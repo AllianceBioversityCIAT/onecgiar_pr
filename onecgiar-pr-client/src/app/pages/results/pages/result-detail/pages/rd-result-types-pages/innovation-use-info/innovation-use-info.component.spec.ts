@@ -9,6 +9,7 @@ import { PrFieldHeaderComponent } from '../../../../../../../custom-fields/pr-fi
 import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { AddButtonComponent } from '../../../../../../../custom-fields/add-button/add-button.component';
+import { signal } from '@angular/core';
 
 describe('InnovationUseInfoComponent', () => {
   let component: InnovationUseInfoComponent;
@@ -23,19 +24,21 @@ describe('InnovationUseInfoComponent', () => {
     actors: [],
     organization: [],
     measures: []
-  }
+  };
 
   beforeEach(async () => {
-
     mockApiService = {
       resultsSE: {
         GET_innovationUse: () => of({ response: mockGET_innovationUseResponse }),
         PATCH_innovationUse: () => of({ response: [] }),
-        GETAllActorsTypes: () => of({ response: []}),
-        GETInstitutionsTypeTree: () => of({ response: [] }),
+        GETAllActorsTypes: () => of({ response: [] }),
+        GETInstitutionsTypeTree: () => of({ response: [] })
       },
       rolesSE: {
         readOnly: false
+      },
+      dataControlSE: {
+        currentResultSectionName: signal<string>('Innovation use information')
       }
     };
 
@@ -49,17 +52,14 @@ describe('InnovationUseInfoComponent', () => {
         PrFieldHeaderComponent,
         AddButtonComponent
       ],
-      imports: [
-        HttpClientTestingModule,
-      ],
+      imports: [HttpClientTestingModule],
       providers: [
         {
           provide: ApiService,
           useValue: mockApiService
         }
       ]
-    })
-    .compileComponents();
+    }).compileComponents();
 
     fixture = TestBed.createComponent(InnovationUseInfoComponent);
     component = fixture.componentInstance;
@@ -67,7 +67,7 @@ describe('InnovationUseInfoComponent', () => {
 
   describe('ngOnInit()', () => {
     it('should get section information on initialization', () => {
-      const spyGetSectionInformation = jest.spyOn(component, 'getSectionInformation')
+      const spyGetSectionInformation = jest.spyOn(component, 'getSectionInformation');
 
       component.ngOnInit();
 
@@ -78,7 +78,7 @@ describe('InnovationUseInfoComponent', () => {
   describe('getSectionInformation()', () => {
     it('should get section information', () => {
       const apiServiceSpy = jest.spyOn(mockApiService.resultsSE, 'GET_innovationUse');
-      const convertOrganizationsSpy = jest.spyOn(component, 'convertOrganizations')
+      const convertOrganizationsSpy = jest.spyOn(component, 'convertOrganizations');
 
       component.getSectionInformation();
 
@@ -88,8 +88,7 @@ describe('InnovationUseInfoComponent', () => {
     });
     it('should handle error when getting section information', () => {
       const mockError = new Error('Mock error');
-      const apiServiceSpy = jest.spyOn(mockApiService.resultsSE, 'GET_innovationUse')
-        .mockReturnValue(throwError(mockError));
+      const apiServiceSpy = jest.spyOn(mockApiService.resultsSE, 'GET_innovationUse').mockReturnValue(throwError(mockError));
 
       component.getSectionInformation();
 
@@ -101,7 +100,7 @@ describe('InnovationUseInfoComponent', () => {
     it('should save section successfully', () => {
       const spy = jest.spyOn(component, 'convertOrganizationsTosave');
       const spyPATCH_innovationUse = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationUse');
-      const spyGetSectionInformation = jest.spyOn(component, 'getSectionInformation')
+      const spyGetSectionInformation = jest.spyOn(component, 'getSectionInformation');
 
       component.onSaveSection();
 
@@ -112,8 +111,7 @@ describe('InnovationUseInfoComponent', () => {
     });
     it('should handle error when saving section', () => {
       const mockError = new Error('Mock error');
-      const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationUse')
-        .mockReturnValue(throwError(mockError));
+      const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationUse').mockReturnValue(throwError(mockError));
 
       component.onSaveSection();
 
@@ -128,7 +126,7 @@ describe('InnovationUseInfoComponent', () => {
         {
           institution_types_id: 1,
           parent_institution_type_id: 2
-        },
+        }
       ];
 
       component.convertOrganizations(organizations);
@@ -137,9 +135,9 @@ describe('InnovationUseInfoComponent', () => {
         {
           institution_types_id: 2,
           parent_institution_type_id: 2,
-          institution_sub_type_id: 1,
+          institution_sub_type_id: 1
         }
-      ])
+      ]);
     });
   });
 
@@ -156,7 +154,7 @@ describe('InnovationUseInfoComponent', () => {
           hide: false,
           is_active: false,
           id: 1
-        },
+        }
       ];
       component.innovationUseInfoBody.innovatonUse.organization = organizations;
       component.convertOrganizationsTosave();
@@ -172,8 +170,8 @@ describe('InnovationUseInfoComponent', () => {
           hide: false,
           is_active: false,
           id: 1
-        },
-      ])
+        }
+      ]);
     });
   });
 });
