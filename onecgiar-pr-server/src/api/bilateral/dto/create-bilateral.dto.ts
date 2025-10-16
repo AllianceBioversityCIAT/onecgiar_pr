@@ -11,6 +11,10 @@ import {
   ValidateIf,
   IsUrl,
   IsIn,
+  IsObject,
+  IsBoolean,
+  IsDefined,
+  IsInt,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -34,6 +38,16 @@ export class SubmittedByDto {
   @IsOptional()
   @IsString()
   comment?: string;
+}
+
+export class CreatedByDto {
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
+
+  @IsString()
+  @IsNotEmpty()
+  name: string;
 }
 
 export class TocMappingDto {
@@ -198,15 +212,75 @@ export class BilateralProjectDto {
   grant_title: string;
 }
 
+export class MetadataCGDto {
+  @IsString()
+  @IsNotEmpty()
+  source: string;
+
+  @IsBoolean()
+  @IsDefined()
+  accessibility: boolean;
+
+  @IsString()
+  @IsNotEmpty()
+  doi: string;
+
+  @IsBoolean()
+  @IsDefined()
+  is_isi: boolean;
+
+  @IsBoolean()
+  @IsDefined()
+  is_peer_reviewed: boolean;
+
+  @IsNumber()
+  @IsDefined()
+  issue_year: number;
+}
+
+export class KnowledgeProductDto {
+  @IsString()
+  @IsNotEmpty()
+  handle: string;
+
+  @IsString()
+  @IsNotEmpty()
+  knowledge_product_type: string;
+
+  @IsObject()
+  @ValidateNested()
+  @Type(() => MetadataCGDto)
+  metadataCG: MetadataCGDto;
+
+  @IsString()
+  @IsNotEmpty()
+  licence: string;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsNotEmpty({ each: true })
+  agrovoc_keywords: string[];
+}
+
 /* -------------------------------------------------------------------------- */
 /*                               MAIN DTO                                     */
 /* -------------------------------------------------------------------------- */
 
 export class CreateBilateralDto {
+
+  @IsString()
+  @IsNotEmpty()
+  created_date: string;
+
+  @IsObject()
   @ValidateNested()
   @Type(() => SubmittedByDto)
-  @IsNotEmpty()
   submitted_by: SubmittedByDto;
+
+  @IsObject()
+  @ValidateNested()
+  @Type(() => CreatedByDto)
+  created_by: CreatedByDto;
 
   @IsString()
   @IsNotEmpty()
@@ -221,37 +295,55 @@ export class CreateBilateralDto {
   description: string;
 
   @IsArray()
-  @ArrayMinSize(1)
   @ValidateNested({ each: true })
   @Type(() => TocMappingDto)
   toc_mapping: TocMappingDto[];
 
+  @IsObject()
   @ValidateNested()
   @Type(() => GeoFocusDto)
-  @IsNotEmpty()
   geo_focus: GeoFocusDto;
 
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => InstitutionDto)
-  @IsNotEmpty()
   contributing_center: InstitutionDto[];
 
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => InstitutionDto)
-  @IsNotEmpty()
   contributing_partners: InstitutionDto[];
 
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => EvidenceDto)
-  @IsNotEmpty()
   evidence: EvidenceDto[];
 
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => BilateralProjectDto)
-  @IsNotEmpty()
   contributing_bilateral_projects: BilateralProjectDto[];
+
+  @IsObject()
+  @ValidateNested()
+  @Type(() => KnowledgeProductDto)
+  knowledge_product: KnowledgeProductDto;
+}
+
+export class ResultBilateralDto {
+  @IsString()
+  @IsNotEmpty()
+  type: string;
+
+  @IsObject()
+  @ValidateNested()
+  @Type(() => CreateBilateralDto)
+  data: CreateBilateralDto;
+}
+
+export class RootResultsDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ResultBilateralDto)
+  results: ResultBilateralDto[];
 }

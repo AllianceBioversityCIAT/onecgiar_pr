@@ -378,6 +378,27 @@ export class Result {
     enumName: 'source_enum',
   })
   source: SourceEnum = SourceEnum.Result;
+    
+  @Column({
+    name: 'external_submitter',
+    nullable: true,
+    type: 'int',
+  })
+  external_submitter: number;
+    
+  @Column({
+    name: 'external_submitted_date',
+    nullable: true,
+    type: 'text',
+  })
+  external_submitted_date: string;
+
+  @Column({
+    name: 'external_submitted_comment',
+    nullable: true,
+    type: 'text',
+  })
+  external_submitted_comment: string;
 
   // helpers??
   initiative_id!: number;

@@ -1,11 +1,10 @@
 import {
   Injectable,
-  HttpException,
   HttpStatus,
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
-import { CreateBilateralDto, SubmittedByDto } from './dto/create-bilateral.dto';
+import { RootResultsDto, SubmittedByDto } from './dto/create-bilateral.dto';
 import { ResultRepository } from '../results/result.repository';
 import { VersioningService } from '../versioning/versioning.service';
 import { AppModuleIdEnum } from '../../shared/constants/role-type.enum';
@@ -13,7 +12,6 @@ import { HandlersError } from '../../shared/handlers/error.utils';
 import { Result, SourceEnum } from '../results/entities/result.entity';
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
 import { ClarisaRegionsRepository } from '../../clarisa/clarisa-regions/ClariasaRegions.repository';
-import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { Between, In, Like } from 'typeorm';
 import { submissionRepository } from '../results/submissions/submissions.repository';
 import { ClarisaGeographicScopeRepository } from '../../clarisa/clarisa-geographic-scopes/clarisa-geographic-scopes.repository';
@@ -23,7 +21,6 @@ import { ResultCountryRepository } from '../results/result-countries/result-coun
 import { ClarisaSubnationalScopeRepository } from '../../clarisa/clarisa-subnational-scope/clarisa-subnational-scope.repository';
 import { ResultCountrySubnationalRepository } from '../results/result-countries-sub-national/repositories/result-country-subnational.repository';
 import { ResultCountry } from '../results/result-countries/entities/result-country.entity';
-import { Year } from '../results/years/entities/year.entity';
 import { YearRepository } from '../results/years/year.repository';
 import { ResultRegion } from '../results/result-regions/entities/result-region.entity';
 import { InstitutionRoleEnum } from '../results/results_by_institutions/entities/institution_role.enum';
@@ -34,6 +31,14 @@ import { EvidencesService } from '../results/evidences/evidences.service';
 import { EvidencesRepository } from '../results/evidences/evidences.repository';
 import { Evidence } from '../results/evidences/entities/evidence.entity';
 import { ResultsKnowledgeProductsRepository } from '../results/results-knowledge-products/repositories/results-knowledge-products.repository';
+import { ClarisaCentersRepository } from '../../clarisa/clarisa-centers/clarisa-centers.repository';
+import { NonPooledProjectRepository } from '../results/non-pooled-projects/non-pooled-projects.repository';
+import { ResultTypeRepository } from '../results/result_types/resultType.repository';
+import { UserService } from '../../auth/modules/user/user.service';
+import { CreateUserDto } from '../../auth/modules/user/dto/create-user.dto';
+import { ResultsKnowledgeProductsService } from '../results/results-knowledge-products/results-knowledge-products.service';
+import { TokenDto } from '../../shared/globalInterfaces/token.dto';
+import { ResultsKnowledgeProductDto } from '../results/results-knowledge-products/dto/results-knowledge-product.dto';
 
 @Injectable()
 export class BilateralService {
@@ -43,7 +48,6 @@ export class BilateralService {
         private readonly _handlersError: HandlersError,
         private readonly _versioningService: VersioningService,
         private readonly _userRepository: UserRepository,
-        private readonly _clarisaInitiativesRepository: ClarisaInitiativesRepository,
         private readonly _clarisaRegionsRepository: ClarisaRegionsRepository,
         private readonly _yearRepository: YearRepository,
         private readonly _submissionRepository: submissionRepository,
@@ -58,69 +62,158 @@ export class BilateralService {
         private readonly _evidencesRepository: EvidencesRepository,
         private readonly _evidencesService: EvidencesService,
         private readonly _resultsKnowledgeProductsRepository: ResultsKnowledgeProductsRepository,
+        private readonly _clarisaCenters: ClarisaCentersRepository,
+        private readonly _nonPooledProjectRepository: NonPooledProjectRepository,
+        private readonly _resultTypeRepository: ResultTypeRepository,
+        private readonly _userService: UserService,
+        private readonly _resultsKnowledgeProductsService: ResultsKnowledgeProductsService,
     ) {}
 
-    async create(bilateralDto: CreateBilateralDto, isAdmin?: boolean, versionId?: number) {
-        const userId = 977;
+    async create(rootResultsDto: RootResultsDto, isAdmin?: boolean, versionId?: number) {
+    try {
+        for (const result of rootResultsDto.results) {
 
-        // === 1. Crear encabezado del Result ===
-        const version = await this._versioningService.$_findActivePhase(AppModuleIdEnum.REPORTING);
-        if (!version) throw this._handlersError.returnErrorRes({ error: version, debug: true });
+            const bilateralDto = result.data;
+            
+            const resultType = await this._resultTypeRepository.findOne({ where: { name: result.type } });
 
-        const year = await this._yearRepository.findOne({ where: { active: true } });
-        if (!year) throw new NotFoundException('Active year not found');
+            const createdByUser = await this._userRepository.findOne({ where: { email: bilateralDto.created_by.email } });
+            if (!createdByUser) {
+                throw new NotFoundException(`User not found for created_by: ${JSON.stringify(bilateralDto.created_by)}`);
+            }
+            const userId = createdByUser.id;
 
-        const lastCode = await this._resultRepository.getLastResultCode();
+            let existingUser = await this._userRepository.findOne({ where: { email: bilateralDto.submitted_by?.email } });
+            const createUserDto: CreateUserDto = {
+                first_name: bilateralDto.submitted_by?.name,
+                last_name: '(external)',
+                email: bilateralDto.submitted_by?.email,
+                is_cgiar: true,
+                created_by: userId,
+            };
 
-        const newResultHeader = await this._resultRepository.save({
-            created_by: userId,
-            version_id: isAdmin && versionId ? versionId : version.id,
-            title: bilateralDto.title,
-            description: bilateralDto.description,
-            reported_year_id: year.year,
-            result_code: lastCode + 1,
-            source: SourceEnum.Bilateral,
-        });
+            let createdUserResult;
+            if (!existingUser && bilateralDto.submitted_by?.email) {
+                createdUserResult = await this._userService.createFull(
+                    createUserDto,
+                    userId 
+                );
+            }  
 
-        // === 2. Guardar submitted_by ===
-        const user = await this.findSubmittedByUser(bilateralDto.submitted_by);
-        if (!user)
-            throw new NotFoundException(
-                `User not found (email="${bilateralDto.submitted_by.email || 'N/A'}", date="${bilateralDto.submitted_by.submitted_date || 'N/A'}", name="${bilateralDto.submitted_by.name || 'N/A'}")`,
-            );
+            const finalUserId = createdUserResult?.id ?? existingUser?.id;
 
-        await this._submissionRepository.save({
-            results_id: newResultHeader.id,
-            created_date: bilateralDto.submitted_by.submitted_date,
-            user_id: user.id,
-            comment: bilateralDto.submitted_by.comment ?? null,
-        });
+            // === 1. Crear encabezado del Result ===
+            const version = await this._versioningService.$_findActivePhase(AppModuleIdEnum.REPORTING);
+            if (!version) throw this._handlersError.returnErrorRes({ error: version, debug: true });
 
-        // === 3. Geo Focus ===
-        const { scope_code, scope_label, regions, countries, subnational_areas } = bilateralDto.geo_focus;
-        const scope = await this.findScope(scope_code, scope_label);
-        this.validateGeoFocus(scope, regions, countries, subnational_areas);
+            const year = await this._yearRepository.findOne({ where: { active: true } });
+            if (!year) throw new NotFoundException('Active year not found');
 
-        await this.handleRegions(newResultHeader, scope, regions);
-        await this.handleCountries(newResultHeader, countries, subnational_areas, scope.id, userId);
+            const lastCode = await this._resultRepository.getLastResultCode();
 
-        await this._resultRepository.save({
-            ...newResultHeader,
-            geographic_scope_id: this.resolveScopeId(scope.id, countries),
-        });
+            const newResultHeader = await this._resultRepository.save({
+                created_by: userId,
+                version_id: isAdmin && versionId ? versionId : version.id,
+                title: bilateralDto.title,
+                description: bilateralDto.description,
+                reported_year_id: year.year,
+                result_code: lastCode + 1,
+                result_type_id: resultType.id,
+                external_submitter: finalUserId,
+                external_submitted_date: bilateralDto.submitted_by?.submitted_date ?? null,
+                external_submitted_comment: bilateralDto.submitted_by?.comment ?? null,
+                ...(bilateralDto.created_date && { created_date: bilateralDto.created_date }),
+                source: SourceEnum.Bilateral,
+            });
 
-        // === (Pendiente) Instituciones ===
-        const { contributing_center, contributing_partners } = bilateralDto;
+            // === 2. Guardar submitted_by ===
+            const user = await this.findSubmittedByUser(bilateralDto.submitted_by);
+            if (!user)
+                throw new NotFoundException(
+                    `User not found (email="${bilateralDto.submitted_by.email || 'N/A'}", date="${bilateralDto.submitted_by.submitted_date || 'N/A'}", name="${bilateralDto.submitted_by.name || 'N/A'}")`,
+                );
 
-        const allInstitutions = [
-            ...(contributing_center || []),
-            ...(contributing_partners || []),
-        ];
+            await this._submissionRepository.save({
+                results_id: newResultHeader.id,
+                created_date: bilateralDto.submitted_by.submitted_date,
+                user_id: user.id,
+                comment: bilateralDto.submitted_by.comment ?? null,
+            });
 
-        await this.handleInstitutions(newResultHeader.id, allInstitutions, userId);
+            // === 3. Geo Focus ===
+            const { scope_code, scope_label, regions, countries, subnational_areas } = bilateralDto.geo_focus;
+            const scope = await this.findScope(scope_code, scope_label);
+            this.validateGeoFocus(scope, regions, countries, subnational_areas);
 
-        await this.handleEvidence(newResultHeader.id, bilateralDto.evidence, userId);
+            await this.handleRegions(newResultHeader, scope, regions);
+            await this.handleCountries(newResultHeader, countries, subnational_areas, scope.id, userId);
+
+            await this._resultRepository.save({
+                ...newResultHeader,
+                geographic_scope_id: this.resolveScopeId(scope.id, countries),
+            });
+
+            // === (Pendiente) Instituciones ===
+            const { contributing_center, contributing_partners } = bilateralDto;
+
+            const allInstitutions = [
+                ...(contributing_center || []),
+                ...(contributing_partners || []),
+            ];
+
+            await this.handleInstitutions(newResultHeader.id, allInstitutions, userId);
+
+            await this.handleEvidence(newResultHeader.id, bilateralDto.evidence, userId);
+
+            await this.handleNonPooledProject(newResultHeader.id, userId, bilateralDto.contributing_bilateral_projects, bilateralDto.lead_center);
+
+            const tokenDto: TokenDto = {
+                id: userId,
+                email: createdByUser.email,
+                first_name: createdByUser.first_name,
+                last_name: createdByUser.last_name,
+            }
+            let kpDto = bilateralDto.knowledge_product;
+            let resultDto: ResultsKnowledgeProductDto;
+            if (resultType.id === 6 /*Knowledge Product*/) {
+                const cgspaceInfo = await this._resultsKnowledgeProductsService.findOnCGSpace(
+                    kpDto.handle,
+                    tokenDto,
+                    null
+                );
+                resultDto = cgspaceInfo.response as ResultsKnowledgeProductDto;
+                await this._resultsKnowledgeProductsService.create(resultDto, tokenDto);
+            }
+        }    
+    } catch (error) {
+      console.error('Error creating bilateral:', error);
+      throw error;
     }
+    }
+
+    private async handleNonPooledProject(resultId, userId, bilateralProjects, lead_center) {
+
+        const foundInstitution = await this._clarisaInstitutionsRepository.findOne({
+            where: [
+                { name: lead_center },
+                { acronym: lead_center },
+            ],
+        });
+
+        const clarisaCenter = await this._clarisaCenters.findOne({ where: { institutionId: foundInstitution.id } });
+
+        for (const nonpp of bilateralProjects) {
+            await this._nonPooledProjectRepository.save({
+                results_id: resultId,
+                grant_title: nonpp.grant_title,
+                lead_center_id: clarisaCenter.code,
+                funder_institution_id: foundInstitution.id,
+                created_by: userId,
+            });
+        }
+
+    }
+
 
     private async handleEvidence(resultId, evidence, userId) {
 
