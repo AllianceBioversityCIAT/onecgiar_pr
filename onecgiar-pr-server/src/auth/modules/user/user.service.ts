@@ -1186,11 +1186,11 @@ export class UserService {
       new_roles_assigned_per_entity,
     };
 
-    /*     const technicalTeamEmailsRecord =
+    const technicalTeamEmailsRecord =
       await this._globalParametersRepository.findOne({
         where: { name: 'technical_team_email' },
         select: { value: true },
-      }); */
+      });
 
     await this._emailNotificationManagementService.sendEmail({
       from: {
@@ -1201,7 +1201,7 @@ export class UserService {
         subject: `PRMS - Your Account Has Been ${newStatus}`,
         to: [user.email],
         cc: [],
-        bcc: 'n.higuita@cgiar.org',
+        bcc: technicalTeamEmailsRecord.value,
         message: {
           text: `Your account has been ${newStatus.toLowerCase()}.`,
           socketFile: compiledTemplate(emailData),
