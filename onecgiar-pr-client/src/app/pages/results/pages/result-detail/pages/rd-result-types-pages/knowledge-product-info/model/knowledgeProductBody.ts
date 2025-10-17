@@ -38,6 +38,7 @@ interface Institution {
 interface Metadatum {
   source: string;
   accessibility: string | boolean;
+  open_access?: string;
   doi?: any;
   is_isi: boolean;
   is_peer_reviewed: boolean;

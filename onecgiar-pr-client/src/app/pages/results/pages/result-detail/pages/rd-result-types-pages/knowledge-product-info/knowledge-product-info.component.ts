@@ -128,10 +128,10 @@ export class KnowledgeProductInfoComponent implements OnInit {
     mapped.is_peer_reviewed_CG = this.transformBoolean(response.metadataCG?.is_peer_reviewed);
     mapped.is_isi_CG = this.transformBoolean(response.metadataCG?.is_isi, isJA);
     let accessibilityCG: string;
-    if (response.metadataCG?.accessibility == null) {
-      accessibilityCG = !isJA ? 'Not available' : 'Not provided';
+    if (response.metadataCG?.open_access === null) {
+      accessibilityCG = 'Not applicable';
     } else {
-      accessibilityCG = response.metadataCG.accessibility ? 'Open Access' : 'Limited Access';
+      accessibilityCG = response.metadataCG.open_access;
     }
     mapped.accessibility_CG = accessibilityCG;
     mapped.yearCG = response.metadataCG?.issue_year;
