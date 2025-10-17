@@ -90,13 +90,15 @@ export class BilateralService {
     try {
       const createdResults = [];
       for (const result of rootResultsDto.results) {
-             let adminUser = await this._userRepository.findOne({
-                where: { email: 'admin@prms.pr' },
-            });        const bilateralDto = result.data;
+        const bilateralDto = result.data;
+
+        let adminUser = await this._userRepository.findOne({
+          where: { email: 'admin@prms.pr' },
+        });
+
         let resultType;
         if (result.type === 'knowledge_product') {
           resultType = { id: 6, name: 'Knowledge product' };
-          console.log('resultType (manual knowledge_product):', resultType);
         } else {
           resultType = await this._resultTypeRepository.findOne({
             where: { name: result.type },
@@ -116,7 +118,7 @@ export class BilateralService {
         const submittedUserId = submittedUser.id;
 
 
-        // === 1. Crear encabezado del Result ===
+        // === Crear encabezado del Result ===
         const version = await this._versioningService.$_findActivePhase(
           AppModuleIdEnum.REPORTING,
         );
@@ -152,7 +154,7 @@ export class BilateralService {
           source: SourceEnum.Bilateral,
         });
 
-        // === 3. Geo Focus ===
+        // === Geo Focus ===
         const {
           scope_code,
           scope_label,
@@ -271,10 +273,12 @@ export class BilateralService {
             created_by: adminUser,
             };
 
+            console.log('Creating new user for email:', createUserDto);
             const createdUserResult = await this._userService.createFull(
             createUserDto,
             adminUser,
             );
+            console.log('Created user:', createdUserResult);
 
             return createdUserResult;
         }
