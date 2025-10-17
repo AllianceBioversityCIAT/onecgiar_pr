@@ -272,40 +272,33 @@ export class BilateralService {
   }
 
   private async handleTocMapping(tocArray, userId, resultId) {
-    try {
-      for (const toc of tocArray) {
-        const mapToToc =
-          await this._resultsTocResultsRepository.findTocResultsForBilateral(
-            toc,
-          );
-        
-          console.log('mapToToc:', mapToToc);
+    for (const toc of tocArray) {
+      const mapToToc =
+        await this._resultsTocResultsRepository.findTocResultsForBilateral(toc);
 
-        const init = await this._clarisaInitiatives.findOne({
-          where: { official_code: toc.science_program_id },
-        });
+      console.log('mapToToc:', mapToToc);
 
-        const newTocMapping = this._resultsTocResultsRepository.create({
+      const init = await this._clarisaInitiatives.findOne({
+        where: { official_code: toc.science_program_id },
+      });
+
+      const newTocMapping = this._resultsTocResultsRepository.create({
+        created_by: userId,
+        toc_result_id: mapToToc[0].toc_result_id,
+        initiative_id: init ? init.id : null,
+        result_id: resultId,
+      });
+      await this._resultsTocResultsRepository.save(newTocMapping);
+
+      const newTocContributorsIndicator =
+        this._resultsTocResultsIndicatorsRepository.create({
           created_by: userId,
-          toc_result_id: mapToToc[0].toc_result_id,
-          initiative_id: init ? init.id : null,
-          result_id: resultId,
+          results_toc_results_id: newTocMapping.result_toc_result_id,
+          toc_results_indicator_id: mapToToc[0].toc_results_indicator_id,
         });
-        await this._resultsTocResultsRepository.save(newTocMapping);
-
-        const newTocContributorsIndicator =
-          this._resultsTocResultsIndicatorsRepository.create({
-            created_by: userId,
-            results_toc_results_id: newTocMapping.result_toc_result_id,
-            toc_results_indicator_id: mapToToc[0].toc_results_indicator_id,
-          });
-        await this._resultsTocResultsIndicatorsRepository.save(
-          newTocContributorsIndicator,
-        );
-      }
-    } catch (error) {
-      console.error('Error in handleTocMapping:', error);
-      throw error;
+      await this._resultsTocResultsIndicatorsRepository.save(
+        newTocContributorsIndicator,
+      );
     }
   }
 
