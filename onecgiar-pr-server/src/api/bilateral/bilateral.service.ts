@@ -41,6 +41,7 @@ import { ResultsKnowledgeProductDto } from '../results/results-knowledge-product
 import { ResultsTocResultRepository } from '../results/results-toc-results/repositories/results-toc-results.repository';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { ResultsTocResultIndicatorsRepository } from '../results/results-toc-results/repositories/results-toc-results-indicators.repository';
+import { User } from '../../auth/modules/user/entities/user.entity';
 
 @Injectable()
 export class BilateralService {
@@ -89,7 +90,9 @@ export class BilateralService {
     try {
       const createdResults = [];
       for (const result of rootResultsDto.results) {
-        const bilateralDto = result.data;
+             let adminUser = await this._userRepository.findOne({
+                where: { email: 'admin@prms.pr' },
+            });        const bilateralDto = result.data;
         let resultType;
         if (result.type === 'knowledge_product') {
           resultType = { id: 6, name: 'Knowledge product' };
@@ -106,36 +109,12 @@ export class BilateralService {
           }
         }
 
-        const createdByUser = await this._userRepository.findOne({
-          where: { email: bilateralDto.created_by.email },
-        });
-        if (!createdByUser) {
-          throw new NotFoundException(
-            `User not found for created_by: ${JSON.stringify(bilateralDto.created_by)}`,
-          );
-        }
+        const createdByUser = await this.findOrCreateUser(bilateralDto.created_by, adminUser)
         const userId = createdByUser.id;
 
-        let existingUser = await this._userRepository.findOne({
-          where: { email: bilateralDto.submitted_by?.email },
-        });
-        const createUserDto: CreateUserDto = {
-          first_name: bilateralDto.submitted_by?.name,
-          last_name: '(external)',
-          email: bilateralDto.submitted_by?.email,
-          is_cgiar: true,
-          created_by: userId,
-        };
+        const submittedUser = await this.findOrCreateUser(bilateralDto.submitted_by, createdByUser)
+        const submittedUserId = submittedUser.id;
 
-        let createdUserResult;
-        if (!existingUser && bilateralDto.submitted_by?.email) {
-          createdUserResult = await this._userService.createFull(
-            createUserDto,
-            userId,
-          );
-        }
-
-        const finalUserId = createdUserResult?.id ?? existingUser?.id;
 
         // === 1. Crear encabezado del Result ===
         const version = await this._versioningService.$_findActivePhase(
@@ -162,7 +141,7 @@ export class BilateralService {
           reported_year_id: year.year,
           result_code: lastCode + 1,
           result_type_id: resultType.id,
-          external_submitter: finalUserId,
+          external_submitter: submittedUserId,
           external_submitted_date:
             bilateralDto.submitted_by?.submitted_date ?? null,
           external_submitted_comment:
@@ -198,7 +177,7 @@ export class BilateralService {
           geographic_scope_id: this.resolveScopeId(scope.id, countries),
         });
 
-        // === (Pendiente) Instituciones ===
+        // === Instituciones ===
         const { contributing_center, contributing_partners } = bilateralDto;
 
         const allInstitutions = [
@@ -269,7 +248,39 @@ export class BilateralService {
       console.error('Error creating bilateral:', error);
       throw error;
     }
-  }
+    }
+
+    private async findOrCreateUser(
+        userData,
+        adminUser,
+    ): Promise<any> {
+        if (!userData?.email) {
+            throw new BadRequestException('User email is required.');
+        }
+
+        let user = await this._userRepository.findOne({
+            where: { email: userData.email },
+        });
+
+        if (!user) {
+            const createUserDto: CreateUserDto = {
+            first_name: userData.name ?? '(no name)',
+            last_name: '(external)',
+            email: userData.email,
+            is_cgiar: true,
+            created_by: adminUser,
+            };
+
+            const createdUserResult = await this._userService.createFull(
+            createUserDto,
+            adminUser,
+            );
+
+            return createdUserResult;
+        }
+
+        return user;
+    }
 
   private async handleTocMapping(tocArray, userId, resultId) {
     for (const toc of tocArray) {
@@ -308,23 +319,22 @@ export class BilateralService {
     bilateralProjects,
     lead_center,
   ) {
+
     const foundInstitution = await this._clarisaInstitutionsRepository.findOne({
-      where: { id: 46 }, //CORREGIR ESTO
+      where: [
+            { name: Like(`%${lead_center}%`) },
+            { acronym: Like(`%${lead_center}%`) },
+        ],
     });
 
-    if (!foundInstitution) {
-      throw new NotFoundException(
-        `Institution not found for lead_center: ${lead_center}`,
-      );
-    }
-
-    const clarisaCenter = await this._clarisaCenters.findOne({
-      where: { institutionId: 46 },
-    });
-    if (!clarisaCenter) {
-      throw new NotFoundException(
-        `Clarisa center not found for institutionId: ${foundInstitution.id}`,
-      );
+    let clarisaCenter;
+    if (foundInstitution.id) {
+        clarisaCenter = await this._clarisaCenters.findOne({
+            where: { institutionId: foundInstitution.id },
+        });
+        if (!clarisaCenter) {
+           clarisaCenter = null 
+        }
     }
 
     for (const nonpp of bilateralProjects) {
