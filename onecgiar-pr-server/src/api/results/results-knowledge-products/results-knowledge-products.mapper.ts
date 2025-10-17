@@ -800,6 +800,7 @@ export class ResultsKnowledgeProductMapper {
       metadata.is_peer_reviewed = m.is_peer_reviewed;
       metadata.year = m.issue_year;
       metadata.online_year = m.online_year;
+      metadata.open_access = m.open_access;
 
       if (!knowledgeProduct.last_updated_by) {
         metadata.created_by = knowledgeProduct.created_by;
