@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Post, UseInterceptors, ValidationPipe } from '@nestjs/common';
 import { BilateralService } from './bilateral.service';
 import { ApiTags } from '@nestjs/swagger';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
@@ -10,12 +10,14 @@ import { RootResultsDto } from './dto/create-bilateral.dto';
 export class BilateralController {
   constructor(private readonly bilateralService: BilateralService) {}
 
-    @Post('create')
-    create(
-      @Body() bilateralDto: RootResultsDto
-    ) {
-      return this.bilateralService.create(
-        bilateralDto
-      );
-    }
+  @Post('create')
+  async create(
+    @Body(new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: false,
+      transform: true,
+    })) body: RootResultsDto
+  ) {
+    return this.bilateralService.create(body);
+  }
 }

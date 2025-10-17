@@ -143,6 +143,7 @@ import { InitiativeEntityMapRepository } from '../../initiative_entity_map/initi
     ClarisaInstitutionsRepository,
     DeleteRecoverDataService,
     GlobalParameterRepository,
+    ResultsKnowledgeProductsService,
   ],
 })
 export class ResultsKnowledgeProductsModule {}

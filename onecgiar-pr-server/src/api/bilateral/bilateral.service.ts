@@ -13,7 +13,6 @@ import { Result, SourceEnum } from '../results/entities/result.entity';
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
 import { ClarisaRegionsRepository } from '../../clarisa/clarisa-regions/ClariasaRegions.repository';
 import { Between, In, Like } from 'typeorm';
-import { submissionRepository } from '../results/submissions/submissions.repository';
 import { ClarisaGeographicScopeRepository } from '../../clarisa/clarisa-geographic-scopes/clarisa-geographic-scopes.repository';
 import { ResultRegionRepository } from '../results/result-regions/result-regions.repository';
 import { ClarisaCountriesRepository } from '../../clarisa/clarisa-countries/ClarisaCountries.repository';
@@ -50,7 +49,6 @@ export class BilateralService {
         private readonly _userRepository: UserRepository,
         private readonly _clarisaRegionsRepository: ClarisaRegionsRepository,
         private readonly _yearRepository: YearRepository,
-        private readonly _submissionRepository: submissionRepository,
         private readonly _geoScopeRepository: ClarisaGeographicScopeRepository,
         private readonly _resultRegionRepository: ResultRegionRepository,
         private readonly _clarisaCountriesRepository: ClarisaCountriesRepository,
@@ -70,12 +68,25 @@ export class BilateralService {
     ) {}
 
     async create(rootResultsDto: RootResultsDto, isAdmin?: boolean, versionId?: number) {
-    try {
+        if (!rootResultsDto?.results || !Array.isArray(rootResultsDto.results) || rootResultsDto.results.length === 0) {
+        throw new BadRequestException('The "results" array is required and cannot be empty.');
+        }
+        try {
+        const createdResults = [];
         for (const result of rootResultsDto.results) {
 
             const bilateralDto = result.data;
-            
-            const resultType = await this._resultTypeRepository.findOne({ where: { name: result.type } });
+            let resultType;
+            if (result.type === 'knowledge_product') {
+                resultType = { id: 6, name: 'Knowledge product' };
+                console.log('resultType (manual knowledge_product):', resultType);
+            } else {
+                resultType = await this._resultTypeRepository.findOne({ where: { name: result.type } });
+                console.log('resultType (from DB):', resultType);
+                if (!resultType) {
+                    throw new NotFoundException(`Result type not found for name: ${result.type}`);
+                }
+            }
 
             const createdByUser = await this._userRepository.findOne({ where: { email: bilateralDto.created_by.email } });
             if (!createdByUser) {
@@ -126,20 +137,6 @@ export class BilateralService {
                 source: SourceEnum.Bilateral,
             });
 
-            // === 2. Guardar submitted_by ===
-            const user = await this.findSubmittedByUser(bilateralDto.submitted_by);
-            if (!user)
-                throw new NotFoundException(
-                    `User not found (email="${bilateralDto.submitted_by.email || 'N/A'}", date="${bilateralDto.submitted_by.submitted_date || 'N/A'}", name="${bilateralDto.submitted_by.name || 'N/A'}")`,
-                );
-
-            await this._submissionRepository.save({
-                results_id: newResultHeader.id,
-                created_date: bilateralDto.submitted_by.submitted_date,
-                user_id: user.id,
-                comment: bilateralDto.submitted_by.comment ?? null,
-            });
-
             // === 3. Geo Focus ===
             const { scope_code, scope_label, regions, countries, subnational_areas } = bilateralDto.geo_focus;
             const scope = await this.findScope(scope_code, scope_label);
@@ -184,7 +181,19 @@ export class BilateralService {
                 resultDto = cgspaceInfo.response as ResultsKnowledgeProductDto;
                 await this._resultsKnowledgeProductsService.create(resultDto, tokenDto);
             }
-        }    
+
+            createdResults.push({
+                id: newResultHeader.id,
+                result_code: newResultHeader.result_code,
+            });
+        }
+        return {
+            response: {
+                results: createdResults
+            },
+            message: "Results Bilateral created successfully.",
+            status: 201
+        };    
     } catch (error) {
       console.error('Error creating bilateral:', error);
       throw error;
@@ -194,24 +203,27 @@ export class BilateralService {
     private async handleNonPooledProject(resultId, userId, bilateralProjects, lead_center) {
 
         const foundInstitution = await this._clarisaInstitutionsRepository.findOne({
-            where: [
-                { name: lead_center },
-                { acronym: lead_center },
-            ],
+            where: { id: 46 } //CORREGIR ESTO
         });
 
-        const clarisaCenter = await this._clarisaCenters.findOne({ where: { institutionId: foundInstitution.id } });
+        if (!foundInstitution) {
+            throw new NotFoundException(`Institution not found for lead_center: ${lead_center}`);
+        }
+
+        const clarisaCenter = await this._clarisaCenters.findOne({ where: { institutionId: 46 } });
+        if (!clarisaCenter) {
+            throw new NotFoundException(`Clarisa center not found for institutionId: ${foundInstitution.id}`);
+        }
 
         for (const nonpp of bilateralProjects) {
             await this._nonPooledProjectRepository.save({
                 results_id: resultId,
                 grant_title: nonpp.grant_title,
-                lead_center_id: clarisaCenter.code,
+                lead_center_id: clarisaCenter?.code ?? null,
                 funder_institution_id: foundInstitution.id,
                 created_by: userId,
             });
         }
-
     }
 
 
@@ -263,20 +275,35 @@ export class BilateralService {
 
     private async handleInstitutions(resultId, institutions, userId) {
 
-        const institutionIds = institutions.map(r => r.institution_id).filter(Boolean);
-        const names = institutions.map(r => r.name).filter(Boolean);
-        const acronyms = institutions.map(r => r.iso_alpha_3).filter(Boolean);
+        const whereConditions = [];
 
-        const whereConditions = [
-            ...(institutionIds.length ? [{ id: In(institutionIds) }] : []),
-            ...(names.length ? [{ name: In(names) }] : []),
-            ...(acronyms.length ? [{ acronym: In(acronyms) }] : []),
-        ];
+        const institutionIds = institutions
+            .map(r => r.institution_id)
+            .filter(id => id !== null && id !== undefined);
+        if (institutionIds.length) {
+            whereConditions.push({ id: In(institutionIds) });
+        }
 
-        const foundInstitutions = whereConditions.length
-            ? await this._clarisaInstitutionsRepository.find({ where: whereConditions })
-            : [];
-        
+        const names = institutions
+            .map(r => r.name)
+            .filter(name => name !== null && name !== undefined);
+        if (names.length) {
+            whereConditions.push({ name: In(names) });
+        }
+
+        const acronyms = institutions
+            .map(r => r.iso_alpha_3)
+            .filter(acronym => acronym !== null && acronym !== undefined);
+        if (acronyms.length) {
+            whereConditions.push({ acronym: In(acronyms) });
+        }
+
+        if (whereConditions.length === 0) {
+            throw new BadRequestException('At least one institution identifier (id, name, or acronym) must be provided.');
+        }
+
+        const foundInstitutions = await this._clarisaInstitutionsRepository.find({ where: whereConditions });
+
         const mappedInstitutions = foundInstitutions.map(
             (institution) => ({
                 institutions_id: institution.id,
@@ -346,7 +373,7 @@ export class BilateralService {
     }
 
     private async findScope(scope_code?: number, scope_label?: string) {
-        const where = scope_code ? { code: scope_code } : { name: scope_label };
+        const where = scope_code ? { id: scope_code } : { name: scope_label };
         const scope = await this._geoScopeRepository.findOne({ where });
         if (!scope) {
             throw new NotFoundException(
@@ -380,15 +407,23 @@ export class BilateralService {
             return;
         }
 
-        const um49codes = regions.map(r => r.um49code).filter(Boolean);
-        const names = regions.map(r => r.name).filter(Boolean);
+        const um49codes = regions
+            .map(r => r.um49code)
+            .filter(code => code !== null && code !== undefined);
+        const names = regions
+            .map(r => r.name)
+            .filter(name => name !== null && name !== undefined);
 
-        const foundRegions = await this._clarisaRegionsRepository.find({
-            where: [
-                ...(um49codes.length ? [{ um49Code: In(um49codes) }] : []),
-                ...(names.length ? [{ name: In(names) }] : []),
-            ],
-        });
+        const whereConditions = [
+            ...(um49codes.length ? [{ um49Code: In(um49codes) }] : []),
+            ...(names.length ? [{ name: In(names) }] : []),
+        ];
+
+        if (whereConditions.length === 0) {
+            throw new BadRequestException('At least one region identifier (um49code or name) must be provided.');
+        }
+
+        const foundRegions = await this._clarisaRegionsRepository.find({ where: whereConditions });
 
         if (!foundRegions.length) {
             throw new NotFoundException(
@@ -441,10 +476,18 @@ export class BilateralService {
         }
 
         // --- Buscar países en clarisa_countries ---
-        const ids = countries.map(r => r.id).filter(Boolean);
-        const names = countries.map(r => r.name).filter(Boolean);
-        const isoAlpha3s = countries.map(r => r.iso_alpha_3).filter(Boolean);
-        const isoAlpha2s = countries.map(r => r.iso_alpha_2).filter(Boolean);
+        const ids = countries
+            .map(r => r.id)
+            .filter(id => id !== null && id !== undefined);
+        const names = countries
+            .map(r => r.name)
+            .filter(name => name !== null && name !== undefined);
+        const isoAlpha3s = countries
+            .map(r => r.iso_alpha_3)
+            .filter(code => code !== null && code !== undefined);
+        const isoAlpha2s = countries
+            .map(r => r.iso_alpha_2)
+            .filter(code => code !== null && code !== undefined);
 
         const whereConditions = [
             ...(ids.length ? [{ id: In(ids) }] : []),
@@ -453,9 +496,11 @@ export class BilateralService {
             ...(isoAlpha2s.length ? [{ iso_alpha_2: In(isoAlpha2s) }] : []),
         ];
 
-        const foundCountries = whereConditions.length
-            ? await this._clarisaCountriesRepository.find({ where: whereConditions })
-            : [];
+        if (whereConditions.length === 0) {
+            throw new BadRequestException('At least one country identifier (id, name, iso_alpha_3, or iso_alpha_2) must be provided.');
+        }
+
+        const foundCountries = await this._clarisaCountriesRepository.find({ where: whereConditions });
 
         if (!foundCountries.length) {
             throw new NotFoundException(
@@ -496,17 +541,29 @@ export class BilateralService {
     private async handleSubnationals(resultCountryArray, subnational_areas, geoScopeId, userId) {
         if (geoScopeId !== 5) return;
 
-        const ids = subnational_areas.map(r => r.id).filter(Boolean);
-        const names = subnational_areas.map(r => r.name).filter(Boolean);
+        const ids = subnational_areas
+            .map(r => r.id)
+            .filter(id => id !== null && id !== undefined);
+        const names = subnational_areas
+            .map(r => r.name)
+            .filter(name => name !== null && name !== undefined);
 
         const whereConditions = [
             ...(ids.length ? [{ id: In(ids) }] : []),
             ...(names.length ? [{ name: In(names) }] : []),
         ];
 
-        const foundSubnationalAreas = whereConditions.length
-            ? await this._clarisaSubnationalAreasRepository.find({ where: whereConditions })
-            : [];        
+        if (whereConditions.length === 0) {
+            throw new BadRequestException('At least one subnational area identifier (id or name) must be provided.');
+        }
+
+        const foundSubnationalAreas = await this._clarisaSubnationalAreasRepository.find({ where: whereConditions });
+
+        if (!foundSubnationalAreas.length) {
+            throw new NotFoundException(
+                `No subnational areas found matching any of the provided identifiers: ids=${ids.join(', ') || 'N/A'}, names=${names.join(', ') || 'N/A'}.`
+            );
+        }
 
         const foundCountryIds = foundSubnationalAreas.map(c => c.code);
 

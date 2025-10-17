@@ -343,6 +343,7 @@ export class ResultBilateralDto {
 
 export class RootResultsDto {
   @IsArray()
+  @IsNotEmpty()
   @ValidateNested({ each: true })
   @Type(() => ResultBilateralDto)
   results: ResultBilateralDto[];
