@@ -22,6 +22,7 @@ import { ResultsKnowledgeProductsModule } from '../results/results-knowledge-pro
 import { ClarisaCentersModule } from '../../clarisa/clarisa-centers/clarisa-centers.module';
 import { NonPooledProjectsModule } from '../results/non-pooled-projects/non-pooled-projects.module';
 import { ResultTypesModule } from '../results/result_types/result_types.module';
+import { ResultsTocResultsModule } from '../results/results-toc-results/results-toc-results.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { ResultTypesModule } from '../results/result_types/result_types.module';
     ClarisaCentersModule,
     NonPooledProjectsModule,
     ResultTypesModule,
+    ResultsTocResultsModule,
   ],
   controllers: [BilateralController],
   providers: [BilateralService],

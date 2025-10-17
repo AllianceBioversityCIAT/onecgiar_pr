@@ -68,7 +68,11 @@ import { SocketManagementModule } from '../../../shared/microservices/socket-man
     UserNotificationSettingRepository,
     GlobalParameterRepository,
   ],
-  exports: [ResultsTocResultRepository, ResultsTocResultsService],
+  exports: [
+    ResultsTocResultRepository,
+    ResultsTocResultsService,
+    ResultsTocResultIndicatorsRepository,
+  ],
   imports: [
     EmailNotificationManagementModule,
     VersioningModule,
