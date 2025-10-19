@@ -31,6 +31,8 @@ import { EvidencesService } from '../results/evidences/evidences.service';
 import { EvidencesRepository } from '../results/evidences/evidences.repository';
 import { Evidence } from '../results/evidences/entities/evidence.entity';
 import { ResultsKnowledgeProductsRepository } from '../results/results-knowledge-products/repositories/results-knowledge-products.repository';
+import { ResultsKnowledgeProductMetadataRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-metadata.repository';
+import { ResultsKnowledgeProductKeywordRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-keywords.repository';
 import { ClarisaCentersRepository } from '../../clarisa/clarisa-centers/clarisa-centers.repository';
 import { NonPooledProjectRepository } from '../results/non-pooled-projects/non-pooled-projects.repository';
 import { ResultTypeRepository } from '../results/result_types/resultType.repository';
@@ -66,6 +68,8 @@ export class BilateralService {
     private readonly _evidencesRepository: EvidencesRepository,
     private readonly _evidencesService: EvidencesService,
     private readonly _resultsKnowledgeProductsRepository: ResultsKnowledgeProductsRepository,
+    private readonly _resultsKnowledgeProductMetadataRepository: ResultsKnowledgeProductMetadataRepository,
+    private readonly _resultsKnowledgeProductKeywordRepository: ResultsKnowledgeProductKeywordRepository,
     private readonly _clarisaCenters: ClarisaCentersRepository,
     private readonly _nonPooledProjectRepository: NonPooledProjectRepository,
     private readonly _resultTypeRepository: ResultTypeRepository,
@@ -136,32 +140,100 @@ export class BilateralService {
 
         const lastCode = await this._resultRepository.getLastResultCode();
 
-        const newResultHeader = await this._resultRepository.save({
-          created_by: userId,
-          version_id: isAdmin && versionId ? versionId : version.id,
-          title: bilateralDto.title,
-          description: bilateralDto.description,
-          reported_year_id: year.year,
-          result_code: lastCode + 1,
-          result_type_id: bilateralDto.result_type_id,
-          result_level_id: bilateralDto.result_level_id,
-          external_submitter: submittedUserId,
-          external_submitted_date:
-            bilateralDto.submitted_by?.submitted_date ?? null,
-          external_submitted_comment:
-            bilateralDto.submitted_by?.comment ?? null,
-          ...(bilateralDto.created_date && {
-            created_date: bilateralDto.created_date,
-          }),
-          source: SourceEnum.Bilateral,
-        });
+        let newResultHeader: Result;
+        let resultId: number;
+
+        if (bilateralDto.result_type_id === 6) {
+          this.logger.log('Direct KP creation (no CGSpace sync)');
+          const existingKp =
+            await this._resultsKnowledgeProductsRepository.findOne({
+              where: { handle: Like(bilateralDto.knowledge_product.handle) },
+              relations: { result_object: true },
+            });
+          if (existingKp) {
+            this.logger.warn(
+              `Knowledge Product with handle ${bilateralDto.knowledge_product.handle} already exists (result_id=${existingKp.result_object.id}), skipping KP creation for this entry.`,
+            );
+            newResultHeader = existingKp.result_object;
+            resultId = newResultHeader.id;
+          } else {
+            newResultHeader = await this._resultRepository.save({
+              created_by: userId,
+              version_id: version.id,
+              title: bilateralDto.title,
+              description: bilateralDto.description,
+              reported_year_id: year.year,
+              result_code: lastCode + 1,
+              result_type_id: bilateralDto.result_type_id,
+              result_level_id: bilateralDto.result_level_id,
+              external_submitter: submittedUserId,
+              external_submitted_date:
+                bilateralDto.submitted_by?.submitted_date ?? null,
+              external_submitted_comment:
+                bilateralDto.submitted_by?.comment ?? null,
+              ...(bilateralDto.created_date && {
+                created_date: bilateralDto.created_date,
+              }),
+              source: SourceEnum.Bilateral,
+            });
+            resultId = newResultHeader.id;
+
+            const kpEntity: any = {
+              results_id: resultId,
+              created_by: userId,
+              handle: bilateralDto.knowledge_product.handle,
+              name: bilateralDto.title,
+              description: bilateralDto.description,
+              knowledge_product_type:
+                bilateralDto.knowledge_product.knowledge_product_type,
+              licence: bilateralDto.knowledge_product.licence,
+              is_active: true,
+            };
+            const savedKp =
+              await this._resultsKnowledgeProductsRepository.save(kpEntity);
+
+            if (bilateralDto.knowledge_product.metadataCG) {
+              const meta = bilateralDto.knowledge_product.metadataCG;
+              await this._resultsKnowledgeProductMetadataRepository.save({
+                result_knowledge_product_id:
+                  savedKp.result_knowledge_product_id,
+                source: meta.source,
+                is_isi: meta.is_isi ?? null,
+                accesibility: meta.accessibility ? 'Open' : 'Restricted',
+                year: meta.issue_year ?? null,
+                online_year: meta.issue_year ?? null,
+                is_peer_reviewed: meta.is_peer_reviewed ?? null,
+                doi: null,
+                created_by: userId,
+                is_active: true,
+              });
+            }
+          }
+        } else {
+          newResultHeader = await this._resultRepository.save({
+            created_by: userId,
+            version_id: version.id,
+            title: bilateralDto.title,
+            description: bilateralDto.description,
+            reported_year_id: year.year,
+            result_code: lastCode + 1,
+            result_type_id: bilateralDto.result_type_id,
+            result_level_id: bilateralDto.result_level_id,
+            external_submitter: submittedUserId,
+            external_submitted_date:
+              bilateralDto.submitted_by?.submitted_date ?? null,
+            external_submitted_comment:
+              bilateralDto.submitted_by?.comment ?? null,
+            ...(bilateralDto.created_date && {
+              created_date: bilateralDto.created_date,
+            }),
+            source: SourceEnum.Bilateral,
+          });
+          resultId = newResultHeader.id;
+        }
 
         // === Lead Center (Primary & Leading) ===
-        await this.handleLeadCenter(
-          newResultHeader.id,
-          bilateralDto.lead_center,
-          userId,
-        );
+        await this.handleLeadCenter(resultId, bilateralDto.lead_center, userId);
 
         // === Geo Focus ===
         const {
@@ -196,55 +268,35 @@ export class BilateralService {
           ...(contributing_partners || []),
         ];
 
-        await this.handleTocMapping(
-          bilateralDto.toc_mapping,
-          userId,
-          newResultHeader.id,
-        );
+        await this.handleTocMapping(bilateralDto.toc_mapping, userId, resultId);
 
-        await this.handleInstitutions(
-          newResultHeader.id,
-          allInstitutions,
-          userId,
-        );
+        await this.handleInstitutions(resultId, allInstitutions, userId);
 
-        await this.handleEvidence(
-          newResultHeader.id,
-          bilateralDto.evidence,
-          userId,
-        );
+        await this.handleEvidence(resultId, bilateralDto.evidence, userId);
 
         await this.handleNonPooledProject(
-          newResultHeader.id,
+          resultId,
           userId,
           bilateralDto.contributing_bilateral_projects,
         );
 
-        const tokenDto: TokenDto = {
-          id: userId,
-          email: createdByUser.email,
-          first_name: createdByUser.first_name,
-          last_name: createdByUser.last_name,
-        };
-        let kpDto = bilateralDto.knowledge_product;
-        let resultDto: ResultsKnowledgeProductDto;
-        if (bilateralDto.result_type_id === 6 /*Knowledge Product*/) {
-          const cgspaceInfo =
-            await this._resultsKnowledgeProductsService.findOnCGSpace(
-              kpDto.handle,
-              tokenDto,
-              null,
-            );
-          resultDto = cgspaceInfo.response as ResultsKnowledgeProductDto;
-          await this._resultsKnowledgeProductsService.create(
-            resultDto,
-            tokenDto,
-          );
+        let kpExtra: any = {};
+        if (bilateralDto.result_type_id === 6) {
+          const kp = await this._resultsKnowledgeProductsRepository.findOne({
+            where: { results_id: resultId },
+          });
+          if (kp) {
+            kpExtra = {
+              knowledge_product_id: kp.result_knowledge_product_id,
+              knowledge_product_handle: kp.handle,
+            };
+          }
         }
 
         createdResults.push({
-          id: newResultHeader.id,
+          id: resultId,
           result_code: newResultHeader.result_code,
+          ...kpExtra,
         });
       }
       return {

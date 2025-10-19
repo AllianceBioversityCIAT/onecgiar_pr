@@ -403,15 +403,6 @@ export class KnowledgeProductDto {
   @IsString()
   @IsNotEmpty()
   licence: string;
-
-  @ApiProperty({
-    description: 'List of AGROVOC keywords associated with the product',
-    example: ['climate change', 'beans', 'Andes'],
-  })
-  @IsArray()
-  @IsString({ each: true })
-  @IsNotEmpty({ each: true })
-  agrovoc_keywords: string[];
 }
 
 export class LeadCenterDto {
