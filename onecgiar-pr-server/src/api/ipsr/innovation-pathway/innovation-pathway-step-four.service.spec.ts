@@ -399,6 +399,9 @@ describe('InnovationPathwayStepFourService', () => {
         contribution_to_indicator_result_array: [],
         obj_result_qaed: [],
         lead_contact_person_id: 1,
+        external_submitter: 2,
+        external_submitted_date: new Date().toISOString(),
+        external_submitted_comment: 'Test Comment',
         obj_lead_contact_person: {
           id: 1,
           cn: 'Test User',
