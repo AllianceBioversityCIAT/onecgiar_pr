@@ -81,7 +81,7 @@ export class AoWBilateralRepository {
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         error,
-        className: TocResultsRepository.name,
+        className: AoWBilateralRepository.name,
         debug: true,
       });
     }
