@@ -3,6 +3,7 @@ import {
   HttpStatus,
   BadRequestException,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { RootResultsDto, SubmittedByDto } from './dto/create-bilateral.dto';
 import { ResultRepository } from '../results/result.repository';
@@ -73,6 +74,8 @@ export class BilateralService {
     private readonly _resultsTocResultsIndicatorsRepository: ResultsTocResultIndicatorsRepository,
   ) {}
 
+  private readonly logger = new Logger(BilateralService.name);
+
   async create(
     rootResultsDto: RootResultsDto,
     isAdmin?: boolean,
@@ -103,7 +106,9 @@ export class BilateralService {
           resultType = await this._resultTypeRepository.findOne({
             where: { name: result.type },
           });
-          console.log('resultType (from DB):', resultType);
+          this.logger.debug(
+            `Resolved result type from DB: ${JSON.stringify(resultType)}`,
+          );
           if (!resultType) {
             throw new NotFoundException(
               `Result type not found for name: ${result.type}`,
@@ -111,12 +116,17 @@ export class BilateralService {
           }
         }
 
-        const createdByUser = await this.findOrCreateUser(bilateralDto.created_by, adminUser)
+        const createdByUser = await this.findOrCreateUser(
+          bilateralDto.created_by,
+          adminUser,
+        );
         const userId = createdByUser.id;
 
-        const submittedUser = await this.findOrCreateUser(bilateralDto.submitted_by, createdByUser)
+        const submittedUser = await this.findOrCreateUser(
+          bilateralDto.submitted_by,
+          createdByUser,
+        );
         const submittedUserId = submittedUser.id;
-
 
         // === Crear encabezado del Result ===
         const version = await this._versioningService.$_findActivePhase(
@@ -247,51 +257,59 @@ export class BilateralService {
         status: 201,
       };
     } catch (error) {
-      console.error('Error creating bilateral:', error);
+      this.logger.error(
+        'Error creating bilateral',
+        error instanceof Error ? error.stack : JSON.stringify(error),
+      );
       throw error;
     }
+  }
+
+  private async findOrCreateUser(userData, adminUser): Promise<any> {
+    if (!userData?.email) {
+      throw new BadRequestException('User email is required.');
     }
 
-    private async findOrCreateUser(
-        userData,
+    let user = await this._userRepository.findOne({
+      where: { email: userData.email },
+    });
+
+    if (!user) {
+      const createUserDto: CreateUserDto = {
+        first_name: userData.name ?? '(no name)',
+        last_name: '(external)',
+        email: userData.email,
+        is_cgiar: true,
+        created_by: adminUser,
+      };
+
+      this.logger.log(`Creating new user for email: ${createUserDto.email}`);
+      const createdUserResult = await this._userService.createFull(
+        createUserDto,
         adminUser,
-    ): Promise<any> {
-        if (!userData?.email) {
-            throw new BadRequestException('User email is required.');
-        }
+      );
+      if (createdUserResult && typeof createdUserResult === 'object') {
+        const maybeId = (createdUserResult as any).id;
+        const maybeEmail = (createdUserResult as any).email;
+        this.logger.debug(
+          `Created user result: ${JSON.stringify({ id: maybeId ?? null, email: maybeEmail ?? null })}`,
+        );
+      } else {
+        this.logger.debug('Created user result: (non-object response)');
+      }
 
-        let user = await this._userRepository.findOne({
-            where: { email: userData.email },
-        });
-
-        if (!user) {
-            const createUserDto: CreateUserDto = {
-            first_name: userData.name ?? '(no name)',
-            last_name: '(external)',
-            email: userData.email,
-            is_cgiar: true,
-            created_by: adminUser,
-            };
-
-            console.log('Creating new user for email:', createUserDto);
-            const createdUserResult = await this._userService.createFull(
-            createUserDto,
-            adminUser,
-            );
-            console.log('Created user:', createdUserResult);
-
-            return createdUserResult;
-        }
-
-        return user;
+      return createdUserResult;
     }
+
+    return user;
+  }
 
   private async handleTocMapping(tocArray, userId, resultId) {
     for (const toc of tocArray) {
       const mapToToc =
         await this._resultsTocResultsRepository.findTocResultsForBilateral(toc);
 
-      console.log('mapToToc:', mapToToc);
+      this.logger.debug(`Mapping ToC data: ${JSON.stringify(mapToToc)}`);
 
       const init = await this._clarisaInitiatives.findOne({
         where: { official_code: toc.science_program_id },
@@ -323,22 +341,21 @@ export class BilateralService {
     bilateralProjects,
     lead_center,
   ) {
-
     const foundInstitution = await this._clarisaInstitutionsRepository.findOne({
       where: [
-            { name: Like(`%${lead_center}%`) },
-            { acronym: Like(`%${lead_center}%`) },
-        ],
+        { name: Like(`%${lead_center}%`) },
+        { acronym: Like(`%${lead_center}%`) },
+      ],
     });
 
     let clarisaCenter;
     if (foundInstitution.id) {
-        clarisaCenter = await this._clarisaCenters.findOne({
-            where: { institutionId: foundInstitution.id },
-        });
-        if (!clarisaCenter) {
-           clarisaCenter = null 
-        }
+      clarisaCenter = await this._clarisaCenters.findOne({
+        where: { institutionId: foundInstitution.id },
+      });
+      if (!clarisaCenter) {
+        clarisaCenter = null;
+      }
     }
 
     for (const nonpp of bilateralProjects) {

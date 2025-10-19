@@ -348,14 +348,6 @@ export class MetadataCGDto {
   accessibility: boolean;
 
   @ApiProperty({
-    description: 'Digital Object Identifier (DOI) of the knowledge product',
-    example: '10.1000/xyz123',
-  })
-  @IsString()
-  @IsNotEmpty()
-  doi: string;
-
-  @ApiProperty({
     description: 'Indicates if the product is indexed in ISI',
     example: false,
   })
