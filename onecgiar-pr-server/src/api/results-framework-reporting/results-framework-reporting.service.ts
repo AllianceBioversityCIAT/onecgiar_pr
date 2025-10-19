@@ -110,6 +110,23 @@ export class ResultsFrameworkReportingService {
         order: { code: 'ASC' },
       });
 
+      const tocAcronyms =
+        await this._tocResultsRepository.findUnitAcronymsByProgram(
+          initiative.official_code.toUpperCase(),
+        );
+
+      const filteredUnits = childUnits
+        .filter((unit) => tocAcronyms.has(unit.code?.toUpperCase() ?? ''))
+        .map((unit) => ({
+          id: unit.id,
+          code: unit.code,
+          name: unit.name,
+          composeCode: unit.composeCode,
+          year: unit.year,
+          level: unit.level,
+          parentId: unit.parentId,
+        }));
+
       return {
         response: {
           initiative: {
@@ -126,15 +143,7 @@ export class ResultsFrameworkReportingService {
             level: parentUnit.level,
             year: parentUnit.year,
           },
-          units: childUnits.map((unit) => ({
-            id: unit.id,
-            code: unit.code,
-            name: unit.name,
-            composeCode: unit.composeCode,
-            year: unit.year,
-            level: unit.level,
-            parentId: unit.parentId,
-          })),
+          units: filteredUnits,
           metadata: {
             activeYear: activeYearValue,
             portfolio: parentUnit.portfolioId,

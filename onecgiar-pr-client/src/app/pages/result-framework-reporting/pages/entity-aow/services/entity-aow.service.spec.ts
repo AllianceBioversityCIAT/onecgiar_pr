@@ -98,7 +98,9 @@ describe('EntityAowService', () => {
       resultsSE: {
         GET_ClarisaGlobalUnits: jest.fn().mockReturnValue(of(mockApiResponse)),
         GET_TocResultsByAowId: jest.fn().mockReturnValue(of(mockTocApiResponse)),
-        GET_IndicatorContributionSummary: jest.fn().mockReturnValue(of(mockIndicatorApiResponse))
+        GET_IndicatorContributionSummary: jest.fn().mockReturnValue(of(mockIndicatorApiResponse)),
+        GET_W3BilateralProjects: jest.fn().mockReturnValue(of({ response: [] })),
+        GET_ExistingResultsContributors: jest.fn().mockReturnValue(of({ response: { contributors: [] } }))
       }
     } as any;
 
@@ -802,6 +804,351 @@ describe('EntityAowService', () => {
     });
   });
 
+  describe('Computed signals', () => {
+    it('should compute currentAowSelected correctly when aowId matches', () => {
+      service.entityAows.set(mockUnits);
+      service.aowId.set('AOW-001');
+
+      const currentAow = service.currentAowSelected();
+
+      expect(currentAow).toEqual(mockUnits[0]);
+    });
+
+    it('should return undefined when currentAowSelected finds no match', () => {
+      service.entityAows.set(mockUnits);
+      service.aowId.set('NONEXISTENT-AOW');
+
+      const currentAow = service.currentAowSelected();
+
+      expect(currentAow).toBeUndefined();
+    });
+
+    it('should return undefined when entityAows is empty', () => {
+      service.entityAows.set([]);
+      service.aowId.set('AOW-001');
+
+      const currentAow = service.currentAowSelected();
+
+      expect(currentAow).toBeUndefined();
+    });
+
+    it('should compute currentResultIsKnowledgeProduct correctly for knowledge product', () => {
+      const knowledgeProductResult = {
+        indicators: [
+          {
+            type_value: 'Number of knowledge products'
+          }
+        ]
+      };
+      service.currentResultToReport.set(knowledgeProductResult);
+
+      const isKnowledgeProduct = service.currentResultIsKnowledgeProduct();
+
+      expect(isKnowledgeProduct).toBe(true);
+    });
+
+    it('should compute currentResultIsKnowledgeProduct correctly for non-knowledge product', () => {
+      const regularResult = {
+        indicators: [
+          {
+            type_value: 'Number of outcomes'
+          }
+        ]
+      };
+      service.currentResultToReport.set(regularResult);
+
+      const isKnowledgeProduct = service.currentResultIsKnowledgeProduct();
+
+      expect(isKnowledgeProduct).toBe(false);
+    });
+
+    it('should return false when currentResultToReport has no indicators', () => {
+      const resultWithoutIndicators = {};
+      service.currentResultToReport.set(resultWithoutIndicators);
+
+      const isKnowledgeProduct = service.currentResultIsKnowledgeProduct();
+
+      expect(isKnowledgeProduct).toBe(false);
+    });
+
+    it('should return false when currentResultToReport is empty', () => {
+      service.currentResultToReport.set({});
+
+      const isKnowledgeProduct = service.currentResultIsKnowledgeProduct();
+
+      expect(isKnowledgeProduct).toBe(false);
+    });
+  });
+
+  describe('Additional signals', () => {
+    it('should update w3BilateralProjects signal', () => {
+      const mockProjects = [
+        { id: 1, name: 'Project 1', status: 'active' },
+        { id: 2, name: 'Project 2', status: 'completed' }
+      ];
+      service.w3BilateralProjects.set(mockProjects);
+
+      expect(service.w3BilateralProjects()).toEqual(mockProjects);
+    });
+
+    it('should update selectedW3BilateralProjects signal', () => {
+      const mockSelectedProjects = [
+        { id: 1, name: 'Selected Project 1' },
+        { id: 2, name: 'Selected Project 2' }
+      ];
+      service.selectedW3BilateralProjects.set(mockSelectedProjects);
+
+      expect(service.selectedW3BilateralProjects()).toEqual(mockSelectedProjects);
+    });
+
+    it('should update selectedEntities signal', () => {
+      const mockSelectedEntities = [
+        { id: 1, name: 'Entity 1', type: 'initiative' },
+        { id: 2, name: 'Entity 2', type: 'unit' }
+      ];
+      service.selectedEntities.set(mockSelectedEntities);
+
+      expect(service.selectedEntities()).toEqual(mockSelectedEntities);
+    });
+
+    it('should update existingResultsContributors signal', () => {
+      const mockContributors = [
+        { id: 1, name: 'Contributor 1', role: 'lead' },
+        { id: 2, name: 'Contributor 2', role: 'member' }
+      ];
+      service.existingResultsContributors.set(mockContributors);
+
+      expect(service.existingResultsContributors()).toEqual(mockContributors);
+    });
+
+    it('should update showReportResultModal signal', () => {
+      service.showReportResultModal.set(true);
+      expect(service.showReportResultModal()).toBe(true);
+
+      service.showReportResultModal.set(false);
+      expect(service.showReportResultModal()).toBe(false);
+    });
+
+    it('should update currentResultToReport signal', () => {
+      const mockResult = {
+        id: 1,
+        title: 'Test Result',
+        description: 'Test Description',
+        indicators: []
+      };
+      service.currentResultToReport.set(mockResult);
+
+      expect(service.currentResultToReport()).toEqual(mockResult);
+    });
+  });
+
+  describe('getW3BilateralProjects', () => {
+    const mockCurrentResult = {
+      toc_result_id: 'result-123'
+    };
+
+    const mockW3BilateralProjects = [
+      { id: 1, name: 'W3 Project 1', status: 'active' },
+      { id: 2, name: 'W3 Project 2', status: 'completed' }
+    ];
+
+    const mockW3ApiResponse = {
+      response: mockW3BilateralProjects
+    };
+
+    beforeEach(() => {
+      service.currentResultToReport.set(mockCurrentResult);
+    });
+
+    it('should call API with correct toc_result_id', () => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_W3BilateralProjects').mockReturnValue(of(mockW3ApiResponse));
+
+      service.getW3BilateralProjects();
+
+      expect(mockApiService.resultsSE.GET_W3BilateralProjects).toHaveBeenCalledWith('result-123');
+    });
+
+    it('should update w3BilateralProjects on successful API call', () => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_W3BilateralProjects').mockReturnValue(of(mockW3ApiResponse));
+
+      service.getW3BilateralProjects();
+
+      expect(service.w3BilateralProjects()).toEqual(mockW3BilateralProjects);
+    });
+
+    it('should handle empty response', () => {
+      const emptyResponse = { response: [] };
+      jest.spyOn(mockApiService.resultsSE, 'GET_W3BilateralProjects').mockReturnValue(of(emptyResponse));
+
+      service.getW3BilateralProjects();
+
+      expect(service.w3BilateralProjects()).toEqual([]);
+    });
+
+    it('should handle null response', () => {
+      const nullResponse = { response: null };
+      jest.spyOn(mockApiService.resultsSE, 'GET_W3BilateralProjects').mockReturnValue(of(nullResponse));
+
+      service.getW3BilateralProjects();
+
+      expect(service.w3BilateralProjects()).toEqual([]);
+    });
+
+    it('should handle undefined response', () => {
+      const undefinedResponse = { response: undefined };
+      jest.spyOn(mockApiService.resultsSE, 'GET_W3BilateralProjects').mockReturnValue(of(undefinedResponse));
+
+      service.getW3BilateralProjects();
+
+      expect(service.w3BilateralProjects()).toEqual([]);
+    });
+  });
+
+  describe('getExistingResultsContributors', () => {
+    const mockCurrentResult = {
+      toc_result_id: 'result-123',
+      indicators: [{ related_node_id: 'node-456' }]
+    };
+
+    const mockContributors = [
+      { id: 1, name: 'Contributor 1', role: 'lead' },
+      { id: 2, name: 'Contributor 2', role: 'member' }
+    ];
+
+    const mockContributorsApiResponse = {
+      response: {
+        contributors: mockContributors
+      }
+    };
+
+    beforeEach(() => {
+      service.currentResultToReport.set(mockCurrentResult);
+    });
+
+    it('should call API with correct parameters', () => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_ExistingResultsContributors').mockReturnValue(of(mockContributorsApiResponse));
+
+      service.getExistingResultsContributors();
+
+      expect(mockApiService.resultsSE.GET_ExistingResultsContributors).toHaveBeenCalledWith('result-123', 'node-456');
+    });
+
+    it('should update existingResultsContributors on successful API call', () => {
+      jest.spyOn(mockApiService.resultsSE, 'GET_ExistingResultsContributors').mockReturnValue(of(mockContributorsApiResponse));
+
+      service.getExistingResultsContributors();
+
+      expect(service.existingResultsContributors()).toEqual(mockContributors);
+    });
+
+    it('should handle empty contributors array', () => {
+      const emptyResponse = {
+        response: {
+          contributors: []
+        }
+      };
+      jest.spyOn(mockApiService.resultsSE, 'GET_ExistingResultsContributors').mockReturnValue(of(emptyResponse));
+
+      service.getExistingResultsContributors();
+
+      expect(service.existingResultsContributors()).toEqual([]);
+    });
+
+    it('should handle null contributors', () => {
+      const nullResponse = {
+        response: {
+          contributors: null
+        }
+      };
+      jest.spyOn(mockApiService.resultsSE, 'GET_ExistingResultsContributors').mockReturnValue(of(nullResponse));
+
+      service.getExistingResultsContributors();
+
+      expect(service.existingResultsContributors()).toEqual([]);
+    });
+
+    it('should handle undefined response', () => {
+      const undefinedResponse = {
+        response: undefined
+      };
+      jest.spyOn(mockApiService.resultsSE, 'GET_ExistingResultsContributors').mockReturnValue(of(undefinedResponse));
+
+      service.getExistingResultsContributors();
+
+      expect(service.existingResultsContributors()).toEqual([]);
+    });
+  });
+
+  describe('onCloseReportResultModal', () => {
+    beforeEach(() => {
+      // Set up initial state
+      service.showReportResultModal.set(true);
+      service.currentResultToReport.set({ id: 1, title: 'Test Result' });
+      service.w3BilateralProjects.set([{ id: 1, name: 'Project 1' }]);
+      service.selectedW3BilateralProjects.set([{ id: 1, name: 'Selected Project' }]);
+      service.selectedEntities.set([{ id: 1, name: 'Entity 1' }]);
+      service.existingResultsContributors.set([{ id: 1, name: 'Contributor 1' }]);
+    });
+
+    it('should reset all modal-related signals', () => {
+      service.onCloseReportResultModal();
+
+      expect(service.showReportResultModal()).toBe(false);
+      expect(service.currentResultToReport()).toEqual({});
+      expect(service.w3BilateralProjects()).toEqual([]);
+      expect(service.selectedW3BilateralProjects()).toEqual([]);
+      expect(service.selectedEntities()).toEqual([]);
+      expect(service.existingResultsContributors()).toEqual([]);
+    });
+
+    it('should be idempotent - calling multiple times should not cause issues', () => {
+      service.onCloseReportResultModal();
+      service.onCloseReportResultModal();
+      service.onCloseReportResultModal();
+
+      expect(service.showReportResultModal()).toBe(false);
+      expect(service.currentResultToReport()).toEqual({});
+      expect(service.w3BilateralProjects()).toEqual([]);
+      expect(service.selectedW3BilateralProjects()).toEqual([]);
+      expect(service.selectedEntities()).toEqual([]);
+      expect(service.existingResultsContributors()).toEqual([]);
+    });
+  });
+
+  describe('Error handling for getTocResultsByAowId', () => {
+    it('should handle API error and reset state', () => {
+      const entityId = 'test-entity-id';
+      const aowId = 'test-aow-id';
+      const error = new Error('API Error');
+      jest.spyOn(mockApiService.resultsSE, 'GET_TocResultsByAowId').mockReturnValue(throwError(() => error));
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      service.getTocResultsByAowId(entityId, aowId);
+
+      expect(service.tocResultsByAowId()).toEqual([]);
+      expect(service.isLoadingTocResultsByAowId()).toBe(false);
+      expect(consoleSpy).toHaveBeenCalledWith(error);
+
+      consoleSpy.mockRestore();
+    });
+
+    it('should handle API error without breaking the service', () => {
+      const entityId = 'test-entity-id';
+      const aowId = 'test-aow-id';
+      const error = new Error('Network Error');
+      jest.spyOn(mockApiService.resultsSE, 'GET_TocResultsByAowId').mockReturnValue(throwError(() => error));
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      // Should not throw
+      expect(() => service.getTocResultsByAowId(entityId, aowId)).not.toThrow();
+
+      expect(service.tocResultsByAowId()).toEqual([]);
+      expect(service.isLoadingTocResultsByAowId()).toBe(false);
+
+      consoleSpy.mockRestore();
+    });
+  });
+
   describe('Integration scenarios', () => {
     it('should handle complete flow from API call to sidebar update', () => {
       const entityId = 'integration-test-id';
@@ -903,6 +1250,42 @@ describe('EntityAowService', () => {
       expect(service.tocResultsByAowId()).toEqual(customTocResults);
       expect(service.isLoadingTocResultsByAowId()).toBe(false);
       expect(mockApiService.resultsSE.GET_TocResultsByAowId).toHaveBeenCalledWith(entityId, aowId2);
+    });
+
+    it('should handle complete modal workflow', () => {
+      const mockResult = {
+        toc_result_id: 'result-123',
+        indicators: [{ related_node_id: 'node-456' }]
+      };
+
+      // Open modal and set result
+      service.showReportResultModal.set(true);
+      service.currentResultToReport.set(mockResult);
+
+      // Load related data
+      const mockW3Projects = [{ id: 1, name: 'Project 1' }];
+      const mockContributors = [{ id: 1, name: 'Contributor 1' }];
+
+      jest.spyOn(mockApiService.resultsSE, 'GET_W3BilateralProjects').mockReturnValue(of({ response: mockW3Projects }));
+      jest.spyOn(mockApiService.resultsSE, 'GET_ExistingResultsContributors').mockReturnValue(
+        of({
+          response: { contributors: mockContributors }
+        })
+      );
+
+      service.getW3BilateralProjects();
+      service.getExistingResultsContributors();
+
+      expect(service.w3BilateralProjects()).toEqual(mockW3Projects);
+      expect(service.existingResultsContributors()).toEqual(mockContributors);
+
+      // Close modal
+      service.onCloseReportResultModal();
+
+      expect(service.showReportResultModal()).toBe(false);
+      expect(service.currentResultToReport()).toEqual({});
+      expect(service.w3BilateralProjects()).toEqual([]);
+      expect(service.existingResultsContributors()).toEqual([]);
     });
   });
 });
