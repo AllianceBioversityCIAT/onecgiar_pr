@@ -487,8 +487,7 @@ export class UserService {
       relations: ['obj_user', 'obj_initiative'],
     });
 
-    if (existingLead){
-
+    if (existingLead) {
       if (existingLead.user === updatedUserId) {
         return;
       }
