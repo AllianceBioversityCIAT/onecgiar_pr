@@ -80,6 +80,6 @@ export const ModulesRoutes: Routes = [
   },
   {
     path: 'bilateral',
-    module: BilateralModule
-  }
+    module: BilateralModule,
+  },
 ];

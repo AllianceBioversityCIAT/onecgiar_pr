@@ -39,14 +39,12 @@ import { ResultTypeRepository } from '../results/result_types/resultType.reposit
 import { UserService } from '../../auth/modules/user/user.service';
 import { CreateUserDto } from '../../auth/modules/user/dto/create-user.dto';
 import { ResultsKnowledgeProductsService } from '../results/results-knowledge-products/results-knowledge-products.service';
-import { TokenDto } from '../../shared/globalInterfaces/token.dto';
-import { ResultsKnowledgeProductDto } from '../results/results-knowledge-products/dto/results-knowledge-product.dto';
 import { ResultsTocResultRepository } from '../results/results-toc-results/repositories/results-toc-results.repository';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { ResultsTocResultIndicatorsRepository } from '../results/results-toc-results/repositories/results-toc-results-indicators.repository';
-import { User } from '../../auth/modules/user/entities/user.entity';
 import { ResultsCenterRepository } from '../results/results-centers/results-centers.repository';
 import { ClarisaCenter } from '../../clarisa/clarisa-centers/entities/clarisa-center.entity';
+import { ClarisaInstitution } from '../../clarisa/clarisa-institutions/entities/clarisa-institution.entity';
 
 @Injectable()
 export class BilateralService {
@@ -69,12 +67,9 @@ export class BilateralService {
     private readonly _evidencesService: EvidencesService,
     private readonly _resultsKnowledgeProductsRepository: ResultsKnowledgeProductsRepository,
     private readonly _resultsKnowledgeProductMetadataRepository: ResultsKnowledgeProductMetadataRepository,
-    private readonly _resultsKnowledgeProductKeywordRepository: ResultsKnowledgeProductKeywordRepository,
     private readonly _clarisaCenters: ClarisaCentersRepository,
     private readonly _nonPooledProjectRepository: NonPooledProjectRepository,
-    private readonly _resultTypeRepository: ResultTypeRepository,
     private readonly _userService: UserService,
-    private readonly _resultsKnowledgeProductsService: ResultsKnowledgeProductsService,
     private readonly _resultsTocResultsRepository: ResultsTocResultRepository,
     private readonly _clarisaInitiatives: ClarisaInitiativesRepository,
     private readonly _resultsTocResultsIndicatorsRepository: ResultsTocResultIndicatorsRepository,
@@ -83,16 +78,7 @@ export class BilateralService {
 
   private readonly logger = new Logger(BilateralService.name);
 
-  async create(
-    rootResultsDto: RootResultsDto,
-    isAdmin?: boolean,
-    versionId?: number,
-  ) {
-    this.logger.log(
-      'Received RootResultsDto:',
-      JSON.stringify(rootResultsDto, null, 2),
-    );
-
+  async create(rootResultsDto: RootResultsDto) {
     if (
       !rootResultsDto?.results ||
       !Array.isArray(rootResultsDto.results) ||
@@ -107,7 +93,7 @@ export class BilateralService {
       for (const result of rootResultsDto.results) {
         const bilateralDto = result.data;
 
-        let adminUser = await this._userRepository.findOne({
+        const adminUser = await this._userRepository.findOne({
           where: { email: 'admin@prms.pr' },
         });
 
@@ -123,7 +109,6 @@ export class BilateralService {
         );
         const submittedUserId = submittedUser.id;
 
-        // === Crear encabezado del Result ===
         const version = await this._versioningService.$_findActivePhase(
           AppModuleIdEnum.REPORTING,
         );
@@ -143,11 +128,15 @@ export class BilateralService {
         let newResultHeader: Result;
         let resultId: number;
 
+        let isDuplicateKp = false;
         if (bilateralDto.result_type_id === 6) {
           this.logger.log('Direct KP creation (no CGSpace sync)');
           const existingKp =
             await this._resultsKnowledgeProductsRepository.findOne({
-              where: { handle: Like(bilateralDto.knowledge_product.handle) },
+              where: {
+                handle: Like(bilateralDto.knowledge_product.handle),
+                result_object: { is_active: true },
+              },
               relations: { result_object: true },
             });
           if (existingKp) {
@@ -156,6 +145,7 @@ export class BilateralService {
             );
             newResultHeader = existingKp.result_object;
             resultId = newResultHeader.id;
+            isDuplicateKp = true;
           } else {
             newResultHeader = await this._resultRepository.save({
               created_by: userId,
@@ -232,52 +222,65 @@ export class BilateralService {
           resultId = newResultHeader.id;
         }
 
-        // === Lead Center (Primary & Leading) ===
-        await this.handleLeadCenter(resultId, bilateralDto.lead_center, userId);
+        // === Ancillary handlers skipped if KP already existed to avoid duplicate inserts ===
+        if (!isDuplicateKp) {
+          await this.handleLeadCenter(
+            resultId,
+            bilateralDto.lead_center,
+            userId,
+          );
 
-        // === Geo Focus ===
-        const {
-          scope_code,
-          scope_label,
-          regions,
-          countries,
-          subnational_areas,
-        } = bilateralDto.geo_focus;
-        const scope = await this.findScope(scope_code, scope_label);
-        this.validateGeoFocus(scope, regions, countries, subnational_areas);
+          const {
+            scope_code,
+            scope_label,
+            regions,
+            countries,
+            subnational_areas,
+          } = bilateralDto.geo_focus;
+          const scope = await this.findScope(scope_code, scope_label);
+          this.validateGeoFocus(scope, regions, countries, subnational_areas);
 
-        await this.handleRegions(newResultHeader, scope, regions);
-        await this.handleCountries(
-          newResultHeader,
-          countries,
-          subnational_areas,
-          scope.id,
-          userId,
-        );
+          await this.handleRegions(newResultHeader, scope, regions);
+          await this.handleCountries(
+            newResultHeader,
+            countries,
+            subnational_areas,
+            scope.id,
+            userId,
+          );
 
-        await this._resultRepository.save({
-          ...newResultHeader,
-          geographic_scope_id: this.resolveScopeId(scope.id, countries),
-        });
+          await this._resultRepository.save({
+            ...newResultHeader,
+            geographic_scope_id: this.resolveScopeId(scope.id, countries),
+          });
 
-        // === Instituciones ===
-        const { contributing_center, contributing_partners } = bilateralDto;
+          await this.handleTocMapping(
+            bilateralDto.toc_mapping,
+            userId,
+            resultId,
+          );
+          await this.handleInstitutions(
+            resultId,
+            bilateralDto.contributing_partners || [],
+            userId,
+          );
+          await this.handleEvidence(resultId, bilateralDto.evidence, userId);
+          await this.handleNonPooledProject(
+            resultId,
+            userId,
+            bilateralDto.contributing_bilateral_projects,
+          );
+        } else {
+          this.logger.debug(
+            `Skipping TOC, institutions, evidence and NPP handlers for duplicate KP handle='${bilateralDto.knowledge_product.handle}' (result_id=${resultId}).`,
+          );
+        }
 
-        const allInstitutions = [
-          ...(contributing_center || []),
-          ...(contributing_partners || []),
-        ];
-
-        await this.handleTocMapping(bilateralDto.toc_mapping, userId, resultId);
-
-        await this.handleInstitutions(resultId, allInstitutions, userId);
-
-        await this.handleEvidence(resultId, bilateralDto.evidence, userId);
-
-        await this.handleNonPooledProject(
+        await this.handleContributingCenters(
           resultId,
+          bilateralDto.contributing_center || [],
           userId,
-          bilateralDto.contributing_bilateral_projects,
+          bilateralDto.lead_center,
         );
 
         let kpExtra: any = {};
@@ -296,6 +299,7 @@ export class BilateralService {
         createdResults.push({
           id: resultId,
           result_code: newResultHeader.result_code,
+          is_duplicate_kp: isDuplicateKp,
           ...kpExtra,
         });
       }
@@ -320,7 +324,7 @@ export class BilateralService {
       throw new BadRequestException('User email is required.');
     }
 
-    let user = await this._userRepository.findOne({
+    const user = await this._userRepository.findOne({
       where: { email: userData.email },
     });
 
@@ -500,7 +504,7 @@ export class BilateralService {
       return;
     }
 
-    let institutionCandidates = [];
+    const institutionCandidates = [];
 
     if (institution_id) {
       const inst = await this._clarisaInstitutionsRepository.findOne({
@@ -588,6 +592,99 @@ export class BilateralService {
     }
   }
 
+  /**
+   * Stores contributing centers (non lead) into results_center.
+   * Input objects follow InstitutionDto shape: may include institution_id, acronym, or name.
+   * Avoids duplicating the lead center if already stored.
+   */
+  private async handleContributingCenters(
+    resultId: number,
+    centers: { name?: string; acronym?: string; institution_id?: number }[],
+    userId: number,
+    leadCenter?: { name?: string; acronym?: string; institution_id?: number },
+  ) {
+    if (!Array.isArray(centers) || !centers.length) return;
+
+    for (const centerInput of centers) {
+      if (!centerInput) continue;
+      const { name, acronym, institution_id } = centerInput;
+      if (!name && !acronym && !institution_id) continue;
+
+      if (
+        leadCenter &&
+        ((leadCenter.institution_id &&
+          institution_id &&
+          leadCenter.institution_id === institution_id) ||
+          (leadCenter.acronym &&
+            acronym &&
+            leadCenter.acronym.toLowerCase() === acronym.toLowerCase()) ||
+          (leadCenter.name &&
+            name &&
+            leadCenter.name.toLowerCase() === name.toLowerCase()))
+      ) {
+        continue;
+      }
+
+      const institutionCandidates = [];
+      if (institution_id) {
+        const inst = await this._clarisaInstitutionsRepository.findOne({
+          where: { id: institution_id },
+        });
+        if (inst) institutionCandidates.push(inst);
+      }
+      const fuzzyConditions = [];
+      if (name) fuzzyConditions.push({ name: Like(`%${name}%`) });
+      if (acronym) fuzzyConditions.push({ acronym: Like(`%${acronym}%`) });
+      if (!institution_id && fuzzyConditions.length) {
+        const fuzzy = await this._clarisaInstitutionsRepository.find({
+          where: fuzzyConditions,
+        });
+        for (const f of fuzzy) {
+          if (!institutionCandidates.find((c) => c.id === f.id)) {
+            institutionCandidates.push(f);
+          }
+        }
+      }
+      if (!institutionCandidates.length) continue;
+
+      let selectedCenter: ClarisaCenter = null;
+      for (const inst of institutionCandidates) {
+        const centersFound = await this._clarisaCenters.find({
+          where: { institutionId: inst.id },
+        });
+        if (centersFound?.length) {
+          selectedCenter = centersFound[0];
+          break;
+        }
+      }
+      if (!selectedCenter) continue;
+
+      const existing =
+        await this._resultsCenterRepository.getAllResultsCenterByResultIdAndCenterId(
+          resultId,
+          selectedCenter.code,
+        );
+      if (existing) continue;
+
+      try {
+        await this._resultsCenterRepository.save({
+          result_id: resultId,
+          center_id: selectedCenter.code,
+          is_primary: false,
+          is_leading_result: false,
+          from_cgspace: false,
+          is_active: true,
+          created_by: userId,
+        });
+      } catch (err) {
+        this.logger.error(
+          `Failed to save contributing center ${selectedCenter.code} for result ${resultId}`,
+          err instanceof Error ? err.stack : JSON.stringify(err),
+        );
+      }
+    }
+  }
+
   private async handleEvidence(resultId, evidence, userId) {
     const evidencesArray = evidence.filter((e) => !!e?.link);
     const testDuplicate = evidencesArray.map((e) => e.link);
@@ -635,41 +732,47 @@ export class BilateralService {
   }
 
   private async handleInstitutions(resultId, institutions, userId) {
-    const whereConditions = [];
+    if (!Array.isArray(institutions) || !institutions.length) return;
 
-    const institutionIds = institutions
-      .map((r) => r.institution_id)
-      .filter((id) => id !== null && id !== undefined);
-    if (institutionIds.length) {
-      whereConditions.push({ id: In(institutionIds) });
+    const resolvedInstitutionIds: number[] = [];
+
+    for (const input of institutions) {
+      if (!input) continue;
+      const { institution_id, name, acronym } = input;
+      let matched: ClarisaInstitution | null = null;
+
+      if (institution_id) {
+        matched = await this._clarisaInstitutionsRepository.findOne({
+          where: { id: institution_id },
+        });
+      }
+
+      if (!matched && (name || acronym)) {
+        const fuzzyConds = [];
+        if (name) fuzzyConds.push({ name: Like(`%${name}%`) });
+        if (acronym) fuzzyConds.push({ acronym: Like(`%${acronym}%`) });
+        if (fuzzyConds.length) {
+          const fuzzy = await this._clarisaInstitutionsRepository.find({
+            where: fuzzyConds,
+          });
+          if (fuzzy?.length) matched = fuzzy[0];
+        }
+      }
+
+      if (matched && !resolvedInstitutionIds.includes(matched.id)) {
+        resolvedInstitutionIds.push(matched.id);
+      }
     }
 
-    const names = institutions
-      .map((r) => r.name)
-      .filter((name) => name !== null && name !== undefined);
-    if (names.length) {
-      whereConditions.push({ name: In(names) });
-    }
-
-    const acronyms = institutions
-      .map((r) => r.iso_alpha_3)
-      .filter((acronym) => acronym !== null && acronym !== undefined);
-    if (acronyms.length) {
-      whereConditions.push({ acronym: In(acronyms) });
-    }
-
-    if (whereConditions.length === 0) {
-      throw new BadRequestException(
-        'At least one institution identifier (id, name, or acronym) must be provided.',
+    if (!resolvedInstitutionIds.length) {
+      this.logger.warn(
+        'handleInstitutions: no institutions resolved from provided partners; skipping.',
       );
+      return;
     }
 
-    const foundInstitutions = await this._clarisaInstitutionsRepository.find({
-      where: whereConditions,
-    });
-
-    const mappedInstitutions = foundInstitutions.map((institution) => ({
-      institutions_id: institution.id,
+    const mappedInstitutions = resolvedInstitutionIds.map((id) => ({
+      institutions_id: id,
     }));
 
     await this._resultByIntitutionsRepository.updateInstitutions(
@@ -677,29 +780,32 @@ export class BilateralService {
       mappedInstitutions,
       userId,
       false,
-      [InstitutionRoleEnum.ACTOR],
+      [InstitutionRoleEnum.PARTNER],
     );
-    const saveInstitutions: ResultsByInstitution[] = [];
-    for (let index = 0; index < institutions.length; index++) {
-      const isInstitutions =
+
+    const toPersist: ResultsByInstitution[] = [];
+    for (const instId of resolvedInstitutionIds) {
+      const exists =
         await this._resultByIntitutionsRepository.getResultByInstitutionExists(
           resultId,
-          institutions[index].institutions_id,
-          InstitutionRoleEnum.ACTOR,
+          instId,
+          InstitutionRoleEnum.PARTNER,
         );
-      if (!isInstitutions) {
-        const institutionsNew: ResultsByInstitution =
-          new ResultsByInstitution();
-        institutionsNew.created_by = userId;
-        institutionsNew.institution_roles_id = 1;
-        institutionsNew.institutions_id = institutions[index].institutions_id;
-        institutionsNew.last_updated_by = userId;
-        institutionsNew.result_id = resultId;
-        institutionsNew.is_active = true;
-        saveInstitutions.push(institutionsNew);
+      if (!exists) {
+        const newPartner = new ResultsByInstitution();
+        newPartner.created_by = userId;
+        newPartner.last_updated_by = userId;
+        newPartner.result_id = resultId;
+        newPartner.institution_roles_id = InstitutionRoleEnum.PARTNER; // 2
+        newPartner.institutions_id = instId;
+        newPartner.is_active = true;
+        toPersist.push(newPartner);
       }
     }
-    await this._resultByIntitutionsRepository.save(saveInstitutions);
+
+    if (toPersist.length) {
+      await this._resultByIntitutionsRepository.save(toPersist);
+    }
   }
 
   private async findSubmittedByUser({
