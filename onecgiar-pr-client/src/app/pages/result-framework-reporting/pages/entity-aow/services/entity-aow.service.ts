@@ -99,9 +99,16 @@ export class EntityAowService {
 
     this.isLoadingTocResultsByAowId.set(true);
 
-    this.api.resultsSE.GET_TocResultsByAowId(entityId, aowId).subscribe(({ response }) => {
-      this.tocResultsByAowId.set(response?.tocResults ?? []);
-      this.isLoadingTocResultsByAowId.set(false);
+    this.api.resultsSE.GET_TocResultsByAowId(entityId, aowId).subscribe({
+      next: ({ response }) => {
+        this.tocResultsByAowId.set(response?.tocResults ?? []);
+        this.isLoadingTocResultsByAowId.set(false);
+      },
+      error: err => {
+        console.error(err);
+        this.tocResultsByAowId.set([]);
+        this.isLoadingTocResultsByAowId.set(false);
+      }
     });
   }
 
