@@ -148,6 +148,7 @@ import { NotificationModule } from '../../notification/notification.module';
     ClarisaInstitutionsRepository,
     DeleteRecoverDataService,
     GlobalParameterRepository,
+    ResultsKnowledgeProductsService,
   ],
 })
 export class ResultsKnowledgeProductsModule {}

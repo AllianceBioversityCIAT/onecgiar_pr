@@ -35,6 +35,11 @@ import { AdUser } from '../../ad_users/entity/ad-user.entity';
 import { ImpactAreasScoresComponent } from '../impact_areas_scores_components/entities/impact_areas_scores_component.entity';
 import { ResultsByProjects } from '../results_by_projects/entities/results_by_projects.entity';
 
+export enum SourceEnum {
+  Result = 'Result',
+  Bilateral = 'API',
+}
+
 @Entity()
 export class Result {
   @PrimaryGeneratedColumn({
@@ -440,6 +445,37 @@ export class Result {
 
   @Column({ name: 'is_lead_by_partner', type: 'boolean', nullable: true })
   is_lead_by_partner: boolean;
+
+  @Column({
+    name: 'source',
+    nullable: true,
+    default: 'Result',
+    enum: SourceEnum,
+    type: 'enum',
+    enumName: 'source_enum',
+  })
+  source: SourceEnum = SourceEnum.Result;
+
+  @Column({
+    name: 'external_submitter',
+    nullable: true,
+    type: 'int',
+  })
+  external_submitter: number;
+
+  @Column({
+    name: 'external_submitted_date',
+    nullable: true,
+    type: 'text',
+  })
+  external_submitted_date: string;
+
+  @Column({
+    name: 'external_submitted_comment',
+    nullable: true,
+    type: 'text',
+  })
+  external_submitted_comment: string;
 
   // helpers??
   initiative_id!: number;

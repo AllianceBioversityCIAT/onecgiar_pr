@@ -17,6 +17,7 @@ import { UserNotificationSettingsModule } from './user-notification-settings/use
 import { AdUsersModule } from './ad_users/ad_users.module';
 import { InitiativeEntityMapModule } from './initiative_entity_map/initiative_entity_map.module';
 import { ResultsFrameworkReportingModule } from './results-framework-reporting/results-framework-reporting.module';
+import { BilateralModule } from './bilateral/bilateral.module';
 
 export const ModulesRoutes: Routes = [
   {
@@ -81,5 +82,9 @@ export const ModulesRoutes: Routes = [
   {
     path: 'results-framework-reporting',
     module: ResultsFrameworkReportingModule,
+  },
+  {
+    path: 'bilateral',
+    module: BilateralModule,
   },
 ];

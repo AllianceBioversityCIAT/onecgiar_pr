@@ -98,7 +98,7 @@ export class UserController {
     createFullUserDto: CreateUserDto,
     @DecodedUser() user: TokenDto,
   ) {
-    return this.userService.createFull(createFullUserDto, user);
+    return this.userService.createFull(createFullUserDto, user.id);
   }
 
   @Get('get/all')

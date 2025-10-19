@@ -70,7 +70,7 @@ export class UserService {
    */
   async createFull(
     createUserDto: CreateUserDto,
-    token: TokenDto,
+    token: number,
   ): Promise<returnFormatUser | returnErrorDto> {
     try {
       await this.validateUserInput(createUserDto);
@@ -257,7 +257,7 @@ export class UserService {
 
   private async saveUserToDB(
     dto: CreateUserDto | ChangeUserStatusDto | UpdateUserDto,
-    token: TokenDto,
+    userId: number,
     changeStatus?: boolean,
     rbu_id?: number,
   ): Promise<returnFormatUser> {
@@ -272,7 +272,7 @@ export class UserService {
       });
 
       const currentUser = await this._userRepository.findOne({
-        where: { id: token.id },
+        where: { id: userId },
       });
 
       if (dto.role_assignments?.length) {
@@ -1406,7 +1406,7 @@ export class UserService {
         await this._roleByUserRepository.save(role);
       }
 
-      await this.saveUserToDB(dto, token);
+      await this.saveUserToDB(dto, token.id);
 
       const newlyAssigned = (dto.role_assignments || []).filter(
         (r) => !existingPairs.has(`${r.entity_id}:${r.role_id}`),

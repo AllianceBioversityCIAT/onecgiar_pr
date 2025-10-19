@@ -2449,4 +2449,44 @@ select *
       });
     }
   }
+
+  async findTocResultsForBilateral(tocResult) {
+    try {
+      const {
+        science_program_id,
+        aow_compose_code,
+        result_title,
+        result_indicator_description,
+        result_indicator_type_name,
+      } = tocResult;
+
+      const tocResultQuery = `
+        SELECT
+          tr.id AS toc_result_id,
+          tri.related_node_id AS toc_results_indicator_id
+        FROM
+          ${env.DB_TOC}.toc_work_packages twp
+        JOIN ${env.DB_TOC}.toc_results tr ON tr.wp_id = twp.id
+        JOIN ${env.DB_TOC}.toc_results_indicators tri ON tri.toc_results_id = tr.id
+        WHERE
+          wp_official_code = '${aow_compose_code}'
+          AND initiativeId = '${science_program_id}'
+          AND tr.result_title LIKE '%${result_title}%'
+          AND (tri.indicator_description LIKE '%${result_indicator_description}%' AND tri.type_value = '${result_indicator_type_name}') 
+      `;
+      const tocResultData = await this.query(tocResultQuery);
+
+      if (tocResultData.length === 0) {
+        return null;
+      }
+
+      return tocResultData;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsTocResultRepository.name,
+        error: `Error finding TOC Results for Bilateral ${error}`,
+        debug: true,
+      });
+    }
+  }
 }
