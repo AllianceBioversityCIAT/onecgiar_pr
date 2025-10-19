@@ -43,6 +43,8 @@ import { ResultsTocResultRepository } from '../results/results-toc-results/repos
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { ResultsTocResultIndicatorsRepository } from '../results/results-toc-results/repositories/results-toc-results-indicators.repository';
 import { User } from '../../auth/modules/user/entities/user.entity';
+import { ResultsCenterRepository } from '../results/results-centers/results-centers.repository';
+import { ClarisaCenter } from '../../clarisa/clarisa-centers/entities/clarisa-center.entity';
 
 @Injectable()
 export class BilateralService {
@@ -72,6 +74,7 @@ export class BilateralService {
     private readonly _resultsTocResultsRepository: ResultsTocResultRepository,
     private readonly _clarisaInitiatives: ClarisaInitiativesRepository,
     private readonly _resultsTocResultsIndicatorsRepository: ResultsTocResultIndicatorsRepository,
+    private readonly _resultsCenterRepository: ResultsCenterRepository,
   ) {}
 
   private readonly logger = new Logger(BilateralService.name);
@@ -81,6 +84,11 @@ export class BilateralService {
     isAdmin?: boolean,
     versionId?: number,
   ) {
+    this.logger.log(
+      'Received RootResultsDto:',
+      JSON.stringify(rootResultsDto, null, 2),
+    );
+
     if (
       !rootResultsDto?.results ||
       !Array.isArray(rootResultsDto.results) ||
@@ -98,23 +106,6 @@ export class BilateralService {
         let adminUser = await this._userRepository.findOne({
           where: { email: 'admin@prms.pr' },
         });
-
-        let resultType;
-        if (result.type === 'knowledge_product') {
-          resultType = { id: 6, name: 'Knowledge product' };
-        } else {
-          resultType = await this._resultTypeRepository.findOne({
-            where: { name: result.type },
-          });
-          this.logger.debug(
-            `Resolved result type from DB: ${JSON.stringify(resultType)}`,
-          );
-          if (!resultType) {
-            throw new NotFoundException(
-              `Result type not found for name: ${result.type}`,
-            );
-          }
-        }
 
         const createdByUser = await this.findOrCreateUser(
           bilateralDto.created_by,
@@ -152,7 +143,8 @@ export class BilateralService {
           description: bilateralDto.description,
           reported_year_id: year.year,
           result_code: lastCode + 1,
-          result_type_id: resultType.id,
+          result_type_id: bilateralDto.result_type_id,
+          result_level_id: bilateralDto.result_level_id,
           external_submitter: submittedUserId,
           external_submitted_date:
             bilateralDto.submitted_by?.submitted_date ?? null,
@@ -163,6 +155,13 @@ export class BilateralService {
           }),
           source: SourceEnum.Bilateral,
         });
+
+        // === Lead Center (Primary & Leading) ===
+        await this.handleLeadCenter(
+          newResultHeader.id,
+          bilateralDto.lead_center,
+          userId,
+        );
 
         // === Geo Focus ===
         const {
@@ -219,7 +218,6 @@ export class BilateralService {
           newResultHeader.id,
           userId,
           bilateralDto.contributing_bilateral_projects,
-          bilateralDto.lead_center,
         );
 
         const tokenDto: TokenDto = {
@@ -230,7 +228,7 @@ export class BilateralService {
         };
         let kpDto = bilateralDto.knowledge_product;
         let resultDto: ResultsKnowledgeProductDto;
-        if (resultType.id === 6 /*Knowledge Product*/) {
+        if (bilateralDto.result_type_id === 6 /*Knowledge Product*/) {
           const cgspaceInfo =
             await this._resultsKnowledgeProductsService.findOnCGSpace(
               kpDto.handle,
@@ -305,67 +303,236 @@ export class BilateralService {
   }
 
   private async handleTocMapping(tocArray, userId, resultId) {
-    for (const toc of tocArray) {
-      const mapToToc =
-        await this._resultsTocResultsRepository.findTocResultsForBilateral(toc);
+    if (!Array.isArray(tocArray)) {
+      this.logger.warn(
+        'handleTocMapping received non-array tocArray; skipping',
+      );
+      return;
+    }
 
-      this.logger.debug(`Mapping ToC data: ${JSON.stringify(mapToToc)}`);
+    const errors: string[] = [];
+    let processed = 0;
 
-      const init = await this._clarisaInitiatives.findOne({
-        where: { official_code: toc.science_program_id },
-      });
+    for (const [index, toc] of tocArray.entries()) {
+      const {
+        science_program_id,
+        aow_compose_code,
+        result_title,
+        result_indicator_description,
+        result_indicator_type_name,
+      } = toc || {};
 
-      const newTocMapping = this._resultsTocResultsRepository.create({
-        created_by: userId,
-        toc_result_id: mapToToc[0].toc_result_id,
-        initiative_id: init ? init.id : null,
-        result_id: resultId,
-      });
-      await this._resultsTocResultsRepository.save(newTocMapping);
+      const missingFields = [
+        !science_program_id && 'science_program_id',
+        !aow_compose_code && 'aow_compose_code',
+        !result_title && 'result_title',
+        !result_indicator_description && 'result_indicator_description',
+        !result_indicator_type_name && 'result_indicator_type_name',
+      ].filter(Boolean) as string[];
 
-      const newTocContributorsIndicator =
-        this._resultsTocResultsIndicatorsRepository.create({
-          created_by: userId,
-          results_toc_results_id: newTocMapping.result_toc_result_id,
-          toc_results_indicator_id: mapToToc[0].toc_results_indicator_id,
+      if (missingFields.length) {
+        errors.push(
+          `TOC item ${index} missing required fields: ${missingFields.join(', ')}`,
+        );
+        continue;
+      }
+
+      try {
+        const mapToToc =
+          await this._resultsTocResultsRepository.findTocResultsForBilateral(
+            toc,
+          );
+
+        if (!mapToToc || !Array.isArray(mapToToc) || !mapToToc.length) {
+          errors.push(
+            `TOC item ${index} did not match any ToC results (compose=${aow_compose_code}, program=${science_program_id})`,
+          );
+          continue;
+        }
+
+        const firstMap = mapToToc[0];
+        if (!firstMap.toc_result_id || !firstMap.toc_results_indicator_id) {
+          errors.push(
+            `TOC item ${index} repository data missing fields: toc_result_id or toc_results_indicator_id`,
+          );
+          continue;
+        }
+
+        const init = await this._clarisaInitiatives.findOne({
+          where: { official_code: science_program_id },
         });
-      await this._resultsTocResultsIndicatorsRepository.save(
-        newTocContributorsIndicator,
+
+        if (!init) {
+          errors.push(
+            `TOC item ${index} initiative not found for official_code=${science_program_id}`,
+          );
+          continue;
+        }
+
+        const newTocMapping = this._resultsTocResultsRepository.create({
+          created_by: userId,
+          toc_result_id: firstMap.toc_result_id,
+          initiative_id: init.id,
+          result_id: resultId,
+        });
+        await this._resultsTocResultsRepository.save(newTocMapping);
+
+        const newTocContributorsIndicator =
+          this._resultsTocResultsIndicatorsRepository.create({
+            created_by: userId,
+            results_toc_results_id: newTocMapping.result_toc_result_id,
+            toc_results_indicator_id: firstMap.toc_results_indicator_id,
+          });
+        await this._resultsTocResultsIndicatorsRepository.save(
+          newTocContributorsIndicator,
+        );
+        processed++;
+      } catch (err) {
+        errors.push(
+          `TOC item ${index} unexpected error: ${(err as Error).message}`,
+        );
+      }
+    }
+
+    if (errors.length) {
+      this.logger.warn(
+        `handleTocMapping completed with ${processed} items processed and ${errors.length} issues: ${errors.join(' | ')}`,
+      );
+    } else {
+      this.logger.debug(
+        `handleTocMapping processed ${processed} TOC items successfully`,
       );
     }
   }
 
   private async handleNonPooledProject(
-    resultId,
-    userId,
-    bilateralProjects,
-    lead_center,
+    resultId: number,
+    userId: number,
+    bilateralProjects: any[],
   ) {
-    const foundInstitution = await this._clarisaInstitutionsRepository.findOne({
-      where: [
-        { name: Like(`%${lead_center}%`) },
-        { acronym: Like(`%${lead_center}%`) },
-      ],
-    });
-
-    let clarisaCenter;
-    if (foundInstitution.id) {
-      clarisaCenter = await this._clarisaCenters.findOne({
-        where: { institutionId: foundInstitution.id },
-      });
-      if (!clarisaCenter) {
-        clarisaCenter = null;
-      }
+    if (
+      !bilateralProjects ||
+      !Array.isArray(bilateralProjects) ||
+      !bilateralProjects.length
+    ) {
+      return;
     }
-
     for (const nonpp of bilateralProjects) {
+      if (!nonpp?.grant_title) continue;
       await this._nonPooledProjectRepository.save({
         results_id: resultId,
         grant_title: nonpp.grant_title,
-        lead_center_id: clarisaCenter?.code ?? null,
-        funder_institution_id: foundInstitution.id,
+        funder_institution_id: null,
         created_by: userId,
       });
+    }
+  }
+
+  private async handleLeadCenter(
+    resultId: number,
+    leadCenter: { name?: string; acronym?: string; institution_id?: number },
+    userId: number,
+  ) {
+    if (!leadCenter || typeof leadCenter !== 'object') {
+      this.logger.debug(
+        'No lead_center object; skipping results_center creation',
+      );
+      return;
+    }
+
+    const { name, acronym, institution_id } = leadCenter;
+    if (!name && !acronym && !institution_id) {
+      this.logger.warn(
+        'lead_center must include at least one of name, acronym, institution_id',
+      );
+      return;
+    }
+
+    let institutionCandidates = [];
+
+    if (institution_id) {
+      const inst = await this._clarisaInstitutionsRepository.findOne({
+        where: { id: institution_id },
+      });
+      if (inst) institutionCandidates.push(inst);
+      else
+        this.logger.warn(
+          `No institution found for institution_id=${institution_id}`,
+        );
+    }
+
+    const fuzzyConditions = [];
+    if (name) fuzzyConditions.push({ name: Like(`%${name}%`) });
+    if (acronym) fuzzyConditions.push({ acronym: Like(`%${acronym}%`) });
+    if (fuzzyConditions.length) {
+      const fuzzy = await this._clarisaInstitutionsRepository.find({
+        where: fuzzyConditions,
+      });
+      for (const f of fuzzy) {
+        if (!institutionCandidates.find((c) => c.id === f.id)) {
+          institutionCandidates.push(f);
+        }
+      }
+    }
+
+    if (!institutionCandidates.length) {
+      this.logger.warn(
+        `No institutions matched lead_center input (name='${name || ''}', acronym='${acronym || ''}', institution_id='${institution_id || ''}')`,
+      );
+      return;
+    }
+
+    let selectedCenter: ClarisaCenter | null = null;
+    for (const inst of institutionCandidates) {
+      const centers = await this._clarisaCenters.find({
+        where: { institutionId: inst.id },
+      });
+      if (centers && centers.length) {
+        selectedCenter = centers[0];
+        break;
+      }
+    }
+
+    if (!selectedCenter) {
+      this.logger.warn(
+        'Institutions matched but none have associated clarisa_center records',
+      );
+      return;
+    }
+
+    try {
+      const existing =
+        await this._resultsCenterRepository.getAllResultsCenterByResultIdAndCenterId(
+          resultId,
+          selectedCenter.code,
+        );
+      if (existing) {
+        await this._resultRepository.query(
+          `update results_center set is_primary = 1, is_leading_result = 1, last_updated_date = NOW(), last_updated_by = ? where id = ?`,
+          [userId, existing.id],
+        );
+        this.logger.debug(
+          `Updated existing lead center flags (center=${selectedCenter.code}, result=${resultId})`,
+        );
+        return;
+      }
+      await this._resultsCenterRepository.save({
+        result_id: resultId,
+        center_id: selectedCenter.code,
+        is_primary: true,
+        is_leading_result: true,
+        from_cgspace: false,
+        is_active: true,
+        created_by: userId,
+      });
+      this.logger.log(
+        `Lead center stored for result ${resultId}: center_id=${selectedCenter.code}`,
+      );
+    } catch (err) {
+      this.logger.error(
+        `Failed to save lead center for result ${resultId}: ${selectedCenter.code}`,
+        err instanceof Error ? err.stack : JSON.stringify(err),
+      );
     }
   }
 

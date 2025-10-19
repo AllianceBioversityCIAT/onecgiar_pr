@@ -23,6 +23,7 @@ import { ClarisaCentersModule } from '../../clarisa/clarisa-centers/clarisa-cent
 import { NonPooledProjectsModule } from '../results/non-pooled-projects/non-pooled-projects.module';
 import { ResultTypesModule } from '../results/result_types/result_types.module';
 import { ResultsTocResultsModule } from '../results/results-toc-results/results-toc-results.module';
+import { ResultsCentersModule } from '../results/results-centers/results-centers.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { ResultsTocResultsModule } from '../results/results-toc-results/results-
     NonPooledProjectsModule,
     ResultTypesModule,
     ResultsTocResultsModule,
+    ResultsCentersModule,
   ],
   controllers: [BilateralController],
   providers: [BilateralService],

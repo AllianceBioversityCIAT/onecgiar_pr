@@ -414,11 +414,50 @@ export class KnowledgeProductDto {
   agrovoc_keywords: string[];
 }
 
+export class LeadCenterDto {
+  @ApiPropertyOptional({
+    description: 'Lead center name',
+    example: 'Alliance Bioversity - CIAT',
+  })
+  @ValidateIf((o) => !o.acronym && !o.institution_id)
+  @IsString()
+  name?: string;
+
+  @ApiPropertyOptional({ description: 'Lead center acronym', example: 'CIAT' })
+  @ValidateIf((o) => !o.name && !o.institution_id)
+  @IsString()
+  acronym?: string;
+
+  @ApiPropertyOptional({
+    description: 'Clarisa institution id for the lead center',
+    example: 501,
+  })
+  @ValidateIf((o) => !o.name && !o.acronym)
+  @IsNumber()
+  institution_id?: number;
+}
+
 /* -------------------------------------------------------------------------- */
 /*                               MAIN DTO                                     */
 /* -------------------------------------------------------------------------- */
 
 export class CreateBilateralDto {
+  @ApiProperty({
+    description: 'Result type identifier for the bilateral',
+    example: 6,
+  })
+  @IsInt()
+  @IsNotEmpty()
+  result_type_id: number;
+
+  @ApiProperty({
+    description: 'Result level identifier for the bilateral',
+    example: 4,
+  })
+  @IsInt()
+  @IsNotEmpty()
+  result_level_id: number;
+
   @ApiProperty({
     description:
       'ISO date string representing when the bilateral record was created',
@@ -447,12 +486,14 @@ export class CreateBilateralDto {
   created_by: CreatedByDto;
 
   @ApiProperty({
-    description: 'Lead center responsible for the bilateral project',
-    example: 'Alliance Bioversity-CIAT',
+    description:
+      'Lead center responsible for the bilateral project (at least one of name, acronym, institution_id)',
+    type: () => LeadCenterDto,
   })
-  @IsString()
-  @IsNotEmpty()
-  lead_center: string;
+  @IsObject()
+  @ValidateNested()
+  @Type(() => LeadCenterDto)
+  lead_center: LeadCenterDto;
 
   @ApiProperty({
     description: 'Title of the bilateral project',
