@@ -166,12 +166,13 @@
         </div>
 
         <div class="report-result-content_left_content_actions" [ngClass]="{ globalDisabled: creatingResult() }">
-          <app-pr-button
-            [verticalMargin]="0"
-            text="Create and continue"
+          <p-button
+            label="Create and continue"
+            type="button"
+            class="pr-body-2"
             (click)="createResult()"
-            [rotating]="creatingResult()"
-            [icon]="creatingResult() ? 'loop' : ''"></app-pr-button>
+            [loading]="creatingResult()"
+            iconPos="right"></p-button>
         </div>
       </div>
     </div>

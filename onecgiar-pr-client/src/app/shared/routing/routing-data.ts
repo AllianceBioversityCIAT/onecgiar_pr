@@ -6,7 +6,7 @@ export const routingApp: PrRoute[] = [
   {
     prName: 'Results Framework & Reporting',
     underConstruction: false,
-    prHide: true,
+    prHide: false,
     canActivate: [CheckLoginGuard],
     path: 'result-framework-reporting',
     loadChildren: () => import('../../pages/result-framework-reporting/result-framework-reporting.module').then(m => m.ResultFrameworkReportingModule)

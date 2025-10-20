@@ -6,6 +6,7 @@ import { EntityAowService } from '../../../../../../services/entity-aow.service'
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 import { CommonModule } from '@angular/common';
+import { ButtonModule } from 'primeng/button';
 
 interface CreateResultBody {
   handler: string;
@@ -15,7 +16,7 @@ interface CreateResultBody {
 
 @Component({
   selector: 'app-aow-hlo-create-modal',
-  imports: [CommonModule, DialogModule, CustomFieldsModule, MultiSelectModule, FormsModule],
+  imports: [CommonModule, DialogModule, CustomFieldsModule, MultiSelectModule, FormsModule, ButtonModule],
   templateUrl: './aow-hlo-create-modal.component.html',
   styleUrl: './aow-hlo-create-modal.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
