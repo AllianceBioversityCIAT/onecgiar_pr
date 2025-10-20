@@ -25,12 +25,12 @@ export class AowHloTableComponent {
   entityAowService = inject(EntityAowService);
 
   columnOrder = signal<ColumnOrder[]>([
-    { title: 'Indicator name', attr: 'indicator_description' },
-    { title: 'Type', attr: 'type_value' },
-    { title: 'Expected target 2025', attr: 'target_value_sum' },
-    { title: 'Actual achieved', attr: 'actual_achieved_value_sum' },
-    { title: 'Progress', attr: 'progress_percentage', hideSortIcon: true },
-    { title: 'Status', attr: 'status', hideSortIcon: true }
+    { title: 'Indicator name', attr: 'indicator_description', width: '30%' },
+    { title: 'Type', attr: 'type_value', width: '10%' },
+    { title: 'Expected target 2025', attr: 'target_value_sum', width: '10%' },
+    { title: 'Actual achieved', attr: 'actual_achieved_value_sum', width: '10%' },
+    { title: 'Progress', attr: 'progress_percentage', hideSortIcon: true, width: '112px' },
+    { title: 'Status', attr: 'status', hideSortIcon: true, width: '11%' }
   ]);
 
   isKnowledgeProduct = signal<boolean>(true);
