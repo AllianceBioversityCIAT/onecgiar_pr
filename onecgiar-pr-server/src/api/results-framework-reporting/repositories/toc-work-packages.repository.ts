@@ -126,7 +126,7 @@ export class TocResultsRepository {
         AND trit.target_date = ${year}
       WHERE 
         wp.wp_official_code = ?
-        AND tr.category = 'OUTPUT'
+        AND tr.category IN ('OUTPUT', 'OUTCOME')
     `;
 
     query += `

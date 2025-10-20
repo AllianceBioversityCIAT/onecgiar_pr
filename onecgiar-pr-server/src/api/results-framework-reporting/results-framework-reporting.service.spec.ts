@@ -380,7 +380,8 @@ describe('ResultsFrameworkReportingService', () => {
         response: {
           compositeCode: 'SP01-AOW01',
           year: 2024,
-          tocResults: [
+          tocResultsOutcomes: [],
+          tocResultsOutputs: [
             {
               id: 1,
               category: 'OUTPUT',
@@ -388,6 +389,11 @@ describe('ResultsFrameworkReportingService', () => {
               related_node_id: 'NODE-1',
             },
           ],
+          metadata: {
+            total: 1,
+            outcomes: 0,
+            outputs: 1,
+          },
         },
       });
     });
