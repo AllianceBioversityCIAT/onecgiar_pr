@@ -128,11 +128,15 @@ export class KnowledgeProductInfoComponent implements OnInit {
     mapped.is_peer_reviewed_CG = this.transformBoolean(response.metadataCG?.is_peer_reviewed);
     mapped.is_isi_CG = this.transformBoolean(response.metadataCG?.is_isi, isJA);
     let accessibilityCG: string;
-    if (response.metadataCG?.open_access === null) {
-      accessibilityCG = 'Not applicable';
-    } else {
+
+    if (response.metadataCG?.open_access) {
       accessibilityCG = response.metadataCG.open_access;
+    } else if (response.metadataCG?.accessibility == null) {
+      accessibilityCG = isJA ? 'Not provided' : 'Not available';
+    } else {
+      accessibilityCG = response.metadataCG.accessibility ? 'Open Access' : 'Limited Access';
     }
+
     mapped.accessibility_CG = accessibilityCG;
     mapped.yearCG = response.metadataCG?.issue_year;
   }
@@ -140,13 +144,13 @@ export class KnowledgeProductInfoComponent implements OnInit {
   private getMetadataFromWoS(mapped: KnowledgeProductBodyMapped, response: KnowledgeProductBody) {
     mapped.is_peer_reviewed_WOS = this.transformBoolean(response.metadataWOS?.is_peer_reviewed);
     mapped.is_isi_WOS = this.transformBoolean(response.metadataWOS?.is_isi);
-    mapped.accessibility_WOS = response.metadataWOS?.accessibility == true ? 'Open Access' : 'Limited Access';
+    mapped.accessibility_WOS = response.metadataWOS?.accessibility ? 'Open Access' : 'Limited Access';
     mapped.year_WOS = response.metadataWOS?.issue_year;
   }
 
   private transformBoolean(value: boolean, isJA?: boolean): string {
     if (value == null) {
-      return !isJA ? 'Not available' : 'Not provided';
+      return isJA ? 'Not provided' : 'Not available';
     }
 
     return value ? 'Yes' : 'No';
