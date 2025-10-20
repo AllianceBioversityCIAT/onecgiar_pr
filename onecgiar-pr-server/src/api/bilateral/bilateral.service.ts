@@ -87,6 +87,7 @@ export class BilateralService {
     }
     try {
       const createdResults = [];
+      let resultInfo: any = null;
       for (const result of rootResultsDto.results) {
         const bilateralDto = result.data;
 
@@ -299,11 +300,35 @@ export class BilateralService {
           is_duplicate_kp: isDuplicateKp,
           ...kpExtra,
         });
+
+        resultInfo = await this._resultRepository.findOne({
+          where: { id: newResultHeader.id },
+          relations: {
+            obj_geographic_scope: true,
+            result_region_array: {
+              region_object: true,
+            },
+            result_country_array: {
+              country_object: true,
+              result_countries_subnational_array: true,
+            },
+            result_by_institution_array: {
+              obj_institutions: {
+                obj_institution_type_code: true,
+              },
+            },
+            result_center_array: {
+              clarisa_center_object: {
+                clarisa_institution: true,
+              },
+            },
+            obj_results_toc_result: true,
+          },
+        });
       }
+
       return {
-        response: {
-          results: createdResults,
-        },
+        response: resultInfo,
         message: 'Results Bilateral created successfully.',
         status: 201,
       };
@@ -326,30 +351,39 @@ export class BilateralService {
     });
 
     if (!user) {
+      const emailDomain = (userData.email.split('@')[1] || '').toLowerCase();
+      const isCgiar = /cgiar/.test(emailDomain);
       const createUserDto: CreateUserDto = {
         first_name: userData.name ?? '(no name)',
         last_name: '(external)',
         email: userData.email,
-        is_cgiar: true,
-        created_by: adminUser,
+        is_cgiar: isCgiar,
+        created_by: adminUser?.id,
       };
 
       this.logger.log(`Creating new user for email: ${createUserDto.email}`);
-      const createdUserResult = await this._userService.createFull(
+      const createdUserWrapper = await this._userService.createFull(
         createUserDto,
-        adminUser,
+        adminUser?.id,
       );
-      if (createdUserResult && typeof createdUserResult === 'object') {
-        const maybeId = (createdUserResult as any).id;
-        const maybeEmail = (createdUserResult as any).email;
-        this.logger.debug(
-          `Created user result: ${JSON.stringify({ id: maybeId ?? null, email: maybeEmail ?? null })}`,
-        );
-      } else {
-        this.logger.debug('Created user result: (non-object response)');
+      let createdUser: any = createdUserWrapper;
+      if (
+        createdUserWrapper &&
+        typeof createdUserWrapper === 'object' &&
+        'response' in createdUserWrapper &&
+        createdUserWrapper.response
+      ) {
+        createdUser = createdUserWrapper.response;
       }
-
-      return createdUserResult;
+      if (!createdUser?.id) {
+        this.logger.warn(
+          `createFull did not return expected user object for email=${createUserDto.email}`,
+        );
+      }
+      this.logger.debug(
+        `Created user unwrapped: ${JSON.stringify({ id: createdUser?.id ?? null, email: createUserDto.email })}`,
+      );
+      return createdUser;
     }
 
     return user;
