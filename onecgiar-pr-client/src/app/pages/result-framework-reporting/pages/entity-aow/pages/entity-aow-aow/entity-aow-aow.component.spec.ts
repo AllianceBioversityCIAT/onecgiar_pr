@@ -17,7 +17,7 @@ describe('EntityAowAowComponent', () => {
       aowId: signal<string>(''),
       entityId: signal<string>(''),
       getTocResultsByAowId: jest.fn(),
-      tocResultsByAowId: signal<any[]>([]),
+      tocResultsOutputsByAowId: signal<any[]>([]),
       isLoadingTocResultsByAowId: signal<boolean>(false),
       showReportResultModal: signal<boolean>(false)
     } as any;

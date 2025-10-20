@@ -235,7 +235,14 @@ export class ResultsFrameworkReportingService {
         resolvedYear,
       );
 
-      if (!tocResults.length) {
+      const tocResultsOutcomes = (tocResults || []).filter(
+        (r) => (r.category || '').toUpperCase() === 'OUTCOME',
+      );
+      const tocResultsOutputs = (tocResults || []).filter(
+        (r) => (r.category || '').toUpperCase() === 'OUTPUT',
+      );
+
+      if (!tocResultsOutcomes.length && !tocResultsOutputs.length) {
         throw {
           response: {},
           message:
@@ -248,7 +255,13 @@ export class ResultsFrameworkReportingService {
         response: {
           compositeCode,
           year: resolvedYear,
-          tocResults,
+          tocResultsOutcomes,
+          tocResultsOutputs,
+          metadata: {
+            total: tocResults.length,
+            outcomes: tocResultsOutcomes.length,
+            outputs: tocResultsOutputs.length,
+          },
         },
         message: 'Work packages retrieved successfully.',
         status: HttpStatus.OK,
