@@ -13,14 +13,11 @@
   <ng-template pTemplate="header">
     <tr>
       @for (column of columnOrder(); track column.attr) {
-        <th [pSortableColumn]="column.attr" [id]="column.attr">
-          @if (!column.hideSortIcon) {
-            <p-sortIcon [field]="column.attr"></p-sortIcon>
-          }
+        <th [id]="column.attr" style="text-align: center" [style.width]="column.width">
           {{ column.title }}
         </th>
       }
-      <th id="actions">Actions</th>
+      <th id="actions" style="text-align: center; width: 16%">Actions</th>
     </tr>
   </ng-template>
 
@@ -67,12 +64,7 @@
           </div>
         </td>
         <td>
-          <div
-            class="tab-content_chip in-progress"
-            style="width: max-content"
-            [ngClass]="{ achieved: getProgress(result.progress_percentage) >= 90 }">
-            In progress
-          </div>
+          <div class="tab-content_chip in-progress" [ngClass]="{ achieved: getProgress(result.progress_percentage) >= 90 }">In progress</div>
         </td>
         <td>
           <div class="tab-content_actions">

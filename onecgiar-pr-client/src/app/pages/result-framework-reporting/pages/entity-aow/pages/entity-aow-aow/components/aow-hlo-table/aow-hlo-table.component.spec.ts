@@ -52,12 +52,12 @@ describe('AowHloTableComponent', () => {
   describe('Component Initialization', () => {
     it('should initialize with default values', () => {
       expect(component.columnOrder()).toEqual([
-        { title: 'Indicator name', attr: 'indicator_description' },
-        { title: 'Type', attr: 'type_value' },
-        { title: 'Expected target 2025', attr: 'target_value_sum' },
-        { title: 'Actual achieved', attr: 'actual_achieved_value_sum' },
-        { title: 'Progress', attr: 'progress_percentage', hideSortIcon: true },
-        { title: 'Status', attr: 'status', hideSortIcon: true }
+        { title: 'Indicator name', attr: 'indicator_description', width: '30%' },
+        { title: 'Type', attr: 'type_value', width: '10%' },
+        { title: 'Expected target 2025', attr: 'target_value_sum', width: '10%' },
+        { title: 'Actual achieved', attr: 'actual_achieved_value_sum', width: '10%' },
+        { title: 'Progress', attr: 'progress_percentage', hideSortIcon: true, width: '112px' },
+        { title: 'Status', attr: 'status', hideSortIcon: true, width: '11%' }
       ]);
     });
 
@@ -73,15 +73,18 @@ describe('AowHloTableComponent', () => {
       expect(columns).toHaveLength(6);
       expect(columns[0]).toEqual({
         title: 'Indicator name',
-        attr: 'indicator_description'
+        attr: 'indicator_description',
+        width: '30%'
       });
       expect(columns[1]).toEqual({
         title: 'Type',
-        attr: 'type_value'
+        attr: 'type_value',
+        width: '10%'
       });
       expect(columns[2]).toEqual({
         title: 'Expected target 2025',
-        attr: 'target_value_sum'
+        attr: 'target_value_sum',
+        width: '10%'
       });
     });
 
