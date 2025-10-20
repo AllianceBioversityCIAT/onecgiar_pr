@@ -87,7 +87,7 @@ describe('UserManagementComponent', () => {
 
   it('should have proper column configuration', () => {
     expect(component.columns).toBeDefined();
-    expect(component.columns.length).toBe(7);
+    expect(component.columns.length).toBe(8);
     expect(component.columns[0].label).toBe('User name');
     expect(component.columns[1].label).toBe('Email');
   });
