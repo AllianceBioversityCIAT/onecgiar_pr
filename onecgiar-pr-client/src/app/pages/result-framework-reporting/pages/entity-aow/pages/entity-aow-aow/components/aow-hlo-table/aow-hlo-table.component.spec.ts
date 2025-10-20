@@ -19,7 +19,7 @@ describe('AowHloTableComponent', () => {
       aowId: signal<string>(''),
       entityId: signal<string>(''),
       getTocResultsByAowId: jest.fn(),
-      tocResultsByAowId: signal<any[]>([]),
+      tocResultsOutputsByAowId: signal<any[]>([]),
       isLoadingTocResultsByAowId: signal<boolean>(false),
       showReportResultModal: mockShowReportResultModal,
       currentResultToReport: mockCurrentResultToReport

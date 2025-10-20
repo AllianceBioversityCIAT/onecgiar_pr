@@ -27,7 +27,8 @@ export class EntityAowService {
 
   existingResultsContributors = signal<any[]>([]);
 
-  tocResultsByAowId = signal<any[]>([]);
+  tocResultsOutputsByAowId = signal<any[]>([]);
+  tocResultsOutcomesByAowId = signal<any[]>([]);
   isLoadingTocResultsByAowId = signal<boolean>(false);
 
   showReportResultModal = signal<boolean>(false);
@@ -101,12 +102,14 @@ export class EntityAowService {
 
     this.api.resultsSE.GET_TocResultsByAowId(entityId, aowId).subscribe({
       next: ({ response }) => {
-        this.tocResultsByAowId.set(response?.tocResults ?? []);
+        this.tocResultsOutputsByAowId.set(response?.tocResultsOutputs ?? []);
+        this.tocResultsOutcomesByAowId.set(response?.tocResultsOutcomes ?? []);
         this.isLoadingTocResultsByAowId.set(false);
       },
       error: err => {
         console.error(err);
-        this.tocResultsByAowId.set([]);
+        this.tocResultsOutputsByAowId.set([]);
+        this.tocResultsOutcomesByAowId.set([]);
         this.isLoadingTocResultsByAowId.set(false);
       }
     });
