@@ -7,6 +7,7 @@ import { signal } from '@angular/core';
 import { AowHloCreateModalComponent } from './aow-hlo-create-modal.component';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 import { of, throwError } from 'rxjs';
+import { ButtonModule } from 'primeng/button';
 
 describe('AowHloCreateModalComponent', () => {
   let component: AowHloCreateModalComponent;
@@ -41,7 +42,7 @@ describe('AowHloCreateModalComponent', () => {
     };
 
     await TestBed.configureTestingModule({
-      imports: [AowHloCreateModalComponent, ProgressBarModule, RouterTestingModule, HttpClientTestingModule],
+      imports: [AowHloCreateModalComponent, ProgressBarModule, RouterTestingModule, HttpClientTestingModule, ButtonModule],
       providers: [
         { provide: EntityAowService, useValue: entityAowServiceMock },
         { provide: ApiService, useValue: apiServiceMock }
