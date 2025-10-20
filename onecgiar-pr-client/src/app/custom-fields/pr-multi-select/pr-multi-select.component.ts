@@ -5,17 +5,17 @@ import { CustomizedAlertsFeService } from '../../shared/services/customized-aler
 import { DataControlService } from '../../shared/services/data-control.service';
 
 @Component({
-    selector: 'app-pr-multi-select',
-    templateUrl: './pr-multi-select.component.html',
-    styleUrls: ['./pr-multi-select.component.scss'],
-    providers: [
-        {
-            provide: NG_VALUE_ACCESSOR,
-            useExisting: forwardRef(() => PrMultiSelectComponent),
-            multi: true
-        }
-    ],
-    standalone: false
+  selector: 'app-pr-multi-select',
+  templateUrl: './pr-multi-select.component.html',
+  styleUrls: ['./pr-multi-select.component.scss'],
+  providers: [
+    {
+      provide: NG_VALUE_ACCESSOR,
+      useExisting: forwardRef(() => PrMultiSelectComponent),
+      multi: true
+    }
+  ],
+  standalone: false
 })
 export class PrMultiSelectComponent implements ControlValueAccessor {
   @Input() optionLabel: string;
@@ -49,7 +49,11 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   public searchText: string;
   private currentOptionsLength = 0;
 
-  constructor(public rolesSE: RolesService, private customizedAlertsFeSE: CustomizedAlertsFeService, public dataControlSE: DataControlService) {}
+  constructor(
+    public rolesSE: RolesService,
+    private customizedAlertsFeSE: CustomizedAlertsFeService,
+    public dataControlSE: DataControlService
+  ) {}
 
   get optionsIntance() {
     if (!this.options?.length) return [];
@@ -142,11 +146,6 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
     this.onTouch = fn;
   }
 
-  toggleSelectOption(option) {
-    if (option?.disabled) return;
-    option.selected = !option.selected;
-  }
-
   removeFocus() {
     const element: any = document.getElementById(this.optionValue);
     element.blur();
@@ -159,9 +158,18 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   }
 
   confirmDeletionEvent(option) {
-    this.customizedAlertsFeSE.show({ id: 'confirm-delete-item', title: `Are you sure you want to remove this Initiative from the contributors?`, description: `This will remove the ToC match made by the Initiative and in case you want to add it again, you will need to submit a new request.`, status: 'warning', confirmText: 'Yes, delete' }, () => {
-      this.removeOption(option);
-    });
+    this.customizedAlertsFeSE.show(
+      {
+        id: 'confirm-delete-item',
+        title: `Are you sure you want to remove this Initiative from the contributors?`,
+        description: `This will remove the ToC match made by the Initiative and in case you want to add it again, you will need to submit a new request.`,
+        status: 'warning',
+        confirmText: 'Yes, delete'
+      },
+      () => {
+        this.removeOption(option);
+      }
+    );
   }
 
   onSelectOption(option) {
@@ -171,16 +179,16 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
 
     const indexFind = this.value.findIndex(valueItem => valueItem[this.optionValue] == option[this.optionValue]);
     if (indexFind < 0) {
+      // Option is being selected
       this.value.push({ ...option, new: true, is_active: true });
     } else {
+      // Option is being deselected
       const valueItemFind = this.value.find(valueItem => valueItem[this.optionValue] == option[this.optionValue]);
       if (this.logicalDeletion && !valueItemFind.new) {
-        if (!option.selected) {
-          valueItemFind.is_active = true;
-        } else {
-          valueItemFind.is_active = false;
-        }
+        // For logical deletion, toggle is_active based on current selected state
+        valueItemFind.is_active = option.selected;
       } else {
+        // For normal deletion, remove from value array
         this.value.splice(indexFind, 1);
       }
     }
