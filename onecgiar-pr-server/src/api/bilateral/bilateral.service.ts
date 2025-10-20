@@ -301,6 +301,7 @@ export class BilateralService {
           ...kpExtra,
         });
 
+        const isKpType = bilateralDto.result_type_id === 6;
         resultInfo = await this._resultRepository.findOne({
           where: { id: newResultHeader.id },
           relations: {
@@ -323,6 +324,12 @@ export class BilateralService {
               },
             },
             obj_results_toc_result: true,
+            ...(isKpType && {
+              result_knowledge_product_array: {
+                result_knowledge_product_keyword_array: true,
+                result_knowledge_product_metadata_array: true,
+              },
+            }),
           },
         });
       }
