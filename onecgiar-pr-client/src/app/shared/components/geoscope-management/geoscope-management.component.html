@@ -89,5 +89,19 @@
     { value: false, label: 'No' }
   ]"
   optionLabel="label"
+  [(ngModel)]="body.any_other_countries"
   optionValue="value">
 </app-pr-radio-button>
+
+@if (body.any_other_countries) {
+  <br />
+  <app-pr-radio-button
+    fieldRef="[geoscope-management]-any-other"
+    [options]="this.geoscopeOptions"
+    optionLabel="full_name"
+    optionValue="id"
+    [readOnly]="this.readOnly || this.api.dataControlSE.isKnowledgeProduct"
+    [(ngModel)]="body.any_other"
+    (ngModelChange)="this.resetHasScope()">
+  </app-pr-radio-button>
+}

@@ -97,6 +97,11 @@ export class FieldsManagerService {
         required: true,
         hide:
           this.isP22() && this.dataControlSE.currentResultSignal().result_type_id != 2 && this.dataControlSE.currentResultSignal().result_type_id != 7
+      },
+      '[geoscope-management]-any-other': {
+        label: 'What is the geographic scope where there may be potential impact in other geographic areas?',
+        hide:
+          this.isP22() && this.dataControlSE.currentResultSignal().result_type_id != 2 && this.dataControlSE.currentResultSignal().result_type_id != 7
       }
     };
     return fields;
