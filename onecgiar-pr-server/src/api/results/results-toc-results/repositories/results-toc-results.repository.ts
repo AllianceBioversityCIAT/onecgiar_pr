@@ -8,9 +8,9 @@ import {
   ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
 import { ResultsTocResultIndicatorsRepository } from './results-toc-results-indicators.repository';
-import { ResultsTocImpactAreaTargetRepository } from './result-toc-impact-area-repository';
-import { ResultsTocSdgTargetRepository } from './result-toc-sdg-target-repository';
-import { ResultsSdgTargetRepository } from './results-sdg-targets.respository';
+import { ResultsTocImpactAreaTargetRepository } from './result-toc-impact-area.repository';
+import { ResultsTocSdgTargetRepository } from './result-toc-sdg-target.repository';
+import { ResultsSdgTargetRepository } from './results-sdg-targets.repository';
 import { ResultsActionAreaOutcomeRepository } from './result-toc-action-area.repository';
 import { ResultsTocTargetIndicatorRepository } from './result-toc-result-target-indicator.repository';
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
@@ -2442,6 +2442,37 @@ select *
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,
         error: `Error saving Action Area Result ${error}`,
+        debug: true,
+      });
+    }
+  }
+
+  async getWpExtraInfoV2(
+    resultId: number,
+    toc_result_id: number,
+    initiativeId: number,
+  ) {
+    const queryData = `
+    SELECT
+      tr.result_title,
+      IFNULL(twp.acronym, NULL) AS wp_acronym
+    FROM
+      results_toc_result rtr	
+      left JOIN ${env.DB_TOC}.toc_results tr on tr.id = rtr.toc_result_id
+      left join clarisa_initiatives ci on ci.id = rtr.initiative_id
+      left join ${env.DB_TOC}.toc_work_packages twp on twp.id = tr.wp_id
+    where rtr.results_id = ${resultId}
+      and rtr.initiative_id = ${initiativeId}
+      and ${toc_result_id ? `rtr.toc_result_id = ${toc_result_id}` : ``}
+      and rtr.is_active > 0;
+    `;
+    try {
+      const resultTocResult: ResultsTocResult[] = await this.query(queryData);
+      return resultTocResult;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsTocResultRepository.name,
+        error: error,
         debug: true,
       });
     }

@@ -5,7 +5,7 @@ import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser
 import { ClarisaGlobalUnitRepository } from '../../clarisa/clarisa-global-unit/clarisa-global-unit.repository';
 import { YearRepository } from '../results/years/year.repository';
 import { HandlersError } from '../../shared/handlers/error.utils';
-import { TocResultsRepository } from './repositories/toc-work-packages.repository';
+import { AoWBilateralRepository } from '../results/results-toc-results/repositories/aow-bilateral.repository';
 import { ResultRepository } from '../results/result.repository';
 import { ResultsService } from '../results/results.service';
 import { ResultsKnowledgeProductsService } from '../results/results-knowledge-products/results-knowledge-products.service';
@@ -110,7 +110,7 @@ describe('ResultsFrameworkReportingService', () => {
         { provide: YearRepository, useValue: mockYearRepository },
         { provide: HandlersError, useValue: mockHandlersError },
         {
-          provide: TocResultsRepository,
+          provide: AoWBilateralRepository,
           useValue: mockTocResultsRepository,
         },
         {
