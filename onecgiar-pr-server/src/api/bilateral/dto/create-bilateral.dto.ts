@@ -609,4 +609,56 @@ export class RootResultsDto {
   @ValidateNested({ each: true })
   @Type(() => ResultBilateralDto)
   results?: ResultBilateralDto[];
+
+  @ApiPropertyOptional({
+    description:
+      'Event type identifier when receiving single payloads directly from external systems.',
+    example: 'knowledge_product',
+  })
+  @IsOptional()
+  @IsString()
+  type?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Timestamp indicating when the upstream system delivered the payload.',
+    example: '2025-10-21T15:38:58.642Z',
+  })
+  @IsOptional()
+  @IsDateString()
+  received_at?: string;
+
+  @ApiPropertyOptional({
+    description: 'Unique idempotency key provided by the upstream source.',
+    example: 'b4e66fb305296fe4be52',
+  })
+  @IsOptional()
+  @IsString()
+  idempotencyKey?: string;
+
+  @ApiPropertyOptional({
+    description: 'Tenant or source identifier associated with the payload.',
+    example: 'prms.result-management.api',
+  })
+  @IsOptional()
+  @IsString()
+  tenant?: string;
+
+  @ApiPropertyOptional({
+    description: 'Operation code provided by the upstream source.',
+    example: 'dataset.ingest.requested',
+  })
+  @IsOptional()
+  @IsString()
+  op?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Single bilateral payload when the upstream source sends the dataset directly under "data".',
+    type: () => CreateBilateralDto,
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreateBilateralDto)
+  data?: CreateBilateralDto;
 }

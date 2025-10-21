@@ -374,6 +374,19 @@ export class BilateralService {
       return [rootResultsDto.result];
     }
 
+    if (
+      rootResultsDto.data &&
+      typeof rootResultsDto.data === 'object' &&
+      Object.keys(rootResultsDto.data).length > 0
+    ) {
+      return [
+        {
+          type: rootResultsDto.type ?? 'BILATERAL',
+          data: rootResultsDto.data,
+        },
+      ];
+    }
+
     return [];
   }
 
