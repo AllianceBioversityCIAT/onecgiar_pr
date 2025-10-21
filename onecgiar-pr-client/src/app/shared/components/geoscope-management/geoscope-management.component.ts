@@ -8,10 +8,10 @@ import { ApiService } from '../../services/api/api.service';
 import { ResultLevelService } from '../../../pages/results/pages/result-creator/services/result-level.service';
 
 @Component({
-    selector: 'app-geoscope-management',
-    templateUrl: './geoscope-management.component.html',
-    styleUrls: ['./geoscope-management.component.scss'],
-    standalone: false
+  selector: 'app-geoscope-management',
+  templateUrl: './geoscope-management.component.html',
+  styleUrls: ['./geoscope-management.component.scss'],
+  standalone: false
 })
 export class GeoscopeManagementComponent implements OnInit {
   @Input() body: any = { regions: [], countries: [] };
@@ -30,14 +30,22 @@ export class GeoscopeManagementComponent implements OnInit {
   ];
 
   get labelRadioButtons(): string {
-    return this.internalModule && this.internalModule.name === ModuleTypeEnum.REPORTING ? `What is the main geographic focus of the ${this.api.dataControlSE.getLastWord(this.resultLevelSE.currentResultLevelName)}?` : `Select country/ geoscope for which packaging and scaling readiness assessment will be conducted`;
+    return this.internalModule && this.internalModule.name === ModuleTypeEnum.REPORTING
+      ? `What is the main geographic focus of the ${this.api.dataControlSE.getLastWord(this.resultLevelSE.currentResultLevelName)}?`
+      : `Select country/ geoscope for which packaging and scaling readiness assessment will be conducted`;
   }
 
   get descriptionRadioButtons(): string {
-    return this.internalModule && this.internalModule.name === ModuleTypeEnum.REPORTING ? `This should reflect where the <strong>${this.api.dataControlSE.getLastWord(this.resultLevelSE.currentResultLevelName)}</strong> has taken place/contributed to benefit.` : undefined;
+    return this.internalModule && this.internalModule.name === ModuleTypeEnum.REPORTING
+      ? `This should reflect where the <strong>${this.api.dataControlSE.getLastWord(this.resultLevelSE.currentResultLevelName)}</strong> has taken place/contributed to benefit.`
+      : undefined;
   }
 
-  constructor(public regionsCountriesSE: RegionsCountriesService, public api: ApiService, public resultLevelSE: ResultLevelService) {}
+  constructor(
+    public regionsCountriesSE: RegionsCountriesService,
+    public api: ApiService,
+    public resultLevelSE: ResultLevelService
+  ) {}
 
   resetHasScope() {
     switch (this.body.geo_scope_id) {
@@ -62,10 +70,12 @@ export class GeoscopeManagementComponent implements OnInit {
     let tags = '';
     switch (id) {
       case 2:
-        tags += 'For region, multiple regions can be selected, unless the selection adds up to every region, in which case global should be selected.';
+        tags +=
+          'For region, multiple regions can be selected, unless the selection adds up to every region, in which case global should be selected.';
         break;
       case 3:
-        tags += 'For country, multiple countries can be selected, unless the selection adds up to a specific region, or set of regions, or global, in which case, region or global should be selected.';
+        tags +=
+          'For country, multiple countries can be selected, unless the selection adds up to a specific region, or set of regions, or global, in which case, region or global should be selected.';
         break;
     }
     tags += '';
@@ -99,6 +109,7 @@ export class GeoscopeManagementComponent implements OnInit {
 
   ngOnInit(): void {
     this.internalModule = AppModuleEnum.getFromName(this.module);
-    if (this.internalModule && this.internalModule.name === ModuleTypeEnum.REPORTING) this.geoscopeOptions = [...this.geoscopeOptions, { full_name: 'This is yet to be determined', id: GeoScopeEnum.DETERMINED }];
+    if (this.internalModule && this.internalModule.name === ModuleTypeEnum.REPORTING)
+      this.geoscopeOptions = [...this.geoscopeOptions, { full_name: 'This is yet to be determined', id: GeoScopeEnum.DETERMINED }];
   }
 }

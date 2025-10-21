@@ -89,12 +89,16 @@ export class FieldsManagerService {
       '[general-info]-poverty_impact_area_id': {
         label: this.scoresImpactAreaLabel,
         hide: this.isP22()
+      },
+      '[geoscope-management]-any-other-countries': {
+        label: 'Are there any other geopgraphic areas where  the innovation could be impactful (beyond current development and use)?',
+        description:
+          'This should reflect other geographies where the innovation development, testing and/or use could also contribute to outcomes and impact"',
+        required: true,
+        hide:
+          this.isP22() && this.dataControlSE.currentResultSignal().result_type_id != 2 && this.dataControlSE.currentResultSignal().result_type_id != 7
       }
     };
     return fields;
   });
-
-  constructor() {
-    //
-  }
 }
