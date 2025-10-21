@@ -74,7 +74,7 @@ describe('AowHloCreateModalComponent', () => {
 
     it('should return the title input label', () => {
       entityAowServiceMock.currentResultIsKnowledgeProduct.set(false);
-      expect(component.getTitleInputLabel()).toBe('Title');
+      expect(component.getTitleInputLabel()).toBe('Title retrieved from the repository');
     });
   });
 
