@@ -53,7 +53,7 @@ export class ResultsKnowledgeProductMapper {
         ? mqapResponseDto['Country ISO code']
         : (mqapResponseDto?.Countries ?? []);
 
-    knowledgeProductDto.repo = mqapResponseDto?.repo?.toUpperCase();
+    knowledgeProductDto.repo = mqapResponseDto?.repo;
 
     knowledgeProductDto.cgspace_countries = this.getAsArray(countryCodes);
 
@@ -99,7 +99,7 @@ export class ResultsKnowledgeProductMapper {
     const metadataCGSpace: ResultsKnowledgeProductMetadataDto =
       new ResultsKnowledgeProductMetadataDto();
 
-    metadataCGSpace.source = knowledgeProductDto.repo.toUpperCase();
+    metadataCGSpace.source = knowledgeProductDto.repo;
 
     if (dto?.['Open Access']) {
       metadataCGSpace.accessibility =
@@ -134,7 +134,7 @@ export class ResultsKnowledgeProductMapper {
       const metadataWoS: ResultsKnowledgeProductMetadataDto =
         new ResultsKnowledgeProductMetadataDto();
 
-      metadataWoS.source = mqapDOIData.source.toUpperCase();
+      metadataWoS.source = mqapDOIData.source;
 
       if (mqapDOIData.is_oa) {
         metadataWoS.accessibility = mqapDOIData.is_oa
@@ -431,14 +431,14 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProductDto.metadataCG = knowledgeProductDto.metadata.length
       ? {
           ...knowledgeProductDto.metadata[0],
-          source: knowledgeProductDto.metadata[0]?.source?.toUpperCase(),
+          source: knowledgeProductDto.metadata[0]?.source,
         }
       : null;
 
     knowledgeProductDto.metadataWOS = knowledgeProductDto.metadata.length
       ? {
           ...knowledgeProductDto.metadata[1],
-          source: knowledgeProductDto.metadata[1]?.source?.toUpperCase(),
+          source: knowledgeProductDto.metadata[1]?.source,
         }
       : null;
 
@@ -800,6 +800,7 @@ export class ResultsKnowledgeProductMapper {
       metadata.is_peer_reviewed = m.is_peer_reviewed;
       metadata.year = m.issue_year;
       metadata.online_year = m.online_year;
+      metadata.open_access = m.open_access;
 
       if (!knowledgeProduct.last_updated_by) {
         metadata.created_by = knowledgeProduct.created_by;
