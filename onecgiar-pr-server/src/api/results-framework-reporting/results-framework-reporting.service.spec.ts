@@ -44,6 +44,7 @@ const mockHandlersError = {
 
 const mockTocResultsRepository = {
   findByCompositeCode: jest.fn(),
+  find2030Outcomes: jest.fn(),
   findResultById: jest.fn(),
   findIndicatorById: jest.fn(),
   findUnitAcronymsByProgram: jest.fn(),
@@ -486,6 +487,97 @@ describe('ResultsFrameworkReportingService', () => {
       expect(
         mockTocResultsRepository.findByCompositeCode,
       ).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getToc2030Outcomes', () => {
+    beforeEach(() => {
+      mockTocResultsRepository.find2030Outcomes.mockReset();
+      mockYearRepository.findOne.mockReset();
+    });
+
+    it('should return ToC 2030 outcomes when repository returns data', async () => {
+      mockYearRepository.findOne.mockResolvedValueOnce({ year: 2030 });
+      mockTocResultsRepository.find2030Outcomes.mockResolvedValueOnce([
+        {
+          toc_result_id: 1,
+          category: 'EOI',
+          result_title: 'Outcome 1',
+          related_node_id: 'NODE-EOI-1',
+          indicators: [],
+        },
+      ]);
+
+      const result: any = await service.getToc2030Outcomes('sp01');
+
+      expect(mockYearRepository.findOne).toHaveBeenCalledWith({
+        where: { active: true },
+        select: ['year'],
+      });
+      expect(mockTocResultsRepository.find2030Outcomes).toHaveBeenCalledWith(
+        'SP01',
+        2030,
+      );
+      expect(result.status).toBe(200);
+      expect(result.response).toMatchObject({
+        program: 'SP01',
+        year: 2030,
+        metadata: { total: 1 },
+      });
+    });
+
+    it('should return handler error when program identifier is missing', async () => {
+      const result: any = await service.getToc2030Outcomes('');
+
+      expect(result.status).toBe(400);
+      expect(mockHandlersError.returnErrorRes).toHaveBeenCalled();
+      expect(mockTocResultsRepository.find2030Outcomes).not.toHaveBeenCalled();
+    });
+
+    it('should return handler error when active year is not configured', async () => {
+      mockYearRepository.findOne.mockResolvedValueOnce(null);
+
+      const result: any = await service.getToc2030Outcomes('SP02');
+
+      expect(result.status).toBe(404);
+      expect(mockHandlersError.returnErrorRes).toHaveBeenCalledWith({
+        error: expect.objectContaining({
+          status: 404,
+          message: 'No active reporting year was found.',
+        }),
+        debug: true,
+      });
+      expect(mockTocResultsRepository.find2030Outcomes).not.toHaveBeenCalled();
+    });
+
+    it('should return handler error when active year value is invalid', async () => {
+      mockYearRepository.findOne.mockResolvedValueOnce({ year: 'invalid' });
+
+      const result: any = await service.getToc2030Outcomes('sp03');
+
+      expect(result.status).toBe(500);
+      expect(mockHandlersError.returnErrorRes).toHaveBeenCalledWith({
+        error: expect.objectContaining({
+          status: 500,
+          message: 'The active reporting year configured is invalid.',
+        }),
+        debug: true,
+      });
+      expect(mockTocResultsRepository.find2030Outcomes).not.toHaveBeenCalled();
+    });
+
+    it('should return handler error when no outcomes are found', async () => {
+      mockYearRepository.findOne.mockResolvedValueOnce({ year: 2031 });
+      mockTocResultsRepository.find2030Outcomes.mockResolvedValueOnce([]);
+
+      const result: any = await service.getToc2030Outcomes('sp04');
+
+      expect(result.status).toBe(404);
+      expect(mockHandlersError.returnErrorRes).toHaveBeenCalled();
+      expect(mockTocResultsRepository.find2030Outcomes).toHaveBeenCalledWith(
+        'SP04',
+        2031,
+      );
     });
   });
 

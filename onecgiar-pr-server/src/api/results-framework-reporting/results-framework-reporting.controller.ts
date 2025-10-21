@@ -131,6 +131,25 @@ export class ResultsFrameworkReportingController {
     );
   }
 
+  @Get('toc-results/2030-outcomes')
+  @ApiOperation({
+    summary: 'List ToC 2030 outcomes by program',
+    description:
+      'Retrieves the set of End of Initiative (EOI) ToC outcomes for the requested program in the active reporting year.',
+  })
+  @ApiQuery({
+    name: 'programId',
+    type: String,
+    required: true,
+    description: 'Program identifier (e.g. SP01).',
+  })
+  @ApiOkResponse({
+    description: 'ToC 2030 outcomes retrieved successfully.',
+  })
+  getToc2030Outcomes(@Query('programId') programId: string) {
+    return this.resultsFrameworkReportingService.getToc2030Outcomes(programId);
+  }
+
   @Get('programs/indicator-contribution-summary')
   @ApiOperation({
     summary: 'Get summary of results contributing to ToC indicators',
