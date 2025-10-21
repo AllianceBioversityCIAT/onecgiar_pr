@@ -107,7 +107,6 @@ export class EntityAowService {
         this.isLoadingTocResultsByAowId.set(false);
       },
       error: err => {
-        console.error(err);
         this.tocResultsOutputsByAowId.set([]);
         this.tocResultsOutcomesByAowId.set([]);
         this.isLoadingTocResultsByAowId.set(false);
@@ -124,8 +123,13 @@ export class EntityAowService {
   getExistingResultsContributors() {
     this.api.resultsSE
       .GET_ExistingResultsContributors(this.currentResultToReport()?.toc_result_id, this.currentResultToReport()?.indicators[0].related_node_id)
-      .subscribe(response => {
-        this.existingResultsContributors.set(response?.response?.contributors ?? []);
+      .subscribe({
+        next: ({ response }) => {
+          this.existingResultsContributors.set(response?.response?.contributors ?? []);
+        },
+        error: err => {
+          this.existingResultsContributors.set([]);
+        }
       });
   }
 

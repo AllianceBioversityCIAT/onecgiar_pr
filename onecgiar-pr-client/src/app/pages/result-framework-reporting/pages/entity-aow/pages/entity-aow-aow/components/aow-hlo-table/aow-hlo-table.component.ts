@@ -5,6 +5,7 @@ import { ProgressBarModule } from 'primeng/progressbar';
 import { CommonModule } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 import { AowHloCreateModalComponent } from './components/aow-hlo-table-create-modal/aow-hlo-create-modal.component';
+import { ResultLevelService } from '../../../../../../../results/pages/result-creator/services/result-level.service';
 
 export interface ColumnOrder {
   title: string;
@@ -23,6 +24,7 @@ export interface ColumnOrder {
 })
 export class AowHloTableComponent {
   entityAowService = inject(EntityAowService);
+  resultLevelService = inject(ResultLevelService);
 
   @Input() tableType: 'outputs' | 'outcomes' = 'outputs';
 

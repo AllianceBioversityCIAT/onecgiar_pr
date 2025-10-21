@@ -20,10 +20,25 @@
         <p class="report-result-content_left_header_desc">{{ entityAowService.currentResultToReport()?.indicators?.[0]?.indicator_description }}</p>
       </div>
       <div class="report-result-content_left_content">
-        <div class="report-result-content_left_content_indicator">
-          <span class="report-result-content_left_content_label">Indicator category: </span>
-          <span class="report-result-content_left_content_value">{{ entityAowService.currentResultToReport()?.indicators?.[0]?.type_name }}</span>
-        </div>
+        @if (entityAowService.currentResultToReport().indicators?.[0]?.result_type_id) {
+          <div class="report-result-content_left_content_indicator">
+            <span class="report-result-content_left_content_label">Indicator category: </span>
+            <span class="report-result-content_left_content_value">{{ entityAowService.currentResultToReport()?.indicators?.[0]?.type_name }}</span>
+          </div>
+        } @else {
+          <div>
+            <app-pr-field-header label="Indicator category" [required]="true" [labelDescInlineStyles]="'margin-top: 0 !important'" [useColon]="false">
+            </app-pr-field-header>
+
+            <p-select
+              [options]="resultTypes()"
+              [(ngModel)]="createResultBody().result_type_id"
+              optionLabel="name"
+              optionValue="id"
+              placeholder="Select an indicator category"
+              [style]="{ width: '100%' }" />
+          </div>
+        }
 
         @if (entityAowService.currentResultIsKnowledgeProduct()) {
           <div>

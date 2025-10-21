@@ -4,6 +4,7 @@ import { of } from 'rxjs';
 import { AowHloTableComponent } from './aow-hlo-table.component';
 import { EntityAowService } from '../../../../services/entity-aow.service';
 import { signal } from '@angular/core';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 
 describe('AowHloTableComponent', () => {
   let component: AowHloTableComponent;
@@ -20,6 +21,7 @@ describe('AowHloTableComponent', () => {
       entityId: signal<string>(''),
       getTocResultsByAowId: jest.fn(),
       tocResultsOutputsByAowId: signal<any[]>([]),
+      tocResultsOutcomesByAowId: signal<any[]>([]),
       isLoadingTocResultsByAowId: signal<boolean>(false),
       showReportResultModal: mockShowReportResultModal,
       currentResultToReport: mockCurrentResultToReport
@@ -33,7 +35,7 @@ describe('AowHloTableComponent', () => {
     };
 
     await TestBed.configureTestingModule({
-      imports: [AowHloTableComponent],
+      imports: [AowHloTableComponent, HttpClientTestingModule],
       providers: [
         { provide: EntityAowService, useValue: mockEntityAowService },
         { provide: ActivatedRoute, useValue: mockActivatedRoute }

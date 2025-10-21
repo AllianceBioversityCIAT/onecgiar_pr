@@ -37,7 +37,6 @@ export class ResultsFrameworkReportingService {
     private readonly _resultsTocResultIndicatorsRepository: ResultsTocResultIndicatorsRepository,
     private readonly _shareResultRequestService: ShareResultRequestService,
     private readonly _resultsByProjectsService: ResultsByProjectsService,
-    private readonly _contributionToIndicatorResultsRepository: ContributionToIndicatorResultsRepository,
   ) {}
 
   async getGlobalUnitsByProgram(user: TokenDto, programId?: string) {
@@ -264,6 +263,72 @@ export class ResultsFrameworkReportingService {
           },
         },
         message: 'Work packages retrieved successfully.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async getToc2030Outcomes(programId?: string) {
+    try {
+      const normalizedProgram = programId?.trim();
+
+      if (!normalizedProgram) {
+        throw {
+          response: {},
+          message: 'The program identifier is required in the query params.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const activeYear = await this._yearRepository.findOne({
+        where: { active: true },
+        select: ['year'],
+      });
+
+      if (!activeYear) {
+        throw {
+          response: {},
+          message: 'No active reporting year was found.',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const resolvedYear = Number(activeYear.year);
+
+      if (!Number.isFinite(resolvedYear) || resolvedYear < 0) {
+        throw {
+          response: {},
+          message: 'The active reporting year configured is invalid.',
+          status: HttpStatus.INTERNAL_SERVER_ERROR,
+        };
+      }
+
+      const toc2030Outcomes = await this._tocResultsRepository.find2030Outcomes(
+        normalizedProgram.toUpperCase(),
+        resolvedYear,
+      );
+
+      if (!toc2030Outcomes?.length) {
+        throw {
+          response: {},
+          message:
+            'No ToC 2030 outcomes were found for the provided program identifier.',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      return {
+        response: {
+          program: normalizedProgram.toUpperCase(),
+          year: resolvedYear,
+          tocResults: toc2030Outcomes,
+          metadata: {
+            total: toc2030Outcomes.length,
+          },
+        },
+        message: 'ToC 2030 outcomes retrieved successfully.',
         status: HttpStatus.OK,
       };
     } catch (error) {

@@ -4,6 +4,7 @@ import { of } from 'rxjs';
 import { EntityAowAowComponent } from './entity-aow-aow.component';
 import { EntityAowService } from '../../services/entity-aow.service';
 import { signal } from '@angular/core';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 
 describe('EntityAowAowComponent', () => {
   let component: EntityAowAowComponent;
@@ -29,7 +30,7 @@ describe('EntityAowAowComponent', () => {
     };
 
     await TestBed.configureTestingModule({
-      imports: [EntityAowAowComponent],
+      imports: [EntityAowAowComponent, HttpClientTestingModule],
       providers: [
         { provide: EntityAowService, useValue: mockEntityAowService },
         { provide: ActivatedRoute, useValue: mockActivatedRoute }
