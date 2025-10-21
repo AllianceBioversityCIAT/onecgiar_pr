@@ -836,7 +836,7 @@ describe('EntityAowService', () => {
       const knowledgeProductResult = {
         indicators: [
           {
-            type_value: 'Number of knowledge products'
+            type_name: 'Number of knowledge products'
           }
         ]
       };
@@ -851,7 +851,7 @@ describe('EntityAowService', () => {
       const regularResult = {
         indicators: [
           {
-            type_value: 'Number of outcomes'
+            type_name: 'Number of outcomes'
           }
         ]
       };

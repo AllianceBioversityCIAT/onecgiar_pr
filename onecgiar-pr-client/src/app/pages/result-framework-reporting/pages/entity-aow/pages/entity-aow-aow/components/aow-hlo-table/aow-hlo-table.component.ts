@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, Input, signal } from '@angular/core';
 import { TableModule } from 'primeng/table';
 import { EntityAowService } from '../../../../services/entity-aow.service';
 import { ProgressBarModule } from 'primeng/progressbar';
@@ -24,9 +24,22 @@ export interface ColumnOrder {
 export class AowHloTableComponent {
   entityAowService = inject(EntityAowService);
 
+  @Input() tableType: 'outputs' | 'outcomes' = 'outputs';
+
+  tableData = computed(() => {
+    switch (this.tableType) {
+      case 'outputs':
+        return this.entityAowService.tocResultsOutputsByAowId();
+      case 'outcomes':
+        return this.entityAowService.tocResultsOutcomesByAowId();
+      default:
+        return [];
+    }
+  });
+
   columnOrder = signal<ColumnOrder[]>([
     { title: 'Indicator name', attr: 'indicator_description', width: '30%' },
-    { title: 'Type', attr: 'type_value', width: '10%' },
+    { title: 'Type', attr: 'type_name', width: '10%' },
     { title: 'Expected target 2025', attr: 'target_value_sum', width: '10%' },
     { title: 'Actual achieved', attr: 'actual_achieved_value_sum', width: '10%' },
     { title: 'Progress', attr: 'progress_percentage', hideSortIcon: true, width: '112px' },

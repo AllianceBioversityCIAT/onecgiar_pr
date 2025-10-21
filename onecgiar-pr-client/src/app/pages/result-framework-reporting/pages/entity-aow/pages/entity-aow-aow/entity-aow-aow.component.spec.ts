@@ -18,6 +18,7 @@ describe('EntityAowAowComponent', () => {
       entityId: signal<string>(''),
       getTocResultsByAowId: jest.fn(),
       tocResultsOutputsByAowId: signal<any[]>([]),
+      tocResultsOutcomesByAowId: signal<any[]>([]),
       isLoadingTocResultsByAowId: signal<boolean>(false),
       showReportResultModal: signal<boolean>(false)
     } as any;
@@ -48,7 +49,7 @@ describe('EntityAowAowComponent', () => {
     it('should initialize with default values', () => {
       expect(component.tabs()).toEqual([
         { id: 'high-level-outputs', label: 'High-Level Outputs', count: 0 },
-        { id: 'outcomes', label: 'Outcomes', count: 0, disabled: true }
+        { id: 'outcomes', label: 'Outcomes', count: 0 }
       ]);
 
       expect(component.activeTabId()).toBe('high-level-outputs');
@@ -133,8 +134,7 @@ describe('EntityAowAowComponent', () => {
       expect(tabs[1]).toEqual({
         id: 'outcomes',
         label: 'Outcomes',
-        count: 0,
-        disabled: true
+        count: 0
       });
     });
 

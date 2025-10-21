@@ -53,7 +53,7 @@ describe('AowHloTableComponent', () => {
     it('should initialize with default values', () => {
       expect(component.columnOrder()).toEqual([
         { title: 'Indicator name', attr: 'indicator_description', width: '30%' },
-        { title: 'Type', attr: 'type_value', width: '10%' },
+        { title: 'Type', attr: 'type_name', width: '10%' },
         { title: 'Expected target 2025', attr: 'target_value_sum', width: '10%' },
         { title: 'Actual achieved', attr: 'actual_achieved_value_sum', width: '10%' },
         { title: 'Progress', attr: 'progress_percentage', hideSortIcon: true, width: '112px' },
@@ -78,7 +78,7 @@ describe('AowHloTableComponent', () => {
       });
       expect(columns[1]).toEqual({
         title: 'Type',
-        attr: 'type_value',
+        attr: 'type_name',
         width: '10%'
       });
       expect(columns[2]).toEqual({
@@ -90,7 +90,7 @@ describe('AowHloTableComponent', () => {
 
     it('should have all required column attributes', () => {
       const columns = component.columnOrder();
-      const requiredAttrs = ['indicator_description', 'type_value', 'target_value_sum', 'actual_achieved_value_sum', 'progress_percentage', 'status'];
+      const requiredAttrs = ['indicator_description', 'type_name', 'target_value_sum', 'actual_achieved_value_sum', 'progress_percentage', 'status'];
 
       columns.forEach(column => {
         expect(requiredAttrs).toContain(column.attr);
@@ -174,9 +174,9 @@ describe('AowHloTableComponent', () => {
         id: 'result-1',
         title: 'Test Result',
         indicators: [
-          { indicator_id: 'indicator-1', name: 'Indicator 1', type_value: 'Number of knowledge products' },
-          { indicator_id: 'indicator-2', name: 'Indicator 2', type_value: 'Outcome indicator' },
-          { indicator_id: 'indicator-3', name: 'Indicator 3', type_value: 'Impact indicator' }
+          { indicator_id: 'indicator-1', name: 'Indicator 1', type_name: 'Number of knowledge products' },
+          { indicator_id: 'indicator-2', name: 'Indicator 2', type_name: 'Outcome indicator' },
+          { indicator_id: 'indicator-3', name: 'Indicator 3', type_name: 'Impact indicator' }
         ]
       };
       const currentItemId = 'indicator-2';
@@ -187,7 +187,7 @@ describe('AowHloTableComponent', () => {
       expect(mockEntityAowService.currentResultToReport.set).toHaveBeenCalledWith({
         id: 'result-1',
         title: 'Test Result',
-        indicators: [{ indicator_id: 'indicator-2', name: 'Indicator 2', type_value: 'Outcome indicator' }]
+        indicators: [{ indicator_id: 'indicator-2', name: 'Indicator 2', type_name: 'Outcome indicator' }]
       });
     });
 
@@ -196,8 +196,8 @@ describe('AowHloTableComponent', () => {
         id: 'result-1',
         title: 'Test Result',
         indicators: [
-          { indicator_id: 'indicator-1', name: 'Indicator 1', type_value: 'Number of knowledge products' },
-          { indicator_id: 'indicator-2', name: 'Indicator 2', type_value: 'Outcome indicator' }
+          { indicator_id: 'indicator-1', name: 'Indicator 1', type_name: 'Number of knowledge products' },
+          { indicator_id: 'indicator-2', name: 'Indicator 2', type_name: 'Outcome indicator' }
         ]
       };
       const currentItemId = 'non-existent-indicator';
@@ -249,8 +249,8 @@ describe('AowHloTableComponent', () => {
         description: 'Test Description',
         status: 'active',
         indicators: [
-          { indicator_id: 'indicator-1', name: 'Indicator 1', type_value: 'Number of knowledge products' },
-          { indicator_id: 'indicator-2', name: 'Indicator 2', type_value: 'Outcome indicator' }
+          { indicator_id: 'indicator-1', name: 'Indicator 1', type_name: 'Number of knowledge products' },
+          { indicator_id: 'indicator-2', name: 'Indicator 2', type_name: 'Outcome indicator' }
         ]
       };
       const currentItemId = 'indicator-1';
@@ -262,7 +262,7 @@ describe('AowHloTableComponent', () => {
         title: 'Test Result',
         description: 'Test Description',
         status: 'active',
-        indicators: [{ indicator_id: 'indicator-1', name: 'Indicator 1', type_value: 'Number of knowledge products' }]
+        indicators: [{ indicator_id: 'indicator-1', name: 'Indicator 1', type_name: 'Number of knowledge products' }]
       });
     });
 
@@ -271,9 +271,9 @@ describe('AowHloTableComponent', () => {
         id: 'result-1',
         title: 'Test Result',
         indicators: [
-          { indicator_id: 'indicator-1', name: 'Indicator 1', type_value: 'Number of knowledge products' },
-          { indicator_id: 'indicator-1', name: 'Indicator 1 Duplicate', type_value: 'Outcome indicator' },
-          { indicator_id: 'indicator-2', name: 'Indicator 2', type_value: 'Impact indicator' }
+          { indicator_id: 'indicator-1', name: 'Indicator 1', type_name: 'Number of knowledge products' },
+          { indicator_id: 'indicator-1', name: 'Indicator 1 Duplicate', type_name: 'Outcome indicator' },
+          { indicator_id: 'indicator-2', name: 'Indicator 2', type_name: 'Impact indicator' }
         ]
       };
       const currentItemId = 'indicator-1';
@@ -284,8 +284,8 @@ describe('AowHloTableComponent', () => {
         id: 'result-1',
         title: 'Test Result',
         indicators: [
-          { indicator_id: 'indicator-1', name: 'Indicator 1', type_value: 'Number of knowledge products' },
-          { indicator_id: 'indicator-1', name: 'Indicator 1 Duplicate', type_value: 'Outcome indicator' }
+          { indicator_id: 'indicator-1', name: 'Indicator 1', type_name: 'Number of knowledge products' },
+          { indicator_id: 'indicator-1', name: 'Indicator 1 Duplicate', type_name: 'Outcome indicator' }
         ]
       });
     });

@@ -34,7 +34,7 @@ export class EntityAowService {
   showReportResultModal = signal<boolean>(false);
   currentResultToReport = signal<any>({});
   currentResultIsKnowledgeProduct = computed(() => {
-    return this.currentResultToReport()?.indicators?.[0]?.type_value === 'Number of knowledge products';
+    return this.currentResultToReport()?.indicators?.[0]?.type_name === 'Number of knowledge products';
   });
 
   getAllDetailsData() {
