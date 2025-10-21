@@ -117,8 +117,7 @@ export class TocResultsRepository {
           WHEN tri.type_value LIKE '%capacity%' THEN 5
           WHEN tri.type_value LIKE '%knowledge%' THEN 6
           WHEN tri.type_value LIKE '%development%' THEN 7
-          WHEN tr.category = 'OUTCOME' THEN 4
-          ELSE 8
+          ELSE null
         END AS result_type_id,
         CASE
           WHEN tr.category = 'OUTCOME' THEN CAST(3 AS SIGNED)
