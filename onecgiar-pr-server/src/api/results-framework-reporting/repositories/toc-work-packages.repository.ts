@@ -52,6 +52,41 @@ export class TocResultsRepository {
     private readonly _handlersError: HandlersError,
   ) {}
 
+  /**
+   * Returns the distinct list of work package acronyms (unit codes) registered in the
+   * ToC catalogue for the provided program (initiative official code).
+   *
+   * Mapping context requested:
+   *  code (unit code) = acronym (toc_work_packages.acronym)
+   *  programId = initiativeId / program official code (toc_results.official_code)
+   */
+  async findUnitAcronymsByProgram(
+    programOfficialCode: string,
+  ): Promise<Set<string>> {
+    const query = `
+      SELECT DISTINCT wp.acronym
+      FROM ${env.DB_TOC}.toc_work_packages wp
+      INNER JOIN ${env.DB_TOC}.toc_results tr ON tr.wp_id = wp.id
+        AND tr.official_code = ?
+    `;
+
+    try {
+      const rows = await this.dataSource.query(query, [programOfficialCode]);
+      const acronyms = new Set<string>();
+      for (const row of rows || []) {
+        const value = row?.acronym?.trim();
+        if (value) acronyms.add(value.toUpperCase());
+      }
+      return acronyms;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        error,
+        className: TocResultsRepository.name,
+        debug: true,
+      });
+    }
+  }
+
   async findByCompositeCode(
     program: string,
     composite_code: string,
