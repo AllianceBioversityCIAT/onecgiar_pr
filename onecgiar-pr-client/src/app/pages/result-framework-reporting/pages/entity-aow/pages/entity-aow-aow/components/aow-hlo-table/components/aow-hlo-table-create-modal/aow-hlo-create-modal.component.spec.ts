@@ -27,7 +27,9 @@ describe('AowHloCreateModalComponent', () => {
         indicators: [{ result_type_id: 1, result_level_id: 1 }]
       }),
       entityDetails: signal<any>({ id: 1 }),
-      onCloseReportResultModal: jest.fn()
+      onCloseReportResultModal: jest.fn(),
+      currentResultIsKnowledgeProduct: signal<boolean>(false),
+      mqapJson: signal<any>(null)
     };
 
     apiServiceMock = {
@@ -55,6 +57,25 @@ describe('AowHloCreateModalComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  describe('getTitleInputLabel', () => {
+    it('should return the title input label', () => {
+      entityAowServiceMock.currentResultIsKnowledgeProduct.set(true);
+      component.mqapJson.set({ metadata: [{ source: 'CGSpace' }] });
+      expect(component.getTitleInputLabel()).toBe('Title retrived from CGSpace');
+    });
+
+    it('should return the title input label', () => {
+      entityAowServiceMock.currentResultIsKnowledgeProduct.set(true);
+      component.mqapJson.set({ metadata: [{ source: 'MELSpace' }] });
+      expect(component.getTitleInputLabel()).toBe('Title retrived from MELSpace');
+    });
+
+    it('should return the title input label', () => {
+      entityAowServiceMock.currentResultIsKnowledgeProduct.set(false);
+      expect(component.getTitleInputLabel()).toBe('Title');
+    });
   });
 
   describe('ngOnInit', () => {
@@ -161,6 +182,7 @@ describe('AowHloCreateModalComponent', () => {
 
     it('should handle success on POST_createResult call', () => {
       jest.spyOn(apiServiceMock.resultsSE, 'POST_createResult').mockReturnValue(of({ response: { success: true } }));
+
       component.createResult();
       expect(apiServiceMock.resultsSE.POST_createResult).toHaveBeenCalled();
       expect(entityAowServiceMock.onCloseReportResultModal).toHaveBeenCalled();

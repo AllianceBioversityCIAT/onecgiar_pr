@@ -31,7 +31,7 @@
               <app-pr-input
                 [isStatic]="true"
                 placeholder="Handle..."
-                label="CGSpace link"
+                label="Repository link/handle"
                 type="text"
                 labelDescInlineStyles="margin-top: 0 !important"
                 [(ngModel)]="createResultBody().handler">
@@ -50,9 +50,9 @@
         <app-pr-input
           [isStatic]="true"
           [placeholder]="entityAowService.currentResultIsKnowledgeProduct() ? 'Knowledge product title...' : 'Input title...'"
-          label="Title"
+          [label]="getTitleInputLabel()"
           type="text"
-          [description]="entityAowService.currentResultIsKnowledgeProduct() ? 'Title retrieved from CGSpace' : ''"
+          [description]="entityAowService.currentResultIsKnowledgeProduct() ? getTitleInputLabel() : ''"
           labelDescInlineStyles="margin-top: 0 !important"
           [(ngModel)]="createResultBody().result_name"
           [maxWords]="30"
