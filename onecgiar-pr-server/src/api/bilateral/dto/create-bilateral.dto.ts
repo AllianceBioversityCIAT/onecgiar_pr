@@ -588,13 +588,25 @@ export class ResultBilateralDto {
 }
 
 export class RootResultsDto {
-  @ApiProperty({
-    description: 'Collection of bilateral result records to be processed',
+  @ApiPropertyOptional({
+    description:
+      'Single bilateral result record to be processed when sending one item at a time',
+    type: () => ResultBilateralDto,
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ResultBilateralDto)
+  result?: ResultBilateralDto;
+
+  @ApiPropertyOptional({
+    description:
+      'Collection of bilateral result records to be processed in bulk mode',
     type: [ResultBilateralDto],
   })
+  @IsOptional()
   @IsArray()
-  @IsNotEmpty()
+  @ArrayMinSize(1)
   @ValidateNested({ each: true })
   @Type(() => ResultBilateralDto)
-  results: ResultBilateralDto[];
+  results?: ResultBilateralDto[];
 }
