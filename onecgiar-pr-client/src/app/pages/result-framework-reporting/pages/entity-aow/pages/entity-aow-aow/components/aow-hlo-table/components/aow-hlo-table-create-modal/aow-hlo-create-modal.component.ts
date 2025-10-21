@@ -54,7 +54,7 @@ export class AowHloCreateModalComponent implements OnInit {
     if (this.entityAowService.currentResultIsKnowledgeProduct() && this.mqapJson()?.metadata?.length > 0) {
       return 'Title retrived from ' + this.mqapJson()?.metadata?.[0]?.source;
     }
-    return 'Title';
+    return 'Title retrieved from the repository';
   }
 
   removeBilateralProject(project: any) {
