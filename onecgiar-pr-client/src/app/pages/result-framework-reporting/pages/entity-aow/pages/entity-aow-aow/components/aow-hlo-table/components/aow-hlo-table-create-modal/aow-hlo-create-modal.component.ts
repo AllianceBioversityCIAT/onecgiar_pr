@@ -7,6 +7,7 @@ import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 import { CommonModule } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
+import { Router } from '@angular/router';
 
 interface CreateResultBody {
   handler: string;
@@ -24,6 +25,7 @@ interface CreateResultBody {
 export class AowHloCreateModalComponent implements OnInit {
   api = inject(ApiService);
   entityAowService = inject(EntityAowService);
+  router = inject(Router);
 
   allInitiatives = signal<any[]>([]);
   createResultBody = signal<CreateResultBody>({
@@ -46,6 +48,13 @@ export class AowHloCreateModalComponent implements OnInit {
     this.api.resultsSE.GET_AllInitiatives('p25').subscribe(({ response }) => {
       this.allInitiatives.set(response.filter(item => item.initiative_id !== this.entityAowService.entityDetails().id));
     });
+  }
+
+  getTitleInputLabel() {
+    if (this.entityAowService.currentResultIsKnowledgeProduct() && this.mqapJson()?.metadata?.length > 0) {
+      return 'Title retrived from ' + this.mqapJson()?.metadata?.[0]?.source;
+    }
+    return 'Title';
   }
 
   removeBilateralProject(project: any) {
@@ -137,6 +146,9 @@ export class AowHloCreateModalComponent implements OnInit {
         this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
         this.entityAowService.onCloseReportResultModal();
         this.creatingResult.set(false);
+        this.router.navigate([`/result/result-detail/${resp?.response?.result?.result_code}/general-information`], {
+          queryParams: { phase: resp?.response?.result?.version_id }
+        });
       },
       error: err => {
         this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
