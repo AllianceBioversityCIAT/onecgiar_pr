@@ -5,7 +5,11 @@ import {
   NotFoundException,
   Logger,
 } from '@nestjs/common';
-import { RootResultsDto, SubmittedByDto } from './dto/create-bilateral.dto';
+import {
+  ResultBilateralDto,
+  RootResultsDto,
+  SubmittedByDto,
+} from './dto/create-bilateral.dto';
 import { ResultRepository } from '../results/result.repository';
 import { VersioningService } from '../versioning/versioning.service';
 import { AppModuleIdEnum } from '../../shared/constants/role-type.enum';
@@ -76,19 +80,23 @@ export class BilateralService {
   private readonly logger = new Logger(BilateralService.name);
 
   async create(rootResultsDto: RootResultsDto) {
-    if (
-      !rootResultsDto?.results ||
-      !Array.isArray(rootResultsDto.results) ||
-      rootResultsDto.results.length === 0
-    ) {
+    const incomingResults = this.unwrapIncomingResults(rootResultsDto);
+
+    if (!incomingResults.length) {
       throw new BadRequestException(
-        'The "results" array is required and cannot be empty.',
+        'At least one result payload is required in either "results" or "result".',
       );
     }
     try {
       const createdResults = [];
       let resultInfo: any = null;
-      for (const result of rootResultsDto.results) {
+      for (const result of incomingResults) {
+        if (!result?.data || typeof result.data !== 'object') {
+          throw new BadRequestException(
+            'Each result entry must include a "data" object with the bilateral payload.',
+          );
+        }
+
         const bilateralDto = result.data;
 
         const adminUser = await this._userRepository.findOne({
@@ -346,6 +354,27 @@ export class BilateralService {
       );
       throw error;
     }
+  }
+
+  private unwrapIncomingResults(
+    rootResultsDto: RootResultsDto,
+  ): ResultBilateralDto[] {
+    if (!rootResultsDto) {
+      return [];
+    }
+
+    if (
+      Array.isArray(rootResultsDto.results) &&
+      rootResultsDto.results.length > 0
+    ) {
+      return rootResultsDto.results;
+    }
+
+    if (rootResultsDto.result) {
+      return [rootResultsDto.result];
+    }
+
+    return [];
   }
 
   private async findOrCreateUser(userData, adminUser): Promise<any> {
