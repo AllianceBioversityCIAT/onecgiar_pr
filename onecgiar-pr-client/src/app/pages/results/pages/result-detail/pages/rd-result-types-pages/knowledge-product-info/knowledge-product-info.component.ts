@@ -21,8 +21,10 @@ export class KnowledgeProductInfoComponent implements OnInit {
   ostMeliaStudies = [];
   private readonly kpGradientScale = chroma.scale(['#f44444', '#dcdf38', '#38df7b']).mode('hcl');
   fair_data: Array<{ key: string; value: FairSpecificData }>;
-  fairGuideline =
-    'FAIR (findability, accessibility, interoperability, and reusability) scores are used to support reporting that aligns with the <a href="https://cgspace.cgiar.org/handle/10568/113623" target="_blank">CGIAR Open and FAIR Data Assets Policy</a>. FAIR scores are calculated based on the presence or absence of metadata in CGSpace. If you wish to enhance the FAIR score for a knowledge product, review the metadata flagged with a red icon below and liaise with your Center’s knowledge management team to implement improvements.';
+  get fairGuideline(): string {
+    const repositoryName = this.knowledgeProductBody?.source || 'the repository';
+    return `FAIR (findability, accessibility, interoperability, and reusability) scores are used to support reporting that aligns with the <a href="https://cgspace.cgiar.org/handle/10568/113623" target="_blank">CGIAR Open and FAIR Data Assets Policy</a>. FAIR scores are calculated based on the presence or absence of metadata in ${repositoryName}. If you wish to enhance the FAIR score for a knowledge product, review the metadata flagged with a red icon below and liaise with your Center's knowledge management team to implement improvements.`;
+  }
 
   constructor(
     public api: ApiService,

@@ -2,10 +2,14 @@
 <div class="detail_container">
   <app-alert-status [description]="warning" *ngFor="let warning of this.knowledgeProductBody?.warnings"> </app-alert-status>
   <app-alert-status
-    description="If any of the metadata fields are incorrect, please contact your Center library staff or knowledge management team to update them in CGSpace. Before the end of the reporting period, metadata will be automatically refreshed on this page.">
+    description="If any of the metadata fields are incorrect, please contact your Center library staff or knowledge management team to update them in {{
+      knowledgeProductBody.source
+    }}. Before the end of the reporting period, metadata will be automatically refreshed on this page.">
   </app-alert-status>
   <app-alert-status
-    description="Some information in this section is automatically collected from external sources such as the Web of Science, Scopus, and Unpaywall using the DOI (Digital Object Identifier) linked to this knowledge product in CGSpace. In the case of any discrepancies, the CGIAR Quality Assurance team will manually validate the record. ">
+    description="Some information in this section is automatically collected from external sources such as the Web of Science, Scopus, and Unpaywall using the DOI (Digital Object Identifier) linked to this knowledge product in {{
+      knowledgeProductBody.source
+    }}. In the case of any discrepancies, the CGIAR Quality Assurance team will manually validate the record. ">
   </app-alert-status>
 
   <div appFeedbackValidation labelText="Is this knowledge product a MELIA Product?" [isComplete]="this.sectionData.isMeliaProduct !== null"></div>
