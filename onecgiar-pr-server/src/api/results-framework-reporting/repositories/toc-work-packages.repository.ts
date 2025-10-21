@@ -112,12 +112,18 @@ export class TocResultsRepository {
         0 AS actual_achieved_value_sum,
         '50%' AS progress_percentage,
         CASE
+          WHEN tri.type_value LIKE '%policy%' THEN 1
+          WHEN tri.type_value LIKE '%use%' THEN 2
           WHEN tri.type_value LIKE '%capacity%' THEN 5
           WHEN tri.type_value LIKE '%knowledge%' THEN 6
           WHEN tri.type_value LIKE '%development%' THEN 7
-          ELSE 8
+          ELSE null
         END AS result_type_id,
-        CAST(4 AS SIGNED) AS result_level_id
+        CASE
+          WHEN tr.category = 'OUTCOME' THEN CAST(3 AS SIGNED)
+          WHEN tr.category = 'OUTPUT' THEN  CAST(4 AS SIGNED)
+          ELSE NULL
+        END AS result_level_id
       FROM ${env.DB_TOC}.toc_work_packages wp
       JOIN ${env.DB_TOC}.toc_results tr ON tr.wp_id = wp.id
         AND tr.official_code = ?

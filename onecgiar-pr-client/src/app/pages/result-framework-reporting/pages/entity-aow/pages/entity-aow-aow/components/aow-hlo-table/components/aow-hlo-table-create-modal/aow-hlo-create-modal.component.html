@@ -22,7 +22,7 @@
       <div class="report-result-content_left_content">
         <div class="report-result-content_left_content_indicator">
           <span class="report-result-content_left_content_label">Indicator category: </span>
-          <span class="report-result-content_left_content_value">{{ entityAowService.currentResultToReport()?.indicators?.[0]?.type_value }}</span>
+          <span class="report-result-content_left_content_value">{{ entityAowService.currentResultToReport()?.indicators?.[0]?.type_name }}</span>
         </div>
 
         @if (entityAowService.currentResultIsKnowledgeProduct()) {
