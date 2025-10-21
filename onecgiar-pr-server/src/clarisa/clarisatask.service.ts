@@ -323,8 +323,27 @@ export class ClarisaTaskService {
         }
       };
 
+      const IGNORED_YEAR_ENTITY_TYPES = new Set<number>([22, 23, 24]);
+      const buildIndexKey = (
+        composeCode?: string | null,
+        year?: number | null,
+        code?: string | null,
+        entityTypeId?: number | null,
+      ): string => {
+        const effectiveYear =
+          entityTypeId && IGNORED_YEAR_ENTITY_TYPES.has(entityTypeId)
+            ? null
+            : (year ?? null);
+        return this.buildGlobalUnitKey(composeCode, effectiveYear, code);
+      };
+
       for (const u of existingUnits) {
-        const key = this.buildGlobalUnitKey(u.composeCode, u.year, u.code);
+        const key = buildIndexKey(
+          u.composeCode,
+          u.year,
+          u.code,
+          u.entityTypeId,
+        );
         unitsByKey.set(key, u);
         registerInCodeIndex(u);
       }
@@ -348,17 +367,19 @@ export class ClarisaTaskService {
           continue;
         }
 
-        const key = this.buildGlobalUnitKey(composeCode, year, code);
+        const entityTypeCode = item.entity_type?.code;
+        const key = buildIndexKey(composeCode, year, code, entityTypeCode);
         const existing = unitsByKey.get(key);
 
         const entity = existing ?? globalUnitRepo.create();
         const wasActive = entity.isActive ?? true;
 
         const prevKey = existing
-          ? this.buildGlobalUnitKey(
+          ? buildIndexKey(
               existing.composeCode,
               existing.year,
               existing.code,
+              existing.entityTypeId,
             )
           : null;
         const prevCodeKey = existing
@@ -376,7 +397,6 @@ export class ClarisaTaskService {
         entity.level =
           typeof item.level === 'number' ? item.level : (entity.level ?? 0);
 
-        const entityTypeCode = item.entity_type?.code;
         entity.entityTypeId =
           typeof entityTypeCode === 'number' ? entityTypeCode : null;
 
@@ -412,10 +432,11 @@ export class ClarisaTaskService {
 
       for (const saved of savedBatch) {
         processedUnitIds.add(saved.id);
-        const newKey = this.buildGlobalUnitKey(
+        const newKey = buildIndexKey(
           saved.composeCode,
           saved.year,
           saved.code,
+          saved.entityTypeId,
         );
         unitsByKey.set(newKey, saved);
         registerInCodeIndex(saved);
@@ -432,7 +453,12 @@ export class ClarisaTaskService {
         if (!composeCode || !code) continue;
 
         const child = unitsByKey.get(
-          this.buildGlobalUnitKey(composeCode, year, code),
+          buildIndexKey(
+            composeCode,
+            year,
+            code,
+            item.entity_type?.code ?? null,
+          ),
         );
         if (!child) continue;
 
@@ -505,7 +531,12 @@ export class ClarisaTaskService {
         if (!composeCode || !code) continue;
 
         const toUnit = unitsByKey.get(
-          this.buildGlobalUnitKey(composeCode, year, code),
+          buildIndexKey(
+            composeCode,
+            year,
+            code,
+            item.entity_type?.code ?? null,
+          ),
         );
         if (!toUnit || !item.incoming_lineages?.length) continue;
 
