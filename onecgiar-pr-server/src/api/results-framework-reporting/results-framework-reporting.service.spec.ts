@@ -909,7 +909,7 @@ describe('ResultsFrameworkReportingService', () => {
           indicators: [{ indicator_id: 81 }],
           contributing_indicator: 3.5,
           number_target: '25',
-          target_date: '2025-12-31',
+          target_date: '2025',
         },
         user,
       );
@@ -920,7 +920,7 @@ describe('ResultsFrameworkReportingService', () => {
           result_toc_result_indicator_id: 812,
           number_target: 25,
           contributing_indicator: 3.5,
-          target_date: '2025-12-31',
+          target_date: 2025,
           created_by: user.id,
           last_updated_by: user.id,
           is_active: true,

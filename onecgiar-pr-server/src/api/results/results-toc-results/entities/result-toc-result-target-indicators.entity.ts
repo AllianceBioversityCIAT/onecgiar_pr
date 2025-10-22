@@ -49,12 +49,11 @@ export class ResultIndicatorTarget extends BaseEntity {
   target_progress_narrative: string;
 
   @Column({
-    type: 'varchar',
-    length: 50,
+    type: 'int',
     name: 'target_date',
     nullable: true,
   })
-  target_date: string | null;
+  target_date: number | null;
 
   @ManyToOne(
     () => ResultsTocResultIndicators,
