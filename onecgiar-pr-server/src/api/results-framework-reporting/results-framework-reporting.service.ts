@@ -503,11 +503,11 @@ export class ResultsFrameworkReportingService {
         await this.upsertTocIndicators(
           primaryTocRecord.result_toc_result_id,
           resolvedTocResultId,
-          payload.indicators ?? [],
-          payload.contributing_indicator ?? 1,
-          payload.number_target ? `${payload.number_target}` : null,
-          payload.target_date ?? null,
+          payload.indicators ?? null,
+          payload.contributing_indicator ?? null,
           user.id,
+          payload.number_target ?? null,
+          payload.target_date ?? null,
         );
       }
 
@@ -565,18 +565,30 @@ export class ResultsFrameworkReportingService {
   private async upsertTocIndicators(
     resultTocResultId: number,
     tocResultId: number,
-    indicators: ResultsFrameworkTocIndicatorDto[],
-    contributingIndicator: number,
-    numberTarget: string | null,
-    targetDate: string | null,
+    indicatorsInput:
+      | ResultsFrameworkTocIndicatorDto
+      | ResultsFrameworkTocIndicatorDto[]
+      | null
+      | undefined,
+    defaultContributingIndicator: number | null,
     userId: number,
+    fallbackNumberTarget?: string | number | null,
+    fallbackTargetDate?: string | null,
   ) {
-    if (!Array.isArray(indicators) || !indicators.length) {
+    const indicatorsArray = Array.isArray(indicatorsInput)
+      ? indicatorsInput
+      : indicatorsInput
+        ? [indicatorsInput]
+        : [];
+
+    if (!indicatorsArray.length) {
       return;
     }
 
-    for (const indicator of indicators) {
-      const indicatorId = Number(indicator.indicator_id);
+    for (const indicator of indicatorsArray) {
+      const indicatorIdRaw =
+        (indicator as any)?.indicator_id ?? (indicator as any)?.id;
+      const indicatorId = Number(indicatorIdRaw);
       if (!Number.isFinite(indicatorId) || indicatorId <= 0) {
         throw {
           response: {},
@@ -638,11 +650,23 @@ export class ResultsFrameworkReportingService {
         continue;
       }
 
+      const numberTargetValue = ((indicator as any)?.number_target ??
+        fallbackNumberTarget ??
+        null) as string | number | null;
+
+      const targetDateValue = ((indicator as any)?.target_date ??
+        fallbackTargetDate ??
+        null) as string | null;
+
+      const contributingValue = ((indicator as any)?.contributing_indicator ??
+        defaultContributingIndicator ??
+        null) as number | null;
+
       await this.upsertIndicatorTargetRecord(
         indicatorRecord.result_toc_result_indicator_id,
-        numberTarget,
-        targetDate,
-        contributingIndicator,
+        numberTargetValue,
+        targetDateValue,
+        contributingValue,
         userId,
       );
     }
@@ -650,9 +674,9 @@ export class ResultsFrameworkReportingService {
 
   private async upsertIndicatorTargetRecord(
     indicatorResultId: number,
-    numberTarget: string | null,
+    numberTarget: string | number | null,
     targetDate: string | null,
-    contributingIndicator: number,
+    contributingIndicator: number | null,
     userId: number,
   ) {
     const hasNumberTarget =
@@ -675,8 +699,12 @@ export class ResultsFrameworkReportingService {
       };
     }
 
-    const parsedContributingIndicator = Number(contributingIndicator);
+    const parsedContributingIndicator =
+      contributingIndicator !== null && contributingIndicator !== undefined
+        ? Number(contributingIndicator)
+        : null;
     const normalizedContributing =
+      parsedContributingIndicator !== null &&
       Number.isFinite(parsedContributingIndicator) &&
       parsedContributingIndicator >= 0
         ? parsedContributingIndicator
@@ -684,6 +712,12 @@ export class ResultsFrameworkReportingService {
 
     const normalizedTargetDate =
       targetDate && targetDate.trim() !== '' ? targetDate.trim() : null;
+    const parsedTargetDate =
+      normalizedTargetDate !== null ? Number(normalizedTargetDate) : null;
+    const numericTargetDate =
+      parsedTargetDate !== null && Number.isFinite(parsedTargetDate)
+        ? parsedTargetDate
+        : null;
 
     const existingTarget =
       await this._resultsIndicatorsTargetsRepository.findOne({
@@ -699,7 +733,7 @@ export class ResultsFrameworkReportingService {
         existingTarget.indicators_targets,
         {
           contributing_indicator: normalizedContributing,
-          target_date: normalizedTargetDate ? +normalizedTargetDate : null,
+          target_date: numericTargetDate,
           last_updated_by: userId,
           is_active: true,
         },
@@ -711,7 +745,7 @@ export class ResultsFrameworkReportingService {
       result_toc_result_indicator_id: indicatorResultId,
       number_target: parsedNumberTarget,
       contributing_indicator: normalizedContributing,
-      target_date: normalizedTargetDate ? +normalizedTargetDate : null,
+      target_date: numericTargetDate,
       created_by: userId,
       last_updated_by: userId,
       is_active: true,

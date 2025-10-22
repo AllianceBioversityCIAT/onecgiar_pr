@@ -22,7 +22,9 @@ describe('EntityAowAowComponent', () => {
       tocResultsOutcomesByAowId: signal<any[]>([]),
       isLoadingTocResultsByAowId: signal<boolean>(false),
       showReportResultModal: signal<boolean>(false),
-      isLoadingTocResults2030Outcomes: signal<boolean>(false)
+      isLoadingTocResults2030Outcomes: signal<boolean>(false),
+      showViewResultDrawer: signal<boolean>(false),
+      currentResultToView: signal<any>({})
     } as any;
 
     // Mock ActivatedRoute

@@ -39,6 +39,10 @@ export class EntityAowService {
     return this.currentResultToReport()?.indicators?.[0]?.type_name === 'Number of knowledge products';
   });
 
+  // View result modal
+  showViewResultDrawer = signal<boolean>(true);
+  currentResultToView = signal<any>({});
+
   getAllDetailsData() {
     this.isLoadingDetails.set(true);
 
