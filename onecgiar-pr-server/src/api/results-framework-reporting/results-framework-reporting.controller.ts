@@ -23,6 +23,7 @@ import { CreateResultsFrameworkResultDto } from './dto/create-results-framework.
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 @ApiTags('Results Framework and Reporting')
 @UseInterceptors(ResponseInterceptor)
 export class ResultsFrameworkReportingController {

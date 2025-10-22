@@ -5,7 +5,7 @@ import { ClarisaGlobalUnitRepository } from '../../clarisa/clarisa-global-unit/c
 import { YearRepository } from '../results/years/year.repository';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
-import { TocResultsRepository } from './repositories/toc-work-packages.repository';
+import { AoWBilateralRepository } from '../results/results-toc-results/repositories/aow-bilateral.repository';
 import { ResultRepository } from '../results/result.repository';
 import { ResultsService } from '../results/results.service';
 import {
@@ -29,7 +29,7 @@ export class ResultsFrameworkReportingService {
     private readonly _clarisaGlobalUnitRepository: ClarisaGlobalUnitRepository,
     private readonly _yearRepository: YearRepository,
     private readonly _handlersError: HandlersError,
-    private readonly _tocResultsRepository: TocResultsRepository,
+    private readonly _tocResultsRepository: AoWBilateralRepository,
     private readonly _resultRepository: ResultRepository,
     private readonly _resultsService: ResultsService,
     private readonly _resultsKnowledgeProductsService: ResultsKnowledgeProductsService,

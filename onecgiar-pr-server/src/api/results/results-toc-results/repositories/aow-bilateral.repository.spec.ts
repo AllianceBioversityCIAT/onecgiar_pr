@@ -1,9 +1,9 @@
 import { DataSource } from 'typeorm';
 import { env } from 'process';
-import { TocResultsRepository } from './toc-work-packages.repository';
-import { HandlersError } from '../../../shared/handlers/error.utils';
+import { AoWBilateralRepository } from './aow-bilateral.repository';
+import { HandlersError } from '../../../../shared/handlers/error.utils';
 
-describe('TocResultsRepository', () => {
+describe('AoWBilateralRepository', () => {
   const mockDataSource = {
     query: jest.fn(),
   } as unknown as DataSource;
@@ -12,7 +12,7 @@ describe('TocResultsRepository', () => {
     returnErrorRepository: jest.fn(({ error }) => error),
   } as unknown as HandlersError;
 
-  let repository: TocResultsRepository;
+  let repository: AoWBilateralRepository;
 
   beforeAll(() => {
     env.DB_TOC = 'toc_test';
@@ -21,7 +21,7 @@ describe('TocResultsRepository', () => {
   beforeEach(() => {
     (mockDataSource.query as jest.Mock).mockReset();
     (mockHandlersError.returnErrorRepository as jest.Mock).mockClear();
-    repository = new TocResultsRepository(mockDataSource, mockHandlersError);
+    repository = new AoWBilateralRepository(mockDataSource, mockHandlersError);
   });
 
   it('should execute the aggregate query for composite code with expected clauses', async () => {
@@ -78,7 +78,7 @@ describe('TocResultsRepository', () => {
 
     expect(mockHandlersError.returnErrorRepository).toHaveBeenCalledWith({
       error: dbError,
-      className: TocResultsRepository.name,
+      className: AoWBilateralRepository.name,
       debug: true,
     });
   });

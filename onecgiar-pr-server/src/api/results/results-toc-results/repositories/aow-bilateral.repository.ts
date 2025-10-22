@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { env } from 'process';
-import { HandlersError } from '../../../shared/handlers/error.utils';
+import { HandlersError } from '../../../../shared/handlers/error.utils';
 
 interface toc_result_row {
   toc_result_id: number;
@@ -56,7 +56,7 @@ interface TocQueryOptions {
 }
 
 @Injectable()
-export class TocResultsRepository {
+export class AoWBilateralRepository {
   constructor(
     private readonly dataSource: DataSource,
     private readonly _handlersError: HandlersError,
@@ -91,7 +91,7 @@ export class TocResultsRepository {
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         error,
-        className: TocResultsRepository.name,
+        className: AoWBilateralRepository.name,
         debug: true,
       });
     }
@@ -117,7 +117,7 @@ export class TocResultsRepository {
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         error,
-        className: TocResultsRepository.name,
+        className: AoWBilateralRepository.name,
         debug: true,
       });
     }
@@ -138,7 +138,7 @@ export class TocResultsRepository {
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         error,
-        className: TocResultsRepository.name,
+        className: AoWBilateralRepository.name,
         debug: true,
       });
     }
@@ -296,7 +296,7 @@ export class TocResultsRepository {
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         error,
-        className: TocResultsRepository.name,
+        className: AoWBilateralRepository.name,
         debug: true,
       });
     }
@@ -320,7 +320,7 @@ export class TocResultsRepository {
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         error,
-        className: TocResultsRepository.name,
+        className: AoWBilateralRepository.name,
         debug: true,
       });
     }
@@ -344,7 +344,7 @@ export class TocResultsRepository {
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         error,
-        className: TocResultsRepository.name,
+        className: AoWBilateralRepository.name,
         debug: true,
       });
     }

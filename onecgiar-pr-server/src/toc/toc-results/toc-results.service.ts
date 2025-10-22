@@ -44,18 +44,12 @@ export class TocResultsService {
 
   async findAllByinitiativeId(initiativeId: number, levelId: number) {
     try {
-      let tocResults =
+      const tocResults =
         await this._tocResultsRepository.getAllTocResultsByInitiative(
           initiativeId,
           levelId,
         );
 
-      if (!tocResults.length && levelId == 4) {
-        tocResults =
-          await this._tocResultsRepository.getAllOutcomeByInitiative(
-            initiativeId,
-          );
-      }
       if (!tocResults.length) {
         throw {
           response: {},
@@ -106,6 +100,58 @@ export class TocResultsService {
         throw {
           response: {},
           message: 'ToC by Initiative Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      return {
+        response: tocResults,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  async findTocResultByConfigV2(
+    result_id: number,
+    init_id: number,
+    toc_level: number,
+  ) {
+    try {
+      const res = await this._tocResultsRepository.$_getResultTocByConfigV2(
+        result_id,
+        init_id,
+        toc_level,
+      );
+      console.log(res);
+      return this._returnResponse.format({
+        message: 'Successful response',
+        response: res,
+        statusCode: HttpStatus.OK,
+      });
+    } catch (error) {
+      return this._returnResponse.format(
+        error,
+        !EnvironmentExtractor.isProduction(),
+      );
+    }
+  }
+
+  async findAllByinitiativeIdV2(initiativeId: number, levelId: number) {
+    try {
+      const tocResults =
+        await this._tocResultsRepository.getAllTocResultsByInitiativeV2(
+          initiativeId,
+          levelId,
+        );
+      console.log(tocResults);
+
+      if (!tocResults.length) {
+        throw {
+          response: {},
+          message: 'ToC Results Not Found',
           status: HttpStatus.NOT_FOUND,
         };
       }
