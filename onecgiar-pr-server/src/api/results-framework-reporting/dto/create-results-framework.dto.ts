@@ -75,6 +75,25 @@ export class CreateResultsFrameworkResultDto {
   indicators?: ResultsFrameworkTocIndicatorDto[];
 
   @ApiProperty({
+    description:
+      'Identifier of the ToC result indicator (ToC results indicators table primary key).',
+    required: false,
+  })
+  contributing_indicator?: number;
+
+  @ApiProperty({
+    description: 'Target number associated with the indicator.',
+    required: false,
+  })
+  number_target?: string | null;
+
+  @ApiProperty({
+    description: 'Target date associated with the indicator.',
+    required: false,
+  })
+  target_date?: string | null;
+
+  @ApiProperty({
     required: false,
     type: () => [ContributorResultTocResult],
     description:
