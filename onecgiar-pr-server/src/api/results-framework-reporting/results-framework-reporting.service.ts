@@ -505,7 +505,7 @@ export class ResultsFrameworkReportingService {
           resolvedTocResultId,
           payload.indicators ?? [],
           payload.contributing_indicator ?? 1,
-          payload.number_target ?? null,
+          payload.number_target ? `${payload.number_target}` : null,
           payload.target_date ?? null,
           user.id,
         );
@@ -699,7 +699,7 @@ export class ResultsFrameworkReportingService {
         existingTarget.indicators_targets,
         {
           contributing_indicator: normalizedContributing,
-          target_date: normalizedTargetDate,
+          target_date: normalizedTargetDate ? +normalizedTargetDate : null,
           last_updated_by: userId,
           is_active: true,
         },
@@ -711,7 +711,7 @@ export class ResultsFrameworkReportingService {
       result_toc_result_indicator_id: indicatorResultId,
       number_target: parsedNumberTarget,
       contributing_indicator: normalizedContributing,
-      target_date: normalizedTargetDate,
+      target_date: normalizedTargetDate ? +normalizedTargetDate : null,
       created_by: userId,
       last_updated_by: userId,
       is_active: true,
