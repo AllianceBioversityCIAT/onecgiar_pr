@@ -20,7 +20,6 @@ import { ResultsKnowledgeProductDto } from '../results/results-knowledge-product
 import { ShareResultRequestService } from '../results/share-result-request/share-result-request.service';
 import { CreateTocShareResult } from '../results/share-result-request/dto/create-toc-share-result.dto';
 import { ResultsByProjectsService } from '../results/results_by_projects/results_by_projects.service';
-import { ContributionToIndicatorResultsRepository } from '../contribution-to-indicators/repositories/contribution-to-indicator-result.repository';
 
 @Injectable()
 export class ResultsFrameworkReportingService {
