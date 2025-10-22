@@ -82,6 +82,7 @@
 </div>
 <br *ngIf="this.internalModule.name === 'ipsr'" />
 
+<!-- @if (fieldsManagerS.isP25()) { -->
 <app-pr-radio-button
   fieldRef="[geoscope-management]-any-other-countries"
   [options]="[
@@ -105,3 +106,4 @@
     (ngModelChange)="this.resetHasScope()">
   </app-pr-radio-button>
 }
+<!-- } -->

@@ -11,7 +11,7 @@ enum Portfolios {
 export class FieldsManagerService {
   dataControlSE = inject(DataControlService);
 
-  portfolioAcronym = computed(() => this.dataControlSE.currentResultSignal()?.portfolio);
+  portfolioAcronym = computed(() => 'P25');
   isP25 = computed(() => Portfolios[this.portfolioAcronym()] == Portfolios.P25);
   isP22 = computed(() => Portfolios[this.portfolioAcronym()] == Portfolios.P22);
 
@@ -96,12 +96,14 @@ export class FieldsManagerService {
           'This should reflect other geographies where the innovation development, testing and/or use could also contribute to outcomes and impact"',
         required: true,
         hide:
-          this.isP22() && this.dataControlSE.currentResultSignal().result_type_id != 2 && this.dataControlSE.currentResultSignal().result_type_id != 7
+          this.isP22() ||
+          (this.dataControlSE.currentResultSignal().result_type_id != 2 && this.dataControlSE.currentResultSignal().result_type_id != 7)
       },
       '[geoscope-management]-any-other': {
         label: 'What is the geographic scope where there may be potential impact in other geographic areas?',
         hide:
-          this.isP22() && this.dataControlSE.currentResultSignal().result_type_id != 2 && this.dataControlSE.currentResultSignal().result_type_id != 7
+          this.isP22() ||
+          (this.dataControlSE.currentResultSignal().result_type_id != 2 && this.dataControlSE.currentResultSignal().result_type_id != 7)
       }
     };
     return fields;
