@@ -34,6 +34,7 @@ import { providePrimeNG } from 'primeng/config';
 import { reportingTheme } from './theme/reportingTheme';
 import { UserRolesInfoModalComponent } from './shared/components/user-roles-info-modal/user-roles-info-modal.component';
 import { FormatTimeAgoPipe } from './shared/pipes/format-time-ago/format-time-ago.pipe';
+import { CookiesDialogComponent } from './shared/components/cookies-dialog/cookies-dialog.component';
 
 function initializeClarityService(clarityService: ClarityService) {
   return () => clarityService.init();
@@ -63,6 +64,7 @@ function initializeClarityService(clarityService: ClarityService) {
     TooltipModule,
     PopUpNotificationItemComponent,
     UserRolesInfoModalComponent,
+    CookiesDialogComponent,
     SocketIoModule.forRoot({ url: environment.webSocketUrl, options: {} })
   ],
   providers: [
