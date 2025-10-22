@@ -22,6 +22,8 @@ describe('AowHloTableComponent', () => {
       getTocResultsByAowId: jest.fn(),
       tocResultsOutputsByAowId: signal<any[]>([]),
       tocResultsOutcomesByAowId: signal<any[]>([]),
+      tocResults2030Outcomes: signal<any[]>([]),
+      isLoadingTocResults2030Outcomes: signal<boolean>(false),
       isLoadingTocResultsByAowId: signal<boolean>(false),
       showReportResultModal: mockShowReportResultModal,
       currentResultToReport: mockCurrentResultToReport
@@ -167,6 +169,102 @@ describe('AowHloTableComponent', () => {
     it('should handle very large numbers', () => {
       const result = component.getProgress('999999%');
       expect(result).toBe(999999);
+    });
+  });
+
+  describe('tableData computed', () => {
+    beforeEach(() => {
+      // Reset mock signals to empty arrays
+      mockEntityAowService.tocResultsOutputsByAowId.set([]);
+      mockEntityAowService.tocResultsOutcomesByAowId.set([]);
+      mockEntityAowService.tocResults2030Outcomes.set([]);
+    });
+
+    it('should return outputs data when tableType is "outputs"', () => {
+      const mockOutputsData = [
+        { id: 'output-1', title: 'Output 1', type: 'output' },
+        { id: 'output-2', title: 'Output 2', type: 'output' }
+      ];
+      mockEntityAowService.tocResultsOutputsByAowId.set(mockOutputsData);
+      component.tableType = 'outputs';
+
+      const result = component.tableData();
+
+      expect(result).toEqual(mockOutputsData);
+    });
+
+    it('should return outcomes data when tableType is "outcomes"', () => {
+      const mockOutcomesData = [
+        { id: 'outcome-1', title: 'Outcome 1', type: 'outcome' },
+        { id: 'outcome-2', title: 'Outcome 2', type: 'outcome' }
+      ];
+      mockEntityAowService.tocResultsOutcomesByAowId.set(mockOutcomesData);
+      component.tableType = 'outcomes';
+
+      const result = component.tableData();
+
+      expect(result).toEqual(mockOutcomesData);
+    });
+
+    it('should return 2030 outcomes data when tableType is "2030-outcomes"', () => {
+      const mock2030OutcomesData = [
+        { id: '2030-outcome-1', title: '2030 Outcome 1', type: '2030-outcome' },
+        { id: '2030-outcome-2', title: '2030 Outcome 2', type: '2030-outcome' }
+      ];
+      mockEntityAowService.tocResults2030Outcomes.set(mock2030OutcomesData);
+      component.tableType = '2030-outcomes';
+
+      const result = component.tableData();
+
+      expect(result).toEqual(mock2030OutcomesData);
+    });
+
+    it('should return empty array when tableType is undefined', () => {
+      component.tableType = undefined as any;
+
+      const result = component.tableData();
+
+      expect(result).toEqual([]);
+    });
+
+    it('should return empty array when tableType is null', () => {
+      component.tableType = null as any;
+
+      const result = component.tableData();
+
+      expect(result).toEqual([]);
+    });
+
+    it('should reactively update when service signals change', () => {
+      const initialData = [{ id: 'output-1', title: 'Initial Output' }];
+      const updatedData = [
+        { id: 'output-1', title: 'Updated Output' },
+        { id: 'output-2', title: 'New Output' }
+      ];
+
+      mockEntityAowService.tocResultsOutputsByAowId.set(initialData);
+      component.tableType = 'outputs';
+
+      // First call with initial data
+      let result = component.tableData();
+      expect(result).toEqual(initialData);
+
+      // Update the signal
+      mockEntityAowService.tocResultsOutputsByAowId.set(updatedData);
+
+      // Second call should return updated data
+      result = component.tableData();
+      expect(result).toEqual(updatedData);
+    });
+
+    it('should handle empty data arrays correctly', () => {
+      mockEntityAowService.tocResultsOutputsByAowId.set([]);
+      component.tableType = 'outputs';
+
+      const result = component.tableData();
+
+      expect(result).toEqual([]);
+      expect(Array.isArray(result)).toBe(true);
     });
   });
 

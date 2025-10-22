@@ -29,6 +29,8 @@ export class EntityAowService {
 
   tocResultsOutputsByAowId = signal<any[]>([]);
   tocResultsOutcomesByAowId = signal<any[]>([]);
+  tocResults2030Outcomes = signal<any[]>([]);
+  isLoadingTocResults2030Outcomes = signal<boolean>(false);
   isLoadingTocResultsByAowId = signal<boolean>(false);
 
   showReportResultModal = signal<boolean>(false);
@@ -61,25 +63,6 @@ export class EntityAowService {
     });
   }
 
-  getClarisaGlobalUnits() {
-    this.isLoadingDetails.set(true);
-
-    this.api.resultsSE.GET_ClarisaGlobalUnits(this.entityId()).subscribe(({ response }) => {
-      this.entityDetails.set(response?.initiative);
-      this.entityAows.set(response?.units ?? []);
-      this.isLoadingDetails.set(false);
-      if (this.entityAows().length) {
-        this.setSideBarItems();
-      }
-    });
-  }
-
-  getIndicatorSummaries() {
-    this.api.resultsSE.GET_IndicatorContributionSummary(this.entityId()).subscribe(({ response }) => {
-      this.indicatorSummaries.set(response?.totalsByType ?? []);
-    });
-  }
-
   setSideBarItems() {
     this.sideBarItems.set([
       {
@@ -91,6 +74,11 @@ export class EntityAowService {
           name: aow.name,
           itemLink: `/aow/${aow.code}`
         }))
+      },
+      {
+        isTree: false,
+        label: '2030 Outcomes',
+        itemLink: '/aow/2030-outcomes'
       }
     ]);
   }
@@ -110,6 +98,22 @@ export class EntityAowService {
         this.tocResultsOutputsByAowId.set([]);
         this.tocResultsOutcomesByAowId.set([]);
         this.isLoadingTocResultsByAowId.set(false);
+      }
+    });
+  }
+
+  get2030Outcomes(entityId: string) {
+    if (!entityId) return;
+    this.isLoadingTocResults2030Outcomes.set(true);
+
+    this.api.resultsSE.GET_2030Outcomes(entityId).subscribe({
+      next: ({ response }) => {
+        this.tocResults2030Outcomes.set(response?.tocResults ?? []);
+        this.isLoadingTocResults2030Outcomes.set(false);
+      },
+      error: err => {
+        this.tocResults2030Outcomes.set([]);
+        this.isLoadingTocResults2030Outcomes.set(false);
       }
     });
   }

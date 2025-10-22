@@ -26,7 +26,7 @@ export class AowHloTableComponent {
   entityAowService = inject(EntityAowService);
   resultLevelService = inject(ResultLevelService);
 
-  @Input() tableType: 'outputs' | 'outcomes' = 'outputs';
+  @Input() tableType: 'outputs' | 'outcomes' | '2030-outcomes' = 'outputs';
 
   tableData = computed(() => {
     switch (this.tableType) {
@@ -34,6 +34,8 @@ export class AowHloTableComponent {
         return this.entityAowService.tocResultsOutputsByAowId();
       case 'outcomes':
         return this.entityAowService.tocResultsOutcomesByAowId();
+      case '2030-outcomes':
+        return this.entityAowService.tocResults2030Outcomes();
       default:
         return [];
     }
