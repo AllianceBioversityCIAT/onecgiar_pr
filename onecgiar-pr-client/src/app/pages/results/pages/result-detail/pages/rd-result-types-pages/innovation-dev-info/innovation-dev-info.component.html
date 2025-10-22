@@ -1,6 +1,11 @@
 <div class="detail_container">
   <app-alert-status [description]="alertInfoText()"> </app-alert-status>
-  <app-pr-input label="Long title" [required]="false" [readOnly]="true" [(ngModel)]="innovationDevInfoBody?.result.title"> </app-pr-input>
+  <app-pr-input 
+    fieldRef="[innovation-dev-info]-long_title"
+    [required]="false" 
+    [readOnly]="true" 
+    [(ngModel)]="innovationDevInfoBody?.result.title"> 
+  </app-pr-input>
   <app-pr-input
     fieldRef="[innovation-dev-info]-short_title"
     [maxWords]="10"

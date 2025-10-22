@@ -103,6 +103,10 @@ export class FieldsManagerService {
         hide:
           this.isP22() && this.dataControlSE.currentResultSignal().result_type_id != 2 && this.dataControlSE.currentResultSignal().result_type_id != 7
       },
+      '[innovation-dev-info]-long_title': {
+        label: 'Long title',
+        hide: this.isP25()
+      },
       '[innovation-dev-info]-short_title': {
         label: this.isP25() ? 'Provide a short name for the innovation' : 'Provide a short title for the innovation',
         placeholder: 'Innovation short name goes here...',
