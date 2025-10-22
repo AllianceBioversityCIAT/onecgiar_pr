@@ -40,7 +40,7 @@ export class EntityAowService {
   });
 
   // View result modal
-  showViewResultDrawer = signal<boolean>(true);
+  showViewResultDrawer = signal<boolean>(false);
   currentResultToView = signal<any>({});
 
   getAllDetailsData() {
