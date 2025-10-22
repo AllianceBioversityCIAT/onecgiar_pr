@@ -11,7 +11,7 @@ enum Portfolios {
 export class FieldsManagerService {
   dataControlSE = inject(DataControlService);
 
-  portfolioAcronym = computed(() => 'P25');
+  portfolioAcronym = computed(() => this.dataControlSE.currentResultSignal()?.portfolio);
   isP25 = computed(() => Portfolios[this.portfolioAcronym()] == Portfolios.P25);
   isP22 = computed(() => Portfolios[this.portfolioAcronym()] == Portfolios.P22);
 
