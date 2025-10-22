@@ -1,0 +1,18 @@
+<p-dialog
+  header="Preferencias de Cookies"
+  [(visible)]="visible"
+  [modal]="false"
+  [position]="position"
+  [draggable]="false"
+  [resizable]="false"
+  [closable]="false"
+  [dismissableMask]="false"
+  [style]="{ width: '28rem' }">
+  <p>Usamos cookies para mejorar tu experiencia. Puedes aceptar todas o configurar tus preferencias.</p>
+  <div class="buttons">
+    <p-button padding="medium" text="Aceptar todas" icon="check" colorType="primary" (clickEvent)=""> </p-button>
+  </div>
+  <div class="buttons">
+    <p-button padding="medium" text="Rechazar todas" icon="close" colorType="secondary" (clickEvent)=""> </p-button>
+  </div>
+</p-dialog>
