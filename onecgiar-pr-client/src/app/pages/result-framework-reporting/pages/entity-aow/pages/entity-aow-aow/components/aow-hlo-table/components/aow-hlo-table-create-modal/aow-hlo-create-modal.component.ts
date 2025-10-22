@@ -10,17 +10,19 @@ import { ButtonModule } from 'primeng/button';
 import { Router } from '@angular/router';
 import { SelectModule } from 'primeng/select';
 import { ResultsListFilterService } from '../../../../../../../../../results/pages/results-outlet/pages/results-list/services/results-list-filter.service';
+import { InputNumberModule } from 'primeng/inputnumber';
 
 interface CreateResultBody {
   handler: string;
   result_name: string;
   toc_progressive_narrative: string;
   result_type_id: number | null;
+  contribution_to_indicator_target: number | null;
 }
 
 @Component({
   selector: 'app-aow-hlo-create-modal',
-  imports: [CommonModule, DialogModule, CustomFieldsModule, MultiSelectModule, FormsModule, ButtonModule, SelectModule],
+  imports: [CommonModule, DialogModule, CustomFieldsModule, MultiSelectModule, FormsModule, ButtonModule, SelectModule, InputNumberModule],
   templateUrl: './aow-hlo-create-modal.component.html',
   styleUrl: './aow-hlo-create-modal.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -36,7 +38,8 @@ export class AowHloCreateModalComponent implements OnInit {
     handler: '',
     result_name: '',
     toc_progressive_narrative: '',
-    result_type_id: null
+    result_type_id: null,
+    contribution_to_indicator_target: null
   });
   mqapJson = signal<any>(null);
   validatingHandler = signal<boolean>(false);
@@ -156,6 +159,7 @@ export class AowHloCreateModalComponent implements OnInit {
         result_name: this.createResultBody().result_name,
         handler: this.createResultBody().handler
       },
+      contributing_indicator: this.createResultBody().contribution_to_indicator_target,
       knowledge_product: this.mqapJson(),
       toc_result_id: this.entityAowService.currentResultToReport().toc_result_id,
       toc_progressive_narrative: this.createResultBody().toc_progressive_narrative,

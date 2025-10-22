@@ -91,6 +91,18 @@
           labelDescInlineStyles="margin-top: 0 !important"></app-pr-textarea>
 
         <div>
+          <app-pr-field-header label="Contribution to indicator target" [required]="false" [labelDescInlineStyles]="'margin-top: 0 !important'">
+          </app-pr-field-header>
+
+          <p-inputnumber
+            [(ngModel)]="createResultBody().contribution_to_indicator_target"
+            inputId="minmax"
+            mode="decimal"
+            [min]="0"
+            [max]="9999999" />
+        </div>
+
+        <div>
           <app-pr-field-header
             label="Contributing Science Programs/Accelerators"
             [required]="false"
