@@ -48,6 +48,14 @@ export class ResultIndicatorTarget extends BaseEntity {
   })
   target_progress_narrative: string;
 
+  @Column({
+    type: 'varchar',
+    length: 50,
+    name: 'target_date',
+    nullable: true,
+  })
+  target_date: string | null;
+
   @ManyToOne(
     () => ResultsTocResultIndicators,
     (cs) => cs.result_toc_result_indicator_id,

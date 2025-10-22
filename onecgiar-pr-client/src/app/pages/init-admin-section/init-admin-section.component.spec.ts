@@ -38,7 +38,7 @@ describe('InitAdminSectionComponent', () => {
 
       component.ngOnInit();
 
-      expect(spyDetailSectionTitle).toHaveBeenCalledWith('Results Monitoring Center');
+      expect(spyDetailSectionTitle).toHaveBeenCalledWith('My Admin');
     });
   });
 });

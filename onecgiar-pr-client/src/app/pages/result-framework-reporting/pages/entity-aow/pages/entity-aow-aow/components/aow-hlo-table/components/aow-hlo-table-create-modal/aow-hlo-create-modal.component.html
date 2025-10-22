@@ -13,17 +13,34 @@
     <div class="report-result-content_left">
       <div class="report-result-content_left_header">
         <p class="report-result-content_left_header_subtitle">
-          {{ entityAowService.entityId() }} - {{ entityAowService.entityDetails().name }} / {{ entityAowService.currentAowSelected()?.code }} -
-          {{ entityAowService.currentAowSelected()?.name }}
+          {{ entityAowService.entityId() }} - {{ entityAowService.entityDetails().name }}
+          @if (entityAowService.currentAowSelected()) {
+            / {{ entityAowService.currentAowSelected().code }} - {{ entityAowService.currentAowSelected().name }}
+          }
         </p>
         <p class="report-result-content_left_header_title">{{ entityAowService.currentResultToReport()?.result_title }}</p>
         <p class="report-result-content_left_header_desc">{{ entityAowService.currentResultToReport()?.indicators?.[0]?.indicator_description }}</p>
       </div>
       <div class="report-result-content_left_content">
-        <div class="report-result-content_left_content_indicator">
-          <span class="report-result-content_left_content_label">Indicator category: </span>
-          <span class="report-result-content_left_content_value">{{ entityAowService.currentResultToReport()?.indicators?.[0]?.type_value }}</span>
-        </div>
+        @if (entityAowService.currentResultToReport().indicators?.[0]?.result_type_id) {
+          <div class="report-result-content_left_content_indicator">
+            <span class="report-result-content_left_content_label">Indicator category: </span>
+            <span class="report-result-content_left_content_value">{{ entityAowService.currentResultToReport()?.indicators?.[0]?.type_name }}</span>
+          </div>
+        } @else {
+          <div>
+            <app-pr-field-header label="Indicator category" [required]="true" [labelDescInlineStyles]="'margin-top: 0 !important'" [useColon]="false">
+            </app-pr-field-header>
+
+            <p-select
+              [options]="resultTypes()"
+              [(ngModel)]="createResultBody().result_type_id"
+              optionLabel="name"
+              optionValue="id"
+              placeholder="Select an indicator category"
+              [style]="{ width: '100%' }" />
+          </div>
+        }
 
         @if (entityAowService.currentResultIsKnowledgeProduct()) {
           <div>
@@ -31,7 +48,7 @@
               <app-pr-input
                 [isStatic]="true"
                 placeholder="Handle..."
-                label="CGSpace link"
+                label="Repository link/handle"
                 type="text"
                 labelDescInlineStyles="margin-top: 0 !important"
                 [(ngModel)]="createResultBody().handler">
@@ -50,9 +67,9 @@
         <app-pr-input
           [isStatic]="true"
           [placeholder]="entityAowService.currentResultIsKnowledgeProduct() ? 'Knowledge product title...' : 'Input title...'"
-          label="Title"
+          [label]="getTitleInputLabel()"
           type="text"
-          [description]="entityAowService.currentResultIsKnowledgeProduct() ? 'Title retrieved from CGSpace' : ''"
+          [description]="entityAowService.currentResultIsKnowledgeProduct() ? getTitleInputLabel() : ''"
           labelDescInlineStyles="margin-top: 0 !important"
           [(ngModel)]="createResultBody().result_name"
           [maxWords]="30"
@@ -72,6 +89,18 @@
           type="text"
           [disabled]="entityAowService.currentResultIsKnowledgeProduct()"
           labelDescInlineStyles="margin-top: 0 !important"></app-pr-textarea>
+
+        <div>
+          <app-pr-field-header label="Contribution to indicator target" [required]="false" [labelDescInlineStyles]="'margin-top: 0 !important'">
+          </app-pr-field-header>
+
+          <p-inputnumber
+            [(ngModel)]="createResultBody().contribution_to_indicator_target"
+            inputId="minmax"
+            mode="decimal"
+            [min]="0"
+            [max]="9999999" />
+        </div>
 
         <div>
           <app-pr-field-header
@@ -166,12 +195,13 @@
         </div>
 
         <div class="report-result-content_left_content_actions" [ngClass]="{ globalDisabled: creatingResult() }">
-          <app-pr-button
-            [verticalMargin]="0"
-            text="Create and continue"
+          <p-button
+            label="Create and continue"
+            type="button"
+            class="pr-body-2"
             (click)="createResult()"
-            [rotating]="creatingResult()"
-            [icon]="creatingResult() ? 'loop' : ''"></app-pr-button>
+            [loading]="creatingResult()"
+            iconPos="right"></p-button>
         </div>
       </div>
     </div>

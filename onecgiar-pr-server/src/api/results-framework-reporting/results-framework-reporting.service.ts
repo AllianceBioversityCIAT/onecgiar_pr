@@ -20,7 +20,7 @@ import { ResultsKnowledgeProductDto } from '../results/results-knowledge-product
 import { ShareResultRequestService } from '../results/share-result-request/share-result-request.service';
 import { CreateTocShareResult } from '../results/share-result-request/dto/create-toc-share-result.dto';
 import { ResultsByProjectsService } from '../results/results_by_projects/results_by_projects.service';
-import { ContributionToIndicatorResultsRepository } from '../contribution-to-indicators/repositories/contribution-to-indicator-result.repository';
+import { ResultsTocTargetIndicatorRepository } from '../results/results-toc-results/repositories/result-toc-result-target-indicator.repository';
 
 @Injectable()
 export class ResultsFrameworkReportingService {
@@ -35,9 +35,9 @@ export class ResultsFrameworkReportingService {
     private readonly _resultsKnowledgeProductsService: ResultsKnowledgeProductsService,
     private readonly _resultsTocResultRepository: ResultsTocResultRepository,
     private readonly _resultsTocResultIndicatorsRepository: ResultsTocResultIndicatorsRepository,
+    private readonly _resultsIndicatorsTargetsRepository: ResultsTocTargetIndicatorRepository,
     private readonly _shareResultRequestService: ShareResultRequestService,
     private readonly _resultsByProjectsService: ResultsByProjectsService,
-    private readonly _contributionToIndicatorResultsRepository: ContributionToIndicatorResultsRepository,
   ) {}
 
   async getGlobalUnitsByProgram(user: TokenDto, programId?: string) {
@@ -235,7 +235,14 @@ export class ResultsFrameworkReportingService {
         resolvedYear,
       );
 
-      if (!tocResults.length) {
+      const tocResultsOutcomes = (tocResults || []).filter(
+        (r) => (r.category || '').toUpperCase() === 'OUTCOME',
+      );
+      const tocResultsOutputs = (tocResults || []).filter(
+        (r) => (r.category || '').toUpperCase() === 'OUTPUT',
+      );
+
+      if (!tocResultsOutcomes.length && !tocResultsOutputs.length) {
         throw {
           response: {},
           message:
@@ -248,9 +255,81 @@ export class ResultsFrameworkReportingService {
         response: {
           compositeCode,
           year: resolvedYear,
-          tocResults,
+          tocResultsOutcomes,
+          tocResultsOutputs,
+          metadata: {
+            total: tocResults.length,
+            outcomes: tocResultsOutcomes.length,
+            outputs: tocResultsOutputs.length,
+          },
         },
         message: 'Work packages retrieved successfully.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async getToc2030Outcomes(programId?: string) {
+    try {
+      const normalizedProgram = programId?.trim();
+
+      if (!normalizedProgram) {
+        throw {
+          response: {},
+          message: 'The program identifier is required in the query params.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const activeYear = await this._yearRepository.findOne({
+        where: { active: true },
+        select: ['year'],
+      });
+
+      if (!activeYear) {
+        throw {
+          response: {},
+          message: 'No active reporting year was found.',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const resolvedYear = Number(activeYear.year);
+
+      if (!Number.isFinite(resolvedYear) || resolvedYear < 0) {
+        throw {
+          response: {},
+          message: 'The active reporting year configured is invalid.',
+          status: HttpStatus.INTERNAL_SERVER_ERROR,
+        };
+      }
+
+      const toc2030Outcomes = await this._tocResultsRepository.find2030Outcomes(
+        normalizedProgram.toUpperCase(),
+        resolvedYear,
+      );
+
+      if (!toc2030Outcomes?.length) {
+        throw {
+          response: {},
+          message:
+            'No ToC 2030 outcomes were found for the provided program identifier.',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      return {
+        response: {
+          program: normalizedProgram.toUpperCase(),
+          year: resolvedYear,
+          tocResults: toc2030Outcomes,
+          metadata: {
+            total: toc2030Outcomes.length,
+          },
+        },
+        message: 'ToC 2030 outcomes retrieved successfully.',
         status: HttpStatus.OK,
       };
     } catch (error) {
@@ -425,6 +504,9 @@ export class ResultsFrameworkReportingService {
           primaryTocRecord.result_toc_result_id,
           resolvedTocResultId,
           payload.indicators ?? [],
+          payload.contributing_indicator ?? 1,
+          payload.number_target ?? null,
+          payload.target_date ?? null,
           user.id,
         );
       }
@@ -484,6 +566,9 @@ export class ResultsFrameworkReportingService {
     resultTocResultId: number,
     tocResultId: number,
     indicators: ResultsFrameworkTocIndicatorDto[],
+    contributingIndicator: number,
+    numberTarget: string | null,
+    targetDate: string | null,
     userId: number,
   ) {
     if (!Array.isArray(indicators) || !indicators.length) {
@@ -528,18 +613,109 @@ export class ResultsFrameworkReportingService {
           },
         });
 
-      if (existingIndicator) {
+      let indicatorRecord =
+        existingIndicator ??
+        (await this._resultsTocResultIndicatorsRepository.save({
+          results_toc_results_id: resultTocResultId,
+          toc_results_indicator_id: indicatorRow.related_node_id,
+          created_by: userId,
+          last_updated_by: userId,
+          is_active: true,
+        }));
+
+      if (!indicatorRecord?.result_toc_result_indicator_id) {
+        indicatorRecord =
+          await this._resultsTocResultIndicatorsRepository.findOne({
+            where: {
+              results_toc_results_id: resultTocResultId,
+              toc_results_indicator_id: indicatorRow.related_node_id,
+              is_active: true,
+            },
+          });
+      }
+
+      if (!indicatorRecord?.result_toc_result_indicator_id) {
         continue;
       }
 
-      await this._resultsTocResultIndicatorsRepository.save({
-        results_toc_results_id: resultTocResultId,
-        toc_results_indicator_id: indicatorRow.related_node_id,
-        created_by: userId,
-        last_updated_by: userId,
-        is_active: true,
-      });
+      await this.upsertIndicatorTargetRecord(
+        indicatorRecord.result_toc_result_indicator_id,
+        numberTarget,
+        targetDate,
+        contributingIndicator,
+        userId,
+      );
     }
+  }
+
+  private async upsertIndicatorTargetRecord(
+    indicatorResultId: number,
+    numberTarget: string | null,
+    targetDate: string | null,
+    contributingIndicator: number,
+    userId: number,
+  ) {
+    const hasNumberTarget =
+      numberTarget !== undefined &&
+      numberTarget !== null &&
+      `${numberTarget}`.trim() !== '';
+
+    if (!hasNumberTarget) {
+      return;
+    }
+
+    const parsedNumberTarget = Number(numberTarget);
+
+    if (!Number.isFinite(parsedNumberTarget)) {
+      throw {
+        response: {},
+        message:
+          'The provided number_target value for the indicator contribution is invalid.',
+        status: HttpStatus.BAD_REQUEST,
+      };
+    }
+
+    const parsedContributingIndicator = Number(contributingIndicator);
+    const normalizedContributing =
+      Number.isFinite(parsedContributingIndicator) &&
+      parsedContributingIndicator >= 0
+        ? parsedContributingIndicator
+        : null;
+
+    const normalizedTargetDate =
+      targetDate && targetDate.trim() !== '' ? targetDate.trim() : null;
+
+    const existingTarget =
+      await this._resultsIndicatorsTargetsRepository.findOne({
+        where: {
+          result_toc_result_indicator_id: indicatorResultId,
+          number_target: parsedNumberTarget,
+          is_active: true,
+        },
+      });
+
+    if (existingTarget) {
+      await this._resultsIndicatorsTargetsRepository.update(
+        existingTarget.indicators_targets,
+        {
+          contributing_indicator: normalizedContributing,
+          target_date: normalizedTargetDate,
+          last_updated_by: userId,
+          is_active: true,
+        },
+      );
+      return;
+    }
+
+    await this._resultsIndicatorsTargetsRepository.save({
+      result_toc_result_indicator_id: indicatorResultId,
+      number_target: parsedNumberTarget,
+      contributing_indicator: normalizedContributing,
+      target_date: normalizedTargetDate,
+      created_by: userId,
+      last_updated_by: userId,
+      is_active: true,
+    });
   }
 
   async getProgramIndicatorContributionSummary(program?: string) {
