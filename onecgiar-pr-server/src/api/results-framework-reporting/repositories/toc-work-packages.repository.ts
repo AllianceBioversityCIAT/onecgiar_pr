@@ -19,6 +19,8 @@ interface toc_result_row {
   target_value_sum: number | null;
   actual_achieved_value_sum: number | null;
   progress_percentage: string | null;
+  number_target?: string | null;
+  target_date?: number | null;
   result_type_id?: number | null;
   result_level_id?: number | null;
 }
@@ -40,6 +42,8 @@ export interface toc_result_response {
     target_value_sum: number | null;
     actual_achieved_value_sum?: number | null;
     progress_percentage?: string | null;
+    number_target?: string | null;
+    target_date?: number | null;
     result_type_id?: number | null;
     result_level_id?: number | null;
   }>;
@@ -49,7 +53,6 @@ interface TocQueryOptions {
   compositeCode?: string;
   categories?: string[];
   year?: number;
-  includeResultMeta?: boolean;
 }
 
 @Injectable()
@@ -103,7 +106,6 @@ export class TocResultsRepository {
       compositeCode: composite_code,
       year,
       categories: ['OUTPUT', 'OUTCOME'],
-      includeResultMeta: true,
     });
 
     try {
@@ -111,7 +113,7 @@ export class TocResultsRepository {
         query,
         params,
       )) as toc_result_row[];
-      return this.groupTocRows(rows, true);
+      return this.groupTocRows(rows);
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         error,
@@ -125,7 +127,6 @@ export class TocResultsRepository {
     const { query, params } = this.buildTocQuery(program, {
       year,
       categories: ['EOI'],
-      includeResultMeta: false,
     });
 
     try {
@@ -133,7 +134,7 @@ export class TocResultsRepository {
         query,
         params,
       )) as toc_result_row[];
-      return this.groupTocRows(rows, false);
+      return this.groupTocRows(rows);
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         error,
@@ -151,31 +152,6 @@ export class TocResultsRepository {
       options.categories && options.categories.length > 0
         ? options.categories
         : ['OUTPUT', 'OUTCOME'];
-    const includeResultMeta =
-      options.includeResultMeta === undefined
-        ? true
-        : options.includeResultMeta;
-
-    const selectResultType = includeResultMeta
-      ? `
-        CASE
-          WHEN tri.type_value LIKE '%policy%' THEN 1
-          WHEN tri.type_value LIKE '%use%' THEN 2
-          WHEN tri.type_value LIKE '%capacity%' THEN 5
-          WHEN tri.type_value LIKE '%knowledge%' THEN 6
-          WHEN tri.type_value LIKE '%development%' THEN 7
-          ELSE null
-        END AS result_type_id,
-        CASE
-          WHEN tr.category = 'OUTCOME' THEN CAST(3 AS SIGNED)
-          WHEN tr.category = 'OUTPUT' THEN CAST(4 AS SIGNED)
-          ELSE NULL
-        END AS result_level_id
-      `
-      : `
-        NULL AS result_type_id,
-        NULL AS result_level_id
-      `;
 
     const params: Array<string | number> = [];
     const categoryPlaceholders = categories.map(() => '?').join(', ');
@@ -195,9 +171,24 @@ export class TocResultsRepository {
         tri.type_name,
         tri.location,
         COALESCE(SUM(CAST(trit.target_value AS SIGNED)), 0) AS target_value_sum,
+        trit.number_target,
+        trit.target_date,
         0 AS actual_achieved_value_sum,
         '50%' AS progress_percentage,
-        ${selectResultType}
+        CASE
+          WHEN tri.type_value LIKE '%policy%' THEN 1
+          WHEN tri.type_value LIKE '%use%' THEN 2
+          WHEN tri.type_value LIKE '%capacity%' THEN 5
+          WHEN tri.type_value LIKE '%knowledge%' THEN 6
+          WHEN tri.type_value LIKE '%development%' THEN 7
+          ELSE NULL
+        END AS result_type_id,
+        CASE
+          WHEN tr.category = 'OUTCOME' THEN 3
+          WHEN tr.category = 'OUTPUT' THEN 4
+          WHEN tr.category = 'EOI' THEN 3
+          ELSE NULL
+        END AS result_level_id
       FROM ${env.DB_TOC}.toc_results tr
     `;
 
@@ -240,17 +231,16 @@ export class TocResultsRepository {
         tri.unit_messurament,
         tri.type_value,
         tri.type_name,
-        tri.location
+        tri.location,
+        trit.number_target,
+        trit.target_date
       ORDER BY tr.id ASC, tri.id ASC
     `;
 
     return { query, params };
   }
 
-  private groupTocRows(
-    rows: toc_result_row[],
-    includeResultMeta: boolean,
-  ): toc_result_response[] {
+  private groupTocRows(rows: toc_result_row[]): toc_result_response[] {
     const grouped = new Map<number, toc_result_response>();
 
     for (const row of rows) {
@@ -276,17 +266,12 @@ export class TocResultsRepository {
           location: row.location,
           target_value_sum: row.target_value_sum,
           actual_achieved_value_sum: row.actual_achieved_value_sum,
+          number_target: row.number_target,
+          target_date: row.target_date,
           progress_percentage: row.progress_percentage,
+          result_level_id: row.result_level_id ?? null,
+          result_type_id: row.result_type_id ?? null,
         };
-
-        if (includeResultMeta) {
-          indicator.result_type_id = row.result_type_id
-            ? Number(row.result_type_id)
-            : null;
-          indicator.result_level_id = row.result_level_id
-            ? Number(row.result_level_id)
-            : null;
-        }
 
         grouped.get(row.toc_result_id)?.indicators.push(indicator);
       }

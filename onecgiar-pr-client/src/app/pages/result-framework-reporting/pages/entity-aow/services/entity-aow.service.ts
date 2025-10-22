@@ -129,7 +129,7 @@ export class EntityAowService {
       .GET_ExistingResultsContributors(this.currentResultToReport()?.toc_result_id, this.currentResultToReport()?.indicators[0].related_node_id)
       .subscribe({
         next: ({ response }) => {
-          this.existingResultsContributors.set(response?.response?.contributors ?? []);
+          this.existingResultsContributors.set(response?.contributors ?? []);
         },
         error: err => {
           this.existingResultsContributors.set([]);

@@ -15,6 +15,7 @@ import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 import { ShareResultRequestService } from '../results/share-result-request/share-result-request.service';
 import { ResultsByProjectsService } from '../results/results_by_projects/results_by_projects.service';
 import { ContributionToIndicatorResultsRepository } from '../contribution-to-indicators/repositories/contribution-to-indicator-result.repository';
+import { ResultsTocTargetIndicatorRepository } from '../results/results-toc-results/repositories/result-toc-result-target-indicator.repository';
 
 const mockClarisaInitiativesRepository = {
   findOne: jest.fn(),
@@ -69,6 +70,12 @@ const mockResultsTocResultIndicatorsRepository = {
   findOne: jest.fn(),
   find: jest.fn(),
   save: jest.fn(),
+};
+
+const mockResultsIndicatorsTargetsRepository = {
+  findOne: jest.fn(),
+  save: jest.fn(),
+  update: jest.fn(),
 };
 
 const mockShareResultRequestService = {
@@ -131,6 +138,10 @@ describe('ResultsFrameworkReportingService', () => {
         {
           provide: ResultsTocResultIndicatorsRepository,
           useValue: mockResultsTocResultIndicatorsRepository,
+        },
+        {
+          provide: ResultsTocTargetIndicatorRepository,
+          useValue: mockResultsIndicatorsTargetsRepository,
         },
         {
           provide: ShareResultRequestService,
@@ -803,6 +814,9 @@ describe('ResultsFrameworkReportingService', () => {
       mockResultsTocResultIndicatorsRepository.findOne.mockReset();
       mockResultsTocResultIndicatorsRepository.find.mockReset();
       mockResultsTocResultIndicatorsRepository.save.mockReset();
+      mockResultsIndicatorsTargetsRepository.findOne.mockReset();
+      mockResultsIndicatorsTargetsRepository.save.mockReset();
+      mockResultsIndicatorsTargetsRepository.update.mockReset();
       mockShareResultRequestService.resultRequest.mockReset();
       mockResultsByProjectsService.linkBilateralProjectToResult.mockReset();
     });
@@ -851,11 +865,67 @@ describe('ResultsFrameworkReportingService', () => {
       expect(
         mockShareResultRequestService.resultRequest,
       ).not.toHaveBeenCalled();
-      // No bilateral project data provided -> should not call link service
       expect(
         mockResultsByProjectsService.linkBilateralProjectToResult,
       ).not.toHaveBeenCalled();
       expect(response.response.tocResultLinkId).toBe(900);
+    });
+
+    it('should persist indicator target information when payload provides it', async () => {
+      mockResultsService.createOwnerResultV2.mockResolvedValueOnce({
+        status: 201,
+        response: { id: 303 },
+      });
+      mockResultRepository.getResultById.mockResolvedValueOnce({
+        id: 303,
+        result_level_id: 2,
+      });
+      mockTocResultsRepository.findResultById.mockResolvedValueOnce({
+        id: 444,
+      });
+      mockResultsTocResultRepository.findOne.mockResolvedValueOnce(null);
+      mockResultsTocResultRepository.save.mockResolvedValueOnce({
+        result_toc_result_id: 707,
+      });
+      mockTocResultsRepository.findIndicatorById.mockResolvedValueOnce({
+        id: 81,
+        toc_results_id: 444,
+        related_node_id: 'REL-81',
+      });
+      mockResultsTocResultIndicatorsRepository.findOne.mockResolvedValueOnce(
+        null,
+      );
+      mockResultsTocResultIndicatorsRepository.save.mockResolvedValueOnce({
+        result_toc_result_indicator_id: 812,
+      });
+      mockResultsIndicatorsTargetsRepository.findOne.mockResolvedValueOnce(
+        null,
+      );
+
+      await service.createResultFromFramework(
+        {
+          result: baseResult,
+          toc_result_id: 444,
+          indicators: [{ indicator_id: 81 }],
+          contributing_indicator: 3.5,
+          number_target: '25',
+          target_date: '2025-12-31',
+        },
+        user,
+      );
+
+      expect(mockResultsTocResultIndicatorsRepository.save).toHaveBeenCalled();
+      expect(mockResultsIndicatorsTargetsRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          result_toc_result_indicator_id: 812,
+          number_target: 25,
+          contributing_indicator: 3.5,
+          target_date: '2025-12-31',
+          created_by: user.id,
+          last_updated_by: user.id,
+          is_active: true,
+        }),
+      );
     });
 
     it('should create a knowledge product result and reuse existing ToC record (single bilateral)', async () => {
