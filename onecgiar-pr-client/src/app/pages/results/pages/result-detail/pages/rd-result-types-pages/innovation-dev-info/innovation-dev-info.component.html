@@ -2,10 +2,8 @@
   <app-alert-status [description]="alertInfoText()"> </app-alert-status>
   <app-pr-input label="Long title" [required]="false" [readOnly]="true" [(ngModel)]="innovationDevInfoBody?.result.title"> </app-pr-input>
   <app-pr-input
-    label="Provide a short title for the innovation"
-    [description]="shortTitleDescription()"
+    fieldRef="[innovation-dev-info]-short_title"
     [maxWords]="10"
-    placeholder="Innovation short name goes here..."
     [(ngModel)]="innovationDevInfoBody.short_title">
   </app-pr-input>
   <app-pr-select

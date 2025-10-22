@@ -6,6 +6,7 @@ import { InnovationDevelopmentQuestions } from './model/InnovationDevelopmentQue
 import { InnovationDevInfoUtilsService } from './services/innovation-dev-info-utils.service';
 import { InnovationDevelopmentLinks } from './model/InnovationDevelopmentLinks.model';
 import { TerminologyService } from '../../../../../../../internationalization/terminology.service';
+import { FieldsManagerService } from '../../../../../../../shared/services/fields-manager.service';
 
 @Component({
   selector: 'app-innovation-dev-info',
@@ -24,7 +25,8 @@ export class InnovationDevInfoComponent implements OnInit {
     private api: ApiService,
     public innovationControlListSE: InnovationControlListService,
     private innovationDevInfoUtilsSE: InnovationDevInfoUtilsService,
-    private terminologyService: TerminologyService
+    private terminologyService: TerminologyService,
+    private fieldsManagerSE: FieldsManagerService
   ) {
     this.api.dataControlSE.currentResultSectionName.set('Innovation Development information');
   }
@@ -126,18 +128,6 @@ export class InnovationDevInfoComponent implements OnInit {
     Examples of evidence documentation for different CGIAR innovations and readiness levels can be found <a target="_blank" href="https://drive.google.com/file/d/1rWGC0VfxazlzdZ1htcfBSw1jO7GmVQbq/view" class='open_route alert-event'>here</a>`;
   }
 
-  shortTitleDescription() {
-    return `<ul>
-    <li>Innovations are new, improved, or adapted technologies or products, capacity development tools and services, and policies or institutional arrangements with high potential to contribute to positive impacts when used at scale.</li>
-    <li>Innovations may be at early stages of readiness (ideation or basic research) or at more mature stages of readiness (delivery and scaling).</li>
-    <li>Enter a short name that facilitates clear communication about the innovation.</li>
-    <li>Avoid abbreviations or (technical) jargon.</li>
-    <li>Varieties or breeds should be described by their generic traits or characteristics (e.g. Drought tolerant and aphid resistant groundnut cultivars).</li>
-    <li>You do not need to specify the number of new or improved lines/varieties – this can be specified under Innovation Typology.</li>
-    <li>If not essential, avoid making reference to specific countries or regions (this is captured through geotagging)</li>
-    <li>Avoid the use of CGIAR Center, ${this.terminologyService.t('term.entity.singular', this.api.dataControlSE.currentResult?.portfolio)} or organization names in the short title</li>
-    </ul>`;
-  }
 
   readiness_of_this_innovation_description() {
     return `<ul>
