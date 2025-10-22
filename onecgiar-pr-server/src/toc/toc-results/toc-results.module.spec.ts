@@ -1,4 +1,5 @@
 import { Test, TestingModuleBuilder } from '@nestjs/testing';
+import { DataSource } from 'typeorm';
 
 jest.mock('../../shared/services/share-point/share-point.module', () => ({
   SharePointModule: class SharePointModule {},
@@ -84,13 +85,21 @@ import { ResultsByIpInnovationUseMeasureRepository } from '../../api/ipsr/result
 import { ResultsIpInstitutionTypeRepository } from '../../api/ipsr/results-ip-institution-type/results-ip-institution-type.repository';
 import { ResultCountrySubnationalRepository } from '../../api/results/result-countries-sub-national/repositories/result-country-subnational.repository';
 import { ResultAnswerRepository } from '../../api/results/result-questions/repository/result-answers.repository';
+import { ResultTypeRepository } from '../../api/results/result_types/resultType.repository';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
+import { HandlersError } from '../../shared/handlers/error.utils';
 
 describe('TocResultsModule', () => {
   async function compileModule() {
     const moduleBuilder: TestingModuleBuilder = Test.createTestingModule({
       imports: [TocResultsModule],
     });
+
+    moduleBuilder
+      .overrideProvider(DataSource)
+      .useValue({ createEntityManager: () => ({}) });
+    moduleBuilder.overrideProvider(HandlersError).useValue({});
+    moduleBuilder.overrideProvider(ResultTypeRepository).useValue({});
 
     const providersToMock = [
       TocResultsRepository,
