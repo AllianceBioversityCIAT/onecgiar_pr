@@ -74,7 +74,12 @@
               type="button"
               class="pr-body-3 tab-content_actions_button"
               (click)="openReportResultModal(item, result.indicator_id)"></button>
-            <button pButton label="View results" type="button" class="p-button-outlined pr-body-3 tab-content_actions_button"></button>
+            <button
+              pButton
+              label="View results"
+              type="button"
+              class="p-button-outlined pr-body-3 tab-content_actions_button"
+              (click)="openViewResultDrawer(item, result.indicator_id)"></button>
             <button pButton label="Progress by program" type="button" class="p-button-outlined pr-body-3 tab-content_actions_button"></button>
           </div>
         </td>
@@ -91,4 +96,8 @@
 
 @if (entityAowService.showReportResultModal()) {
   <app-aow-hlo-create-modal></app-aow-hlo-create-modal>
+}
+
+@if (entityAowService.showViewResultDrawer()) {
+  <app-aow-view-results-drawer></app-aow-view-results-drawer>
 }
