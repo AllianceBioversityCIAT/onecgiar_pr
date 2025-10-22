@@ -20,7 +20,7 @@ describe('RdEvidencesComponent', () => {
   let mockSaveButtonService: any;
   const mockGET_evidencesResponse = {
     evidences: [],
-    innovation_readiness_level_id: 1,
+    innovation_readiness_level_id: 1
   };
   const mockGET_loadFileInUploadSessionResponse = 'sampleUploadUrl';
   const mockPUT_loadFileInUploadSessionResponse = {
@@ -39,16 +39,15 @@ describe('RdEvidencesComponent', () => {
         POST_createUploadSession: async () => firstValueFrom(await Promise.resolve(of(mockGET_loadFileInUploadSessionResponse))),
         GET_loadFileInUploadSession: () => of({ nextExpectedRanges: ['sampleRange'] }),
         PUT_loadFileInUploadSession: () => of(mockPUT_loadFileInUploadSessionResponse),
-        POST_evidences: () => of({ response: [] }),
+        POST_evidences: () => of({ response: [] })
       },
       dataControlSE: {
         isKnowledgeProduct: true,
         currentResult: {
           result_type_id: 5
-        },
-      },
-
-    }
+        }
+      }
+    };
 
     mockInnovationControlListService = {
       readinessLevelsList: [
@@ -56,25 +55,17 @@ describe('RdEvidencesComponent', () => {
           id: 1,
           name: 'Level 1'
         }
-      ],
-    }
+      ]
+    };
 
     mockSaveButtonService = {
       showSaveSpinner: jest.fn(),
-      hideSaveSpinner: jest.fn(),
-    }
+      hideSaveSpinner: jest.fn()
+    };
 
     await TestBed.configureTestingModule({
-      declarations: [
-        RdEvidencesComponent,
-        NoDataTextComponent,
-        AlertStatusComponent,
-        SaveButtonComponent,
-        DetailSectionTitleComponent
-      ],
-      imports: [
-        HttpClientTestingModule,
-      ],
+      declarations: [RdEvidencesComponent, NoDataTextComponent, AlertStatusComponent, SaveButtonComponent, DetailSectionTitleComponent],
+      imports: [HttpClientTestingModule],
       providers: [
         {
           provide: ApiService,
@@ -87,7 +78,7 @@ describe('RdEvidencesComponent', () => {
         {
           provide: SaveButtonService,
           useValue: mockSaveButtonService
-        },
+        }
       ]
     }).compileComponents();
 
@@ -99,7 +90,7 @@ describe('RdEvidencesComponent', () => {
     it('should return appropriate text when isKnowledgeProduct is true', () => {
       const result = component.alertStatus();
       expect(result).toBe(
-        'As this knowledge product is stored in CGSpace, this section only requires an indication of whether the knowledge product is associated with any of the Impact Area tags provided below.'
+        'As this knowledge product is stored in the repository, this section only requires an indication of whether the knowledge product is associated with any of the Impact Area tags provided below.'
       );
     });
 
@@ -136,22 +127,22 @@ describe('RdEvidencesComponent', () => {
   describe('getAndCalculateFilePercentage', () => {
     it('should calculate file percentage and update evidenceIterator', () => {
       const response = {
-        nextExpectedRanges: ['0-1024'],
+        nextExpectedRanges: ['0-1024']
       };
       const evidenceIterator = {
-        percentage: 0,
+        percentage: 0
       };
       component.getAndCalculateFilePercentage(response, evidenceIterator);
 
-      expect(evidenceIterator.percentage).toBe("0");
+      expect(evidenceIterator.percentage).toBe('0');
     });
 
     it('should not update percentage if totalBytes is zero', () => {
       const response = {
-        nextExpectedRanges: ['0-0'],
+        nextExpectedRanges: ['0-0']
       };
       const evidenceIterator = {
-        percentage: 50,
+        percentage: 50
       };
 
       component.getAndCalculateFilePercentage(response, evidenceIterator);
@@ -161,10 +152,10 @@ describe('RdEvidencesComponent', () => {
 
     it('should calculate file percentage and update evidenceIterator', () => {
       const response = {
-        nextExpectedRanges: ['0-'],
+        nextExpectedRanges: ['0-']
       };
       const evidenceIterator = {
-        percentage: 0,
+        percentage: 0
       };
 
       component.getAndCalculateFilePercentage(response, evidenceIterator);
@@ -183,7 +174,7 @@ describe('RdEvidencesComponent', () => {
   describe('endLoadFile', () => {
     it('should clear the interval and set the percentage to 100', () => {
       const spy = jest.spyOn(global, 'clearInterval');
-      const intervalId = setInterval(() => { }, 100);
+      const intervalId = setInterval(() => {}, 100);
       const evidenceIterator = { percentage: 50 };
 
       component.endLoadFile(intervalId, evidenceIterator);
@@ -195,11 +186,7 @@ describe('RdEvidencesComponent', () => {
 
   describe('loadAllFiles', () => {
     it('should load files and update evidence properties', async () => {
-      const mockEvidences = [
-        { file: new File([], 'file1.pdf') },
-        { file: new File([], 'file2.pdf') },
-        { file: undefined },
-      ];
+      const mockEvidences = [{ file: new File([], 'file1.pdf') }, { file: new File([], 'file2.pdf') }, { file: undefined }];
       component.evidencesBody.evidences = mockEvidences;
       const spyEndLoadFile = jest.spyOn(component, 'endLoadFile');
       const spyPOST_createUploadSession = jest.spyOn(mockApiService.resultsSE, 'POST_createUploadSession');
@@ -216,14 +203,9 @@ describe('RdEvidencesComponent', () => {
     });
 
     it('should handle errors in loadAllFiles', async () => {
-      const mockEvidences = [
-        { file: new File([], 'file1.pdf') },
-        { file: new File([], 'file2.pdf') },
-        { file: undefined },
-      ];
+      const mockEvidences = [{ file: new File([], 'file1.pdf') }, { file: new File([], 'file2.pdf') }, { file: undefined }];
       component.evidencesBody.evidences = mockEvidences;
-      jest.spyOn(mockApiService.resultsSE, 'POST_createUploadSession')
-        .mockRejectedValue('Error from POST_createUploadSession');
+      jest.spyOn(mockApiService.resultsSE, 'POST_createUploadSession').mockRejectedValue('Error from POST_createUploadSession');
       const consoleSpy = jest.spyOn(console, 'error');
 
       await component.loadAllFiles();
@@ -260,11 +242,7 @@ describe('RdEvidencesComponent', () => {
 
   describe('deleteEvidence', () => {
     it('should delete evidence from the evidencesBody', () => {
-      const mockEvidences = [
-        { is_sharepoint: false },
-        { is_sharepoint: true },
-        { is_sharepoint: false },
-      ];
+      const mockEvidences = [{ is_sharepoint: false }, { is_sharepoint: true }, { is_sharepoint: false }];
       const evidencesBody = {
         result_id: 1,
         evidences: mockEvidences,
@@ -273,15 +251,12 @@ describe('RdEvidencesComponent', () => {
         nutrition_tag_level: '',
         environmental_biodiversity_tag_level: '',
         poverty_tag_level: ''
-      }
+      };
       component.evidencesBody = evidencesBody;
 
       component.deleteEvidence(1);
 
-      expect(component.evidencesBody.evidences).toEqual([
-        { is_sharepoint: false },
-        { is_sharepoint: false },
-      ]);
+      expect(component.evidencesBody.evidences).toEqual([{ is_sharepoint: false }, { is_sharepoint: false }]);
     });
   });
 
@@ -301,8 +276,8 @@ describe('RdEvidencesComponent', () => {
             nutrition_related: true,
             environmental_biodiversity_related: false,
             poverty_related: false
-          },
-        ],
+          }
+        ]
       };
 
       const result = component.validateCheckBoxes();
@@ -324,8 +299,8 @@ describe('RdEvidencesComponent', () => {
         evidences: [
           { link: 'link', is_sharepoint: false, file: null },
           { link: 'link', is_sharepoint: false, file: null },
-          { link: null, is_sharepoint: true, file: null },
-        ],
+          { link: null, is_sharepoint: true, file: null }
+        ]
       };
 
       const result = component.validateButtonDisabled;
@@ -344,8 +319,8 @@ describe('RdEvidencesComponent', () => {
         evidences: [
           { link: null, is_sharepoint: false, file: null },
           { link: null, is_sharepoint: false, file: null },
-          { link: null, is_sharepoint: false, file: null },
-        ],
+          { link: null, is_sharepoint: false, file: null }
+        ]
       };
 
       const result = component.validateButtonDisabled;
@@ -364,8 +339,8 @@ describe('RdEvidencesComponent', () => {
         evidences: [
           { link: null, is_sharepoint: true, file: null },
           { link: null, is_sharepoint: true, file: null },
-          { link: null, is_sharepoint: true, file: null },
-        ],
+          { link: null, is_sharepoint: true, file: null }
+        ]
       };
 
       const result = component.validateButtonDisabled;
@@ -381,9 +356,7 @@ describe('RdEvidencesComponent', () => {
         nutrition_tag_level: '1',
         environmental_biodiversity_tag_level: '2',
         poverty_tag_level: '3',
-        evidences: [
-
-        ],
+        evidences: []
       };
 
       const result = component.validateButtonDisabled;
@@ -393,37 +366,31 @@ describe('RdEvidencesComponent', () => {
   });
 
   describe('validateHasInnoReadinessLevelEvidence', () => {
-      it('should return true if isOptionalReadinessLevel is true', () => {
-        component.isOptionalReadinessLevel = true;
-        const result = component.validateHasInnoReadinessLevelEvidence();
-        expect(result).toBe(true);
-      });
-
-      it('should return true if any evidence has innovation_readiness_related set to true', () => {
-        component.isOptionalReadinessLevel = false;
-        component.evidencesBody.evidences = [
-          { innovation_readiness_related: false },
-          { innovation_readiness_related: true },
-        ];
-        const result = component.validateHasInnoReadinessLevelEvidence();
-        expect(result).toBe(true);
-      });
-
-      it('should return false if no evidence has innovation_readiness_related set to true', () => {
-        component.isOptionalReadinessLevel = false;
-        component.evidencesBody.evidences = [
-          { innovation_readiness_related: false },
-          { innovation_readiness_related: false },
-        ];
-        const result = component.validateHasInnoReadinessLevelEvidence();
-        expect(result).toBe(false);
-      });
-
-      it('should return false if evidences array is empty', () => {
-        component.isOptionalReadinessLevel = false;
-        component.evidencesBody.evidences = [];
-        const result = component.validateHasInnoReadinessLevelEvidence();
-        expect(result).toBe(false);
-      });
+    it('should return true if isOptionalReadinessLevel is true', () => {
+      component.isOptionalReadinessLevel = true;
+      const result = component.validateHasInnoReadinessLevelEvidence();
+      expect(result).toBe(true);
     });
+
+    it('should return true if any evidence has innovation_readiness_related set to true', () => {
+      component.isOptionalReadinessLevel = false;
+      component.evidencesBody.evidences = [{ innovation_readiness_related: false }, { innovation_readiness_related: true }];
+      const result = component.validateHasInnoReadinessLevelEvidence();
+      expect(result).toBe(true);
+    });
+
+    it('should return false if no evidence has innovation_readiness_related set to true', () => {
+      component.isOptionalReadinessLevel = false;
+      component.evidencesBody.evidences = [{ innovation_readiness_related: false }, { innovation_readiness_related: false }];
+      const result = component.validateHasInnoReadinessLevelEvidence();
+      expect(result).toBe(false);
+    });
+
+    it('should return false if evidences array is empty', () => {
+      component.isOptionalReadinessLevel = false;
+      component.evidencesBody.evidences = [];
+      const result = component.validateHasInnoReadinessLevelEvidence();
+      expect(result).toBe(false);
+    });
+  });
 });
