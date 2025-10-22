@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { EntityAowService } from '../../services/entity-aow.service';
 import { CommonModule } from '@angular/common';
@@ -19,7 +19,7 @@ export interface Tab {
   styleUrl: './entity-aow-aow.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class EntityAowAowComponent implements OnInit {
+export class EntityAowAowComponent implements OnInit, OnDestroy {
   route = inject(ActivatedRoute);
   entityAowService = inject(EntityAowService);
 
@@ -43,5 +43,9 @@ export class EntityAowAowComponent implements OnInit {
 
   isActiveTab(tabId: string): boolean {
     return this.activeTabId() === tabId;
+  }
+
+  ngOnDestroy() {
+    this.entityAowService.aowId.set('');
   }
 }

@@ -13,8 +13,10 @@
     <div class="report-result-content_left">
       <div class="report-result-content_left_header">
         <p class="report-result-content_left_header_subtitle">
-          {{ entityAowService.entityId() }} - {{ entityAowService.entityDetails().name }} / {{ entityAowService.currentAowSelected()?.code }} -
-          {{ entityAowService.currentAowSelected()?.name }}
+          {{ entityAowService.entityId() }} - {{ entityAowService.entityDetails().name }}
+          @if (entityAowService.currentAowSelected()) {
+            / {{ entityAowService.currentAowSelected().code }} - {{ entityAowService.currentAowSelected().name }}
+          }
         </p>
         <p class="report-result-content_left_header_title">{{ entityAowService.currentResultToReport()?.result_title }}</p>
         <p class="report-result-content_left_header_desc">{{ entityAowService.currentResultToReport()?.indicators?.[0]?.indicator_description }}</p>

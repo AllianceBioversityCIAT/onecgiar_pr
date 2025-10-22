@@ -2,7 +2,7 @@
   id="tocResultsByAowIdTable"
   styleClass="p-datatable-gridlines p-datatable-sm"
   [value]="tableData()"
-  [loading]="entityAowService.isLoadingTocResultsByAowId()"
+  [loading]="entityAowService.isLoadingTocResultsByAowId() || entityAowService.isLoadingTocResults2030Outcomes()"
   sortField="result_title"
   [sortOrder]="1"
   responsiveLayout="scroll"

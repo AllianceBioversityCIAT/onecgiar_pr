@@ -21,7 +21,8 @@ describe('EntityAowAowComponent', () => {
       tocResultsOutputsByAowId: signal<any[]>([]),
       tocResultsOutcomesByAowId: signal<any[]>([]),
       isLoadingTocResultsByAowId: signal<boolean>(false),
-      showReportResultModal: signal<boolean>(false)
+      showReportResultModal: signal<boolean>(false),
+      isLoadingTocResults2030Outcomes: signal<boolean>(false)
     } as any;
 
     // Mock ActivatedRoute
@@ -216,6 +217,22 @@ describe('EntityAowAowComponent', () => {
         expect(component.activeTabId()).toBe(expectedTab);
         expect(component.isActiveTab(expectedTab)).toBe(true);
       });
+    });
+  });
+
+  describe('ngOnDestroy', () => {
+    it('should call ngOnDestroy', () => {
+      const ngOnDestroySpy = jest.spyOn(component, 'ngOnDestroy');
+
+      component.ngOnDestroy();
+
+      expect(ngOnDestroySpy).toHaveBeenCalled();
+    });
+
+    it('should set aowId to empty string', () => {
+      component.ngOnDestroy();
+
+      expect(mockEntityAowService.aowId()).toBe('');
     });
   });
 });
