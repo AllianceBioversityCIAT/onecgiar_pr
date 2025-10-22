@@ -5,10 +5,10 @@ import { InnovationControlListService } from '../../../../../../shared/services/
 import { SaveButtonService } from '../../../../../../custom-fields/save-button/save-button.service';
 import { DataControlService } from '../../../../../../shared/services/data-control.service';
 @Component({
-    selector: 'app-rd-evidences',
-    templateUrl: './rd-evidences.component.html',
-    styleUrls: ['./rd-evidences.component.scss'],
-    standalone: false
+  selector: 'app-rd-evidences',
+  templateUrl: './rd-evidences.component.html',
+  styleUrls: ['./rd-evidences.component.scss'],
+  standalone: false
 })
 export class RdEvidencesComponent implements OnInit {
   evidencesBody = new EvidencesBody();
@@ -18,7 +18,7 @@ export class RdEvidencesComponent implements OnInit {
 
   alertStatus() {
     if (this.api.dataControlSE.isKnowledgeProduct)
-      return 'As this knowledge product is stored in CGSpace, this section only requires an indication of whether the knowledge product is associated with any of the Impact Area tags provided below.';
+      return 'As this knowledge product is stored in the repository, this section only requires an indication of whether the knowledge product is associated with any of the Impact Area tags provided below.';
     let mainText = `<ul>
     <li>Submit a maximum of 6 pieces of evidence.</li>
     <li>Please list evidence from most to least important.</li>
