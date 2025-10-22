@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { EntityAowService } from '../../services/entity-aow.service';
 import { CommonModule } from '@angular/common';
@@ -19,14 +19,13 @@ export interface Tab {
   styleUrl: './entity-aow-aow.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class EntityAowAowComponent implements OnInit {
+export class EntityAowAowComponent implements OnInit, OnDestroy {
   route = inject(ActivatedRoute);
   entityAowService = inject(EntityAowService);
 
-  // Tab management
-  readonly tabs = signal<Tab[]>([
-    { id: 'high-level-outputs', label: 'High-Level Outputs', count: 0 },
-    { id: 'outcomes', label: 'Outcomes', count: 0, disabled: true }
+  tabs = computed(() => [
+    { id: 'high-level-outputs', label: 'High-Level Outputs', count: this.entityAowService.tocResultsOutputsByAowId().length },
+    { id: 'outcomes', label: 'Outcomes', count: this.entityAowService.tocResultsOutcomesByAowId().length }
   ]);
 
   readonly activeTabId = signal<string>('high-level-outputs');
@@ -44,5 +43,9 @@ export class EntityAowAowComponent implements OnInit {
 
   isActiveTab(tabId: string): boolean {
     return this.activeTabId() === tabId;
+  }
+
+  ngOnDestroy() {
+    this.entityAowService.aowId.set('');
   }
 }

@@ -1238,6 +1238,10 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/programs/indicator-contribution-summary?program=${entityId}`);
   }
 
+  GET_2030Outcomes(entityId: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/toc-results/2030-outcomes?programId=${entityId}`);
+  }
+
   GET_W3BilateralProjects(tocResultId: string) {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/bilateral-projects?tocResultId=${tocResultId}`);
   }

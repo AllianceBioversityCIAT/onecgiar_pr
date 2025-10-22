@@ -24,7 +24,7 @@ describe('AoWBilateralRepository', () => {
     repository = new AoWBilateralRepository(mockDataSource, mockHandlersError);
   });
 
-  it('should execute the aggregate query with expected clauses', async () => {
+  it('should execute the aggregate query for composite code with expected clauses', async () => {
     (mockDataSource.query as jest.Mock).mockResolvedValueOnce([]);
 
     await repository.findByCompositeCode('SP01', 'SP01-AOW01', 2025);
@@ -32,14 +32,37 @@ describe('AoWBilateralRepository', () => {
     expect(mockDataSource.query).toHaveBeenCalledTimes(1);
     const [query, params] = (mockDataSource.query as jest.Mock).mock.calls[0];
 
-    expect(params).toEqual(['SP01', 'SP01-AOW01']);
+    expect(params).toEqual(['SP01-AOW01', 2025, 'SP01', 'OUTPUT', 'OUTCOME']);
     expect(query).toContain(
       'COALESCE(SUM(CAST(trit.target_value AS SIGNED)), 0) AS target_value_sum',
     );
     expect(query).toContain('GROUP BY');
     expect(query).toContain('ORDER BY tr.id ASC, tri.id ASC');
-    expect(query).toContain('FROM toc_test.toc_work_packages');
-    expect(query).toContain('AND trit.target_date = 2025');
+    expect(query).toContain('FROM toc_test.toc_results tr');
+    expect(query).toContain(
+      'JOIN toc_test.toc_work_packages wp ON tr.wp_id = wp.id',
+    );
+    expect(query).toContain('LEFT JOIN toc_test.toc_result_indicator_target');
+    expect(query).toContain('AND trit.target_date = ?');
+    expect(query).toContain('WHERE');
+  });
+
+  it('should omit work package join when composite code is not provided', async () => {
+    (mockDataSource.query as jest.Mock).mockResolvedValueOnce([]);
+
+    await repository.find2030Outcomes('SP01', 2025);
+
+    expect(mockDataSource.query).toHaveBeenCalledTimes(1);
+    const [query, params] = (mockDataSource.query as jest.Mock).mock.calls[0];
+
+    expect(params).toEqual([2025, 'SP01', 'EOI']);
+    expect(query).toContain('FROM toc_test.toc_results tr');
+    expect(query).not.toContain('JOIN toc_test.toc_work_packages');
+    expect(query).toContain(
+      'JOIN toc_test.toc_results_indicators tri ON tri.toc_results_id = tr.id',
+    );
+    expect(query).toContain('LEFT JOIN toc_test.toc_result_indicator_target');
+    expect(query).toContain('AND trit.target_date = ?');
   });
 
   it('should delegate query failures to the handlers error utility', async () => {

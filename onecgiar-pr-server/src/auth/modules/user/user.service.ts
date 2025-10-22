@@ -458,6 +458,7 @@ export class UserService {
           role_id,
           force_swap,
           currentUser,
+          user.id,
         );
       }
 
@@ -479,21 +480,28 @@ export class UserService {
     role_id: number,
     force_swap: boolean,
     currentUser: User,
+    updatedUserId: number,
   ) {
     const existingLead = await queryRunner.manager.findOne(RoleByUser, {
       where: { initiative_id: entity_id, role: role_id, active: true },
       relations: ['obj_user', 'obj_initiative'],
     });
 
-    if (existingLead && !force_swap) {
-      this.throwIfLeadAlreadyAssigned(existingLead, role_id);
-    }
+    if (existingLead) {
+      if (existingLead.user === updatedUserId) {
+        return;
+      }
 
-    if (existingLead && force_swap) {
-      await queryRunner.manager.update(RoleByUser, existingLead.id, {
-        role: ROLE_IDS.COORDINATOR,
-        last_updated_by: currentUser.id,
-      });
+      if (!force_swap) {
+        this.throwIfLeadAlreadyAssigned(existingLead, role_id);
+      }
+
+      if (force_swap) {
+        await queryRunner.manager.update(RoleByUser, existingLead.id, {
+          role: ROLE_IDS.COORDINATOR,
+          last_updated_by: currentUser.id,
+        });
+      }
     }
   }
 

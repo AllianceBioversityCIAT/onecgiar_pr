@@ -6,16 +6,23 @@ import { EntityAowService } from '../../../../../../services/entity-aow.service'
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 import { CommonModule } from '@angular/common';
+import { ButtonModule } from 'primeng/button';
+import { Router } from '@angular/router';
+import { SelectModule } from 'primeng/select';
+import { ResultsListFilterService } from '../../../../../../../../../results/pages/results-outlet/pages/results-list/services/results-list-filter.service';
+import { InputNumberModule } from 'primeng/inputnumber';
 
 interface CreateResultBody {
   handler: string;
   result_name: string;
   toc_progressive_narrative: string;
+  result_type_id: number | null;
+  contribution_to_indicator_target: number | null;
 }
 
 @Component({
   selector: 'app-aow-hlo-create-modal',
-  imports: [CommonModule, DialogModule, CustomFieldsModule, MultiSelectModule, FormsModule],
+  imports: [CommonModule, DialogModule, CustomFieldsModule, MultiSelectModule, FormsModule, ButtonModule, SelectModule, InputNumberModule],
   templateUrl: './aow-hlo-create-modal.component.html',
   styleUrl: './aow-hlo-create-modal.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -23,12 +30,16 @@ interface CreateResultBody {
 export class AowHloCreateModalComponent implements OnInit {
   api = inject(ApiService);
   entityAowService = inject(EntityAowService);
+  router = inject(Router);
+  resultsListFilterSE = inject(ResultsListFilterService);
 
   allInitiatives = signal<any[]>([]);
   createResultBody = signal<CreateResultBody>({
     handler: '',
     result_name: '',
-    toc_progressive_narrative: ''
+    toc_progressive_narrative: '',
+    result_type_id: null,
+    contribution_to_indicator_target: null
   });
   mqapJson = signal<any>(null);
   validatingHandler = signal<boolean>(false);
@@ -36,6 +47,7 @@ export class AowHloCreateModalComponent implements OnInit {
     status: false,
     message: ''
   });
+  resultTypes = signal<any[]>([]);
 
   creatingResult = signal<boolean>(false);
 
@@ -45,6 +57,30 @@ export class AowHloCreateModalComponent implements OnInit {
     this.api.resultsSE.GET_AllInitiatives('p25').subscribe(({ response }) => {
       this.allInitiatives.set(response.filter(item => item.initiative_id !== this.entityAowService.entityDetails().id));
     });
+
+    if (!this.entityAowService.currentResultToReport()?.indicators?.[0]?.result_type_id) {
+      let options = this.resultsListFilterSE.filters.resultLevel?.find(
+        item => item.id === this.entityAowService.currentResultToReport()?.indicators?.[0]?.result_level_id
+      )?.options;
+
+      if (this.entityAowService.currentResultToReport()?.indicators?.[0]?.result_level_id === 4) {
+        options = options?.filter(item => item.id !== 6);
+      }
+
+      this.resultTypes.set(options);
+    }
+  }
+
+  getTitleInputLabel() {
+    if (this.entityAowService.currentResultIsKnowledgeProduct() && this.mqapJson()?.metadata?.length > 0) {
+      return 'Title retrived from ' + this.mqapJson()?.metadata?.[0]?.source;
+    }
+
+    if (this.entityAowService.currentResultIsKnowledgeProduct()) {
+      return 'Title retrieved from the repository';
+    }
+
+    return 'Title';
   }
 
   removeBilateralProject(project: any) {
@@ -117,12 +153,15 @@ export class AowHloCreateModalComponent implements OnInit {
 
     const body = {
       result: {
-        result_type_id: this.entityAowService.currentResultToReport().indicators[0].result_type_id,
+        result_type_id: this.entityAowService.currentResultToReport().indicators[0].result_type_id ?? this.createResultBody().result_type_id,
         result_level_id: this.entityAowService.currentResultToReport().indicators[0].result_level_id,
         initiative_id: this.entityAowService.entityDetails().id,
         result_name: this.createResultBody().result_name,
         handler: this.createResultBody().handler
       },
+      number_target: this.entityAowService.currentResultToReport().indicators[0].number_target,
+      target_date: this.entityAowService.currentResultToReport().indicators[0].target_date,
+      contributing_indicator: this.createResultBody().contribution_to_indicator_target,
       knowledge_product: this.mqapJson(),
       toc_result_id: this.entityAowService.currentResultToReport().toc_result_id,
       toc_progressive_narrative: this.createResultBody().toc_progressive_narrative,
@@ -136,6 +175,9 @@ export class AowHloCreateModalComponent implements OnInit {
         this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
         this.entityAowService.onCloseReportResultModal();
         this.creatingResult.set(false);
+        this.router.navigate([`/result/result-detail/${resp?.response?.result?.result_code}/general-information`], {
+          queryParams: { phase: resp?.response?.result?.version_id }
+        });
       },
       error: err => {
         this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });

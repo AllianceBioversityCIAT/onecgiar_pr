@@ -17,7 +17,13 @@
     <div class="entity-aow_sidebar_option_items">
       @for (item of entityAowService.sideBarItems(); track item) {
         @if (!item.isTree) {
-          <div class="entity-aow_sidebar_option_item" [routerLink]="url + item.itemLink" routerLinkActive="active">
+          <div
+            #sidebarOptionItem
+            class="entity-aow_sidebar_option_item"
+            [routerLink]="url + item.itemLink"
+            routerLinkActive="active"
+            (keydown.space)="$event.preventDefault(); sidebarOptionItem.click()"
+            (keydown.enter)="sidebarOptionItem.click()">
             <i class="pi pi-folder" style="font-size: 14px"></i>
             <p class="entity-aow_sidebar_option_item_title">{{ item.label }}</p>
           </div>
@@ -30,12 +36,15 @@
           @if (item.isOpen) {
             @for (item of item.items; track item) {
               <div
+                #sidebarOptionItem
                 class="entity-aow_sidebar_option_item"
                 [routerLink]="url + item.itemLink"
                 routerLinkActive="active"
                 [style.cursor]="entityAowService.aowId() === item.label ? 'not-allowed' : 'pointer'"
                 [style.pointer-events]="entityAowService.aowId() === item.label ? 'none' : 'auto'"
-                (click)="entityAowService.getTocResultsByAowId(entityAowService.entityId(), item.label)">
+                (click)="entityAowService.aowId() !== item.label && entityAowService.getTocResultsByAowId(entityAowService.entityId(), item.label)"
+                (keydown.space)="$event.preventDefault(); sidebarOptionItem.click()"
+                (keydown.enter)="sidebarOptionItem.click()">
                 <i class="pi pi-folder" style="font-size: 14px"></i>
                 <p class="entity-aow_sidebar_option_item_title">{{ item.label }}</p>
               </div>
