@@ -15,6 +15,8 @@ describe('AowHloTableComponent', () => {
   beforeEach(async () => {
     const mockShowReportResultModal = signal<boolean>(false);
     const mockCurrentResultToReport = signal<any>({});
+    const mockShowViewResultDrawer = signal<boolean>(false);
+    const mockCurrentResultToView = signal<any>({});
 
     mockEntityAowService = {
       aowId: signal<string>(''),
@@ -26,11 +28,15 @@ describe('AowHloTableComponent', () => {
       isLoadingTocResults2030Outcomes: signal<boolean>(false),
       isLoadingTocResultsByAowId: signal<boolean>(false),
       showReportResultModal: mockShowReportResultModal,
-      currentResultToReport: mockCurrentResultToReport
+      currentResultToReport: mockCurrentResultToReport,
+      showViewResultDrawer: mockShowViewResultDrawer,
+      currentResultToView: mockCurrentResultToView
     } as any;
 
     jest.spyOn(mockShowReportResultModal, 'set');
     jest.spyOn(mockCurrentResultToReport, 'set');
+    jest.spyOn(mockShowViewResultDrawer, 'set');
+    jest.spyOn(mockCurrentResultToView, 'set');
 
     mockActivatedRoute = {
       params: of({ aowId: 'test-aow-id' })
@@ -402,6 +408,143 @@ describe('AowHloTableComponent', () => {
 
       expect(mockEntityAowService.showReportResultModal.set).toHaveBeenCalledWith(true);
       expect(mockEntityAowService.showReportResultModal.set).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('openViewResultDrawer', () => {
+    it('should filter indicators by currentItemId and update service signals', () => {
+      const mockItem = {
+        id: 'result-1',
+        title: 'Test Result',
+        indicators: [
+          { indicator_id: 'indicator-1', name: 'Indicator 1', type_name: 'Number of knowledge products' },
+          { indicator_id: 'indicator-2', name: 'Indicator 2', type_name: 'Outcome indicator' },
+          { indicator_id: 'indicator-3', name: 'Indicator 3', type_name: 'Impact indicator' }
+        ]
+      };
+      const currentItemId = 'indicator-2';
+
+      component.openViewResultDrawer(mockItem, currentItemId);
+
+      expect(mockEntityAowService.showViewResultDrawer.set).toHaveBeenCalledWith(true);
+      expect(mockEntityAowService.currentResultToView.set).toHaveBeenCalledWith({
+        id: 'result-1',
+        title: 'Test Result',
+        indicators: [{ indicator_id: 'indicator-2', name: 'Indicator 2', type_name: 'Outcome indicator' }]
+      });
+    });
+
+    it('should handle item with no matching indicators', () => {
+      const mockItem = {
+        id: 'result-1',
+        title: 'Test Result',
+        indicators: [
+          { indicator_id: 'indicator-1', name: 'Indicator 1', type_name: 'Number of knowledge products' },
+          { indicator_id: 'indicator-2', name: 'Indicator 2', type_name: 'Outcome indicator' }
+        ]
+      };
+      const currentItemId = 'non-existent-indicator';
+
+      component.openViewResultDrawer(mockItem, currentItemId);
+
+      expect(mockEntityAowService.showViewResultDrawer.set).toHaveBeenCalledWith(true);
+      expect(mockEntityAowService.currentResultToView.set).toHaveBeenCalledWith({
+        id: 'result-1',
+        title: 'Test Result',
+        indicators: []
+      });
+    });
+
+    it('should handle item with empty indicators array', () => {
+      const mockItem = {
+        id: 'result-1',
+        title: 'Test Result',
+        indicators: []
+      };
+      const currentItemId = 'any-indicator';
+
+      component.openViewResultDrawer(mockItem, currentItemId);
+
+      expect(mockEntityAowService.showViewResultDrawer.set).toHaveBeenCalledWith(true);
+      expect(mockEntityAowService.currentResultToView.set).toHaveBeenCalledWith({
+        id: 'result-1',
+        title: 'Test Result',
+        indicators: []
+      });
+    });
+
+    it('should handle item with undefined indicators', () => {
+      const mockItem = {
+        id: 'result-1',
+        title: 'Test Result'
+      };
+      const currentItemId = 'any-indicator';
+
+      expect(() => {
+        component.openViewResultDrawer(mockItem, currentItemId);
+      }).toThrow();
+    });
+
+    it('should preserve all item properties except indicators', () => {
+      const mockItem = {
+        id: 'result-1',
+        title: 'Test Result',
+        description: 'Test Description',
+        status: 'active',
+        indicators: [
+          { indicator_id: 'indicator-1', name: 'Indicator 1', type_name: 'Number of knowledge products' },
+          { indicator_id: 'indicator-2', name: 'Indicator 2', type_name: 'Outcome indicator' }
+        ]
+      };
+      const currentItemId = 'indicator-1';
+
+      component.openViewResultDrawer(mockItem, currentItemId);
+
+      expect(mockEntityAowService.currentResultToView.set).toHaveBeenCalledWith({
+        id: 'result-1',
+        title: 'Test Result',
+        description: 'Test Description',
+        status: 'active',
+        indicators: [{ indicator_id: 'indicator-1', name: 'Indicator 1', type_name: 'Number of knowledge products' }]
+      });
+    });
+
+    it('should handle multiple indicators with same indicator_id', () => {
+      const mockItem = {
+        id: 'result-1',
+        title: 'Test Result',
+        indicators: [
+          { indicator_id: 'indicator-1', name: 'Indicator 1', type_name: 'Number of knowledge products' },
+          { indicator_id: 'indicator-1', name: 'Indicator 1 Duplicate', type_name: 'Outcome indicator' },
+          { indicator_id: 'indicator-2', name: 'Indicator 2', type_name: 'Impact indicator' }
+        ]
+      };
+      const currentItemId = 'indicator-1';
+
+      component.openViewResultDrawer(mockItem, currentItemId);
+
+      expect(mockEntityAowService.currentResultToView.set).toHaveBeenCalledWith({
+        id: 'result-1',
+        title: 'Test Result',
+        indicators: [
+          { indicator_id: 'indicator-1', name: 'Indicator 1', type_name: 'Number of knowledge products' },
+          { indicator_id: 'indicator-1', name: 'Indicator 1 Duplicate', type_name: 'Outcome indicator' }
+        ]
+      });
+    });
+
+    it('should always set showReportResultModal to true regardless of item content', () => {
+      const mockItem = {
+        id: 'result-1',
+        title: 'Test Result',
+        indicators: []
+      };
+      const currentItemId = 'any-indicator';
+
+      component.openViewResultDrawer(mockItem, currentItemId);
+
+      expect(mockEntityAowService.showViewResultDrawer.set).toHaveBeenCalledWith(true);
+      expect(mockEntityAowService.showViewResultDrawer.set).toHaveBeenCalledTimes(1);
     });
   });
 });
