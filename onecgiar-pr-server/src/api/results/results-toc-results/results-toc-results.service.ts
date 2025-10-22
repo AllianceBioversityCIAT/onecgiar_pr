@@ -1367,11 +1367,12 @@ export class ResultsTocResultsService {
           toc_result_id,
           init,
         );
-      const extra_info = await this._resultsTocResultRepository.getWpExtraInfoV2(
-        resultIdToc,
-        toc_result_id,
-        init,
-      );
+      const extra_info =
+        await this._resultsTocResultRepository.getWpExtraInfoV2(
+          resultIdToc,
+          toc_result_id,
+          init,
+        );
       const wp_info =
         await this._resultsTocResultRepository.getWpInformation(toc_result_id);
 
