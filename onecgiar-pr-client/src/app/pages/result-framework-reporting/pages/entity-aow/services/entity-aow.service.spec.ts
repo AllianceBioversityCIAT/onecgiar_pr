@@ -870,9 +870,7 @@ describe('EntityAowService', () => {
 
     const mockContributorsApiResponse = {
       response: {
-        response: {
-          contributors: mockContributors
-        }
+        contributors: mockContributors
       }
     };
 
@@ -1119,9 +1117,7 @@ describe('EntityAowService', () => {
       jest.spyOn(mockApiService.resultsSE, 'GET_W3BilateralProjects').mockReturnValue(of({ response: mockW3Projects }));
       jest.spyOn(mockApiService.resultsSE, 'GET_ExistingResultsContributors').mockReturnValue(
         of({
-          response: {
-            response: { contributors: mockContributors }
-          }
+          response: { contributors: mockContributors }
         })
       );
 
