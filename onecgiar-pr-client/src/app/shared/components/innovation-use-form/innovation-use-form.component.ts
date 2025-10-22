@@ -7,6 +7,7 @@ import {
   Organization
 } from '../../../pages/ipsr/pages/innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n1/model/Ipsr-step-1-body.model';
 import { TerminologyService } from '../../../internationalization/terminology.service';
+import { FieldsManagerService } from '../../services/fields-manager.service';
 
 @Component({
   selector: 'app-innovation-use-form',
@@ -22,7 +23,8 @@ export class InnovationUseFormComponent {
 
   constructor(
     public api: ApiService,
-    private terminologyService: TerminologyService
+    private terminologyService: TerminologyService,
+    public fieldsManagerSE: FieldsManagerService
   ) {
     this.GETAllActorsTypes();
     this.GETInstitutionsTypeTree();
@@ -161,16 +163,22 @@ export class InnovationUseFormComponent {
     this.calculateTotalField(actorItem);
   }
 
+  currentUseHeaderLabel() {
+    return this.fieldsManagerSE.isP25() 
+      ? 'Current core innovation use in number of users that can be supported by evidence (within the reporting year).'
+      : 'Specify the current use of the innovation in number of users (actors/ organizations/ other) that can be supported by evidence';
+  }
+
   narrativeActors() {
     return `<ul>
     <li>
     If the innovation does not target specific groups of actors or people, then please specify the expected innovation use at organizational level or other use below.
     </li>
     <li>
-    Individuals, organizations or networks operating within or beyond the system the ${this.terminologyService.t('term.entity.singular', this.api.dataControlSE?.currentResult?.portfolio)} or intervention aims to influence and whose actions can advance or impede the ${this.terminologyService.t('term.entity.singular', this.api.dataControlSE?.currentResult?.portfolio)}’s aims.
+    Individuals, organizations or networks operating within or beyond the system the ${this.terminologyService.t('term.entity.singular', this.api.dataControlSE?.currentResult?.portfolio)} or intervention aims to influence and whose actions can advance or impede the ${this.terminologyService.t('term.entity.singular', this.api.dataControlSE?.currentResult?.portfolio)}'s aims.
     </li>
     <li>
-    The numbers for ‘youth' and 'non-youth' equal the total number for 'Women' or 'Men’.
+    The numbers for 'youth' and 'non-youth' equal the total number for 'Women' or 'Men'.
     </li>
     </ul>`;
   }

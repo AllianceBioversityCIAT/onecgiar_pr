@@ -6,7 +6,6 @@ import { InnovationDevelopmentQuestions } from './model/InnovationDevelopmentQue
 import { InnovationDevInfoUtilsService } from './services/innovation-dev-info-utils.service';
 import { InnovationDevelopmentLinks } from './model/InnovationDevelopmentLinks.model';
 import { TerminologyService } from '../../../../../../../internationalization/terminology.service';
-import { FieldsManagerService } from '../../../../../../../shared/services/fields-manager.service';
 
 @Component({
   selector: 'app-innovation-dev-info',
@@ -26,7 +25,6 @@ export class InnovationDevInfoComponent implements OnInit {
     public innovationControlListSE: InnovationControlListService,
     private innovationDevInfoUtilsSE: InnovationDevInfoUtilsService,
     private terminologyService: TerminologyService,
-    private fieldsManagerSE: FieldsManagerService
   ) {
     this.api.dataControlSE.currentResultSectionName.set('Innovation Development information');
   }
