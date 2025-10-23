@@ -202,7 +202,8 @@ export class AoWBilateralRepository {
 
     query += `
       JOIN ${env.DB_TOC}.toc_results_indicators tri ON tri.toc_results_id = tr.id
-      LEFT JOIN ${env.DB_TOC}.toc_result_indicator_target trit ON tri.id = trit.id_indicator
+      JOIN ${env.DB_TOC}.toc_result_indicator_target trit ON tri.id = trit.id_indicator
+      AND trit.toc_result_indicator_id = tri.toc_result_indicator_id
     `;
 
     if (options.year !== undefined) {
