@@ -168,18 +168,18 @@ export class ResultCountryRepository
     geoScopeRoleId: number
   ) {
     const query = `
-    select 
-    rc.result_country_id,
-    rc.is_active,
-    rc.result_id,
-    rc.country_id,
-    rc.created_date,
-    rc.last_updated_date 
-    from result_country rc 
-    where rc.is_active > 0
-      and rc.result_id = ?
-      and rc.country_id = ?
-      and rc.geo_scope_role_id = ?;
+      select 
+        rc.result_country_id,
+        rc.is_active,
+        rc.result_id,
+        rc.country_id,
+        rc.created_date,
+        rc.last_updated_date 
+      from result_country rc 
+      where rc.is_active > 0
+        and rc.result_id = ?
+        and rc.country_id = ?
+        and rc.geo_scope_role_id = ?;
     `;
 
     try {
@@ -198,7 +198,11 @@ export class ResultCountryRepository
     }
   }
 
-  async updateCountries(resultId: number, countriesArray: number[], geoScopeRoleId: number) {
+  async updateCountries(
+    resultId: number, 
+    countriesArray: number[], 
+    geoScopeRoleId: number
+  ) {
     const countries = countriesArray ?? [];
     const upDateInactive = `
     update result_country  
@@ -206,6 +210,7 @@ export class ResultCountryRepository
     	 last_updated_date = NOW()
     where is_active > 0 
     	and result_id  = ?
+      and geo_scope_role_id = ?
     	and country_id  not in (${countries.toString()});
     `;
 
@@ -214,6 +219,7 @@ export class ResultCountryRepository
     set is_active = 1, 
     	 last_updated_date = NOW()
     where result_id  = ?
+      and geo_scope_role_id = ?
     	and country_id in (${countries.toString()});
     `;
 
@@ -221,16 +227,17 @@ export class ResultCountryRepository
     update result_country  
     set is_active = 0, 
     	 last_updated_date = NOW()
-    where result_id = ?;
+    where result_id = ?
+      and geo_scope_role_id = ?;
     `;
 
     try {
       if (countries?.length) {
-        await this.query(upDateInactive, [resultId]);
+        await this.query(upDateInactive, [resultId, geoScopeRoleId]);
 
-        return await this.query(upDateActive, [resultId]);
+        return await this.query(upDateActive, [resultId, geoScopeRoleId]);
       } else {
-        return await this.query(upDateAllInactive, [resultId]);
+        return await this.query(upDateAllInactive, [resultId, geoScopeRoleId]);
       }
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

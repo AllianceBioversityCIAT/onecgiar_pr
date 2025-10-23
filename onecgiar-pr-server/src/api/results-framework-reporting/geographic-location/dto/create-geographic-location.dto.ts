@@ -10,23 +10,23 @@ export class CreateGeographicLocationDto extends CreateResultGeoDto{
   public extra_geo_scope_id?: number | null;
 
   @ApiProperty({
-    description: 'Flag indicating if the result has country coverage.',
+    description: 'Flag indicating if the result has extra country coverage.',
   })
   public has_extra_countries: boolean;
 
   @ApiProperty({
-    description: 'Flag indicating if the result covers specific regions.',
+    description: 'Flag indicating if the result covers extra specific regions.',
   })
   public has_extra_regions: boolean;
 
   @ApiPropertyOptional({
-    description: 'List of regions linked to the result.',
+    description: 'List of extra regions linked to the result.',
     type: () => [GeoScopeDto],
   })
   public extra_regions: GeoScopeDto[];
 
   @ApiPropertyOptional({
-    description: 'List of countries linked to the result.',
+    description: 'List of extra countries linked to the result.',
     type: () => [GeoScopeDto],
   })
   public extra_countries: GeoScopeDto[];

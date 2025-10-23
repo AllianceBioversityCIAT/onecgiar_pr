@@ -121,12 +121,14 @@ export class ResultCountrySubnationalRepository
           is_active: true,
           result_country_id: rcId,
           clarisa_subnational_scope_code: subnationalCode,
+          geo_scope_role_id: geoScopeRoleId,
         });
 
         if (!existing) {
           const newSubnational = new ResultCountrySubnational();
           newSubnational.clarisa_subnational_scope_code = subnationalCode;
           newSubnational.result_country_id = rcId;
+          newSubnational.geo_scope_role_id = geoScopeRoleId;
           newSubnational.created_by = userId;
           newSubnational.last_updated_by = userId;
           resultSubnationalArray.push(newSubnational);

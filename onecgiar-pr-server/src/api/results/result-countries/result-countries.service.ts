@@ -137,9 +137,15 @@ export class ResultCountriesService {
         result.geographic_scope_id = geo_scope_id;
       }
 
-      if (extra_geo_scope_id) result.extra_geo_scope_id = extra_geo_scope_id;
-      if (has_extra_countries !== undefined)
-        result.has_extra_countries = !!has_extra_countries;
+      if (extra_geo_scope_id != null && (extra_countries && extra_geo_scope_id == 3)) {
+        result.extra_geo_scope_id =extra_countries?.length > 1 ? 3 : 4;
+      } else if ( extra_geo_scope_id != null && (extra_geo_scope_id == 4 || extra_geo_scope_id == 50 )) {
+        result.extra_geo_scope_id = 50;
+      } else {
+        result.extra_geo_scope_id = extra_geo_scope_id;
+      }
+
+      // COMPROBAR QUE has_extra_countries SE ESTÉ GUARDANDO BIEN;
 
       await this._resultRepository.save(result);
 
@@ -238,7 +244,7 @@ export class ResultCountriesService {
   async handleSubnationals(
     resultCountryArray,
     countries,
-    geo_scope_id, //Es decir, el extra_geo_scope_id Para el caso de que venga extra_geo_scope!
+    geo_scope_id, 
     userId,
     geoScopeRoleId,
   ) {
