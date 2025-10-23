@@ -88,6 +88,7 @@ const mockResultRepository = {
   getActiveResultTypes: jest.fn(),
   getResultById: jest.fn(),
   findUnitAcronymsByProgram: jest.fn(),
+  query: jest.fn(),
 };
 
 const mockResultsByProjectsService = {
@@ -343,6 +344,147 @@ describe('ResultsFrameworkReportingService', () => {
         error: thrown,
         debug: true,
       });
+    });
+  });
+
+  describe('getDashboardStats', () => {
+    it('should aggregate dashboard stats by status, level, and type', async () => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValue({
+        id: 7,
+        official_code: 'SP01',
+        name: 'Sample Program',
+      });
+
+      mockResultRepository.query.mockResolvedValue([
+        {
+          status_id: 1,
+          result_level_id: 4,
+          result_type_id: ResultTypeEnum.KNOWLEDGE_PRODUCT,
+          total_results: 4,
+        },
+        {
+          status_id: 1,
+          result_level_id: 3,
+          result_type_id: ResultTypeEnum.POLICY_CHANGE,
+          total_results: 1,
+        },
+        {
+          status_id: 3,
+          result_level_id: 4,
+          result_type_id: ResultTypeEnum.INNOVATION_DEVELOPMENT,
+          total_results: 2,
+        },
+        {
+          status_id: 2,
+          result_level_id: 4,
+          result_type_id: ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+          total_results: 3,
+        },
+        {
+          status_id: 2,
+          result_level_id: 3,
+          result_type_id: ResultTypeEnum.INNOVATION_USE,
+          total_results: 5,
+        },
+        {
+          status_id: 2,
+          result_level_id: 3,
+          result_type_id: ResultTypeEnum.CAPACITY_CHANGE,
+          total_results: 1,
+        },
+        {
+          status_id: 2,
+          result_level_id: 4,
+          result_type_id: 999,
+          total_results: 10,
+        },
+      ]);
+
+      const result = await service.getDashboardStats('sp01');
+
+      expect(mockClarisaInitiativesRepository.findOne).toHaveBeenCalledWith({
+        where: { official_code: 'SP01', active: true },
+        select: ['id', 'official_code', 'name'],
+      });
+      expect(mockResultRepository.query).toHaveBeenCalled();
+
+      expect(result).toEqual({
+        response: {
+          editing: {
+            total: 5,
+            label: 'Editing results',
+            data: {
+              outputs: {
+                knowledgeProduct: 4,
+                innovationDevelopment: 0,
+                capacitySharingForDevelopment: 0,
+                otherOutput: 0,
+              },
+              outcomes: {
+                policyChange: 1,
+                innovationUse: 0,
+                otherOutcome: 0,
+              },
+            },
+          },
+          submitted: {
+            total: 2,
+            label: 'Submitted results',
+            data: {
+              outputs: {
+                knowledgeProduct: 0,
+                innovationDevelopment: 2,
+                capacitySharingForDevelopment: 0,
+                otherOutput: 0,
+              },
+              outcomes: {
+                policyChange: 0,
+                innovationUse: 0,
+                otherOutcome: 0,
+              },
+            },
+          },
+          qualityAssessed: {
+            total: 9,
+            label: 'Quality assessed results',
+            data: {
+              outputs: {
+                knowledgeProduct: 0,
+                innovationDevelopment: 0,
+                capacitySharingForDevelopment: 3,
+                otherOutput: 0,
+              },
+              outcomes: {
+                policyChange: 0,
+                innovationUse: 5,
+                otherOutcome: 1,
+              },
+            },
+          },
+        },
+        message: 'Dashboard stats retrieved successfully.',
+        status: 200,
+      });
+    });
+
+    it('should return bad request error when programId is missing', async () => {
+      const result = await service.getDashboardStats('   ');
+
+      expect(result.status).toBe(400);
+      expect(result.message).toBe(
+        'The program identifier is required in the query params.',
+      );
+    });
+
+    it('should return not found error when program does not exist', async () => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce(null);
+
+      const result = await service.getDashboardStats('SP-404');
+
+      expect(result.status).toBe(404);
+      expect(result.message).toBe(
+        'No initiative was found with the provided program identifier.',
+      );
     });
   });
 
