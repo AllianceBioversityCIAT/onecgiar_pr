@@ -41,6 +41,7 @@ export class EntityAowService {
 
   // View result modal
   showViewResultDrawer = signal<boolean>(false);
+  viewResultDrawerFullScreen = signal<boolean>(false);
   currentResultToView = signal<any>({});
 
   getAllDetailsData() {

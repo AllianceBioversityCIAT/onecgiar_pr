@@ -1,4 +1,8 @@
-<p-drawer [(visible)]="entityAowService.showViewResultDrawer" position="right" [closable]="false" [style]="{ minWidth: '65vw' }">
+<p-drawer
+  [(visible)]="entityAowService.showViewResultDrawer"
+  [position]="entityAowService.viewResultDrawerFullScreen() ? 'full' : 'right'"
+  [closable]="false"
+  [style]="{ minWidth: '65vw' }">
   <ng-template #header>
     <div class="view-result-drawer-header">
       <div class="view-result-drawer-header_content">
@@ -10,8 +14,18 @@
         </p>
 
         <div class="view-result-drawer-header_content_icons">
-          <i class="pi pi-arrow-up-right-and-arrow-down-left-from-center" style="font-size: 15px; cursor: pointer"></i>
-          <i class="pi pi-times" style="font-size: 16px; cursor: pointer"></i>
+          <i
+            class="pi {{
+              entityAowService.viewResultDrawerFullScreen()
+                ? 'pi-arrow-down-left-and-arrow-up-right-to-center'
+                : 'pi-arrow-up-right-and-arrow-down-left-from-center'
+            }}"
+            style="font-size: 15px; cursor: pointer"
+            (click)="entityAowService.viewResultDrawerFullScreen.set(!entityAowService.viewResultDrawerFullScreen())"></i>
+          <i
+            class="pi pi-times"
+            style="font-size: 16px; cursor: pointer"
+            (click)="entityAowService.showViewResultDrawer.set(false); entityAowService.viewResultDrawerFullScreen.set(false)"></i>
         </div>
       </div>
       <p class="view-result-drawer-header_title">{{ entityAowService.currentResultToView()?.result_title }}</p>
