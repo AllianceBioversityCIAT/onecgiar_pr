@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { DialogModule } from 'primeng/dialog';
 import { CustomFieldsModule } from '../../../../../../../../../../custom-fields/custom-fields.module';
 import { MultiSelectModule } from 'primeng/multiselect';
@@ -48,6 +48,12 @@ export class AowHloCreateModalComponent implements OnInit {
     message: ''
   });
   resultTypes = signal<any[]>([]);
+  currentResultIsKnowledgeProduct = computed(() => {
+    return (
+      this.entityAowService.currentResultToReport()?.indicators?.[0]?.type_name === 'Number of knowledge products' ||
+      this.createResultBody().result_type_id === 6
+    );
+  });
 
   creatingResult = signal<boolean>(false);
 
@@ -59,24 +65,27 @@ export class AowHloCreateModalComponent implements OnInit {
     });
 
     if (!this.entityAowService.currentResultToReport()?.indicators?.[0]?.result_type_id) {
-      let options = this.resultsListFilterSE.filters.resultLevel?.find(
-        item => item.id === this.entityAowService.currentResultToReport()?.indicators?.[0]?.result_level_id
-      )?.options;
-
-      if (this.entityAowService.currentResultToReport()?.indicators?.[0]?.result_level_id === 4) {
-        options = options?.filter(item => item.id !== 6);
-      }
-
-      this.resultTypes.set(options);
+      this.resultTypes.set(
+        this.resultsListFilterSE.filters.resultLevel?.find(
+          item => item.id === this.entityAowService.currentResultToReport()?.indicators?.[0]?.result_level_id
+        )?.options
+      );
     }
   }
 
+  onResultTypeChange(resultTypeId: number) {
+    this.createResultBody.set({
+      ...this.createResultBody(),
+      result_type_id: resultTypeId
+    });
+  }
+
   getTitleInputLabel() {
-    if (this.entityAowService.currentResultIsKnowledgeProduct() && this.mqapJson()?.metadata?.length > 0) {
+    if (this.currentResultIsKnowledgeProduct() && this.mqapJson()?.metadata?.length > 0) {
       return 'Title retrived from ' + this.mqapJson()?.metadata?.[0]?.source;
     }
 
-    if (this.entityAowService.currentResultIsKnowledgeProduct()) {
+    if (this.currentResultIsKnowledgeProduct()) {
       return 'Title retrieved from the repository';
     }
 
