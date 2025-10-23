@@ -16,7 +16,9 @@ describe('EntityAow2030Component', () => {
       tocResults2030Outcomes: signal<any[]>([]),
       isLoadingTocResults2030Outcomes: signal<boolean>(false),
       isLoadingTocResultsByAowId: signal<boolean>(false),
-      showReportResultModal: signal<boolean>(false)
+      showReportResultModal: signal<boolean>(false),
+      showViewResultDrawer: signal<boolean>(false),
+      currentResultToView: signal<any>({})
     } as any;
 
     await TestBed.configureTestingModule({

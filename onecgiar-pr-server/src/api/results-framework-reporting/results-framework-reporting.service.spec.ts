@@ -849,7 +849,7 @@ describe('ResultsFrameworkReportingService', () => {
         {
           result: baseResult,
           toc_result_id: 555,
-          indicators: [{ indicator_id: 777 }],
+          indicators: { indicator_id: 777 },
         },
         user,
       );
@@ -905,10 +905,13 @@ describe('ResultsFrameworkReportingService', () => {
         {
           result: baseResult,
           toc_result_id: 444,
-          indicators: [{ indicator_id: 81 }],
+          indicators: {
+            indicator_id: 81,
+            number_target: '25',
+            target_date: '2025',
+            contributing_indicator: 3.5,
+          },
           contributing_indicator: 3.5,
-          number_target: '25',
-          target_date: '2025-12-31',
         },
         user,
       );
@@ -919,7 +922,7 @@ describe('ResultsFrameworkReportingService', () => {
           result_toc_result_indicator_id: 812,
           number_target: 25,
           contributing_indicator: 3.5,
-          target_date: '2025-12-31',
+          target_date: 2025,
           created_by: user.id,
           last_updated_by: user.id,
           is_active: true,
@@ -964,7 +967,7 @@ describe('ResultsFrameworkReportingService', () => {
           },
           knowledge_product: kpPayload,
           toc_result_id: 888,
-          indicators: [{ indicator_id: 999 }],
+          indicators: { indicator_id: 999 },
           contributors_result_toc_result: [
             {
               initiative_id: 20,
@@ -1038,7 +1041,7 @@ describe('ResultsFrameworkReportingService', () => {
         {
           result: baseResult,
           toc_result_id: 777,
-          indicators: [{ indicator_id: 5555 }],
+          indicators: { indicator_id: 5555 },
           bilateral_project: [
             { project_id: 9001, project_name: 'Proj A' },
             { project_id: '9002', project_name: 'Proj B' },
