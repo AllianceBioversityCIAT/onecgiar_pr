@@ -10,15 +10,25 @@ import { UnsubmitModalService } from '../components/unsubmit-modal/unsubmit-moda
 import { RolesService } from '../../../../../shared/services/global/roles.service';
 
 @Component({
-    selector: 'app-panel-menu',
-    templateUrl: './panel-menu.component.html',
-    styleUrls: ['./panel-menu.component.scss'],
-    standalone: false
+  selector: 'app-panel-menu',
+  templateUrl: './panel-menu.component.html',
+  styleUrls: ['./panel-menu.component.scss'],
+  standalone: false
 })
 export class PanelMenuComponent {
   @Output() copyEvent = new EventEmitter();
   navigationOptions: PrRoute[] = resultDetailRouting;
-  constructor(public rolesSE: RolesService, public resultLevelSE: ResultLevelService, public resultsListSE: ResultsApiService, public api: ApiService, public greenChecksSE: GreenChecksService, public submissionModalSE: SubmissionModalService, public unsubmitModalSE: UnsubmitModalService, public dataControlSE: DataControlService) {}
+
+  constructor(
+    public rolesSE: RolesService,
+    public resultLevelSE: ResultLevelService,
+    public resultsListSE: ResultsApiService,
+    public api: ApiService,
+    public greenChecksSE: GreenChecksService,
+    public submissionModalSE: SubmissionModalService,
+    public unsubmitModalSE: UnsubmitModalService,
+    public dataControlSE: DataControlService
+  ) {}
 
   hideKP(navOption) {
     if (!this.api.dataControlSE.isKnowledgeProduct) return false;
@@ -27,6 +37,11 @@ export class PanelMenuComponent {
     if (hideInKP.length === 0) return false;
 
     return Boolean(hideInKP.find(option => option == navOption.path));
+  }
+
+  hideLinksToResults(navOption) {
+    if (navOption.path === 'links-to-results') return this.dataControlSE.currentResultSignal()?.portfolio === 'P25';
+    return false;
   }
 
   get green_checks_string() {
