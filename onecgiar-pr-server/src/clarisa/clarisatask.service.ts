@@ -148,6 +148,9 @@ export class ClarisaTaskService {
         return this.syncControlList(ClarisaEndpoints.PORTFOLIO, index);
       },
       async (index: number) => {
+        return this.syncControlList(ClarisaEndpoints.PROJECTS, index);
+      },
+      async (index: number) => {
         return this.syncControlList(ClarisaEndpoints.CGIAR_ENTITY_TYPES, index);
       },
       async (index: number) => {
