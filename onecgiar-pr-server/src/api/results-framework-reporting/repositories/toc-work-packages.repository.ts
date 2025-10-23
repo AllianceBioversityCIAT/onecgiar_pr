@@ -76,7 +76,7 @@ export class TocResultsRepository {
     const query = `
       SELECT DISTINCT wp.acronym
       FROM ${env.DB_TOC}.toc_work_packages wp
-      INNER JOIN ${env.DB_TOC}.toc_results tr ON tr.wp_id = wp.id
+      INNER JOIN ${env.DB_TOC}.toc_results tr ON tr.wp_id = wp.toc_id
         AND tr.official_code = ?
     `;
 
@@ -194,7 +194,7 @@ export class TocResultsRepository {
 
     if (options.compositeCode) {
       query += `
-        JOIN ${env.DB_TOC}.toc_work_packages wp ON tr.wp_id = wp.id
+        JOIN ${env.DB_TOC}.toc_work_packages wp ON tr.wp_id = wp.toc_id
           AND wp.wp_official_code = ?
       `;
       params.push(options.compositeCode);
@@ -214,6 +214,7 @@ export class TocResultsRepository {
       WHERE
         tr.official_code = ?
         AND tr.category IN (${categoryPlaceholders})
+        AND tri.is_active = 1
     `;
     params.push(program);
     params.push(...categories);
@@ -311,6 +312,7 @@ export class TocResultsRepository {
         tri.related_node_id
       FROM ${env.DB_TOC}.toc_results_indicators tri
       WHERE tri.id = ?
+      AND tri.is_active = 1
       LIMIT 1;
     `;
 
