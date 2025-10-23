@@ -38,6 +38,8 @@ import { ClarisaSubnationalScope } from './clarisa-subnational-scope/entities/cl
 import { ClarisaPortfolios } from './clarisa-portfolios/entities/clarisa-portfolios.entity';
 import { ClarisaPortfolioDto } from './dtos/clarisa-portfolio.dto';
 import { ClarisaGlobalUnit } from './clarisa-global-unit/entities/clarisa-global-unit.entity';
+import { ClarisaProject } from './clarisa-projects/entity/clarisa-projects.entity';
+import { ClarisaProjectDto } from './dtos/clarisa-project.dto';
 
 /**
  * Represents a mapping of CLARISA parameters to their corresponding values.
@@ -333,6 +335,13 @@ export class ClarisaEndpoints<Entity, Dto> {
     ClarisaEndpoints.portfolioMapper,
   );
 
+  public static readonly PROJECTS = new ClarisaEndpoints(
+    'projects',
+    'GET',
+    ClarisaProject,
+    ClarisaEndpoints.projectMapper,
+  );
+
   /**
    * Constructs a new CLARISA endpoint.
    *
@@ -576,5 +585,21 @@ export class ClarisaEndpoints<Entity, Dto> {
         acronym: item.acronym,
       };
     });
+  }
+
+  static projectMapper(
+    data: ClarisaProjectDto[],
+  ): DeepPartial<ClarisaProject>[] {
+    return data.map((item) => ({
+      id: item.id,
+      shortName: item.short_name ?? null,
+      fullName: item.full_name ?? null,
+      summary: item.summary ?? null,
+      description: item.description ?? null,
+      startDate: item.start_date ?? null,
+      endDate: item.end_date ?? null,
+      totalBudget: item.total_budget ?? null,
+      remaining: item.remaining ?? null,
+    }));
   }
 }
