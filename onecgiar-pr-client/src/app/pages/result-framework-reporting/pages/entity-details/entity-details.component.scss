@@ -112,10 +112,10 @@ p {
 }
 
 .entity-details_card_content_graph {
-  height: 365px;
   padding: 24px 34px;
-  display: flex;
-  gap: 20px;
+  display: grid;
+  grid-template-columns: 270px 1fr;
+  gap: 42px;
 }
 .entity-details_card_content_graph_item {
   border: 1px solid var(--pr-color-primary-400);
@@ -150,21 +150,37 @@ p {
   width: 100%;
 }
 
+.details_card_content_graph_item_title {
+  @include fonts.pr-typography('body-2');
+  font-weight: 500;
+  color: var(--pr-color-accents-7);
+}
+
 .entity-details_card_content_graph_item_title_absolute {
   position: absolute;
-  bottom: -15px;
-  right: -20px;
   background-color: var(--pr-color-primary-300);
   height: 40px;
-  width: 150px;
   border-radius: 6px;
-  border-top-left-radius: 35px;
   display: flex;
   align-items: center;
   justify-content: center;
   @include fonts.pr-typography('body-2');
   font-weight: 500;
   color: var(--pr-color-white);
+}
+
+.bottom_title {
+  bottom: -15px;
+  right: -20px;
+  border-top-left-radius: 35px;
+  width: 150px;
+}
+
+.top_title {
+  top: -15px;
+  left: -20px;
+  border-top-right-radius: 35px;
+  width: 190px;
 }
 
 .entity-details_cards {

@@ -47,8 +47,21 @@
             }
           }
 
-          <!-- title absolute -->
-          <div class="entity-details_card_content_graph_item_title_absolute">Summary</div>
+          <div class="entity-details_card_content_graph_item_title_absolute bottom_title">Summary</div>
+        </div>
+
+        <div class="entity-details_card_content_graph_item" style="padding: 40px 16px 30px; display: grid; grid-template-columns: 1fr 1fr">
+          <div>
+            <h3 class="details_card_content_graph_item_title">Outputs</h3>
+            <p-chart type="bar" [data]="dataOutputs" [options]="options" height="245px" />
+          </div>
+
+          <div>
+            <h3 class="details_card_content_graph_item_title">Outcomes</h3>
+            <p-chart type="bar" [data]="dataOutcomes" [options]="options" height="245px" />
+          </div>
+
+          <div class="entity-details_card_content_graph_item_title_absolute top_title">Progress by Indicators</div>
         </div>
       </div>
     </div>
