@@ -31,41 +31,21 @@ export class EntityDetailsComponent implements OnInit {
   api = inject(ApiService);
   entityAowService = inject(EntityAowService);
 
-  entityResultsByIndicatorCategory = signal<any[]>([
+  summaryInsightsData = signal([
     {
-      indicatorType: 7,
-      indicatorName: 'Innovation Development',
-      resultsEditing: 80,
-      resultsSubmitted: 50,
-      resultsQualityAssessed: 30
+      label: 'Editing results',
+      value: 126,
+      icon: '../../../../../assets/result-framework-reporting/editing_results.png'
     },
     {
-      indicatorType: 6,
-      indicatorName: 'Knowledge Products',
-      resultsEditing: 80,
-      resultsSubmitted: 50,
-      resultsQualityAssessed: 30
+      label: 'Submitted results',
+      value: 102,
+      icon: '../../../../../assets/result-framework-reporting/submitted_results.png'
     },
     {
-      indicatorType: 5,
-      indicatorName: 'Capacity Sharing for Development',
-      resultsEditing: 80,
-      resultsSubmitted: 50,
-      resultsQualityAssessed: 30
-    },
-    {
-      indicatorType: 2,
-      indicatorName: 'Innovation Use',
-      resultsEditing: 80,
-      resultsSubmitted: 50,
-      resultsQualityAssessed: 30
-    },
-    {
-      indicatorType: 1,
-      indicatorName: 'Policy Change',
-      resultsEditing: 80,
-      resultsSubmitted: 50,
-      resultsQualityAssessed: 30
+      label: 'Quality assessed results',
+      value: 40,
+      icon: '../../../../../assets/result-framework-reporting/quality_assessed_results.png'
     }
   ]);
 

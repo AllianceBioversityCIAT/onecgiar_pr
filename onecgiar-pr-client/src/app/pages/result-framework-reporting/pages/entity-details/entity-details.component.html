@@ -28,9 +28,29 @@
     <img class="under_construction_icon" src="assets/work-in-progress.png" alt="" srcset="" />
 
     <div class="entity-details_card">
-      <div class="entity-details_card_header">General insights</div>
+      <div class="entity-details_card_header">Insights</div>
 
-      <div class="entity-details_card_content_graph"></div>
+      <div class="entity-details_card_content_graph">
+        <div class="entity-details_card_content_graph_item">
+          @for (item of summaryInsightsData(); track $index) {
+            <div class="entity-details_card_content_graph_item_content">
+              <img [src]="item.icon" alt="{{ item.label }} Icon" class="entity-details_card_content_graph_item_icon" />
+
+              <div>
+                <h3 class="entity-details_card_content_graph_item_value">{{ item.value }}</h3>
+                <p class="entity-details_card_content_graph_item_label">{{ item.label }}</p>
+              </div>
+            </div>
+
+            @if ($index < summaryInsightsData().length - 1) {
+              <div class="entity-details_card_content_graph_item_separator"></div>
+            }
+          }
+
+          <!-- title absolute -->
+          <div class="entity-details_card_content_graph_item_title_absolute">Summary</div>
+        </div>
+      </div>
     </div>
   </div>
 
