@@ -21,6 +21,7 @@ import { ShareResultRequestService } from '../results/share-result-request/share
 import { CreateTocShareResult } from '../results/share-result-request/dto/create-toc-share-result.dto';
 import { ResultsByProjectsService } from '../results/results_by_projects/results_by_projects.service';
 import { ResultsTocTargetIndicatorRepository } from '../results/results-toc-results/repositories/result-toc-result-target-indicator.repository';
+import { ResultLevelEnum } from '../../shared/constants/result-level.enum';
 
 @Injectable()
 export class ResultsFrameworkReportingService {
@@ -1023,6 +1024,178 @@ export class ResultsFrameworkReportingService {
           tocResultIndicatorId,
         },
         message: 'Existing result contributors retrieved successfully.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async getDashboardStats(programId: string) {
+    try {
+      const normalizedProgram = programId?.trim().toUpperCase();
+
+      if (!normalizedProgram) {
+        throw {
+          response: {},
+          message: 'The program identifier is required in the query params.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const initiative = await this._clarisaInitiativesRepository.findOne({
+        where: { official_code: normalizedProgram, active: true },
+        select: ['id', 'official_code', 'name'],
+      });
+
+      if (!initiative) {
+        throw {
+          response: {},
+          message:
+            'No initiative was found with the provided program identifier.',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const rawDashboardData = await this._resultRepository.query(
+        `
+          SELECT
+            r.status_id,
+            r.result_level_id,
+            r.result_type_id,
+            COUNT(DISTINCT r.id) AS total_results
+          FROM result r
+          INNER JOIN results_by_inititiative rbi
+            ON rbi.result_id = r.id
+            AND rbi.inititiative_id = ?
+            AND rbi.is_active = 1
+          INNER JOIN results_toc_result rtr
+            ON rtr.results_id = r.id
+            AND (rtr.is_active = 1 OR r.is_active = 1)
+          INNER JOIN results_toc_result_indicators rtri
+            ON rtri.results_toc_results_id = rtr.result_toc_result_id
+            AND rtri.is_active = 1
+            AND rtri.is_not_aplicable = 0
+          INNER JOIN result_indicators_targets rit
+            ON rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
+            AND rit.is_active = 1
+          WHERE
+            r.is_active = 1
+            AND r.status_id IN (1, 2, 3)
+            AND r.result_level_id IN (3, 4)
+            AND r.result_type_id IN (1, 2, 3, 4, 5, 6, 7, 8)
+          GROUP BY
+            r.status_id,
+            r.result_level_id,
+            r.result_type_id;
+        `,
+        [initiative.id],
+      );
+
+      const statusConfig = new Map([
+        [
+          1,
+          {
+            key: 'editing' as const,
+            label: 'Editing results',
+          },
+        ],
+        [
+          3,
+          {
+            key: 'submitted' as const,
+            label: 'Submitted results',
+          },
+        ],
+        [
+          2,
+          {
+            key: 'qualityAssessed' as const,
+            label: 'Quality assessed results',
+          },
+        ],
+      ]);
+
+      const initialStatusBlock = (label: string) => ({
+        total: 0,
+        label,
+        data: {
+          outputs: {
+            knowledgeProduct: 0,
+            innovationDevelopment: 0,
+            capacitySharingForDevelopment: 0,
+            otherOutput: 0,
+          },
+          outcomes: {
+            policyChange: 0,
+            innovationUse: 0,
+            otherOutcome: 0,
+          },
+        },
+      });
+
+      const dashboardStats = {
+        editing: initialStatusBlock('Editing results'),
+        submitted: initialStatusBlock('Submitted results'),
+        qualityAssessed: initialStatusBlock('Quality assessed results'),
+      };
+
+      const outputTypeMap = new Map<
+        number,
+        keyof typeof dashboardStats.editing.data.outputs
+      >([
+        [ResultTypeEnum.KNOWLEDGE_PRODUCT, 'knowledgeProduct'],
+        [ResultTypeEnum.INNOVATION_DEVELOPMENT, 'innovationDevelopment'],
+        [
+          ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+          'capacitySharingForDevelopment',
+        ],
+        [ResultTypeEnum.OTHER_OUTPUT, 'otherOutput'],
+      ]);
+
+      const outcomeTypeMap = new Map<
+        number,
+        keyof typeof dashboardStats.editing.data.outcomes
+      >([
+        [ResultTypeEnum.POLICY_CHANGE, 'policyChange'],
+        [ResultTypeEnum.INNOVATION_USE, 'innovationUse'],
+        [ResultTypeEnum.OTHER_OUTCOME, 'otherOutcome'],
+        [ResultTypeEnum.CAPACITY_CHANGE, 'otherOutcome'],
+      ]);
+
+      for (const row of rawDashboardData ?? []) {
+        const statusId = Number(row.status_id);
+        const levelId = Number(row.result_level_id);
+        const typeId = Number(row.result_type_id);
+        const total = Number(row.total_results) || 0;
+
+        if (!statusConfig.has(statusId) || total <= 0) {
+          continue;
+        }
+
+        const { key } = statusConfig.get(statusId)!;
+        const statusBlock = dashboardStats[key];
+
+        if (levelId === ResultLevelEnum.INITIATIVE_OUTPUT) {
+          const typeKey = outputTypeMap.get(typeId);
+          if (!typeKey) {
+            continue;
+          }
+          statusBlock.data.outputs[typeKey] += total;
+          statusBlock.total += total;
+        } else if (levelId === ResultLevelEnum.INITIATIVE_OUTCOME) {
+          const typeKey = outcomeTypeMap.get(typeId);
+          if (!typeKey) {
+            continue;
+          }
+          statusBlock.data.outcomes[typeKey] += total;
+          statusBlock.total += total;
+        }
+      }
+
+      return {
+        response: dashboardStats,
+        message: 'Dashboard stats retrieved successfully.',
         status: HttpStatus.OK,
       };
     } catch (error) {

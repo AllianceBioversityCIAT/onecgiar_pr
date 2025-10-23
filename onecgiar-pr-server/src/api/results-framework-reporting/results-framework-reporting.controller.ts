@@ -243,4 +243,23 @@ export class ResultsFrameworkReportingController {
       tocResultIndicatorId,
     );
   }
+
+  @Get('dashboard')
+  @ApiOperation({
+    summary: 'Get dashboard statistics for a program',
+    description:
+      'Retrieves key statistics and metrics for the dashboard view of the specified program.',
+  })
+  @ApiQuery({
+    name: 'programId',
+    type: String,
+    required: true,
+    description: 'Program identifier to fetch dashboard statistics for.',
+  })
+  @ApiOkResponse({
+    description: 'Dashboard statistics retrieved successfully.',
+  })
+  getDashboardStats(@Query('programId') programId: string) {
+    return this.resultsFrameworkReportingService.getDashboardStats(programId);
+  }
 }
