@@ -376,6 +376,33 @@ export class Result {
   obj_geographic_scope!: ClarisaGeographicScope;
 
   @Column({
+    name: 'extra_geo_scope_id',
+    type: 'int',
+    nullable: true,
+  })
+  extra_geo_scope_id: number;
+
+  @ManyToOne(() => ClarisaGeographicScope, (cgo) => cgo.id, { nullable: true })
+  @JoinColumn({
+    name: 'extra_geo_scope_id',
+  })
+  obj_extra_geographic_scope!: ClarisaGeographicScope;
+
+  @Column({
+    name: 'has_extra_regions',
+    nullable: true,
+    type: 'boolean',
+  })
+  has_extra_regions: boolean;
+
+  @Column({
+    name: 'has_extra_countries',
+    nullable: true,
+    type: 'boolean',
+  })
+  has_extra_countries: boolean;
+
+  @Column({
     name: 'has_regions',
     nullable: true,
     type: 'boolean',

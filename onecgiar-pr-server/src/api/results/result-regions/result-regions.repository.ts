@@ -150,25 +150,28 @@ export class ResultRegionRepository
   async getResultRegionByResultIdAndRegionId(
     resultId: number,
     regionId: number,
+    geo_scope_role_id: number = 1,
   ) {
     const query = `
-    select 
-    rr.result_region_id,
-    rr.region_id,
-    rr.result_id,
-    rr.is_active,
-    rr.created_date,
-    rr.last_updated_date 
-    from result_region rr 
-    where rr.is_active > 0
-      and rr.result_id = ?
-      and rr.region_id = ?;
+      select 
+        rr.result_region_id,
+        rr.region_id,
+        rr.result_id,
+        rr.is_active,
+        rr.created_date,
+        rr.last_updated_date 
+      from result_region rr 
+      where rr.is_active > 0
+        and rr.result_id = ?
+        and rr.region_id = ?
+        and rr.geo_scope_role_id = ?;
     `;
 
     try {
       const result: ResultRegion[] = await this.query(query, [
         resultId,
         regionId,
+        geo_scope_role_id,
       ]);
       return result?.length ? result[0] : undefined;
     } catch (error) {
@@ -249,4 +252,74 @@ export class ResultRegionRepository
       });
     }
   }
+
+  async updateRegionsV2(
+    resultId: number,
+    regionArray: number[] = [],
+    extraRegionArray: number[] = [],
+  ): Promise<void> {
+    try {
+
+      const updateRegionsByRole = async (roleId: number, regionIds: number[]) => {
+        if (regionIds.length > 0) {
+
+          await this.query(
+            `
+            UPDATE result_region
+            SET is_active = 0,
+                last_updated_date = NOW()
+            WHERE is_active > 0
+              AND geo_scope_role_id = ?
+              AND result_id = ?
+              AND region_id NOT IN (${regionIds.map(() => '?').join(', ')});
+            `,
+            [roleId, resultId, ...regionIds]
+          );
+
+          await this.query(
+            `
+            UPDATE result_region
+            SET is_active = 1,
+                last_updated_date = NOW()
+            WHERE geo_scope_role_id = ?
+              AND result_id = ?
+              AND region_id IN (${regionIds.map(() => '?').join(', ')});
+            `,
+            [roleId, resultId, ...regionIds]
+          );
+        } else {
+
+          await this.query(
+            `
+            UPDATE result_region
+            SET is_active = 0,
+                last_updated_date = NOW()
+            WHERE is_active > 0
+              AND geo_scope_role_id = ?
+              AND result_id = ?;
+            `,
+            [roleId, resultId]
+          );
+        }
+      };
+
+      const promises = [];
+
+      if (regionArray !== undefined && regionArray !== null) {
+        promises.push(updateRegionsByRole(1, regionArray));
+      }
+
+      if (extraRegionArray !== undefined && extraRegionArray !== null) {
+        promises.push(updateRegionsByRole(2, extraRegionArray));
+      }
+
+      await Promise.all(promises);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRegionRepository.name,
+        error: `updateRegionsV2 ${error}`,
+        debug: true,
+      });
+    }
+  } 
 }
