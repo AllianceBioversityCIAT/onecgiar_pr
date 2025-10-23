@@ -14,6 +14,8 @@ import { AoWBilateralRepository } from '../results/results-toc-results/repositor
 import { ContributionToIndicatorResultsRepository } from '../contribution-to-indicators/repositories/contribution-to-indicator-result.repository';
 import { ResultsByProjectsModule } from '../results/results_by_projects/results_by_projects.module';
 import { ContributorsPartnersModule } from './contributors-partners/contributors-partners.module';
+import { GeographicLocationModule } from './geographic-location/geographic-location.module';
+import { GeoScopeRoleModule } from './geo_scope_role/geo_scope_role.module';
 
 @Module({
   imports: [
@@ -23,6 +25,8 @@ import { ContributorsPartnersModule } from './contributors-partners/contributors
     ShareResultRequestModule,
     ResultsByProjectsModule,
     ContributorsPartnersModule,
+    GeographicLocationModule,
+    GeoScopeRoleModule,
   ],
   controllers: [ResultsFrameworkReportingController],
   providers: [
