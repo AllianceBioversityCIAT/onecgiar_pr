@@ -17,7 +17,8 @@ describe('AowViewResultsDrawer', () => {
       getTocResultsByAowId: jest.fn(),
       tocResultsOutputsByAowId: signal<any[]>([]),
       tocResultsOutcomesByAowId: signal<any[]>([]),
-      isLoadingTocResultsByAowId: signal<boolean>(false)
+      isLoadingTocResultsByAowId: signal<boolean>(false),
+      viewResultDrawerFullScreen: signal<boolean>(false)
     } as any;
 
     TestBed.configureTestingModule({
