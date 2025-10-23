@@ -165,6 +165,7 @@ export class ResultCountryRepository
   async getResultCountrieByIdResultAndCountryId(
     resultId: number,
     countryId: number,
+    geoScopeRoleId: number
   ) {
     const query = `
     select 
@@ -177,13 +178,15 @@ export class ResultCountryRepository
     from result_country rc 
     where rc.is_active > 0
       and rc.result_id = ?
-      and rc.country_id = ?;
+      and rc.country_id = ?
+      and rc.geo_scope_role_id = ?;
     `;
 
     try {
       const result: ResultCountry[] = await this.query(query, [
         resultId,
         countryId,
+        geoScopeRoleId,
       ]);
       return result?.length ? result[0] : undefined;
     } catch (error) {
@@ -195,7 +198,7 @@ export class ResultCountryRepository
     }
   }
 
-  async updateCountries(resultId: number, countriesArray: number[]) {
+  async updateCountries(resultId: number, countriesArray: number[], geoScopeRoleId: number) {
     const countries = countriesArray ?? [];
     const upDateInactive = `
     update result_country  
