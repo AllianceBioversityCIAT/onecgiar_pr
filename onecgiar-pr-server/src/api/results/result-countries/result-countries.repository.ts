@@ -202,7 +202,7 @@ export class ResultCountryRepository
   async updateCountries(
     resultId: number,
     countriesArray: number[],
-    geoScopeRoleId: number,
+    geoScopeRoleId: number = 1,
   ) {
     const countries = countriesArray ?? [];
     const upDateInactive = `
