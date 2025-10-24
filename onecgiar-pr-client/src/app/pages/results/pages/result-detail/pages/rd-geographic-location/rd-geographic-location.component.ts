@@ -92,6 +92,9 @@ export class RdGeographicLocationComponent implements OnInit {
     this.api.resultsSE.PATCH_geographicSection(this.geographicLocationBody).subscribe(() => {
       this.getSectionInformation();
     });
+    this.api.resultsSE.PATCH_geographicSectionp25(this.extraGeographicLocationBody).subscribe(() => {
+      this.getSectionInformationp25();
+    });
   }
 
   onSyncSection() {
