@@ -284,8 +284,18 @@ export class ResultsApiService {
     return this.http.patch<any>(`${this.apiBaseUrl}update/geographic/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 
+  PATCH_geographicSectionp25(body: any) {
+    return this.http
+      .patch<any>(`${this.apiBaseUrlV2}geographic-location/update/geographic/${this.currentResultId}`, body)
+      .pipe(this.saveButtonSE.isSavingPipe());
+  }
+
   GET_geographicSection() {
     return this.http.get<any>(`${this.apiBaseUrl}get/geographic/${this.currentResultId}`);
+  }
+
+  GET_geographicSectionp25() {
+    return this.http.get<any>(`${this.apiBaseUrlV2}geographic-location/get/geographic/${this.currentResultId}`);
   }
 
   GET_resultsLinked(isIpsr: boolean) {

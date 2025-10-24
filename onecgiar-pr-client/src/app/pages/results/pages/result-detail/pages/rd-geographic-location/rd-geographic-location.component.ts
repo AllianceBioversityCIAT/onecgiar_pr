@@ -72,6 +72,16 @@ export class RdGeographicLocationComponent implements OnInit {
         this.geographicLocationBody?.geo_scope_id == legacyCountries ? GeoScopeEnum.COUNTRY : this.geographicLocationBody.geo_scope_id;
     });
   }
+
+  getSectionInformationp25() {
+    this.api.resultsSE.GET_geographicSection().subscribe(({ response }) => {
+      this.geographicLocationBody = response;
+      const legacyCountries = 4;
+      this.geographicLocationBody.geo_scope_id =
+        this.geographicLocationBody?.geo_scope_id == legacyCountries ? GeoScopeEnum.COUNTRY : this.geographicLocationBody.geo_scope_id;
+    });
+  }
+
   onSaveSection() {
     this.api.resultsSE.PATCH_geographicSection(this.geographicLocationBody).subscribe(() => {
       this.getSectionInformation();
