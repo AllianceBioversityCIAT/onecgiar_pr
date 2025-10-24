@@ -97,12 +97,12 @@
 @if (body.has_extra_geo_scope) {
   <br />
   <app-pr-radio-button
-    fieldRef="[geoscope-management]-any-other"
+    fieldRef="[geoscope-management]-extra_geo_scope_id"
     [options]="this.geoscopeOptions"
     optionLabel="full_name"
     optionValue="id"
     [readOnly]="this.readOnly || this.api.dataControlSE.isKnowledgeProduct"
-    [(ngModel)]="body.any_other"
+    [(ngModel)]="body.extra_geo_scope_id"
     (ngModelChange)="this.resetHasScope()">
   </app-pr-radio-button>
 }
