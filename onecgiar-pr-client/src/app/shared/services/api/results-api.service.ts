@@ -17,6 +17,7 @@ import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-c
 import { UpdateUserStatus } from '../../interfaces/updateUserStatus.interface';
 import { SearchParams } from './api.service';
 import { EntityDetails } from '../../../pages/result-framework-reporting/pages/entity-details/interfaces/entity-details.interface';
+import { ExtraGeographicLocationBody } from '../../../pages/results/pages/result-detail/pages/rd-geographic-location/models/extraGeographicLocationBody';
 
 @Injectable({
   providedIn: 'root'
@@ -285,10 +286,8 @@ export class ResultsApiService {
     return this.http.patch<any>(`${this.apiBaseUrl}update/geographic/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 
-  PATCH_geographicSectionp25(body: any) {
-    return this.http
-      .patch<any>(`${this.baseApiBaseUrlV2}geographic-location/update/geographic/${this.currentResultId}`, body)
-      .pipe(this.saveButtonSE.isSavingPipe());
+  PATCH_geographicSectionp25(body: ExtraGeographicLocationBody) {
+    return this.http.patch<any>(`${this.baseApiBaseUrlV2}geographic-location/update/geographic/${this.currentResultId}`, body);
   }
 
   GET_geographicSection() {

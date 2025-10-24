@@ -80,11 +80,14 @@ export class RdGeographicLocationComponent implements OnInit {
 
   getSectionInformationp25() {
     this.api.resultsSE.GET_geographicSectionp25().subscribe(({ response }) => {
-      this.geographicLocationBody = response;
+      this.extraGeographicLocationBody = response;
       console.log(response);
       const legacyCountries = 4;
-      this.geographicLocationBody.geo_scope_id =
-        this.geographicLocationBody?.geo_scope_id == legacyCountries ? GeoScopeEnum.COUNTRY : this.geographicLocationBody.geo_scope_id;
+      this.extraGeographicLocationBody.has_extra_geo_scope = Boolean(response.has_extra_geo_scope);
+      this.extraGeographicLocationBody.extra_geo_scope_id =
+        this.extraGeographicLocationBody?.extra_geo_scope_id == legacyCountries
+          ? GeoScopeEnum.COUNTRY
+          : this.extraGeographicLocationBody.extra_geo_scope_id;
     });
   }
 
