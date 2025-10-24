@@ -128,7 +128,6 @@ export class ResultRegionRepository
     rr.is_active,
     rr.created_date,
     rr.last_updated_date,
-    rr.has_extra_geo_scope,
     rr.geo_scope_role_id,
     cr.name
     from result_region rr 
