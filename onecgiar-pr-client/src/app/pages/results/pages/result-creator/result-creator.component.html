@@ -82,7 +82,15 @@
           <div (click)="GET_mqapValidation()" class="sync_button" *ngIf="isKnowledgeProduct" [ngClass]="{ globalDisabled: validating }">
             <app-pr-button
               padding="medium"
-              [text]="validating ? 'Fetching metadata from CGSpace' : 'Sync'"
+              [text]="
+                validating
+                  ? this.resultLevelSE.resultBody.handler?.includes('20.500.11766')
+                    ? 'Fetching metadata from MELSpace'
+                    : this.resultLevelSE.resultBody.handler
+                      ? 'Fetching metadata from CGSpace'
+                      : 'Fetching metadata from the repository'
+                  : 'Sync'
+              "
               icon="sync"
               [rotating]="validating"></app-pr-button>
           </div>
@@ -104,7 +112,9 @@
             isKnowledgeProduct
               ? this.resultLevelSE.resultBody.handler?.includes('20.500.11766')
                 ? 'Title retrieved from MELSpace'
-                : 'Title retrieved from CGSpace'
+                : this.resultLevelSE.resultBody.handler
+                  ? 'Title retrieved from CGSpace'
+                  : 'Title retrieved from the repository'
               : 'To search for results that have already been reported, enter key words into the title box below. If your result has not already been reported, you can add it here.'
           "
           [(ngModel)]="this.resultLevelSE.resultBody.result_name"

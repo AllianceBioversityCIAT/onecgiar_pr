@@ -1,7 +1,11 @@
 <app-alert-status [description]="alertStatusMessage"> </app-alert-status>
 
 <app-alert-status
-  description="If any of the metadata fields are incorrect, please contact your Center library staff or knowledge management team to update them in CGSpace. Before the end of the reporting period, metadata will be automatically refreshed on this page.">
+  [description]="
+    'If any of the metadata fields are incorrect, please contact your Center library staff or knowledge management team to update them in ' +
+    sourceLabel +
+    '. Before the end of the reporting period, metadata will be automatically refreshed on this page.'
+  ">
 </app-alert-status>
 
 <app-alert-status
