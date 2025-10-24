@@ -15,7 +15,7 @@ import { FieldsManagerService } from '../../services/fields-manager.service';
   standalone: false
 })
 export class GeoscopeManagementComponent implements OnInit {
-  @Input() body: any = { regions: [], countries: [] };
+  @Input() body: any = { regions: [], countries: [], extra_regions: [], extra_countries: [] };
   @Input() readOnly: boolean = false;
   @Input() module: string;
   fieldsManagerS = inject(FieldsManagerService);
@@ -74,15 +74,19 @@ export class GeoscopeManagementComponent implements OnInit {
       case GeoScopeEnum.GLOBAL:
         this.body.has_extra_countries = false;
         this.body.has_extra_regions = false;
+        this.body.extra_regions = [];
+        this.body.extra_countries = [];
         break;
       case GeoScopeEnum.REGIONAL:
         this.body.has_extra_regions = true;
         this.body.has_extra_countries = false;
+        this.body.extra_countries = [];
         break;
       case GeoScopeEnum.COUNTRY:
       case GeoScopeEnum.SUB_NATIONAL:
         this.body.has_extra_countries = true;
         this.body.has_extra_regions = false;
+        this.body.extra_regions = [];
         break;
     }
   }
@@ -136,5 +140,9 @@ export class GeoscopeManagementComponent implements OnInit {
     this.internalModule = AppModuleEnum.getFromName(this.module);
     if (this.internalModule && this.internalModule.name === ModuleTypeEnum.REPORTING)
       this.geoscopeOptions = [...this.geoscopeOptions, { full_name: 'This is yet to be determined', id: GeoScopeEnum.DETERMINED }];
+
+    // Initialize extra arrays if they don't exist
+    if (!this.body.extra_regions) this.body.extra_regions = [];
+    if (!this.body.extra_countries) this.body.extra_countries = [];
   }
 }
