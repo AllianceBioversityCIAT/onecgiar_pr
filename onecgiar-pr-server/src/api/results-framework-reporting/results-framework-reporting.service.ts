@@ -949,7 +949,9 @@ export class ResultsFrameworkReportingService {
       const resultContributionExists =
         await this._resultsTocResultRepository.find({
           relations: {
-            obj_results: true,
+            obj_results: {
+              obj_status: true,
+            },
           },
           where: {
             toc_result_id: parsedResultTocResultId,
@@ -964,6 +966,12 @@ export class ResultsFrameworkReportingService {
               title: true,
               result_code: true,
               result_type_id: true,
+              version_id: true,
+              obj_status: {
+                result_status_id: true,
+                status_name: true,
+                status_description: true,
+              },
             },
           },
         });
@@ -1015,6 +1023,8 @@ export class ResultsFrameworkReportingService {
           result_id: contrib.result_id,
           title: contrib.obj_results?.title,
           result_code: contrib.obj_results?.result_code,
+          status_name: contrib.obj_results?.obj_status?.status_name,
+          version_id: contrib.obj_results?.version_id,
         }));
 
       return {
