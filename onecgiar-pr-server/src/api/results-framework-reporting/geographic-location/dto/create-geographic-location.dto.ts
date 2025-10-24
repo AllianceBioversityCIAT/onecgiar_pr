@@ -6,6 +6,14 @@ import {
 
 export class CreateGeographicLocationDto extends CreateResultGeoDto {
   @ApiPropertyOptional({
+    description:
+      'Flag indicating if an extra geographic scope is being assigned (nullable).',
+    nullable: true,
+    type: Boolean,
+  })
+  public has_extra_geo_scope?: boolean;
+
+  @ApiPropertyOptional({
     description: 'Extra geographic scope identifier being assigned (nullable).',
     nullable: true,
     type: Number,

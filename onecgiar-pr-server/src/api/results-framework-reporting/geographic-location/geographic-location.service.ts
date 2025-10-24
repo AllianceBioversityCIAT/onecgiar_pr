@@ -32,14 +32,13 @@ export class GeographicLocationService {
     user: TokenDto,
   ) {
     try {
-      //await this._resultService.saveGeoScope(createResultGeo, user); // COMPROBAR SI ESTO ES NECESARIO PORQUE EN EL RESTO DEL CÓDIGO YA ABARCO LAS FUNCIONALIDADES DE AMBAS VERSIONES UNIFICADAS.
-
       await this._resultRegionsService.createV2(createResultGeo);
       await this._resultCountriesService.createV2(createResultGeo, user);
 
       await this._resultRepository.update(createResultGeo.result_id, {
         geographic_scope_id: createResultGeo.geo_scope_id,
         extra_geo_scope_id: createResultGeo.extra_geo_scope_id ?? null,
+        has_extra_geo_scope: createResultGeo.has_extra_geo_scope,
         has_regions: createResultGeo.has_regions,
         has_extra_regions: createResultGeo.has_extra_regions,
         has_countries: createResultGeo.has_countries,
@@ -170,6 +169,7 @@ export class GeographicLocationService {
           regions,
           countries,
           geo_scope_id: scope,
+          has_extra_geo_scope: result?.has_extra_geo_scope,
           has_countries: result?.has_countries,
           has_regions: result?.has_regions,
           extra_geo_scope_id: extra_scope,

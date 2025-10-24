@@ -381,6 +381,13 @@ export class Result {
   obj_geographic_scope!: ClarisaGeographicScope;
 
   @Column({
+    name: 'has_extra_geo_scope',
+    nullable: true,
+    type: 'boolean',
+  })
+  has_extra_geo_scope: boolean;
+
+  @Column({
     name: 'extra_geo_scope_id',
     type: 'int',
     nullable: true,
