@@ -17,7 +17,11 @@ describe('AowViewResultsDrawer', () => {
       getTocResultsByAowId: jest.fn(),
       tocResultsOutputsByAowId: signal<any[]>([]),
       tocResultsOutcomesByAowId: signal<any[]>([]),
-      isLoadingTocResultsByAowId: signal<boolean>(false)
+      isLoadingTocResultsByAowId: signal<boolean>(false),
+      viewResultDrawerFullScreen: signal<boolean>(false),
+      currentResultToView: signal<any>({}),
+      getExistingResultsContributors: jest.fn(),
+      existingResultsContributors: signal<any[]>([])
     } as any;
 
     TestBed.configureTestingModule({
@@ -46,32 +50,7 @@ describe('AowViewResultsDrawer', () => {
       expect(columns).toHaveLength(3);
       expect(columns[0]).toEqual({ title: 'Code', attr: 'code', width: '10%' });
       expect(columns[1]).toEqual({ title: 'Title', attr: 'title' });
-      expect(columns[2]).toEqual({ title: 'Status', attr: 'status', width: '20%' });
-    });
-  });
-
-  describe('dummyData signal', () => {
-    it('should initialize with test data', () => {
-      const dummyData = component.dummyData();
-      expect(dummyData).toHaveLength(3);
-      expect(dummyData[0]).toEqual({
-        code: '11231',
-        title: 'Result 1',
-        status: 'Submitted',
-        pdfDocument: 'https://www.google.com',
-        actions: 'View'
-      });
-    });
-
-    it('should have all required properties for each data item', () => {
-      const dummyData = component.dummyData();
-      for (const item of dummyData) {
-        expect(item).toHaveProperty('code');
-        expect(item).toHaveProperty('title');
-        expect(item).toHaveProperty('status');
-        expect(item).toHaveProperty('pdfDocument');
-        expect(item).toHaveProperty('actions');
-      }
+      expect(columns[2]).toEqual({ title: 'Status', attr: 'status', width: '130px' });
     });
   });
 
@@ -119,7 +98,6 @@ describe('AowViewResultsDrawer', () => {
     it('should have correct component properties', () => {
       expect(component.entityAowService).toBeDefined();
       expect(component.columns).toBeDefined();
-      expect(component.dummyData).toBeDefined();
       expect(component.actionItems).toBeDefined();
     });
   });
@@ -133,13 +111,6 @@ describe('AowViewResultsDrawer', () => {
 
       component.columns.set(newColumns);
       expect(component.columns()).toEqual(newColumns);
-    });
-
-    it('should update dummyData when signal changes', () => {
-      const newData = [{ code: '999', title: 'New Result', status: 'New Status', pdfDocument: 'test.pdf', actions: 'New Action' }];
-
-      component.dummyData.set(newData);
-      expect(component.dummyData()).toEqual(newData);
     });
 
     it('should update actionItems when signal changes', () => {

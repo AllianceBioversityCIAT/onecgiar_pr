@@ -40,9 +40,9 @@ describe('TocResultsRepository', () => {
     expect(query).toContain('ORDER BY tr.id ASC, tri.id ASC');
     expect(query).toContain('FROM toc_test.toc_results tr');
     expect(query).toContain(
-      'JOIN toc_test.toc_work_packages wp ON tr.wp_id = wp.id',
+      'JOIN toc_test.toc_work_packages wp ON tr.wp_id = wp.toc_id',
     );
-    expect(query).toContain('LEFT JOIN toc_test.toc_result_indicator_target');
+    expect(query).toContain('JOIN toc_test.toc_result_indicator_target');
     expect(query).toContain('AND trit.target_date = ?');
     expect(query).toContain('WHERE');
   });
@@ -61,7 +61,7 @@ describe('TocResultsRepository', () => {
     expect(query).toContain(
       'JOIN toc_test.toc_results_indicators tri ON tri.toc_results_id = tr.id',
     );
-    expect(query).toContain('LEFT JOIN toc_test.toc_result_indicator_target');
+    expect(query).toContain('JOIN toc_test.toc_result_indicator_target');
     expect(query).toContain('AND trit.target_date = ?');
   });
 

@@ -76,7 +76,7 @@ export class TocResultsRepository {
     const query = `
       SELECT DISTINCT wp.acronym
       FROM ${env.DB_TOC}.toc_work_packages wp
-      INNER JOIN ${env.DB_TOC}.toc_results tr ON tr.wp_id = wp.id
+      INNER JOIN ${env.DB_TOC}.toc_results tr ON tr.wp_id = wp.toc_id
         AND tr.official_code = ?
     `;
 
@@ -176,11 +176,11 @@ export class TocResultsRepository {
         0 AS actual_achieved_value_sum,
         '50%' AS progress_percentage,
         CASE
-          WHEN tri.type_value LIKE '%policy%' THEN 1
-          WHEN tri.type_value LIKE '%use%' THEN 2
-          WHEN tri.type_value LIKE '%capacity%' THEN 5
-          WHEN tri.type_value LIKE '%knowledge%' THEN 6
-          WHEN tri.type_value LIKE '%development%' THEN 7
+          WHEN tri.type_value LIKE '%Number of Policy%' THEN 1
+          WHEN tri.type_value LIKE '%Innovation Use%' THEN 2
+          WHEN tri.type_value LIKE '%Number of people trained (capacity sharing for development)%' THEN 5
+          WHEN tri.type_value LIKE '%Number of knowledge products%' THEN 6
+          WHEN tri.type_value LIKE '%Number of innovations (innovation development)%' THEN 7
           ELSE NULL
         END AS result_type_id,
         CASE
@@ -194,7 +194,7 @@ export class TocResultsRepository {
 
     if (options.compositeCode) {
       query += `
-        JOIN ${env.DB_TOC}.toc_work_packages wp ON tr.wp_id = wp.id
+        JOIN ${env.DB_TOC}.toc_work_packages wp ON tr.wp_id = wp.toc_id
           AND wp.wp_official_code = ?
       `;
       params.push(options.compositeCode);
@@ -202,7 +202,8 @@ export class TocResultsRepository {
 
     query += `
       JOIN ${env.DB_TOC}.toc_results_indicators tri ON tri.toc_results_id = tr.id
-      LEFT JOIN ${env.DB_TOC}.toc_result_indicator_target trit ON tri.id = trit.id_indicator
+      JOIN ${env.DB_TOC}.toc_result_indicator_target trit ON tri.id = trit.id_indicator
+      AND trit.toc_result_indicator_id = tri.toc_result_indicator_id
     `;
 
     if (options.year !== undefined) {
@@ -214,6 +215,7 @@ export class TocResultsRepository {
       WHERE
         tr.official_code = ?
         AND tr.category IN (${categoryPlaceholders})
+        AND tri.is_active = 1
     `;
     params.push(program);
     params.push(...categories);
@@ -311,6 +313,7 @@ export class TocResultsRepository {
         tri.related_node_id
       FROM ${env.DB_TOC}.toc_results_indicators tri
       WHERE tri.id = ?
+      AND tri.is_active = 1
       LIMIT 1;
     `;
 

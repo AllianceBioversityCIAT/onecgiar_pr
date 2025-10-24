@@ -20,6 +20,7 @@ describe('ResultsFrameworkReportingController', () => {
             getProgramIndicatorContributionSummary: jest.fn(),
             createResultFromFramework: jest.fn(),
             getExistingResultContributorsToIndicators: jest.fn(),
+            getDashboardStats: jest.fn(),
           },
         },
         {
@@ -136,6 +137,16 @@ describe('ResultsFrameworkReportingController', () => {
       expect(
         reportingService.getExistingResultContributorsToIndicators,
       ).toHaveBeenCalledWith(55, 'IND-7');
+    });
+  });
+
+  describe('getDashboardStats', () => {
+    it('should delegate to reporting service with programId', () => {
+      reportingService.getDashboardStats.mockResolvedValueOnce({} as any);
+
+      controller.getDashboardStats('SP01');
+
+      expect(reportingService.getDashboardStats).toHaveBeenCalledWith('SP01');
     });
   });
 });

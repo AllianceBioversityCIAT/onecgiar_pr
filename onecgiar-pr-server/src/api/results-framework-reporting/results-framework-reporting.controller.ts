@@ -6,8 +6,6 @@ import {
   Query,
   UseInterceptors,
 } from '@nestjs/common';
-import { ResultsFrameworkReportingService } from './results-framework-reporting.service';
-import { ResultsService } from '../results/results.service';
 import {
   ApiOperation,
   ApiQuery,
@@ -16,6 +14,8 @@ import {
   ApiCreatedResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { ResultsFrameworkReportingService } from './results-framework-reporting.service';
+import { ResultsService } from '../results/results.service';
 import { UserToken } from '../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { ScienceProgramProgressResponseDto } from '../results/dto/science-program-progress.dto';
@@ -241,5 +241,24 @@ export class ResultsFrameworkReportingController {
       resultTocResultId,
       tocResultIndicatorId,
     );
+  }
+
+  @Get('dashboard')
+  @ApiOperation({
+    summary: 'Get dashboard statistics for a program',
+    description:
+      'Retrieves key statistics and metrics for the dashboard view of the specified program.',
+  })
+  @ApiQuery({
+    name: 'programId',
+    type: String,
+    required: true,
+    description: 'Program identifier to fetch dashboard statistics for.',
+  })
+  @ApiOkResponse({
+    description: 'Dashboard statistics retrieved successfully.',
+  })
+  getDashboardStats(@Query('programId') programId: string) {
+    return this.resultsFrameworkReportingService.getDashboardStats(programId);
   }
 }
