@@ -30,6 +30,7 @@ export class ResultsApiService {
   apiBaseUrl = environment.apiBaseUrl + 'api/results/';
   apiBaseUrlV2 = environment.apiBaseUrl + 'v2/api/results/';
   baseApiBaseUrl = environment.apiBaseUrl + 'api/';
+  baseApiBaseUrlV2 = environment.apiBaseUrl + 'v2/api/';
   currentResultId: number | string = null;
   currentResultCode: number | string = null;
   currentResultPhase: number | string = null;
@@ -286,7 +287,7 @@ export class ResultsApiService {
 
   PATCH_geographicSectionp25(body: any) {
     return this.http
-      .patch<any>(`${this.apiBaseUrlV2}geographic-location/update/geographic/${this.currentResultId}`, body)
+      .patch<any>(`${this.baseApiBaseUrlV2}geographic-location/update/geographic/${this.currentResultId}`, body)
       .pipe(this.saveButtonSE.isSavingPipe());
   }
 
@@ -295,7 +296,7 @@ export class ResultsApiService {
   }
 
   GET_geographicSectionp25() {
-    return this.http.get<any>(`${this.apiBaseUrlV2}geographic-location/get/geographic/${this.currentResultId}`);
+    return this.http.get<any>(`${this.baseApiBaseUrlV2}geographic-location/get/geographic/${this.currentResultId}`);
   }
 
   GET_resultsLinked(isIpsr: boolean) {

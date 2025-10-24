@@ -5,6 +5,8 @@ import { ResultLevelService } from '../../../result-creator/services/result-leve
 import { RegionsCountriesService } from '../../../../../../shared/services/global/regions-countries.service';
 import { GeoScopeEnum } from '../../../../../../shared/enum/geo-scope.enum';
 import { CustomizedAlertsFeService } from '../../../../../../shared/services/customized-alerts-fe.service';
+import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
+import { ExtraGeographicLocationBody } from './models/extraGeographicLocationBody';
 
 @Component({
   selector: 'app-rd-geographic-location',
@@ -14,6 +16,7 @@ import { CustomizedAlertsFeService } from '../../../../../../shared/services/cus
 })
 export class RdGeographicLocationComponent implements OnInit {
   geographicLocationBody = new GeographicLocationBody();
+  extraGeographicLocationBody = new ExtraGeographicLocationBody();
   UNM49 = 'https://unstats.un.org/unsd/methodology/m49/';
   ISO3166 = 'https://www.iso.org/iso-3166-country-codes.html';
   geographic_focus = [
@@ -39,13 +42,15 @@ export class RdGeographicLocationComponent implements OnInit {
     public api: ApiService,
     public resultLevelSE: ResultLevelService,
     public regionsCountriesSE: RegionsCountriesService,
-    private customizedAlertsFeSE: CustomizedAlertsFeService
+    private customizedAlertsFeSE: CustomizedAlertsFeService,
+    private fieldsManagerSE: FieldsManagerService
   ) {
     this.api.dataControlSE.currentResultSectionName.set('Geographic location');
   }
 
   ngOnInit(): void {
     this.getSectionInformation();
+    this.getSectionInformationp25();
   }
 
   geographic_focus_description(id) {
@@ -74,8 +79,9 @@ export class RdGeographicLocationComponent implements OnInit {
   }
 
   getSectionInformationp25() {
-    this.api.resultsSE.GET_geographicSection().subscribe(({ response }) => {
+    this.api.resultsSE.GET_geographicSectionp25().subscribe(({ response }) => {
       this.geographicLocationBody = response;
+      console.log(response);
       const legacyCountries = 4;
       this.geographicLocationBody.geo_scope_id =
         this.geographicLocationBody?.geo_scope_id == legacyCountries ? GeoScopeEnum.COUNTRY : this.geographicLocationBody.geo_scope_id;

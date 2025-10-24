@@ -8,8 +8,25 @@
     description="In case some of the metadata fields are incorrect, please get in touch with the library staff of your Center to update them in the repository. Before the end of the reporting period, metadata will be automatically refreshed on this page.">
   </app-alert-status>
 
-  <!-- <h1>{{this.geographicLocationBody.scope_id}}</h1> -->
   <app-geoscope-management [body]="this.geographicLocationBody" module="reporting"> </app-geoscope-management>
+
+  <br />
+  <app-pr-radio-button
+    fieldRef="[geoscope-management]-has_extra_geo_scope"
+    [options]="[
+      { value: true, label: 'Yes' },
+      { value: false, label: 'No' }
+    ]"
+    optionLabel="label"
+    [(ngModel)]="extraGeographicLocationBody.has_extra_geo_scope"
+    optionValue="value">
+  </app-pr-radio-button>
+  <br />
+
+  @if (this.extraGeographicLocationBody.has_extra_geo_scope) {
+    <app-geoscope-management [body]="this.extraGeographicLocationBody" module="reporting"> </app-geoscope-management>
+  }
+
   <app-save-button class="position_sticky" (clickSave)="onSaveSection()" *ngIf="!this.api.dataControlSE.isKnowledgeProduct"></app-save-button>
 
   <app-sync-button (clickSave)="onSyncSection()"></app-sync-button>
