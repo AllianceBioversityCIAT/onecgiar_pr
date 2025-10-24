@@ -68,6 +68,25 @@ export class GeoscopeManagementComponent implements OnInit {
     }
   }
 
+  resetExtraScope() {
+    switch (this.body.extra_geo_scope_id) {
+      case GeoScopeEnum.DETERMINED:
+      case GeoScopeEnum.GLOBAL:
+        this.body.has_extra_countries = false;
+        this.body.has_extra_regions = false;
+        break;
+      case GeoScopeEnum.REGIONAL:
+        this.body.has_extra_regions = true;
+        this.body.has_extra_countries = false;
+        break;
+      case GeoScopeEnum.COUNTRY:
+      case GeoScopeEnum.SUB_NATIONAL:
+        this.body.has_extra_countries = true;
+        this.body.has_extra_regions = false;
+        break;
+    }
+  }
+
   geographic_focus_description(id) {
     let tags = '';
     switch (id) {
@@ -103,6 +122,10 @@ export class GeoscopeManagementComponent implements OnInit {
 
   includesScope(ids: number[]): boolean {
     return ids.includes(this.body.geo_scope_id);
+  }
+
+  includesExtraScope(ids: number[]): boolean {
+    return ids.includes(this.body.extra_geo_scope_id);
   }
 
   thereAnyText(isCountry: boolean): string {

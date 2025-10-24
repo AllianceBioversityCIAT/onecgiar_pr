@@ -103,7 +103,69 @@
     optionValue="id"
     [readOnly]="this.readOnly || this.api.dataControlSE.isKnowledgeProduct"
     [(ngModel)]="body.extra_geo_scope_id"
-    (ngModelChange)="this.resetHasScope()">
+    (ngModelChange)="this.resetExtraScope()">
   </app-pr-radio-button>
+  <br />
+
+  <ng-container *ngIf="body?.extra_geo_scope_id && !!body.extra_geo_scope_id && !this.includesExtraScope([4, 5, 50])">
+    <app-pr-yes-or-not
+      *ngIf="body.extra_geo_scope_id != 3"
+      [readOnly]="this.api.dataControlSE.isKnowledgeProduct"
+      [label]="body.extra_geo_scope_id != 2 ? 'Are there any regions that you wish to specify?' : null"
+      [hideOptions]="body.extra_geo_scope_id != 1"
+      [(ngModel)]="body.has_extra_regions"
+      [required]="!(body.extra_geo_scope_id != 2)">
+    </app-pr-yes-or-not>
+  </ng-container>
+
+  <app-pr-multi-select
+    *ngIf="body?.extra_geo_scope_id && (body.extra_geo_scope_id == 2 || body.has_extra_regions)"
+    [options]="this.regionsCountriesSE.regionsList"
+    [description]="body.has_extra_regions !== false || body.extra_geo_scope_id == 2 ? this.thereAnyText(false) : null"
+    [label]="this.readOnly ? 'Regions(s) selected' : 'Select regions'"
+    selectedLabel="Regions(s) selected"
+    [readOnly]="this.readOnly || this.api.dataControlSE.isKnowledgeProduct"
+    selectedOptionLabel="name"
+    optionLabel="name"
+    optionValue="id"
+    placeholder="Select regions"
+    [(ngModel)]="body.extra_regions">
+  </app-pr-multi-select>
+
+  <ng-container *ngIf="body?.extra_geo_scope_id && !this.includesExtraScope([3, 5, 50])">
+    <app-pr-yes-or-not
+      [label]="body.extra_geo_scope_id != 3 ? 'Are there any countries that you wish to specify?' : null"
+      [(ngModel)]="body.has_extra_countries"
+      [required]="false"
+      [readOnly]="this.api.dataControlSE.isKnowledgeProduct"
+      [hideOptions]="body.extra_geo_scope_id != 1 && body.extra_geo_scope_id != 2">
+    </app-pr-yes-or-not>
+  </ng-container>
+
+  <app-pr-multi-select
+    *ngIf="body?.extra_geo_scope_id && (this.includesExtraScope([5, 3]) || body.has_extra_countries)"
+    [options]="this.regionsCountriesSE.countriesList"
+    [description]="body.has_extra_countries !== false || body.extra_geo_scope_id == 3 ? this.thereAnyText(true) : null"
+    [label]="this.readOnly ? 'Countries selected' : 'Select countries'"
+    selectedLabel="Countries selected"
+    [selectedOptionLabel]="!this.includesExtraScope([5, 50]) ? 'name' : ''"
+    optionLabel="full_name"
+    optionValue="id"
+    placeholder="Select countries"
+    [(ngModel)]="body.extra_countries"
+    [readOnly]="this.readOnly || this.api.dataControlSE.isKnowledgeProduct">
+  </app-pr-multi-select>
+
+  <div *ngIf="body.extra_geo_scope_id == 5">
+    <div *ngFor="let el of body.extra_countries; let i = index">
+      <app-sub-geoscope
+        [obj_country]="el"
+        [index]="i"
+        [obj_countrySelected]="body.extra_countries"
+        [name]="el.name"
+        [readOnly]="this.readOnly || this.api.dataControlSE.isKnowledgeProduct">
+      </app-sub-geoscope>
+    </div>
+  </div>
 }
 <!-- } -->
