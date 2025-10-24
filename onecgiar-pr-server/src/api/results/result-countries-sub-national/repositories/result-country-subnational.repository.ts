@@ -111,7 +111,7 @@ export class ResultCountrySubnationalRepository
     rcId: number,
     subnationalCodes: string[],
     userId: number,
-    geoScopeRoleId: number,
+    geoScopeRoleId: number = 1,
   ) {
     try {
       const resultSubnationalArray: ResultCountrySubnational[] = [];
