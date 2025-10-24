@@ -834,7 +834,7 @@ describe('EntityAowService', () => {
     it('should call API with correct parameters', () => {
       jest.spyOn(mockApiService.resultsSE, 'GET_ExistingResultsContributors').mockReturnValue(of(mockContributorsApiResponse));
 
-      service.getExistingResultsContributors();
+      service.getExistingResultsContributors('result-123', 'node-456');
 
       expect(mockApiService.resultsSE.GET_ExistingResultsContributors).toHaveBeenCalledWith('result-123', 'node-456');
     });
@@ -842,7 +842,7 @@ describe('EntityAowService', () => {
     it('should update existingResultsContributors on successful API call', () => {
       jest.spyOn(mockApiService.resultsSE, 'GET_ExistingResultsContributors').mockReturnValue(of(mockContributorsApiResponse));
 
-      service.getExistingResultsContributors();
+      service.getExistingResultsContributors('result-123', 'node-456');
 
       expect(service.existingResultsContributors()).toEqual(mockContributors);
     });
@@ -857,7 +857,7 @@ describe('EntityAowService', () => {
       };
       jest.spyOn(mockApiService.resultsSE, 'GET_ExistingResultsContributors').mockReturnValue(of(emptyResponse));
 
-      service.getExistingResultsContributors();
+      service.getExistingResultsContributors('result-123', 'node-456');
 
       expect(service.existingResultsContributors()).toEqual([]);
     });
@@ -872,7 +872,7 @@ describe('EntityAowService', () => {
       };
       jest.spyOn(mockApiService.resultsSE, 'GET_ExistingResultsContributors').mockReturnValue(of(nullResponse));
 
-      service.getExistingResultsContributors();
+      service.getExistingResultsContributors('result-123', 'node-456');
 
       expect(service.existingResultsContributors()).toEqual([]);
     });
@@ -883,7 +883,7 @@ describe('EntityAowService', () => {
       };
       jest.spyOn(mockApiService.resultsSE, 'GET_ExistingResultsContributors').mockReturnValue(of(undefinedResponse));
 
-      service.getExistingResultsContributors();
+      service.getExistingResultsContributors('result-123', 'node-456');
 
       expect(service.existingResultsContributors()).toEqual([]);
     });
@@ -892,26 +892,9 @@ describe('EntityAowService', () => {
       const error = new Error('API Error');
       jest.spyOn(mockApiService.resultsSE, 'GET_ExistingResultsContributors').mockReturnValue(throwError(() => error));
 
-      service.getExistingResultsContributors();
+      service.getExistingResultsContributors('result-123', 'node-456');
 
       expect(service.existingResultsContributors()).toEqual([]);
-    });
-
-    it('should handle case when currentResultToReport has no indicators', () => {
-      service.currentResultToReport.set({ toc_result_id: 'result-123' });
-      jest.spyOn(mockApiService.resultsSE, 'GET_ExistingResultsContributors');
-
-      expect(() => service.getExistingResultsContributors()).toThrow();
-    });
-
-    it('should handle case when currentResultToReport has empty indicators array', () => {
-      service.currentResultToReport.set({
-        toc_result_id: 'result-123',
-        indicators: []
-      });
-      jest.spyOn(mockApiService.resultsSE, 'GET_ExistingResultsContributors');
-
-      expect(() => service.getExistingResultsContributors()).toThrow();
     });
   });
 
@@ -1075,7 +1058,7 @@ describe('EntityAowService', () => {
       );
 
       service.getW3BilateralProjects();
-      service.getExistingResultsContributors();
+      service.getExistingResultsContributors('result-123', 'node-456');
 
       expect(service.w3BilateralProjects()).toEqual(mockW3Projects);
       expect(service.existingResultsContributors()).toEqual(mockContributors);
