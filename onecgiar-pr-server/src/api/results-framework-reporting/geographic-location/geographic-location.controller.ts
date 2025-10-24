@@ -1,4 +1,12 @@
-import { Controller, Get, Body, Patch, Param, Version, UseInterceptors } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Body,
+  Patch,
+  Param,
+  Version,
+  UseInterceptors,
+} from '@nestjs/common';
 import { GeographicLocationService } from './geographic-location.service';
 import { CreateGeographicLocationDto } from './dto/create-geographic-location.dto';
 import { ApiOperation } from '@nestjs/swagger/dist/decorators/api-operation.decorator';
