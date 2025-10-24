@@ -1,6 +1,9 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { ResultRepository } from '../result.repository';
-import { countriesInterface, CreateResultCountryDto } from './dto/create-result-country.dto';
+import {
+  countriesInterface,
+  CreateResultCountryDto,
+} from './dto/create-result-country.dto';
 import { Result } from '../entities/result.entity';
 import { ResultCountryRepository } from './result-countries.repository';
 import { ResultCountry } from './entities/result-country.entity';
@@ -72,7 +75,10 @@ export class ResultCountriesService {
     }
   }
 
-  async createV2(createResultCountryDto: CreateResultCountryDto, user: TokenDto) {
+  async createV2(
+    createResultCountryDto: CreateResultCountryDto,
+    user: TokenDto,
+  ) {
     try {
       if (!createResultCountryDto?.geo_scope_id) {
         throw {
@@ -130,16 +136,23 @@ export class ResultCountriesService {
       }
 
       if (countries && geo_scope_id == 3) {
-        result.geographic_scope_id =countries?.length > 1 ? 3 : 4;
-      } else if ( geo_scope_id == 4 || geo_scope_id == 50 ) {
+        result.geographic_scope_id = countries?.length > 1 ? 3 : 4;
+      } else if (geo_scope_id == 4 || geo_scope_id == 50) {
         result.geographic_scope_id = 50;
       } else {
         result.geographic_scope_id = geo_scope_id;
       }
 
-      if (extra_geo_scope_id != null && (extra_countries && extra_geo_scope_id == 3)) {
-        result.extra_geo_scope_id =extra_countries?.length > 1 ? 3 : 4;
-      } else if ( extra_geo_scope_id != null && (extra_geo_scope_id == 4 || extra_geo_scope_id == 50 )) {
+      if (
+        extra_geo_scope_id != null &&
+        extra_countries &&
+        extra_geo_scope_id == 3
+      ) {
+        result.extra_geo_scope_id = extra_countries?.length > 1 ? 3 : 4;
+      } else if (
+        extra_geo_scope_id != null &&
+        (extra_geo_scope_id == 4 || extra_geo_scope_id == 50)
+      ) {
         result.extra_geo_scope_id = 50;
       } else {
         result.extra_geo_scope_id = extra_geo_scope_id;
@@ -165,42 +178,47 @@ export class ResultCountriesService {
     user: TokenDto,
     geoScopeRoleId: number = 1,
   ) {
+    if ((!has_countries && geo_scope_id != 3) || geo_scope_id == 4) {
+      await this._resultCountryRepository.updateCountries(
+        result.id,
+        [],
+        geoScopeRoleId,
+      );
 
-      if ((!has_countries && geo_scope_id != 3) || geo_scope_id == 4) {
-        await this._resultCountryRepository.updateCountries(result.id, [], geoScopeRoleId);
+      if (geoScopeRoleId === EnumGeoScopeRole.EXTRA)
+        result.has_extra_countries = false;
+      else result.has_countries = false;
 
-        if (geoScopeRoleId === EnumGeoScopeRole.EXTRA) result.has_extra_countries = false;
-        else result.has_countries = false;
+      return;
+    }
 
-        return;
+    if (geo_scope_id == 3 || has_countries) {
+      if (countries?.length) {
+        await this._resultCountryRepository.updateCountries(
+          result.id,
+          countries.map((e) => e.id),
+          geoScopeRoleId,
+        );
+
+        const resultCountryArray = await this.handleResultCountryArray(
+          result,
+          countries,
+          geoScopeRoleId,
+        );
+
+        await this.handleSubnationals(
+          resultCountryArray,
+          countries,
+          geo_scope_id,
+          user.id,
+          geoScopeRoleId,
+        );
       }
 
-      if (geo_scope_id == 3 || has_countries) {
-        if (countries?.length) {
-          await this._resultCountryRepository.updateCountries(
-            result.id,
-            countries.map((e) => e.id),
-            geoScopeRoleId,
-          );
-
-          const resultCountryArray = await this.handleResultCountryArray(
-            result,
-            countries,
-            geoScopeRoleId,
-          );
-
-          await this.handleSubnationals(
-            resultCountryArray,
-            countries,
-            geo_scope_id,
-            user.id,
-            geoScopeRoleId,
-          );
-        }
-
-        if (geoScopeRoleId === EnumGeoScopeRole.EXTRA) result.has_extra_countries = geo_scope_id == 3 ? true : !!has_countries;
-        else result.has_countries = geo_scope_id == 3 ? true : !!has_countries;
-      }
+      if (geoScopeRoleId === EnumGeoScopeRole.EXTRA)
+        result.has_extra_countries = geo_scope_id == 3 ? true : !!has_countries;
+      else result.has_countries = geo_scope_id == 3 ? true : !!has_countries;
+    }
   }
 
   async handleResultCountryArray(
@@ -223,7 +241,7 @@ export class ResultCountriesService {
         const newCountry = new ResultCountry();
         newCountry.country_id = country.id;
         newCountry.result_id = result.id;
-        newCountry.geo_scope_role_id = geoScopeRoleId; 
+        newCountry.geo_scope_role_id = geoScopeRoleId;
         newCountry.is_active = true;
         resultCountryArray.push(newCountry);
       } else {
@@ -232,7 +250,8 @@ export class ResultCountriesService {
     }
 
     if (resultCountryArray.length) {
-      const savedCountries = await this._resultCountryRepository.save(resultCountryArray);
+      const savedCountries =
+        await this._resultCountryRepository.save(resultCountryArray);
       return savedCountries.concat(existingCountries);
     }
 
@@ -242,7 +261,7 @@ export class ResultCountriesService {
   async handleSubnationals(
     resultCountryArray,
     countries,
-    geo_scope_id, 
+    geo_scope_id,
     userId,
     geoScopeRoleId,
   ) {

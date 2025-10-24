@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class GeoScopeRoleService {
-
   findAll() {
     return `This action returns all geoScopeRole`;
   }

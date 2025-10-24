@@ -1,4 +1,4 @@
 export enum EnumGeoScopeRole {
-    MAIN = 1,
-    EXTRA = 2,
+  MAIN = 1,
+  EXTRA = 2,
 }

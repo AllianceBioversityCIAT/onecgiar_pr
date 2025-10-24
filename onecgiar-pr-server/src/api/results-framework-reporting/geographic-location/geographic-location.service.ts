@@ -1,11 +1,9 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { CreateGeographicLocationDto } from './dto/create-geographic-location.dto';
-import { UpdateGeographicLocationDto } from './dto/update-geographic-location.dto';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultRegionsService } from '../../results/result-regions/result-regions.service';
 import { ResultCountriesService } from '../../results/result-countries/result-countries.service';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
-import { CreateResultGeoDto } from '../../results/dto/create-result-geo-scope.dto';
 import { ResultsService } from '../../results/results.service';
 import { ResultRepository } from '../../results/result.repository';
 import { ElasticOperationDto } from '../../../elastic/dto/elastic-operation.dto';
@@ -14,11 +12,9 @@ import { ResultRegion } from '../../results/result-regions/entities/result-regio
 import { ResultRegionRepository } from '../../results/result-regions/result-regions.repository';
 import { ResultCountryRepository } from '../../results/result-countries/result-countries.repository';
 import { ResultCountry } from '../../results/result-countries/entities/result-country.entity';
-import { EnumGeoScopeRole } from '../geo_scope_role/enum/geo_scope_role.enum';
 
 @Injectable()
 export class GeographicLocationService {
-
   private readonly _logger: Logger = new Logger(GeographicLocationService.name);
   constructor(
     private readonly _handlersError: HandlersError,
@@ -29,11 +25,12 @@ export class GeographicLocationService {
     private readonly _elasticService: ElasticService,
     private readonly _resultRegionRepository: ResultRegionRepository,
     private readonly _resultCountryRepository: ResultCountryRepository,
-
-
   ) {}
 
-  async saveGeoScopeV2(createResultGeo: CreateGeographicLocationDto, user: TokenDto) {
+  async saveGeoScopeV2(
+    createResultGeo: CreateGeographicLocationDto,
+    user: TokenDto,
+  ) {
     try {
       //await this._resultService.saveGeoScope(createResultGeo, user); // COMPROBAR SI ESTO ES NECESARIO PORQUE EN EL RESTO DEL CÓDIGO YA ABARCO LAS FUNCIONALIDADES DE AMBAS VERSIONES UNIFICADAS.
 
@@ -109,28 +106,32 @@ export class GeographicLocationService {
 
       const allRegions: (ResultRegion | string)[] =
         await this._resultRegionRepository.getResultRegionByResultId(resultId);
-      
+
       if (Array.isArray(allRegions)) {
         const validRegions = allRegions.filter(
-          (r): r is ResultRegion => typeof r !== 'string' && !!r.geo_scope_role_id
+          (r): r is ResultRegion =>
+            typeof r !== 'string' && !!r.geo_scope_role_id,
         );
 
-        regions = validRegions.filter(r => r.geo_scope_role_id === 1);
-        extra_regions = validRegions.filter(r => r.geo_scope_role_id === 2);
+        regions = validRegions.filter((r) => r.geo_scope_role_id === 1);
+        extra_regions = validRegions.filter((r) => r.geo_scope_role_id === 2);
       }
 
       const allCountries: (ResultCountry | string)[] =
         await this._resultCountryRepository.getResultCountriesByResultId(
           resultId,
         );
-      
+
       if (Array.isArray(allCountries)) {
         const validCountries = allCountries.filter(
-          (r): r is ResultCountry => typeof r !== 'string' && !!r.geo_scope_role_id
+          (r): r is ResultCountry =>
+            typeof r !== 'string' && !!r.geo_scope_role_id,
         );
 
-        countries = validCountries.filter(r => r.geo_scope_role_id === 1);
-        extra_countries = validCountries.filter(r => r.geo_scope_role_id === 2);
+        countries = validCountries.filter((r) => r.geo_scope_role_id === 1);
+        extra_countries = validCountries.filter(
+          (r) => r.geo_scope_role_id === 2,
+        );
       }
 
       let scope = 0;
