@@ -126,7 +126,8 @@ export class ResultCountryRepository
       rc.created_date,
       rc.last_updated_date,
       cc.name,
-      cc.iso_alpha_2
+      cc.iso_alpha_2,
+      rc.geo_scope_role_id
       from result_country rc 
       inner join clarisa_countries cc on cc.id = rc.country_id 
       where rc.is_active > 0
@@ -134,7 +135,7 @@ export class ResultCountryRepository
     `;
 
     const querySubnational = `
-      select rc.result_country_id, rcs.result_country_subnational_id, css.*
+      select rc.result_country_id, rcs.result_country_subnational_id, rcs.geo_scope_role_id, css.*
       from result r
       left join result_country rc on rc.result_id = r.id and rc.is_active > 0
       right join result_country_subnational rcs on rcs.result_country_id = rc.result_country_id and rcs.is_active > 0

@@ -128,6 +128,7 @@ export class ResultRegionRepository
     rr.is_active,
     rr.created_date,
     rr.last_updated_date,
+    rr.geo_scope_role_id,
     cr.name
     from result_region rr 
     inner join clarisa_regions cr on cr.um49Code = rr.region_id 

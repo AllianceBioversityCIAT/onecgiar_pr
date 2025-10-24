@@ -14,6 +14,7 @@ import { ResultRegion } from '../../results/result-regions/entities/result-regio
 import { ResultRegionRepository } from '../../results/result-regions/result-regions.repository';
 import { ResultCountryRepository } from '../../results/result-countries/result-countries.repository';
 import { ResultCountry } from '../../results/result-countries/entities/result-country.entity';
+import { EnumGeoScopeRole } from '../geo_scope_role/enum/geo_scope_role.enum';
 
 @Injectable()
 export class GeographicLocationService {
@@ -34,7 +35,7 @@ export class GeographicLocationService {
 
   async saveGeoScopeV2(createResultGeo: CreateGeographicLocationDto, user: TokenDto) {
     try {
-      await this._resultService.saveGeoScope(createResultGeo, user); // COMPROBAR SI ESTO ES NECESARIO PORQUE EN EL RESTO DEL CÓDIGO YA ABARCO LAS FUNCIONALIDADES DE AMBAS VERSIONES UNIFICADAS.
+      //await this._resultService.saveGeoScope(createResultGeo, user); // COMPROBAR SI ESTO ES NECESARIO PORQUE EN EL RESTO DEL CÓDIGO YA ABARCO LAS FUNCIONALIDADES DE AMBAS VERSIONES UNIFICADAS.
 
       await this._resultRegionsService.createV2(createResultGeo);
       await this._resultCountriesService.createV2(createResultGeo, user);
@@ -88,9 +89,10 @@ export class GeographicLocationService {
     }
   }
 
-  async getGeoScope(resultId: number) {
+  async getGeoScopeV2(resultId: number) {
     try {
       const result = await this._resultRepository.getResultById(resultId);
+      console.log('result', result.id);
 
       if (!result?.id) {
         throw {
@@ -100,12 +102,36 @@ export class GeographicLocationService {
         };
       }
 
-      const regions: (ResultRegion | string)[] =
+      let regions: ResultRegion[] = [];
+      let extra_regions: ResultRegion[] = [];
+      let countries: ResultCountry[] = [];
+      let extra_countries: ResultCountry[] = [];
+
+      const allRegions: (ResultRegion | string)[] =
         await this._resultRegionRepository.getResultRegionByResultId(resultId);
-      const countries: (ResultCountry | string)[] =
+      
+      if (Array.isArray(allRegions)) {
+        const validRegions = allRegions.filter(
+          (r): r is ResultRegion => typeof r !== 'string' && !!r.geo_scope_role_id
+        );
+
+        regions = validRegions.filter(r => r.geo_scope_role_id === 1);
+        extra_regions = validRegions.filter(r => r.geo_scope_role_id === 2);
+      }
+
+      const allCountries: (ResultCountry | string)[] =
         await this._resultCountryRepository.getResultCountriesByResultId(
           resultId,
         );
+      
+      if (Array.isArray(allCountries)) {
+        const validCountries = allCountries.filter(
+          (r): r is ResultCountry => typeof r !== 'string' && !!r.geo_scope_role_id
+        );
+
+        countries = validCountries.filter(r => r.geo_scope_role_id === 1);
+        extra_countries = validCountries.filter(r => r.geo_scope_role_id === 2);
+      }
 
       let scope = 0;
       if (
@@ -122,13 +148,34 @@ export class GeographicLocationService {
       } else if (result.geographic_scope_id == 50) {
         scope = 50;
       }
+
+      let extra_scope = null;
+      if (
+        result.geo_extra_scope_id == 1 ||
+        result.geo_extra_scope_id == 2 ||
+        result.geo_extra_scope_id == 5
+      ) {
+        extra_scope = result.geo_extra_scope_id;
+      } else if (
+        result.geo_extra_scope_id == 3 ||
+        result.geo_extra_scope_id == 4
+      ) {
+        extra_scope = 3;
+      } else if (result.geo_extra_scope_id == 50) {
+        extra_scope = 50;
+      }
       return {
         response: {
-          regions: regions,
+          regions,
           countries,
           geo_scope_id: scope,
           has_countries: result?.has_countries,
           has_regions: result?.has_regions,
+          extra_geo_scope_id: extra_scope,
+          extra_regions,
+          extra_countries,
+          has_extra_regions: result?.has_extra_regions,
+          has_extra_countries: result?.has_extra_countries,
         },
         message: 'Successful response',
         status: HttpStatus.OK,

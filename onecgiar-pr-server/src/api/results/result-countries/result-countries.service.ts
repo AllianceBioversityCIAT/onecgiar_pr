@@ -145,8 +145,6 @@ export class ResultCountriesService {
         result.extra_geo_scope_id = extra_geo_scope_id;
       }
 
-      // COMPROBAR QUE has_extra_countries SE ESTÉ GUARDANDO BIEN;
-
       await this._resultRepository.save(result);
 
       return {

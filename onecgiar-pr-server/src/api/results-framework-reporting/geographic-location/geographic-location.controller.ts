@@ -42,7 +42,7 @@ export class GeographicLocationController {
   @ApiParam({ name: 'resultId', type: Number, required: true })
   @ApiOkResponse({ description: 'Geographic scope retrieved.' })
   getGeographic(@Param('resultId') resultId: number) {
-    return this.geographicLocationService.getGeoScope(resultId);
+    return this.geographicLocationService.getGeoScopeV2(resultId);
   }
 
 }
