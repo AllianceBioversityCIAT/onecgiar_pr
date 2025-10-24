@@ -40,6 +40,7 @@ export class EntityAowService {
   showViewResultDrawer = signal<boolean>(false);
   viewResultDrawerFullScreen = signal<boolean>(false);
   currentResultToView = signal<any>({});
+  dashboardData = signal<any>(null);
 
   getAllDetailsData() {
     this.isLoadingDetails.set(true);
@@ -133,6 +134,17 @@ export class EntityAowService {
       },
       error: err => {
         this.existingResultsContributors.set([]);
+      }
+    });
+  }
+
+  getDashboardData() {
+    this.api.resultsSE.GET_DashboardData(this.entityId()).subscribe({
+      next: ({ response }) => {
+        this.dashboardData.set(response);
+      },
+      error: err => {
+        this.dashboardData.set(null);
       }
     });
   }

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit, PLATFORM_ID, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject, OnInit, PLATFORM_ID, signal } from '@angular/core';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
@@ -37,34 +37,114 @@ export class EntityDetailsComponent implements OnInit {
 
   cd = inject(ChangeDetectorRef);
 
-  summaryInsightsData = signal([
-    {
-      label: 'Editing results',
-      value: 126,
-      icon: '../../../../../assets/result-framework-reporting/editing_results.png'
-    },
-    {
-      label: 'Submitted results',
-      value: 102,
-      icon: '../../../../../assets/result-framework-reporting/submitted_results.png'
-    },
-    {
-      label: 'Quality assessed results',
-      value: 40,
-      icon: '../../../../../assets/result-framework-reporting/quality_assessed_results.png'
-    }
-  ]);
+  summaryInsightsData = computed(() => {
+    return [
+      {
+        label: this.entityAowService.dashboardData()?.editing?.label,
+        value: this.entityAowService.dashboardData()?.editing?.total,
+        icon: '../../../../../assets/result-framework-reporting/editing_results.png'
+      },
+      {
+        label: this.entityAowService.dashboardData()?.submitted?.label,
+        value: this.entityAowService.dashboardData()?.submitted?.total,
+        icon: '../../../../../assets/result-framework-reporting/submitted_results.png'
+      },
+      {
+        label: this.entityAowService.dashboardData()?.qualityAssessed?.label,
+        value: this.entityAowService.dashboardData()?.qualityAssessed?.total,
+        icon: '../../../../../assets/result-framework-reporting/quality_assessed_results.png'
+      }
+    ];
+  });
+
+  dataOutputs = computed(() => {
+    return {
+      labels: ['Knowledge product', 'Innovation development', 'Capacity sharing for development', 'Other output'],
+      datasets: [
+        {
+          type: 'bar',
+          label: 'Editing',
+          backgroundColor: '#60a5fa',
+          data: [
+            this.entityAowService.dashboardData()?.editing?.data?.outputs?.knowledgeProduct,
+            this.entityAowService.dashboardData()?.editing?.data?.outputs?.innovationDevelopment,
+            this.entityAowService.dashboardData()?.editing?.data?.outputs?.capacitySharingForDevelopment,
+            this.entityAowService.dashboardData()?.editing?.data?.outputs?.otherOutput
+          ]
+        },
+        {
+          type: 'bar',
+          label: 'Submitted',
+          backgroundColor: '#8e9be8',
+          data: [
+            this.entityAowService.dashboardData()?.submitted?.data?.outputs?.knowledgeProduct,
+            this.entityAowService.dashboardData()?.submitted?.data?.outputs?.innovationDevelopment,
+            this.entityAowService.dashboardData()?.submitted?.data?.outputs?.capacitySharingForDevelopment,
+            this.entityAowService.dashboardData()?.submitted?.data?.outputs?.otherOutput
+          ]
+        },
+        {
+          type: 'bar',
+          label: 'Quality assessed',
+          backgroundColor: '#5569dd',
+          data: [
+            this.entityAowService.dashboardData()?.qualityAssessed?.data?.outputs?.knowledgeProduct,
+            this.entityAowService.dashboardData()?.qualityAssessed?.data?.outputs?.innovationDevelopment,
+            this.entityAowService.dashboardData()?.qualityAssessed?.data?.outputs?.capacitySharingForDevelopment,
+            this.entityAowService.dashboardData()?.qualityAssessed?.data?.outputs?.otherOutput
+          ]
+        }
+      ]
+    };
+  });
+
+  dataOutcomes = computed(() => {
+    return {
+      labels: ['Policy change', 'Innovation use', 'Other outcome'],
+      datasets: [
+        {
+          type: 'bar',
+          label: 'Editing',
+          backgroundColor: '#60a5fa',
+          data: [
+            this.entityAowService.dashboardData()?.editing?.data?.outcomes?.policyChange,
+            this.entityAowService.dashboardData()?.editing?.data?.outcomes?.innovationUse,
+            this.entityAowService.dashboardData()?.editing?.data?.outcomes?.otherOutcome
+          ]
+        },
+        {
+          type: 'bar',
+          label: 'Submitted',
+          backgroundColor: '#8e9be8',
+          data: [
+            this.entityAowService.dashboardData()?.submitted?.data?.outcomes?.policyChange,
+            this.entityAowService.dashboardData()?.submitted?.data?.outcomes?.innovationUse,
+            this.entityAowService.dashboardData()?.submitted?.data?.outcomes?.otherOutcome
+          ]
+        },
+        {
+          type: 'bar',
+          label: 'Quality assessed',
+          backgroundColor: '#5569dd',
+          data: [
+            this.entityAowService.dashboardData()?.qualityAssessed?.data?.outcomes?.policyChange,
+            this.entityAowService.dashboardData()?.qualityAssessed?.data?.outcomes?.innovationUse,
+            this.entityAowService.dashboardData()?.qualityAssessed?.data?.outcomes?.otherOutcome
+          ]
+        }
+      ]
+    };
+  });
 
   ngOnInit() {
     this.route.params.subscribe(params => {
       this.entityAowService.entityId.set(params['entityId']);
     });
     this.entityAowService.getAllDetailsData();
+    this.entityAowService.getDashboardData();
     this.initChart();
   }
 
-  dataOutputs: any;
-  dataOutcomes: any;
   options: any;
 
   platformId = inject(PLATFORM_ID);
@@ -72,54 +152,6 @@ export class EntityDetailsComponent implements OnInit {
   initChart() {
     if (isPlatformBrowser(this.platformId)) {
       Chart.register(ChartDataLabels);
-
-      this.dataOutputs = {
-        labels: ['Knowledge product', 'Innovation development', 'Capacity sharing for development', 'Other output'],
-        datasets: [
-          {
-            type: 'bar',
-            label: 'Editing',
-            backgroundColor: '#60a5fa',
-            data: [42, 30, 10, 5]
-          },
-          {
-            type: 'bar',
-            label: 'Submitted',
-            backgroundColor: '#8e9be8',
-            data: [25, 18, 12, 0]
-          },
-          {
-            type: 'bar',
-            label: 'Quality assessed',
-            backgroundColor: '#5569dd',
-            data: [5, 4, 10, 1]
-          }
-        ]
-      };
-
-      this.dataOutcomes = {
-        labels: ['Policy change', 'Innovation use', 'Other outcome'],
-        datasets: [
-          {
-            type: 'bar',
-            label: 'Editing',
-            backgroundColor: '#60a5fa',
-            data: [14, 15, 10]
-          },
-          {
-            type: 'bar',
-            label: 'Submitted',
-            backgroundColor: '#8e9be8',
-            data: [17, 18, 12]
-          },
-          {
-            type: 'bar',
-            label: 'Quality assessed',
-            backgroundColor: '#5569dd',
-            data: [5, 4, 10]
-          }
-        ]
-      };
 
       this.options = {
         responsive: true,
