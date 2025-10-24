@@ -684,53 +684,6 @@ describe('EntityAowService', () => {
 
       expect(currentAow).toBeUndefined();
     });
-
-    it('should compute currentResultIsKnowledgeProduct correctly for knowledge product', () => {
-      const knowledgeProductResult = {
-        indicators: [
-          {
-            type_name: 'Number of knowledge products'
-          }
-        ]
-      };
-      service.currentResultToReport.set(knowledgeProductResult);
-
-      const isKnowledgeProduct = service.currentResultIsKnowledgeProduct();
-
-      expect(isKnowledgeProduct).toBe(true);
-    });
-
-    it('should compute currentResultIsKnowledgeProduct correctly for non-knowledge product', () => {
-      const regularResult = {
-        indicators: [
-          {
-            type_name: 'Number of outcomes'
-          }
-        ]
-      };
-      service.currentResultToReport.set(regularResult);
-
-      const isKnowledgeProduct = service.currentResultIsKnowledgeProduct();
-
-      expect(isKnowledgeProduct).toBe(false);
-    });
-
-    it('should return false when currentResultToReport has no indicators', () => {
-      const resultWithoutIndicators = {};
-      service.currentResultToReport.set(resultWithoutIndicators);
-
-      const isKnowledgeProduct = service.currentResultIsKnowledgeProduct();
-
-      expect(isKnowledgeProduct).toBe(false);
-    });
-
-    it('should return false when currentResultToReport is empty', () => {
-      service.currentResultToReport.set({});
-
-      const isKnowledgeProduct = service.currentResultIsKnowledgeProduct();
-
-      expect(isKnowledgeProduct).toBe(false);
-    });
   });
 
   describe('Additional signals', () => {

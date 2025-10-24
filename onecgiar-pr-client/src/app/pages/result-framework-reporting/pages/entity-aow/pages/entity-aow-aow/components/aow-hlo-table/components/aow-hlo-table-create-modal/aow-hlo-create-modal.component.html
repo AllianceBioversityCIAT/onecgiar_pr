@@ -34,7 +34,8 @@
 
             <p-select
               [options]="resultTypes()"
-              [(ngModel)]="createResultBody().result_type_id"
+              [ngModel]="createResultBody().result_type_id"
+              (ngModelChange)="onResultTypeChange($event)"
               optionLabel="name"
               optionValue="id"
               placeholder="Select an indicator category"
@@ -42,7 +43,7 @@
           </div>
         }
 
-        @if (entityAowService.currentResultIsKnowledgeProduct()) {
+        @if (currentResultIsKnowledgeProduct()) {
           <div>
             <div class="mqap_sync_title">
               <app-pr-input
@@ -66,15 +67,15 @@
 
         <app-pr-input
           [isStatic]="true"
-          [placeholder]="entityAowService.currentResultIsKnowledgeProduct() ? 'Knowledge product title...' : 'Input title...'"
+          [placeholder]="currentResultIsKnowledgeProduct() ? 'Knowledge product title...' : 'Input title...'"
           [label]="getTitleInputLabel()"
           type="text"
-          [description]="entityAowService.currentResultIsKnowledgeProduct() ? getTitleInputLabel() : ''"
+          [description]="currentResultIsKnowledgeProduct() ? getTitleInputLabel() : ''"
           labelDescInlineStyles="margin-top: 0 !important"
           [(ngModel)]="createResultBody().result_name"
           [maxWords]="30"
-          [disabled]="entityAowService.currentResultIsKnowledgeProduct()"
-          [autogenerate]="entityAowService.currentResultIsKnowledgeProduct()">
+          [disabled]="currentResultIsKnowledgeProduct()"
+          [autogenerate]="currentResultIsKnowledgeProduct()">
         </app-pr-input>
 
         <div class="separator"></div>
@@ -82,12 +83,10 @@
         <app-pr-textarea
           [isStatic]="true"
           placeholder="Provide input here..."
-          [label]="
-            entityAowService.currentResultIsKnowledgeProduct() ? 'Progress narrative of the High-Level Output' : 'Progress narrative of the Output'
-          "
+          [label]="currentResultIsKnowledgeProduct() ? 'Progress narrative of the High-Level Output' : 'Progress narrative of the Output'"
           [(ngModel)]="createResultBody().toc_progressive_narrative"
           type="text"
-          [disabled]="entityAowService.currentResultIsKnowledgeProduct()"
+          [disabled]="currentResultIsKnowledgeProduct()"
           labelDescInlineStyles="margin-top: 0 !important"></app-pr-textarea>
 
         <div>
