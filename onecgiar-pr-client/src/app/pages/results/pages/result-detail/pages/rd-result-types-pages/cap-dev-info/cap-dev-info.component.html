@@ -3,9 +3,9 @@
   <app-pr-field-header label="Number of people trained" [description]="peopleTrainedDesc"> </app-pr-field-header>
   <!-- In the case where the gender balance of trainees is not known (e.g. online training), assume 50-50 split. -->
   <div class="peopleFields">
-    <app-pr-input placeholder=" Type quantity" label="Female" type="number" [required]="false" [(ngModel)]="this.capDevInfoRoutingBody.female_using">
+    <app-pr-input placeholder=" Type quantity" label="Women" type="number" [required]="false" [(ngModel)]="this.capDevInfoRoutingBody.female_using">
     </app-pr-input>
-    <app-pr-input placeholder="Type quantity" label="Male" type="number" [required]="false" [(ngModel)]="this.capDevInfoRoutingBody.male_using">
+    <app-pr-input placeholder="Type quantity" label="Men" type="number" [required]="false" [(ngModel)]="this.capDevInfoRoutingBody.male_using">
     </app-pr-input>
     <app-pr-input
       placeholder="Type quantity"

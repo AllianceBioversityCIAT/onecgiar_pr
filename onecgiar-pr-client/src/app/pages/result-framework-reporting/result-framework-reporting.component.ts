@@ -1,6 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { ResultFrameworkReportingHomeService } from './pages/result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { ApiService } from '../../shared/services/api/api.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-result-framework-reporting',
