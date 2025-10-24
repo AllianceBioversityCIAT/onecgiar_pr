@@ -1,13 +1,16 @@
-import { Controller, Get, Body, Patch, Param, Version } from '@nestjs/common';
+import { Controller, Get, Body, Patch, Param, Version, UseInterceptors } from '@nestjs/common';
 import { GeographicLocationService } from './geographic-location.service';
 import { CreateGeographicLocationDto } from './dto/create-geographic-location.dto';
 import { ApiOperation } from '@nestjs/swagger/dist/decorators/api-operation.decorator';
 import { ApiParam } from '@nestjs/swagger/dist/decorators/api-param.decorator';
-import { ApiBody, ApiOkResponse } from '@nestjs/swagger';
+import { ApiBody, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 
-@Controller('geographic-location')
+@Controller()
+@UseInterceptors(ResponseInterceptor)
+@ApiTags('Results Framework and Reporting - Geographic Location')
 export class GeographicLocationController {
   constructor(
     private readonly geographicLocationService: GeographicLocationService,
