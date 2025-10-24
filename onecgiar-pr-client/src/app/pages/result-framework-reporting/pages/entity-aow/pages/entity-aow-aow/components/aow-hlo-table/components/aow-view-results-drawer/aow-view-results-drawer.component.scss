@@ -81,6 +81,13 @@ p {
   }
 }
 
+.noDataText {
+  text-align: center;
+  padding: 20px 0px;
+  @include fonts.pr-typography('h4');
+  color: var(--pr-color-primary-300);
+}
+
 ::ng-deep {
   .p-drawer-header {
     padding: 0 !important;

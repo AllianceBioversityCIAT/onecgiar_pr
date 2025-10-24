@@ -126,17 +126,15 @@ export class EntityAowService {
     });
   }
 
-  getExistingResultsContributors() {
-    this.api.resultsSE
-      .GET_ExistingResultsContributors(this.currentResultToReport()?.toc_result_id, this.currentResultToReport()?.indicators[0].related_node_id)
-      .subscribe({
-        next: ({ response }) => {
-          this.existingResultsContributors.set(response?.contributors ?? []);
-        },
-        error: err => {
-          this.existingResultsContributors.set([]);
-        }
-      });
+  getExistingResultsContributors(tocResultId: string, relatedNodeId: string) {
+    this.api.resultsSE.GET_ExistingResultsContributors(tocResultId, relatedNodeId).subscribe({
+      next: ({ response }) => {
+        this.existingResultsContributors.set(response?.contributors ?? []);
+      },
+      error: err => {
+        this.existingResultsContributors.set([]);
+      }
+    });
   }
 
   onCloseReportResultModal() {
