@@ -1255,4 +1255,8 @@ export class ResultsApiService {
       `${environment.apiBaseUrl}api/results-framework-reporting/existing-result-contributors?resultTocResultId=${resultTocResultId}&tocResultIndicatorId=${tocResultIndicatorId}`
     );
   }
+  // /api/results-framework-reporting/dashboard
+  GET_DashboardData(entityId: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/dashboard?programId=${entityId}`);
+  }
 }
