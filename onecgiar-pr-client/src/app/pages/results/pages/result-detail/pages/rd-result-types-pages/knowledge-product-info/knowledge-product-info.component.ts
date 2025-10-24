@@ -90,9 +90,9 @@ export class KnowledgeProductInfoComponent implements OnInit {
     const sourceFromMetadata = response.metadata?.find(m => m?.source)?.source;
     mapped.source = response.metadataCG?.source ?? sourceFromMetadata ?? response.repo ?? 'Unknown';
 
-    if (mapped.source === 'CGSPACE') {
+    if (mapped.source === 'CGSpace') {
       mapped.handle = `https://cgspace.cgiar.org/handle/${response.handle}`;
-    } else if (mapped.source === 'MELSPACE') {
+    } else if (mapped.source === 'MELSpace') {
       mapped.handle = `https://repo.mel.cgiar.org/handle/${response.handle}`;
     }
 
