@@ -1,17 +1,17 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Version } from '@nestjs/common';
+import { Controller, Get, Body, Patch, Param, Version } from '@nestjs/common';
 import { GeographicLocationService } from './geographic-location.service';
 import { CreateGeographicLocationDto } from './dto/create-geographic-location.dto';
-import { UpdateGeographicLocationDto } from './dto/update-geographic-location.dto';
 import { ApiOperation } from '@nestjs/swagger/dist/decorators/api-operation.decorator';
 import { ApiParam } from '@nestjs/swagger/dist/decorators/api-param.decorator';
 import { ApiBody, ApiOkResponse } from '@nestjs/swagger';
-import { CreateResultGeoDto } from '../../results/dto/create-result-geo-scope.dto';
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 
 @Controller('geographic-location')
 export class GeographicLocationController {
-  constructor(private readonly geographicLocationService: GeographicLocationService) {}
+  constructor(
+    private readonly geographicLocationService: GeographicLocationService,
+  ) {}
 
   @Version('2')
   @Patch('update/geographic/:resultId')
@@ -29,7 +29,10 @@ export class GeographicLocationController {
     @UserToken() user: TokenDto,
   ) {
     createResultGeoDto.result_id = resultId;
-    return this.geographicLocationService.saveGeoScopeV2(createResultGeoDto, user);
+    return this.geographicLocationService.saveGeoScopeV2(
+      createResultGeoDto,
+      user,
+    );
   }
 
   @Version('2')
@@ -44,5 +47,4 @@ export class GeographicLocationController {
   getGeographic(@Param('resultId') resultId: number) {
     return this.geographicLocationService.getGeoScopeV2(resultId);
   }
-
 }

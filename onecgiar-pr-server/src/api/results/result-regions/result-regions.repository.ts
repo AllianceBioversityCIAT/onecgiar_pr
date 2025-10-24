@@ -260,10 +260,11 @@ export class ResultRegionRepository
     extraRegionArray: number[] = [],
   ): Promise<void> {
     try {
-
-      const updateRegionsByRole = async (roleId: number, regionIds: number[]) => {
+      const updateRegionsByRole = async (
+        roleId: number,
+        regionIds: number[],
+      ) => {
         if (regionIds.length > 0) {
-
           await this.query(
             `
             UPDATE result_region
@@ -274,7 +275,7 @@ export class ResultRegionRepository
               AND result_id = ?
               AND region_id NOT IN (${regionIds.map(() => '?').join(', ')});
             `,
-            [roleId, resultId, ...regionIds]
+            [roleId, resultId, ...regionIds],
           );
 
           await this.query(
@@ -286,10 +287,9 @@ export class ResultRegionRepository
               AND result_id = ?
               AND region_id IN (${regionIds.map(() => '?').join(', ')});
             `,
-            [roleId, resultId, ...regionIds]
+            [roleId, resultId, ...regionIds],
           );
         } else {
-
           await this.query(
             `
             UPDATE result_region
@@ -299,7 +299,7 @@ export class ResultRegionRepository
               AND geo_scope_role_id = ?
               AND result_id = ?;
             `,
-            [roleId, resultId]
+            [roleId, resultId],
           );
         }
       };
@@ -322,5 +322,5 @@ export class ResultRegionRepository
         debug: true,
       });
     }
-  } 
+  }
 }

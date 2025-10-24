@@ -111,7 +111,7 @@ export class ResultCountrySubnationalRepository
     rcId: number,
     subnationalCodes: string[],
     userId: number,
-    geoScopeRoleId: number,
+    geoScopeRoleId: number = 1,
   ) {
     try {
       const resultSubnationalArray: ResultCountrySubnational[] = [];
@@ -149,7 +149,7 @@ export class ResultCountrySubnationalRepository
     rcId: number,
     subnationalCodes: string[],
     userId: number,
-    geoScopeRoleId: number,
+    geoScopeRoleId: number = 1,
   ) {
     const subnationals = subnationalCodes ?? [];
 
@@ -193,7 +193,11 @@ export class ResultCountrySubnationalRepository
 
         return await this.query(upDateActive, [userId, rcId, geoScopeRoleId]);
       } else {
-        return await this.query(upDateAllInactive, [userId, rcId, geoScopeRoleId]);
+        return await this.query(upDateAllInactive, [
+          userId,
+          rcId,
+          geoScopeRoleId,
+        ]);
       }
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

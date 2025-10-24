@@ -1,7 +1,10 @@
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { CreateResultGeoDto, GeoScopeDto } from "../../../results/dto/create-result-geo-scope.dto";
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  CreateResultGeoDto,
+  GeoScopeDto,
+} from '../../../results/dto/create-result-geo-scope.dto';
 
-export class CreateGeographicLocationDto extends CreateResultGeoDto{
+export class CreateGeographicLocationDto extends CreateResultGeoDto {
   @ApiPropertyOptional({
     description: 'Extra geographic scope identifier being assigned (nullable).',
     nullable: true,

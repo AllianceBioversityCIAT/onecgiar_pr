@@ -166,7 +166,7 @@ export class ResultCountryRepository
   async getResultCountrieByIdResultAndCountryId(
     resultId: number,
     countryId: number,
-    geoScopeRoleId: number
+    geoScopeRoleId: number = 1,
   ) {
     const query = `
       select 
@@ -200,9 +200,9 @@ export class ResultCountryRepository
   }
 
   async updateCountries(
-    resultId: number, 
-    countriesArray: number[], 
-    geoScopeRoleId: number
+    resultId: number,
+    countriesArray: number[],
+    geoScopeRoleId: number = 1,
   ) {
     const countries = countriesArray ?? [];
     const upDateInactive = `
