@@ -55,6 +55,7 @@ export class AdminPanelService implements OnModuleInit {
   }
 
   async excelFullReportByResultCodes(filterResults: FilterResultsDto) {
+    console.log('filterResults', filterResults);
     let resultIds = [];
     if (filterResults?.fullReport) {
       resultIds = (await this._resultRepository.getActiveResultCodes()).map(
