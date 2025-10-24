@@ -388,12 +388,6 @@ describe('ResultsFrameworkReportingService', () => {
         },
         {
           status_id: 2,
-          result_level_id: 3,
-          result_type_id: ResultTypeEnum.CAPACITY_CHANGE,
-          total_results: 1,
-        },
-        {
-          status_id: 2,
           result_level_id: 4,
           result_type_id: 999,
           total_results: 10,
@@ -445,7 +439,7 @@ describe('ResultsFrameworkReportingService', () => {
             },
           },
           qualityAssessed: {
-            total: 9,
+            total: 8,
             label: 'Quality assessed results',
             data: {
               outputs: {
@@ -457,7 +451,7 @@ describe('ResultsFrameworkReportingService', () => {
               outcomes: {
                 policyChange: 0,
                 innovationUse: 5,
-                otherOutcome: 1,
+                otherOutcome: 0,
               },
             },
           },

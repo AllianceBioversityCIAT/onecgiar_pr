@@ -1093,7 +1093,7 @@ export class ResultsFrameworkReportingService {
             r.is_active = 1
             AND r.status_id IN (1, 2, 3)
             AND r.result_level_id IN (3, 4)
-            AND r.result_type_id IN (1, 2, 3, 4, 5, 6, 7, 8)
+            AND r.result_type_id IN (1, 2, 4, 5, 6, 7, 8)
           GROUP BY
             r.status_id,
             r.result_level_id,
@@ -1170,7 +1170,6 @@ export class ResultsFrameworkReportingService {
         [ResultTypeEnum.POLICY_CHANGE, 'policyChange'],
         [ResultTypeEnum.INNOVATION_USE, 'innovationUse'],
         [ResultTypeEnum.OTHER_OUTCOME, 'otherOutcome'],
-        [ResultTypeEnum.CAPACITY_CHANGE, 'otherOutcome'],
       ]);
 
       for (const row of rawDashboardData ?? []) {
