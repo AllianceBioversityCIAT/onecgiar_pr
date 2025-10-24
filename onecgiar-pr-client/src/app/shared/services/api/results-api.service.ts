@@ -1261,4 +1261,8 @@ export class ResultsApiService {
   GET_impactAreasScoresComponentsAll() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results/impact-areas-scores-components/all`);
   }
+
+  GET_DashboardData(entityId: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/dashboard?programId=${entityId}`);
+  }
 }
