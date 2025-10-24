@@ -90,7 +90,7 @@ export class FieldsManagerService {
         label: this.scoresImpactAreaLabel,
         hide: this.isP22()
       },
-      '[geoscope-management]-any-other-countries': {
+      '[geoscope-management]-has_extra_geo_scope': {
         label: 'Are there any other geopgraphic areas where  the innovation could be impactful (beyond current development and use)?',
         description:
           'This should reflect other geographies where the innovation development, testing and/or use could also contribute to outcomes and impact"',
@@ -104,16 +104,16 @@ export class FieldsManagerService {
         hide:
           this.isP22() ||
           (this.dataControlSE.currentResultSignal().result_type_id != 2 && this.dataControlSE.currentResultSignal().result_type_id != 7)
-        },
-        '[innovation-dev-info]-long_title': {
-          label: 'Long title',
-          hide: this.isP25()
-        },
-        '[innovation-dev-info]-short_title': {
-          label: this.isP25() ? 'Provide a short name for the innovation' : 'Provide a short title for the innovation',
-          placeholder: 'Innovation short name goes here...',
-          description: this.isP22() ? 
-            `<ul>
+      },
+      '[innovation-dev-info]-long_title': {
+        label: 'Long title',
+        hide: this.isP25()
+      },
+      '[innovation-dev-info]-short_title': {
+        label: this.isP25() ? 'Provide a short name for the innovation' : 'Provide a short title for the innovation',
+        placeholder: 'Innovation short name goes here...',
+        description: this.isP22()
+          ? `<ul>
             <li>Innovations are new, improved, or adapted technologies or products, capacity development tools and services, and policies or institutional arrangements with high potential to contribute to positive impacts when used at scale.</li>
             <li>Innovations may be at early stages of readiness (ideation or basic research) or at more mature stages of readiness (delivery and scaling).</li>
             <li>Enter a short name that facilitates clear communication about the innovation.</li>
@@ -122,8 +122,8 @@ export class FieldsManagerService {
             <li>You do not need to specify the number of new or improved lines/varieties – this can be specified under Innovation Typology.</li>
             <li>If not essential, avoid making reference to specific countries or regions (this is captured through geotagging)</li>
             <li>Avoid the use of CGIAR Center, Program or organization names in the short title</li>
-            </ul>` :
-            `<ul>
+            </ul>`
+          : `<ul>
             <li>Innovations are new, improved, or adapted technologies or products, capacity development tools and services, and policies or institutional arrangements with high potential to contribute to positive impacts when used at scale.</li>
             <li>Innovations may be at early stages of readiness (ideation and upstream research) or at more mature stages of readiness (delivery and scaling).</li>
             <li>Try to develop a short name that facilitates clear communication about the innovation.</li>
@@ -133,7 +133,7 @@ export class FieldsManagerService {
             <li>Varieties or breeds should be described by their generic traits or characteristics (e.g. Drought tolerant and aphid resistant groundnut cultivars).</li>
             <li>The specific number of new or improved lines/ varieties can be specified elsewhere.</li>
             </ul>`
-        }
+      }
     };
     return fields;
   });

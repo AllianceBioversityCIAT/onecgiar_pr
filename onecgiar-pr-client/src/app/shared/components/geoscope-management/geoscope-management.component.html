@@ -84,17 +84,17 @@
 
 <!-- @if (fieldsManagerS.isP25()) { -->
 <app-pr-radio-button
-  fieldRef="[geoscope-management]-any-other-countries"
+  fieldRef="[geoscope-management]-has_extra_geo_scope"
   [options]="[
     { value: true, label: 'Yes' },
     { value: false, label: 'No' }
   ]"
   optionLabel="label"
-  [(ngModel)]="body.any_other_countries"
+  [(ngModel)]="body.has_extra_geo_scope"
   optionValue="value">
 </app-pr-radio-button>
 
-@if (body.any_other_countries) {
+@if (body.has_extra_geo_scope) {
   <br />
   <app-pr-radio-button
     fieldRef="[geoscope-management]-any-other"
