@@ -959,6 +959,7 @@ WHERE
     r.legacy_id,
     r.no_applicable_partner,
     r.geographic_scope_id,
+    r.has_extra_geo_scope,
     r.extra_geo_scope_id,
     rbi.inititiative_id as initiative_id,
     rl.name as result_level_name,
