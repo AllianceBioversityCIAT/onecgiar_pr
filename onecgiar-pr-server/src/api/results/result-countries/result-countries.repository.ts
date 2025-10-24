@@ -166,7 +166,7 @@ export class ResultCountryRepository
   async getResultCountrieByIdResultAndCountryId(
     resultId: number,
     countryId: number,
-    geoScopeRoleId: number,
+    geoScopeRoleId: number = 1,
   ) {
     const query = `
       select 

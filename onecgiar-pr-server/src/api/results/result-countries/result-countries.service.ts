@@ -224,7 +224,7 @@ export class ResultCountriesService {
   async handleResultCountryArray(
     result,
     countries: countriesInterface[],
-    geoScopeRoleId: number,
+    geoScopeRoleId: number = 1,
   ) {
     const resultCountryArray: ResultCountry[] = [];
     const existingCountries: ResultCountry[] = [];
@@ -263,7 +263,7 @@ export class ResultCountriesService {
     countries,
     geo_scope_id,
     userId,
-    geoScopeRoleId,
+    geoScopeRoleId: number = 1,
   ) {
     await Promise.all(
       resultCountryArray.map(async (rc) => {
