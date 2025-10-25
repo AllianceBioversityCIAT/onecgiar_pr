@@ -88,6 +88,7 @@ const mockResultRepository = {
   getActiveResultTypes: jest.fn(),
   getResultById: jest.fn(),
   findUnitAcronymsByProgram: jest.fn(),
+  getUserRolesForResults: jest.fn(),
   query: jest.fn(),
 };
 
@@ -1205,6 +1206,7 @@ describe('ResultsFrameworkReportingService', () => {
     beforeEach(() => {
       mockResultsTocResultRepository.find.mockReset();
       mockResultsTocResultIndicatorsRepository.find.mockReset();
+      mockResultRepository.getUserRolesForResults.mockReset();
       mockHandlersError.returnErrorRes.mockClear();
     });
 
@@ -1218,6 +1220,9 @@ describe('ResultsFrameworkReportingService', () => {
             title: 'Result Alpha',
             result_code: 'RES-101',
             result_type_id: 2,
+            version_id: 30,
+            status_id: 2,
+            obj_status: { status_name: 'Submitted' },
           },
         },
         {
@@ -1228,15 +1233,25 @@ describe('ResultsFrameworkReportingService', () => {
             title: 'Result Beta',
             result_code: 'RES-102',
             result_type_id: 3,
+            version_id: 31,
+            status_id: 1,
+            obj_status: { status_name: 'Editing' },
           },
         },
       ]);
       mockResultsTocResultIndicatorsRepository.find.mockResolvedValueOnce([
         { results_toc_results_id: 11 },
       ]);
+      mockResultRepository.getUserRolesForResults.mockResolvedValueOnce([
+        { result_id: '101', role_id: 4, role_name: 'Lead' },
+      ]);
 
       const result: any =
-        await service.getExistingResultContributorsToIndicators(5, 'IND-55');
+        await service.getExistingResultContributorsToIndicators(
+          user,
+          5,
+          'IND-55',
+        );
 
       expect(mockResultsTocResultRepository.find).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -1256,13 +1271,68 @@ describe('ResultsFrameworkReportingService', () => {
           }),
         }),
       );
+      expect(mockResultRepository.getUserRolesForResults).toHaveBeenCalledWith(
+        user.id,
+        [101],
+      );
       expect(result.status).toBe(200);
       expect(result.response.contributors).toEqual([
         {
           result_id: 101,
           title: 'Result Alpha',
           result_code: 'RES-101',
+          status_name: 'Submitted',
+          version_id: 30,
+          status_id: 2,
+          role_id: 4,
         },
+      ]);
+      expect(mockHandlersError.returnErrorRes).not.toHaveBeenCalled();
+    });
+
+    it('should default role fields to null when no role mapping found', async () => {
+      mockResultsTocResultRepository.find.mockResolvedValueOnce([
+        {
+          result_toc_result_id: 31,
+          result_id: 501,
+          toc_result_id: 7,
+          obj_results: {
+            title: 'Result Delta',
+            result_code: 'RES-501',
+            result_type_id: 1,
+            version_id: 10,
+            status_id: 3,
+            obj_status: { status_name: 'Quality assessed' },
+          },
+        },
+      ]);
+      mockResultsTocResultIndicatorsRepository.find.mockResolvedValueOnce([
+        { results_toc_results_id: 31 },
+      ]);
+      mockResultRepository.getUserRolesForResults.mockResolvedValueOnce([]);
+
+      const result: any =
+        await service.getExistingResultContributorsToIndicators(
+          user,
+          7,
+          'IND-12',
+        );
+
+      expect(mockResultRepository.getUserRolesForResults).toHaveBeenCalledWith(
+        user.id,
+        [501],
+      );
+      expect(result.status).toBe(200);
+      expect(result.response.contributors).toEqual([
+        expect.objectContaining({
+          result_id: 501,
+          role_id: null,
+          status_id: 3,
+          status_name: 'Quality assessed',
+          title: 'Result Delta',
+          result_code: 'RES-501',
+          version_id: 10,
+        }),
       ]);
       expect(mockHandlersError.returnErrorRes).not.toHaveBeenCalled();
     });
@@ -1282,14 +1352,22 @@ describe('ResultsFrameworkReportingService', () => {
       mockResultsTocResultIndicatorsRepository.find.mockResolvedValueOnce([]);
 
       const result: any =
-        await service.getExistingResultContributorsToIndicators(8, 'IND-99');
+        await service.getExistingResultContributorsToIndicators(
+          user,
+          8,
+          'IND-99',
+        );
 
       expect(result.status).toBe(200);
       expect(result.response.contributors).toEqual([]);
+      expect(
+        mockResultRepository.getUserRolesForResults,
+      ).not.toHaveBeenCalled();
     });
 
     it('should propagate errors through handlers when invalid id provided', async () => {
       const result = await service.getExistingResultContributorsToIndicators(
+        user,
         'abc',
         'IND-3',
       );
@@ -1305,6 +1383,7 @@ describe('ResultsFrameworkReportingService', () => {
 
     it('should handle missing indicator identifier', async () => {
       const result = await service.getExistingResultContributorsToIndicators(
+        user,
         9,
         '',
       );
@@ -1317,6 +1396,7 @@ describe('ResultsFrameworkReportingService', () => {
       mockResultsTocResultRepository.find.mockResolvedValueOnce([]);
 
       const result = await service.getExistingResultContributorsToIndicators(
+        user,
         10,
         'IND-1',
       );
