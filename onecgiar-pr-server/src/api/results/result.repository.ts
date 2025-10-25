@@ -565,6 +565,65 @@ WHERE
     }
   }
 
+  async getUserRolesForResults(
+    userId: number,
+    resultIds: (number | string)[],
+  ): Promise<
+    Array<{
+      result_id: number;
+      role_id: number | null;
+      role_name: string | null;
+    }>
+  > {
+    if (!Number.isFinite(Number(userId)) || !resultIds?.length) {
+      return [];
+    }
+
+    const normalizedIds = resultIds
+      .map((id) => Number(id))
+      .filter((id) => Number.isFinite(id));
+
+    if (!normalizedIds.length) {
+      return [];
+    }
+
+    const placeholders = normalizedIds.map(() => '?').join(', ');
+
+    const query = `
+      SELECT
+        r.id AS result_id,
+        rbu.\`role\` AS role_id,
+        ro.description AS role_name
+      FROM result r
+      INNER JOIN results_by_inititiative rbi
+        ON rbi.result_id = r.id
+        AND rbi.is_active = 1
+        AND rbi.initiative_role_id = 1
+      INNER JOIN clarisa_initiatives ci
+        ON ci.id = rbi.inititiative_id
+        AND ci.active > 0
+      LEFT JOIN role_by_user rbu
+        ON rbu.initiative_id = rbi.inititiative_id
+        AND rbu.\`user\` = ?
+        AND rbu.active = 1
+      LEFT JOIN \`role\` ro
+        ON ro.id = rbu.\`role\`
+      WHERE
+        r.id IN (${placeholders})
+        AND r.is_active > 0;
+    `;
+
+    try {
+      return await this.query(query, [userId, ...normalizedIds]);
+    } catch (error) {
+      throw {
+        message: `[${ResultRepository.name}] => getUserRolesForResults error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
   async AllResultsByRoleUserAndInitiativeFiltered(
     userid: number,
     filters?: {

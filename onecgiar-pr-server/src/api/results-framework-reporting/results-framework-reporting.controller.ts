@@ -234,10 +234,12 @@ export class ResultsFrameworkReportingController {
     description: 'Contributors and partners fetched successfully.',
   })
   getExistingResultContributorsAndPartners(
+    @UserToken() user: TokenDto,
     @Query('resultTocResultId') resultTocResultId: number,
     @Query('tocResultIndicatorId') tocResultIndicatorId: string,
   ) {
     return this.resultsFrameworkReportingService.getExistingResultContributorsToIndicators(
+      user,
       resultTocResultId,
       tocResultIndicatorId,
     );
