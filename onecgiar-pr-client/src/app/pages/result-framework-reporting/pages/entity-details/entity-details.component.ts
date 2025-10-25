@@ -1,7 +1,7 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject, OnInit, PLATFORM_ID, signal } from '@angular/core';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { ApiService } from '../../../../shared/services/api/api.service';
-import { CommonModule } from '@angular/common';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { SelectModule } from 'primeng/select';
 import { FormsModule } from '@angular/forms';
 import { ProgressBarModule } from 'primeng/progressbar';
@@ -9,6 +9,9 @@ import { EntityAowCardComponent } from './components/entity-aow-card/entity-aow-
 import { EntityResultsByIndicatorCategoryCardComponent } from './components/entity-results-by-indicator-category-card/entity-results-by-indicator-category-card.component';
 import { EntityAowService } from '../entity-aow/services/entity-aow.service';
 import { SkeletonModule } from 'primeng/skeleton';
+import { ChartModule } from 'primeng/chart';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
+import { Chart } from 'chart.js';
 
 @Component({
   selector: 'app-entity-details',
@@ -20,7 +23,8 @@ import { SkeletonModule } from 'primeng/skeleton';
     ProgressBarModule,
     EntityAowCardComponent,
     EntityResultsByIndicatorCategoryCardComponent,
-    SkeletonModule
+    SkeletonModule,
+    ChartModule
   ],
   templateUrl: './entity-details.component.html',
   styleUrl: './entity-details.component.scss',
@@ -31,48 +35,178 @@ export class EntityDetailsComponent implements OnInit {
   api = inject(ApiService);
   entityAowService = inject(EntityAowService);
 
-  entityResultsByIndicatorCategory = signal<any[]>([
-    {
-      indicatorType: 7,
-      indicatorName: 'Innovation Development',
-      resultsEditing: 80,
-      resultsSubmitted: 50,
-      resultsQualityAssessed: 30
-    },
-    {
-      indicatorType: 6,
-      indicatorName: 'Knowledge Products',
-      resultsEditing: 80,
-      resultsSubmitted: 50,
-      resultsQualityAssessed: 30
-    },
-    {
-      indicatorType: 5,
-      indicatorName: 'Capacity Sharing for Development',
-      resultsEditing: 80,
-      resultsSubmitted: 50,
-      resultsQualityAssessed: 30
-    },
-    {
-      indicatorType: 2,
-      indicatorName: 'Innovation Use',
-      resultsEditing: 80,
-      resultsSubmitted: 50,
-      resultsQualityAssessed: 30
-    },
-    {
-      indicatorType: 1,
-      indicatorName: 'Policy Change',
-      resultsEditing: 80,
-      resultsSubmitted: 50,
-      resultsQualityAssessed: 30
-    }
-  ]);
+  cd = inject(ChangeDetectorRef);
+
+  summaryInsightsData = computed(() => {
+    return [
+      {
+        label: this.entityAowService.dashboardData()?.editing?.label,
+        value: this.entityAowService.dashboardData()?.editing?.total,
+        icon: '../../../../../assets/result-framework-reporting/editing_results.png'
+      },
+      {
+        label: this.entityAowService.dashboardData()?.submitted?.label,
+        value: this.entityAowService.dashboardData()?.submitted?.total,
+        icon: '../../../../../assets/result-framework-reporting/submitted_results.png'
+      },
+      {
+        label: this.entityAowService.dashboardData()?.qualityAssessed?.label,
+        value: this.entityAowService.dashboardData()?.qualityAssessed?.total,
+        icon: '../../../../../assets/result-framework-reporting/quality_assessed_results.png'
+      }
+    ];
+  });
+
+  dataOutputs = computed(() => {
+    return {
+      labels: ['Knowledge product', 'Innovation development', 'Capacity sharing for development', 'Other output'],
+      datasets: [
+        {
+          type: 'bar',
+          label: 'Editing',
+          backgroundColor: '#60a5fa',
+          data: [
+            this.entityAowService.dashboardData()?.editing?.data?.outputs?.knowledgeProduct,
+            this.entityAowService.dashboardData()?.editing?.data?.outputs?.innovationDevelopment,
+            this.entityAowService.dashboardData()?.editing?.data?.outputs?.capacitySharingForDevelopment,
+            this.entityAowService.dashboardData()?.editing?.data?.outputs?.otherOutput
+          ]
+        },
+        {
+          type: 'bar',
+          label: 'Submitted',
+          backgroundColor: '#8e9be8',
+          data: [
+            this.entityAowService.dashboardData()?.submitted?.data?.outputs?.knowledgeProduct,
+            this.entityAowService.dashboardData()?.submitted?.data?.outputs?.innovationDevelopment,
+            this.entityAowService.dashboardData()?.submitted?.data?.outputs?.capacitySharingForDevelopment,
+            this.entityAowService.dashboardData()?.submitted?.data?.outputs?.otherOutput
+          ]
+        },
+        {
+          type: 'bar',
+          label: 'Quality assessed',
+          backgroundColor: '#5569dd',
+          data: [
+            this.entityAowService.dashboardData()?.qualityAssessed?.data?.outputs?.knowledgeProduct,
+            this.entityAowService.dashboardData()?.qualityAssessed?.data?.outputs?.innovationDevelopment,
+            this.entityAowService.dashboardData()?.qualityAssessed?.data?.outputs?.capacitySharingForDevelopment,
+            this.entityAowService.dashboardData()?.qualityAssessed?.data?.outputs?.otherOutput
+          ]
+        }
+      ]
+    };
+  });
+
+  dataOutcomes = computed(() => {
+    return {
+      labels: ['Policy change', 'Innovation use', 'Other outcome'],
+      datasets: [
+        {
+          type: 'bar',
+          label: 'Editing',
+          backgroundColor: '#60a5fa',
+          data: [
+            this.entityAowService.dashboardData()?.editing?.data?.outcomes?.policyChange,
+            this.entityAowService.dashboardData()?.editing?.data?.outcomes?.innovationUse,
+            this.entityAowService.dashboardData()?.editing?.data?.outcomes?.otherOutcome
+          ]
+        },
+        {
+          type: 'bar',
+          label: 'Submitted',
+          backgroundColor: '#8e9be8',
+          data: [
+            this.entityAowService.dashboardData()?.submitted?.data?.outcomes?.policyChange,
+            this.entityAowService.dashboardData()?.submitted?.data?.outcomes?.innovationUse,
+            this.entityAowService.dashboardData()?.submitted?.data?.outcomes?.otherOutcome
+          ]
+        },
+        {
+          type: 'bar',
+          label: 'Quality assessed',
+          backgroundColor: '#5569dd',
+          data: [
+            this.entityAowService.dashboardData()?.qualityAssessed?.data?.outcomes?.policyChange,
+            this.entityAowService.dashboardData()?.qualityAssessed?.data?.outcomes?.innovationUse,
+            this.entityAowService.dashboardData()?.qualityAssessed?.data?.outcomes?.otherOutcome
+          ]
+        }
+      ]
+    };
+  });
 
   ngOnInit() {
     this.route.params.subscribe(params => {
       this.entityAowService.entityId.set(params['entityId']);
     });
     this.entityAowService.getAllDetailsData();
+    this.entityAowService.getDashboardData();
+    this.initChart();
+  }
+
+  options: any;
+
+  platformId = inject(PLATFORM_ID);
+
+  initChart() {
+    if (isPlatformBrowser(this.platformId)) {
+      Chart.register(ChartDataLabels);
+
+      this.options = {
+        responsive: true,
+        maintainAspectRatio: false,
+        aspectRatio: 0.8,
+        indexAxis: 'y',
+        plugins: {
+          tooltip: {
+            mode: 'index',
+            intersect: true
+          },
+          datalabels: {
+            color: '#fff',
+            font: {
+              weight: '400',
+              size: 9
+            },
+            formatter: (value: number) => {
+              return value > 1 ? value : '';
+            },
+            anchor: 'center',
+            align: 'center'
+          },
+          legend: {
+            labels: {
+              boxWidth: 10,
+              font: {
+                size: 8
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            stacked: true,
+            ticks: {
+              font: {
+                size: 8
+              },
+              padding: 0,
+              minRotation: 45
+            }
+          },
+          y: {
+            stacked: true,
+            ticks: {
+              font: {
+                size: 8
+              },
+              padding: 0
+            }
+          }
+        }
+      };
+      this.cd.markForCheck();
+    }
   }
 }
