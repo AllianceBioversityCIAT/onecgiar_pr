@@ -109,11 +109,20 @@ export class TocResultsRepository {
     });
 
     try {
-      const rows = (await this.dataSource.query(
-        query,
-        params,
-      )) as toc_result_row[];
-      return this.groupTocRows(rows);
+      const [rows, contributions] = await Promise.all([
+        this.dataSource.query(query, params) as Promise<toc_result_row[]>,
+        this.getIndicatorContributions(program, year),
+      ]);
+
+      const enhancedRows = rows.map((row) => ({
+        ...row,
+        actual_achieved_value_sum:
+          contributions.get(row.indicator_id)?.actual_achieved_value_sum ?? 0,
+        progress_percentage:
+          contributions.get(row.indicator_id)?.progress_percentage ?? '0%',
+      }));
+
+      return this.groupTocRows(enhancedRows);
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         error,
@@ -130,11 +139,20 @@ export class TocResultsRepository {
     });
 
     try {
-      const rows = (await this.dataSource.query(
-        query,
-        params,
-      )) as toc_result_row[];
-      return this.groupTocRows(rows);
+      const [rows, contributions] = await Promise.all([
+        this.dataSource.query(query, params) as Promise<toc_result_row[]>,
+        this.getIndicatorContributions(program, year),
+      ]);
+
+      const enhancedRows = rows.map((row) => ({
+        ...row,
+        actual_achieved_value_sum:
+          contributions.get(row.indicator_id)?.actual_achieved_value_sum ?? 0,
+        progress_percentage:
+          contributions.get(row.indicator_id)?.progress_percentage ?? '0%',
+      }));
+
+      return this.groupTocRows(enhancedRows);
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         error,
@@ -173,8 +191,6 @@ export class TocResultsRepository {
         COALESCE(SUM(CAST(trit.target_value AS SIGNED)), 0) AS target_value_sum,
         trit.number_target,
         trit.target_date,
-        0 AS actual_achieved_value_sum,
-        '50%' AS progress_percentage,
         CASE
           WHEN tri.type_value LIKE '%Number of Policy%' THEN 1
           WHEN tri.type_value LIKE '%Innovation Use%' THEN 2
@@ -203,7 +219,7 @@ export class TocResultsRepository {
     query += `
       JOIN ${env.DB_TOC}.toc_results_indicators tri ON tri.toc_results_id = tr.id
       JOIN ${env.DB_TOC}.toc_result_indicator_target trit ON tri.id = trit.id_indicator
-      AND trit.toc_result_indicator_id = tri.toc_result_indicator_id
+      AND CONVERT(trit.toc_result_indicator_id USING utf8mb4) = CONVERT(tri.toc_result_indicator_id USING utf8mb4)
     `;
 
     if (options.year !== undefined) {
@@ -320,6 +336,105 @@ export class TocResultsRepository {
     try {
       const rows = await this.dataSource.query(query, [indicatorId]);
       return rows?.[0] ?? null;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        error,
+        className: TocResultsRepository.name,
+        debug: true,
+      });
+    }
+  }
+
+  async getIndicatorContributions(program: string, year?: number) {
+    const params: Array<string | number> = [];
+
+    const targetYearCondition =
+      year !== undefined ? ' AND trit.target_date = ?' : '';
+    const actualYearCondition =
+      year !== undefined ? ' AND rit.target_date = ?' : '';
+
+    const query = `
+      SELECT
+        tgt.indicator_id,
+        tgt.toc_result_indicator_id,
+        tgt.target_value_sum,
+        COALESCE(act.actual_achieved_value_sum, 0) AS actual_achieved_value_sum
+      FROM (
+        SELECT
+          tri.id AS indicator_id,
+          tri.toc_result_indicator_id,
+          COALESCE(SUM(CAST(trit.target_value AS DECIMAL(15,2))), 0) AS target_value_sum
+        FROM ${env.DB_TOC}.toc_results tr
+        JOIN ${env.DB_TOC}.toc_results_indicators tri ON tri.toc_results_id = tr.id
+        JOIN ${env.DB_TOC}.toc_result_indicator_target trit ON tri.id = trit.id_indicator
+          AND CONVERT(trit.toc_result_indicator_id USING utf8mb4) = CONVERT(tri.toc_result_indicator_id USING utf8mb4)
+          ${targetYearCondition}
+        WHERE
+          tr.official_code = ?
+          AND tri.is_active = 1
+        GROUP BY
+          tri.id,
+          tri.toc_result_indicator_id
+      ) AS tgt
+      LEFT JOIN (
+        SELECT
+          tri.id AS indicator_id,
+          COALESCE(SUM(CAST(rit.contributing_indicator AS DECIMAL(15,2))), 0) AS actual_achieved_value_sum
+        FROM ${env.DB_NAME}.result r
+        LEFT JOIN ${env.DB_NAME}.results_toc_result rtr ON rtr.results_id = r.id
+          AND rtr.is_active = 1
+        LEFT JOIN ${env.DB_NAME}.results_toc_result_indicators rtri ON rtri.results_toc_results_id = rtr.result_toc_result_id
+          AND rtri.is_active = 1
+          AND rtri.is_not_aplicable = 0
+        LEFT JOIN ${env.DB_NAME}.result_indicators_targets rit ON rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
+          AND rit.is_active = 1
+          AND rit.contributing_indicator IS NOT NULL
+          ${actualYearCondition}
+        JOIN ${env.DB_TOC}.toc_results tr ON tr.id = rtr.toc_result_id
+        JOIN ${env.DB_TOC}.toc_results_indicators tri ON tri.toc_results_id = tr.id
+          AND tri.is_active = 1
+          AND CONVERT(rtri.toc_results_indicator_id USING utf8mb4) = CONVERT(tri.related_node_id USING utf8mb4)
+        WHERE
+          tr.official_code = ?
+          AND r.is_active = 1
+          AND r.status_id IN (1, 2, 3)
+          AND r.result_level_id IN (3, 4)
+          AND r.result_type_id IN (1, 2, 4, 5, 6, 7, 8)
+        GROUP BY
+          tri.id
+      ) AS act ON act.indicator_id = tgt.indicator_id
+    `;
+    if (year !== undefined) {
+      params.push(year);
+    }
+    params.push(program);
+    if (year !== undefined) {
+      params.push(year);
+    }
+    params.push(program);
+
+    try {
+      const rows = await this.dataSource.query(query, params);
+      const contributionsMap = new Map<
+        number,
+        { actual_achieved_value_sum: number; progress_percentage: string }
+      >();
+
+      for (const row of rows) {
+        const targetValue = Number(row.target_value_sum) || 0;
+        const actualValue = Number(row.actual_achieved_value_sum) || 0;
+        const progressPercentage = targetValue > 0 
+          ? Math.round((actualValue / targetValue) * 100)
+          : 0;
+        const formattedProgress = `${progressPercentage}%`;
+
+        contributionsMap.set(row.indicator_id, {
+          actual_achieved_value_sum: actualValue,
+          progress_percentage: formattedProgress,
+        });
+      }
+
+      return contributionsMap;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         error,
