@@ -38,6 +38,14 @@ export class ResultsInnovationsUse {
   })
   female_using!: number;
 
+  
+  @Column({
+    name: 'has_innovation_link',
+    type: 'tinyint',
+    nullable: true,
+  })
+  has_innovation_link: boolean;
+
   @Column({
     name: 'is_active',
     type: 'boolean',
