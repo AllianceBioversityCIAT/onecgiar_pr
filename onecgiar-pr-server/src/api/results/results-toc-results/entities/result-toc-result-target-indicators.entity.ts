@@ -57,7 +57,7 @@ export class ResultIndicatorTarget extends BaseEntity {
 
   @ManyToOne(
     () => ResultsTocResultIndicators,
-    (cs) => cs.result_toc_result_indicator_id,
+    (cs) => cs.obj_result_indicator_targets,
     { nullable: true },
   )
   @JoinColumn({
