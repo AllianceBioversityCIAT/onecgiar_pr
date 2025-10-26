@@ -423,10 +423,19 @@ export class TocResultsRepository {
       for (const row of rows) {
         const targetValue = Number(row.target_value_sum) || 0;
         const actualValue = Number(row.actual_achieved_value_sum) || 0;
-        const progressPercentage = targetValue > 0 
-          ? Math.round((actualValue / targetValue) * 100)
-          : 0;
-        const formattedProgress = `${progressPercentage}%`;
+        let progressPercentage = 0;
+        if (targetValue > 0) {
+          progressPercentage = (actualValue / targetValue) * 100;
+        } else if (targetValue === 0 && actualValue > 0) {
+          progressPercentage = actualValue * 100;
+        }
+        const progressRounded = Math.round(progressPercentage * 10) / 10;
+        const isWholeNumber = Number.isFinite(progressRounded)
+          ? Number.isInteger(progressRounded)
+          : false;
+        const formattedProgress = Number.isFinite(progressRounded)
+          ? `${isWholeNumber ? progressRounded.toFixed(0) : progressRounded.toFixed(1)}%`
+          : '0%';
 
         contributionsMap.set(row.indicator_id, {
           actual_achieved_value_sum: actualValue,

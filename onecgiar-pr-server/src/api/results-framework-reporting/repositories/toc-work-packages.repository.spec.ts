@@ -177,7 +177,7 @@ describe('TocResultsRepository', () => {
 
     expect(result.get(1)).toEqual({
       actual_achieved_value_sum: 15,
-      progress_percentage: '0%',
+      progress_percentage: '1500%',
     });
   });
 
