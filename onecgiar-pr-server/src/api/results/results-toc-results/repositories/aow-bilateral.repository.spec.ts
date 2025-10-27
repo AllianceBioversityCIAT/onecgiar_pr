@@ -157,10 +157,14 @@ describe('AoWBilateralRepository', () => {
     expect(result.get(1)).toEqual({
       actual_achieved_value_sum: 15,
       progress_percentage: '75%',
+      target_value_sum: 20,
+      work_package_acronym: null,
     });
     expect(result.get(2)).toEqual({
       actual_achieved_value_sum: 10,
       progress_percentage: '40%',
+      target_value_sum: 25,
+      work_package_acronym: null,
     });
   });
 
@@ -178,6 +182,8 @@ describe('AoWBilateralRepository', () => {
     expect(result.get(1)).toEqual({
       actual_achieved_value_sum: 15,
       progress_percentage: '1500%',
+      target_value_sum: 0,
+      work_package_acronym: null,
     });
   });
 
