@@ -35,14 +35,12 @@ export class EntityAowService {
 
   showReportResultModal = signal<boolean>(false);
   currentResultToReport = signal<any>({});
-  currentResultIsKnowledgeProduct = computed(() => {
-    return this.currentResultToReport()?.indicators?.[0]?.type_name === 'Number of knowledge products';
-  });
 
   // View result modal
   showViewResultDrawer = signal<boolean>(false);
   viewResultDrawerFullScreen = signal<boolean>(false);
   currentResultToView = signal<any>({});
+  dashboardData = signal<any>(null);
 
   getAllDetailsData() {
     this.isLoadingDetails.set(true);
@@ -129,17 +127,26 @@ export class EntityAowService {
     });
   }
 
-  getExistingResultsContributors() {
-    this.api.resultsSE
-      .GET_ExistingResultsContributors(this.currentResultToReport()?.toc_result_id, this.currentResultToReport()?.indicators[0].related_node_id)
-      .subscribe({
-        next: ({ response }) => {
-          this.existingResultsContributors.set(response?.contributors ?? []);
-        },
-        error: err => {
-          this.existingResultsContributors.set([]);
-        }
-      });
+  getExistingResultsContributors(tocResultId: string, relatedNodeId: string) {
+    this.api.resultsSE.GET_ExistingResultsContributors(tocResultId, relatedNodeId).subscribe({
+      next: ({ response }) => {
+        this.existingResultsContributors.set(response?.contributors ?? []);
+      },
+      error: err => {
+        this.existingResultsContributors.set([]);
+      }
+    });
+  }
+
+  getDashboardData() {
+    this.api.resultsSE.GET_DashboardData(this.entityId()).subscribe({
+      next: ({ response }) => {
+        this.dashboardData.set(response);
+      },
+      error: err => {
+        this.dashboardData.set(null);
+      }
+    });
   }
 
   onCloseReportResultModal() {

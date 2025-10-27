@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { In } from 'typeorm';
+import { In, IsNull, Not } from 'typeorm';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { ClarisaGlobalUnitRepository } from '../../clarisa/clarisa-global-unit/clarisa-global-unit.repository';
 import { YearRepository } from '../results/years/year.repository';
@@ -921,6 +921,7 @@ export class ResultsFrameworkReportingService {
   }
 
   async getExistingResultContributorsToIndicators(
+    user: TokenDto,
     resultTocResultId: string | number,
     tocResultIndicatorId: string,
   ) {
@@ -949,12 +950,24 @@ export class ResultsFrameworkReportingService {
       const resultContributionExists =
         await this._resultsTocResultRepository.find({
           relations: {
-            obj_results: true,
+            obj_results: {
+              obj_status: true,
+            },
+            obj_results_toc_result_indicators: {
+              obj_result_indicator_targets: true,
+            },
           },
           where: {
             toc_result_id: parsedResultTocResultId,
             is_active: true,
             obj_results: { is_active: true },
+            obj_results_toc_result_indicators: {
+              toc_results_indicator_id: tocResultIndicatorId,
+              obj_result_indicator_targets: {
+                is_active: true,
+                contributing_indicator: Not(IsNull()),
+              },
+            },
           },
           select: {
             result_toc_result_id: true,
@@ -964,6 +977,22 @@ export class ResultsFrameworkReportingService {
               title: true,
               result_code: true,
               result_type_id: true,
+              version_id: true,
+              status_id: true,
+              obj_status: {
+                result_status_id: true,
+                status_name: true,
+                status_description: true,
+              },
+            },
+            obj_results_toc_result_indicators: {
+              toc_results_indicator_id: true,
+              obj_result_indicator_targets: {
+                number_target: true,
+                target_date: true,
+                contributing_indicator: true,
+                is_active: true,
+              },
             },
           },
         });
@@ -1007,15 +1036,67 @@ export class ResultsFrameworkReportingService {
         (ind) => ind.results_toc_results_id,
       );
 
-      const contributors = resultContributionExists
-        .filter((contrib) =>
-          contributingTocResultIds.includes(contrib.result_toc_result_id),
-        )
-        .map((contrib) => ({
-          result_id: contrib.result_id,
+      const filteredContributors = resultContributionExists.filter((contrib) =>
+        contributingTocResultIds.includes(contrib.result_toc_result_id),
+      );
+
+      const uniqueResultIds = Array.from(
+        new Set(
+          filteredContributors
+            .map((contrib) => Number(contrib.result_id))
+            .filter((id) => Number.isFinite(id)),
+        ),
+      );
+
+      const userId = Number(user?.id);
+      const rolesByResult = new Map<
+        number,
+        { role_id: number | null; role_name: string | null }
+      >();
+
+      if (Number.isFinite(userId) && uniqueResultIds.length > 0) {
+        const roleResults = await this._resultRepository.getUserRolesForResults(
+          userId,
+          uniqueResultIds,
+        );
+        for (const row of roleResults ?? []) {
+          const resultId = Number(row?.result_id);
+
+          if (!Number.isFinite(resultId)) {
+            continue;
+          }
+
+          rolesByResult.set(resultId, {
+            role_id:
+              row?.role_id !== null && row?.role_id !== undefined
+                ? Number(row.role_id)
+                : null,
+            role_name:
+              row?.role_name !== null && row?.role_name !== undefined
+                ? String(row.role_name)
+                : null,
+          });
+        }
+      }
+
+      const contributors = filteredContributors.map((contrib) => {
+        const numericResultId = Number(contrib.result_id);
+        const roleInfo = Number.isFinite(numericResultId)
+          ? rolesByResult.get(numericResultId)
+          : undefined;
+
+        return {
+          result_id: Number.isFinite(numericResultId)
+            ? numericResultId
+            : contrib.result_id,
           title: contrib.obj_results?.title,
           result_code: contrib.obj_results?.result_code,
-        }));
+          status_name: contrib.obj_results?.obj_status?.status_name,
+          version_id: contrib.obj_results?.version_id,
+          status_id: +contrib.obj_results?.status_id,
+          role_id: roleInfo?.role_id ?? null,
+        };
+      });
 
       return {
         response: {
@@ -1076,14 +1157,15 @@ export class ResultsFrameworkReportingService {
             ON rtri.results_toc_results_id = rtr.result_toc_result_id
             AND rtri.is_active = 1
             AND rtri.is_not_aplicable = 0
-          INNER JOIN result_indicators_targets rit
+          LEFT JOIN result_indicators_targets rit
             ON rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
             AND rit.is_active = 1
           WHERE
             r.is_active = 1
             AND r.status_id IN (1, 2, 3)
             AND r.result_level_id IN (3, 4)
-            AND r.result_type_id IN (1, 2, 3, 4, 5, 6, 7, 8)
+            AND r.result_type_id IN (1, 2, 4, 5, 6, 7, 8)
+            AND rit.contributing_indicator IS NOT NULL
           GROUP BY
             r.status_id,
             r.result_level_id,
@@ -1160,7 +1242,6 @@ export class ResultsFrameworkReportingService {
         [ResultTypeEnum.POLICY_CHANGE, 'policyChange'],
         [ResultTypeEnum.INNOVATION_USE, 'innovationUse'],
         [ResultTypeEnum.OTHER_OUTCOME, 'otherOutcome'],
-        [ResultTypeEnum.CAPACITY_CHANGE, 'otherOutcome'],
       ]);
 
       for (const row of rawDashboardData ?? []) {

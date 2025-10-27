@@ -30,7 +30,6 @@ describe('AowHloCreateModalComponent', () => {
       }),
       entityDetails: signal<any>({ id: 1 }),
       onCloseReportResultModal: jest.fn(),
-      currentResultIsKnowledgeProduct: signal<boolean>(false),
       mqapJson: signal<any>(null)
     };
 
@@ -88,24 +87,32 @@ describe('AowHloCreateModalComponent', () => {
 
   describe('getTitleInputLabel', () => {
     it('should return the title input label', () => {
-      entityAowServiceMock.currentResultIsKnowledgeProduct.set(true);
+      entityAowServiceMock.currentResultToReport.set({
+        indicators: [{ type_name: 'Number of knowledge products' }]
+      });
       component.mqapJson.set({ metadata: [{ source: 'CGSpace' }] });
       expect(component.getTitleInputLabel()).toBe('Title retrived from CGSpace');
     });
 
     it('should return the title input label', () => {
-      entityAowServiceMock.currentResultIsKnowledgeProduct.set(true);
+      entityAowServiceMock.currentResultToReport.set({
+        indicators: [{ type_name: 'Number of knowledge products' }]
+      });
       component.mqapJson.set({ metadata: [{ source: 'MELSpace' }] });
       expect(component.getTitleInputLabel()).toBe('Title retrived from MELSpace');
     });
 
     it('should return the title input label', () => {
-      entityAowServiceMock.currentResultIsKnowledgeProduct.set(false);
+      entityAowServiceMock.currentResultToReport.set({
+        indicators: [{ type_name: 'Other type' }]
+      });
       expect(component.getTitleInputLabel()).toBe('Title');
     });
 
     it('should return the title input label', () => {
-      entityAowServiceMock.currentResultIsKnowledgeProduct.set(true);
+      entityAowServiceMock.currentResultToReport.set({
+        indicators: [{ type_name: 'Number of knowledge products' }]
+      });
       component.mqapJson.set(null);
       expect(component.getTitleInputLabel()).toBe('Title retrieved from the repository');
     });
@@ -150,23 +157,6 @@ describe('AowHloCreateModalComponent', () => {
 
         // Assert
         expect(component.resultTypes()).toEqual([]);
-      });
-
-      it('should filter out option with id 6 when result_level_id is 4', () => {
-        // Arrange: Set up currentResultToReport with result_level_id 4
-        entityAowServiceMock.currentResultToReport.set({
-          indicators: [{ result_level_id: 4 }]
-        });
-
-        // Act
-        component.ngOnInit();
-
-        // Assert
-        expect(component.resultTypes()).toEqual([
-          { id: 5, name: 'Type 5' },
-          { id: 7, name: 'Type 7' }
-        ]);
-        expect(component.resultTypes()).not.toContainEqual({ id: 6, name: 'Type 6' });
       });
 
       it('should handle case when no matching result level is found', () => {
@@ -267,6 +257,13 @@ describe('AowHloCreateModalComponent', () => {
           { id: 2, name: 'Type 2' }
         ]);
       });
+    });
+  });
+
+  describe('onResultTypeChange', () => {
+    it('should set the result_type_id in the createResultBody', () => {
+      component.onResultTypeChange(6);
+      expect(component.createResultBody().result_type_id).toBe(6);
     });
   });
 

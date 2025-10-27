@@ -132,11 +132,15 @@ describe('ResultsFrameworkReportingController', () => {
         {} as any,
       );
 
-      controller.getExistingResultContributorsAndPartners(55, 'IND-7');
+      controller.getExistingResultContributorsAndPartners(
+        { id: 1 } as any,
+        55,
+        'IND-7',
+      );
 
       expect(
         reportingService.getExistingResultContributorsToIndicators,
-      ).toHaveBeenCalledWith(55, 'IND-7');
+      ).toHaveBeenCalledWith({ id: 1 }, 55, 'IND-7');
     });
   });
 
