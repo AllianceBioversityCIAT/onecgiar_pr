@@ -13,6 +13,8 @@ import { ResultIpMeasure } from '../../ipsr/result-ip-measures/entities/result-i
 import { ResultIpMeasureRepository } from '../../ipsr/result-ip-measures/result-ip-measures.repository';
 import { ResultsInnovationsUseRepository } from '../../results/summary/repositories/results-innovations-use.repository';
 import { ResultsInnovationsUse } from '../../results/summary/entities/results-innovations-use.entity';
+import { ResultScalingStudyUrl } from '../result_scaling_study_urls/entities/result_scaling_study_url.entity';
+import { ResultScalingStudyUrlsRepository } from '../result_scaling_study_urls/repositories/result_scaling_study_urls.repository';
 
 @Injectable()
 export class InnovationUseService {
@@ -25,6 +27,7 @@ export class InnovationUseService {
     private readonly _resultByIntitutionsTypeRepository: ResultByIntitutionsTypeRepository,
     private readonly _resultIpMeasureRepository: ResultIpMeasureRepository,
     private readonly _resultsInnovationsUseRepository: ResultsInnovationsUseRepository,
+    private readonly _resultScalingStudyUrlsRepository: ResultScalingStudyUrlsRepository,
   ) {}
 
   async saveInnovationUse(
@@ -46,17 +49,34 @@ export class InnovationUseService {
       const {
         has_innovation_link,
         innovation_readiness_level_id,
-        linked_results
+        linked_results,
+        readiness_level_explanation,
+        has_scaling_studies,
+        scaling_studies_urls,
       } = innovationUseDto;
 
-      let InnUseRes: ResultsInnovationsUse = undefined;
+      let InnUseRes: ResultsInnovationsUse;
       if (resultExist) {
         resultExist.has_innovation_link = has_innovation_link;
-        resultExist.innovation_readiness_level_id =
-          innovation_readiness_level_id;
-        InnUseRes = await this._resultsInnovationsUseRepository.save(
-          resultExist as any,
-        );
+        resultExist.innovation_readiness_level_id = innovation_readiness_level_id;
+        resultExist.last_updated_by = user.id;
+
+        if (innovation_readiness_level_id >= 6) {
+          resultExist.readiness_level_explanation = readiness_level_explanation ?? null;
+          resultExist.has_scaling_studies = !!has_scaling_studies;
+        } else {
+          // Limpia los campos si el nivel baja de 6
+          resultExist.readiness_level_explanation = null;
+          resultExist.has_scaling_studies = false;
+
+          // Desactiva o elimina las URLs previas si existían
+          await this._resultScalingStudyUrlsRepository.update(
+            { result_innov_use_id: resultExist.result_innovation_use_id},
+            { is_active: false },
+          );
+        }
+
+        InnUseRes = await this._resultsInnovationsUseRepository.save(resultExist);
       } else {
         const newInnUse = new ResultsInnovationsUse();
         newInnUse.created_by = user.id;
@@ -65,20 +85,44 @@ export class InnovationUseService {
         newInnUse.is_active = true;
         newInnUse.innovation_readiness_level_id = innovation_readiness_level_id;
         newInnUse.has_innovation_link = has_innovation_link;
+
+        if (innovation_readiness_level_id >= 6) {
+          newInnUse.readiness_level_explanation = readiness_level_explanation ?? null;
+          newInnUse.has_scaling_studies = !!has_scaling_studies;
+        }
+
         InnUseRes = await this._resultsInnovationsUseRepository.save(newInnUse);
       }
 
-      const InnovationUse = await this.saveAnticipatedInnoUser(
-        resultExist.result_innovation_use_id,
+      if (innovation_readiness_level_id >= 6 && has_scaling_studies && scaling_studies_urls?.length) {
+        // Limpia registros anteriores (si existen)
+        await this._resultScalingStudyUrlsRepository.update(
+          { result_innov_use_id: InnUseRes.result_innovation_use_id },
+          { is_active: false },
+        );
+
+        // Inserta los nuevos
+        const urlsToSave = scaling_studies_urls.map((url) => ({
+          result_id: InnUseRes.result_innovation_use_id,
+          study_url: url,
+          is_active: true,
+          created_by: user.id,
+        }));
+
+        await this._resultScalingStudyUrlsRepository.save(urlsToSave);
+      }
+
+      await this.saveAnticipatedInnoUser(
+        InnUseRes.result_innovation_use_id,
         user.id,
         innovationUseDto,
       );
 
-      await this._linkedResultService.createForInnovationUse(resultExist.result_innovation_use_id, linked_results, user);
+      await this._linkedResultService.createForInnovationUse(InnUseRes.result_innovation_use_id, linked_results, user);
 
       return {
-        response: InnovationUse,
-        message: 'Results Innovations Use has been created successfully',
+        response: InnUseRes,
+        message: 'Results Innovations Use has been saved successfully',
         status: HttpStatus.CREATED,
       };
     } catch (error) {
@@ -254,13 +298,23 @@ export class InnovationUseService {
 
   async getInnovationUse(resultId: number) {
     try {
+
       const innDevExists =
         await this._resultsInnovationsUseRepository.InnovUseExists(
           resultId,
         );
-      console.log(innDevExists);
-      const linked_results: number[] = await this._resultsInnovationsUseRepository.getLinkedResultsByOrigin(resultId);
 
+      if (!innDevExists) {
+        throw {
+          response: {},
+          message: `Innovation Use not found for result ${resultId}`,
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+      const linked_results: number[] = 
+        await this._resultsInnovationsUseRepository.getLinkedResultsByOrigin(resultId);
+
+      // Actors
       const actorsData = await this._resultActorRepository.find({
         where: { result_id: resultId, is_active: true },
         relations: { obj_actor_type: true },
@@ -269,35 +323,56 @@ export class InnovationUseService {
         el['men_non_youth'] = el.men - el.men_youth;
         el['women_non_youth'] = el.women - el.women_youth;
       });
-      const innovatonUse = {
+
+      // Measures
+      const measures = await this._resultIpMeasureRepository.find({
+        where: { result_id: resultId, is_active: true },
+      });
+
+      // Organizations
+      const organization = (
+        await this._resultByIntitutionsTypeRepository.find({
+          where: {
+            results_id: resultId,
+            institution_roles_id: 5,
+            is_active: true,
+          },
+          relations: {
+            obj_institution_types: { obj_parent: { obj_parent: true } },
+          },
+        })
+      ).map((el) => ({
+        ...el,
+        parent_institution_type_id:
+          el.obj_institution_types?.obj_parent?.obj_parent?.code ??
+          el.obj_institution_types?.obj_parent?.code ??
+          null,
+      }));
+
+      let scaling_studies_urls: string[] = [];
+      if (innDevExists.innovation_readiness_level_id >= 6) {
+        const urls = await this._resultScalingStudyUrlsRepository.find({
+          where: {
+            result_innov_use_id: innDevExists.result_innovation_use_id,
+            is_active: true,
+          },
+        });
+        scaling_studies_urls = urls.map((u) => u.study_url);
+      }
+
+      const innovationUse = {
         ...innDevExists,
-        linked_results: linked_results,
+        linked_results,
         actors: actorsData,
-        measures: await this._resultIpMeasureRepository.find({
-          where: { result_id: resultId, is_active: true },
-        }),
-        organization: (
-          await this._resultByIntitutionsTypeRepository.find({
-            where: {
-              results_id: resultId,
-              institution_roles_id: 5,
-              is_active: true,
-            },
-            relations: {
-              obj_institution_types: { obj_parent: { obj_parent: true } },
-            },
-          })
-        ).map((el) => ({
-          ...el,
-          parent_institution_type_id: el.obj_institution_types?.obj_parent
-            ?.obj_parent?.code
-            ? el.obj_institution_types?.obj_parent?.obj_parent?.code
-            : el.obj_institution_types?.obj_parent?.code || null,
-        })),
+        measures,
+        organization,
+        readiness_level_explanation: innDevExists.readiness_level_explanation ?? null,
+        has_scaling_studies: innDevExists.has_scaling_studies ?? false,
+        scaling_studies_urls,
       };
 
       return {
-        response: innovatonUse,
+        response: innovationUse,
         message: 'Successful response',
         status: HttpStatus.OK,
       };

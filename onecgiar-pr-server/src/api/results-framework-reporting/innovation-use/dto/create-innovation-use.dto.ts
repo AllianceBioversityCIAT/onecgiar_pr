@@ -6,6 +6,9 @@ export interface CreateInnovationUseDto {
     has_innovation_link: boolean;
     linked_results: number[];
     innovation_readiness_level_id: number;
+    readiness_level_explanation: string;
+    has_scaling_studies: boolean;
+    scaling_studies_urls: string[];
     actors: ResultActor[];
     organization: ResultsByInstitutionType[];
     measures: ResultIpMeasure[];

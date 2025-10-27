@@ -47,6 +47,21 @@ export class ResultsInnovationsUse {
   has_innovation_link: boolean;
 
   @Column({
+    name: 'has_scaling_studies',
+    type: 'tinyint',
+    nullable: true,
+  })
+  has_scaling_studies: boolean;
+
+  @Column({
+    name: 'readiness_level_explanation',
+    type: 'varchar',
+    length: 50,
+    nullable: true,
+  })
+  readiness_level_explanation: string;
+
+  @Column({
     name: 'innovation_readiness_level_id',
     type: 'bigint',
     nullable: true,

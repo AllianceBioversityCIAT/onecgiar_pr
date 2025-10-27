@@ -16,6 +16,7 @@ import { ResultsByProjectsModule } from '../results/results_by_projects/results_
 import { ContributorsPartnersModule } from './contributors-partners/contributors-partners.module';
 import { ResultsTocTargetIndicatorRepository } from '../results/results-toc-results/repositories/result-toc-result-target-indicator.repository';
 import { InnovationUseModule } from './innovation-use/innovation-use.module';
+import { ResultScalingStudyUrlsModule } from './result_scaling_study_urls/result_scaling_study_urls.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { InnovationUseModule } from './innovation-use/innovation-use.module';
     ResultsByProjectsModule,
     ContributorsPartnersModule,
     InnovationUseModule,
+    ResultScalingStudyUrlsModule,
   ],
   controllers: [ResultsFrameworkReportingController],
   providers: [
