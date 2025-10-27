@@ -12,6 +12,7 @@ import { ResultByIntitutionsTypeRepository } from '../../results/results_by_inst
 import { ResultIpMeasure } from '../../ipsr/result-ip-measures/entities/result-ip-measure.entity';
 import { ResultIpMeasureRepository } from '../../ipsr/result-ip-measures/result-ip-measures.repository';
 import { ResultsInnovationsUseRepository } from '../../results/summary/repositories/results-innovations-use.repository';
+import { ResultsInnovationsUse } from '../../results/summary/entities/results-innovations-use.entity';
 
 @Injectable()
 export class InnovationUseService {
@@ -32,6 +33,7 @@ export class InnovationUseService {
     user: TokenDto,
   ) {
     try {
+
       if (!resultId) {
         throw {
           response: {},
@@ -39,17 +41,40 @@ export class InnovationUseService {
           status: HttpStatus.BAD_REQUEST,
         };
       }
-      const resultExist = await this._resultRepository.findOne({
-        where: { id: resultId },
-      });
+
+      const resultExist = await this._resultsInnovationsUseRepository.InnovUseExists(resultId);
+      const {
+        has_innovation_link,
+        innovation_readiness_level_id,
+        linked_results
+      } = innovationUseDto;
+
+      let InnUseRes: ResultsInnovationsUse = undefined;
+      if (resultExist) {
+        resultExist.has_innovation_link = has_innovation_link;
+        resultExist.innovation_readiness_level_id =
+          innovation_readiness_level_id;
+        InnUseRes = await this._resultsInnovationsUseRepository.save(
+          resultExist as any,
+        );
+      } else {
+        const newInnUse = new ResultsInnovationsUse();
+        newInnUse.created_by = user.id;
+        newInnUse.results_id = resultId;
+        newInnUse.last_updated_by = user.id;
+        newInnUse.is_active = true;
+        newInnUse.innovation_readiness_level_id = innovation_readiness_level_id;
+        newInnUse.has_innovation_link = has_innovation_link;
+        InnUseRes = await this._resultsInnovationsUseRepository.save(newInnUse);
+      }
 
       const InnovationUse = await this.saveAnticipatedInnoUser(
-        resultExist.id,
+        resultExist.result_innovation_use_id,
         user.id,
         innovationUseDto,
       );
 
-      await this._linkedResultService.createForInnovationUse(resultExist.id, innovationUseDto.linked_results, user);
+      await this._linkedResultService.createForInnovationUse(resultExist.result_innovation_use_id, linked_results, user);
 
       return {
         response: InnovationUse,
@@ -230,7 +255,7 @@ export class InnovationUseService {
   async getInnovationUse(resultId: number) {
     try {
       const innDevExists =
-        await this._resultsInnovationsUseRepository.InnovDevExists(
+        await this._resultsInnovationsUseRepository.InnovUseExists(
           resultId,
         );
       console.log(innDevExists);

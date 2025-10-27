@@ -5,6 +5,7 @@ import { ResultsByInstitutionType } from "../../../results/results_by_institutio
 export interface CreateInnovationUseDto {
     has_innovation_link: boolean;
     linked_results: number[];
+    innovation_readiness_level_id: number;
     actors: ResultActor[];
     organization: ResultsByInstitutionType[];
     measures: ResultIpMeasure[];

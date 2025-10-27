@@ -168,12 +168,13 @@ export class ResultsInnovationsUseRepository
     }
   }
 
-  async InnovDevExists(resultId: number) {
+  async InnovUseExists(resultId: number) {
     const queryData = `
       SELECT
         riu.male_using,
         riu.female_using,
-        riu.has_innovation_link
+        riu.has_innovation_link,
+        riu.innovation_readiness_level_id
       FROM result r
       left join version v on r.version_id = v.id
       right JOIN results_innovations_use riu on riu.results_id = r.id and riu.is_active
