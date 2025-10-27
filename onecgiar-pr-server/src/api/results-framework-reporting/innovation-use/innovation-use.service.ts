@@ -34,7 +34,9 @@ export class InnovationUseService {
     resultId: number,
     user: TokenDto,
   ) {
-    this.logger.log(`saveInnovationUse called with resultId: ${resultId}, user: ${JSON.stringify(user)}`);
+    this.logger.log(
+      `saveInnovationUse called with resultId: ${resultId}, user: ${JSON.stringify(user)}`,
+    );
     try {
       if (!resultId) {
         this.logger.error('Missing resultId in saveInnovationUse');
@@ -47,7 +49,9 @@ export class InnovationUseService {
 
       const resultExist =
         await this._resultsInnovationsUseRepository.InnovUseExists(resultId);
-      this.logger.debug(`InnovUseExists result: ${JSON.stringify(resultExist)}`);
+      this.logger.debug(
+        `InnovUseExists result: ${JSON.stringify(resultExist)}`,
+      );
 
       const {
         has_innovation_link,
@@ -60,10 +64,13 @@ export class InnovationUseService {
 
       let InnUseRes: ResultsInnovationsUse;
       if (resultExist) {
-        this.logger.log(`Updating existing ResultsInnovationsUse for resultId: ${resultId}`);
+        this.logger.log(
+          `Updating existing ResultsInnovationsUse for resultId: ${resultId}`,
+        );
 
         resultExist.has_innovation_link = has_innovation_link;
-        resultExist.innovation_readiness_level_id = innovation_readiness_level_id;
+        resultExist.innovation_readiness_level_id =
+          innovation_readiness_level_id;
         resultExist.last_updated_by = user.id;
 
         if (innovation_readiness_level_id >= 6) {
@@ -87,7 +94,9 @@ export class InnovationUseService {
         InnUseRes =
           await this._resultsInnovationsUseRepository.save(resultExist);
       } else {
-        this.logger.log(`Creating new ResultsInnovationsUse for resultId: ${resultId}`);
+        this.logger.log(
+          `Creating new ResultsInnovationsUse for resultId: ${resultId}`,
+        );
 
         const newInnUse = new ResultsInnovationsUse();
         newInnUse.created_by = user.id;
@@ -111,7 +120,9 @@ export class InnovationUseService {
         has_scaling_studies &&
         scaling_studies_urls?.length
       ) {
-        this.logger.log(`Saving scaling study URLs for result_innovation_use_id: ${InnUseRes.result_innovation_use_id}`);
+        this.logger.log(
+          `Saving scaling study URLs for result_innovation_use_id: ${InnUseRes.result_innovation_use_id}`,
+        );
 
         // Limpia registros anteriores (si existen)
         await this._resultScalingStudyUrlsRepository.update(
@@ -131,16 +142,20 @@ export class InnovationUseService {
         await this._resultScalingStudyUrlsRepository.save(urlsToSave);
       }
 
-      this.logger.log(`Calling saveAnticipatedInnoUser for result_innovation_use_id: ${InnUseRes.result_innovation_use_id}`);
+      this.logger.log(
+        `Calling saveAnticipatedInnoUser for result_innovation_use_id: ${InnUseRes.result_innovation_use_id}`,
+      );
       await this.saveAnticipatedInnoUser(
-        InnUseRes.result_innovation_use_id,
+        InnUseRes.results_id,
         user.id,
         innovationUseDto,
       );
 
-      this.logger.log(`Calling createForInnovationUse for result_innovation_use_id: ${InnUseRes.result_innovation_use_id}`);
+      this.logger.log(
+        `Calling createForInnovationUse for result_innovation_use_id: ${InnUseRes.result_innovation_use_id}`,
+      );
       await this._linkedResultService.createForInnovationUse(
-        InnUseRes.result_innovation_use_id,
+        InnUseRes.results_id,
         linked_results,
         user,
       );
@@ -163,8 +178,8 @@ export class InnovationUseService {
     crtr: CreateInnovationUseDto,
   ) {
     // Actors
-    if (crtr?.actors?.length) {
-      for (const el of crtr.actors) {
+    if (crtr?.innovation_use?.actors?.length) {
+      for (const el of crtr.innovation_use.actors) {
         let actorExists: ResultActor = null;
         if (el?.actor_type_id) {
           const whereOptions: any = {
@@ -204,17 +219,23 @@ export class InnovationUseService {
             actorExists.result_actors_id,
             this.buildActorData(el, user, resultId),
           );
+          this.logger.log(
+            `[saveAnticipatedInnoUser] Updated actor: ${JSON.stringify(this.buildActorData(el, user, resultId))}`,
+          );
         } else {
-          await this._resultActorRepository.save(
+          const savedActor = await this._resultActorRepository.save(
             this.buildActorData(el, user, resultId),
+          );
+          this.logger.log(
+            `[saveAnticipatedInnoUser] Created actor: ${JSON.stringify(savedActor)}`,
           );
         }
       }
     }
 
     // Organizations
-    if (crtr?.organization?.length) {
-      for (const el of crtr.organization) {
+    if (crtr?.innovation_use?.organization?.length) {
+      for (const el of crtr.innovation_use.organization) {
         let ite: ResultsByInstitutionType = null;
         if (el?.institution_types_id && el?.institution_types_id != 78) {
           ite =
@@ -243,17 +264,23 @@ export class InnovationUseService {
             ite.id,
             this.buildInstitutionData(el, user, resultId),
           );
+          this.logger.log(
+            `[saveAnticipatedInnoUser] Updated organization: ${JSON.stringify(this.buildInstitutionData(el, user, resultId))}`,
+          );
         } else {
-          await this._resultByIntitutionsTypeRepository.save(
+          const savedOrg = await this._resultByIntitutionsTypeRepository.save(
             this.buildInstitutionData(el, user, resultId),
+          );
+          this.logger.log(
+            `[saveAnticipatedInnoUser] Created organization: ${JSON.stringify(savedOrg)}`,
           );
         }
       }
     }
 
     // Measures
-    if (crtr?.measures?.length) {
-      for (const el of crtr.measures) {
+    if (crtr?.innovation_use?.measures?.length) {
+      for (const el of crtr.innovation_use.measures) {
         let ripm: ResultIpMeasure = null;
         if (el?.result_ip_measure_id) {
           ripm = await this._resultIpMeasureRepository.findOne({
@@ -287,9 +314,15 @@ export class InnovationUseService {
             ripm.result_ip_measure_id,
             this.buildMeasureData(el, user, resultId),
           );
+          this.logger.log(
+            `[saveAnticipatedInnoUser] Updated measure: ${JSON.stringify(this.buildMeasureData(el, user, resultId))}`,
+          );
         } else {
-          await this._resultIpMeasureRepository.save(
+          const savedMeasure = await this._resultIpMeasureRepository.save(
             this.buildMeasureData(el, user, resultId),
+          );
+          this.logger.log(
+            `[saveAnticipatedInnoUser] Created measure: ${JSON.stringify(savedMeasure)}`,
           );
         }
       }

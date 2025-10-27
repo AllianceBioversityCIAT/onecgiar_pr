@@ -4,7 +4,7 @@ import { ResultScalingStudyUrlsController } from './result_scaling_study_urls.co
 
 @Module({
   controllers: [ResultScalingStudyUrlsController],
-  providers: [ResultScalingStudyUrlsService,],
-  exports: [ResultScalingStudyUrlsService,],
+  providers: [ResultScalingStudyUrlsService],
+  exports: [ResultScalingStudyUrlsService],
 })
 export class ResultScalingStudyUrlsModule {}
