@@ -13,14 +13,12 @@ import { ResultIpMeasure } from '../../ipsr/result-ip-measures/entities/result-i
 import { ResultIpMeasureRepository } from '../../ipsr/result-ip-measures/result-ip-measures.repository';
 import { ResultsInnovationsUseRepository } from '../../results/summary/repositories/results-innovations-use.repository';
 import { ResultsInnovationsUse } from '../../results/summary/entities/results-innovations-use.entity';
-import { ResultScalingStudyUrl } from '../result_scaling_study_urls/entities/result_scaling_study_url.entity';
 import { ResultScalingStudyUrlsRepository } from '../result_scaling_study_urls/repositories/result_scaling_study_urls.repository';
 
 @Injectable()
 export class InnovationUseService {
 
   constructor(
-    private readonly _resultRepository: ResultRepository,
     private readonly _handlersError: HandlersError,
     private readonly _linkedResultService: LinkedResultsService,
     private readonly _resultActorRepository: ResultActorRepository,

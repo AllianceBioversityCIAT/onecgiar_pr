@@ -8,6 +8,7 @@ import { ResultActorsModule } from '../../results/result-actors/result-actors.mo
 import { LinkedResultsModule } from '../../results/linked-results/linked-results.module';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultsModule } from '../../results/results.module';
+import { ResultScalingStudyUrlsModule } from '../result_scaling_study_urls/result_scaling_study_urls.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { ResultsModule } from '../../results/results.module';
     ResultsByInstitutionTypesModule,
     ResultIpMeasuresModule,
     SummaryModule,
+    ResultScalingStudyUrlsModule
   ],
   controllers: [InnovationUseController],
   providers: [InnovationUseService, HandlersError],
