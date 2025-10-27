@@ -200,7 +200,7 @@ export class ResultsInnovationsUseRepository
     const query = `
       SELECT linked_results_id
       FROM linked_result
-      WHERE origin_results_id = ? AND is_active = TRUE;
+      WHERE origin_result_id = ? AND is_active = TRUE;
     `;
 
     const results = await this.dataSource.query(query, [originId]);

@@ -1,4 +1,5 @@
 export class InnovationResultItemDto {
+  id: number;
   result_code: string;
   title: string;
 }

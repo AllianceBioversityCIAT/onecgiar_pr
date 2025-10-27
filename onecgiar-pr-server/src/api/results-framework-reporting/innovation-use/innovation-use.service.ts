@@ -233,7 +233,7 @@ export class InnovationUseService {
         await this._resultsInnovationsUseRepository.InnovDevExists(
           resultId,
         );
-
+      console.log(innDevExists);
       const linked_results: number[] = await this._resultsInnovationsUseRepository.getLinkedResultsByOrigin(resultId);
 
       const actorsData = await this._resultActorRepository.find({
