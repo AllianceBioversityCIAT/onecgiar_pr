@@ -9,9 +9,12 @@ import { LinkedResultsModule } from '../../results/linked-results/linked-results
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultsModule } from '../../results/results.module';
 import { ResultScalingStudyUrlsModule } from '../result_scaling_study_urls/result_scaling_study_urls.module';
+import { ResultScalingStudyUrl } from '../result_scaling_study_urls/entities/result_scaling_study_url.entity';
+import { TypeOrmModule } from '@nestjs/typeorm';
 
 @Module({
   imports: [
+    TypeOrmModule.forFeature([ResultScalingStudyUrl]),
     ResultsModule,
     ResultActorsModule,
     LinkedResultsModule,

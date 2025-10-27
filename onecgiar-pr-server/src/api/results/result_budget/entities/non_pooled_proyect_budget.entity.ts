@@ -19,9 +19,16 @@ export class NonPooledProjectBudget extends BaseEntity {
   @Column({
     name: 'non_pooled_projetct_id',
     type: 'bigint',
-    nullable: false,
+    nullable: true,
   })
   non_pooled_projetct_id: number;
+
+  @Column({
+    name: 'result_project_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  result_project_id: number;
 
   @Column({
     name: 'in_kind',
