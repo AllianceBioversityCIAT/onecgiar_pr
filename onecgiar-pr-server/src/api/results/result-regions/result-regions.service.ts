@@ -135,35 +135,37 @@ export class ResultRegionsService {
 
       const regions = createResultRegionDto.regions;
       const extra_regions = createResultRegionDto.extra_regions;
+
       if (
         (!has_regions && geo_scope_id !== 2) ||
         (!has_extra_regions && extra_geo_scope_id !== 2) ||
         [3, 4].includes(geo_scope_id) ||
         (extra_geo_scope_id !== null && [3, 4].includes(extra_geo_scope_id))
       ) {
-        const regionArgs: (number[] | null | undefined)[] = [];
+        const regionArgs: (number[] | null | undefined)[] = [undefined, undefined];
 
         if (!has_regions) {
           regionArgs[0] = [];
-        } else {
-          regionArgs[0] = undefined;
         }
 
         if (!has_extra_regions) {
           regionArgs[1] = [];
-        } else {
-          regionArgs[1] = undefined;
         }
 
-        await this._resultRegionRepository.updateRegionsV2(
-          result.id,
-          regionArgs[0],
-          regionArgs[1],
-        );
+        if (regionArgs[0] !== undefined || regionArgs[1] !== undefined) {
+          await this._resultRegionRepository.updateRegionsV2(
+            result.id,
+            regionArgs[0],
+            regionArgs[1],
+          );
+        }
 
-        result.has_regions = false;
-        result.has_extra_regions = false;
-      } else if (
+        // 🔹 Actualiza los flags según lo que realmente se borró
+        if (!has_regions) result.has_regions = false;
+        if (!has_extra_regions) result.has_extra_regions = false;
+      } 
+      
+      if (
         geo_scope_id === 2 ||
         geo_scope_id === 1 ||
         has_regions ||
