@@ -151,17 +151,17 @@ export class GeographicLocationService {
 
       let extra_scope = null;
       if (
-        result.geo_extra_scope_id == 1 ||
-        result.geo_extra_scope_id == 2 ||
-        result.geo_extra_scope_id == 5
+        result.extra_geo_scope_id == 1 ||
+        result.extra_geo_scope_id == 2 ||
+        result.extra_geo_scope_id == 5
       ) {
-        extra_scope = result.geo_extra_scope_id;
+        extra_scope = result.extra_geo_scope_id;
       } else if (
-        result.geo_extra_scope_id == 3 ||
-        result.geo_extra_scope_id == 4
+        result.extra_geo_scope_id == 3 ||
+        result.extra_geo_scope_id == 4
       ) {
         extra_scope = 3;
-      } else if (result.geo_extra_scope_id == 50) {
+      } else if (result.extra_geo_scope_id == 50) {
         extra_scope = 50;
       }
       return {
