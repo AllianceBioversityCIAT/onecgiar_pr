@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { In } from 'typeorm';
+import { In, IsNull, Not } from 'typeorm';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { ClarisaGlobalUnitRepository } from '../../clarisa/clarisa-global-unit/clarisa-global-unit.repository';
 import { YearRepository } from '../results/years/year.repository';
@@ -953,11 +953,21 @@ export class ResultsFrameworkReportingService {
             obj_results: {
               obj_status: true,
             },
+            obj_results_toc_result_indicators: {
+              obj_result_indicator_targets: true,
+            },
           },
           where: {
             toc_result_id: parsedResultTocResultId,
             is_active: true,
             obj_results: { is_active: true },
+            obj_results_toc_result_indicators: {
+              toc_results_indicator_id: tocResultIndicatorId,
+              obj_result_indicator_targets: {
+                is_active: true,
+                contributing_indicator: Not(IsNull()),
+              },
+            },
           },
           select: {
             result_toc_result_id: true,
@@ -973,6 +983,15 @@ export class ResultsFrameworkReportingService {
                 result_status_id: true,
                 status_name: true,
                 status_description: true,
+              },
+            },
+            obj_results_toc_result_indicators: {
+              toc_results_indicator_id: true,
+              obj_result_indicator_targets: {
+                number_target: true,
+                target_date: true,
+                contributing_indicator: true,
+                is_active: true,
               },
             },
           },
@@ -1138,7 +1157,7 @@ export class ResultsFrameworkReportingService {
             ON rtri.results_toc_results_id = rtr.result_toc_result_id
             AND rtri.is_active = 1
             AND rtri.is_not_aplicable = 0
-          INNER JOIN result_indicators_targets rit
+          LEFT JOIN result_indicators_targets rit
             ON rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
             AND rit.is_active = 1
           WHERE
@@ -1146,6 +1165,7 @@ export class ResultsFrameworkReportingService {
             AND r.status_id IN (1, 2, 3)
             AND r.result_level_id IN (3, 4)
             AND r.result_type_id IN (1, 2, 4, 5, 6, 7, 8)
+            AND rit.contributing_indicator IS NOT NULL
           GROUP BY
             r.status_id,
             r.result_level_id,

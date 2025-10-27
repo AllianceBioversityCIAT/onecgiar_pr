@@ -4,6 +4,7 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -13,6 +14,7 @@ import { User } from '../../../../auth/modules/user/entities/user.entity';
 import { ClarisaInitiative } from '../../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 import { ClarisaActionArea } from '../../../../clarisa/clarisa-action-areas/entities/clarisa-action-area.entity';
 import { TocLevel } from '../../../../toc/toc-level/entities/toc-level.entity';
+import { ResultsTocResultIndicators } from './results-toc-results-indicators.entity';
 
 @Entity('results_toc_result')
 export class ResultsTocResult {
@@ -169,4 +171,10 @@ export class ResultsTocResult {
     nullable: true,
   })
   version_dashboard_id: boolean;
+
+  @OneToMany(
+    () => ResultsTocResultIndicators,
+    (rtri) => rtri.obj_results_toc_results,
+  )
+  obj_results_toc_result_indicators: ResultsTocResultIndicators[];
 }
