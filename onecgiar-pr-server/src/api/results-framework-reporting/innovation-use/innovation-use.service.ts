@@ -1,10 +1,10 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { CreateInnovationUseDto } from './dto/create-innovation-use.dto';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { LinkedResultsService } from '../../results/linked-results/linked-results.service';
 import { ResultActor } from '../../results/result-actors/entities/result-actor.entity';
-import { IsNull } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { ResultActorRepository } from '../../results/result-actors/repositories/result-actors.repository';
 import { ResultsByInstitutionType } from '../../results/results_by_institution_types/entities/results_by_institution_type.entity';
 import { ResultByIntitutionsTypeRepository } from '../../results/results_by_institution_types/result_by_intitutions_type.repository';
@@ -12,10 +12,12 @@ import { ResultIpMeasure } from '../../ipsr/result-ip-measures/entities/result-i
 import { ResultIpMeasureRepository } from '../../ipsr/result-ip-measures/result-ip-measures.repository';
 import { ResultsInnovationsUseRepository } from '../../results/summary/repositories/results-innovations-use.repository';
 import { ResultsInnovationsUse } from '../../results/summary/entities/results-innovations-use.entity';
-import { ResultScalingStudyUrlsRepository } from '../result_scaling_study_urls/repositories/result_scaling_study_urls.repository';
+import { ResultScalingStudyUrl } from '../result_scaling_study_urls/entities/result_scaling_study_url.entity';
+import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
 export class InnovationUseService {
+  private readonly logger = new Logger(InnovationUseService.name);
   constructor(
     private readonly _handlersError: HandlersError,
     private readonly _linkedResultService: LinkedResultsService,
@@ -23,7 +25,8 @@ export class InnovationUseService {
     private readonly _resultByIntitutionsTypeRepository: ResultByIntitutionsTypeRepository,
     private readonly _resultIpMeasureRepository: ResultIpMeasureRepository,
     private readonly _resultsInnovationsUseRepository: ResultsInnovationsUseRepository,
-    private readonly _resultScalingStudyUrlsRepository: ResultScalingStudyUrlsRepository,
+    @InjectRepository(ResultScalingStudyUrl)
+    private readonly _resultScalingStudyUrlsRepository: Repository<ResultScalingStudyUrl>,
   ) {}
 
   async saveInnovationUse(
@@ -31,8 +34,12 @@ export class InnovationUseService {
     resultId: number,
     user: TokenDto,
   ) {
+    this.logger.log(
+      `saveInnovationUse called with resultId: ${resultId}, user: ${JSON.stringify(user)}`,
+    );
     try {
       if (!resultId) {
+        this.logger.error('Missing resultId in saveInnovationUse');
         throw {
           response: {},
           message: 'Missing data in the request',
@@ -42,6 +49,10 @@ export class InnovationUseService {
 
       const resultExist =
         await this._resultsInnovationsUseRepository.InnovUseExists(resultId);
+      this.logger.debug(
+        `InnovUseExists result: ${JSON.stringify(resultExist)}`,
+      );
+
       const {
         has_innovation_link,
         innovation_readiness_level_id,
@@ -53,6 +64,10 @@ export class InnovationUseService {
 
       let InnUseRes: ResultsInnovationsUse;
       if (resultExist) {
+        this.logger.log(
+          `Updating existing ResultsInnovationsUse for resultId: ${resultId}`,
+        );
+
         resultExist.has_innovation_link = has_innovation_link;
         resultExist.innovation_readiness_level_id =
           innovation_readiness_level_id;
@@ -63,6 +78,7 @@ export class InnovationUseService {
             readiness_level_explanation ?? null;
           resultExist.has_scaling_studies = !!has_scaling_studies;
         } else {
+          this.logger.log('Readiness level < 6, cleaning scaling study fields');
           // Limpia los campos si el nivel baja de 6
           resultExist.readiness_level_explanation = null;
           resultExist.has_scaling_studies = false;
@@ -74,9 +90,14 @@ export class InnovationUseService {
           );
         }
 
+        console.log('ACTUALIZANDO resultExist', resultExist);
         InnUseRes =
           await this._resultsInnovationsUseRepository.save(resultExist);
       } else {
+        this.logger.log(
+          `Creating new ResultsInnovationsUse for resultId: ${resultId}`,
+        );
+
         const newInnUse = new ResultsInnovationsUse();
         newInnUse.created_by = user.id;
         newInnUse.results_id = resultId;
@@ -99,15 +120,20 @@ export class InnovationUseService {
         has_scaling_studies &&
         scaling_studies_urls?.length
       ) {
+        this.logger.log(
+          `Saving scaling study URLs for result_innovation_use_id: ${InnUseRes.result_innovation_use_id}`,
+        );
+
         // Limpia registros anteriores (si existen)
         await this._resultScalingStudyUrlsRepository.update(
           { result_innov_use_id: InnUseRes.result_innovation_use_id },
           { is_active: false },
         );
 
+        console.log('scaling_studies_urls', scaling_studies_urls);
         // Inserta los nuevos
         const urlsToSave = scaling_studies_urls.map((url) => ({
-          result_id: InnUseRes.result_innovation_use_id,
+          result_innov_use_id: InnUseRes.result_innovation_use_id,
           study_url: url,
           is_active: true,
           created_by: user.id,
@@ -116,24 +142,32 @@ export class InnovationUseService {
         await this._resultScalingStudyUrlsRepository.save(urlsToSave);
       }
 
+      this.logger.log(
+        `Calling saveAnticipatedInnoUser for result_innovation_use_id: ${InnUseRes.result_innovation_use_id}`,
+      );
       await this.saveAnticipatedInnoUser(
-        InnUseRes.result_innovation_use_id,
+        InnUseRes.results_id,
         user.id,
         innovationUseDto,
       );
 
+      this.logger.log(
+        `Calling createForInnovationUse for result_innovation_use_id: ${InnUseRes.result_innovation_use_id}`,
+      );
       await this._linkedResultService.createForInnovationUse(
-        InnUseRes.result_innovation_use_id,
+        InnUseRes.results_id,
         linked_results,
         user,
       );
 
+      this.logger.log('saveInnovationUse completed successfully');
       return {
         response: InnUseRes,
         message: 'Results Innovations Use has been saved successfully',
         status: HttpStatus.CREATED,
       };
     } catch (error) {
+      this.logger.error('Error in saveInnovationUse', error.stack || error);
       return this._handlersError.returnErrorRes({ error });
     }
   }
@@ -144,8 +178,8 @@ export class InnovationUseService {
     crtr: CreateInnovationUseDto,
   ) {
     // Actors
-    if (crtr?.actors?.length) {
-      for (const el of crtr.actors) {
+    if (crtr?.innovation_use?.actors?.length) {
+      for (const el of crtr.innovation_use.actors) {
         let actorExists: ResultActor = null;
         if (el?.actor_type_id) {
           const whereOptions: any = {
@@ -185,17 +219,23 @@ export class InnovationUseService {
             actorExists.result_actors_id,
             this.buildActorData(el, user, resultId),
           );
+          this.logger.log(
+            `[saveAnticipatedInnoUser] Updated actor: ${JSON.stringify(this.buildActorData(el, user, resultId))}`,
+          );
         } else {
-          await this._resultActorRepository.save(
+          const savedActor = await this._resultActorRepository.save(
             this.buildActorData(el, user, resultId),
+          );
+          this.logger.log(
+            `[saveAnticipatedInnoUser] Created actor: ${JSON.stringify(savedActor)}`,
           );
         }
       }
     }
 
     // Organizations
-    if (crtr?.organization?.length) {
-      for (const el of crtr.organization) {
+    if (crtr?.innovation_use?.organization?.length) {
+      for (const el of crtr.innovation_use.organization) {
         let ite: ResultsByInstitutionType = null;
         if (el?.institution_types_id && el?.institution_types_id != 78) {
           ite =
@@ -224,17 +264,23 @@ export class InnovationUseService {
             ite.id,
             this.buildInstitutionData(el, user, resultId),
           );
+          this.logger.log(
+            `[saveAnticipatedInnoUser] Updated organization: ${JSON.stringify(this.buildInstitutionData(el, user, resultId))}`,
+          );
         } else {
-          await this._resultByIntitutionsTypeRepository.save(
+          const savedOrg = await this._resultByIntitutionsTypeRepository.save(
             this.buildInstitutionData(el, user, resultId),
+          );
+          this.logger.log(
+            `[saveAnticipatedInnoUser] Created organization: ${JSON.stringify(savedOrg)}`,
           );
         }
       }
     }
 
     // Measures
-    if (crtr?.measures?.length) {
-      for (const el of crtr.measures) {
+    if (crtr?.innovation_use?.measures?.length) {
+      for (const el of crtr.innovation_use.measures) {
         let ripm: ResultIpMeasure = null;
         if (el?.result_ip_measure_id) {
           ripm = await this._resultIpMeasureRepository.findOne({
@@ -268,9 +314,15 @@ export class InnovationUseService {
             ripm.result_ip_measure_id,
             this.buildMeasureData(el, user, resultId),
           );
+          this.logger.log(
+            `[saveAnticipatedInnoUser] Updated measure: ${JSON.stringify(this.buildMeasureData(el, user, resultId))}`,
+          );
         } else {
-          await this._resultIpMeasureRepository.save(
+          const savedMeasure = await this._resultIpMeasureRepository.save(
             this.buildMeasureData(el, user, resultId),
+          );
+          this.logger.log(
+            `[saveAnticipatedInnoUser] Created measure: ${JSON.stringify(savedMeasure)}`,
           );
         }
       }

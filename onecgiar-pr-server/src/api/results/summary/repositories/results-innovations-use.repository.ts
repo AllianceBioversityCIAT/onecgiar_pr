@@ -171,10 +171,14 @@ export class ResultsInnovationsUseRepository
   async InnovUseExists(resultId: number) {
     const queryData = `
       SELECT
+        riu.result_innovation_use_id,
         riu.male_using,
         riu.female_using,
+        riu.results_id,
         riu.has_innovation_link,
-        riu.innovation_readiness_level_id
+        riu.innovation_readiness_level_id,
+        riu.has_scaling_studies,
+        riu.readiness_level_explanation
       FROM result r
       left join version v on r.version_id = v.id
       right JOIN results_innovations_use riu on riu.results_id = r.id and riu.is_active
@@ -187,6 +191,7 @@ export class ResultsInnovationsUseRepository
         queryData,
         [resultId],
       );
+      console.log('resultTocResult', resultTocResult);
       return resultTocResult.length ? resultTocResult[0] : undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
