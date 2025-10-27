@@ -142,7 +142,10 @@ export class ResultRegionsService {
         [3, 4].includes(geo_scope_id) ||
         (extra_geo_scope_id !== null && [3, 4].includes(extra_geo_scope_id))
       ) {
-        const regionArgs: (number[] | null | undefined)[] = [undefined, undefined];
+        const regionArgs: (number[] | null | undefined)[] = [
+          undefined,
+          undefined,
+        ];
 
         if (!has_regions) {
           regionArgs[0] = [];
@@ -163,8 +166,8 @@ export class ResultRegionsService {
         // 🔹 Actualiza los flags según lo que realmente se borró
         if (!has_regions) result.has_regions = false;
         if (!has_extra_regions) result.has_extra_regions = false;
-      } 
-      
+      }
+
       if (
         geo_scope_id === 2 ||
         geo_scope_id === 1 ||

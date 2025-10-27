@@ -1,4 +1,4 @@
-import { Transform } from "class-transformer";
+import { Transform } from 'class-transformer';
 
 export class CreateResultRegionDto {
   public geo_scope_id: number;
@@ -10,7 +10,7 @@ export class CreateResultRegionDto {
 
   @Transform(({ value }) => Boolean(Number(value)))
   public has_extra_regions?: boolean;
-  
+
   public regions: regionsInterface[];
   public extra_regions?: regionsInterface[];
 }
