@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { In, IsNull, Not } from 'typeorm';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { ClarisaGlobalUnitRepository } from '../../clarisa/clarisa-global-unit/clarisa-global-unit.repository';
@@ -25,6 +25,10 @@ import { ResultLevelEnum } from '../../shared/constants/result-level.enum';
 
 @Injectable()
 export class ResultsFrameworkReportingService {
+  private readonly _logger: Logger = new Logger(
+    ResultsFrameworkReportingService.name,
+  );
+
   constructor(
     private readonly _clarisaInitiativesRepository: ClarisaInitiativesRepository,
     private readonly _clarisaGlobalUnitRepository: ClarisaGlobalUnitRepository,
@@ -116,17 +120,118 @@ export class ResultsFrameworkReportingService {
           initiative.official_code.toUpperCase(),
         );
 
+      const indicatorContributions =
+        await this._tocResultsRepository.getIndicatorContributions(
+          initiative.official_code.toUpperCase(),
+          activeYearValue,
+        );
+      let totalTargetValue = 0;
+      let totalActualValue = 0;
+      const progressByUnit = new Map<
+        string,
+        {
+          targetValue: number;
+          actualValue: number;
+          progressSum: number;
+          indicatorCount: number;
+        }
+      >();
+
+      const computeProgressValue = (
+        targetValue: number,
+        actualValue: number,
+      ) => {
+        let progressRaw = 0;
+        if (targetValue > 0) {
+          progressRaw = (actualValue / targetValue) * 100;
+        } else if (targetValue === 0 && actualValue > 0) {
+          progressRaw = actualValue * 100;
+        }
+
+        const progressRounded = Math.round(progressRaw * 10) / 10;
+        return Number.isFinite(progressRounded) ? progressRounded : 0;
+      };
+
+      let globalProgressSum = 0;
+      let globalIndicatorCount = 0;
+
+      for (const contribution of indicatorContributions.values()) {
+        totalTargetValue += contribution.target_value_sum ?? 0;
+        totalActualValue += contribution.actual_achieved_value_sum ?? 0;
+
+        const indicatorProgress = computeProgressValue(
+          contribution.target_value_sum ?? 0,
+          contribution.actual_achieved_value_sum ?? 0,
+        );
+        globalProgressSum += indicatorProgress;
+        globalIndicatorCount += 1;
+
+        const unitKey = contribution.work_package_acronym;
+        if (unitKey) {
+          const normalizedKey = unitKey.toUpperCase();
+          const current = progressByUnit.get(normalizedKey) ?? {
+            targetValue: 0,
+            actualValue: 0,
+            progressSum: 0,
+            indicatorCount: 0,
+          };
+
+          current.targetValue += contribution.target_value_sum ?? 0;
+          this._logger.log(
+            `[ResultsFramework] unit=${normalizedKey}: targetValueSum=${current.targetValue}`,
+          );
+          current.actualValue += contribution.actual_achieved_value_sum ?? 0;
+          current.progressSum += indicatorProgress;
+          current.indicatorCount += 1;
+          progressByUnit.set(normalizedKey, current);
+        }
+      }
+
+      let globalProgressPercentage = computeProgressValue(
+        totalTargetValue,
+        totalActualValue,
+      );
+      if (globalIndicatorCount > 0) {
+        const averageProgress = globalProgressSum / globalIndicatorCount;
+        globalProgressPercentage = Math.round(averageProgress * 10) / 10;
+      }
+
       const filteredUnits = childUnits
         .filter((unit) => tocAcronyms.has(unit.code?.toUpperCase() ?? ''))
-        .map((unit) => ({
-          id: unit.id,
-          code: unit.code,
-          name: unit.name,
-          composeCode: unit.composeCode,
-          year: unit.year,
-          level: unit.level,
-          parentId: unit.parentId,
-        }));
+        .map((unit) => {
+          const unitKey = unit.code?.toUpperCase() ?? '';
+          const totals = progressByUnit.get(unitKey) ?? {
+            targetValue: 0,
+            actualValue: 0,
+            progressSum: 0,
+            indicatorCount: 0,
+          };
+
+          let unitProgress = computeProgressValue(
+            totals.targetValue,
+            totals.actualValue,
+          );
+
+          if (totals.indicatorCount > 0) {
+            const unitAverage = totals.progressSum / totals.indicatorCount;
+            unitProgress = Math.round(unitAverage * 10) / 10;
+          }
+
+          return {
+            id: unit.id,
+            code: unit.code,
+            name: unit.name,
+            composeCode: unit.composeCode,
+            year: unit.year,
+            level: unit.level,
+            parentId: unit.parentId,
+            progress: unitProgress ?? 0,
+            progressDetails: {
+              targetValueSum: totals.targetValue,
+              actualAchievedValueSum: totals.actualValue,
+            },
+          };
+        });
 
       return {
         response: {
@@ -148,6 +253,11 @@ export class ResultsFrameworkReportingService {
           metadata: {
             activeYear: activeYearValue,
             portfolio: parentUnit.portfolioId,
+          },
+          globalProgress: {
+            targetValueSum: totalTargetValue,
+            actualAchievedValueSum: totalActualValue,
+            progressPercentage: globalProgressPercentage,
           },
         },
         message: 'Global units retrieved successfully.',
