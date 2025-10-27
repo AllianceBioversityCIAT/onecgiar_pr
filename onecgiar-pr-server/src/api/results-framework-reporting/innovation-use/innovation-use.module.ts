@@ -18,7 +18,7 @@ import { ResultScalingStudyUrlsModule } from '../result_scaling_study_urls/resul
     ResultsByInstitutionTypesModule,
     ResultIpMeasuresModule,
     SummaryModule,
-    ResultScalingStudyUrlsModule
+    ResultScalingStudyUrlsModule,
   ],
   controllers: [InnovationUseController],
   providers: [InnovationUseService, HandlersError],
