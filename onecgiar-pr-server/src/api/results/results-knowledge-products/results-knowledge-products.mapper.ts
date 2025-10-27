@@ -107,7 +107,7 @@ export class ResultsKnowledgeProductMapper {
           'Open Access',
           dto?.['Open Access'],
         ) == 0;
-      
+
       metadataCGSpace.open_access = dto?.['Open Access'];
     }
 
@@ -421,7 +421,8 @@ export class ResultsKnowledgeProductMapper {
       metadataDto.doi = m.doi;
       metadataDto.is_isi = m.is_isi;
       metadataDto.is_peer_reviewed = m.is_peer_reviewed;
-      metadataDto.issue_year = m.year;
+      metadataDto.issue_year =
+        !m.year || +m.year === 0 ? m.online_year || null : m.year;
       metadataDto.online_year = m.online_year;
       metadataDto.open_access = m.open_access;
 
