@@ -167,4 +167,49 @@ export class ResultsInnovationsUseRepository
       });
     }
   }
+
+  async InnovUseExists(resultId: number) {
+    const queryData = `
+      SELECT
+        riu.male_using,
+        riu.female_using,
+        riu.has_innovation_link,
+        riu.innovation_readiness_level_id
+      FROM result r
+      left join version v on r.version_id = v.id
+      right JOIN results_innovations_use riu on riu.results_id = r.id and riu.is_active
+      LEFT JOIN version previous_v on v.previous_phase = previous_v.id
+      left join result previous_r on r.result_code = previous_r.result_code and previous_r.version_id = previous_v.id
+      WHERE r.id = ? AND r.is_active;
+    `;
+    try {
+      const resultTocResult: ResultsInnovationsUse[] = await this.query(
+        queryData,
+        [resultId],
+      );
+      return resultTocResult.length ? resultTocResult[0] : undefined;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsInnovationsUseRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async getLinkedResultsByOrigin(originId: number): Promise<number[]> {
+    const query = `
+      SELECT linked_results_id
+      FROM linked_result
+      WHERE origin_result_id = ? AND is_active = TRUE;
+    `;
+
+    const results = await this.dataSource.query(query, [originId]);
+
+    const linked_results: number[] = results.map(
+      (r: any) => r.linked_results_id,
+    );
+
+    return linked_results;
+  }
 }

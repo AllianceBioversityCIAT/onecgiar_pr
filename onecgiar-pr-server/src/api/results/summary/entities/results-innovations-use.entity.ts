@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { Result } from '../../entities/result.entity';
 import { User } from '../../../../auth/modules/user/entities/user.entity';
+import { ClarisaInnovationReadinessLevel } from '../../../../clarisa/clarisa-innovation-readiness-levels/entities/clarisa-innovation-readiness-level.entity';
 
 @Entity('results_innovations_use')
 export class ResultsInnovationsUse {
@@ -37,6 +38,43 @@ export class ResultsInnovationsUse {
     nullable: true,
   })
   female_using!: number;
+
+  @Column({
+    name: 'has_innovation_link',
+    type: 'tinyint',
+    nullable: true,
+  })
+  has_innovation_link: boolean;
+
+  @Column({
+    name: 'has_scaling_studies',
+    type: 'tinyint',
+    nullable: true,
+  })
+  has_scaling_studies: boolean;
+
+  @Column({
+    name: 'readiness_level_explanation',
+    type: 'varchar',
+    length: 50,
+    nullable: true,
+  })
+  readiness_level_explanation: string;
+
+  @Column({
+    name: 'innovation_readiness_level_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  innovation_readiness_level_id!: number;
+
+  @ManyToOne(() => ClarisaInnovationReadinessLevel, {
+    nullable: true,
+  })
+  @JoinColumn({
+    name: 'innovation_readiness_level_id',
+  })
+  obj_innovation_readiness_level?: ClarisaInnovationReadinessLevel;
 
   @Column({
     name: 'is_active',

@@ -187,6 +187,78 @@ export class LinkedResultsService {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
+
+  async createForInnovationUse(
+    result_id: number,
+    linked_results: number[],
+    user: TokenDto,
+  ) {
+    try {
+      const result: Result =
+        await this._resultRepository.getResultById(result_id);
+      if (!result) {
+        throw {
+          response: {},
+          message: 'Result not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      // Normalizamos el array de entrada
+      const links: number[] = linked_results ?? [];
+
+      if (links.length > 0) {
+        const newLinks: LinkedResult[] = [];
+        const isExistsNew: number[] = [];
+
+        for (const linkId of links) {
+          const linkExists =
+            await this._linkedResultRepository.getLinkResultByIdResultAndLinkId(
+              result.id,
+              linkId,
+            );
+
+          if (!linkExists && !isExistsNew.includes(linkId)) {
+            const newLink = new LinkedResult();
+            newLink.created_by = user.id;
+            newLink.last_updated_by = user.id;
+            newLink.origin_result_id = result.id;
+            newLink.linked_results_id = linkId;
+            newLink.is_active = true;
+            newLinks.push(newLink);
+            isExistsNew.push(linkId);
+          }
+        }
+
+        if (newLinks.length > 0) {
+          await this._linkedResultRepository.save(newLinks);
+        }
+
+        // Actualizamos el estado de los links (activar los enviados, desactivar los que ya no están)
+        await this._linkedResultRepository.updateLink(
+          result_id,
+          links,
+          [],
+          user.id,
+          true,
+        );
+      } else {
+        // Si no se envían links, desactivar todos los existentes
+        await this._linkedResultRepository.update(
+          { origin_result_id: result_id, is_active: true },
+          { is_active: false, last_updated_by: user.id },
+        );
+      }
+
+      return {
+        response: 'Yasta',
+        message: 'The data was updated correctly',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
 }
 
 interface interfaceLinkResults {
