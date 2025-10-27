@@ -49,6 +49,7 @@ const mockTocResultsRepository = {
   findResultById: jest.fn(),
   findIndicatorById: jest.fn(),
   findUnitAcronymsByProgram: jest.fn(),
+  getIndicatorContributions: jest.fn(),
 };
 
 const mockResultsService = {
@@ -105,6 +106,10 @@ describe('ResultsFrameworkReportingService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+
+    mockTocResultsRepository.getIndicatorContributions.mockResolvedValue(
+      new Map(),
+    );
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -205,6 +210,28 @@ describe('ResultsFrameworkReportingService', () => {
       mockTocResultsRepository.findUnitAcronymsByProgram.mockResolvedValue(
         new Set(['PR-001-A']),
       );
+      mockTocResultsRepository.getIndicatorContributions.mockResolvedValue(
+        new Map([
+          [
+            1,
+            {
+              target_value_sum: 10,
+              actual_achieved_value_sum: 5,
+              progress_percentage: '50%',
+              work_package_acronym: 'PR-001-A',
+            },
+          ],
+          [
+            2,
+            {
+              target_value_sum: 0,
+              actual_achieved_value_sum: 2,
+              progress_percentage: '200%',
+              work_package_acronym: 'PR-001-A',
+            },
+          ],
+        ]),
+      );
 
       const result = await service.getGlobalUnitsByProgram(user, 'PR-001');
 
@@ -242,9 +269,19 @@ describe('ResultsFrameworkReportingService', () => {
               id: 101,
               code: 'PR-001-A',
               level: 2,
+              progress: 125,
+              progressDetails: {
+                targetValueSum: 10,
+                actualAchievedValueSum: 7,
+              },
             }),
           ],
           metadata: { activeYear: 2025, portfolio: 3 },
+          globalProgress: {
+            targetValueSum: 10,
+            actualAchievedValueSum: 7,
+            progressPercentage: 125,
+          },
         },
       });
     });

@@ -358,23 +358,27 @@ export class TocResultsRepository {
         tgt.indicator_id,
         tgt.toc_result_indicator_id,
         tgt.target_value_sum,
+        tgt.work_package_acronym,
         COALESCE(act.actual_achieved_value_sum, 0) AS actual_achieved_value_sum
       FROM (
         SELECT
           tri.id AS indicator_id,
           tri.toc_result_indicator_id,
-          COALESCE(SUM(CAST(trit.target_value AS DECIMAL(15,2))), 0) AS target_value_sum
+          COALESCE(SUM(CAST(trit.target_value AS DECIMAL(15,2))), 0) AS target_value_sum,
+          UPPER(TRIM(wp.acronym)) AS work_package_acronym
         FROM ${env.DB_TOC}.toc_results tr
         JOIN ${env.DB_TOC}.toc_results_indicators tri ON tri.toc_results_id = tr.id
         JOIN ${env.DB_TOC}.toc_result_indicator_target trit ON tri.id = trit.id_indicator
           AND CONVERT(trit.toc_result_indicator_id USING utf8mb4) = CONVERT(tri.toc_result_indicator_id USING utf8mb4)
           ${targetYearCondition}
+        LEFT JOIN ${env.DB_TOC}.toc_work_packages wp ON wp.toc_id = tr.wp_id
         WHERE
           tr.official_code = ?
           AND tri.is_active = 1
         GROUP BY
           tri.id,
-          tri.toc_result_indicator_id
+          tri.toc_result_indicator_id,
+          wp.acronym
       ) AS tgt
       LEFT JOIN (
         SELECT
@@ -394,6 +398,7 @@ export class TocResultsRepository {
         JOIN ${env.DB_TOC}.toc_results_indicators tri ON tri.toc_results_id = tr.id
           AND tri.is_active = 1
           AND CONVERT(rtri.toc_results_indicator_id USING utf8mb4) = CONVERT(tri.related_node_id USING utf8mb4)
+        LEFT JOIN ${env.DB_TOC}.toc_work_packages wp ON wp.toc_id = tr.wp_id
         WHERE
           tr.official_code = ?
           AND r.is_active = 1
@@ -417,7 +422,12 @@ export class TocResultsRepository {
       const rows = await this.dataSource.query(query, params);
       const contributionsMap = new Map<
         number,
-        { actual_achieved_value_sum: number; progress_percentage: string }
+        {
+          target_value_sum: number;
+          actual_achieved_value_sum: number;
+          work_package_acronym: string | null;
+          progress_percentage: string;
+        }
       >();
 
       for (const row of rows) {
@@ -438,7 +448,12 @@ export class TocResultsRepository {
           : '0%';
 
         contributionsMap.set(row.indicator_id, {
+          target_value_sum: targetValue,
           actual_achieved_value_sum: actualValue,
+          work_package_acronym:
+            typeof row.work_package_acronym === 'string'
+              ? row.work_package_acronym
+              : null,
           progress_percentage: formattedProgress,
         });
       }
