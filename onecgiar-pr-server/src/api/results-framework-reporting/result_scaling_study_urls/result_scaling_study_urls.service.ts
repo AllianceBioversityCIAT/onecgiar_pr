@@ -1,10 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { CreateResultScalingStudyUrlDto } from './dto/create-result_scaling_study_url.dto';
-import { UpdateResultScalingStudyUrlDto } from './dto/update-result_scaling_study_url.dto';
 
 @Injectable()
 export class ResultScalingStudyUrlsService {
-  create(createResultScalingStudyUrlDto: CreateResultScalingStudyUrlDto) {
+  create() {
     return 'This action adds a new resultScalingStudyUrl';
   }
 
@@ -16,7 +14,7 @@ export class ResultScalingStudyUrlsService {
     return `This action returns a #${id} resultScalingStudyUrl`;
   }
 
-  update(id: number, updateResultScalingStudyUrlDto: UpdateResultScalingStudyUrlDto) {
+  update(id: number) {
     return `This action updates a #${id} resultScalingStudyUrl`;
   }
 

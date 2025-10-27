@@ -194,7 +194,8 @@ export class LinkedResultsService {
     user: TokenDto,
   ) {
     try {
-      const result: Result = await this._resultRepository.getResultById(result_id);
+      const result: Result =
+        await this._resultRepository.getResultById(result_id);
       if (!result) {
         throw {
           response: {},

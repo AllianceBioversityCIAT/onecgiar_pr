@@ -206,7 +206,9 @@ export class ResultsInnovationsUseRepository
 
     const results = await this.dataSource.query(query, [originId]);
 
-    const linked_results: number[] = results.map((r: any) => r.linked_results_id);
+    const linked_results: number[] = results.map(
+      (r: any) => r.linked_results_id,
+    );
 
     return linked_results;
   }

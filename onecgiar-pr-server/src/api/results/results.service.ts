@@ -2190,7 +2190,7 @@ export class ResultsService {
     return this.createOwnerResult(createResultDto, user, isAdmin, versionId);
   }
 
-  async getAllResultsForInnovUse(){
+  async getAllResultsForInnovUse() {
     try {
       const results = await this._resultRepository.getResultsForInnovUse();
 
@@ -2222,11 +2222,11 @@ export class ResultsService {
         }
       }
 
-    return {
-      response: mapped,
-      message: 'Results retrieved successfully',
-      status: 200
-    };
+      return {
+        response: mapped,
+        message: 'Results retrieved successfully',
+        status: 200,
+      };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }

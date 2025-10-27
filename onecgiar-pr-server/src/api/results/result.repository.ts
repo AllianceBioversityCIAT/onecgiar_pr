@@ -2233,7 +2233,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     }
   }
 
-  async getResultsForInnovUse(){
+  async getResultsForInnovUse() {
     const query = `
       SELECT 
           r.id,

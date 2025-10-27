@@ -1,15 +1,15 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Delete } from '@nestjs/common';
 import { ResultScalingStudyUrlsService } from './result_scaling_study_urls.service';
-import { CreateResultScalingStudyUrlDto } from './dto/create-result_scaling_study_url.dto';
-import { UpdateResultScalingStudyUrlDto } from './dto/update-result_scaling_study_url.dto';
 
 @Controller('result-scaling-study-urls')
 export class ResultScalingStudyUrlsController {
-  constructor(private readonly resultScalingStudyUrlsService: ResultScalingStudyUrlsService) {}
+  constructor(
+    private readonly resultScalingStudyUrlsService: ResultScalingStudyUrlsService,
+  ) {}
 
   @Post()
-  create(@Body() createResultScalingStudyUrlDto: CreateResultScalingStudyUrlDto) {
-    return this.resultScalingStudyUrlsService.create(createResultScalingStudyUrlDto);
+  create() {
+    return this.resultScalingStudyUrlsService.create();
   }
 
   @Get()
@@ -23,8 +23,8 @@ export class ResultScalingStudyUrlsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateResultScalingStudyUrlDto: UpdateResultScalingStudyUrlDto) {
-    return this.resultScalingStudyUrlsService.update(+id, updateResultScalingStudyUrlDto);
+  update(@Param('id') id: string) {
+    return this.resultScalingStudyUrlsService.update(+id);
   }
 
   @Delete(':id')

@@ -1,4 +1,12 @@
-import { Controller, Get, Body, Patch, Param, UseInterceptors, Version } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Body,
+  Patch,
+  Param,
+  UseInterceptors,
+  Version,
+} from '@nestjs/common';
 import { InnovationUseService } from './innovation-use.service';
 import { CreateInnovationUseDto } from './dto/create-innovation-use.dto';
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
@@ -31,5 +39,4 @@ export class InnovationUseController {
   getInnovationUse(@Param('resultId') resultId: number) {
     return this.innovationUseService.getInnovationUse(resultId);
   }
-  
 }
