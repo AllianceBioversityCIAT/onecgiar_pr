@@ -1,13 +1,13 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, OnInit, OnChanges } from '@angular/core';
 import { ApiService } from '../../services/api/api.service';
-import {
-  Actor,
-  IpsrStep1Body,
-  Measure,
-  Organization
-} from '../../../pages/ipsr/pages/innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n1/model/Ipsr-step-1-body.model';
 import { TerminologyService } from '../../../internationalization/terminology.service';
 import { FieldsManagerService } from '../../services/fields-manager.service';
+import { InnovationControlListService } from '../../services/global/innovation-control-list.service';
+import { InnovationUseResultsService } from '../../services/global/innovation-use-results.service';
+import { InnovationDevelopmentLinks } from '../../../pages/results/pages/result-detail/pages/rd-result-types-pages/innovation-dev-info/model/InnovationDevelopmentLinks.model';
+import { Actor, Organization, Measure } from '../../../pages/results/pages/result-detail/pages/rd-result-types-pages/innovation-dev-info/model/innovationDevInfoBody';
+import { IpsrStep1Body } from '../../../pages/ipsr/pages/innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n1/model/Ipsr-step-1-body.model';
+
 
 @Component({
   selector: 'app-innovation-use-form',
@@ -15,19 +15,105 @@ import { FieldsManagerService } from '../../services/fields-manager.service';
   styleUrls: ['./innovation-use-form.component.scss'],
   standalone: false
 })
-export class InnovationUseFormComponent {
+export class InnovationUseFormComponent implements OnInit, OnChanges {
   actorsTypeList = [];
   institutionsTypeTreeList = [];
   @Input() body = new IpsrStep1Body();
   @Input() saving: boolean = false;
+  innovationDevelopmentLinks: InnovationDevelopmentLinks = new InnovationDevelopmentLinks();
 
   constructor(
     public api: ApiService,
-    private terminologyService: TerminologyService,
-    public fieldsManagerSE: FieldsManagerService
+    private readonly terminologyService: TerminologyService,
+    public fieldsManagerSE: FieldsManagerService,
+    public innovationControlListSE: InnovationControlListService,
+    public innovationUseResultsSE: InnovationUseResultsService
   ) {
     this.GETAllActorsTypes();
     this.GETInstitutionsTypeTree();
+  }
+
+  ngOnInit() {
+    this.initializeComponentProperties();
+  }
+
+  ngOnChanges() {
+    this.initializeComponentProperties();
+  }
+
+  initializeComponentProperties() {
+    const body = this.body as any;
+    
+    if (!body.initiative_expected_investment) {
+      body.initiative_expected_investment = [];
+    }
+    if (!body.bilateral_expected_investment) {
+      body.bilateral_expected_investment = [];
+    }
+    if (!body.institutions_expected_investment) {
+      body.institutions_expected_investment = [];
+    }
+    if (!body.reference_materials) {
+      body.reference_materials = [{ link: '' }];
+    }
+    if (!body.pictures) {
+      body.pictures = [{ link: '' }];
+    }
+    if (!body.studies_links) {
+      body.studies_links = [{ link: '' }];
+    }
+    if (!body.scaling_studies_urls) {
+      body.scaling_studies_urls = [{ link: '' }];
+    }
+    if (!body.innovation_use_2030) {
+      body.innovation_use_2030 = {
+        actors: [],
+        measures: [],
+        organization: []
+      };
+    }
+    if (body.innov_use_to_be_determined === undefined) {
+      body.innov_use_to_be_determined = false;
+    }
+    if (body.innov_use_2030_to_be_determined === undefined) {
+      body.innov_use_2030_to_be_determined = false;
+    }
+    if (!body.result) {
+      body.result = { title: '' };
+    }
+  }
+
+  get bodyAsAny(): any {
+    return this.body as any;
+  }
+
+  readiness_of_this_innovation_description() {
+    return `<ul>
+    <li>In case the innovation use level differs across countries or regions, we advise to assign the highest current innovation readiness level that can be supported by the evidence provided.</li>
+    <li>Be realistic in assessing the use level of the innovation and keep in mind that the claimed use level needs to be supported by evidence documentation.</li>
+    <li>The innovation use level will be quality assessed.</li>
+    <li><strong>YOUR READINESS LEVEL IN JUST 3 CLICKS: TRY THE NEW <a href="https://www.scalingreadiness.org/calculator-readiness-headless/" class="open_route" target="_blank">INNOVATION USE CALCULATOR</a></strong></li>
+    </ul>`;
+  }
+  hasReadinessLevelDiminished() {
+    const currentLevel = this.innovationControlListSE?.readinessLevelsList.find(
+      irl => irl.id === this.body?.innovation_readiness_level_id
+    );
+    const oldLevel = this.innovationControlListSE?.readinessLevelsList.find(irl => irl.id === this.body?.previous_irl);
+
+    return Number(currentLevel?.level) < Number(oldLevel?.level);
+  }
+
+  alertInfoText2() {
+    return `Please make sure you provide evidence/documentation that support the current innovation use level.<br>
+    * Evidence are inputted in the ‘Evidence’ section <a class="open_route" target="_blank" href="/result/result-detail/${this.api.resultsSE?.currentResultCode}/evidences?phase=${this.api.resultsSE?.currentResultPhase}">(click here to go there)</a><br>
+    <br>
+    Documentation may include idea-notes, concept-notes, technical report, pilot testing report, experimental data paper, newsletter, etc. It may be project reports, scientific publications, book chapters, communication materials that provide evidence of the current development/ maturity stage of the innovation.
+    `;
+  }
+
+  alertDiminishedReadinessLevel() {
+    return `It appears that the readiness level has decreased since the previous report. Please provide a justification in the text box below.`;
   }
 
   GETAllActorsTypes() {
@@ -86,6 +172,28 @@ export class InnovationUseFormComponent {
   }
   addOther() {
     this.body.innovatonUse.measures.push(new Measure());
+  }
+
+  addActor2030() {
+    const body = this.body as any;
+    if (!body.innovation_use_2030.actors) {
+      body.innovation_use_2030.actors = [];
+    }
+    body.innovation_use_2030.actors.push(new Actor());
+  }
+  addOrganization2030() {
+    const body = this.body as any;
+    if (!body.innovation_use_2030.organization) {
+      body.innovation_use_2030.organization = [];
+    }
+    body.innovation_use_2030.organization.push(new Organization());
+  }
+  addOther2030() {
+    const body = this.body as any;
+    if (!body.innovation_use_2030.measures) {
+      body.innovation_use_2030.measures = [];
+    }
+    body.innovation_use_2030.measures.push(new Measure());
   }
   get getAllSubTypes() {
     const list = [];
@@ -182,4 +290,15 @@ export class InnovationUseFormComponent {
     </li>
     </ul>`;
   }
+
+  getReadinessLevelIndex(): number {
+    if (!this.body.innovation_readiness_level_id || !this.innovationControlListSE.readinessLevelsList) {
+      return -1;
+    }
+    
+    const selectedId = this.body.innovation_readiness_level_id;
+    const index = this.innovationControlListSE.readinessLevelsList.findIndex(level => level.id === selectedId);
+    return index >= 0 ? index : -1;
+  }
+
 }
