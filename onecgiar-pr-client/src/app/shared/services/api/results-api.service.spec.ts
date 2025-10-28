@@ -418,6 +418,7 @@ describe('ResultsApiService', () => {
         lead_contact_person_data: {
           cn: 'John Doe',
           displayName: 'John Doe',
+          display_name: 'John Doe',
           mail: 'john.doe@cgiar.org',
           sAMAccountName: 'jdoe',
           givenName: 'John',

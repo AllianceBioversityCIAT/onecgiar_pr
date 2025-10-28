@@ -1279,7 +1279,6 @@ export class ResultsApiService {
   }
 
   GET_adUsersSearch(search?: string) {
-    console.log(`${environment.apiBaseUrl}api/ad-users/search?query=${search}`);
     return this.http.get<any>(`${environment.apiBaseUrl}api/ad-users/search?query=${search}`);
   }
 }

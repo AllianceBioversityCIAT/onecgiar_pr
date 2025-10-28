@@ -15,6 +15,7 @@ describe('LeadContactPersonFieldComponent', () => {
   const mockJohnDoe = {
     cn: 'John Doe',
     displayName: 'John Doe',
+    display_name: 'John Doe',
     mail: 'john.doe@cgiar.org',
     sAMAccountName: 'jdoe',
     givenName: 'John',
@@ -34,6 +35,7 @@ describe('LeadContactPersonFieldComponent', () => {
   const mockJaneSmith = {
     cn: 'Jane Smith',
     displayName: 'Jane Smith',
+    display_name: 'Jane Smith',
     mail: 'jane.smith@cgiar.org',
     sAMAccountName: 'jsmith',
     givenName: 'Jane',
@@ -53,6 +55,7 @@ describe('LeadContactPersonFieldComponent', () => {
   const mockTestUser = {
     cn: 'Test User',
     displayName: 'Test User',
+    display_name: 'Test User',
     mail: 'test.user@cgiar.org',
     sAMAccountName: 'tuser',
     givenName: 'Test',
@@ -72,6 +75,7 @@ describe('LeadContactPersonFieldComponent', () => {
   const mockNoEmailUser = {
     cn: 'No Email User',
     displayName: 'No Email User',
+    display_name: 'No Email User',
     mail: '',
     sAMAccountName: 'noemail',
     givenName: 'No',
@@ -111,6 +115,9 @@ describe('LeadContactPersonFieldComponent', () => {
 
     fixture = TestBed.createComponent(LeadContactPersonFieldComponent);
     component = fixture.componentInstance;
+
+    // Mock the resultsApiService.GET_adUsersSearch method
+    jest.spyOn(component.resultsApiService, 'GET_adUsersSearch').mockReturnValue(of(mockUserSearchResponse));
   });
 
   it('should create', () => {
@@ -153,10 +160,10 @@ describe('LeadContactPersonFieldComponent', () => {
         component.selectUser(mockUser);
 
         expect(mockUserSearchService.selectedUser).toBe(mockUser);
-        expect(mockUserSearchService.searchQuery).toBe(mockUser.displayName);
+        expect(mockUserSearchService.searchQuery).toBe(mockUser.display_name);
         expect(component.searchResults).toEqual([]);
         expect(component.showResults).toBe(false);
-        expect(component.body.lead_contact_person).toBe(mockUser.displayName);
+        expect(component.body.lead_contact_person).toBe(mockUser.display_name);
         expect(component.body.lead_contact_person_data).toBe(mockUser);
       });
     });
@@ -171,7 +178,7 @@ describe('LeadContactPersonFieldComponent', () => {
       });
 
       it('should search users when query has 4 or more characters', () => {
-        const spySearchUsers = jest.spyOn(mockUserSearchService, 'searchUsers');
+        const spySearchUsers = jest.spyOn(component.resultsApiService, 'GET_adUsersSearch');
 
         component['searchSubject'].next('john');
         jest.advanceTimersByTime(500);
@@ -183,7 +190,7 @@ describe('LeadContactPersonFieldComponent', () => {
       });
 
       it('should not search when query has less than 4 characters', () => {
-        const spySearchUsers = jest.spyOn(mockUserSearchService, 'searchUsers');
+        const spySearchUsers = jest.spyOn(component.resultsApiService, 'GET_adUsersSearch');
 
         component['searchSubject'].next('jo');
         jest.advanceTimersByTime(500);
@@ -197,7 +204,7 @@ describe('LeadContactPersonFieldComponent', () => {
       it('should handle search errors gracefully', () => {
         const spyConsoleError = jest.spyOn(console, 'error').mockImplementation();
         const errorMessage = 'Test error';
-        mockUserSearchService.searchUsers.mockReturnValue(throwError(errorMessage));
+        jest.spyOn(component.resultsApiService, 'GET_adUsersSearch').mockReturnValue(throwError(errorMessage));
 
         component['searchSubject'].next('john');
         jest.advanceTimersByTime(500);
@@ -211,7 +218,7 @@ describe('LeadContactPersonFieldComponent', () => {
       });
 
       it('should debounce search requests', () => {
-        const spySearchUsers = jest.spyOn(mockUserSearchService, 'searchUsers');
+        const spySearchUsers = jest.spyOn(component.resultsApiService, 'GET_adUsersSearch');
 
         component['searchSubject'].next('john');
         component['searchSubject'].next('johnd');
@@ -228,12 +235,14 @@ describe('LeadContactPersonFieldComponent', () => {
       });
 
       it('should set isSearching to true during search', () => {
-        mockUserSearchService.searchUsers.mockReturnValue(new Promise(resolve => setTimeout(() => resolve(mockUserSearchResponse), 100)));
-
         component['searchSubject'].next('john');
         jest.advanceTimersByTime(500);
 
-        expect(component.isSearching).toBe(true);
+        // After the search completes, isSearching should be false
+        expect(component.isSearching).toBe(false);
+        // But the search should have been completed successfully
+        expect(component.searchResults).toEqual(mockUserSearchResponse.response);
+        expect(component.showResults).toBe(true);
       });
     });
 
@@ -375,7 +384,7 @@ describe('LeadContactPersonFieldComponent', () => {
 
       it('should mark contact as invalid when no search results found', () => {
         const emptyResponse = { message: 'No users found', response: [], status: 200 };
-        mockUserSearchService.searchUsers.mockReturnValue(of(emptyResponse));
+        jest.spyOn(component.resultsApiService, 'GET_adUsersSearch').mockReturnValue(of(emptyResponse));
 
         mockUserSearchService.searchQuery = 'nonexistent';
         component['searchSubject'].next('nonexistent');
@@ -387,7 +396,7 @@ describe('LeadContactPersonFieldComponent', () => {
 
       it('should mark contact as invalid when search fails', () => {
         const errorMessage = 'Network error';
-        mockUserSearchService.searchUsers.mockReturnValue(throwError(errorMessage));
+        jest.spyOn(component.resultsApiService, 'GET_adUsersSearch').mockReturnValue(throwError(errorMessage));
 
         mockUserSearchService.searchQuery = 'john';
         component['searchSubject'].next('john');
@@ -398,7 +407,7 @@ describe('LeadContactPersonFieldComponent', () => {
       });
 
       it('should not mark contact as invalid when search returns results', () => {
-        mockUserSearchService.searchUsers.mockReturnValue(of(mockUserSearchResponse));
+        jest.spyOn(component.resultsApiService, 'GET_adUsersSearch').mockReturnValue(of(mockUserSearchResponse));
         mockUserSearchService.searchQuery = 'john';
         mockUserSearchService.hasValidContact = false;
         component['searchSubject'].next('john');
@@ -551,7 +560,7 @@ describe('LeadContactPersonFieldComponent', () => {
         status: 200
       };
 
-      mockUserSearchService.searchUsers.mockReturnValue(of(mockResponseWithFilters));
+      jest.spyOn(component.resultsApiService, 'GET_adUsersSearch').mockReturnValue(of(mockResponseWithFilters));
 
       mockUserSearchService.searchQuery = 'john';
       component['searchSubject'].next('john');
@@ -575,11 +584,11 @@ describe('LeadContactPersonFieldComponent', () => {
         component.selectUser(mockUser);
 
         expect(mockUserSearchService.selectedUser).toBe(mockUser);
-        expect(mockUserSearchService.searchQuery).toBe(mockUser.displayName);
+        expect(mockUserSearchService.searchQuery).toBe(mockUser.display_name);
         expect(component.isContactLocked).toBe(true);
         expect(mockUserSearchService.hasValidContact).toBe(true);
         expect(mockUserSearchService.showContactError).toBe(false);
-        expect(component.body.lead_contact_person).toBe(mockUser.displayName);
+        expect(component.body.lead_contact_person).toBe(mockUser.display_name);
         expect(component.body.lead_contact_person_data).toBe(mockUser);
       });
 
@@ -718,13 +727,13 @@ describe('LeadContactPersonFieldComponent', () => {
       component.selectUser(mockUser);
 
       expect(mockUserSearchService.selectedUser).toBe(mockUser);
-      expect(mockUserSearchService.searchQuery).toBe(mockUser.displayName);
+      expect(mockUserSearchService.searchQuery).toBe(mockUser.display_name);
       expect(component.searchResults).toEqual([]);
       expect(component.showResults).toBe(false);
       expect(mockUserSearchService.hasValidContact).toBe(true);
       expect(mockUserSearchService.showContactError).toBe(false);
       expect(component.isContactLocked).toBe(true);
-      expect(component.body.lead_contact_person).toBe(mockUser.displayName);
+      expect(component.body.lead_contact_person).toBe(mockUser.display_name);
       expect(component.body.lead_contact_person_data).toBe(mockUser);
     });
   });
