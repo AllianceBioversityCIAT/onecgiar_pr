@@ -22,6 +22,29 @@ export class InnovUseGroupsDto {
   })
   measures: ResultIpMeasure[];
 }
+
+export class InvesmentDto {
+  @ApiProperty({
+    description: 'Entity providing the investment',
+    example: 'SP01',
+    type: String,
+  })
+  entity: string;
+
+  @ApiProperty({
+    description: 'Total value of the investment',
+    example: '1000000',
+    type: String,
+  })
+  total_value: string;
+
+  @ApiProperty({
+    description: 'Indicates whether the investment is determined',
+    example: true,
+    type: Boolean,
+  })
+  is_determined: boolean;
+}
 export class CreateInnovationUseDto {
   @ApiProperty({
     description: 'Indicates whether the result is linked to an innovation',
@@ -49,6 +72,12 @@ export class CreateInnovationUseDto {
   readiness_level_explanation: string;
 
   @ApiProperty({
+    description: 'Indicates whether the innovation use is to be determined',
+    example: true,
+  })
+  innov_use_to_be_determined: boolean;
+
+  @ApiProperty({
     description: 'Groups related to the current innovation use',
     type: InnovUseGroupsDto,
   })
@@ -59,6 +88,12 @@ export class CreateInnovationUseDto {
     type: InnovUseGroupsDto,
   })
   innovation_use_2030: InnovUseGroupsDto;
+
+  @ApiProperty({
+    description: 'Indicates whether the innovation use by end of 2030 is to be determined',
+    example: true,
+  })
+  innov_use_2030_to_be_determined: boolean;
 
   @ApiProperty({
     description: 'Indicates whether there are associated scaling studies',
@@ -75,4 +110,22 @@ export class CreateInnovationUseDto {
     type: [String],
   })
   scaling_studies_urls: string[];
+
+  @ApiProperty({
+    description: 'Investment programs related to the innovation use',
+    type: InvesmentDto,
+  })
+  investment_programs: InvesmentDto;
+
+  @ApiProperty({
+    description: 'Investment partners related to the innovation use',
+    type: InvesmentDto,
+  })
+  investment_partners: InvesmentDto;
+
+  @ApiProperty({
+    description: 'Investment projects related to the innovation use',
+    type: InvesmentDto,
+  })
+  investment_bilateral: InvesmentDto;
 }

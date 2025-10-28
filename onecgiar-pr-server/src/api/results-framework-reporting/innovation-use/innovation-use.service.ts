@@ -14,6 +14,7 @@ import { ResultsInnovationsUseRepository } from '../../results/summary/repositor
 import { ResultsInnovationsUse } from '../../results/summary/entities/results-innovations-use.entity';
 import { ResultScalingStudyUrl } from '../result_scaling_study_urls/entities/result_scaling_study_url.entity';
 import { InjectRepository } from '@nestjs/typeorm';
+import { ResultCoreInnovUseSectionEnum } from '../result_innov_section/enum/result_innov_section.enum';
 
 @Injectable()
 export class InnovationUseService {
@@ -145,11 +146,58 @@ export class InnovationUseService {
       this.logger.log(
         `Calling saveAnticipatedInnoUser for result_innovation_use_id: ${InnUseRes.result_innovation_use_id}`,
       );
-      await this.saveAnticipatedInnoUser(
-        InnUseRes.results_id,
-        user.id,
-        innovationUseDto,
-      );
+
+      // Determinar flag y procesar innovation_use y/o innovation_use_2030
+      const hasCurrent =
+        (Array.isArray(innovationUseDto?.innovation_use?.actors) &&
+          innovationUseDto.innovation_use.actors.length > 0) ||
+        (Array.isArray(innovationUseDto?.innovation_use?.organization) &&
+          innovationUseDto.innovation_use.organization.length > 0) ||
+        (Array.isArray(innovationUseDto?.innovation_use?.measures) &&
+          innovationUseDto.innovation_use.measures.length > 0);
+
+      const hasFuture =
+        (Array.isArray(innovationUseDto?.innovation_use_2030?.actors) &&
+          innovationUseDto.innovation_use_2030.actors.length > 0) ||
+        (Array.isArray(innovationUseDto?.innovation_use_2030?.organization) &&
+          innovationUseDto.innovation_use_2030.organization.length > 0) ||
+        (Array.isArray(innovationUseDto?.innovation_use_2030?.measures) &&
+          innovationUseDto.innovation_use_2030.measures.length > 0);
+
+      if (hasCurrent) {
+        await this.saveAnticipatedInnoUser(
+          InnUseRes.results_id,
+          user.id,
+          {
+            ...innovationUseDto,
+            innovation_use: innovationUseDto.innovation_use,
+          },
+          ResultCoreInnovUseSectionEnum.CURRENT,
+        );
+      }
+      if (hasFuture) {
+        await this.saveAnticipatedInnoUser(
+          InnUseRes.results_id,
+          user.id,
+          {
+            ...innovationUseDto,
+            innovation_use: innovationUseDto.innovation_use_2030,
+          },
+          ResultCoreInnovUseSectionEnum.FUTURE,
+        );
+      }
+      if (!hasCurrent && !hasFuture) {
+        // Si ninguno tiene información, llamar con flag 'future' por defecto
+        await this.saveAnticipatedInnoUser(
+          InnUseRes.results_id,
+          user.id,
+          {
+            ...innovationUseDto,
+            innovation_use: innovationUseDto.innovation_use_2030,
+          },
+          ResultCoreInnovUseSectionEnum.FUTURE,
+        );
+      }
 
       this.logger.log(
         `Calling createForInnovationUse for result_innovation_use_id: ${InnUseRes.result_innovation_use_id}`,
@@ -176,6 +224,7 @@ export class InnovationUseService {
     resultId: number,
     user: number,
     crtr: CreateInnovationUseDto,
+    section: ResultCoreInnovUseSectionEnum = null,
   ) {
     // Actors
     if (crtr?.innovation_use?.actors?.length) {
@@ -217,14 +266,14 @@ export class InnovationUseService {
         if (actorExists) {
           await this._resultActorRepository.update(
             actorExists.result_actors_id,
-            this.buildActorData(el, user, resultId),
+            this.buildActorData(el, user, resultId, section),
           );
           this.logger.log(
-            `[saveAnticipatedInnoUser] Updated actor: ${JSON.stringify(this.buildActorData(el, user, resultId))}`,
+            `[saveAnticipatedInnoUser] Updated actor: ${JSON.stringify(this.buildActorData(el, user, resultId, section))}`,
           );
         } else {
           const savedActor = await this._resultActorRepository.save(
-            this.buildActorData(el, user, resultId),
+            this.buildActorData(el, user, resultId, section),
           );
           this.logger.log(
             `[saveAnticipatedInnoUser] Created actor: ${JSON.stringify(savedActor)}`,
@@ -262,14 +311,14 @@ export class InnovationUseService {
         if (ite) {
           await this._resultByIntitutionsTypeRepository.update(
             ite.id,
-            this.buildInstitutionData(el, user, resultId),
+            this.buildInstitutionData(el, user, resultId, section),
           );
           this.logger.log(
-            `[saveAnticipatedInnoUser] Updated organization: ${JSON.stringify(this.buildInstitutionData(el, user, resultId))}`,
+            `[saveAnticipatedInnoUser] Updated organization: ${JSON.stringify(this.buildInstitutionData(el, user, resultId, section))}`,
           );
         } else {
           const savedOrg = await this._resultByIntitutionsTypeRepository.save(
-            this.buildInstitutionData(el, user, resultId),
+            this.buildInstitutionData(el, user, resultId, section),
           );
           this.logger.log(
             `[saveAnticipatedInnoUser] Created organization: ${JSON.stringify(savedOrg)}`,
@@ -312,14 +361,14 @@ export class InnovationUseService {
         if (ripm) {
           await this._resultIpMeasureRepository.update(
             ripm.result_ip_measure_id,
-            this.buildMeasureData(el, user, resultId),
+            this.buildMeasureData(el, user, resultId, section),
           );
           this.logger.log(
-            `[saveAnticipatedInnoUser] Updated measure: ${JSON.stringify(this.buildMeasureData(el, user, resultId))}`,
+            `[saveAnticipatedInnoUser] Updated measure: ${JSON.stringify(this.buildMeasureData(el, user, resultId, section))}`,
           );
         } else {
           const savedMeasure = await this._resultIpMeasureRepository.save(
-            this.buildMeasureData(el, user, resultId),
+            this.buildMeasureData(el, user, resultId, section),
           );
           this.logger.log(
             `[saveAnticipatedInnoUser] Created measure: ${JSON.stringify(savedMeasure)}`,
@@ -343,7 +392,7 @@ export class InnovationUseService {
     }
   }
 
-  private buildActorData(el, user, resultId) {
+  private buildActorData(el, user, resultId, section) {
     return {
       actor_type_id: this.isNullData(el?.actor_type_id),
       is_active: el?.is_active ?? true,
@@ -356,6 +405,7 @@ export class InnovationUseService {
       women: this.isNullData(el?.women),
       women_youth: this.isNullData(el?.women_youth),
       other_actor_type: this.isNullData(el?.other_actor_type),
+      section_id: this.isNullData(section),
       last_updated_by: user,
       created_by: user,
       result_id: resultId,
@@ -365,7 +415,7 @@ export class InnovationUseService {
     };
   }
 
-  private buildInstitutionData(el, user, resultId) {
+  private buildInstitutionData(el, user, resultId, section) {
     return {
       results_id: resultId,
       created_by: user,
@@ -376,11 +426,12 @@ export class InnovationUseService {
       institution_roles_id: 5,
       how_many: el?.how_many,
       addressing_demands: this.isNullData(el?.addressing_demands),
+      section_id: this.isNullData(section),
       is_active: el?.is_active,
     };
   }
 
-  private buildMeasureData(el, user, resultId) {
+  private buildMeasureData(el, user, resultId, section) {
     return {
       result_id: resultId,
       quantity: this.isNullData(el?.quantity),
@@ -388,6 +439,7 @@ export class InnovationUseService {
       created_by: user,
       last_updated_by: user,
       addressing_demands: this.isNullData(el?.addressing_demands),
+      section_id: this.isNullData(section),
       is_active: el.is_active ?? true,
     };
   }
@@ -444,6 +496,18 @@ export class InnovationUseService {
           null,
       }));
 
+      const innovation_use = {
+        actors: actorsData.filter((a) => a.section_id === 1),
+        organizations: organization.filter((o) => o.section_id === 1),
+        measures: measures.filter((m) => m.section_id === 1),
+      };
+
+      const innovation_use_2030 = {
+        actors: actorsData.filter((a) => a.section_id === 2),
+        organizations: organization.filter((o) => o.section_id === 2),
+        measures: measures.filter((m) => m.section_id === 2),
+      };
+
       let scaling_studies_urls: string[] = [];
       if (innDevExists.innovation_readiness_level_id >= 6) {
         const urls = await this._resultScalingStudyUrlsRepository.find({
@@ -458,9 +522,8 @@ export class InnovationUseService {
       const innovationUse = {
         ...innDevExists,
         linked_results,
-        actors: actorsData,
-        measures,
-        organization,
+        innovation_use,
+        innovation_use_2030,
         readiness_level_explanation:
           innDevExists.readiness_level_explanation ?? null,
         has_scaling_studies: innDevExists.has_scaling_studies ?? false,
