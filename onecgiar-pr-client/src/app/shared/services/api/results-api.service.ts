@@ -1277,4 +1277,9 @@ export class ResultsApiService {
   GET_DashboardData(entityId: string) {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/dashboard?programId=${entityId}`);
   }
+
+  GET_adUsersSearch(search?: string) {
+    console.log(`${environment.apiBaseUrl}api/ad-users/search?query=${search}`);
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ad-users/search?query=${search}`);
+  }
 }
