@@ -133,7 +133,36 @@ export class FieldsManagerService {
             <li>Varieties or breeds should be described by their generic traits or characteristics (e.g. Drought tolerant and aphid resistant groundnut cultivars).</li>
             <li>The specific number of new or improved lines/ varieties can be specified elsewhere.</li>
             </ul>`
-        }
+        },
+        '[innovation-use-form]-has-innovation-link': {
+          label: 'Is this innovation linked or bundled with another CGIAR-reported result (such as another innovation or a different type of result)?',
+          hide: this.isP22(),
+          required: true,
+        },
+        '[innovation-use-form]-core-innovation': {
+          label: 'Current core innovation use in number of users that can be supported by evidence (within the reporting year)?',
+          hide: this.isP22(),
+          required: true,
+          description: 'Depending on the innovation, users may be groups of actors or be organizations. Multiple actors or organizations can be selected.',
+        },
+        '[innovation-use-form]-has-studies-links': {
+          label: 'Have any studies been conducted to inform the innovation scaling strategy design (e.g. willingness to pay, ex-ante impact study, policy integration, cost-benefit analysis, market sizing, scaling partner network, demand/ needs assessment, user-centred design, etc.).',
+          hide: this.isP22(),
+          required: true,
+        },
+        '[innovation-use-form]-2030-to-be-determined': {
+          label: 'Specify the targeted innovation use of the core innovation by end of 2030, supported by projections or evidence where available',
+          hide: this.isP22(),
+          required: true,
+          description: 
+          `<ul>
+          <li>Depending on the innovation, users may be groups of actors or be organizations. Multiple actors or organizations can be selected.</li>
+          <li>If the innovation does not target specific groups of actors or people, then please specify the expected innovation use at organizational level or other use.</li>
+          <li>The numbers should reflect the expected innovation use by end of 2030. This <a href="https://docs.google.com/document/d/1mkt4bS51CyGmHKfkvuonAiJhkl4n-mLE/" class="open_route" target="_blank">guidance note</a> outlines a practical process for estimating or projecting innovation use figures by 2030.</li>
+          <li>Add information for as many as applicable.</li>
+          <li>CGIAR follows the United Nations definition of 'youth' as those persons between the ages of 15 and 24 years. If age disaggregation does not apply then please apply a 50/50% rule in dividing women or men across the youth/non-youth category.</li>
+          </ul>`
+        },
     };
     return fields;
   });
