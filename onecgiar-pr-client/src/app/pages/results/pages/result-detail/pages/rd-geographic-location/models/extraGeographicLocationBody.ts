@@ -1,4 +1,6 @@
-export class ExtraGeographicLocationBody {
+import { GeographicLocationBody } from './geographicLocationBody';
+
+export class ExtraGeographicLocationBody extends GeographicLocationBody {
   public extra_geo_scope_id: number;
   public extra_regions: number[] = [];
   public extra_countries: number[] = [];

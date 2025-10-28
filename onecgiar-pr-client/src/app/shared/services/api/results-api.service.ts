@@ -287,7 +287,9 @@ export class ResultsApiService {
   }
 
   PATCH_geographicSectionp25(body: ExtraGeographicLocationBody) {
-    return this.http.patch<any>(`${this.baseApiBaseUrlV2}geographic-location/update/geographic/${this.currentResultId}`, body);
+    return this.http
+      .patch<any>(`${this.baseApiBaseUrlV2}geographic-location/update/geographic/${this.currentResultId}`, body)
+      .pipe(this.saveButtonSE.isSavingPipe());
   }
 
   GET_geographicSection() {
