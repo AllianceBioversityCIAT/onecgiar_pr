@@ -164,7 +164,7 @@ export class InnovationUseFormComponent {
   }
 
   currentUseHeaderLabel() {
-    return this.fieldsManagerSE.isP25() 
+    return this.fieldsManagerSE.isP25()
       ? 'Current core innovation use in number of users that can be supported by evidence (within the reporting year).'
       : 'Specify the current use of the innovation in number of users (actors/ organizations/ other) that can be supported by evidence';
   }

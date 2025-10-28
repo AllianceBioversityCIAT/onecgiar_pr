@@ -76,7 +76,6 @@ export class RdGeographicLocationComponent implements OnInit {
   }
 
   fillGeographicLocationBody(response: any) {
-    console.log('mapping geographic location body');
     this.geographicLocationBody = response;
     const legacyCountries = 4;
     this.geographicLocationBody.geo_scope_id =
@@ -84,7 +83,6 @@ export class RdGeographicLocationComponent implements OnInit {
   }
 
   fillExtraGeographicLocationBody(response: any) {
-    console.log('mapping extra geographic location body');
     this.extraGeographicLocationBody.geo_scope_id = response.extra_geo_scope_id;
     this.extraGeographicLocationBody.has_regions = response.has_extra_regions;
     this.extraGeographicLocationBody.has_countries = response.has_extra_countries;
@@ -94,12 +92,10 @@ export class RdGeographicLocationComponent implements OnInit {
     const legacyCountries = 4;
     this.extraGeographicLocationBody.geo_scope_id =
       this.extraGeographicLocationBody?.geo_scope_id == legacyCountries ? GeoScopeEnum.COUNTRY : this.extraGeographicLocationBody.geo_scope_id;
-    console.log(this.extraGeographicLocationBody);
   }
 
   getSectionInformationp25() {
     this.api.resultsSE.GET_geographicSectionp25().subscribe(({ response }) => {
-      console.log(response);
       this.fillGeographicLocationBody(response);
       this.fillExtraGeographicLocationBody(response);
     });
