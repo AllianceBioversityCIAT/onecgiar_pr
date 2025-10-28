@@ -5,7 +5,7 @@
   [readOnly]="this.readOnly || this.api.dataControlSE.isKnowledgeProduct"
   [(ngModel)]="body.geo_scope_id"
   (ngModelChange)="this.resetHasScope()"
-  [label]="this.labelRadioButtons"
+  [label]="this.label ? this.label : this.labelRadioButtons"
   [description]="this.descriptionRadioButtons">
 </app-pr-radio-button>
 <div class="geographic_focus_description" *ngIf="this.internalModule.name === 'reporting'">

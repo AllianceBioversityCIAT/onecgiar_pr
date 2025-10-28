@@ -18,6 +18,7 @@ export class GeoscopeManagementComponent implements OnInit {
   @Input() body: any = { regions: [], countries: [], extra_regions: [], extra_countries: [] };
   @Input() readOnly: boolean = false;
   @Input() module: string;
+  @Input() label: string;
   fieldsManagerS = inject(FieldsManagerService);
   public internalModule: AppModuleEnum;
   public selectedItems: DisableOptionsSubNa[] = [];

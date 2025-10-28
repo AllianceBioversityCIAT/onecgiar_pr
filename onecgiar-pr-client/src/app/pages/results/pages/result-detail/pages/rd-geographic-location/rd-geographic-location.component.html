@@ -24,7 +24,11 @@
   <br />
 
   @if (this.extraGeographicLocationBody.has_extra_geo_scope) {
-    <app-geoscope-management [body]="this.extraGeographicLocationBody" module="reporting"> </app-geoscope-management>
+    <app-geoscope-management
+      label="What is the geographic scope where there may be potential impact in other geographic areas?"
+      [body]="this.extraGeographicLocationBody"
+      module="reporting">
+    </app-geoscope-management>
   }
 
   <app-save-button class="position_sticky" (clickSave)="onSaveSection()" *ngIf="!this.api.dataControlSE.isKnowledgeProduct"></app-save-button>
