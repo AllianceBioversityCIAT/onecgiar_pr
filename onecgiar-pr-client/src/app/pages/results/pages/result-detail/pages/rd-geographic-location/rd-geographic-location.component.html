@@ -8,7 +8,16 @@
     description="In case some of the metadata fields are incorrect, please get in touch with the library staff of your Center to update them in the repository. Before the end of the reporting period, metadata will be automatically refreshed on this page.">
   </app-alert-status>
 
-  <app-geoscope-management [body]="this.geographicLocationBody" module="reporting"> </app-geoscope-management>
+  <app-geoscope-management
+    [description]="
+      this.fieldsManagerSE.isP25()
+        ? 'This should reflect geographies where the innovation development, testing and/or use has taken place'
+        : undefined
+    "
+    [label]="this.fieldsManagerSE.isP25() ? 'What is the current geographic focus of the innovation development, testing and/or use?' : undefined"
+    [body]="this.geographicLocationBody"
+    module="reporting">
+  </app-geoscope-management>
 
   <br />
   @if (this.geographicLocationBody.geo_scope_id != 1) {
