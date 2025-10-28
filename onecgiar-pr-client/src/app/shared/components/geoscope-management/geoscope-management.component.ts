@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, computed, inject } from '@angular/core';
+import { Component, Input, OnInit, inject } from '@angular/core';
 import { DisableOptionsSubNa } from './interfaces/subnational.interface';
 import { RegionsCountriesService } from '../../services/global/regions-countries.service';
 import { GeoScopeEnum } from '../../enum/geo-scope.enum';
@@ -20,6 +20,7 @@ export class GeoscopeManagementComponent implements OnInit {
   @Input() module: string;
   @Input() label: string;
   @Input() hideTobeDetermined: boolean = false;
+  @Input() description: string;
   fieldsManagerS = inject(FieldsManagerService);
   public internalModule: AppModuleEnum;
   public selectedItems: DisableOptionsSubNa[] = [];
