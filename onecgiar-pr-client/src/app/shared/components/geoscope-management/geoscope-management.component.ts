@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, inject } from '@angular/core';
+import { Component, Input, OnInit, computed, inject } from '@angular/core';
 import { DisableOptionsSubNa } from './interfaces/subnational.interface';
 import { RegionsCountriesService } from '../../services/global/regions-countries.service';
 import { GeoScopeEnum } from '../../enum/geo-scope.enum';
@@ -19,6 +19,7 @@ export class GeoscopeManagementComponent implements OnInit {
   @Input() readOnly: boolean = false;
   @Input() module: string;
   @Input() label: string;
+  @Input() hideTobeDetermined: boolean = false;
   fieldsManagerS = inject(FieldsManagerService);
   public internalModule: AppModuleEnum;
   public selectedItems: DisableOptionsSubNa[] = [];
@@ -139,7 +140,7 @@ export class GeoscopeManagementComponent implements OnInit {
 
   ngOnInit(): void {
     this.internalModule = AppModuleEnum.getFromName(this.module);
-    if (this.internalModule && this.internalModule.name === ModuleTypeEnum.REPORTING)
+    if (this.internalModule && this.internalModule.name === ModuleTypeEnum.REPORTING && !this.hideTobeDetermined)
       this.geoscopeOptions = [...this.geoscopeOptions, { full_name: 'This is yet to be determined', id: GeoScopeEnum.DETERMINED }];
 
     // Initialize extra arrays if they don't exist
