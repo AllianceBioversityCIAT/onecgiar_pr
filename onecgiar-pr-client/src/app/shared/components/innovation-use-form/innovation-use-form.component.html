@@ -1,5 +1,5 @@
 <app-pr-field-header
-  label="Specify the current use of the innovation in number of users (actors/ organizations/ other) that can be supported by evidence"></app-pr-field-header>
+  [label]="currentUseHeaderLabel()" [useColon]="!this.fieldsManagerSE.isP25()"></app-pr-field-header>
 
 <app-pr-field-header [required]="false" label="Actors" description="{{ narrativeActors() }}"></app-pr-field-header>
 <input type="text" id="removeFocus" style="position: absolute; opacity: 0" />

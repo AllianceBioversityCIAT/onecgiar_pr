@@ -75,8 +75,10 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
 
   preventFieldRender = computed<boolean>(() => {
     if (!this.fieldRef) return true;
-    const { hide, label } = this.fieldsManager.fields()[this.fieldRef] || {};
+    const { hide, label, description, required } = this.fieldsManager.fields()[this.fieldRef] || {};
     this.label = label;
+    this.description = description;
+    this.required = required;
     return !hide;
   });
 

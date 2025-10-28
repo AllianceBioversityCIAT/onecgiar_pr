@@ -177,6 +177,11 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
 
     if (option?.disabled) return;
 
+    // Ensure value is initialized as an array
+    if (!this.value) {
+      this.value = [];
+    }
+
     const indexFind = this.value.findIndex(valueItem => valueItem[this.optionValue] == option[this.optionValue]);
     if (indexFind < 0) {
       // Option is being selected
@@ -198,6 +203,12 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
 
   removeOption(option) {
     this.selectAll = null;
+
+    // Ensure value is initialized as an array
+    if (!this.value) {
+      this.value = [];
+    }
+
     if (this.logicalDeletion && !option.new) {
       option.is_active = false;
     } else {

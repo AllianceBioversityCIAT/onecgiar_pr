@@ -5,6 +5,8 @@ import { ResultLevelService } from '../../../result-creator/services/result-leve
 import { RegionsCountriesService } from '../../../../../../shared/services/global/regions-countries.service';
 import { GeoScopeEnum } from '../../../../../../shared/enum/geo-scope.enum';
 import { CustomizedAlertsFeService } from '../../../../../../shared/services/customized-alerts-fe.service';
+import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
+import { ExtraGeographicLocationBody } from './models/extraGeographicLocationBody';
 
 @Component({
   selector: 'app-rd-geographic-location',
@@ -14,6 +16,8 @@ import { CustomizedAlertsFeService } from '../../../../../../shared/services/cus
 })
 export class RdGeographicLocationComponent implements OnInit {
   geographicLocationBody = new GeographicLocationBody();
+  extraGeographicLocationBody = new ExtraGeographicLocationBody();
+
   UNM49 = 'https://unstats.un.org/unsd/methodology/m49/';
   ISO3166 = 'https://www.iso.org/iso-3166-country-codes.html';
   geographic_focus = [
@@ -39,13 +43,14 @@ export class RdGeographicLocationComponent implements OnInit {
     public api: ApiService,
     public resultLevelSE: ResultLevelService,
     public regionsCountriesSE: RegionsCountriesService,
-    private customizedAlertsFeSE: CustomizedAlertsFeService
+    private customizedAlertsFeSE: CustomizedAlertsFeService,
+    public fieldsManagerSE: FieldsManagerService
   ) {
     this.api.dataControlSE.currentResultSectionName.set('Geographic location');
   }
 
   ngOnInit(): void {
-    this.getSectionInformation();
+    this.fieldsManagerSE.isP25() ? this.getSectionInformationp25() : this.getSectionInformation();
   }
 
   geographic_focus_description(id) {
@@ -66,16 +71,64 @@ export class RdGeographicLocationComponent implements OnInit {
 
   getSectionInformation() {
     this.api.resultsSE.GET_geographicSection().subscribe(({ response }) => {
-      this.geographicLocationBody = response;
-      const legacyCountries = 4;
-      this.geographicLocationBody.geo_scope_id =
-        this.geographicLocationBody?.geo_scope_id == legacyCountries ? GeoScopeEnum.COUNTRY : this.geographicLocationBody.geo_scope_id;
+      this.fillGeographicLocationBody(response);
     });
   }
-  onSaveSection() {
-    this.api.resultsSE.PATCH_geographicSection(this.geographicLocationBody).subscribe(() => {
-      this.getSectionInformation();
+
+  fillGeographicLocationBody(response: any) {
+    console.log('mapping geographic location body');
+    this.geographicLocationBody = response;
+    const legacyCountries = 4;
+    this.geographicLocationBody.geo_scope_id =
+      this.geographicLocationBody?.geo_scope_id == legacyCountries ? GeoScopeEnum.COUNTRY : this.geographicLocationBody.geo_scope_id;
+  }
+
+  fillExtraGeographicLocationBody(response: any) {
+    console.log('mapping extra geographic location body');
+    this.extraGeographicLocationBody.geo_scope_id = response.extra_geo_scope_id;
+    this.extraGeographicLocationBody.has_regions = response.has_extra_regions;
+    this.extraGeographicLocationBody.has_countries = response.has_extra_countries;
+    this.extraGeographicLocationBody.countries = response.extra_countries;
+    this.extraGeographicLocationBody.regions = response.extra_regions;
+    this.extraGeographicLocationBody.has_extra_geo_scope = Boolean(response.has_extra_geo_scope);
+    const legacyCountries = 4;
+    this.extraGeographicLocationBody.geo_scope_id =
+      this.extraGeographicLocationBody?.geo_scope_id == legacyCountries ? GeoScopeEnum.COUNTRY : this.extraGeographicLocationBody.geo_scope_id;
+    console.log(this.extraGeographicLocationBody);
+  }
+
+  getSectionInformationp25() {
+    this.api.resultsSE.GET_geographicSectionp25().subscribe(({ response }) => {
+      console.log(response);
+      this.fillGeographicLocationBody(response);
+      this.fillExtraGeographicLocationBody(response);
     });
+  }
+
+  onSaveSection() {
+    if (this.fieldsManagerSE.isP25()) {
+      this.api.resultsSE
+        .PATCH_geographicSectionp25({
+          has_countries: this.geographicLocationBody.has_countries,
+          has_regions: this.geographicLocationBody.has_regions,
+          regions: this.geographicLocationBody.regions,
+          countries: this.geographicLocationBody.countries,
+          geo_scope_id: this.geographicLocationBody.geo_scope_id,
+          extra_geo_scope_id: this.extraGeographicLocationBody.geo_scope_id,
+          extra_regions: this.extraGeographicLocationBody.regions,
+          extra_countries: this.extraGeographicLocationBody.countries,
+          has_extra_countries: this.extraGeographicLocationBody.has_countries,
+          has_extra_regions: this.extraGeographicLocationBody.has_regions,
+          has_extra_geo_scope: this.extraGeographicLocationBody.has_extra_geo_scope
+        })
+        .subscribe(() => {
+          this.getSectionInformationp25();
+        });
+    } else {
+      this.api.resultsSE.PATCH_geographicSection(this.geographicLocationBody).subscribe(() => {
+        this.getSectionInformation();
+      });
+    }
   }
 
   onSyncSection() {
