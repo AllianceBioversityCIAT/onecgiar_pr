@@ -2460,7 +2460,7 @@ select *
       results_toc_result rtr	
       left JOIN ${env.DB_TOC}.toc_results tr on tr.id = rtr.toc_result_id
       left join clarisa_initiatives ci on ci.id = rtr.initiative_id
-      left join ${env.DB_TOC}.toc_work_packages twp on twp.id = tr.wp_id
+      left join ${env.DB_TOC}.toc_work_packages twp on twp.toc_id = tr.wp_id
     where rtr.results_id = ${resultId}
       and rtr.initiative_id = ${initiativeId}
       and ${toc_result_id ? `rtr.toc_result_id = ${toc_result_id}` : ``}

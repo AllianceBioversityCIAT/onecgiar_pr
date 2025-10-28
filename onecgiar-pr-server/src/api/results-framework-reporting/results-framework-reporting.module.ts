@@ -14,6 +14,7 @@ import { AoWBilateralRepository } from '../results/results-toc-results/repositor
 import { ContributionToIndicatorResultsRepository } from '../contribution-to-indicators/repositories/contribution-to-indicator-result.repository';
 import { ResultsByProjectsModule } from '../results/results_by_projects/results_by_projects.module';
 import { ContributorsPartnersModule } from './contributors-partners/contributors-partners.module';
+import { ResultsTocTargetIndicatorRepository } from '../results/results-toc-results/repositories/result-toc-result-target-indicator.repository';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { ContributorsPartnersModule } from './contributors-partners/contributors
     HandlersError,
     AoWBilateralRepository,
     ContributionToIndicatorResultsRepository,
+    ResultsTocTargetIndicatorRepository,
   ],
 })
 export class ResultsFrameworkReportingModule {}

@@ -5,7 +5,7 @@ export const routingApp: PrRoute[] = [
   {
     prName: 'Results Framework & Reporting',
     underConstruction: false,
-    prHide: true,
+    prHide: false,
     canActivate: [CheckLoginGuard],
     path: 'result-framework-reporting',
     loadChildren: () => import('../../pages/result-framework-reporting/result-framework-reporting.module').then(m => m.ResultFrameworkReportingModule)
@@ -475,12 +475,18 @@ export const ResultFrameworkReportingRouting: PrRoute[] = [
             m => m.EntityAowAllComponent
           )
       },
-      // unplanned route
       {
         path: 'unplanned',
         loadComponent: () =>
           import('../../pages/result-framework-reporting/pages/entity-aow/pages/entity-aow-unplanned/entity-aow-unplanned.component').then(
             m => m.EntityAowUnplannedComponent
+          )
+      },
+      {
+        path: '2030-outcomes',
+        loadComponent: () =>
+          import('../../pages/result-framework-reporting/pages/entity-aow/pages/entity-aow-2030/entity-aow-2030.component').then(
+            m => m.EntityAow2030Component
           )
       },
       {

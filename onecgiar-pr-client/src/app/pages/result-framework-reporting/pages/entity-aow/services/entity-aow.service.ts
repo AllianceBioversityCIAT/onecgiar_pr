@@ -27,14 +27,20 @@ export class EntityAowService {
 
   existingResultsContributors = signal<any[]>([]);
 
-  tocResultsByAowId = signal<any[]>([]);
+  tocResultsOutputsByAowId = signal<any[]>([]);
+  tocResultsOutcomesByAowId = signal<any[]>([]);
+  tocResults2030Outcomes = signal<any[]>([]);
+  isLoadingTocResults2030Outcomes = signal<boolean>(false);
   isLoadingTocResultsByAowId = signal<boolean>(false);
 
   showReportResultModal = signal<boolean>(false);
   currentResultToReport = signal<any>({});
-  currentResultIsKnowledgeProduct = computed(() => {
-    return this.currentResultToReport()?.indicators?.[0]?.type_value === 'Number of knowledge products';
-  });
+
+  // View result modal
+  showViewResultDrawer = signal<boolean>(false);
+  viewResultDrawerFullScreen = signal<boolean>(false);
+  currentResultToView = signal<any>({});
+  dashboardData = signal<any>(null);
 
   getAllDetailsData() {
     this.isLoadingDetails.set(true);
@@ -60,25 +66,6 @@ export class EntityAowService {
     });
   }
 
-  getClarisaGlobalUnits() {
-    this.isLoadingDetails.set(true);
-
-    this.api.resultsSE.GET_ClarisaGlobalUnits(this.entityId()).subscribe(({ response }) => {
-      this.entityDetails.set(response?.initiative);
-      this.entityAows.set(response?.units ?? []);
-      this.isLoadingDetails.set(false);
-      if (this.entityAows().length) {
-        this.setSideBarItems();
-      }
-    });
-  }
-
-  getIndicatorSummaries() {
-    this.api.resultsSE.GET_IndicatorContributionSummary(this.entityId()).subscribe(({ response }) => {
-      this.indicatorSummaries.set(response?.totalsByType ?? []);
-    });
-  }
-
   setSideBarItems() {
     this.sideBarItems.set([
       {
@@ -90,6 +77,11 @@ export class EntityAowService {
           name: aow.name,
           itemLink: `/aow/${aow.code}`
         }))
+      },
+      {
+        isTree: false,
+        label: '2030 Outcomes',
+        itemLink: '/aow/2030-outcomes'
       }
     ]);
   }
@@ -101,13 +93,30 @@ export class EntityAowService {
 
     this.api.resultsSE.GET_TocResultsByAowId(entityId, aowId).subscribe({
       next: ({ response }) => {
-        this.tocResultsByAowId.set(response?.tocResults ?? []);
+        this.tocResultsOutputsByAowId.set(response?.tocResultsOutputs ?? []);
+        this.tocResultsOutcomesByAowId.set(response?.tocResultsOutcomes ?? []);
         this.isLoadingTocResultsByAowId.set(false);
       },
       error: err => {
-        console.error(err);
-        this.tocResultsByAowId.set([]);
+        this.tocResultsOutputsByAowId.set([]);
+        this.tocResultsOutcomesByAowId.set([]);
         this.isLoadingTocResultsByAowId.set(false);
+      }
+    });
+  }
+
+  get2030Outcomes(entityId: string) {
+    if (!entityId) return;
+    this.isLoadingTocResults2030Outcomes.set(true);
+
+    this.api.resultsSE.GET_2030Outcomes(entityId).subscribe({
+      next: ({ response }) => {
+        this.tocResults2030Outcomes.set(response?.tocResults ?? []);
+        this.isLoadingTocResults2030Outcomes.set(false);
+      },
+      error: err => {
+        this.tocResults2030Outcomes.set([]);
+        this.isLoadingTocResults2030Outcomes.set(false);
       }
     });
   }
@@ -118,12 +127,26 @@ export class EntityAowService {
     });
   }
 
-  getExistingResultsContributors() {
-    this.api.resultsSE
-      .GET_ExistingResultsContributors(this.currentResultToReport()?.toc_result_id, this.currentResultToReport()?.indicators[0].related_node_id)
-      .subscribe(response => {
-        this.existingResultsContributors.set(response?.response?.contributors ?? []);
-      });
+  getExistingResultsContributors(tocResultId: string, relatedNodeId: string) {
+    this.api.resultsSE.GET_ExistingResultsContributors(tocResultId, relatedNodeId).subscribe({
+      next: ({ response }) => {
+        this.existingResultsContributors.set(response?.contributors ?? []);
+      },
+      error: err => {
+        this.existingResultsContributors.set([]);
+      }
+    });
+  }
+
+  getDashboardData() {
+    this.api.resultsSE.GET_DashboardData(this.entityId()).subscribe({
+      next: ({ response }) => {
+        this.dashboardData.set(response);
+      },
+      error: err => {
+        this.dashboardData.set(null);
+      }
+    });
   }
 
   onCloseReportResultModal() {
