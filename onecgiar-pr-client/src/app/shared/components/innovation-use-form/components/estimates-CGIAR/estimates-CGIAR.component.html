@@ -1,0 +1,107 @@
+<div class="segment">
+    <app-pr-field-header
+        [label]="'Estimation of total USD-value of investment by CGIAR Programs during the reporting period'"
+        [description]="headerDescriptions().n1" [useColon]="false"></app-pr-field-header>
+    <table [style]="!body.investment_programs?.length ? 'margin-bottom: 5px;' : null" aria-label="Table showing estimation of total USD-value of investment by CGIAR Programs during the reporting period">
+        <tr>
+            <th>Entity</th>
+            <th>Total USD Value <br> <span>(in-cash + in-kind)</span> </th>
+            <th></th>
+        </tr>
+        <tr *ngFor="let item of body.investment_programs">
+            <div appFeedbackValidation labelText="Total USD Value" [isComplete]="checkValueAlert(item)">
+            </div>
+
+            <td> <strong>{{item.official_code}}</strong> - {{item.name}}</td>
+            <td>
+                <app-pr-input placeholder="Write some..." type="currency" [(ngModel)]="item.kind_cash"
+                    [noDataText]="item.is_determined ? 'Not applicable':'Not provided'" [required]="false">
+                </app-pr-input>
+            </td>
+
+            <td>
+                <app-pr-radio-button optionLabel="name" optionValue="id" [(ngModel)]="item.is_determined"
+                    [options]="[{name:'This is yet to be determined',id:true}]">
+                </app-pr-radio-button>
+            </td>
+        </tr>
+    </table>
+    <div style="margin-bottom: 45px;" *ngIf="!body.investment_programs?.length">
+        <app-no-data-text title="There are no items available for this table."></app-no-data-text>
+    </div>
+</div>
+
+
+<div class="segment">
+    <app-pr-field-header
+        label="Estimated total USD-value of investment by CGIAR W3 or bilateral projects during the reporting period"
+        [description]="headerDescriptions().n2" [useColon]="false"></app-pr-field-header>
+
+    <table style="margin-bottom: 5px;" aria-label="Table showing estimated total USD-value of investment by CGIAR W3 or bilateral projects during the reporting period">
+        <tr>
+            <th>Entity</th>
+            <th>Total USD Value <br> <span>(in-cash + in-kind)</span> </th>
+            <th></th>
+        </tr>
+        <tr *ngFor="let item of body.investment_bilateral">
+            <div appFeedbackValidation labelText="Total USD Value" [isComplete]="checkValueAlert(item)">
+            </div>
+
+            <td>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    {{item?.name}}
+                </div>
+            </td>
+            <td>
+                <app-pr-input placeholder="Write some..." type="currency" [(ngModel)]="item.kind_cash"
+                    [noDataText]="item.is_determined ? 'Not applicable':'Not provided'" [required]="false">
+                </app-pr-input>
+            </td>
+
+            <td>
+                <app-pr-radio-button optionLabel="name" optionValue="id" [(ngModel)]="item.is_determined"
+                    [options]="[{name:'This is yet to be determined',id:true}]">
+                </app-pr-radio-button>
+            </td>
+        </tr>
+    </table>
+    <div style="margin-bottom: 45px;" *ngIf="!body.investment_bilateral?.length">
+        <app-no-data-text title="There are no items available for this table."></app-no-data-text>
+    </div>
+</div>
+
+<div class="segment">
+    <app-pr-field-header label="Estimated total USD-value of (co-)investment by partners during the reporting period"
+        [description]="headerDescriptions().n3" [useColon]="false"></app-pr-field-header>
+
+    <table style="margin-bottom: 5px;" aria-label="Table showing Estimated total USD-value of (co-)investment by partners during the reporting period">
+        <tr>
+            <th>Entity</th>
+            <th>Total USD Value <br> <span>(in-cash + in-kind)</span> </th>
+            <th></th>
+        </tr>
+        <tr *ngFor=" let item of body.investment_partners">
+            <div appFeedbackValidation labelText="Total USD Value" [isComplete]="checkValueAlert(item)">
+            </div>
+
+            <td>
+                <div class="name">{{item.name}}</div>
+            </td>
+            <td>
+                <app-pr-input placeholder="Write some..." type="currency" [(ngModel)]="item.kind_cash"
+                    [noDataText]="item.is_determined ? 'Not applicable':'Not provided'" [required]="false">
+                </app-pr-input>
+            </td>
+
+            <td>
+                <app-pr-radio-button optionLabel="name" optionValue="id" [(ngModel)]="item.is_determined"
+                    [options]="[{name:'This is yet to be determined',id:true}]">
+                </app-pr-radio-button>
+            </td>
+        </tr>
+    </table>
+
+    <app-no-data-text *ngIf="!body.investment_partners?.length"
+        title="There are no items available for this table."></app-no-data-text>
+
+</div>
