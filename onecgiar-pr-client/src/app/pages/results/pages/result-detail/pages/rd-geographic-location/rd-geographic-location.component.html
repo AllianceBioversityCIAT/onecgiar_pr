@@ -11,25 +11,27 @@
   <app-geoscope-management [body]="this.geographicLocationBody" module="reporting"> </app-geoscope-management>
 
   <br />
-  <app-pr-radio-button
-    fieldRef="[geoscope-management]-has_extra_geo_scope"
-    [options]="[
-      { value: true, label: 'Yes' },
-      { value: false, label: 'No' }
-    ]"
-    optionLabel="label"
-    [(ngModel)]="extraGeographicLocationBody.has_extra_geo_scope"
-    optionValue="value">
-  </app-pr-radio-button>
-  <br />
+  @if (this.geographicLocationBody.geo_scope_id != 1) {
+    <app-pr-radio-button
+      fieldRef="[geoscope-management]-has_extra_geo_scope"
+      [options]="[
+        { value: true, label: 'Yes' },
+        { value: false, label: 'No' }
+      ]"
+      optionLabel="label"
+      [(ngModel)]="extraGeographicLocationBody.has_extra_geo_scope"
+      optionValue="value">
+    </app-pr-radio-button>
+    <br />
 
-  @if (this.extraGeographicLocationBody.has_extra_geo_scope) {
-    <app-geoscope-management
-      label="What is the geographic scope where there may be potential impact in other geographic areas?"
-      [body]="this.extraGeographicLocationBody"
-      [hideTobeDetermined]="true"
-      module="reporting">
-    </app-geoscope-management>
+    @if (this.extraGeographicLocationBody.has_extra_geo_scope) {
+      <app-geoscope-management
+        label="What is the geographic scope where there may be potential impact in other geographic areas?"
+        [body]="this.extraGeographicLocationBody"
+        [hideTobeDetermined]="true"
+        module="reporting">
+      </app-geoscope-management>
+    }
   }
 
   <app-save-button class="position_sticky" (clickSave)="onSaveSection()" *ngIf="!this.api.dataControlSE.isKnowledgeProduct"></app-save-button>
