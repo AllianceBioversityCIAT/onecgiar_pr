@@ -133,14 +133,14 @@ export class LeadContactPersonFieldComponent implements OnChanges {
 
   selectUser(user: User): void {
     this.userSearchService.selectedUser = user;
-    this.userSearchService.searchQuery = user.displayName;
+    this.userSearchService.searchQuery = user.display_name;
     this.searchResults = [];
     this.showResults = false;
     this.userSearchService.hasValidContact = true;
     this.userSearchService.showContactError = false;
     this.isContactLocked = true;
 
-    this.body.lead_contact_person = user.displayName;
+    this.body.lead_contact_person = user.display_name;
     this.body.lead_contact_person_data = user;
   }
 
