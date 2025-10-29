@@ -64,7 +64,16 @@
           </div>
         </td>
         <td>
-          <div class="tab-content_chip in-progress" [ngClass]="{ achieved: getProgress(result.progress_percentage) >= 90 }">In progress</div>
+          <div
+            class="tab-content_chip"
+            [ngClass]="{
+              'not-started': getProgress(result.progress_percentage) === 0,
+              'in-progress': getProgress(result.progress_percentage) >= 1 && getProgress(result.progress_percentage) <= 99,
+              achieved: getProgress(result.progress_percentage) === 100,
+              overachieved: getProgress(result.progress_percentage) > 100
+            }">
+            {{ getStatusLabel(result.progress_percentage) }}
+          </div>
         </td>
         <td>
           <div class="tab-content_actions">

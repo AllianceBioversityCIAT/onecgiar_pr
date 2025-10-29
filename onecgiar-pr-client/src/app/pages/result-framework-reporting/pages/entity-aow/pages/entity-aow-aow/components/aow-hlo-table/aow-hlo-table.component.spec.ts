@@ -178,6 +178,43 @@ describe('AowHloTableComponent', () => {
     });
   });
 
+  describe('getStatusLabel Function', () => {
+    it('should return "Not started" for 0%', () => {
+      const result = component.getStatusLabel('0%');
+      expect(result).toBe('Not started');
+    });
+
+    it('should return "In progress" for 1%', () => {
+      const result = component.getStatusLabel('1%');
+      expect(result).toBe('In progress');
+    });
+
+    it('should return "In progress" for 50%', () => {
+      const result = component.getStatusLabel('50%');
+      expect(result).toBe('In progress');
+    });
+
+    it('should return "In progress" for 99%', () => {
+      const result = component.getStatusLabel('99%');
+      expect(result).toBe('In progress');
+    });
+
+    it('should return "Achieved" for 100%', () => {
+      const result = component.getStatusLabel('100%');
+      expect(result).toBe('Achieved');
+    });
+
+    it('should return "Overachieved" for 101%', () => {
+      const result = component.getStatusLabel('101%');
+      expect(result).toBe('Overachieved');
+    });
+
+    it('should return "Overachieved" for 150%', () => {
+      const result = component.getStatusLabel('150%');
+      expect(result).toBe('Overachieved');
+    });
+  });
+
   describe('tableData computed', () => {
     beforeEach(() => {
       // Reset mock signals to empty arrays
