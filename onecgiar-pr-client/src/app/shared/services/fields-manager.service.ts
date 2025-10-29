@@ -14,6 +14,9 @@ export class FieldsManagerService {
   portfolioAcronym = computed(() => this.dataControlSE.currentResultSignal()?.portfolio);
   isP25 = computed(() => Portfolios[this.portfolioAcronym()] == Portfolios.P25);
   isP22 = computed(() => Portfolios[this.portfolioAcronym()] == Portfolios.P22);
+  isAnInnovation = computed(
+    () => this.dataControlSE.currentResultSignal()?.result_type_id == 2 || this.dataControlSE.currentResultSignal()?.result_type_id == 7
+  );
 
   scoresImpactAreaLabel = 'Which component of the Impact Area is this result intended to impact?';
 
@@ -95,15 +98,11 @@ export class FieldsManagerService {
         description:
           'This should reflect other geographies where the innovation development, testing and/or use could also contribute to outcomes and impact"',
         required: true,
-        hide:
-          this.isP22() ||
-          (this.dataControlSE.currentResultSignal().result_type_id != 2 && this.dataControlSE.currentResultSignal().result_type_id != 7)
+        hide: this.isP22() || this.isAnInnovation()
       },
       '[geoscope-management]-extra_geo_scope_id': {
         label: 'What is the geographic scope where there may be potential impact in other geographic areas?',
-        hide:
-          this.isP22() ||
-          (this.dataControlSE.currentResultSignal().result_type_id != 2 && this.dataControlSE.currentResultSignal().result_type_id != 7)
+        hide: this.isP22() || this.isAnInnovation()
       },
       '[innovation-dev-info]-long_title': {
         label: 'Long title',
