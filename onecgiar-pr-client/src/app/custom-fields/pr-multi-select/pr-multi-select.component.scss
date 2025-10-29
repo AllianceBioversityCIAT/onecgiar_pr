@@ -19,3 +19,20 @@
 .is_active_false {
   display: none !important;
 }
+
+/* Option row spacing and alignment */
+.options .option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+}
+
+.options .option .label {
+  display: inline-block;
+}
+
+/* Group header spacing */
+.options .group > .pr-body-2 {
+  padding: 8px 10px;
+}

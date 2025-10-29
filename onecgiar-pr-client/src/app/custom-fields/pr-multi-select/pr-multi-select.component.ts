@@ -32,6 +32,9 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   @Input() hideSelect?: boolean = false;
   @Input() isStatic: boolean = false;
   @Input() showSelectAll: boolean = false;
+  @Input() group: boolean = false;
+  @Input() optionGroupLabel: string;
+  @Input() optionGroupChildren: string;
   @Input() required: boolean = true;
   @Input() showPartnerAlert: boolean = false;
   @Input() flagsCode: string;
@@ -57,38 +60,78 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
 
     this.currentOptionsLength = this.options?.length;
 
-    this._optionsIntance.forEach((resp: any) => {
-      if (resp.disabled === true) resp.disabled = false;
-      if (resp.selected === true) resp.selected = false;
-    });
+    if (!this.group) {
+      this._optionsIntance.forEach((resp: any) => {
+        if (resp.disabled === true) resp.disabled = false;
+        if (resp.selected === true) resp.selected = false;
+      });
+
+      this.disableOptions?.map(disableOption => {
+        const itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == disableOption[this.optionValue]);
+        if (itemFinded) itemFinded.disabled = true;
+      });
+
+      this.value?.map(savedListItem => {
+        const itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == savedListItem[this.optionValue]);
+
+        if (itemFinded) itemFinded.selected = true;
+
+        if (itemFinded && this.logicalDeletion) itemFinded.selected = savedListItem.is_active;
+      });
+
+      this._beforeValueLength = this._value?.length;
+
+      if (this.selectAll === false)
+        this._optionsIntance.forEach((resp: any) => {
+          if (resp.disabled === true) resp.selected = false;
+          this.value = [];
+        });
+
+    if (this.selectAll === true) {
+      const newSelection: any[] = [];
+      this._optionsIntance.forEach((resp: any) => {
+        if (resp.disabled === true) resp.selected = true;
+        newSelection.push(resp);
+      });
+      this.value = newSelection;
+    }
+
+      return this._optionsIntance;
+    }
+
+    // Grouped mode: reset flags on all children
+    const children = this.getAllChildrenFromGroups(this._optionsIntance);
+
+    for (const child of children) {
+      if (child.disabled === true) child.disabled = false;
+      if (child.selected === true) child.selected = false;
+    }
 
     this.disableOptions?.map(disableOption => {
-      const itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == disableOption[this.optionValue]);
+      const itemFinded = children.find(listItem => listItem[this.optionValue] == disableOption[this.optionValue]);
       if (itemFinded) itemFinded.disabled = true;
     });
 
     this.value?.map(savedListItem => {
-      const itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == savedListItem[this.optionValue]);
-
+      const itemFinded = children.find(listItem => listItem[this.optionValue] == savedListItem[this.optionValue]);
       if (itemFinded) itemFinded.selected = true;
-
       if (itemFinded && this.logicalDeletion) itemFinded.selected = savedListItem.is_active;
     });
 
-    this._beforeValueLength = this._value?.length;
-
-    if (this.selectAll === false)
-      this._optionsIntance.forEach((resp: any) => {
-        if (resp.disabled === true) resp.selected = false;
-        this.value = [];
-      });
+    if (this.selectAll === false) {
+      for (const child of children) {
+        if (child.disabled === true) child.selected = false;
+      }
+      this.value = [];
+    }
 
     if (this.selectAll === true) {
-      this.value = [];
-      this._optionsIntance.forEach((resp: any) => {
-        if (resp.disabled === true) resp.selected = true;
-        this.value.push(resp);
-      });
+      const newSelection: any[] = [];
+      for (const child of children) {
+        if (child.disabled === true) child.selected = true;
+        newSelection.push(child);
+      }
+      this.value = newSelection;
     }
 
     return this._optionsIntance;
@@ -158,6 +201,24 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
     return id;
   }
 
+  getAllChildrenFromGroups(groups: any[]): any[] {
+    const list: any[] = [];
+    if (!Array.isArray(groups)) return list;
+    for (const group of groups) {
+      const children = group?.[this.optionGroupChildren] || [];
+      for (const child of children) {
+        list.push(child);
+      }
+    }
+    return list;
+  }
+
+  filterChildrenBySearch(children: any[]): any[] {
+    if (!this.searchText) return children || [];
+    const label = this.optionLabel;
+    return (children || []).filter((c: any) => (c?.[label] || '').toString().toLowerCase().includes(this.searchText.toLowerCase()));
+  }
+
   confirmDeletionEvent(option) {
     this.customizedAlertsFeSE.show({ id: 'confirm-delete-item', title: `Are you sure you want to remove this Initiative from the contributors?`, description: `This will remove the ToC match made by the Initiative and in case you want to add it again, you will need to submit a new request.`, status: 'warning', confirmText: 'Yes, delete' }, () => {
       this.removeOption(option);
@@ -171,17 +232,21 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
 
     const indexFind = this.value.findIndex(valueItem => valueItem[this.optionValue] == option[this.optionValue]);
     if (indexFind < 0) {
-      this.value.push({ ...option, new: true, is_active: true });
+      const newValue = [...(this.value || []), { ...option, new: true, is_active: true }];
+      this.value = newValue;
     } else {
       const valueItemFind = this.value.find(valueItem => valueItem[this.optionValue] == option[this.optionValue]);
       if (this.logicalDeletion && !valueItemFind.new) {
-        if (!option.selected) {
-          valueItemFind.is_active = true;
-        } else {
-          valueItemFind.is_active = false;
-        }
+        const updated = this.value.map(item => {
+          if (item[this.optionValue] == option[this.optionValue]) {
+            return { ...item, is_active: !option.selected };
+          }
+          return item;
+        });
+        this.value = updated;
       } else {
-        this.value.splice(indexFind, 1);
+        const filtered = this.value.filter((_, i) => i !== indexFind);
+        this.value = filtered;
       }
     }
 
@@ -191,10 +256,15 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   removeOption(option) {
     this.selectAll = null;
     if (this.logicalDeletion && !option.new) {
-      option.is_active = false;
+      const updated = this.value.map(item => {
+        if (item[this.optionValue] == option[this.optionValue]) return { ...item, is_active: false };
+        return item;
+      });
+      this.value = updated;
     } else {
       const optionFinded = this.value.findIndex(valueItem => valueItem[this.optionValue] == option[this.optionValue]);
-      this.value.splice(optionFinded, 1);
+      const filtered = this.value.filter((_, i) => i !== optionFinded);
+      this.value = filtered;
     }
 
     this.removeOptionEvent.emit({ remove: option });

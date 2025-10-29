@@ -24,20 +24,38 @@
                 {{this.selectAll ?'Unselect all':'Select all'}}
             </div>
 
-            <cdk-virtual-scroll-viewport itemSize="30" class="custom_scroll virtual_scroll">
-                <div *ngIf="!(optionsIntance | listFilterByTextAndAttr:this.optionLabel:this.searchText)?.length"
-                    class="no_info">No
-                    information found</div>
-                <div *cdkVirtualFor="let option of optionsIntance | listFilterByTextAndAttr:this.optionLabel:this.searchText"
-                    class="option" [ngClass]="{'disabled': option?.disabled}" (click)="onSelectOption(option)">
-                    <p-checkbox [disabled]="option?.disabled" [binary]="true" [(ngModel)]="option.selected">
-                    </p-checkbox>
-                    <img *ngIf="flagsCode" [src]="'https://countryflagsapi.com/png/'+option[this.flagsCode]" alt=""
-                        srcset="">
-                    <div class="label pr-body-2" [innerHtml]="option[this.optionLabel]"></div>
-                    <div class="event" (click)="toggleSelectOption(option)"></div>
+            <ng-container *ngIf="group; else flatList">
+                <div class="custom_scroll" style="max-height: 300px; overflow: auto;">
+                    <div *ngFor="let grp of options" class="group">
+                        <div class="pr-body-2" style="font-weight: 600; padding: 6px 10px;">{{ grp[optionGroupLabel] }}</div>
+                        <div *ngFor="let option of filterChildrenBySearch(grp[optionGroupChildren])" class="option" [ngClass]="{'disabled': option?.disabled}" (click)="onSelectOption(option)">
+                            <p-checkbox [disabled]="option?.disabled" [binary]="true" [(ngModel)]="option.selected">
+                            </p-checkbox>
+                            <img *ngIf="flagsCode" [src]="'https://countryflagsapi.com/png/'+option[this.flagsCode]" alt="" srcset="">
+                            <div class="label pr-body-2" [innerHtml]="option[this.optionLabel]"></div>
+                            <div class="event" (click)="toggleSelectOption(option)"></div>
+                        </div>
+                    </div>
+                    <div *ngIf="!options?.length || !getAllChildrenFromGroups(options)?.length" class="no_info">No information found</div>
                 </div>
-            </cdk-virtual-scroll-viewport>
+            </ng-container>
+
+            <ng-template #flatList>
+                <cdk-virtual-scroll-viewport itemSize="30" class="custom_scroll virtual_scroll">
+                    <div *ngIf="!(optionsIntance | listFilterByTextAndAttr:this.optionLabel:this.searchText)?.length"
+                        class="no_info">No
+                        information found</div>
+                    <div *cdkVirtualFor="let option of optionsIntance | listFilterByTextAndAttr:this.optionLabel:this.searchText"
+                        class="option" [ngClass]="{'disabled': option?.disabled}" (click)="onSelectOption(option)">
+                        <p-checkbox [disabled]="option?.disabled" [binary]="true" [(ngModel)]="option.selected">
+                        </p-checkbox>
+                        <img *ngIf="flagsCode" [src]="'https://countryflagsapi.com/png/'+option[this.flagsCode]" alt=""
+                            srcset="">
+                        <div class="label pr-body-2" [innerHtml]="option[this.optionLabel]"></div>
+                        <div class="event" (click)="toggleSelectOption(option)"></div>
+                    </div>
+                </cdk-virtual-scroll-viewport>
+            </ng-template>
         </div>
     </a>
     <div class="selected_container custom_scroll" *ngIf="this.selectedLabel">
