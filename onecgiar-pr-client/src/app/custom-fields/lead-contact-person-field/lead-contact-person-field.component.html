@@ -28,7 +28,7 @@
   @if (isContactLocked && userSearchService?.selectedUser) {
     <div class="selected-contact-info">
       <div class="selected-contact-details">
-        <div class="selected-user-name">{{ userSearchService?.selectedUser?.displayName }}</div>
+        <div class="selected-user-name">{{ userSearchService?.selectedUser?.display_name }}</div>
         <div class="selected-user-info">{{ userSearchService?.selectedUser?.mail }} - {{ userSearchService?.selectedUser?.title }}</div>
       </div>
     </div>
@@ -40,7 +40,7 @@
     @if (searchResults.length > 0 && showResults && !isSearching) {
       <div class="search-results">
         <div class="search-result-item" *ngFor="let user of searchResults" (click)="selectUser(user)">
-          <div class="user-name">{{ user.displayName }}</div>
+          <div class="user-name">{{ user.display_name }}</div>
           <div class="user-details">{{ user.mail }} - {{ user.title }}</div>
         </div>
       </div>
