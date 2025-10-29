@@ -4,8 +4,8 @@ import { TerminologyService } from '../../../../../internationalization/terminol
 
 @Component({
     selector: 'app-estimates-cgiar',
-    templateUrl: './estimates-cgiar.component.html',
-    styleUrls: ['./estimates-cgiar.component.scss'],
+    templateUrl: './estimates.component.html',
+    styleUrls: ['./estimates.component.scss'],
     standalone: false
 })
 export class EstimatesCgiarComponent {
