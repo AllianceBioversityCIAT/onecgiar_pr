@@ -150,7 +150,31 @@ export class ContributorsPartnersService {
     user: TokenDto,
   ) {
     try {
-      if (!payload?.toc_mapping && !payload?.partners) {
+      const hasProp = (key: string) =>
+        Object.prototype.hasOwnProperty.call(payload ?? {}, key);
+
+      const hasUnifiedToc = [
+        'contributing_initiatives',
+        'accepted_contributing_initiatives',
+        'pending_contributing_initiatives',
+        'changePrimaryInit',
+        'email_template',
+        'result_toc_result',
+        'contributors_result_toc_result',
+        'cancel_pending_requests',
+      ].some(hasProp);
+
+      const hasUnifiedPartners = [
+        'institutions',
+        'mqap_institutions',
+        'contributing_center',
+        'bilateral_projects',
+        'bilateral_project',
+        'no_applicable_partner',
+        'is_lead_by_partner',
+      ].some(hasProp);
+
+      if (!hasUnifiedToc && !hasUnifiedPartners) {
         return {
           response: {},
           message: 'No payload provided to update.',
@@ -162,21 +186,43 @@ export class ContributorsPartnersService {
       const statuses: number[] = [];
       const messages: string[] = [];
 
-      if (payload.toc_mapping) {
-        const tocRes = await this.updateTocMappingV2(
-          resultId,
-          payload.toc_mapping,
-          user,
-        );
+      if (hasUnifiedToc) {
+        const tocPayload: CreateResultsTocResultV2Dto & {
+          contributing_initiatives?: UpdateContributorsPartnersDto['contributing_initiatives'];
+        } = {
+          contributing_initiatives: payload.contributing_initiatives,
+          accepted_contributing_initiatives:
+            payload.accepted_contributing_initiatives,
+          pending_contributing_initiatives:
+            payload.pending_contributing_initiatives,
+          cancel_pending_requests: payload.cancel_pending_requests,
+          changePrimaryInit: payload.changePrimaryInit,
+          email_template: payload.email_template,
+          result_toc_result: payload.result_toc_result,
+          contributors_result_toc_result: payload.contributors_result_toc_result,
+        };
+
+        const tocRes = await this.updateTocMappingV2(resultId, tocPayload, user);
         response['toc_mapping'] = tocRes.response;
         statuses.push(tocRes.status ?? HttpStatus.OK);
         if (tocRes.message) messages.push(tocRes.message);
       }
 
-      if (payload.partners) {
+      if (hasUnifiedPartners) {
+        const partnersPayload: SavePartnersV2Dto = {
+          result_id: resultId,
+          institutions: payload.institutions,
+          mqap_institutions: payload.mqap_institutions,
+          contributing_center: payload.contributing_center,
+          bilateral_project:
+            (payload as any).bilateral_project ?? payload.bilateral_projects,
+          no_applicable_partner: payload.no_applicable_partner,
+          is_lead_by_partner: payload.is_lead_by_partner,
+        };
+
         const partnersRes = await this.updatePartnersV2(
           resultId,
-          payload.partners,
+          partnersPayload,
           user,
         );
         response['partners'] = partnersRes.response;
