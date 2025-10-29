@@ -15,7 +15,6 @@ export class IpsrStep1Body {
   investment_programs: Investment[] = [];
   investment_bilateral: Investment[] = [];
   investment_partners: Investment[] = [];
-  
   initiative_id: number = null;
   geo_scope_id: number = null;
   countries: Country[] = [];

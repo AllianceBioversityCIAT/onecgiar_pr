@@ -3,12 +3,12 @@ import { ApiService } from '../../../../services/api/api.service';
 import { TerminologyService } from '../../../../../internationalization/terminology.service';
 
 @Component({
-    selector: 'app-estimates-CGIAR',
-    templateUrl: './estimates-CGIAR.component.html',
-    styleUrls: ['./estimates-CGIAR.component.scss'],
+    selector: 'app-estimates-cgiar',
+    templateUrl: './estimates-cgiar.component.html',
+    styleUrls: ['./estimates-cgiar.component.scss'],
     standalone: false
 })
-export class EstimatesCGIARComponent {
+export class EstimatesCgiarComponent {
     @Input() body: any = {};
 
     constructor(

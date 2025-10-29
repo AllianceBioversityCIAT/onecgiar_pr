@@ -1,7 +1,7 @@
 import { Component, effect } from '@angular/core';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { IpsrStep1Body } from '../../../../../../ipsr/pages/innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n1/model/Ipsr-step-1-body.model';
-import { FieldsManagerService } from 'src/app/shared/services/fields-manager.service';
+import { FieldsManagerService } from '../../../../../../../shared/services/fields-manager.service';
 import { DataControlService } from '../../../../../../../shared/services/data-control.service';
 
 @Component({
