@@ -15,6 +15,7 @@ export class ResultsByProjectsRepository extends Repository<ResultsByProjects> {
   async findResultsByProjectsByResultId(resultId: number) {
     try {
       return await this.find({
+        relations: { obj_clarisa_project: true },
         where: {
           result_id: resultId,
           is_active: true,

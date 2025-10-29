@@ -26,7 +26,10 @@ export class ResultsByProjects extends BaseEntity {
   })
   obj_result_project: Result;
 
-  @ManyToOne(() => ClarisaProject, { eager: false, nullable: false })
+  @ManyToOne(() => ClarisaProject, (r) => r.obj_results_by_projects, {
+    eager: false,
+    nullable: false,
+  })
   @JoinColumn({ name: 'project_id' })
-  clarisaProject: ClarisaProject;
+  obj_clarisa_project: ClarisaProject;
 }
