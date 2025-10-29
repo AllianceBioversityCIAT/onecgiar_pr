@@ -112,7 +112,7 @@ export class FieldsManagerService {
         '[innovation-dev-info]-short_title': {
           label: this.isP25() ? 'Provide a short name for the innovation' : 'Provide a short title for the innovation',
           placeholder: 'Innovation short name goes here...',
-          description: this.isP22() ? 
+          description: this.isP22() ?
             `<ul>
             <li>Innovations are new, improved, or adapted technologies or products, capacity development tools and services, and policies or institutional arrangements with high potential to contribute to positive impacts when used at scale.</li>
             <li>Innovations may be at early stages of readiness (ideation or basic research) or at more mature stages of readiness (delivery and scaling).</li>
@@ -154,7 +154,7 @@ export class FieldsManagerService {
           label: 'Specify the targeted innovation use of the core innovation by end of 2030, supported by projections or evidence where available',
           hide: this.isP22(),
           required: true,
-          description: 
+          description:
           `<ul>
           <li>Depending on the innovation, users may be groups of actors or be organizations. Multiple actors or organizations can be selected.</li>
           <li>If the innovation does not target specific groups of actors or people, then please specify the expected innovation use at organizational level or other use.</li>

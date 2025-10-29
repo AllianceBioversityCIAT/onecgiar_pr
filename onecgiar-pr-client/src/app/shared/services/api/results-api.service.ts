@@ -430,7 +430,6 @@ export class ResultsApiService {
     return this.http
       .get<any>(`${this.apiBaseUrlV2}get/innov-use-linked-results`);
   }
-  
   GET_innovationUseP25() {
     return this.http
       .get<any>(`${this.apiBaseUrlP25}innovation-use/get/result/${this.currentResultId}`)

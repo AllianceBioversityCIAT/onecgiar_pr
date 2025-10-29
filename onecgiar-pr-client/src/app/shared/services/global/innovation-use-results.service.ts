@@ -6,7 +6,7 @@ import { ApiService } from '../api/api.service';
 })
 export class InnovationUseResultsService {
   resultsList = [];
-  
+
   constructor(private api: ApiService) {
     this.api.resultsSE.GET_innovationUseResults().subscribe(({ response }) => {
       this.resultsList = [
@@ -23,7 +23,7 @@ export class InnovationUseResultsService {
           options: response['P22-P24']?.[0]?.['innovation-development'] || []
         }
       ];
-      
+
     });
   }
 }
