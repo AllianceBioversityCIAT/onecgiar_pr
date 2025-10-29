@@ -42,18 +42,6 @@ export class ContributorsPartnersService {
         };
       }
 
-      const [conInit, conPending] = await Promise.all([
-        this._resultByInitiativesRepository.getContributorInitiativeByResult(
-          resultId,
-        ),
-        this._resultByInitiativesRepository.getPendingInit(resultId),
-      ]);
-
-      const contributingInitiatives = {
-        accepted_contributing_initiatives: conInit,
-        pending_contributing_initiatives: conPending,
-      };
-
       const institutionsData = await this._resultByIntitutionsRepository.find({
         where: {
           result_id: resultId,
@@ -89,7 +77,29 @@ export class ContributorsPartnersService {
           resultId,
         );
 
-      console.log(bilateralProjects);
+      const tocMappingRes =
+        await this._resultsTocResultsService.getTocByResult(resultId);
+
+      if (tocMappingRes?.status && tocMappingRes.status !== HttpStatus.OK) {
+        return tocMappingRes;
+      }
+
+      const tocResponse =
+        (tocMappingRes?.response as Record<string, any>) ?? {};
+      const tocMapping = {
+        contributing_initiatives: tocResponse.contributing_initiatives ?? {
+          accepted_contributing_initiatives: [],
+          pending_contributing_initiatives: [],
+        },
+        contributing_and_primary_initiative:
+          tocResponse.contributing_and_primary_initiative ?? [],
+        result_toc_result: tocResponse.result_toc_result ?? null,
+        contributors_result_toc_result:
+          tocResponse.contributors_result_toc_result ?? [],
+        impacts: tocResponse.impacts ?? null,
+        impactsTarge: tocResponse.impactsTarge ?? null,
+        sdgTargets: tocResponse.sdgTargets ?? null,
+      };
 
       return {
         response: {
@@ -98,7 +108,7 @@ export class ContributorsPartnersService {
           title: result.title,
           level_id: result.result_level_id,
           owner_initiative: resultInit,
-          contributing_initiatives: contributingInitiatives,
+          ...tocMapping,
           institutions,
           contributing_center: contributingCenters,
           bilateral_projects: bilateralProjects,
