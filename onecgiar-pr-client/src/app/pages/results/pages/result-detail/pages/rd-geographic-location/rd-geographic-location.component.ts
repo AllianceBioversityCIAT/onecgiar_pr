@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, effect } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { GeographicLocationBody } from './models/geographicLocationBody';
 import { ResultLevelService } from '../../../result-creator/services/result-level.service';
@@ -7,6 +7,7 @@ import { GeoScopeEnum } from '../../../../../../shared/enum/geo-scope.enum';
 import { CustomizedAlertsFeService } from '../../../../../../shared/services/customized-alerts-fe.service';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 import { ExtraGeographicLocationBody } from './models/extraGeographicLocationBody';
+import { DataControlService } from '../../../../../../shared/services/data-control.service';
 
 @Component({
   selector: 'app-rd-geographic-location',
@@ -14,7 +15,7 @@ import { ExtraGeographicLocationBody } from './models/extraGeographicLocationBod
   styleUrls: ['./rd-geographic-location.component.scss'],
   standalone: false
 })
-export class RdGeographicLocationComponent implements OnInit {
+export class RdGeographicLocationComponent {
   geographicLocationBody = new GeographicLocationBody();
   extraGeographicLocationBody = new ExtraGeographicLocationBody();
 
@@ -43,15 +44,18 @@ export class RdGeographicLocationComponent implements OnInit {
     public api: ApiService,
     public resultLevelSE: ResultLevelService,
     public regionsCountriesSE: RegionsCountriesService,
-    private customizedAlertsFeSE: CustomizedAlertsFeService,
-    public fieldsManagerSE: FieldsManagerService
+    public customizedAlertsFeSE: CustomizedAlertsFeService,
+    public fieldsManagerSE: FieldsManagerService,
+    public dataControlSE: DataControlService
   ) {
     this.api.dataControlSE.currentResultSectionName.set('Geographic location');
   }
 
-  ngOnInit(): void {
-    this.fieldsManagerSE.isP25() ? this.getSectionInformationp25() : this.getSectionInformation();
-  }
+  OnChangePortfolio = effect(() => {
+    if (this.dataControlSE.currentResultSignal()?.portfolio !== undefined) {
+      this.fieldsManagerSE.isP25() ? this.getSectionInformationp25() : this.getSectionInformation();
+    }
+  });
 
   geographic_focus_description(id) {
     let tags = '';
