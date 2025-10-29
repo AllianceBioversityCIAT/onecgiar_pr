@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { ResultIpMeasure } from '../../../ipsr/result-ip-measures/entities/result-ip-measure.entity';
 import { ResultActor } from '../../../results/result-actors/entities/result-actor.entity';
 import { ResultsByInstitutionType } from '../../../results/results_by_institution_types/entities/results_by_institution_type.entity';
+import { Transform } from 'class-transformer';
 
 export class InnovUseGroupsDto {
   @ApiProperty({
@@ -26,17 +27,17 @@ export class InnovUseGroupsDto {
 export class InvesmentDto {
   @ApiProperty({
     description: 'Entity providing the investment',
-    example: 'SP01',
-    type: String,
+    example: '15',
+    type: Number,
   })
-  entity: string;
+  id: number;
 
   @ApiProperty({
     description: 'Total value of the investment',
     example: '1000000',
     type: String,
   })
-  total_value: string;
+  kind_cash: string;
 
   @ApiProperty({
     description: 'Indicates whether the investment is determined',
@@ -78,10 +79,33 @@ export class CreateInnovationUseDto {
   innov_use_to_be_determined: boolean;
 
   @ApiProperty({
-    description: 'Groups related to the current innovation use',
-    type: InnovUseGroupsDto,
+    description: 'List of actors related to the result',
+    type: [ResultActor],
   })
-  innovation_use: InnovUseGroupsDto;
+  actors: ResultActor[];
+
+  @ApiProperty({
+    description: 'Organizations involved, classified by institution type',
+    type: [ResultsByInstitutionType],
+  })
+  organization: ResultsByInstitutionType[];
+
+  @ApiProperty({
+    description: 'Measures associated with the result',
+    type: [ResultIpMeasure],
+  })
+  measures: ResultIpMeasure[];
+
+  @Transform(({ obj }) => ({
+    actors: obj.actors,
+    organization: obj.organization,
+    measures: obj.measures,
+  }))
+  innovation_use: {
+    actors: ResultActor[];
+    organization: ResultsByInstitutionType[];
+    measures: ResultIpMeasure[];
+  };
 
   @ApiProperty({
     description: 'Groups related to the innovation use by end of 2030',
@@ -90,7 +114,8 @@ export class CreateInnovationUseDto {
   innovation_use_2030: InnovUseGroupsDto;
 
   @ApiProperty({
-    description: 'Indicates whether the innovation use by end of 2030 is to be determined',
+    description:
+      'Indicates whether the innovation use by end of 2030 is to be determined',
     example: true,
   })
   innov_use_2030_to_be_determined: boolean;
@@ -113,19 +138,19 @@ export class CreateInnovationUseDto {
 
   @ApiProperty({
     description: 'Investment programs related to the innovation use',
-    type: InvesmentDto,
+    type: [InvesmentDto],
   })
-  investment_programs: InvesmentDto;
+  investment_programs: InvesmentDto[];
 
   @ApiProperty({
     description: 'Investment partners related to the innovation use',
-    type: InvesmentDto,
+    type: [InvesmentDto],
   })
-  investment_partners: InvesmentDto;
+  investment_partners: InvesmentDto[];
 
   @ApiProperty({
     description: 'Investment projects related to the innovation use',
-    type: InvesmentDto,
+    type: [InvesmentDto],
   })
-  investment_bilateral: InvesmentDto;
+  investment_bilateral: InvesmentDto[];
 }

@@ -62,6 +62,20 @@ export class ResultsInnovationsUse {
   readiness_level_explanation: string;
 
   @Column({
+    name: 'innov_use_to_be_determined',
+    type: 'tinyint',
+    nullable: true,
+  })
+  innov_use_to_be_determined: boolean;
+
+  @Column({
+    name: 'innov_use_2030_to_be_determined',
+    type: 'tinyint',
+    nullable: true,
+  })
+  innov_use_2030_to_be_determined: boolean;
+
+  @Column({
     name: 'innovation_readiness_level_id',
     type: 'bigint',
     nullable: true,

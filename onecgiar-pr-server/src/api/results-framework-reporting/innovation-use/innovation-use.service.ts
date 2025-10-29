@@ -4,7 +4,7 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { LinkedResultsService } from '../../results/linked-results/linked-results.service';
 import { ResultActor } from '../../results/result-actors/entities/result-actor.entity';
-import { IsNull, Repository } from 'typeorm';
+import { In, IsNull, Repository } from 'typeorm';
 import { ResultActorRepository } from '../../results/result-actors/repositories/result-actors.repository';
 import { ResultsByInstitutionType } from '../../results/results_by_institution_types/entities/results_by_institution_type.entity';
 import { ResultByIntitutionsTypeRepository } from '../../results/results_by_institution_types/result_by_intitutions_type.repository';
@@ -15,6 +15,15 @@ import { ResultsInnovationsUse } from '../../results/summary/entities/results-in
 import { ResultScalingStudyUrl } from '../result_scaling_study_urls/entities/result_scaling_study_url.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ResultCoreInnovUseSectionEnum } from '../result_innov_section/enum/result_innov_section.enum';
+import { ResultByInitiativesRepository } from '../../results/results_by_inititiatives/resultByInitiatives.repository';
+import { ResultInitiativeBudget } from '../../results/result_budget/entities/result_initiative_budget.entity';
+import { ResultInitiativeBudgetRepository } from '../../results/result_budget/repositories/result_initiative_budget.repository';
+import { NonPooledProjectRepository } from '../../results/non-pooled-projects/non-pooled-projects.repository';
+import { NonPooledProjectBudgetRepository } from '../../results/result_budget/repositories/non_pooled_proyect_budget.repository';
+import { ResultInstitutionsBudget } from '../../results/result_budget/entities/result_institutions_budget.entity';
+import { ResultInstitutionsBudgetRepository } from '../../results/result_budget/repositories/result_institutions_budget.repository';
+import { ResultsByInstitution } from '../../results/results_by_institutions/entities/results_by_institution.entity';
+import { ResultByIntitutionsRepository } from '../../results/results_by_institutions/result_by_intitutions.repository';
 
 @Injectable()
 export class InnovationUseService {
@@ -28,6 +37,12 @@ export class InnovationUseService {
     private readonly _resultsInnovationsUseRepository: ResultsInnovationsUseRepository,
     @InjectRepository(ResultScalingStudyUrl)
     private readonly _resultScalingStudyUrlsRepository: Repository<ResultScalingStudyUrl>,
+    private readonly _resultByInitiativeRepository: ResultByInitiativesRepository,
+    private readonly _resultInitiativesBudgetRepository: ResultInitiativeBudgetRepository,
+    private readonly _nonPooledProjectRepository: NonPooledProjectRepository,
+    private readonly _resultBilateralBudgetRepository: NonPooledProjectBudgetRepository,
+    private readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
+    private readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
   ) {}
 
   async saveInnovationUse(
@@ -68,7 +83,7 @@ export class InnovationUseService {
         this.logger.log(
           `Updating existing ResultsInnovationsUse for resultId: ${resultId}`,
         );
-
+        console.log(`User ID: ${user.id}`);
         resultExist.has_innovation_link = has_innovation_link;
         resultExist.innovation_readiness_level_id =
           innovation_readiness_level_id;
@@ -149,12 +164,12 @@ export class InnovationUseService {
 
       // Determinar flag y procesar innovation_use y/o innovation_use_2030
       const hasCurrent =
-        (Array.isArray(innovationUseDto?.innovation_use?.actors) &&
-          innovationUseDto.innovation_use.actors.length > 0) ||
-        (Array.isArray(innovationUseDto?.innovation_use?.organization) &&
-          innovationUseDto.innovation_use.organization.length > 0) ||
-        (Array.isArray(innovationUseDto?.innovation_use?.measures) &&
-          innovationUseDto.innovation_use.measures.length > 0);
+        (Array.isArray(innovationUseDto?.actors) &&
+          innovationUseDto.actors.length > 0) ||
+        (Array.isArray(innovationUseDto?.organization) &&
+          innovationUseDto.organization.length > 0) ||
+        (Array.isArray(innovationUseDto?.measures) &&
+          innovationUseDto.measures.length > 0);
 
       const hasFuture =
         (Array.isArray(innovationUseDto?.innovation_use_2030?.actors) &&
@@ -198,6 +213,22 @@ export class InnovationUseService {
           ResultCoreInnovUseSectionEnum.FUTURE,
         );
       }
+
+      await this.saveInitiativeInvestment(
+        resultId,
+        user.id,
+        innovationUseDto,
+      );
+      await this.saveBillateralInvestment(
+        resultId,
+        user.id,
+        innovationUseDto,
+      );
+      await this.savePartnerInvestment(
+        resultId,
+        user.id,
+        innovationUseDto,
+      );
 
       this.logger.log(
         `Calling createForInnovationUse for result_innovation_use_id: ${InnUseRes.result_innovation_use_id}`,
@@ -496,11 +527,10 @@ export class InnovationUseService {
           null,
       }));
 
-      const innovation_use = {
-        actors: actorsData.filter((a) => a.section_id === 1),
-        organizations: organization.filter((o) => o.section_id === 1),
-        measures: measures.filter((m) => m.section_id === 1),
-      };
+      
+      const actors_current = actorsData.filter((a) => a.section_id === 1);
+      const organizations_current = organization.filter((o) => o.section_id === 1);
+      const measures_current = measures.filter((m) => m.section_id === 1);
 
       const innovation_use_2030 = {
         actors: actorsData.filter((a) => a.section_id === 2),
@@ -519,11 +549,100 @@ export class InnovationUseService {
         scaling_studies_urls = urls.map((u) => u.study_url);
       }
 
+      const initiatives = await this._resultByInitiativeRepository.find({
+        where: {
+          result_id: resultId,
+          is_active: true,
+        },
+      });
+
+      const investment_programs_raw =
+        await this._resultInitiativesBudgetRepository.find({
+          where: {
+            result_initiative_id: In(initiatives.map((el) => el.id)),
+            is_active: true,
+          },
+          relations: {
+            obj_result_initiative: {
+              obj_initiative: true,
+            },
+          },
+        });
+
+      const investment_programs = investment_programs_raw.map((item) => ({
+        id: item.obj_result_initiative?.obj_initiative?.id ?? null,
+        kind_cash: item.kind_cash ?? null,
+        is_determined: item.is_determined ?? null,
+        official_code: item.obj_result_initiative?.obj_initiative?.official_code ?? null,
+        name: item.obj_result_initiative?.obj_initiative?.name ?? null,
+      }));
+
+      const npp = await this._nonPooledProjectRepository.find({
+        where: {
+          results_id: resultId,
+          is_active: true,
+          non_pooled_project_type_id: 1,
+        },
+      });
+
+      const investment_bilateral_raw =
+        await this._resultBilateralBudgetRepository.find({
+          where: {
+            non_pooled_projetct_id: In(npp.map((el) => el.id)),
+            is_active: true,
+          },
+          relations: {
+            obj_non_pooled_projetct: {
+              obj_funder_institution_id: true,
+            },
+          },
+        });
+
+      const investment_bilateral = investment_bilateral_raw.map((item) => ({
+        id: item.obj_non_pooled_projetct?.obj_funder_institution_id.id ?? null,
+        kind_cash: item.kind_cash ?? null,
+        is_determined: item.is_determined ?? null,
+        official_code: null,
+        name: item.obj_non_pooled_projetct?.grant_title ?? null,
+      }));
+
+      const institutions: ResultsByInstitution[] =
+        await this._resultByIntitutionsRepository.find({
+          where: { result_id: resultId, is_active: true },
+        });
+      const investment_partners_raw =
+        await this._resultInstitutionsBudgetRepository.find({
+          where: {
+            result_institution_id: In(institutions.map((el) => el.id)),
+            is_active: true,
+          },
+          relations: {
+            obj_result_institution: {
+              obj_institutions: {
+                obj_institution_type_code: true,
+              },
+            },
+          },
+        });
+
+      const investment_partners = investment_partners_raw.map((item) => ({
+        id: item.obj_result_institution?.obj_institutions?.id ?? null,
+        kind_cash: item.kind_cash ?? null,
+        is_determined: item.is_determined ?? null,
+        official_code: item.obj_result_institution?.obj_institutions?.acronym ?? null,
+        name: item.obj_result_institution?.obj_institutions?.name ?? null,
+      }));
+
       const innovationUse = {
         ...innDevExists,
         linked_results,
-        innovation_use,
+        actors: actors_current,
+        organizations: organizations_current,
+        measures: measures_current,
         innovation_use_2030,
+        investment_programs,
+        investment_partners,
+        investment_bilateral,
         readiness_level_explanation:
           innDevExists.readiness_level_explanation ?? null,
         has_scaling_studies: innDevExists.has_scaling_studies ?? false,
@@ -537,6 +656,189 @@ export class InnovationUseService {
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  async saveInitiativeInvestment(
+    resultId: number,
+    user: number,
+    { investment_programs: inv }: CreateInnovationUseDto,
+  ) {
+    try {
+      if (!inv || !Array.isArray(inv) || inv.length === 0) {
+        this.logger.log(`[saveInitiativeInvestment] No investment_programs provided for resultId: ${resultId}. Continuing flow.`);
+        return { valid: true };
+      }
+
+      for (const initiative of inv) {
+
+        const ibr = await this._resultByInitiativeRepository.findOne({
+          where: {
+            result_id: resultId,
+            initiative_id: initiative.id,
+            is_active: true,
+          },
+        });
+
+        if (!ibr) {
+          this.logger.error(`[saveInitiativeInvestment] Initiative relation not found for resultId: ${resultId}, initiativeId: ${initiative.id}`);
+          throw {
+            response: {},
+            message: `Initiative relation not found for resultId: ${resultId}, initiativeId: ${initiative.id}`,
+            status: HttpStatus.NOT_FOUND,
+          };
+        }
+
+        const rie: ResultInitiativeBudget =
+          await this._resultInitiativesBudgetRepository.findOne({
+            where: {
+              result_initiative_id: ibr.id,
+              is_active: true,
+            },
+          });
+
+        if (rie) {
+          rie.kind_cash = initiative.kind_cash === null ? null : Number(initiative.kind_cash);
+          rie.is_determined = initiative.is_determined;
+          rie.last_updated_by = user;
+
+          await this._resultInitiativesBudgetRepository.save(rie);
+        } else {
+          const newRie = this._resultInitiativesBudgetRepository.create({
+            result_initiative_id: ibr.id,
+            kind_cash: initiative.kind_cash === null ? null : Number(initiative.kind_cash),
+            is_determined: initiative.is_determined,
+            created_by: user,
+            last_updated_by: user,
+          });
+          await this._resultInitiativesBudgetRepository.save(newRie);
+        }
+        
+      }
+      
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async saveBillateralInvestment(
+    resultId: number,
+    user: number,
+    { investment_bilateral: inv }: CreateInnovationUseDto,
+  ) {
+    try {
+      // Validar que exista el arreglo
+      if (!inv || !Array.isArray(inv) || inv.length === 0) {
+        this.logger.log(`[saveBillateralInvestment] No investment_bilateral provided for resultId: ${resultId}. Continuing flow.`);
+        return { valid: true };
+      }
+
+      for (const i of inv) {
+        const npp = await this._nonPooledProjectRepository.findOne({
+          where: {
+            results_id: resultId,
+            is_active: true,
+            funder_institution_id: i.id,
+          },
+        });
+
+        if (!npp) {
+          this.logger.error(`[saveBillateralInvestment] Non-pooled project not found for resultId: ${resultId}, id: ${i.id}`);
+          throw {
+            response: {},
+            message: `Non-pooled project not found for resultId: ${resultId}, id: ${i.id}`,
+            status: HttpStatus.NOT_FOUND,
+          };
+        }
+
+        const rbb = await this._resultBilateralBudgetRepository.findOne({
+          where: {
+            non_pooled_projetct_id: npp.id,
+            is_active: true,
+          },
+        });
+
+        if (rbb) {
+          rbb.kind_cash = i.kind_cash === null ? null : Number(i.kind_cash);
+          rbb.is_determined = i.is_determined;
+          rbb.last_updated_by = user;
+
+          await this._resultBilateralBudgetRepository.save(rbb);
+        } else {
+          const newRbb = this._resultBilateralBudgetRepository.create({
+            non_pooled_projetct_id: npp.id,
+            kind_cash: i.kind_cash === null ? null : Number(i.kind_cash),
+            is_determined: i.is_determined,
+            created_by: user,
+            last_updated_by: user,
+          });
+
+          await this._resultBilateralBudgetRepository.save(newRbb);
+        }
+      }
+
+      return { valid: true };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async savePartnerInvestment(
+    resultId: number,
+    user: number,
+    { investment_partners: inv }: CreateInnovationUseDto,
+  ) {
+    try {
+      if (!inv || !Array.isArray(inv) || inv.length === 0) {
+        this.logger.log('[savePartnerInvestment] No investment_partners provided. Continuing flow.');
+        return { valid: true };
+      }
+
+      for (const partner of inv) {
+        const rbi = await this._resultByIntitutionsRepository.findOne({
+          where: {
+            result_id: resultId,
+            institutions_id: partner.id,
+          },
+        });
+
+        if (!rbi) {
+          this.logger.error(`[savePartnerInvestment] Institution relation not found for resultId: ${resultId}, institutionId: ${partner.id}`);
+          throw {
+            response: {},
+            message: `Partner relation not found for resultId: ${resultId}, partnerId: ${partner.id}`,
+            status: HttpStatus.NOT_FOUND,
+          };
+        }
+
+        const existBud: ResultInstitutionsBudget = 
+          await this._resultInstitutionsBudgetRepository.findOne({
+            where: {
+              result_institution_id: rbi.id,
+              is_active: true,
+            },
+          });
+
+        if (existBud) {
+          existBud.kind_cash = partner.kind_cash === null ? null : Number(partner.kind_cash);
+          existBud.is_determined = partner.is_determined;
+          existBud.last_updated_by = user;
+
+          await this._resultInstitutionsBudgetRepository.save(existBud);
+        } else {
+            const newBud = this._resultInstitutionsBudgetRepository.create({
+            result_institution_id: rbi.id,
+            kind_cash: partner.kind_cash === null ? null : Number(partner.kind_cash),
+            is_determined: partner.is_determined,
+            created_by: user,
+            last_updated_by: user,
+            });
+
+          await this._resultInstitutionsBudgetRepository.save(newBud);
+        }
+      }
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 }
