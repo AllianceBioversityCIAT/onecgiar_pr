@@ -257,64 +257,52 @@ export class ResultRegionRepository
   async updateRegionsV2(
     resultId: number,
     regionArray: number[] = [],
-    extraRegionArray: number[] = [],
+    roleId: number,
   ): Promise<void> {
     try {
-      const updateRegionsByRole = async (
-        roleId: number,
-        regionIds: number[],
-      ) => {
-        if (regionIds.length > 0) {
-          await this.query(
-            `
-            UPDATE result_region
-            SET is_active = 0,
-                last_updated_date = NOW()
-            WHERE is_active > 0
-              AND geo_scope_role_id = ?
-              AND result_id = ?
-              AND region_id NOT IN (${regionIds.map(() => '?').join(', ')});
-            `,
-            [roleId, resultId, ...regionIds],
-          );
+      if (regionArray.length > 0) {
+        console.log('Regions to update', roleId, regionArray);
 
-          await this.query(
-            `
-            UPDATE result_region
-            SET is_active = 1,
-                last_updated_date = NOW()
-            WHERE geo_scope_role_id = ?
-              AND result_id = ?
-              AND region_id IN (${regionIds.map(() => '?').join(', ')});
-            `,
-            [roleId, resultId, ...regionIds],
-          );
-        } else {
-          await this.query(
-            `
-            UPDATE result_region
-            SET is_active = 0,
-                last_updated_date = NOW()
-            WHERE is_active > 0
-              AND geo_scope_role_id = ?
-              AND result_id = ?;
-            `,
-            [roleId, resultId],
-          );
-        }
-      };
+        await this.query(
+          `
+          UPDATE result_region
+          SET is_active = 0,
+              last_updated_date = NOW()
+          WHERE is_active > 0
+            AND geo_scope_role_id = ?
+            AND result_id = ?
+            AND region_id NOT IN (${regionArray.map(() => '?').join(', ')});
+          `,
+          [roleId, resultId, ...regionArray],
+        );
 
-      const promises = [];
+        await this.query(
+          `
+          UPDATE result_region
+          SET is_active = 1,
+              last_updated_date = NOW()
+          WHERE geo_scope_role_id = ?
+            AND result_id = ?
+            AND region_id IN (${regionArray.map(() => '?').join(', ')});
+          `,
+          [roleId, resultId, ...regionArray],
+        );
 
-      if (regionArray !== undefined && regionArray !== null) {
-        promises.push(updateRegionsByRole(1, regionArray));
+        console.log('Regions updated', regionArray, roleId);
+      } else {
+        console.log('No regions to update', roleId);
+        await this.query(
+          `
+          UPDATE result_region
+          SET is_active = 0,
+              last_updated_date = NOW()
+          WHERE is_active > 0
+            AND geo_scope_role_id = ?
+            AND result_id = ?;
+          `,
+          [roleId, resultId],
+        );
       }
-
-      if (extraRegionArray !== undefined && extraRegionArray !== null) {
-        promises.push(updateRegionsByRole(2, extraRegionArray));
-      }
-
-      await Promise.all(promises);
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultRegionRepository.name,
