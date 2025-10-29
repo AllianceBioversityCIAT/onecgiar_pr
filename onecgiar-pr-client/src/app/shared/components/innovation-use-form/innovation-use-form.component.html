@@ -5,27 +5,18 @@
 </app-pr-radio-button>
 
 <div *ngIf="body.has_innovation_link && this.fieldsManagerSE.isP25()">
-  <app-pr-field-header
-    label="Please select a result"
-    [required]="true">
-  </app-pr-field-header>
-  
-  <p-multiselect
+  <app-pr-multi-select
     [options]="this.innovationUseResultsSE.resultsList"
     [(ngModel)]="body.linked_results"
     optionLabel="title"
     optionValue="id"
+    [group]="true"
     optionGroupLabel="name"
     optionGroupChildren="options"
+    label="Please select a result"
     placeholder="Please select a result"
-    [style]="{ width: '100%' }"
-    [group]="true">
-    <ng-template let-group pTemplate="group">
-      <div class="flex items-center">
-        <span>{{ group.name }}</span>
-      </div>
-    </ng-template>
-  </p-multiselect>
+    selectedLabel="Results selected">
+  </app-pr-multi-select>
 </div>
 
 @if (!this.fieldsManagerSE.isP25()) {
@@ -193,7 +184,7 @@
 
 @if (this.fieldsManagerSE.isP25()) {
 <div style="padding-top: 12px !important">
-  <app-pr-field-header label="How would you assess the current use level of this innovation?"
+  <app-pr-field-header label="How would you assess the current use of the innovation?"
     [description]="readiness_of_this_innovation_description()">
   </app-pr-field-header>
 </div>
