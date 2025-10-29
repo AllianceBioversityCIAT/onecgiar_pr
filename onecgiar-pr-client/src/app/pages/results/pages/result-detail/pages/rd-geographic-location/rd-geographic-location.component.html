@@ -10,11 +10,15 @@
 
   <app-geoscope-management
     [description]="
-      this.fieldsManagerSE.isP25()
+      this.fieldsManagerSE.isP25() && this.fieldsManagerSE.isAnInnovation()
         ? 'This should reflect geographies where the innovation development, testing and/or use has taken place'
         : undefined
     "
-    [label]="this.fieldsManagerSE.isP25() ? 'What is the current geographic focus of the innovation development, testing and/or use?' : undefined"
+    [label]="
+      this.fieldsManagerSE.isP25() && this.fieldsManagerSE.isAnInnovation()
+        ? 'What is the current geographic focus of the innovation development, testing and/or use?'
+        : undefined
+    "
     [body]="this.geographicLocationBody"
     module="reporting">
   </app-geoscope-management>
