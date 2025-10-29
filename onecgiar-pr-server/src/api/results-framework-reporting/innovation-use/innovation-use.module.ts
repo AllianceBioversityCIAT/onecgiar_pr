@@ -11,6 +11,13 @@ import { ResultsModule } from '../../results/results.module';
 import { ResultScalingStudyUrlsModule } from '../result_scaling_study_urls/result_scaling_study_urls.module';
 import { ResultScalingStudyUrl } from '../result_scaling_study_urls/entities/result_scaling_study_url.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ResultsByInititiativesModule } from '../../results/results_by_inititiatives/results_by_inititiatives.module';
+import { NonPooledProjectsModule } from '../../results/non-pooled-projects/non-pooled-projects.module';
+import { ResultInstitutionsBudgetRepository } from '../../results/result_budget/repositories/result_institutions_budget.repository';
+import { ResultInitiativeBudgetRepository } from '../../results/result_budget/repositories/result_initiative_budget.repository';
+import { NonPooledProjectBudgetRepository } from '../../results/result_budget/repositories/non_pooled_proyect_budget.repository';
+import { ResultBudgetModule } from '../../results/result_budget/result_budget.module';
+import { ResultsByInstitutionsModule } from '../../results/results_by_institutions/results_by_institutions.module';
 
 @Module({
   imports: [
@@ -22,8 +29,18 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     ResultIpMeasuresModule,
     SummaryModule,
     ResultScalingStudyUrlsModule,
+    ResultsByInititiativesModule,
+    ResultBudgetModule,
+    NonPooledProjectsModule,
+    ResultsByInstitutionsModule,
   ],
   controllers: [InnovationUseController],
-  providers: [InnovationUseService, HandlersError],
+  providers: [
+    InnovationUseService,
+    HandlersError,
+    ResultInstitutionsBudgetRepository,
+    ResultInitiativeBudgetRepository,
+    NonPooledProjectBudgetRepository,
+  ],
 })
 export class InnovationUseModule {}

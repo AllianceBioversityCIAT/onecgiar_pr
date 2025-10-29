@@ -55,11 +55,24 @@ export class ResultsInnovationsUse {
 
   @Column({
     name: 'readiness_level_explanation',
-    type: 'varchar',
-    length: 50,
+    type: 'text',
     nullable: true,
   })
   readiness_level_explanation: string;
+
+  @Column({
+    name: 'innov_use_to_be_determined',
+    type: 'tinyint',
+    nullable: true,
+  })
+  innov_use_to_be_determined: boolean;
+
+  @Column({
+    name: 'innov_use_2030_to_be_determined',
+    type: 'tinyint',
+    nullable: true,
+  })
+  innov_use_2030_to_be_determined: boolean;
 
   @Column({
     name: 'innovation_readiness_level_id',

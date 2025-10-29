@@ -178,7 +178,9 @@ export class ResultsInnovationsUseRepository
         riu.has_innovation_link,
         riu.innovation_readiness_level_id,
         riu.has_scaling_studies,
-        riu.readiness_level_explanation
+        riu.readiness_level_explanation,
+        riu.innov_use_to_be_determined,
+        riu.innov_use_2030_to_be_determined
       FROM result r
       left join version v on r.version_id = v.id
       right JOIN results_innovations_use riu on riu.results_id = r.id and riu.is_active
@@ -187,12 +189,12 @@ export class ResultsInnovationsUseRepository
       WHERE r.id = ? AND r.is_active;
     `;
     try {
-      const resultTocResult: ResultsInnovationsUse[] = await this.query(
+      const InnovUseResult: ResultsInnovationsUse[] = await this.query(
         queryData,
         [resultId],
       );
-      console.log('resultTocResult', resultTocResult);
-      return resultTocResult.length ? resultTocResult[0] : undefined;
+      console.log('InnovUseResult', InnovUseResult);
+      return InnovUseResult.length ? InnovUseResult[0] : undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsInnovationsUseRepository.name,

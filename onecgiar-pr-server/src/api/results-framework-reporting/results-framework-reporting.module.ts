@@ -19,6 +19,7 @@ import { GeographicLocationModule } from './geographic-location/geographic-locat
 import { GeoScopeRoleModule } from './geo_scope_role/geo_scope_role.module';
 import { InnovationUseModule } from './innovation-use/innovation-use.module';
 import { ResultScalingStudyUrlsModule } from './result_scaling_study_urls/result_scaling_study_urls.module';
+import { ResultInnovSectionModule } from './result_innov_section/result_innov_section.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { ResultScalingStudyUrlsModule } from './result_scaling_study_urls/result
     GeoScopeRoleModule,
     InnovationUseModule,
     ResultScalingStudyUrlsModule,
+    ResultInnovSectionModule,
   ],
   controllers: [ResultsFrameworkReportingController],
   providers: [

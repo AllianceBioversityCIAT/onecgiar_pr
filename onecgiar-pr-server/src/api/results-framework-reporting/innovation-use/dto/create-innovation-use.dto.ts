@@ -22,7 +22,32 @@ export class InnovUseGroupsDto {
   })
   measures: ResultIpMeasure[];
 }
+
+export class InvesmentDto {
+  @ApiProperty({
+    description: 'Entity providing the investment',
+    example: '15',
+    type: Number,
+  })
+  id: number;
+
+  @ApiProperty({
+    description: 'Total value of the investment',
+    example: '1000000',
+    type: String,
+  })
+  kind_cash: string;
+
+  @ApiProperty({
+    description: 'Indicates whether the investment is determined',
+    example: true,
+    type: Boolean,
+  })
+  is_determined: boolean;
+}
 export class CreateInnovationUseDto {
+  innovation_use: InnovUseGroupsDto;
+
   @ApiProperty({
     description: 'Indicates whether the result is linked to an innovation',
     example: true,
@@ -49,16 +74,41 @@ export class CreateInnovationUseDto {
   readiness_level_explanation: string;
 
   @ApiProperty({
-    description: 'Groups related to the current innovation use',
-    type: InnovUseGroupsDto,
+    description: 'Indicates whether the innovation use is to be determined',
+    example: true,
   })
-  innovation_use: InnovUseGroupsDto;
+  innov_use_to_be_determined: boolean;
+
+  @ApiProperty({
+    description: 'List of actors related to the result',
+    type: [ResultActor],
+  })
+  actors: ResultActor[];
+
+  @ApiProperty({
+    description: 'Organizations involved, classified by institution type',
+    type: [ResultsByInstitutionType],
+  })
+  organization: ResultsByInstitutionType[];
+
+  @ApiProperty({
+    description: 'Measures associated with the result',
+    type: [ResultIpMeasure],
+  })
+  measures: ResultIpMeasure[];
 
   @ApiProperty({
     description: 'Groups related to the innovation use by end of 2030',
     type: InnovUseGroupsDto,
   })
   innovation_use_2030: InnovUseGroupsDto;
+
+  @ApiProperty({
+    description:
+      'Indicates whether the innovation use by end of 2030 is to be determined',
+    example: true,
+  })
+  innov_use_2030_to_be_determined: boolean;
 
   @ApiProperty({
     description: 'Indicates whether there are associated scaling studies',
@@ -75,4 +125,22 @@ export class CreateInnovationUseDto {
     type: [String],
   })
   scaling_studies_urls: string[];
+
+  @ApiProperty({
+    description: 'Investment programs related to the innovation use',
+    type: [InvesmentDto],
+  })
+  investment_programs: InvesmentDto[];
+
+  @ApiProperty({
+    description: 'Investment partners related to the innovation use',
+    type: [InvesmentDto],
+  })
+  investment_partners: InvesmentDto[];
+
+  @ApiProperty({
+    description: 'Investment projects related to the innovation use',
+    type: [InvesmentDto],
+  })
+  investment_bilateral: InvesmentDto[];
 }
