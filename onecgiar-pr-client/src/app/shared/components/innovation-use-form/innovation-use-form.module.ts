@@ -8,7 +8,7 @@ import { YmzListStructureItemModule } from '../../directives/ymz-list-structure-
 import { FeedbackValidationDirectiveModule } from '../../directives/feedback-validation-directive.module';
 import { MessageModule } from 'primeng/message';
 import { MultiSelectModule } from 'primeng/multiselect';
-import { EstimatesCgiarComponent } from './components/estimates-cgiar/estimates-cgiar.component';
+import { EstimatesCgiarComponent } from './components/estimates/estimates.component';
 
 @NgModule({
   declarations: [InnovationUseFormComponent, StudiesLinkComponent, EstimatesCgiarComponent],

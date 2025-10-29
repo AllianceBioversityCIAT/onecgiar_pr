@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
-import { EstimatesCgiarComponent } from './estimates-cgiar.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { EstimatesCgiarComponent } from './estimates.component';
 
 // Minimal stubs for injected services via ApiService usage
 class ApiServiceStub {
