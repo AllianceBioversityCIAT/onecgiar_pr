@@ -43,7 +43,7 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
 
   initializeComponentProperties() {
     const body = this.body as any;
-    
+
     if (!body.initiative_expected_investment) {
       body.initiative_expected_investment = [];
     }
@@ -275,7 +275,7 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
   }
 
   currentUseHeaderLabel() {
-    return this.fieldsManagerSE.isP25() 
+    return this.fieldsManagerSE.isP25()
       ? 'Current core innovation use in number of users that can be supported by evidence (within the reporting year).'
       : 'Specify the current use of the innovation in number of users (actors/ organizations/ other) that can be supported by evidence';
   }
@@ -298,7 +298,7 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     if (!this.body.innovation_readiness_level_id || !this.innovationControlListSE.readinessLevelsList) {
       return -1;
     }
-    
+
     const selectedId = this.body.innovation_readiness_level_id;
     const index = this.innovationControlListSE.readinessLevelsList.findIndex(level => level.id === selectedId);
     return index >= 0 ? index : -1;
