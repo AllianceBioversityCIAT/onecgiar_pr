@@ -197,9 +197,9 @@ export class ResultRegionsService {
         if (regions?.length || extra_regions?.length) {
           const resultRegionArray: ResultRegion[] = [];
 
-          if (regions?.length) {
-            const geo_scope_role_id = EnumGeoScopeRole.MAIN;
+          if (regions?.length) {          
             for (const region of regions) {
+              const geo_scope_role_id = EnumGeoScopeRole.MAIN;
               const exist =
                 await this._resultRegionRepository.getResultRegionByResultIdAndRegionId(
                   result.id,
@@ -207,6 +207,7 @@ export class ResultRegionsService {
                   geo_scope_role_id,
                 );
 
+              console.log('Exist Main Region:', exist);
               if (!exist) {
                 const newRegion = new ResultRegion();
                 newRegion.region_id = region.id;
@@ -218,8 +219,8 @@ export class ResultRegionsService {
           }
 
           if (extra_regions?.length) {
-            const geo_scope_role_id = EnumGeoScopeRole.EXTRA;
             for (const region of extra_regions) {
+              const geo_scope_role_id = EnumGeoScopeRole.EXTRA;
               const exist =
                 await this._resultRegionRepository.getResultRegionByResultIdAndRegionId(
                   result.id,
@@ -227,6 +228,7 @@ export class ResultRegionsService {
                   geo_scope_role_id,
                 );
 
+              console.log('Exist Extra Region:', exist);
               if (!exist) {
                 const newRegion = new ResultRegion();
                 newRegion.region_id = region.id;
