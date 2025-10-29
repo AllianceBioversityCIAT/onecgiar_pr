@@ -146,7 +146,7 @@ export class FieldsManagerService {
           description: 'Depending on the innovation, users may be groups of actors or be organizations. Multiple actors or organizations can be selected.',
         },
         '[innovation-use-form]-has-studies-links': {
-          label: 'Have any studies been conducted to inform the innovation scaling strategy design (e.g. willingness to pay, ex-ante impact study, policy integration, cost-benefit analysis, market sizing, scaling partner network, demand/ needs assessment, user-centred design, etc.).',
+          label: 'Have any studies been conducted to inform the innovation scaling strategy design (e.g. willingness to pay, ex-ante impact study, policy integration, cost-benefit analysis, market sizing, scaling partner network, etc.).?',
           hide: this.isP22(),
           required: true,
         },
