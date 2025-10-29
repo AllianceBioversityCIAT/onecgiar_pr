@@ -51,7 +51,7 @@
         : 'Select countries'
     "
     [(ngModel)]="this.body.has_countries"
-    [required]="false"
+    [required]="true"
     [readOnly]="this.api.dataControlSE.isKnowledgeProduct"
     [hideOptions]="this.body.geo_scope_id != 1 && this.body.geo_scope_id != 2">
   </app-pr-yes-or-not>
