@@ -48,4 +48,16 @@ export class EstimatesCGIARComponent {
 
         return false;
     }
+
+    onRadioChange(item: any) {
+        if (item.is_determined) {
+            item.kind_cash = null;
+        }
+    }
+
+    onInputChange(item: any) {
+        if (item.kind_cash) {
+            item.is_determined = null;
+        }
+    }
 }
