@@ -36,3 +36,16 @@
 .options .group > .pr-body-2 {
   padding: 8px 10px;
 }
+
+/* Dropdown positioning so it doesn't overlap the field placeholder */
+.custom_select .field {
+  position: relative;
+}
+
+.custom_select .field .options {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 1000;
+}

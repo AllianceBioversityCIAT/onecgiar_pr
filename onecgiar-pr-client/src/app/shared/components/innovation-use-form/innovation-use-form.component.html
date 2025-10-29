@@ -7,7 +7,7 @@
 <div *ngIf="body.has_innovation_link && this.fieldsManagerSE.isP25()">
   <app-pr-multi-select [options]="this.innovationUseResultsSE.resultsList" [(ngModel)]="body.linked_results"
     optionLabel="title" optionValue="id" [group]="true" optionGroupLabel="name" optionGroupChildren="options"
-    label="Please select a result" placeholder="Please select a result" selectedLabel="Results selected">
+    label="Please select a result" placeholder="Please select a result" selectedLabel="Results selected" selectedOptionLabel="title">
   </app-pr-multi-select>
 </div>
 

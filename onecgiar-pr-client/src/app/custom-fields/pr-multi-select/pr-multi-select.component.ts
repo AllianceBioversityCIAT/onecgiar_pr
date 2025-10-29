@@ -1,4 +1,4 @@
-import { Component, forwardRef, Input, Output, EventEmitter } from '@angular/core';
+import { Component, forwardRef, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { CustomizedAlertsFeService } from '../../shared/services/customized-alerts-fe.service';
@@ -17,7 +17,7 @@ import { DataControlService } from '../../shared/services/data-control.service';
   ],
   standalone: false
 })
-export class PrMultiSelectComponent implements ControlValueAccessor {
+export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
   @Input() optionLabel: string;
   @Input() optionValue: string;
   @Input() options: any;
@@ -58,6 +58,12 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
     public dataControlSE: DataControlService
   ) {}
 
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['options'] || changes['group']) {
+      this.syncSelectionFlags();
+    }
+  }
+
   get optionsIntance() {
     if (!this.options?.length) return [];
     if (!this._optionsIntance?.length || this.currentOptionsLength != this.options?.length) this._optionsIntance = [...this.options];
@@ -75,8 +81,9 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
         if (itemFinded) itemFinded.disabled = true;
       });
 
-      this.value?.map(savedListItem => {
-        const itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == savedListItem[this.optionValue]);
+    this.value?.map(savedListItem => {
+      const savedId = typeof savedListItem === 'object' ? savedListItem?.[this.optionValue] : savedListItem;
+      const itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == savedId);
 
         if (itemFinded) itemFinded.selected = true;
 
@@ -117,7 +124,8 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
     });
 
     this.value?.map(savedListItem => {
-      const itemFinded = children.find(listItem => listItem[this.optionValue] == savedListItem[this.optionValue]);
+      const savedId = typeof savedListItem === 'object' ? savedListItem?.[this.optionValue] : savedListItem;
+      const itemFinded = children.find(listItem => listItem[this.optionValue] == savedId);
       if (itemFinded) itemFinded.selected = true;
       if (itemFinded && this.logicalDeletion) itemFinded.selected = savedListItem.is_active;
     });
@@ -178,7 +186,42 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   onTouch() {}
 
   writeValue(value: any): void {
+    // Support receiving array of IDs by mapping them to option objects for chip rendering
+    if (Array.isArray(value)) {
+      const source = this.group ? this.getAllChildrenFromGroups(this.options || []) : (this.options || []);
+      const mapped = value
+        .map((v: any) => (typeof v === 'object' ? v : source.find((s: any) => s?.[this.optionValue] == v)))
+        .filter(Boolean);
+      this._value = mapped;
+      this.syncSelectionFlags();
+      return;
+    }
     this._value = value;
+    this.syncSelectionFlags();
+  }
+
+  private syncSelectionFlags() {
+    const ids = new Set((this._value || []).map((v: any) => (typeof v === 'object' ? v?.[this.optionValue] : v)));
+    if (!ids.size) {
+      // clear all flags
+      if (this.group) {
+        const children = this.getAllChildrenFromGroups(this.options || []);
+        for (const child of children) child.selected = false;
+      } else {
+        for (const opt of this.options || []) opt.selected = false;
+      }
+      return;
+    }
+    if (this.group) {
+      const children = this.getAllChildrenFromGroups(this.options || []);
+      for (const child of children) {
+        child.selected = ids.has(child?.[this.optionValue]);
+      }
+    } else {
+      for (const opt of this.options || []) {
+        opt.selected = ids.has(opt?.[this.optionValue]);
+      }
+    }
   }
 
   registerOnChange(fn: any): void {
