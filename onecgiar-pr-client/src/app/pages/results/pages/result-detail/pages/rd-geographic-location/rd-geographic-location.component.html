@@ -24,7 +24,7 @@
   </app-geoscope-management>
 
   <br />
-  @if (this.geographicLocationBody.geo_scope_id != 1 && this.geographicLocationBody.geo_scope_id) {
+  @if (this.geographicLocationBody.geo_scope_id != 1 && this.geographicLocationBody.geo_scope_id != 50 && this.geographicLocationBody.geo_scope_id) {
     <app-pr-radio-button
       fieldRef="[geoscope-management]-has_extra_geo_scope"
       [options]="[
