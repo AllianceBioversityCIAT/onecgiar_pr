@@ -40,6 +40,7 @@ import { ResultsByInstitutionsModule } from '../../results/results_by_institutio
     HandlersError,
     ResultInstitutionsBudgetRepository,
     ResultInitiativeBudgetRepository,
-    NonPooledProjectBudgetRepository,],
+    NonPooledProjectBudgetRepository,
+  ],
 })
 export class InnovationUseModule {}

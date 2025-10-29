@@ -2,7 +2,6 @@ import { ApiProperty } from '@nestjs/swagger';
 import { ResultIpMeasure } from '../../../ipsr/result-ip-measures/entities/result-ip-measure.entity';
 import { ResultActor } from '../../../results/result-actors/entities/result-actor.entity';
 import { ResultsByInstitutionType } from '../../../results/results_by_institution_types/entities/results_by_institution_type.entity';
-import { Transform } from 'class-transformer';
 
 export class InnovUseGroupsDto {
   @ApiProperty({
@@ -47,6 +46,8 @@ export class InvesmentDto {
   is_determined: boolean;
 }
 export class CreateInnovationUseDto {
+  innovation_use: InnovUseGroupsDto;
+
   @ApiProperty({
     description: 'Indicates whether the result is linked to an innovation',
     example: true,
@@ -95,17 +96,6 @@ export class CreateInnovationUseDto {
     type: [ResultIpMeasure],
   })
   measures: ResultIpMeasure[];
-
-  @Transform(({ obj }) => ({
-    actors: obj.actors,
-    organization: obj.organization,
-    measures: obj.measures,
-  }))
-  innovation_use: {
-    actors: ResultActor[];
-    organization: ResultsByInstitutionType[];
-    measures: ResultIpMeasure[];
-  };
 
   @ApiProperty({
     description: 'Groups related to the innovation use by end of 2030',

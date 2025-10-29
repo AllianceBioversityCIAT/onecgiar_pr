@@ -55,8 +55,7 @@ export class ResultsInnovationsUse {
 
   @Column({
     name: 'readiness_level_explanation',
-    type: 'varchar',
-    length: 50,
+    type: 'text',
     nullable: true,
   })
   readiness_level_explanation: string;
