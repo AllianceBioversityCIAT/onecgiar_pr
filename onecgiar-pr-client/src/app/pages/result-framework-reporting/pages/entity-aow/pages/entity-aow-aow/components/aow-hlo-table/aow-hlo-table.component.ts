@@ -59,6 +59,17 @@ export class AowHloTableComponent {
     return Number(progress);
   }
 
+  getStatusLabel(progressPercentage: string): string {
+    const progress = this.getProgress(progressPercentage);
+
+    if (progress === 0 || progress === null) return 'Not started';
+    if (progress >= 1 && progress <= 99) return 'In progress';
+    if (progress === 100) return 'Achieved';
+    if (progress > 100) return 'Overachieved';
+
+    return 'Not started';
+  }
+
   openReportResultModal(item: any, currentItemId: string) {
     const selectedCurrentItem = {
       ...item,
