@@ -94,15 +94,15 @@ export class FieldsManagerService {
         hide: this.isP22()
       },
       '[geoscope-management]-has_extra_geo_scope': {
-        label: 'Are there any other geopgraphic areas where  the innovation could be impactful (beyond current development and use)?',
+        label: 'Are there any other geographic areas where  the innovation could be impactful (beyond current development and use)?',
         description:
           'This should reflect other geographies where the innovation development, testing and/or use could also contribute to outcomes and impact"',
         required: true,
-        hide: this.isP22() || this.isAnInnovation()
+        hide: this.isP22() || !this.isAnInnovation()
       },
       '[geoscope-management]-extra_geo_scope_id': {
         label: 'What is the geographic scope where there may be potential impact in other geographic areas?',
-        hide: this.isP22() || this.isAnInnovation()
+        hide: this.isP22() || !this.isAnInnovation()
       },
       '[innovation-dev-info]-long_title': {
         label: 'Long title',
