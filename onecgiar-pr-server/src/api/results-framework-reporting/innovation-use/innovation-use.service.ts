@@ -80,6 +80,9 @@ export class InnovationUseService {
         resultExist.innovation_readiness_level_id =
           innovation_readiness_level_id;
         resultExist.last_updated_by = user.id;
+        resultExist.innov_use_to_be_determined = innov_use_to_be_determined;
+        resultExist.innov_use_2030_to_be_determined =
+          innov_use_2030_to_be_determined;
 
         if (innovation_readiness_level_id >= 6) {
           resultExist.readiness_level_explanation =
@@ -105,6 +108,9 @@ export class InnovationUseService {
         newInnUse.is_active = true;
         newInnUse.innovation_readiness_level_id = innovation_readiness_level_id;
         newInnUse.has_innovation_link = has_innovation_link;
+        newInnUse.innov_use_to_be_determined = innov_use_to_be_determined;
+        newInnUse.innov_use_2030_to_be_determined =
+          innov_use_2030_to_be_determined;
 
         if (innovation_readiness_level_id >= 6) {
           newInnUse.readiness_level_explanation =
@@ -459,7 +465,7 @@ export class InnovationUseService {
 
       const innovation_use_2030 = {
         actors: actorsData.filter((a) => Number(a.section_id) === 2),
-        organizations: organization.filter((o) => Number(o.section_id) === 2),
+        organization: organization.filter((o) => Number(o.section_id) === 2),
         measures: measures.filter((m) => Number(m.section_id) === 2),
       };
 
@@ -573,7 +579,7 @@ export class InnovationUseService {
         ...innDevExists,
         linked_results,
         actors: actors_current,
-        organizations: organizations_current,
+        organization: organizations_current,
         measures: measures_current,
         innovation_use_2030,
         investment_programs,
