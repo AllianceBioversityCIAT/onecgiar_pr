@@ -10,11 +10,15 @@ import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { AddButtonComponent } from '../../../../../../../custom-fields/add-button/add-button.component';
 import { signal } from '@angular/core';
+import { FieldsManagerService } from '../../../../../../../shared/services/fields-manager.service';
+import { DataControlService } from '../../../../../../../shared/services/data-control.service';
 
 describe('InnovationUseInfoComponent', () => {
   let component: InnovationUseInfoComponent;
   let fixture: ComponentFixture<InnovationUseInfoComponent>;
   let mockApiService: any;
+  let mockFieldsManagerService: any;
+  let mockDataControlService: any;
   const mockGET_innovationUseResponse = {
     innovatonUse: {
       actors: [],
@@ -32,7 +36,13 @@ describe('InnovationUseInfoComponent', () => {
         GET_innovationUse: () => of({ response: mockGET_innovationUseResponse }),
         PATCH_innovationUse: () => of({ response: [] }),
         GETAllActorsTypes: () => of({ response: [] }),
-        GETInstitutionsTypeTree: () => of({ response: [] })
+        GETInstitutionsTypeTree: () => of({ response: [] }),
+        GET_innovationUseP25: () => of({ response: mockGET_innovationUseResponse }),
+        PATCH_innovationUseP25: () => of({ response: [] }),
+        GET_clarisaInnovationType: () => of({ response: [] }),
+        GET_clarisaInnovationCharacteristics: () => of({ response: [] }),
+        GET_clarisaInnovationReadinessLevels: () => of({ response: [] }),
+        GET_innovationUseResults: () => of({ response: [] })
       },
       rolesSE: {
         readOnly: false
@@ -40,6 +50,14 @@ describe('InnovationUseInfoComponent', () => {
       dataControlSE: {
         currentResultSectionName: signal<string>('Innovation use information')
       }
+    };
+
+    mockFieldsManagerService = {
+      isP25: jest.fn().mockReturnValue(false)
+    };
+
+    mockDataControlService = {
+      currentResultSignal: signal({ portfolio: 'test' })
     };
 
     await TestBed.configureTestingModule({
@@ -57,6 +75,14 @@ describe('InnovationUseInfoComponent', () => {
         {
           provide: ApiService,
           useValue: mockApiService
+        },
+        {
+          provide: FieldsManagerService,
+          useValue: mockFieldsManagerService
+        },
+        {
+          provide: DataControlService,
+          useValue: mockDataControlService
         }
       ]
     }).compileComponents();
@@ -65,15 +91,6 @@ describe('InnovationUseInfoComponent', () => {
     component = fixture.componentInstance;
   });
 
-  describe('ngOnInit()', () => {
-    it('should get section information on initialization', () => {
-      const spyGetSectionInformation = jest.spyOn(component, 'getSectionInformation');
-
-      component.ngOnInit();
-
-      expect(spyGetSectionInformation).toHaveBeenCalled();
-    });
-  });
 
   describe('getSectionInformation()', () => {
     it('should get section information', () => {

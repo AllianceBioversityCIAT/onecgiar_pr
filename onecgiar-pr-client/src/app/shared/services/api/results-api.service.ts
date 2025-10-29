@@ -30,6 +30,7 @@ export class ResultsApiService {
   ) {}
   apiBaseUrl = environment.apiBaseUrl + 'api/results/';
   apiBaseUrlV2 = environment.apiBaseUrl + 'v2/api/results/';
+  apiBaseUrlP25 = environment.apiBaseUrl + 'v2/api/';
   baseApiBaseUrl = environment.apiBaseUrl + 'api/';
   baseApiBaseUrlV2 = environment.apiBaseUrl + 'v2/api/';
   currentResultId: number | string = null;
@@ -428,6 +429,22 @@ export class ResultsApiService {
   GET_innovationUse() {
     return this.http
       .get<any>(`${this.apiBaseUrl}summary/innovation-use/get/result/${this.currentResultId}`)
+      .pipe(this.saveButtonSE.isGettingSectionPipe());
+  }
+
+  PATCH_innovationUseP25(body) {
+    return this.http
+      .patch<any>(`${this.apiBaseUrlP25}innovation-use/create/result/${this.currentResultId}`, body)
+      .pipe(this.saveButtonSE.isSavingPipe());
+  }
+
+  GET_innovationUseResults() {
+    return this.http
+      .get<any>(`${this.apiBaseUrlV2}get/innov-use-linked-results`);
+  }
+  GET_innovationUseP25() {
+    return this.http
+      .get<any>(`${this.apiBaseUrlP25}innovation-use/get/result/${this.currentResultId}`)
       .pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 

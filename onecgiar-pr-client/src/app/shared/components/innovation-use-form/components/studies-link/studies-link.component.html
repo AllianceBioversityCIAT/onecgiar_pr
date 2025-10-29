@@ -1,0 +1,30 @@
+<div>
+  <app-pr-field-header
+    label="Provide URL to those studies"
+    [required]="false"
+    [useColon]="false"></app-pr-field-header>
+
+  <div class="linkItem" *ngFor="let study of this.body.scaling_studies_urls; let i = index; trackBy: trackByIndex">
+    <div class="index">{{ i + 1 }}</div>
+
+    <div class="link">
+      <app-pr-input placeholder="Add link" type="link" [required]="true" [(ngModel)]="this.body.scaling_studies_urls[i]"></app-pr-input>
+    </div>
+
+    <button class="icon" *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status" (click)="deleteStudiesLink(i)" type="button" aria-label="Delete study link">
+      <i class="material-icons-round">delete</i>
+    </button>
+  </div>
+
+  <app-no-data-text
+    *ngIf="!this.body.scaling_studies_urls.length && !this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status"
+    title="No study link added"></app-no-data-text>
+
+  <br />
+
+  <app-add-button
+    name="Add another study link"
+    (clickEvent)="addStudiesLink()"
+    *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status">
+  </app-add-button>
+</div>
