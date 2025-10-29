@@ -12,6 +12,9 @@ export class IpsrStep1Body {
   linked_results: number[] = [];
   scaling_studies_urls: string[] = [];
   previous_irl: number = null;
+  investment_programs: Investment[] = [];
+  investment_bilateral: Investment[] = [];
+  investment_partners: Investment[] = [];
   
   initiative_id: number = null;
   geo_scope_id: number = null;
@@ -31,6 +34,13 @@ export class IpsrStep1Body {
   result_ip_result_core: Resultipresultcomplementary = new Resultipresultcomplementary();
   result_ip_expert_workshop_organized = [];
   link_workshop_list: string = null;
+}
+
+class Investment {
+  official_code: string = null;
+  name: string = null;
+  kind_cash: number = null;
+  is_determined: boolean = null;
 }
 
 class Scalig_ambition {

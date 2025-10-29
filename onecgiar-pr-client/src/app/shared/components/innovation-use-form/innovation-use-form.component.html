@@ -5,25 +5,16 @@
 </app-pr-radio-button>
 
 <div *ngIf="body.has_innovation_link && this.fieldsManagerSE.isP25()">
-  <app-pr-multi-select
-    [options]="this.innovationUseResultsSE.resultsList"
-    [(ngModel)]="body.linked_results"
-    optionLabel="title"
-    optionValue="id"
-    [group]="true"
-    optionGroupLabel="name"
-    optionGroupChildren="options"
-    label="Please select a result"
-    placeholder="Please select a result"
-    selectedLabel="Results selected">
+  <app-pr-multi-select [options]="this.innovationUseResultsSE.resultsList" [(ngModel)]="body.linked_results"
+    optionLabel="title" optionValue="id" [group]="true" optionGroupLabel="name" optionGroupChildren="options"
+    label="Please select a result" placeholder="Please select a result" selectedLabel="Results selected">
   </app-pr-multi-select>
 </div>
 
 @if (!this.fieldsManagerSE.isP25()) {
 <app-pr-field-header [label]="currentUseHeaderLabel()" [useColon]="!this.fieldsManagerSE.isP25()"></app-pr-field-header>
 }
-<app-pr-radio-button fieldRef="[innovation-use-form]-core-innovation"
-  [options]="[
+<app-pr-radio-button fieldRef="[innovation-use-form]-core-innovation" [options]="[
     { value: true, label: 'This is yet to be determined' },
   ]" optionLabel="label" [(ngModel)]="body.innov_use_to_be_determined" optionValue="value">
 </app-pr-radio-button>
@@ -212,13 +203,14 @@
 </app-pr-textarea>
 
 <!-- Innovation Links Component -->
-<app-pr-radio-button *ngIf="getReadinessLevelIndex() >= 6"  fieldRef="[innovation-use-form]-has-studies-links" [options]="[
+<app-pr-radio-button *ngIf="getReadinessLevelIndex() >= 6" fieldRef="[innovation-use-form]-has-studies-links" [options]="[
   { value: true, label: 'Yes' },
   { value: false, label: 'No' }
   ]" optionLabel="label" [(ngModel)]="body.has_scaling_studies" optionValue="value">
 </app-pr-radio-button>
 <!-- Studies Links Component -->
-<app-studies-link *ngIf="body.has_scaling_studies && getReadinessLevelIndex() >= 6" [body]="bodyAsAny"></app-studies-link>
+<app-studies-link *ngIf="body.has_scaling_studies && getReadinessLevelIndex() >= 6"
+  [body]="bodyAsAny"></app-studies-link>
 
 
 <app-pr-radio-button fieldRef="[innovation-use-form]-2030-to-be-determined" [options]="[
@@ -227,6 +219,7 @@
 </app-pr-radio-button>
 
 <!-- 2030 to be determined Component -->
+@if (!body.innov_use_2030_to_be_determined) {
 <app-pr-field-header [required]="false" label="Actors"></app-pr-field-header>
 <input type="text" id="removeFocus" style="position: absolute; opacity: 0" />
 <div class="fields_list" *ngIf="this.body.innovation_use_2030.actors?.length">
@@ -328,10 +321,10 @@
     <div>
       <div class="right_content">
         <app-pr-select *ngIf="
-              organizationItem.institution_types_id &&
-              !organizationItem.hide &&
-              getInstitutionsTypeTreeChildrens(organizationItem.institution_types_id)?.length
-            " [options]="getInstitutionsTypeTreeChildrens(organizationItem.institution_types_id)" label="Sub-type"
+                organizationItem.institution_types_id &&
+                !organizationItem.hide &&
+                getInstitutionsTypeTreeChildrens(organizationItem.institution_types_id)?.length
+              " [options]="getInstitutionsTypeTreeChildrens(organizationItem.institution_types_id)" label="Sub-type"
           optionLabel="name" optionValue="code" [(ngModel)]="organizationItem.institution_sub_type_id"
           [disableOptions]="getAllSubTypes" placeholder="Select Sub-type" [required]="!!organizationItem?.id">
         </app-pr-select>
@@ -378,7 +371,7 @@
   title="Other quantitative measures not added">
 </app-no-data-text>
 <app-add-button name="Add other" *ngIf="!this.api.rolesSE.readOnly" (clickEvent)="addOther2030()"></app-add-button>
-
+}
 
 <!-- Estimates CGIAR Component -->
 <app-estimates-CGIAR [body]="bodyAsAny"></app-estimates-CGIAR>
