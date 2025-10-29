@@ -10,7 +10,6 @@ import { ResultsByInstitutionsService } from '../../results/results_by_instituti
 import { ResultByIntitutionsRepository } from '../../results/results_by_institutions/result_by_intitutions.repository';
 import { ResultsTocResultsService } from '../../results/results-toc-results/results-toc-results.service';
 import { CreateResultsTocResultV2Dto } from '../../results/results-toc-results/dto/create-results-toc-result-v2.dto';
-import { SavePartnersV2Dto } from '../../results/results_by_institutions/dto/save-partners-v2.dto';
 import { UpdateContributorsPartnersDto } from './dto/update-contributors-partners.dto';
 import { ContributorsPartnersService } from './contributors-partners.service';
 
@@ -255,8 +254,18 @@ describe('ContributorsPartnersService', () => {
       );
 
       const payload: UpdateContributorsPartnersDto = {
-        toc_mapping: { changePrimaryInit: 2 },
-        partners: { institutions: [] } as unknown as SavePartnersV2Dto,
+        changePrimaryInit: 2,
+        result_toc_result: {
+          planned_result: true,
+          initiative_id: 10,
+          result_toc_results: [],
+        },
+        contributors_result_toc_result: [],
+        institutions: [],
+        contributing_center: [],
+        bilateral_projects: [],
+        no_applicable_partner: false,
+        is_lead_by_partner: true,
       };
       const user = { id: 5 } as TokenDto;
 
@@ -267,9 +276,28 @@ describe('ContributorsPartnersService', () => {
       );
 
       expect(resultsTocResultsService.createTocMappingV2).toHaveBeenCalled();
+      const tocArg =
+        resultsTocResultsService.createTocMappingV2.mock.calls[0][0];
+      expect(tocArg).toMatchObject({
+        result_id: 321,
+        changePrimaryInit: 2,
+        result_toc_result: payload.result_toc_result,
+        contributors_result_toc_result: payload.contributors_result_toc_result,
+      });
       expect(
         resultsByInstitutionsService.savePartnersInstitutionsByResultV2,
       ).toHaveBeenCalled();
+      const partnersArg =
+        resultsByInstitutionsService.savePartnersInstitutionsByResultV2
+          .mock.calls[0][0];
+      expect(partnersArg).toMatchObject({
+        result_id: 321,
+        institutions: payload.institutions,
+        contributing_center: payload.contributing_center,
+        bilateral_project: [],
+        no_applicable_partner: false,
+        is_lead_by_partner: true,
+      });
       expect(result).toEqual({
         response: {
           toc_mapping: tocRes.response,
