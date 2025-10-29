@@ -240,7 +240,7 @@ export class LinkedResultsService {
           links,
           [],
           user.id,
-          true,
+          false,
         );
       } else {
         // Si no se envían links, desactivar todos los existentes
