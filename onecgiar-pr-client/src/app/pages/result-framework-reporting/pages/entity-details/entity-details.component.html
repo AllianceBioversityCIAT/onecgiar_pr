@@ -24,13 +24,44 @@
 </div>
 
 <div class="entity-details_container">
-  <div class="under_construction_container">
-    <img class="under_construction_icon" src="assets/work-in-progress.png" alt="" srcset="" />
+  <img class="under_construction_icon" src="assets/work-in-progress.png" alt="" srcset="" />
 
-    <div class="entity-details_card">
-      <div class="entity-details_card_header">General insights</div>
+  <div class="entity-details_card">
+    <div class="entity-details_card_header">Insights</div>
 
-      <div class="entity-details_card_content_graph"></div>
+    <div class="entity-details_card_content_graph">
+      <div class="entity-details_card_content_graph_item">
+        @for (item of summaryInsightsData(); track $index) {
+          <div class="entity-details_card_content_graph_item_content">
+            <img [src]="item.icon" alt="{{ item.label }} Icon" class="entity-details_card_content_graph_item_icon" />
+
+            <div>
+              <h3 class="entity-details_card_content_graph_item_value">{{ item.value }}</h3>
+              <p class="entity-details_card_content_graph_item_label">{{ item.label }}</p>
+            </div>
+          </div>
+
+          @if ($index < summaryInsightsData().length - 1) {
+            <div class="entity-details_card_content_graph_item_separator"></div>
+          }
+        }
+
+        <div class="entity-details_card_content_graph_item_title_absolute bottom_title">Summary</div>
+      </div>
+
+      <div class="entity-details_card_content_graph_item" style="padding: 40px 16px 30px; display: grid; grid-template-columns: 1fr 1fr">
+        <div>
+          <h3 class="details_card_content_graph_item_title">Outputs</h3>
+          <p-chart type="bar" [data]="dataOutputs()" [options]="options" height="245px" />
+        </div>
+
+        <div>
+          <h3 class="details_card_content_graph_item_title">Outcomes</h3>
+          <p-chart type="bar" [data]="dataOutcomes()" [options]="options" height="245px" />
+        </div>
+
+        <div class="entity-details_card_content_graph_item_title_absolute top_title">Progress by Indicators</div>
+      </div>
     </div>
   </div>
 

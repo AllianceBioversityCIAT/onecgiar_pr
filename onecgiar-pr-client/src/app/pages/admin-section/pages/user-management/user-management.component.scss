@@ -152,11 +152,11 @@
   display: inline-flex;
   align-items: center;
   padding: 4px 10px;
-  border-radius: 12px;
+  border-radius: 5px;
   @include fonts.pr-typography('body-2');
   font-weight: 600;
-  background-color: #fff7d6; // Amarillo claro
-  color: #b59f3b; // Amarillo oscuro
+  background-color: var(--pr-color-yellow-50);
+  color: var(--pr-color-yellow-300);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   border: none;
@@ -166,6 +166,11 @@
 
   span {
     line-height: 1;
+  }
+
+  &.admin-role {
+    background-color: var(--pr-color-primary-50);
+    color: var(--pr-color-secondary-200);
   }
 }
 

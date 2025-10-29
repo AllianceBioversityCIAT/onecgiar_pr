@@ -43,10 +43,24 @@ describe('AppModule metadata', () => {
       path: 'api/platform-report/(.*)',
       method: RequestMethod.ALL,
     });
-    expect(firstChain.forRoutes).toHaveBeenCalledWith({
-      path: 'api/*',
-      method: RequestMethod.ALL,
-    });
+    expect(firstChain.forRoutes).toHaveBeenCalledWith(
+      {
+        path: 'api/(.*)',
+        method: RequestMethod.ALL,
+      },
+      {
+        path: 'v2/(.*)',
+        method: RequestMethod.ALL,
+      },
+      {
+        path: 'clarisa/(.*)',
+        method: RequestMethod.ALL,
+      },
+      {
+        path: 'toc/(.*)',
+        method: RequestMethod.ALL,
+      },
+    );
 
     expect(consumer.apply).toHaveBeenNthCalledWith(2, JwtMiddleware);
     expect(secondChain.forRoutes).toHaveBeenCalledWith({

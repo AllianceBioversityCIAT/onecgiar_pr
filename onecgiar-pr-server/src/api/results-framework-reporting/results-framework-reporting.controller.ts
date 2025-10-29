@@ -6,8 +6,6 @@ import {
   Query,
   UseInterceptors,
 } from '@nestjs/common';
-import { ResultsFrameworkReportingService } from './results-framework-reporting.service';
-import { ResultsService } from '../results/results.service';
 import {
   ApiOperation,
   ApiQuery,
@@ -16,6 +14,8 @@ import {
   ApiCreatedResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { ResultsFrameworkReportingService } from './results-framework-reporting.service';
+import { ResultsService } from '../results/results.service';
 import { UserToken } from '../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { ScienceProgramProgressResponseDto } from '../results/dto/science-program-progress.dto';
@@ -131,6 +131,25 @@ export class ResultsFrameworkReportingController {
     );
   }
 
+  @Get('toc-results/2030-outcomes')
+  @ApiOperation({
+    summary: 'List ToC 2030 outcomes by program',
+    description:
+      'Retrieves the set of End of Initiative (EOI) ToC outcomes for the requested program in the active reporting year.',
+  })
+  @ApiQuery({
+    name: 'programId',
+    type: String,
+    required: true,
+    description: 'Program identifier (e.g. SP01).',
+  })
+  @ApiOkResponse({
+    description: 'ToC 2030 outcomes retrieved successfully.',
+  })
+  getToc2030Outcomes(@Query('programId') programId: string) {
+    return this.resultsFrameworkReportingService.getToc2030Outcomes(programId);
+  }
+
   @Get('programs/indicator-contribution-summary')
   @ApiOperation({
     summary: 'Get summary of results contributing to ToC indicators',
@@ -215,12 +234,33 @@ export class ResultsFrameworkReportingController {
     description: 'Contributors and partners fetched successfully.',
   })
   getExistingResultContributorsAndPartners(
+    @UserToken() user: TokenDto,
     @Query('resultTocResultId') resultTocResultId: number,
     @Query('tocResultIndicatorId') tocResultIndicatorId: string,
   ) {
     return this.resultsFrameworkReportingService.getExistingResultContributorsToIndicators(
+      user,
       resultTocResultId,
       tocResultIndicatorId,
     );
+  }
+
+  @Get('dashboard')
+  @ApiOperation({
+    summary: 'Get dashboard statistics for a program',
+    description:
+      'Retrieves key statistics and metrics for the dashboard view of the specified program.',
+  })
+  @ApiQuery({
+    name: 'programId',
+    type: String,
+    required: true,
+    description: 'Program identifier to fetch dashboard statistics for.',
+  })
+  @ApiOkResponse({
+    description: 'Dashboard statistics retrieved successfully.',
+  })
+  getDashboardStats(@Query('programId') programId: string) {
+    return this.resultsFrameworkReportingService.getDashboardStats(programId);
   }
 }

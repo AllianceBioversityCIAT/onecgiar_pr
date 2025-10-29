@@ -15,6 +15,7 @@ import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 import { ShareResultRequestService } from '../results/share-result-request/share-result-request.service';
 import { ResultsByProjectsService } from '../results/results_by_projects/results_by_projects.service';
 import { ContributionToIndicatorResultsRepository } from '../contribution-to-indicators/repositories/contribution-to-indicator-result.repository';
+import { ResultsTocTargetIndicatorRepository } from '../results/results-toc-results/repositories/result-toc-result-target-indicator.repository';
 
 const mockClarisaInitiativesRepository = {
   findOne: jest.fn(),
@@ -44,9 +45,11 @@ const mockHandlersError = {
 
 const mockTocResultsRepository = {
   findByCompositeCode: jest.fn(),
+  find2030Outcomes: jest.fn(),
   findResultById: jest.fn(),
   findIndicatorById: jest.fn(),
   findUnitAcronymsByProgram: jest.fn(),
+  getIndicatorContributions: jest.fn(),
 };
 
 const mockResultsService = {
@@ -70,6 +73,12 @@ const mockResultsTocResultIndicatorsRepository = {
   save: jest.fn(),
 };
 
+const mockResultsIndicatorsTargetsRepository = {
+  findOne: jest.fn(),
+  save: jest.fn(),
+  update: jest.fn(),
+};
+
 const mockShareResultRequestService = {
   resultRequest: jest.fn(),
   findUnitAcronymsByProgram: jest.fn(),
@@ -79,6 +88,9 @@ const mockResultRepository = {
   getIndicatorContributionSummaryByProgram: jest.fn(),
   getActiveResultTypes: jest.fn(),
   getResultById: jest.fn(),
+  findUnitAcronymsByProgram: jest.fn(),
+  getUserRolesForResults: jest.fn(),
+  query: jest.fn(),
 };
 
 const mockResultsByProjectsService = {
@@ -94,6 +106,10 @@ describe('ResultsFrameworkReportingService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+
+    mockTocResultsRepository.getIndicatorContributions.mockResolvedValue(
+      new Map(),
+    );
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -129,6 +145,10 @@ describe('ResultsFrameworkReportingService', () => {
         {
           provide: ResultsTocResultIndicatorsRepository,
           useValue: mockResultsTocResultIndicatorsRepository,
+        },
+        {
+          provide: ResultsTocTargetIndicatorRepository,
+          useValue: mockResultsIndicatorsTargetsRepository,
         },
         {
           provide: ShareResultRequestService,
@@ -190,6 +210,28 @@ describe('ResultsFrameworkReportingService', () => {
       mockTocResultsRepository.findUnitAcronymsByProgram.mockResolvedValue(
         new Set(['PR-001-A']),
       );
+      mockTocResultsRepository.getIndicatorContributions.mockResolvedValue(
+        new Map([
+          [
+            1,
+            {
+              target_value_sum: 10,
+              actual_achieved_value_sum: 5,
+              progress_percentage: '50%',
+              work_package_acronym: 'PR-001-A',
+            },
+          ],
+          [
+            2,
+            {
+              target_value_sum: 0,
+              actual_achieved_value_sum: 2,
+              progress_percentage: '200%',
+              work_package_acronym: 'PR-001-A',
+            },
+          ],
+        ]),
+      );
 
       const result = await service.getGlobalUnitsByProgram(user, 'PR-001');
 
@@ -227,9 +269,19 @@ describe('ResultsFrameworkReportingService', () => {
               id: 101,
               code: 'PR-001-A',
               level: 2,
+              progress: 125,
+              progressDetails: {
+                targetValueSum: 10,
+                actualAchievedValueSum: 7,
+              },
             }),
           ],
           metadata: { activeYear: 2025, portfolio: 3 },
+          globalProgress: {
+            targetValueSum: 10,
+            actualAchievedValueSum: 7,
+            progressPercentage: 125,
+          },
         },
       });
     });
@@ -333,6 +385,141 @@ describe('ResultsFrameworkReportingService', () => {
     });
   });
 
+  describe('getDashboardStats', () => {
+    it('should aggregate dashboard stats by status, level, and type', async () => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValue({
+        id: 7,
+        official_code: 'SP01',
+        name: 'Sample Program',
+      });
+
+      mockResultRepository.query.mockResolvedValue([
+        {
+          status_id: 1,
+          result_level_id: 4,
+          result_type_id: ResultTypeEnum.KNOWLEDGE_PRODUCT,
+          total_results: 4,
+        },
+        {
+          status_id: 1,
+          result_level_id: 3,
+          result_type_id: ResultTypeEnum.POLICY_CHANGE,
+          total_results: 1,
+        },
+        {
+          status_id: 3,
+          result_level_id: 4,
+          result_type_id: ResultTypeEnum.INNOVATION_DEVELOPMENT,
+          total_results: 2,
+        },
+        {
+          status_id: 2,
+          result_level_id: 4,
+          result_type_id: ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+          total_results: 3,
+        },
+        {
+          status_id: 2,
+          result_level_id: 3,
+          result_type_id: ResultTypeEnum.INNOVATION_USE,
+          total_results: 5,
+        },
+        {
+          status_id: 2,
+          result_level_id: 4,
+          result_type_id: 999,
+          total_results: 10,
+        },
+      ]);
+
+      const result = await service.getDashboardStats('sp01');
+
+      expect(mockClarisaInitiativesRepository.findOne).toHaveBeenCalledWith({
+        where: { official_code: 'SP01', active: true },
+        select: ['id', 'official_code', 'name'],
+      });
+      expect(mockResultRepository.query).toHaveBeenCalled();
+
+      expect(result).toEqual({
+        response: {
+          editing: {
+            total: 5,
+            label: 'Editing results',
+            data: {
+              outputs: {
+                knowledgeProduct: 4,
+                innovationDevelopment: 0,
+                capacitySharingForDevelopment: 0,
+                otherOutput: 0,
+              },
+              outcomes: {
+                policyChange: 1,
+                innovationUse: 0,
+                otherOutcome: 0,
+              },
+            },
+          },
+          submitted: {
+            total: 2,
+            label: 'Submitted results',
+            data: {
+              outputs: {
+                knowledgeProduct: 0,
+                innovationDevelopment: 2,
+                capacitySharingForDevelopment: 0,
+                otherOutput: 0,
+              },
+              outcomes: {
+                policyChange: 0,
+                innovationUse: 0,
+                otherOutcome: 0,
+              },
+            },
+          },
+          qualityAssessed: {
+            total: 8,
+            label: 'Quality assessed results',
+            data: {
+              outputs: {
+                knowledgeProduct: 0,
+                innovationDevelopment: 0,
+                capacitySharingForDevelopment: 3,
+                otherOutput: 0,
+              },
+              outcomes: {
+                policyChange: 0,
+                innovationUse: 5,
+                otherOutcome: 0,
+              },
+            },
+          },
+        },
+        message: 'Dashboard stats retrieved successfully.',
+        status: 200,
+      });
+    });
+
+    it('should return bad request error when programId is missing', async () => {
+      const result = await service.getDashboardStats('   ');
+
+      expect(result.status).toBe(400);
+      expect(result.message).toBe(
+        'The program identifier is required in the query params.',
+      );
+    });
+
+    it('should return not found error when program does not exist', async () => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce(null);
+
+      const result = await service.getDashboardStats('SP-404');
+
+      expect(result.status).toBe(404);
+      expect(result.message).toBe(
+        'No initiative was found with the provided program identifier.',
+      );
+    });
+  });
+
   describe('getWorkPackagesByProgramAndArea', () => {
     beforeEach(() => {
       mockTocResultsRepository.findByCompositeCode.mockReset();
@@ -379,7 +566,8 @@ describe('ResultsFrameworkReportingService', () => {
         response: {
           compositeCode: 'SP01-AOW01',
           year: 2024,
-          tocResults: [
+          tocResultsOutcomes: [],
+          tocResultsOutputs: [
             {
               id: 1,
               category: 'OUTPUT',
@@ -387,6 +575,11 @@ describe('ResultsFrameworkReportingService', () => {
               related_node_id: 'NODE-1',
             },
           ],
+          metadata: {
+            total: 1,
+            outcomes: 0,
+            outputs: 1,
+          },
         },
       });
     });
@@ -480,6 +673,97 @@ describe('ResultsFrameworkReportingService', () => {
       expect(
         mockTocResultsRepository.findByCompositeCode,
       ).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getToc2030Outcomes', () => {
+    beforeEach(() => {
+      mockTocResultsRepository.find2030Outcomes.mockReset();
+      mockYearRepository.findOne.mockReset();
+    });
+
+    it('should return ToC 2030 outcomes when repository returns data', async () => {
+      mockYearRepository.findOne.mockResolvedValueOnce({ year: 2030 });
+      mockTocResultsRepository.find2030Outcomes.mockResolvedValueOnce([
+        {
+          toc_result_id: 1,
+          category: 'EOI',
+          result_title: 'Outcome 1',
+          related_node_id: 'NODE-EOI-1',
+          indicators: [],
+        },
+      ]);
+
+      const result: any = await service.getToc2030Outcomes('sp01');
+
+      expect(mockYearRepository.findOne).toHaveBeenCalledWith({
+        where: { active: true },
+        select: ['year'],
+      });
+      expect(mockTocResultsRepository.find2030Outcomes).toHaveBeenCalledWith(
+        'SP01',
+        2030,
+      );
+      expect(result.status).toBe(200);
+      expect(result.response).toMatchObject({
+        program: 'SP01',
+        year: 2030,
+        metadata: { total: 1 },
+      });
+    });
+
+    it('should return handler error when program identifier is missing', async () => {
+      const result: any = await service.getToc2030Outcomes('');
+
+      expect(result.status).toBe(400);
+      expect(mockHandlersError.returnErrorRes).toHaveBeenCalled();
+      expect(mockTocResultsRepository.find2030Outcomes).not.toHaveBeenCalled();
+    });
+
+    it('should return handler error when active year is not configured', async () => {
+      mockYearRepository.findOne.mockResolvedValueOnce(null);
+
+      const result: any = await service.getToc2030Outcomes('SP02');
+
+      expect(result.status).toBe(404);
+      expect(mockHandlersError.returnErrorRes).toHaveBeenCalledWith({
+        error: expect.objectContaining({
+          status: 404,
+          message: 'No active reporting year was found.',
+        }),
+        debug: true,
+      });
+      expect(mockTocResultsRepository.find2030Outcomes).not.toHaveBeenCalled();
+    });
+
+    it('should return handler error when active year value is invalid', async () => {
+      mockYearRepository.findOne.mockResolvedValueOnce({ year: 'invalid' });
+
+      const result: any = await service.getToc2030Outcomes('sp03');
+
+      expect(result.status).toBe(500);
+      expect(mockHandlersError.returnErrorRes).toHaveBeenCalledWith({
+        error: expect.objectContaining({
+          status: 500,
+          message: 'The active reporting year configured is invalid.',
+        }),
+        debug: true,
+      });
+      expect(mockTocResultsRepository.find2030Outcomes).not.toHaveBeenCalled();
+    });
+
+    it('should return handler error when no outcomes are found', async () => {
+      mockYearRepository.findOne.mockResolvedValueOnce({ year: 2031 });
+      mockTocResultsRepository.find2030Outcomes.mockResolvedValueOnce([]);
+
+      const result: any = await service.getToc2030Outcomes('sp04');
+
+      expect(result.status).toBe(404);
+      expect(mockHandlersError.returnErrorRes).toHaveBeenCalled();
+      expect(mockTocResultsRepository.find2030Outcomes).toHaveBeenCalledWith(
+        'SP04',
+        2031,
+      );
     });
   });
 
@@ -704,6 +988,9 @@ describe('ResultsFrameworkReportingService', () => {
       mockResultsTocResultIndicatorsRepository.findOne.mockReset();
       mockResultsTocResultIndicatorsRepository.find.mockReset();
       mockResultsTocResultIndicatorsRepository.save.mockReset();
+      mockResultsIndicatorsTargetsRepository.findOne.mockReset();
+      mockResultsIndicatorsTargetsRepository.save.mockReset();
+      mockResultsIndicatorsTargetsRepository.update.mockReset();
       mockShareResultRequestService.resultRequest.mockReset();
       mockResultsByProjectsService.linkBilateralProjectToResult.mockReset();
     });
@@ -737,7 +1024,7 @@ describe('ResultsFrameworkReportingService', () => {
         {
           result: baseResult,
           toc_result_id: 555,
-          indicators: [{ indicator_id: 777 }],
+          indicators: { indicator_id: 777 },
         },
         user,
       );
@@ -752,11 +1039,70 @@ describe('ResultsFrameworkReportingService', () => {
       expect(
         mockShareResultRequestService.resultRequest,
       ).not.toHaveBeenCalled();
-      // No bilateral project data provided -> should not call link service
       expect(
         mockResultsByProjectsService.linkBilateralProjectToResult,
       ).not.toHaveBeenCalled();
       expect(response.response.tocResultLinkId).toBe(900);
+    });
+
+    it('should persist indicator target information when payload provides it', async () => {
+      mockResultsService.createOwnerResultV2.mockResolvedValueOnce({
+        status: 201,
+        response: { id: 303 },
+      });
+      mockResultRepository.getResultById.mockResolvedValueOnce({
+        id: 303,
+        result_level_id: 2,
+      });
+      mockTocResultsRepository.findResultById.mockResolvedValueOnce({
+        id: 444,
+      });
+      mockResultsTocResultRepository.findOne.mockResolvedValueOnce(null);
+      mockResultsTocResultRepository.save.mockResolvedValueOnce({
+        result_toc_result_id: 707,
+      });
+      mockTocResultsRepository.findIndicatorById.mockResolvedValueOnce({
+        id: 81,
+        toc_results_id: 444,
+        related_node_id: 'REL-81',
+      });
+      mockResultsTocResultIndicatorsRepository.findOne.mockResolvedValueOnce(
+        null,
+      );
+      mockResultsTocResultIndicatorsRepository.save.mockResolvedValueOnce({
+        result_toc_result_indicator_id: 812,
+      });
+      mockResultsIndicatorsTargetsRepository.findOne.mockResolvedValueOnce(
+        null,
+      );
+
+      await service.createResultFromFramework(
+        {
+          result: baseResult,
+          toc_result_id: 444,
+          indicators: {
+            indicator_id: 81,
+            number_target: '25',
+            target_date: '2025',
+            contributing_indicator: 3.5,
+          },
+          contributing_indicator: 3.5,
+        },
+        user,
+      );
+
+      expect(mockResultsTocResultIndicatorsRepository.save).toHaveBeenCalled();
+      expect(mockResultsIndicatorsTargetsRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          result_toc_result_indicator_id: 812,
+          number_target: 25,
+          contributing_indicator: 3.5,
+          target_date: 2025,
+          created_by: user.id,
+          last_updated_by: user.id,
+          is_active: true,
+        }),
+      );
     });
 
     it('should create a knowledge product result and reuse existing ToC record (single bilateral)', async () => {
@@ -796,7 +1142,7 @@ describe('ResultsFrameworkReportingService', () => {
           },
           knowledge_product: kpPayload,
           toc_result_id: 888,
-          indicators: [{ indicator_id: 999 }],
+          indicators: { indicator_id: 999 },
           contributors_result_toc_result: [
             {
               initiative_id: 20,
@@ -870,7 +1216,7 @@ describe('ResultsFrameworkReportingService', () => {
         {
           result: baseResult,
           toc_result_id: 777,
-          indicators: [{ indicator_id: 5555 }],
+          indicators: { indicator_id: 5555 },
           bilateral_project: [
             { project_id: 9001, project_name: 'Proj A' },
             { project_id: '9002', project_name: 'Proj B' },
@@ -897,6 +1243,7 @@ describe('ResultsFrameworkReportingService', () => {
     beforeEach(() => {
       mockResultsTocResultRepository.find.mockReset();
       mockResultsTocResultIndicatorsRepository.find.mockReset();
+      mockResultRepository.getUserRolesForResults.mockReset();
       mockHandlersError.returnErrorRes.mockClear();
     });
 
@@ -910,6 +1257,9 @@ describe('ResultsFrameworkReportingService', () => {
             title: 'Result Alpha',
             result_code: 'RES-101',
             result_type_id: 2,
+            version_id: 30,
+            status_id: 2,
+            obj_status: { status_name: 'Submitted' },
           },
         },
         {
@@ -920,15 +1270,25 @@ describe('ResultsFrameworkReportingService', () => {
             title: 'Result Beta',
             result_code: 'RES-102',
             result_type_id: 3,
+            version_id: 31,
+            status_id: 1,
+            obj_status: { status_name: 'Editing' },
           },
         },
       ]);
       mockResultsTocResultIndicatorsRepository.find.mockResolvedValueOnce([
         { results_toc_results_id: 11 },
       ]);
+      mockResultRepository.getUserRolesForResults.mockResolvedValueOnce([
+        { result_id: '101', role_id: 4, role_name: 'Lead' },
+      ]);
 
       const result: any =
-        await service.getExistingResultContributorsToIndicators(5, 'IND-55');
+        await service.getExistingResultContributorsToIndicators(
+          user,
+          5,
+          'IND-55',
+        );
 
       expect(mockResultsTocResultRepository.find).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -948,13 +1308,68 @@ describe('ResultsFrameworkReportingService', () => {
           }),
         }),
       );
+      expect(mockResultRepository.getUserRolesForResults).toHaveBeenCalledWith(
+        user.id,
+        [101],
+      );
       expect(result.status).toBe(200);
       expect(result.response.contributors).toEqual([
         {
           result_id: 101,
           title: 'Result Alpha',
           result_code: 'RES-101',
+          status_name: 'Submitted',
+          version_id: 30,
+          status_id: 2,
+          role_id: 4,
         },
+      ]);
+      expect(mockHandlersError.returnErrorRes).not.toHaveBeenCalled();
+    });
+
+    it('should default role fields to null when no role mapping found', async () => {
+      mockResultsTocResultRepository.find.mockResolvedValueOnce([
+        {
+          result_toc_result_id: 31,
+          result_id: 501,
+          toc_result_id: 7,
+          obj_results: {
+            title: 'Result Delta',
+            result_code: 'RES-501',
+            result_type_id: 1,
+            version_id: 10,
+            status_id: 3,
+            obj_status: { status_name: 'Quality assessed' },
+          },
+        },
+      ]);
+      mockResultsTocResultIndicatorsRepository.find.mockResolvedValueOnce([
+        { results_toc_results_id: 31 },
+      ]);
+      mockResultRepository.getUserRolesForResults.mockResolvedValueOnce([]);
+
+      const result: any =
+        await service.getExistingResultContributorsToIndicators(
+          user,
+          7,
+          'IND-12',
+        );
+
+      expect(mockResultRepository.getUserRolesForResults).toHaveBeenCalledWith(
+        user.id,
+        [501],
+      );
+      expect(result.status).toBe(200);
+      expect(result.response.contributors).toEqual([
+        expect.objectContaining({
+          result_id: 501,
+          role_id: null,
+          status_id: 3,
+          status_name: 'Quality assessed',
+          title: 'Result Delta',
+          result_code: 'RES-501',
+          version_id: 10,
+        }),
       ]);
       expect(mockHandlersError.returnErrorRes).not.toHaveBeenCalled();
     });
@@ -974,14 +1389,22 @@ describe('ResultsFrameworkReportingService', () => {
       mockResultsTocResultIndicatorsRepository.find.mockResolvedValueOnce([]);
 
       const result: any =
-        await service.getExistingResultContributorsToIndicators(8, 'IND-99');
+        await service.getExistingResultContributorsToIndicators(
+          user,
+          8,
+          'IND-99',
+        );
 
       expect(result.status).toBe(200);
       expect(result.response.contributors).toEqual([]);
+      expect(
+        mockResultRepository.getUserRolesForResults,
+      ).not.toHaveBeenCalled();
     });
 
     it('should propagate errors through handlers when invalid id provided', async () => {
       const result = await service.getExistingResultContributorsToIndicators(
+        user,
         'abc',
         'IND-3',
       );
@@ -997,6 +1420,7 @@ describe('ResultsFrameworkReportingService', () => {
 
     it('should handle missing indicator identifier', async () => {
       const result = await service.getExistingResultContributorsToIndicators(
+        user,
         9,
         '',
       );
@@ -1009,6 +1433,7 @@ describe('ResultsFrameworkReportingService', () => {
       mockResultsTocResultRepository.find.mockResolvedValueOnce([]);
 
       const result = await service.getExistingResultContributorsToIndicators(
+        user,
         10,
         'IND-1',
       );

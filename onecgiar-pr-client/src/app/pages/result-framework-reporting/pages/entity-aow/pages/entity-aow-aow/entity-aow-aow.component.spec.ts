@@ -4,6 +4,7 @@ import { of } from 'rxjs';
 import { EntityAowAowComponent } from './entity-aow-aow.component';
 import { EntityAowService } from '../../services/entity-aow.service';
 import { signal } from '@angular/core';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 
 describe('EntityAowAowComponent', () => {
   let component: EntityAowAowComponent;
@@ -17,9 +18,13 @@ describe('EntityAowAowComponent', () => {
       aowId: signal<string>(''),
       entityId: signal<string>(''),
       getTocResultsByAowId: jest.fn(),
-      tocResultsByAowId: signal<any[]>([]),
+      tocResultsOutputsByAowId: signal<any[]>([]),
+      tocResultsOutcomesByAowId: signal<any[]>([]),
       isLoadingTocResultsByAowId: signal<boolean>(false),
-      showReportResultModal: signal<boolean>(false)
+      showReportResultModal: signal<boolean>(false),
+      isLoadingTocResults2030Outcomes: signal<boolean>(false),
+      showViewResultDrawer: signal<boolean>(false),
+      currentResultToView: signal<any>({})
     } as any;
 
     // Mock ActivatedRoute
@@ -28,7 +33,7 @@ describe('EntityAowAowComponent', () => {
     };
 
     await TestBed.configureTestingModule({
-      imports: [EntityAowAowComponent],
+      imports: [EntityAowAowComponent, HttpClientTestingModule],
       providers: [
         { provide: EntityAowService, useValue: mockEntityAowService },
         { provide: ActivatedRoute, useValue: mockActivatedRoute }
@@ -48,7 +53,7 @@ describe('EntityAowAowComponent', () => {
     it('should initialize with default values', () => {
       expect(component.tabs()).toEqual([
         { id: 'high-level-outputs', label: 'High-Level Outputs', count: 0 },
-        { id: 'outcomes', label: 'Outcomes', count: 0, disabled: true }
+        { id: 'outcomes', label: 'Outcomes', count: 0 }
       ]);
 
       expect(component.activeTabId()).toBe('high-level-outputs');
@@ -133,8 +138,7 @@ describe('EntityAowAowComponent', () => {
       expect(tabs[1]).toEqual({
         id: 'outcomes',
         label: 'Outcomes',
-        count: 0,
-        disabled: true
+        count: 0
       });
     });
 
@@ -215,6 +219,22 @@ describe('EntityAowAowComponent', () => {
         expect(component.activeTabId()).toBe(expectedTab);
         expect(component.isActiveTab(expectedTab)).toBe(true);
       });
+    });
+  });
+
+  describe('ngOnDestroy', () => {
+    it('should call ngOnDestroy', () => {
+      const ngOnDestroySpy = jest.spyOn(component, 'ngOnDestroy');
+
+      component.ngOnDestroy();
+
+      expect(ngOnDestroySpy).toHaveBeenCalled();
+    });
+
+    it('should set aowId to empty string', () => {
+      component.ngOnDestroy();
+
+      expect(mockEntityAowService.aowId()).toBe('');
     });
   });
 });

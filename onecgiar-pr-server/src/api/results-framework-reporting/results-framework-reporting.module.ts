@@ -13,6 +13,7 @@ import { ShareResultRequestModule } from '../results/share-result-request/share-
 import { TocResultsRepository } from './repositories/toc-work-packages.repository';
 import { ContributionToIndicatorResultsRepository } from '../contribution-to-indicators/repositories/contribution-to-indicator-result.repository';
 import { ResultsByProjectsModule } from '../results/results_by_projects/results_by_projects.module';
+import { ResultsTocTargetIndicatorRepository } from '../results/results-toc-results/repositories/result-toc-result-target-indicator.repository';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { ResultsByProjectsModule } from '../results/results_by_projects/results_
     HandlersError,
     TocResultsRepository,
     ContributionToIndicatorResultsRepository,
+    ResultsTocTargetIndicatorRepository,
   ],
 })
 export class ResultsFrameworkReportingModule {}

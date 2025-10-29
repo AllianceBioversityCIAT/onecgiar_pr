@@ -1,5 +1,5 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
-import { In } from 'typeorm';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { In, IsNull, Not } from 'typeorm';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { ClarisaGlobalUnitRepository } from '../../clarisa/clarisa-global-unit/clarisa-global-unit.repository';
 import { YearRepository } from '../results/years/year.repository';
@@ -20,10 +20,15 @@ import { ResultsKnowledgeProductDto } from '../results/results-knowledge-product
 import { ShareResultRequestService } from '../results/share-result-request/share-result-request.service';
 import { CreateTocShareResult } from '../results/share-result-request/dto/create-toc-share-result.dto';
 import { ResultsByProjectsService } from '../results/results_by_projects/results_by_projects.service';
-import { ContributionToIndicatorResultsRepository } from '../contribution-to-indicators/repositories/contribution-to-indicator-result.repository';
+import { ResultsTocTargetIndicatorRepository } from '../results/results-toc-results/repositories/result-toc-result-target-indicator.repository';
+import { ResultLevelEnum } from '../../shared/constants/result-level.enum';
 
 @Injectable()
 export class ResultsFrameworkReportingService {
+  private readonly _logger: Logger = new Logger(
+    ResultsFrameworkReportingService.name,
+  );
+
   constructor(
     private readonly _clarisaInitiativesRepository: ClarisaInitiativesRepository,
     private readonly _clarisaGlobalUnitRepository: ClarisaGlobalUnitRepository,
@@ -35,9 +40,9 @@ export class ResultsFrameworkReportingService {
     private readonly _resultsKnowledgeProductsService: ResultsKnowledgeProductsService,
     private readonly _resultsTocResultRepository: ResultsTocResultRepository,
     private readonly _resultsTocResultIndicatorsRepository: ResultsTocResultIndicatorsRepository,
+    private readonly _resultsIndicatorsTargetsRepository: ResultsTocTargetIndicatorRepository,
     private readonly _shareResultRequestService: ShareResultRequestService,
     private readonly _resultsByProjectsService: ResultsByProjectsService,
-    private readonly _contributionToIndicatorResultsRepository: ContributionToIndicatorResultsRepository,
   ) {}
 
   async getGlobalUnitsByProgram(user: TokenDto, programId?: string) {
@@ -115,17 +120,118 @@ export class ResultsFrameworkReportingService {
           initiative.official_code.toUpperCase(),
         );
 
+      const indicatorContributions =
+        await this._tocResultsRepository.getIndicatorContributions(
+          initiative.official_code.toUpperCase(),
+          activeYearValue,
+        );
+      let totalTargetValue = 0;
+      let totalActualValue = 0;
+      const progressByUnit = new Map<
+        string,
+        {
+          targetValue: number;
+          actualValue: number;
+          progressSum: number;
+          indicatorCount: number;
+        }
+      >();
+
+      const computeProgressValue = (
+        targetValue: number,
+        actualValue: number,
+      ) => {
+        let progressRaw = 0;
+        if (targetValue > 0) {
+          progressRaw = (actualValue / targetValue) * 100;
+        } else if (targetValue === 0 && actualValue > 0) {
+          progressRaw = actualValue * 100;
+        }
+
+        const progressRounded = Math.round(progressRaw * 10) / 10;
+        return Number.isFinite(progressRounded) ? progressRounded : 0;
+      };
+
+      let globalProgressSum = 0;
+      let globalIndicatorCount = 0;
+
+      for (const contribution of indicatorContributions.values()) {
+        totalTargetValue += contribution.target_value_sum ?? 0;
+        totalActualValue += contribution.actual_achieved_value_sum ?? 0;
+
+        const indicatorProgress = computeProgressValue(
+          contribution.target_value_sum ?? 0,
+          contribution.actual_achieved_value_sum ?? 0,
+        );
+        globalProgressSum += indicatorProgress;
+        globalIndicatorCount += 1;
+
+        const unitKey = contribution.work_package_acronym;
+        if (unitKey) {
+          const normalizedKey = unitKey.toUpperCase();
+          const current = progressByUnit.get(normalizedKey) ?? {
+            targetValue: 0,
+            actualValue: 0,
+            progressSum: 0,
+            indicatorCount: 0,
+          };
+
+          current.targetValue += contribution.target_value_sum ?? 0;
+          this._logger.log(
+            `[ResultsFramework] unit=${normalizedKey}: targetValueSum=${current.targetValue}`,
+          );
+          current.actualValue += contribution.actual_achieved_value_sum ?? 0;
+          current.progressSum += indicatorProgress;
+          current.indicatorCount += 1;
+          progressByUnit.set(normalizedKey, current);
+        }
+      }
+
+      let globalProgressPercentage = computeProgressValue(
+        totalTargetValue,
+        totalActualValue,
+      );
+      if (globalIndicatorCount > 0) {
+        const averageProgress = globalProgressSum / globalIndicatorCount;
+        globalProgressPercentage = Math.round(averageProgress * 10) / 10;
+      }
+
       const filteredUnits = childUnits
         .filter((unit) => tocAcronyms.has(unit.code?.toUpperCase() ?? ''))
-        .map((unit) => ({
-          id: unit.id,
-          code: unit.code,
-          name: unit.name,
-          composeCode: unit.composeCode,
-          year: unit.year,
-          level: unit.level,
-          parentId: unit.parentId,
-        }));
+        .map((unit) => {
+          const unitKey = unit.code?.toUpperCase() ?? '';
+          const totals = progressByUnit.get(unitKey) ?? {
+            targetValue: 0,
+            actualValue: 0,
+            progressSum: 0,
+            indicatorCount: 0,
+          };
+
+          let unitProgress = computeProgressValue(
+            totals.targetValue,
+            totals.actualValue,
+          );
+
+          if (totals.indicatorCount > 0) {
+            const unitAverage = totals.progressSum / totals.indicatorCount;
+            unitProgress = Math.round(unitAverage * 10) / 10;
+          }
+
+          return {
+            id: unit.id,
+            code: unit.code,
+            name: unit.name,
+            composeCode: unit.composeCode,
+            year: unit.year,
+            level: unit.level,
+            parentId: unit.parentId,
+            progress: unitProgress ?? 0,
+            progressDetails: {
+              targetValueSum: totals.targetValue,
+              actualAchievedValueSum: totals.actualValue,
+            },
+          };
+        });
 
       return {
         response: {
@@ -147,6 +253,11 @@ export class ResultsFrameworkReportingService {
           metadata: {
             activeYear: activeYearValue,
             portfolio: parentUnit.portfolioId,
+          },
+          globalProgress: {
+            targetValueSum: totalTargetValue,
+            actualAchievedValueSum: totalActualValue,
+            progressPercentage: globalProgressPercentage,
           },
         },
         message: 'Global units retrieved successfully.',
@@ -235,7 +346,14 @@ export class ResultsFrameworkReportingService {
         resolvedYear,
       );
 
-      if (!tocResults.length) {
+      const tocResultsOutcomes = (tocResults || []).filter(
+        (r) => (r.category || '').toUpperCase() === 'OUTCOME',
+      );
+      const tocResultsOutputs = (tocResults || []).filter(
+        (r) => (r.category || '').toUpperCase() === 'OUTPUT',
+      );
+
+      if (!tocResultsOutcomes.length && !tocResultsOutputs.length) {
         throw {
           response: {},
           message:
@@ -248,9 +366,81 @@ export class ResultsFrameworkReportingService {
         response: {
           compositeCode,
           year: resolvedYear,
-          tocResults,
+          tocResultsOutcomes,
+          tocResultsOutputs,
+          metadata: {
+            total: tocResults.length,
+            outcomes: tocResultsOutcomes.length,
+            outputs: tocResultsOutputs.length,
+          },
         },
         message: 'Work packages retrieved successfully.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async getToc2030Outcomes(programId?: string) {
+    try {
+      const normalizedProgram = programId?.trim();
+
+      if (!normalizedProgram) {
+        throw {
+          response: {},
+          message: 'The program identifier is required in the query params.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const activeYear = await this._yearRepository.findOne({
+        where: { active: true },
+        select: ['year'],
+      });
+
+      if (!activeYear) {
+        throw {
+          response: {},
+          message: 'No active reporting year was found.',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const resolvedYear = Number(activeYear.year);
+
+      if (!Number.isFinite(resolvedYear) || resolvedYear < 0) {
+        throw {
+          response: {},
+          message: 'The active reporting year configured is invalid.',
+          status: HttpStatus.INTERNAL_SERVER_ERROR,
+        };
+      }
+
+      const toc2030Outcomes = await this._tocResultsRepository.find2030Outcomes(
+        normalizedProgram.toUpperCase(),
+        resolvedYear,
+      );
+
+      if (!toc2030Outcomes?.length) {
+        throw {
+          response: {},
+          message:
+            'No ToC 2030 outcomes were found for the provided program identifier.',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      return {
+        response: {
+          program: normalizedProgram.toUpperCase(),
+          year: resolvedYear,
+          tocResults: toc2030Outcomes,
+          metadata: {
+            total: toc2030Outcomes.length,
+          },
+        },
+        message: 'ToC 2030 outcomes retrieved successfully.',
         status: HttpStatus.OK,
       };
     } catch (error) {
@@ -424,8 +614,11 @@ export class ResultsFrameworkReportingService {
         await this.upsertTocIndicators(
           primaryTocRecord.result_toc_result_id,
           resolvedTocResultId,
-          payload.indicators ?? [],
+          payload.indicators ?? null,
+          payload.contributing_indicator ?? null,
           user.id,
+          payload.number_target ?? null,
+          payload.target_date ?? null,
         );
       }
 
@@ -483,15 +676,30 @@ export class ResultsFrameworkReportingService {
   private async upsertTocIndicators(
     resultTocResultId: number,
     tocResultId: number,
-    indicators: ResultsFrameworkTocIndicatorDto[],
+    indicatorsInput:
+      | ResultsFrameworkTocIndicatorDto
+      | ResultsFrameworkTocIndicatorDto[]
+      | null
+      | undefined,
+    defaultContributingIndicator: number | null,
     userId: number,
+    fallbackNumberTarget?: string | number | null,
+    fallbackTargetDate?: string | null,
   ) {
-    if (!Array.isArray(indicators) || !indicators.length) {
+    const indicatorsArray = Array.isArray(indicatorsInput)
+      ? indicatorsInput
+      : indicatorsInput
+        ? [indicatorsInput]
+        : [];
+
+    if (!indicatorsArray.length) {
       return;
     }
 
-    for (const indicator of indicators) {
-      const indicatorId = Number(indicator.indicator_id);
+    for (const indicator of indicatorsArray) {
+      const indicatorIdRaw =
+        (indicator as any)?.indicator_id ?? (indicator as any)?.id;
+      const indicatorId = Number(indicatorIdRaw);
       if (!Number.isFinite(indicatorId) || indicatorId <= 0) {
         throw {
           response: {},
@@ -528,18 +736,131 @@ export class ResultsFrameworkReportingService {
           },
         });
 
-      if (existingIndicator) {
+      let indicatorRecord =
+        existingIndicator ??
+        (await this._resultsTocResultIndicatorsRepository.save({
+          results_toc_results_id: resultTocResultId,
+          toc_results_indicator_id: indicatorRow.related_node_id,
+          created_by: userId,
+          last_updated_by: userId,
+          is_active: true,
+        }));
+
+      if (!indicatorRecord?.result_toc_result_indicator_id) {
+        indicatorRecord =
+          await this._resultsTocResultIndicatorsRepository.findOne({
+            where: {
+              results_toc_results_id: resultTocResultId,
+              toc_results_indicator_id: indicatorRow.related_node_id,
+              is_active: true,
+            },
+          });
+      }
+
+      if (!indicatorRecord?.result_toc_result_indicator_id) {
         continue;
       }
 
-      await this._resultsTocResultIndicatorsRepository.save({
-        results_toc_results_id: resultTocResultId,
-        toc_results_indicator_id: indicatorRow.related_node_id,
-        created_by: userId,
-        last_updated_by: userId,
-        is_active: true,
-      });
+      const numberTargetValue = ((indicator as any)?.number_target ??
+        fallbackNumberTarget ??
+        null) as string | number | null;
+
+      const targetDateValue = ((indicator as any)?.target_date ??
+        fallbackTargetDate ??
+        null) as string | null;
+
+      const contributingValue = ((indicator as any)?.contributing_indicator ??
+        defaultContributingIndicator ??
+        null) as number | null;
+
+      await this.upsertIndicatorTargetRecord(
+        indicatorRecord.result_toc_result_indicator_id,
+        numberTargetValue,
+        targetDateValue,
+        contributingValue,
+        userId,
+      );
     }
+  }
+
+  private async upsertIndicatorTargetRecord(
+    indicatorResultId: number,
+    numberTarget: string | number | null,
+    targetDate: string | null,
+    contributingIndicator: number | null,
+    userId: number,
+  ) {
+    const hasNumberTarget =
+      numberTarget !== undefined &&
+      numberTarget !== null &&
+      `${numberTarget}`.trim() !== '';
+
+    if (!hasNumberTarget) {
+      return;
+    }
+
+    const parsedNumberTarget = Number(numberTarget);
+
+    if (!Number.isFinite(parsedNumberTarget)) {
+      throw {
+        response: {},
+        message:
+          'The provided number_target value for the indicator contribution is invalid.',
+        status: HttpStatus.BAD_REQUEST,
+      };
+    }
+
+    const parsedContributingIndicator =
+      contributingIndicator !== null && contributingIndicator !== undefined
+        ? Number(contributingIndicator)
+        : null;
+    const normalizedContributing =
+      parsedContributingIndicator !== null &&
+      Number.isFinite(parsedContributingIndicator) &&
+      parsedContributingIndicator >= 0
+        ? parsedContributingIndicator
+        : null;
+
+    const normalizedTargetDate =
+      targetDate && targetDate.trim() !== '' ? targetDate.trim() : null;
+    const parsedTargetDate =
+      normalizedTargetDate !== null ? Number(normalizedTargetDate) : null;
+    const numericTargetDate =
+      parsedTargetDate !== null && Number.isFinite(parsedTargetDate)
+        ? parsedTargetDate
+        : null;
+
+    const existingTarget =
+      await this._resultsIndicatorsTargetsRepository.findOne({
+        where: {
+          result_toc_result_indicator_id: indicatorResultId,
+          number_target: parsedNumberTarget,
+          is_active: true,
+        },
+      });
+
+    if (existingTarget) {
+      await this._resultsIndicatorsTargetsRepository.update(
+        existingTarget.indicators_targets,
+        {
+          contributing_indicator: normalizedContributing,
+          target_date: numericTargetDate,
+          last_updated_by: userId,
+          is_active: true,
+        },
+      );
+      return;
+    }
+
+    await this._resultsIndicatorsTargetsRepository.save({
+      result_toc_result_indicator_id: indicatorResultId,
+      number_target: parsedNumberTarget,
+      contributing_indicator: normalizedContributing,
+      target_date: numericTargetDate,
+      created_by: userId,
+      last_updated_by: userId,
+      is_active: true,
+    });
   }
 
   async getProgramIndicatorContributionSummary(program?: string) {
@@ -710,6 +1031,7 @@ export class ResultsFrameworkReportingService {
   }
 
   async getExistingResultContributorsToIndicators(
+    user: TokenDto,
     resultTocResultId: string | number,
     tocResultIndicatorId: string,
   ) {
@@ -738,12 +1060,24 @@ export class ResultsFrameworkReportingService {
       const resultContributionExists =
         await this._resultsTocResultRepository.find({
           relations: {
-            obj_results: true,
+            obj_results: {
+              obj_status: true,
+            },
+            obj_results_toc_result_indicators: {
+              obj_result_indicator_targets: true,
+            },
           },
           where: {
             toc_result_id: parsedResultTocResultId,
             is_active: true,
             obj_results: { is_active: true },
+            obj_results_toc_result_indicators: {
+              toc_results_indicator_id: tocResultIndicatorId,
+              obj_result_indicator_targets: {
+                is_active: true,
+                contributing_indicator: Not(IsNull()),
+              },
+            },
           },
           select: {
             result_toc_result_id: true,
@@ -753,6 +1087,22 @@ export class ResultsFrameworkReportingService {
               title: true,
               result_code: true,
               result_type_id: true,
+              version_id: true,
+              status_id: true,
+              obj_status: {
+                result_status_id: true,
+                status_name: true,
+                status_description: true,
+              },
+            },
+            obj_results_toc_result_indicators: {
+              toc_results_indicator_id: true,
+              obj_result_indicator_targets: {
+                number_target: true,
+                target_date: true,
+                contributing_indicator: true,
+                is_active: true,
+              },
             },
           },
         });
@@ -796,15 +1146,67 @@ export class ResultsFrameworkReportingService {
         (ind) => ind.results_toc_results_id,
       );
 
-      const contributors = resultContributionExists
-        .filter((contrib) =>
-          contributingTocResultIds.includes(contrib.result_toc_result_id),
-        )
-        .map((contrib) => ({
-          result_id: contrib.result_id,
+      const filteredContributors = resultContributionExists.filter((contrib) =>
+        contributingTocResultIds.includes(contrib.result_toc_result_id),
+      );
+
+      const uniqueResultIds = Array.from(
+        new Set(
+          filteredContributors
+            .map((contrib) => Number(contrib.result_id))
+            .filter((id) => Number.isFinite(id)),
+        ),
+      );
+
+      const userId = Number(user?.id);
+      const rolesByResult = new Map<
+        number,
+        { role_id: number | null; role_name: string | null }
+      >();
+
+      if (Number.isFinite(userId) && uniqueResultIds.length > 0) {
+        const roleResults = await this._resultRepository.getUserRolesForResults(
+          userId,
+          uniqueResultIds,
+        );
+        for (const row of roleResults ?? []) {
+          const resultId = Number(row?.result_id);
+
+          if (!Number.isFinite(resultId)) {
+            continue;
+          }
+
+          rolesByResult.set(resultId, {
+            role_id:
+              row?.role_id !== null && row?.role_id !== undefined
+                ? Number(row.role_id)
+                : null,
+            role_name:
+              row?.role_name !== null && row?.role_name !== undefined
+                ? String(row.role_name)
+                : null,
+          });
+        }
+      }
+
+      const contributors = filteredContributors.map((contrib) => {
+        const numericResultId = Number(contrib.result_id);
+        const roleInfo = Number.isFinite(numericResultId)
+          ? rolesByResult.get(numericResultId)
+          : undefined;
+
+        return {
+          result_id: Number.isFinite(numericResultId)
+            ? numericResultId
+            : contrib.result_id,
           title: contrib.obj_results?.title,
           result_code: contrib.obj_results?.result_code,
-        }));
+          status_name: contrib.obj_results?.obj_status?.status_name,
+          version_id: contrib.obj_results?.version_id,
+          status_id: +contrib.obj_results?.status_id,
+          role_id: roleInfo?.role_id ?? null,
+        };
+      });
 
       return {
         response: {
@@ -813,6 +1215,178 @@ export class ResultsFrameworkReportingService {
           tocResultIndicatorId,
         },
         message: 'Existing result contributors retrieved successfully.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async getDashboardStats(programId: string) {
+    try {
+      const normalizedProgram = programId?.trim().toUpperCase();
+
+      if (!normalizedProgram) {
+        throw {
+          response: {},
+          message: 'The program identifier is required in the query params.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const initiative = await this._clarisaInitiativesRepository.findOne({
+        where: { official_code: normalizedProgram, active: true },
+        select: ['id', 'official_code', 'name'],
+      });
+
+      if (!initiative) {
+        throw {
+          response: {},
+          message:
+            'No initiative was found with the provided program identifier.',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const rawDashboardData = await this._resultRepository.query(
+        `
+          SELECT
+            r.status_id,
+            r.result_level_id,
+            r.result_type_id,
+            COUNT(DISTINCT r.id) AS total_results
+          FROM result r
+          INNER JOIN results_by_inititiative rbi
+            ON rbi.result_id = r.id
+            AND rbi.inititiative_id = ?
+            AND rbi.is_active = 1
+          INNER JOIN results_toc_result rtr
+            ON rtr.results_id = r.id
+            AND (rtr.is_active = 1 OR r.is_active = 1)
+          INNER JOIN results_toc_result_indicators rtri
+            ON rtri.results_toc_results_id = rtr.result_toc_result_id
+            AND rtri.is_active = 1
+            AND rtri.is_not_aplicable = 0
+          LEFT JOIN result_indicators_targets rit
+            ON rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
+            AND rit.is_active = 1
+          WHERE
+            r.is_active = 1
+            AND r.status_id IN (1, 2, 3)
+            AND r.result_level_id IN (3, 4)
+            AND r.result_type_id IN (1, 2, 4, 5, 6, 7, 8)
+            AND rit.contributing_indicator IS NOT NULL
+          GROUP BY
+            r.status_id,
+            r.result_level_id,
+            r.result_type_id;
+        `,
+        [initiative.id],
+      );
+
+      const statusConfig = new Map([
+        [
+          1,
+          {
+            key: 'editing' as const,
+            label: 'Editing results',
+          },
+        ],
+        [
+          3,
+          {
+            key: 'submitted' as const,
+            label: 'Submitted results',
+          },
+        ],
+        [
+          2,
+          {
+            key: 'qualityAssessed' as const,
+            label: 'Quality assessed results',
+          },
+        ],
+      ]);
+
+      const initialStatusBlock = (label: string) => ({
+        total: 0,
+        label,
+        data: {
+          outputs: {
+            knowledgeProduct: 0,
+            innovationDevelopment: 0,
+            capacitySharingForDevelopment: 0,
+            otherOutput: 0,
+          },
+          outcomes: {
+            policyChange: 0,
+            innovationUse: 0,
+            otherOutcome: 0,
+          },
+        },
+      });
+
+      const dashboardStats = {
+        editing: initialStatusBlock('Editing results'),
+        submitted: initialStatusBlock('Submitted results'),
+        qualityAssessed: initialStatusBlock('Quality assessed results'),
+      };
+
+      const outputTypeMap = new Map<
+        number,
+        keyof typeof dashboardStats.editing.data.outputs
+      >([
+        [ResultTypeEnum.KNOWLEDGE_PRODUCT, 'knowledgeProduct'],
+        [ResultTypeEnum.INNOVATION_DEVELOPMENT, 'innovationDevelopment'],
+        [
+          ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+          'capacitySharingForDevelopment',
+        ],
+        [ResultTypeEnum.OTHER_OUTPUT, 'otherOutput'],
+      ]);
+
+      const outcomeTypeMap = new Map<
+        number,
+        keyof typeof dashboardStats.editing.data.outcomes
+      >([
+        [ResultTypeEnum.POLICY_CHANGE, 'policyChange'],
+        [ResultTypeEnum.INNOVATION_USE, 'innovationUse'],
+        [ResultTypeEnum.OTHER_OUTCOME, 'otherOutcome'],
+      ]);
+
+      for (const row of rawDashboardData ?? []) {
+        const statusId = Number(row.status_id);
+        const levelId = Number(row.result_level_id);
+        const typeId = Number(row.result_type_id);
+        const total = Number(row.total_results) || 0;
+
+        if (!statusConfig.has(statusId) || total <= 0) {
+          continue;
+        }
+
+        const { key } = statusConfig.get(statusId)!;
+        const statusBlock = dashboardStats[key];
+
+        if (levelId === ResultLevelEnum.INITIATIVE_OUTPUT) {
+          const typeKey = outputTypeMap.get(typeId);
+          if (!typeKey) {
+            continue;
+          }
+          statusBlock.data.outputs[typeKey] += total;
+          statusBlock.total += total;
+        } else if (levelId === ResultLevelEnum.INITIATIVE_OUTCOME) {
+          const typeKey = outcomeTypeMap.get(typeId);
+          if (!typeKey) {
+            continue;
+          }
+          statusBlock.data.outcomes[typeKey] += total;
+          statusBlock.total += total;
+        }
+      }
+
+      return {
+        response: dashboardStats,
+        message: 'Dashboard stats retrieved successfully.',
         status: HttpStatus.OK,
       };
     } catch (error) {

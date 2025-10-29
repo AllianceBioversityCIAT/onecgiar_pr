@@ -13,6 +13,7 @@ describe('Results List E2E Tests', () => {
     // Login first and then navigate to results list
     cy.visit('/');
     cy.login('guest'); // Use Guest role
+    cy.visit('/result/results-outlet/results-list');
     cy.url().should('include', '/result/results-outlet/results-list');
   });
 
