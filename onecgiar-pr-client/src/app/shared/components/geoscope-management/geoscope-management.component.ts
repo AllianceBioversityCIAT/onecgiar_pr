@@ -15,9 +15,12 @@ import { FieldsManagerService } from '../../services/fields-manager.service';
   standalone: false
 })
 export class GeoscopeManagementComponent implements OnInit {
-  @Input() body: any = { regions: [], countries: [] };
+  @Input() body: any = { regions: [], countries: [], extra_regions: [], extra_countries: [] };
   @Input() readOnly: boolean = false;
   @Input() module: string;
+  @Input() label: string;
+  @Input() hideTobeDetermined: boolean = false;
+  @Input() description: string;
   fieldsManagerS = inject(FieldsManagerService);
   public internalModule: AppModuleEnum;
   public selectedItems: DisableOptionsSubNa[] = [];
@@ -68,6 +71,29 @@ export class GeoscopeManagementComponent implements OnInit {
     }
   }
 
+  resetExtraScope() {
+    switch (this.body.extra_geo_scope_id) {
+      case GeoScopeEnum.DETERMINED:
+      case GeoScopeEnum.GLOBAL:
+        this.body.has_extra_countries = false;
+        this.body.has_extra_regions = false;
+        this.body.extra_regions = [];
+        this.body.extra_countries = [];
+        break;
+      case GeoScopeEnum.REGIONAL:
+        this.body.has_extra_regions = true;
+        this.body.has_extra_countries = false;
+        this.body.extra_countries = [];
+        break;
+      case GeoScopeEnum.COUNTRY:
+      case GeoScopeEnum.SUB_NATIONAL:
+        this.body.has_extra_countries = true;
+        this.body.has_extra_regions = false;
+        this.body.extra_regions = [];
+        break;
+    }
+  }
+
   geographic_focus_description(id) {
     let tags = '';
     switch (id) {
@@ -105,13 +131,21 @@ export class GeoscopeManagementComponent implements OnInit {
     return ids.includes(this.body.geo_scope_id);
   }
 
+  includesExtraScope(ids: number[]): boolean {
+    return ids.includes(this.body.extra_geo_scope_id);
+  }
+
   thereAnyText(isCountry: boolean): string {
     return `The list of ${isCountry ? 'countries' : 'regions'} below follows the <a href='${isCountry ? this.ISO3166 : this.UNM49}' class="open_route" target='_blank'>${isCountry ? 'ISO 3166' : 'UN (M.49)'}<a> standard`;
   }
 
   ngOnInit(): void {
     this.internalModule = AppModuleEnum.getFromName(this.module);
-    if (this.internalModule && this.internalModule.name === ModuleTypeEnum.REPORTING)
+    if (this.internalModule && this.internalModule.name === ModuleTypeEnum.REPORTING && !this.hideTobeDetermined)
       this.geoscopeOptions = [...this.geoscopeOptions, { full_name: 'This is yet to be determined', id: GeoScopeEnum.DETERMINED }];
+
+    // Initialize extra arrays if they don't exist
+    if (!this.body.extra_regions) this.body.extra_regions = [];
+    if (!this.body.extra_countries) this.body.extra_countries = [];
   }
 }

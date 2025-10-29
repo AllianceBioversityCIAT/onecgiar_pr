@@ -17,6 +17,7 @@ import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-c
 import { UpdateUserStatus } from '../../interfaces/updateUserStatus.interface';
 import { SearchParams } from './api.service';
 import { EntityDetails } from '../../../pages/result-framework-reporting/pages/entity-details/interfaces/entity-details.interface';
+import { ExtraGeographicLocationBody } from '../../../pages/results/pages/result-detail/pages/rd-geographic-location/models/extraGeographicLocationBody';
 
 @Injectable({
   providedIn: 'root'
@@ -31,6 +32,7 @@ export class ResultsApiService {
   apiBaseUrlV2 = environment.apiBaseUrl + 'v2/api/results/';
   apiBaseUrlP25 = environment.apiBaseUrl + 'v2/api/';
   baseApiBaseUrl = environment.apiBaseUrl + 'api/';
+  baseApiBaseUrlV2 = environment.apiBaseUrl + 'v2/api/';
   currentResultId: number | string = null;
   currentResultCode: number | string = null;
   currentResultPhase: number | string = null;
@@ -285,8 +287,18 @@ export class ResultsApiService {
     return this.http.patch<any>(`${this.apiBaseUrl}update/geographic/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 
+  PATCH_geographicSectionp25(body: ExtraGeographicLocationBody) {
+    return this.http
+      .patch<any>(`${this.baseApiBaseUrlV2}geographic-location/update/geographic/${this.currentResultId}`, body)
+      .pipe(this.saveButtonSE.isSavingPipe());
+  }
+
   GET_geographicSection() {
     return this.http.get<any>(`${this.apiBaseUrl}get/geographic/${this.currentResultId}`);
+  }
+
+  GET_geographicSectionp25() {
+    return this.http.get<any>(`${this.baseApiBaseUrlV2}geographic-location/get/geographic/${this.currentResultId}`);
   }
 
   GET_resultsLinked(isIpsr: boolean) {
@@ -1261,6 +1273,10 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/programs/indicator-contribution-summary?program=${entityId}`);
   }
 
+  GET_2030Outcomes(entityId: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/toc-results/2030-outcomes?programId=${entityId}`);
+  }
+
   GET_W3BilateralProjects(tocResultId: string) {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/bilateral-projects?tocResultId=${tocResultId}`);
   }
@@ -1273,5 +1289,13 @@ export class ResultsApiService {
     return this.http.get<any>(
       `${environment.apiBaseUrl}api/results-framework-reporting/existing-result-contributors?resultTocResultId=${resultTocResultId}&tocResultIndicatorId=${tocResultIndicatorId}`
     );
+  }
+  // /api/results-framework-reporting/dashboard
+  GET_DashboardData(entityId: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/dashboard?programId=${entityId}`);
+  }
+
+  GET_adUsersSearch(search?: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/ad-users/search?query=${search}`);
   }
 }

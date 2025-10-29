@@ -1,0 +1,93 @@
+<p-drawer
+  [(visible)]="entityAowService.showViewResultDrawer"
+  [position]="entityAowService.viewResultDrawerFullScreen() ? 'full' : 'right'"
+  [closable]="false"
+  [style]="{ minWidth: '65vw' }">
+  <ng-template #header>
+    <div class="view-result-drawer-header">
+      <div class="view-result-drawer-header_content">
+        <p class="view-result-drawer-header_subtitle">
+          {{ entityAowService.entityId() }} - {{ entityAowService.entityDetails().name }}
+          @if (entityAowService.currentAowSelected()) {
+            / {{ entityAowService.currentAowSelected().code }} - {{ entityAowService.currentAowSelected().name }}
+          }
+        </p>
+
+        <div class="view-result-drawer-header_content_icons">
+          <i
+            class="pi {{
+              entityAowService.viewResultDrawerFullScreen()
+                ? 'pi-arrow-down-left-and-arrow-up-right-to-center'
+                : 'pi-arrow-up-right-and-arrow-down-left-from-center'
+            }}"
+            style="font-size: 15px; cursor: pointer"
+            (click)="entityAowService.viewResultDrawerFullScreen.set(!entityAowService.viewResultDrawerFullScreen())"></i>
+          <i
+            class="pi pi-times"
+            style="font-size: 16px; cursor: pointer"
+            (click)="entityAowService.showViewResultDrawer.set(false); entityAowService.viewResultDrawerFullScreen.set(false)"></i>
+        </div>
+      </div>
+      <p class="view-result-drawer-header_title">{{ entityAowService.currentResultToView()?.result_title }}</p>
+      <p class="view-result-drawer-header_desc">{{ entityAowService.currentResultToView()?.indicators?.[0]?.indicator_description }}</p>
+    </div>
+  </ng-template>
+
+  <div class="view-result-drawer-content">
+    <h3 class="view-result-drawer-content_title">Results for {{ entityAowService.currentResultToView()?.indicators?.[0]?.indicator_description }}</h3>
+    <p class="view-result-drawer-content_desc">See results details.</p>
+
+    <p-table [value]="entityAowService.existingResultsContributors()" [tableStyle]="{ marginTop: '24px' }" sortField="code" [sortOrder]="1">
+      <ng-template #header>
+        <tr>
+          @for (column of columns(); track column.attr) {
+            <th [id]="column.attr" [style.width]="column.width" [pSortableColumn]="column.attr">
+              {{ column.title }}
+
+              <p-sortIcon [field]="column.attr" />
+            </th>
+          }
+          <th id="pdf" style="text-align: center; width: 10%">PDF</th>
+          <th id="actions" style="text-align: center; width: 10%">Actions</th>
+        </tr>
+      </ng-template>
+      <ng-template #body let-product>
+        <tr>
+          <td>{{ product.result_code }}</td>
+          <td>{{ product.title }}</td>
+          <td>{{ product.status_name }}</td>
+          <td style="text-align: center">
+            <a
+              pTooltip="Click to view the pdf"
+              tooltipPosition="bottom"
+              href="/reports/result-details/{{ product.result_code }}?phase={{ product.version_id }}"
+              target="_blank"
+              rel="noopener noreferrer">
+              <app-pdf-icon></app-pdf-icon>
+            </a>
+          </td>
+          <td style="text-align: center">
+            <div class="icon_container text-center" aria-hidden="false">
+              <i class="pi pi-ellipsis-v" (click)="menu.toggle($event)"> </i>
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="5" class="noDataText">No existing results found</td>
+        </tr>
+      </ng-template>
+    </p-table>
+
+    <p-popover #menu>
+      @for (item of actionItems(); track item) {
+        <div class="table_menu_item" (click)="item.command(); menu.toggle($event)">
+          <i [class]="item.icon"></i>
+          <span>{{ item.label }}</span>
+        </div>
+      }
+    </p-popover>
+  </div>
+</p-drawer>

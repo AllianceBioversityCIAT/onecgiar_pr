@@ -5,17 +5,17 @@ import { CustomizedAlertsFeService } from '../../shared/services/customized-aler
 import { DataControlService } from '../../shared/services/data-control.service';
 
 @Component({
-    selector: 'app-pr-multi-select',
-    templateUrl: './pr-multi-select.component.html',
-    styleUrls: ['./pr-multi-select.component.scss'],
-    providers: [
-        {
-            provide: NG_VALUE_ACCESSOR,
-            useExisting: forwardRef(() => PrMultiSelectComponent),
-            multi: true
-        }
-    ],
-    standalone: false
+  selector: 'app-pr-multi-select',
+  templateUrl: './pr-multi-select.component.html',
+  styleUrls: ['./pr-multi-select.component.scss'],
+  providers: [
+    {
+      provide: NG_VALUE_ACCESSOR,
+      useExisting: forwardRef(() => PrMultiSelectComponent),
+      multi: true
+    }
+  ],
+  standalone: false
 })
 export class PrMultiSelectComponent implements ControlValueAccessor {
   @Input() optionLabel: string;
@@ -52,7 +52,11 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   public searchText: string;
   private currentOptionsLength = 0;
 
-  constructor(public rolesSE: RolesService, private customizedAlertsFeSE: CustomizedAlertsFeService, public dataControlSE: DataControlService) {}
+  constructor(
+    public rolesSE: RolesService,
+    private customizedAlertsFeSE: CustomizedAlertsFeService,
+    public dataControlSE: DataControlService
+  ) {}
 
   get optionsIntance() {
     if (!this.options?.length) return [];
@@ -185,11 +189,6 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
     this.onTouch = fn;
   }
 
-  toggleSelectOption(option) {
-    if (option?.disabled) return;
-    option.selected = !option.selected;
-  }
-
   removeFocus() {
     const element: any = document.getElementById(this.optionValue);
     element.blur();
@@ -220,9 +219,18 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
   }
 
   confirmDeletionEvent(option) {
-    this.customizedAlertsFeSE.show({ id: 'confirm-delete-item', title: `Are you sure you want to remove this Initiative from the contributors?`, description: `This will remove the ToC match made by the Initiative and in case you want to add it again, you will need to submit a new request.`, status: 'warning', confirmText: 'Yes, delete' }, () => {
-      this.removeOption(option);
-    });
+    this.customizedAlertsFeSE.show(
+      {
+        id: 'confirm-delete-item',
+        title: `Are you sure you want to remove this Initiative from the contributors?`,
+        description: `This will remove the ToC match made by the Initiative and in case you want to add it again, you will need to submit a new request.`,
+        status: 'warning',
+        confirmText: 'Yes, delete'
+      },
+      () => {
+        this.removeOption(option);
+      }
+    );
   }
 
   onSelectOption(option) {
@@ -230,11 +238,17 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
 
     if (option?.disabled) return;
 
+    // Ensure value is initialized as an array
+    if (!this.value) {
+      this.value = [];
+    }
+
     const indexFind = this.value.findIndex(valueItem => valueItem[this.optionValue] == option[this.optionValue]);
     if (indexFind < 0) {
       const newValue = [...(this.value || []), { ...option, new: true, is_active: true }];
       this.value = newValue;
     } else {
+      // Option is being deselected
       const valueItemFind = this.value.find(valueItem => valueItem[this.optionValue] == option[this.optionValue]);
       if (this.logicalDeletion && !valueItemFind.new) {
         const updated = this.value.map(item => {
@@ -255,6 +269,12 @@ export class PrMultiSelectComponent implements ControlValueAccessor {
 
   removeOption(option) {
     this.selectAll = null;
+
+    // Ensure value is initialized as an array
+    if (!this.value) {
+      this.value = [];
+    }
+
     if (this.logicalDeletion && !option.new) {
       const updated = this.value.map(item => {
         if (item[this.optionValue] == option[this.optionValue]) return { ...item, is_active: false };

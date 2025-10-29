@@ -7,12 +7,15 @@ import { signal } from '@angular/core';
 import { AowHloCreateModalComponent } from './aow-hlo-create-modal.component';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 import { of, throwError } from 'rxjs';
+import { ButtonModule } from 'primeng/button';
+import { ResultsListFilterService } from '../../../../../../../../../results/pages/results-outlet/pages/results-list/services/results-list-filter.service';
 
 describe('AowHloCreateModalComponent', () => {
   let component: AowHloCreateModalComponent;
   let fixture: ComponentFixture<AowHloCreateModalComponent>;
   let entityAowServiceMock: any;
   let apiServiceMock: any;
+  let resultsListFilterServiceMock: any;
 
   beforeEach(async () => {
     entityAowServiceMock = {
@@ -26,7 +29,8 @@ describe('AowHloCreateModalComponent', () => {
         indicators: [{ result_type_id: 1, result_level_id: 1 }]
       }),
       entityDetails: signal<any>({ id: 1 }),
-      onCloseReportResultModal: jest.fn()
+      onCloseReportResultModal: jest.fn(),
+      mqapJson: signal<any>(null)
     };
 
     apiServiceMock = {
@@ -40,11 +44,36 @@ describe('AowHloCreateModalComponent', () => {
       }
     };
 
+    resultsListFilterServiceMock = {
+      filters: {
+        resultLevel: [
+          {
+            id: 1,
+            name: 'Level 1',
+            options: [
+              { id: 1, name: 'Type 1' },
+              { id: 2, name: 'Type 2' }
+            ]
+          },
+          {
+            id: 4,
+            name: 'Level 4',
+            options: [
+              { id: 5, name: 'Type 5' },
+              { id: 6, name: 'Type 6' },
+              { id: 7, name: 'Type 7' }
+            ]
+          }
+        ]
+      }
+    };
+
     await TestBed.configureTestingModule({
-      imports: [AowHloCreateModalComponent, ProgressBarModule, RouterTestingModule, HttpClientTestingModule],
+      imports: [AowHloCreateModalComponent, ProgressBarModule, RouterTestingModule, HttpClientTestingModule, ButtonModule],
       providers: [
         { provide: EntityAowService, useValue: entityAowServiceMock },
-        { provide: ApiService, useValue: apiServiceMock }
+        { provide: ApiService, useValue: apiServiceMock },
+        { provide: ResultsListFilterService, useValue: resultsListFilterServiceMock }
       ]
     }).compileComponents();
 
@@ -56,6 +85,39 @@ describe('AowHloCreateModalComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  describe('getTitleInputLabel', () => {
+    it('should return the title input label', () => {
+      entityAowServiceMock.currentResultToReport.set({
+        indicators: [{ type_name: 'Number of knowledge products' }]
+      });
+      component.mqapJson.set({ metadata: [{ source: 'CGSpace' }] });
+      expect(component.getTitleInputLabel()).toBe('Title retrived from CGSpace');
+    });
+
+    it('should return the title input label', () => {
+      entityAowServiceMock.currentResultToReport.set({
+        indicators: [{ type_name: 'Number of knowledge products' }]
+      });
+      component.mqapJson.set({ metadata: [{ source: 'MELSpace' }] });
+      expect(component.getTitleInputLabel()).toBe('Title retrived from MELSpace');
+    });
+
+    it('should return the title input label', () => {
+      entityAowServiceMock.currentResultToReport.set({
+        indicators: [{ type_name: 'Other type' }]
+      });
+      expect(component.getTitleInputLabel()).toBe('Title');
+    });
+
+    it('should return the title input label', () => {
+      entityAowServiceMock.currentResultToReport.set({
+        indicators: [{ type_name: 'Number of knowledge products' }]
+      });
+      component.mqapJson.set(null);
+      expect(component.getTitleInputLabel()).toBe('Title retrieved from the repository');
+    });
+  });
+
   describe('ngOnInit', () => {
     it('should call getAllDetailsData', () => {
       const getAllDetailsDataSpy = jest.spyOn(entityAowServiceMock, 'getW3BilateralProjects');
@@ -65,6 +127,143 @@ describe('AowHloCreateModalComponent', () => {
       expect(getAllDetailsDataSpy).toHaveBeenCalled();
       expect(getExistingResultsContributorsSpy).toHaveBeenCalled();
       expect(getAllInitiativesSpy).toHaveBeenCalled();
+    });
+
+    describe('result types filtering logic', () => {
+      it('should set resultTypes when result_type_id is not present', () => {
+        // Arrange: Set up currentResultToReport without result_type_id
+        entityAowServiceMock.currentResultToReport.set({
+          indicators: [{ result_level_id: 1 }]
+        });
+
+        // Act
+        component.ngOnInit();
+
+        // Assert
+        expect(component.resultTypes()).toEqual([
+          { id: 1, name: 'Type 1' },
+          { id: 2, name: 'Type 2' }
+        ]);
+      });
+
+      it('should not set resultTypes when result_type_id is present', () => {
+        // Arrange: Set up currentResultToReport with result_type_id
+        entityAowServiceMock.currentResultToReport.set({
+          indicators: [{ result_type_id: 1, result_level_id: 1 }]
+        });
+
+        // Act
+        component.ngOnInit();
+
+        // Assert
+        expect(component.resultTypes()).toEqual([]);
+      });
+
+      it('should handle case when no matching result level is found', () => {
+        // Arrange: Set up currentResultToReport with non-existent result_level_id
+        entityAowServiceMock.currentResultToReport.set({
+          indicators: [{ result_level_id: 999 }]
+        });
+
+        // Act
+        component.ngOnInit();
+
+        // Assert
+        expect(component.resultTypes()).toBeUndefined();
+      });
+
+      it('should handle case when result level has no options', () => {
+        // Arrange: Set up result level with no options
+        resultsListFilterServiceMock.filters.resultLevel = [
+          {
+            id: 1,
+            name: 'Level 1',
+            options: []
+          }
+        ];
+        entityAowServiceMock.currentResultToReport.set({
+          indicators: [{ result_level_id: 1 }]
+        });
+
+        // Act
+        component.ngOnInit();
+
+        // Assert
+        expect(component.resultTypes()).toEqual([]);
+      });
+
+      it('should handle case when indicators array is empty', () => {
+        // Arrange: Set up currentResultToReport with empty indicators
+        entityAowServiceMock.currentResultToReport.set({
+          indicators: []
+        });
+
+        // Act
+        component.ngOnInit();
+
+        // Assert
+        expect(component.resultTypes()).toBeUndefined();
+      });
+
+      it('should handle case when indicators is undefined', () => {
+        // Arrange: Set up currentResultToReport with undefined indicators
+        entityAowServiceMock.currentResultToReport.set({
+          indicators: undefined
+        });
+
+        // Act
+        component.ngOnInit();
+
+        // Assert
+        expect(component.resultTypes()).toBeUndefined();
+      });
+
+      it('should handle case when currentResultToReport is undefined', () => {
+        // Arrange: Set up undefined currentResultToReport
+        entityAowServiceMock.currentResultToReport.set(undefined);
+
+        // Act
+        component.ngOnInit();
+
+        // Assert
+        expect(component.resultTypes()).toBeUndefined();
+      });
+
+      it('should handle case when result_level_id is undefined', () => {
+        // Arrange: Set up currentResultToReport with undefined result_level_id
+        entityAowServiceMock.currentResultToReport.set({
+          indicators: [{ result_level_id: undefined }]
+        });
+
+        // Act
+        component.ngOnInit();
+
+        // Assert
+        expect(component.resultTypes()).toBeUndefined();
+      });
+
+      it('should preserve original options when result_level_id is not 4', () => {
+        // Arrange: Set up currentResultToReport with result_level_id 1
+        entityAowServiceMock.currentResultToReport.set({
+          indicators: [{ result_level_id: 1 }]
+        });
+
+        // Act
+        component.ngOnInit();
+
+        // Assert
+        expect(component.resultTypes()).toEqual([
+          { id: 1, name: 'Type 1' },
+          { id: 2, name: 'Type 2' }
+        ]);
+      });
+    });
+  });
+
+  describe('onResultTypeChange', () => {
+    it('should set the result_type_id in the createResultBody', () => {
+      component.onResultTypeChange(6);
+      expect(component.createResultBody().result_type_id).toBe(6);
     });
   });
 
@@ -160,6 +359,7 @@ describe('AowHloCreateModalComponent', () => {
 
     it('should handle success on POST_createResult call', () => {
       jest.spyOn(apiServiceMock.resultsSE, 'POST_createResult').mockReturnValue(of({ response: { success: true } }));
+
       component.createResult();
       expect(apiServiceMock.resultsSE.POST_createResult).toHaveBeenCalled();
       expect(entityAowServiceMock.onCloseReportResultModal).toHaveBeenCalled();

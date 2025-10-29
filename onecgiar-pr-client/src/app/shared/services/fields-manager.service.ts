@@ -14,6 +14,9 @@ export class FieldsManagerService {
   portfolioAcronym = computed(() => this.dataControlSE.currentResultSignal()?.portfolio);
   isP25 = computed(() => Portfolios[this.portfolioAcronym()] == Portfolios.P25);
   isP22 = computed(() => Portfolios[this.portfolioAcronym()] == Portfolios.P22);
+  isAnInnovation = computed(
+    () => this.dataControlSE.currentResultSignal()?.result_type_id == 2 || this.dataControlSE.currentResultSignal()?.result_type_id == 7
+  );
 
   scoresImpactAreaLabel = 'Which component of the Impact Area is this result intended to impact?';
 
@@ -90,30 +93,29 @@ export class FieldsManagerService {
         label: this.scoresImpactAreaLabel,
         hide: this.isP22()
       },
-      '[geoscope-management]-any-other-countries': {
-        label: 'Are there any other geopgraphic areas where  the innovation could be impactful (beyond current development and use)?',
+      '[geoscope-management]-has_extra_geo_scope': {
+        label: 'Are there any other geographic areas where  the innovation could be impactful (beyond current development and use)?',
         description:
           'This should reflect other geographies where the innovation development, testing and/or use could also contribute to outcomes and impact"',
         required: true,
-        hide:
-          this.isP22() ||
-          (this.dataControlSE.currentResultSignal().result_type_id != 2 && this.dataControlSE.currentResultSignal().result_type_id != 7)
+        hide: this.isP22() || !this.isAnInnovation()
       },
-      '[geoscope-management]-any-other': {
+      '[geoscope-management]-extra_geo_scope_id': {
         label: 'What is the geographic scope where there may be potential impact in other geographic areas?',
         hide:
           this.isP22() ||
           (this.dataControlSE.currentResultSignal().result_type_id != 2 && this.dataControlSE.currentResultSignal().result_type_id != 7)
-        },
-        '[innovation-dev-info]-long_title': {
-          label: 'Long title',
-          hide: this.isP25()
-        },
-        '[innovation-dev-info]-short_title': {
-          label: this.isP25() ? 'Provide a short name for the innovation' : 'Provide a short title for the innovation',
-          placeholder: 'Innovation short name goes here...',
-          description: this.isP22() ?
-            `<ul>
+      },
+      '[innovation-dev-info]-long_title': {
+        label: 'Long title',
+        hide: this.isP25()
+      },
+      '[innovation-dev-info]-short_title': {
+        label: this.isP25() ? 'Provide a short name for the innovation' : 'Provide a short title for the innovation',
+        placeholder: 'Innovation short name goes here...',
+        hide: this.isP22() || !this.isAnInnovation(),
+        description: this.isP22()
+          ? `<ul>
             <li>Innovations are new, improved, or adapted technologies or products, capacity development tools and services, and policies or institutional arrangements with high potential to contribute to positive impacts when used at scale.</li>
             <li>Innovations may be at early stages of readiness (ideation or basic research) or at more mature stages of readiness (delivery and scaling).</li>
             <li>Enter a short name that facilitates clear communication about the innovation.</li>
@@ -122,8 +124,8 @@ export class FieldsManagerService {
             <li>You do not need to specify the number of new or improved lines/varieties – this can be specified under Innovation Typology.</li>
             <li>If not essential, avoid making reference to specific countries or regions (this is captured through geotagging)</li>
             <li>Avoid the use of CGIAR Center, Program or organization names in the short title</li>
-            </ul>` :
-            `<ul>
+            </ul>`
+          : `<ul>
             <li>Innovations are new, improved, or adapted technologies or products, capacity development tools and services, and policies or institutional arrangements with high potential to contribute to positive impacts when used at scale.</li>
             <li>Innovations may be at early stages of readiness (ideation and upstream research) or at more mature stages of readiness (delivery and scaling).</li>
             <li>Try to develop a short name that facilitates clear communication about the innovation.</li>
@@ -133,28 +135,28 @@ export class FieldsManagerService {
             <li>Varieties or breeds should be described by their generic traits or characteristics (e.g. Drought tolerant and aphid resistant groundnut cultivars).</li>
             <li>The specific number of new or improved lines/ varieties can be specified elsewhere.</li>
             </ul>`
-        },
-        '[innovation-use-form]-has-innovation-link': {
-          label: 'Is this innovation linked or bundled with another CGIAR-reported result (such as another innovation or a different type of result)?',
-          hide: this.isP22(),
-          required: true,
-        },
-        '[innovation-use-form]-core-innovation': {
-          label: 'Current core innovation use in number of users that can be supported by evidence (within the reporting year)?',
-          hide: this.isP22(),
-          required: true,
-          description: 'Depending on the innovation, users may be groups of actors or be organizations. Multiple actors or organizations can be selected.',
-        },
-        '[innovation-use-form]-has-studies-links': {
-          label: 'Have any studies been conducted to inform the innovation scaling strategy design (e.g. willingness to pay, ex-ante impact study, policy integration, cost-benefit analysis, market sizing, scaling partner network, etc.).?',
-          hide: this.isP22(),
-          required: true,
-        },
-        '[innovation-use-form]-2030-to-be-determined': {
-          label: 'Specify the targeted innovation use of the core innovation by end of 2030, supported by projections or evidence where available',
-          hide: this.isP22(),
-          required: true,
-          description:
+      },
+      '[innovation-use-form]-has-innovation-link': {
+        label: 'Is this innovation linked or bundled with another CGIAR-reported result (such as another innovation or a different type of result)?',
+        hide: this.isP22(),
+        required: true,
+      },
+      '[innovation-use-form]-core-innovation': {
+        label: 'Current core innovation use in number of users that can be supported by evidence (within the reporting year)?',
+        hide: this.isP22(),
+        required: true,
+        description: 'Depending on the innovation, users may be groups of actors or be organizations. Multiple actors or organizations can be selected.',
+      },
+      '[innovation-use-form]-has-studies-links': {
+        label: 'Have any studies been conducted to inform the innovation scaling strategy design (e.g. willingness to pay, ex-ante impact study, policy integration, cost-benefit analysis, market sizing, scaling partner network, etc.).?',
+        hide: this.isP22(),
+        required: true,
+      },
+      '[innovation-use-form]-2030-to-be-determined': {
+        label: 'Specify the targeted innovation use of the core innovation by end of 2030, supported by projections or evidence where available',
+        hide: this.isP22(),
+        required: true,
+        description:
           `<ul>
           <li>Depending on the innovation, users may be groups of actors or be organizations. Multiple actors or organizations can be selected.</li>
           <li>If the innovation does not target specific groups of actors or people, then please specify the expected innovation use at organizational level or other use.</li>
@@ -162,7 +164,7 @@ export class FieldsManagerService {
           <li>Add information for as many as applicable.</li>
           <li>CGIAR follows the United Nations definition of 'youth' as those persons between the ages of 15 and 24 years. If age disaggregation does not apply then please apply a 50/50% rule in dividing women or men across the youth/non-youth category.</li>
           </ul>`
-        },
+      },
     };
     return fields;
   });

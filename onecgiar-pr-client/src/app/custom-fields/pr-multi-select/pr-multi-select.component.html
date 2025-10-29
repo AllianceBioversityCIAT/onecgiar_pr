@@ -1,78 +1,81 @@
-<app-pr-field-header [label]="this.label" [description]="this.description" [required]="this.required"
-[labelDescInlineStyles]="this.labelDescInlineStyles">
+<app-pr-field-header
+  [label]="this.label"
+  [description]="this.description"
+  [required]="this.required"
+  [labelDescInlineStyles]="this.labelDescInlineStyles">
 </app-pr-field-header>
 <div class="custom_select">
-    <a class="field" tabindex="0" [id]="this.optionValue" *ngIf="!hideSelect && !(readOnly || this.rolesSE.readOnly) || (isStatic)">
-        <div class="text select_placeholder">{{placeholder}}</div>
-        <div class="icon_container">
+  <a class="field" tabindex="0" [id]="this.optionValue" *ngIf="(!hideSelect && !(readOnly || this.rolesSE.readOnly)) || isStatic">
+    <div class="text select_placeholder">{{ placeholder }}</div>
+    <div class="icon_container"></div>
+    <i class="pi pi-chevron-down icon_dropdown"></i>
+    <div class="remove_focus" (click)="removeFocus()"></div>
+    <div class="options">
+      <div class="search_input_container">
+        <p-iconfield>
+          <p-inputicon styleClass="pi pi-search" />
+          <input type="text" pInputText placeholder="Search" [(ngModel)]="this.searchText" style="width: 100%" />
+        </p-iconfield>
+      </div>
+
+      <div class="util_container">
+        <ng-content select="[util]"></ng-content>
+      </div>
+
+      <div class="bulk_selector" (click)="this.selectAllF()" *ngIf="this.showSelectAll">
+        {{ this.selectAll ? 'Unselect all' : 'Select all' }}
+      </div>
+      <ng-container *ngIf="group; else flatList">
+        <div class="custom_scroll" style="max-height: 300px; overflow: auto;">
+          <div *ngFor="let grp of options" class="group">
+            <div class="pr-body-2" style="font-weight: 600; padding: 6px 10px;">{{ grp[optionGroupLabel] }}</div>
+            <div *ngFor="let option of filterChildrenBySearch(grp[optionGroupChildren])" class="option" [ngClass]="{'disabled': option?.disabled}" (click)="onSelectOption(option)">
+              <p-checkbox [disabled]="option?.disabled" [binary]="true" [(ngModel)]="option.selected"></p-checkbox>
+              <img *ngIf="flagsCode" [src]="'https://countryflagsapi.com/png/'+option[this.flagsCode]" alt="" srcset="">
+              <div class="label pr-body-2" [innerHtml]="option[this.optionLabel]"></div>
+              <div class="event" (click)="onSelectOption(option)"></div>
+            </div>
+          </div>
+          <div *ngIf="!options?.length || !getAllChildrenFromGroups(options)?.length" class="no_info">No information found</div>
         </div>
-        <i class="pi pi-chevron-down icon_dropdown"></i>
-        <div class="remove_focus" (click)="removeFocus()"></div>
-        <div class="options">
-            <div class="search_input_container">
-                <p-iconfield>
-                    <p-inputicon styleClass="pi pi-search" />
-                    <input type="text" pInputText placeholder="Search" [(ngModel)]="this.searchText" style="width: 100%" />
-                </p-iconfield>
-            </div>
-
-            <div class="util_container">
-                <ng-content select="[util]"></ng-content>
-            </div>
-
-            <div class="bulk_selector" (click)="this.selectAllF()" *ngIf="this.showSelectAll">
-                {{this.selectAll ?'Unselect all':'Select all'}}
-            </div>
-
-            <ng-container *ngIf="group; else flatList">
-                <div class="custom_scroll" style="max-height: 300px; overflow: auto;">
-                    <div *ngFor="let grp of options" class="group">
-                        <div class="pr-body-2" style="font-weight: 600; padding: 6px 10px;">{{ grp[optionGroupLabel] }}</div>
-                        <div *ngFor="let option of filterChildrenBySearch(grp[optionGroupChildren])" class="option" [ngClass]="{'disabled': option?.disabled}" (click)="onSelectOption(option)">
-                            <p-checkbox [disabled]="option?.disabled" [binary]="true" [(ngModel)]="option.selected">
-                            </p-checkbox>
-                            <img *ngIf="flagsCode" [src]="'https://countryflagsapi.com/png/'+option[this.flagsCode]" alt="" srcset="">
-                            <div class="label pr-body-2" [innerHtml]="option[this.optionLabel]"></div>
-                            <div class="event" (click)="toggleSelectOption(option)"></div>
-                        </div>
-                    </div>
-                    <div *ngIf="!options?.length || !getAllChildrenFromGroups(options)?.length" class="no_info">No information found</div>
-                </div>
-            </ng-container>
-
-            <ng-template #flatList>
-                <cdk-virtual-scroll-viewport itemSize="30" class="custom_scroll virtual_scroll">
-                    <div *ngIf="!(optionsIntance | listFilterByTextAndAttr:this.optionLabel:this.searchText)?.length"
-                        class="no_info">No
-                        information found</div>
-                    <div *cdkVirtualFor="let option of optionsIntance | listFilterByTextAndAttr:this.optionLabel:this.searchText"
-                        class="option" [ngClass]="{'disabled': option?.disabled}" (click)="onSelectOption(option)">
-                        <p-checkbox [disabled]="option?.disabled" [binary]="true" [(ngModel)]="option.selected">
-                        </p-checkbox>
-                        <img *ngIf="flagsCode" [src]="'https://countryflagsapi.com/png/'+option[this.flagsCode]" alt=""
-                            srcset="">
-                        <div class="label pr-body-2" [innerHtml]="option[this.optionLabel]"></div>
-                        <div class="event" (click)="toggleSelectOption(option)"></div>
-                    </div>
-                </cdk-virtual-scroll-viewport>
-            </ng-template>
-        </div>
-    </a>
-    <div class="selected_container custom_scroll" *ngIf="this.selectedLabel">
-        <app-pr-field-header [description]="selectedLabelDescription()">
-        </app-pr-field-header>
-        
-        <div class="chips_container" *ngIf="this.selectedOptionLabel">
-            <div class="pr_chip_selected" *ngFor="let option of value; let i=index"
-                [ngClass]="{'is_active_false': logicalDeletion && option.is_active == false}">
-                <div class="name" [innerHtml]="option[this.selectedOptionLabel]"></div><i
-                    *ngIf="validateShowDeleteButton(option)" class="material-icons-round"
-                    (click)="confirmDeletion && option.new ? confirmDeletionEvent(option) : removeOption(option)">remove_circle
-                </i>
-            </div>
-        </div>
+      </ng-container>
+      <ng-template #flatList>
+        <cdk-virtual-scroll-viewport itemSize="30" class="custom_scroll virtual_scroll">
+          <div *ngIf="!(optionsIntance | listFilterByTextAndAttr: this.optionLabel : this.searchText)?.length" class="no_info">
+            No information found
+          </div>
+          <div
+            *cdkVirtualFor="let option of optionsIntance | listFilterByTextAndAttr: this.optionLabel : this.searchText"
+            class="option"
+            [ngClass]="{ disabled: option?.disabled }">
+            <p-checkbox [disabled]="option?.disabled" [binary]="true" [(ngModel)]="option.selected" (onChange)="onSelectOption(option)"> </p-checkbox>
+            <img *ngIf="flagsCode" [src]="'https://countryflagsapi.com/png/' + option[this.flagsCode]" alt="" srcset="" />
+            <div class="label pr-body-2" [innerHtml]="option[this.optionLabel]" (click)="onSelectOption(option)"></div>
+          </div>
+        </cdk-virtual-scroll-viewport>
+      </ng-template>
     </div>
-    <app-alert-status *ngIf="showPartnerAlert"
-        description="If you don't find the partner you are looking for, <a class='open_route pSelectP'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list.">
-    </app-alert-status>
+  </a>
+  <div class="selected_container custom_scroll" *ngIf="this.selectedLabel">
+    <app-pr-field-header [description]="selectedLabelDescription()"> </app-pr-field-header>
+
+    <div class="chips_container" *ngIf="this.selectedOptionLabel">
+      <div
+        class="pr_chip_selected"
+        *ngFor="let option of value; let i = index"
+        [ngClass]="{ is_active_false: logicalDeletion && option.is_active == false }">
+        <div class="name" [innerHtml]="option[this.selectedOptionLabel]"></div>
+        <i
+          *ngIf="validateShowDeleteButton(option)"
+          class="material-icons-round"
+          (click)="confirmDeletion && option.new ? confirmDeletionEvent(option) : removeOption(option)"
+          >remove_circle
+        </i>
+      </div>
+    </div>
+  </div>
+  <app-alert-status
+    *ngIf="showPartnerAlert"
+    description="If you don't find the partner you are looking for, <a class='open_route pSelectP'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list.">
+  </app-alert-status>
 </div>

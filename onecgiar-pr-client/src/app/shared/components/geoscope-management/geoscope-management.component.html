@@ -5,8 +5,8 @@
   [readOnly]="this.readOnly || this.api.dataControlSE.isKnowledgeProduct"
   [(ngModel)]="body.geo_scope_id"
   (ngModelChange)="this.resetHasScope()"
-  [label]="this.labelRadioButtons"
-  [description]="this.descriptionRadioButtons">
+  [label]="this.label ? this.label : this.labelRadioButtons"
+  [description]="this.description ? this.description : this.descriptionRadioButtons">
 </app-pr-radio-button>
 <div class="geographic_focus_description" *ngIf="this.internalModule.name === 'reporting'">
   <app-pr-field-header [description]="geographic_focus_description(this.body.geo_scope_id)"></app-pr-field-header>
@@ -81,29 +81,3 @@
   </div>
 </div>
 <br *ngIf="this.internalModule.name === 'ipsr'" />
-
-<!-- @if (fieldsManagerS.isP25()) { -->
-<app-pr-radio-button
-  fieldRef="[geoscope-management]-any-other-countries"
-  [options]="[
-    { value: true, label: 'Yes' },
-    { value: false, label: 'No' }
-  ]"
-  optionLabel="label"
-  [(ngModel)]="body.any_other_countries"
-  optionValue="value">
-</app-pr-radio-button>
-
-@if (body.any_other_countries) {
-  <br />
-  <app-pr-radio-button
-    fieldRef="[geoscope-management]-any-other"
-    [options]="this.geoscopeOptions"
-    optionLabel="full_name"
-    optionValue="id"
-    [readOnly]="this.readOnly || this.api.dataControlSE.isKnowledgeProduct"
-    [(ngModel)]="body.any_other"
-    (ngModelChange)="this.resetHasScope()">
-  </app-pr-radio-button>
-}
-<!-- } -->

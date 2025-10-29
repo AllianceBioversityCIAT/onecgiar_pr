@@ -1,8 +1,8 @@
 <p-table
   id="tocResultsByAowIdTable"
   styleClass="p-datatable-gridlines p-datatable-sm"
-  [value]="entityAowService.tocResultsByAowId()"
-  [loading]="entityAowService.isLoadingTocResultsByAowId()"
+  [value]="tableData()"
+  [loading]="entityAowService.isLoadingTocResultsByAowId() || entityAowService.isLoadingTocResults2030Outcomes()"
   sortField="result_title"
   [sortOrder]="1"
   responsiveLayout="scroll"
@@ -13,14 +13,11 @@
   <ng-template pTemplate="header">
     <tr>
       @for (column of columnOrder(); track column.attr) {
-        <th [pSortableColumn]="column.attr" [id]="column.attr">
-          @if (!column.hideSortIcon) {
-            <p-sortIcon [field]="column.attr"></p-sortIcon>
-          }
+        <th [id]="column.attr" style="text-align: center" [style.width]="column.width">
           {{ column.title }}
         </th>
       }
-      <th id="actions">Actions</th>
+      <th id="actions" style="text-align: center; width: 16%">Actions</th>
     </tr>
   </ng-template>
 
@@ -55,7 +52,7 @@
         <td class="text-secondary-300" style="min-width: 150px !important">{{ result.indicator_description }}</td>
         <td>
           <div class="tab-content_chip">
-            {{ result.type_value }}
+            {{ result.type_name }}
           </div>
         </td>
         <td style="text-align: center">{{ result.target_value_sum }}</td>
@@ -68,10 +65,14 @@
         </td>
         <td>
           <div
-            class="tab-content_chip in-progress"
-            style="width: max-content"
-            [ngClass]="{ achieved: getProgress(result.progress_percentage) >= 90 }">
-            In progress
+            class="tab-content_chip"
+            [ngClass]="{
+              'not-started': getProgress(result.progress_percentage) === 0,
+              'in-progress': getProgress(result.progress_percentage) >= 1 && getProgress(result.progress_percentage) <= 99,
+              achieved: getProgress(result.progress_percentage) === 100,
+              overachieved: getProgress(result.progress_percentage) > 100
+            }">
+            {{ getStatusLabel(result.progress_percentage) }}
           </div>
         </td>
         <td>
@@ -82,7 +83,12 @@
               type="button"
               class="pr-body-3 tab-content_actions_button"
               (click)="openReportResultModal(item, result.indicator_id)"></button>
-            <button pButton label="View results" type="button" class="p-button-outlined pr-body-3 tab-content_actions_button"></button>
+            <button
+              pButton
+              label="View results"
+              type="button"
+              class="p-button-outlined pr-body-3 tab-content_actions_button"
+              (click)="openViewResultDrawer(item, result.indicator_id)"></button>
             <button pButton label="Progress by program" type="button" class="p-button-outlined pr-body-3 tab-content_actions_button"></button>
           </div>
         </td>
@@ -99,4 +105,8 @@
 
 @if (entityAowService.showReportResultModal()) {
   <app-aow-hlo-create-modal></app-aow-hlo-create-modal>
+}
+
+@if (entityAowService.showViewResultDrawer()) {
+  <app-aow-view-results-drawer></app-aow-view-results-drawer>
 }

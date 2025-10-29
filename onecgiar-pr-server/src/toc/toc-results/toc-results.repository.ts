@@ -425,7 +425,7 @@ export class TocResultsRepository extends Repository<TocResult> {
         NULL AS action_area_outcome_id
       FROM ${env.DB_TOC}.toc_results tr
       LEFT JOIN ${env.DB_TOC}.toc_work_packages wp 
-        ON wp.id = tr.wp_id
+        ON wp.toc_id = tr.wp_id
       LEFT JOIN clarisa_initiatives ci 
         ON ci.official_code = tr.official_code
       WHERE tr.is_active > 0
@@ -481,7 +481,7 @@ export class TocResultsRepository extends Repository<TocResult> {
         NULL AS action_area_outcome_id
       FROM ${env.DB_TOC}.toc_results tr
       LEFT JOIN ${env.DB_TOC}.toc_work_packages wp 
-        ON wp.id = tr.wp_id
+        ON wp.toc_id = tr.wp_id
         AND wp.is_active > 0
       LEFT JOIN clarisa_initiatives ci 
         ON ci.toc_id = tr.id_toc_initiative
