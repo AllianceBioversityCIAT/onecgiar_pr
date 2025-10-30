@@ -125,6 +125,7 @@ export class RdContributorsAndPartnersService implements OnDestroy {
         this.setPossibleLeadCenters(onSave);
         this.setLeadCenterOnLoad(onSave);
         this.getConsumed.set(true);
+        console.log(response);
       },
       error: _err => {
         this.getConsumed.set(true);
