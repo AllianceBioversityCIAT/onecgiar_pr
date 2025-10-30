@@ -67,6 +67,13 @@ export class ContributorsPartnersService {
           : null,
       }));
 
+      const mqap_institutions =
+        await this._resultsByInstitutionsService.getInstitutionsPartnersByResultIdV2(
+          resultId,
+        );
+      const mqapInstitutionsData =
+        (mqap_institutions?.response as any)?.mqap_institutions || [];
+
       const contributingCenters =
         await this._resultsCenterRepository.getAllResultsCenterByResultId(
           resultId,
@@ -110,6 +117,7 @@ export class ContributorsPartnersService {
           owner_initiative: resultInit,
           ...tocMapping,
           institutions,
+          mqap_institutions: mqapInstitutionsData,
           contributing_center: contributingCenters,
           bilateral_projects: bilateralProjects,
           no_applicable_partner: !!result.no_applicable_partner,
