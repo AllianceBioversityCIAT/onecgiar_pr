@@ -324,7 +324,10 @@ export const resultDetailRouting: PrRoute[] = [
     prName: 'Contributors & partners',
     path: 'contributors-and-partners',
     underConstruction: false,
-    loadComponent: () => import('../../pages/results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.component')
+    loadChildren: () =>
+      import('../../pages/results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.module').then(
+        m => m.RdContributorsAndPartnersModule
+      )
   },
   {
     prName: 'Geographic location',
