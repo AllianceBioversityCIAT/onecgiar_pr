@@ -3,28 +3,34 @@
   <!-- Contributing Centers start -->
   <div appFeedbackValidation labelText="Contributing CG Centers" [isComplete]="!!this.rdPartnersSE.partnersBody.contributing_center?.length"></div>
 
-  <!-- @if (getConsumed) {
+  @if (this.rdPartnersSE.getConsumed()) {
     <app-pr-select
       class="segment_title_margin"
-      [options]="this.theoryOfChangeBody.contributing_and_primary_initiative"
+      [options]="this.rdPartnersSE.partnersBody.contributing_and_primary_initiative"
       label="Submitter"
       optionLabel="full_name"
       optionValue="id"
       [placeholder]="'Select ' + ('term.entity.orPlatforms' | term: this.api.dataControlSE.currentResult?.portfolio)"
       [description]="'Select ' + ('term.entity.orPlatforms' | term: this.api.dataControlSE.currentResult?.portfolio)"
-      [(ngModel)]="this.theoryOfChangeBody.changePrimaryInit"
+      [(ngModel)]="this.rdPartnersSE.partnersBody.changePrimaryInit"
       [fieldDisabled]="
-        !!(this.theoryOfChangeBody.contributing_and_primary_initiative?.length === 1 && this.theoryOfChangeBody?.result_toc_result?.initiative_id)
+        !!(
+          this.rdPartnersSE.partnersBody.contributing_and_primary_initiative?.length === 1 &&
+          this.rdPartnersSE.partnersBody?.result_toc_result?.initiative_id
+        )
       ">
     </app-pr-select>
 
-    @if (this.theoryOfChangeBody.contributing_and_primary_initiative?.length == 1 && this.theoryOfChangeBody?.result_toc_result?.initiative_id) {
+    @if (
+      this.rdPartnersSE.partnersBody.contributing_and_primary_initiative?.length == 1 &&
+      this.rdPartnersSE.partnersBody?.result_toc_result?.initiative_id
+    ) {
       <div class="no-primary-list">
         Since this result has not been shared and accepted by other
         {{ 'term.entity.plural' | term: this.api.dataControlSE.currentResult?.portfolio }}, it is not possible to change the submitter.
       </div>
     }
-  } -->
+  }
 
   <app-pr-multi-select
     [options]="this.centersSE.centersList"

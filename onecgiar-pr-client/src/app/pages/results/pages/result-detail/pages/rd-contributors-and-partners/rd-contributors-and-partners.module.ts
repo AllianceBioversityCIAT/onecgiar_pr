@@ -8,6 +8,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { RdPartnersModule } from '../rd-partners/rd-partners.module';
 import { RdContributorsAndPartnersComponent } from './rd-contributors-and-partners.component';
 import { RdContributorsAndPartnersRoutingModule } from './rd-contributors-and-partners-routing.module';
+import { TermPipe } from '../../../../../../internationalization/term.pipe';
 
 @NgModule({
   declarations: [RdContributorsAndPartnersComponent],
@@ -19,7 +20,8 @@ import { RdContributorsAndPartnersRoutingModule } from './rd-contributors-and-pa
     FeedbackValidationDirectiveModule,
     TooltipModule,
     FormsModule,
-    RdPartnersModule
+    RdPartnersModule,
+    TermPipe
   ]
 })
 export class RdContributorsAndPartnersModule {}

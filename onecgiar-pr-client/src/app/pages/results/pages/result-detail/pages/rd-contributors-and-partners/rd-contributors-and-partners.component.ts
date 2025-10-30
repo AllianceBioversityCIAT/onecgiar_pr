@@ -4,8 +4,9 @@ import { RolesService } from '../../../../../../shared/services/global/roles.ser
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
 import { CustomizedAlertsFeService } from '../../../../../../shared/services/customized-alerts-fe.service';
-import { NonPooledProjectDto, PartnersBody } from '../rd-partners/models/partnersBody';
+import { NonPooledProjectDto } from '../rd-partners/models/partnersBody';
 import { RdContributorsAndPartnersService } from './rd-contributors-and-partners.service';
+import { ContributorsAndPartnersBody } from './models/contributorsAndPartnersBody';
 
 @Component({
   selector: 'app-rd-contributors-and-partners',
@@ -34,7 +35,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.rdPartnersSE.partnersBody = new PartnersBody();
+    this.rdPartnersSE.partnersBody = new ContributorsAndPartnersBody();
     this.rdPartnersSE.getSectionInformation();
     this.api.dataControlSE.findClassTenSeconds('alert-event').then(_resp => {
       try {

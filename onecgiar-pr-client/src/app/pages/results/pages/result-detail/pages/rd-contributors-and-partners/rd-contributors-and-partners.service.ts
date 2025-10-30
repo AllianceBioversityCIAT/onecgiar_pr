@@ -1,16 +1,17 @@
 import { Injectable, OnDestroy, signal } from '@angular/core';
-import { InstitutionsInterface, PartnersBody, UnmappedMQAPInstitutionDto } from '../rd-partners/models/partnersBody';
+import { InstitutionsInterface, UnmappedMQAPInstitutionDto } from '../rd-partners/models/partnersBody';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InstitutionMapped } from '../../../../../../shared/interfaces/institutions.interface';
 import { CenterDto } from '../../../../../../shared/interfaces/center.dto';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
+import { ContributorsAndPartnersBody } from './models/contributorsAndPartnersBody';
 
 @Injectable({
   providedIn: 'root'
 })
 export class RdContributorsAndPartnersService implements OnDestroy {
-  partnersBody = new PartnersBody();
+  partnersBody = new ContributorsAndPartnersBody();
   toggle = 0;
   getConsumed = signal<boolean>(false);
   cgspaceDisabledList: any = [];
