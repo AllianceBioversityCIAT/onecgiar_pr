@@ -582,7 +582,7 @@ export class InnovationUseService {
             },
             relations: {
               obj_result_project: {
-                clarisaProject: true,
+                obj_clarisa_project: true,
               },
             },
           });
