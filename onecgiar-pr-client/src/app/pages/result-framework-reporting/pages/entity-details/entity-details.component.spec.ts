@@ -38,7 +38,8 @@ describe('EntityDetailsComponent', () => {
       getAllDetailsData: jest.fn(),
       indicatorSummaries: signal<any[]>([]),
       getDashboardData: jest.fn(),
-      dashboardData: signal<any>(null)
+      dashboardData: signal<any>(null),
+      resetDashboardData: jest.fn()
     };
 
     await TestBed.configureTestingModule({
@@ -91,10 +92,16 @@ describe('EntityDetailsComponent', () => {
     expect(component.initChart).toHaveBeenCalled();
   });
 
+  it('should call resetDashboardData when route params change', () => {
+    component.ngOnInit();
+    expect(entityAowServiceMock.resetDashboardData).toHaveBeenCalled();
+  });
+
   it('should update entityId when route params change', () => {
     component.ngOnInit();
     params$.next({ entityId: '456' });
     expect(entityAowServiceMock.entityId()).toBe('456');
+    expect(entityAowServiceMock.resetDashboardData).toHaveBeenCalledTimes(2);
   });
 
   describe('Computed Signals', () => {
@@ -218,7 +225,8 @@ describe('EntityDetailsComponent', () => {
         expect(result.datasets[0]).toEqual({
           type: 'bar',
           label: 'Editing',
-          backgroundColor: '#60a5fa',
+          backgroundColor: 'rgba(153, 153, 153, 0.6)',
+          hoverBackgroundColor: 'rgba(153, 153, 153, 0.6)',
           data: [5, 3, 2, 1]
         });
 
@@ -226,7 +234,8 @@ describe('EntityDetailsComponent', () => {
         expect(result.datasets[1]).toEqual({
           type: 'bar',
           label: 'Submitted',
-          backgroundColor: '#8e9be8',
+          backgroundColor: '#93C5FD',
+          hoverBackgroundColor: '#93C5FD',
           data: [8, 4, 2, 1]
         });
 
@@ -234,7 +243,8 @@ describe('EntityDetailsComponent', () => {
         expect(result.datasets[2]).toEqual({
           type: 'bar',
           label: 'Quality assessed',
-          backgroundColor: '#5569dd',
+          backgroundColor: '#38DF7B',
+          hoverBackgroundColor: '#38DF7B',
           data: [6, 3, 2, 1]
         });
       });
@@ -262,7 +272,8 @@ describe('EntityDetailsComponent', () => {
         expect(result.datasets[0]).toEqual({
           type: 'bar',
           label: 'Editing',
-          backgroundColor: '#60a5fa',
+          backgroundColor: 'rgba(153, 153, 153, 0.6)',
+          hoverBackgroundColor: 'rgba(153, 153, 153, 0.6)',
           data: [4, 3, 2]
         });
 
@@ -270,7 +281,8 @@ describe('EntityDetailsComponent', () => {
         expect(result.datasets[1]).toEqual({
           type: 'bar',
           label: 'Submitted',
-          backgroundColor: '#8e9be8',
+          backgroundColor: '#93C5FD',
+          hoverBackgroundColor: '#93C5FD',
           data: [6, 5, 4]
         });
 
@@ -278,7 +290,8 @@ describe('EntityDetailsComponent', () => {
         expect(result.datasets[2]).toEqual({
           type: 'bar',
           label: 'Quality assessed',
-          backgroundColor: '#5569dd',
+          backgroundColor: '#38DF7B',
+          hoverBackgroundColor: '#38DF7B',
           data: [5, 4, 3]
         });
       });

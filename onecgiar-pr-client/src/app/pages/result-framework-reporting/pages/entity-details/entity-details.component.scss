@@ -20,6 +20,13 @@ p {
   gap: 6px;
   border-bottom: 1px solid var(--pr-color-accents-2);
   background-color: var(--pr-color-white);
+
+  @media (max-width: 768px) {
+    padding: 0 16px;
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 40px;
+  }
 }
 
 .entity-details_breadcrumb_homeLink {
@@ -48,6 +55,11 @@ p {
   max-width: 1600px;
   padding: 0px 30px;
   margin: 38px auto;
+
+  @media (max-width: 768px) {
+    padding: 0 16px;
+    margin: 20px auto;
+  }
 }
 
 .entity-details_container {
@@ -57,6 +69,10 @@ p {
   padding: 0px 30px 112px;
   max-width: 1600px;
   margin: 0 auto;
+
+  @media (max-width: 768px) {
+    padding: 0 16px 60px;
+  }
 }
 
 .entity-details_title_container {
@@ -69,6 +85,10 @@ p {
   @include fonts.pr-typography('h1');
   font-weight: 700;
   color: var(--pr-color-secondary-600);
+
+  &--primary {
+    color: var(--pr-color-primary-300);
+  }
 }
 
 .entity-details_description {
@@ -85,19 +105,7 @@ p {
   flex-direction: column;
 }
 
-.under_construction_container {
-  padding: 20px;
-  position: relative;
-  border: 2px dashed var(--pr-color-yellow-300);
-  border-radius: 10px;
-}
 
-.under_construction_icon {
-  position: absolute;
-  right: -20px;
-  top: -20px;
-  width: 40px;
-}
 
 .entity-details_card_header {
   display: flex;
@@ -116,6 +124,16 @@ p {
   display: grid;
   grid-template-columns: 270px 1fr;
   gap: 42px;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding: 24px 20px;
+  }
+
+  @media (max-width: 768px) {
+    padding: 16px;
+  }
 }
 .entity-details_card_content_graph_item {
   border: 1px solid var(--pr-color-primary-400);
@@ -126,6 +144,19 @@ p {
   justify-content: space-between;
   gap: 12px;
   position: relative;
+
+  &--charts {
+    padding: 40px 16px 30px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+
+    @media (max-width: 768px) {
+      grid-template-columns: 1fr;
+      padding: 20px 12px;
+      gap: 16px;
+    }
+  }
 }
 
 .entity-details_card_content_graph_item_content {
@@ -187,6 +218,10 @@ p {
   display: grid;
   grid-template-columns: 1.5fr 1fr;
   gap: 20px;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: 1fr;
+  }
 }
 
 .entity-details_card_content {

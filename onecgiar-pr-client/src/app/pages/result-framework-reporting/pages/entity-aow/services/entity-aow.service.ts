@@ -157,4 +157,11 @@ export class EntityAowService {
     this.selectedEntities.set([]);
     this.existingResultsContributors.set([]);
   }
+
+  resetDashboardData() {
+    this.dashboardData.set(null);
+    this.entityDetails.set({} as Initiative);
+    this.entityAows.set([]);
+    this.indicatorSummaries.set([]);
+  }
 }
