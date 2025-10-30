@@ -4,11 +4,10 @@ import {
   Patch,
   Param,
   UseInterceptors,
-  Query,
+  Version,
 } from '@nestjs/common';
 import { ResultsValidationModuleService } from './results-validation-module.service';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
-import { ApiQuery } from '@nestjs/swagger';
 
 @Controller()
 @UseInterceptors(ResponseInterceptor)
@@ -17,21 +16,16 @@ export class ResultsValidationModuleController {
     private readonly resultsValidationModuleService: ResultsValidationModuleService,
   ) {}
 
-  @ApiQuery({
-    name: 'v',
-    required: false,
-    type: String,
-    description: 'API version',
-    enum: ['1', '2'],
-  })
   @Get('get/green-checks/:resultId')
-  findAll(@Param('resultId') resultId: number, @Query('v') version: string) {
-    if (version === '2') {
-      return this.resultsValidationModuleService.calculateValidationSections(
-        resultId,
-      );
-    }
+  findAll(@Param('resultId') resultId: number) {
     return this.resultsValidationModuleService.getGreenchecksByResult(resultId);
+  }
+
+  @Version('2')
+  findAllV2(@Param('resultId') resultId: number) {
+    return this.resultsValidationModuleService.calculateValidationSections(
+      resultId,
+    );
   }
 
   @Patch('save/green-checks/:resultId')
