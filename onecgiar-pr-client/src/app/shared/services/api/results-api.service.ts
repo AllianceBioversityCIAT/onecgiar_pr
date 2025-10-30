@@ -1281,4 +1281,14 @@ export class ResultsApiService {
   GET_adUsersSearch(search?: string) {
     return this.http.get<any>(`${environment.apiBaseUrl}api/ad-users/search?query=${search}`);
   }
+
+  // /v2/api/contributors-partners/{resultId}
+  GET_ContributorsPartners(resultId: string) {
+    return this.http.get<any>(`${this.baseApiBaseUrlV2}/contributors-partners/${resultId}`);
+  }
+
+  // /v2/api/contributors-partners/{resultId}
+  PATCH_ContributorsPartners(resultId: string, body: any) {
+    return this.http.patch<any>(`${this.baseApiBaseUrlV2}/contributors-partners/${resultId}`, body);
+  }
 }
