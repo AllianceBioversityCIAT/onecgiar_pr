@@ -17,6 +17,7 @@ import { ContributorsPartnersModule } from './contributors-partners/contributors
 import { ResultsTocTargetIndicatorRepository } from '../results/results-toc-results/repositories/result-toc-result-target-indicator.repository';
 import { GeographicLocationModule } from './geographic-location/geographic-location.module';
 import { GeoScopeRoleModule } from './geo_scope_role/geo_scope_role.module';
+import { InnovationDevModule } from './innovation_dev/innovation_dev.module';
 import { InnovationUseModule } from './innovation-use/innovation-use.module';
 import { ResultScalingStudyUrlsModule } from './result_scaling_study_urls/result_scaling_study_urls.module';
 import { ResultInnovSectionModule } from './result_innov_section/result_innov_section.module';
@@ -31,6 +32,7 @@ import { ResultInnovSectionModule } from './result_innov_section/result_innov_se
     ContributorsPartnersModule,
     GeographicLocationModule,
     GeoScopeRoleModule,
+    InnovationDevModule,
     InnovationUseModule,
     ResultScalingStudyUrlsModule,
     ResultInnovSectionModule,

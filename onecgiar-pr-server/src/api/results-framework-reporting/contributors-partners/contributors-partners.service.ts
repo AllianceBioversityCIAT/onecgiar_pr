@@ -199,10 +199,15 @@ export class ContributorsPartnersService {
           changePrimaryInit: payload.changePrimaryInit,
           email_template: payload.email_template,
           result_toc_result: payload.result_toc_result,
-          contributors_result_toc_result: payload.contributors_result_toc_result,
+          contributors_result_toc_result:
+            payload.contributors_result_toc_result,
         };
 
-        const tocRes = await this.updateTocMappingV2(resultId, tocPayload, user);
+        const tocRes = await this.updateTocMappingV2(
+          resultId,
+          tocPayload,
+          user,
+        );
         response['toc_mapping'] = tocRes.response;
         statuses.push(tocRes.status ?? HttpStatus.OK);
         if (tocRes.message) messages.push(tocRes.message);
