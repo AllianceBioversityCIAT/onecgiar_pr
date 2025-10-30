@@ -18,6 +18,8 @@ import { ResultInitiativeBudgetRepository } from '../../results/result_budget/re
 import { NonPooledProjectBudgetRepository } from '../../results/result_budget/repositories/non_pooled_proyect_budget.repository';
 import { ResultBudgetModule } from '../../results/result_budget/result_budget.module';
 import { ResultsByInstitutionsModule } from '../../results/results_by_institutions/results_by_institutions.module';
+import { ResultRepository } from '../../results/result.repository';
+import { ResultsByProjectsRepository } from '../../results/results_by_projects/results_by_projects.repository';
 
 @Module({
   imports: [
@@ -41,6 +43,8 @@ import { ResultsByInstitutionsModule } from '../../results/results_by_institutio
     ResultInstitutionsBudgetRepository,
     ResultInitiativeBudgetRepository,
     NonPooledProjectBudgetRepository,
+    ResultRepository,
+    ResultsByProjectsRepository,
   ],
 })
 export class InnovationUseModule {}

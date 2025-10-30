@@ -24,6 +24,8 @@ import { ResultInstitutionsBudget } from '../../results/result_budget/entities/r
 import { ResultInstitutionsBudgetRepository } from '../../results/result_budget/repositories/result_institutions_budget.repository';
 import { ResultsByInstitution } from '../../results/results_by_institutions/entities/results_by_institution.entity';
 import { ResultByIntitutionsRepository } from '../../results/results_by_institutions/result_by_intitutions.repository';
+import { ResultRepository } from '../../results/result.repository';
+import { ResultsByProjectsRepository } from '../../results/results_by_projects/results_by_projects.repository';
 
 @Injectable()
 export class InnovationUseService {
@@ -43,6 +45,8 @@ export class InnovationUseService {
     private readonly _resultBilateralBudgetRepository: NonPooledProjectBudgetRepository,
     private readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
     private readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
+    private readonly _resultRepository: ResultRepository,
+    private readonly _resultByProjectRepository: ResultsByProjectsRepository,
   ) {}
 
   async saveInnovationUse(
@@ -88,6 +92,13 @@ export class InnovationUseService {
           resultExist.readiness_level_explanation =
             readiness_level_explanation ?? null;
           resultExist.has_scaling_studies = !!has_scaling_studies;
+
+          if (!has_scaling_studies) {
+            await this._resultScalingStudyUrlsRepository.update(
+              { result_innov_use_id: resultExist.result_innovation_use_id },
+              { is_active: false },
+            );
+          }
         } else {
           resultExist.readiness_level_explanation = null;
           resultExist.has_scaling_studies = false;
@@ -116,6 +127,13 @@ export class InnovationUseService {
           newInnUse.readiness_level_explanation =
             readiness_level_explanation ?? null;
           newInnUse.has_scaling_studies = !!has_scaling_studies;
+
+          if (!has_scaling_studies) {
+            await this._resultScalingStudyUrlsRepository.update(
+              { result_innov_use_id: newInnUse.result_innovation_use_id },
+              { is_active: false },
+            );
+          }
         }
 
         InnUseRes = await this._resultsInnovationsUseRepository.save(newInnUse);
@@ -147,43 +165,55 @@ export class InnovationUseService {
         measures: innovationUseDto.measures ?? [],
       };
 
-      if (!innov_use_to_be_determined || innov_use_to_be_determined != null) {
-        await this.saveAnticipatedInnoUser(
-          InnUseRes.results_id,
-          user.id,
-          {
-            ...innovationUseDto,
-            innovation_use: innovation_use,
-          },
-          ResultCoreInnovUseSectionEnum.CURRENT,
-        );
-      }
-
-      if (
-        !innov_use_2030_to_be_determined ||
-        innov_use_2030_to_be_determined != null
-      ) {
-        await this.saveAnticipatedInnoUser(
-          InnUseRes.results_id,
-          user.id,
-          {
-            ...innovationUseDto,
-            innovation_use: innovationUseDto.innovation_use_2030,
-          },
-          ResultCoreInnovUseSectionEnum.FUTURE,
-        );
-      }
-
-      await this.saveInitiativeInvestment(resultId, user.id, innovationUseDto);
-      await this.saveBillateralInvestment(resultId, user.id, innovationUseDto);
-      await this.savePartnerInvestment(resultId, user.id, innovationUseDto);
-
-      await this._linkedResultService.createForInnovationUse(
+      await this.saveAnticipatedInnoUser(
         InnUseRes.results_id,
-        linked_results,
-        user,
+        user.id,
+        {
+          ...innovationUseDto,
+          innovation_use: innovation_use,
+        },
+        ResultCoreInnovUseSectionEnum.CURRENT,
+        innov_use_to_be_determined,
       );
 
+      await this.saveAnticipatedInnoUser(
+        InnUseRes.results_id,
+        user.id,
+        {
+          ...innovationUseDto,
+          innovation_use: innovationUseDto.innovation_use_2030,
+        },
+        ResultCoreInnovUseSectionEnum.FUTURE,
+        innov_use_2030_to_be_determined,
+      );
+
+      const result_version = await this._resultRepository.findOne({
+        where: { id: resultId },
+        select: ['version_id'],
+      });
+
+      await this.saveInitiativeInvestment(resultId, user.id, innovationUseDto);
+      await this.saveBillateralInvestment(
+        resultId,
+        result_version.version_id,
+        user.id,
+        innovationUseDto,
+      );
+      await this.savePartnerInvestment(resultId, user.id, innovationUseDto);
+
+      if (!has_innovation_link) {
+        await this._linkedResultService.createForInnovationUse(
+          InnUseRes.results_id,
+          [],
+          user,
+        );
+      } else {
+        await this._linkedResultService.createForInnovationUse(
+          InnUseRes.results_id,
+          linked_results,
+          user,
+        );
+      }
       return {
         response: InnUseRes,
         message: 'Results Innovations Use has been saved successfully',
@@ -200,7 +230,25 @@ export class InnovationUseService {
     user: number,
     crtr: CreateInnovationUseDto,
     section: ResultCoreInnovUseSectionEnum = null,
+    determined?: boolean | null,
   ) {
+    if (determined === true) {
+      await this._resultActorRepository.update(
+        { result_id: resultId, is_active: true },
+        { is_active: false, last_updated_by: user },
+      );
+      await this._resultByIntitutionsTypeRepository.update(
+        { results_id: resultId, is_active: true },
+        { is_active: false, last_updated_by: user },
+      );
+      await this._resultIpMeasureRepository.update(
+        { result_id: resultId, is_active: true },
+        { is_active: false, last_updated_by: user },
+      );
+
+      return;
+    }
+
     // Actors
     if (crtr?.innovation_use?.actors?.length) {
       for (const el of crtr.innovation_use.actors) {
@@ -512,37 +560,77 @@ export class InnovationUseService {
         name: item.obj_result_initiative?.obj_initiative?.name ?? null,
       }));
 
-      const npp = await this._nonPooledProjectRepository.find({
-        where: {
-          results_id: resultId,
-          is_active: true,
-          non_pooled_project_type_id: 1,
-        },
+      const rversion = await this._resultRepository.findOne({
+        where: { id: resultId },
+        select: ['version_id'],
       });
 
-      const investment_bilateral_raw =
-        await this._resultBilateralBudgetRepository.find({
+      let investment_bilateral_raw: any;
+      if (rversion?.version_id === 34) {
+        const rbp = await this._resultByProjectRepository.find({
           where: {
-            non_pooled_projetct_id: In(npp.map((el) => el.id)),
+            result_id: resultId,
             is_active: true,
-          },
-          relations: {
-            obj_non_pooled_projetct: {
-              obj_funder_institution_id: true,
-            },
           },
         });
 
-      const investment_bilateral = investment_bilateral_raw.map((item) => ({
-        id: item.obj_non_pooled_projetct?.obj_funder_institution_id.id ?? null,
-        kind_cash:
-          item.kind_cash !== null && item.kind_cash !== undefined
-            ? Number(item.kind_cash)
-            : null,
-        is_determined: item.is_determined ?? null,
-        official_code: null,
-        name: item.obj_non_pooled_projetct?.grant_title ?? null,
-      }));
+        investment_bilateral_raw =
+          await this._resultBilateralBudgetRepository.find({
+            where: {
+              result_project_id: In(rbp.map((el) => el.id)),
+              is_active: true,
+            },
+            relations: {
+              obj_result_project: {
+                clarisaProject: true,
+              },
+            },
+          });
+      } else {
+        const npp = await this._nonPooledProjectRepository.find({
+          where: {
+            results_id: resultId,
+            is_active: true,
+            non_pooled_project_type_id: 1,
+          },
+        });
+
+        investment_bilateral_raw =
+          await this._resultBilateralBudgetRepository.find({
+            where: {
+              non_pooled_projetct_id: In(npp.map((el) => el.id)),
+              is_active: true,
+            },
+            relations: {
+              obj_non_pooled_projetct: {
+                obj_funder_institution_id: true,
+              },
+            },
+          });
+      }
+
+      const investment_bilateral = investment_bilateral_raw.map((item) => {
+        const funder =
+          rversion?.version_id === 34
+            ? item.obj_result_project?.clarisaProject
+            : item.obj_non_pooled_projetct?.obj_funder_institution_id;
+
+        const name =
+          rversion?.version_id === 34
+            ? (item.obj_result_project?.clarisaProject?.short_name ?? null)
+            : (item.obj_non_pooled_projetct?.grant_title ?? null);
+
+        return {
+          id: funder?.id ?? null,
+          kind_cash:
+            item.kind_cash !== null && item.kind_cash !== undefined
+              ? Number(item.kind_cash)
+              : null,
+          is_determined: item.is_determined ?? null,
+          official_code: null,
+          name,
+        };
+      });
 
       const institutions: ResultsByInstitution[] =
         await this._resultByIntitutionsRepository.find({
@@ -644,7 +732,12 @@ export class InnovationUseService {
 
         if (rie) {
           rie.kind_cash =
-            initiative.kind_cash === null ? null : Number(initiative.kind_cash);
+            initiative.is_determined === true
+              ? null
+              : initiative.kind_cash === null
+                ? null
+                : Number(initiative.kind_cash);
+
           rie.is_determined = initiative.is_determined;
           rie.last_updated_by = user;
 
@@ -653,13 +746,16 @@ export class InnovationUseService {
           const newRie = this._resultInitiativesBudgetRepository.create({
             result_initiative_id: ibr.id,
             kind_cash:
-              initiative.kind_cash === null
+              initiative.is_determined === true
                 ? null
-                : Number(initiative.kind_cash),
+                : initiative.kind_cash === null
+                  ? null
+                  : Number(initiative.kind_cash),
             is_determined: initiative.is_determined,
             created_by: user,
             last_updated_by: user,
           });
+
           await this._resultInitiativesBudgetRepository.save(newRie);
         }
       }
@@ -670,11 +766,11 @@ export class InnovationUseService {
 
   async saveBillateralInvestment(
     resultId: number,
+    result_version: number,
     user: number,
     { investment_bilateral: inv }: CreateInnovationUseDto,
   ) {
     try {
-      // Validar que exista el arreglo
       if (!inv || !Array.isArray(inv) || inv.length === 0) {
         this.logger.log(
           `[saveBillateralInvestment] No investment_bilateral provided for resultId: ${resultId}. Continuing flow.`,
@@ -683,51 +779,121 @@ export class InnovationUseService {
       }
 
       for (const i of inv) {
-        const npp = await this._nonPooledProjectRepository.findOne({
-          where: {
-            results_id: resultId,
-            is_active: true,
-            funder_institution_id: i.id,
-          },
-        });
-
-        if (!npp) {
-          this.logger.error(
-            `[saveBillateralInvestment] Non-pooled project not found for resultId: ${resultId}, id: ${i.id}`,
-          );
-          throw {
-            response: {},
-            message: `Non-pooled project not found for resultId: ${resultId}, id: ${i.id}`,
-            status: HttpStatus.NOT_FOUND,
-          };
-        }
-
-        const rbb = await this._resultBilateralBudgetRepository.findOne({
-          where: {
-            non_pooled_projetct_id: npp.id,
-            is_active: true,
-          },
-        });
-
-        if (rbb) {
-          rbb.kind_cash = i.kind_cash === null ? null : Number(i.kind_cash);
-          rbb.is_determined = i.is_determined;
-          rbb.last_updated_by = user;
-
-          await this._resultBilateralBudgetRepository.save(rbb);
-        } else {
-          const newRbb = this._resultBilateralBudgetRepository.create({
-            non_pooled_projetct_id: npp.id,
-            kind_cash: i.kind_cash === null ? null : Number(i.kind_cash),
-            is_determined: i.is_determined,
-            created_by: user,
-            last_updated_by: user,
+        if (result_version === 34) {
+          // ========  result_version Reporting P25 ========
+          const rbp = await this._resultByProjectRepository.findOne({
+            where: {
+              result_id: resultId,
+              is_active: true,
+              project_id: i.id,
+            },
           });
 
-          await this._resultBilateralBudgetRepository.save(newRbb);
+          if (!rbp) {
+            this.logger.error(
+              `[saveBillateralInvestment] ResultByProject not found for resultId: ${resultId}, project_id: ${i.id}`,
+            );
+            throw {
+              response: {},
+              message: `ResultByProject not found for resultId: ${resultId}, project_id: ${i.id}`,
+              status: HttpStatus.NOT_FOUND,
+            };
+          }
+
+          const rbb = await this._resultBilateralBudgetRepository.findOne({
+            where: {
+              result_project_id: rbp.id,
+              is_active: true,
+            },
+          });
+
+          if (rbb) {
+            rbb.kind_cash =
+              i.is_determined === true
+                ? null
+                : i.kind_cash === null
+                  ? null
+                  : Number(i.kind_cash);
+            rbb.is_determined = i.is_determined;
+            rbb.last_updated_by = user;
+            rbb.non_pooled_projetct_id = null;
+
+            await this._resultBilateralBudgetRepository.save(rbb);
+          } else {
+            const newRbb = this._resultBilateralBudgetRepository.create({
+              result_project_id: rbp.id,
+              non_pooled_projetct_id: null,
+              kind_cash:
+                i.is_determined === true
+                  ? null
+                  : i.kind_cash === null
+                    ? null
+                    : Number(i.kind_cash),
+              is_determined: i.is_determined,
+              created_by: user,
+              last_updated_by: user,
+            });
+
+            await this._resultBilateralBudgetRepository.save(newRbb);
+          }
+        } else {
+          const npp = await this._nonPooledProjectRepository.findOne({
+            where: {
+              results_id: resultId,
+              is_active: true,
+              funder_institution_id: i.id,
+            },
+          });
+
+          if (!npp) {
+            this.logger.error(
+              `[saveBillateralInvestment] Non-pooled project not found for resultId: ${resultId}, id: ${i.id}`,
+            );
+            throw {
+              response: {},
+              message: `Non-pooled project not found for resultId: ${resultId}, id: ${i.id}`,
+              status: HttpStatus.NOT_FOUND,
+            };
+          }
+
+          const rbb = await this._resultBilateralBudgetRepository.findOne({
+            where: {
+              non_pooled_projetct_id: npp.id,
+              is_active: true,
+            },
+          });
+
+          if (rbb) {
+            rbb.kind_cash =
+              i.is_determined === true
+                ? null
+                : i.kind_cash === null
+                  ? null
+                  : Number(i.kind_cash);
+            rbb.is_determined = i.is_determined;
+            rbb.result_project_id = null;
+            rbb.last_updated_by = user;
+
+            await this._resultBilateralBudgetRepository.save(rbb);
+          } else {
+            const newRbb = this._resultBilateralBudgetRepository.create({
+              non_pooled_projetct_id: npp.id,
+              result_project_id: null,
+              kind_cash:
+                i.is_determined === true
+                  ? null
+                  : i.kind_cash === null
+                    ? null
+                    : Number(i.kind_cash),
+              is_determined: i.is_determined,
+              created_by: user,
+              last_updated_by: user,
+            });
+
+            await this._resultBilateralBudgetRepository.save(newRbb);
+          }
         }
       }
-
       return { valid: true };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
