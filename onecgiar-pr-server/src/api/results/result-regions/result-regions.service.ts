@@ -200,6 +200,7 @@ export class ResultRegionsService {
           role,
         );
         if (regions?.length) {
+          console.log('regions.length', regions);
           const resultRegionArray: ResultRegion[] = [];
           for (let index = 0; index < regions.length; index++) {
             const exist =
@@ -212,8 +213,13 @@ export class ResultRegionsService {
               const newRegions = new ResultRegion();
               newRegions.region_id = regions[index].id;
               newRegions.result_id = result.id;
+              newRegions.geo_scope_role_id = role;
               resultRegionArray.push(newRegions);
             }
+          }
+
+          if (resultRegionArray.length) {
+            console.log('resultRegionArray.length', resultRegionArray);
             await this._resultRegionRepository.save(resultRegionArray);
           }
         }

@@ -193,6 +193,12 @@ export class ResultCountriesService {
     }
 
     if (geo_scope_id == 3 || has_countries) {
+      await this._resultCountryRepository.updateCountries(
+        result.id,
+        countries?.map((e) => e.id) ?? [],
+        geoScopeRoleId,
+      );
+
       if (countries?.length) {
         await this._resultCountryRepository.updateCountries(
           result.id,
