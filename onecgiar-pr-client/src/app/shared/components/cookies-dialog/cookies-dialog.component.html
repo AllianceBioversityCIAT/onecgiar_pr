@@ -7,12 +7,10 @@
   [resizable]="false"
   [closable]="false"
   [dismissableMask]="false"
-  [style]="{ width: '28rem' }">
-  <p>Usamos cookies para mejorar tu experiencia. Puedes aceptar todas o configurar tus preferencias.</p>
+  [style]="{ width: 'auto', padding: '2rem' }">
+  <p class="buttons">Usamos cookies para mejorar tu experiencia.</p>
   <div class="buttons">
-    <p-button padding="medium" text="Aceptar todas" icon="check" colorType="primary" (clickEvent)=""> </p-button>
-  </div>
-  <div class="buttons">
-    <p-button padding="medium" text="Rechazar todas" icon="close" colorType="secondary" (clickEvent)=""> </p-button>
+    <p-button size="small" label="Aceptar todas" icon="pi pi-check" severity="primary" (onClick)="acceptAll()"> </p-button>
+    <p-button size="small" label="Rechazar todas" icon="pi pi-times" severity="secondary" (onClick)="rejectAll()"> </p-button>
   </div>
 </p-dialog>

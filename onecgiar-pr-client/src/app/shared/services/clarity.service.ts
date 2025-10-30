@@ -31,7 +31,11 @@ export class ClarityService {
   private initClarity(): void {
     try {
       Clarity.init(this.CLARITY_PROJECT_ID);
-      Clarity.consent(); // Enable cookie consent by default
+      // Initialize with conservative defaults for Consent Mode v2 (per Clarity docs)
+      globalThis.clarity('consentv2', {
+        ad_Storage: 'denied',
+        analytics_Storage: 'denied'
+      });
     } catch (error) {
       console.error('Error initializing Clarity:', error);
       throw error;
