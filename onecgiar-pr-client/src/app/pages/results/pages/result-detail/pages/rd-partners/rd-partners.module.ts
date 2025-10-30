@@ -21,6 +21,7 @@ import { FormsModule } from '@angular/forms';
     FeedbackValidationDirectiveModule,
     TooltipModule,
     FormsModule
-  ]
+  ],
+  exports: [InstToInstTypesPipe, NormalSelectorComponent, KnowledgeProductSelectorComponent]
 })
 export class RdPartnersModule {}

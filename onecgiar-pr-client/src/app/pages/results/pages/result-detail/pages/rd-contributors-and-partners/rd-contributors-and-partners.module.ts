@@ -5,14 +5,12 @@ import { FormsModule } from '@angular/forms';
 import { FeedbackValidationDirectiveModule } from '../../../../../../shared/directives/feedback-validation-directive.module';
 import { InstitutionsPipesModule } from '../rd-general-information/pipes/institutions-pipes.module';
 import { TooltipModule } from 'primeng/tooltip';
-import { InstToInstTypesPipe } from '../rd-partners/pipes/inst-to-inst-types.pipe';
-import { NormalSelectorComponent } from '../rd-partners/components/normal-selector/normal-selector.component';
-import { KnowledgeProductSelectorComponent } from '../rd-partners/components/knowledge-product-selector/knowledge-product-selector.component';
+import { RdPartnersModule } from '../rd-partners/rd-partners.module';
 import { RdContributorsAndPartnersComponent } from './rd-contributors-and-partners.component';
 import { RdContributorsAndPartnersRoutingModule } from './rd-contributors-and-partners-routing.module';
 
 @NgModule({
-  declarations: [RdContributorsAndPartnersComponent, InstToInstTypesPipe, NormalSelectorComponent, KnowledgeProductSelectorComponent],
+  declarations: [RdContributorsAndPartnersComponent],
   imports: [
     CommonModule,
     RdContributorsAndPartnersRoutingModule,
@@ -20,7 +18,8 @@ import { RdContributorsAndPartnersRoutingModule } from './rd-contributors-and-pa
     InstitutionsPipesModule,
     FeedbackValidationDirectiveModule,
     TooltipModule,
-    FormsModule
+    FormsModule,
+    RdPartnersModule
   ]
 })
 export class RdContributorsAndPartnersModule {}
