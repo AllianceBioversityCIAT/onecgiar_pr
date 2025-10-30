@@ -1,4 +1,4 @@
-import { Injectable, OnDestroy } from '@angular/core';
+import { Injectable, OnDestroy, signal } from '@angular/core';
 import { InstitutionsInterface, PartnersBody, UnmappedMQAPInstitutionDto } from '../rd-partners/models/partnersBody';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InstitutionMapped } from '../../../../../../shared/interfaces/institutions.interface';
@@ -12,7 +12,7 @@ import { CentersService } from '../../../../../../shared/services/global/centers
 export class RdContributorsAndPartnersService implements OnDestroy {
   partnersBody = new PartnersBody();
   toggle = 0;
-
+  getConsumed = signal<boolean>(false);
   cgspaceDisabledList: any = [];
 
   possibleLeadPartners: InstitutionMapped[] = [];
@@ -123,8 +123,10 @@ export class RdContributorsAndPartnersService implements OnDestroy {
         this.setLeadPartnerOnLoad(onSave);
         this.setPossibleLeadCenters(onSave);
         this.setLeadCenterOnLoad(onSave);
+        this.getConsumed.set(true);
       },
       error: _err => {
+        this.getConsumed.set(true);
         if (no_applicable_partner === true || no_applicable_partner === false) this.partnersBody.no_applicable_partner = no_applicable_partner;
       }
     });
