@@ -32,7 +32,7 @@ export class CreateInnovationDevDtoV2 {
   public bilateral_expected_investment: NonPooledProjectBudget[];
   public institutions_expected_investment: ResultInstitutionsBudget[];
   public has_scaling_studies: boolean;
-  public url_studies: string[];
+  public scaling_studies_urls: string[];
 }
 export interface SubOption {
   result_question_id: number;

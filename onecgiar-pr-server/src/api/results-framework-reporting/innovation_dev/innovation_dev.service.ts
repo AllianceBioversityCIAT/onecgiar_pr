@@ -17,8 +17,10 @@ import { NonPooledProjectRepository } from '../../results/non-pooled-projects/no
 import { ResultInstitutionsBudgetRepository } from '../../results/result_budget/repositories/result_institutions_budget.repository';
 import { InnoDevService } from '../../results/summary/innovation_dev.service';
 import { ResultsInnovationsDev } from '../../results/summary/entities/results-innovations-dev.entity';
-import { In } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { ResultsByInstitution } from '../../results/results_by_institutions/entities/results_by_institution.entity';
+import { ResultScalingStudyUrl } from '../result_scaling_study_urls/entities/result_scaling_study_url.entity';
+import { InnovationReadinessLevelByLevel } from './enum/innov-readiness-level.enum';
 
 @Injectable()
 export class InnovationDevService {
@@ -37,6 +39,7 @@ export class InnovationDevService {
     private readonly _nonPooledProjectRepository: NonPooledProjectRepository,
     private readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
     private readonly _innoDevService: InnoDevService,
+    private readonly _resultScalingStudyUrlsRepository: Repository<ResultScalingStudyUrl>,
   ) {}
   async saveInnovationDev(
     createInnovationDevDto: CreateInnovationDevDtoV2,
@@ -65,6 +68,7 @@ export class InnovationDevService {
         innovation_pdf,
         innovation_user_to_be_determined,
         has_scaling_studies,
+        scaling_studies_urls,
       } = createInnovationDevDto;
 
       let InnDevRes: ResultsInnovationsDev = undefined;
@@ -196,6 +200,27 @@ export class InnovationDevService {
       );
 
       if (
+        innovation_readiness_level_id >=
+          InnovationReadinessLevelByLevel.Level_6 &&
+        has_scaling_studies &&
+        scaling_studies_urls?.length
+      ) {
+        await this._resultScalingStudyUrlsRepository.update(
+          { result_innov_use_id: InnDevRes.result_innovation_dev_id },
+          { is_active: false },
+        );
+
+        const urlsToSave = scaling_studies_urls.map((url) => ({
+          result_innov_use_id: InnDevRes.result_innovation_dev_id,
+          study_url: url,
+          is_active: true,
+          created_by: user.id,
+        }));
+
+        await this._resultScalingStudyUrlsRepository.save(urlsToSave);
+      }
+
+      if (
         innovation_user_to_be_determined != false ||
         innovation_user_to_be_determined != null
       ) {
@@ -321,6 +346,20 @@ export class InnovationDevService {
           },
         });
 
+      let scaling_studies_urls: string[] = [];
+      if (
+        innDevExists.innovation_readiness_level_id >=
+        InnovationReadinessLevelByLevel.Level_6
+      ) {
+        const urls = await this._resultScalingStudyUrlsRepository.find({
+          where: {
+            result_innov_use_id: innDevExists.result_innovation_dev_id,
+            is_active: true,
+          },
+        });
+        scaling_studies_urls = urls.map((u) => u.study_url);
+      }
+
       return {
         response: {
           ...innDevExists,
@@ -329,6 +368,7 @@ export class InnovationDevService {
           initiative_expected_investment,
           bilateral_expected_investment,
           institutions_expected_investment,
+          scaling_studies_urls,
           reference_materials,
           result,
         },

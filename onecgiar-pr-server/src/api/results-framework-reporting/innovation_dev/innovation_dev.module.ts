@@ -17,6 +17,7 @@ import { ResultByIntitutionsRepository } from '../../results/results_by_institut
 import { ResultsInnovationsDevRepository } from '../../results/summary/repositories/results-innovations-dev.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultAnswerRepository } from '../../results/result-questions/repository/result-answers.repository';
+import { ResultScalingStudyUrlsModule } from '../result_scaling_study_urls/result_scaling_study_urls.module';
 
 @Module({
   controllers: [InnovationDevController],
@@ -38,6 +39,7 @@ import { ResultAnswerRepository } from '../../results/result-questions/repositor
     NonPooledProjectRepository,
     InnoDevService,
     ResultsPolicyChangesRepository,
+    ResultScalingStudyUrlsModule,
   ],
 })
 export class InnovationDevModule {}
