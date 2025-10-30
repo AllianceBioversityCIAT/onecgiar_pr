@@ -2,10 +2,10 @@ import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
-import { RdPartnersService } from '../rd-partners/rd-partners.service';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
 import { CustomizedAlertsFeService } from '../../../../../../shared/services/customized-alerts-fe.service';
 import { NonPooledProjectDto, PartnersBody } from '../rd-partners/models/partnersBody';
+import { RdContributorsAndPartnersService } from './rd-contributors-and-partners.service';
 
 @Component({
   selector: 'app-rd-contributors-and-partners',
@@ -26,7 +26,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     public api: ApiService,
     public institutionsSE: InstitutionsService,
     public rolesSE: RolesService,
-    public rdPartnersSE: RdPartnersService,
+    public rdPartnersSE: RdContributorsAndPartnersService,
     private readonly customizedAlertsFeSE: CustomizedAlertsFeService,
     public centersSE: CentersService
   ) {
