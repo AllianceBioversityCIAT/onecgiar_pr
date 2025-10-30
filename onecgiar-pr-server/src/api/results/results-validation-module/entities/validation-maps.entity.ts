@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryColumn, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, PrimaryColumn } from 'typeorm';
 import { BaseEntity } from '../../../../shared/entities/base-entity';
 
 @Entity('validation_maps')
