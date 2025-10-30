@@ -64,6 +64,13 @@ export class ResultsInnovationsDev {
   is_new_variety!: boolean;
 
   @Column({
+    name: 'has_scaling_studies',
+    type: 'boolean',
+    nullable: true,
+  })
+  has_scaling_studies: boolean;
+
+  @Column({
     name: 'number_of_varieties',
     type: 'bigint',
     nullable: true,

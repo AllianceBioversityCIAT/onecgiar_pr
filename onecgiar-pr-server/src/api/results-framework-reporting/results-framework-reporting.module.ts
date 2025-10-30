@@ -15,6 +15,7 @@ import { ContributionToIndicatorResultsRepository } from '../contribution-to-ind
 import { ResultsByProjectsModule } from '../results/results_by_projects/results_by_projects.module';
 import { ContributorsPartnersModule } from './contributors-partners/contributors-partners.module';
 import { ResultsTocTargetIndicatorRepository } from '../results/results-toc-results/repositories/result-toc-result-target-indicator.repository';
+import { InnovationDevModule } from './innovation_dev/innovation_dev.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { ResultsTocTargetIndicatorRepository } from '../results/results-toc-resu
     ShareResultRequestModule,
     ResultsByProjectsModule,
     ContributorsPartnersModule,
+    InnovationDevModule,
   ],
   controllers: [ResultsFrameworkReportingController],
   providers: [
