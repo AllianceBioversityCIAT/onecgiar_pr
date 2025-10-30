@@ -321,6 +321,12 @@ export const resultDetailRouting: PrRoute[] = [
     loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-partners/rd-partners.module').then(m => m.RdPartnersModule)
   },
   {
+    prName: 'Contributors & partners',
+    path: 'contributors-and-partners',
+    underConstruction: false,
+    loadComponent: () => import('../../pages/results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.component')
+  },
+  {
     prName: 'Geographic location',
     path: 'geographic-location',
     underConstruction: false,
