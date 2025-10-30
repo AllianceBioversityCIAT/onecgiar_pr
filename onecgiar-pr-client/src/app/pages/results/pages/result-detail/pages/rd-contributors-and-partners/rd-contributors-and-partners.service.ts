@@ -1,4 +1,4 @@
-import { Injectable, OnDestroy, signal } from '@angular/core';
+import { Injectable, OnDestroy, inject, signal } from '@angular/core';
 import { InstitutionsInterface, UnmappedMQAPInstitutionDto } from '../rd-partners/models/partnersBody';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InstitutionMapped } from '../../../../../../shared/interfaces/institutions.interface';
@@ -6,6 +6,7 @@ import { CenterDto } from '../../../../../../shared/interfaces/center.dto';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
 import { ContributorsAndPartnersBody } from './models/contributorsAndPartnersBody';
+import { RdCpTheoryOfChangesServicesService } from './rd-cp-theory-of-changes-services.service';
 
 @Injectable({
   providedIn: 'root'
@@ -18,6 +19,7 @@ export class RdContributorsAndPartnersService implements OnDestroy {
 
   possibleLeadPartners: InstitutionMapped[] = [];
   possibleLeadCenters: CenterDto[] = [];
+  submitter: string = '';
 
   nppCenters: CenterDto[] = [];
 
@@ -26,7 +28,7 @@ export class RdContributorsAndPartnersService implements OnDestroy {
 
   updatingLeadData: boolean = false;
   disableLeadPartner: boolean = false;
-
+  rdCpTheoryOfChangesServicesSE = inject(RdCpTheoryOfChangesServicesService);
   constructor(
     public api: ApiService,
     public institutionsSE: InstitutionsService,
@@ -124,8 +126,52 @@ export class RdContributorsAndPartnersService implements OnDestroy {
         this.setLeadPartnerOnLoad(onSave);
         this.setPossibleLeadCenters(onSave);
         this.setLeadCenterOnLoad(onSave);
-        this.getConsumed.set(true);
+
         console.log(response);
+        //! TOC
+        // this.theoryOfChangeBody = response;
+
+        this.partnersBody?.contributing_and_primary_initiative.forEach(
+          init => (init.full_name = `${init?.official_code} - <strong>${init?.short_name}</strong> - ${init?.initiative_name}`)
+        );
+        this.submitter = this.partnersBody.contributing_and_primary_initiative.find(
+          init => init.id === this.partnersBody?.result_toc_result?.initiative_id
+        )?.full_name;
+
+        if (this.partnersBody?.impactsTarge)
+          this.partnersBody?.impactsTarge.forEach(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
+        if (this.partnersBody?.sdgTargets)
+          this.partnersBody?.sdgTargets.forEach(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
+
+        // this.theoryOfChangesServices.partnersBody = this.partnersBody;
+
+        // if (this.partnersBody?.result_toc_result?.result_toc_results !== null) {
+        //   this.theoryOfChangesServices.result_toc_result = this.partnersBody?.result_toc_result;
+        //   this.theoryOfChangesServices.result_toc_result.planned_result =
+        //     this.partnersBody?.result_toc_result?.result_toc_results[0].planned_result ?? null;
+        //   this.theoryOfChangesServices.result_toc_result.showMultipleWPsContent = true;
+        // }
+
+        // if (this.partnersBody?.contributors_result_toc_result !== null) {
+        //   this.theoryOfChangesServices.contributors_result_toc_result = this.partnersBody?.contributors_result_toc_result;
+        //   this.theoryOfChangesServices.contributors_result_toc_result.forEach((tab: any, index) => {
+        //     tab.planned_result = tab.result_toc_results[0]?.planned_result ?? null;
+        //     tab.index = index;
+        //     tab.showMultipleWPsContent = true;
+        //   });
+        // }
+
+        this.partnersBody.changePrimaryInit = this.partnersBody?.result_toc_result.initiative_id;
+
+        // this.disabledOptions = [
+        //   ...(this.partnersBody?.contributing_initiatives.accepted_contributing_initiatives || []),
+        //   ...(this.partnersBody?.contributing_initiatives.pending_contributing_initiatives || [])
+        // ];
+
+        // this.getConsumed = true;
+        // this.changeDetectorRef.detectChanges();
+        this.getConsumed.set(true);
+        //! TOC END
       },
       error: _err => {
         this.getConsumed.set(true);
