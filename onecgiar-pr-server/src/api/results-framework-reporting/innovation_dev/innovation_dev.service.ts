@@ -21,6 +21,7 @@ import { In, Repository } from 'typeorm';
 import { ResultsByInstitution } from '../../results/results_by_institutions/entities/results_by_institution.entity';
 import { ResultScalingStudyUrl } from '../result_scaling_study_urls/entities/result_scaling_study_url.entity';
 import { InnovationReadinessLevelByLevel } from './enum/innov-readiness-level.enum';
+import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
 export class InnovationDevService {
@@ -39,6 +40,7 @@ export class InnovationDevService {
     private readonly _nonPooledProjectRepository: NonPooledProjectRepository,
     private readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
     private readonly _innoDevService: InnoDevService,
+    @InjectRepository(ResultScalingStudyUrl)
     private readonly _resultScalingStudyUrlsRepository: Repository<ResultScalingStudyUrl>,
   ) {}
   async saveInnovationDev(

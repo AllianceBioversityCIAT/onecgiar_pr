@@ -18,8 +18,21 @@ import { ResultsInnovationsDevRepository } from '../../results/summary/repositor
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultAnswerRepository } from '../../results/result-questions/repository/result-answers.repository';
 import { ResultScalingStudyUrlsModule } from '../result_scaling_study_urls/result_scaling_study_urls.module';
+import { ResultScalingStudyUrl } from '../result_scaling_study_urls/entities/result_scaling_study_url.entity';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { EvidencesModule } from '../../results/evidences/evidences.module';
+import { SharePointModule } from '../../../shared/services/share-point/share-point.module';
+import { EvidencesService } from '../../results/evidences/evidences.service';
+import { VersioningModule } from '../../versioning/versioning.module';
 
 @Module({
+  imports: [
+    TypeOrmModule.forFeature([ResultScalingStudyUrl]),
+    ResultScalingStudyUrlsModule,
+    EvidencesModule,
+    SharePointModule,
+    VersioningModule,
+  ],
   controllers: [InnovationDevController],
   providers: [
     HandlersError,
@@ -39,7 +52,7 @@ import { ResultScalingStudyUrlsModule } from '../result_scaling_study_urls/resul
     NonPooledProjectRepository,
     InnoDevService,
     ResultsPolicyChangesRepository,
-    ResultScalingStudyUrlsModule,
+    EvidencesService,
   ],
 })
 export class InnovationDevModule {}
