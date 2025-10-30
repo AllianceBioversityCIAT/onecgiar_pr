@@ -1283,8 +1283,10 @@ export class ResultsApiService {
   }
 
   // /v2/api/contributors-partners/{resultId}
-  GET_ContributorsPartners(resultId: string) {
-    return this.http.get<any>(`${this.baseApiBaseUrlV2}/contributors-partners/${resultId}`);
+  GET_ContributorsPartners() {
+    return this.http
+      .get<any>(`${this.baseApiBaseUrlV2}/contributors-partners/${this.currentResultId}`)
+      .pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   // /v2/api/contributors-partners/{resultId}

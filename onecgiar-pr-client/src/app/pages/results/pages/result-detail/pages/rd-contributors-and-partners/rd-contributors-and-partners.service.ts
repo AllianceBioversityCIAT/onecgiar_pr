@@ -115,7 +115,7 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   }
 
   getSectionInformation(no_applicable_partner?: boolean, onSave: boolean = false) {
-    this.api.resultsSE.GET_partnersSection().subscribe({
+    this.api.resultsSE.GET_ContributorsPartners().subscribe({
       next: ({ response }) => {
         this.partnersBody = response;
         this.getDisabledCentersForKP();
