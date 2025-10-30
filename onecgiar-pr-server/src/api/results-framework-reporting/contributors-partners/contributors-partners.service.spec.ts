@@ -288,8 +288,8 @@ describe('ContributorsPartnersService', () => {
         resultsByInstitutionsService.savePartnersInstitutionsByResultV2,
       ).toHaveBeenCalled();
       const partnersArg =
-        resultsByInstitutionsService.savePartnersInstitutionsByResultV2
-          .mock.calls[0][0];
+        resultsByInstitutionsService.savePartnersInstitutionsByResultV2.mock
+          .calls[0][0];
       expect(partnersArg).toMatchObject({
         result_id: 321,
         institutions: payload.institutions,
