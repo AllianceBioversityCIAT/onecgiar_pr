@@ -24,7 +24,7 @@ export class InnovationDevInfoComponent implements OnInit {
     private api: ApiService,
     public innovationControlListSE: InnovationControlListService,
     private innovationDevInfoUtilsSE: InnovationDevInfoUtilsService,
-    private terminologyService: TerminologyService
+    private terminologyService: TerminologyService,
   ) {
     this.api.dataControlSE.currentResultSectionName.set('Innovation Development information');
   }
@@ -135,7 +135,7 @@ export class InnovationDevInfoComponent implements OnInit {
     <li>Varieties or breeds should be described by their generic traits or characteristics (e.g. Drought tolerant and aphid resistant groundnut cultivars).</li>
     <li>You do not need to specify the number of new or improved lines/varieties – this can be specified under Innovation Typology.</li>
     <li>If not essential, avoid making reference to specific countries or regions (this is captured through geotagging)</li>
-    <li>Avoid the use of CGIAR Center, ${this.terminologyService.t('term.entity.singular', this.api.dataControlSE.currentResult?.portfolio)} or organization names in the short title</li>
+    <li>Avoid the use of CGIAR Center, Initiative or organization names in the short title</li>
     </ul>`;
   }
 
