@@ -43,7 +43,7 @@ export class ClarisaProject {
 
   @OneToMany(
     () => ResultsByProjects,
-    (resultProject) => resultProject.clarisaProject,
+    (resultProject) => resultProject.obj_clarisa_project,
   )
-  resultsByProjects: ResultsByProjects[];
+  obj_results_by_projects: ResultsByProjects[];
 }

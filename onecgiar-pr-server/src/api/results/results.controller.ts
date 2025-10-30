@@ -515,4 +515,16 @@ export class ResultsController {
   getGeneralInformationByResultV2(@Param('id') id: number) {
     return this.resultsService.getGeneralInformation(id);
   }
+
+  @Version('2')
+  @Get('get/innov-use-linked-results')
+  @ApiOperation({
+    summary: 'Get all results of P25 and innov use - dev results of P22-P24',
+    description:
+      'Retrieves all results of the P25 portfolio and just innov use and dev results of P22-P24 portfolios.',
+  })
+  @ApiOkResponse({ description: 'Centers retrieved.' })
+  getAllResultsForInnovUse() {
+    return this.resultsService.getAllResultsForInnovUse();
+  }
 }

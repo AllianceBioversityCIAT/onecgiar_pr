@@ -1,5 +1,9 @@
 <div class="detail_container">
   <div id="alert"></div>
+  <div
+    appFeedbackValidation
+    labelText="What is the main geographic focus of the Output?"
+    [isComplete]="this.geographicLocationBody.geo_scope_id !== undefined"></div>
 
   <app-alert-status description="Select the geographic location/s where this result is taking place."> </app-alert-status>
 
@@ -10,17 +14,21 @@
 
   <app-geoscope-management
     [description]="
-      this.fieldsManagerSE.isP25()
+      this.fieldsManagerSE.isP25() && this.fieldsManagerSE.isAnInnovation()
         ? 'This should reflect geographies where the innovation development, testing and/or use has taken place'
         : undefined
     "
-    [label]="this.fieldsManagerSE.isP25() ? 'What is the current geographic focus of the innovation development, testing and/or use?' : undefined"
+    [label]="
+      this.fieldsManagerSE.isP25() && this.fieldsManagerSE.isAnInnovation()
+        ? 'What is the current geographic focus of the innovation development, testing and/or use?'
+        : undefined
+    "
     [body]="this.geographicLocationBody"
     module="reporting">
   </app-geoscope-management>
 
   <br />
-  @if (this.geographicLocationBody.geo_scope_id != 1) {
+  @if (this.geographicLocationBody.geo_scope_id != 1 && this.geographicLocationBody.geo_scope_id != 50 && this.geographicLocationBody.geo_scope_id) {
     <app-pr-radio-button
       fieldRef="[geoscope-management]-has_extra_geo_scope"
       [options]="[
@@ -32,6 +40,10 @@
       optionValue="value">
     </app-pr-radio-button>
     <br />
+    <div
+      appFeedbackValidation
+      labelText="Are there any regions that you wish to specify for this Output?"
+      [isComplete]="this.extraGeographicLocationBody.has_extra_geo_scope !== undefined"></div>
 
     @if (this.extraGeographicLocationBody.has_extra_geo_scope) {
       <app-geoscope-management

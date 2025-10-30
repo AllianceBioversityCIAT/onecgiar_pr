@@ -17,5 +17,6 @@ import {
     HandlersError,
     ReturnResponse,
   ],
+  exports: [ResultActorsService, ResultActorRepository],
 })
 export class ResultActorsModule {}
