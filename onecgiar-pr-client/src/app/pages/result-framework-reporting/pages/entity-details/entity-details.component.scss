@@ -69,6 +69,12 @@ p {
   padding: 0px 30px 112px;
   max-width: 1600px;
   margin: 0 auto;
+  overflow-x: hidden;
+
+  @media (max-width: 1366px) {
+    padding: 0 20px 80px;
+    max-width: 100%;
+  }
 
   @media (max-width: 768px) {
     padding: 0 16px 60px;
@@ -125,6 +131,12 @@ p {
   grid-template-columns: 270px 1fr;
   gap: 42px;
 
+  @media (max-width: 1366px) {
+    grid-template-columns: 200px 1fr;
+    gap: 20px;
+    padding: 20px;
+  }
+
   @media (max-width: 1024px) {
     grid-template-columns: 1fr;
     gap: 24px;
@@ -145,11 +157,21 @@ p {
   gap: 12px;
   position: relative;
 
+  @media (max-width: 1366px) {
+    padding: 16px 12px 20px;
+    gap: 8px;
+  }
+
   &--charts {
     padding: 40px 16px 30px;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 20px;
+
+    @media (max-width: 1366px) {
+      padding: 30px 12px 20px;
+      gap: 16px;
+    }
 
     @media (max-width: 768px) {
       grid-template-columns: 1fr;
