@@ -19,6 +19,7 @@ export class IntellectualPropertyRightsComponent implements OnInit {
     this.options.intellectual_property_rights.q1['value'] = null;
     this.options.intellectual_property_rights.q2['value'] = null;
     this.options.intellectual_property_rights.q3['value'] = null;
+    this.options.intellectual_property_rights.q4['value'] = null;
   }
 
   // Create a function to clear q2 and q3 if q1 is equal to '32' and clear q3 if q2 is equal to '35'
