@@ -94,6 +94,8 @@ export class KnowledgeProductInfoComponent implements OnInit {
       mapped.handle = `https://cgspace.cgiar.org/handle/${response.handle}`;
     } else if (mapped.source === 'MELSpace') {
       mapped.handle = `https://repo.mel.cgiar.org/handle/${response.handle}`;
+    } else if (mapped.source === 'WorldFish DSpace') {
+      mapped.handle = `https://hdl.handle.net/${response.handle}`;
     }
 
     this.fair_data = this.filterOutObject(response.fair_data);
