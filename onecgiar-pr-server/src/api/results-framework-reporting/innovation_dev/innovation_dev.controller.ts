@@ -55,13 +55,13 @@ export class InnovationDevController {
     );
     createEvidenceDto.result_id = resultId;
 
-    return this.evidencesService.create(createEvidenceDto, user);
+    return this.evidencesService.createV2(createEvidenceDto, user);
   }
 
   @Version('2')
   @Get('evidence_demand/:resultId')
   findEvidenceByResult(@Param('resultId') resultId: number) {
-    return this.evidencesService.findAll(resultId);
+    return this.evidencesService.findAllV2(resultId);
   }
 
   @Version('2')
