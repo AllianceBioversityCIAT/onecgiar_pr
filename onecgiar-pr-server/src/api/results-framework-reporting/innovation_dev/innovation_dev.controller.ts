@@ -59,9 +59,9 @@ export class InnovationDevController {
   }
 
   @Version('2')
-  @Get('evidence_demand/:id')
-  findOne(@Param('id') id: string) {
-    return this.evidencesService.findOne(+id);
+  @Get('evidence_demand/:resultId')
+  findEvidenceByResult(@Param('resultId') resultId: number) {
+    return this.evidencesService.findAll(resultId);
   }
 
   @Version('2')
