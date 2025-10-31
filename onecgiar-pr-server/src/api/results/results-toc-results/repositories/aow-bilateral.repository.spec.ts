@@ -98,7 +98,11 @@ describe('AoWBilateralRepository', () => {
       expect.stringContaining('FROM toc_test.toc_results'),
       [10],
     );
-    expect(result).toEqual({ id: 10, result_title: 'Sample', category: 'OUTPUT' });
+    expect(result).toEqual({
+      id: 10,
+      result_title: 'Sample',
+      category: 'OUTPUT',
+    });
   });
 
   it('should fetch a single ToC indicator by id', async () => {
