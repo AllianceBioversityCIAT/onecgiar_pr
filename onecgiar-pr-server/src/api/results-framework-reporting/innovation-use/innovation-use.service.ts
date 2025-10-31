@@ -519,7 +519,9 @@ export class InnovationUseService {
       };
 
       let scaling_studies_urls: string[] = [];
-      if (innDevExists.innovation_readiness_level_id >= InnovationUseLevel.Level_6) {
+      if (
+        innDevExists.innovation_readiness_level_id >= InnovationUseLevel.Level_6
+      ) {
         const urls = await this._resultScalingStudyUrlsRepository.find({
           where: {
             result_innov_use_id: innDevExists.result_innovation_use_id,

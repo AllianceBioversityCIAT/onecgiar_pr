@@ -66,6 +66,7 @@ describe('ContributorsPartnersService', () => {
           provide: ResultsTocResultsService,
           useValue: {
             getTocByResult: jest.fn(),
+            getTocByResultV2: jest.fn(),
             createTocMappingV2: jest.fn(),
           },
         },
@@ -174,7 +175,7 @@ describe('ContributorsPartnersService', () => {
         impactsTarge: null,
         sdgTargets: null,
       };
-      resultsTocResultsService.getTocByResult.mockResolvedValue({
+      resultsTocResultsService.getTocByResultV2.mockResolvedValue({
         response: tocResponse,
         status: HttpStatus.OK,
         message: 'ok',
@@ -216,6 +217,10 @@ describe('ContributorsPartnersService', () => {
         message: 'Contributors and Partners fetched successfully (P25)',
         status: HttpStatus.OK,
       });
+
+      expect(resultsTocResultsService.getTocByResultV2).toHaveBeenCalledWith(
+        resultId,
+      );
     });
 
     it('should delegate errors to the handler when result is missing', async () => {

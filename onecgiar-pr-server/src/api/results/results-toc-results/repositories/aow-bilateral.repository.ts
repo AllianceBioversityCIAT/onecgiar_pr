@@ -302,7 +302,8 @@ export class AoWBilateralRepository {
     const query = `
       SELECT
         tr.id,
-        tr.result_title
+        tr.result_title,
+        tr.category
       FROM ${env.DB_TOC}.toc_results tr
       WHERE tr.id = ?
       LIMIT 1;
