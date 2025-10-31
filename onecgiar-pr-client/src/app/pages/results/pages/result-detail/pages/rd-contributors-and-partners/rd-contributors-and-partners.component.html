@@ -37,7 +37,17 @@
 
   <!-- from toc section  -->
 
-  @switch (this.resultLevelSE.currentResultLevelId) {
+  <app-multiple-wps
+    [editable]="true"
+    [initiative]="this.rdPartnersSE.partnersBody.result_toc_result"
+    [resultLevelId]="this.resultLevelSE.currentResultLevelId"
+    [isIpsr]="false"
+    [isContributor]="false"
+    [isNotifications]="false"
+    [showMultipleWPsContent]="this.rdPartnersSE.getConsumed()"></app-multiple-wps>
+
+  <!-- asasasas -->
+  <!-- @switch (this.resultLevelSE.currentResultLevelId) {
     @case (1) {
       <app-toc-impact-section
         [contributing_initiatives]="this.rdPartnersSE.partnersBody.contributing_initiatives"
@@ -62,7 +72,7 @@
         [contributors_result_toc_result]="this.rdPartnersSE.partnersBody.contributors_result_toc_result">
       </app-toc-initiative-output-section>
     }
-  }
+  } -->
   <!-- from toc section end -->
 
   <app-pr-multi-select

@@ -7,6 +7,16 @@ export class ContributorsAndPartnersBody extends TheoryOfChangeBody {
   public contributing_np_projects: NonPooledProjectDto[];
   public contributing_center: ResultsCenterDto[];
   public is_lead_by_partner: boolean | null;
+  owner_initiative: OwnerInitiative;
+}
+
+export interface OwnerInitiative {
+  id: number;
+  official_code: string;
+  initiative_name: string;
+  short_name: string;
+  initiative_role_id: string;
+  is_active: number;
 }
 
 export class InstitutionsInterface {

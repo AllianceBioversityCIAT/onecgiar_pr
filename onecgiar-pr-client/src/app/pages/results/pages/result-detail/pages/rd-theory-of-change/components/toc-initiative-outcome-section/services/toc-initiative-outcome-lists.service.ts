@@ -1,6 +1,7 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, effect, inject, signal } from '@angular/core';
 import { ApiService } from '../../../../../../../../../shared/services/api/api.service';
 import { FieldsManagerService } from '../../../../../../../../../shared/services/fields-manager.service';
+import { DataControlService } from '../../../../../../../../../shared/services/data-control.service';
 
 @Injectable({
   providedIn: 'root'
@@ -8,14 +9,23 @@ import { FieldsManagerService } from '../../../../../../../../../shared/services
 export class TocInitiativeOutcomeListsService {
   outcomeLevelList = [];
   fieldsManagerSE = inject(FieldsManagerService);
-  constructor(private api: ApiService) {
-    this.api.tocApiSE.GET_AllTocLevels(this.fieldsManagerSE.isP25()).subscribe({
-      next: ({ response }) => {
-        this.outcomeLevelList = response.filter(item => item.toc_level_id === 2 || item.toc_level_id === 3);
-      },
-      error: err => {
-        console.error(err);
-      }
-    });
-  }
+  dataControlSE = inject(DataControlService);
+  tocResultList = signal<any[]>([]);
+  api = inject(ApiService);
+  onChangePortfolio = effect(() => {
+    console.log(this.dataControlSE.currentResultSignal()?.portfolio);
+    if (this.dataControlSE.currentResultSignal()?.portfolio !== undefined) {
+      this.api.tocApiSE.GET_AllTocLevels(this.fieldsManagerSE.isP25()).subscribe({
+        next: ({ response }) => {
+          console.log(response);
+          this.tocResultList.set(response);
+          this.outcomeLevelList = response.filter(item => item.toc_level_id === 2 || item.toc_level_id === 3);
+          console.log(this.outcomeLevelList);
+        },
+        error: err => {
+          console.error(err);
+        }
+      });
+    }
+  });
 }
