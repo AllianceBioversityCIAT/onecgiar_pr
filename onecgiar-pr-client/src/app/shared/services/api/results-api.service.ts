@@ -1290,7 +1290,7 @@ export class ResultsApiService {
   }
 
   // /v2/api/contributors-partners/{resultId}
-  PATCH_ContributorsPartners(resultId: string, body: any) {
-    return this.http.patch<any>(`${this.baseApiBaseUrlV2}contributors-partners/${resultId}`, body);
+  PATCH_ContributorsPartners(body: any) {
+    return this.http.patch<any>(`${this.baseApiBaseUrlV2}contributors-partners/${this.currentResultId}`, body);
   }
 }

@@ -134,7 +134,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
       });
     }
 
-    this.api.resultsSE.PATCH_partnersSection(this.rdPartnersSE.partnersBody).subscribe(_resp => {
+    this.api.resultsSE.PATCH_ContributorsPartners(this.rdPartnersSE.partnersBody).subscribe(_resp => {
       this.rdPartnersSE.getSectionInformation(null, true);
     });
   }
