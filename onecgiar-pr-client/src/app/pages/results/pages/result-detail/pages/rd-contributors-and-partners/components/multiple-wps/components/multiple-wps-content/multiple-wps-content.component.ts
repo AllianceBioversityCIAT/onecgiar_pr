@@ -54,7 +54,7 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   ) {}
 
   ngOnChanges() {
-    this.toc_level_id_signal.set(this.activeTab.toc_level_id);
+    this.toc_level_id_signal.set(this.activeTab?.toc_level_id);
     if (this.showMultipleWPsContent) {
       if (
         (this.resultLevelId === 1 && this.outputList.length > 0 && this.eoiList.length > 0) ||

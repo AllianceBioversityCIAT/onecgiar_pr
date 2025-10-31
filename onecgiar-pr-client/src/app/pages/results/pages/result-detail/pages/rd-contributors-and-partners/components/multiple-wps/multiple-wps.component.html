@@ -18,10 +18,8 @@
         </div>
       </div>
     </div>
-    <a
-      class="tab-add-button"
-      (click)="onAddTab()"
-      *ngIf="initiative()?.result_toc_results.length < this.getMaxNumberOfTabs(this.initiative()?.planned_result, this.resultLevelId) && editable">
+    <!-- @if (initiative()?.result_toc_results.length < this.getMaxNumberOfTabs(this.initiative()?.planned_result, this.resultLevelId) && editable) { -->
+    <a class="tab-add-button" (click)="onAddTab()">
       <i
         class="material-icons-round close_icon tab-add-button-item"
         style="font-size: 16px; color: var(--pr-color-primary-300)"
@@ -29,6 +27,7 @@
         add
       </i>
     </a>
+    <!-- } -->
   </div>
 
   <div class="multiple-wps-container">
