@@ -39,7 +39,8 @@
               optionLabel="name"
               optionValue="id"
               placeholder="Select an indicator category"
-              [style]="{ width: '100%' }" />
+              [style]="{ width: '100%' }"
+              [disabled]="creatingResult()" />
           </div>
         }
 
@@ -52,10 +53,11 @@
                 label="Repository link/handle"
                 type="text"
                 labelDescInlineStyles="margin-top: 0 !important"
-                [(ngModel)]="createResultBody().handler">
+                [(ngModel)]="createResultBody().handler"
+                [disabled]="creatingResult()">
               </app-pr-input>
 
-              <div (click)="GET_mqapValidation()" class="sync_button" [ngClass]="{ globalDisabled: validatingHandler() }">
+              <div (click)="GET_mqapValidation()" class="sync_button" [ngClass]="{ globalDisabled: validatingHandler() || creatingResult() }">
                 <app-pr-button padding="small" [verticalMargin]="0" text="Sync" icon="sync" [rotating]="validatingHandler()"></app-pr-button>
               </div>
             </div>
@@ -74,7 +76,7 @@
           labelDescInlineStyles="margin-top: 0 !important"
           [(ngModel)]="createResultBody().result_name"
           [maxWords]="30"
-          [disabled]="currentResultIsKnowledgeProduct()"
+          [disabled]="creatingResult() || currentResultIsKnowledgeProduct()"
           [autogenerate]="currentResultIsKnowledgeProduct()">
         </app-pr-input>
 
@@ -86,7 +88,7 @@
           [label]="currentResultIsKnowledgeProduct() ? 'Progress narrative of the High-Level Output' : 'Progress narrative of the Output'"
           [(ngModel)]="createResultBody().toc_progressive_narrative"
           type="text"
-          [disabled]="currentResultIsKnowledgeProduct()"
+          [disabled]="creatingResult()"
           labelDescInlineStyles="margin-top: 0 !important"></app-pr-textarea>
 
         <div>
@@ -98,7 +100,8 @@
             inputId="minmax"
             mode="decimal"
             [min]="0"
-            [max]="9999999" />
+            [max]="9999999"
+            [disabled]="creatingResult()" />
         </div>
 
         <div>
@@ -114,7 +117,8 @@
             placeholder="Select entity"
             appendTo="body"
             [(ngModel)]="entityAowService.selectedEntities"
-            [style]="{ width: '100%', height: '32px' }">
+            [style]="{ width: '100%', height: '32px' }"
+            [disabled]="creatingResult()">
             <ng-template let-entity #item>
               <div class="flex items-center gap-2">
                 <div>{{ entity.official_code }} - {{ entity.name }}</div>
@@ -161,7 +165,8 @@
             optionLabel="project_name"
             [maxSelectedLabels]="1"
             [(ngModel)]="entityAowService.selectedW3BilateralProjects"
-            [style]="{ width: '100%', height: '32px', marginTop: '10px' }">
+            [style]="{ width: '100%', height: '32px', marginTop: '10px' }"
+            [disabled]="creatingResult()">
             <ng-template let-project #item>
               <div class="flex items-center gap-2">
                 <div style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 400px">{{ project.project_name }}</div>

@@ -20,7 +20,7 @@
   ]" optionLabel="label" [(ngModel)]="body.innov_use_to_be_determined" optionValue="value">
 </app-pr-radio-button>
 
-@if (!body.innov_use_to_be_determined || !this.fieldsManagerSE.isP25()) {
+@if (!body.innov_use_to_be_determined || !this.fieldsManagerSE.isP25() || body.innov_use_to_be_determined === null || body.innov_use_to_be_determined === undefined) {
 
 <app-pr-field-header [required]="false" label="Actors" description="{{ narrativeActors() }}"></app-pr-field-header>
 <input type="text" id="removeFocus" style="position: absolute; opacity: 0" />
@@ -201,7 +201,7 @@
 <app-pr-textarea placeholder="Provide a brief explanation here..." [maxWords]="50"
   [(ngModel)]="body.readiness_level_explanation"
   label="Provide a brief explanation of how the provided evidence/documentation (URL provided under Section 4) justifies the chosen innovation use level"
-  description="<strong>Example:</strong> We chose readiness level 6 (semi-controlled testing) for the genetically improved farm tilapia (GIFT) because it is currently being tested under semi-controlled conditions in the multiplication center and hatchery in the selected countries as shown in the provided evidence. ">
+  description="<strong>Example:</strong> We selected Level 6 because the climate-smart maize drying technology is now being used by farmer cooperatives and individual processors who were not directly connected to the organizations involved in the initial innovation development. This reflects diffusion beyond project-supported activities and demonstrates that the innovation is being adopted through peer learning and local adaptation mechanisms. Although the innovation is being applied independently of the original partners, its use remains limited to a minority of potential users. This pattern of selective but autonomous uptake is consistent with Level 6, where adoption has extended beyond initial networks but has not yet reached broad or mainstream use. ">
 </app-pr-textarea>
 
 <!-- Innovation Links Component -->
@@ -221,7 +221,7 @@
 </app-pr-radio-button>
 
 <!-- 2030 to be determined Component -->
-@if (!body.innov_use_2030_to_be_determined) {
+@if (!body.innov_use_2030_to_be_determined || body.innov_use_2030_to_be_determined === null || body.innov_use_2030_to_be_determined === undefined) {
 <app-pr-field-header [required]="false" label="Actors"></app-pr-field-header>
 <input type="text" id="removeFocus" style="position: absolute; opacity: 0" />
 <div class="fields_list" *ngIf="this.body.innovation_use_2030.actors?.length">
