@@ -25,7 +25,7 @@ export class RdContributorsAndPartnersService implements OnDestroy {
 
   leadPartnerId: number = null;
   leadCenterCode: string = null;
-
+  result_toc_result_signal = signal<any>(null);
   updatingLeadData: boolean = false;
   disableLeadPartner: boolean = false;
   rdCpTheoryOfChangesServicesSE = inject(RdCpTheoryOfChangesServicesService);
@@ -169,6 +169,7 @@ export class RdContributorsAndPartnersService implements OnDestroy {
         ];
 
         // this.changeDetectorRef.detectChanges();
+        this.result_toc_result_signal.set(this.partnersBody?.result_toc_result);
         this.getConsumed.set(true);
         //! TOC END
       },

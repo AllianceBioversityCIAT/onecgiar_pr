@@ -1,19 +1,5 @@
 <div class="container">
   <div class="flex-no-wrap" *ngIf="activeTab?.planned_result !== null && showMultipleWPsContent">
-    <app-pr-select
-      *ngIf="activeTab?.planned_result && resultLevelId === 1"
-      [options]="outputList"
-      label="Output"
-      optionLabel="extraInformation"
-      optionValue="toc_result_id"
-      [disabled]="!editable"
-      [editable]="editable"
-      placeholder="Select output"
-      [(ngModel)]="activeTab.toc_result_id"
-      [extraInformation]="true"
-      (ngModelChange)="getIndicator(); validateSelectedOptionOutPut()">
-    </app-pr-select>
-
     <div style="max-width: 250px" *ngIf="resultLevelId === 1 ? !activeTab?.planned_result : true">
       <app-pr-select
         [options]="this.tocResultListFiltered()"
@@ -23,36 +9,53 @@
         optionValue="toc_level_id"
         placeholder="Select outcome level"
         [(ngModel)]="activeTab.toc_level_id"
-        (ngModelChange)="indicatorView = false">
+        (ngModelChange)="indicatorView = false; toc_level_id_signal.set(activeTab.toc_level_id)">
       </app-pr-select>
     </div>
 
-    <app-pr-select
-      *ngIf="(resultLevelId === 1 ? !activeTab?.planned_result : true) && activeTab?.toc_level_id !== 3"
-      [options]="outcomeList"
-      label="Outcome"
-      [editable]="editable"
-      [disabled]="(resultLevelId === 1 && false) || !editable"
-      optionLabel="extraInformation"
-      [extraInformation]="true"
-      optionValue="toc_result_id"
-      placeholder="Select outcome"
-      [(ngModel)]="activeTab.toc_result_id"
-      (ngModelChange)="getIndicator(); validateSelectedOptionOutCome()">
-    </app-pr-select>
-
-    <app-pr-select
-      *ngIf="(resultLevelId === 1 ? !activeTab?.planned_result : true) && activeTab?.toc_level_id === 3"
-      [options]="eoiList"
-      label="Outcome"
-      [editable]="editable"
-      [disabled]="(resultLevelId === 1 && false) || !editable"
-      optionLabel="title"
-      optionValue="toc_result_id"
-      placeholder="Select outcome"
-      [(ngModel)]="activeTab.toc_result_id"
-      (ngModelChange)="getIndicator(); validateSelectedOptionEOI()">
-    </app-pr-select>
+    @switch (activeTab.toc_level_id) {
+      @case (3) {
+        <app-pr-select
+          [options]="eoiList"
+          [label]="this.secondFieldLabel()"
+          [editable]="editable"
+          [disabled]="(resultLevelId === 1 && false) || !editable"
+          optionLabel="title"
+          optionValue="toc_result_id"
+          placeholder="Select outcome"
+          [(ngModel)]="activeTab.toc_result_id"
+          (ngModelChange)="getIndicator(); validateSelectedOptionEOI()">
+        </app-pr-select>
+      }
+      @case (2) {
+        <app-pr-select
+          [options]="outcomeList"
+          [label]="this.secondFieldLabel()"
+          [editable]="editable"
+          [disabled]="(resultLevelId === 1 && false) || !editable"
+          optionLabel="extraInformation"
+          [extraInformation]="true"
+          optionValue="toc_result_id"
+          placeholder="Select outcome"
+          [(ngModel)]="activeTab.toc_result_id"
+          (ngModelChange)="getIndicator(); validateSelectedOptionOutCome()">
+        </app-pr-select>
+      }
+      @case (1) {
+        <app-pr-select
+          [options]="outputList"
+          [label]="this.secondFieldLabel()"
+          optionLabel="extraInformation"
+          optionValue="toc_result_id"
+          [disabled]="!editable"
+          [editable]="editable"
+          placeholder="Select output"
+          [(ngModel)]="activeTab.toc_result_id"
+          [extraInformation]="true"
+          (ngModelChange)="getIndicator(); validateSelectedOptionOutPut()">
+        </app-pr-select>
+      }
+    }
   </div>
 
   <hr class="divider-20" />

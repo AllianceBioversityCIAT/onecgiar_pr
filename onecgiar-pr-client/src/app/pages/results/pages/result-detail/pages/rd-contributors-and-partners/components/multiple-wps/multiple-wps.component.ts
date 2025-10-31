@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, OnInit, inject } from '@angular/core';
+import { Component, Input, OnChanges, OnInit, WritableSignal, effect, inject } from '@angular/core';
 import { CustomizedAlertsFeService } from '../../../../../../../../shared/services/customized-alerts-fe.service';
 
 import { FieldsManagerService } from '../../../../../../../../shared/services/fields-manager.service';
@@ -30,9 +30,9 @@ interface Tab {
   styleUrls: ['./multiple-wps.component.scss'],
   standalone: false
 })
-export class CPMultipleWPsComponent implements OnChanges, OnInit {
+export class CPMultipleWPsComponent implements OnChanges {
   @Input() editable: boolean;
-  @Input() initiative: any;
+  @Input() initiative: WritableSignal<any>;
   @Input() isContributor?: boolean = false;
   @Input() isNotifications?: boolean = false;
   @Input() resultLevelId: number | string;
@@ -56,20 +56,21 @@ export class CPMultipleWPsComponent implements OnChanges, OnInit {
     private customizedAlertsFeSE: CustomizedAlertsFeService
   ) {}
 
-  ngOnInit(): void {
+  onChangesInitiative = effect(() => {
+    if (!this.initiative()?.initiative_id) return;
     this.GET_outcomeList();
     this.GET_outputList();
     this.GET_EOIList();
-    this.currentPlannedResult = this.initiative?.planned_result;
-  }
+    this.currentPlannedResult = this.initiative()?.planned_result;
+  });
 
   ngOnChanges() {
-    this.initiative?.result_toc_results.forEach((tab: any) => {
+    this.initiative()?.result_toc_results.forEach((tab: any) => {
       tab.uniqueId = Math.random().toString(36).substring(7);
     });
 
     if (this.currentPlannedResult !== null) {
-      if (this.initiative?.planned_result !== this.currentPlannedResult) {
+      if (this.initiative()?.planned_result !== this.currentPlannedResult) {
         this.selectedOptionsOutput = [];
         this.selectedOptionsOutcome = [];
         this.selectedOptionsEOI = [];
@@ -81,20 +82,21 @@ export class CPMultipleWPsComponent implements OnChanges, OnInit {
       }
     }
 
-    this.activeTab = this.initiative?.result_toc_results[0];
+    this.activeTab = this.initiative()?.result_toc_results[0];
   }
 
   GET_outputList() {
-    console.log('outcome');
     this.api.tocApiSE
       .GET_tocLevelsByconfig(
         this.api.dataControlSE.currentNotification?.result_id || this.activeTab?.results_id || this.api.dataControlSE?.currentResult?.id,
-        this.activeTab?.initiative_id,
+        this.initiative()?.initiative_id,
         1,
         this.fieldsManagerSE.isP25()
       )
       .subscribe({
         next: ({ response }) => {
+          console.log('GET_outputList');
+          console.log(response);
           this.outputList = response;
         },
         error: err => {
@@ -105,16 +107,17 @@ export class CPMultipleWPsComponent implements OnChanges, OnInit {
   }
 
   GET_outcomeList() {
-    console.log('outcome');
     this.api.tocApiSE
       .GET_tocLevelsByconfig(
         this.api.dataControlSE.currentNotification?.result_id || this.activeTab?.results_id || this.api.dataControlSE?.currentResult?.id,
-        this.activeTab?.initiative_id,
+        this.initiative()?.initiative_id,
         2,
         this.fieldsManagerSE.isP25()
       )
       .subscribe({
         next: ({ response }) => {
+          console.log('GET_outcomeList');
+          console.log(response);
           this.outcomeList = response;
         },
         error: err => {
@@ -125,16 +128,17 @@ export class CPMultipleWPsComponent implements OnChanges, OnInit {
   }
 
   GET_EOIList() {
-    console.log('outcome');
     this.api.tocApiSE
       .GET_tocLevelsByconfig(
         this.api.dataControlSE.currentNotification?.result_id || this.activeTab?.results_id || this.api.dataControlSE?.currentResult?.id,
-        this.activeTab?.initiative_id,
+        this.initiative()?.initiative_id,
         3,
         this.fieldsManagerSE.isP25()
       )
       .subscribe({
         next: ({ response }) => {
+          console.log('GET_EOIList');
+          console.log(response);
           response.forEach((item, index) => {
             item.uniqueId = `${item.toc_result_id}-${index}`;
           });
@@ -148,11 +152,11 @@ export class CPMultipleWPsComponent implements OnChanges, OnInit {
   }
 
   dynamicTabTitle(tabNumber) {
-    return `TOC-${this.initiative?.planned_result && this.resultLevelId === 1 ? 'Output' : 'Outcome'} N° ${tabNumber}`;
+    return `TOC-${this.initiative()?.planned_result && this.resultLevelId === 1 ? 'Output' : 'Outcome'} N° ${tabNumber}`;
   }
 
   getGridTemplateColumns() {
-    return `repeat(${this.initiative?.result_toc_results.length}, 1fr)`;
+    return `repeat(${this.initiative()?.result_toc_results.length}, 1fr)`;
   }
 
   completnessStatusValidation(tab) {
@@ -195,25 +199,25 @@ export class CPMultipleWPsComponent implements OnChanges, OnInit {
   }
 
   onAddTab() {
-    const tocLevelId = !this.initiative.planned_result ? 3 : this.resultLevelId === 1 ? 1 : 2;
+    const tocLevelId = !this.initiative().planned_result ? 3 : this.resultLevelId === 1 ? 1 : 2;
 
-    this.initiative.result_toc_results.push({
+    this.initiative().result_toc_results.push({
       action_area_outcome_id: null,
-      initiative_id: this.initiative.initiative_id,
-      official_code: this.initiative.official_code,
-      planned_result: this.initiative.planned_result,
+      initiative_id: this.initiative().initiative_id,
+      official_code: this.initiative().official_code,
+      planned_result: this.initiative().planned_result,
       results_id: null,
-      short_name: this.initiative.short_name,
+      short_name: this.initiative().short_name,
       toc_level_id: tocLevelId,
       toc_result_id: null,
       uniqueId: Math.random().toString(36).substring(7)
     });
 
-    this.onActiveTab(this.initiative.result_toc_results[this.initiative.result_toc_results.length - 1]);
+    this.onActiveTab(this.initiative().result_toc_results[this.initiative().result_toc_results.length - 1]);
   }
 
   onDeleteTab(tab: Tab, tabNumber = 0) {
-    const confirmationMessage = `Are you sure you want to delete contribution TOC-${this.initiative?.planned_result && this.resultLevelId === 1 ? 'Output' : 'Outcome'} N° ${tabNumber} to the TOC?`;
+    const confirmationMessage = `Are you sure you want to delete contribution TOC-${this.initiative()?.planned_result && this.resultLevelId === 1 ? 'Output' : 'Outcome'} N° ${tabNumber} to the TOC?`;
 
     this.customizedAlertsFeSE.show(
       {
@@ -230,7 +234,7 @@ export class CPMultipleWPsComponent implements OnChanges, OnInit {
   }
 
   deleteTabLogic(tab) {
-    const isLastTab = this.initiative.result_toc_results.length === 1;
+    const isLastTab = this.initiative().result_toc_results.length === 1;
     const isOutputTab = tab.toc_level_id === 1;
     const isOutcomeTab = tab.toc_level_id === 2;
     const isEOITab = tab.toc_level_id === 3;
@@ -241,15 +245,15 @@ export class CPMultipleWPsComponent implements OnChanges, OnInit {
 
     if (this.isNotifications) return;
 
-    this.initiative.result_toc_results = this.initiative.result_toc_results.filter(t => t.uniqueId !== tab.uniqueId);
+    this.initiative().result_toc_results = this.initiative().result_toc_results.filter(t => t.uniqueId !== tab.uniqueId);
 
-    this.activeTab = this.initiative?.result_toc_results[0];
+    this.activeTab = this.initiative()?.result_toc_results[0];
 
     if (this.isContributor) {
-      this.theoryOfChangesServices.theoryOfChangeBody.contributors_result_toc_result[this.initiative.index].result_toc_results =
-        this.initiative.result_toc_results;
+      this.theoryOfChangesServices.theoryOfChangeBody.contributors_result_toc_result[this.initiative().index].result_toc_results =
+        this.initiative().result_toc_results;
     } else {
-      this.theoryOfChangesServices.theoryOfChangeBody.result_toc_result.result_toc_results = this.initiative.result_toc_results;
+      this.theoryOfChangesServices.theoryOfChangeBody.result_toc_result.result_toc_results = this.initiative().result_toc_results;
     }
 
     if (isOutputTab) {

@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, computed, inject } from '@angular/core';
+import { Component, Input, OnChanges, computed, inject, signal } from '@angular/core';
 import { MappedResultsModalServiceService } from '../mapped-results-modal/mapped-results-modal-service.service';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 import { TocInitiativeOutcomeListsService } from '../../../../../rd-theory-of-change/components/toc-initiative-outcome-section/services/toc-initiative-outcome-lists.service';
@@ -30,6 +30,14 @@ export class CPMultipleWPsContentComponent implements OnChanges {
 
   indicatorView = false;
 
+  toc_level_id_signal = signal<number | null>(null);
+
+  secondFieldLabel = computed(() => {
+    console.log(this.tocResultListFiltered());
+    console.log(this.toc_level_id_signal());
+    return this.tocResultListFiltered().find(item => item.toc_level_id === this.toc_level_id_signal())?.name;
+  });
+
   tocResultListFiltered = computed(() => {
     console.log(this.reusltlevelSE.currentResultLevelIdSignal());
     switch (this.reusltlevelSE.currentResultLevelIdSignal()) {
@@ -49,6 +57,7 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   ) {}
 
   ngOnChanges() {
+    console.log(this.initiative.initiative_id);
     if (this.showMultipleWPsContent) {
       if (
         (this.resultLevelId === 1 && this.outputList.length > 0 && this.eoiList.length > 0) ||
