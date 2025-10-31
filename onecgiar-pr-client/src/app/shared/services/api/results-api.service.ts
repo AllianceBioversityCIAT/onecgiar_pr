@@ -566,8 +566,15 @@ export class ResultsApiService {
   }
 
   POST_createEvidenceDemandP25(body) {
+    const formData = new FormData();
+    formData.append('jsonData', JSON.stringify(body));
+    if (Array.isArray(body?.evidences)) {
+      body.evidences.forEach((evidence: any) => {
+        if (evidence?.file) formData.append('files', evidence.file);
+      });
+    }
     return this.http
-      .post<any>(`${this.baseApiBaseUrlV2}innovation-development/evidence_demand/create/${this.currentResultId}`, body)
+      .post<any>(`${this.baseApiBaseUrlV2}innovation-development/evidence_demand/create/${this.currentResultId}`, formData)
       .pipe(this.saveButtonSE.isSavingPipe());
   }
 
