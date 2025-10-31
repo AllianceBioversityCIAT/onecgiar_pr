@@ -1006,6 +1006,7 @@ describe('ResultsFrameworkReportingService', () => {
       });
       mockTocResultsRepository.findResultById.mockResolvedValueOnce({
         id: 555,
+        category: 'OUTPUT',
       });
       mockResultsTocResultRepository.findOne.mockResolvedValueOnce(null);
       mockResultsTocResultRepository.save.mockResolvedValueOnce({
@@ -1034,7 +1035,12 @@ describe('ResultsFrameworkReportingService', () => {
         user,
       );
       expect(mockResultsKnowledgeProductsService.create).not.toHaveBeenCalled();
-      expect(mockResultsTocResultRepository.save).toHaveBeenCalled();
+      expect(mockResultsTocResultRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          toc_result_id: 555,
+          toc_level_id: 1,
+        }),
+      );
       expect(mockResultsTocResultIndicatorsRepository.save).toHaveBeenCalled();
       expect(
         mockShareResultRequestService.resultRequest,
@@ -1056,6 +1062,7 @@ describe('ResultsFrameworkReportingService', () => {
       });
       mockTocResultsRepository.findResultById.mockResolvedValueOnce({
         id: 444,
+        category: 'OUTPUT',
       });
       mockResultsTocResultRepository.findOne.mockResolvedValueOnce(null);
       mockResultsTocResultRepository.save.mockResolvedValueOnce({
@@ -1092,6 +1099,11 @@ describe('ResultsFrameworkReportingService', () => {
       );
 
       expect(mockResultsTocResultIndicatorsRepository.save).toHaveBeenCalled();
+      expect(mockResultsTocResultRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          toc_level_id: 1,
+        }),
+      );
       expect(mockResultsIndicatorsTargetsRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
           result_toc_result_indicator_id: 812,
@@ -1121,6 +1133,7 @@ describe('ResultsFrameworkReportingService', () => {
       });
       mockTocResultsRepository.findResultById.mockResolvedValueOnce({
         id: 888,
+        category: 'OUTCOME',
       });
       mockResultsTocResultRepository.findOne.mockResolvedValueOnce({
         result_toc_result_id: 333,
@@ -1162,12 +1175,17 @@ describe('ResultsFrameworkReportingService', () => {
 
       expect(mockResultsKnowledgeProductsService.create).toHaveBeenCalled();
       expect(mockResultsService.createOwnerResultV2).not.toHaveBeenCalled();
-      expect(mockResultsTocResultRepository.update).toHaveBeenCalledWith(333, {
-        toc_result_id: 888,
-        toc_progressive_narrative: null,
-        last_updated_by: user.id,
-        is_active: true,
-      });
+      expect(mockResultsTocResultRepository.update).toHaveBeenCalledWith(
+        333,
+        expect.objectContaining({
+          toc_result_id: 888,
+          toc_level_id: 2,
+          toc_progressive_narrative: null,
+          last_updated_by: user.id,
+          is_active: true,
+          planned_result: true,
+        }),
+      );
       expect(mockShareResultRequestService.resultRequest).toHaveBeenCalledWith(
         {
           initiativeShareId: [20],
@@ -1198,6 +1216,7 @@ describe('ResultsFrameworkReportingService', () => {
       mockResultRepository.getResultById.mockResolvedValueOnce({ id: 303 });
       mockTocResultsRepository.findResultById.mockResolvedValueOnce({
         id: 777,
+        category: 'EOI',
       });
       mockResultsTocResultRepository.findOne.mockResolvedValueOnce(null);
       mockResultsTocResultRepository.save.mockResolvedValueOnce({
@@ -1227,6 +1246,11 @@ describe('ResultsFrameworkReportingService', () => {
       );
 
       expect(response.status).toBe(201);
+      expect(mockResultsTocResultRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          toc_level_id: 3,
+        }),
+      );
       expect(
         mockResultsByProjectsService.linkBilateralProjectToResult,
       ).toHaveBeenCalledTimes(2);

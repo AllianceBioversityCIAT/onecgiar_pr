@@ -125,7 +125,6 @@ export class TocResultsService {
         init_id,
         toc_level,
       );
-      console.log(res);
       return this._returnResponse.format({
         message: 'Successful response',
         response: res,
@@ -146,7 +145,6 @@ export class TocResultsService {
           initiativeId,
           levelId,
         );
-      console.log(tocResults);
 
       if (!tocResults.length) {
         throw {

@@ -85,7 +85,7 @@ export class ContributorsPartnersService {
         );
 
       const tocMappingRes =
-        await this._resultsTocResultsService.getTocByResult(resultId);
+        await this._resultsTocResultsService.getTocByResultV2(resultId);
 
       if (tocMappingRes?.status && tocMappingRes.status !== HttpStatus.OK) {
         return tocMappingRes;
