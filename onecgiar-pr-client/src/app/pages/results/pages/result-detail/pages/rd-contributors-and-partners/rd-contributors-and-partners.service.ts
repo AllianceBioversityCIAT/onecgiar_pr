@@ -20,7 +20,7 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   possibleLeadPartners: InstitutionMapped[] = [];
   possibleLeadCenters: CenterDto[] = [];
   submitter: string = '';
-
+  disabledOptions = [];
   nppCenters: CenterDto[] = [];
 
   leadPartnerId: number = null;
@@ -152,23 +152,22 @@ export class RdContributorsAndPartnersService implements OnDestroy {
           this.rdCpTheoryOfChangesServicesSE.result_toc_result.showMultipleWPsContent = true;
         }
 
-        // if (this.partnersBody?.contributors_result_toc_result !== null) {
-        //   this.theoryOfChangesServices.contributors_result_toc_result = this.partnersBody?.contributors_result_toc_result;
-        //   this.theoryOfChangesServices.contributors_result_toc_result.forEach((tab: any, index) => {
-        //     tab.planned_result = tab.result_toc_results[0]?.planned_result ?? null;
-        //     tab.index = index;
-        //     tab.showMultipleWPsContent = true;
-        //   });
-        // }
+        if (this.partnersBody?.contributors_result_toc_result !== null) {
+          this.rdCpTheoryOfChangesServicesSE.contributors_result_toc_result = this.partnersBody?.contributors_result_toc_result;
+          this.rdCpTheoryOfChangesServicesSE.contributors_result_toc_result.forEach((tab: any, index) => {
+            tab.planned_result = tab.result_toc_results[0]?.planned_result ?? null;
+            tab.index = index;
+            tab.showMultipleWPsContent = true;
+          });
+        }
 
         this.partnersBody.changePrimaryInit = this.partnersBody?.result_toc_result.initiative_id;
 
-        // this.disabledOptions = [
-        //   ...(this.partnersBody?.contributing_initiatives.accepted_contributing_initiatives || []),
-        //   ...(this.partnersBody?.contributing_initiatives.pending_contributing_initiatives || [])
-        // ];
+        this.disabledOptions = [
+          ...(this.partnersBody?.contributing_initiatives.accepted_contributing_initiatives || []),
+          ...(this.partnersBody?.contributing_initiatives.pending_contributing_initiatives || [])
+        ];
 
-        // this.getConsumed = true;
         // this.changeDetectorRef.detectChanges();
         this.getConsumed.set(true);
         //! TOC END
