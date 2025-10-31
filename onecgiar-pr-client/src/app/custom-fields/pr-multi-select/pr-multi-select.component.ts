@@ -257,8 +257,30 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
 
   filterChildrenBySearch(children: any[]): any[] {
     if (!this.searchText) return children || [];
-    const label = this.optionLabel;
-    return (children || []).filter((c: any) => (c?.[label] || '').toString().toLowerCase().includes(this.searchText.toLowerCase()));
+    const searchLower = this.searchText.toLowerCase();
+    return (children || []).filter((c: any) => {
+      const title = (c?.[this.optionLabel] || '').toString().toLowerCase();
+      const resultCode = (c?.result_code || '').toString().toLowerCase();
+      return title.includes(searchLower) || resultCode.includes(searchLower);
+    });
+  }
+
+  getDisplayLabel(option: any): string {
+    if (option?.result_code && option[this.optionLabel]) {
+      return `[${option.result_code}] ${option[this.optionLabel]}`;
+    }
+    return option?.[this.optionLabel] || '';
+  }
+
+  filterFlatOptions(options: any[]): any[] {
+    if (!options?.length) return [];
+    if (!this.searchText) return options;
+    const searchLower = this.searchText.toLowerCase();
+    return options.filter((option: any) => {
+      const title = (option?.[this.optionLabel] || '').toString().toLowerCase();
+      const resultCode = (option?.result_code || '').toString().toLowerCase();
+      return title.includes(searchLower) || resultCode.includes(searchLower);
+    });
   }
 
   confirmDeletionEvent(option) {
