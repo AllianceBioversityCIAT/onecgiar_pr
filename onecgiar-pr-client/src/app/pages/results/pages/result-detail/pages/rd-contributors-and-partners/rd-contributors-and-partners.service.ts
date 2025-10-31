@@ -127,7 +127,6 @@ export class RdContributorsAndPartnersService implements OnDestroy {
         this.setPossibleLeadCenters(onSave);
         this.setLeadCenterOnLoad(onSave);
 
-        console.log(response);
         //! TOC
         // this.theoryOfChangeBody = response;
 
@@ -144,7 +143,6 @@ export class RdContributorsAndPartnersService implements OnDestroy {
           this.partnersBody?.sdgTargets.forEach(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
 
         // this.theoryOfChangesServices.partnersBody = this.partnersBody;
-        console.log(this.partnersBody?.result_toc_result?.result_toc_results);
         if (this.partnersBody?.result_toc_result?.result_toc_results !== null) {
           this.rdCpTheoryOfChangesServicesSE.result_toc_result = this.partnersBody?.result_toc_result;
           this.rdCpTheoryOfChangesServicesSE.result_toc_result.planned_result =

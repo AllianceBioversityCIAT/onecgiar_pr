@@ -13,16 +13,11 @@ export class TocInitiativeOutcomeListsService {
   tocResultList = signal<any[]>([]);
   api = inject(ApiService);
   onChangePortfolio = effect(() => {
-    console.log(this.dataControlSE.currentResultSignal()?.portfolio);
     if (this.dataControlSE.currentResultSignal()?.portfolio !== undefined) {
-      console.log('get toc result list');
-
       this.api.tocApiSE.GET_AllTocLevels(this.fieldsManagerSE.isP25()).subscribe({
         next: ({ response }) => {
-          console.log(response);
           this.tocResultList.set(response);
           this.outcomeLevelList = response.filter(item => item.toc_level_id === 2 || item.toc_level_id === 3);
-          console.log(this.outcomeLevelList);
         },
         error: err => {
           console.error(err);

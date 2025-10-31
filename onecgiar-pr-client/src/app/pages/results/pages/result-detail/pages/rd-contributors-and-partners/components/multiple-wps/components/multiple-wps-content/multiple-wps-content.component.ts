@@ -33,13 +33,10 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   toc_level_id_signal = signal<number | null>(null);
 
   secondFieldLabel = computed(() => {
-    console.log(this.tocResultListFiltered());
-    console.log(this.toc_level_id_signal());
     return this.tocResultListFiltered().find(item => item.toc_level_id === this.toc_level_id_signal())?.name;
   });
 
   tocResultListFiltered = computed(() => {
-    console.log(this.reusltlevelSE.currentResultLevelIdSignal());
     switch (this.reusltlevelSE.currentResultLevelIdSignal()) {
       case 3:
         return this.tocInitiativeOutcomeListsSE.tocResultList().filter(item => item.toc_level_id !== 1);
@@ -57,7 +54,6 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   ) {}
 
   ngOnChanges() {
-    console.log(this.initiative.initiative_id);
     this.toc_level_id_signal.set(this.activeTab.toc_level_id);
     if (this.showMultipleWPsContent) {
       if (

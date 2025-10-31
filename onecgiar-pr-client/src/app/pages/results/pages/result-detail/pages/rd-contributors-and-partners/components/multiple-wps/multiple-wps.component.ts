@@ -95,8 +95,6 @@ export class CPMultipleWPsComponent implements OnChanges {
       )
       .subscribe({
         next: ({ response }) => {
-          console.log('GET_outputList');
-          console.log(response);
           this.outputList = response;
         },
         error: err => {
@@ -116,8 +114,6 @@ export class CPMultipleWPsComponent implements OnChanges {
       )
       .subscribe({
         next: ({ response }) => {
-          console.log('GET_outcomeList');
-          console.log(response);
           this.outcomeList = response;
         },
         error: err => {
@@ -137,8 +133,6 @@ export class CPMultipleWPsComponent implements OnChanges {
       )
       .subscribe({
         next: ({ response }) => {
-          console.log('GET_EOIList');
-          console.log(response);
           response.forEach((item, index) => {
             item.uniqueId = `${item.toc_result_id}-${index}`;
           });

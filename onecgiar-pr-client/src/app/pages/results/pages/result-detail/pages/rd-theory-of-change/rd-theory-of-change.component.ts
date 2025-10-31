@@ -101,7 +101,6 @@ export class RdTheoryOfChangeComponent implements OnInit {
 
         this.getConsumed = true;
         this.changeDetectorRef.detectChanges();
-        console.log('theoryOfChangeBody', this.theoryOfChangeBody);
       },
       error: err => {
         this.getConsumed = true;

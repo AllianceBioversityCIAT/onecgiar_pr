@@ -76,10 +76,6 @@ export class TocInitiativeOutComponent implements OnInit {
 
     if (this.isNotifications) return;
 
-    console.log('here..');
-    console.log(this.initiative);
-    console.log(this.initiative?.result_toc_results[0]?.initiative_id);
-    console.log(this.fieldsManagerSE.isP25());
     this.api.resultsSE.get_vesrsionDashboard(this.initiative?.result_toc_results[0]?.initiative_id, this.fieldsManagerSE.isP25()).subscribe({
       next: ({ response }) => {
         this.fullInitiativeToc = response?.version_id;

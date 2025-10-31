@@ -84,7 +84,6 @@ export class MultipleWPsComponent implements OnChanges, OnInit {
   }
 
   GET_outputList() {
-    console.log('outcome');
     this.api.tocApiSE
       .GET_tocLevelsByconfig(
         this.api.dataControlSE.currentNotification?.result_id || this.activeTab?.results_id || this.api.dataControlSE?.currentResult?.id,
@@ -104,7 +103,6 @@ export class MultipleWPsComponent implements OnChanges, OnInit {
   }
 
   GET_outcomeList() {
-    console.log('outcome');
     this.api.tocApiSE
       .GET_tocLevelsByconfig(
         this.api.dataControlSE.currentNotification?.result_id || this.activeTab?.results_id || this.api.dataControlSE?.currentResult?.id,
@@ -124,7 +122,6 @@ export class MultipleWPsComponent implements OnChanges, OnInit {
   }
 
   GET_EOIList() {
-    console.log('outcome');
     this.api.tocApiSE
       .GET_tocLevelsByconfig(
         this.api.dataControlSE.currentNotification?.result_id || this.activeTab?.results_id || this.api.dataControlSE?.currentResult?.id,
