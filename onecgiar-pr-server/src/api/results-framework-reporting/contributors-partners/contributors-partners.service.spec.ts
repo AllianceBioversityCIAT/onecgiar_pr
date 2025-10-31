@@ -73,6 +73,7 @@ describe('ContributorsPartnersService', () => {
           provide: ResultsByInstitutionsService,
           useValue: {
             savePartnersInstitutionsByResultV2: jest.fn(),
+            getInstitutionsPartnersByResultIdV2: jest.fn(),
           },
         },
         {
@@ -179,6 +180,21 @@ describe('ContributorsPartnersService', () => {
         message: 'ok',
       });
 
+      resultsByInstitutionsService.getInstitutionsPartnersByResultIdV2.mockResolvedValue(
+        {
+          response: {
+            no_applicable_partner: false,
+            institutions: [],
+            mqap_institutions: [],
+            bilateral_projects: [],
+            contributing_center: [],
+            is_lead_by_partner: false,
+          },
+          message: 'Successful response (P25)',
+          status: HttpStatus.OK,
+        },
+      );
+
       const response =
         await service.getContributorsPartnersByResultId(resultId);
 
@@ -191,6 +207,7 @@ describe('ContributorsPartnersService', () => {
           owner_initiative: mockInitiative,
           ...tocResponse,
           institutions: [],
+          mqap_institutions: [],
           contributing_center: [],
           bilateral_projects: bilateralProjects,
           no_applicable_partner: false,
@@ -288,8 +305,8 @@ describe('ContributorsPartnersService', () => {
         resultsByInstitutionsService.savePartnersInstitutionsByResultV2,
       ).toHaveBeenCalled();
       const partnersArg =
-        resultsByInstitutionsService.savePartnersInstitutionsByResultV2
-          .mock.calls[0][0];
+        resultsByInstitutionsService.savePartnersInstitutionsByResultV2.mock
+          .calls[0][0];
       expect(partnersArg).toMatchObject({
         result_id: 321,
         institutions: payload.institutions,

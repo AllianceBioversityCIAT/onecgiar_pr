@@ -13,19 +13,17 @@
 
 <div class="entity-details_header">
   <div class="entity-details_title_container">
-    <h1 class="entity-details_title">{{ entityAowService.entityId() }} -</h1>
+    <h1 class="entity-details_title entity-details_title--primary">{{ entityAowService.entityId() }} -</h1>
     @if (entityAowService.isLoadingDetails()) {
       <p-skeleton width="200px" height="30px" />
     } @else {
-      <h1 class="entity-details_title">{{ entityAowService.entityDetails()?.shortName ?? 'No information loaded' }}</h1>
+      <h1 class="entity-details_title entity-details_title--primary">{{ entityAowService.entityDetails()?.shortName ?? 'No information loaded' }}</h1>
     }
   </div>
   <p class="entity-details_description">Overview of progress and access to detailed Areas of Work and Results for this Science Program.</p>
 </div>
 
 <div class="entity-details_container">
-  <img class="under_construction_icon" src="assets/work-in-progress.png" alt="" srcset="" />
-
   <div class="entity-details_card">
     <div class="entity-details_card_header">Insights</div>
 
@@ -49,15 +47,15 @@
         <div class="entity-details_card_content_graph_item_title_absolute bottom_title">Summary</div>
       </div>
 
-      <div class="entity-details_card_content_graph_item" style="padding: 40px 16px 30px; display: grid; grid-template-columns: 1fr 1fr">
+      <div class="entity-details_card_content_graph_item entity-details_card_content_graph_item--charts">
         <div>
           <h3 class="details_card_content_graph_item_title">Outputs</h3>
-          <p-chart type="bar" [data]="dataOutputs()" [options]="options" height="245px" />
+          <p-chart type="bar" [data]="dataOutputs()" [options]="options" height="245px" styleClass="entity-details_chart" />
         </div>
 
         <div>
           <h3 class="details_card_content_graph_item_title">Outcomes</h3>
-          <p-chart type="bar" [data]="dataOutcomes()" [options]="options" height="245px" />
+          <p-chart type="bar" [data]="dataOutcomes()" [options]="options" height="245px" styleClass="entity-details_chart" />
         </div>
 
         <div class="entity-details_card_content_graph_item_title_absolute top_title">Progress by Indicators</div>

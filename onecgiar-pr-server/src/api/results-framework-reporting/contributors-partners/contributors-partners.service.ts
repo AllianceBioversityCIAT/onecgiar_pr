@@ -67,6 +67,13 @@ export class ContributorsPartnersService {
           : null,
       }));
 
+      const mqap_institutions =
+        await this._resultsByInstitutionsService.getInstitutionsPartnersByResultIdV2(
+          resultId,
+        );
+      const mqapInstitutionsData =
+        (mqap_institutions?.response as any)?.mqap_institutions || [];
+
       const contributingCenters =
         await this._resultsCenterRepository.getAllResultsCenterByResultId(
           resultId,
@@ -110,6 +117,7 @@ export class ContributorsPartnersService {
           owner_initiative: resultInit,
           ...tocMapping,
           institutions,
+          mqap_institutions: mqapInstitutionsData,
           contributing_center: contributingCenters,
           bilateral_projects: bilateralProjects,
           no_applicable_partner: !!result.no_applicable_partner,
@@ -199,10 +207,15 @@ export class ContributorsPartnersService {
           changePrimaryInit: payload.changePrimaryInit,
           email_template: payload.email_template,
           result_toc_result: payload.result_toc_result,
-          contributors_result_toc_result: payload.contributors_result_toc_result,
+          contributors_result_toc_result:
+            payload.contributors_result_toc_result,
         };
 
-        const tocRes = await this.updateTocMappingV2(resultId, tocPayload, user);
+        const tocRes = await this.updateTocMappingV2(
+          resultId,
+          tocPayload,
+          user,
+        );
         response['toc_mapping'] = tocRes.response;
         statuses.push(tocRes.status ?? HttpStatus.OK);
         if (tocRes.message) messages.push(tocRes.message);
