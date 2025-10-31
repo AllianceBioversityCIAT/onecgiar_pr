@@ -32,6 +32,8 @@ import { InnovationDevInfoUtilsService } from './services/innovation-dev-info-ut
 import { MegatrendsComponent } from './components/megatrends/megatrends.component';
 import { TermPipe } from '../../../../../../../internationalization/term.pipe';
 import { signal } from '@angular/core';
+import { FieldsManagerService } from '../../../../../../../shared/services/fields-manager.service';
+import { DataControlService } from '../../../../../../../shared/services/data-control.service';
 
 describe('InnovationDevInfoComponent', () => {
   let component: InnovationDevInfoComponent;
@@ -299,7 +301,12 @@ describe('InnovationDevInfoComponent', () => {
       resultsSE: {
         GET_innovationDev: () => of({ response: mockGET_innovationDevResponse }),
         GET_questionsInnovationDevelopment: () => of({ response: mockGET_questionsInnovationDevelopmentResponse }),
+        GET_innovationDevP25: () => of({ response: mockGET_innovationDevResponse }),
+        GET_questionsInnovationDevelopmentP25: () => of({ response: mockGET_questionsInnovationDevelopmentResponse }),
         PATCH_innovationDev: () => of({}),
+        PATCH_innovationDevP25: () => of({}),
+        POST_createEvidenceDemandP25: () => of({}),
+        GET_evidenceDemandP25: () => of({ response: { evidences: [] } }),
         GET_clarisaInnovationType: () => of({}),
         GET_clarisaInnovationCharacteristics: () => of({}),
         GET_clarisaInnovationReadinessLevels: () => of({}),
@@ -326,6 +333,15 @@ describe('InnovationDevInfoComponent', () => {
     mockInnovationDevInfoUtilsService = {
       mapRadioButtonBooleans: jest.fn()
     };
+
+    const mockFieldsManagerService = {
+      isP25: jest.fn(() => false)
+    } as any;
+
+    const mockDataControlService = {
+      currentResultSignal: signal({ portfolio: 'P22' })
+    } as any;
+
     await TestBed.configureTestingModule({
       declarations: [
         InnovationDevInfoComponent,
@@ -366,6 +382,14 @@ describe('InnovationDevInfoComponent', () => {
         {
           provide: InnovationDevInfoUtilsService,
           useValue: mockInnovationDevInfoUtilsService
+        },
+        {
+          provide: FieldsManagerService,
+          useValue: mockFieldsManagerService
+        },
+        {
+          provide: DataControlService,
+          useValue: mockDataControlService
         }
       ]
     }).compileComponents();
@@ -432,6 +456,17 @@ describe('InnovationDevInfoComponent', () => {
       expect(spy).toHaveBeenCalled();
       expect(convertOrganizationsSpy).not.toHaveBeenCalled();
       expect(component.savingSection).toBeFalsy();
+    });
+  });
+
+  describe('getSectionInformationp25()', () => {
+    it('should get p25 section information and questions', () => {
+      const apiGetDev = jest.spyOn(mockApiService.resultsSE, 'GET_innovationDevP25');
+      const apiGetQ = jest.spyOn(mockApiService.resultsSE, 'GET_questionsInnovationDevelopmentP25');
+      component.getSectionInformationp25();
+      expect(apiGetDev).toHaveBeenCalled();
+      expect(apiGetQ).toHaveBeenCalled();
+      expect(component.innovationDevInfoBody).toEqual(mockGET_innovationDevResponse);
     });
   });
   describe('convertOrganizations()', () => {
@@ -517,6 +552,37 @@ describe('InnovationDevInfoComponent', () => {
 
       expect(spy).toHaveBeenCalled();
       expect(component.savingSection).toBeFalsy();
+    });
+
+    it('should save P25 section including evidences body', () => {
+      const spyConvert = jest.spyOn(component, 'convertOrganizationsTosave');
+      const spyPostEvidences = jest.spyOn(mockApiService.resultsSE, 'POST_createEvidenceDemandP25');
+      const spyPatchP25 = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationDevP25');
+      const spyGetP25 = jest.spyOn(component, 'getSectionInformationp25');
+      jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(true as any);
+      (component as any).api.dataControlSE.currentResult = { id: 1 };
+      (component as any).evidencesBody = { evidences: [{ is_sharepoint: false, link: 'x' }] } as any;
+      component.onSaveSection();
+      expect(spyConvert).toHaveBeenCalled();
+      expect(spyPostEvidences).toHaveBeenCalled();
+      expect(spyPatchP25).toHaveBeenCalled();
+      expect(spyGetP25).toHaveBeenCalled();
+      expect(component.savingSection).toBeFalsy();
+    });
+
+    it('should handle P25 evidences POST error gracefully', () => {
+      jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(true as any);
+      (component as any).api.resultsSE.POST_createEvidenceDemandP25 = () => throwError(() => new Error('err'));
+      component.onSaveSection();
+      expect(component.savingSection).toBeFalsy();
+    });
+  });
+
+  describe('getReadinessLevelIndex()', () => {
+    it('should return -1 when no readiness level or list', () => {
+      component.innovationDevInfoBody.innovation_readiness_level_id = null as any;
+      (component as any).innovationControlListSE.readinessLevelsList = null as any;
+      expect(component.getReadinessLevelIndex()).toBe(-1);
     });
   });
 
