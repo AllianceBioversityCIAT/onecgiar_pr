@@ -144,13 +144,13 @@ export class RdContributorsAndPartnersService implements OnDestroy {
           this.partnersBody?.sdgTargets.forEach(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
 
         // this.theoryOfChangesServices.partnersBody = this.partnersBody;
-
-        // if (this.partnersBody?.result_toc_result?.result_toc_results !== null) {
-        //   this.theoryOfChangesServices.result_toc_result = this.partnersBody?.result_toc_result;
-        //   this.theoryOfChangesServices.result_toc_result.planned_result =
-        //     this.partnersBody?.result_toc_result?.result_toc_results[0].planned_result ?? null;
-        //   this.theoryOfChangesServices.result_toc_result.showMultipleWPsContent = true;
-        // }
+        console.log(this.partnersBody?.result_toc_result?.result_toc_results);
+        if (this.partnersBody?.result_toc_result?.result_toc_results !== null) {
+          this.rdCpTheoryOfChangesServicesSE.result_toc_result = this.partnersBody?.result_toc_result;
+          this.rdCpTheoryOfChangesServicesSE.result_toc_result.planned_result =
+            this.partnersBody?.result_toc_result?.result_toc_results[0].planned_result ?? null;
+          this.rdCpTheoryOfChangesServicesSE.result_toc_result.showMultipleWPsContent = true;
+        }
 
         // if (this.partnersBody?.contributors_result_toc_result !== null) {
         //   this.theoryOfChangesServices.contributors_result_toc_result = this.partnersBody?.contributors_result_toc_result;
