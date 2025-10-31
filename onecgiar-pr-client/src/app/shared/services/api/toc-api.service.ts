@@ -10,8 +10,10 @@ export class TocApiService {
   constructor(public http: HttpClient) {}
   apiBaseUrl = environment.apiBaseUrl + 'toc/';
   apiBaseUrlV2 = environment.apiBaseUrl + 'v2/toc/';
-  GET_AllTocLevels() {
-    return this.http.get<any>(`${this.apiBaseUrl}level/get/all`);
+  GET_AllTocLevels(isP25: boolean = false) {
+    const dynamicApiBaseURl = isP25 ? this.apiBaseUrlV2 : this.apiBaseUrl;
+    console.log(`${dynamicApiBaseURl}level/get/all`);
+    return this.http.get<any>(`${dynamicApiBaseURl}level/get/all`);
   }
 
   GET_tocLevelsByconfig(result_id, initiativeId, levelId, isP25: boolean = false) {
