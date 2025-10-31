@@ -218,9 +218,9 @@ describe('ContributorsPartnersService', () => {
         status: HttpStatus.OK,
       });
 
-      expect(
-        resultsTocResultsService.getTocByResultV2,
-      ).toHaveBeenCalledWith(resultId);
+      expect(resultsTocResultsService.getTocByResultV2).toHaveBeenCalledWith(
+        resultId,
+      );
     });
 
     it('should delegate errors to the handler when result is missing', async () => {

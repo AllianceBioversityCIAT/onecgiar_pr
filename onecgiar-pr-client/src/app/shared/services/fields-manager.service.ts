@@ -142,7 +142,7 @@ export class FieldsManagerService {
         required: true,
       },
       '[innovation-use-form]-core-innovation': {
-        label: 'Current core innovation use in number of users that can be supported by evidence (within the reporting year)?',
+        label: 'Current core innovation use in number of users that can be supported by evidence (within the reporting year)',
         hide: this.isP22(),
         required: true,
         description: 'Depending on the innovation, users may be groups of actors or be organizations. Multiple actors or organizations can be selected.',

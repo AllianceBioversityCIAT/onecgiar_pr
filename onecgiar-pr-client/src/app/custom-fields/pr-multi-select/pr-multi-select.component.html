@@ -32,7 +32,7 @@
             <div *ngFor="let option of filterChildrenBySearch(grp[optionGroupChildren])" class="option" [ngClass]="{'disabled': option?.disabled}">
               <p-checkbox [disabled]="option?.disabled" [binary]="true" [(ngModel)]="option.selected" (onChange)="onSelectOption(option)"></p-checkbox>
               <img *ngIf="flagsCode" [src]="'https://countryflagsapi.com/png/'+option[this.flagsCode]" alt="" srcset="">
-              <div class="label pr-body-2" [innerHtml]="option[this.optionLabel]" (click)="option.selected = !option.selected; onSelectOption(option); $event.stopPropagation()"></div>
+              <div class="label pr-body-2" [innerHtml]="getDisplayLabel(option)" (click)="option.selected = !option.selected; onSelectOption(option); $event.stopPropagation()"></div>
               <div class="event" (click)="$event.stopPropagation()"></div>
             </div>
           </div>
@@ -41,16 +41,16 @@
       </ng-container>
       <ng-template #flatList>
         <cdk-virtual-scroll-viewport itemSize="30" class="custom_scroll virtual_scroll">
-          <div *ngIf="!(optionsIntance | listFilterByTextAndAttr: this.optionLabel : this.searchText)?.length" class="no_info">
+          <div *ngIf="!filterFlatOptions(optionsIntance)?.length" class="no_info">
             No information found
           </div>
           <div
-            *cdkVirtualFor="let option of optionsIntance | listFilterByTextAndAttr: this.optionLabel : this.searchText"
+            *cdkVirtualFor="let option of filterFlatOptions(optionsIntance)"
             class="option"
             [ngClass]="{ disabled: option?.disabled }">
             <p-checkbox [disabled]="option?.disabled" [binary]="true" [(ngModel)]="option.selected" (onChange)="onSelectOption(option)"> </p-checkbox>
             <img *ngIf="flagsCode" [src]="'https://countryflagsapi.com/png/' + option[this.flagsCode]" alt="" srcset="" />
-            <div class="label pr-body-2" [innerHtml]="option[this.optionLabel]" (click)="onSelectOption(option)"></div>
+            <div class="label pr-body-2" [innerHtml]="getDisplayLabel(option)" (click)="onSelectOption(option)"></div>
           </div>
         </cdk-virtual-scroll-viewport>
       </ng-template>
