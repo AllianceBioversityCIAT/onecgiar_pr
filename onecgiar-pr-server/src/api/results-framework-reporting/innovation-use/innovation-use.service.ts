@@ -26,6 +26,7 @@ import { ResultsByInstitution } from '../../results/results_by_institutions/enti
 import { ResultByIntitutionsRepository } from '../../results/results_by_institutions/result_by_intitutions.repository';
 import { ResultRepository } from '../../results/result.repository';
 import { ResultsByProjectsRepository } from '../../results/results_by_projects/results_by_projects.repository';
+import { InnovationUseLevel } from './enum/innov-use-levels.enum';
 
 @Injectable()
 export class InnovationUseService {
@@ -88,7 +89,7 @@ export class InnovationUseService {
         resultExist.innov_use_2030_to_be_determined =
           innov_use_2030_to_be_determined;
 
-        if (innovation_readiness_level_id >= 6) {
+        if (innovation_readiness_level_id >= InnovationUseLevel.Level_6) {
           resultExist.readiness_level_explanation =
             readiness_level_explanation ?? null;
           resultExist.has_scaling_studies = !!has_scaling_studies;
@@ -123,7 +124,7 @@ export class InnovationUseService {
         newInnUse.innov_use_2030_to_be_determined =
           innov_use_2030_to_be_determined;
 
-        if (innovation_readiness_level_id >= 6) {
+        if (innovation_readiness_level_id >= InnovationUseLevel.Level_6) {
           newInnUse.readiness_level_explanation =
             readiness_level_explanation ?? null;
           newInnUse.has_scaling_studies = !!has_scaling_studies;
@@ -140,7 +141,7 @@ export class InnovationUseService {
       }
 
       if (
-        innovation_readiness_level_id >= 6 &&
+        innovation_readiness_level_id >= InnovationUseLevel.Level_6 &&
         has_scaling_studies &&
         scaling_studies_urls?.length
       ) {
@@ -518,7 +519,7 @@ export class InnovationUseService {
       };
 
       let scaling_studies_urls: string[] = [];
-      if (innDevExists.innovation_readiness_level_id >= 6) {
+      if (innDevExists.innovation_readiness_level_id >= InnovationUseLevel.Level_6) {
         const urls = await this._resultScalingStudyUrlsRepository.find({
           where: {
             result_innov_use_id: innDevExists.result_innovation_use_id,
