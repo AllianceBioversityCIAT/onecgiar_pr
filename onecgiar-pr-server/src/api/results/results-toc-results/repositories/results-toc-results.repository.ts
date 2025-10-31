@@ -334,11 +334,18 @@ export class ResultsTocResultRepository
       ci.official_code,
       ci.name,
       ci.short_name,
-      IFNULL(rtr.toc_level_id, tr.result_type) as toc_level_id
+      IFNULL(rtr.toc_level_id, tr.result_type) as toc_level_id,
+      tr.result_type as toc_level_id,
+      rtri.toc_results_indicator_id,
+      ritt.indicators_targets,
+      ritt.contributing_indicator,
+      ritt.target_date
     FROM
       results_toc_result rtr	
       left JOIN ${env.DB_TOC}.toc_results tr on tr.id = rtr.toc_result_id
       left join clarisa_initiatives ci on ci.id = rtr.initiative_id
+      left join results_toc_result_indicators rtri on rtri.results_toc_results_id = rtr.result_toc_result_id
+      left join result_indicators_targets ritt on ritt.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
     where rtr.results_id = ?
       and rtr.initiative_id ${isPrimary ? '' : 'not'} in (${
         initiativeId ? initiativeId.toString() : null
@@ -357,6 +364,77 @@ export class ResultsTocResultRepository
         resultId,
       ]);
       return resultTocResult;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsTocResultRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async getRTRPrimaryV2(
+    resultId: number,
+    initiativeIds?: Array<number | string>,
+  ) {
+    const normalizedIds = (initiativeIds ?? [])
+      .map((id) => Number(id))
+      .filter((id) => Number.isFinite(id));
+
+    const params: Array<number> = [resultId];
+    let initiativeFilter = '';
+
+    if (normalizedIds.length > 0) {
+      const placeholders = normalizedIds.map(() => '?').join(', ');
+      initiativeFilter = `AND rtr.initiative_id IN (${placeholders})`;
+      params.push(...normalizedIds);
+    }
+
+    const queryData = `
+      SELECT
+        rtr.result_toc_result_id,
+        rtr.toc_result_id,
+        rtr.planned_result,
+        rtr.results_id,
+        rtr.initiative_id,
+        rtr.toc_progressive_narrative,
+        rtr.toc_level_id,
+        ci.official_code,
+        ci.short_name,
+        ci.name,
+        rtri.result_toc_result_indicator_id,
+        rtri.toc_results_indicator_id,
+        rtri.indicator_contributing,
+        rtri.status AS indicator_status,
+        rit.indicators_targets,
+        rit.number_target,
+        rit.contributing_indicator,
+        rit.target_date,
+        rit.target_progress_narrative,
+        rit.indicator_question
+      FROM results_toc_result rtr
+      LEFT JOIN clarisa_initiatives ci
+        ON ci.id = rtr.initiative_id
+      LEFT JOIN results_toc_result_indicators rtri
+        ON rtri.results_toc_results_id = rtr.result_toc_result_id
+        AND rtri.is_active = 1
+        AND rtri.is_not_aplicable = 0
+      LEFT JOIN result_indicators_targets rit
+        ON rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
+        AND rit.is_active = 1
+      WHERE
+        rtr.results_id = ?
+        AND rtr.is_active = 1
+        ${initiativeFilter}
+      ORDER BY
+        rtr.initiative_id,
+        rtr.result_toc_result_id,
+        rtri.result_toc_result_indicator_id,
+        rit.indicators_targets;
+    `;
+
+    try {
+      return await this.query(queryData, params);
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,
@@ -2489,7 +2567,7 @@ select *
       });
     }
   }
-  
+
   async getWpExtraInfoV2(
     resultId: number,
     toc_result_id: number,
