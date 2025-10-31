@@ -409,7 +409,7 @@ export class EvidencesService {
     }
   }
 
-  private async getHandleFromRegularLink(evidence: string): Promise<string> {
+  public async getHandleFromRegularLink(evidence: string): Promise<string> {
     const isCGLink = this.kpUrlRegex.exec(evidence ?? '');
 
     if (isCGLink) {
