@@ -18,6 +18,7 @@ import { AdUsersModule } from './ad_users/ad_users.module';
 import { InitiativeEntityMapModule } from './initiative_entity_map/initiative_entity_map.module';
 import { ResultsFrameworkReportingModule } from './results-framework-reporting/results-framework-reporting.module';
 import { ContributorsPartnersModule } from './results-framework-reporting/contributors-partners/contributors-partners.module';
+import { InnovationDevModule } from './results-framework-reporting/innovation_dev/innovation_dev.module';
 import { InnovationUseModule } from './results-framework-reporting/innovation-use/innovation-use.module';
 
 export const ModulesRoutes: Routes = [
@@ -87,6 +88,10 @@ export const ModulesRoutes: Routes = [
   {
     path: 'contributors-partners',
     module: ContributorsPartnersModule,
+  },
+  {
+    path: 'innovation-development',
+    module: InnovationDevModule,
   },
   {
     path: 'innovation-use',

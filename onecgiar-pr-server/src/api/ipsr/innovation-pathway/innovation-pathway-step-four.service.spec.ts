@@ -160,6 +160,7 @@ describe('InnovationPathwayStepFourService', () => {
     obj_result: null,
     evidence_type: null,
     evidenceSharepointArray: [],
+    innov_dev_user_demand: false,
   };
 
   beforeEach(async () => {
