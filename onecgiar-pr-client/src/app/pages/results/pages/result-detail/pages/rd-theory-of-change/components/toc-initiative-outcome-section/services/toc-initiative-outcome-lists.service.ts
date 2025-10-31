@@ -15,6 +15,8 @@ export class TocInitiativeOutcomeListsService {
   onChangePortfolio = effect(() => {
     console.log(this.dataControlSE.currentResultSignal()?.portfolio);
     if (this.dataControlSE.currentResultSignal()?.portfolio !== undefined) {
+      console.log('get toc result list');
+
       this.api.tocApiSE.GET_AllTocLevels(this.fieldsManagerSE.isP25()).subscribe({
         next: ({ response }) => {
           console.log(response);

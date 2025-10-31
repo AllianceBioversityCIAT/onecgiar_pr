@@ -12,18 +12,11 @@ import { TermPipe } from '../../../../../../internationalization/term.pipe';
 import { RdTheoryOfChangeModule } from '../rd-theory-of-change/rd-theory-of-change.module';
 import { CPMultipleWPsComponent } from './components/multiple-wps/multiple-wps.component';
 import { CPMultipleWPsContentComponent } from './components/multiple-wps/components/multiple-wps-content/multiple-wps-content.component';
-import { CPFilterOutcomeLevelByBooleanPipe } from './components/multiple-wps/components/multiple-wps-content/pipes/filter-outcome-level-by-boolean.pipe';
 import { CPMappedResultsModalComponent } from './components/multiple-wps/components/mapped-results-modal/mapped-results-modal.component';
 import { DialogModule } from 'primeng/dialog';
 import { TableModule } from 'primeng/table';
 @NgModule({
-  declarations: [
-    RdContributorsAndPartnersComponent,
-    CPMultipleWPsComponent,
-    CPMultipleWPsContentComponent,
-    CPFilterOutcomeLevelByBooleanPipe,
-    CPMappedResultsModalComponent
-  ],
+  declarations: [RdContributorsAndPartnersComponent, CPMultipleWPsComponent, CPMultipleWPsContentComponent, CPMappedResultsModalComponent],
   imports: [
     CommonModule,
     RdContributorsAndPartnersRoutingModule,

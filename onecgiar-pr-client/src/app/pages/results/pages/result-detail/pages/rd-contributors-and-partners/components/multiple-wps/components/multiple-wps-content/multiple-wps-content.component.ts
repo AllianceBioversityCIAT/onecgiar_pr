@@ -1,8 +1,9 @@
-import { Component, Input, OnChanges } from '@angular/core';
+import { Component, Input, OnChanges, computed, inject } from '@angular/core';
 import { MappedResultsModalServiceService } from '../mapped-results-modal/mapped-results-modal-service.service';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 import { TocInitiativeOutcomeListsService } from '../../../../../rd-theory-of-change/components/toc-initiative-outcome-section/services/toc-initiative-outcome-lists.service';
 import { RdTheoryOfChangesServicesService } from '../../../../../rd-theory-of-change/rd-theory-of-changes-services.service';
+import { ResultLevelService } from '../../../../../../../../../../pages/results/pages/result-creator/services/result-level.service';
 
 @Component({
   selector: 'app-multiple-wps-content',
@@ -25,8 +26,20 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   @Input() selectedOptionsOutput = [];
   @Input() selectedOptionsOutcome = [];
   @Input() selectedOptionsEOI = [];
+  reusltlevelSE = inject(ResultLevelService);
 
   indicatorView = false;
+
+  tocResultListFiltered = computed(() => {
+    console.log(this.reusltlevelSE.currentResultLevelIdSignal());
+    switch (this.reusltlevelSE.currentResultLevelIdSignal()) {
+      case 3:
+        return this.tocInitiativeOutcomeListsSE.tocResultList().filter(item => item.toc_level_id !== 1);
+      case 4:
+        return this.tocInitiativeOutcomeListsSE.tocResultList().filter(item => item.toc_level_id == 1);
+    }
+    return this.tocInitiativeOutcomeListsSE.tocResultList();
+  });
 
   constructor(
     public tocInitiativeOutcomeListsSE: TocInitiativeOutcomeListsService,
