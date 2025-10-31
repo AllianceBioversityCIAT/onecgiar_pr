@@ -9,6 +9,7 @@ import { RdPartnersModule } from '../rd-partners/rd-partners.module';
 import { RdContributorsAndPartnersComponent } from './rd-contributors-and-partners.component';
 import { RdContributorsAndPartnersRoutingModule } from './rd-contributors-and-partners-routing.module';
 import { TermPipe } from '../../../../../../internationalization/term.pipe';
+import { RdTheoryOfChangeModule } from '../rd-theory-of-change/rd-theory-of-change.module';
 
 @NgModule({
   declarations: [RdContributorsAndPartnersComponent],
@@ -21,7 +22,8 @@ import { TermPipe } from '../../../../../../internationalization/term.pipe';
     TooltipModule,
     FormsModule,
     RdPartnersModule,
-    TermPipe
+    TermPipe,
+    RdTheoryOfChangeModule
   ]
 })
 export class RdContributorsAndPartnersModule {}

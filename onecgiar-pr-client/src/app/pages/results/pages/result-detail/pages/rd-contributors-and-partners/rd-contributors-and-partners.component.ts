@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
@@ -7,6 +7,7 @@ import { CustomizedAlertsFeService } from '../../../../../../shared/services/cus
 import { NonPooledProjectDto } from '../rd-partners/models/partnersBody';
 import { RdContributorsAndPartnersService } from './rd-contributors-and-partners.service';
 import { ContributorsAndPartnersBody } from './models/contributorsAndPartnersBody';
+import { ResultLevelService } from '../../../result-creator/services/result-level.service';
 
 @Component({
   selector: 'app-rd-contributors-and-partners',
@@ -15,6 +16,7 @@ import { ContributorsAndPartnersBody } from './models/contributorsAndPartnersBod
   standalone: false
 })
 export class RdContributorsAndPartnersComponent implements OnInit {
+  resultLevelSE = inject(ResultLevelService);
   resultCode = this?.api?.dataControlSE?.currentResult?.result_code;
   versionId = this?.api?.dataControlSE?.currentResult?.version_id;
 

@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
 import { map, Observable, firstValueFrom } from 'rxjs';
@@ -18,6 +18,7 @@ import { UpdateUserStatus } from '../../interfaces/updateUserStatus.interface';
 import { SearchParams } from './api.service';
 import { EntityDetails } from '../../../pages/result-framework-reporting/pages/entity-details/interfaces/entity-details.interface';
 import { ExtraGeographicLocationBody } from '../../../pages/results/pages/result-detail/pages/rd-geographic-location/models/extraGeographicLocationBody';
+import { FieldsManagerService } from '../fields-manager.service';
 
 @Injectable({
   providedIn: 'root'
@@ -407,9 +408,10 @@ export class ResultsApiService {
         .pipe(this.saveButtonSE.isGettingSectionPipe());
     }
   }
-  get_vesrsionDashboard(init) {
+  get_vesrsionDashboard(init, isP25: boolean = false) {
+    const dynamicApiBaseURl = isP25 ? this.apiBaseUrlV2 : this.apiBaseUrl;
     return this.http.get<any>(
-      `${this.apiBaseUrl}toc/get/version/${
+      `${dynamicApiBaseURl}toc/get/version/${
         this.ipsrDataControlSE.inIpsr ? this.ipsrDataControlSE.resultInnovationId : this.currentResultId
       }/initiative/${init}/resultToc`
     );

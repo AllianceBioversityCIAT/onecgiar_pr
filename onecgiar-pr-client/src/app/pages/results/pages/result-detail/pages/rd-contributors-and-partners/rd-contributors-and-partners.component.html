@@ -3,6 +3,7 @@
   <!-- Contributing Centers start -->
   <div appFeedbackValidation labelText="Contributing CG Centers" [isComplete]="!!this.rdPartnersSE.partnersBody.contributing_center?.length"></div>
 
+  <!-- ! from toc section -->
   @if (this.rdPartnersSE.getConsumed()) {
     <app-pr-select
       class="segment_title_margin"
@@ -31,6 +32,38 @@
       </div>
     }
   }
+
+  <!-- ! from toc section end -->
+
+  <!-- from toc section  -->
+
+  @switch (this.resultLevelSE.currentResultLevelId) {
+    @case (1) {
+      <app-toc-impact-section
+        [contributing_initiatives]="this.rdPartnersSE.partnersBody.contributing_initiatives"
+        [impacts]="this.rdPartnersSE.partnersBody.impactsTarge"
+        [sdg]="this.rdPartnersSE.partnersBody.sdgTargets"></app-toc-impact-section>
+    }
+    @case (2) {
+      <app-toc-action-area-outcome-section
+        [result_toc_result]="this.rdPartnersSE.partnersBody.result_toc_result"
+        [contributors_result_toc_result]="this.rdPartnersSE.partnersBody.contributors_result_toc_result">
+      </app-toc-action-area-outcome-section>
+    }
+    @case (3) {
+      <app-toc-initiative-outcome-section
+        [result_toc_result]="this.rdPartnersSE.partnersBody.result_toc_result"
+        [contributors_result_toc_result]="this.rdPartnersSE.partnersBody.contributors_result_toc_result">
+      </app-toc-initiative-outcome-section>
+    }
+    @case (4) {
+      <app-toc-initiative-output-section
+        [result_toc_result]="this.rdPartnersSE.partnersBody.result_toc_result"
+        [contributors_result_toc_result]="this.rdPartnersSE.partnersBody.contributors_result_toc_result">
+      </app-toc-initiative-output-section>
+    }
+  }
+  <!-- from toc section end -->
 
   <app-pr-multi-select
     [options]="this.centersSE.centersList"
