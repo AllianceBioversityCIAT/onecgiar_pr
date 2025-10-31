@@ -535,10 +535,47 @@ export class ResultsApiService {
       .pipe(this.saveButtonSE.isSavingPipe());
   }
 
+  PATCH_innovationDevP25(body) {
+    return this.http
+      .patch<any>(`${this.baseApiBaseUrlV2}innovation-development/innovation-dev/create/result/${this.currentResultId}`, body)
+      .pipe(this.saveButtonSE.isSavingPipe());
+  }
+
   GET_innovationDev() {
     return this.http
       .get<any>(`${this.apiBaseUrl}summary/innovation-dev/get/result/${this.currentResultId}`)
       .pipe(this.saveButtonSE.isGettingSectionPipe());
+  }
+
+  GET_innovationDevP25() {
+    return this.http
+      .get<any>(`${this.baseApiBaseUrlV2}innovation-development/innovation-dev/get/result/${this.currentResultId}`)
+      .pipe(this.saveButtonSE.isGettingSectionPipe());
+  }
+
+  GET_evidenceDemandP25() {
+    return this.http
+      .get<any>(`${this.baseApiBaseUrlV2}innovation-development/evidence_demand/${this.currentResultId}`)
+      .pipe(this.saveButtonSE.isGettingSectionPipe());
+  }
+
+  POST_createUploadSessionP25(body) {
+    return this.http
+      .post<any>(`${this.baseApiBaseUrlV2}innovation-development/evidence_demand/createUploadSession`, body)
+      .pipe(this.saveButtonSE.isSavingPipe());
+  }
+
+  POST_createEvidenceDemandP25(body) {
+    const formData = new FormData();
+    formData.append('jsonData', JSON.stringify(body));
+    if (Array.isArray(body?.evidences)) {
+      body.evidences.forEach((evidence: any) => {
+        if (evidence?.file) formData.append('files', evidence.file);
+      });
+    }
+    return this.http
+      .post<any>(`${this.baseApiBaseUrlV2}innovation-development/evidence_demand/create/${this.currentResultId}`, formData)
+      .pipe(this.saveButtonSE.isSavingPipe());
   }
 
   PATCH_policyChanges(body) {
@@ -1040,7 +1077,7 @@ export class ResultsApiService {
   }
 
   DELETEcomplementaryinnovation(idResult) {
-    return this.http.delete<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/delete/complementary-innovation/${idResult}`);
+    return this.http.delete<any>(`${environment.apiBaseUrl}v2/api/ipsr/innovation-pathway/delete/complementary-innovation/${idResult}`);
   }
 
   GET_versioning(status, modules) {
@@ -1084,6 +1121,10 @@ export class ResultsApiService {
 
   GET_questionsInnovationDevelopment() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results/questions/innovation-development/${this.currentResultId}`);
+  }
+
+  GET_questionsInnovationDevelopmentP25() {
+    return this.http.get<any>(`${this.baseApiBaseUrlV2}results/questions/innovation-development/${this.currentResultId}`);
   }
 
   GET_investmentDiscontinuedOptions(result_type_id) {

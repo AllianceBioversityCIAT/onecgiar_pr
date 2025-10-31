@@ -127,6 +127,27 @@ describe('InnovationDevInfoComponent', () => {
             subOptions: []
           }
         ]
+      },
+      q4: {
+        result_question_id: '',
+        question_text: '',
+        question_description: '',
+        result_type_id: 0,
+        parent_question_id: '',
+        question_type_id: '',
+        question_level: '',
+        options: [
+          {
+            answer_boolean: true,
+            result_question_id: '1',
+            question_text: '',
+            result_type_id: 1,
+            parent_question_id: '1',
+            question_type_id: '1',
+            question_level: '',
+            subOptions: []
+          }
+        ]
       }
     },
     responsible_innovation_and_scaling: {
@@ -152,6 +173,48 @@ describe('InnovationDevInfoComponent', () => {
         question_level: ''
       },
       q2: {
+        options: [
+          {
+            answer_boolean: true,
+            result_question_id: '1',
+            question_text: '',
+            result_type_id: 1,
+            parent_question_id: '1',
+            question_type_id: '1',
+            question_level: '',
+            subOptions: []
+          }
+        ],
+        result_question_id: '',
+        question_text: '',
+        question_description: '',
+        result_type_id: 0,
+        parent_question_id: '',
+        question_type_id: '',
+        question_level: ''
+      },
+      q3: {
+        options: [
+          {
+            answer_boolean: true,
+            result_question_id: '1',
+            question_text: '',
+            result_type_id: 1,
+            parent_question_id: '1',
+            question_type_id: '1',
+            question_level: '',
+            subOptions: []
+          }
+        ],
+        result_question_id: '',
+        question_text: '',
+        question_description: '',
+        result_type_id: 0,
+        parent_question_id: '',
+        question_type_id: '',
+        question_level: ''
+      },
+      q4: {
         options: [
           {
             answer_boolean: true,
@@ -206,6 +269,7 @@ describe('InnovationDevInfoComponent', () => {
       actors: [],
       measures: []
     },
+    has_scaling_studies: false,
     initiative_expected_investment: [],
     institutions_expected_investment: [],
     bilateral_expected_investment: [],
@@ -310,12 +374,13 @@ describe('InnovationDevInfoComponent', () => {
     component = fixture.componentInstance;
   });
 
-  describe('ngOnInit()', () => {
-    it('should get section information on initialization', () => {
+  describe('initialization behavior', () => {
+    it('should load section and questions when invoked', () => {
       const spyGetSectionInformation = jest.spyOn(component, 'getSectionInformation');
       const spyGET_questionsInnovationDevelopment = jest.spyOn(component, 'GET_questionsInnovationDevelopment');
 
-      component.ngOnInit();
+      component.getSectionInformation();
+      component.GET_questionsInnovationDevelopment();
 
       expect(spyGetSectionInformation).toHaveBeenCalled();
       expect(spyGET_questionsInnovationDevelopment).toHaveBeenCalled();

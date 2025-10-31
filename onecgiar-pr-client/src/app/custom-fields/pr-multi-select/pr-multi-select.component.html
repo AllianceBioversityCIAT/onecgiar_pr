@@ -29,11 +29,11 @@
         <div class="custom_scroll" style="max-height: 300px; overflow: auto;">
           <div *ngFor="let grp of options" class="group">
             <div class="pr-body-2" style="font-weight: 600; padding: 6px 10px;">{{ grp[optionGroupLabel] }}</div>
-            <div *ngFor="let option of filterChildrenBySearch(grp[optionGroupChildren])" class="option" [ngClass]="{'disabled': option?.disabled}" (click)="onSelectOption(option)">
-              <p-checkbox [disabled]="option?.disabled" [binary]="true" [(ngModel)]="option.selected"></p-checkbox>
+            <div *ngFor="let option of filterChildrenBySearch(grp[optionGroupChildren])" class="option" [ngClass]="{'disabled': option?.disabled}">
+              <p-checkbox [disabled]="option?.disabled" [binary]="true" [(ngModel)]="option.selected" (onChange)="onSelectOption(option)"></p-checkbox>
               <img *ngIf="flagsCode" [src]="'https://countryflagsapi.com/png/'+option[this.flagsCode]" alt="" srcset="">
-              <div class="label pr-body-2" [innerHtml]="option[this.optionLabel]"></div>
-              <div class="event" (click)="onSelectOption(option)"></div>
+              <div class="label pr-body-2" [innerHtml]="option[this.optionLabel]" (click)="option.selected = !option.selected; onSelectOption(option); $event.stopPropagation()"></div>
+              <div class="event" (click)="$event.stopPropagation()"></div>
             </div>
           </div>
           <div *ngIf="!options?.length || !getAllChildrenFromGroups(options)?.length" class="no_info">No information found</div>
