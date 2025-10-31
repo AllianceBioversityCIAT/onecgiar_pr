@@ -208,12 +208,12 @@ export class InnovationDevService {
         scaling_studies_urls?.length
       ) {
         await this._resultScalingStudyUrlsRepository.update(
-          { result_innov_use_id: InnDevRes.result_innovation_dev_id },
+          { result_innov_dev_id: InnDevRes.result_innovation_dev_id },
           { is_active: false },
         );
 
         const urlsToSave = scaling_studies_urls.map((url) => ({
-          result_innov_use_id: InnDevRes.result_innovation_dev_id,
+          result_innov_dev_id: InnDevRes.result_innovation_dev_id,
           study_url: url,
           is_active: true,
           created_by: user.id,
@@ -355,7 +355,7 @@ export class InnovationDevService {
       ) {
         const urls = await this._resultScalingStudyUrlsRepository.find({
           where: {
-            result_innov_use_id: innDevExists.result_innovation_dev_id,
+            result_innov_dev_id: innDevExists.result_innovation_dev_id,
             is_active: true,
           },
         });
