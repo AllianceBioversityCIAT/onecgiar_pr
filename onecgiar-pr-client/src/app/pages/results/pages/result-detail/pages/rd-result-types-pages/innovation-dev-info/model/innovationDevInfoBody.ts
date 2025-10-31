@@ -9,6 +9,7 @@ export class InnovationDevInfoBody {
   public innovation_developers: string;
   public innovation_collaborators: string;
   public evidences_justification: string;
+  public has_scaling_studies: boolean; 
   public innovation_acknowledgement: string;
   public result = { title: '' };
   public pictures: LinkType[] = [{ link: '' }];
