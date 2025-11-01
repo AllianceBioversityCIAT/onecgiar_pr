@@ -24,7 +24,7 @@
           optionValue="toc_result_id"
           placeholder="Select outcome"
           [(ngModel)]="activeTab.toc_result_id"
-          (ngModelChange)="getIndicator(); validateSelectedOptionEOI()">
+          (ngModelChange)="getIndicator(); validateSelectedOptionEOI(); getIndicatorsList()">
         </app-pr-select>
       }
       @case (2) {
@@ -38,7 +38,7 @@
           optionValue="toc_result_id"
           placeholder="Select outcome"
           [(ngModel)]="activeTab.toc_result_id"
-          (ngModelChange)="getIndicator(); validateSelectedOptionOutCome()">
+          (ngModelChange)="getIndicator(); validateSelectedOptionOutCome(); getIndicatorsList()">
         </app-pr-select>
       }
       @case (1) {
@@ -52,20 +52,22 @@
           placeholder="Select output"
           [(ngModel)]="activeTab.toc_result_id"
           [extraInformation]="true"
-          (ngModelChange)="getIndicator(); validateSelectedOptionOutPut()">
+          (ngModelChange)="getIndicator(); validateSelectedOptionOutPut(); getIndicatorsList()">
         </app-pr-select>
       }
     }
 
-    <app-pr-select
-      [options]="this.indicatorsList()"
-      label="Indicator"
-      [editable]="editable"
-      optionLabel="indicator_description"
-      optionValue="related_node_id"
-      placeholder="Select outcome level"
-      [(ngModel)]="activeTab.indicators[0].related_node_id">
-    </app-pr-select>
+    @if (showIndicators()) {
+      <app-pr-select
+        [options]="this.indicatorsList()"
+        label="Indicator"
+        [editable]="editable"
+        optionLabel="indicator_description"
+        optionValue="related_node_id"
+        placeholder="Select outcome level"
+        [(ngModel)]="activeTab.indicators[0].related_node_id">
+      </app-pr-select>
+    }
   </div>
 
   <hr class="divider-20" />

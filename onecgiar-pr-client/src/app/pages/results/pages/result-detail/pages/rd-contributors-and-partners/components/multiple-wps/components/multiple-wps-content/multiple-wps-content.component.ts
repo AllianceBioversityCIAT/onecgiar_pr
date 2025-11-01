@@ -29,6 +29,7 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   reusltlevelSE = inject(ResultLevelService);
   indicatorsList = signal<any[]>([]);
   indicatorView = false;
+  showIndicators = signal<boolean>(false);
 
   toc_level_id_signal = signal<number | null>(null);
 
@@ -57,6 +58,7 @@ export class CPMultipleWPsContentComponent implements OnChanges {
     const filterIndicators = list => {
       if (!list.length) return;
       const itemSelected = list.find(item => item.toc_result_id === this.activeTab.toc_result_id);
+      console.log(itemSelected.indicators);
       this.indicatorsList.set(itemSelected.indicators);
       this.activeTab.indicators[0].related_node_id = this.activeTab.indicators[0].toc_results_indicator_id;
     };
@@ -71,9 +73,18 @@ export class CPMultipleWPsContentComponent implements OnChanges {
         filterIndicators(this.outputList);
         break;
     }
+    this.hideIndicators();
+  }
+
+  hideIndicators() {
+    this.showIndicators.set(false);
+    setTimeout(() => {
+      this.showIndicators.set(true);
+    }, 100);
   }
 
   ngOnChanges() {
+    console.log('raimundo');
     this.toc_level_id_signal.set(this.activeTab?.toc_level_id);
     this.getIndicatorsList();
 
