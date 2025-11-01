@@ -576,6 +576,26 @@ export class ResultsFrameworkReportingService {
           };
         }
 
+        const categoryLevelMap: Record<string, number> = {
+          OUTPUT: 1,
+          OUTCOME: 2,
+          EOI: 3,
+        };
+
+        const normalizedCategory = `${tocResult?.category ?? ''}`
+          .trim()
+          .toUpperCase();
+        const resolvedTocLevelId = categoryLevelMap[normalizedCategory];
+
+        if (!resolvedTocLevelId) {
+          throw {
+            response: {},
+            message:
+              'The ToC result category is not supported for automatic level mapping.',
+            status: HttpStatus.BAD_REQUEST,
+          };
+        }
+
         let primaryTocRecord = await this._resultsTocResultRepository.findOne({
           where: {
             result_id: createdResultId,
@@ -589,16 +609,19 @@ export class ResultsFrameworkReportingService {
             primaryTocRecord.result_toc_result_id,
             {
               toc_result_id: resolvedTocResultId,
+              toc_level_id: resolvedTocLevelId,
               toc_progressive_narrative:
                 payload.toc_progressive_narrative ?? null,
               last_updated_by: user.id,
               is_active: true,
+              planned_result: true,
             },
           );
         } else {
           primaryTocRecord = await this._resultsTocResultRepository.save({
             initiative_ids: initiativeId,
             toc_result_id: resolvedTocResultId,
+            toc_level_id: resolvedTocLevelId,
             result_id: createdResultId,
             planned_result: true,
             toc_progressive_narrative:

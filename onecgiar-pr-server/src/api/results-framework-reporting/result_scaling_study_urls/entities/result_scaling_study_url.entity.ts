@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { User } from '../../../../auth/modules/user/entities/user.entity';
 import { ResultsInnovationsUse } from '../../../results/summary/entities/results-innovations-use.entity';
+import { ResultsInnovationsDev } from '../../../results/summary/entities/results-innovations-dev.entity';
 
 @Entity('result_scaling_study_urls')
 export class ResultScalingStudyUrl {
@@ -20,9 +21,24 @@ export class ResultScalingStudyUrl {
   @Column({
     name: 'result_innov_use_id',
     type: 'bigint',
-    nullable: false,
+    nullable: true,
   })
   result_innov_use_id!: number;
+
+  @Column({
+    name: 'result_innov_dev_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  result_innov_dev_id!: number;
+
+  @ManyToOne(() => ResultsInnovationsDev, {
+    nullable: false,
+  })
+  @JoinColumn({
+    name: 'result_innov_dev_id',
+  })
+  obj_result_innov_dev: ResultsInnovationsDev;
 
   @Column({
     name: 'study_url',

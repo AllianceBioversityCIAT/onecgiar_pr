@@ -440,6 +440,298 @@ export class ResultsTocResultsService {
     }
   }
 
+  async getTocByResultV2(resultId: number) {
+    try {
+      const result = await this._resultRepository.getResultById(resultId);
+      const resultInit =
+        await this._resultByInitiativesRepository.getOwnerInitiativeByResult(
+          resultId,
+        );
+
+      if (!result?.id || !resultInit?.id) {
+        throw {
+          response: { resultId },
+          message: 'Result or Initiative not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const [conAccepted, conPending, contributingAndPrimary] =
+        await Promise.all([
+          this._resultByInitiativesRepository.getContributorInitiativeByResult(
+            resultId,
+          ),
+          this._resultByInitiativesRepository.getPendingInit(resultId),
+          this._resultByInitiativesRepository.getContributorInitiativeAndPrimaryByResult(
+            resultId,
+          ),
+        ]);
+
+      const contributingInitiatives = {
+        accepted_contributing_initiatives: conAccepted ?? [],
+        pending_contributing_initiatives: conPending ?? [],
+      };
+
+      const initiativeIds = new Set<number>();
+      initiativeIds.add(resultInit.id);
+      for (const init of conAccepted ?? []) {
+        if (init?.id) {
+          initiativeIds.add(Number(init.id));
+        }
+      }
+
+      const mappingRows =
+        initiativeIds.size > 0
+          ? await this._resultsTocResultRepository.getRTRPrimaryV2(
+              resultId,
+              Array.from(initiativeIds),
+            )
+          : [];
+
+      interface IndicatorAccumulator {
+        result_toc_result_indicator_id: number;
+        toc_results_indicator_id: string | null;
+        indicator_contributing: string | null;
+        status_id: number | null;
+        targets: Array<{
+          indicators_targets: number | null;
+          number_target: number | null;
+          contributing_indicator: number | null;
+          target_date: number | null;
+          target_progress_narrative: string | null;
+          indicator_question: boolean | null;
+        }>;
+      }
+
+      interface ResultAccumulator {
+        result_toc_result_id: number;
+        toc_result_id: number | null;
+        planned_result: boolean | null;
+        initiative_id: number | null;
+        toc_progressive_narrative: string | null;
+        toc_level_id: number | null;
+        indicatorsMap: Map<number, IndicatorAccumulator>;
+      }
+
+      interface InitiativeAccumulator {
+        initiative_id: number;
+        official_code: string | null;
+        short_name: string | null;
+        planned_result: boolean | null;
+        resultsMap: Map<number, ResultAccumulator>;
+      }
+
+      const initiativesMap = new Map<number, InitiativeAccumulator>();
+
+      for (const row of mappingRows ?? []) {
+        const initiativeId = Number(row?.initiative_id);
+        if (!Number.isFinite(initiativeId)) {
+          continue;
+        }
+
+        const resultTocResultId = Number(row?.result_toc_result_id);
+
+        let initiativeEntry = initiativesMap.get(initiativeId);
+        if (!initiativeEntry) {
+          initiativeEntry = {
+            initiative_id: initiativeId,
+            official_code:
+              typeof row?.official_code === 'string' ? row.official_code : null,
+            short_name:
+              typeof row?.short_name === 'string' ? row.short_name : null,
+            planned_result:
+              row?.planned_result === null || row?.planned_result === undefined
+                ? null
+                : Boolean(row.planned_result),
+            resultsMap: new Map(),
+          };
+          initiativesMap.set(initiativeId, initiativeEntry);
+        } else if (
+          initiativeEntry.planned_result === null &&
+          row?.planned_result !== null &&
+          row?.planned_result !== undefined
+        ) {
+          initiativeEntry.planned_result = Boolean(row.planned_result);
+        }
+
+        if (!Number.isFinite(resultTocResultId)) {
+          continue;
+        }
+
+        let resultEntry = initiativeEntry.resultsMap.get(resultTocResultId);
+        if (!resultEntry) {
+          resultEntry = {
+            result_toc_result_id: resultTocResultId,
+            toc_result_id:
+              row?.toc_result_id !== null && row?.toc_result_id !== undefined
+                ? Number(row.toc_result_id)
+                : null,
+            planned_result:
+              row?.planned_result === null || row?.planned_result === undefined
+                ? null
+                : Boolean(row.planned_result),
+            initiative_id:
+              row?.initiative_id !== null && row?.initiative_id !== undefined
+                ? Number(row.initiative_id)
+                : null,
+            toc_progressive_narrative:
+              typeof row?.toc_progressive_narrative === 'string'
+                ? row.toc_progressive_narrative
+                : null,
+            toc_level_id:
+              row?.toc_level_id !== null && row?.toc_level_id !== undefined
+                ? Number(row.toc_level_id)
+                : null,
+            indicatorsMap: new Map(),
+          };
+          initiativeEntry.resultsMap.set(resultTocResultId, resultEntry);
+        }
+
+        const indicatorId = Number(row?.result_toc_result_indicator_id);
+        if (Number.isFinite(indicatorId)) {
+          let indicatorEntry = resultEntry.indicatorsMap.get(indicatorId);
+          if (!indicatorEntry) {
+            indicatorEntry = {
+              result_toc_result_indicator_id: indicatorId,
+              toc_results_indicator_id: row?.toc_results_indicator_id ?? null,
+              indicator_contributing: row?.indicator_contributing ?? null,
+              status_id:
+                row?.indicator_status !== null &&
+                row?.indicator_status !== undefined
+                  ? Number(row.indicator_status)
+                  : null,
+              targets: [],
+            };
+            resultEntry.indicatorsMap.set(indicatorId, indicatorEntry);
+          }
+
+          const targetIdRaw = row?.indicators_targets;
+          if (targetIdRaw !== undefined) {
+            const targetId = targetIdRaw !== null ? Number(targetIdRaw) : null;
+            const existingTarget = indicatorEntry.targets.find(
+              (target) => target.indicators_targets === targetId,
+            );
+
+            if (!existingTarget) {
+              indicatorEntry.targets.push({
+                indicators_targets: targetId,
+                number_target:
+                  row?.number_target !== null &&
+                  row?.number_target !== undefined
+                    ? Number(row.number_target)
+                    : null,
+                contributing_indicator:
+                  row?.contributing_indicator !== null &&
+                  row?.contributing_indicator !== undefined
+                    ? Number(row.contributing_indicator)
+                    : null,
+                target_date:
+                  row?.target_date !== null && row?.target_date !== undefined
+                    ? Number(row.target_date)
+                    : null,
+                target_progress_narrative:
+                  row?.target_progress_narrative ?? null,
+                indicator_question:
+                  row?.indicator_question !== null &&
+                  row?.indicator_question !== undefined
+                    ? Boolean(row.indicator_question)
+                    : null,
+              });
+            }
+          }
+        }
+      }
+
+      const serializeInitiativeEntry = (
+        initiativeId: number,
+        fallback: {
+          official_code?: string | null;
+          short_name?: string | null;
+        } = {},
+      ) => {
+        const entry = initiativesMap.get(initiativeId);
+        const resultArray =
+          entry?.resultsMap !== undefined
+            ? Array.from(entry.resultsMap.values()).map((result) => ({
+                result_toc_result_id: result.result_toc_result_id,
+                toc_result_id: result.toc_result_id,
+                planned_result: result.planned_result,
+                initiative_id: result.initiative_id,
+                toc_progressive_narrative: result.toc_progressive_narrative,
+                toc_level_id: result.toc_level_id,
+                indicators: Array.from(result.indicatorsMap.values()).map(
+                  (indicator) => ({
+                    result_toc_result_indicator_id:
+                      indicator.result_toc_result_indicator_id,
+                    toc_results_indicator_id:
+                      indicator.toc_results_indicator_id,
+                    indicator_contributing: indicator.indicator_contributing,
+                    status_id: indicator.status_id,
+                    targets: indicator.targets,
+                  }),
+                ),
+              }))
+            : [];
+
+        return {
+          planned_result: entry?.planned_result ?? null,
+          initiative_id: initiativeId,
+          official_code: entry?.official_code ?? fallback.official_code ?? null,
+          short_name: entry?.short_name ?? fallback.short_name ?? null,
+          result_toc_results: resultArray,
+        };
+      };
+
+      const primaryMapping = serializeInitiativeEntry(resultInit.id, {
+        official_code: resultInit.official_code ?? null,
+        short_name: resultInit.short_name ?? null,
+      });
+
+      const contributorMappings =
+        (conAccepted ?? []).map((initiative) =>
+          serializeInitiativeEntry(Number(initiative?.id), {
+            official_code: initiative?.official_code ?? null,
+            short_name: initiative?.short_name ?? null,
+          }),
+        ) ?? [];
+
+      for (const pending of conPending ?? []) {
+        const pendingId = Number(pending?.id);
+        if (!Number.isFinite(pendingId)) {
+          continue;
+        }
+        const existing = contributorMappings.find(
+          (entry) => entry.initiative_id === pendingId,
+        );
+        if (!existing) {
+          contributorMappings.push({
+            planned_result: null,
+            initiative_id: pendingId,
+            official_code: pending?.official_code ?? null,
+            short_name: pending?.short_name ?? null,
+            result_toc_results: [],
+          });
+        }
+      }
+
+      return {
+        response: {
+          contributing_initiatives: contributingInitiatives,
+          contributing_and_primary_initiative: contributingAndPrimary ?? [],
+          result_toc_result: primaryMapping,
+          contributors_result_toc_result: contributorMappings,
+          impacts: null,
+          impactsTarge: null,
+          sdgTargets: null,
+        },
+        message: 'The toc data is successfully created',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
   async getTocResultIndicatorByResultTocId(
     resultIdToc: number,
     toc_result_id: number,
