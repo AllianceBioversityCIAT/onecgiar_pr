@@ -199,6 +199,32 @@
     (clickEvent)="addBilateralContribution()"></app-add-button>
   <!-- Contributing non-pooled end -->
 
+  <app-pr-radio-button
+    fieldRef="[innovation-use-form]-has-innovation-link"
+    [options]="[
+      { value: true, label: 'Yes' },
+      { value: false, label: 'No' }
+    ]"
+    optionLabel="label"
+    [(ngModel)]="this.rdPartnersSE.partnersBody.has_innovation_link"
+    optionValue="value">
+  </app-pr-radio-button>
+
+  @if (this.rdPartnersSE.partnersBody.has_innovation_link && this.fieldsManagerSE.isP25()) {
+    <app-pr-multi-select
+      [options]="this.innovationUseResultsSE.resultsList"
+      [(ngModel)]="this.rdPartnersSE.partnersBody.linked_results"
+      optionLabel="title"
+      optionValue="id"
+      [group]="true"
+      optionGroupLabel="name"
+      optionGroupChildren="options"
+      label="Please select a result"
+      placeholder="Please select a result"
+      selectedLabel="Results selected"
+      selectedOptionLabel="title">
+    </app-pr-multi-select>
+  }
   <app-alert-status
     *ngIf="this.api.dataControlSE.isKnowledgeProduct"
     description="In this section you can enter CGIAR Center partners. If you notice any discrepancies, such as partners appearing in CGSpace but not here, please reach out to PRMSTechSupport@cgiar.org for assistance. ">

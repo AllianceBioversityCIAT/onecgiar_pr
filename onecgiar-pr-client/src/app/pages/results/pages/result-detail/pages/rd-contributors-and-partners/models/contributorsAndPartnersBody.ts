@@ -8,6 +8,8 @@ export class ContributorsAndPartnersBody extends TheoryOfChangeBody {
   public contributing_center: ResultsCenterDto[];
   public is_lead_by_partner: boolean | null;
   owner_initiative: OwnerInitiative;
+  has_innovation_link: boolean = false;
+  linked_results: any[] = [];
 }
 
 export interface OwnerInitiative {

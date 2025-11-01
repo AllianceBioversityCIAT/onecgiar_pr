@@ -8,6 +8,8 @@ import { NonPooledProjectDto } from '../rd-partners/models/partnersBody';
 import { RdContributorsAndPartnersService } from './rd-contributors-and-partners.service';
 import { ContributorsAndPartnersBody } from './models/contributorsAndPartnersBody';
 import { ResultLevelService } from '../../../result-creator/services/result-level.service';
+import { InnovationUseResultsService } from '../../../../../../shared/services/global/innovation-use-results.service';
+import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 
 @Component({
   selector: 'app-rd-contributors-and-partners',
@@ -24,7 +26,8 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   cgCentersMessage: string = `This section displays CGIAR Center partners as they appear in <a class="open_route" href="/result/result-detail/${this.resultCode}/theory-of-change?phase=${this.versionId}" target="_blank">Section 2, Theory of Change</a>.</li> Should you identify any inconsistencies, please update Section 2`;
 
   disabledText = 'To remove this center, please contact your librarian';
-
+  innovationUseResultsSE = inject(InnovationUseResultsService);
+  fieldsManagerSE = inject(FieldsManagerService);
   constructor(
     public api: ApiService,
     public institutionsSE: InstitutionsService,
