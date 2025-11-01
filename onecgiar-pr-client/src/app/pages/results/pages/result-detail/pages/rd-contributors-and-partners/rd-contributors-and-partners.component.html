@@ -144,60 +144,6 @@
   </ng-template>
 
   <br />
-  <!-- Lead partner/center end -->
-
-  <!-- Contributing non-pooled start -->
-  <div class="column_title">Contributing non-pooled projects</div>
-  <app-alert-status
-    *ngIf="!this.api.rolesSE.readOnly"
-    description="If you don't find the partner you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list.">
-  </app-alert-status>
-  <div class="donors">
-    <div class="donor" *ngFor="let donor of this.rdPartnersSE.partnersBody.contributing_np_projects; let i = index">
-      <app-pr-field-header [label]="'Non-pooled project No. ' + (i + 1)" [required]="false"></app-pr-field-header>
-      <app-pr-select
-        class="segment_title_margin"
-        [options]="this.institutionsSE?.institutionsList"
-        label="Funder name"
-        optionLabel="full_name"
-        optionValue="institutions_id"
-        placeholder="Select funder"
-        [(ngModel)]="donor.funder">
-      </app-pr-select>
-      <div class="auto_fit_container">
-        <app-pr-input label="Grant title" [required]="true" [(ngModel)]="donor.grant_title" placeholder="Grant title goes here..."> </app-pr-input>
-        <app-pr-input label="Center Grant ID" [required]="false" [(ngModel)]="donor.center_grant_id" placeholder="e.g. G184"> </app-pr-input>
-        <app-pr-select
-          [options]="this.rdPartnersSE.nppCenters"
-          label="Lead/Contract Center"
-          optionLabel="name"
-          optionValue="lead_center"
-          placeholder="Select donor"
-          [(ngModel)]="donor.lead_center"
-          placeholder="Lead/Contract Center goes here...">
-        </app-pr-select>
-      </div>
-      <app-edit-or-delete-item-button
-        (click)="deleteEvidence(i)"
-        *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status">
-      </app-edit-or-delete-item-button>
-    </div>
-  </div>
-
-  <app-no-data-text
-    *ngIf="
-      !this.rdPartnersSE.partnersBody?.contributing_np_projects?.length &&
-      !this.api.rolesSE.readOnly &&
-      !this.api.dataControlSE?.currentResult?.status
-    "
-    title="No Non-pooled added">
-  </app-no-data-text>
-
-  <app-add-button
-    name="Add non-pooled project"
-    *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status"
-    (clickEvent)="addBilateralContribution()"></app-add-button>
-  <!-- Contributing non-pooled end -->
 
   <app-pr-multi-select
     [options]="this.rdPartnersSE.clarisaProjectsList"
