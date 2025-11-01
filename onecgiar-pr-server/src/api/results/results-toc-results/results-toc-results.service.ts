@@ -1327,23 +1327,6 @@ export class ResultsTocResultsService {
         await this._shareResultRequestRepository.cancelRequest(toCancelIds);
       }
 
-      const normalizeTocLevel = (planned: any, provided?: number | null) => {
-        const allowed = new Set([3, 4, 7]);
-        const maybe = provided ?? null;
-
-        if (planned === 0 || planned === false) {
-          if (allowed.has(Number(maybe))) return Number(maybe);
-          return 3;
-        }
-        if (planned === 1 || planned === true) {
-          if (allowed.has(Number(maybe))) return Number(maybe);
-          return 4;
-        }
-
-        if (allowed.has(Number(maybe))) return Number(maybe);
-        return 4;
-      };
-
       const incomingIdsPrimary: number[] = (
         result_toc_result?.result_toc_results ?? []
       )
@@ -1384,19 +1367,13 @@ export class ResultsTocResultsService {
         for (const t of result_toc_result.result_toc_results) {
           if (!t?.result_toc_result_id && !t?.toc_result_id) continue;
 
-          const lvl = normalizeTocLevel(
-            result_toc_result.planned_result,
-            t?.toc_level_id ?? null,
-          );
-
           if (t?.result_toc_result_id) {
             await this._resultsTocResultRepository.update(
               Number(t.result_toc_result_id),
               {
-                initiative_id: changePrimaryInit,
                 toc_result_id: t?.toc_result_id ?? null,
                 toc_progressive_narrative: t?.toc_progressive_narrative ?? null,
-                toc_level_id: lvl,
+                toc_level_id: t?.toc_level_id ?? null,
                 planned_result: result_toc_result?.planned_result ?? null,
                 action_area_outcome_id: null,
                 is_active: true,
@@ -1405,10 +1382,9 @@ export class ResultsTocResultsService {
             );
           } else {
             await this._resultsTocResultRepository.insert({
-              initiative_id: changePrimaryInit,
               toc_result_id: t?.toc_result_id ?? null,
               toc_progressive_narrative: t?.toc_progressive_narrative ?? null,
-              toc_level_id: lvl,
+              toc_level_id: t?.toc_level_id ?? null,
               planned_result: result_toc_result?.planned_result ?? null,
               action_area_outcome_id: null,
               result_id: result.id,
@@ -1418,7 +1394,6 @@ export class ResultsTocResultsService {
             });
           }
         }
-      } else {
       }
 
       if (Array.isArray(contributors_result_toc_result)) {
@@ -1435,11 +1410,6 @@ export class ResultsTocResultsService {
           for (const t of contrib.result_toc_results ?? []) {
             if (!t?.result_toc_result_id && !t?.toc_result_id) continue;
 
-            const lvl = normalizeTocLevel(
-              contrib.planned_result,
-              t?.toc_level_id ?? null,
-            );
-
             if (t?.result_toc_result_id) {
               await this._resultsTocResultRepository.update(
                 Number(t.result_toc_result_id),
@@ -1448,7 +1418,7 @@ export class ResultsTocResultsService {
                   toc_result_id: t?.toc_result_id ?? null,
                   toc_progressive_narrative:
                     t?.toc_progressive_narrative ?? null,
-                  toc_level_id: lvl,
+                  toc_level_id: t?.toc_level_id ?? null,
                   planned_result: contrib?.planned_result ?? null,
                   action_area_outcome_id: null,
                   is_active: true,
@@ -1460,7 +1430,7 @@ export class ResultsTocResultsService {
                 initiative_id: contrib.initiative_id,
                 toc_result_id: t?.toc_result_id ?? null,
                 toc_progressive_narrative: t?.toc_progressive_narrative ?? null,
-                toc_level_id: lvl,
+                toc_level_id: t?.toc_level_id ?? null,
                 planned_result: contrib?.planned_result ?? null,
                 action_area_outcome_id: null,
                 result_id: result.id,

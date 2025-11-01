@@ -100,6 +100,7 @@ describe('ContributorsPartnersService', () => {
           useValue: {
             findOne: jest.fn(),
             update: jest.fn(),
+            save: jest.fn(),
           },
         },
         {
@@ -107,6 +108,7 @@ describe('ContributorsPartnersService', () => {
           useValue: {
             findOne: jest.fn(),
             update: jest.fn(),
+            save: jest.fn(),
           },
         },
         {
@@ -154,7 +156,9 @@ describe('ContributorsPartnersService', () => {
     linkedResultRepository.save.mockResolvedValue(undefined);
     linkedResultRepository.getActiveLinkedResultIds.mockResolvedValue([]);
     resultsInnovationsDevRepository.update.mockResolvedValue({} as any);
+    resultsInnovationsDevRepository.save.mockResolvedValue({} as any);
     resultsInnovationsUseRepository.update.mockResolvedValue({} as any);
+    resultsInnovationsUseRepository.save.mockResolvedValue({} as any);
     resultsInnovationsDevRepository.findOne.mockResolvedValue(null);
     resultsInnovationsUseRepository.findOne.mockResolvedValue(null);
   });
@@ -285,7 +289,7 @@ describe('ContributorsPartnersService', () => {
       );
       expect(resultsInnovationsDevRepository.findOne).toHaveBeenCalledWith({
         where: { results_id: resultId, is_active: true },
-        select: ['has_innovation_link'],
+        select: { has_innovation_link: true },
       });
       expect(
         linkedResultRepository.getActiveLinkedResultIds,
@@ -428,20 +432,20 @@ describe('ContributorsPartnersService', () => {
         user,
       );
 
-      expect(resultsInnovationsDevRepository.update).toHaveBeenCalledWith(
-        { results_id: 55 },
-        {
+      expect(resultsInnovationsDevRepository.update).not.toHaveBeenCalled();
+      expect(resultsInnovationsDevRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          results_id: 55,
           has_innovation_link: true,
+          created_by: user.id,
           last_updated_by: user.id,
-        },
+        }),
       );
-      expect(resultsInnovationsDevRepository.update).toHaveBeenCalledTimes(1);
       expect(resultRepository.find).toHaveBeenCalledWith({
         where: {
           id: expect.anything(),
           is_active: true,
         },
-        select: ['id'],
       });
       expect(resultRepository.find).toHaveBeenCalledTimes(1);
       expect(linkedResultRepository.updateLink).toHaveBeenCalledWith(
