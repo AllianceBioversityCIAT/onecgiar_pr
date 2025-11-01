@@ -21,7 +21,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   resultLevelSE = inject(ResultLevelService);
   resultCode = this?.api?.dataControlSE?.currentResult?.result_code;
   versionId = this?.api?.dataControlSE?.currentResult?.version_id;
-
+  contributingInitiativesList = [];
   alertStatusMessage: string = `Partner organization or CG Center that you collaborated with or are currently collaborating with to generate this result.`;
   cgCentersMessage: string = `This section displays CGIAR Center partners as they appear in <a class="open_route" href="/result/result-detail/${this.resultCode}/theory-of-change?phase=${this.versionId}" target="_blank">Section 2, Theory of Change</a>.</li> Should you identify any inconsistencies, please update Section 2`;
 
@@ -43,6 +43,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     this.rdPartnersSE.partnersBody = new ContributorsAndPartnersBody();
     this.rdPartnersSE.getSectionInformation();
     this.rdPartnersSE.loadClarisaProjects();
+    this.GET_AllWithoutResults();
     this.api.dataControlSE.findClassTenSeconds('alert-event').then(_resp => {
       try {
         document.querySelectorAll('.alert-event').forEach(element => {
@@ -52,6 +53,22 @@ export class RdContributorsAndPartnersComponent implements OnInit {
         });
       } catch (error) {
         console.error(error);
+      }
+    });
+  }
+
+  GET_AllWithoutResults() {
+    this.api.resultsSE.GET_resultById().subscribe({
+      next: ({ response }) => {
+        this.api.dataControlSE.currentResult = response;
+        const activePortfolio = this.api.dataControlSE.currentResult?.portfolio;
+        this.api.resultsSE.GET_AllWithoutResults(activePortfolio).subscribe(({ response }) => {
+          this.contributingInitiativesList = response;
+          // this.changeDetectorRef.detectChanges();
+        });
+      },
+      error: err => {
+        console.error(err);
       }
     });
   }

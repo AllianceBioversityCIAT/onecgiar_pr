@@ -71,6 +71,20 @@
     <ng-template #item let-project> </ng-template>
   </app-pr-multi-select>
 
+  <app-pr-multi-select
+    [options]="this.contributingInitiativesList"
+    label="Contributing {{ 'term.entity.orPlatformsPlural' | term: this.api.dataControlSE.currentResult?.portfolio }}"
+    [disableOptions]="this.rdPartnersSE.disabledOptions"
+    optionLabel="full_name"
+    optionValue="id"
+    (selectOptionEvent)="this.rdPartnersSE.onSelectContributingInitiative()"
+    [required]="false"
+    selectedOptionLabel="full_name"
+    [(ngModel)]="this.rdPartnersSE.partnersBody.contributingInitiativeNew"
+    [confirmDeletion]="true"
+    [placeholder]="'Select ' + ('term.entity.orPlatformsWith()' | term: this.api.dataControlSE.currentResult?.portfolio)">
+  </app-pr-multi-select>
+
   <div class="medal_selector selected_container">
     <div class="centers chips_container">
       <div

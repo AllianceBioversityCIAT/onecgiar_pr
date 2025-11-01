@@ -11,6 +11,7 @@ export class ContributorsAndPartnersBody extends TheoryOfChangeBody {
   has_innovation_link: boolean = false;
   linked_results: any[] = [];
   bilateral_projects: any[] = [];
+  contributingInitiativeNew: any[] = [];
 }
 
 export interface OwnerInitiative {

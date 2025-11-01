@@ -7,6 +7,7 @@ import { InstitutionsService } from '../../../../../../shared/services/global/in
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
 import { ContributorsAndPartnersBody } from './models/contributorsAndPartnersBody';
 import { RdCpTheoryOfChangesServicesService } from './rd-cp-theory-of-changes-services.service';
+import { ResultTocResultsInterface } from '../rd-theory-of-change/model/theoryOfChangeBody';
 
 @Injectable({
   providedIn: 'root'
@@ -92,6 +93,17 @@ export class RdContributorsAndPartnersService implements OnDestroy {
     if (!Array.isArray(deliveries)) return false;
 
     return deliveries.find(delivery => delivery.partner_delivery_type_id == deliveryId);
+  }
+
+  onSelectContributingInitiative() {
+    this.partnersBody?.contributing_initiatives.accepted_contributing_initiatives.forEach((resp: any) => {
+      const contributorFinded = this.partnersBody.contributors_result_toc_result?.find((result: any) => result?.initiative_id === resp.id);
+      const contributorToPush = new ResultTocResultsInterface();
+      contributorToPush.initiative_id = resp.id;
+      contributorToPush.short_name = resp.short_name;
+      contributorToPush.official_code = resp.official_code;
+      if (!contributorFinded) this.partnersBody.contributors_result_toc_result?.push(contributorToPush);
+    });
   }
 
   onSelectDeliveryPartners(option, deliveryId: number) {
