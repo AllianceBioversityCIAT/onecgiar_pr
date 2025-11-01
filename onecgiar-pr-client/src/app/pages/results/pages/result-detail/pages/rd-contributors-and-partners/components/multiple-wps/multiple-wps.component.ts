@@ -84,7 +84,6 @@ export class CPMultipleWPsComponent implements OnChanges {
     }
 
     this.activeTab = this.initiative()?.result_toc_results[0];
-    console.log(this.activeTab.toc_level_id, 'this.activeTab.toc_level_id');
   }
 
   GET_outputList() {
@@ -97,7 +96,6 @@ export class CPMultipleWPsComponent implements OnChanges {
       )
       .subscribe({
         next: ({ response }) => {
-          console.log(response, 'response');
           this.outputList = response;
         },
         error: err => {

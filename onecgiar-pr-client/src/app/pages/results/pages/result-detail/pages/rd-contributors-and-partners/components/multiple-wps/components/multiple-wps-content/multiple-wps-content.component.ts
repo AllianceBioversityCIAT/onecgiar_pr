@@ -55,6 +55,7 @@ export class CPMultipleWPsContentComponent implements OnChanges {
 
   getIndicatorsList() {
     const filterIndicators = list => {
+      if (!list.length) return;
       const itemSelected = list.find(item => item.toc_result_id === this.activeTab.toc_result_id);
       this.indicatorsList.set(itemSelected.indicators);
       this.activeTab.indicators[0].related_node_id = this.activeTab.indicators[0].toc_results_indicator_id;
