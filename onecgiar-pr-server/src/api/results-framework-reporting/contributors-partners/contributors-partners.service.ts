@@ -353,25 +353,29 @@ export class ContributorsPartnersService {
     resultId: number,
     resultTypeId: number,
   ): Promise<boolean> {
-    if (resultTypeId === ResultTypeEnum.INNOVATION_DEVELOPMENT) {
-      const record = await this._resultsInnovationsDevRepository.findOne({
-        where: { results_id: resultId, is_active: true },
-        select: ['has_innovation_link'],
-      });
+    try {
+      if (resultTypeId === ResultTypeEnum.INNOVATION_DEVELOPMENT) {
+        const record = await this._resultsInnovationsDevRepository.findOne({
+          where: { results_id: resultId, is_active: true },
+          select: { has_innovation_link: true },
+        });
 
-      return !!record?.has_innovation_link;
+        return !!record?.has_innovation_link;
+      }
+
+      if (resultTypeId === ResultTypeEnum.INNOVATION_USE) {
+        const record = await this._resultsInnovationsUseRepository.findOne({
+          where: { results_id: resultId, is_active: true },
+          select: { has_innovation_link: true },
+        });
+
+        return !!record?.has_innovation_link;
+      }
+
+      return false;
+    } catch (error) {
+      return false;
     }
-
-    if (resultTypeId === ResultTypeEnum.INNOVATION_USE) {
-      const record = await this._resultsInnovationsUseRepository.findOne({
-        where: { results_id: resultId, is_active: true },
-        select: ['has_innovation_link'],
-      });
-
-      return !!record?.has_innovation_link;
-    }
-
-    return false;
   }
 
   private async updateInnovationSummaryLink(
@@ -380,25 +384,62 @@ export class ContributorsPartnersService {
     hasInnovationLink: boolean,
     userId: number,
   ) {
-    if (resultTypeId === ResultTypeEnum.INNOVATION_DEVELOPMENT) {
-      await this._resultsInnovationsDevRepository.update(
-        { results_id: resultId },
-        {
-          has_innovation_link: hasInnovationLink,
-          last_updated_by: userId,
-        },
-      );
-      return;
-    }
+    try {
+      if (resultTypeId === ResultTypeEnum.INNOVATION_DEVELOPMENT) {
+        const existing = await this._resultsInnovationsDevRepository.findOne({
+          where: { results_id: resultId, is_active: true },
+        });
 
-    if (resultTypeId === ResultTypeEnum.INNOVATION_USE) {
-      await this._resultsInnovationsUseRepository.update(
-        { results_id: resultId },
-        {
-          has_innovation_link: hasInnovationLink,
-          last_updated_by: userId,
-        },
-      );
+        if (existing) {
+          await this._resultsInnovationsDevRepository.update(
+            { results_id: resultId },
+            {
+              has_innovation_link: hasInnovationLink,
+              last_updated_by: userId,
+            },
+          );
+        } else {
+          await this._resultsInnovationsDevRepository.save({
+            results_id: resultId,
+            has_innovation_link: hasInnovationLink,
+            is_active: true,
+            created_by: userId,
+            last_updated_by: userId,
+          } as any);
+        }
+        return;
+      }
+
+      if (resultTypeId === ResultTypeEnum.INNOVATION_USE) {
+        const existing = await this._resultsInnovationsUseRepository.findOne({
+          where: { results_id: resultId, is_active: true },
+        });
+
+        if (existing) {
+          await this._resultsInnovationsUseRepository.update(
+            { results_id: resultId },
+            {
+              has_innovation_link: hasInnovationLink,
+              last_updated_by: userId,
+            },
+          );
+        } else {
+          await this._resultsInnovationsUseRepository.save({
+            results_id: resultId,
+            has_innovation_link: hasInnovationLink,
+            is_active: true,
+            created_by: userId,
+            last_updated_by: userId,
+          } as any);
+        }
+      }
+    } catch (error) {
+      throw {
+        response: { resultId, resultTypeId, hasInnovationLink },
+        message: 'Failed to persist innovation link state for the result.',
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+        error,
+      };
     }
   }
 
@@ -407,82 +448,90 @@ export class ContributorsPartnersService {
     desiredLinkedIds: number[],
     userId: number,
   ): Promise<number[]> {
-    if (!desiredLinkedIds.length) {
+    try {
+      if (!desiredLinkedIds.length) {
+        await this._linkedResultRepository.updateLink(
+          resultId,
+          [],
+          [],
+          userId,
+          false,
+        );
+        return [];
+      }
+
+      const activeResults = await this._resultRepository.find({
+        where: {
+          id: In(desiredLinkedIds),
+          is_active: true,
+        },
+      });
+
+      const activeIds = new Set(
+        (activeResults ?? []).map((result) => Number(result.id)),
+      );
+
+      const filteredLinkedIds = desiredLinkedIds.filter((id) =>
+        activeIds.has(id),
+      );
+
+      if (!filteredLinkedIds.length) {
+        await this._linkedResultRepository.updateLink(
+          resultId,
+          [],
+          [],
+          userId,
+          false,
+        );
+        return [];
+      }
+
       await this._linkedResultRepository.updateLink(
         resultId,
-        [],
+        filteredLinkedIds,
         [],
         userId,
         false,
       );
-      return [];
-    }
 
-    const activeResults = await this._resultRepository.find({
-      where: {
-        id: In(desiredLinkedIds),
-        is_active: true,
-      },
-      select: ['id'],
-    });
+      const existing = await this._linkedResultRepository.find({
+        where: {
+          origin_result_id: resultId,
+          linked_results_id: In(filteredLinkedIds),
+        },
+      });
 
-    const activeIds = new Set(
-      (activeResults ?? []).map((result) => Number(result.id)),
-    );
-
-    const filteredLinkedIds = desiredLinkedIds.filter((id) =>
-      activeIds.has(id),
-    );
-
-    if (!filteredLinkedIds.length) {
-      await this._linkedResultRepository.updateLink(
-        resultId,
-        [],
-        [],
-        userId,
-        false,
+      const existingIds = new Set(
+        (existing ?? []).map((link) => Number(link.linked_results_id)),
       );
-      return [];
-    }
 
-    await this._linkedResultRepository.updateLink(
-      resultId,
-      filteredLinkedIds,
-      [],
-      userId,
-      false,
-    );
+      const toCreate = filteredLinkedIds.filter((id) => !existingIds.has(id));
 
-    const existing = await this._linkedResultRepository.find({
-      where: {
-        origin_result_id: resultId,
-        linked_results_id: In(filteredLinkedIds),
-      },
-    });
+      if (!toCreate.length) {
+        return filteredLinkedIds;
+      }
 
-    const existingIds = new Set(
-      (existing ?? []).map((link) => Number(link.linked_results_id)),
-    );
+      const newEntities = toCreate.map((id) =>
+        this._linkedResultRepository.create({
+          origin_result_id: resultId,
+          linked_results_id: id,
+          created_by: userId,
+          last_updated_by: userId,
+          is_active: true,
+        }),
+      );
 
-    const toCreate = filteredLinkedIds.filter((id) => !existingIds.has(id));
+      await this._linkedResultRepository.save(newEntities);
 
-    if (!toCreate.length) {
       return filteredLinkedIds;
+    } catch (error) {
+      throw {
+        response: { resultId, desiredLinkedIds },
+        message: 'Failed to synchronize linked results for the innovation.',
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+        error,
+      };
     }
-
-    const newEntities = toCreate.map((id) =>
-      this._linkedResultRepository.create({
-        origin_result_id: resultId,
-        linked_results_id: id,
-        created_by: userId,
-        last_updated_by: userId,
-        is_active: true,
-      }),
-    );
-
-    await this._linkedResultRepository.save(newEntities);
-
-    return filteredLinkedIds;
   }
 
   private normalizeLinkedResultIds(
