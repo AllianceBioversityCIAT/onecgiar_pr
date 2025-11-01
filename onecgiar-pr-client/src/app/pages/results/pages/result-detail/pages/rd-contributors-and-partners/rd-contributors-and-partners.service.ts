@@ -22,6 +22,7 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   submitter: string = '';
   disabledOptions = [];
   nppCenters: CenterDto[] = [];
+  clarisaProjectsList: any[] = [];
 
   leadPartnerId: number = null;
   leadCenterCode: string = null;
@@ -54,6 +55,19 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   ngOnDestroy(): void {
     this.institutionsSE?.loadedInstitutions?.unsubscribe();
     this.centersSE.loadedCenters.unsubscribe();
+  }
+
+  loadClarisaProjects() {
+    this.api.resultsSE.GET_ClarisaProjects().subscribe({
+      next: ({ response }) => {
+        console.log('Clarisa projects response:', response);
+        this.clarisaProjectsList = response;
+        console.log('Processed projects list:', this.clarisaProjectsList);
+      },
+      error: err => {
+        console.error('Error loading Clarisa projects:', err);
+      }
+    });
   }
 
   validateDeliverySelection(deliveries, deliveryId: number) {

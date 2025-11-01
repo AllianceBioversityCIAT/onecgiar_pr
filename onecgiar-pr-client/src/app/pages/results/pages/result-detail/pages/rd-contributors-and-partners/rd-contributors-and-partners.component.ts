@@ -42,6 +42,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   ngOnInit() {
     this.rdPartnersSE.partnersBody = new ContributorsAndPartnersBody();
     this.rdPartnersSE.getSectionInformation();
+    this.rdPartnersSE.loadClarisaProjects();
     this.api.dataControlSE.findClassTenSeconds('alert-event').then(_resp => {
       try {
         document.querySelectorAll('.alert-event').forEach(element => {

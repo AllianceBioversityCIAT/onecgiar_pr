@@ -200,15 +200,16 @@
   <!-- Contributing non-pooled end -->
 
   <app-pr-multi-select
-    [options]="this.institutionsSE.institutionsWithoutCentersListPartners"
-    [required]="false"
-    label="Contributing W3 and/or bilateral projects"
-    selectedOptionLabel="institutions_name"
-    optionLabel="full_name"
-    optionValue="institutions_id"
+    [options]="this.rdPartnersSE.clarisaProjectsList"
     [(ngModel)]="this.rdPartnersSE.partnersBody.bilateral_projects"
-    placeholder="Select partner"
-    labelDescInlineStyles="margin-top: 0 !important;">
+    [required]="false"
+    optionLabel="fullName"
+    optionValue="id"
+    label="Contributing W3 and/or bilateral projects"
+    selectedLabel="Projects selected"
+    selectedOptionLabel="fullName"
+    placeholder="Select project">
+    <ng-template #item let-project> </ng-template>
   </app-pr-multi-select>
 
   <app-pr-radio-button
