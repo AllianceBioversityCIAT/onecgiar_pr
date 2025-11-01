@@ -56,6 +56,18 @@
         </app-pr-select>
       }
     }
+
+    @if (!hideInicator() && this.indicatorsList().length) {
+      <app-pr-select
+        [options]="this.indicatorsList()"
+        label="Indicator"
+        [editable]="editable"
+        optionLabel="indicator_description"
+        optionValue="related_node_id"
+        placeholder="Select outcome level"
+        [(ngModel)]="activeTab.indicators[0].related_node_id">
+      </app-pr-select>
+    }
   </div>
 
   <hr class="divider-20" />

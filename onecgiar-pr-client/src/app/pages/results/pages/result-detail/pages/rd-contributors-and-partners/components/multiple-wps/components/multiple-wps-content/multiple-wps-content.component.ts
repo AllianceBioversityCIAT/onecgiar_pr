@@ -27,7 +27,7 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   @Input() selectedOptionsOutcome = [];
   @Input() selectedOptionsEOI = [];
   reusltlevelSE = inject(ResultLevelService);
-
+  indicatorsList = signal<any[]>([]);
   indicatorView = false;
 
   toc_level_id_signal = signal<number | null>(null);
@@ -53,8 +53,34 @@ export class CPMultipleWPsContentComponent implements OnChanges {
     public mappedResultService: MappedResultsModalServiceService
   ) {}
 
+  hideInicator = signal<boolean>(false);
+
+  getIndicatorsList() {
+    console.log(this.activeTab?.toc_level_id);
+    const optionSelected = this.activeTab?.indicators[0];
+    console.log(optionSelected);
+    console.log(this.activeTab?.indicators[0]);
+    switch (this.activeTab?.toc_level_id) {
+      case 3:
+        console.log('eoi');
+        break;
+      case 2:
+        console.log('outcome');
+        break;
+      case 1:
+        this.hideInicator.set(true);
+        const itemSelected = this.outputList.find(item => item.toc_result_id === this.activeTab.toc_result_id);
+        this.indicatorsList.set(itemSelected.indicators);
+        this.activeTab.indicators[0].related_node_id = this.activeTab.indicators[0].toc_results_indicator_id;
+        this.hideInicator.set(false);
+        break;
+    }
+  }
+
   ngOnChanges() {
     this.toc_level_id_signal.set(this.activeTab?.toc_level_id);
+    this.getIndicatorsList();
+
     if (this.showMultipleWPsContent) {
       if (
         (this.resultLevelId === 1 && this.outputList.length > 0 && this.eoiList.length > 0) ||

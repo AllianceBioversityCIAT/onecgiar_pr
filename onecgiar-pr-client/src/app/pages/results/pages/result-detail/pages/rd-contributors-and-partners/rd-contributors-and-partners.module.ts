@@ -1,5 +1,5 @@
 import { NgModule } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, JsonPipe } from '@angular/common';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { FormsModule } from '@angular/forms';
 import { FeedbackValidationDirectiveModule } from '../../../../../../shared/directives/feedback-validation-directive.module';
@@ -36,7 +36,8 @@ import { CPNormalSelectorComponent } from './components/multiple-wps/components/
     TermPipe,
     RdTheoryOfChangeModule,
     DialogModule,
-    TableModule
+    TableModule,
+    JsonPipe
   ]
 })
 export class RdContributorsAndPartnersModule {}
