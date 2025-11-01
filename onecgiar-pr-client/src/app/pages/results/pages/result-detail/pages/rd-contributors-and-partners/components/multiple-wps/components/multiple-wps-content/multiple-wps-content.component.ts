@@ -62,6 +62,7 @@ export class CPMultipleWPsContentComponent implements OnChanges {
       console.log(itemSelected.indicators);
       this.indicatorsList.set(itemSelected.indicators);
       this.activeTab.indicators[0].related_node_id = this.activeTab.indicators[0].toc_results_indicator_id;
+      if (!this.activeTab.toc_progressive_narrative) this.activeTab.toc_progressive_narrative = '';
     };
     switch (this.activeTab?.toc_level_id) {
       case 3:
@@ -150,11 +151,9 @@ export class CPMultipleWPsContentComponent implements OnChanges {
     return `Indicator(s) of the outcome selected`;
   }
 
-  dynamicProgressLabel() {
-    if (this.activeTab?.planned_result && this.resultLevelId === 1) return `Progress narrative of the Output`;
-
-    return `Progress narrative of the Outcome`;
-  }
+  dynamicProgressLabel = computed(() => {
+    return `Progress narrative of the ${this.secondFieldLabel()}`;
+  });
 
   pushSelectedOptions() {
     this.allTabsCreated.forEach(tab => {

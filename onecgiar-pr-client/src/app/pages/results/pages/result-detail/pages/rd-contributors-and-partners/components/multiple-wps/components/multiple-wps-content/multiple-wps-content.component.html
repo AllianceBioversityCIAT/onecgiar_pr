@@ -1,4 +1,4 @@
-<div class="container">
+<div class="container" *ngIf="activeTab">
   <div class="flex-no-wrap" *ngIf="activeTab?.planned_result !== null && showMultipleWPsContent">
     <div style="max-width: 250px" *ngIf="resultLevelId === 1 ? !activeTab?.planned_result : true">
       <app-pr-select
@@ -56,16 +56,6 @@
         </app-pr-select>
       }
     }
-
-    <!-- <app-pr-textarea
-      [label]="dynamicProgressLabel()"
-      [required]="false"
-      placeholder="Enter text"
-      [rows]="3"
-      [(ngModel)]="activeTab.toc_progressive_narrative"
-      [maxWords]="150"
-      *ngIf="showNarrative()">
-    </app-pr-textarea> -->
   </div>
   @if (showIndicators()) {
     <app-pr-select
@@ -88,14 +78,13 @@
   </ng-container> -->
 
   <app-pr-textarea
-    [label]="this.secondFieldLabel()"
+    [label]="dynamicProgressLabel()"
     [required]="false"
     placeholder="Enter text"
     [rows]="3"
     [(ngModel)]="activeTab.toc_progressive_narrative"
     [maxWords]="150">
   </app-pr-textarea>
-  <!-- </div> -->
 </div>
 
 <app-mapped-results-modal [activeTab]="activeTab" [outputList]="outputList" [resultLevelId]="resultLevelId"></app-mapped-results-modal>
