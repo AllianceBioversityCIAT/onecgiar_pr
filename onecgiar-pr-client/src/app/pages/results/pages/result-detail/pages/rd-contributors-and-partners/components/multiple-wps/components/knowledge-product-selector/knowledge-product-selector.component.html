@@ -1,0 +1,107 @@
+<app-alert-status [description]="alertStatusMessage"> </app-alert-status>
+
+<app-alert-status
+  description="If any of the metadata fields are incorrect, please contact your Center library staff or knowledge management team to update them in CGSpace. Before the end of the reporting period, metadata will be automatically refreshed on this page.">
+</app-alert-status>
+
+<app-alert-status
+  *ngIf="!this.api.rolesSE.readOnly"
+  description="If you don't find the partner you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list.">
+</app-alert-status>
+
+<div class="header">
+  <h1 class="header_title">Author affiliations</h1>
+  <p class="header_subTitle">Please match each author affiliation with a CLARISA partner.</p>
+</div>
+
+<div class="partners">
+  <div class="partner_item" *ngFor="let partner of this.rdPartnersSE.partnersBody.mqap_institutions; let index = index">
+    <div class="partner_item_header">
+      <div class="partner_item_header-circle"></div>
+
+      <h1 class="partner_item_header-name">
+        <span class="partner_item_header-prename"> CGSpace author affiliation: </span>
+        {{ partner.result_kp_mqap_institution_object.intitution_name }}
+      </h1>
+    </div>
+
+    <div class="partner_item_content">
+      <div
+        class="partner_item_content-line"
+        [ngStyle]="{ 'background-color': partner.is_predicted ? 'var(--pr-color-blue-500)' : 'var(--pr-color-neutral-1000)' }"></div>
+
+      <div
+        class="partner_item_content_predicted"
+        [ngStyle]="{ 'background-color': partner.is_predicted ? 'var(--pr-color-blue-500)' : 'var(--pr-color-primary-300)' }">
+        <p class="partner_item_content-predicted-text">
+          {{ partner.is_predicted ? 'Predicted by M-QAP AI' : 'Manual match' }}
+        </p>
+        <i class="material-icons-round" style="color: var(--pr-color-white); font-size: 14px">{{
+          partner.is_predicted ? 'auto_awesome' : 'ads_click'
+        }}</i>
+      </div>
+
+      <div style="width: 100%">
+        <app-pr-select
+          descInlineStyles="background-color: var(--pr-color-white); box-shadow:none; padding: 0; margin-bottom: 8px;"
+          labelDescInlineStyles="margin-top: 0;"
+          [options]="this.institutionsSE.institutionsWithoutCentersList"
+          [required]="true"
+          label="CLARISA partner"
+          [showDescriptionLabel]="false"
+          [description]="generateDescription(partner)"
+          optionLabel="full_name"
+          optionValue="institutions_id"
+          placeholder="Select partner"
+          (selectOptionEvent)="institutions_institutions_type_name(partner); this.rdPartnersSE.toggle = this.rdPartnersSE.toggle + 1"
+          [(ngModel)]="partner.institutions_id">
+        </app-pr-select>
+
+        <div class="partner_item_content-footer" style="margin-top: 10px">
+          <div class="type">
+            Institution type:
+            <span class="type-type">
+              {{ partner?.obj_institutions?.obj_institution_type_code?.name ?? 'No partner selected' }}
+            </span>
+          </div>
+
+          <div class="type">
+            Website:
+            <a
+              *ngIf="partner?.obj_institutions?.website_link"
+              class="type-link"
+              [href]="partner?.obj_institutions?.website_link"
+              target="_blank"
+              rel="noopener noreferrer"
+              >{{ partner?.obj_institutions?.website_link }}</a
+            >
+            <span *ngIf="!partner?.obj_institutions?.website_link" style="font-weight: 500">Not available</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="chips_container partners_selected">
+        <div appFeedbackValidation labelText="Partner role" [isComplete]="partner?.delivery.length > 0"></div>
+        <div class="pr_chip_selected" style="background-color: white !important; padding: 0 !important">
+          <div class="type">Partner role: <span style="color: var(--pr-color-red-300)">*</span></div>
+
+          <div class="deliveries" [ngClass]="{ readOnly_deliveries: this.rolesSE.readOnly }">
+            @for (delivery of deliveryOptions; track $index) {
+              <ng-container>
+                <button
+                  class="delivery"
+                  [ngClass]="{
+                    active: this.rdPartnersSE.validateDeliverySelectionPartners(partner?.delivery, delivery.id),
+                    globalDisabled: this.rolesSE.readOnly
+                  }"
+                  (click)="this.rdPartnersSE.onSelectDeliveryPartners(partner, delivery.id)">
+                  {{ delivery.name }}
+                </button>
+              </ng-container>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

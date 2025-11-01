@@ -1,0 +1,113 @@
+<div class="column_title">
+  {{ dataControlSE.isKnowledgeProduct ? 'Additional partners' : 'Partners' }}
+</div>
+<div [ngSwitch]="this.rolesSE.readOnly">
+  <div *ngSwitchCase="true">{{ this.rdPartnersSE.partnersBody.no_applicable_partner ? 'Marked as not applicable' : '' }}</div>
+  <div *ngSwitchCase="false">
+    <app-pr-checkbox
+      label="This section is not applicable."
+      [(ngModel)]="this.rdPartnersSE.partnersBody.no_applicable_partner"
+      (selectOptionEvent)="!this.dataControlSE.isKnowledgeProduct ? this.updateLeadData() : null">
+    </app-pr-checkbox>
+  </div>
+</div>
+<app-alert-status
+  *ngIf="dataControlSE.isKnowledgeProduct"
+  description="In this section you can include additional partners. If you do not find the partner in the dropdown menu, you can <a class='open_route alert-event'>request</a> to have it added to the list. Once approved, it may take up to an hour for the partner to appear in the CLARISA institutions list">
+</app-alert-status>
+
+<app-alert-status
+  [hidden]="this.rdPartnersSE.partnersBody.no_applicable_partner"
+  *ngIf="!this.rolesSE.readOnly && !dataControlSE.isKnowledgeProduct"
+  description="In this section you can include additional partners. If you do not find the partner in the dropdown menu, you can <a class='open_route alert-event'>request</a> to have it added to the list. Once approved, it may take up to an hour for the partner to appear in the CLARISA institutions list.">
+</app-alert-status>
+
+<div class="auto_fit_container fadeIn" style="position: relative; z-index: 5" *ngIf="this.rdPartnersSE.partnersBody.no_applicable_partner !== true">
+  <div (click)="getDisableOptions()">
+    <app-pr-multi-select
+      [options]="this.institutionsSE.institutionsWithoutCentersListPartners"
+      [required]="false"
+      [label]="dataControlSE.isKnowledgeProduct ? 'Partners' : null"
+      selectedOptionLabel="institutions_name"
+      optionLabel="full_name"
+      optionValue="institutions_id"
+      [(ngModel)]="this.rdPartnersSE.partnersBody.institutions"
+      [disableOptions]="this.disableOptions"
+      placeholder="Select partner"
+      labelDescInlineStyles="margin-top: 0 !important;"
+      (selectOptionEvent)="this.rdPartnersSE.toggle = this.rdPartnersSE.toggle + 1; getOnlyPartnerTypes(); emitPartnerEvent($event)">
+    </app-pr-multi-select>
+    <div class="partners_selected_header" [style]="this.rolesSE.readOnly ? 'margin-top: -15px' : ''">
+      <app-pr-field-header [description]="'Partner(s) selected (' + this.rdPartnersSE.partnersBody.institutions?.length + '):'">
+      </app-pr-field-header>
+    </div>
+
+    <div class="chips_container custom_scroll partners_selected">
+      <div class="pr_chip_selected" *ngFor="let option of this.rdPartnersSE.partnersBody.institutions; let i = index">
+        <div appFeedbackValidation labelText="Partner role" [isComplete]="!!option?.delivery?.length"></div>
+        <div class="name">{{ option?.obj_institutions?.name }}</div>
+        <div class="type"><strong>Institution type:</strong> {{ option?.obj_institutions?.obj_institution_type_code?.name }}</div>
+        <div style="margin-top: -10px; margin-bottom: -20px">
+          <app-pr-field-header label="Partner role"> </app-pr-field-header>
+        </div>
+        <div class="deliveries" [ngClass]="{ readOnly_deliveries: this.rolesSE.readOnly }">
+          <div
+            class="delivery"
+            *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 1) : true"
+            [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 1) }"
+            (click)="this.rdPartnersSE.onSelectDeliveryPartners(option, 1)"
+            pTooltip="Organizations or entities that CGIAR collaborates with to advance the uptake and use of innovations at scale."
+            tooltipPosition="top">
+            Scaling
+          </div>
+          <div
+            class="delivery"
+            *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 2) : true"
+            [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 2) }"
+            (click)="this.rdPartnersSE.onSelectDeliveryPartners(option, 2)"
+            pTooltip="Organizations or entities that have (expressed) an explicit or implicit demand for an innovation, change or who aspire to a specific goal or impact to which CGIAR can contribute."
+            tooltipPosition="top">
+            Demand
+          </div>
+          <div
+            class="delivery"
+            *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 3) : true"
+            [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 3) }"
+            (click)="this.rdPartnersSE.onSelectDeliveryPartners(option, 3)"
+            pTooltip="Organizations or entities that CGIAR collaborates and co-invests with to develop, improve the readiness of, or apply innovations to contribute to impact at scale."
+            tooltipPosition="top">
+            Innovation
+          </div>
+          <div
+            class="delivery"
+            *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 4) : true"
+            [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 4) }"
+            (click)="this.rdPartnersSE.onSelectDeliveryPartners(option, 4)">
+            Other
+          </div>
+        </div>
+        <i class="material-icons-round" *ngIf="!this.rolesSE.readOnly" (click)="this.rdPartnersSE.removePartner(i)">remove_circle </i>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <app-pr-field-header
+      label="Partner types"
+      labelDescInlineStyles="margin-top: 0 !important;"
+      [description]="
+        'Total partner(s) type (' + (this.rdPartnersSE.partnersBody.institutions | countInstitutionsTypes: this.rdPartnersSE.toggle)?.length + '):'
+      "
+      [required]="false">
+    </app-pr-field-header>
+
+    <div class="chips_container custom_scroll">
+      <div
+        class="pr_chip_selected"
+        *ngFor="let option of this.rdPartnersSE.partnersBody.institutions | countInstitutionsTypes: this.rdPartnersSE.toggle; let i = index">
+        <div class="name">{{ option?.count_name }}</div>
+        <i class="material-icons-round" *ngIf="false">remove_circle </i>
+      </div>
+    </div>
+  </div>
+</div>

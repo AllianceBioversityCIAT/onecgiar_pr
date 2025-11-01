@@ -5,7 +5,6 @@ import { FormsModule } from '@angular/forms';
 import { FeedbackValidationDirectiveModule } from '../../../../../../shared/directives/feedback-validation-directive.module';
 import { InstitutionsPipesModule } from '../rd-general-information/pipes/institutions-pipes.module';
 import { TooltipModule } from 'primeng/tooltip';
-import { RdPartnersModule } from '../rd-partners/rd-partners.module';
 import { RdContributorsAndPartnersComponent } from './rd-contributors-and-partners.component';
 import { RdContributorsAndPartnersRoutingModule } from './rd-contributors-and-partners-routing.module';
 import { TermPipe } from '../../../../../../internationalization/term.pipe';
@@ -15,8 +14,17 @@ import { CPMultipleWPsContentComponent } from './components/multiple-wps/compone
 import { CPMappedResultsModalComponent } from './components/multiple-wps/components/mapped-results-modal/mapped-results-modal.component';
 import { DialogModule } from 'primeng/dialog';
 import { TableModule } from 'primeng/table';
+import { CPKnowledgeProductSelectorComponent } from './components/multiple-wps/components/knowledge-product-selector/knowledge-product-selector.component';
+import { CPNormalSelectorComponent } from './components/multiple-wps/components/normal-selector/normal-selector.component';
 @NgModule({
-  declarations: [RdContributorsAndPartnersComponent, CPMultipleWPsComponent, CPMultipleWPsContentComponent, CPMappedResultsModalComponent],
+  declarations: [
+    RdContributorsAndPartnersComponent,
+    CPMultipleWPsComponent,
+    CPMultipleWPsContentComponent,
+    CPMappedResultsModalComponent,
+    CPKnowledgeProductSelectorComponent,
+    CPNormalSelectorComponent
+  ],
   imports: [
     CommonModule,
     RdContributorsAndPartnersRoutingModule,
@@ -25,7 +33,6 @@ import { TableModule } from 'primeng/table';
     FeedbackValidationDirectiveModule,
     TooltipModule,
     FormsModule,
-    RdPartnersModule,
     TermPipe,
     RdTheoryOfChangeModule,
     DialogModule,
