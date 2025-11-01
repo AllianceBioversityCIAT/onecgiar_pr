@@ -1,7 +1,7 @@
 <div class="detail_container">
   <app-alert-status *ngIf="!this.api.dataControlSE.isKnowledgeProduct" [description]="alertStatusMessage"> </app-alert-status>
   <!-- Contributing Centers start -->
-  <div appFeedbackValidation labelText="Contributing CG Centers" [isComplete]="!!this.rdPartnersSE.partnersBody.contributing_center?.length"></div>
+  <div appFeedbackValidation labelText="Contributing CGIAR Centers" [isComplete]="!!this.rdPartnersSE.partnersBody.contributing_center?.length"></div>
 
   <!-- ! from toc section -->
   @if (this.rdPartnersSE.getConsumed()) {
