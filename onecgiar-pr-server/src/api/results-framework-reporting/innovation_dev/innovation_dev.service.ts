@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { CreateInnovationDevDtoV2 } from './dto/create-innovation_dev.dto';
+import { CreateInnovationDevDtoV2 } from './dto/create-innovation_dev_v2.dto';
 import { InnovationUseDto } from '../../results/summary/dto/create-innovation-use.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResultByIntitutionsRepository } from '../../results/results_by_institutions/result_by_intitutions.repository';
@@ -121,6 +121,10 @@ export class InnovationDevService {
         InnDevRes = await this._resultsInnovationsDevRepository.save(newInnDev);
       }
 
+      console.log(
+        'Responsible Innovation and Scaling Options:',
+        createInnovationDevDto?.responsible_innovation_and_scaling.q1.options,
+      );
       // * SAVING INNOVATION AND SCALING
       await this._innoDevService.saveOptionsAndSubOptions(
         resultId,

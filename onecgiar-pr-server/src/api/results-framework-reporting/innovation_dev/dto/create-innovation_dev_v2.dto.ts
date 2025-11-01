@@ -21,10 +21,10 @@ export class CreateInnovationDevDtoV2 {
   public innovation_acknowledgement: string;
   public innovation_pdf!: boolean;
   public innovation_user_to_be_determined!: boolean;
-  public responsible_innovation_and_scaling!: TopLevelQuestions;
-  public intellectual_property_rights!: TopLevelQuestions;
-  public innovation_team_diversity!: TopLevelQuestions;
-  public megatrends!: TopLevelQuestions;
+  public responsible_innovation_and_scaling!: TopLevelQuestionsV2;
+  public intellectual_property_rights!: TopLevelQuestionsV2;
+  public innovation_team_diversity!: TopLevelQuestionsV2;
+  public megatrends!: TopLevelQuestionsV2;
   public reference_materials!: Evidence[];
   public pictures!: Evidence[];
   public innovatonUse: innovatonUseInterface;
@@ -34,33 +34,33 @@ export class CreateInnovationDevDtoV2 {
   public has_scaling_studies: boolean;
   public scaling_studies_urls: string[];
 }
-export interface SubOption {
+export interface SubOptionV2 {
   result_question_id: number;
   answer_boolean: boolean;
   answer_text: string;
 }
 
-export interface Option {
+export interface OptionV2 {
   result_question_id: number;
   answer_boolean: boolean;
   answer_text: string;
-  subOptions: SubOption[];
+  subOptions: SubOptionV2[];
 }
 
-export interface TopLevelQuestions {
+export interface TopLevelQuestionsV2 {
   q1: {
-    options: Option[];
+    options: OptionV2[];
   };
   q2: {
-    options: Option[];
+    options: OptionV2[];
   };
   q3: {
-    options: Option[];
+    options: OptionV2[];
   };
   q4: {
-    options: Option[];
+    options: OptionV2[];
   };
-  options: Option[];
+  options: OptionV2[];
 }
 
 export interface innovatonUseInterface {
