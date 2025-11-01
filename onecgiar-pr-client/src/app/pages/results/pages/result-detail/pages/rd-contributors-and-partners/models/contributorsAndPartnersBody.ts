@@ -10,6 +10,7 @@ export class ContributorsAndPartnersBody extends TheoryOfChangeBody {
   owner_initiative: OwnerInitiative;
   has_innovation_link: boolean = false;
   linked_results: any[] = [];
+  bilateral_projects: any[] = [];
 }
 
 export interface OwnerInitiative {
