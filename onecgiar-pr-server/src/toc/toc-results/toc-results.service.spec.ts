@@ -26,8 +26,12 @@ describe('TocResultsService', () => {
       getFullInitiativeTocByResult: jest.fn(),
       getFullInitiativeTocByInitiative: jest.fn(),
       $_getResultTocByConfigV2: jest.fn(),
+      getTocIndicatorsByResultIds: jest.fn(),
+      getResultIndicatorMappings: jest.fn(),
       getAllTocResultsByInitiativeV2: jest.fn(),
     } as any;
+    repository.getTocIndicatorsByResultIds.mockResolvedValue([]);
+    repository.getResultIndicatorMappings.mockResolvedValue([]);
 
     returnResponse = {
       format: jest.fn(),
@@ -151,7 +155,34 @@ describe('TocResultsService', () => {
 
   describe('findTocResultByConfigV2', () => {
     it('returns formatted response', async () => {
-      const data = [{ id: 1 }];
+      const data = [{ toc_result_id: 10, title: 'Result' }];
+      const indicatorRows = [
+        {
+          toc_result_id: 10,
+          indicator_id: 900,
+          toc_result_indicator_id: 'IND-1',
+          related_node_id: 'NODE-1',
+          indicator_description: 'Indicator desc',
+          unit_messurament: 'Households',
+          type_value: 'Number',
+          type_name: 'Quantitative',
+          location: 'Global',
+        },
+      ];
+      repository.getTocIndicatorsByResultIds.mockResolvedValue(indicatorRows);
+      const mappingRows = [
+        {
+          toc_result_id: 10,
+          result_toc_result_id: 500,
+          planned_result: true,
+          toc_progressive_narrative: 'Narrative',
+          result_toc_result_indicator_id: 700,
+          toc_results_indicator_id: 'NODE-1',
+          indicator_contributing: 4,
+          indicator_status: 2,
+        },
+      ];
+      repository.getResultIndicatorMappings.mockResolvedValue(mappingRows);
       const formattedResponse = {
         response: data,
         message: 'Successful response',
@@ -164,10 +195,93 @@ describe('TocResultsService', () => {
 
       expect(returnResponse.format).toHaveBeenCalledWith({
         message: 'Successful response',
-        response: data,
+        response: [
+          {
+            ...data[0],
+            result_toc_result_id: 500,
+            planned_result: true,
+            toc_progressive_narrative: 'Narrative',
+            indicators: [
+              {
+                indicator_id: 900,
+                toc_result_indicator_id: 'IND-1',
+                related_node_id: 'NODE-1',
+                indicator_description: 'Indicator desc',
+                unit_messurament: 'Households',
+                type_value: 'Number',
+                type_name: 'Quantitative',
+                location: 'Global',
+                result_toc_result_indicator_id: 700,
+                indicator_contributing: 4,
+                status_id: 2,
+                targets: [],
+              },
+            ],
+          },
+        ],
         statusCode: HttpStatus.OK,
       });
+      expect(repository.getTocIndicatorsByResultIds).toHaveBeenCalledWith([10]);
+      expect(repository.getResultIndicatorMappings).toHaveBeenCalledWith(1, 2, [
+        10,
+      ]);
       expect(result).toBe(formattedResponse);
+    });
+
+    it('returns indicator metadata with null mapping when no links exist', async () => {
+      const data = [{ toc_result_id: 20, title: 'Result B' }];
+      const indicatorRows = [
+        {
+          toc_result_id: 20,
+          indicator_id: 901,
+          toc_result_indicator_id: 'IND-2',
+          related_node_id: 'NODE-2',
+          indicator_description: 'Indicator B',
+          unit_messurament: 'Sessions',
+          type_value: 'Qualitative',
+          type_name: 'Narrative',
+          location: 'Regional',
+        },
+      ];
+      repository.$_getResultTocByConfigV2.mockResolvedValue(data);
+      repository.getTocIndicatorsByResultIds.mockResolvedValue(indicatorRows);
+      repository.getResultIndicatorMappings.mockResolvedValue([]);
+      returnResponse.format.mockReturnValue({} as any);
+
+      await service.findTocResultByConfigV2(4, 5, 1);
+
+      expect(returnResponse.format).toHaveBeenCalledWith({
+        message: 'Successful response',
+        response: [
+          {
+            ...data[0],
+            result_toc_result_id: null,
+            planned_result: null,
+            toc_progressive_narrative: null,
+            indicators: [
+              {
+                indicator_id: 901,
+                toc_result_indicator_id: 'IND-2',
+                related_node_id: 'NODE-2',
+                indicator_description: 'Indicator B',
+                unit_messurament: 'Sessions',
+                type_value: 'Qualitative',
+                type_name: 'Narrative',
+                location: 'Regional',
+                result_toc_result_indicator_id: null,
+                indicator_contributing: null,
+                status_id: null,
+                targets: [],
+              },
+            ],
+          },
+        ],
+        statusCode: HttpStatus.OK,
+      });
+      expect(repository.getTocIndicatorsByResultIds).toHaveBeenCalledWith([20]);
+      expect(repository.getResultIndicatorMappings).toHaveBeenCalledWith(4, 5, [
+        20,
+      ]);
     });
 
     it('formats error when repository fails', async () => {
@@ -176,6 +290,8 @@ describe('TocResultsService', () => {
 
       await service.findTocResultByConfigV2(1, 2, 3);
 
+      expect(repository.getTocIndicatorsByResultIds).not.toHaveBeenCalled();
+      expect(repository.getResultIndicatorMappings).not.toHaveBeenCalled();
       expect(returnResponse.format).toHaveBeenCalledWith(error, true);
     });
   });
