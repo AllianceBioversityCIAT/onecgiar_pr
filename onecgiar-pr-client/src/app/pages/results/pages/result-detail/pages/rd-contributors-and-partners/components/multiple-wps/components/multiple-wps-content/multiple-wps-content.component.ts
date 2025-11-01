@@ -57,9 +57,7 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   getIndicatorsList() {
     const filterIndicators = list => {
       if (!list.length) return;
-      console.log(this.activeTab);
       const itemSelected = list.find(item => item.toc_result_id === this.activeTab.toc_result_id);
-      console.log(itemSelected.indicators);
       this.indicatorsList.set(itemSelected.indicators);
       this.activeTab.indicators[0].related_node_id = this.activeTab.indicators[0].toc_results_indicator_id;
       if (!this.activeTab.toc_progressive_narrative) this.activeTab.toc_progressive_narrative = '';
@@ -86,7 +84,6 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   }
 
   ngOnChanges() {
-    console.log('raimundo');
     this.toc_level_id_signal.set(this.activeTab?.toc_level_id);
     this.getIndicatorsList();
 
