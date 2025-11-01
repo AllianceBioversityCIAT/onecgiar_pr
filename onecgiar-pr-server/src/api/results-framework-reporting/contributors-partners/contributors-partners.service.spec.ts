@@ -12,6 +12,10 @@ import { ResultsTocResultsService } from '../../results/results-toc-results/resu
 import { CreateResultsTocResultV2Dto } from '../../results/results-toc-results/dto/create-results-toc-result-v2.dto';
 import { UpdateContributorsPartnersDto } from './dto/update-contributors-partners.dto';
 import { ContributorsPartnersService } from './contributors-partners.service';
+import { LinkedResultRepository } from '../../results/linked-results/linked-results.repository';
+import { ResultsInnovationsDevRepository } from '../../results/summary/repositories/results-innovations-dev.repository';
+import { ResultsInnovationsUseRepository } from '../../results/summary/repositories/results-innovations-use.repository';
+import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 
 describe('ContributorsPartnersService', () => {
   let service: ContributorsPartnersService;
@@ -22,6 +26,9 @@ describe('ContributorsPartnersService', () => {
   let resultsByProjectsRepository: jest.Mocked<ResultsByProjectsRepository>;
   let resultsTocResultsService: jest.Mocked<ResultsTocResultsService>;
   let resultsByInstitutionsService: jest.Mocked<ResultsByInstitutionsService>;
+  let linkedResultRepository: jest.Mocked<LinkedResultRepository>;
+  let resultsInnovationsDevRepository: jest.Mocked<ResultsInnovationsDevRepository>;
+  let resultsInnovationsUseRepository: jest.Mocked<ResultsInnovationsUseRepository>;
   let handlersError: { returnErrorRes: jest.Mock };
 
   beforeEach(async () => {
@@ -34,6 +41,7 @@ describe('ContributorsPartnersService', () => {
           provide: ResultRepository,
           useValue: {
             getResultById: jest.fn(),
+            find: jest.fn(),
           },
         },
         {
@@ -78,6 +86,30 @@ describe('ContributorsPartnersService', () => {
           },
         },
         {
+          provide: LinkedResultRepository,
+          useValue: {
+            getActiveLinkedResultIds: jest.fn(),
+            updateLink: jest.fn(),
+            find: jest.fn(),
+            create: jest.fn((entity) => entity),
+            save: jest.fn(),
+          },
+        },
+        {
+          provide: ResultsInnovationsDevRepository,
+          useValue: {
+            findOne: jest.fn(),
+            update: jest.fn(),
+          },
+        },
+        {
+          provide: ResultsInnovationsUseRepository,
+          useValue: {
+            findOne: jest.fn(),
+            update: jest.fn(),
+          },
+        },
+        {
           provide: HandlersError,
           useValue: handlersError,
         },
@@ -88,6 +120,7 @@ describe('ContributorsPartnersService', () => {
     resultRepository = module.get(
       ResultRepository,
     ) as jest.Mocked<ResultRepository>;
+    resultRepository.find.mockResolvedValue([]);
     resultByInitiativesRepository = module.get(
       ResultByInitiativesRepository,
     ) as jest.Mocked<ResultByInitiativesRepository>;
@@ -106,6 +139,24 @@ describe('ContributorsPartnersService', () => {
     resultsByInstitutionsService = module.get(
       ResultsByInstitutionsService,
     ) as jest.Mocked<ResultsByInstitutionsService>;
+    linkedResultRepository = module.get(
+      LinkedResultRepository,
+    ) as jest.Mocked<LinkedResultRepository>;
+    resultsInnovationsDevRepository = module.get(
+      ResultsInnovationsDevRepository,
+    ) as jest.Mocked<ResultsInnovationsDevRepository>;
+    resultsInnovationsUseRepository = module.get(
+      ResultsInnovationsUseRepository,
+    ) as jest.Mocked<ResultsInnovationsUseRepository>;
+
+    linkedResultRepository.find.mockResolvedValue([]);
+    linkedResultRepository.updateLink.mockResolvedValue(undefined);
+    linkedResultRepository.save.mockResolvedValue(undefined);
+    linkedResultRepository.getActiveLinkedResultIds.mockResolvedValue([]);
+    resultsInnovationsDevRepository.update.mockResolvedValue({} as any);
+    resultsInnovationsUseRepository.update.mockResolvedValue({} as any);
+    resultsInnovationsDevRepository.findOne.mockResolvedValue(null);
+    resultsInnovationsUseRepository.findOne.mockResolvedValue(null);
   });
 
   describe('getContributorsPartnersByResultId', () => {
@@ -118,6 +169,7 @@ describe('ContributorsPartnersService', () => {
         result_level_id: 4,
         no_applicable_partner: 0,
         is_lead_by_partner: 1,
+        result_type_id: ResultTypeEnum.INNOVATION_DEVELOPMENT,
       } as any;
       resultRepository.getResultById.mockResolvedValue(mockResult);
 
@@ -156,6 +208,12 @@ describe('ContributorsPartnersService', () => {
       resultsByProjectsRepository.findResultsByProjectsByResultId.mockResolvedValue(
         bilateralProjects as any,
       );
+      resultsInnovationsDevRepository.findOne.mockResolvedValue({
+        has_innovation_link: true,
+      } as any);
+      linkedResultRepository.getActiveLinkedResultIds.mockResolvedValue([
+        1001, 1002,
+      ]);
 
       const tocResponse = {
         contributing_initiatives: {
@@ -213,6 +271,10 @@ describe('ContributorsPartnersService', () => {
           bilateral_projects: bilateralProjects,
           no_applicable_partner: false,
           is_lead_by_partner: true,
+          innovation_link: {
+            hasInnovationLink: true,
+            linkedResultIds: [1001, 1002],
+          },
         },
         message: 'Contributors and Partners fetched successfully (P25)',
         status: HttpStatus.OK,
@@ -221,6 +283,13 @@ describe('ContributorsPartnersService', () => {
       expect(resultsTocResultsService.getTocByResultV2).toHaveBeenCalledWith(
         resultId,
       );
+      expect(resultsInnovationsDevRepository.findOne).toHaveBeenCalledWith({
+        where: { results_id: resultId, is_active: true },
+        select: ['has_innovation_link'],
+      });
+      expect(
+        linkedResultRepository.getActiveLinkedResultIds,
+      ).toHaveBeenCalledWith(resultId);
     });
 
     it('should delegate errors to the handler when result is missing', async () => {
@@ -260,6 +329,10 @@ describe('ContributorsPartnersService', () => {
 
   describe('updateContributorsAndPartners', () => {
     it('should update both toc mapping and partners when payload contains both', async () => {
+      resultRepository.getResultById.mockResolvedValue({
+        id: 321,
+        result_type_id: ResultTypeEnum.POLICY_CHANGE,
+      } as any);
       const tocRes = {
         response: { toc: true },
         status: HttpStatus.OK,
@@ -327,6 +400,76 @@ describe('ContributorsPartnersService', () => {
         },
         message: 'Toc ok | Partners ok',
         status: HttpStatus.CREATED,
+      });
+    });
+
+    it('should manage innovation linkage for innovation development results', async () => {
+      resultRepository.getResultById.mockResolvedValue({
+        id: 55,
+        result_type_id: ResultTypeEnum.INNOVATION_DEVELOPMENT,
+      } as any);
+      resultRepository.find.mockResolvedValue([
+        { id: 1001 },
+        { id: 1002 },
+      ] as any);
+
+      linkedResultRepository.find.mockResolvedValue([
+        { linked_results_id: 1001 } as any,
+      ]);
+      const payload: UpdateContributorsPartnersDto = {
+        has_innovation_link: true,
+        linked_results: [1001, '1002', 'invalid'],
+      } as any;
+      const user = { id: 9 } as TokenDto;
+
+      const result = await service.updateContributorsAndPartners(
+        55,
+        payload,
+        user,
+      );
+
+      expect(resultsInnovationsDevRepository.update).toHaveBeenCalledWith(
+        { results_id: 55 },
+        {
+          has_innovation_link: true,
+          last_updated_by: user.id,
+        },
+      );
+      expect(resultsInnovationsDevRepository.update).toHaveBeenCalledTimes(1);
+      expect(resultRepository.find).toHaveBeenCalledWith({
+        where: {
+          id: expect.anything(),
+          is_active: true,
+        },
+        select: ['id'],
+      });
+      expect(resultRepository.find).toHaveBeenCalledTimes(1);
+      expect(linkedResultRepository.updateLink).toHaveBeenCalledWith(
+        55,
+        [1001, 1002],
+        [],
+        user.id,
+        false,
+      );
+      expect(linkedResultRepository.updateLink).toHaveBeenCalledTimes(1);
+      expect(linkedResultRepository.save).toHaveBeenCalledWith([
+        expect.objectContaining({
+          origin_result_id: 55,
+          linked_results_id: 1002,
+          created_by: user.id,
+          last_updated_by: user.id,
+        }),
+      ]);
+      expect(linkedResultRepository.save).toHaveBeenCalledTimes(1);
+      expect(result).toEqual({
+        response: {
+          innovation_link: {
+            hasInnovationLink: true,
+            linkedResultIds: [1001, 1002],
+          },
+        },
+        message: 'Innovation linkage updated.',
+        status: HttpStatus.OK,
       });
     });
   });

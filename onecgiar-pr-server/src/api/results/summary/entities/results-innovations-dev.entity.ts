@@ -159,4 +159,11 @@ export class ResultsInnovationsDev {
     nullable: true,
   })
   innovation_user_to_be_determined!: boolean;
+
+  @Column({
+    name: 'has_innovation_link',
+    type: 'tinyint',
+    nullable: true,
+  })
+  has_innovation_link: boolean;
 }

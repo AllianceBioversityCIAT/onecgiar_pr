@@ -335,6 +335,70 @@ describe('TocResultsRepository', () => {
     });
   });
 
+  describe('getTocIndicatorsByResultIds', () => {
+    it('returns empty array when no ids provided', async () => {
+      const result = await repository.getTocIndicatorsByResultIds([]);
+
+      expect(result).toEqual([]);
+      expect(mockQuery).not.toHaveBeenCalled();
+    });
+
+    it('returns query results for provided ids', async () => {
+      const expected = [{ toc_result_id: 5 }];
+      mockQuery.mockResolvedValue(expected);
+
+      const result = await repository.getTocIndicatorsByResultIds([10, '11']);
+
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('toc_results_indicators tri'),
+        [10, 11],
+      );
+      expect(result).toBe(expected);
+    });
+
+    it('throws formatted error on failure', async () => {
+      mockQuery.mockRejectedValue(new Error('fail'));
+
+      await expect(
+        repository.getTocIndicatorsByResultIds([3]),
+      ).rejects.toMatchObject({
+        message: expect.stringContaining('getTocIndicatorsByResultIds error'),
+      });
+    });
+  });
+
+  describe('getResultIndicatorMappings', () => {
+    it('returns empty array when no ids provided', async () => {
+      const result = await repository.getResultIndicatorMappings(1, 2, []);
+
+      expect(result).toEqual([]);
+      expect(mockQuery).not.toHaveBeenCalled();
+    });
+
+    it('returns query results when data exists', async () => {
+      const expected = [{ toc_result_id: 10 }];
+      mockQuery.mockResolvedValue(expected);
+
+      const result = await repository.getResultIndicatorMappings(5, 6, [10]);
+
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('results_toc_result rtr'),
+        [5, 6, 10],
+      );
+      expect(result).toBe(expected);
+    });
+
+    it('throws formatted error on failure', async () => {
+      mockQuery.mockRejectedValue(new Error('fail'));
+
+      await expect(
+        repository.getResultIndicatorMappings(1, 2, [3]),
+      ).rejects.toMatchObject({
+        message: expect.stringContaining('getResultIndicatorMappings error'),
+      });
+    });
+  });
+
   describe('getAllTocResultsByInitiativeV2', () => {
     it('throws when toc level is invalid', async () => {
       await expect(

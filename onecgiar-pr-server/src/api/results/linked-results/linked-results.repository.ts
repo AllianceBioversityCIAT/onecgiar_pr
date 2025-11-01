@@ -265,6 +265,32 @@ export class LinkedResultRepository
     }
   }
 
+  async getActiveLinkedResultIds(resultId: number): Promise<number[]> {
+    const query = `
+      SELECT lr.linked_results_id
+      FROM linked_result lr
+      INNER JOIN result r
+        ON r.id = lr.linked_results_id
+        AND r.is_active > 0
+      WHERE
+        lr.origin_result_id = ?
+        AND lr.is_active > 0;
+    `;
+
+    try {
+      const rows = await this.query(query, [resultId]);
+      return rows
+        .map((row: any) => Number(row?.linked_results_id))
+        .filter((id) => Number.isFinite(id) && id > 0);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: LinkedResultRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
   async updateLink(
     resultId: number,
     resultsArray: number[],
