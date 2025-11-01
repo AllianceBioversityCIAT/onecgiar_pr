@@ -9,6 +9,9 @@ import { ResultByIntitutionsRepository } from '../../results/results_by_institut
 import { ResultsByProjectsRepository } from '../../results/results_by_projects/results_by_projects.repository';
 import { ResultsByInstitutionsModule } from '../../results/results_by_institutions/results_by_institutions.module';
 import { ResultsTocResultsModule } from '../../results/results-toc-results/results-toc-results.module';
+import { LinkedResultRepository } from '../../results/linked-results/linked-results.repository';
+import { ResultsInnovationsDevRepository } from '../../results/summary/repositories/results-innovations-dev.repository';
+import { ResultsInnovationsUseRepository } from '../../results/summary/repositories/results-innovations-use.repository';
 
 @Module({
   controllers: [ContributorsPartnersController],
@@ -20,6 +23,9 @@ import { ResultsTocResultsModule } from '../../results/results-toc-results/resul
     ResultByIntitutionsRepository,
     ResultsCenterRepository,
     ResultsByProjectsRepository,
+    LinkedResultRepository,
+    ResultsInnovationsDevRepository,
+    ResultsInnovationsUseRepository,
   ],
   imports: [ResultsByInstitutionsModule, ResultsTocResultsModule],
 })
