@@ -1293,4 +1293,8 @@ export class ResultsApiService {
   PATCH_ContributorsPartners(body: any) {
     return this.http.patch<any>(`${this.baseApiBaseUrlV2}contributors-partners/${this.currentResultId}`, body);
   }
+
+  GET_ClarisaProjects() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/projects/get/all`);
+  }
 }
