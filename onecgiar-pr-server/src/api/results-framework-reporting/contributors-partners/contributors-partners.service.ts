@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { ResultRepository } from '../../results/result.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultByInitiativesRepository } from '../../results/results_by_inititiatives/resultByInitiatives.repository';
@@ -20,6 +20,8 @@ import { In } from 'typeorm';
 
 @Injectable()
 export class ContributorsPartnersService {
+  private readonly logger = new Logger(ContributorsPartnersService.name);
+
   constructor(
     private readonly _resultRepository: ResultRepository,
     private readonly _handlersError: HandlersError,
@@ -374,6 +376,9 @@ export class ContributorsPartnersService {
 
       return false;
     } catch (error) {
+      this.logger.error(
+        `Error fetching innovation link status for result ID ${resultId}: ${error.message}`,
+      );
       return false;
     }
   }
