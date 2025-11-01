@@ -53,26 +53,21 @@ export class CPMultipleWPsContentComponent implements OnChanges {
     public mappedResultService: MappedResultsModalServiceService
   ) {}
 
-  hideInicator = signal<boolean>(false);
-
   getIndicatorsList() {
-    console.log(this.activeTab?.toc_level_id);
-    const optionSelected = this.activeTab?.indicators[0];
-    console.log(optionSelected);
-    console.log(this.activeTab?.indicators[0]);
+    const filterIndicators = list => {
+      const itemSelected = list.find(item => item.toc_result_id === this.activeTab.toc_result_id);
+      this.indicatorsList.set(itemSelected.indicators);
+      this.activeTab.indicators[0].related_node_id = this.activeTab.indicators[0].toc_results_indicator_id;
+    };
     switch (this.activeTab?.toc_level_id) {
       case 3:
-        console.log('eoi');
+        filterIndicators(this.eoiList);
         break;
       case 2:
-        console.log('outcome');
+        filterIndicators(this.outcomeList);
         break;
       case 1:
-        this.hideInicator.set(true);
-        const itemSelected = this.outputList.find(item => item.toc_result_id === this.activeTab.toc_result_id);
-        this.indicatorsList.set(itemSelected.indicators);
-        this.activeTab.indicators[0].related_node_id = this.activeTab.indicators[0].toc_results_indicator_id;
-        this.hideInicator.set(false);
+        filterIndicators(this.outputList);
         break;
     }
   }

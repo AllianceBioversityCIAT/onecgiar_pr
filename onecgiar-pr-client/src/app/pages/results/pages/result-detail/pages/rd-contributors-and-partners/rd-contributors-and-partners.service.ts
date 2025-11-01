@@ -195,6 +195,7 @@ export class RdContributorsAndPartnersService implements OnDestroy {
         // this.changeDetectorRef.detectChanges();
         this.result_toc_result_signal.set(this.partnersBody?.result_toc_result);
         this.getConsumed.set(true);
+        console.log('partnersBody', this.partnersBody);
         //! TOC END
       },
       error: _err => {
