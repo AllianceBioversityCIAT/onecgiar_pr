@@ -1,11 +1,11 @@
 <div class="column_title">
-  {{ dataControlSE.isKnowledgeProduct ? 'Additional partners' : 'Partners' }}
+  {{ dataControlSE.isKnowledgeProduct ? 'Additional partners' : 'External partners' }}
 </div>
 <div [ngSwitch]="this.rolesSE.readOnly">
   <div *ngSwitchCase="true">{{ this.rdPartnersSE.partnersBody.no_applicable_partner ? 'Marked as not applicable' : '' }}</div>
   <div *ngSwitchCase="false">
     <app-pr-checkbox
-      label="This section is not applicable."
+      label="Select this option if the partner section is not applicable"
       [(ngModel)]="this.rdPartnersSE.partnersBody.no_applicable_partner"
       (selectOptionEvent)="!this.dataControlSE.isKnowledgeProduct ? this.updateLeadData() : null">
     </app-pr-checkbox>
