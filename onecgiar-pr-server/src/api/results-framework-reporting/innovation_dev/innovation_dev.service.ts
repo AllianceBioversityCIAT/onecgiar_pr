@@ -1,5 +1,9 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { CreateInnovationDevDtoV2 } from './dto/create-innovation_dev.dto';
+import {
+  CreateInnovationDevDtoV2,
+  OptionV2,
+  SubOptionV2,
+} from './dto/create-innovation_dev_v2.dto';
 import { InnovationUseDto } from '../../results/summary/dto/create-innovation-use.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResultByIntitutionsRepository } from '../../results/results_by_institutions/result_by_intitutions.repository';
@@ -22,6 +26,8 @@ import { ResultsByInstitution } from '../../results/results_by_institutions/enti
 import { ResultScalingStudyUrl } from '../result_scaling_study_urls/entities/result_scaling_study_url.entity';
 import { InnovationReadinessLevelByLevel } from './enum/innov-readiness-level.enum';
 import { InjectRepository } from '@nestjs/typeorm';
+import { ResultAnswerRepository } from '../../results/result-questions/repository/result-answers.repository';
+import { ResultAnswer } from '../../results/result-questions/entities/result-answers.entity';
 
 @Injectable()
 export class InnovationDevService {
@@ -42,6 +48,7 @@ export class InnovationDevService {
     private readonly _innoDevService: InnoDevService,
     @InjectRepository(ResultScalingStudyUrl)
     private readonly _resultScalingStudyUrlsRepository: Repository<ResultScalingStudyUrl>,
+    private readonly _resultAnswerRepository: ResultAnswerRepository,
   ) {}
   async saveInnovationDev(
     createInnovationDevDto: CreateInnovationDevDtoV2,
@@ -121,59 +128,81 @@ export class InnovationDevService {
         InnDevRes = await this._resultsInnovationsDevRepository.save(newInnDev);
       }
 
-      // * SAVING INNOVATION AND SCALING
-      await this._innoDevService.saveOptionsAndSubOptions(
-        resultId,
-        user.id,
+      console.log(
+        'Responsible Innovation and Scaling Options:',
         createInnovationDevDto?.responsible_innovation_and_scaling.q1.options,
       );
-      await this._innoDevService.saveOptionsAndSubOptions(
+      // * SAVING INNOVATION AND SCALING
+      await this.saveOptionsAndSubOptions(
         resultId,
         user.id,
+        createInnovationDevDto?.responsible_innovation_and_scaling.q1
+          .radioButtonValue,
+        createInnovationDevDto?.responsible_innovation_and_scaling.q1.options,
+      );
+      await this.saveOptionsAndSubOptions(
+        resultId,
+        user.id,
+        createInnovationDevDto?.responsible_innovation_and_scaling.q2
+          .radioButtonValue,
         createInnovationDevDto?.responsible_innovation_and_scaling.q2.options,
       );
-      await this._innoDevService.saveOptionsAndSubOptions(
+      await this.saveOptionsAndSubOptions(
         resultId,
         user.id,
+        createInnovationDevDto?.responsible_innovation_and_scaling.q3
+          .radioButtonValue,
         createInnovationDevDto?.responsible_innovation_and_scaling.q3.options,
       );
-      await this._innoDevService.saveOptionsAndSubOptions(
+      await this.saveOptionsAndSubOptions(
         resultId,
         user.id,
+        createInnovationDevDto?.responsible_innovation_and_scaling.q4
+          .radioButtonValue,
         createInnovationDevDto?.responsible_innovation_and_scaling.q4.options,
       );
 
       // * SAVING INTELLECTUAL PROPERTY RIGHTS
-      await this._innoDevService.saveOptionsAndSubOptions(
+      await this.saveOptionsAndSubOptions(
         resultId,
         user.id,
+        createInnovationDevDto?.intellectual_property_rights.q1
+          .radioButtonValue,
         createInnovationDevDto?.intellectual_property_rights.q1.options,
       );
-      await this._innoDevService.saveOptionsAndSubOptions(
+      await this.saveOptionsAndSubOptions(
         resultId,
         user.id,
+        createInnovationDevDto?.intellectual_property_rights.q2
+          .radioButtonValue,
         createInnovationDevDto?.intellectual_property_rights.q2.options,
       );
-      await this._innoDevService.saveOptionsAndSubOptions(
+      await this.saveOptionsAndSubOptions(
         resultId,
         user.id,
+        createInnovationDevDto?.intellectual_property_rights.q3
+          .radioButtonValue,
         createInnovationDevDto?.intellectual_property_rights.q3.options,
       );
-      await this._innoDevService.saveOptionsAndSubOptions(
+      await this.saveOptionsAndSubOptions(
         resultId,
         user.id,
+        createInnovationDevDto?.intellectual_property_rights.q4
+          .radioButtonValue,
         createInnovationDevDto?.intellectual_property_rights.q4.options,
       );
 
       // * SAVING DIVERSITY AND MEGATRENDS
-      await this._innoDevService.saveOptionsAndSubOptions(
+      await this.saveOptionsAndSubOptions(
         resultId,
         user.id,
+        createInnovationDevDto?.innovation_team_diversity.radioButtonValue,
         createInnovationDevDto?.innovation_team_diversity.options,
       );
-      await this._innoDevService.saveOptionsAndSubOptions(
+      await this.saveOptionsAndSubOptions(
         resultId,
         user.id,
+        createInnovationDevDto?.megatrends.radioButtonValue,
         createInnovationDevDto?.megatrends.options,
       );
 
@@ -379,6 +408,54 @@ export class InnovationDevService {
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  async saveOptionsAndSubOptions(
+    resultId: number,
+    user: number,
+    radioButtonValue: number,
+    options: OptionV2[],
+  ) {
+    const saveAnswer = async (data: OptionV2 | SubOptionV2) => {
+      if (radioButtonValue != null && radioButtonValue != undefined) {
+        data.result_question_id = radioButtonValue;
+        data.answer_boolean = true;
+      } else {
+        return;
+      }
+
+      const existingAnswer = await this._resultAnswerRepository.findOne({
+        where: {
+          result_id: resultId,
+          result_question_id: data.result_question_id,
+        },
+      });
+
+      if (existingAnswer) {
+        existingAnswer.answer_boolean = data.answer_boolean;
+        existingAnswer.answer_text = data.answer_text;
+        existingAnswer.last_updated_by = user;
+        await this._resultAnswerRepository.save(existingAnswer);
+      } else {
+        const newAnswer = new ResultAnswer();
+        newAnswer.result_question_id = data.result_question_id;
+        newAnswer.answer_boolean = data.answer_boolean;
+        newAnswer.answer_text = data.answer_text;
+        newAnswer.result_id = resultId;
+        newAnswer.created_by = user;
+        newAnswer.last_updated_by = user;
+
+        await this._resultAnswerRepository.save(newAnswer);
+      }
+    };
+
+    for (const optionData of options) {
+      await saveAnswer(optionData);
+
+      for (const subOptionData of optionData.subOptions ?? []) {
+        await saveAnswer(subOptionData);
+      }
     }
   }
 }
