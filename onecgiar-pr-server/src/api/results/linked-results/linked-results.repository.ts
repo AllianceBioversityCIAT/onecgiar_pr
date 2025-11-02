@@ -96,11 +96,12 @@ export class LinkedResultRepository
   async logicalDelete(resultId: number): Promise<LinkedResult> {
     const dataQuery = `update linked_result lr set lr.is_active = 0 where lr.origin_result_id = ?;`;
     const result = await this.dataSource.getRepository(Result).findOne({
-      where: { id: resultId }, relations: {obj_version: {obj_portfolio: true}}
+      where: { id: resultId },
+      relations: { obj_version: { obj_portfolio: true } },
     });
 
     if (result?.obj_version?.id === 34) {
-      await this.update({linked_results_id: resultId}, {is_active: false});
+      await this.update({ linked_results_id: resultId }, { is_active: false });
     }
 
     return this.query(dataQuery, [resultId])
