@@ -417,11 +417,22 @@ export class InnovationDevService {
     radioButtonValue: number,
     options: OptionV2[],
   ) {
+
+    const isOptionV2 = (data: OptionV2 | SubOptionV2): data is OptionV2 => {
+      return (data as OptionV2).subOptions !== undefined;
+    };
+
     const saveAnswer = async (data: OptionV2 | SubOptionV2) => {
-      if (radioButtonValue != null && radioButtonValue != undefined) {
-        data.result_question_id = radioButtonValue;
-        data.answer_boolean = true;
-      } else {
+      if (isOptionV2(data)) {
+        if (radioButtonValue != null && radioButtonValue != undefined) {
+          data.result_question_id = radioButtonValue;
+          data.answer_boolean = true;
+        } else {
+          return;
+        }
+      }
+
+      if (data.answer_boolean == null && data.answer_text == null) {
         return;
       }
 
@@ -434,14 +445,14 @@ export class InnovationDevService {
 
       if (existingAnswer) {
         existingAnswer.answer_boolean = data.answer_boolean;
-        existingAnswer.answer_text = data.answer_text;
+        existingAnswer.answer_text = data.answer_text ? data.answer_text : null;
         existingAnswer.last_updated_by = user;
         await this._resultAnswerRepository.save(existingAnswer);
       } else {
         const newAnswer = new ResultAnswer();
         newAnswer.result_question_id = data.result_question_id;
         newAnswer.answer_boolean = data.answer_boolean;
-        newAnswer.answer_text = data.answer_text;
+        newAnswer.answer_text = data.answer_text ? data.answer_text : null;
         newAnswer.result_id = resultId;
         newAnswer.created_by = user;
         newAnswer.last_updated_by = user;
@@ -458,4 +469,6 @@ export class InnovationDevService {
       }
     }
   }
+  
+
 }
