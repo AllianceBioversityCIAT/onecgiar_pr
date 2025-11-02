@@ -9,6 +9,7 @@ import { TerminologyService } from '../../../../../../../internationalization/te
 import { EvidencesBody, EvidencesCreateInterface } from '../../../../result-detail/pages/rd-evidences/model/evidencesBody.model';
 import { FieldsManagerService } from '../../../../../../../shared/services/fields-manager.service';
 import { DataControlService } from '../../../../../../../shared/services/data-control.service';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-innovation-dev-info',
@@ -128,7 +129,7 @@ export class InnovationDevInfoComponent {
     });
   }
 
-  onSaveSection() {
+  async onSaveSection() {
     this.savingSection = true;
     this.convertOrganizationsTosave();
     if (this.innovationDevInfoBody.innovation_nature_id != 12) {
@@ -136,9 +137,17 @@ export class InnovationDevInfoComponent {
       this.innovationDevInfoBody.is_new_variety = null;
     }
     if (this.fieldsManagerSE.isP25()) {
-      // Ensure result id present in evidences body
       const resultId = (this.api.dataControlSE?.currentResult as any)?.result_id ?? (this.api.dataControlSE?.currentResult as any)?.id;
       (this.evidencesBody as any).result_id = resultId;
+
+      try {
+        await this.uploadPendingFiles();
+      } catch (error) {
+        console.error('Error uploading files:', error);
+        this.savingSection = false;
+        return;
+      }
+
       this.api.resultsSE.POST_createEvidenceDemandP25(this.evidencesBody).subscribe({
         next: () => {
           this.api.resultsSE
@@ -171,6 +180,60 @@ export class InnovationDevInfoComponent {
           this.savingSection = false;
         }
       });
+    }
+  }
+
+  private async uploadPendingFiles(): Promise<void> {
+    if (!Array.isArray(this.evidencesBody.evidences)) {
+      return;
+    }
+
+    const resultId = (this.api.dataControlSE?.currentResult as any)?.result_id ?? (this.api.dataControlSE?.currentResult as any)?.id;
+    let count = 0;
+
+    for (const evidence of this.evidencesBody.evidences) {
+      if (evidence.file && !evidence.link) {
+        count++;
+        try {
+          const { response: uploadUrl } = await firstValueFrom(
+            this.api.resultsSE.POST_createUploadSessionP25({
+              resultId,
+              fileName: evidence.file.name,
+              count
+            })
+          );
+
+          const intervalId = setInterval(async () => {
+            try {
+              const response = await this.api.resultsSE.GET_loadFileInUploadSession(uploadUrl);
+              if (response?.nextExpectedRanges?.[0]) {
+                const nextRange = response?.nextExpectedRanges[0];
+                const [startByte, totalBytes] = nextRange.split('-').map(Number);
+                if (totalBytes) {
+                  const progressPercentage = (startByte / totalBytes) * 100;
+                  (evidence as any).percentage = Number.isFinite(progressPercentage)
+                    ? progressPercentage.toFixed(0)
+                    : (evidence as any).percentage;
+                }
+              }
+            } catch (_) {
+              clearInterval(intervalId);
+              (evidence as any).percentage = 100;
+            }
+          }, 2000);
+
+          const response = await this.api.resultsSE.PUT_loadFileInUploadSession(evidence.file, uploadUrl);
+          clearInterval(intervalId);
+          (evidence as any).percentage = 100;
+          evidence.link = response?.webUrl;
+          (evidence as any).sp_document_id = response?.id;
+          evidence.sp_file_name = response?.name || evidence.file.name;
+          (evidence as any).sp_folder_path = response?.parentReference?.path?.split('root:')?.pop();
+        } catch (error) {
+          console.error('Error uploading evidence file:', error);
+          throw error;
+        }
+      }
     }
   }
 

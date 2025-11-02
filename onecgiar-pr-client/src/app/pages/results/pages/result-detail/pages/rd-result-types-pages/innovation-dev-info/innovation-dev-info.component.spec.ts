@@ -25,6 +25,7 @@ import { FeedbackValidationDirective } from '../../../../../../../shared/directi
 import { PrFieldValidationsComponent } from '../../../../../../../custom-fields/pr-field-validations/pr-field-validations.component';
 import { DetailSectionTitleComponent } from '../../../../../../../custom-fields/detail-section-title/detail-section-title.component';
 import { of, throwError } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { AddButtonComponent } from '../../../../../../../custom-fields/add-button/add-button.component';
 import { InnovationControlListService } from '../../../../../../../shared/services/global/innovation-control-list.service';
@@ -307,6 +308,9 @@ describe('InnovationDevInfoComponent', () => {
         PATCH_innovationDevP25: () => of({}),
         POST_createEvidenceDemandP25: () => of({}),
         GET_evidenceDemandP25: () => of({ response: { evidences: [] } }),
+        POST_createUploadSessionP25: () => of({ response: 'https://upload-url.com' }),
+        PUT_loadFileInUploadSession: jest.fn(() => Promise.resolve({ webUrl: 'https://file-url.com', id: 'file-id', name: 'file.pdf', parentReference: { path: 'root:/folder' } })),
+        GET_loadFileInUploadSession: jest.fn(() => Promise.resolve({ nextExpectedRanges: ['0-100'] })),
         GET_clarisaInnovationType: () => of({}),
         GET_clarisaInnovationCharacteristics: () => of({}),
         GET_clarisaInnovationReadinessLevels: () => of({}),
@@ -554,7 +558,7 @@ describe('InnovationDevInfoComponent', () => {
       expect(component.savingSection).toBeFalsy();
     });
 
-    it('should save P25 section including evidences body', () => {
+    it('should save P25 section including evidences body', async () => {
       const spyConvert = jest.spyOn(component, 'convertOrganizationsTosave');
       const spyPostEvidences = jest.spyOn(mockApiService.resultsSE, 'POST_createEvidenceDemandP25');
       const spyPatchP25 = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationDevP25');
@@ -562,7 +566,7 @@ describe('InnovationDevInfoComponent', () => {
       jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(true as any);
       (component as any).api.dataControlSE.currentResult = { id: 1 };
       (component as any).evidencesBody = { evidences: [{ is_sharepoint: false, link: 'x' }] } as any;
-      component.onSaveSection();
+      await component.onSaveSection();
       expect(spyConvert).toHaveBeenCalled();
       expect(spyPostEvidences).toHaveBeenCalled();
       expect(spyPatchP25).toHaveBeenCalled();
@@ -570,10 +574,12 @@ describe('InnovationDevInfoComponent', () => {
       expect(component.savingSection).toBeFalsy();
     });
 
-    it('should handle P25 evidences POST error gracefully', () => {
+    it('should handle P25 evidences POST error gracefully', async () => {
       jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(true as any);
+      (component as any).api.dataControlSE.currentResult = { id: 1 };
+      (component as any).evidencesBody = { evidences: [] } as any;
       (component as any).api.resultsSE.POST_createEvidenceDemandP25 = () => throwError(() => new Error('err'));
-      component.onSaveSection();
+      await component.onSaveSection();
       expect(component.savingSection).toBeFalsy();
     });
   });

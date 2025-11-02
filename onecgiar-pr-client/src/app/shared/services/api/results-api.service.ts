@@ -562,7 +562,7 @@ export class ResultsApiService {
   POST_createUploadSessionP25(body) {
     return this.http
       .post<any>(`${this.baseApiBaseUrlV2}innovation-development/evidence_demand/createUploadSession`, body)
-      .pipe(this.saveButtonSE.isSavingPipe());
+      .pipe();
   }
 
   POST_createEvidenceDemandP25(body) {
@@ -575,7 +575,7 @@ export class ResultsApiService {
     }
     return this.http
       .post<any>(`${this.baseApiBaseUrlV2}innovation-development/evidence_demand/create/${this.currentResultId}`, formData)
-      .pipe(this.saveButtonSE.isSavingPipe());
+      .pipe();
   }
 
   PATCH_policyChanges(body) {
