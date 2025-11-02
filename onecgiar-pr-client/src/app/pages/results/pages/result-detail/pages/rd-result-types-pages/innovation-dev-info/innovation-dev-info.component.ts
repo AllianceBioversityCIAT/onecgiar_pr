@@ -139,7 +139,7 @@ export class InnovationDevInfoComponent {
     if (this.fieldsManagerSE.isP25()) {
       const resultId = (this.api.dataControlSE?.currentResult as any)?.result_id ?? (this.api.dataControlSE?.currentResult as any)?.id;
       (this.evidencesBody as any).result_id = resultId;
-      
+
       try {
         await this.uploadPendingFiles();
       } catch (error) {
