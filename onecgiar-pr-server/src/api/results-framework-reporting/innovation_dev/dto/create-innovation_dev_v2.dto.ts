@@ -49,17 +49,22 @@ export interface OptionV2 {
 
 export interface TopLevelQuestionsV2 {
   q1: {
+    radioButtonValue: number;
     options: OptionV2[];
   };
   q2: {
+    radioButtonValue: number;
     options: OptionV2[];
   };
   q3: {
+    radioButtonValue: number;
     options: OptionV2[];
   };
   q4: {
+    radioButtonValue: number;
     options: OptionV2[];
   };
+  radioButtonValue: number;
   options: OptionV2[];
 }
 
