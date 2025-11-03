@@ -233,6 +233,7 @@ export class InnovationUseService {
     section: ResultCoreInnovUseSectionEnum = null,
     determined?: boolean | null,
   ) {
+    // Si determined === true, desactiva todo
     if (determined === true) {
       await this._resultActorRepository.update(
         { result_id: resultId, is_active: true },
@@ -246,13 +247,24 @@ export class InnovationUseService {
         { result_id: resultId, is_active: true },
         { is_active: false, last_updated_by: user },
       );
-
       return;
     }
 
-    // Actors
+    // ==== ACTORS ====
     if (crtr?.innovation_use?.actors?.length) {
       for (const el of crtr.innovation_use.actors) {
+        // 🔸 Si viene inactivo, null o undefined, marcar como inactivo y continuar
+        if (el?.is_active === false) {
+          if (el?.result_actors_id) {
+            await this._resultActorRepository.update(
+              { result_actors_id: el.result_actors_id },
+              { is_active: false, last_updated_by: user },
+            );
+          }
+          continue;
+        }
+
+        // 🔹 Buscar si el actor ya existe
         let actorExists: ResultActor = null;
         if (el?.actor_type_id) {
           const whereOptions: any = {
@@ -300,9 +312,19 @@ export class InnovationUseService {
       }
     }
 
-    // Organizations
+    // ==== ORGANIZATIONS ====
     if (crtr?.innovation_use?.organization?.length) {
       for (const el of crtr.innovation_use.organization) {
+        if (el?.is_active === false) {
+          if (el?.id) {
+            await this._resultByIntitutionsTypeRepository.update(
+              { id: el.id },
+              { is_active: false, last_updated_by: user },
+            );
+          }
+          continue;
+        }
+
         let ite: ResultsByInstitutionType = null;
         if (el?.institution_types_id && el?.institution_types_id != 78) {
           ite =
@@ -339,9 +361,19 @@ export class InnovationUseService {
       }
     }
 
-    // Measures
+    // ==== MEASURES ====
     if (crtr?.innovation_use?.measures?.length) {
       for (const el of crtr.innovation_use.measures) {
+        if (el?.is_active === false) {
+          if (el?.result_ip_measure_id) {
+            await this._resultIpMeasureRepository.update(
+              { result_ip_measure_id: el.result_ip_measure_id },
+              { is_active: false, last_updated_by: user },
+            );
+          }
+          continue;
+        }
+
         let ripm: ResultIpMeasure = null;
         if (el?.result_ip_measure_id) {
           ripm = await this._resultIpMeasureRepository.findOne({
@@ -472,9 +504,18 @@ export class InnovationUseService {
         where: { result_id: resultId, is_active: true },
         relations: { obj_actor_type: true },
       });
-      actorsData.map((el) => {
-        el['men_non_youth'] = el.men - el.men_youth;
-        el['women_non_youth'] = el.women - el.women_youth;
+
+      actorsData.forEach((el) => {
+        const men = el.men ?? 0;
+        const women = el.women ?? 0;
+        const men_youth = el.men_youth ?? 0;
+        const women_youth = el.women_youth ?? 0;
+
+        const men_non_youth = men - men_youth;
+        const women_non_youth = women - women_youth;
+
+        el['men_non_youth'] = men_non_youth > 0 ? men_non_youth : 0;
+        el['women_non_youth'] = women_non_youth > 0 ? women_non_youth : 0;
       });
 
       // Measures
