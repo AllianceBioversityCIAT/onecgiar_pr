@@ -11,7 +11,6 @@
         @for (navOption of navigationOptions | panelMenu: this.resultLevelSE.currentResultTypeId : green_checks_string; track navOption.path) {
           <a
             [hidden]="hideKP(navOption)"
-            [hidden]="hideLinksToResults(navOption)"
             [routerLink]="'/result/result-detail/' + this.dataControlSE?.currentResult?.result_code + '/' + navOption.path"
             [queryParams]="{ phase: this.dataControlSE?.currentResult?.version_id }"
             routerLinkActive="section_active"
