@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { MappedResultsModalComponent } from './mapped-results-modal.component';
+import { CPMappedResultsModalComponent } from './mapped-results-modal.component';
 import { MappedResultsModalServiceService } from './mapped-results-modal-service.service';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { TableModule } from 'primeng/table';
@@ -7,26 +7,19 @@ import { DialogModule } from 'primeng/dialog';
 
 jest.useFakeTimers();
 
-describe('MappedResultsModalComponent', () => {
-  let component: MappedResultsModalComponent;
-  let fixture: ComponentFixture<MappedResultsModalComponent>;
+describe('CPMappedResultsModalComponent', () => {
+  let component: CPMappedResultsModalComponent;
+  let fixture: ComponentFixture<CPMappedResultsModalComponent>;
   let mappedResultService: MappedResultsModalServiceService;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [MappedResultsModalComponent],
-      providers: [MappedResultsModalServiceService]
-    }).compileComponents();
-  });
-
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      declarations: [MappedResultsModalComponent],
+      declarations: [CPMappedResultsModalComponent],
       imports: [HttpClientTestingModule, TableModule, DialogModule],
       providers: [{ provide: 'Window', useValue: window }]
     }).compileComponents();
 
-    fixture = TestBed.createComponent(MappedResultsModalComponent);
+    fixture = TestBed.createComponent(CPMappedResultsModalComponent);
     component = fixture.componentInstance;
     TestBed.inject(MappedResultsModalServiceService);
   });
