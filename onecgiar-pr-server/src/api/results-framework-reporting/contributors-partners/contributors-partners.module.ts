@@ -10,6 +10,7 @@ import { ResultsByProjectsRepository } from '../../results/results_by_projects/r
 import { ResultsByInstitutionsModule } from '../../results/results_by_institutions/results_by_institutions.module';
 import { ResultsTocResultsModule } from '../../results/results-toc-results/results-toc-results.module';
 import { LinkedResultRepository } from '../../results/linked-results/linked-results.repository';
+import { LinkedResultsModule } from '../../results/linked-results/linked-results.module';
 import { ResultsInnovationsDevRepository } from '../../results/summary/repositories/results-innovations-dev.repository';
 import { ResultsInnovationsUseRepository } from '../../results/summary/repositories/results-innovations-use.repository';
 
@@ -27,6 +28,10 @@ import { ResultsInnovationsUseRepository } from '../../results/summary/repositor
     ResultsInnovationsDevRepository,
     ResultsInnovationsUseRepository,
   ],
-  imports: [ResultsByInstitutionsModule, ResultsTocResultsModule],
+  imports: [
+    ResultsByInstitutionsModule,
+    ResultsTocResultsModule,
+    LinkedResultsModule,
+  ],
 })
 export class ContributorsPartnersModule {}
