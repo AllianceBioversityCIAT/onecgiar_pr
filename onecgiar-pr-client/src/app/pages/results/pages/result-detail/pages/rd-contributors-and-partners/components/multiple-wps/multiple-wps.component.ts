@@ -39,6 +39,7 @@ export class CPMultipleWPsComponent implements OnChanges {
   @Input() isIpsr: boolean = false;
   @Input() showMultipleWPsContent: boolean = true;
   activeTab: Tab;
+  activeTabIndex: number = 0;
 
   currentPlannedResult = null;
   outcomeList = [];
@@ -66,8 +67,8 @@ export class CPMultipleWPsComponent implements OnChanges {
   });
 
   ngOnChanges() {
-    this.initiative()?.result_toc_results.forEach((tab: any) => {
-      tab.uniqueId = Math.random().toString(36).substring(7);
+    this.initiative()?.result_toc_results.forEach((tab: any, index: number) => {
+      tab.uniqueId = index.toString();
     });
 
     if (this.currentPlannedResult !== null) {
@@ -83,7 +84,15 @@ export class CPMultipleWPsComponent implements OnChanges {
       }
     }
 
-    this.activeTab = this.initiative()?.result_toc_results[0];
+    // Restore active tab from saved index or default to first tab
+    const savedIndex = this.theoryOfChangesServices.savedActiveTabIndex;
+    if (savedIndex !== null && savedIndex >= 0 && savedIndex < this.initiative()?.result_toc_results.length) {
+      this.activeTabIndex = savedIndex;
+      this.activeTab = this.initiative()?.result_toc_results[savedIndex];
+    } else {
+      this.activeTabIndex = 0;
+      this.activeTab = this.initiative()?.result_toc_results[0];
+    }
   }
 
   GET_outputList() {
@@ -186,8 +195,11 @@ export class CPMultipleWPsComponent implements OnChanges {
     return uniqueWorkPackageIds.size;
   }
 
-  onActiveTab(tab: any) {
+  onActiveTab(tab: any, index: number) {
+    this.activeTabIndex = index;
     this.activeTab = tab;
+    // Save active tab index
+    this.theoryOfChangesServices.savedActiveTabIndex = index;
     this.showMultipleWPsContent = false;
 
     setTimeout(() => {
@@ -197,6 +209,7 @@ export class CPMultipleWPsComponent implements OnChanges {
 
   onAddTab() {
     const tocLevelId = !this.initiative().planned_result ? 3 : this.resultLevelId === 1 ? 1 : 2;
+    const newIndex = this.initiative().result_toc_results.length;
 
     this.initiative().result_toc_results.push({
       action_area_outcome_id: null,
@@ -207,13 +220,14 @@ export class CPMultipleWPsComponent implements OnChanges {
       short_name: this.initiative().short_name,
       toc_level_id: tocLevelId,
       toc_result_id: null,
-      uniqueId: Math.random().toString(36).substring(7),
+      uniqueId: newIndex.toString(),
       related_node_id: null,
       toc_progressive_narrative: null,
       indicators: [{ related_node_id: null, targets: [{ contributing_indicator: null }] }]
     });
 
-    this.onActiveTab(this.initiative().result_toc_results[this.initiative().result_toc_results.length - 1]);
+    const lastIndex = this.initiative().result_toc_results.length - 1;
+    this.onActiveTab(this.initiative().result_toc_results[lastIndex], lastIndex);
   }
 
   onDeleteTab(tab: Tab, tabNumber = 0) {
@@ -247,7 +261,14 @@ export class CPMultipleWPsComponent implements OnChanges {
 
     this.initiative().result_toc_results = this.initiative().result_toc_results.filter(t => t.uniqueId !== tab.uniqueId);
 
+    // Recalculate uniqueId after deletion
+    this.initiative().result_toc_results.forEach((t: any, index: number) => {
+      t.uniqueId = index.toString();
+    });
+
+    this.activeTabIndex = 0;
     this.activeTab = this.initiative()?.result_toc_results[0];
+    this.theoryOfChangesServices.savedActiveTabIndex = 0;
 
     if (this.isContributor) {
       this.theoryOfChangesServices.theoryOfChangeBody.contributors_result_toc_result[this.initiative().index].result_toc_results =
