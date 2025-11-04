@@ -615,11 +615,12 @@ export class ResultsFrameworkReportingService {
               last_updated_by: user.id,
               is_active: true,
               planned_result: true,
+              initiative_id: initiativeId,
             },
           );
         } else {
           primaryTocRecord = await this._resultsTocResultRepository.save({
-            initiative_ids: initiativeId,
+            initiative_id: initiativeId,
             toc_result_id: resolvedTocResultId,
             toc_level_id: resolvedTocLevelId,
             result_id: createdResultId,

@@ -3,7 +3,6 @@ import { animate, state, style, transition, trigger } from '@angular/animations'
 import { EvidencesCreateInterface } from '../../../../../../result-detail/pages/rd-evidences/model/evidencesBody.model';
 import { DataControlService } from '../../../../../../../../../shared/services/data-control.service';
 import { ApiService } from '../../../../../../../../../shared/services/api/api.service';
-import { firstValueFrom } from 'rxjs';
 
 
 @Component({
@@ -112,7 +111,6 @@ export class UserEvidenceComponent {
         this.evidence.file = selectedFile;
         this.evidence.sp_file_name = selectedFile.name;
         this.incorrectFile = false;
-        this.uploadSelectedFile();
       } else {
         this.incorrectFile = true;
       }
@@ -129,7 +127,6 @@ export class UserEvidenceComponent {
         this.evidence.file = selectedFile;
         this.evidence.sp_file_name = selectedFile.name;
         this.incorrectFile = false;
-        this.uploadSelectedFile();
       } else {
         this.incorrectFile = true;
         setTimeout(() => {
@@ -169,50 +166,6 @@ export class UserEvidenceComponent {
       this.cleanLink();
     } else {
       this.cleanSP();
-    }
-  }
-
-  private async uploadSelectedFile() {
-    try {
-      const file = this.evidence.file;
-      if (!file) return;
-
-      const resultId = (this.api.dataControlSE?.currentResult as any)?.result_id ?? (this.api.dataControlSE?.currentResult as any)?.id;
-      const createResp: any = await firstValueFrom(this.api.resultsSE.POST_createUploadSessionP25({
-        resultId,
-        fileName: file.name,
-        count: 1
-      }));
-      const uploadUrl = createResp?.response;
-
-      const intervalId = setInterval(async () => {
-        try {
-          const response = await this.api.resultsSE.GET_loadFileInUploadSession(uploadUrl);
-          const nextRange = response?.nextExpectedRanges?.[0];
-          if (!nextRange) return;
-          const [startByte, totalBytes] = nextRange.split('-').map(Number);
-          if (totalBytes) {
-            const progressPercentage = (startByte / totalBytes) * 100;
-            (this.evidence as any).percentage = Number.isFinite(progressPercentage)
-              ? progressPercentage.toFixed(0)
-              : this.evidence?.percentage;
-          }
-        } catch (_) {
-          clearInterval(intervalId);
-          (this.evidence as any).percentage = 100;
-        }
-      }, 2000);
-
-      const response = await this.api.resultsSE.PUT_loadFileInUploadSession(file, uploadUrl);
-      clearInterval(intervalId);
-      (this.evidence as any).percentage = 100;
-      this.evidence.link = response?.webUrl;
-      (this.evidence as any).sp_document_id = response?.id;
-      this.evidence.sp_file_name = response?.name || file.name;
-      (this.evidence as any).sp_folder_path = response?.parentReference?.path?.split('root:')?.pop();
-    } catch (error) {
-      // Silently fail; parent handles alerts
-      (this.evidence as any).percentage = undefined;
     }
   }
 }

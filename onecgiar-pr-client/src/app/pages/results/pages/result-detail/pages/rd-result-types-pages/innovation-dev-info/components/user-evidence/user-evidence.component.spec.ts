@@ -107,12 +107,11 @@ describe('UserEvidenceComponent', () => {
 
   it('onFileSelected should set file info and trigger upload for valid file', () => {
     const valid = new File(['data'], 'doc.pdf', { type: 'application/pdf' });
-    const spyUpload = jest.spyOn<any, any>(component as any, 'uploadSelectedFile').mockImplementation(() => {});
     const event = { target: { files: [valid] } } as any;
     component.onFileSelected(event);
     expect(component.evidence.sp_file_name).toBe('doc.pdf');
     expect(component.incorrectFile).toBeFalsy();
-    expect(spyUpload).toHaveBeenCalled();
+    expect(component.evidence.file).toBe(valid);
   });
 
   it('onFileDropped should set incorrectFile when invalid', () => {
@@ -124,11 +123,10 @@ describe('UserEvidenceComponent', () => {
 
   it('onFileDropped should set file info and trigger upload for valid', () => {
     const valid = new File(['data'], 'doc.pdf', { type: 'application/pdf' });
-    const spyUpload = jest.spyOn<any, any>(component as any, 'uploadSelectedFile').mockImplementation(() => {});
     const evt: any = { preventDefault: () => {}, stopPropagation: () => {}, dataTransfer: { files: [valid] } };
     component.onFileDropped(evt);
     expect(component.evidence.sp_file_name).toBe('doc.pdf');
-    expect(spyUpload).toHaveBeenCalled();
+    expect(component.evidence.file).toBe(valid);
   });
 
   it('onDeleteSPLink should clean sharepoint fields', () => {
