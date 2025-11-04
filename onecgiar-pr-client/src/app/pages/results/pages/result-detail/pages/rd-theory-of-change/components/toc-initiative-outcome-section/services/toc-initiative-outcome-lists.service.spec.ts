@@ -2,10 +2,15 @@ import { TestBed } from '@angular/core/testing';
 import { TocInitiativeOutcomeListsService } from './toc-initiative-outcome-lists.service';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { of, throwError } from 'rxjs';
+import { ApiService } from '../../../../../../../../../shared/services/api/api.service';
+import { FieldsManagerService } from '../../../../../../../../../shared/services/fields-manager.service';
+import { DataControlService } from '../../../../../../../../../shared/services/data-control.service';
 
 describe('TocInitiativeOutcomeListsService', () => {
   let service: TocInitiativeOutcomeListsService;
   let mockApiService: any;
+  let mockFieldsManagerService: any;
+  let mockDataControlService: any;
   const mockResponse = [
     { toc_level_id: 1, name: 'Level 1' },
     { toc_level_id: 2, name: 'Level 2' },
@@ -23,31 +28,50 @@ describe('TocInitiativeOutcomeListsService', () => {
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule]
     });
-    service = new TocInitiativeOutcomeListsService(mockApiService);
+    service = TestBed.inject(TocInitiativeOutcomeListsService);
   });
 
-  it('should populate outcomeLevelList with levels 2 and 3', () => {
+  it('should populate outcomeLevelList with levels 2 and 3', done => {
     const spy = jest.spyOn(mockApiService.tocApiSE, 'GET_AllTocLevels');
 
-    service = new TocInitiativeOutcomeListsService(mockApiService);
-
-    expect(spy).toHaveBeenCalled();
-    expect(service.outcomeLevelList.length).toBe(4);
-    expect(service.outcomeLevelList[0].toc_level_id).toBe(1);
-    expect(service.outcomeLevelList[1].toc_level_id).toBe(2);
+    // The effect runs automatically when the service is created
+    // Wait a bit for the effect to complete
+    setTimeout(() => {
+      expect(spy).toHaveBeenCalledWith(false);
+      expect(service.outcomeLevelList.length).toBe(2);
+      expect(service.outcomeLevelList[0].toc_level_id).toBe(2);
+      expect(service.outcomeLevelList[1].toc_level_id).toBe(3);
+      done();
+    }, 100);
   });
 
-  it('should handle GET_AllTocLevels error', () => {
+  it('should handle GET_AllTocLevels error', done => {
     const spyConsoleError = jest.spyOn(console, 'error');
-
     const errorMessage = 'Error message';
-    mockApiService = {
+
+    // Create a new service instance with error response
+    const errorApiService = {
       tocApiSE: {
-        GET_AllTocLevels: () => throwError(errorMessage)
+        GET_AllTocLevels: jest.fn().mockReturnValue(throwError(errorMessage))
       }
     };
-    service = new TocInitiativeOutcomeListsService(mockApiService);
 
-    expect(spyConsoleError).toHaveBeenCalledWith(errorMessage);
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [HttpClientTestingModule],
+      providers: [
+        TocInitiativeOutcomeListsService,
+        { provide: ApiService, useValue: errorApiService },
+        { provide: FieldsManagerService, useValue: mockFieldsManagerService },
+        { provide: DataControlService, useValue: mockDataControlService }
+      ]
+    });
+
+    const errorService = TestBed.inject(TocInitiativeOutcomeListsService);
+
+    setTimeout(() => {
+      expect(spyConsoleError).toHaveBeenCalledWith(errorMessage);
+      done();
+    }, 100);
   });
 });

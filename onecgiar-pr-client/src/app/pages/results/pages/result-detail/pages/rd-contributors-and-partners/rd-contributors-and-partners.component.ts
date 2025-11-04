@@ -155,8 +155,6 @@ export class RdContributorsAndPartnersComponent implements OnInit {
       });
     }
 
-    console.log(this.rdPartnersSE.partnersBody);
-
     this.api.resultsSE.PATCH_ContributorsPartners(this.rdPartnersSE.partnersBody).subscribe(_resp => {
       this.rdPartnersSE.getSectionInformation(null, true);
     });

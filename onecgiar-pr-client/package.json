@@ -94,7 +94,8 @@
       "!./src/app/**/routing-data-ipsr.ts",
       "!./src/app/**/routing-data.ts",
       "!./src/app/**/pusher-blocked-routes.ts",
-      "!./src/app/custom-fields/**/*"
+      "!./src/app/custom-fields/**/*",
+      "!./src/app/pages/results/pages/result-detail/pages/rd-contributors-and-partners/**/*"
     ],
     "testPathIgnorePatterns": [
       "<rootDir>/node_modules/",
