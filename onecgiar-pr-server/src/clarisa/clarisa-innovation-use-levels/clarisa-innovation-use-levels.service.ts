@@ -36,7 +36,9 @@ export class ClarisaInnovationUseLevelsService {
 
   async findAllV2() {
     try {
-      const response = await this._clarisaInnovationUseLevelRepository.find({ where: { id: In([11, 12, 13, 14, 15, 16, 17, 18, 19, 20]) } });
+      const response = await this._clarisaInnovationUseLevelRepository.find({
+        where: { id: In([11, 12, 13, 14, 15, 16, 17, 18, 19, 20]) },
+      });
       if (!response.length) {
         throw {
           response: {},

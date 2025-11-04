@@ -176,7 +176,7 @@ export class ResultsInnovationsUseRepository
         riu.female_using,
         riu.results_id,
         riu.has_innovation_link,
-        riu.innovation_readiness_level_id,
+        riu.innovation_use_level_id,
         riu.has_scaling_studies,
         riu.readiness_level_explanation,
         riu.innov_use_to_be_determined,
