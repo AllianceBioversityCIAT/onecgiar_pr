@@ -62,6 +62,10 @@ export class RdContributorsAndPartnersService implements OnDestroy {
     this.api.resultsSE.GET_ClarisaProjects().subscribe({
       next: ({ response }) => {
         this.clarisaProjectsList = response;
+        response.forEach(project => {
+          project.project_id = project.id;
+        });
+        console.log(this.clarisaProjectsList);
       },
       error: err => {
         console.error('Error loading Clarisa projects:', err);
@@ -195,6 +199,9 @@ export class RdContributorsAndPartnersService implements OnDestroy {
         this.result_toc_result_signal.set(this.partnersBody?.result_toc_result);
         this.getConsumed.set(true);
         //! TOC END
+        this.partnersBody.bilateral_projects.forEach(project => {
+          project.fullName = project.obj_clarisa_project.fullName;
+        });
       },
       error: _err => {
         this.getConsumed.set(true);

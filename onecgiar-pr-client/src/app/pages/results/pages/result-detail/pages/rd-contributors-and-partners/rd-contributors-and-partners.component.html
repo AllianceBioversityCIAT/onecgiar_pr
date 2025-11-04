@@ -83,12 +83,11 @@
     [(ngModel)]="this.rdPartnersSE.partnersBody.bilateral_projects"
     [required]="false"
     optionLabel="fullName"
-    optionValue="id"
+    optionValue="project_id"
     label="Contributing W3 and/or bilateral projects"
     selectedLabel="Projects selected"
     selectedOptionLabel="fullName"
     placeholder="Select project">
-    <ng-template #item let-project> </ng-template>
   </app-pr-multi-select>
 
   <app-pr-multi-select
