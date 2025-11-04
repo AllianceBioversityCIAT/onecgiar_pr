@@ -248,7 +248,7 @@ export class EvidencesService {
           evidencesArray.map((e) => e?.id),
           user.id,
           false,
-          1,
+          6,
         );
 
         const long: number =
@@ -260,7 +260,7 @@ export class EvidencesService {
               result.id,
               evidence.id,
               false,
-              1,
+              6,
             );
 
           evidence.link = await this.getHandleFromRegularLink(evidence.link);
@@ -342,63 +342,10 @@ export class EvidencesService {
           [],
           user.id,
           false,
-          1,
+          6,
         );
       }
 
-      if (createEvidenceDto?.supplementary) {
-        const supplementaryArray = createEvidenceDto?.supplementary.filter(
-          (e) => !!e?.link,
-        );
-        const testDuplicate = supplementaryArray.map((e) => e.link);
-        if (new Set(testDuplicate).size !== testDuplicate.length) {
-          throw {
-            response: {},
-            message: 'Duplicate links found in supplementary information',
-            status: HttpStatus.BAD_REQUEST,
-          };
-        }
-        await this._evidencesRepository.updateEvidences(
-          createEvidenceDto.result_id,
-          supplementaryArray.map((e) => e.link.trim()),
-          user.id,
-          true,
-          1,
-        );
-        const supplementaryLenght: number =
-          supplementaryArray.length > 3 ? 3 : supplementaryArray.length;
-        const newsEvidencesArray: Evidence[] = [];
-        for (let index = 0; index < supplementaryLenght; index++) {
-          const supplementary = supplementaryArray[index];
-          const eExists =
-            await this._evidencesRepository.getEvidencesByResultIdAndLink(
-              result.id,
-              supplementary.link,
-              true,
-              1,
-            );
-
-          supplementary.link = await this.getHandleFromRegularLink(
-            supplementary.link,
-          );
-
-          if (!eExists) {
-            const newEvidnece = new Evidence();
-            newEvidnece.created_by = user.id;
-            newEvidnece.last_updated_by = user.id;
-            newEvidnece.description = supplementary?.description ?? null;
-            newEvidnece.is_supplementary = true;
-            newEvidnece.link = supplementary.link;
-            newEvidnece.result_id = result.id;
-            newEvidnece.evidence_type_id = 6;
-            newsEvidencesArray.push(newEvidnece);
-          } else {
-            eExists.description = supplementary?.description ?? null;
-            newsEvidencesArray.push(eExists);
-          }
-        }
-        await this._evidencesRepository.save(newsEvidencesArray);
-      }
       return {
         response: createEvidenceDto,
         message: 'The data was updated correctly',
@@ -409,7 +356,7 @@ export class EvidencesService {
     }
   }
 
-  private async getHandleFromRegularLink(evidence: string): Promise<string> {
+  public async getHandleFromRegularLink(evidence: string): Promise<string> {
     const isCGLink = this.kpUrlRegex.exec(evidence ?? '');
 
     if (isCGLink) {
