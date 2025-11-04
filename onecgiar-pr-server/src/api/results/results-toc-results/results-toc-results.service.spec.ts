@@ -199,18 +199,10 @@ describe('ResultsTocResultsService', () => {
 
     expect(
       resultsTocResultRepository.saveIndicatorsPrimarySubmitter,
-    ).toHaveBeenCalledWith(
-      expect.objectContaining({ result_id: 1 }),
-      1,
-      1,
-    );
+    ).toHaveBeenCalledWith(expect.objectContaining({ result_id: 1 }), 1, 1);
     expect(
       resultsTocResultRepository.saveIndicatorsContributors,
-    ).toHaveBeenCalledWith(
-      expect.objectContaining({ result_id: 1 }),
-      1,
-      1,
-    );
+    ).toHaveBeenCalledWith(expect.objectContaining({ result_id: 1 }), 1, 1);
     expect(resultRepository.getResultById).toHaveBeenCalledWith(1);
     expect(
       resultByInitiativesRepository.updateResultByInitiative,
