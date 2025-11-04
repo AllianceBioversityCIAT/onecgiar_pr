@@ -62,6 +62,8 @@ export class CookiesDialogComponent implements OnInit {
         ad_Storage: granted ? 'granted' : 'denied',
         analytics_Storage: granted ? 'granted' : 'denied'
       });
-    } catch {}
+    } catch {
+      // Ignore errors from Clarity consent API calls
+    }
   }
 }

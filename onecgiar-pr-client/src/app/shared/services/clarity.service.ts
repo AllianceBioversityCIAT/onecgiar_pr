@@ -30,7 +30,9 @@ export class ClarityService {
             ad_Storage: 'denied',
             analytics_Storage: 'denied'
           });
-        } catch {}
+        } catch {
+          // Ignore errors from Clarity consent API calls
+        }
         this.initialized = true;
         return;
       }
@@ -41,14 +43,18 @@ export class ClarityService {
           ad_Storage: hasConsent ? 'granted' : 'denied',
           analytics_Storage: hasConsent ? 'granted' : 'denied'
         });
-      } catch {}
+      } catch {
+        // Ignore errors from Clarity consent API calls
+      }
 
       this.initClarity();
 
       // Reinforce consent after initialization
       try {
         Clarity.consent(hasConsent);
-      } catch {}
+      } catch {
+        // Ignore errors from Clarity consent API calls
+      }
 
       this.setupRouteTracking();
       this.setUserInfo();

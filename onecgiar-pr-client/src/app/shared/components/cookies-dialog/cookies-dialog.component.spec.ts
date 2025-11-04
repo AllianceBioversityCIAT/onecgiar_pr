@@ -1,4 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 
 import { CookiesDialogComponent } from './cookies-dialog.component';
 
@@ -8,9 +10,8 @@ describe('CookiesDialogComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [CookiesDialogComponent]
-    })
-    .compileComponents();
+      imports: [CookiesDialogComponent, HttpClientTestingModule, BrowserAnimationsModule]
+    }).compileComponents();
 
     fixture = TestBed.createComponent(CookiesDialogComponent);
     component = fixture.componentInstance;
