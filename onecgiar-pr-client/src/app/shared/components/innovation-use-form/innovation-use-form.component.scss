@@ -57,3 +57,9 @@
   padding-top: 120px !important;
 }
 
+/* Force underline for the calculator link rendered via innerHTML */
+:host ::ng-deep a.open_route[target="_blank"][href*="scalingreadiness.org/calculator-use-headless/"] {
+  text-decoration: underline !important;
+  border-bottom: none !important;
+}
+

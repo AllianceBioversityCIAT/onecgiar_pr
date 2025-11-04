@@ -60,6 +60,7 @@ describe('InnovationUseInfoComponent', () => {
         GET_clarisaInnovationType: () => of({ response: [] }),
         GET_clarisaInnovationCharacteristics: () => of({ response: [] }),
         GET_clarisaInnovationReadinessLevels: () => of({ response: [] }),
+        GET_clarisaInnovationUseLevels: () => of({ response: [] }),
         GET_innovationUseResults: () => of({ response: [] })
       },
       rolesSE: {

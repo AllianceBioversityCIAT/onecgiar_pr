@@ -92,7 +92,7 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     <li>In case the innovation use level differs across countries or regions, we advise to assign the highest current innovation use level that can be supported by the evidence provided.</li>
     <li>Be realistic in assessing the use level of the innovation and keep in mind that the claimed use level needs to be supported by evidence documentation.</li>
     <li>The innovation use level will be quality assessed.</li>
-    <li><strong>YOUR USE LEVEL IN JUST 3 CLICKS: TRY THE NEW <a href="https://www.scalingreadiness.org/calculator-use-headless/" class="open_route" target="_blank">INNOVATION USE CALCULATOR</a></strong></li>
+    <li><strong>YOUR USE LEVEL IN JUST 3 CLICKS: <a href="https://www.scalingreadiness.org/calculator-use-headless/" class="open_route" target="_blank" style="text-decoration: none !important;"><span style="border-bottom: 1px solid currentColor;">TRY THE NEW INNOVATION USE CALCULATOR</span></a></strong></li>
     </ul>`;
   }
   hasReadinessLevelDiminished() {
