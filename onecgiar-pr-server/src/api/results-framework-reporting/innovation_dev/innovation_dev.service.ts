@@ -417,7 +417,6 @@ export class InnovationDevService {
     radioButtonValue: number,
     options: OptionV2[],
   ) {
-
     const isOptionV2 = (data: OptionV2 | SubOptionV2): data is OptionV2 => {
       return (data as OptionV2).subOptions !== undefined;
     };
@@ -468,6 +467,4 @@ export class InnovationDevService {
       }
     }
   }
-  
-
 }
