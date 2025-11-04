@@ -25,7 +25,7 @@
             optionValue="toc_result_id"
             placeholder="Select outcome"
             [(ngModel)]="activeTab.toc_result_id"
-            (ngModelChange)="getIndicator(); validateSelectedOptionEOI(); getIndicatorsList()">
+            (ngModelChange)="validateSelectedOptionEOI(); getIndicatorsList()">
           </app-pr-select>
         }
         @case (2) {
@@ -39,7 +39,7 @@
             optionValue="toc_result_id"
             placeholder="Select outcome"
             [(ngModel)]="activeTab.toc_result_id"
-            (ngModelChange)="getIndicator(); validateSelectedOptionOutCome(); getIndicatorsList()">
+            (ngModelChange)="validateSelectedOptionOutCome(); getIndicatorsList()">
           </app-pr-select>
         }
         @case (1) {
@@ -53,7 +53,7 @@
             placeholder="Select output"
             [(ngModel)]="activeTab.toc_result_id"
             [extraInformation]="true"
-            (ngModelChange)="getIndicator(); validateSelectedOptionOutPut(); getIndicatorsList()">
+            (ngModelChange)="validateSelectedOptionOutPut(); getIndicatorsList()">
           </app-pr-select>
         }
       }

@@ -88,60 +88,21 @@ export class CPMultipleWPsContentComponent implements OnChanges {
     this.getIndicatorsList();
 
     if (this.showMultipleWPsContent) {
-      if (
-        (this.resultLevelId === 1 && this.outputList.length > 0 && this.eoiList.length > 0) ||
-        (this.resultLevelId === 2 && this.outcomeList.length > 0 && this.eoiList.length > 0)
-      ) {
-        if (this.activeTab?.toc_result_id && this.activeTab?.initiative_id && !this.activeTab?.indicators?.length) {
-          this.getIndicator();
-        }
-      }
+      // if (
+      //   (this.resultLevelId === 1 && this.outputList.length > 0 && this.eoiList.length > 0) ||
+      //   (this.resultLevelId === 2 && this.outcomeList.length > 0 && this.eoiList.length > 0)
+      // ) {
+      //   if (this.activeTab?.toc_result_id && this.activeTab?.initiative_id && !this.activeTab?.indicators?.length) {
+      //     this.getIndicator();
+      //   }
+      // }
       this.pushSelectedOptions();
     }
   }
 
   mapTocResultsIndicatorId() {
     this.activeTab.indicators[0].toc_results_indicator_id = this.activeTab.indicators[0].related_node_id;
-  }
-
-  getIndicator() {
-    this.indicatorView = false;
-
-    this.api.resultsSE.Get_indicator(this.activeTab?.toc_result_id, this.activeTab?.initiative_id).subscribe({
-      next: ({ response }) => {
-        this.activeTab.indicators = response?.informationIndicator;
-        this.activeTab.impactAreasTargets = response?.impactAreas.map(item => ({
-          ...item,
-          full_name: `<strong>${item.name}</strong> - ${item.target}`
-        }));
-        this.activeTab.sdgTargest = response?.sdgTargets.map(item => ({
-          ...item,
-          full_name: `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`
-        }));
-
-        const getText = (actionAreaId: number) => {
-          if (actionAreaId === 1) return '<strong>Systems Transformation</strong>';
-          if (actionAreaId === 2) return '<strong>Resilient Agrifood Systems</strong>';
-          return '<strong>Genetic Innovation</strong>';
-        };
-        this.activeTab.actionAreaOutcome = response?.actionAreaOutcome.map(item => ({
-          ...item,
-          full_name: `${getText(item.actionAreaId)} (${item.outcomeSMOcode}) - ${item.outcomeStatement}`
-        }));
-        this.activeTab.is_sdg_action_impact = response?.is_sdg_action_impact;
-        this.activeTab.wpinformation = response?.wpinformation;
-        this.activeTab.wpinformation.wpTitle = response.wpinformation?.extraInformation?.wp_acronym
-          ? `<strong>${response.wpinformation?.extraInformation?.wp_acronym}</strong> <br> <div class="select_item_description">${response.wpinformation?.extraInformation?.result_title}</div>`
-          : `<strong>${response.wpinformation?.extraInformation?.result_title}</strong>`;
-
-        setTimeout(() => {
-          this.indicatorView = true;
-        }, 80);
-      },
-      error: err => {
-        console.error(err);
-      }
-    });
+    console.log(this.activeTab.indicators[0]);
   }
 
   narrativeTypeResult() {
