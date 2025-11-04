@@ -441,8 +441,7 @@ export class ResultsApiService {
   }
 
   GET_innovationUseResults() {
-    return this.http
-      .get<any>(`${this.apiBaseUrlV2}get/innov-use-linked-results`);
+    return this.http.get<any>(`${this.apiBaseUrlV2}get/innov-use-linked-results`);
   }
   GET_innovationUseP25() {
     return this.http
@@ -1349,7 +1348,7 @@ export class ResultsApiService {
 
   // /v2/api/contributors-partners/{resultId}
   PATCH_ContributorsPartners(body: any) {
-    return this.http.patch<any>(`${this.baseApiBaseUrlV2}contributors-partners/${this.currentResultId}`, body);
+    return this.http.patch<any>(`${this.baseApiBaseUrlV2}contributors-partners/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 
   GET_ClarisaProjects() {

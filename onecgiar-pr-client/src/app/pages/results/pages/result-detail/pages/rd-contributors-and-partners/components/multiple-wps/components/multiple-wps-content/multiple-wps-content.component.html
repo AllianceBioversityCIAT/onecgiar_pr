@@ -70,6 +70,8 @@
       [(ngModel)]="activeTab.indicators[0].related_node_id"
       (ngModelChange)="mapTocResultsIndicatorId()">
     </app-pr-select>
+    <app-pr-input placeholder="Enter target" label="Target" type="number" [(ngModel)]="activeTab.indicators[0].targets[0].contributing_indicator">
+    </app-pr-input>
   }
   <hr class="divider-20" />
 

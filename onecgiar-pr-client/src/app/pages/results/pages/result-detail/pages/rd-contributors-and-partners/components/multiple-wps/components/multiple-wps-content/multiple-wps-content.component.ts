@@ -101,7 +101,6 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   }
 
   mapTocResultsIndicatorId() {
-    if (this.activeTab.indicators[0].toc_results_indicator_id) return;
     this.activeTab.indicators[0].toc_results_indicator_id = this.activeTab.indicators[0].related_node_id;
   }
 

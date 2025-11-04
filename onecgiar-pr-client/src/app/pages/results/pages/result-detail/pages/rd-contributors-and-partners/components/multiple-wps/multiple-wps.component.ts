@@ -208,7 +208,7 @@ export class CPMultipleWPsComponent implements OnChanges {
       uniqueId: Math.random().toString(36).substring(7),
       related_node_id: null,
       toc_progressive_narrative: null,
-      indicators: [{ related_node_id: null }]
+      indicators: [{ related_node_id: null, targets: [{ contributing_indicator: null }] }]
     });
 
     this.onActiveTab(this.initiative().result_toc_results[this.initiative().result_toc_results.length - 1]);
