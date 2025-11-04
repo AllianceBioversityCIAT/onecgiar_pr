@@ -26,6 +26,7 @@ import { ResultsCenterDto } from '../results-centers/dto/results-center.dto';
 import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 import { ResultsByProjectsService } from '../results_by_projects/results_by_projects.service';
 import { SavePartnersV2Dto } from './dto/save-partners-v2.dto';
+import { ResultsByProjectsRepository } from '../results_by_projects/results_by_projects.repository';
 
 @Injectable()
 export class ResultsByInstitutionsService {
@@ -43,6 +44,7 @@ export class ResultsByInstitutionsService {
     private readonly _resultsCenterRepository: ResultsCenterRepository,
     private readonly _resultBilateralBudgetRepository: NonPooledProjectBudgetRepository,
     private readonly _resultsByProjectsService: ResultsByProjectsService,
+    private readonly _resultsBilateralRepository: ResultsByProjectsRepository,
   ) {}
 
   create(createResultsByInstitutionDto: CreateResultsByInstitutionDto) {
@@ -606,10 +608,10 @@ export class ResultsByInstitutionsService {
           resultId,
         );
 
-      const bilateral_projects = await this._resultsByProjectsService.find({
-        where: { result_id: resultId, is_active: true },
-        order: { id: 'ASC' },
-      });
+      const bilateral_projects =
+        await this._resultsBilateralRepository.findResultsByProjectsByResultId(
+          resultId,
+        );
 
       return {
         response: {
