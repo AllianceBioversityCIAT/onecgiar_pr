@@ -5,7 +5,7 @@
         <div class="tab" [ngClass]="{ active: tab.uniqueId === activeTab.uniqueId }">
           <a class="tab-content" (click)="onActiveTab(tab)">
             <i class="material-icons-round {{ completnessStatusValidation(tab) ? 'valid' : 'invalid' }}" style="font-size: 20px"> check_circle </i>
-            <p class="tab-title">{{ this.dynamicTabTitle() }} N° {{ i + 1 }}</p>
+            <p class="tab-title">{{ this.dynamicTabTitle() }} N~{{ i + 1 }}</p>
           </a>
           <a
             *ngIf="initiative()?.result_toc_results.length !== 1"
