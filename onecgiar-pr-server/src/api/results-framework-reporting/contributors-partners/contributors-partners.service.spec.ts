@@ -4,7 +4,6 @@ import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultRepository } from '../../results/result.repository';
 import { ResultByInitiativesRepository } from '../../results/results_by_inititiatives/resultByInitiatives.repository';
-import { ResultsByProjectsRepository } from '../../results/results_by_projects/results_by_projects.repository';
 import { ResultsCenterRepository } from '../../results/results-centers/results-centers.repository';
 import { ResultsByInstitutionsService } from '../../results/results_by_institutions/results_by_institutions.service';
 import { ResultByIntitutionsRepository } from '../../results/results_by_institutions/result_by_intitutions.repository';
@@ -24,7 +23,6 @@ describe('ContributorsPartnersService', () => {
   let resultByInitiativesRepository: jest.Mocked<ResultByInitiativesRepository>;
   let resultByInstitutionsRepository: jest.Mocked<ResultByIntitutionsRepository>;
   let resultsCenterRepository: jest.Mocked<ResultsCenterRepository>;
-  let resultsByProjectsRepository: jest.Mocked<ResultsByProjectsRepository>;
   let resultsTocResultsService: jest.Mocked<ResultsTocResultsService>;
   let resultsByInstitutionsService: jest.Mocked<ResultsByInstitutionsService>;
   let linkedResultRepository: jest.Mocked<LinkedResultRepository>;
@@ -64,12 +62,6 @@ describe('ContributorsPartnersService', () => {
           provide: ResultsCenterRepository,
           useValue: {
             getAllResultsCenterByResultId: jest.fn(),
-          },
-        },
-        {
-          provide: ResultsByProjectsRepository,
-          useValue: {
-            findResultsByProjectsByResultId: jest.fn(),
           },
         },
         {
@@ -144,9 +136,6 @@ describe('ContributorsPartnersService', () => {
     resultsCenterRepository = module.get(
       ResultsCenterRepository,
     ) as jest.Mocked<ResultsCenterRepository>;
-    resultsByProjectsRepository = module.get(
-      ResultsByProjectsRepository,
-    ) as jest.Mocked<ResultsByProjectsRepository>;
     resultsTocResultsService = module.get(
       ResultsTocResultsService,
     ) as jest.Mocked<ResultsTocResultsService>;
@@ -210,21 +199,71 @@ describe('ContributorsPartnersService', () => {
       resultsCenterRepository.getAllResultsCenterByResultId.mockResolvedValue(
         [],
       );
-      const bilateralProjects = [
+      const institutionsPayload = [
         {
-          id: 15,
-          result_id: `${resultId}`,
-          project_id: '260',
+          id: '22853',
           is_active: true,
-          created_date: '2025-10-26T07:37:05.576Z',
-          last_updated_date: '2025-10-26T07:37:05.576Z',
-          created_by: '615',
-          last_updated_by: '615',
+          is_predicted: false,
+          created_date: '2025-11-04T19:33:17.450Z',
+          last_updated_date: '2025-11-04T20:50:51.000Z',
+          is_leading_result: false,
+          result_id: '8387',
+          institutions_id: 1,
+          institution_roles_id: '2',
+          result_kp_mqap_institution_id: null,
+          delivery: [],
+          obj_institutions: {
+            name: 'Wageningen University and Research Centre',
+            website_link: 'http://www.wur.nl/en.htm',
+            obj_institution_type_code: {
+              id: 60,
+              name: 'Research organizations and universities National (Universities)',
+            },
+          },
         },
-      ] as any[];
-      resultsByProjectsRepository.findResultsByProjectsByResultId.mockResolvedValue(
-        bilateralProjects as any,
-      );
+        {
+          id: '22862',
+          is_active: true,
+          is_predicted: false,
+          created_date: '2025-11-04T20:50:50.239Z',
+          last_updated_date: '2025-11-04T20:50:50.239Z',
+          is_leading_result: false,
+          result_id: '8387',
+          institutions_id: 3,
+          institution_roles_id: '2',
+          result_kp_mqap_institution_id: null,
+          delivery: [
+            {
+              id: 26904,
+              partner_delivery_type_id: 1,
+              result_by_institution_id: '22862',
+              is_active: true,
+              created_by: 615,
+              created_date: '2025-11-04T20:50:52.100Z',
+              last_updated_by: 615,
+              last_updated_date: '2025-11-04T20:50:52.100Z',
+            },
+            {
+              id: 26905,
+              partner_delivery_type_id: 3,
+              result_by_institution_id: '22862',
+              is_active: true,
+              created_by: 615,
+              created_date: '2025-11-04T20:50:52.436Z',
+              last_updated_by: 615,
+              last_updated_date: '2025-11-04T20:50:52.436Z',
+            },
+          ],
+          obj_institutions: {
+            name: 'Institut National de Recherche Agricole du Benin',
+            website_link: 'http://inrab.org/',
+            obj_institution_type_code: {
+              id: 68,
+              name: 'Government (National)',
+            },
+          },
+        },
+      ];
       resultsInnovationsDevRepository.query.mockImplementation(
         async (sql: string, params: any[]) => {
           if (
@@ -268,11 +307,11 @@ describe('ContributorsPartnersService', () => {
         {
           response: {
             no_applicable_partner: false,
-            institutions: [],
+            institutions: institutionsPayload,
             mqap_institutions: [],
             bilateral_projects: [],
             contributing_center: [],
-            is_lead_by_partner: false,
+            is_lead_by_partner: true,
           },
           message: 'Successful response (P25)',
           status: HttpStatus.OK,
@@ -290,10 +329,13 @@ describe('ContributorsPartnersService', () => {
           level_id: mockResult.result_level_id,
           owner_initiative: mockInitiative,
           ...tocResponse,
-          institutions: [],
+          institutions: institutionsPayload.map((inst) => ({
+            ...inst,
+            delivery: inst.delivery.filter((d) => d.is_active),
+          })),
           mqap_institutions: [],
           contributing_center: [],
-          bilateral_projects: bilateralProjects,
+          bilateral_projects: [],
           no_applicable_partner: false,
           is_lead_by_partner: true,
           has_innovation_link: true,

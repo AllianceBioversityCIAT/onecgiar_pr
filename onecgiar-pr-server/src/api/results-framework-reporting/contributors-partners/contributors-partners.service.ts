@@ -2,10 +2,7 @@ import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { ResultRepository } from '../../results/result.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultByInitiativesRepository } from '../../results/results_by_inititiatives/resultByInitiatives.repository';
-import { ResultsCenterRepository } from '../../results/results-centers/results-centers.repository';
-import { InstitutionRoleEnum } from '../../results/results_by_institutions/entities/institution_role.enum';
 import { ResultByIntitutionsRepository } from '../../results/results_by_institutions/result_by_intitutions.repository';
-import { ResultsByProjectsRepository } from '../../results/results_by_projects/results_by_projects.repository';
 import { ResultsTocResultsService } from '../../results/results-toc-results/results-toc-results.service';
 import { ResultsByInstitutionsService } from '../../results/results_by_institutions/results_by_institutions.service';
 import { CreateResultsTocResultV2Dto } from '../../results/results-toc-results/dto/create-results-toc-result-v2.dto';
@@ -27,8 +24,6 @@ export class ContributorsPartnersService {
     private readonly _handlersError: HandlersError,
     private readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
     private readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
-    private readonly _resultsCenterRepository: ResultsCenterRepository,
-    private readonly _resultsBilateralRepository: ResultsByProjectsRepository,
     private readonly _resultsTocResultsService: ResultsTocResultsService,
     private readonly _resultsByInstitutionsService: ResultsByInstitutionsService,
     private readonly _linkedResultRepository: LinkedResultRepository,
@@ -55,47 +50,39 @@ export class ContributorsPartnersService {
 
       const resultTypeId = Number(result.result_type_id);
 
-      const institutionsData = await this._resultByIntitutionsRepository.find({
-        where: {
-          result_id: resultId,
-          is_active: true,
-          institution_roles_id: InstitutionRoleEnum.PARTNER,
-        },
-        relations: {
-          delivery: true,
-          obj_institutions: { obj_institution_type_code: true },
-        },
-        order: { id: 'ASC' },
-      });
-
-      const institutions = institutionsData.map((inst) => ({
-        id: inst.id,
-        deliveries: inst.delivery.filter((d) => d.is_active),
-        institution: inst.obj_institutions
-          ? {
-              name: inst.obj_institutions.name,
-              website_link: inst.obj_institutions.website_link,
-              type: inst.obj_institutions.obj_institution_type_code?.name,
-            }
-          : null,
-      }));
-
-      const mqap_institutions =
+      const partnersSnapshot =
         await this._resultsByInstitutionsService.getInstitutionsPartnersByResultIdV2(
           resultId,
         );
-      const mqapInstitutionsData =
-        (mqap_institutions?.response as any)?.mqap_institutions || [];
 
-      const contributingCenters =
-        await this._resultsCenterRepository.getAllResultsCenterByResultId(
-          resultId,
-        );
+      if (
+        partnersSnapshot?.status &&
+        partnersSnapshot.status !== HttpStatus.OK
+      ) {
+        return partnersSnapshot;
+      }
 
-      const bilateralProjects =
-        await this._resultsBilateralRepository.findResultsByProjectsByResultId(
-          resultId,
-        );
+      const partnersResponse = (partnersSnapshot?.response ?? {}) as Record<
+        string,
+        any
+      >;
+
+      const institutionsData = (partnersResponse.institutions ?? []).map(
+        (inst: any) => ({
+          ...inst,
+          delivery: (inst.delivery ?? []).filter((d) => d.is_active),
+        }),
+      );
+
+      const mqapInstitutionsData = (
+        partnersResponse.mqap_institutions ?? []
+      ).map((inst: any) => ({
+        ...inst,
+        delivery: (inst.delivery ?? []).filter((d) => d.is_active),
+      }));
+
+      const contributingCenters = partnersResponse.contributing_center ?? [];
+      const bilateralProjects = partnersResponse.bilateral_projects ?? [];
 
       const tocMappingRes =
         await this._resultsTocResultsService.getTocByResultV2(resultId);
@@ -124,6 +111,12 @@ export class ContributorsPartnersService {
       let hasInnovationLink: boolean | null = null;
       let linkedResultIds: number[] | null = null;
 
+      const noApplicablePartner =
+        partnersResponse.no_applicable_partner ??
+        !!result.no_applicable_partner;
+      const isLeadByPartner =
+        partnersResponse.is_lead_by_partner ?? !!result.is_lead_by_partner;
+
       if (
         resultTypeId === ResultTypeEnum.INNOVATION_DEVELOPMENT ||
         resultTypeId === ResultTypeEnum.INNOVATION_USE
@@ -145,12 +138,12 @@ export class ContributorsPartnersService {
           level_id: result.result_level_id,
           owner_initiative: resultInit,
           ...tocMapping,
-          institutions,
+          institutions: institutionsData,
           mqap_institutions: mqapInstitutionsData,
           contributing_center: contributingCenters,
           bilateral_projects: bilateralProjects,
-          no_applicable_partner: !!result.no_applicable_partner,
-          is_lead_by_partner: !!result.is_lead_by_partner,
+          no_applicable_partner: noApplicablePartner,
+          is_lead_by_partner: isLeadByPartner,
           has_innovation_link: hasInnovationLink,
           linked_results: linkedResultIds,
         },
