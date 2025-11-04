@@ -24,6 +24,7 @@ export class CurrentResultService {
         this.rolesSE.validateReadOnly(response);
         this.resultLevelSE.currentResultLevelName = response.result_level_name;
         this.resultLevelSE.currentResultLevelId = response.result_level_id;
+        this.resultLevelSE.currentResultLevelIdSignal.set(response.result_level_id);
         this.resultLevelSE.currentResultTypeId = response.result_type_id;
         this.dataControlSE.currentResult = response;
         const { result_type_id } = this.dataControlSE.currentResult || {};

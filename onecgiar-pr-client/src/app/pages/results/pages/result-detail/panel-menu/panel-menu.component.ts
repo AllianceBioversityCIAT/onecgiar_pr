@@ -39,11 +39,6 @@ export class PanelMenuComponent {
     return Boolean(hideInKP.find(option => option == navOption.path));
   }
 
-  hideLinksToResults(navOption) {
-    if (navOption.path === 'links-to-results') return this.dataControlSE.currentResultSignal()?.portfolio === 'P25';
-    return false;
-  }
-
   get green_checks_string() {
     return JSON.stringify(this.api.dataControlSE.green_checks);
   }

@@ -1,0 +1,112 @@
+@use '../../../../../../../styles/fonts.scss' as fonts;
+
+.selected_container {
+  margin-top: 10px;
+  overflow-y: auto;
+  max-height: 300px;
+
+  .chips_container {
+    display: flex;
+    flex-wrap: wrap;
+    position: relative;
+    gap: 3px;
+
+    .pr_chip_selected {
+      background-color: var(--pr-color-primary-50);
+      color: var(--pr-color-secondary-400);
+      @include fonts.pr-typography('body-2');
+      padding: 6px 13px;
+      border-radius: 10px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+
+      .medal {
+        transition: all ease-in-out 0.4s;
+        color: var(--pr-color-accents-3);
+      }
+
+      .primary {
+        color: var(--pr-color-primary-300);
+      }
+    }
+
+    .medal-gap {
+      gap: 10px;
+    }
+  }
+}
+
+i {
+  justify-self: center;
+  align-self: center;
+  cursor: default !important;
+  font-size: 1.5em;
+  color: var(--pr-color-accents-6);
+}
+
+.column_title {
+  @include fonts.pr-typography('h4');
+  font-weight: 500;
+}
+
+.medal_info {
+  display: flex;
+  align-items: center;
+  color: var(--pr-color-accents-3);
+  gap: 10px;
+}
+
+.no-primary-list {
+  color: var(--pr-color-primary-300);
+  margin-top: 5px;
+  font-weight: 500;
+}
+
+.selected_container {
+  margin-top: 10px;
+  overflow-y: auto;
+  max-height: 300px;
+
+  .chips_container {
+    display: flex;
+    flex-wrap: wrap;
+    position: relative;
+    gap: 3px;
+
+    .pending {
+      .text_inactive {
+        text-decoration: line-through;
+      }
+    }
+
+    .pr_chip_selected {
+      display: flex;
+      justify-content: space-between;
+      background-color: var(--pr-color-primary-50);
+      color: var(--pr-color-secondary-400);
+      @include fonts.pr-typography('body-2');
+      padding: 6px 13px;
+      border-radius: 10px;
+      gap: 10px;
+      align-items: center;
+
+      .medal {
+        transition: all ease-in-out 0.4s;
+        color: var(--pr-color-accents-3);
+      }
+
+      .primary {
+        color: var(--pr-color-primary-300);
+      }
+
+      i {
+        justify-self: center;
+        align-self: center;
+        cursor: pointer;
+        font-size: 1.5em;
+        color: var(--pr-color-accents-6);
+      }
+    }
+  }
+}

@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
 import { map, Observable, firstValueFrom } from 'rxjs';
@@ -18,6 +18,7 @@ import { UpdateUserStatus } from '../../interfaces/updateUserStatus.interface';
 import { SearchParams } from './api.service';
 import { EntityDetails } from '../../../pages/result-framework-reporting/pages/entity-details/interfaces/entity-details.interface';
 import { ExtraGeographicLocationBody } from '../../../pages/results/pages/result-detail/pages/rd-geographic-location/models/extraGeographicLocationBody';
+import { FieldsManagerService } from '../fields-manager.service';
 
 @Injectable({
   providedIn: 'root'
@@ -408,9 +409,10 @@ export class ResultsApiService {
         .pipe(this.saveButtonSE.isGettingSectionPipe());
     }
   }
-  get_vesrsionDashboard(init) {
+  get_vesrsionDashboard(init, isP25: boolean = false) {
+    const dynamicApiBaseURl = isP25 ? this.apiBaseUrlV2 : this.apiBaseUrl;
     return this.http.get<any>(
-      `${this.apiBaseUrl}toc/get/version/${
+      `${dynamicApiBaseURl}toc/get/version/${
         this.ipsrDataControlSE.inIpsr ? this.ipsrDataControlSE.resultInnovationId : this.currentResultId
       }/initiative/${init}/resultToc`
     );
@@ -439,8 +441,7 @@ export class ResultsApiService {
   }
 
   GET_innovationUseResults() {
-    return this.http
-      .get<any>(`${this.apiBaseUrlV2}get/innov-use-linked-results`);
+    return this.http.get<any>(`${this.apiBaseUrlV2}get/innov-use-linked-results`);
   }
   GET_innovationUseP25() {
     return this.http
@@ -1342,5 +1343,19 @@ export class ResultsApiService {
 
   GET_adUsersSearch(search?: string) {
     return this.http.get<any>(`${environment.apiBaseUrl}api/ad-users/search?query=${search}`);
+  }
+
+  // /v2/api/contributors-partners/{resultId}
+  GET_ContributorsPartners() {
+    return this.http.get<any>(`${this.baseApiBaseUrlV2}contributors-partners/${this.currentResultId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+  }
+
+  // /v2/api/contributors-partners/{resultId}
+  PATCH_ContributorsPartners(body: any) {
+    return this.http.patch<any>(`${this.baseApiBaseUrlV2}contributors-partners/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+  }
+
+  GET_ClarisaProjects() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/projects/get/all`);
   }
 }
