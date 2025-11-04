@@ -50,13 +50,16 @@ export class PrInputComponent implements ControlValueAccessor {
   public wordCount: number = 0;
   public notProvidedText = "<div class='text-red-100 italic'>Not provided</div>";
 
+  useColon: boolean = true;
+
   preventFieldRender = computed<boolean>(() => {
     if (!this.fieldRef) return true;
-    const { hide, label, placeholder, description, required } = this.fieldsManager.fields()[this.fieldRef] || {};
+    const { hide, label, placeholder, description, required, useColon } = this.fieldsManager.fields()[this.fieldRef] || {};
     this.label = label;
     this.placeholder = placeholder;
     this.description = description;
     this.required = required;
+    this.useColon = useColon ?? true;
     return !hide;
   });
 

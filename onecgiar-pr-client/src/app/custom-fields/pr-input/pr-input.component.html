@@ -8,7 +8,8 @@
       [readOnly]="(readOnly || this.rolesSE.readOnly) && !isStatic"
       [showDescriptionLabel]="this.showDescription"
       [descInlineStyles]="descInlineStyles"
-      [labelDescInlineStyles]="labelDescInlineStyles">
+      [labelDescInlineStyles]="labelDescInlineStyles"
+      [useColon]="useColon">
     </app-pr-field-header>
     <div
       [ngSwitch]="(readOnly || this.rolesSE.readOnly) && !isStatic"

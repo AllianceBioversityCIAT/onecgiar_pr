@@ -5,4 +5,5 @@ export interface CustomField {
   hide?: boolean;
   description?: string;
   required?: boolean;
+  useColon?: boolean;
 }
