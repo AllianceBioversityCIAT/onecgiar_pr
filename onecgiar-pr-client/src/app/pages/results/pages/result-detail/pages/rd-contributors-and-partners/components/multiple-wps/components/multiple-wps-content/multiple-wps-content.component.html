@@ -13,47 +13,49 @@
       </app-pr-select>
     </div>
 
-    @switch (activeTab.toc_level_id) {
-      @case (3) {
-        <app-pr-select
-          [options]="eoiList"
-          [label]="this.secondFieldLabel()"
-          [editable]="editable"
-          [disabled]="(resultLevelId === 1 && false) || !editable"
-          optionLabel="title"
-          optionValue="toc_result_id"
-          placeholder="Select outcome"
-          [(ngModel)]="activeTab.toc_result_id"
-          (ngModelChange)="getIndicator(); validateSelectedOptionEOI(); getIndicatorsList()">
-        </app-pr-select>
-      }
-      @case (2) {
-        <app-pr-select
-          [options]="outcomeList"
-          [label]="this.secondFieldLabel()"
-          [editable]="editable"
-          [disabled]="(resultLevelId === 1 && false) || !editable"
-          optionLabel="extraInformation"
-          [extraInformation]="true"
-          optionValue="toc_result_id"
-          placeholder="Select outcome"
-          [(ngModel)]="activeTab.toc_result_id"
-          (ngModelChange)="getIndicator(); validateSelectedOptionOutCome(); getIndicatorsList()">
-        </app-pr-select>
-      }
-      @case (1) {
-        <app-pr-select
-          [options]="outputList"
-          [label]="this.secondFieldLabel()"
-          optionLabel="extraInformation"
-          optionValue="toc_result_id"
-          [disabled]="!editable"
-          [editable]="editable"
-          placeholder="Select output"
-          [(ngModel)]="activeTab.toc_result_id"
-          [extraInformation]="true"
-          (ngModelChange)="getIndicator(); validateSelectedOptionOutPut(); getIndicatorsList()">
-        </app-pr-select>
+    @if (this.secondFieldLabel()) {
+      @switch (activeTab.toc_level_id) {
+        @case (3) {
+          <app-pr-select
+            [options]="eoiList"
+            [label]="this.secondFieldLabel()"
+            [editable]="editable"
+            [disabled]="(resultLevelId === 1 && false) || !editable"
+            optionLabel="title"
+            optionValue="toc_result_id"
+            placeholder="Select outcome"
+            [(ngModel)]="activeTab.toc_result_id"
+            (ngModelChange)="getIndicator(); validateSelectedOptionEOI(); getIndicatorsList()">
+          </app-pr-select>
+        }
+        @case (2) {
+          <app-pr-select
+            [options]="outcomeList"
+            [label]="this.secondFieldLabel()"
+            [editable]="editable"
+            [disabled]="(resultLevelId === 1 && false) || !editable"
+            optionLabel="extraInformation"
+            [extraInformation]="true"
+            optionValue="toc_result_id"
+            placeholder="Select outcome"
+            [(ngModel)]="activeTab.toc_result_id"
+            (ngModelChange)="getIndicator(); validateSelectedOptionOutCome(); getIndicatorsList()">
+          </app-pr-select>
+        }
+        @case (1) {
+          <app-pr-select
+            [options]="outputList"
+            [label]="this.secondFieldLabel()"
+            optionLabel="extraInformation"
+            optionValue="toc_result_id"
+            [disabled]="!editable"
+            [editable]="editable"
+            placeholder="Select output"
+            [(ngModel)]="activeTab.toc_result_id"
+            [extraInformation]="true"
+            (ngModelChange)="getIndicator(); validateSelectedOptionOutPut(); getIndicatorsList()">
+          </app-pr-select>
+        }
       }
     }
   </div>
@@ -65,7 +67,8 @@
       optionLabel="indicator_description"
       optionValue="related_node_id"
       placeholder="Select outcome level"
-      [(ngModel)]="activeTab.indicators[0].related_node_id">
+      [(ngModel)]="activeTab.indicators[0].related_node_id"
+      (ngModelChange)="mapTocResultsIndicatorId()">
     </app-pr-select>
   }
   <hr class="divider-20" />

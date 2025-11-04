@@ -205,7 +205,10 @@ export class CPMultipleWPsComponent implements OnChanges {
       short_name: this.initiative().short_name,
       toc_level_id: tocLevelId,
       toc_result_id: null,
-      uniqueId: Math.random().toString(36).substring(7)
+      uniqueId: Math.random().toString(36).substring(7),
+      related_node_id: null,
+      toc_progressive_narrative: null,
+      indicators: [{ related_node_id: null }]
     });
 
     this.onActiveTab(this.initiative().result_toc_results[this.initiative().result_toc_results.length - 1]);

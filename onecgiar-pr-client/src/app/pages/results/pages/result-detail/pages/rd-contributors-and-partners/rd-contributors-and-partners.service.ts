@@ -144,6 +144,7 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   getSectionInformation(no_applicable_partner?: boolean, onSave: boolean = false) {
     this.api.resultsSE.GET_ContributorsPartners().subscribe({
       next: ({ response }) => {
+        console.log(response);
         this.partnersBody = response;
         this.getDisabledCentersForKP();
         this.setPossibleLeadPartners(onSave);
@@ -170,7 +171,7 @@ export class RdContributorsAndPartnersService implements OnDestroy {
         if (this.partnersBody?.result_toc_result?.result_toc_results !== null) {
           this.rdCpTheoryOfChangesServicesSE.result_toc_result = this.partnersBody?.result_toc_result;
           this.rdCpTheoryOfChangesServicesSE.result_toc_result.planned_result =
-            this.partnersBody?.result_toc_result?.result_toc_results[0].planned_result ?? null;
+            this.partnersBody?.result_toc_result?.result_toc_results[0]?.planned_result ?? null;
           this.rdCpTheoryOfChangesServicesSE.result_toc_result.showMultipleWPsContent = true;
         }
 
@@ -193,7 +194,6 @@ export class RdContributorsAndPartnersService implements OnDestroy {
         // this.changeDetectorRef.detectChanges();
         this.result_toc_result_signal.set(this.partnersBody?.result_toc_result);
         this.getConsumed.set(true);
-        console.log('partnersBody', this.partnersBody);
         //! TOC END
       },
       error: _err => {

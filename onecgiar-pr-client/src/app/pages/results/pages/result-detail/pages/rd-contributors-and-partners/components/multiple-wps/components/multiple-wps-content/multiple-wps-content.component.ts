@@ -58,7 +58,7 @@ export class CPMultipleWPsContentComponent implements OnChanges {
     const filterIndicators = list => {
       if (!list.length) return;
       const itemSelected = list.find(item => item.toc_result_id === this.activeTab.toc_result_id);
-      this.indicatorsList.set(itemSelected.indicators);
+      this.indicatorsList.set(itemSelected?.indicators || []);
       this.activeTab.indicators[0].related_node_id = this.activeTab.indicators[0].toc_results_indicator_id;
       if (!this.activeTab.toc_progressive_narrative) this.activeTab.toc_progressive_narrative = '';
     };
@@ -98,6 +98,11 @@ export class CPMultipleWPsContentComponent implements OnChanges {
       }
       this.pushSelectedOptions();
     }
+  }
+
+  mapTocResultsIndicatorId() {
+    if (this.activeTab.indicators[0].toc_results_indicator_id) return;
+    this.activeTab.indicators[0].toc_results_indicator_id = this.activeTab.indicators[0].related_node_id;
   }
 
   getIndicator() {
