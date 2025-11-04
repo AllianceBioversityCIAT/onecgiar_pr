@@ -219,7 +219,7 @@ export class AoWBilateralRepository {
     query += `
       JOIN ${env.DB_TOC}.toc_results_indicators tri ON tri.toc_results_id = tr.id
       JOIN ${env.DB_TOC}.toc_result_indicator_target trit ON tri.id = trit.id_indicator
-      AND CONVERT(trit.toc_result_indicator_id USING utf8mb4) = CONVERT(tri.toc_result_indicator_id USING utf8mb4)
+      AND CONVERT(trit.toc_result_indicator_id USING utf8mb4) = CONVERT(tri.related_node_id USING utf8mb4)
     `;
 
     if (options.year !== undefined) {
@@ -370,7 +370,7 @@ export class AoWBilateralRepository {
         FROM ${env.DB_TOC}.toc_results tr
         JOIN ${env.DB_TOC}.toc_results_indicators tri ON tri.toc_results_id = tr.id
         JOIN ${env.DB_TOC}.toc_result_indicator_target trit ON tri.id = trit.id_indicator
-          AND CONVERT(trit.toc_result_indicator_id USING utf8mb4) = CONVERT(tri.toc_result_indicator_id USING utf8mb4)
+          AND CONVERT(trit.toc_result_indicator_id USING utf8mb4) = CONVERT(tri.related_node_id USING utf8mb4)
           ${targetYearCondition}
         LEFT JOIN ${env.DB_TOC}.toc_work_packages wp ON wp.toc_id = tr.wp_id
         WHERE
