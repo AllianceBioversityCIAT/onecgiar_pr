@@ -22,6 +22,7 @@ export class ResultsValidationModuleController {
   }
 
   @Version('2')
+  @Get('get/green-checks/:resultId')
   findAllV2(@Param('resultId') resultId: number) {
     return this.resultsValidationModuleService.calculateValidationSections(
       resultId,
