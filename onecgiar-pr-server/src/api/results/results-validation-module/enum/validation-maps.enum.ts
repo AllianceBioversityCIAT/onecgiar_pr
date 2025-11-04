@@ -10,4 +10,5 @@ export enum ValidationMapsEnum {
   CAP_DEV = 'cap-dev-info',
   POLICY_CHANGE = 'policy-change1-info',
   LINK_RESULT = 'links-to-results',
+  CONTRIBUTOR_PARTNERS = 'contributor-partners',
 }
