@@ -60,6 +60,24 @@
     (selectOptionEvent)="this.rdPartnersSE.setPossibleLeadCenters(true)">
   </app-pr-multi-select>
 
+  <div class="medal_selector selected_container">
+    <div class="centers chips_container">
+      <div
+        class="center pr_chip_selected"
+        [pTooltip]="this.disabledText"
+        [tooltipDisabled]="!center.from_cgspace"
+        *ngFor="let center of this.rdPartnersSE.partnersBody.contributing_center; let i = index">
+        <div class="name" [innerHtml]="center?.name"></div>
+        <i
+          *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status && !center.from_cgspace"
+          class="material-icons-round"
+          (click)="deleteContributingCenter(i); this.rdPartnersSE.setPossibleLeadCenters(true)"
+          >cancel</i
+        >
+      </div>
+    </div>
+  </div>
+
   <app-pr-multi-select
     [options]="this.rdPartnersSE.clarisaProjectsList"
     [(ngModel)]="this.rdPartnersSE.partnersBody.bilateral_projects"
@@ -87,23 +105,6 @@
     [placeholder]="'Select ' + ('term.entity.orPlatformsWith()' | term: this.api.dataControlSE.currentResult?.portfolio)">
   </app-pr-multi-select>
 
-  <div class="medal_selector selected_container">
-    <div class="centers chips_container">
-      <div
-        class="center pr_chip_selected"
-        [pTooltip]="this.disabledText"
-        [tooltipDisabled]="!center.from_cgspace"
-        *ngFor="let center of this.rdPartnersSE.partnersBody.contributing_center; let i = index">
-        <div class="name" [innerHtml]="center?.name"></div>
-        <i
-          *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status && !center.from_cgspace"
-          class="material-icons-round"
-          (click)="deleteContributingCenter(i); this.rdPartnersSE.setPossibleLeadCenters(true)"
-          >cancel</i
-        >
-      </div>
-    </div>
-  </div>
   <!-- Contributing Centers end -->
 
   <app-knowledge-product-selector *ngIf="this.api.dataControlSE.isKnowledgeProduct"></app-knowledge-product-selector>
