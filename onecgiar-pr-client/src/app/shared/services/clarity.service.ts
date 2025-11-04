@@ -19,7 +19,37 @@ export class ClarityService {
     if (this.initialized) return;
 
     try {
+      // Read stored consent before initializing Clarity
+      const saved = (localStorage.getItem('cookieConsent') ?? '') as 'accepted' | 'rejected' | '';
+      const hasConsent = saved === 'accepted';
+
+      // If explicitly rejected, do not initialize Clarity and enforce denied
+      if (saved === 'rejected') {
+        try {
+          globalThis.clarity?.('consentv2', {
+            ad_Storage: 'denied',
+            analytics_Storage: 'denied'
+          });
+        } catch {}
+        this.initialized = true;
+        return;
+      }
+
+      // Apply consent mode BEFORE initializing Clarity to avoid regenerating identifiers
+      try {
+        globalThis.clarity?.('consentv2', {
+          ad_Storage: hasConsent ? 'granted' : 'denied',
+          analytics_Storage: hasConsent ? 'granted' : 'denied'
+        });
+      } catch {}
+
       this.initClarity();
+
+      // Reinforce consent after initialization
+      try {
+        Clarity.consent(hasConsent);
+      } catch {}
+
       this.setupRouteTracking();
       this.setUserInfo();
       this.initialized = true;
@@ -31,7 +61,6 @@ export class ClarityService {
   private initClarity(): void {
     try {
       Clarity.init(this.CLARITY_PROJECT_ID);
-      Clarity.consent(); // Enable cookie consent by default
     } catch (error) {
       console.error('Error initializing Clarity:', error);
       throw error;
@@ -64,7 +93,7 @@ export class ClarityService {
     }
   }
 
-  // Método público para actualizar la información del usuario
+  // Public method to update user information
   public updateUserInfo(): void {
     this.setUserInfo();
   }
