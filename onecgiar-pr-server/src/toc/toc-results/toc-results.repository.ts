@@ -430,17 +430,12 @@ export class TocResultsRepository extends Repository<TocResult> {
         ON ci.official_code = tr.official_code
       WHERE tr.is_active > 0
         AND ci.id = ?
-        AND tr.phase = (SELECT v.toc_pahse_id FROM \`result\` r
-                       INNER JOIN \`version\` v ON v.id = r.version_id
-                       WHERE r.id = ?
-                         AND r.is_active > 0
-                       LIMIT 1)
         AND tr.category = ?
       ORDER BY wp.acronym, tr.result_title ASC;
     `;
 
     try {
-      const res = await this.query(queryData, [init_id, result_id, category]);
+      const res = await this.query(queryData, [init_id, category]);
       return res;
     } catch (error) {
       throw {
