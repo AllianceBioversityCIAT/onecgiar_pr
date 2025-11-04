@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, OnInit, WritableSignal, effect, inject } from '@angular/core';
+import { Component, Input, OnChanges, OnInit, WritableSignal, computed, effect, inject } from '@angular/core';
 import { CustomizedAlertsFeService } from '../../../../../../../../shared/services/customized-alerts-fe.service';
 
 import { FieldsManagerService } from '../../../../../../../../shared/services/fields-manager.service';
@@ -146,9 +146,11 @@ export class CPMultipleWPsComponent implements OnChanges {
       });
   }
 
-  dynamicTabTitle(tabNumber) {
-    return `TOC-${this.initiative()?.planned_result && this.resultLevelId === 1 ? 'Output' : 'Outcome'} N° ${tabNumber}`;
-  }
+  dynamicTabTitle = computed(() => {
+    if (this.api.dataControlSE?.currentResultSignal().result_level_id) return 'HLO';
+    if (this.api.dataControlSE?.currentResultSignal().result_level_id) return 'Outcome';
+    return ``;
+  });
 
   getGridTemplateColumns() {
     return `repeat(${this.initiative()?.result_toc_results.length}, 1fr)`;
