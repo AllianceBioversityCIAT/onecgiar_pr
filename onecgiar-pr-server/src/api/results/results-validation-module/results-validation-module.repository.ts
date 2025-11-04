@@ -38,16 +38,28 @@ export class resultValidationRepository
         id: Number(resultId),
         is_active: true,
       },
+      relations: {
+        obj_version: {
+          obj_portfolio: true,
+        },
+      },
     });
 
     const sections: ValidationMapsEnum[] = [
       ValidationMapsEnum.GENERAL_INFORMATION,
-      ValidationMapsEnum.THEORY_OF_CHANGE,
-      ValidationMapsEnum.PARTNERS,
       ValidationMapsEnum.GEO_LOCATION,
       ValidationMapsEnum.EVIDENCES,
-      ValidationMapsEnum.LINK_RESULT,
     ];
+
+    if (result.obj_version?.obj_portfolio?.acronym === 'P25') {
+      sections.push(ValidationMapsEnum.CONTRIBUTOR_PARTNERS);
+    } else {
+      sections.push(
+        ValidationMapsEnum.LINK_RESULT,
+        ValidationMapsEnum.THEORY_OF_CHANGE,
+        ValidationMapsEnum.PARTNERS,
+      );
+    }
 
     const queryValidation = (sections: ValidationMapsEnum[]) => {
       const sectionsString = JSON.stringify(sections ?? []);
