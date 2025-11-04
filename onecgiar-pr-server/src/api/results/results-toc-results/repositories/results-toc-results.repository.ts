@@ -1597,7 +1597,7 @@ export class ResultsTocResultRepository
     }
   }
 
-  async saveInditicatorsContributingV1(
+  async saveInditicatorsContributing(
     targetsIndicator: any[],
     id_result_toc_result?: number,
     result_id?: number,
