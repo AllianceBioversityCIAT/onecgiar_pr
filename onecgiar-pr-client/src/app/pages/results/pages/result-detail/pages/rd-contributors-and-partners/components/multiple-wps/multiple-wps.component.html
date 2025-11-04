@@ -1,22 +1,22 @@
 <div class="local_container section_container">
   <div class="tabs-container">
     <div class="tabs" [style.grid-template-columns]="getGridTemplateColumns()">
-      <div *ngFor="let tab of initiative()?.result_toc_results; let i = index">
-        <div class="tab" [ngClass]="{ active: tab.uniqueId === activeTab.uniqueId }">
-          <a class="tab-content" (click)="onActiveTab(tab)">
+      @for (tab of initiative()?.result_toc_results; track $index) {
+        <div class="tab" [ngClass]="{ active: $index === activeTabIndex }">
+          <a class="tab-content" (click)="onActiveTab(tab, $index)">
             <i class="material-icons-round {{ completnessStatusValidation(tab) ? 'valid' : 'invalid' }}" style="font-size: 20px"> check_circle </i>
-            <p class="tab-title">{{ dynamicTabTitle(i + 1) }}</p>
+            <p class="tab-title">{{ this.dynamicTabTitle() }} N~{{ $index + 1 }}</p>
           </a>
           <a
             *ngIf="initiative()?.result_toc_results.length !== 1"
-            (click)="onDeleteTab(tab, i + 1)"
+            (click)="onDeleteTab(tab, $index + 1)"
             pTooltip="Delete TOC contributio"
             tooltipPosition="top"
             class="material-icons-round close_icon tab-delete-button-item"
             >backspace</a
           >
         </div>
-      </div>
+      }
     </div>
     <!-- @if (initiative()?.result_toc_results.length < this.getMaxNumberOfTabs(this.initiative()?.planned_result, this.resultLevelId) && editable) { -->
     <a class="tab-add-button" (click)="onAddTab()">
