@@ -27,6 +27,9 @@ describe('CurrentResultService', () => {
     mockResultLevelService = {
       currentResultLevelName: '',
       currentResultLevelId: '',
+      currentResultLevelIdSignal: {
+        set: jest.fn()
+      },
       currentResultTypeId: ''
     };
 

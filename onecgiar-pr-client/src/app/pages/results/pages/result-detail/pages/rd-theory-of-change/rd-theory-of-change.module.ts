@@ -37,6 +37,12 @@ import { TermPipe } from '../../../../../../internationalization/term.pipe';
     FeedbackValidationDirectiveModule,
     TooltipModule,
     TermPipe
+  ],
+  exports: [
+    TocImpactSectionComponent,
+    TocActionAreaOutcomeSectionComponent,
+    TocInitiativeOutcomeSectionComponent,
+    TocInitiativeOutputSectionComponent
   ]
 })
 export class RdTheoryOfChangeModule {}

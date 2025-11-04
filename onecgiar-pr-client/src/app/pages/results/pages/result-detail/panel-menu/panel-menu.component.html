@@ -8,20 +8,20 @@
     <div class="segment">
       <div class="name">Sections</div>
       <div class="sections">
-        <a
-          *ngFor="let navOption of navigationOptions | panelMenu: this.resultLevelSE.currentResultTypeId : green_checks_string; let i = index"
-          [hidden]="hideKP(navOption)"
-          [hidden]="hideLinksToResults(navOption)"
-          [routerLink]="'/result/result-detail/' + this.dataControlSE?.currentResult?.result_code + '/' + navOption.path"
-          [queryParams]="{ phase: this.dataControlSE?.currentResult?.version_id }"
-          routerLinkActive="section_active"
-          class="pr-body-2">
-          {{ i + 1 }}. {{ navOption.prName }}
-          <img *ngIf="navOption.underConstruction === true" class="under_construction" src="assets/work-in-progress.png" alt="" srcset="" />
-          <div class="check">
-            <i class="material-icons-round {{ navOption.validation ? 'valid' : 'invalid' }}"> check_circle </i>
-          </div>
-        </a>
+        @for (navOption of navigationOptions | panelMenu: this.resultLevelSE.currentResultTypeId : green_checks_string; track navOption.path) {
+          <a
+            [hidden]="hideKP(navOption)"
+            [routerLink]="'/result/result-detail/' + this.dataControlSE?.currentResult?.result_code + '/' + navOption.path"
+            [queryParams]="{ phase: this.dataControlSE?.currentResult?.version_id }"
+            routerLinkActive="section_active"
+            class="pr-body-2">
+            {{ $index + 1 }}. {{ navOption.prName }}
+            <img *ngIf="navOption.underConstruction === true" class="under_construction" src="assets/work-in-progress.png" alt="" srcset="" />
+            <div class="check">
+              <i class="material-icons-round {{ navOption.validation ? 'valid' : 'invalid' }}"> check_circle </i>
+            </div>
+          </a>
+        }
       </div>
     </div>
   </div>

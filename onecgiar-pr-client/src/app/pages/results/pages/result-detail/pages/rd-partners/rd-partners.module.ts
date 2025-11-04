@@ -1,6 +1,5 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-
 import { RdPartnersRoutingModule } from './rd-partners-routing.module';
 import { RdPartnersComponent } from './rd-partners.component';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
@@ -22,6 +21,7 @@ import { FormsModule } from '@angular/forms';
     FeedbackValidationDirectiveModule,
     TooltipModule,
     FormsModule
-  ]
+  ],
+  exports: [InstToInstTypesPipe, NormalSelectorComponent, KnowledgeProductSelectorComponent]
 })
 export class RdPartnersModule {}
