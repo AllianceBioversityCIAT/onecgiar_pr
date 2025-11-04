@@ -102,7 +102,6 @@ export class CPMultipleWPsContentComponent implements OnChanges {
 
   mapTocResultsIndicatorId() {
     this.activeTab.indicators[0].toc_results_indicator_id = this.activeTab.indicators[0].related_node_id;
-    console.log(this.activeTab.indicators[0]);
   }
 
   narrativeTypeResult() {

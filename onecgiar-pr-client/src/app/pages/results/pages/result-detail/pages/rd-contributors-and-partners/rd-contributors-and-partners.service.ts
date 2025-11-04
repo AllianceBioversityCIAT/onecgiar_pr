@@ -65,7 +65,6 @@ export class RdContributorsAndPartnersService implements OnDestroy {
         response.forEach(project => {
           project.project_id = project.id;
         });
-        console.log(this.clarisaProjectsList);
       },
       error: err => {
         console.error('Error loading Clarisa projects:', err);
@@ -148,7 +147,6 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   getSectionInformation(no_applicable_partner?: boolean, onSave: boolean = false) {
     this.api.resultsSE.GET_ContributorsPartners().subscribe({
       next: ({ response }) => {
-        console.log(response);
         this.partnersBody = response;
         this.getDisabledCentersForKP();
         this.setPossibleLeadPartners(onSave);
