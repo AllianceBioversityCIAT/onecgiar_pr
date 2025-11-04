@@ -199,10 +199,12 @@ export class ResultsTocResultsService {
           await this._resultsTocResultRepository.saveIndicatorsPrimarySubmitter(
             createResultsTocResultDto,
             result_id,
+            user.id,
           );
           await this._resultsTocResultRepository.saveIndicatorsContributors(
             createResultsTocResultDto,
             result_id,
+            user.id,
           );
         }
 
@@ -899,6 +901,11 @@ export class ResultsTocResultsService {
     result_id: number,
   ) {
     try {
+      const primaryInitiativeId =
+        (createResultsTocResultDto.result_toc_result as any)?.initiative_id ??
+        result?.initiative_id ??
+        null;
+
       const incomingResultTocResultIds = [];
       createResultsTocResultDto.result_toc_result.result_toc_results.forEach(
         (toc) => {
@@ -959,14 +966,16 @@ export class ResultsTocResultsService {
               last_updated_by: user.id,
               planned_result:
                 createResultsTocResultDto.result_toc_result?.planned_result,
+              initiative_ids: primaryInitiativeId ?? RtR.initiative_ids ?? null,
               is_active: true,
               toc_progressive_narrative: toc.toc_progressive_narrative || null,
             },
           );
         } else if (toc) {
           await this._resultsTocResultRepository.save({
-            initiative_ids: toc?.initiative_id,
+            initiative_ids: toc?.initiative_id ?? primaryInitiativeId ?? null,
             toc_result_id: toc?.toc_result_id,
+            toc_level_id: toc.toc_level_id,
             created_by: user.id,
             last_updated_by: user.id,
             result_id: result.id,
@@ -1043,18 +1052,27 @@ export class ResultsTocResultsService {
                 );
 
               if (existingRtR) {
+                const updatePayload: Record<string, any> = {
+                  toc_result_id: rtrc?.toc_result_id,
+                  action_area_outcome_id: rtrc?.action_area_outcome_id || null,
+                  toc_progressive_narrative:
+                    rtrc?.toc_progressive_narrative || null,
+                  planned_result: contributor?.planned_result,
+                  last_updated_by: user.id,
+                  is_active: true,
+                };
+
+                const normalizedInitiative = Number(contributor?.initiative_id);
+                if (
+                  Number.isFinite(normalizedInitiative) &&
+                  normalizedInitiative > 0
+                ) {
+                  updatePayload.initiative_ids = normalizedInitiative;
+                }
+
                 return this._resultsTocResultRepository.update(
                   existingRtR.result_toc_result_id,
-                  {
-                    toc_result_id: rtrc?.toc_result_id,
-                    action_area_outcome_id:
-                      rtrc?.action_area_outcome_id || null,
-                    toc_progressive_narrative:
-                      rtrc?.toc_progressive_narrative || null,
-                    planned_result: contributor?.planned_result,
-                    last_updated_by: user.id,
-                    is_active: true,
-                  },
+                  updatePayload,
                 );
               } else {
                 return this._resultsTocResultRepository.insert({
@@ -1312,6 +1330,17 @@ export class ResultsTocResultsService {
         await this._shareResultRequestRepository.cancelRequest(toCancelIds);
       }
 
+      const normalizeInitiativeId = (value: any): number | null => {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+      };
+
+      const primaryInitiativeId =
+        normalizeInitiativeId((result_toc_result as any)?.initiative_id) ??
+        normalizeInitiativeId(changePrimaryInit) ??
+        normalizeInitiativeId(initSubmitter?.initiative_id) ??
+        normalizeInitiativeId(result?.initiative_id);
+
       const incomingIdsPrimary: number[] = (
         result_toc_result?.result_toc_results ?? []
       )
@@ -1353,20 +1382,35 @@ export class ResultsTocResultsService {
           if (!t?.result_toc_result_id && !t?.toc_result_id) continue;
 
           if (t?.result_toc_result_id) {
+            const resolvedInitiativeId =
+              normalizeInitiativeId((t as any)?.initiative_id) ??
+              primaryInitiativeId;
+
+            const updatePayload: Record<string, any> = {
+              toc_result_id: t?.toc_result_id ?? null,
+              toc_progressive_narrative: t?.toc_progressive_narrative ?? null,
+              toc_level_id: t?.toc_level_id ?? null,
+              planned_result: result_toc_result?.planned_result ?? null,
+              action_area_outcome_id: null,
+              is_active: true,
+              last_updated_by: user.id,
+            };
+
+            if (resolvedInitiativeId != null) {
+              updatePayload.initiative_ids = resolvedInitiativeId;
+            }
+
             await this._resultsTocResultRepository.update(
               Number(t.result_toc_result_id),
-              {
-                toc_result_id: t?.toc_result_id ?? null,
-                toc_progressive_narrative: t?.toc_progressive_narrative ?? null,
-                toc_level_id: t?.toc_level_id ?? null,
-                planned_result: result_toc_result?.planned_result ?? null,
-                action_area_outcome_id: null,
-                is_active: true,
-                last_updated_by: user.id,
-              },
+              updatePayload,
             );
           } else {
+            const resolvedInitiativeId =
+              normalizeInitiativeId((t as any)?.initiative_id) ??
+              primaryInitiativeId;
+
             await this._resultsTocResultRepository.insert({
+              initiative_ids: resolvedInitiativeId ?? null,
               toc_result_id: t?.toc_result_id ?? null,
               toc_progressive_narrative: t?.toc_progressive_narrative ?? null,
               toc_level_id: t?.toc_level_id ?? null,
@@ -1396,23 +1440,31 @@ export class ResultsTocResultsService {
             if (!t?.result_toc_result_id && !t?.toc_result_id) continue;
 
             if (t?.result_toc_result_id) {
+              const resolvedContribInit = normalizeInitiativeId(
+                contrib?.initiative_id,
+              );
+
+              const updatePayload: Record<string, any> = {
+                toc_result_id: t?.toc_result_id ?? null,
+                toc_progressive_narrative: t?.toc_progressive_narrative ?? null,
+                toc_level_id: t?.toc_level_id ?? null,
+                planned_result: contrib?.planned_result ?? null,
+                action_area_outcome_id: null,
+                is_active: true,
+                last_updated_by: user.id,
+              };
+
+              if (resolvedContribInit != null) {
+                updatePayload.initiative_ids = resolvedContribInit;
+              }
+
               await this._resultsTocResultRepository.update(
                 Number(t.result_toc_result_id),
-                {
-                  initiative_id: contrib.initiative_id,
-                  toc_result_id: t?.toc_result_id ?? null,
-                  toc_progressive_narrative:
-                    t?.toc_progressive_narrative ?? null,
-                  toc_level_id: t?.toc_level_id ?? null,
-                  planned_result: contrib?.planned_result ?? null,
-                  action_area_outcome_id: null,
-                  is_active: true,
-                  last_updated_by: user.id,
-                },
+                updatePayload,
               );
             } else {
               await this._resultsTocResultRepository.insert({
-                initiative_id: contrib.initiative_id,
+                initiative_ids: normalizeInitiativeId(contrib?.initiative_id),
                 toc_result_id: t?.toc_result_id ?? null,
                 toc_progressive_narrative: t?.toc_progressive_narrative ?? null,
                 toc_level_id: t?.toc_level_id ?? null,
@@ -1425,6 +1477,47 @@ export class ResultsTocResultsService {
               });
             }
           }
+        }
+      }
+
+      const hasPrimaryIndicators =
+        Array.isArray(result_toc_result?.result_toc_results) &&
+        result_toc_result.result_toc_results.some((item) =>
+          Array.isArray((item as any)?.indicators),
+        );
+      const hasContributorIndicators =
+        Array.isArray(contributors_result_toc_result) &&
+        contributors_result_toc_result.some(
+          (contrib) =>
+            Array.isArray(contrib?.result_toc_results) &&
+            contrib.result_toc_results.some((item) =>
+              Array.isArray((item as any)?.indicators),
+            ),
+        );
+
+      if (
+        result.result_level_id > 2 &&
+        (hasPrimaryIndicators || hasContributorIndicators)
+      ) {
+        const indicatorsPayload = {
+          result_id,
+          result_toc_result,
+          contributors_result_toc_result,
+        } as CreateResultsTocResultDto;
+
+        if (hasPrimaryIndicators) {
+          await this._resultsTocResultRepository.saveIndicatorsPrimarySubmitter(
+            indicatorsPayload,
+            result_id,
+            user.id,
+          );
+        }
+        if (hasContributorIndicators) {
+          await this._resultsTocResultRepository.saveIndicatorsContributors(
+            indicatorsPayload,
+            result_id,
+            user.id,
+          );
         }
       }
 
