@@ -10,7 +10,7 @@ import { DataControlService } from '../../shared/services/data-control.service';
 })
 export class InitAdminSectionComponent implements OnInit {
   sections = [
-    { name: 'Completeness status', icon: 'check_circle', path: '/init-admin-module/init-completeness-status' },
+    //{ name: 'Completeness status', icon: 'check_circle', path: '/init-admin-module/init-completeness-status' },
     { name: 'General results report', icon: 'task', path: '/init-admin-module/init-general-results-report' }
   ];
   constructor(
