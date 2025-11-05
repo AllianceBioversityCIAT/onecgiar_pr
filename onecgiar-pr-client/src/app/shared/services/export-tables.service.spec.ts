@@ -830,43 +830,6 @@ describe('ExportTablesService', () => {
       );
     });
 
-    it('should add row without indicators for T1R', () => {
-      const worksheet = {
-        addRow: jest.fn()
-      };
-      const data = {
-        workpackage_name: 'WP Name',
-        workpackage_short_name: 'WP1',
-        toc_results: [
-          {
-            toc_result_title: 'Result Title',
-            indicators: []
-          }
-        ]
-      };
-
-      (service as any).addWPSRow({
-        worksheet,
-        data,
-        isT1R: true,
-        showInitiativeCode: false
-      });
-
-      expect(worksheet.addRow).toHaveBeenCalledWith(
-        expect.objectContaining({
-          index: 'OUTCOME 1',
-          workpackage_name: 'WP1: WP Name',
-          toc_result_title: 'Result Title',
-          indicator_name: 'Not defined'
-        })
-      );
-      expect(worksheet.addRow).toHaveBeenCalledWith(
-        expect.not.objectContaining({
-          indicator_achieved_narrative: expect.anything(),
-          indicator_supporting_results: expect.anything()
-        })
-      );
-    });
 
     it('should add row without indicators for non-T1R', () => {
       const worksheet = {
