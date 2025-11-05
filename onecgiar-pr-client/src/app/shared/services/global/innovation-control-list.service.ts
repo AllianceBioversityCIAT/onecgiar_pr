@@ -8,10 +8,12 @@ export class InnovationControlListService {
   typeList = [];
   characteristicsList = [];
   readinessLevelsList = [];
+  useLevelsList = [];
   constructor(private api: ApiService) {
     this.GET_clarisaInnovationType();
     this.GET_clarisaInnovationCharacteristics();
     this.GET_clarisaInnovationReadinessLevels();
+    this.GET_clarisaInnovationUseLevels();
   }
   GET_clarisaInnovationType() {
     this.api.resultsSE.GET_clarisaInnovationType().subscribe(({ response }) => {
@@ -29,6 +31,11 @@ export class InnovationControlListService {
     this.api.resultsSE.GET_clarisaInnovationReadinessLevels().subscribe(({ response }) => {
       //(response);
       this.readinessLevelsList = response;
+    });
+  }
+  GET_clarisaInnovationUseLevels() {
+    this.api.resultsSE.GET_clarisaInnovationUseLevels().subscribe(({ response }) => {
+      this.useLevelsList = response;
     });
   }
 }

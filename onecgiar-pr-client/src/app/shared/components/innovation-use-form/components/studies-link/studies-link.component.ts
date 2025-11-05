@@ -9,7 +9,7 @@ import { ApiService } from '../../../../services/api/api.service';
 })
 export class StudiesLinkComponent implements OnInit {
   @Input() body: any = {};
-
+  @Input() disabled: boolean = false;
   constructor(public api: ApiService) {}
 
   ngOnInit() {

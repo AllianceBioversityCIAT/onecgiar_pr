@@ -530,6 +530,10 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/innovation-readiness-levels/get/all`);
   }
 
+  GET_clarisaInnovationUseLevels() {
+    return this.http.get<any>(`${environment.apiBaseUrl}v2/clarisa/innovation-use-levels`);
+  }
+
   PATCH_innovationDev(body) {
     return this.http
       .patch<any>(`${this.apiBaseUrl}summary/innovation-dev/create/result/${this.currentResultId}`, body)
