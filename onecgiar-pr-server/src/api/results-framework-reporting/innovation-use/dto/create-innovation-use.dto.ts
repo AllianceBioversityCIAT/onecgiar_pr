@@ -59,7 +59,7 @@ export class OrganizationsDto {
     example: 37,
     type: Number,
   })
-  institution_type_id: number;
+  institution_types_id: number;
 
   @ApiProperty({
     description: 'ID of the institution sub-type',
