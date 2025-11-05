@@ -480,23 +480,28 @@ export class InnovationUseService {
       });
 
       actorsData.forEach((el) => {
-        const men = el.men ?? 0;
-        const women = el.women ?? 0;
-        const men_youth = el.men_youth ?? 0;
-        const women_youth = el.women_youth ?? 0;
+        const men = Number(el.men) || 0;
+        const women = Number(el.women) || 0;
+        const men_youth = Number(el.men_youth) || 0;
+        const women_youth = Number(el.women_youth) || 0;
 
-        const men_non_youth = men - men_youth;
+        let men_non_youth = men - men_youth;
         let women_non_youth = women - women_youth;
+
+        el['men_non_youth'] = men_non_youth > 0 ? men_non_youth : 0;
+        el['women_non_youth'] = women_non_youth > 0 ? women_non_youth : 0;
 
         if ((el.women === null || el.women === 0) && women_youth > 0) {
           el.women = women_youth;
           women_non_youth = 0;
         }
-
-        el['men_non_youth'] = men_non_youth > 0 ? men_non_youth : 0;
-        el['women_non_youth'] = women_non_youth > 0 ? women_non_youth : 0;
+        if ((el.men === null || el.men === 0) && men_youth > 0) {
+          el.men = men_youth;
+          men_non_youth = 0;
+        }
 
         el.how_many = women + men;
+        console.log('el.how_many', el.how_many);
       });
 
       // Measures
