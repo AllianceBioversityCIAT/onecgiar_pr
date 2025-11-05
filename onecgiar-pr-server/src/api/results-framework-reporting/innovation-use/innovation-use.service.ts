@@ -142,25 +142,18 @@ export class InnovationUseService {
       const scalingStudiesUrls: string[] = (scaling_studies_urls ?? []).filter(
         (link) => link !== null && link !== undefined && link !== '',
       );
+      console.log('scalingStudiesUrls', scalingStudiesUrls);
 
       if (
         innovation_readiness_level_id >= InnovationUseLevel.Level_6 &&
         has_scaling_studies &&
-        scalingStudiesUrls?.length
+        Array.isArray(scalingStudiesUrls)
       ) {
-        await this._resultScalingStudyUrlsRepository.update(
-          { result_innov_use_id: InnUseRes.result_innovation_use_id },
-          { is_active: false },
+        await this.syncScalingStudyUrls(
+          InnUseRes.result_innovation_use_id,
+          scalingStudiesUrls,
+          user.id,
         );
-
-        const urlsToSave = scalingStudiesUrls.map((url) => ({
-          result_innov_use_id: InnUseRes.result_innovation_use_id,
-          study_url: url,
-          is_active: true,
-          created_by: user.id,
-        }));
-
-        await this._resultScalingStudyUrlsRepository.save(urlsToSave);
       }
 
       const innovation_use = {
@@ -994,6 +987,49 @@ export class InnovationUseService {
       }
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  private async syncScalingStudyUrls(
+    resultInnoUseId: number,
+    scalingStudiesUrls: string[],
+    userId: number,
+  ): Promise<void> {
+    const existingUrls = await this._resultScalingStudyUrlsRepository.find({
+      where: { result_innov_use_id: resultInnoUseId, is_active: true },
+    });
+
+    const existingUrlStrings = existingUrls.map((el) => el.study_url.trim());
+    const incomingUrls = scalingStudiesUrls.map((url) => url.trim());
+
+    const urlsToCreate = incomingUrls.filter(
+      (url) => !existingUrlStrings.includes(url),
+    );
+
+    const urlsToDeactivate = existingUrls.filter(
+      (el) => !incomingUrls.includes(el.study_url.trim()),
+    );
+
+    if (urlsToCreate.length > 0) {
+      const newUrls = urlsToCreate.map((url) => ({
+        result_innov_use_id: resultInnoUseId,
+        study_url: url,
+        is_active: true,
+        created_by: userId,
+      }));
+
+      await this._resultScalingStudyUrlsRepository.save(newUrls);
+    }
+
+    if (urlsToDeactivate.length > 0) {
+      const idsToDeactivate = urlsToDeactivate.map(
+        (el) => el.id,
+      );
+
+      await this._resultScalingStudyUrlsRepository.update(
+        { id: In(idsToDeactivate) },
+        { is_active: false, last_updated_by: userId },
+      );
     }
   }
 }
