@@ -24,6 +24,7 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   disabledOptions = [];
   nppCenters: CenterDto[] = [];
   clarisaProjectsList: any[] = [];
+  contributingInitiativeNew = [];
 
   leadPartnerId: number = null;
   leadCenterCode: string = null;
@@ -145,6 +146,7 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   }
 
   getSectionInformation(no_applicable_partner?: boolean, onSave: boolean = false) {
+    this.contributingInitiativeNew = [];
     this.api.resultsSE.GET_ContributorsPartners().subscribe({
       next: ({ response }) => {
         this.partnersBody = response;
@@ -200,6 +202,8 @@ export class RdContributorsAndPartnersService implements OnDestroy {
         this.partnersBody.bilateral_projects.forEach(project => {
           project.fullName = project.obj_clarisa_project.fullName;
         });
+
+        console.log(this.partnersBody);
       },
       error: _err => {
         this.getConsumed.set(true);
