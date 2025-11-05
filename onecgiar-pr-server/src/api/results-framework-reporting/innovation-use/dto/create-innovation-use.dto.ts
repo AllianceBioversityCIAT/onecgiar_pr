@@ -46,14 +46,13 @@ export class InvesmentDto {
   is_determined: boolean;
 }
 
-export class OrganizationsDto{
+export class OrganizationsDto {
   @ApiProperty({
     description: 'Unique identifier of the organization record',
     example: 886,
     type: Number,
   })
   id: number;
-
 
   @ApiProperty({
     description: 'ID of the institution type',
@@ -153,10 +152,10 @@ export class CreateInnovationUseDto {
   linked_results: number[];
 
   @ApiProperty({
-    description: 'ID of the innovation readiness level',
+    description: 'ID of the innovation use level',
     example: 3,
   })
-  innovation_readiness_level_id: number;
+  innovation_use_level_id: number;
 
   @ApiProperty({
     description: 'Explanation for the selected readiness level',
