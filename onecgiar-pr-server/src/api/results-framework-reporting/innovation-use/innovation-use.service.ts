@@ -311,7 +311,17 @@ export class InnovationUseService {
         }
 
         let ite: ResultsByInstitutionType = null;
-        if (el?.institution_sub_type_id && el?.institution_sub_type_id != 78) {
+        if (el?.id) {
+          ite = await this._resultByIntitutionsTypeRepository.findOne({
+            where: { id: el.id, is_active: true },
+          });
+        }
+
+        if (el?.id) {
+          ite = await this._resultByIntitutionsTypeRepository.findOne({
+            where: { id: el.id, is_active: true },
+          });
+        } else if (el?.institution_sub_type_id != 78) {
           ite =
             await this._resultByIntitutionsTypeRepository.getNewResultByInstitutionTypeExists(
               resultId,
@@ -319,15 +329,9 @@ export class InnovationUseService {
               5,
             );
         }
-        if (!ite && el?.id) {
-          ite =
-            await this._resultByIntitutionsTypeRepository.getNewResultByIdExists(
-              resultId,
-              el.id,
-              5,
-            );
-        }
 
+        console.log('ite', ite);
+        console.log('el', el);
         if (ite) {
           await this._resultByIntitutionsTypeRepository.update(
             ite.id,
