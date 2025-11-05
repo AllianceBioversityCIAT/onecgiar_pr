@@ -1636,6 +1636,11 @@ export class ResultsTocResultRepository
       };
 
       for (const itemIndicator of targetsIndicator) {
+        const indicatorId =
+          itemIndicator.toc_results_indicator_id ||
+          itemIndicator.related_node_id;
+        if (!indicatorId) continue;
+
         const targetIndicators =
           await this._resultsTocResultIndicatorRepository.findOne({
             where: {
@@ -1669,9 +1674,7 @@ export class ResultsTocResultRepository
 
           if (Array.isArray(itemIndicator.targets)) {
             for (const target of itemIndicator.targets) {
-              const canonical = await getCanonicalTarget(
-                itemIndicator.toc_results_indicator_id,
-              );
+              const canonical = await getCanonicalTarget(indicatorId);
               const resolvedNumberTarget =
                 canonical?.number_target ??
                 this.toNumberOrNull(target.number_target);
@@ -1752,9 +1755,7 @@ export class ResultsTocResultRepository
             });
           if (Array.isArray(itemIndicator.targets)) {
             for (const target of itemIndicator.targets) {
-              const canonical = await getCanonicalTarget(
-                itemIndicator.toc_results_indicator_id,
-              );
+              const canonical = await getCanonicalTarget(indicatorId);
               const resolvedNumberTarget =
                 canonical?.number_target ??
                 this.toNumberOrNull(target.number_target);
