@@ -204,7 +204,6 @@ export class LinkedResultsService {
         };
       }
 
-      // Normalizamos el array de entrada
       const links: number[] = linked_results ?? [];
 
       if (links.length > 0) {

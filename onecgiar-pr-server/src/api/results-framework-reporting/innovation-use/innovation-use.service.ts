@@ -82,8 +82,7 @@ export class InnovationUseService {
       let InnUseRes: ResultsInnovationsUse;
       if (resultExist) {
         resultExist.has_innovation_link = has_innovation_link;
-        resultExist.innovation_readiness_level_id =
-          innovation_readiness_level_id;
+        resultExist.innovation_use_level_id = innovation_readiness_level_id;
         resultExist.last_updated_by = user.id;
         resultExist.innov_use_to_be_determined = innov_use_to_be_determined;
         resultExist.innov_use_2030_to_be_determined =
@@ -118,7 +117,7 @@ export class InnovationUseService {
         newInnUse.results_id = resultId;
         newInnUse.last_updated_by = user.id;
         newInnUse.is_active = true;
-        newInnUse.innovation_readiness_level_id = innovation_readiness_level_id;
+        newInnUse.innovation_use_level_id = innovation_readiness_level_id;
         newInnUse.has_innovation_link = has_innovation_link;
         newInnUse.innov_use_to_be_determined = innov_use_to_be_determined;
         newInnUse.innov_use_2030_to_be_determined =
@@ -140,17 +139,21 @@ export class InnovationUseService {
         InnUseRes = await this._resultsInnovationsUseRepository.save(newInnUse);
       }
 
+      const scalingStudiesUrls: string[] = (scaling_studies_urls ?? []).filter(
+        (link) => link !== null && link !== undefined && link !== '',
+      );
+
       if (
         innovation_readiness_level_id >= InnovationUseLevel.Level_6 &&
         has_scaling_studies &&
-        scaling_studies_urls?.length
+        scalingStudiesUrls?.length
       ) {
         await this._resultScalingStudyUrlsRepository.update(
           { result_innov_use_id: InnUseRes.result_innovation_use_id },
           { is_active: false },
         );
 
-        const urlsToSave = scaling_studies_urls.map((url) => ({
+        const urlsToSave = scalingStudiesUrls.map((url) => ({
           result_innov_use_id: InnUseRes.result_innovation_use_id,
           study_url: url,
           is_active: true,
@@ -233,6 +236,7 @@ export class InnovationUseService {
     section: ResultCoreInnovUseSectionEnum = null,
     determined?: boolean | null,
   ) {
+    // Si determined === true, desactiva todo
     if (determined === true) {
       await this._resultActorRepository.update(
         { result_id: resultId, is_active: true },
@@ -246,46 +250,44 @@ export class InnovationUseService {
         { result_id: resultId, is_active: true },
         { is_active: false, last_updated_by: user },
       );
-
       return;
     }
 
-    // Actors
+    // ==== ACTORS ====
     if (crtr?.innovation_use?.actors?.length) {
       for (const el of crtr.innovation_use.actors) {
-        let actorExists: ResultActor = null;
-        if (el?.actor_type_id) {
-          const whereOptions: any = {
-            actor_type_id: el.actor_type_id,
-            result_id: resultId,
-            result_actors_id: el.result_actors_id ?? IsNull(),
-            is_active: true,
-          };
-          if (!el?.result_actors_id && `${el.actor_type_id}` === '5') {
-            whereOptions.other_actor_type = el?.other_actor_type || IsNull();
-          } else if (el?.result_actors_id) {
-            delete whereOptions.actor_type_id;
+        if (el?.is_active === false) {
+          if (el?.result_actors_id) {
+            await this._resultActorRepository.update(
+              { result_actors_id: el.result_actors_id },
+              { is_active: false, last_updated_by: user },
+            );
           }
-          actorExists = await this._resultActorRepository.findOne({
-            where: whereOptions,
-          });
-        } else if (el?.result_actors_id) {
-          actorExists = await this._resultActorRepository.findOne({
-            where: {
-              result_actors_id: el.result_actors_id,
-              result_id: resultId,
-            },
-          });
-        } else {
-          actorExists = await this._resultActorRepository.findOne({
-            where: { actor_type_id: IsNull(), result_id: resultId },
-          });
+          continue;
         }
 
-        this.validateRequired(
-          el?.actor_type_id,
-          'The field actor type is required',
-        );
+        if (!el?.actor_type_id) {
+          continue;
+        }
+
+        let actorExists: ResultActor = null;
+
+        const whereOptions: any = {
+          actor_type_id: el.actor_type_id,
+          result_id: resultId,
+          result_actors_id: el.result_actors_id ?? IsNull(),
+          is_active: true,
+        };
+
+        if (!el?.result_actors_id && `${el.actor_type_id}` === '5') {
+          whereOptions.other_actor_type = el?.other_actor_type || IsNull();
+        } else if (el?.result_actors_id) {
+          delete whereOptions.actor_type_id;
+        }
+
+        actorExists = await this._resultActorRepository.findOne({
+          where: whereOptions,
+        });
 
         if (actorExists) {
           await this._resultActorRepository.update(
@@ -300,9 +302,23 @@ export class InnovationUseService {
       }
     }
 
-    // Organizations
+    // ==== ORGANIZATIONS ====
     if (crtr?.innovation_use?.organization?.length) {
       for (const el of crtr.innovation_use.organization) {
+        if (el?.is_active === false) {
+          if (el?.id) {
+            await this._resultByIntitutionsTypeRepository.update(
+              { id: el.id },
+              { is_active: false, last_updated_by: user },
+            );
+          }
+          continue;
+        }
+
+        if (!el?.institution_types_id) {
+          continue;
+        }
+
         let ite: ResultsByInstitutionType = null;
         if (el?.institution_types_id && el?.institution_types_id != 78) {
           ite =
@@ -321,11 +337,6 @@ export class InnovationUseService {
             );
         }
 
-        this.validateRequired(
-          el?.institution_types_id,
-          'The field institution type is required',
-        );
-
         if (ite) {
           await this._resultByIntitutionsTypeRepository.update(
             ite.id,
@@ -339,9 +350,19 @@ export class InnovationUseService {
       }
     }
 
-    // Measures
+    // ==== MEASURES ====
     if (crtr?.innovation_use?.measures?.length) {
       for (const el of crtr.innovation_use.measures) {
+        if (el?.is_active === false) {
+          if (el?.result_ip_measure_id) {
+            await this._resultIpMeasureRepository.update(
+              { result_ip_measure_id: el.result_ip_measure_id },
+              { is_active: false, last_updated_by: user },
+            );
+          }
+          continue;
+        }
+
         let ripm: ResultIpMeasure = null;
         if (el?.result_ip_measure_id) {
           ripm = await this._resultIpMeasureRepository.findOne({
@@ -365,11 +386,6 @@ export class InnovationUseService {
           });
         }
 
-        this.validateRequired(
-          el?.unit_of_measure,
-          'The field Unit of Measure is required',
-        );
-
         if (ripm) {
           await this._resultIpMeasureRepository.update(
             ripm.result_ip_measure_id,
@@ -386,16 +402,6 @@ export class InnovationUseService {
 
   isNullData(data: any) {
     return data == undefined ? null : data;
-  }
-
-  private validateRequired(field: any, message: string) {
-    if (!field) {
-      throw {
-        response: { status: 'Error' },
-        message,
-        status: HttpStatus.BAD_REQUEST,
-      };
-    }
   }
 
   private buildActorData(el, user, resultId, section) {
@@ -472,9 +478,25 @@ export class InnovationUseService {
         where: { result_id: resultId, is_active: true },
         relations: { obj_actor_type: true },
       });
-      actorsData.map((el) => {
-        el['men_non_youth'] = el.men - el.men_youth;
-        el['women_non_youth'] = el.women - el.women_youth;
+
+      actorsData.forEach((el) => {
+        const men = el.men ?? 0;
+        const women = el.women ?? 0;
+        const men_youth = el.men_youth ?? 0;
+        const women_youth = el.women_youth ?? 0;
+
+        const men_non_youth = men - men_youth;
+        let women_non_youth = women - women_youth;
+
+        if ((el.women === null || el.women === 0) && women_youth > 0) {
+          el.women = women_youth;
+          women_non_youth = 0;
+        }
+
+        el['men_non_youth'] = men_non_youth > 0 ? men_non_youth : 0;
+        el['women_non_youth'] = women_non_youth > 0 ? women_non_youth : 0;
+
+        el.how_many = women + men;
       });
 
       // Measures
@@ -519,9 +541,7 @@ export class InnovationUseService {
       };
 
       let scaling_studies_urls: string[] = [];
-      if (
-        innDevExists.innovation_readiness_level_id >= InnovationUseLevel.Level_6
-      ) {
+      if (innDevExists.innovation_use_level_id >= InnovationUseLevel.Level_6) {
         const urls = await this._resultScalingStudyUrlsRepository.find({
           where: {
             result_innov_use_id: innDevExists.result_innovation_use_id,
