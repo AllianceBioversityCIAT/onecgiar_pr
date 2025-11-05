@@ -311,6 +311,9 @@ export class InnovationUseService {
         }
 
         let ite: ResultsByInstitutionType = null;
+        if (el?.institution_sub_type_id == null && el?.institution_types_id) {
+          el.institution_sub_type_id = el?.institution_types_id;
+        }
         if (el?.id) {
           el.institution_sub_type_id = el?.institution_types_id;
           ite = await this._resultByIntitutionsTypeRepository.findOne({
