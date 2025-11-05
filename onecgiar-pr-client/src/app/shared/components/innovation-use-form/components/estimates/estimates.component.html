@@ -14,14 +14,14 @@
 
             <td> <strong>{{item.official_code}}</strong> - {{item.name}}</td>
             <td>
-                <app-pr-input placeholder="Write some..." type="currency" [(ngModel)]="item.kind_cash"
+                <app-pr-input placeholder="Write some..." type="currency" [(ngModel)]="item.kind_cash" [disabled]="disabled"
                     [noDataText]="item.is_determined ? 'Not applicable':'Not provided'" [required]="false"
                     (ngModelChange)="onInputChange(item)">
                 </app-pr-input>
             </td>
 
             <td>
-                <app-pr-radio-button optionLabel="name" optionValue="id" [(ngModel)]="item.is_determined"
+                <app-pr-radio-button optionLabel="name" optionValue="id" [(ngModel)]="item.is_determined" [disabled]="disabled"
                     [options]="[{name:'This is yet to be determined',id:true}]"
                     (ngModelChange)="onRadioChange(item)">
                 </app-pr-radio-button>
@@ -55,14 +55,14 @@
                 </div>
             </td>
             <td>
-                <app-pr-input placeholder="Write some..." type="currency" [(ngModel)]="item.kind_cash"
+                <app-pr-input placeholder="Write some..." type="currency" [(ngModel)]="item.kind_cash" [disabled]="disabled"
                     [noDataText]="item.is_determined ? 'Not applicable':'Not provided'" [required]="false"
                     (ngModelChange)="onInputChange(item)">
                 </app-pr-input>
             </td>
 
             <td>
-                <app-pr-radio-button optionLabel="name" optionValue="id" [(ngModel)]="item.is_determined"
+                <app-pr-radio-button optionLabel="name" optionValue="id" [(ngModel)]="item.is_determined" [disabled]="disabled"
                     [options]="[{name:'This is yet to be determined',id:true}]"
                     (ngModelChange)="onRadioChange(item)">
                 </app-pr-radio-button>
@@ -92,14 +92,14 @@
                 <div class="name">{{item.name}}</div>
             </td>
             <td>
-                <app-pr-input placeholder="Write some..." type="currency" [(ngModel)]="item.kind_cash"
+                <app-pr-input placeholder="Write some..." type="currency" [(ngModel)]="item.kind_cash" [disabled]="disabled"
                     [noDataText]="item.is_determined ? 'Not applicable':'Not provided'" [required]="false"
                     (ngModelChange)="onInputChange(item)">
                 </app-pr-input>
             </td>
 
             <td>
-                <app-pr-radio-button optionLabel="name" optionValue="id" [(ngModel)]="item.is_determined"
+                <app-pr-radio-button optionLabel="name" optionValue="id" [(ngModel)]="item.is_determined" [disabled]="disabled"
                     [options]="[{name:'This is yet to be determined',id:true}]"
                     (ngModelChange)="onRadioChange(item)">
                 </app-pr-radio-button>

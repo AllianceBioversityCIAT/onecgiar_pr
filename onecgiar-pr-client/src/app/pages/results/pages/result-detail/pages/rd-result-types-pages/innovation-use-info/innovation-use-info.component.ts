@@ -75,17 +75,20 @@ export class InnovationUseInfoComponent {
 
   onSaveSection() {
     this.savingSection = true;
-    this.convertOrganizationsTosave();
 
     const { investment_programs = [], investment_bilateral = [], investment_partners = [] } = (this.innovationUseInfoBody as any);
     const actors = this.innovationUseInfoBody?.innovatonUse?.actors || [];
     const measures = this.innovationUseInfoBody?.innovatonUse?.measures || [];
-    const organization = this.innovationUseInfoBody?.innovatonUse?.organization || [];
+    // Do not mutate UI-bound state; map payload only
+    const organization = (this.innovationUseInfoBody?.innovatonUse?.organization || []).map((item: any) => ({
+      ...item,
+      institution_types_id: item?.institution_sub_type_id ?? item?.institution_types_id
+    }));
 
     const bodyToSend = {
       has_innovation_link: this.innovationUseInfoBody.has_innovation_link,
       linked_results: (this.innovationUseInfoBody.linked_results || []).map((r: any) => Number(r?.id ?? r)),
-      innovation_readiness_level_id: this.innovationUseInfoBody.innovation_readiness_level_id,
+      innovation_use_level_id: (this.innovationUseInfoBody as any).innovation_use_level_id,
       readiness_level_explanation: this.innovationUseInfoBody.readiness_level_explanation,
       has_scaling_studies: this.innovationUseInfoBody.has_scaling_studies,
       scaling_studies_urls: this.innovationUseInfoBody.scaling_studies_urls,

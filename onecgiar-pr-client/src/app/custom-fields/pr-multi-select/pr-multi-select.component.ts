@@ -164,6 +164,7 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
     if (v !== this._value) {
       this._value = v;
       this.onChange(v);
+      this.syncSelectionFlags();
     }
   }
 

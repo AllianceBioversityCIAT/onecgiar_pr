@@ -8,10 +8,10 @@
     <div class="index">{{ i + 1 }}</div>
 
     <div class="link">
-      <app-pr-input placeholder="Add link" type="link" [required]="true" [(ngModel)]="this.body.scaling_studies_urls[i]"></app-pr-input>
+      <app-pr-input [disabled]="disabled" placeholder="Add link" type="link" [required]="true" [(ngModel)]="this.body.scaling_studies_urls[i]"></app-pr-input>
     </div>
 
-    <button class="icon" *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status" (click)="deleteStudiesLink(i)" type="button" aria-label="Delete study link">
+    <button class="icon" *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status && !disabled" (click)="deleteStudiesLink(i)" type="button" aria-label="Delete study link">
       <i class="material-icons-round">delete</i>
     </button>
   </div>
@@ -25,6 +25,7 @@
   <app-add-button
     name="Add another study link"
     (clickEvent)="addStudiesLink()"
+    [disabled]="disabled"
     *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status">
   </app-add-button>
 </div>
