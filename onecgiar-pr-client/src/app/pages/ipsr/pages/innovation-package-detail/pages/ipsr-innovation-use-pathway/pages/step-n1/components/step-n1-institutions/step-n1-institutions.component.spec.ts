@@ -31,6 +31,13 @@ describe('StepN1InstitutionsComponent', () => {
     expect(result).toBe(true);
   });
 
+  it('should return false when deliveries is not an object', () => {
+    const deliveries = 'not an object' as any;
+    const deliveryId = 2;
+    const result = component.validateDeliverySelection(deliveries, deliveryId);
+    expect(result).toBe(false);
+  });
+
   it('should select partner', () => {
     const e = { option: { institutions_id: 1 } };
     component.body.institutions = [{ institutions_id: 1, deliveries: [], institutions_name: 'Inst. 1', institutions_type_name: '1' }];
