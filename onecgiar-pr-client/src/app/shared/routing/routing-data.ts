@@ -147,7 +147,7 @@ export const adminModuleRouting: PrRoute[] = [
     path: 'user-management',
     loadComponent: () => import('../../pages/admin-section/pages/user-management/user-management.component')
   },
-  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'completeness-status' }
+  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'tickets-dashboard' }
 ];
 
 export const managementPhasesRuting: PrRoute[] = [
@@ -184,7 +184,7 @@ export const initadminModuleRouting: PrRoute[] = [
         m => m.InitGeneralResultsReportModule
       )
   },
-  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'init-completeness-status' }
+  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'init-general-results-report' }
 ];
 
 export const resultsOutletRouting: PrRoute[] = [
