@@ -408,6 +408,10 @@ describe('InnovationPathwayStepFourService', () => {
         contribution_to_indicator_result_array: [],
         obj_result_qaed: [],
         obj_result_by_project: [],
+        obj_ai_review_sessions: [],
+        obj_ai_review_events: [],
+        obj_result_field_revisions: [],
+        obj_result_field_ai_states: [],
         lead_contact_person_id: 1,
         obj_lead_contact_person: {
           id: 1,
