@@ -306,18 +306,13 @@ export class InnovationUseService {
           continue;
         }
 
-        if (!el?.institution_sub_type_id) {
+        if (!el?.institution_sub_type_id && (el?.id == null || el.id === undefined)) {
           continue;
         }
 
         let ite: ResultsByInstitutionType = null;
         if (el?.id) {
-          ite = await this._resultByIntitutionsTypeRepository.findOne({
-            where: { id: el.id, is_active: true },
-          });
-        }
-
-        if (el?.id) {
+          el.institution_sub_type_id = el?.institution_types_id;
           ite = await this._resultByIntitutionsTypeRepository.findOne({
             where: { id: el.id, is_active: true },
           });
@@ -330,8 +325,6 @@ export class InnovationUseService {
             );
         }
 
-        console.log('ite', ite);
-        console.log('el', el);
         if (ite) {
           await this._resultByIntitutionsTypeRepository.update(
             ite.id,
@@ -438,7 +431,7 @@ export class InnovationUseService {
       how_many: el?.how_many,
       addressing_demands: this.isNullData(el?.addressing_demands),
       section_id: this.isNullData(section),
-      is_active: el?.is_active,
+      is_active: true,
     };
   }
 
