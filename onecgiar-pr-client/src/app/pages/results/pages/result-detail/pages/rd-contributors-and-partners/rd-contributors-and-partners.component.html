@@ -99,10 +99,72 @@
     (selectOptionEvent)="this.rdPartnersSE.onSelectContributingInitiative()"
     [required]="false"
     selectedOptionLabel="full_name"
-    [(ngModel)]="this.rdPartnersSE.partnersBody.contributingInitiativeNew"
+    [(ngModel)]="this.rdPartnersSE.contributingInitiativeNew"
     [confirmDeletion]="true"
     [placeholder]="'Select ' + ('term.entity.orPlatformsWith()' | term: this.api.dataControlSE.currentResult?.portfolio)">
   </app-pr-multi-select>
+
+  <div class="selected_container custom_scroll">
+    <app-pr-field-header [description]="('term.entity.singularWith()' | term: this.api.dataControlSE.currentResult?.portfolio) + ' selected:'">
+    </app-pr-field-header>
+
+    <div class="chips_container">
+      @for (
+        item of this.rdPartnersSE.rdCpTheoryOfChangesServicesSE.theoryOfChangeBody?.contributing_initiatives?.accepted_contributing_initiatives || [];
+        track item.id;
+        let i = $index
+      ) {
+        <div class="pr_chip_selected">
+          <div class="name" [ngClass]="{ text_inactive: !item.is_active }">
+            <strong>{{ item.official_code }}</strong> {{ item.initiative_name }}
+          </div>
+
+          @if (!this.api.rolesSE.readOnly) {
+            <i
+              class="material-icons-round"
+              [style.color]="item.is_active ? 'var(--pr-color-red-100)' : 'var(--pr-color-primary-300)'"
+              (click)="onRemoveContribuiting(i, true)">
+              {{ item.is_active ? 'backspace' : 'undo' }}
+            </i>
+          }
+        </div>
+      }
+
+      @for (item of this.rdPartnersSE.contributingInitiativeNew; track item.id; let i = $index) {
+        <div class="pr_chip_selected pending">
+          <div class="name" [ngClass]="{ text_inactive: !item.is_active }">
+            <strong>{{ item.official_code }}</strong> {{ item.name }} - <b style="font-style: italic"> Not saved yet </b>
+          </div>
+
+          @if (!this.api.rolesSE.readOnly) {
+            <i
+              class="material-icons-round"
+              [style.color]="item.is_active ? 'var(--pr-color-red-100)' : 'var(--pr-color-primary-300)'"
+              (click)="onRemoveContribuiting(i, false)">
+              {{ item.is_active ? 'backspace' : 'undo' }}
+            </i>
+          }
+        </div>
+      }
+
+      @for (item of this.rdPartnersSE.partnersBody?.contributing_initiatives?.pending_contributing_initiatives || []; track item.id) {
+        <div class="pr_chip_selected pending">
+          <div class="name" [ngClass]="{ text_inactive: !item.is_active }">
+            <strong>{{ item.official_code }}</strong> {{ item.initiative_name }} - <b style="font-style: italic"> Pending confirmation </b>
+          </div>
+
+          @if (!this.api.rolesSE.readOnly) {
+            <i
+              class="material-icons-round"
+              [style.color]="item.is_active ? 'var(--pr-color-red-100)' : 'var(--pr-color-primary-300)'"
+              (click)="toggleActiveContributor(item)">
+              {{ item.is_active ? 'backspace' : 'undo' }}
+            </i>
+          }
+        </div>
+      }
+    </div>
+  </div>
 
   <!-- Contributing Centers end -->
 
