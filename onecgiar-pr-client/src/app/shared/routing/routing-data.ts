@@ -311,6 +311,7 @@ export const resultDetailRouting: PrRoute[] = [
     prName: 'Theory of change',
     path: 'theory-of-change',
     underConstruction: false,
+    portfolioAcronym: 'P22',
     loadChildren: () =>
       import('../../pages/results/pages/result-detail/pages/rd-theory-of-change/rd-theory-of-change.module').then(m => m.RdTheoryOfChangeModule)
   },
@@ -318,7 +319,18 @@ export const resultDetailRouting: PrRoute[] = [
     prName: 'Partners & Contributors',
     path: 'partners',
     underConstruction: false,
+    portfolioAcronym: 'P22',
     loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-partners/rd-partners.module').then(m => m.RdPartnersModule)
+  },
+  {
+    prName: 'Contributors & partners',
+    path: 'contributors-and-partners',
+    portfolioAcronym: 'P25',
+    underConstruction: false,
+    loadChildren: () =>
+      import('../../pages/results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.module').then(
+        m => m.RdContributorsAndPartnersModule
+      )
   },
   {
     prName: 'Geographic location',
@@ -332,6 +344,7 @@ export const resultDetailRouting: PrRoute[] = [
   {
     prName: 'Links to results',
     path: 'links-to-results',
+    portfolioAcronym: 'P22',
     underConstruction: false,
     loadChildren: () =>
       import('../../pages/results/pages/result-detail/pages/rd-links-to-results/rd-links-to-results.module').then(m => m.RdLinksToResultsModule)
@@ -506,4 +519,5 @@ export interface PrRoute extends Route {
   prHide?: boolean | number;
   underConstruction?: boolean | number;
   onlyTest?: boolean;
+  portfolioAcronym?: string;
 }

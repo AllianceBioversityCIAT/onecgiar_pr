@@ -31,7 +31,7 @@ export class ResultsTocResultRepository
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
-    private readonly _resultsTocResultIndicator: ResultsTocResultIndicatorsRepository,
+    private readonly _resultsTocResultIndicatorRepository: ResultsTocResultIndicatorsRepository,
     private readonly _resultsTocImpactAreaTargetRepository: ResultsTocImpactAreaTargetRepository,
     private readonly _resultsTocSdgTargetRepository: ResultsTocSdgTargetRepository,
     private readonly _resultsSdgTargetRepository: ResultsSdgTargetRepository,
@@ -1604,7 +1604,7 @@ export class ResultsTocResultRepository
       const phaseYear = await this.getPhaseYearByResult(result_id);
 
       if (id_result_toc_result) {
-        await this._resultsTocResultIndicator.update(
+        await this._resultsTocResultIndicatorRepository.update(
           { results_toc_results_id: id_result_toc_result },
           {
             is_active: false,
@@ -1633,16 +1633,22 @@ export class ResultsTocResultRepository
       };
 
       for (const itemIndicator of targetsIndicator) {
-        const targetIndicators = await this._resultsTocResultIndicator.findOne({
-          where: {
-            results_toc_results_id: id_result_toc_result,
-            toc_results_indicator_id: itemIndicator.toc_results_indicator_id,
-          },
-        });
+        const indicatorId =
+          itemIndicator.toc_results_indicator_id ||
+          itemIndicator.related_node_id;
+        if (!indicatorId) continue;
+
+        const targetIndicators =
+          await this._resultsTocResultIndicatorRepository.findOne({
+            where: {
+              results_toc_results_id: id_result_toc_result,
+              toc_results_indicator_id: itemIndicator.toc_results_indicator_id,
+            },
+          });
 
         if (targetIndicators) {
           targetIndicators.is_active = true;
-          await this._resultsTocResultIndicator.update(
+          await this._resultsTocResultIndicatorRepository.update(
             {
               results_toc_results_id: id_result_toc_result,
               toc_results_indicator_id: itemIndicator.toc_results_indicator_id,
@@ -1665,9 +1671,7 @@ export class ResultsTocResultRepository
 
           if (Array.isArray(itemIndicator.targets)) {
             for (const target of itemIndicator.targets) {
-              const canonical = await getCanonicalTarget(
-                itemIndicator.toc_results_indicator_id,
-              );
+              const canonical = await getCanonicalTarget(indicatorId);
               const resolvedNumberTarget =
                 canonical?.number_target ??
                 this.toNumberOrNull(target.number_target);
@@ -1739,7 +1743,7 @@ export class ResultsTocResultRepository
           }
         } else {
           const resultTocResultIndicator =
-            await this._resultsTocResultIndicator.save({
+            await this._resultsTocResultIndicatorRepository.save({
               results_toc_results_id: id_result_toc_result,
               toc_results_indicator_id: itemIndicator.toc_results_indicator_id,
               is_active: true,
@@ -1748,9 +1752,7 @@ export class ResultsTocResultRepository
             });
           if (Array.isArray(itemIndicator.targets)) {
             for (const target of itemIndicator.targets) {
-              const canonical = await getCanonicalTarget(
-                itemIndicator.toc_results_indicator_id,
-              );
+              const canonical = await getCanonicalTarget(indicatorId);
               const resolvedNumberTarget =
                 canonical?.number_target ??
                 this.toNumberOrNull(target.number_target);

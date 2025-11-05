@@ -153,45 +153,6 @@ describe('PanelMenuComponent', () => {
     });
   });
 
-  describe('hideLinksToResults()', () => {
-    it('should return false when navOption path is not "links-to-results"', () => {
-      mockDataControlService.currentResultSignal.mockReturnValue({ portfolio: 'P25' });
-      const result = component.hideLinksToResults({ path: 'other-path' });
-      expect(result).toBe(false);
-    });
-
-    it('should return true when navOption path is "links-to-results" and portfolio is P25', () => {
-      mockDataControlService.currentResultSignal.mockReturnValue({ portfolio: 'P25' });
-      const result = component.hideLinksToResults({ path: 'links-to-results' });
-      expect(result).toBe(true);
-    });
-
-    it('should return false when navOption path is "links-to-results" and portfolio is not P25', () => {
-      mockDataControlService.currentResultSignal.mockReturnValue({ portfolio: 'P1' });
-      const result = component.hideLinksToResults({ path: 'links-to-results' });
-      expect(result).toBe(false);
-    });
-
-    it('should return false when navOption path is "links-to-results" and currentResultSignal returns null', () => {
-      mockDataControlService.currentResultSignal.mockReturnValue(null);
-      const result = component.hideLinksToResults({ path: 'links-to-results' });
-      expect(result).toBe(false);
-    });
-
-    it('should return false when navOption path is "links-to-results" and currentResultSignal returns undefined', () => {
-      mockDataControlService.currentResultSignal.mockReturnValue(undefined);
-      const result = component.hideLinksToResults({ path: 'links-to-results' });
-      expect(result).toBe(false);
-    });
-
-    it('should handle undefined navOption gracefully', () => {
-      // This test documents that the method should handle undefined gracefully
-      // The actual implementation will throw an error, so we test the expected behavior
-      expect(() => {
-        component.hideLinksToResults(undefined);
-      }).toThrow();
-    });
-  });
 
   describe('green_checks_string()', () => {
     it('should return a stringified JSON representation of green_checks', () => {
@@ -357,10 +318,8 @@ describe('PanelMenuComponent', () => {
       const navOption = { path: 'links-to-results' };
 
       const hideKPResult = component.hideKP(navOption);
-      const hideLinksResult = component.hideLinksToResults(navOption);
 
       expect(hideKPResult).toBe(false);
-      expect(hideLinksResult).toBe(true);
     });
 
     it('should handle complex scenario with all methods', () => {
@@ -375,12 +334,10 @@ describe('PanelMenuComponent', () => {
 
       // Test all methods
       const hideKPResult = component.hideKP(navOption);
-      const hideLinksResult = component.hideLinksToResults(navOption);
       const greenChecksString = component.green_checks_string;
       const validateMemberResult = component.validateMember(mockInitiativesList);
 
       expect(hideKPResult).toBe(false);
-      expect(hideLinksResult).toBe(false);
       expect(greenChecksString).toBe('{"section1":true}');
       expect(validateMemberResult).toBe(1);
     });

@@ -10,7 +10,7 @@ import {
 } from 'typeorm';
 import { Result } from '../../entities/result.entity';
 import { User } from '../../../../auth/modules/user/entities/user.entity';
-import { ClarisaInnovationReadinessLevel } from '../../../../clarisa/clarisa-innovation-readiness-levels/entities/clarisa-innovation-readiness-level.entity';
+import { ClarisaInnovationUseLevel } from '../../../../clarisa/clarisa-innovation-use-levels/entities/clarisa-innovation-use-level.entity';
 
 @Entity('results_innovations_use')
 export class ResultsInnovationsUse {
@@ -75,19 +75,19 @@ export class ResultsInnovationsUse {
   innov_use_2030_to_be_determined: boolean;
 
   @Column({
-    name: 'innovation_readiness_level_id',
+    name: 'innovation_use_level_id',
     type: 'bigint',
     nullable: true,
   })
-  innovation_readiness_level_id!: number;
+  innovation_use_level_id!: number;
 
-  @ManyToOne(() => ClarisaInnovationReadinessLevel, {
+  @ManyToOne(() => ClarisaInnovationUseLevel, {
     nullable: true,
   })
   @JoinColumn({
-    name: 'innovation_readiness_level_id',
+    name: 'innovation_use_level_id',
   })
-  obj_innovation_readiness_level?: ClarisaInnovationReadinessLevel;
+  obj_innovation_use_level?: ClarisaInnovationUseLevel;
 
   @Column({
     name: 'is_active',

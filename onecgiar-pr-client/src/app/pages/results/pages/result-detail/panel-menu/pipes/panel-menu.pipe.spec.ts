@@ -1,8 +1,12 @@
+import { TestBed } from '@angular/core/testing';
 import { PanelMenuPipe } from './panel-menu.pipe';
+import { DataControlService } from '../../../../../../shared/services/data-control.service';
+import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 
 describe('PanelMenuPipe', () => {
   let pipe: PanelMenuPipe;
   let mockDataControlService: any;
+  let mockFieldsManagerService: any;
 
   beforeEach(() => {
     mockDataControlService = {
@@ -13,7 +17,20 @@ describe('PanelMenuPipe', () => {
       ],
     };
 
-    pipe = new PanelMenuPipe(mockDataControlService);
+    mockFieldsManagerService = {
+      isP25: jest.fn().mockReturnValue(false),
+      isP22: jest.fn().mockReturnValue(false)
+    };
+
+    TestBed.configureTestingModule({
+      providers: [
+        PanelMenuPipe,
+        { provide: DataControlService, useValue: mockDataControlService },
+        { provide: FieldsManagerService, useValue: mockFieldsManagerService }
+      ]
+    });
+
+    pipe = TestBed.inject(PanelMenuPipe);
   });
 
   it('should apply transformations to the list based on green_checks', () => {
