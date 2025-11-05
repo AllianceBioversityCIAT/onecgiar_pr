@@ -37,16 +37,21 @@
         (validateMember(this.api.dataControlSE?.myInitiativesList) !== 6 && this.dataControlSE?.currentResult?.inQA) ||
         this.api.rolesSE.isAdmin
       ">
+      <div class="ai-review-button">
+        <img src="assets/icons/stars.png" alt="submit-result" />
+        AI Review
+      </div>
+
       <app-pr-button
         [ngClass]="{
           globalDisabled: !this.greenChecksSE.submit || (this.dataControlSE?.currentResult?.inQA && this.api.globalVariablesSE.get?.in_qa)
         }"
         (click)="this.submissionModalSE.showModal = true"
-        text="Submit"
+        text="Submit result"
         *ngIf="this.dataControlSE?.currentResult?.status_id == 1"></app-pr-button>
 
       <app-pr-button
-        text="Unsubmit"
+        text="Unsubmit result"
         *ngIf="this.dataControlSE?.currentResult?.status_id == 3"
         [ngClass]="{ globalDisabled: this.dataControlSE?.currentResult?.inQA && this.api.globalVariablesSE.get?.in_qa }"
         (click)="this.unsubmitModalSE.showModal = true"></app-pr-button>
