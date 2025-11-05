@@ -142,7 +142,6 @@ export class InnovationUseService {
       const scalingStudiesUrls: string[] = (scaling_studies_urls ?? []).filter(
         (link) => link !== null && link !== undefined && link !== '',
       );
-      console.log('scalingStudiesUrls', scalingStudiesUrls);
 
       if (
         innovation_readiness_level_id >= InnovationUseLevel.Level_6 &&
@@ -229,7 +228,7 @@ export class InnovationUseService {
     section: ResultCoreInnovUseSectionEnum = null,
     determined?: boolean | null,
   ) {
-    // Si determined === true, desactiva todo
+
     if (determined === true) {
       await this._resultActorRepository.update(
         { result_id: resultId, is_active: true },
@@ -298,6 +297,7 @@ export class InnovationUseService {
     // ==== ORGANIZATIONS ====
     if (crtr?.innovation_use?.organization?.length) {
       for (const el of crtr.innovation_use.organization) {
+
         if (el?.is_active === false) {
           if (el?.id) {
             await this._resultByIntitutionsTypeRepository.update(
@@ -308,16 +308,16 @@ export class InnovationUseService {
           continue;
         }
 
-        if (!el?.institution_types_id) {
+        if (!el?.institution_sub_type_id) {
           continue;
         }
 
         let ite: ResultsByInstitutionType = null;
-        if (el?.institution_types_id && el?.institution_types_id != 78) {
+        if (el?.institution_sub_type_id && el?.institution_sub_type_id != 78) {
           ite =
             await this._resultByIntitutionsTypeRepository.getNewResultByInstitutionTypeExists(
               resultId,
-              el.institution_types_id,
+              el.institution_sub_type_id,
               5,
             );
         }
@@ -430,7 +430,7 @@ export class InnovationUseService {
       created_by: user,
       last_updated_by: user,
       other_institution: this.isNullData(el?.other_institution),
-      institution_types_id: this.isNullData(el.institution_types_id),
+      institution_types_id: this.isNullData(el.institution_sub_type_id),
       graduate_students: this.isNullData(el?.graduate_students),
       institution_roles_id: 5,
       how_many: el?.how_many,
@@ -498,7 +498,6 @@ export class InnovationUseService {
         }
 
         el.how_many = women + men;
-        console.log('el.how_many', el.how_many);
       });
 
       // Measures

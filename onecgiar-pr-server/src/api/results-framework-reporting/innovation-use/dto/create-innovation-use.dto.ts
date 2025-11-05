@@ -14,7 +14,7 @@ export class InnovUseGroupsDto {
     description: 'Organizations involved, classified by institution type',
     type: [ResultsByInstitutionType],
   })
-  organization: ResultsByInstitutionType[];
+  organization: OrganizationsDto[];
 
   @ApiProperty({
     description: 'Measures associated with the result',
@@ -44,6 +44,97 @@ export class InvesmentDto {
     type: Boolean,
   })
   is_determined: boolean;
+}
+
+export class OrganizationsDto{
+  @ApiProperty({
+    description: 'Unique identifier of the organization record',
+    example: 886,
+    type: Number,
+  })
+  id: number;
+
+
+  @ApiProperty({
+    description: 'ID of the institution type',
+    example: 37,
+    type: Number,
+  })
+  institution_type_id: number;
+
+  @ApiProperty({
+    description: 'ID of the institution sub-type',
+    example: 12,
+    type: Number,
+    required: false,
+  })
+  institution_sub_type_id?: number;
+
+  @ApiProperty({
+    description: 'ID of the institution role',
+    example: 5,
+    type: Number,
+  })
+  institution_roles_id: number;
+
+  @ApiProperty({
+    description: 'Name of the other organization if not in catalog',
+    example: 'Organization ABC',
+    type: String,
+    required: false,
+  })
+  other_institution?: string;
+
+  @ApiProperty({
+    description: 'Amount representing how many are involved',
+    example: 3,
+    type: Number,
+  })
+  how_many: number;
+
+  @ApiProperty({
+    description: 'Graduate students associated with this organization',
+    example: 'Some graduate students',
+    type: String,
+    required: false,
+  })
+  graduate_students?: string;
+
+  @ApiProperty({
+    description: 'Information about how this organization addresses demands',
+    example: 'Supports community development',
+    type: String,
+    required: false,
+  })
+  addressing_demands?: string;
+
+  @ApiProperty({
+    description: 'Section ID linked to this organization entry',
+    example: 2,
+    type: Number,
+  })
+  section_id: number;
+
+  @ApiProperty({
+    description: 'Result ID related to this organization entry',
+    example: 8594,
+    type: Number,
+  })
+  results_id: number;
+
+  @ApiProperty({
+    description: 'Indicates if the organization record is active',
+    example: true,
+    type: Boolean,
+  })
+  is_active: boolean;
+
+  @ApiProperty({
+    description: 'If it is hidden',
+    example: false,
+    type: Boolean,
+  })
+  hide: boolean;
 }
 export class CreateInnovationUseDto {
   innovation_use: InnovUseGroupsDto;
@@ -89,7 +180,7 @@ export class CreateInnovationUseDto {
     description: 'Organizations involved, classified by institution type',
     type: [ResultsByInstitutionType],
   })
-  organization: ResultsByInstitutionType[];
+  organization: OrganizationsDto[];
 
   @ApiProperty({
     description: 'Measures associated with the result',
