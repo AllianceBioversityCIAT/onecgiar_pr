@@ -155,11 +155,6 @@ export class RdContributorsAndPartnersComponent implements OnInit {
       });
     }
 
-    console.log(this.rdPartnersSE.partnersBody);
-
-    console.log(this.rdPartnersSE.contributingInitiativeNew);
-    console.log(this.rdPartnersSE.partnersBody.contributing_initiatives.pending_contributing_initiatives);
-
     const sendedData = {
       ...this.rdPartnersSE.partnersBody,
       contributing_initiatives: {
@@ -171,8 +166,6 @@ export class RdContributorsAndPartnersComponent implements OnInit {
       },
       email_template: 'email_template_contribution'
     };
-
-    console.log(this.rdPartnersSE.partnersBody);
 
     this.api.resultsSE.PATCH_ContributorsPartners({ ...this.rdPartnersSE.partnersBody, ...sendedData }).subscribe(_resp => {
       this.rdPartnersSE.getSectionInformation(null, true);
