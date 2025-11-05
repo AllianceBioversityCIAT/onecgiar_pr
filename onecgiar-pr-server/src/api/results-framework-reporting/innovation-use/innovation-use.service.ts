@@ -70,7 +70,7 @@ export class InnovationUseService {
 
       const {
         has_innovation_link,
-        innovation_readiness_level_id,
+        innovation_use_level_id,
         linked_results,
         readiness_level_explanation,
         has_scaling_studies,
@@ -82,13 +82,13 @@ export class InnovationUseService {
       let InnUseRes: ResultsInnovationsUse;
       if (resultExist) {
         resultExist.has_innovation_link = has_innovation_link;
-        resultExist.innovation_use_level_id = innovation_readiness_level_id;
+        resultExist.innovation_use_level_id = innovation_use_level_id;
         resultExist.last_updated_by = user.id;
         resultExist.innov_use_to_be_determined = innov_use_to_be_determined;
         resultExist.innov_use_2030_to_be_determined =
           innov_use_2030_to_be_determined;
 
-        if (innovation_readiness_level_id >= InnovationUseLevel.Level_6) {
+        if (innovation_use_level_id >= InnovationUseLevel.Level_6) {
           resultExist.readiness_level_explanation =
             readiness_level_explanation ?? null;
           resultExist.has_scaling_studies = !!has_scaling_studies;
@@ -117,13 +117,13 @@ export class InnovationUseService {
         newInnUse.results_id = resultId;
         newInnUse.last_updated_by = user.id;
         newInnUse.is_active = true;
-        newInnUse.innovation_use_level_id = innovation_readiness_level_id;
+        newInnUse.innovation_use_level_id = innovation_use_level_id;
         newInnUse.has_innovation_link = has_innovation_link;
         newInnUse.innov_use_to_be_determined = innov_use_to_be_determined;
         newInnUse.innov_use_2030_to_be_determined =
           innov_use_2030_to_be_determined;
 
-        if (innovation_readiness_level_id >= InnovationUseLevel.Level_6) {
+        if (innovation_use_level_id >= InnovationUseLevel.Level_6) {
           newInnUse.readiness_level_explanation =
             readiness_level_explanation ?? null;
           newInnUse.has_scaling_studies = !!has_scaling_studies;
@@ -144,7 +144,7 @@ export class InnovationUseService {
       );
 
       if (
-        innovation_readiness_level_id >= InnovationUseLevel.Level_6 &&
+        innovation_use_level_id >= InnovationUseLevel.Level_6 &&
         has_scaling_studies &&
         Array.isArray(scalingStudiesUrls)
       ) {
@@ -228,7 +228,6 @@ export class InnovationUseService {
     section: ResultCoreInnovUseSectionEnum = null,
     determined?: boolean | null,
   ) {
-
     if (determined === true) {
       await this._resultActorRepository.update(
         { result_id: resultId, is_active: true },
@@ -297,7 +296,6 @@ export class InnovationUseService {
     // ==== ORGANIZATIONS ====
     if (crtr?.innovation_use?.organization?.length) {
       for (const el of crtr.innovation_use.organization) {
-
         if (el?.is_active === false) {
           if (el?.id) {
             await this._resultByIntitutionsTypeRepository.update(
@@ -1021,9 +1019,7 @@ export class InnovationUseService {
     }
 
     if (urlsToDeactivate.length > 0) {
-      const idsToDeactivate = urlsToDeactivate.map(
-        (el) => el.id,
-      );
+      const idsToDeactivate = urlsToDeactivate.map((el) => el.id);
 
       await this._resultScalingStudyUrlsRepository.update(
         { id: In(idsToDeactivate) },

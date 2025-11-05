@@ -19,7 +19,7 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
   actorsTypeList = [];
   institutionsTypeTreeList = [];
   @Input() body = new IpsrStep1Body();
-  @Input() saving: boolean = false;
+  @Input() saving: boolean = true;
   innovationDevelopmentLinks: InnovationDevelopmentLinks = new InnovationDevelopmentLinks();
 
   constructor(
@@ -294,14 +294,14 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     </ul>`;
   }
 
-  getReadinessLevelIndex(): number {
-    if (!this.body.innovation_readiness_level_id || !this.innovationControlListSE.readinessLevelsList) {
-      return -1;
-    }
+  getUseLevelIndex(): number {
+    const selectedId = this.body?.innovation_use_level_id;
+    const list = this.innovationControlListSE?.useLevelsList || [];
+    if (!selectedId || !list.length) return -1;
 
-    const selectedId = this.body.innovation_readiness_level_id;
-    const index = this.innovationControlListSE.readinessLevelsList.findIndex(level => level.id === selectedId);
-    return index >= 0 ? index : -1;
+    const selected = list.find((lvl: any) => String(lvl?.id) === String(selectedId));
+    const levelNumber = Number(selected?.level);
+    return Number.isFinite(levelNumber) ? levelNumber : -1;
   }
 
 }
