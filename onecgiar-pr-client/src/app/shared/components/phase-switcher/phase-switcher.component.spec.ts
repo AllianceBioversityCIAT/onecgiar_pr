@@ -31,4 +31,18 @@ describe('PhaseSwitcherComponent', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
+
+  it('should return ipsrPhaseList when inIpsr is true', () => {
+    component.ipsrDataControlSE.inIpsr = true;
+    component.ipsrDataControlSE.ipsrPhaseList = [{ id: 1, name: 'Phase 1' }];
+    const result = component.getFilterPhases();
+    expect(result).toEqual(component.ipsrDataControlSE.ipsrPhaseList);
+  });
+
+  it('should return resultPhaseList when inIpsr is false', () => {
+    component.ipsrDataControlSE.inIpsr = false;
+    component.api.dataControlSE.resultPhaseList = [{ id: 2, name: 'Phase 2' }];
+    const result = component.getFilterPhases();
+    expect(result).toEqual(component.api.dataControlSE.resultPhaseList);
+  });
 });

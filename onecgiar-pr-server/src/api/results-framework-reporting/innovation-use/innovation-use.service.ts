@@ -70,7 +70,7 @@ export class InnovationUseService {
 
       const {
         has_innovation_link,
-        innovation_readiness_level_id,
+        innovation_use_level_id,
         linked_results,
         readiness_level_explanation,
         has_scaling_studies,
@@ -82,13 +82,13 @@ export class InnovationUseService {
       let InnUseRes: ResultsInnovationsUse;
       if (resultExist) {
         resultExist.has_innovation_link = has_innovation_link;
-        resultExist.innovation_use_level_id = innovation_readiness_level_id;
+        resultExist.innovation_use_level_id = innovation_use_level_id;
         resultExist.last_updated_by = user.id;
         resultExist.innov_use_to_be_determined = innov_use_to_be_determined;
         resultExist.innov_use_2030_to_be_determined =
           innov_use_2030_to_be_determined;
 
-        if (innovation_readiness_level_id >= InnovationUseLevel.Level_6) {
+        if (innovation_use_level_id >= InnovationUseLevel.Level_6) {
           resultExist.readiness_level_explanation =
             readiness_level_explanation ?? null;
           resultExist.has_scaling_studies = !!has_scaling_studies;
@@ -117,13 +117,13 @@ export class InnovationUseService {
         newInnUse.results_id = resultId;
         newInnUse.last_updated_by = user.id;
         newInnUse.is_active = true;
-        newInnUse.innovation_use_level_id = innovation_readiness_level_id;
+        newInnUse.innovation_use_level_id = innovation_use_level_id;
         newInnUse.has_innovation_link = has_innovation_link;
         newInnUse.innov_use_to_be_determined = innov_use_to_be_determined;
         newInnUse.innov_use_2030_to_be_determined =
           innov_use_2030_to_be_determined;
 
-        if (innovation_readiness_level_id >= InnovationUseLevel.Level_6) {
+        if (innovation_use_level_id >= InnovationUseLevel.Level_6) {
           newInnUse.readiness_level_explanation =
             readiness_level_explanation ?? null;
           newInnUse.has_scaling_studies = !!has_scaling_studies;
@@ -144,23 +144,15 @@ export class InnovationUseService {
       );
 
       if (
-        innovation_readiness_level_id >= InnovationUseLevel.Level_6 &&
+        innovation_use_level_id >= InnovationUseLevel.Level_6 &&
         has_scaling_studies &&
-        scalingStudiesUrls?.length
+        Array.isArray(scalingStudiesUrls)
       ) {
-        await this._resultScalingStudyUrlsRepository.update(
-          { result_innov_use_id: InnUseRes.result_innovation_use_id },
-          { is_active: false },
+        await this.syncScalingStudyUrls(
+          InnUseRes.result_innovation_use_id,
+          scalingStudiesUrls,
+          user.id,
         );
-
-        const urlsToSave = scalingStudiesUrls.map((url) => ({
-          result_innov_use_id: InnUseRes.result_innovation_use_id,
-          study_url: url,
-          is_active: true,
-          created_by: user.id,
-        }));
-
-        await this._resultScalingStudyUrlsRepository.save(urlsToSave);
       }
 
       const innovation_use = {
@@ -236,7 +228,6 @@ export class InnovationUseService {
     section: ResultCoreInnovUseSectionEnum = null,
     determined?: boolean | null,
   ) {
-    // Si determined === true, desactiva todo
     if (determined === true) {
       await this._resultActorRepository.update(
         { result_id: resultId, is_active: true },
@@ -315,24 +306,21 @@ export class InnovationUseService {
           continue;
         }
 
-        if (!el?.institution_types_id) {
+        if (!el?.institution_sub_type_id && (el?.id == null || el.id === undefined)) {
           continue;
         }
 
         let ite: ResultsByInstitutionType = null;
-        if (el?.institution_types_id && el?.institution_types_id != 78) {
+        if (el?.id) {
+          el.institution_sub_type_id = el?.institution_types_id;
+          ite = await this._resultByIntitutionsTypeRepository.findOne({
+            where: { id: el.id, is_active: true },
+          });
+        } else if (el?.institution_sub_type_id != 78) {
           ite =
             await this._resultByIntitutionsTypeRepository.getNewResultByInstitutionTypeExists(
               resultId,
-              el.institution_types_id,
-              5,
-            );
-        }
-        if (!ite && el?.id) {
-          ite =
-            await this._resultByIntitutionsTypeRepository.getNewResultByIdExists(
-              resultId,
-              el.id,
+              el.institution_sub_type_id,
               5,
             );
         }
@@ -360,6 +348,10 @@ export class InnovationUseService {
               { is_active: false, last_updated_by: user },
             );
           }
+          continue;
+        }
+
+        if (el?.quantity == null && el?.unit_of_measure == null) {
           continue;
         }
 
@@ -433,13 +425,13 @@ export class InnovationUseService {
       created_by: user,
       last_updated_by: user,
       other_institution: this.isNullData(el?.other_institution),
-      institution_types_id: this.isNullData(el.institution_types_id),
+      institution_types_id: this.isNullData(el.institution_sub_type_id),
       graduate_students: this.isNullData(el?.graduate_students),
       institution_roles_id: 5,
       how_many: el?.how_many,
       addressing_demands: this.isNullData(el?.addressing_demands),
       section_id: this.isNullData(section),
-      is_active: el?.is_active,
+      is_active: true,
     };
   }
 
@@ -480,21 +472,25 @@ export class InnovationUseService {
       });
 
       actorsData.forEach((el) => {
-        const men = el.men ?? 0;
-        const women = el.women ?? 0;
-        const men_youth = el.men_youth ?? 0;
-        const women_youth = el.women_youth ?? 0;
+        const men = Number(el.men) || 0;
+        const women = Number(el.women) || 0;
+        const men_youth = Number(el.men_youth) || 0;
+        const women_youth = Number(el.women_youth) || 0;
 
-        const men_non_youth = men - men_youth;
+        let men_non_youth = men - men_youth;
         let women_non_youth = women - women_youth;
+
+        el['men_non_youth'] = men_non_youth > 0 ? men_non_youth : 0;
+        el['women_non_youth'] = women_non_youth > 0 ? women_non_youth : 0;
 
         if ((el.women === null || el.women === 0) && women_youth > 0) {
           el.women = women_youth;
           women_non_youth = 0;
         }
-
-        el['men_non_youth'] = men_non_youth > 0 ? men_non_youth : 0;
-        el['women_non_youth'] = women_non_youth > 0 ? women_non_youth : 0;
+        if ((el.men === null || el.men === 0) && men_youth > 0) {
+          el.men = men_youth;
+          men_non_youth = 0;
+        }
 
         el.how_many = women + men;
       });
@@ -985,6 +981,47 @@ export class InnovationUseService {
       }
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  private async syncScalingStudyUrls(
+    resultInnoUseId: number,
+    scalingStudiesUrls: string[],
+    userId: number,
+  ): Promise<void> {
+    const existingUrls = await this._resultScalingStudyUrlsRepository.find({
+      where: { result_innov_use_id: resultInnoUseId, is_active: true },
+    });
+
+    const existingUrlStrings = existingUrls.map((el) => el.study_url.trim());
+    const incomingUrls = scalingStudiesUrls.map((url) => url.trim());
+
+    const urlsToCreate = incomingUrls.filter(
+      (url) => !existingUrlStrings.includes(url),
+    );
+
+    const urlsToDeactivate = existingUrls.filter(
+      (el) => !incomingUrls.includes(el.study_url.trim()),
+    );
+
+    if (urlsToCreate.length > 0) {
+      const newUrls = urlsToCreate.map((url) => ({
+        result_innov_use_id: resultInnoUseId,
+        study_url: url,
+        is_active: true,
+        created_by: userId,
+      }));
+
+      await this._resultScalingStudyUrlsRepository.save(newUrls);
+    }
+
+    if (urlsToDeactivate.length > 0) {
+      const idsToDeactivate = urlsToDeactivate.map((el) => el.id);
+
+      await this._resultScalingStudyUrlsRepository.update(
+        { id: In(idsToDeactivate) },
+        { is_active: false, last_updated_by: userId },
+      );
     }
   }
 }

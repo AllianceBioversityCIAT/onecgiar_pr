@@ -155,9 +155,33 @@ export class RdContributorsAndPartnersComponent implements OnInit {
       });
     }
 
-    this.api.resultsSE.PATCH_ContributorsPartners(this.rdPartnersSE.partnersBody).subscribe(_resp => {
+    const sendedData = {
+      ...this.rdPartnersSE.partnersBody,
+      contributing_initiatives: {
+        ...this.rdPartnersSE.partnersBody.contributing_initiatives,
+        pending_contributing_initiatives: [
+          ...this.rdPartnersSE.partnersBody.contributing_initiatives.pending_contributing_initiatives,
+          ...this.rdPartnersSE.contributingInitiativeNew
+        ]
+      },
+      email_template: 'email_template_contribution'
+    };
+
+    this.api.resultsSE.PATCH_ContributorsPartners({ ...this.rdPartnersSE.partnersBody, ...sendedData }).subscribe(_resp => {
       this.rdPartnersSE.getSectionInformation(null, true);
     });
+  }
+
+  onRemoveContribuiting(index, isAcceptedArray: boolean) {
+    if (isAcceptedArray) {
+      this.rdPartnersSE.partnersBody.contributing_initiatives.accepted_contributing_initiatives.splice(index, 1);
+    } else {
+      this.rdPartnersSE.contributingInitiativeNew.splice(index, 1);
+    }
+  }
+
+  toggleActiveContributor(item) {
+    item.is_active = !item.is_active;
   }
 
   getMessageLead() {

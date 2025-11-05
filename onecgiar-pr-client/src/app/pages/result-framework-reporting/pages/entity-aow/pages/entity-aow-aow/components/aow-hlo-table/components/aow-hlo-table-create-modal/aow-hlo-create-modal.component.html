@@ -19,7 +19,8 @@
           }
         </p>
         <p class="report-result-content_left_header_title">{{ entityAowService.currentResultToReport()?.result_title }}</p>
-        <p class="report-result-content_left_header_desc">{{ entityAowService.currentResultToReport()?.indicators?.[0]?.indicator_description }}</p>
+        <p class="report-result-content_left_header_desc"><strong>Indicator name:</strong> {{ entityAowService.currentResultToReport()?.indicators?.[0]?.indicator_description }}</p>
+        <p class="report-result-content_left_header_desc"><strong>Indicator type:</strong> {{ entityAowService.currentResultToReport()?.indicators?.[0]?.type_name }}</p>
       </div>
       <div class="report-result-content_left_content">
         @if (entityAowService.currentResultToReport().indicators?.[0]?.result_type_id) {
