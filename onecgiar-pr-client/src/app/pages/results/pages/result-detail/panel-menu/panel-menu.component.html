@@ -26,9 +26,6 @@
     </div>
   </div>
 
-  <div style="padding: 0px 35px">
-    <app-pdf-actions (copyEvent)="copyEvent.emit()"></app-pdf-actions>
-  </div>
   <div>
     <div
       class="submit_button"
@@ -71,5 +68,9 @@
         This result is part of a QA process and cannot be un-submitted for editing.
       </div>
     </div>
+  </div>
+
+  <div style="padding: 0px 35px">
+    <app-pdf-actions (copyEvent)="copyEvent.emit()"></app-pdf-actions>
   </div>
 </div>

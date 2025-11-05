@@ -1,13 +1,13 @@
 .panel_menu {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 50px;
   border-radius: 10px;
   padding: 10px 25px;
   height: 100%;
   box-sizing: border-box;
   background-color: var(--pr-color-white);
-  justify-content: space-between;
+  // justify-content: space-between;
   overflow-y: auto;
 
   .ai-review-button {
