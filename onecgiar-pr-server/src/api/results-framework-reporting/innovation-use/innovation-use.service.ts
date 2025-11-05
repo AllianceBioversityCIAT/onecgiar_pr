@@ -321,8 +321,7 @@ export class InnovationUseService {
           ite = await this._resultByIntitutionsTypeRepository.findOne({
             where: { id: el.id, is_active: true },
           });
-        }
-        else if (el?.institution_sub_type_id != 78) {
+        } else if (el?.institution_sub_type_id != 78) {
           ite =
             await this._resultByIntitutionsTypeRepository.getNewResultByInstitutionTypeExists(
               resultId,
