@@ -11,7 +11,7 @@ import { TerminologyService } from '../../../../../internationalization/terminol
 export class EstimatesCgiarComponent {
     @Input() body: any = {};
     @Input() disabled: boolean = false;
-    
+
     constructor(
         public api: ApiService,
         private readonly terminologyService: TerminologyService
