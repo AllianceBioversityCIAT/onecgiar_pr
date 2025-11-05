@@ -42,23 +42,22 @@
         AI Review
       </div>
 
-      <!-- <div style="width: 100%"> -->
-      <app-pr-button
-        tooltipText="Enter your username"
-        tooltipTextPosition="top"
-        [ngClass]="{
-          width: '100% !important',
-          globalDisabled: !this.greenChecksSE.submit || (this.dataControlSE?.currentResult?.inQA && this.api.globalVariablesSE.get?.in_qa)
-        }"
-        (click)="this.submissionModalSE.showModal = true"
-        text="Submit result"
-        *ngIf="this.dataControlSE?.currentResult?.status_id == 1"></app-pr-button>
-      <app-pr-button
-        text="Unsubmit result"
-        *ngIf="this.dataControlSE?.currentResult?.status_id == 3"
-        [ngClass]="{ globalDisabled: this.dataControlSE?.currentResult?.inQA && this.api.globalVariablesSE.get?.in_qa }"
-        (click)="this.unsubmitModalSE.showModal = true"></app-pr-button>
-      <!-- </div> -->
+      <div style="width: 100%">
+        <app-pr-button
+          tooltipText="Enter your username"
+          tooltipTextPosition="top"
+          [ngClass]="{
+            globalDisabled: !this.greenChecksSE.submit || (this.dataControlSE?.currentResult?.inQA && this.api.globalVariablesSE.get?.in_qa)
+          }"
+          (click)="this.submissionModalSE.showModal = true"
+          text="Submit result"
+          *ngIf="this.dataControlSE?.currentResult?.status_id == 1"></app-pr-button>
+        <app-pr-button
+          text="Unsubmit result"
+          *ngIf="this.dataControlSE?.currentResult?.status_id == 3"
+          [ngClass]="{ globalDisabled: this.dataControlSE?.currentResult?.inQA && this.api.globalVariablesSE.get?.in_qa }"
+          (click)="this.unsubmitModalSE.showModal = true"></app-pr-button>
+      </div>
 
       <div class="button_access_information pr-body-3" *ngIf="this.dataControlSE?.currentResult?.status_id == 1">
         This button will become available once all sections are completed.
