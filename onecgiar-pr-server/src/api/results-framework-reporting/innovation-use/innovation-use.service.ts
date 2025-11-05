@@ -363,6 +363,10 @@ export class InnovationUseService {
           continue;
         }
 
+        if (el?.quantity == null && el?.unit_of_measure == null) {
+          continue;
+        }
+
         let ripm: ResultIpMeasure = null;
         if (el?.result_ip_measure_id) {
           ripm = await this._resultIpMeasureRepository.findOne({
