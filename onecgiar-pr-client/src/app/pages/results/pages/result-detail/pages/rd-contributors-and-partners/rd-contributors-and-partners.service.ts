@@ -17,6 +17,7 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   toggle = 0;
   getConsumed = signal<boolean>(false);
   cgspaceDisabledList: any = [];
+  savedActiveTabIndex: number | null = null;
 
   possibleLeadPartners: InstitutionMapped[] = [];
   possibleLeadCenters: CenterDto[] = [];
