@@ -6,6 +6,7 @@ import { CommonModule } from '@angular/common';
 import { ColumnOrder } from '../../aow-hlo-table.component';
 import { PdfIconModule } from '../../../../../../../../../../shared/icon-components/pdf-icon/pdf-icon.module';
 import { PopoverModule } from 'primeng/popover';
+import { Router } from '@angular/router';
 
 interface ActionItem {
   icon: string;
@@ -22,6 +23,9 @@ interface ActionItem {
 })
 export class AowViewResultsDrawerComponent implements OnInit {
   entityAowService = inject(EntityAowService);
+  router = inject(Router);
+
+  selectedProduct: any = null;
 
   columns = signal<ColumnOrder[]>([
     { title: 'Code', attr: 'code', width: '10%' },
@@ -30,10 +34,29 @@ export class AowViewResultsDrawerComponent implements OnInit {
   ]);
 
   actionItems = signal<ActionItem[]>([
-    { icon: 'pi pi-eye', label: 'View', command: () => {} },
-    { icon: 'pi pi-pencil', label: 'Edit', command: () => {} },
-    { icon: 'pi pi-trash', label: 'Delete', command: () => {} }
+    { icon: 'pi pi-eye', label: 'View', command: () => this.navigateToResult() }
   ]);
+
+  navigateToResult() {
+    if (this.selectedProduct) {
+      this.router.navigate([`/result/result-detail/${this.selectedProduct.result_code}/general-information`], {
+        queryParams: { phase: this.selectedProduct.version_id }
+      });
+    }
+  }
+
+  setSelectedProduct(product: any) {
+    this.selectedProduct = product;
+  }
+
+  navigateToResultDirect(product: any) {
+    const url = this.router.serializeUrl(
+      this.router.createUrlTree([`/result/result-detail/${product.result_code}/general-information`], {
+        queryParams: { phase: product.version_id }
+      })
+    );
+    window.open(url, '_blank');
+  }
 
   ngOnInit() {
     this.entityAowService.getExistingResultsContributors(
