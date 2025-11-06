@@ -12,7 +12,7 @@ import { CheckLoginGuard } from '../../../../../../../../../../shared/guards/che
   styleUrls: ['./multiple-wps-content.component.scss'],
   standalone: false
 })
-export class CPMultipleWPsContentComponent implements OnInit {
+export class CPMultipleWPsContentComponent implements OnChanges {
   @Input() editable: boolean;
   @Input() activeTab: any;
   @Input() resultLevelId: number | string;
@@ -42,8 +42,7 @@ export class CPMultipleWPsContentComponent implements OnInit {
     this.getIndicatorsList();
   });
 
-  ngOnInit() {
-    console.log('ngOnInit');
+  ngOnChanges(): void {
     this.pushSelectedOptions();
   }
 
