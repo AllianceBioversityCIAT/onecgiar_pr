@@ -43,7 +43,14 @@ export class CPMultipleWPsContentComponent implements OnChanges {
     console.log('hideIndicators');
   });
 
+  setActiveTabSignal() {
+    this.activeTabSignal.update(prev => {
+      return { ...prev, toc_level_id: this.activeTab.toc_level_id };
+    });
+  }
+
   tocResultListFiltered = computed(() => {
+    console.log('tocResultListFiltered', this.reusltlevelSE.currentResultLevelIdSignal());
     switch (this.reusltlevelSE.currentResultLevelIdSignal()) {
       case 3:
         return this.tocInitiativeOutcomeListsSE.tocResultList().filter(item => item.toc_level_id !== 1);

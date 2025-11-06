@@ -186,9 +186,8 @@ export class CPMultipleWPsComponent implements OnChanges {
   }
 
   onAddTab() {
-    const tocLevelId = !this.initiative().planned_result ? 3 : this.resultLevelId === 1 ? 1 : 2;
     const newIndex = this.initiative().result_toc_results.length;
-
+    console.log(this.resultLevelId);
     this.initiative.update(prev => {
       prev.result_toc_results.push({
         action_area_outcome_id: null,
@@ -197,7 +196,7 @@ export class CPMultipleWPsComponent implements OnChanges {
         planned_result: this.initiative().planned_result,
         results_id: null,
         short_name: this.initiative().short_name,
-        toc_level_id: tocLevelId,
+        toc_level_id: null,
         toc_result_id: null,
         uniqueId: newIndex.toString(),
         related_node_id: null,
