@@ -1,9 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
   AiReviewEvent,
   AiReviewEventType,
+  AiReviewEventFieldName,
 } from './entities/ai-review-event.entity';
 import {
   AiReviewSession,
@@ -20,6 +25,7 @@ import {
 import {
   ResultFieldRevision,
   ResultFieldRevisionFieldName,
+  ResultFieldRevisionProvenance,
 } from './entities/result-field-revision.entity';
 import { ResultFieldAiStateFieldName } from './entities/result-field-ai-state.entity';
 import {
@@ -35,6 +41,7 @@ import { CreateSessionDto } from './dto/create-session.dto';
 import { SaveChangesDto } from './dto/save-changes.dto';
 import { Result } from '../results/entities/result.entity';
 import { ResultsInnovationsDev } from '../results/summary/entities/results-innovations-dev.entity';
+import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 
 @Injectable()
 export class AiService {
@@ -57,10 +64,11 @@ export class AiService {
 
   async createSession(
     createSessionDto: CreateSessionDto,
+    user: TokenDto,
   ): Promise<SessionResponseDto> {
     const session = this.sessionRepository.create({
       result_id: createSessionDto.result_id,
-      opened_by: createSessionDto.user_id,
+      opened_by: user.id,
       all_sections_completed: false,
       status: AiReviewSessionStatus.COMPLETED,
     });
@@ -69,14 +77,17 @@ export class AiService {
     await this.eventRepository.save({
       session_id: savedSession.id,
       result_id: createSessionDto.result_id,
-      user_id: createSessionDto.user_id,
+      user_id: user.id,
       event_type: AiReviewEventType.CLICK_REVIEW,
     });
 
-    return this.mapSessionToResponse(savedSession);
+    return this.mapSessionToResponse(savedSession, user);
   }
 
-  async closeSession(sessionId: number): Promise<SessionResponseDto> {
+  async closeSession(
+    sessionId: number,
+    user: TokenDto,
+  ): Promise<SessionResponseDto> {
     const session = await this.sessionRepository.findOne({
       where: { id: sessionId },
     });
@@ -90,11 +101,11 @@ export class AiService {
     await this.eventRepository.save({
       session_id: sessionId,
       result_id: session.result_id,
-      user_id: session.opened_by,
+      user_id: user.id,
       event_type: AiReviewEventType.CLOSE_MODAL,
     });
 
-    return this.mapSessionToResponse(updatedSession);
+    return this.mapSessionToResponse(updatedSession, user);
   }
 
   async createProposals(
@@ -131,15 +142,42 @@ export class AiService {
     return proposals.map((p) => this.mapProposalToResponse(p));
   }
 
-  async createEvent(createEventDto: CreateEventDto): Promise<EventResponseDto> {
-    const event = this.eventRepository.create(createEventDto);
+  async createEvent(
+    createEventDto: CreateEventDto,
+    user: TokenDto,
+  ): Promise<EventResponseDto> {
+    const session = await this.sessionRepository.findOne({
+      where: { id: createEventDto.session_id },
+    });
+    if (!session) {
+      throw new NotFoundException('Session not found');
+    }
+
+    if (createEventDto.field_name) {
+      if (createEventDto.field_name === AiReviewEventFieldName.SHORT_TITLE) {
+        const hasInnovationDev = await this.innovationsDevRepository.exists({
+          where: { results_id: session.result_id },
+        });
+        if (!hasInnovationDev) {
+          throw new BadRequestException(
+            'short_title field is only applicable for Innovation Development results',
+          );
+        }
+      }
+    }
+
+    const event = this.eventRepository.create({
+      ...createEventDto,
+      user_id: user.id,
+    });
     const savedEvent = await this.eventRepository.save(event);
-    return this.mapEventToResponse(savedEvent);
+    return this.mapEventToResponse(savedEvent, user);
   }
 
   async saveChanges(
     sessionId: number,
     saveChangesDto: SaveChangesDto,
+    user: TokenDto,
   ): Promise<void> {
     const session = await this.sessionRepository.findOne({
       where: { id: sessionId },
@@ -149,44 +187,77 @@ export class AiService {
     }
 
     for (const field of saveChangesDto.fields) {
-      // Save audit trail
+      if (field.field_name === AiReviewProposalFieldName.SHORT_TITLE) {
+        const hasInnovationDev = await this.innovationsDevRepository.exists({
+          where: { results_id: session.result_id },
+        });
+        if (!hasInnovationDev) {
+          throw new BadRequestException(
+            'short_title field is only applicable for Innovation Development results',
+          );
+        }
+      }
+
+      let previousText: string | null = null;
+
+      switch (field.field_name) {
+        case AiReviewProposalFieldName.TITLE:
+        case AiReviewProposalFieldName.DESCRIPTION: {
+          const current = await this.resultRepository.findOne({
+            where: { id: session.result_id },
+          });
+          previousText = current?.[field.field_name] ?? null;
+          break;
+        }
+        case AiReviewProposalFieldName.SHORT_TITLE: {
+          const current = await this.innovationsDevRepository.findOne({
+            where: { results_id: session.result_id },
+          });
+          previousText = current?.short_title ?? null;
+          break;
+        }
+      }
+
+      const provenance = field.was_ai_suggested
+        ? ResultFieldRevisionProvenance.AI_SUGGESTED
+        : ResultFieldRevisionProvenance.USER_EDIT;
+
       await this.revisionRepository.save({
         result_id: session.result_id,
-        user_id: saveChangesDto.user_id,
+        user_id: user.id,
         field_name: field.field_name as unknown as ResultFieldRevisionFieldName,
+        old_value: previousText,
         new_value: field.new_value,
         change_reason: field.change_reason,
+        provenance,
+        proposal_id: field.proposal_id ?? null,
       });
 
-      // Update the actual field based on field_name
       switch (field.field_name) {
         case AiReviewProposalFieldName.TITLE:
         case AiReviewProposalFieldName.DESCRIPTION:
-          // Update Result entity
           await this.resultRepository.update(
             { id: session.result_id },
             {
               [field.field_name]: field.new_value,
-              last_updated_by: saveChangesDto.user_id,
+              last_updated_by: user.id,
               last_updated_date: new Date(),
             },
           );
           break;
 
         case AiReviewProposalFieldName.SHORT_TITLE:
-          // Update ResultsInnovationsDev entity
           await this.innovationsDevRepository.update(
             { results_id: session.result_id },
             {
               short_title: field.new_value,
-              last_updated_by: saveChangesDto.user_id,
+              last_updated_by: user.id,
               last_updated_date: new Date(),
             },
           );
           break;
       }
 
-      // Update AI state if this was an AI suggestion
       if (field.was_ai_suggested) {
         await this.aiStateRepository.upsert(
           {
@@ -196,20 +267,21 @@ export class AiService {
             status: ResultFieldAiStateStatus.ACCEPTED,
             ai_suggestion: field.new_value,
             user_feedback: field.user_feedback,
-            last_updated_by: saveChangesDto.user_id,
+            last_updated_by: user.id,
+            last_ai_proposal_id: field.proposal_id ?? null,
           },
           ['result_id', 'field_name'],
         );
       }
-    }
 
-    // Create audit event
-    await this.eventRepository.save({
-      session_id: sessionId,
-      result_id: session.result_id,
-      user_id: saveChangesDto.user_id,
-      event_type: AiReviewEventType.SAVE_CHANGES,
-    });
+      await this.eventRepository.save({
+        session_id: sessionId,
+        result_id: session.result_id,
+        user_id: saveChangesDto.user_id,
+        event_type: AiReviewEventType.SAVE_CHANGES,
+        field_name: field.field_name as unknown as AiReviewEventFieldName,
+      });
+    }
   }
 
   async getResultState(resultId: number): Promise<ResultStateResponseDto> {
@@ -248,6 +320,25 @@ export class AiService {
       return acc;
     }, {});
 
+    const eventsByFieldRaw = await this.eventRepository
+      .createQueryBuilder('e')
+      .select('e.event_type', 'event_type')
+      .addSelect('e.field_name', 'field_name')
+      .addSelect('COUNT(*)', 'count')
+      .where('e.result_id = :resultId', { resultId })
+      .andWhere('e.field_name IS NOT NULL')
+      .groupBy('e.event_type')
+      .addGroupBy('e.field_name')
+      .getRawMany();
+
+    const eventsByField = eventsByFieldRaw.reduce((acc, event) => {
+      if (!acc[event.event_type]) {
+        acc[event.event_type] = {};
+      }
+      acc[event.event_type][event.field_name] = parseInt(event.count);
+      return acc;
+    }, {});
+
     const lastSession = sessions.sort(
       (a, b) => b.opened_at.getTime() - a.opened_at.getTime(),
     )[0];
@@ -260,15 +351,19 @@ export class AiService {
         0,
       ),
       events_by_type: eventsByType,
+      events_by_field: eventsByField,
       last_session_at: lastSession?.opened_at,
     };
   }
 
-  private mapSessionToResponse(session: AiReviewSession): SessionResponseDto {
+  private mapSessionToResponse(
+    session: AiReviewSession,
+    user: TokenDto,
+  ): SessionResponseDto {
     return {
       id: session.id,
       result_id: session.result_id,
-      opened_by: session.opened_by,
+      opened_by: user.id,
       opened_at: session.opened_at,
       closed_at: session.closed_at,
       all_sections_completed: session.all_sections_completed,
@@ -290,12 +385,15 @@ export class AiService {
     };
   }
 
-  private mapEventToResponse(event: AiReviewEvent): EventResponseDto {
+  private mapEventToResponse(
+    event: AiReviewEvent,
+    user: TokenDto,
+  ): EventResponseDto {
     return {
       id: event.id,
       session_id: event.session_id,
       result_id: event.result_id,
-      user_id: event.user_id,
+      user_id: user.id,
       event_type: event.event_type,
       field_name: event.field_name,
       created_at: event.created_at,

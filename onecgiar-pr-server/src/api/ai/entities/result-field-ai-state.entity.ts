@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { Result } from '../../results/entities/result.entity';
 import { User } from '../../../auth/modules/user/entities/user.entity';
+import { AiReviewProposal } from './ai-review-proposal.entity';
 
 export enum ResultFieldAiStateFieldName {
   TITLE = 'title',
@@ -29,6 +30,7 @@ export enum ResultFieldAiStateStatus {
   unique: true,
 })
 @Index('IDX_result_field_ai_state_user', ['last_updated_by'])
+@Index('IDX_result_field_ai_state_proposal', ['last_ai_proposal_id'])
 export class ResultFieldAiState {
   @PrimaryGeneratedColumn({ type: 'bigint' })
   id: number;
@@ -71,6 +73,9 @@ export class ResultFieldAiState {
   @Column({ name: 'last_updated_by', type: 'int', nullable: true })
   last_updated_by: number;
 
+  @Column({ name: 'last_ai_proposal_id', type: 'bigint', nullable: true })
+  last_ai_proposal_id: number;
+
   @CreateDateColumn({
     name: 'created_at',
     type: 'timestamp',
@@ -98,4 +103,8 @@ export class ResultFieldAiState {
   @ManyToOne(() => User, (user) => user.obj_result_field_ai_states_updated)
   @JoinColumn({ name: 'last_updated_by' })
   obj_last_updated_by: User;
+
+  @ManyToOne(() => AiReviewProposal, (proposal) => proposal.obj_ai_states)
+  @JoinColumn({ name: 'last_ai_proposal_id' })
+  obj_last_ai_proposal: AiReviewProposal;
 }

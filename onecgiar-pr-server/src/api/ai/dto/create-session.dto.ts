@@ -10,13 +10,4 @@ export class CreateSessionDto {
   @IsInt()
   @IsNotEmpty()
   result_id: number;
-
-  @ApiProperty({
-    description: 'ID of the user opening the AI review session',
-    example: 456,
-    type: Number,
-  })
-  @IsInt()
-  @IsNotEmpty()
-  user_id: number;
 }

@@ -9,11 +9,17 @@ import {
 } from 'typeorm';
 import { Result } from '../../results/entities/result.entity';
 import { User } from '../../../auth/modules/user/entities/user.entity';
+import { AiReviewProposal } from './ai-review-proposal.entity';
 
 export enum ResultFieldRevisionFieldName {
   TITLE = 'title',
   DESCRIPTION = 'description',
   SHORT_TITLE = 'short_title',
+}
+
+export enum ResultFieldRevisionProvenance {
+  AI_SUGGESTED = 'AI_SUGGESTED',
+  USER_EDIT = 'USER_EDIT',
 }
 
 @Entity('result_field_revision')
@@ -61,6 +67,18 @@ export class ResultFieldRevision {
   })
   change_reason: string;
 
+  @Column({
+    name: 'provenance',
+    type: 'enum',
+    enum: ResultFieldRevisionProvenance,
+    nullable: false,
+    default: ResultFieldRevisionProvenance.USER_EDIT,
+  })
+  provenance: ResultFieldRevisionProvenance;
+
+  @Column({ name: 'proposal_id', type: 'bigint', nullable: true })
+  proposal_id: number;
+
   @CreateDateColumn({
     name: 'created_at',
     type: 'timestamp',
@@ -78,4 +96,8 @@ export class ResultFieldRevision {
   @ManyToOne(() => User, (user) => user.obj_result_field_revisions)
   @JoinColumn({ name: 'user_id' })
   obj_user: User;
+
+  @ManyToOne(() => AiReviewProposal, (proposal) => proposal.obj_revisions)
+  @JoinColumn({ name: 'proposal_id' })
+  obj_proposal: AiReviewProposal;
 }

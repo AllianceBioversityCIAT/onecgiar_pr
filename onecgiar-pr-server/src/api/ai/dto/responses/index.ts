@@ -224,6 +224,22 @@ export class UsageStatsResponseDto {
   events_by_type: Record<string, number>;
 
   @ApiProperty({
+    description: 'Breakdown of events by type and field name',
+    example: {
+      APPLY_PROPOSAL: {
+        title: 4,
+        description: 3,
+        short_title: 1,
+      },
+      SAVE_CHANGES: {
+        title: 2,
+        description: 3,
+      },
+    },
+  })
+  events_by_field: Record<string, Record<string, number>>;
+
+  @ApiProperty({
     description: 'Timestamp of the most recent session',
     example: '2025-11-05T14:30:00.000Z',
     nullable: true,

@@ -5,9 +5,12 @@ import {
   Index,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { AiReviewSession } from './ai-review-session.entity';
+import { ResultFieldRevision } from './result-field-revision.entity';
+import { ResultFieldAiState } from './result-field-ai-state.entity';
 
 export enum AiReviewProposalFieldName {
   TITLE = 'title',
@@ -68,4 +71,10 @@ export class AiReviewProposal {
   @ManyToOne(() => AiReviewSession, (session) => session.obj_proposals)
   @JoinColumn({ name: 'session_id' })
   obj_session: AiReviewSession;
+
+  @OneToMany(() => ResultFieldRevision, (revision) => revision.obj_proposal)
+  obj_revisions: ResultFieldRevision[];
+
+  @OneToMany(() => ResultFieldAiState, (aiState) => aiState.obj_last_ai_proposal)
+  obj_ai_states: ResultFieldAiState[];
 }

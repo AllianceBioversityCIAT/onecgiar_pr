@@ -29,6 +29,8 @@ import { CreateEventDto } from './dto/create-event.dto';
 import { CreateProposalsDto } from './dto/create-proposals.dto';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { SaveChangesDto } from './dto/save-changes.dto';
+import { UserToken } from '../../shared/decorators/user-token.decorator';
+import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 
 @ApiTags('AI Review')
 @Controller()
@@ -58,15 +60,15 @@ export class AiController {
         summary: 'Create session example',
         value: {
           result_id: 123,
-          user_id: 456,
         },
       },
     },
   })
   async createSession(
     @Body() createSessionDto: CreateSessionDto,
+    @UserToken() user: TokenDto,
   ): Promise<SessionResponseDto> {
-    return this.aiService.createSession(createSessionDto);
+    return this.aiService.createSession(createSessionDto, user);
   }
 
   @Post('sessions/:sessionId/close')
@@ -91,8 +93,9 @@ export class AiController {
   })
   async closeSession(
     @Param('sessionId', ParseIntPipe) sessionId: number,
+    @UserToken() user: TokenDto,
   ): Promise<SessionResponseDto> {
-    return this.aiService.closeSession(sessionId);
+    return this.aiService.closeSession(sessionId, user);
   }
 
   @Post('sessions/:sessionId/proposals')
@@ -217,8 +220,9 @@ export class AiController {
   })
   async createEvent(
     @Body() createEventDto: CreateEventDto,
+    @UserToken() user: TokenDto,
   ): Promise<EventResponseDto> {
-    return this.aiService.createEvent(createEventDto);
+    return this.aiService.createEvent(createEventDto, user);
   }
 
   @Post('sessions/:sessionId/save')
@@ -271,8 +275,9 @@ export class AiController {
   async saveChanges(
     @Param('sessionId', ParseIntPipe) sessionId: number,
     @Body() saveChangesDto: SaveChangesDto,
+    @UserToken() user: TokenDto,
   ): Promise<void> {
-    return this.aiService.saveChanges(sessionId, saveChangesDto);
+    return this.aiService.saveChanges(sessionId, saveChangesDto, user);
   }
 
   @Get('results/:resultId/state')

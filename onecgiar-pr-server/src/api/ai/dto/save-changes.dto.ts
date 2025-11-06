@@ -51,6 +51,15 @@ export class SaveFieldDto {
   @IsString()
   @IsOptional()
   user_feedback?: string;
+
+  @ApiProperty({
+    description: 'ID of the AI proposal that originated this change (optional)',
+    example: 123,
+    required: false,
+  })
+  @IsInt()
+  @IsOptional()
+  proposal_id?: number;
 }
 
 export class SaveChangesDto {

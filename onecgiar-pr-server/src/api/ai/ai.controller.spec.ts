@@ -19,6 +19,14 @@ describe('AiController', () => {
     getResultStats: jest.Mock;
   };
 
+  let user = {
+    id: 1,
+    username: 'testuser',
+    email: 'testuser@example.com',
+    first_name: 'Test',
+    last_name: 'User',
+  };
+
   beforeEach(async () => {
     service = {
       createSession: jest.fn(),
@@ -53,16 +61,18 @@ describe('AiController', () => {
     const expected = { id: 10 };
     service.createSession.mockResolvedValue(expected);
 
-    await expect(controller.createSession(dto)).resolves.toEqual(expected);
-    expect(service.createSession).toHaveBeenCalledWith(dto);
+    await expect(controller.createSession(dto, user)).resolves.toEqual(
+      expected,
+    );
+    expect(service.createSession).toHaveBeenCalledWith(dto, user);
   });
 
   it('closes a session', async () => {
     const expected = { id: 1, closed_at: new Date() };
     service.closeSession.mockResolvedValue(expected);
 
-    await expect(controller.closeSession(1)).resolves.toEqual(expected);
-    expect(service.closeSession).toHaveBeenCalledWith(1);
+    await expect(controller.closeSession(1, user)).resolves.toEqual(expected);
+    expect(service.closeSession).toHaveBeenCalledWith(1, user);
   });
 
   it('stores proposals for a session', async () => {
@@ -86,24 +96,23 @@ describe('AiController', () => {
     const dto = {
       session_id: 1,
       result_id: 2,
-      user_id: 3,
       event_type: AiReviewEventType.APPLY_PROPOSAL,
       field_name: AiReviewEventFieldName.TITLE,
     };
     const expected = { id: 2 };
     service.createEvent.mockResolvedValue(expected);
 
-    await expect(controller.createEvent(dto)).resolves.toEqual(expected);
-    expect(service.createEvent).toHaveBeenCalledWith(dto);
+    await expect(controller.createEvent(dto, user)).resolves.toEqual(expected);
+    expect(service.createEvent).toHaveBeenCalledWith(dto, user);
   });
 
   it('saves final changes', async () => {
     const dto = { fields: [], user_id: 1 };
     service.saveChanges.mockResolvedValue(undefined);
 
-    await controller.saveChanges(3, dto);
+    await controller.saveChanges(3, dto, user);
 
-    expect(service.saveChanges).toHaveBeenCalledWith(3, dto);
+    expect(service.saveChanges).toHaveBeenCalledWith(3, dto, user);
   });
 
   it('returns AI state for a result', async () => {
