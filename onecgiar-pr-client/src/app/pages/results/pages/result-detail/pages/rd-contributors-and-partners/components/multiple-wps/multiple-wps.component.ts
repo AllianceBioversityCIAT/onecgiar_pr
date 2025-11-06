@@ -4,6 +4,7 @@ import { CustomizedAlertsFeService } from '../../../../../../../../shared/servic
 import { FieldsManagerService } from '../../../../../../../../shared/services/fields-manager.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { RdTheoryOfChangesServicesService } from '../../../rd-theory-of-change/rd-theory-of-changes-services.service';
+import { RdContributorsAndPartnersService } from '../../rd-contributors-and-partners.service';
 
 interface Tab {
   action_area_outcome_id: number | null;
@@ -53,10 +54,9 @@ export class CPMultipleWPsComponent implements OnChanges {
   indicatorsList = [];
 
   fieldsManagerSE = inject(FieldsManagerService);
-
+  rdPartnersSE = inject(RdContributorsAndPartnersService);
   constructor(
     public api: ApiService,
-    public theoryOfChangesServices: RdTheoryOfChangesServicesService,
     private customizedAlertsFeSE: CustomizedAlertsFeService
   ) {}
 
@@ -83,7 +83,7 @@ export class CPMultipleWPsComponent implements OnChanges {
     }
 
     // Restore active tab from saved index or default to first tab
-    const savedIndex = this.theoryOfChangesServices.savedActiveTabIndex;
+    const savedIndex = this.rdPartnersSE.savedActiveTabIndex;
     if (savedIndex !== null && savedIndex >= 0 && savedIndex < this.initiative()?.result_toc_results.length) {
       this.activeTabIndex = savedIndex;
       this.activeTab = this.initiative()?.result_toc_results[savedIndex];
@@ -178,7 +178,7 @@ export class CPMultipleWPsComponent implements OnChanges {
     this.activeTab = tab;
     this.activeTabSignal.set(tab);
     // Save active tab index
-    this.theoryOfChangesServices.savedActiveTabIndex = index;
+    this.rdPartnersSE.savedActiveTabIndex = index;
     this.showMultipleWPsContent = false;
 
     setTimeout(() => {
@@ -246,13 +246,13 @@ export class CPMultipleWPsComponent implements OnChanges {
     this.activeTabIndex = 0;
     this.activeTab = this.initiative()?.result_toc_results[0];
     this.activeTabSignal.set(this.activeTab);
-    this.theoryOfChangesServices.savedActiveTabIndex = 0;
+    this.rdPartnersSE.savedActiveTabIndex = 0;
 
     if (this.isContributor) {
-      this.theoryOfChangesServices.theoryOfChangeBody.contributors_result_toc_result[this.initiative().index].result_toc_results =
+      this.rdPartnersSE.partnersBody.contributors_result_toc_result[this.initiative().index].result_toc_results =
         this.initiative().result_toc_results;
     } else {
-      this.theoryOfChangesServices.theoryOfChangeBody.result_toc_result.result_toc_results = this.initiative().result_toc_results;
+      this.rdPartnersSE.partnersBody.result_toc_result.result_toc_results = this.initiative().result_toc_results;
     }
   }
 }

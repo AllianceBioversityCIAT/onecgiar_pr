@@ -131,6 +131,8 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   }
 
   onSaveSection() {
+    console.log('onSaveSection');
+    console.log(this.rdPartnersSE.partnersBody);
     if (this.rdPartnersSE.partnersBody.no_applicable_partner) {
       this.rdPartnersSE.partnersBody.institutions = [];
     }
@@ -166,6 +168,9 @@ export class RdContributorsAndPartnersComponent implements OnInit {
       },
       email_template: 'email_template_contribution'
     };
+
+    console.log('sendedData', this.rdPartnersSE.partnersBody);
+    console.log('sendedData', sendedData);
 
     this.api.resultsSE.PATCH_ContributorsPartners({ ...this.rdPartnersSE.partnersBody, ...sendedData }).subscribe(_resp => {
       this.rdPartnersSE.getSectionInformation(null, true);
