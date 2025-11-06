@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, WritableSignal, computed, effect, inject, signal } from '@angular/core';
+import { Component, Input, OnChanges, OnInit, WritableSignal, computed, effect, inject, signal } from '@angular/core';
 import { MappedResultsModalServiceService } from '../mapped-results-modal/mapped-results-modal-service.service';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 import { TocInitiativeOutcomeListsService } from '../../../../../rd-theory-of-change/components/toc-initiative-outcome-section/services/toc-initiative-outcome-lists.service';
@@ -12,7 +12,7 @@ import { CheckLoginGuard } from '../../../../../../../../../../shared/guards/che
   styleUrls: ['./multiple-wps-content.component.scss'],
   standalone: false
 })
-export class CPMultipleWPsContentComponent {
+export class CPMultipleWPsContentComponent implements OnInit {
   @Input() editable: boolean;
   @Input() activeTab: any;
   @Input() resultLevelId: number | string;
@@ -38,9 +38,14 @@ export class CPMultipleWPsContentComponent {
   });
 
   onChangesActiveTab = effect(() => {
+    console.log('onChangesActiveTab');
     this.getIndicatorsList();
-    this.pushSelectedOptions();
   });
+
+  ngOnInit() {
+    console.log('ngOnInit');
+    this.pushSelectedOptions();
+  }
 
   setActiveTabSignal() {
     this.activeTabSignal.update(prev => {
@@ -49,7 +54,6 @@ export class CPMultipleWPsContentComponent {
   }
 
   tocResultListFiltered = computed(() => {
-    console.log('tocResultListFiltered', this.reusltlevelSE.currentResultLevelIdSignal());
     switch (this.reusltlevelSE.currentResultLevelIdSignal()) {
       case 3:
         return this.tocInitiativeOutcomeListsSE.tocResultList().filter(item => item.toc_level_id !== 1);
@@ -68,15 +72,12 @@ export class CPMultipleWPsContentComponent {
 
   getIndicatorsList() {
     const filterIndicators = list => {
-      console.log(list);
       if (!list.length) return;
       const itemSelected = list.find(item => item.toc_result_id === this.activeTab.toc_result_id);
       this.indicatorsList.set(itemSelected?.indicators || []);
-      console.log(itemSelected?.indicators);
       this.activeTab.indicators[0].related_node_id = this.activeTab.indicators[0].toc_results_indicator_id;
       if (!this.activeTab.toc_progressive_narrative) this.activeTab.toc_progressive_narrative = '';
     };
-    console.log(this.activeTab.toc_level_id);
     switch (this.activeTabSignal()?.toc_level_id) {
       case 3:
         filterIndicators(this.eoiList());

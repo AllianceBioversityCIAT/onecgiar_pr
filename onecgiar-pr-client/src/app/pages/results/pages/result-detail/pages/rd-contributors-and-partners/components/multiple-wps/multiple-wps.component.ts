@@ -46,6 +46,7 @@ export class CPMultipleWPsComponent implements OnChanges {
   outcomeList = signal<any[]>([]);
   outputList = signal<any[]>([]);
   eoiList = signal<any[]>([]);
+
   selectedOptionsOutput = [];
   selectedOptionsOutcome = [];
   selectedOptionsEOI = [];
@@ -187,7 +188,6 @@ export class CPMultipleWPsComponent implements OnChanges {
 
   onAddTab() {
     const newIndex = this.initiative().result_toc_results.length;
-    console.log(this.resultLevelId);
     this.initiative.update(prev => {
       prev.result_toc_results.push({
         action_area_outcome_id: null,
