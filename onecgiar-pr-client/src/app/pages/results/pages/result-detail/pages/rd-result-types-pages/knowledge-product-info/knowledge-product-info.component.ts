@@ -9,10 +9,10 @@ import { RolesService } from '../../../../../../../shared/services/global/roles.
 import { CustomizedAlertsFeService } from '../../../../../../../shared/services/customized-alerts-fe.service';
 
 @Component({
-    selector: 'app-knowledge-product-info',
-    templateUrl: './knowledge-product-info.component.html',
-    styleUrls: ['./knowledge-product-info.component.scss'],
-    standalone: false
+  selector: 'app-knowledge-product-info',
+  templateUrl: './knowledge-product-info.component.html',
+  styleUrls: ['./knowledge-product-info.component.scss'],
+  standalone: false
 })
 export class KnowledgeProductInfoComponent implements OnInit {
   knowledgeProductBody = new KnowledgeProductBodyMapped();
@@ -28,7 +28,9 @@ export class KnowledgeProductInfoComponent implements OnInit {
     public api: ApiService,
     public rolesSE: RolesService,
     private customizedAlertsFeSE: CustomizedAlertsFeService
-  ) {}
+  ) {
+    this.api.dataControlSE.currentResultSectionName.set('Knowledge product information');
+  }
 
   ngOnInit(): void {
     this.getSectionInformation();

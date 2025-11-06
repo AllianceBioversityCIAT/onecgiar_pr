@@ -1,7 +1,8 @@
-import { Component, forwardRef, Input, Output, EventEmitter } from '@angular/core';
+import { Component, forwardRef, Input, Output, EventEmitter, inject, computed } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { DataControlService } from '../../shared/services/data-control.service';
+import { FieldsManagerService } from '../../shared/services/fields-manager.service';
 @Component({
   selector: 'app-pr-radio-button',
   templateUrl: './pr-radio-button.component.html',
@@ -27,6 +28,7 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
   @Input() readOnly: boolean;
   @Input() isStatic: boolean = false;
   @Input() verticalAlignment: boolean = false;
+  @Input() fieldRef: string | number;
   @Input() checkboxConfig: {
     listAttr: string;
     optionLabel: string;
@@ -36,6 +38,7 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
   } = { listAttr: '', optionLabel: '', optionValue: '', optionTextValue: '', showInputIfAttr: '' };
   @Output() selectOptionEvent = new EventEmitter<any>();
   private _value: string;
+  fieldsManager = inject(FieldsManagerService);
   constructor(
     public rolesSE: RolesService,
     public dataControlSE: DataControlService
@@ -69,6 +72,15 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
   joinName() {
     return this.label?.split(' ')?.join('');
   }
+
+  preventFieldRender = computed<boolean>(() => {
+    if (!this.fieldRef) return true;
+    const { hide, label, description, required } = this.fieldsManager.fields()[this.fieldRef] || {};
+    this.label = label;
+    this.description = description;
+    this.required = required;
+    return !hide;
+  });
 
   currentVal = null;
   onSelect() {

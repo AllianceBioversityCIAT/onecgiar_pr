@@ -1,95 +1,98 @@
-<app-detail-section-title sectionName="Innovation Development information"></app-detail-section-title>
 <div class="detail_container">
   <app-alert-status [description]="alertInfoText()"> </app-alert-status>
-  <app-pr-input label="Long title" [required]="false" [readOnly]="true" [(ngModel)]="innovationDevInfoBody?.result.title"> </app-pr-input>
-  <app-pr-input
-    label="Provide a short title for the innovation"
-    [description]="shortTitleDescription()"
-    [maxWords]="10"
-    placeholder="Innovation short name goes here..."
+  <app-pr-input fieldRef="[innovation-dev-info]-long_title" [required]="false" [readOnly]="true"
+    [(ngModel)]="innovationDevInfoBody?.result.title">
+  </app-pr-input>
+  <app-pr-input fieldRef="[innovation-dev-info]-short_title" [maxWords]="10"
     [(ngModel)]="innovationDevInfoBody.short_title">
   </app-pr-input>
-  <app-pr-select
-    [options]="this.innovationControlListSE.characteristicsList"
-    label="What would be the best way to characterize this innovation?"
-    optionLabel="extraInformation"
-    optionValue="id"
-    placeholder="Select innovation characteristics"
-    [extraInformation]="true"
+  <app-pr-select [options]="this.innovationControlListSE.characteristicsList"
+    label="What would be the best way to characterize this innovation?" optionLabel="extraInformation" optionValue="id"
+    placeholder="Select innovation characteristics" [extraInformation]="true"
     [(ngModel)]="innovationDevInfoBody.innovation_characterization_id">
   </app-pr-select>
-  <app-pr-select
-    [options]="this.innovationControlListSE.typeList"
+  <app-pr-select [options]="this.innovationControlListSE.typeList"
     label="Which of the below typologies best fits the nature of the innovation?"
     description="Choose ‘other’ if you feel the Innovation does not fit well with the proposed categories. "
-    optionLabel="extraInformation"
-    optionValue="code"
-    placeholder="Select innovation type"
-    [extraInformation]="true"
+    optionLabel="extraInformation" optionValue="code" placeholder="Select innovation type" [extraInformation]="true"
     [(ngModel)]="this.innovationDevInfoBody.innovation_nature_id">
   </app-pr-select>
   <div *ngIf="this.innovationDevInfoBody.innovation_nature_id == 12">
-    <app-pr-yes-or-not label="Are you profiling a new or improved variety or breed?" [(ngModel)]="innovationDevInfoBody.is_new_variety">
+    <app-pr-yes-or-not label="Are you profiling a new or improved variety or breed?"
+      [(ngModel)]="innovationDevInfoBody.is_new_variety">
     </app-pr-yes-or-not>
-    <div appFeedbackValidation labelText="Innovation package" [isComplete]="this.innovationDevInfoBody.is_new_variety !== null"></div>
-    <app-pr-input
-      *ngIf="innovationDevInfoBody.is_new_variety"
-      label="Indicate the number of individual new or improved lines/ varieties"
-      [required]="false"
-      type="number"
-      placeholder="0"
-      [(ngModel)]="innovationDevInfoBody.number_of_varieties">
+    <div appFeedbackValidation labelText="Innovation package"
+      [isComplete]="this.innovationDevInfoBody.is_new_variety !== null"></div>
+    <app-pr-input *ngIf="innovationDevInfoBody.is_new_variety"
+      label="Indicate the number of individual new or improved lines/ varieties" [required]="false" type="number"
+      placeholder="0" [(ngModel)]="innovationDevInfoBody.number_of_varieties">
     </app-pr-input>
   </div>
 
-  <app-anticipated-innovation-user [body]="innovationDevInfoBody" [saving]="this.savingSection"></app-anticipated-innovation-user>
+  <app-anticipated-innovation-user [body]="innovationDevInfoBody"
+    [saving]="this.savingSection"></app-anticipated-innovation-user>
+
+  @if (this.fieldsManagerSE.isP25()) {
+  <div class="evidences">
+    <app-pr-field-header label="Evidence of user need/user demand" [required]="false"></app-pr-field-header>
+
+    <div class="evidence evidenceItem" *ngFor="let evidence of this.evidencesBody.evidences; let i = index">
+      <app-user-evidence [evidence]="evidence" [index]="i + 1" (deleteEvent)="deleteEvidence(i)"
+        [isOptional]="isOptional">
+      </app-user-evidence>
+    </div>
+  </div>
+  <app-add-button name="Add evidence" (clickEvent)="addEvidence()" *ngIf="this.evidencesBody.evidences.length < 6">
+  </app-add-button>
+  }
+
   <app-megatrends [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-megatrends>
 
   <app-pr-field-header label="Responsible innovation and scaling" [required]="false"></app-pr-field-header>
 
   <div class="paddingLeft20">
-    <app-gesi-innovation-assessment [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-gesi-innovation-assessment>
-    <app-scale-impact-analysis [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-scale-impact-analysis>
+    <app-gesi-innovation-assessment [body]="innovationDevInfoBody"
+      [options]="innovationDevelopmentQuestions"></app-gesi-innovation-assessment>
+    <app-scale-impact-analysis [body]="innovationDevInfoBody"
+      [options]="innovationDevelopmentQuestions"></app-scale-impact-analysis>
+    @if (this.fieldsManagerSE.isP25()) {
+    <app-assumptions-examination [body]="innovationDevInfoBody"
+      [options]="innovationDevelopmentQuestions"></app-assumptions-examination>
+    <app-partners-policies-safeguards [body]="innovationDevInfoBody"
+      [options]="innovationDevelopmentQuestions"></app-partners-policies-safeguards>
+    }
   </div>
 
-  <app-intellectual-property-rights [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-intellectual-property-rights>
+  <app-intellectual-property-rights [body]="innovationDevInfoBody"
+    [options]="innovationDevelopmentQuestions"></app-intellectual-property-rights>
 
-  <app-pr-textarea
-    placeholder="Contact persons info goes here..."
-    [required]="false"
-    label="Innovation Developer"
+  <app-pr-textarea placeholder="Contact persons info goes here..." [required]="false" label="Innovation Developer"
     description="Provide the full name(s), email address and organizational affiliation(s) of the innovation developer/ contact person
-        Innovation developer will be first author of the Innovation Profile document and the prime contact for the innovation.<br> 
+        Innovation developer will be first author of the Innovation Profile document and the prime contact for the innovation.<br>
         Please provide information such as first name, family name, email address and organizational affiliations."
     [(ngModel)]="innovationDevInfoBody.innovation_developers">
   </app-pr-textarea>
 
-  <app-pr-textarea
-    placeholder="Contact persons info goes here..."
-    [required]="false"
-    label="Innovation collaborators"
+  <app-pr-textarea placeholder="Contact persons info goes here..." [required]="false" label="Innovation collaborators"
     description="Provide the full name(s), email address and organizational affiliation(s)  of other CGIAR and/or partner colleagues that contribute to this innovation
         Names of key contributors will feature as co-authors on the Innovation Profile document in the same order as provided below."
     [(ngModel)]="innovationDevInfoBody.innovation_collaborators">
   </app-pr-textarea>
 
-  <app-innovation-team-diversity [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-innovation-team-diversity>
+  <app-innovation-team-diversity [body]="innovationDevInfoBody"
+    [options]="innovationDevelopmentQuestions"></app-innovation-team-diversity>
 
-  <app-pr-field-header
-    label="How would you assess the current readiness of this innovation?"
+  <app-pr-field-header label="How would you assess the current readiness of this innovation?"
     [description]="readiness_of_this_innovation_description()">
   </app-pr-field-header>
 
-  <app-pr-range-level
-    itemTitle="name"
-    itemDescription="definition"
-    optionLabel="name"
-    optionValue="id"
+  <app-pr-range-level itemTitle="name" itemDescription="definition" optionLabel="name" optionValue="id"
     [options]="this.innovationControlListSE.readinessLevelsList"
     [(ngModel)]="innovationDevInfoBody.innovation_readiness_level_id"></app-pr-range-level>
 
   <div class="pr_description" style="margin-top: 1rem">
-    <a href="https://drive.google.com/file/d/1muDLtqpeaSCIX60g6qQG_GGOPR61Rq7E/view" class="open_route" target="_blank" rel="noopener noreferrer">
+    <a href="https://drive.google.com/file/d/1muDLtqpeaSCIX60g6qQG_GGOPR61Rq7E/view" class="open_route" target="_blank"
+      rel="noopener noreferrer">
       Click here
     </a>
     to see the definition of all readiness levels
@@ -97,23 +100,30 @@
 
   <app-alert-status [description]="alertInfoText2()"> </app-alert-status>
 
-  <p-message
-    *ngIf="hasReadinessLevelDiminished()"
-    [style]="{ width: '100%', 'justify-content': 'flex-start' }"
-    severity="warn"
-    [text]="alertDiminishedReadinessLevel()"></p-message>
+  <p-message *ngIf="hasReadinessLevelDiminished()" [style]="{ width: '100%', 'justify-content': 'flex-start' }"
+    severity="warn" [text]="alertDiminishedReadinessLevel()"></p-message>
 
-  <app-pr-textarea
-    placeholder="Provide a brief explanation here..."
-    [maxWords]="50"
+  <app-pr-textarea placeholder="Provide a brief explanation here..." [maxWords]="50"
     [(ngModel)]="innovationDevInfoBody.evidences_justification"
     label="Please provide a brief explanation that explains how the provided evidence (inputted in the Evidence section) justifies the chosen innovation readiness level"
     description="<strong>Example:</strong> We chose readiness level 6 (semi-controlled testing) for the genetically improved farm tilapia (GIFT) because it is currently being tested under semi-controlled conditions in the multiplication center and hatchery in the selected countries as shown in the provided evidence. ">
   </app-pr-textarea>
 
+  @if (this.fieldsManagerSE.isP25()) {
+  <app-pr-radio-button *ngIf="getReadinessLevelIndex() >= 6" fieldRef="[innovation-use-form]-has-studies-links"
+    [options]="[
+    { value: true, label: 'Yes' },
+    { value: false, label: 'No' }
+  ]" optionLabel="label" [(ngModel)]="innovationDevInfoBody.has_scaling_studies" optionValue="value">
+  </app-pr-radio-button>
+  <app-studies-link *ngIf="innovationDevInfoBody.has_scaling_studies && getReadinessLevelIndex() >= 6"
+    [body]="innovationDevInfoBody"></app-studies-link>
+  }
+
   <app-estimates [body]="innovationDevInfoBody"></app-estimates>
 
   <app-innovation-links [body]="innovationDevInfoBody" [options]="innovationDevelopmentLinks"></app-innovation-links>
+
 </div>
 
 <app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>

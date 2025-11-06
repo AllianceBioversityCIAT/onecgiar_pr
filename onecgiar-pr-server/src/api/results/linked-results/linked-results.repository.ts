@@ -12,6 +12,7 @@ import {
 } from '../../../shared/utils/versioning.utils';
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 import { BaseRepository } from '../../../shared/extendsGlobalDTO/base-repository';
+import { Result } from '../entities/result.entity';
 
 @Injectable()
 export class LinkedResultRepository
@@ -92,8 +93,17 @@ export class LinkedResultRepository
       );
   }
 
-  logicalDelete(resultId: number): Promise<LinkedResult> {
+  async logicalDelete(resultId: number): Promise<LinkedResult> {
     const dataQuery = `update linked_result lr set lr.is_active = 0 where lr.origin_result_id = ?;`;
+    const result = await this.dataSource.getRepository(Result).findOne({
+      where: { id: resultId },
+      relations: { obj_version: { obj_portfolio: true } },
+    });
+
+    if (result?.obj_version?.id === 34) {
+      await this.update({ linked_results_id: resultId }, { is_active: false });
+    }
+
     return this.query(dataQuery, [resultId])
       .then((res) => res)
       .catch((err) =>
@@ -256,6 +266,32 @@ export class LinkedResultRepository
     try {
       const linked: LinkedResult[] = await this.query(query, [resultId]);
       return linked;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: LinkedResultRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async getActiveLinkedResultIds(resultId: number): Promise<number[]> {
+    const query = `
+      SELECT lr.linked_results_id
+      FROM linked_result lr
+      INNER JOIN result r
+        ON r.id = lr.linked_results_id
+        AND r.is_active > 0
+      WHERE
+        lr.origin_result_id = ?
+        AND lr.is_active > 0;
+    `;
+
+    try {
+      const rows = await this.query(query, [resultId]);
+      return rows
+        .map((row: any) => Number(row?.linked_results_id))
+        .filter((id) => Number.isFinite(id) && id > 0);
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: LinkedResultRepository.name,

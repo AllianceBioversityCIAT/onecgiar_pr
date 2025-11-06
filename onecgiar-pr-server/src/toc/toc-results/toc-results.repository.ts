@@ -390,4 +390,226 @@ export class TocResultsRepository extends Repository<TocResult> {
       };
     }
   }
+
+  async $_getResultTocByConfigV2(
+    result_id: number,
+    init_id: number,
+    toc_level: number,
+  ) {
+    const categoryMap = {
+      1: 'OUTPUT',
+      2: 'OUTCOME',
+      3: 'EOI',
+    };
+
+    const category = categoryMap[toc_level];
+    if (!category) {
+      throw {
+        message: `Invalid toc level: ${toc_level}. Valid levels are 1 (OUTPUT), 2 (OUTCOME), 3 (EOI)`,
+        response: {},
+        status: HttpStatus.BAD_REQUEST,
+      };
+    }
+
+    const queryData = `
+      SELECT DISTINCT
+        tr.id AS toc_result_id,
+        tr.toc_result_id AS toc_internal_id,
+        tr.result_title AS title,
+        tr.result_description AS description,
+        tr.result_type AS toc_type_id,
+        tr.result_type AS toc_level_id,
+        ci.id AS inititiative_id,
+        tr.wp_id AS work_package_id,
+        wp.acronym AS wp_short_name,
+        NULL AS action_area_outcome_id
+      FROM ${env.DB_TOC}.toc_results tr
+      LEFT JOIN ${env.DB_TOC}.toc_work_packages wp 
+        ON wp.toc_id = tr.wp_id
+      LEFT JOIN clarisa_initiatives ci 
+        ON ci.official_code = tr.official_code
+      WHERE tr.is_active > 0
+        AND ci.id = ?
+        AND tr.category = ?
+      ORDER BY wp.acronym, tr.result_title ASC;
+    `;
+
+    try {
+      const res = await this.query(queryData, [init_id, category]);
+      return res;
+    } catch (error) {
+      throw {
+        message: `[${TocResultsRepository.name}] => _getResultTocByConfigV2 error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
+  async getTocIndicatorsByResultIds(
+    tocResultIds: Array<number | string>,
+  ): Promise<
+    Array<{
+      toc_result_id: number;
+      indicator_id: number;
+      toc_result_indicator_id: string | null;
+      related_node_id: string | null;
+      indicator_description: string | null;
+      unit_messurament: string | null;
+      type_value: string | null;
+      type_name: string | null;
+      location: string | null;
+    }>
+  > {
+    const numericIds = (tocResultIds ?? [])
+      .map((id) => Number(id))
+      .filter((id) => Number.isFinite(id));
+
+    if (!numericIds.length) {
+      return [];
+    }
+
+    const placeholders = numericIds.map(() => '?').join(', ');
+
+    const query = `
+      SELECT
+        tri.toc_results_id AS toc_result_id,
+        tri.id AS indicator_id,
+        tri.toc_result_indicator_id,
+        tri.related_node_id,
+        tri.indicator_description,
+        tri.unit_messurament,
+        tri.type_value,
+        tri.type_name,
+        tri.location
+      FROM ${env.DB_TOC}.toc_results_indicators tri
+      WHERE
+        tri.toc_results_id IN (${placeholders})
+        AND tri.is_active = 1;
+    `;
+
+    try {
+      return await this.query(query, numericIds);
+    } catch (error) {
+      throw {
+        message: `[${TocResultsRepository.name}] => getTocIndicatorsByResultIds error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
+  async getResultIndicatorMappings(
+    resultId: number,
+    initiativeId: number,
+    tocResultIds: Array<number | string>,
+  ): Promise<
+    Array<{
+      toc_result_id: number | null;
+      result_toc_result_id: number | null;
+      planned_result: boolean | null;
+      toc_progressive_narrative: string | null;
+      result_toc_result_indicator_id: number | null;
+      toc_results_indicator_id: string | null;
+      indicator_contributing: number | null;
+      indicator_status: number | null;
+    }>
+  > {
+    const numericIds = (tocResultIds ?? [])
+      .map((id) => Number(id))
+      .filter((id) => Number.isFinite(id));
+
+    if (!numericIds.length) {
+      return [];
+    }
+
+    const placeholders = numericIds.map(() => '?').join(', ');
+
+    const query = `
+      SELECT
+        rtr.toc_result_id,
+        rtr.result_toc_result_id,
+        rtr.planned_result,
+        rtr.toc_progressive_narrative,
+        rtri.result_toc_result_indicator_id,
+        rtri.toc_results_indicator_id,
+        rtri.indicator_contributing,
+        rtri.status AS indicator_status
+      FROM results_toc_result rtr
+      LEFT JOIN results_toc_result_indicators rtri
+        ON rtri.results_toc_results_id = rtr.result_toc_result_id
+        AND rtri.is_active = 1
+        AND rtri.is_not_aplicable = 0
+      WHERE
+        rtr.results_id = ?
+        AND rtr.initiative_id = ?
+        AND rtr.is_active = 1
+        AND rtr.toc_result_id IN (${placeholders});
+    `;
+
+    try {
+      return await this.query(query, [resultId, initiativeId, ...numericIds]);
+    } catch (error) {
+      throw {
+        message: `[${TocResultsRepository.name}] => getResultIndicatorMappings error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
+  async getAllTocResultsByInitiativeV2(initiativeId: number, tocLevel: number) {
+    const categoryMap = {
+      1: 'OUTPUT',
+      2: 'OUTCOME',
+      3: 'EOI',
+    };
+
+    const category = categoryMap[tocLevel];
+    if (!category) {
+      throw {
+        message: `Invalid toc level: ${tocLevel}. Valid levels are 1 (OUTPUT), 2 (OUTCOME), 3 (EOI)`,
+        response: {},
+        status: HttpStatus.BAD_REQUEST,
+      };
+    }
+
+    const queryData = `
+      SELECT DISTINCT
+        tr.id AS toc_result_id,
+        tr.toc_result_id AS toc_internal_id,
+        tr.result_title AS title,
+        tr.result_description AS description,
+        tr.result_type AS toc_type_id,
+        tr.result_type AS toc_level_id,
+        ci.id AS inititiative_id,
+        tr.wp_id AS work_package_id,
+        wp.acronym AS wp_short_name,
+        NULL AS action_area_outcome_id
+      FROM ${env.DB_TOC}.toc_results tr
+      LEFT JOIN ${env.DB_TOC}.toc_work_packages wp 
+        ON wp.toc_id = tr.wp_id
+        AND wp.is_active > 0
+      LEFT JOIN clarisa_initiatives ci 
+        ON ci.toc_id = tr.id_toc_initiative
+      WHERE ci.id = ?
+        AND tr.category = ?
+        AND tr.is_active > 0
+      ORDER BY wp.acronym, tr.result_title ASC;
+    `;
+
+    try {
+      const tocResult: TocResult[] = await this.query(queryData, [
+        initiativeId,
+        category,
+      ]);
+      return tocResult;
+    } catch (error) {
+      throw {
+        message: `[${TocResultsRepository.name}] => getAllTocResultsByInitiativeV2 error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
 }

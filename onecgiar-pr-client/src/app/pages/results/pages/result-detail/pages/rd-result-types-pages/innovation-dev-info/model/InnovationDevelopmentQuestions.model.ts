@@ -49,6 +49,7 @@ export class Intellectualpropertyrights {
   q1: Q12 = new Q12();
   q2: Q12 = new Q12();
   q3: Q3 = new Q3();
+  q4: Q3 = new Q3();
 }
 
 export class Q3 {
@@ -96,6 +97,8 @@ export class Responsibleinnovationandscaling {
   question_level: string = '';
   q1: Q1 = new Q1();
   q2: Q1 = new Q1();
+  q3: Q1 = new Q1();
+  q4: Q1 = new Q1();
 }
 
 export class Q1 {

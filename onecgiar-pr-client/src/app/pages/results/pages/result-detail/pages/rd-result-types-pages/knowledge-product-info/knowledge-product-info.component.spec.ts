@@ -14,20 +14,23 @@ import { of } from 'rxjs';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { SaveButtonComponent } from '../../../../../../../custom-fields/save-button/save-button.component';
 import { CustomizedAlertsFeService } from '../../../../../../../shared/services/customized-alerts-fe.service';
+import { signal } from '@angular/core';
 
 describe('KnowledgeProductInfoComponent', () => {
   let component: KnowledgeProductInfoComponent;
   let fixture: ComponentFixture<KnowledgeProductInfoComponent>;
   let mockApiService: any;
-  let mockCustomizedAlertsFeService:any;
+  let mockCustomizedAlertsFeService: any;
   const mockGET_resultknowledgeProductsResponse = {
     melia_type_id: 1,
     is_melia: false,
     ost_melia_study_id: 1,
     melia_previous_submitted: '',
-    authors: [{
-      name: 'name'
-    }],
+    authors: [
+      {
+        name: 'name'
+      }
+    ],
     type: 'type journal article',
     licence: '',
     keywords: ['keyword1', 'keyword2'],
@@ -50,7 +53,7 @@ describe('KnowledgeProductInfoComponent', () => {
       },
       R: {
         score: 1
-      },
+      }
     },
     metadataCG: {
       doi: true,
@@ -63,24 +66,24 @@ describe('KnowledgeProductInfoComponent', () => {
       accessibility: true,
       issue_year: 2023
     }
-  }
+  };
 
   beforeEach(async () => {
-
     mockApiService = {
       resultsSE: {
         GET_resultknowledgeProducts: () => of({ response: mockGET_resultknowledgeProductsResponse }),
         GET_allClarisaMeliaStudyTypes: () => of({ response: [] }),
         GET_ostMeliaStudiesByResultId: () => of({ response: [] }),
         PATCH_resyncKnowledgeProducts: () => of({ response: [] }),
-        PATCH_knowledgeProductSection: () => of({ response: [] }),
+        PATCH_knowledgeProductSection: () => of({ response: [] })
       },
       rolesSE: {
         readOnly: false
       },
       dataControlSE: {
         isKnowledgeProduct: true,
-      },
+        currentResultSectionName: signal<string>('Knowledge product information')
+      }
     };
 
     mockCustomizedAlertsFeService = {
@@ -102,10 +105,7 @@ describe('KnowledgeProductInfoComponent', () => {
         DetailSectionTitleComponent,
         SaveButtonComponent
       ],
-      imports: [
-        HttpClientTestingModule,
-        FormsModule
-      ],
+      imports: [HttpClientTestingModule, FormsModule],
       providers: [
         {
           provide: ApiService,
@@ -116,8 +116,7 @@ describe('KnowledgeProductInfoComponent', () => {
           useValue: mockCustomizedAlertsFeService
         }
       ]
-    })
-      .compileComponents();
+    }).compileComponents();
 
     fixture = TestBed.createComponent(KnowledgeProductInfoComponent);
     component = fixture.componentInstance;
@@ -218,7 +217,7 @@ describe('KnowledgeProductInfoComponent', () => {
 
       const result = component.calculateInnerColor(value);
 
-      expect(result).toBe('#ffff6e')
+      expect(result).toBe('#ffff6e');
     });
   });
 
@@ -260,12 +259,12 @@ describe('KnowledgeProductInfoComponent', () => {
         accessibility: false,
         is_peer_reviewed: false
       };
-        mockGET_resultknowledgeProductsResponse.metadataWOS = {
-          is_peer_reviewed: true,
-          is_isi: true,
-          accessibility: false,
-          issue_year: 2023
-        }
+      mockGET_resultknowledgeProductsResponse.metadataWOS = {
+        is_peer_reviewed: true,
+        is_isi: true,
+        accessibility: false,
+        issue_year: 2023
+      };
       mockGET_resultknowledgeProductsResponse.type = 'type journal article';
       const spy = jest.spyOn(mockApiService.resultsSE, 'GET_resultknowledgeProducts');
 
@@ -295,7 +294,7 @@ describe('KnowledgeProductInfoComponent', () => {
         },
         R: {
           score: 1
-        },
+        }
       };
 
       const result = component.filterOutObject(fairObject);
@@ -309,7 +308,7 @@ describe('KnowledgeProductInfoComponent', () => {
   describe('onSaveSection()', () => {
     it('should save section successfully', () => {
       const spyPATCH_knowledgeProductSection = jest.spyOn(mockApiService.resultsSE, 'PATCH_knowledgeProductSection');
-      const spyGetSectionInformation = jest.spyOn(component, 'getSectionInformation')
+      const spyGetSectionInformation = jest.spyOn(component, 'getSectionInformation');
 
       component.onSaveSection();
 

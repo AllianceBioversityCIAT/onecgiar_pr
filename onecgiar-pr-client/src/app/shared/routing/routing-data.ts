@@ -1,12 +1,11 @@
 import { Route } from '@angular/router';
 import { CheckLoginGuard } from '../guards/check-login.guard';
 import { CheckAdminGuard } from '../guards/check-admin.guard';
-
 export const routingApp: PrRoute[] = [
   {
     prName: 'Results Framework & Reporting',
     underConstruction: false,
-    prHide: true,
+    prHide: false,
     canActivate: [CheckLoginGuard],
     path: 'result-framework-reporting',
     loadChildren: () => import('../../pages/result-framework-reporting/result-framework-reporting.module').then(m => m.ResultFrameworkReportingModule)
@@ -312,6 +311,7 @@ export const resultDetailRouting: PrRoute[] = [
     prName: 'Theory of change',
     path: 'theory-of-change',
     underConstruction: false,
+    portfolioAcronym: 'P22',
     loadChildren: () =>
       import('../../pages/results/pages/result-detail/pages/rd-theory-of-change/rd-theory-of-change.module').then(m => m.RdTheoryOfChangeModule)
   },
@@ -319,7 +319,18 @@ export const resultDetailRouting: PrRoute[] = [
     prName: 'Partners & Contributors',
     path: 'partners',
     underConstruction: false,
+    portfolioAcronym: 'P22',
     loadChildren: () => import('../../pages/results/pages/result-detail/pages/rd-partners/rd-partners.module').then(m => m.RdPartnersModule)
+  },
+  {
+    prName: 'Contributors & partners',
+    path: 'contributors-and-partners',
+    portfolioAcronym: 'P25',
+    underConstruction: false,
+    loadChildren: () =>
+      import('../../pages/results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.module').then(
+        m => m.RdContributorsAndPartnersModule
+      )
   },
   {
     prName: 'Geographic location',
@@ -333,6 +344,7 @@ export const resultDetailRouting: PrRoute[] = [
   {
     prName: 'Links to results',
     path: 'links-to-results',
+    portfolioAcronym: 'P22',
     underConstruction: false,
     loadChildren: () =>
       import('../../pages/results/pages/result-detail/pages/rd-links-to-results/rd-links-to-results.module').then(m => m.RdLinksToResultsModule)
@@ -457,6 +469,48 @@ export const ResultFrameworkReportingRouting: PrRoute[] = [
         m => m.ResultFrameworkReportingHomeComponent
       )
   },
+  {
+    prName: 'Entity details',
+    path: 'entity-details/:entityId',
+    loadComponent: () =>
+      import('../../pages/result-framework-reporting/pages/entity-details/entity-details.component').then(m => m.EntityDetailsComponent)
+  },
+  {
+    prName: 'Entity AOW',
+    path: 'entity-details/:entityId/aow',
+    loadComponent: () => import('../../pages/result-framework-reporting/pages/entity-aow/entity-aow.component').then(m => m.EntityAowComponent),
+    children: [
+      { path: '', pathMatch: 'full', redirectTo: 'all' },
+      {
+        path: 'all',
+        loadComponent: () =>
+          import('../../pages/result-framework-reporting/pages/entity-aow/pages/entity-aow-all/entity-aow-all.component').then(
+            m => m.EntityAowAllComponent
+          )
+      },
+      {
+        path: 'unplanned',
+        loadComponent: () =>
+          import('../../pages/result-framework-reporting/pages/entity-aow/pages/entity-aow-unplanned/entity-aow-unplanned.component').then(
+            m => m.EntityAowUnplannedComponent
+          )
+      },
+      {
+        path: '2030-outcomes',
+        loadComponent: () =>
+          import('../../pages/result-framework-reporting/pages/entity-aow/pages/entity-aow-2030/entity-aow-2030.component').then(
+            m => m.EntityAow2030Component
+          )
+      },
+      {
+        path: ':aowId',
+        loadComponent: () =>
+          import('../../pages/result-framework-reporting/pages/entity-aow/pages/entity-aow-aow/entity-aow-aow.component').then(
+            m => m.EntityAowAowComponent
+          )
+      }
+    ]
+  },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'home' }
 ];
 
@@ -465,4 +519,5 @@ export interface PrRoute extends Route {
   prHide?: boolean | number;
   underConstruction?: boolean | number;
   onlyTest?: boolean;
+  portfolioAcronym?: string;
 }

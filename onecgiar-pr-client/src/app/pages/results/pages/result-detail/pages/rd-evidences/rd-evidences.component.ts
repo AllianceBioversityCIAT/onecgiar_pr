@@ -5,10 +5,10 @@ import { InnovationControlListService } from '../../../../../../shared/services/
 import { SaveButtonService } from '../../../../../../custom-fields/save-button/save-button.service';
 import { DataControlService } from '../../../../../../shared/services/data-control.service';
 @Component({
-    selector: 'app-rd-evidences',
-    templateUrl: './rd-evidences.component.html',
-    styleUrls: ['./rd-evidences.component.scss'],
-    standalone: false
+  selector: 'app-rd-evidences',
+  templateUrl: './rd-evidences.component.html',
+  styleUrls: ['./rd-evidences.component.scss'],
+  standalone: false
 })
 export class RdEvidencesComponent implements OnInit {
   evidencesBody = new EvidencesBody();
@@ -45,7 +45,9 @@ export class RdEvidencesComponent implements OnInit {
     public innovationControlListSE: InnovationControlListService,
     private saveButtonSE: SaveButtonService,
     public dataControlSE: DataControlService
-  ) {}
+  ) {
+    this.api.dataControlSE.currentResultSectionName.set('Evidence');
+  }
 
   ngOnInit(): void {
     this.getSectionInformation();

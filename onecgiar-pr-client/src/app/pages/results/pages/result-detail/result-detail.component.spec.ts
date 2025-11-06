@@ -9,7 +9,6 @@ import { NoEditContainerComponent } from './components/no-edit-container/no-edit
 import { PartnersRequestComponent } from './components/partners-request/partners-request.component';
 import { UnsubmitModalComponent } from './components/unsubmit-modal/unsubmit-modal.component';
 import { SubmissionModalComponent } from './components/submission-modal/submission-modal.component';
-import { ResultTitleComponent } from './components/result-title/result-title.component';
 import { PhaseSwitcherComponent } from '../../../../shared/components/phase-switcher/phase-switcher.component';
 import { PanelMenuComponent } from './panel-menu/panel-menu.component';
 import { PrButtonComponent } from '../../../../custom-fields/pr-button/pr-button.component';
@@ -28,6 +27,7 @@ import { ShareRequestModalService } from './components/share-request-modal/share
 import { DataControlService } from '../../../../shared/services/data-control.service';
 import { jest } from '@jest/globals';
 import { ResultLevelService } from '../result-creator/services/result-level.service';
+import { signal } from '@angular/core';
 
 jest.useFakeTimers();
 
@@ -62,12 +62,17 @@ describe('ResultDetailComponent', () => {
       },
       dataControlSE: {
         resultPhaseList: [],
-        someMandatoryFieldIncompleteResultDetail: jest.fn()
+        someMandatoryFieldIncompleteResultDetail: jest.fn(),
+        someMandatoryFieldIncomplete: jest.fn().mockReturnValue(false),
+        currentResultSectionName: signal(''),
+        myInitiativesList: []
       }
     }
 
     mockDataControlService = {
-      currentResult: 'currentResult'
+      currentResult: 'currentResult',
+      currentResultSignal: signal({}),
+      currentResultSectionName: signal('')
     }
 
     mockCurrentResultService = {
@@ -94,7 +99,6 @@ describe('ResultDetailComponent', () => {
         PartnersRequestComponent,
         UnsubmitModalComponent,
         SubmissionModalComponent,
-        ResultTitleComponent,
         PhaseSwitcherComponent,
         PanelMenuComponent,
         PrButtonComponent,
@@ -178,9 +182,10 @@ describe('ResultDetailComponent', () => {
       expect(spyGET_resultIdToCode).toHaveBeenCalled();
       expect(spyGET_resultById).toHaveBeenCalled();
       expect(spyUpdateGreenChecks).toHaveBeenCalled();
-      expect(spyGetGreenChecks).toHaveBeenCalled();
       expect(spyGET_versioningResult).toHaveBeenCalled();
       expect(mockShareRequestModalService.inNotifications).toBe(false);
+      // getGreenChecks() is now called by the effect when portfolio is defined, not directly in getData()
+      expect(spyGetGreenChecks).not.toHaveBeenCalled();
     });
   });
 

@@ -14,25 +14,16 @@ describe('GeoscopeManagementComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [
-        GeoscopeManagementComponent,
-        PrRadioButtonComponent,
-        PrFieldHeaderComponent
-      ],
-      imports: [
-        HttpClientTestingModule,
-        FormsModule
-      ],
-    })
-      .compileComponents();
+      declarations: [GeoscopeManagementComponent, PrRadioButtonComponent, PrFieldHeaderComponent],
+      imports: [HttpClientTestingModule, FormsModule]
+    }).compileComponents();
 
     fixture = TestBed.createComponent(GeoscopeManagementComponent);
     component = fixture.componentInstance;
     component.internalModule = {
       name: 'module',
       value: 1
-    }
-
+    };
   });
 
   describe('resetHasScope', () => {
@@ -119,13 +110,15 @@ describe('GeoscopeManagementComponent', () => {
   describe('thereAnyText', () => {
     it('should return the correct string for countries', () => {
       const result = component.thereAnyText(true);
-      const expectedString = "The list of countries below follows the <a href='https://www.iso.org/iso-3166-country-codes.html' class=\"open_route\" target='_blank'>ISO 3166<a> standard";
+      const expectedString =
+        "The list of countries below follows the <a href='https://www.iso.org/iso-3166-country-codes.html' class=\"open_route\" target='_blank'>ISO 3166<a> standard";
 
       expect(result).toBe(expectedString);
     });
     it('should return the correct string for regions', () => {
       const result = component.thereAnyText(false);
-      const expectedString = "The list of regions below follows the <a href='https://unstats.un.org/unsd/methodology/m49/' class=\"open_route\" target='_blank'>UN (M.49)<a> standard";
+      const expectedString =
+        "The list of regions below follows the <a href='https://unstats.un.org/unsd/methodology/m49/' class=\"open_route\" target='_blank'>UN (M.49)<a> standard";
 
       expect(result).toBe(expectedString);
     });
@@ -138,12 +131,10 @@ describe('GeoscopeManagementComponent', () => {
       component.ngOnInit();
 
       expect(component.internalModule).toBeDefined();
-      expect(component.geoscopeOptions).toContainEqual(
-        {
-          full_name: "This is yet to be determined",
-          id: 50
-        }
-      );
+      expect(component.geoscopeOptions).toContainEqual({
+        full_name: 'This is yet to be determined',
+        id: 50
+      });
     });
   });
 

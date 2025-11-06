@@ -137,6 +137,46 @@ describe('IpsrContributorsComponent', () => {
       expect(component.theoryOfChangesServices.result_toc_result.planned_result).toBeNull();
       expect(component.theoryOfChangesServices.contributors_result_toc_result[0].result_toc_results[0].planned_result).toBeNull();
     });
+
+    it('should handle when result_toc_result.result_toc_results is null', () => {
+      const nullResponse = {
+        ...mockResponse,
+        result_toc_result: {
+          result_toc_results: null
+        },
+        contributing_initiatives: {
+          accepted_contributing_initiatives: [],
+          pending_contributing_initiatives: []
+        },
+        institutions: []
+      };
+
+      jest.spyOn(mockApiService.resultsSE, 'GETContributorsByIpsrResultId').mockReturnValue(of({ response: nullResponse }));
+
+      component.getSectionInformation();
+
+      expect(component.contributorsBody).toEqual(nullResponse);
+      expect(component.theoryOfChangesServices.theoryOfChangeBody).toEqual(nullResponse);
+    });
+
+    it('should handle when contributors_result_toc_result is null', () => {
+      const nullContributorsResponse = {
+        ...mockResponse,
+        contributors_result_toc_result: null,
+        contributing_initiatives: {
+          accepted_contributing_initiatives: [],
+          pending_contributing_initiatives: []
+        },
+        institutions: []
+      };
+
+      jest.spyOn(mockApiService.resultsSE, 'GETContributorsByIpsrResultId').mockReturnValue(of({ response: nullContributorsResponse }));
+
+      component.getSectionInformation();
+
+      expect(component.contributorsBody).toEqual(nullContributorsResponse);
+      expect(component.theoryOfChangesServices.theoryOfChangeBody).toEqual(nullContributorsResponse);
+    });
   });
 
   describe('onSaveSection', () => {

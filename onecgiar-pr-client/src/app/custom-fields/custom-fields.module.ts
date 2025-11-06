@@ -37,6 +37,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { LeadContactPersonFieldComponent } from './lead-contact-person-field/lead-contact-person-field.component';
+import { SSelectComponent } from './s-select/s-select.component';
 
 const fieldComponents = [
   PrInputComponent,
@@ -57,7 +58,8 @@ const fieldComponents = [
   AddButtonComponent,
   PrRangeLevelComponent,
   SyncButtonComponent,
-  LeadContactPersonFieldComponent
+  LeadContactPersonFieldComponent,
+  SSelectComponent
 ];
 
 @NgModule({

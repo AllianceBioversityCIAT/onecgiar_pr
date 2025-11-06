@@ -19,9 +19,9 @@ import { ShareResultRequestService } from '../share-result-request/share-result-
 import { ShareResultRequestRepository } from '../share-result-request/share-result-request.repository';
 import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/result_initiative_budget.repository';
 import { ResultsTocResultIndicatorsRepository } from './repositories/results-toc-results-indicators.repository';
-import { ResultsTocSdgTargetRepository } from './repositories/result-toc-sdg-target-repository';
-import { ResultsTocImpactAreaTargetRepository } from './repositories/result-toc-impact-area-repository';
-import { ResultsSdgTargetRepository } from './repositories/results-sdg-targets.respository';
+import { ResultsTocSdgTargetRepository } from './repositories/result-toc-sdg-target.repository';
+import { ResultsTocImpactAreaTargetRepository } from './repositories/result-toc-impact-area.repository';
+import { ResultsSdgTargetRepository } from './repositories/results-sdg-targets.repository';
 import { NonPooledProjectBudgetRepository } from '../result_budget/repositories/non_pooled_proyect_budget.repository';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 import { ResultsActionAreaOutcomeRepository } from './repositories/result-toc-action-area.repository';
@@ -68,7 +68,11 @@ import { SocketManagementModule } from '../../../shared/microservices/socket-man
     UserNotificationSettingRepository,
     GlobalParameterRepository,
   ],
-  exports: [ResultsTocResultRepository, ResultsTocResultsService],
+  exports: [
+    ResultsTocResultRepository,
+    ResultsTocResultsService,
+    ResultsTocResultIndicatorsRepository,
+  ],
   imports: [
     EmailNotificationManagementModule,
     VersioningModule,

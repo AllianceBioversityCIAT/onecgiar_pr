@@ -64,6 +64,13 @@ export class ResultsInnovationsDev {
   is_new_variety!: boolean;
 
   @Column({
+    name: 'has_scaling_studies',
+    type: 'boolean',
+    nullable: true,
+  })
+  has_scaling_studies: boolean;
+
+  @Column({
     name: 'number_of_varieties',
     type: 'bigint',
     nullable: true,
@@ -152,4 +159,11 @@ export class ResultsInnovationsDev {
     nullable: true,
   })
   innovation_user_to_be_determined!: boolean;
+
+  @Column({
+    name: 'has_innovation_link',
+    type: 'tinyint',
+    nullable: true,
+  })
+  has_innovation_link: boolean;
 }
