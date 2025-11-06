@@ -306,7 +306,10 @@ export class InnovationUseService {
           continue;
         }
 
-        if (!el?.institution_sub_type_id && (el?.id == null || el.id === undefined)) {
+        if (
+          !el?.institution_sub_type_id &&
+          (el?.id == null || el.id === undefined)
+        ) {
           continue;
         }
 
@@ -475,7 +478,6 @@ export class InnovationUseService {
       });
 
       actorsData.forEach((el) => {
-
         if (el.sex_and_age_disaggregation == true) {
           return;
         }

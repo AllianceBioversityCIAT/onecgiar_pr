@@ -24,6 +24,7 @@ const mockClarisaInitiativesRepository = {
 const mockRoleByUserRepository = {
   findOne: jest.fn(),
   isUserAdmin: jest.fn(),
+  find: jest.fn(),
 };
 
 const mockClarisaGlobalUnitRepository = {
@@ -1268,6 +1269,7 @@ describe('ResultsFrameworkReportingService', () => {
       mockResultsTocResultRepository.find.mockReset();
       mockResultsTocResultIndicatorsRepository.find.mockReset();
       mockResultRepository.getUserRolesForResults.mockReset();
+      mockRoleByUserRepository.find.mockReset();
       mockHandlersError.returnErrorRes.mockClear();
     });
 
@@ -1303,6 +1305,7 @@ describe('ResultsFrameworkReportingService', () => {
       mockResultsTocResultIndicatorsRepository.find.mockResolvedValueOnce([
         { results_toc_results_id: 11 },
       ]);
+      mockRoleByUserRepository.find.mockResolvedValueOnce([]);
       mockResultRepository.getUserRolesForResults.mockResolvedValueOnce([
         { result_id: '101', role_id: 4, role_name: 'Lead' },
       ]);
@@ -1351,7 +1354,7 @@ describe('ResultsFrameworkReportingService', () => {
       expect(mockHandlersError.returnErrorRes).not.toHaveBeenCalled();
     });
 
-    it('should default role fields to null when no role mapping found', async () => {
+    it('should use general application roles as fallback when no specific role mapping found', async () => {
       mockResultsTocResultRepository.find.mockResolvedValueOnce([
         {
           result_toc_result_id: 31,
@@ -1371,6 +1374,7 @@ describe('ResultsFrameworkReportingService', () => {
         { results_toc_results_id: 31 },
       ]);
       mockResultRepository.getUserRolesForResults.mockResolvedValueOnce([]);
+      mockRoleByUserRepository.find.mockResolvedValueOnce([{ role: 1 }]);
 
       const result: any =
         await service.getExistingResultContributorsToIndicators(
@@ -1383,11 +1387,20 @@ describe('ResultsFrameworkReportingService', () => {
         user.id,
         [501],
       );
+      expect(mockRoleByUserRepository.find).toHaveBeenCalledWith({
+        where: {
+          user: user.id,
+          active: true,
+          initiative_id: expect.any(Object), // IsNull()
+          action_area_id: expect.any(Object), // IsNull()
+        },
+        select: ['role'],
+      });
       expect(result.status).toBe(200);
       expect(result.response.contributors).toEqual([
         expect.objectContaining({
           result_id: 501,
-          role_id: null,
+          role_id: 1,
           status_id: 3,
           status_name: 'Quality assessed',
           title: 'Result Delta',
@@ -1411,6 +1424,7 @@ describe('ResultsFrameworkReportingService', () => {
         },
       ]);
       mockResultsTocResultIndicatorsRepository.find.mockResolvedValueOnce([]);
+      mockRoleByUserRepository.find.mockResolvedValueOnce([]);
 
       const result: any =
         await service.getExistingResultContributorsToIndicators(
