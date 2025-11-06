@@ -19,7 +19,7 @@
           <label [for]="'radio_' + i" class="name pr-body-2">{{ option[this.optionLabel] }}</label>
         </div>
 
-        <div *ngIf="textInputWhenSelectedLabels?.includes(option[optionLabel]) && value === option[optionValue]" style="margin-top: 18px;">
+        <div *ngIf="textInputWhenSelectedLabels?.includes(option[optionLabel]) && value === option[optionValue]" style="margin-top: 18px; max-width: 300px;">
           <app-pr-input
             [label]="textInputLabelOverrides?.[option[optionLabel]] ?? textInputLabel"
             [placeholder]="textInputPlaceholderOverrides?.[option[optionLabel]] ?? textInputPlaceholder"
