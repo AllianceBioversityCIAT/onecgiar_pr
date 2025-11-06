@@ -14,6 +14,7 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { of } from 'rxjs';
 import { RdPartnersService } from './rd-partners.service';
 import { CustomizedAlertsFeService } from '../../../../../../shared/services/customized-alerts-fe.service';
+import { signal } from '@angular/core';
 
 describe('RdPartnersComponent', () => {
   let component: RdPartnersComponent;
@@ -25,6 +26,7 @@ describe('RdPartnersComponent', () => {
   beforeEach(async () => {
     mockApiService = {
       dataControlSE: {
+        currentResultSectionName: signal<string>('Partners'),
         findClassTenSeconds: jest.fn(() => Promise.resolve())
       },
       resultsSE: {

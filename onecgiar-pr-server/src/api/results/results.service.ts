@@ -82,6 +82,7 @@ import {
   NotificationTypeEnum,
 } from '../notification/enum/notification.enum';
 import { ImpactAreasScoresComponentRepository } from './impact_areas_scores_components/repositories/impact_areas_scores_components.repository';
+import { GetResultsForInnovUseDto } from './dto/get-results-for-innov-use.dto';
 
 @Injectable()
 export class ResultsService {
@@ -700,21 +701,26 @@ export class ResultsService {
         gender_tag_level_id: resultGeneralInformation.gender_tag_id
           ? genderTag.id
           : null,
-        gender_impact_area_id: genderTagComponent ? genderTagComponent.id : null,
+        gender_impact_area_id: genderTagComponent
+          ? genderTagComponent.id
+          : null,
         climate_change_tag_level_id:
           resultGeneralInformation.climate_change_tag_id ? climateTag.id : null,
-        climate_impact_area_id: climateTagComponent ? climateTagComponent.id : null,
+        climate_impact_area_id: climateTagComponent
+          ? climateTagComponent.id
+          : null,
         nutrition_tag_level_id: resultGeneralInformation.nutrition_tag_level_id
           ? nutritionTag.id
           : null,
         nutrition_impact_area_id: nutritionTagComponent
-            ? nutritionTagComponent.id
-            : null,
+          ? nutritionTagComponent.id
+          : null,
         environmental_biodiversity_tag_level_id:
           resultGeneralInformation.environmental_biodiversity_tag_level_id
             ? environmentalBiodiversityTag.id
             : null,
-        environmental_biodiversity_impact_area_id: environmentalBiodiversityTagComponent
+        environmental_biodiversity_impact_area_id:
+          environmentalBiodiversityTagComponent
             ? environmentalBiodiversityTagComponent.id
             : null,
         poverty_tag_level_id: resultGeneralInformation.poverty_tag_level_id
@@ -2181,5 +2187,47 @@ export class ResultsService {
     versionId?: number,
   ): Promise<returnFormatResult | returnErrorDto> {
     return this.createOwnerResult(createResultDto, user, isAdmin, versionId);
+  }
+
+  async getAllResultsForInnovUse() {
+    try {
+      const results = await this._resultRepository.getResultsForInnovUse();
+
+      const mapped: GetResultsForInnovUseDto = {
+        P25: [],
+        'P22-P24': [
+          {
+            'innovation-use': [],
+            'innovation-development': [],
+          },
+        ],
+      };
+
+      for (const r of results) {
+        const item = {
+          id: r.id,
+          result_code: r.result_code,
+          title: r.title,
+        };
+
+        if (r.acronym === 'P25') {
+          mapped.P25.push(item);
+        } else {
+          if (r.result_type_id === 2) {
+            mapped['P22-P24'][0]['innovation-use'].push(item);
+          } else if (r.result_type_id === 7) {
+            mapped['P22-P24'][0]['innovation-development'].push(item);
+          }
+        }
+      }
+
+      return {
+        response: mapped,
+        message: 'Results retrieved successfully',
+        status: 200,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
   }
 }

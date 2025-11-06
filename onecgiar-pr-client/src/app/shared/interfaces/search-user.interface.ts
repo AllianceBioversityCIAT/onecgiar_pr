@@ -1,6 +1,6 @@
 export interface SearchUser {
   cn: string;
-  displayName: string;
+  display_name: string;
   mail: string;
   sAMAccountName: string;
   givenName: string;

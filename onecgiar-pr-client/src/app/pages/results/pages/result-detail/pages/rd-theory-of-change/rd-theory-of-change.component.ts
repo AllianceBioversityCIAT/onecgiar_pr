@@ -31,7 +31,9 @@ export class RdTheoryOfChangeComponent implements OnInit {
     public theoryOfChangesServices: RdTheoryOfChangesServicesService,
     public dataControlSE: DataControlService,
     private readonly changeDetectorRef: ChangeDetectorRef
-  ) {}
+  ) {
+    this.api.dataControlSE.currentResultSectionName.set('Theory of Change');
+  }
 
   ngOnInit() {
     this.getSectionInformation();

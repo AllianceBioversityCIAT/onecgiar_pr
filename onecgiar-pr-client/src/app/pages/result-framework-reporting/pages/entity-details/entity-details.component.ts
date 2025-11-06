@@ -64,7 +64,8 @@ export class EntityDetailsComponent implements OnInit {
         {
           type: 'bar',
           label: 'Editing',
-          backgroundColor: '#60a5fa',
+          backgroundColor: 'rgba(153, 153, 153, 0.6)',
+          hoverBackgroundColor: 'rgba(153, 153, 153, 0.6)',
           data: [
             this.entityAowService.dashboardData()?.editing?.data?.outputs?.knowledgeProduct,
             this.entityAowService.dashboardData()?.editing?.data?.outputs?.innovationDevelopment,
@@ -75,7 +76,8 @@ export class EntityDetailsComponent implements OnInit {
         {
           type: 'bar',
           label: 'Submitted',
-          backgroundColor: '#8e9be8',
+          backgroundColor: '#93C5FD',
+          hoverBackgroundColor: '#93C5FD',
           data: [
             this.entityAowService.dashboardData()?.submitted?.data?.outputs?.knowledgeProduct,
             this.entityAowService.dashboardData()?.submitted?.data?.outputs?.innovationDevelopment,
@@ -86,7 +88,8 @@ export class EntityDetailsComponent implements OnInit {
         {
           type: 'bar',
           label: 'Quality assessed',
-          backgroundColor: '#5569dd',
+          backgroundColor: '#38DF7B',
+          hoverBackgroundColor: '#38DF7B',
           data: [
             this.entityAowService.dashboardData()?.qualityAssessed?.data?.outputs?.knowledgeProduct,
             this.entityAowService.dashboardData()?.qualityAssessed?.data?.outputs?.innovationDevelopment,
@@ -105,7 +108,8 @@ export class EntityDetailsComponent implements OnInit {
         {
           type: 'bar',
           label: 'Editing',
-          backgroundColor: '#60a5fa',
+          backgroundColor: 'rgba(153, 153, 153, 0.6)',
+          hoverBackgroundColor: 'rgba(153, 153, 153, 0.6)',
           data: [
             this.entityAowService.dashboardData()?.editing?.data?.outcomes?.policyChange,
             this.entityAowService.dashboardData()?.editing?.data?.outcomes?.innovationUse,
@@ -115,7 +119,8 @@ export class EntityDetailsComponent implements OnInit {
         {
           type: 'bar',
           label: 'Submitted',
-          backgroundColor: '#8e9be8',
+          backgroundColor: '#93C5FD',
+          hoverBackgroundColor: '#93C5FD',
           data: [
             this.entityAowService.dashboardData()?.submitted?.data?.outcomes?.policyChange,
             this.entityAowService.dashboardData()?.submitted?.data?.outcomes?.innovationUse,
@@ -125,7 +130,8 @@ export class EntityDetailsComponent implements OnInit {
         {
           type: 'bar',
           label: 'Quality assessed',
-          backgroundColor: '#5569dd',
+          backgroundColor: '#38DF7B',
+          hoverBackgroundColor: '#38DF7B',
           data: [
             this.entityAowService.dashboardData()?.qualityAssessed?.data?.outcomes?.policyChange,
             this.entityAowService.dashboardData()?.qualityAssessed?.data?.outcomes?.innovationUse,
@@ -138,6 +144,7 @@ export class EntityDetailsComponent implements OnInit {
 
   ngOnInit() {
     this.route.params.subscribe(params => {
+      this.entityAowService.resetDashboardData();
       this.entityAowService.entityId.set(params['entityId']);
     });
     this.entityAowService.getAllDetailsData();

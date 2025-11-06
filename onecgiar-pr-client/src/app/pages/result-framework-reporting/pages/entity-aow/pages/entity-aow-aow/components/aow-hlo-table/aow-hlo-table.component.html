@@ -51,8 +51,8 @@
       <tr>
         <td class="text-secondary-300" style="min-width: 150px !important">{{ result.indicator_description }}</td>
         <td>
-          <div class="tab-content_chip">
-            {{ result.type_name }}
+          <div class="tab-content_chip" [pTooltip]="!result.type_name ? 'This information should be filled in the ToC Board' : ''">
+            {{ result.type_name || 'Not provided' }}
           </div>
         </td>
         <td style="text-align: center">{{ result.target_value_sum }}</td>

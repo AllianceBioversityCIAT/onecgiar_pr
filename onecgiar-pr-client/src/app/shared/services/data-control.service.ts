@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, WritableSignal, computed, signal } from '@angular/core';
 import { ResultItem } from '../interfaces/result.interface';
 import { environment } from '../../../environments/environment';
 import { Title } from '@angular/platform-browser';
@@ -20,6 +20,7 @@ export class DataControlService {
   myInitiativesLoaded = false;
   resultsList: ResultItem[] = [];
   currentResult: CurrentResult = {};
+  currentResultSignal: WritableSignal<CurrentResult> = signal({});
   showSectionSpinner = false;
   currentSectionName = '';
   fieldFeedbackList = [];
@@ -29,6 +30,7 @@ export class DataControlService {
   changeResultTypeModal = false;
   inNotifications = false;
   currentNotification = null;
+  currentResultSectionName = signal('');
   green_checks = null;
   show_qa_full_screen = false;
   showResultHistoryOfChangesModal = false;
@@ -124,6 +126,8 @@ export class DataControlService {
   get isKnowledgeProduct() {
     return this.currentResult?.result_type_id == 6;
   }
+
+  isKnowledgeProductSignal = computed(() => this.currentResultSignal()?.result_type_id == 6);
 
   get isInnoDev() {
     return this.currentResult?.result_type_id == 7;

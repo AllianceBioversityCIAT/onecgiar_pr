@@ -1,7 +1,8 @@
-import { Component, Input, OnChanges, OnInit } from '@angular/core';
+import { Component, Input, OnChanges, OnInit, inject } from '@angular/core';
 import { RdTheoryOfChangesServicesService } from '../../../../rd-theory-of-changes-services.service';
 import { CustomizedAlertsFeService } from '../../../../../../../../../../shared/services/customized-alerts-fe.service';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
+import { FieldsManagerService } from '../../../../../../../../../../shared/services/fields-manager.service';
 
 interface Tab {
   action_area_outcome_id: number | null;
@@ -23,10 +24,10 @@ interface Tab {
 }
 
 @Component({
-    selector: 'app-multiple-wps',
-    templateUrl: './multiple-wps.component.html',
-    styleUrls: ['./multiple-wps.component.scss'],
-    standalone: false
+  selector: 'app-multiple-wps',
+  templateUrl: './multiple-wps.component.html',
+  styleUrls: ['./multiple-wps.component.scss'],
+  standalone: false
 })
 export class MultipleWPsComponent implements OnChanges, OnInit {
   @Input() editable: boolean;
@@ -46,7 +47,13 @@ export class MultipleWPsComponent implements OnChanges, OnInit {
   selectedOptionsOutcome = [];
   selectedOptionsEOI = [];
 
-  constructor(public api: ApiService, public theoryOfChangesServices: RdTheoryOfChangesServicesService, private customizedAlertsFeSE: CustomizedAlertsFeService) {}
+  fieldsManagerSE = inject(FieldsManagerService);
+
+  constructor(
+    public api: ApiService,
+    public theoryOfChangesServices: RdTheoryOfChangesServicesService,
+    private customizedAlertsFeSE: CustomizedAlertsFeService
+  ) {}
 
   ngOnInit(): void {
     this.GET_outcomeList();
@@ -77,42 +84,63 @@ export class MultipleWPsComponent implements OnChanges, OnInit {
   }
 
   GET_outputList() {
-    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.activeTab?.results_id || this.api.dataControlSE?.currentResult?.id, this.activeTab?.initiative_id, 1).subscribe({
-      next: ({ response }) => {
-        this.outputList = response;
-      },
-      error: err => {
-        this.outputList = [];
-        console.error(err);
-      }
-    });
+    this.api.tocApiSE
+      .GET_tocLevelsByconfig(
+        this.api.dataControlSE.currentNotification?.result_id || this.activeTab?.results_id || this.api.dataControlSE?.currentResult?.id,
+        this.activeTab?.initiative_id,
+        1,
+        this.fieldsManagerSE.isP25()
+      )
+      .subscribe({
+        next: ({ response }) => {
+          this.outputList = response;
+        },
+        error: err => {
+          this.outputList = [];
+          console.error(err);
+        }
+      });
   }
 
   GET_outcomeList() {
-    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.activeTab?.results_id || this.api.dataControlSE?.currentResult?.id, this.activeTab?.initiative_id, 2).subscribe({
-      next: ({ response }) => {
-        this.outcomeList = response;
-      },
-      error: err => {
-        this.outcomeList = [];
-        console.error(err);
-      }
-    });
+    this.api.tocApiSE
+      .GET_tocLevelsByconfig(
+        this.api.dataControlSE.currentNotification?.result_id || this.activeTab?.results_id || this.api.dataControlSE?.currentResult?.id,
+        this.activeTab?.initiative_id,
+        2,
+        this.fieldsManagerSE.isP25()
+      )
+      .subscribe({
+        next: ({ response }) => {
+          this.outcomeList = response;
+        },
+        error: err => {
+          this.outcomeList = [];
+          console.error(err);
+        }
+      });
   }
 
   GET_EOIList() {
-    this.api.tocApiSE.GET_tocLevelsByconfig(this.api.dataControlSE.currentNotification?.result_id || this.activeTab?.results_id || this.api.dataControlSE?.currentResult?.id, this.activeTab?.initiative_id, 3).subscribe({
-      next: ({ response }) => {
-        response.forEach((item, index) => {
-          item.uniqueId = `${item.toc_result_id}-${index}`;
-        });
-        this.eoiList = response;
-      },
-      error: err => {
-        this.eoiList = [];
-        console.error(err);
-      }
-    });
+    this.api.tocApiSE
+      .GET_tocLevelsByconfig(
+        this.api.dataControlSE.currentNotification?.result_id || this.activeTab?.results_id || this.api.dataControlSE?.currentResult?.id,
+        this.activeTab?.initiative_id,
+        3,
+        this.fieldsManagerSE.isP25()
+      )
+      .subscribe({
+        next: ({ response }) => {
+          response.forEach((item, index) => {
+            item.uniqueId = `${item.toc_result_id}-${index}`;
+          });
+          this.eoiList = response;
+        },
+        error: err => {
+          this.eoiList = [];
+          console.error(err);
+        }
+      });
   }
 
   dynamicTabTitle(tabNumber) {
@@ -214,7 +242,8 @@ export class MultipleWPsComponent implements OnChanges, OnInit {
     this.activeTab = this.initiative?.result_toc_results[0];
 
     if (this.isContributor) {
-      this.theoryOfChangesServices.theoryOfChangeBody.contributors_result_toc_result[this.initiative.index].result_toc_results = this.initiative.result_toc_results;
+      this.theoryOfChangesServices.theoryOfChangeBody.contributors_result_toc_result[this.initiative.index].result_toc_results =
+        this.initiative.result_toc_results;
     } else {
       this.theoryOfChangesServices.theoryOfChangeBody.result_toc_result.result_toc_results = this.initiative.result_toc_results;
     }

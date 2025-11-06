@@ -19,13 +19,20 @@
           }
         </p>
         <p class="report-result-content_left_header_title">{{ entityAowService.currentResultToReport()?.result_title }}</p>
-        <p class="report-result-content_left_header_desc">{{ entityAowService.currentResultToReport()?.indicators?.[0]?.indicator_description }}</p>
+        <p class="report-result-content_left_header_desc">
+          <strong>Indicator name:</strong> {{ entityAowService.currentResultToReport()?.indicators?.[0]?.indicator_description }}
+        </p>
+        <p class="report-result-content_left_header_desc">
+          <strong>Indicator type:</strong> {{ entityAowService.currentResultToReport()?.indicators?.[0]?.type_name }}
+        </p>
       </div>
       <div class="report-result-content_left_content">
         @if (entityAowService.currentResultToReport().indicators?.[0]?.result_type_id) {
           <div class="report-result-content_left_content_indicator">
             <span class="report-result-content_left_content_label">Indicator category: </span>
-            <span class="report-result-content_left_content_value">{{ entityAowService.currentResultToReport()?.indicators?.[0]?.type_name }}</span>
+            <span class="report-result-content_left_content_value">{{
+              entityAowService.currentResultToReport()?.indicators?.[0]?.result_type_name
+            }}</span>
           </div>
         } @else {
           <div>
@@ -39,7 +46,8 @@
               optionLabel="name"
               optionValue="id"
               placeholder="Select an indicator category"
-              [style]="{ width: '100%' }" />
+              [style]="{ width: '100%' }"
+              [disabled]="creatingResult()" />
           </div>
         }
 
@@ -52,10 +60,11 @@
                 label="Repository link/handle"
                 type="text"
                 labelDescInlineStyles="margin-top: 0 !important"
-                [(ngModel)]="createResultBody().handler">
+                [(ngModel)]="createResultBody().handler"
+                [disabled]="creatingResult()">
               </app-pr-input>
 
-              <div (click)="GET_mqapValidation()" class="sync_button" [ngClass]="{ globalDisabled: validatingHandler() }">
+              <div (click)="GET_mqapValidation()" class="sync_button" [ngClass]="{ globalDisabled: validatingHandler() || creatingResult() }">
                 <app-pr-button padding="small" [verticalMargin]="0" text="Sync" icon="sync" [rotating]="validatingHandler()"></app-pr-button>
               </div>
             </div>
@@ -74,7 +83,7 @@
           labelDescInlineStyles="margin-top: 0 !important"
           [(ngModel)]="createResultBody().result_name"
           [maxWords]="30"
-          [disabled]="currentResultIsKnowledgeProduct()"
+          [disabled]="creatingResult() || currentResultIsKnowledgeProduct()"
           [autogenerate]="currentResultIsKnowledgeProduct()">
         </app-pr-input>
 
@@ -86,7 +95,7 @@
           [label]="currentResultIsKnowledgeProduct() ? 'Progress narrative of the High-Level Output' : 'Progress narrative of the Output'"
           [(ngModel)]="createResultBody().toc_progressive_narrative"
           type="text"
-          [disabled]="currentResultIsKnowledgeProduct()"
+          [disabled]="creatingResult()"
           labelDescInlineStyles="margin-top: 0 !important"></app-pr-textarea>
 
         <div>
@@ -98,7 +107,8 @@
             inputId="minmax"
             mode="decimal"
             [min]="0"
-            [max]="9999999" />
+            [max]="9999999"
+            [disabled]="creatingResult()" />
         </div>
 
         <div>
@@ -114,7 +124,8 @@
             placeholder="Select entity"
             appendTo="body"
             [(ngModel)]="entityAowService.selectedEntities"
-            [style]="{ width: '100%', height: '32px' }">
+            [style]="{ width: '100%', height: '32px' }"
+            [disabled]="creatingResult()">
             <ng-template let-entity #item>
               <div class="flex items-center gap-2">
                 <div>{{ entity.official_code }} - {{ entity.name }}</div>
@@ -161,7 +172,8 @@
             optionLabel="project_name"
             [maxSelectedLabels]="1"
             [(ngModel)]="entityAowService.selectedW3BilateralProjects"
-            [style]="{ width: '100%', height: '32px', marginTop: '10px' }">
+            [style]="{ width: '100%', height: '32px', marginTop: '10px' }"
+            [disabled]="creatingResult()">
             <ng-template let-project #item>
               <div class="flex items-center gap-2">
                 <div style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 400px">{{ project.project_name }}</div>
@@ -211,7 +223,7 @@
       <div class="report-result-content_right_content">
         @if (entityAowService.existingResultsContributors().length > 0) {
           @for (item of entityAowService.existingResultsContributors(); track $index) {
-            <div class="report-result-content_right_content_item">
+            <div class="report-result-content_right_content_item" style="cursor: pointer" (click)="navigateToResult(item)">
               <i class="pi pi-book" style="font-size: 12px; color: var(--pr-color-neutral-200)"></i>
               <p class="pr-body-2">
                 <span class="font-weight-600">{{ item.result_code }} -</span> {{ item.title }}

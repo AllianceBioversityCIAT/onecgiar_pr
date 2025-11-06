@@ -1,11 +1,12 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { In, IsNull, Not } from 'typeorm';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
+import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
 import { ClarisaGlobalUnitRepository } from '../../clarisa/clarisa-global-unit/clarisa-global-unit.repository';
 import { YearRepository } from '../results/years/year.repository';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
-import { TocResultsRepository } from './repositories/toc-work-packages.repository';
+import { AoWBilateralRepository } from '../results/results-toc-results/repositories/aow-bilateral.repository';
 import { ResultRepository } from '../results/result.repository';
 import { ResultsService } from '../results/results.service';
 import {
@@ -31,10 +32,11 @@ export class ResultsFrameworkReportingService {
 
   constructor(
     private readonly _clarisaInitiativesRepository: ClarisaInitiativesRepository,
+    private readonly _roleByUserRepository: RoleByUserRepository,
     private readonly _clarisaGlobalUnitRepository: ClarisaGlobalUnitRepository,
     private readonly _yearRepository: YearRepository,
     private readonly _handlersError: HandlersError,
-    private readonly _tocResultsRepository: TocResultsRepository,
+    private readonly _tocResultsRepository: AoWBilateralRepository,
     private readonly _resultRepository: ResultRepository,
     private readonly _resultsService: ResultsService,
     private readonly _resultsKnowledgeProductsService: ResultsKnowledgeProductsService,
@@ -576,6 +578,26 @@ export class ResultsFrameworkReportingService {
           };
         }
 
+        const categoryLevelMap: Record<string, number> = {
+          OUTPUT: 1,
+          OUTCOME: 2,
+          EOI: 3,
+        };
+
+        const normalizedCategory = `${tocResult?.category ?? ''}`
+          .trim()
+          .toUpperCase();
+        const resolvedTocLevelId = categoryLevelMap[normalizedCategory];
+
+        if (!resolvedTocLevelId) {
+          throw {
+            response: {},
+            message:
+              'The ToC result category is not supported for automatic level mapping.',
+            status: HttpStatus.BAD_REQUEST,
+          };
+        }
+
         let primaryTocRecord = await this._resultsTocResultRepository.findOne({
           where: {
             result_id: createdResultId,
@@ -589,16 +611,20 @@ export class ResultsFrameworkReportingService {
             primaryTocRecord.result_toc_result_id,
             {
               toc_result_id: resolvedTocResultId,
+              toc_level_id: resolvedTocLevelId,
               toc_progressive_narrative:
                 payload.toc_progressive_narrative ?? null,
               last_updated_by: user.id,
               is_active: true,
+              planned_result: true,
+              initiative_ids: initiativeId,
             },
           );
         } else {
           primaryTocRecord = await this._resultsTocResultRepository.save({
             initiative_ids: initiativeId,
             toc_result_id: resolvedTocResultId,
+            toc_level_id: resolvedTocLevelId,
             result_id: createdResultId,
             planned_result: true,
             toc_progressive_narrative:
@@ -1164,6 +1190,25 @@ export class ResultsFrameworkReportingService {
         { role_id: number | null; role_name: string | null }
       >();
 
+      // Get user's general application roles (roles 1 or 2 where initiative_id is null)
+      let userGeneralRole: number | null = null;
+      if (Number.isFinite(userId)) {
+        const generalRoles = await this._roleByUserRepository.find({
+          where: {
+            user: userId,
+            active: true,
+            initiative_id: IsNull(),
+            action_area_id: IsNull(),
+          },
+          select: ['role'],
+        });
+
+        const appRole = generalRoles.find((r) => r.role === 1 || r.role === 2);
+        if (appRole) {
+          userGeneralRole = appRole.role;
+        }
+      }
+
       if (Number.isFinite(userId) && uniqueResultIds.length > 0) {
         const roleResults = await this._resultRepository.getUserRolesForResults(
           userId,
@@ -1195,6 +1240,9 @@ export class ResultsFrameworkReportingService {
           ? rolesByResult.get(numericResultId)
           : undefined;
 
+        // Use specific role for result, or fallback to general application role
+        const finalRoleId = roleInfo?.role_id ?? userGeneralRole;
+
         return {
           result_id: Number.isFinite(numericResultId)
             ? numericResultId
@@ -1204,7 +1252,7 @@ export class ResultsFrameworkReportingService {
           status_name: contrib.obj_results?.obj_status?.status_name,
           version_id: contrib.obj_results?.version_id,
           status_id: +contrib.obj_results?.status_id,
-          role_id: roleInfo?.role_id ?? null,
+          role_id: finalRoleId,
         };
       });
 

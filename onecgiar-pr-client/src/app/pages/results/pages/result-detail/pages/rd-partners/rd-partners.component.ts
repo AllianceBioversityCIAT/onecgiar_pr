@@ -8,10 +8,10 @@ import { CustomizedAlertsFeService } from '../../../../../../shared/services/cus
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
 
 @Component({
-    selector: 'app-rd-partners',
-    templateUrl: './rd-partners.component.html',
-    styleUrls: ['./rd-partners.component.scss'],
-    standalone: false
+  selector: 'app-rd-partners',
+  templateUrl: './rd-partners.component.html',
+  styleUrls: ['./rd-partners.component.scss'],
+  standalone: false
 })
 export class RdPartnersComponent implements OnInit {
   resultCode = this?.api?.dataControlSE?.currentResult?.result_code;
@@ -29,7 +29,9 @@ export class RdPartnersComponent implements OnInit {
     public rdPartnersSE: RdPartnersService,
     private readonly customizedAlertsFeSE: CustomizedAlertsFeService,
     public centersSE: CentersService
-  ) {}
+  ) {
+    this.api.dataControlSE.currentResultSectionName.set('Partners & Contributors');
+  }
 
   ngOnInit() {
     this.rdPartnersSE.partnersBody = new PartnersBody();

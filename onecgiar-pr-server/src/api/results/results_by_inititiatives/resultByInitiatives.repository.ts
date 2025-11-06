@@ -544,40 +544,47 @@ export class ResultByInitiativesRepository
     resultId: number,
     old_primary_submitter: number,
     new_primary_submitter: number,
-  ) {
+  ): Promise<ResultsByInititiative> {
     try {
-      let updateIniciative: any;
-      if (resultId != null) {
-        await this.update(
-          {
-            result_id: resultId,
-            is_active: true,
-            initiative_id: old_primary_submitter,
-          },
-          {
-            initiative_role_id: 2,
-          },
-        );
-
-        updateIniciative = await this.update(
-          { result_id: resultId, initiative_id: new_primary_submitter },
-          {
-            initiative_role_id: 1,
-            is_active: true,
-          },
+      if (resultId == null) {
+        throw new Error(
+          'Result id is required to update the primary submitter',
         );
       }
 
-      await this.findOneBy({
-        result_id: resultId,
-        initiative_id: new_primary_submitter,
+      await this.update(
+        {
+          result_id: resultId,
+          is_active: true,
+          initiative_id: old_primary_submitter,
+        },
+        {
+          initiative_role_id: 2,
+        },
+      );
+
+      await this.update(
+        { result_id: resultId, initiative_id: new_primary_submitter },
+        {
+          initiative_role_id: 1,
+          is_active: true,
+        },
+      );
+
+      const updatedInitiative = await this.findOne({
+        where: {
+          result_id: resultId,
+          initiative_id: new_primary_submitter,
+        },
       });
 
-      return {
-        initiative_id: new_primary_submitter,
-        old_initiative: old_primary_submitter,
-        response: updateIniciative,
-      };
+      if (!updatedInitiative) {
+        throw new Error(
+          `Primary submitter initiative ${new_primary_submitter} not found for result ${resultId}`,
+        );
+      }
+
+      return updatedInitiative;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultByInitiativesRepository.name,

@@ -19,6 +19,10 @@ import { FeedbackValidationDirectiveModule } from '../../../../../../../shared/d
 import { MessageModule } from 'primeng/message';
 import { MegatrendsComponent } from './components/megatrends/megatrends.component';
 import { TermPipe } from '../../../../../../../internationalization/term.pipe';
+import { UserEvidenceComponent } from './components/user-evidence/user-evidence.component';
+import { InnovationUseFormModule } from '../../../../../../../shared/components/innovation-use-form/innovation-use-form.module';
+import { AssumptionsExaminationComponent } from './components/assumptions-examination/assumptions-examination.component';
+import { PartnersPoliciesSafeguardsComponent } from './components/partners-policies-safeguards/partners-policies-safeguards.component';
 
 @NgModule({
   declarations: [
@@ -29,9 +33,12 @@ import { TermPipe } from '../../../../../../../internationalization/term.pipe';
     InnovationTeamDiversityComponent,
     AnticipatedInnovationUserComponent,
     EstimatesComponent,
+    UserEvidenceComponent,
     InnovationLinksComponent,
     NonPooledInfoComponent,
-    MegatrendsComponent
+    MegatrendsComponent,
+    AssumptionsExaminationComponent,
+    PartnersPoliciesSafeguardsComponent,
   ],
   imports: [
     CommonModule,
@@ -43,6 +50,7 @@ import { TermPipe } from '../../../../../../../internationalization/term.pipe';
     SkeletonModule,
     MessageModule,
     TermPipe
+    , InnovationUseFormModule
   ]
 })
 export class InnovationDevInfoModule {}

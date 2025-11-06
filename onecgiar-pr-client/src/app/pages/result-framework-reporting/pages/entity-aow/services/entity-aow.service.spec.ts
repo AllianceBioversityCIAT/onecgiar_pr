@@ -110,7 +110,8 @@ describe('EntityAowService', () => {
         GET_IndicatorContributionSummary: jest.fn().mockReturnValue(of(mockIndicatorApiResponse)),
         GET_W3BilateralProjects: jest.fn().mockReturnValue(of({ response: [] })),
         GET_ExistingResultsContributors: jest.fn().mockReturnValue(of({ response: { contributors: [] } })),
-        GET_2030Outcomes: jest.fn().mockReturnValue(of(mockApiResponse))
+        GET_2030Outcomes: jest.fn().mockReturnValue(of(mockApiResponse)),
+        GET_DashboardData: jest.fn().mockReturnValue(of({ response: null }))
       }
     } as any;
 
@@ -1138,7 +1139,6 @@ describe('EntityAowService', () => {
       expect(service.isLoadingTocResults2030Outcomes()).toBe(false);
     });
 
-    // handle error
     it('should handle error and set loading to false', () => {
       const entityId = 'test-entity-id';
       const error = new Error('API Error');
@@ -1149,6 +1149,103 @@ describe('EntityAowService', () => {
 
       expect(service.tocResults2030Outcomes()).toEqual([]);
       expect(service.isLoadingTocResults2030Outcomes()).toBe(false);
+    });
+  });
+
+  describe('getDashboardData', () => {
+    const mockDashboardData = {
+      editing: { total: 5, label: 'Editing' },
+      submitted: { total: 10, label: 'Submitted' },
+      qualityAssessed: { total: 8, label: 'Quality Assessed' }
+    };
+
+    const mockDashboardApiResponse = {
+      response: mockDashboardData
+    };
+
+    beforeEach(() => {
+      mockApiService.resultsSE.GET_DashboardData = jest.fn().mockReturnValue(of(mockDashboardApiResponse));
+    });
+
+    it('should call API with correct entityId', () => {
+      const entityId = 'test-entity-id';
+      service.entityId.set(entityId);
+
+      service.getDashboardData();
+
+      expect(mockApiService.resultsSE.GET_DashboardData).toHaveBeenCalledWith(entityId);
+    });
+
+    it('should update dashboardData on successful API call', () => {
+      service.getDashboardData();
+
+      expect(service.dashboardData()).toEqual(mockDashboardData);
+    });
+
+    it('should handle API error and set dashboardData to null', () => {
+      const error = new Error('API Error');
+      jest.spyOn(mockApiService.resultsSE, 'GET_DashboardData').mockReturnValue(throwError(() => error));
+
+      service.getDashboardData();
+
+      expect(service.dashboardData()).toBeNull();
+    });
+
+    it('should handle empty response', () => {
+      const emptyResponse = { response: null };
+      jest.spyOn(mockApiService.resultsSE, 'GET_DashboardData').mockReturnValue(of(emptyResponse));
+
+      service.getDashboardData();
+
+      expect(service.dashboardData()).toBeNull();
+    });
+
+    it('should handle undefined response', () => {
+      const undefinedResponse = { response: undefined };
+      jest.spyOn(mockApiService.resultsSE, 'GET_DashboardData').mockReturnValue(of(undefinedResponse));
+
+      service.getDashboardData();
+
+      expect(service.dashboardData()).toBeUndefined();
+    });
+  });
+
+  describe('resetDashboardData', () => {
+    beforeEach(() => {
+      service.dashboardData.set({ editing: { total: 10 }, submitted: { total: 5 } });
+      service.entityDetails.set(mockInitiative);
+      service.entityAows.set(mockUnits);
+      service.indicatorSummaries.set(mockIndicatorSummaries);
+    });
+
+    it('should reset all dashboard-related signals to initial state', () => {
+      service.resetDashboardData();
+
+      expect(service.dashboardData()).toBeNull();
+      expect(service.entityDetails()).toEqual({} as Initiative);
+      expect(service.entityAows()).toEqual([]);
+      expect(service.indicatorSummaries()).toEqual([]);
+    });
+
+    it('should be idempotent - calling multiple times should not cause issues', () => {
+      service.resetDashboardData();
+      service.resetDashboardData();
+      service.resetDashboardData();
+
+      expect(service.dashboardData()).toBeNull();
+      expect(service.entityDetails()).toEqual({} as Initiative);
+      expect(service.entityAows()).toEqual([]);
+      expect(service.indicatorSummaries()).toEqual([]);
+    });
+
+    it('should reset data even when signals are already empty', () => {
+      service.resetDashboardData();
+      service.resetDashboardData();
+
+      expect(service.dashboardData()).toBeNull();
+      expect(service.entityDetails()).toEqual({} as Initiative);
+      expect(service.entityAows()).toEqual([]);
+      expect(service.indicatorSummaries()).toEqual([]);
     });
   });
 });
