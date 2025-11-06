@@ -110,7 +110,7 @@
 
     <div class="chips_container">
       @for (
-        item of this.rdPartnersSE.rdCpTheoryOfChangesServicesSE.theoryOfChangeBody?.contributing_initiatives?.accepted_contributing_initiatives || [];
+        item of this.rdPartnersSE.result_toc_result?.contributing_initiatives?.accepted_contributing_initiatives || [];
         track item.id;
         let i = $index
       ) {
