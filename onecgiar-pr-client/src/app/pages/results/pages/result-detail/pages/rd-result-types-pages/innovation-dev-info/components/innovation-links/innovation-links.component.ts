@@ -12,7 +12,8 @@ import { InnovationDevelopmentLinks } from '../../model/InnovationDevelopmentLin
 export class InnovationLinksComponent {
   @Input() body = new InnovationDevInfoBody();
   @Input() options: InnovationDevelopmentLinks = new InnovationDevelopmentLinks();
-
+  @Input() saving: boolean = false;
+  
   constructor(public api: ApiService) {}
 
   picturesLinksAlertText() {
