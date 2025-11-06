@@ -3,13 +3,23 @@
   [useColon]="false"></app-pr-field-header>
 
 <app-pr-radio-button
-  (selectOptionEvent)="innovationDevInfoUtilsSE.mapBoolean(this.options?.responsible_innovation_and_scaling?.q2)"
+  (selectOptionEvent)="handleSelectionChange()"
   [verticalAlignment]="true" [options]="this.options?.responsible_innovation_and_scaling?.q2?.options"
   optionLabel="question_text" optionValue="result_question_id" subLabel="Multiple answers can be selected."
   [checkboxConfig]="{ listAttr: 'subOptions', optionLabel: 'question_text', optionValue: 'answer_boolean', optionTextValue: 'answer_text'}"
   [(ngModel)]="this.options.responsible_innovation_and_scaling.q2['radioButtonValue']">
 </app-pr-radio-button>
 
+<div *ngIf="isNoActionsSelected || isNoNegativeExpected" style="margin-top: 10px;">
+  <app-pr-input
+    placeholder="Why?"
+    variant="xs"
+    [required]="true"
+    [ngModel]="selectedOption?.answer_text || ''"
+    (ngModelChange)="onWhyChange($event)">
+  </app-pr-input>
+  </div>
+
 <div appFeedbackValidation
   labelText="Have concrete actions been taken to understand and/or limit potential unintended negative consequences or impacts if the innovation is used at scale?"
-  [isComplete]="!!this.options?.responsible_innovation_and_scaling?.q2['radioButtonValue']"></div>
+  [isComplete]="isComplete"></div>

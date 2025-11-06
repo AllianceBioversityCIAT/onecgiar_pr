@@ -38,11 +38,9 @@ export class GesiInnovationAssessmentComponent {
   handleSelectionChange() {
     this.innovationDevInfoUtilsSE.mapBoolean(this.q1);
     const selected = this.selectedOption;
-    // Clear any previous text if current option is not 'No actions taken yet'
     if (selected && selected.question_text !== 'No actions taken yet') {
       selected.answer_text = null;
     }
-    // Also clear answer_text on all non-selected options to avoid stale data
     this.q1?.options?.forEach((opt: any) => {
       if (!selected || opt.result_question_id !== selected.result_question_id) {
         opt.answer_text = null;
