@@ -19,6 +19,15 @@
           <label [for]="'radio_' + i" class="name pr-body-2">{{ option[this.optionLabel] }}</label>
         </div>
 
+        <div *ngIf="textInputWhenSelectedLabels?.includes(option[optionLabel]) && value === option[optionValue]" style="margin-top: 18px;">
+          <app-pr-input
+            [placeholder]="textInputPlaceholderOverrides?.[option[optionLabel]] ?? textInputPlaceholder"
+            variant="xs"
+            [(ngModel)]="option.answer_text"
+            [disabled]="((readOnly || this.rolesSE.readOnly) && !isStatic)">
+          </app-pr-input>
+        </div>
+
         <ng-container *ngIf="option?.subOptions?.length && value === option[optionValue]">
           <p class="radioButton__subLabel" *ngIf="option?.subOptions?.length">{{ this.subLabel }}</p>
           <div *ngFor="let checkbox of option[this.checkboxConfig?.listAttr]" class="checkboxList">
