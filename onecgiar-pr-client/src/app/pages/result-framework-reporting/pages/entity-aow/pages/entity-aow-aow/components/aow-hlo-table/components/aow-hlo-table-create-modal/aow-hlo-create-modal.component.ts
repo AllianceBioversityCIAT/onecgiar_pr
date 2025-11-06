@@ -159,6 +159,15 @@ export class AowHloCreateModalComponent implements OnInit {
     });
   }
 
+  navigateToResult(item: any) {
+    const url = this.router.serializeUrl(
+      this.router.createUrlTree([`/result/result-detail/${item.result_code}/general-information`], {
+        queryParams: { phase: item.version_id }
+      })
+    );
+    window.open(url, '_blank');
+  }
+
   createResult() {
     this.creatingResult.set(true);
 
