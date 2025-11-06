@@ -277,7 +277,7 @@ export class AiService {
       await this.eventRepository.save({
         session_id: sessionId,
         result_id: session.result_id,
-        user_id: saveChangesDto.user_id,
+        user_id: user.id,
         event_type: AiReviewEventType.SAVE_CHANGES,
         field_name: field.field_name as unknown as AiReviewEventFieldName,
       });

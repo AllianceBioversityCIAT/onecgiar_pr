@@ -69,12 +69,4 @@ export class SaveChangesDto {
   })
   @IsNotEmpty()
   fields: SaveFieldDto[];
-
-  @ApiProperty({
-    description: 'ID of the user making the changes',
-    example: 456,
-  })
-  @IsInt()
-  @IsNotEmpty()
-  user_id: number;
 }

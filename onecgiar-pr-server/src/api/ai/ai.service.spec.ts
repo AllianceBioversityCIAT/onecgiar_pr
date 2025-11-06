@@ -464,14 +464,14 @@ describe('AiService', () => {
       expect(eventRepository.save).toHaveBeenNthCalledWith(1, {
         session_id: session.id,
         result_id: session.result_id,
-        user_id: dto.user_id,
+        user_id: user.id,
         event_type: AiReviewEventType.SAVE_CHANGES,
         field_name: AiReviewEventFieldName.TITLE,
       });
       expect(eventRepository.save).toHaveBeenNthCalledWith(2, {
         session_id: session.id,
         result_id: session.result_id,
-        user_id: dto.user_id,
+        user_id: user.id,
         event_type: AiReviewEventType.SAVE_CHANGES,
         field_name: AiReviewEventFieldName.DESCRIPTION,
       });
@@ -543,7 +543,7 @@ describe('AiService', () => {
       expect(eventRepository.save).toHaveBeenCalledWith({
         session_id: session.id,
         result_id: session.result_id,
-        user_id: dto.user_id,
+        user_id: user.id,
         event_type: AiReviewEventType.SAVE_CHANGES,
         field_name: AiReviewEventFieldName.SHORT_TITLE,
       });
@@ -553,7 +553,7 @@ describe('AiService', () => {
       sessionRepository.findOne.mockResolvedValue(null);
 
       await expect(
-        service.saveChanges(1, { user_id: 1, fields: [] }, buildUser(1)),
+        service.saveChanges(1, { fields: [] }, buildUser(1)),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 

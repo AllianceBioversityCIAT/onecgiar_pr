@@ -267,7 +267,6 @@ export class AiController {
               was_ai_suggested: false,
             },
           ],
-          user_id: 456,
         },
       },
     },

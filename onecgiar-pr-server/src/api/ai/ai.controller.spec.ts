@@ -19,7 +19,7 @@ describe('AiController', () => {
     getResultStats: jest.Mock;
   };
 
-  let user = {
+  const user = {
     id: 1,
     username: 'testuser',
     email: 'testuser@example.com',

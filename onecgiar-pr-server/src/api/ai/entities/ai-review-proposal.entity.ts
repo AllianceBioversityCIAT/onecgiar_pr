@@ -75,6 +75,9 @@ export class AiReviewProposal {
   @OneToMany(() => ResultFieldRevision, (revision) => revision.obj_proposal)
   obj_revisions: ResultFieldRevision[];
 
-  @OneToMany(() => ResultFieldAiState, (aiState) => aiState.obj_last_ai_proposal)
+  @OneToMany(
+    () => ResultFieldAiState,
+    (aiState) => aiState.obj_last_ai_proposal,
+  )
   obj_ai_states: ResultFieldAiState[];
 }
