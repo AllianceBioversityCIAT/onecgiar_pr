@@ -249,10 +249,6 @@ export class CPMultipleWPsComponent implements OnChanges {
 
   deleteTabLogic(tab) {
     const isLastTab = this.initiative().result_toc_results.length === 1;
-    const isOutputTab = tab.toc_level_id === 1;
-    const isOutcomeTab = tab.toc_level_id === 2;
-    const isEOITab = tab.toc_level_id === 3;
-
     if (isLastTab) {
       return;
     }
