@@ -29,6 +29,7 @@ export class InnovationUseInfoComponent {
       next: ({ response }) => {
         this.innovationUseInfoBody.innovatonUse = response;
         this.convertOrganizations(this.innovationUseInfoBody?.innovatonUse?.organization);
+        this.convertOrganizations(this.innovationUseInfoBody?.innovation_use_2030?.organization);
       },
       error: err => {
         console.error(err);
@@ -66,6 +67,7 @@ export class InnovationUseInfoComponent {
           };
         }
         this.convertOrganizations(this.innovationUseInfoBody?.innovatonUse?.organization);
+        this.convertOrganizations(this.innovationUseInfoBody?.innovation_use_2030?.organization);
       },
       error: err => {
         console.error(err);
@@ -85,6 +87,14 @@ export class InnovationUseInfoComponent {
       institution_types_id: item?.institution_sub_type_id ?? item?.institution_types_id
     }));
 
+    const innovation_use_2030 = this.innovationUseInfoBody.innovation_use_2030 ? {
+      ...this.innovationUseInfoBody.innovation_use_2030,
+      organization: (this.innovationUseInfoBody.innovation_use_2030.organization || []).map((item: any) => ({
+        ...item,
+        institution_types_id: item?.institution_sub_type_id ?? item?.institution_types_id
+      }))
+    } : this.innovationUseInfoBody.innovation_use_2030;
+
     const bodyToSend = {
       has_innovation_link: this.innovationUseInfoBody.has_innovation_link,
       linked_results: (this.innovationUseInfoBody.linked_results || []).map((r: any) => Number(r?.id ?? r)),
@@ -100,7 +110,7 @@ export class InnovationUseInfoComponent {
       actors,
       measures,
       organization,
-      innovation_use_2030: this.innovationUseInfoBody.innovation_use_2030
+      innovation_use_2030
     };
 
     if (this.fieldsManagerSE.isP25()) {

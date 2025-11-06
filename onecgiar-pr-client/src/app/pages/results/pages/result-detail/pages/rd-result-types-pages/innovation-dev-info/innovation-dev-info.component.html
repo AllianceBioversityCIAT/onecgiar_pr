@@ -42,7 +42,7 @@
       </app-user-evidence>
     </div>
   </div>
-  <app-add-button name="Add evidence" (clickEvent)="addEvidence()" *ngIf="this.evidencesBody.evidences.length < 6">
+  <app-add-button name="Add evidence" (clickEvent)="addEvidence()" [disabled]="savingSection" *ngIf="this.evidencesBody.evidences.length < 6">
   </app-add-button>
   }
 
@@ -122,8 +122,8 @@
 
   <app-estimates [body]="innovationDevInfoBody"></app-estimates>
 
-  <app-innovation-links [body]="innovationDevInfoBody" [options]="innovationDevelopmentLinks"></app-innovation-links>
+  <app-innovation-links [body]="innovationDevInfoBody" [options]="innovationDevelopmentLinks" [saving]="this.savingSection"></app-innovation-links>
 
 </div>
 
-<app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>
+<app-save-button class="position_sticky" [disabled]="savingSection" (clickSave)="onSaveSection()"></app-save-button>

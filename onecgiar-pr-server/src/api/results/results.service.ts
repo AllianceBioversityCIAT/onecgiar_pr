@@ -726,7 +726,7 @@ export class ResultsService {
         poverty_tag_level_id: resultGeneralInformation.poverty_tag_level_id
           ? povertyTag.id
           : null,
-        poverty_impact_area_id: resultGeneralInformation.poverty_impact_area_id
+        poverty_impact_area_id: povertyTagComponent
           ? povertyTagComponent.id
           : null,
         krs_url: resultGeneralInformation.krs_url,

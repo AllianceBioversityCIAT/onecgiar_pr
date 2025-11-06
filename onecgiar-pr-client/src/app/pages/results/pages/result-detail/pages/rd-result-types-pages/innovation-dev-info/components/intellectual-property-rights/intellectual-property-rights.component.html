@@ -2,6 +2,20 @@
 
 
 <div class="paddingLeft20">
+
+    <app-pr-radio-button
+        (selectOptionEvent)="handleSelectionChangeQ4()"
+        [label]="options.intellectual_property_rights.q4.question_text"
+        [description]="options.intellectual_property_rights.q4.question_description" [options]="
+        options.intellectual_property_rights.q4.options" optionLabel="question_text" [verticalAlignment]="true"
+        optionValue="result_question_id"
+        [textInputWhenSelectedLabels]="['No']"
+        [textInputPlaceholder]="''"
+        [textInputLabel]="'Provide insights into potential entry points'"
+        [textInputLabelOverrides]="{ 'No': 'Provide insights into potential entry points' }"
+        [textInputRequiredWhenSelectedLabels]="['No']"
+        [(ngModel)]="options.intellectual_property_rights.q4['radioButtonValue']"></app-pr-radio-button>
+        
     <app-pr-radio-button
         (selectOptionEvent)="innovationDevInfoUtilsSE.mapBoolean(this.options?.intellectual_property_rights.q1) ; clearIntellectualPropertyRights()"
         [label]="options.intellectual_property_rights.q1.question_text"
@@ -26,12 +40,4 @@
         && options.intellectual_property_rights.q1['radioButtonValue'] != 32" [verticalAlignment]="true"
         optionValue="result_question_id"
         [(ngModel)]="options.intellectual_property_rights.q3['radioButtonValue']"></app-pr-radio-button>
-
-    <app-pr-radio-button
-        (selectOptionEvent)="innovationDevInfoUtilsSE.mapBoolean(this.options?.intellectual_property_rights.q4)"
-        [label]="options.intellectual_property_rights.q4.question_text"
-        [description]="options.intellectual_property_rights.q4.question_description" [options]="
-        options.intellectual_property_rights.q4.options" optionLabel="question_text" [verticalAlignment]="true"
-        optionValue="result_question_id"
-        [(ngModel)]="options.intellectual_property_rights.q4['radioButtonValue']"></app-pr-radio-button>
 </div>
