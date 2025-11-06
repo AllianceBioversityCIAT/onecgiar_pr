@@ -21,9 +21,11 @@
 
         <div *ngIf="textInputWhenSelectedLabels?.includes(option[optionLabel]) && value === option[optionValue]" style="margin-top: 18px;">
           <app-pr-input
+            [label]="textInputLabelOverrides?.[option[optionLabel]] ?? textInputLabel"
             [placeholder]="textInputPlaceholderOverrides?.[option[optionLabel]] ?? textInputPlaceholder"
             variant="xs"
             [(ngModel)]="option.answer_text"
+            [required]="textInputRequiredWhenSelectedLabels?.includes(option[optionLabel])"
             [disabled]="((readOnly || this.rolesSE.readOnly) && !isStatic)">
           </app-pr-input>
         </div>
