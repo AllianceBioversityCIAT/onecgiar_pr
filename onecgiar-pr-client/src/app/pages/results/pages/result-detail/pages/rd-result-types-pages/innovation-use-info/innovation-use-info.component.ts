@@ -29,6 +29,7 @@ export class InnovationUseInfoComponent {
       next: ({ response }) => {
         this.innovationUseInfoBody.innovatonUse = response;
         this.convertOrganizations(this.innovationUseInfoBody?.innovatonUse?.organization);
+        this.convertOrganizations(this.innovationUseInfoBody?.innovation_use_2030?.organization);
       },
       error: err => {
         console.error(err);
@@ -66,6 +67,7 @@ export class InnovationUseInfoComponent {
           };
         }
         this.convertOrganizations(this.innovationUseInfoBody?.innovatonUse?.organization);
+        this.convertOrganizations(this.innovationUseInfoBody?.innovation_use_2030?.organization);
       },
       error: err => {
         console.error(err);
