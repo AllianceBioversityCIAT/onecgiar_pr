@@ -9,7 +9,7 @@
         optionValue="toc_level_id"
         placeholder="Select outcome level"
         [(ngModel)]="activeTab.toc_level_id"
-        (ngModelChange)="indicatorView = false; toc_level_id_signal.set(activeTab.toc_level_id)">
+        (ngModelChange)="indicatorView = false; this.activeTabSignal.set(activeTab)">
       </app-pr-select>
     </div>
 
@@ -74,13 +74,6 @@
     </app-pr-input>
   }
   <hr class="divider-20" />
-
-  <!-- <div *ngIf="indicatorView && showMultipleWPsContent && activeTab?.toc_result_id"> -->
-  <!-- <ng-container *ngIf="activeTab?.planned_result && resultLevelId === 1">
-    <app-alert-status
-      description="The selected ToC element does not have any indicators associated with it."
-      *ngIf="activeTab?.indicators?.length === 0"></app-alert-status>
-  </ng-container> -->
 
   <app-pr-textarea
     [label]="dynamicProgressLabel()"

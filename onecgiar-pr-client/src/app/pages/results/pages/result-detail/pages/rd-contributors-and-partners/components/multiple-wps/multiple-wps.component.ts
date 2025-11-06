@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, OnInit, WritableSignal, computed, effect, inject } from '@angular/core';
+import { Component, Input, OnChanges, OnInit, WritableSignal, computed, effect, inject, signal } from '@angular/core';
 import { CustomizedAlertsFeService } from '../../../../../../../../shared/services/customized-alerts-fe.service';
 
 import { FieldsManagerService } from '../../../../../../../../shared/services/fields-manager.service';
@@ -39,6 +39,7 @@ export class CPMultipleWPsComponent implements OnChanges {
   @Input() isIpsr: boolean = false;
   @Input() showMultipleWPsContent: boolean = true;
   activeTab: Tab;
+  activeTabSignal = signal<Tab | null>(null);
   activeTabIndex: number = 0;
 
   currentPlannedResult = null;
@@ -89,9 +90,11 @@ export class CPMultipleWPsComponent implements OnChanges {
     if (savedIndex !== null && savedIndex >= 0 && savedIndex < this.initiative()?.result_toc_results.length) {
       this.activeTabIndex = savedIndex;
       this.activeTab = this.initiative()?.result_toc_results[savedIndex];
+      this.activeTabSignal.set(this.activeTab);
     } else {
       this.activeTabIndex = 0;
       this.activeTab = this.initiative()?.result_toc_results[0];
+      this.activeTabSignal.set(this.activeTab);
     }
   }
 
@@ -198,6 +201,7 @@ export class CPMultipleWPsComponent implements OnChanges {
   onActiveTab(tab: any, index: number) {
     this.activeTabIndex = index;
     this.activeTab = tab;
+    this.activeTabSignal.set(tab);
     // Save active tab index
     this.theoryOfChangesServices.savedActiveTabIndex = index;
     this.showMultipleWPsContent = false;
@@ -268,6 +272,7 @@ export class CPMultipleWPsComponent implements OnChanges {
 
     this.activeTabIndex = 0;
     this.activeTab = this.initiative()?.result_toc_results[0];
+    this.activeTabSignal.set(this.activeTab);
     this.theoryOfChangesServices.savedActiveTabIndex = 0;
 
     if (this.isContributor) {
@@ -276,45 +281,5 @@ export class CPMultipleWPsComponent implements OnChanges {
     } else {
       this.theoryOfChangesServices.theoryOfChangeBody.result_toc_result.result_toc_results = this.initiative().result_toc_results;
     }
-
-    if (isOutputTab) {
-      this.deleteSelectedOptionOutPut(tab);
-    }
-
-    if (isOutcomeTab) {
-      this.deleteSelectedOptionOutCome(tab);
-    }
-
-    if (isEOITab) {
-      this.deleteSelectedOptionEOI(tab);
-    }
-  }
-
-  deleteSelectedOptionOutPut(tab: any) {
-    this.selectedOptionsOutput = this.selectedOptionsOutput.filter(item => item.toc_result_id !== tab?.toc_result_id);
-
-    this.outputList = this.outputList.map(item => {
-      const found = this.selectedOptionsOutput.find(option => option.work_package_id === item.work_package_id);
-      item.disabledd = !!found;
-      return item;
-    });
-  }
-
-  deleteSelectedOptionOutCome(tab: any) {
-    this.selectedOptionsOutcome = this.selectedOptionsOutcome.filter(item => item.toc_result_id !== tab?.toc_result_id);
-    this.outcomeList = this.outcomeList.map(item => {
-      const found = this.selectedOptionsOutcome.find(option => option.work_package_id === item.work_package_id);
-      item.disabledd = !!found;
-      return item;
-    });
-  }
-
-  deleteSelectedOptionEOI(tab: any) {
-    this.selectedOptionsEOI = this.selectedOptionsEOI.filter(item => item.toc_result_id !== tab?.toc_result_id);
-    this.eoiList = this.eoiList.map(item => {
-      const found = this.selectedOptionsEOI.find(option => option.uniqueId === item.uniqueId);
-      item.disabledd = !!found;
-      return item;
-    });
   }
 }

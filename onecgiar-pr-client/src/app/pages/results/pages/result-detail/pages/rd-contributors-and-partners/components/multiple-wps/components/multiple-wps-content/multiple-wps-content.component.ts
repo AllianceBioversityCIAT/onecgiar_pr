@@ -1,9 +1,10 @@
-import { Component, Input, OnChanges, computed, inject, signal } from '@angular/core';
+import { Component, Input, OnChanges, computed, effect, inject, signal } from '@angular/core';
 import { MappedResultsModalServiceService } from '../mapped-results-modal/mapped-results-modal-service.service';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 import { TocInitiativeOutcomeListsService } from '../../../../../rd-theory-of-change/components/toc-initiative-outcome-section/services/toc-initiative-outcome-lists.service';
 import { RdTheoryOfChangesServicesService } from '../../../../../rd-theory-of-change/rd-theory-of-changes-services.service';
 import { ResultLevelService } from '../../../../../../../../../../pages/results/pages/result-creator/services/result-level.service';
+import { CheckLoginGuard } from '../../../../../../../../../../shared/guards/check-login.guard';
 
 @Component({
   selector: 'app-multiple-wps-content',
@@ -22,6 +23,7 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   @Input() outcomeList = [];
   @Input() outputList = [];
   @Input() eoiList = [];
+  @Input() activeTabSignal: any;
 
   @Input() selectedOptionsOutput = [];
   @Input() selectedOptionsOutcome = [];
@@ -31,10 +33,14 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   indicatorView = false;
   showIndicators = signal<boolean>(false);
 
-  toc_level_id_signal = signal<number | null>(null);
-
   secondFieldLabel = computed(() => {
-    return this.tocResultListFiltered().find(item => item.toc_level_id === this.toc_level_id_signal())?.name;
+    return this.tocResultListFiltered().find(item => item.toc_level_id === this.activeTabSignal()?.toc_level_id)?.name;
+  });
+
+  onChangesActiveTab = effect(() => {
+    console.log('activeTab', this.activeTabSignal());
+    this.getIndicatorsList();
+    console.log('hideIndicators');
   });
 
   tocResultListFiltered = computed(() => {
@@ -56,13 +62,16 @@ export class CPMultipleWPsContentComponent implements OnChanges {
 
   getIndicatorsList() {
     const filterIndicators = list => {
+      console.log(list);
       if (!list.length) return;
       const itemSelected = list.find(item => item.toc_result_id === this.activeTab.toc_result_id);
       this.indicatorsList.set(itemSelected?.indicators || []);
+      console.log(itemSelected?.indicators);
       this.activeTab.indicators[0].related_node_id = this.activeTab.indicators[0].toc_results_indicator_id;
       if (!this.activeTab.toc_progressive_narrative) this.activeTab.toc_progressive_narrative = '';
     };
-    switch (this.activeTab?.toc_level_id) {
+    console.log(this.activeTab.toc_level_id);
+    switch (this.activeTabSignal()?.toc_level_id) {
       case 3:
         filterIndicators(this.eoiList);
         break;
@@ -84,18 +93,7 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   }
 
   ngOnChanges() {
-    this.toc_level_id_signal.set(this.activeTab?.toc_level_id);
-    this.getIndicatorsList();
-
     if (this.showMultipleWPsContent) {
-      // if (
-      //   (this.resultLevelId === 1 && this.outputList.length > 0 && this.eoiList.length > 0) ||
-      //   (this.resultLevelId === 2 && this.outcomeList.length > 0 && this.eoiList.length > 0)
-      // ) {
-      //   if (this.activeTab?.toc_result_id && this.activeTab?.initiative_id && !this.activeTab?.indicators?.length) {
-      //     this.getIndicator();
-      //   }
-      // }
       this.pushSelectedOptions();
     }
   }
