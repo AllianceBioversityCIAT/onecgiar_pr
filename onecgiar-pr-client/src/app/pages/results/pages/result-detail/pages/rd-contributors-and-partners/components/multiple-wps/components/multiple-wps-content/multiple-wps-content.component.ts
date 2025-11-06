@@ -12,7 +12,7 @@ import { CheckLoginGuard } from '../../../../../../../../../../shared/guards/che
   styleUrls: ['./multiple-wps-content.component.scss'],
   standalone: false
 })
-export class CPMultipleWPsContentComponent implements OnChanges {
+export class CPMultipleWPsContentComponent {
   @Input() editable: boolean;
   @Input() activeTab: any;
   @Input() resultLevelId: number | string;
@@ -38,9 +38,8 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   });
 
   onChangesActiveTab = effect(() => {
-    console.log('activeTab', this.activeTabSignal());
     this.getIndicatorsList();
-    console.log('hideIndicators');
+    this.pushSelectedOptions();
   });
 
   setActiveTabSignal() {
@@ -97,12 +96,6 @@ export class CPMultipleWPsContentComponent implements OnChanges {
     setTimeout(() => {
       this.showIndicators.set(true);
     }, 100);
-  }
-
-  ngOnChanges() {
-    if (this.showMultipleWPsContent) {
-      this.pushSelectedOptions();
-    }
   }
 
   mapTocResultsIndicatorId() {
