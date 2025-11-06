@@ -77,10 +77,6 @@ export class CPMultipleWPsComponent implements OnChanges {
         this.selectedOptionsOutput = [];
         this.selectedOptionsOutcome = [];
         this.selectedOptionsEOI = [];
-        this.GET_outcomeList();
-        this.GET_outputList();
-        this.GET_EOIList();
-
         this.currentPlannedResult = this.activeTab?.planned_result;
       }
     }

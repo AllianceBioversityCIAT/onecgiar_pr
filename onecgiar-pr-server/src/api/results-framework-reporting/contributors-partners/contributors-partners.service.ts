@@ -2,10 +2,7 @@ import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { ResultRepository } from '../../results/result.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultByInitiativesRepository } from '../../results/results_by_inititiatives/resultByInitiatives.repository';
-import { ResultsCenterRepository } from '../../results/results-centers/results-centers.repository';
-import { InstitutionRoleEnum } from '../../results/results_by_institutions/entities/institution_role.enum';
 import { ResultByIntitutionsRepository } from '../../results/results_by_institutions/result_by_intitutions.repository';
-import { ResultsByProjectsRepository } from '../../results/results_by_projects/results_by_projects.repository';
 import { ResultsTocResultsService } from '../../results/results-toc-results/results-toc-results.service';
 import { ResultsByInstitutionsService } from '../../results/results_by_institutions/results_by_institutions.service';
 import { CreateResultsTocResultV2Dto } from '../../results/results-toc-results/dto/create-results-toc-result-v2.dto';
@@ -14,9 +11,9 @@ import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { UpdateContributorsPartnersDto } from './dto/update-contributors-partners.dto';
 import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 import { LinkedResultRepository } from '../../results/linked-results/linked-results.repository';
+import { LinkedResultsService } from '../../results/linked-results/linked-results.service';
 import { ResultsInnovationsDevRepository } from '../../results/summary/repositories/results-innovations-dev.repository';
 import { ResultsInnovationsUseRepository } from '../../results/summary/repositories/results-innovations-use.repository';
-import { In } from 'typeorm';
 
 @Injectable()
 export class ContributorsPartnersService {
@@ -27,11 +24,10 @@ export class ContributorsPartnersService {
     private readonly _handlersError: HandlersError,
     private readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
     private readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
-    private readonly _resultsCenterRepository: ResultsCenterRepository,
-    private readonly _resultsBilateralRepository: ResultsByProjectsRepository,
     private readonly _resultsTocResultsService: ResultsTocResultsService,
     private readonly _resultsByInstitutionsService: ResultsByInstitutionsService,
     private readonly _linkedResultRepository: LinkedResultRepository,
+    private readonly _linkedResultsService: LinkedResultsService,
     private readonly _resultsInnovationsDevRepository: ResultsInnovationsDevRepository,
     private readonly _resultsInnovationsUseRepository: ResultsInnovationsUseRepository,
   ) {}
@@ -54,47 +50,39 @@ export class ContributorsPartnersService {
 
       const resultTypeId = Number(result.result_type_id);
 
-      const institutionsData = await this._resultByIntitutionsRepository.find({
-        where: {
-          result_id: resultId,
-          is_active: true,
-          institution_roles_id: InstitutionRoleEnum.PARTNER,
-        },
-        relations: {
-          delivery: true,
-          obj_institutions: { obj_institution_type_code: true },
-        },
-        order: { id: 'ASC' },
-      });
-
-      const institutions = institutionsData.map((inst) => ({
-        id: inst.id,
-        deliveries: inst.delivery.filter((d) => d.is_active),
-        institution: inst.obj_institutions
-          ? {
-              name: inst.obj_institutions.name,
-              website_link: inst.obj_institutions.website_link,
-              type: inst.obj_institutions.obj_institution_type_code?.name,
-            }
-          : null,
-      }));
-
-      const mqap_institutions =
+      const partnersSnapshot =
         await this._resultsByInstitutionsService.getInstitutionsPartnersByResultIdV2(
           resultId,
         );
-      const mqapInstitutionsData =
-        (mqap_institutions?.response as any)?.mqap_institutions || [];
 
-      const contributingCenters =
-        await this._resultsCenterRepository.getAllResultsCenterByResultId(
-          resultId,
-        );
+      if (
+        partnersSnapshot?.status &&
+        partnersSnapshot.status !== HttpStatus.OK
+      ) {
+        return partnersSnapshot;
+      }
 
-      const bilateralProjects =
-        await this._resultsBilateralRepository.findResultsByProjectsByResultId(
-          resultId,
-        );
+      const partnersResponse = (partnersSnapshot?.response ?? {}) as Record<
+        string,
+        any
+      >;
+
+      const institutionsData = (partnersResponse.institutions ?? []).map(
+        (inst: any) => ({
+          ...inst,
+          delivery: (inst.delivery ?? []).filter((d) => d.is_active),
+        }),
+      );
+
+      const mqapInstitutionsData = (
+        partnersResponse.mqap_institutions ?? []
+      ).map((inst: any) => ({
+        ...inst,
+        delivery: (inst.delivery ?? []).filter((d) => d.is_active),
+      }));
+
+      const contributingCenters = partnersResponse.contributing_center ?? [];
+      const bilateralProjects = partnersResponse.bilateral_projects ?? [];
 
       const tocMappingRes =
         await this._resultsTocResultsService.getTocByResultV2(resultId);
@@ -120,24 +108,26 @@ export class ContributorsPartnersService {
         sdgTargets: tocResponse.sdgTargets ?? null,
       };
 
-      let innovationLink: {
-        hasInnovationLink: boolean;
-        linkedResultIds: number[];
-      } | null = null;
+      let hasInnovationLink: boolean | null = null;
+      let linkedResultIds: number[] | null = null;
+
+      const noApplicablePartner =
+        partnersResponse.no_applicable_partner ??
+        !!result.no_applicable_partner;
+      const isLeadByPartner =
+        partnersResponse.is_lead_by_partner ?? !!result.is_lead_by_partner;
 
       if (
         resultTypeId === ResultTypeEnum.INNOVATION_DEVELOPMENT ||
         resultTypeId === ResultTypeEnum.INNOVATION_USE
       ) {
-        const [hasInnovationLink, linkedResultIds] = await Promise.all([
+        const [linkFlag, linkedIds] = await Promise.all([
           this.getInnovationLinkStatus(result.id, resultTypeId),
           this._linkedResultRepository.getActiveLinkedResultIds(result.id),
         ]);
 
-        innovationLink = {
-          hasInnovationLink,
-          linkedResultIds,
-        };
+        hasInnovationLink = linkFlag;
+        linkedResultIds = linkedIds ?? [];
       }
 
       return {
@@ -148,13 +138,14 @@ export class ContributorsPartnersService {
           level_id: result.result_level_id,
           owner_initiative: resultInit,
           ...tocMapping,
-          institutions,
+          institutions: institutionsData,
           mqap_institutions: mqapInstitutionsData,
           contributing_center: contributingCenters,
           bilateral_projects: bilateralProjects,
-          no_applicable_partner: !!result.no_applicable_partner,
-          is_lead_by_partner: !!result.is_lead_by_partner,
-          innovation_link: innovationLink,
+          no_applicable_partner: noApplicablePartner,
+          is_lead_by_partner: isLeadByPartner,
+          has_innovation_link: hasInnovationLink,
+          linked_results: linkedResultIds,
         },
         message: 'Contributors and Partners fetched successfully (P25)',
         status: HttpStatus.OK,
@@ -299,40 +290,37 @@ export class ContributorsPartnersService {
         const normalizedLinkedIds = this.normalizeLinkedResultIds(
           payload.linked_results,
         );
-        const hasInnovationLink = hasProp('has_innovation_link')
+        const requestedHasInnovationLink = hasProp('has_innovation_link')
           ? Boolean(payload.has_innovation_link)
           : normalizedLinkedIds.length > 0;
+
+        const filteredLinkedIds = requestedHasInnovationLink
+          ? await this.filterActiveLinkedResults(normalizedLinkedIds)
+          : [];
+
+        await this._linkedResultsService.createForInnovationUse(
+          resultId,
+          filteredLinkedIds,
+          user,
+        );
+
+        const persistedLinkedIds =
+          (await this._linkedResultRepository.getActiveLinkedResultIds(
+            resultId,
+          )) ?? [];
+
+        const finalHasInnovationLink =
+          requestedHasInnovationLink && persistedLinkedIds.length > 0;
 
         await this.updateInnovationSummaryLink(
           resultTypeId,
           resultId,
-          hasInnovationLink,
+          finalHasInnovationLink,
           user.id,
         );
 
-        const desiredLinkedIds = hasInnovationLink ? normalizedLinkedIds : [];
-
-        const persistedLinkedIds = await this.syncLinkedResults(
-          resultId,
-          desiredLinkedIds,
-          user.id,
-        );
-
-        let finalHasInnovationLink = hasInnovationLink;
-        if (hasInnovationLink && persistedLinkedIds.length === 0) {
-          finalHasInnovationLink = false;
-          await this.updateInnovationSummaryLink(
-            resultTypeId,
-            resultId,
-            finalHasInnovationLink,
-            user.id,
-          );
-        }
-
-        response['innovation_link'] = {
-          hasInnovationLink: finalHasInnovationLink,
-          linkedResultIds: persistedLinkedIds,
-        };
+        response['has_innovation_link'] = finalHasInnovationLink;
+        response['linked_results'] = persistedLinkedIds;
         statuses.push(HttpStatus.OK);
         messages.push('Innovation linkage updated.');
       }
@@ -357,21 +345,35 @@ export class ContributorsPartnersService {
   ): Promise<boolean> {
     try {
       if (resultTypeId === ResultTypeEnum.INNOVATION_DEVELOPMENT) {
-        const record = await this._resultsInnovationsDevRepository.findOne({
-          where: { results_id: resultId, is_active: true },
-          select: { has_innovation_link: true },
-        });
+        const rows = await this._resultsInnovationsDevRepository.query(
+          `
+            SELECT has_innovation_link
+            FROM results_innovations_dev
+            WHERE results_id = ?
+            ORDER BY is_active DESC, result_innovation_dev_id DESC
+            LIMIT 1
+          `,
+          [resultId],
+        );
 
-        return !!record?.has_innovation_link;
+        const value = rows?.[0]?.has_innovation_link;
+        return value === null || value === undefined ? false : Boolean(value);
       }
 
       if (resultTypeId === ResultTypeEnum.INNOVATION_USE) {
-        const record = await this._resultsInnovationsUseRepository.findOne({
-          where: { results_id: resultId, is_active: true },
-          select: { has_innovation_link: true },
-        });
+        const rows = await this._resultsInnovationsUseRepository.query(
+          `
+            SELECT has_innovation_link
+            FROM results_innovations_use
+            WHERE results_id = ?
+            ORDER BY is_active DESC, result_innovation_use_id DESC
+            LIMIT 1
+          `,
+          [resultId],
+        );
 
-        return !!record?.has_innovation_link;
+        const value = rows?.[0]?.has_innovation_link;
+        return value === null || value === undefined ? false : Boolean(value);
       }
 
       return false;
@@ -391,51 +393,77 @@ export class ContributorsPartnersService {
   ) {
     try {
       if (resultTypeId === ResultTypeEnum.INNOVATION_DEVELOPMENT) {
-        const existing = await this._resultsInnovationsDevRepository.findOne({
-          where: { results_id: resultId, is_active: true },
-        });
+        const [existing] = await this._resultsInnovationsDevRepository.query(
+          `
+            SELECT result_innovation_dev_id
+            FROM results_innovations_dev
+            WHERE results_id = ?
+            ORDER BY is_active DESC, result_innovation_dev_id DESC
+            LIMIT 1
+          `,
+          [resultId],
+        );
 
-        if (existing) {
-          await this._resultsInnovationsDevRepository.update(
-            { results_id: resultId },
-            {
-              has_innovation_link: hasInnovationLink,
-              last_updated_by: userId,
-            },
+        if (existing?.result_innovation_dev_id) {
+          await this._resultsInnovationsDevRepository.query(
+            `
+              UPDATE results_innovations_dev
+              SET has_innovation_link = ?, is_active = 1, last_updated_by = ?, last_updated_date = NOW()
+              WHERE result_innovation_dev_id = ?
+            `,
+            [
+              hasInnovationLink ? 1 : 0,
+              userId,
+              existing.result_innovation_dev_id,
+            ],
           );
         } else {
-          await this._resultsInnovationsDevRepository.save({
-            results_id: resultId,
-            has_innovation_link: hasInnovationLink,
-            is_active: true,
-            created_by: userId,
-            last_updated_by: userId,
-          } as any);
+          await this._resultsInnovationsDevRepository.query(
+            `
+              INSERT INTO results_innovations_dev
+                (results_id, has_innovation_link, is_active, created_by, last_updated_by, created_date, last_updated_date)
+              VALUES (?, ?, 1, ?, ?, NOW(), NOW())
+            `,
+            [resultId, hasInnovationLink ? 1 : 0, userId, userId],
+          );
         }
         return;
       }
 
       if (resultTypeId === ResultTypeEnum.INNOVATION_USE) {
-        const existing = await this._resultsInnovationsUseRepository.findOne({
-          where: { results_id: resultId, is_active: true },
-        });
+        const [existing] = await this._resultsInnovationsUseRepository.query(
+          `
+            SELECT result_innovation_use_id
+            FROM results_innovations_use
+            WHERE results_id = ?
+            ORDER BY is_active DESC, result_innovation_use_id DESC
+            LIMIT 1
+          `,
+          [resultId],
+        );
 
-        if (existing) {
-          await this._resultsInnovationsUseRepository.update(
-            { results_id: resultId },
-            {
-              has_innovation_link: hasInnovationLink,
-              last_updated_by: userId,
-            },
+        if (existing?.result_innovation_use_id) {
+          await this._resultsInnovationsUseRepository.query(
+            `
+              UPDATE results_innovations_use
+              SET has_innovation_link = ?, is_active = 1, last_updated_by = ?, last_updated_date = NOW()
+              WHERE result_innovation_use_id = ?
+            `,
+            [
+              hasInnovationLink ? 1 : 0,
+              userId,
+              existing.result_innovation_use_id,
+            ],
           );
         } else {
-          await this._resultsInnovationsUseRepository.save({
-            results_id: resultId,
-            has_innovation_link: hasInnovationLink,
-            is_active: true,
-            created_by: userId,
-            last_updated_by: userId,
-          } as any);
+          await this._resultsInnovationsUseRepository.query(
+            `
+              INSERT INTO results_innovations_use
+                (results_id, has_innovation_link, is_active, created_by, last_updated_by, created_date, last_updated_date)
+              VALUES (?, ?, 1, ?, ?, NOW(), NOW())
+            `,
+            [resultId, hasInnovationLink ? 1 : 0, userId, userId],
+          );
         }
       }
     } catch (error) {
@@ -448,99 +476,27 @@ export class ContributorsPartnersService {
     }
   }
 
-  private async syncLinkedResults(
-    resultId: number,
-    desiredLinkedIds: number[],
-    userId: number,
-  ): Promise<number[]> {
-    try {
-      if (!desiredLinkedIds.length) {
-        await this._linkedResultRepository.updateLink(
-          resultId,
-          [],
-          [],
-          userId,
-          false,
-        );
-        return [];
-      }
-
-      const activeResults = await this._resultRepository.find({
-        where: {
-          id: In(desiredLinkedIds),
-          is_active: true,
-        },
-      });
-
-      const activeIds = new Set(
-        (activeResults ?? []).map((result) => Number(result.id)),
-      );
-
-      const filteredLinkedIds = desiredLinkedIds.filter((id) =>
-        activeIds.has(id),
-      );
-
-      if (!filteredLinkedIds.length) {
-        await this._linkedResultRepository.updateLink(
-          resultId,
-          [],
-          [],
-          userId,
-          false,
-        );
-        return [];
-      }
-
-      await this._linkedResultRepository.updateLink(
-        resultId,
-        filteredLinkedIds,
-        [],
-        userId,
-        false,
-      );
-
-      const existing = await this._linkedResultRepository.find({
-        where: {
-          origin_result_id: resultId,
-          linked_results_id: In(filteredLinkedIds),
-        },
-      });
-
-      const existingIds = new Set(
-        (existing ?? []).map((link) => Number(link.linked_results_id)),
-      );
-
-      const toCreate = filteredLinkedIds.filter((id) => !existingIds.has(id));
-
-      if (!toCreate.length) {
-        return filteredLinkedIds;
-      }
-
-      const newEntities = toCreate.map((id) =>
-        this._linkedResultRepository.create({
-          origin_result_id: resultId,
-          linked_results_id: id,
-          created_by: userId,
-          last_updated_by: userId,
-          is_active: true,
-        }),
-      );
-
-      await this._linkedResultRepository.save(newEntities);
-
-      return filteredLinkedIds;
-    } catch (error) {
-      throw {
-        response: { resultId, desiredLinkedIds },
-        message: 'Failed to synchronize linked results for the innovation.',
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-        error,
-      };
-    }
-  }
-
   private normalizeLinkedResultIds(
-    raw?: Array<number | string> | number | string | null,
+    raw?:
+      | Array<
+          | number
+          | string
+          | {
+              id?: number | string;
+              result_id?: number | string;
+              selected?: boolean;
+              is_active?: boolean;
+            }
+        >
+      | number
+      | string
+      | {
+          id?: number | string;
+          result_id?: number | string;
+          selected?: boolean;
+          is_active?: boolean;
+        }
+      | null,
   ): number[] {
     if (raw === null || raw === undefined) {
       return [];
@@ -549,9 +505,54 @@ export class ContributorsPartnersService {
     const values = Array.isArray(raw) ? raw : [raw];
 
     const sanitized = values
-      .map((value) => Number(value))
-      .filter((value) => Number.isFinite(value) && value > 0);
+      .map((value) => {
+        if (value === null || value === undefined) return null;
+
+        if (typeof value === 'number' || typeof value === 'string') {
+          const num = Number(value);
+          return Number.isFinite(num) && num > 0 ? num : null;
+        }
+
+        if (typeof value === 'object') {
+          const { id, result_id, selected, is_active } = value as {
+            id?: number | string;
+            result_id?: number | string;
+            selected?: boolean;
+            is_active?: boolean;
+          };
+
+          if (
+            selected === false ||
+            (selected === undefined && is_active === false)
+          ) {
+            return null;
+          }
+
+          const candidate = id ?? result_id;
+          const num = Number(candidate);
+          return Number.isFinite(num) && num > 0 ? num : null;
+        }
+
+        return null;
+      })
+      .filter((value): value is number => value !== null);
 
     return Array.from(new Set(sanitized));
+  }
+
+  private async filterActiveLinkedResults(ids: number[]): Promise<number[]> {
+    if (!ids.length) {
+      return [];
+    }
+
+    const placeholders = ids.map(() => '?').join(', ');
+    const rows = await this._resultRepository.query(
+      `SELECT id FROM result WHERE id IN (${placeholders}) AND is_active > 0`,
+      ids,
+    );
+
+    return (rows ?? [])
+      .map((row) => Number(row.id))
+      .filter((id) => Number.isFinite(id) && ids.includes(id));
   }
 }

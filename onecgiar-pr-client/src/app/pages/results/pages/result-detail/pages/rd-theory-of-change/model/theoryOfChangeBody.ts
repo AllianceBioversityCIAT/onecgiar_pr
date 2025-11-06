@@ -30,11 +30,13 @@ interface ResultTocImpactsInterface {
 interface TargetTocInterface {
   targetId: number;
   target?: string;
+  contributing_indicator?: number;
 }
 
 interface IndicatorsTocInterface {
   id: number;
   indicator_statement?: string;
+  targets: TargetTocInterface[];
 }
 
 export interface CenterInterfacesToc {
@@ -63,4 +65,5 @@ export class ResultTocResultsInterface {
   official_code: string = null;
   initiative_id: number | string = null;
   toc_level_id?: number | string = null;
+  indicators: IndicatorsTocInterface[] = new Array<IndicatorsTocInterface>();
 }

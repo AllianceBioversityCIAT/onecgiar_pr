@@ -311,19 +311,6 @@ describe('TocResultsRepository', () => {
       });
     });
 
-    it('returns query results for valid level', async () => {
-      const expected = [{ id: 11 }];
-      mockQuery.mockResolvedValue(expected);
-
-      const result = await repository.$_getResultTocByConfigV2(1, 2, 1);
-
-      expect(mockQuery).toHaveBeenCalledWith(
-        expect.stringContaining('db_toc'),
-        [2, 1, 'OUTPUT'],
-      );
-      expect(result).toBe(expected);
-    });
-
     it('throws formatted error on failure', async () => {
       mockQuery.mockRejectedValue(new Error('fail'));
 

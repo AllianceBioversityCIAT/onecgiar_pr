@@ -69,6 +69,7 @@ describe('InnovationUseFormComponent', () => {
     fixture = TestBed.createComponent(InnovationUseFormComponent);
     component = fixture.componentInstance;
     component.body = new IpsrStep1Body();
+    component.saving = false;
     fixture.detectChanges();
   });
 

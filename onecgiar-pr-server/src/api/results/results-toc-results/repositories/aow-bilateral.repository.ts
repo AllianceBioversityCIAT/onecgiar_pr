@@ -22,6 +22,7 @@ interface toc_result_row {
   number_target?: string | null;
   target_date?: number | null;
   result_type_id?: number | null;
+  result_type_name?: string | null;
   result_level_id?: number | null;
 }
 
@@ -45,6 +46,7 @@ export interface toc_result_response {
     number_target?: string | null;
     target_date?: number | null;
     result_type_id?: number | null;
+    result_type_name?: string | null;
     result_level_id?: number | null;
   }>;
 }
@@ -199,6 +201,16 @@ export class AoWBilateralRepository {
           WHEN tri.type_value LIKE '%Number of innovations (innovation development)%' THEN 7
           ELSE NULL
         END AS result_type_id,
+        (SELECT rt.name
+         FROM ${env.DB_NAME}.result_type rt
+         WHERE rt.id = CASE
+           WHEN tri.type_value LIKE '%Number of Policy%' THEN 1
+           WHEN tri.type_value LIKE '%Innovation Use%' THEN 2
+           WHEN tri.type_value LIKE '%Number of people trained (capacity sharing for development)%' THEN 5
+           WHEN tri.type_value LIKE '%Number of knowledge products%' THEN 6
+           WHEN tri.type_value LIKE '%Number of innovations (innovation development)%' THEN 7
+           ELSE NULL
+         END) AS result_type_name,
         CASE
           WHEN tr.category = 'OUTCOME' THEN 3
           WHEN tr.category = 'OUTPUT' THEN 4
@@ -219,7 +231,7 @@ export class AoWBilateralRepository {
     query += `
       JOIN ${env.DB_TOC}.toc_results_indicators tri ON tri.toc_results_id = tr.id
       JOIN ${env.DB_TOC}.toc_result_indicator_target trit ON tri.id = trit.id_indicator
-      AND CONVERT(trit.toc_result_indicator_id USING utf8mb4) = CONVERT(tri.toc_result_indicator_id USING utf8mb4)
+      AND CONVERT(trit.toc_result_indicator_id USING utf8mb4) = CONVERT(tri.related_node_id USING utf8mb4)
     `;
 
     if (options.year !== undefined) {
@@ -289,6 +301,7 @@ export class AoWBilateralRepository {
           progress_percentage: row.progress_percentage,
           result_level_id: row.result_level_id ?? null,
           result_type_id: row.result_type_id ?? null,
+          result_type_name: row.result_type_name ?? null,
         };
 
         grouped.get(row.toc_result_id)?.indicators.push(indicator);
@@ -370,7 +383,7 @@ export class AoWBilateralRepository {
         FROM ${env.DB_TOC}.toc_results tr
         JOIN ${env.DB_TOC}.toc_results_indicators tri ON tri.toc_results_id = tr.id
         JOIN ${env.DB_TOC}.toc_result_indicator_target trit ON tri.id = trit.id_indicator
-          AND CONVERT(trit.toc_result_indicator_id USING utf8mb4) = CONVERT(tri.toc_result_indicator_id USING utf8mb4)
+          AND CONVERT(trit.toc_result_indicator_id USING utf8mb4) = CONVERT(tri.related_node_id USING utf8mb4)
           ${targetYearCondition}
         LEFT JOIN ${env.DB_TOC}.toc_work_packages wp ON wp.toc_id = tr.wp_id
         WHERE

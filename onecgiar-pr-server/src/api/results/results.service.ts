@@ -701,27 +701,26 @@ export class ResultsService {
         gender_tag_level_id: resultGeneralInformation.gender_tag_id
           ? genderTag.id
           : null,
-        gender_impact_area_id: resultGeneralInformation.gender_impact_area_id
+        gender_impact_area_id: genderTagComponent
           ? genderTagComponent.id
           : null,
         climate_change_tag_level_id:
           resultGeneralInformation.climate_change_tag_id ? climateTag.id : null,
-        climate_impact_area_id: resultGeneralInformation.climate_impact_area_id
+        climate_impact_area_id: climateTagComponent
           ? climateTagComponent.id
           : null,
         nutrition_tag_level_id: resultGeneralInformation.nutrition_tag_level_id
           ? nutritionTag.id
           : null,
-        nutrition_impact_area_id:
-          resultGeneralInformation.nutrition_impact_area_id
-            ? nutritionTagComponent.id
-            : null,
+        nutrition_impact_area_id: nutritionTagComponent
+          ? nutritionTagComponent.id
+          : null,
         environmental_biodiversity_tag_level_id:
           resultGeneralInformation.environmental_biodiversity_tag_level_id
             ? environmentalBiodiversityTag.id
             : null,
         environmental_biodiversity_impact_area_id:
-          resultGeneralInformation.environmental_biodiversity_impact_area_id
+          environmentalBiodiversityTagComponent
             ? environmentalBiodiversityTagComponent.id
             : null,
         poverty_tag_level_id: resultGeneralInformation.poverty_tag_level_id

@@ -113,7 +113,9 @@ export class FieldsManagerService {
       '[innovation-dev-info]-short_title': {
         label: this.isP25() ? 'Provide a short name for the innovation' : 'Provide a short title for the innovation',
         placeholder: 'Innovation short name goes here...',
+        required: this.isP25(),
         hide: this.isP22() || !this.isAnInnovation(),
+        useColon: !this.isP25(),
         description: this.isP22()
           ? `<ul>
             <li>Innovations are new, improved, or adapted technologies or products, capacity development tools and services, and policies or institutional arrangements with high potential to contribute to positive impacts when used at scale.</li>

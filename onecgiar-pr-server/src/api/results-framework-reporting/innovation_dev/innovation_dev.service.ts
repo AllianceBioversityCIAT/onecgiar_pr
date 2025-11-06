@@ -417,18 +417,19 @@ export class InnovationDevService {
     radioButtonValue: number,
     options: OptionV2[],
   ) {
-
     const isOptionV2 = (data: OptionV2 | SubOptionV2): data is OptionV2 => {
       return (data as OptionV2).subOptions !== undefined;
     };
 
     const saveAnswer = async (data: OptionV2 | SubOptionV2) => {
       if (isOptionV2(data)) {
-        if (radioButtonValue != null && radioButtonValue != undefined) {
-          data.result_question_id = radioButtonValue;
+        if (
+          radioButtonValue != null &&
+          data.result_question_id === radioButtonValue
+        ) {
           data.answer_boolean = true;
         } else {
-          return;
+          data.answer_boolean = false;
         }
       }
 
@@ -469,6 +470,4 @@ export class InnovationDevService {
       }
     }
   }
-  
-
 }

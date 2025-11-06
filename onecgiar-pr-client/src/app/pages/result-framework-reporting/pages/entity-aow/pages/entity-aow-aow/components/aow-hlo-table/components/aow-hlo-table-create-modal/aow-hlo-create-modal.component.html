@@ -19,13 +19,14 @@
           }
         </p>
         <p class="report-result-content_left_header_title">{{ entityAowService.currentResultToReport()?.result_title }}</p>
-        <p class="report-result-content_left_header_desc">{{ entityAowService.currentResultToReport()?.indicators?.[0]?.indicator_description }}</p>
+        <p class="report-result-content_left_header_desc"><strong>Indicator name:</strong> {{ entityAowService.currentResultToReport()?.indicators?.[0]?.indicator_description }}</p>
+        <p class="report-result-content_left_header_desc"><strong>Indicator type:</strong> {{ entityAowService.currentResultToReport()?.indicators?.[0]?.type_name }}</p>
       </div>
       <div class="report-result-content_left_content">
         @if (entityAowService.currentResultToReport().indicators?.[0]?.result_type_id) {
           <div class="report-result-content_left_content_indicator">
             <span class="report-result-content_left_content_label">Indicator category: </span>
-            <span class="report-result-content_left_content_value">{{ entityAowService.currentResultToReport()?.indicators?.[0]?.type_name }}</span>
+            <span class="report-result-content_left_content_value">{{ entityAowService.currentResultToReport()?.indicators?.[0]?.result_type_name }}</span>
           </div>
         } @else {
           <div>

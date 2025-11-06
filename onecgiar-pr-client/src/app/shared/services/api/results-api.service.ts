@@ -31,7 +31,6 @@ export class ResultsApiService {
   ) {}
   apiBaseUrl = environment.apiBaseUrl + 'api/results/';
   apiBaseUrlV2 = environment.apiBaseUrl + 'v2/api/results/';
-  apiBaseUrlP25 = environment.apiBaseUrl + 'v2/api/';
   baseApiBaseUrl = environment.apiBaseUrl + 'api/';
   baseApiBaseUrlV2 = environment.apiBaseUrl + 'v2/api/';
   currentResultId: number | string = null;
@@ -436,7 +435,7 @@ export class ResultsApiService {
 
   PATCH_innovationUseP25(body) {
     return this.http
-      .patch<any>(`${this.apiBaseUrlP25}innovation-use/create/result/${this.currentResultId}`, body)
+      .patch<any>(`${this.baseApiBaseUrlV2}innovation-use/create/result/${this.currentResultId}`, body)
       .pipe(this.saveButtonSE.isSavingPipe());
   }
 
@@ -445,7 +444,7 @@ export class ResultsApiService {
   }
   GET_innovationUseP25() {
     return this.http
-      .get<any>(`${this.apiBaseUrlP25}innovation-use/get/result/${this.currentResultId}`)
+      .get<any>(`${this.baseApiBaseUrlV2}innovation-use/get/result/${this.currentResultId}`)
       .pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
@@ -528,6 +527,10 @@ export class ResultsApiService {
 
   GET_clarisaInnovationReadinessLevels() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/innovation-readiness-levels/get/all`);
+  }
+
+  GET_clarisaInnovationUseLevels() {
+    return this.http.get<any>(`${environment.apiBaseUrl}v2/clarisa/innovation-use-levels`);
   }
 
   PATCH_innovationDev(body) {
@@ -715,6 +718,10 @@ export class ResultsApiService {
 
   GET_greenChecksByResultId() {
     return this.http.get<any>(`${this.apiBaseUrl}results-validation/get/green-checks/${this.currentResultId}`);
+  }
+
+  GET_p25GreenChecksByResultId() {
+    return this.http.get<any>(`${this.baseApiBaseUrlV2}results/results-validation/get/green-checks/${this.currentResultId}`);
   }
 
   PATCH_greenChecksByResultId() {
