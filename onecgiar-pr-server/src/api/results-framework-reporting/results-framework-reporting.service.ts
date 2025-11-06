@@ -1,6 +1,7 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { In, IsNull, Not } from 'typeorm';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
+import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
 import { ClarisaGlobalUnitRepository } from '../../clarisa/clarisa-global-unit/clarisa-global-unit.repository';
 import { YearRepository } from '../results/years/year.repository';
 import { HandlersError } from '../../shared/handlers/error.utils';
@@ -31,6 +32,7 @@ export class ResultsFrameworkReportingService {
 
   constructor(
     private readonly _clarisaInitiativesRepository: ClarisaInitiativesRepository,
+    private readonly _roleByUserRepository: RoleByUserRepository,
     private readonly _clarisaGlobalUnitRepository: ClarisaGlobalUnitRepository,
     private readonly _yearRepository: YearRepository,
     private readonly _handlersError: HandlersError,
@@ -1188,6 +1190,25 @@ export class ResultsFrameworkReportingService {
         { role_id: number | null; role_name: string | null }
       >();
 
+      // Get user's general application roles (roles 1 or 2 where initiative_id is null)
+      let userGeneralRole: number | null = null;
+      if (Number.isFinite(userId)) {
+        const generalRoles = await this._roleByUserRepository.find({
+          where: {
+            user: userId,
+            active: true,
+            initiative_id: IsNull(),
+            action_area_id: IsNull(),
+          },
+          select: ['role'],
+        });
+
+        const appRole = generalRoles.find((r) => r.role === 1 || r.role === 2);
+        if (appRole) {
+          userGeneralRole = appRole.role;
+        }
+      }
+
       if (Number.isFinite(userId) && uniqueResultIds.length > 0) {
         const roleResults = await this._resultRepository.getUserRolesForResults(
           userId,
@@ -1219,6 +1240,9 @@ export class ResultsFrameworkReportingService {
           ? rolesByResult.get(numericResultId)
           : undefined;
 
+        // Use specific role for result, or fallback to general application role
+        const finalRoleId = roleInfo?.role_id ?? userGeneralRole;
+
         return {
           result_id: Number.isFinite(numericResultId)
             ? numericResultId
@@ -1228,7 +1252,7 @@ export class ResultsFrameworkReportingService {
           status_name: contrib.obj_results?.obj_status?.status_name,
           version_id: contrib.obj_results?.version_id,
           status_id: +contrib.obj_results?.status_id,
-          role_id: roleInfo?.role_id ?? null,
+          role_id: finalRoleId,
         };
       });
 
