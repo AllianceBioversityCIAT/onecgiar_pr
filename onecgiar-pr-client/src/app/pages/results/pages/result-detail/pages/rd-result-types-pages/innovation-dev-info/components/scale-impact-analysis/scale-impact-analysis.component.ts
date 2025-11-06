@@ -53,9 +53,4 @@ export class ScaleImpactAnalysisComponent {
     });
   }
 
-  onWhyChange(value: string) {
-    if (this.selectedOption) {
-      this.selectedOption.answer_text = value;
-    }
-  }
 }
