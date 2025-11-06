@@ -63,7 +63,7 @@ export class resultValidationRepository
       return `CALL validate_sections_mapped_batch(${tempResultId}, '${sectionsString}');`;
     };
 
-    switch (result?.result_level_id) {
+    switch (result?.result_type_id) {
       case ResultTypeEnum.INNOVATION_DEVELOPMENT:
         sections.push(ValidationMapsEnum.INNOVATION_DEV);
         break;
