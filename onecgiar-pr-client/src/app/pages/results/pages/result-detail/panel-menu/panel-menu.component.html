@@ -34,7 +34,7 @@
         (validateMember(this.api.dataControlSE?.myInitiativesList) !== 6 && this.dataControlSE?.currentResult?.inQA) ||
         this.api.rolesSE.isAdmin
       ">
-      <div class="ai-review-button">
+      <div class="ai-review-button" (click)="this.aiReviewSE.POST_createSession()">
         <img src="assets/icons/stars.png" alt="submit-result" />
         AI Review
       </div>
