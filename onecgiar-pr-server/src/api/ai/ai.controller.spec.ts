@@ -59,7 +59,11 @@ describe('AiController', () => {
   it('creates a session', async () => {
     const dto = { result_id: 1, user_id: 2 };
     const expected = { id: 10 };
-    service.createSession.mockResolvedValue(expected);
+    service.createSession.mockResolvedValue({
+      response: expected,
+      message: 'Session created successfully',
+      status: 201,
+    });
 
     await expect(controller.createSession(dto, user)).resolves.toEqual(
       expected,
@@ -69,7 +73,11 @@ describe('AiController', () => {
 
   it('closes a session', async () => {
     const expected = { id: 1, closed_at: new Date() };
-    service.closeSession.mockResolvedValue(expected);
+    service.closeSession.mockResolvedValue({
+      response: expected,
+      message: 'Session closed successfully',
+      status: 200,
+    });
 
     await expect(controller.closeSession(1, user)).resolves.toEqual(expected);
     expect(service.closeSession).toHaveBeenCalledWith(1, user);
@@ -78,7 +86,11 @@ describe('AiController', () => {
   it('stores proposals for a session', async () => {
     const dto = { proposals: [] };
     const expected = [{ id: 1 }];
-    service.createProposals.mockResolvedValue(expected);
+    service.createProposals.mockResolvedValue({
+      response: expected,
+      message: 'Proposals created successfully',
+      status: 201,
+    });
 
     await expect(controller.createProposals(5, dto)).resolves.toEqual(expected);
     expect(service.createProposals).toHaveBeenCalledWith(5, dto);
@@ -86,7 +98,11 @@ describe('AiController', () => {
 
   it('retrieves proposals', async () => {
     const expected = [{ id: 1 }];
-    service.getProposals.mockResolvedValue(expected);
+    service.getProposals.mockResolvedValue({
+      response: expected,
+      message: 'Proposals retrieved successfully',
+      status: 200,
+    });
 
     await expect(controller.getProposals(7)).resolves.toEqual(expected);
     expect(service.getProposals).toHaveBeenCalledWith(7);
@@ -100,7 +116,11 @@ describe('AiController', () => {
       field_name: AiReviewEventFieldName.TITLE,
     };
     const expected = { id: 2 };
-    service.createEvent.mockResolvedValue(expected);
+    service.createEvent.mockResolvedValue({
+      response: expected,
+      message: 'Event created successfully',
+      status: 201,
+    });
 
     await expect(controller.createEvent(dto, user)).resolves.toEqual(expected);
     expect(service.createEvent).toHaveBeenCalledWith(dto, user);
@@ -108,7 +128,11 @@ describe('AiController', () => {
 
   it('saves final changes', async () => {
     const dto = { fields: [], user_id: 1 };
-    service.saveChanges.mockResolvedValue(undefined);
+    service.saveChanges.mockResolvedValue({
+      response: {},
+      message: 'Changes saved successfully',
+      status: 200,
+    });
 
     await controller.saveChanges(3, dto, user);
 
@@ -117,7 +141,11 @@ describe('AiController', () => {
 
   it('returns AI state for a result', async () => {
     const expected = { result_id: 1, fields: [] };
-    service.getResultState.mockResolvedValue(expected);
+    service.getResultState.mockResolvedValue({
+      response: expected,
+      message: 'Result state retrieved successfully',
+      status: 200,
+    });
 
     await expect(controller.getResultState(1)).resolves.toEqual(expected);
     expect(service.getResultState).toHaveBeenCalledWith(1);
@@ -125,7 +153,11 @@ describe('AiController', () => {
 
   it('returns stats for a result', async () => {
     const expected = { result_id: 1, total_sessions: 0 };
-    service.getResultStats.mockResolvedValue(expected);
+    service.getResultStats.mockResolvedValue({
+      response: expected,
+      message: 'Result statistics retrieved successfully',
+      status: 200,
+    });
 
     await expect(controller.getResultStats(1)).resolves.toEqual(expected);
     expect(service.getResultStats).toHaveBeenCalledWith(1);

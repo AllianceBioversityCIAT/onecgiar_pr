@@ -246,3 +246,18 @@ export class UsageStatsResponseDto {
   })
   last_session_at?: Date;
 }
+
+export class ResultContextFieldDto {
+  @ApiProperty({
+    description: 'The field name',
+    example: 'title',
+  })
+  field_name: string;
+
+  @ApiProperty({
+    description: 'The original text from the result field',
+    example: 'Original title text',
+    nullable: true,
+  })
+  original_text?: string;
+}

@@ -24,6 +24,7 @@ import {
   EventResponseDto,
   ResultStateResponseDto,
   UsageStatsResponseDto,
+  ResultContextFieldDto,
 } from './dto/responses';
 import { CreateEventDto } from './dto/create-event.dto';
 import { CreateProposalsDto } from './dto/create-proposals.dto';
@@ -36,6 +37,48 @@ import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 @Controller()
 export class AiController {
   constructor(private readonly aiService: AiService) {}
+
+  @Get('result-context/:resultId')
+  @ApiOperation({
+    summary: 'Get result context for AI processing',
+    description:
+      'Retrieves the current text content of result fields that can be improved by AI. Returns title and description for all results, plus short_title for Innovation Development results.',
+  })
+  @ApiOkResponse({
+    description: 'Result context retrieved successfully',
+    type: [ResultContextFieldDto],
+    example: [
+      {
+        field_name: 'title',
+        original_text: 'Original title text',
+      },
+      {
+        field_name: 'description',
+        original_text: 'Original description text',
+      },
+      {
+        field_name: 'short_title',
+        original_text: 'Original short title text',
+      },
+    ],
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Result not found',
+  })
+  @ApiParam({
+    name: 'resultId',
+    description: 'ID of the result to get context for',
+    type: Number,
+    example: 123,
+  })
+  async getResultContext(@Param('resultId', ParseIntPipe) resultId: number) {
+    const result = await this.aiService.getResultContext(resultId);
+    if (result.status >= 400) {
+      throw result;
+    }
+    return result.response;
+  }
 
   @Post('sessions')
   @HttpCode(HttpStatus.CREATED)
@@ -67,8 +110,12 @@ export class AiController {
   async createSession(
     @Body() createSessionDto: CreateSessionDto,
     @UserToken() user: TokenDto,
-  ): Promise<SessionResponseDto> {
-    return this.aiService.createSession(createSessionDto, user);
+  ) {
+    const result = await this.aiService.createSession(createSessionDto, user);
+    if (result.status >= 400) {
+      throw result;
+    }
+    return result.response;
   }
 
   @Post('sessions/:sessionId/close')
@@ -94,8 +141,12 @@ export class AiController {
   async closeSession(
     @Param('sessionId', ParseIntPipe) sessionId: number,
     @UserToken() user: TokenDto,
-  ): Promise<SessionResponseDto> {
-    return this.aiService.closeSession(sessionId, user);
+  ) {
+    const result = await this.aiService.closeSession(sessionId, user);
+    if (result.status >= 400) {
+      throw result;
+    }
+    return result.response;
   }
 
   @Post('sessions/:sessionId/proposals')
@@ -147,8 +198,15 @@ export class AiController {
   async createProposals(
     @Param('sessionId', ParseIntPipe) sessionId: number,
     @Body() createProposalsDto: CreateProposalsDto,
-  ): Promise<ProposalResponseDto[]> {
-    return this.aiService.createProposals(sessionId, createProposalsDto);
+  ) {
+    const result = await this.aiService.createProposals(
+      sessionId,
+      createProposalsDto,
+    );
+    if (result.status >= 400) {
+      throw result;
+    }
+    return result.response;
   }
 
   @Get('sessions/:sessionId/proposals')
@@ -171,10 +229,12 @@ export class AiController {
     type: Number,
     example: 1,
   })
-  async getProposals(
-    @Param('sessionId', ParseIntPipe) sessionId: number,
-  ): Promise<ProposalResponseDto[]> {
-    return this.aiService.getProposals(sessionId);
+  async getProposals(@Param('sessionId', ParseIntPipe) sessionId: number) {
+    const result = await this.aiService.getProposals(sessionId);
+    if (result.status >= 400) {
+      throw result;
+    }
+    return result.response;
   }
 
   @Post('events')
@@ -221,8 +281,12 @@ export class AiController {
   async createEvent(
     @Body() createEventDto: CreateEventDto,
     @UserToken() user: TokenDto,
-  ): Promise<EventResponseDto> {
-    return this.aiService.createEvent(createEventDto, user);
+  ) {
+    const result = await this.aiService.createEvent(createEventDto, user);
+    if (result.status >= 400) {
+      throw result;
+    }
+    return result.response;
   }
 
   @Post('sessions/:sessionId/save')
@@ -275,8 +339,16 @@ export class AiController {
     @Param('sessionId', ParseIntPipe) sessionId: number,
     @Body() saveChangesDto: SaveChangesDto,
     @UserToken() user: TokenDto,
-  ): Promise<void> {
-    return this.aiService.saveChanges(sessionId, saveChangesDto, user);
+  ) {
+    const result = await this.aiService.saveChanges(
+      sessionId,
+      saveChangesDto,
+      user,
+    );
+    if (result.status >= 400) {
+      throw result;
+    }
+    return result.response;
   }
 
   @Get('results/:resultId/state')
@@ -295,10 +367,12 @@ export class AiController {
     type: Number,
     example: 123,
   })
-  async getResultState(
-    @Param('resultId', ParseIntPipe) resultId: number,
-  ): Promise<ResultStateResponseDto> {
-    return this.aiService.getResultState(resultId);
+  async getResultState(@Param('resultId', ParseIntPipe) resultId: number) {
+    const result = await this.aiService.getResultState(resultId);
+    if (result.status >= 400) {
+      throw result;
+    }
+    return result.response;
   }
 
   @Get('results/:resultId/stats')
@@ -317,9 +391,11 @@ export class AiController {
     type: Number,
     example: 123,
   })
-  async getResultStats(
-    @Param('resultId', ParseIntPipe) resultId: number,
-  ): Promise<UsageStatsResponseDto> {
-    return this.aiService.getResultStats(resultId);
+  async getResultStats(@Param('resultId', ParseIntPipe) resultId: number) {
+    const result = await this.aiService.getResultStats(resultId);
+    if (result.status >= 400) {
+      throw result;
+    }
+    return result.response;
   }
 }
