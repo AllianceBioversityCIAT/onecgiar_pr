@@ -34,6 +34,10 @@ import { ResultQaedLog } from '../../result-qaed/entities/result-qaed-log.entity
 import { AdUser } from '../../ad_users/entity/ad-user.entity';
 import { ImpactAreasScoresComponent } from '../impact_areas_scores_components/entities/impact_areas_scores_component.entity';
 import { ResultsByProjects } from '../results_by_projects/entities/results_by_projects.entity';
+import { AiReviewSession } from '../../ai/entities/ai-review-session.entity';
+import { AiReviewEvent } from '../../ai/entities/ai-review-event.entity';
+import { ResultFieldRevision } from '../../ai/entities/result-field-revision.entity';
+import { ResultFieldAiState } from '../../ai/entities/result-field-ai-state.entity';
 
 export enum SourceEnum {
   Result = 'Result',
@@ -564,4 +568,16 @@ export class Result {
 
   @OneToMany(() => ResultsByProjects, (rbp) => rbp.obj_result_project)
   obj_result_by_project: ResultsByProjects[];
+
+  @OneToMany(() => AiReviewSession, (session) => session.obj_result)
+  obj_ai_review_sessions: AiReviewSession[];
+
+  @OneToMany(() => AiReviewEvent, (event) => event.obj_result)
+  obj_ai_review_events: AiReviewEvent[];
+
+  @OneToMany(() => ResultFieldRevision, (revision) => revision.obj_result)
+  obj_result_field_revisions: ResultFieldRevision[];
+
+  @OneToMany(() => ResultFieldAiState, (state) => state.obj_result)
+  obj_result_field_ai_states: ResultFieldAiState[];
 }
