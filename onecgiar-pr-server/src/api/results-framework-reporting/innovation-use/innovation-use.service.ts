@@ -306,24 +306,23 @@ export class InnovationUseService {
           continue;
         }
 
-        if (!el?.institution_sub_type_id && (el?.id == null || el.id === undefined)) {
+        if (
+          !el?.institution_types_id &&
+          (el?.id == null || el.id === undefined)
+        ) {
           continue;
         }
 
         let ite: ResultsByInstitutionType = null;
-        if (el?.institution_sub_type_id == null && el?.institution_types_id) {
-          el.institution_sub_type_id = el?.institution_types_id;
-        }
         if (el?.id) {
-          el.institution_sub_type_id = el?.institution_types_id;
           ite = await this._resultByIntitutionsTypeRepository.findOne({
             where: { id: el.id, is_active: true },
           });
-        } else if (el?.institution_sub_type_id != 78) {
+        } else if (el?.institution_types_id != 78) {
           ite =
             await this._resultByIntitutionsTypeRepository.getNewResultByInstitutionTypeExists(
               resultId,
-              el.institution_sub_type_id,
+              el.institution_types_id,
               5,
             );
         }
@@ -428,7 +427,7 @@ export class InnovationUseService {
       created_by: user,
       last_updated_by: user,
       other_institution: this.isNullData(el?.other_institution),
-      institution_types_id: this.isNullData(el.institution_sub_type_id),
+      institution_types_id: this.isNullData(el.institution_type_id),
       graduate_students: this.isNullData(el?.graduate_students),
       institution_roles_id: 5,
       how_many: el?.how_many,
@@ -475,7 +474,6 @@ export class InnovationUseService {
       });
 
       actorsData.forEach((el) => {
-
         if (el.sex_and_age_disaggregation == true) {
           return;
         }
