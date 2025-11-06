@@ -306,18 +306,16 @@ export class InnovationUseService {
           continue;
         }
 
-        if (!el?.institution_sub_type_id) {
+        if (!el?.institution_sub_type_id && (el?.id == null || el.id === undefined)) {
           continue;
         }
 
         let ite: ResultsByInstitutionType = null;
-        if (el?.id) {
-          ite = await this._resultByIntitutionsTypeRepository.findOne({
-            where: { id: el.id, is_active: true },
-          });
+        if (el?.institution_sub_type_id == null && el?.institution_types_id) {
+          el.institution_sub_type_id = el?.institution_types_id;
         }
-
         if (el?.id) {
+          el.institution_sub_type_id = el?.institution_types_id;
           ite = await this._resultByIntitutionsTypeRepository.findOne({
             where: { id: el.id, is_active: true },
           });
@@ -330,8 +328,6 @@ export class InnovationUseService {
             );
         }
 
-        console.log('ite', ite);
-        console.log('el', el);
         if (ite) {
           await this._resultByIntitutionsTypeRepository.update(
             ite.id,
@@ -438,7 +434,7 @@ export class InnovationUseService {
       how_many: el?.how_many,
       addressing_demands: this.isNullData(el?.addressing_demands),
       section_id: this.isNullData(section),
-      is_active: el?.is_active,
+      is_active: true,
     };
   }
 
@@ -479,6 +475,11 @@ export class InnovationUseService {
       });
 
       actorsData.forEach((el) => {
+
+        if (el.sex_and_age_disaggregation == true) {
+          return;
+        }
+
         const men = Number(el.men) || 0;
         const women = Number(el.women) || 0;
         const men_youth = Number(el.men_youth) || 0;

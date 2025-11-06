@@ -37,8 +37,8 @@ export class ResultQuestionsService {
     try {
       const scaling = await this.responsibleInnovationAndScalingV2(resultId);
       const intellectual = await this.intellectualPropertyRightsV2(resultId);
-      const innovation = await this.innovationTeamDiversity(resultId);
-      const megatrends = await this.getMegatrends(resultId);
+      const innovation = await this.innovationTeamDiversityV2(resultId);
+      const megatrends = await this.getMegatrendsV2(resultId);
 
       return {
         response: {
@@ -151,6 +151,34 @@ export class ResultQuestionsService {
     }
   }
 
+  async getMegatrendsV2(resultId: number) {
+    try {
+      const megatrendQuestion = await this._resultQuestionRepository.findOne({
+        where: { result_question_id: 125 },
+      });
+
+      const megatrendQuestionChildren =
+        await this._resultQuestionRepository.find({
+          where: {
+            question_level: 2,
+            parent_question_id: megatrendQuestion.result_question_id,
+          },
+        });
+
+      const megatrendAnswers = await this.mapOptions(
+        resultId,
+        megatrendQuestionChildren,
+      );
+
+      return {
+        ...megatrendQuestion,
+        options: megatrendAnswers,
+      };
+    } catch (error) {
+      return this._handlerError.returnErrorRes({ error, debug: true });
+    }
+  }
+
   private _mapMacroOptions(resultId: number, options: any[]) {
     return Promise.all(
       options.map(async (option) => {
@@ -238,9 +266,10 @@ export class ResultQuestionsService {
     try {
       const topLevelQuestions = await this._resultQuestionRepository.find({
         where: {
-          result_question_id: 1,
+          result_question_id: 77,
           question_level: 1,
           result_type_id: 7,
+          version: 'P25',
         },
       });
 
@@ -250,6 +279,7 @@ export class ResultQuestionsService {
             where: {
               question_level: 2,
               parent_question_id: topLevelQuestion.result_question_id,
+              version: 'P25',
             },
           });
 
@@ -260,6 +290,7 @@ export class ResultQuestionsService {
                   where: {
                     question_level: 3,
                     parent_question_id: childQuestion.result_question_id,
+                    version: 'P25',
                   },
                 },
               );
@@ -352,9 +383,10 @@ export class ResultQuestionsService {
     try {
       const topLevelQuestions = await this._resultQuestionRepository.find({
         where: {
-          result_question_id: 26,
+          result_question_id: 100,
           question_level: 1,
           result_type_id: 7,
+          version: 'P25',
         },
       });
 
@@ -413,6 +445,70 @@ export class ResultQuestionsService {
           result_question_id: 38,
           question_level: 1,
           result_type_id: 7,
+        },
+      });
+
+      const innovationWithOptions = await Promise.all(
+        topLevelQuestions.map(async (topLevelQuestion) => {
+          const childQuestions = await this._resultQuestionRepository.find({
+            where: {
+              question_level: 2,
+              parent_question_id: topLevelQuestion.result_question_id,
+            },
+          });
+
+          const questionsWithOptions = await Promise.all(
+            childQuestions.map(async (childQuestion) => {
+              const answers = await this.getAnswersForQuestion(
+                resultId,
+                childQuestion.result_question_id,
+              );
+              const questionOptions = await this._resultQuestionRepository.find(
+                {
+                  where: {
+                    question_level: 3,
+                    parent_question_id: childQuestion.result_question_id,
+                  },
+                },
+              );
+
+              const optionsWithAnswers = await this._mapMacroOptions(
+                resultId,
+                questionOptions,
+              );
+
+              return {
+                ...childQuestion,
+                answer_boolean:
+                  answers[0] === undefined ? null : answers[0].answer_boolean,
+                answer_text:
+                  answers[0] === undefined ? null : answers[0].answer_text,
+                subOptions: optionsWithAnswers,
+              };
+            }),
+          );
+
+          return {
+            ...topLevelQuestion,
+            options: questionsWithOptions,
+          };
+        }),
+      );
+
+      return innovationWithOptions;
+    } catch (error) {
+      return this._handlerError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async innovationTeamDiversityV2(resultId: number) {
+    try {
+      const topLevelQuestions = await this._resultQuestionRepository.find({
+        where: {
+          result_question_id: 112,
+          question_level: 1,
+          result_type_id: 7,
+          version: 'P25',
         },
       });
 
