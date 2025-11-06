@@ -311,6 +311,9 @@ export class InnovationUseService {
         }
 
         let ite: ResultsByInstitutionType = null;
+        if (el?.institution_sub_type_id == null && el?.institution_types_id) {
+          el.institution_sub_type_id = el?.institution_types_id;
+        }
         if (el?.id) {
           el.institution_sub_type_id = el?.institution_types_id;
           ite = await this._resultByIntitutionsTypeRepository.findOne({
@@ -472,6 +475,11 @@ export class InnovationUseService {
       });
 
       actorsData.forEach((el) => {
+
+        if (el.sex_and_age_disaggregation == true) {
+          return;
+        }
+
         const men = Number(el.men) || 0;
         const women = Number(el.women) || 0;
         const men_youth = Number(el.men_youth) || 0;
