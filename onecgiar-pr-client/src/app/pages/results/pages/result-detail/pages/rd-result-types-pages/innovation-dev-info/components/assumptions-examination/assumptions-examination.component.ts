@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, computed, signal } from '@angular/core';
 import { InnovationDevInfoBody } from '../../model/innovationDevInfoBody';
 import { InnovationDevelopmentQuestions } from '../../model/InnovationDevelopmentQuestions.model';
 import { InnovationDevInfoUtilsService } from '../../services/innovation-dev-info-utils.service';
@@ -13,6 +13,11 @@ export class AssumptionsExaminationComponent {
   @Input() body = new InnovationDevInfoBody();
   @Input() options: InnovationDevelopmentQuestions;
 
+  isYesActions = signal<boolean>(false);
+  isNoActions = signal<boolean>(false);
+  isNotNecessary = signal<boolean>(false);
+  isTooEarly = signal<boolean>(false);
+
   constructor(public innovationDevInfoUtilsSE: InnovationDevInfoUtilsService) {}
 
   get q3() {
@@ -24,36 +29,24 @@ export class AssumptionsExaminationComponent {
     return this.q3?.options?.find((opt: any) => opt?.result_question_id == id);
   }
 
-  get isYesActions(): boolean {
-    return this.selectedOption?.question_text === 'Yes, the following actions have been taken:';
-  }
-
-  get isNoActions(): boolean {
-    return this.selectedOption?.question_text === 'No actions taken yet';
-  }
-
-  get isNotNecessary(): boolean {
-    return this.selectedOption?.question_text === 'Not considered necessary for this innovation';
-  }
-
-  get isTooEarly(): boolean {
-    return this.selectedOption?.question_text === 'It is too early to determine this';
-  }
-
-  get showWhyInput(): boolean {
-    return this.isYesActions || this.isNoActions || this.isNotNecessary;
-  }
+  showWhyInput = computed<boolean>(() => this.isYesActions() || this.isNoActions() || this.isNotNecessary());
 
   get isComplete(): boolean {
     if (!this.q3?.['radioButtonValue']) return false;
-    if (this.showWhyInput) return !!this.selectedOption?.answer_text;
+    if (this.showWhyInput()) return !!this.selectedOption?.answer_text;
     return true;
   }
 
   handleSelectionChange() {
     this.innovationDevInfoUtilsSE.mapBoolean(this.q3);
     const selected = this.selectedOption;
-    const requiresWhy = this.showWhyInput;
+    const label = selected?.question_text || '';
+    this.isYesActions.set(label === 'Yes, the following actions have been taken:');
+    this.isNoActions.set(label === 'No actions taken yet');
+    this.isNotNecessary.set(label === 'Not considered necessary for this innovation');
+    this.isTooEarly.set(label === 'It is too early to determine this');
+
+    const requiresWhy = this.showWhyInput();
     if (selected && !requiresWhy) {
       selected.answer_text = null;
     }
