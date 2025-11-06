@@ -202,8 +202,6 @@ export class RdContributorsAndPartnersService implements OnDestroy {
         this.partnersBody.bilateral_projects.forEach(project => {
           project.fullName = project.obj_clarisa_project.fullName;
         });
-
-        console.log('this.partnersBody', this.partnersBody);
       },
       error: _err => {
         this.getConsumed.set(true);

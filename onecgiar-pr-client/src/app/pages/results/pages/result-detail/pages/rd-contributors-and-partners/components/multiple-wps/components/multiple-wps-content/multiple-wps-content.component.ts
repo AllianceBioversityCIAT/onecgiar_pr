@@ -38,7 +38,6 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   });
 
   onChangesActiveTab = effect(() => {
-    console.log('onChangesActiveTab');
     this.getIndicatorsList();
   });
 
