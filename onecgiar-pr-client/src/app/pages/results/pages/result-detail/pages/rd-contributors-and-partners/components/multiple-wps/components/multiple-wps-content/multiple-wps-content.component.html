@@ -17,7 +17,7 @@
       @switch (activeTab.toc_level_id) {
         @case (3) {
           <app-pr-select
-            [options]="eoiList"
+            [options]="eoiList()"
             [label]="this.secondFieldLabel()"
             [editable]="editable"
             [disabled]="(resultLevelId === 1 && false) || !editable"
@@ -25,12 +25,12 @@
             optionValue="toc_result_id"
             placeholder="Select outcome"
             [(ngModel)]="activeTab.toc_result_id"
-            (ngModelChange)="validateSelectedOptionEOI(); getIndicatorsList()">
+            (ngModelChange)="getIndicatorsList()">
           </app-pr-select>
         }
         @case (2) {
           <app-pr-select
-            [options]="outcomeList"
+            [options]="outcomeList()"
             [label]="this.secondFieldLabel()"
             [editable]="editable"
             [disabled]="(resultLevelId === 1 && false) || !editable"
@@ -39,12 +39,12 @@
             optionValue="toc_result_id"
             placeholder="Select outcome"
             [(ngModel)]="activeTab.toc_result_id"
-            (ngModelChange)="validateSelectedOptionOutCome(); getIndicatorsList()">
+            (ngModelChange)="getIndicatorsList()">
           </app-pr-select>
         }
         @case (1) {
           <app-pr-select
-            [options]="outputList"
+            [options]="outputList()"
             [label]="this.secondFieldLabel()"
             optionLabel="extraInformation"
             optionValue="toc_result_id"
@@ -53,7 +53,7 @@
             placeholder="Select output"
             [(ngModel)]="activeTab.toc_result_id"
             [extraInformation]="true"
-            (ngModelChange)="validateSelectedOptionOutPut(); getIndicatorsList()">
+            (ngModelChange)="getIndicatorsList()">
           </app-pr-select>
         }
       }

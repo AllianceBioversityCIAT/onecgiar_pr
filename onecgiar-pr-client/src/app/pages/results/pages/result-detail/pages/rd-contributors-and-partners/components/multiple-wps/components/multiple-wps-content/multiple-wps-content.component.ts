@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, computed, effect, inject, signal } from '@angular/core';
+import { Component, Input, OnChanges, WritableSignal, computed, effect, inject, signal } from '@angular/core';
 import { MappedResultsModalServiceService } from '../mapped-results-modal/mapped-results-modal-service.service';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 import { TocInitiativeOutcomeListsService } from '../../../../../rd-theory-of-change/components/toc-initiative-outcome-section/services/toc-initiative-outcome-lists.service';
@@ -20,9 +20,9 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   @Input() showMultipleWPsContent: boolean = true;
   @Input() initiative: any;
   @Input() allTabsCreated = [];
-  @Input() outcomeList = [];
-  @Input() outputList = [];
-  @Input() eoiList = [];
+  @Input() outcomeList: WritableSignal<any[]>;
+  @Input() outputList: WritableSignal<any[]>;
+  @Input() eoiList: WritableSignal<any[]>;
   @Input() activeTabSignal: any;
 
   @Input() selectedOptionsOutput = [];
@@ -73,13 +73,13 @@ export class CPMultipleWPsContentComponent implements OnChanges {
     console.log(this.activeTab.toc_level_id);
     switch (this.activeTabSignal()?.toc_level_id) {
       case 3:
-        filterIndicators(this.eoiList);
+        filterIndicators(this.eoiList());
         break;
       case 2:
-        filterIndicators(this.outcomeList);
+        filterIndicators(this.outcomeList());
         break;
       case 1:
-        filterIndicators(this.outputList);
+        filterIndicators(this.outputList());
         break;
     }
     this.hideIndicators();
@@ -130,8 +130,8 @@ export class CPMultipleWPsContentComponent implements OnChanges {
 
   validateSelectedOptionOutPut(tab?: any) {
     const selectedOption = tab
-      ? this.outputList.find(item => item.toc_result_id === tab.toc_result_id)
-      : this.outputList.find(item => item.toc_result_id === this.activeTab?.toc_result_id);
+      ? this.outputList().find(item => item.toc_result_id === tab.toc_result_id)
+      : this.outputList().find(item => item.toc_result_id === this.activeTab?.toc_result_id);
 
     if (!selectedOption) return;
 
@@ -140,19 +140,21 @@ export class CPMultipleWPsContentComponent implements OnChanges {
     this.selectedOptionsOutput = this.selectedOptionsOutput.filter(item => item.tabId !== selectedOption.tabId);
     this.selectedOptionsOutput.push(selectedOption);
 
-    this.outputList = this.outputList.map(item => {
-      const finded = this.selectedOptionsOutput.find(
-        option => option.tabId !== this.activeTab.uniqueId && option.work_package_id === item.work_package_id
-      );
-      item.disabledd = !!finded;
-      return item;
+    this.outputList.update(prev => {
+      return prev.map(item => {
+        const finded = this.selectedOptionsOutput.find(
+          option => option.tabId !== this.activeTab.uniqueId && option.work_package_id === item.work_package_id
+        );
+        item.disabledd = !!finded;
+        return item;
+      });
     });
   }
 
   validateSelectedOptionOutCome(tab?: any) {
     const selectedOption = tab
-      ? this.outcomeList.find(item => item.toc_result_id === tab.toc_result_id)
-      : this.outcomeList.find(item => item.toc_result_id === this.activeTab?.toc_result_id);
+      ? this.outcomeList().find(item => item.toc_result_id === tab.toc_result_id)
+      : this.outcomeList().find(item => item.toc_result_id === this.activeTab?.toc_result_id);
 
     if (!selectedOption) return;
 
@@ -161,19 +163,21 @@ export class CPMultipleWPsContentComponent implements OnChanges {
     this.selectedOptionsOutcome = this.selectedOptionsOutcome.filter(item => item.tabId !== selectedOption.tabId);
     this.selectedOptionsOutcome.push(selectedOption);
 
-    this.outcomeList = this.outcomeList.map(item => {
-      const finded = this.selectedOptionsOutcome.find(
-        option => option.tabId !== this.activeTab.uniqueId && option.work_package_id === item.work_package_id
-      );
-      item.disabledd = !!finded;
-      return item;
+    this.outcomeList.update(prev => {
+      return prev.map(item => {
+        const finded = this.selectedOptionsOutcome.find(
+          option => option.tabId !== this.activeTab.uniqueId && option.work_package_id === item.work_package_id
+        );
+        item.disabledd = !!finded;
+        return item;
+      });
     });
   }
 
   validateSelectedOptionEOI(tab?: any) {
     const selectedOption = tab
-      ? this.eoiList.find(item => item.toc_result_id === tab.toc_result_id)
-      : this.eoiList.find(item => item.toc_result_id === this.activeTab?.toc_result_id);
+      ? this.eoiList().find(item => item.toc_result_id === tab.toc_result_id)
+      : this.eoiList().find(item => item.toc_result_id === this.activeTab?.toc_result_id);
 
     if (!selectedOption) return;
 
@@ -182,10 +186,12 @@ export class CPMultipleWPsContentComponent implements OnChanges {
     this.selectedOptionsEOI = this.selectedOptionsEOI.filter(item => item.tabId !== selectedOption.tabId);
     this.selectedOptionsEOI.push(selectedOption);
 
-    this.eoiList = this.eoiList.map(item => {
-      const finded = this.selectedOptionsEOI.find(option => option.toc_result_id === item.toc_result_id);
-      item.disabledd = !!finded;
-      return item;
+    this.eoiList.update(prev => {
+      return prev.map(item => {
+        const finded = this.selectedOptionsEOI.find(option => option.toc_result_id === item.toc_result_id);
+        item.disabledd = !!finded;
+        return item;
+      });
     });
   }
 

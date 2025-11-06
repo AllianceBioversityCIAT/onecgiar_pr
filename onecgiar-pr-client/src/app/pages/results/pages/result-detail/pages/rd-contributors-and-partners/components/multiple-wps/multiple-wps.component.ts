@@ -43,9 +43,9 @@ export class CPMultipleWPsComponent implements OnChanges {
   activeTabIndex: number = 0;
 
   currentPlannedResult = null;
-  outcomeList = [];
-  outputList = [];
-  eoiList = [];
+  outcomeList = signal<any[]>([]);
+  outputList = signal<any[]>([]);
+  eoiList = signal<any[]>([]);
   selectedOptionsOutput = [];
   selectedOptionsOutcome = [];
   selectedOptionsEOI = [];
@@ -104,10 +104,10 @@ export class CPMultipleWPsComponent implements OnChanges {
       )
       .subscribe({
         next: ({ response }) => {
-          this.outputList = response;
+          this.outputList.set(response);
         },
         error: err => {
-          this.outputList = [];
+          this.outputList.set([]);
           console.error(err);
         }
       });
@@ -123,10 +123,10 @@ export class CPMultipleWPsComponent implements OnChanges {
       )
       .subscribe({
         next: ({ response }) => {
-          this.outcomeList = response;
+          this.outcomeList.set(response);
         },
         error: err => {
-          this.outcomeList = [];
+          this.outcomeList.set([]);
           console.error(err);
         }
       });
@@ -145,10 +145,10 @@ export class CPMultipleWPsComponent implements OnChanges {
           response.forEach((item, index) => {
             item.uniqueId = `${item.toc_result_id}-${index}`;
           });
-          this.eoiList = response;
+          this.eoiList.set(response);
         },
         error: err => {
-          this.eoiList = [];
+          this.eoiList.set([]);
           console.error(err);
         }
       });
@@ -172,28 +172,6 @@ export class CPMultipleWPsComponent implements OnChanges {
     return tab.toc_level_id !== null && tab.toc_result_id !== null;
   }
 
-  getMaxNumberOfTabs(plannedResult: boolean, resultLevelId: number | string): number {
-    let uniqueWorkPackageIds = new Set<number | string>();
-
-    if (resultLevelId === 1) {
-      if (plannedResult) {
-        uniqueWorkPackageIds = new Set(this.outputList.map(item => item.work_package_id));
-      } else {
-        uniqueWorkPackageIds = new Set(this.eoiList.map(item => item.toc_result_id));
-      }
-    } else if (resultLevelId === 2) {
-      if (plannedResult) {
-        const uniqueWorkPackageIdsOutcome = new Set(this.outcomeList.map(item => item.work_package_id));
-        const uniqueWorkPackageIdsEOI = new Set(this.eoiList.map(item => item.toc_result_id));
-        uniqueWorkPackageIds = new Set([...uniqueWorkPackageIdsOutcome, ...uniqueWorkPackageIdsEOI]);
-      } else {
-        uniqueWorkPackageIds = new Set(this.eoiList.map(item => item.toc_result_id));
-      }
-    }
-
-    return uniqueWorkPackageIds.size;
-  }
-
   onActiveTab(tab: any, index: number) {
     this.activeTabIndex = index;
     this.activeTab = tab;
@@ -211,19 +189,23 @@ export class CPMultipleWPsComponent implements OnChanges {
     const tocLevelId = !this.initiative().planned_result ? 3 : this.resultLevelId === 1 ? 1 : 2;
     const newIndex = this.initiative().result_toc_results.length;
 
-    this.initiative().result_toc_results.push({
-      action_area_outcome_id: null,
-      initiative_id: this.initiative().initiative_id,
-      official_code: this.initiative().official_code,
-      planned_result: this.initiative().planned_result,
-      results_id: null,
-      short_name: this.initiative().short_name,
-      toc_level_id: tocLevelId,
-      toc_result_id: null,
-      uniqueId: newIndex.toString(),
-      related_node_id: null,
-      toc_progressive_narrative: null,
-      indicators: [{ related_node_id: null, targets: [{ contributing_indicator: null }] }]
+    this.initiative.update(prev => {
+      prev.result_toc_results.push({
+        action_area_outcome_id: null,
+        initiative_id: this.initiative().initiative_id,
+        official_code: this.initiative().official_code,
+        planned_result: this.initiative().planned_result,
+        results_id: null,
+        short_name: this.initiative().short_name,
+        toc_level_id: tocLevelId,
+        toc_result_id: null,
+        uniqueId: newIndex.toString(),
+        related_node_id: null,
+        toc_progressive_narrative: null,
+        indicators: [{ related_node_id: null, targets: [{ contributing_indicator: null }] }]
+      });
+
+      return { ...prev };
     });
 
     const lastIndex = this.initiative().result_toc_results.length - 1;
