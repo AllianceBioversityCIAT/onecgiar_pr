@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, computed, signal } from '@angular/core';
 import { InnovationDevInfoBody } from '../../model/innovationDevInfoBody';
 import { InnovationDevelopmentQuestions } from '../../model/InnovationDevelopmentQuestions.model';
 import { InnovationDevInfoUtilsService } from '../../services/innovation-dev-info-utils.service';
@@ -12,7 +12,46 @@ import { InnovationDevInfoUtilsService } from '../../services/innovation-dev-inf
 export class ScaleImpactAnalysisComponent {
   @Input() body = new InnovationDevInfoBody();
   @Input() options: InnovationDevelopmentQuestions;
+
+  isNoActionsSelected = signal<boolean>(false);
+  isNoNegativeExpected = signal<boolean>(false);
   example2 = null;
 
   constructor(public innovationDevInfoUtilsSE: InnovationDevInfoUtilsService) {}
+
+  get q2() {
+    return this.options?.responsible_innovation_and_scaling?.q2 as any;
+  }
+
+  get selectedOption() {
+    const id = this.q2?.['radioButtonValue'];
+    return this.q2?.options?.find((opt: any) => opt?.result_question_id == id);
+  }
+
+  showWhyInput = computed<boolean>(() => this.isNoActionsSelected() || this.isNoNegativeExpected());
+
+  get isComplete(): boolean {
+    if (!this.q2?.['radioButtonValue']) return false;
+    if (this.showWhyInput()) return !!this.selectedOption?.answer_text;
+    return true;
+  }
+
+  handleSelectionChange() {
+    this.innovationDevInfoUtilsSE.mapBoolean(this.q2);
+    const selected = this.selectedOption;
+    const label = selected?.question_text || '';
+    this.isNoActionsSelected.set(label === 'No actions taken yet');
+    this.isNoNegativeExpected.set(label === 'No negative consequences or impacts expected');
+
+    const requiresWhy = this.showWhyInput();
+    if (selected && !requiresWhy) {
+      selected.answer_text = null;
+    }
+    this.q2?.options?.forEach((opt: any) => {
+      if (!selected || opt.result_question_id !== selected.result_question_id) {
+        opt.answer_text = null;
+      }
+    });
+  }
+
 }
