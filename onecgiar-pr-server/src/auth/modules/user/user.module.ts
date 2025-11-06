@@ -3,6 +3,7 @@ import {
   Module,
   NestModule,
   RequestMethod,
+  Global,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UserController } from './user.controller';
@@ -29,6 +30,7 @@ import { ClarisaInitiativesModule } from '../../../clarisa/clarisa-initiatives/c
 import { VersionRepository } from '../../../api/versioning/versioning.repository';
 import { GlobalParameterRepository } from '../../../api/global-parameter/repositories/global-parameter.repository';
 
+@Global()
 @Module({
   controllers: [UserController],
   providers: [
