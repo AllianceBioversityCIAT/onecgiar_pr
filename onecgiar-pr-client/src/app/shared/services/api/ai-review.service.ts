@@ -8,12 +8,14 @@ import { AISession, POSTAIAssistantSaveHistory } from '../../interfaces/ai-revie
   providedIn: 'root'
 })
 export class AiReviewService {
+  showAiReview = signal<boolean>(false);
   http = inject(HttpClient);
   dataControlSE = inject(DataControlService);
   baseApiBaseUrl = environment.apiBaseUrl + 'api/';
   reviewApiUrl = environment.reviewApiUrl;
   sessionId = signal<AISession | null>(null);
   POST_createSession() {
+    this.showAiReview.set(true);
     return new Promise((resolve, reject) => {
       return this.http.post<any>(`${this.baseApiBaseUrl}ai/sessions`, { result_id: this.dataControlSE.currentResultSignal().id }).subscribe({
         next: (response: any) => {
