@@ -1,0 +1,104 @@
+@use '../../../../../../../../../../../styles/fonts.scss' as fonts;
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin: 0;
+}
+
+.view-result-drawer-header {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 24px 54px;
+  background-color: var(--pr-color-primary-25);
+  border-bottom: 1px solid var(--pr-color-accents-2);
+  width: 100%;
+}
+
+.view-result-drawer-header_title {
+  @include fonts.pr-typography('h3');
+  font-weight: 600;
+  color: var(--pr-color-secondary-400);
+}
+
+.view-result-drawer-header_desc {
+  @include fonts.pr-typography('body-2');
+  font-weight: 400;
+  color: var(--pr-color-accents-6);
+}
+
+.view-result-drawer-header_content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 10px;
+}
+
+.view-result-drawer-header_subtitle {
+  @include fonts.pr-typography('h3');
+  font-weight: 500;
+  color: var(--pr-color-accents-5);
+}
+
+.view-result-drawer-header_content_icons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.view-result-drawer-content {
+  padding: 32px 20px;
+}
+
+.view-result-drawer-content_title {
+  @include fonts.pr-typography('h3');
+  font-weight: 700;
+  color: var(--pr-color-secondary-400);
+}
+
+.view-result-drawer-content_desc {
+  @include fonts.pr-typography('body-2');
+  font-weight: 400;
+  color: var(--pr-color-accents-6);
+}
+
+.table_menu_item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  width: 100px;
+
+  &:hover {
+    background-color: var(--pr-color-primary-25);
+    cursor: pointer;
+  }
+}
+
+.noDataText {
+  text-align: center;
+  padding: 20px 0px;
+  @include fonts.pr-typography('h4');
+  color: var(--pr-color-primary-300);
+}
+
+::ng-deep {
+  .p-drawer-header {
+    padding: 0 !important;
+  }
+
+  .p-popover:before,
+  .p-popover:after {
+    display: none;
+  }
+
+  .p-popover-content {
+    padding: 0.25rem !important;
+  }
+}

@@ -1,6 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
+import { ResultFrameworkReportingHomeService } from './pages/result-framework-reporting-home/services/result-framework-reporting-home.service';
 import { ApiService } from '../../shared/services/api/api.service';
-import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-result-framework-reporting',
@@ -8,13 +8,12 @@ import { Router } from '@angular/router';
   standalone: false
 })
 export class ResultFrameworkReportingComponent implements OnInit {
-  constructor(
-    private api: ApiService,
-    private router: Router
-  ) {}
+  api = inject(ApiService);
+  resultFrameworkReportingHomeService = inject(ResultFrameworkReportingHomeService);
 
   ngOnInit(): void {
     this.api.dataControlSE.detailSectionTitle('Results Framework & Reporting');
-    this.router.navigate(['/result']);
+    this.resultFrameworkReportingHomeService.getScienceProgramsProgress();
+    this.resultFrameworkReportingHomeService.getRecentActivity();
   }
 }

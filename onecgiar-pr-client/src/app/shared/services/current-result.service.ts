@@ -24,8 +24,10 @@ export class CurrentResultService {
         this.rolesSE.validateReadOnly(response);
         this.resultLevelSE.currentResultLevelName = response.result_level_name;
         this.resultLevelSE.currentResultLevelId = response.result_level_id;
+        this.resultLevelSE.currentResultLevelIdSignal.set(response.result_level_id);
         this.resultLevelSE.currentResultTypeId = response.result_type_id;
         this.dataControlSE.currentResult = response;
+        this.dataControlSE.currentResultSignal.set(response);
         const is_phase_open = response.is_phase_open;
         switch (is_phase_open) {
           case 0:

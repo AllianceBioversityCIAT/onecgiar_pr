@@ -4,28 +4,30 @@
   labelText="Does this result match a planned result in your Theory of Change?"
   [isComplete]="this.initiative.planned_result !== null"></div>
 
-<div class="editable_field" [ngClass]="{ 'global-editable': this.editable }">
-  <app-pr-yes-or-not
-    [label]="getDescription(this.initiative?.official_code, this.initiative?.short_name)"
-    [(ngModel)]="this.initiative.planned_result"
-    (selectOptionEvent)="clearTocResultId()"
-    [description]="this.headerDescription(this.initiative.official_code)"
-    [readOnly]="!editable"
-    [editable]="editable"
-    [required]="!(!this.initiative.result_toc_results.length && isContributor)"
-    [hideDescription]="this.initiative.planned_result === null"
-    [hideOptions]="initiative?.result_toc_results.length === 0">
-  </app-pr-yes-or-not>
+@if (!this.fieldsManagerSE.isP25()) {
+  <div class="editable_field" [ngClass]="{ 'global-editable': this.editable }">
+    <app-pr-yes-or-not
+      [label]="getDescription(this.initiative?.official_code, this.initiative?.short_name)"
+      [(ngModel)]="this.initiative.planned_result"
+      (selectOptionEvent)="clearTocResultId()"
+      [description]="this.headerDescription(this.initiative.official_code)"
+      [readOnly]="!editable"
+      [editable]="editable"
+      [required]="!(!this.initiative.result_toc_results.length && isContributor)"
+      [hideDescription]="this.initiative.planned_result === null"
+      [hideOptions]="initiative?.result_toc_results.length === 0">
+    </app-pr-yes-or-not>
 
-  <a
-    [href]="this.api.dataControlSE.tocUrl + this.fullInitiativeToc"
-    target="_blank"
-    class="toc_button"
-    *ngIf="!isNotifications && !!this.initiative.result_toc_results.length">
-    <span>See ToC</span>
-    <img src="assets/icons/toc_icon.png" alt="" />
-  </a>
-</div>
+    <a
+      [href]="this.api.dataControlSE.tocUrl + this.fullInitiativeToc"
+      target="_blank"
+      class="toc_button"
+      *ngIf="!isNotifications && !!this.initiative.result_toc_results.length">
+      <span>See ToC</span>
+      <img src="assets/icons/toc_icon.png" alt="" />
+    </a>
+  </div>
+}
 
 <div *ngIf="!this.initiative.result_toc_results.length && (isContributor || isIpsr)" class="pr-message">
   <i class="material-icons-round" style="font-size: 20px; color: var(--pr-color-orange-400)">info</i>

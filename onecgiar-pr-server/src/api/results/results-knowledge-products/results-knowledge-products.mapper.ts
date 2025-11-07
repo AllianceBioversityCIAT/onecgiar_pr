@@ -47,9 +47,15 @@ export class ResultsKnowledgeProductMapper {
       .join('; ');
     knowledgeProductDto.type = mqapResponseDto?.Type;
 
-    knowledgeProductDto.cgspace_countries = this.getAsArray(
-      mqapResponseDto?.['Country ISO code'],
-    );
+    const countryCodes =
+      mqapResponseDto?.['Country ISO code'] &&
+      mqapResponseDto['Country ISO code'].length > 0
+        ? mqapResponseDto['Country ISO code']
+        : (mqapResponseDto?.Countries ?? []);
+
+    knowledgeProductDto.repo = mqapResponseDto?.repo;
+
+    knowledgeProductDto.cgspace_countries = this.getAsArray(countryCodes);
 
     knowledgeProductDto = this.fillRelatedMetadata(
       mqapResponseDto,
@@ -93,7 +99,7 @@ export class ResultsKnowledgeProductMapper {
     const metadataCGSpace: ResultsKnowledgeProductMetadataDto =
       new ResultsKnowledgeProductMetadataDto();
 
-    metadataCGSpace.source = 'CGSpace';
+    metadataCGSpace.source = knowledgeProductDto.repo;
 
     if (dto?.['Open Access']) {
       metadataCGSpace.accessibility =
@@ -101,6 +107,8 @@ export class ResultsKnowledgeProductMapper {
           'Open Access',
           dto?.['Open Access'],
         ) == 0;
+
+      metadataCGSpace.open_access = dto?.['Open Access'];
     }
 
     metadataCGSpace.doi = dto?.DOI;
@@ -413,17 +421,27 @@ export class ResultsKnowledgeProductMapper {
       metadataDto.doi = m.doi;
       metadataDto.is_isi = m.is_isi;
       metadataDto.is_peer_reviewed = m.is_peer_reviewed;
-      metadataDto.issue_year = m.year;
+      metadataDto.issue_year =
+        !m.year || +m.year === 0 ? m.online_year || null : m.year;
       metadataDto.online_year = m.online_year;
+      metadataDto.open_access = m.open_access;
 
       return metadataDto;
     });
-    knowledgeProductDto.metadataCG = knowledgeProductDto.metadata.find(
-      (m) => m.source === 'CGSpace',
-    );
-    knowledgeProductDto.metadataWOS = knowledgeProductDto.metadata.find(
-      (m) => m.source !== 'CGSpace',
-    );
+
+    knowledgeProductDto.metadataCG = knowledgeProductDto.metadata.length
+      ? {
+          ...knowledgeProductDto.metadata[0],
+          source: knowledgeProductDto.metadata[0]?.source,
+        }
+      : null;
+
+    knowledgeProductDto.metadataWOS = knowledgeProductDto.metadata.length
+      ? {
+          ...knowledgeProductDto.metadata[1],
+          source: knowledgeProductDto.metadata[1]?.source,
+        }
+      : null;
 
     const altmetric =
       entity.result_knowledge_product_altmetric_array[0] ?? undefined;
@@ -783,6 +801,7 @@ export class ResultsKnowledgeProductMapper {
       metadata.is_peer_reviewed = m.is_peer_reviewed;
       metadata.year = m.issue_year;
       metadata.online_year = m.online_year;
+      metadata.open_access = m.open_access;
 
       if (!knowledgeProduct.last_updated_by) {
         metadata.created_by = knowledgeProduct.created_by;

@@ -435,13 +435,14 @@ describe('ResultsListComponent', () => {
   describe('Component Properties', () => {
     it('should have correct column order configuration', () => {
       expect(component.columnOrder).toEqual([
-        { title: 'Title', attr: 'title', class: 'notCenter' },
-        { title: 'Phase - Portfolio', attr: 'phase_name' },
-        { title: 'Indicator category', attr: 'result_type' },
-        { title: 'Submitter', attr: 'submitter', center: true },
-        { title: 'Status', attr: 'full_status_name_html', center: true },
-        { title: 'Creation date	', attr: 'created_date' },
-        { title: 'Created by	', attr: 'full_name' }
+        { title: 'Result code', attr: 'result_code', center: true, width: '105px' },
+        { title: 'Title', attr: 'title', class: 'notCenter', width: '305px' },
+        { title: 'Phase - Portfolio', attr: 'phase_name', width: '155px' },
+        { title: 'Indicator category', attr: 'result_type', width: '180px' },
+        { title: 'Submitter', attr: 'submitter', center: true, width: '95px' },
+        { title: 'Status', attr: 'full_status_name_html', center: true, width: '75px' },
+        { title: 'Creation date	', attr: 'created_date', center: true, width: '120px' },
+        { title: 'Created by	', attr: 'full_name', width: '120px' }
       ]);
     });
 

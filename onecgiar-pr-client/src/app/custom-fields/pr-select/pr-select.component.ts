@@ -4,17 +4,17 @@ import { RolesService } from '../../shared/services/global/roles.service';
 import { DataControlService } from '../../shared/services/data-control.service';
 
 @Component({
-    selector: 'app-pr-select',
-    templateUrl: './pr-select.component.html',
-    styleUrls: ['./pr-select.component.scss'],
-    providers: [
-        {
-            provide: NG_VALUE_ACCESSOR,
-            useExisting: forwardRef(() => PrSelectComponent),
-            multi: true
-        }
-    ],
-    standalone: false
+  selector: 'app-pr-select',
+  templateUrl: './pr-select.component.html',
+  styleUrls: ['./pr-select.component.scss'],
+  providers: [
+    {
+      provide: NG_VALUE_ACCESSOR,
+      useExisting: forwardRef(() => PrSelectComponent),
+      multi: true
+    }
+  ],
+  standalone: false
 })
 export class PrSelectComponent implements ControlValueAccessor {
   @Input() optionLabel: string;
@@ -109,6 +109,7 @@ export class PrSelectComponent implements ControlValueAccessor {
       this.isDropdownOpen = true; // Only track state if expansion is enabled
     }
   }
+
   get optionsIntance() {
     if (!this.options?.length) return [];
     if (!this._optionsIntance?.length) this._optionsIntance = [...this.options];

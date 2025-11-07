@@ -1,0 +1,19 @@
+<app-pr-field-header [label]="options?.responsible_innovation_and_scaling?.q3?.question_text"
+  [description]="options?.responsible_innovation_and_scaling?.q3?.question_description"
+  [useColon]="false"></app-pr-field-header>
+
+<app-pr-radio-button
+  (selectOptionEvent)="handleSelectionChange()"
+  [verticalAlignment]="true" [options]="this.options?.responsible_innovation_and_scaling?.q3?.options"
+  optionLabel="question_text" optionValue="result_question_id"
+  [textInputWhenSelectedLabels]="['Yes, the following actions have been taken:','No actions taken yet','Not considered necessary for this innovation']"
+  [textInputPlaceholder]="'Why?'"
+  [textInputPlaceholderOverrides]="{ 'Yes, the following actions have been taken:': '' }"
+  [(ngModel)]="this.options.responsible_innovation_and_scaling.q3['radioButtonValue']">
+</app-pr-radio-button>
+
+<div appFeedbackValidation
+  labelText="Have the assumptions and intended purposes of this innovation been critically examined with stakeholders?"
+  [isComplete]="isComplete"></div>
+
+

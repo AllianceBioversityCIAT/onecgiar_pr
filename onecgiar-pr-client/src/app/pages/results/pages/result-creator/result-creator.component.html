@@ -1,5 +1,5 @@
 <div class="local_container">
-  <div routerLink="/results/results-list" style="max-width: fit-content">
+  <div routerLink="/result/results-outlet/results-list" style="max-width: fit-content">
     <app-pr-button
       text="Back to results"
       icon="arrow_back"
@@ -75,14 +75,22 @@
             *ngIf="isKnowledgeProduct"
             [isStatic]="true"
             placeholder="Handle..."
-            label="CGSpace link"
+            label="Repository link/handle"
             type="text"
             [(ngModel)]="this.resultLevelSE.resultBody.handler">
           </app-pr-input>
           <div (click)="GET_mqapValidation()" class="sync_button" *ngIf="isKnowledgeProduct" [ngClass]="{ globalDisabled: validating }">
             <app-pr-button
               padding="medium"
-              [text]="validating ? 'Fetching metadata from CGSpace' : 'Sync'"
+              [text]="
+                validating
+                  ? this.resultLevelSE.resultBody.handler?.includes('20.500.11766')
+                    ? 'Fetching metadata from MELSpace'
+                    : this.resultLevelSE.resultBody.handler
+                      ? 'Fetching metadata from CGSpace'
+                      : 'Fetching metadata from the repository'
+                  : 'Sync'
+              "
               icon="sync"
               [rotating]="validating"></app-pr-button>
           </div>
@@ -102,7 +110,11 @@
           [required]="resultLevelSE.resultBody.result_type_id != 6"
           [description]="
             isKnowledgeProduct
-              ? 'Title retrieved from CGSpace'
+              ? this.resultLevelSE.resultBody.handler?.includes('20.500.11766')
+                ? 'Title retrieved from MELSpace'
+                : this.resultLevelSE.resultBody.handler
+                  ? 'Title retrieved from CGSpace'
+                  : 'Title retrieved from the repository'
               : 'To search for results that have already been reported, enter key words into the title box below. If your result has not already been reported, you can add it here.'
           "
           [(ngModel)]="this.resultLevelSE.resultBody.result_name"

@@ -1,4 +1,14 @@
-<div class="recent-activity-card">
+<div
+  #recentActivityCard
+  class="recent-activity-card"
+  [routerLink]="getResultUrl()"
+  [queryParams]="{ phase: item?.phase }"
+  [attr.aria-label]="getTooltipText()"
+  type="button"
+  (keydown.space)="$event.preventDefault(); recentActivityCard.click()"
+  (keydown.enter)="recentActivityCard.click()"
+  [pTooltip]="getTooltipText()"
+  tooltipPosition="bottom">
   <div class="recent-activity-card__row">
     <div class="recent-activity-card__row_left">
       <i class="pi pi-info-circle" style="font-size: 16px; color: var(--pr-color-neutral-200)"></i>

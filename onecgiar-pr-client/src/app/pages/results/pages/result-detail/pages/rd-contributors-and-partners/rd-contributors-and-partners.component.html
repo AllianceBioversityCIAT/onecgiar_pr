@@ -1,0 +1,246 @@
+<div class="detail_container">
+  <app-alert-status *ngIf="!this.api.dataControlSE.isKnowledgeProduct" [description]="alertStatusMessage"> </app-alert-status>
+  <!-- Contributing Centers start -->
+  <div appFeedbackValidation labelText="Contributing CGIAR Centers" [isComplete]="!!this.rdPartnersSE.partnersBody.contributing_center?.length"></div>
+
+  <!-- ! from toc section -->
+  @if (this.rdPartnersSE.getConsumed()) {
+    <app-pr-select
+      class="segment_title_margin"
+      [options]="this.rdPartnersSE.partnersBody.contributing_and_primary_initiative"
+      label="Submitter"
+      optionLabel="full_name"
+      optionValue="id"
+      [placeholder]="'Select ' + ('term.entity.orPlatforms' | term: this.api.dataControlSE.currentResult?.portfolio)"
+      [description]="'Select ' + ('term.entity.orPlatforms' | term: this.api.dataControlSE.currentResult?.portfolio)"
+      [(ngModel)]="this.rdPartnersSE.partnersBody.changePrimaryInit"
+      [fieldDisabled]="
+        !!(
+          this.rdPartnersSE.partnersBody.contributing_and_primary_initiative?.length === 1 &&
+          this.rdPartnersSE.partnersBody?.result_toc_result?.initiative_id
+        )
+      ">
+    </app-pr-select>
+
+    @if (
+      this.rdPartnersSE.partnersBody.contributing_and_primary_initiative?.length == 1 &&
+      this.rdPartnersSE.partnersBody?.result_toc_result?.initiative_id
+    ) {
+      <div class="no-primary-list">
+        Since this result has not been shared and accepted by other
+        {{ 'term.entity.plural' | term: this.api.dataControlSE.currentResult?.portfolio }}, it is not possible to change the submitter.
+      </div>
+    }
+  }
+
+  <!-- ! from toc section end -->
+
+  <!-- from toc section  -->
+
+  <div style="z-index: 1; position: relative">
+    <app-multiple-wps
+      [editable]="true"
+      [initiative]="this.rdPartnersSE.partnersBody?.result_toc_result"
+      [initiativeId]="this.rdPartnersSE.initiativeIdSignal"
+      [resultLevelId]="this.resultLevelSE.currentResultLevelId"
+      [isIpsr]="false"
+      [isContributor]="false"
+      [isNotifications]="false"
+      [showMultipleWPsContent]="this.rdPartnersSE.getConsumed()"></app-multiple-wps>
+  </div>
+
+  <app-pr-multi-select
+    [options]="this.centersSE.centersList"
+    label="Contributing CGIAR Centers"
+    selectedLabel="Center(s) selected"
+    optionLabel="full_name"
+    optionValue="code"
+    [(ngModel)]="this.rdPartnersSE.partnersBody.contributing_center"
+    placeholder="Select center(s)"
+    [disableOptions]="this.rdPartnersSE.cgspaceDisabledList"
+    (selectOptionEvent)="this.rdPartnersSE.setPossibleLeadCenters(true)">
+  </app-pr-multi-select>
+
+  <div class="medal_selector selected_container">
+    <div class="centers chips_container">
+      <div
+        class="center pr_chip_selected"
+        [pTooltip]="this.disabledText"
+        [tooltipDisabled]="!center.from_cgspace"
+        *ngFor="let center of this.rdPartnersSE.partnersBody.contributing_center; let i = index">
+        <div class="name" [innerHtml]="center?.name"></div>
+        <i
+          *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status && !center.from_cgspace"
+          class="material-icons-round"
+          (click)="deleteContributingCenter(i); this.rdPartnersSE.setPossibleLeadCenters(true)"
+          >cancel</i
+        >
+      </div>
+    </div>
+  </div>
+
+  <app-pr-multi-select
+    [options]="this.rdPartnersSE.clarisaProjectsList"
+    [(ngModel)]="this.rdPartnersSE.partnersBody.bilateral_projects"
+    [required]="false"
+    optionLabel="fullName"
+    optionValue="project_id"
+    label="Contributing W3 and/or bilateral projects"
+    selectedLabel="Projects selected"
+    selectedOptionLabel="fullName"
+    placeholder="Select project">
+  </app-pr-multi-select>
+
+  <app-pr-multi-select
+    [options]="this.contributingInitiativesList"
+    label="Contributing {{ 'term.entity.orPlatformsPlural' | term: this.api.dataControlSE.currentResult?.portfolio }}"
+    [disableOptions]="this.rdPartnersSE.disabledOptions"
+    optionLabel="full_name"
+    optionValue="id"
+    (selectOptionEvent)="this.rdPartnersSE.onSelectContributingInitiative()"
+    [required]="false"
+    selectedOptionLabel="full_name"
+    [(ngModel)]="this.rdPartnersSE.contributingInitiativeNew"
+    [confirmDeletion]="true"
+    [placeholder]="'Select ' + ('term.entity.orPlatformsWith()' | term: this.api.dataControlSE.currentResult?.portfolio)">
+  </app-pr-multi-select>
+
+  <div class="selected_container custom_scroll">
+    <app-pr-field-header [description]="('term.entity.singularWith()' | term: this.api.dataControlSE.currentResult?.portfolio) + ' selected:'">
+    </app-pr-field-header>
+
+    <div class="chips_container">
+      @for (
+        item of this.rdPartnersSE.result_toc_result?.contributing_initiatives?.accepted_contributing_initiatives || [];
+        track item.id;
+        let i = $index
+      ) {
+        <div class="pr_chip_selected">
+          <div class="name" [ngClass]="{ text_inactive: !item.is_active }">
+            <strong>{{ item.official_code }}</strong> {{ item.initiative_name }}
+          </div>
+
+          @if (!this.api.rolesSE.readOnly) {
+            <i
+              class="material-icons-round"
+              [style.color]="item.is_active ? 'var(--pr-color-red-100)' : 'var(--pr-color-primary-300)'"
+              (click)="onRemoveContribuiting(i, true)">
+              {{ item.is_active ? 'backspace' : 'undo' }}
+            </i>
+          }
+        </div>
+      }
+
+      @for (item of this.rdPartnersSE.contributingInitiativeNew; track item.id; let i = $index) {
+        <div class="pr_chip_selected pending">
+          <div class="name" [ngClass]="{ text_inactive: !item.is_active }">
+            <strong>{{ item.official_code }}</strong> {{ item.name }} - <b style="font-style: italic"> Not saved yet </b>
+          </div>
+
+          @if (!this.api.rolesSE.readOnly) {
+            <i
+              class="material-icons-round"
+              [style.color]="item.is_active ? 'var(--pr-color-red-100)' : 'var(--pr-color-primary-300)'"
+              (click)="onRemoveContribuiting(i, false)">
+              {{ item.is_active ? 'backspace' : 'undo' }}
+            </i>
+          }
+        </div>
+      }
+
+      @for (item of this.rdPartnersSE.partnersBody?.contributing_initiatives?.pending_contributing_initiatives || []; track item.id) {
+        <div class="pr_chip_selected pending">
+          <div class="name" [ngClass]="{ text_inactive: !item.is_active }">
+            <strong>{{ item.official_code }}</strong> {{ item.initiative_name }} - <b style="font-style: italic"> Pending confirmation </b>
+          </div>
+
+          @if (!this.api.rolesSE.readOnly) {
+            <i
+              class="material-icons-round"
+              [style.color]="item.is_active ? 'var(--pr-color-red-100)' : 'var(--pr-color-primary-300)'"
+              (click)="toggleActiveContributor(item)">
+              {{ item.is_active ? 'backspace' : 'undo' }}
+            </i>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Contributing Centers end -->
+
+  <app-knowledge-product-selector *ngIf="this.api.dataControlSE.isKnowledgeProduct"></app-knowledge-product-selector>
+  <app-normal-selector></app-normal-selector>
+
+  <!-- Lead partner/center start -->
+  <app-pr-yes-or-not
+    label="Is this result being led by an external partner?"
+    [required]="true"
+    [(ngModel)]="this.rdPartnersSE.partnersBody.is_lead_by_partner"
+    (selectOptionEvent)="$event ? (this.rdPartnersSE.leadCenterCode = null) : (this.rdPartnersSE.leadPartnerId = null)"
+    [readOnly]="!this.api.dataControlSE.isKnowledgeProduct && this.rdPartnersSE.partnersBody.no_applicable_partner">
+  </app-pr-yes-or-not>
+  <app-alert-status [description]="getMessageLead()"></app-alert-status>
+  <div *ngIf="this.rdPartnersSE.partnersBody.is_lead_by_partner; else selectLeadCenter">
+    <app-pr-select
+      label="Lead partner"
+      [options]="this.rdPartnersSE.possibleLeadPartners"
+      optionLabel="full_name"
+      optionValue="institutions_id"
+      placeholder="Select a lead partner..."
+      [required]="this.rdPartnersSE.partnersBody.is_lead_by_partner"
+      [(ngModel)]="this.rdPartnersSE.leadPartnerId"
+      *ngIf="!this.rdPartnersSE.updatingLeadData">
+    </app-pr-select>
+  </div>
+  <ng-template #selectLeadCenter>
+    <app-pr-select
+      label="Lead center"
+      [options]="this.rdPartnersSE.possibleLeadCenters"
+      optionLabel="full_name"
+      optionValue="code"
+      placeholder="Select a lead center..."
+      [required]="!this.rdPartnersSE.partnersBody.is_lead_by_partner"
+      [(ngModel)]="this.rdPartnersSE.leadCenterCode"
+      *ngIf="!this.rdPartnersSE.updatingLeadData">
+    </app-pr-select>
+  </ng-template>
+
+  @if (this.api.dataControlSE.currentResultSignal().result_type_id == 2 || this.api.dataControlSE.currentResultSignal().result_type_id == 7) {
+    <app-pr-radio-button
+      fieldRef="[innovation-use-form]-has-innovation-link"
+      [options]="[
+        { value: true, label: 'Yes' },
+        { value: false, label: 'No' }
+      ]"
+      optionLabel="label"
+      [(ngModel)]="this.rdPartnersSE.partnersBody.has_innovation_link"
+      optionValue="value">
+    </app-pr-radio-button>
+
+    @if (this.rdPartnersSE.partnersBody.has_innovation_link && this.fieldsManagerSE.isP25()) {
+      <app-pr-multi-select
+        [options]="this.innovationUseResultsSE.resultsList"
+        [(ngModel)]="this.rdPartnersSE.partnersBody.linked_results"
+        optionLabel="title"
+        optionValue="id"
+        optionGroupLabel="name"
+        optionGroupChildren="options"
+        label="Please select a result"
+        placeholder="Please select a result"
+        selectedLabel="Results selected"
+        selectedOptionLabel="title"
+        [displayLabelFormatter]="formatResultLabel.bind(this)">
+      </app-pr-multi-select>
+    }
+  }
+  <app-alert-status
+    *ngIf="this.api.dataControlSE.isKnowledgeProduct"
+    description="In this section you can enter CGIAR Center partners. If you notice any discrepancies, such as partners appearing in CGSpace but not here, please reach out to PRMSTechSupport@cgiar.org for assistance. ">
+  </app-alert-status>
+
+  <!-- Sync -->
+
+  <app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>
+  <app-sync-button (clickSave)="onSyncSection()"></app-sync-button>
+</div>

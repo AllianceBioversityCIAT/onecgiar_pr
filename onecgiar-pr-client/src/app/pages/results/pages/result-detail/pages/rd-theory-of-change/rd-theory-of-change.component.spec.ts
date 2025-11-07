@@ -12,6 +12,7 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { of, throwError } from 'rxjs';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { TermPipe } from '../../../../../../internationalization/term.pipe';
+import { signal } from '@angular/core';
 
 jest.useFakeTimers();
 
@@ -107,6 +108,7 @@ describe('RdTheoryOfChangeComponent', () => {
         })
       },
       dataControlSE: {
+        currentResultSectionName: signal<string>('Theory of change'),
         findClassTenSeconds: () => {
           return Promise.resolve(document.querySelector('alert-event'));
         }

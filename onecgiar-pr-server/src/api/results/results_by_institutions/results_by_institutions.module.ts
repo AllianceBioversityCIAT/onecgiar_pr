@@ -18,6 +18,7 @@ import { GlobalParameterRepository } from '../../global-parameter/repositories/g
 import { NonPooledProjectRepository } from '../non-pooled-projects/non-pooled-projects.repository';
 import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
 import { NonPooledProjectBudgetRepository } from '../result_budget/repositories/non_pooled_proyect_budget.repository';
+import { ResultsByProjectsModule } from '../results_by_projects/results_by_projects.module';
 
 @Module({
   controllers: [ResultsByInstitutionsController],
@@ -39,7 +40,7 @@ import { NonPooledProjectBudgetRepository } from '../result_budget/repositories/
     ResultsCenterRepository,
     NonPooledProjectBudgetRepository,
   ],
-  imports: [],
-  exports: [ResultByIntitutionsRepository],
+  imports: [ResultsByProjectsModule],
+  exports: [ResultsByInstitutionsService, ResultByIntitutionsRepository],
 })
 export class ResultsByInstitutionsModule {}

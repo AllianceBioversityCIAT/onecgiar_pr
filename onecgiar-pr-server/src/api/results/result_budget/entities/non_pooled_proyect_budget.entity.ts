@@ -7,6 +7,7 @@ import {
 } from 'typeorm';
 import { BaseEntity } from '../../../../shared/entities/base-entity';
 import { NonPooledProject } from '../../non-pooled-projects/entities/non-pooled-project.entity';
+import { ResultsByProjects } from '../../results_by_projects/entities/results_by_projects.entity';
 
 @Entity('non_pooled_projetct_budget')
 export class NonPooledProjectBudget extends BaseEntity {
@@ -19,9 +20,16 @@ export class NonPooledProjectBudget extends BaseEntity {
   @Column({
     name: 'non_pooled_projetct_id',
     type: 'bigint',
-    nullable: false,
+    nullable: true,
   })
   non_pooled_projetct_id: number;
+
+  @Column({
+    name: 'result_project_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  result_project_id: number;
 
   @Column({
     name: 'in_kind',
@@ -65,4 +73,10 @@ export class NonPooledProjectBudget extends BaseEntity {
     name: 'non_pooled_projetct_id',
   })
   obj_non_pooled_projetct: NonPooledProject;
+
+  @ManyToOne(() => ResultsByProjects)
+  @JoinColumn({
+    name: 'result_project_id',
+  })
+  obj_result_project: ResultsByProjects;
 }
