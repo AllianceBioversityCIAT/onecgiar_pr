@@ -18,7 +18,7 @@ export class RdEvidencesComponent implements OnInit {
 
   alertStatus() {
     if (this.api.dataControlSE.isKnowledgeProduct)
-      return 'As this knowledge product is stored in CGSpace, this section only requires an indication of whether the knowledge product is associated with any of the Impact Area tags provided below.';
+      return 'As this knowledge product is stored in the repository, this section only requires an indication of whether the knowledge product is associated with any of the Impact Area tags provided below.';
     let mainText = `<ul>
     <li>Submit a maximum of 6 pieces of evidence.</li>
     <li>Please list evidence from most to least important.</li>

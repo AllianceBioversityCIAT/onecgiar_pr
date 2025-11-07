@@ -304,4 +304,19 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     return Number.isFinite(levelNumber) ? levelNumber : -1;
   }
 
+  formatResultLabel(option: any): string {
+    if (option?.result_code && option?.name) {
+      let phaseInfo = '';
+      if (option?.acronym && option?.phase_year) {
+        phaseInfo = ` (Phase: ${option.acronym}, Year: ${option.phase_year})`;
+      } else if (option?.acronym) {
+        phaseInfo = ` (Phase: ${option.acronym})`;
+      } else if (option?.phase_year) {
+        phaseInfo = ` (Year: ${option.phase_year})`;
+      }
+      return `${option.result_code} – ${option.name}${phaseInfo}`;
+    }
+    return option?.title || option?.name || '';
+  }
+
 }
