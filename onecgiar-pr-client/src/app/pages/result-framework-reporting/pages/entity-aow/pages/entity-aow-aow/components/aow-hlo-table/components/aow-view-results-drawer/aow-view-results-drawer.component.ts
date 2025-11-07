@@ -28,9 +28,9 @@ export class AowViewResultsDrawerComponent implements OnInit {
   selectedProduct: any = null;
 
   columns = signal<ColumnOrder[]>([
-    { title: 'Code', attr: 'code', width: '10%' },
+    { title: 'Code', attr: 'result_code', width: '10%' },
     { title: 'Title', attr: 'title' },
-    { title: 'Status', attr: 'status', width: '130px' }
+    { title: 'Status', attr: 'status_name', width: '130px' }
   ]);
 
   actionItems = signal<ActionItem[]>([
