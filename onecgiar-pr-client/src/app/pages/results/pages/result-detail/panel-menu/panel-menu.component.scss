@@ -21,6 +21,98 @@
     padding: 7px 13px;
     border-radius: 4px;
     cursor: pointer;
+    transition: all 0.3s ease;
+    background-color: transparent;
+
+    img {
+      transition: transform 0.3s ease;
+    }
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(122, 48, 168, 0.25);
+      border-color: #7a30a8;
+      background-color: rgba(122, 48, 168, 0.05);
+
+      img {
+        transform: scale(1.15);
+      }
+    }
+
+    &:active {
+      transform: translateY(0px);
+      box-shadow: 0 2px 6px rgba(122, 48, 168, 0.2);
+    }
+
+    &.loading {
+      pointer-events: none;
+      opacity: 0.7;
+
+      img {
+        animation: spin-smooth 1.2s linear infinite;
+      }
+    }
+
+    &.completed {
+      animation: success-smooth 0.5s ease-out;
+      background: linear-gradient(135deg, rgba(122, 48, 168, 0.12) 0%, rgba(122, 48, 168, 0.18) 100%);
+      border-color: #7a30a8;
+      box-shadow: 0 0 15px rgba(122, 48, 168, 0.3);
+
+      img {
+        animation: icon-glow 0.5s ease-out;
+        filter: drop-shadow(0 0 6px rgba(122, 48, 168, 0.5));
+      }
+
+      span {
+        animation: text-fade-in 0.3s ease-out;
+      }
+    }
+  }
+
+  @keyframes spin-smooth {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes success-smooth {
+    0% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    40% {
+      transform: scale(1.06);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  @keyframes icon-glow {
+    0% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.15);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  @keyframes text-fade-in {
+    0% {
+      opacity: 0;
+      transform: translateY(-2px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   .back_button {

@@ -15,16 +15,14 @@ export class AiReviewService {
   reviewApiUrl = environment.reviewApiUrl;
   sessionId = signal<AISession | null>(null);
   POST_createSession() {
-    this.showAiReview.set(true);
     return new Promise((resolve, reject) => {
       return this.http.post<any>(`${this.baseApiBaseUrl}ai/sessions`, { result_id: this.dataControlSE.currentResultSignal().id }).subscribe({
         next: (response: any) => {
-          console.log('response', response);
           this.sessionId.set(response.id);
           resolve(response);
         },
         error: (error: any) => {
-          console.log('error', error);
+          console.error('error', error);
           reject(error);
         }
       });
@@ -36,11 +34,10 @@ export class AiReviewService {
     return new Promise((resolve, reject) => {
       return this.http.post<any>(`${this.baseApiBaseUrl}ai/sessions/${this.sessionId()}/proposals`, body).subscribe({
         next: (response: any) => {
-          console.log('response', response);
           resolve(response);
         },
         error: (error: any) => {
-          console.log('error', error);
+          console.error('error', error);
           reject(error);
         }
       });
@@ -52,7 +49,11 @@ export class AiReviewService {
     return new Promise((resolve, reject) => {
       return this.http.get<any>(`${this.baseApiBaseUrl}ai/result-context/${this.dataControlSE.currentResultSignal().id}`).subscribe({
         next: (response: any) => {
-          console.log('response', response);
+          resolve(response);
+        },
+        error: (error: any) => {
+          console.error('error', error);
+          reject(error);
         }
       });
     });
@@ -62,7 +63,11 @@ export class AiReviewService {
     return new Promise((resolve, reject) => {
       return this.http.post<any>(`${this.reviewApiUrl}prms-qa`, body).subscribe({
         next: (response: any) => {
-          console.log('response', response);
+          resolve(response);
+        },
+        error: (error: any) => {
+          console.error('error', error);
+          reject(error);
         }
       });
     });

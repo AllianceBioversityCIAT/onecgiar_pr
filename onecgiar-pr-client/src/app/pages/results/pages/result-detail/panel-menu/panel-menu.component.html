@@ -34,9 +34,15 @@
         (validateMember(this.api.dataControlSE?.myInitiativesList) !== 6 && this.dataControlSE?.currentResult?.inQA) ||
         this.api.rolesSE.isAdmin
       ">
-      <div class="ai-review-button" (click)="this.aiReviewSE.POST_createSession()">
-        <img src="assets/icons/stars.png" alt="submit-result" />
-        AI Review
+      <div
+        class="ai-review-button"
+        [ngClass]="{
+          'loading': aiReviewButtonState === 'loading',
+          'completed': aiReviewButtonState === 'completed'
+        }"
+        (click)="onAIReviewClick()">
+        <img src="assets/icons/stars.png" alt="ai-review" />
+        <span>{{ aiReviewButtonState === 'loading' ? 'Loading...' : aiReviewButtonState === 'completed' ? 'Ready!' : 'AI Review' }}</span>
       </div>
 
       <div style="width: 100%">
