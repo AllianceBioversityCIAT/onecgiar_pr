@@ -13,25 +13,36 @@
       <!-- Title Section -->
       <div class="field-section">
         <div class="field-header">
-          <h3 class="field-title">{{ field.field_name }}</h3>
+          <h3 class="field-title">{{ field.field_name | titlecase }}</h3>
           <span class="improvement-badge">⚠️ Needs improvement</span>
         </div>
 
         <div class="proposal-section">
           <div class="proposal-label">💡 AI proposal</div>
           <div class="proposal-content">
-            Development of Conceptual Framework for Small-Scale Fisheries and Aquaculture: Improving Sustainable Resource Management
+            {{ field.proposed_text }}
           </div>
-          <app-pr-button text="Apply proposal" [showBackground]="false" class="apply-button-custom"> </app-pr-button>
+          <app-pr-button (click)="moveTextToInput(field)" text="Apply proposal" [showBackground]="false" class="apply-button-custom"> </app-pr-button>
         </div>
 
         <div class="current-version">
           <label class="version-label">Result version</label>
-          <app-pr-input type="text" [readOnly]="false" [(ngModel)]="field.original_text" placeholder="Small-scale Fisheries and Aquaculture Ontology">
+          <app-pr-input
+            [disabled]="true"
+            type="text"
+            [readOnly]="false"
+            [(ngModel)]="field.original_text"
+            placeholder="Small-scale Fisheries and Aquaculture Ontology">
           </app-pr-input>
         </div>
 
-        <app-pr-button text="Save changes" icon="save" [showBackground]="true" class="save-button-custom"> </app-pr-button>
+        <app-pr-button
+          text="Save changes"
+          icon="save"
+          [showBackground]="true"
+          class="save-button-custom"
+          (click)="aiReviewSE.onApplyProposal(field, $index)">
+        </app-pr-button>
       </div>
     }
 

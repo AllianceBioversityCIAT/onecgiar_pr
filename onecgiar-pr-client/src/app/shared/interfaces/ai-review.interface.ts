@@ -18,3 +18,38 @@ export interface Proposal {
   proposed_text: string;
   needs_improvement: boolean;
 }
+
+export interface POSTPRMSQa {
+  user_id: string;
+  result_metadata: any;
+}
+
+export interface IAiRecommendation {
+  time_taken: string;
+  json_content: JsonContent;
+  interaction_id: string;
+}
+
+export interface JsonContent {
+  new_title: string;
+  new_description: string;
+}
+
+export interface POSTAIAssistantCreateEvent {
+  session_id: number | string;
+  result_id: number | string;
+  event_type: string;
+  field_name: string;
+}
+
+export interface SaveProposal {
+  fields: POSTSaveProposalField[];
+}
+
+export interface POSTSaveProposalField {
+  field_name: string;
+  new_value: string;
+  change_reason: string;
+  was_ai_suggested: boolean;
+  user_feedback?: string;
+}
