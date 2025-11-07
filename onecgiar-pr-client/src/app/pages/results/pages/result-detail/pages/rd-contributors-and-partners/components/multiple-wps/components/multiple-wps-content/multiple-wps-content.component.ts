@@ -141,7 +141,6 @@ export class CPMultipleWPsContentComponent implements OnChanges {
       (indicator: IndicatorItem) => indicator.related_node_id === this.activeTab.indicators[0].related_node_id
     );
 
-    console.log('selectedIndicator:', selectedIndicator);
     this.selectedIndicatorData.set(selectedIndicator || null);
   }
 
