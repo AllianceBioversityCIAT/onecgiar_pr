@@ -213,6 +213,7 @@ export class AowHloCreateModalComponent implements OnInit {
       number_target: this.entityAowService.currentResultToReport().indicators[0].number_target,
       target_date: this.entityAowService.currentResultToReport().indicators[0].target_date,
       contributing_indicator: this.createResultBody().contribution_to_indicator_target,
+      contributing_center: this.createResultBody().contributing_center,
       knowledge_product: this.mqapJson(),
       toc_result_id: this.entityAowService.currentResultToReport().toc_result_id,
       toc_progressive_narrative: this.createResultBody().toc_progressive_narrative,
