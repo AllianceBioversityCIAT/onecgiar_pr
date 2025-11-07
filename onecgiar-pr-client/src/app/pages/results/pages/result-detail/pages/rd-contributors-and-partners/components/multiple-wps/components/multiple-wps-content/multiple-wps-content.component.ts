@@ -4,7 +4,21 @@ import { ApiService } from '../../../../../../../../../../shared/services/api/ap
 import { TocInitiativeOutcomeListsService } from '../../../../../rd-theory-of-change/components/toc-initiative-outcome-section/services/toc-initiative-outcome-lists.service';
 import { RdTheoryOfChangesServicesService } from '../../../../../rd-theory-of-change/rd-theory-of-changes-services.service';
 import { ResultLevelService } from '../../../../../../../../../../pages/results/pages/result-creator/services/result-level.service';
-import { CheckLoginGuard } from '../../../../../../../../../../shared/guards/check-login.guard';
+
+interface TocResultItem {
+  toc_result_id: string;
+  indicators?: IndicatorItem[];
+}
+
+interface IndicatorItem {
+  related_node_id: string;
+  unit_messurament?: string;
+  targets?: TargetItem[];
+}
+
+interface TargetItem {
+  target_value?: number;
+}
 
 @Component({
   selector: 'app-multiple-wps-content',
@@ -31,6 +45,7 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   indicatorsList = signal<any[]>([]);
   indicatorView = false;
   showIndicators = signal<boolean>(false);
+  selectedIndicatorData = signal<IndicatorItem | null>(null);
 
   secondFieldLabel = computed(() => {
     return this.tocResultListFiltered().find(item => item.toc_level_id === this.activeTabSignal()?.toc_level_id)?.name;
@@ -42,6 +57,7 @@ export class CPMultipleWPsContentComponent implements OnChanges {
 
   ngOnChanges(): void {
     this.pushSelectedOptions();
+    this.updateSelectedIndicatorData();
   }
 
   setActiveTabSignal() {
@@ -87,6 +103,7 @@ export class CPMultipleWPsContentComponent implements OnChanges {
         break;
     }
     this.hideIndicators();
+    this.updateSelectedIndicatorData();
   }
 
   hideIndicators() {
@@ -98,6 +115,34 @@ export class CPMultipleWPsContentComponent implements OnChanges {
 
   mapTocResultsIndicatorId() {
     this.activeTab.indicators[0].toc_results_indicator_id = this.activeTab.indicators[0].related_node_id;
+    this.updateSelectedIndicatorData();
+  }
+
+  updateSelectedIndicatorData() {
+    let selectedOption: TocResultItem | undefined = undefined;
+    switch (this.activeTabSignal()?.toc_level_id) {
+      case 3:
+        selectedOption = this.eoiList().find((item: TocResultItem) => item.toc_result_id === this.activeTab?.toc_result_id);
+        break;
+      case 2:
+        selectedOption = this.outcomeList().find((item: TocResultItem) => item.toc_result_id === this.activeTab?.toc_result_id);
+        break;
+      case 1:
+        selectedOption = this.outputList().find((item: TocResultItem) => item.toc_result_id === this.activeTab?.toc_result_id);
+        break;
+    }
+
+    if (!selectedOption || !this.activeTab?.indicators?.[0]?.related_node_id) {
+      this.selectedIndicatorData.set(null);
+      return;
+    }
+
+    const selectedIndicator: IndicatorItem | undefined = selectedOption.indicators?.find(
+      (indicator: IndicatorItem) => indicator.related_node_id === this.activeTab.indicators[0].related_node_id
+    );
+
+    console.log('selectedIndicator:', selectedIndicator);
+    this.selectedIndicatorData.set(selectedIndicator || null);
   }
 
   narrativeTypeResult() {

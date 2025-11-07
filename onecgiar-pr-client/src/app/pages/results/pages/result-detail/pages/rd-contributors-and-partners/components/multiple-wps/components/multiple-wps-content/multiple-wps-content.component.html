@@ -70,8 +70,20 @@
       [(ngModel)]="activeTab.indicators[0].related_node_id"
       (ngModelChange)="mapTocResultsIndicatorId()">
     </app-pr-select>
-    <app-pr-input placeholder="Enter target" label="Target" type="number" [(ngModel)]="activeTab.indicators[0].targets[0].contributing_indicator">
-    </app-pr-input>
+    
+    <div>
+      <app-pr-field-header label="Contribution to indicator target"></app-pr-field-header>
+      <div style="margin: 8px 0;" *ngIf="selectedIndicatorData()">
+        <p><strong>Unit of measurement:</strong> {{ selectedIndicatorData()?.unit_messurament || 'Not specified' }}</p>
+        <p><strong>Target:</strong> {{ selectedIndicatorData()?.targets?.[0]?.target_value || 'Not specified' }}</p>
+      </div>
+      <input 
+        type="number" 
+        placeholder="Enter target" 
+        [(ngModel)]="activeTab.indicators[0].targets[0].contributing_indicator"
+        class="p-inputtext p-component"
+        style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+    </div>
   }
   <hr class="divider-20" />
 
