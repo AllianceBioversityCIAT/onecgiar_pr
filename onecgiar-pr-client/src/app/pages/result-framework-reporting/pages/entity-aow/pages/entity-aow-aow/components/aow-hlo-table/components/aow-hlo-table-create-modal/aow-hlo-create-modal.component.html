@@ -26,7 +26,8 @@
           <strong>Indicator type:</strong> {{ entityAowService.currentResultToReport()?.indicators?.[0]?.type_name }}
         </p>
         <p class="report-result-content_left_header_desc">
-          <strong>Unit of measurement:</strong> {{ entityAowService.currentResultToReport()?.indicators?.[0]?.unit_messurament }} &nbsp;&nbsp;&nbsp; <strong>Target:</strong> {{ entityAowService.currentResultToReport()?.indicators?.[0]?.target_value_sum }}
+          <strong>Unit of measurement:</strong> {{ entityAowService.currentResultToReport()?.indicators?.[0]?.unit_messurament }} &nbsp;&nbsp;&nbsp;
+          <strong>Target:</strong> {{ entityAowService.currentResultToReport()?.indicators?.[0]?.target_value_sum }}
         </p>
       </div>
       <div class="report-result-content_left_content">
@@ -118,6 +119,32 @@
             [min]="0"
             [max]="9999999"
             [disabled]="creatingResult()" />
+        </div>
+
+        <div>
+          <app-pr-multi-select
+            [options]="this.centersSE.centersList"
+            label="Contributing CGIAR Centers"
+            selectedLabel="Center(s) selected"
+            optionLabel="full_name"
+            optionValue="code"
+            [(ngModel)]="createResultBody().contributing_center"
+            placeholder="Select center(s)">
+          </app-pr-multi-select>
+
+          <div class="medal_selector selected_container">
+            <div class="centers chips_container">
+              <div class="center pr_chip_selected" *ngFor="let center of createResultBody().contributing_center; let i = index">
+                <div class="name" [innerHtml]="center?.name"></div>
+                <i
+                  *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status && !center.from_cgspace"
+                  class="material-icons-round"
+                  (click)="deleteContributingCenter(i)"
+                  >cancel</i
+                >
+              </div>
+            </div>
+          </div>
         </div>
 
         <div>
