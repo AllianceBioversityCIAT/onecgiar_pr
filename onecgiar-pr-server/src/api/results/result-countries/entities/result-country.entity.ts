@@ -12,6 +12,7 @@ import { ClarisaCountry } from '../../../../clarisa/clarisa-countries/entities/c
 import { OneToMany } from 'typeorm';
 import { ResultCountriesSubNational } from '../../result-countries-sub-national/entities/result-countries-sub-national.entity';
 import { ResultCountrySubnational } from '../../result-countries-sub-national/entities/result-country-subnational.entity';
+import { GeoScopeRole } from '../../../results-framework-reporting/geo_scope_role/entities/geo_scope_role.entity';
 
 @Entity('result_country')
 export class ResultCountry {
@@ -25,6 +26,15 @@ export class ResultCountry {
 
   @Column({ type: 'int', nullable: true })
   country_id: number;
+
+  @Column({ type: 'int', nullable: true })
+  geo_scope_role_id: number;
+
+  @ManyToOne(() => GeoScopeRole, (v) => v.id, { nullable: false })
+  @JoinColumn({
+    name: 'geo_scope_role_id',
+  })
+  obj_geo_scope_role: GeoScopeRole;
 
   @Column({
     name: 'is_active',

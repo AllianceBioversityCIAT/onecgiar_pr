@@ -688,7 +688,10 @@ export class ResultsFrameworkReportingService {
       }
 
       const hasContributingCentersPayload =
-        Object.prototype.hasOwnProperty.call(payload ?? {}, 'contributing_center');
+        Object.prototype.hasOwnProperty.call(
+          payload ?? {},
+          'contributing_center',
+        );
 
       if (hasContributingCentersPayload) {
         await this._resultsByInstitutionsService.handleContributingCenters(

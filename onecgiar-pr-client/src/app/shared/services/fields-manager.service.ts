@@ -59,7 +59,8 @@ export class FieldsManagerService {
       },
       '[general-info]-gender_impact_area_id': {
         label: this.scoresImpactAreaLabel,
-        hide: this.isP22()
+        hide: this.isP22(),
+        required: true
       },
       //? score 2
       '[general-info]-climate_change_tag_id': {
@@ -67,7 +68,8 @@ export class FieldsManagerService {
       },
       '[general-info]-climate_impact_area_id': {
         label: this.scoresImpactAreaLabel,
-        hide: this.isP22()
+        hide: this.isP22(),
+        required: true
       },
       //? score 3
       '[general-info]-nutrition_tag_level_id': {
@@ -75,7 +77,8 @@ export class FieldsManagerService {
       },
       '[general-info]-nutrition_impact_area_id': {
         label: this.scoresImpactAreaLabel,
-        hide: this.isP22()
+        hide: this.isP22(),
+        required: true
       },
       //? score 4
       '[general-info]-environmental_biodiversity_tag_level_id': {
@@ -83,7 +86,8 @@ export class FieldsManagerService {
       },
       '[general-info]-environmental_biodiversity_impact_area_id': {
         label: this.scoresImpactAreaLabel,
-        hide: this.isP22()
+        hide: this.isP22(),
+        required: true
       },
       //? score 5
       '[general-info]-poverty_tag_level_id': {
@@ -91,7 +95,8 @@ export class FieldsManagerService {
       },
       '[general-info]-poverty_impact_area_id': {
         label: this.scoresImpactAreaLabel,
-        hide: this.isP22()
+        hide: this.isP22(),
+        required: true
       },
       '[geoscope-management]-has_extra_geo_scope': {
         label: 'Are there any other geographic areas where  the innovation could be impactful (beyond current development and use)?',

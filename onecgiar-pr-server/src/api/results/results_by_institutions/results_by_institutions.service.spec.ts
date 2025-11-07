@@ -135,7 +135,10 @@ describe('ResultsByInstitutionsService', () => {
         .mockResolvedValueOnce([
           {
             id: 1,
-            delivery: [{ id: 10, is_active: true }, { id: 11, is_active: false }],
+            delivery: [
+              { id: 10, is_active: true },
+              { id: 11, is_active: false },
+            ],
             obj_institutions: {
               name: 'Inst 1',
               website_link: 'https://example.org',
@@ -151,8 +154,7 @@ describe('ResultsByInstitutionsService', () => {
         [],
       );
 
-      const response =
-        await service.getGetInstitutionsPartnersByResultId(99);
+      const response = await service.getGetInstitutionsPartnersByResultId(99);
 
       expect(response).toMatchObject({
         response: expect.objectContaining({
