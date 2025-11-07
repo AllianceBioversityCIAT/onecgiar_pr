@@ -1,4 +1,9 @@
-import { Injectable, HttpStatus, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  HttpStatus,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { resultValidationRepository } from './results-validation-module.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultRepository } from '../result.repository';
@@ -22,7 +27,10 @@ export class ResultsValidationModuleService {
     try {
       const response =
         await this._resultValidationRepository.validateResultById(resultId);
-
+      if (!response)
+        return this._handlersError.returnErrorRes({
+          error: new NotFoundException('Result not found'),
+        });
       const submit = response.reduce(
         (previousValue, currentValue: any) =>
           previousValue * parseInt(currentValue.validation),
@@ -41,7 +49,7 @@ export class ResultsValidationModuleService {
         statusCode: HttpStatus.OK,
       });
     } catch (error) {
-      this._handlersError.returnErrorRes({ error });
+      return this._handlersError.returnErrorRes({ error });
     }
   }
 
