@@ -45,6 +45,10 @@ export class resultValidationRepository
       },
     });
 
+    if (!result) {
+      return null;
+    }
+
     const sections: ValidationMapsEnum[] = [
       ValidationMapsEnum.GENERAL_INFORMATION,
       ValidationMapsEnum.GEO_LOCATION,
