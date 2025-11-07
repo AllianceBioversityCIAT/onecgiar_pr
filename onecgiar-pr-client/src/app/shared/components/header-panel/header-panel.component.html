@@ -42,6 +42,7 @@
         [attr.aria-expanded]="notificationsPopover.isOpen()"
         aria-controls="notifications-popover"
         [ngStyle]="{ 'margin-top': unreadNotifications.length > 0 ? '-5px' : '0' }"
+        [ngClass]="{ section_active: isInNotificationsRoute() }"
         style="border-bottom: 4px solid transparent; border-top: 4px solid transparent">
         @if (unreadNotifications.length === 0) {
           <i class="material-icons-round info_icon" [ngClass]="{ info_icon_active: notificationsPopover.isOpen() }" aria-hidden="true">

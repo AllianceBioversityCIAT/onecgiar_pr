@@ -4,7 +4,7 @@ import { RolesService } from '../../services/global/roles.service';
 import { DataControlService } from '../../services/data-control.service';
 import { environment } from '../../../../environments/environment';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 
 @Component({
   selector: 'app-navigation-bar',
@@ -19,6 +19,7 @@ export class NavigationBarComponent {
 
   public readonly rolesSE = inject(RolesService);
   public readonly dataControlSE = inject(DataControlService);
+  public readonly router = inject(Router);
 
   validateAdminModuleAndRole(option: PrRoute): boolean {
     if (option?.onlyTest && environment.production) return true;
