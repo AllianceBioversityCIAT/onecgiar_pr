@@ -34,19 +34,20 @@
         (validateMember(this.api.dataControlSE?.myInitiativesList) !== 6 && this.dataControlSE?.currentResult?.inQA) ||
         this.api.rolesSE.isAdmin
       ">
-      <div
-        class="ai-review-button"
-        [ngClass]="{
-          loading: aiReviewSE.aiReviewButtonState === 'loading',
-          completed: aiReviewSE.aiReviewButtonState === 'completed'
-        }"
-        (click)="aiReviewSE.onAIReviewClick()">
-        <img src="assets/icons/stars.png" alt="ai-review" />
-        <span>{{
-          aiReviewSE.aiReviewButtonState === 'loading' ? 'Loading...' : aiReviewSE.aiReviewButtonState === 'completed' ? 'Ready!' : 'AI Review'
-        }}</span>
-      </div>
-
+      @if (this.api.dataControlSE?.currentResult?.result_type_id != 6) {
+        <div
+          class="ai-review-button"
+          [ngClass]="{
+            loading: aiReviewSE.aiReviewButtonState === 'loading',
+            completed: aiReviewSE.aiReviewButtonState === 'completed'
+          }"
+          (click)="aiReviewSE.onAIReviewClick()">
+          <img src="assets/icons/stars.png" alt="ai-review" />
+          <span>{{
+            aiReviewSE.aiReviewButtonState === 'loading' ? 'Loading...' : aiReviewSE.aiReviewButtonState === 'completed' ? 'Ready!' : 'AI Review'
+          }}</span>
+        </div>
+      }
       <div style="width: 100%">
         <app-pr-button
           tooltipText="Enter your username"
