@@ -37,7 +37,7 @@
     <h3 class="view-result-drawer-content_title">Results for {{ entityAowService.currentResultToView()?.indicators?.[0]?.indicator_description }}</h3>
     <p class="view-result-drawer-content_desc">See results details.</p>
 
-    <p-table [value]="entityAowService.existingResultsContributors()" [tableStyle]="{ marginTop: '24px' }" sortField="code" [sortOrder]="1">
+    <p-table [value]="entityAowService.existingResultsContributors()" [tableStyle]="{ marginTop: '24px' }" sortField="result_code" [sortOrder]="1">
       <ng-template #header>
         <tr>
           @for (column of columns(); track column.attr) {
