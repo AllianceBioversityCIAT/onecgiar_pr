@@ -90,9 +90,10 @@ export class UserEvidenceComponent {
   }
 
   isInvalidLink(value: string) {
-    const regex = /^(https?:\/\/)?(www\.)?[a-z0-9]+([-.]?[a-z0-9]+)*\.[a-z]{2,6}(:\d{1,5})?(\/\S*)?$/i;
-
-    return regex.test(value.trim());
+    const trimmedValue = value.trim();
+    if (!trimmedValue) return false;
+    const regex = /^(https?:\/\/)?(www\.)?[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\.[a-z]{2,6}(:\d{1,5})?(\/[^\s]*)?$/i;
+    return regex.test(trimmedValue);
   }
 
   deleteItem() {
