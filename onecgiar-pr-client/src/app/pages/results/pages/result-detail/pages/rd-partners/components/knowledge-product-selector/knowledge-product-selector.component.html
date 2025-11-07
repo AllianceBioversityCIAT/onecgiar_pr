@@ -1,7 +1,11 @@
 <app-alert-status [description]="alertStatusMessage"> </app-alert-status>
 
 <app-alert-status
-  description="If any of the metadata fields are incorrect, please contact your Center library staff or knowledge management team to update them in CGSpace. Before the end of the reporting period, metadata will be automatically refreshed on this page.">
+  [description]="
+    'If any of the metadata fields are incorrect, please contact your Center library staff or knowledge management team to update them in ' +
+    sourceLabel +
+    '. Before the end of the reporting period, metadata will be automatically refreshed on this page.'
+  ">
 </app-alert-status>
 
 <app-alert-status
@@ -20,7 +24,7 @@
       <div class="partner_item_header-circle"></div>
 
       <h1 class="partner_item_header-name">
-        <span class="partner_item_header-prename"> CGSpace author affiliation: </span>
+        <span class="partner_item_header-prename"> {{ sourceLabel }} author affiliation: </span>
         {{ partner.result_kp_mqap_institution_object.intitution_name }}
       </h1>
     </div>
