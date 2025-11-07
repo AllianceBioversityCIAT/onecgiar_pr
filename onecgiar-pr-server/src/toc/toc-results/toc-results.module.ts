@@ -67,6 +67,7 @@ import { ResultCountrySubnationalRepository } from '../../api/results/result-cou
 import { ResultAnswerRepository } from '../../api/results/result-questions/repository/result-answers.repository';
 import { MQAPModule } from '../../api/m-qap/m-qap.module';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
+import { YearRepository } from '../../api/results/years/year.repository';
 
 @Module({
   controllers: [TocResultsController],
@@ -131,6 +132,7 @@ import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/
     ResultCountrySubnationalRepository,
     ResultAnswerRepository,
     ClarisaInitiativesRepository,
+    YearRepository,
   ],
   imports: [
     SharePointModule,

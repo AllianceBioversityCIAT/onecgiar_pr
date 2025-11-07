@@ -5,12 +5,18 @@ import {
   ReturnResponse,
 } from '../../shared/handlers/error.utils';
 import { TocResultsRepository } from './toc-results.repository';
+import { ResultRepository } from '../../api/results/result.repository';
+import { YearRepository } from '../../api/results/years/year.repository';
 
 describe('TocResultsService', () => {
   let service: TocResultsService;
   let handlersError: jest.Mocked<HandlersError>;
   let repository: jest.Mocked<TocResultsRepository>;
   let returnResponse: jest.Mocked<ReturnResponse>;
+  let resultRepository: jest.Mocked<ResultRepository>;
+  let yearRepository: jest.Mocked<YearRepository>;
+  let resultRecord: any;
+  let yearRecord: any;
 
   beforeEach(() => {
     handlersError = {
@@ -37,7 +43,28 @@ describe('TocResultsService', () => {
       format: jest.fn(),
     } as any;
 
-    service = new TocResultsService(handlersError, repository, returnResponse);
+    resultRecord = {
+      id: 1,
+      version_id: 2,
+      obj_version: { id: 3, phase_year: 2030 },
+    };
+    yearRecord = { year: 2030 };
+
+    resultRepository = {
+      findOne: jest.fn().mockResolvedValue(resultRecord),
+    } as any;
+
+    yearRepository = {
+      findOne: jest.fn().mockResolvedValue(yearRecord),
+    } as any;
+
+    service = new TocResultsService(
+      handlersError,
+      repository,
+      returnResponse,
+      resultRepository,
+      yearRepository,
+    );
   });
 
   afterEach(() => {
@@ -167,6 +194,7 @@ describe('TocResultsService', () => {
           type_value: 'Number',
           type_name: 'Quantitative',
           location: 'Global',
+          target_value: 15,
         },
       ];
       repository.getTocIndicatorsByResultIds.mockResolvedValue(indicatorRows);
@@ -214,14 +242,19 @@ describe('TocResultsService', () => {
                 result_toc_result_indicator_id: 700,
                 indicator_contributing: 4,
                 status_id: 2,
-                targets: [],
+                target_value: 15,
+                targets: [{ target_value: 15 }],
               },
             ],
           },
         ],
         statusCode: HttpStatus.OK,
       });
-      expect(repository.getTocIndicatorsByResultIds).toHaveBeenCalledWith([10]);
+      expect(repository.getTocIndicatorsByResultIds).toHaveBeenCalledWith(
+        resultRecord,
+        yearRecord,
+        [10],
+      );
       expect(repository.getResultIndicatorMappings).toHaveBeenCalledWith(1, 2, [
         10,
       ]);
@@ -241,6 +274,7 @@ describe('TocResultsService', () => {
           type_value: 'Qualitative',
           type_name: 'Narrative',
           location: 'Regional',
+          target_value: null,
         },
       ];
       repository.$_getResultTocByConfigV2.mockResolvedValue(data);
@@ -271,14 +305,19 @@ describe('TocResultsService', () => {
                 result_toc_result_indicator_id: null,
                 indicator_contributing: null,
                 status_id: null,
-                targets: [],
+                target_value: null,
+                targets: [{ target_value: null }],
               },
             ],
           },
         ],
         statusCode: HttpStatus.OK,
       });
-      expect(repository.getTocIndicatorsByResultIds).toHaveBeenCalledWith([20]);
+      expect(repository.getTocIndicatorsByResultIds).toHaveBeenCalledWith(
+        resultRecord,
+        yearRecord,
+        [20],
+      );
       expect(repository.getResultIndicatorMappings).toHaveBeenCalledWith(4, 5, [
         20,
       ]);
