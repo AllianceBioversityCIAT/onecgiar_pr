@@ -3,12 +3,13 @@ import { ProgressBarModule } from 'primeng/progressbar';
 import { RouterTestingModule } from '@angular/router/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { EntityAowService } from '../../../../../../services/entity-aow.service';
-import { signal } from '@angular/core';
+import { signal, EventEmitter } from '@angular/core';
 import { AowHloCreateModalComponent } from './aow-hlo-create-modal.component';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 import { of, throwError } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { ResultsListFilterService } from '../../../../../../../../../results/pages/results-outlet/pages/results-list/services/results-list-filter.service';
+import { CentersService } from '../../../../../../../../../../shared/services/global/centers.service';
 
 describe('AowHloCreateModalComponent', () => {
   let component: AowHloCreateModalComponent;
@@ -16,8 +17,15 @@ describe('AowHloCreateModalComponent', () => {
   let entityAowServiceMock: any;
   let apiServiceMock: any;
   let resultsListFilterServiceMock: any;
+  let centersServiceMock: any;
 
   beforeEach(async () => {
+    centersServiceMock = {
+      centersList: [],
+      loadedCenters: new EventEmitter<boolean>(),
+      getData: jest.fn().mockResolvedValue([])
+    };
+
     entityAowServiceMock = {
       getW3BilateralProjects: jest.fn(),
       getExistingResultsContributors: jest.fn(),
@@ -37,7 +45,8 @@ describe('AowHloCreateModalComponent', () => {
       resultsSE: {
         GET_AllInitiatives: jest.fn().mockReturnValue(of({ response: [] })),
         GET_mqapValidation: () => of({ response: { title: 'Title' } }),
-        POST_createResult: jest.fn().mockReturnValue(of({ response: { success: true } }))
+        POST_createResult: jest.fn().mockReturnValue(of({ response: { success: true } })),
+        GET_AllCLARISACenters: jest.fn().mockReturnValue(of({ response: [] }))
       },
       alertsFe: {
         show: jest.fn()
@@ -73,7 +82,8 @@ describe('AowHloCreateModalComponent', () => {
       providers: [
         { provide: EntityAowService, useValue: entityAowServiceMock },
         { provide: ApiService, useValue: apiServiceMock },
-        { provide: ResultsListFilterService, useValue: resultsListFilterServiceMock }
+        { provide: ResultsListFilterService, useValue: resultsListFilterServiceMock },
+        { provide: CentersService, useValue: centersServiceMock }
       ]
     }).compileComponents();
 
