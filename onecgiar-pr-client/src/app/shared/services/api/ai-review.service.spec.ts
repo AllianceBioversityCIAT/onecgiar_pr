@@ -1,12 +1,15 @@
 import { TestBed } from '@angular/core/testing';
-
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { AiReviewService } from './ai-review.service';
 
 describe('AiReviewService', () => {
   let service: AiReviewService;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({
+      imports: [HttpClientTestingModule],
+      providers: [AiReviewService]
+    });
     service = TestBed.inject(AiReviewService);
   });
 
