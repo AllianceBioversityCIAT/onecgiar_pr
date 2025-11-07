@@ -95,10 +95,6 @@
     [(ngModel)]="activeTab.toc_progressive_narrative"
     [maxWords]="150">
   </app-pr-textarea>
-
-  <h1>TOC progressive narrative: {{ activeTab.toc_progressive_narrative }}</h1>
-  <h1>TOC level: {{ activeTab.toc_level_id }}</h1>
-  <h1>target: {{ activeTab.indicators[0].targets[0].contributing_indicator }}</h1>
 </div>
 
 <app-mapped-results-modal [activeTab]="activeTab" [outputList]="outputList" [resultLevelId]="resultLevelId"></app-mapped-results-modal>
