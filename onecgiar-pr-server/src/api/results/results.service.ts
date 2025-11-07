@@ -82,6 +82,8 @@ import {
   NotificationTypeEnum,
 } from '../notification/enum/notification.enum';
 import { ImpactAreasScoresComponentRepository } from './impact_areas_scores_components/repositories/impact_areas_scores_components.repository';
+import { ResultsInnovationsDev } from './summary/entities/results-innovations-dev.entity';
+import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 
 @Injectable()
 export class ResultsService {
@@ -2308,7 +2310,6 @@ export class ResultsService {
           'result_center_array.clarisa_center_object.clarisa_institution',
         ],
       });
-      console.log(result);
 
       if (!result) {
         throw {
@@ -2316,6 +2317,24 @@ export class ResultsService {
           message: 'Result not found',
           status: HttpStatus.NOT_FOUND,
         };
+      }
+
+      if (result.result_type_id === ResultTypeEnum.KNOWLEDGE_PRODUCT) {
+        throw {
+          response: {},
+          message: 'No esta habilitado para ese tipo de indicador',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      let innovationsDev: ResultsInnovationsDev = null;
+      if (result.result_type_id === ResultTypeEnum.INNOVATION_DEVELOPMENT) {
+        innovationsDev = await this._resultRepository.manager.findOne(
+          ResultsInnovationsDev,
+          {
+            where: { results_id: resultId, is_active: true },
+          },
+        );
       }
 
       const activeInitiatives =
@@ -2340,7 +2359,6 @@ export class ResultsService {
         result.obj_results_toc_result?.filter((toc) => toc.is_active) || [],
         result.obj_version.phase_year,
       );
-      console.log(tocMetadata);
 
       const activeCenters =
         result.result_center_array?.filter((c) => c.is_active) || [];
@@ -2366,6 +2384,7 @@ export class ResultsService {
         result_level_name: result.obj_result_level?.name || null,
         result_name: result.title,
         result_description: result.description,
+        short_title: innovationsDev?.short_title || null,
         geographic_scope_name: result.obj_geographic_scope?.name || null,
         geographic_scope_description:
           result.obj_geographic_scope?.description || null,
