@@ -5,6 +5,8 @@ import {
 } from '../../shared/handlers/error.utils';
 import { TocResultsRepository } from './toc-results.repository';
 import { EnvironmentExtractor } from '../../shared/utils/environment-extractor';
+import { ResultRepository } from '../../api/results/result.repository';
+import { YearRepository } from '../../api/results/years/year.repository';
 
 @Injectable()
 export class TocResultsService {
@@ -12,6 +14,8 @@ export class TocResultsService {
     private readonly _handlersError: HandlersError,
     private readonly _tocResultsRepository: TocResultsRepository,
     private readonly _returnResponse: ReturnResponse,
+    private readonly _resultRepository: ResultRepository,
+    private readonly _yearRepository: YearRepository,
   ) {}
 
   async findTocResultByConfig(
@@ -120,8 +124,31 @@ export class TocResultsService {
     toc_level: number,
   ) {
     try {
+      const result = await this._resultRepository.findOne({
+        select: {
+          id: true,
+          version_id: true,
+          obj_version: {
+            id: true,
+            phase_year: true,
+          },
+        },
+        where: { id: result_id, is_active: true },
+        relations: {
+          obj_version: true,
+        },
+      });
+
+      const year = await this._yearRepository.findOne({
+        select: {
+          year: true,
+        },
+        where: {
+          active: true,
+        },
+      });
+
       const res = await this._tocResultsRepository.$_getResultTocByConfigV2(
-        result_id,
         init_id,
         toc_level,
       );
@@ -140,6 +167,8 @@ export class TocResultsService {
         if (tocResultIds.length) {
           const [indicatorRows, mappingRows] = await Promise.all([
             this._tocResultsRepository.getTocIndicatorsByResultIds(
+              result,
+              year,
               tocResultIds,
             ),
             this._tocResultsRepository.getResultIndicatorMappings(
@@ -163,7 +192,10 @@ export class TocResultsService {
               result_toc_result_indicator_id: number | null;
               indicator_contributing: number | null;
               status_id: number | null;
-              targets: any[];
+              target_value: number | null;
+              targets: Array<{
+                target_value: number | null;
+              }>;
             }>
           >();
 
@@ -273,7 +305,12 @@ export class TocResultsService {
               indicator_contributing:
                 mappingInfo?.indicator_contributing ?? null,
               status_id: mappingInfo?.status_id ?? null,
-              targets: [],
+              target_value: indicator.target_value ?? null,
+              targets: [
+                {
+                  target_value: indicator.target_value ?? null,
+                },
+              ],
             });
           }
 

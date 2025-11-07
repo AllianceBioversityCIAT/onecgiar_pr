@@ -17,7 +17,6 @@ export class RdTheoryOfChangesServicesService {
   result_toc_result = null;
   contributors_result_toc_result = null;
   fullInitiativeToc = null;
-  savedActiveTabIndex: number | null = null;
 
   constructor(public api: ApiService) {}
 

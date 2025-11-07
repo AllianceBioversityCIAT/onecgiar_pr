@@ -304,7 +304,7 @@ describe('TocResultsRepository', () => {
   describe('$_getResultTocByConfigV2', () => {
     it('throws when toc level is invalid', async () => {
       await expect(
-        repository.$_getResultTocByConfigV2(1, 2, 99),
+        repository.$_getResultTocByConfigV2(1, 99),
       ).rejects.toMatchObject({
         message: expect.stringContaining('Invalid toc level'),
         status: 400,
@@ -315,7 +315,7 @@ describe('TocResultsRepository', () => {
       mockQuery.mockRejectedValue(new Error('fail'));
 
       await expect(
-        repository.$_getResultTocByConfigV2(1, 2, 1),
+        repository.$_getResultTocByConfigV2(1, 1),
       ).rejects.toMatchObject({
         message: expect.stringContaining('_getResultTocByConfigV2 error'),
       });
@@ -324,7 +324,11 @@ describe('TocResultsRepository', () => {
 
   describe('getTocIndicatorsByResultIds', () => {
     it('returns empty array when no ids provided', async () => {
-      const result = await repository.getTocIndicatorsByResultIds([]);
+      const result = await repository.getTocIndicatorsByResultIds(
+        { obj_version: { phase_year: 2035 } } as any,
+        { year: 2030 } as any,
+        [],
+      );
 
       expect(result).toEqual([]);
       expect(mockQuery).not.toHaveBeenCalled();
@@ -334,12 +338,20 @@ describe('TocResultsRepository', () => {
       const expected = [{ toc_result_id: 5 }];
       mockQuery.mockResolvedValue(expected);
 
-      const result = await repository.getTocIndicatorsByResultIds([10, '11']);
+      const resultObj = { obj_version: { phase_year: 2035 } } as any;
+      const yearObj = { year: 2028 } as any;
+
+      const result = await repository.getTocIndicatorsByResultIds(
+        resultObj,
+        yearObj,
+        [10, '11'],
+      );
 
       expect(mockQuery).toHaveBeenCalledWith(
         expect.stringContaining('toc_results_indicators tri'),
         [10, 11],
       );
+      expect(mockQuery.mock.calls[0][0]).toContain('target_date = 2035');
       expect(result).toBe(expected);
     });
 
@@ -347,7 +359,11 @@ describe('TocResultsRepository', () => {
       mockQuery.mockRejectedValue(new Error('fail'));
 
       await expect(
-        repository.getTocIndicatorsByResultIds([3]),
+        repository.getTocIndicatorsByResultIds(
+          { obj_version: { phase_year: 2035 } } as any,
+          { year: 2030 } as any,
+          [3],
+        ),
       ).rejects.toMatchObject({
         message: expect.stringContaining('getTocIndicatorsByResultIds error'),
       });

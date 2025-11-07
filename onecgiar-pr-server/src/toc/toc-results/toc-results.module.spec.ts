@@ -87,6 +87,7 @@ import { ResultCountrySubnationalRepository } from '../../api/results/result-cou
 import { ResultAnswerRepository } from '../../api/results/result-questions/repository/result-answers.repository';
 import { ResultTypeRepository } from '../../api/results/result_types/resultType.repository';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
+import { YearRepository } from '../../api/results/years/year.repository';
 import { HandlersError } from '../../shared/handlers/error.utils';
 
 describe('TocResultsModule', () => {
@@ -158,6 +159,7 @@ describe('TocResultsModule', () => {
       ResultAnswerRepository,
       ClarisaInitiativesRepository,
       EvidencesService,
+      YearRepository,
     ];
 
     providersToMock.forEach((provider) => {

@@ -25,6 +25,10 @@
         <p class="report-result-content_left_header_desc">
           <strong>Indicator type:</strong> {{ entityAowService.currentResultToReport()?.indicators?.[0]?.type_name }}
         </p>
+        <p class="report-result-content_left_header_desc">
+          <strong>Unit of measurement:</strong> {{ entityAowService.currentResultToReport()?.indicators?.[0]?.unit_messurament }} &nbsp;&nbsp;&nbsp;
+          <strong>Target:</strong> {{ entityAowService.currentResultToReport()?.indicators?.[0]?.target_value_sum }}
+        </p>
       </div>
       <div class="report-result-content_left_content">
         @if (entityAowService.currentResultToReport().indicators?.[0]?.result_type_id) {
@@ -89,14 +93,20 @@
 
         <div class="separator"></div>
 
-        <app-pr-textarea
-          [isStatic]="true"
-          placeholder="Provide input here..."
-          [label]="currentResultIsKnowledgeProduct() ? 'Progress narrative of the High-Level Output' : 'Progress narrative of the Output'"
-          [(ngModel)]="createResultBody().toc_progressive_narrative"
-          type="text"
-          [disabled]="creatingResult()"
-          labelDescInlineStyles="margin-top: 0 !important"></app-pr-textarea>
+        <div>
+          <app-pr-field-header
+            [label]="currentResultIsKnowledgeProduct() ? 'Progress narrative of the High-Level Output' : 'Progress narrative of the Output'"
+            [required]="false"
+            [labelDescInlineStyles]="'margin-top: 0 !important'">
+          </app-pr-field-header>
+
+          <app-pr-textarea
+            [isStatic]="true"
+            placeholder="Provide input here..."
+            [(ngModel)]="createResultBody().toc_progressive_narrative"
+            type="text"
+            [disabled]="creatingResult()"></app-pr-textarea>
+        </div>
 
         <div>
           <app-pr-field-header label="Contribution to indicator target" [required]="false" [labelDescInlineStyles]="'margin-top: 0 !important'">
@@ -109,6 +119,33 @@
             [min]="0"
             [max]="9999999"
             [disabled]="creatingResult()" />
+        </div>
+
+        <div>
+          <app-pr-multi-select
+            [options]="this.centersSE.centersList"
+            label="Contributing CGIAR Centers"
+            selectedLabel="Center(s) selected"
+            [required]="false"
+            optionLabel="full_name"
+            optionValue="code"
+            [(ngModel)]="createResultBody().contributing_center"
+            placeholder="Select center(s)">
+          </app-pr-multi-select>
+
+          <div class="medal_selector selected_container">
+            <div class="centers chips_container">
+              <div class="center pr_chip_selected" *ngFor="let center of createResultBody().contributing_center; let i = index">
+                <div class="name" [innerHtml]="center?.name"></div>
+                <i
+                  *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status && !center.from_cgspace"
+                  class="material-icons-round"
+                  (click)="deleteContributingCenter(i)"
+                  >cancel</i
+                >
+              </div>
+            </div>
+          </div>
         </div>
 
         <div>

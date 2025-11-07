@@ -21,6 +21,7 @@ interface toc_result_row {
   progress_percentage: string | null;
   number_target?: string | null;
   target_date?: number | null;
+  target_value?: number | null;
   result_type_id?: number | null;
   result_type_name?: string | null;
   result_level_id?: number | null;
@@ -45,6 +46,7 @@ export interface toc_result_response {
     progress_percentage?: string | null;
     number_target?: string | null;
     target_date?: number | null;
+    target_value?: number | null;
     result_type_id?: number | null;
     result_type_name?: string | null;
     result_level_id?: number | null;
@@ -193,6 +195,7 @@ export class AoWBilateralRepository {
         COALESCE(SUM(CAST(trit.target_value AS SIGNED)), 0) AS target_value_sum,
         trit.number_target,
         trit.target_date,
+        trit.target_value,
         CASE
           WHEN tri.type_value LIKE '%Number of Policy%' THEN 1
           WHEN tri.type_value LIKE '%Innovation Use%' THEN 2
@@ -263,7 +266,8 @@ export class AoWBilateralRepository {
         tri.type_name,
         tri.location,
         trit.number_target,
-        trit.target_date
+        trit.target_date,
+        trit.target_value
       ORDER BY tr.id ASC, tri.id ASC
     `;
 
@@ -298,6 +302,7 @@ export class AoWBilateralRepository {
           actual_achieved_value_sum: row.actual_achieved_value_sum,
           number_target: row.number_target,
           target_date: row.target_date,
+          target_value: row.target_value,
           progress_percentage: row.progress_percentage,
           result_level_id: row.result_level_id ?? null,
           result_type_id: row.result_type_id ?? null,
