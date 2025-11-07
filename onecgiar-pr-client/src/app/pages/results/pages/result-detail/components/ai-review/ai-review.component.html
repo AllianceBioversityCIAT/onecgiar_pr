@@ -9,12 +9,34 @@
   <div class="ai-review-container">
     <app-alert-status description="✨ The AI analyzed your information and identified the following:"> </app-alert-status>
 
-    @for (item of aiReviewSE.currnetFieldsList(); track $index) {
-      {{ item.field_name }}
+    @for (field of aiReviewSE.currnetFieldsList(); track $index) {
+      <!-- Title Section -->
+      <div class="field-section">
+        <div class="field-header">
+          <h3 class="field-title">{{ field.field_name }}</h3>
+          <span class="improvement-badge">⚠️ Needs improvement</span>
+        </div>
+
+        <div class="proposal-section">
+          <div class="proposal-label">💡 AI proposal</div>
+          <div class="proposal-content">
+            Development of Conceptual Framework for Small-Scale Fisheries and Aquaculture: Improving Sustainable Resource Management
+          </div>
+          <app-pr-button text="Apply proposal" [showBackground]="false" class="apply-button-custom"> </app-pr-button>
+        </div>
+
+        <div class="current-version">
+          <label class="version-label">Result version</label>
+          <app-pr-input type="text" [readOnly]="false" [(ngModel)]="field.original_text" placeholder="Small-scale Fisheries and Aquaculture Ontology">
+          </app-pr-input>
+        </div>
+
+        <app-pr-button text="Save changes" icon="save" [showBackground]="true" class="save-button-custom"> </app-pr-button>
+      </div>
     }
 
     <!-- Title Section -->
-    <div class="field-section">
+    <!-- <div class="field-section">
       <div class="field-header">
         <h3 class="field-title">Title</h3>
         <span class="improvement-badge">⚠️ Needs improvement</span>
@@ -35,10 +57,10 @@
       </div>
 
       <app-pr-button text="Save changes" icon="save" [showBackground]="true" class="save-button-custom"> </app-pr-button>
-    </div>
+    </div> -->
 
     <!-- Description Section -->
-    <div class="field-section">
+    <!-- <div class="field-section">
       <div class="field-header">
         <h3 class="field-title">Description</h3>
         <span class="improvement-badge">⚠️ Needs improvement</span>
@@ -62,10 +84,10 @@
       </div>
 
       <app-pr-button text="Save changes" icon="save" [showBackground]="true" class="save-button-custom"> </app-pr-button>
-    </div>
+    </div> -->
 
     <!-- Innovation Short Title Section -->
-    <div class="field-section">
+    <!-- <div class="field-section">
       <div class="field-header">
         <h3 class="field-title">Innovation short title</h3>
         <span class="improvement-badge">⚠️ Needs improvement</span>
@@ -83,6 +105,6 @@
       </div>
 
       <app-pr-button text="Save changes" icon="save" [showBackground]="true" class="save-button-custom"> </app-pr-button>
-    </div>
+    </div> -->
   </div>
 </p-dialog>
