@@ -2,9 +2,12 @@ import { CreateResultCountriesSubNationalDto } from '../../result-countries-sub-
 
 export class CreateResultCountryDto {
   public geo_scope_id: number;
+  public extra_geo_scope_id?: number | null;
   public result_id: number;
   public has_countries: boolean;
+  public has_extra_countries?: boolean;
   public countries: countriesInterface[];
+  public extra_countries?: countriesInterface[];
 }
 
 export interface countriesInterface {
