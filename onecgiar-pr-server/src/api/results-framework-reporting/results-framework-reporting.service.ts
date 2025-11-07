@@ -23,6 +23,7 @@ import { CreateTocShareResult } from '../results/share-result-request/dto/create
 import { ResultsByProjectsService } from '../results/results_by_projects/results_by_projects.service';
 import { ResultsTocTargetIndicatorRepository } from '../results/results-toc-results/repositories/result-toc-result-target-indicator.repository';
 import { ResultLevelEnum } from '../../shared/constants/result-level.enum';
+import { ResultsByInstitutionsService } from '../results/results_by_institutions/results_by_institutions.service';
 
 @Injectable()
 export class ResultsFrameworkReportingService {
@@ -45,6 +46,7 @@ export class ResultsFrameworkReportingService {
     private readonly _resultsIndicatorsTargetsRepository: ResultsTocTargetIndicatorRepository,
     private readonly _shareResultRequestService: ShareResultRequestService,
     private readonly _resultsByProjectsService: ResultsByProjectsService,
+    private readonly _resultsByInstitutionsService: ResultsByInstitutionsService,
   ) {}
 
   async getGlobalUnitsByProgram(user: TokenDto, programId?: string) {
@@ -683,6 +685,19 @@ export class ResultsFrameworkReportingService {
             );
           }
         }
+      }
+
+      const hasContributingCentersPayload =
+        Object.prototype.hasOwnProperty.call(payload ?? {}, 'contributing_center');
+
+      if (hasContributingCentersPayload) {
+        await this._resultsByInstitutionsService.handleContributingCenters(
+          Array.isArray(payload.contributing_center)
+            ? payload.contributing_center
+            : [],
+          { result_id: createdResultId },
+          user,
+        );
       }
 
       return {
