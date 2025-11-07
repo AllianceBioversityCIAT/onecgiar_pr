@@ -34,48 +34,53 @@ export class AiReviewService {
   // on AI review click
   async onAIReviewClick() {
     console.clear();
-    if (this.aiReviewButtonState !== 'idle') return;
+    try {
+      if (this.aiReviewButtonState !== 'idle') return;
 
-    this.aiReviewButtonState = 'loading';
+      this.aiReviewButtonState = 'loading';
 
-    // TODO: To async all steps
-    await this.POST_createSession();
-    await this.GET_aiContext();
-    await this.GET_resultContext();
-    console.log(this.api.authSE.localStorageUser);
-    const iaBody: POSTPRMSQa = {
-      user_id: this.api.authSE.localStorageUser.email,
-      result_metadata: this.aiContext()
-    };
-    console.log('iaBody', iaBody);
-    const { json_content } = await this.POST_prmsQa(iaBody);
+      // TODO: To async all steps
+      await this.POST_createSession();
+      await this.GET_aiContext();
+      await this.GET_resultContext();
+      console.log(this.api.authSE.localStorageUser);
+      const iaBody: POSTPRMSQa = {
+        user_id: this.api.authSE.localStorageUser.email,
+        result_metadata: this.aiContext()
+      };
+      console.log('iaBody', iaBody);
+      const { json_content } = await this.POST_prmsQa(iaBody);
 
-    console.log('aiRecommendation', json_content);
+      console.log('aiRecommendation', json_content);
 
-    this.currnetFieldsList.update(res => {
-      res[0].proposed_text = json_content.new_title;
-      res[0].needs_improvement = true;
-      res[1].proposed_text = json_content.new_description;
-      res[1].needs_improvement = true;
-      return [...res];
-    });
+      this.currnetFieldsList.update(res => {
+        res[0].proposed_text = json_content.new_title;
+        res[0].needs_improvement = true;
+        res[1].proposed_text = json_content.new_description;
+        res[1].needs_improvement = true;
+        return [...res];
+      });
 
-    console.log('currnetFieldsList', this.currnetFieldsList());
+      console.log('currnetFieldsList', this.currnetFieldsList());
 
-    const proposalResponse = await this.POST_createProposal({
-      proposals: this.currnetFieldsList()
-    });
+      const proposalResponse = await this.POST_createProposal({
+        proposals: this.currnetFieldsList()
+      });
 
-    console.log('proposalResponse', proposalResponse);
+      console.log('proposalResponse', proposalResponse);
 
-    // Mostrar animación de completado
-    this.aiReviewButtonState = 'completed';
+      // Mostrar animación de completado
+      this.aiReviewButtonState = 'completed';
 
-    // Esperar a que termine la animación antes de abrir el modal
-    setTimeout(() => {
-      this.showAiReview.set(true);
+      // Esperar a que termine la animación antes de abrir el modal
+      setTimeout(() => {
+        this.showAiReview.set(true);
+        this.aiReviewButtonState = 'idle';
+      }, 600);
+    } catch (error) {
+      console.error('Error creating AI session:', error);
       this.aiReviewButtonState = 'idle';
-    }, 600);
+    }
   }
 
   onApplyProposal(field, index: number) {
@@ -89,7 +94,11 @@ export class AiReviewService {
     console.log(body);
     console.log({ fields: [this.currnetFieldsList()[index] as POSTSaveProposalField] });
     this.POST_createEvent(body);
-    this.POST_saveSession({ fields: [this.currnetFieldsList()[index] as POSTSaveProposalField] });
+    const fieldToSave = this.currnetFieldsList()[index] as POSTSaveProposalField;
+    fieldToSave.new_value = fieldToSave.original_text;
+    fieldToSave.change_reason = 'AI proposal applied';
+    fieldToSave.was_ai_suggested = true;
+    this.POST_saveSession({ fields: [fieldToSave] });
   }
 
   // STEP 1: Create AI session
@@ -195,6 +204,7 @@ export class AiReviewService {
         .pipe(this.saveButtonSE.isGettingSectionPipe())
         .subscribe({
           next: (response: any) => {
+            console.log('response', response);
             resolve(response);
           }
         });

@@ -52,4 +52,7 @@ export interface POSTSaveProposalField {
   change_reason: string;
   was_ai_suggested: boolean;
   user_feedback?: string;
+  // aux
+  proposed_text?: string;
+  original_text?: string;
 }

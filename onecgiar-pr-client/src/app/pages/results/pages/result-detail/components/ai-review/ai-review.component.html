@@ -27,16 +27,11 @@
 
         <div class="current-version">
           <label class="version-label">Result version</label>
-          <app-pr-input
-            [disabled]="true"
-            type="text"
-            [readOnly]="false"
-            [(ngModel)]="field.original_text"
-            placeholder="Small-scale Fisheries and Aquaculture Ontology">
-          </app-pr-input>
+          <app-pr-input type="text" [readOnly]="false" [(ngModel)]="field.original_text" placeholder=""> </app-pr-input>
         </div>
 
         <app-pr-button
+          [disabled]="!field.canSave"
           text="Save changes"
           icon="save"
           [showBackground]="true"
@@ -45,77 +40,5 @@
         </app-pr-button>
       </div>
     }
-
-    <!-- Title Section -->
-    <!-- <div class="field-section">
-      <div class="field-header">
-        <h3 class="field-title">Title</h3>
-        <span class="improvement-badge">⚠️ Needs improvement</span>
-      </div>
-
-      <div class="proposal-section">
-        <div class="proposal-label">💡 AI proposal</div>
-        <div class="proposal-content">
-          Development of Conceptual Framework for Small-Scale Fisheries and Aquaculture: Improving Sustainable Resource Management
-        </div>
-        <app-pr-button text="Apply proposal" [showBackground]="false" class="apply-button-custom"> </app-pr-button>
-      </div>
-
-      <div class="current-version">
-        <label class="version-label">Result version</label>
-        <app-pr-input type="text" [readOnly]="false" [(ngModel)]="titleCurrentVersion" placeholder="Small-scale Fisheries and Aquaculture Ontology">
-        </app-pr-input>
-      </div>
-
-      <app-pr-button text="Save changes" icon="save" [showBackground]="true" class="save-button-custom"> </app-pr-button>
-    </div> -->
-
-    <!-- Description Section -->
-    <!-- <div class="field-section">
-      <div class="field-header">
-        <h3 class="field-title">Description</h3>
-        <span class="improvement-badge">⚠️ Needs improvement</span>
-      </div>
-
-      <div class="proposal-section">
-        <div class="proposal-label">💡 AI proposal</div>
-        <div class="proposal-content">
-          This result presents a comprehensive conceptual framework for the sustainable management of small-scale fisheries and aquaculture systems.
-          The project developed a standardized ontology that enables consistent classification and description of species, fishing practices, and
-          environmental characteristics. This tool facilitates evidence-based decision-making for fishing communities, improving the resilience of
-          local food systems and promoting sustainable practices that protect marine biodiversity while ensuring the livelihoods of coastal
-          communities.
-        </div>
-        <app-pr-button text="Apply proposal" [showBackground]="false" class="apply-button-custom"> </app-pr-button>
-      </div>
-
-      <div class="current-version">
-        <label class="version-label">Result version</label>
-        <app-pr-textarea [readOnly]="false" [(ngModel)]="descriptionCurrentVersion" [maxWords]="150"> </app-pr-textarea>
-      </div>
-
-      <app-pr-button text="Save changes" icon="save" [showBackground]="true" class="save-button-custom"> </app-pr-button>
-    </div> -->
-
-    <!-- Innovation Short Title Section -->
-    <!-- <div class="field-section">
-      <div class="field-header">
-        <h3 class="field-title">Innovation short title</h3>
-        <span class="improvement-badge">⚠️ Needs improvement</span>
-      </div>
-
-      <div class="proposal-section">
-        <div class="proposal-label">💡 AI proposal</div>
-        <div class="proposal-content">Standardized Classification System for Sustainable Fisheries</div>
-        <app-pr-button text="Apply proposal" [showBackground]="false" class="apply-button-custom"> </app-pr-button>
-      </div>
-
-      <div class="current-version">
-        <label class="version-label">Result version</label>
-        <app-pr-input type="text" [readOnly]="false" [(ngModel)]="innovationShortTitleCurrentVersion" placeholder="Not completed"> </app-pr-input>
-      </div>
-
-      <app-pr-button text="Save changes" icon="save" [showBackground]="true" class="save-button-custom"> </app-pr-button>
-    </div> -->
   </div>
 </p-dialog>
