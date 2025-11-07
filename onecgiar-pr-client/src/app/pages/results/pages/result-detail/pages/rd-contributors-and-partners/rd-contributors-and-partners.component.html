@@ -224,13 +224,13 @@
         [(ngModel)]="this.rdPartnersSE.partnersBody.linked_results"
         optionLabel="title"
         optionValue="id"
-        [group]="true"
         optionGroupLabel="name"
         optionGroupChildren="options"
         label="Please select a result"
         placeholder="Please select a result"
         selectedLabel="Results selected"
-        selectedOptionLabel="title">
+        selectedOptionLabel="title"
+        [displayLabelFormatter]="formatResultLabel.bind(this)">
       </app-pr-multi-select>
     }
   }
