@@ -29,7 +29,7 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   contributors_result_toc_result = null;
   leadPartnerId: number = null;
   leadCenterCode: string = null;
-  result_toc_result_signal = signal<any>(null);
+  initiativeIdSignal = signal<any>(null);
   updatingLeadData: boolean = false;
   disableLeadPartner: boolean = false;
 
@@ -196,7 +196,9 @@ export class RdContributorsAndPartnersService implements OnDestroy {
         ];
 
         // this.changeDetectorRef.detectChanges();
-        this.result_toc_result_signal.set(this.partnersBody?.result_toc_result);
+        console.log('initiativeId', this.partnersBody?.result_toc_result?.initiative_id);
+        this.initiativeIdSignal.set(this.partnersBody?.result_toc_result?.initiative_id);
+        console.log('initiativeIdSignal', this.initiativeIdSignal());
         this.getConsumed.set(true);
         //! TOC END
         this.partnersBody.bilateral_projects.forEach(project => {
