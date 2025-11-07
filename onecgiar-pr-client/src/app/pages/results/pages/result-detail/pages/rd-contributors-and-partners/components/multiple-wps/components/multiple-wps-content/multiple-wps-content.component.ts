@@ -33,17 +33,14 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   showIndicators = signal<boolean>(false);
 
   secondFieldLabel = computed(() => {
-    console.log('secondFieldLabel');
     return this.tocResultListFiltered().find(item => item.toc_level_id === this.activeTabSignal()?.toc_level_id)?.name;
   });
 
   onChangesActiveTab = effect(() => {
-    console.log('onChangesActiveTab');
     this.getIndicatorsList();
   });
 
   ngOnChanges(): void {
-    console.log('ngOnChanges');
     this.pushSelectedOptions();
   }
 

@@ -63,9 +63,7 @@ export class CPMultipleWPsComponent implements OnChanges {
   ) {}
 
   onChangesInitiative = effect(() => {
-    console.log(this.initiativeId());
     if (!this.initiativeId()) return;
-    console.log('load data');
     this.GET_outcomeList();
     this.GET_outputList();
     this.GET_EOIList();
