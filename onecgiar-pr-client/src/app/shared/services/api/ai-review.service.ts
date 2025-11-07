@@ -201,7 +201,7 @@ export class AiReviewService {
     return new Promise((resolve, reject) => {
       return this.http
         .post<SaveProposal>(`${this.baseApiBaseUrl}ai/sessions/${this.sessionId()}/save`, body)
-        .pipe(this.saveButtonSE.isGettingSectionPipe())
+        .pipe(this.saveButtonSE.isSavingPipe())
         .subscribe({
           next: (response: any) => {
             console.log('response', response);
