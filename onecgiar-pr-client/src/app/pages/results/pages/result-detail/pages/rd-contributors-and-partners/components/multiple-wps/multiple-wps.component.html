@@ -1,14 +1,14 @@
 <div class="local_container section_container">
   <div class="tabs-container">
     <div class="tabs" [style.grid-template-columns]="getGridTemplateColumns()">
-      @for (tab of initiative()?.result_toc_results; track $index) {
+      @for (tab of initiative?.result_toc_results; track $index) {
         <div class="tab" [ngClass]="{ active: $index === activeTabIndex }">
           <a class="tab-content" (click)="onActiveTab(tab, $index)">
             <i class="material-icons-round {{ completnessStatusValidation(tab) ? 'valid' : 'invalid' }}" style="font-size: 20px"> check_circle </i>
             <p class="tab-title">{{ this.dynamicTabTitle() }} N~{{ $index + 1 }}</p>
           </a>
           <a
-            *ngIf="initiative()?.result_toc_results.length !== 1"
+            *ngIf="initiative?.result_toc_results.length !== 1"
             (click)="onDeleteTab(tab, $index + 1)"
             pTooltip="Delete TOC contributio"
             tooltipPosition="top"
@@ -18,7 +18,7 @@
         </div>
       }
     </div>
-    <!-- @if (initiative()?.result_toc_results.length < this.getMaxNumberOfTabs(this.initiative()?.planned_result, this.resultLevelId) && editable) { -->
+    <!-- @if (initiative?.result_toc_results.length < this.getMaxNumberOfTabs(this.initiative?.planned_result, this.resultLevelId) && editable) { -->
     <a class="tab-add-button" (click)="onAddTab()">
       <i
         class="material-icons-round close_icon tab-add-button-item"
@@ -33,7 +33,6 @@
   <div class="multiple-wps-container">
     <app-multiple-wps-content
       [editable]="editable"
-      [initiative]="initiative()"
       [activeTab]="activeTab"
       [activeTabSignal]="activeTabSignal"
       [resultLevelId]="resultLevelId"
@@ -42,7 +41,7 @@
       [outcomeList]="outcomeList"
       [eoiList]="eoiList"
       [outputList]="outputList"
-      [allTabsCreated]="this.initiative()?.result_toc_results"
+      [allTabsCreated]="this.initiative?.result_toc_results"
       [selectedOptionsOutput]="selectedOptionsOutput"
       [selectedOptionsOutcome]="selectedOptionsOutcome"
       [selectedOptionsEOI]="selectedOptionsEOI"></app-multiple-wps-content>

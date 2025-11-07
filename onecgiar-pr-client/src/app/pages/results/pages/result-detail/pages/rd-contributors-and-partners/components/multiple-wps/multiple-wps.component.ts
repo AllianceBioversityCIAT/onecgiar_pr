@@ -5,6 +5,7 @@ import { FieldsManagerService } from '../../../../../../../../shared/services/fi
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { RdTheoryOfChangesServicesService } from '../../../rd-theory-of-change/rd-theory-of-changes-services.service';
 import { RdContributorsAndPartnersService } from '../../rd-contributors-and-partners.service';
+import { ResultToResultInterfaceToc } from '../../../../../../../ipsr/pages/innovation-package-detail/pages/ipsr-contributors/model/contributorsBody';
 
 interface Tab {
   action_area_outcome_id: number | null;
@@ -33,7 +34,8 @@ interface Tab {
 })
 export class CPMultipleWPsComponent implements OnChanges {
   @Input() editable: boolean;
-  @Input() initiative: WritableSignal<any>;
+  @Input() initiative: ResultToResultInterfaceToc | null | any;
+  @Input() initiativeId: WritableSignal<number | null>;
   @Input() isContributor?: boolean = false;
   @Input() isNotifications?: boolean = false;
   @Input() resultLevelId: number | string;
@@ -61,20 +63,22 @@ export class CPMultipleWPsComponent implements OnChanges {
   ) {}
 
   onChangesInitiative = effect(() => {
-    if (!this.initiative()?.initiative_id) return;
+    console.log(this.initiativeId());
+    if (!this.initiativeId()) return;
+    console.log('load data');
     this.GET_outcomeList();
     this.GET_outputList();
     this.GET_EOIList();
-    this.currentPlannedResult = this.initiative()?.planned_result;
+    // this.currentPlannedResult = this.initiative()?.planned_result;
   });
 
   ngOnChanges() {
-    this.initiative()?.result_toc_results.forEach((tab: any, index: number) => {
+    this.initiative?.result_toc_results.forEach((tab: any, index: number) => {
       tab.uniqueId = index.toString();
     });
 
     if (this.currentPlannedResult !== null) {
-      if (this.initiative()?.planned_result !== this.currentPlannedResult) {
+      if (this.initiative?.planned_result !== this.currentPlannedResult) {
         this.selectedOptionsOutput = [];
         this.selectedOptionsOutcome = [];
         this.selectedOptionsEOI = [];
@@ -84,13 +88,13 @@ export class CPMultipleWPsComponent implements OnChanges {
 
     // Restore active tab from saved index or default to first tab
     const savedIndex = this.rdPartnersSE.savedActiveTabIndex;
-    if (savedIndex !== null && savedIndex >= 0 && savedIndex < this.initiative()?.result_toc_results.length) {
+    if (savedIndex !== null && savedIndex >= 0 && savedIndex < this.initiative?.result_toc_results.length) {
       this.activeTabIndex = savedIndex;
-      this.activeTab = this.initiative()?.result_toc_results[savedIndex];
+      this.activeTab = this.initiative?.result_toc_results[savedIndex];
       this.activeTabSignal.set(this.activeTab);
     } else {
       this.activeTabIndex = 0;
-      this.activeTab = this.initiative()?.result_toc_results[0];
+      this.activeTab = this.initiative?.result_toc_results[0];
       this.activeTabSignal.set(this.activeTab);
     }
   }
@@ -99,7 +103,7 @@ export class CPMultipleWPsComponent implements OnChanges {
     this.api.tocApiSE
       .GET_tocLevelsByconfig(
         this.api.dataControlSE.currentNotification?.result_id || this.activeTab?.results_id || this.api.dataControlSE?.currentResult?.id,
-        this.initiative()?.initiative_id,
+        this.initiative?.initiative_id,
         1,
         this.fieldsManagerSE.isP25()
       )
@@ -118,7 +122,7 @@ export class CPMultipleWPsComponent implements OnChanges {
     this.api.tocApiSE
       .GET_tocLevelsByconfig(
         this.api.dataControlSE.currentNotification?.result_id || this.activeTab?.results_id || this.api.dataControlSE?.currentResult?.id,
-        this.initiative()?.initiative_id,
+        this.initiative?.initiative_id,
         2,
         this.fieldsManagerSE.isP25()
       )
@@ -137,7 +141,7 @@ export class CPMultipleWPsComponent implements OnChanges {
     this.api.tocApiSE
       .GET_tocLevelsByconfig(
         this.api.dataControlSE.currentNotification?.result_id || this.activeTab?.results_id || this.api.dataControlSE?.currentResult?.id,
-        this.initiative()?.initiative_id,
+        this.initiative?.initiative_id,
         3,
         this.fieldsManagerSE.isP25()
       )
@@ -162,7 +166,7 @@ export class CPMultipleWPsComponent implements OnChanges {
   });
 
   getGridTemplateColumns() {
-    return `repeat(${this.initiative()?.result_toc_results.length}, 1fr)`;
+    return `repeat(${this.initiative?.result_toc_results.length}, 1fr)`;
   }
 
   completnessStatusValidation(tab) {
@@ -187,32 +191,28 @@ export class CPMultipleWPsComponent implements OnChanges {
   }
 
   onAddTab() {
-    const newIndex = this.initiative().result_toc_results.length;
-    this.initiative.update(prev => {
-      prev.result_toc_results.push({
-        action_area_outcome_id: null,
-        initiative_id: this.initiative().initiative_id,
-        official_code: this.initiative().official_code,
-        planned_result: this.initiative().planned_result,
-        results_id: null,
-        short_name: this.initiative().short_name,
-        toc_level_id: null,
-        toc_result_id: null,
-        uniqueId: newIndex.toString(),
-        related_node_id: null,
-        toc_progressive_narrative: null,
-        indicators: [{ related_node_id: null, targets: [{ contributing_indicator: null }] }]
-      });
-
-      return { ...prev };
+    const newIndex = this.initiative?.result_toc_results.length;
+    this.initiative.result_toc_results.push({
+      action_area_outcome_id: null,
+      initiative_id: this.initiative?.initiative_id,
+      official_code: this.initiative?.official_code,
+      planned_result: this.initiative?.planned_result,
+      results_id: null,
+      short_name: this.initiative?.short_name,
+      toc_level_id: null,
+      toc_result_id: null,
+      uniqueId: newIndex.toString(),
+      related_node_id: null,
+      toc_progressive_narrative: null,
+      indicators: [{ related_node_id: null, targets: [{ contributing_indicator: null }] }]
     });
 
-    const lastIndex = this.initiative().result_toc_results.length - 1;
-    this.onActiveTab(this.initiative().result_toc_results[lastIndex], lastIndex);
+    const lastIndex = this.initiative?.result_toc_results.length - 1;
+    this.onActiveTab(this.initiative?.result_toc_results[lastIndex], lastIndex);
   }
 
   onDeleteTab(tab: Tab, tabNumber = 0) {
-    const confirmationMessage = `Are you sure you want to delete contribution TOC-${this.initiative()?.planned_result && this.resultLevelId === 1 ? 'Output' : 'Outcome'} N° ${tabNumber} to the TOC?`;
+    const confirmationMessage = `Are you sure you want to delete contribution TOC-${this.initiative?.planned_result && this.resultLevelId === 1 ? 'Output' : 'Outcome'} N° ${tabNumber} to the TOC?`;
 
     this.customizedAlertsFeSE.show(
       {
@@ -229,30 +229,29 @@ export class CPMultipleWPsComponent implements OnChanges {
   }
 
   deleteTabLogic(tab) {
-    const isLastTab = this.initiative().result_toc_results.length === 1;
+    const isLastTab = this.initiative?.result_toc_results.length === 1;
     if (isLastTab) {
       return;
     }
 
     if (this.isNotifications) return;
 
-    this.initiative().result_toc_results = this.initiative().result_toc_results.filter(t => t.uniqueId !== tab.uniqueId);
+    this.initiative.result_toc_results = this.initiative?.result_toc_results.filter(t => t.uniqueId !== tab.uniqueId);
 
     // Recalculate uniqueId after deletion
-    this.initiative().result_toc_results.forEach((t: any, index: number) => {
+    this.initiative?.result_toc_results.forEach((t: any, index: number) => {
       t.uniqueId = index.toString();
     });
 
     this.activeTabIndex = 0;
-    this.activeTab = this.initiative()?.result_toc_results[0];
+    this.activeTab = this.initiative?.result_toc_results[0];
     this.activeTabSignal.set(this.activeTab);
     this.rdPartnersSE.savedActiveTabIndex = 0;
 
     if (this.isContributor) {
-      this.rdPartnersSE.partnersBody.contributors_result_toc_result[this.initiative().index].result_toc_results =
-        this.initiative().result_toc_results;
+      this.rdPartnersSE.partnersBody.contributors_result_toc_result[this.initiative?.index].result_toc_results = this.initiative?.result_toc_results;
     } else {
-      this.rdPartnersSE.partnersBody.result_toc_result.result_toc_results = this.initiative().result_toc_results;
+      this.rdPartnersSE.partnersBody.result_toc_result.result_toc_results = this.initiative?.result_toc_results;
     }
   }
 }
