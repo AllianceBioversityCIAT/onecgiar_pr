@@ -2223,7 +2223,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         rt.name
       FROM result_type rt
       WHERE rt.is_active = 1
-        AND rt.id IN (1, 2, 5, 6, 7)
+        AND rt.id IN (1, 2, 4, 5, 6, 7, 8, 10)
       ORDER BY rt.name ASC;
     `;
 

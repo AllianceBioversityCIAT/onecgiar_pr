@@ -32,7 +32,7 @@
         ],
         // "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
         // "no-unused-vars": "error",
-        // "no-console": ["error", { "allow": ["error"] }],
+        "no-console": ["error", { "allow": ["error"] }],
         "no-empty": "error",
         "no-trailing-spaces": "error",
         // "camelcase":"warn",

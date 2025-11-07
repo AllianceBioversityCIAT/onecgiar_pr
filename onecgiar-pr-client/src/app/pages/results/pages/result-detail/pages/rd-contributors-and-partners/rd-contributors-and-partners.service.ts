@@ -196,9 +196,7 @@ export class RdContributorsAndPartnersService implements OnDestroy {
         ];
 
         // this.changeDetectorRef.detectChanges();
-        console.log('initiativeId', this.partnersBody?.result_toc_result?.initiative_id);
         this.initiativeIdSignal.set(this.partnersBody?.result_toc_result?.initiative_id);
-        console.log('initiativeIdSignal', this.initiativeIdSignal());
         this.getConsumed.set(true);
         //! TOC END
         this.partnersBody.bilateral_projects.forEach(project => {

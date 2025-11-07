@@ -13,7 +13,7 @@
       </app-pr-select>
     </div>
 
-    @if (this.secondFieldLabel()) {
+    @if (this.secondFieldLabel() && activeTab.toc_level_id) {
       @switch (activeTab.toc_level_id) {
         @case (3) {
           <app-pr-select
@@ -59,34 +59,46 @@
       }
     }
   </div>
-  @if (showIndicators()) {
-    <app-pr-select
-      [options]="this.indicatorsList()"
-      label="Indicator"
-      [editable]="editable"
-      optionLabel="indicator_description"
-      optionValue="related_node_id"
-      placeholder="Select outcome level"
-      [(ngModel)]="activeTab.indicators[0].related_node_id"
-      (ngModelChange)="mapTocResultsIndicatorId()">
-    </app-pr-select>
-    <app-pr-input placeholder="Enter target" label="Target" type="number" [(ngModel)]="activeTab.indicators[0].targets[0].contributing_indicator">
-    </app-pr-input>
+  @if (this.secondFieldLabel()) {
+    @if (showIndicators() && activeTab.toc_result_id) {
+      <app-pr-select
+        [options]="this.indicatorsList()"
+        label="Indicator"
+        [editable]="editable"
+        optionLabel="indicator_description"
+        optionValue="related_node_id"
+        placeholder="Select outcome level"
+        [(ngModel)]="activeTab.indicators[0].related_node_id"
+        (ngModelChange)="mapTocResultsIndicatorId()">
+      </app-pr-select>
+
+      @if (activeTab.indicators[0].related_node_id) {
+        <div>
+          <app-pr-field-header label="Contribution to indicator target"></app-pr-field-header>
+          <div style="margin: 8px 0" *ngIf="selectedIndicatorData()">
+            <p><strong>Unit of measurement:</strong> {{ selectedIndicatorData()?.unit_messurament || 'Not specified' }}</p>
+            <p><strong>Target:</strong> {{ selectedIndicatorData()?.targets?.[0]?.target_value || 'Not specified' }}</p>
+          </div>
+          <input
+            type="number"
+            placeholder="Enter target"
+            [(ngModel)]="activeTab.indicators[0].targets[0].contributing_indicator"
+            class="p-inputtext p-component"
+            style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem" />
+        </div>
+      }
+    }
+    <hr class="divider-20" />
+
+    <app-pr-textarea
+      [label]="dynamicProgressLabel()"
+      [required]="false"
+      placeholder="Enter text"
+      [rows]="3"
+      [(ngModel)]="activeTab.toc_progressive_narrative"
+      [maxWords]="150">
+    </app-pr-textarea>
   }
-  <hr class="divider-20" />
-
-  <app-pr-textarea
-    [label]="dynamicProgressLabel()"
-    [required]="false"
-    placeholder="Enter text"
-    [rows]="3"
-    [(ngModel)]="activeTab.toc_progressive_narrative"
-    [maxWords]="150">
-  </app-pr-textarea>
-
-  <h1>TOC progressive narrative: {{ activeTab.toc_progressive_narrative }}</h1>
-  <h1>TOC level: {{ activeTab.toc_level_id }}</h1>
-  <h1>target: {{ activeTab.indicators[0].targets[0].contributing_indicator }}</h1>
 </div>
 
 <app-mapped-results-modal [activeTab]="activeTab" [outputList]="outputList" [resultLevelId]="resultLevelId"></app-mapped-results-modal>
