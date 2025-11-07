@@ -57,12 +57,6 @@ export class CPMultipleWPsContentComponent implements OnChanges {
     this.getIndicatorsList();
   });
 
-  onActiveTabChange = effect(() => {
-    // Force recomputation of selectedIndicatorData when activeTab changes
-    console.log('activeTab changed:', this.activeTab);
-    console.log('selectedIndicatorData:', this.selectedIndicatorData());
-  });
-
   ngOnChanges(): void {
     console.log('ngOnChanges');
     this.pushSelectedOptions();
@@ -93,9 +87,6 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   ) {}
 
   getIndicatorsList() {
-    console.log('activeTab:', this.activeTab);
-    console.log('activeTab.indicators:', this.activeTab?.indicators);
-    console.log('activeTab.indicators[0]:', this.activeTab?.indicators?.[0]);
     const filterIndicators = list => {
       if (!list.length) return;
       const itemSelected = list.find(item => item.toc_result_id === this.activeTab.toc_result_id);
@@ -131,11 +122,6 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   }
 
   updateSelectedIndicatorData() {
-    console.log('Updating selectedIndicatorData...');
-    console.log('activeTab?.toc_result_id:', this.activeTab?.toc_result_id);
-    console.log('activeTabSignal()?.toc_level_id:', this.activeTabSignal()?.toc_level_id);
-    console.log('activeTab?.indicators?.[0]?.related_node_id:', this.activeTab?.indicators?.[0]?.related_node_id);
-
     let selectedOption: TocResultItem | undefined = undefined;
     switch (this.activeTabSignal()?.toc_level_id) {
       case 3:
@@ -149,10 +135,7 @@ export class CPMultipleWPsContentComponent implements OnChanges {
         break;
     }
 
-    console.log('selectedOption:', selectedOption);
-
     if (!selectedOption || !this.activeTab?.indicators?.[0]?.related_node_id) {
-      console.log('No selectedOption or related_node_id, setting null');
       this.selectedIndicatorData.set(null);
       return;
     }
