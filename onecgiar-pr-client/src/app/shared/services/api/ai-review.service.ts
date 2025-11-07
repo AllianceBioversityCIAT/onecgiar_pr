@@ -33,7 +33,6 @@ export class AiReviewService {
 
   // on AI review click
   async onAIReviewClick() {
-    console.clear();
     try {
       if (this.aiReviewButtonState !== 'idle') return;
 
@@ -43,15 +42,11 @@ export class AiReviewService {
       await this.POST_createSession();
       await this.GET_aiContext();
       await this.GET_resultContext();
-      console.log(this.api.authSE.localStorageUser);
       const iaBody: POSTPRMSQa = {
         user_id: this.api.authSE.localStorageUser.email,
         result_metadata: this.aiContext()
       };
-      console.log('iaBody', iaBody);
       const { json_content } = await this.POST_prmsQa(iaBody);
-
-      console.log('aiRecommendation', json_content);
 
       this.currnetFieldsList.update(res => {
         res[0].proposed_text = json_content.new_title;
@@ -61,13 +56,9 @@ export class AiReviewService {
         return [...res];
       });
 
-      console.log('currnetFieldsList', this.currnetFieldsList());
-
-      const proposalResponse = await this.POST_createProposal({
+      await this.POST_createProposal({
         proposals: this.currnetFieldsList()
       });
-
-      console.log('proposalResponse', proposalResponse);
 
       // Mostrar animación de completado
       this.aiReviewButtonState = 'completed';
@@ -84,7 +75,6 @@ export class AiReviewService {
   }
 
   async onApplyProposal(field, index: number) {
-    console.log(field);
     field.canSave = false;
     const body: POSTAIAssistantCreateEvent = {
       session_id: this.sessionId(),
@@ -92,8 +82,6 @@ export class AiReviewService {
       event_type: 'APPLY_PROPOSAL',
       field_name: field.field_name
     };
-    console.log(body);
-    console.log({ fields: [this.currnetFieldsList()[index] as POSTSaveProposalField] });
     this.POST_createEvent(body);
     const fieldToSave = this.currnetFieldsList()[index] as POSTSaveProposalField;
     fieldToSave.new_value = fieldToSave.original_text;
@@ -108,9 +96,7 @@ export class AiReviewService {
     return new Promise((resolve, reject) => {
       return this.http.post<any>(`${this.baseApiBaseUrl}ai/sessions`, { result_id: this.dataControlSE.currentResultSignal().id }).subscribe({
         next: (response: any) => {
-          console.log(response.response.id);
           this.sessionId.set(response.response.id);
-          console.log('response', response.response);
           resolve(response);
         },
         error: (error: any) => {
@@ -126,7 +112,6 @@ export class AiReviewService {
     return new Promise((resolve, reject) => {
       return this.http.get<any>(`${this.baseApiUrlV2}results/ai/context`).subscribe({
         next: (response: any) => {
-          console.log('response', response.response);
           this.aiContext.set(response.response);
           resolve(response);
         },
@@ -143,7 +128,6 @@ export class AiReviewService {
     return new Promise((resolve, reject) => {
       return this.http.get<any>(`${this.baseApiBaseUrl}ai/result-context/${this.dataControlSE.currentResultSignal().id}`).subscribe({
         next: (response: any) => {
-          console.log('response', response.response);
           this.currnetFieldsList.set(response.response);
           resolve(response);
         },
@@ -160,7 +144,6 @@ export class AiReviewService {
     return new Promise<IAiRecommendation>((resolve, reject) => {
       return this.http.post<IAiRecommendation>(`${this.reviewApiUrl}prms-qa`, body).subscribe({
         next: (response: IAiRecommendation) => {
-          console.log('response', response);
           resolve(response);
         },
         error: (error: any) => {
@@ -176,7 +159,6 @@ export class AiReviewService {
     return new Promise((resolve, reject) => {
       return this.http.post<any>(`${this.baseApiBaseUrl}ai/sessions/${this.sessionId()}/proposals`, body).subscribe({
         next: (response: any) => {
-          console.log('response', response);
           resolve(response);
         },
         error: (error: any) => {
@@ -206,7 +188,6 @@ export class AiReviewService {
         .pipe(this.saveButtonSE.isSavingPipe())
         .subscribe({
           next: (response: any) => {
-            console.log('response', response);
             resolve(response);
           }
         });

@@ -22,7 +22,6 @@ export class AiReviewComponent {
   innovationShortTitleCurrentVersion = '';
 
   moveTextToInput(field: any) {
-    console.log(field);
     field.canSave = true;
     field.original_text = field.proposed_text;
   }
