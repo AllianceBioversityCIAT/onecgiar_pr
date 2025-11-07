@@ -17,6 +17,7 @@ describe('AowHloTableComponent', () => {
     const mockCurrentResultToReport = signal<any>({});
     const mockShowViewResultDrawer = signal<boolean>(false);
     const mockCurrentResultToView = signal<any>({});
+    const mockExistingResultsContributors = signal<any[]>([]);
 
     mockEntityAowService = {
       aowId: signal<string>(''),
@@ -30,13 +31,15 @@ describe('AowHloTableComponent', () => {
       showReportResultModal: mockShowReportResultModal,
       currentResultToReport: mockCurrentResultToReport,
       showViewResultDrawer: mockShowViewResultDrawer,
-      currentResultToView: mockCurrentResultToView
+      currentResultToView: mockCurrentResultToView,
+      existingResultsContributors: mockExistingResultsContributors
     } as any;
 
     jest.spyOn(mockShowReportResultModal, 'set');
     jest.spyOn(mockCurrentResultToReport, 'set');
     jest.spyOn(mockShowViewResultDrawer, 'set');
     jest.spyOn(mockCurrentResultToView, 'set');
+    jest.spyOn(mockExistingResultsContributors, 'set');
 
     mockActivatedRoute = {
       params: of({ aowId: 'test-aow-id' })
@@ -570,7 +573,7 @@ describe('AowHloTableComponent', () => {
       });
     });
 
-    it('should always set showReportResultModal to true regardless of item content', () => {
+    it('should always set showViewResultDrawer to true regardless of item content', () => {
       const mockItem = {
         id: 'result-1',
         title: 'Test Result',
@@ -582,6 +585,19 @@ describe('AowHloTableComponent', () => {
 
       expect(mockEntityAowService.showViewResultDrawer.set).toHaveBeenCalledWith(true);
       expect(mockEntityAowService.showViewResultDrawer.set).toHaveBeenCalledTimes(1);
+    });
+
+    it('should clear previous contributors before opening a new drawer', () => {
+      const mockItem = {
+        id: 'result-1',
+        title: 'Test Result',
+        indicators: [{ indicator_id: 'indicator-1', name: 'Indicator 1' }]
+      };
+
+      component.openViewResultDrawer(mockItem, 'indicator-1');
+
+      expect(mockEntityAowService.existingResultsContributors.set).toHaveBeenCalledWith([]);
+      expect(mockEntityAowService.existingResultsContributors.set).toHaveBeenCalledTimes(1);
     });
   });
 });
