@@ -25,4 +25,5 @@ export class KnowledgeProductBodyMapped {
   warnings?: string[];
   fair_data: FullFairData;
   isJournalArticle: boolean;
+  source: string;
 }

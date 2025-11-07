@@ -6,9 +6,9 @@
 
 <div *ngIf="body.has_innovation_link && this.fieldsManagerSE.isP25()">
   <app-pr-multi-select [readOnly]="saving" [options]="this.innovationUseResultsSE.resultsList" [(ngModel)]="body.linked_results"
-    optionLabel="title" optionValue="id" [group]="true" optionGroupLabel="name" optionGroupChildren="options"
+    optionLabel="title" optionValue="id"  optionGroupLabel="name" optionGroupChildren="options"
     label="Please select a result" placeholder="Please select a result" selectedLabel="Results selected"
-    selectedOptionLabel="title">
+    selectedOptionLabel="title" [displayLabelFormatter]="formatResultLabel.bind(this)">
   </app-pr-multi-select>
 </div>
 
@@ -205,7 +205,7 @@
 </app-pr-textarea>
 
 <!-- Innovation Links Component -->
-<app-pr-radio-button [disabled]="saving" *ngIf="getUseLevelIndex() >= 6" fieldRef="[innovation-use-form]-has-studies-links" [options]="[
+<app-pr-radio-button [readOnly]="saving" *ngIf="getUseLevelIndex() >= 6" fieldRef="[innovation-use-form]-has-studies-links" [options]="[
   { value: true, label: 'Yes' },
   { value: false, label: 'No' }
   ]" optionLabel="label" [(ngModel)]="body.has_scaling_studies" optionValue="value">

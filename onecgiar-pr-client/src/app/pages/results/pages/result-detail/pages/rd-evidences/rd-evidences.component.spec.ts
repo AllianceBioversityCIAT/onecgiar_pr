@@ -92,7 +92,7 @@ describe('RdEvidencesComponent', () => {
     it('should return appropriate text when isKnowledgeProduct is true', () => {
       const result = component.alertStatus();
       expect(result).toBe(
-        'As this knowledge product is stored in CGSpace, this section only requires an indication of whether the knowledge product is associated with any of the Impact Area tags provided below.'
+        'As this knowledge product is stored in the repository, this section only requires an indication of whether the knowledge product is associated with any of the Impact Area tags provided below.'
       );
     });
 

@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { Router } from '@angular/router';
 
 import { AowViewResultsDrawerComponent } from './aow-view-results-drawer.component';
 import { EntityAowService } from '../../../../../../services/entity-aow.service';
@@ -9,6 +10,7 @@ describe('AowViewResultsDrawer', () => {
   let component: AowViewResultsDrawerComponent;
   let fixture: ComponentFixture<AowViewResultsDrawerComponent>;
   let mockEntityAowService: jest.Mocked<EntityAowService>;
+  let mockRouter: jest.Mocked<Router>;
 
   beforeEach(() => {
     mockEntityAowService = {
@@ -24,9 +26,17 @@ describe('AowViewResultsDrawer', () => {
       existingResultsContributors: signal<any[]>([])
     } as any;
 
+    mockRouter = {
+      createUrlTree: jest.fn().mockReturnValue({}),
+      serializeUrl: jest.fn().mockReturnValue('/test-url')
+    } as any;
+
     TestBed.configureTestingModule({
       imports: [AowViewResultsDrawerComponent, HttpClientTestingModule],
-      providers: [{ provide: EntityAowService, useValue: mockEntityAowService }]
+      providers: [
+        { provide: EntityAowService, useValue: mockEntityAowService },
+        { provide: Router, useValue: mockRouter }
+      ]
     }).compileComponents();
   });
 
@@ -40,24 +50,25 @@ describe('AowViewResultsDrawer', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should inject EntityAowService', () => {
+  it('should inject EntityAowService and Router', () => {
     expect(component.entityAowService).toBe(mockEntityAowService);
+    expect(component.router).toBe(mockRouter);
   });
 
   describe('columns signal', () => {
     it('should initialize with correct column configuration', () => {
       const columns = component.columns();
       expect(columns).toHaveLength(3);
-      expect(columns[0]).toEqual({ title: 'Code', attr: 'code', width: '10%' });
+      expect(columns[0]).toEqual({ title: 'Code', attr: 'result_code', width: '10%' });
       expect(columns[1]).toEqual({ title: 'Title', attr: 'title' });
-      expect(columns[2]).toEqual({ title: 'Status', attr: 'status', width: '130px' });
+      expect(columns[2]).toEqual({ title: 'Status', attr: 'status_name', width: '130px' });
     });
   });
 
   describe('actionItems signal', () => {
-    it('should initialize with three action items', () => {
+    it('should initialize with one action item', () => {
       const actionItems = component.actionItems();
-      expect(actionItems).toHaveLength(3);
+      expect(actionItems).toHaveLength(1);
     });
 
     it('should have correct action item properties', () => {
@@ -66,18 +77,6 @@ describe('AowViewResultsDrawer', () => {
       expect(actionItems[0]).toEqual({
         icon: 'pi pi-eye',
         label: 'View',
-        command: expect.any(Function)
-      });
-
-      expect(actionItems[1]).toEqual({
-        icon: 'pi pi-pencil',
-        label: 'Edit',
-        command: expect.any(Function)
-      });
-
-      expect(actionItems[2]).toEqual({
-        icon: 'pi pi-trash',
-        label: 'Delete',
         command: expect.any(Function)
       });
     });

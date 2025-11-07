@@ -21,7 +21,7 @@
             </td>
 
             <td>
-                <app-pr-radio-button optionLabel="name" optionValue="id" [(ngModel)]="item.is_determined" [disabled]="disabled"
+                <app-pr-radio-button optionLabel="name" optionValue="id" [(ngModel)]="item.is_determined" [readOnly]="disabled"
                     [options]="[{name:'This is yet to be determined',id:true}]"
                     (ngModelChange)="onRadioChange(item)">
                 </app-pr-radio-button>
@@ -62,7 +62,7 @@
             </td>
 
             <td>
-                <app-pr-radio-button optionLabel="name" optionValue="id" [(ngModel)]="item.is_determined" [disabled]="disabled"
+                <app-pr-radio-button optionLabel="name" optionValue="id" [(ngModel)]="item.is_determined" [readOnly]="disabled"
                     [options]="[{name:'This is yet to be determined',id:true}]"
                     (ngModelChange)="onRadioChange(item)">
                 </app-pr-radio-button>
@@ -99,7 +99,7 @@
             </td>
 
             <td>
-                <app-pr-radio-button optionLabel="name" optionValue="id" [(ngModel)]="item.is_determined" [disabled]="disabled"
+                <app-pr-radio-button optionLabel="name" optionValue="id" [(ngModel)]="item.is_determined" [readOnly]="disabled"
                     [options]="[{name:'This is yet to be determined',id:true}]"
                     (ngModelChange)="onRadioChange(item)">
                 </app-pr-radio-button>

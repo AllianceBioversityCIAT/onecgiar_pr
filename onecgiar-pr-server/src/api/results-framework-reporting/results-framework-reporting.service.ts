@@ -1,6 +1,7 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { In, IsNull, Not } from 'typeorm';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
+import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
 import { ClarisaGlobalUnitRepository } from '../../clarisa/clarisa-global-unit/clarisa-global-unit.repository';
 import { YearRepository } from '../results/years/year.repository';
 import { HandlersError } from '../../shared/handlers/error.utils';
@@ -22,6 +23,7 @@ import { CreateTocShareResult } from '../results/share-result-request/dto/create
 import { ResultsByProjectsService } from '../results/results_by_projects/results_by_projects.service';
 import { ResultsTocTargetIndicatorRepository } from '../results/results-toc-results/repositories/result-toc-result-target-indicator.repository';
 import { ResultLevelEnum } from '../../shared/constants/result-level.enum';
+import { ResultsByInstitutionsService } from '../results/results_by_institutions/results_by_institutions.service';
 
 @Injectable()
 export class ResultsFrameworkReportingService {
@@ -31,6 +33,7 @@ export class ResultsFrameworkReportingService {
 
   constructor(
     private readonly _clarisaInitiativesRepository: ClarisaInitiativesRepository,
+    private readonly _roleByUserRepository: RoleByUserRepository,
     private readonly _clarisaGlobalUnitRepository: ClarisaGlobalUnitRepository,
     private readonly _yearRepository: YearRepository,
     private readonly _handlersError: HandlersError,
@@ -43,6 +46,7 @@ export class ResultsFrameworkReportingService {
     private readonly _resultsIndicatorsTargetsRepository: ResultsTocTargetIndicatorRepository,
     private readonly _shareResultRequestService: ShareResultRequestService,
     private readonly _resultsByProjectsService: ResultsByProjectsService,
+    private readonly _resultsByInstitutionsService: ResultsByInstitutionsService,
   ) {}
 
   async getGlobalUnitsByProgram(user: TokenDto, programId?: string) {
@@ -683,6 +687,19 @@ export class ResultsFrameworkReportingService {
         }
       }
 
+      const hasContributingCentersPayload =
+        Object.prototype.hasOwnProperty.call(payload ?? {}, 'contributing_center');
+
+      if (hasContributingCentersPayload) {
+        await this._resultsByInstitutionsService.handleContributingCenters(
+          Array.isArray(payload.contributing_center)
+            ? payload.contributing_center
+            : [],
+          { result_id: createdResultId },
+          user,
+        );
+      }
+
       return {
         response: {
           result: resultSummary,
@@ -1188,6 +1205,25 @@ export class ResultsFrameworkReportingService {
         { role_id: number | null; role_name: string | null }
       >();
 
+      // Get user's general application roles (roles 1 or 2 where initiative_id is null)
+      let userGeneralRole: number | null = null;
+      if (Number.isFinite(userId)) {
+        const generalRoles = await this._roleByUserRepository.find({
+          where: {
+            user: userId,
+            active: true,
+            initiative_id: IsNull(),
+            action_area_id: IsNull(),
+          },
+          select: ['role'],
+        });
+
+        const appRole = generalRoles.find((r) => r.role === 1 || r.role === 2);
+        if (appRole) {
+          userGeneralRole = appRole.role;
+        }
+      }
+
       if (Number.isFinite(userId) && uniqueResultIds.length > 0) {
         const roleResults = await this._resultRepository.getUserRolesForResults(
           userId,
@@ -1219,6 +1255,9 @@ export class ResultsFrameworkReportingService {
           ? rolesByResult.get(numericResultId)
           : undefined;
 
+        // Use specific role for result, or fallback to general application role
+        const finalRoleId = roleInfo?.role_id ?? userGeneralRole;
+
         return {
           result_id: Number.isFinite(numericResultId)
             ? numericResultId
@@ -1228,7 +1267,7 @@ export class ResultsFrameworkReportingService {
           status_name: contrib.obj_results?.obj_status?.status_name,
           version_id: contrib.obj_results?.version_id,
           status_id: +contrib.obj_results?.status_id,
-          role_id: roleInfo?.role_id ?? null,
+          role_id: finalRoleId,
         };
       });
 
