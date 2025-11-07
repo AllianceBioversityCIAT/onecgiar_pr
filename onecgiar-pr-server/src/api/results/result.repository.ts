@@ -2236,44 +2236,40 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
 
   async getResultsForInnovUse() {
     const query = `
-      SELECT 
-          r.id,
-          r.result_code, 
-          r.title,
-          r.result_type_id,
-          cp.acronym
-      FROM 
-          result r 
-      INNER JOIN 
-          version v ON r.version_id = v.id
-          AND v.is_active = true
-      INNER JOIN 
-          clarisa_portfolios cp ON v.portfolio_id = cp.id
-      INNER JOIN 
-          result_type rt ON r.result_type_id = rt.id
-      WHERE
-          r.version_id IN (1, 18, 30)
-          AND r.result_type_id IN (2, 7)
-          AND r.is_active = true
-      UNION ALL
-      SELECT
-          r.id,
-          r.result_code, 
-          r.title,
-          r.result_type_id,
-          cp.acronym
-      FROM 
-          result r 
-      INNER JOIN 
-          version v ON r.version_id = v.id
-          AND v.is_active = true
-      INNER JOIN 
-          clarisa_portfolios cp ON v.portfolio_id = cp.id
-      INNER JOIN 
-          result_type rt ON r.result_type_id = rt.id
-      WHERE
-          r.version_id = 34
-          AND r.is_active = true;
+    SELECT 
+      r.id,
+      cp.acronym,
+      v.phase_year,
+      r.result_code,
+      rt.name,
+      r.title
+    FROM result r
+    INNER JOIN result_type rt ON r.result_type_id = rt.id
+      AND rt.is_active = true
+    INNER JOIN version v ON r.version_id = v.id
+      AND v.is_active = true
+    INNER JOIN clarisa_portfolios cp ON v.portfolio_id = cp.id
+    WHERE         
+      r.version_id = 34
+        AND r.is_active = true
+    UNION ALL
+    SELECT 
+      r.id,
+      cp.acronym,
+      v.phase_year,
+      r.result_code,
+      rt.name,
+      r.title
+    FROM result r
+    INNER JOIN result_type rt ON r.result_type_id = rt.id
+      AND rt.is_active = true
+    INNER JOIN version v ON r.version_id = v.id
+      AND v.is_active = true
+    INNER JOIN clarisa_portfolios cp ON v.portfolio_id = cp.id
+    WHERE         
+      cp.id = 2
+        AND r.result_type_id IN (2, 7)
+        AND r.is_active = true;
     `;
 
     try {
