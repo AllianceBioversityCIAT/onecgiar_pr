@@ -64,7 +64,7 @@
         class="pr_chip_selected"
         *ngFor="let option of value; let i = index"
         [ngClass]="{ is_active_false: logicalDeletion && option.is_active == false }">
-        <div class="name" [innerHtml]="option[this.selectedOptionLabel]"></div>
+        <div class="name" [innerHtml]="getDisplayLabel(option, true) || option[this.selectedOptionLabel]"></div>
         <i
           *ngIf="validateShowDeleteButton(option)"
           class="material-icons-round"
