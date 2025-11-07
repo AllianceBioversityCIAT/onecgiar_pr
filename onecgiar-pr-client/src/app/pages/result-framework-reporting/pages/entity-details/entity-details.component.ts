@@ -12,6 +12,9 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { ChartModule } from 'primeng/chart';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { Chart } from 'chart.js';
+import { ButtonModule } from 'primeng/button';
+import { DialogModule } from 'primeng/dialog';
+import { ResultCreatorModule } from '../../../results/pages/result-creator/result-creator.module';
 
 @Component({
   selector: 'app-entity-details',
@@ -24,7 +27,10 @@ import { Chart } from 'chart.js';
     EntityAowCardComponent,
     EntityResultsByIndicatorCategoryCardComponent,
     SkeletonModule,
-    ChartModule
+    ChartModule,
+    ButtonModule,
+    DialogModule,
+    ResultCreatorModule
   ],
   templateUrl: './entity-details.component.html',
   styleUrl: './entity-details.component.scss',
@@ -36,6 +42,8 @@ export class EntityDetailsComponent implements OnInit {
   entityAowService = inject(EntityAowService);
 
   cd = inject(ChangeDetectorRef);
+
+  showReportModal = signal(false);
 
   summaryInsightsData = computed(() => {
     return [
