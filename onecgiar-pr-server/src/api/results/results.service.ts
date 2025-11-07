@@ -380,6 +380,13 @@ export class ResultsService {
     user: TokenDto,
   ) {
     try {
+      const { 
+        gender_impact_area_id, 
+        climate_impact_area_id, 
+        nutrition_impact_area_id,
+        environmental_biodiversity_impact_area_id,
+        poverty_impact_area_id, 
+      } = resultGeneralInformation;
       const result = await this._resultRepository.getResultById(
         resultGeneralInformation.result_id,
       );
@@ -425,10 +432,10 @@ export class ResultsService {
       }
 
       let genderTagComponent = null;
-      if (Number(genderTag?.id) === 3) {
+      if (Number(genderTag?.id) === 3 && gender_impact_area_id != null) {
         genderTagComponent =
           await this._impactAreasScoresComponentRepository.findOne({
-            where: { id: resultGeneralInformation.gender_impact_area_id },
+            where: { id: gender_impact_area_id },
           });
         if (!genderTagComponent) {
           throw {
@@ -451,10 +458,10 @@ export class ResultsService {
       }
 
       let climateTagComponent = null;
-      if (Number(climateTag?.id) === 3) {
+      if (Number(climateTag?.id) === 3 && climate_impact_area_id != null) {
         climateTagComponent =
           await this._impactAreasScoresComponentRepository.findOne({
-            where: { id: resultGeneralInformation.climate_impact_area_id },
+            where: { id: climate_impact_area_id },
           });
         if (!climateTagComponent) {
           throw {
@@ -477,10 +484,10 @@ export class ResultsService {
       }
 
       let nutritionTagComponent = null;
-      if (Number(nutritionTag?.id) === 3) {
+      if (Number(nutritionTag?.id) === 3 && nutrition_impact_area_id != null) {
         nutritionTagComponent =
           await this._impactAreasScoresComponentRepository.findOne({
-            where: { id: resultGeneralInformation.nutrition_impact_area_id },
+            where: { id: nutrition_impact_area_id },
           });
         if (!nutritionTagComponent) {
           throw {
@@ -506,11 +513,11 @@ export class ResultsService {
       }
 
       let environmentalBiodiversityTagComponent = null;
-      if (Number(environmentalBiodiversityTag?.id) === 3) {
+      if (Number(environmentalBiodiversityTag?.id) === 3 && environmental_biodiversity_impact_area_id != null) {
         environmentalBiodiversityTagComponent =
           await this._impactAreasScoresComponentRepository.findOne({
             where: {
-              id: resultGeneralInformation.environmental_biodiversity_impact_area_id,
+              id: environmental_biodiversity_impact_area_id,
             },
           });
         if (!environmentalBiodiversityTagComponent) {
@@ -535,10 +542,10 @@ export class ResultsService {
       }
 
       let povertyTagComponent = null;
-      if (Number(povertyTag?.id) === 3) {
+      if (Number(povertyTag?.id) === 3 && poverty_impact_area_id != null) {
         povertyTagComponent =
           await this._impactAreasScoresComponentRepository.findOne({
-            where: { id: resultGeneralInformation.poverty_impact_area_id },
+            where: { id: poverty_impact_area_id },
           });
         if (!povertyTagComponent) {
           throw {

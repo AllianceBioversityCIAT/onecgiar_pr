@@ -14,9 +14,10 @@ import { AlertGlobalInfoModule } from '../../../../shared/components/alert-globa
 import { TooltipModule } from 'primeng/tooltip';
 import { ResultAiAssistantComponent } from './components/result-ai-assistant/result-ai-assistant.component';
 import { TermPipe } from '../../../../internationalization/term.pipe';
+import { ReportResultFormComponent } from './components/report-result-form/report-result-form.component';
 
 @NgModule({
-  declarations: [ResultCreatorComponent, ResultLevelButtonsComponent, SimilarResultsComponent, SimilarResultsPipe],
+  declarations: [ResultCreatorComponent, ResultLevelButtonsComponent, SimilarResultsComponent, SimilarResultsPipe, ReportResultFormComponent],
   imports: [
     CommonModule,
     ResultCreatorRoutingModule,
@@ -29,6 +30,7 @@ import { TermPipe } from '../../../../internationalization/term.pipe';
     ResultAiAssistantComponent,
     TermPipe
   ],
+  exports: [ResultCreatorComponent, ReportResultFormComponent],
   schemas: [CUSTOM_ELEMENTS_SCHEMA]
 })
 export class ResultCreatorModule {}

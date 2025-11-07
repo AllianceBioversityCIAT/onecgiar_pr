@@ -116,7 +116,7 @@ p {
 .entity-details_card_header {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: space-between;
   padding: 0 24px;
   height: 46px;
   border-bottom: 1px solid var(--pr-color-accents-2);
@@ -315,5 +315,42 @@ p {
   canvas {
     width: 100% !important;
     height: auto !important;
+  }
+}
+
+// Modal styles
+.report-result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 12px 20px;
+  @include fonts.pr-typography('h4');
+  font-weight: 600;
+  height: 47px;
+  border-bottom: 1px solid var(--pr-color-accents-2);
+}
+
+::ng-deep {
+  .report-result-dialog {
+    width: 70vw !important;
+    max-width: 1200px !important;
+    min-height: 50vh !important;
+    max-height: 90vh !important;
+    border-radius: 26px !important;
+
+    @media screen and (max-width: 1200px) {
+      width: 85vw !important;
+      max-width: none !important;
+    }
+
+    @media screen and (max-width: 768px) {
+      width: 95vw !important;
+    }
+
+    .p-dialog-content {
+      padding: 0 !important;
+      overflow: hidden;
+    }
   }
 }
