@@ -413,6 +413,7 @@ describe('InnovationPathwayStepFourService', () => {
         obj_result_field_revisions: [],
         obj_result_field_ai_states: [],
         lead_contact_person_id: 1,
+        evidence_array: [],
         obj_lead_contact_person: {
           id: 1,
           cn: 'Test User',

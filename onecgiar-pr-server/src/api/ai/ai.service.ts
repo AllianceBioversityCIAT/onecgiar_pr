@@ -38,6 +38,7 @@ import { SaveChangesDto } from './dto/save-changes.dto';
 import { Result } from '../results/entities/result.entity';
 import { ResultsInnovationsDev } from '../results/summary/entities/results-innovations-dev.entity';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
+import { ReturnResponseUtil } from '../../shared/utils/response.util';
 
 @Injectable()
 export class AiService {
@@ -98,11 +99,11 @@ export class AiService {
         });
       }
 
-      return {
+      return ReturnResponseUtil.format({
         response: contextFields,
         message: 'Successful response',
-        status: HttpStatus.OK,
-      };
+        statusCode: HttpStatus.OK,
+      });
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
@@ -125,11 +126,11 @@ export class AiService {
         event_type: AiReviewEventType.CLICK_REVIEW,
       });
 
-      return {
+      return ReturnResponseUtil.format({
         response: this.mapSessionToResponse(savedSession, user),
         message: 'Session created successfully',
-        status: HttpStatus.CREATED,
-      };
+        statusCode: HttpStatus.CREATED,
+      });
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
@@ -158,11 +159,11 @@ export class AiService {
         event_type: AiReviewEventType.CLOSE_MODAL,
       });
 
-      return {
+      return ReturnResponseUtil.format({
         response: this.mapSessionToResponse(updatedSession, user),
         message: 'Session closed successfully',
-        status: HttpStatus.OK,
-      };
+        statusCode: HttpStatus.OK,
+      });
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
@@ -195,11 +196,11 @@ export class AiService {
       );
 
       const savedProposals = await this.proposalRepository.save(proposals);
-      return {
+      return ReturnResponseUtil.format({
         response: savedProposals.map((p) => this.mapProposalToResponse(p)),
         message: 'Proposals created successfully',
-        status: HttpStatus.CREATED,
-      };
+        statusCode: HttpStatus.CREATED,
+      });
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
@@ -212,11 +213,11 @@ export class AiService {
         order: { created_at: 'ASC' },
       });
 
-      return {
+      return ReturnResponseUtil.format({
         response: proposals.map((p) => this.mapProposalToResponse(p)),
         message: 'Proposals retrieved successfully',
-        status: HttpStatus.OK,
-      };
+        statusCode: HttpStatus.OK,
+      });
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
@@ -256,11 +257,11 @@ export class AiService {
         user_id: user.id,
       });
       const savedEvent = await this.eventRepository.save(event);
-      return {
+      return ReturnResponseUtil.format({
         response: this.mapEventToResponse(savedEvent, user),
         message: 'Event created successfully',
-        status: HttpStatus.CREATED,
-      };
+        statusCode: HttpStatus.CREATED,
+      });
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
@@ -384,11 +385,11 @@ export class AiService {
         });
       }
 
-      return {
+      return ReturnResponseUtil.format({
         response: {},
         message: 'Changes saved successfully',
-        status: HttpStatus.OK,
-      };
+        statusCode: HttpStatus.OK,
+      });
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
@@ -400,7 +401,7 @@ export class AiService {
         where: { result_id: resultId },
       });
 
-      return {
+      return ReturnResponseUtil.format({
         response: {
           result_id: resultId,
           fields: states.map((state) => ({
@@ -413,8 +414,8 @@ export class AiService {
           })),
         },
         message: 'Result state retrieved successfully',
-        status: HttpStatus.OK,
-      };
+        statusCode: HttpStatus.OK,
+      });
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
@@ -462,7 +463,7 @@ export class AiService {
         (a, b) => b.opened_at.getTime() - a.opened_at.getTime(),
       )[0];
 
-      return {
+      return ReturnResponseUtil.format({
         response: {
           result_id: resultId,
           total_sessions: sessions.length,
@@ -475,8 +476,8 @@ export class AiService {
           last_session_at: lastSession?.opened_at,
         },
         message: 'Result statistics retrieved successfully',
-        status: HttpStatus.OK,
-      };
+        statusCode: HttpStatus.OK,
+      });
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }

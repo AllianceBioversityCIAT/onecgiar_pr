@@ -7,6 +7,7 @@ import {
   ParseIntPipe,
   HttpCode,
   HttpStatus,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -32,9 +33,11 @@ import { CreateSessionDto } from './dto/create-session.dto';
 import { SaveChangesDto } from './dto/save-changes.dto';
 import { UserToken } from '../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
+import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 
 @ApiTags('AI Review')
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 export class AiController {
   constructor(private readonly aiService: AiService) {}
 
@@ -73,11 +76,7 @@ export class AiController {
     example: 123,
   })
   async getResultContext(@Param('resultId', ParseIntPipe) resultId: number) {
-    const result = await this.aiService.getResultContext(resultId);
-    if (result.status >= 400) {
-      throw result;
-    }
-    return result.response;
+    return await this.aiService.getResultContext(resultId);
   }
 
   @Post('sessions')
@@ -111,11 +110,7 @@ export class AiController {
     @Body() createSessionDto: CreateSessionDto,
     @UserToken() user: TokenDto,
   ) {
-    const result = await this.aiService.createSession(createSessionDto, user);
-    if (result.status >= 400) {
-      throw result;
-    }
-    return result.response;
+    return await this.aiService.createSession(createSessionDto, user);
   }
 
   @Post('sessions/:sessionId/close')
@@ -142,11 +137,7 @@ export class AiController {
     @Param('sessionId', ParseIntPipe) sessionId: number,
     @UserToken() user: TokenDto,
   ) {
-    const result = await this.aiService.closeSession(sessionId, user);
-    if (result.status >= 400) {
-      throw result;
-    }
-    return result.response;
+    return await this.aiService.closeSession(sessionId, user);
   }
 
   @Post('sessions/:sessionId/proposals')
@@ -199,14 +190,7 @@ export class AiController {
     @Param('sessionId', ParseIntPipe) sessionId: number,
     @Body() createProposalsDto: CreateProposalsDto,
   ) {
-    const result = await this.aiService.createProposals(
-      sessionId,
-      createProposalsDto,
-    );
-    if (result.status >= 400) {
-      throw result;
-    }
-    return result.response;
+    return await this.aiService.createProposals(sessionId, createProposalsDto);
   }
 
   @Get('sessions/:sessionId/proposals')
@@ -230,11 +214,7 @@ export class AiController {
     example: 1,
   })
   async getProposals(@Param('sessionId', ParseIntPipe) sessionId: number) {
-    const result = await this.aiService.getProposals(sessionId);
-    if (result.status >= 400) {
-      throw result;
-    }
-    return result.response;
+    return await this.aiService.getProposals(sessionId);
   }
 
   @Post('events')
@@ -282,11 +262,7 @@ export class AiController {
     @Body() createEventDto: CreateEventDto,
     @UserToken() user: TokenDto,
   ) {
-    const result = await this.aiService.createEvent(createEventDto, user);
-    if (result.status >= 400) {
-      throw result;
-    }
-    return result.response;
+    return await this.aiService.createEvent(createEventDto, user);
   }
 
   @Post('sessions/:sessionId/save')
@@ -340,15 +316,7 @@ export class AiController {
     @Body() saveChangesDto: SaveChangesDto,
     @UserToken() user: TokenDto,
   ) {
-    const result = await this.aiService.saveChanges(
-      sessionId,
-      saveChangesDto,
-      user,
-    );
-    if (result.status >= 400) {
-      throw result;
-    }
-    return result.response;
+    return await this.aiService.saveChanges(sessionId, saveChangesDto, user);
   }
 
   @Get('results/:resultId/state')
@@ -368,11 +336,7 @@ export class AiController {
     example: 123,
   })
   async getResultState(@Param('resultId', ParseIntPipe) resultId: number) {
-    const result = await this.aiService.getResultState(resultId);
-    if (result.status >= 400) {
-      throw result;
-    }
-    return result.response;
+    return await this.aiService.getResultState(resultId);
   }
 
   @Get('results/:resultId/stats')
@@ -392,10 +356,6 @@ export class AiController {
     example: 123,
   })
   async getResultStats(@Param('resultId', ParseIntPipe) resultId: number) {
-    const result = await this.aiService.getResultStats(resultId);
-    if (result.status >= 400) {
-      throw result;
-    }
-    return result.response;
+    return await this.aiService.getResultStats(resultId);
   }
 }
