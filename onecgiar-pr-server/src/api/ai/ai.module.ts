@@ -9,6 +9,7 @@ import { ResultFieldAiState } from './entities/result-field-ai-state.entity';
 import { ResultFieldRevision } from './entities/result-field-revision.entity';
 import { Result } from '../results/entities/result.entity';
 import { ResultsInnovationsDev } from '../results/summary/entities/results-innovations-dev.entity';
+import { HandlersError } from '../../shared/handlers/error.utils';
 
 @Module({
   imports: [
@@ -23,7 +24,7 @@ import { ResultsInnovationsDev } from '../results/summary/entities/results-innov
     ]),
   ],
   controllers: [AiController],
-  providers: [AiService],
+  providers: [AiService, HandlersError],
   exports: [AiService],
 })
 export class AiModule {}

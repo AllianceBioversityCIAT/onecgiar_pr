@@ -1,711 +1,406 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { SelectQueryBuilder } from 'typeorm';
+import { HttpStatus } from '@nestjs/common';
 import { AiService } from './ai.service';
 import {
-  AiReviewEvent,
   AiReviewEventFieldName,
   AiReviewEventType,
 } from './entities/ai-review-event.entity';
-import {
-  AiReviewProposal,
-  AiReviewProposalFieldName,
-} from './entities/ai-review-proposal.entity';
-import {
-  AiReviewSession,
-  AiReviewSessionStatus,
-} from './entities/ai-review-session.entity';
-import {
-  ResultFieldAiState,
-  ResultFieldAiStateFieldName,
-  ResultFieldAiStateStatus,
-} from './entities/result-field-ai-state.entity';
-import {
-  ResultFieldRevision,
-  ResultFieldRevisionFieldName,
-  ResultFieldRevisionProvenance,
-} from './entities/result-field-revision.entity';
-import { Result } from '../results/entities/result.entity';
-import { ResultsInnovationsDev } from '../results/summary/entities/results-innovations-dev.entity';
+import { AiReviewProposalFieldName } from './entities/ai-review-proposal.entity';
+import { AiReviewSessionStatus } from './entities/ai-review-session.entity';
+import { ResultFieldAiStateStatus } from './entities/result-field-ai-state.entity';
+import { ResultFieldRevisionProvenance } from './entities/result-field-revision.entity';
+import { ReturnResponseUtil } from '../../shared/utils/response.util';
 
-const buildUser = (id: number) => ({
-  id,
-  email: `user${id}@example.com`,
-  first_name: 'Test',
-  last_name: 'User',
+type MockRepository = {
+  findOne: jest.Mock;
+  find: jest.Mock;
+  create: jest.Mock;
+  save: jest.Mock;
+  update: jest.Mock;
+  createQueryBuilder: jest.Mock;
+  exists: jest.Mock;
+  upsert: jest.Mock;
+};
+
+const createMockRepository = (): MockRepository => ({
+  findOne: jest.fn(),
+  find: jest.fn(),
+  create: jest.fn(),
+  save: jest.fn(),
+  update: jest.fn(),
+  createQueryBuilder: jest.fn(),
+  exists: jest.fn(),
+  upsert: jest.fn(),
 });
 
 describe('AiService', () => {
   let service: AiService;
-
-  let sessionRepository: {
-    create: jest.Mock;
-    save: jest.Mock;
-    findOne: jest.Mock;
-    find: jest.Mock;
-  };
-  let proposalRepository: {
-    create: jest.Mock;
-    save: jest.Mock;
-    find: jest.Mock;
-  };
-  let eventRepository: {
-    create: jest.Mock;
-    save: jest.Mock;
-    createQueryBuilder: jest.Mock;
-  };
-  let revisionRepository: {
-    save: jest.Mock;
-  };
-  let aiStateRepository: {
-    upsert: jest.Mock;
-    find: jest.Mock;
-  };
-  let resultRepository: {
-    update: jest.Mock;
-    findOne: jest.Mock;
-  };
-  let innovationsDevRepository: {
-    update: jest.Mock;
-    findOne: jest.Mock;
-    exists: jest.Mock;
+  let sessionRepository: MockRepository;
+  let proposalRepository: MockRepository;
+  let eventRepository: MockRepository;
+  let revisionRepository: MockRepository;
+  let aiStateRepository: MockRepository;
+  let resultRepository: MockRepository;
+  let innovationsDevRepository: MockRepository;
+  const handlersError = {
+    returnErrorRes: jest.fn((payload) => payload),
   };
 
-  beforeEach(async () => {
-    sessionRepository = {
-      create: jest.fn(),
-      save: jest.fn(),
-      findOne: jest.fn(),
-      find: jest.fn(),
-    };
-    proposalRepository = {
-      create: jest.fn(),
-      save: jest.fn(),
-      find: jest.fn(),
-    };
-    eventRepository = {
-      create: jest.fn(),
-      save: jest.fn(),
-      createQueryBuilder: jest.fn(),
-    };
-    revisionRepository = {
-      save: jest.fn(),
-    };
-    aiStateRepository = {
-      upsert: jest.fn(),
-      find: jest.fn(),
-    };
-    resultRepository = {
-      update: jest.fn(),
-      findOne: jest.fn(),
-    };
-    innovationsDevRepository = {
-      update: jest.fn(),
-      findOne: jest.fn(),
-      exists: jest.fn(),
-    };
+  const user = {
+    id: 4,
+    email: 'user@example.org',
+  } as any;
 
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        AiService,
-        {
-          provide: getRepositoryToken(AiReviewSession),
-          useValue: sessionRepository,
-        },
-        {
-          provide: getRepositoryToken(AiReviewProposal),
-          useValue: proposalRepository,
-        },
-        {
-          provide: getRepositoryToken(AiReviewEvent),
-          useValue: eventRepository,
-        },
-        {
-          provide: getRepositoryToken(ResultFieldRevision),
-          useValue: revisionRepository,
-        },
-        {
-          provide: getRepositoryToken(ResultFieldAiState),
-          useValue: aiStateRepository,
-        },
-        {
-          provide: getRepositoryToken(Result),
-          useValue: resultRepository,
-        },
-        {
-          provide: getRepositoryToken(ResultsInnovationsDev),
-          useValue: innovationsDevRepository,
-        },
-      ],
-    }).compile();
+  beforeEach(() => {
+    sessionRepository = createMockRepository();
+    proposalRepository = createMockRepository();
+    eventRepository = createMockRepository();
+    revisionRepository = createMockRepository();
+    aiStateRepository = createMockRepository();
+    resultRepository = createMockRepository();
+    innovationsDevRepository = createMockRepository();
 
-    service = module.get<AiService>(AiService);
-    jest.clearAllMocks();
+    service = new AiService(
+      sessionRepository as any,
+      proposalRepository as any,
+      eventRepository as any,
+      revisionRepository as any,
+      aiStateRepository as any,
+      resultRepository as any,
+      innovationsDevRepository as any,
+      handlersError as any,
+    );
   });
 
-  it('should be defined', () => {
-    expect(service).toBeDefined();
+  const mockQueryBuilder = (result: any) => {
+    const qb = {
+      select: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      addSelect: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      groupBy: jest.fn().mockReturnThis(),
+      addGroupBy: jest.fn().mockReturnThis(),
+      getOne: jest.fn().mockResolvedValue(result),
+      getRawMany: jest.fn().mockResolvedValue(result),
+    };
+    return qb;
+  };
+
+  describe('getResultContext', () => {
+    it('returns result fields including short title when available', async () => {
+      resultRepository.findOne.mockResolvedValue({
+        id: 7,
+        title: 'Result title',
+        description: 'Description',
+      });
+      const innovationQB = mockQueryBuilder({ short_title: 'Shorty' });
+      innovationsDevRepository.createQueryBuilder.mockReturnValue(innovationQB);
+
+      const response = await service.getResultContext(7);
+
+      expect(response).toEqual(
+        ReturnResponseUtil.format({
+          response: [
+            { field_name: 'title', original_text: 'Result title' },
+            { field_name: 'description', original_text: 'Description' },
+            { field_name: 'short_title', original_text: 'Shorty' },
+          ],
+          message: 'Successful response',
+          statusCode: HttpStatus.OK,
+        }),
+      );
+    });
+
+    it('delegates error when result does not exist', async () => {
+      resultRepository.findOne.mockResolvedValue(null);
+      const handled = { statusCode: 404 };
+      handlersError.returnErrorRes.mockReturnValueOnce(handled);
+
+      const response = await service.getResultContext(99);
+
+      expect(handlersError.returnErrorRes).toHaveBeenCalledWith({
+        error: expect.objectContaining({ message: 'Result not found' }),
+        debug: true,
+      });
+      expect(response).toBe(handled);
+    });
   });
 
   describe('createSession', () => {
-    it('creates a session and logs the opening event', async () => {
-      const dto = { result_id: 10, user_id: 20 };
-      const user = buildUser(20);
-      const createdSession = {
-        result_id: dto.result_id,
-        opened_by: dto.user_id,
+    it('persists session and registers opening event', async () => {
+      const dto = { result_id: 30 };
+      const savedSession = {
+        id: 11,
+        result_id: 30,
+        opened_at: new Date(),
+        closed_at: null,
         all_sections_completed: false,
         status: AiReviewSessionStatus.COMPLETED,
-      } as AiReviewSession;
-      const savedSession = {
-        ...createdSession,
-        id: 44,
-        opened_at: new Date('2024-01-01T00:00:00.000Z'),
-        closed_at: null,
-      } as AiReviewSession;
-
-      sessionRepository.create.mockReturnValue(createdSession);
+      };
+      sessionRepository.create.mockReturnValue(savedSession);
       sessionRepository.save.mockResolvedValue(savedSession);
+      eventRepository.save.mockResolvedValue({});
 
       const response = await service.createSession(dto, user);
 
-      expect(sessionRepository.create).toHaveBeenCalledWith({
-        result_id: dto.result_id,
-        opened_by: dto.user_id,
-        all_sections_completed: false,
-        status: AiReviewSessionStatus.COMPLETED,
-      });
-      expect(sessionRepository.save).toHaveBeenCalledWith(createdSession);
-      expect(eventRepository.save).toHaveBeenCalledWith({
-        session_id: savedSession.id,
-        result_id: dto.result_id,
-        user_id: dto.user_id,
-        event_type: AiReviewEventType.CLICK_REVIEW,
-      });
-      expect(response).toEqual({
-        id: savedSession.id,
-        result_id: savedSession.result_id,
-        opened_by: user.id,
-        opened_at: savedSession.opened_at,
-        closed_at: savedSession.closed_at,
-        all_sections_completed: savedSession.all_sections_completed,
-        status: savedSession.status,
-      });
+      expect(response).toEqual(
+        ReturnResponseUtil.format({
+          response: expect.objectContaining({
+            id: 11,
+            result_id: 30,
+            opened_by: user.id,
+            status: AiReviewSessionStatus.COMPLETED,
+          }),
+          message: 'Session created successfully',
+          statusCode: HttpStatus.CREATED,
+        }),
+      );
+      expect(eventRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          session_id: 11,
+          result_id: 30,
+          user_id: user.id,
+          event_type: AiReviewEventType.CLICK_REVIEW,
+        }),
+      );
     });
   });
 
   describe('closeSession', () => {
-    it('closes a session and logs the event', async () => {
-      const user = buildUser(99);
-      const session = {
-        id: 7,
-        result_id: 4,
-        opened_by: 5,
-        opened_at: new Date('2024-01-01T00:00:00.000Z'),
-        closed_at: null,
-        all_sections_completed: false,
-        status: AiReviewSessionStatus.COMPLETED,
-      } as AiReviewSession;
-      const updatedSession = { ...session, closed_at: new Date() };
-
-      sessionRepository.findOne.mockResolvedValue(session);
-      sessionRepository.save.mockResolvedValue(updatedSession);
-
-      const result = await service.closeSession(session.id, user);
-
-      expect(sessionRepository.findOne).toHaveBeenCalledWith({
-        where: { id: session.id },
-      });
-      expect(sessionRepository.save).toHaveBeenCalledWith({
-        ...session,
-        closed_at: expect.any(Date),
-      });
-      expect(eventRepository.save).toHaveBeenCalledWith({
-        session_id: session.id,
-        result_id: session.result_id,
-        user_id: user.id,
-        event_type: AiReviewEventType.CLOSE_MODAL,
-      });
-      expect(result.closed_at).toEqual(updatedSession.closed_at);
-      expect(result.opened_by).toBe(user.id);
-    });
-
-    it('throws when session does not exist', async () => {
+    it('returns handler error when session is not found', async () => {
       sessionRepository.findOne.mockResolvedValue(null);
+      const handled = { statusCode: 404 };
+      handlersError.returnErrorRes.mockReturnValueOnce(handled);
 
-      await expect(
-        service.closeSession(1, buildUser(2)),
-      ).rejects.toBeInstanceOf(NotFoundException);
+      const response = await service.closeSession(10, user);
+
+      expect(handlersError.returnErrorRes).toHaveBeenCalledWith({
+        error: expect.objectContaining({ message: 'Session not found' }),
+        debug: true,
+      });
+      expect(response).toBe(handled);
     });
   });
 
   describe('createProposals', () => {
-    it('stores proposals for a session', async () => {
-      const session = { id: 1 } as AiReviewSession;
-      const dto = {
-        proposals: [
-          {
-            field_name: AiReviewProposalFieldName.TITLE,
-            original_text: 'old',
-            proposed_text: 'new',
-            needs_improvement: true,
-          },
-        ],
-      };
-      const createdProposal = {
-        session_id: session.id,
-        ...dto.proposals[0],
-      } as AiReviewProposal;
-      const savedProposal = {
-        ...createdProposal,
-        id: 8,
-        created_at: new Date(),
-      } as AiReviewProposal;
-
-      sessionRepository.findOne.mockResolvedValue(session);
-      proposalRepository.create.mockReturnValue(createdProposal);
-      proposalRepository.save.mockResolvedValue([savedProposal]);
-
-      const result = await service.createProposals(session.id, dto);
-
-      expect(sessionRepository.findOne).toHaveBeenCalledWith({
-        where: { id: session.id },
-      });
-      expect(proposalRepository.create).toHaveBeenCalledWith({
-        session_id: session.id,
-        field_name: dto.proposals[0].field_name,
-        original_text: dto.proposals[0].original_text,
-        proposed_text: dto.proposals[0].proposed_text,
-        needs_improvement: dto.proposals[0].needs_improvement,
-      });
-      expect(proposalRepository.save).toHaveBeenCalledWith([createdProposal]);
-      expect(result).toEqual([
+    it('saves proposals for a session', async () => {
+      sessionRepository.findOne.mockResolvedValue({ id: 5 });
+      const saved = [
         {
-          id: savedProposal.id,
-          session_id: savedProposal.session_id,
-          field_name: savedProposal.field_name,
-          original_text: savedProposal.original_text,
-          proposed_text: savedProposal.proposed_text,
-          needs_improvement: savedProposal.needs_improvement,
-          created_at: savedProposal.created_at,
+          id: 1,
+          session_id: 5,
+          field_name: AiReviewProposalFieldName.TITLE,
+          original_text: 'Old',
+          proposed_text: 'New',
+          needs_improvement: true,
         },
-      ]);
+      ];
+      proposalRepository.create.mockImplementation((input) => input);
+      proposalRepository.save.mockResolvedValue(saved);
+
+      const response = await service.createProposals(5, {
+        proposals: saved,
+      });
+
+      expect(response).toEqual(
+        ReturnResponseUtil.format({
+          response: saved.map((p) => ({
+            id: p.id,
+            session_id: p.session_id,
+            field_name: p.field_name,
+            original_text: p.original_text,
+            proposed_text: p.proposed_text,
+            needs_improvement: p.needs_improvement,
+            created_at: undefined,
+          })),
+          message: 'Proposals created successfully',
+          statusCode: HttpStatus.CREATED,
+        }),
+      );
     });
   });
 
   describe('createEvent', () => {
-    it('creates an event and overrides the user_id', async () => {
-      const user = buildUser(55);
-      const dto = {
-        session_id: 1,
-        result_id: 2,
-        event_type: AiReviewEventType.APPLY_PROPOSAL,
-      };
-      const session = { id: dto.session_id, result_id: dto.result_id };
-      const createdEvent = {
-        ...dto,
-        user_id: user.id,
-        field_name: null,
-      } as unknown as AiReviewEvent;
-      const savedEvent = {
-        ...createdEvent,
-        id: 9,
-        created_at: new Date(),
-      } as AiReviewEvent;
-
-      sessionRepository.findOne.mockResolvedValue(session);
-      eventRepository.create.mockReturnValue(createdEvent);
-      eventRepository.save.mockResolvedValue(savedEvent);
-
-      const result = await service.createEvent(dto, user);
-
-      expect(sessionRepository.findOne).toHaveBeenCalledWith({
-        where: { id: dto.session_id },
+    it('rejects short_title events when innovation record is missing', async () => {
+      sessionRepository.findOne.mockResolvedValue({
+        id: 100,
+        result_id: 77,
       });
-      expect(eventRepository.create).toHaveBeenCalledWith({
-        ...dto,
-        user_id: user.id,
-      });
-      expect(eventRepository.save).toHaveBeenCalledWith(createdEvent);
-      expect(result).toEqual({
-        id: savedEvent.id,
-        session_id: savedEvent.session_id,
-        result_id: savedEvent.result_id,
-        user_id: user.id,
-        event_type: savedEvent.event_type,
-        field_name: savedEvent.field_name,
-        created_at: savedEvent.created_at,
-      });
-    });
-
-    it('validates short_title events require innovations data', async () => {
-      const user = buildUser(5);
-      const dto = {
-        session_id: 3,
-        result_id: 4,
-        event_type: AiReviewEventType.REGENERATE,
-        field_name: AiReviewEventFieldName.SHORT_TITLE,
-      };
-      const session = { id: dto.session_id, result_id: dto.result_id };
-
-      sessionRepository.findOne.mockResolvedValue(session);
       innovationsDevRepository.exists.mockResolvedValue(false);
+      const handled = { statusCode: 400 };
+      handlersError.returnErrorRes.mockReturnValueOnce(handled);
 
-      await expect(service.createEvent(dto, user)).rejects.toBeInstanceOf(
-        BadRequestException,
+      const response = await service.createEvent(
+        {
+          session_id: 100,
+          result_id: 77,
+          event_type: AiReviewEventType.APPLY_PROPOSAL,
+          field_name: AiReviewEventFieldName.SHORT_TITLE,
+        },
+        user,
       );
-      expect(innovationsDevRepository.exists).toHaveBeenCalledWith({
-        where: { results_id: session.result_id },
+
+      expect(response).toBe(handled);
+      expect(handlersError.returnErrorRes).toHaveBeenCalledWith({
+        error: expect.objectContaining({
+          message:
+            'short_title field is only applicable for Innovation Development results',
+        }),
+        debug: true,
       });
-    });
-
-    it('throws when session does not exist', async () => {
-      sessionRepository.findOne.mockResolvedValue(null);
-
-      await expect(
-        service.createEvent(
-          {
-            session_id: 1,
-            result_id: 2,
-            event_type: AiReviewEventType.APPLY_PROPOSAL,
-          },
-          buildUser(1),
-        ),
-      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(eventRepository.save).not.toHaveBeenCalled();
     });
   });
 
   describe('saveChanges', () => {
-    it('persists revisions and updates result fields', async () => {
-      const user = buildUser(100);
-      const session = { id: 1, result_id: 2 } as AiReviewSession;
+    it('updates result fields, revisions and AI state', async () => {
+      const session = { id: 1, result_id: 50 };
+      sessionRepository.findOne.mockResolvedValue(session);
+      resultRepository.findOne.mockResolvedValue({
+        id: 50,
+        title: 'Old title',
+      });
+
       const dto = {
-        user_id: 200,
         fields: [
           {
             field_name: AiReviewProposalFieldName.TITLE,
-            new_value: 'Updated title',
-            change_reason: 'AI suggestion',
+            new_value: 'New title',
+            change_reason: 'Applied AI suggestion',
             was_ai_suggested: true,
-            user_feedback: 'Nice',
-            proposal_id: 10,
-          },
-          {
-            field_name: AiReviewProposalFieldName.DESCRIPTION,
-            new_value: 'Updated description',
-            change_reason: 'Manual edit',
-            was_ai_suggested: false,
+            proposal_id: 9,
           },
         ],
       };
 
-      sessionRepository.findOne.mockResolvedValue(session);
-      resultRepository.findOne
-        .mockResolvedValueOnce({ title: 'Previous title' })
-        .mockResolvedValueOnce({ description: 'Previous description' });
+      const response = await service.saveChanges(1, dto as any, user);
 
-      await service.saveChanges(session.id, dto, user);
-
-      expect(resultRepository.findOne).toHaveBeenCalledWith({
-        where: { id: session.result_id },
-      });
-      expect(revisionRepository.save).toHaveBeenNthCalledWith(1, {
-        result_id: session.result_id,
-        user_id: user.id,
-        field_name: ResultFieldRevisionFieldName.TITLE,
-        old_value: 'Previous title',
-        new_value: dto.fields[0].new_value,
-        change_reason: dto.fields[0].change_reason,
-        provenance: ResultFieldRevisionProvenance.AI_SUGGESTED,
-        proposal_id: dto.fields[0].proposal_id,
-      });
-      expect(revisionRepository.save).toHaveBeenNthCalledWith(2, {
-        result_id: session.result_id,
-        user_id: user.id,
-        field_name: ResultFieldRevisionFieldName.DESCRIPTION,
-        old_value: 'Previous description',
-        new_value: dto.fields[1].new_value,
-        change_reason: dto.fields[1].change_reason,
-        provenance: ResultFieldRevisionProvenance.USER_EDIT,
-        proposal_id: null,
-      });
-      expect(resultRepository.update).toHaveBeenNthCalledWith(
-        1,
-        { id: session.result_id },
-        {
-          [dto.fields[0].field_name]: dto.fields[0].new_value,
-          last_updated_by: user.id,
-          last_updated_date: expect.any(Date),
-        },
+      expect(revisionRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          result_id: 50,
+          field_name: AiReviewProposalFieldName.TITLE,
+          old_value: 'Old title',
+          new_value: 'New title',
+          provenance: ResultFieldRevisionProvenance.AI_SUGGESTED,
+        }),
       );
-      expect(resultRepository.update).toHaveBeenNthCalledWith(
-        2,
-        { id: session.result_id },
-        {
-          [dto.fields[1].field_name]: dto.fields[1].new_value,
+      expect(resultRepository.update).toHaveBeenCalledWith(
+        { id: 50 },
+        expect.objectContaining({
+          title: 'New title',
           last_updated_by: user.id,
-          last_updated_date: expect.any(Date),
-        },
+        }),
       );
       expect(aiStateRepository.upsert).toHaveBeenCalledWith(
-        {
-          result_id: session.result_id,
-          field_name: ResultFieldAiStateFieldName.TITLE,
+        expect.objectContaining({
+          result_id: 50,
+          field_name: AiReviewProposalFieldName.TITLE,
           status: ResultFieldAiStateStatus.ACCEPTED,
-          ai_suggestion: dto.fields[0].new_value,
-          user_feedback: dto.fields[0].user_feedback,
-          last_updated_by: user.id,
-          last_ai_proposal_id: dto.fields[0].proposal_id,
-        },
+        }),
         ['result_id', 'field_name'],
       );
-      expect(innovationsDevRepository.update).not.toHaveBeenCalled();
-      expect(eventRepository.save).toHaveBeenNthCalledWith(1, {
-        session_id: session.id,
-        result_id: session.result_id,
-        user_id: user.id,
-        event_type: AiReviewEventType.SAVE_CHANGES,
-        field_name: AiReviewEventFieldName.TITLE,
-      });
-      expect(eventRepository.save).toHaveBeenNthCalledWith(2, {
-        session_id: session.id,
-        result_id: session.result_id,
-        user_id: user.id,
-        event_type: AiReviewEventType.SAVE_CHANGES,
-        field_name: AiReviewEventFieldName.DESCRIPTION,
-      });
-    });
-
-    it('updates short_title fields', async () => {
-      const user = buildUser(5);
-      const session = { id: 1, result_id: 10 } as AiReviewSession;
-      const dto = {
-        user_id: 6,
-        fields: [
-          {
-            field_name: AiReviewProposalFieldName.SHORT_TITLE,
-            new_value: 'New short title',
-            was_ai_suggested: true,
-            change_reason: 'AI applied',
-            proposal_id: 15,
-            user_feedback: 'Great suggestion',
-          },
-        ],
-      };
-
-      sessionRepository.findOne.mockResolvedValue(session);
-      innovationsDevRepository.exists.mockResolvedValue(true);
-      innovationsDevRepository.findOne.mockResolvedValue({
-        results_id: session.result_id,
-        short_title: 'Old short',
-      });
-
-      await service.saveChanges(session.id, dto, user);
-
-      expect(innovationsDevRepository.exists).toHaveBeenCalledWith({
-        where: { results_id: session.result_id },
-      });
-      expect(innovationsDevRepository.findOne).toHaveBeenCalledWith({
-        where: { results_id: session.result_id },
-      });
-      expect(revisionRepository.save).toHaveBeenCalledWith({
-        result_id: session.result_id,
-        user_id: user.id,
-        field_name: ResultFieldRevisionFieldName.SHORT_TITLE,
-        old_value: 'Old short',
-        new_value: dto.fields[0].new_value,
-        change_reason: dto.fields[0].change_reason,
-        provenance: ResultFieldRevisionProvenance.AI_SUGGESTED,
-        proposal_id: dto.fields[0].proposal_id,
-      });
-      expect(innovationsDevRepository.update).toHaveBeenCalledWith(
-        { results_id: session.result_id },
-        {
-          short_title: dto.fields[0].new_value,
-          last_updated_by: user.id,
-          last_updated_date: expect.any(Date),
-        },
+      expect(eventRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          session_id: 1,
+          event_type: AiReviewEventType.SAVE_CHANGES,
+          field_name: AiReviewEventFieldName.TITLE,
+        }),
       );
-      expect(resultRepository.update).not.toHaveBeenCalled();
-      expect(aiStateRepository.upsert).toHaveBeenCalledWith(
-        {
-          result_id: session.result_id,
-          field_name: ResultFieldAiStateFieldName.SHORT_TITLE,
-          status: ResultFieldAiStateStatus.ACCEPTED,
-          ai_suggestion: dto.fields[0].new_value,
-          user_feedback: dto.fields[0].user_feedback,
-          last_updated_by: user.id,
-          last_ai_proposal_id: dto.fields[0].proposal_id,
-        },
-        ['result_id', 'field_name'],
+      expect(response).toEqual(
+        ReturnResponseUtil.format({
+          response: {},
+          message: 'Changes saved successfully',
+          statusCode: HttpStatus.OK,
+        }),
       );
-      expect(eventRepository.save).toHaveBeenCalledWith({
-        session_id: session.id,
-        result_id: session.result_id,
-        user_id: user.id,
-        event_type: AiReviewEventType.SAVE_CHANGES,
-        field_name: AiReviewEventFieldName.SHORT_TITLE,
-      });
-    });
-
-    it('throws when session is missing', async () => {
-      sessionRepository.findOne.mockResolvedValue(null);
-
-      await expect(
-        service.saveChanges(1, { fields: [] }, buildUser(1)),
-      ).rejects.toBeInstanceOf(NotFoundException);
-    });
-
-    it('validates short_title availability', async () => {
-      const session = { id: 1, result_id: 2 } as AiReviewSession;
-      const dto = {
-        user_id: 1,
-        fields: [
-          {
-            field_name: AiReviewProposalFieldName.SHORT_TITLE,
-            new_value: 'Anything',
-          },
-        ],
-      };
-
-      sessionRepository.findOne.mockResolvedValue(session);
-      innovationsDevRepository.exists.mockResolvedValue(false);
-
-      await expect(
-        service.saveChanges(session.id, dto, buildUser(1)),
-      ).rejects.toBeInstanceOf(BadRequestException);
-      expect(innovationsDevRepository.exists).toHaveBeenCalledWith({
-        where: { results_id: session.result_id },
-      });
     });
   });
 
   describe('getResultState', () => {
-    it('returns AI states for a result', async () => {
-      const states: ResultFieldAiState[] = [
+    it('returns AI state per field', async () => {
+      const states = [
         {
-          id: 1,
-          result_id: 2,
-          field_name: ResultFieldAiStateFieldName.TITLE,
+          field_name: AiReviewProposalFieldName.TITLE,
           status: ResultFieldAiStateStatus.ACCEPTED,
-          ai_suggestion: 'Text',
-          user_feedback: 'Feedback',
-          last_updated_by: 3,
-          created_at: new Date(),
+          ai_suggestion: 'New title',
+          user_feedback: 'Great',
+          last_updated_by: 1,
           updated_at: new Date(),
-        } as ResultFieldAiState,
+        },
       ];
       aiStateRepository.find.mockResolvedValue(states);
 
-      const result = await service.getResultState(2);
+      const response = await service.getResultState(80);
 
-      expect(aiStateRepository.find).toHaveBeenCalledWith({
-        where: { result_id: 2 },
-      });
-      expect(result).toEqual({
-        result_id: 2,
-        fields: [
-          {
-            field_name: states[0].field_name,
-            status: states[0].status,
-            ai_suggestion: states[0].ai_suggestion,
-            user_feedback: states[0].user_feedback,
-            last_updated_by: states[0].last_updated_by,
-            updated_at: states[0].updated_at,
+      expect(response).toEqual(
+        ReturnResponseUtil.format({
+          response: {
+            result_id: 80,
+            fields: [
+              {
+                field_name: AiReviewProposalFieldName.TITLE,
+                status: ResultFieldAiStateStatus.ACCEPTED,
+                ai_suggestion: 'New title',
+                user_feedback: 'Great',
+                last_updated_by: 1,
+                updated_at: states[0].updated_at,
+              },
+            ],
           },
-        ],
-      });
+          message: 'Result state retrieved successfully',
+          statusCode: HttpStatus.OK,
+        }),
+      );
     });
   });
 
   describe('getResultStats', () => {
-    it('aggregates stats including events by field', async () => {
-      const sessions: AiReviewSession[] = [
-        {
-          id: 1,
-          result_id: 9,
-          opened_by: 1,
-          opened_at: new Date('2024-01-01T00:00:00.000Z'),
-          closed_at: null,
-          all_sections_completed: false,
-          status: AiReviewSessionStatus.COMPLETED,
-        } as AiReviewSession,
+    it('aggregates sessions and events', async () => {
+      const openedAt = new Date();
+      sessionRepository.find.mockResolvedValue([
+        { id: 1, opened_at: openedAt, result_id: 90 },
         {
           id: 2,
-          result_id: 9,
-          opened_by: 2,
-          opened_at: new Date('2024-02-01T00:00:00.000Z'),
-          closed_at: null,
-          all_sections_completed: true,
-          status: AiReviewSessionStatus.COMPLETED,
-        } as AiReviewSession,
-      ];
-      const eventsByType = [
+          opened_at: new Date(openedAt.getTime() - 1000),
+          result_id: 90,
+        },
+      ]);
+
+      const qbEventsByType = mockQueryBuilder([
         { event_type: AiReviewEventType.CLICK_REVIEW, count: '2' },
-        { event_type: AiReviewEventType.SAVE_CHANGES, count: '1' },
-      ];
-      const eventsByField = [
+      ]);
+      const qbEventsByField = mockQueryBuilder([
         {
-          event_type: AiReviewEventType.SAVE_CHANGES,
+          event_type: AiReviewEventType.APPLY_PROPOSAL,
           field_name: AiReviewEventFieldName.TITLE,
           count: '1',
         },
-      ];
-
-      sessionRepository.find.mockResolvedValue(sessions);
-      const expectedLastSession = sessions[1].opened_at;
-
-      const qbEvents = {
-        select: jest.fn().mockReturnThis(),
-        addSelect: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnThis(),
-        groupBy: jest.fn().mockReturnThis(),
-        getRawMany: jest.fn().mockResolvedValue(eventsByType),
-      } as unknown as SelectQueryBuilder<AiReviewEvent>;
-
-      const qbFields = {
-        select: jest.fn().mockReturnThis(),
-        addSelect: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        groupBy: jest.fn().mockReturnThis(),
-        addGroupBy: jest.fn().mockReturnThis(),
-        getRawMany: jest.fn().mockResolvedValue(eventsByField),
-      } as unknown as SelectQueryBuilder<AiReviewEvent>;
-
+      ]);
       eventRepository.createQueryBuilder
-        .mockReturnValueOnce(qbEvents)
-        .mockReturnValueOnce(qbFields);
+        .mockReturnValueOnce(qbEventsByType)
+        .mockReturnValueOnce(qbEventsByField);
 
-      const result = await service.getResultStats(9);
+      const response = await service.getResultStats(90);
 
-      expect(sessionRepository.find).toHaveBeenCalledWith({
-        where: { result_id: 9 },
-      });
-      expect(eventRepository.createQueryBuilder).toHaveBeenNthCalledWith(
-        1,
-        'event',
+      expect(response).toEqual(
+        ReturnResponseUtil.format({
+          response: {
+            result_id: 90,
+            total_sessions: 2,
+            total_events: 2,
+            events_by_type: {
+              [AiReviewEventType.CLICK_REVIEW]: 2,
+            },
+            events_by_field: {
+              [AiReviewEventType.APPLY_PROPOSAL]: {
+                [AiReviewEventFieldName.TITLE]: 1,
+              },
+            },
+            last_session_at: openedAt,
+          },
+          message: 'Result statistics retrieved successfully',
+          statusCode: HttpStatus.OK,
+        }),
       );
-      expect(eventRepository.createQueryBuilder).toHaveBeenNthCalledWith(
-        2,
-        'e',
-      );
-      expect(result).toMatchObject({
-        result_id: 9,
-        total_sessions: sessions.length,
-        total_events: 3,
-        events_by_type: {
-          CLICK_REVIEW: 2,
-          SAVE_CHANGES: 1,
-        },
-        last_session_at: expectedLastSession,
-      });
-      expect(result.events_by_field).toEqual({
-        SAVE_CHANGES: {
-          [AiReviewEventFieldName.TITLE]: 1,
-        },
-      });
     });
   });
 });

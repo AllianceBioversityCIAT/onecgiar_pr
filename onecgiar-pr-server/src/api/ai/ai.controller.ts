@@ -7,6 +7,7 @@ import {
   ParseIntPipe,
   HttpCode,
   HttpStatus,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -24,6 +25,7 @@ import {
   EventResponseDto,
   ResultStateResponseDto,
   UsageStatsResponseDto,
+  ResultContextFieldDto,
 } from './dto/responses';
 import { CreateEventDto } from './dto/create-event.dto';
 import { CreateProposalsDto } from './dto/create-proposals.dto';
@@ -31,11 +33,51 @@ import { CreateSessionDto } from './dto/create-session.dto';
 import { SaveChangesDto } from './dto/save-changes.dto';
 import { UserToken } from '../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
+import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 
 @ApiTags('AI Review')
 @Controller()
+@UseInterceptors(ResponseInterceptor)
 export class AiController {
   constructor(private readonly aiService: AiService) {}
+
+  @Get('result-context/:resultId')
+  @ApiOperation({
+    summary: 'Get result context for AI processing',
+    description:
+      'Retrieves the current text content of result fields that can be improved by AI. Returns title and description for all results, plus short_title for Innovation Development results.',
+  })
+  @ApiOkResponse({
+    description: 'Result context retrieved successfully',
+    type: [ResultContextFieldDto],
+    example: [
+      {
+        field_name: 'title',
+        original_text: 'Original title text',
+      },
+      {
+        field_name: 'description',
+        original_text: 'Original description text',
+      },
+      {
+        field_name: 'short_title',
+        original_text: 'Original short title text',
+      },
+    ],
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Result not found',
+  })
+  @ApiParam({
+    name: 'resultId',
+    description: 'ID of the result to get context for',
+    type: Number,
+    example: 123,
+  })
+  async getResultContext(@Param('resultId', ParseIntPipe) resultId: number) {
+    return await this.aiService.getResultContext(resultId);
+  }
 
   @Post('sessions')
   @HttpCode(HttpStatus.CREATED)
@@ -67,8 +109,8 @@ export class AiController {
   async createSession(
     @Body() createSessionDto: CreateSessionDto,
     @UserToken() user: TokenDto,
-  ): Promise<SessionResponseDto> {
-    return this.aiService.createSession(createSessionDto, user);
+  ) {
+    return await this.aiService.createSession(createSessionDto, user);
   }
 
   @Post('sessions/:sessionId/close')
@@ -94,8 +136,8 @@ export class AiController {
   async closeSession(
     @Param('sessionId', ParseIntPipe) sessionId: number,
     @UserToken() user: TokenDto,
-  ): Promise<SessionResponseDto> {
-    return this.aiService.closeSession(sessionId, user);
+  ) {
+    return await this.aiService.closeSession(sessionId, user);
   }
 
   @Post('sessions/:sessionId/proposals')
@@ -147,8 +189,8 @@ export class AiController {
   async createProposals(
     @Param('sessionId', ParseIntPipe) sessionId: number,
     @Body() createProposalsDto: CreateProposalsDto,
-  ): Promise<ProposalResponseDto[]> {
-    return this.aiService.createProposals(sessionId, createProposalsDto);
+  ) {
+    return await this.aiService.createProposals(sessionId, createProposalsDto);
   }
 
   @Get('sessions/:sessionId/proposals')
@@ -171,10 +213,8 @@ export class AiController {
     type: Number,
     example: 1,
   })
-  async getProposals(
-    @Param('sessionId', ParseIntPipe) sessionId: number,
-  ): Promise<ProposalResponseDto[]> {
-    return this.aiService.getProposals(sessionId);
+  async getProposals(@Param('sessionId', ParseIntPipe) sessionId: number) {
+    return await this.aiService.getProposals(sessionId);
   }
 
   @Post('events')
@@ -221,8 +261,8 @@ export class AiController {
   async createEvent(
     @Body() createEventDto: CreateEventDto,
     @UserToken() user: TokenDto,
-  ): Promise<EventResponseDto> {
-    return this.aiService.createEvent(createEventDto, user);
+  ) {
+    return await this.aiService.createEvent(createEventDto, user);
   }
 
   @Post('sessions/:sessionId/save')
@@ -275,8 +315,8 @@ export class AiController {
     @Param('sessionId', ParseIntPipe) sessionId: number,
     @Body() saveChangesDto: SaveChangesDto,
     @UserToken() user: TokenDto,
-  ): Promise<void> {
-    return this.aiService.saveChanges(sessionId, saveChangesDto, user);
+  ) {
+    return await this.aiService.saveChanges(sessionId, saveChangesDto, user);
   }
 
   @Get('results/:resultId/state')
@@ -295,10 +335,8 @@ export class AiController {
     type: Number,
     example: 123,
   })
-  async getResultState(
-    @Param('resultId', ParseIntPipe) resultId: number,
-  ): Promise<ResultStateResponseDto> {
-    return this.aiService.getResultState(resultId);
+  async getResultState(@Param('resultId', ParseIntPipe) resultId: number) {
+    return await this.aiService.getResultState(resultId);
   }
 
   @Get('results/:resultId/stats')
@@ -317,9 +355,7 @@ export class AiController {
     type: Number,
     example: 123,
   })
-  async getResultStats(
-    @Param('resultId', ParseIntPipe) resultId: number,
-  ): Promise<UsageStatsResponseDto> {
-    return this.aiService.getResultStats(resultId);
+  async getResultStats(@Param('resultId', ParseIntPipe) resultId: number) {
+    return await this.aiService.getResultStats(resultId);
   }
 }
