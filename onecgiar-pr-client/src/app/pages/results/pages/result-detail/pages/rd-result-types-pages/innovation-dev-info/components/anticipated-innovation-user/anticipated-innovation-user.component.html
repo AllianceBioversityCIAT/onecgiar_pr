@@ -112,7 +112,7 @@
 
     <app-no-data-text *ngIf="!hasElementsWithId(body?.innovatonUse?.actors, 'result_actors_id')" title="No actors provided"> </app-no-data-text>
     <br />
-    <app-add-button name=" Add actor" *ngIf="!this.api.rolesSE.readOnly" (clickEvent)="addActor()"></app-add-button>
+    <app-add-button name=" Add actor" *ngIf="!this.api.rolesSE.readOnly" [disabled]="saving" (clickEvent)="addActor()"></app-add-button>
 
     <div class="fragment_section_divider"></div>
 
@@ -198,7 +198,7 @@
 
     <app-no-data-text *ngIf="!hasElementsWithId(this.body.innovatonUse.organization, 'id')" title="No organizations provided"> </app-no-data-text>
     <br />
-    <app-add-button name="Add organization" *ngIf="!this.api.rolesSE.readOnly" (clickEvent)="addOrganization()"></app-add-button>
+    <app-add-button name="Add organization" *ngIf="!this.api.rolesSE.readOnly" [disabled]="saving" (clickEvent)="addOrganization()"></app-add-button>
 
     <div class="fragment_section_divider"></div>
 
@@ -235,6 +235,6 @@
       title="Other quantitative measures not added">
     </app-no-data-text>
     <br />
-    <app-add-button name="Add other" *ngIf="!this.api.rolesSE.readOnly" (clickEvent)="addOtherMesure()"></app-add-button>
+    <app-add-button name="Add other" *ngIf="!this.api.rolesSE.readOnly" [disabled]="saving" (clickEvent)="addOtherMesure()"></app-add-button>
   </div>
 </div>

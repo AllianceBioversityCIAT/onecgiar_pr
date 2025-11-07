@@ -26,6 +26,7 @@ import { DataControlService } from './../../../../../../shared/services/data-con
 import { RolesService } from './../../../../../../shared/services/global/roles.service';
 import { InstitutionsService } from './../../../../../../shared/services/global/institutions.service';
 import { PusherService } from './../../../../../../shared/services/pusher.service';
+import { signal } from '@angular/core';
 
 describe('RdGeneralInformationComponent', () => {
   let component: RdGeneralInformationComponent;
@@ -107,6 +108,9 @@ describe('RdGeneralInformationComponent', () => {
   beforeEach(async () => {
     mockApiService = {
       resultsSE: {
+        GET_impactAreasScoresComponentsAll: jest.fn(() => {
+          return of({ response: {} });
+        }),
         GET_generalInformationByResultId: jest.fn(() => {
           return of({ response: mockGET_generalInformationByResultIdResponse });
         }),
@@ -134,6 +138,7 @@ describe('RdGeneralInformationComponent', () => {
       },
       alertsFs: new CustomizedAlertsFsService(),
       dataControlSE: {
+        currentResultSignal: signal<any>({}),
         findClassTenSeconds: () => {
           return Promise.resolve(document.querySelector('alert-event'));
         },
@@ -177,6 +182,8 @@ describe('RdGeneralInformationComponent', () => {
 
     mockDataControlService = {
       isKnowledgeProduct: false,
+      currentResultSignal: signal<any>({}),
+      currentResultSectionName: signal<string>('General information'),
       currentResult: {
         result_type_id: 1,
         status: false,
@@ -375,17 +382,6 @@ describe('RdGeneralInformationComponent', () => {
       expect(spyPATCH_generalInformation).toHaveBeenCalled();
       expect(consoleErrorSpy).toHaveBeenCalledWith(errorResponse);
       expect(spyGetSectionInformation).toHaveBeenCalled();
-    });
-  });
-
-  describe('titleTextInfo', () => {
-    it('should return a string containing the specified list items', () => {
-      const result = component.titleTextInfo();
-
-      expect(result).toContain('<ul>');
-      expect(result).toContain('<li>Provide a clear, informative name of the output, for a non-specialist reader and without acronyms.</li>');
-      expect(result).toContain('<li>Avoid abbreviations or (technical) jargon.</li>');
-      expect(result).toContain('</ul>');
     });
   });
 

@@ -20,6 +20,17 @@ export class SocketManagementService implements OnModuleInit {
 
   async getActiveUsers() {
     try {
+      if (!this.url) {
+        this._logger.warn(
+          'SOCKET_URL is not configured; skipping active user lookup.',
+        );
+        return {
+          response: [],
+          message: 'Socket service not configured',
+          status: HttpStatus.OK,
+        };
+      }
+
       const response = await axios.get(
         `${this.url}/socket/users/${this.environmentCheck()}`,
       );
@@ -51,6 +62,16 @@ export class SocketManagementService implements OnModuleInit {
           response: null,
           message: 'No users online to send notification',
           status: HttpStatus.NOT_FOUND,
+        };
+      }
+      if (!this.url) {
+        this._logger.warn(
+          'SOCKET_URL is not configured; skipping socket push.',
+        );
+        return {
+          response: null,
+          message: 'Socket service not configured',
+          status: HttpStatus.OK,
         };
       }
       const response = await axios.post(`${this.url}/socket/notification`, {

@@ -12,6 +12,7 @@ describe('UserSearchService', () => {
   const mockJohnDoe = {
     cn: 'John Doe',
     displayName: 'John Doe',
+    display_name: 'John Doe',
     mail: 'john.doe@cgiar.org',
     sAMAccountName: 'jdoe',
     givenName: 'John',
@@ -31,6 +32,7 @@ describe('UserSearchService', () => {
   const mockJaneDoe = {
     cn: 'Jane Doe',
     displayName: 'Jane Doe',
+    display_name: 'Jane Doe',
     mail: 'jane.doe@cgiar.org',
     sAMAccountName: 'jadoe',
     givenName: 'Jane',
@@ -77,7 +79,7 @@ describe('UserSearchService', () => {
     service.searchUsers(query).subscribe(response => {
       expect(response).toEqual(mockUserSearchResponse);
       expect(response.response.length).toBe(1);
-      expect(response.response[0].displayName).toBe('John Doe');
+      expect(response.response[0].display_name).toBe('John Doe');
       expect(response.response[0].mail).toBe('john.doe@cgiar.org');
       expect(response.status).toBe(200);
     });
@@ -146,8 +148,8 @@ describe('UserSearchService', () => {
 
     service.searchUsers(query).subscribe(response => {
       expect(response.response.length).toBe(2);
-      expect(response.response[0].displayName).toBe('John Doe');
-      expect(response.response[1].displayName).toBe('Jane Doe');
+      expect(response.response[0].display_name).toBe('John Doe');
+      expect(response.response[1].display_name).toBe('Jane Doe');
     });
 
     const req = httpMock.expectOne(`${environment.apiBaseUrl}auth/users/search?q=${query}`);

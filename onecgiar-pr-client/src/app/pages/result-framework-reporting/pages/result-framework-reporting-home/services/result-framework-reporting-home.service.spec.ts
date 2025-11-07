@@ -21,7 +21,8 @@ describe('ResultFrameworkReportingHomeService', () => {
       message: 'Test description 1',
       emitterId: 1,
       emitterName: 'Test Emitter 1',
-      createdAt: new Date('2024-01-01T00:00:00Z')
+      createdAt: new Date('2024-01-01T00:00:00Z'),
+      phase: '1'
     },
     {
       id: 2,
@@ -35,14 +36,16 @@ describe('ResultFrameworkReportingHomeService', () => {
       message: 'Test description 2',
       emitterId: 2,
       emitterName: 'Test Emitter 2',
-      createdAt: new Date('2024-01-02T00:00:00Z')
+      createdAt: new Date('2024-01-02T00:00:00Z'),
+      phase: '2'
     }
   ];
 
   beforeEach(() => {
     mockApiService = {
       resultsSE: {
-        GET_RecentActivity: jest.fn()
+        GET_RecentActivity: jest.fn(),
+        GET_ScienceProgramsProgress: jest.fn()
       }
     } as any;
 
@@ -99,7 +102,8 @@ describe('ResultFrameworkReportingHomeService', () => {
           message: 'Initial message',
           emitterId: 1,
           emitterName: 'Initial Emitter',
-          createdAt: new Date('2024-01-03T00:00:00Z')
+          createdAt: new Date('2024-01-03T00:00:00Z'),
+          phase: '1'
         }
       ];
       service.recentActivityList.set(initialActivity);
@@ -111,6 +115,44 @@ describe('ResultFrameworkReportingHomeService', () => {
 
       expect(service.recentActivityList()).toEqual(mockRecentActivity);
       expect(service.recentActivityList()).not.toEqual(initialActivity);
+    });
+  });
+
+  describe('getScienceProgramsProgress', () => {
+    it('should fetch and set SP progress lists', () => {
+      const mockResponse = {
+        response: {
+          mySciencePrograms: [{ id: 1, acronym: 'SP1', name: 'Science Program 1', progress: 50 }],
+          otherSciencePrograms: [{ id: 2, acronym: 'SP2', name: 'Science Program 2', progress: 25 }]
+        }
+      } as any;
+
+      mockApiService.resultsSE.GET_ScienceProgramsProgress = jest.fn().mockReturnValue(of(mockResponse));
+
+      service.getScienceProgramsProgress();
+
+      expect(mockApiService.resultsSE.GET_ScienceProgramsProgress).toHaveBeenCalledTimes(1);
+      expect(service.mySPsList()).toEqual(mockResponse.response.mySciencePrograms);
+      expect(service.otherSPsList()).toEqual(mockResponse.response.otherSciencePrograms);
+    });
+
+    it('should handle missing response properties gracefully', () => {
+      const mockResponse = { response: {} } as any;
+      mockApiService.resultsSE.GET_ScienceProgramsProgress = jest.fn().mockReturnValue(of(mockResponse));
+
+      service.getScienceProgramsProgress();
+
+      expect(service.mySPsList()).toBeUndefined();
+      expect(service.otherSPsList()).toBeUndefined();
+    });
+
+    it('signals should be settable and readable', () => {
+      const myList = [{ id: 3 } as any];
+      const otherList = [{ id: 4 } as any];
+      service.mySPsList.set(myList as any);
+      service.otherSPsList.set(otherList as any);
+      expect(service.mySPsList()).toEqual(myList as any);
+      expect(service.otherSPsList()).toEqual(otherList as any);
     });
   });
 

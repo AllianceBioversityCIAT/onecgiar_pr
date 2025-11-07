@@ -1,68 +1,21 @@
 <app-rd-annual-updating *ngIf="this.generalInfoBody.is_replicated" [generalInfoBody]="this.generalInfoBody"></app-rd-annual-updating>
-
-<app-detail-section-title sectionName="General information"></app-detail-section-title>
-
 <div class="detail_container">
   <app-alert-status
     *ngIf="this.api.dataControlSE.isKnowledgeProduct"
     description="In case some of the metadata fields are incorrect, please get in touch with the library staff of your Center to update them in the repository. Before the end of the reporting period, metadata will be automatically refreshed on this page.">
   </app-alert-status>
 
-  <div class="general_header">
-    <app-pr-input
-      placeholder="Enter text"
-      label="Result level"
-      type="text"
-      [required]="false"
-      [readOnly]="true"
-      [(ngModel)]="this.generalInfoBody.result_level_name">
-    </app-pr-input>
-    <div class="reporting_year">
-      <div class="pr_label">Reporting year</div>
-      <div class="pr_description">{{ this.generalInfoBody.reporting_year }}</div>
-    </div>
-  </div>
-
-  <div style="display: flex; gap: 1rem; align-items: flex-end">
-    <app-pr-input
-      [attr.attribute-you-are-targeting]="'expression'"
-      placeholder="Enter text"
-      label="Indicator category"
-      type="text"
-      [required]="false"
-      [readOnly]="true"
-      [(ngModel)]="this.generalInfoBody.result_type_name">
-    </app-pr-input>
-
-    <div *ngIf="!this.api.rolesSE.readOnly && isPhaseOpen">
-      <app-pr-button
-        text="Change result type"
-        icon="move_up"
-        [reverse]="true"
-        (click)="this.api.dataControlSE.changeResultTypeModal = true"
-        [rotateRight]="true"
-        [verticalMargin]="0">
-      </app-pr-button>
-    </div>
-  </div>
-
   <app-pr-input
-    placeholder="Enter text"
-    label="Title"
+    fieldRef="[general-info]-title"
     type="text"
-    [description]="titleTextInfo()"
     [readOnly]="this.dataControlSE.isKnowledgeProduct"
     [(ngModel)]="this.generalInfoBody.result_name"
     [maxWords]="30">
   </app-pr-input>
 
   <app-pr-textarea
-    placeholder="Enter text"
-    label="Description"
-    type="text"
-    [description]="descriptionTextInfo()"
+    fieldRef="[general-info]-description"
     [readOnly]="this.dataControlSE.isKnowledgeProduct"
-    [required]="!this.dataControlSE.isKnowledgeProduct"
     [(ngModel)]="this.generalInfoBody.result_description"
     [maxWords]="150"></app-pr-textarea>
 
@@ -71,6 +24,7 @@
   <h1 class="pr_label">Impact Area scores:</h1>
   <app-alert-status [description]="impactAreaScoresInfo()"> </app-alert-status>
 
+  <!------- [1] ------->
   <div class="block_container">
     <app-alert-status [description]="genderInformation()"> </app-alert-status>
     <div class="radio_grid">
@@ -78,13 +32,23 @@
         [options]="this.scoreSE.genderTagScoreList"
         optionLabel="full_name"
         optionValue="id"
-        label="Gender equality score"
+        fieldRef="[general-info]-gender_tag_id"
         [(ngModel)]="this.generalInfoBody.gender_tag_id">
       </app-pr-radio-button>
       <div id="gender_tag_alert" [hidden]="this.generalInfoBody.gender_tag_id != 3"></div>
     </div>
+    @if (this.generalInfoBody.gender_tag_id == 3) {
+      <app-pr-radio-button
+        [options]="this.getImpactAreasScoresComponents.genderTagScoreList()"
+        optionLabel="name"
+        optionValue="id"
+        fieldRef="[general-info]-gender_impact_area_id"
+        [(ngModel)]="this.generalInfoBody.gender_impact_area_id">
+      </app-pr-radio-button>
+    }
   </div>
 
+  <!------- [2] ------->
   <div class="block_container">
     <app-alert-status [description]="climateInformation()"> </app-alert-status>
     <div class="radio_grid" id="climate_change_tag">
@@ -92,13 +56,23 @@
         [options]="this.scoreSE.genderTagScoreList"
         optionLabel="full_name"
         optionValue="id"
-        label="Climate change score"
+        fieldRef="[general-info]-climate_change_tag_id"
         [(ngModel)]="this.generalInfoBody.climate_change_tag_id">
       </app-pr-radio-button>
       <div id="climate_change_tag_alert" [hidden]="this.generalInfoBody.climate_change_tag_id != 3"></div>
     </div>
+    @if (this.generalInfoBody.climate_change_tag_id == 3) {
+      <app-pr-radio-button
+        [options]="this.getImpactAreasScoresComponents.climateTagScoreList()"
+        optionLabel="name"
+        optionValue="id"
+        fieldRef="[general-info]-climate_impact_area_id"
+        [(ngModel)]="this.generalInfoBody.climate_impact_area_id">
+      </app-pr-radio-button>
+    }
   </div>
 
+  <!------- [3] ------->
   <div class="block_container">
     <app-alert-status [description]="nutritionInformation()"> </app-alert-status>
     <div class="radio_grid">
@@ -106,13 +80,23 @@
         [options]="this.scoreSE.genderTagScoreList"
         optionLabel="full_name"
         optionValue="id"
-        label="Nutrition, health and food security score"
+        fieldRef="[general-info]-nutrition_tag_level_id"
         [(ngModel)]="this.generalInfoBody.nutrition_tag_level_id">
       </app-pr-radio-button>
       <div id="nutrition_tag_alert" [hidden]="this.generalInfoBody.nutrition_tag_level_id != 3"></div>
     </div>
+    @if (this.generalInfoBody.nutrition_tag_level_id == 3) {
+      <app-pr-radio-button
+        [options]="this.getImpactAreasScoresComponents.nutritionTagScoreList()"
+        optionLabel="name"
+        optionValue="id"
+        fieldRef="[general-info]-nutrition_impact_area_id"
+        [(ngModel)]="this.generalInfoBody.nutrition_impact_area_id">
+      </app-pr-radio-button>
+    }
   </div>
 
+  <!------- [4] ------->
   <div class="block_container">
     <app-alert-status [description]="environmentInformation()"> </app-alert-status>
     <div class="radio_grid">
@@ -120,13 +104,23 @@
         [options]="this.scoreSE.genderTagScoreList"
         optionLabel="full_name"
         optionValue="id"
-        label="Environmental health and biodiversity score"
+        fieldRef="[general-info]-environmental_biodiversity_tag_level_id"
         [(ngModel)]="this.generalInfoBody.environmental_biodiversity_tag_level_id">
       </app-pr-radio-button>
       <div id="environment_tag_alert" [hidden]="this.generalInfoBody.environmental_biodiversity_tag_level_id != 3"></div>
     </div>
+    @if (this.generalInfoBody.environmental_biodiversity_tag_level_id == 3) {
+      <app-pr-radio-button
+        [options]="this.getImpactAreasScoresComponents.environmentalBiodiversityTagScoreList()"
+        optionLabel="name"
+        optionValue="id"
+        fieldRef="[general-info]-environmental_biodiversity_impact_area_id"
+        [(ngModel)]="this.generalInfoBody.environmental_biodiversity_impact_area_id">
+      </app-pr-radio-button>
+    }
   </div>
 
+  <!------- [5] ------->
   <div class="block_container">
     <app-alert-status [description]="povertyInformation()"> </app-alert-status>
     <div class="radio_grid">
@@ -134,15 +128,25 @@
         [options]="this.scoreSE.genderTagScoreList"
         optionLabel="full_name"
         optionValue="id"
-        label="Poverty reduction, livelihoods and jobs score"
+        fieldRef="[general-info]-poverty_tag_level_id"
         [(ngModel)]="this.generalInfoBody.poverty_tag_level_id">
       </app-pr-radio-button>
       <div id="poverty_tag_alert" [hidden]="this.generalInfoBody.poverty_tag_level_id != 3"></div>
     </div>
+    @if (this.generalInfoBody.poverty_tag_level_id == 3) {
+      <app-pr-radio-button
+        [options]="this.getImpactAreasScoresComponents.povertyTagScoreList()"
+        optionLabel="name"
+        optionValue="id"
+        fieldRef="[general-info]-poverty_impact_area_id"
+        [(ngModel)]="this.generalInfoBody.poverty_impact_area_id">
+      </app-pr-radio-button>
+    }
   </div>
 
   <app-pr-yes-or-not
-    label="Is this result featured in a Key Result Story for the reporting year?"
+    fieldRef="[general-info]-is_krs"
+    label="yes"
     [(ngModel)]="this.generalInfoBody.is_krs"
     (ngModelChange)="onChangeKrs()"></app-pr-yes-or-not>
 

@@ -14,10 +14,15 @@ export class GeneralInformationDto {
   public result_name: string | null;
   public result_description: string | null;
   public gender_tag_id: number | null;
+  public gender_impact_area_id: number | null;
   public climate_change_tag_id: number | null;
+  public climate_impact_area_id: number | null;
   public nutrition_tag_level_id: number | null;
+  public nutrition_impact_area_id: number | null;
   public environmental_biodiversity_tag_level_id: number | null;
+  public environmental_biodiversity_impact_area_id: number | null;
   public poverty_tag_level_id: number | null;
+  public poverty_impact_area_id: number | null;
   public institutions: ResultsByInstitution[];
   public institutions_type: ResultsByInstitutionType[];
   public krs_url: string | null;

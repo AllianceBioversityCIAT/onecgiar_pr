@@ -47,4 +47,5 @@ export class ResultsKnowledgeProductDto {
   result_code?: number;
   version_id?: number;
   modification_justification?: string;
+  repo?: string;
 }

@@ -1,37 +1,70 @@
 <div class="local_container">
-    <div class="notifications_filters">
-        <app-pr-select label="Phases" [options]="this.phaseList" [isStatic]="true" [required]="false"
-            optionLabel="phase_name_status" optionValue="id" placeholder="Select phase" [(ngModel)]="phaseFilter">
-        </app-pr-select>
-        <div>
-            <app-pr-select [options]="this.api.dataControlSE.myInitiativesList" *ngIf="!this.api.rolesSE.isAdmin"
-                label="Initiative" [isStatic]="true" [required]="false" optionLabel="full_name"
-                optionValue="initiative_id" placeholder="Select Initiative" [(ngModel)]="initiativeIdFilter">
-            </app-pr-select>
+  <div class="notifications_filters">
+    <app-pr-select
+      label="Phases"
+      [options]="this.phaseList"
+      [isStatic]="true"
+      [required]="false"
+      optionLabel="phase_name_status"
+      optionValue="id"
+      placeholder="Select phase"
+      (selectOptionEvent)="this.onSelectPhase($event)"
+      [(ngModel)]="phaseFilter">
+    </app-pr-select>
+    <div>
+      <!-- <app-pr-select
+          [options]="this.initiativesByPortfolio()"
+          label="Entity"
+          [isStatic]="true"
+          [required]="false"
+          optionLabel="full_name"
+          optionValue="initiative_id"
+          placeholder="Select entity"
+          [(ngModel)]="initiativeIdFilter">
+        </app-pr-select> -->
 
-            <app-pr-select [options]="this.allInitiatives" label="Initiative" [required]="false" [isStatic]="true"
-                *ngIf="this.api.rolesSE.isAdmin" optionLabel="full_name" optionValue="initiative_id"
-                placeholder="Select initiative" [(ngModel)]="initiativeIdFilter">
-            </app-pr-select>
-        </div>
+      <app-s-select
+        [options]="this.initiativesByPortfolio"
+        label="Entity"
+        [isStatic]="true"
+        [required]="false"
+        optionLabel="full_name"
+        optionValue="initiative_id"
+        placeholder="Select entity"
+        [(ngModel)]="initiativeIdFilter">
+      </app-s-select>
     </div>
+  </div>
 
-    <div
-        *ngIf="(this.resultsNotificationsSE?.dataIPSR | filterNotificationByInitiative:initiativeIdFilter | filterNotificationByPhase:phaseFilter).length > 0">
-        <div class="all_notifications">
-            <cdk-virtual-scroll-viewport itemSize="190" class="custom_scroll virtual_scroll all_notifications">
-                <div style="display: flex; flex-direction: column; gap: 10px;"
-                    *cdkVirtualFor="let notification of this.resultsNotificationsSE?.dataIPSR | filterNotificationByInitiative:initiativeIdFilter | filterNotificationByPhase:phaseFilter; let i =index">
-                    <app-notification-item-innovation [comes]="notification.pending"
-                        (requestEvent)="this.resultsNotificationsSE.get_section_innovation_packages()"
-                        [notification]="notification" style="margin-bottom: 10px;">
-                    </app-notification-item-innovation>
-                </div>
-            </cdk-virtual-scroll-viewport>
+  <div
+    *ngIf="
+      (this.resultsNotificationsSE?.dataIPSR | filterNotificationByInitiative: initiativeIdFilter | filterNotificationByPhase: phaseFilter).length > 0
+    ">
+    <div class="all_notifications">
+      <cdk-virtual-scroll-viewport itemSize="190" class="custom_scroll virtual_scroll all_notifications">
+        <div
+          style="display: flex; flex-direction: column; gap: 10px"
+          *cdkVirtualFor="
+            let notification of this.resultsNotificationsSE?.dataIPSR
+              | filterNotificationByInitiative: initiativeIdFilter
+              | filterNotificationByPhase: phaseFilter;
+            let i = index
+          ">
+          <app-notification-item-innovation
+            [comes]="notification.pending"
+            (requestEvent)="this.resultsNotificationsSE.get_section_innovation_packages()"
+            [notification]="notification"
+            style="margin-bottom: 10px">
+          </app-notification-item-innovation>
         </div>
+      </cdk-virtual-scroll-viewport>
     </div>
+  </div>
 
-    <app-no-data-text title="No notifications"
-        *ngIf="!(this.resultsNotificationsSE?.dataIPSR | filterNotificationByInitiative:initiativeIdFilter | filterNotificationByPhase:phaseFilter).length">
-    </app-no-data-text>
+  <app-no-data-text
+    title="No notifications"
+    *ngIf="
+      !(this.resultsNotificationsSE?.dataIPSR | filterNotificationByInitiative: initiativeIdFilter | filterNotificationByPhase: phaseFilter).length
+    ">
+  </app-no-data-text>
 </div>

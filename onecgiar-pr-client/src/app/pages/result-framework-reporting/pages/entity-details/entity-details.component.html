@@ -1,0 +1,107 @@
+<div class="entity-details_breadcrumb">
+  <span class="entity-details_breadcrumb_homeLink" routerLink="/result-framework-reporting/home"> Science programs </span>
+  <i class="pi pi-chevron-right entity-details_breadcrumb_separator"></i>
+  <div class="entity-details_title_container">
+    <span class="entity-details_breadcrumb_link"> {{ entityAowService.entityId() }} - </span>
+    @if (entityAowService.isLoadingDetails()) {
+      <p-skeleton width="200px" height="21px" />
+    } @else {
+      <span class="entity-details_breadcrumb_link"> {{ entityAowService.entityDetails()?.shortName ?? 'No information loaded' }} </span>
+    }
+  </div>
+</div>
+
+<div class="entity-details_header">
+  <div class="entity-details_title_container">
+    <h1 class="entity-details_title entity-details_title--primary">{{ entityAowService.entityId() }} -</h1>
+    @if (entityAowService.isLoadingDetails()) {
+      <p-skeleton width="200px" height="30px" />
+    } @else {
+      <h1 class="entity-details_title entity-details_title--primary">{{ entityAowService.entityDetails()?.shortName ?? 'No information loaded' }}</h1>
+    }
+  </div>
+  <p class="entity-details_description">Overview of progress and access to detailed Areas of Work and Results for this Science Program.</p>
+</div>
+
+<div class="entity-details_container">
+  <div class="entity-details_card">
+    <div class="entity-details_card_header">Insights</div>
+
+    <div class="entity-details_card_content_graph">
+      <div class="entity-details_card_content_graph_item">
+        @for (item of summaryInsightsData(); track $index) {
+          <div class="entity-details_card_content_graph_item_content">
+            <img [src]="item.icon" alt="{{ item.label }} Icon" class="entity-details_card_content_graph_item_icon" />
+
+            <div>
+              <h3 class="entity-details_card_content_graph_item_value">{{ item.value }}</h3>
+              <p class="entity-details_card_content_graph_item_label">{{ item.label }}</p>
+            </div>
+          </div>
+
+          @if ($index < summaryInsightsData().length - 1) {
+            <div class="entity-details_card_content_graph_item_separator"></div>
+          }
+        }
+
+        <div class="entity-details_card_content_graph_item_title_absolute bottom_title">Summary</div>
+      </div>
+
+      <div class="entity-details_card_content_graph_item entity-details_card_content_graph_item--charts">
+        <div>
+          <h3 class="details_card_content_graph_item_title">Outputs</h3>
+          <p-chart type="bar" [data]="dataOutputs()" [options]="options" height="245px" styleClass="entity-details_chart" />
+        </div>
+
+        <div>
+          <h3 class="details_card_content_graph_item_title">Outcomes</h3>
+          <p-chart type="bar" [data]="dataOutcomes()" [options]="options" height="245px" styleClass="entity-details_chart" />
+        </div>
+
+        <div class="entity-details_card_content_graph_item_title_absolute top_title">Progress by Indicators</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="entity-details_cards">
+    <div class="entity-details_card">
+      <div class="entity-details_card_header">Areas of work</div>
+
+      <div class="entity-details_card_content">
+        @if (entityAowService.isLoadingDetails()) {
+          @for (item of [0, 1, 2]; track $index) {
+            <p-skeleton width="100%" height="125px" />
+          }
+        } @else {
+          @if (entityAowService.entityAows().length > 0) {
+            @for (item of entityAowService.entityAows(); track $index) {
+              <app-entity-aow-card [item]="item"></app-entity-aow-card>
+            }
+          } @else {
+            <h1 class="entity-details_card_content_empty">No areas of work found for this science program</h1>
+          }
+        }
+      </div>
+    </div>
+
+    <div class="entity-details_card">
+      <div class="entity-details_card_header">Results</div>
+
+      <div class="entity-details_card_content">
+        @if (entityAowService.isLoadingDetails()) {
+          @for (item of [0, 1, 2]; track $index) {
+            <p-skeleton width="100%" height="125px" />
+          }
+        } @else {
+          @if (entityAowService.indicatorSummaries().length > 0) {
+            @for (item of entityAowService.indicatorSummaries(); track $index) {
+              <app-entity-results-by-indicator-category-card [item]="item"></app-entity-results-by-indicator-category-card>
+            }
+          } @else {
+            <h1 class="entity-details_card_content_empty">No results found for this science program</h1>
+          }
+        }
+      </div>
+    </div>
+  </div>
+</div>

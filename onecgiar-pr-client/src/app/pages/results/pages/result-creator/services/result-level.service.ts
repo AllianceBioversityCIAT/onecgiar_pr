@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { ResultLevel, Resulttype, ResultBody } from '../../../../../shared/interfaces/result.interface';
 import { ApiService } from '../../../../../shared/services/api/api.service';
 import { ResultsListFilterService } from '../../results-outlet/pages/results-list/services/results-list-filter.service';
@@ -11,6 +11,7 @@ export class ResultLevelService {
   currentResultTypeList: Resulttype[];
   resultBody = new ResultBody();
   currentResultLevelId = null;
+  currentResultLevelIdSignal = signal<number | null>(null);
   currentResultLevelName = null;
   currentResultTypeId = null;
   resultHandle: string = '';

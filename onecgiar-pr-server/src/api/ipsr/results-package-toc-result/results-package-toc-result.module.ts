@@ -21,9 +21,9 @@ import { ResultInitiativeBudgetRepository } from '../../results/result_budget/re
 import { ResultIpEoiOutcomeRepository } from '../innovation-pathway/repository/result-ip-eoi-outcomes.repository';
 import { VersioningModule } from '../../versioning/versioning.module';
 import { ResultsTocResultIndicatorsRepository } from 'src/api/results/results-toc-results/repositories/results-toc-results-indicators.repository';
-import { ResultsTocSdgTargetRepository } from 'src/api/results/results-toc-results/repositories/result-toc-sdg-target-repository';
-import { ResultsTocImpactAreaTargetRepository } from 'src/api/results/results-toc-results/repositories/result-toc-impact-area-repository';
-import { ResultsSdgTargetRepository } from 'src/api/results/results-toc-results/repositories/results-sdg-targets.respository';
+import { ResultsTocSdgTargetRepository } from 'src/api/results/results-toc-results/repositories/result-toc-sdg-target.repository';
+import { ResultsTocImpactAreaTargetRepository } from 'src/api/results/results-toc-results/repositories/result-toc-impact-area.repository';
+import { ResultsSdgTargetRepository } from 'src/api/results/results-toc-results/repositories/results-sdg-targets.repository';
 import { ResultsActionAreaOutcomeRepository } from 'src/api/results/results-toc-results/repositories/result-toc-action-area.repository';
 import { ResultsTocTargetIndicatorRepository } from 'src/api/results/results-toc-results/repositories/result-toc-result-target-indicator.repository';
 import { ResultsTocResultsModule } from '../../results/results-toc-results/results-toc-results.module';

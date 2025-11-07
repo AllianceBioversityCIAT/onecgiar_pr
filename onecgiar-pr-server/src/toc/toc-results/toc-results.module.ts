@@ -36,9 +36,9 @@ import {
   HandlersError,
   ReturnResponse,
 } from '../../shared/handlers/error.utils';
-import { ResultsTocImpactAreaTargetRepository } from 'src/api/results/results-toc-results/repositories/result-toc-impact-area-repository';
-import { ResultsTocSdgTargetRepository } from 'src/api/results/results-toc-results/repositories/result-toc-sdg-target-repository';
-import { ResultsSdgTargetRepository } from 'src/api/results/results-toc-results/repositories/results-sdg-targets.respository';
+import { ResultsTocImpactAreaTargetRepository } from 'src/api/results/results-toc-results/repositories/result-toc-impact-area.repository';
+import { ResultsTocSdgTargetRepository } from 'src/api/results/results-toc-results/repositories/result-toc-sdg-target.repository';
+import { ResultsSdgTargetRepository } from 'src/api/results/results-toc-results/repositories/results-sdg-targets.repository';
 import { ResultsActionAreaOutcomeRepository } from 'src/api/results/results-toc-results/repositories/result-toc-action-area.repository';
 import { ResultsTocTargetIndicatorRepository } from 'src/api/results/results-toc-results/repositories/result-toc-result-target-indicator.repository';
 import { ResultInitiativeBudgetRepository } from '../../api/results/result_budget/repositories/result_initiative_budget.repository';
@@ -67,6 +67,7 @@ import { ResultCountrySubnationalRepository } from '../../api/results/result-cou
 import { ResultAnswerRepository } from '../../api/results/result-questions/repository/result-answers.repository';
 import { MQAPModule } from '../../api/m-qap/m-qap.module';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
+import { YearRepository } from '../../api/results/years/year.repository';
 
 @Module({
   controllers: [TocResultsController],
@@ -131,6 +132,7 @@ import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/
     ResultCountrySubnationalRepository,
     ResultAnswerRepository,
     ClarisaInitiativesRepository,
+    YearRepository,
   ],
   imports: [
     SharePointModule,

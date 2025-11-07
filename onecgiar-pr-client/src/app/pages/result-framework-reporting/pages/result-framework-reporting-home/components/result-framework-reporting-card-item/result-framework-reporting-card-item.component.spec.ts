@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ResultFrameworkReportingCardItemComponent } from './result-framework-reporting-card-item.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { RouterTestingModule } from '@angular/router/testing';
 
 describe('ResultFrameworkReportingCardItemComponent', () => {
   let component: ResultFrameworkReportingCardItemComponent;
@@ -10,7 +11,7 @@ describe('ResultFrameworkReportingCardItemComponent', () => {
     await TestBed.configureTestingModule({
       declarations: [],
       providers: [],
-      imports: [ResultFrameworkReportingCardItemComponent, HttpClientTestingModule]
+      imports: [ResultFrameworkReportingCardItemComponent, HttpClientTestingModule, RouterTestingModule]
     }).compileComponents();
 
     fixture = TestBed.createComponent(ResultFrameworkReportingCardItemComponent);

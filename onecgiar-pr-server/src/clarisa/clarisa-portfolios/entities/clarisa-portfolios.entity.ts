@@ -1,6 +1,7 @@
 import { Column, Entity, OneToMany, PrimaryColumn } from 'typeorm';
 import { Version } from '../../../api/versioning/entities/version.entity';
 import { ClarisaInitiative } from '../../clarisa-initiatives/entities/clarisa-initiative.entity';
+import { ClarisaGlobalUnit } from '../../clarisa-global-unit/entities/clarisa-global-unit.entity';
 
 @Entity('clarisa_portfolios')
 export class ClarisaPortfolios {
@@ -31,4 +32,7 @@ export class ClarisaPortfolios {
 
   @OneToMany(() => ClarisaInitiative, (initiative) => initiative.obj_portfolio)
   initiatives: ClarisaInitiative[];
+
+  @OneToMany(() => ClarisaGlobalUnit, (unit) => unit.portfolio)
+  globalUnits?: ClarisaGlobalUnit[];
 }

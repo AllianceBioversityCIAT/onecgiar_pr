@@ -1,5 +1,6 @@
 import { Column, Entity, OneToMany, PrimaryColumn } from 'typeorm';
 import { ClarisaInitiative } from '../../clarisa-initiatives/entities/clarisa-initiative.entity';
+import { ClarisaGlobalUnit } from '../../clarisa-global-unit/entities/clarisa-global-unit.entity';
 
 @Entity('clarisa_cgiar_entity_types')
 export class ClarisaCgiarEntityType {
@@ -18,4 +19,7 @@ export class ClarisaCgiarEntityType {
 
   @OneToMany(() => ClarisaInitiative, (ci) => ci.obj_cgiar_entity_type)
   clarisa_initiative_array?: ClarisaInitiative[];
+
+  @OneToMany(() => ClarisaGlobalUnit, (unit) => unit.entityType)
+  globalUnits?: ClarisaGlobalUnit[];
 }

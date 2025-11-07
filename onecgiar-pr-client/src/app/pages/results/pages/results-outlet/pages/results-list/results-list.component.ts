@@ -8,6 +8,7 @@ import { RetrieveModalService } from '../../../result-detail/components/retrieve
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
 import { Table } from 'primeng/table';
 import { ResultsNotificationsService } from '../results-notifications/results-notifications.service';
+import { ResultsListFilterService } from './services/results-list-filter.service';
 
 interface ItemMenu {
   label: string;
@@ -18,7 +19,6 @@ interface ItemMenu {
   tooltipShow?: boolean;
   disabled?: boolean;
 }
-import { ResultsListFilterService } from './services/results-list-filter.service';
 
 @Component({
   selector: 'app-results-list',
@@ -31,13 +31,14 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   combine = true;
 
   columnOrder = [
-    { title: 'Title', attr: 'title', class: 'notCenter' },
-    { title: 'Phase - Portfolio', attr: 'phase_name' },
-    { title: 'Indicator category', attr: 'result_type' },
-    { title: 'Submitter', attr: 'submitter', center: true },
-    { title: 'Status', attr: 'full_status_name_html', center: true },
-    { title: 'Creation date	', attr: 'created_date' },
-    { title: 'Created by	', attr: 'full_name' }
+    { title: 'Result code', attr: 'result_code', center: true, width: '105px' },
+    { title: 'Title', attr: 'title', class: 'notCenter', width: '305px' },
+    { title: 'Phase - Portfolio', attr: 'phase_name', width: '155px' },
+    { title: 'Indicator category', attr: 'result_type', width: '180px' },
+    { title: 'Submitter', attr: 'submitter', center: true, width: '95px' },
+    { title: 'Status', attr: 'full_status_name_html', center: true, width: '75px' },
+    { title: 'Creation date	', attr: 'created_date', center: true, width: '120px' },
+    { title: 'Created by	', attr: 'full_name', width: '120px' }
   ];
   items: ItemMenu[] = [
     {
@@ -95,18 +96,16 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
     public phasesService: PhasesService,
     public resultsListFilterSE: ResultsListFilterService
   ) {
-    // Set up reactive table reset that responds to filter changes
     effect(() => {
-      // Track all filter signals to trigger reset when any change
       this.resultsListFilterSE.text_to_search();
       this.resultsListFilterSE.selectedPhases();
       this.api?.rolesSE?.isAdmin ? this.resultsListFilterSE.selectedSubmittersAdmin() : this.resultsListFilterSE.selectedSubmitters();
       this.resultsListFilterSE.selectedIndicatorCategories();
       this.resultsListFilterSE.selectedStatus();
 
-      // Reset table when any filter changes (only if table is available)
       if (this.table) {
         this.resetTable();
+        this.applyDefaultSort();
       }
     });
   }
@@ -138,9 +137,9 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit(): void {
-    // Trigger initial table reset after view is initialized
     setTimeout(() => {
       this.resetTable();
+      this.applyDefaultSort();
     }, 500);
   }
 
@@ -150,9 +149,21 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  // Public method to manually reset table (can be called from template or other components)
   public resetTableManually(): void {
     this.resetTable();
+  }
+
+  private applyDefaultSort(): void {
+    if (!this.table) return;
+
+    this.table.sortField = 'result_code';
+    this.table.sortOrder = -1;
+
+    if (typeof this.table.sortSingle === 'function') {
+      this.table.sortSingle();
+    } else if (typeof this.table.sort === 'function') {
+      this.table.sort({ field: 'result_code', order: -1 });
+    }
   }
 
   unSelectInits() {

@@ -284,8 +284,14 @@ export class ResultsPackageTocResultService {
       if (crtr?.result_toc_result?.result_toc_results?.length) {
         await this._resultsTocResultRepository.saveIndicatorsPrimarySubmitter(
           crtr,
+          crtr.result_id,
+          user.id,
         );
-        await this._resultsTocResultRepository.saveIndicatorsContributors(crtr);
+        await this._resultsTocResultRepository.saveIndicatorsContributors(
+          crtr,
+          crtr.result_id,
+          user.id,
+        );
       }
 
       // * Save EOI
