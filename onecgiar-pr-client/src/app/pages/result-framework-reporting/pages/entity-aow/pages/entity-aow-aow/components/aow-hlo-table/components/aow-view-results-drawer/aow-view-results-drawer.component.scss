@@ -43,7 +43,7 @@ p {
 .view-result-drawer-header_subtitle {
   @include fonts.pr-typography('h3');
   font-weight: 500;
-  color: var(--pr-color-primary-300);
+  color: var(--pr-color-accents-5);
 }
 
 .view-result-drawer-header_content_icons {

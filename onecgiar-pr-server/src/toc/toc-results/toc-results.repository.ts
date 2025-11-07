@@ -2,6 +2,8 @@ import { Injectable, HttpStatus } from '@nestjs/common';
 import { env } from 'process';
 import { DataSource, Repository } from 'typeorm';
 import { TocResult } from './entities/toc-result.entity';
+import { Result } from '../../api/results/entities/result.entity';
+import { Year } from '../../api/results/years/entities/year.entity';
 
 @Injectable()
 export class TocResultsRepository extends Repository<TocResult> {
@@ -391,11 +393,7 @@ export class TocResultsRepository extends Repository<TocResult> {
     }
   }
 
-  async $_getResultTocByConfigV2(
-    result_id: number,
-    init_id: number,
-    toc_level: number,
-  ) {
+  async $_getResultTocByConfigV2(init_id: number, toc_level: number) {
     const categoryMap = {
       1: 'OUTPUT',
       2: 'OUTCOME',
@@ -447,6 +445,8 @@ export class TocResultsRepository extends Repository<TocResult> {
   }
 
   async getTocIndicatorsByResultIds(
+    result: Result,
+    year: Year,
     tocResultIds: Array<number | string>,
   ): Promise<
     Array<{
@@ -459,6 +459,7 @@ export class TocResultsRepository extends Repository<TocResult> {
       type_value: string | null;
       type_name: string | null;
       location: string | null;
+      target_value: number | null;
     }>
   > {
     const numericIds = (tocResultIds ?? [])
@@ -481,8 +482,12 @@ export class TocResultsRepository extends Repository<TocResult> {
         tri.unit_messurament,
         tri.type_value,
         tri.type_name,
-        tri.location
+        tri.location,
+        trit.target_value
       FROM ${env.DB_TOC}.toc_results_indicators tri
+      JOIN ${env.DB_TOC}.toc_result_indicator_target trit
+        ON trit.toc_result_indicator_id = tri.related_node_id
+        AND trit.target_date = ${result.obj_version?.phase_year || year.year}
       WHERE
         tri.toc_results_id IN (${placeholders})
         AND tri.is_active = 1;

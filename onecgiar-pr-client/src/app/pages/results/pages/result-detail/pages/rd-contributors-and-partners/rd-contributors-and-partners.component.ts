@@ -167,7 +167,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
       email_template: 'email_template_contribution'
     };
 
-    this.api.resultsSE.PATCH_ContributorsPartners({ ...this.rdPartnersSE.partnersBody, ...sendedData }).subscribe(_resp => {
+    this.api.resultsSE.PATCH_ContributorsPartners(sendedData).subscribe(_resp => {
       this.rdPartnersSE.getSectionInformation(null, true);
     });
   }

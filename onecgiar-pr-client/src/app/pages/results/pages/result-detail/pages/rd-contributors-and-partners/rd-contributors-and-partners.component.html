@@ -40,7 +40,8 @@
   <div style="z-index: 1; position: relative">
     <app-multiple-wps
       [editable]="true"
-      [initiative]="this.rdPartnersSE.result_toc_result_signal"
+      [initiative]="this.rdPartnersSE.partnersBody?.result_toc_result"
+      [initiativeId]="this.rdPartnersSE.initiativeIdSignal"
       [resultLevelId]="this.resultLevelSE.currentResultLevelId"
       [isIpsr]="false"
       [isContributor]="false"
@@ -110,7 +111,7 @@
 
     <div class="chips_container">
       @for (
-        item of this.rdPartnersSE.rdCpTheoryOfChangesServicesSE.theoryOfChangeBody?.contributing_initiatives?.accepted_contributing_initiatives || [];
+        item of this.rdPartnersSE.result_toc_result?.contributing_initiatives?.accepted_contributing_initiatives || [];
         track item.id;
         let i = $index
       ) {

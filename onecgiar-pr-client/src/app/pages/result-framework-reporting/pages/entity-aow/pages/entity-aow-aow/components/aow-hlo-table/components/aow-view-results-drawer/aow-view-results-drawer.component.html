@@ -37,7 +37,7 @@
     <h3 class="view-result-drawer-content_title">Results for {{ entityAowService.currentResultToView()?.indicators?.[0]?.indicator_description }}</h3>
     <p class="view-result-drawer-content_desc">See results details.</p>
 
-    <p-table [value]="entityAowService.existingResultsContributors()" [tableStyle]="{ marginTop: '24px' }" sortField="code" [sortOrder]="1">
+    <p-table [value]="entityAowService.existingResultsContributors()" [tableStyle]="{ marginTop: '24px' }" sortField="result_code" [sortOrder]="1" [scrollable]="false" [loading]="isLoadingResults()">
       <ng-template #header>
         <tr>
           @for (column of columns(); track column.attr) {
@@ -52,11 +52,11 @@
         </tr>
       </ng-template>
       <ng-template #body let-product>
-        <tr>
+        <tr style="cursor: pointer" (click)="navigateToResultDirect(product)">
           <td>{{ product.result_code }}</td>
           <td>{{ product.title }}</td>
           <td>{{ product.status_name }}</td>
-          <td style="text-align: center">
+          <td style="text-align: center" (click)="$event.stopPropagation()">
             <a
               pTooltip="Click to view the pdf"
               tooltipPosition="bottom"
@@ -66,9 +66,9 @@
               <app-pdf-icon></app-pdf-icon>
             </a>
           </td>
-          <td style="text-align: center">
+          <td style="text-align: center" (click)="$event.stopPropagation()">
             <div class="icon_container text-center" aria-hidden="false">
-              <i class="pi pi-ellipsis-v" (click)="menu.toggle($event)"> </i>
+              <i class="pi pi-ellipsis-v" (click)="setSelectedProduct(product); menu.toggle($event)"> </i>
             </div>
           </td>
         </tr>

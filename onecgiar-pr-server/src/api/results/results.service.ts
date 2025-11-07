@@ -82,7 +82,6 @@ import {
   NotificationTypeEnum,
 } from '../notification/enum/notification.enum';
 import { ImpactAreasScoresComponentRepository } from './impact_areas_scores_components/repositories/impact_areas_scores_components.repository';
-import { GetResultsForInnovUseDto } from './dto/get-results-for-innov-use.dto';
 
 @Injectable()
 export class ResultsService {
@@ -726,7 +725,7 @@ export class ResultsService {
         poverty_tag_level_id: resultGeneralInformation.poverty_tag_level_id
           ? povertyTag.id
           : null,
-        poverty_impact_area_id: resultGeneralInformation.poverty_impact_area_id
+        poverty_impact_area_id: povertyTagComponent
           ? povertyTagComponent.id
           : null,
         krs_url: resultGeneralInformation.krs_url,
@@ -2193,36 +2192,8 @@ export class ResultsService {
     try {
       const results = await this._resultRepository.getResultsForInnovUse();
 
-      const mapped: GetResultsForInnovUseDto = {
-        P25: [],
-        'P22-P24': [
-          {
-            'innovation-use': [],
-            'innovation-development': [],
-          },
-        ],
-      };
-
-      for (const r of results) {
-        const item = {
-          id: r.id,
-          result_code: r.result_code,
-          title: r.title,
-        };
-
-        if (r.acronym === 'P25') {
-          mapped.P25.push(item);
-        } else {
-          if (r.result_type_id === 2) {
-            mapped['P22-P24'][0]['innovation-use'].push(item);
-          } else if (r.result_type_id === 7) {
-            mapped['P22-P24'][0]['innovation-development'].push(item);
-          }
-        }
-      }
-
       return {
-        response: mapped,
+        response: results,
         message: 'Results retrieved successfully',
         status: 200,
       };

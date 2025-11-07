@@ -11,6 +11,7 @@ import {
 import { NextFunction, Request, Response } from 'express';
 import { env } from 'process';
 import { JwtService } from '@nestjs/jwt';
+import { UserRepository } from '../modules/user/repositories/user.repository';
 
 @Injectable()
 export class JwtMiddleware implements NestMiddleware {
@@ -22,7 +23,10 @@ export class JwtMiddleware implements NestMiddleware {
     '/validate/code',
   ];
 
-  constructor(private readonly _jwtService: JwtService) {}
+  constructor(
+    private readonly _jwtService: JwtService,
+    private readonly userRepository: UserRepository,
+  ) {}
 
   async use(
     @Req() req: Request,
@@ -119,6 +123,11 @@ export class JwtMiddleware implements NestMiddleware {
           HttpStatus.UNAUTHORIZED,
         );
       }
+
+      // Update last_login asynchronously without blocking
+      this.userRepository
+        .updateLastLogin(jwtPayload.id)
+        .catch((err) => this.logger.error('Error updating last_login:', err));
 
       res.locals.jwtPayload = jwtPayload;
       req['user'] = jwtPayload;

@@ -1,4 +1,4 @@
-import { Component, DoCheck, OnInit } from '@angular/core';
+import { Component, DoCheck, OnInit, effect } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
@@ -25,7 +25,14 @@ export class ResultDetailComponent implements OnInit, DoCheck {
     public saveButtonSE: SaveButtonService,
     public dataControlSE: DataControlService,
     private readonly greenChecksSE: GreenChecksService
-  ) {}
+  ) {
+    effect(() => {
+      const portfolio = this.dataControlSE.currentResultSignal()?.portfolio;
+      if (portfolio !== undefined && this.api.resultsSE.currentResultId) {
+        this.greenChecksSE.getGreenChecks();
+      }
+    });
+  }
   closeInfo = false;
   ngOnInit(): void {
     this.getData();
@@ -47,7 +54,6 @@ export class ResultDetailComponent implements OnInit, DoCheck {
 
     this.currentResultSE.GET_resultById();
     this.greenChecksSE.updateGreenChecks();
-    this.greenChecksSE.getGreenChecks();
     this.GET_versioningResult();
 
     this.shareRequestModalSE.inNotifications = false;
