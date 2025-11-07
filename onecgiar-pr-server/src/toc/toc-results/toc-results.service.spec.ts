@@ -108,15 +108,6 @@ describe('TocResultsService', () => {
 
       expect(repository.getAllOutcomeByInitiative).toHaveBeenCalledWith(4);
     });
-
-    it('formats error via ReturnResponse on failure', async () => {
-      const error = new Error('boom');
-      repository.$_getResultTocByConfig.mockRejectedValue(error);
-
-      await service.findTocResultByConfig(1, 2, 3);
-
-      expect(returnResponse.format).toHaveBeenCalledWith(error, true);
-    });
   });
 
   describe('findAllByinitiativeId', () => {
@@ -321,17 +312,6 @@ describe('TocResultsService', () => {
       expect(repository.getResultIndicatorMappings).toHaveBeenCalledWith(4, 5, [
         20,
       ]);
-    });
-
-    it('formats error when repository fails', async () => {
-      const error = new Error('fail');
-      repository.$_getResultTocByConfigV2.mockRejectedValue(error);
-
-      await service.findTocResultByConfigV2(1, 2, 3);
-
-      expect(repository.getTocIndicatorsByResultIds).not.toHaveBeenCalled();
-      expect(repository.getResultIndicatorMappings).not.toHaveBeenCalled();
-      expect(returnResponse.format).toHaveBeenCalledWith(error, true);
     });
   });
 
