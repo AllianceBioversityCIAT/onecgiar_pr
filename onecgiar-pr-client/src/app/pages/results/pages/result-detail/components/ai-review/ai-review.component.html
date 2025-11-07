@@ -31,7 +31,7 @@
         </div>
 
         <app-pr-button
-          [disabled]="!field.canSave"
+          [ngClass]="{ globalDisabled: !field.canSave }"
           text="Save changes"
           icon="save"
           [showBackground]="true"
