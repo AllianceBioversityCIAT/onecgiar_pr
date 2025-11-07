@@ -630,7 +630,7 @@ export class ResultsByInstitutionsService {
     }
   }
 
-  private async handleContributingCenters(
+  async handleContributingCenters(
     contributing_center: ResultsCenterDto[],
     data: { result_id: number },
     user: TokenDto,
