@@ -382,12 +382,12 @@ export class ResultsService {
     user: TokenDto,
   ) {
     try {
-      const { 
-        gender_impact_area_id, 
-        climate_impact_area_id, 
+      const {
+        gender_impact_area_id,
+        climate_impact_area_id,
         nutrition_impact_area_id,
         environmental_biodiversity_impact_area_id,
-        poverty_impact_area_id, 
+        poverty_impact_area_id,
       } = resultGeneralInformation;
       const result = await this._resultRepository.getResultById(
         resultGeneralInformation.result_id,
@@ -515,7 +515,10 @@ export class ResultsService {
       }
 
       let environmentalBiodiversityTagComponent = null;
-      if (Number(environmentalBiodiversityTag?.id) === 3 && environmental_biodiversity_impact_area_id != null) {
+      if (
+        Number(environmentalBiodiversityTag?.id) === 3 &&
+        environmental_biodiversity_impact_area_id != null
+      ) {
         environmentalBiodiversityTagComponent =
           await this._impactAreasScoresComponentRepository.findOne({
             where: {
@@ -2323,14 +2326,6 @@ export class ResultsService {
           response: {},
           message: 'Result not found',
           status: HttpStatus.NOT_FOUND,
-        };
-      }
-
-      if (result.result_type_id === ResultTypeEnum.KNOWLEDGE_PRODUCT) {
-        throw {
-          response: {},
-          message: 'No esta habilitado para ese tipo de indicador',
-          status: HttpStatus.BAD_REQUEST,
         };
       }
 
