@@ -69,7 +69,6 @@ export class CPMultipleWPsComponent implements OnChanges {
     this.GET_outcomeList();
     this.GET_outputList();
     this.GET_EOIList();
-    // this.currentPlannedResult = this.initiative()?.planned_result;
   });
 
   ngOnChanges() {
