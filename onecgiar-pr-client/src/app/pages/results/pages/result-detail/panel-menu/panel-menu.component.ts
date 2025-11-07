@@ -20,7 +20,6 @@ export class PanelMenuComponent {
   @Output() copyEvent = new EventEmitter();
   navigationOptions: PrRoute[] = resultDetailRouting;
   aiReviewSE = inject(AiReviewService);
-  aiReviewButtonState: 'idle' | 'loading' | 'completed' = 'idle';
 
   constructor(
     public rolesSE: RolesService,
@@ -32,28 +31,6 @@ export class PanelMenuComponent {
     public unsubmitModalSE: UnsubmitModalService,
     public dataControlSE: DataControlService
   ) {}
-
-  async onAIReviewClick() {
-    if (this.aiReviewButtonState !== 'idle') return;
-
-    this.aiReviewButtonState = 'loading';
-
-    try {
-      await this.aiReviewSE.POST_createSession();
-
-      // Mostrar animación de completado
-      this.aiReviewButtonState = 'completed';
-
-      // Esperar a que termine la animación antes de abrir el modal
-      setTimeout(() => {
-        this.aiReviewSE.showAiReview.set(true);
-        this.aiReviewButtonState = 'idle';
-      }, 600);
-    } catch (error) {
-      console.error('Error creating AI session:', error);
-      this.aiReviewButtonState = 'idle';
-    }
-  }
 
   hideKP(navOption) {
     if (!this.api.dataControlSE.isKnowledgeProduct) return false;

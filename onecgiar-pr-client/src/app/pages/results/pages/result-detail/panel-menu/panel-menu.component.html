@@ -37,12 +37,14 @@
       <div
         class="ai-review-button"
         [ngClass]="{
-          'loading': aiReviewButtonState === 'loading',
-          'completed': aiReviewButtonState === 'completed'
+          loading: aiReviewSE.aiReviewButtonState === 'loading',
+          completed: aiReviewSE.aiReviewButtonState === 'completed'
         }"
-        (click)="onAIReviewClick()">
+        (click)="aiReviewSE.onAIReviewClick()">
         <img src="assets/icons/stars.png" alt="ai-review" />
-        <span>{{ aiReviewButtonState === 'loading' ? 'Loading...' : aiReviewButtonState === 'completed' ? 'Ready!' : 'AI Review' }}</span>
+        <span>{{
+          aiReviewSE.aiReviewButtonState === 'loading' ? 'Loading...' : aiReviewSE.aiReviewButtonState === 'completed' ? 'Ready!' : 'AI Review'
+        }}</span>
       </div>
 
       <div style="width: 100%">
