@@ -36,6 +36,7 @@ import { ImpactAreasScoresComponent } from '../impact_areas_scores_components/en
 import { ResultsByProjects } from '../results_by_projects/entities/results_by_projects.entity';
 import { AiReviewSession } from '../../ai/entities/ai-review-session.entity';
 import { AiReviewEvent } from '../../ai/entities/ai-review-event.entity';
+import { Evidence } from '../evidences/entities/evidence.entity';
 import { ResultFieldRevision } from '../../ai/entities/result-field-revision.entity';
 import { ResultFieldAiState } from '../../ai/entities/result-field-ai-state.entity';
 
@@ -510,4 +511,7 @@ export class Result {
 
   @OneToMany(() => ResultFieldAiState, (state) => state.obj_result)
   obj_result_field_ai_states: ResultFieldAiState[];
+
+  @OneToMany(() => Evidence, (e) => e.obj_result)
+  evidence_array: Evidence[];
 }
