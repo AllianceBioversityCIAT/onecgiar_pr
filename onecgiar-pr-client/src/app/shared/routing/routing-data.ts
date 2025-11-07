@@ -87,7 +87,7 @@ export const routingApp: PrRoute[] = [
     path: 'reports/ipsr-details/:id',
     loadChildren: () => import('../../pages/pdf-reports/pdf-reports.module').then(m => m.PdfReportsModule)
   },
-  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'result', prHide: true }
+  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'result-framework-reporting', prHide: true }
 ];
 
 export const extraRoutingApp: PrRoute[] = [
