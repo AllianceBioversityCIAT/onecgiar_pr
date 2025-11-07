@@ -83,8 +83,9 @@ export class AiReviewService {
     }
   }
 
-  onApplyProposal(field, index: number) {
+  async onApplyProposal(field, index: number) {
     console.log(field);
+    field.canSave = false;
     const body: POSTAIAssistantCreateEvent = {
       session_id: this.sessionId(),
       result_id: this.dataControlSE.currentResultSignal().id,
@@ -98,7 +99,8 @@ export class AiReviewService {
     fieldToSave.new_value = fieldToSave.original_text;
     fieldToSave.change_reason = 'AI proposal applied';
     fieldToSave.was_ai_suggested = true;
-    this.POST_saveSession({ fields: [fieldToSave] });
+    await this.POST_saveSession({ fields: [fieldToSave] });
+    field.canSave = true;
   }
 
   // STEP 1: Create AI session
