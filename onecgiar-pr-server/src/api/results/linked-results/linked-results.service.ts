@@ -233,7 +233,6 @@ export class LinkedResultsService {
           await this._linkedResultRepository.save(newLinks);
         }
 
-        // Actualizamos el estado de los links (activar los enviados, desactivar los que ya no están)
         await this._linkedResultRepository.updateLink(
           result_id,
           links,
@@ -242,7 +241,6 @@ export class LinkedResultsService {
           false,
         );
       } else {
-        // Si no se envían links, desactivar todos los existentes
         await this._linkedResultRepository.update(
           { origin_result_id: result_id, is_active: true },
           { is_active: false, last_updated_by: user.id },

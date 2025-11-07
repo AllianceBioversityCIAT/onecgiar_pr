@@ -427,7 +427,7 @@ export class InnovationUseService {
       created_by: user,
       last_updated_by: user,
       other_institution: this.isNullData(el?.other_institution),
-      institution_types_id: this.isNullData(el.institution_type_id),
+      institution_types_id: this.isNullData(el.institution_types_id),
       graduate_students: this.isNullData(el?.graduate_students),
       institution_roles_id: 5,
       how_many: el?.how_many,
