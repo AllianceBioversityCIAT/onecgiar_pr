@@ -110,7 +110,7 @@ export class AiReviewService {
   // STEP 2: Get AI result context
   GET_aiContext() {
     return new Promise((resolve, reject) => {
-      return this.http.get<any>(`${this.baseApiUrlV2}results/ai/context`).subscribe({
+      return this.http.get<any>(`${this.baseApiUrlV2}results/ai/context?resultId=${this.dataControlSE.currentResultSignal().id}`).subscribe({
         next: (response: any) => {
           this.aiContext.set(response.response);
           resolve(response);
