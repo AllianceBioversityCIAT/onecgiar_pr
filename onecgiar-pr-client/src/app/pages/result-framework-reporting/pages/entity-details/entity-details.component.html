@@ -86,12 +86,12 @@
 
     <div class="entity-details_card">
       <div class="entity-details_card_header">Results
-        <button
-        pButton
-        label="Report"
-        type="button"
-        class="pr-body-3 tab-content_actions_button"
-        (click)="showReportModal.set(true)"></button>
+        <p-splitbutton 
+          label="Report" 
+          icon="pi pi-plus-circle" 
+          [model]="reportMenuItems"
+          styleClass="entity-report-splitbutton">
+        </p-splitbutton>
       </div>
 
       <div class="entity-details_card_content">
