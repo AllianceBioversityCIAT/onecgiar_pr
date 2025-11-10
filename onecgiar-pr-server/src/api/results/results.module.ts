@@ -88,6 +88,7 @@ import { SocketManagementService } from '../../shared/microservices/socket-manag
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
 import { ImpactAreasScoresComponentsModule } from './impact_areas_scores_components/impact_areas_scores_components.module';
 import { ResultsByProjectsModule } from './results_by_projects/results_by_projects.module';
+import { ResultsTocResultRepository } from './results-toc-results/repositories/results-toc-results.repository';
 
 @Module({
   controllers: [ResultsController],
@@ -173,6 +174,7 @@ import { ResultsByProjectsModule } from './results_by_projects/results_by_projec
     NotificationTypeRepository,
     SocketManagementService,
     UserRepository,
+    ResultsTocResultRepository,
   ],
   exports: [ResultRepository, JwtMiddleware, ResultsService],
 })
