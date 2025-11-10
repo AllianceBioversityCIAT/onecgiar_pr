@@ -2,23 +2,25 @@
   <div class="report-result-content_left">
     <div class="report-result-content_left_header">
       <span class="report-result-title">Report result</span>
-      <span class="report-result-description">Make sure the result you want to report isn't already in the PRMS Reporting Tool. If it exists, simply map it to your Initiative instead of creating a new one.</span>
+      <span class="report-result-description">Make sure the result you want to report isn't already in the PRMS Reporting Tool. If it exists, simply map it to your Science Program/Accelerator instead of creating a new one.</span>
     </div>
     <div class="report-result-content_left_content">
       <app-pr-select
         [group]="true"
         groupName="name"
-        [options]="this.api.rolesSE.isAdmin ? this.allInitiatives : this.api.dataControlSE.myInitiativesListReportingByPortfolio"
+        [options]="availableInitiativesSig()"
         label="Report for"
         [isStatic]="true"
         optionLabel="full_name"
         optionValue="initiative_id"
         [placeholder]="'Select ' + ('term.entity.singular' | term: this.api.dataControlSE?.reportingCurrentPhase?.portfolioAcronym)"
         [(ngModel)]="this.resultLevelSE.resultBody.initiative_id"
+        [disabled]="disableInitiativeSelect"
+        [readOnly]="disableInitiativeSelect"
         (ngModelChange)="onSelectInit()">
       </app-pr-select>
 
-      <app-result-level-buttons [currentResultType]="this.currentResultType"></app-result-level-buttons>
+      <app-result-level-cards [currentResultType]="this.currentResultType" [hideAlert]="true"></app-result-level-cards>
 
       <app-pr-radio-button
         label="Indicator category"

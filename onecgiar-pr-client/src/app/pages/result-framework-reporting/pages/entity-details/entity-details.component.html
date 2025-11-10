@@ -65,7 +65,7 @@
 
   <div class="entity-details_cards">
     <div class="entity-details_card">
-      <div class="entity-details_card_header">Areas of work</div>
+      <div class="entity-details_card_header">Reporting by Theory of Change</div>
 
       <div class="entity-details_card_content">
         @if (entityAowService.isLoadingDetails()) {
@@ -85,13 +85,15 @@
     </div>
 
     <div class="entity-details_card">
-      <div class="entity-details_card_header">Results
-        <button
-        pButton
-        label="Report"
-        type="button"
-        class="pr-body-3 tab-content_actions_button"
-        (click)="showReportModal.set(true)"></button>
+      <div class="entity-details_card_header">Reporting by indicator category
+        <p-splitbutton 
+          label="Report" 
+          icon="pi pi-plus-circle" 
+          appendTo="self"
+          menuStyleClass="entity-report-menu-overlay"
+          [model]="reportMenuItems"
+          styleClass="entity-report-splitbutton">
+        </p-splitbutton>
       </div>
 
       <div class="entity-details_card_content">
@@ -125,11 +127,15 @@
     [styleClass]="'report-result-dialog'"
     (onHide)="showReportModal.set(false)">
     <div class="report-result-header">
-      <span class="font-bold whitespace-nowrap">Unplanned result</span>
+      <span style="font-weight: 550; color: #000000; padding-left: 30px; font-size: 16px !important;">Unplanned result</span>
       <button type="button" (click)="showReportModal.set(false)" aria-label="Close modal" style="background: none; border: none; cursor: pointer; padding: 0; display: flex; align-items: center;">
         <i class="material-icons-round" style="font-size: 20px;">close</i>
       </button>
     </div>
-    <app-report-result-form (resultCreated)="showReportModal.set(false)"></app-report-result-form>
+    <app-report-result-form
+      [selectedInitiativeId]="entityAowService.entityDetails()?.id"
+      [disableInitiativeSelect]="true"
+      (resultCreated)="showReportModal.set(false)">
+    </app-report-result-form>
   </p-dialog>
 }
