@@ -13,6 +13,7 @@ import {
 } from '../../interfaces/ai-review.interface';
 import { ApiService } from './api.service';
 import { SaveButtonService } from '../../../custom-fields/save-button/save-button.service';
+import { Router } from '@angular/router';
 
 @Injectable({
   providedIn: 'root'
@@ -30,6 +31,10 @@ export class AiReviewService {
   aiContext = signal<any>(null);
   api = inject(ApiService);
   saveButtonSE = inject(SaveButtonService);
+  router = inject(Router);
+
+  // Signal para notificar cuando se guarda en general-information
+  generalInformationSaved = signal<number>(0);
 
   // on AI review click
   async onAIReviewClick() {
@@ -187,11 +192,23 @@ export class AiReviewService {
   // STEP 6: Save AI session
   POST_saveSession(body: any) {
     return new Promise((resolve, reject) => {
-      return this.http.post<SaveProposal>(`${this.baseApiBaseUrl}ai/sessions/${this.sessionId()}/save`, body).subscribe({
-        next: (response: any) => {
-          resolve(response);
-        }
-      });
+      return this.http
+        .post<SaveProposal>(`${this.baseApiBaseUrl}ai/sessions/${this.sessionId()}/save`, body)
+        .pipe(this.saveButtonSE.isSavingPipe())
+        .subscribe({
+          next: (response: any) => {
+            // Detectar si estamos en la ruta de general-information
+            const currentUrl = this.router.url;
+            if (currentUrl.includes('general-information')) {
+              // Incrementar el signal para notificar el cambio
+              this.generalInformationSaved.update(val => val + 1);
+            }
+            resolve(response);
+          },
+          error: (error: any) => {
+            reject(error);
+          }
+        });
     });
   }
 }
