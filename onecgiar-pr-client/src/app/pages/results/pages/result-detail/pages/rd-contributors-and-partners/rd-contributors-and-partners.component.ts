@@ -157,6 +157,8 @@ export class RdContributorsAndPartnersComponent implements OnInit {
       });
     }
 
+    if (!this.rdPartnersSE.partnersBody.result_toc_result.planned_result) this.rdPartnersSE.partnersBody.result_toc_result.result_toc_results = [];
+
     const sendedData = {
       ...this.rdPartnersSE.partnersBody,
       contributing_initiatives: {
