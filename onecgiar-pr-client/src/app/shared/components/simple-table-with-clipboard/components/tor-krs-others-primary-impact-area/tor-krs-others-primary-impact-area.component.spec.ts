@@ -51,9 +51,7 @@ describe('TorKrsOthersPrimaryImpactAreaComponent', () => {
       const keyResultStoryData = {
         impact_areas: JSON.stringify(impactAreas)
       };
-      
       const result = component.getImpactAreasList(keyResultStoryData);
-      
       expect(result).toBe('Impact Area 1; Impact Area 2<br>');
     });
 
@@ -64,9 +62,7 @@ describe('TorKrsOthersPrimaryImpactAreaComponent', () => {
       const keyResultStoryData = {
         impact_areas: JSON.stringify(impactAreas)
       };
-      
       const result = component.getImpactAreasList(keyResultStoryData);
-      
       expect(result).toBe('Single Impact Area<br>');
     });
 
@@ -74,9 +70,7 @@ describe('TorKrsOthersPrimaryImpactAreaComponent', () => {
       const keyResultStoryData = {
         impact_areas: JSON.stringify([])
       };
-      
       const result = component.getImpactAreasList(keyResultStoryData);
-      
       expect(result).toBe('<br>');
     });
 
@@ -89,9 +83,7 @@ describe('TorKrsOthersPrimaryImpactAreaComponent', () => {
       const keyResultStoryData = {
         impact_areas: JSON.stringify(impactAreas)
       };
-      
       const result = component.getImpactAreasList(keyResultStoryData);
-      
       expect(result).toBe('Area 1; Area 2; Area 3<br>');
     });
   });
@@ -100,14 +92,12 @@ describe('TorKrsOthersPrimaryImpactAreaComponent', () => {
     it('should return undefined when keyResultStoryData is undefined', () => {
       mockTypeOneReportService.keyResultStoryData = undefined;
       component.result_code = '123';
-      
       expect(component.resultIndex).toBeUndefined();
     });
 
     it('should return -1 when keyResultStoryData is empty', () => {
       mockTypeOneReportService.keyResultStoryData = [];
       component.result_code = '123';
-      
       expect(component.resultIndex).toBe(-1);
     });
 
@@ -118,7 +108,6 @@ describe('TorKrsOthersPrimaryImpactAreaComponent', () => {
         { result_code: '333' }
       ];
       component.result_code = '222';
-      
       expect(component.resultIndex).toBe(1);
     });
 
@@ -128,7 +117,6 @@ describe('TorKrsOthersPrimaryImpactAreaComponent', () => {
         { result_code: '222' }
       ];
       component.result_code = '999';
-      
       expect(component.resultIndex).toBe(-1);
     });
 
@@ -138,7 +126,6 @@ describe('TorKrsOthersPrimaryImpactAreaComponent', () => {
         { result_code: '456' }
       ];
       component.result_code = '123';
-      
       expect(component.resultIndex).toBe(0);
     });
   });

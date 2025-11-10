@@ -81,7 +81,6 @@ describe('TawkComponent', () => {
     it('should not initialize Tawk when user is undefined', () => {
       component.user = undefined;
       component.initializeTawkIo();
-      
       expect(mockRenderer.appendChild).not.toHaveBeenCalled();
       expect(mockApiService.setTWKAttributes).not.toHaveBeenCalled();
     });
@@ -90,18 +89,13 @@ describe('TawkComponent', () => {
 
     it('should set script text correctly when user is defined', () => {
       component.user = { name: 'Test User' };
-      
-      // Ensure container exists
       let container = document.querySelector('.Tawk_API_container');
       if (!container) {
         container = document.createElement('div');
         container.className = 'Tawk_API_container';
         document.body.appendChild(container);
       }
-      
       component.initializeTawkIo();
-      
-      // Verify script text contains the Tawk.io initialization code
       expect(component.script.text).toBeTruthy();
       expect(component.script.text.length).toBeGreaterThan(0);
       expect(component.script.text).toContain('document.createElement("script")');
@@ -112,18 +106,13 @@ describe('TawkComponent', () => {
 
     it('should include environment.tawkId in script src', () => {
       component.user = { name: 'Test User' };
-      
-      // Ensure container exists
       let container = document.querySelector('.Tawk_API_container');
       if (!container) {
         container = document.createElement('div');
         container.className = 'Tawk_API_container';
         document.body.appendChild(container);
       }
-      
       component.initializeTawkIo();
-      
-      // The script should contain the tawkId in the URL
       expect(component.script.text).toContain('embed.tawk.to');
     });
   });
