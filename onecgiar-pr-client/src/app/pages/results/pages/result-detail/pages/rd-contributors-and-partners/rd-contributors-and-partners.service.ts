@@ -160,6 +160,8 @@ export class RdContributorsAndPartnersService implements OnDestroy {
         //! TOC
         // this.theoryOfChangeBody = response;
 
+        this.partnersBody.linked_results = response.linked_results || [];
+
         this.partnersBody?.contributing_and_primary_initiative.forEach(
           init => (init.full_name = `${init?.official_code} - <strong>${init?.short_name}</strong> - ${init?.initiative_name}`)
         );

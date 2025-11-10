@@ -26,7 +26,7 @@ p {
   flex-direction: column;
   gap: 8px;
   padding: 0 54px;
-  padding-top: 40px;
+  padding-top: 35px;
   padding-bottom: 0px;
 }
 
@@ -48,6 +48,11 @@ p {
   padding: 2px 54px 74px;
   display: flex;
   flex-direction: column;
+}
+
+::ng-deep .fixed_button {
+  margin-right: 55px !important;
+  z-index: 5;
 }
 
 .report-result-content_left_content_actions {

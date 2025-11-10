@@ -1,5 +1,5 @@
 <div class="container" *ngIf="activeTab">
-  <div class="flex-no-wrap" *ngIf="activeTab?.planned_result !== null && showMultipleWPsContent">
+  <div class="flex-no-wrap" *ngIf="(activeTab?.planned_result !== null || activeTab?.planned_result === null) && showMultipleWPsContent">
     <div style="max-width: 250px" *ngIf="resultLevelId === 1 ? !activeTab?.planned_result : true">
       <app-pr-select
         [options]="this.tocResultListFiltered()"

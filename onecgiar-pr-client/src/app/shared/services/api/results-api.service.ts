@@ -143,8 +143,8 @@ export class ResultsApiService {
     );
   }
 
-  POST_resultCreateHeader(body: ResultBody) {
-    return this.http.post<any>(`${this.apiBaseUrl}create/header`, body).pipe(this.saveButtonSE.isCreatingPipe());
+  POST_resultCreateHeader(body: ResultBody, v2: boolean = false) {
+    return this.http.post<any>(`${v2 ? this.apiBaseUrlV2 : this.apiBaseUrl}create/header`, body).pipe(this.saveButtonSE.isCreatingPipe());
   }
 
   GET_allGenderTag() {

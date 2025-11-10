@@ -1,0 +1,25 @@
+<div class="result-level-cards-container">
+<div class="title_margin">What do you want to report?</div>
+
+  <div class="result-level-cards-grid">
+    @for (resultLevel of resultLevelSE.resultLevelListSig()?.slice(2, 4).reverse(); track $index) {
+      <div 
+        class="result-level-card" 
+        [ngClass]="{ 'selected': resultLevel?.selected }"
+        (click)="this.resultLevelSE.onSelectResultLevel(resultLevel)"
+        (keydown.space)="$event.preventDefault(); this.resultLevelSE.onSelectResultLevel(resultLevel)">
+        <div class="card-header">
+          <span class="level-label">Level</span>
+          <div class="radio-button" [ngClass]="{ 'checked': resultLevel?.selected }">
+            @if (resultLevel?.selected) {
+              <div class="radio-dot"></div>
+            }
+          </div>
+        </div>
+        <h3 class="card-title">{{ resultLevel.name }}</h3>
+        <p class="card-description">{{ resultLevel.description }}</p>
+      </div>
+    }
+  </div>
+</div>
+

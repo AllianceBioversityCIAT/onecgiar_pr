@@ -52,6 +52,7 @@ import { CreateResultGeoDto } from './dto/create-result-geo-scope.dto';
 import { v4 } from 'uuid';
 import { ScienceProgramProgressResponseDto } from './dto/science-program-progress.dto';
 import { ImpactAreasScoresComponentRepository } from './impact_areas_scores_components/repositories/impact_areas_scores_components.repository';
+import { ResultsTocResultRepository } from './results-toc-results/repositories/results-toc-results.repository';
 
 describe('ResultsService (unit, pure mocks)', () => {
   let module: TestingModule;
@@ -312,6 +313,10 @@ describe('ResultsService (unit, pure mocks)', () => {
     findOne: jest.fn().mockResolvedValue({ id: 123 }),
   };
 
+  const mockResultsTocResultRepository = {
+    findOne: jest.fn().mockResolvedValue({ id: 123 }),
+  } as any;
+
   beforeEach(async () => {
     module = await Test.createTestingModule({
       providers: [
@@ -427,6 +432,10 @@ describe('ResultsService (unit, pure mocks)', () => {
         {
           provide: ImpactAreasScoresComponentRepository,
           useValue: mockImpactAreasScoresComponentRepository,
+        },
+        {
+          provide: ResultsTocResultRepository,
+          useValue: mockResultsTocResultRepository,
         },
       ],
     }).compile();

@@ -267,6 +267,7 @@ export class InnovationUseService {
           actor_type_id: el.actor_type_id,
           result_id: resultId,
           result_actors_id: el.result_actors_id ?? IsNull(),
+          section_id: section,
           is_active: true,
         };
 
@@ -313,6 +314,14 @@ export class InnovationUseService {
           continue;
         }
 
+        const whereOptions: any = {
+          institution_types_id: el.institution_types_id,
+          results_id: resultId,
+          institution_roles_id: 5,
+          section_id: section,
+          is_active: true,
+        };
+
         let ite: ResultsByInstitutionType = null;
         if (el?.id) {
           ite = await this._resultByIntitutionsTypeRepository.findOne({
@@ -320,10 +329,9 @@ export class InnovationUseService {
           });
         } else if (el?.institution_types_id != 78) {
           ite =
-            await this._resultByIntitutionsTypeRepository.getNewResultByInstitutionTypeExists(
-              resultId,
-              el.institution_types_id,
-              5,
+            await this._resultByIntitutionsTypeRepository.findOne({
+              where: whereOptions,
+            }
             );
         }
 

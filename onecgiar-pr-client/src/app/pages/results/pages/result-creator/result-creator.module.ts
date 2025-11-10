@@ -6,6 +6,7 @@ import { ResultCreatorComponent } from './result-creator.component';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { FormsModule } from '@angular/forms';
 import { ResultLevelButtonsComponent } from './components/result-level-buttons/result-level-buttons.component';
+import { ResultLevelCardsComponent } from './components/result-level-cards/result-level-cards.component';
 import { SimilarResultsComponent } from './components/similar-results/similar-results.component';
 import { SimilarResultsPipe } from './components/similar-results/pipes/similar-results.pipe';
 import { MenuModule } from 'primeng/menu';
@@ -17,7 +18,7 @@ import { TermPipe } from '../../../../internationalization/term.pipe';
 import { ReportResultFormComponent } from './components/report-result-form/report-result-form.component';
 
 @NgModule({
-  declarations: [ResultCreatorComponent, ResultLevelButtonsComponent, SimilarResultsComponent, SimilarResultsPipe, ReportResultFormComponent],
+  declarations: [ResultCreatorComponent, ResultLevelButtonsComponent, ResultLevelCardsComponent, SimilarResultsComponent, SimilarResultsPipe, ReportResultFormComponent],
   imports: [
     CommonModule,
     ResultCreatorRoutingModule,

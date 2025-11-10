@@ -163,7 +163,7 @@ export class CPMultipleWPsComponent implements OnChanges {
   });
 
   getGridTemplateColumns() {
-    return `repeat(${this.initiative?.result_toc_results.length}, 1fr)`;
+    return `repeat(${this.initiative?.result_toc_results?.length}, 1fr)`;
   }
 
   completnessStatusValidation(tab) {
@@ -188,6 +188,7 @@ export class CPMultipleWPsComponent implements OnChanges {
   }
 
   onAddTab() {
+    if (!this.initiative?.result_toc_results) this.initiative.result_toc_results = [];
     const newIndex = this.initiative?.result_toc_results.length;
     this.initiative.result_toc_results.push({
       action_area_outcome_id: null,

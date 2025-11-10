@@ -311,7 +311,7 @@
         [required]="!!organizationItem?.id" optionLabel="name" optionValue="code"
         [(ngModel)]="organizationItem.institution_types_id" placeholder="Select organization"
         (selectOptionEvent)="reloadSelect(organizationItem)" (ngModelChange)="organizationItem.other_institution = null"
-        [disableOptions]="removeOtherInOrg(disableOrganizations)">
+        [disableOptions]="removeOtherInOrg(disableOrganizations2030)">
       </app-pr-select>
       <div style="margin-top: 13px"></div>
       <app-pr-input *ngIf="organizationItem.institution_types_id == 78"
@@ -328,7 +328,7 @@
                 getInstitutionsTypeTreeChildrens(organizationItem.institution_types_id)?.length
               " [options]="getInstitutionsTypeTreeChildrens(organizationItem.institution_types_id)" label="Sub-type"
           optionLabel="name" optionValue="code" [(ngModel)]="organizationItem.institution_sub_type_id"
-          [disableOptions]="getAllSubTypes" placeholder="Select Sub-type" [required]="!!organizationItem?.id" [disabled]="saving">
+          [disableOptions]="getAllSubTypes2030" placeholder="Select Sub-type" [required]="!!organizationItem?.id" [disabled]="saving">
         </app-pr-select>
       </div>
       <div class="right_content">
