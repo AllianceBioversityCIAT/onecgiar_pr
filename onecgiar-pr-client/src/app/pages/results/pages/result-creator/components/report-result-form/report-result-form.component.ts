@@ -1,4 +1,4 @@
-import { Component, OnInit, DoCheck, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, DoCheck, Output, EventEmitter, Input, signal } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ResultLevelService } from '../../services/result-level.service';
 import { Router } from '@angular/router';
@@ -31,6 +31,7 @@ export class ReportResultFormComponent implements OnInit, DoCheck {
   } will not be accepted and will need to be reported in the correct reporting period. A new functionality will be implemented in the PRMS Reporting Tool to periodically allow the reporting of results from previous year. Handles already reported will also not be accepted.<br><br>
   If you need support to modify any of the harvested metadata from CGSpace, contact your Center's knowledge manager.<br><br>`;
   allInitiatives = [];
+  availableInitiativesSig = signal<any[]>([]);
   allPhases = [];
   cgiarEntityTypes = [];
   currentResultType = '';
@@ -40,6 +41,12 @@ export class ReportResultFormComponent implements OnInit, DoCheck {
   };
 
   @Output() resultCreated = new EventEmitter<any>();
+  @Input() disableInitiativeSelect: boolean = false;
+  private _selectedInitiativeId: number | string | null = null;
+  @Input() set selectedInitiativeId(value: number | string | null | undefined) {
+    this._selectedInitiativeId = value !== null && value !== undefined ? value : null;
+    this.tryApplySelectedInitiative();
+  }
 
   constructor(
     public api: ApiService,
@@ -60,8 +67,24 @@ export class ReportResultFormComponent implements OnInit, DoCheck {
     this.resultLevelSE.resultLevelList?.forEach(reLevel => (reLevel.selected = false));
     this.resultLevelSE.cleanData();
     this.api.updateUserData(() => {
-      if (this.api.dataControlSE.myInitiativesListReportingByPortfolio.length == 1)
+      if (!this.api.rolesSE.isAdmin) {
+        this.availableInitiativesSig.set(
+          Array.isArray(this.api.dataControlSE.myInitiativesListReportingByPortfolio)
+            ? [...this.api.dataControlSE.myInitiativesListReportingByPortfolio]
+            : []
+        );
+        if (this._selectedInitiativeId == null && this.api.dataControlSE.myInitiativesListReportingByPortfolio?.length === 1) {
+          this._selectedInitiativeId = this.api.dataControlSE.myInitiativesListReportingByPortfolio[0]?.initiative_id ||
+            this.api.dataControlSE.myInitiativesListReportingByPortfolio[0]?.id;
+        }
+        this.tryApplySelectedInitiative();
+      }
+      if (this._selectedInitiativeId != null) {
+        this.resultLevelSE.resultBody.initiative_id = this._selectedInitiativeId as any;
+        this.tryApplySelectedInitiative();
+      } else if (this.api.dataControlSE.myInitiativesListReportingByPortfolio.length == 1) {
         this.resultLevelSE.resultBody.initiative_id = this.api.dataControlSE.myInitiativesListReportingByPortfolio[0].id;
+      }
     });
 
     setTimeout(() => {
@@ -73,6 +96,7 @@ export class ReportResultFormComponent implements OnInit, DoCheck {
     const init = ((this.api.rolesSE.isAdmin ? this.allInitiatives : this.api.dataControlSE.myInitiativesListReportingByPortfolio) || []).find(
       init => init.id == this.resultLevelSE.resultBody.initiative_id
     );
+    if (!init) return;
     const resultType = this.cgiarEntityTypes.find(type => type.code == init.typeCode);
     this.currentResultType = resultType?.name;
   }
@@ -121,6 +145,8 @@ export class ReportResultFormComponent implements OnInit, DoCheck {
             if (initsGroup?.length) resultList.push(groupItem, ...initsGroup);
           });
           this.allInitiatives = resultList;
+          this.availableInitiativesSig.set(this.allInitiatives);
+          this.tryApplySelectedInitiative();
         });
       },
       error: err => {
@@ -286,6 +312,23 @@ export class ReportResultFormComponent implements OnInit, DoCheck {
         this.resultLevelSE.resultBody.result_name = '';
       }
     });
+  }
+
+  private tryApplySelectedInitiative() {
+    if (this._selectedInitiativeId == null) return;
+    const list = this.availableInitiativesSig();
+    if (!Array.isArray(list) || !list.length) return;
+
+    const match = list.find(item => (item?.id ?? item?.initiative_id) == this._selectedInitiativeId);
+    if (!match) return;
+
+    const value = match?.id ?? match?.initiative_id ?? this._selectedInitiativeId;
+    this.resultLevelSE.resultBody.initiative_id = value as any;
+    this.onSelectInit();
+  }
+
+  private getAvailableInitiatives() {
+    return this.availableInitiativesSig();
   }
 }
 
