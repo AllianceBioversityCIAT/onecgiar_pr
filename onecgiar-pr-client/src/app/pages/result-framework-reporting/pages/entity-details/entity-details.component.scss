@@ -118,7 +118,7 @@ p {
   text-decoration: none;
   overflow: hidden;
   position: relative;
-  color: #273EC5;
+  color: #273EC5 !important;
   font-weight: 500;
   padding: var(--p-tieredmenu-item-padding);
   gap: var(--p-tieredmenu-item-gap);
@@ -128,7 +128,7 @@ p {
 
 
 ::ng-deep .p-tieredmenu-item-icon {
-  color: #273EC5;
+  color: #273EC5 !important;
 }
 
 ::ng-deep .p-tieredmenu {
