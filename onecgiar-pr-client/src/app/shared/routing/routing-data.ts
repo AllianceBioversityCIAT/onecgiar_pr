@@ -324,7 +324,7 @@ export const resultDetailRouting: PrRoute[] = [
   },
   {
     prName: 'Contributors & partners',
-    path: 'contributors-and-partners',
+    path: 'contributor-partners',
     portfolioAcronym: 'P25',
     underConstruction: false,
     loadChildren: () =>
