@@ -230,7 +230,7 @@ export class ReportResultFormComponent implements OnInit, DoCheck {
 
     if (this.resultLevelSE.resultBody.result_type_id != 6) {
       this.api.dataControlSE.validateBody(this.resultLevelSE.resultBody);
-      this.api.resultsSE.POST_resultCreateHeader(this.resultLevelSE.resultBody).subscribe({
+      this.api.resultsSE.POST_resultCreateHeader(this.resultLevelSE.resultBody, true).subscribe({
         next: (resp: any) => {
           this.resultCreated.emit(resp?.response);
           this.router.navigate([`/result/result-detail/${resp?.response?.result_code}/general-information`], {
