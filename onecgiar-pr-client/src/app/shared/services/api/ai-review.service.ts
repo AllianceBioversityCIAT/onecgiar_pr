@@ -187,14 +187,11 @@ export class AiReviewService {
   // STEP 6: Save AI session
   POST_saveSession(body: any) {
     return new Promise((resolve, reject) => {
-      return this.http
-        .post<SaveProposal>(`${this.baseApiBaseUrl}ai/sessions/${this.sessionId()}/save`, body)
-        .pipe(this.saveButtonSE.isSavingPipe())
-        .subscribe({
-          next: (response: any) => {
-            resolve(response);
-          }
-        });
+      return this.http.post<SaveProposal>(`${this.baseApiBaseUrl}ai/sessions/${this.sessionId()}/save`, body).subscribe({
+        next: (response: any) => {
+          resolve(response);
+        }
+      });
     });
   }
 }
