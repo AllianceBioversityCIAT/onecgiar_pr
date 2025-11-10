@@ -53,6 +53,10 @@ export class AiReviewService {
         res[0].needs_improvement = true;
         res[1].proposed_text = json_content.new_description;
         res[1].needs_improvement = true;
+        if (res[2]) {
+          res[2].proposed_text = json_content.short_name;
+          res[2].needs_improvement = true;
+        }
         return [...res];
       });
 

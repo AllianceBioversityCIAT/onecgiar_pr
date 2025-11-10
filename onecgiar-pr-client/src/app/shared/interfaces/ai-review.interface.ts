@@ -33,6 +33,7 @@ export interface IAiRecommendation {
 export interface JsonContent {
   new_title: string;
   new_description: string;
+  short_name: string;
 }
 
 export interface POSTAIAssistantCreateEvent {
