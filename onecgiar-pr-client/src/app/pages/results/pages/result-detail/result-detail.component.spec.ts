@@ -58,7 +58,10 @@ describe('ResultDetailComponent', () => {
         GET_allChildlessInstitutionTypes:() => of({response: [] }),
         currentResultCode: 'currentResultCode',
         currentResultPhase: 'currentResultPhase',
-        currentResultId: 'currentResultId'
+        currentResultId: null
+      },
+      rolesSE: {
+        isAdmin: false
       },
       dataControlSE: {
         resultPhaseList: [],
@@ -229,6 +232,55 @@ describe('ResultDetailComponent', () => {
 
       expect(mockApiService.dataControlSE.someMandatoryFieldIncompleteResultDetail).toHaveBeenCalledWith('.section_container');
     });
+  });
+
+  describe('constructor effect', () => {
+    it('should call getGreenChecks when portfolio is defined and currentResultId exists', async () => {
+      // Reset the spy
+      jest.clearAllMocks();
+      
+      // Set currentResultId first
+      mockApiService.resultsSE.currentResultId = 123;
+      // Set up the signal with portfolio defined
+      mockDataControlService.currentResultSignal.set({ portfolio: 'P25' });
+      
+      // Create a new component instance to trigger the effect
+      const newFixture = TestBed.createComponent(ResultDetailComponent);
+      const newComponent = newFixture.componentInstance;
+      
+      // Force change detection
+      newFixture.detectChanges();
+      
+      // Wait for effects to execute
+      await Promise.resolve();
+      
+      // The effect should have been triggered
+      expect(mockGreenChecksService.getGreenChecks).toHaveBeenCalled();
+    });
+
+    it('should not call getGreenChecks when portfolio is undefined', async () => {
+      // Reset the spy
+      jest.clearAllMocks();
+      
+      // Set currentResultId first
+      mockApiService.resultsSE.currentResultId = 123;
+      // Set up the signal without portfolio
+      mockDataControlService.currentResultSignal.set({});
+      
+      // Create a new component instance
+      const newFixture = TestBed.createComponent(ResultDetailComponent);
+      const newComponent = newFixture.componentInstance;
+      
+      // Force change detection
+      newFixture.detectChanges();
+      
+      // Wait for effects to execute
+      await Promise.resolve();
+      
+      // The effect should not call getGreenChecks
+      expect(mockGreenChecksService.getGreenChecks).not.toHaveBeenCalled();
+    });
+
   });
 
 });
