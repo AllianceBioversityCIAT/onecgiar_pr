@@ -203,6 +203,17 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     return list;
   }
 
+  get getAllSubTypes2030() {
+    const list = [];
+    const body = this.body as any;
+    if (body.innovation_use_2030?.organization) {
+      body.innovation_use_2030.organization.forEach(resp => {
+        list.push({ code: resp.institution_sub_type_id });
+      });
+    }
+    return list;
+  }
+
   removeOther(actors) {
     return actors.filter(item => item.actor_type_id != 5);
   }
@@ -220,6 +231,17 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     this.body.innovatonUse.organization.forEach(resp => {
       if (!resp.institution_sub_type_id) list.push({ code: resp.institution_types_id });
     });
+    return list;
+  }
+
+  get disableOrganizations2030() {
+    const list = [];
+    const body = this.body as any;
+    if (body.innovation_use_2030?.organization) {
+      body.innovation_use_2030.organization.forEach(resp => {
+        if (!resp.institution_sub_type_id) list.push({ code: resp.institution_types_id });
+      });
+    }
     return list;
   }
 
