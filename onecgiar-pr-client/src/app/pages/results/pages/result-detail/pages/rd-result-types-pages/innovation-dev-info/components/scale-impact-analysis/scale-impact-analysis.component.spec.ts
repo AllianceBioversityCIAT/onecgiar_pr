@@ -350,7 +350,6 @@ describe('ScaleImpactAnalysisComponent', () => {
 
     it('should handle when q2 is undefined', () => {
       component.options = undefined;
-      
       expect(() => component.handleSelectionChange()).not.toThrow();
     });
   });

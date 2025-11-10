@@ -11,7 +11,6 @@ import { ResultLevelService } from '../../services/result-level.service';
 export class ResultLevelCardsComponent {
   @Input() currentResultType: any;
   @Input() hideAlert: boolean = false;
-  
   constructor(
     public api: ApiService,
     public resultLevelSE: ResultLevelService
