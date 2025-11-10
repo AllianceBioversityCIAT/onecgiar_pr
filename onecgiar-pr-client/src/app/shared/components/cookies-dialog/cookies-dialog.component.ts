@@ -1,21 +1,19 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
-import { DialogModule } from 'primeng/dialog';
+import { DrawerModule } from 'primeng/drawer';
 import { ClarityService } from '../../services/clarity.service';
 
 type ConsentValue = 'accepted' | 'rejected';
 
 @Component({
   selector: 'app-cookies-dialog',
-  imports: [DialogModule, ButtonModule],
+  imports: [DrawerModule, ButtonModule],
   templateUrl: './cookies-dialog.component.html',
   styleUrl: './cookies-dialog.component.scss'
 })
 export class CookiesDialogComponent implements OnInit {
   private readonly CONSENT_KEY = 'cookieConsent';
   visible: boolean = true;
-
-  position: 'left' | 'right' | 'top' | 'bottom' | 'center' | 'topleft' | 'topright' | 'bottomleft' | 'bottomright' = 'bottomright';
 
   private readonly clarity = inject(ClarityService);
 
@@ -38,8 +36,7 @@ export class CookiesDialogComponent implements OnInit {
     this.visible = true;
   }
 
-  showDialog(position: 'left' | 'right' | 'top' | 'bottom' | 'center' | 'topleft' | 'topright' | 'bottomleft' | 'bottomright') {
-    this.position = position;
+  showDialog() {
     this.visible = true;
   }
 
