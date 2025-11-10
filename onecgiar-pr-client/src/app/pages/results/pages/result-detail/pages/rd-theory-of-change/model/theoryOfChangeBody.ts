@@ -48,7 +48,7 @@ export interface CenterInterfacesToc {
 
 export class ResultToResultInterfaceToc {
   planned_result: boolean = null;
-  toc_narrative_progress: string = null;
+  toc_progressive_narrative: string = null;
   initiative_id: number = null;
   official_code: string = null;
   short_name: string = null;
