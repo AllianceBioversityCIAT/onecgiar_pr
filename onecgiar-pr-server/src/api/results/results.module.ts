@@ -184,7 +184,7 @@ import { ResultsTocTargetIndicatorRepository } from './results-toc-results/repos
     ResultsTocSdgTargetRepository,
     ResultsSdgTargetRepository,
     ResultsActionAreaOutcomeRepository,
-    ResultsTocTargetIndicatorRepository
+    ResultsTocTargetIndicatorRepository,
   ],
   exports: [ResultRepository, JwtMiddleware, ResultsService],
 })

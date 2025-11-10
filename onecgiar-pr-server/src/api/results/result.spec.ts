@@ -53,15 +53,14 @@ import { v4 } from 'uuid';
 import { ScienceProgramProgressResponseDto } from './dto/science-program-progress.dto';
 import { ImpactAreasScoresComponentRepository } from './impact_areas_scores_components/repositories/impact_areas_scores_components.repository';
 import { ResultsTocResultRepository } from './results-toc-results/repositories/results-toc-results.repository';
+import { ResultsInnovationsDevRepository } from './summary/repositories/results-innovations-dev.repository';
 
 describe('ResultsService (unit, pure mocks)', () => {
   let module: TestingModule;
   let resultService: ResultsService;
   let currentResultId: number;
 
-  // Shared mocks
   const mockResultRepository = {
-    // Used as both _resultRepository and _customResultRepository
     getLastResultCode: jest.fn().mockResolvedValue(100),
     save: jest.fn().mockImplementation(async (data: any) => ({
       ...data,
@@ -317,6 +316,10 @@ describe('ResultsService (unit, pure mocks)', () => {
     findOne: jest.fn().mockResolvedValue({ id: 123 }),
   } as any;
 
+  const mockResultsInnovationsDevRepository = {
+    findOne: jest.fn().mockResolvedValue({ id: 123 }),
+  } as any;
+
   beforeEach(async () => {
     module = await Test.createTestingModule({
       providers: [
@@ -436,6 +439,10 @@ describe('ResultsService (unit, pure mocks)', () => {
         {
           provide: ResultsTocResultRepository,
           useValue: mockResultsTocResultRepository,
+        },
+        {
+          provide: ResultsInnovationsDevRepository,
+          useValue: mockResultsInnovationsDevRepository,
         },
       ],
     }).compile();

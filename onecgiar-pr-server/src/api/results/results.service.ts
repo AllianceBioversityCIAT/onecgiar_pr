@@ -2376,7 +2376,6 @@ export class ResultsService {
           [resultId],
         );
       }
-      console.log(innovationsDev);
 
       const activeInitiatives =
         result.obj_result_by_initiatives?.filter((rbi) => rbi.is_active) || [];
