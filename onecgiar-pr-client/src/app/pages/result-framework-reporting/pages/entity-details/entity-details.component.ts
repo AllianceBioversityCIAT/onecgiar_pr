@@ -47,7 +47,6 @@ export class EntityDetailsComponent implements OnInit {
   cd = inject(ChangeDetectorRef);
 
   showReportModal = signal(false);
-  
   reportMenuItems: MenuItem[] = [
     {
       label: 'AI Assistant',
