@@ -2,7 +2,7 @@
   <div class="report-result-content_left">
     <div class="report-result-content_left_header">
       <span class="report-result-title">Report result</span>
-      <span class="report-result-description">Make sure the result you want to report isn't already in the PRMS Reporting Tool. If it exists, simply map it to your Initiative instead of creating a new one.</span>
+      <span class="report-result-description">Make sure the result you want to report isn't already in the PRMS Reporting Tool. If it exists, simply map it to your Science Program/Accelerator instead of creating a new one.</span>
     </div>
     <div class="report-result-content_left_content">
       <app-pr-select
@@ -18,7 +18,7 @@
         (ngModelChange)="onSelectInit()">
       </app-pr-select>
 
-      <app-result-level-buttons [currentResultType]="this.currentResultType"></app-result-level-buttons>
+      <app-result-level-buttons [currentResultType]="this.currentResultType" [hideAlert]="true"></app-result-level-buttons>
 
       <app-pr-radio-button
         label="Indicator category"
