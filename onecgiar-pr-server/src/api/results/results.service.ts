@@ -85,6 +85,7 @@ import { ImpactAreasScoresComponentRepository } from './impact_areas_scores_comp
 import { ResultsInnovationsDev } from './summary/entities/results-innovations-dev.entity';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 import { ResultsTocResultRepository } from './results-toc-results/repositories/results-toc-results.repository';
+import { ResultsInnovationsDevRepository } from './summary/repositories/results-innovations-dev.repository';
 
 @Injectable()
 export class ResultsService {
@@ -129,6 +130,7 @@ export class ResultsService {
     private readonly _resultsTocResultRepository: ResultsTocResultRepository,
     private readonly _initiativeEntityMapRepository?: InitiativeEntityMapRepository,
     private readonly _roleByUserRepository?: RoleByUserRepository,
+    private readonly _resultsInnovationsDevRepository?: ResultsInnovationsDevRepository,
     @Optional()
     @Inject(AdUserService)
     private readonly _adUserService?: AdUserService,
@@ -2363,13 +2365,18 @@ export class ResultsService {
 
       let innovationsDev: ResultsInnovationsDev = null;
       if (result.result_type_id === ResultTypeEnum.INNOVATION_DEVELOPMENT) {
-        innovationsDev = await this._resultRepository.manager.findOne(
-          ResultsInnovationsDev,
-          {
-            where: { results_id: resultId, is_active: true },
-          },
+        innovationsDev = await this._resultsInnovationsDevRepository.query(
+          `
+            SELECT short_title, result_innovation_dev_id, results_id
+            FROM results_innovations_dev
+            WHERE results_id = ?
+            ORDER BY is_active DESC, result_innovation_dev_id DESC
+            LIMIT 1
+          `,
+          [resultId],
         );
       }
+      console.log(innovationsDev);
 
       const activeInitiatives =
         result.obj_result_by_initiatives?.filter((rbi) => rbi.is_active) || [];
@@ -2418,7 +2425,7 @@ export class ResultsService {
         result_level_name: result.obj_result_level?.name || null,
         result_name: result.title,
         result_description: result.description,
-        short_title: innovationsDev?.short_title || null,
+        short_title: innovationsDev?.[0]?.short_title || null,
         geographic_scope_name: result.obj_geographic_scope?.name || null,
         geographic_scope_description:
           result.obj_geographic_scope?.description || null,
