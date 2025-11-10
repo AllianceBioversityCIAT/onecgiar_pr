@@ -111,7 +111,54 @@ p {
   flex-direction: column;
 }
 
+::ng-deep .p-tieredmenu-item-link {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  overflow: hidden;
+  position: relative;
+  color: #273EC5 !important;
+  font-weight: 500;
+  padding: var(--p-tieredmenu-item-padding);
+  gap: var(--p-tieredmenu-item-gap);
+  user-select: none;
+  outline: 0 none;
+}
 
+
+::ng-deep .p-tieredmenu-item-icon {
+  color: #273EC5 !important;
+}
+
+::ng-deep .entity-report-menu-overlay {
+  left: auto !important;
+  right: 0 !important;
+  top: 100% !important;
+  margin-top: 5px !important;
+  transform-origin: top right !important;
+}
+
+::ng-deep .p-tieredmenu {
+  padding: 16px !important;
+  padding-bottom: 12px !important;
+  min-width: 230px !important;
+  border-radius: 10px !important;
+  box-shadow: 0px 10px 30px rgba(60, 64, 67, 0.15);
+
+  &::before {
+    content: 'Options';
+    display: block;
+    font-weight: 600;
+    color: #9C9C9C;
+    margin-bottom: 10px;
+    @include fonts.pr-typography('body-2');
+  }
+
+  .p-tieredmenu-separator {
+    margin: 6px 0 !important;
+  }
+}
 
 .entity-details_card_header {
   display: flex;
