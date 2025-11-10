@@ -82,6 +82,7 @@ import {
   NotificationTypeEnum,
 } from '../notification/enum/notification.enum';
 import { ImpactAreasScoresComponentRepository } from './impact_areas_scores_components/repositories/impact_areas_scores_components.repository';
+import { ResultsTocResultRepository } from './results-toc-results/repositories/results-toc-results.repository';
 
 @Injectable()
 export class ResultsService {
@@ -123,6 +124,7 @@ export class ResultsService {
     private readonly _resultsInvestmentDiscontinuedOptionRepository: ResultsInvestmentDiscontinuedOptionRepository,
     private readonly _resultInitiativeBudgetRepository: ResultInitiativeBudgetRepository,
     private readonly _resultsCenterRepository: ResultsCenterRepository,
+    private readonly _resultsTocResultRepository: ResultsTocResultRepository,
     private readonly _initiativeEntityMapRepository?: InitiativeEntityMapRepository,
     private readonly _roleByUserRepository?: RoleByUserRepository,
     @Optional()
@@ -380,12 +382,12 @@ export class ResultsService {
     user: TokenDto,
   ) {
     try {
-      const { 
-        gender_impact_area_id, 
-        climate_impact_area_id, 
+      const {
+        gender_impact_area_id,
+        climate_impact_area_id,
         nutrition_impact_area_id,
         environmental_biodiversity_impact_area_id,
-        poverty_impact_area_id, 
+        poverty_impact_area_id,
       } = resultGeneralInformation;
       const result = await this._resultRepository.getResultById(
         resultGeneralInformation.result_id,
@@ -513,7 +515,10 @@ export class ResultsService {
       }
 
       let environmentalBiodiversityTagComponent = null;
-      if (Number(environmentalBiodiversityTag?.id) === 3 && environmental_biodiversity_impact_area_id != null) {
+      if (
+        Number(environmentalBiodiversityTag?.id) === 3 &&
+        environmental_biodiversity_impact_area_id != null
+      ) {
         environmentalBiodiversityTagComponent =
           await this._impactAreasScoresComponentRepository.findOne({
             where: {
@@ -2192,7 +2197,37 @@ export class ResultsService {
     isAdmin?: boolean,
     versionId?: number,
   ): Promise<returnFormatResult | returnErrorDto> {
-    return this.createOwnerResult(createResultDto, user, isAdmin, versionId);
+    const result = await this.createOwnerResult(
+      createResultDto,
+      user,
+      isAdmin,
+      versionId,
+    );
+
+    if (
+      result.status === HttpStatus.CREATED &&
+      result.response &&
+      (result.response as Result).id
+    ) {
+      try {
+        await this._resultsTocResultRepository.save({
+          planned_result: false,
+          toc_level_id: null,
+          result_id: (result.response as Result).id,
+          initiative_ids: createResultDto.initiative_id,
+          created_by: user.id,
+          last_updated_by: user.id,
+          is_active: true,
+        });
+      } catch (error) {
+        this._logger.error(
+          `Failed to create ResultsTocResult for result ${(result.response as Result).id}`,
+          error,
+        );
+      }
+    }
+
+    return result;
   }
 
   async getAllResultsForInnovUse() {
