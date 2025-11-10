@@ -57,7 +57,8 @@
     <div style="z-index: 1; position: relative">
       <app-multiple-wps
         [editable]="true"
-        [initiative]="this.rdPartnersSE.result_toc_result_signal"
+        [initiative]="this.rdPartnersSE.partnersBody?.result_toc_result"
+        [initiativeId]="this.rdPartnersSE.initiativeIdSignal"
         [resultLevelId]="this.resultLevelSE.currentResultLevelId"
         [isIpsr]="false"
         [isContributor]="false"
@@ -241,13 +242,13 @@
         [(ngModel)]="this.rdPartnersSE.partnersBody.linked_results"
         optionLabel="title"
         optionValue="id"
-        [group]="true"
         optionGroupLabel="name"
         optionGroupChildren="options"
         label="Please select a result"
         placeholder="Please select a result"
         selectedLabel="Results selected"
-        selectedOptionLabel="title">
+        selectedOptionLabel="title"
+        [displayLabelFormatter]="formatResultLabel.bind(this)">
       </app-pr-multi-select>
     }
   }

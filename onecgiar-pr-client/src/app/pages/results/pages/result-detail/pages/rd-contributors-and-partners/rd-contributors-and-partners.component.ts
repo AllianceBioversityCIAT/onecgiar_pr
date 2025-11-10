@@ -131,8 +131,6 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   }
 
   onSaveSection() {
-    console.log('onSaveSection');
-    console.log({ ...this.rdPartnersSE.partnersBody });
     if (this.rdPartnersSE.partnersBody.no_applicable_partner) {
       this.rdPartnersSE.partnersBody.institutions = [];
     }
@@ -171,9 +169,6 @@ export class RdContributorsAndPartnersComponent implements OnInit {
       email_template: 'email_template_contribution'
     };
 
-    console.log('sendedData', { ...this.rdPartnersSE.partnersBody });
-    console.log('sendedData', { ...sendedData });
-
     this.api.resultsSE.PATCH_ContributorsPartners(sendedData).subscribe(_resp => {
       this.rdPartnersSE.getSectionInformation(null, true);
     });
@@ -194,5 +189,26 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   getMessageLead() {
     const entity = this.rdPartnersSE.partnersBody.is_lead_by_partner ? 'partner' : 'CG Center';
     return `Please select the ${entity} leading this result. <b>Only ${entity}s already added in this section can be selected as the result lead.</b>`;
+  }
+
+  formatResultLabel(option: any): string {
+    if (option?.result_code && option?.name) {
+      let phaseInfo = '';
+      if (option?.acronym && option?.phase_year) {
+        phaseInfo = `(${option.acronym} - ${option.phase_year}) `;
+      } else if (option?.acronym) {
+        phaseInfo = `(${option.acronym}) `;
+      } else if (option?.phase_year) {
+        phaseInfo = `(${option.phase_year}) `;
+      }
+
+      const resultType = option?.result_type_name || option?.resultTypeName || option?.type_name || '';
+      const resultTypeInfo = resultType ? ` (${resultType})` : '';
+
+      const title = option?.title ? ` - ${option.title}` : '';
+
+      return `${phaseInfo}${option.result_code} - ${option.name}${resultTypeInfo}${title}`;
+    }
+    return option?.title || option?.name || '';
   }
 }

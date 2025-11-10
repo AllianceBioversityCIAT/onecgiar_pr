@@ -82,7 +82,6 @@ import {
   NotificationTypeEnum,
 } from '../notification/enum/notification.enum';
 import { ImpactAreasScoresComponentRepository } from './impact_areas_scores_components/repositories/impact_areas_scores_components.repository';
-import { GetResultsForInnovUseDto } from './dto/get-results-for-innov-use.dto';
 
 @Injectable()
 export class ResultsService {
@@ -381,6 +380,13 @@ export class ResultsService {
     user: TokenDto,
   ) {
     try {
+      const { 
+        gender_impact_area_id, 
+        climate_impact_area_id, 
+        nutrition_impact_area_id,
+        environmental_biodiversity_impact_area_id,
+        poverty_impact_area_id, 
+      } = resultGeneralInformation;
       const result = await this._resultRepository.getResultById(
         resultGeneralInformation.result_id,
       );
@@ -426,10 +432,10 @@ export class ResultsService {
       }
 
       let genderTagComponent = null;
-      if (Number(genderTag?.id) === 3) {
+      if (Number(genderTag?.id) === 3 && gender_impact_area_id != null) {
         genderTagComponent =
           await this._impactAreasScoresComponentRepository.findOne({
-            where: { id: resultGeneralInformation.gender_impact_area_id },
+            where: { id: gender_impact_area_id },
           });
         if (!genderTagComponent) {
           throw {
@@ -452,10 +458,10 @@ export class ResultsService {
       }
 
       let climateTagComponent = null;
-      if (Number(climateTag?.id) === 3) {
+      if (Number(climateTag?.id) === 3 && climate_impact_area_id != null) {
         climateTagComponent =
           await this._impactAreasScoresComponentRepository.findOne({
-            where: { id: resultGeneralInformation.climate_impact_area_id },
+            where: { id: climate_impact_area_id },
           });
         if (!climateTagComponent) {
           throw {
@@ -478,10 +484,10 @@ export class ResultsService {
       }
 
       let nutritionTagComponent = null;
-      if (Number(nutritionTag?.id) === 3) {
+      if (Number(nutritionTag?.id) === 3 && nutrition_impact_area_id != null) {
         nutritionTagComponent =
           await this._impactAreasScoresComponentRepository.findOne({
-            where: { id: resultGeneralInformation.nutrition_impact_area_id },
+            where: { id: nutrition_impact_area_id },
           });
         if (!nutritionTagComponent) {
           throw {
@@ -507,11 +513,11 @@ export class ResultsService {
       }
 
       let environmentalBiodiversityTagComponent = null;
-      if (Number(environmentalBiodiversityTag?.id) === 3) {
+      if (Number(environmentalBiodiversityTag?.id) === 3 && environmental_biodiversity_impact_area_id != null) {
         environmentalBiodiversityTagComponent =
           await this._impactAreasScoresComponentRepository.findOne({
             where: {
-              id: resultGeneralInformation.environmental_biodiversity_impact_area_id,
+              id: environmental_biodiversity_impact_area_id,
             },
           });
         if (!environmentalBiodiversityTagComponent) {
@@ -536,10 +542,10 @@ export class ResultsService {
       }
 
       let povertyTagComponent = null;
-      if (Number(povertyTag?.id) === 3) {
+      if (Number(povertyTag?.id) === 3 && poverty_impact_area_id != null) {
         povertyTagComponent =
           await this._impactAreasScoresComponentRepository.findOne({
-            where: { id: resultGeneralInformation.poverty_impact_area_id },
+            where: { id: poverty_impact_area_id },
           });
         if (!povertyTagComponent) {
           throw {
@@ -2193,36 +2199,8 @@ export class ResultsService {
     try {
       const results = await this._resultRepository.getResultsForInnovUse();
 
-      const mapped: GetResultsForInnovUseDto = {
-        P25: [],
-        'P22-P24': [
-          {
-            'innovation-use': [],
-            'innovation-development': [],
-          },
-        ],
-      };
-
-      for (const r of results) {
-        const item = {
-          id: r.id,
-          result_code: r.result_code,
-          title: r.title,
-        };
-
-        if (r.acronym === 'P25') {
-          mapped.P25.push(item);
-        } else {
-          if (r.result_type_id === 2) {
-            mapped['P22-P24'][0]['innovation-use'].push(item);
-          } else if (r.result_type_id === 7) {
-            mapped['P22-P24'][0]['innovation-development'].push(item);
-          }
-        }
-      }
-
       return {
-        response: mapped,
+        response: results,
         message: 'Results retrieved successfully',
         status: 200,
       };

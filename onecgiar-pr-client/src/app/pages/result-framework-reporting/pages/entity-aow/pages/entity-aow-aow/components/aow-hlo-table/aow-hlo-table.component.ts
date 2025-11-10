@@ -87,6 +87,7 @@ export class AowHloTableComponent {
       indicators: item.indicators.filter((indicator: any) => indicator.indicator_id === currentItemId)
     };
 
+    this.entityAowService.existingResultsContributors.set([]);
     this.entityAowService.showViewResultDrawer.set(true);
     this.entityAowService.currentResultToView.set(selectedCurrentItem);
   }
