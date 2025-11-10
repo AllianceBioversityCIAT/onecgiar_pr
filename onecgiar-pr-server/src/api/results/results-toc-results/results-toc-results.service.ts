@@ -525,6 +525,7 @@ export class ResultsTocResultsService {
         short_name: string | null;
         planned_result: boolean | null;
         resultsMap: Map<number, ResultAccumulator>;
+        toc_progressive_narrative?: string | null;
       }
 
       const initiativesMap = new Map<number, InitiativeAccumulator>();
@@ -679,12 +680,21 @@ export class ResultsTocResultsService {
               }))
             : [];
 
+        const isPlanned = entry?.planned_result === true;
+        const resultTocResults = isPlanned ? resultArray : null;
+        const tocProgressiveNarrative = isPlanned
+          ? null
+          : (resultArray?.[0]?.toc_progressive_narrative ?? null);
+
         return {
           planned_result: entry?.planned_result ?? null,
           initiative_id: initiativeId,
           official_code: entry?.official_code ?? fallback.official_code ?? null,
           short_name: entry?.short_name ?? fallback.short_name ?? null,
-          result_toc_results: resultArray,
+          result_toc_results: resultTocResults,
+          ...(isPlanned
+            ? {}
+            : { toc_progressive_narrative: tocProgressiveNarrative }),
         };
       };
 
@@ -716,6 +726,7 @@ export class ResultsTocResultsService {
             official_code: pending?.official_code ?? null,
             short_name: pending?.short_name ?? null,
             result_toc_results: [],
+            toc_progressive_narrative: null,
           });
         }
       }
@@ -1391,7 +1402,11 @@ export class ResultsTocResultsService {
         }),
       );
 
-      if (result_toc_result?.result_toc_results?.length) {
+      if (
+        result_toc_result?.result_toc_results?.length &&
+        result_toc_result?.planned_result === true
+      ) {
+        console.log('result_toc_result', result_toc_result);
         for (const t of result_toc_result.result_toc_results) {
           if (!t?.result_toc_result_id && !t?.toc_result_id) continue;
 
@@ -1436,6 +1451,43 @@ export class ResultsTocResultsService {
               last_updated_by: user.id,
             });
           }
+        }
+      } else if (
+        result_toc_result &&
+        result_toc_result?.planned_result === false
+      ) {
+        console.log('result_toc_result else', result_toc_result);
+
+        interface SpecialCaseResultTocResult {
+          planned_result: boolean;
+          initiative_id: number;
+          toc_progressive_narrative: string;
+        }
+
+        const rtr = result_toc_result as unknown as SpecialCaseResultTocResult;
+        const isSpecialCase = rtr.planned_result === false && rtr.initiative_id;
+
+        if (isSpecialCase) {
+          await this._resultsTocResultRepository.update(
+            { result_id, initiative_ids: rtr.initiative_id },
+            {
+              is_active: false,
+              last_updated_by: user.id,
+            },
+          );
+
+          await this._resultsTocResultRepository.insert({
+            initiative_ids: rtr.initiative_id,
+            toc_result_id: null,
+            toc_level_id: null,
+            toc_progressive_narrative: rtr.toc_progressive_narrative ?? null,
+            planned_result: rtr.planned_result,
+            action_area_outcome_id: null,
+            result_id: result.id,
+            is_active: true,
+            created_by: user.id,
+            last_updated_by: user.id,
+          });
         }
       }
 
@@ -1578,12 +1630,17 @@ export class ResultsTocResultsService {
           if (el['planned_result'] === false) el['toc_level_id'] = 3;
         });
 
+        const contribPlanned = items?.[0]?.planned_result === true;
+        const contribTocProgressiveNarrative = contribPlanned
+          ? null
+          : (items?.[0]?.toc_progressive_narrative ?? null);
         contributorsResp.push({
-          planned_result: null,
+          planned_result: items?.[0]?.planned_result ?? null,
           initiative_id: items?.[0]?.initiative_id ?? c.id,
           official_code: items?.[0]?.official_code ?? c.official_code,
           short_name: items?.[0]?.short_name ?? c.short_name,
-          result_toc_results: items ?? [],
+          result_toc_results: contribPlanned ? (items ?? []) : null,
+          toc_progressive_narrative: contribTocProgressiveNarrative,
         });
       }
 
@@ -1593,11 +1650,17 @@ export class ResultsTocResultsService {
           initiative_id: p.id,
           official_code: p.official_code,
           short_name: p.short_name,
-          result_toc_results: [],
+          result_toc_results: null,
         });
       }
 
+      const isPrimaryPlanned = result_toc_result?.planned_result === true;
+      const resultTocResults = isPrimaryPlanned ? primaryBox : null;
+      const tocProgressiveNarrative = isPrimaryPlanned
+        ? null
+        : (primaryBox?.[0]?.toc_progressive_narrative ?? null);
       const showMultipleWPsContent =
+        isPrimaryPlanned &&
         (result_toc_result?.result_toc_results?.length ?? 0) > 1;
 
       return {
@@ -1612,7 +1675,8 @@ export class ResultsTocResultsService {
             initiative_id: changePrimaryInit,
             official_code: primaryBox?.[0]?.official_code ?? null,
             short_name: primaryBox?.[0]?.short_name ?? null,
-            result_toc_results: primaryBox,
+            result_toc_results: resultTocResults,
+            toc_progressive_narrative: tocProgressiveNarrative,
             showMultipleWPsContent,
           },
           contributors_result_toc_result: contributorsResp,

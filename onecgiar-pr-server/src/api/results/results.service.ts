@@ -84,6 +84,7 @@ import {
 import { ImpactAreasScoresComponentRepository } from './impact_areas_scores_components/repositories/impact_areas_scores_components.repository';
 import { ResultsInnovationsDev } from './summary/entities/results-innovations-dev.entity';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
+import { ResultsTocResultRepository } from './results-toc-results/repositories/results-toc-results.repository';
 
 @Injectable()
 export class ResultsService {
@@ -125,6 +126,7 @@ export class ResultsService {
     private readonly _resultsInvestmentDiscontinuedOptionRepository: ResultsInvestmentDiscontinuedOptionRepository,
     private readonly _resultInitiativeBudgetRepository: ResultInitiativeBudgetRepository,
     private readonly _resultsCenterRepository: ResultsCenterRepository,
+    private readonly _resultsTocResultRepository: ResultsTocResultRepository,
     private readonly _initiativeEntityMapRepository?: InitiativeEntityMapRepository,
     private readonly _roleByUserRepository?: RoleByUserRepository,
     @Optional()
@@ -2197,7 +2199,37 @@ export class ResultsService {
     isAdmin?: boolean,
     versionId?: number,
   ): Promise<returnFormatResult | returnErrorDto> {
-    return this.createOwnerResult(createResultDto, user, isAdmin, versionId);
+    const result = await this.createOwnerResult(
+      createResultDto,
+      user,
+      isAdmin,
+      versionId,
+    );
+
+    if (
+      result.status === HttpStatus.CREATED &&
+      result.response &&
+      (result.response as Result).id
+    ) {
+      try {
+        await this._resultsTocResultRepository.save({
+          planned_result: false,
+          toc_level_id: null,
+          result_id: (result.response as Result).id,
+          initiative_ids: createResultDto.initiative_id,
+          created_by: user.id,
+          last_updated_by: user.id,
+          is_active: true,
+        });
+      } catch (error) {
+        this._logger.error(
+          `Failed to create ResultsTocResult for result ${(result.response as Result).id}`,
+          error,
+        );
+      }
+    }
+
+    return result;
   }
 
   async getAllResultsForInnovUse() {
