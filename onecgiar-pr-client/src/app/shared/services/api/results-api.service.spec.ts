@@ -410,9 +410,15 @@ describe('ResultsApiService', () => {
         discontinued_options: [],
         is_replicated: false,
         result_code: 200,
+        gender_impact_area_id: 1,
+        climate_impact_area_id: 1,
+        nutrition_impact_area_id: 1,
+        environmental_biodiversity_impact_area_id: 1,
+        poverty_impact_area_id: 1,
         lead_contact_person_data: {
           cn: 'John Doe',
           displayName: 'John Doe',
+          display_name: 'John Doe',
           mail: 'john.doe@cgiar.org',
           sAMAccountName: 'jdoe',
           givenName: 'John',
@@ -3250,7 +3256,7 @@ describe('ResultsApiService', () => {
         done();
       });
 
-      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/delete/complementary-innovation/${idResult}`);
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}v2/api/ipsr/innovation-pathway/delete/complementary-innovation/${idResult}`);
       expect(req.request.method).toBe('DELETE');
 
       req.flush(mockResponse);
@@ -3672,6 +3678,48 @@ describe('ResultsApiService', () => {
       });
 
       const req = httpMock.expectOne(`${environment.apiBaseUrl}clarisa/initiatives/entities`);
+      expect(req.request.method).toBe('GET');
+
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_ScienceProgramsProgress', () => {
+    it('should call GET_ScienceProgramsProgress and return expected data', done => {
+      service.GET_ScienceProgramsProgress().subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/get/science-programs/progress`);
+      expect(req.request.method).toBe('GET');
+
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_RecentActivity', () => {
+    it('should call GET_RecentActivity and return expected data', done => {
+      service.GET_RecentActivity().subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/notification/recent-activity`);
+      expect(req.request.method).toBe('GET');
+
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_ClarisaGlobalUnits', () => {
+    it('should call GET_ClarisaGlobalUnits and return expected data', done => {
+      service.GET_ClarisaGlobalUnits('SP01').subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/clarisa-global-units?programId=SP01`);
       expect(req.request.method).toBe('GET');
 
       req.flush(mockResponse);

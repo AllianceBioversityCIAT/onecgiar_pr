@@ -1,8 +1,9 @@
-import { Component, forwardRef, Input } from '@angular/core';
+import { Component, computed, forwardRef, inject, Input } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { WordCounterService } from '../../shared/services/word-counter.service';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { DataControlService } from '../../shared/services/data-control.service';
+import { FieldsManagerService } from '../../shared/services/fields-manager.service';
 
 @Component({
   selector: 'app-pr-input',
@@ -39,11 +40,28 @@ export class PrInputComponent implements ControlValueAccessor {
   @Input() showDescription?: boolean = true;
   @Input() InlineStyles?: string = '';
   @Input() descInlineStyles?: string = '';
+  @Input() fieldRef: string | number;
+
+  fieldsManager = inject(FieldsManagerService);
+  @Input() labelDescInlineStyles?: string = '';
 
   private _value: any;
   private beforeValue: string;
   public wordCount: number = 0;
   public notProvidedText = "<div class='text-red-100 italic'>Not provided</div>";
+
+  useColon: boolean = true;
+
+  preventFieldRender = computed<boolean>(() => {
+    if (!this.fieldRef) return true;
+    const { hide, label, placeholder, description, required, useColon } = this.fieldsManager.fields()[this.fieldRef] || {};
+    this.label = label;
+    this.placeholder = placeholder;
+    this.description = description;
+    this.required = required;
+    this.useColon = useColon ?? true;
+    return !hide;
+  });
 
   constructor(
     private readonly wordCounterSE: WordCounterService,

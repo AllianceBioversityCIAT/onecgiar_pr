@@ -58,6 +58,21 @@ export class ResultQuestion {
   })
   question_level: number;
 
+  @Column({
+    name: 'version',
+    type: 'enum',
+    enum: ['P22', 'P25'],
+    nullable: true,
+  })
+  version: 'P22' | 'P25';
+
+  @Column({
+    name: 'previous_question_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  previous_question_id: number;
+
   @ManyToOne(() => ResultType, (rqt) => rqt.obj_result_type)
   @JoinColumn({
     name: 'result_type_id',
@@ -68,6 +83,10 @@ export class ResultQuestion {
   @ManyToOne(() => ResultQuestion, (ciet) => ciet.result_question_id)
   @JoinColumn({ name: 'parent_question_id' })
   obj_parent_question_id: ResultQuestion[];
+
+  @ManyToOne(() => ResultQuestion, (ciet) => ciet.result_question_id)
+  @JoinColumn({ name: 'previous_question_id' })
+  obj_previous_question_id: ResultQuestion[];
 
   @OneToMany(() => ResultAnswer, (rq) => rq.obj_result_question)
   obj_result_question: ResultAnswer[];

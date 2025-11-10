@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { ResultLevel, Resulttype, ResultBody } from '../../../../../shared/interfaces/result.interface';
 import { ApiService } from '../../../../../shared/services/api/api.service';
 import { ResultsListFilterService } from '../../results-outlet/pages/results-list/services/results-list-filter.service';
@@ -8,9 +8,12 @@ import { ResultsListFilterService } from '../../results-outlet/pages/results-lis
 })
 export class ResultLevelService {
   resultLevelList: ResultLevel[];
+  resultLevelListSig = signal<ResultLevel[]>([]);
   currentResultTypeList: Resulttype[];
+  currentResultTypeListSig = signal<Resulttype[]>([]);
   resultBody = new ResultBody();
   currentResultLevelId = null;
+  currentResultLevelIdSignal = signal<number | null>(null);
   currentResultLevelName = null;
   currentResultTypeId = null;
   resultHandle: string = '';
@@ -27,8 +30,14 @@ export class ResultLevelService {
     this.resultBody['result_level_name'] = resultLevel.name;
     this.resultBody.result_type_id = null;
     this.currentResultTypeList = resultLevel.result_type;
-    this.resultLevelList.forEach(reLevel => (reLevel.selected = false));
+    this.currentResultTypeListSig.set(resultLevel.result_type || []);
+    (this.resultLevelList || []).forEach(reLevel => (reLevel.selected = false));
     resultLevel.selected = !resultLevel.selected;
+    const updated = (this.resultLevelListSig() || []).map(rl => {
+      if (rl.id === resultLevel.id) return { ...rl, selected: resultLevel.selected };
+      return { ...rl, selected: false };
+    });
+    this.resultLevelListSig.set(updated);
   }
 
   cleanData() {
@@ -39,6 +48,7 @@ export class ResultLevelService {
     this.api.resultsSE.GET_TypeByResultLevel().subscribe(resp => {
       this.removeResultTypes(resp.response);
       this.resultLevelList = resp.response;
+      this.resultLevelListSig.set(resp.response || []);
 
       this.resultsListFilterSE.setFiltersByResultLevelTypes(this.resultLevelList);
     });

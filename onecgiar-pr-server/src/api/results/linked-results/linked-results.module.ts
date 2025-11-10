@@ -23,6 +23,6 @@ import { ResultsPolicyChangesRepository } from '../summary/repositories/results-
     ReturnResponse,
     ResultsPolicyChangesRepository,
   ],
-  exports: [LinkedResultRepository],
+  exports: [LinkedResultRepository, LinkedResultsService],
 })
 export class LinkedResultsModule {}

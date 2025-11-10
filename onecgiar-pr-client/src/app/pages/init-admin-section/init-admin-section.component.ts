@@ -19,6 +19,6 @@ export class InitAdminSectionComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.dataControlSE.detailSectionTitle('Results Monitoring Center');
+    this.dataControlSE.detailSectionTitle('My Admin');
   }
 }

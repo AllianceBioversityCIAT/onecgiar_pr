@@ -1,12 +1,13 @@
-import { Pipe, PipeTransform } from '@angular/core';
-import { ResultLevelService } from '../../../result-creator/services/result-level.service';
+import { Pipe, PipeTransform, inject } from '@angular/core';
 import { DataControlService } from '../../../../../../shared/services/data-control.service';
+import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 
 @Pipe({
-    name: 'panelMenu',
-    standalone: false
+  name: 'panelMenu',
+  standalone: false
 })
 export class PanelMenuPipe implements PipeTransform {
+  fieldsManager = inject(FieldsManagerService);
   constructor(private dataControlSE: DataControlService) {}
   transform(list: any[], resultTypeId: string, toggle) {
     this.dataControlSE?.green_checks?.map(green_check => {
@@ -15,6 +16,8 @@ export class PanelMenuPipe implements PipeTransform {
     });
     return list.filter(option => {
       if (option.path == '**') return false;
+      if (this.fieldsManager.isP25() && option.portfolioAcronym == 'P22') return false;
+      if (this.fieldsManager.isP22() && option.portfolioAcronym == 'P25') return false;
       if (!option?.hasOwnProperty('prHide')) return true;
       return option.prHide == resultTypeId ? true : false;
     });

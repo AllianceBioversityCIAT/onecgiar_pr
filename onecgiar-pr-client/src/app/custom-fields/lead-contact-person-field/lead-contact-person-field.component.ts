@@ -3,6 +3,7 @@ import { debounceTime, distinctUntilChanged, Subject, switchMap } from 'rxjs';
 
 import { User } from '../../pages/results/pages/result-detail/pages/rd-general-information/models/userSearchResponse';
 import { UserSearchService } from '../../pages/results/pages/result-detail/pages/rd-general-information/services/user-search-service.service';
+import { ResultsApiService } from '../../shared/services/api/results-api.service';
 
 @Component({
   selector: 'app-lead-contact-person-field',
@@ -20,7 +21,10 @@ export class LeadContactPersonFieldComponent implements OnChanges {
 
   private searchSubject = new Subject<string>();
 
-  constructor(public userSearchService: UserSearchService) {
+  constructor(
+    public userSearchService: UserSearchService,
+    public resultsApiService: ResultsApiService
+  ) {
     this.searchSubject
       .pipe(
         debounceTime(500),
@@ -30,7 +34,7 @@ export class LeadContactPersonFieldComponent implements OnChanges {
           if (trimmedQuery.length >= 4) {
             this.isSearching = true;
             this.showResults = false;
-            return this.userSearchService.searchUsers(trimmedQuery);
+            return this.resultsApiService.GET_adUsersSearch(trimmedQuery);
           } else {
             this.searchResults = [];
             this.showResults = false;
@@ -99,11 +103,6 @@ export class LeadContactPersonFieldComponent implements OnChanges {
     });
   }
 
-  leadContactPersonTextInfo() {
-    return `For more precise results, we recommend searching by email or username. 
-    <br><strong>Examples:</strong> j.smith@cgiar.org; jsmith; JSmith`;
-  }
-
   onSearchInput(event: any): void {
     if (this.isContactLocked) return;
 
@@ -134,14 +133,14 @@ export class LeadContactPersonFieldComponent implements OnChanges {
 
   selectUser(user: User): void {
     this.userSearchService.selectedUser = user;
-    this.userSearchService.searchQuery = user.displayName;
+    this.userSearchService.searchQuery = user.display_name;
     this.searchResults = [];
     this.showResults = false;
     this.userSearchService.hasValidContact = true;
     this.userSearchService.showContactError = false;
     this.isContactLocked = true;
 
-    this.body.lead_contact_person = user.displayName;
+    this.body.lead_contact_person = user.display_name;
     this.body.lead_contact_person_data = user;
   }
 

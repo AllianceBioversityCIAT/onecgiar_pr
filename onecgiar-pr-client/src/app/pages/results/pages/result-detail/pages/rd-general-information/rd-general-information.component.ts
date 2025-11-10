@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { GeneralInfoBody } from './models/generalInfoBody';
 import { ScoreService } from '../../../../../../shared/services/global/score.service';
@@ -10,17 +10,20 @@ import { CustomizedAlertsFeService } from '../../../../../../shared/services/cus
 import { PusherService } from '../../../../../../shared/services/pusher.service';
 import { CurrentResultService } from '../../../../../../shared/services/current-result.service';
 import { UserSearchService } from './services/user-search-service.service';
+import { GetImpactAreasScoresService } from '../../../../../../shared/services/global/get-impact-areas-scores.service';
 
 @Component({
-    selector: 'app-rd-general-information',
-    templateUrl: './rd-general-information.component.html',
-    styleUrls: ['./rd-general-information.component.scss'],
-    standalone: false
+  selector: 'app-rd-general-information',
+  templateUrl: './rd-general-information.component.html',
+  styleUrls: ['./rd-general-information.component.scss'],
+  standalone: false
 })
 export class RdGeneralInformationComponent implements OnInit {
   generalInfoBody = new GeneralInfoBody();
   toggle = 0;
   isPhaseOpen = false;
+
+  getImpactAreasScoresComponents = inject(GetImpactAreasScoresService);
 
   constructor(
     public api: ApiService,
@@ -37,6 +40,7 @@ export class RdGeneralInformationComponent implements OnInit {
   ngOnInit(): void {
     this.showAlerts();
     this.getSectionInformation();
+    this.dataControlSE.currentResultSectionName.set('General information');
   }
 
   get disableOptions() {
@@ -44,7 +48,7 @@ export class RdGeneralInformationComponent implements OnInit {
   }
 
   getSectionInformation() {
-    this.api.resultsSE.GET_generalInformationByResultId().subscribe(({ response }) => {
+    this.api.resultsSE.GET_generalInformationByResultId(this.dataControlSE.currentResultSignal()?.portfolio === 'P25').subscribe(({ response }) => {
       this.generalInfoBody = response;
       this.generalInfoBody.reporting_year = response['phase_year'];
       this.generalInfoBody.institutions_type = [...this.generalInfoBody.institutions_type, ...this.generalInfoBody.institutions] as any;
@@ -90,7 +94,8 @@ export class RdGeneralInformationComponent implements OnInit {
     this.generalInfoBody.institutions_type = this.generalInfoBody.institutions_type.filter(inst => !inst.hasOwnProperty('institutions_id'));
 
     if (!this.generalInfoBody.is_discontinued) this.generalInfoBody.discontinued_options = [];
-    this.api.resultsSE.PATCH_generalInformation(this.generalInfoBody).subscribe({
+
+    this.api.resultsSE.PATCH_generalInformation(this.generalInfoBody, this.dataControlSE.currentResultSignal()?.portfolio === 'P25').subscribe({
       next: resp => {
         this.currentResultSE.GET_resultById();
         this.getSectionInformation();
@@ -102,13 +107,6 @@ export class RdGeneralInformationComponent implements OnInit {
     });
   }
 
-  titleTextInfo() {
-    return `<ul>
-    <li>Provide a clear, informative name of the output, for a non-specialist reader and without acronyms.</li>
-    <li>Avoid abbreviations or (technical) jargon.</li>
-    </ul>`;
-  }
-
   descriptionTextInfo() {
     return `<ul>
     <li>Ensure the description is understandable for a non-specialist reader.</li>
@@ -118,7 +116,7 @@ export class RdGeneralInformationComponent implements OnInit {
   }
 
   leadContactPersonTextInfo() {
-    return `For more precise results, we recommend searching by email or username. 
+    return `For more precise results, we recommend searching by email or username.
     <br><strong>Examples:</strong> j.smith@cgiar.org; jsmith; JSmith`;
   }
 

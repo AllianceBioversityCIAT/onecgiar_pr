@@ -8,6 +8,7 @@ import {
 import { BaseEntity } from '../../../../shared/entities/base-entity';
 import { Result } from '../../entities/result.entity';
 import { ActorType } from './actor-type.entity';
+import { ResultInnovSection } from '../../../results-framework-reporting/result_innov_section/entities/result_innov_section.entity';
 
 @Entity('result_actors')
 export class ResultActor extends BaseEntity {
@@ -101,6 +102,17 @@ export class ResultActor extends BaseEntity {
     nullable: true,
   })
   addressing_demands!: string;
+
+  @ManyToOne(() => ResultInnovSection)
+  @JoinColumn({ name: 'section_id' })
+  obj_section: ResultInnovSection;
+
+  @Column({
+    name: 'section_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  section_id?: number;
 
   // relations
 

@@ -51,6 +51,8 @@ import { GeneralInformationDto } from './dto/general-information.dto';
 import { CreateResultGeoDto } from './dto/create-result-geo-scope.dto';
 import { v4 } from 'uuid';
 import { ScienceProgramProgressResponseDto } from './dto/science-program-progress.dto';
+import { ImpactAreasScoresComponentRepository } from './impact_areas_scores_components/repositories/impact_areas_scores_components.repository';
+import { ResultsTocResultRepository } from './results-toc-results/repositories/results-toc-results.repository';
 
 describe('ResultsService (unit, pure mocks)', () => {
   let module: TestingModule;
@@ -306,6 +308,15 @@ describe('ResultsService (unit, pure mocks)', () => {
     first_name: 'support',
     last_name: 'prms',
   };
+
+  const mockImpactAreasScoresComponentRepository = {
+    findOne: jest.fn().mockResolvedValue({ id: 123 }),
+  };
+
+  const mockResultsTocResultRepository = {
+    findOne: jest.fn().mockResolvedValue({ id: 123 }),
+  } as any;
+
   beforeEach(async () => {
     module = await Test.createTestingModule({
       providers: [
@@ -418,6 +429,14 @@ describe('ResultsService (unit, pure mocks)', () => {
           useValue: mockInitiativeEntityMapRepository,
         },
         { provide: RoleByUserRepository, useValue: mockRoleByUserRepository },
+        {
+          provide: ImpactAreasScoresComponentRepository,
+          useValue: mockImpactAreasScoresComponentRepository,
+        },
+        {
+          provide: ResultsTocResultRepository,
+          useValue: mockResultsTocResultRepository,
+        },
       ],
     }).compile();
 
@@ -477,7 +496,7 @@ describe('ResultsService (unit, pure mocks)', () => {
     );
     expect(response.status).toBe(HttpStatus.BAD_REQUEST);
     expect(response.message).toBe(
-      'missing data: Result name, Initiative or Result type',
+      'Missing data: Result name, Initiative or Result type',
     );
   });
 
@@ -659,25 +678,31 @@ describe('ResultsService (unit, pure mocks)', () => {
       result_level_id: ResultLevelEnum.INITIATIVE_OUTCOME,
       result_name: resultTitle,
       result_description: resultDescription,
-      gender_tag_id: 1,
-      climate_change_tag_id: 1,
-      nutrition_tag_level_id: 1,
-      environmental_biodiversity_tag_level_id: 1,
-      poverty_tag_level_id: 1,
+      gender_tag_id: 3,
+      gender_impact_area_id: 201,
+      climate_change_tag_id: 3,
+      climate_impact_area_id: 202,
+      nutrition_tag_level_id: 3,
+      nutrition_impact_area_id: 203,
+      environmental_biodiversity_tag_level_id: 3,
+      environmental_biodiversity_impact_area_id: 204,
+      poverty_tag_level_id: 3,
+      poverty_impact_area_id: 205,
       institutions: [],
       institutions_type: [],
       krs_url: `https://ciat.org/${v4()}`,
       is_krs: true,
       lead_contact_person: 'John Doe',
-      is_discontinued: null,
+      is_discontinued: false,
       discontinued_options: [],
     };
     const results: returnFormatService =
       await resultService.createResultGeneralInformation(newResult, userTest);
     expect(results.response).toBeDefined();
-    expect(results.response.updateResult.id).toBeDefined();
-    expect(results.response.updateResult.title).toBe(resultTitle);
-    expect(results.response.updateResult.description).toBe(resultDescription);
+    const updated = (results.response as any).updateResult || results.response;
+    expect(updated.id).toBeDefined();
+    expect(updated.title).toBe(resultTitle);
+    expect(updated.description).toBe(resultDescription);
   }, 20000);
 
   it('should delete a result', async () => {

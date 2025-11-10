@@ -1,12 +1,13 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, OnInit, OnChanges } from '@angular/core';
 import { ApiService } from '../../services/api/api.service';
-import {
-  Actor,
-  IpsrStep1Body,
-  Measure,
-  Organization
-} from '../../../pages/ipsr/pages/innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n1/model/Ipsr-step-1-body.model';
 import { TerminologyService } from '../../../internationalization/terminology.service';
+import { FieldsManagerService } from '../../services/fields-manager.service';
+import { InnovationControlListService } from '../../services/global/innovation-control-list.service';
+import { InnovationUseResultsService } from '../../services/global/innovation-use-results.service';
+import { InnovationDevelopmentLinks } from '../../../pages/results/pages/result-detail/pages/rd-result-types-pages/innovation-dev-info/model/InnovationDevelopmentLinks.model';
+import { Actor, Organization, Measure } from '../../../pages/results/pages/result-detail/pages/rd-result-types-pages/innovation-dev-info/model/innovationDevInfoBody';
+import { IpsrStep1Body } from '../../../pages/ipsr/pages/innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n1/model/Ipsr-step-1-body.model';
+
 
 @Component({
   selector: 'app-innovation-use-form',
@@ -14,18 +15,105 @@ import { TerminologyService } from '../../../internationalization/terminology.se
   styleUrls: ['./innovation-use-form.component.scss'],
   standalone: false
 })
-export class InnovationUseFormComponent {
+export class InnovationUseFormComponent implements OnInit, OnChanges {
   actorsTypeList = [];
   institutionsTypeTreeList = [];
   @Input() body = new IpsrStep1Body();
-  @Input() saving: boolean = false;
+  @Input() saving: boolean = true;
+  innovationDevelopmentLinks: InnovationDevelopmentLinks = new InnovationDevelopmentLinks();
 
   constructor(
     public api: ApiService,
-    private terminologyService: TerminologyService
+    private readonly terminologyService: TerminologyService,
+    public fieldsManagerSE: FieldsManagerService,
+    public innovationControlListSE: InnovationControlListService,
+    public innovationUseResultsSE: InnovationUseResultsService
   ) {
     this.GETAllActorsTypes();
     this.GETInstitutionsTypeTree();
+  }
+
+  ngOnInit() {
+    this.initializeComponentProperties();
+  }
+
+  ngOnChanges() {
+    this.initializeComponentProperties();
+  }
+
+  initializeComponentProperties() {
+    const body = this.body as any;
+
+    if (!body.initiative_expected_investment) {
+      body.initiative_expected_investment = [];
+    }
+    if (!body.bilateral_expected_investment) {
+      body.bilateral_expected_investment = [];
+    }
+    if (!body.institutions_expected_investment) {
+      body.institutions_expected_investment = [];
+    }
+    if (!body.reference_materials) {
+      body.reference_materials = [{ link: '' }];
+    }
+    if (!body.pictures) {
+      body.pictures = [{ link: '' }];
+    }
+    if (!body.studies_links) {
+      body.studies_links = [{ link: '' }];
+    }
+    if (!body.scaling_studies_urls) {
+      body.scaling_studies_urls = [{ link: '' }];
+    }
+    if (!body.innovation_use_2030) {
+      body.innovation_use_2030 = {
+        actors: [],
+        measures: [],
+        organization: []
+      };
+    }
+    if (body.innov_use_to_be_determined === undefined) {
+      body.innov_use_to_be_determined = false;
+    }
+    if (body.innov_use_2030_to_be_determined === undefined) {
+      body.innov_use_2030_to_be_determined = false;
+    }
+    if (!body.result) {
+      body.result = { title: '' };
+    }
+  }
+
+  get bodyAsAny(): any {
+    return this.body as any;
+  }
+
+  readiness_of_this_innovation_description() {
+    return `<ul>
+    <li>In case the innovation use level differs across countries or regions, we advise to assign the highest current innovation use level that can be supported by the evidence provided.</li>
+    <li>Be realistic in assessing the use level of the innovation and keep in mind that the claimed use level needs to be supported by evidence documentation.</li>
+    <li>The innovation use level will be quality assessed.</li>
+    <li><strong>YOUR USE LEVEL IN JUST 3 CLICKS: <a href="https://www.scalingreadiness.org/calculator-use-headless/" class="open_route" target="_blank" style="text-decoration: none !important;"><span style="border-bottom: 1px solid currentColor;">TRY THE NEW INNOVATION USE CALCULATOR</span></a></strong></li>
+    </ul>`;
+  }
+  hasReadinessLevelDiminished() {
+    const currentLevel = this.innovationControlListSE?.readinessLevelsList.find(
+      irl => irl.id === this.body?.innovation_readiness_level_id
+    );
+    const oldLevel = this.innovationControlListSE?.readinessLevelsList.find(irl => irl.id === this.body?.previous_irl);
+
+    return Number(currentLevel?.level) < Number(oldLevel?.level);
+  }
+
+  alertInfoText2() {
+    return `Please make sure you provide evidence/documentation that support the current innovation use level.<br>
+    * Evidence are inputted in the ‘Evidence’ section <a class="open_route" target="_blank" href="/result/result-detail/${this.api.resultsSE?.currentResultCode}/evidences?phase=${this.api.resultsSE?.currentResultPhase}">(click here to go there)</a><br>
+    <br>
+    Documentation may include idea-notes, concept-notes, technical report, pilot testing report, experimental data paper, newsletter, etc. It may be project reports, scientific publications, book chapters, communication materials that provide evidence of the current development/ maturity stage of the innovation.
+    `;
+  }
+
+  alertDiminishedReadinessLevel() {
+    return `It appears that the readiness level has decreased since the previous report. Please provide a justification in the text box below.`;
   }
 
   GETAllActorsTypes() {
@@ -85,11 +173,44 @@ export class InnovationUseFormComponent {
   addOther() {
     this.body.innovatonUse.measures.push(new Measure());
   }
+
+  addActor2030() {
+    const body = this.body as any;
+    if (!body.innovation_use_2030.actors) {
+      body.innovation_use_2030.actors = [];
+    }
+    body.innovation_use_2030.actors.push(new Actor());
+  }
+  addOrganization2030() {
+    const body = this.body as any;
+    if (!body.innovation_use_2030.organization) {
+      body.innovation_use_2030.organization = [];
+    }
+    body.innovation_use_2030.organization.push(new Organization());
+  }
+  addOther2030() {
+    const body = this.body as any;
+    if (!body.innovation_use_2030.measures) {
+      body.innovation_use_2030.measures = [];
+    }
+    body.innovation_use_2030.measures.push(new Measure());
+  }
   get getAllSubTypes() {
     const list = [];
     this.body.innovatonUse.organization.forEach(resp => {
       list.push({ code: resp.institution_sub_type_id });
     });
+    return list;
+  }
+
+  get getAllSubTypes2030() {
+    const list = [];
+    const body = this.body as any;
+    if (body.innovation_use_2030?.organization) {
+      body.innovation_use_2030.organization.forEach(resp => {
+        list.push({ code: resp.institution_sub_type_id });
+      });
+    }
     return list;
   }
 
@@ -113,8 +234,22 @@ export class InnovationUseFormComponent {
     return list;
   }
 
+  get disableOrganizations2030() {
+    const list = [];
+    const body = this.body as any;
+    if (body.innovation_use_2030?.organization) {
+      body.innovation_use_2030.organization.forEach(resp => {
+        if (!resp.institution_sub_type_id) list.push({ code: resp.institution_types_id });
+      });
+    }
+    return list;
+  }
+
   hasElementsWithId(list, attr) {
-    const finalList = this.api.rolesSE.readOnly ? list.filter(item => item[attr]) : list.filter(item => item.is_active != false);
+    if (!Array.isArray(list)) return 0;
+    const finalList = this.api.rolesSE.readOnly
+      ? list.filter(item => item && item[attr])
+      : list.filter(item => item && item.is_active != false);
     return finalList.length;
   }
 
@@ -161,17 +296,55 @@ export class InnovationUseFormComponent {
     this.calculateTotalField(actorItem);
   }
 
+  currentUseHeaderLabel() {
+    return this.fieldsManagerSE.isP25()
+      ? 'Current core innovation use in number of users that can be supported by evidence (within the reporting year).'
+      : 'Specify the current use of the innovation in number of users (actors/ organizations/ other) that can be supported by evidence';
+  }
+
   narrativeActors() {
     return `<ul>
     <li>
     If the innovation does not target specific groups of actors or people, then please specify the expected innovation use at organizational level or other use below.
     </li>
     <li>
-    Individuals, organizations or networks operating within or beyond the system the ${this.terminologyService.t('term.entity.singular', this.api.dataControlSE?.currentResult?.portfolio)} or intervention aims to influence and whose actions can advance or impede the ${this.terminologyService.t('term.entity.singular', this.api.dataControlSE?.currentResult?.portfolio)}’s aims.
+    Individuals, organizations or networks operating within or beyond the system the ${this.terminologyService.t('term.entity.singular', this.api.dataControlSE?.currentResult?.portfolio)} or intervention aims to influence and whose actions can advance or impede the ${this.terminologyService.t('term.entity.singular', this.api.dataControlSE?.currentResult?.portfolio)}'s aims.
     </li>
     <li>
-    The numbers for ‘youth' and 'non-youth' equal the total number for 'Women' or 'Men’.
+    The numbers for 'youth' and 'non-youth' equal the total number for 'Women' or 'Men'.
     </li>
     </ul>`;
   }
+
+  getUseLevelIndex(): number {
+    const selectedId = this.body?.innovation_use_level_id;
+    const list = this.innovationControlListSE?.useLevelsList || [];
+    if (!selectedId || !list.length) return -1;
+
+    const selected = list.find((lvl: any) => String(lvl?.id) === String(selectedId));
+    const levelNumber = Number(selected?.level);
+    return Number.isFinite(levelNumber) ? levelNumber : -1;
+  }
+
+  formatResultLabel(option: any): string {
+    if (option?.result_code && option?.name) {
+      let phaseInfo = '';
+      if (option?.acronym && option?.phase_year) {
+        phaseInfo = `(${option.acronym} - ${option.phase_year}) `;
+      } else if (option?.acronym) {
+        phaseInfo = `(${option.acronym}) `;
+      } else if (option?.phase_year) {
+        phaseInfo = `(${option.phase_year}) `;
+      }
+
+      const resultType = option?.result_type_name || option?.resultTypeName || option?.type_name || '';
+      const resultTypeInfo = resultType ? ` (${resultType})` : '';
+
+      const title = option?.title ? ` - ${option.title}` : '';
+
+      return `${phaseInfo}${option.result_code} - ${option.name}${resultTypeInfo}${title}`;
+    }
+    return option?.title || option?.name || '';
+  }
+
 }

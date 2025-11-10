@@ -96,7 +96,13 @@ describe('StepN1Component', () => {
         getAllInnoPaRegionalLeadership: () => of({ response: [] }),
         getAllInnoPaRegionalIntegrated: () => of({ response: [] }),
         getAllInnoPaActiveBackstopping: () => of({ response: [] }),
-        GETInnovationPathwayByRiId: () => of({ response: [] })
+        GETInnovationPathwayByRiId: () => of({ response: [] }),
+        // Mocks required by nested components/services used in the template
+        GET_clarisaInnovationType: () => of({ response: [] }),
+        GET_clarisaInnovationCharacteristics: () => of({ response: [] }),
+        GET_clarisaInnovationReadinessLevels: () => of({ response: [] }),
+        GET_clarisaInnovationUseLevels: () => of({ response: [] }),
+        GET_innovationUseResults: () => of({ response: [] })
       },
       rolesSE: {
         readOnly: false

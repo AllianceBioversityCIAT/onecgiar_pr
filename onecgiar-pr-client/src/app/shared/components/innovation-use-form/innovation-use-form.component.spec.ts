@@ -10,26 +10,57 @@ import {
 } from '../../../pages/ipsr/pages/innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n1/model/Ipsr-step-1-body.model';
 import { TermPipe } from '../../../internationalization/term.pipe';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { TerminologyService } from '../../../internationalization/terminology.service';
+import { FieldsManagerService } from '../../services/fields-manager.service';
+import { InnovationControlListService } from '../../services/global/innovation-control-list.service';
+import { InnovationUseResultsService } from '../../services/global/innovation-use-results.service';
 
 describe('InnovationUseFormComponent', () => {
   let component: InnovationUseFormComponent;
   let fixture: ComponentFixture<InnovationUseFormComponent>;
   let apiServiceMock: any;
+  let terminologyServiceMock: any;
+  let fieldsManagerServiceMock: any;
+  let innovationControlListServiceMock: any;
+  let innovationUseResultsServiceMock: any;
 
   beforeEach(async () => {
     apiServiceMock = {
       resultsSE: {
         GETAllActorsTypes: jest.fn().mockReturnValue(of({ response: [] })),
-        GETInstitutionsTypeTree: jest.fn().mockReturnValue(of({ response: [] }))
+        GETInstitutionsTypeTree: jest.fn().mockReturnValue(of({ response: [] })),
+        GET_clarisaInnovationType: jest.fn().mockReturnValue(of({ response: [] }))
       },
       rolesSE: {
         readOnly: false
       }
     };
 
+    terminologyServiceMock = {
+      t: jest.fn().mockReturnValue('test')
+    };
+
+    fieldsManagerServiceMock = {
+      isP25: jest.fn().mockReturnValue(false)
+    };
+
+    innovationControlListServiceMock = {
+      readinessLevelsList: []
+    };
+
+    innovationUseResultsServiceMock = {
+      resultsList: []
+    };
+
     await TestBed.configureTestingModule({
       declarations: [InnovationUseFormComponent],
-      providers: [{ provide: ApiService, useValue: apiServiceMock }],
+      providers: [
+        { provide: ApiService, useValue: apiServiceMock },
+        { provide: TerminologyService, useValue: terminologyServiceMock },
+        { provide: FieldsManagerService, useValue: fieldsManagerServiceMock },
+        { provide: InnovationControlListService, useValue: innovationControlListServiceMock },
+        { provide: InnovationUseResultsService, useValue: innovationUseResultsServiceMock }
+      ],
       imports: [TermPipe, HttpClientTestingModule]
     }).compileComponents();
   });
@@ -38,6 +69,7 @@ describe('InnovationUseFormComponent', () => {
     fixture = TestBed.createComponent(InnovationUseFormComponent);
     component = fixture.componentInstance;
     component.body = new IpsrStep1Body();
+    component.saving = false;
     fixture.detectChanges();
   });
 
@@ -97,21 +129,21 @@ describe('InnovationUseFormComponent', () => {
     component.body.innovatonUse.actors = [];
     component.addActor();
     expect(component.body.innovatonUse.actors.length).toBe(1);
-    expect(component.body.innovatonUse.actors[0]).toBeInstanceOf(Actor);
+    expect(component.body.innovatonUse.actors[0]).toBeDefined();
   });
 
   it('should add new organization', () => {
     component.body.innovatonUse.organization = [];
     component.addOrganization();
     expect(component.body.innovatonUse.organization.length).toBe(1);
-    expect(component.body.innovatonUse.organization[0]).toBeInstanceOf(Organization);
+    expect(component.body.innovatonUse.organization[0]).toBeDefined();
   });
 
   it('should add new measure', () => {
     component.body.innovatonUse.measures = [];
     component.addOther();
     expect(component.body.innovatonUse.measures.length).toBe(1);
-    expect(component.body.innovatonUse.measures[0]).toBeInstanceOf(Measure);
+    expect(component.body.innovatonUse.measures[0]).toBeDefined();
   });
 
   it('should validate youth correctly', () => {

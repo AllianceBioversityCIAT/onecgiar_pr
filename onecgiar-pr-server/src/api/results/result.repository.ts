@@ -565,6 +565,65 @@ WHERE
     }
   }
 
+  async getUserRolesForResults(
+    userId: number,
+    resultIds: (number | string)[],
+  ): Promise<
+    Array<{
+      result_id: number;
+      role_id: number | null;
+      role_name: string | null;
+    }>
+  > {
+    if (!Number.isFinite(Number(userId)) || !resultIds?.length) {
+      return [];
+    }
+
+    const normalizedIds = resultIds
+      .map((id) => Number(id))
+      .filter((id) => Number.isFinite(id));
+
+    if (!normalizedIds.length) {
+      return [];
+    }
+
+    const placeholders = normalizedIds.map(() => '?').join(', ');
+
+    const query = `
+      SELECT
+        r.id AS result_id,
+        rbu.\`role\` AS role_id,
+        ro.description AS role_name
+      FROM result r
+      INNER JOIN results_by_inititiative rbi
+        ON rbi.result_id = r.id
+        AND rbi.is_active = 1
+        AND rbi.initiative_role_id = 1
+      INNER JOIN clarisa_initiatives ci
+        ON ci.id = rbi.inititiative_id
+        AND ci.active > 0
+      LEFT JOIN role_by_user rbu
+        ON rbu.initiative_id = rbi.inititiative_id
+        AND rbu.\`user\` = ?
+        AND rbu.active = 1
+      LEFT JOIN \`role\` ro
+        ON ro.id = rbu.\`role\`
+      WHERE
+        r.id IN (${placeholders})
+        AND r.is_active > 0;
+    `;
+
+    try {
+      return await this.query(query, [userId, ...normalizedIds]);
+    } catch (error) {
+      throw {
+        message: `[${ResultRepository.name}] => getUserRolesForResults error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
   async AllResultsByRoleUserAndInitiativeFiltered(
     userid: number,
     filters?: {
@@ -959,11 +1018,15 @@ WHERE
     r.legacy_id,
     r.no_applicable_partner,
     r.geographic_scope_id,
+    r.has_extra_geo_scope,
+    r.extra_geo_scope_id,
     rbi.inititiative_id as initiative_id,
     rl.name as result_level_name,
     rt.name as result_type_name,
     r.has_regions,
     r.has_countries,
+    r.has_extra_regions,
+    r.has_extra_countries,
     ci.name as initiative_name,
     ci.short_name as initiative_short_name,
     ci.official_code as initiative_official_code,
@@ -1112,6 +1175,7 @@ WHERE
     r.is_active,
     r.last_updated_date,
     r.gender_tag_level_id,
+    r.gender_impact_area_id,
     r.result_type_id,
     rt.name as result_type_name,
     r.status,
@@ -1126,9 +1190,13 @@ WHERE
     r.title,
     r.legacy_id,
     r.climate_change_tag_level_id,
+    r.climate_impact_area_id,
     r.nutrition_tag_level_id,
+    r.nutrition_impact_area_id,
     r.environmental_biodiversity_tag_level_id,
+    r.environmental_biodiversity_impact_area_id,
     r.poverty_tag_level_id,
+    r.poverty_impact_area_id,
     r.is_krs,
     r.krs_url,
     r.no_applicable_partner,
@@ -2087,6 +2155,133 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       throw this._handlersError.returnErrorRepository({
         className: ResultRepository.name,
         error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async getIndicatorContributionSummaryByProgram(initiativeId: number) {
+    const query = `
+      SELECT
+        r.result_type_id,
+        rt.name AS result_type_name,
+        r.status_id,
+        COUNT(DISTINCT r.id) AS total_results
+      FROM result r
+      INNER JOIN results_by_inititiative rbi
+        ON rbi.result_id = r.id
+        AND rbi.inititiative_id = ?
+        AND rbi.is_active = 1
+      INNER JOIN \`version\` v
+        ON v.id = r.version_id
+        AND v.is_active = 1
+        AND v.status = 1
+        AND v.app_module_id = 1
+      INNER JOIN results_toc_result rtr
+        ON rtr.results_id = r.id
+        AND (rtr.is_active = 1 OR r.is_active = 1)
+        AND (rtr.initiative_id IS NULL OR rtr.initiative_id = rbi.inititiative_id)
+      INNER JOIN results_toc_result_indicators rtri
+        ON rtri.results_toc_results_id = rtr.result_toc_result_id
+        AND rtri.is_active = 1
+        AND rtri.is_not_aplicable = 0
+      LEFT JOIN result_indicators_targets rit
+        ON rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
+        AND rit.is_active = 1
+      INNER JOIN result_type rt
+        ON rt.id = r.result_type_id
+      WHERE
+        r.is_active = 1
+        AND r.status_id IN (1, 2, 3)
+        AND r.result_level_id IN (3, 4)
+        AND r.result_type_id IN (1, 2, 4, 5, 6, 7, 8)
+        AND rit.contributing_indicator IS NOT NULL
+      GROUP BY
+        r.result_type_id,
+        rt.name,
+        r.status_id
+      ORDER BY
+        rt.name ASC,
+        r.status_id ASC;
+    `;
+
+    try {
+      return await this.query(query, [initiativeId]);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  async getActiveResultTypes() {
+    const query = `
+      SELECT
+        rt.id,
+        rt.name
+      FROM result_type rt
+      WHERE rt.is_active = 1
+        AND rt.id IN (1, 2, 4, 5, 6, 7, 8, 10)
+      ORDER BY rt.name ASC;
+    `;
+
+    try {
+      return await this.query(query);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  async getResultsForInnovUse() {
+    const query = `
+    SELECT 
+      r.id,
+      cp.acronym,
+      v.phase_year,
+      r.result_code,
+      rt.name,
+      r.title
+    FROM result r
+    INNER JOIN result_type rt ON r.result_type_id = rt.id
+      AND rt.is_active = true
+    INNER JOIN version v ON r.version_id = v.id
+      AND v.is_active = true
+    INNER JOIN clarisa_portfolios cp ON v.portfolio_id = cp.id
+    WHERE         
+      r.version_id = 34
+        AND r.is_active = true
+    UNION ALL
+    SELECT 
+      r.id,
+      cp.acronym,
+      v.phase_year,
+      r.result_code,
+      rt.name,
+      r.title
+    FROM result r
+    INNER JOIN result_type rt ON r.result_type_id = rt.id
+      AND rt.is_active = true
+    INNER JOIN version v ON r.version_id = v.id
+      AND v.is_active = true
+    INNER JOIN clarisa_portfolios cp ON v.portfolio_id = cp.id
+    WHERE         
+      cp.id = 2
+        AND r.result_type_id IN (2, 7)
+        AND r.is_active = true;
+    `;
+
+    try {
+      return await this.query(query);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
         debug: true,
       });
     }

@@ -1,0 +1,105 @@
+<p-table
+  id="tocResultsByAowIdTable"
+  styleClass="p-datatable-gridlines p-datatable-sm"
+  [value]="tableData()"
+  [loading]="entityAowService.isLoadingTocResultsByAowId() || entityAowService.isLoadingTocResults2030Outcomes()"
+  sortField="result_title"
+  [sortOrder]="1"
+  responsiveLayout="scroll"
+  dataKey="result_title"
+  sortMode="single"
+  rowGroupMode="subheader"
+  groupRowsBy="result_title">
+  <ng-template pTemplate="header">
+    <tr>
+      @for (column of columnOrder(); track column.attr) {
+        <th [id]="column.attr" style="text-align: center" [style.width]="column.width">
+          {{ column.title }}
+        </th>
+      }
+      <th id="actions" style="text-align: center; width: 16%">Actions</th>
+    </tr>
+  </ng-template>
+
+  <ng-template #groupheader let-item let-rowIndex="rowIndex" let-expanded="expanded">
+    <tr>
+      <td colspan="8" style="background: var(--pr-color-primary-25); border-bottom: 1px solid var(--pr-color-secondary-50)">
+        <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; padding-right: 20px">
+          <div style="display: flex; justify-content: flex-start; align-items: center; gap: 0.5rem; cursor: pointer" pRipple [pRowToggler]="item">
+            <button
+              type="button"
+              pButton
+              class="p-button-text p-button-rounded"
+              style="border: none; box-shadow: none !important"
+              [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"></button>
+
+            <span style="font-weight: bold">{{ item.result_title }}</span>
+          </div>
+        </div>
+      </td>
+    </tr>
+  </ng-template>
+
+  <ng-template #expandedrow let-item>
+    @for (result of item.indicators; track $index) {
+      <tr>
+        <td class="text-secondary-300" style="min-width: 150px !important">{{ result.indicator_description }}</td>
+        <td>
+          <div class="tab-content_chip" [pTooltip]="!result.type_name ? 'This information should be filled in the ToC Board' : ''">
+            {{ result.type_name || 'Not provided' }}
+          </div>
+        </td>
+        <td style="text-align: center">{{ result.target_value_sum }}</td>
+        <td style="text-align: center">{{ result.actual_achieved_value_sum }}</td>
+        <td>
+          <div class="tab-content_progress">
+            <p-progressbar [value]="getProgress(result.progress_percentage)" [showValue]="false" [style]="{ width: '65px', height: '8px' }" />
+            <p class="tab-content_progress_value">{{ result.progress_percentage }}</p>
+          </div>
+        </td>
+        <td>
+          <div
+            class="tab-content_chip"
+            [ngClass]="{
+              'not-started': getProgress(result.progress_percentage) === 0,
+              'in-progress': getProgress(result.progress_percentage) >= 1 && getProgress(result.progress_percentage) <= 99,
+              achieved: getProgress(result.progress_percentage) === 100,
+              overachieved: getProgress(result.progress_percentage) > 100
+            }">
+            {{ getStatusLabel(result.progress_percentage) }}
+          </div>
+        </td>
+        <td>
+          <div class="tab-content_actions">
+            <button
+              pButton
+              label="Report result"
+              type="button"
+              class="pr-body-3 tab-content_actions_button"
+              (click)="openReportResultModal(item, result.indicator_id)"></button>
+            <button
+              pButton
+              label="View results"
+              type="button"
+              class="p-button-outlined pr-body-3 tab-content_actions_button"
+              (click)="openViewResultDrawer(item, result.indicator_id)"></button>
+          </div>
+        </td>
+      </tr>
+    }
+  </ng-template>
+
+  <ng-template #emptymessage>
+    <tr style="height: 200px">
+      <td colspan="8" class="tab-content_empty">There are no High-Level Outputs Indicators found.</td>
+    </tr>
+  </ng-template>
+</p-table>
+
+@if (entityAowService.showReportResultModal()) {
+  <app-aow-hlo-create-modal></app-aow-hlo-create-modal>
+}
+
+@if (entityAowService.showViewResultDrawer()) {
+  <app-aow-view-results-drawer></app-aow-view-results-drawer>
+}

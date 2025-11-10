@@ -1,0 +1,86 @@
+<div class="report-result-content">
+  <div class="report-result-content_left">
+    <div class="report-result-content_left_header">
+      <span class="report-result-title">Report result</span>
+      <span class="report-result-description">Make sure the result you want to report isn't already in the PRMS Reporting Tool. If it exists, simply map it to your Science Program/Accelerator instead of creating a new one.</span>
+    </div>
+    <div class="report-result-content_left_content">
+      <app-pr-select
+        [group]="true"
+        groupName="name"
+        [options]="availableInitiativesSig()"
+        label="Report for"
+        [isStatic]="true"
+        optionLabel="full_name"
+        optionValue="initiative_id"
+        [placeholder]="'Select ' + ('term.entity.singular' | term: this.api.dataControlSE?.reportingCurrentPhase?.portfolioAcronym)"
+        [(ngModel)]="this.resultLevelSE.resultBody.initiative_id"
+        [disabled]="disableInitiativeSelect"
+        [readOnly]="disableInitiativeSelect"
+        (ngModelChange)="onSelectInit()">
+      </app-pr-select>
+
+      <app-result-level-buttons [currentResultType]="this.currentResultType" [hideAlert]="true"></app-result-level-buttons>
+
+      <app-pr-radio-button
+        label="Indicator category"
+        *ngIf="this.resultLevelSE?.currentResultTypeList?.length"
+        [options]="this.resultLevelSE.currentResultTypeList"
+        [isStatic]="true"
+        optionLabel="name"
+        optionValue="id"
+        [(ngModel)]="this.resultLevelSE.resultBody.result_type_id"
+        (ngModelChange)="clean()">
+      </app-pr-radio-button>
+
+      <div *ngIf="this.resultLevelSE.resultBody.result_level_id">
+        <app-alert-status *ngIf="isKnowledgeProduct" [description]="this.kpAlertDescription"> </app-alert-status>
+
+        <div [ngClass]="{ mqap_sync_title: isKnowledgeProduct }">
+          <app-pr-input
+            *ngIf="isKnowledgeProduct"
+            [isStatic]="true"
+            placeholder="Handle..."
+            label="CGSpace link"
+            type="text"
+            [(ngModel)]="this.resultLevelSE.resultBody.handler">
+          </app-pr-input>
+          <button type="button" (click)="GET_mqapValidation()" class="sync_button" *ngIf="isKnowledgeProduct" [ngClass]="{ globalDisabled: validating }" [disabled]="validating">
+            <app-pr-button
+              padding="medium"
+              [text]="validating ? 'Fetching metadata from CGSpace' : 'Sync'"
+              icon="sync"
+              [rotating]="validating"></app-pr-button>
+          </button>
+        </div>
+
+        <div *ngIf="isKnowledgeProduct && mqapUrlError.status" class="error__link" [innerHTML]="mqapUrlError.message"></div>
+
+        <app-pr-input
+          [disabled]="isKnowledgeProduct"
+          [readOnly]="isKnowledgeProduct"
+          [isStatic]="true"
+          *ngIf="this.resultLevelSE.resultBody.result_type_id"
+          [placeholder]="resultTypeNamePlaceholder + ''"
+          label="Title"
+          type="text"
+          [maxWords]="30"
+          [required]="resultLevelSE.resultBody.result_type_id != 6"
+          [description]="
+            isKnowledgeProduct
+              ? 'Title retrieved from CGSpace'
+              : 'To search for results that have already been reported, enter key words into the title box below. If your result has not already been reported, you can add it here.'
+          "
+          [(ngModel)]="this.resultLevelSE.resultBody.result_name"
+          (ngModelChange)="depthSearch(this.resultLevelSE.resultBody.result_name)">
+        </app-pr-input>
+      </div>
+
+      <div class="report-result-content_left_content_actions">
+        <app-save-button [editable]="true" (clickSave)="onSaveSection()" [disabled]="!this.resultLevelSE.resultBody.initiative_id" text="Save and continue"> </app-save-button>
+      </div>
+    </div>
+  </div>
+ 
+</div>
+

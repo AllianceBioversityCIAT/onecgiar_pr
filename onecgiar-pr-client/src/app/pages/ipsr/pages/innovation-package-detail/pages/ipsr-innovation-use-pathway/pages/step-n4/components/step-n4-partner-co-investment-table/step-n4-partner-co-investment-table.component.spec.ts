@@ -23,13 +23,40 @@ describe('StepN4PartnerCoInvestmentTableComponent', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
-  describe('StepN4PartnerCoInvestmentTableComponent', () => {
-    describe('deletePartner', () => {
-      it('should set is_active to false', () => {
-        const partner = { is_active: true };
-        component.deletePartner(partner);
-        expect(partner.is_active).toBe(false);
-      });
+
+  describe('deletePartner', () => {
+    it('should set is_active to false', () => {
+      const partner = { is_active: true };
+      component.deletePartner(partner);
+      expect(partner.is_active).toBe(false);
+    });
+  });
+
+  describe('hasElementsWithId', () => {
+    it('should filter by created_by when readOnly is true', () => {
+      component.rolesSE.readOnly = true;
+      const list = [
+        { obj_result_institution: { created_by: 'user1', is_active: true } },
+        { obj_result_institution: { created_by: null, is_active: true } },
+        { obj_result_institution: { created_by: 'user2', is_active: false } }
+      ];
+
+      const result = component.hasElementsWithId(list);
+
+      expect(result).toBe(2);
+    });
+
+    it('should filter by is_active when readOnly is false', () => {
+      component.rolesSE.readOnly = false;
+      const list = [
+        { obj_result_institution: { created_by: 'user1', is_active: true } },
+        { obj_result_institution: { created_by: null, is_active: true } },
+        { obj_result_institution: { created_by: 'user2', is_active: false } }
+      ];
+
+      const result = component.hasElementsWithId(list);
+
+      expect(result).toBe(2);
     });
   });
 });

@@ -86,6 +86,14 @@ import { NotificationTypeRepository } from '../notification/repositories/notific
 import { NotificationRepository } from '../notification/repositories/notification.respository';
 import { SocketManagementService } from '../../shared/microservices/socket-management/socket-management.service';
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
+import { ImpactAreasScoresComponentsModule } from './impact_areas_scores_components/impact_areas_scores_components.module';
+import { ResultsByProjectsModule } from './results_by_projects/results_by_projects.module';
+import { ResultsTocResultRepository } from './results-toc-results/repositories/results-toc-results.repository';
+import { ResultsTocImpactAreaTargetRepository } from './results-toc-results/repositories/result-toc-impact-area.repository';
+import { ResultsTocSdgTargetRepository } from './results-toc-results/repositories/result-toc-sdg-target.repository';
+import { ResultsSdgTargetRepository } from './results-toc-results/repositories/results-sdg-targets.repository';
+import { ResultsActionAreaOutcomeRepository } from './results-toc-results/repositories/result-toc-action-area.repository';
+import { ResultsTocTargetIndicatorRepository } from './results-toc-results/repositories/result-toc-result-target-indicator.repository';
 
 @Module({
   controllers: [ResultsController],
@@ -142,6 +150,8 @@ import { UserRepository } from '../../auth/modules/user/repositories/user.reposi
     ResultFoldersModule,
     AdUsersModule,
     NotificationModule,
+    ImpactAreasScoresComponentsModule,
+    ResultsByProjectsModule,
   ],
   providers: [
     ResultsService,
@@ -169,8 +179,14 @@ import { UserRepository } from '../../auth/modules/user/repositories/user.reposi
     NotificationTypeRepository,
     SocketManagementService,
     UserRepository,
+    ResultsTocResultRepository,
+    ResultsTocImpactAreaTargetRepository,
+    ResultsTocSdgTargetRepository,
+    ResultsSdgTargetRepository,
+    ResultsActionAreaOutcomeRepository,
+    ResultsTocTargetIndicatorRepository
   ],
-  exports: [ResultRepository, JwtMiddleware],
+  exports: [ResultRepository, JwtMiddleware, ResultsService],
 })
 export class ResultsModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

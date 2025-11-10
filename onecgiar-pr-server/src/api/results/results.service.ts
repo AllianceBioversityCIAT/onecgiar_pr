@@ -81,6 +81,8 @@ import {
   NotificationLevelEnum,
   NotificationTypeEnum,
 } from '../notification/enum/notification.enum';
+import { ImpactAreasScoresComponentRepository } from './impact_areas_scores_components/repositories/impact_areas_scores_components.repository';
+import { ResultsTocResultRepository } from './results-toc-results/repositories/results-toc-results.repository';
 
 @Injectable()
 export class ResultsService {
@@ -104,6 +106,7 @@ export class ResultsService {
     private readonly _resultRegionsService: ResultRegionsService,
     private readonly _resultCountriesService: ResultCountriesService,
     private readonly _genderTagRepository: GenderTagRepository,
+    private readonly _impactAreasScoresComponentRepository: ImpactAreasScoresComponentRepository,
     private readonly _resultRegionRepository: ResultRegionRepository,
     private readonly _resultCountryRepository: ResultCountryRepository,
     private readonly _resultKnowledgeProductRepository: ResultsKnowledgeProductsRepository,
@@ -121,6 +124,7 @@ export class ResultsService {
     private readonly _resultsInvestmentDiscontinuedOptionRepository: ResultsInvestmentDiscontinuedOptionRepository,
     private readonly _resultInitiativeBudgetRepository: ResultInitiativeBudgetRepository,
     private readonly _resultsCenterRepository: ResultsCenterRepository,
+    private readonly _resultsTocResultRepository: ResultsTocResultRepository,
     private readonly _initiativeEntityMapRepository?: InitiativeEntityMapRepository,
     private readonly _roleByUserRepository?: RoleByUserRepository,
     @Optional()
@@ -145,7 +149,7 @@ export class ResultsService {
       ) {
         throw {
           response: {},
-          message: 'missing data: Result name, Initiative or Result type',
+          message: 'Missing data: Result name, Initiative or Result type',
           status: HttpStatus.BAD_REQUEST,
         };
       }
@@ -378,6 +382,13 @@ export class ResultsService {
     user: TokenDto,
   ) {
     try {
+      const {
+        gender_impact_area_id,
+        climate_impact_area_id,
+        nutrition_impact_area_id,
+        environmental_biodiversity_impact_area_id,
+        poverty_impact_area_id,
+      } = resultGeneralInformation;
       const result = await this._resultRepository.getResultById(
         resultGeneralInformation.result_id,
       );
@@ -422,6 +433,21 @@ export class ResultsService {
         };
       }
 
+      let genderTagComponent = null;
+      if (Number(genderTag?.id) === 3 && gender_impact_area_id != null) {
+        genderTagComponent =
+          await this._impactAreasScoresComponentRepository.findOne({
+            where: { id: gender_impact_area_id },
+          });
+        if (!genderTagComponent) {
+          throw {
+            response: {},
+            message: 'The Gender tag component does not exist',
+            status: HttpStatus.NOT_FOUND,
+          };
+        }
+      }
+
       const climateTag = await this._genderTagRepository.findOne({
         where: { id: resultGeneralInformation.climate_change_tag_id },
       });
@@ -433,15 +459,45 @@ export class ResultsService {
         };
       }
 
+      let climateTagComponent = null;
+      if (Number(climateTag?.id) === 3 && climate_impact_area_id != null) {
+        climateTagComponent =
+          await this._impactAreasScoresComponentRepository.findOne({
+            where: { id: climate_impact_area_id },
+          });
+        if (!climateTagComponent) {
+          throw {
+            response: {},
+            message: 'The Climate change tag component does not exist',
+            status: HttpStatus.NOT_FOUND,
+          };
+        }
+      }
+
       const nutritionTag = await this._genderTagRepository.findOne({
         where: { id: resultGeneralInformation.nutrition_tag_level_id },
       });
-      if (!climateTag) {
+      if (!nutritionTag) {
         throw {
           response: {},
           message: 'The Nutrition tag does not exist',
           status: HttpStatus.NOT_FOUND,
         };
+      }
+
+      let nutritionTagComponent = null;
+      if (Number(nutritionTag?.id) === 3 && nutrition_impact_area_id != null) {
+        nutritionTagComponent =
+          await this._impactAreasScoresComponentRepository.findOne({
+            where: { id: nutrition_impact_area_id },
+          });
+        if (!nutritionTagComponent) {
+          throw {
+            response: {},
+            message: 'The Nutrition tag component does not exist',
+            status: HttpStatus.NOT_FOUND,
+          };
+        }
       }
 
       const environmentalBiodiversityTag =
@@ -450,7 +506,7 @@ export class ResultsService {
             id: resultGeneralInformation.environmental_biodiversity_tag_level_id,
           },
         });
-      if (!climateTag) {
+      if (!environmentalBiodiversityTag) {
         throw {
           response: {},
           message: 'The Environmental or/and biodiversity tag does not exist',
@@ -458,15 +514,51 @@ export class ResultsService {
         };
       }
 
+      let environmentalBiodiversityTagComponent = null;
+      if (
+        Number(environmentalBiodiversityTag?.id) === 3 &&
+        environmental_biodiversity_impact_area_id != null
+      ) {
+        environmentalBiodiversityTagComponent =
+          await this._impactAreasScoresComponentRepository.findOne({
+            where: {
+              id: environmental_biodiversity_impact_area_id,
+            },
+          });
+        if (!environmentalBiodiversityTagComponent) {
+          throw {
+            response: {},
+            message:
+              'The Environmental or/and biodiversity tag component does not exist',
+            status: HttpStatus.NOT_FOUND,
+          };
+        }
+      }
+
       const povertyTag = await this._genderTagRepository.findOne({
         where: { id: resultGeneralInformation.poverty_tag_level_id },
       });
-      if (!climateTag) {
+      if (!povertyTag) {
         throw {
           response: {},
           message: 'The Poverty tag does not exist',
           status: HttpStatus.NOT_FOUND,
         };
+      }
+
+      let povertyTagComponent = null;
+      if (Number(povertyTag?.id) === 3 && poverty_impact_area_id != null) {
+        povertyTagComponent =
+          await this._impactAreasScoresComponentRepository.findOne({
+            where: { id: poverty_impact_area_id },
+          });
+        if (!povertyTagComponent) {
+          throw {
+            response: {},
+            message: 'The Poverty tag component does not exist',
+            status: HttpStatus.NOT_FOUND,
+          };
+        }
       }
 
       if (resultGeneralInformation.institutions.length) {
@@ -620,17 +712,33 @@ export class ResultsService {
         gender_tag_level_id: resultGeneralInformation.gender_tag_id
           ? genderTag.id
           : null,
+        gender_impact_area_id: genderTagComponent
+          ? genderTagComponent.id
+          : null,
         climate_change_tag_level_id:
           resultGeneralInformation.climate_change_tag_id ? climateTag.id : null,
+        climate_impact_area_id: climateTagComponent
+          ? climateTagComponent.id
+          : null,
         nutrition_tag_level_id: resultGeneralInformation.nutrition_tag_level_id
           ? nutritionTag.id
+          : null,
+        nutrition_impact_area_id: nutritionTagComponent
+          ? nutritionTagComponent.id
           : null,
         environmental_biodiversity_tag_level_id:
           resultGeneralInformation.environmental_biodiversity_tag_level_id
             ? environmentalBiodiversityTag.id
             : null,
+        environmental_biodiversity_impact_area_id:
+          environmentalBiodiversityTagComponent
+            ? environmentalBiodiversityTagComponent.id
+            : null,
         poverty_tag_level_id: resultGeneralInformation.poverty_tag_level_id
           ? povertyTag.id
+          : null,
+        poverty_impact_area_id: povertyTagComponent
+          ? povertyTagComponent.id
           : null,
         krs_url: resultGeneralInformation.krs_url,
         is_krs: resultGeneralInformation.is_krs,
@@ -1781,11 +1889,17 @@ export class ResultsService {
           result_name: result.title ?? null,
           result_description: result.description ?? null,
           gender_tag_id: result.gender_tag_level_id || null,
+          gender_impact_area_id: result.gender_impact_area_id || null,
           climate_change_tag_id: result.climate_change_tag_level_id || null,
+          climate_impact_area_id: result.climate_impact_area_id || null,
           nutrition_tag_level_id: result.nutrition_tag_level_id || null,
+          nutrition_impact_area_id: result.nutrition_impact_area_id || null,
           environmental_biodiversity_tag_level_id:
             result.environmental_biodiversity_tag_level_id || null,
+          environmental_biodiversity_impact_area_id:
+            result.environmental_biodiversity_impact_area_id || null,
           poverty_tag_level_id: result.poverty_tag_level_id || null,
+          poverty_impact_area_id: result.poverty_impact_area_id || null,
           institutions: institutions,
           institutions_type: institutionsType,
           krs_url: result.krs_url ?? null,
@@ -1999,6 +2113,9 @@ export class ResultsService {
         return;
       }
 
+      this._logger.verbose(
+        `Emitting result created notification for result ${result.id}`,
+      );
       await this._notificationService.emitResultNotification(
         NotificationLevelEnum.RESULT,
         NotificationTypeEnum.RESULT_CREATED,
@@ -2053,7 +2170,7 @@ export class ResultsService {
           active: true,
           initiative_id: IsNull(),
           action_area_id: IsNull(),
-          role: In([RoleEnum.ADMIN, RoleEnum.GUEST]),
+          role: In([RoleEnum.ADMIN]),
         },
       });
 
@@ -2071,6 +2188,59 @@ export class ResultsService {
         error as Error,
       );
       return [];
+    }
+  }
+
+  async createOwnerResultV2(
+    createResultDto: CreateResultDto,
+    user: TokenDto,
+    isAdmin?: boolean,
+    versionId?: number,
+  ): Promise<returnFormatResult | returnErrorDto> {
+    const result = await this.createOwnerResult(
+      createResultDto,
+      user,
+      isAdmin,
+      versionId,
+    );
+
+    if (
+      result.status === HttpStatus.CREATED &&
+      result.response &&
+      (result.response as Result).id
+    ) {
+      try {
+        await this._resultsTocResultRepository.save({
+          planned_result: false,
+          toc_level_id: null,
+          result_id: (result.response as Result).id,
+          initiative_ids: createResultDto.initiative_id,
+          created_by: user.id,
+          last_updated_by: user.id,
+          is_active: true,
+        });
+      } catch (error) {
+        this._logger.error(
+          `Failed to create ResultsTocResult for result ${(result.response as Result).id}`,
+          error,
+        );
+      }
+    }
+
+    return result;
+  }
+
+  async getAllResultsForInnovUse() {
+    try {
+      const results = await this._resultRepository.getResultsForInnovUse();
+
+      return {
+        response: results,
+        message: 'Results retrieved successfully',
+        status: 200,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 }

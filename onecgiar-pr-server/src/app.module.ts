@@ -50,6 +50,7 @@ import { AdUsersModule } from './api/ad_users/ad_users.module';
 import { InitiativeEntityMapModule } from './api/initiative_entity_map/initiative_entity_map.module';
 import { apiVersionMiddleware } from './shared/middleware/api-versioning.middleware';
 import { BilateralModule } from './api/bilateral/bilateral.module';
+import { ResultsFrameworkReportingModule } from './api/results-framework-reporting/results-framework-reporting.module';
 
 @Module({
   imports: [
@@ -99,6 +100,7 @@ import { BilateralModule } from './api/bilateral/bilateral.module';
     AdUsersModule,
     InitiativeEntityMapModule,
     BilateralModule,
+    ResultsFrameworkReportingModule,
   ],
   controllers: [AppController],
   providers: [
@@ -125,7 +127,12 @@ export class AppModule implements NestModule {
         { path: 'api/platform-report/(.*)', method: RequestMethod.ALL },
         { path: 'api/bilateral/(.*)', method: RequestMethod.ALL },
       )
-      .forRoutes({ path: 'api/*', method: RequestMethod.ALL });
+      .forRoutes(
+        { path: 'api/(.*)', method: RequestMethod.ALL },
+        { path: 'v2/(.*)', method: RequestMethod.ALL },
+        { path: 'clarisa/(.*)', method: RequestMethod.ALL },
+        { path: 'toc/(.*)', method: RequestMethod.ALL },
+      );
 
     consumer
       .apply(JwtMiddleware)

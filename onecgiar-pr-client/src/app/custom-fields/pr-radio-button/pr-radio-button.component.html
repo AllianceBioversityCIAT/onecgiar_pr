@@ -1,32 +1,53 @@
-<app-pr-field-header [label]="this.label" [description]="this.description" [required]="this.required"
-    [useColon]="false">
-</app-pr-field-header>
+@if (this.preventFieldRender()) {
+  <app-pr-field-header [label]="this.label" [description]="this.description" [required]="this.required" [useColon]="false"> </app-pr-field-header>
 
-<div class="pr-field" [ngClass]="{'mandatory': this.required,'complete': value !== null && value !== undefined}">
-    <div class="radioButtonList"
-        [ngClass]="{'verticalAlignment': this.verticalAlignment,'block-field':(readOnly || this.rolesSE.readOnly) && (!isStatic)}"
-        [hidden]="hideOptions">
-        <div *ngFor="let option of this.options; let i=index">
-            <div class="radioButton">
-                <p-radioButton (click)="onSelect()" [id]="'radio_' + i" name="groupname" [value]="option[optionValue]" [(ngModel)]="value"
-                    [disabled]="(readOnly || this.rolesSE.readOnly) && (!isStatic)">
-                </p-radioButton>
-                <label [for]="'radio_' + i" class="name pr-body-2">{{option[this.optionLabel]}}</label>
-            </div>
-
-            <ng-container *ngIf="option?.subOptions?.length && value === option[optionValue]">
-                <p class="radioButton__subLabel" *ngIf="option?.subOptions?.length">{{this.subLabel}}</p>
-                <div *ngFor="let checkbox of option[this.checkboxConfig?.listAttr]" class="checkboxList">
-                    <app-pr-checkbox [label]="checkbox[this.checkboxConfig.optionLabel]"
-                        [(ngModel)]="checkbox[this.checkboxConfig.optionValue]"
-                        (ngModelChange)="checkbox.answer_text && setAnswerTextToNull(checkbox)"
-                        [readOnly]="this.value !== option[this.optionValue] || (readOnly || this.rolesSE.readOnly) && (!isStatic)">
-                    </app-pr-checkbox>
-                    <app-pr-input placeholder="" *ngIf="checkbox?.question_text == 'Other'" variant="xs"
-                        [(ngModel)]="checkbox[this.checkboxConfig.optionTextValue]"
-                        [disabled]="!checkbox[this.checkboxConfig.optionValue] || (readOnly || this.rolesSE.readOnly) && (!isStatic)"></app-pr-input>
-                </div>
-            </ng-container>
+  <div class="pr-field" [ngClass]="{ mandatory: this.required, complete: value !== null && value !== undefined }">
+    <div
+      class="radioButtonList"
+      [ngClass]="{ verticalAlignment: this.verticalAlignment, 'block-field': (readOnly || this.rolesSE.readOnly) && !isStatic }"
+      [hidden]="hideOptions">
+      <div *ngFor="let option of this.options; let i = index">
+        <div class="radioButton">
+          <p-radioButton
+            (click)="onSelect()"
+            [id]="'radio_' + i"
+            name="groupname"
+            [value]="option[optionValue]"
+            [(ngModel)]="value"
+            [disabled]="(readOnly || this.rolesSE.readOnly) && !isStatic">
+          </p-radioButton>
+          <label [for]="'radio_' + i" class="name pr-body-2">{{ option[this.optionLabel] }}</label>
         </div>
+
+        <div *ngIf="textInputWhenSelectedLabels?.includes(option[optionLabel]) && value === option[optionValue]" style="margin-top: 18px; max-width: 300px;">
+          <app-pr-input
+            [label]="textInputLabelOverrides?.[option[optionLabel]] ?? textInputLabel"
+            [placeholder]="textInputPlaceholderOverrides?.[option[optionLabel]] ?? textInputPlaceholder"
+            variant="xs"
+            [(ngModel)]="option.answer_text"
+            [required]="textInputRequiredWhenSelectedLabels?.includes(option[optionLabel])"
+            [disabled]="((readOnly || this.rolesSE.readOnly) && !isStatic)">
+          </app-pr-input>
+        </div>
+
+        <ng-container *ngIf="option?.subOptions?.length && value === option[optionValue]">
+          <p class="radioButton__subLabel" *ngIf="option?.subOptions?.length">{{ this.subLabel }}</p>
+          <div *ngFor="let checkbox of option[this.checkboxConfig?.listAttr]" class="checkboxList">
+            <app-pr-checkbox
+              [label]="checkbox[this.checkboxConfig.optionLabel]"
+              [(ngModel)]="checkbox[this.checkboxConfig.optionValue]"
+              (ngModelChange)="checkbox.answer_text && setAnswerTextToNull(checkbox)"
+              [readOnly]="this.value !== option[this.optionValue] || ((readOnly || this.rolesSE.readOnly) && !isStatic)">
+            </app-pr-checkbox>
+            <app-pr-input
+              placeholder=""
+              *ngIf="checkbox?.question_text == 'Other'"
+              variant="xs"
+              [(ngModel)]="checkbox[this.checkboxConfig.optionTextValue]"
+              [disabled]="!checkbox[this.checkboxConfig.optionValue] || ((readOnly || this.rolesSE.readOnly) && !isStatic)"></app-pr-input>
+          </div>
+        </ng-container>
+      </div>
     </div>
-</div>
+  </div>
+}

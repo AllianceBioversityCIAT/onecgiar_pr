@@ -63,7 +63,7 @@ describe('HeaderPanelComponent', () => {
 
     component.goToNotifications();
 
-    expect(routerNavigateSpy).toHaveBeenCalledWith(['result/results-outlet/results-notifications/requests']);
+    expect(routerNavigateSpy).toHaveBeenCalledWith(['result/results-outlet/results-notifications/updates']);
 
     routerNavigateSpy.mockRestore();
   });

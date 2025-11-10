@@ -10,14 +10,25 @@ import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.modu
 import { BreadcrumbModule } from '../../../../shared/components/breadcrumb/breadcrumb.module';
 import { NoEditContainerComponent } from './components/no-edit-container/no-edit-container.component';
 import { ButtonModule } from 'primeng/button';
-import { ResultTitleComponent } from './components/result-title/result-title.component';
 import { SubmissionModalModule } from './components/submission-modal/submission-modal.module';
 import { UnsubmitModalModule } from './components/unsubmit-modal/unsubmit-modal.module';
 import { PdfActionsModule } from './components/pdf-actions/pdf-actions.module';
 import { ToastModule } from 'primeng/toast';
 import { PhaseSwitcherModule } from '../../../../shared/components/phase-switcher/phase-switcher.module';
 @NgModule({
-  declarations: [ResultDetailComponent, PanelMenuComponent, PanelMenuPipe, NoEditContainerComponent, ResultTitleComponent],
-  imports: [CommonModule, ResultDetailRoutingModule, PartnersRequestModule, CustomFieldsModule, BreadcrumbModule, ButtonModule, SubmissionModalModule, UnsubmitModalModule, PdfActionsModule, ToastModule, PhaseSwitcherModule]
+  declarations: [ResultDetailComponent, PanelMenuComponent, PanelMenuPipe, NoEditContainerComponent],
+  imports: [
+    CommonModule,
+    ResultDetailRoutingModule,
+    PartnersRequestModule,
+    CustomFieldsModule,
+    BreadcrumbModule,
+    ButtonModule,
+    SubmissionModalModule,
+    UnsubmitModalModule,
+    PdfActionsModule,
+    ToastModule,
+    PhaseSwitcherModule
+  ]
 })
 export class ResultDetailModule {}

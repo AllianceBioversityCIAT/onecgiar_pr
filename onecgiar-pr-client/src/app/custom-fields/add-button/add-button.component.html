@@ -1,5 +1,5 @@
 <div class="add_button_container">
-    <div class="add_button_content" (click)="clickEvent.emit()">
+    <div class="add_button_content" [ngClass]="{ disabled: disabled }" (click)="!disabled ? clickEvent.emit() : null">
         <div class="name">{{this.name}}</div>
         <div class="icon_container">
             <div class="icon">
