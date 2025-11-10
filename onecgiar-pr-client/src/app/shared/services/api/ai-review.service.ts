@@ -13,6 +13,7 @@ import {
 } from '../../interfaces/ai-review.interface';
 import { ApiService } from './api.service';
 import { SaveButtonService } from '../../../custom-fields/save-button/save-button.service';
+import { Router } from '@angular/router';
 
 @Injectable({
   providedIn: 'root'
@@ -30,6 +31,10 @@ export class AiReviewService {
   aiContext = signal<any>(null);
   api = inject(ApiService);
   saveButtonSE = inject(SaveButtonService);
+  router = inject(Router);
+
+  // Signal para notificar cuando se guarda en general-information
+  generalInformationSaved = signal<number>(0);
 
   // on AI review click
   async onAIReviewClick() {
@@ -53,6 +58,10 @@ export class AiReviewService {
         res[0].needs_improvement = true;
         res[1].proposed_text = json_content.new_description;
         res[1].needs_improvement = true;
+        if (res[2]) {
+          res[2].proposed_text = json_content.short_name;
+          res[2].needs_improvement = true;
+        }
         return [...res];
       });
 
@@ -188,7 +197,16 @@ export class AiReviewService {
         .pipe(this.saveButtonSE.isSavingPipe())
         .subscribe({
           next: (response: any) => {
+            // Detectar si estamos en la ruta de general-information
+            const currentUrl = this.router.url;
+            if (currentUrl.includes('general-information')) {
+              // Incrementar el signal para notificar el cambio
+              this.generalInformationSaved.update(val => val + 1);
+            }
             resolve(response);
+          },
+          error: (error: any) => {
+            reject(error);
           }
         });
     });

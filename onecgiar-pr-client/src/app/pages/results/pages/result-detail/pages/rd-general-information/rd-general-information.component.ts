@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, effect } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { GeneralInfoBody } from './models/generalInfoBody';
 import { ScoreService } from '../../../../../../shared/services/global/score.service';
@@ -11,6 +11,7 @@ import { PusherService } from '../../../../../../shared/services/pusher.service'
 import { CurrentResultService } from '../../../../../../shared/services/current-result.service';
 import { UserSearchService } from './services/user-search-service.service';
 import { GetImpactAreasScoresService } from '../../../../../../shared/services/global/get-impact-areas-scores.service';
+import { AiReviewService } from '../../../../../../shared/services/api/ai-review.service';
 
 @Component({
   selector: 'app-rd-general-information',
@@ -34,8 +35,19 @@ export class RdGeneralInformationComponent implements OnInit {
     public dataControlSE: DataControlService,
     private customizedAlertsFeSE: CustomizedAlertsFeService,
     public pusherSE: PusherService,
-    private userSearchService: UserSearchService
-  ) {}
+    private userSearchService: UserSearchService,
+    private aiReviewSE: AiReviewService
+  ) {
+    // Effect que escucha cambios en el signal y recarga los datos automáticamente
+    effect(() => {
+      // Leer el signal para activar el effect
+      this.aiReviewSE.generalInformationSaved();
+      // Solo recargar si el componente ya está inicializado
+      if (this.generalInfoBody.result_code) {
+        this.getSectionInformation();
+      }
+    });
+  }
 
   ngOnInit(): void {
     this.showAlerts();
