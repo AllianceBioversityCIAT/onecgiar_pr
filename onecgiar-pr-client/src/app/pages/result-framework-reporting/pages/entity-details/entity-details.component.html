@@ -130,6 +130,10 @@
         <i class="material-icons-round" style="font-size: 20px;">close</i>
       </button>
     </div>
-    <app-report-result-form (resultCreated)="showReportModal.set(false)"></app-report-result-form>
+    <app-report-result-form
+      [selectedInitiativeId]="entityAowService.entityDetails()?.id"
+      [disableInitiativeSelect]="true"
+      (resultCreated)="showReportModal.set(false)">
+    </app-report-result-form>
   </p-dialog>
 }
