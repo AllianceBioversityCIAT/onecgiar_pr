@@ -34,8 +34,8 @@ export class ResultLevelService {
     (this.resultLevelList || []).forEach(reLevel => (reLevel.selected = false));
     resultLevel.selected = !resultLevel.selected;
     const updated = (this.resultLevelListSig() || []).map(rl => {
-      if (rl.id === resultLevel.id) return { ...rl, selected: resultLevel.selected } as any;
-      return { ...rl, selected: false } as any;
+      if (rl.id === resultLevel.id) return { ...rl, selected: resultLevel.selected };
+      return { ...rl, selected: false };
     });
     this.resultLevelListSig.set(updated);
   }
