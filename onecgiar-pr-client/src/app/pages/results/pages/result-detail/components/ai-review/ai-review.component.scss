@@ -64,14 +64,27 @@
       }
     }
 
+    .line-divider {
+      height: 1px;
+      background-color: #e2e2e2;
+      margin: 10px 0;
+    }
+
+    .applied-badge {
+      margin-top: 10px;
+      color: #47b556;
+      font-size: 13px;
+      font-weight: 400;
+    }
+
     .apply-proposal-button {
-      // align-self: flex-start;
       color: var(--pr-color-neutral-500);
       border: 1px solid #7a30a874;
       width: fit-content;
       padding: 5px 15px;
       margin-top: 10px;
       border-radius: 6px;
+      font-size: 13px;
     }
 
     .proposal-label {
