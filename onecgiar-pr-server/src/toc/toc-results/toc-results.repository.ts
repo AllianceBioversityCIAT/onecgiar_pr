@@ -11,6 +11,23 @@ export class TocResultsRepository extends Repository<TocResult> {
     super(TocResult, dataSource.createEntityManager());
   }
 
+  private async getCurrentTocPhaseId(): Promise<string | null> {
+    const query = `
+      SELECT toc_pahse_id
+      FROM ${env.DB_NAME}.version
+      WHERE is_active = 1 AND status = 1 AND app_module_id = 1
+      LIMIT 1
+    `;
+    try {
+      const rows = await this.dataSource.query(query);
+      return rows?.[0]?.toc_pahse_id ?? null;
+    } catch (error) {
+      throw new Error(
+        `[${TocResultsRepository.name}] => getCurrentTocPhaseId error: ${error}`,
+      );
+    }
+  }
+
   async deleteAllData() {
     const queryData = `
     DELETE FROM toc_result;
@@ -409,6 +426,8 @@ export class TocResultsRepository extends Repository<TocResult> {
       };
     }
 
+    const tocPhaseId = await this.getCurrentTocPhaseId();
+
     const queryData = `
       SELECT DISTINCT
         tr.id AS toc_result_id,
@@ -429,11 +448,17 @@ export class TocResultsRepository extends Repository<TocResult> {
       WHERE tr.is_active > 0
         AND ci.id = ?
         AND tr.category = ?
+        ${tocPhaseId ? 'AND tr.phase = ?' : ''}
       ORDER BY wp.acronym, tr.result_title ASC;
     `;
 
+    const params: (string | number)[] = [init_id, category];
+    if (tocPhaseId) {
+      params.push(tocPhaseId);
+    }
+
     try {
-      const res = await this.query(queryData, [init_id, category]);
+      const res = await this.query(queryData, params);
       return res;
     } catch (error) {
       throw {
@@ -579,6 +604,8 @@ export class TocResultsRepository extends Repository<TocResult> {
       };
     }
 
+    const tocPhaseId = await this.getCurrentTocPhaseId();
+
     const queryData = `
       SELECT DISTINCT
         tr.id AS toc_result_id,
@@ -600,14 +627,17 @@ export class TocResultsRepository extends Repository<TocResult> {
       WHERE ci.id = ?
         AND tr.category = ?
         AND tr.is_active > 0
+        ${tocPhaseId ? 'AND tr.phase = ?' : ''}
       ORDER BY wp.acronym, tr.result_title ASC;
     `;
 
+    const params: (string | number)[] = [initiativeId, category];
+    if (tocPhaseId) {
+      params.push(tocPhaseId);
+    }
+
     try {
-      const tocResult: TocResult[] = await this.query(queryData, [
-        initiativeId,
-        category,
-      ]);
+      const tocResult: TocResult[] = await this.query(queryData, params);
       return tocResult;
     } catch (error) {
       throw {

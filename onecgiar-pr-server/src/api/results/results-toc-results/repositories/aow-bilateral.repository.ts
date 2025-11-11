@@ -57,6 +57,7 @@ interface TocQueryOptions {
   compositeCode?: string;
   categories?: string[];
   year?: number;
+  tocPhaseId?: string;
 }
 
 @Injectable()
@@ -65,6 +66,26 @@ export class AoWBilateralRepository {
     private readonly dataSource: DataSource,
     private readonly _handlersError: HandlersError,
   ) {}
+
+  private async getCurrentTocPhaseId(): Promise<string | null> {
+    const query = `
+      SELECT toc_pahse_id
+      FROM ${env.DB_NAME}.version
+      WHERE is_active = 1 AND status = 1 AND app_module_id = 1
+      LIMIT 1
+    `;
+    try {
+      const rows = await this.dataSource.query(query);
+      return rows?.[0]?.toc_pahse_id ?? null;
+    } catch (error) {
+      this._handlersError.returnErrorRepository({
+        error,
+        className: AoWBilateralRepository.name,
+        debug: true,
+      });
+      return null;
+    }
+  }
 
   /**
    * Returns the distinct list of work package acronyms (unit codes) registered in the
@@ -77,15 +98,21 @@ export class AoWBilateralRepository {
   async findUnitAcronymsByProgram(
     programOfficialCode: string,
   ): Promise<Set<string>> {
-    const query = `
+    const tocPhaseId = await this.getCurrentTocPhaseId();
+    let query = `
       SELECT DISTINCT wp.acronym
       FROM ${env.DB_TOC}.toc_work_packages wp
       INNER JOIN ${env.DB_TOC}.toc_results tr ON tr.wp_id = wp.toc_id
         AND tr.official_code = ?
     `;
+    const params: (string | number)[] = [programOfficialCode];
+    if (tocPhaseId) {
+      query += ` AND tr.phase = ?`;
+      params.push(tocPhaseId);
+    }
 
     try {
-      const rows = await this.dataSource.query(query, [programOfficialCode]);
+      const rows = await this.dataSource.query(query, params);
       const acronyms = new Set<string>();
       for (const row of rows || []) {
         const value = row?.acronym?.trim();
@@ -106,12 +133,15 @@ export class AoWBilateralRepository {
     composite_code: string,
     year?: number,
   ) {
+    const tocPhaseId = await this.getCurrentTocPhaseId();
     const { query, params } = this.buildTocQuery(program, {
       compositeCode: composite_code,
       year,
       categories: ['OUTPUT', 'OUTCOME'],
+      tocPhaseId,
     });
 
+    console.log('TOC Query:', query);
     try {
       const [rows, contributions] = await Promise.all([
         this.dataSource.query(query, params) as Promise<toc_result_row[]>,
@@ -137,9 +167,11 @@ export class AoWBilateralRepository {
   }
 
   async find2030Outcomes(program: string, year?: number) {
+    const tocPhaseId = await this.getCurrentTocPhaseId();
     const { query, params } = this.buildTocQuery(program, {
       year,
       categories: ['EOI'],
+      tocPhaseId,
     });
 
     try {
@@ -251,6 +283,17 @@ export class AoWBilateralRepository {
     params.push(program);
     params.push(...categories);
 
+    console.log('Toc Query Options:', {
+      program: params[0],
+      categories: params.slice(1, categories.length + 1),
+      year: options.year,
+      tocPhaseId: options.tocPhaseId,
+    });
+    if (options.tocPhaseId) {
+      query += ` AND tr.phase = ?`;
+      params.push(options.tocPhaseId);
+    }
+
     query += `
       GROUP BY
         tr.id,
@@ -317,18 +360,24 @@ export class AoWBilateralRepository {
   }
 
   async findResultById(tocResultId: number) {
-    const query = `
+    const tocPhaseId = await this.getCurrentTocPhaseId();
+    let query = `
       SELECT
         tr.id,
         tr.result_title,
         tr.category
       FROM ${env.DB_TOC}.toc_results tr
       WHERE tr.id = ?
-      LIMIT 1;
     `;
+    const params: (string | number)[] = [tocResultId];
+    if (tocPhaseId) {
+      query += ` AND tr.phase = ?`;
+      params.push(tocPhaseId);
+    }
+    query += ` LIMIT 1;`;
 
     try {
-      const rows = await this.dataSource.query(query, [tocResultId]);
+      const rows = await this.dataSource.query(query, params);
       return rows?.[0] ?? null;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -365,7 +414,8 @@ export class AoWBilateralRepository {
   }
 
   async getIndicatorContributions(program: string, year?: number) {
-    const params: Array<string | number> = [];
+    const tocPhaseId = await this.getCurrentTocPhaseId();
+    const params: (string | number)[] = [];
 
     const targetYearCondition =
       year !== undefined ? ' AND trit.target_date = ?' : '';
@@ -394,6 +444,7 @@ export class AoWBilateralRepository {
         WHERE
           tr.official_code = ?
           AND tri.is_active = 1
+          ${tocPhaseId ? 'AND tr.phase = ?' : ''}
         GROUP BY
           tri.id,
           tri.toc_result_indicator_id,
@@ -424,6 +475,7 @@ export class AoWBilateralRepository {
           AND r.status_id IN (1, 2, 3)
           AND r.result_level_id IN (3, 4)
           AND r.result_type_id IN (1, 2, 4, 5, 6, 7, 8)
+          ${tocPhaseId ? 'AND tr.phase = ?' : ''}
         GROUP BY
           tri.id
       ) AS act ON act.indicator_id = tgt.indicator_id
@@ -432,10 +484,16 @@ export class AoWBilateralRepository {
       params.push(year);
     }
     params.push(program);
+    if (tocPhaseId) {
+      params.push(tocPhaseId);
+    }
     if (year !== undefined) {
       params.push(year);
     }
     params.push(program);
+    if (tocPhaseId) {
+      params.push(tocPhaseId);
+    }
 
     try {
       const rows = await this.dataSource.query(query, params);
@@ -488,7 +546,8 @@ export class AoWBilateralRepository {
   }
 
   async findBilateralProjectById(tocResultId: number) {
-    const query = `
+    const tocPhaseId = await this.getCurrentTocPhaseId();
+    let query = `
       SELECT
         tr.id AS toc_result_id,
         tr.official_code AS official_code,
@@ -499,9 +558,14 @@ export class AoWBilateralRepository {
       JOIN ${env.DB_TOC}.toc_result_projects trp ON trp.toc_result_id_toc = tr.related_node_id
       WHERE tr.id = ?
     `;
+    const params: (string | number)[] = [tocResultId];
+    if (tocPhaseId) {
+      query += ` AND tr.phase = ?`;
+      params.push(tocPhaseId);
+    }
 
     try {
-      return this.dataSource.query(query, [tocResultId]);
+      return this.dataSource.query(query, params);
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         error,

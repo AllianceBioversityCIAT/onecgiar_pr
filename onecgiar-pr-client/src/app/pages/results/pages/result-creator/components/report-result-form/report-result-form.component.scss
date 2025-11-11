@@ -1,0 +1,117 @@
+@use '../../../../../../../styles/fonts.scss' as fonts;
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin: 0;
+}
+
+.report-result-content {
+  display: grid;
+}
+
+.report-result-content_left {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  max-height: 82vh;
+}
+
+.report-result-content_left_header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 54px;
+  padding-top: 35px;
+  padding-bottom: 0px;
+}
+
+.report-result-title {
+  font-weight: 500;
+  font-size: 1.25rem;
+  color: var(--pr-color-black, #000);
+  display: block;
+}
+
+.report-result-description {
+  font-size: 1rem;
+  color: var(--pr-color-accents-6, #666);
+  line-height: 1.5;
+  display: block;
+}
+
+.report-result-content_left_content {
+  padding: 2px 54px 74px;
+  display: flex;
+  flex-direction: column;
+}
+
+::ng-deep .fixed_button {
+  margin-right: 55px !important;
+  z-index: 5;
+}
+
+.report-result-content_left_content_actions {
+  display: flex;
+  padding: 30px 0px;
+  justify-content: flex-end;
+}
+
+.mqap_sync_title {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: 2px;
+
+  .sync_button {
+    margin-bottom: 5px;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+
+    &:disabled {
+      cursor: not-allowed;
+    }
+  }
+}
+
+.error__link {
+  color: var(--pr-color-error);
+  margin-top: 10px;
+  padding: 10px;
+  background-color: var(--pr-color-error-light);
+  border-radius: 4px;
+}
+
+.report-result-content_right {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  border-left: 1px solid var(--pr-color-accents-2);
+}
+
+.report-result-content_right_title {
+  @include fonts.pr-typography('h4');
+  font-weight: 600;
+  color: var(--pr-color-secondary-400);
+  padding: 20px 16px 0;
+}
+
+.report-result-content_right_content {
+  display: grid;
+  gap: 14px;
+}
+
+.report-result-content_right_content_item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0px 16px 10px;
+  border-bottom: 1px solid var(--pr-color-accents-2);
+}
+

@@ -82,6 +82,10 @@ import {
   NotificationTypeEnum,
 } from '../notification/enum/notification.enum';
 import { ImpactAreasScoresComponentRepository } from './impact_areas_scores_components/repositories/impact_areas_scores_components.repository';
+import { ResultsInnovationsDev } from './summary/entities/results-innovations-dev.entity';
+import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
+import { ResultsTocResultRepository } from './results-toc-results/repositories/results-toc-results.repository';
+import { ResultsInnovationsDevRepository } from './summary/repositories/results-innovations-dev.repository';
 
 @Injectable()
 export class ResultsService {
@@ -123,8 +127,10 @@ export class ResultsService {
     private readonly _resultsInvestmentDiscontinuedOptionRepository: ResultsInvestmentDiscontinuedOptionRepository,
     private readonly _resultInitiativeBudgetRepository: ResultInitiativeBudgetRepository,
     private readonly _resultsCenterRepository: ResultsCenterRepository,
+    private readonly _resultsTocResultRepository: ResultsTocResultRepository,
     private readonly _initiativeEntityMapRepository?: InitiativeEntityMapRepository,
     private readonly _roleByUserRepository?: RoleByUserRepository,
+    private readonly _resultsInnovationsDevRepository?: ResultsInnovationsDevRepository,
     @Optional()
     @Inject(AdUserService)
     private readonly _adUserService?: AdUserService,
@@ -380,6 +386,13 @@ export class ResultsService {
     user: TokenDto,
   ) {
     try {
+      const {
+        gender_impact_area_id,
+        climate_impact_area_id,
+        nutrition_impact_area_id,
+        environmental_biodiversity_impact_area_id,
+        poverty_impact_area_id,
+      } = resultGeneralInformation;
       const result = await this._resultRepository.getResultById(
         resultGeneralInformation.result_id,
       );
@@ -425,10 +438,10 @@ export class ResultsService {
       }
 
       let genderTagComponent = null;
-      if (Number(genderTag?.id) === 3) {
+      if (Number(genderTag?.id) === 3 && gender_impact_area_id != null) {
         genderTagComponent =
           await this._impactAreasScoresComponentRepository.findOne({
-            where: { id: resultGeneralInformation.gender_impact_area_id },
+            where: { id: gender_impact_area_id },
           });
         if (!genderTagComponent) {
           throw {
@@ -451,10 +464,10 @@ export class ResultsService {
       }
 
       let climateTagComponent = null;
-      if (Number(climateTag?.id) === 3) {
+      if (Number(climateTag?.id) === 3 && climate_impact_area_id != null) {
         climateTagComponent =
           await this._impactAreasScoresComponentRepository.findOne({
-            where: { id: resultGeneralInformation.climate_impact_area_id },
+            where: { id: climate_impact_area_id },
           });
         if (!climateTagComponent) {
           throw {
@@ -477,10 +490,10 @@ export class ResultsService {
       }
 
       let nutritionTagComponent = null;
-      if (Number(nutritionTag?.id) === 3) {
+      if (Number(nutritionTag?.id) === 3 && nutrition_impact_area_id != null) {
         nutritionTagComponent =
           await this._impactAreasScoresComponentRepository.findOne({
-            where: { id: resultGeneralInformation.nutrition_impact_area_id },
+            where: { id: nutrition_impact_area_id },
           });
         if (!nutritionTagComponent) {
           throw {
@@ -506,11 +519,14 @@ export class ResultsService {
       }
 
       let environmentalBiodiversityTagComponent = null;
-      if (Number(environmentalBiodiversityTag?.id) === 3) {
+      if (
+        Number(environmentalBiodiversityTag?.id) === 3 &&
+        environmental_biodiversity_impact_area_id != null
+      ) {
         environmentalBiodiversityTagComponent =
           await this._impactAreasScoresComponentRepository.findOne({
             where: {
-              id: resultGeneralInformation.environmental_biodiversity_impact_area_id,
+              id: environmental_biodiversity_impact_area_id,
             },
           });
         if (!environmentalBiodiversityTagComponent) {
@@ -535,10 +551,10 @@ export class ResultsService {
       }
 
       let povertyTagComponent = null;
-      if (Number(povertyTag?.id) === 3) {
+      if (Number(povertyTag?.id) === 3 && poverty_impact_area_id != null) {
         povertyTagComponent =
           await this._impactAreasScoresComponentRepository.findOne({
-            where: { id: resultGeneralInformation.poverty_impact_area_id },
+            where: { id: poverty_impact_area_id },
           });
         if (!povertyTagComponent) {
           throw {
@@ -2185,7 +2201,37 @@ export class ResultsService {
     isAdmin?: boolean,
     versionId?: number,
   ): Promise<returnFormatResult | returnErrorDto> {
-    return this.createOwnerResult(createResultDto, user, isAdmin, versionId);
+    const result = await this.createOwnerResult(
+      createResultDto,
+      user,
+      isAdmin,
+      versionId,
+    );
+
+    if (
+      result.status === HttpStatus.CREATED &&
+      result.response &&
+      (result.response as Result).id
+    ) {
+      try {
+        await this._resultsTocResultRepository.save({
+          planned_result: false,
+          toc_level_id: null,
+          result_id: (result.response as Result).id,
+          initiative_ids: createResultDto.initiative_id,
+          created_by: user.id,
+          last_updated_by: user.id,
+          is_active: true,
+        });
+      } catch (error) {
+        this._logger.error(
+          `Failed to create ResultsTocResult for result ${(result.response as Result).id}`,
+          error,
+        );
+      }
+    }
+
+    return result;
   }
 
   async getAllResultsForInnovUse() {
@@ -2196,6 +2242,237 @@ export class ResultsService {
         response: results,
         message: 'Results retrieved successfully',
         status: 200,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  private async getTocMetadata(activeTocResults: any[], phaseYear: number) {
+    if (!activeTocResults.length) return [];
+
+    const tocResultIds = activeTocResults.map((toc) => toc.toc_result_id);
+
+    const query = `
+      SELECT
+        tr.id as toc_result_id,
+        tr.result_title,
+        tri.related_node_id,
+        tri.unit_messurament,
+        tri.type_name,
+        tri.indicator_description,
+        trit.target_date,
+        trit.target_value
+      FROM ${process.env.DB_TOC}.toc_results tr
+      LEFT JOIN ${process.env.DB_TOC}.toc_results_indicators tri ON tri.toc_results_id = tr.id
+      LEFT JOIN ${process.env.DB_TOC}.toc_result_indicator_target trit ON tri.id = trit.id_indicator
+        AND CONVERT(trit.toc_result_indicator_id USING utf8mb4) = CONVERT(tri.related_node_id USING utf8mb4)
+        AND trit.target_date = ${phaseYear}
+      WHERE tr.id IN (${tocResultIds.map(() => '?').join(',')})
+        AND tri.is_active = 1
+    `;
+
+    try {
+      const tocData = await this._resultRepository.query(query, tocResultIds);
+
+      const groupedTocData = new Map();
+
+      for (const toc of activeTocResults) {
+        const tocResultData = tocData.filter(
+          (td: any) => td.toc_result_id === toc.toc_result_id,
+        );
+        const indicators =
+          toc.obj_results_toc_result_indicators?.filter(
+            (ind: any) => ind.is_active,
+          ) || [];
+
+        const indicatorsWithContributions = indicators.map((indicator: any) => {
+          const targets =
+            indicator.obj_result_indicator_targets?.filter(
+              (target: any) => target.is_active,
+            ) || [];
+          const contributingIndicator = targets.reduce(
+            (sum: number, target: any) =>
+              sum + (Number(target.contributing_indicator) || 0),
+            0,
+          );
+
+          const tocIndicatorData = tocResultData.find(
+            (td: any) =>
+              td.related_node_id === indicator.toc_results_indicator_id,
+          );
+
+          return {
+            indicator_description:
+              tocIndicatorData?.indicator_description || null,
+            type_name: tocIndicatorData?.type_name || null,
+            unit_messurament: tocIndicatorData?.unit_messurament || null,
+            target_date: tocIndicatorData?.target_date || null,
+            target_value: tocIndicatorData?.target_value || null,
+            contributing_indicator: contributingIndicator,
+          };
+        });
+
+        groupedTocData.set(toc.toc_result_id, {
+          toc_result_id: toc.toc_result_id,
+          result_title: tocResultData[0]?.result_title || null,
+          indicators: indicatorsWithContributions,
+        });
+      }
+
+      return Array.from(groupedTocData.values());
+    } catch (error) {
+      this._logger.error('Error fetching TOC metadata:', error);
+      return [];
+    }
+  }
+
+  async getAIContext(resultId: number) {
+    try {
+      const result = await this._resultRepository.findOne({
+        where: { id: resultId, is_active: true },
+        relations: [
+          'obj_result_type',
+          'obj_result_level',
+          'obj_gender_tag_level',
+          'obj_gender_impact_area',
+          'obj_climate_change_tag_level',
+          'obj_climate_impact_area',
+          'obj_nutrition_tag_level',
+          'obj_nutrition_impact_area',
+          'obj_environmental_biodiversity_tag_level',
+          'obj_environmental_biodiversity_impact_area',
+          'obj_poverty_tag_level_id',
+          'obj_poverty_impact_area',
+          'obj_geographic_scope',
+          'result_region_array.region_object',
+          'result_country_array.country_object',
+          'obj_result_by_initiatives.obj_initiative',
+          'evidence_array',
+          'obj_results_toc_result.obj_results_toc_result_indicators.obj_result_indicator_targets',
+          'obj_version',
+          'result_center_array.clarisa_center_object.clarisa_institution',
+        ],
+      });
+
+      if (!result) {
+        throw {
+          response: {},
+          message: 'Result not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      let innovationsDev: ResultsInnovationsDev = null;
+      if (result.result_type_id === ResultTypeEnum.INNOVATION_DEVELOPMENT) {
+        innovationsDev = await this._resultsInnovationsDevRepository.query(
+          `
+            SELECT short_title, result_innovation_dev_id, results_id
+            FROM results_innovations_dev
+            WHERE results_id = ?
+            ORDER BY is_active DESC, result_innovation_dev_id DESC
+            LIMIT 1
+          `,
+          [resultId],
+        );
+      }
+
+      const activeInitiatives =
+        result.obj_result_by_initiatives?.filter((rbi) => rbi.is_active) || [];
+      const primarySubmitter =
+        activeInitiatives.find((rbi) => Number(rbi.initiative_role_id) === 1)
+          ?.obj_initiative?.name || null;
+      const primarySubmitterOfficialCode =
+        activeInitiatives.find((rbi) => Number(rbi.initiative_role_id) === 1)
+          ?.obj_initiative?.official_code || null;
+
+      const activeEvidence =
+        result.evidence_array?.filter((e) => e.is_active) || [];
+      const evidence = activeEvidence
+        .map((e) => ({
+          link: e.link,
+          description: e.description,
+        }))
+        .filter((e) => e.link || e.description);
+
+      const tocMetadata = await this.getTocMetadata(
+        result.obj_results_toc_result?.filter((toc) => toc.is_active) || [],
+        result.obj_version.phase_year,
+      );
+
+      const activeCenters =
+        result.result_center_array?.filter((c) => c.is_active) || [];
+      const centers = activeCenters
+        .map((c) => ({
+          code: c.clarisa_center_object?.code || null,
+          financial_code: c.clarisa_center_object?.financial_code || null,
+          is_primary: c.is_primary || false,
+          institution_name:
+            c.clarisa_center_object?.clarisa_institution?.name || null,
+          institution_acronym:
+            c.clarisa_center_object?.clarisa_institution?.acronym || null,
+          institution_website:
+            c.clarisa_center_object?.clarisa_institution?.website_link || null,
+        }))
+        .filter((c) => c.code);
+
+      const response = {
+        id: result.id,
+        result_code: result.result_code,
+        result_type_name: result.obj_result_type?.name || null,
+        result_level_id: result.result_level_id,
+        result_level_name: result.obj_result_level?.name || null,
+        result_name: result.title,
+        result_description: result.description,
+        short_title: innovationsDev?.[0]?.short_title || null,
+        geographic_scope_name: result.obj_geographic_scope?.name || null,
+        geographic_scope_description:
+          result.obj_geographic_scope?.description || null,
+        regions:
+          result.result_region_array
+            ?.filter((r) => r.is_active)
+            .map((r) => r.region_object?.name)
+            .filter(Boolean)
+            .join(', ') || null,
+        countries:
+          result.result_country_array
+            ?.filter((c) => c.is_active)
+            .map((c) => c.country_object?.name)
+            .filter(Boolean)
+            .join(', ') || null,
+        primary_submitter_initiative: primarySubmitter,
+        primary_submitter_initiative_official_code:
+          primarySubmitterOfficialCode,
+        gender_tag_level_description:
+          result.obj_gender_tag_level?.description || null,
+        gender_impact_area_impact_area:
+          result.obj_gender_impact_area?.impact_area || null,
+        climate_change_tag_level_description:
+          result.obj_climate_change_tag_level?.description || null,
+        climate_impact_area_impact_area:
+          result.obj_climate_impact_area?.impact_area || null,
+        nutrition_tag_level_description:
+          result.obj_nutrition_tag_level?.description || null,
+        nutrition_impact_area_impact_area:
+          result.obj_nutrition_impact_area?.impact_area || null,
+        environmental_biodiversity_tag_level_description:
+          result.obj_environmental_biodiversity_tag_level?.description || null,
+        environmental_biodiversity_impact_area_impact_area:
+          result.obj_environmental_biodiversity_impact_area?.impact_area ||
+          null,
+        poverty_tag_level_description:
+          result.obj_poverty_tag_level_id?.description || null,
+        poverty_impact_area_impact_area:
+          result.obj_poverty_impact_area?.impact_area || null,
+        evidence: evidence,
+        centers: centers,
+        toc_metadata: tocMetadata,
+      };
+
+      return {
+        response,
+        message: 'AI context retrieved successfully',
+        status: HttpStatus.OK,
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });

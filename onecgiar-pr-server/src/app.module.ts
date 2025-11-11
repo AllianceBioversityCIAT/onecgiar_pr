@@ -50,6 +50,7 @@ import { AdUsersModule } from './api/ad_users/ad_users.module';
 import { InitiativeEntityMapModule } from './api/initiative_entity_map/initiative_entity_map.module';
 import { apiVersionMiddleware } from './shared/middleware/api-versioning.middleware';
 import { ResultsFrameworkReportingModule } from './api/results-framework-reporting/results-framework-reporting.module';
+import { AiModule } from './api/ai/ai.module';
 
 @Module({
   imports: [
@@ -99,6 +100,7 @@ import { ResultsFrameworkReportingModule } from './api/results-framework-reporti
     AdUsersModule,
     InitiativeEntityMapModule,
     ResultsFrameworkReportingModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [

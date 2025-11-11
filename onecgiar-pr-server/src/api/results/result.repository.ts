@@ -1018,11 +1018,15 @@ WHERE
     r.legacy_id,
     r.no_applicable_partner,
     r.geographic_scope_id,
+    r.has_extra_geo_scope,
+    r.extra_geo_scope_id,
     rbi.inititiative_id as initiative_id,
     rl.name as result_level_name,
     rt.name as result_type_name,
     r.has_regions,
     r.has_countries,
+    r.has_extra_regions,
+    r.has_extra_countries,
     ci.name as initiative_name,
     ci.short_name as initiative_short_name,
     ci.official_code as initiative_official_code,
@@ -2190,7 +2194,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         r.is_active = 1
         AND r.status_id IN (1, 2, 3)
         AND r.result_level_id IN (3, 4)
-        AND r.result_type_id IN (1, 2, 4, 5, 6, 7, 8)
+        AND r.result_type_id IN (1, 2, 4, 5, 6, 7, 8, 10)
         AND rit.contributing_indicator IS NOT NULL
       GROUP BY
         r.result_type_id,

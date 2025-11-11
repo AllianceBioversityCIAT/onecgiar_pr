@@ -34,6 +34,11 @@ import { ResultQaedLog } from '../../result-qaed/entities/result-qaed-log.entity
 import { AdUser } from '../../ad_users/entity/ad-user.entity';
 import { ImpactAreasScoresComponent } from '../impact_areas_scores_components/entities/impact_areas_scores_component.entity';
 import { ResultsByProjects } from '../results_by_projects/entities/results_by_projects.entity';
+import { AiReviewSession } from '../../ai/entities/ai-review-session.entity';
+import { AiReviewEvent } from '../../ai/entities/ai-review-event.entity';
+import { Evidence } from '../evidences/entities/evidence.entity';
+import { ResultFieldRevision } from '../../ai/entities/result-field-revision.entity';
+import { ResultFieldAiState } from '../../ai/entities/result-field-ai-state.entity';
 
 @Entity()
 export class Result {
@@ -376,6 +381,40 @@ export class Result {
   obj_geographic_scope!: ClarisaGeographicScope;
 
   @Column({
+    name: 'has_extra_geo_scope',
+    nullable: true,
+    type: 'boolean',
+  })
+  has_extra_geo_scope: boolean;
+
+  @Column({
+    name: 'extra_geo_scope_id',
+    type: 'int',
+    nullable: true,
+  })
+  extra_geo_scope_id: number;
+
+  @ManyToOne(() => ClarisaGeographicScope, (cgo) => cgo.id, { nullable: true })
+  @JoinColumn({
+    name: 'extra_geo_scope_id',
+  })
+  obj_extra_geographic_scope!: ClarisaGeographicScope;
+
+  @Column({
+    name: 'has_extra_regions',
+    nullable: true,
+    type: 'boolean',
+  })
+  has_extra_regions: boolean;
+
+  @Column({
+    name: 'has_extra_countries',
+    nullable: true,
+    type: 'boolean',
+  })
+  has_extra_countries: boolean;
+
+  @Column({
     name: 'has_regions',
     nullable: true,
     type: 'boolean',
@@ -494,4 +533,19 @@ export class Result {
 
   @OneToMany(() => ResultsByProjects, (rbp) => rbp.obj_result_project)
   obj_result_by_project: ResultsByProjects[];
+
+  @OneToMany(() => AiReviewSession, (session) => session.obj_result)
+  obj_ai_review_sessions: AiReviewSession[];
+
+  @OneToMany(() => AiReviewEvent, (event) => event.obj_result)
+  obj_ai_review_events: AiReviewEvent[];
+
+  @OneToMany(() => ResultFieldRevision, (revision) => revision.obj_result)
+  obj_result_field_revisions: ResultFieldRevision[];
+
+  @OneToMany(() => ResultFieldAiState, (state) => state.obj_result)
+  obj_result_field_ai_states: ResultFieldAiState[];
+
+  @OneToMany(() => Evidence, (e) => e.obj_result)
+  evidence_array: Evidence[];
 }

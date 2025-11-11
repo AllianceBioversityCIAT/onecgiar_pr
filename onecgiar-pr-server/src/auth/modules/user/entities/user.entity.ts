@@ -14,6 +14,10 @@ import { UserNotificationSetting } from '../../../../api/user-notification-setti
 import { ResultQaedLog } from '../../../../api/result-qaed/entities/result-qaed-log.entity';
 import { ContributionToIndicatorSubmission } from '../../../../api/contribution-to-indicators/entities/contribution-to-indicator-submission.entity';
 import { RoleByUser } from '../../role-by-user/entities/role-by-user.entity';
+import { AiReviewSession } from '../../../../api/ai/entities/ai-review-session.entity';
+import { AiReviewEvent } from '../../../../api/ai/entities/ai-review-event.entity';
+import { ResultFieldRevision } from '../../../../api/ai/entities/result-field-revision.entity';
+import { ResultFieldAiState } from '../../../../api/ai/entities/result-field-ai-state.entity';
 
 @Entity('users')
 @Index(['email'], { unique: true })
@@ -116,4 +120,16 @@ export class User {
     (ctis) => ctis.user_object,
   )
   contribution_to_indicator_submission_array: ContributionToIndicatorSubmission[];
+
+  @OneToMany(() => AiReviewSession, (session) => session.obj_opened_by)
+  obj_ai_review_sessions_opened: AiReviewSession[];
+
+  @OneToMany(() => AiReviewEvent, (event) => event.obj_user)
+  obj_ai_review_events: AiReviewEvent[];
+
+  @OneToMany(() => ResultFieldRevision, (revision) => revision.obj_user)
+  obj_result_field_revisions: ResultFieldRevision[];
+
+  @OneToMany(() => ResultFieldAiState, (state) => state.obj_last_updated_by)
+  obj_result_field_ai_states_updated: ResultFieldAiState[];
 }

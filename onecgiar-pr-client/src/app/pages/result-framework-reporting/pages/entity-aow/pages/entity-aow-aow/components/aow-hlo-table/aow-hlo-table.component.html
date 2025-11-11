@@ -9,7 +9,8 @@
   dataKey="result_title"
   sortMode="single"
   rowGroupMode="subheader"
-  groupRowsBy="result_title">
+  groupRowsBy="result_title"
+  [expandedRowKeys]="expandedRowKeys()">
   <ng-template pTemplate="header">
     <tr>
       @for (column of columnOrder(); track column.attr) {
@@ -34,12 +35,6 @@
               [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"></button>
 
             <span style="font-weight: bold">{{ item.result_title }}</span>
-          </div>
-
-          <div style="display: flex; justify-content: flex-start; align-items: center; gap: 5px; cursor: not-allowed">
-            <span class="material-icons-round text-primary-300" style="font-size: 16px"> mail </span>
-
-            <p class="pr-body-3 text-primary-300 font-weight-400" style="white-space: nowrap">View associated bilateral projects</p>
           </div>
         </div>
       </td>
@@ -89,7 +84,6 @@
               type="button"
               class="p-button-outlined pr-body-3 tab-content_actions_button"
               (click)="openViewResultDrawer(item, result.indicator_id)"></button>
-            <button pButton label="Progress by program" type="button" class="p-button-outlined pr-body-3 tab-content_actions_button"></button>
           </div>
         </td>
       </tr>

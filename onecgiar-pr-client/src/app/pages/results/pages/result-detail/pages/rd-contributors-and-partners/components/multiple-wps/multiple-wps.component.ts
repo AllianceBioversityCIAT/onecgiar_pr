@@ -100,7 +100,7 @@ export class CPMultipleWPsComponent implements OnChanges {
     this.api.tocApiSE
       .GET_tocLevelsByconfig(
         this.api.dataControlSE.currentNotification?.result_id || this.activeTab?.results_id || this.api.dataControlSE?.currentResult?.id,
-        this.initiative?.initiative_id,
+        this.initiativeId(),
         1,
         this.fieldsManagerSE.isP25()
       )
@@ -119,7 +119,7 @@ export class CPMultipleWPsComponent implements OnChanges {
     this.api.tocApiSE
       .GET_tocLevelsByconfig(
         this.api.dataControlSE.currentNotification?.result_id || this.activeTab?.results_id || this.api.dataControlSE?.currentResult?.id,
-        this.initiative?.initiative_id,
+        this.initiativeId(),
         2,
         this.fieldsManagerSE.isP25()
       )
@@ -138,7 +138,7 @@ export class CPMultipleWPsComponent implements OnChanges {
     this.api.tocApiSE
       .GET_tocLevelsByconfig(
         this.api.dataControlSE.currentNotification?.result_id || this.activeTab?.results_id || this.api.dataControlSE?.currentResult?.id,
-        this.initiative?.initiative_id,
+        this.initiativeId(),
         3,
         this.fieldsManagerSE.isP25()
       )
@@ -163,7 +163,7 @@ export class CPMultipleWPsComponent implements OnChanges {
   });
 
   getGridTemplateColumns() {
-    return `repeat(${this.initiative?.result_toc_results.length}, 1fr)`;
+    return `repeat(${this.initiative?.result_toc_results?.length}, 1fr)`;
   }
 
   completnessStatusValidation(tab) {
@@ -188,10 +188,11 @@ export class CPMultipleWPsComponent implements OnChanges {
   }
 
   onAddTab() {
+    if (!this.initiative?.result_toc_results) this.initiative.result_toc_results = [];
     const newIndex = this.initiative?.result_toc_results.length;
     this.initiative.result_toc_results.push({
       action_area_outcome_id: null,
-      initiative_id: this.initiative?.initiative_id,
+      initiative_id: this.initiativeId(),
       official_code: this.initiative?.official_code,
       planned_result: this.initiative?.planned_result,
       results_id: null,
