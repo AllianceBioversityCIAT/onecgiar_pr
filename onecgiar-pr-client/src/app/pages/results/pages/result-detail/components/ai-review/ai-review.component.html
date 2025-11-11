@@ -27,7 +27,11 @@
             {{ field.proposed_text }}
           </div>
 
-          <div class="apply-proposal-button" (click)="moveTextToInput(field)">Apply proposal</div>
+          @if (field.original_text == field.proposed_text) {
+            <div class="applied-badge"><i class="pi pi-check-circle"></i> Applied</div>
+          } @else {
+            <div class="apply-proposal-button" (click)="moveTextToInput(field)">Apply proposal</div>
+          }
         </div>
 
         <div class="current-version">
