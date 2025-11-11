@@ -203,7 +203,7 @@ export class AiReviewService {
           next: (response: any) => {
             // Detectar si estamos en la ruta de general-information
             const currentUrl = this.router.url;
-            if (currentUrl.includes('general-information')) {
+            if (currentUrl.includes('general-information') || currentUrl.includes('innovation-dev-info')) {
               // Incrementar el signal para notificar el cambio
               this.generalInformationSaved.update(val => val + 1);
             }

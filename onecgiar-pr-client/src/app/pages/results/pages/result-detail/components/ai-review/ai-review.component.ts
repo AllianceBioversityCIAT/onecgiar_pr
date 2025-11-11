@@ -25,4 +25,7 @@ export class AiReviewComponent {
     field.canSave = true;
     field.original_text = field.proposed_text;
   }
+  updateCurrnetFieldsList() {
+    this.aiReviewSE.currnetFieldsList.update(res => [...res]);
+  }
 }
