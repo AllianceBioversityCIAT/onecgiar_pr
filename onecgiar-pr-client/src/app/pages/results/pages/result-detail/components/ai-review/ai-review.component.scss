@@ -15,19 +15,29 @@
     .field-header {
       display: flex;
       align-items: center;
-      justify-content: space-between;
       margin-bottom: 8px;
+      gap: 15px;
 
       .field-title {
         font-size: 18px;
         font-weight: 600;
-        color: #5468ff;
+        color: var(--pr-color-primary-400);
         margin: 0;
       }
 
+      .needs-improvement-badge {
+        background: #fffded;
+        color: #deb336;
+        border: 1px solid #deb336;
+      }
+
+      .updated-badge {
+        background: #fbedff;
+        color: #7a30a8;
+        border: 1px solid #7a30a838;
+      }
+
       .improvement-badge {
-        background: #fff3cd;
-        color: #856404;
         padding: 4px 12px;
         border-radius: 4px;
         font-size: 12px;

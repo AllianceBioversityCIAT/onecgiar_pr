@@ -15,9 +15,9 @@
         <div class="field-header">
           <h3 class="field-title">{{ field.field_name_label }}</h3>
           @if (field.original_text == field.proposed_text) {
-            <span class="improvement-badge"> <img src="assets/icons/stars.png" alt="" srcset="" /> Updated</span>
+            <span class="improvement-badge updated-badge"> <img src="assets/icons/stars.png" alt="" srcset="" /> Updated</span>
           } @else {
-            <span class="improvement-badge"> <i class="pi pi-exclamation-triangle"></i> Needs improvement</span>
+            <span class="improvement-badge needs-improvement-badge"> <i class="pi pi-exclamation-triangle"></i> Needs improvement</span>
           }
         </div>
 
