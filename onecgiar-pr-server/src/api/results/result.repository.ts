@@ -2194,7 +2194,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         r.is_active = 1
         AND r.status_id IN (1, 2, 3)
         AND r.result_level_id IN (3, 4)
-        AND r.result_type_id IN (1, 2, 4, 5, 6, 7, 8)
+        AND r.result_type_id IN (1, 2, 4, 5, 6, 7, 8, 10)
         AND rit.contributing_indicator IS NOT NULL
       GROUP BY
         r.result_type_id,
