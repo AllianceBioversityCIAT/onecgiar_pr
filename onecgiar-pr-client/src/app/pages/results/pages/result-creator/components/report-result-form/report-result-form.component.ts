@@ -44,7 +44,7 @@ export class ReportResultFormComponent implements OnInit, DoCheck {
   @Input() disableInitiativeSelect: boolean = false;
   private _selectedInitiativeId: number | string | null = null;
   @Input() set selectedInitiativeId(value: number | string | null | undefined) {
-    this._selectedInitiativeId = value !== null && value !== undefined ? value : null;
+    this._selectedInitiativeId = value ?? null;
     this.tryApplySelectedInitiative();
   }
 
@@ -323,7 +323,7 @@ export class ReportResultFormComponent implements OnInit, DoCheck {
     if (!match) return;
 
     const value = match?.id ?? match?.initiative_id ?? this._selectedInitiativeId;
-    this.resultLevelSE.resultBody.initiative_id = value as any;
+    this.resultLevelSE.resultBody.initiative_id = value;
     this.onSelectInit();
   }
 

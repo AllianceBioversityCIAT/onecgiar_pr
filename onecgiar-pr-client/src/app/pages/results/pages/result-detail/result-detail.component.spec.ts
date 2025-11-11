@@ -58,7 +58,10 @@ describe('ResultDetailComponent', () => {
         GET_allChildlessInstitutionTypes:() => of({response: [] }),
         currentResultCode: 'currentResultCode',
         currentResultPhase: 'currentResultPhase',
-        currentResultId: 'currentResultId'
+        currentResultId: null
+      },
+      rolesSE: {
+        isAdmin: false
       },
       dataControlSE: {
         resultPhaseList: [],
@@ -231,4 +234,27 @@ describe('ResultDetailComponent', () => {
     });
   });
 
+  describe('constructor effect', () => {
+    it('should call getGreenChecks when portfolio is defined and currentResultId exists', async () => {
+      jest.clearAllMocks();
+      mockApiService.resultsSE.currentResultId = 123;
+      mockDataControlService.currentResultSignal.set({ portfolio: 'P25' });
+      const newFixture = TestBed.createComponent(ResultDetailComponent);
+      const newComponent = newFixture.componentInstance;
+      newFixture.detectChanges();
+      await Promise.resolve();
+      expect(mockGreenChecksService.getGreenChecks).toHaveBeenCalled();
+    });
+
+    it('should not call getGreenChecks when portfolio is undefined', async () => {
+      jest.clearAllMocks();
+      mockApiService.resultsSE.currentResultId = 123;
+      mockDataControlService.currentResultSignal.set({});
+      const newFixture = TestBed.createComponent(ResultDetailComponent);
+      const newComponent = newFixture.componentInstance;
+      newFixture.detectChanges();
+      await Promise.resolve();
+      expect(mockGreenChecksService.getGreenChecks).not.toHaveBeenCalled();
+    });
+  });
 });
