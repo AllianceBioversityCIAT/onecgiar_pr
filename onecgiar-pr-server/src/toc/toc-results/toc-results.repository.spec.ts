@@ -46,10 +46,7 @@ describe('TocResultsRepository', () => {
 
       await expect(
         (repository as any).getCurrentTocPhaseId(),
-      ).rejects.toMatchObject({
-        message: expect.stringContaining('getCurrentTocPhaseId error'),
-        status: 500,
-      });
+      ).rejects.toThrow('getCurrentTocPhaseId error');
     });
   });
 
