@@ -1,16 +1,9 @@
-<p-dialog
-  header="Cookie Preferences"
-  [(visible)]="visible"
-  [modal]="false"
-  [position]="position"
-  [draggable]="false"
-  [resizable]="false"
-  [closable]="false"
-  [dismissableMask]="false"
-  [style]="{ width: 'auto', padding: '2rem' }">
-  <p class="buttons">We use cookies to improve your experience.</p>
-  <div class="buttons">
-    <p-button size="small" label="Accept" icon="pi pi-check" severity="primary" (onClick)="acceptAll()"> </p-button>
-    <p-button size="small" label="Reject" icon="pi pi-times" severity="secondary" (onClick)="rejectAll()"> </p-button>
+<p-drawer [(visible)]="visible" position="bottom" [closable]="false" [modal]="false" [style]="{ width: '100%', height: 'auto' }">
+  <div class="cookies-content">
+    <p class="cookies-message">This website uses cookies in order to improve the use experience and provide additional functionality</p>
+    <div class="buttons">
+      <p-button size="large" label="Accept" icon="pi pi-check" severity="primary" (onClick)="acceptAll()"> </p-button>
+      <p-button size="large" label="Reject" icon="pi pi-times" severity="secondary" (onClick)="rejectAll()"> </p-button>
+    </div>
   </div>
-</p-dialog>
+</p-drawer>
