@@ -9,7 +9,8 @@
   dataKey="result_title"
   sortMode="single"
   rowGroupMode="subheader"
-  groupRowsBy="result_title">
+  groupRowsBy="result_title"
+  [expandedRowKeys]="expandedRowKeys()">
   <ng-template pTemplate="header">
     <tr>
       @for (column of columnOrder(); track column.attr) {

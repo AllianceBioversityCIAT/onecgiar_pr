@@ -43,6 +43,14 @@ export class AowHloTableComponent {
     }
   });
 
+  expandedRowKeys = computed(() => {
+    const expanded: { [key: string]: boolean } = {};
+    this.tableData().forEach((item: any) => {
+      expanded[item.result_title] = true;
+    });
+    return expanded;
+  });
+
   columnOrder = signal<ColumnOrder[]>([
     { title: 'Indicator name', attr: 'indicator_description', width: '30%' },
     { title: 'Type', attr: 'type_name', width: '10%' },
