@@ -91,7 +91,6 @@ export class TocMappingDto {
     example: 'CLIMATE-AGROECOLOGICAL',
   })
   @IsString()
-  @IsNotEmpty()
   aow_compose_code: string;
 
   @ApiProperty({
@@ -99,7 +98,6 @@ export class TocMappingDto {
     example: 'Climate-resilient crop systems adopted',
   })
   @IsString()
-  @IsNotEmpty()
   result_title: string;
 
   @ApiProperty({
@@ -107,7 +105,6 @@ export class TocMappingDto {
     example: 'Number of climate resilient practices documented',
   })
   @IsString()
-  @IsNotEmpty()
   result_indicator_description: string;
 
   @ApiProperty({
@@ -115,7 +112,6 @@ export class TocMappingDto {
     example: 'Output',
   })
   @IsString()
-  @IsNotEmpty()
   result_indicator_type_name: string;
 }
 
@@ -315,7 +311,6 @@ export class EvidenceDto {
     example: 'Peer-reviewed article documenting outcomes',
   })
   @IsString()
-  @IsNotEmpty()
   description: string;
 }
 

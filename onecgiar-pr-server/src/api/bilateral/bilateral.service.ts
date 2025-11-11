@@ -228,7 +228,6 @@ export class BilateralService {
           resultId = newResultHeader.id;
         }
 
-        // === Ancillary handlers skipped if KP already existed to avoid duplicate inserts ===
         if (!isDuplicateKp) {
           await this.handleLeadCenter(
             resultId,
@@ -398,6 +397,7 @@ export class BilateralService {
     const user = await this._userRepository.findOne({
       where: { email: userData.email },
     });
+    console.log('User lookup for email:', userData.email);
 
     if (!user) {
       const emailDomain = (userData.email.split('@')[1] || '').toLowerCase();
@@ -411,30 +411,46 @@ export class BilateralService {
       };
 
       this.logger.log(`Creating new user for email: ${createUserDto.email}`);
-      const createdUserWrapper = await this._userService.createFull(
-        createUserDto,
-        adminUser?.id,
-      );
-      let createdUser: any = createdUserWrapper;
-      if (
-        createdUserWrapper &&
-        typeof createdUserWrapper === 'object' &&
-        'response' in createdUserWrapper &&
-        createdUserWrapper.response
-      ) {
-        createdUser = createdUserWrapper.response;
-      }
-      if (!createdUser?.id) {
-        this.logger.warn(
-          `createFull did not return expected user object for email=${createUserDto.email}`,
+      try {
+        const createdUserWrapper = await this._userService.createFull(
+          createUserDto,
+          adminUser?.id,
+        );
+
+        let createdUser: any = createdUserWrapper;
+        if (
+          createdUserWrapper &&
+          typeof createdUserWrapper === 'object' &&
+          'response' in createdUserWrapper &&
+          createdUserWrapper.response
+        ) {
+          createdUser = createdUserWrapper.response;
+        }
+
+        if (!createdUser?.id) {
+          throw new Error(
+            `User creation failed: createFull did not return a valid user object for email=${createUserDto.email}`,
+          );
+        }
+
+        this.logger.debug(
+          `Created user unwrapped: ${JSON.stringify({ id: createdUser.id, email: createUserDto.email })}`,
+        );
+        return createdUser;
+      } catch (error) {
+        this.logger.error(
+          `Failed to create user for email ${createUserDto.email}:`,
+          error instanceof Error ? error.stack : JSON.stringify(error),
+        );
+        throw new BadRequestException(
+          `Unable to create user account for ${createUserDto.email}. Please contact support.`,
         );
       }
-      this.logger.debug(
-        `Created user unwrapped: ${JSON.stringify({ id: createdUser?.id ?? null, email: createUserDto.email })}`,
-      );
-      return createdUser;
     }
 
+    this.logger.debug(
+      `Found existing user: ${JSON.stringify({ id: user.id, email: user.email })}`,
+    );
     return user;
   }
 
@@ -460,10 +476,34 @@ export class BilateralService {
 
       const missingFields = [
         !science_program_id && 'science_program_id',
-        !aow_compose_code && 'aow_compose_code',
-        !result_title && 'result_title',
-        !result_indicator_description && 'result_indicator_description',
-        !result_indicator_type_name && 'result_indicator_type_name',
+        science_program_id &&
+        !aow_compose_code &&
+        !result_title &&
+        !result_indicator_description &&
+        !result_indicator_type_name
+          ? null
+          : !aow_compose_code && 'aow_compose_code',
+        science_program_id &&
+        !aow_compose_code &&
+        !result_title &&
+        !result_indicator_description &&
+        !result_indicator_type_name
+          ? null
+          : !result_title && 'result_title',
+        science_program_id &&
+        !aow_compose_code &&
+        !result_title &&
+        !result_indicator_description &&
+        !result_indicator_type_name
+          ? null
+          : !result_indicator_description && 'result_indicator_description',
+        science_program_id &&
+        !aow_compose_code &&
+        !result_title &&
+        !result_indicator_description &&
+        !result_indicator_type_name
+          ? null
+          : !result_indicator_type_name && 'result_indicator_type_name',
       ].filter(Boolean) as string[];
 
       if (missingFields.length) {
@@ -487,7 +527,15 @@ export class BilateralService {
         }
 
         const firstMap = mapToToc[0];
-        if (!firstMap.toc_result_id || !firstMap.toc_results_indicator_id) {
+        const isInitiativeOnlyMapping =
+          firstMap.toc_result_id === null &&
+          firstMap.toc_results_indicator_id === null &&
+          firstMap.science_program_id;
+
+        if (
+          !isInitiativeOnlyMapping &&
+          (!firstMap.toc_result_id || !firstMap.toc_results_indicator_id)
+        ) {
           errors.push(
             `TOC item ${index} repository data missing fields: toc_result_id or toc_results_indicator_id`,
           );
@@ -513,15 +561,17 @@ export class BilateralService {
         });
         await this._resultsTocResultsRepository.save(newTocMapping);
 
-        const newTocContributorsIndicator =
-          this._resultsTocResultsIndicatorsRepository.create({
-            created_by: userId,
-            results_toc_results_id: newTocMapping.result_toc_result_id,
-            toc_results_indicator_id: firstMap.toc_results_indicator_id,
-          });
-        await this._resultsTocResultsIndicatorsRepository.save(
-          newTocContributorsIndicator,
-        );
+        if (!isInitiativeOnlyMapping) {
+          const newTocContributorsIndicator =
+            this._resultsTocResultsIndicatorsRepository.create({
+              created_by: userId,
+              results_toc_results_id: newTocMapping.result_toc_result_id,
+              toc_results_indicator_id: firstMap.toc_results_indicator_id,
+            });
+          await this._resultsTocResultsIndicatorsRepository.save(
+            newTocContributorsIndicator,
+          );
+        }
         processed++;
       } catch (err) {
         errors.push(
@@ -876,7 +926,7 @@ export class BilateralService {
         newPartner.created_by = userId;
         newPartner.last_updated_by = userId;
         newPartner.result_id = resultId;
-        newPartner.institution_roles_id = InstitutionRoleEnum.PARTNER; // 2
+        newPartner.institution_roles_id = InstitutionRoleEnum.PARTNER;
         newPartner.institutions_id = instId;
         newPartner.is_active = true;
         toPersist.push(newPartner);
@@ -1038,14 +1088,12 @@ export class BilateralService {
   ) {
     const hasCountries = Array.isArray(countries) && countries.length > 0;
 
-    // Caso sin países válidos o alcance global/regional sin detalle
     if ((!hasCountries && scopeId !== 3) || scopeId === 4) {
       await this._resultCountryRepository.updateCountries(result.id, []);
       result.has_countries = false;
       return;
     }
 
-    // --- Buscar países en clarisa_countries ---
     const ids = countries
       .map((r) => r.id)
       .filter((id) => id !== null && id !== undefined);
