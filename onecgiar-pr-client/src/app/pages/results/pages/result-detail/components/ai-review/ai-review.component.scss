@@ -46,6 +46,16 @@
       }
     }
 
+    .apply-proposal-button {
+      // align-self: flex-start;
+      color: var(--pr-color-neutral-500);
+      border: 1px solid #7a30a874;
+      width: fit-content;
+      padding: 5px 15px;
+      margin-top: 10px;
+      border-radius: 6px;
+    }
+
     .proposal-label {
       display: flex;
       align-items: center;
@@ -69,7 +79,7 @@
     }
 
     .apply-button-custom {
-      align-self: flex-start;
+      // align-self: flex-start;
     }
 
     .current-version {
@@ -79,7 +89,7 @@
 
       .version-label {
         font-weight: 500;
-        color: #666;
+        color: var(--pr-color-secondary-400);
         font-size: 14px;
       }
     }

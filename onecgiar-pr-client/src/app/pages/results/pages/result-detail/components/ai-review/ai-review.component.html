@@ -26,13 +26,8 @@
           <div class="proposal-content">
             {{ field.proposed_text }}
           </div>
-          <app-pr-button
-            onkeypress="moveTextToInput(field)"
-            (click)="moveTextToInput(field)"
-            text="Apply proposal"
-            [showBackground]="false"
-            class="apply-button-custom">
-          </app-pr-button>
+
+          <div class="apply-proposal-button" (click)="moveTextToInput(field)">Apply proposal</div>
         </div>
 
         <div class="current-version">
