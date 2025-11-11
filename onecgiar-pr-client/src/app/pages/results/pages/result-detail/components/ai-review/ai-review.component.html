@@ -26,13 +26,18 @@
           <div class="proposal-content">
             {{ field.proposed_text }}
           </div>
-          <app-pr-button (click)="moveTextToInput(field)" text="Apply proposal" [showBackground]="false" class="apply-button-custom"> </app-pr-button>
+          <app-pr-button
+            onkeypress="moveTextToInput(field)"
+            (click)="moveTextToInput(field)"
+            text="Apply proposal"
+            [showBackground]="false"
+            class="apply-button-custom">
+          </app-pr-button>
         </div>
 
         <div class="current-version">
           <label class="version-label">Result version</label>
-          <app-pr-input type="text" [readOnly]="false" [(ngModel)]="field.original_text" (ngModelChange)="updateCurrnetFieldsList()" placeholder="">
-          </app-pr-input>
+          <app-pr-input type="text" [readOnly]="false" [(ngModel)]="field.original_text" placeholder=""> </app-pr-input>
         </div>
 
         <app-pr-button
@@ -41,6 +46,7 @@
           icon="save"
           [showBackground]="true"
           class="save-button-custom"
+          onkeypress="aiReviewSE.onApplyProposal(field, $index)"
           (click)="aiReviewSE.onApplyProposal(field, $index)">
         </app-pr-button>
       </div>
