@@ -328,11 +328,9 @@ export class InnovationUseService {
             where: { id: el.id, is_active: true },
           });
         } else if (el?.institution_types_id != 78) {
-          ite =
-            await this._resultByIntitutionsTypeRepository.findOne({
-              where: whereOptions,
-            }
-            );
+          ite = await this._resultByIntitutionsTypeRepository.findOne({
+            where: whereOptions,
+          });
         }
 
         if (ite) {

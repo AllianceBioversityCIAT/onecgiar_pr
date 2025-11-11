@@ -51,6 +51,7 @@ import { InitiativeEntityMapModule } from './api/initiative_entity_map/initiativ
 import { apiVersionMiddleware } from './shared/middleware/api-versioning.middleware';
 import { BilateralModule } from './api/bilateral/bilateral.module';
 import { ResultsFrameworkReportingModule } from './api/results-framework-reporting/results-framework-reporting.module';
+import { AiModule } from './api/ai/ai.module';
 
 @Module({
   imports: [
@@ -101,6 +102,7 @@ import { ResultsFrameworkReportingModule } from './api/results-framework-reporti
     InitiativeEntityMapModule,
     BilateralModule,
     ResultsFrameworkReportingModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [

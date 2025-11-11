@@ -1326,22 +1326,11 @@ export class ResultsFrameworkReportingService {
             ON rbi.result_id = r.id
             AND rbi.inititiative_id = ?
             AND rbi.is_active = 1
-          INNER JOIN results_toc_result rtr
-            ON rtr.results_id = r.id
-            AND (rtr.is_active = 1 OR r.is_active = 1)
-          INNER JOIN results_toc_result_indicators rtri
-            ON rtri.results_toc_results_id = rtr.result_toc_result_id
-            AND rtri.is_active = 1
-            AND rtri.is_not_aplicable = 0
-          LEFT JOIN result_indicators_targets rit
-            ON rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
-            AND rit.is_active = 1
           WHERE
             r.is_active = 1
             AND r.status_id IN (1, 2, 3)
             AND r.result_level_id IN (3, 4)
-            AND r.result_type_id IN (1, 2, 4, 5, 6, 7, 8)
-            AND rit.contributing_indicator IS NOT NULL
+            AND r.result_type_id IN (1, 2, 4, 5, 6, 7, 8, 10)
           GROUP BY
             r.status_id,
             r.result_level_id,

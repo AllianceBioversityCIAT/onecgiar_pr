@@ -189,4 +189,18 @@ export class VersionRepository extends Repository<Version> {
       };
     }
   }
+
+  async getCurrentVersionResultsModule(): Promise<Version | undefined> {
+    try {
+      return await this.findOne({
+        where: { is_active: true, status: true, app_module_id: 1 },
+      });
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: VersionRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
 }

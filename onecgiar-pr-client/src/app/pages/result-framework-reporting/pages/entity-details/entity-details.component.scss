@@ -381,12 +381,12 @@ p {
 ::ng-deep {
   .report-result-dialog {
     width: 70vw !important;
-    max-width: 1200px !important;
+    max-width: 1000px !important;
     min-height: 50vh !important;
     max-height: 90vh !important;
     border-radius: 26px !important;
 
-    @media screen and (max-width: 1200px) {
+    @media screen and (max-width: 1100px) {
       width: 85vw !important;
       max-width: none !important;
     }
