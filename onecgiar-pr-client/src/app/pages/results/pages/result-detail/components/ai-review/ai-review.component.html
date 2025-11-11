@@ -7,7 +7,9 @@
   [draggable]="false"
   [resizable]="false">
   <div class="ai-review-container">
-    <app-alert-status description="✨ The AI analyzed your information and identified the following:"> </app-alert-status>
+    <div class="ai-review-header">
+      <img src="assets/icons/stars.png" alt="" srcset="" /> The AI analyzed your information and identified the following:
+    </div>
 
     @for (field of aiReviewSE.currnetFieldsList(); track $index) {
       <!-- Title Section -->

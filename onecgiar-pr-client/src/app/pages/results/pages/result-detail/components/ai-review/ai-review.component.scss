@@ -4,6 +4,24 @@
   gap: 24px;
   padding: 16px 20px;
 
+  .ai-review-header {
+    margin-left: 10px;
+    margin-top: 5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+    font-weight: 300;
+    color: #6b7b90;
+
+    img {
+      width: 15px;
+
+      filter: brightness(0);
+      opacity: 0.5;
+    }
+  }
+
   .field-section {
     border-radius: 8px;
     padding: 20px;
