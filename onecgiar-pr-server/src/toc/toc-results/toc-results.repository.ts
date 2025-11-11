@@ -22,11 +22,9 @@ export class TocResultsRepository extends Repository<TocResult> {
       const rows = await this.dataSource.query(query);
       return rows?.[0]?.toc_pahse_id ?? null;
     } catch (error) {
-      throw {
-        message: `[${TocResultsRepository.name}] => getCurrentTocPhaseId error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throw new Error(
+        `[${TocResultsRepository.name}] => getCurrentTocPhaseId error: ${error}`,
+      );
     }
   }
 
