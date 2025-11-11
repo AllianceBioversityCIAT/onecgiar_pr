@@ -527,4 +527,15 @@ export class ResultsController {
   getAllResultsForInnovUse() {
     return this.resultsService.getAllResultsForInnovUse();
   }
+
+  @Version('2')
+  @Get('ai/context')
+  @ApiOperation({
+    summary: 'Get AI context',
+    description: 'Retrieves the AI context for the current user session.',
+  })
+  @ApiOkResponse({ description: 'AI context retrieved.' })
+  getAIContext(@Query('resultId') resultId: number) {
+    return this.resultsService.getAIContext(resultId);
+  }
 }

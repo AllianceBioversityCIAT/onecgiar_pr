@@ -1,0 +1,44 @@
+<p-dialog
+  header="AI Review"
+  [modal]="true"
+  [(visible)]="aiReviewSE.showAiReview"
+  [style]="{ width: '90vw', maxWidth: '1200px' }"
+  [dismissableMask]="true"
+  [draggable]="false"
+  [resizable]="false">
+  <div class="ai-review-container">
+    <app-alert-status description="✨ The AI analyzed your information and identified the following:"> </app-alert-status>
+
+    @for (field of aiReviewSE.currnetFieldsList(); track $index) {
+      <!-- Title Section -->
+      <div class="field-section">
+        <div class="field-header">
+          <h3 class="field-title">{{ field.field_name | titlecase }}</h3>
+          <span class="improvement-badge">⚠️ Needs improvement</span>
+        </div>
+
+        <div class="proposal-section">
+          <div class="proposal-label">💡 AI proposal</div>
+          <div class="proposal-content">
+            {{ field.proposed_text }}
+          </div>
+          <app-pr-button (click)="moveTextToInput(field)" text="Apply proposal" [showBackground]="false" class="apply-button-custom"> </app-pr-button>
+        </div>
+
+        <div class="current-version">
+          <label class="version-label">Result version</label>
+          <app-pr-input type="text" [readOnly]="false" [(ngModel)]="field.original_text" placeholder=""> </app-pr-input>
+        </div>
+
+        <app-pr-button
+          [ngClass]="{ globalDisabled: !field.canSave }"
+          text="Save changes"
+          icon="save"
+          [showBackground]="true"
+          class="save-button-custom"
+          (click)="aiReviewSE.onApplyProposal(field, $index)">
+        </app-pr-button>
+      </div>
+    }
+  </div>
+</p-dialog>

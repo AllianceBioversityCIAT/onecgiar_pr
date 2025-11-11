@@ -1,0 +1,214 @@
+import { Injectable, inject, signal } from '@angular/core';
+import { environment } from '../../../../environments/environment';
+import { HttpClient } from '@angular/common/http';
+import { DataControlService } from '../data-control.service';
+import {
+  AISession,
+  IAiRecommendation,
+  POSTAIAssistantCreateEvent,
+  POSTAIAssistantSaveHistory,
+  POSTPRMSQa,
+  POSTSaveProposalField,
+  SaveProposal
+} from '../../interfaces/ai-review.interface';
+import { ApiService } from './api.service';
+import { SaveButtonService } from '../../../custom-fields/save-button/save-button.service';
+import { Router } from '@angular/router';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class AiReviewService {
+  showAiReview = signal<boolean>(false);
+  http = inject(HttpClient);
+  dataControlSE = inject(DataControlService);
+  baseApiBaseUrl = environment.apiBaseUrl + 'api/';
+  baseApiUrlV2 = environment.apiBaseUrl + 'v2/api/';
+  reviewApiUrl = environment.reviewApiUrl;
+  sessionId = signal<number | string | null>(null);
+  aiReviewButtonState: 'idle' | 'loading' | 'completed' = 'idle';
+  currnetFieldsList = signal<any[]>([]);
+  aiContext = signal<any>(null);
+  api = inject(ApiService);
+  saveButtonSE = inject(SaveButtonService);
+  router = inject(Router);
+
+  // Signal para notificar cuando se guarda en general-information
+  generalInformationSaved = signal<number>(0);
+
+  // on AI review click
+  async onAIReviewClick() {
+    try {
+      if (this.aiReviewButtonState !== 'idle') return;
+
+      this.aiReviewButtonState = 'loading';
+
+      // TODO: To async all steps
+      await this.POST_createSession();
+      await this.GET_aiContext();
+      await this.GET_resultContext();
+      const iaBody: POSTPRMSQa = {
+        user_id: this.api.authSE.localStorageUser.email,
+        result_metadata: this.aiContext()
+      };
+      const { json_content } = await this.POST_prmsQa(iaBody);
+
+      this.currnetFieldsList.update(res => {
+        res[0].proposed_text = json_content.new_title;
+        res[0].needs_improvement = true;
+        res[1].proposed_text = json_content.new_description;
+        res[1].needs_improvement = true;
+        if (res[2]) {
+          res[2].proposed_text = json_content.short_name;
+          res[2].needs_improvement = true;
+        }
+        return [...res];
+      });
+
+      await this.POST_createProposal({
+        proposals: this.currnetFieldsList()
+      });
+
+      // Mostrar animación de completado
+      this.aiReviewButtonState = 'completed';
+
+      // Esperar a que termine la animación antes de abrir el modal
+      setTimeout(() => {
+        this.showAiReview.set(true);
+        this.aiReviewButtonState = 'idle';
+      }, 600);
+    } catch (error) {
+      console.error('Error creating AI session:', error);
+      this.aiReviewButtonState = 'idle';
+    }
+  }
+
+  async onApplyProposal(field, index: number) {
+    field.canSave = false;
+    const body: POSTAIAssistantCreateEvent = {
+      session_id: this.sessionId(),
+      result_id: this.dataControlSE.currentResultSignal().id,
+      event_type: 'APPLY_PROPOSAL',
+      field_name: field.field_name
+    };
+    this.POST_createEvent(body);
+    const fieldToSave = this.currnetFieldsList()[index] as POSTSaveProposalField;
+    fieldToSave.new_value = fieldToSave.original_text;
+    fieldToSave.change_reason = 'AI proposal applied';
+    fieldToSave.was_ai_suggested = true;
+    await this.POST_saveSession({ fields: [fieldToSave] });
+    field.canSave = true;
+  }
+
+  // STEP 1: Create AI session
+  POST_createSession() {
+    return new Promise((resolve, reject) => {
+      return this.http.post<any>(`${this.baseApiBaseUrl}ai/sessions`, { result_id: this.dataControlSE.currentResultSignal().id }).subscribe({
+        next: (response: any) => {
+          this.sessionId.set(response.response.id);
+          resolve(response);
+        },
+        error: (error: any) => {
+          console.error('error', error);
+          reject(error);
+        }
+      });
+    });
+  }
+
+  // STEP 2: Get AI result context
+  GET_aiContext() {
+    return new Promise((resolve, reject) => {
+      return this.http.get<any>(`${this.baseApiUrlV2}results/ai/context?resultId=${this.dataControlSE.currentResultSignal().id}`).subscribe({
+        next: (response: any) => {
+          this.aiContext.set(response.response);
+          resolve(response);
+        },
+        error: (error: any) => {
+          console.error('error', error);
+          reject(error);
+        }
+      });
+    });
+  }
+
+  // STEP 3: Get current fields list
+  GET_resultContext() {
+    return new Promise((resolve, reject) => {
+      return this.http.get<any>(`${this.baseApiBaseUrl}ai/result-context/${this.dataControlSE.currentResultSignal().id}`).subscribe({
+        next: (response: any) => {
+          this.currnetFieldsList.set(response.response);
+          resolve(response);
+        },
+        error: (error: any) => {
+          console.error('error', error);
+          reject(error);
+        }
+      });
+    });
+  }
+
+  // STEP 4.1: Create proposal generated by AI
+  POST_prmsQa(body: POSTPRMSQa) {
+    return new Promise<IAiRecommendation>((resolve, reject) => {
+      return this.http.post<IAiRecommendation>(`${this.reviewApiUrl}prms-qa`, body).subscribe({
+        next: (response: IAiRecommendation) => {
+          resolve(response);
+        },
+        error: (error: any) => {
+          console.error('error', error);
+          reject(error);
+        }
+      });
+    });
+  }
+
+  // STEP 4.2: Create proposal generated by AI
+  POST_createProposal(body: POSTAIAssistantSaveHistory) {
+    return new Promise((resolve, reject) => {
+      return this.http.post<any>(`${this.baseApiBaseUrl}ai/sessions/${this.sessionId()}/proposals`, body).subscribe({
+        next: (response: any) => {
+          resolve(response);
+        },
+        error: (error: any) => {
+          console.error('error', error);
+          reject(error);
+        }
+      });
+    });
+  }
+
+  // STEP 5: Create event
+  POST_createEvent(body: any) {
+    return new Promise((resolve, reject) => {
+      return this.http.post<any>(`${this.baseApiBaseUrl}ai/events`, body).subscribe({
+        next: (response: any) => {
+          resolve(response);
+        }
+      });
+    });
+  }
+
+  // STEP 6: Save AI session
+  POST_saveSession(body: any) {
+    return new Promise((resolve, reject) => {
+      return this.http
+        .post<SaveProposal>(`${this.baseApiBaseUrl}ai/sessions/${this.sessionId()}/save`, body)
+        .pipe(this.saveButtonSE.isSavingPipe())
+        .subscribe({
+          next: (response: any) => {
+            // Detectar si estamos en la ruta de general-information
+            const currentUrl = this.router.url;
+            if (currentUrl.includes('general-information')) {
+              // Incrementar el signal para notificar el cambio
+              this.generalInformationSaved.update(val => val + 1);
+            }
+            resolve(response);
+          },
+          error: (error: any) => {
+            reject(error);
+          }
+        });
+    });
+  }
+}
