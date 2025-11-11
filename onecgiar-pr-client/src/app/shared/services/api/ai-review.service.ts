@@ -56,11 +56,14 @@ export class AiReviewService {
       this.currnetFieldsList.update(res => {
         res[0].proposed_text = json_content.new_title;
         res[0].needs_improvement = true;
+        res[0].field_name_label = 'Title';
         res[1].proposed_text = json_content.new_description;
         res[1].needs_improvement = true;
+        res[1].field_name_label = 'Description';
         if (res[2]) {
           res[2].proposed_text = json_content.short_name;
           res[2].needs_improvement = true;
+          res[2].field_name_label = 'Short Name';
         }
         return [...res];
       });
