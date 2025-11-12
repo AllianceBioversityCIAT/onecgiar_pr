@@ -120,6 +120,8 @@ export class BilateralService {
 
         const bilateralDto = result.data;
 
+        await this.ensureUniqueTitle(bilateralDto.title);
+
         const adminUser = await this._userRepository.findOne({
           where: { email: 'admin@prms.pr' },
         });
@@ -636,6 +638,24 @@ export class BilateralService {
       bilateralDto: context.bilateralDto,
       isDuplicateResult: context.isDuplicateResult,
     });
+  }
+
+  private async ensureUniqueTitle(title: string) {
+    const normalizedTitle = (title || '').trim();
+    if (!normalizedTitle) {
+      throw new BadRequestException('Result title is required.');
+    }
+
+    const existing = await this._resultRepository.findOne({
+      where: { title: normalizedTitle, is_active: true },
+      select: { id: true },
+    });
+
+    if (existing) {
+      throw new BadRequestException(
+        `A result with the title "${normalizedTitle}" already exists.`,
+      );
+    }
   }
 
   private async handleLeadCenter(
