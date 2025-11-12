@@ -152,9 +152,6 @@ export class BilateralService {
 
         const lastCode = await this._resultRepository.getLastResultCode();
 
-        let newResultHeader: Result;
-        let resultId: number;
-
         const resultHeader = await this.initializeResultHeader({
           bilateralDto,
           userId,
@@ -163,8 +160,8 @@ export class BilateralService {
           year,
           lastCode,
         });
-        newResultHeader = resultHeader;
-        resultId = resultHeader.id;
+        const newResultHeader = resultHeader;
+        const resultId = resultHeader.id;
 
         await this.handleLeadCenter(resultId, bilateralDto.lead_center, userId);
 

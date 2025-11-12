@@ -424,6 +424,8 @@ describe('InnovationPathwayStepFourService', () => {
         external_submitted_date: new Date().toISOString(),
         external_submitted_comment: 'Test Comment',
         evidence_array: [],
+        results_capacity_development_object: null,
+        results_innovations_dev_object: null,
         obj_lead_contact_person: {
           id: 1,
           cn: 'Test User',

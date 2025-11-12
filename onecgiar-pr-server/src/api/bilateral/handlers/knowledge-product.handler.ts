@@ -10,7 +10,6 @@ import { ResultRepository } from '../../results/result.repository';
 import { ResultsKnowledgeProductsRepository } from '../../results/results-knowledge-products/repositories/results-knowledge-products.repository';
 import { ResultsKnowledgeProductMetadataRepository } from '../../results/results-knowledge-products/repositories/results-knowledge-product-metadata.repository';
 import { Like } from 'typeorm';
-import { Result } from '../../results/entities/result.entity';
 import { SourceEnum } from '../../results/entities/result.entity';
 
 @Injectable()
@@ -38,14 +37,13 @@ export class KnowledgeProductBilateralHandler
     }
 
     this.logger.log('Direct KP creation (no CGSpace sync)');
-    const existingKp =
-      await this._resultsKnowledgeProductsRepository.findOne({
-        where: {
-          handle: Like(bilateralDto.knowledge_product.handle),
-          result_object: { is_active: true },
-        },
-        relations: { result_object: true },
-      });
+    const existingKp = await this._resultsKnowledgeProductsRepository.findOne({
+      where: {
+        handle: Like(bilateralDto.knowledge_product.handle),
+        result_object: { is_active: true },
+      },
+      relations: { result_object: true },
+    });
 
     if (existingKp) {
       this.logger.warn(

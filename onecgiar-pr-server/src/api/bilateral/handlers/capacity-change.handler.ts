@@ -1,4 +1,9 @@
-import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+  Logger,
+} from '@nestjs/common';
 import {
   BilateralResultTypeHandler,
   HandlerAfterCreateContext,
@@ -58,11 +63,8 @@ export class CapacityChangeBilateralHandler
       );
     }
 
-    const {
-      number_people_trained,
-      length_training,
-      delivery_method,
-    } = capacitySharing;
+    const { number_people_trained, length_training, delivery_method } =
+      capacitySharing;
 
     if (!number_people_trained) {
       throw new BadRequestException(

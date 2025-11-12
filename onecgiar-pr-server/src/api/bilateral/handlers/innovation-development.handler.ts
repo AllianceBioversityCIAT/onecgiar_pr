@@ -18,18 +18,9 @@ export class InnovationDevelopmentBilateralHandler
   private readonly typologyNameToCode = new Map<string, number>([
     ['technological innovation', 12],
     ['capacity development innovation', 13],
-    [
-      'policy, organizational or institutional innovation',
-      14,
-    ],
-    [
-      'other/i’m not sure/this typology does not work for my innovation',
-      15,
-    ],
-    [
-      'other/im not sure/this typology does not work for my innovation',
-      15,
-    ],
+    ['policy, organizational or institutional innovation', 14],
+    ['other/i’m not sure/this typology does not work for my innovation', 15],
+    ['other/im not sure/this typology does not work for my innovation', 15],
   ]);
 
   constructor(
@@ -41,9 +32,7 @@ export class InnovationDevelopmentBilateralHandler
     resultId,
     userId,
   }: HandlerAfterCreateContext): Promise<void> {
-    if (
-      bilateralDto.result_type_id !== ResultTypeEnum.INNOVATION_DEVELOPMENT
-    ) {
+    if (bilateralDto.result_type_id !== ResultTypeEnum.INNOVATION_DEVELOPMENT) {
       return;
     }
 
@@ -69,10 +58,9 @@ export class InnovationDevelopmentBilateralHandler
       );
     }
 
-    const existing =
-      await this._resultsInnovationsDevRepository.findOne({
-        where: { results_id: resultId },
-      });
+    const existing = await this._resultsInnovationsDevRepository.findOne({
+      where: { results_id: resultId },
+    });
 
     if (existing) {
       existing.innovation_nature_id = innovationNatureId;
