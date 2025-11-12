@@ -24,6 +24,8 @@ import { ResultsTocResultsModule } from '../results/results-toc-results/results-
 import { ResultsCentersModule } from '../results/results-centers/results-centers.module';
 import { ClarisaProjectsModule } from '../../clarisa/clarisa-projects/clarisa-projects.module';
 import { ResultsByProjectsModule } from '../results/results_by_projects/results_by_projects.module';
+import { CapdevsTermsModule } from '../results/capdevs-terms/capdevs-terms.module';
+import { CapdevsDeliveryMethodsModule } from '../results/capdevs-delivery-methods/capdevs-delivery-methods.module';
 
 @Module({
   imports: [
@@ -50,6 +52,8 @@ import { ResultsByProjectsModule } from '../results/results_by_projects/results_
     ResultsCentersModule,
     ClarisaProjectsModule,
     ResultsByProjectsModule,
+    CapdevsTermsModule,
+    CapdevsDeliveryMethodsModule,
   ],
   controllers: [BilateralController],
   providers: [BilateralService],

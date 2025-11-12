@@ -9,10 +9,13 @@ import {
   ResultBilateralDto,
   RootResultsDto,
   SubmittedByDto,
+  CapacitySharingDto,
+  CreateBilateralDto,
 } from './dto/create-bilateral.dto';
 import { ResultRepository } from '../results/result.repository';
 import { VersioningService } from '../versioning/versioning.service';
 import { AppModuleIdEnum } from '../../shared/constants/role-type.enum';
+import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { Result, SourceEnum } from '../results/entities/result.entity';
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
@@ -48,6 +51,9 @@ import { ClarisaProjectsRepository } from '../../clarisa/clarisa-projects/claris
 import { ResultsByProjectsRepository } from '../results/results_by_projects/results_by_projects.repository';
 import { ClarisaCenter } from '../../clarisa/clarisa-centers/entities/clarisa-center.entity';
 import { ClarisaInstitution } from '../../clarisa/clarisa-institutions/entities/clarisa-institution.entity';
+import { ResultsCapacityDevelopmentsRepository } from '../results/summary/repositories/results-capacity-developments.repository';
+import { CapdevsTermRepository } from '../results/capdevs-terms/capdevs-terms.repository';
+import { CapdevsDeliveryMethodRepository } from '../results/capdevs-delivery-methods/capdevs-delivery-methods.repository';
 
 @Injectable()
 export class BilateralService {
@@ -79,9 +85,64 @@ export class BilateralService {
     private readonly _resultsCenterRepository: ResultsCenterRepository,
     private readonly _clarisaProjectsRepository: ClarisaProjectsRepository,
     private readonly _resultsByProjectsRepository: ResultsByProjectsRepository,
-  ) {}
+    private readonly _resultsCapacityDevelopmentsRepository: ResultsCapacityDevelopmentsRepository,
+    private readonly _capdevsTermRepository: CapdevsTermRepository,
+    private readonly _capdevsDeliveryMethodRepository: CapdevsDeliveryMethodRepository,
+  ) {
+    this.resultTypeHandlers = {
+      [ResultTypeEnum.KNOWLEDGE_PRODUCT]: [
+        async (context) => this.handleKnowledgeProduct(context),
+      ],
+      [ResultTypeEnum.CAPACITY_CHANGE]: [
+        async (context) =>
+          this.handleCapacitySharing(
+            context.resultId,
+            context.bilateralDto.capacity_sharing,
+            context.userId,
+          ),
+      ],
+      [ResultTypeEnum.INNOVATION_DEVELOPMENT]: [
+        async (context) =>
+          this.validateInnovationDevelopment(context.bilateralDto),
+      ],
+    };
+  }
 
   private readonly logger = new Logger(BilateralService.name);
+  private readonly capdevTermLabelToId = new Map<string, number>([
+    ['phd', 1],
+    ['ph.d.', 1],
+    ['doctorate', 1],
+    ['master', 2],
+    ['masters', 2],
+    ['short-term', 3],
+    ['short term', 3],
+    ['short', 3],
+    ['long-term', 4],
+    ['long term', 4],
+    ['long', 4],
+  ]);
+  private readonly capdevDeliveryLabelToId = new Map<string, number>([
+    ['virtual/online', 1],
+    ['virtual / online', 1],
+    ['online', 1],
+    ['virtual', 1],
+    ['in person', 2],
+    ['in-person', 2],
+    ['blended (in-person and virtual)', 3],
+    ['blended', 3],
+  ]);
+  private readonly resultTypeHandlers: Record<
+    number,
+    Array<
+      (context: {
+        resultId: number;
+        bilateralDto: CreateBilateralDto;
+        userId: number;
+        isDuplicateKp: boolean;
+      }) => Promise<void>
+    >
+  >;
 
   async create(rootResultsDto: RootResultsDto) {
     const incomingResults = this.unwrapIncomingResults(rootResultsDto);
@@ -138,101 +199,23 @@ export class BilateralService {
         let newResultHeader: Result;
         let resultId: number;
 
-        let isDuplicateKp = false;
-        if (bilateralDto.result_type_id === 6) {
-          this.logger.log('Direct KP creation (no CGSpace sync)');
-          const existingKp =
-            await this._resultsKnowledgeProductsRepository.findOne({
-              where: {
-                handle: Like(bilateralDto.knowledge_product.handle),
-                result_object: { is_active: true },
-              },
-              relations: { result_object: true },
-            });
-          if (existingKp) {
-            this.logger.warn(
-              `Knowledge Product with handle ${bilateralDto.knowledge_product.handle} already exists (result_id=${existingKp.result_object.id}), skipping KP creation for this entry.`,
-            );
-            newResultHeader = existingKp.result_object;
-            resultId = newResultHeader.id;
-            isDuplicateKp = true;
-          } else {
-            newResultHeader = await this._resultRepository.save({
-              created_by: userId,
-              version_id: version.id,
-              title: bilateralDto.title,
-              description: bilateralDto.description,
-              reported_year_id: year.year,
-              result_code: lastCode + 1,
-              result_type_id: bilateralDto.result_type_id,
-              result_level_id: bilateralDto.result_level_id,
-              external_submitter: submittedUserId,
-              external_submitted_date:
-                bilateralDto.submitted_by?.submitted_date ?? null,
-              external_submitted_comment:
-                bilateralDto.submitted_by?.comment ?? null,
-              ...(bilateralDto.created_date && {
-                created_date: bilateralDto.created_date,
-              }),
-              source: SourceEnum.Bilateral,
-            });
-            resultId = newResultHeader.id;
-
-            const kpEntity: any = {
-              results_id: resultId,
-              created_by: userId,
-              handle: bilateralDto.knowledge_product.handle,
-              name: bilateralDto.title,
-              description: bilateralDto.description,
-              knowledge_product_type:
-                bilateralDto.knowledge_product.knowledge_product_type,
-              licence: bilateralDto.knowledge_product.licence,
-              is_active: true,
-            };
-            const savedKp =
-              await this._resultsKnowledgeProductsRepository.save(kpEntity);
-
-            if (bilateralDto.knowledge_product.metadataCG) {
-              const meta = bilateralDto.knowledge_product.metadataCG;
-              await this._resultsKnowledgeProductMetadataRepository.save({
-                result_knowledge_product_id:
-                  savedKp.result_knowledge_product_id,
-                source: meta.source,
-                is_isi: meta.is_isi ?? null,
-                accesibility: meta.accessibility ? 'Open' : 'Restricted',
-                year: meta.issue_year ?? null,
-                online_year: meta.issue_year ?? null,
-                is_peer_reviewed: meta.is_peer_reviewed ?? null,
-                doi: null,
-                created_by: userId,
-                is_active: true,
-              });
-            }
-          }
-        } else {
-          newResultHeader = await this._resultRepository.save({
-            created_by: userId,
-            version_id: version.id,
-            title: bilateralDto.title,
-            description: bilateralDto.description,
-            reported_year_id: year.year,
-            result_code: lastCode + 1,
-            result_type_id: bilateralDto.result_type_id,
-            result_level_id: bilateralDto.result_level_id,
-            external_submitter: submittedUserId,
-            external_submitted_date:
-              bilateralDto.submitted_by?.submitted_date ?? null,
-            external_submitted_comment:
-              bilateralDto.submitted_by?.comment ?? null,
-            ...(bilateralDto.created_date && {
-              created_date: bilateralDto.created_date,
-            }),
-            source: SourceEnum.Bilateral,
+        const { resultHeader, isDuplicateKp } =
+          await this.initializeResultHeader({
+            bilateralDto,
+            userId,
+            submittedUserId,
+            version,
+            year,
+            lastCode,
           });
-          resultId = newResultHeader.id;
-        }
+        newResultHeader = resultHeader;
+        resultId = resultHeader.id;
 
-        if (!isDuplicateKp) {
+        const skipDetailHandlers =
+          isDuplicateKp &&
+          bilateralDto.result_type_id === ResultTypeEnum.KNOWLEDGE_PRODUCT;
+
+        if (!skipDetailHandlers) {
           await this.handleLeadCenter(
             resultId,
             bilateralDto.lead_center,
@@ -284,6 +267,13 @@ export class BilateralService {
             `Skipping TOC, institutions, evidence and NPP handlers for duplicate KP handle='${bilateralDto.knowledge_product.handle}' (result_id=${resultId}).`,
           );
         }
+
+        await this.runResultTypeHandlers({
+          resultId,
+          userId,
+          bilateralDto,
+          isDuplicateKp,
+        });
 
         await this.handleContributingCenters(
           resultId,
@@ -631,6 +621,329 @@ export class BilateralService {
         result_id: resultId,
         project_id: project.id,
         created_by: userId,
+      });
+    }
+  }
+
+  private normalizeCapacityLabel(value?: string | null) {
+    return value
+      ? value
+          .trim()
+          .toLowerCase()
+          .replace(/\s*\/\s*/g, '/')
+          .replace(/\s+/g, ' ')
+      : '';
+  }
+
+  private async resolveCapdevTermId(lengthTraining: string) {
+    if (!lengthTraining) {
+      throw new BadRequestException(
+        'length_training is required inside capacity_sharing.',
+      );
+    }
+    const normalized = this.normalizeCapacityLabel(lengthTraining);
+    const mappedId = this.capdevTermLabelToId.get(normalized);
+    if (!mappedId) {
+      throw new BadRequestException(
+        `Unsupported length_training value "${lengthTraining}".`,
+      );
+    }
+    const term = await this._capdevsTermRepository.findOne({
+      where: { capdev_term_id: mappedId },
+    });
+    if (!term) {
+      throw new NotFoundException(
+        `Capdev term not found for value "${lengthTraining}".`,
+      );
+    }
+    return term.capdev_term_id;
+  }
+
+  private async resolveCapdevDeliveryMethodId(deliveryMethod: string) {
+    if (!deliveryMethod) {
+      throw new BadRequestException(
+        'delivery_method is required inside capacity_sharing.',
+      );
+    }
+    const normalized = this.normalizeCapacityLabel(deliveryMethod);
+    const mappedId = this.capdevDeliveryLabelToId.get(normalized);
+    if (!mappedId) {
+      throw new BadRequestException(
+        `Unsupported delivery_method value "${deliveryMethod}".`,
+      );
+    }
+    const record = await this._capdevsDeliveryMethodRepository.findOne({
+      where: { capdev_delivery_method_id: mappedId },
+    });
+    if (!record) {
+      throw new NotFoundException(
+        `Capdev delivery method not found for value "${deliveryMethod}".`,
+      );
+    }
+    return record.capdev_delivery_method_id;
+  }
+
+  private async handleCapacitySharing(
+    resultId: number,
+    capacitySharing: CapacitySharingDto,
+    userId: number,
+  ) {
+    if (!capacitySharing) {
+      throw new BadRequestException(
+        'capacity_sharing object is required for CAPACITY_CHANGE results.',
+      );
+    }
+    const { number_people_trained, length_training, delivery_method } =
+      capacitySharing;
+
+    if (!number_people_trained) {
+      throw new BadRequestException(
+        'number_people_trained is required inside capacity_sharing.',
+      );
+    }
+
+    const capdevTermId = await this.resolveCapdevTermId(length_training);
+    const deliveryMethodId =
+      await this.resolveCapdevDeliveryMethodId(delivery_method);
+
+    const capacityData = {
+      male_using: number_people_trained.men ?? null,
+      female_using: number_people_trained.women ?? null,
+      non_binary_using: number_people_trained.non_binary ?? null,
+      has_unkown_using: number_people_trained.unknown ?? null,
+      capdev_term_id: capdevTermId,
+      capdev_delivery_method_id: deliveryMethodId,
+    };
+
+    const existing =
+      await this._resultsCapacityDevelopmentsRepository.capDevExists(resultId);
+
+    if (existing) {
+      await this._resultsCapacityDevelopmentsRepository.save({
+        ...existing,
+        ...capacityData,
+        last_updated_by: userId,
+      });
+      this.logger.debug(
+        `Updated capacity sharing data for result ${resultId} (CAPACITY_CHANGE).`,
+      );
+      return;
+    }
+
+    await this._resultsCapacityDevelopmentsRepository.save(
+      this._resultsCapacityDevelopmentsRepository.create({
+        result_id: resultId,
+        created_by: userId,
+        is_active: true,
+        ...capacityData,
+      }),
+    );
+    this.logger.log(
+      `Stored capacity sharing data for result ${resultId} (CAPACITY_CHANGE).`,
+    );
+  }
+
+  private async initializeResultHeader({
+    bilateralDto,
+    userId,
+    submittedUserId,
+    version,
+    year,
+    lastCode,
+  }: {
+    bilateralDto: CreateBilateralDto;
+    userId: number;
+    submittedUserId: number;
+    version: any;
+    year: any;
+    lastCode: number;
+  }): Promise<{ resultHeader: Result; isDuplicateKp: boolean }> {
+    if (bilateralDto.result_type_id === ResultTypeEnum.KNOWLEDGE_PRODUCT) {
+      return this.initializeKnowledgeProductResult({
+        bilateralDto,
+        userId,
+        submittedUserId,
+        version,
+        year,
+        lastCode,
+      });
+    }
+
+    const resultHeader = await this._resultRepository.save({
+      created_by: userId,
+      version_id: version.id,
+      title: bilateralDto.title,
+      description: bilateralDto.description,
+      reported_year_id: year.year,
+      result_code: lastCode + 1,
+      result_type_id: bilateralDto.result_type_id,
+      result_level_id: bilateralDto.result_level_id,
+      external_submitter: submittedUserId,
+      external_submitted_date:
+        bilateralDto.submitted_by?.submitted_date ?? null,
+      external_submitted_comment: bilateralDto.submitted_by?.comment ?? null,
+      ...(bilateralDto.created_date && {
+        created_date: bilateralDto.created_date,
+      }),
+      source: SourceEnum.Bilateral,
+    });
+
+    return { resultHeader, isDuplicateKp: false };
+  }
+
+  private async initializeKnowledgeProductResult({
+    bilateralDto,
+    userId,
+    submittedUserId,
+    version,
+    year,
+    lastCode,
+  }: {
+    bilateralDto: CreateBilateralDto;
+    userId: number;
+    submittedUserId: number;
+    version: any;
+    year: any;
+    lastCode: number;
+  }): Promise<{ resultHeader: Result; isDuplicateKp: boolean }> {
+    if (!bilateralDto.knowledge_product) {
+      throw new BadRequestException(
+        'knowledge_product object is required for KNOWLEDGE_PRODUCT results.',
+      );
+    }
+
+    this.logger.log('Direct KP creation (no CGSpace sync)');
+    const existingKp = await this._resultsKnowledgeProductsRepository.findOne({
+      where: {
+        handle: Like(bilateralDto.knowledge_product.handle),
+        result_object: { is_active: true },
+      },
+      relations: { result_object: true },
+    });
+
+    if (existingKp) {
+      this.logger.warn(
+        `Knowledge Product with handle ${bilateralDto.knowledge_product.handle} already exists (result_id=${existingKp.result_object.id}), reusing existing result.`,
+      );
+      return {
+        resultHeader: existingKp.result_object,
+        isDuplicateKp: true,
+      };
+    }
+
+    const resultHeader = await this._resultRepository.save({
+      created_by: userId,
+      version_id: version.id,
+      title: bilateralDto.title,
+      description: bilateralDto.description,
+      reported_year_id: year.year,
+      result_code: lastCode + 1,
+      result_type_id: bilateralDto.result_type_id,
+      result_level_id: bilateralDto.result_level_id,
+      external_submitter: submittedUserId,
+      external_submitted_date:
+        bilateralDto.submitted_by?.submitted_date ?? null,
+      external_submitted_comment: bilateralDto.submitted_by?.comment ?? null,
+      ...(bilateralDto.created_date && {
+        created_date: bilateralDto.created_date,
+      }),
+      source: SourceEnum.Bilateral,
+    });
+
+    return { resultHeader, isDuplicateKp: false };
+  }
+
+  private async runResultTypeHandlers(context: {
+    resultId: number;
+    userId: number;
+    bilateralDto: CreateBilateralDto;
+    isDuplicateKp: boolean;
+  }) {
+    const handlers =
+      this.resultTypeHandlers[context.bilateralDto.result_type_id];
+    if (!handlers?.length) return;
+    for (const handler of handlers) {
+      await handler(context);
+    }
+  }
+
+  private async validateInnovationDevelopment(
+    bilateralDto: CreateBilateralDto,
+  ) {
+    const innovation = bilateralDto.innovation_development;
+    if (!innovation) {
+      throw new BadRequestException(
+        'innovation_development object is required for INNOVATION_DEVELOPMENT results.',
+      );
+    }
+
+    if (
+      innovation.is_new_variety &&
+      (innovation.number_of_varieties === undefined ||
+        innovation.number_of_varieties === null)
+    ) {
+      throw new BadRequestException(
+        'number_of_varieties must be provided when is_new_variety is true.',
+      );
+    }
+
+    this.logger.debug(
+      'Innovation Development payload validated (persistence not implemented yet).',
+    );
+  }
+
+  private async handleKnowledgeProduct(context: {
+    resultId: number;
+    bilateralDto: CreateBilateralDto;
+    userId: number;
+    isDuplicateKp: boolean;
+  }) {
+    if (
+      context.bilateralDto.result_type_id !== ResultTypeEnum.KNOWLEDGE_PRODUCT
+    ) {
+      return;
+    }
+
+    const knowledgeProduct = context.bilateralDto.knowledge_product;
+    if (!knowledgeProduct) {
+      throw new BadRequestException(
+        'knowledge_product object is required for KNOWLEDGE_PRODUCT results.',
+      );
+    }
+
+    if (context.isDuplicateKp) {
+      this.logger.debug(
+        `Skipping knowledge product record creation for duplicate handle='${knowledgeProduct.handle}'.`,
+      );
+      return;
+    }
+
+    const kpEntity: any = {
+      results_id: context.resultId,
+      created_by: context.userId,
+      handle: knowledgeProduct.handle,
+      name: context.bilateralDto.title,
+      description: context.bilateralDto.description,
+      knowledge_product_type: knowledgeProduct.knowledge_product_type,
+      licence: knowledgeProduct.licence,
+      is_active: true,
+    };
+    const savedKp =
+      await this._resultsKnowledgeProductsRepository.save(kpEntity);
+
+    if (knowledgeProduct.metadataCG) {
+      const meta = knowledgeProduct.metadataCG;
+      await this._resultsKnowledgeProductMetadataRepository.save({
+        result_knowledge_product_id: savedKp.result_knowledge_product_id,
+        source: meta.source,
+        is_isi: meta.is_isi ?? null,
+        accesibility: meta.accessibility ? 'Open' : 'Restricted',
+        year: meta.issue_year ?? null,
+        online_year: meta.issue_year ?? null,
+        is_peer_reviewed: meta.is_peer_reviewed ?? null,
+        doi: null,
+        created_by: context.userId,
+        is_active: true,
       });
     }
   }

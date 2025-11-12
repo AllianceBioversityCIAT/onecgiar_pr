@@ -15,9 +15,11 @@ import {
   IsBoolean,
   IsDefined,
   IsInt,
+  Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 
 /* -------------------------------------------------------------------------- */
 /*                               SUB-OBJECTS                                   */
@@ -186,6 +188,163 @@ export class SubnationalAreaDto {
   @ValidateIf((o) => !o.id)
   @IsString()
   name?: string;
+}
+
+export class PeopleTrainedBreakdownDto {
+  @ApiProperty({
+    description: 'Number of women that attended the training',
+    example: 150,
+  })
+  @IsNumber()
+  @Min(0)
+  women: number;
+
+  @ApiProperty({
+    description: 'Number of men that attended the training',
+    example: 120,
+  })
+  @IsNumber()
+  @Min(0)
+  men: number;
+
+  @ApiPropertyOptional({
+    description: 'Number of non-binary people that attended the training',
+    example: 5,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  non_binary?: number;
+
+  @ApiPropertyOptional({
+    description: 'Number of attendees whose gender was not disclosed',
+    example: 10,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  unknown?: number;
+}
+
+export class CapacitySharingDto {
+  @ApiProperty({
+    description: 'Breakdown of trained people by gender',
+    type: () => PeopleTrainedBreakdownDto,
+  })
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => PeopleTrainedBreakdownDto)
+  number_people_trained: PeopleTrainedBreakdownDto;
+
+  @ApiProperty({
+    description: 'Length of the training session',
+    enum: ['Short-term', 'Long-term', 'Master', 'PhD'],
+    example: 'Short-term',
+  })
+  @IsString()
+  length_training: string;
+
+  @ApiProperty({
+    description: 'Delivery method used to provide the training',
+    enum: ['Virtual / Online', 'In person', 'Blended (in-person and virtual)'],
+    example: 'In person',
+  })
+  @IsString()
+  delivery_method: string;
+}
+
+export class InnovationDevelopmentDetailsDto {
+  @ApiProperty({
+    description: 'Short title describing the innovation result',
+    example: 'Low-emission rice management package',
+  })
+  @IsString()
+  @IsNotEmpty()
+  short_title: string;
+
+  @ApiProperty({
+    description: 'Catalog identifier describing the nature of the innovation',
+    example: 3,
+  })
+  @IsNumber()
+  @Min(1)
+  innovation_nature_id: number;
+
+  @ApiProperty({
+    description: 'Readiness level identifier associated with the innovation',
+    example: 5,
+  })
+  @IsNumber()
+  @Min(1)
+  innovation_readiness_level_id: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Characterization identifier that classifies the innovation (if applicable)',
+    example: 2,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  innovation_characterization_id?: number;
+
+  @ApiPropertyOptional({
+    description: 'Indicates if the innovation is a new variety',
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  is_new_variety?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Number of varieties involved. Required when is_new_variety is true.',
+    example: 4,
+  })
+  @ValidateIf((o) => o.is_new_variety)
+  @IsNumber()
+  @Min(1)
+  number_of_varieties?: number;
+
+  @ApiPropertyOptional({
+    description: 'Comma separated list (or text) of innovation developers',
+    example: 'Alliance Bioversity-CIAT; IRRI',
+  })
+  @IsOptional()
+  @IsString()
+  innovation_developers?: string;
+
+  @ApiPropertyOptional({
+    description: 'Comma separated list (or text) of collaborators',
+    example: 'World Bank; CCAFS partners',
+  })
+  @IsOptional()
+  @IsString()
+  innovation_collaborators?: string;
+
+  @ApiPropertyOptional({
+    description: 'Narrative on readiness level assessment',
+    example: 'Field validation for two consecutive seasons completed.',
+  })
+  @IsOptional()
+  @IsString()
+  readiness_level?: string;
+
+  @ApiPropertyOptional({
+    description: 'Narrative justifying the evidence',
+    example: 'Trial data attached covering adoption and performance.',
+  })
+  @IsOptional()
+  @IsString()
+  evidences_justification?: string;
+
+  @ApiPropertyOptional({
+    description: 'Acknowledgement text for key contributors',
+    example: 'Supported by Initiative ABC under grant 123.',
+  })
+  @IsOptional()
+  @IsString()
+  innovation_acknowledgement?: string;
 }
 
 /**
@@ -561,6 +720,28 @@ export class CreateBilateralDto {
   @ValidateNested()
   @Type(() => KnowledgeProductDto)
   knowledge_product: KnowledgeProductDto;
+
+  @ApiPropertyOptional({
+    description:
+      'Capacity sharing metadata (required when result_type_id is CAPACITY_CHANGE)',
+    type: () => CapacitySharingDto,
+  })
+  @ValidateIf((o) => o.result_type_id === ResultTypeEnum.CAPACITY_CHANGE)
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => CapacitySharingDto)
+  capacity_sharing?: CapacitySharingDto;
+
+  @ApiPropertyOptional({
+    description:
+      'Innovation development metadata (required when result_type_id is INNOVATION_DEVELOPMENT)',
+    type: () => InnovationDevelopmentDetailsDto,
+  })
+  @ValidateIf((o) => o.result_type_id === ResultTypeEnum.INNOVATION_DEVELOPMENT)
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => InnovationDevelopmentDetailsDto)
+  innovation_development?: InnovationDevelopmentDetailsDto;
 }
 
 export class ResultBilateralDto {
