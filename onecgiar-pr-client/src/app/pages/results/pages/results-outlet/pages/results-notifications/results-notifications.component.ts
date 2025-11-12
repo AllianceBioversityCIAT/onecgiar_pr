@@ -75,7 +75,7 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
   }
 
   getAllPhases() {
-    this.api.resultsSE.GET_versioning(StatusPhaseEnum.ALL, ModuleTypeEnum.REPORTING).subscribe(({ response }) => {
+    this.api.resultsSE.GET_versioning(StatusPhaseEnum.ALL, ModuleTypeEnum.ALL).subscribe(({ response }) => {
       this.phaseList = response;
       if (!this.activatedRoute.snapshot.queryParams['phase'])
         this.resultsNotificationsSE.phaseFilter = this.phaseList.find(phase => phase.status)?.id;
