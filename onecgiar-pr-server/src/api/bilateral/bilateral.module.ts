@@ -1,8 +1,6 @@
 import { Module } from '@nestjs/common';
 import { BilateralService } from './bilateral.service';
 import { BilateralController } from './bilateral.controller';
-
-// Ajusta los imports para usar los módulos correctos y consistentes con tu estructura
 import { ResultsModule } from '../results/results.module';
 import { VersioningModule } from '../versioning/versioning.module';
 import { UserModule } from '../../auth/modules/user/user.module';
@@ -24,6 +22,8 @@ import { NonPooledProjectsModule } from '../results/non-pooled-projects/non-pool
 import { ResultTypesModule } from '../results/result_types/result_types.module';
 import { ResultsTocResultsModule } from '../results/results-toc-results/results-toc-results.module';
 import { ResultsCentersModule } from '../results/results-centers/results-centers.module';
+import { ClarisaProjectsModule } from '../../clarisa/clarisa-projects/clarisa-projects.module';
+import { ResultsByProjectsModule } from '../results/results_by_projects/results_by_projects.module';
 
 @Module({
   imports: [
@@ -48,6 +48,8 @@ import { ResultsCentersModule } from '../results/results-centers/results-centers
     ResultTypesModule,
     ResultsTocResultsModule,
     ResultsCentersModule,
+    ClarisaProjectsModule,
+    ResultsByProjectsModule,
   ],
   controllers: [BilateralController],
   providers: [BilateralService],

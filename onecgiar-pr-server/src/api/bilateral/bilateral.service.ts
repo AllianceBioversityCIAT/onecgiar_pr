@@ -44,6 +44,8 @@ import { ResultsTocResultRepository } from '../results/results-toc-results/repos
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { ResultsTocResultIndicatorsRepository } from '../results/results-toc-results/repositories/results-toc-results-indicators.repository';
 import { ResultsCenterRepository } from '../results/results-centers/results-centers.repository';
+import { ClarisaProjectsRepository } from '../../clarisa/clarisa-projects/clarisa-projects.repository';
+import { ResultsByProjectsRepository } from '../results/results_by_projects/results_by_projects.repository';
 import { ClarisaCenter } from '../../clarisa/clarisa-centers/entities/clarisa-center.entity';
 import { ClarisaInstitution } from '../../clarisa/clarisa-institutions/entities/clarisa-institution.entity';
 
@@ -75,6 +77,8 @@ export class BilateralService {
     private readonly _clarisaInitiatives: ClarisaInitiativesRepository,
     private readonly _resultsTocResultsIndicatorsRepository: ResultsTocResultIndicatorsRepository,
     private readonly _resultsCenterRepository: ResultsCenterRepository,
+    private readonly _clarisaProjectsRepository: ClarisaProjectsRepository,
+    private readonly _resultsByProjectsRepository: ResultsByProjectsRepository,
   ) {}
 
   private readonly logger = new Logger(BilateralService.name);
@@ -331,6 +335,9 @@ export class BilateralService {
               },
             },
             obj_results_toc_result: true,
+            obj_result_by_project: {
+              obj_clarisa_project: true,
+            },
             ...(isKpType && {
               result_knowledge_product_array: {
                 result_knowledge_product_keyword_array: true,
@@ -605,10 +612,24 @@ export class BilateralService {
     }
     for (const nonpp of bilateralProjects) {
       if (!nonpp?.grant_title) continue;
-      await this._nonPooledProjectRepository.save({
-        results_id: resultId,
-        grant_title: nonpp.grant_title,
-        funder_institution_id: null,
+
+      const project = await this._clarisaProjectsRepository.findOne({
+        where: [
+          { shortName: nonpp.grant_title },
+          { fullName: nonpp.grant_title },
+        ],
+      });
+
+      if (!project) {
+        this.logger.warn(
+          `Project not found for grant_title: ${nonpp.grant_title}`,
+        );
+        continue;
+      }
+
+      await this._resultsByProjectsRepository.save({
+        result_id: resultId,
+        project_id: project.id,
         created_by: userId,
       });
     }

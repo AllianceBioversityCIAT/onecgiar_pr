@@ -2755,15 +2755,17 @@ select *
           tri.related_node_id AS toc_results_indicator_id
         FROM
           ${env.DB_TOC}.toc_work_packages twp
-        JOIN ${env.DB_TOC}.toc_results tr ON tr.wp_id = twp.id
+        JOIN ${env.DB_TOC}.toc_results tr ON tr.wp_id = twp.toc_id
         JOIN ${env.DB_TOC}.toc_results_indicators tri ON tri.toc_results_id = tr.id
         WHERE
           wp_official_code = '${aow_compose_code}'
           AND initiativeId = '${science_program_id}'
           AND tr.result_title LIKE '%${result_title}%'
-          AND (tri.indicator_description LIKE '%${result_indicator_description}%' AND tri.type_value = '${result_indicator_type_name}')
+          AND (tri.indicator_description LIKE '%${result_indicator_description}%' OR tri.type_value = '${result_indicator_type_name}')
       `;
+      console.log('tocResultQuery', tocResultQuery);
       const tocResultData = await this.query(tocResultQuery);
+      console.log('tocResultData', tocResultData);
 
       if (tocResultData.length === 0) {
         return null;
@@ -2777,6 +2779,7 @@ select *
       });
     }
   }
+
   async getWpExtraInfoV2(
     resultId: number,
     toc_result_id: number,
