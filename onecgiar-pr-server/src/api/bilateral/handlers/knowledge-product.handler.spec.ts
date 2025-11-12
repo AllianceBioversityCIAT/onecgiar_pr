@@ -75,9 +75,9 @@ describe('KnowledgeProductBilateralHandler', () => {
         result_object: { id: 99 },
       });
 
-      await expect(handler.initializeResultHeader(baseInitContext)).rejects.toBeInstanceOf(
-        BadRequestException,
-      );
+      await expect(
+        handler.initializeResultHeader(baseInitContext),
+      ).rejects.toBeInstanceOf(BadRequestException);
     });
 
     it('creates a new result when handle is unique', async () => {
