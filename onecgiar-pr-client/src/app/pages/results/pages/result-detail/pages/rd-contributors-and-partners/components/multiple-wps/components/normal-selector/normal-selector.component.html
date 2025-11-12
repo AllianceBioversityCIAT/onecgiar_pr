@@ -22,7 +22,7 @@
   description="In this section you can include additional partners. If you do not find the partner in the dropdown menu, you can <a class='open_route alert-event'>request</a> to have it added to the list. Once approved, it may take up to an hour for the partner to appear in the CLARISA institutions list.">
 </app-alert-status>
 
-<div class="auto_fit_container fadeIn" style="position: relative; z-index: 5" *ngIf="this.rdPartnersSE.partnersBody.no_applicable_partner !== true">
+<div class="partners_container fadeIn" style="position: relative; z-index: 5" *ngIf="this.rdPartnersSE.partnersBody.no_applicable_partner !== true">
   <div (click)="getDisableOptions()">
     <app-pr-multi-select
       [options]="this.institutionsSE.institutionsWithoutCentersListPartners"
@@ -91,23 +91,19 @@
     </div>
   </div>
 
-  <div>
+  <div class="partner_types_container">
     <app-pr-field-header
-      label="Partner types"
-      labelDescInlineStyles="margin-top: 0 !important;"
-      [description]="
-        'Total partner(s) type (' + (this.rdPartnersSE.partnersBody.institutions | countInstitutionsTypes: this.rdPartnersSE.toggle)?.length + '):'
-      "
+      [label]="'Partner types (' + (this.rdPartnersSE.partnersBody.institutions | countInstitutionsTypes: this.rdPartnersSE.toggle)?.length + ')'"
+      labelDescInlineStyles="margin-top: 8px !important;"
       [required]="false">
     </app-pr-field-header>
+    <!-- <div>Partner types ({{ (this.rdPartnersSE.partnersBody.institutions | countInstitutionsTypes: this.rdPartnersSE.toggle)?.length }}):</div> -->
 
-    <div class="chips_container custom_scroll">
-      <div
-        class="pr_chip_selected"
-        *ngFor="let option of this.rdPartnersSE.partnersBody.institutions | countInstitutionsTypes: this.rdPartnersSE.toggle; let i = index">
-        <div class="name">{{ option?.count_name }}</div>
-        <i class="material-icons-round" *ngIf="false">remove_circle </i>
-      </div>
+    <div
+      class="partner_type_chip_selected"
+      *ngFor="let option of this.rdPartnersSE.partnersBody.institutions | countInstitutionsTypes: this.rdPartnersSE.toggle; let i = index">
+      <div class="name">{{ option?.count_name }}</div>
+      <i class="material-icons-round" *ngIf="false">remove_circle </i>
     </div>
   </div>
 </div>
