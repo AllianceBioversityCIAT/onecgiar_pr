@@ -1089,13 +1089,13 @@ export class BilateralService {
     }
 
     result.has_regions = true;
-    result.geographic_scope_id = [4, 50].includes(scope.id) ? 50 : scope.id;
+    result.geographic_scope_id = scope.id === 50 ? 50 : scope.id;
 
     await this._resultRepository.save(result);
   }
 
   private resolveScopeId(scopeId: number, countries?: any[]) {
-    if ([4, 50].includes(scopeId)) return 50;
+    if (scopeId === 50) return 50;
     if (scopeId === 3 && countries) return countries.length > 1 ? 3 : 4;
     return scopeId;
   }
@@ -1109,8 +1109,10 @@ export class BilateralService {
   ) {
     const hasCountries = Array.isArray(countries) && countries.length > 0;
 
-    if ((!hasCountries && scopeId !== 3) || scopeId === 4) {
-      await this._resultCountryRepository.updateCountries(result.id, []);
+    if (!hasCountries) {
+      if (scopeId !== 3) {
+        await this._resultCountryRepository.updateCountries(result.id, []);
+      }
       result.has_countries = false;
       return;
     }
