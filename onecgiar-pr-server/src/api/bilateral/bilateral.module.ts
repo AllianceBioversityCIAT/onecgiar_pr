@@ -1,8 +1,6 @@
 import { Module } from '@nestjs/common';
 import { BilateralService } from './bilateral.service';
 import { BilateralController } from './bilateral.controller';
-
-// Ajusta los imports para usar los módulos correctos y consistentes con tu estructura
 import { ResultsModule } from '../results/results.module';
 import { VersioningModule } from '../versioning/versioning.module';
 import { UserModule } from '../../auth/modules/user/user.module';
@@ -24,6 +22,15 @@ import { NonPooledProjectsModule } from '../results/non-pooled-projects/non-pool
 import { ResultTypesModule } from '../results/result_types/result_types.module';
 import { ResultsTocResultsModule } from '../results/results-toc-results/results-toc-results.module';
 import { ResultsCentersModule } from '../results/results-centers/results-centers.module';
+import { ClarisaProjectsModule } from '../../clarisa/clarisa-projects/clarisa-projects.module';
+import { ResultsByProjectsModule } from '../results/results_by_projects/results_by_projects.module';
+import { CapdevsTermsModule } from '../results/capdevs-terms/capdevs-terms.module';
+import { CapdevsDeliveryMethodsModule } from '../results/capdevs-delivery-methods/capdevs-delivery-methods.module';
+import { KnowledgeProductBilateralHandler } from './handlers/knowledge-product.handler';
+import { CapacityChangeBilateralHandler } from './handlers/capacity-change.handler';
+import { InnovationDevelopmentBilateralHandler } from './handlers/innovation-development.handler';
+import { ResultsInnovationsDevRepository } from '../results/summary/repositories/results-innovations-dev.repository';
+import { NoopBilateralHandler } from './handlers/noop.handler';
 
 @Module({
   imports: [
@@ -48,8 +55,19 @@ import { ResultsCentersModule } from '../results/results-centers/results-centers
     ResultTypesModule,
     ResultsTocResultsModule,
     ResultsCentersModule,
+    ClarisaProjectsModule,
+    ResultsByProjectsModule,
+    CapdevsTermsModule,
+    CapdevsDeliveryMethodsModule,
   ],
   controllers: [BilateralController],
-  providers: [BilateralService],
+  providers: [
+    BilateralService,
+    KnowledgeProductBilateralHandler,
+    CapacityChangeBilateralHandler,
+    InnovationDevelopmentBilateralHandler,
+    NoopBilateralHandler,
+    ResultsInnovationsDevRepository,
+  ],
 })
 export class BilateralModule {}

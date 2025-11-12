@@ -49,8 +49,8 @@ import { AuthMicroserviceModule } from './shared/microservices/auth-microservice
 import { AdUsersModule } from './api/ad_users/ad_users.module';
 import { InitiativeEntityMapModule } from './api/initiative_entity_map/initiative_entity_map.module';
 import { apiVersionMiddleware } from './shared/middleware/api-versioning.middleware';
-import { ResultsFrameworkReportingModule } from './api/results-framework-reporting/results-framework-reporting.module';
 import { BilateralModule } from './api/bilateral/bilateral.module';
+import { ResultsFrameworkReportingModule } from './api/results-framework-reporting/results-framework-reporting.module';
 import { AiModule } from './api/ai/ai.module';
 
 @Module({
@@ -100,8 +100,8 @@ import { AiModule } from './api/ai/ai.module';
     AuthMicroserviceModule,
     AdUsersModule,
     InitiativeEntityMapModule,
-    ResultsFrameworkReportingModule,
     BilateralModule,
+    ResultsFrameworkReportingModule,
     AiModule,
   ],
   controllers: [AppController],
