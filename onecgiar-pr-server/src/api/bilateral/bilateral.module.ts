@@ -26,6 +26,11 @@ import { ClarisaProjectsModule } from '../../clarisa/clarisa-projects/clarisa-pr
 import { ResultsByProjectsModule } from '../results/results_by_projects/results_by_projects.module';
 import { CapdevsTermsModule } from '../results/capdevs-terms/capdevs-terms.module';
 import { CapdevsDeliveryMethodsModule } from '../results/capdevs-delivery-methods/capdevs-delivery-methods.module';
+import { KnowledgeProductBilateralHandler } from './handlers/knowledge-product.handler';
+import { CapacityChangeBilateralHandler } from './handlers/capacity-change.handler';
+import { InnovationDevelopmentBilateralHandler } from './handlers/innovation-development.handler';
+import { ResultsInnovationsDevRepository } from '../results/summary/repositories/results-innovations-dev.repository';
+import { NoopBilateralHandler } from './handlers/noop.handler';
 
 @Module({
   imports: [
@@ -56,6 +61,13 @@ import { CapdevsDeliveryMethodsModule } from '../results/capdevs-delivery-method
     CapdevsDeliveryMethodsModule,
   ],
   controllers: [BilateralController],
-  providers: [BilateralService],
+  providers: [
+    BilateralService,
+    KnowledgeProductBilateralHandler,
+    CapacityChangeBilateralHandler,
+    InnovationDevelopmentBilateralHandler,
+    NoopBilateralHandler,
+    ResultsInnovationsDevRepository,
+  ],
 })
 export class BilateralModule {}

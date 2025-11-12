@@ -8,8 +8,6 @@ import {
 import {
   ResultBilateralDto,
   RootResultsDto,
-  SubmittedByDto,
-  CapacitySharingDto,
   CreateBilateralDto,
 } from './dto/create-bilateral.dto';
 import { ResultRepository } from '../results/result.repository';
@@ -20,7 +18,7 @@ import { HandlersError } from '../../shared/handlers/error.utils';
 import { Result, SourceEnum } from '../results/entities/result.entity';
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
 import { ClarisaRegionsRepository } from '../../clarisa/clarisa-regions/ClariasaRegions.repository';
-import { Between, In, Like } from 'typeorm';
+import { In, Like } from 'typeorm';
 import { ClarisaGeographicScopeRepository } from '../../clarisa/clarisa-geographic-scopes/clarisa-geographic-scopes.repository';
 import { ResultRegionRepository } from '../results/result-regions/result-regions.repository';
 import { ClarisaCountriesRepository } from '../../clarisa/clarisa-countries/ClarisaCountries.repository';
@@ -38,9 +36,7 @@ import { EvidencesService } from '../results/evidences/evidences.service';
 import { EvidencesRepository } from '../results/evidences/evidences.repository';
 import { Evidence } from '../results/evidences/entities/evidence.entity';
 import { ResultsKnowledgeProductsRepository } from '../results/results-knowledge-products/repositories/results-knowledge-products.repository';
-import { ResultsKnowledgeProductMetadataRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-metadata.repository';
 import { ClarisaCentersRepository } from '../../clarisa/clarisa-centers/clarisa-centers.repository';
-import { NonPooledProjectRepository } from '../results/non-pooled-projects/non-pooled-projects.repository';
 import { UserService } from '../../auth/modules/user/user.service';
 import { CreateUserDto } from '../../auth/modules/user/dto/create-user.dto';
 import { ResultsTocResultRepository } from '../results/results-toc-results/repositories/results-toc-results.repository';
@@ -51,9 +47,11 @@ import { ClarisaProjectsRepository } from '../../clarisa/clarisa-projects/claris
 import { ResultsByProjectsRepository } from '../results/results_by_projects/results_by_projects.repository';
 import { ClarisaCenter } from '../../clarisa/clarisa-centers/entities/clarisa-center.entity';
 import { ClarisaInstitution } from '../../clarisa/clarisa-institutions/entities/clarisa-institution.entity';
-import { ResultsCapacityDevelopmentsRepository } from '../results/summary/repositories/results-capacity-developments.repository';
-import { CapdevsTermRepository } from '../results/capdevs-terms/capdevs-terms.repository';
-import { CapdevsDeliveryMethodRepository } from '../results/capdevs-delivery-methods/capdevs-delivery-methods.repository';
+import { KnowledgeProductBilateralHandler } from './handlers/knowledge-product.handler';
+import { CapacityChangeBilateralHandler } from './handlers/capacity-change.handler';
+import { InnovationDevelopmentBilateralHandler } from './handlers/innovation-development.handler';
+import { BilateralResultTypeHandler } from './handlers/bilateral-result-type-handler.interface';
+import { NoopBilateralHandler } from './handlers/noop.handler';
 
 @Injectable()
 export class BilateralService {
@@ -75,9 +73,7 @@ export class BilateralService {
     private readonly _evidencesRepository: EvidencesRepository,
     private readonly _evidencesService: EvidencesService,
     private readonly _resultsKnowledgeProductsRepository: ResultsKnowledgeProductsRepository,
-    private readonly _resultsKnowledgeProductMetadataRepository: ResultsKnowledgeProductMetadataRepository,
     private readonly _clarisaCenters: ClarisaCentersRepository,
-    private readonly _nonPooledProjectRepository: NonPooledProjectRepository,
     private readonly _userService: UserService,
     private readonly _resultsTocResultsRepository: ResultsTocResultRepository,
     private readonly _clarisaInitiatives: ClarisaInitiativesRepository,
@@ -85,63 +81,23 @@ export class BilateralService {
     private readonly _resultsCenterRepository: ResultsCenterRepository,
     private readonly _clarisaProjectsRepository: ClarisaProjectsRepository,
     private readonly _resultsByProjectsRepository: ResultsByProjectsRepository,
-    private readonly _resultsCapacityDevelopmentsRepository: ResultsCapacityDevelopmentsRepository,
-    private readonly _capdevsTermRepository: CapdevsTermRepository,
-    private readonly _capdevsDeliveryMethodRepository: CapdevsDeliveryMethodRepository,
+    private readonly _knowledgeProductHandler: KnowledgeProductBilateralHandler,
+    private readonly _capacityChangeHandler: CapacityChangeBilateralHandler,
+    private readonly _innovationDevelopmentHandler: InnovationDevelopmentBilateralHandler,
+    private readonly _otherOutputHandler: NoopBilateralHandler,
   ) {
-    this.resultTypeHandlers = {
-      [ResultTypeEnum.KNOWLEDGE_PRODUCT]: [
-        async (context) => this.handleKnowledgeProduct(context),
-      ],
-      [ResultTypeEnum.CAPACITY_CHANGE]: [
-        async (context) =>
-          this.handleCapacitySharing(
-            context.resultId,
-            context.bilateralDto.capacity_sharing,
-            context.userId,
-          ),
-      ],
-      [ResultTypeEnum.INNOVATION_DEVELOPMENT]: [
-        async (context) =>
-          this.validateInnovationDevelopment(context.bilateralDto),
-      ],
-    };
+    this.resultTypeHandlerMap = new Map<number, BilateralResultTypeHandler>([
+      [_knowledgeProductHandler.resultType, _knowledgeProductHandler],
+      [_capacityChangeHandler.resultType, _capacityChangeHandler],
+      [_innovationDevelopmentHandler.resultType, _innovationDevelopmentHandler],
+      [_otherOutputHandler.resultType, _otherOutputHandler],
+    ]);
   }
 
   private readonly logger = new Logger(BilateralService.name);
-  private readonly capdevTermLabelToId = new Map<string, number>([
-    ['phd', 1],
-    ['ph.d.', 1],
-    ['doctorate', 1],
-    ['master', 2],
-    ['masters', 2],
-    ['short-term', 3],
-    ['short term', 3],
-    ['short', 3],
-    ['long-term', 4],
-    ['long term', 4],
-    ['long', 4],
-  ]);
-  private readonly capdevDeliveryLabelToId = new Map<string, number>([
-    ['virtual/online', 1],
-    ['virtual / online', 1],
-    ['online', 1],
-    ['virtual', 1],
-    ['in person', 2],
-    ['in-person', 2],
-    ['blended (in-person and virtual)', 3],
-    ['blended', 3],
-  ]);
-  private readonly resultTypeHandlers: Record<
+  private readonly resultTypeHandlerMap: Map<
     number,
-    Array<
-      (context: {
-        resultId: number;
-        bilateralDto: CreateBilateralDto;
-        userId: number;
-        isDuplicateKp: boolean;
-      }) => Promise<void>
-    >
+    BilateralResultTypeHandler
   >;
 
   async create(rootResultsDto: RootResultsDto) {
@@ -199,80 +155,61 @@ export class BilateralService {
         let newResultHeader: Result;
         let resultId: number;
 
-        const { resultHeader, isDuplicateKp } =
-          await this.initializeResultHeader({
-            bilateralDto,
-            userId,
-            submittedUserId,
-            version,
-            year,
-            lastCode,
-          });
+        const resultHeader = await this.initializeResultHeader({
+          bilateralDto,
+          userId,
+          submittedUserId,
+          version,
+          year,
+          lastCode,
+        });
         newResultHeader = resultHeader;
         resultId = resultHeader.id;
 
-        const skipDetailHandlers =
-          isDuplicateKp &&
-          bilateralDto.result_type_id === ResultTypeEnum.KNOWLEDGE_PRODUCT;
+        await this.handleLeadCenter(resultId, bilateralDto.lead_center, userId);
 
-        if (!skipDetailHandlers) {
-          await this.handleLeadCenter(
-            resultId,
-            bilateralDto.lead_center,
-            userId,
-          );
+        const {
+          scope_code,
+          scope_label,
+          regions,
+          countries,
+          subnational_areas,
+        } = bilateralDto.geo_focus;
+        const scope = await this.findScope(scope_code, scope_label);
+        this.validateGeoFocus(scope, regions, countries, subnational_areas);
 
-          const {
-            scope_code,
-            scope_label,
-            regions,
-            countries,
-            subnational_areas,
-          } = bilateralDto.geo_focus;
-          const scope = await this.findScope(scope_code, scope_label);
-          this.validateGeoFocus(scope, regions, countries, subnational_areas);
+        await this.handleRegions(newResultHeader, scope, regions);
+        await this.handleCountries(
+          newResultHeader,
+          countries,
+          subnational_areas,
+          scope.id,
+          userId,
+        );
 
-          await this.handleRegions(newResultHeader, scope, regions);
-          await this.handleCountries(
-            newResultHeader,
-            countries,
-            subnational_areas,
-            scope.id,
-            userId,
-          );
+        await this._resultRepository.save({
+          ...newResultHeader,
+          geographic_scope_id: this.resolveScopeId(scope.id, countries),
+        });
 
-          await this._resultRepository.save({
-            ...newResultHeader,
-            geographic_scope_id: this.resolveScopeId(scope.id, countries),
-          });
-
-          await this.handleTocMapping(
-            bilateralDto.toc_mapping,
-            userId,
-            resultId,
-          );
-          await this.handleInstitutions(
-            resultId,
-            bilateralDto.contributing_partners || [],
-            userId,
-          );
-          await this.handleEvidence(resultId, bilateralDto.evidence, userId);
-          await this.handleNonPooledProject(
-            resultId,
-            userId,
-            bilateralDto.contributing_bilateral_projects,
-          );
-        } else {
-          this.logger.debug(
-            `Skipping TOC, institutions, evidence and NPP handlers for duplicate KP handle='${bilateralDto.knowledge_product.handle}' (result_id=${resultId}).`,
-          );
-        }
+        await this.handleTocMapping(bilateralDto.toc_mapping, userId, resultId);
+        await this.handleInstitutions(
+          resultId,
+          bilateralDto.contributing_partners || [],
+          userId,
+        );
+        await this.handleEvidence(resultId, bilateralDto.evidence, userId);
+        await this.handleNonPooledProject(
+          resultId,
+          userId,
+          bilateralDto.contributing_bilateral_projects,
+        );
 
         await this.runResultTypeHandlers({
           resultId,
           userId,
           bilateralDto,
-          isDuplicateKp,
+          isDuplicateResult: false,
         });
 
         await this.handleContributingCenters(
@@ -282,8 +219,15 @@ export class BilateralService {
           bilateralDto.lead_center,
         );
 
+        const isKpType =
+          bilateralDto.result_type_id === ResultTypeEnum.KNOWLEDGE_PRODUCT;
+        const isCapacityChange =
+          bilateralDto.result_type_id === ResultTypeEnum.CAPACITY_CHANGE;
+        const isInnovationDev =
+          bilateralDto.result_type_id === ResultTypeEnum.INNOVATION_DEVELOPMENT;
+
         let kpExtra: any = {};
-        if (bilateralDto.result_type_id === 6) {
+        if (isKpType) {
           const kp = await this._resultsKnowledgeProductsRepository.findOne({
             where: { results_id: resultId },
           });
@@ -298,11 +242,10 @@ export class BilateralService {
         createdResults.push({
           id: resultId,
           result_code: newResultHeader.result_code,
-          is_duplicate_kp: isDuplicateKp,
+          is_duplicate_kp: false,
           ...kpExtra,
         });
 
-        const isKpType = bilateralDto.result_type_id === 6;
         resultInfo = await this._resultRepository.findOne({
           where: { id: newResultHeader.id },
           relations: {
@@ -333,6 +276,12 @@ export class BilateralService {
                 result_knowledge_product_keyword_array: true,
                 result_knowledge_product_metadata_array: true,
               },
+            }),
+            ...(isCapacityChange && {
+              results_capacity_development_object: true,
+            }),
+            ...(isInnovationDev && {
+              results_innovations_dev_object: true,
             }),
           },
         });
@@ -394,7 +343,6 @@ export class BilateralService {
     const user = await this._userRepository.findOne({
       where: { email: userData.email },
     });
-    console.log('User lookup for email:', userData.email);
 
     if (!user) {
       const emailDomain = (userData.email.split('@')[1] || '').toLowerCase();
@@ -625,124 +573,6 @@ export class BilateralService {
     }
   }
 
-  private normalizeCapacityLabel(value?: string | null) {
-    return value
-      ? value
-          .trim()
-          .toLowerCase()
-          .replace(/\s*\/\s*/g, '/')
-          .replace(/\s+/g, ' ')
-      : '';
-  }
-
-  private async resolveCapdevTermId(lengthTraining: string) {
-    if (!lengthTraining) {
-      throw new BadRequestException(
-        'length_training is required inside capacity_sharing.',
-      );
-    }
-    const normalized = this.normalizeCapacityLabel(lengthTraining);
-    const mappedId = this.capdevTermLabelToId.get(normalized);
-    if (!mappedId) {
-      throw new BadRequestException(
-        `Unsupported length_training value "${lengthTraining}".`,
-      );
-    }
-    const term = await this._capdevsTermRepository.findOne({
-      where: { capdev_term_id: mappedId },
-    });
-    if (!term) {
-      throw new NotFoundException(
-        `Capdev term not found for value "${lengthTraining}".`,
-      );
-    }
-    return term.capdev_term_id;
-  }
-
-  private async resolveCapdevDeliveryMethodId(deliveryMethod: string) {
-    if (!deliveryMethod) {
-      throw new BadRequestException(
-        'delivery_method is required inside capacity_sharing.',
-      );
-    }
-    const normalized = this.normalizeCapacityLabel(deliveryMethod);
-    const mappedId = this.capdevDeliveryLabelToId.get(normalized);
-    if (!mappedId) {
-      throw new BadRequestException(
-        `Unsupported delivery_method value "${deliveryMethod}".`,
-      );
-    }
-    const record = await this._capdevsDeliveryMethodRepository.findOne({
-      where: { capdev_delivery_method_id: mappedId },
-    });
-    if (!record) {
-      throw new NotFoundException(
-        `Capdev delivery method not found for value "${deliveryMethod}".`,
-      );
-    }
-    return record.capdev_delivery_method_id;
-  }
-
-  private async handleCapacitySharing(
-    resultId: number,
-    capacitySharing: CapacitySharingDto,
-    userId: number,
-  ) {
-    if (!capacitySharing) {
-      throw new BadRequestException(
-        'capacity_sharing object is required for CAPACITY_CHANGE results.',
-      );
-    }
-    const { number_people_trained, length_training, delivery_method } =
-      capacitySharing;
-
-    if (!number_people_trained) {
-      throw new BadRequestException(
-        'number_people_trained is required inside capacity_sharing.',
-      );
-    }
-
-    const capdevTermId = await this.resolveCapdevTermId(length_training);
-    const deliveryMethodId =
-      await this.resolveCapdevDeliveryMethodId(delivery_method);
-
-    const capacityData = {
-      male_using: number_people_trained.men ?? null,
-      female_using: number_people_trained.women ?? null,
-      non_binary_using: number_people_trained.non_binary ?? null,
-      has_unkown_using: number_people_trained.unknown ?? null,
-      capdev_term_id: capdevTermId,
-      capdev_delivery_method_id: deliveryMethodId,
-    };
-
-    const existing =
-      await this._resultsCapacityDevelopmentsRepository.capDevExists(resultId);
-
-    if (existing) {
-      await this._resultsCapacityDevelopmentsRepository.save({
-        ...existing,
-        ...capacityData,
-        last_updated_by: userId,
-      });
-      this.logger.debug(
-        `Updated capacity sharing data for result ${resultId} (CAPACITY_CHANGE).`,
-      );
-      return;
-    }
-
-    await this._resultsCapacityDevelopmentsRepository.save(
-      this._resultsCapacityDevelopmentsRepository.create({
-        result_id: resultId,
-        created_by: userId,
-        is_active: true,
-        ...capacityData,
-      }),
-    );
-    this.logger.log(
-      `Stored capacity sharing data for result ${resultId} (CAPACITY_CHANGE).`,
-    );
-  }
-
   private async initializeResultHeader({
     bilateralDto,
     userId,
@@ -757,9 +587,10 @@ export class BilateralService {
     version: any;
     year: any;
     lastCode: number;
-  }): Promise<{ resultHeader: Result; isDuplicateKp: boolean }> {
-    if (bilateralDto.result_type_id === ResultTypeEnum.KNOWLEDGE_PRODUCT) {
-      return this.initializeKnowledgeProductResult({
+  }): Promise<Result> {
+    const handler = this.resultTypeHandlerMap.get(bilateralDto.result_type_id);
+    if (handler?.initializeResultHeader) {
+      const custom = await handler.initializeResultHeader({
         bilateralDto,
         userId,
         submittedUserId,
@@ -767,6 +598,7 @@ export class BilateralService {
         year,
         lastCode,
       });
+      if (custom?.resultHeader) return custom.resultHeader;
     }
 
     const resultHeader = await this._resultRepository.save({
@@ -788,164 +620,25 @@ export class BilateralService {
       source: SourceEnum.Bilateral,
     });
 
-    return { resultHeader, isDuplicateKp: false };
-  }
-
-  private async initializeKnowledgeProductResult({
-    bilateralDto,
-    userId,
-    submittedUserId,
-    version,
-    year,
-    lastCode,
-  }: {
-    bilateralDto: CreateBilateralDto;
-    userId: number;
-    submittedUserId: number;
-    version: any;
-    year: any;
-    lastCode: number;
-  }): Promise<{ resultHeader: Result; isDuplicateKp: boolean }> {
-    if (!bilateralDto.knowledge_product) {
-      throw new BadRequestException(
-        'knowledge_product object is required for KNOWLEDGE_PRODUCT results.',
-      );
-    }
-
-    this.logger.log('Direct KP creation (no CGSpace sync)');
-    const existingKp = await this._resultsKnowledgeProductsRepository.findOne({
-      where: {
-        handle: Like(bilateralDto.knowledge_product.handle),
-        result_object: { is_active: true },
-      },
-      relations: { result_object: true },
-    });
-
-    if (existingKp) {
-      this.logger.warn(
-        `Knowledge Product with handle ${bilateralDto.knowledge_product.handle} already exists (result_id=${existingKp.result_object.id}), reusing existing result.`,
-      );
-      return {
-        resultHeader: existingKp.result_object,
-        isDuplicateKp: true,
-      };
-    }
-
-    const resultHeader = await this._resultRepository.save({
-      created_by: userId,
-      version_id: version.id,
-      title: bilateralDto.title,
-      description: bilateralDto.description,
-      reported_year_id: year.year,
-      result_code: lastCode + 1,
-      result_type_id: bilateralDto.result_type_id,
-      result_level_id: bilateralDto.result_level_id,
-      external_submitter: submittedUserId,
-      external_submitted_date:
-        bilateralDto.submitted_by?.submitted_date ?? null,
-      external_submitted_comment: bilateralDto.submitted_by?.comment ?? null,
-      ...(bilateralDto.created_date && {
-        created_date: bilateralDto.created_date,
-      }),
-      source: SourceEnum.Bilateral,
-    });
-
-    return { resultHeader, isDuplicateKp: false };
+    return resultHeader;
   }
 
   private async runResultTypeHandlers(context: {
     resultId: number;
     userId: number;
     bilateralDto: CreateBilateralDto;
-    isDuplicateKp: boolean;
+    isDuplicateResult: boolean;
   }) {
-    const handlers =
-      this.resultTypeHandlers[context.bilateralDto.result_type_id];
-    if (!handlers?.length) return;
-    for (const handler of handlers) {
-      await handler(context);
-    }
-  }
-
-  private async validateInnovationDevelopment(
-    bilateralDto: CreateBilateralDto,
-  ) {
-    const innovation = bilateralDto.innovation_development;
-    if (!innovation) {
-      throw new BadRequestException(
-        'innovation_development object is required for INNOVATION_DEVELOPMENT results.',
-      );
-    }
-
-    if (
-      innovation.is_new_variety &&
-      (innovation.number_of_varieties === undefined ||
-        innovation.number_of_varieties === null)
-    ) {
-      throw new BadRequestException(
-        'number_of_varieties must be provided when is_new_variety is true.',
-      );
-    }
-
-    this.logger.debug(
-      'Innovation Development payload validated (persistence not implemented yet).',
+    const handler = this.resultTypeHandlerMap.get(
+      context.bilateralDto.result_type_id,
     );
-  }
-
-  private async handleKnowledgeProduct(context: {
-    resultId: number;
-    bilateralDto: CreateBilateralDto;
-    userId: number;
-    isDuplicateKp: boolean;
-  }) {
-    if (
-      context.bilateralDto.result_type_id !== ResultTypeEnum.KNOWLEDGE_PRODUCT
-    ) {
-      return;
-    }
-
-    const knowledgeProduct = context.bilateralDto.knowledge_product;
-    if (!knowledgeProduct) {
-      throw new BadRequestException(
-        'knowledge_product object is required for KNOWLEDGE_PRODUCT results.',
-      );
-    }
-
-    if (context.isDuplicateKp) {
-      this.logger.debug(
-        `Skipping knowledge product record creation for duplicate handle='${knowledgeProduct.handle}'.`,
-      );
-      return;
-    }
-
-    const kpEntity: any = {
-      results_id: context.resultId,
-      created_by: context.userId,
-      handle: knowledgeProduct.handle,
-      name: context.bilateralDto.title,
-      description: context.bilateralDto.description,
-      knowledge_product_type: knowledgeProduct.knowledge_product_type,
-      licence: knowledgeProduct.licence,
-      is_active: true,
-    };
-    const savedKp =
-      await this._resultsKnowledgeProductsRepository.save(kpEntity);
-
-    if (knowledgeProduct.metadataCG) {
-      const meta = knowledgeProduct.metadataCG;
-      await this._resultsKnowledgeProductMetadataRepository.save({
-        result_knowledge_product_id: savedKp.result_knowledge_product_id,
-        source: meta.source,
-        is_isi: meta.is_isi ?? null,
-        accesibility: meta.accessibility ? 'Open' : 'Restricted',
-        year: meta.issue_year ?? null,
-        online_year: meta.issue_year ?? null,
-        is_peer_reviewed: meta.is_peer_reviewed ?? null,
-        doi: null,
-        created_by: context.userId,
-        is_active: true,
-      });
-    }
+    if (!handler?.afterCreate) return;
+    await handler.afterCreate({
+      resultId: context.resultId,
+      userId: context.userId,
+      bilateralDto: context.bilateralDto,
+      isDuplicateResult: context.isDuplicateResult,
+    });
   }
 
   private async handleLeadCenter(
@@ -1270,42 +963,6 @@ export class BilateralService {
     if (toPersist.length) {
       await this._resultByIntitutionsRepository.save(toPersist);
     }
-  }
-
-  private async findSubmittedByUser({
-    email,
-    submitted_date,
-    name,
-  }: SubmittedByDto) {
-    if (email) return this._userRepository.findOne({ where: { email } });
-
-    if (submitted_date) {
-      const start = new Date(submitted_date);
-      const end = new Date(submitted_date);
-      start.setHours(0, 0, 0, 0);
-      end.setHours(23, 59, 59, 999);
-
-      return this._userRepository.findOne({
-        where: { created_date: Between(start, end) },
-      });
-    }
-
-    if (name) {
-      const [firstName, ...lastParts] = name.trim().split(/\s+/);
-      const lastName = lastParts.join(' ') || null;
-      const where: any[] = [{ first_name: firstName }];
-
-      if (lastName) {
-        where.push(
-          { last_name: lastName },
-          { first_name: firstName, last_name: lastName },
-        );
-      }
-
-      return this._userRepository.findOne({ where });
-    }
-
-    return null;
   }
 
   private async findScope(scope_code?: number, scope_label?: string) {

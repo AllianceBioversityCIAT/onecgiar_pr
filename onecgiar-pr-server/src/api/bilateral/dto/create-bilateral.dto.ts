@@ -253,98 +253,50 @@ export class CapacitySharingDto {
   delivery_method: string;
 }
 
+export class InnovationTypologyDto {
+  @ApiPropertyOptional({
+    description: 'Numeric code identifying the innovation typology (12-15)',
+    example: 12,
+  })
+  @ValidateIf((o) => !o.name)
+  @IsNumber()
+  @IsIn([12, 13, 14, 15])
+  code?: number;
+
+  @ApiPropertyOptional({
+    description: 'Human readable typology name',
+    example: 'Technological innovation',
+  })
+  @ValidateIf((o) => !o.code)
+  @IsString()
+  name?: string;
+}
+
 export class InnovationDevelopmentDetailsDto {
   @ApiProperty({
-    description: 'Short title describing the innovation result',
-    example: 'Low-emission rice management package',
+    description:
+      'Typology information for the innovation (code or name must be provided).',
+    type: () => InnovationTypologyDto,
+  })
+  @ValidateNested()
+  @Type(() => InnovationTypologyDto)
+  innovation_typology: InnovationTypologyDto;
+
+  @ApiProperty({
+    description: 'Comma separated list (or text) of innovation developers',
+    example: 'John Doe; Marie Curie; Nikola Tesla',
   })
   @IsString()
   @IsNotEmpty()
-  short_title: string;
-
-  @ApiProperty({
-    description: 'Catalog identifier describing the nature of the innovation',
-    example: 3,
-  })
-  @IsNumber()
-  @Min(1)
-  innovation_nature_id: number;
+  innovation_developers: string;
 
   @ApiProperty({
     description: 'Readiness level identifier associated with the innovation',
-    example: 5,
+    example: 14,
   })
   @IsNumber()
   @Min(1)
-  innovation_readiness_level_id: number;
-
-  @ApiPropertyOptional({
-    description:
-      'Characterization identifier that classifies the innovation (if applicable)',
-    example: 2,
-  })
-  @IsOptional()
-  @IsNumber()
-  @Min(1)
-  innovation_characterization_id?: number;
-
-  @ApiPropertyOptional({
-    description: 'Indicates if the innovation is a new variety',
-    example: true,
-  })
-  @IsOptional()
-  @IsBoolean()
-  is_new_variety?: boolean;
-
-  @ApiPropertyOptional({
-    description:
-      'Number of varieties involved. Required when is_new_variety is true.',
-    example: 4,
-  })
-  @ValidateIf((o) => o.is_new_variety)
-  @IsNumber()
-  @Min(1)
-  number_of_varieties?: number;
-
-  @ApiPropertyOptional({
-    description: 'Comma separated list (or text) of innovation developers',
-    example: 'Alliance Bioversity-CIAT; IRRI',
-  })
-  @IsOptional()
-  @IsString()
-  innovation_developers?: string;
-
-  @ApiPropertyOptional({
-    description: 'Comma separated list (or text) of collaborators',
-    example: 'World Bank; CCAFS partners',
-  })
-  @IsOptional()
-  @IsString()
-  innovation_collaborators?: string;
-
-  @ApiPropertyOptional({
-    description: 'Narrative on readiness level assessment',
-    example: 'Field validation for two consecutive seasons completed.',
-  })
-  @IsOptional()
-  @IsString()
-  readiness_level?: string;
-
-  @ApiPropertyOptional({
-    description: 'Narrative justifying the evidence',
-    example: 'Trial data attached covering adoption and performance.',
-  })
-  @IsOptional()
-  @IsString()
-  evidences_justification?: string;
-
-  @ApiPropertyOptional({
-    description: 'Acknowledgement text for key contributors',
-    example: 'Supported by Initiative ABC under grant 123.',
-  })
-  @IsOptional()
-  @IsString()
-  innovation_acknowledgement?: string;
+  innovation_readiness_level: number;
 }
 
 /**
@@ -712,14 +664,17 @@ export class CreateBilateralDto {
   @Type(() => BilateralProjectDto)
   contributing_bilateral_projects: BilateralProjectDto[];
 
-  @ApiProperty({
-    description: 'Knowledge product associated with the bilateral project',
+  @ApiPropertyOptional({
+    description:
+      'Knowledge product associated with the bilateral project (required only for KNOWLEDGE_PRODUCT results)',
     type: () => KnowledgeProductDto,
   })
+  @ValidateIf((o) => o.result_type_id === ResultTypeEnum.KNOWLEDGE_PRODUCT)
+  @IsDefined()
   @IsObject()
   @ValidateNested()
   @Type(() => KnowledgeProductDto)
-  knowledge_product: KnowledgeProductDto;
+  knowledge_product?: KnowledgeProductDto;
 
   @ApiPropertyOptional({
     description:

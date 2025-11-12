@@ -2763,9 +2763,7 @@ select *
           AND tr.result_title LIKE '%${result_title}%'
           AND (tri.indicator_description LIKE '%${result_indicator_description}%' OR tri.type_value = '${result_indicator_type_name}')
       `;
-      console.log('tocResultQuery', tocResultQuery);
       const tocResultData = await this.query(tocResultQuery);
-      console.log('tocResultData', tocResultData);
 
       if (tocResultData.length === 0) {
         return null;
