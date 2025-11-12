@@ -45,45 +45,49 @@
     <div class="chips_container custom_scroll partners_selected">
       <div class="pr_chip_selected" *ngFor="let option of this.rdPartnersSE.partnersBody.institutions; let i = index">
         <div appFeedbackValidation labelText="Partner role" [isComplete]="!!option?.delivery?.length"></div>
-        <div class="name">{{ option?.obj_institutions?.name }}</div>
-        <div class="type"><strong>Institution type:</strong> {{ option?.obj_institutions?.obj_institution_type_code?.name }}</div>
-        <div class="deliveries" [ngClass]="{ readOnly_deliveries: this.rolesSE.readOnly }">
-          <div
-            class="delivery"
-            *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 1) : true"
-            [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 1) }"
-            (click)="this.rdPartnersSE.onSelectDeliveryPartners(option, 1)"
-            pTooltip="Organizations or entities that CGIAR collaborates with to advance the uptake and use of innovations at scale."
-            tooltipPosition="top">
-            Scaling
-          </div>
-          <div
-            class="delivery"
-            *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 2) : true"
-            [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 2) }"
-            (click)="this.rdPartnersSE.onSelectDeliveryPartners(option, 2)"
-            pTooltip="Organizations or entities that have (expressed) an explicit or implicit demand for an innovation, change or who aspire to a specific goal or impact to which CGIAR can contribute."
-            tooltipPosition="top">
-            Demand
-          </div>
-          <div
-            class="delivery"
-            *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 3) : true"
-            [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 3) }"
-            (click)="this.rdPartnersSE.onSelectDeliveryPartners(option, 3)"
-            pTooltip="Organizations or entities that CGIAR collaborates and co-invests with to develop, improve the readiness of, or apply innovations to contribute to impact at scale."
-            tooltipPosition="top">
-            Innovation
-          </div>
-          <div
-            class="delivery"
-            *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 4) : true"
-            [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 4) }"
-            (click)="this.rdPartnersSE.onSelectDeliveryPartners(option, 4)">
-            Other
-          </div>
+        <div>
+          <div class="name">{{ option?.obj_institutions?.name }}</div>
+          <div class="type"><strong>Institution type:</strong> {{ option?.obj_institutions?.obj_institution_type_code?.name }}</div>
         </div>
-        <i class="material-icons-round" *ngIf="!this.rolesSE.readOnly" (click)="this.rdPartnersSE.removePartner(i)">remove_circle </i>
+        <div class="deliveries_container">
+          <div class="deliveries" [ngClass]="{ readOnly_deliveries: this.rolesSE.readOnly }">
+            <div
+              class="delivery"
+              *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 1) : true"
+              [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 1) }"
+              (click)="this.rdPartnersSE.onSelectDeliveryPartners(option, 1)"
+              pTooltip="Organizations or entities that CGIAR collaborates with to advance the uptake and use of innovations at scale."
+              tooltipPosition="top">
+              Scaling
+            </div>
+            <div
+              class="delivery"
+              *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 2) : true"
+              [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 2) }"
+              (click)="this.rdPartnersSE.onSelectDeliveryPartners(option, 2)"
+              pTooltip="Organizations or entities that have (expressed) an explicit or implicit demand for an innovation, change or who aspire to a specific goal or impact to which CGIAR can contribute."
+              tooltipPosition="top">
+              Demand
+            </div>
+            <div
+              class="delivery"
+              *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 3) : true"
+              [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 3) }"
+              (click)="this.rdPartnersSE.onSelectDeliveryPartners(option, 3)"
+              pTooltip="Organizations or entities that CGIAR collaborates and co-invests with to develop, improve the readiness of, or apply innovations to contribute to impact at scale."
+              tooltipPosition="top">
+              Innovation
+            </div>
+            <div
+              class="delivery"
+              *ngIf="this.rolesSE.readOnly ? this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 4) : true"
+              [ngClass]="{ active: this.rdPartnersSE.validateDeliverySelectionPartners(option?.delivery, 4) }"
+              (click)="this.rdPartnersSE.onSelectDeliveryPartners(option, 4)">
+              Other
+            </div>
+          </div>
+          <i class="material-icons-round" *ngIf="!this.rolesSE.readOnly" (click)="this.rdPartnersSE.removePartner(i)">delete</i>
+        </div>
       </div>
     </div>
   </div>
