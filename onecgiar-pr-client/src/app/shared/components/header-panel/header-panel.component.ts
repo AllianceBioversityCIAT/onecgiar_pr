@@ -85,4 +85,8 @@ export class HeaderPanelComponent implements OnInit {
     this.resultsNotificationsSE.updatesPopUpData = [];
     this.resultsNotificationsSE.handlePopUpNotificationLastViewed();
   }
+
+  isInNotificationsRoute(): boolean {
+    return this.router.url.includes('results-notifications');
+  }
 }
