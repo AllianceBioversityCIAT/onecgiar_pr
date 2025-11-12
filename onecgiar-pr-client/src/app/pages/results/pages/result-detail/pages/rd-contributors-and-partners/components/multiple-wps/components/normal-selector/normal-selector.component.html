@@ -47,9 +47,6 @@
         <div appFeedbackValidation labelText="Partner role" [isComplete]="!!option?.delivery?.length"></div>
         <div class="name">{{ option?.obj_institutions?.name }}</div>
         <div class="type"><strong>Institution type:</strong> {{ option?.obj_institutions?.obj_institution_type_code?.name }}</div>
-        <div style="margin-top: -10px; margin-bottom: -20px">
-          <app-pr-field-header label="Partner role"> </app-pr-field-header>
-        </div>
         <div class="deliveries" [ngClass]="{ readOnly_deliveries: this.rolesSE.readOnly }">
           <div
             class="delivery"
