@@ -13,8 +13,12 @@
       <!-- Title Section -->
       <div class="field-section">
         <div class="field-header">
-          <h3 class="field-title">{{ field.field_name | titlecase }}</h3>
-          <span class="improvement-badge">⚠️ Needs improvement</span>
+          <h3 class="field-title">{{ field.field_name_label }}</h3>
+          @if (field.original_text == field.proposed_text) {
+            <span class="improvement-badge"> <img src="assets/icons/stars.png" alt="" srcset="" /> Updated</span>
+          } @else {
+            <span class="improvement-badge"> <i class="pi pi-exclamation-triangle"></i> Needs improvement</span>
+          }
         </div>
 
         <div class="proposal-section">
@@ -22,7 +26,13 @@
           <div class="proposal-content">
             {{ field.proposed_text }}
           </div>
-          <app-pr-button (click)="moveTextToInput(field)" text="Apply proposal" [showBackground]="false" class="apply-button-custom"> </app-pr-button>
+          <app-pr-button
+            onkeypress="moveTextToInput(field)"
+            (click)="moveTextToInput(field)"
+            text="Apply proposal"
+            [showBackground]="false"
+            class="apply-button-custom">
+          </app-pr-button>
         </div>
 
         <div class="current-version">
@@ -36,6 +46,7 @@
           icon="save"
           [showBackground]="true"
           class="save-button-custom"
+          onkeypress="aiReviewSE.onApplyProposal(field, $index)"
           (click)="aiReviewSE.onApplyProposal(field, $index)">
         </app-pr-button>
       </div>
