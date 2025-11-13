@@ -414,6 +414,7 @@ describe('UserNotificationSettingsService', () => {
             obj_ai_review_events: [],
             obj_result_field_revisions: [],
             obj_result_field_ai_states_updated: [],
+            obj_external_submitter_results: [],
           },
           obj_initiative: {} as any,
           action_area_id: 1,

@@ -249,6 +249,10 @@ export class BilateralService {
           where: { id: newResultHeader.id },
           relations: {
             obj_geographic_scope: true,
+            obj_result_type: true,
+            obj_result_level: true,
+            obj_created: true,
+            obj_external_submitter: true,
             result_region_array: {
               region_object: true,
             },
@@ -292,11 +296,10 @@ export class BilateralService {
         status: 201,
       };
     } catch (error) {
-      this.logger.error(
-        'Error creating bilateral',
-        error instanceof Error ? error.stack : JSON.stringify(error),
-      );
-      throw error;
+      this.logger.error('Error creating bilateral', {
+        error,
+      });
+      return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 
