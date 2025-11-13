@@ -608,27 +608,45 @@ export class AiService {
     let innovationDev = await this.getInnovationDevByResultId(resultId);
     if (!innovationDev) {
       try {
-        innovationDev = await this.innovationsDevRepository.save({
-          results_id: resultId,
-          created_by: userId,
-        } as Partial<ResultsInnovationsDev>);
+        await this.innovationsDevRepository.query(
+          `
+            INSERT INTO results_innovations_dev (
+              results_id,
+              created_by,
+              last_updated_by,
+              is_active,
+              created_date,
+              last_updated_date
+            )
+            VALUES (?, ?, ?, 1, NOW(), NOW())
+          `,
+          [resultId, userId, userId],
+        );
       } catch (error) {
-        const isDuplicateKey =
-          error?.code === 'ER_DUP_ENTRY' ||
-          error?.sqlState === '23000' ||
-          error?.errno === 1062;
-        if (!isDuplicateKey) {
+        if (!this.isDuplicateKeyError(error)) {
           throw error;
         }
+      }
 
-        innovationDev = await this.getInnovationDevByResultId(resultId);
-        if (!innovationDev) {
-          throw error;
-        }
+      innovationDev = await this.getInnovationDevByResultId(resultId);
+      if (!innovationDev) {
+        throw {
+          response: {},
+          message: 'Unable to initialize innovation development record',
+          status: HttpStatus.INTERNAL_SERVER_ERROR,
+        };
       }
     }
 
     return innovationDev;
+  }
+
+  private isDuplicateKeyError(error: any): boolean {
+    return (
+      error?.code === 'ER_DUP_ENTRY' ||
+      error?.sqlState === '23000' ||
+      error?.errno === 1062
+    );
   }
 
   private mapSessionToResponse(
