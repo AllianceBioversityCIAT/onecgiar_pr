@@ -18,6 +18,7 @@ import { AiReviewSession } from '../../../../api/ai/entities/ai-review-session.e
 import { AiReviewEvent } from '../../../../api/ai/entities/ai-review-event.entity';
 import { ResultFieldRevision } from '../../../../api/ai/entities/result-field-revision.entity';
 import { ResultFieldAiState } from '../../../../api/ai/entities/result-field-ai-state.entity';
+import { Result } from '../../../../api/results/entities/result.entity';
 
 @Entity('users')
 @Index(['email'], { unique: true })
@@ -132,4 +133,7 @@ export class User {
 
   @OneToMany(() => ResultFieldAiState, (state) => state.obj_last_updated_by)
   obj_result_field_ai_states_updated: ResultFieldAiState[];
+
+  @OneToMany(() => Result, (result) => result.obj_external_submitter)
+  obj_external_submitter_results: Result[];
 }
