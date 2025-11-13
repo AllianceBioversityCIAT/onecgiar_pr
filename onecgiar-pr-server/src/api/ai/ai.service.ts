@@ -252,20 +252,8 @@ export class AiService {
         createEventDto.field_name,
       );
 
-      if (eventFieldName) {
-        if (eventFieldName === AiReviewEventFieldName.SHORT_TITLE) {
-          const hasInnovationDev = await this.innovationDevExists(
-            session.result_id,
-          );
-          if (!hasInnovationDev) {
-            throw {
-              response: {},
-              message:
-                'short_title field is only applicable for Innovation Development results',
-              status: HttpStatus.BAD_REQUEST,
-            };
-          }
-        }
+      if (eventFieldName === AiReviewEventFieldName.SHORT_TITLE) {
+        await this.ensureInnovationDevRecord(session.result_id, user.id);
       }
 
       const event = this.eventRepository.create({
@@ -308,21 +296,15 @@ export class AiService {
           field.field_name,
         );
 
-        if (normalizedFieldName === AiReviewProposalFieldName.SHORT_TITLE) {
-          const hasInnovationDev = await this.innovationDevExists(
-            session.result_id,
-          );
-          if (!hasInnovationDev) {
-            throw {
-              response: {},
-              message:
-                'short_title field is only applicable for Innovation Development results',
-              status: HttpStatus.BAD_REQUEST,
-            };
-          }
-        }
-
         let previousText: string | null = null;
+        let innovationDevRecord: ResultsInnovationsDev | null = null;
+
+        if (normalizedFieldName === AiReviewProposalFieldName.SHORT_TITLE) {
+          innovationDevRecord = await this.ensureInnovationDevRecord(
+            session.result_id,
+            user.id,
+          );
+        }
 
         switch (normalizedFieldName) {
           case AiReviewProposalFieldName.TITLE:
@@ -334,10 +316,7 @@ export class AiService {
             break;
           }
           case AiReviewProposalFieldName.SHORT_TITLE: {
-            const current = await this.getInnovationDevByResultId(
-              session.result_id,
-            );
-            previousText = current?.short_title ?? null;
+            previousText = innovationDevRecord?.short_title ?? null;
             break;
           }
         }
@@ -574,13 +553,6 @@ export class AiService {
     }
   }
 
-  private innovationDevExists(resultId: number): Promise<boolean> {
-    return this.innovationsDevRepository
-      .createQueryBuilder('innovationsDev')
-      .where('innovationsDev.results_id = :resultId', { resultId })
-      .getExists();
-  }
-
   private getInnovationDevByResultId(
     resultId: number,
   ): Promise<ResultsInnovationsDev | null> {
@@ -605,6 +577,58 @@ export class AiService {
       })
       .where('results_id = :resultId', { resultId })
       .execute();
+  }
+
+  private async ensureInnovationDevRecord(
+    resultId: number,
+    userId: number,
+  ): Promise<ResultsInnovationsDev> {
+    const result = await this.resultRepository.findOne({
+      select: { id: true, result_type_id: true },
+      where: { id: resultId },
+    });
+
+    if (!result) {
+      throw {
+        response: {},
+        message: 'Result not found',
+        status: HttpStatus.NOT_FOUND,
+      };
+    }
+
+    if (result.result_type_id !== ResultTypeEnum.INNOVATION_DEVELOPMENT) {
+      throw {
+        response: {},
+        message:
+          'short_title field is only applicable for Innovation Development results',
+        status: HttpStatus.BAD_REQUEST,
+      };
+    }
+
+    let innovationDev = await this.getInnovationDevByResultId(resultId);
+    if (!innovationDev) {
+      try {
+        innovationDev = await this.innovationsDevRepository.save({
+          results_id: resultId,
+          created_by: userId,
+        } as Partial<ResultsInnovationsDev>);
+      } catch (error) {
+        const isDuplicateKey =
+          error?.code === 'ER_DUP_ENTRY' ||
+          error?.sqlState === '23000' ||
+          error?.errno === 1062;
+        if (!isDuplicateKey) {
+          throw error;
+        }
+
+        innovationDev = await this.getInnovationDevByResultId(resultId);
+        if (!innovationDev) {
+          throw error;
+        }
+      }
+    }
+
+    return innovationDev;
   }
 
   private mapSessionToResponse(
