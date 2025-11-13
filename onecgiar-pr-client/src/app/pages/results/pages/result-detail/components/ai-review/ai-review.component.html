@@ -7,7 +7,9 @@
   [draggable]="false"
   [resizable]="false">
   <div class="ai-review-container">
-    <app-alert-status description="✨ The AI analyzed your information and identified the following:"> </app-alert-status>
+    <div class="ai-review-header">
+      <img src="assets/icons/stars.png" alt="" srcset="" /> The AI analyzed your information and identified the following:
+    </div>
 
     @for (field of aiReviewSE.currnetFieldsList(); track $index) {
       <!-- Title Section -->
@@ -15,25 +17,26 @@
         <div class="field-header">
           <h3 class="field-title">{{ field.field_name_label }}</h3>
           @if (field.original_text == field.proposed_text) {
-            <span class="improvement-badge"> <img src="assets/icons/stars.png" alt="" srcset="" /> Updated</span>
+            <span class="improvement-badge updated-badge"> <img src="assets/icons/stars.png" alt="" srcset="" /> Updated</span>
           } @else {
-            <span class="improvement-badge"> <i class="pi pi-exclamation-triangle"></i> Needs improvement</span>
+            <span class="improvement-badge needs-improvement-badge"> <i class="pi pi-exclamation-triangle"></i> Needs improvement</span>
           }
         </div>
 
         <div class="proposal-section">
-          <div class="proposal-label">💡 AI proposal</div>
+          <div class="proposal-label"><i class="pi pi-lightbulb"></i> AI proposal</div>
           <div class="proposal-content">
             {{ field.proposed_text }}
           </div>
-          <app-pr-button
-            onkeypress="moveTextToInput(field)"
-            (click)="moveTextToInput(field)"
-            text="Apply proposal"
-            [showBackground]="false"
-            class="apply-button-custom">
-          </app-pr-button>
+
+          @if (field.original_text == field.proposed_text) {
+            <div class="applied-badge"><i class="pi pi-check-circle"></i> Applied</div>
+          } @else {
+            <div class="apply-proposal-button" (click)="moveTextToInput(field)">Apply proposal</div>
+          }
         </div>
+
+        <div class="line-divider"></div>
 
         <div class="current-version">
           <label class="version-label">Result version</label>
