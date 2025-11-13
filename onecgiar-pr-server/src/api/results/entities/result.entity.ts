@@ -505,6 +505,12 @@ export class Result {
   })
   external_submitter: number;
 
+  @ManyToOne(() => User, (u) => u.id, { nullable: true })
+  @JoinColumn({
+    name: 'external_submitter',
+  })
+  obj_external_submitter: User;
+
   @Column({
     name: 'external_submitted_date',
     nullable: true,
