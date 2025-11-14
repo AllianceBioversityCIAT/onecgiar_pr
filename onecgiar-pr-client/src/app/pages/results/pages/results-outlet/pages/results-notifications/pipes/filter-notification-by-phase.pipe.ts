@@ -9,8 +9,8 @@ type TNotificationItem = {
 };
 
 @Pipe({
-    name: 'filterNotificationByPhase',
-    standalone: false
+  name: 'filterNotificationByPhase',
+  standalone: false
 })
 export class FilterNotificationByPhasePipe implements PipeTransform {
   transform(list, phaseId: string) {

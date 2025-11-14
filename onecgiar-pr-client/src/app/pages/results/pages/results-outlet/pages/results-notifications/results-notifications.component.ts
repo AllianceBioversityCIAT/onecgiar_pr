@@ -14,13 +14,17 @@ import { ActivatedRoute, Router } from '@angular/router';
 export class ResultsNotificationsComponent implements OnInit, OnDestroy {
   allInitiatives = [];
   phaseList = [];
+  private readonly phaseModuleGroups = [
+    { moduleId: 1, groupLabel: 'Reporting' },
+    { moduleId: 2, groupLabel: 'IPSR' }
+  ];
 
   constructor(
     public api: ApiService,
-    private shareRequestModalSE: ShareRequestModalService,
+    private readonly shareRequestModalSE: ShareRequestModalService,
     public resultsNotificationsSE: ResultsNotificationsService,
     public router: Router,
-    private activatedRoute: ActivatedRoute
+    private readonly activatedRoute: ActivatedRoute
   ) {}
 
   ngOnInit(): void {
@@ -76,9 +80,31 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
 
   getAllPhases() {
     this.api.resultsSE.GET_versioning(StatusPhaseEnum.ALL, ModuleTypeEnum.ALL).subscribe(({ response }) => {
-      this.phaseList = response;
-      if (!this.activatedRoute.snapshot.queryParams['phase'])
-        this.resultsNotificationsSE.phaseFilter = this.phaseList.find(phase => phase.status)?.id;
+      this.phaseList = this.buildGroupedPhaseList(response);
+      if (this.activatedRoute.snapshot.queryParams['phase']) return;
+      const defaultPhase =
+        response.find(phase => phase.status && Number(phase.app_module_id) === this.phaseModuleGroups[0].moduleId) ||
+        response.find(phase => phase.status);
+      if (defaultPhase?.id) {
+        this.resultsNotificationsSE.phaseFilter = defaultPhase.id;
+      }
     });
+  }
+
+  private buildGroupedPhaseList(phases: any[] = []) {
+    return this.phaseModuleGroups.reduce((groupedList: any[], group) => {
+      const modulePhases = phases
+        .filter(phase => Number(phase.app_module_id) === group.moduleId)
+        .sort((a, b) => {
+          const yearDiff = (a.phase_year ?? 0) - (b.phase_year ?? 0);
+          if (yearDiff === 0) return a.phase_name.localeCompare(b.phase_name);
+          return yearDiff;
+        });
+
+      if (modulePhases.length === 0) return groupedList;
+
+      groupedList.push({ isLabel: true, groupLabel: group.groupLabel }, ...modulePhases);
+      return groupedList;
+    }, []);
   }
 }
