@@ -29,12 +29,12 @@
   <div class="line"></div>
 
   <p class="request_description" *ngIf="router.url.includes('/results-notifications/requests')">
-    In this section, there are requests that any initiative has made to your initiative(s) for collaboration on a result. Please note that it will now
-    be possible to send, accept or reject request even if the result has already been submitted.
+    In this section, there are requests that any entity has made to your entity(ies) for collaboration on a result. Please note that it will now be
+    possible to send, accept or reject request even if the result has already been submitted.
   </p>
 
   <p class="request_description" *ngIf="router.url.includes('/results-notifications/updates')">
-    In this section, there are updates on any results to which your initiative(s) are contributing.
+    In this section, there are updates on any results to which your entity(ies) are contributing.
   </p>
 
   <div class="notifications_filters" *ngIf="!router.url.includes('/results-notifications/settings')">
@@ -66,13 +66,13 @@
 
       <app-pr-select
         [options]="this.allInitiatives"
-        label="Initiative"
+        label="Entity"
         [required]="false"
         [isStatic]="true"
         *ngIf="this.api.rolesSE.isAdmin"
         optionLabel="full_name"
         optionValue="initiative_id"
-        placeholder="Select initiative"
+        placeholder="Select Entity"
         [(ngModel)]="this.resultsNotificationsSE.initiativeIdFilter"
         [truncateSelectionText]="true">
       </app-pr-select>

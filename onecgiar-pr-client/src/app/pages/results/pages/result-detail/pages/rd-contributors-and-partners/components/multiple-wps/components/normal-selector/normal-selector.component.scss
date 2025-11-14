@@ -11,20 +11,20 @@
     padding: 10px;
     position: relative;
     display: flex;
-    flex-direction: column;
+    justify-content: space-between;
 
-    i {
-      position: absolute;
-      right: 0;
-      top: 0;
-      margin-top: 5px;
-      margin-right: 5px;
+    .deliveries_container {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      i {
+        font-size: 20px;
+      }
     }
 
     .deliveries {
       display: flex;
       gap: 10px;
-      margin-top: 15px;
 
       .delivery {
         padding: 7px 14px;
@@ -46,6 +46,29 @@
 .partners_selected_header {
   padding-top: 15px;
   padding-bottom: 2px;
+}
+
+.partners_container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  .partner_types_container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 10px;
+    align-items: center;
+
+    .partner_type_chip_selected {
+      padding: 5px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--pr-color-secondary-100);
+      color: var(--pr-color-secondary-100);
+      border-radius: 10px;
+    }
+  }
 }
 
 .readOnly_deliveries {

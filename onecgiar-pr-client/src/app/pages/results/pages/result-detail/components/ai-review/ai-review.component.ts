@@ -2,13 +2,13 @@ import { Component, inject } from '@angular/core';
 import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
 import { FormsModule } from '@angular/forms';
-import { CommonModule, TitleCasePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { AiReviewService } from '../../../../../../shared/services/api/ai-review.service';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 
 @Component({
   selector: 'app-ai-review',
-  imports: [DialogModule, ButtonModule, FormsModule, CommonModule, CustomFieldsModule, TitleCasePipe],
+  imports: [DialogModule, ButtonModule, FormsModule, CommonModule, CustomFieldsModule],
   templateUrl: './ai-review.component.html',
   styleUrl: './ai-review.component.scss'
 })
