@@ -32,6 +32,20 @@ describe('InitAdminSectionComponent', () => {
     fixture.detectChanges();
   });
 
+  it('should create', () => {
+    expect(component).toBeTruthy();
+  });
+
+  it('should initialize sections with correct data', () => {
+    expect(component.sections).toBeDefined();
+    expect(component.sections.length).toBe(1);
+    expect(component.sections[0]).toEqual({
+      name: 'General results report',
+      icon: 'task',
+      path: '/init-admin-module/init-general-results-report'
+    });
+  });
+
   describe('ngOnInit()', () => {
     it('should set the detailSectionTitle on ngOnInit', () => {
       const spyDetailSectionTitle = jest.spyOn(mockDataControlService, 'detailSectionTitle');
