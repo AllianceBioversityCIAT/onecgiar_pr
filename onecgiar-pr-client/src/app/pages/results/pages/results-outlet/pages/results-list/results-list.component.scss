@@ -1,5 +1,7 @@
 @use '../../../../../../../styles/fonts.scss' as fonts;
-
+.page_section_header {
+  border-bottom: 1px solid var(--pr-color-neutral-200);
+}
 .action_buttons {
   display: flex;
   align-items: center;
