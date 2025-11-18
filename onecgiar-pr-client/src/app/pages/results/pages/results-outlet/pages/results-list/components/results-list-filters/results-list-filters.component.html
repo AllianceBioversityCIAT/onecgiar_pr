@@ -13,11 +13,7 @@
     <app-pr-button (click)="this.clearAllNewFilters()" text="Clear Filters" [verticalMargin]="0" colorType="secondary" />
   </div>
 
-  <app-pr-button
-    text="Download"
-    (click)="onDownLoadTableAsExcel()"
-    [rotating]="this.gettingReport()"
-    [icon]="this.gettingReport() ? 'loop' : 'file_download'"></app-pr-button>
+  <p-button label="Download" variant="outlined" icon="pi pi-download" (click)="onDownLoadTableAsExcel()" [loading]="this.gettingReport()" />
 </div>
 
 <p-drawer [(visible)]="visible" header="Table Filters" position="right" [style]="{ width: '350px', backgroundColor: 'var(--pr-color-accents-1)' }">

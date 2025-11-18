@@ -14,7 +14,7 @@ import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { InputTextModule } from 'primeng/inputtext';
 import { switchMap } from 'rxjs';
-
+import { ButtonModule } from 'primeng/button';
 @Component({
   selector: 'app-results-list-filters',
   templateUrl: './results-list-filters.component.html',
@@ -30,7 +30,8 @@ import { switchMap } from 'rxjs';
     BadgeModule,
     IconFieldModule,
     InputIconModule,
-    InputTextModule
+    InputTextModule,
+    ButtonModule
   ]
 })
 export class ResultsListFiltersComponent implements OnInit, OnChanges {
