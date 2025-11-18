@@ -1,8 +1,16 @@
 .filters {
   display: flex;
-  justify-self: start;
+  justify-content: space-between;
   align-items: center;
   gap: 10px;
+  border-bottom: 1px solid rgb(200, 200, 200);
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+  width: 100%;
+  .filters_items_container_left {
+    display: flex;
+    align-items: center;
+  }
 }
 
 .filters_items_container_left,
