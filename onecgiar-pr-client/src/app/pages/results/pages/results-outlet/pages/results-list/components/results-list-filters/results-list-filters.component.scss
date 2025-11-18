@@ -1,21 +1,15 @@
+.page_section_header {
+  border-bottom: 1px solid var(--pr-color-neutral-200);
+}
 .filters {
   display: flex;
-  justify-content: space-between;
+  justify-self: start;
   align-items: center;
   gap: 10px;
 }
 
-.filters_items_container {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 10px;
-  margin: 20px 20px 10px 20px;
-}
-
 .filters_items_container_left,
-.filters_items_container_drawer,
-.filters_items_container_right {
+.filters_items_container_drawer {
   display: flex;
   gap: 10px;
 }

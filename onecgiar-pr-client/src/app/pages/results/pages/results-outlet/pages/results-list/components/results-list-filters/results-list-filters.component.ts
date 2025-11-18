@@ -49,8 +49,8 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges {
     return count;
   });
   filtersCountText = computed(() => {
-    if (this.filtersCount() === 0) return 'See all filters';
-    return `See all filters (${this.filtersCount()})`;
+    if (this.filtersCount() === 0) return 'Apply filters';
+    return `Apply filters (${this.filtersCount()})`;
   });
   @Input() isAdmin = false;
 

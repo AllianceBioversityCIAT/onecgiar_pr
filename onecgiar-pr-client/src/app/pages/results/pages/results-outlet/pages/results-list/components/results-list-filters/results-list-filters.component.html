@@ -1,98 +1,14 @@
-<div class="result_level_container">
-  <div class="result_level_title">Filters</div>
-
-  <div class="filters_items_container">
-    <div class="filters_items_container_left">
-      <div>
-        <app-pr-field-header
-          label="Phase"
-          labelDescStyleClass="pr-body-2"
-          labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-accents-4);"
-          [required]="false"></app-pr-field-header>
-
-        <p-multiselect
-          [filter]="false"
-          [showHeader]="false"
-          [options]="this.resultsListFilterSE.phasesOptions()"
-          [(ngModel)]="resultsListFilterSE.selectedPhases"
-          optionLabel="name"
-          (onChange)="onSelectPhases()"
-          placeholder="Select phase"
-          [maxSelectedLabels]="1"
-          [style]="{ width: '245px' }" />
-      </div>
-
-      <div>
-        <app-pr-field-header
-          label="Submitter(s)"
-          labelDescStyleClass="pr-body-2"
-          labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-accents-4);"
-          [required]="false"></app-pr-field-header>
-
-        @if (this.isAdmin) {
-          <p-multiselect
-            [filter]="false"
-            [options]="this.resultsListFilterSE.submittersOptionsAdmin()"
-            [(ngModel)]="resultsListFilterSE.selectedSubmittersAdmin"
-            optionLabel="official_code"
-            placeholder="Select submitter(s)"
-            [maxSelectedLabels]="1"
-            [filter]="true"
-            [style]="{ width: '245px' }" />
-        } @else {
-          <p-multiselect
-            [filter]="false"
-            [options]="this.resultsListFilterSE.submittersOptions()"
-            [(ngModel)]="resultsListFilterSE.selectedSubmitters"
-            optionLabel="name"
-            placeholder="Select submitter(s)"
-            [maxSelectedLabels]="1"
-            [filter]="true"
-            [style]="{ width: '245px' }" />
-        }
-      </div>
-
-      <div>
-        <app-pr-field-header
-          label="Indicator category(ies)"
-          labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-accents-4);"
-          labelDescStyleClass="pr-body-2"
-          [required]="false"></app-pr-field-header>
-
-        <p-multiselect
-          [filter]="false"
-          [showHeader]="false"
-          [options]="this.resultsListFilterSE.filters.resultLevel"
-          [(ngModel)]="resultsListFilterSE.selectedIndicatorCategories"
-          optionLabel="name"
-          placeholder="Select indicator category(ies)"
-          [maxSelectedLabels]="1"
-          [group]="true"
-          optionGroupChildren="options"
-          [style]="{ width: '245px' }">
-          <ng-template let-group #group>
-            <div class="flex items-center">
-              <span>{{ group.name }}</span>
-            </div>
-          </ng-template>
-        </p-multiselect>
-      </div>
-    </div>
-
-    <div class="filters_items_container_right">
-      <p-overlaybadge value="" [badgeDisabled]="filtersCount() === 0">
-        <app-pr-button (click)="visible.set(true)" [text]="filtersCountText()" [verticalMargin]="0" icon="filter_alt" [reverse]="true" />
-      </p-overlaybadge>
-      <app-pr-button (click)="this.clearAllNewFilters()" text="Clear Filters" [verticalMargin]="0" colorType="secondary" />
-    </div>
-  </div>
-</div>
+<div class="page_section_header">Results table</div>
 
 <div class="filters">
   <p-iconfield>
     <p-inputicon styleClass="pi pi-search" />
     <input type="text" pInputText placeholder="Find result..." [(ngModel)]="this.resultsListFilterSE.text_to_search" [style]="{ width: '350px' }" />
   </p-iconfield>
+  <p-overlaybadge value="" [badgeDisabled]="filtersCount() === 0">
+    <app-pr-button (click)="visible.set(true)" [text]="filtersCountText()" [verticalMargin]="0" icon="filter_alt" [reverse]="true" />
+  </p-overlaybadge>
+  <app-pr-button (click)="this.clearAllNewFilters()" text="Clear Filters" [verticalMargin]="0" colorType="secondary" />
 
   <app-pr-button
     text="Download"
