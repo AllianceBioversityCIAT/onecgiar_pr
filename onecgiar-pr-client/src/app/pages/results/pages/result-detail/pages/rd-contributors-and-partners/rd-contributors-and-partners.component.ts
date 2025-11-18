@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
@@ -34,7 +34,8 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     public rolesSE: RolesService,
     public rdPartnersSE: RdContributorsAndPartnersService,
     private readonly customizedAlertsFeSE: CustomizedAlertsFeService,
-    public centersSE: CentersService
+    public centersSE: CentersService,
+    private cdr: ChangeDetectorRef
   ) {
     this.api.dataControlSE.currentResultSectionName.set('Partners & Contributors');
   }
@@ -55,6 +56,20 @@ export class RdContributorsAndPartnersComponent implements OnInit {
         console.error(error);
       }
     });
+
+    const checkResultsList = setInterval(() => {
+      if (this.innovationUseResultsSE.resultsList?.length > 0 &&
+          this.rdPartnersSE.partnersBody?.linked_results?.length > 0) {
+        const linkedResults = this.rdPartnersSE.partnersBody.linked_results;
+        const hasIds = linkedResults.some((item: any) => typeof item === 'number');
+        if (hasIds) {
+          this.rdPartnersSE.partnersBody.linked_results = [...linkedResults];
+          this.cdr.detectChanges();
+        }
+        clearInterval(checkResultsList);
+      }
+    }, 100);
+    setTimeout(() => clearInterval(checkResultsList), 5000);
   }
 
   GET_AllWithoutResults() {
@@ -155,8 +170,13 @@ export class RdContributorsAndPartnersComponent implements OnInit {
       });
     }
 
+    if (!this.rdPartnersSE.partnersBody.result_toc_result.planned_result) this.rdPartnersSE.partnersBody.result_toc_result.result_toc_results = [];
+
+    const linkedResultsIds = (this.rdPartnersSE.partnersBody.linked_results || []).map((r: any) => Number(r?.id ?? r));
+
     const sendedData = {
       ...this.rdPartnersSE.partnersBody,
+      linked_results: linkedResultsIds,
       contributing_initiatives: {
         ...this.rdPartnersSE.partnersBody.contributing_initiatives,
         pending_contributing_initiatives: [
@@ -167,7 +187,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
       email_template: 'email_template_contribution'
     };
 
-    this.api.resultsSE.PATCH_ContributorsPartners({ ...this.rdPartnersSE.partnersBody, ...sendedData }).subscribe(_resp => {
+    this.api.resultsSE.PATCH_ContributorsPartners(sendedData).subscribe(_resp => {
       this.rdPartnersSE.getSectionInformation(null, true);
     });
   }
@@ -187,5 +207,27 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   getMessageLead() {
     const entity = this.rdPartnersSE.partnersBody.is_lead_by_partner ? 'partner' : 'CG Center';
     return `Please select the ${entity} leading this result. <b>Only ${entity}s already added in this section can be selected as the result lead.</b>`;
+  }
+
+
+  formatResultLabel(option: any): string {
+    if (option?.result_code && option?.name) {
+      let phaseInfo = '';
+      if (option?.acronym && option?.phase_year) {
+        phaseInfo = `(${option.acronym} - ${option.phase_year}) `;
+      } else if (option?.acronym) {
+        phaseInfo = `(${option.acronym}) `;
+      } else if (option?.phase_year) {
+        phaseInfo = `(${option.phase_year}) `;
+      }
+
+      const resultType = option?.result_type_name || option?.resultTypeName || option?.type_name || '';
+      const resultTypeInfo = resultType ? ` (${resultType})` : '';
+
+      const title = option?.title ? ` - ${option.title}` : '';
+
+      return `${phaseInfo}${option.result_code} - ${option.name}${resultTypeInfo}${title}`;
+    }
+    return option?.title || option?.name || '';
   }
 }

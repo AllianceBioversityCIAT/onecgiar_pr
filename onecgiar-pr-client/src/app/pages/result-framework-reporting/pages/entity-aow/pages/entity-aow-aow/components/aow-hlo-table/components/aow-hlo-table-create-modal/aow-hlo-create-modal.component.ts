@@ -11,6 +11,8 @@ import { Router } from '@angular/router';
 import { SelectModule } from 'primeng/select';
 import { ResultsListFilterService } from '../../../../../../../../../results/pages/results-outlet/pages/results-list/services/results-list-filter.service';
 import { InputNumberModule } from 'primeng/inputnumber';
+import { CentersService } from '../../../../../../../../../../shared/services/global/centers.service';
+import { TooltipModule } from 'primeng/tooltip';
 
 interface CreateResultBody {
   handler: string;
@@ -18,11 +20,22 @@ interface CreateResultBody {
   toc_progressive_narrative: string;
   result_type_id: number | null;
   contribution_to_indicator_target: number | null;
+  contributing_center: any[] | null;
 }
 
 @Component({
   selector: 'app-aow-hlo-create-modal',
-  imports: [CommonModule, DialogModule, CustomFieldsModule, MultiSelectModule, FormsModule, ButtonModule, SelectModule, InputNumberModule],
+  imports: [
+    CommonModule,
+    DialogModule,
+    CustomFieldsModule,
+    MultiSelectModule,
+    FormsModule,
+    ButtonModule,
+    SelectModule,
+    InputNumberModule,
+    TooltipModule
+  ],
   templateUrl: './aow-hlo-create-modal.component.html',
   styleUrl: './aow-hlo-create-modal.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -32,6 +45,7 @@ export class AowHloCreateModalComponent implements OnInit {
   entityAowService = inject(EntityAowService);
   router = inject(Router);
   resultsListFilterSE = inject(ResultsListFilterService);
+  centersSE = inject(CentersService);
 
   allInitiatives = signal<any[]>([]);
   createResultBody = signal<CreateResultBody>({
@@ -39,7 +53,8 @@ export class AowHloCreateModalComponent implements OnInit {
     result_name: '',
     toc_progressive_narrative: '',
     result_type_id: null,
-    contribution_to_indicator_target: null
+    contribution_to_indicator_target: null,
+    contributing_center: null
   });
   mqapJson = signal<any>(null);
   validatingHandler = signal<boolean>(false);
@@ -104,7 +119,22 @@ export class AowHloCreateModalComponent implements OnInit {
   removeEntityOption(option: any) {
     this.entityAowService.selectedEntities.set(this.entityAowService.selectedEntities().filter(item => item.id !== option.id));
   }
+  deleteContributingCenter(index: number, updateComponent: boolean = false) {
+    // if (updateComponent) {
+    //   this.rdPartnersSE.updatingLeadData = true;
+    // }
 
+    const deletedCenter = this.createResultBody().contributing_center.splice(index, 1);
+    // if (deletedCenter.length === 1 && this.rdPartnersSE.leadCenterCode === deletedCenter[0].code) {
+    //   //always should happen
+    //   this.rdPartnersSE.leadCenterCode = null;
+    // }
+    // if (updateComponent) {
+    //   setTimeout(() => {
+    //     this.rdPartnersSE.updatingLeadData = false;
+    //   }, 50);
+    // }
+  }
   GET_mqapValidation() {
     this.validatingHandler.set(true);
 
@@ -118,15 +148,14 @@ export class AowHloCreateModalComponent implements OnInit {
     }
 
     const regex =
-      /^https:\/\/(?:(?:cgspace\.cgiar\.org|repo\.mel\.cgiar\.org)\/items\/[0-9a-fA-F-]{36}|hdl\.handle\.net\/(?:10568|20\.500\.11766)\/\d+|cgspace\.cgiar\.org\/handle\/(?:10568|20\.500\.11766)\/\d+)$/;
+      /^https:\/\/(?:(?:cgspace\.cgiar\.org|repo\.mel\.cgiar\.org|digitalarchive\.worldfishcenter\.org)\/items\/[0-9a-fA-F-]{36}|hdl\.handle\.net\/(?:10568|20\.500\.11766|20\.500\.12348)\/\d+|cgspace\.cgiar\.org\/handle\/(?:10568|20\.500\.11766)\/\d+)$/;
 
     const isValid = regex.test(this.createResultBody().handler);
 
     if (!isValid) {
       this.mqapUrlError.set({
         status: true,
-        message:
-          'Please ensure that the handle is from the <a href="https://cgspace.cgiar.org/home" target="_blank" rel="noopener noreferrer">CGSpace repository</a> and not other CGIAR repositories.'
+        message: 'Please ensure that the handle is from the CGSpace, MELSpace or WorldFish repository and not other CGIAR repositories.'
       });
       this.validatingHandler.set(false);
       return;
@@ -160,6 +189,15 @@ export class AowHloCreateModalComponent implements OnInit {
     });
   }
 
+  navigateToResult(item: any) {
+    const url = this.router.serializeUrl(
+      this.router.createUrlTree([`/result/result-detail/${item.result_code}/general-information`], {
+        queryParams: { phase: item.version_id }
+      })
+    );
+    window.open(url, '_blank');
+  }
+
   createResult() {
     this.creatingResult.set(true);
 
@@ -174,6 +212,7 @@ export class AowHloCreateModalComponent implements OnInit {
       number_target: this.entityAowService.currentResultToReport().indicators[0].number_target,
       target_date: this.entityAowService.currentResultToReport().indicators[0].target_date,
       contributing_indicator: this.createResultBody().contribution_to_indicator_target,
+      contributing_center: this.createResultBody().contributing_center,
       knowledge_product: this.mqapJson(),
       toc_result_id: this.entityAowService.currentResultToReport().toc_result_id,
       toc_progressive_narrative: this.createResultBody().toc_progressive_narrative,

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { InstitutionsService } from '../../../../../../../../shared/services/global/institutions.service';
 import { RdPartnersService } from '../../rd-partners.service';
@@ -11,13 +11,15 @@ import { UnmappedMQAPInstitutionDto } from '../../models/partnersBody';
   styleUrls: ['./knowledge-product-selector.component.scss'],
   standalone: false
 })
-export class KnowledgeProductSelectorComponent {
+export class KnowledgeProductSelectorComponent implements OnInit {
   authorAffiliationsList: any[] = [{ part: { code: 5 } }];
 
   resultCode = this?.api?.dataControlSE?.currentResult?.result_code;
   versionId = this?.api?.dataControlSE?.currentResult?.version_id;
 
-  alertStatusMessage: string = `Partner organizations you collaborated with or are currently collaborating with to generate this result. <li>Please note that CGIAR Centers are not listed here. They are directly linked to <a class="open_route" href="/result/result-detail/${this.resultCode}/theory-of-change?phase=${this.versionId}" target="_blank">Section 2, Theory of Change</a>.</li>`;
+  alertStatusMessage: string = `Partner organizations you collaborated with or are currently collaborating with to generate this result. </br>Please note that CGIAR Centers are not listed here. They are directly linked to <a class="open_route" href="/result/result-detail/${this.resultCode}/theory-of-change?phase=${this.versionId}" target="_blank">Section 2, Theory of Change</a>.`;
+
+  sourceLabel: string = '';
 
   deliveryOptions = [
     { id: 1, name: 'Scaling' },
@@ -32,6 +34,23 @@ export class KnowledgeProductSelectorComponent {
     public rdPartnersSE: RdPartnersService,
     public rolesSE: RolesService
   ) {}
+
+  ngOnInit(): void {
+    this.api.resultsSE.GET_resultknowledgeProducts().subscribe((res: any) => {
+      const response = res?.response;
+      const sourceFromMetadata = response?.metadata?.find(m => m?.source)?.source;
+      const rawSource = response?.metadataCG?.source ?? sourceFromMetadata ?? response?.repo ?? null;
+
+      const normalized = (rawSource || '').toString().trim().toUpperCase();
+      if (normalized === 'MELSPACE') {
+        this.sourceLabel = 'MELSpace';
+      } else if (normalized === 'CGSPACE') {
+        this.sourceLabel = 'CGSpace';
+      } else {
+        this.sourceLabel = '';
+      }
+    });
+  }
 
   institutions_institutions_type_name(partner) {
     const insts = this.institutionsSE.institutionsList;

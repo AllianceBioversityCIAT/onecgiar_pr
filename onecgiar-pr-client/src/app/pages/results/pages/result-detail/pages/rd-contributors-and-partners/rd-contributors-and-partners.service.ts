@@ -6,7 +6,6 @@ import { CenterDto } from '../../../../../../shared/interfaces/center.dto';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
 import { ContributorsAndPartnersBody } from './models/contributorsAndPartnersBody';
-import { RdCpTheoryOfChangesServicesService } from './rd-cp-theory-of-changes-services.service';
 import { ResultTocResultsInterface } from '../rd-theory-of-change/model/theoryOfChangeBody';
 
 @Injectable({
@@ -17,6 +16,7 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   toggle = 0;
   getConsumed = signal<boolean>(false);
   cgspaceDisabledList: any = [];
+  savedActiveTabIndex: number | null = null;
 
   possibleLeadPartners: InstitutionMapped[] = [];
   possibleLeadCenters: CenterDto[] = [];
@@ -25,13 +25,14 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   nppCenters: CenterDto[] = [];
   clarisaProjectsList: any[] = [];
   contributingInitiativeNew = [];
-
+  result_toc_result = null;
+  contributors_result_toc_result = null;
   leadPartnerId: number = null;
   leadCenterCode: string = null;
-  result_toc_result_signal = signal<any>(null);
+  initiativeIdSignal = signal<any>(null);
   updatingLeadData: boolean = false;
   disableLeadPartner: boolean = false;
-  rdCpTheoryOfChangesServicesSE = inject(RdCpTheoryOfChangesServicesService);
+
   constructor(
     public api: ApiService,
     public institutionsSE: InstitutionsService,
@@ -159,6 +160,8 @@ export class RdContributorsAndPartnersService implements OnDestroy {
         //! TOC
         // this.theoryOfChangeBody = response;
 
+        this.partnersBody.linked_results = response.linked_results || [];
+
         this.partnersBody?.contributing_and_primary_initiative.forEach(
           init => (init.full_name = `${init?.official_code} - <strong>${init?.short_name}</strong> - ${init?.initiative_name}`)
         );
@@ -173,15 +176,14 @@ export class RdContributorsAndPartnersService implements OnDestroy {
 
         // this.theoryOfChangesServices.partnersBody = this.partnersBody;
         if (this.partnersBody?.result_toc_result?.result_toc_results !== null) {
-          this.rdCpTheoryOfChangesServicesSE.result_toc_result = this.partnersBody?.result_toc_result;
-          this.rdCpTheoryOfChangesServicesSE.result_toc_result.planned_result =
-            this.partnersBody?.result_toc_result?.result_toc_results[0]?.planned_result ?? null;
-          this.rdCpTheoryOfChangesServicesSE.result_toc_result.showMultipleWPsContent = true;
+          this.result_toc_result = this.partnersBody?.result_toc_result;
+          this.result_toc_result.planned_result = this.partnersBody?.result_toc_result?.result_toc_results[0]?.planned_result ?? null;
+          this.result_toc_result.showMultipleWPsContent = true;
         }
 
         if (this.partnersBody?.contributors_result_toc_result !== null) {
-          this.rdCpTheoryOfChangesServicesSE.contributors_result_toc_result = this.partnersBody?.contributors_result_toc_result;
-          this.rdCpTheoryOfChangesServicesSE.contributors_result_toc_result.forEach((tab: any, index) => {
+          this.contributors_result_toc_result = this.partnersBody?.contributors_result_toc_result;
+          this.contributors_result_toc_result.forEach((tab: any, index) => {
             tab.planned_result = tab.result_toc_results[0]?.planned_result ?? null;
             tab.index = index;
             tab.showMultipleWPsContent = true;
@@ -196,7 +198,7 @@ export class RdContributorsAndPartnersService implements OnDestroy {
         ];
 
         // this.changeDetectorRef.detectChanges();
-        this.result_toc_result_signal.set(this.partnersBody?.result_toc_result);
+        this.initiativeIdSignal.set(this.partnersBody?.result_toc_result?.initiative_id);
         this.getConsumed.set(true);
         //! TOC END
         this.partnersBody.bilateral_projects.forEach(project => {

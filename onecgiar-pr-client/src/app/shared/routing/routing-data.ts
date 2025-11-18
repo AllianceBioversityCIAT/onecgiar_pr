@@ -87,7 +87,7 @@ export const routingApp: PrRoute[] = [
     path: 'reports/ipsr-details/:id',
     loadChildren: () => import('../../pages/pdf-reports/pdf-reports.module').then(m => m.PdfReportsModule)
   },
-  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'result', prHide: true }
+  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'result-framework-reporting', prHide: true }
 ];
 
 export const extraRoutingApp: PrRoute[] = [
@@ -147,7 +147,7 @@ export const adminModuleRouting: PrRoute[] = [
     path: 'user-management',
     loadComponent: () => import('../../pages/admin-section/pages/user-management/user-management.component')
   },
-  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'completeness-status' }
+  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'tickets-dashboard' }
 ];
 
 export const managementPhasesRuting: PrRoute[] = [
@@ -184,7 +184,7 @@ export const initadminModuleRouting: PrRoute[] = [
         m => m.InitGeneralResultsReportModule
       )
   },
-  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'init-completeness-status' }
+  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'init-general-results-report' }
 ];
 
 export const resultsOutletRouting: PrRoute[] = [
@@ -324,7 +324,7 @@ export const resultDetailRouting: PrRoute[] = [
   },
   {
     prName: 'Contributors & partners',
-    path: 'contributors-and-partners',
+    path: 'contributor-partners',
     portfolioAcronym: 'P25',
     underConstruction: false,
     loadChildren: () =>

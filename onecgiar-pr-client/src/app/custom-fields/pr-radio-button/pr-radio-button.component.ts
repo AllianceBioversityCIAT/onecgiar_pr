@@ -29,6 +29,12 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
   @Input() isStatic: boolean = false;
   @Input() verticalAlignment: boolean = false;
   @Input() fieldRef: string | number;
+  @Input() textInputWhenSelectedLabels: string[] = [];
+  @Input() textInputPlaceholder: string = 'Why?';
+  @Input() textInputPlaceholderOverrides: { [label: string]: string } | null = null;
+  @Input() textInputRequiredWhenSelectedLabels: string[] = [];
+  @Input() textInputLabel: string | null = null;
+  @Input() textInputLabelOverrides: { [label: string]: string } | null = null;
   @Input() checkboxConfig: {
     listAttr: string;
     optionLabel: string;

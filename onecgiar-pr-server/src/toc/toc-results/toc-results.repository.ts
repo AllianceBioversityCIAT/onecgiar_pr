@@ -2,11 +2,30 @@ import { Injectable, HttpStatus } from '@nestjs/common';
 import { env } from 'process';
 import { DataSource, Repository } from 'typeorm';
 import { TocResult } from './entities/toc-result.entity';
+import { Result } from '../../api/results/entities/result.entity';
+import { Year } from '../../api/results/years/entities/year.entity';
 
 @Injectable()
 export class TocResultsRepository extends Repository<TocResult> {
   constructor(private dataSource: DataSource) {
     super(TocResult, dataSource.createEntityManager());
+  }
+
+  private async getCurrentTocPhaseId(): Promise<string | null> {
+    const query = `
+      SELECT toc_pahse_id
+      FROM ${env.DB_NAME}.version
+      WHERE is_active = 1 AND status = 1 AND app_module_id = 1
+      LIMIT 1
+    `;
+    try {
+      const rows = await this.dataSource.query(query);
+      return rows?.[0]?.toc_pahse_id ?? null;
+    } catch (error) {
+      throw new Error(
+        `[${TocResultsRepository.name}] => getCurrentTocPhaseId error: ${error}`,
+      );
+    }
   }
 
   async deleteAllData() {
@@ -391,11 +410,7 @@ export class TocResultsRepository extends Repository<TocResult> {
     }
   }
 
-  async $_getResultTocByConfigV2(
-    result_id: number,
-    init_id: number,
-    toc_level: number,
-  ) {
+  async $_getResultTocByConfigV2(init_id: number, toc_level: number) {
     const categoryMap = {
       1: 'OUTPUT',
       2: 'OUTCOME',
@@ -410,6 +425,8 @@ export class TocResultsRepository extends Repository<TocResult> {
         status: HttpStatus.BAD_REQUEST,
       };
     }
+
+    const tocPhaseId = await this.getCurrentTocPhaseId();
 
     const queryData = `
       SELECT DISTINCT
@@ -431,11 +448,17 @@ export class TocResultsRepository extends Repository<TocResult> {
       WHERE tr.is_active > 0
         AND ci.id = ?
         AND tr.category = ?
+        ${tocPhaseId ? 'AND tr.phase = ?' : ''}
       ORDER BY wp.acronym, tr.result_title ASC;
     `;
 
+    const params: (string | number)[] = [init_id, category];
+    if (tocPhaseId) {
+      params.push(tocPhaseId);
+    }
+
     try {
-      const res = await this.query(queryData, [init_id, category]);
+      const res = await this.query(queryData, params);
       return res;
     } catch (error) {
       throw {
@@ -447,6 +470,8 @@ export class TocResultsRepository extends Repository<TocResult> {
   }
 
   async getTocIndicatorsByResultIds(
+    result: Result,
+    year: Year,
     tocResultIds: Array<number | string>,
   ): Promise<
     Array<{
@@ -459,6 +484,7 @@ export class TocResultsRepository extends Repository<TocResult> {
       type_value: string | null;
       type_name: string | null;
       location: string | null;
+      target_value: number | null;
     }>
   > {
     const numericIds = (tocResultIds ?? [])
@@ -481,8 +507,12 @@ export class TocResultsRepository extends Repository<TocResult> {
         tri.unit_messurament,
         tri.type_value,
         tri.type_name,
-        tri.location
+        tri.location,
+        trit.target_value
       FROM ${env.DB_TOC}.toc_results_indicators tri
+      JOIN ${env.DB_TOC}.toc_result_indicator_target trit
+        ON trit.toc_result_indicator_id = tri.related_node_id
+        AND trit.target_date = ${result.obj_version?.phase_year || year.year}
       WHERE
         tri.toc_results_id IN (${placeholders})
         AND tri.is_active = 1;
@@ -574,6 +604,8 @@ export class TocResultsRepository extends Repository<TocResult> {
       };
     }
 
+    const tocPhaseId = await this.getCurrentTocPhaseId();
+
     const queryData = `
       SELECT DISTINCT
         tr.id AS toc_result_id,
@@ -595,14 +627,17 @@ export class TocResultsRepository extends Repository<TocResult> {
       WHERE ci.id = ?
         AND tr.category = ?
         AND tr.is_active > 0
+        ${tocPhaseId ? 'AND tr.phase = ?' : ''}
       ORDER BY wp.acronym, tr.result_title ASC;
     `;
 
+    const params: (string | number)[] = [initiativeId, category];
+    if (tocPhaseId) {
+      params.push(tocPhaseId);
+    }
+
     try {
-      const tocResult: TocResult[] = await this.query(queryData, [
-        initiativeId,
-        category,
-      ]);
+      const tocResult: TocResult[] = await this.query(queryData, params);
       return tocResult;
     } catch (error) {
       throw {

@@ -1,4 +1,4 @@
-import { Component, Output, EventEmitter } from '@angular/core';
+import { Component, Output, EventEmitter, inject } from '@angular/core';
 import { PrRoute, resultDetailRouting } from '../../../../../shared/routing/routing-data';
 import { ResultLevelService } from '../../result-creator/services/result-level.service';
 import { ResultsApiService } from '../../../../../shared/services/api/results-api.service';
@@ -8,6 +8,7 @@ import { SubmissionModalService } from '../components/submission-modal/submissio
 import { DataControlService } from '../../../../../shared/services/data-control.service';
 import { UnsubmitModalService } from '../components/unsubmit-modal/unsubmit-modal.service';
 import { RolesService } from '../../../../../shared/services/global/roles.service';
+import { AiReviewService } from '../../../../../shared/services/api/ai-review.service';
 
 @Component({
   selector: 'app-panel-menu',
@@ -18,6 +19,7 @@ import { RolesService } from '../../../../../shared/services/global/roles.servic
 export class PanelMenuComponent {
   @Output() copyEvent = new EventEmitter();
   navigationOptions: PrRoute[] = resultDetailRouting;
+  aiReviewSE = inject(AiReviewService);
 
   constructor(
     public rolesSE: RolesService,

@@ -7,21 +7,21 @@ describe('user.interface', () => {
     expect(ua.password).toBe('');
     expect(ua.confirmPassword).toBe('');
     ua.email = 'a@b.com';
-    ua.password = 'x';
-    ua.confirmPassword = 'y';
+    ua.password = 'test-value-1';
+    ua.confirmPassword = 'test-value-2';
     expect(ua.email).toBe('a@b.com');
-    expect(ua.password).toBe('x');
-    expect(ua.confirmPassword).toBe('y');
+    expect(ua.password).toBe('test-value-1');
+    expect(ua.confirmPassword).toBe('test-value-2');
   });
 
   it('should accept a valid UserCreate object', () => {
     const obj: UserCreate = {
       userData: { first_name: 'John', last_name: 'Doe', email: 'john@doe.com' },
-      complementData: { password: 'secret' },
+      complementData: { password: 'test-password-value' },
       role: 1
     };
     expect(obj.userData.first_name).toBe('John');
-    expect(obj.complementData.password).toBe('secret');
+    expect(obj.complementData.password).toBe('test-password-value');
     expect(obj.role).toBe(1);
   });
 
@@ -40,12 +40,12 @@ describe('user.interface', () => {
 
   it('should accept a valid UserChangePassword', () => {
     const ucp: UserChangePassword = {
-      session: 'token',
-      newPassword: 'new-secret',
+      session: 'test-session-token',
+      newPassword: 'test-new-password-value',
       username: 'jdoe'
     };
-    expect(ucp.session).toBe('token');
-    expect(ucp.newPassword).toBe('new-secret');
+    expect(ucp.session).toBe('test-session-token');
+    expect(ucp.newPassword).toBe('test-new-password-value');
     expect(ucp.username).toBe('jdoe');
   });
 });

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { Validation } from './entities/validation.entity';
@@ -6,12 +6,17 @@ import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface
 import { GetValidationSectionDto } from './dto/getValidationSection.dto';
 import { Evidence } from '../evidences/entities/evidence.entity';
 import { env } from 'process';
+import { Result } from '../entities/result.entity';
+import { ValidationMapsEnum } from './enum/validation-maps.enum';
+import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
+import { NewValidationsDto } from './dto/new-validations.dto';
 
 @Injectable()
 export class resultValidationRepository
   extends Repository<Validation>
   implements LogicalDelete<Validation>
 {
+  private readonly _logger = new Logger(resultValidationRepository.name);
   constructor(
     private dataSource: DataSource,
     private _handlersError: HandlersError,
@@ -22,6 +27,71 @@ export class resultValidationRepository
   private _regex = new RegExp(
     /^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/\S*)?$/i,
   );
+
+  async validateResultById(resultId: number): Promise<NewValidationsDto[]> {
+    const result = await this.dataSource.getRepository(Result).findOne({
+      where: {
+        id: Number(resultId),
+        is_active: true,
+      },
+      relations: {
+        obj_version: {
+          obj_portfolio: true,
+        },
+      },
+    });
+
+    if (!result) {
+      return null;
+    }
+
+    const sections: ValidationMapsEnum[] = [
+      ValidationMapsEnum.GENERAL_INFORMATION,
+      ValidationMapsEnum.GEO_LOCATION,
+      ValidationMapsEnum.EVIDENCES,
+    ];
+
+    if (result.obj_version?.obj_portfolio?.acronym === 'P25') {
+      sections.push(ValidationMapsEnum.CONTRIBUTOR_PARTNERS);
+    } else {
+      sections.push(
+        ValidationMapsEnum.LINK_RESULT,
+        ValidationMapsEnum.THEORY_OF_CHANGE,
+        ValidationMapsEnum.PARTNERS,
+      );
+    }
+
+    const queryValidation = (sections: ValidationMapsEnum[]) => {
+      const sectionsString = JSON.stringify(sections ?? []);
+      const tempResultId = Number(result?.id ?? 0);
+      return `CALL validate_sections_mapped_batch(${tempResultId}, '${sectionsString}');`;
+    };
+
+    switch (result?.result_type_id) {
+      case ResultTypeEnum.INNOVATION_DEVELOPMENT:
+        sections.push(ValidationMapsEnum.INNOVATION_DEV);
+        break;
+      case ResultTypeEnum.INNOVATION_USE:
+        sections.push(ValidationMapsEnum.INNOVATION_USE);
+        break;
+      case ResultTypeEnum.KNOWLEDGE_PRODUCT:
+        sections.push(ValidationMapsEnum.KNOWLEDGE_PRODUCT);
+        break;
+      case ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT:
+        sections.push(ValidationMapsEnum.CAP_DEV);
+        break;
+      case ResultTypeEnum.POLICY_CHANGE:
+        sections.push(ValidationMapsEnum.POLICY_CHANGE);
+    }
+    const query = queryValidation(sections);
+    const [resultValidations] = await this.dataSource
+      .query<NewValidationsDto[]>(query)
+      .catch((err) => {
+        this._logger.error('Error querying result validations:', err);
+        return [null];
+      });
+    return resultValidations;
+  }
 
   fisicalDelete(resultId: number): Promise<any> {
     const queryData = `delete v from validation v where v.results_id = ?;`;

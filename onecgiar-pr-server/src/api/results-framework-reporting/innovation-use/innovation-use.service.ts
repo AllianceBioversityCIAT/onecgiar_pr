@@ -267,6 +267,7 @@ export class InnovationUseService {
           actor_type_id: el.actor_type_id,
           result_id: resultId,
           result_actors_id: el.result_actors_id ?? IsNull(),
+          section_id: section,
           is_active: true,
         };
 
@@ -306,32 +307,32 @@ export class InnovationUseService {
           continue;
         }
 
-        if (!el?.institution_sub_type_id) {
+        if (
+          !el?.institution_types_id &&
+          (el?.id == null || el.id === undefined)
+        ) {
           continue;
         }
+
+        const whereOptions: any = {
+          institution_types_id: el.institution_types_id,
+          results_id: resultId,
+          institution_roles_id: 5,
+          section_id: section,
+          is_active: true,
+        };
 
         let ite: ResultsByInstitutionType = null;
         if (el?.id) {
           ite = await this._resultByIntitutionsTypeRepository.findOne({
             where: { id: el.id, is_active: true },
           });
-        }
-
-        if (el?.id) {
+        } else if (el?.institution_types_id != 78) {
           ite = await this._resultByIntitutionsTypeRepository.findOne({
-            where: { id: el.id, is_active: true },
+            where: whereOptions,
           });
-        } else if (el?.institution_sub_type_id != 78) {
-          ite =
-            await this._resultByIntitutionsTypeRepository.getNewResultByInstitutionTypeExists(
-              resultId,
-              el.institution_sub_type_id,
-              5,
-            );
         }
 
-        console.log('ite', ite);
-        console.log('el', el);
         if (ite) {
           await this._resultByIntitutionsTypeRepository.update(
             ite.id,
@@ -432,13 +433,13 @@ export class InnovationUseService {
       created_by: user,
       last_updated_by: user,
       other_institution: this.isNullData(el?.other_institution),
-      institution_types_id: this.isNullData(el.institution_sub_type_id),
+      institution_types_id: this.isNullData(el.institution_types_id),
       graduate_students: this.isNullData(el?.graduate_students),
       institution_roles_id: 5,
       how_many: el?.how_many,
       addressing_demands: this.isNullData(el?.addressing_demands),
       section_id: this.isNullData(section),
-      is_active: el?.is_active,
+      is_active: true,
     };
   }
 
@@ -479,6 +480,10 @@ export class InnovationUseService {
       });
 
       actorsData.forEach((el) => {
+        if (el.sex_and_age_disaggregation == true) {
+          return;
+        }
+
         const men = Number(el.men) || 0;
         const women = Number(el.women) || 0;
         const men_youth = Number(el.men_youth) || 0;

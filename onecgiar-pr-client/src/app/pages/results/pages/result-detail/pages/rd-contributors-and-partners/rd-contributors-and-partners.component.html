@@ -33,20 +33,39 @@
     }
   }
 
+  <app-pr-yes-or-not
+    label="Does this result align with your Theory of Change—both in terms of supporting progress and matching a planned result?"
+    [required]="true"
+    [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.planned_result">
+  </app-pr-yes-or-not>
+
   <!-- ! from toc section end -->
 
   <!-- from toc section  -->
 
-  <div style="z-index: 1; position: relative">
-    <app-multiple-wps
-      [editable]="true"
-      [initiative]="this.rdPartnersSE.result_toc_result_signal"
-      [resultLevelId]="this.resultLevelSE.currentResultLevelId"
-      [isIpsr]="false"
-      [isContributor]="false"
-      [isNotifications]="false"
-      [showMultipleWPsContent]="this.rdPartnersSE.getConsumed()"></app-multiple-wps>
-  </div>
+  @if (!this.rdPartnersSE.partnersBody.result_toc_result.planned_result) {
+    <app-pr-textarea
+      placeholder="Enter reason"
+      label="Why is the result being reported?"
+      type="text"
+      [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.toc_progressive_narrative"
+      [maxWords]="30"
+      [rows]="2"
+      [autogenerate]="true">
+    </app-pr-textarea>
+  } @else {
+    <div style="z-index: 1; position: relative">
+      <app-multiple-wps
+        [editable]="true"
+        [initiative]="this.rdPartnersSE.partnersBody?.result_toc_result"
+        [initiativeId]="this.rdPartnersSE.initiativeIdSignal"
+        [resultLevelId]="this.resultLevelSE.currentResultLevelId"
+        [isIpsr]="false"
+        [isContributor]="false"
+        [isNotifications]="false"
+        [showMultipleWPsContent]="this.rdPartnersSE.getConsumed()"></app-multiple-wps>
+    </div>
+  }
 
   <app-pr-multi-select
     [options]="this.centersSE.centersList"
@@ -110,7 +129,7 @@
 
     <div class="chips_container">
       @for (
-        item of this.rdPartnersSE.rdCpTheoryOfChangesServicesSE.theoryOfChangeBody?.contributing_initiatives?.accepted_contributing_initiatives || [];
+        item of this.rdPartnersSE.result_toc_result?.contributing_initiatives?.accepted_contributing_initiatives || [];
         track item.id;
         let i = $index
       ) {
@@ -223,13 +242,13 @@
         [(ngModel)]="this.rdPartnersSE.partnersBody.linked_results"
         optionLabel="title"
         optionValue="id"
-        [group]="true"
         optionGroupLabel="name"
         optionGroupChildren="options"
         label="Please select a result"
         placeholder="Please select a result"
         selectedLabel="Results selected"
-        selectedOptionLabel="title">
+        selectedOptionLabel="title"
+        [displayLabelFormatter]="formatResultLabel.bind(this)">
       </app-pr-multi-select>
     }
   }
@@ -242,4 +261,5 @@
 
   <app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>
   <app-sync-button (clickSave)="onSyncSection()"></app-sync-button>
+  <div [style.height.px]="this.rdPartnersSE.partnersBody.linked_results.length ? 80 : 20" style="transition: height 0.3s ease-in-out"></div>
 </div>

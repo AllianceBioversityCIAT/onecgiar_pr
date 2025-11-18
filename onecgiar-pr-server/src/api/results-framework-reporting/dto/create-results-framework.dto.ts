@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { CreateResultDto } from '../../results/dto/create-result.dto';
 import { ResultsKnowledgeProductDto } from '../../results/results-knowledge-products/dto/results-knowledge-product.dto';
 import { ContributorResultTocResult } from '../../results/results-toc-results/dto/create-results-toc-result.dto';
+import { ResultsCenterDto } from '../../results/results-centers/dto/results-center.dto';
 
 export class ResultsFrameworkTocIndicatorDto {
   @ApiProperty({
@@ -185,4 +186,11 @@ export class CreateResultsFrameworkResultDto {
       'List of bilateral projects linked to the result. If provided, supersedes bilateral_project.',
   })
   bilateral_project?: ResultsFrameworkBilateralProjectDto[];
+
+  @ApiPropertyOptional({
+    type: () => [ResultsCenterDto],
+    description:
+      'Optional list of centers contributing to the result; mirrors the Contributors & Partners payload.',
+  })
+  contributing_center?: ResultsCenterDto[];
 }

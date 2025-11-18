@@ -76,7 +76,7 @@ export class HeaderPanelComponent implements OnInit {
   }
 
   goToNotifications() {
-    this.router.navigate(['result/results-outlet/results-notifications/requests']);
+    this.router.navigate(['result/results-outlet/results-notifications/updates']);
   }
 
   handleClosePopUp() {
@@ -84,5 +84,9 @@ export class HeaderPanelComponent implements OnInit {
 
     this.resultsNotificationsSE.updatesPopUpData = [];
     this.resultsNotificationsSE.handlePopUpNotificationLastViewed();
+  }
+
+  isInNotificationsRoute(): boolean {
+    return this.router.url.includes('results-notifications');
   }
 }

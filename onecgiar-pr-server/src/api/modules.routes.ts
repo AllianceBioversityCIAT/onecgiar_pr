@@ -20,6 +20,8 @@ import { ResultsFrameworkReportingModule } from './results-framework-reporting/r
 import { ContributorsPartnersModule } from './results-framework-reporting/contributors-partners/contributors-partners.module';
 import { InnovationDevModule } from './results-framework-reporting/innovation_dev/innovation_dev.module';
 import { InnovationUseModule } from './results-framework-reporting/innovation-use/innovation-use.module';
+import { AiModule } from './ai/ai.module';
+import { GeographicLocationModule } from './results-framework-reporting/geographic-location/geographic-location.module';
 
 export const ModulesRoutes: Routes = [
   {
@@ -96,5 +98,13 @@ export const ModulesRoutes: Routes = [
   {
     path: 'innovation-use',
     module: InnovationUseModule,
+  },
+  {
+    path: 'ai',
+    module: AiModule,
+  },
+  {
+    path: 'geographic-location',
+    module: GeographicLocationModule,
   },
 ];

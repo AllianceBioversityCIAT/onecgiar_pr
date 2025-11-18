@@ -6,9 +6,9 @@
 
 <div *ngIf="body.has_innovation_link && this.fieldsManagerSE.isP25()">
   <app-pr-multi-select [readOnly]="saving" [options]="this.innovationUseResultsSE.resultsList" [(ngModel)]="body.linked_results"
-    optionLabel="title" optionValue="id" [group]="true" optionGroupLabel="name" optionGroupChildren="options"
+    optionLabel="title" optionValue="id"  optionGroupLabel="name" optionGroupChildren="options"
     label="Please select a result" placeholder="Please select a result" selectedLabel="Results selected"
-    selectedOptionLabel="title">
+    selectedOptionLabel="title" [displayLabelFormatter]="formatResultLabel.bind(this)">
   </app-pr-multi-select>
 </div>
 
@@ -205,7 +205,7 @@
 </app-pr-textarea>
 
 <!-- Innovation Links Component -->
-<app-pr-radio-button [disabled]="saving" *ngIf="getUseLevelIndex() >= 6" fieldRef="[innovation-use-form]-has-studies-links" [options]="[
+<app-pr-radio-button [readOnly]="saving" *ngIf="getUseLevelIndex() >= 6" fieldRef="[innovation-use-form]-has-studies-links" [options]="[
   { value: true, label: 'Yes' },
   { value: false, label: 'No' }
   ]" optionLabel="label" [(ngModel)]="body.has_scaling_studies" optionValue="value">
@@ -311,7 +311,7 @@
         [required]="!!organizationItem?.id" optionLabel="name" optionValue="code"
         [(ngModel)]="organizationItem.institution_types_id" placeholder="Select organization"
         (selectOptionEvent)="reloadSelect(organizationItem)" (ngModelChange)="organizationItem.other_institution = null"
-        [disableOptions]="removeOtherInOrg(disableOrganizations)">
+        [disableOptions]="removeOtherInOrg(disableOrganizations2030)">
       </app-pr-select>
       <div style="margin-top: 13px"></div>
       <app-pr-input *ngIf="organizationItem.institution_types_id == 78"
@@ -328,7 +328,7 @@
                 getInstitutionsTypeTreeChildrens(organizationItem.institution_types_id)?.length
               " [options]="getInstitutionsTypeTreeChildrens(organizationItem.institution_types_id)" label="Sub-type"
           optionLabel="name" optionValue="code" [(ngModel)]="organizationItem.institution_sub_type_id"
-          [disableOptions]="getAllSubTypes" placeholder="Select Sub-type" [required]="!!organizationItem?.id" [disabled]="saving">
+          [disableOptions]="getAllSubTypes2030" placeholder="Select Sub-type" [required]="!!organizationItem?.id" [disabled]="saving">
         </app-pr-select>
       </div>
       <div class="right_content">

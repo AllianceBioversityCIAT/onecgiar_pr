@@ -88,6 +88,12 @@ import { SocketManagementService } from '../../shared/microservices/socket-manag
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
 import { ImpactAreasScoresComponentsModule } from './impact_areas_scores_components/impact_areas_scores_components.module';
 import { ResultsByProjectsModule } from './results_by_projects/results_by_projects.module';
+import { ResultsTocResultRepository } from './results-toc-results/repositories/results-toc-results.repository';
+import { ResultsTocImpactAreaTargetRepository } from './results-toc-results/repositories/result-toc-impact-area.repository';
+import { ResultsTocSdgTargetRepository } from './results-toc-results/repositories/result-toc-sdg-target.repository';
+import { ResultsSdgTargetRepository } from './results-toc-results/repositories/results-sdg-targets.repository';
+import { ResultsActionAreaOutcomeRepository } from './results-toc-results/repositories/result-toc-action-area.repository';
+import { ResultsTocTargetIndicatorRepository } from './results-toc-results/repositories/result-toc-result-target-indicator.repository';
 
 @Module({
   controllers: [ResultsController],
@@ -173,6 +179,12 @@ import { ResultsByProjectsModule } from './results_by_projects/results_by_projec
     NotificationTypeRepository,
     SocketManagementService,
     UserRepository,
+    ResultsTocResultRepository,
+    ResultsTocImpactAreaTargetRepository,
+    ResultsTocSdgTargetRepository,
+    ResultsSdgTargetRepository,
+    ResultsActionAreaOutcomeRepository,
+    ResultsTocTargetIndicatorRepository,
   ],
   exports: [ResultRepository, JwtMiddleware, ResultsService],
 })

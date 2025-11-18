@@ -1,0 +1,58 @@
+<p-dialog
+  header="AI Review"
+  [modal]="true"
+  [(visible)]="aiReviewSE.showAiReview"
+  [style]="{ width: '90vw', maxWidth: '1200px' }"
+  [dismissableMask]="true"
+  [draggable]="false"
+  [resizable]="false">
+  <div class="ai-review-container">
+    <div class="ai-review-header">
+      <img src="assets/icons/stars.png" alt="" srcset="" /> The AI analyzed your information and identified the following:
+    </div>
+
+    @for (field of aiReviewSE.currnetFieldsList(); track $index) {
+      <!-- Title Section -->
+      <div class="field-section">
+        <div class="field-header">
+          <h3 class="field-title">{{ field.field_name_label }}</h3>
+          @if (field.original_text == field.proposed_text) {
+            <span class="improvement-badge updated-badge"> <img src="assets/icons/stars.png" alt="" srcset="" /> Updated</span>
+          } @else {
+            <span class="improvement-badge needs-improvement-badge"> <i class="pi pi-exclamation-triangle"></i> Needs improvement</span>
+          }
+        </div>
+
+        <div class="proposal-section">
+          <div class="proposal-label"><i class="pi pi-lightbulb"></i> AI proposal</div>
+          <div class="proposal-content">
+            {{ field.proposed_text }}
+          </div>
+
+          @if (field.original_text == field.proposed_text) {
+            <div class="applied-badge"><i class="pi pi-check-circle"></i> Applied</div>
+          } @else {
+            <div class="apply-proposal-button" (click)="moveTextToInput(field)">Apply proposal</div>
+          }
+        </div>
+
+        <div class="line-divider"></div>
+
+        <div class="current-version">
+          <label class="version-label">Result version</label>
+          <app-pr-input type="text" [readOnly]="false" [(ngModel)]="field.original_text" placeholder=""> </app-pr-input>
+        </div>
+
+        <app-pr-button
+          [ngClass]="{ globalDisabled: !field.canSave }"
+          text="Save changes"
+          icon="save"
+          [showBackground]="true"
+          class="save-button-custom"
+          onkeypress="aiReviewSE.onApplyProposal(field, $index)"
+          (click)="aiReviewSE.onApplyProposal(field, $index)">
+        </app-pr-button>
+      </div>
+    }
+  </div>
+</p-dialog>

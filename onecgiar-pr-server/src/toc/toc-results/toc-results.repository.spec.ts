@@ -3,6 +3,10 @@ import { TocResultsRepository } from './toc-results.repository';
 describe('TocResultsRepository', () => {
   let repository: TocResultsRepository;
   let mockQuery: jest.Mock;
+  let mockDataSource: {
+    createEntityManager: jest.Mock;
+    query: jest.Mock;
+  };
 
   beforeAll(() => {
     process.env.DB_TOC = 'db_toc';
@@ -11,13 +15,39 @@ describe('TocResultsRepository', () => {
   });
 
   beforeEach(() => {
-    const mockDataSource: any = {
+    mockDataSource = {
       createEntityManager: jest.fn().mockReturnValue({}),
+      query: jest.fn(),
     };
 
-    repository = new TocResultsRepository(mockDataSource);
+    repository = new TocResultsRepository(mockDataSource as any);
     mockQuery = jest.fn();
     (repository as any).query = mockQuery;
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  describe('getCurrentTocPhaseId', () => {
+    it('returns phase id when row exists', async () => {
+      mockDataSource.query.mockResolvedValue([{ toc_pahse_id: 'phase-1' }]);
+
+      const phaseId = await (repository as any).getCurrentTocPhaseId();
+
+      expect(mockDataSource.query).toHaveBeenCalledWith(
+        expect.stringContaining('SELECT toc_pahse_id'),
+      );
+      expect(phaseId).toBe('phase-1');
+    });
+
+    it('throws formatted error when query fails', async () => {
+      mockDataSource.query.mockRejectedValue(new Error('boom'));
+
+      await expect((repository as any).getCurrentTocPhaseId()).rejects.toThrow(
+        'getCurrentTocPhaseId error',
+      );
+    });
   });
 
   describe('deleteAllData', () => {
@@ -304,7 +334,7 @@ describe('TocResultsRepository', () => {
   describe('$_getResultTocByConfigV2', () => {
     it('throws when toc level is invalid', async () => {
       await expect(
-        repository.$_getResultTocByConfigV2(1, 2, 99),
+        repository.$_getResultTocByConfigV2(1, 99),
       ).rejects.toMatchObject({
         message: expect.stringContaining('Invalid toc level'),
         status: 400,
@@ -315,16 +345,50 @@ describe('TocResultsRepository', () => {
       mockQuery.mockRejectedValue(new Error('fail'));
 
       await expect(
-        repository.$_getResultTocByConfigV2(1, 2, 1),
+        repository.$_getResultTocByConfigV2(1, 1),
       ).rejects.toMatchObject({
         message: expect.stringContaining('_getResultTocByConfigV2 error'),
       });
+    });
+
+    it('appends toc phase filter when available', async () => {
+      jest
+        .spyOn(repository as any, 'getCurrentTocPhaseId')
+        .mockResolvedValue('phase-123');
+      mockQuery.mockResolvedValue([{ id: 1 }]);
+
+      const result = await repository.$_getResultTocByConfigV2(5, 1);
+
+      expect(mockQuery).toHaveBeenCalledWith(expect.any(String), [
+        5,
+        'OUTPUT',
+        'phase-123',
+      ]);
+      expect(result).toEqual([{ id: 1 }]);
+    });
+
+    it('omits toc phase filter when not found', async () => {
+      jest
+        .spyOn(repository as any, 'getCurrentTocPhaseId')
+        .mockResolvedValue(null);
+      mockQuery.mockResolvedValue([{ id: 2 }]);
+
+      await repository.$_getResultTocByConfigV2(7, 2);
+
+      expect(mockQuery).toHaveBeenCalledWith(expect.any(String), [
+        7,
+        'OUTCOME',
+      ]);
     });
   });
 
   describe('getTocIndicatorsByResultIds', () => {
     it('returns empty array when no ids provided', async () => {
-      const result = await repository.getTocIndicatorsByResultIds([]);
+      const result = await repository.getTocIndicatorsByResultIds(
+        { obj_version: { phase_year: 2035 } } as any,
+        { year: 2030 } as any,
+        [],
+      );
 
       expect(result).toEqual([]);
       expect(mockQuery).not.toHaveBeenCalled();
@@ -334,12 +398,20 @@ describe('TocResultsRepository', () => {
       const expected = [{ toc_result_id: 5 }];
       mockQuery.mockResolvedValue(expected);
 
-      const result = await repository.getTocIndicatorsByResultIds([10, '11']);
+      const resultObj = { obj_version: { phase_year: 2035 } } as any;
+      const yearObj = { year: 2028 } as any;
+
+      const result = await repository.getTocIndicatorsByResultIds(
+        resultObj,
+        yearObj,
+        [10, '11'],
+      );
 
       expect(mockQuery).toHaveBeenCalledWith(
         expect.stringContaining('toc_results_indicators tri'),
         [10, 11],
       );
+      expect(mockQuery.mock.calls[0][0]).toContain('target_date = 2035');
       expect(result).toBe(expected);
     });
 
@@ -347,7 +419,11 @@ describe('TocResultsRepository', () => {
       mockQuery.mockRejectedValue(new Error('fail'));
 
       await expect(
-        repository.getTocIndicatorsByResultIds([3]),
+        repository.getTocIndicatorsByResultIds(
+          { obj_version: { phase_year: 2035 } } as any,
+          { year: 2030 } as any,
+          [3],
+        ),
       ).rejects.toMatchObject({
         message: expect.stringContaining('getTocIndicatorsByResultIds error'),
       });
@@ -398,13 +474,16 @@ describe('TocResultsRepository', () => {
 
     it('returns query results for valid level', async () => {
       const expected = [{ id: 12 }];
+      jest
+        .spyOn(repository as any, 'getCurrentTocPhaseId')
+        .mockResolvedValue('phase-123');
       mockQuery.mockResolvedValue(expected);
 
       const result = await repository.getAllTocResultsByInitiativeV2(1, 2);
 
       expect(mockQuery).toHaveBeenCalledWith(
         expect.stringContaining('db_toc'),
-        [1, 'OUTCOME'],
+        [1, 'OUTCOME', 'phase-123'],
       );
       expect(result).toBe(expected);
     });
@@ -419,6 +498,17 @@ describe('TocResultsRepository', () => {
           'getAllTocResultsByInitiativeV2 error',
         ),
       });
+    });
+
+    it('runs without toc phase constraint when none is active', async () => {
+      jest
+        .spyOn(repository as any, 'getCurrentTocPhaseId')
+        .mockResolvedValue(null);
+      mockQuery.mockResolvedValue([{ id: 13 }]);
+
+      await repository.getAllTocResultsByInitiativeV2(2, 1);
+
+      expect(mockQuery).toHaveBeenCalledWith(expect.any(String), [2, 'OUTPUT']);
     });
   });
 });

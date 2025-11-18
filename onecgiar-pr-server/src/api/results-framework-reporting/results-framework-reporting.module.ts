@@ -19,6 +19,9 @@ import { InnovationDevModule } from './innovation_dev/innovation_dev.module';
 import { InnovationUseModule } from './innovation-use/innovation-use.module';
 import { ResultScalingStudyUrlsModule } from './result_scaling_study_urls/result_scaling_study_urls.module';
 import { ResultInnovSectionModule } from './result_innov_section/result_innov_section.module';
+import { ResultsByInstitutionsModule } from '../results/results_by_institutions/results_by_institutions.module';
+import { GeographicLocationModule } from './geographic-location/geographic-location.module';
+import { GeoScopeRoleModule } from './geo_scope_role/geo_scope_role.module';
 
 @Module({
   imports: [
@@ -32,6 +35,9 @@ import { ResultInnovSectionModule } from './result_innov_section/result_innov_se
     InnovationUseModule,
     ResultScalingStudyUrlsModule,
     ResultInnovSectionModule,
+    ResultsByInstitutionsModule,
+    GeographicLocationModule,
+    GeoScopeRoleModule,
   ],
   controllers: [ResultsFrameworkReportingController],
   providers: [

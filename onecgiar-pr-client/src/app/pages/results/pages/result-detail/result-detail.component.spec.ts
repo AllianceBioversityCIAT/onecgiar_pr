@@ -27,6 +27,7 @@ import { ShareRequestModalService } from './components/share-request-modal/share
 import { DataControlService } from '../../../../shared/services/data-control.service';
 import { jest } from '@jest/globals';
 import { ResultLevelService } from '../result-creator/services/result-level.service';
+import { signal } from '@angular/core';
 
 jest.useFakeTimers();
 
@@ -57,16 +58,24 @@ describe('ResultDetailComponent', () => {
         GET_allChildlessInstitutionTypes:() => of({response: [] }),
         currentResultCode: 'currentResultCode',
         currentResultPhase: 'currentResultPhase',
-        currentResultId: 'currentResultId'
+        currentResultId: null
+      },
+      rolesSE: {
+        isAdmin: false
       },
       dataControlSE: {
         resultPhaseList: [],
-        someMandatoryFieldIncompleteResultDetail: jest.fn()
+        someMandatoryFieldIncompleteResultDetail: jest.fn(),
+        someMandatoryFieldIncomplete: jest.fn().mockReturnValue(false),
+        currentResultSectionName: signal(''),
+        myInitiativesList: []
       }
     }
 
     mockDataControlService = {
-      currentResult: 'currentResult'
+      currentResult: 'currentResult',
+      currentResultSignal: signal({}),
+      currentResultSectionName: signal('')
     }
 
     mockCurrentResultService = {
@@ -176,9 +185,10 @@ describe('ResultDetailComponent', () => {
       expect(spyGET_resultIdToCode).toHaveBeenCalled();
       expect(spyGET_resultById).toHaveBeenCalled();
       expect(spyUpdateGreenChecks).toHaveBeenCalled();
-      expect(spyGetGreenChecks).toHaveBeenCalled();
       expect(spyGET_versioningResult).toHaveBeenCalled();
       expect(mockShareRequestModalService.inNotifications).toBe(false);
+      // getGreenChecks() is now called by the effect when portfolio is defined, not directly in getData()
+      expect(spyGetGreenChecks).not.toHaveBeenCalled();
     });
   });
 
@@ -224,4 +234,27 @@ describe('ResultDetailComponent', () => {
     });
   });
 
+  describe('constructor effect', () => {
+    it('should call getGreenChecks when portfolio is defined and currentResultId exists', async () => {
+      jest.clearAllMocks();
+      mockApiService.resultsSE.currentResultId = 123;
+      mockDataControlService.currentResultSignal.set({ portfolio: 'P25' });
+      const newFixture = TestBed.createComponent(ResultDetailComponent);
+      const newComponent = newFixture.componentInstance;
+      newFixture.detectChanges();
+      await Promise.resolve();
+      expect(mockGreenChecksService.getGreenChecks).toHaveBeenCalled();
+    });
+
+    it('should not call getGreenChecks when portfolio is undefined', async () => {
+      jest.clearAllMocks();
+      mockApiService.resultsSE.currentResultId = 123;
+      mockDataControlService.currentResultSignal.set({});
+      const newFixture = TestBed.createComponent(ResultDetailComponent);
+      const newComponent = newFixture.componentInstance;
+      newFixture.detectChanges();
+      await Promise.resolve();
+      expect(mockGreenChecksService.getGreenChecks).not.toHaveBeenCalled();
+    });
+  });
 });

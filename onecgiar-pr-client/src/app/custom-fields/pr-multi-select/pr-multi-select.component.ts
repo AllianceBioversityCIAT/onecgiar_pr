@@ -42,6 +42,7 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
   @Input() logicalDeletion: boolean = false;
   @Input() labelDescInlineStyles?: string = '';
   @Input() selectedPrimary?: any;
+  @Input() displayLabelFormatter?: (option: any) => string;
   @Output() selectOptionEvent = new EventEmitter<any>();
   @Output() removeOptionEvent = new EventEmitter<any>();
   selectAll = null;
@@ -266,9 +267,12 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
     });
   }
 
-  getDisplayLabel(option: any): string {
-    if (option?.result_code && option[this.optionLabel]) {
-      return `[${option.result_code}] ${option[this.optionLabel]}`;
+  getDisplayLabel(option: any, useSelectedLabel: boolean = false): string {
+    if (this.displayLabelFormatter) {
+      return this.displayLabelFormatter(option);
+    }
+    if (useSelectedLabel && this.selectedOptionLabel) {
+      return option?.[this.selectedOptionLabel] || '';
     }
     return option?.[this.optionLabel] || '';
   }

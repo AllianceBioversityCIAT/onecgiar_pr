@@ -158,12 +158,16 @@ export class ResultsKnowledgeProductsService {
         false,
       );
 
+      console.log('CGSpace response:', cgspaceResponse);
+
       if (cgspaceResponse.status !== HttpStatus.OK) {
         throw this._handlersError.returnErrorRes({ error: cgspaceResponse });
       }
 
       const newMetadata =
         cgspaceResponse.response as ResultsKnowledgeProductDto;
+
+      console.log('New Metadata:', newMetadata);
 
       const updatedKnowledgeProduct =
         this._resultsKnowledgeProductMapper.updateEntity(
@@ -304,6 +308,11 @@ export class ResultsKnowledgeProductsService {
 
       //geolocation
       await this.updateCountries(updatedKnowledgeProduct, newMetadata, true);
+
+      for (const country of updatedKnowledgeProduct.result_object.result_country_array ?? [])
+      {
+        country.geo_scope_role_id = 1;
+      }
       await this._resultCountryRepository.save(
         updatedKnowledgeProduct.result_object.result_country_array ?? [],
       );
@@ -314,6 +323,10 @@ export class ResultsKnowledgeProductsService {
         newMetadata,
       );
 
+      for (const region of updatedKnowledgeProduct.result_object.result_region_array ?? [])
+      {
+        region.geo_scope_role_id = 1;
+      } 
       await this._resultRegionRepository.save(
         updatedKnowledgeProduct.result_object.result_region_array ?? [],
       );
@@ -473,13 +486,25 @@ export class ResultsKnowledgeProductsService {
   ) {
     const allClarisaCountries = await this._clarisaCountriesRepository.find();
 
+    const normalize = (str: string) =>
+      str
+        ?.trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+
     const countries = (resultsKnowledgeProductDto.cgspace_countries ?? []).map(
-      (mqapIso) => {
+      (mqapValue) => {
         let country: ResultCountry;
         if (upsert) {
           country = (
             newKnowledgeProduct.result_object.result_country_array ?? []
-          ).find((orc) => orc.country_object?.iso_alpha_2 == mqapIso);
+          ).find(
+            (orc) =>
+              normalize(orc.country_object?.iso_alpha_2) ==
+                normalize(mqapValue) ||
+              normalize(orc.country_object?.name) === normalize(mqapValue),
+          );
           if (country) {
             country['matched'] = true;
           }
@@ -488,14 +513,16 @@ export class ResultsKnowledgeProductsService {
         country ??= new ResultCountry();
 
         //searching for country by iso-2
-        const clarisaCountry = allClarisaCountries.find(
-          (cc) => cc.iso_alpha_2 == mqapIso,
-        )?.id;
+        const clarisaCountry = allClarisaCountries.find((cc) => {
+          const iso2Match = normalize(cc.iso_alpha_2) == normalize(mqapValue);
+          const nameMatch = normalize(cc.name) === normalize(mqapValue);
+          return iso2Match || nameMatch;
+        })?.id;
 
         country.country_id = clarisaCountry;
         if (!clarisaCountry) {
           console.warn(
-            `country with ISO Code "${mqapIso}" does not have a mapping in CLARISA for handle "${resultsKnowledgeProductDto.handle}"`,
+            `country with ISO Code "${mqapValue}" does not have a mapping in CLARISA for handle "${resultsKnowledgeProductDto.handle}"`,
           );
         }
 
@@ -976,6 +1003,11 @@ export class ResultsKnowledgeProductsService {
         false,
       );
 
+      for (const country of newKnowledgeProduct.result_object
+        .result_country_array ?? [])
+      {
+        country.geo_scope_role_id = 1;
+      }
       await this._resultCountryRepository.save(
         newKnowledgeProduct.result_object.result_country_array ?? [],
       );
@@ -986,6 +1018,10 @@ export class ResultsKnowledgeProductsService {
         resultsKnowledgeProductDto,
       );
 
+      for (const region of newResult.result_region_array ?? [])
+      {
+        region.geo_scope_role_id = 1;
+      }  
       await this._resultRegionRepository.save(
         newResult.result_region_array ?? [],
       );

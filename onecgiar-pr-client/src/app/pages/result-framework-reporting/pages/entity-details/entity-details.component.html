@@ -58,14 +58,14 @@
           <p-chart type="bar" [data]="dataOutcomes()" [options]="options" height="245px" styleClass="entity-details_chart" />
         </div>
 
-        <div class="entity-details_card_content_graph_item_title_absolute top_title">Progress by Indicators</div>
+        <div class="entity-details_card_content_graph_item_title_absolute top_title">Results by Indicator Category</div>
       </div>
     </div>
   </div>
 
   <div class="entity-details_cards">
     <div class="entity-details_card">
-      <div class="entity-details_card_header">Areas of work</div>
+      <div class="entity-details_card_header">Reporting by Theory of Change</div>
 
       <div class="entity-details_card_content">
         @if (entityAowService.isLoadingDetails()) {
@@ -85,7 +85,16 @@
     </div>
 
     <div class="entity-details_card">
-      <div class="entity-details_card_header">Results</div>
+      <div class="entity-details_card_header">Reporting by indicator category
+        <p-splitbutton 
+          label="Report" 
+          icon="pi pi-plus-circle" 
+          appendTo="self"
+          menuStyleClass="entity-report-menu-overlay"
+          [model]="reportMenuItems"
+          styleClass="entity-report-splitbutton">
+        </p-splitbutton>
+      </div>
 
       <div class="entity-details_card_content">
         @if (entityAowService.isLoadingDetails()) {
@@ -105,3 +114,28 @@
     </div>
   </div>
 </div>
+
+@if (showReportModal()) {
+  <p-dialog
+    appendTo="body"
+    [visible]="showReportModal()"
+    [draggable]="false"
+    [modal]="true"
+    [closeOnEscape]="true"
+    [showHeader]="false"
+    [dismissableMask]="true"
+    [styleClass]="'report-result-dialog'"
+    (onHide)="showReportModal.set(false)">
+    <div class="report-result-header">
+      <span style="font-weight: 550; color: #000000; padding-left: 30px; font-size: 16px !important;">Unplanned result</span>
+      <button type="button" (click)="showReportModal.set(false)" aria-label="Close modal" style="background: none; border: none; cursor: pointer; padding: 0; display: flex; align-items: center;">
+        <i class="material-icons-round" style="font-size: 20px;">close</i>
+      </button>
+    </div>
+    <app-report-result-form
+      [selectedInitiativeId]="entityAowService.entityDetails()?.id"
+      [disableInitiativeSelect]="true"
+      (resultCreated)="showReportModal.set(false)">
+    </app-report-result-form>
+  </p-dialog>
+}

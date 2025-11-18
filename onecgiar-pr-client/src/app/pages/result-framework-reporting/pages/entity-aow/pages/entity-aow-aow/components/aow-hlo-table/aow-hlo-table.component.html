@@ -9,7 +9,8 @@
   dataKey="result_title"
   sortMode="single"
   rowGroupMode="subheader"
-  groupRowsBy="result_title">
+  groupRowsBy="result_title"
+  [expandedRowKeys]="expandedRowKeys()">
   <ng-template pTemplate="header">
     <tr>
       @for (column of columnOrder(); track column.attr) {
@@ -35,12 +36,6 @@
 
             <span style="font-weight: bold">{{ item.result_title }}</span>
           </div>
-
-          <div style="display: flex; justify-content: flex-start; align-items: center; gap: 5px; cursor: not-allowed">
-            <span class="material-icons-round text-primary-300" style="font-size: 16px"> mail </span>
-
-            <p class="pr-body-3 text-primary-300 font-weight-400" style="white-space: nowrap">View associated bilateral projects</p>
-          </div>
         </div>
       </td>
     </tr>
@@ -51,8 +46,8 @@
       <tr>
         <td class="text-secondary-300" style="min-width: 150px !important">{{ result.indicator_description }}</td>
         <td>
-          <div class="tab-content_chip">
-            {{ result.type_name }}
+          <div class="tab-content_chip" [pTooltip]="!result.type_name ? 'This information should be filled in the ToC Board' : ''">
+            {{ result.type_name || 'Not provided' }}
           </div>
         </td>
         <td style="text-align: center">{{ result.target_value_sum }}</td>
@@ -89,7 +84,6 @@
               type="button"
               class="p-button-outlined pr-body-3 tab-content_actions_button"
               (click)="openViewResultDrawer(item, result.indicator_id)"></button>
-            <button pButton label="Progress by program" type="button" class="p-button-outlined pr-body-3 tab-content_actions_button"></button>
           </div>
         </td>
       </tr>

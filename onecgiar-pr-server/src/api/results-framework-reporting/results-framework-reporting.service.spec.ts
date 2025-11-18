@@ -16,6 +16,7 @@ import { ShareResultRequestService } from '../results/share-result-request/share
 import { ResultsByProjectsService } from '../results/results_by_projects/results_by_projects.service';
 import { ContributionToIndicatorResultsRepository } from '../contribution-to-indicators/repositories/contribution-to-indicator-result.repository';
 import { ResultsTocTargetIndicatorRepository } from '../results/results-toc-results/repositories/result-toc-result-target-indicator.repository';
+import { ResultsByInstitutionsService } from '../results/results_by_institutions/results_by_institutions.service';
 
 const mockClarisaInitiativesRepository = {
   findOne: jest.fn(),
@@ -24,6 +25,7 @@ const mockClarisaInitiativesRepository = {
 const mockRoleByUserRepository = {
   findOne: jest.fn(),
   isUserAdmin: jest.fn(),
+  find: jest.fn(),
 };
 
 const mockClarisaGlobalUnitRepository = {
@@ -101,6 +103,10 @@ const mockContributionToIndicatorResultsRepository = {
   find: jest.fn(),
 };
 
+const mockResultsByInstitutionsService = {
+  handleContributingCenters: jest.fn(),
+};
+
 describe('ResultsFrameworkReportingService', () => {
   let service: ResultsFrameworkReportingService;
 
@@ -161,6 +167,10 @@ describe('ResultsFrameworkReportingService', () => {
         {
           provide: ContributionToIndicatorResultsRepository,
           useValue: mockContributionToIndicatorResultsRepository,
+        },
+        {
+          provide: ResultsByInstitutionsService,
+          useValue: mockResultsByInstitutionsService,
         },
       ],
     }).compile();
@@ -993,6 +1003,7 @@ describe('ResultsFrameworkReportingService', () => {
       mockResultsIndicatorsTargetsRepository.update.mockReset();
       mockShareResultRequestService.resultRequest.mockReset();
       mockResultsByProjectsService.linkBilateralProjectToResult.mockReset();
+      mockResultsByInstitutionsService.handleContributingCenters.mockReset();
     });
 
     it('should create a non-knowledge product result and link ToC data', async () => {
@@ -1261,6 +1272,52 @@ describe('ResultsFrameworkReportingService', () => {
         mockResultsByProjectsService.linkBilateralProjectToResult,
       ).toHaveBeenNthCalledWith(2, 303, 9002, user.id);
     });
+
+    it('should persist contributing centers when payload includes them', async () => {
+      mockResultsService.createOwnerResultV2.mockResolvedValueOnce({
+        status: 201,
+        response: { id: 606 },
+      });
+      mockResultRepository.getResultById.mockResolvedValueOnce({
+        id: 606,
+        result_level_id: 2,
+      });
+      mockTocResultsRepository.findResultById.mockResolvedValueOnce({
+        id: 909,
+        category: 'OUTPUT',
+      });
+      mockResultsTocResultRepository.findOne.mockResolvedValueOnce(null);
+      mockResultsTocResultRepository.save.mockResolvedValueOnce({
+        result_toc_result_id: 1212,
+      });
+      mockTocResultsRepository.findIndicatorById.mockResolvedValueOnce({
+        id: 3030,
+        toc_results_id: 909,
+        related_node_id: 'NODE-909',
+      });
+      mockResultsTocResultIndicatorsRepository.findOne.mockResolvedValueOnce(
+        null,
+      );
+
+      const centers: any = [
+        { code: 'CIM', is_leading_result: true },
+        { code: 'IITA', is_leading_result: false },
+      ];
+
+      await service.createResultFromFramework(
+        {
+          result: baseResult,
+          toc_result_id: 909,
+          indicators: { indicator_id: 3030 },
+          contributing_center: centers,
+        } as any,
+        user,
+      );
+
+      expect(
+        mockResultsByInstitutionsService.handleContributingCenters,
+      ).toHaveBeenCalledWith(centers, { result_id: 606 }, user);
+    });
   });
 
   describe('getExistingResultContributorsToIndicators', () => {
@@ -1268,6 +1325,7 @@ describe('ResultsFrameworkReportingService', () => {
       mockResultsTocResultRepository.find.mockReset();
       mockResultsTocResultIndicatorsRepository.find.mockReset();
       mockResultRepository.getUserRolesForResults.mockReset();
+      mockRoleByUserRepository.find.mockReset();
       mockHandlersError.returnErrorRes.mockClear();
     });
 
@@ -1303,6 +1361,7 @@ describe('ResultsFrameworkReportingService', () => {
       mockResultsTocResultIndicatorsRepository.find.mockResolvedValueOnce([
         { results_toc_results_id: 11 },
       ]);
+      mockRoleByUserRepository.find.mockResolvedValueOnce([]);
       mockResultRepository.getUserRolesForResults.mockResolvedValueOnce([
         { result_id: '101', role_id: 4, role_name: 'Lead' },
       ]);
@@ -1351,7 +1410,7 @@ describe('ResultsFrameworkReportingService', () => {
       expect(mockHandlersError.returnErrorRes).not.toHaveBeenCalled();
     });
 
-    it('should default role fields to null when no role mapping found', async () => {
+    it('should use general application roles as fallback when no specific role mapping found', async () => {
       mockResultsTocResultRepository.find.mockResolvedValueOnce([
         {
           result_toc_result_id: 31,
@@ -1371,6 +1430,7 @@ describe('ResultsFrameworkReportingService', () => {
         { results_toc_results_id: 31 },
       ]);
       mockResultRepository.getUserRolesForResults.mockResolvedValueOnce([]);
+      mockRoleByUserRepository.find.mockResolvedValueOnce([{ role: 1 }]);
 
       const result: any =
         await service.getExistingResultContributorsToIndicators(
@@ -1383,11 +1443,20 @@ describe('ResultsFrameworkReportingService', () => {
         user.id,
         [501],
       );
+      expect(mockRoleByUserRepository.find).toHaveBeenCalledWith({
+        where: {
+          user: user.id,
+          active: true,
+          initiative_id: expect.any(Object), // IsNull()
+          action_area_id: expect.any(Object), // IsNull()
+        },
+        select: ['role'],
+      });
       expect(result.status).toBe(200);
       expect(result.response.contributors).toEqual([
         expect.objectContaining({
           result_id: 501,
-          role_id: null,
+          role_id: 1,
           status_id: 3,
           status_name: 'Quality assessed',
           title: 'Result Delta',
@@ -1411,6 +1480,7 @@ describe('ResultsFrameworkReportingService', () => {
         },
       ]);
       mockResultsTocResultIndicatorsRepository.find.mockResolvedValueOnce([]);
+      mockRoleByUserRepository.find.mockResolvedValueOnce([]);
 
       const result: any =
         await service.getExistingResultContributorsToIndicators(

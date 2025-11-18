@@ -203,6 +203,17 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     return list;
   }
 
+  get getAllSubTypes2030() {
+    const list = [];
+    const body = this.body as any;
+    if (body.innovation_use_2030?.organization) {
+      body.innovation_use_2030.organization.forEach(resp => {
+        list.push({ code: resp.institution_sub_type_id });
+      });
+    }
+    return list;
+  }
+
   removeOther(actors) {
     return actors.filter(item => item.actor_type_id != 5);
   }
@@ -220,6 +231,17 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     this.body.innovatonUse.organization.forEach(resp => {
       if (!resp.institution_sub_type_id) list.push({ code: resp.institution_types_id });
     });
+    return list;
+  }
+
+  get disableOrganizations2030() {
+    const list = [];
+    const body = this.body as any;
+    if (body.innovation_use_2030?.organization) {
+      body.innovation_use_2030.organization.forEach(resp => {
+        if (!resp.institution_sub_type_id) list.push({ code: resp.institution_types_id });
+      });
+    }
     return list;
   }
 
@@ -302,6 +324,27 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     const selected = list.find((lvl: any) => String(lvl?.id) === String(selectedId));
     const levelNumber = Number(selected?.level);
     return Number.isFinite(levelNumber) ? levelNumber : -1;
+  }
+
+  formatResultLabel(option: any): string {
+    if (option?.result_code && option?.name) {
+      let phaseInfo = '';
+      if (option?.acronym && option?.phase_year) {
+        phaseInfo = `(${option.acronym} - ${option.phase_year}) `;
+      } else if (option?.acronym) {
+        phaseInfo = `(${option.acronym}) `;
+      } else if (option?.phase_year) {
+        phaseInfo = `(${option.phase_year}) `;
+      }
+
+      const resultType = option?.result_type_name || option?.resultTypeName || option?.type_name || '';
+      const resultTypeInfo = resultType ? ` (${resultType})` : '';
+
+      const title = option?.title ? ` - ${option.title}` : '';
+
+      return `${phaseInfo}${option.result_code} - ${option.name}${resultTypeInfo}${title}`;
+    }
+    return option?.title || option?.name || '';
   }
 
 }
