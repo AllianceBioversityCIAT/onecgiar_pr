@@ -7,9 +7,10 @@ import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.modu
 import { AlertGlobalInfoModule } from '../../../../shared/components/alert-global-info/alert-global-info.module';
 import { PrFieldHeaderComponent } from '../../../../custom-fields/pr-field-header/pr-field-header.component';
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
+import { PageAlertModule } from 'src/app/shared/components/page-alert/page-alert.module';
 
 @NgModule({
   declarations: [ResultsOutletComponent],
-  imports: [CommonModule, ResultsOutletRoutingModule, CustomFieldsModule, AlertGlobalInfoModule, PageHeaderComponent]
+  imports: [CommonModule, ResultsOutletRoutingModule, CustomFieldsModule, AlertGlobalInfoModule, PageHeaderComponent, PageHeaderComponent]
 })
 export class ResultsOutletModule {}
