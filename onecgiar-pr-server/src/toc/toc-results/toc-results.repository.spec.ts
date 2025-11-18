@@ -44,9 +44,9 @@ describe('TocResultsRepository', () => {
     it('throws formatted error when query fails', async () => {
       mockDataSource.query.mockRejectedValue(new Error('boom'));
 
-      await expect(
-        (repository as any).getCurrentTocPhaseId(),
-      ).rejects.toThrow('getCurrentTocPhaseId error');
+      await expect((repository as any).getCurrentTocPhaseId()).rejects.toThrow(
+        'getCurrentTocPhaseId error',
+      );
     });
   });
 
