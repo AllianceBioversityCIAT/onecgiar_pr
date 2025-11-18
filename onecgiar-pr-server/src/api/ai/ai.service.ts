@@ -458,11 +458,11 @@ export class AiService {
       }
     }
 
-    throw {
-      response: {},
-      message: `Invalid ${paramName} provided`,
-      status: HttpStatus.BAD_REQUEST,
-    };
+    const error = new Error(
+      'short_title field is only applicable for Innovation Development results',
+    );
+    Object.assign(error, { response: {}, status: HttpStatus.BAD_REQUEST });
+    throw error;
   }
 
   async getResultState(resultId: number) {
@@ -589,20 +589,17 @@ export class AiService {
     });
 
     if (!result) {
-      throw {
-        response: {},
-        message: 'Result not found',
-        status: HttpStatus.NOT_FOUND,
-      };
+      const error = new Error('Result not found');
+      Object.assign(error, { response: {}, status: HttpStatus.NOT_FOUND });
+      throw error;
     }
 
     if (result.result_type_id !== ResultTypeEnum.INNOVATION_DEVELOPMENT) {
-      throw {
-        response: {},
-        message:
-          'short_title field is only applicable for Innovation Development results',
-        status: HttpStatus.BAD_REQUEST,
-      };
+      const error = new Error(
+        'short_title field is only applicable for Innovation Development results',
+      );
+      Object.assign(error, { response: {}, status: HttpStatus.BAD_REQUEST });
+      throw error;
     }
 
     let innovationDev = await this.getInnovationDevByResultId(resultId);
