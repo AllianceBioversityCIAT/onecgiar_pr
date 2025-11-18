@@ -8,7 +8,7 @@
   </p-iconfield>
   <!-- apply filters button -->
   <p-overlaybadge value="" [badgeDisabled]="filtersCount() === 0">
-    <app-pr-button (click)="visible.set(true)" [text]="filtersCountText()" [verticalMargin]="-3" icon="filter_alt" [reverse]="true" />
+    <app-pr-button (click)="visible.set(true)" [text]="filtersCountText()" [verticalMargin]="-6" icon="filter_alt" [reverse]="true" />
   </p-overlaybadge>
   <!-- celar fitlers -->
   <app-pr-button (click)="this.clearAllNewFilters()" text="Clear Filters" [verticalMargin]="0" colorType="secondary" />
