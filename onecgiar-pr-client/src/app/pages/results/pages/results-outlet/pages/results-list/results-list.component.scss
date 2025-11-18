@@ -4,7 +4,10 @@
   color: var(--pr-color-primary-800);
   font-size: 14px;
   font-weight: 600;
-  padding: 15px 22px;
+  padding: 5px 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 .action_buttons {
   display: flex;
