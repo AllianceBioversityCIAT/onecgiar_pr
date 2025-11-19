@@ -47,12 +47,16 @@
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
-  padding: 24px;
 
   &.open {
     transform: translateX(0);
   }
+}
+
+.drawer-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
 }
 
 .drawer-header {
@@ -98,9 +102,9 @@
 
 .drawer-footer {
   display: grid;
-  grid-template-columns: 1fr 2fr;
+  grid-template-columns: 2fr 3fr;
   gap: 12px;
-  margin-top: 30px;
-  padding-top: 20px;
+  padding: 20px 24px;
   border-top: 1px solid rgba(0, 0, 0, 0.08);
+  background-color: var(--pr-color-accents-1);
 }

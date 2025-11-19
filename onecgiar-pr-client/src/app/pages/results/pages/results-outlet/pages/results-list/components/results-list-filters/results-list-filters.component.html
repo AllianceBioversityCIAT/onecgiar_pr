@@ -19,119 +19,121 @@
 <!-- Custom Drawer -->
 <div class="custom-drawer-container" [class.visible]="visible()" [style.top.px]="navbarHeight()">
   <div class="custom-drawer" [class.open]="visible()">
-    <div class="drawer-header">
-      <h3 class="drawer-title">Table Filters</h3>
-      <button class="close-button" (click)="cancelFilters()" aria-label="Close">
-        <i class="pi pi-times"></i>
-      </button>
-    </div>
-
-    <p class="drawer-description">Filter your table data by applying custom criteria.</p>
-
-    <div class="filters_items_container_drawer" style="flex-direction: column; margin: 0; gap: 20px">
-      <div>
-        <app-pr-field-header
-          label="Clarisa Portfolio"
-          labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
-          [required]="false"></app-pr-field-header>
-
-        <p-multiselect
-          [filter]="false"
-          [options]="this.clarisaPortfolios()"
-          [(ngModel)]="tempSelectedClarisaPortfolios"
-          optionLabel="name"
-          placeholder="Select clarisa portfolio"
-          [maxSelectedLabels]="1"
-          [style]="{ width: '100%' }" />
-      </div>
-      <div>
-        <app-pr-field-header
-          label="Phase"
-          labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
-          [required]="false"></app-pr-field-header>
-
-        <p-multiselect
-          [filter]="false"
-          [showHeader]="false"
-          [options]="this.resultsListFilterSE.phasesOptions()"
-          [(ngModel)]="tempSelectedPhases"
-          (onChange)="onSelectPhases()"
-          optionLabel="name"
-          placeholder="Select phase"
-          [maxSelectedLabels]="1"
-          [style]="{ width: '100%' }" />
+    <div class="drawer-content">
+      <div class="drawer-header">
+        <h3 class="drawer-title">Table Filters</h3>
+        <button class="close-button" (click)="cancelFilters()" aria-label="Close">
+          <i class="pi pi-times"></i>
+        </button>
       </div>
 
-      <div>
-        <app-pr-field-header
-          label="Submitter(s)"
-          labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
-          [required]="false"></app-pr-field-header>
+      <p class="drawer-description">Filter your table data by applying custom criteria.</p>
 
-        @if (this.isAdmin) {
+      <div class="filters_items_container_drawer" style="flex-direction: column; margin: 0; gap: 20px">
+        <div>
+          <app-pr-field-header
+            label="Clarisa Portfolio"
+            labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
+            [required]="false"></app-pr-field-header>
+
           <p-multiselect
             [filter]="false"
-            [options]="this.resultsListFilterSE.submittersOptionsAdmin()"
-            [(ngModel)]="tempSelectedSubmittersAdmin"
-            optionLabel="official_code"
-            placeholder="Select submitter(s)"
-            [maxSelectedLabels]="6"
-            [filter]="true"
-            [style]="{ width: '100%' }" />
-        } @else {
-          <p-multiselect
-            [filter]="false"
-            [options]="this.resultsListFilterSE.submittersOptions()"
-            [(ngModel)]="tempSelectedSubmitters"
+            [options]="this.clarisaPortfolios()"
+            [(ngModel)]="tempSelectedClarisaPortfolios"
             optionLabel="name"
-            placeholder="Select submitter(s)"
-            [maxSelectedLabels]="6"
-            [filter]="true"
+            placeholder="Select clarisa portfolio"
+            [maxSelectedLabels]="1"
             [style]="{ width: '100%' }" />
-        }
-      </div>
+        </div>
+        <div>
+          <app-pr-field-header
+            label="Phase"
+            labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
+            [required]="false"></app-pr-field-header>
 
-      <div>
-        <app-pr-field-header
-          label="Indicator category(ies)"
-          labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
-          [required]="false"></app-pr-field-header>
+          <p-multiselect
+            [filter]="false"
+            [showHeader]="false"
+            [options]="this.resultsListFilterSE.phasesOptions()"
+            [(ngModel)]="tempSelectedPhases"
+            (onChange)="onSelectPhases()"
+            optionLabel="name"
+            placeholder="Select phase"
+            [maxSelectedLabels]="1"
+            [style]="{ width: '100%' }" />
+        </div>
 
-        <p-multiselect
-          [filter]="false"
-          [showHeader]="false"
-          [options]="this.resultsListFilterSE.filters.resultLevel"
-          [(ngModel)]="tempSelectedIndicatorCategories"
-          optionLabel="name"
-          placeholder="Select indicator category(ies)"
-          [maxSelectedLabels]="1"
-          [group]="true"
-          optionGroupChildren="options"
-          [style]="{ width: '100%' }">
-          <ng-template let-group #group>
-            <div class="flex items-center">
-              <span>{{ group.name }}</span>
-            </div>
-          </ng-template>
-        </p-multiselect>
-      </div>
+        <div>
+          <app-pr-field-header
+            label="Submitter(s)"
+            labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
+            [required]="false"></app-pr-field-header>
 
-      <div>
-        <app-pr-field-header
-          label="Status"
-          labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
-          [required]="false"></app-pr-field-header>
+          @if (this.isAdmin) {
+            <p-multiselect
+              [filter]="false"
+              [options]="this.resultsListFilterSE.submittersOptionsAdmin()"
+              [(ngModel)]="tempSelectedSubmittersAdmin"
+              optionLabel="official_code"
+              placeholder="Select submitter(s)"
+              [maxSelectedLabels]="6"
+              [filter]="true"
+              [style]="{ width: '100%' }" />
+          } @else {
+            <p-multiselect
+              [filter]="false"
+              [options]="this.resultsListFilterSE.submittersOptions()"
+              [(ngModel)]="tempSelectedSubmitters"
+              optionLabel="name"
+              placeholder="Select submitter(s)"
+              [maxSelectedLabels]="6"
+              [filter]="true"
+              [style]="{ width: '100%' }" />
+          }
+        </div>
 
-        <p-multiselect
-          [filter]="false"
-          [showHeader]="false"
-          [options]="this.resultsListFilterSE.statusOptions()"
-          [(ngModel)]="tempSelectedStatus"
-          optionLabel="name"
-          placeholder="Select status"
-          [maxSelectedLabels]="3"
-          [style]="{ width: '100%' }" />
-      </div>
+        <div>
+          <app-pr-field-header
+            label="Indicator category(ies)"
+            labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
+            [required]="false"></app-pr-field-header>
+
+          <p-multiselect
+            [filter]="false"
+            [showHeader]="false"
+            [options]="this.resultsListFilterSE.filters.resultLevel"
+            [(ngModel)]="tempSelectedIndicatorCategories"
+            optionLabel="name"
+            placeholder="Select indicator category(ies)"
+            [maxSelectedLabels]="1"
+            [group]="true"
+            optionGroupChildren="options"
+            [style]="{ width: '100%' }">
+            <ng-template let-group #group>
+              <div class="flex items-center">
+                <span>{{ group.name }}</span>
+              </div>
+            </ng-template>
+          </p-multiselect>
+        </div>
+
+        <div>
+          <app-pr-field-header
+            label="Status"
+            labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
+            [required]="false"></app-pr-field-header>
+
+          <p-multiselect
+            [filter]="false"
+            [showHeader]="false"
+            [options]="this.resultsListFilterSE.statusOptions()"
+            [(ngModel)]="tempSelectedStatus"
+            optionLabel="name"
+            placeholder="Select status"
+            [maxSelectedLabels]="3"
+            [style]="{ width: '100%' }" />
+        </div>
+    </div>
     </div>
 
     <!-- Footer buttons -->
