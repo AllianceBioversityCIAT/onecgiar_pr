@@ -42,6 +42,8 @@ import { ResultFieldRevision } from '../../ai/entities/result-field-revision.ent
 import { ResultFieldAiState } from '../../ai/entities/result-field-ai-state.entity';
 import { ResultsCapacityDevelopments } from '../summary/entities/results-capacity-developments.entity';
 import { ResultsInnovationsDev } from '../summary/entities/results-innovations-dev.entity';
+import { ResultsInnovationsUse } from '../summary/entities/results-innovations-use.entity';
+import { ResultsPolicyChanges } from '../summary/entities/results-policy-changes.entity';
 
 export enum SourceEnum {
   Result = 'Result',
@@ -603,4 +605,14 @@ export class Result {
     nullable: true,
   })
   results_innovations_dev_object: ResultsInnovationsDev;
+
+  @OneToOne(() => ResultsInnovationsUse, (riu) => riu.obj_result, {
+    nullable: true,
+  })
+  results_innovations_use_object: ResultsInnovationsUse;
+
+  @OneToOne(() => ResultsPolicyChanges, (rpc) => rpc.obj_result, {
+    nullable: true,
+  })
+  results_policy_changes_object: ResultsPolicyChanges;
 }

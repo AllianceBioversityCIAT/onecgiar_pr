@@ -27,10 +27,17 @@ import { ResultsByProjectsModule } from '../results/results_by_projects/results_
 import { CapdevsTermsModule } from '../results/capdevs-terms/capdevs-terms.module';
 import { CapdevsDeliveryMethodsModule } from '../results/capdevs-delivery-methods/capdevs-delivery-methods.module';
 import { ClarisaInnovationReadinessLevelsModule } from '../../clarisa/clarisa-innovation-readiness-levels/clarisa-innovation-readiness-levels.module';
+import { ClarisaInnovationUseLevelsModule } from '../../clarisa/clarisa-innovation-use-levels/clarisa-innovation-use-levels.module';
+import { ClarisaPolicyTypesModule } from '../../clarisa/clarisa-policy-types/clarisa-policy-types.module';
+import { ClarisaPolicyStagesModule } from '../../clarisa/clarisa-policy-stages/clarisa-policy-stages.module';
 import { KnowledgeProductBilateralHandler } from './handlers/knowledge-product.handler';
 import { CapacityChangeBilateralHandler } from './handlers/capacity-change.handler';
 import { InnovationDevelopmentBilateralHandler } from './handlers/innovation-development.handler';
+import { InnovationUseBilateralHandler } from './handlers/innovation-use.handler';
+import { PolicyChangeBilateralHandler } from './handlers/policy-change.handler';
 import { ResultsInnovationsDevRepository } from '../results/summary/repositories/results-innovations-dev.repository';
+import { ResultsInnovationsUseRepository } from '../results/summary/repositories/results-innovations-use.repository';
+import { ResultsPolicyChangesRepository } from '../results/summary/repositories/results-policy-changes.repository';
 import { NoopBilateralHandler } from './handlers/noop.handler';
 
 @Module({
@@ -61,6 +68,9 @@ import { NoopBilateralHandler } from './handlers/noop.handler';
     CapdevsTermsModule,
     CapdevsDeliveryMethodsModule,
     ClarisaInnovationReadinessLevelsModule,
+    ClarisaInnovationUseLevelsModule,
+    ClarisaPolicyTypesModule,
+    ClarisaPolicyStagesModule,
   ],
   controllers: [BilateralController],
   providers: [
@@ -68,8 +78,12 @@ import { NoopBilateralHandler } from './handlers/noop.handler';
     KnowledgeProductBilateralHandler,
     CapacityChangeBilateralHandler,
     InnovationDevelopmentBilateralHandler,
+    InnovationUseBilateralHandler,
+    PolicyChangeBilateralHandler,
     NoopBilateralHandler,
     ResultsInnovationsDevRepository,
+    ResultsInnovationsUseRepository,
+    ResultsPolicyChangesRepository,
   ],
 })
 export class BilateralModule {}

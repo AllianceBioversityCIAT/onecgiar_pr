@@ -50,6 +50,8 @@ import { ClarisaInstitution } from '../../clarisa/clarisa-institutions/entities/
 import { KnowledgeProductBilateralHandler } from './handlers/knowledge-product.handler';
 import { CapacityChangeBilateralHandler } from './handlers/capacity-change.handler';
 import { InnovationDevelopmentBilateralHandler } from './handlers/innovation-development.handler';
+import { InnovationUseBilateralHandler } from './handlers/innovation-use.handler';
+import { PolicyChangeBilateralHandler } from './handlers/policy-change.handler';
 import { BilateralResultTypeHandler } from './handlers/bilateral-result-type-handler.interface';
 import { NoopBilateralHandler } from './handlers/noop.handler';
 
@@ -84,13 +86,19 @@ export class BilateralService {
     private readonly _knowledgeProductHandler: KnowledgeProductBilateralHandler,
     private readonly _capacityChangeHandler: CapacityChangeBilateralHandler,
     private readonly _innovationDevelopmentHandler: InnovationDevelopmentBilateralHandler,
+    private readonly _innovationUseHandler: InnovationUseBilateralHandler,
+    private readonly _policyChangeHandler: PolicyChangeBilateralHandler,
     private readonly _otherOutputHandler: NoopBilateralHandler,
+    private readonly _otherOutcomeHandler: NoopBilateralHandler,
   ) {
     this.resultTypeHandlerMap = new Map<number, BilateralResultTypeHandler>([
       [_knowledgeProductHandler.resultType, _knowledgeProductHandler],
       [_capacityChangeHandler.resultType, _capacityChangeHandler],
       [_innovationDevelopmentHandler.resultType, _innovationDevelopmentHandler],
+      [_innovationUseHandler.resultType, _innovationUseHandler],
+      [_policyChangeHandler.resultType, _policyChangeHandler],
       [_otherOutputHandler.resultType, _otherOutputHandler],
+      [_otherOutcomeHandler.resultType, _otherOutcomeHandler],
     ]);
   }
 
@@ -224,6 +232,10 @@ export class BilateralService {
           bilateralDto.result_type_id === ResultTypeEnum.CAPACITY_CHANGE;
         const isInnovationDev =
           bilateralDto.result_type_id === ResultTypeEnum.INNOVATION_DEVELOPMENT;
+        const isInnovationUse =
+          bilateralDto.result_type_id === ResultTypeEnum.INNOVATION_USE;
+        const isPolicyChange =
+          bilateralDto.result_type_id === ResultTypeEnum.POLICY_CHANGE;
 
         let kpExtra: any = {};
         if (isKpType) {
@@ -285,6 +297,12 @@ export class BilateralService {
             }),
             ...(isInnovationDev && {
               results_innovations_dev_object: true,
+            }),
+            ...(isInnovationUse && {
+              results_innovations_use_object: true,
+            }),
+            ...(isPolicyChange && {
+              results_policy_changes_object: true,
             }),
           },
         });

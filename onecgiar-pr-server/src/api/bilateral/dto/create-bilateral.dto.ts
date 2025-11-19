@@ -319,6 +319,369 @@ export class InnovationDevelopmentDetailsDto {
   innovation_readiness_level: InnovationReadinessLevelDto;
 }
 
+export class InnovationUseActorDto {
+  @ApiPropertyOptional({
+    description: 'Actor result ID',
+    example: 123,
+  })
+  @IsOptional()
+  result_actors_id?: string | number;
+
+  @ApiPropertyOptional({
+    description: 'Actor type identifier',
+    example: 1,
+  })
+  @ValidateIf((o) => !o.actor_type_name)
+  actor_type_id?: string | number;
+
+  @ApiPropertyOptional({
+    description: 'Actor type name',
+    example: 'Farmers',
+  })
+  @ValidateIf((o) => !o.actor_type_id)
+  @IsString()
+  actor_type_name?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Other actor type description (required if actor_type_id is 5)',
+    example: 'Custom actor type',
+  })
+  @ValidateIf((o) => o.actor_type_id === 5 || o.actor_type_id === '5')
+  @IsString()
+  other_actor_type?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Whether sex and age disaggregation is provided',
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  sex_and_age_disaggregation?: boolean | null;
+
+  @ApiPropertyOptional({
+    description:
+      'Total number of actors (required if sex_and_age_disaggregation is true)',
+    example: 1000,
+  })
+  @ValidateIf((o) => o.sex_and_age_disaggregation === true)
+  how_many?: string | number | null;
+
+  @ApiPropertyOptional({
+    description: 'Number of women',
+    example: 400,
+  })
+  @IsOptional()
+  women?: string | number | null;
+
+  @ApiPropertyOptional({
+    description: 'Number of women youth',
+    example: 100,
+  })
+  @IsOptional()
+  women_youth?: string | number | null;
+
+  @ApiPropertyOptional({
+    description: 'Number of men',
+    example: 450,
+  })
+  @IsOptional()
+  men?: string | number | null;
+
+  @ApiPropertyOptional({
+    description: 'Number of men youth',
+    example: 50,
+  })
+  @IsOptional()
+  men_youth?: string | number | null;
+
+  @ApiPropertyOptional({
+    description: 'Previous number of women',
+    example: 350,
+  })
+  @IsOptional()
+  previousWomen?: string | number | null;
+}
+
+export class InnovationUseOrganizationDto {
+  @ApiPropertyOptional({
+    description: 'Institution type identifier',
+    example: 3,
+  })
+  @ValidateIf((o) => !o.institution_types_name)
+  institution_types_id?: string | number;
+
+  @ApiPropertyOptional({
+    description: 'Institution type name',
+    example: 'Research Organization',
+  })
+  @ValidateIf((o) => !o.institution_types_id)
+  @IsString()
+  institution_types_name?: string;
+
+  @ApiPropertyOptional({
+    description: 'Institution sub-type identifier',
+    example: 10,
+  })
+  @IsOptional()
+  institution_sub_type_id?: string | number | null;
+
+  @ApiPropertyOptional({
+    description: 'Institution sub-type name',
+    example: 'University',
+  })
+  @IsOptional()
+  @IsString()
+  institution_sub_type_name?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Other institution description (required if institution_types_id is 78)',
+    example: 'Custom institution type',
+  })
+  @ValidateIf(
+    (o) => o.institution_types_id === 78 || o.institution_types_id === '78',
+  )
+  @IsString()
+  other_institution?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Number of organizations',
+    example: 5,
+  })
+  @IsOptional()
+  how_many?: string | number | null;
+
+  @ApiPropertyOptional({
+    description: 'Whether to hide this organization',
+    example: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  hide?: boolean;
+}
+
+export class InnovationUseMeasureDto {
+  @ApiProperty({
+    description: 'Unit of measure',
+    example: 'hectares',
+  })
+  @IsString()
+  @IsNotEmpty()
+  unit_of_measure: string;
+
+  @ApiPropertyOptional({
+    description: 'Quantity measured',
+    example: 5000,
+  })
+  @IsOptional()
+  quantity?: string | number;
+}
+
+export class CurrentInnovationUseNumbersDto {
+  @ApiProperty({
+    description: 'If true, no actors data is required',
+    example: false,
+  })
+  @IsBoolean()
+  @IsDefined()
+  innov_use_to_be_determined: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'List of actors (required if innov_use_to_be_determined is false)',
+    type: [InnovationUseActorDto],
+  })
+  @ValidateIf((o) => o.innov_use_to_be_determined === false)
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => InnovationUseActorDto)
+  actors?: InnovationUseActorDto[];
+
+  @ApiPropertyOptional({
+    description: 'List of organizations',
+    type: [InnovationUseOrganizationDto],
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => InnovationUseOrganizationDto)
+  organization?: InnovationUseOrganizationDto[];
+
+  @ApiPropertyOptional({
+    description: 'List of measures',
+    type: [InnovationUseMeasureDto],
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => InnovationUseMeasureDto)
+  measures?: InnovationUseMeasureDto[];
+}
+
+export class InnovationUseLevelDto {
+  @ApiPropertyOptional({
+    description: 'Numeric level of innovation use',
+    example: 2,
+  })
+  @ValidateIf((o) => !o.name)
+  @IsNumber()
+  @Min(1)
+  level?: number;
+
+  @ApiPropertyOptional({
+    description: 'Human readable use level name',
+    example: 'Proven under field conditions',
+  })
+  @ValidateIf((o) => !o.level)
+  @IsString()
+  name?: string;
+}
+
+export class InnovationUseDetailsDto {
+  @ApiProperty({
+    description: 'Current innovation use numbers',
+    type: () => CurrentInnovationUseNumbersDto,
+  })
+  @ValidateNested()
+  @Type(() => CurrentInnovationUseNumbersDto)
+  current_innovation_use_numbers: CurrentInnovationUseNumbersDto;
+
+  @ApiPropertyOptional({
+    description: 'Innovation use level (level or name must be provided)',
+    type: () => InnovationUseLevelDto,
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => InnovationUseLevelDto)
+  innovation_use_level?: InnovationUseLevelDto;
+}
+
+export class PolicyStatusAmountDto {
+  @ApiPropertyOptional({
+    description: 'Status amount identifier',
+    example: 1,
+  })
+  @ValidateIf((o) => !o.name)
+  @IsNumber()
+  id?: number;
+
+  @ApiPropertyOptional({
+    description: 'Status amount name',
+    example: 'Funded',
+  })
+  @ValidateIf((o) => !o.id)
+  @IsString()
+  name?: string;
+}
+
+export class PolicyTypeDto {
+  @ApiPropertyOptional({
+    description: 'Policy type identifier',
+    example: 1,
+  })
+  @ValidateIf((o) => !o.name)
+  @IsNumber()
+  id?: number;
+
+  @ApiPropertyOptional({
+    description: 'Policy type name',
+    example: 'Funding instrument',
+  })
+  @ValidateIf((o) => !o.id)
+  @IsString()
+  name?: string;
+
+  @ApiPropertyOptional({
+    description: 'Status amount (required if policy type id is 1)',
+    type: () => PolicyStatusAmountDto,
+  })
+  @ValidateIf((o) => o.id === 1)
+  @ValidateNested()
+  @Type(() => PolicyStatusAmountDto)
+  status_amount?: PolicyStatusAmountDto;
+
+  @ApiPropertyOptional({
+    description: 'Amount value (required if policy type id is 1)',
+    example: 500000,
+  })
+  @ValidateIf((o) => o.id === 1)
+  @IsNumber()
+  amount?: number;
+}
+
+export class PolicyStageDto {
+  @ApiPropertyOptional({
+    description: 'Policy stage identifier',
+    example: 2,
+  })
+  @ValidateIf((o) => !o.name)
+  @IsNumber()
+  id?: number;
+
+  @ApiPropertyOptional({
+    description: 'Policy stage name',
+    example: 'Formulation',
+  })
+  @ValidateIf((o) => !o.id)
+  @IsString()
+  name?: string;
+}
+
+export class PolicyImplementingOrganizationDto {
+  @ApiPropertyOptional({
+    description: 'Institution identifier',
+    example: 123,
+  })
+  @ValidateIf((o) => !o.institutions_acronym && !o.institutions_name)
+  @IsNumber()
+  institutions_id?: number;
+
+  @ApiPropertyOptional({
+    description: 'Institution acronym',
+    example: 'CIAT',
+  })
+  @ValidateIf((o) => !o.institutions_id && !o.institutions_name)
+  @IsString()
+  institutions_acronym?: string;
+
+  @ApiPropertyOptional({
+    description: 'Institution name',
+    example: 'International Center for Tropical Agriculture',
+  })
+  @ValidateIf((o) => !o.institutions_id && !o.institutions_acronym)
+  @IsString()
+  institutions_name?: string;
+}
+
+export class PolicyChangeDetailsDto {
+  @ApiProperty({
+    description: 'Policy type information',
+    type: () => PolicyTypeDto,
+  })
+  @ValidateNested()
+  @Type(() => PolicyTypeDto)
+  policy_type: PolicyTypeDto;
+
+  @ApiProperty({
+    description: 'Policy stage information',
+    type: () => PolicyStageDto,
+  })
+  @ValidateNested()
+  @Type(() => PolicyStageDto)
+  policy_stage: PolicyStageDto;
+
+  @ApiProperty({
+    description: 'List of implementing organizations (at least one required)',
+    type: [PolicyImplementingOrganizationDto],
+  })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => PolicyImplementingOrganizationDto)
+  implementing_organization: PolicyImplementingOrganizationDto[];
+}
+
 /**
  * DTO principal: GeoFocus
  */
@@ -717,6 +1080,28 @@ export class CreateBilateralDto {
   @ValidateNested()
   @Type(() => InnovationDevelopmentDetailsDto)
   innovation_development?: InnovationDevelopmentDetailsDto;
+
+  @ApiPropertyOptional({
+    description:
+      'Innovation use metadata (required when result_type_id is INNOVATION_USE)',
+    type: () => InnovationUseDetailsDto,
+  })
+  @ValidateIf((o) => o.result_type_id === ResultTypeEnum.INNOVATION_USE)
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => InnovationUseDetailsDto)
+  innovation_use?: InnovationUseDetailsDto;
+
+  @ApiPropertyOptional({
+    description:
+      'Policy change metadata (required when result_type_id is POLICY_CHANGE)',
+    type: () => PolicyChangeDetailsDto,
+  })
+  @ValidateIf((o) => o.result_type_id === ResultTypeEnum.POLICY_CHANGE)
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => PolicyChangeDetailsDto)
+  policy_change?: PolicyChangeDetailsDto;
 }
 
 export class ResultBilateralDto {
