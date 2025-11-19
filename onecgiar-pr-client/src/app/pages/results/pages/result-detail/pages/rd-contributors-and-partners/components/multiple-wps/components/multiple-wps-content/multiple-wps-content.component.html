@@ -90,8 +90,13 @@
     }
     <hr class="divider-20" />
 
+    <app-alert-status
+      status="info"
+      description="Where results are qualitative and do not contribute numerically to the indicator target, provide here a short explanation of how the result supports or aligns with the Program’s TOC pathway."
+      inlineStyles="margin: 0; margin: 10px 0;"></app-alert-status>
+
     <app-pr-textarea
-      [label]="dynamicProgressLabel()"
+      [label]="'Explanation of how the result aligns with/contributes to the Program’s TOC pathway'"
       [required]="false"
       placeholder="Enter text"
       [rows]="3"

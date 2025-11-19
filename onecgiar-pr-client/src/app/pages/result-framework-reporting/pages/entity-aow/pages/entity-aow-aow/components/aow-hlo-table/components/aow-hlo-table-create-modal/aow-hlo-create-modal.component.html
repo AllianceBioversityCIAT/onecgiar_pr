@@ -95,10 +95,14 @@
 
         <div>
           <app-pr-field-header
-            [label]="currentResultIsKnowledgeProduct() ? 'Progress narrative of the High-Level Output' : 'Progress narrative of the Output'"
+            [label]="'Explanation of how the result aligns with/contributes to the Program’s TOC pathway'"
             [required]="false"
             [labelDescInlineStyles]="'margin-top: 0 !important'">
           </app-pr-field-header>
+          <app-alert-status
+            status="info"
+            description="Where results are qualitative and do not contribute numerically to the indicator target, provide here a short explanation of how the result supports or aligns with the Program’s TOC pathway."
+            inlineStyles="margin: 0; margin: 10px 0;"></app-alert-status>
 
           <app-pr-textarea
             [isStatic]="true"
@@ -191,15 +195,10 @@
 
         <div>
           <app-pr-field-header
-            label="Contributing to W3 and/or bilateral projects"
+            label="Contributing W3 and/or bilateral projects"
             [required]="false"
             [labelDescInlineStyles]="'margin-top: 0 !important'">
           </app-pr-field-header>
-
-          <app-alert-status
-            status="info"
-            description="If you don't find the funder you are looking for, <a class='open_route pSelectP'>request</a> to have it added to the list."
-            inlineStyles="margin: 0; margin-top: 10px;"></app-alert-status>
 
           <p-multiselect
             [options]="entityAowService.w3BilateralProjects()"
@@ -208,7 +207,7 @@
             optionLabel="project_name"
             [maxSelectedLabels]="1"
             [(ngModel)]="entityAowService.selectedW3BilateralProjects"
-            [style]="{ width: '100%', height: '32px', marginTop: '10px' }"
+            [style]="{ width: '100%', height: '32px' }"
             [disabled]="creatingResult()">
             <ng-template let-project #item>
               <div class="flex items-center gap-2">
