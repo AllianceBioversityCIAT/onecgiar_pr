@@ -21,7 +21,10 @@ export class ResultsListFilterPipe implements PipeTransform {
     return this.convertList(
       this.filterByPhase(
         this.filterBySubmitters(
-          this.filterByIndicatorCategories(this.filterByStatus(this.filterByText(resultList, word), selectedStatus), selectedIndicatorCategories),
+          this.filterByIndicatorCategories(
+            this.filterByClarisaPortfolios(this.filterByStatus(this.filterByText(resultList, word), selectedStatus), selectedClarisaPortfolios),
+            selectedIndicatorCategories
+          ),
           selectedSubmitters
         ),
         selectedPhases
@@ -38,6 +41,9 @@ export class ResultsListFilterPipe implements PipeTransform {
 
     if (!resultsFilter.length && selectedClarisaPortfolios.length === 0) return resultList;
 
+    console.log(resultsFilter.length);
+
+    console.log('retorna');
     return resultsFilter;
   }
 
