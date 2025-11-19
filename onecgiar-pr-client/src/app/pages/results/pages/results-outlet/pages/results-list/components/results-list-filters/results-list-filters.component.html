@@ -22,6 +22,21 @@
   <div class="filters_items_container_drawer" style="flex-direction: column; margin: 0; gap: 20px">
     <div>
       <app-pr-field-header
+        label="Clarisa Portfolio"
+        labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
+        [required]="false"></app-pr-field-header>
+
+      <p-multiselect
+        [filter]="false"
+        [options]="this.clarisaPortfolios()"
+        [(ngModel)]="resultsListFilterSE.selectedClarisaPortfolios"
+        optionLabel="name"
+        placeholder="Select clarisa portfolio"
+        [maxSelectedLabels]="1"
+        [style]="{ width: '100%' }" />
+    </div>
+    <div>
+      <app-pr-field-header
         label="Phase"
         labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
         [required]="false"></app-pr-field-header>

@@ -37,6 +37,8 @@ import { ButtonModule } from 'primeng/button';
 export class ResultsListFiltersComponent implements OnInit, OnChanges {
   gettingReport = signal(false);
   visible = signal(false);
+  clarisaPortfolios = signal([]);
+
   filtersCount = computed(() => {
     let count = 0;
 
@@ -64,8 +66,20 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges {
   ngOnInit(): void {
     this.getData();
     this.getResultStatus();
+    this.getClarisaPortfolios();
   }
 
+  getClarisaPortfolios() {
+    this.api.resultsSE.GET_ClarisaPortfolios().subscribe({
+      next: response => {
+        this.clarisaPortfolios.set(response);
+        console.log(response);
+      },
+      error: err => {
+        console.error(err);
+      }
+    });
+  }
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['isAdmin']) {
       this.getAllInitiatives();
