@@ -48,9 +48,12 @@
       <ng-template pTemplate="header">
         <tr>
           @for (column of columnOrder; track column.attr) {
-            <th (click)="validateOrder(column.attr)" [pSortableColumn]="column.attr" [id]="column.attr" [style.width]="column.width">
-              <p-sortIcon [field]="column.attr"></p-sortIcon>
+            <th  (click)="validateOrder(column.attr)" [pSortableColumn]="column.attr" [id]="column.attr" [style.width]="column.width">
+             <div class="align-center">
+           <p-sortIcon [field]="column.attr"></p-sortIcon>
               {{ column.title }}
+             </div>
+
             </th>
           }
 

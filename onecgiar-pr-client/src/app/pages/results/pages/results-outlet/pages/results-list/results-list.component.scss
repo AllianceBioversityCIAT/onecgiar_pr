@@ -17,6 +17,13 @@
 .table {
   padding-bottom: 100px;
   position: relative;
+  .align-center {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 10px 10px;
+
+  }
 }
 
 .section_content {
