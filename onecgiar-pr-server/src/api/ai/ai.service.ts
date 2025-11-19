@@ -39,6 +39,7 @@ import { Result } from '../results/entities/result.entity';
 import { ResultsInnovationsDev } from '../results/summary/entities/results-innovations-dev.entity';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { ReturnResponseUtil } from '../../shared/utils/response.util';
+import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 
 @Injectable()
 export class AiService {
@@ -63,7 +64,15 @@ export class AiService {
   async getResultContext(resultId: number) {
     try {
       const result = await this.resultRepository.findOne({
-        select: ['title', 'description'],
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          result_type_id: true,
+        },
+        relations: {
+          obj_result_type: true,
+        },
         where: { id: resultId },
       });
 
@@ -86,16 +95,18 @@ export class AiService {
         },
       ];
 
-      const innovationDev = await this.innovationsDevRepository
-        .createQueryBuilder('rid')
-        .select('rid.short_title')
-        .where('rid.results_id = :resultId', { resultId })
-        .getOne();
+      const isInnovationDevelopment =
+        result?.result_type_id === ResultTypeEnum.INNOVATION_DEVELOPMENT;
 
-      if (innovationDev?.short_title) {
+      if (isInnovationDevelopment) {
+        const innovationDev = await this.innovationsDevRepository
+          .createQueryBuilder('innovationsDev')
+          .where('innovationsDev.results_id = :resultId', { resultId })
+          .getOne();
+
         contextFields.push({
           field_name: 'short_title',
-          original_text: innovationDev.short_title,
+          original_text: innovationDev?.short_title ?? null,
         });
       }
 
@@ -236,24 +247,20 @@ export class AiService {
         };
       }
 
-      if (createEventDto.field_name) {
-        if (createEventDto.field_name === AiReviewEventFieldName.SHORT_TITLE) {
-          const hasInnovationDev = await this.innovationsDevRepository.exists({
-            where: { results_id: session.result_id },
-          });
-          if (!hasInnovationDev) {
-            throw {
-              response: {},
-              message:
-                'short_title field is only applicable for Innovation Development results',
-              status: HttpStatus.BAD_REQUEST,
-            };
-          }
-        }
+      const eventType = this.normalizeEventType(createEventDto.event_type);
+      const eventFieldName = this.normalizeEventFieldName(
+        createEventDto.field_name,
+      );
+
+      if (eventFieldName === AiReviewEventFieldName.SHORT_TITLE) {
+        await this.ensureInnovationDevRecord(session.result_id, user.id);
       }
 
       const event = this.eventRepository.create({
-        ...createEventDto,
+        session_id: createEventDto.session_id,
+        result_id: createEventDto.result_id,
+        event_type: eventType,
+        field_name: eventFieldName,
         user_id: user.id,
       });
       const savedEvent = await this.eventRepository.save(event);
@@ -285,36 +292,31 @@ export class AiService {
       }
 
       for (const field of saveChangesDto.fields) {
-        if (field.field_name === AiReviewProposalFieldName.SHORT_TITLE) {
-          const hasInnovationDev = await this.innovationsDevRepository.exists({
-            where: { results_id: session.result_id },
-          });
-          if (!hasInnovationDev) {
-            throw {
-              response: {},
-              message:
-                'short_title field is only applicable for Innovation Development results',
-              status: HttpStatus.BAD_REQUEST,
-            };
-          }
-        }
+        const normalizedFieldName = this.normalizeProposalFieldName(
+          field.field_name,
+        );
 
         let previousText: string | null = null;
+        let innovationDevRecord: ResultsInnovationsDev | null = null;
 
-        switch (field.field_name) {
+        if (normalizedFieldName === AiReviewProposalFieldName.SHORT_TITLE) {
+          innovationDevRecord = await this.ensureInnovationDevRecord(
+            session.result_id,
+            user.id,
+          );
+        }
+
+        switch (normalizedFieldName) {
           case AiReviewProposalFieldName.TITLE:
           case AiReviewProposalFieldName.DESCRIPTION: {
             const current = await this.resultRepository.findOne({
               where: { id: session.result_id },
             });
-            previousText = current?.[field.field_name] ?? null;
+            previousText = current?.[normalizedFieldName] ?? null;
             break;
           }
           case AiReviewProposalFieldName.SHORT_TITLE: {
-            const current = await this.innovationsDevRepository.findOne({
-              where: { results_id: session.result_id },
-            });
-            previousText = current?.short_title ?? null;
+            previousText = innovationDevRecord?.short_title ?? null;
             break;
           }
         }
@@ -327,7 +329,7 @@ export class AiService {
           result_id: session.result_id,
           user_id: user.id,
           field_name:
-            field.field_name as unknown as ResultFieldRevisionFieldName,
+            normalizedFieldName as unknown as ResultFieldRevisionFieldName,
           old_value: previousText,
           new_value: field.new_value,
           change_reason: field.change_reason,
@@ -335,13 +337,13 @@ export class AiService {
           proposal_id: field.proposal_id ?? null,
         });
 
-        switch (field.field_name) {
+        switch (normalizedFieldName) {
           case AiReviewProposalFieldName.TITLE:
           case AiReviewProposalFieldName.DESCRIPTION:
             await this.resultRepository.update(
               { id: session.result_id },
               {
-                [field.field_name]: field.new_value,
+                [normalizedFieldName]: field.new_value,
                 last_updated_by: user.id,
                 last_updated_date: new Date(),
               },
@@ -349,13 +351,10 @@ export class AiService {
             break;
 
           case AiReviewProposalFieldName.SHORT_TITLE:
-            await this.innovationsDevRepository.update(
-              { results_id: session.result_id },
-              {
-                short_title: field.new_value,
-                last_updated_by: user.id,
-                last_updated_date: new Date(),
-              },
+            await this.updateInnovationDevShortTitle(
+              session.result_id,
+              field.new_value,
+              user.id,
             );
             break;
         }
@@ -365,7 +364,7 @@ export class AiService {
             {
               result_id: session.result_id,
               field_name:
-                field.field_name as unknown as ResultFieldAiStateFieldName,
+                normalizedFieldName as unknown as ResultFieldAiStateFieldName,
               status: ResultFieldAiStateStatus.ACCEPTED,
               ai_suggestion: field.new_value,
               user_feedback: field.user_feedback,
@@ -381,7 +380,7 @@ export class AiService {
           result_id: session.result_id,
           user_id: user.id,
           event_type: AiReviewEventType.SAVE_CHANGES,
-          field_name: field.field_name as unknown as AiReviewEventFieldName,
+          field_name: normalizedFieldName as unknown as AiReviewEventFieldName,
         });
       }
 
@@ -393,6 +392,77 @@ export class AiService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  private normalizeProposalFieldName(
+    fieldName: unknown,
+  ): AiReviewProposalFieldName {
+    return this.resolveEnumValue(fieldName, AiReviewProposalFieldName, {
+      paramName: 'field_name',
+    }) as AiReviewProposalFieldName;
+  }
+
+  private normalizeEventFieldName(
+    fieldName?: unknown,
+  ): AiReviewEventFieldName | undefined {
+    return this.resolveEnumValue(fieldName, AiReviewEventFieldName, {
+      paramName: 'field_name',
+      allowUndefined: true,
+    }) as AiReviewEventFieldName | undefined;
+  }
+
+  private normalizeEventType(eventType: unknown): AiReviewEventType {
+    return this.resolveEnumValue(eventType, AiReviewEventType, {
+      paramName: 'event_type',
+    }) as AiReviewEventType;
+  }
+
+  private resolveEnumValue<T extends Record<string, any>>(
+    rawValue: unknown,
+    enumObj: T,
+    options: { allowUndefined?: boolean; paramName: string },
+  ): T[keyof T] | undefined {
+    const { allowUndefined = false, paramName } = options;
+    if (rawValue === undefined || rawValue === null) {
+      if (allowUndefined) {
+        return undefined;
+      }
+      throw {
+        response: {},
+        message: `${paramName} is required`,
+        status: HttpStatus.BAD_REQUEST,
+      };
+    }
+
+    const enumValues = Object.values(enumObj);
+    if (enumValues.includes(rawValue)) {
+      return rawValue as T[keyof T];
+    }
+
+    if (
+      typeof rawValue === 'string' &&
+      Object.prototype.hasOwnProperty.call(enumObj, rawValue)
+    ) {
+      return enumObj[rawValue as keyof T];
+    }
+
+    const numericValue =
+      typeof rawValue === 'string' && rawValue.trim() !== ''
+        ? Number(rawValue)
+        : rawValue;
+    if (typeof numericValue === 'number' && !Number.isNaN(numericValue)) {
+      const enumKeys = Object.keys(enumObj);
+      const key = enumKeys[numericValue];
+      if (key && Object.prototype.hasOwnProperty.call(enumObj, key)) {
+        return enumObj[key as keyof T];
+      }
+    }
+
+    const error = new Error(
+      'short_title field is only applicable for Innovation Development results',
+    );
+    Object.assign(error, { response: {}, status: HttpStatus.BAD_REQUEST });
+    throw error;
   }
 
   async getResultState(resultId: number) {
@@ -481,6 +551,81 @@ export class AiService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  private getInnovationDevByResultId(
+    resultId: number,
+  ): Promise<ResultsInnovationsDev | null> {
+    return this.innovationsDevRepository
+      .createQueryBuilder('innovationsDev')
+      .where('innovationsDev.results_id = :resultId', { resultId })
+      .getOne();
+  }
+
+  private async updateInnovationDevShortTitle(
+    resultId: number,
+    shortTitle: string,
+    userId: number,
+  ): Promise<void> {
+    await this.innovationsDevRepository
+      .createQueryBuilder()
+      .update()
+      .set({
+        short_title: shortTitle,
+        last_updated_by: userId,
+        last_updated_date: () => 'CURRENT_TIMESTAMP(6)',
+      })
+      .where('results_id = :resultId', { resultId })
+      .execute();
+  }
+
+  private async ensureInnovationDevRecord(
+    resultId: number,
+    userId: number,
+  ): Promise<ResultsInnovationsDev> {
+    const result = await this.resultRepository.findOne({
+      select: { id: true, result_type_id: true },
+      where: { id: resultId },
+    });
+
+    if (!result) {
+      const error = new Error('Result not found');
+      Object.assign(error, { response: {}, status: HttpStatus.NOT_FOUND });
+      throw error;
+    }
+
+    if (result.result_type_id !== ResultTypeEnum.INNOVATION_DEVELOPMENT) {
+      const error = new Error(
+        'short_title field is only applicable for Innovation Development results',
+      );
+      Object.assign(error, { response: {}, status: HttpStatus.BAD_REQUEST });
+      throw error;
+    }
+
+    let innovationDev = await this.getInnovationDevByResultId(resultId);
+    if (!innovationDev) {
+      try {
+        innovationDev = await this.innovationsDevRepository.save({
+          results_id: resultId,
+          created_by: userId,
+        } as Partial<ResultsInnovationsDev>);
+      } catch (error) {
+        const isDuplicateKey =
+          error?.code === 'ER_DUP_ENTRY' ||
+          error?.sqlState === '23000' ||
+          error?.errno === 1062;
+        if (!isDuplicateKey) {
+          throw error;
+        }
+
+        innovationDev = await this.getInnovationDevByResultId(resultId);
+        if (!innovationDev) {
+          throw error;
+        }
+      }
+    }
+
+    return innovationDev;
   }
 
   private mapSessionToResponse(
