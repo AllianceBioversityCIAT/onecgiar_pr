@@ -41,9 +41,6 @@ export class ResultsListFilterPipe implements PipeTransform {
 
     if (!resultsFilter.length && selectedClarisaPortfolios.length === 0) return resultList;
 
-    console.log(resultsFilter.length);
-
-    console.log('retorna');
     return resultsFilter;
   }
 

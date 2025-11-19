@@ -88,7 +88,6 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     this.api.resultsSE.GET_ClarisaPortfolios().subscribe({
       next: response => {
         this.clarisaPortfolios.set(response);
-        console.log(response);
       },
       error: err => {
         console.error(err);
@@ -183,10 +182,6 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     });
   }
 
-  onSelectClarisaPortfolio() {
-    console.log(this.tempSelectedClarisaPortfolios());
-  }
-
   onSelectPhases() {
     // Reset submitters when phases change (using temp values)
     this.tempSelectedSubmitters.set([]);
@@ -200,9 +195,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     );
 
     this.resultsListFilterSE.submittersOptions.set(
-      this.resultsListFilterSE
-        .submittersOptionsOld()
-        .filter(item => this.tempSelectedPhases().some(phase => phase.portfolio_id == item.portfolio_id))
+      this.resultsListFilterSE.submittersOptionsOld().filter(item => this.tempSelectedPhases().some(phase => phase.portfolio_id == item.portfolio_id))
     );
   }
 
@@ -287,11 +280,12 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
 
   private calculateNavbarHeight() {
     // Try to find the navbar/header element
-    const navbar = document.querySelector('app-header-panel') ||
-                   document.querySelector('header') ||
-                   document.querySelector('nav') ||
-                   document.querySelector('.navbar') ||
-                   document.querySelector('.header');
+    const navbar =
+      document.querySelector('app-header-panel') ||
+      document.querySelector('header') ||
+      document.querySelector('nav') ||
+      document.querySelector('.navbar') ||
+      document.querySelector('.header');
 
     if (navbar) {
       const height = navbar.getBoundingClientRect().height;
@@ -303,11 +297,12 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   }
 
   private setupResizeObserver() {
-    const navbar = document.querySelector('app-header-panel') ||
-                   document.querySelector('header') ||
-                   document.querySelector('nav') ||
-                   document.querySelector('.navbar') ||
-                   document.querySelector('.header');
+    const navbar =
+      document.querySelector('app-header-panel') ||
+      document.querySelector('header') ||
+      document.querySelector('nav') ||
+      document.querySelector('.navbar') ||
+      document.querySelector('.header');
 
     if (navbar) {
       this.resizeObserver = new ResizeObserver(() => {
