@@ -9,6 +9,7 @@ import { AiReviewSessionStatus } from './entities/ai-review-session.entity';
 import { ResultFieldAiStateStatus } from './entities/result-field-ai-state.entity';
 import { ResultFieldRevisionProvenance } from './entities/result-field-revision.entity';
 import { ReturnResponseUtil } from '../../shared/utils/response.util';
+import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 
 type MockRepository = {
   findOne: jest.Mock;
@@ -17,7 +18,6 @@ type MockRepository = {
   save: jest.Mock;
   update: jest.Mock;
   createQueryBuilder: jest.Mock;
-  exists: jest.Mock;
   upsert: jest.Mock;
 };
 
@@ -28,9 +28,26 @@ const createMockRepository = (): MockRepository => ({
   save: jest.fn(),
   update: jest.fn(),
   createQueryBuilder: jest.fn(),
-  exists: jest.fn(),
   upsert: jest.fn(),
 });
+
+const createQueryBuilderMock = () => {
+  const qb = {
+    select: jest.fn().mockReturnThis(),
+    where: jest.fn().mockReturnThis(),
+    addSelect: jest.fn().mockReturnThis(),
+    andWhere: jest.fn().mockReturnThis(),
+    groupBy: jest.fn().mockReturnThis(),
+    addGroupBy: jest.fn().mockReturnThis(),
+    update: jest.fn().mockReturnThis(),
+    set: jest.fn().mockReturnThis(),
+    getOne: jest.fn(),
+    getRawMany: jest.fn(),
+    getExists: jest.fn(),
+    execute: jest.fn(),
+  };
+  return qb;
+};
 
 describe('AiService', () => {
   let service: AiService;
@@ -71,28 +88,16 @@ describe('AiService', () => {
     );
   });
 
-  const mockQueryBuilder = (result: any) => {
-    const qb = {
-      select: jest.fn().mockReturnThis(),
-      where: jest.fn().mockReturnThis(),
-      addSelect: jest.fn().mockReturnThis(),
-      andWhere: jest.fn().mockReturnThis(),
-      groupBy: jest.fn().mockReturnThis(),
-      addGroupBy: jest.fn().mockReturnThis(),
-      getOne: jest.fn().mockResolvedValue(result),
-      getRawMany: jest.fn().mockResolvedValue(result),
-    };
-    return qb;
-  };
-
   describe('getResultContext', () => {
     it('returns result fields including short title when available', async () => {
       resultRepository.findOne.mockResolvedValue({
         id: 7,
         title: 'Result title',
         description: 'Description',
+        result_type_id: ResultTypeEnum.INNOVATION_DEVELOPMENT,
       });
-      const innovationQB = mockQueryBuilder({ short_title: 'Shorty' });
+      const innovationQB = createQueryBuilderMock();
+      innovationQB.getOne.mockResolvedValue({ short_title: 'Shorty' });
       innovationsDevRepository.createQueryBuilder.mockReturnValue(innovationQB);
 
       const response = await service.getResultContext(7);
@@ -220,12 +225,15 @@ describe('AiService', () => {
   });
 
   describe('createEvent', () => {
-    it('rejects short_title events when innovation record is missing', async () => {
+    it('rejects short_title events when result is not innovation development', async () => {
       sessionRepository.findOne.mockResolvedValue({
         id: 100,
         result_id: 77,
       });
-      innovationsDevRepository.exists.mockResolvedValue(false);
+      resultRepository.findOne.mockResolvedValue({
+        id: 77,
+        result_type_id: ResultTypeEnum.KNOWLEDGE_PRODUCT,
+      });
       const handled = { statusCode: 400 };
       handlersError.returnErrorRes.mockReturnValueOnce(handled);
 
@@ -248,6 +256,135 @@ describe('AiService', () => {
         debug: true,
       });
       expect(eventRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('creates innovation dev record on short_title events when missing', async () => {
+      sessionRepository.findOne.mockResolvedValue({
+        id: 101,
+        result_id: 88,
+      });
+      resultRepository.findOne.mockResolvedValue({
+        id: 88,
+        result_type_id: ResultTypeEnum.INNOVATION_DEVELOPMENT,
+      });
+      const innovationFetchQB = createQueryBuilderMock();
+      innovationFetchQB.getOne.mockResolvedValue(null);
+      innovationsDevRepository.createQueryBuilder.mockReturnValueOnce(
+        innovationFetchQB,
+      );
+      const savedInnovation = {
+        results_id: 88,
+        created_by: user.id,
+        short_title: null,
+      };
+      innovationsDevRepository.save.mockResolvedValue(savedInnovation);
+
+      const createdEvent = {
+        session_id: 101,
+        result_id: 88,
+        event_type: AiReviewEventType.APPLY_PROPOSAL,
+        field_name: AiReviewEventFieldName.SHORT_TITLE,
+        user_id: user.id,
+      };
+      const persistedEvent = { ...createdEvent, id: 1, created_at: new Date() };
+      eventRepository.create.mockReturnValue(createdEvent as any);
+      eventRepository.save.mockResolvedValue(persistedEvent as any);
+
+      const response = await service.createEvent(
+        {
+          session_id: 101,
+          result_id: 88,
+          event_type: AiReviewEventType.APPLY_PROPOSAL,
+          field_name: AiReviewEventFieldName.SHORT_TITLE,
+        },
+        user,
+      );
+
+      expect(innovationsDevRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          results_id: 88,
+          created_by: user.id,
+        }),
+      );
+      expect(eventRepository.save).toHaveBeenCalledWith(createdEvent);
+      expect(response).toEqual(
+        ReturnResponseUtil.format({
+          response: {
+            id: persistedEvent.id,
+            session_id: createdEvent.session_id,
+            result_id: createdEvent.result_id,
+            user_id: user.id,
+            event_type: createdEvent.event_type,
+            field_name: createdEvent.field_name,
+            created_at: persistedEvent.created_at,
+          },
+          message: 'Event created successfully',
+          statusCode: HttpStatus.CREATED,
+        }),
+      );
+    });
+
+    it('reuses existing innovation dev record when concurrent insert causes duplicate entry', async () => {
+      sessionRepository.findOne.mockResolvedValue({
+        id: 102,
+        result_id: 89,
+      });
+      resultRepository.findOne.mockResolvedValue({
+        id: 89,
+        result_type_id: ResultTypeEnum.INNOVATION_DEVELOPMENT,
+      });
+
+      const initialFetchQB = createQueryBuilderMock();
+      initialFetchQB.getOne.mockResolvedValue(null);
+      const refetchedQB = createQueryBuilderMock();
+      refetchedQB.getOne.mockResolvedValue({
+        results_id: 89,
+        short_title: 'Existing short',
+      });
+      innovationsDevRepository.createQueryBuilder
+        .mockReturnValueOnce(initialFetchQB)
+        .mockReturnValueOnce(refetchedQB);
+
+      const duplicateError = { code: 'ER_DUP_ENTRY' };
+      innovationsDevRepository.save.mockRejectedValueOnce(duplicateError);
+
+      const createdEvent = {
+        session_id: 102,
+        result_id: 89,
+        event_type: AiReviewEventType.APPLY_PROPOSAL,
+        field_name: AiReviewEventFieldName.SHORT_TITLE,
+        user_id: user.id,
+      };
+      const persistedEvent = { ...createdEvent, id: 2, created_at: new Date() };
+      eventRepository.create.mockReturnValue(createdEvent as any);
+      eventRepository.save.mockResolvedValue(persistedEvent as any);
+
+      const response = await service.createEvent(
+        {
+          session_id: 102,
+          result_id: 89,
+          event_type: AiReviewEventType.APPLY_PROPOSAL,
+          field_name: AiReviewEventFieldName.SHORT_TITLE,
+        },
+        user,
+      );
+
+      expect(innovationsDevRepository.save).toHaveBeenCalled();
+      expect(response).toEqual(
+        ReturnResponseUtil.format({
+          response: {
+            id: persistedEvent.id,
+            session_id: createdEvent.session_id,
+            result_id: createdEvent.result_id,
+            user_id: user.id,
+            event_type: createdEvent.event_type,
+            field_name: createdEvent.field_name,
+            created_at: persistedEvent.created_at,
+          },
+          message: 'Event created successfully',
+          statusCode: HttpStatus.CREATED,
+        }),
+      );
     });
   });
 
@@ -313,6 +450,68 @@ describe('AiService', () => {
         }),
       );
     });
+
+    it('updates short_title via innovation dev helper when record exists', async () => {
+      const session = { id: 2, result_id: 60 };
+      sessionRepository.findOne.mockResolvedValue(session);
+      resultRepository.findOne.mockResolvedValue({
+        id: 60,
+        result_type_id: ResultTypeEnum.INNOVATION_DEVELOPMENT,
+      });
+
+      const innovationFetchQB = createQueryBuilderMock();
+      innovationFetchQB.getOne.mockResolvedValue({ short_title: 'Old short' });
+
+      const innovationUpdateQB = createQueryBuilderMock();
+      innovationUpdateQB.execute.mockResolvedValue(undefined);
+
+      innovationsDevRepository.createQueryBuilder
+        .mockReturnValueOnce(innovationFetchQB)
+        .mockReturnValueOnce(innovationUpdateQB);
+
+      const dto = {
+        fields: [
+          {
+            field_name: AiReviewProposalFieldName.SHORT_TITLE,
+            new_value: 'New short',
+            change_reason: 'Manual edit',
+            was_ai_suggested: false,
+          },
+        ],
+      };
+
+      const response = await service.saveChanges(2, dto as any, user);
+
+      expect(innovationFetchQB.getOne).toHaveBeenCalled();
+      expect(revisionRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          result_id: 60,
+          field_name: AiReviewProposalFieldName.SHORT_TITLE,
+          old_value: 'Old short',
+          new_value: 'New short',
+        }),
+      );
+      expect(innovationUpdateQB.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          short_title: 'New short',
+          last_updated_by: user.id,
+        }),
+      );
+      expect(innovationUpdateQB.execute).toHaveBeenCalled();
+      expect(eventRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          session_id: 2,
+          field_name: AiReviewEventFieldName.SHORT_TITLE,
+        }),
+      );
+      expect(response).toEqual(
+        ReturnResponseUtil.format({
+          response: {},
+          message: 'Changes saved successfully',
+          statusCode: HttpStatus.OK,
+        }),
+      );
+    });
   });
 
   describe('getResultState', () => {
@@ -365,10 +564,12 @@ describe('AiService', () => {
         },
       ]);
 
-      const qbEventsByType = mockQueryBuilder([
+      const qbEventsByType = createQueryBuilderMock();
+      qbEventsByType.getRawMany.mockResolvedValue([
         { event_type: AiReviewEventType.CLICK_REVIEW, count: '2' },
       ]);
-      const qbEventsByField = mockQueryBuilder([
+      const qbEventsByField = createQueryBuilderMock();
+      qbEventsByField.getRawMany.mockResolvedValue([
         {
           event_type: AiReviewEventType.APPLY_PROPOSAL,
           field_name: AiReviewEventFieldName.TITLE,
