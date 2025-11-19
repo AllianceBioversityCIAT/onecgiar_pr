@@ -15,7 +15,8 @@ export class ResultsListFilterPipe implements PipeTransform {
     selectedPhases: any[],
     selectedSubmitters: any[],
     selectedIndicatorCategories: any[],
-    selectedStatus: any[]
+    selectedStatus: any[],
+    selectedClarisaPortfolios: any[]
   ): any {
     return this.convertList(
       this.filterByPhase(
@@ -28,6 +29,16 @@ export class ResultsListFilterPipe implements PipeTransform {
 
       combine
     );
+  }
+
+  filterByClarisaPortfolios(resultList: any[], selectedClarisaPortfolios: any[]) {
+    if (!selectedClarisaPortfolios.length) return resultList;
+
+    const resultsFilter = resultList.filter(result => selectedClarisaPortfolios.some(clarisaPortfolio => clarisaPortfolio.id == result.portfolio_id));
+
+    if (!resultsFilter.length && selectedClarisaPortfolios.length === 0) return resultList;
+
+    return resultsFilter;
   }
 
   filterByStatus(resultList: any[], selectedStatus: any[]) {

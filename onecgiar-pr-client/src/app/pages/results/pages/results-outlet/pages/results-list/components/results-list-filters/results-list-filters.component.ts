@@ -159,6 +159,10 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges {
     });
   }
 
+  onSelectClarisaPortfolio() {
+    console.log(this.resultsListFilterSE.selectedClarisaPortfolios());
+  }
+
   onSelectPhases() {
     this.resultsListFilterSE.selectedSubmitters.set([]);
     this.resultsListFilterSE.selectedSubmittersAdmin.set([]);
