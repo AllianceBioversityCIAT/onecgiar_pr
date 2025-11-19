@@ -5,7 +5,7 @@ import {
 } from './bilateral-result-type-handler.interface';
 import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 import { ResultsInnovationsDevRepository } from '../../results/summary/repositories/results-innovations-dev.repository';
-import { ResultsInnovationsDev } from '../../results/summary/entities/results-innovations-dev.entity';
+import { ClarisaInnovationReadinessLevelRepository } from '../../../clarisa/clarisa-innovation-readiness-levels/clarisa-innovation-readiness-levels.repository';
 
 @Injectable()
 export class InnovationDevelopmentBilateralHandler
@@ -25,6 +25,7 @@ export class InnovationDevelopmentBilateralHandler
 
   constructor(
     private readonly _resultsInnovationsDevRepository: ResultsInnovationsDevRepository,
+    private readonly _clarisaInnovationReadinessLevelRepository: ClarisaInnovationReadinessLevelRepository,
   ) {}
 
   async afterCreate({
@@ -46,12 +47,11 @@ export class InnovationDevelopmentBilateralHandler
     const innovationNatureId = this.resolveTypologyCode(
       innovation.innovation_typology,
     );
-    const readinessLevelId = innovation.innovation_readiness_level;
-    if (!readinessLevelId) {
-      throw new BadRequestException(
-        'innovation_readiness_level is required for INNOVATION_DEVELOPMENT results.',
-      );
-    }
+
+    const readinessLevelId = await this.resolveReadinessLevelId(
+      innovation.innovation_readiness_level,
+    );
+
     if (!innovation.innovation_developers?.trim()) {
       throw new BadRequestException(
         'innovation_developers is required for INNOVATION_DEVELOPMENT results.',
@@ -59,7 +59,7 @@ export class InnovationDevelopmentBilateralHandler
     }
 
     const existing = await this._resultsInnovationsDevRepository.findOne({
-      where: { results_id: resultId },
+      where: { result_object: { id: resultId } },
     });
 
     if (existing) {
@@ -74,18 +74,16 @@ export class InnovationDevelopmentBilateralHandler
       return;
     }
 
-    const payload: Partial<ResultsInnovationsDev> = {
-      results_id: resultId,
+    const newRecord = this._resultsInnovationsDevRepository.create({
+      result_object: { id: resultId } as any,
       created_by: userId,
       is_active: true,
       short_title: bilateralDto.title,
       innovation_nature_id: innovationNatureId,
       innovation_developers: innovation.innovation_developers,
       innovation_readiness_level_id: readinessLevelId,
-    };
-    await this._resultsInnovationsDevRepository.save(
-      this._resultsInnovationsDevRepository.create(payload),
-    );
+    });
+    await this._resultsInnovationsDevRepository.save(newRecord);
     this.logger.log(
       `Stored innovation development data for result ${resultId}.`,
     );
@@ -120,5 +118,47 @@ export class InnovationDevelopmentBilateralHandler
         `Unsupported innovation typology code "${code}".`,
       );
     }
+  }
+
+  private async resolveReadinessLevelId(readinessLevel?: {
+    level?: number;
+    name?: string;
+  }): Promise<number> {
+    if (!readinessLevel) {
+      throw new BadRequestException(
+        'innovation_readiness_level is required for INNOVATION_DEVELOPMENT results.',
+      );
+    }
+
+    if (readinessLevel.level !== undefined && readinessLevel.level !== null) {
+      const found =
+        await this._clarisaInnovationReadinessLevelRepository.findOne({
+          where: { level: readinessLevel.level },
+        });
+      if (!found) {
+        throw new BadRequestException(
+          `Invalid innovation readiness level: ${readinessLevel.level}. Please provide a valid readiness level.`,
+        );
+      }
+      return found.id;
+    }
+
+    if (readinessLevel.name) {
+      const normalized = readinessLevel.name.trim().toLowerCase();
+      const found = await this._clarisaInnovationReadinessLevelRepository
+        .createQueryBuilder('irl')
+        .where('LOWER(irl.name) = :name', { name: normalized })
+        .getOne();
+      if (!found) {
+        throw new BadRequestException(
+          `Invalid innovation readiness level name: "${readinessLevel.name}". Please provide a valid readiness level name.`,
+        );
+      }
+      return found.id;
+    }
+
+    throw new BadRequestException(
+      'innovation_readiness_level must provide either level (number) or name (string).',
+    );
   }
 }

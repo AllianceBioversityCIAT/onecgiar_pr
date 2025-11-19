@@ -26,6 +26,7 @@ import { ClarisaProjectsModule } from '../../clarisa/clarisa-projects/clarisa-pr
 import { ResultsByProjectsModule } from '../results/results_by_projects/results_by_projects.module';
 import { CapdevsTermsModule } from '../results/capdevs-terms/capdevs-terms.module';
 import { CapdevsDeliveryMethodsModule } from '../results/capdevs-delivery-methods/capdevs-delivery-methods.module';
+import { ClarisaInnovationReadinessLevelsModule } from '../../clarisa/clarisa-innovation-readiness-levels/clarisa-innovation-readiness-levels.module';
 import { KnowledgeProductBilateralHandler } from './handlers/knowledge-product.handler';
 import { CapacityChangeBilateralHandler } from './handlers/capacity-change.handler';
 import { InnovationDevelopmentBilateralHandler } from './handlers/innovation-development.handler';
@@ -59,6 +60,7 @@ import { NoopBilateralHandler } from './handlers/noop.handler';
     ResultsByProjectsModule,
     CapdevsTermsModule,
     CapdevsDeliveryMethodsModule,
+    ClarisaInnovationReadinessLevelsModule,
   ],
   controllers: [BilateralController],
   providers: [

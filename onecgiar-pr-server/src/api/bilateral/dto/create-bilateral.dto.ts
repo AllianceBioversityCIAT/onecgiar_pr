@@ -272,6 +272,25 @@ export class InnovationTypologyDto {
   name?: string;
 }
 
+export class InnovationReadinessLevelDto {
+  @ApiPropertyOptional({
+    description: 'Numeric level of innovation readiness (e.g., 1-9)',
+    example: 3,
+  })
+  @ValidateIf((o) => !o.name)
+  @IsNumber()
+  @Min(1)
+  level?: number;
+
+  @ApiPropertyOptional({
+    description: 'Human readable readiness level name',
+    example: 'Proven under field conditions',
+  })
+  @ValidateIf((o) => !o.level)
+  @IsString()
+  name?: string;
+}
+
 export class InnovationDevelopmentDetailsDto {
   @ApiProperty({
     description:
@@ -291,12 +310,13 @@ export class InnovationDevelopmentDetailsDto {
   innovation_developers: string;
 
   @ApiProperty({
-    description: 'Readiness level identifier associated with the innovation',
-    example: 14,
+    description:
+      'Readiness level information for the innovation (level or name must be provided).',
+    type: () => InnovationReadinessLevelDto,
   })
-  @IsNumber()
-  @Min(1)
-  innovation_readiness_level: number;
+  @ValidateNested()
+  @Type(() => InnovationReadinessLevelDto)
+  innovation_readiness_level: InnovationReadinessLevelDto;
 }
 
 /**
