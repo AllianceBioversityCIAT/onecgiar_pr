@@ -97,7 +97,8 @@
 }
 
 .drawer-footer {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 2fr;
   gap: 12px;
   margin-top: 30px;
   padding-top: 20px;
