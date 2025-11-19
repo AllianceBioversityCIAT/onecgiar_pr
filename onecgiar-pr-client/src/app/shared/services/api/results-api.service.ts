@@ -564,9 +564,7 @@ export class ResultsApiService {
   }
 
   POST_createUploadSessionP25(body) {
-    return this.http
-      .post<any>(`${this.baseApiBaseUrlV2}innovation-development/evidence_demand/createUploadSession`, body)
-      .pipe();
+    return this.http.post<any>(`${this.baseApiBaseUrlV2}innovation-development/evidence_demand/createUploadSession`, body).pipe();
   }
 
   POST_createEvidenceDemandP25(body) {
@@ -577,9 +575,7 @@ export class ResultsApiService {
         if (evidence?.file) formData.append('files', evidence.file);
       });
     }
-    return this.http
-      .post<any>(`${this.baseApiBaseUrlV2}innovation-development/evidence_demand/create/${this.currentResultId}`, formData)
-      .pipe();
+    return this.http.post<any>(`${this.baseApiBaseUrlV2}innovation-development/evidence_demand/create/${this.currentResultId}`, formData).pipe();
   }
 
   PATCH_policyChanges(body) {
@@ -1360,5 +1356,9 @@ export class ResultsApiService {
 
   GET_ClarisaProjects() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/projects/get/all`);
+  }
+
+  GET_ClarisaPortfolios() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/portfolios`);
   }
 }
