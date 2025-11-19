@@ -39,6 +39,14 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges {
   visible = signal(false);
   clarisaPortfolios = signal([]);
 
+  // Temporary signals for filter selections (before applying)
+  tempSelectedClarisaPortfolios = signal([]);
+  tempSelectedPhases = signal([]);
+  tempSelectedSubmitters = signal([]);
+  tempSelectedSubmittersAdmin = signal([]);
+  tempSelectedIndicatorCategories = signal([]);
+  tempSelectedStatus = signal([]);
+
   filtersCount = computed(() => {
     let count = 0;
 
@@ -48,6 +56,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges {
     if (this.resultsListFilterSE.selectedIndicatorCategories().length > 0) count++;
     if (this.resultsListFilterSE.selectedStatus().length > 0) count++;
     if (this.resultsListFilterSE.text_to_search().length > 0) count++;
+    if (this.resultsListFilterSE.selectedClarisaPortfolios().length > 0) count++;
 
     return count;
   });
@@ -138,6 +147,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges {
   }
 
   clearAllNewFilters() {
+    this.resultsListFilterSE.selectedClarisaPortfolios.set([]);
     this.resultsListFilterSE.selectedPhases.set([]);
 
     // Update available submitter options based on the reset phases
@@ -151,6 +161,14 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges {
     this.resultsListFilterSE.selectedIndicatorCategories.set([]);
     this.resultsListFilterSE.selectedStatus.set([]);
     this.resultsListFilterSE.text_to_search.set('');
+
+    // Also clear temp values
+    this.tempSelectedClarisaPortfolios.set([]);
+    this.tempSelectedPhases.set([]);
+    this.tempSelectedSubmitters.set([]);
+    this.tempSelectedSubmittersAdmin.set([]);
+    this.tempSelectedIndicatorCategories.set([]);
+    this.tempSelectedStatus.set([]);
   }
 
   getResultStatus() {
@@ -160,24 +178,60 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges {
   }
 
   onSelectClarisaPortfolio() {
-    console.log(this.resultsListFilterSE.selectedClarisaPortfolios());
+    console.log(this.tempSelectedClarisaPortfolios());
   }
 
   onSelectPhases() {
-    this.resultsListFilterSE.selectedSubmitters.set([]);
-    this.resultsListFilterSE.selectedSubmittersAdmin.set([]);
+    // Reset submitters when phases change (using temp values)
+    this.tempSelectedSubmitters.set([]);
+    this.tempSelectedSubmittersAdmin.set([]);
 
+    // Update submitter options based on selected phases
     this.resultsListFilterSE.submittersOptionsAdmin.set(
       this.resultsListFilterSE
         .submittersOptionsAdminOld()
-        .filter(item => this.resultsListFilterSE.selectedPhases().some(phase => phase.portfolio_id == item.portfolio_id))
+        .filter(item => this.tempSelectedPhases().some(phase => phase.portfolio_id == item.portfolio_id))
     );
 
     this.resultsListFilterSE.submittersOptions.set(
       this.resultsListFilterSE
         .submittersOptionsOld()
-        .filter(item => this.resultsListFilterSE.selectedPhases().some(phase => phase.portfolio_id == item.portfolio_id))
+        .filter(item => this.tempSelectedPhases().some(phase => phase.portfolio_id == item.portfolio_id))
     );
+  }
+
+  // Initialize temp values when opening the drawer
+  openFiltersDrawer() {
+    this.tempSelectedClarisaPortfolios.set([...this.resultsListFilterSE.selectedClarisaPortfolios()]);
+    this.tempSelectedPhases.set([...this.resultsListFilterSE.selectedPhases()]);
+    this.tempSelectedSubmitters.set([...this.resultsListFilterSE.selectedSubmitters()]);
+    this.tempSelectedSubmittersAdmin.set([...this.resultsListFilterSE.selectedSubmittersAdmin()]);
+    this.tempSelectedIndicatorCategories.set([...this.resultsListFilterSE.selectedIndicatorCategories()]);
+    this.tempSelectedStatus.set([...this.resultsListFilterSE.selectedStatus()]);
+    this.visible.set(true);
+  }
+
+  // Apply filters when clicking "Apply filters" button
+  applyFilters() {
+    this.resultsListFilterSE.selectedClarisaPortfolios.set([...this.tempSelectedClarisaPortfolios()]);
+    this.resultsListFilterSE.selectedPhases.set([...this.tempSelectedPhases()]);
+    this.resultsListFilterSE.selectedSubmitters.set([...this.tempSelectedSubmitters()]);
+    this.resultsListFilterSE.selectedSubmittersAdmin.set([...this.tempSelectedSubmittersAdmin()]);
+    this.resultsListFilterSE.selectedIndicatorCategories.set([...this.tempSelectedIndicatorCategories()]);
+    this.resultsListFilterSE.selectedStatus.set([...this.tempSelectedStatus()]);
+    this.visible.set(false);
+  }
+
+  // Cancel and discard changes
+  cancelFilters() {
+    // Reset temp values to current applied filters
+    this.tempSelectedClarisaPortfolios.set([...this.resultsListFilterSE.selectedClarisaPortfolios()]);
+    this.tempSelectedPhases.set([...this.resultsListFilterSE.selectedPhases()]);
+    this.tempSelectedSubmitters.set([...this.resultsListFilterSE.selectedSubmitters()]);
+    this.tempSelectedSubmittersAdmin.set([...this.resultsListFilterSE.selectedSubmittersAdmin()]);
+    this.tempSelectedIndicatorCategories.set([...this.resultsListFilterSE.selectedIndicatorCategories()]);
+    this.tempSelectedStatus.set([...this.resultsListFilterSE.selectedStatus()]);
+    this.visible.set(false);
   }
 
   onDownLoadTableAsExcel() {

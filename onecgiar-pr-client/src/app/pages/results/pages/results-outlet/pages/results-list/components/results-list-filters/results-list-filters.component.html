@@ -7,7 +7,7 @@
     </p-iconfield>
     <!-- apply filters button -->
     <p-overlaybadge value="" [badgeDisabled]="filtersCount() === 0">
-      <app-pr-button (click)="visible.set(true)" [text]="filtersCountText()" [verticalMargin]="-6" icon="filter_alt" [reverse]="true" />
+      <app-pr-button (click)="openFiltersDrawer()" [text]="filtersCountText()" [verticalMargin]="-6" icon="filter_alt" [reverse]="true" />
     </p-overlaybadge>
     <!-- celar fitlers -->
     <app-pr-button (click)="this.clearAllNewFilters()" text="Clear Filters" [verticalMargin]="0" colorType="secondary" />
@@ -29,7 +29,7 @@
       <p-multiselect
         [filter]="false"
         [options]="this.clarisaPortfolios()"
-        [(ngModel)]="resultsListFilterSE.selectedClarisaPortfolios"
+        [(ngModel)]="tempSelectedClarisaPortfolios"
         optionLabel="name"
         placeholder="Select clarisa portfolio"
         [maxSelectedLabels]="1"
@@ -45,7 +45,7 @@
         [filter]="false"
         [showHeader]="false"
         [options]="this.resultsListFilterSE.phasesOptions()"
-        [(ngModel)]="resultsListFilterSE.selectedPhases"
+        [(ngModel)]="tempSelectedPhases"
         (onChange)="onSelectPhases()"
         optionLabel="name"
         placeholder="Select phase"
@@ -63,7 +63,7 @@
         <p-multiselect
           [filter]="false"
           [options]="this.resultsListFilterSE.submittersOptionsAdmin()"
-          [(ngModel)]="resultsListFilterSE.selectedSubmittersAdmin"
+          [(ngModel)]="tempSelectedSubmittersAdmin"
           optionLabel="official_code"
           placeholder="Select submitter(s)"
           [maxSelectedLabels]="6"
@@ -73,7 +73,7 @@
         <p-multiselect
           [filter]="false"
           [options]="this.resultsListFilterSE.submittersOptions()"
-          [(ngModel)]="resultsListFilterSE.selectedSubmitters"
+          [(ngModel)]="tempSelectedSubmitters"
           optionLabel="name"
           placeholder="Select submitter(s)"
           [maxSelectedLabels]="6"
@@ -92,7 +92,7 @@
         [filter]="false"
         [showHeader]="false"
         [options]="this.resultsListFilterSE.filters.resultLevel"
-        [(ngModel)]="resultsListFilterSE.selectedIndicatorCategories"
+        [(ngModel)]="tempSelectedIndicatorCategories"
         optionLabel="name"
         placeholder="Select indicator category(ies)"
         [maxSelectedLabels]="1"
@@ -117,11 +117,17 @@
         [filter]="false"
         [showHeader]="false"
         [options]="this.resultsListFilterSE.statusOptions()"
-        [(ngModel)]="resultsListFilterSE.selectedStatus"
+        [(ngModel)]="tempSelectedStatus"
         optionLabel="name"
         placeholder="Select status"
         [maxSelectedLabels]="3"
         [style]="{ width: '100%' }" />
     </div>
+  </div>
+
+  <!-- Footer buttons -->
+  <div style="display: flex; gap: 12px; margin-top: 30px;">
+    <p-button label="Cancel" variant="outlined" [style]="{ flex: '1' }" (click)="cancelFilters()" />
+    <p-button label="Apply filters" [style]="{ flex: '1' }" (click)="applyFilters()" />
   </div>
 </p-drawer>
