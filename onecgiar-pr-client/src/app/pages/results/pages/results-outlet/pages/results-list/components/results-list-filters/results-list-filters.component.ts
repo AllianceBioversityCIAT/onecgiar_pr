@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, signal, Input, SimpleChanges, OnChanges } from '@angular/core';
+import { Component, OnInit, computed, signal, Input, SimpleChanges, OnChanges, effect, afterNextRender, OnDestroy } from '@angular/core';
 import { ResultsListFilterService } from '../../services/results-list-filter.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { ExportTablesService } from '../../../../../../../../shared/services/export-tables.service';
@@ -6,7 +6,6 @@ import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
 import { MultiSelectModule } from 'primeng/multiselect';
-import { DrawerModule } from 'primeng/drawer';
 import { ModuleTypeEnum, StatusPhaseEnum } from '../../../../../../../../shared/enum/api.enum';
 import { OverlayBadgeModule } from 'primeng/overlaybadge';
 import { BadgeModule } from 'primeng/badge';
@@ -25,7 +24,6 @@ import { ButtonModule } from 'primeng/button';
     FormsModule,
     MultiSelectModule,
     CustomFieldsModule,
-    DrawerModule,
     OverlayBadgeModule,
     BadgeModule,
     IconFieldModule,
@@ -34,10 +32,12 @@ import { ButtonModule } from 'primeng/button';
     ButtonModule
   ]
 })
-export class ResultsListFiltersComponent implements OnInit, OnChanges {
+export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy {
   gettingReport = signal(false);
   visible = signal(false);
   clarisaPortfolios = signal([]);
+  navbarHeight = signal(0);
+  private resizeObserver: ResizeObserver | null = null;
 
   // Temporary signals for filter selections (before applying)
   tempSelectedClarisaPortfolios = signal([]);
@@ -70,7 +70,13 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges {
     public resultsListFilterSE: ResultsListFilterService,
     public api: ApiService,
     private exportTablesSE: ExportTablesService
-  ) {}
+  ) {
+    // Calculate navbar height after render
+    afterNextRender(() => {
+      this.calculateNavbarHeight();
+      this.setupResizeObserver();
+    });
+  }
 
   ngOnInit(): void {
     this.getData();
@@ -277,5 +283,44 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges {
         this.gettingReport.set(false);
       }
     });
+  }
+
+  private calculateNavbarHeight() {
+    // Try to find the navbar/header element
+    const navbar = document.querySelector('app-header-panel') ||
+                   document.querySelector('header') ||
+                   document.querySelector('nav') ||
+                   document.querySelector('.navbar') ||
+                   document.querySelector('.header');
+
+    if (navbar) {
+      const height = navbar.getBoundingClientRect().height;
+      this.navbarHeight.set(height);
+    } else {
+      // Default fallback height
+      this.navbarHeight.set(60);
+    }
+  }
+
+  private setupResizeObserver() {
+    const navbar = document.querySelector('app-header-panel') ||
+                   document.querySelector('header') ||
+                   document.querySelector('nav') ||
+                   document.querySelector('.navbar') ||
+                   document.querySelector('.header');
+
+    if (navbar) {
+      this.resizeObserver = new ResizeObserver(() => {
+        this.calculateNavbarHeight();
+      });
+      this.resizeObserver.observe(navbar);
+    }
+  }
+
+  ngOnDestroy() {
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+      this.resizeObserver = null;
+    }
   }
 }

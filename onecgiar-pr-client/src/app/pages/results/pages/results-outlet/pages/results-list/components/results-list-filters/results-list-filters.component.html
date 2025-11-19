@@ -16,10 +16,19 @@
   <p-button label="Download" variant="outlined" icon="pi pi-download" (click)="onDownLoadTableAsExcel()" [loading]="this.gettingReport()" />
 </div>
 
-<p-drawer [(visible)]="visible" header="Table Filters" position="right" [style]="{ width: '350px', backgroundColor: 'var(--pr-color-accents-1)' }">
-  <p>Filter your table data by applying custom criteria.</p>
+<!-- Custom Drawer -->
+<div class="custom-drawer-container" [class.visible]="visible()" [style.top.px]="navbarHeight()">
+  <div class="custom-drawer" [class.open]="visible()">
+    <div class="drawer-header">
+      <h3 class="drawer-title">Table Filters</h3>
+      <button class="close-button" (click)="cancelFilters()" aria-label="Close">
+        <i class="pi pi-times"></i>
+      </button>
+    </div>
 
-  <div class="filters_items_container_drawer" style="flex-direction: column; margin: 0; gap: 20px">
+    <p class="drawer-description">Filter your table data by applying custom criteria.</p>
+
+    <div class="filters_items_container_drawer" style="flex-direction: column; margin: 0; gap: 20px">
     <div>
       <app-pr-field-header
         label="Clarisa Portfolio"
@@ -125,9 +134,10 @@
     </div>
   </div>
 
-  <!-- Footer buttons -->
-  <div style="display: flex; gap: 12px; margin-top: 30px;">
-    <p-button label="Cancel" variant="outlined" [style]="{ flex: '1' }" (click)="cancelFilters()" />
-    <p-button label="Apply filters" [style]="{ flex: '1' }" (click)="applyFilters()" />
+    <!-- Footer buttons -->
+    <div class="drawer-footer">
+      <p-button label="Cancel" variant="outlined" [style]="{ flex: '1' }" (click)="cancelFilters()" />
+      <p-button label="Apply filters" [style]="{ flex: '1' }" (click)="applyFilters()" />
+    </div>
   </div>
-</p-drawer>
+</div>
