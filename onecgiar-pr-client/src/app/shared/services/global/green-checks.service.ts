@@ -15,17 +15,6 @@ export class GreenChecksService {
     private readonly fieldsManagerSE: FieldsManagerService
   ) {}
 
-  updateGreenChecks() {
-    setTimeout(() => {
-      if (this.resultsApiSE.currentResultId) {
-        this.api.resultsSE.PATCH_greenChecksByResultId().subscribe(resp => {
-          this.api.dataControlSE.green_checks = resp.response.green_checks;
-          this.submit = Boolean(resp.response?.submit);
-        });
-      }
-    }, 10);
-  }
-
   getGreenChecks() {
     if (this.resultsApiSE.currentResultId) {
       if (this.fieldsManagerSE.isP25()) {
