@@ -63,4 +63,17 @@ export class ResultLevelService {
     removetType(10);
     removetType(11);
   }
+
+  resetFormState(preserveInitiative = true) {
+    const savedInitiative = preserveInitiative ? this.resultBody.initiative_id ?? null : null;
+    this.cleanData();
+    this.currentResultTypeList = [];
+    this.currentResultTypeListSig.set([]);
+    const resetLevels = (this.resultLevelList || []).map(level => ({ ...level, selected: false }));
+    this.resultLevelList = resetLevels;
+    this.resultLevelListSig.set(resetLevels);
+    if (savedInitiative != null) {
+      this.resultBody.initiative_id = savedInitiative;
+    }
+  }
 }

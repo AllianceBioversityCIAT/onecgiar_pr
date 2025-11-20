@@ -17,6 +17,7 @@ import { DialogModule } from 'primeng/dialog';
 import { SplitButtonModule } from 'primeng/splitbutton';
 import { ResultCreatorModule } from '../../../results/pages/result-creator/result-creator.module';
 import { MenuItem } from 'primeng/api';
+import { ResultLevelService } from '../../../results/pages/result-creator/services/result-level.service';
 
 @Component({
   selector: 'app-entity-details',
@@ -43,6 +44,7 @@ export class EntityDetailsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   api = inject(ApiService);
   entityAowService = inject(EntityAowService);
+  private readonly resultLevelSE = inject(ResultLevelService);
 
   cd = inject(ChangeDetectorRef);
 
@@ -243,5 +245,10 @@ export class EntityDetailsComponent implements OnInit {
       };
       this.cd.markForCheck();
     }
+  }
+
+  handleReportModalHide(): void {
+    this.resultLevelSE.resetFormState();
+    this.showReportModal.set(false);
   }
 }

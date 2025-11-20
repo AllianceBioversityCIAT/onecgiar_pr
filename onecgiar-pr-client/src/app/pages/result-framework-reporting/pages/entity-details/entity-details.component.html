@@ -85,10 +85,11 @@
     </div>
 
     <div class="entity-details_card">
-      <div class="entity-details_card_header">Reporting by indicator category
-        <p-splitbutton 
-          label="Report" 
-          icon="pi pi-plus-circle" 
+      <div class="entity-details_card_header">
+        Reporting by indicator category
+        <p-splitbutton
+          label="Report"
+          icon="pi pi-plus-circle"
           appendTo="self"
           menuStyleClass="entity-report-menu-overlay"
           [model]="reportMenuItems"
@@ -125,17 +126,21 @@
     [showHeader]="false"
     [dismissableMask]="true"
     [styleClass]="'report-result-dialog'"
-    (onHide)="showReportModal.set(false)">
+    (onHide)="handleReportModalHide()">
     <div class="report-result-header">
-      <span style="font-weight: 550; color: #000000; padding-left: 30px; font-size: 16px !important;">Unplanned result</span>
-      <button type="button" (click)="showReportModal.set(false)" aria-label="Close modal" style="background: none; border: none; cursor: pointer; padding: 0; display: flex; align-items: center;">
-        <i class="material-icons-round" style="font-size: 20px;">close</i>
+      <span style="font-weight: 550; color: #000000; padding-left: 30px; font-size: 16px !important">Unplanned result</span>
+      <button
+        type="button"
+        (click)="handleReportModalHide()"
+        aria-label="Close modal"
+        style="background: none; border: none; cursor: pointer; padding: 0; display: flex; align-items: center">
+        <i class="material-icons-round" style="font-size: 20px">close</i>
       </button>
     </div>
     <app-report-result-form
       [selectedInitiativeId]="entityAowService.entityDetails()?.id"
       [disableInitiativeSelect]="true"
-      (resultCreated)="showReportModal.set(false)">
+      (resultCreated)="handleReportModalHide()">
     </app-report-result-form>
   </p-dialog>
 }

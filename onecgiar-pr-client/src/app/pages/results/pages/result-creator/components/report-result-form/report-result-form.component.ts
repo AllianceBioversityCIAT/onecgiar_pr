@@ -74,7 +74,8 @@ export class ReportResultFormComponent implements OnInit, DoCheck {
             : []
         );
         if (this._selectedInitiativeId == null && this.api.dataControlSE.myInitiativesListReportingByPortfolio?.length === 1) {
-          this._selectedInitiativeId = this.api.dataControlSE.myInitiativesListReportingByPortfolio[0]?.initiative_id ||
+          this._selectedInitiativeId =
+            this.api.dataControlSE.myInitiativesListReportingByPortfolio[0]?.initiative_id ||
             this.api.dataControlSE.myInitiativesListReportingByPortfolio[0]?.id;
         }
         this.tryApplySelectedInitiative();
@@ -331,4 +332,3 @@ export class ReportResultFormComponent implements OnInit, DoCheck {
     return this.availableInitiativesSig();
   }
 }
-
