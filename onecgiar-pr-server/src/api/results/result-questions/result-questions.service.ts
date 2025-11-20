@@ -76,7 +76,7 @@ export class ResultQuestionsService {
         const firstAnswer = answers?.[0];
         const mappedOption: any = {
           ...Object.fromEntries(
-            Object.entries(option).filter(([key]) => key !== 'subOptions')
+            Object.entries(option).filter(([key]) => key !== 'subOptions'),
           ),
           answer_boolean:
             firstAnswer === undefined ? null : firstAnswer.answer_boolean,
@@ -240,7 +240,9 @@ export class ResultQuestionsService {
           answer_boolean:
             answers[0] === undefined ? null : answers[0].answer_boolean,
           answer_text: answers[0] === undefined ? null : answers[0].answer_text,
-          ...(subOptionsWithAnswers.length > 0 && { subOptions: subOptionsWithAnswers }),
+          ...(subOptionsWithAnswers.length > 0 && {
+            subOptions: subOptionsWithAnswers,
+          }),
         };
       }),
     );
@@ -572,7 +574,7 @@ export class ResultQuestionsService {
                     question_level: 3,
                     parent_question_id: childQuestion.result_question_id,
                   },
-                }
+                },
               );
 
               const optionsWithAnswers = await this._mapMacroOptionsDiversity(

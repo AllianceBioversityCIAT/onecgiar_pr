@@ -462,7 +462,7 @@ export class ResultsByInstitutionsService {
         } else {
           const isInnovation = [
             ResultTypeEnum.INNOVATION_DEVELOPMENT,
-            ResultTypeEnum.INNOVATION_USE
+            ResultTypeEnum.INNOVATION_USE,
           ].includes(incomingResult.result_type_id);
           console.log('isInnovation', isInnovation);
           await this.handleInstitutions(
@@ -503,11 +503,10 @@ export class ResultsByInstitutionsService {
           });
 
           await Promise.all(
-            activeProjects.map(project => 
-              this.updateOrSaveResultProjectBudget(project.id, user)
-            )
+            activeProjects.map((project) =>
+              this.updateOrSaveResultProjectBudget(project.id, user),
+            ),
           );
-          
         }
 
         const current = await this.getInstitutionsPartnersByResultIdV2(
@@ -753,7 +752,6 @@ export class ResultsByInstitutionsService {
   }
 
   private async updateOrSaveNonPooledBudget(projectId: number, user: TokenDto) {
-
     const existingBudget = await this._resultBilateralBudgetRepository.findOne({
       where: { non_pooled_projetct_id: projectId },
     });
@@ -774,7 +772,10 @@ export class ResultsByInstitutionsService {
     }
   }
 
-  private async updateOrSaveResultProjectBudget(projectId: number, user: TokenDto) {
+  private async updateOrSaveResultProjectBudget(
+    projectId: number,
+    user: TokenDto,
+  ) {
     const existingBudget = await this._resultBilateralBudgetRepository.findOne({
       where: { result_project_id: projectId },
     });
