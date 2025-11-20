@@ -464,7 +464,7 @@ export class ResultsByInstitutionsService {
             ResultTypeEnum.INNOVATION_DEVELOPMENT,
             ResultTypeEnum.INNOVATION_USE
           ].includes(incomingResult.result_type_id);
-
+          console.log('isInnovation', isInnovation);
           await this.handleInstitutions(
             data.institutions ?? [],
             oldPartners,

@@ -351,27 +351,26 @@ export class InnovationDevService {
           },
         });
 
-      const npp = await this._nonPooledProjectRepository.find({
+      const rbp = await this._resultByProjectRepository.find({
         where: {
-          results_id: resultId,
+          result_id: resultId,
           is_active: true,
-          non_pooled_project_type_id: 1,
         },
       });
 
       const bilateral_expected_investment =
         await this._resultBilateralBudgetRepository.find({
           where: {
-            non_pooled_projetct_id: In(npp.map((el) => el.id)),
+            result_project_id: In(rbp.map((el) => el.id)),
             is_active: true,
           },
           relations: {
-            obj_non_pooled_projetct: {
-              obj_funder_institution_id: true,
+            obj_result_project: {
+              obj_clarisa_project: true,
             },
           },
         });
-
+        console.log('bilateral_expected_investment', bilateral_expected_investment);
       const institutions: ResultsByInstitution[] =
         await this._resultByIntitutionsRepository.find({
           where: { result_id: resultId, is_active: true },
