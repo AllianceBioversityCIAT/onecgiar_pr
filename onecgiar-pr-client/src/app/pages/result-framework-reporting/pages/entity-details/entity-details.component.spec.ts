@@ -426,7 +426,7 @@ describe('EntityDetailsComponent', () => {
     it('should handle isLoadingDetails signal', () => {
       entityAowServiceMock.isLoadingDetails = signal(true);
       expect(component.entityAowService.isLoadingDetails()).toBe(true);
-      
+
       entityAowServiceMock.isLoadingDetails = signal(false);
       expect(component.entityAowService.isLoadingDetails()).toBe(false);
     });
