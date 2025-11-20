@@ -189,6 +189,10 @@ export class InnovationUseService {
       });
 
       await this.saveInitiativeInvestment(resultId, user.id, innovationUseDto);
+      await this.syncBudgetForResults(
+        resultId,
+        user.id,
+      );
       await this.saveBillateralInvestment(
         resultId,
         result_version.version_id,
@@ -792,6 +796,33 @@ export class InnovationUseService {
       }
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async syncBudgetForResults(resultId: number, userId: number) {
+    const resultProjects = await this._resultByProjectRepository.find({
+      where: { result_id: resultId, is_active: true }
+    });
+
+    if (!resultProjects.length) return;
+
+    for (const rp of resultProjects) {
+      const existingBudget = await this._resultBilateralBudgetRepository.findOne({
+        where: {
+          result_project_id: rp.id,
+          is_active: true
+        }
+      });
+
+      if (!existingBudget) {
+        const newBudget = this._resultBilateralBudgetRepository.create({
+          result_project_id: rp.id,
+          is_active: true,
+          created_by: userId
+        });
+
+        await this._resultBilateralBudgetRepository.save(newBudget);
+      }
     }
   }
 
