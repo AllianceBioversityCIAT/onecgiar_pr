@@ -222,7 +222,7 @@ export class AoWBilateralRepository {
         tri.related_node_id AS indicator_related_node_id,
         tri.unit_messurament AS unit_messurament,
         tri.type_value,
-        tri.type_name,
+        NULLIF(TRIM(tri.type_name), '') AS type_name,
         tri.location,
         COALESCE(SUM(CAST(trit.target_value AS SIGNED)), 0) AS target_value_sum,
         trit.number_target,

@@ -10,6 +10,13 @@ p {
   margin: 0;
 }
 
+.container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
 .entity-results-by-indicator-category-card {
   display: flex;
   flex-direction: column;
@@ -68,6 +75,7 @@ p {
   display: flex;
   align-items: center;
   gap: 30px;
+  margin-top: 15px;
 }
 
 .entity-results-by-indicator-category-card_results_item {

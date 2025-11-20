@@ -1,14 +1,16 @@
-import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, output } from '@angular/core';
+import { ButtonModule } from 'primeng/button';
 
 @Component({
   selector: 'app-entity-results-by-indicator-category-card',
-  imports: [],
+  imports: [ButtonModule],
   templateUrl: './entity-results-by-indicator-category-card.component.html',
   styleUrl: './entity-results-by-indicator-category-card.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EntityResultsByIndicatorCategoryCardComponent {
   @Input() item: any;
+  readonly reportRequested = output<void>();
 
   getIcon(indicatorType: number) {
     switch (indicatorType) {

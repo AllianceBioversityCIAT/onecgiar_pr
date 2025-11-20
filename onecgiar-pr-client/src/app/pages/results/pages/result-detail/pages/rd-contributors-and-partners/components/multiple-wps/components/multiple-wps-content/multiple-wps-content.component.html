@@ -75,6 +75,12 @@
       @if (activeTab.indicators[0].related_node_id) {
         <div>
           <app-pr-field-header label="Contribution to indicator target"></app-pr-field-header>
+          <app-alert-status
+            status="info"
+            description="Indicate in this box the numerical value that your result contributes toward the 2025 target of the indicator.<br>
+            <br><strong>Example:</strong> If the 2025 indicator target is 200 (people trained) and your result (e.g., a capacity-sharing activity) provides evidence of 90 people trained, enter <strong>90</strong> in this box.<br>
+            <br>The values entered here will be aggregated at the end of the reporting cycle to assess progress toward the planned 2025 target for the indicator."
+            inlineStyles="margin: 0; margin-bottom: 10px !important;"></app-alert-status>
           <div style="margin: 8px 0" *ngIf="selectedIndicatorData()">
             <p><strong>Unit of measurement:</strong> {{ selectedIndicatorData()?.unit_messurament || 'Not specified' }}</p>
             <p><strong>Target:</strong> {{ selectedIndicatorData()?.targets?.[0]?.target_value || 'Not specified' }}</p>
@@ -90,8 +96,13 @@
     }
     <hr class="divider-20" />
 
+    <app-alert-status
+      status="info"
+      description="Where results are qualitative and do not contribute numerically to the indicator target, provide here a short explanation of how the result supports or aligns with the Program’s TOC pathway."
+      inlineStyles="margin: 0; margin: 10px 0;"></app-alert-status>
+
     <app-pr-textarea
-      [label]="dynamicProgressLabel()"
+      [label]="'Explanation of how the result aligns with/contributes to the Program’s TOC pathway'"
       [required]="false"
       placeholder="Enter text"
       [rows]="3"

@@ -107,7 +107,7 @@ export class AowHloCreateModalComponent implements OnInit {
       return 'Title retrieved from the repository';
     }
 
-    return 'Title';
+    return 'Title of Result';
   }
 
   removeBilateralProject(project: any) {

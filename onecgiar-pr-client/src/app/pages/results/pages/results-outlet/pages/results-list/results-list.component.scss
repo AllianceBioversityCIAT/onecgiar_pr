@@ -1,8 +1,18 @@
 @use '../../../../../../../styles/fonts.scss' as fonts;
 
 .action_buttons {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 20px;
   align-items: center;
+
+  > div:first-child {
+    app-pr-button {
+      ::ng-deep .pr_button .text {
+        white-space: nowrap;
+      }
+    }
+  }
 }
 
 .table {

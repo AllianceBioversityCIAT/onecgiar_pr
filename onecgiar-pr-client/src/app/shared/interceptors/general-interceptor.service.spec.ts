@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { HttpClient, HTTP_INTERCEPTORS } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { GeneralInterceptorService } from './general-interceptor.service';
 import { AuthService } from '../services/api/auth.service';
 import { GreenChecksService } from '../services/global/green-checks.service';
@@ -16,12 +17,14 @@ describe('GeneralInterceptorService', () => {
   let greenChecksServiceMock: any;
   let apiServiceMock: any;
   let ipsrCompletenessStatusServiceMock: any;
+  let routerMock: any;
 
   beforeEach(() => {
     authServiceMock = { localStorageToken: 'test-token' };
-    greenChecksServiceMock = { updateGreenChecks: jest.fn() };
+    greenChecksServiceMock = { getGreenChecks: jest.fn() };
     apiServiceMock = {};
     ipsrCompletenessStatusServiceMock = { updateGreenChecks: jest.fn() };
+    routerMock = { url: '/result/result-detail/123/general-information' };
 
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
@@ -31,6 +34,7 @@ describe('GeneralInterceptorService', () => {
         { provide: GreenChecksService, useValue: greenChecksServiceMock },
         { provide: ApiService, useValue: apiServiceMock },
         { provide: IpsrCompletenessStatusService, useValue: ipsrCompletenessStatusServiceMock },
+        { provide: Router, useValue: routerMock },
         {
           provide: HTTP_INTERCEPTORS,
           useClass: GeneralInterceptorService,
@@ -67,11 +71,29 @@ describe('GeneralInterceptorService', () => {
     expect(httpRequest.request.headers.has('auth')).toBeFalsy();
   });
 
-  it('should update green checks on successful PATCH or POST request', () => {
+  it('should call getGreenChecks on successful PATCH or POST request when in result-detail route', () => {
+    routerMock.url = '/result/result-detail/123/general-information';
     httpClient.post('/api/results/some-endpoint', {}).subscribe();
     const httpRequest = httpMock.expectOne('/api/results/some-endpoint');
     httpRequest.flush({ status: 200 });
 
-    expect(greenChecksServiceMock.updateGreenChecks).toHaveBeenCalled();
+    expect(greenChecksServiceMock.getGreenChecks).toHaveBeenCalled();
+  });
+
+  it('should not call getGreenChecks when not in result-detail route', () => {
+    routerMock.url = '/result/results-list';
+    httpClient.post('/api/results/some-endpoint', {}).subscribe();
+    const httpRequest = httpMock.expectOne('/api/results/some-endpoint');
+    httpRequest.flush({ status: 200 });
+
+    expect(greenChecksServiceMock.getGreenChecks).not.toHaveBeenCalled();
+  });
+
+  it('should call updateGreenChecks for IPSR module', () => {
+    httpClient.post('/api/ipsr/some-endpoint', {}).subscribe();
+    const httpRequest = httpMock.expectOne('/api/ipsr/some-endpoint');
+    httpRequest.flush({ status: 200 });
+
+    expect(ipsrCompletenessStatusServiceMock.updateGreenChecks).toHaveBeenCalled();
   });
 });
