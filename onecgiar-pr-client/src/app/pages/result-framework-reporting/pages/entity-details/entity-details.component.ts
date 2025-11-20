@@ -246,8 +246,4 @@ export class EntityDetailsComponent implements OnInit {
       this.cd.markForCheck();
     }
   }
-
-  onReviewResults() {
-    // Navigate to bilateral results review page
-  }
 }
