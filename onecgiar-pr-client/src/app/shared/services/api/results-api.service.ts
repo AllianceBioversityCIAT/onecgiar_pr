@@ -720,10 +720,6 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.baseApiBaseUrlV2}results/results-validation/get/green-checks/${this.currentResultId}`);
   }
 
-  PATCH_greenChecksByResultId() {
-    return this.http.patch<any>(`${this.apiBaseUrl}results-validation/save/green-checks/${this.currentResultId}`, {});
-  }
-
   PATCH_submit(comment) {
     return this.http.patch<any>(`${this.apiBaseUrl}submissions/submit/${this.currentResultId}`, { comment });
   }

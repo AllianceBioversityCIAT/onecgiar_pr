@@ -1933,21 +1933,6 @@ describe('ResultsApiService', () => {
     });
   });
 
-  describe('PATCH_greenChecksByResultId', () => {
-    it('should call PATCH_greenChecksByResultId and return expected data ', done => {
-      service.PATCH_greenChecksByResultId().subscribe(response => {
-        expect(response).toEqual(mockResponse);
-        done();
-      });
-
-      const req = httpMock.expectOne(`${service.apiBaseUrl}results-validation/save/green-checks/${service.currentResultId}`);
-      expect(req.request.method).toBe('PATCH');
-      expect(req.request.body).toEqual({});
-
-      req.flush(mockResponse);
-    });
-  });
-
   describe('PATCH_submit', () => {
     it('should call PATCH_submit and return expected data ', done => {
       const comment = 'Test comment';

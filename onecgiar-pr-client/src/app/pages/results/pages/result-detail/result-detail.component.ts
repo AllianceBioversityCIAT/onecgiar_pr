@@ -53,7 +53,7 @@ export class ResultDetailComponent implements OnInit, DoCheck {
     await this.GET_resultIdToCode();
 
     this.currentResultSE.GET_resultById();
-    this.greenChecksSE.updateGreenChecks();
+    this.greenChecksSE.getGreenChecks();
     this.GET_versioningResult();
 
     this.shareRequestModalSE.inNotifications = false;

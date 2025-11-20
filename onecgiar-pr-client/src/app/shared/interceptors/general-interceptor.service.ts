@@ -1,17 +1,24 @@
 import { HttpErrorResponse, HttpEvent, HttpHandler, HttpInterceptor, HttpRequest } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { catchError, Observable, tap, throwError } from 'rxjs';
 import { AuthService } from '../services/api/auth.service';
 import { ApiService } from '../services/api/api.service';
 import { GreenChecksService } from '../services/global/green-checks.service';
 import { environment } from '../../../environments/environment';
 import { IpsrCompletenessStatusService } from '../../pages/ipsr/services/ipsr-completeness-status.service';
+import { Router } from '@angular/router';
 
 @Injectable({
   providedIn: 'root'
 })
 export class GeneralInterceptorService implements HttpInterceptor {
-  constructor(private readonly authService: AuthService, private readonly greenChecksSE: GreenChecksService, private apiService: ApiService, private readonly ipsrCompletenessStatusSE: IpsrCompletenessStatusService) {}
+  router = inject(Router);
+  constructor(
+    private readonly authService: AuthService,
+    private readonly greenChecksSE: GreenChecksService,
+    private apiService: ApiService,
+    private readonly ipsrCompletenessStatusSE: IpsrCompletenessStatusService
+  ) {}
 
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
     if (!this.authService?.localStorageToken && !req.url.indexOf(environment.apiBaseUrl)) return next.handle(req.clone());
@@ -30,18 +37,13 @@ export class GeneralInterceptorService implements HttpInterceptor {
       return next.handle(reqClone).pipe(
         tap((event: any) => {
           if (event && event.status >= 200 && event.status < 300) {
-            const validateGreenCheckRoute = req.url.indexOf('green-checks') > 0;
-            const inResultsModule = req.url.includes('/api/results/');
+            const inResultsModule = this.router.url.includes('/result/result-detail/');
             const inIPSRModule = req.url.includes('/api/ipsr/');
             const notValidateList = ['/api/ipsr/all-innovations'];
             if (!notValidateList.some(url => req.url.includes(url))) {
-              if (!validateGreenCheckRoute && inResultsModule) {
-                this.greenChecksSE.updateGreenChecks();
-                this.greenChecksSE.getGreenChecks();
-              }
-              if (inIPSRModule) {
-                this.ipsrCompletenessStatusSE.updateGreenChecks();
-              }
+              if (inResultsModule) this.greenChecksSE.getGreenChecks();
+
+              if (inIPSRModule) this.ipsrCompletenessStatusSE.updateGreenChecks();
             }
           }
         }),
