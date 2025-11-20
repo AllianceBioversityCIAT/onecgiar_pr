@@ -595,65 +595,30 @@ export class InnovationUseService {
         name: item.obj_result_initiative?.obj_initiative?.name ?? null,
       }));
 
-      const rversion = await this._resultRepository.findOne({
-        where: { id: resultId },
-        select: ['version_id'],
+      const rbp = await this._resultByProjectRepository.find({
+        where: { result_id: resultId, is_active: true },
       });
+      const rbpIds = rbp.map((el) => el.id);
 
-      let investment_bilateral_raw: any;
-      if (rversion?.version_id === 34) {
-        const rbp = await this._resultByProjectRepository.find({
+      const investment_bilateral_raw =
+        await this._resultBilateralBudgetRepository.find({
           where: {
-            result_id: resultId,
+            result_project_id: In(rbpIds),
             is_active: true,
           },
-        });
-
-        investment_bilateral_raw =
-          await this._resultBilateralBudgetRepository.find({
-            where: {
-              result_project_id: In(rbp.map((el) => el.id)),
-              is_active: true,
-            },
-            relations: {
-              obj_result_project: {
-                obj_clarisa_project: true,
-              },
-            },
-          });
-      } else {
-        const npp = await this._nonPooledProjectRepository.find({
-          where: {
-            results_id: resultId,
-            is_active: true,
-            non_pooled_project_type_id: 1,
+          relations: {
+            obj_result_project: {
+              obj_clarisa_project: true,
+            }
           },
         });
-
-        investment_bilateral_raw =
-          await this._resultBilateralBudgetRepository.find({
-            where: {
-              non_pooled_projetct_id: In(npp.map((el) => el.id)),
-              is_active: true,
-            },
-            relations: {
-              obj_non_pooled_projetct: {
-                obj_funder_institution_id: true,
-              },
-            },
-          });
-      }
 
       const investment_bilateral = investment_bilateral_raw.map((item) => {
         const funder =
-          rversion?.version_id === 34
-            ? item.obj_result_project?.clarisaProject
-            : item.obj_non_pooled_projetct?.obj_funder_institution_id;
+          item.obj_result_project?.obj_clarisa_project ?? null;
 
         const name =
-          rversion?.version_id === 34
-            ? (item.obj_result_project?.clarisaProject?.short_name ?? null)
-            : (item.obj_non_pooled_projetct?.grant_title ?? null);
+          item.obj_result_project?.obj_clarisa_project?.shortName ?? null;
 
         return {
           id: funder?.id ?? null,
