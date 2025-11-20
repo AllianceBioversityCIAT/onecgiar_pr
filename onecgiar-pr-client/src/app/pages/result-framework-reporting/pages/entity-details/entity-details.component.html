@@ -63,6 +63,30 @@
     </div>
   </div>
 
+  <div class="bilateral-review-banner">
+    <div class="bilateral-review-banner_content">
+      <div class="bilateral-review-banner_icon">
+        <i class="material-icons-round">schedule</i>
+      </div>
+
+      <div class="bilateral-review-banner_text">
+        <div class="bilateral-review-banner_title">
+          <span class="bilateral-review-banner_title_main">Bilateral Results Review</span>
+          <span class="bilateral-review-banner_title_separator">•</span>
+          <span class="bilateral-review-banner_title_count">10 Pending review</span>
+        </div>
+        <p class="bilateral-review-banner_description">
+          Validate bilateral results from CGIAR Centers to maintain data quality and program coherence.
+        </p>
+      </div>
+    </div>
+
+    <button class="bilateral-review-banner_button" (click)="onReviewResults()">
+      <span>Review results</span>
+      <i class="material-icons-round">touch_app</i>
+    </button>
+  </div>
+
   <div class="entity-details_cards">
     <div class="entity-details_card">
       <div class="entity-details_card_header">Reporting by Theory of Change</div>
@@ -85,10 +109,11 @@
     </div>
 
     <div class="entity-details_card">
-      <div class="entity-details_card_header">Reporting by indicator category
-        <p-splitbutton 
-          label="Report" 
-          icon="pi pi-plus-circle" 
+      <div class="entity-details_card_header">
+        Reporting by indicator category
+        <p-splitbutton
+          label="Report"
+          icon="pi pi-plus-circle"
           appendTo="self"
           menuStyleClass="entity-report-menu-overlay"
           [model]="reportMenuItems"
@@ -127,9 +152,13 @@
     [styleClass]="'report-result-dialog'"
     (onHide)="showReportModal.set(false)">
     <div class="report-result-header">
-      <span style="font-weight: 550; color: #000000; padding-left: 30px; font-size: 16px !important;">Unplanned result</span>
-      <button type="button" (click)="showReportModal.set(false)" aria-label="Close modal" style="background: none; border: none; cursor: pointer; padding: 0; display: flex; align-items: center;">
-        <i class="material-icons-round" style="font-size: 20px;">close</i>
+      <span style="font-weight: 550; color: #000000; padding-left: 30px; font-size: 16px !important">Unplanned result</span>
+      <button
+        type="button"
+        (click)="showReportModal.set(false)"
+        aria-label="Close modal"
+        style="background: none; border: none; cursor: pointer; padding: 0; display: flex; align-items: center">
+        <i class="material-icons-round" style="font-size: 20px">close</i>
       </button>
     </div>
     <app-report-result-form

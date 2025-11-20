@@ -401,3 +401,150 @@ p {
     }
   }
 }
+
+// Bilateral Review Banner
+.bilateral-review-banner {
+  background-color: var(--pr-color-white);
+  border-radius: 10px;
+  box-shadow: 0px 4px 30px 0px rgba(var(--pr-color-secondary-rgb), 0.051);
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 16px 20px;
+  }
+}
+
+.bilateral-review-banner_content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+
+  @media (max-width: 768px) {
+    gap: 12px;
+  }
+}
+
+.bilateral-review-banner_icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background-color: #FEF3C7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  i {
+    font-size: 32px;
+    color: #F59E0B;
+  }
+
+  @media (max-width: 768px) {
+    width: 48px;
+    height: 48px;
+
+    i {
+      font-size: 28px;
+    }
+  }
+}
+
+.bilateral-review-banner_text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.bilateral-review-banner_title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    gap: 6px;
+  }
+}
+
+.bilateral-review-banner_title_main {
+  @include fonts.pr-typography('h4');
+  font-weight: 600;
+  color: var(--pr-color-secondary-600);
+
+  @media (max-width: 768px) {
+    @include fonts.pr-typography('body-1');
+    font-weight: 600;
+  }
+}
+
+.bilateral-review-banner_title_separator {
+  color: #F59E0B;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.bilateral-review-banner_title_count {
+  @include fonts.pr-typography('body-2');
+  font-weight: 500;
+  color: #F59E0B;
+
+  @media (max-width: 768px) {
+    font-size: 14px;
+  }
+}
+
+.bilateral-review-banner_description {
+  @include fonts.pr-typography('body-2');
+  font-weight: 400;
+  color: var(--pr-color-accents-6);
+  line-height: 1.4;
+
+  @media (max-width: 768px) {
+    font-size: 14px;
+  }
+}
+
+.bilateral-review-banner_button {
+  background-color: #6366F1;
+  color: var(--pr-color-white);
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  @include fonts.pr-typography('body-2');
+  font-weight: 500;
+  white-space: nowrap;
+
+  i {
+    font-size: 20px;
+  }
+
+  &:hover {
+    background-color: #4F46E5;
+    box-shadow: 0px 4px 12px rgba(99, 102, 241, 0.3);
+  }
+
+  &:active {
+    background-color: #4338CA;
+    transform: scale(0.98);
+  }
+
+  @media (max-width: 768px) {
+    width: 100%;
+    justify-content: center;
+    padding: 10px 20px;
+  }
+}
