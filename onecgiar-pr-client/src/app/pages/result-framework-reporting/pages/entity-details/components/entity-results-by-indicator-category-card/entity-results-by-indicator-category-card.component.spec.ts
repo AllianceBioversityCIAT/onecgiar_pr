@@ -4,6 +4,7 @@ import { EntityResultsByIndicatorCategoryCardComponent } from './entity-results-
 describe('EntityResultsByIndicatorCategoryCardComponent', () => {
   let component: EntityResultsByIndicatorCategoryCardComponent;
   let fixture: ComponentFixture<EntityResultsByIndicatorCategoryCardComponent>;
+  let nativeElement: HTMLElement;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -12,10 +13,23 @@ describe('EntityResultsByIndicatorCategoryCardComponent', () => {
 
     fixture = TestBed.createComponent(EntityResultsByIndicatorCategoryCardComponent);
     component = fixture.componentInstance;
+    nativeElement = fixture.nativeElement as HTMLElement;
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('should emit reportRequested when Report button is clicked', () => {
+    const spy = jest.fn();
+    component.reportRequested.subscribe(spy);
+    fixture.detectChanges();
+
+    const button = nativeElement.querySelector('button');
+    button?.dispatchEvent(new Event('click'));
+    fixture.detectChanges();
+
+    expect(spy).toHaveBeenCalledTimes(1);
   });
 
   describe('getIcon', () => {
