@@ -370,7 +370,7 @@ export class InnovationDevService {
             },
           },
         });
-        console.log('bilateral_expected_investment', bilateral_expected_investment);
+
       const institutions: ResultsByInstitution[] =
         await this._resultByIntitutionsRepository.find({
           where: { result_id: resultId, is_active: true },
