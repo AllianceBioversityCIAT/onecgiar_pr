@@ -20,13 +20,11 @@ export class GreenChecksService {
       if (this.fieldsManagerSE.isP25()) {
         this.api.resultsSE.GET_p25GreenChecksByResultId().subscribe(({ response }) => {
           this.api.dataControlSE.green_checks = response.green_checks;
-          console.log(response);
           this.submit = response.submit;
         });
       } else {
         this.api.resultsSE.GET_greenChecksByResultId().subscribe(({ response }) => {
           this.api.dataControlSE.green_checks = response.green_checks;
-          console.log(response);
           this.submit = response.submit;
         });
       }

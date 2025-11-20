@@ -37,7 +37,6 @@ export class GeneralInterceptorService implements HttpInterceptor {
       return next.handle(reqClone).pipe(
         tap((event: any) => {
           if (event && event.status >= 200 && event.status < 300) {
-            console.log(req.url);
             const inResultsModule = this.router.url.includes('/result/result-detail/');
             const inIPSRModule = req.url.includes('/api/ipsr/');
             const notValidateList = ['/api/ipsr/all-innovations'];
