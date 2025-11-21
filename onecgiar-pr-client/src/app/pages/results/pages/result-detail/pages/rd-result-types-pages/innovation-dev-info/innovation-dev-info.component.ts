@@ -38,13 +38,11 @@ export class InnovationDevInfoComponent {
     this.api.dataControlSE.currentResultSectionName.set('Innovation Development information');
   }
 
-
   OnChangePortfolio = effect(() => {
     if (this.dataControlSE.currentResultSignal()?.portfolio !== undefined) {
       this.fieldsManagerSE.isP25() ? this.getSectionInformationp25() : this.getSectionInformation();
     }
   });
-
 
   getSectionInformationp25(): void {
     this.api.resultsSE.GET_innovationDevP25().subscribe(({ response }) => {
@@ -52,6 +50,7 @@ export class InnovationDevInfoComponent {
       this.convertOrganizations(response?.innovatonUse?.organization);
       this.innovationDevInfoBody.innovation_user_to_be_determined = Boolean(this.innovationDevInfoBody.innovation_user_to_be_determined);
       this.savingSection = false;
+      console.log(response);
     });
     this.api.resultsSE.GET_questionsInnovationDevelopmentP25().subscribe(({ response }) => {
       this.innovationDevelopmentQuestions = response;
@@ -150,26 +149,23 @@ export class InnovationDevInfoComponent {
 
       this.api.resultsSE.POST_createEvidenceDemandP25(this.evidencesBody).subscribe({
         next: () => {
-          this.api.resultsSE
-            .PATCH_innovationDevP25({ ...this.innovationDevInfoBody, ...this.innovationDevelopmentQuestions })
-            .subscribe({
-              next: () => {
-                this.getSectionInformationp25();
-                this.savingSection = false;
-              },
-              error: err => {
-                console.error(err);
-                this.savingSection = false;
-              }
-            });
+          this.api.resultsSE.PATCH_innovationDevP25({ ...this.innovationDevInfoBody, ...this.innovationDevelopmentQuestions }).subscribe({
+            next: () => {
+              this.getSectionInformationp25();
+              this.savingSection = false;
+            },
+            error: err => {
+              console.error(err);
+              this.savingSection = false;
+            }
+          });
         },
         error: err => {
           console.error(err);
           this.savingSection = false;
         }
       });
-    }
-    else {
+    } else {
       this.api.resultsSE.PATCH_innovationDev({ ...this.innovationDevInfoBody, ...this.innovationDevelopmentQuestions }).subscribe({
         next: ({ response }) => {
           this.getSectionInformation();
@@ -211,9 +207,7 @@ export class InnovationDevInfoComponent {
                 const [startByte, totalBytes] = nextRange.split('-').map(Number);
                 if (totalBytes) {
                   const progressPercentage = (startByte / totalBytes) * 100;
-                  (evidence as any).percentage = Number.isFinite(progressPercentage)
-                    ? progressPercentage.toFixed(0)
-                    : (evidence as any).percentage;
+                  (evidence as any).percentage = Number.isFinite(progressPercentage) ? progressPercentage.toFixed(0) : (evidence as any).percentage;
                 }
               }
             } catch (_) {
@@ -309,7 +303,6 @@ export class InnovationDevInfoComponent {
       this.evidencesBody.evidences.push({ is_sharepoint: false } as any);
     }
   }
-
 
   getReadinessLevelIndex(): number {
     if (!this.innovationDevInfoBody.innovation_readiness_level_id || !this.innovationControlListSE.readinessLevelsList) {

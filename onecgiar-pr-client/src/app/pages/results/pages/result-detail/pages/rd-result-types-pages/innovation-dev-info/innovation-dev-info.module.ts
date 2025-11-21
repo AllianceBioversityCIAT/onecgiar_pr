@@ -13,6 +13,7 @@ import { EstimatesComponent } from './components/estimates/estimates.component';
 import { InnovationLinksComponent } from './components/innovation-links/innovation-links.component';
 import { YmzListStructureItemModule } from '../../../../../../../shared/directives/ymz-list-structure-item/ymz-list-structure-item.module';
 import { NonPooledInfoComponent } from './components/estimates/components/non-pooled-info/non-pooled-info.component';
+import { NonPooledInfoComponentP25 } from './components/estimates/components/non-pooled-info-p25/non-pooled-info.component';
 import { DialogModule } from 'primeng/dialog';
 import { SkeletonModule } from 'primeng/skeleton';
 import { FeedbackValidationDirectiveModule } from '../../../../../../../shared/directives/feedback-validation-directive.module';
@@ -39,6 +40,7 @@ import { PartnersPoliciesSafeguardsComponent } from './components/partners-polic
     MegatrendsComponent,
     AssumptionsExaminationComponent,
     PartnersPoliciesSafeguardsComponent,
+    NonPooledInfoComponentP25
   ],
   imports: [
     CommonModule,
@@ -49,8 +51,8 @@ import { PartnersPoliciesSafeguardsComponent } from './components/partners-polic
     FeedbackValidationDirectiveModule,
     SkeletonModule,
     MessageModule,
-    TermPipe
-    , InnovationUseFormModule
+    TermPipe,
+    InnovationUseFormModule
   ]
 })
 export class InnovationDevInfoModule {}
