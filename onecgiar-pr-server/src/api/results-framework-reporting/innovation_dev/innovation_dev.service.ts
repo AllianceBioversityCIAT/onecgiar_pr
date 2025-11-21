@@ -110,7 +110,7 @@ export class InnovationDevService {
       } else {
         const newInnDev = new ResultsInnovationsDev();
         newInnDev.created_by = user.id;
-        newInnDev.results_id = resultId;
+        newInnDev.result_object = { id: +resultId } as any;
         newInnDev.last_updated_by = user.id;
         newInnDev.short_title = short_title;
         newInnDev.is_active = true;
