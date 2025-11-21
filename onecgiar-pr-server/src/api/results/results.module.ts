@@ -95,6 +95,7 @@ import { ResultsSdgTargetRepository } from './results-toc-results/repositories/r
 import { ResultsActionAreaOutcomeRepository } from './results-toc-results/repositories/result-toc-action-area.repository';
 import { ResultsTocTargetIndicatorRepository } from './results-toc-results/repositories/result-toc-result-target-indicator.repository';
 import { ResultsTocResultIndicatorsService } from './results-toc-results/results-toc-result-indicators.service';
+import { AoWBilateralRepository } from './results-toc-results/repositories/aow-bilateral.repository';
 
 @Module({
   controllers: [ResultsController],
@@ -187,6 +188,7 @@ import { ResultsTocResultIndicatorsService } from './results-toc-results/results
     ResultsActionAreaOutcomeRepository,
     ResultsTocTargetIndicatorRepository,
     ResultsTocResultIndicatorsService,
+    AoWBilateralRepository,
   ],
   exports: [ResultRepository, JwtMiddleware, ResultsService],
 })
