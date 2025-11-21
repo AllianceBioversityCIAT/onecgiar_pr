@@ -83,58 +83,58 @@ describe('ResultsListFilterPipe', () => {
 
   describe('transform', () => {
     it('should return empty array when resultList is null or undefined', () => {
-      expect(pipe.transform(null, 'test', false, [], [], [], [])).toEqual([]);
-      expect(pipe.transform(undefined, 'test', false, [], [], [], [])).toEqual([]);
+      expect(pipe.transform(null, 'test', false, [], [], [], [], [])).toEqual([]);
+      expect(pipe.transform(undefined, 'test', false, [], [], [], [], [])).toEqual([]);
     });
 
     it('should return original list when no filters are applied', () => {
-      const result = pipe.transform(mockResultList, '', false, [], [], [], []);
+      const result = pipe.transform(mockResultList, '', false, [], [], [], [], []);
       expect(result).toEqual(mockResultList);
     });
 
     it('should apply text filter correctly', () => {
-      const result = pipe.transform(mockResultList, 'Test Result One', false, [], [], [], []);
+      const result = pipe.transform(mockResultList, 'Test Result One', false, [], [], [], [], []);
       expect(result).toHaveLength(1);
       expect(result[0].title).toBe('Test Result One');
     });
 
     it('should apply phase filter correctly', () => {
       const selectedPhases = [{ attr: 'Phase One' }];
-      const result = pipe.transform(mockResultList, '', false, selectedPhases, [], [], []);
+      const result = pipe.transform(mockResultList, '', false, selectedPhases, [], [], [], []);
       expect(result).toHaveLength(2);
       expect(result.every(r => r.phase_name === 'Phase One')).toBe(true);
     });
 
     it('should apply status filter correctly', () => {
       const selectedStatus = [{ status_id: 1 }];
-      const result = pipe.transform(mockResultList, '', false, [], [], [], selectedStatus);
+      const result = pipe.transform(mockResultList, '', false, [], [], [], selectedStatus, []);
       expect(result).toHaveLength(2);
       expect(result.every(r => r.status_id === 1)).toBe(true);
     });
 
     it('should apply indicator categories filter correctly', () => {
       const selectedIndicatorCategories = [{ resultLevelId: 456, id: 789 }];
-      const result = pipe.transform(mockResultList, '', false, [], [], selectedIndicatorCategories, []);
+      const result = pipe.transform(mockResultList, '', false, [], [], selectedIndicatorCategories, [], []);
       expect(result).toHaveLength(2);
       expect(result.every(r => r.result_level_id === 456 && r.result_type_id === 789)).toBe(true);
     });
 
     it('should apply submitters filter correctly', () => {
       const selectedSubmitters = [{ official_code: 'ORG001' }];
-      const result = pipe.transform(mockResultList, '', false, [], selectedSubmitters, [], []);
+      const result = pipe.transform(mockResultList, '', false, [], selectedSubmitters, [], [], []);
       expect(result).toHaveLength(1);
       expect(result[0].submitter).toBe('ORG001');
     });
 
     it('should combine results when combine is true', () => {
-      const result = pipe.transform(mockResultList, '', true, [], [], [], []);
+      const result = pipe.transform(mockResultList, '', true, [], [], [], [], []);
       expect(result).toHaveLength(2); // Two unique result codes
       const combinedResult = result.find(r => r.result_code === 123);
       expect(combinedResult.results).toHaveLength(2);
     });
 
     it('should separate results when combine is false', () => {
-      const result = pipe.transform(mockResultList, '', false, [], [], [], []);
+      const result = pipe.transform(mockResultList, '', false, [], [], [], [], []);
       expect(result).toHaveLength(3);
       result.forEach(r => {
         expect(r.results).toHaveLength(1);
@@ -145,7 +145,7 @@ describe('ResultsListFilterPipe', () => {
     it('should apply multiple filters simultaneously', () => {
       const selectedPhases = [{ attr: 'Phase One' }];
       const selectedStatus = [{ status_id: 1 }];
-      const result = pipe.transform(mockResultList, 'Test', true, selectedPhases, [], [], selectedStatus);
+      const result = pipe.transform(mockResultList, 'Test', true, selectedPhases, [], [], selectedStatus, []);
       expect(result).toHaveLength(1);
       expect(result[0].result_code).toBe(123);
     });

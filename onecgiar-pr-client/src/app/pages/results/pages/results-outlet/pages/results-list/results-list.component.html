@@ -6,11 +6,11 @@
       : this.resultsListFilterSE.selectedPhases()
       : (this.api.rolesSE.isAdmin ? this.resultsListFilterSE.selectedSubmittersAdmin() : this.resultsListFilterSE.selectedSubmitters())
       : this.resultsListFilterSE.selectedIndicatorCategories()
-      : this.resultsListFilterSE.selectedStatus();
-
-<div class="local_container">
-  @let activeButtons = this.api.dataControlSE?.myInitiativesListReportingByPortfolio?.length > 0 || this.api.rolesSE?.isAdmin;
-
+      : this.resultsListFilterSE.selectedStatus()
+      : this.resultsListFilterSE.selectedClarisaPortfolios();
+@let activeButtons = this.api.dataControlSE?.myInitiativesListReportingByPortfolio?.length > 0 || this.api.rolesSE?.isAdmin;
+<div class="page_section_header">
+  Results table
   <div class="action_buttons">
     <app-report-new-result-button [ngClass]="{ disabledButtons: !activeButtons }"> </app-report-new-result-button>
     <app-pr-button
@@ -22,121 +22,127 @@
       [tooltipText]="!activeButtons ? 'To update a result, please ensure that you have a role assigned in the active portfolio.' : null"
       (click)="activeButtons ? (this.api.dataControlSE.updateResultModal = true) : null"></app-pr-button>
   </div>
-
-  <br />
-  <app-results-list-filters [isAdmin]="this.api.rolesSE.isAdmin"></app-results-list-filters>
 </div>
 
-<div class="table">
-  <p-table
-    id="resultListTable"
-    #table
-    sortField="result_code"
-    [sortOrder]="-1"
-    [value]="filteredResults"
-    [loading]="this.resultsListService.showDeletingResultSpinner || (this.resultsListService.showLoadingResultSpinner && !filteredResults?.length)"
-    [showLoader]="false"
-    [paginator]="filteredResults?.length"
-    responsiveLayout="scroll"
-    [rows]="10"
-    styleClass="p-datatable-gridlines p-datatable-sm"
-    selectionMode="single"
-    [first]="this.resultsListFilterSE.text_to_search() && 0"
-    [rowsPerPageOptions]="[10, 50, 100]">
-    <ng-template pTemplate="header">
-      <tr>
-        @for (column of columnOrder; track column.attr) {
-          <th (click)="validateOrder(column.attr)" [pSortableColumn]="column.attr" [id]="column.attr" [style.width]="column.width">
-            <p-sortIcon [field]="column.attr"></p-sortIcon>
-            {{ column.title }}
-          </th>
-        }
+<div class="section_content">
+  <div class="local_container">
+    <br />
+    <app-results-list-filters [isAdmin]="this.api.rolesSE.isAdmin"></app-results-list-filters>
+  </div>
 
-        <th id="pdf" style="width: 50px">PDF</th>
+  <div class="table">
+    <p-table
+      id="resultListTable"
+      #table
+      sortField="result_code"
+      [sortOrder]="-1"
+      [value]="filteredResults"
+      [loading]="this.resultsListService.showDeletingResultSpinner || (this.resultsListService.showLoadingResultSpinner && !filteredResults?.length)"
+      [showLoader]="false"
+      [paginator]="filteredResults?.length"
+      responsiveLayout="scroll"
+      [rows]="10"
+      styleClass="p-datatable-gridlines p-datatable-sm"
+      selectionMode="single"
+      [first]="this.resultsListFilterSE.text_to_search() && 0"
+      [rowsPerPageOptions]="[10, 50, 100]">
+      <ng-template pTemplate="header">
+        <tr>
+          @for (column of columnOrder; track column.attr) {
+            <th (click)="validateOrder(column.attr)" [pSortableColumn]="column.attr" [id]="column.attr" [style.width]="column.width">
+              <div class="align-center">
+                <p-sortIcon [field]="column.attr"></p-sortIcon>
+                {{ column.title }}
+              </div>
+            </th>
+          }
 
-        @if (!this.api.rolesSE.platformIsClosed) {
-          <th id="action" style="width: 60px">Action</th>
-        }
-      </tr>
-    </ng-template>
+          <th id="pdf" style="width: 50px">PDF</th>
 
-    <ng-template pTemplate="body" let-result>
-      <tr>
-        @for (column of columnOrder; track column.attr; let i = $index) {
-          <td [class]="column.attr">
-            @for (subResult of result['results']; track subResult) {
-              <a
-                [class]="column.class"
-                [routerLink]="'/result/result-detail/' + subResult?.result_code"
-                [queryParams]="{ phase: subResult?.version_id }">
-                @if (i == 1) {
-                  @if (subResult.is_new && !subResult.legacy_id) {
-                    <div class="new_tag">New</div>
-                  } @else if (subResult.legacy_id) {
-                    <div class="new_tag pre">Pre 2022</div>
+          @if (!this.api.rolesSE.platformIsClosed) {
+            <th id="action" style="width: 60px">Action</th>
+          }
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-result>
+        <tr>
+          @for (column of columnOrder; track column.attr; let i = $index) {
+            <td [class]="column.attr">
+              @for (subResult of result['results']; track subResult) {
+                <a
+                  [class]="column.class"
+                  [routerLink]="'/result/result-detail/' + subResult?.result_code"
+                  [queryParams]="{ phase: subResult?.version_id }">
+                  @if (i == 1) {
+                    @if (subResult.is_new && !subResult.legacy_id) {
+                      <div class="new_tag">New</div>
+                    } @else if (subResult.legacy_id) {
+                      <div class="new_tag pre">Pre 2022</div>
+                    }
                   }
-                }
 
-                <div
-                  [pTooltip]="subResult.inQA ? 'This result is being QAed' : ''"
-                  [ngClass]="{ center_flex_100: column.center, 'text-center': column.center, 'truncate-multiline': column.attr === 'full_name' }"
-                  [innerHTML]="column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date: 'YYYY-MM-dd')"></div>
-              </a>
-            }
-          </td>
-        }
+                  <div
+                    [pTooltip]="subResult.inQA ? 'This result is being QAed' : ''"
+                    [ngClass]="{ center_flex_100: column.center, 'text-center': column.center, 'truncate-multiline': column.attr === 'full_name' }"
+                    [innerHTML]="column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date: 'YYYY-MM-dd')"></div>
+                </a>
+              }
+            </td>
+          }
 
-        <td>
-          <div class="subResults">
-            @for (subResult of result['results']; track subResult) {
-              <a
-                pTooltip="Click to view the pdf"
-                tooltipPosition="bottom"
-                [href]="'/reports/result-details/' + subResult?.result_code + '?phase=' + subResult?.version_id"
-                target="_blank"
-                rel="noopener noreferrer">
-                <app-pdf-icon></app-pdf-icon>
-              </a>
-            }
-          </div>
-        </td>
-
-        @if (!this.api.rolesSE.platformIsClosed) {
           <td>
             <div class="subResults">
               @for (subResult of result['results']; track subResult) {
-                <div class="icon_container text-center" aria-hidden="false">
-                  <i class="pi pi-ellipsis-v" (click)="menu.toggle($event); onPressAction(subResult)"> </i>
-                </div>
+                <a
+                  pTooltip="Click to view the pdf"
+                  tooltipPosition="bottom"
+                  [href]="'/reports/result-details/' + subResult?.result_code + '?phase=' + subResult?.version_id"
+                  target="_blank"
+                  rel="noopener noreferrer">
+                  <app-pdf-icon></app-pdf-icon>
+                </a>
               }
             </div>
           </td>
-        }
-      </tr>
-    </ng-template>
 
-    <ng-template pTemplate="loadingbody">
-      <div
-        [style]="{
-          height: filteredResults?.length ? '100%' : '400px'
-        }">
-        <app-custom-spinner [text]="this.resultsListService.showLoadingResultSpinner ? 'Loading results' : 'Deleting result'"></app-custom-spinner>
+          @if (!this.api.rolesSE.platformIsClosed) {
+            <td>
+              <div class="subResults">
+                @for (subResult of result['results']; track subResult) {
+                  <div class="icon_container text-center" aria-hidden="false">
+                    <i class="pi pi-ellipsis-v" (click)="menu.toggle($event); onPressAction(subResult)"> </i>
+                  </div>
+                }
+              </div>
+            </td>
+          }
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="loadingbody">
+        <div
+          [style]="{
+            height: filteredResults?.length ? '100%' : '400px'
+          }">
+          <app-custom-spinner [text]="this.resultsListService.showLoadingResultSpinner ? 'Loading results' : 'Deleting result'"></app-custom-spinner>
+        </div>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr style="height: 200px">
+          <td colspan="10" class="noDataText">There are no results for the selected filters.</td>
+        </tr>
+      </ng-template>
+    </p-table>
+
+    @if (filteredResults?.length) {
+      <div class="total" style="margin-top: 10px">
+        Total:
+        {{ filteredResults?.length }}/{{ this.api.dataControlSE.resultsList?.length }}
       </div>
-    </ng-template>
-
-    <ng-template pTemplate="emptymessage">
-      <tr style="height: 200px">
-        <td colspan="10" class="noDataText">There are no results for the selected filters.</td>
-      </tr>
-    </ng-template>
-  </p-table>
-
-  @if (filteredResults?.length) {
-    <div class="total" style="margin-top: 10px">
-      Total:
-      {{ filteredResults?.length }}/{{ this.api.dataControlSE.resultsList?.length }}
-    </div>
-  }
+    }
+  </div>
 </div>
 
 <p-popover #menu>
