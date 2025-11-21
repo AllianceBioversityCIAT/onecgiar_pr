@@ -2,13 +2,31 @@
   <h2 class="sidebar-title">Centers</h2>
 
   <div class="centers-list">
-    @for (center of centers(); track center.id) {
-      <div class="center-item" [class.selected]="isSelected(center.id)" (click)="selectCenter(center.id)">
-        <span class="material-icons-round center-icon">{{ center.icon }}</span>
-        <span class="center-name">{{ center.name }}</span>
-        @if (center.count > 0) {
-          <span class="center-count">{{ center.count }}</span>
-        }
+    <!-- All Centers - Manual -->
+    <div
+      class="center-item"
+      [class.selected]="isSelected(null)"
+      (click)="selectCenter(null)"
+      (keydown.enter)="selectCenter(null)"
+      (keydown.space)="selectCenter(null)"
+      tabindex="0"
+      role="button">
+      <span class="material-icons-round center-icon">inventory_2</span>
+      <span class="center-name">All Centers</span>
+    </div>
+
+    <!-- Centros desde el servicio -->
+    @for (center of centers(); track center.code) {
+      <div
+        class="center-item"
+        [class.selected]="isSelected(center.code)"
+        (click)="selectCenter(center.code)"
+        (keydown.enter)="selectCenter(center.code)"
+        (keydown.space)="selectCenter(center.code)"
+        tabindex="0"
+        role="button">
+        <span class="material-icons-round center-icon">apartment</span>
+        <span class="center-name">{{ center.acronym }}</span>
       </div>
     }
   </div>
