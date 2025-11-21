@@ -32,8 +32,9 @@
       <div class="filters-container">
         <!-- Dummy Filter 1 -->
         <div class="filter-item">
-          <label class="filter-label">Category</label>
+          <label class="filter-label" for="category-filter">Category</label>
           <p-multiselect
+            inputId="category-filter"
             [filter]="false"
             [options]="dummyOptions1"
             optionLabel="name"
@@ -44,8 +45,9 @@
 
         <!-- Dummy Filter 2 -->
         <div class="filter-item">
-          <label class="filter-label">Status</label>
+          <label class="filter-label" for="status-filter">Status</label>
           <p-multiselect
+            inputId="status-filter"
             [filter]="false"
             [options]="dummyOptions2"
             optionLabel="name"
