@@ -46,6 +46,7 @@ describe('TocResultsService', () => {
     resultRecord = {
       id: 1,
       version_id: 2,
+      result_type_id: 7,
       obj_version: { id: 3, phase_year: 2030 },
     };
     yearRecord = { year: 2030 };
@@ -245,6 +246,7 @@ describe('TocResultsService', () => {
         resultRecord,
         yearRecord,
         [10],
+        7,
       );
       expect(repository.getResultIndicatorMappings).toHaveBeenCalledWith(1, 2, [
         10,
@@ -308,6 +310,7 @@ describe('TocResultsService', () => {
         resultRecord,
         yearRecord,
         [20],
+        7,
       );
       expect(repository.getResultIndicatorMappings).toHaveBeenCalledWith(4, 5, [
         20,
