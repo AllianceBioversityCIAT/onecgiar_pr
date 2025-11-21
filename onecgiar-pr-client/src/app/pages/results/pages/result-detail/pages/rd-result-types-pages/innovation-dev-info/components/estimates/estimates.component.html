@@ -1,107 +1,150 @@
 <div class="segment">
-    <app-pr-field-header
-        [label]="'Estimation of total USD-value of pooled investment by CGIAR ' + ('term.entity.plural' | term: this.api.dataControlSE.currentResult?.portfolio)+ ' during the reporting period'"
-        [description]="headerDescriptions().n1" [useColon]="false"></app-pr-field-header>
-    <table [style]="!body.initiative_expected_investment.length ? 'margin-bottom: 5px;' : null" aria-label="Table showing estimation of total USD-value of pooled investment by CGIAR initiatives during the reporting period">
-        <tr>
-            <th>{{'term.entity.singular' | term: this.api.dataControlSE.currentResult?.portfolio}}</th>
-            <th>Total USD Value <br> <span>(in-cash + in-kind)</span> </th>
-            <th></th>
-        </tr>
-        <tr *ngFor="let item of body.initiative_expected_investment">
-            <div appFeedbackValidation labelText="Total USD Value" [isComplete]="checkValueAlert(item)">
-            </div>
+  <app-pr-field-header
+    [label]="
+      'Estimation of total USD-value of pooled investment by CGIAR ' +
+      ('term.entity.plural' | term: this.api.dataControlSE.currentResult?.portfolio) +
+      ' during the reporting period'
+    "
+    [description]="headerDescriptions().n1"
+    [useColon]="false"></app-pr-field-header>
+  <table
+    [style]="!body.initiative_expected_investment.length ? 'margin-bottom: 5px;' : null"
+    aria-label="Table showing estimation of total USD-value of pooled investment by CGIAR initiatives during the reporting period">
+    <tr>
+      <th>{{ 'term.entity.singular' | term: this.api.dataControlSE.currentResult?.portfolio }}</th>
+      <th>
+        Total USD Value <br />
+        <span>(in-cash + in-kind)</span>
+      </th>
+      <th></th>
+    </tr>
+    <tr *ngFor="let item of body.initiative_expected_investment">
+      <div appFeedbackValidation labelText="Total USD Value" [isComplete]="checkValueAlert(item)"></div>
 
-            <td> <strong>{{item.obj_result_initiative.obj_initiative.official_code}}</strong> -
-                {{item.obj_result_initiative.obj_initiative.name}}</td>
-            <td>
-                <app-pr-input placeholder="Write some..." type="currency" [(ngModel)]="item.kind_cash"
-                    [noDataText]="item.is_determined ? 'Not applicable':'Not provided'" [required]="false">
-                </app-pr-input>
-            </td>
+      <td>
+        <strong>{{ item.obj_result_initiative.obj_initiative.official_code }}</strong> - {{ item.obj_result_initiative.obj_initiative.name }}
+      </td>
+      <td>
+        <app-pr-input
+          placeholder="Write some..."
+          type="currency"
+          [(ngModel)]="item.kind_cash"
+          [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
+          [required]="false">
+        </app-pr-input>
+      </td>
 
-            <td>
-                <app-pr-radio-button optionLabel="name" optionValue="id" [(ngModel)]="item.is_determined"
-                    [options]="[{name:'This is yet to be determined',id:true}]">
-                </app-pr-radio-button>
-            </td>
-        </tr>
-    </table>
-    <div style="margin-bottom: 45px;" *ngIf="!body.initiative_expected_investment.length">
-        <app-no-data-text title=" There are no items available for this table."></app-no-data-text>
-    </div>
+      <td>
+        <app-pr-radio-button
+          optionLabel="name"
+          optionValue="id"
+          [(ngModel)]="item.is_determined"
+          [options]="[{ name: 'This is yet to be determined', id: true }]">
+        </app-pr-radio-button>
+      </td>
+    </tr>
+  </table>
+  <div style="margin-bottom: 45px" *ngIf="!body.initiative_expected_investment.length">
+    <app-no-data-text title=" There are no items available for this table."></app-no-data-text>
+  </div>
 </div>
 
 <div class="segment">
-    <app-pr-field-header
-        label="Estimated total USD-value of investment by CGIAR W3 or bilateral projects during the reporting period"
-        [description]="headerDescriptions().n2" [useColon]="false"></app-pr-field-header>
+  <app-pr-field-header
+    label="Estimated total USD-value of investment by CGIAR W3 or bilateral projects during the reporting period"
+    [description]="headerDescriptions().n2"
+    [useColon]="false"></app-pr-field-header>
 
-    <table style="margin-bottom: 5px;" aria-label="Table showing estimated total USD-value of investment by CGIAR W3 or bilateral projects during the reporting period">
-        <tr>
-            <th>Non-pooled project</th>
-            <th>Total USD Value <br> <span>(in-cash + in-kind)</span> </th>
-            <th></th>
-        </tr>
-        <tr *ngFor="let item of body.bilateral_expected_investment">
-            <div appFeedbackValidation labelText="Total USD Value" [isComplete]="checkValueAlert(item)">
-            </div>
+  <table
+    style="margin-bottom: 5px"
+    aria-label="Table showing estimated total USD-value of investment by CGIAR W3 or bilateral projects during the reporting period">
+    <tr>
+      <th>Non-pooled project</th>
+      <th>
+        Total USD Value <br />
+        <span>(in-cash + in-kind)</span>
+      </th>
+      <th></th>
+    </tr>
+    <tr *ngFor="let item of body.bilateral_expected_investment">
+      <div appFeedbackValidation labelText="Total USD Value" [isComplete]="checkValueAlert(item)"></div>
 
-            <td>
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    {{item?.obj_non_pooled_projetct?.grant_title}}
-                    <app-non-pooled-info [body]="item"></app-non-pooled-info>
-                </div>
-            </td>
-            <td>
-                <app-pr-input placeholder="Write some..." type="currency" [(ngModel)]="item.kind_cash"
-                    [noDataText]="item.is_determined ? 'Not applicable':'Not provided'" [required]="false">
-                </app-pr-input>
-            </td>
+      <td>
+        <div style="display: flex; justify-content: space-between; align-items: center">
+          @if (this.fieldsManagerSE.isP25()) {
+            {{ item?.obj_result_project.obj_clarisa_project.shortName }}
+            <app-non-pooled-info-p25 [body]="item"></app-non-pooled-info-p25>
+          } @else {
+            {{ item?.obj_non_pooled_projetct?.grant_title }}
+            <!-- <app-non-pooled-info [body]="item"></app-non-pooled-info> -->
+          }
+        </div>
+      </td>
+      <td>
+        <app-pr-input
+          placeholder="Write some..."
+          type="currency"
+          [(ngModel)]="item.kind_cash"
+          [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
+          [required]="false">
+        </app-pr-input>
+      </td>
 
-            <td>
-                <app-pr-radio-button optionLabel="name" optionValue="id" [(ngModel)]="item.is_determined"
-                    [options]="[{name:'This is yet to be determined',id:true}]">
-                </app-pr-radio-button>
-            </td>
-        </tr>
-    </table>
-    <app-no-data-text *ngIf="!body.bilateral_expected_investment.length"
-        title="There are no items available for this table."></app-no-data-text>
+      <td>
+        <app-pr-radio-button
+          optionLabel="name"
+          optionValue="id"
+          [(ngModel)]="item.is_determined"
+          [options]="[{ name: 'This is yet to be determined', id: true }]">
+        </app-pr-radio-button>
+      </td>
+    </tr>
+  </table>
+  <app-no-data-text *ngIf="!body.bilateral_expected_investment.length" title="There are no items available for this table."></app-no-data-text>
 
-    <div style="margin-bottom: 45px;">
-        <p>To add additional non-pooled projects, please go to <a class="open_route"
-                [href]="'/result/result-detail/'+ resultCode + '/theory-of-change?phase=' + versionId"
-                target="_blank">section
-                2</a> of this result.</p>
-    </div>
+  <div style="margin-bottom: 45px">
+    <p>
+      To add additional non-pooled projects, please go to
+      <a class="open_route" [href]="'/result/result-detail/' + resultCode + '/theory-of-change?phase=' + versionId" target="_blank">section 2</a> of
+      this result.
+    </p>
+  </div>
 </div>
 
 <div class="segment">
-    <app-pr-field-header label="Estimated total USD-value of (co-)investment by partners during the reporting period"
-        [description]="headerDescriptions().n3" [useColon]="false"></app-pr-field-header>
+  <app-pr-field-header
+    label="Estimated total USD-value of (co-)investment by partners during the reporting period"
+    [description]="headerDescriptions().n3"
+    [useColon]="false"></app-pr-field-header>
 
-    <table style="margin-bottom: 5px;" aria-label="Table showing Estimated total USD-value of (co-)investment by partners during the reporting period">
-        <tr>
-            <th>Partner</th>
-            <th>Total USD Value <br> <span>(in-cash + in-kind)</span> </th>
-            <th></th>
-        </tr>
-        <tr *ngFor=" let item of body.institutions_expected_investment">
-            <div appFeedbackValidation labelText="Total USD Value" [isComplete]="checkValueAlert(item)">
-            </div>
+  <table style="margin-bottom: 5px" aria-label="Table showing Estimated total USD-value of (co-)investment by partners during the reporting period">
+    <tr>
+      <th>Partner</th>
+      <th>
+        Total USD Value <br />
+        <span>(in-cash + in-kind)</span>
+      </th>
+      <th></th>
+    </tr>
+    <tr *ngFor="let item of body.institutions_expected_investment">
+      <div appFeedbackValidation labelText="Total USD Value" [isComplete]="checkValueAlert(item)"></div>
 
-            <td>
-                <div class="name">{{item['obj_result_institution']?.obj_institutions.name}}</div>
-                <div class="type"> <strong>Institution type:</strong>
-                    {{item['obj_result_institution']?.obj_institutions?.obj_institution_type_code.name}}
-                </div>
-            </td>
-            <td>
-                <app-pr-input placeholder="Write some..." type="currency" [(ngModel)]="item.kind_cash"
-                    [noDataText]="item.is_determined ? 'Not applicable':'Not provided'" [required]="false">
-                </app-pr-input>
-            </td>
+      <td>
+        <div class="name">{{ item['obj_result_institution']?.obj_institutions.name }}</div>
+        <div class="type">
+          <strong>Institution type:</strong>
+          {{ item['obj_result_institution']?.obj_institutions?.obj_institution_type_code.name }}
+        </div>
+      </td>
+      <td>
+        <app-pr-input
+          placeholder="Write some..."
+          type="currency"
+          [(ngModel)]="item.kind_cash"
+          [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
+          [required]="false">
+        </app-pr-input>
+      </td>
 
             <td>
                 <app-pr-radio-button optionLabel="name" optionValue="id" [(ngModel)]="item.is_determined"
@@ -112,8 +155,7 @@
         </tr>
     </table>
 
-    <app-no-data-text *ngIf="!body.institutions_expected_investment.length"
-        title="There are no items available for this table."></app-no-data-text>
+  <app-no-data-text *ngIf="!body.institutions_expected_investment.length" title="There are no items available for this table."></app-no-data-text>
 
     <div style="margin-bottom: 45px;">
         <p>To add additional partners, please go to <a class="open_route"
