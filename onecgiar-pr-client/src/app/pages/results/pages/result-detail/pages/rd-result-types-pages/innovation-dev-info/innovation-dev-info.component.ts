@@ -50,7 +50,6 @@ export class InnovationDevInfoComponent {
       this.convertOrganizations(response?.innovatonUse?.organization);
       this.innovationDevInfoBody.innovation_user_to_be_determined = Boolean(this.innovationDevInfoBody.innovation_user_to_be_determined);
       this.savingSection = false;
-      console.log(response);
     });
     this.api.resultsSE.GET_questionsInnovationDevelopmentP25().subscribe(({ response }) => {
       this.innovationDevelopmentQuestions = response;

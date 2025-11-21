@@ -9,7 +9,7 @@ import { InstitutionsService } from '../../../../../../../../../../../shared/ser
   styleUrls: ['./non-pooled-info.component.scss'],
   standalone: false
 })
-export class NonPooledInfoComponentP25 {
+export class NonPooledInfoP25Component {
   @Input() body: any;
   visible = false;
 
