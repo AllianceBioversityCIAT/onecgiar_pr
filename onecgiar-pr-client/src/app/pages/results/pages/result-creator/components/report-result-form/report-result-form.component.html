@@ -57,6 +57,7 @@
             [disabled]="validating">
             <app-pr-button
               padding="medium"
+              [verticalMargin]="1"
               [text]="validating ? 'Fetching metadata from CGSpace' : 'Sync'"
               icon="sync"
               [rotating]="validating"></app-pr-button>
