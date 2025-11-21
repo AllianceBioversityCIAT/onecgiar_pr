@@ -185,11 +185,7 @@ export class InnovationUseService {
 
       await this.saveInitiativeInvestment(resultId, user.id, innovationUseDto);
       await this.syncBudgetForResults(resultId, user.id);
-      await this.saveBillateralInvestment(
-        resultId,
-        user.id,
-        innovationUseDto,
-      );
+      await this.saveBillateralInvestment(resultId, user.id, innovationUseDto);
       await this.savePartnerInvestment(resultId, user.id, innovationUseDto);
 
       if (!has_innovation_link) {
@@ -796,62 +792,62 @@ export class InnovationUseService {
       }
 
       for (const i of inv) {
-          const rbp = await this._resultByProjectRepository.findOne({
-            where: {
-              result_id: resultId,
-              is_active: true,
-              project_id: i.id,
-            },
-          });
+        const rbp = await this._resultByProjectRepository.findOne({
+          where: {
+            result_id: resultId,
+            is_active: true,
+            project_id: i.id,
+          },
+        });
 
-          console.log('Encontró', rbp);
-          if (!rbp) {
-            this.logger.error(
-              `[saveBillateralInvestment] ResultByProject not found for resultId: ${resultId}, project_id: ${i.id}`,
-            );
-            throw {
-              response: {},
-              message: `ResultByProject not found for resultId: ${resultId}, project_id: ${i.id}`,
-              status: HttpStatus.NOT_FOUND,
-            };
-          }
+        console.log('Encontró', rbp);
+        if (!rbp) {
+          this.logger.error(
+            `[saveBillateralInvestment] ResultByProject not found for resultId: ${resultId}, project_id: ${i.id}`,
+          );
+          throw {
+            response: {},
+            message: `ResultByProject not found for resultId: ${resultId}, project_id: ${i.id}`,
+            status: HttpStatus.NOT_FOUND,
+          };
+        }
 
-          const rbb = await this._resultBilateralBudgetRepository.findOne({
-            where: {
-              result_project_id: rbp.id,
-              is_active: true,
-            },
-          });
+        const rbb = await this._resultBilateralBudgetRepository.findOne({
+          where: {
+            result_project_id: rbp.id,
+            is_active: true,
+          },
+        });
 
-          if (rbb) {
-            rbb.kind_cash =
+        if (rbb) {
+          rbb.kind_cash =
+            i.is_determined === true
+              ? null
+              : i.kind_cash === null
+                ? null
+                : Number(i.kind_cash);
+          rbb.is_determined = i.is_determined;
+          rbb.last_updated_by = user;
+          rbb.non_pooled_projetct_id = null;
+
+          await this._resultBilateralBudgetRepository.save(rbb);
+        } else {
+          const newRbb = this._resultBilateralBudgetRepository.create({
+            result_project_id: rbp.id,
+            non_pooled_projetct_id: null,
+            kind_cash:
               i.is_determined === true
                 ? null
                 : i.kind_cash === null
                   ? null
-                  : Number(i.kind_cash);
-            rbb.is_determined = i.is_determined;
-            rbb.last_updated_by = user;
-            rbb.non_pooled_projetct_id = null;
+                  : Number(i.kind_cash),
+            is_determined: i.is_determined,
+            created_by: user,
+            last_updated_by: user,
+          });
 
-            await this._resultBilateralBudgetRepository.save(rbb);
-          } else {
-            const newRbb = this._resultBilateralBudgetRepository.create({
-              result_project_id: rbp.id,
-              non_pooled_projetct_id: null,
-              kind_cash:
-                i.is_determined === true
-                  ? null
-                  : i.kind_cash === null
-                    ? null
-                    : Number(i.kind_cash),
-              is_determined: i.is_determined,
-              created_by: user,
-              last_updated_by: user,
-            });
-
-            await this._resultBilateralBudgetRepository.save(newRbb);
-          }
+          await this._resultBilateralBudgetRepository.save(newRbb);
+        }
       }
       return { valid: true };
     } catch (error) {
