@@ -1,1 +1,65 @@
-<p>results-review-filters works!</p>
+<div class="filters-bar">
+  <!-- Search input -->
+  <p-iconfield>
+    <p-inputicon styleClass="pi pi-search" />
+    <input type="text" pInputText placeholder="Find result" [(ngModel)]="searchText" [style]="{ width: '350px' }" />
+  </p-iconfield>
+
+  <div class="filter-actions">
+    <!-- Apply filters button -->
+    <p-button label="Apply filters" icon="pi pi-filter" (onClick)="openFiltersDrawer()" [style]="{ marginLeft: '12px' }" />
+
+    <!-- Clear filters button -->
+    <p-button label="Clear Filters" variant="outlined" (onClick)="clearFilters()" />
+  </div>
+</div>
+
+<!-- Custom Drawer -->
+<div class="custom-drawer-container" [class.visible]="visible()" [style.top.px]="totalTopHeight()">
+  <div class="custom-drawer" [class.open]="visible()" [style.--drawer-top-offset.px]="totalTopHeight()">
+    <div class="drawer-content">
+      <!-- Drawer Header -->
+      <div class="drawer-header">
+        <h3 class="drawer-title">Table Filters</h3>
+        <button class="close-button" (click)="closeFiltersDrawer()" aria-label="Close">
+          <i class="pi pi-times"></i>
+        </button>
+      </div>
+
+      <p class="drawer-description">Filter your table data by applying custom criteria.</p>
+
+      <!-- Filters Container -->
+      <div class="filters-container">
+        <!-- Dummy Filter 1 -->
+        <div class="filter-item">
+          <label class="filter-label">Category</label>
+          <p-multiselect
+            [filter]="false"
+            [options]="dummyOptions1"
+            optionLabel="name"
+            placeholder="Select category"
+            [maxSelectedLabels]="1"
+            [style]="{ width: '100%' }" />
+        </div>
+
+        <!-- Dummy Filter 2 -->
+        <div class="filter-item">
+          <label class="filter-label">Status</label>
+          <p-multiselect
+            [filter]="false"
+            [options]="dummyOptions2"
+            optionLabel="name"
+            placeholder="Select status"
+            [maxSelectedLabels]="1"
+            [style]="{ width: '100%' }" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer buttons -->
+    <div class="drawer-footer">
+      <p-button label="Cancel" variant="outlined" [style]="{ width: '100%' }" (onClick)="closeFiltersDrawer()" />
+      <p-button label="Apply filters" [style]="{ width: '100%' }" (onClick)="applyFilters()" />
+    </div>
+  </div>
+</div>
