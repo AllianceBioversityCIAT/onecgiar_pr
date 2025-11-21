@@ -42,6 +42,7 @@ export class PrInputComponent implements ControlValueAccessor {
   @Input() descInlineStyles?: string = '';
   @Input() labelDescInlineStyles?: string = '';
   @Input() fieldRef: string | number;
+  @Input() customLabel?: string;
 
   fieldsManager = inject(FieldsManagerService);
 
