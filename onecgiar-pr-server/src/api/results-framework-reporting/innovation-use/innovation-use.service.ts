@@ -189,10 +189,7 @@ export class InnovationUseService {
       });
 
       await this.saveInitiativeInvestment(resultId, user.id, innovationUseDto);
-      await this.syncBudgetForResults(
-        resultId,
-        user.id,
-      );
+      await this.syncBudgetForResults(resultId, user.id);
       await this.saveBillateralInvestment(
         resultId,
         result_version.version_id,
@@ -609,13 +606,12 @@ export class InnovationUseService {
           relations: {
             obj_result_project: {
               obj_clarisa_project: true,
-            }
+            },
           },
         });
 
       const investment_bilateral = investment_bilateral_raw.map((item) => {
-        const funder =
-          item.obj_result_project?.obj_clarisa_project ?? null;
+        const funder = item.obj_result_project?.obj_clarisa_project ?? null;
 
         const name =
           item.obj_result_project?.obj_clarisa_project?.shortName ?? null;
@@ -766,24 +762,25 @@ export class InnovationUseService {
 
   async syncBudgetForResults(resultId: number, userId: number) {
     const resultProjects = await this._resultByProjectRepository.find({
-      where: { result_id: resultId, is_active: true }
+      where: { result_id: resultId, is_active: true },
     });
 
     if (!resultProjects.length) return;
 
     for (const rp of resultProjects) {
-      const existingBudget = await this._resultBilateralBudgetRepository.findOne({
-        where: {
-          result_project_id: rp.id,
-          is_active: true
-        }
-      });
+      const existingBudget =
+        await this._resultBilateralBudgetRepository.findOne({
+          where: {
+            result_project_id: rp.id,
+            is_active: true,
+          },
+        });
 
       if (!existingBudget) {
         const newBudget = this._resultBilateralBudgetRepository.create({
           result_project_id: rp.id,
           is_active: true,
-          created_by: userId
+          created_by: userId,
         });
 
         await this._resultBilateralBudgetRepository.save(newBudget);
