@@ -1,1 +1,15 @@
-<p>indicators-sidebar works!</p>
+<div class="sidebar-container">
+  <h2 class="sidebar-title">Centers</h2>
+
+  <div class="centers-list">
+    @for (center of centers(); track center.id) {
+      <div class="center-item" [class.selected]="isSelected(center.id)" (click)="selectCenter(center.id)">
+        <span class="material-icons-round center-icon">{{ center.icon }}</span>
+        <span class="center-name">{{ center.name }}</span>
+        @if (center.count > 0) {
+          <span class="center-count">{{ center.count }}</span>
+        }
+      </div>
+    }
+  </div>
+</div>

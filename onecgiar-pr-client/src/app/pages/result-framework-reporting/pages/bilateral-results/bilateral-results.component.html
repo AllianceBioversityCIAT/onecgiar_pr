@@ -1,7 +1,12 @@
-<app-page-header>yte</app-page-header>
+<div class="bilateral-results-layout">
+  <header app-page-header class="layout-header">yte</header>
 
-<div app-indicators-sidebar></div>
+  <div class="layout-content">
+    <aside app-indicators-sidebar class="sidebar"></aside>
 
-<app-results-review-container><p>results-review-container works!</p> </app-results-review-container>
-
-<app-results-review-filters></app-results-review-filters>
+    <main app-results-review-container class="main-container">
+      <div app-results-review-filters class="filters"></div>
+      <p>results-review-container works!</p>
+    </main>
+  </div>
+</div>
