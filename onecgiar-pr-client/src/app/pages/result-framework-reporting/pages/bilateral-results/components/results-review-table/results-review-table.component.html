@@ -1,1 +1,103 @@
-<p>results-review-table works!</p>
+<p-table
+  styleClass="p-datatable-gridlines p-datatable-sm bilateral-results-table"
+  [value]="tableData()"
+  sortField="group_title"
+  [sortOrder]="1"
+  responsiveLayout="scroll"
+  dataKey="group_title"
+  sortMode="single"
+  rowGroupMode="subheader"
+  groupRowsBy="group_title"
+  [expandedRowKeys]="expandedRowKeys()">
+  
+  <!-- Header -->
+  <ng-template pTemplate="header">
+    <tr>
+      <th style="width: 5%">Code</th>
+      <th style="width: 15%">Title</th>
+      <th style="width: 10%">Indicator category</th>
+      <th style="width: 8%">Status</th>
+      <th style="width: 18%">TOC result</th>
+      <th style="width: 15%">Indicator</th>
+      <th style="width: 10%">Submission date</th>
+      <th style="width: 19%; text-align: center">Actions</th>
+    </tr>
+  </ng-template>
+
+  <!-- Group Header -->
+  <ng-template pTemplate="groupheader" let-item let-expanded="expanded">
+    <tr>
+      <td colspan="8" class="group-header-cell">
+        <div class="group-header-content" pRipple [pRowToggler]="item">
+          <button
+            type="button"
+            pButton
+            class="p-button-text p-button-rounded group-toggle-button"
+            [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'">
+          </button>
+          <span class="group-title">{{ item.group_title }}</span>
+        </div>
+      </td>
+    </tr>
+  </ng-template>
+
+  <!-- Expanded Rows -->
+  <ng-template #expandedrow let-group>
+    @for (result of group.results; track result.code) {
+      <tr>
+        <td class="code-cell">{{ result.code }}</td>
+        <td class="title-cell">{{ result.title }}</td>
+        <td class="category-cell">{{ result.indicator_category }}</td>
+        <td class="status-cell">
+          <span class="status-badge pending">{{ result.status }}</span>
+        </td>
+        <td class="toc-cell">{{ result.toc_result }}</td>
+        <td class="indicator-cell">{{ result.indicator }}</td>
+        <td class="date-cell">{{ result.submission_date }}</td>
+        <td class="actions-cell">
+          <div class="actions-container">
+            <button
+              pButton
+              type="button"
+              class="action-button approve-button"
+              (click)="approveResult(result)"
+              pTooltip="Approve"
+              tooltipPosition="top">
+              <i class="material-icons-round">check_circle</i>
+              <span>APPROVE</span>
+            </button>
+            <button
+              pButton
+              type="button"
+              class="action-button reject-button"
+              (click)="rejectResult(result)"
+              pTooltip="Reject"
+              tooltipPosition="top">
+              <i class="material-icons-round">cancel</i>
+              <span>REJECT</span>
+            </button>
+            <button
+              pButton
+              type="button"
+              class="action-button adjust-button"
+              (click)="adjustTOC(result)"
+              pTooltip="Adjust TOC"
+              tooltipPosition="top">
+              <i class="material-icons-round">edit</i>
+              <span>Adjust TOC</span>
+            </button>
+          </div>
+        </td>
+      </tr>
+    }
+  </ng-template>
+
+  <!-- Empty Message -->
+  <ng-template pTemplate="emptymessage">
+    <tr style="height: 200px">
+      <td colspan="8" class="empty-message">
+        No results found.
+      </td>
+    </tr>
+  </ng-template>
+</p-table>

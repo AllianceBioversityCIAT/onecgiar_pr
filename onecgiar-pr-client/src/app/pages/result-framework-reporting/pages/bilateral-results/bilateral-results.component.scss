@@ -50,7 +50,8 @@
 
 .results-content {
   flex: 1;
-  padding: 24px;
+  padding: 16px 24px 24px 24px;
   overflow-y: auto;
+  min-height: 0; // Para que el flex respete el overflow
 }
 
