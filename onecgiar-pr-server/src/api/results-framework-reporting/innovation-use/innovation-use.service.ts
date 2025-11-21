@@ -183,16 +183,10 @@ export class InnovationUseService {
         innov_use_2030_to_be_determined,
       );
 
-      const result_version = await this._resultRepository.findOne({
-        where: { id: resultId },
-        select: ['version_id'],
-      });
-
       await this.saveInitiativeInvestment(resultId, user.id, innovationUseDto);
       await this.syncBudgetForResults(resultId, user.id);
       await this.saveBillateralInvestment(
         resultId,
-        result_version.version_id,
         user.id,
         innovationUseDto,
       );
@@ -790,7 +784,6 @@ export class InnovationUseService {
 
   async saveBillateralInvestment(
     resultId: number,
-    result_version: number,
     user: number,
     { investment_bilateral: inv }: CreateInnovationUseDto,
   ) {
@@ -803,8 +796,6 @@ export class InnovationUseService {
       }
 
       for (const i of inv) {
-        if (result_version === 34) {
-          // ========  result_version Reporting P25 ========
           const rbp = await this._resultByProjectRepository.findOne({
             where: {
               result_id: resultId,
@@ -813,6 +804,7 @@ export class InnovationUseService {
             },
           });
 
+          console.log('Encontró', rbp);
           if (!rbp) {
             this.logger.error(
               `[saveBillateralInvestment] ResultByProject not found for resultId: ${resultId}, project_id: ${i.id}`,
@@ -860,63 +852,6 @@ export class InnovationUseService {
 
             await this._resultBilateralBudgetRepository.save(newRbb);
           }
-        } else {
-          const npp = await this._nonPooledProjectRepository.findOne({
-            where: {
-              results_id: resultId,
-              is_active: true,
-              funder_institution_id: i.id,
-            },
-          });
-
-          if (!npp) {
-            this.logger.error(
-              `[saveBillateralInvestment] Non-pooled project not found for resultId: ${resultId}, id: ${i.id}`,
-            );
-            throw {
-              response: {},
-              message: `Non-pooled project not found for resultId: ${resultId}, id: ${i.id}`,
-              status: HttpStatus.NOT_FOUND,
-            };
-          }
-
-          const rbb = await this._resultBilateralBudgetRepository.findOne({
-            where: {
-              non_pooled_projetct_id: npp.id,
-              is_active: true,
-            },
-          });
-
-          if (rbb) {
-            rbb.kind_cash =
-              i.is_determined === true
-                ? null
-                : i.kind_cash === null
-                  ? null
-                  : Number(i.kind_cash);
-            rbb.is_determined = i.is_determined;
-            rbb.result_project_id = null;
-            rbb.last_updated_by = user;
-
-            await this._resultBilateralBudgetRepository.save(rbb);
-          } else {
-            const newRbb = this._resultBilateralBudgetRepository.create({
-              non_pooled_projetct_id: npp.id,
-              result_project_id: null,
-              kind_cash:
-                i.is_determined === true
-                  ? null
-                  : i.kind_cash === null
-                    ? null
-                    : Number(i.kind_cash),
-              is_determined: i.is_determined,
-              created_by: user,
-              last_updated_by: user,
-            });
-
-            await this._resultBilateralBudgetRepository.save(newRbb);
-          }
-        }
       }
       return { valid: true };
     } catch (error) {
