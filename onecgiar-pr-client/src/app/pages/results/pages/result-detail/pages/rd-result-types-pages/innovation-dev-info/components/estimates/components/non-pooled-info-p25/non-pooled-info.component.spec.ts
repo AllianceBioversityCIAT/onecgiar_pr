@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { NonPooledInfoComponent } from './non-pooled-info.component';
+import { NonPooledInfoP25Component } from './non-pooled-info.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { PrSelectComponent } from '../../../../../../../../../../../custom-fields/pr-select/pr-select.component';
 import { PrButtonComponent } from '../../../../../../../../../../../custom-fields/pr-button/pr-button.component';
@@ -12,14 +12,14 @@ import { FormsModule } from '@angular/forms';
 import { YesOrNotByBooleanPipe } from '../../../../../../../../../../..//custom-fields/pipes/yes-or-not-by-boolean.pipe';
 import { TooltipModule } from 'primeng/tooltip';
 
-describe('NonPooledInfoComponent', () => {
-  let component: NonPooledInfoComponent;
-  let fixture: ComponentFixture<NonPooledInfoComponent>;
+describe('NonPooledInfoP25Component', () => {
+  let component: NonPooledInfoP25Component;
+  let fixture: ComponentFixture<NonPooledInfoP25Component>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [
-        NonPooledInfoComponent,
+        NonPooledInfoP25Component,
         PrSelectComponent,
         PrButtonComponent,
         PrInputComponent,
@@ -31,14 +31,14 @@ describe('NonPooledInfoComponent', () => {
       imports: [HttpClientTestingModule, DialogModule, FormsModule, TooltipModule]
     }).compileComponents();
 
-    fixture = TestBed.createComponent(NonPooledInfoComponent);
+    fixture = TestBed.createComponent(NonPooledInfoP25Component);
     component = fixture.componentInstance;
     component.body = {
-      obj_non_pooled_projetct: {
-        funder_institution_id: 1,
-        grant_title: '',
-        center_grant_id: 1,
-        lead_center_id: ''
+      obj_result_project: {
+        obj_clarisa_project: {
+          id: 1,
+          shortName: ''
+        }
       }
     };
     fixture.detectChanges();
