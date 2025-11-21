@@ -2,7 +2,7 @@
   <div class="position-relative">
     <app-under-construction-point *ngIf="this.underConstruction"></app-under-construction-point>
     <app-pr-field-header
-      [label]="customLabel || this.label || 'Title'"
+      [label]="customLabel || this.label"
       [description]="this.description"
       [required]="this.required"
       [readOnly]="(readOnly || this.rolesSE.readOnly) && !isStatic"
