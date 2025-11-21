@@ -35,13 +35,22 @@
   display: flex;
   flex-direction: column;
   min-width: 0; // Importante para evitar que el contenido desborde
+  background-color: #FFFFFF;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  margin: 16px;
+  border-radius: 8px;
 }
 
 .filters {
   flex-shrink: 0;
   // Los filtros ocuparán su altura natural sin hacer scroll
-  padding: 16px;
-  background-color: #fff;
-  border-bottom: 1px solid #e0e0e0;
+  padding: 16px 24px;
+  background-color: #FFFFFF;
+}
+
+.results-content {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
 }
 
