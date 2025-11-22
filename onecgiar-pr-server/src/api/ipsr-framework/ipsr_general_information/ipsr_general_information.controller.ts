@@ -1,10 +1,14 @@
-import { Controller, Body, Patch, Param, Version, Get } from '@nestjs/common';
+import { Controller, Body, Patch, Param, Version, Get, UseInterceptors } from '@nestjs/common';
 import { IpsrGeneralInformationService } from './ipsr_general_information.service';
 import { UpdateIpsrGeneralInformationDto } from './dto/update-ipsr_general_information.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
+import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
+import { ApiTags } from '@nestjs/swagger';
 
-@Controller('ipsr-general-information')
+@Controller()
+@UseInterceptors(ResponseInterceptor)
+@ApiTags('IPSR - General information P25')
 export class IpsrGeneralInformationController {
   constructor(
     private readonly ipsrGeneralInformationService: IpsrGeneralInformationService,

@@ -20,6 +20,10 @@ import { IpsrRepository } from '../../ipsr/ipsr.repository';
 
 @Injectable()
 export class IpsrGeneralInformationService {
+    private readonly _logger: Logger = new Logger(
+      IpsrGeneralInformationService.name,
+    );
+
   constructor(
     private readonly _resultRepository: ResultRepository,
     private readonly _versioningService: VersioningService,
@@ -29,7 +33,6 @@ export class IpsrGeneralInformationService {
     protected readonly _ipsrRespository: IpsrRepository,
     private readonly _genderTagRepository: GenderTagRepository,
     private readonly _ipsrService: IpsrService,
-    private readonly _logger: Logger,
     @Optional()
     @Inject(AdUserService)
     private readonly _adUserService?: AdUserService,
