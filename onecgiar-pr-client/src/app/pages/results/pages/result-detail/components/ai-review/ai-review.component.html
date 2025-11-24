@@ -40,7 +40,11 @@
 
         <div class="current-version">
           <label class="version-label">Result version</label>
-          <app-pr-input type="text" [readOnly]="false" [(ngModel)]="field.original_text" placeholder=""> </app-pr-input>
+          @if ($index === 1) {
+            <app-pr-textarea [readOnly]="false" [(ngModel)]="field.original_text" placeholder=""> </app-pr-textarea>
+          } @else {
+            <app-pr-input type="text" [readOnly]="false" [(ngModel)]="field.original_text" placeholder=""> </app-pr-input>
+          }
         </div>
 
         <app-pr-button
