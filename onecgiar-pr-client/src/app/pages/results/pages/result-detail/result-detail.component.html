@@ -1,3 +1,6 @@
+<app-page-header>
+  {{ this.dataControlSE.currentResultSectionName() }}
+</app-page-header>
 <div class="local_grid">
   <div>
     <div class="panel_menu">
@@ -11,7 +14,6 @@
 
     <div class="section_container">
       <div class="fixed_data_container">
-        <div class="section_name">{{ this.dataControlSE.currentResultSectionName() }}</div>
         <div class="metadata">
           <div class="item">
             Result code: <span>{{ this.api.resultsSE.currentResultCode }}</span>

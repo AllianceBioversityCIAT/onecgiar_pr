@@ -28,6 +28,7 @@ import { DataControlService } from '../../../../shared/services/data-control.ser
 import { jest } from '@jest/globals';
 import { ResultLevelService } from '../result-creator/services/result-level.service';
 import { signal } from '@angular/core';
+import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
 
 jest.useFakeTimers();
 
@@ -115,7 +116,8 @@ describe('ResultDetailComponent', () => {
         HttpClientTestingModule,
         RouterTestingModule,
         ToastModule,
-        DialogModule
+        DialogModule,
+        PageHeaderComponent
       ],
       providers: [
         MessageService,

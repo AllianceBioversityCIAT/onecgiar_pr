@@ -1,21 +1,29 @@
 @use '../../../../../styles/fonts.scss' as fonts;
 
+// Estilos específicos para el page-header en este componente
+app-page-header {
+  position: sticky;
+  top: 79px;
+  z-index: 10;
+  display: block;
+}
+
 .local_grid {
   display: grid;
   grid-template-columns: 300px 1fr;
-  grid-template-rows: minmax(calc(100vh - 180px), 1fr);
+  grid-template-rows: minmax(calc(100vh - 230px), 1fr);
   padding: 25px 0px 25px 15px;
   height: 100%;
   box-sizing: border-box;
 
   .panel_menu {
     position: sticky;
-    height: calc(100vh - 180px);
+    height: calc(100vh - 230px);
     width: 300px;
-    top: 79px;
+    top: 144px;
     margin-bottom: 25px;
     transition: all cubic-bezier(0.075, 0.82, 0.165, 1) 0.1s;
-    z-index: 0;
+    z-index: 5;
   }
 
   .section_container {
@@ -27,12 +35,6 @@
       display: flex;
       flex-direction: column;
       gap: 30px;
-
-      .section_name {
-        @include fonts.pr-typography('h3');
-        color: var(--pr-color-accents-4);
-        font-weight: 400;
-      }
 
       .metadata {
         display: flex;

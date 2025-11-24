@@ -17,6 +17,7 @@ import { ToastModule } from 'primeng/toast';
 import { PhaseSwitcherModule } from '../../../../shared/components/phase-switcher/phase-switcher.module';
 import { AiReviewComponent } from './components/ai-review/ai-review.component';
 import { TooltipModule } from 'primeng/tooltip';
+import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
 
 @NgModule({
   declarations: [ResultDetailComponent, PanelMenuComponent, PanelMenuPipe, NoEditContainerComponent],
@@ -33,7 +34,8 @@ import { TooltipModule } from 'primeng/tooltip';
     ToastModule,
     PhaseSwitcherModule,
     AiReviewComponent,
-    TooltipModule
+    TooltipModule,
+    PageHeaderComponent
   ]
 })
 export class ResultDetailModule {}
