@@ -70,11 +70,6 @@ describe('IpsrGeneralInformationService', () => {
     findOne: jest.fn(),
   };
 
-  const mockLogger = {
-    log: jest.fn(),
-    warn: jest.fn(),
-  };
-
   const mockUser: TokenDto = {
     id: 10,
     first_name: 'Test',
@@ -90,6 +85,8 @@ describe('IpsrGeneralInformationService', () => {
   };
 
   beforeEach(async () => {
+    jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation();
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         IpsrGeneralInformationService,
@@ -109,7 +106,6 @@ describe('IpsrGeneralInformationService', () => {
         { provide: IpsrService, useValue: mockIpsrService },
         { provide: AdUserService, useValue: mockAdUserService },
         { provide: AdUserRepository, useValue: mockAdUserRepo },
-        { provide: Logger, useValue: mockLogger },
       ],
     }).compile();
 
@@ -118,7 +114,10 @@ describe('IpsrGeneralInformationService', () => {
     );
   });
 
-  afterEach(() => jest.clearAllMocks());
+  afterEach(() => {
+    jest.clearAllMocks();
+    jest.restoreAllMocks();
+  });
 
   describe('generalInformation', () => {
     const mockDto: UpdateIpsrGeneralInformationDto = {
@@ -241,7 +240,7 @@ describe('IpsrGeneralInformationService', () => {
       expect(
         mockAdUserService.adUserRepository.saveFromADUser,
       ).toHaveBeenCalled();
-      expect(mockLogger.log).toHaveBeenCalledWith(
+      expect(Logger.prototype.log).toHaveBeenCalledWith(
         `Created new AD user: ${newAdUser.mail} with ID: ${newAdUser.id}`,
       );
     });
@@ -263,7 +262,7 @@ describe('IpsrGeneralInformationService', () => {
       expect(mockAdUserService.getUserByIdentifier).toHaveBeenCalledWith(
         'existing@example.com',
       );
-      expect(mockLogger.log).toHaveBeenCalledWith(
+      expect(Logger.prototype.log).toHaveBeenCalledWith(
         `Found existing AD user: ${existingAdUser.mail} with ID: ${existingAdUser.id}`,
       );
     });
@@ -348,13 +347,15 @@ describe('IpsrGeneralInformationService', () => {
 
       await service.generalInformation(1, dtoWithAdUser, mockUser);
 
-      expect(mockLogger.warn).toHaveBeenCalledWith(
+      expect(Logger.prototype.warn).toHaveBeenCalledWith(
         'Failed to process lead_contact_person_data: AD Service Error',
       );
     });
 
     it('should return error via handler if something fails', async () => {
       mockResultRepo.findOneBy.mockRejectedValue(new Error('Database error'));
+
+      const result = await service.generalInformation(1, mockDto, mockUser);
 
       expect(mockErrorHandler.returnErrorRes).toHaveBeenCalledWith({
         error: expect.any(Error),
@@ -430,7 +431,6 @@ describe('IpsrGeneralInformationService', () => {
       mockDiscontinuedRepo.find.mockResolvedValue([]);
       mockAdUserRepo.findOne.mockRejectedValue(new Error('User not found'));
 
-      // Mock console.warn
       jest.spyOn(console, 'warn').mockImplementation(() => {});
 
       const result = await service.findOneInnovation(1);
@@ -442,12 +442,13 @@ describe('IpsrGeneralInformationService', () => {
         expect.any(Error),
       );
 
-      // Restore console.warn
       jest.restoreAllMocks();
     });
 
     it('should handle result not found', async () => {
       mockIpsrRepo.getResultInnovationById.mockResolvedValue([]);
+
+      const result = await service.findOneInnovation(1);
 
       expect(mockErrorHandler.returnErrorRes).toHaveBeenCalledWith({
         error: expect.any(Error),
@@ -459,6 +460,8 @@ describe('IpsrGeneralInformationService', () => {
       mockIpsrRepo.getResultInnovationById.mockRejectedValue(
         new Error('Database error'),
       );
+
+      const result = await service.findOneInnovation(1);
 
       expect(mockErrorHandler.returnErrorRes).toHaveBeenCalledWith({
         error: expect.any(Error),
@@ -475,7 +478,6 @@ describe('IpsrGeneralInformationService', () => {
       mockGenderTagRepo.findOne.mockResolvedValue(tag);
       mockImpactAreaCompRepo.findOne.mockResolvedValue(component);
 
-      // Access private method
       const result = await (service as any).validateTagAndComponent(
         3,
         5,
