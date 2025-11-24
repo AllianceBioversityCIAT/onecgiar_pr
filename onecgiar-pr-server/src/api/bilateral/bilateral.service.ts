@@ -18,7 +18,7 @@ import { HandlersError } from '../../shared/handlers/error.utils';
 import { Result, SourceEnum } from '../results/entities/result.entity';
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
 import { ClarisaRegionsRepository } from '../../clarisa/clarisa-regions/ClariasaRegions.repository';
-import { In, Like } from 'typeorm';
+import { DataSource, In, Like } from 'typeorm';
 import { ClarisaGeographicScopeRepository } from '../../clarisa/clarisa-geographic-scopes/clarisa-geographic-scopes.repository';
 import { ResultRegionRepository } from '../results/result-regions/result-regions.repository';
 import { ClarisaCountriesRepository } from '../../clarisa/clarisa-countries/ClarisaCountries.repository';
@@ -59,6 +59,7 @@ import { NoopBilateralHandler } from './handlers/noop.handler';
 @Injectable()
 export class BilateralService {
   constructor(
+    private readonly dataSource: DataSource,
     private readonly _resultRepository: ResultRepository,
     private readonly _handlersError: HandlersError,
     private readonly _versioningService: VersioningService,
@@ -118,209 +119,229 @@ export class BilateralService {
         'At least one result payload is required in either "results" or "result".',
       );
     }
-    try {
-      const createdResults = [];
-      let resultInfo: any = null;
-      for (const result of incomingResults) {
-        if (!result?.data || typeof result.data !== 'object') {
-          throw new BadRequestException(
-            'Each result entry must include a "data" object with the bilateral payload.',
-          );
-        }
 
-        const bilateralDto = result.data;
+    const createdResults = [];
+    let resultInfo: any = null;
 
-        await this.ensureUniqueTitle(bilateralDto.title);
+    for (const result of incomingResults) {
+      try {
+        await this.dataSource.transaction(
+          async (transactionalEntityManager) => {
+            if (!result?.data || typeof result.data !== 'object') {
+              throw new BadRequestException(
+                'Each result entry must include a "data" object with the bilateral payload.',
+              );
+            }
 
-        const adminUser = await this._userRepository.findOne({
-          where: { email: 'admin@prms.pr' },
-        });
+            const bilateralDto = result.data;
 
-        const createdByUser = await this.findOrCreateUser(
-          bilateralDto.created_by,
-          adminUser,
-        );
-        const userId = createdByUser.id;
+            await this.ensureUniqueTitle(bilateralDto.title);
 
-        const submittedUser = await this.findOrCreateUser(
-          bilateralDto.submitted_by,
-          createdByUser,
-        );
-        const submittedUserId = submittedUser.id;
+            const adminUser = await this._userRepository.findOne({
+              where: { email: 'admin@prms.pr' },
+            });
 
-        const version = await this._versioningService.$_findActivePhase(
-          AppModuleIdEnum.REPORTING,
-        );
-        if (!version)
-          throw this._handlersError.returnErrorRes({
-            error: version,
-            debug: true,
-          });
+            const createdByUser = await this.findOrCreateUser(
+              bilateralDto.created_by,
+              adminUser,
+            );
+            const userId = createdByUser.id;
 
-        const year = await this._yearRepository.findOne({
-          where: { active: true },
-        });
-        if (!year) throw new NotFoundException('Active year not found');
+            const submittedUser = await this.findOrCreateUser(
+              bilateralDto.submitted_by,
+              createdByUser,
+            );
+            const submittedUserId = submittedUser.id;
 
-        const lastCode = await this._resultRepository.getLastResultCode();
+            const version = await this._versioningService.$_findActivePhase(
+              AppModuleIdEnum.REPORTING,
+            );
+            if (!version)
+              throw this._handlersError.returnErrorRes({
+                error: version,
+                debug: true,
+              });
 
-        const resultHeader = await this.initializeResultHeader({
-          bilateralDto,
-          userId,
-          submittedUserId,
-          version,
-          year,
-          lastCode,
-        });
-        const newResultHeader = resultHeader;
-        const resultId = resultHeader.id;
+            const year = await this._yearRepository.findOne({
+              where: { active: true },
+            });
+            if (!year) throw new NotFoundException('Active year not found');
 
-        await this.handleLeadCenter(resultId, bilateralDto.lead_center, userId);
+            const lastCode = await this._resultRepository.getLastResultCode();
 
-        const {
-          scope_code,
-          scope_label,
-          regions,
-          countries,
-          subnational_areas,
-        } = bilateralDto.geo_focus;
-        const scope = await this.findScope(scope_code, scope_label);
-        this.validateGeoFocus(scope, regions, countries, subnational_areas);
+            const resultHeader = await this.initializeResultHeader({
+              bilateralDto,
+              userId,
+              submittedUserId,
+              version,
+              year,
+              lastCode,
+            });
+            const newResultHeader = resultHeader;
+            const resultId = resultHeader.id;
 
-        await this.handleRegions(newResultHeader, scope, regions);
-        await this.handleCountries(
-          newResultHeader,
-          countries,
-          subnational_areas,
-          scope.id,
-          userId,
-        );
+            await this.handleLeadCenter(
+              resultId,
+              bilateralDto.lead_center,
+              userId,
+            );
 
-        await this._resultRepository.save({
-          ...newResultHeader,
-          geographic_scope_id: this.resolveScopeId(scope.id, countries),
-        });
+            const {
+              scope_code,
+              scope_label,
+              regions,
+              countries,
+              subnational_areas,
+            } = bilateralDto.geo_focus;
+            const scope = await this.findScope(scope_code, scope_label);
+            this.validateGeoFocus(scope, regions, countries, subnational_areas);
 
-        await this.handleTocMapping(bilateralDto.toc_mapping, userId, resultId);
-        await this.handleInstitutions(
-          resultId,
-          bilateralDto.contributing_partners || [],
-          userId,
-        );
-        await this.handleEvidence(resultId, bilateralDto.evidence, userId);
-        await this.handleNonPooledProject(
-          resultId,
-          userId,
-          bilateralDto.contributing_bilateral_projects,
-        );
+            await this.handleRegions(newResultHeader, scope, regions);
+            await this.handleCountries(
+              newResultHeader,
+              countries,
+              subnational_areas,
+              scope.id,
+              userId,
+            );
 
-        await this.runResultTypeHandlers({
-          resultId,
-          userId,
-          bilateralDto,
-          isDuplicateResult: false,
-        });
+            await this._resultRepository.save({
+              ...newResultHeader,
+              geographic_scope_id: this.resolveScopeId(scope.id, countries),
+            });
 
-        await this.handleContributingCenters(
-          resultId,
-          bilateralDto.contributing_center || [],
-          userId,
-          bilateralDto.lead_center,
-        );
+            await this.handleTocMapping(
+              bilateralDto.toc_mapping,
+              userId,
+              resultId,
+            );
+            await this.handleInstitutions(
+              resultId,
+              bilateralDto.contributing_partners || [],
+              userId,
+            );
+            await this.handleEvidence(resultId, bilateralDto.evidence, userId);
+            await this.handleNonPooledProject(
+              resultId,
+              userId,
+              bilateralDto.contributing_bilateral_projects,
+            );
 
-        const isKpType =
-          bilateralDto.result_type_id === ResultTypeEnum.KNOWLEDGE_PRODUCT;
-        const isCapacityChange =
-          bilateralDto.result_type_id === ResultTypeEnum.CAPACITY_CHANGE;
-        const isInnovationDev =
-          bilateralDto.result_type_id === ResultTypeEnum.INNOVATION_DEVELOPMENT;
-        const isInnovationUse =
-          bilateralDto.result_type_id === ResultTypeEnum.INNOVATION_USE;
-        const isPolicyChange =
-          bilateralDto.result_type_id === ResultTypeEnum.POLICY_CHANGE;
+            await this.runResultTypeHandlers({
+              resultId,
+              userId,
+              bilateralDto,
+              isDuplicateResult: false,
+            });
 
-        let kpExtra: any = {};
-        if (isKpType) {
-          const kp = await this._resultsKnowledgeProductsRepository.findOne({
-            where: { results_id: resultId },
-          });
-          if (kp) {
-            kpExtra = {
-              knowledge_product_id: kp.result_knowledge_product_id,
-              knowledge_product_handle: kp.handle,
-            };
-          }
-        }
+            await this.handleContributingCenters(
+              resultId,
+              bilateralDto.contributing_center || [],
+              userId,
+              bilateralDto.lead_center,
+            );
 
-        createdResults.push({
-          id: resultId,
-          result_code: newResultHeader.result_code,
-          is_duplicate_kp: false,
-          ...kpExtra,
-        });
+            const isKpType =
+              bilateralDto.result_type_id === ResultTypeEnum.KNOWLEDGE_PRODUCT;
+            const isCapacityChange =
+              bilateralDto.result_type_id === ResultTypeEnum.CAPACITY_CHANGE;
+            const isInnovationDev =
+              bilateralDto.result_type_id ===
+              ResultTypeEnum.INNOVATION_DEVELOPMENT;
+            const isInnovationUse =
+              bilateralDto.result_type_id === ResultTypeEnum.INNOVATION_USE;
+            const isPolicyChange =
+              bilateralDto.result_type_id === ResultTypeEnum.POLICY_CHANGE;
 
-        resultInfo = await this._resultRepository.findOne({
-          where: { id: newResultHeader.id },
-          relations: {
-            obj_geographic_scope: true,
-            obj_result_type: true,
-            obj_result_level: true,
-            obj_created: true,
-            obj_external_submitter: true,
-            result_region_array: {
-              region_object: true,
-            },
-            result_country_array: {
-              country_object: true,
-              result_countries_subnational_array: true,
-            },
-            result_by_institution_array: {
-              obj_institutions: {
-                obj_institution_type_code: true,
+            let kpExtra: any = {};
+            if (isKpType) {
+              const kp = await this._resultsKnowledgeProductsRepository.findOne(
+                {
+                  where: { results_id: resultId },
+                },
+              );
+              if (kp) {
+                kpExtra = {
+                  knowledge_product_id: kp.result_knowledge_product_id,
+                  knowledge_product_handle: kp.handle,
+                };
+              }
+            }
+
+            createdResults.push({
+              id: resultId,
+              result_code: newResultHeader.result_code,
+              is_duplicate_kp: false,
+              ...kpExtra,
+            });
+
+            resultInfo = await this._resultRepository.findOne({
+              where: { id: newResultHeader.id },
+              relations: {
+                obj_geographic_scope: true,
+                obj_result_type: true,
+                obj_result_level: true,
+                obj_created: true,
+                obj_external_submitter: true,
+                result_region_array: {
+                  region_object: true,
+                },
+                result_country_array: {
+                  country_object: true,
+                  result_countries_subnational_array: true,
+                },
+                result_by_institution_array: {
+                  obj_institutions: {
+                    obj_institution_type_code: true,
+                  },
+                },
+                result_center_array: {
+                  clarisa_center_object: {
+                    clarisa_institution: true,
+                  },
+                },
+                obj_results_toc_result: true,
+                obj_result_by_project: {
+                  obj_clarisa_project: true,
+                },
+                ...(isKpType && {
+                  result_knowledge_product_array: {
+                    result_knowledge_product_keyword_array: true,
+                    result_knowledge_product_metadata_array: true,
+                  },
+                }),
+                ...(isCapacityChange && {
+                  results_capacity_development_object: true,
+                }),
+                ...(isInnovationDev && {
+                  results_innovations_dev_object: true,
+                }),
+                ...(isInnovationUse && {
+                  results_innovations_use_object: true,
+                }),
+                ...(isPolicyChange && {
+                  results_policy_changes_object: true,
+                }),
               },
-            },
-            result_center_array: {
-              clarisa_center_object: {
-                clarisa_institution: true,
-              },
-            },
-            obj_results_toc_result: true,
-            obj_result_by_project: {
-              obj_clarisa_project: true,
-            },
-            ...(isKpType && {
-              result_knowledge_product_array: {
-                result_knowledge_product_keyword_array: true,
-                result_knowledge_product_metadata_array: true,
-              },
-            }),
-            ...(isCapacityChange && {
-              results_capacity_development_object: true,
-            }),
-            ...(isInnovationDev && {
-              results_innovations_dev_object: true,
-            }),
-            ...(isInnovationUse && {
-              results_innovations_use_object: true,
-            }),
-            ...(isPolicyChange && {
-              results_policy_changes_object: true,
-            }),
+            });
+
+            this.logger.log(
+              `Successfully created bilateral result ${resultId} (code: ${newResultHeader.result_code})`,
+            );
           },
-        });
+        );
+      } catch (error) {
+        this.logger.error('Error creating bilateral', error);
+        this.logger.error(error.stack);
+        throw error;
       }
-
-      return {
-        response: resultInfo,
-        message: 'Results Bilateral created successfully.',
-        status: 201,
-      };
-    } catch (error) {
-      this.logger.error('Error creating bilateral', {
-        error,
-      });
-      return this._handlersError.returnErrorRes({ error, debug: true });
     }
+
+    return {
+      response: resultInfo,
+      message: 'Results Bilateral created successfully.',
+      status: 201,
+    };
   }
 
   private unwrapIncomingResults(
