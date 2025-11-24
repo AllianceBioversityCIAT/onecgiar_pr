@@ -2752,11 +2752,16 @@ select *
       const tocResultQuery = `
         SELECT
           tr.id AS toc_result_id,
-          tri.related_node_id AS toc_results_indicator_id
+          tri.related_node_id AS toc_results_indicator_id,
+          tr.category AS category,
+          trit.number_target AS number_target,
+          trit.target_date AS target_date
         FROM
           ${env.DB_TOC}.toc_work_packages twp
         JOIN ${env.DB_TOC}.toc_results tr ON tr.wp_id = twp.toc_id
         JOIN ${env.DB_TOC}.toc_results_indicators tri ON tri.toc_results_id = tr.id
+        JOIN ${env.DB_TOC}.toc_result_indicator_target trit ON tri.id = trit.id_indicator
+          AND CONVERT(trit.toc_result_indicator_id USING utf8mb4) = CONVERT(tri.related_node_id USING utf8mb4)
         WHERE
           wp_official_code = '${aow_compose_code}'
           AND initiativeId = '${science_program_id}'

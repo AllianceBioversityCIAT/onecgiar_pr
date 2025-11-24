@@ -42,6 +42,7 @@ import { CreateUserDto } from '../../auth/modules/user/dto/create-user.dto';
 import { ResultsTocResultRepository } from '../results/results-toc-results/repositories/results-toc-results.repository';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { ResultsTocResultIndicatorsRepository } from '../results/results-toc-results/repositories/results-toc-results-indicators.repository';
+import { ResultsTocTargetIndicatorRepository } from '../results/results-toc-results/repositories/result-toc-result-target-indicator.repository';
 import { ResultsCenterRepository } from '../results/results-centers/results-centers.repository';
 import { ClarisaProjectsRepository } from '../../clarisa/clarisa-projects/clarisa-projects.repository';
 import { ResultsByProjectsRepository } from '../results/results_by_projects/results_by_projects.repository';
@@ -80,6 +81,7 @@ export class BilateralService {
     private readonly _resultsTocResultsRepository: ResultsTocResultRepository,
     private readonly _clarisaInitiatives: ClarisaInitiativesRepository,
     private readonly _resultsTocResultsIndicatorsRepository: ResultsTocResultIndicatorsRepository,
+    private readonly _resultsTocTargetIndicatorRepository: ResultsTocTargetIndicatorRepository,
     private readonly _resultsCenterRepository: ResultsCenterRepository,
     private readonly _clarisaProjectsRepository: ClarisaProjectsRepository,
     private readonly _resultsByProjectsRepository: ResultsByProjectsRepository,
@@ -501,6 +503,22 @@ export class BilateralService {
         return;
       }
 
+      const categoryToLevelMap = {
+        OUTPUT: 1,
+        OUTCOME: 2,
+        EOI: 3,
+      };
+
+      const tocLevelId = firstMap.category
+        ? categoryToLevelMap[firstMap.category.toUpperCase()]
+        : null;
+
+      if (firstMap.category && !tocLevelId) {
+        this.logger.warn(
+          `TOC mapping has invalid category: ${firstMap.category}`,
+        );
+      }
+
       const init = await this._clarisaInitiatives.findOne({
         where: { official_code: science_program_id },
       });
@@ -517,6 +535,7 @@ export class BilateralService {
         toc_result_id: firstMap.toc_result_id,
         initiative_id: init.id,
         result_id: resultId,
+        toc_level_id: tocLevelId,
       });
       await this._resultsTocResultsRepository.save(newTocMapping);
 
@@ -530,6 +549,28 @@ export class BilateralService {
         await this._resultsTocResultsIndicatorsRepository.save(
           newTocContributorsIndicator,
         );
+
+        if (firstMap.number_target) {
+          const targetDate = firstMap.target_date
+            ? Number(firstMap.target_date)
+            : null;
+
+          const newIndicatorTarget =
+            this._resultsTocTargetIndicatorRepository.create({
+              number_target: firstMap.number_target,
+              result_toc_result_indicator_id:
+                newTocContributorsIndicator.result_toc_result_indicator_id,
+              contributing_indicator: 1,
+              target_date: targetDate,
+              created_by: userId,
+              last_updated_by: userId,
+              is_active: true,
+            });
+
+          await this._resultsTocTargetIndicatorRepository.save(
+            newIndicatorTarget,
+          );
+        }
       }
 
       this.logger.debug('TOC mapping processed successfully');
