@@ -309,8 +309,8 @@ export class ResultsKnowledgeProductsService {
       //geolocation
       await this.updateCountries(updatedKnowledgeProduct, newMetadata, true);
 
-      for (const country of updatedKnowledgeProduct.result_object.result_country_array ?? [])
-      {
+      for (const country of updatedKnowledgeProduct.result_object
+        .result_country_array ?? []) {
         country.geo_scope_role_id = 1;
       }
       await this._resultCountryRepository.save(
@@ -323,10 +323,10 @@ export class ResultsKnowledgeProductsService {
         newMetadata,
       );
 
-      for (const region of updatedKnowledgeProduct.result_object.result_region_array ?? [])
-      {
+      for (const region of updatedKnowledgeProduct.result_object
+        .result_region_array ?? []) {
         region.geo_scope_role_id = 1;
-      } 
+      }
       await this._resultRegionRepository.save(
         updatedKnowledgeProduct.result_object.result_region_array ?? [],
       );
@@ -1004,8 +1004,7 @@ export class ResultsKnowledgeProductsService {
       );
 
       for (const country of newKnowledgeProduct.result_object
-        .result_country_array ?? [])
-      {
+        .result_country_array ?? []) {
         country.geo_scope_role_id = 1;
       }
       await this._resultCountryRepository.save(
@@ -1018,10 +1017,9 @@ export class ResultsKnowledgeProductsService {
         resultsKnowledgeProductDto,
       );
 
-      for (const region of newResult.result_region_array ?? [])
-      {
+      for (const region of newResult.result_region_array ?? []) {
         region.geo_scope_role_id = 1;
-      }  
+      }
       await this._resultRegionRepository.save(
         newResult.result_region_array ?? [],
       );
