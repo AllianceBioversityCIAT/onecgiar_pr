@@ -23,6 +23,7 @@ import { GeographicLocationModule } from './results-framework-reporting/geograph
 import { InnovationDevModule } from './results-framework-reporting/innovation_dev/innovation_dev.module';
 import { InnovationUseModule } from './results-framework-reporting/innovation-use/innovation-use.module';
 import { AiModule } from './ai/ai.module';
+import { IpsrGeneralInformationModule } from './ipsr-framework/ipsr_general_information/ipsr_general_information.module';
 
 export const ModulesRoutes: Routes = [
   {
@@ -112,4 +113,12 @@ export const ModulesRoutes: Routes = [
     path: 'ai',
     module: AiModule,
   },
+  {
+    path: 'geographic-location',
+    module: GeographicLocationModule,
+  },
+  {
+    path: 'ipsr-general-information',
+    module: IpsrGeneralInformationModule,
+  }
 ];

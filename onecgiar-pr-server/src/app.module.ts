@@ -52,6 +52,7 @@ import { apiVersionMiddleware } from './shared/middleware/api-versioning.middlew
 import { BilateralModule } from './api/bilateral/bilateral.module';
 import { ResultsFrameworkReportingModule } from './api/results-framework-reporting/results-framework-reporting.module';
 import { AiModule } from './api/ai/ai.module';
+import { IpsrFrameworkModule } from './api/ipsr-framework/ipsr-framework.module';
 
 @Module({
   imports: [
@@ -103,6 +104,7 @@ import { AiModule } from './api/ai/ai.module';
     BilateralModule,
     ResultsFrameworkReportingModule,
     AiModule,
+    IpsrFrameworkModule,
   ],
   controllers: [AppController],
   providers: [
