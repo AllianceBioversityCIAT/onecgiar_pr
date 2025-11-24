@@ -143,8 +143,8 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
     }
   }
 
-    async generalInformationV2(resultId: number) {
-        const giQuery = `
+  async generalInformationV2(resultId: number) {
+    const giQuery = `
         SELECT
             'general-information' as sectionName,
             CASE
@@ -212,18 +212,18 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
             AND r.id = ?;
         `;
 
-        try {
-        const generalInformation: GetValidationSectionInnoPckgDto[] =
-            await this.query(giQuery, [resultId]);
-        return generalInformation[0];
-        } catch (error) {
-        throw this._handlersError.returnErrorRepository({
-            className: ResultsInnovationPackagesValidationModuleRepository.name,
-            error: error,
-            debug: true,
-        });
-        }
+    try {
+      const generalInformation: GetValidationSectionInnoPckgDto[] =
+        await this.query(giQuery, [resultId]);
+      return generalInformation[0];
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsInnovationPackagesValidationModuleRepository.name,
+        error: error,
+        debug: true,
+      });
     }
+  }
 
   async contributors(resultId: number) {
     const contributorsQuery = `

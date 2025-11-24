@@ -355,8 +355,6 @@ describe('IpsrGeneralInformationService', () => {
     it('should return error via handler if something fails', async () => {
       mockResultRepo.findOneBy.mockRejectedValue(new Error('Database error'));
 
-      const result = await service.generalInformation(1, mockDto, mockUser);
-
       expect(mockErrorHandler.returnErrorRes).toHaveBeenCalledWith({
         error: expect.any(Error),
         debug: true,
@@ -448,8 +446,6 @@ describe('IpsrGeneralInformationService', () => {
     it('should handle result not found', async () => {
       mockIpsrRepo.getResultInnovationById.mockResolvedValue([]);
 
-      const result = await service.findOneInnovation(1);
-
       expect(mockErrorHandler.returnErrorRes).toHaveBeenCalledWith({
         error: expect.any(Error),
         debug: true,
@@ -460,8 +456,6 @@ describe('IpsrGeneralInformationService', () => {
       mockIpsrRepo.getResultInnovationById.mockRejectedValue(
         new Error('Database error'),
       );
-
-      const result = await service.findOneInnovation(1);
 
       expect(mockErrorHandler.returnErrorRes).toHaveBeenCalledWith({
         error: expect.any(Error),

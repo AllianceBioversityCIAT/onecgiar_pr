@@ -120,5 +120,5 @@ export const ModulesRoutes: Routes = [
   {
     path: 'ipsr-general-information',
     module: IpsrGeneralInformationModule,
-  }
+  },
 ];
