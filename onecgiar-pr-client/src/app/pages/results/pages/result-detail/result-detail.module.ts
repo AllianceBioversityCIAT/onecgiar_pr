@@ -16,6 +16,8 @@ import { PdfActionsModule } from './components/pdf-actions/pdf-actions.module';
 import { ToastModule } from 'primeng/toast';
 import { PhaseSwitcherModule } from '../../../../shared/components/phase-switcher/phase-switcher.module';
 import { AiReviewComponent } from './components/ai-review/ai-review.component';
+import { TooltipModule } from 'primeng/tooltip';
+
 @NgModule({
   declarations: [ResultDetailComponent, PanelMenuComponent, PanelMenuPipe, NoEditContainerComponent],
   imports: [
@@ -30,7 +32,8 @@ import { AiReviewComponent } from './components/ai-review/ai-review.component';
     PdfActionsModule,
     ToastModule,
     PhaseSwitcherModule,
-    AiReviewComponent
+    AiReviewComponent,
+    TooltipModule
   ]
 })
 export class ResultDetailModule {}
