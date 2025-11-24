@@ -20,9 +20,9 @@ import { IpsrRepository } from '../../ipsr/ipsr.repository';
 
 @Injectable()
 export class IpsrGeneralInformationService {
-    private readonly _logger: Logger = new Logger(
-      IpsrGeneralInformationService.name,
-    );
+  private readonly _logger: Logger = new Logger(
+    IpsrGeneralInformationService.name,
+  );
 
   constructor(
     private readonly _resultRepository: ResultRepository,

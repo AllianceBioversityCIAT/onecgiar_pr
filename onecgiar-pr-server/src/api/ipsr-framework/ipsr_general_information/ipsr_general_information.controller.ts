@@ -1,4 +1,12 @@
-import { Controller, Body, Patch, Param, Version, Get, UseInterceptors } from '@nestjs/common';
+import {
+  Controller,
+  Body,
+  Patch,
+  Param,
+  Version,
+  Get,
+  UseInterceptors,
+} from '@nestjs/common';
 import { IpsrGeneralInformationService } from './ipsr_general_information.service';
 import { UpdateIpsrGeneralInformationDto } from './dto/update-ipsr_general_information.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
