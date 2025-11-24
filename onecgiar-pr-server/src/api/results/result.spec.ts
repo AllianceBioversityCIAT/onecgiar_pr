@@ -54,6 +54,7 @@ import { ScienceProgramProgressResponseDto } from './dto/science-program-progres
 import { ImpactAreasScoresComponentRepository } from './impact_areas_scores_components/repositories/impact_areas_scores_components.repository';
 import { ResultsTocResultRepository } from './results-toc-results/repositories/results-toc-results.repository';
 import { ResultsInnovationsDevRepository } from './summary/repositories/results-innovations-dev.repository';
+import { AoWBilateralRepository } from './results-toc-results/repositories/aow-bilateral.repository';
 
 describe('ResultsService (unit, pure mocks)', () => {
   let module: TestingModule;
@@ -320,6 +321,10 @@ describe('ResultsService (unit, pure mocks)', () => {
     findOne: jest.fn().mockResolvedValue({ id: 123 }),
   } as any;
 
+  const mockAoWBilateralRepository = {
+    getIndicatorContributions: jest.fn().mockResolvedValue(new Map()),
+  } as any;
+
   beforeEach(async () => {
     module = await Test.createTestingModule({
       providers: [
@@ -443,6 +448,10 @@ describe('ResultsService (unit, pure mocks)', () => {
         {
           provide: ResultsInnovationsDevRepository,
           useValue: mockResultsInnovationsDevRepository,
+        },
+        {
+          provide: AoWBilateralRepository,
+          useValue: mockAoWBilateralRepository,
         },
       ],
     }).compile();
@@ -621,7 +630,7 @@ describe('ResultsService (unit, pure mocks)', () => {
     const mySp = payload.mySciencePrograms[0];
     expect(mySp.initiativeCode).toBe('SP01');
     expect(mySp.totalResults).toBe(1);
-    expect(mySp.progress).toBe(80);
+    expect(mySp.progress).toBe(0); // 0 porque no hay contribuciones a indicadores en el mock
     expect(mySp.entityTypeCode).toBe(101);
     expect(mySp.entityTypeName).toBe('Science Program');
     expect(mySp.versions[0].totalResults).toBe(1);

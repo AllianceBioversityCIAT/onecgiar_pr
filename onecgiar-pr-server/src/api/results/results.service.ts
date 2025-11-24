@@ -86,6 +86,7 @@ import { ResultsInnovationsDev } from './summary/entities/results-innovations-de
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 import { ResultsTocResultRepository } from './results-toc-results/repositories/results-toc-results.repository';
 import { ResultsInnovationsDevRepository } from './summary/repositories/results-innovations-dev.repository';
+import { AoWBilateralRepository } from './results-toc-results/repositories/aow-bilateral.repository';
 
 @Injectable()
 export class ResultsService {
@@ -128,6 +129,7 @@ export class ResultsService {
     private readonly _resultInitiativeBudgetRepository: ResultInitiativeBudgetRepository,
     private readonly _resultsCenterRepository: ResultsCenterRepository,
     private readonly _resultsTocResultRepository: ResultsTocResultRepository,
+    private readonly _tocResultsRepository: AoWBilateralRepository,
     private readonly _initiativeEntityMapRepository?: InitiativeEntityMapRepository,
     private readonly _roleByUserRepository?: RoleByUserRepository,
     private readonly _resultsInnovationsDevRepository?: ResultsInnovationsDevRepository,
@@ -1251,12 +1253,68 @@ export class ResultsService {
     }
   }
 
+  private computeProgressValue(
+    targetValue: number,
+    actualValue: number,
+  ): number {
+    let progressRaw = 0;
+    if (targetValue > 0) {
+      progressRaw = (actualValue / targetValue) * 100;
+    } else if (targetValue === 0 && actualValue > 0) {
+      progressRaw = actualValue * 100;
+    }
+
+    const progressRounded = Math.round(progressRaw * 10) / 10;
+    return Number.isFinite(progressRounded) ? progressRounded : 0;
+  }
+
+  private async calculateInitiativeProgress(
+    initiativeCode: string,
+    year: number,
+  ): Promise<number> {
+    try {
+      const indicatorContributions =
+        await this._tocResultsRepository.getIndicatorContributions(
+          initiativeCode.toUpperCase(),
+          year,
+        );
+
+      let totalProgressSum = 0;
+      let totalIndicatorCount = 0;
+
+      for (const contribution of indicatorContributions.values()) {
+        const targetValue = contribution.target_value_sum ?? 0;
+        const actualValue = contribution.actual_achieved_value_sum ?? 0;
+
+        const indicatorProgress = this.computeProgressValue(
+          targetValue,
+          actualValue,
+        );
+
+        totalProgressSum += indicatorProgress;
+        totalIndicatorCount += 1;
+      }
+
+      if (totalIndicatorCount === 0) {
+        return 0;
+      }
+
+      const averageProgress = totalProgressSum / totalIndicatorCount;
+      return Math.round(averageProgress * 10) / 10;
+    } catch (error) {
+      this._logger.warn(
+        `Failed to calculate progress for ${initiativeCode}: ${error?.message}`,
+      );
+      return 0;
+    }
+  }
+
   private buildScienceProgramBuckets(
     rows: any[],
     initiativesSeed: ClarisaInitiative[],
     userRoles: Map<number, { hasEdit: boolean }>,
+    progressMap: Map<number, number>,
   ): ScienceProgramProgressResponseDto {
-    const DEFAULT_PROGRESS = 80;
     const metadata = new Map<
       number,
       {
@@ -1506,7 +1564,9 @@ export class ResultsService {
       container.dto.versions = versions;
 
       const hasResults = (container.dto.totalResults ?? 0) > 0;
-      container.dto.progress = hasResults ? DEFAULT_PROGRESS : 0;
+      const calculatedProgress =
+        progressMap.get(container.dto.initiativeId) ?? 0;
+      container.dto.progress = calculatedProgress;
       container.dto.totalResults = hasResults
         ? container.dto.totalResults
         : null;
@@ -1597,10 +1657,37 @@ export class ResultsService {
           filters,
         );
 
+      const activeYear = await this._yearRepository.findOne({
+        where: { active: true },
+        select: ['year'],
+      });
+
+      const activeYearValue = activeYear?.year
+        ? Number(activeYear.year)
+        : new Date().getFullYear();
+
+      const progressMap = new Map<number, number>();
+
+      const progressPromises = initiativesSeed.map(async (initiative) => {
+        if (!initiative.official_code) {
+          return;
+        }
+
+        const progress = await this.calculateInitiativeProgress(
+          initiative.official_code,
+          activeYearValue,
+        );
+
+        progressMap.set(initiative.id, progress);
+      });
+
+      await Promise.all(progressPromises);
+
       const response = this.buildScienceProgramBuckets(
         results ?? [],
         initiativesSeed,
         userRoleMap,
+        progressMap,
       );
 
       return {

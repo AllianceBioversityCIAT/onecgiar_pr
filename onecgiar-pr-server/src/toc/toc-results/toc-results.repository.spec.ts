@@ -409,9 +409,9 @@ describe('TocResultsRepository', () => {
 
       expect(mockQuery).toHaveBeenCalledWith(
         expect.stringContaining('toc_results_indicators tri'),
-        [10, 11],
+        [2035, 10, 11],
       );
-      expect(mockQuery.mock.calls[0][0]).toContain('target_date = 2035');
+      expect(mockQuery.mock.calls[0][0]).toContain('target_date = ?');
       expect(result).toBe(expected);
     });
 
