@@ -39,7 +39,8 @@
           class="ai-review-button"
           [ngClass]="{
             loading: aiReviewSE.aiReviewButtonState === 'loading',
-            completed: aiReviewSE.aiReviewButtonState === 'completed'
+            completed: aiReviewSE.aiReviewButtonState === 'completed',
+            globalDisabled: !this.greenChecksSE.submit || (this.dataControlSE?.currentResult?.inQA && this.api.globalVariablesSE.get?.in_qa)
           }"
           (click)="aiReviewSE.onAIReviewClick()">
           <img src="assets/icons/stars.png" alt="ai-review" />
