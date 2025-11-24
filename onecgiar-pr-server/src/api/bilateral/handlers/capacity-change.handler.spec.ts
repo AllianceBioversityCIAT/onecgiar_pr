@@ -76,7 +76,7 @@ describe('CapacityChangeBilateralHandler', () => {
 
     expect(capDevRepo.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        result_id: baseContext.resultId,
+        result_object: { id: baseContext.resultId },
         male_using: 5,
         female_using: 10,
       }),
