@@ -357,7 +357,7 @@ describe('IpsrGeneralInformationService', () => {
 
       try {
         await service.generalInformation(1, mockDto, mockUser);
-      } catch (error) {}
+      } catch (_error) {}
 
       expect(mockErrorHandler.returnErrorRes).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -458,13 +458,13 @@ describe('IpsrGeneralInformationService', () => {
         expect.objectContaining({
           error: expect.any(Error),
           debug: true,
-        })
+        }),
       );
     });
 
     it('should handle error and return handler response', async () => {
       mockIpsrRepo.getResultInnovationById.mockRejectedValue(
-        new Error('Some DB error')
+        new Error('Some DB error'),
       );
 
       await service.findOneInnovation(1).catch(() => {});
@@ -473,7 +473,7 @@ describe('IpsrGeneralInformationService', () => {
         expect.objectContaining({
           error: expect.any(Error),
           debug: true,
-        })
+        }),
       );
     });
   });
