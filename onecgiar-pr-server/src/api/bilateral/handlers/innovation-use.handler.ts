@@ -4,8 +4,8 @@ import {
   HandlerAfterCreateContext,
 } from './bilateral-result-type-handler.interface';
 import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
-import { ResultsInnovationsUseRepository } from '../../results/summary/repositories/results-innovations-use.repository';
 import { ClarisaInnovationUseLevelRepository } from '../../../clarisa/clarisa-innovation-use-levels/clarisa-innovation-use-levels.repository';
+import { InnovationUseService } from '../../results-framework-reporting/innovation-use/innovation-use.service';
 
 @Injectable()
 export class InnovationUseBilateralHandler
@@ -15,7 +15,7 @@ export class InnovationUseBilateralHandler
   private readonly logger = new Logger(InnovationUseBilateralHandler.name);
 
   constructor(
-    private readonly _resultsInnovationsUseRepository: ResultsInnovationsUseRepository,
+    private readonly _innovationUseService: InnovationUseService,
     private readonly _clarisaInnovationUseLevelRepository: ClarisaInnovationUseLevelRepository,
   ) {}
 
@@ -64,31 +64,31 @@ export class InnovationUseBilateralHandler
       );
     }
 
-    const existing = await this._resultsInnovationsUseRepository.findOne({
-      where: { results_id: resultId },
-    });
-
-    if (existing) {
-      existing.innov_use_to_be_determined =
-        currentNumbers.innov_use_to_be_determined;
-      if (innovationUseLevelId) {
-        existing.innovation_use_level_id = innovationUseLevelId;
-      }
-      existing.last_updated_by = userId;
-      await this._resultsInnovationsUseRepository.save(existing);
-      this.logger.debug(`Updated innovation use data for result ${resultId}.`);
-      return;
-    }
-
-    const newRecord = this._resultsInnovationsUseRepository.create({
-      results_id: resultId,
-      created_by: userId,
-      is_active: true,
-      innov_use_to_be_determined: currentNumbers.innov_use_to_be_determined,
+    const innovationUseDto = {
+      has_innovation_link: false,
       innovation_use_level_id: innovationUseLevelId,
-    });
-    await this._resultsInnovationsUseRepository.save(newRecord);
-    this.logger.log(`Stored innovation use data for result ${resultId}.`);
+      linked_results: [],
+      readiness_level_explanation: null,
+      has_scaling_studies: false,
+      scaling_studies_urls: [],
+      innov_use_2030_to_be_determined: true,
+      innov_use_to_be_determined: currentNumbers.innov_use_to_be_determined,
+      actors: currentNumbers.actors || [],
+      organization: currentNumbers.organization || [],
+      measures: currentNumbers.measures || [],
+    };
+
+    const userToken = { id: userId } as any;
+
+    await this._innovationUseService.saveInnovationUse(
+      innovationUseDto as any,
+      resultId,
+      userToken,
+    );
+
+    this.logger.log(
+      `Stored innovation use data and actors for result ${resultId}.`,
+    );
   }
 
   private async resolveInnovationUseLevelId(useLevel?: {

@@ -2755,16 +2755,30 @@ select *
       const tocResultQuery = `
         SELECT
           tr.id AS toc_result_id,
-          tri.related_node_id AS toc_results_indicator_id
+          tri.related_node_id AS toc_results_indicator_id,
+          tr.category AS category,
+          trit.number_target AS number_target,
+          trit.target_date AS target_date
         FROM
           ${env.DB_TOC}.toc_work_packages twp
         JOIN ${env.DB_TOC}.toc_results tr ON tr.wp_id = twp.toc_id
         JOIN ${env.DB_TOC}.toc_results_indicators tri ON tri.toc_results_id = tr.id
+        JOIN ${env.DB_TOC}.toc_result_indicator_target trit ON tri.id = trit.id_indicator
+          AND CONVERT(trit.toc_result_indicator_id USING utf8mb4) = CONVERT(tri.related_node_id USING utf8mb4)
+        CROSS JOIN ${env.DB_NAME}.year y
         WHERE
           wp_official_code = '${aow_compose_code}'
           AND initiativeId = '${science_program_id}'
           AND tr.result_title LIKE '%${result_title}%'
           AND (tri.indicator_description LIKE '%${result_indicator_description}%' OR tri.type_value = '${result_indicator_type_name}')
+          AND y.active = 1
+          AND (
+            CASE
+              WHEN trit.target_date REGEXP '^[0-9]{4}-' THEN YEAR(trit.target_date)
+              WHEN trit.target_date REGEXP '^[0-9]{4}$' THEN CAST(trit.target_date AS SIGNED)
+              ELSE NULL
+            END
+          ) = y.year
       `;
       const tocResultData = await this.query(tocResultQuery);
 

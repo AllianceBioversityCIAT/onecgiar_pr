@@ -100,14 +100,14 @@ export class CapacityChangeBilateralHandler
       return;
     }
 
-    await this._resultsCapacityDevelopmentsRepository.save(
-      this._resultsCapacityDevelopmentsRepository.create({
-        result_id: resultId,
-        created_by: userId,
-        is_active: true,
-        ...capacityData,
-      }),
-    );
+    const newRecord = this._resultsCapacityDevelopmentsRepository.create({
+      result_object: { id: resultId } as any,
+      created_by: userId,
+      is_active: true,
+      ...capacityData,
+    });
+
+    await this._resultsCapacityDevelopmentsRepository.save(newRecord);
     this.logger.log(
       `Stored capacity sharing data for result ${resultId} (CAPACITY_CHANGE).`,
     );

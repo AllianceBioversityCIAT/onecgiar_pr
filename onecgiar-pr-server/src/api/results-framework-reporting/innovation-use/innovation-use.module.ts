@@ -46,5 +46,6 @@ import { ResultsByProjectsRepository } from '../../results/results_by_projects/r
     ResultRepository,
     ResultsByProjectsRepository,
   ],
+  exports: [InnovationUseService],
 })
 export class InnovationUseModule {}

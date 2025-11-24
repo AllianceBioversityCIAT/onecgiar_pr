@@ -274,19 +274,19 @@ export class InnovationTypologyDto {
 
 export class InnovationReadinessLevelDto {
   @ApiPropertyOptional({
-    description: 'Numeric level of innovation readiness (e.g., 1-9)',
+    description: 'Numeric level of innovation readiness (e.g., 0-9). Either level or name must be provided.',
     example: 3,
   })
-  @ValidateIf((o) => !o.name)
+  @ValidateIf((o) => o.level !== undefined && o.level !== null)
   @IsNumber()
-  @Min(1)
+  @Min(0)
   level?: number;
 
   @ApiPropertyOptional({
-    description: 'Human readable readiness level name',
+    description: 'Human readable readiness level name. Either level or name must be provided.',
     example: 'Proven under field conditions',
   })
-  @ValidateIf((o) => !o.level)
+  @ValidateIf((o) => o.name !== undefined && o.name !== null)
   @IsString()
   name?: string;
 }
