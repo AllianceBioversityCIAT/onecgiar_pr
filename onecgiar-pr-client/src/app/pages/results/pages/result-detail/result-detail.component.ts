@@ -1,4 +1,4 @@
-import { Component, DoCheck, OnInit, effect } from '@angular/core';
+import { Component, DoCheck, OnInit, effect, HostListener, ElementRef } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
@@ -29,7 +29,8 @@ export class ResultDetailComponent implements OnInit, DoCheck {
     public saveButtonSE: SaveButtonService,
     public dataControlSE: DataControlService,
     private readonly greenChecksSE: GreenChecksService,
-    private readonly clipboard: Clipboard
+    private readonly clipboard: Clipboard,
+    private readonly elementRef: ElementRef
   ) {
     effect(() => {
       const portfolio = this.dataControlSE.currentResultSignal()?.portfolio;
@@ -42,6 +43,14 @@ export class ResultDetailComponent implements OnInit, DoCheck {
 
   ngOnInit(): void {
     this.getData();
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    const clickedInside = this.elementRef.nativeElement.querySelector('.pdf-menu-container')?.contains(event.target);
+    if (!clickedInside && this.showPdfMenu) {
+      this.showPdfMenu = false;
+    }
   }
 
   togglePdfMenu(): void {

@@ -177,6 +177,42 @@ describe('ResultDetailComponent', () => {
     });
   });
 
+  describe('onDocumentClick()', () => {
+    it('should close menu when clicking outside', () => {
+      component.showPdfMenu = true;
+      const mockEvent = {
+        target: document.createElement('div')
+      } as MouseEvent;
+
+      component.onDocumentClick(mockEvent);
+
+      expect(component.showPdfMenu).toBe(false);
+    });
+
+    it('should not close menu when clicking inside', () => {
+      component.showPdfMenu = true;
+      const container = fixture.nativeElement.querySelector('.pdf-menu-container');
+      const mockEvent = {
+        target: container || fixture.nativeElement
+      } as MouseEvent;
+
+      component.onDocumentClick(mockEvent);
+
+      expect(component.showPdfMenu).toBe(true);
+    });
+
+    it('should do nothing if menu is already closed', () => {
+      component.showPdfMenu = false;
+      const mockEvent = {
+        target: document.createElement('div')
+      } as MouseEvent;
+
+      component.onDocumentClick(mockEvent);
+
+      expect(component.showPdfMenu).toBe(false);
+    });
+  });
+
   describe('viewPdf()', () => {
     it('should open PDF in new window and close menu', () => {
       const windowOpenSpy = jest.spyOn(window, 'open').mockImplementation();
