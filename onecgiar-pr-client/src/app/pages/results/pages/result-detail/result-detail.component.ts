@@ -7,6 +7,8 @@ import { GreenChecksService } from '../../../../shared/services/global/green-che
 import { ShareRequestModalService } from './components/share-request-modal/share-request-modal.service';
 import { CurrentResultService } from '../../../../shared/services/current-result.service';
 import { MessageService } from 'primeng/api';
+import { environment } from '../../../../../environments/environment';
+import { Clipboard } from '@angular/cdk/clipboard';
 
 @Component({
   selector: 'app-result-detail',
@@ -16,6 +18,8 @@ import { MessageService } from 'primeng/api';
   standalone: false
 })
 export class ResultDetailComponent implements OnInit, DoCheck {
+  showPdfMenu = false;
+
   constructor(
     private readonly messageSE: MessageService,
     public currentResultSE: CurrentResultService,
@@ -24,7 +28,8 @@ export class ResultDetailComponent implements OnInit, DoCheck {
     public api: ApiService,
     public saveButtonSE: SaveButtonService,
     public dataControlSE: DataControlService,
-    private readonly greenChecksSE: GreenChecksService
+    private readonly greenChecksSE: GreenChecksService,
+    private readonly clipboard: Clipboard
   ) {
     effect(() => {
       const portfolio = this.dataControlSE.currentResultSignal()?.portfolio;
@@ -34,12 +39,28 @@ export class ResultDetailComponent implements OnInit, DoCheck {
     });
   }
   closeInfo = false;
+
   ngOnInit(): void {
     this.getData();
   }
 
-  onCopy() {
+  togglePdfMenu(): void {
+    this.showPdfMenu = !this.showPdfMenu;
+  }
+
+  viewPdf(): void {
+    window.open(this.getPdfLink(), '_blank');
+    this.showPdfMenu = false;
+  }
+
+  getPdfLink(): string {
+    return `${environment.frontBaseUrl}reports/result-details/${this.api.resultsSE.currentResultCode}?phase=${this.api.resultsSE.currentResultPhase}`;
+  }
+
+  copyPdfLink(): void {
+    this.clipboard.copy(this.getPdfLink());
     this.messageSE.add({ key: 'copyResultLinkPdf', severity: 'success', summary: 'PDF link copied' });
+    this.showPdfMenu = false;
   }
 
   async getData() {

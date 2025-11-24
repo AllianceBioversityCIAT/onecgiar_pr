@@ -18,6 +18,7 @@ import { PhaseSwitcherModule } from '../../../../shared/components/phase-switche
 import { AiReviewComponent } from './components/ai-review/ai-review.component';
 import { TooltipModule } from 'primeng/tooltip';
 import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
+import { ClipboardModule } from '@angular/cdk/clipboard';
 
 @NgModule({
   declarations: [ResultDetailComponent, PanelMenuComponent, PanelMenuPipe, NoEditContainerComponent],
@@ -35,7 +36,8 @@ import { PageHeaderComponent } from '../../../../shared/components/page-header/p
     PhaseSwitcherModule,
     AiReviewComponent,
     TooltipModule,
-    PageHeaderComponent
+    PageHeaderComponent,
+    ClipboardModule
   ]
 })
 export class ResultDetailModule {}

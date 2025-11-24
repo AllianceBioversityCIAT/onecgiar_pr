@@ -8,6 +8,92 @@ app-page-header {
   display: block;
 }
 
+// Estilos para el menú de PDF
+.pdf-menu-container {
+  display: flex;
+  align-items: center;
+  position: relative;
+
+  .pdf-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 20px;
+    border: 2px solid var(--pr-color-blue-500);
+    border-radius: 25px;
+    background-color: white;
+    color: var(--pr-color-blue-500);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    font-weight: 600;
+
+    i {
+      font-size: 16px;
+      
+      &.pi-angle-down {
+        font-size: 14px;
+      }
+    }
+
+    &:hover {
+      background-color: var(--pr-color-blue-50);
+      border-color: var(--pr-color-blue-600);
+      color: var(--pr-color-blue-600);
+    }
+
+    &:active {
+      transform: scale(0.98);
+    }
+
+    &:focus {
+      outline: 2px solid var(--pr-color-blue-300);
+      outline-offset: 2px;
+    }
+  }
+
+  .pdf-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    min-width: 180px;
+    z-index: 1000;
+    overflow: hidden;
+
+    .pdf-dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+      color: var(--pr-color-secondary-100);
+      font-size: 14px;
+      font-weight: 500;
+
+      i {
+        font-size: 18px;
+        color: var(--pr-color-blue-500);
+      }
+
+      &:hover {
+        background-color: var(--pr-color-blue-50);
+
+        i {
+          color: var(--pr-color-blue-600);
+        }
+
+        span {
+          color: var(--pr-color-blue-600);
+        }
+      }
+    }
+  }
+}
+
 .local_grid {
   display: grid;
   grid-template-columns: 300px 1fr;
