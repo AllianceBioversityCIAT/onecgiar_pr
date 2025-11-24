@@ -71,7 +71,11 @@
       </div>
 
       <div class="button_access_information pr-body-3" *ngIf="this.dataControlSE?.currentResult?.status_id == 1">
-        These buttons will become available once all sections are completed.
+        @if (this.api.dataControlSE?.currentResult?.result_type_id != 6) {
+          These buttons will become available once all sections are completed.
+        } @else {
+          This button will become available once all sections are completed.
+        }
       </div>
 
       <div class="button_access_information pr-body-3" *ngIf="this.dataControlSE?.currentResult?.status_id == 2">
