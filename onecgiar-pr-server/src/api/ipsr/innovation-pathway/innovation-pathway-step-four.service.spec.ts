@@ -426,6 +426,8 @@ describe('InnovationPathwayStepFourService', () => {
         evidence_array: [],
         results_capacity_development_object: null,
         results_innovations_dev_object: null,
+        results_innovations_use_object: null,
+        results_policy_changes_object: null,
         obj_external_submitter: null,
         obj_lead_contact_person: {
           id: 1,
