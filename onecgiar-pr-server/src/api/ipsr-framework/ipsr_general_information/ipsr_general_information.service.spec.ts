@@ -355,10 +355,16 @@ describe('IpsrGeneralInformationService', () => {
     it('should return error via handler if something fails', async () => {
       mockResultRepo.findOneBy.mockRejectedValue(new Error('Database error'));
 
-      expect(mockErrorHandler.returnErrorRes).toHaveBeenCalledWith({
-        error: expect.any(Error),
-        debug: true,
-      });
+      try {
+        await service.generalInformation(1, mockDto, mockUser);
+      } catch (error) {}
+
+      expect(mockErrorHandler.returnErrorRes).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: expect.any(Error),
+          debug: true,
+        }),
+      );
     });
   });
 
@@ -446,21 +452,29 @@ describe('IpsrGeneralInformationService', () => {
     it('should handle result not found', async () => {
       mockIpsrRepo.getResultInnovationById.mockResolvedValue([]);
 
-      expect(mockErrorHandler.returnErrorRes).toHaveBeenCalledWith({
-        error: expect.any(Error),
-        debug: true,
-      });
+      await service.findOneInnovation(999).catch(() => {});
+
+      expect(mockErrorHandler.returnErrorRes).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: expect.any(Error),
+          debug: true,
+        })
+      );
     });
 
     it('should handle error and return handler response', async () => {
       mockIpsrRepo.getResultInnovationById.mockRejectedValue(
-        new Error('Database error'),
+        new Error('Some DB error')
       );
 
-      expect(mockErrorHandler.returnErrorRes).toHaveBeenCalledWith({
-        error: expect.any(Error),
-        debug: true,
-      });
+      await service.findOneInnovation(1).catch(() => {});
+
+      expect(mockErrorHandler.returnErrorRes).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: expect.any(Error),
+          debug: true,
+        })
+      );
     });
   });
 
