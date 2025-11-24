@@ -3,11 +3,8 @@ import { PanelMenuComponent } from './panel-menu.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { PanelMenuPipe } from './pipes/panel-menu.pipe';
 import { PrInputComponent } from '../../../../../custom-fields/pr-input/pr-input.component';
-import { PdfActionsComponent } from '../components/pdf-actions/pdf-actions.component';
-import { CdkCopyToClipboard } from '@angular/cdk/clipboard';
 import { PrButtonComponent } from '../../../../../custom-fields/pr-button/pr-button.component';
 import { TooltipModule } from 'primeng/tooltip';
-import { PdfIconComponent } from '../../../../../shared/icon-components/pdf-icon/pdf-icon.component';
 import { ApiService } from '../../../../../shared/services/api/api.service';
 import { ResultLevelService } from '../../result-creator/services/result-level.service';
 import { ResultsApiService } from '../../../../../shared/services/api/results-api.service';
@@ -85,8 +82,8 @@ describe('PanelMenuComponent', () => {
     };
 
     await TestBed.configureTestingModule({
-      declarations: [PanelMenuComponent, PanelMenuPipe, PrInputComponent, PdfActionsComponent, PrButtonComponent, PdfIconComponent],
-      imports: [HttpClientTestingModule, TooltipModule, CdkCopyToClipboard, RouterTestingModule],
+      declarations: [PanelMenuComponent, PanelMenuPipe, PrInputComponent, PrButtonComponent],
+      imports: [HttpClientTestingModule, TooltipModule, RouterTestingModule],
       providers: [
         { provide: ApiService, useValue: mockApiService },
         { provide: ResultLevelService, useValue: mockResultLevelService },
@@ -111,11 +108,6 @@ describe('PanelMenuComponent', () => {
     it('should initialize navigationOptions from routing data', () => {
       expect(component.navigationOptions).toBeDefined();
       expect(Array.isArray(component.navigationOptions)).toBe(true);
-    });
-
-    it('should initialize copyEvent as EventEmitter', () => {
-      expect(component.copyEvent).toBeDefined();
-      expect(component.copyEvent.emit).toBeDefined();
     });
   });
 
@@ -282,20 +274,6 @@ describe('PanelMenuComponent', () => {
     });
   });
 
-  describe('Output Events', () => {
-    it('should emit copyEvent when copyEvent.emit() is called', () => {
-      jest.spyOn(component.copyEvent, 'emit');
-      component.copyEvent.emit();
-      expect(component.copyEvent.emit).toHaveBeenCalled();
-    });
-
-    it('should emit copyEvent with data when provided', () => {
-      const testData = { action: 'copy' };
-      jest.spyOn(component.copyEvent, 'emit');
-      component.copyEvent.emit(testData);
-      expect(component.copyEvent.emit).toHaveBeenCalledWith(testData);
-    });
-  });
 
   describe('Service Dependencies', () => {
     it('should have all required services injected', () => {
