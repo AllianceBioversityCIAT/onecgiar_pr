@@ -19,10 +19,10 @@ app-page-header {
     align-items: center;
     gap: 8px;
     padding: 8px 20px;
-    border: 2px solid var(--pr-color-blue-500);
-    border-radius: 25px;
+    border: 2px solid var(--pr-color-primary-400);
+    border-radius: 10px;
     background-color: white;
-    color: var(--pr-color-blue-500);
+    color: var(--pr-color-primary-400);
     cursor: pointer;
     transition: all 0.2s ease;
     font-size: 14px;
@@ -37,9 +37,9 @@ app-page-header {
     }
 
     &:hover {
-      background-color: var(--pr-color-blue-50);
-      border-color: var(--pr-color-blue-600);
-      color: var(--pr-color-blue-600);
+      background-color: var(--pr-color-primary-50);
+      border-color: var(--pr-color-primary-500);
+      color: var(--pr-color-primary-500);
     }
 
     &:active {
@@ -47,7 +47,7 @@ app-page-header {
     }
 
     &:focus {
-      outline: 2px solid var(--pr-color-blue-300);
+      outline: 2px solid var(--pr-color-primary-200);
       outline-offset: 2px;
     }
   }
@@ -59,9 +59,23 @@ app-page-header {
     background-color: white;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    min-width: 180px;
+    min-width: 200px;
     z-index: 1000;
     overflow: hidden;
+
+    .pdf-dropdown-header {
+      padding: 12px 16px 8px 16px;
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--pr-color-accents-3);
+      text-transform: capitalize;
+    }
+
+    .pdf-dropdown-separator {
+      height: 1px;
+      background-color: var(--pr-color-accents-2);
+      margin: 4px 0;
+    }
 
     .pdf-dropdown-item {
       display: flex;
@@ -70,24 +84,24 @@ app-page-header {
       padding: 12px 16px;
       cursor: pointer;
       transition: background-color 0.2s ease;
-      color: var(--pr-color-secondary-100);
+      color: var(--pr-color-primary-400);
       font-size: 14px;
       font-weight: 500;
 
       i {
         font-size: 18px;
-        color: var(--pr-color-blue-500);
+        color: var(--pr-color-primary-400);
       }
 
       &:hover {
-        background-color: var(--pr-color-blue-50);
+        background-color: var(--pr-color-primary-50);
 
         i {
-          color: var(--pr-color-blue-600);
+          color: var(--pr-color-primary-500);
         }
 
         span {
-          color: var(--pr-color-blue-600);
+          color: var(--pr-color-primary-500);
         }
       }
     }
