@@ -26,4 +26,8 @@ export interface Unit {
   year: number;
   parentId?: string;
   progress: number;
+  progressDetails?: {
+    targetValueSum: number;
+    actualAchievedValueSum: number;
+  };
 }

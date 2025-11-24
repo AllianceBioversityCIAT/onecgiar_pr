@@ -83,3 +83,23 @@ p {
   font-weight: 600;
   color: var(--pr-color-primary-300);
 }
+
+.entity-aow-card_results {
+  display: flex;
+  gap: 30px;
+}
+
+.entity-results-by-indicator-category-card_results_item {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  @include fonts.pr-typography('body-2');
+  font-weight: 400;
+  color: var(--pr-color-secondary-300);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
