@@ -94,6 +94,7 @@ export class ApiService {
       response.official_code = response?.initiative_official_code;
       this.rolesSE.validateReadOnly(response);
       this.dataControlSE.currentResult = response;
+      this.dataControlSE.currentResultSignal.set(response);
       const is_phase_open = response?.is_phase_open;
 
       switch (is_phase_open) {
