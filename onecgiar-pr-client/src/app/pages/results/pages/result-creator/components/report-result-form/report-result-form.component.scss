@@ -68,10 +68,8 @@ p {
   gap: 2px;
 
   .sync_button {
-    margin-bottom: 5px;
     background: none;
     border: none;
-    padding: 0;
     cursor: pointer;
 
     &:disabled {
@@ -114,4 +112,3 @@ p {
   padding: 0px 16px 10px;
   border-bottom: 1px solid var(--pr-color-accents-2);
 }
-
