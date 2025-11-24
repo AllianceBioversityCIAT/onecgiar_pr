@@ -83,7 +83,6 @@ describe('ResultDetailComponent', () => {
     }
 
     mockGreenChecksService = {
-      updateGreenChecks: jest.fn(),
       getGreenChecks: jest.fn(),
     }
 
@@ -172,7 +171,6 @@ describe('ResultDetailComponent', () => {
       const spyUpdateUserData = jest.spyOn(mockApiService, 'updateUserData');
       const spyGET_resultIdToCode = jest.spyOn(mockApiService.resultsSE, 'GET_resultIdToCode');
       const spyGET_resultById = jest.spyOn(mockCurrentResultService, 'GET_resultById');
-      const spyUpdateGreenChecks = jest.spyOn(mockGreenChecksService, 'updateGreenChecks');
       const spyGetGreenChecks = jest.spyOn(mockGreenChecksService,'getGreenChecks');
       const spyGET_versioningResult = jest.spyOn(mockApiService.resultsSE, 'GET_versioningResult');
 
@@ -184,11 +182,9 @@ describe('ResultDetailComponent', () => {
       expect(spyUpdateUserData).toHaveBeenCalled();
       expect(spyGET_resultIdToCode).toHaveBeenCalled();
       expect(spyGET_resultById).toHaveBeenCalled();
-      expect(spyUpdateGreenChecks).toHaveBeenCalled();
+      expect(spyGetGreenChecks).toHaveBeenCalled();
       expect(spyGET_versioningResult).toHaveBeenCalled();
       expect(mockShareRequestModalService.inNotifications).toBe(false);
-      // getGreenChecks() is now called by the effect when portfolio is defined, not directly in getData()
-      expect(spyGetGreenChecks).not.toHaveBeenCalled();
     });
   });
 
@@ -239,21 +235,34 @@ describe('ResultDetailComponent', () => {
       jest.clearAllMocks();
       mockApiService.resultsSE.currentResultId = 123;
       mockDataControlService.currentResultSignal.set({ portfolio: 'P25' });
+
+      // Mock getData to prevent it from being called during component creation
+      const spyGetData = jest.spyOn(ResultDetailComponent.prototype, 'getData').mockImplementation(async () => {});
+
       const newFixture = TestBed.createComponent(ResultDetailComponent);
       const newComponent = newFixture.componentInstance;
       newFixture.detectChanges();
       await Promise.resolve();
+
+      spyGetData.mockRestore();
       expect(mockGreenChecksService.getGreenChecks).toHaveBeenCalled();
     });
 
-    it('should not call getGreenChecks when portfolio is undefined', async () => {
+    it('should not call getGreenChecks from effect when portfolio is undefined', async () => {
       jest.clearAllMocks();
       mockApiService.resultsSE.currentResultId = 123;
       mockDataControlService.currentResultSignal.set({});
+
+      // Mock getData to prevent it from calling getGreenChecks
+      const spyGetData = jest.spyOn(ResultDetailComponent.prototype, 'getData').mockImplementation(async () => {});
+
       const newFixture = TestBed.createComponent(ResultDetailComponent);
       const newComponent = newFixture.componentInstance;
       newFixture.detectChanges();
       await Promise.resolve();
+
+      spyGetData.mockRestore();
+      // getGreenChecks should not be called by the effect since portfolio is undefined
       expect(mockGreenChecksService.getGreenChecks).not.toHaveBeenCalled();
     });
   });

@@ -1,0 +1,50 @@
+<p-dialog
+  appendTo="body"
+  header="Title"
+  [(visible)]="this.visible"
+  [draggable]="false"
+  [modal]="true"
+  [closeOnEscape]="true"
+  [showHeader]="false"
+  [dismissableMask]="true"
+  [style]="{ padding: '0px' }">
+  <div class="modal_title">Non-Pooled Project Info</div>
+
+  <div class="modal_container partners-request-container">
+    <app-pr-select
+      class="segment_title_margin"
+      [options]="this.institutionsSE.institutionsList"
+      label="Funder name"
+      optionLabel="full_name"
+      optionValue="institutions_id"
+      [readOnly]="true"
+      [(ngModel)]="this.body.obj_result_project.obj_clarisa_project.id">
+    </app-pr-select>
+
+    <div class="auto_fit_container">
+      <app-pr-input label="Grant title" [required]="true" [(ngModel)]="this.body.obj_result_project.obj_clarisa_project.shortName" [readOnly]="true">
+      </app-pr-input>
+
+      <!-- <app-pr-input [(ngModel)]="this.body.obj_result_project.center_grant_id" label="Center Grant ID" [required]="true" [readOnly]="true">
+      </app-pr-input> -->
+    </div>
+
+    <!-- <app-pr-select
+      [options]="this.centersSE.centersList"
+      [required]="true"
+      label="Lead/Contract Center"
+      [(ngModel)]="this.body.obj_result_project.obj_clarisa_project.lead_center_id"
+      optionLabel="full_name"
+      optionValue="lead_center"
+      [readOnly]="true">
+    </app-pr-select> -->
+  </div>
+
+  <div class="buttons">
+    <app-pr-button padding="medium" text="Close" icon="cancel_schedule_send" colorType="secondary" (click)="this.visible = false"> </app-pr-button>
+  </div>
+</p-dialog>
+
+<div class="buttonOpen" (click)="visible = true" style="font-size: 17px; margin-bottom: 5px">
+  <i class="material-icons-round" style="font-size: 17px"> visibility </i>
+</div>

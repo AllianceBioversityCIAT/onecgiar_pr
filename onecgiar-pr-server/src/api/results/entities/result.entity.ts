@@ -6,6 +6,7 @@ import {
   JoinColumn,
   ManyToOne,
   OneToMany,
+  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -39,6 +40,7 @@ import { AiReviewEvent } from '../../ai/entities/ai-review-event.entity';
 import { Evidence } from '../evidences/entities/evidence.entity';
 import { ResultFieldRevision } from '../../ai/entities/result-field-revision.entity';
 import { ResultFieldAiState } from '../../ai/entities/result-field-ai-state.entity';
+import { ResultsInnovationsDev } from '../summary/entities/results-innovations-dev.entity';
 
 @Entity()
 export class Result {
@@ -548,4 +550,9 @@ export class Result {
 
   @OneToMany(() => Evidence, (e) => e.obj_result)
   evidence_array: Evidence[];
+
+  @OneToOne(() => ResultsInnovationsDev, (rid) => rid.result_object, {
+    nullable: true,
+  })
+  results_innovations_dev_object: ResultsInnovationsDev;
 }
