@@ -182,9 +182,9 @@ describe('ResultDetailComponent', () => {
       component.showPdfMenu = true;
       const mockEvent = {
         target: document.createElement('div')
-      } as MouseEvent;
+      } as Partial<MouseEvent>;
 
-      component.onDocumentClick(mockEvent);
+      component.onDocumentClick(mockEvent as MouseEvent);
 
       expect(component.showPdfMenu).toBe(false);
     });
@@ -194,9 +194,9 @@ describe('ResultDetailComponent', () => {
       const container = fixture.nativeElement.querySelector('.pdf-menu-container');
       const mockEvent = {
         target: container || fixture.nativeElement
-      } as MouseEvent;
+      } as Partial<MouseEvent>;
 
-      component.onDocumentClick(mockEvent);
+      component.onDocumentClick(mockEvent as MouseEvent);
 
       expect(component.showPdfMenu).toBe(true);
     });
@@ -205,9 +205,9 @@ describe('ResultDetailComponent', () => {
       component.showPdfMenu = false;
       const mockEvent = {
         target: document.createElement('div')
-      } as MouseEvent;
+      } as Partial<MouseEvent>;
 
-      component.onDocumentClick(mockEvent);
+      component.onDocumentClick(mockEvent as MouseEvent);
 
       expect(component.showPdfMenu).toBe(false);
     });
@@ -215,7 +215,7 @@ describe('ResultDetailComponent', () => {
 
   describe('viewPdf()', () => {
     it('should open PDF in new window and close menu', () => {
-      const windowOpenSpy = jest.spyOn(window, 'open').mockImplementation();
+      const windowOpenSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
       const testLink = 'http://test-link.com';
       jest.spyOn(component, 'getPdfLink').mockReturnValue(testLink);
       component.showPdfMenu = true;
