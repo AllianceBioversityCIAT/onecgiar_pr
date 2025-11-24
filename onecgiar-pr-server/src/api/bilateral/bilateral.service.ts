@@ -419,139 +419,123 @@ export class BilateralService {
     return user;
   }
 
-  private async handleTocMapping(tocArray, userId, resultId) {
-    if (!Array.isArray(tocArray)) {
+  private async handleTocMapping(toc, userId, resultId) {
+    if (!toc || typeof toc !== 'object') {
       this.logger.warn(
-        'handleTocMapping received non-array tocArray; skipping',
+        'handleTocMapping received invalid toc object; skipping',
       );
       return;
     }
 
-    const errors: string[] = [];
-    let processed = 0;
+    const {
+      science_program_id,
+      aow_compose_code,
+      result_title,
+      result_indicator_description,
+      result_indicator_type_name,
+    } = toc;
 
-    for (const [index, toc] of tocArray.entries()) {
-      const {
-        science_program_id,
-        aow_compose_code,
-        result_title,
-        result_indicator_description,
-        result_indicator_type_name,
-      } = toc || {};
+    const missingFields = [
+      !science_program_id && 'science_program_id',
+      science_program_id &&
+      !aow_compose_code &&
+      !result_title &&
+      !result_indicator_description &&
+      !result_indicator_type_name
+        ? null
+        : !aow_compose_code && 'aow_compose_code',
+      science_program_id &&
+      !aow_compose_code &&
+      !result_title &&
+      !result_indicator_description &&
+      !result_indicator_type_name
+        ? null
+        : !result_title && 'result_title',
+      science_program_id &&
+      !aow_compose_code &&
+      !result_title &&
+      !result_indicator_description &&
+      !result_indicator_type_name
+        ? null
+        : !result_indicator_description && 'result_indicator_description',
+      science_program_id &&
+      !aow_compose_code &&
+      !result_title &&
+      !result_indicator_description &&
+      !result_indicator_type_name
+        ? null
+        : !result_indicator_type_name && 'result_indicator_type_name',
+    ].filter(Boolean) as string[];
 
-      const missingFields = [
-        !science_program_id && 'science_program_id',
-        science_program_id &&
-        !aow_compose_code &&
-        !result_title &&
-        !result_indicator_description &&
-        !result_indicator_type_name
-          ? null
-          : !aow_compose_code && 'aow_compose_code',
-        science_program_id &&
-        !aow_compose_code &&
-        !result_title &&
-        !result_indicator_description &&
-        !result_indicator_type_name
-          ? null
-          : !result_title && 'result_title',
-        science_program_id &&
-        !aow_compose_code &&
-        !result_title &&
-        !result_indicator_description &&
-        !result_indicator_type_name
-          ? null
-          : !result_indicator_description && 'result_indicator_description',
-        science_program_id &&
-        !aow_compose_code &&
-        !result_title &&
-        !result_indicator_description &&
-        !result_indicator_type_name
-          ? null
-          : !result_indicator_type_name && 'result_indicator_type_name',
-      ].filter(Boolean) as string[];
-
-      if (missingFields.length) {
-        errors.push(
-          `TOC item ${index} missing required fields: ${missingFields.join(', ')}`,
-        );
-        continue;
-      }
-
-      try {
-        const mapToToc =
-          await this._resultsTocResultsRepository.findTocResultsForBilateral(
-            toc,
-          );
-
-        if (!mapToToc || !Array.isArray(mapToToc) || !mapToToc.length) {
-          errors.push(
-            `TOC item ${index} did not match any ToC results (compose=${aow_compose_code}, program=${science_program_id})`,
-          );
-          continue;
-        }
-
-        const firstMap = mapToToc[0];
-        const isInitiativeOnlyMapping =
-          firstMap.toc_result_id === null &&
-          firstMap.toc_results_indicator_id === null &&
-          firstMap.science_program_id;
-
-        if (
-          !isInitiativeOnlyMapping &&
-          (!firstMap.toc_result_id || !firstMap.toc_results_indicator_id)
-        ) {
-          errors.push(
-            `TOC item ${index} repository data missing fields: toc_result_id or toc_results_indicator_id`,
-          );
-          continue;
-        }
-
-        const init = await this._clarisaInitiatives.findOne({
-          where: { official_code: science_program_id },
-        });
-
-        if (!init) {
-          errors.push(
-            `TOC item ${index} initiative not found for official_code=${science_program_id}`,
-          );
-          continue;
-        }
-
-        const newTocMapping = this._resultsTocResultsRepository.create({
-          created_by: userId,
-          toc_result_id: firstMap.toc_result_id,
-          initiative_id: init.id,
-          result_id: resultId,
-        });
-        await this._resultsTocResultsRepository.save(newTocMapping);
-
-        if (!isInitiativeOnlyMapping) {
-          const newTocContributorsIndicator =
-            this._resultsTocResultsIndicatorsRepository.create({
-              created_by: userId,
-              results_toc_results_id: newTocMapping.result_toc_result_id,
-              toc_results_indicator_id: firstMap.toc_results_indicator_id,
-            });
-          await this._resultsTocResultsIndicatorsRepository.save(
-            newTocContributorsIndicator,
-          );
-        }
-        processed++;
-      } catch (err) {
-        errors.push(
-          `TOC item ${index} unexpected error: ${(err as Error).message}`,
-        );
-      }
+    if (missingFields.length) {
+      this.logger.warn(
+        `TOC mapping missing required fields: ${missingFields.join(', ')}`,
+      );
+      return;
     }
 
-    if (errors.length) {
-      this.logger.warn(
-        `handleTocMapping completed with ${processed} items processed and ${errors.length} issues: ${errors.join(' | ')}`,
-      );
-    } else {
-      this.logger.debug(
-        `handleTocMapping processed ${processed} TOC items successfully`,
+    try {
+      const mapToToc =
+        await this._resultsTocResultsRepository.findTocResultsForBilateral(toc);
+
+      if (!mapToToc || !Array.isArray(mapToToc) || !mapToToc.length) {
+        this.logger.warn(
+          `TOC mapping did not match any ToC results (compose=${aow_compose_code}, program=${science_program_id})`,
+        );
+        return;
+      }
+
+      const firstMap = mapToToc[0];
+      const isInitiativeOnlyMapping =
+        firstMap.toc_result_id === null &&
+        firstMap.toc_results_indicator_id === null &&
+        firstMap.science_program_id;
+
+      if (
+        !isInitiativeOnlyMapping &&
+        (!firstMap.toc_result_id || !firstMap.toc_results_indicator_id)
+      ) {
+        this.logger.warn(
+          'TOC mapping repository data missing fields: toc_result_id or toc_results_indicator_id',
+        );
+        return;
+      }
+
+      const init = await this._clarisaInitiatives.findOne({
+        where: { official_code: science_program_id },
+      });
+
+      if (!init) {
+        this.logger.warn(
+          `TOC mapping initiative not found for official_code=${science_program_id}`,
+        );
+        return;
+      }
+
+      const newTocMapping = this._resultsTocResultsRepository.create({
+        created_by: userId,
+        toc_result_id: firstMap.toc_result_id,
+        initiative_id: init.id,
+        result_id: resultId,
+      });
+      await this._resultsTocResultsRepository.save(newTocMapping);
+
+      if (!isInitiativeOnlyMapping) {
+        const newTocContributorsIndicator =
+          this._resultsTocResultsIndicatorsRepository.create({
+            created_by: userId,
+            results_toc_results_id: newTocMapping.result_toc_result_id,
+            toc_results_indicator_id: firstMap.toc_results_indicator_id,
+          });
+        await this._resultsTocResultsIndicatorsRepository.save(
+          newTocContributorsIndicator,
+        );
+      }
+
+      this.logger.debug('TOC mapping processed successfully');
+    } catch (err) {
+      this.logger.error(
+        `TOC mapping unexpected error: ${(err as Error).message}`,
       );
     }
   }

@@ -995,12 +995,12 @@ export class CreateBilateralDto {
   @ApiProperty({
     description:
       'Mapping information linking the bilateral to Theory of Change elements',
-    type: [TocMappingDto],
+    type: () => TocMappingDto,
   })
-  @IsArray()
-  @ValidateNested({ each: true })
+  @IsObject()
+  @ValidateNested()
   @Type(() => TocMappingDto)
-  toc_mapping: TocMappingDto[];
+  toc_mapping: TocMappingDto;
 
   @ApiProperty({
     description: 'Geographic focus definition for the bilateral',
