@@ -29,14 +29,16 @@ describe('InnovationUseBilateralHandler', () => {
   };
 
   let handler: InnovationUseBilateralHandler;
-  let repoStub: any;
+  let innovationUseServiceStub: any;
   let useLevelRepoStub: any;
 
   beforeEach(() => {
-    repoStub = {
-      findOne: jest.fn().mockResolvedValue(undefined),
-      save: jest.fn(),
-      create: jest.fn((payload) => payload),
+    innovationUseServiceStub = {
+      saveInnovationUse: jest.fn().mockResolvedValue({
+        response: {},
+        message: 'Success',
+        status: 201,
+      }),
     };
     useLevelRepoStub = {
       findOne: jest.fn().mockResolvedValue({ id: 10, level: 2 }),
@@ -45,7 +47,10 @@ describe('InnovationUseBilateralHandler', () => {
         getOne: jest.fn().mockResolvedValue({ id: 10, name: 'Test Level' }),
       }),
     };
-    handler = new InnovationUseBilateralHandler(repoStub, useLevelRepoStub);
+    handler = new InnovationUseBilateralHandler(
+      innovationUseServiceStub,
+      useLevelRepoStub,
+    );
   });
 
   it('throws when innovation_use payload is missing', async () => {
@@ -150,14 +155,15 @@ describe('InnovationUseBilateralHandler', () => {
     expect(useLevelRepoStub.findOne).toHaveBeenCalledWith({
       where: { level: 2 },
     });
-    expect(repoStub.create).toHaveBeenCalledWith(
+    expect(innovationUseServiceStub.saveInnovationUse).toHaveBeenCalledWith(
       expect.objectContaining({
-        results_id: baseContext.resultId,
         innov_use_to_be_determined: false,
         innovation_use_level_id: 10,
+        actors: expect.any(Array),
       }),
+      baseContext.resultId,
+      expect.objectContaining({ id: baseContext.userId }),
     );
-    expect(repoStub.save).toHaveBeenCalled();
   });
 
   it('creates repository entry with use level by name', async () => {
@@ -176,13 +182,13 @@ describe('InnovationUseBilateralHandler', () => {
     });
 
     expect(useLevelRepoStub.createQueryBuilder).toHaveBeenCalledWith('iul');
-    expect(repoStub.create).toHaveBeenCalledWith(
+    expect(innovationUseServiceStub.saveInnovationUse).toHaveBeenCalledWith(
       expect.objectContaining({
-        results_id: baseContext.resultId,
         innovation_use_level_id: 10,
       }),
+      baseContext.resultId,
+      expect.objectContaining({ id: baseContext.userId }),
     );
-    expect(repoStub.save).toHaveBeenCalled();
   });
 
   it('creates repository entry without use level when not provided', async () => {
@@ -198,33 +204,27 @@ describe('InnovationUseBilateralHandler', () => {
       },
     });
 
-    expect(repoStub.create).toHaveBeenCalledWith(
+    expect(innovationUseServiceStub.saveInnovationUse).toHaveBeenCalledWith(
       expect.objectContaining({
-        results_id: baseContext.resultId,
         innov_use_to_be_determined: true,
         innovation_use_level_id: null,
       }),
+      baseContext.resultId,
+      expect.objectContaining({ id: baseContext.userId }),
     );
-    expect(repoStub.save).toHaveBeenCalled();
   });
 
   it('updates existing record when found', async () => {
-    repoStub.findOne.mockResolvedValue({
-      result_innovation_use_id: 123,
-    });
-
     await handler.afterCreate(baseContext);
 
-    expect(repoStub.findOne).toHaveBeenCalledWith({
-      where: { results_id: baseContext.resultId },
-    });
-    expect(repoStub.save).toHaveBeenCalledWith(
+    expect(innovationUseServiceStub.saveInnovationUse).toHaveBeenCalledWith(
       expect.objectContaining({
-        result_innovation_use_id: 123,
         innov_use_to_be_determined: false,
         innovation_use_level_id: 10,
-        last_updated_by: baseContext.userId,
+        actors: expect.any(Array),
       }),
+      baseContext.resultId,
+      expect.objectContaining({ id: baseContext.userId }),
     );
   });
 });

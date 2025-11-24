@@ -126,7 +126,7 @@ export class BilateralService {
     for (const result of incomingResults) {
       try {
         await this.dataSource.transaction(
-          async (transactionalEntityManager) => {
+          async (_transactionalEntityManager) => {
             if (!result?.data || typeof result.data !== 'object') {
               throw new BadRequestException(
                 'Each result entry must include a "data" object with the bilateral payload.',
