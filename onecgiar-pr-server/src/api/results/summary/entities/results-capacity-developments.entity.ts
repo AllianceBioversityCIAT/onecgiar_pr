@@ -20,11 +20,18 @@ export class ResultsCapacityDevelopments {
   })
   result_capacity_development_id: number;
 
-  @OneToOne(() => Result, (r) => r.id, { nullable: false })
+  @Column({
+    name: 'result_id',
+    type: 'bigint',
+    nullable: false,
+  })
+  result_id: number;
+
+  @OneToOne(() => Result, (r) => r.obj_result_capacity_development)
   @JoinColumn({
     name: 'result_id',
   })
-  result_id: number;
+  result_object: Result;
 
   @Column({
     name: 'male_using',

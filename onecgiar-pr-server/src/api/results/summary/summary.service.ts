@@ -254,10 +254,21 @@ export class SummaryService {
         );
 
       if (!capDevExists) {
-        throw {
-          response: {},
-          message: 'Capacity Developents not found',
-          status: HttpStatus.NOT_FOUND,
+        return {
+          response: {
+            result_capacity_development_id: null,
+            result_id: resultId,
+            male_using: null,
+            female_using: null,
+            non_binary_using: null,
+            has_unkown_using: null,
+            capdev_delivery_method_id: null,
+            capdev_term_id: null,
+            is_attending_for_organization: null,
+            institutions: capDepInstitutions,
+          },
+          message: 'No capacity development data found for this result',
+          status: HttpStatus.OK,
         };
       }
 
@@ -267,7 +278,7 @@ export class SummaryService {
           institutions: capDepInstitutions,
         },
         message: 'Capacity Developents has been created successfully',
-        status: HttpStatus.CREATED,
+        status: HttpStatus.OK,
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
