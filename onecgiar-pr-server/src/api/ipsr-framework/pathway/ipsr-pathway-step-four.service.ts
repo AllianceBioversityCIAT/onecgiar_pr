@@ -18,6 +18,8 @@ import { ResultsByProjectsRepository } from "../../results/results_by_projects/r
 import { ResultInstitutionsBudget } from "../../results/result_budget/entities/result_institutions_budget.entity";
 import { ResultScalingStudyUrl } from "../../results-framework-reporting/result_scaling_study_urls/entities/result_scaling_study_url.entity";
 import { In, Repository } from "typeorm";
+import { NonPooledProjectRepository } from "../../results/non-pooled-projects/non-pooled-projects.repository";
+import { InjectRepository } from "@nestjs/typeorm";
 
 @Injectable()
 export class IpsrPathwayStepFourService {
@@ -26,8 +28,10 @@ export class IpsrPathwayStepFourService {
         protected readonly _handlersError: HandlersError,
         protected readonly _resultRepository: ResultRepository,
         protected readonly _resultInnovationPackageRepository: ResultInnovationPackageRepository,
+        @InjectRepository(ResultScalingStudyUrl)
         private readonly _resultScalingStudyUrlsRepository: Repository<ResultScalingStudyUrl>,
         protected readonly _evidenceRepository: EvidencesRepository,
+        protected readonly _nonPooledProjectRepository: NonPooledProjectRepository,
         protected readonly _resultByInitiativeRepository: ResultByInitiativesRepository,
         protected readonly _resultByProjectRepository: ResultsByProjectsRepository,
         protected readonly _resultInitiativesBudgetRepository: ResultInitiativeBudgetRepository,
@@ -468,24 +472,162 @@ export class IpsrPathwayStepFourService {
         }, []);
     }
 
-      private createNew(
+    private createNew(
         existingLinks: string[],
         ipsrMaterials: { link: string }[],
         user: TokenDto,
         resultId: number,
-      ): Promise<Evidence>[] {
-        return ipsrMaterials
-          .filter((m) => !existingLinks.includes(m.link))
-          .map((m) => {
-            const newMaterial = new Evidence();
-            newMaterial.result_id = resultId;
-            newMaterial.link = m.link;
-            newMaterial.evidence_type_id = 4;
-            newMaterial.created_by = user.id;
-            newMaterial.creation_date = new Date();
-            newMaterial.last_updated_by = user.id;
-            newMaterial.last_updated_date = new Date();
-            return this._evidenceRepository.save(newMaterial);
+    ): Promise<Evidence>[] {
+    return ipsrMaterials
+        .filter((m) => !existingLinks.includes(m.link))
+        .map((m) => {
+        const newMaterial = new Evidence();
+        newMaterial.result_id = resultId;
+        newMaterial.link = m.link;
+        newMaterial.evidence_type_id = 4;
+        newMaterial.created_by = user.id;
+        newMaterial.creation_date = new Date();
+        newMaterial.last_updated_by = user.id;
+        newMaterial.last_updated_date = new Date();
+        return this._evidenceRepository.save(newMaterial);
+        });
+    }
+
+    async getStepFour(resultId: number) {
+        try {
+        const ipsr_pictures = await this._evidenceRepository.find({
+            where: {
+            result_id: resultId,
+            is_active: 1,
+            evidence_type_id: 3,
+            },
+        });
+
+        const ipsr_materials = await this._evidenceRepository.find({
+            where: {
+            result_id: resultId,
+            is_active: 1,
+            evidence_type_id: 4,
+            },
+        });
+
+        const initiatives = await this._resultByInitiativeRepository.find({
+            where: {
+            result_id: resultId,
+            is_active: true,
+            },
+        });
+
+        const initiative_expected_investment =
+            await this._resultInitiativesBudgetRepository.find({
+            where: {
+                result_initiative_id: In(initiatives.map((el) => el.id)),
+                is_active: true,
+            },
+            relations: {
+                obj_result_initiative: {
+                obj_initiative: true,
+                },
+            },
+            });
+
+        const result_ip = await this._resultInnovationPackageRepository.findOne({
+            where: {
+            result_innovation_package_id: resultId,
+            is_active: true,
+            },
+        });
+
+        const rbp = await this._resultByProjectRepository.find({
+          where: {
+            result_id: resultId,
+            is_active: true,
+          },
+        });
+
+        const bilateral_expected_investment =
+          await this._resultBilateralBudgetRepository.find({
+            where: {
+              result_project_id: In(rbp.map((el) => el.id)),
+              is_active: true,
+            },
+            relations: {
+              obj_result_project: {
+                obj_clarisa_project: true,
+              },
+            },
           });
-      }
+
+        const institutions = await this._resultByInstitutionsRepository.find({
+            where: [
+            {
+                result_id: resultId,
+                institution_roles_id: 2,
+            },
+            {
+                result_id: resultId,
+                is_active: true,
+                institution_roles_id: 7,
+            },
+            ],
+        });
+
+        const institutions_expected_investment =
+            await this._resultInstitutionsBudgetRepository.find({
+            select: {
+                result_institutions_budget_id: true,
+                result_institution_id: true,
+                kind_cash: true,
+                is_determined: true,
+                is_active: true,
+            },
+            where: {
+                result_institution_id: In(institutions.map((el) => el.id)),
+                is_active: true,
+            },
+            relations: {
+                obj_result_institution: {
+                obj_institutions: {
+                    obj_institution_type_code: true,
+                },
+                result_institution_budget_array: true,
+                },
+            },
+            });
+
+        if (!result_ip) {
+            return {
+                response: {},
+                message: 'No ipsr_pictures found',
+                statusCode: HttpStatus.NOT_FOUND,
+            };
+        }
+
+        return {
+            response: {
+            ipsr_pictures,
+            ipsr_materials,
+            initiative_expected_investment,
+            initiative_unit_time_id: result_ip.initiative_unit_time_id,
+            initiative_expected_time: result_ip.initiative_expected_time,
+            bilateral_unit_time_id: result_ip.bilateral_unit_time_id,
+            bilateral_expected_time: result_ip.bilateral_expected_time,
+            partner_unit_time_id: result_ip.partner_unit_time_id,
+            partner_expected_time: result_ip.partner_expected_time,
+            bilateral_expected_investment,
+            institutions_expected_investment,
+            is_result_ip_published: result_ip.is_result_ip_published,
+            ipsr_pdf_report: result_ip.ipsr_pdf_report,
+            },
+            message: 'Successful response',
+            status: HttpStatus.OK,
+        };
+        } catch (error) {
+            return {
+                response: error,
+                message: 'Error getting step four',
+                statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+            };
+        }
+    }
 }

@@ -16,7 +16,7 @@ import { ApiTags } from '@nestjs/swagger';
 
 @Controller()
 @UseInterceptors(ResponseInterceptor)
-@ApiTags('IPSR - General information P25')
+@ApiTags('IPSR Framework - General information P25')
 export class IpsrGeneralInformationController {
   constructor(
     private readonly ipsrGeneralInformationService: IpsrGeneralInformationService,
