@@ -551,6 +551,8 @@ export class Result {
   @OneToMany(() => Evidence, (e) => e.obj_result)
   evidence_array: Evidence[];
 
-  @OneToOne(() => ResultsCapacityDevelopments, (rcd) => rcd.result_object)
-  obj_result_capacity_development?: ResultsCapacityDevelopments;
+  @OneToOne(() => ResultsCapacityDevelopments, (rcd) => rcd.result_object, {
+    nullable: true,
+  })
+  results_capacity_development_object?: ResultsCapacityDevelopments;
 }
