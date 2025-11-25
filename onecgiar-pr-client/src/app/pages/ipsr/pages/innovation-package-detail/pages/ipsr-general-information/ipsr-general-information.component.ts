@@ -75,7 +75,7 @@ export class IpsrGeneralInformationComponent implements OnInit {
       return;
     }
 
-    this.api.resultsSE.PATCHIpsrGeneralInfo(this.ipsrGeneralInformationBody, this.ipsrDataControlSE.resultInnovationId).subscribe({
+    this.api.resultsSE.PATCHIpsrGeneralInfo(this.ipsrGeneralInformationBody, this.ipsrDataControlSE.resultInnovationId, this.fieldsManagerSE.isP25()).subscribe({
       next: resp => {
         this.getSectionInformation();
       },
