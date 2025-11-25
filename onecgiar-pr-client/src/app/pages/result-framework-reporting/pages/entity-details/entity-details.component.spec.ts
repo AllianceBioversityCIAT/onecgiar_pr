@@ -167,7 +167,7 @@ describe('EntityDetailsComponent', () => {
       it('should compute summary insights data correctly', () => {
         const result = component.summaryInsightsData();
 
-        expect(result).toHaveLength(3);
+        expect(result).toHaveLength(2);
         expect(result[0]).toEqual({
           label: 'Editing Results',
           value: 10,
@@ -178,11 +178,6 @@ describe('EntityDetailsComponent', () => {
           value: 15,
           icon: '../../../../../assets/result-framework-reporting/submitted_results.png'
         });
-        expect(result[2]).toEqual({
-          label: 'Quality Assessed Results',
-          value: 12,
-          icon: '../../../../../assets/result-framework-reporting/quality_assessed_results.png'
-        });
       });
 
       it('should handle undefined dashboard data', () => {
@@ -190,13 +185,11 @@ describe('EntityDetailsComponent', () => {
 
         const result = component.summaryInsightsData();
 
-        expect(result).toHaveLength(3);
+        expect(result).toHaveLength(2);
         expect(result[0].label).toBeUndefined();
         expect(result[0].value).toBeUndefined();
         expect(result[1].label).toBeUndefined();
         expect(result[1].value).toBeUndefined();
-        expect(result[2].label).toBeUndefined();
-        expect(result[2].value).toBeUndefined();
       });
 
       it('should update when dashboard data changes', () => {
@@ -311,7 +304,7 @@ describe('EntityDetailsComponent', () => {
   describe('Chart Formatter', () => {
     it('should format data labels correctly', () => {
       component.initChart();
-      const formatter = component.options.plugins.datalabels.formatter;
+      const formatter = component.chartOptionsOutputs().plugins?.datalabels?.formatter as (value: number) => string | number;
 
       // Test values greater than 1
       expect(formatter(5)).toBe(5);
@@ -327,16 +320,92 @@ describe('EntityDetailsComponent', () => {
 
     it('should handle edge cases in formatter', () => {
       component.initChart();
-      const formatter = component.options.plugins.datalabels.formatter;
+      const formatter = component.chartOptionsOutputs().plugins?.datalabels?.formatter as (value: number) => string | number;
 
       // Test decimal values
       expect(formatter(1.1)).toBe(1.1);
-      expect(formatter(1.0)).toBe('');
+      expect(formatter(1)).toBe('');
       expect(formatter(0.9)).toBe('');
 
       // Test negative values
       expect(formatter(-5)).toBe('');
       expect(formatter(-0.5)).toBe('');
+    });
+  });
+
+  describe('Chart Axis Limit', () => {
+    const mockDashboardData = {
+      editing: {
+        label: 'Editing Results',
+        total: 10,
+        data: {
+          outputs: {
+            knowledgeProduct: 5,
+            innovationDevelopment: 3,
+            capacitySharingForDevelopment: 2,
+            otherOutput: 1
+          },
+          outcomes: {
+            policyChange: 4,
+            innovationUse: 3,
+            otherOutcome: 2
+          }
+        }
+      },
+      submitted: {
+        label: 'Submitted Results',
+        total: 15,
+        data: {
+          outputs: {
+            knowledgeProduct: 8,
+            innovationDevelopment: 4,
+            capacitySharingForDevelopment: 2,
+            otherOutput: 1
+          },
+          outcomes: {
+            policyChange: 6,
+            innovationUse: 5,
+            otherOutcome: 4
+          }
+        }
+      },
+      qualityAssessed: {
+        label: 'Quality Assessed Results',
+        total: 12,
+        data: {
+          outputs: {
+            knowledgeProduct: 6,
+            innovationDevelopment: 3,
+            capacitySharingForDevelopment: 2,
+            otherOutput: 1
+          },
+          outcomes: {
+            policyChange: 5,
+            innovationUse: 4,
+            otherOutcome: 3
+          }
+        }
+      }
+    };
+
+    beforeEach(() => {
+      entityAowServiceMock.dashboardData = signal(mockDashboardData);
+    });
+
+    it('should scale outputs axis to max + 10', () => {
+      const options = component.chartOptionsOutputs();
+      expect(options.scales?.['x']?.max).toBe(18);
+    });
+
+    it('should scale outcomes axis to max + 10', () => {
+      const options = component.chartOptionsOutcomes();
+      expect(options.scales?.['x']?.max).toBe(16);
+    });
+
+    it('should default axes to padding when data is empty', () => {
+      entityAowServiceMock.dashboardData = signal(null);
+      expect(component.chartOptionsOutputs().scales?.['x']?.max).toBe(10);
+      expect(component.chartOptionsOutcomes().scales?.['x']?.max).toBe(10);
     });
   });
 
