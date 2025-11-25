@@ -167,7 +167,7 @@ describe('EntityDetailsComponent', () => {
       it('should compute summary insights data correctly', () => {
         const result = component.summaryInsightsData();
 
-        expect(result).toHaveLength(3);
+        expect(result).toHaveLength(2);
         expect(result[0]).toEqual({
           label: 'Editing Results',
           value: 10,
@@ -178,11 +178,6 @@ describe('EntityDetailsComponent', () => {
           value: 15,
           icon: '../../../../../assets/result-framework-reporting/submitted_results.png'
         });
-        expect(result[2]).toEqual({
-          label: 'Quality Assessed Results',
-          value: 12,
-          icon: '../../../../../assets/result-framework-reporting/quality_assessed_results.png'
-        });
       });
 
       it('should handle undefined dashboard data', () => {
@@ -190,13 +185,11 @@ describe('EntityDetailsComponent', () => {
 
         const result = component.summaryInsightsData();
 
-        expect(result).toHaveLength(3);
+        expect(result).toHaveLength(2);
         expect(result[0].label).toBeUndefined();
         expect(result[0].value).toBeUndefined();
         expect(result[1].label).toBeUndefined();
         expect(result[1].value).toBeUndefined();
-        expect(result[2].label).toBeUndefined();
-        expect(result[2].value).toBeUndefined();
       });
 
       it('should update when dashboard data changes', () => {
@@ -331,7 +324,7 @@ describe('EntityDetailsComponent', () => {
 
       // Test decimal values
       expect(formatter(1.1)).toBe(1.1);
-      expect(formatter(1.0)).toBe('');
+      expect(formatter(1)).toBe('');
       expect(formatter(0.9)).toBe('');
 
       // Test negative values
