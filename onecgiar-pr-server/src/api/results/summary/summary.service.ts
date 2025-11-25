@@ -28,6 +28,7 @@ import { ResultInstitutionsBudgetRepository } from '../result_budget/repositorie
 import { InnoDevService } from './innovation_dev.service';
 import { ResultAnswerRepository } from '../result-questions/repository/result-answers.repository';
 import { ResultAnswer } from '../result-questions/entities/result-answers.entity';
+import { Result } from '../entities/result.entity';
 
 @Injectable()
 export class SummaryService {
@@ -181,6 +182,7 @@ export class SummaryService {
         newCapDev.female_using = female_using || 0;
         newCapDev.male_using = male_using || 0;
         newCapDev.has_unkown_using = has_unkown_using || 0;
+        newCapDev.result_object = { id: resultId } as Result;
         newCapDev.non_binary_using = non_binary_using || 0;
         newCapDev.result_id = resultId;
         newCapDev.capdev_delivery_method_id = capdev_delivery_method_id;
