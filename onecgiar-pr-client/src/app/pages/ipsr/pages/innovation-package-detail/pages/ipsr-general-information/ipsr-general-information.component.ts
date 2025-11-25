@@ -8,6 +8,7 @@ import { debounceTime, distinctUntilChanged, Subject, switchMap } from 'rxjs';
 import { UserSearchService } from '../../../../../results/pages/result-detail/pages/rd-general-information/services/user-search-service.service';
 import { DataControlService } from '../../../../../../shared/services/data-control.service';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
+import { GetImpactAreasScoresService } from '../../../../../../shared/services/global/get-impact-areas-scores.service';
 
 @Component({
   selector: 'app-ipsr-general-information',
@@ -20,6 +21,7 @@ export class IpsrGeneralInformationComponent implements OnInit {
 
   dataControlSE = inject(DataControlService);
   fieldsManagerSE = inject(FieldsManagerService);
+  getImpactAreasScoresComponents = inject(GetImpactAreasScoresService);
 
   constructor(
     public api: ApiService,
