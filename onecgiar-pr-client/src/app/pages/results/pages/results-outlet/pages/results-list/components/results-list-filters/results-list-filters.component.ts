@@ -76,11 +76,21 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges {
 
     this.api.resultsSE.GET_AllInitiatives().subscribe({
       next: ({ response }) => {
-        this.resultsListFilterSE.submittersOptionsAdminOld.set(response);
+        this.resultsListFilterSE.submittersOptionsAdminOld.set(this.sortSubmittersBySP(response));
       },
       error: err => {
         console.error(err);
       }
+    });
+  }
+
+  private sortSubmittersBySP<T extends { official_code?: string }>(options: T[]): T[] {
+    return [...options].sort((a, b) => {
+      const aStartsWithSP = a.official_code?.startsWith('SP') ?? false;
+      const bStartsWithSP = b.official_code?.startsWith('SP') ?? false;
+      if (aStartsWithSP && !bStartsWithSP) return -1;
+      if (!aStartsWithSP && bStartsWithSP) return 1;
+      return 0;
     });
   }
 
@@ -117,9 +127,10 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges {
     }));
   }
 
-  private filterOptionsBySelectedPhases<T extends { portfolio_id: any }>(options: T[]): T[] {
+  private filterOptionsBySelectedPhases<T extends { portfolio_id: any; official_code?: string }>(options: T[]): T[] {
     const selected = this.resultsListFilterSE.selectedPhases();
-    return options.filter(item => selected.some(phase => phase.portfolio_id == item.portfolio_id));
+    const filtered = options.filter(item => selected.some(phase => phase.portfolio_id == item.portfolio_id));
+    return this.sortSubmittersBySP(filtered);
   }
 
   clearAllNewFilters() {
@@ -150,17 +161,9 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges {
     this.resultsListFilterSE.selectedSubmitters.set([]);
     this.resultsListFilterSE.selectedSubmittersAdmin.set([]);
 
-    this.resultsListFilterSE.submittersOptionsAdmin.set(
-      this.resultsListFilterSE
-        .submittersOptionsAdminOld()
-        .filter(item => this.resultsListFilterSE.selectedPhases().some(phase => phase.portfolio_id == item.portfolio_id))
-    );
+    this.resultsListFilterSE.submittersOptionsAdmin.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptionsAdminOld()));
 
-    this.resultsListFilterSE.submittersOptions.set(
-      this.resultsListFilterSE
-        .submittersOptionsOld()
-        .filter(item => this.resultsListFilterSE.selectedPhases().some(phase => phase.portfolio_id == item.portfolio_id))
-    );
+    this.resultsListFilterSE.submittersOptions.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptionsOld()));
   }
 
   onDownLoadTableAsExcel() {
