@@ -38,7 +38,7 @@
   }
 
   .fixed_data_container {
-    padding: 20px 80px 0px 80px;
+    padding: 20px 50px 0px 50px;
     display: flex;
     flex-direction: column;
     gap: 30px;
@@ -74,7 +74,7 @@
 
 .content {
   min-height: calc(100vh - 200px);
-  padding: 30px 50px 0px 50px;
+  padding: 10px 50px 0px 50px;
 }
 
 @media only screen and (max-width: 1400px) {
