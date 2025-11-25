@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 
 import { SubmissionModalComponent } from './submission-modal.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
@@ -29,6 +29,15 @@ describe('SubmissionModalComponent', () => {
       },
       alertsFe: {
         show: jest.fn()
+      },
+      fieldsManagerSE: {
+        inIpsr: {
+          set: jest.fn()
+        }
+      },
+      rolesSE: {
+        readOnly: false,
+        isAdmin: false
       }
     }
 
@@ -73,11 +82,12 @@ describe('SubmissionModalComponent', () => {
   });
 
   describe('onSubmit', () => {
-    it('should call PATCH_submit, set requesting to true and handle successful submission',() => {
+    it('should call PATCH_submit, set requesting to true and handle successful submission', fakeAsync(() => {
       const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_submit');
       const spyShow = jest.spyOn(mockApiService.alertsFe, 'show');
 
       component.onSubmit();
+      tick();
 
       expect(spy).toHaveBeenCalledWith(component.comment);
       expect(component.requesting).toBeFalsy();
@@ -88,8 +98,8 @@ describe('SubmissionModalComponent', () => {
         description: `The result has been submitted.`,
         status: 'success',
       });
-    });
-    it('should handle error on PATCH_submit call',() => {
+    }));
+    it('should handle error on PATCH_submit call', fakeAsync(() => {
       const errorMessage = {
         error:{
           message: 'error message'
@@ -100,6 +110,7 @@ describe('SubmissionModalComponent', () => {
       const spyShow = jest.spyOn(mockApiService.alertsFe, 'show');
 
       component.onSubmit();
+      tick();
 
       expect(spy).toHaveBeenCalledWith(component.comment);
       expect(component.requesting).toBeFalsy();
@@ -109,6 +120,6 @@ describe('SubmissionModalComponent', () => {
         description: `error message`,
         status: 'error',
       });
-    });
+    }));
   });
 });
