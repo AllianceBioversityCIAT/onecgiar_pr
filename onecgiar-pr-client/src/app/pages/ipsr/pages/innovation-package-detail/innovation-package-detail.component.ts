@@ -26,7 +26,7 @@ export class InnovationPackageDetailComponent implements OnInit, DoCheck {
     public api: ApiService,
     public saveButtonSE: SaveButtonService,
     private readonly ipsrCompletenessStatusSE: IpsrCompletenessStatusService,
-    private readonly dataControlSE: DataControlService,
+    public dataControlSE: DataControlService,
     private readonly router: Router
   ) {}
   ngOnInit(): void {
