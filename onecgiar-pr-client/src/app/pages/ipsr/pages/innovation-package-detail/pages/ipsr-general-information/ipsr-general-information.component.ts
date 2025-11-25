@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, effect, inject } from '@angular/core';
 import { ScoreService } from '../../../../../../shared/services/global/score.service';
 import { IpsrDataControlService } from '../../../../services/ipsr-data-control.service';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
@@ -6,15 +6,20 @@ import { IpsrGeneralInformationBody } from './model/ipsr-general-information.mod
 import { User } from '../../../../../results/pages/result-detail/pages/rd-general-information/models/userSearchResponse';
 import { debounceTime, distinctUntilChanged, Subject, switchMap } from 'rxjs';
 import { UserSearchService } from '../../../../../results/pages/result-detail/pages/rd-general-information/services/user-search-service.service';
+import { DataControlService } from '../../../../../../shared/services/data-control.service';
+import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 
 @Component({
-    selector: 'app-ipsr-general-information',
-    templateUrl: './ipsr-general-information.component.html',
-    styleUrls: ['./ipsr-general-information.component.scss'],
-    standalone: false
+  selector: 'app-ipsr-general-information',
+  templateUrl: './ipsr-general-information.component.html',
+  styleUrls: ['./ipsr-general-information.component.scss'],
+  standalone: false
 })
 export class IpsrGeneralInformationComponent implements OnInit {
   ipsrGeneralInformationBody = new IpsrGeneralInformationBody();
+
+  dataControlSE = inject(DataControlService);
+  fieldsManagerSE = inject(FieldsManagerService);
 
   constructor(
     public api: ApiService,
@@ -23,13 +28,21 @@ export class IpsrGeneralInformationComponent implements OnInit {
     private userSearchService: UserSearchService
   ) {}
 
+  OnChangePortfolio = effect(() => {
+    if (this.dataControlSE.currentResultSignal()?.portfolio !== undefined) this.getSectionInformation();
+  });
+
   ngOnInit(): void {
-    this.getSectionInformation();
+    // this.getSectionInformation();
     this.api.dataControlSE.detailSectionTitle('General information');
   }
 
+  getSectionInformationp25() {
+    console.log('getSectionInformationp25');
+  }
+
   getSectionInformation() {
-    this.api.resultsSE.GETInnovationByResultId(this.ipsrDataControlSE.resultInnovationId).subscribe(({ response }) => {
+    this.api.resultsSE.GETInnovationByResultId(this.ipsrDataControlSE.resultInnovationId, this.fieldsManagerSE.isP25()).subscribe(({ response }) => {
       this.ipsrGeneralInformationBody = response;
     });
   }

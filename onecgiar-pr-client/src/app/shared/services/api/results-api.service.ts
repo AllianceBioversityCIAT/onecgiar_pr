@@ -792,8 +792,12 @@ export class ResultsApiService {
     return this.http.post<any>(`${environment.apiBaseUrl}api/ipsr/all-innovations`, initiativesList);
   }
 
-  GETInnovationByResultId(resultId) {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation/${resultId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+  GETInnovationByResultId(resultId, isP25: boolean = false) {
+    const p22Url = `${environment.apiBaseUrl}api/ipsr/innovation/${resultId}`;
+    const p25Url = `${this.baseApiBaseUrlV2}ipsr-general-information/innovation/${resultId}`;
+    const url = isP25 ? p25Url : p22Url;
+    console.log('url', url);
+    return this.http.get<any>(url).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   GET_globalNarratives(name: string) {
