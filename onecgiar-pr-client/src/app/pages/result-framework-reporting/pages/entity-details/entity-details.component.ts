@@ -76,11 +76,6 @@ export class EntityDetailsComponent implements OnInit {
         label: this.entityAowService.dashboardData()?.submitted?.label,
         value: this.entityAowService.dashboardData()?.submitted?.total,
         icon: '../../../../../assets/result-framework-reporting/submitted_results.png'
-      },
-      {
-        label: this.entityAowService.dashboardData()?.qualityAssessed?.label,
-        value: this.entityAowService.dashboardData()?.qualityAssessed?.total,
-        icon: '../../../../../assets/result-framework-reporting/quality_assessed_results.png'
       }
     ];
   });
