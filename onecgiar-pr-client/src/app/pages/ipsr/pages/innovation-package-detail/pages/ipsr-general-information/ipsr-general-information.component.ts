@@ -28,12 +28,9 @@ export class IpsrGeneralInformationComponent implements OnInit {
     private userSearchService: UserSearchService
   ) {}
 
-  OnChangePortfolio = effect(() => {
-    if (this.dataControlSE.currentResultSignal()?.portfolio !== undefined) this.getSectionInformation();
-  });
-
   ngOnInit(): void {
-    // this.getSectionInformation();
+    console.log(this.dataControlSE.currentResultSignal()?.portfolio);
+    this.getSectionInformation();
     this.api.dataControlSE.detailSectionTitle('General information');
   }
 

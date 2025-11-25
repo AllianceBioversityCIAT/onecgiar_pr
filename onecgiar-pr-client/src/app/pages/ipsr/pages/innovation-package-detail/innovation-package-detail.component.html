@@ -60,7 +60,9 @@
   </div>
 
   <div class="content">
-    <router-outlet *ngIf="this.ipsrDataControlSE.resultInnovationId"></router-outlet>
+    @if (this.ipsrDataControlSE.resultInnovationId && this.fieldsManagerSE.porfolioExists()) {
+      <router-outlet></router-outlet>
+    }
     <div class="spinner" *ngIf="this.saveButtonSE.isGettingSection">
       <div class="info">
         <img src="assets/icons/spinner.png" class="rotating" alt="" srcset="" />

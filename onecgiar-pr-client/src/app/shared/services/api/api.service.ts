@@ -89,6 +89,7 @@ export class ApiService {
 
   GETInnovationPackageDetail() {
     this.fieldsManagerSE.inIpsr.set(true);
+    this.dataControlSE.currentResultSignal.set(null);
     this.resultsSE.GETInnovationPackageDetail().subscribe(({ response }) => {
       response.initiative_id = response?.inititiative_id;
       response.official_code = response?.initiative_official_code;

@@ -10,6 +10,7 @@ enum Portfolios {
 })
 export class FieldsManagerService {
   dataControlSE = inject(DataControlService);
+  porfolioExists = computed(() => this.dataControlSE.currentResultSignal()?.portfolio);
 
   inIpsr = signal(false);
 
