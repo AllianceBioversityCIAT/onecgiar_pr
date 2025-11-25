@@ -29,13 +29,13 @@ export class IpsrGeneralInformationComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    console.log(this.dataControlSE.currentResultSignal()?.portfolio);
+
     this.getSectionInformation();
     this.api.dataControlSE.detailSectionTitle('General information');
   }
 
   getSectionInformationp25() {
-    console.log('getSectionInformationp25');
+
   }
 
   getSectionInformation() {

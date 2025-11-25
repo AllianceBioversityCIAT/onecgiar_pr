@@ -796,7 +796,7 @@ export class ResultsApiService {
     const p22Url = `${environment.apiBaseUrl}api/ipsr/innovation/${resultId}`;
     const p25Url = `${this.baseApiBaseUrlV2}ipsr-general-information/innovation/${resultId}`;
     const url = isP25 ? p25Url : p22Url;
-    console.log('url', url);
+
     return this.http.get<any>(url).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
@@ -822,11 +822,11 @@ export class ResultsApiService {
   }
 
   PATCHIpsrGeneralInfo(body, resulId, isP25: boolean = false) {
-    console.log('isP25', isP25);
+
     const p22Url = `${environment.apiBaseUrl}api/ipsr/results-innovation-package/general-information/${resulId}`;
     const p25Url = `${this.baseApiBaseUrlV2}ipsr-general-information/general-information/${resulId}`;
     const url = isP25 ? p25Url : p22Url;
-    console.log('url', url);
+
     return this.http
       .patch<any>(url, body)
       .pipe(this.saveButtonSE.isCreatingPipe());
