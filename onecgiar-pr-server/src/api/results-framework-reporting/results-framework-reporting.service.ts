@@ -1129,6 +1129,8 @@ export class ResultsFrameworkReportingService {
             obj_results: { is_active: true },
             obj_results_toc_result_indicators: {
               toc_results_indicator_id: tocResultIndicatorId,
+              is_active: true,
+              is_not_aplicable: false,
               obj_result_indicator_targets: {
                 is_active: true,
                 contributing_indicator: Not(IsNull()),
@@ -1182,6 +1184,7 @@ export class ResultsFrameworkReportingService {
             results_toc_results_id: In(tocResultIdsWithIndicator),
             toc_results_indicator_id: tocResultIndicatorId,
             is_active: true,
+            is_not_aplicable: false,
           },
           select: ['results_toc_results_id'],
         });
