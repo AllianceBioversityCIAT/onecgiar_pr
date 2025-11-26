@@ -4,6 +4,7 @@ import { DataSource, Repository } from 'typeorm';
 import { TocResult } from './entities/toc-result.entity';
 import { Result } from '../../api/results/entities/result.entity';
 import { Year } from '../../api/results/years/entities/year.entity';
+import { RESULT_TYPE_TO_INDICATOR_PATTERN } from '../../shared/constants/indicator-type-mapping.constant';
 
 @Injectable()
 export class TocResultsRepository extends Repository<TocResult> {
@@ -410,7 +411,11 @@ export class TocResultsRepository extends Repository<TocResult> {
     }
   }
 
-  async $_getResultTocByConfigV2(init_id: number, toc_level: number) {
+  async $_getResultTocByConfigV2(
+    init_id: number,
+    toc_level: number,
+    resultTypeId?: number,
+  ) {
     const categoryMap = {
       1: 'OUTPUT',
       2: 'OUTCOME',
@@ -427,6 +432,32 @@ export class TocResultsRepository extends Repository<TocResult> {
     }
 
     const tocPhaseId = await this.getCurrentTocPhaseId();
+
+    const params: (string | number)[] = [init_id, category];
+    if (tocPhaseId) {
+      params.push(tocPhaseId);
+    }
+
+    let indicatorFilter = '';
+    if (
+      resultTypeId &&
+      RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId]?.length
+    ) {
+      const allowedPatterns = RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId];
+      const likeConditions = allowedPatterns
+        .map(() => 'tri.type_value LIKE ?')
+        .join(' OR ');
+      indicatorFilter = `
+        AND EXISTS (
+          SELECT 1 
+          FROM ${env.DB_TOC}.toc_results_indicators tri
+          WHERE tri.toc_results_id = tr.id
+            AND tri.is_active = 1
+            AND (${likeConditions})
+        )
+      `;
+      params.push(...allowedPatterns);
+    }
 
     const queryData = `
       SELECT DISTINCT
@@ -449,13 +480,9 @@ export class TocResultsRepository extends Repository<TocResult> {
         AND ci.id = ?
         AND tr.category = ?
         ${tocPhaseId ? 'AND tr.phase = ?' : ''}
+        ${indicatorFilter}
       ORDER BY wp.acronym, tr.result_title ASC;
     `;
-
-    const params: (string | number)[] = [init_id, category];
-    if (tocPhaseId) {
-      params.push(tocPhaseId);
-    }
 
     try {
       const res = await this.query(queryData, params);
@@ -473,6 +500,7 @@ export class TocResultsRepository extends Repository<TocResult> {
     result: Result,
     year: Year,
     tocResultIds: Array<number | string>,
+    resultTypeId?: number,
   ): Promise<
     Array<{
       toc_result_id: number;
@@ -496,6 +524,22 @@ export class TocResultsRepository extends Repository<TocResult> {
     }
 
     const placeholders = numericIds.map(() => '?').join(', ');
+    const targetYear = result.obj_version?.phase_year || year.year;
+
+    const queryParams: any[] = [targetYear, ...numericIds];
+
+    let typeFilter = '';
+    if (
+      resultTypeId &&
+      RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId]?.length
+    ) {
+      const allowedPatterns = RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId];
+      const likeConditions = allowedPatterns
+        .map(() => 'tri.type_value LIKE ?')
+        .join(' OR ');
+      typeFilter = `AND (${likeConditions})`;
+      queryParams.push(...allowedPatterns);
+    }
 
     const query = `
       SELECT
@@ -510,16 +554,17 @@ export class TocResultsRepository extends Repository<TocResult> {
         tri.location,
         trit.target_value
       FROM ${env.DB_TOC}.toc_results_indicators tri
-      JOIN ${env.DB_TOC}.toc_result_indicator_target trit
+      LEFT JOIN ${env.DB_TOC}.toc_result_indicator_target trit
         ON trit.toc_result_indicator_id = tri.related_node_id
-        AND trit.target_date = ${result.obj_version?.phase_year || year.year}
+        AND trit.target_date = ?
       WHERE
         tri.toc_results_id IN (${placeholders})
-        AND tri.is_active = 1;
+        AND tri.is_active = 1
+        ${typeFilter};
     `;
 
     try {
-      return await this.query(query, numericIds);
+      return await this.query(query, queryParams);
     } catch (error) {
       throw {
         message: `[${TocResultsRepository.name}] => getTocIndicatorsByResultIds error: ${error}`,

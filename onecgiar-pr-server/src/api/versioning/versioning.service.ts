@@ -245,10 +245,6 @@ export class VersioningService {
 
       if (!entity_id) {
         await this._shareResultRequestRepository.replicate(manager, config);
-        await this._resultInstitutionsBudgetRepository.replicate(
-          manager,
-          config,
-        );
         await this._resultInitiativeBudgetRepository.replicate(manager, config);
         await this._resultNonPooledProjectBudgetRepository.replicate(
           manager,
@@ -320,6 +316,14 @@ export class VersioningService {
         config,
       );
       await this._resultByIntitutionsTypeRepository.replicate(manager, config);
+
+      if (!entity_id) {
+        await this._resultInstitutionsBudgetRepository.replicate(
+          manager,
+          config,
+        );
+      }
+
       await this._resultCountryRepository.replicate(manager, config);
       await this._resultRegionRepository.replicate(manager, config);
       await this._linkedResultRepository.replicate(manager, config);

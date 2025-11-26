@@ -12,15 +12,24 @@
   @let activeButtons = this.api.dataControlSE?.myInitiativesListReportingByPortfolio?.length > 0 || this.api.rolesSE?.isAdmin;
 
   <div class="action_buttons">
-    <app-report-new-result-button [ngClass]="{ disabledButtons: !activeButtons }"> </app-report-new-result-button>
-    <app-pr-button
-      text="Update result"
-      icon="moving"
-      [reverse]="true"
-      tooltipTextPosition="bottom"
-      [ngClass]="{ disabledButtons: !activeButtons }"
-      [tooltipText]="!activeButtons ? 'To update a result, please ensure that you have a role assigned in the active portfolio.' : null"
-      (click)="activeButtons ? (this.api.dataControlSE.updateResultModal = true) : null"></app-pr-button>
+    <div>
+      <app-report-new-result-button [ngClass]="{ disabledButtons: !activeButtons }"> </app-report-new-result-button>
+      <app-pr-button
+        text="Update result"
+        icon="moving"
+        [reverse]="true"
+        tooltipTextPosition="bottom"
+        [ngClass]="{ disabledButtons: !activeButtons }"
+        [tooltipText]="!activeButtons ? 'To update a result, please ensure that you have a role assigned in the active portfolio.' : null"
+        (click)="activeButtons ? (this.api.dataControlSE.updateResultModal = true) : null"></app-pr-button>
+    </div>
+    <div>
+      <app-alert-status
+        status="info"
+        description="If you know the title of the result you wish to update, use this button to paste or type the title and quickly retrieve it from the PRMS database.<br>
+      If the result title is unknown, use the filters below (reporting cycle, submitting entity, and/or result category) to locate the result you plan to update. Then, click the three dots at the end of the result line and select <strong>“Update result.”</strong>"
+        inlineStyles="margin: 0; margin-bottom: 10px !important;"></app-alert-status>
+    </div>
   </div>
 
   <br />
