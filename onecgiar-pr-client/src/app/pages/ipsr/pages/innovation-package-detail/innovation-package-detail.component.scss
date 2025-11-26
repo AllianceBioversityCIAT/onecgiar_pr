@@ -43,6 +43,11 @@
     flex-direction: column;
     gap: 30px;
 
+    .back_button {
+      margin-bottom: -15px;
+      max-width: 250px;
+    }
+
     .section_name {
       @include fonts.pr-typography('h3');
       color: var(--pr-color-accents-4);
