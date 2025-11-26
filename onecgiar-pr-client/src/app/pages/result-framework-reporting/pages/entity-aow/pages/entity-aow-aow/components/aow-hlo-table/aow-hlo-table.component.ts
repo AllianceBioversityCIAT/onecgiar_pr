@@ -79,11 +79,16 @@ export class AowHloTableComponent {
     return 'Not started';
   }
 
-  openReportResultModal(item: any, currentItemId: string) {
-    const selectedCurrentItem = {
-      ...item,
-      indicators: item.indicators.filter((indicator: any) => indicator.indicator_id === currentItemId)
-    };
+  openReportResultModal(item: any, currentItemId: string | null) {
+    const selectedCurrentItem = currentItemId
+      ? {
+          ...item,
+          indicators: item.indicators.filter((indicator: any) => indicator.indicator_id === currentItemId)
+        }
+      : {
+          ...item,
+          indicators: []
+        };
 
     this.entityAowService.showReportResultModal.set(true);
     this.entityAowService.currentResultToReport.set(selectedCurrentItem);

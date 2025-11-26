@@ -90,7 +90,19 @@
         </tr>
       }
     } @else {
-      <h1>open</h1>
+      <tr>
+        <td colspan="8" style="padding: 40px 20px">
+          <div class="no-indicators-container">
+            <p class="no-indicators-message">This HLO has no associated indicators. Report results directly using the button below.</p>
+            <button
+              pButton
+              label="Report result"
+              type="button"
+              class="pr-body-3 no-indicators-button"
+              (click)="openReportResultModal(item, null)"></button>
+          </div>
+        </td>
+      </tr>
     }
   </ng-template>
 
