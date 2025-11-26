@@ -28,6 +28,7 @@ export class ResultRegionRepository
       )} as created_date,
       null as last_updated_date,
       rr.region_id,
+      rr.geo_scope_role_id,
       ${config.new_result_id} as result_id
       from result_region rr WHERE  rr.result_id = ${
         config.old_result_id
@@ -39,6 +40,7 @@ export class ResultRegionRepository
         created_date,
         last_updated_date,
         region_id,
+        geo_scope_role_id,
         result_id
         )
         select
@@ -48,6 +50,7 @@ export class ResultRegionRepository
         )} as created_date,
         null as last_updated_date,
         rr.region_id,
+        rr.geo_scope_role_id,
         ${config.new_result_id} as result_id
         from result_region rr WHERE  rr.result_id = ${
           config.old_result_id
