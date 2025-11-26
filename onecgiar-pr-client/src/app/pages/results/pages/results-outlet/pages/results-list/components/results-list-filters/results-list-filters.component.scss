@@ -108,3 +108,51 @@
   border-top: 1px solid rgba(0, 0, 0, 0.08);
   background-color: var(--pr-color-accents-1);
 }
+
+// Filter Chips Bar Styles
+.filter-chips-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgb(200, 200, 200);
+}
+
+.filter-chips-main-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--pr-color-primary-300);
+}
+
+.filter-chips-groups-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 24px;
+  align-items: flex-start;
+}
+
+.filter-chip-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-chip-category-label {
+  font-size: 14px;
+  font-weight: 400;
+  color: #666;
+  white-space: nowrap;
+}
+
+.filter-chip-arrow {
+  font-size: 14px;
+  color: #666;
+}
+
+.filter-chips-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}

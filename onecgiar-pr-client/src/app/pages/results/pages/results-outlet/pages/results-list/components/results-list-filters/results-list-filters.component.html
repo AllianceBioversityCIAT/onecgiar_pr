@@ -16,6 +16,30 @@
   <p-button label="Download" variant="outlined" icon="pi pi-download" (click)="onDownLoadTableAsExcel()" [loading]="this.gettingReport()" />
 </div>
 
+<!-- Filter Chips Bar -->
+@if (filterChipGroups().length > 0) {
+  <div class="filter-chips-container">
+    <span class="filter-chips-main-label">Results filtered by</span>
+    <div class="filter-chips-groups-wrapper">
+      @for (group of filterChipGroups(); track group.category) {
+        <div class="filter-chip-group">
+          <span class="filter-chip-category-label">{{ group.category }}</span>
+          <span class="filter-chip-arrow">→</span>
+          <div class="filter-chips-list">
+            @for (chip of group.chips; track chip.label) {
+              <p-chip
+                [label]="chip.label"
+                [removable]="true"
+                (onRemove)="removeFilter(chip)"
+                styleClass="filter-chip" />
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+}
+
 <!-- Custom Drawer -->
 <div class="custom-drawer-container" [class.visible]="visible()" [style.top.px]="navbarHeight()">
   <div class="custom-drawer" [class.open]="visible()">
