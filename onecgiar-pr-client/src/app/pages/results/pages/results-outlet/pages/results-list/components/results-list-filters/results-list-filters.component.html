@@ -27,11 +27,7 @@
           <span class="filter-chip-arrow">→</span>
           <div class="filter-chips-list">
             @for (chip of group.chips; track chip.label) {
-              <p-chip
-                [label]="chip.label"
-                [removable]="true"
-                (onRemove)="removeFilter(chip)"
-                styleClass="filter-chip" />
+              <p-chip [label]="chip.label" [removable]="true" (onRemove)="removeFilter(chip)" styleClass="filter-chip" />
             }
           </div>
         </div>
@@ -98,11 +94,19 @@
               [filter]="false"
               [options]="this.resultsListFilterSE.submittersOptionsAdmin()"
               [(ngModel)]="tempSelectedSubmittersAdmin"
-              optionLabel="official_code"
               placeholder="Select submitter(s)"
               [maxSelectedLabels]="6"
               [filter]="true"
-              [style]="{ width: '100%' }" />
+              [style]="{ width: '100%' }"
+              panelStyleClass="submitter-multiselect-panel">
+              <ng-template let-option pTemplate="item">
+                <div
+                  class="multiselect-item-text"
+                  style="max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block">
+                  {{ option.official_code }} {{ option.name }}
+                </div>
+              </ng-template>
+            </p-multiselect>
           } @else {
             <p-multiselect
               [filter]="false"
@@ -125,7 +129,7 @@
           <p-multiselect
             [filter]="false"
             [showHeader]="false"
-            [options]="this.resultsListFilterSE.filters.resultLevel"
+            [options]="this.resultsListFilterSE.filters.resultLevel | reverse"
             [(ngModel)]="tempSelectedIndicatorCategories"
             optionLabel="name"
             placeholder="Select indicator category(ies)"
@@ -157,7 +161,7 @@
             [maxSelectedLabels]="3"
             [style]="{ width: '100%' }" />
         </div>
-    </div>
+      </div>
     </div>
 
     <!-- Footer buttons -->

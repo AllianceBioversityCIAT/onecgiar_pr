@@ -15,6 +15,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { switchMap } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { ChipModule } from 'primeng/chip';
+import { ReversePipe } from '../../../../../../../../shared/pipes/reverse.pipe';
 @Component({
   selector: 'app-results-list-filters',
   templateUrl: './results-list-filters.component.html',
@@ -31,7 +32,8 @@ import { ChipModule } from 'primeng/chip';
     InputIconModule,
     InputTextModule,
     ButtonModule,
-    ChipModule
+    ChipModule,
+    ReversePipe
   ]
 })
 export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy {
