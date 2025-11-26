@@ -27,11 +27,7 @@
           <span class="filter-chip-arrow">→</span>
           <div class="filter-chips-list">
             @for (chip of group.chips; track chip.label) {
-              <p-chip
-                [label]="chip.label"
-                [removable]="true"
-                (onRemove)="removeFilter(chip)"
-                styleClass="filter-chip" />
+              <p-chip [label]="chip.label" [removable]="true" (onRemove)="removeFilter(chip)" styleClass="filter-chip" />
             }
           </div>
         </div>
@@ -157,7 +153,7 @@
             [maxSelectedLabels]="3"
             [style]="{ width: '100%' }" />
         </div>
-    </div>
+      </div>
     </div>
 
     <!-- Footer buttons -->
