@@ -94,11 +94,19 @@
               [filter]="false"
               [options]="this.resultsListFilterSE.submittersOptionsAdmin()"
               [(ngModel)]="tempSelectedSubmittersAdmin"
-              optionLabel="official_code"
               placeholder="Select submitter(s)"
               [maxSelectedLabels]="6"
               [filter]="true"
-              [style]="{ width: '100%' }" />
+              [style]="{ width: '100%' }"
+              panelStyleClass="submitter-multiselect-panel">
+              <ng-template let-option pTemplate="item">
+                <div
+                  class="multiselect-item-text"
+                  style="max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block">
+                  {{ option.official_code }} {{ option.name }}
+                </div>
+              </ng-template>
+            </p-multiselect>
           } @else {
             <p-multiselect
               [filter]="false"
