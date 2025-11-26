@@ -128,6 +128,7 @@ export class TocResultsService {
         select: {
           id: true,
           version_id: true,
+          result_type_id: true,
           obj_version: {
             id: true,
             phase_year: true,
@@ -151,6 +152,7 @@ export class TocResultsService {
       const res = await this._tocResultsRepository.$_getResultTocByConfigV2(
         init_id,
         toc_level,
+        result?.result_type_id,
       );
 
       let enrichedResults = res ?? [];
@@ -170,6 +172,7 @@ export class TocResultsService {
               result,
               year,
               tocResultIds,
+              result?.result_type_id,
             ),
             this._tocResultsRepository.getResultIndicatorMappings(
               result_id,
