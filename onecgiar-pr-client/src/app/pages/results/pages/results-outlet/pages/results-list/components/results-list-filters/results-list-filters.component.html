@@ -121,7 +121,7 @@
           <p-multiselect
             [filter]="false"
             [showHeader]="false"
-            [options]="this.resultsListFilterSE.filters.resultLevel"
+            [options]="this.resultsListFilterSE.filters.resultLevel | reverse"
             [(ngModel)]="tempSelectedIndicatorCategories"
             optionLabel="name"
             placeholder="Select indicator category(ies)"
