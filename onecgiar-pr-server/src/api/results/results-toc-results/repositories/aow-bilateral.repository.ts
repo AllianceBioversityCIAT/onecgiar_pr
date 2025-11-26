@@ -264,9 +264,10 @@ export class AoWBilateralRepository {
     }
 
     query += `
-      JOIN ${env.DB_TOC}.toc_results_indicators tri ON tri.toc_results_id = tr.id
-      JOIN ${env.DB_TOC}.toc_result_indicator_target trit ON tri.id = trit.id_indicator
-      AND CONVERT(trit.toc_result_indicator_id USING utf8mb4) = CONVERT(tri.related_node_id USING utf8mb4)
+      LEFT JOIN ${env.DB_TOC}.toc_results_indicators tri ON tri.toc_results_id = tr.id
+        AND tri.is_active = 1
+      LEFT JOIN ${env.DB_TOC}.toc_result_indicator_target trit ON tri.id = trit.id_indicator
+        AND CONVERT(trit.toc_result_indicator_id USING utf8mb4) = CONVERT(tri.related_node_id USING utf8mb4)
     `;
 
     if (options.year !== undefined) {
@@ -278,7 +279,6 @@ export class AoWBilateralRepository {
       WHERE
         tr.official_code = ?
         AND tr.category IN (${categoryPlaceholders})
-        AND tri.is_active = 1
     `;
     params.push(program);
     params.push(...categories);
