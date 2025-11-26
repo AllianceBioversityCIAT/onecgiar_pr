@@ -639,15 +639,18 @@ export class ResultsFrameworkReportingService {
 
         primaryTocRecordId = primaryTocRecord.result_toc_result_id;
 
-        await this.upsertTocIndicators(
-          primaryTocRecord.result_toc_result_id,
-          resolvedTocResultId,
-          payload.indicators ?? null,
-          payload.contributing_indicator ?? null,
-          user.id,
-          payload.number_target ?? null,
-          payload.target_date ?? null,
-        );
+        // Only process indicators if they are provided
+        if (payload.indicators) {
+          await this.upsertTocIndicators(
+            primaryTocRecord.result_toc_result_id,
+            resolvedTocResultId,
+            payload.indicators,
+            payload.contributing_indicator ?? null,
+            user.id,
+            payload.number_target ?? null,
+            payload.target_date ?? null,
+          );
+        }
       }
 
       if (payload.contributors_result_toc_result?.length) {
