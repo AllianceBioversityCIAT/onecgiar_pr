@@ -1,10 +1,4 @@
 <div class="top_menu">
-    <div class="option back_buttton" routerLink="/ipsr/list">
-        <div class="content">
-            <i class="material-icons-round">arrow_back</i>
-        </div>
-    </div>
-    
     @for (option of this.menuOptions; track option.prName; let i = $index) {
     <div class="option" [routerLink]="option.path"
         [queryParams]="{ phase:  this.ipsrDataControlSE.resultInnovationPhase }"

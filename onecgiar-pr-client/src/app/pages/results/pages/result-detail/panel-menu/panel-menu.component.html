@@ -1,10 +1,5 @@
 <div class="panel_menu custom_scroll shadow-1">
   <div>
-    <div class="back_button">
-      <a routerLink="/result/results-list" class="open_link_in_new_page">
-        <app-pr-button text="Back to results" icon="arrow_back" [reverse]="true" [showBackground]="false"> </app-pr-button>
-      </a>
-    </div>
     <div class="segment">
       <div class="name">Sections</div>
       <div class="sections">
@@ -77,9 +72,5 @@
         This result is part of a QA process and cannot be un-submitted for editing.
       </div>
     </div>
-  </div>
-
-  <div style="padding: 0px 35px">
-    <app-pdf-actions (copyEvent)="copyEvent.emit()"></app-pdf-actions>
   </div>
 </div>
