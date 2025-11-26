@@ -61,9 +61,9 @@ describe('ResultsListFiltersComponent', () => {
     };
 
     const mockSubmitters = [
-      { id: 0, name: 'All submitters', portfolio_id: 1, official_code: 'ALL' },
-      { id: 11, name: 'User A', portfolio_id: 1, official_code: 'ABC001' },
-      { id: 22, name: 'User B', portfolio_id: 2, official_code: 'SP002' }
+      { id: 0, name: 'All submitters', portfolio_id: 1 },
+      { id: 11, name: 'User A', portfolio_id: 1 },
+      { id: 22, name: 'User B', portfolio_id: 2 }
     ];
 
     // Seed old options so filtering has data to work with
@@ -145,14 +145,14 @@ describe('ResultsListFiltersComponent', () => {
       }
     ]);
 
-    // submitters filtered by selected phases portfolio_id 1, sorted with SP first
+    // submitters filtered by selected phases portfolio_id 1
     expect(mockResultsListFilterService.submittersOptions()).toEqual([
-      { id: 0, name: 'All submitters', portfolio_id: 1, official_code: 'ALL' },
-      { id: 11, name: 'User A', portfolio_id: 1, official_code: 'ABC001' }
+      { id: 0, name: 'All submitters', portfolio_id: 1 },
+      { id: 11, name: 'User A', portfolio_id: 1 }
     ]);
     expect(mockResultsListFilterService.selectedSubmitters()).toEqual([
-      { id: 0, name: 'All submitters', portfolio_id: 1, official_code: 'ALL' },
-      { id: 11, name: 'User A', portfolio_id: 1, official_code: 'ABC001' }
+      { id: 0, name: 'All submitters', portfolio_id: 1 },
+      { id: 11, name: 'User A', portfolio_id: 1 }
     ]);
 
     // status options
@@ -338,22 +338,17 @@ describe('ResultsListFiltersComponent', () => {
     });
   });
 
-  it('onSelectPhases should reset submitters and filter submittersOptions by selected phases with SP sorting', () => {
+  it('onSelectPhases should reset submitters and filter submittersOptions by selected phases', () => {
     mockResultsListFilterService.submittersOptionsOld.set([
-      { id: 11, portfolio_id: 1, official_code: 'ABC001' },
-      { id: 22, portfolio_id: 2, official_code: 'SP002' },
-      { id: 33, portfolio_id: 1, official_code: 'SP001' }
+      { id: 11, portfolio_id: 1 },
+      { id: 22, portfolio_id: 2 }
     ] as any);
-    mockResultsListFilterService.selectedPhases.set([{ portfolio_id: 1 } as any]);
+    mockResultsListFilterService.selectedPhases.set([{ portfolio_id: 2 } as any]);
 
     component.onSelectPhases();
 
     expect(mockResultsListFilterService.selectedSubmitters()).toEqual([]);
-    // Verificar que se ordenó correctamente: SP primero
-    expect(mockResultsListFilterService.submittersOptions()).toEqual([
-      { id: 33, portfolio_id: 1, official_code: 'SP001' },
-      { id: 11, portfolio_id: 1, official_code: 'ABC001' }
-    ]);
+    expect(mockResultsListFilterService.submittersOptions()).toEqual([{ id: 22, portfolio_id: 2 }]);
   });
 
   it('onDownLoadTableAsExcel should export and toggle gettingReport', () => {
@@ -442,8 +437,8 @@ describe('ResultsListFiltersComponent', () => {
       component.isAdmin = true;
       const mockResponse = {
         response: [
-          { id: 1, name: 'Initiative A', official_code: 'ABC123' },
-          { id: 2, name: 'Initiative B', official_code: 'SP001' }
+          { id: 1, name: 'Initiative A' },
+          { id: 2, name: 'Initiative B' }
         ]
       };
       mockApiService.resultsSE.GET_AllInitiatives.mockReturnValue(of(mockResponse));
@@ -451,11 +446,7 @@ describe('ResultsListFiltersComponent', () => {
       component.getAllInitiatives();
 
       expect(mockApiService.resultsSE.GET_AllInitiatives).toHaveBeenCalled();
-      // Verificar que se ordenó correctamente: SP primero
-      expect(mockResultsListFilterService.submittersOptionsAdminOld.set).toHaveBeenCalledWith([
-        { id: 2, name: 'Initiative B', official_code: 'SP001' },
-        { id: 1, name: 'Initiative A', official_code: 'ABC123' }
-      ]);
+      expect(mockResultsListFilterService.submittersOptionsAdminOld.set).toHaveBeenCalledWith(mockResponse.response);
     });
 
     it('should handle API error gracefully', () => {
@@ -491,49 +482,7 @@ describe('ResultsListFiltersComponent', () => {
       component.getAllInitiatives();
 
       expect(mockApiService.resultsSE.GET_AllInitiatives).toHaveBeenCalled();
-      // sortSubmittersBySP maneja null retornando array vacío
-      expect(mockResultsListFilterService.submittersOptionsAdminOld.set).toHaveBeenCalledWith([]);
-    });
-
-    it('should sort initiatives with SP prefix first', () => {
-      component.isAdmin = true;
-      const mockResponse = {
-        response: [
-          { id: 1, name: 'Initiative A', official_code: 'XYZ001' },
-          { id: 2, name: 'Initiative B', official_code: 'SP002' },
-          { id: 3, name: 'Initiative C', official_code: 'ABC123' },
-          { id: 4, name: 'Initiative D', official_code: 'SP001' }
-        ]
-      };
-      mockApiService.resultsSE.GET_AllInitiatives.mockReturnValue(of(mockResponse));
-
-      component.getAllInitiatives();
-
-      const callArgs = mockResultsListFilterService.submittersOptionsAdminOld.set.mock.calls[0][0];
-      // Verificar que las opciones con SP están primero
-      expect(callArgs[0].official_code).toBe('SP002');
-      expect(callArgs[1].official_code).toBe('SP001');
-      // Las que no empiezan con SP vienen después
-      expect(callArgs[2].official_code).toBe('XYZ001');
-      expect(callArgs[3].official_code).toBe('ABC123');
-    });
-
-    it('should handle initiatives without official_code', () => {
-      component.isAdmin = true;
-      const mockResponse = {
-        response: [
-          { id: 1, name: 'Initiative A' },
-          { id: 2, name: 'Initiative B', official_code: 'SP001' }
-        ]
-      };
-      mockApiService.resultsSE.GET_AllInitiatives.mockReturnValue(of(mockResponse));
-
-      component.getAllInitiatives();
-
-      const callArgs = mockResultsListFilterService.submittersOptionsAdminOld.set.mock.calls[0][0];
-      // La que tiene SP debe estar primero
-      expect(callArgs[0].official_code).toBe('SP001');
-      expect(callArgs[1].id).toBe(1);
+      expect(mockResultsListFilterService.submittersOptionsAdminOld.set).toHaveBeenCalledWith(null);
     });
   });
 
@@ -549,20 +498,18 @@ describe('ResultsListFiltersComponent', () => {
       ];
       mockResultsListFilterService.phasesOptions.set(mockPhasesOptions);
 
-      // Set up mock data for submitters options with official_code
+      // Set up mock data for submitters options
       const mockSubmittersOptions = [
-        { id: 0, name: 'All submitters', portfolio_id: 1, official_code: 'ALL' },
-        { id: 11, name: 'User A', portfolio_id: 1, official_code: 'ABC001' },
-        { id: 22, name: 'User B', portfolio_id: 2, official_code: 'SP002' },
-        { id: 33, name: 'User C', portfolio_id: 1, official_code: 'SP001' }
+        { id: 0, name: 'All submitters', portfolio_id: 1 },
+        { id: 11, name: 'User A', portfolio_id: 1 },
+        { id: 22, name: 'User B', portfolio_id: 2 }
       ];
       mockResultsListFilterService.submittersOptionsOld.set(mockSubmittersOptions);
 
-      // Set up mock data for admin submitters options with official_code
+      // Set up mock data for admin submitters options
       const mockAdminSubmittersOptions = [
-        { id: 1, name: 'Admin User A', portfolio_id: 1, official_code: 'XYZ001' },
-        { id: 2, name: 'Admin User B', portfolio_id: 2, official_code: 'SP002' },
-        { id: 3, name: 'Admin User C', portfolio_id: 1, official_code: 'SP001' }
+        { id: 1, name: 'Admin User A', portfolio_id: 1 },
+        { id: 2, name: 'Admin User B', portfolio_id: 2 }
       ];
       mockResultsListFilterService.submittersOptionsAdminOld.set(mockAdminSubmittersOptions);
 
@@ -582,62 +529,50 @@ describe('ResultsListFiltersComponent', () => {
       ]);
     });
 
-    it('should reset selectedSubmitters to filtered options by selected phases with SP sorting', () => {
+    it('should reset selectedSubmitters to filtered options by selected phases', () => {
       // Set some initial selected submitters
       mockResultsListFilterService.selectedSubmitters.set([{ id: 22, name: 'User B', portfolio_id: 2 }]);
 
       component.clearAllNewFilters();
 
       // Should only select submitters with portfolio_id = 1 (matching selected phases)
-      // And should be sorted with SP first
       expect(mockResultsListFilterService.selectedSubmitters()).toEqual([
-        { id: 33, name: 'User C', portfolio_id: 1, official_code: 'SP001' },
-        { id: 0, name: 'All submitters', portfolio_id: 1, official_code: 'ALL' },
-        { id: 11, name: 'User A', portfolio_id: 1, official_code: 'ABC001' }
+        { id: 0, name: 'All submitters', portfolio_id: 1 },
+        { id: 11, name: 'User A', portfolio_id: 1 }
       ]);
     });
 
-    it('should update submittersOptions to filtered options by selected phases with SP sorting', () => {
+    it('should update submittersOptions to filtered options by selected phases', () => {
       // Set some initial submitters options
       mockResultsListFilterService.submittersOptions.set([{ id: 22, name: 'User B', portfolio_id: 2 }]);
 
       component.clearAllNewFilters();
 
       // Should update available submitters options to only those with portfolio_id = 1
-      // And should be sorted with SP first
       expect(mockResultsListFilterService.submittersOptions()).toEqual([
-        { id: 33, name: 'User C', portfolio_id: 1, official_code: 'SP001' },
-        { id: 0, name: 'All submitters', portfolio_id: 1, official_code: 'ALL' },
-        { id: 11, name: 'User A', portfolio_id: 1, official_code: 'ABC001' }
+        { id: 0, name: 'All submitters', portfolio_id: 1 },
+        { id: 11, name: 'User A', portfolio_id: 1 }
       ]);
     });
 
-    it('should reset selectedSubmittersAdmin to filtered options by selected phases with SP sorting', () => {
+    it('should reset selectedSubmittersAdmin to filtered options by selected phases', () => {
       // Set some initial selected admin submitters
       mockResultsListFilterService.selectedSubmittersAdmin.set([{ id: 2, name: 'Admin User B', portfolio_id: 2 }]);
 
       component.clearAllNewFilters();
 
       // Should only select admin submitters with portfolio_id = 1 (matching selected phases)
-      // And should be sorted with SP first
-      expect(mockResultsListFilterService.selectedSubmittersAdmin()).toEqual([
-        { id: 3, name: 'Admin User C', portfolio_id: 1, official_code: 'SP001' },
-        { id: 1, name: 'Admin User A', portfolio_id: 1, official_code: 'XYZ001' }
-      ]);
+      expect(mockResultsListFilterService.selectedSubmittersAdmin()).toEqual([{ id: 1, name: 'Admin User A', portfolio_id: 1 }]);
     });
 
-    it('should update submittersOptionsAdmin to filtered options by selected phases with SP sorting', () => {
+    it('should update submittersOptionsAdmin to filtered options by selected phases', () => {
       // Set some initial admin submitters options
       mockResultsListFilterService.submittersOptionsAdmin.set([{ id: 2, name: 'Admin User B', portfolio_id: 2 }]);
 
       component.clearAllNewFilters();
 
       // Should update available admin submitters options to only those with portfolio_id = 1
-      // And should be sorted with SP first
-      expect(mockResultsListFilterService.submittersOptionsAdmin()).toEqual([
-        { id: 3, name: 'Admin User C', portfolio_id: 1, official_code: 'SP001' },
-        { id: 1, name: 'Admin User A', portfolio_id: 1, official_code: 'XYZ001' }
-      ]);
+      expect(mockResultsListFilterService.submittersOptionsAdmin()).toEqual([{ id: 1, name: 'Admin User A', portfolio_id: 1 }]);
     });
 
     it('should clear selectedIndicatorCategories', () => {
@@ -699,7 +634,7 @@ describe('ResultsListFiltersComponent', () => {
       expect(mockResultsListFilterService.selectedPhases()).toEqual([]);
     });
 
-    it('should reset all filters in one call with SP sorting', () => {
+    it('should reset all filters in one call', () => {
       // Set all filters to have some values
       mockResultsListFilterService.selectedPhases.set([{ id: 102, portfolio_id: 2, phase_name: '2023' }]);
       mockResultsListFilterService.selectedSubmitters.set([{ id: 22, name: 'User B', portfolio_id: 2 }]);
@@ -718,132 +653,21 @@ describe('ResultsListFiltersComponent', () => {
       expect(mockResultsListFilterService.selectedPhases()).toEqual([
         { id: 101, portfolio_id: 1, phase_name: '2024', status: true, obj_portfolio: { acronym: 'ABC' } }
       ]);
-      // Verificar ordenamiento con SP primero
       expect(mockResultsListFilterService.selectedSubmitters()).toEqual([
-        { id: 33, name: 'User C', portfolio_id: 1, official_code: 'SP001' },
-        { id: 0, name: 'All submitters', portfolio_id: 1, official_code: 'ALL' },
-        { id: 11, name: 'User A', portfolio_id: 1, official_code: 'ABC001' }
+        { id: 0, name: 'All submitters', portfolio_id: 1 },
+        { id: 11, name: 'User A', portfolio_id: 1 }
       ]);
-      expect(mockResultsListFilterService.selectedSubmittersAdmin()).toEqual([
-        { id: 3, name: 'Admin User C', portfolio_id: 1, official_code: 'SP001' },
-        { id: 1, name: 'Admin User A', portfolio_id: 1, official_code: 'XYZ001' }
-      ]);
+      expect(mockResultsListFilterService.selectedSubmittersAdmin()).toEqual([{ id: 1, name: 'Admin User A', portfolio_id: 1 }]);
       expect(mockResultsListFilterService.selectedIndicatorCategories()).toEqual([]);
       expect(mockResultsListFilterService.selectedStatus()).toEqual([]);
       expect(mockResultsListFilterService.text_to_search()).toBe('');
 
-      // Verify that available options are also updated with SP sorting
+      // Verify that available options are also updated
       expect(mockResultsListFilterService.submittersOptions()).toEqual([
-        { id: 33, name: 'User C', portfolio_id: 1, official_code: 'SP001' },
-        { id: 0, name: 'All submitters', portfolio_id: 1, official_code: 'ALL' },
-        { id: 11, name: 'User A', portfolio_id: 1, official_code: 'ABC001' }
+        { id: 0, name: 'All submitters', portfolio_id: 1 },
+        { id: 11, name: 'User A', portfolio_id: 1 }
       ]);
-      expect(mockResultsListFilterService.submittersOptionsAdmin()).toEqual([
-        { id: 3, name: 'Admin User C', portfolio_id: 1, official_code: 'SP001' },
-        { id: 1, name: 'Admin User A', portfolio_id: 1, official_code: 'XYZ001' }
-      ]);
-    });
-  });
-
-  describe('sortSubmittersBySP', () => {
-    it('should sort options with SP prefix first', () => {
-      const options = [
-        { id: 1, official_code: 'ABC001' },
-        { id: 2, official_code: 'SP002' },
-        { id: 3, official_code: 'XYZ003' },
-        { id: 4, official_code: 'SP001' }
-      ];
-
-      // Acceder al método privado usando any para testing
-      const sorted = (component as any).sortSubmittersBySP(options);
-
-      expect(sorted[0].official_code).toBe('SP002');
-      expect(sorted[1].official_code).toBe('SP001');
-      expect(sorted[2].official_code).toBe('ABC001');
-      expect(sorted[3].official_code).toBe('XYZ003');
-    });
-
-    it('should handle options without official_code', () => {
-      const options = [
-        { id: 1, name: 'Option A' },
-        { id: 2, official_code: 'SP001' },
-        { id: 3, name: 'Option B' }
-      ];
-
-      const sorted = (component as any).sortSubmittersBySP(options);
-
-      expect(sorted[0].official_code).toBe('SP001');
-      expect(sorted[1].id).toBe(1);
-      expect(sorted[2].id).toBe(3);
-    });
-
-    it('should handle empty array', () => {
-      const options: any[] = [];
-
-      const sorted = (component as any).sortSubmittersBySP(options);
-
-      expect(sorted).toEqual([]);
-    });
-
-    it('should handle null', () => {
-      const sorted = (component as any).sortSubmittersBySP(null);
-
-      expect(sorted).toEqual([]);
-    });
-
-    it('should handle undefined', () => {
-      const sorted = (component as any).sortSubmittersBySP(undefined);
-
-      expect(sorted).toEqual([]);
-    });
-
-    it('should handle all options with SP prefix', () => {
-      const options = [
-        { id: 1, official_code: 'SP002' },
-        { id: 2, official_code: 'SP001' },
-        { id: 3, official_code: 'SP003' }
-      ];
-
-      const sorted = (component as any).sortSubmittersBySP(options);
-
-      // Todos tienen SP, así que el orden original se mantiene
-      expect(sorted.length).toBe(3);
-      expect(sorted.every((item: any) => item.official_code?.startsWith('SP'))).toBe(true);
-    });
-
-    it('should handle all options without SP prefix', () => {
-      const options = [
-        { id: 1, official_code: 'ABC001' },
-        { id: 2, official_code: 'XYZ002' },
-        { id: 3, official_code: 'DEF003' }
-      ];
-
-      const sorted = (component as any).sortSubmittersBySP(options);
-
-      // Ninguno tiene SP, así que el orden original se mantiene
-      expect(sorted.length).toBe(3);
-      expect(sorted.every((item: any) => !item.official_code?.startsWith('SP'))).toBe(true);
-    });
-  });
-
-  describe('onSelectPhases with admin submitters', () => {
-    it('should sort admin submitters with SP first', () => {
-      mockResultsListFilterService.submittersOptionsAdminOld.set([
-        { id: 1, portfolio_id: 1, official_code: 'XYZ001' },
-        { id: 2, portfolio_id: 1, official_code: 'SP001' },
-        { id: 3, portfolio_id: 1, official_code: 'ABC001' }
-      ] as any);
-      mockResultsListFilterService.selectedPhases.set([{ portfolio_id: 1 } as any]);
-
-      component.onSelectPhases();
-
-      expect(mockResultsListFilterService.selectedSubmittersAdmin()).toEqual([]);
-      // Verificar que se ordenó correctamente: SP primero
-      expect(mockResultsListFilterService.submittersOptionsAdmin()).toEqual([
-        { id: 2, portfolio_id: 1, official_code: 'SP001' },
-        { id: 1, portfolio_id: 1, official_code: 'XYZ001' },
-        { id: 3, portfolio_id: 1, official_code: 'ABC001' }
-      ]);
+      expect(mockResultsListFilterService.submittersOptionsAdmin()).toEqual([{ id: 1, name: 'Admin User A', portfolio_id: 1 }]);
     });
   });
 });

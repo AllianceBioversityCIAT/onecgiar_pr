@@ -84,8 +84,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges {
     });
   }
 
-  private sortSubmittersBySP<T extends { official_code?: string }>(options: T[] | null | undefined): T[] {
-    if (!options || !Array.isArray(options)) return [];
+  private sortSubmittersBySP<T extends { official_code?: string }>(options: T[]): T[] {
     return [...options].sort((a, b) => {
       const aStartsWithSP = a.official_code?.startsWith('SP') ?? false;
       const bStartsWithSP = b.official_code?.startsWith('SP') ?? false;
