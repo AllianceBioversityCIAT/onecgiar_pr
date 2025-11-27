@@ -32,6 +32,7 @@ export interface toc_result_response {
   category: string;
   result_title: string;
   related_node_id: string | null;
+  result_level_id?: number | null;
   indicators: Array<{
     indicator_id: number;
     indicator_description: string | null;
@@ -320,6 +321,7 @@ export class AoWBilateralRepository {
           category: row.category,
           result_title: row.result_title,
           related_node_id: row.related_node_id,
+          result_level_id: row.result_level_id ?? null,
           indicators: [],
         });
       }
