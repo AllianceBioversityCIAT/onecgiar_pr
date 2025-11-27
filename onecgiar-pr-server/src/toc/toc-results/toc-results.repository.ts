@@ -415,6 +415,7 @@ export class TocResultsRepository extends Repository<TocResult> {
     init_id: number,
     toc_level: number,
     resultTypeId?: number,
+    resultId?: number,
   ) {
     const categoryMap = {
       1: 'OUTPUT',
@@ -447,16 +448,39 @@ export class TocResultsRepository extends Repository<TocResult> {
       const likeConditions = allowedPatterns
         .map(() => 'tri.type_value LIKE ?')
         .join(' OR ');
-      indicatorFilter = `
-        AND EXISTS (
-          SELECT 1 
-          FROM ${env.DB_TOC}.toc_results_indicators tri
-          WHERE tri.toc_results_id = tr.id
-            AND tri.is_active = 1
-            AND (${likeConditions})
-        )
-      `;
-      params.push(...allowedPatterns);
+
+      if (resultId && Number.isFinite(resultId) && resultId > 0) {
+        indicatorFilter = `
+          AND (
+            EXISTS (
+              SELECT 1 
+              FROM ${env.DB_TOC}.toc_results_indicators tri
+              WHERE tri.toc_results_id = tr.id
+                AND tri.is_active = 1
+                AND (${likeConditions})
+            )
+            OR EXISTS (
+              SELECT 1
+              FROM ${env.DB_NAME}.results_toc_result rtr
+              WHERE rtr.toc_result_id = tr.id
+                AND rtr.results_id = ?
+                AND rtr.is_active = 1
+            )
+          )
+        `;
+        params.push(...allowedPatterns, resultId);
+      } else {
+        indicatorFilter = `
+          AND EXISTS (
+            SELECT 1 
+            FROM ${env.DB_TOC}.toc_results_indicators tri
+            WHERE tri.toc_results_id = tr.id
+              AND tri.is_active = 1
+              AND (${likeConditions})
+          )
+        `;
+        params.push(...allowedPatterns);
+      }
     }
 
     const queryData = `
