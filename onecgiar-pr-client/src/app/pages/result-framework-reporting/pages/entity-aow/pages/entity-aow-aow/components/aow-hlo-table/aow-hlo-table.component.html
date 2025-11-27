@@ -42,48 +42,64 @@
   </ng-template>
 
   <ng-template #expandedrow let-item>
-    @for (result of item.indicators; track $index) {
+    @if (item.indicators.length) {
+      @for (result of item.indicators; track $index) {
+        <tr>
+          <td class="text-secondary-300" style="min-width: 150px !important">{{ result.indicator_description }}</td>
+          <td>
+            <div class="tab-content_chip" [pTooltip]="!result.type_name ? 'This information should be filled in the ToC Board' : ''">
+              {{ result.type_name || 'Not provided' }}
+            </div>
+          </td>
+          <td style="text-align: center">{{ result.target_value_sum }}</td>
+          <td style="text-align: center">{{ result.actual_achieved_value_sum }}</td>
+          <td>
+            <div class="tab-content_progress">
+              <p-progressbar [value]="getProgress(result.progress_percentage)" [showValue]="false" [style]="{ width: '65px', height: '8px' }" />
+              <p class="tab-content_progress_value">{{ result.progress_percentage }}</p>
+            </div>
+          </td>
+          <td>
+            <div
+              class="tab-content_chip"
+              [ngClass]="{
+                'not-started': getProgress(result.progress_percentage) === 0,
+                'in-progress': getProgress(result.progress_percentage) >= 1 && getProgress(result.progress_percentage) <= 99,
+                achieved: getProgress(result.progress_percentage) === 100,
+                overachieved: getProgress(result.progress_percentage) > 100
+              }">
+              {{ getStatusLabel(result.progress_percentage) }}
+            </div>
+          </td>
+          <td>
+            <div class="tab-content_actions">
+              <button
+                pButton
+                label="Report result"
+                type="button"
+                class="pr-body-3 tab-content_actions_button"
+                (click)="openReportResultModal(item, result.indicator_id)"></button>
+              <button
+                pButton
+                label="View results"
+                type="button"
+                class="p-button-outlined pr-body-3 tab-content_actions_button"
+                (click)="openViewResultDrawer(item, result.indicator_id)"></button>
+            </div>
+          </td>
+        </tr>
+      }
+    } @else {
       <tr>
-        <td class="text-secondary-300" style="min-width: 150px !important">{{ result.indicator_description }}</td>
-        <td>
-          <div class="tab-content_chip" [pTooltip]="!result.type_name ? 'This information should be filled in the ToC Board' : ''">
-            {{ result.type_name || 'Not provided' }}
-          </div>
-        </td>
-        <td style="text-align: center">{{ result.target_value_sum }}</td>
-        <td style="text-align: center">{{ result.actual_achieved_value_sum }}</td>
-        <td>
-          <div class="tab-content_progress">
-            <p-progressbar [value]="getProgress(result.progress_percentage)" [showValue]="false" [style]="{ width: '65px', height: '8px' }" />
-            <p class="tab-content_progress_value">{{ result.progress_percentage }}</p>
-          </div>
-        </td>
-        <td>
-          <div
-            class="tab-content_chip"
-            [ngClass]="{
-              'not-started': getProgress(result.progress_percentage) === 0,
-              'in-progress': getProgress(result.progress_percentage) >= 1 && getProgress(result.progress_percentage) <= 99,
-              achieved: getProgress(result.progress_percentage) === 100,
-              overachieved: getProgress(result.progress_percentage) > 100
-            }">
-            {{ getStatusLabel(result.progress_percentage) }}
-          </div>
-        </td>
-        <td>
-          <div class="tab-content_actions">
+        <td colspan="8" style="padding: 10px 20px">
+          <div class="no-indicators-container">
+            <p class="no-indicators-message">This HLO has no associated indicators. Report results directly using the button below.</p>
             <button
               pButton
               label="Report result"
               type="button"
-              class="pr-body-3 tab-content_actions_button"
-              (click)="openReportResultModal(item, result.indicator_id)"></button>
-            <button
-              pButton
-              label="View results"
-              type="button"
-              class="p-button-outlined pr-body-3 tab-content_actions_button"
-              (click)="openViewResultDrawer(item, result.indicator_id)"></button>
+              class="pr-body-3 no-indicators-button"
+              (click)="openReportResultModal(item, null)"></button>
           </div>
         </td>
       </tr>

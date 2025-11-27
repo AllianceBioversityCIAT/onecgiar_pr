@@ -57,3 +57,24 @@ p {
   font-weight: 500;
   color: var(--pr-color-secondary-400);
 }
+
+.no-indicators-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 10px 15px;
+
+  .no-indicators-message {
+    @include fonts.pr-typography('body-1');
+    color: #7e8389;
+    text-align: center;
+    max-width: 600px;
+  }
+
+  .no-indicators-button {
+    min-width: max-content;
+    padding: 4px 20px;
+  }
+}

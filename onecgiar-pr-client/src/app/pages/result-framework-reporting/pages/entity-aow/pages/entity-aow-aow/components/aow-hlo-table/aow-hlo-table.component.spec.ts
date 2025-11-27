@@ -358,6 +358,24 @@ describe('AowHloTableComponent', () => {
       });
     });
 
+    it('should handle null currentItemId (no indicators case)', () => {
+      const mockItem = {
+        id: 'result-1',
+        title: 'Test Result',
+        indicators: [{ indicator_id: 'indicator-1', name: 'Indicator 1', type_name: 'Number of knowledge products' }]
+      };
+      const currentItemId = null;
+
+      component.openReportResultModal(mockItem, currentItemId);
+
+      expect(mockEntityAowService.showReportResultModal.set).toHaveBeenCalledWith(true);
+      expect(mockEntityAowService.currentResultToReport.set).toHaveBeenCalledWith({
+        id: 'result-1',
+        title: 'Test Result',
+        indicators: []
+      });
+    });
+
     it('should handle item with empty indicators array', () => {
       const mockItem = {
         id: 'result-1',
