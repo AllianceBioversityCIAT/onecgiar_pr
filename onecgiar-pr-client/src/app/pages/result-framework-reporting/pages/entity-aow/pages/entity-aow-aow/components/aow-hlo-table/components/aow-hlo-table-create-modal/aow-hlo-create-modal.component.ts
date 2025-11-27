@@ -82,12 +82,23 @@ export class AowHloCreateModalComponent implements OnInit {
       this.allInitiatives.set(response.filter(item => item.initiative_id !== this.entityAowService.entityDetails().id));
     });
 
+    console.log(this.entityAowService.currentResultToReport().result_level_id);
+    console.log(
+      this.entityAowService.currentResultToReport()?.indicators?.[0]?.result_level_id ||
+        this.entityAowService.currentResultToReport()?.result_level_id
+    );
+
     if (!this.entityAowService.currentResultToReport()?.indicators?.[0]?.result_type_id) {
+      console.log(this.resultsListFilterSE.filters.resultLevel);
       this.resultTypes.set(
         this.resultsListFilterSE.filters.resultLevel?.find(
-          item => item.id === this.entityAowService.currentResultToReport()?.indicators?.[0]?.result_level_id
+          item =>
+            item.id ===
+            (this.entityAowService.currentResultToReport()?.indicators?.[0]?.result_level_id ||
+              this.entityAowService.currentResultToReport()?.result_level_id)
         )?.options
       );
+      console.log(this.resultTypes());
     }
   }
 

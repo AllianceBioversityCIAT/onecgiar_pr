@@ -80,6 +80,9 @@ export class AowHloTableComponent {
   }
 
   openReportResultModal(item: any, currentItemId: string | null) {
+    console.log('item', item);
+    console.log('currentItemId', currentItemId);
+    console.log('item.indicators', item.indicators);
     const selectedCurrentItem = currentItemId
       ? {
           ...item,
