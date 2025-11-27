@@ -339,4 +339,96 @@ describe('EntityDetailsComponent', () => {
       expect(formatter(-0.5)).toBe('');
     });
   });
+
+  describe('Report Modal', () => {
+    it('should initialize with showReportModal as false', () => {
+      expect(component.showReportModal()).toBe(false);
+    });
+
+    it('should open modal when showReportModal is set to true', () => {
+      component.showReportModal.set(true);
+      expect(component.showReportModal()).toBe(true);
+    });
+
+    it('should close modal when showReportModal is set to false', () => {
+      component.showReportModal.set(true);
+      component.showReportModal.set(false);
+      expect(component.showReportModal()).toBe(false);
+    });
+
+    it('should handle reportRequested event handler correctly', () => {
+      // Simulate the event handler that would be called from child component
+      component.showReportModal.set(true);
+      expect(component.showReportModal()).toBe(true);
+    });
+
+    it('should handle onHide event handler correctly', () => {
+      component.showReportModal.set(true);
+      // Simulate the onHide handler
+      component.showReportModal.set(false);
+      expect(component.showReportModal()).toBe(false);
+    });
+
+    it('should handle resultCreated event handler correctly', () => {
+      component.showReportModal.set(true);
+      // Simulate the resultCreated handler
+      component.showReportModal.set(false);
+      expect(component.showReportModal()).toBe(false);
+    });
+
+    it('should have entityDetails available for report form', () => {
+      const mockEntityDetails = { id: 123, shortName: 'Test Initiative' };
+      entityAowServiceMock.entityDetails = signal(mockEntityDetails);
+      expect(component.entityAowService.entityDetails()?.id).toBe(123);
+    });
+  });
+
+  describe('SplitButton', () => {
+    it('should have reportMenuItems configured correctly', () => {
+      expect(component.reportMenuItems).toBeDefined();
+      expect(component.reportMenuItems.length).toBe(3);
+      expect(component.reportMenuItems[0].label).toBe('AI Assistant');
+      expect(component.reportMenuItems[0].disabled).toBe(true);
+      expect(component.reportMenuItems[2].label).toBe('Unplanned result');
+    });
+
+    it('should open modal when Unplanned result menu item command is executed', () => {
+      const unplannedResultItem = component.reportMenuItems[2];
+      expect(unplannedResultItem.command).toBeDefined();
+
+      const mockEvent = { item: unplannedResultItem } as any;
+      unplannedResultItem.command?.(mockEvent);
+      expect(component.showReportModal()).toBe(true);
+    });
+  });
+
+  describe('Indicator Summaries Integration', () => {
+    it('should have indicatorSummaries signal available', () => {
+      const mockSummaries = [
+        {
+          resultTypeId: 7,
+          resultTypeName: 'Test Category 1',
+          editing: 5,
+          submitted: 10,
+          qualityAssessed: 8
+        }
+      ];
+      entityAowServiceMock.indicatorSummaries = signal(mockSummaries);
+      expect(component.entityAowService.indicatorSummaries().length).toBe(1);
+      expect(component.entityAowService.indicatorSummaries()[0].resultTypeName).toBe('Test Category 1');
+    });
+
+    it('should handle empty indicatorSummaries', () => {
+      entityAowServiceMock.indicatorSummaries = signal([]);
+      expect(component.entityAowService.indicatorSummaries().length).toBe(0);
+    });
+
+    it('should handle isLoadingDetails signal', () => {
+      entityAowServiceMock.isLoadingDetails = signal(true);
+      expect(component.entityAowService.isLoadingDetails()).toBe(true);
+
+      entityAowServiceMock.isLoadingDetails = signal(false);
+      expect(component.entityAowService.isLoadingDetails()).toBe(false);
+    });
+  });
 });

@@ -54,6 +54,7 @@ import { GlobalParameterRepository } from '../../global-parameter/repositories/g
 import { InitiativeEntityMapRepository } from '../../initiative_entity_map/initiative_entity_map.repository';
 import { ImpactAreasScoresComponentsModule } from '../impact_areas_scores_components/impact_areas_scores_components.module';
 import { NotificationModule } from '../../notification/notification.module';
+import { AoWBilateralRepository } from '../results-toc-results/repositories/aow-bilateral.repository';
 
 @Module({
   imports: [
@@ -114,6 +115,7 @@ import { NotificationModule } from '../../notification/notification.module';
     DeleteRecoverDataService,
     GlobalParameterRepository,
     InitiativeEntityMapRepository,
+    AoWBilateralRepository,
   ],
   exports: [
     ResultsKnowledgeProductsService,

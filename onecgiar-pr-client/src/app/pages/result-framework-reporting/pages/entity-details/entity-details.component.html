@@ -95,7 +95,8 @@
           appendTo="self"
           menuStyleClass="entity-report-menu-overlay"
           [model]="reportMenuItems"
-          styleClass="entity-report-splitbutton">
+          styleClass="entity-report-splitbutton"
+          [hidden]="true">
         </p-splitbutton>
       </div>
 
@@ -107,7 +108,9 @@
         } @else {
           @if (entityAowService.indicatorSummaries().length > 0) {
             @for (item of entityAowService.indicatorSummaries(); track $index) {
-              <app-entity-results-by-indicator-category-card [item]="item"></app-entity-results-by-indicator-category-card>
+              <app-entity-results-by-indicator-category-card
+                [item]="item"
+                (reportRequested)="showReportModal.set(true)"></app-entity-results-by-indicator-category-card>
             }
           } @else {
             <h1 class="entity-details_card_content_empty">No results found for this science program</h1>

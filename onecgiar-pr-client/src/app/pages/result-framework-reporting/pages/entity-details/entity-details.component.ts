@@ -229,7 +229,9 @@ export class EntityDetailsComponent implements OnInit {
                 size: 8
               },
               padding: 0,
-              minRotation: 45
+              minRotation: 45,
+              stepSize: 1,
+              precision: 0
             }
           },
           y: {
