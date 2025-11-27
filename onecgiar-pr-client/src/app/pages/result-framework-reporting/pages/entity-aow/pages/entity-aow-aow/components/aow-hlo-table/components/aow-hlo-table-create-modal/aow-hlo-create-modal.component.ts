@@ -82,14 +82,7 @@ export class AowHloCreateModalComponent implements OnInit {
       this.allInitiatives.set(response.filter(item => item.initiative_id !== this.entityAowService.entityDetails().id));
     });
 
-    console.log(this.entityAowService.currentResultToReport().result_level_id);
-    console.log(
-      this.entityAowService.currentResultToReport()?.indicators?.[0]?.result_level_id ||
-        this.entityAowService.currentResultToReport()?.result_level_id
-    );
-
     if (!this.entityAowService.currentResultToReport()?.indicators?.[0]?.result_type_id) {
-      console.log(this.resultsListFilterSE.filters.resultLevel);
       this.resultTypes.set(
         this.resultsListFilterSE.filters.resultLevel?.find(
           item =>
@@ -98,7 +91,6 @@ export class AowHloCreateModalComponent implements OnInit {
               this.entityAowService.currentResultToReport()?.result_level_id)
         )?.options
       );
-      console.log(this.resultTypes());
     }
   }
 
@@ -210,10 +202,7 @@ export class AowHloCreateModalComponent implements OnInit {
   }
 
   createResult() {
-    console.log('on create result');
     this.creatingResult.set(true);
-
-    console.log(this.createResultBody().result_type_id);
 
     const body = {
       result: {
@@ -237,7 +226,6 @@ export class AowHloCreateModalComponent implements OnInit {
       bilateral_project: this.entityAowService.selectedW3BilateralProjects()
     };
 
-    console.log(body);
     this.api.resultsSE.POST_createResult(body).subscribe({
       next: resp => {
         this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
