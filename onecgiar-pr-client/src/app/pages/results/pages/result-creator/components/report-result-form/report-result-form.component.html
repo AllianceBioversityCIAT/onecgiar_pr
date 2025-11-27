@@ -44,7 +44,7 @@
             *ngIf="isKnowledgeProduct"
             [isStatic]="true"
             placeholder="Handle..."
-            label="CGSpace link"
+            label="Repository link/handle"
             type="text"
             [(ngModel)]="this.resultLevelSE.resultBody.handler">
           </app-pr-input>
@@ -72,7 +72,7 @@
           [isStatic]="true"
           *ngIf="this.resultLevelSE.resultBody.result_type_id"
           [placeholder]="resultTypeNamePlaceholder + ''"
-          label="Title of Result"
+          label="Title retrieved from the repository"
           type="text"
           [maxWords]="30"
           [required]="resultLevelSE.resultBody.result_type_id != 6"
