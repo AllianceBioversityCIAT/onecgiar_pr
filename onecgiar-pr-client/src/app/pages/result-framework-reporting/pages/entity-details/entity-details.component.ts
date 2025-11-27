@@ -17,6 +17,7 @@ import { DialogModule } from 'primeng/dialog';
 import { SplitButtonModule } from 'primeng/splitbutton';
 import { ResultCreatorModule } from '../../../results/pages/result-creator/result-creator.module';
 import { MenuItem } from 'primeng/api';
+import { ResultLevelService } from '../../../results/pages/result-creator/services/result-level.service';
 
 @Component({
   selector: 'app-entity-details',
@@ -43,10 +44,12 @@ export class EntityDetailsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   api = inject(ApiService);
   entityAowService = inject(EntityAowService);
+  resultLevelSE = inject(ResultLevelService);
 
   cd = inject(ChangeDetectorRef);
 
   showReportModal = signal(false);
+  selectedIndicatorItem = signal<any>(null);
   reportMenuItems: MenuItem[] = [
     {
       label: 'AI Assistant',
@@ -260,5 +263,17 @@ export class EntityDetailsComponent implements OnInit {
         }
       }
     };
+  }
+
+  onReportRequested(item: any) {
+    this.selectedIndicatorItem.set(item);
+    this.showReportModal.set(true);
+  }
+
+  onModalClose() {
+    this.showReportModal.set(false);
+    this.selectedIndicatorItem.set(null);
+    this.resultLevelSE.resetSelection();
+    this.resultLevelSE.cleanData();
   }
 }
