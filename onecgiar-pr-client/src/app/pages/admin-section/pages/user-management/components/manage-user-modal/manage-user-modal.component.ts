@@ -117,11 +117,12 @@ export class ManageUserModalComponent {
       .map((item, index) => (index !== currentIndex ? item.entity_id : null))
       .filter(entityId => entityId !== null);
 
-    // Filter within each group's entities array
-    return this.entities().map(group => ({
-      ...group,
-      entities: group.entities.filter(entity => !selectedEntities.includes(entity.initiative_id))
-    }));
+    return this.entities()
+      .filter(group => group.name === 'P25')
+      .map(group => ({
+        ...group,
+        entities: group.entities.filter(entity => !selectedEntities.includes(entity.initiative_id))
+      }));
   }
 
   onRoleEntityChange(event: number, index: number): void {

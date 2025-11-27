@@ -359,3 +359,10 @@
   justify-content: space-between;
   margin-bottom: 12px;
 }
+
+::ng-deep {
+  .entity-select-panel,
+  .add-user-modal .p-select-panel {
+    max-width: calc(600px - 48px) !important;
+  }
+}
