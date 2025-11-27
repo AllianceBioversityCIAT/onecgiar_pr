@@ -1323,6 +1323,7 @@ export class ResultsApiService {
   }
 
   POST_createResult(body: any) {
+    console.log('post');
     return this.http.post<any>(`${environment.apiBaseUrl}api/results-framework-reporting/create`, body);
   }
 
