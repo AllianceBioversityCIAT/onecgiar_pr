@@ -95,7 +95,8 @@
               [options]="this.resultsListFilterSE.submittersOptionsAdmin()"
               [(ngModel)]="tempSelectedSubmittersAdmin"
               placeholder="Select submitter(s)"
-              [maxSelectedLabels]="6"
+              [maxSelectedLabels]="0"
+              [selectedItemsLabel]="'{0} items selected'"
               [filter]="true"
               [style]="{ width: '100%' }"
               panelStyleClass="submitter-multiselect-panel">
@@ -114,7 +115,8 @@
               [(ngModel)]="tempSelectedSubmitters"
               optionLabel="name"
               placeholder="Select submitter(s)"
-              [maxSelectedLabels]="6"
+              [maxSelectedLabels]="0"
+              [selectedItemsLabel]="'{0} items selected'"
               [filter]="true"
               [style]="{ width: '100%' }" />
           }
