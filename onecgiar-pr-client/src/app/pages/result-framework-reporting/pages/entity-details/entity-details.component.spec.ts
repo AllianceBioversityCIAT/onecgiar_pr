@@ -3,8 +3,9 @@ import { NO_ERRORS_SCHEMA, signal, PLATFORM_ID, ChangeDetectorRef } from '@angul
 import { BehaviorSubject, of } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
 import { EntityDetailsComponent } from './entity-details.component';
-import { ApiService } from '../../../../shared/services/api/api.service';
 import { EntityAowService } from '../entity-aow/services/entity-aow.service';
+import { ApiService } from '../../../../shared/services/api/api.service';
+import { ResultLevelService } from '../../../results/pages/result-creator/services/result-level.service';
 
 describe('EntityDetailsComponent', () => {
   let component: EntityDetailsComponent;
@@ -13,6 +14,7 @@ describe('EntityDetailsComponent', () => {
   let apiServiceMock: any;
   let entityAowServiceMock: any;
   let changeDetectorRefMock: any;
+  let resultLevelServiceMock: any;
 
   beforeEach(async () => {
     params$ = new BehaviorSubject({ entityId: '123' });
@@ -42,12 +44,18 @@ describe('EntityDetailsComponent', () => {
       resetDashboardData: jest.fn()
     };
 
+    resultLevelServiceMock = {
+      setPendingResultType: jest.fn(),
+      cleanData: jest.fn()
+    };
+
     await TestBed.configureTestingModule({
       imports: [EntityDetailsComponent],
       providers: [
         { provide: ActivatedRoute, useValue: { params: params$.asObservable() } },
         { provide: ApiService, useValue: apiServiceMock },
         { provide: EntityAowService, useValue: entityAowServiceMock },
+        { provide: ResultLevelService, useValue: resultLevelServiceMock },
         { provide: ChangeDetectorRef, useValue: changeDetectorRefMock },
         { provide: PLATFORM_ID, useValue: 'browser' }
       ],

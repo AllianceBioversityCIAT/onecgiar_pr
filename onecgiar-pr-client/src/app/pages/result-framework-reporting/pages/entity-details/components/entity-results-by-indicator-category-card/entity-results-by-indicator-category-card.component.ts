@@ -10,7 +10,7 @@ import { ButtonModule } from 'primeng/button';
 })
 export class EntityResultsByIndicatorCategoryCardComponent {
   @Input() item: any;
-  readonly reportRequested = output<void>();
+  readonly reportRequested = output<any>();
 
   getIcon(indicatorType: number) {
     switch (indicatorType) {
