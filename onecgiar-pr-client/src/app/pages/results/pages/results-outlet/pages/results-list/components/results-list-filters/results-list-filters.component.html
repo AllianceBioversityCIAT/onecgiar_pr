@@ -16,6 +16,26 @@
   <p-button label="Download" variant="outlined" icon="pi pi-download" (click)="onDownLoadTableAsExcel()" [loading]="this.gettingReport()" />
 </div>
 
+<!-- Filter Chips Bar -->
+@if (filterChipGroups().length > 0) {
+  <div class="filter-chips-container">
+    <span class="filter-chips-main-label">Results filtered by</span>
+    <div class="filter-chips-groups-wrapper">
+      @for (group of filterChipGroups(); track group.category) {
+        <div class="filter-chip-group">
+          <span class="filter-chip-category-label">{{ group.category }}</span>
+          <span class="filter-chip-arrow">→</span>
+          <div class="filter-chips-list">
+            @for (chip of group.chips; track chip.label) {
+              <p-chip [label]="chip.label" [removable]="true" (onRemove)="removeFilter(chip)" styleClass="filter-chip" />
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+}
+
 <!-- Custom Drawer -->
 <div class="custom-drawer-container" [class.visible]="visible()" [style.top.px]="navbarHeight()">
   <div class="custom-drawer" [class.open]="visible()">
@@ -74,11 +94,20 @@
               [filter]="false"
               [options]="this.resultsListFilterSE.submittersOptionsAdmin()"
               [(ngModel)]="tempSelectedSubmittersAdmin"
-              optionLabel="official_code"
               placeholder="Select submitter(s)"
-              [maxSelectedLabels]="6"
+              [maxSelectedLabels]="0"
+              [selectedItemsLabel]="'{0} items selected'"
               [filter]="true"
-              [style]="{ width: '100%' }" />
+              [style]="{ width: '100%' }"
+              panelStyleClass="submitter-multiselect-panel">
+              <ng-template let-option pTemplate="item">
+                <div
+                  class="multiselect-item-text"
+                  style="max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block">
+                  {{ option.official_code }} {{ option.name }}
+                </div>
+              </ng-template>
+            </p-multiselect>
           } @else {
             <p-multiselect
               [filter]="false"
@@ -86,7 +115,8 @@
               [(ngModel)]="tempSelectedSubmitters"
               optionLabel="name"
               placeholder="Select submitter(s)"
-              [maxSelectedLabels]="6"
+              [maxSelectedLabels]="0"
+              [selectedItemsLabel]="'{0} items selected'"
               [filter]="true"
               [style]="{ width: '100%' }" />
           }
@@ -101,7 +131,7 @@
           <p-multiselect
             [filter]="false"
             [showHeader]="false"
-            [options]="this.resultsListFilterSE.filters.resultLevel"
+            [options]="this.resultsListFilterSE.filters.resultLevel | reverse"
             [(ngModel)]="tempSelectedIndicatorCategories"
             optionLabel="name"
             placeholder="Select indicator category(ies)"
@@ -133,7 +163,7 @@
             [maxSelectedLabels]="3"
             [style]="{ width: '100%' }" />
         </div>
-    </div>
+      </div>
     </div>
 
     <!-- Footer buttons -->

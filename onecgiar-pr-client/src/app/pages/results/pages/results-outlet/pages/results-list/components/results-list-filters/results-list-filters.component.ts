@@ -14,6 +14,8 @@ import { InputIconModule } from 'primeng/inputicon';
 import { InputTextModule } from 'primeng/inputtext';
 import { switchMap } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
+import { ChipModule } from 'primeng/chip';
+import { ReversePipe } from '../../../../../../../../shared/pipes/reverse.pipe';
 @Component({
   selector: 'app-results-list-filters',
   templateUrl: './results-list-filters.component.html',
@@ -29,7 +31,9 @@ import { ButtonModule } from 'primeng/button';
     IconFieldModule,
     InputIconModule,
     InputTextModule,
-    ButtonModule
+    ButtonModule,
+    ChipModule,
+    ReversePipe
   ]
 })
 export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy {
@@ -64,6 +68,91 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     if (this.filtersCount() === 0) return 'Apply filters';
     return `Apply filters (${this.filtersCount()})`;
   });
+
+  // Computed property to generate grouped chips from applied filters
+  filterChipGroups = computed(() => {
+    const groups: Array<{
+      category: string;
+      chips: Array<{ label: string; filterType: string; item?: any }>;
+    }> = [];
+
+    // Clarisa Portfolios
+    const clarisaPortfoliosChips = this.resultsListFilterSE.selectedClarisaPortfolios().map(portfolio => ({
+      label: portfolio.name,
+      filterType: 'clarisaPortfolio',
+      item: portfolio
+    }));
+    if (clarisaPortfoliosChips.length > 0) {
+      groups.push({
+        category: 'Clarisa Portfolio',
+        chips: clarisaPortfoliosChips
+      });
+    }
+
+    // Phases
+    const phaseChips = this.resultsListFilterSE.selectedPhases().map(phase => ({
+      label: phase.name,
+      filterType: 'phase',
+      item: phase
+    }));
+    if (phaseChips.length > 0) {
+      groups.push({
+        category: 'Phase',
+        chips: phaseChips
+      });
+    }
+
+    // Indicator Categories
+    const indicatorCategoryChips = this.resultsListFilterSE.selectedIndicatorCategories().map(category => ({
+      label: category.name,
+      filterType: 'indicatorCategory',
+      item: category
+    }));
+    if (indicatorCategoryChips.length > 0) {
+      groups.push({
+        category: 'Indicator category',
+        chips: indicatorCategoryChips
+      });
+    }
+
+    // Submitters
+    let submitterChips = [];
+    if (this.isAdmin) {
+      submitterChips = this.resultsListFilterSE.selectedSubmittersAdmin().map(submitter => ({
+        label: submitter.official_code,
+        filterType: 'submitter',
+        item: submitter
+      }));
+    } else {
+      submitterChips = this.resultsListFilterSE.selectedSubmitters().map(submitter => ({
+        label: submitter.name,
+        filterType: 'submitter',
+        item: submitter
+      }));
+    }
+    if (submitterChips.length > 0) {
+      groups.push({
+        category: 'Submitter',
+        chips: submitterChips
+      });
+    }
+
+    // Status
+    const statusChips = this.resultsListFilterSE.selectedStatus().map(status => ({
+      label: status.name,
+      filterType: 'status',
+      item: status
+    }));
+    if (statusChips.length > 0) {
+      groups.push({
+        category: 'Status',
+        chips: statusChips
+      });
+    }
+
+    return groups;
+  });
+
   @Input() isAdmin = false;
 
   constructor(
@@ -174,6 +263,60 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     this.tempSelectedSubmittersAdmin.set([]);
     this.tempSelectedIndicatorCategories.set([]);
     this.tempSelectedStatus.set([]);
+  }
+
+  removeFilter(chip: { label: string; filterType: string; item?: any }) {
+    switch (chip.filterType) {
+      case 'clarisaPortfolio':
+        this.resultsListFilterSE.selectedClarisaPortfolios.set(
+          this.resultsListFilterSE.selectedClarisaPortfolios().filter(p => p !== chip.item)
+        );
+        break;
+
+      case 'phase':
+        this.resultsListFilterSE.selectedPhases.set(
+          this.resultsListFilterSE.selectedPhases().filter(p => p !== chip.item)
+        );
+        // Update submitter options when phases change
+        this.resultsListFilterSE.submittersOptions.set(
+          this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptionsOld())
+        );
+        this.resultsListFilterSE.submittersOptionsAdmin.set(
+          this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptionsAdminOld())
+        );
+        // Remove submitters that are no longer valid
+        this.resultsListFilterSE.selectedSubmitters.set(
+          this.filterOptionsBySelectedPhases(this.resultsListFilterSE.selectedSubmitters())
+        );
+        this.resultsListFilterSE.selectedSubmittersAdmin.set(
+          this.filterOptionsBySelectedPhases(this.resultsListFilterSE.selectedSubmittersAdmin())
+        );
+        break;
+
+      case 'submitter':
+        if (this.isAdmin) {
+          this.resultsListFilterSE.selectedSubmittersAdmin.set(
+            this.resultsListFilterSE.selectedSubmittersAdmin().filter(s => s !== chip.item)
+          );
+        } else {
+          this.resultsListFilterSE.selectedSubmitters.set(
+            this.resultsListFilterSE.selectedSubmitters().filter(s => s !== chip.item)
+          );
+        }
+        break;
+
+      case 'indicatorCategory':
+        this.resultsListFilterSE.selectedIndicatorCategories.set(
+          this.resultsListFilterSE.selectedIndicatorCategories().filter(c => c !== chip.item)
+        );
+        break;
+
+      case 'status':
+        this.resultsListFilterSE.selectedStatus.set(
+          this.resultsListFilterSE.selectedStatus().filter(s => s !== chip.item)
+        );
+        break;
+    }
   }
 
   getResultStatus() {
