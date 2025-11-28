@@ -17,6 +17,7 @@ export class ResultLevelService {
   currentResultLevelName = null;
   currentResultTypeId = null;
   resultHandle: string = '';
+  private pendingResultTypeSelection: { id?: number; name?: string } | null = null;
 
   constructor(
     private api: ApiService,
@@ -42,6 +43,50 @@ export class ResultLevelService {
 
   cleanData() {
     this.resultBody = new ResultBody();
+  }
+
+  resetSelection() {
+    const updated = (this.resultLevelListSig() || []).map(rl => ({
+      ...rl,
+      selected: false
+    }));
+    this.resultLevelListSig.set(updated);
+    if (this.resultLevelList) {
+      this.resultLevelList.forEach(reLevel => (reLevel.selected = false));
+    }
+  }
+
+  preselectResultType(resultTypeId?: number, resultTypeName?: string) {
+    if (!this.resultLevelList?.length) return;
+
+    const matchesType = (type: Resulttype) => {
+      if (resultTypeId != null) return type.id === resultTypeId;
+      if (resultTypeName) return type.name?.trim().toLowerCase() === resultTypeName.trim().toLowerCase();
+      return false;
+    };
+
+    const targetLevel = this.resultLevelList.find(level => level.result_type?.some(matchesType));
+    if (!targetLevel) return;
+
+    this.onSelectResultLevel(targetLevel);
+
+    const targetType = targetLevel.result_type?.find(matchesType);
+    if (targetType) {
+      this.resultBody.result_type_id = targetType.id;
+    }
+  }
+
+  setPendingResultType(resultTypeId?: number, resultTypeName?: string) {
+    this.pendingResultTypeSelection = {
+      id: resultTypeId ?? undefined,
+      name: resultTypeName ?? undefined
+    };
+  }
+
+  consumePendingResultType(): { id?: number; name?: string } | null {
+    const selection = this.pendingResultTypeSelection;
+    this.pendingResultTypeSelection = null;
+    return selection;
   }
 
   GET_TypeByResultLevel() {

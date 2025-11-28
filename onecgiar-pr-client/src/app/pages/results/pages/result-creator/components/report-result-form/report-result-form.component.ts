@@ -58,6 +58,7 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
     this.resultLevelSE.currentResultTypeList = [];
     this.resultLevelSE.resultLevelList?.forEach(reLevel => (reLevel.selected = false));
     this.resultLevelSE.cleanData();
+    this.applyPendingResultTypeSelection();
     this.api.updateUserData(() => {
       if (!this.api.rolesSE.isAdmin) {
         this.availableInitiativesSig.set(
@@ -172,6 +173,13 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
   clean() {
     if (this.resultLevelSE.resultBody.result_type_id == 6) this.resultLevelSE.resultBody.result_name = '';
     else this.depthSearch(this.resultLevelSE.resultBody.result_name);
+  }
+
+  private applyPendingResultTypeSelection() {
+    const pendingSelection = this.resultLevelSE.consumePendingResultType?.();
+    if (pendingSelection) {
+      this.resultLevelSE.preselectResultType(pendingSelection.id, pendingSelection.name);
+    }
   }
 
   depthSearch(title: string) {
