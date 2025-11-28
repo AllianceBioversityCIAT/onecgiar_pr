@@ -85,7 +85,7 @@
 }
 
 .bilateral-review-banner_title_separator {
-  color: #f59e0b;
+  color: #5d5d5d;
   font-size: 18px;
   font-weight: 600;
 }
@@ -101,6 +101,7 @@
 }
 
 .bilateral-review-banner_description {
+  margin: 0px !important;
   @include fonts.pr-typography('body-2');
   font-weight: 400;
   color: var(--pr-color-accents-6);
@@ -115,8 +116,8 @@
   background-color: #6366f1;
   color: var(--pr-color-white);
   border: none;
-  border-radius: 8px;
-  padding: 12px 24px;
+  border-radius: 2px;
+  padding: 8px 30px;
   display: flex;
   align-items: center;
   gap: 8px;
