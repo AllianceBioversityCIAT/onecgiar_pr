@@ -1,0 +1,40 @@
+<p-drawer
+  [(visible)]="entityAowService.showTargetDetailsDrawer"
+  [position]="entityAowService.targetDetailsDrawerFullScreen() ? 'full' : 'right'"
+  [closable]="false"
+  [style]="{ minWidth: '65vw' }">
+  <ng-template #header>
+    <div class="target-details-drawer-header">
+      <div class="target-details-drawer-header_content">
+        <p class="target-details-drawer-header_subtitle">
+          {{ entityAowService.entityId() }} - {{ entityAowService.entityDetails().name }}
+          @if (entityAowService.currentAowSelected()) {
+            / {{ entityAowService.currentAowSelected().code }} - {{ entityAowService.currentAowSelected().name }}
+          }
+        </p>
+
+        <div class="target-details-drawer-header_content_icons">
+          <i
+            class="pi {{
+              entityAowService.targetDetailsDrawerFullScreen()
+                ? 'pi-arrow-down-left-and-arrow-up-right-to-center'
+                : 'pi-arrow-up-right-and-arrow-down-left-from-center'
+            }}"
+            style="font-size: 15px; cursor: pointer"
+            (click)="entityAowService.targetDetailsDrawerFullScreen.set(!entityAowService.targetDetailsDrawerFullScreen())"></i>
+          <i
+            class="pi pi-times"
+            style="font-size: 16px; cursor: pointer"
+            (click)="entityAowService.showTargetDetailsDrawer.set(false); entityAowService.targetDetailsDrawerFullScreen.set(false)"></i>
+        </div>
+      </div>
+      <p class="target-details-drawer-header_title">{{ entityAowService.currentTargetToView()?.result_title }}</p>
+      <p class="target-details-drawer-header_desc">{{ entityAowService.currentTargetToView()?.indicators?.[0]?.indicator_description }}</p>
+    </div>
+  </ng-template>
+
+  <div class="target-details-drawer-content">
+    <h3 class="target-details-drawer-content_title">Target details for {{ entityAowService.currentTargetToView()?.indicators?.[0]?.indicator_description }}</h3>
+    <p class="target-details-drawer-content_desc">See target details.</p>
+  </div>
+</p-drawer>

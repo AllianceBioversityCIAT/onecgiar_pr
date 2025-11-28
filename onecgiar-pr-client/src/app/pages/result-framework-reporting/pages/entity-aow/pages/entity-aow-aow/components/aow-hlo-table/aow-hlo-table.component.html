@@ -85,6 +85,12 @@
                 type="button"
                 class="p-button-outlined pr-body-3 tab-content_actions_button"
                 (click)="openViewResultDrawer(item, result.indicator_id)"></button>
+              <button
+                pButton
+                label="Target details"
+                type="button"
+                class="p-button-outlined pr-body-3 tab-content_actions_button"
+                (click)="openTargetDetailsDrawer(item, result.indicator_id)"></button>
             </div>
           </td>
         </tr>
@@ -119,4 +125,8 @@
 
 @if (entityAowService.showViewResultDrawer()) {
   <app-aow-view-results-drawer></app-aow-view-results-drawer>
+}
+
+@if (entityAowService.showTargetDetailsDrawer()) {
+  <app-aow-target-details-drawer></app-aow-target-details-drawer>
 }
