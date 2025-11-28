@@ -72,7 +72,7 @@
           [isStatic]="true"
           *ngIf="this.resultLevelSE.resultBody.result_type_id"
           [placeholder]="resultTypeNamePlaceholder + ''"
-          label="Title retrieved from the repository"
+          [label]="isKnowledgeProduct ? 'Title retrieved from the repository' : 'Title of result'"
           type="text"
           [maxWords]="30"
           [required]="resultLevelSE.resultBody.result_type_id != 6"
