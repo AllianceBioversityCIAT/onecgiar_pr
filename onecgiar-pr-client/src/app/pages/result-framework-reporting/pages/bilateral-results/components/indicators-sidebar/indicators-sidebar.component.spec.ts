@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { IndicatorsSidebarComponent } from './indicators-sidebar.component';
 
 describe('IndicatorsSidebarComponent', () => {
@@ -8,7 +8,7 @@ describe('IndicatorsSidebarComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [IndicatorsSidebarComponent]
+      imports: [IndicatorsSidebarComponent, HttpClientTestingModule]
     })
     .compileComponents();
 

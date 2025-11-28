@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { BilateralResultsComponent } from './bilateral-results.component';
 
 describe('BilateralResultsComponent', () => {
@@ -8,7 +8,7 @@ describe('BilateralResultsComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [BilateralResultsComponent]
+      imports: [BilateralResultsComponent, HttpClientTestingModule]
     })
     .compileComponents();
 
