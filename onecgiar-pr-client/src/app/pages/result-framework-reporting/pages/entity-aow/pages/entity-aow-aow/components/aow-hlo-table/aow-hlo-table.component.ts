@@ -123,6 +123,5 @@ export class AowHloTableComponent {
 
     this.entityAowService.showTargetDetailsDrawer.set(true);
     this.entityAowService.currentTargetToView.set(selectedCurrentItem);
-    console.log(selectedCurrentItem);
   }
 }
