@@ -4,7 +4,7 @@ import { CentersService } from '../../../../../../shared/services/global/centers
 import { CenterDto } from '../../../../../../shared/interfaces/center.dto';
 
 @Component({
-  selector: '[app-indicators-sidebar]',
+  selector: 'app-indicators-sidebar',
   imports: [CommonModule],
   templateUrl: './indicators-sidebar.component.html',
   styleUrl: './indicators-sidebar.component.scss'

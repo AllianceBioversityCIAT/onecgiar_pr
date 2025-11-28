@@ -8,7 +8,7 @@ import { MultiSelectModule } from 'primeng/multiselect';
 import { FormsModule } from '@angular/forms';
 
 @Component({
-  selector: '[app-results-review-filters]',
+  selector: 'app-results-review-filters',
   imports: [
     CommonModule,
     IconFieldModule,
@@ -25,7 +25,7 @@ export class ResultsReviewFiltersComponent implements OnInit, OnDestroy {
   searchText: string = '';
   visible = signal<boolean>(false);
   navbarHeight = signal<number>(60);
-  
+
   private resizeObserver?: ResizeObserver;
 
   // Dummy filter options
@@ -76,10 +76,10 @@ export class ResultsReviewFiltersComponent implements OnInit, OnDestroy {
 
   private calculateHeights(): void {
     // Calculate navbar height only
-    const navbar = document.querySelector('app-header-panel') || 
-                   document.querySelector('header') || 
+    const navbar = document.querySelector('app-header-panel') ||
+                   document.querySelector('header') ||
                    document.querySelector('nav');
-    
+
     if (navbar) {
       this.navbarHeight.set(navbar.getBoundingClientRect().height);
     }
