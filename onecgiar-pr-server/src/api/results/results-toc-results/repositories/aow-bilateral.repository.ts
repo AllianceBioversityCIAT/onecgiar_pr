@@ -32,6 +32,7 @@ export interface toc_result_response {
   category: string;
   result_title: string;
   related_node_id: string | null;
+  result_level_id?: number | null;
   indicators: Array<{
     indicator_id: number;
     indicator_description: string | null;
@@ -141,7 +142,6 @@ export class AoWBilateralRepository {
       tocPhaseId,
     });
 
-    console.log('TOC Query:', query);
     try {
       const [rows, contributions] = await Promise.all([
         this.dataSource.query(query, params) as Promise<toc_result_row[]>,
@@ -264,9 +264,10 @@ export class AoWBilateralRepository {
     }
 
     query += `
-      JOIN ${env.DB_TOC}.toc_results_indicators tri ON tri.toc_results_id = tr.id
-      JOIN ${env.DB_TOC}.toc_result_indicator_target trit ON tri.id = trit.id_indicator
-      AND CONVERT(trit.toc_result_indicator_id USING utf8mb4) = CONVERT(tri.related_node_id USING utf8mb4)
+      LEFT JOIN ${env.DB_TOC}.toc_results_indicators tri ON tri.toc_results_id = tr.id
+        AND tri.is_active = 1
+      LEFT JOIN ${env.DB_TOC}.toc_result_indicator_target trit ON tri.id = trit.id_indicator
+        AND CONVERT(trit.toc_result_indicator_id USING utf8mb4) = CONVERT(tri.related_node_id USING utf8mb4)
     `;
 
     if (options.year !== undefined) {
@@ -278,17 +279,10 @@ export class AoWBilateralRepository {
       WHERE
         tr.official_code = ?
         AND tr.category IN (${categoryPlaceholders})
-        AND tri.is_active = 1
     `;
     params.push(program);
     params.push(...categories);
 
-    console.log('Toc Query Options:', {
-      program: params[0],
-      categories: params.slice(1, categories.length + 1),
-      year: options.year,
-      tocPhaseId: options.tocPhaseId,
-    });
     if (options.tocPhaseId) {
       query += ` AND tr.phase = ?`;
       params.push(options.tocPhaseId);
@@ -327,6 +321,7 @@ export class AoWBilateralRepository {
           category: row.category,
           result_title: row.result_title,
           related_node_id: row.related_node_id,
+          result_level_id: row.result_level_id ?? null,
           indicators: [],
         });
       }
@@ -566,6 +561,83 @@ export class AoWBilateralRepository {
 
     try {
       return this.dataSource.query(query, params);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        error,
+        className: AoWBilateralRepository.name,
+        debug: true,
+      });
+    }
+  }
+
+  /**
+   * Get all targets for an indicator across all years with their contributing centers
+   * @param indicatorId The indicator ID from toc_results_indicators
+   * @returns Array of targets with their centers
+   */
+  async findTargetsWithCentersByIndicatorId(indicatorId: number) {
+    const query = `
+      SELECT
+        trit.toc_indicator_target_id,
+        trit.target_date AS year,
+        trit.target_value,
+        trit.number_target,
+        tritc.center_id,
+        ci.acronym AS center_acronym,
+        ci.name AS center_name
+      FROM ${env.DB_TOC}.toc_result_indicator_target trit
+      LEFT JOIN ${env.DB_TOC}.toc_result_indicator_target_center tritc 
+        ON trit.toc_indicator_target_id = tritc.toc_indicator_target_id
+      LEFT JOIN ${env.DB_NAME}.clarisa_institutions ci 
+        ON tritc.center_id = ci.id
+      WHERE trit.id_indicator = ?
+        AND trit.target_date >= 2025
+      ORDER BY trit.target_date ASC, ci.acronym ASC
+    `;
+
+    try {
+      const rows = await this.dataSource.query(query, [indicatorId]);
+
+      // Group by target_id to consolidate centers
+      const targetsMap = new Map<
+        number,
+        {
+          toc_indicator_target_id: number;
+          year: number;
+          target_value: number;
+          number_target: string;
+          centers: Array<{
+            center_id: number;
+            center_acronym: string;
+            center_name: string;
+          }>;
+        }
+      >();
+
+      for (const row of rows) {
+        const targetId = row.toc_indicator_target_id;
+
+        if (!targetsMap.has(targetId)) {
+          targetsMap.set(targetId, {
+            toc_indicator_target_id: targetId,
+            year: row.year,
+            target_value: row.target_value,
+            number_target: row.number_target,
+            centers: [],
+          });
+        }
+
+        // Add center if exists
+        if (row.center_id) {
+          targetsMap.get(targetId).centers.push({
+            center_id: row.center_id,
+            center_acronym: row.center_acronym,
+            center_name: row.center_name,
+          });
+        }
+      }
+
+      return Array.from(targetsMap.values());
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         error,

@@ -8,6 +8,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { AowHloCreateModalComponent } from './components/aow-hlo-table-create-modal/aow-hlo-create-modal.component';
 import { ResultLevelService } from '../../../../../../../results/pages/result-creator/services/result-level.service';
 import { AowViewResultsDrawerComponent } from './components/aow-view-results-drawer/aow-view-results-drawer.component';
+import { AowTargetDetailsDrawerComponent } from './components/aow-target-details-drawer/aow-target-details-drawer.component';
 
 export interface ColumnOrder {
   title: string;
@@ -19,7 +20,16 @@ export interface ColumnOrder {
 
 @Component({
   selector: 'app-aow-hlo-table',
-  imports: [CommonModule, TableModule, ProgressBarModule, ButtonModule, TooltipModule, AowHloCreateModalComponent, AowViewResultsDrawerComponent],
+  imports: [
+    CommonModule,
+    TableModule,
+    ProgressBarModule,
+    ButtonModule,
+    TooltipModule,
+    AowHloCreateModalComponent,
+    AowViewResultsDrawerComponent,
+    AowTargetDetailsDrawerComponent
+  ],
   templateUrl: './aow-hlo-table.component.html',
   styleUrl: './aow-hlo-table.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -79,11 +89,16 @@ export class AowHloTableComponent {
     return 'Not started';
   }
 
-  openReportResultModal(item: any, currentItemId: string) {
-    const selectedCurrentItem = {
-      ...item,
-      indicators: item.indicators.filter((indicator: any) => indicator.indicator_id === currentItemId)
-    };
+  openReportResultModal(item: any, currentItemId: string | null) {
+    const selectedCurrentItem = currentItemId
+      ? {
+          ...item,
+          indicators: item.indicators.filter((indicator: any) => indicator.indicator_id === currentItemId)
+        }
+      : {
+          ...item,
+          indicators: []
+        };
 
     this.entityAowService.showReportResultModal.set(true);
     this.entityAowService.currentResultToReport.set(selectedCurrentItem);
@@ -98,5 +113,15 @@ export class AowHloTableComponent {
     this.entityAowService.existingResultsContributors.set([]);
     this.entityAowService.showViewResultDrawer.set(true);
     this.entityAowService.currentResultToView.set(selectedCurrentItem);
+  }
+
+  openTargetDetailsDrawer(item: any, currentItemId: string) {
+    const selectedCurrentItem = {
+      ...item,
+      indicators: item.indicators.filter((indicator: any) => indicator.indicator_id === currentItemId)
+    };
+
+    this.entityAowService.showTargetDetailsDrawer.set(true);
+    this.entityAowService.currentTargetToView.set(selectedCurrentItem);
   }
 }

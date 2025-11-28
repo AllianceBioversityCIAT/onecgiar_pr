@@ -378,6 +378,63 @@ export class ResultsFrameworkReportingService {
         };
       }
 
+      const enrichTocResultsWithTargets = async (tocResultsList: any[]) => {
+        for (const tocResult of tocResultsList) {
+          if (tocResult.indicators && Array.isArray(tocResult.indicators)) {
+            for (const indicator of tocResult.indicators) {
+              if (indicator.indicator_id) {
+                const targetsWithCenters =
+                  await this._tocResultsRepository.findTargetsWithCentersByIndicatorId(
+                    indicator.indicator_id,
+                  );
+
+                const centersMap = new Map<
+                  number,
+                  {
+                    center_id: number;
+                    center_acronym: string;
+                    center_name: string;
+                  }
+                >();
+
+                const targets = targetsWithCenters.map((target) => {
+                  target.centers.forEach((center) => {
+                    if (!centersMap.has(center.center_id)) {
+                      centersMap.set(center.center_id, {
+                        center_id: center.center_id,
+                        center_acronym: center.center_acronym,
+                        center_name: center.center_name,
+                      });
+                    }
+                  });
+
+                  return {
+                    toc_indicator_target_id: target.toc_indicator_target_id,
+                    year: target.year,
+                    target_value: target.target_value,
+                    number_target: target.number_target,
+                  };
+                });
+
+                if (centersMap.size > 0) {
+                  indicator.targets_by_center = {
+                    targets,
+                    centers: Array.from(centersMap.values()),
+                  };
+                } else {
+                  indicator.targets_by_center = {};
+                }
+              }
+            }
+          }
+        }
+      };
+
+      await Promise.all([
+        enrichTocResultsWithTargets(tocResultsOutcomes),
+        enrichTocResultsWithTargets(tocResultsOutputs),
+      ]);
+
       return {
         response: {
           compositeCode,
@@ -651,15 +708,17 @@ export class ResultsFrameworkReportingService {
 
         primaryTocRecordId = primaryTocRecord.result_toc_result_id;
 
-        await this.upsertTocIndicators(
-          primaryTocRecord.result_toc_result_id,
-          resolvedTocResultId,
-          payload.indicators ?? null,
-          payload.contributing_indicator ?? null,
-          user.id,
-          payload.number_target ?? null,
-          payload.target_date ?? null,
-        );
+        if (payload.indicators) {
+          await this.upsertTocIndicators(
+            primaryTocRecord.result_toc_result_id,
+            resolvedTocResultId,
+            payload.indicators,
+            payload.contributing_indicator ?? null,
+            user.id,
+            payload.number_target ?? null,
+            payload.target_date ?? null,
+          );
+        }
       }
 
       if (payload.contributors_result_toc_result?.length) {
@@ -1223,7 +1282,6 @@ export class ResultsFrameworkReportingService {
         { role_id: number | null; role_name: string | null }
       >();
 
-      // Get user's general application roles (roles 1 or 2 where initiative_id is null)
       let userGeneralRole: number | null = null;
       if (Number.isFinite(userId)) {
         const generalRoles = await this._roleByUserRepository.find({
@@ -1273,7 +1331,6 @@ export class ResultsFrameworkReportingService {
           ? rolesByResult.get(numericResultId)
           : undefined;
 
-        // Use specific role for result, or fallback to general application role
         const finalRoleId = roleInfo?.role_id ?? userGeneralRole;
 
         return {
