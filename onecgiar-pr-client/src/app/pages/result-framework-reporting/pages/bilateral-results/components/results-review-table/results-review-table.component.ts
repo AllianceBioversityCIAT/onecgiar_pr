@@ -153,16 +153,8 @@ export class ResultsReviewTableComponent {
     return expanded;
   });
 
-  // Acciones de botones
-  approveResult(result: ResultItem): void {
-    console.log('Approve:', result);
-  }
-
-  rejectResult(result: ResultItem): void {
-    console.log('Reject:', result);
-  }
-
-  adjustTOC(result: ResultItem): void {
-    console.log('Adjust TOC:', result);
+  // Acción del botón
+  reviewResult(result: ResultItem): void {
+    // TODO: Implement review result logic
   }
 }

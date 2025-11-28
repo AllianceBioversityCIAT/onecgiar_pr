@@ -55,38 +55,17 @@
         <td class="indicator-cell">{{ result.indicator }}</td>
         <td class="date-cell">{{ result.submission_date }}</td>
         <td class="actions-cell">
-          <div class="actions-container">
-            <button
-              pButton
-              type="button"
-              class="action-button approve-button"
-              (click)="approveResult(result)"
-              pTooltip="Approve"
-              tooltipPosition="top">
-              <i class="material-icons-round">check_circle</i>
-              <span>APPROVE</span>
-            </button>
-            <button
-              pButton
-              type="button"
-              class="action-button reject-button"
-              (click)="rejectResult(result)"
-              pTooltip="Reject"
-              tooltipPosition="top">
-              <i class="material-icons-round">cancel</i>
-              <span>REJECT</span>
-            </button>
-            <button
-              pButton
-              type="button"
-              class="action-button adjust-button"
-              (click)="adjustTOC(result)"
-              pTooltip="Adjust TOC"
-              tooltipPosition="top">
-              <i class="material-icons-round">edit</i>
-              <span>Adjust TOC</span>
-            </button>
-          </div>
+          <button
+            pButton
+            type="button"
+            variant="outlined"
+            class="review-result-button"
+            (click)="reviewResult(result)"
+            pTooltip="Review result"
+            tooltipPosition="top">
+            <i class="material-icons-round">edit</i>
+            <span>Review result</span>
+          </button>
         </td>
       </tr>
     }

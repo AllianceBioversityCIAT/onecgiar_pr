@@ -67,14 +67,14 @@
       display: inline-block;
       padding: 4px 12px;
       border-radius: 4px;
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 500;
       white-space: nowrap;
 
       &.pending {
-        background-color: #FFF4E5;
-        color: #E65100;
-        border: 1px solid #FFE0B2;
+        background-color: transparent;
+        color: #E78C31;
+        border: 1px solid #E78C31;
       }
     }
   }
@@ -98,63 +98,39 @@
   // Actions
   .actions-cell {
     padding: 8px 12px !important;
+    text-align: center;
   }
 
-  .actions-container {
-    display: flex;
+  .review-result-button {
+    display: inline-flex;
+    align-items: center;
     gap: 6px;
-    align-items: center;
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-
-  .action-button {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 6px 10px !important;
-    font-size: 11px !important;
-    font-weight: 600 !important;
+    padding: 6px 12px !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
     border-radius: 4px !important;
-    border: none !important;
+    border: 1px solid var(--pr-color-primary-300) !important;
+    background-color: transparent !important;
+    color: var(--pr-color-primary-300) !important;
     transition: all 0.2s ease;
     cursor: pointer;
-    height: 28px;
+    height: 32px;
 
     i {
-      font-size: 14px;
+      font-size: 16px;
     }
 
     span {
-      font-size: 10px;
-      font-weight: 600;
+      font-size: 12px;
+      font-weight: 500;
     }
 
-    &.approve-button {
-      background-color: #4CAF50 !important;
-      color: white !important;
-
-      &:hover {
-        background-color: #45A049 !important;
-      }
+    &:hover {
+      background-color: rgba(99, 102, 241, 0.04) !important;
     }
 
-    &.reject-button {
-      background-color: #F44336 !important;
-      color: white !important;
-
-      &:hover {
-        background-color: #E53935 !important;
-      }
-    }
-
-    &.adjust-button {
-      background-color: #6366F1 !important;
-      color: white !important;
-
-      &:hover {
-        background-color: #4F46E5 !important;
-      }
+    &:active {
+      background-color: rgba(99, 102, 241, 0.08) !important;
     }
   }
 
@@ -163,19 +139,6 @@
     text-align: center;
     color: #757575;
     font-size: 14px;
-  }
-
-  // Responsive adjustments
-  @media (max-width: 1400px) {
-    .actions-container {
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .action-button {
-      width: 100%;
-      justify-content: center;
-    }
   }
 }
 
