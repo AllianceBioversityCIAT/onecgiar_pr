@@ -42,7 +42,6 @@ export class ReportResultFormComponent implements OnInit, DoCheck {
 
   @Output() resultCreated = new EventEmitter<any>();
   @Input() disableInitiativeSelect: boolean = false;
-  @Input() selectedResultTypeName: string | null = null;
   private _selectedInitiativeId: number | string | null = null;
   @Input() set selectedInitiativeId(value: number | string | null | undefined) {
     this._selectedInitiativeId = value ?? null;
@@ -67,15 +66,6 @@ export class ReportResultFormComponent implements OnInit, DoCheck {
     this.resultLevelSE.currentResultTypeList = [];
     this.resultLevelSE.resultLevelList?.forEach(reLevel => (reLevel.selected = false));
     this.resultLevelSE.cleanData();
-    
-    // Pre-seleccionar el nivel basado en el resultTypeName si está disponible
-    if (this.selectedResultTypeName) {
-      // Esperar un poco más para asegurar que los datos estén cargados
-      setTimeout(() => {
-        this.preSelectResultLevel(this.selectedResultTypeName);
-      }, 300);
-    }
-    
     this.api.updateUserData(() => {
       if (!this.api.rolesSE.isAdmin) {
         this.availableInitiativesSig.set(
@@ -339,70 +329,6 @@ export class ReportResultFormComponent implements OnInit, DoCheck {
 
   private getAvailableInitiatives() {
     return this.availableInitiativesSig();
-  }
-
-  private preSelectResultLevel(resultTypeName: string): void {
-    // Mapeo de resultTypeName a nivel (Output/Outcome)
-    const outcomeTypes = ['Policy change', 'Innovation use', 'Other outcome'];
-    const outputTypes = ['Capacity sharing for development', 'Innovation development', 'Knowledge product', 'Other output'];
-    
-    const isOutcome = outcomeTypes.includes(resultTypeName);
-    const isOutput = outputTypes.includes(resultTypeName);
-    
-    if (!isOutcome && !isOutput) return;
-    
-    const targetLevelName = isOutcome ? 'Outcome' : 'Output';
-    const resultLevels = this.resultLevelSE.resultLevelListSig();
-    
-    if (!resultLevels || resultLevels.length === 0) return;
-    
-    // Buscar el nivel que corresponde (Output o Outcome)
-    const targetLevel = resultLevels.find(level => 
-      level.name === targetLevelName || 
-      level.name.toLowerCase().includes(targetLevelName.toLowerCase())
-    );
-    
-    if (targetLevel) {
-      // Usar el objeto original de la lista, no una copia
-      const originalLevel = this.resultLevelSE.resultLevelList?.find(rl => rl.id === targetLevel.id);
-      const levelToSelect = originalLevel || targetLevel;
-      
-      if (levelToSelect) {
-        // Seleccionar el nivel primero
-        this.resultLevelSE.onSelectResultLevel(levelToSelect);
-        
-        // Después de seleccionar el nivel, buscar y seleccionar el tipo de resultado
-        setTimeout(() => {
-          this.preSelectResultType(resultTypeName);
-        }, 50);
-      }
-    }
-  }
-
-  private preSelectResultType(resultTypeName: string): void {
-    // Buscar el tipo de resultado en la lista actual de tipos disponibles
-    // Primero intentar con el array, luego con la señal
-    const currentResultTypes = this.resultLevelSE.currentResultTypeList?.length 
-      ? this.resultLevelSE.currentResultTypeList 
-      : this.resultLevelSE.currentResultTypeListSig();
-    
-    if (!currentResultTypes || currentResultTypes.length === 0) return;
-    
-    // Buscar el tipo de resultado que coincida con el nombre
-    const targetResultType = currentResultTypes.find(type => 
-      type.name === resultTypeName || 
-      type.name.toLowerCase() === resultTypeName.toLowerCase()
-    );
-    
-    if (targetResultType) {
-      // Asignar el result_type_id al resultBody
-      this.resultLevelSE.resultBody.result_type_id = targetResultType.id;
-      
-      // Si no es Knowledge Product y hay un nombre de resultado, hacer la búsqueda de profundidad
-      if (targetResultType.id !== 6 && this.resultLevelSE.resultBody.result_name) {
-        this.depthSearch(this.resultLevelSE.resultBody.result_name);
-      }
-    }
   }
 }
 

@@ -44,17 +44,6 @@ export class ResultLevelService {
     this.resultBody = new ResultBody();
   }
 
-  resetSelection() {
-    const updated = (this.resultLevelListSig() || []).map(rl => ({
-      ...rl,
-      selected: false
-    }));
-    this.resultLevelListSig.set(updated);
-    if (this.resultLevelList) {
-      this.resultLevelList.forEach(reLevel => (reLevel.selected = false));
-    }
-  }
-
   GET_TypeByResultLevel() {
     this.api.resultsSE.GET_TypeByResultLevel().subscribe(resp => {
       this.removeResultTypes(resp.response);
