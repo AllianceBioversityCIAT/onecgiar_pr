@@ -95,6 +95,7 @@ import { ResultsSdgTargetRepository } from './results-toc-results/repositories/r
 import { ResultsActionAreaOutcomeRepository } from './results-toc-results/repositories/result-toc-action-area.repository';
 import { ResultsTocTargetIndicatorRepository } from './results-toc-results/repositories/result-toc-result-target-indicator.repository';
 import { AoWBilateralRepository } from './results-toc-results/repositories/aow-bilateral.repository';
+import { IntellectualPropertyExpertsModule } from './intellectual_property_experts/intellectual_property_experts.module';
 
 @Module({
   controllers: [ResultsController],
@@ -153,6 +154,7 @@ import { AoWBilateralRepository } from './results-toc-results/repositories/aow-b
     NotificationModule,
     ImpactAreasScoresComponentsModule,
     ResultsByProjectsModule,
+    IntellectualPropertyExpertsModule,
   ],
   providers: [
     ResultsService,

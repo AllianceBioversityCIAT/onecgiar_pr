@@ -16,6 +16,8 @@ import {
   NotificationTypeEnum,
 } from '../../notification/enum/notification.enum';
 import { UserNotificationSettingsService } from '../../user-notification-settings/user-notification-settings.service';
+import { InnovationPackagingExpertRepository } from '../../ipsr/innovation-packaging-experts/repositories/innovation-packaging-expert.repository';
+import { IntellectualPropertyExpertRepository } from '../intellectual_property_experts/repositories/intellectual_property_experts.repository';
 
 @Injectable()
 export class SubmissionsService {
@@ -29,6 +31,7 @@ export class SubmissionsService {
     private readonly _resultInnovationPackageValidationService: ResultsInnovationPackagesValidationModuleService,
     private readonly _notificationService: NotificationService,
     private readonly _userNotificationSettingsService: UserNotificationSettingsService,
+    private readonly _intellectualPropertyExpertRepository: IntellectualPropertyExpertRepository,
   ) {}
 
   async submitFunction(
@@ -89,6 +92,14 @@ export class SubmissionsService {
         NotificationLevelEnum.RESULT,
         NotificationTypeEnum.RESULT_SUBMITTED,
       );
+
+      const hasContactRequest = await this._resultRepository.getResultInnovationDevelopmentByResultId(result.id);
+      if(result.result_type_id === 7 && hasContactRequest){
+        const emails =
+          await this._intellectualPropertyExpertRepository.getIpExpertsEmailsByResultId(result.id);
+        
+        console.log('Send notification for contact request');
+      }
 
       return {
         response: data,
