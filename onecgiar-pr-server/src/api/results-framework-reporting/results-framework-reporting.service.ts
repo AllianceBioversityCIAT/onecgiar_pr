@@ -416,10 +416,14 @@ export class ResultsFrameworkReportingService {
                   };
                 });
 
-                indicator.targets_by_center = {
-                  targets,
-                  centers: Array.from(centersMap.values()),
-                };
+                if (centersMap.size > 0) {
+                  indicator.targets_by_center = {
+                    targets,
+                    centers: Array.from(centersMap.values()),
+                  };
+                } else {
+                  indicator.targets_by_center = {};
+                }
               }
             }
           }

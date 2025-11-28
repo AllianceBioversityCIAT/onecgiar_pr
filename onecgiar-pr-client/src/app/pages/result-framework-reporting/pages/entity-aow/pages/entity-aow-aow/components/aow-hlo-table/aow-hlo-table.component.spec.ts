@@ -16,12 +16,18 @@ describe('AowHloTableComponent', () => {
     const mockShowReportResultModal = signal<boolean>(false);
     const mockCurrentResultToReport = signal<any>({});
     const mockShowViewResultDrawer = signal<boolean>(false);
+    const mockViewResultDrawerFullScreen = signal<boolean>(false);
     const mockCurrentResultToView = signal<any>({});
+    const mockShowTargetDetailsDrawer = signal<boolean>(false);
+    const mockTargetDetailsDrawerFullScreen = signal<boolean>(false);
+    const mockCurrentTargetToView = signal<any>({});
     const mockExistingResultsContributors = signal<any[]>([]);
 
     mockEntityAowService = {
       aowId: signal<string>(''),
       entityId: signal<string>(''),
+      entityDetails: signal<any>({}),
+      currentAowSelected: jest.fn(() => ({})),
       getTocResultsByAowId: jest.fn(),
       tocResultsOutputsByAowId: signal<any[]>([]),
       tocResultsOutcomesByAowId: signal<any[]>([]),
@@ -31,14 +37,22 @@ describe('AowHloTableComponent', () => {
       showReportResultModal: mockShowReportResultModal,
       currentResultToReport: mockCurrentResultToReport,
       showViewResultDrawer: mockShowViewResultDrawer,
+      viewResultDrawerFullScreen: mockViewResultDrawerFullScreen,
       currentResultToView: mockCurrentResultToView,
+      showTargetDetailsDrawer: mockShowTargetDetailsDrawer,
+      targetDetailsDrawerFullScreen: mockTargetDetailsDrawerFullScreen,
+      currentTargetToView: mockCurrentTargetToView,
       existingResultsContributors: mockExistingResultsContributors
     } as any;
 
     jest.spyOn(mockShowReportResultModal, 'set');
     jest.spyOn(mockCurrentResultToReport, 'set');
     jest.spyOn(mockShowViewResultDrawer, 'set');
+    jest.spyOn(mockViewResultDrawerFullScreen, 'set');
     jest.spyOn(mockCurrentResultToView, 'set');
+    jest.spyOn(mockShowTargetDetailsDrawer, 'set');
+    jest.spyOn(mockTargetDetailsDrawerFullScreen, 'set');
+    jest.spyOn(mockCurrentTargetToView, 'set');
     jest.spyOn(mockExistingResultsContributors, 'set');
 
     mockActivatedRoute = {
