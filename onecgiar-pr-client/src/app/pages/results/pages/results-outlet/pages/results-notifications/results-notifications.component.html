@@ -3,7 +3,7 @@
 
   <div class="options">
     <div class="tabs">
-      <a class="tab disabled" style="opacity: 0.5; cursor: not-allowed; pointer-events: none;">
+      <a class="tab disabled" style="opacity: 0.5; cursor: not-allowed; pointer-events: none">
         <i class="material-icons-round" style="font-size: 20px"> mark_unread_chat_alt </i>
         Requests
       </a>
@@ -40,6 +40,8 @@
   <div class="notifications_filters" *ngIf="!router.url.includes('/results-notifications/settings')">
     <app-pr-select
       label="Phases"
+      [group]="true"
+      groupName="groupLabel"
       [options]="this.phaseList"
       [isStatic]="true"
       [required]="false"
