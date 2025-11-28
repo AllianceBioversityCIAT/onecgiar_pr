@@ -1,0 +1,57 @@
+.bilateral-results-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.layout-header {
+  flex-shrink: 0;
+  // El header ocupará su altura natural
+  // Puedes agregar una altura fija si lo necesitas, ej: height: 64px;
+}
+
+.layout-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  // Ocupa todo el espacio restante después del header
+  min-height: 0; // Importante para que el flex funcione correctamente con overflow
+}
+
+.sidebar {
+  width: 320px; // Ancho ajustado para el diseño de centers
+  flex-shrink: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  // Scroll interno del sidebar
+}
+
+.main-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  // Scroll interno del container
+  display: flex;
+  flex-direction: column;
+  min-width: 0; // Importante para evitar que el contenido desborde
+  background-color: #FFFFFF;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  margin: 16px;
+  border-radius: 8px;
+}
+
+.filters {
+  flex-shrink: 0;
+  // Los filtros ocuparán su altura natural sin hacer scroll
+  padding: 16px 24px;
+  background-color: #FFFFFF;
+}
+
+.results-content {
+  flex: 1;
+  padding: 16px 24px 24px 24px;
+  overflow-y: auto;
+  min-height: 0; // Para que el flex respete el overflow
+}
+

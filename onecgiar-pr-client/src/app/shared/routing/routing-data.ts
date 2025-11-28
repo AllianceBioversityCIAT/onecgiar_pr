@@ -476,6 +476,12 @@ export const ResultFrameworkReportingRouting: PrRoute[] = [
       import('../../pages/result-framework-reporting/pages/entity-details/entity-details.component').then(m => m.EntityDetailsComponent)
   },
   {
+    prName: 'Bilateral results review',
+    path: 'entity-details/:entityId/results-review',
+    loadComponent: () =>
+      import('../../pages/result-framework-reporting/pages/bilateral-results/bilateral-results.component').then(m => m.BilateralResultsComponent)
+  },
+  {
     prName: 'Entity AOW',
     path: 'entity-details/:entityId/aow',
     loadComponent: () => import('../../pages/result-framework-reporting/pages/entity-aow/entity-aow.component').then(m => m.EntityAowComponent),

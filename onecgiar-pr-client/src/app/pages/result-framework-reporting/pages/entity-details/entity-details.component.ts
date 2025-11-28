@@ -18,6 +18,7 @@ import { SplitButtonModule } from 'primeng/splitbutton';
 import { ResultCreatorModule } from '../../../results/pages/result-creator/result-creator.module';
 import { MenuItem } from 'primeng/api';
 import { ResultLevelService } from '../../../results/pages/result-creator/services/result-level.service';
+import { BilateralResultsReviewComponent } from './components/bilateral-results-review/bilateral-results-review.component';
 
 @Component({
   selector: 'app-entity-details',
@@ -34,7 +35,8 @@ import { ResultLevelService } from '../../../results/pages/result-creator/servic
     ButtonModule,
     DialogModule,
     SplitButtonModule,
-    ResultCreatorModule
+    ResultCreatorModule,
+    BilateralResultsReviewComponent
   ],
   templateUrl: './entity-details.component.html',
   styleUrl: './entity-details.component.scss',
