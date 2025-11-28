@@ -68,8 +68,65 @@ p {
   color: var(--pr-color-accents-6);
 }
 
+.noDataText {
+  text-align: center;
+  padding: 20px 0px;
+  @include fonts.pr-typography('h4');
+  color: var(--pr-color-primary-300);
+}
+
 ::ng-deep {
   .p-drawer-header {
     padding: 0 !important;
+  }
+
+  .target-details-table {
+    .p-datatable-thead > tr > th {
+      background-color: #4a5568;
+      color: white;
+      text-align: center;
+      padding: 12px 16px;
+      font-weight: 400;
+      @include fonts.pr-typography('body-2');
+
+      &.center-column {
+        text-align: left;
+
+        .header-content {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+      }
+    }
+
+    .p-datatable-tbody > tr > td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--pr-color-accents-2);
+
+      &.center-cell {
+        .center-content {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+
+          i {
+            color: var(--pr-color-accents-6);
+            font-size: 16px;
+          }
+
+          span {
+            @include fonts.pr-typography('body-2');
+            color: var(--pr-color-secondary-400);
+          }
+        }
+      }
+
+      &.value-cell {
+        text-align: center;
+        @include fonts.pr-typography('body-2');
+        color: var(--pr-color-secondary-400);
+      }
+    }
   }
 }

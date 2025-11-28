@@ -34,7 +34,42 @@
   </ng-template>
 
   <div class="target-details-drawer-content">
-    <h3 class="target-details-drawer-content_title">Target details for {{ entityAowService.currentTargetToView()?.indicators?.[0]?.indicator_description }}</h3>
-    <p class="target-details-drawer-content_desc">See target details.</p>
+    <h3 class="target-details-drawer-content_title">Target details</h3>
+    <p class="target-details-drawer-content_desc">See details.</p>
+
+    <p-table [value]="tableData()" [tableStyle]="{ marginTop: '24px' }" styleClass="target-details-table">
+      <ng-template #header>
+        <tr>
+          <th class="center-column">
+            <div class="header-content">
+              <span>Center</span>
+              <i class="pi pi-sort-alt"></i>
+            </div>
+          </th>
+          @for (year of years(); track year) {
+            <th class="year-column">{{ year }}</th>
+          }
+        </tr>
+      </ng-template>
+      <ng-template #body let-row>
+        <tr>
+          <td class="center-cell">
+            <div class="center-content">
+              <i class="pi pi-building"></i>
+              <span>{{ row.center.center_name }}</span>
+            </div>
+          </td>
+          @for (year of years(); track year) {
+            <td class="value-cell">{{ getTargetValue(row, year) }}</td>
+          }
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td [attr.colspan]="years().length + 1" class="noDataText">No target details available</td>
+        </tr>
+      </ng-template>
+    </p-table>
   </div>
 </p-drawer>
