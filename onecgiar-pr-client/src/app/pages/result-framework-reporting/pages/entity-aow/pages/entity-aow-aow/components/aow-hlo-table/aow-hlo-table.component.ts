@@ -20,7 +20,16 @@ export interface ColumnOrder {
 
 @Component({
   selector: 'app-aow-hlo-table',
-  imports: [CommonModule, TableModule, ProgressBarModule, ButtonModule, TooltipModule, AowHloCreateModalComponent, AowViewResultsDrawerComponent, AowTargetDetailsDrawerComponent],
+  imports: [
+    CommonModule,
+    TableModule,
+    ProgressBarModule,
+    ButtonModule,
+    TooltipModule,
+    AowHloCreateModalComponent,
+    AowViewResultsDrawerComponent,
+    AowTargetDetailsDrawerComponent
+  ],
   templateUrl: './aow-hlo-table.component.html',
   styleUrl: './aow-hlo-table.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
