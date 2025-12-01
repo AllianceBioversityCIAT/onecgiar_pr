@@ -2287,13 +2287,19 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     }
   }
 
-  async getResultInnovationDevelopmentByResultId(resultId: number): Promise<boolean> {
+  async getResultInnovationDevelopmentByResultId(
+    resultId: number,
+  ): Promise<boolean> {
     return await this.createQueryBuilder('r')
-      .innerJoin('result_answers', 'ra', 'ra.result_id = r.id AND ra.is_active = true')
+      .innerJoin(
+        'result_answers',
+        'ra',
+        'ra.result_id = r.id AND ra.is_active = true',
+      )
       .innerJoin(
         'result_questions',
         'rq',
-        'rq.result_question_id = ra.result_question_id'
+        'rq.result_question_id = ra.result_question_id',
       )
       .where('rq.result_question_id = :questionId', { questionId: 110 }) // Id related to: "Yes, please contact me"
       .andWhere('r.is_active = true')

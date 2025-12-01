@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { submissionRepository } from './submissions.repository';
@@ -16,11 +16,16 @@ import {
   NotificationTypeEnum,
 } from '../../notification/enum/notification.enum';
 import { UserNotificationSettingsService } from '../../user-notification-settings/user-notification-settings.service';
-import { InnovationPackagingExpertRepository } from '../../ipsr/innovation-packaging-experts/repositories/innovation-packaging-expert.repository';
 import { IntellectualPropertyExpertRepository } from '../intellectual_property_experts/repositories/intellectual_property_experts.repository';
+import * as handlebars from 'handlebars';
+import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
+import { EmailTemplate } from '../../../shared/microservices/email-notification-management/enum/email-notification.enum';
+import { TemplateRepository } from '../../platform-report/repositories/template.repository';
+import { EmailNotificationManagementService } from '../../../shared/microservices/email-notification-management/email-notification-management.service';
 
 @Injectable()
 export class SubmissionsService {
+  private readonly _logger: Logger = new Logger(SubmissionsService.name);
   constructor(
     private readonly _handlersError: HandlersError,
     private readonly _submissionRepository: submissionRepository,
@@ -32,6 +37,9 @@ export class SubmissionsService {
     private readonly _notificationService: NotificationService,
     private readonly _userNotificationSettingsService: UserNotificationSettingsService,
     private readonly _intellectualPropertyExpertRepository: IntellectualPropertyExpertRepository,
+    private readonly _globalParametersRepository: GlobalParameterRepository,
+    private readonly _templateRepository: TemplateRepository,
+    private readonly _emailNotificationManagementService: EmailNotificationManagementService,
   ) {}
 
   async submitFunction(
@@ -93,12 +101,56 @@ export class SubmissionsService {
         NotificationTypeEnum.RESULT_SUBMITTED,
       );
 
-      const hasContactRequest = await this._resultRepository.getResultInnovationDevelopmentByResultId(result.id);
-      if(result.result_type_id === 7 && hasContactRequest){
+      const hasContactRequest =
+        await this._resultRepository.getResultInnovationDevelopmentByResultId(
+          result.id,
+        );
+      if (result.result_type_id === 7 && hasContactRequest) {
         const emails =
-          await this._intellectualPropertyExpertRepository.getIpExpertsEmailsByResultId(result.id);
-        
-        console.log('Send notification for contact request');
+          await this._intellectualPropertyExpertRepository.getIpExpertsEmailsByResultId(
+            result.id,
+          );
+
+        const bccEmails = await this._globalParametersRepository.findOne({
+          where: { name: 'technical_team_email' },
+          select: { value: true },
+        });
+
+        const template = await this._templateRepository.findOne({
+          where: { name: EmailTemplate.IP_EXPERTS_SUPPORT },
+        });
+        if (!template) {
+          this._logger.warn(
+            'Email template email_template_roles_update not found. Skipping notification.',
+          );
+          return;
+        }
+
+        for (const email of emails) {
+          const emailData: Record<string, any> = {
+            userName: `${email.first_name} ${email.last_name}`.trim(),
+            resultUrl: `${process.env.RESULTS_URL}${result.result_code}/general-information?phase=${result.version_id}`,
+          };
+          const compiledTemplate = handlebars.compile(template.template);
+
+          this._emailNotificationManagementService.sendEmail({
+            from: {
+              email: process.env.EMAIL_SENDER,
+              name: 'PRMS Reporting Tool -',
+            },
+            emailBody: {
+              subject:
+                'PRMS – IP Support Request for Innovation Development Result',
+              to: [email.email],
+              cc: [],
+              bcc: bccEmails.value,
+              message: {
+                text: 'Account roles updated',
+                socketFile: compiledTemplate(emailData),
+              },
+            },
+          });
+        }
       }
 
       return {

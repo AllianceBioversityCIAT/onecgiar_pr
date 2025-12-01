@@ -10,6 +10,10 @@ import { IpsrModule } from '../../ipsr/ipsr.module';
 import { ResultsInnovationPackagesValidationModuleModule } from '../../ipsr/results-innovation-packages-validation-module/results-innovation-packages-validation-module.module';
 import { NotificationModule } from '../../notification/notification.module';
 import { UserNotificationSettingsModule } from '../../user-notification-settings/user-notification-settings.module';
+import { IntellectualPropertyExpertRepository } from '../intellectual_property_experts/repositories/intellectual_property_experts.repository';
+import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
+import { TemplateRepository } from '../../platform-report/repositories/template.repository';
+import { EmailNotificationManagementModule } from '../../../shared/microservices/email-notification-management/email-notification-management.module';
 
 @Module({
   controllers: [SubmissionsController],
@@ -20,6 +24,9 @@ import { UserNotificationSettingsModule } from '../../user-notification-settings
     resultValidationRepository,
     RoleByUserRepository,
     HandlersError,
+    IntellectualPropertyExpertRepository,
+    GlobalParameterRepository,
+    TemplateRepository,
   ],
   exports: [submissionRepository],
   imports: [
@@ -27,6 +34,7 @@ import { UserNotificationSettingsModule } from '../../user-notification-settings
     ResultsInnovationPackagesValidationModuleModule,
     NotificationModule,
     UserNotificationSettingsModule,
+    EmailNotificationManagementModule,
   ],
 })
 export class SubmissionsModule {}
