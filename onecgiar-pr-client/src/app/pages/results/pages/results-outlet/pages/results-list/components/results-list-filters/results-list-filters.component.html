@@ -52,7 +52,7 @@
       <div class="filters_items_container_drawer" style="flex-direction: column; margin: 0; gap: 20px">
         <div>
           <app-pr-field-header
-            label="Clarisa Portfolio"
+            label="Portfolio"
             labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
             [required]="false"></app-pr-field-header>
 
@@ -61,7 +61,7 @@
             [options]="this.clarisaPortfolios()"
             [(ngModel)]="tempSelectedClarisaPortfolios"
             optionLabel="name"
-            placeholder="Select clarisa portfolio"
+            placeholder="Select portfolio"
             [maxSelectedLabels]="1"
             [style]="{ width: '100%' }" />
         </div>
