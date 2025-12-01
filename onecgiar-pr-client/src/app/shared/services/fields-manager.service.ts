@@ -55,7 +55,8 @@ export class FieldsManagerService {
       },
       //? score 1
       '[general-info]-gender_tag_id': {
-        label: this.isP25() ? 'Gender equality, youth and social inclusion tag' : 'Gender equality score'
+        label: this.isP25() ? 'Gender equality, youth and social inclusion tag' : 'Gender equality scoren',
+        required: true
       },
       '[general-info]-gender_impact_area_id': {
         label: this.scoresImpactAreaLabel,
@@ -64,7 +65,8 @@ export class FieldsManagerService {
       },
       //? score 2
       '[general-info]-climate_change_tag_id': {
-        label: this.isP25() ? 'Climate adaptation and mitigation tag' : 'Climate change score'
+        label: this.isP25() ? 'Climate adaptation and mitigation tag' : 'Climate change score',
+        required: true
       },
       '[general-info]-climate_impact_area_id': {
         label: this.scoresImpactAreaLabel,
@@ -73,7 +75,8 @@ export class FieldsManagerService {
       },
       //? score 3
       '[general-info]-nutrition_tag_level_id': {
-        label: `Nutrition, health and food security ${this.isP25() ? 'tag' : 'score'}`
+        label: `Nutrition, health and food security ${this.isP25() ? 'tag' : 'score'}`,
+        required: true
       },
       '[general-info]-nutrition_impact_area_id': {
         label: this.scoresImpactAreaLabel,
@@ -82,7 +85,8 @@ export class FieldsManagerService {
       },
       //? score 4
       '[general-info]-environmental_biodiversity_tag_level_id': {
-        label: `Environmental health and biodiversity ${this.isP25() ? 'tag' : 'score'}`
+        label: `Environmental health and biodiversity ${this.isP25() ? 'tag' : 'score'}`,
+        required: true
       },
       '[general-info]-environmental_biodiversity_impact_area_id': {
         label: this.scoresImpactAreaLabel,
@@ -91,7 +95,8 @@ export class FieldsManagerService {
       },
       //? score 5
       '[general-info]-poverty_tag_level_id': {
-        label: `Poverty reduction, livelihoods and jobs ${this.isP25() ? 'tag' : 'score'}`
+        label: `Poverty reduction, livelihoods and jobs ${this.isP25() ? 'tag' : 'score'}`,
+        required: true
       },
       '[general-info]-poverty_impact_area_id': {
         label: this.scoresImpactAreaLabel,
