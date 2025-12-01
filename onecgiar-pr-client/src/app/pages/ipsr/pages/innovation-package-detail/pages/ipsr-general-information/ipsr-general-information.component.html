@@ -226,18 +226,19 @@
   </div>
 </div>
 
-<app-pr-yes-or-not
-  label="Is this result featured in a Key Result Story for the reporting year?"
-  (ngModelChange)="onChangeKrs()"
-  [(ngModel)]="this.ipsrGeneralInformationBody.is_krs"></app-pr-yes-or-not>
-<app-pr-input
-  *ngIf="this.ipsrGeneralInformationBody.is_krs"
-  placeholder="e.g. https://www.cgiar.org/example"
-  type="text"
-  [required]="false"
-  [(ngModel)]="this.ipsrGeneralInformationBody.krs_url">
-</app-pr-input>
-
+@if (this.fieldsManagerSE.isP22()) {
+  <app-pr-yes-or-not
+    label="Is this result featured in a Key Result Story for the reporting year?"
+    (ngModelChange)="onChangeKrs()"
+    [(ngModel)]="this.ipsrGeneralInformationBody.is_krs"></app-pr-yes-or-not>
+  <app-pr-input
+    *ngIf="this.ipsrGeneralInformationBody.is_krs"
+    placeholder="e.g. https://www.cgiar.org/example"
+    type="text"
+    [required]="false"
+    [(ngModel)]="this.ipsrGeneralInformationBody.krs_url">
+  </app-pr-input>
+}
 <app-save-button
   class="position_sticky"
   (clickSave)="onSaveSection()"
