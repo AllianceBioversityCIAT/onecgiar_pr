@@ -254,7 +254,8 @@
         placeholder="Please select a result"
         selectedLabel="Results selected"
         selectedOptionLabel="title"
-        [displayLabelFormatter]="formatResultLabel.bind(this)">
+        [displayLabelFormatter]="formatResultLabel.bind(this)"
+        [required]="true">
       </app-pr-multi-select>
     }
   }
