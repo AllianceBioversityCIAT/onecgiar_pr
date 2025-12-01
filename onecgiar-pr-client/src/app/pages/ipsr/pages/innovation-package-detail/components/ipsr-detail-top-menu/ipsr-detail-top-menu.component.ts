@@ -11,12 +11,6 @@ import { FieldsManagerService } from '../../../../../../shared/services/fields-m
 })
 export class IpsrDetailTopMenuComponent {
   fieldsManagerSE = inject(FieldsManagerService);
-  menuOptions = computed(() =>
-    IPSRDetailRouting.filter(option => {
-      console.log(option.path);
-      if (this.fieldsManagerSE.isP25() && option.path == 'link-to-results') return false;
-      return true;
-    })
-  );
+  menuOptions = computed(() => IPSRDetailRouting.filter(option => !(this.fieldsManagerSE.isP25() && option.path == 'link-to-results')));
   constructor(public ipsrDataControlSE: IpsrDataControlService) {}
 }
