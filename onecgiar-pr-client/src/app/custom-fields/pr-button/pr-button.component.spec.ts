@@ -54,4 +54,18 @@ describe('PrButtonComponent', () => {
     component.colorType = 'success';
     expect(component.generateColor()).toBe('var(--pr-color-green-500)');
   });
+
+  it('should have default variant as outlined', () => {
+    expect(component.variant).toBe('outlined');
+  });
+
+  it('should accept filled variant', () => {
+    component.variant = 'filled';
+    expect(component.variant).toBe('filled');
+  });
+
+  it('should accept outlined variant', () => {
+    component.variant = 'outlined';
+    expect(component.variant).toBe('outlined');
+  });
 });

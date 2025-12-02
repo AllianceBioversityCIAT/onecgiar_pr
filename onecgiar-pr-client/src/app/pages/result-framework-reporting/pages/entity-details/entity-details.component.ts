@@ -174,6 +174,32 @@ export class EntityDetailsComponent implements OnInit {
   chartOptionsOutputs = computed<ChartOptions<'bar'>>(() => this.buildChartOptions(this.dataOutputs()));
   chartOptionsOutcomes = computed<ChartOptions<'bar'>>(() => this.buildChartOptions(this.dataOutcomes()));
 
+  groupedIndicatorSummaries = computed(() => {
+    const summaries = this.entityAowService.indicatorSummaries().filter(
+      item => item?.resultTypeName !== 'Innovation Use(IPSR)'
+    );
+    
+    const outputs = summaries.filter(item => {
+      const name = item?.resultTypeName || '';
+      return name === 'Innovation development' ||
+             name === 'Knowledge product' ||
+             name === 'Capacity sharing for development' ||
+             name === 'Other output';
+    });
+
+    const outcomes = summaries.filter(item => {
+      const name = item?.resultTypeName || '';
+      return name === 'Innovation use' ||
+             name === 'Policy change' ||
+             name === 'Other outcome';
+    });
+
+    return {
+      outputs,
+      outcomes
+    };
+  });
+
   ngOnInit() {
     this.route.params.subscribe(params => {
       this.entityAowService.resetDashboardData();

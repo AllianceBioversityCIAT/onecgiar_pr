@@ -106,13 +106,27 @@
             <p-skeleton width="100%" height="125px" />
           }
         } @else {
-          @if (entityAowService.indicatorSummaries().length > 0) {
-            @for (item of entityAowService.indicatorSummaries(); track $index) {
-              @if (item?.resultTypeName !== 'Innovation Use(IPSR)') {
-                <app-entity-results-by-indicator-category-card
-                  [item]="item"
-                  (reportRequested)="onReportRequested($event)"></app-entity-results-by-indicator-category-card>
-              }
+          @if (groupedIndicatorSummaries().outputs.length > 0 || groupedIndicatorSummaries().outcomes.length > 0) {
+            @if (groupedIndicatorSummaries().outputs.length > 0) {
+              <div class="entity-details_indicator-group">
+                <h3 class="entity-details_indicator-group_title">OUTPUTS</h3>
+                @for (item of groupedIndicatorSummaries().outputs; track item?.resultTypeId) {
+                  <app-entity-results-by-indicator-category-card
+                    [item]="item"
+                    (reportRequested)="onReportRequested($event)"></app-entity-results-by-indicator-category-card>
+                }
+              </div>
+            }
+
+            @if (groupedIndicatorSummaries().outcomes.length > 0) {
+              <div class="entity-details_indicator-group">
+                <h3 class="entity-details_indicator-group_title">OUTCOMES</h3>
+                @for (item of groupedIndicatorSummaries().outcomes; track item?.resultTypeId) {
+                  <app-entity-results-by-indicator-category-card
+                    [item]="item"
+                    (reportRequested)="onReportRequested($event)"></app-entity-results-by-indicator-category-card>
+                }
+              </div>
             }
           } @else {
             <h1 class="entity-details_card_content_empty">No results found for this science program</h1>
