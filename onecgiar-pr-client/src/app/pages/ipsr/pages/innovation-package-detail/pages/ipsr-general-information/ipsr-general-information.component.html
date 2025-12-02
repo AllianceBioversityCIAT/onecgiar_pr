@@ -33,6 +33,11 @@
 
 <app-lead-contact-person-field [body]="this.ipsrGeneralInformationBody"></app-lead-contact-person-field>
 
+@if (this.fieldsManagerSE.isP25()) {
+  <h1 class="pr_label">Impact Area scores:</h1>
+  <app-alert-status [description]="impactAreaScoresInfo()"> </app-alert-status>
+}
+
 <div class="block_container">
   <app-alert-status [description]="genderInformation()"></app-alert-status>
 
@@ -45,10 +50,14 @@
       [(ngModel)]="this.ipsrGeneralInformationBody.gender_tag_level_id">
     </app-pr-radio-button>
 
-    <div *ngIf="this.ipsrGeneralInformationBody.gender_tag_level_id == 3">
-      <app-alert-status description="As a score of 2 has been selected, you are required to provide evidence of the Gender equality tag.">
-      </app-alert-status>
-    </div>
+    @if (this.fieldsManagerSE.isP25()) {
+      <div id="gender_tag_alert" [hidden]="this.ipsrGeneralInformationBody.gender_tag_level_id != 3"></div>
+    } @else {
+      <div *ngIf="this.ipsrGeneralInformationBody.gender_tag_level_id == 3">
+        <app-alert-status description="As a score of 2 has been selected, you are required to provide evidence of the Gender equality tag.">
+        </app-alert-status>
+      </div>
+    }
   </div>
 
   @if (this.ipsrGeneralInformationBody.gender_tag_level_id == 3) {
@@ -83,10 +92,14 @@
       label="Climate change tag">
     </app-pr-radio-button>
 
-    <div *ngIf="this.ipsrGeneralInformationBody.climate_change_tag_level_id == 3">
-      <app-alert-status description="As a score of 2 has been selected, you are required to provide evidence of the climate change tag.">
-      </app-alert-status>
-    </div>
+    @if (this.fieldsManagerSE.isP25()) {
+      <div id="climate_change_tag_alert" [hidden]="this.ipsrGeneralInformationBody.climate_change_tag_level_id != 3"></div>
+    } @else {
+      <div *ngIf="this.ipsrGeneralInformationBody.climate_change_tag_level_id == 3">
+        <app-alert-status description="As a score of 2 has been selected, you are required to provide evidence of the climate change tag.">
+        </app-alert-status>
+      </div>
+    }
   </div>
 
   @if (this.ipsrGeneralInformationBody.climate_change_tag_level_id == 3) {
@@ -121,11 +134,15 @@
       label="Nutrition, health and food security tag">
     </app-pr-radio-button>
 
-    <div *ngIf="this.ipsrGeneralInformationBody.nutrition_tag_level_id == 3">
-      <app-alert-status
-        description="As a score of 2 has been selected, you are required to provide evidence of the Nutrition, health and food security tag.">
-      </app-alert-status>
-    </div>
+    @if (this.fieldsManagerSE.isP25()) {
+      <div id="nutrition_tag_alert" [hidden]="this.ipsrGeneralInformationBody.nutrition_tag_level_id != 3"></div>
+    } @else {
+      <div *ngIf="this.ipsrGeneralInformationBody.nutrition_tag_level_id == 3">
+        <app-alert-status
+          description="As a score of 2 has been selected, you are required to provide evidence of the Nutrition, health and food security tag.">
+        </app-alert-status>
+      </div>
+    }
   </div>
 
   @if (this.ipsrGeneralInformationBody.nutrition_tag_level_id == 3) {
@@ -160,11 +177,15 @@
       label="Environmental health and biodiversity tag">
     </app-pr-radio-button>
 
-    <div *ngIf="this.ipsrGeneralInformationBody.environmental_biodiversity_tag_level_id == 3">
-      <app-alert-status
-        description="As a score of 2 has been selected, you are required to provide evidence of the Environmental health and biodiversity tag.">
-      </app-alert-status>
-    </div>
+    @if (this.fieldsManagerSE.isP25()) {
+      <div id="environment_tag_alert" [hidden]="this.ipsrGeneralInformationBody.environmental_biodiversity_tag_level_id != 3"></div>
+    } @else {
+      <div *ngIf="this.ipsrGeneralInformationBody.environmental_biodiversity_tag_level_id == 3">
+        <app-alert-status
+          description="As a score of 2 has been selected, you are required to provide evidence of the Environmental health and biodiversity tag.">
+        </app-alert-status>
+      </div>
+    }
   </div>
 
   @if (this.ipsrGeneralInformationBody.environmental_biodiversity_tag_level_id == 3) {
@@ -199,11 +220,15 @@
       label="Poverty reduction, livelihoods and jobs tag">
     </app-pr-radio-button>
 
-    <div *ngIf="this.ipsrGeneralInformationBody.poverty_tag_level_id == 3">
-      <app-alert-status
-        description="As a score of 2 has been selected, you are required to provide evidence of the Poverty reduction, livelihoods and jobs tag.">
-      </app-alert-status>
-    </div>
+    @if (this.fieldsManagerSE.isP25()) {
+      <div id="poverty_tag_alert" [hidden]="this.ipsrGeneralInformationBody.poverty_tag_level_id != 3"></div>
+    } @else {
+      <div *ngIf="this.ipsrGeneralInformationBody.poverty_tag_level_id == 3">
+        <app-alert-status
+          description="As a score of 2 has been selected, you are required to provide evidence of the Poverty reduction, livelihoods and jobs tag.">
+        </app-alert-status>
+      </div>
+    }
   </div>
 
   @if (this.ipsrGeneralInformationBody.poverty_tag_level_id == 3) {
