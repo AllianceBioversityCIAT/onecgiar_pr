@@ -34,7 +34,7 @@
         (validateMember(this.api.dataControlSE?.myInitiativesList) !== 6 && this.dataControlSE?.currentResult?.inQA) ||
         this.api.rolesSE.isAdmin
       ">
-      @if (this.api.dataControlSE?.currentResult?.result_type_id != 6 && this.api.dataControlSE?.isProductionSignal()) {
+      @if (this.api.dataControlSE?.currentResult?.result_type_id != 6 && !this.api.dataControlSE?.isProductionSignal()) {
         <div
           class="ai-review-button"
           [ngClass]="{
