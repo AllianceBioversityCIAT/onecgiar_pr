@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PathwayController } from './pathway.controller';
-import { PathwayService } from './pathway.service';
+import { IpsrPathwayStepFourService } from './ipsr-pathway-step-four.service';
 
 describe('PathwayController', () => {
   let controller: PathwayController;
@@ -8,7 +8,15 @@ describe('PathwayController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [PathwayController],
-      providers: [PathwayService],
+      providers: [
+        {
+          provide: IpsrPathwayStepFourService,
+          useValue: {
+            saveMain: jest.fn(),
+            getStepFour: jest.fn(),
+          },
+        },
+      ],
     }).compile();
 
     controller = module.get<PathwayController>(PathwayController);

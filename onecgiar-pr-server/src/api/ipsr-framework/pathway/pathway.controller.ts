@@ -1,5 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Version, UseInterceptors } from '@nestjs/common';
-import { PathwayService } from './pathway.service';
+import {
+  Controller,
+  Get,
+  Body,
+  Patch,
+  Param,
+  Version,
+  UseInterceptors,
+} from '@nestjs/common';
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
 import { IpsrSaveStepFour } from './dto/ipsr-save-steo-four.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
@@ -31,7 +38,7 @@ export class PathwayController {
 
   @Version('2')
   @Get('get/step-four/:resultId')
-    getStepFour(@Param('resultId') resultId: string) {
-      return this._ipsrPathwayStepFourService.getStepFour(+resultId);
+  getStepFour(@Param('resultId') resultId: string) {
+    return this._ipsrPathwayStepFourService.getStepFour(+resultId);
   }
 }

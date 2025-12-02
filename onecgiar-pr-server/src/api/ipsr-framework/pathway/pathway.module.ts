@@ -37,6 +37,6 @@ import { IpsrPathwayStepFourService } from './ipsr-pathway-step-four.service';
   imports: [
     forwardRef(() => VersioningModule),
     TypeOrmModule.forFeature([ResultScalingStudyUrl]),
-  ]
+  ],
 })
 export class PathwayModule {}

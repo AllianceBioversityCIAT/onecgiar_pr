@@ -1,8 +1,8 @@
-import { PartialType } from "@nestjs/swagger";
-import { NonPooledProjectBudget } from "../../../results/result_budget/entities/non_pooled_proyect_budget.entity";
-import { ResultInitiativeBudget } from "../../../results/result_budget/entities/result_initiative_budget.entity";
-import { ResultInstitutionsBudget } from "../../../results/result_budget/entities/result_institutions_budget.entity";
-import { ResultsByInstitution } from "../../../results/results_by_institutions/entities/results_by_institution.entity";
+import { PartialType } from '@nestjs/swagger';
+import { NonPooledProjectBudget } from '../../../results/result_budget/entities/non_pooled_proyect_budget.entity';
+import { ResultInitiativeBudget } from '../../../results/result_budget/entities/result_initiative_budget.entity';
+import { ResultInstitutionsBudget } from '../../../results/result_budget/entities/result_institutions_budget.entity';
+import { ResultsByInstitution } from '../../../results/results_by_institutions/entities/results_by_institution.entity';
 
 export class IpsrSaveStepFour {
   ipsr_pictures: IpsrPictures[];
