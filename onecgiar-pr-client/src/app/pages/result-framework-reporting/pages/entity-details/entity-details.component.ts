@@ -175,23 +175,18 @@ export class EntityDetailsComponent implements OnInit {
   chartOptionsOutcomes = computed<ChartOptions<'bar'>>(() => this.buildChartOptions(this.dataOutcomes()));
 
   groupedIndicatorSummaries = computed(() => {
-    const summaries = this.entityAowService.indicatorSummaries().filter(
-      item => item?.resultTypeName !== 'Innovation Use(IPSR)'
-    );
-    
+    const summaries = this.entityAowService.indicatorSummaries().filter(item => item?.resultTypeName !== 'Innovation Use(IPSR)');
+
     const outputs = summaries.filter(item => {
       const name = item?.resultTypeName || '';
-      return name === 'Innovation development' ||
-             name === 'Knowledge product' ||
-             name === 'Capacity sharing for development' ||
-             name === 'Other output';
+      return (
+        name === 'Innovation development' || name === 'Knowledge product' || name === 'Capacity sharing for development' || name === 'Other output'
+      );
     });
 
     const outcomes = summaries.filter(item => {
       const name = item?.resultTypeName || '';
-      return name === 'Innovation use' ||
-             name === 'Policy change' ||
-             name === 'Other outcome';
+      return name === 'Innovation use' || name === 'Policy change' || name === 'Other outcome';
     });
 
     return {
