@@ -34,7 +34,11 @@
         (validateMember(this.api.dataControlSE?.myInitiativesList) !== 6 && this.dataControlSE?.currentResult?.inQA) ||
         this.api.rolesSE.isAdmin
       ">
-      @if (this.api.dataControlSE?.currentResult?.result_type_id != 6 && this.dataControlSE?.currentResult?.status_id == 1) {
+      @if (
+        this.api.dataControlSE?.currentResult?.result_type_id != 6 &&
+        !this.api.dataControlSE?.isProductionSignal() &&
+        this.dataControlSE?.currentResult?.status_id == 1
+      ) {
         <div
           style="width: 100%"
           [pTooltip]="
