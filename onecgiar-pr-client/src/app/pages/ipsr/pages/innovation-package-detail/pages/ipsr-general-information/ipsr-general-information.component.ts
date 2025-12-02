@@ -73,6 +73,14 @@ export class IpsrGeneralInformationComponent implements OnInit {
     if (this.ipsrGeneralInformationBody.is_krs === false) this.ipsrGeneralInformationBody.is_krs = null;
   }
 
+  descriptionTextInfo() {
+    return `<ul>
+    <li>Ensure the description is understandable for a non-specialist reader.</li>
+    <li>Avoid acronyms and technical jargon.</li>
+    <li>Avoid repetition of the title.</li>
+    </ul>`;
+  }
+
   onSaveSection() {
     if (this.userSearchService.searchQuery.trim() && !this.userSearchService.selectedUser) {
       this.userSearchService.hasValidContact = false;

@@ -22,14 +22,26 @@
   [autogenerate]="true">
 </app-pr-textarea>
 
-<app-pr-textarea
-  placeholder="Provide input here..."
-  label="Description"
-  type="text"
-  [required]="true"
-  [maxWords]="150"
-  [(ngModel)]="this.ipsrGeneralInformationBody.description">
-</app-pr-textarea>
+@if (this.fieldsManagerSE.isP25()) {
+  <app-pr-textarea
+    placeholder="Provide input here..."
+    label="Description"
+    type="text"
+    [required]="true"
+    [maxWords]="150"
+    [description]="descriptionTextInfo()"
+    [(ngModel)]="this.ipsrGeneralInformationBody.description">
+  </app-pr-textarea>
+} @else {
+  <app-pr-textarea
+    placeholder="Provide input here..."
+    label="Description"
+    type="text"
+    [required]="true"
+    [maxWords]="150"
+    [(ngModel)]="this.ipsrGeneralInformationBody.description">
+  </app-pr-textarea>
+}
 
 <app-lead-contact-person-field [body]="this.ipsrGeneralInformationBody"></app-lead-contact-person-field>
 
