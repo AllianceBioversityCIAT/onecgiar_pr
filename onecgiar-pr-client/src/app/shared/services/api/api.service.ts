@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { ResultsApiService } from './results-api.service';
 import { CustomizedAlertsFsService } from '../customized-alerts-fs.service';
 import { AuthService } from './auth.service';
@@ -17,6 +17,7 @@ import { GlobalVariablesService } from '../global-variables.service';
 import { EndpointsService } from './endpoints/endpoints.service';
 import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-control.service';
 import { CurrentResult } from '../../interfaces/current-result.interface';
+import { FieldsManagerService } from '../fields-manager.service';
 
 export interface SearchParams {
   limit?: number;
@@ -32,6 +33,7 @@ export interface SearchParams {
   providedIn: 'root'
 })
 export class ApiService {
+  fieldsManagerSE = inject(FieldsManagerService);
   constructor(
     private titleService: Title,
     public endpointsSE: EndpointsService,
@@ -86,12 +88,14 @@ export class ApiService {
   }
 
   GETInnovationPackageDetail() {
+    this.fieldsManagerSE.inIpsr.set(true);
+    this.dataControlSE.currentResultSignal.set(null);
     this.resultsSE.GETInnovationPackageDetail().subscribe(({ response }) => {
       response.initiative_id = response?.inititiative_id;
       response.official_code = response?.initiative_official_code;
       this.rolesSE.validateReadOnly(response);
       this.dataControlSE.currentResult = response;
-
+      this.dataControlSE.currentResultSignal.set(response);
       const is_phase_open = response?.is_phase_open;
 
       switch (is_phase_open) {

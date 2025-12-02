@@ -73,7 +73,8 @@ describe('IpsrGeneralInformationComponent', () => {
         PATCHIpsrGeneralInfo: jest.fn(() => of({ response: mockPATCHIpsrGeneralInfoResponse })),
         GET_investmentDiscontinuedOptions: jest.fn(() => {
           return of({ response: mockGET_investmentDiscontinuedOptionsResponse });
-        })
+        }),
+        GET_impactAreasScoresComponentsAll: jest.fn(() => of({ response: [] }))
       },
       alertsFe: {
         show: jest.fn()

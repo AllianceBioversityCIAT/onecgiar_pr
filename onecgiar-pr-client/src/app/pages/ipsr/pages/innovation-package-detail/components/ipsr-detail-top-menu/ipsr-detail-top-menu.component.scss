@@ -40,17 +40,7 @@
     display: none !important;
   }
 
-  .back_buttton {
-    padding: 10px 15px !important;
-    width: max-content;
-    background-color: var(--pr-color-secondary-400);
-    color: var(--pr-color-white);
-    transition: all ease 0.3s;
-
-    &:hover {
-      background-color: var(--pr-color-primary-950);
-    }
-
+  .option {
     .content {
       display: flex;
       align-items: center;

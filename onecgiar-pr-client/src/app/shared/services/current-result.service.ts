@@ -19,6 +19,7 @@ export class CurrentResultService {
   ) {}
 
   GET_resultById() {
+    this.api.fieldsManagerSE.inIpsr.set(false);
     this.api.resultsSE.GET_resultById().subscribe({
       next: ({ response }) => {
         this.rolesSE.validateReadOnly(response);
