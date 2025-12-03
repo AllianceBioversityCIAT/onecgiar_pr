@@ -82,14 +82,16 @@
     </app-pr-radio-button>
   }
 
-  <div *ngIf="this.ipsrGeneralInformationBody.gender_tag_level_id != null">
-    <app-pr-input
-      label="Evidence"
-      [required]="this.ipsrGeneralInformationBody.gender_tag_level_id == 3"
-      placeholder="Link"
-      [(ngModel)]="this.ipsrGeneralInformationBody.evidence_gender_tag">
-    </app-pr-input>
-  </div>
+  @if (!this.fieldsManagerSE.isP25()) {
+    <div *ngIf="this.ipsrGeneralInformationBody.gender_tag_level_id != null">
+      <app-pr-input
+        label="Evidence"
+        [required]="this.ipsrGeneralInformationBody.gender_tag_level_id == 3"
+        placeholder="Link"
+        [(ngModel)]="this.ipsrGeneralInformationBody.evidence_gender_tag">
+      </app-pr-input>
+    </div>
+  }
 </div>
 
 <div class="block_container">
@@ -124,14 +126,16 @@
     </app-pr-radio-button>
   }
 
-  <div *ngIf="this.ipsrGeneralInformationBody.climate_change_tag_level_id != null">
-    <app-pr-input
-      label="Evidence"
-      [required]="this.ipsrGeneralInformationBody.climate_change_tag_level_id == 3"
-      placeholder="Link"
-      [(ngModel)]="this.ipsrGeneralInformationBody.evidence_climate_tag">
-    </app-pr-input>
-  </div>
+  @if (!this.fieldsManagerSE.isP25()) {
+    <div *ngIf="this.ipsrGeneralInformationBody.climate_change_tag_level_id != null">
+      <app-pr-input
+        label="Evidence"
+        [required]="this.ipsrGeneralInformationBody.climate_change_tag_level_id == 3"
+        placeholder="Link"
+        [(ngModel)]="this.ipsrGeneralInformationBody.evidence_climate_tag">
+      </app-pr-input>
+    </div>
+  }
 </div>
 
 <div class="block_container">
@@ -167,14 +171,16 @@
     </app-pr-radio-button>
   }
 
-  <div *ngIf="this.ipsrGeneralInformationBody.nutrition_tag_level_id != null">
-    <app-pr-input
-      label="Evidence"
-      [required]="this.ipsrGeneralInformationBody.nutrition_tag_level_id == 3"
-      placeholder="Link"
-      [(ngModel)]="this.ipsrGeneralInformationBody.evidence_nutrition_tag">
-    </app-pr-input>
-  </div>
+  @if (!this.fieldsManagerSE.isP25()) {
+    <div *ngIf="this.ipsrGeneralInformationBody.nutrition_tag_level_id != null">
+      <app-pr-input
+        label="Evidence"
+        [required]="this.ipsrGeneralInformationBody.nutrition_tag_level_id == 3"
+        placeholder="Link"
+        [(ngModel)]="this.ipsrGeneralInformationBody.evidence_nutrition_tag">
+      </app-pr-input>
+    </div>
+  }
 </div>
 
 <div class="block_container">
@@ -210,14 +216,16 @@
     </app-pr-radio-button>
   }
 
-  <div *ngIf="this.ipsrGeneralInformationBody.environmental_biodiversity_tag_level_id != null">
-    <app-pr-input
-      label="Evidence"
-      [required]="this.ipsrGeneralInformationBody.environmental_biodiversity_tag_level_id == 3"
-      placeholder="Link"
-      [(ngModel)]="this.ipsrGeneralInformationBody.evidence_environment_tag">
-    </app-pr-input>
-  </div>
+  @if (!this.fieldsManagerSE.isP25()) {
+    <div *ngIf="this.ipsrGeneralInformationBody.environmental_biodiversity_tag_level_id != null">
+      <app-pr-input
+        label="Evidence"
+        [required]="this.ipsrGeneralInformationBody.environmental_biodiversity_tag_level_id == 3"
+        placeholder="Link"
+        [(ngModel)]="this.ipsrGeneralInformationBody.evidence_environment_tag">
+      </app-pr-input>
+    </div>
+  }
 </div>
 
 <div class="block_container">
@@ -253,14 +261,16 @@
     </app-pr-radio-button>
   }
 
-  <div *ngIf="this.ipsrGeneralInformationBody.poverty_tag_level_id != null">
-    <app-pr-input
-      label="Evidence"
-      [required]="this.ipsrGeneralInformationBody.poverty_tag_level_id == 3"
-      placeholder="Link"
-      [(ngModel)]="this.ipsrGeneralInformationBody.evidence_poverty_tag">
-    </app-pr-input>
-  </div>
+  @if (!this.fieldsManagerSE.isP25()) {
+    <div *ngIf="this.ipsrGeneralInformationBody.poverty_tag_level_id != null">
+      <app-pr-input
+        label="Evidence"
+        [required]="this.ipsrGeneralInformationBody.poverty_tag_level_id == 3"
+        placeholder="Link"
+        [(ngModel)]="this.ipsrGeneralInformationBody.evidence_poverty_tag">
+      </app-pr-input>
+    </div>
+  }
 </div>
 
 @if (this.fieldsManagerSE.isP22()) {
