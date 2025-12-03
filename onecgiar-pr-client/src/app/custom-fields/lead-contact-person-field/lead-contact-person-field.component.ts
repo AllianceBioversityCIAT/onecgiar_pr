@@ -19,7 +19,9 @@ export class LeadContactPersonFieldComponent implements OnChanges {
   showResults: boolean = false;
   isSearching: boolean = false;
 
-  private searchSubject = new Subject<string>();
+  private readonly searchSubject = new Subject<string>();
+  private lastQueryWasValidEmail: boolean = false;
+  private autoSelectTimeoutId: any = null;
 
   constructor(
     public userSearchService: UserSearchService,
@@ -54,14 +56,19 @@ export class LeadContactPersonFieldComponent implements OnChanges {
           this.searchResults = filteredResults;
           this.showResults = true;
           this.isSearching = false;
-          this.userSearchService.hasValidContact = this.searchResults.length > 0 || !this.userSearchService.searchQuery.trim() ? true : false;
+          this.userSearchService.hasValidContact =
+            this.searchResults.length > 0 || !this.userSearchService.searchQuery.trim();
+
+          if (this.lastQueryWasValidEmail && filteredResults.length === 1) {
+            this.scheduleAutoClickIfSingleResult();
+          }
         },
         error: (error: any) => {
           console.error(error);
           this.searchResults = [];
           this.showResults = false;
           this.isSearching = false;
-          this.userSearchService.hasValidContact = this.userSearchService.searchQuery.trim() ? false : true;
+          this.userSearchService.hasValidContact = !this.userSearchService.searchQuery.trim();
         }
       });
   }
@@ -122,6 +129,8 @@ export class LeadContactPersonFieldComponent implements OnChanges {
     this.userSearchService.selectedUser = null;
     this.userSearchService.showContactError = false;
 
+    this.lastQueryWasValidEmail = this.isEmail(query);
+
     if (query) {
       this.userSearchService.hasValidContact = false;
       this.userSearchService.showContactError = false;
@@ -173,5 +182,40 @@ export class LeadContactPersonFieldComponent implements OnChanges {
     this.isSearching = false;
     this.userSearchService.hasValidContact = true;
     this.userSearchService.showContactError = false;
+  }
+
+  private isEmail(value: string): boolean {
+    if (!value) {
+      return false;
+    }
+
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailPattern.test(value.trim());
+  }
+
+  private scheduleAutoClickIfSingleResult(): void {
+    if (this.autoSelectTimeoutId) {
+      clearTimeout(this.autoSelectTimeoutId);
+    }
+
+    this.autoSelectTimeoutId = setTimeout(() => {
+      if (this.isContactLocked) {
+        return;
+      }
+
+      if (!this.isEmail(this.userSearchService.searchQuery)) {
+        return;
+      }
+
+      if (typeof document === 'undefined') {
+        return;
+      }
+
+      const items = document.querySelectorAll('.search-results .search-result-item');
+
+      if (items.length === 1) {
+        (items[0] as HTMLElement).click();
+      }
+    }, 500);
   }
 }

@@ -571,6 +571,66 @@ describe('LeadContactPersonFieldComponent', () => {
     });
   });
 
+  describe('Auto-select single result by email', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('should auto-select user when query is a valid email and only one result exists', () => {
+      const spySelectUser = jest.spyOn(component, 'selectUser');
+
+      component.body = {
+        lead_contact_person: null,
+        lead_contact_person_data: null
+      };
+
+      const email = 'john.doe@cgiar.org';
+      const mockEvent = { target: { value: email } };
+
+      component.onSearchInput(mockEvent);
+
+      jest.advanceTimersByTime(500);
+
+      fixture.detectChanges();
+
+      jest.advanceTimersByTime(500);
+
+      expect(spySelectUser).toHaveBeenCalledTimes(1);
+      expect(spySelectUser).toHaveBeenCalledWith(expect.objectContaining({ mail: email }));
+      expect(mockUserSearchService.selectedUser).toEqual(expect.objectContaining({ mail: email }));
+    });
+
+    it('should not auto-select when more than one result exists', () => {
+      const spySelectUser = jest.spyOn(component, 'selectUser');
+
+      const multiResponse = {
+        message: 'Users found successfully',
+        response: [mockJohnDoe, mockJaneSmith],
+        status: 200
+      };
+
+      jest.spyOn(component.resultsApiService, 'GET_adUsersSearch').mockReturnValue(of(multiResponse));
+
+      const email = 'john.doe@cgiar.org';
+      const mockEvent = { target: { value: email } };
+
+      component.onSearchInput(mockEvent);
+
+      jest.advanceTimersByTime(500);
+
+      fixture.detectChanges();
+
+      jest.advanceTimersByTime(500);
+
+      expect(spySelectUser).not.toHaveBeenCalled();
+      expect(mockUserSearchService.selectedUser).toBeNull();
+    });
+  });
+
   describe('Contact Lock/Unlock Functionality', () => {
     describe('selectUser', () => {
       it('should lock the contact field when user is selected', () => {
