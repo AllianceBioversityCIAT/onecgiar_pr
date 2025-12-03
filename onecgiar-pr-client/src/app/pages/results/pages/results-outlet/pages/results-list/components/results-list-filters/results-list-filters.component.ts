@@ -197,7 +197,18 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
 
     this.api.resultsSE.GET_AllInitiatives().subscribe({
       next: ({ response }) => {
-        this.resultsListFilterSE.submittersOptionsAdminOld.set(response);
+        // Handle null or undefined response
+        if (!response) {
+          this.resultsListFilterSE.submittersOptionsAdminOld.set([]);
+          return;
+        }
+
+        // Add displayName property to each submitter for use with optionLabel
+        const mappedResponse = response.map(submitter => ({
+          ...submitter,
+          displayName: `${submitter.official_code} ${submitter.name}`
+        }));
+        this.resultsListFilterSE.submittersOptionsAdminOld.set(mappedResponse);
       },
       error: err => {
         console.error(err);
