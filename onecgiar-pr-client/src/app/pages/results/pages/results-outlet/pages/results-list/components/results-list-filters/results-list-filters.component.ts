@@ -54,6 +54,17 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   tempSelectedIndicatorCategories = signal([]);
   tempSelectedStatus = signal([]);
 
+  // Computed signal for filtered phases based on selected portfolios
+  filteredPhasesOptions = computed(() => {
+    const selectedPortfolios = this.tempSelectedClarisaPortfolios();
+    if (selectedPortfolios.length === 0) {
+      return this.resultsListFilterSE.phasesOptionsOld();
+    }
+    return this.resultsListFilterSE.phasesOptionsOld().filter(phase =>
+      selectedPortfolios.some(portfolio => portfolio.id == phase.portfolio_id)
+    );
+  });
+
   filtersCount = computed(() => {
     let count = 0;
 
@@ -233,11 +244,13 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
       this.resultsListFilterSE.phasesOptions().filter(item => this.api.dataControlSE?.reportingCurrentPhase?.portfolioId == item.portfolio_id)
     );
 
-    this.resultsListFilterSE.submittersOptions.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptionsOld()));
-    this.resultsListFilterSE.submittersOptionsAdmin.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptionsAdminOld()));
+    // Show all submitters initially (not filtered by phases)
+    this.resultsListFilterSE.submittersOptions.set(this.resultsListFilterSE.submittersOptionsOld());
+    this.resultsListFilterSE.submittersOptionsAdmin.set(this.resultsListFilterSE.submittersOptionsAdminOld());
 
-    this.resultsListFilterSE.selectedSubmitters.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptions()));
-    this.resultsListFilterSE.selectedSubmittersAdmin.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptionsAdmin()));
+    // No submitters selected initially
+    this.resultsListFilterSE.selectedSubmitters.set([]);
+    this.resultsListFilterSE.selectedSubmittersAdmin.set([]);
   }
 
   private buildPhaseOptions(response: any[]) {
@@ -254,15 +267,25 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     return options.filter(item => selected.some(phase => phase.portfolio_id == item.portfolio_id));
   }
 
+  private filterOptionsBySelectedPortfolios<T extends { portfolio_id: any }>(options: T[]): T[] {
+    const selectedPortfolios = this.resultsListFilterSE.selectedClarisaPortfolios();
+    // If no portfolios selected, show all options
+    if (selectedPortfolios.length === 0) {
+      return options;
+    }
+    // Filter by selected portfolios
+    return options.filter(item => selectedPortfolios.some(portfolio => portfolio.id == item.portfolio_id));
+  }
+
   clearAllNewFilters() {
     this.resultsListFilterSE.selectedClarisaPortfolios.set([]);
     this.resultsListFilterSE.selectedPhases.set([]);
 
-    // Update available submitter options based on the reset phases
-    this.resultsListFilterSE.submittersOptions.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptionsOld()));
-    this.resultsListFilterSE.submittersOptionsAdmin.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptionsAdminOld()));
+    // When portfolios are cleared, show all submitters (no filtering)
+    this.resultsListFilterSE.submittersOptions.set(this.resultsListFilterSE.submittersOptionsOld());
+    this.resultsListFilterSE.submittersOptionsAdmin.set(this.resultsListFilterSE.submittersOptionsAdminOld());
 
-    // Set selected submitters to match the filtered options
+    // Clear selected submitters
     this.resultsListFilterSE.selectedSubmitters.set([]);
     this.resultsListFilterSE.selectedSubmittersAdmin.set([]);
 
@@ -283,16 +306,13 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     switch (chip.filterType) {
       case 'clarisaPortfolio':
         this.resultsListFilterSE.selectedClarisaPortfolios.set(this.resultsListFilterSE.selectedClarisaPortfolios().filter(p => p !== chip.item));
+        // Update phases and submitters when portfolio changes
+        this.updateOptionsAfterPortfolioChange();
         break;
 
       case 'phase':
         this.resultsListFilterSE.selectedPhases.set(this.resultsListFilterSE.selectedPhases().filter(p => p !== chip.item));
-        // Update submitter options when phases change
-        this.resultsListFilterSE.submittersOptions.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptionsOld()));
-        this.resultsListFilterSE.submittersOptionsAdmin.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptionsAdminOld()));
-        // Remove submitters that are no longer valid
-        this.resultsListFilterSE.selectedSubmitters.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.selectedSubmitters()));
-        this.resultsListFilterSE.selectedSubmittersAdmin.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.selectedSubmittersAdmin()));
+        // Phases no longer affect submitters
         break;
 
       case 'submitter':
@@ -313,27 +333,78 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     }
   }
 
+  private updateOptionsAfterPortfolioChange() {
+    // Update submitter options based on selected portfolios
+    this.resultsListFilterSE.submittersOptions.set(this.filterOptionsBySelectedPortfolios(this.resultsListFilterSE.submittersOptionsOld()));
+    this.resultsListFilterSE.submittersOptionsAdmin.set(this.filterOptionsBySelectedPortfolios(this.resultsListFilterSE.submittersOptionsAdminOld()));
+
+    // Remove submitters that are no longer valid
+    this.resultsListFilterSE.selectedSubmitters.set(this.filterOptionsBySelectedPortfolios(this.resultsListFilterSE.selectedSubmitters()));
+    this.resultsListFilterSE.selectedSubmittersAdmin.set(this.filterOptionsBySelectedPortfolios(this.resultsListFilterSE.selectedSubmittersAdmin()));
+
+    // Update phases based on selected portfolios
+    const filteredPhases = this.filterOptionsBySelectedPortfolios(this.resultsListFilterSE.phasesOptionsOld());
+    // Remove phases that are no longer valid
+    this.resultsListFilterSE.selectedPhases.set(
+      this.resultsListFilterSE.selectedPhases().filter(phase =>
+        filteredPhases.some(p => p.id === phase.id)
+      )
+    );
+  }
+
   getResultStatus() {
     this.api.resultsSE.GET_allResultStatuses().subscribe(({ response }) => {
       this.resultsListFilterSE.statusOptions.set(response);
     });
   }
 
-  onSelectPhases() {
-    // Reset submitters when phases change (using temp values)
-    this.tempSelectedSubmitters.set([]);
-    this.tempSelectedSubmittersAdmin.set([]);
+  onSelectPortfolios() {
+    // Update phases based on selected portfolios
+    const filteredPhases = this.tempSelectedClarisaPortfolios().length === 0
+      ? this.resultsListFilterSE.phasesOptionsOld()
+      : this.resultsListFilterSE.phasesOptionsOld().filter(phase =>
+          this.tempSelectedClarisaPortfolios().some(portfolio => portfolio.id == phase.portfolio_id)
+        );
 
-    // Update submitter options based on selected phases
+    // Reset phases if they don't match selected portfolios
+    this.tempSelectedPhases.set(
+      this.tempSelectedPhases().filter(phase =>
+        filteredPhases.some(p => p.id === phase.id)
+      )
+    );
+
+    // Update submitter options based on selected portfolios (not phases)
     this.resultsListFilterSE.submittersOptionsAdmin.set(
-      this.resultsListFilterSE
-        .submittersOptionsAdminOld()
-        .filter(item => this.tempSelectedPhases().some(phase => phase.portfolio_id == item.portfolio_id))
+      this.tempSelectedClarisaPortfolios().length === 0
+        ? this.resultsListFilterSE.submittersOptionsAdminOld()
+        : this.resultsListFilterSE
+            .submittersOptionsAdminOld()
+            .filter(item => this.tempSelectedClarisaPortfolios().some(portfolio => portfolio.id == item.portfolio_id))
     );
 
     this.resultsListFilterSE.submittersOptions.set(
-      this.resultsListFilterSE.submittersOptionsOld().filter(item => this.tempSelectedPhases().some(phase => phase.portfolio_id == item.portfolio_id))
+      this.tempSelectedClarisaPortfolios().length === 0
+        ? this.resultsListFilterSE.submittersOptionsOld()
+        : this.resultsListFilterSE.submittersOptionsOld().filter(item => this.tempSelectedClarisaPortfolios().some(portfolio => portfolio.id == item.portfolio_id))
     );
+
+    // Don't reset selected submitters - they should remain if valid for the selected portfolios
+    this.tempSelectedSubmittersAdmin.set(
+      this.tempSelectedSubmittersAdmin().filter(submitter =>
+        this.resultsListFilterSE.submittersOptionsAdmin().some(option => option.id === submitter.id)
+      )
+    );
+
+    this.tempSelectedSubmitters.set(
+      this.tempSelectedSubmitters().filter(submitter =>
+        this.resultsListFilterSE.submittersOptions().some(option => option.id === submitter.id)
+      )
+    );
+  }
+
+  onSelectPhases() {
+    // Phases selection no longer affects submitters
+    // Submitters are now filtered by portfolios only
   }
 
   // Initialize temp values when opening the drawer
