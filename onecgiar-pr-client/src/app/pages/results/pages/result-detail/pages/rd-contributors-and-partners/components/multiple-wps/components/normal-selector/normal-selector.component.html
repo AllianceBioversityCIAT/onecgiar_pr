@@ -1,4 +1,4 @@
-<div class="column_title">
+<div class="column_title required">
   {{ dataControlSE.isKnowledgeProduct ? 'Additional partners' : 'External partners' }}
 </div>
 <div [ngSwitch]="this.rolesSE.readOnly">
@@ -24,9 +24,13 @@
 
 <div class="partners_container fadeIn" style="position: relative; z-index: 5" *ngIf="this.rdPartnersSE.partnersBody.no_applicable_partner !== true">
   <div (click)="getDisableOptions()">
+    <div
+      appFeedbackValidation
+      [labelText]="dataControlSE.isKnowledgeProduct ? 'Partners' : 'Select partner'"
+      [isComplete]="!!this.rdPartnersSE.partnersBody.institutions?.length"></div>
     <app-pr-multi-select
       [options]="this.institutionsSE.institutionsWithoutCentersListPartners"
-      [required]="false"
+      [required]=""
       [label]="dataControlSE.isKnowledgeProduct ? 'Partners' : null"
       selectedOptionLabel="institutions_name"
       optionLabel="full_name"
