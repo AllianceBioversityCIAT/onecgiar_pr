@@ -59,11 +59,11 @@
           <p-multiselect
             [filter]="false"
             [showHeader]="false"
+            [maxSelectedLabels]="4"
             [options]="this.clarisaPortfolios()"
             [(ngModel)]="tempSelectedClarisaPortfolios"
             optionLabel="name"
             placeholder="Select portfolio"
-            [maxSelectedLabels]="1"
             [style]="{ width: '100%' }" />
         </div>
         <div>
@@ -163,7 +163,7 @@
             [(ngModel)]="tempSelectedStatus"
             optionLabel="name"
             placeholder="Select status"
-            [maxSelectedLabels]="3"
+            [maxSelectedLabels]="4"
             [style]="{ width: '100%' }" />
         </div>
       </div>
