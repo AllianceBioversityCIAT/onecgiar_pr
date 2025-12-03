@@ -124,4 +124,9 @@ export class AowHloTableComponent {
     this.entityAowService.showTargetDetailsDrawer.set(true);
     this.entityAowService.currentTargetToView.set(selectedCurrentItem);
   }
+
+  hasTargets(item: any, indicatorId: string): boolean {
+    const indicator = item.indicators?.find((ind: any) => ind.indicator_id === indicatorId);
+    return indicator?.targets_by_center?.centers?.length > 0;
+  }
 }
