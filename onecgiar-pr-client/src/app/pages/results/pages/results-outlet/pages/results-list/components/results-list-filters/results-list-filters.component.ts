@@ -16,6 +16,8 @@ import { switchMap } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { ChipModule } from 'primeng/chip';
 import { ReversePipe } from '../../../../../../../../shared/pipes/reverse.pipe';
+import { TooltipModule } from 'primeng/tooltip';
+
 @Component({
   selector: 'app-results-list-filters',
   templateUrl: './results-list-filters.component.html',
@@ -33,7 +35,8 @@ import { ReversePipe } from '../../../../../../../../shared/pipes/reverse.pipe';
     InputTextModule,
     ButtonModule,
     ChipModule,
-    ReversePipe
+    ReversePipe,
+    TooltipModule
   ]
 })
 export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy {
@@ -268,53 +271,33 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   removeFilter(chip: { label: string; filterType: string; item?: any }) {
     switch (chip.filterType) {
       case 'clarisaPortfolio':
-        this.resultsListFilterSE.selectedClarisaPortfolios.set(
-          this.resultsListFilterSE.selectedClarisaPortfolios().filter(p => p !== chip.item)
-        );
+        this.resultsListFilterSE.selectedClarisaPortfolios.set(this.resultsListFilterSE.selectedClarisaPortfolios().filter(p => p !== chip.item));
         break;
 
       case 'phase':
-        this.resultsListFilterSE.selectedPhases.set(
-          this.resultsListFilterSE.selectedPhases().filter(p => p !== chip.item)
-        );
+        this.resultsListFilterSE.selectedPhases.set(this.resultsListFilterSE.selectedPhases().filter(p => p !== chip.item));
         // Update submitter options when phases change
-        this.resultsListFilterSE.submittersOptions.set(
-          this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptionsOld())
-        );
-        this.resultsListFilterSE.submittersOptionsAdmin.set(
-          this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptionsAdminOld())
-        );
+        this.resultsListFilterSE.submittersOptions.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptionsOld()));
+        this.resultsListFilterSE.submittersOptionsAdmin.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptionsAdminOld()));
         // Remove submitters that are no longer valid
-        this.resultsListFilterSE.selectedSubmitters.set(
-          this.filterOptionsBySelectedPhases(this.resultsListFilterSE.selectedSubmitters())
-        );
-        this.resultsListFilterSE.selectedSubmittersAdmin.set(
-          this.filterOptionsBySelectedPhases(this.resultsListFilterSE.selectedSubmittersAdmin())
-        );
+        this.resultsListFilterSE.selectedSubmitters.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.selectedSubmitters()));
+        this.resultsListFilterSE.selectedSubmittersAdmin.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.selectedSubmittersAdmin()));
         break;
 
       case 'submitter':
         if (this.isAdmin) {
-          this.resultsListFilterSE.selectedSubmittersAdmin.set(
-            this.resultsListFilterSE.selectedSubmittersAdmin().filter(s => s !== chip.item)
-          );
+          this.resultsListFilterSE.selectedSubmittersAdmin.set(this.resultsListFilterSE.selectedSubmittersAdmin().filter(s => s !== chip.item));
         } else {
-          this.resultsListFilterSE.selectedSubmitters.set(
-            this.resultsListFilterSE.selectedSubmitters().filter(s => s !== chip.item)
-          );
+          this.resultsListFilterSE.selectedSubmitters.set(this.resultsListFilterSE.selectedSubmitters().filter(s => s !== chip.item));
         }
         break;
 
       case 'indicatorCategory':
-        this.resultsListFilterSE.selectedIndicatorCategories.set(
-          this.resultsListFilterSE.selectedIndicatorCategories().filter(c => c !== chip.item)
-        );
+        this.resultsListFilterSE.selectedIndicatorCategories.set(this.resultsListFilterSE.selectedIndicatorCategories().filter(c => c !== chip.item));
         break;
 
       case 'status':
-        this.resultsListFilterSE.selectedStatus.set(
-          this.resultsListFilterSE.selectedStatus().filter(s => s !== chip.item)
-        );
+        this.resultsListFilterSE.selectedStatus.set(this.resultsListFilterSE.selectedStatus().filter(s => s !== chip.item));
         break;
     }
   }

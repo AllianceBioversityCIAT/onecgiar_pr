@@ -71,7 +71,6 @@
             label="Phase"
             labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
             [required]="false"></app-pr-field-header>
-
           <p-multiselect
             [filter]="false"
             [showHeader]="false"
@@ -90,39 +89,42 @@
             labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
             [required]="false"></app-pr-field-header>
 
-          @if (this.isAdmin) {
-            <p-multiselect
-              [filter]="false"
-              [showHeader]="!!this.resultsListFilterSE.submittersOptionsAdmin().length"
-              [options]="this.resultsListFilterSE.submittersOptionsAdmin()"
-              [(ngModel)]="tempSelectedSubmittersAdmin"
-              placeholder="Select submitter(s)"
-              [maxSelectedLabels]="0"
-              [selectedItemsLabel]="'{0} items selected'"
-              [filter]="this.resultsListFilterSE.submittersOptionsAdmin().length"
-              [style]="{ width: '100%' }"
-              panelStyleClass="submitter-multiselect-panel">
-              <ng-template let-option pTemplate="item">
-                <div
-                  class="multiselect-item-text"
-                  style="max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block">
-                  {{ option.official_code }} {{ option.name }}
-                </div>
-              </ng-template>
-            </p-multiselect>
-          } @else {
-            <p-multiselect
-              [showHeader]="!!this.resultsListFilterSE.submittersOptions().length"
-              [options]="this.resultsListFilterSE.submittersOptions()"
-              [(ngModel)]="tempSelectedSubmitters"
-              optionLabel="name"
-              placeholder="Select submitter(s)"
-              [maxSelectedLabels]="0"
-              [selectedItemsLabel]="'{0} items selected'"
-              [style]="{ width: '100%' }" />
-          }
+          <div [pTooltip]="tempSelectedPhases().length ? null : 'Select a phase to enable this filter.'" tooltipPosition="right">
+            @if (this.isAdmin) {
+              <p-multiselect
+                [filter]="false"
+                [disabled]="!tempSelectedPhases().length"
+                [showHeader]="!!this.resultsListFilterSE.submittersOptionsAdmin().length"
+                [options]="this.resultsListFilterSE.submittersOptionsAdmin()"
+                [(ngModel)]="tempSelectedSubmittersAdmin"
+                placeholder="Select submitter(s)"
+                [maxSelectedLabels]="0"
+                [selectedItemsLabel]="'{0} items selected'"
+                [filter]="this.resultsListFilterSE.submittersOptionsAdmin().length"
+                [style]="{ width: '100%' }"
+                panelStyleClass="submitter-multiselect-panel">
+                <ng-template let-option pTemplate="item">
+                  <div
+                    class="multiselect-item-text"
+                    style="max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block">
+                    {{ option.official_code }} {{ option.name }}
+                  </div>
+                </ng-template>
+              </p-multiselect>
+            } @else {
+              <p-multiselect
+                [disabled]="!tempSelectedPhases().length"
+                [showHeader]="!!this.resultsListFilterSE.submittersOptions().length"
+                [options]="this.resultsListFilterSE.submittersOptions()"
+                [(ngModel)]="tempSelectedSubmitters"
+                optionLabel="name"
+                placeholder="Select submitter(s)"
+                [maxSelectedLabels]="0"
+                [selectedItemsLabel]="'{0} items selected'"
+                [style]="{ width: '100%' }" />
+            }
+          </div>
         </div>
-
         <div>
           <app-pr-field-header
             label="Indicator category(ies)"
