@@ -58,6 +58,7 @@
 
           <p-multiselect
             [filter]="false"
+            [showHeader]="false"
             [options]="this.clarisaPortfolios()"
             [(ngModel)]="tempSelectedClarisaPortfolios"
             optionLabel="name"
@@ -92,12 +93,13 @@
           @if (this.isAdmin) {
             <p-multiselect
               [filter]="false"
+              [showHeader]="!!this.resultsListFilterSE.submittersOptionsAdmin().length"
               [options]="this.resultsListFilterSE.submittersOptionsAdmin()"
               [(ngModel)]="tempSelectedSubmittersAdmin"
               placeholder="Select submitter(s)"
               [maxSelectedLabels]="0"
               [selectedItemsLabel]="'{0} items selected'"
-              [filter]="true"
+              [filter]="this.resultsListFilterSE.submittersOptionsAdmin().length"
               [style]="{ width: '100%' }"
               panelStyleClass="submitter-multiselect-panel">
               <ng-template let-option pTemplate="item">
@@ -110,14 +112,13 @@
             </p-multiselect>
           } @else {
             <p-multiselect
-              [filter]="false"
+              [showHeader]="!!this.resultsListFilterSE.submittersOptions().length"
               [options]="this.resultsListFilterSE.submittersOptions()"
               [(ngModel)]="tempSelectedSubmitters"
               optionLabel="name"
               placeholder="Select submitter(s)"
               [maxSelectedLabels]="0"
               [selectedItemsLabel]="'{0} items selected'"
-              [filter]="true"
               [style]="{ width: '100%' }" />
           }
         </div>
