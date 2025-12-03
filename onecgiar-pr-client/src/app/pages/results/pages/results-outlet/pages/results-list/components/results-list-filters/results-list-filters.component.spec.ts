@@ -147,15 +147,14 @@ describe('ResultsListFiltersComponent', () => {
       }
     ]);
 
-    // submitters filtered by selected phases portfolio_id 1
+    // submitters show ALL options (not filtered by phases anymore)
     expect(mockResultsListFilterService.submittersOptions()).toEqual([
       { id: 0, name: 'All submitters', portfolio_id: 1 },
-      { id: 11, name: 'User A', portfolio_id: 1 }
+      { id: 11, name: 'User A', portfolio_id: 1 },
+      { id: 22, name: 'User B', portfolio_id: 2 }
     ]);
-    expect(mockResultsListFilterService.selectedSubmitters()).toEqual([
-      { id: 0, name: 'All submitters', portfolio_id: 1 },
-      { id: 11, name: 'User A', portfolio_id: 1 }
-    ]);
+    // No submitters are selected initially
+    expect(mockResultsListFilterService.selectedSubmitters()).toEqual([]);
 
     // status options
     expect(mockApiService.resultsSE.GET_allResultStatuses).toHaveBeenCalled();
@@ -166,9 +165,9 @@ describe('ResultsListFiltersComponent', () => {
     it('should reflect selected filters for non-admin user', () => {
       component.isAdmin = false;
 
-      // after init, phases and submitters are selected
-      expect(component.filtersCount()).toBe(2);
-      expect(component.filtersCountText()).toBe('Apply filters (2)');
+      // after init, only phases are selected (submitters no longer auto-selected)
+      expect(component.filtersCount()).toBe(1);
+      expect(component.filtersCountText()).toBe('Apply filters (1)');
 
       // set various filters
       mockResultsListFilterService.selectedPhases.set([{} as any]);
@@ -184,9 +183,9 @@ describe('ResultsListFiltersComponent', () => {
     it('should reflect selected filters for admin user', () => {
       component.isAdmin = true;
 
-      // after init, phases and submitters are selected
-      expect(component.filtersCount()).toBe(2);
-      expect(component.filtersCountText()).toBe('Apply filters (2)');
+      // after init, only phases are selected (submitters no longer auto-selected)
+      expect(component.filtersCount()).toBe(1);
+      expect(component.filtersCountText()).toBe('Apply filters (1)');
 
       // set various filters including admin submitters
       mockResultsListFilterService.selectedPhases.set([{} as any]);
@@ -340,17 +339,22 @@ describe('ResultsListFiltersComponent', () => {
     });
   });
 
-  it('onSelectPhases should reset submitters and filter submittersOptions by selected phases', () => {
-    mockResultsListFilterService.submittersOptionsOld.set([
-      { id: 11, portfolio_id: 1 },
-      { id: 22, portfolio_id: 2 }
-    ] as any);
+  it('onSelectPhases should NOT filter submittersOptions (portfolios control filtering now)', () => {
+    // Set up initial submittersOptions from beforeEach initialization
+    const initialSubmittersOptions = mockResultsListFilterService.submittersOptions();
+
     component.tempSelectedPhases.set([{ portfolio_id: 2 } as any]);
 
     component.onSelectPhases();
 
-    expect(component.tempSelectedSubmitters()).toEqual([]);
-    expect(mockResultsListFilterService.submittersOptions()).toEqual([{ id: 22, portfolio_id: 2 }]);
+    // submittersOptions should remain completely unchanged (phases don't affect submitters anymore)
+    expect(mockResultsListFilterService.submittersOptions()).toEqual(initialSubmittersOptions);
+    // Should still have all original submitters including "All submitters"
+    expect(mockResultsListFilterService.submittersOptions()).toEqual([
+      { id: 0, name: 'All submitters', portfolio_id: 1 },
+      { id: 11, name: 'User A', portfolio_id: 1 },
+      { id: 22, name: 'User B', portfolio_id: 2 }
+    ]);
   });
 
   it('onDownLoadTableAsExcel should export and toggle gettingReport', () => {
@@ -571,14 +575,18 @@ describe('ResultsListFiltersComponent', () => {
       expect(mockResultsListFilterService.selectedSubmitters()).toEqual([]);
     });
 
-    it('should update submittersOptions to empty array when no phases selected', () => {
+    it('should update submittersOptions to show ALL submitters when no portfolios selected', () => {
       // Set some initial submitters options
       mockResultsListFilterService.submittersOptions.set([{ id: 22, name: 'User B', portfolio_id: 2 }]);
 
       component.clearAllNewFilters();
 
-      // Should clear submitters options since selectedPhases is empty
-      expect(mockResultsListFilterService.submittersOptions()).toEqual([]);
+      // Should show ALL submitters since no portfolios are selected (new portfolio-based logic)
+      expect(mockResultsListFilterService.submittersOptions()).toEqual([
+        { id: 0, name: 'All submitters', portfolio_id: 1 },
+        { id: 11, name: 'User A', portfolio_id: 1 },
+        { id: 22, name: 'User B', portfolio_id: 2 }
+      ]);
     });
 
     it('should reset selectedSubmittersAdmin to empty array', () => {
@@ -591,14 +599,17 @@ describe('ResultsListFiltersComponent', () => {
       expect(mockResultsListFilterService.selectedSubmittersAdmin()).toEqual([]);
     });
 
-    it('should update submittersOptionsAdmin to empty array when no phases selected', () => {
+    it('should update submittersOptionsAdmin to show ALL admin submitters when no portfolios selected', () => {
       // Set some initial admin submitters options
       mockResultsListFilterService.submittersOptionsAdmin.set([{ id: 2, name: 'Admin User B', portfolio_id: 2 }]);
 
       component.clearAllNewFilters();
 
-      // Should clear admin submitters options since selectedPhases is empty
-      expect(mockResultsListFilterService.submittersOptionsAdmin()).toEqual([]);
+      // Should show ALL admin submitters since no portfolios are selected (new portfolio-based logic)
+      expect(mockResultsListFilterService.submittersOptionsAdmin()).toEqual([
+        { id: 1, name: 'Admin User A', portfolio_id: 1 },
+        { id: 2, name: 'Admin User B', portfolio_id: 2 }
+      ]);
     });
 
     it('should clear selectedIndicatorCategories', () => {
@@ -685,9 +696,16 @@ describe('ResultsListFiltersComponent', () => {
       expect(mockResultsListFilterService.selectedStatus()).toEqual([]);
       expect(mockResultsListFilterService.text_to_search()).toBe('');
 
-      // Verify that available options are also cleared since no phases are selected
-      expect(mockResultsListFilterService.submittersOptions()).toEqual([]);
-      expect(mockResultsListFilterService.submittersOptionsAdmin()).toEqual([]);
+      // Verify that available options show ALL submitters since no portfolios are selected (new portfolio-based logic)
+      expect(mockResultsListFilterService.submittersOptions()).toEqual([
+        { id: 0, name: 'All submitters', portfolio_id: 1 },
+        { id: 11, name: 'User A', portfolio_id: 1 },
+        { id: 22, name: 'User B', portfolio_id: 2 }
+      ]);
+      expect(mockResultsListFilterService.submittersOptionsAdmin()).toEqual([
+        { id: 1, name: 'Admin User A', portfolio_id: 1 },
+        { id: 2, name: 'Admin User B', portfolio_id: 2 }
+      ]);
     });
   });
 });
