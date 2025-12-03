@@ -439,8 +439,8 @@ describe('ResultsListFiltersComponent', () => {
       component.isAdmin = true;
       const mockResponse = {
         response: [
-          { id: 1, name: 'Initiative A' },
-          { id: 2, name: 'Initiative B' }
+          { id: 1, name: 'Initiative A', official_code: 'INIT-01' },
+          { id: 2, name: 'Initiative B', official_code: 'INIT-02' }
         ]
       };
       mockApiService.resultsSE.GET_AllInitiatives.mockReturnValue(of(mockResponse));
@@ -448,7 +448,10 @@ describe('ResultsListFiltersComponent', () => {
       component.getAllInitiatives();
 
       expect(mockApiService.resultsSE.GET_AllInitiatives).toHaveBeenCalled();
-      expect(mockResultsListFilterService.submittersOptionsAdminOld.set).toHaveBeenCalledWith(mockResponse.response);
+      expect(mockResultsListFilterService.submittersOptionsAdminOld.set).toHaveBeenCalledWith([
+        { id: 1, name: 'Initiative A', official_code: 'INIT-01', displayName: 'INIT-01 Initiative A' },
+        { id: 2, name: 'Initiative B', official_code: 'INIT-02', displayName: 'INIT-02 Initiative B' }
+      ]);
     });
 
     it('should handle API error gracefully', () => {
@@ -484,7 +487,36 @@ describe('ResultsListFiltersComponent', () => {
       component.getAllInitiatives();
 
       expect(mockApiService.resultsSE.GET_AllInitiatives).toHaveBeenCalled();
-      expect(mockResultsListFilterService.submittersOptionsAdminOld.set).toHaveBeenCalledWith(null);
+      // Should set empty array when response is null
+      expect(mockResultsListFilterService.submittersOptionsAdminOld.set).toHaveBeenCalledWith([]);
+    });
+
+    it('should handle undefined response', () => {
+      component.isAdmin = true;
+      const mockResponse = { response: undefined };
+      mockApiService.resultsSE.GET_AllInitiatives.mockReturnValue(of(mockResponse));
+
+      component.getAllInitiatives();
+
+      expect(mockApiService.resultsSE.GET_AllInitiatives).toHaveBeenCalled();
+      // Should set empty array when response is undefined
+      expect(mockResultsListFilterService.submittersOptionsAdminOld.set).toHaveBeenCalledWith([]);
+    });
+
+    it('should create displayName from official_code and name', () => {
+      component.isAdmin = true;
+      const mockResponse = {
+        response: [
+          { id: 1, name: 'Test Initiative', official_code: 'TST-01' }
+        ]
+      };
+      mockApiService.resultsSE.GET_AllInitiatives.mockReturnValue(of(mockResponse));
+
+      component.getAllInitiatives();
+
+      expect(mockResultsListFilterService.submittersOptionsAdminOld.set).toHaveBeenCalledWith([
+        { id: 1, name: 'Test Initiative', official_code: 'TST-01', displayName: 'TST-01 Test Initiative' }
+      ]);
     });
   });
 
