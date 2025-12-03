@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, Input, OnChanges, SimpleChanges } from '@angular/core';
-import { debounceTime, distinctUntilChanged, Subject, switchMap } from 'rxjs';
+import { debounceTime, distinctUntilChanged, Subject, switchMap, EMPTY } from 'rxjs';
 
-import { User } from '../../pages/results/pages/result-detail/pages/rd-general-information/models/userSearchResponse';
+import { User, UserSearchResponse } from '../../pages/results/pages/result-detail/pages/rd-general-information/models/userSearchResponse';
 import { UserSearchService } from '../../pages/results/pages/result-detail/pages/rd-general-information/services/user-search-service.service';
 import { ResultsApiService } from '../../shared/services/api/results-api.service';
 
@@ -13,15 +13,15 @@ import { ResultsApiService } from '../../shared/services/api/results-api.service
   standalone: false
 })
 export class LeadContactPersonFieldComponent implements OnChanges {
-  @Input() body: any;
+  @Input() body: { lead_contact_person?: string | null; lead_contact_person_data?: User | null };
   isContactLocked: boolean = false;
-  searchResults: any[] = [];
+  searchResults: User[] = [];
   showResults: boolean = false;
   isSearching: boolean = false;
 
   private readonly searchSubject = new Subject<string>();
   private lastQueryWasValidEmail: boolean = false;
-  private autoSelectTimeoutId: any = null;
+  private autoSelectTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     public userSearchService: UserSearchService,
@@ -41,12 +41,12 @@ export class LeadContactPersonFieldComponent implements OnChanges {
             this.searchResults = [];
             this.showResults = false;
             this.isSearching = false;
-            return [];
+            return EMPTY;
           }
         })
       )
       .subscribe({
-        next: (response: any) => {
+        next: (response: UserSearchResponse | { response: User[] }) => {
           const filteredResults = this.filterValidUsers(response?.response || []);
 
           if (filteredResults.length === 0) {
@@ -56,15 +56,13 @@ export class LeadContactPersonFieldComponent implements OnChanges {
           this.searchResults = filteredResults;
           this.showResults = true;
           this.isSearching = false;
-          this.userSearchService.hasValidContact =
-            this.searchResults.length > 0 || !this.userSearchService.searchQuery.trim();
+          this.userSearchService.hasValidContact = this.searchResults.length > 0 || !this.userSearchService.searchQuery.trim();
 
           if (this.lastQueryWasValidEmail && filteredResults.length === 1) {
             this.scheduleAutoClickIfSingleResult();
           }
         },
-        error: (error: any) => {
-          console.error(error);
+        error: () => {
           this.searchResults = [];
           this.showResults = false;
           this.isSearching = false;
@@ -81,7 +79,7 @@ export class LeadContactPersonFieldComponent implements OnChanges {
         this.isContactLocked = true;
         this.userSearchService.hasValidContact = true;
       } else if (this.body.lead_contact_person) {
-        if (this.userSearchService.selectedUser && this.userSearchService.selectedUser.displayName === this.body.lead_contact_person) {
+        if (this.userSearchService.selectedUser && this.userSearchService.selectedUser.display_name === this.body.lead_contact_person) {
           this.isContactLocked = true;
           this.userSearchService.hasValidContact = true;
         } else {
@@ -110,17 +108,18 @@ export class LeadContactPersonFieldComponent implements OnChanges {
     });
   }
 
-  onSearchInput(event: any): void {
+  onSearchInput(event: string | Event): void {
     if (this.isContactLocked) return;
 
     let query: string = '';
 
     if (typeof event === 'string') {
       query = event;
-    } else if (event && 'target' in event && (event.target as HTMLInputElement)?.value !== undefined) {
-      query = (event.target as HTMLInputElement).value;
-    } else if (event && typeof event === 'object' && event.toString() !== '[object InputEvent]') {
-      query = event.toString();
+    } else if (event && 'target' in event) {
+      const target = event.target as HTMLInputElement;
+      if (target?.value !== undefined) {
+        query = target.value;
+      }
     }
 
     query = query ?? '';
