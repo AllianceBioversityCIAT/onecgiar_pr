@@ -1,4 +1,9 @@
-import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import {
+  HttpStatus,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   CreateInnovationDevDtoV2,
   OptionV2,
@@ -556,11 +561,11 @@ export class InnovationDevService {
       this.logger.error(
         `[saveBillateralInvestment] ResultByProject not found for resultId: ${resultId}, project_id: ${i.obj_result_project.project_id}`,
       );
-      throw {
-        response: {},
+      throw new NotFoundException({
         message: `ResultByProject not found for resultId: ${resultId}, project_id: ${i.obj_result_project.project_id}`,
-        status: HttpStatus.NOT_FOUND,
-      };
+        resultId,
+        projectId: i.obj_result_project.project_id,
+      });
     }
     return rbp;
   }
