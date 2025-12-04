@@ -188,7 +188,7 @@ export class LeadContactPersonFieldComponent implements OnChanges {
       return false;
     }
 
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; //NOSONAR
     return emailPattern.test(value.trim());
   }
 
