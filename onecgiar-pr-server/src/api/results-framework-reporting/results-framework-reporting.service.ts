@@ -1005,7 +1005,7 @@ export class ResultsFrameworkReportingService {
           editing: number;
           qualityAssessed: number;
           submitted: number;
-          others: number;
+          others: number; 
         }
       >();
 
@@ -1428,7 +1428,6 @@ export class ResultsFrameworkReportingService {
       return null;
     }
   }
-
   private buildHttpError(status: number, message: string) {
     const error: any = new Error(message);
     error.response = {};
