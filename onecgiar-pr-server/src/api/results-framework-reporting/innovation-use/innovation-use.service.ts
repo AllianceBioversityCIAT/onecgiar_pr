@@ -27,6 +27,7 @@ import { ResultByIntitutionsRepository } from '../../results/results_by_institut
 import { ResultRepository } from '../../results/result.repository';
 import { ResultsByProjectsRepository } from '../../results/results_by_projects/results_by_projects.repository';
 import { InnovationUseLevel } from './enum/innov-use-levels.enum';
+import { ClarisaInnovationUseLevelRepository } from '../../../clarisa/clarisa-innovation-use-levels/clarisa-innovation-use-levels.repository';
 
 @Injectable()
 export class InnovationUseService {
@@ -48,6 +49,7 @@ export class InnovationUseService {
     private readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
     private readonly _resultRepository: ResultRepository,
     private readonly _resultByProjectRepository: ResultsByProjectsRepository,
+    private readonly _clarisaInnovationUseLevelRepository: ClarisaInnovationUseLevelRepository,
   ) {}
 
   async saveInnovationUse(
@@ -79,16 +81,22 @@ export class InnovationUseService {
         innov_use_to_be_determined,
       } = innovationUseDto;
 
+      const use_levels = await this._clarisaInnovationUseLevelRepository.findOne({
+        where: { level: innovation_use_level_id },
+        select: ['id'],
+      });
+      const innovation_use_level = use_levels.id;
+      
       let InnUseRes: ResultsInnovationsUse;
       if (resultExist) {
         resultExist.has_innovation_link = has_innovation_link;
-        resultExist.innovation_use_level_id = innovation_use_level_id;
+        resultExist.innovation_use_level_id = innovation_use_level;
         resultExist.last_updated_by = user.id;
         resultExist.innov_use_to_be_determined = innov_use_to_be_determined;
         resultExist.innov_use_2030_to_be_determined =
           innov_use_2030_to_be_determined;
 
-        if (innovation_use_level_id >= InnovationUseLevel.Level_6) {
+        if (innovation_use_level >= InnovationUseLevel.Level_6) {
           resultExist.readiness_level_explanation =
             readiness_level_explanation ?? null;
           resultExist.has_scaling_studies = !!has_scaling_studies;
@@ -117,13 +125,13 @@ export class InnovationUseService {
         newInnUse.results_id = resultId;
         newInnUse.last_updated_by = user.id;
         newInnUse.is_active = true;
-        newInnUse.innovation_use_level_id = innovation_use_level_id;
+        newInnUse.innovation_use_level_id = innovation_use_level;
         newInnUse.has_innovation_link = has_innovation_link;
         newInnUse.innov_use_to_be_determined = innov_use_to_be_determined;
         newInnUse.innov_use_2030_to_be_determined =
           innov_use_2030_to_be_determined;
 
-        if (innovation_use_level_id >= InnovationUseLevel.Level_6) {
+        if (innovation_use_level >= InnovationUseLevel.Level_6) {
           newInnUse.readiness_level_explanation =
             readiness_level_explanation ?? null;
           newInnUse.has_scaling_studies = !!has_scaling_studies;
@@ -144,7 +152,7 @@ export class InnovationUseService {
       );
 
       if (
-        innovation_use_level_id >= InnovationUseLevel.Level_6 &&
+        innovation_use_level >= InnovationUseLevel.Level_6 &&
         has_scaling_studies &&
         Array.isArray(scalingStudiesUrls)
       ) {
