@@ -1406,7 +1406,6 @@ export class ResultsTocResultsService {
         result_toc_result?.result_toc_results?.length &&
         result_toc_result?.planned_result === true
       ) {
-        console.log('result_toc_result', result_toc_result);
         for (const t of result_toc_result.result_toc_results) {
           if (!t?.result_toc_result_id && !t?.toc_result_id) continue;
 
@@ -1456,8 +1455,6 @@ export class ResultsTocResultsService {
         result_toc_result &&
         result_toc_result?.planned_result === false
       ) {
-        console.log('result_toc_result else', result_toc_result);
-
         interface SpecialCaseResultTocResult {
           planned_result: boolean;
           initiative_id: number;
@@ -1732,6 +1729,15 @@ export class ResultsTocResultsService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
+  }
+
+  private toNumberOrNull(value: any): number | null {
+    if (value === null || value === undefined) {
+      return null;
+    }
+
+    const num = Number(value);
+    return Number.isFinite(num) ? num : null;
   }
 
   async getTocResultIndicatorByResultTocIdV2(

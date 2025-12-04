@@ -72,28 +72,27 @@
           [(ngModel)]="activeTab.indicators[0].related_node_id"
           (ngModelChange)="mapTocResultsIndicatorId()">
         </app-pr-select>
-      }
-
-      @if (activeTab.indicators[0].related_node_id) {
-        <div>
-          <app-pr-field-header label="Contribution to indicator target"></app-pr-field-header>
-          <app-alert-status
-            status="info"
-            description="Indicate in this box the numerical value that your result contributes toward the 2025 target of the indicator.<br>
-            <br><strong>Example:</strong> If the 2025 indicator target is 200 (people trained) and your result (e.g., a capacity-sharing activity) provides evidence of 90 people trained, enter <strong>90</strong> in this box.<br>
-            <br>The values entered here will be aggregated at the end of the reporting cycle to assess progress toward the planned 2025 target for the indicator."
-            inlineStyles="margin: 0; margin-bottom: 10px !important;"></app-alert-status>
-          <div style="margin: 8px 0" *ngIf="selectedIndicatorData()">
-            <p><strong>Unit of measurement:</strong> {{ selectedIndicatorData()?.unit_messurament || 'Not specified' }}</p>
-            <p><strong>Target:</strong> {{ selectedIndicatorData()?.targets?.[0]?.target_value || 'Not specified' }}</p>
+        @if (activeTab.indicators[0].related_node_id) {
+          <div>
+            <app-pr-field-header label="Contribution to indicator target"></app-pr-field-header>
+            <app-alert-status
+              status="info"
+              description="Indicate in this box the numerical value that your result contributes toward the 2025 target of the indicator.<br>
+              <br><strong>Example:</strong> If the 2025 indicator target is 200 (people trained) and your result (e.g., a capacity-sharing activity) provides evidence of 90 people trained, enter <strong>90</strong> in this box.<br>
+              <br>The values entered here will be aggregated at the end of the reporting cycle to assess progress toward the planned 2025 target for the indicator."
+              inlineStyles="margin: 0; margin-bottom: 10px !important;"></app-alert-status>
+            <div style="margin: 8px 0" *ngIf="selectedIndicatorData()">
+              <p><strong>Unit of measurement:</strong> {{ selectedIndicatorData()?.unit_messurament || 'Not specified' }}</p>
+              <p><strong>Target:</strong> {{ selectedIndicatorData()?.targets?.[0]?.target_value || 'Not specified' }}</p>
+            </div>
+            <input
+              type="number"
+              placeholder="Enter target"
+              [(ngModel)]="activeTab.indicators[0].targets[0].contributing_indicator"
+              class="p-inputtext p-component"
+              style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem" />
           </div>
-          <input
-            type="number"
-            placeholder="Enter target"
-            [(ngModel)]="activeTab.indicators[0].targets[0].contributing_indicator"
-            class="p-inputtext p-component"
-            style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem" />
-        </div>
+        }
       }
     }
     <hr class="divider-20" />
