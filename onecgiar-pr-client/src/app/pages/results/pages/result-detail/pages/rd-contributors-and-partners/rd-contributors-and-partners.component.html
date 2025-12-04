@@ -42,29 +42,30 @@
   <!-- ! from toc section end -->
 
   <!-- from toc section  -->
-
-  @if (!this.rdPartnersSE.partnersBody.result_toc_result.planned_result) {
-    <app-pr-textarea
-      placeholder="Enter reason"
-      label="Why is the result being reported?"
-      type="text"
-      [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.toc_progressive_narrative"
-      [maxWords]="30"
-      [rows]="2"
-      [autogenerate]="true">
-    </app-pr-textarea>
-  } @else {
-    <div style="z-index: 1; position: relative">
-      <app-multiple-wps
-        [editable]="true"
-        [initiative]="this.rdPartnersSE.partnersBody?.result_toc_result"
-        [initiativeId]="this.rdPartnersSE.initiativeIdSignal"
-        [resultLevelId]="this.resultLevelSE.currentResultLevelId"
-        [isIpsr]="false"
-        [isContributor]="false"
-        [isNotifications]="false"
-        [showMultipleWPsContent]="this.rdPartnersSE.getConsumed()"></app-multiple-wps>
-    </div>
+  @if (this.rdPartnersSE.partnersBody.result_toc_result.planned_result !== null) {
+    @if (!this.rdPartnersSE.partnersBody.result_toc_result.planned_result) {
+      <app-pr-textarea
+        placeholder="Enter reason"
+        label="Why is the result being reported?"
+        type="text"
+        [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.toc_progressive_narrative"
+        [maxWords]="30"
+        [rows]="2"
+        [autogenerate]="true">
+      </app-pr-textarea>
+    } @else {
+      <div style="z-index: 1; position: relative">
+        <app-multiple-wps
+          [editable]="true"
+          [initiative]="this.rdPartnersSE.partnersBody?.result_toc_result"
+          [initiativeId]="this.rdPartnersSE.initiativeIdSignal"
+          [resultLevelId]="this.resultLevelSE.currentResultLevelId"
+          [isIpsr]="false"
+          [isContributor]="false"
+          [isNotifications]="false"
+          [showMultipleWPsContent]="this.rdPartnersSE.getConsumed()"></app-multiple-wps>
+      </div>
+    }
   }
 
   <app-pr-multi-select

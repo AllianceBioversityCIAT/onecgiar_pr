@@ -17,6 +17,8 @@ describe('EntityAowAowComponent', () => {
     mockEntityAowService = {
       aowId: signal<string>(''),
       entityId: signal<string>(''),
+      entityDetails: signal<any>({}),
+      currentAowSelected: jest.fn(() => ({})),
       getTocResultsByAowId: jest.fn(),
       tocResultsOutputsByAowId: signal<any[]>([]),
       tocResultsOutcomesByAowId: signal<any[]>([]),
@@ -24,7 +26,12 @@ describe('EntityAowAowComponent', () => {
       showReportResultModal: signal<boolean>(false),
       isLoadingTocResults2030Outcomes: signal<boolean>(false),
       showViewResultDrawer: signal<boolean>(false),
-      currentResultToView: signal<any>({})
+      viewResultDrawerFullScreen: signal<boolean>(false),
+      currentResultToView: signal<any>({}),
+      showTargetDetailsDrawer: signal<boolean>(false),
+      targetDetailsDrawerFullScreen: signal<boolean>(false),
+      currentTargetToView: signal<any>({}),
+      existingResultsContributors: signal<any[]>([])
     } as any;
 
     // Mock ActivatedRoute

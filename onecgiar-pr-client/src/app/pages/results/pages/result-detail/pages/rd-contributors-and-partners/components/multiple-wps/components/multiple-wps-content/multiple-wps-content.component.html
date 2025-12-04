@@ -61,16 +61,18 @@
   </div>
   @if (this.secondFieldLabel()) {
     @if (showIndicators() && activeTab.toc_result_id) {
-      <app-pr-select
-        [options]="this.indicatorsList()"
-        label="Indicator"
-        [editable]="editable"
-        optionLabel="indicator_description"
-        optionValue="related_node_id"
-        placeholder="Select outcome level"
-        [(ngModel)]="activeTab.indicators[0].related_node_id"
-        (ngModelChange)="mapTocResultsIndicatorId()">
-      </app-pr-select>
+      @if (this.indicatorsList().length) {
+        <app-pr-select
+          [options]="this.indicatorsList()"
+          label="Indicator"
+          [editable]="editable"
+          optionLabel="indicator_description"
+          optionValue="related_node_id"
+          placeholder="Select outcome level"
+          [(ngModel)]="activeTab.indicators[0].related_node_id"
+          (ngModelChange)="mapTocResultsIndicatorId()">
+        </app-pr-select>
+      }
 
       @if (activeTab.indicators[0].related_node_id) {
         <div>

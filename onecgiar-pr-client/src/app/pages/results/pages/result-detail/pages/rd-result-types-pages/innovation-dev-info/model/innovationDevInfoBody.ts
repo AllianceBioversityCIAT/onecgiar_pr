@@ -102,6 +102,8 @@ class BilateralExpectedInvestment {
   public kind_cash?: any;
   public is_determined?: any;
   public obj_non_pooled_projetct: ObjNonPooledProjetct = new ObjNonPooledProjetct();
+  // P25
+  public obj_result_project: any;
 }
 
 class ObjNonPooledProjetct {

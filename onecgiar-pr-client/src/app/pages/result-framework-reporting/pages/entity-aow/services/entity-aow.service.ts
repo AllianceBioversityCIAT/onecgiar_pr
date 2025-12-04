@@ -36,10 +36,16 @@ export class EntityAowService {
   showReportResultModal = signal<boolean>(false);
   currentResultToReport = signal<any>({});
 
-  // View result modal
+  // View result drawer
   showViewResultDrawer = signal<boolean>(false);
   viewResultDrawerFullScreen = signal<boolean>(false);
   currentResultToView = signal<any>({});
+
+  // Target details drawer
+  showTargetDetailsDrawer = signal<boolean>(false);
+  targetDetailsDrawerFullScreen = signal<boolean>(false);
+  currentTargetToView = signal<any>({});
+
   dashboardData = signal<any>(null);
 
   getAllDetailsData() {

@@ -153,6 +153,7 @@ export class TocResultsService {
         init_id,
         toc_level,
         result?.result_type_id,
+        result_id,
       );
 
       let enrichedResults = res ?? [];

@@ -1,7 +1,8 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, inject } from '@angular/core';
 import { InnovationDevInfoBody } from '../../model/innovationDevInfoBody';
 import { ApiService } from '../../../../../../../../../shared/services/api/api.service';
 import { TerminologyService } from '../../../../../../../../../internationalization/terminology.service';
+import { FieldsManagerService } from '../../../../../../../../../shared/services/fields-manager.service';
 
 @Component({
   selector: 'app-estimates',
@@ -11,6 +12,7 @@ import { TerminologyService } from '../../../../../../../../../internationalizat
 })
 export class EstimatesComponent {
   @Input() body = new InnovationDevInfoBody();
+  fieldsManagerSE = inject(FieldsManagerService);
 
   constructor(
     public api: ApiService,

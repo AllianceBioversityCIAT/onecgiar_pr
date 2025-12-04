@@ -127,7 +127,7 @@ describe('LeadContactPersonFieldComponent', () => {
   describe('User Search Functionality', () => {
     describe('onSearchInput', () => {
       it('should update search query and reset selected user', () => {
-        const mockEvent = { target: { value: 'john' } };
+        const mockEvent = { target: { value: 'john' } } as unknown as Event;
         const spySearchSubject = jest.spyOn(component['searchSubject'], 'next');
 
         mockUserSearchService.selectedUser = mockJohnDoe;
@@ -139,7 +139,7 @@ describe('LeadContactPersonFieldComponent', () => {
       });
 
       it('should not trigger search for queries less than 4 characters', () => {
-        const mockEvent = { target: { value: 'jo' } };
+        const mockEvent = { target: { value: 'jo' } } as unknown as Event;
         const spySearchUsers = jest.spyOn(mockUserSearchService, 'searchUsers');
 
         component.onSearchInput(mockEvent);
@@ -202,19 +202,17 @@ describe('LeadContactPersonFieldComponent', () => {
       });
 
       it('should handle search errors gracefully', () => {
-        const spyConsoleError = jest.spyOn(console, 'error').mockImplementation();
         const errorMessage = 'Test error';
         jest.spyOn(component.resultsApiService, 'GET_adUsersSearch').mockReturnValue(throwError(errorMessage));
 
+        mockUserSearchService.searchQuery = 'john';
         component['searchSubject'].next('john');
         jest.advanceTimersByTime(500);
 
-        expect(spyConsoleError).toHaveBeenCalledWith(errorMessage);
         expect(component.searchResults).toEqual([]);
         expect(component.showResults).toBe(false);
         expect(component.isSearching).toBe(false);
-
-        spyConsoleError.mockRestore();
+        expect(component.userSearchService.hasValidContact).toBe(false);
       });
 
       it('should debounce search requests', () => {
@@ -322,7 +320,7 @@ describe('LeadContactPersonFieldComponent', () => {
         };
         mockUserSearchService.selectedUser = mockJohnDoe;
 
-        const mockEvent = { target: { value: '' } };
+        const mockEvent = { target: { value: '' } } as unknown as Event;
         component.onSearchInput(mockEvent);
 
         expect(mockUserSearchService.searchQuery).toBe('');
@@ -337,7 +335,7 @@ describe('LeadContactPersonFieldComponent', () => {
       });
 
       it('should mark contact as invalid when typing without selecting user', () => {
-        const mockEvent = { target: { value: 'john' } };
+        const mockEvent = { target: { value: 'john' } } as unknown as Event;
         component.onSearchInput(mockEvent);
 
         expect(mockUserSearchService.searchQuery).toBe('john');
@@ -349,7 +347,7 @@ describe('LeadContactPersonFieldComponent', () => {
         mockUserSearchService.hasValidContact = false;
         mockUserSearchService.showContactError = true;
 
-        const mockEvent = { target: { value: 'jane' } };
+        const mockEvent = { target: { value: 'jane' } } as unknown as Event;
         component.onSearchInput(mockEvent);
 
         expect(mockUserSearchService.showContactError).toBe(false);
@@ -567,7 +565,67 @@ describe('LeadContactPersonFieldComponent', () => {
       jest.advanceTimersByTime(500);
 
       expect(component.searchResults.length).toBe(1);
-      expect(component.searchResults[0].displayName).toBe('John Doe');
+      expect(component.searchResults[0].display_name).toBe('John Doe');
+    });
+  });
+
+  describe('Auto-select single result by email', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('should auto-select user when query is a valid email and only one result exists', () => {
+      const spySelectUser = jest.spyOn(component, 'selectUser');
+
+      component.body = {
+        lead_contact_person: null,
+        lead_contact_person_data: null
+      };
+
+      const email = 'john.doe@cgiar.org';
+      const mockEvent = { target: { value: email } } as unknown as Event;
+
+      component.onSearchInput(mockEvent);
+
+      jest.advanceTimersByTime(500);
+
+      fixture.detectChanges();
+
+      jest.advanceTimersByTime(500);
+
+      expect(spySelectUser).toHaveBeenCalledTimes(1);
+      expect(spySelectUser).toHaveBeenCalledWith(expect.objectContaining({ mail: email }));
+      expect(mockUserSearchService.selectedUser).toEqual(expect.objectContaining({ mail: email }));
+    });
+
+    it('should not auto-select when more than one result exists', () => {
+      const spySelectUser = jest.spyOn(component, 'selectUser');
+
+      const multiResponse = {
+        message: 'Users found successfully',
+        response: [mockJohnDoe, mockJaneSmith],
+        status: 200
+      };
+
+      jest.spyOn(component.resultsApiService, 'GET_adUsersSearch').mockReturnValue(of(multiResponse));
+
+      const email = 'john.doe@cgiar.org';
+      const mockEvent = { target: { value: email } } as unknown as Event;
+
+      component.onSearchInput(mockEvent);
+
+      jest.advanceTimersByTime(500);
+
+      fixture.detectChanges();
+
+      jest.advanceTimersByTime(500);
+
+      expect(spySelectUser).not.toHaveBeenCalled();
+      expect(mockUserSearchService.selectedUser).toBeNull();
     });
   });
 
@@ -639,7 +697,7 @@ describe('LeadContactPersonFieldComponent', () => {
         component.isContactLocked = true;
         const spySearchSubject = jest.spyOn(component['searchSubject'], 'next');
 
-        const mockEvent = { target: { value: 'john' } };
+        const mockEvent = { target: { value: 'john' } } as unknown as Event;
         component.onSearchInput(mockEvent);
 
         expect(spySearchSubject).not.toHaveBeenCalled();
@@ -650,7 +708,7 @@ describe('LeadContactPersonFieldComponent', () => {
         component.isContactLocked = false;
         const spySearchSubject = jest.spyOn(component['searchSubject'], 'next');
 
-        const mockEvent = { target: { value: 'john' } };
+        const mockEvent = { target: { value: 'john' } } as unknown as Event;
         component.onSearchInput(mockEvent);
 
         expect(mockUserSearchService.searchQuery).toBe('john');

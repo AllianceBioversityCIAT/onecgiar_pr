@@ -85,7 +85,10 @@ export class AowHloCreateModalComponent implements OnInit {
     if (!this.entityAowService.currentResultToReport()?.indicators?.[0]?.result_type_id) {
       this.resultTypes.set(
         this.resultsListFilterSE.filters.resultLevel?.find(
-          item => item.id === this.entityAowService.currentResultToReport()?.indicators?.[0]?.result_level_id
+          item =>
+            item.id ===
+            (this.entityAowService.currentResultToReport()?.indicators?.[0]?.result_level_id ||
+              this.entityAowService.currentResultToReport()?.result_level_id)
         )?.options
       );
     }
@@ -203,20 +206,22 @@ export class AowHloCreateModalComponent implements OnInit {
 
     const body = {
       result: {
-        result_type_id: this.entityAowService.currentResultToReport().indicators[0].result_type_id ?? this.createResultBody().result_type_id,
-        result_level_id: this.entityAowService.currentResultToReport().indicators[0].result_level_id,
+        result_type_id: this.entityAowService.currentResultToReport()?.indicators?.[0]?.result_type_id ?? this.createResultBody().result_type_id,
+        result_level_id:
+          this.entityAowService.currentResultToReport()?.indicators?.[0]?.result_level_id ||
+          this.entityAowService.currentResultToReport().result_level_id,
         initiative_id: this.entityAowService.entityDetails().id,
         result_name: this.createResultBody().result_name,
         handler: this.createResultBody().handler
       },
-      number_target: this.entityAowService.currentResultToReport().indicators[0].number_target,
-      target_date: this.entityAowService.currentResultToReport().indicators[0].target_date,
+      number_target: this.entityAowService.currentResultToReport()?.indicators?.[0]?.number_target,
+      target_date: this.entityAowService.currentResultToReport()?.indicators?.[0]?.target_date,
       contributing_indicator: this.createResultBody().contribution_to_indicator_target,
       contributing_center: this.createResultBody().contributing_center,
       knowledge_product: this.mqapJson(),
       toc_result_id: this.entityAowService.currentResultToReport().toc_result_id,
       toc_progressive_narrative: this.createResultBody().toc_progressive_narrative,
-      indicators: this.entityAowService.currentResultToReport().indicators[0],
+      indicators: this.entityAowService.currentResultToReport()?.indicators?.[0] || [],
       contributors_result_toc_result: this.entityAowService.selectedEntities(),
       bilateral_project: this.entityAowService.selectedW3BilateralProjects()
     };
