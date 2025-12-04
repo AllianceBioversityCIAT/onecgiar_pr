@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { HttpStatus } from '@nestjs/common';
+import { BadRequestException, HttpStatus } from '@nestjs/common';
 import { UserService } from './user.service';
 import { User } from './entities/user.entity';
 import { BcryptPasswordEncoder } from '../../utils/bcrypt.util';
@@ -872,6 +872,99 @@ describe('UserService', () => {
       expect(payload?.emailBody?.subject).toBe(
         'PRMS - Your Account Details Have Been Updated',
       );
+    });
+  });
+
+  describe('updateUserStatus (simplified)', () => {
+    const mockUser = {
+      id: 1,
+      email: 'user@example.com',
+      active: false,
+      is_cgiar: true,
+    } as User;
+
+    const mockToken = { id: 99 } as TokenDto;
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('should activate an inactive user and send notification email', async () => {
+      const dto = { activate: true } as any;
+
+      jest
+        .spyOn(service as any, 'findUserWithRelations')
+        .mockResolvedValue({ ...mockUser });
+      jest
+        .spyOn(userRepository, 'findOne')
+        .mockResolvedValue({ id: mockToken.id } as User);
+      jest
+        .spyOn(userRepository, 'save')
+        .mockResolvedValue({ ...mockUser, active: true });
+      jest
+        .spyOn(service as any, 'sendUserStatusChangedEmail')
+        .mockResolvedValue(undefined);
+
+      const result = await service.updateUserStatus(
+        mockUser.email,
+        dto,
+        mockToken,
+      );
+
+      expect(result).toEqual({
+        response: { id: mockUser.id, email: mockUser.email },
+        message: 'User activated successfully',
+        status: HttpStatus.OK,
+      });
+
+      expect(userRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ active: true }),
+      );
+      expect(service['sendUserStatusChangedEmail']).toHaveBeenCalled();
+    });
+
+    it('should deactivate a user and send notification email', async () => {
+      const dto = { activate: false } as any;
+      const activeUser = { ...mockUser, active: true };
+
+      jest
+        .spyOn(service as any, 'findUserWithRelations')
+        .mockResolvedValue(activeUser);
+      jest
+        .spyOn(userRepository, 'findOne')
+        .mockResolvedValue({ id: mockToken.id } as User);
+      jest.spyOn(service as any, 'deactivateUserCompletely').mockResolvedValue({
+        response: { id: activeUser.id, email: activeUser.email },
+        message: 'User deactivated successfully',
+        status: HttpStatus.OK,
+      });
+      jest
+        .spyOn(service as any, 'sendUserStatusChangedEmail')
+        .mockResolvedValue(undefined);
+
+      const result = await service.updateUserStatus(
+        activeUser.email,
+        dto,
+        mockToken,
+      );
+
+      expect(result).toEqual({
+        response: { id: activeUser.id, email: activeUser.email },
+        message: 'User deactivated successfully',
+        status: HttpStatus.OK,
+      });
+
+      expect(service['deactivateUserCompletely']).toHaveBeenCalledWith(
+        activeUser,
+        { id: mockToken.id },
+      );
+      expect(service['sendUserStatusChangedEmail']).toHaveBeenCalled();
+    });
+
+    it('should throw error if email is empty', async () => {
+      await expect(
+        service.updateUserStatus('', { activate: true } as any, mockToken),
+      ).rejects.toThrow(new BadRequestException('Invalid or missing email'));
     });
   });
 

@@ -24,6 +24,7 @@ import { EvidencesModule } from '../../results/evidences/evidences.module';
 import { SharePointModule } from '../../../shared/services/share-point/share-point.module';
 import { EvidencesService } from '../../results/evidences/evidences.service';
 import { VersioningModule } from '../../versioning/versioning.module';
+import { ResultsByProjectsRepository } from '../../results/results_by_projects/results_by_projects.repository';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { VersioningModule } from '../../versioning/versioning.module';
     InnoDevService,
     ResultsPolicyChangesRepository,
     EvidencesService,
+    ResultsByProjectsRepository,
   ],
 })
 export class InnovationDevModule {}
