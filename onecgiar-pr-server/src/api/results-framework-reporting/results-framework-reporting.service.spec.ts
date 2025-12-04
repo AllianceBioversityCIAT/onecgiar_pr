@@ -409,6 +409,10 @@ describe('ResultsFrameworkReportingService', () => {
   });
 
   describe('getDashboardStats', () => {
+    beforeEach(() => {
+      mockYearRepository.findOne.mockResolvedValue({ year: 2025 });
+    });
+
     it('should aggregate dashboard stats by status, level, and type', async () => {
       mockClarisaInitiativesRepository.findOne.mockResolvedValue({
         id: 7,
@@ -461,7 +465,14 @@ describe('ResultsFrameworkReportingService', () => {
         where: { official_code: 'SP01', active: true },
         select: ['id', 'official_code', 'name'],
       });
-      expect(mockResultRepository.query).toHaveBeenCalled();
+      expect(mockYearRepository.findOne).toHaveBeenCalledWith({
+        where: { active: true },
+        select: ['year'],
+      });
+      expect(mockResultRepository.query).toHaveBeenCalledWith(
+        expect.any(String),
+        [7, 2025],
+      );
 
       expect(result).toEqual({
         response: {
@@ -792,6 +803,7 @@ describe('ResultsFrameworkReportingService', () => {
 
   describe('getProgramIndicatorContributionSummary', () => {
     beforeEach(() => {
+      mockYearRepository.findOne.mockResolvedValue({ year: 2025 });
       mockResultRepository.getIndicatorContributionSummaryByProgram.mockReset();
       mockResultRepository.getActiveResultTypes.mockReset();
     });
@@ -835,9 +847,13 @@ describe('ResultsFrameworkReportingService', () => {
       const result: any =
         await service.getProgramIndicatorContributionSummary('sp05');
 
+      expect(mockYearRepository.findOne).toHaveBeenCalledWith({
+        where: { active: true },
+        select: ['year'],
+      });
       expect(
         mockResultRepository.getIndicatorContributionSummaryByProgram,
-      ).toHaveBeenCalledWith(15);
+      ).toHaveBeenCalledWith(15, 2025);
       expect(mockResultRepository.getActiveResultTypes).toHaveBeenCalled();
       expect(result.status).toBe(200);
       expect(result.response.program).toEqual({
