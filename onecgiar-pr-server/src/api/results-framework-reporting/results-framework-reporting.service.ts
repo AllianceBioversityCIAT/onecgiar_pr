@@ -992,9 +992,33 @@ export class ResultsFrameworkReportingService {
         };
       }
 
+      const activeYear = await this._yearRepository.findOne({
+        where: { active: true },
+        select: ['year'],
+      });
+
+      if (!activeYear) {
+        throw {
+          response: {},
+          message: 'No active reporting year was found.',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const activeYearValue = Number(activeYear.year);
+
+      if (!Number.isFinite(activeYearValue) || activeYearValue < 0) {
+        throw {
+          response: {},
+          message: 'The active reporting year configured is invalid.',
+          status: HttpStatus.INTERNAL_SERVER_ERROR,
+        };
+      }
+
       const [rawSummary, activeResultTypes] = await Promise.all([
         this._resultRepository.getIndicatorContributionSummaryByProgram(
           initiative.id,
+          activeYearValue,
         ),
         this._resultRepository.getActiveResultTypes(),
       ]);
@@ -1371,6 +1395,29 @@ export class ResultsFrameworkReportingService {
         };
       }
 
+      const activeYear = await this._yearRepository.findOne({
+        where: { active: true },
+        select: ['year'],
+      });
+
+      if (!activeYear) {
+        throw {
+          response: {},
+          message: 'No active reporting year was found.',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const activeYearValue = Number(activeYear.year);
+
+      if (!Number.isFinite(activeYearValue) || activeYearValue < 0) {
+        throw {
+          response: {},
+          message: 'The active reporting year configured is invalid.',
+          status: HttpStatus.INTERNAL_SERVER_ERROR,
+        };
+      }
+
       const rawDashboardData = await this._resultRepository.query(
         `
           SELECT
@@ -1383,17 +1430,20 @@ export class ResultsFrameworkReportingService {
             ON rbi.result_id = r.id
             AND rbi.inititiative_id = ?
             AND rbi.is_active = 1
+          INNER JOIN \`version\` v
+            ON v.id = r.version_id
           WHERE
             r.is_active = 1
             AND r.status_id IN (1, 2, 3)
             AND r.result_level_id IN (3, 4)
             AND r.result_type_id IN (1, 2, 4, 5, 6, 7, 8, 10)
+            AND COALESCE(r.reported_year_id, v.phase_year) = ?
           GROUP BY
             r.status_id,
             r.result_level_id,
             r.result_type_id;
         `,
-        [initiative.id],
+        [initiative.id, activeYearValue],
       );
 
       const statusConfig = new Map([
