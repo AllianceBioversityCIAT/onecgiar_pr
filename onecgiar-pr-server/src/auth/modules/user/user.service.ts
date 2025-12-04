@@ -1111,7 +1111,7 @@ export class UserService {
           status: HttpStatus.OK,
         };
       }
-      
+
       const deactivationResult = await this.deactivateUserCompletely(
         user,
         currentUser,
@@ -1192,7 +1192,7 @@ export class UserService {
         select: { value: true },
       });
 
-    await this._emailNotificationManagementService.sendEmail({
+    this._emailNotificationManagementService.sendEmail({
       from: {
         email: process.env.EMAIL_SENDER,
         name: 'PRMS Reporting Tool -',
@@ -1235,7 +1235,11 @@ export class UserService {
 
     const user = await this._userRepository.findOne({
       where: { email: cleanEmail },
-      relations: ['obj_role_by_user', 'obj_role_by_user.obj_role', 'obj_role_by_user.obj_initiative',],
+      relations: [
+        'obj_role_by_user',
+        'obj_role_by_user.obj_role',
+        'obj_role_by_user.obj_initiative',
+      ],
     });
 
     if (!user?.email) {

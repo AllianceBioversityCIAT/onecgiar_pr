@@ -31,8 +31,8 @@
       ">
       @if (
         this.api.dataControlSE?.currentResult?.result_type_id != 6 &&
-        !this.api.dataControlSE?.isProductionSignal() &&
-        this.dataControlSE?.currentResult?.status_id == 1
+        this.dataControlSE?.currentResult?.status_id == 1 &&
+        !this.api.dataControlSE?.isProductionSignal()
       ) {
         <div
           style="width: 100%"
