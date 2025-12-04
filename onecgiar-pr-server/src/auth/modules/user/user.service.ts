@@ -1192,7 +1192,7 @@ export class UserService {
         select: { value: true },
       });
 
-    await this._emailNotificationManagementService.sendEmail({
+    this._emailNotificationManagementService.sendEmail({
       from: {
         email: process.env.EMAIL_SENDER,
         name: 'PRMS Reporting Tool -',
