@@ -2177,17 +2177,6 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         AND v.is_active = 1
         AND v.status = 1
         AND v.app_module_id = 1
-      INNER JOIN results_toc_result rtr
-        ON rtr.results_id = r.id
-        AND (rtr.is_active = 1 OR r.is_active = 1)
-        AND (rtr.initiative_id IS NULL OR rtr.initiative_id = rbi.inititiative_id)
-      INNER JOIN results_toc_result_indicators rtri
-        ON rtri.results_toc_results_id = rtr.result_toc_result_id
-        AND rtri.is_active = 1
-        AND rtri.is_not_aplicable = 0
-      LEFT JOIN result_indicators_targets rit
-        ON rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
-        AND rit.is_active = 1
       INNER JOIN result_type rt
         ON rt.id = r.result_type_id
       WHERE
@@ -2195,7 +2184,6 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         AND r.status_id IN (1, 2, 3)
         AND r.result_level_id IN (3, 4)
         AND r.result_type_id IN (1, 2, 4, 5, 6, 7, 8, 10)
-        AND rit.contributing_indicator IS NOT NULL
       GROUP BY
         r.result_type_id,
         rt.name,
