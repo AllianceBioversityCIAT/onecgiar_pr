@@ -366,56 +366,61 @@ export class ResultsFrameworkReportingService {
         };
       }
 
-      const enrichTocResultsWithTargets = async (tocResultsList: any[]) => {
-        for (const tocResult of tocResultsList) {
-          if (tocResult.indicators && Array.isArray(tocResult.indicators)) {
-            for (const indicator of tocResult.indicators) {
-              if (indicator.indicator_id) {
-                const targetsWithCenters =
-                  await this._tocResultsRepository.findTargetsWithCentersByIndicatorId(
-                    indicator.indicator_id,
-                  );
-
-                const centersMap = new Map<
-                  number,
-                  {
-                    center_id: number;
-                    center_acronym: string;
-                    center_name: string;
-                  }
-                >();
-
-                const targets = targetsWithCenters.map((target) => {
-                  target.centers.forEach((center) => {
-                    if (!centersMap.has(center.center_id)) {
-                      centersMap.set(center.center_id, {
-                        center_id: center.center_id,
-                        center_acronym: center.center_acronym,
-                        center_name: center.center_name,
-                      });
-                    }
-                  });
-
-                  return {
-                    toc_indicator_target_id: target.toc_indicator_target_id,
-                    year: target.year,
-                    target_value: target.target_value,
-                    number_target: target.number_target,
-                  };
-                });
-
-                if (centersMap.size > 0) {
-                  indicator.targets_by_center = {
-                    targets,
-                    centers: Array.from(centersMap.values()),
-                  };
-                } else {
-                  indicator.targets_by_center = {};
-                }
-              }
-            }
-          }
+      const enrichIndicatorTargets = async (indicator: any) => {
+        if (!indicator?.indicator_id) {
+          return;
         }
+
+        const targetsWithCenters =
+          await this._tocResultsRepository.findTargetsWithCentersByIndicatorId(
+            indicator.indicator_id,
+          );
+
+        const centersMap = new Map<
+          number,
+          { center_id: number; center_acronym: string; center_name: string }
+        >();
+
+        const targets = targetsWithCenters.map((target) => {
+          target.centers.forEach((center) => {
+            if (!centersMap.has(center.center_id)) {
+              centersMap.set(center.center_id, {
+                center_id: center.center_id,
+                center_acronym: center.center_acronym,
+                center_name: center.center_name,
+              });
+            }
+          });
+
+          return {
+            toc_indicator_target_id: target.toc_indicator_target_id,
+            year: target.year,
+            target_value: target.target_value,
+            number_target: target.number_target,
+          };
+        });
+
+        indicator.targets_by_center = centersMap.size
+          ? { targets, centers: Array.from(centersMap.values()) }
+          : {};
+      };
+
+      const enrichTocResult = async (tocResult: any) => {
+        if (!Array.isArray(tocResult?.indicators)) {
+          return;
+        }
+
+        await Promise.all(
+          tocResult.indicators.map((indicator) =>
+            enrichIndicatorTargets(indicator),
+          ),
+        );
+      };
+
+      const enrichTocResultsWithTargets = async (tocResultsList: any[]) => {
+        await Promise.all(
+          tocResultsList.map((tocResult) => enrichTocResult(tocResult)),
+        );
       };
 
       await Promise.all([
