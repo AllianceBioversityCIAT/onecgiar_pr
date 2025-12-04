@@ -1675,6 +1675,11 @@ export class ResultsTocResultRepository
               const resolvedNumberTarget =
                 canonical?.number_target ??
                 this.toNumberOrNull(target.number_target);
+
+              if (resolvedNumberTarget === null) {
+                continue;
+              }
+
               const resolvedTargetDate =
                 phaseYear ??
                 canonical?.target_date ??
@@ -1756,6 +1761,11 @@ export class ResultsTocResultRepository
               const resolvedNumberTarget =
                 canonical?.number_target ??
                 this.toNumberOrNull(target.number_target);
+
+              if (resolvedNumberTarget === null) {
+                continue;
+              }
+
               const resolvedTargetDate =
                 phaseYear ??
                 canonical?.target_date ??
