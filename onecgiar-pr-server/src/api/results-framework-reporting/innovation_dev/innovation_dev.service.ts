@@ -518,21 +518,22 @@ export class InnovationDevService {
 
       for (const i of inv) {
         // ========  result_version Reporting P25 ========
+        console.log("imprimiendo i:", i);
         const rbp = await this._resultByProjectRepository.findOne({
           where: {
             result_id: resultId,
             is_active: true,
-            project_id: i.result_project_id,
+            project_id: i.obj_result_project.project_id,
           },
         });
 
         if (!rbp) {
           this.logger.error(
-            `[saveBillateralInvestment] ResultByProject not found for resultId: ${resultId}, project_id: ${i.result_project_id}`,
+            `[saveBillateralInvestment] ResultByProject not found for resultId: ${resultId}, project_id: ${i.obj_result_project.project_id}`,
           );
           throw {
             response: {},
-            message: `ResultByProject not found for resultId: ${resultId}, project_id: ${i.result_project_id}`,
+            message: `ResultByProject not found for resultId: ${resultId}, project_id: ${i.obj_result_project.project_id}`,
             status: HttpStatus.NOT_FOUND,
           };
         }
