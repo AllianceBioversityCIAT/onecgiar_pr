@@ -2,7 +2,10 @@
   <div class="report-result-content_left">
     <div class="report-result-content_left_header">
       <span class="report-result-title">Report result</span>
-      <span class="report-result-description">Make sure the result you want to report isn't already in the PRMS Reporting Tool. If it exists, simply map it to your Science Program/Accelerator instead of creating a new one.</span>
+      <span class="report-result-description"
+        >Make sure the result you want to report isn't already in the PRMS Reporting Tool. If it exists, simply map it to your Science
+        Program/Accelerator instead of creating a new one.</span
+      >
     </div>
     <div class="report-result-content_left_content">
       <app-pr-select
@@ -41,13 +44,20 @@
             *ngIf="isKnowledgeProduct"
             [isStatic]="true"
             placeholder="Handle..."
-            label="CGSpace link"
+            label="Repository link/handle"
             type="text"
             [(ngModel)]="this.resultLevelSE.resultBody.handler">
           </app-pr-input>
-          <button type="button" (click)="GET_mqapValidation()" class="sync_button" *ngIf="isKnowledgeProduct" [ngClass]="{ globalDisabled: validating }" [disabled]="validating">
+          <button
+            type="button"
+            (click)="GET_mqapValidation()"
+            class="sync_button"
+            *ngIf="isKnowledgeProduct"
+            [ngClass]="{ globalDisabled: validating }"
+            [disabled]="validating">
             <app-pr-button
               padding="medium"
+              [verticalMargin]="1"
               [text]="validating ? 'Fetching metadata from CGSpace' : 'Sync'"
               icon="sync"
               [rotating]="validating"></app-pr-button>
@@ -62,13 +72,19 @@
           [isStatic]="true"
           *ngIf="this.resultLevelSE.resultBody.result_type_id"
           [placeholder]="resultTypeNamePlaceholder + ''"
-          label="Title"
+          [label]="isKnowledgeProduct ? 'Title retrieved from the repository' : 'Title of result'"
           type="text"
           [maxWords]="30"
           [required]="resultLevelSE.resultBody.result_type_id != 6"
           [description]="
             isKnowledgeProduct
-              ? 'Title retrieved from CGSpace'
+              ? this.resultLevelSE.resultBody.handler?.includes('20.500.11766')
+                ? 'Title retrieved from MELSpace'
+                : this.resultLevelSE.resultBody.handler?.includes('20.500.12348')
+                  ? 'Title retrieved from WorldFish DSpace'
+                  : this.resultLevelSE.resultBody.handler
+                    ? 'Title retrieved from CGSpace'
+                    : 'Title retrieved from the repository'
               : 'To search for results that have already been reported, enter key words into the title box below. If your result has not already been reported, you can add it here.'
           "
           [(ngModel)]="this.resultLevelSE.resultBody.result_name"
@@ -77,10 +93,13 @@
       </div>
 
       <div class="report-result-content_left_content_actions">
-        <app-save-button [editable]="true" (clickSave)="onSaveSection()" [disabled]="!this.resultLevelSE.resultBody.initiative_id" text="Save and continue"> </app-save-button>
+        <app-save-button
+          [editable]="true"
+          (clickSave)="onSaveSection()"
+          [disabled]="!this.resultLevelSE.resultBody.initiative_id"
+          text="Save and continue">
+        </app-save-button>
       </div>
     </div>
   </div>
- 
 </div>
-
