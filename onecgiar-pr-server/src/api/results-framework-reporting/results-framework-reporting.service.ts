@@ -378,56 +378,61 @@ export class ResultsFrameworkReportingService {
         };
       }
 
-      const enrichTocResultsWithTargets = async (tocResultsList: any[]) => {
-        for (const tocResult of tocResultsList) {
-          if (tocResult.indicators && Array.isArray(tocResult.indicators)) {
-            for (const indicator of tocResult.indicators) {
-              if (indicator.indicator_id) {
-                const targetsWithCenters =
-                  await this._tocResultsRepository.findTargetsWithCentersByIndicatorId(
-                    indicator.indicator_id,
-                  );
-
-                const centersMap = new Map<
-                  number,
-                  {
-                    center_id: number;
-                    center_acronym: string;
-                    center_name: string;
-                  }
-                >();
-
-                const targets = targetsWithCenters.map((target) => {
-                  target.centers.forEach((center) => {
-                    if (!centersMap.has(center.center_id)) {
-                      centersMap.set(center.center_id, {
-                        center_id: center.center_id,
-                        center_acronym: center.center_acronym,
-                        center_name: center.center_name,
-                      });
-                    }
-                  });
-
-                  return {
-                    toc_indicator_target_id: target.toc_indicator_target_id,
-                    year: target.year,
-                    target_value: target.target_value,
-                    number_target: target.number_target,
-                  };
-                });
-
-                if (centersMap.size > 0) {
-                  indicator.targets_by_center = {
-                    targets,
-                    centers: Array.from(centersMap.values()),
-                  };
-                } else {
-                  indicator.targets_by_center = {};
-                }
-              }
-            }
-          }
+      const enrichIndicatorTargets = async (indicator: any) => {
+        if (!indicator?.indicator_id) {
+          return;
         }
+
+        const targetsWithCenters =
+          await this._tocResultsRepository.findTargetsWithCentersByIndicatorId(
+            indicator.indicator_id,
+          );
+
+        const centersMap = new Map<
+          number,
+          { center_id: number; center_acronym: string; center_name: string }
+        >();
+
+        const targets = targetsWithCenters.map((target) => {
+          target.centers.forEach((center) => {
+            if (!centersMap.has(center.center_id)) {
+              centersMap.set(center.center_id, {
+                center_id: center.center_id,
+                center_acronym: center.center_acronym,
+                center_name: center.center_name,
+              });
+            }
+          });
+
+          return {
+            toc_indicator_target_id: target.toc_indicator_target_id,
+            year: target.year,
+            target_value: target.target_value,
+            number_target: target.number_target,
+          };
+        });
+
+        indicator.targets_by_center = centersMap.size
+          ? { targets, centers: Array.from(centersMap.values()) }
+          : {};
+      };
+
+      const enrichTocResult = async (tocResult: any) => {
+        if (!Array.isArray(tocResult?.indicators)) {
+          return;
+        }
+
+        await Promise.all(
+          tocResult.indicators.map((indicator) =>
+            enrichIndicatorTargets(indicator),
+          ),
+        );
+      };
+
+      const enrichTocResultsWithTargets = async (tocResultsList: any[]) => {
+        await Promise.all(
+          tocResultsList.map((tocResult) => enrichTocResult(tocResult)),
+        );
       };
 
       await Promise.all([
@@ -980,52 +985,8 @@ export class ResultsFrameworkReportingService {
 
   async getProgramIndicatorContributionSummary(program?: string) {
     try {
-      const normalizedProgram = program?.trim().toUpperCase();
-
-      if (!normalizedProgram) {
-        throw {
-          response: {},
-          message: 'The program identifier is required in the query params.',
-          status: HttpStatus.BAD_REQUEST,
-        };
-      }
-
-      const initiative = await this._clarisaInitiativesRepository.findOne({
-        where: { official_code: normalizedProgram, active: true },
-        select: ['id', 'official_code', 'name'],
-      });
-
-      if (!initiative) {
-        throw {
-          response: {},
-          message:
-            'No initiative was found with the provided program identifier.',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
-
-      const activeYear = await this._yearRepository.findOne({
-        where: { active: true },
-        select: ['year'],
-      });
-
-      if (!activeYear) {
-        throw {
-          response: {},
-          message: 'No active reporting year was found.',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
-
-      const activeYearValue = Number(activeYear.year);
-
-      if (!Number.isFinite(activeYearValue) || activeYearValue < 0) {
-        throw {
-          response: {},
-          message: 'The active reporting year configured is invalid.',
-          status: HttpStatus.INTERNAL_SERVER_ERROR,
-        };
-      }
+      const { initiative, activeYearValue } =
+        await this.resolveInitiativeAndYear(program ?? '');
 
       const [rawSummary, activeResultTypes] = await Promise.all([
         this._resultRepository.getIndicatorContributionSummaryByProgram(
@@ -1468,54 +1429,63 @@ export class ResultsFrameworkReportingService {
     }
   }
 
+  private buildHttpError(status: number, message: string) {
+    const error: any = new Error(message);
+    error.response = {};
+    error.status = status;
+    return error;
+  }
+
+  private async resolveInitiativeAndYear(programId: string) {
+    const normalizedProgram = programId?.trim().toUpperCase();
+
+    if (!normalizedProgram) {
+      throw this.buildHttpError(
+        HttpStatus.BAD_REQUEST,
+        'The program identifier is required in the query params.',
+      );
+    }
+
+    const initiative = await this._clarisaInitiativesRepository.findOne({
+      where: { official_code: normalizedProgram, active: true },
+      select: ['id', 'official_code', 'name'],
+    });
+
+    if (!initiative) {
+      throw this.buildHttpError(
+        HttpStatus.NOT_FOUND,
+        'No initiative was found with the provided program identifier.',
+      );
+    }
+
+    const activeYear = await this._yearRepository.findOne({
+      where: { active: true },
+      select: ['year'],
+    });
+
+    if (!activeYear) {
+      throw this.buildHttpError(
+        HttpStatus.NOT_FOUND,
+        'No active reporting year was found.',
+      );
+    }
+
+    const activeYearValue = Number(activeYear.year);
+
+    if (!Number.isFinite(activeYearValue) || activeYearValue < 0) {
+      throw this.buildHttpError(
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        'The active reporting year configured is invalid.',
+      );
+    }
+
+    return { initiative, activeYearValue, normalizedProgram };
+  }
+
   async getDashboardStats(programId: string) {
     try {
-      const normalizedProgram = programId?.trim().toUpperCase();
-
-      if (!normalizedProgram) {
-        throw {
-          response: {},
-          message: 'The program identifier is required in the query params.',
-          status: HttpStatus.BAD_REQUEST,
-        };
-      }
-
-      const initiative = await this._clarisaInitiativesRepository.findOne({
-        where: { official_code: normalizedProgram, active: true },
-        select: ['id', 'official_code', 'name'],
-      });
-
-      if (!initiative) {
-        throw {
-          response: {},
-          message:
-            'No initiative was found with the provided program identifier.',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
-
-      const activeYear = await this._yearRepository.findOne({
-        where: { active: true },
-        select: ['year'],
-      });
-
-      if (!activeYear) {
-        throw {
-          response: {},
-          message: 'No active reporting year was found.',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
-
-      const activeYearValue = Number(activeYear.year);
-
-      if (!Number.isFinite(activeYearValue) || activeYearValue < 0) {
-        throw {
-          response: {},
-          message: 'The active reporting year configured is invalid.',
-          status: HttpStatus.INTERNAL_SERVER_ERROR,
-        };
-      }
+      const { initiative, activeYearValue } =
+        await this.resolveInitiativeAndYear(programId);
 
       const rawDashboardData = await this._resultRepository.query(
         `

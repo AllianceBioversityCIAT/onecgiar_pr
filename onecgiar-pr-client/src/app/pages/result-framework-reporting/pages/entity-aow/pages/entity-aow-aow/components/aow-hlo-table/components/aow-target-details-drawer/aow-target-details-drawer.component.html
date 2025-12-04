@@ -40,14 +40,14 @@
     <p-table [value]="tableData()" [tableStyle]="{ marginTop: '24px' }" styleClass="target-details-table">
       <ng-template #header>
         <tr>
-          <th class="center-column">
+          <th scope="col" class="center-column">
             <div class="header-content">
               <span>Center</span>
               <i class="pi pi-sort-alt"></i>
             </div>
           </th>
           @for (year of years(); track year) {
-            <th class="year-column">{{ year }}</th>
+            <th scope="col" class="year-column">{{ year }}</th>
           }
         </tr>
       </ng-template>
