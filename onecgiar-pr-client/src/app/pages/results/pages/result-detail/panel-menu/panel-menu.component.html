@@ -34,12 +34,21 @@
         (validateMember(this.api.dataControlSE?.myInitiativesList) !== 6 && this.dataControlSE?.currentResult?.inQA) ||
         this.api.rolesSE.isAdmin
       ">
-      @if (this.api.dataControlSE?.currentResult?.result_type_id != 6 && !this.api.dataControlSE?.isProductionSignal()) {
+      @if (
+        this.api.dataControlSE?.currentResult?.result_type_id != 6 &&
+        this.dataControlSE?.currentResult?.status_id == 1 &&
+        !this.api.dataControlSE?.isProductionSignal()
+      ) {
         <div
           class="ai-review-button"
           [ngClass]="{
             loading: aiReviewSE.aiReviewButtonState === 'loading',
-            completed: aiReviewSE.aiReviewButtonState === 'completed'
+            completed: aiReviewSE.aiReviewButtonState === 'completed',
+            globalDisabled:
+              !this.greenChecksSE.submit ||
+              (this.dataControlSE?.currentResult?.inQA &&
+                this.api.globalVariablesSE.get?.in_qa &&
+                this.api.dataControlSE?.currentResult?.status_id == 1)
           }"
           (click)="aiReviewSE.onAIReviewClick()">
           <img src="assets/icons/stars.png" alt="ai-review" />
@@ -66,7 +75,11 @@
       </div>
 
       <div class="button_access_information pr-body-3" *ngIf="this.dataControlSE?.currentResult?.status_id == 1">
-        This button will become available once all sections are completed.
+        @if (this.api.dataControlSE?.currentResult?.result_type_id != 6) {
+          These buttons will become available once all sections are completed.
+        } @else {
+          This button will become available once all sections are completed.
+        }
       </div>
 
       <div class="button_access_information pr-body-3" *ngIf="this.dataControlSE?.currentResult?.status_id == 2">
