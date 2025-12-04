@@ -378,6 +378,68 @@ export class ResultsFrameworkReportingService {
         };
       }
 
+      const enrichIndicatorTargets = async (indicator: any) => {
+        if (!indicator?.indicator_id) {
+          return;
+        }
+
+        const targetsWithCenters =
+          await this._tocResultsRepository.findTargetsWithCentersByIndicatorId(
+            indicator.indicator_id,
+          );
+
+        const centersMap = new Map<
+          number,
+          { center_id: number; center_acronym: string; center_name: string }
+        >();
+
+        const targets = targetsWithCenters.map((target) => {
+          target.centers.forEach((center) => {
+            if (!centersMap.has(center.center_id)) {
+              centersMap.set(center.center_id, {
+                center_id: center.center_id,
+                center_acronym: center.center_acronym,
+                center_name: center.center_name,
+              });
+            }
+          });
+
+          return {
+            toc_indicator_target_id: target.toc_indicator_target_id,
+            year: target.year,
+            target_value: target.target_value,
+            number_target: target.number_target,
+          };
+        });
+
+        indicator.targets_by_center = centersMap.size
+          ? { targets, centers: Array.from(centersMap.values()) }
+          : {};
+      };
+
+      const enrichTocResult = async (tocResult: any) => {
+        if (!Array.isArray(tocResult?.indicators)) {
+          return;
+        }
+
+        await Promise.all(
+          tocResult.indicators.map((indicator) =>
+            enrichIndicatorTargets(indicator),
+          ),
+        );
+      };
+
+      const enrichTocResultsWithTargets = async (tocResultsList: any[]) => {
+        await Promise.all(
+          tocResultsList.map((tocResult) => enrichTocResult(tocResult)),
+        );
+      };
+
+      await Promise.all([
+        enrichTocResultsWithTargets(tocResultsOutcomes),
+        enrichTocResultsWithTargets(tocResultsOutputs),
+      ]);
+
       return {
         response: {
           compositeCode,
@@ -651,15 +713,17 @@ export class ResultsFrameworkReportingService {
 
         primaryTocRecordId = primaryTocRecord.result_toc_result_id;
 
-        await this.upsertTocIndicators(
-          primaryTocRecord.result_toc_result_id,
-          resolvedTocResultId,
-          payload.indicators ?? null,
-          payload.contributing_indicator ?? null,
-          user.id,
-          payload.number_target ?? null,
-          payload.target_date ?? null,
-        );
+        if (payload.indicators) {
+          await this.upsertTocIndicators(
+            primaryTocRecord.result_toc_result_id,
+            resolvedTocResultId,
+            payload.indicators,
+            payload.contributing_indicator ?? null,
+            user.id,
+            payload.number_target ?? null,
+            payload.target_date ?? null,
+          );
+        }
       }
 
       if (payload.contributors_result_toc_result?.length) {
@@ -921,33 +985,13 @@ export class ResultsFrameworkReportingService {
 
   async getProgramIndicatorContributionSummary(program?: string) {
     try {
-      const normalizedProgram = program?.trim().toUpperCase();
-
-      if (!normalizedProgram) {
-        throw {
-          response: {},
-          message: 'The program identifier is required in the query params.',
-          status: HttpStatus.BAD_REQUEST,
-        };
-      }
-
-      const initiative = await this._clarisaInitiativesRepository.findOne({
-        where: { official_code: normalizedProgram, active: true },
-        select: ['id', 'official_code', 'name'],
-      });
-
-      if (!initiative) {
-        throw {
-          response: {},
-          message:
-            'No initiative was found with the provided program identifier.',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
+      const { initiative, activeYearValue } =
+        await this.resolveInitiativeAndYear(program ?? '');
 
       const [rawSummary, activeResultTypes] = await Promise.all([
         this._resultRepository.getIndicatorContributionSummaryByProgram(
           initiative.id,
+          activeYearValue,
         ),
         this._resultRepository.getActiveResultTypes(),
       ]);
@@ -961,7 +1005,7 @@ export class ResultsFrameworkReportingService {
           editing: number;
           qualityAssessed: number;
           submitted: number;
-          others: number;
+          others: number; 
         }
       >();
 
@@ -1223,7 +1267,6 @@ export class ResultsFrameworkReportingService {
         { role_id: number | null; role_name: string | null }
       >();
 
-      // Get user's general application roles (roles 1 or 2 where initiative_id is null)
       let userGeneralRole: number | null = null;
       if (Number.isFinite(userId)) {
         const generalRoles = await this._roleByUserRepository.find({
@@ -1273,7 +1316,6 @@ export class ResultsFrameworkReportingService {
           ? rolesByResult.get(numericResultId)
           : undefined;
 
-        // Use specific role for result, or fallback to general application role
         const finalRoleId = roleInfo?.role_id ?? userGeneralRole;
 
         return {
@@ -1386,32 +1428,63 @@ export class ResultsFrameworkReportingService {
       return null;
     }
   }
+  private buildHttpError(status: number, message: string) {
+    const error: any = new Error(message);
+    error.response = {};
+    error.status = status;
+    return error;
+  }
+
+  private async resolveInitiativeAndYear(programId: string) {
+    const normalizedProgram = programId?.trim().toUpperCase();
+
+    if (!normalizedProgram) {
+      throw this.buildHttpError(
+        HttpStatus.BAD_REQUEST,
+        'The program identifier is required in the query params.',
+      );
+    }
+
+    const initiative = await this._clarisaInitiativesRepository.findOne({
+      where: { official_code: normalizedProgram, active: true },
+      select: ['id', 'official_code', 'name'],
+    });
+
+    if (!initiative) {
+      throw this.buildHttpError(
+        HttpStatus.NOT_FOUND,
+        'No initiative was found with the provided program identifier.',
+      );
+    }
+
+    const activeYear = await this._yearRepository.findOne({
+      where: { active: true },
+      select: ['year'],
+    });
+
+    if (!activeYear) {
+      throw this.buildHttpError(
+        HttpStatus.NOT_FOUND,
+        'No active reporting year was found.',
+      );
+    }
+
+    const activeYearValue = Number(activeYear.year);
+
+    if (!Number.isFinite(activeYearValue) || activeYearValue < 0) {
+      throw this.buildHttpError(
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        'The active reporting year configured is invalid.',
+      );
+    }
+
+    return { initiative, activeYearValue, normalizedProgram };
+  }
 
   async getDashboardStats(programId: string) {
     try {
-      const normalizedProgram = programId?.trim().toUpperCase();
-
-      if (!normalizedProgram) {
-        throw {
-          response: {},
-          message: 'The program identifier is required in the query params.',
-          status: HttpStatus.BAD_REQUEST,
-        };
-      }
-
-      const initiative = await this._clarisaInitiativesRepository.findOne({
-        where: { official_code: normalizedProgram, active: true },
-        select: ['id', 'official_code', 'name'],
-      });
-
-      if (!initiative) {
-        throw {
-          response: {},
-          message:
-            'No initiative was found with the provided program identifier.',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
+      const { initiative, activeYearValue } =
+        await this.resolveInitiativeAndYear(programId);
 
       const rawDashboardData = await this._resultRepository.query(
         `
@@ -1425,17 +1498,20 @@ export class ResultsFrameworkReportingService {
             ON rbi.result_id = r.id
             AND rbi.inititiative_id = ?
             AND rbi.is_active = 1
+          INNER JOIN \`version\` v
+            ON v.id = r.version_id
           WHERE
             r.is_active = 1
             AND r.status_id IN (1, 2, 3)
             AND r.result_level_id IN (3, 4)
             AND r.result_type_id IN (1, 2, 4, 5, 6, 7, 8, 10)
+            AND COALESCE(r.reported_year_id, v.phase_year) = ?
           GROUP BY
             r.status_id,
             r.result_level_id,
             r.result_type_id;
         `,
-        [initiative.id],
+        [initiative.id, activeYearValue],
       );
 
       const statusConfig = new Map([
