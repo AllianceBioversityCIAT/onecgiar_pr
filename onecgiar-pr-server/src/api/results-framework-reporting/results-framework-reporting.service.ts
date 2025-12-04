@@ -968,52 +968,8 @@ export class ResultsFrameworkReportingService {
 
   async getProgramIndicatorContributionSummary(program?: string) {
     try {
-      const normalizedProgram = program?.trim().toUpperCase();
-
-      if (!normalizedProgram) {
-        throw {
-          response: {},
-          message: 'The program identifier is required in the query params.',
-          status: HttpStatus.BAD_REQUEST,
-        };
-      }
-
-      const initiative = await this._clarisaInitiativesRepository.findOne({
-        where: { official_code: normalizedProgram, active: true },
-        select: ['id', 'official_code', 'name'],
-      });
-
-      if (!initiative) {
-        throw {
-          response: {},
-          message:
-            'No initiative was found with the provided program identifier.',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
-
-      const activeYear = await this._yearRepository.findOne({
-        where: { active: true },
-        select: ['year'],
-      });
-
-      if (!activeYear) {
-        throw {
-          response: {},
-          message: 'No active reporting year was found.',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
-
-      const activeYearValue = Number(activeYear.year);
-
-      if (!Number.isFinite(activeYearValue) || activeYearValue < 0) {
-        throw {
-          response: {},
-          message: 'The active reporting year configured is invalid.',
-          status: HttpStatus.INTERNAL_SERVER_ERROR,
-        };
-      }
+      const { initiative, activeYearValue } =
+        await this.resolveInitiativeAndYear(program ?? '');
 
       const [rawSummary, activeResultTypes] = await Promise.all([
         this._resultRepository.getIndicatorContributionSummaryByProgram(
@@ -1369,54 +1325,63 @@ export class ResultsFrameworkReportingService {
     }
   }
 
+  private buildHttpError(status: number, message: string) {
+    const error: any = new Error(message);
+    error.response = {};
+    error.status = status;
+    return error;
+  }
+
+  private async resolveInitiativeAndYear(programId: string) {
+    const normalizedProgram = programId?.trim().toUpperCase();
+
+    if (!normalizedProgram) {
+      throw this.buildHttpError(
+        HttpStatus.BAD_REQUEST,
+        'The program identifier is required in the query params.',
+      );
+    }
+
+    const initiative = await this._clarisaInitiativesRepository.findOne({
+      where: { official_code: normalizedProgram, active: true },
+      select: ['id', 'official_code', 'name'],
+    });
+
+    if (!initiative) {
+      throw this.buildHttpError(
+        HttpStatus.NOT_FOUND,
+        'No initiative was found with the provided program identifier.',
+      );
+    }
+
+    const activeYear = await this._yearRepository.findOne({
+      where: { active: true },
+      select: ['year'],
+    });
+
+    if (!activeYear) {
+      throw this.buildHttpError(
+        HttpStatus.NOT_FOUND,
+        'No active reporting year was found.',
+      );
+    }
+
+    const activeYearValue = Number(activeYear.year);
+
+    if (!Number.isFinite(activeYearValue) || activeYearValue < 0) {
+      throw this.buildHttpError(
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        'The active reporting year configured is invalid.',
+      );
+    }
+
+    return { initiative, activeYearValue, normalizedProgram };
+  }
+
   async getDashboardStats(programId: string) {
     try {
-      const normalizedProgram = programId?.trim().toUpperCase();
-
-      if (!normalizedProgram) {
-        throw {
-          response: {},
-          message: 'The program identifier is required in the query params.',
-          status: HttpStatus.BAD_REQUEST,
-        };
-      }
-
-      const initiative = await this._clarisaInitiativesRepository.findOne({
-        where: { official_code: normalizedProgram, active: true },
-        select: ['id', 'official_code', 'name'],
-      });
-
-      if (!initiative) {
-        throw {
-          response: {},
-          message:
-            'No initiative was found with the provided program identifier.',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
-
-      const activeYear = await this._yearRepository.findOne({
-        where: { active: true },
-        select: ['year'],
-      });
-
-      if (!activeYear) {
-        throw {
-          response: {},
-          message: 'No active reporting year was found.',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
-
-      const activeYearValue = Number(activeYear.year);
-
-      if (!Number.isFinite(activeYearValue) || activeYearValue < 0) {
-        throw {
-          response: {},
-          message: 'The active reporting year configured is invalid.',
-          status: HttpStatus.INTERNAL_SERVER_ERROR,
-        };
-      }
+      const { initiative, activeYearValue } =
+        await this.resolveInitiativeAndYear(programId);
 
       const rawDashboardData = await this._resultRepository.query(
         `
