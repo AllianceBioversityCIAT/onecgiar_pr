@@ -44,10 +44,8 @@ export class IpsrGeneralInformationComponent implements OnInit {
   getSectionInformationp25() {}
 
   getSectionInformation() {
-    console.log('first');
     this.api.resultsSE.GETInnovationByResultId(this.ipsrDataControlSE.resultInnovationId, this.fieldsManagerSE.isP25()).subscribe(({ response }) => {
       this.ipsrGeneralInformationBody = response;
-      console.log(response);
     });
   }
 
