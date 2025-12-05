@@ -30,14 +30,10 @@
       </div>
     </div>
     <div class="entity-results-by-indicator-category-card_actions">
-      <button
-        pButton
-        label="Report"
-        type="button"
-        class="p-button-outlined pr-body-3 tab-content_actions_button entity-results-by-indicator-category-card_button-full"
-        icon="pi pi-plus"
-        iconPos="right"
-        (click)="reportRequested.emit()"></button>
+      <button type="button" class="entity-results-by-indicator-category-card_button-full" (click)="reportRequested.emit()">
+        <span>Reportt</span>
+        <i class="material-icons-round">add</i>
+      </button>
       <button type="button" class="entity-results-by-indicator-category-card_button-inline" (click)="reportRequested.emit()">
         <span>Report result</span>
         <i class="material-icons-round">add</i>
