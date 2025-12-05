@@ -32,20 +32,20 @@ export class IpsrGeneralInformationComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    if (this.fieldsManagerSE.isP25()) {
-      this.showAlerts();
-    }
+    // if (this.fieldsManagerSE.isP25()) {
+    //   this.showAlerts();
+    // }
     this.getSectionInformation();
     this.api.dataControlSE.detailSectionTitle('General information');
   }
 
-  getSectionInformationp25() {
-
-  }
+  getSectionInformationp25() {}
 
   getSectionInformation() {
+    console.log('first');
     this.api.resultsSE.GETInnovationByResultId(this.ipsrDataControlSE.resultInnovationId, this.fieldsManagerSE.isP25()).subscribe(({ response }) => {
       this.ipsrGeneralInformationBody = response;
+      console.log(response);
     });
   }
 
@@ -88,15 +88,17 @@ export class IpsrGeneralInformationComponent implements OnInit {
       return;
     }
 
-    this.api.resultsSE.PATCHIpsrGeneralInfo(this.ipsrGeneralInformationBody, this.ipsrDataControlSE.resultInnovationId, this.fieldsManagerSE.isP25()).subscribe({
-      next: resp => {
-        this.getSectionInformation();
-      },
-      error: err => {
-        console.error(err);
-        this.getSectionInformation();
-      }
-    });
+    this.api.resultsSE
+      .PATCHIpsrGeneralInfo(this.ipsrGeneralInformationBody, this.ipsrDataControlSE.resultInnovationId, this.fieldsManagerSE.isP25())
+      .subscribe({
+        next: resp => {
+          this.getSectionInformation();
+        },
+        error: err => {
+          console.error(err);
+          this.getSectionInformation();
+        }
+      });
   }
 
   climateInformation() {
