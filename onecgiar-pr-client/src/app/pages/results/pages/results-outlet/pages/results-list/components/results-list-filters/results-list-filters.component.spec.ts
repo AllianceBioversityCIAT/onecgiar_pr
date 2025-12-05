@@ -147,12 +147,8 @@ describe('ResultsListFiltersComponent', () => {
       }
     ]);
 
-    // submitters show ALL options (not filtered by phases anymore)
-    expect(mockResultsListFilterService.submittersOptions()).toEqual([
-      { id: 0, name: 'All submitters', portfolio_id: 1 },
-      { id: 11, name: 'User A', portfolio_id: 1 },
-      { id: 22, name: 'User B', portfolio_id: 2 }
-    ]);
+    // submittersOptions is not initialized anymore (only admin version is used)
+    expect(mockResultsListFilterService.submittersOptions()).toEqual([]);
     // No submitters are selected initially
     expect(mockResultsListFilterService.selectedSubmitters()).toEqual([]);
 
@@ -169,13 +165,14 @@ describe('ResultsListFiltersComponent', () => {
       expect(component.filtersCount()).toBe(1);
       expect(component.filtersCountText()).toBe('Apply filters (1)');
 
-      // set various filters
+      // set various filters (submittersAdmin is always used, not submitters)
       mockResultsListFilterService.selectedPhases.set([{} as any]);
-      mockResultsListFilterService.selectedSubmitters.set([{} as any]);
+      mockResultsListFilterService.selectedSubmittersAdmin.set([{} as any]);
       mockResultsListFilterService.selectedIndicatorCategories.set([{} as any]);
       mockResultsListFilterService.selectedStatus.set([{} as any]);
       mockResultsListFilterService.text_to_search.set('abc');
 
+      // Now counts 5 filters (phases, submittersAdmin, categories, status, text)
       expect(component.filtersCount()).toBe(5);
       expect(component.filtersCountText()).toBe('Apply filters (5)');
     });
@@ -219,7 +216,7 @@ describe('ResultsListFiltersComponent', () => {
       expect(component.filtersCountText()).toBe('Apply filters (1)');
     });
 
-    it('should not count admin submitters when user is not admin', () => {
+    it('should count submitters regardless of admin status', () => {
       component.isAdmin = false;
 
       // Clear all filters first
@@ -233,53 +230,11 @@ describe('ResultsListFiltersComponent', () => {
       expect(component.filtersCount()).toBe(0);
       expect(component.filtersCountText()).toBe('Apply filters');
 
-      // Add admin submitters (should not be counted for non-admin)
-      mockResultsListFilterService.selectedSubmittersAdmin.set([{ id: 1, name: 'Admin User' }]);
-
-      expect(component.filtersCount()).toBe(0);
-      expect(component.filtersCountText()).toBe('Apply filters');
-    });
-
-    it('should count regular submitters when user is not admin', () => {
-      component.isAdmin = false;
-
-      // Clear all filters first
-      mockResultsListFilterService.selectedPhases.set([]);
-      mockResultsListFilterService.selectedSubmitters.set([]);
-      mockResultsListFilterService.selectedSubmittersAdmin.set([]);
-      mockResultsListFilterService.selectedIndicatorCategories.set([]);
-      mockResultsListFilterService.selectedStatus.set([]);
-      mockResultsListFilterService.text_to_search.set('');
-
-      expect(component.filtersCount()).toBe(0);
-      expect(component.filtersCountText()).toBe('Apply filters');
-
-      // Add regular submitters
-      mockResultsListFilterService.selectedSubmitters.set([{ id: 1, name: 'Regular User' }]);
+      // Add submitters (always counted via selectedSubmittersAdmin)
+      mockResultsListFilterService.selectedSubmittersAdmin.set([{ id: 1, name: 'User' }]);
 
       expect(component.filtersCount()).toBe(1);
       expect(component.filtersCountText()).toBe('Apply filters (1)');
-    });
-
-    it('should not count regular submitters when user is admin', () => {
-      component.isAdmin = true;
-
-      // Clear all filters first
-      mockResultsListFilterService.selectedPhases.set([]);
-      mockResultsListFilterService.selectedSubmitters.set([]);
-      mockResultsListFilterService.selectedSubmittersAdmin.set([]);
-      mockResultsListFilterService.selectedIndicatorCategories.set([]);
-      mockResultsListFilterService.selectedStatus.set([]);
-      mockResultsListFilterService.text_to_search.set('');
-
-      expect(component.filtersCount()).toBe(0);
-      expect(component.filtersCountText()).toBe('Apply filters');
-
-      // Add regular submitters (should not be counted for admin)
-      mockResultsListFilterService.selectedSubmitters.set([{ id: 1, name: 'Regular User' }]);
-
-      expect(component.filtersCount()).toBe(0);
-      expect(component.filtersCountText()).toBe('Apply filters');
     });
 
     it('should count all filter types correctly', () => {
@@ -349,12 +304,8 @@ describe('ResultsListFiltersComponent', () => {
 
     // submittersOptions should remain completely unchanged (phases don't affect submitters anymore)
     expect(mockResultsListFilterService.submittersOptions()).toEqual(initialSubmittersOptions);
-    // Should still have all original submitters including "All submitters"
-    expect(mockResultsListFilterService.submittersOptions()).toEqual([
-      { id: 0, name: 'All submitters', portfolio_id: 1 },
-      { id: 11, name: 'User A', portfolio_id: 1 },
-      { id: 22, name: 'User B', portfolio_id: 2 }
-    ]);
+    // submittersOptions is not initialized anymore (empty array)
+    expect(mockResultsListFilterService.submittersOptions()).toEqual([]);
   });
 
   it('onDownLoadTableAsExcel should export and toggle gettingReport', () => {
@@ -399,7 +350,7 @@ describe('ResultsListFiltersComponent', () => {
       expect(getAllInitiativesSpy).toHaveBeenCalled();
     });
 
-    it('should not call getAllInitiatives when isAdmin does not change', () => {
+    it('should call getAllInitiatives even when isAdmin does not change', () => {
       const getAllInitiativesSpy = jest.spyOn(component, 'getAllInitiatives');
 
       const changes: SimpleChanges = {
@@ -413,15 +364,17 @@ describe('ResultsListFiltersComponent', () => {
 
       component.ngOnChanges(changes);
 
-      expect(getAllInitiativesSpy).not.toHaveBeenCalled();
+      // getAllInitiatives is now always called (no isAdmin validation)
+      expect(getAllInitiativesSpy).toHaveBeenCalled();
     });
 
-    it('should not call getAllInitiatives when no changes provided', () => {
+    it('should call getAllInitiatives when no changes provided', () => {
       const getAllInitiativesSpy = jest.spyOn(component, 'getAllInitiatives');
 
       component.ngOnChanges({});
 
-      expect(getAllInitiativesSpy).not.toHaveBeenCalled();
+      // getAllInitiatives is now always called (no isAdmin validation)
+      expect(getAllInitiativesSpy).toHaveBeenCalled();
     });
   });
 
@@ -431,12 +384,13 @@ describe('ResultsListFiltersComponent', () => {
       jest.clearAllMocks();
     });
 
-    it('should not call API when user is not admin', () => {
+    it('should call API regardless of admin status', () => {
       component.isAdmin = false;
 
       component.getAllInitiatives();
 
-      expect(mockApiService.resultsSE.GET_AllInitiatives).not.toHaveBeenCalled();
+      // getAllInitiatives no longer checks isAdmin - always calls API
+      expect(mockApiService.resultsSE.GET_AllInitiatives).toHaveBeenCalled();
     });
 
     it('should call API and update submittersOptionsAdminOld when user is admin', () => {
@@ -565,27 +519,26 @@ describe('ResultsListFiltersComponent', () => {
       expect(mockResultsListFilterService.selectedPhases()).toEqual([]);
     });
 
-    it('should reset selectedSubmitters to empty array', () => {
+    it('should not modify selectedSubmitters (not used anymore)', () => {
       // Set some initial selected submitters
       mockResultsListFilterService.selectedSubmitters.set([{ id: 22, name: 'User B', portfolio_id: 2 }]);
 
       component.clearAllNewFilters();
 
-      // Should clear all selected submitters
-      expect(mockResultsListFilterService.selectedSubmitters()).toEqual([]);
+      // selectedSubmitters is not cleared anymore (only selectedSubmittersAdmin is used)
+      expect(mockResultsListFilterService.selectedSubmitters()).toEqual([{ id: 22, name: 'User B', portfolio_id: 2 }]);
     });
 
-    it('should update submittersOptions to show ALL submitters when no portfolios selected', () => {
-      // Set some initial submitters options
-      mockResultsListFilterService.submittersOptions.set([{ id: 22, name: 'User B', portfolio_id: 2 }]);
+    it('should update submittersOptionsAdmin to show ALL submitters when no portfolios selected', () => {
+      // Set some initial admin submitters options
+      mockResultsListFilterService.submittersOptionsAdmin.set([{ id: 2, name: 'Admin User B', portfolio_id: 2 }]);
 
       component.clearAllNewFilters();
 
-      // Should show ALL submitters since no portfolios are selected (new portfolio-based logic)
-      expect(mockResultsListFilterService.submittersOptions()).toEqual([
-        { id: 0, name: 'All submitters', portfolio_id: 1 },
-        { id: 11, name: 'User A', portfolio_id: 1 },
-        { id: 22, name: 'User B', portfolio_id: 2 }
+      // Should show ALL admin submitters since no portfolios are selected
+      expect(mockResultsListFilterService.submittersOptionsAdmin()).toEqual([
+        { id: 1, name: 'Admin User A', portfolio_id: 1 },
+        { id: 2, name: 'Admin User B', portfolio_id: 2 }
       ]);
     });
 
@@ -687,21 +640,18 @@ describe('ResultsListFiltersComponent', () => {
 
       component.clearAllNewFilters();
 
-      // Verify all filters are cleared
+      // Verify filters are cleared (except selectedSubmitters which is no longer managed)
       expect(mockResultsListFilterService.selectedClarisaPortfolios()).toEqual([]);
       expect(mockResultsListFilterService.selectedPhases()).toEqual([]);
-      expect(mockResultsListFilterService.selectedSubmitters()).toEqual([]);
+      expect(mockResultsListFilterService.selectedSubmitters()).toEqual([{ id: 22, name: 'User B', portfolio_id: 2 }]); // Not cleared
       expect(mockResultsListFilterService.selectedSubmittersAdmin()).toEqual([]);
       expect(mockResultsListFilterService.selectedIndicatorCategories()).toEqual([]);
       expect(mockResultsListFilterService.selectedStatus()).toEqual([]);
       expect(mockResultsListFilterService.text_to_search()).toBe('');
 
-      // Verify that available options show ALL submitters since no portfolios are selected (new portfolio-based logic)
-      expect(mockResultsListFilterService.submittersOptions()).toEqual([
-        { id: 0, name: 'All submitters', portfolio_id: 1 },
-        { id: 11, name: 'User A', portfolio_id: 1 },
-        { id: 22, name: 'User B', portfolio_id: 2 }
-      ]);
+      // Verify that submittersOptionsAdmin shows ALL submitters since no portfolios are selected
+      // submittersOptions is not managed anymore (remains unchanged)
+      expect(mockResultsListFilterService.submittersOptions()).toEqual([{ id: 22, name: 'User B', portfolio_id: 2 }]);
       expect(mockResultsListFilterService.submittersOptionsAdmin()).toEqual([
         { id: 1, name: 'Admin User A', portfolio_id: 1 },
         { id: 2, name: 'Admin User B', portfolio_id: 2 }
