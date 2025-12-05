@@ -91,4 +91,56 @@ p {
   width: 6px;
   height: 6px;
   border-radius: 50%;
+  min-width: 6px;
+  min-height: 6px;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.entity-results-by-indicator-category-card_actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.entity-results-by-indicator-category-card_button-full {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.entity-results-by-indicator-category-card_button-inline {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  align-items: center;
+  gap: 1px;
+  color: var(--pr-color-primary-300);
+  font-weight: 500;
+  @include fonts.pr-typography('body-3');
+  transition: color 0.3s ease-out;
+  white-space: nowrap;
+
+  &:hover {
+    color: var(--pr-color-primary-400);
+  }
+
+  i {
+    font-size: 18px;
+    color: var(--pr-color-primary-300);
+  }
+}
+
+@media screen and (min-width: 1280px) and (min-height: 665px) {
+  .entity-results-by-indicator-category-card_button-full {
+    display: none;
+  }
+
+  .entity-results-by-indicator-category-card_button-inline {
+    display: inline-flex;
+    align-items: center;
+  }
 }
