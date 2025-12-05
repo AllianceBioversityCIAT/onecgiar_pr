@@ -30,7 +30,7 @@
       [isComplete]="!!this.rdPartnersSE.partnersBody.institutions?.length"></div>
     <app-pr-multi-select
       [options]="this.institutionsSE.institutionsWithoutCentersListPartners"
-      [required]=""
+      [required]="true"
       [label]="dataControlSE.isKnowledgeProduct ? 'Partners' : null"
       selectedOptionLabel="institutions_name"
       optionLabel="full_name"
@@ -48,7 +48,7 @@
 
     <div class="chips_container custom_scroll partners_selected">
       <div class="pr_chip_selected" *ngFor="let option of this.rdPartnersSE.partnersBody.institutions; let i = index">
-        <div appFeedbackValidation labelText="Partner role" [isComplete]="!!option?.delivery?.length"></div>
+        <div appFeedbackValidation labelText="Institution type" [isComplete]="!!option?.delivery?.length"></div>
         <div>
           <div class="name">{{ option?.obj_institutions?.name }}</div>
           <div class="type"><strong>Institution type:</strong> {{ option?.obj_institutions?.obj_institution_type_code?.name }}</div>

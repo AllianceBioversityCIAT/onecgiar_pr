@@ -78,6 +78,10 @@
     placeholder="Select organization(s)"
     [(ngModel)]="this.innovationUseInfoBody.institutions">
   </app-pr-multi-select>
+  <div
+    appFeedbackValidation
+    labelText="Whose policy is this? (Implementing organizations)"
+    [isComplete]="this.innovationUseInfoBody.institutions?.length > 0"></div>
 </div>
 
 <app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>
