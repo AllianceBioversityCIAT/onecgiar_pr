@@ -19,7 +19,6 @@ import { SearchParams } from './api.service';
 import { EntityDetails } from '../../../pages/result-framework-reporting/pages/entity-details/interfaces/entity-details.interface';
 import { ExtraGeographicLocationBody } from '../../../pages/results/pages/result-detail/pages/rd-geographic-location/models/extraGeographicLocationBody';
 
-
 @Injectable({
   providedIn: 'root'
 })
@@ -27,7 +26,7 @@ export class ResultsApiService {
   constructor(
     public http: HttpClient,
     private saveButtonSE: SaveButtonService,
-    public ipsrDataControlSE: IpsrDataControlService,
+    public ipsrDataControlSE: IpsrDataControlService
   ) {}
   apiBaseUrl = environment.apiBaseUrl + 'api/results/';
   apiBaseUrlV2 = environment.apiBaseUrl + 'v2/api/results/';
@@ -797,6 +796,8 @@ export class ResultsApiService {
     const p25Url = `${this.baseApiBaseUrlV2}ipsr-general-information/innovation/${resultId}`;
     const url = isP25 ? p25Url : p22Url;
 
+    console.log(url);
+
     return this.http.get<any>(url).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
@@ -822,14 +823,11 @@ export class ResultsApiService {
   }
 
   PATCHIpsrGeneralInfo(body, resulId, isP25: boolean = false) {
-
     const p22Url = `${environment.apiBaseUrl}api/ipsr/results-innovation-package/general-information/${resulId}`;
     const p25Url = `${this.baseApiBaseUrlV2}ipsr-general-information/general-information/${resulId}`;
     const url = isP25 ? p25Url : p22Url;
 
-    return this.http
-      .patch<any>(url, body)
-      .pipe(this.saveButtonSE.isCreatingPipe());
+    return this.http.patch<any>(url, body).pipe(this.saveButtonSE.isCreatingPipe());
   }
 
   GETContributorsByIpsrResultId() {
