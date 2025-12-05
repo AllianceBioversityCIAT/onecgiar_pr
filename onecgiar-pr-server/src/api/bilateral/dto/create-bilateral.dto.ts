@@ -117,6 +117,48 @@ export class TocMappingDto {
   result_indicator_type_name: string;
 }
 
+export class ContributingProgramDto {
+  @ApiProperty({
+    description: 'Official code of the contributing science program',
+    example: 'NEXUS',
+  })
+  @IsString()
+  @IsNotEmpty()
+  science_program_id: string;
+
+  @ApiProperty({
+    description: 'Composite code of the area of work (program-area)',
+    example: 'NEXUS-FOOD',
+  })
+  @IsString()
+  @IsNotEmpty()
+  aow_compose_code: string;
+
+  @ApiProperty({
+    description: 'Title of the Theory of Change result',
+    example: 'Nutrition outcomes improved',
+  })
+  @IsString()
+  @IsNotEmpty()
+  result_title: string;
+
+  @ApiProperty({
+    description: 'Indicator description linked to the ToC result',
+    example: 'Households reached with nutrition interventions',
+  })
+  @IsString()
+  @IsNotEmpty()
+  result_indicator_description: string;
+
+  @ApiProperty({
+    description: 'Type name of the indicator (e.g. Output, Outcome)',
+    example: 'Outcome',
+  })
+  @IsString()
+  @IsNotEmpty()
+  result_indicator_type_name: string;
+}
+
 export class RegionDto {
   @ApiPropertyOptional({
     description: 'UN M49 numeric code of the region',
@@ -1003,6 +1045,17 @@ export class CreateBilateralDto {
   @ValidateNested()
   @Type(() => TocMappingDto)
   toc_mapping: TocMappingDto;
+
+  @ApiPropertyOptional({
+    description:
+      'Optional list of contributing programs to map to the ToC (applied as initiative role 2)',
+    type: () => [ContributingProgramDto],
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ContributingProgramDto)
+  contributing_programs?: ContributingProgramDto[];
 
   @ApiProperty({
     description: 'Geographic focus definition for the bilateral',
