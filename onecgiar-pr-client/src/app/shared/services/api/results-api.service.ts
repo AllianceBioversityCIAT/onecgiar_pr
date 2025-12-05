@@ -796,8 +796,6 @@ export class ResultsApiService {
     const p25Url = `${this.baseApiBaseUrlV2}ipsr-general-information/innovation/${resultId}`;
     const url = isP25 ? p25Url : p22Url;
 
-    console.log(url);
-
     return this.http.get<any>(url).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
