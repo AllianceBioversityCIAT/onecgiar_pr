@@ -90,32 +90,18 @@
             labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
             [required]="false"></app-pr-field-header>
 
-          @if (this.isAdmin) {
-            <p-multiselect
-              [filter]="false"
-              [showHeader]="!!this.resultsListFilterSE.submittersOptionsAdmin().length"
-              [options]="this.resultsListFilterSE.submittersOptionsAdmin()"
-              [(ngModel)]="tempSelectedSubmittersAdmin"
-              placeholder="Select submitter(s)"
-              [maxSelectedLabels]="1"
-              optionLabel="displayName"
-              [selectedItemsLabel]="'{0} items selected'"
-              [filter]="this.resultsListFilterSE.submittersOptionsAdmin().length"
-              [style]="{ width: '100%' }"
-              panelStyleClass="submitter-multiselect-panel">
-            </p-multiselect>
-          } @else {
-            <p-multiselect
-              [filter]="false"
-              [showHeader]="!!this.resultsListFilterSE.submittersOptions().length"
-              [options]="this.resultsListFilterSE.submittersOptions()"
-              [(ngModel)]="tempSelectedSubmitters"
-              optionLabel="name"
-              placeholder="Select submitter(s)"
-              [maxSelectedLabels]="1"
-              [selectedItemsLabel]="'{0} items selected'"
-              [style]="{ width: '100%' }" />
-          }
+          <p-multiselect
+            [filter]="this.resultsListFilterSE.submittersOptionsAdmin().length > 0"
+            [showHeader]="false"
+            [options]="this.resultsListFilterSE.submittersOptionsAdmin()"
+            [(ngModel)]="tempSelectedSubmittersAdmin"
+            placeholder="Select submitter(s)"
+            [maxSelectedLabels]="1"
+            optionLabel="displayName"
+            [selectedItemsLabel]="'{0} items selected'"
+            [style]="{ width: '100%' }"
+            panelStyleClass="submitter-multiselect-panel">
+          </p-multiselect>
         </div>
         <div>
           <app-pr-field-header
