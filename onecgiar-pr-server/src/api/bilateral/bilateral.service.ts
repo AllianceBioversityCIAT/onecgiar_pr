@@ -48,6 +48,7 @@ import { ClarisaProjectsRepository } from '../../clarisa/clarisa-projects/claris
 import { ResultsByProjectsRepository } from '../results/results_by_projects/results_by_projects.repository';
 import { ClarisaCenter } from '../../clarisa/clarisa-centers/entities/clarisa-center.entity';
 import { ClarisaInstitution } from '../../clarisa/clarisa-institutions/entities/clarisa-institution.entity';
+import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { KnowledgeProductBilateralHandler } from './handlers/knowledge-product.handler';
 import { CapacityChangeBilateralHandler } from './handlers/capacity-change.handler';
 import { InnovationDevelopmentBilateralHandler } from './handlers/innovation-development.handler';
@@ -56,12 +57,14 @@ import { PolicyChangeBilateralHandler } from './handlers/policy-change.handler';
 import { BilateralResultTypeHandler } from './handlers/bilateral-result-type-handler.interface';
 import { NoopBilateralHandler } from './handlers/noop.handler';
 import { ResultByInitiativesRepository } from '../results/results_by_inititiatives/resultByInitiatives.repository';
+import { ResultsService } from '../results/results.service';
 
 @Injectable()
 export class BilateralService {
   constructor(
     private readonly dataSource: DataSource,
     private readonly _resultRepository: ResultRepository,
+    private readonly _resultsService: ResultsService,
     private readonly _handlersError: HandlersError,
     private readonly _versioningService: VersioningService,
     private readonly _userRepository: UserRepository,
@@ -345,6 +348,33 @@ export class BilateralService {
     };
   }
 
+  async delete(resultId: number) {
+    try {
+      if (!resultId) {
+        throw new BadRequestException('Result id is required.');
+      }
+
+      const result = await this._resultRepository.findOne({
+        where: { id: resultId },
+      });
+
+      if (!result) {
+        throw new NotFoundException('Result not found.');
+      }
+
+      if (result.source !== SourceEnum.Bilateral) {
+        throw new BadRequestException(
+          'The provided result does not belong to the bilateral API.',
+        );
+      }
+
+      const systemUser = await this.getSystemUserToken();
+      return await this._resultsService.deleteResult(resultId, systemUser);
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
   private unwrapIncomingResults(
     rootResultsDto: RootResultsDto,
   ): ResultBilateralDto[] {
@@ -441,6 +471,28 @@ export class BilateralService {
       `Found existing user: ${JSON.stringify({ id: user.id, email: user.email })}`,
     );
     return user;
+  }
+
+  private async getSystemUserToken(): Promise<TokenDto> {
+    const adminUser = await this._userRepository.findOne({
+      where: { email: 'admin@prms.pr' },
+    });
+
+    if (adminUser) {
+      return {
+        id: adminUser.id,
+        email: adminUser.email,
+        first_name: adminUser.first_name ?? 'Admin',
+        last_name: adminUser.last_name ?? 'PRMS',
+      };
+    }
+
+    return {
+      id: 0,
+      email: 'system@prms.pr',
+      first_name: 'System',
+      last_name: 'Bilateral',
+    };
   }
 
   private async handleTocMapping(
