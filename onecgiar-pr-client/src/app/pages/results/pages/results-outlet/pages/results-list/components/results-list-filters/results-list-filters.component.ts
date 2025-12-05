@@ -200,7 +200,6 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     // if (changes['isAdmin']) {
     this.getAllInitiatives();
     // }
-    console.log('chane');
   }
 
   getAllInitiatives() {
