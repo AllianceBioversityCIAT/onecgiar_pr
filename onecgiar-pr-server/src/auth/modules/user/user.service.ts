@@ -275,6 +275,10 @@ export class UserService {
         where: { id: token.id },
       });
 
+      const adminUser = await this._userRepository.findOne({
+        where: { email: 'admin@prms.pr' },
+      });
+
       if (dto.role_assignments?.length) {
         const seenEntities = new Set<number>();
         for (const assignment of dto.role_assignments) {
@@ -287,8 +291,8 @@ export class UserService {
         }
       }
 
-      dto.created_by = currentUser?.id || null;
-      dto.last_updated_by = currentUser?.id || null;
+      dto.created_by = currentUser?.id || adminUser?.id;
+      dto.last_updated_by = currentUser?.id || adminUser?.id;
 
       let newUser: User;
 
