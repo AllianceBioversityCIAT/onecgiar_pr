@@ -645,6 +645,7 @@ export class BilateralService {
           (await this._resultsTocResultsRepository.save({
             created_by: userId,
             toc_result_id: firstMap.toc_result_id,
+            initiative_ids: init.id,
             initiative_id: init.id,
             result_id: resultId,
             toc_level_id: tocLevelId,
