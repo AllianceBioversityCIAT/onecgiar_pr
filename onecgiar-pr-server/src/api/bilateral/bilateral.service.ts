@@ -434,19 +434,10 @@ export class BilateralService {
       });
 
       await this._resultsCenterRepository.fisicalDelete(resultId);
-      await this.handleLeadCenter(
-        resultId,
-        bilateralDto.lead_center,
-        userId,
-      );
+      await this.handleLeadCenter(resultId, bilateralDto.lead_center, userId);
 
-      const {
-        scope_code,
-        scope_label,
-        regions,
-        countries,
-        subnational_areas,
-      } = bilateralDto.geo_focus;
+      const { scope_code, scope_label, regions, countries, subnational_areas } =
+        bilateralDto.geo_focus;
       const scope = await this.findScope(scope_code, scope_label);
       this.validateGeoFocus(scope, regions, countries, subnational_areas);
 
@@ -479,11 +470,7 @@ export class BilateralService {
       );
 
       await this._evidencesRepository.logicalDelete(resultId);
-      await this.handleEvidence(
-        resultId,
-        bilateralDto.evidence || [],
-        userId,
-      );
+      await this.handleEvidence(resultId, bilateralDto.evidence || [], userId);
 
       await this._resultsByProjectsRepository.delete({ result_id: resultId });
       await this.handleNonPooledProject(
@@ -511,8 +498,7 @@ export class BilateralService {
       const isCapacityChange =
         bilateralDto.result_type_id === ResultTypeEnum.CAPACITY_CHANGE;
       const isInnovationDev =
-        bilateralDto.result_type_id ===
-        ResultTypeEnum.INNOVATION_DEVELOPMENT;
+        bilateralDto.result_type_id === ResultTypeEnum.INNOVATION_DEVELOPMENT;
       const isInnovationUse =
         bilateralDto.result_type_id === ResultTypeEnum.INNOVATION_USE;
       const isPolicyChange =
