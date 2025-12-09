@@ -3,33 +3,108 @@
   justify-content: space-between;
   align-items: center;
   gap: 10px;
-}
-
-.filters_items_container {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 10px;
-  margin: 20px 20px 10px 20px;
-}
-
-.filters_items_container_left,
-.filters_items_container_drawer,
-.filters_items_container_right {
-  display: flex;
-  gap: 10px;
-}
-
-::ng-deep {
-  .p-drawer-title {
-    color: var(--pr-color-primary-300);
+  border-bottom: 1px solid rgb(200, 200, 200);
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+  width: 100%;
+  .filters_items_container_left {
+    display: flex;
+    align-items: center;
   }
 }
 
-.drawer_footer {
+.filters_items_container_left,
+.filters_items_container_drawer {
   display: flex;
-  justify-content: flex-end;
-  align-items: center;
   gap: 10px;
-  margin-top: 10px;
+}
+
+// Custom Drawer Styles
+.custom-drawer-container {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 350px;
+  pointer-events: none;
+  z-index: 1000;
+  transition: top 0.2s ease;
+
+  &.visible {
+    pointer-events: all;
+  }
+}
+
+.custom-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  background-color: var(--pr-color-accents-1);
+  box-shadow: -4px 0 15px rgba(0, 0, 0, 0.1);
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+
+  &.open {
+    transform: translateX(0);
+  }
+}
+
+.drawer-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.drawer-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--pr-color-primary-300);
+}
+
+.close-button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+  color: var(--pr-color-primary-300);
+
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+
+  i {
+    font-size: 20px;
+  }
+}
+
+.drawer-description {
+  margin: 0 0 20px 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.drawer-footer {
+  display: grid;
+  grid-template-columns: 2fr 3fr;
+  gap: 12px;
+  padding: 20px 24px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  background-color: var(--pr-color-accents-1);
 }
