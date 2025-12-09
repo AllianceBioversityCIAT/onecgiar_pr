@@ -121,16 +121,18 @@ export class ManageUserModalComponent {
     const selectedRoleAssignments = this.addUserForm().role_assignments;
     const currentAssignment = selectedRoleAssignments[currentIndex];
     const currentEntityId = currentAssignment?.entity_id;
-
-    // Get selected entities excluding the current one using computed signal
     const allSelectedEntities = this.selectedEntityIds();
-    const selectedEntities = new Set(Array.from(allSelectedEntities).filter(entityId => entityId !== currentEntityId));
 
     // Filter within each group's entities array
     // Always include the current entity_id if it exists (so it shows as selected)
+    // Exclude entities that are selected in other assignments
     return this.entities().map(group => ({
       ...group,
-      entities: group.entities.filter(entity => !selectedEntities.has(entity.initiative_id) || entity.initiative_id === currentEntityId)
+      entities: group.entities.filter(entity => {
+        const isSelectedInOtherAssignment = allSelectedEntities.has(entity.initiative_id) && entity.initiative_id !== currentEntityId;
+        const isCurrentEntity = entity.initiative_id === currentEntityId;
+        return isCurrentEntity || !isSelectedInOtherAssignment;
+      })
     }));
   }
 
