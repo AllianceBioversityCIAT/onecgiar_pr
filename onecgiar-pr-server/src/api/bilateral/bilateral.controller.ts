@@ -34,6 +34,28 @@ export class BilateralController {
     return this.bilateralService.create(body);
   }
 
+  @Patch('update/:id')
+  @ApiOperation({
+    summary: 'Update bilateral result',
+    description:
+      'Updates an existing bilateral-created result. Body is identical to the create payload.',
+  })
+  @ApiParam({ name: 'id', type: Number, required: true })
+  @ApiBody({ type: RootResultsDto })
+  async update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: false,
+        transform: true,
+      }),
+    )
+    body: RootResultsDto,
+  ) {
+    return this.bilateralService.update(id, body);
+  }
+
   @Patch('delete/:id')
   @ApiOperation({
     summary: 'Soft delete bilateral result',
