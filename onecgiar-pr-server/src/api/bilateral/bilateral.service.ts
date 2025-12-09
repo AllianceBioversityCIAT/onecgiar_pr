@@ -554,6 +554,8 @@ export class BilateralService {
         },
       });
 
+      resultInfo = this.filterActiveRelations(resultInfo);
+
       this.logger.log(
         `Successfully updated bilateral result ${resultId} (code: ${existingResult.result_code})`,
       );
@@ -933,6 +935,41 @@ export class BilateralService {
     await this._resultsTocResultsIndicatorsRepository.logicalDelete(resultId);
     await this._resultsTocResultsRepository.logicalDelete(resultId);
     await this._resultByInitiativesRepository.logicalDelete(resultId);
+  }
+
+  private filterActiveRelations(result: any) {
+    if (!result) return result;
+    const onlyActive = (arr: any[]) =>
+      Array.isArray(arr)
+        ? arr.filter(
+            (item) =>
+              item?.is_active === undefined ||
+              item.is_active === null ||
+              item.is_active === true ||
+              item.is_active === 1,
+          )
+        : arr;
+
+    result.result_region_array = onlyActive(result.result_region_array);
+    result.result_country_array = onlyActive(result.result_country_array)?.map(
+      (rc) => ({
+        ...rc,
+        result_countries_subnational_array: onlyActive(
+          rc?.result_countries_subnational_array,
+        ),
+      }),
+    );
+    result.result_by_institution_array = onlyActive(
+      result.result_by_institution_array,
+    );
+    result.result_center_array = onlyActive(result.result_center_array);
+    result.obj_results_toc_result = onlyActive(result.obj_results_toc_result);
+    result.obj_result_by_project = onlyActive(result.obj_result_by_project);
+    result.result_knowledge_product_array = onlyActive(
+      result.result_knowledge_product_array,
+    );
+
+    return result;
   }
 
   private async handleNonPooledProject(
