@@ -213,7 +213,7 @@ export class InnovationUseService {
     resultId: number,
     user: number,
     crtr: InnovUseGroupsDto,
-    section: ResultCoreInnovUseSectionEnum = null,
+    section: number | null,
     determined?: boolean | null,
   ) {
     const hasSection = section !== null && section !== undefined;
