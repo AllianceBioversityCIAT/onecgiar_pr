@@ -216,7 +216,7 @@ describe('ResultDetailComponent', () => {
   describe('viewPdf()', () => {
     it('should open PDF in new window and close menu', () => {
       const windowOpenSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
-      const testLink = 'http://test-link.com';
+      const testLink = 'https://test-link.com';
       jest.spyOn(component, 'getPdfLink').mockReturnValue(testLink);
       component.showPdfMenu = true;
 
@@ -241,7 +241,7 @@ describe('ResultDetailComponent', () => {
       const mockClipboard = { copy: jest.fn() };
       (component as any).clipboard = mockClipboard;
       const spyMessageAdd = jest.spyOn(component['messageSE'], 'add');
-      const testLink = 'http://test-link.com';
+      const testLink = 'https://test-link.com';
       jest.spyOn(component, 'getPdfLink').mockReturnValue(testLink);
       component.showPdfMenu = true;
 
