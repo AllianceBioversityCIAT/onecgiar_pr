@@ -108,14 +108,6 @@ export class StepN1Component implements OnInit {
 
   onSaveSection() {
     this.convertOrganizationsTosave();
-    console.log({
-      ...this.ipsrStep1Body,
-      result_ip: {
-        ...this.ipsrStep1Body.result_ip,
-        participants_consent: this.validateParticipantsConsent() ? this.ipsrStep1Body.result_ip.participants_consent : null
-      }
-    });
-
     this.api.resultsSE
       .PATCHInnovationPathwayByStepOneResultId({
         ...this.ipsrStep1Body,
