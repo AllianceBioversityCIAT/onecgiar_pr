@@ -41,6 +41,7 @@ import { Evidence } from '../evidences/entities/evidence.entity';
 import { ResultFieldRevision } from '../../ai/entities/result-field-revision.entity';
 import { ResultFieldAiState } from '../../ai/entities/result-field-ai-state.entity';
 import { ResultsCapacityDevelopments } from '../summary/entities/results-capacity-developments.entity';
+import { ResultsInnovationsDev } from '../summary/entities/results-innovations-dev.entity';
 
 @Entity()
 export class Result {
@@ -555,4 +556,9 @@ export class Result {
     nullable: true,
   })
   results_capacity_development_object?: ResultsCapacityDevelopments;
+
+  @OneToOne(() => ResultsInnovationsDev, (rid) => rid.result_object, {
+    nullable: true,
+  })
+  results_innovations_dev_object: ResultsInnovationsDev;
 }
