@@ -193,7 +193,6 @@ export class ResultsInnovationsUseRepository
         queryData,
         [resultId],
       );
-      console.log('InnovUseResult', InnovUseResult);
       return InnovUseResult.length ? InnovUseResult[0] : undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
