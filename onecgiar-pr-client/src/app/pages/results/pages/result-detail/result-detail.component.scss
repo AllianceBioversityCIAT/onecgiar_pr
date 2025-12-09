@@ -1,21 +1,128 @@
 @use '../../../../../styles/fonts.scss' as fonts;
 
+// Estilos específicos para el page-header en este componente
+app-page-header {
+  position: sticky;
+  top: 79px;
+  z-index: 10;
+  display: block;
+}
+
+// Estilos para el menú de PDF
+.pdf-menu-container {
+  display: flex;
+  align-items: center;
+  position: relative;
+
+  .pdf-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 20px;
+    border: 1.5px solid var(--pr-color-primary-400);
+    border-radius: 10px;
+    background-color: white;
+    color: var(--pr-color-primary-400);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    font-weight: 600;
+
+    i {
+      font-size: 16px;
+      
+      &.pi-angle-down {
+        font-size: 14px;
+      }
+    }
+
+    &:hover {
+      background-color: var(--pr-color-primary-50);
+      border-color: var(--pr-color-primary-500);
+      color: var(--pr-color-primary-500);
+    }
+
+    &:active {
+      transform: scale(0.98);
+    }
+
+    &:focus {
+      outline: none;
+    }
+  }
+
+  .pdf-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    min-width: 200px;
+    z-index: 1000;
+    overflow: hidden;
+
+    .pdf-dropdown-header {
+      padding: 12px 16px 8px 16px;
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--pr-color-accents-3);
+      text-transform: capitalize;
+    }
+
+    .pdf-dropdown-separator {
+      height: 1px;
+      background-color: var(--pr-color-accents-2);
+      margin: 4px 0;
+    }
+
+    .pdf-dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+      color: var(--pr-color-primary-400);
+      font-size: 14px;
+      font-weight: 500;
+
+      i {
+        font-size: 18px;
+        color: var(--pr-color-primary-400);
+      }
+
+      &:hover {
+        background-color: var(--pr-color-primary-50);
+
+        i {
+          color: var(--pr-color-primary-500);
+        }
+
+        span {
+          color: var(--pr-color-primary-500);
+        }
+      }
+    }
+  }
+}
+
 .local_grid {
   display: grid;
   grid-template-columns: 300px 1fr;
-  grid-template-rows: minmax(calc(100vh - 180px), 1fr);
+  grid-template-rows: minmax(calc(100vh - 230px), 1fr);
   padding: 25px 0px 25px 15px;
   height: 100%;
   box-sizing: border-box;
 
   .panel_menu {
     position: sticky;
-    height: calc(100vh - 180px);
+    height: calc(100vh - 230px);
     width: 300px;
-    top: 79px;
+    top: 144px;
     margin-bottom: 25px;
     transition: all cubic-bezier(0.075, 0.82, 0.165, 1) 0.1s;
-    z-index: 0;
+    z-index: 5;
   }
 
   .section_container {
@@ -27,12 +134,6 @@
       display: flex;
       flex-direction: column;
       gap: 30px;
-
-      .section_name {
-        @include fonts.pr-typography('h3');
-        color: var(--pr-color-accents-4);
-        font-weight: 400;
-      }
 
       .metadata {
         display: flex;
