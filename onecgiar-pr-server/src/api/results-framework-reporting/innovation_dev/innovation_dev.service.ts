@@ -21,7 +21,6 @@ import { ResultIpMeasureRepository } from '../../ipsr/result-ip-measures/result-
 import { ResultInitiativeBudgetRepository } from '../../results/result_budget/repositories/result_initiative_budget.repository';
 import { ResultByInitiativesRepository } from '../../results/results_by_inititiatives/resultByInitiatives.repository';
 import { NonPooledProjectBudgetRepository } from '../../results/result_budget/repositories/non_pooled_proyect_budget.repository';
-import { NonPooledProjectRepository } from '../../results/non-pooled-projects/non-pooled-projects.repository';
 import { ResultInstitutionsBudgetRepository } from '../../results/result_budget/repositories/result_institutions_budget.repository';
 import { InnoDevService } from '../../results/summary/innovation_dev.service';
 import { ResultsInnovationsDev } from '../../results/summary/entities/results-innovations-dev.entity';
@@ -256,7 +255,6 @@ export class InnovationDevService {
 
         await this._resultScalingStudyUrlsRepository.save(urlsToSave);
       }
-
 
       const innovation_use = {
         actors: createInnovationDevDto.innovatonUse.actors ?? [],

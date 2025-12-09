@@ -12,7 +12,6 @@ import { InnovationDevService } from './innovation_dev.service';
 import { CreateInnovationDevDtoV2 } from './dto/create-innovation_dev_v2.dto';
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
-import { InnovationUseDto } from '../../results/summary/dto/create-innovation-use.dto';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 import { ApiTags } from '@nestjs/swagger';
 import { CreateUploadSessionDto } from '../../results/evidences/dto/create-upload-session.dto';

@@ -1,5 +1,8 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
-import { CreateInnovationUseDto, InnovUseGroupsDto } from './dto/create-innovation-use.dto';
+import {
+  CreateInnovationUseDto,
+  InnovUseGroupsDto,
+} from './dto/create-innovation-use.dto';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { LinkedResultsService } from '../../results/linked-results/linked-results.service';
@@ -284,14 +287,12 @@ export class InnovationUseService {
           whereOptions.actor_type_id = el.actor_type_id;
 
           if (Number(el.actor_type_id) === 5) {
-            whereOptions.other_actor_type =
-              el?.other_actor_type ?? IsNull();
+            whereOptions.other_actor_type = el?.other_actor_type ?? IsNull();
           }
 
           actorExists = await this._resultActorRepository.findOne({
             where: whereOptions,
           });
-
         }
 
         const actorPayload = this.buildActorData(el, user, resultId, section);
@@ -307,7 +308,6 @@ export class InnovationUseService {
         }
       }
     }
-  
 
     // ==== ORGANIZATIONS ====
     if (crtr?.organization?.length) {
@@ -333,7 +333,6 @@ export class InnovationUseService {
             where: { id: el.id, is_active: true },
           });
         } else {
-
           const whereOptions: any = {
             results_id: resultId,
             institution_roles_id: 5,
@@ -347,16 +346,14 @@ export class InnovationUseService {
           whereOptions.institution_types_id = el.institution_types_id;
 
           if (Number(el.institution_types_id) === 78) {
-            whereOptions.other_institution =
-              el?.other_institution ?? IsNull();
+            whereOptions.other_institution = el?.other_institution ?? IsNull();
           }
 
           ite = await this._resultByIntitutionsTypeRepository.findOne({
             where: whereOptions,
           });
-
         }
-        
+
         const instPayload = this.buildInstitutionData(
           el,
           user,
@@ -371,9 +368,7 @@ export class InnovationUseService {
             instPayload,
           );
         } else {
-          await this._resultByIntitutionsTypeRepository.save(
-            instPayload,
-          );
+          await this._resultByIntitutionsTypeRepository.save(instPayload);
         }
       }
     }
@@ -402,7 +397,6 @@ export class InnovationUseService {
             where: { result_ip_measure_id: el.result_ip_measure_id },
           });
         } else {
-
           const whereOptions: any = {
             result_id: resultId,
             is_active: true,
@@ -437,9 +431,7 @@ export class InnovationUseService {
             measurePayload,
           );
         } else {
-          await this._resultIpMeasureRepository.save(
-            measurePayload,
-          );
+          await this._resultIpMeasureRepository.save(measurePayload);
         }
       }
     }
