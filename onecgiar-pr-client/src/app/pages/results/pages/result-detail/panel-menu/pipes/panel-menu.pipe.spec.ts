@@ -18,6 +18,7 @@ describe('PanelMenuPipe', () => {
     };
 
     mockFieldsManagerService = {
+      portfolioAcronym: jest.fn().mockReturnValue('P22'),
       isP25: jest.fn().mockReturnValue(false),
       isP22: jest.fn().mockReturnValue(false)
     };

@@ -74,6 +74,7 @@ export class ResultDetailComponent implements OnInit, DoCheck {
 
   async getData() {
     this.dataControlSE.currentResult = null;
+    this.dataControlSE.currentResultSignal.set({});
     this.api.resultsSE.currentResultId = null;
     this.api.resultsSE.currentResultCode = null;
     this.api.resultsSE.currentResultPhase = null;
