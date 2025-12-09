@@ -348,6 +348,238 @@ export class BilateralService {
     };
   }
 
+  async update(resultId: number, rootResultsDto: RootResultsDto) {
+    if (!resultId) {
+      throw new BadRequestException('Result id is required.');
+    }
+
+    const existingResult = await this._resultRepository.findOne({
+      where: { id: resultId },
+    });
+
+    if (!existingResult) {
+      throw new NotFoundException('Result not found.');
+    }
+
+    if (existingResult.source !== SourceEnum.Bilateral) {
+      throw new BadRequestException(
+        'The provided result does not belong to the bilateral API.',
+      );
+    }
+
+    const incomingResults = this.unwrapIncomingResults(rootResultsDto);
+    if (!incomingResults.length) {
+      throw new BadRequestException(
+        'At least one result payload is required in either "results" or "result".',
+      );
+    }
+
+    const firstResult = incomingResults[0];
+    if (!firstResult?.data || typeof firstResult.data !== 'object') {
+      throw new BadRequestException(
+        'Each result entry must include a "data" object with the bilateral payload.',
+      );
+    }
+
+    const bilateralDto = firstResult.data;
+    let resultInfo: any = null;
+
+    await this.dataSource.transaction(async () => {
+      const adminUser = await this._userRepository.findOne({
+        where: { email: 'admin@prms.pr' },
+      });
+
+      const createdByUser = await this.findOrCreateUser(
+        bilateralDto.created_by,
+        adminUser,
+      );
+      const userId = createdByUser.id;
+
+      const submittedUser = await this.findOrCreateUser(
+        bilateralDto.submitted_by,
+        createdByUser,
+      );
+      const submittedUserId = submittedUser.id;
+
+      const version = await this._versioningService.$_findActivePhase(
+        AppModuleIdEnum.REPORTING,
+      );
+      if (!version)
+        throw this._handlersError.returnErrorRes({
+          error: version,
+          debug: true,
+        });
+
+      const year = await this._yearRepository.findOne({
+        where: { active: true },
+      });
+      if (!year) throw new NotFoundException('Active year not found');
+
+      const updatedHeader = await this._resultRepository.save({
+        ...existingResult,
+        title: bilateralDto.title,
+        description: bilateralDto.description,
+        version_id: version.id,
+        reported_year_id: year.year,
+        result_type_id: bilateralDto.result_type_id,
+        result_level_id: bilateralDto.result_level_id,
+        external_submitter: submittedUserId,
+        external_submitted_date:
+          bilateralDto.submitted_by?.submitted_date ?? null,
+        external_submitted_comment: bilateralDto.submitted_by?.comment ?? null,
+        last_updated_by: userId,
+        ...(bilateralDto.created_date && {
+          created_date: bilateralDto.created_date,
+        }),
+      });
+
+      await this._resultsCenterRepository.fisicalDelete(resultId);
+      await this.handleLeadCenter(
+        resultId,
+        bilateralDto.lead_center,
+        userId,
+      );
+
+      const {
+        scope_code,
+        scope_label,
+        regions,
+        countries,
+        subnational_areas,
+      } = bilateralDto.geo_focus;
+      const scope = await this.findScope(scope_code, scope_label);
+      this.validateGeoFocus(scope, regions, countries, subnational_areas);
+
+      await this.handleRegions(updatedHeader, scope, regions);
+      await this.handleCountries(
+        updatedHeader,
+        countries,
+        subnational_areas,
+        scope.id,
+        userId,
+      );
+
+      await this._resultRepository.update(resultId, {
+        geographic_scope_id: this.resolveScopeId(scope.id, countries),
+        has_countries: Array.isArray(countries) && countries.length > 0,
+      });
+
+      await this.resetTocData(resultId);
+      await this.handleTocMapping(
+        bilateralDto.toc_mapping,
+        bilateralDto.contributing_programs,
+        userId,
+        resultId,
+      );
+
+      await this.handleInstitutions(
+        resultId,
+        bilateralDto.contributing_partners || [],
+        userId,
+      );
+
+      await this._evidencesRepository.logicalDelete(resultId);
+      await this.handleEvidence(
+        resultId,
+        bilateralDto.evidence || [],
+        userId,
+      );
+
+      await this._resultsByProjectsRepository.delete({ result_id: resultId });
+      await this.handleNonPooledProject(
+        resultId,
+        userId,
+        bilateralDto.contributing_bilateral_projects,
+      );
+
+      await this.handleContributingCenters(
+        resultId,
+        bilateralDto.contributing_center || [],
+        userId,
+        bilateralDto.lead_center,
+      );
+
+      await this.runResultTypeHandlers({
+        resultId,
+        userId,
+        bilateralDto,
+        isDuplicateResult: false,
+      });
+
+      const isKpType =
+        bilateralDto.result_type_id === ResultTypeEnum.KNOWLEDGE_PRODUCT;
+      const isCapacityChange =
+        bilateralDto.result_type_id === ResultTypeEnum.CAPACITY_CHANGE;
+      const isInnovationDev =
+        bilateralDto.result_type_id ===
+        ResultTypeEnum.INNOVATION_DEVELOPMENT;
+      const isInnovationUse =
+        bilateralDto.result_type_id === ResultTypeEnum.INNOVATION_USE;
+      const isPolicyChange =
+        bilateralDto.result_type_id === ResultTypeEnum.POLICY_CHANGE;
+
+      resultInfo = await this._resultRepository.findOne({
+        where: { id: resultId },
+        relations: {
+          obj_geographic_scope: true,
+          obj_result_type: true,
+          obj_result_level: true,
+          obj_created: true,
+          obj_external_submitter: true,
+          result_region_array: {
+            region_object: true,
+          },
+          result_country_array: {
+            country_object: true,
+            result_countries_subnational_array: true,
+          },
+          result_by_institution_array: {
+            obj_institutions: {
+              obj_institution_type_code: true,
+            },
+          },
+          result_center_array: {
+            clarisa_center_object: {
+              clarisa_institution: true,
+            },
+          },
+          obj_results_toc_result: true,
+          obj_result_by_project: {
+            obj_clarisa_project: true,
+          },
+          ...(isKpType && {
+            result_knowledge_product_array: {
+              result_knowledge_product_keyword_array: true,
+              result_knowledge_product_metadata_array: true,
+            },
+          }),
+          ...(isCapacityChange && {
+            results_capacity_development_object: true,
+          }),
+          ...(isInnovationDev && {
+            results_innovations_dev_object: true,
+          }),
+          ...(isInnovationUse && {
+            results_innovations_use_object: true,
+          }),
+          ...(isPolicyChange && {
+            results_policy_changes_object: true,
+          }),
+        },
+      });
+
+      this.logger.log(
+        `Successfully updated bilateral result ${resultId} (code: ${existingResult.result_code})`,
+      );
+    });
+
+    return {
+      response: resultInfo,
+      message: 'Results Bilateral updated successfully.',
+      status: 200,
+    };
+  }
+
   async delete(resultId: number) {
     try {
       if (!resultId) {
@@ -708,6 +940,13 @@ export class BilateralService {
         );
       }
     }
+  }
+
+  private async resetTocData(resultId: number) {
+    await this._resultsTocTargetIndicatorRepository.logicalDelete(resultId);
+    await this._resultsTocResultsIndicatorsRepository.logicalDelete(resultId);
+    await this._resultsTocResultsRepository.logicalDelete(resultId);
+    await this._resultByInitiativesRepository.logicalDelete(resultId);
   }
 
   private async handleNonPooledProject(
