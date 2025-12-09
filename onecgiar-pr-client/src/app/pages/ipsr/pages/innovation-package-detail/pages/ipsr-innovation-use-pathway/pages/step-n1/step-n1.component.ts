@@ -7,10 +7,10 @@ import { GeoScopeEnum } from '../../../../../../../../shared/enum/geo-scope.enum
 import { ExpertWorkshopOrganized } from '../step-n3/model/Ipsr-step-3-body.model';
 
 @Component({
-    selector: 'app-step-n1',
-    templateUrl: './step-n1.component.html',
-    styleUrls: ['./step-n1.component.scss'],
-    standalone: false
+  selector: 'app-step-n1',
+  templateUrl: './step-n1.component.html',
+  styleUrls: ['./step-n1.component.scss'],
+  standalone: false
 })
 export class StepN1Component implements OnInit {
   ipsrStep1Body = new IpsrStep1Body();
@@ -80,6 +80,7 @@ export class StepN1Component implements OnInit {
     this.api.resultsSE.GETInnovationPathwayByStepOneResultId().subscribe(({ response }) => {
       this.convertOrganizations(response?.innovatonUse?.organization);
       this.ipsrStep1Body = response;
+      this.ipsrStep1Body.innov_use_to_be_determined = false;
       const legacyCountries = 4;
       this.ipsrStep1Body.geo_scope_id = response.geo_scope_id == legacyCountries ? GeoScopeEnum.COUNTRY : response.geo_scope_id;
       this.coreResult = response?.coreResult;
@@ -107,6 +108,14 @@ export class StepN1Component implements OnInit {
 
   onSaveSection() {
     this.convertOrganizationsTosave();
+    console.log({
+      ...this.ipsrStep1Body,
+      result_ip: {
+        ...this.ipsrStep1Body.result_ip,
+        participants_consent: this.validateParticipantsConsent() ? this.ipsrStep1Body.result_ip.participants_consent : null
+      }
+    });
+
     this.api.resultsSE
       .PATCHInnovationPathwayByStepOneResultId({
         ...this.ipsrStep1Body,
