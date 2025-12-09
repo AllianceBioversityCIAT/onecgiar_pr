@@ -69,12 +69,10 @@ export class InnovationDevController {
   saveInnovationDev(
     @Param('resultId') resultId: number,
     @Body() createInnovationDevDto: CreateInnovationDevDtoV2,
-    @Body() innovationUseDto: InnovationUseDto,
     @UserToken() user: TokenDto,
   ) {
     return this.innovationDevService.saveInnovationDev(
       createInnovationDevDto,
-      innovationUseDto,
       resultId,
       user,
     );

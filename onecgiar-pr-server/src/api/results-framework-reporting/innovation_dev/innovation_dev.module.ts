@@ -25,6 +25,8 @@ import { SharePointModule } from '../../../shared/services/share-point/share-poi
 import { EvidencesService } from '../../results/evidences/evidences.service';
 import { VersioningModule } from '../../versioning/versioning.module';
 import { ResultsByProjectsRepository } from '../../results/results_by_projects/results_by_projects.repository';
+import { InnovationUseService } from '../innovation-use/innovation-use.service';
+import { LinkedResultsModule } from '../../results/linked-results/linked-results.module';
 
 @Module({
   imports: [
@@ -33,6 +35,7 @@ import { ResultsByProjectsRepository } from '../../results/results_by_projects/r
     EvidencesModule,
     SharePointModule,
     VersioningModule,
+    LinkedResultsModule,
   ],
   controllers: [InnovationDevController],
   providers: [
@@ -55,6 +58,7 @@ import { ResultsByProjectsRepository } from '../../results/results_by_projects/r
     ResultsPolicyChangesRepository,
     EvidencesService,
     ResultsByProjectsRepository,
+    InnovationUseService,
   ],
 })
 export class InnovationDevModule {}

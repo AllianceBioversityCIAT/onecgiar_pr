@@ -9,7 +9,6 @@ import {
   OptionV2,
   SubOptionV2,
 } from './dto/create-innovation_dev_v2.dto';
-import { InnovationUseDto } from '../../results/summary/dto/create-innovation-use.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResultByIntitutionsRepository } from '../../results/results_by_institutions/result_by_intitutions.repository';
 import { ResultsInnovationsDevRepository } from '../../results/summary/repositories/results-innovations-dev.repository';
@@ -34,6 +33,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { ResultAnswerRepository } from '../../results/result-questions/repository/result-answers.repository';
 import { ResultAnswer } from '../../results/result-questions/entities/result-answers.entity';
 import { ResultsByProjectsRepository } from '../../results/results_by_projects/results_by_projects.repository';
+import { InnovationUseService } from '../innovation-use/innovation-use.service';
 
 @Injectable()
 export class InnovationDevService {
@@ -50,17 +50,17 @@ export class InnovationDevService {
     private readonly _resultInitiativesBudgetRepository: ResultInitiativeBudgetRepository,
     private readonly _resultByInitiativeRepository: ResultByInitiativesRepository,
     private readonly _resultBilateralBudgetRepository: NonPooledProjectBudgetRepository,
-    private readonly _nonPooledProjectRepository: NonPooledProjectRepository,
     private readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
     private readonly _innoDevService: InnoDevService,
+    private readonly _innovationUseService: InnovationUseService,
     @InjectRepository(ResultScalingStudyUrl)
     private readonly _resultScalingStudyUrlsRepository: Repository<ResultScalingStudyUrl>,
     private readonly _resultAnswerRepository: ResultAnswerRepository,
     private readonly _resultByProjectRepository: ResultsByProjectsRepository,
   ) {}
+
   async saveInnovationDev(
     createInnovationDevDto: CreateInnovationDevDtoV2,
-    innovationUseDto: InnovationUseDto,
     resultId: number,
     user: TokenDto,
   ) {
@@ -136,10 +136,6 @@ export class InnovationDevService {
         InnDevRes = await this._resultsInnovationsDevRepository.save(newInnDev);
       }
 
-      console.log(
-        'Responsible Innovation and Scaling Options:',
-        createInnovationDevDto?.responsible_innovation_and_scaling.q1.options,
-      );
       // * SAVING INNOVATION AND SCALING
       await this.saveOptionsAndSubOptions(
         resultId,
@@ -261,17 +257,21 @@ export class InnovationDevService {
         await this._resultScalingStudyUrlsRepository.save(urlsToSave);
       }
 
-      if (
-        innovation_user_to_be_determined != false ||
-        innovation_user_to_be_determined != null
-      ) {
-        // * Save InnovationUser
-        await this._innoDevService.saveAnticipatedInnoUser(
-          resultId,
-          user.id,
-          innovationUseDto,
-        );
-      }
+
+      const innovation_use = {
+        actors: createInnovationDevDto.innovatonUse.actors ?? [],
+        organization: createInnovationDevDto.innovatonUse.organization ?? [],
+        measures: createInnovationDevDto.innovatonUse.measures ?? [],
+      };
+
+      // * Save InnovationUser
+      await this._innovationUseService.saveAnticipatedInnoUser(
+        resultId,
+        user.id,
+        innovation_use,
+        null,
+        innovation_user_to_be_determined,
+      );
 
       return {
         response: InnDevRes,
