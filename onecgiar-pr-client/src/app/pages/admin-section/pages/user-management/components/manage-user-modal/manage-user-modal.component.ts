@@ -74,6 +74,12 @@ export class ManageUserModalComponent {
   loadingRoleAssignment = signal<boolean>(true);
   disabledRoleAssignmentOptions = signal([]);
 
+  // Computed signal for all selected entity IDs
+  selectedEntityIds = computed(() => {
+    const roleAssignments = this.addUserForm().role_assignments;
+    return new Set(roleAssignments.map(item => item.entity_id).filter((entityId): entityId is number => entityId !== null));
+  });
+
   // Admin permissions options for radio button - computed based on CGIAR status
   adminPermissionsOptions = computed(() => {
     if (!this.addUserForm().is_cgiar) {
@@ -113,14 +119,18 @@ export class ManageUserModalComponent {
 
   getAvailableEntities(currentIndex: number) {
     const selectedRoleAssignments = this.addUserForm().role_assignments;
-    const selectedEntities = selectedRoleAssignments
-      .map((item, index) => (index !== currentIndex ? item.entity_id : null))
-      .filter(entityId => entityId !== null);
+    const currentAssignment = selectedRoleAssignments[currentIndex];
+    const currentEntityId = currentAssignment?.entity_id;
+
+    // Get selected entities excluding the current one using computed signal
+    const allSelectedEntities = this.selectedEntityIds();
+    const selectedEntities = new Set(Array.from(allSelectedEntities).filter(entityId => entityId !== currentEntityId));
 
     // Filter within each group's entities array
+    // Always include the current entity_id if it exists (so it shows as selected)
     return this.entities().map(group => ({
       ...group,
-      entities: group.entities.filter(entity => !selectedEntities.includes(entity.initiative_id))
+      entities: group.entities.filter(entity => !selectedEntities.has(entity.initiative_id) || entity.initiative_id === currentEntityId)
     }));
   }
 
