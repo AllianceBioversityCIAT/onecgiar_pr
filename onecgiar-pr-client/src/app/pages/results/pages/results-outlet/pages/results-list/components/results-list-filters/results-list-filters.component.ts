@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, signal, Input, SimpleChanges, OnChanges, effect, afterNextRender, OnDestroy } from '@angular/core';
+import { Component, OnInit, computed, signal, Input, SimpleChanges, OnChanges, afterNextRender, OnDestroy } from '@angular/core';
 import { ResultsListFilterService } from '../../services/results-list-filter.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { ExportTablesService } from '../../../../../../../../shared/services/export-tables.service';

@@ -19,6 +19,15 @@ describe('ResultsListFiltersComponent', () => {
 
   const createSignal = <T>(initial: T) => signal<T>(initial);
 
+  const clearAllFilters = () => {
+    mockResultsListFilterService.selectedPhases.set([]);
+    mockResultsListFilterService.selectedSubmitters.set([]);
+    mockResultsListFilterService.selectedSubmittersAdmin.set([]);
+    mockResultsListFilterService.selectedIndicatorCategories.set([]);
+    mockResultsListFilterService.selectedStatus.set([]);
+    mockResultsListFilterService.text_to_search.set('');
+  };
+
   beforeEach(async () => {
     // ResultsListFilterService mock with all signals used in the component
     mockResultsListFilterService = {
@@ -203,12 +212,7 @@ describe('ResultsListFiltersComponent', () => {
       component.isAdmin = true;
 
       // Clear all filters first
-      mockResultsListFilterService.selectedPhases.set([]);
-      mockResultsListFilterService.selectedSubmitters.set([]);
-      mockResultsListFilterService.selectedSubmittersAdmin.set([]);
-      mockResultsListFilterService.selectedIndicatorCategories.set([]);
-      mockResultsListFilterService.selectedStatus.set([]);
-      mockResultsListFilterService.text_to_search.set('');
+      clearAllFilters();
 
       expect(component.filtersCount()).toBe(0);
       expect(component.filtersCountText()).toBe('Apply filters');
@@ -224,12 +228,7 @@ describe('ResultsListFiltersComponent', () => {
       component.isAdmin = false;
 
       // Clear all filters first
-      mockResultsListFilterService.selectedPhases.set([]);
-      mockResultsListFilterService.selectedSubmitters.set([]);
-      mockResultsListFilterService.selectedSubmittersAdmin.set([]);
-      mockResultsListFilterService.selectedIndicatorCategories.set([]);
-      mockResultsListFilterService.selectedStatus.set([]);
-      mockResultsListFilterService.text_to_search.set('');
+      clearAllFilters();
 
       expect(component.filtersCount()).toBe(0);
       expect(component.filtersCountText()).toBe('Apply filters');
@@ -245,12 +244,7 @@ describe('ResultsListFiltersComponent', () => {
       component.isAdmin = false;
 
       // Clear all filters first
-      mockResultsListFilterService.selectedPhases.set([]);
-      mockResultsListFilterService.selectedSubmitters.set([]);
-      mockResultsListFilterService.selectedSubmittersAdmin.set([]);
-      mockResultsListFilterService.selectedIndicatorCategories.set([]);
-      mockResultsListFilterService.selectedStatus.set([]);
-      mockResultsListFilterService.text_to_search.set('');
+      clearAllFilters();
 
       expect(component.filtersCount()).toBe(0);
       expect(component.filtersCountText()).toBe('Apply filters');
@@ -266,12 +260,7 @@ describe('ResultsListFiltersComponent', () => {
       component.isAdmin = true;
 
       // Clear all filters first
-      mockResultsListFilterService.selectedPhases.set([]);
-      mockResultsListFilterService.selectedSubmitters.set([]);
-      mockResultsListFilterService.selectedSubmittersAdmin.set([]);
-      mockResultsListFilterService.selectedIndicatorCategories.set([]);
-      mockResultsListFilterService.selectedStatus.set([]);
-      mockResultsListFilterService.text_to_search.set('');
+      clearAllFilters();
 
       expect(component.filtersCount()).toBe(0);
       expect(component.filtersCountText()).toBe('Apply filters');
@@ -287,12 +276,7 @@ describe('ResultsListFiltersComponent', () => {
       component.isAdmin = true;
 
       // Clear all filters first
-      mockResultsListFilterService.selectedPhases.set([]);
-      mockResultsListFilterService.selectedSubmitters.set([]);
-      mockResultsListFilterService.selectedSubmittersAdmin.set([]);
-      mockResultsListFilterService.selectedIndicatorCategories.set([]);
-      mockResultsListFilterService.selectedStatus.set([]);
-      mockResultsListFilterService.text_to_search.set('');
+      clearAllFilters();
 
       // Add all possible filters
       mockResultsListFilterService.selectedPhases.set([{ id: 1 }]);
@@ -309,12 +293,7 @@ describe('ResultsListFiltersComponent', () => {
       component.isAdmin = false;
 
       // Clear all filters
-      mockResultsListFilterService.selectedPhases.set([]);
-      mockResultsListFilterService.selectedSubmitters.set([]);
-      mockResultsListFilterService.selectedSubmittersAdmin.set([]);
-      mockResultsListFilterService.selectedIndicatorCategories.set([]);
-      mockResultsListFilterService.selectedStatus.set([]);
-      mockResultsListFilterService.text_to_search.set('');
+      clearAllFilters();
 
       expect(component.filtersCount()).toBe(0);
       expect(component.filtersCountText()).toBe('Apply filters');
@@ -324,12 +303,7 @@ describe('ResultsListFiltersComponent', () => {
       component.isAdmin = true;
 
       // Clear all filters first
-      mockResultsListFilterService.selectedPhases.set([]);
-      mockResultsListFilterService.selectedSubmitters.set([]);
-      mockResultsListFilterService.selectedSubmittersAdmin.set([]);
-      mockResultsListFilterService.selectedIndicatorCategories.set([]);
-      mockResultsListFilterService.selectedStatus.set([]);
-      mockResultsListFilterService.text_to_search.set('');
+      clearAllFilters();
 
       // Add both admin and regular submitters (only admin should count)
       mockResultsListFilterService.selectedSubmitters.set([{ id: 1, name: 'Regular User' }]);
