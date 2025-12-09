@@ -1,10 +1,11 @@
-import { Injectable, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpStatus, Logger } from '@nestjs/common';
 import { ClarisaInnovationUseLevelRepository } from './clarisa-innovation-use-levels.repository';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { In } from 'typeorm';
 
 @Injectable()
 export class ClarisaInnovationUseLevelsService {
+  private logger: Logger = new Logger(ClarisaInnovationUseLevelsService.name);
   constructor(
     private readonly _clarisaInnovationUseLevelRepository: ClarisaInnovationUseLevelRepository,
     private readonly _handlersError: HandlersError,
@@ -13,7 +14,9 @@ export class ClarisaInnovationUseLevelsService {
   async findAll() {
     try {
       const response = await this._clarisaInnovationUseLevelRepository.find();
-      if (!response.length) {
+      this.logger.debug(response);
+      if (!response?.length) {
+        this.logger.debug('No innovation use levels were found in findAll');
         throw {
           response: {},
           message: 'No innovation use levels were found',
@@ -39,7 +42,9 @@ export class ClarisaInnovationUseLevelsService {
       const response = await this._clarisaInnovationUseLevelRepository.find({
         where: { id: In([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) },
       });
+      this.logger.debug(response);
       if (!response.length) {
+        this.logger.debug('No innovation use levels were found in findAllV2');
         throw {
           response: {},
           message: 'No innovation use levels were found',
