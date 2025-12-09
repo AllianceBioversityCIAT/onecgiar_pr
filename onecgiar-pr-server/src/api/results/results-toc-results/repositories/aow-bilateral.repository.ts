@@ -279,6 +279,7 @@ export class AoWBilateralRepository {
       WHERE
         tr.official_code = ?
         AND tr.category IN (${categoryPlaceholders})
+        AND tr.is_active = 1
     `;
     params.push(program);
     params.push(...categories);

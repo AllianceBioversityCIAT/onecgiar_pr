@@ -599,7 +599,7 @@ export class Result {
   @OneToOne(() => ResultsCapacityDevelopments, (rcd) => rcd.result_object, {
     nullable: true,
   })
-  results_capacity_development_object: ResultsCapacityDevelopments;
+  results_capacity_development_object?: ResultsCapacityDevelopments;
 
   @OneToOne(() => ResultsInnovationsDev, (rid) => rid.result_object, {
     nullable: true,
