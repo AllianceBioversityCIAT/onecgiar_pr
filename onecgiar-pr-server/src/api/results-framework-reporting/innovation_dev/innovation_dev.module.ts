@@ -27,6 +27,7 @@ import { VersioningModule } from '../../versioning/versioning.module';
 import { ResultsByProjectsRepository } from '../../results/results_by_projects/results_by_projects.repository';
 import { InnovationUseService } from '../innovation-use/innovation-use.service';
 import { LinkedResultsModule } from '../../results/linked-results/linked-results.module';
+import { ClarisaInnovationUseLevelRepository } from '../../../clarisa/clarisa-innovation-use-levels/clarisa-innovation-use-levels.repository';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { LinkedResultsModule } from '../../results/linked-results/linked-results
     ResultInitiativeBudgetRepository,
     NonPooledProjectBudgetRepository,
     ResultInstitutionsBudgetRepository,
+    ClarisaInnovationUseLevelRepository,
     ResultsInnovationsDevRepository,
     ResultByIntitutionsRepository,
     ResultByInitiativesRepository,
