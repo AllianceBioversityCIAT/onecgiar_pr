@@ -1,5 +1,8 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
-import { IpsrSaveStepFour } from './dto/ipsr-save-steo-four.dto';
+import {
+  IpsrSaveStepFour,
+  ResulByProjectIpsrDto,
+} from './dto/ipsr-save-steo-four.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResultRepository } from '../../results/result.repository';
 import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
@@ -20,6 +23,7 @@ import { ResultScalingStudyUrl } from '../../results-framework-reporting/result_
 import { In, Repository } from 'typeorm';
 import { NonPooledProjectRepository } from '../../results/non-pooled-projects/non-pooled-projects.repository';
 import { InjectRepository } from '@nestjs/typeorm';
+import { ResultsByProjectsService } from '../../results/results_by_projects/results_by_projects.service';
 
 @Injectable()
 export class IpsrPathwayStepFourService {
@@ -39,6 +43,7 @@ export class IpsrPathwayStepFourService {
     protected readonly _resultByInstitutionsRepository: ResultByIntitutionsRepository,
     protected readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
     private readonly _versioningService: VersioningService,
+    private readonly _resultsByProjectsService: ResultsByProjectsService,
   ) {}
 
   async saveMain(
@@ -625,6 +630,29 @@ export class IpsrPathwayStepFourService {
         message: 'Error getting step four',
         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
       };
+    }
+  }
+
+  async saveBilaterals(
+    resultId: number,
+    user: TokenDto,
+    rbpipsr: ResulByProjectIpsrDto,
+  ) {
+    try {
+      const ipsrByProject =
+        await this._resultsByProjectsService.linkBilateralProjectToResult(
+          resultId,
+          rbpipsr.id,
+          user.id,
+        );
+
+      return {
+        response: ipsrByProject.response,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 }
