@@ -54,6 +54,16 @@
           [(ngModel)]="option.in_cash">
         </app-pr-input>
       </td>
+    } @else {
+      <td>
+        <app-pr-input
+          placeholder="Enter text"
+          type="currency"
+          [required]="false"
+          [noDataText]="option?.is_determined ? 'Not applicable' : 'Not provided'"
+          [(ngModel)]="option.kind_cash">
+        </app-pr-input>
+      </td>
     }
     <td>
       <app-pr-radio-button

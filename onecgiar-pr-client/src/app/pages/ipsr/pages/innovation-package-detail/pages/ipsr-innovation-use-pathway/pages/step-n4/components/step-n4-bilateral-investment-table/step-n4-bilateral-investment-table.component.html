@@ -61,7 +61,18 @@
             [(ngModel)]="item.in_cash">
           </app-pr-input>
         </td>
+      } @else {
+        <td>
+          <app-pr-input
+            placeholder="Enter text"
+            type="currency"
+            [required]="false"
+            [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
+            [(ngModel)]="item.kind_cash">
+          </app-pr-input>
+        </td>
       }
+
       @if (this.api.fieldsManagerSE.isP25()) {
         <th>
           <app-pr-input
