@@ -14,14 +14,22 @@
 <table>
   <tr>
     <th>{{ 'term.entity.singular' | term: this.ipsrDataControlSE.detailData?.portfolio }}</th>
-    <th>
-      Current calendar year <br />
-      (USD value)
-    </th>
-    <th>
-      Next calendar year <br />
-      (USD value)
-    </th>
+    @if (!this.fieldsManagerSE.isP25()) {
+      <th>
+        Current calendar year <br />
+        (USD value)
+      </th>
+      <th>
+        Next calendar year <br />
+        (USD value)
+      </th>
+    }
+    @if (this.fieldsManagerSE.isP25()) {
+      <th>
+        Total USD Value <br />
+        (in-cash + in-kind)
+      </th>
+    }
     <th></th>
   </tr>
   <tr *ngFor="let item of this.body.initiative_expected_investment">
