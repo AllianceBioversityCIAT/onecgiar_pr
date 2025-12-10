@@ -35,24 +35,26 @@
         <strong>Institution type:</strong> {{ option?.obj_result_institution?.obj_institutions?.obj_institution_type_code?.name }}
       </div>
     </td>
-    <td>
-      <app-pr-input
-        placeholder="Enter text"
-        type="currency"
-        [required]="false"
-        [noDataText]="option?.is_determined ? 'Not applicable' : 'Not provided'"
-        [(ngModel)]="option.in_kind">
-      </app-pr-input>
-    </td>
-    <td>
-      <app-pr-input
-        placeholder="Enter text"
-        type="currency"
-        [required]="false"
-        [noDataText]="option?.is_determined ? 'Not applicable' : 'Not provided'"
-        [(ngModel)]="option.in_cash">
-      </app-pr-input>
-    </td>
+    @if (!this.fieldsManagerSE.isP25()) {
+      <td>
+        <app-pr-input
+          placeholder="Enter text"
+          type="currency"
+          [required]="false"
+          [noDataText]="option?.is_determined ? 'Not applicable' : 'Not provided'"
+          [(ngModel)]="option.in_kind">
+        </app-pr-input>
+      </td>
+      <td>
+        <app-pr-input
+          placeholder="Enter text"
+          type="currency"
+          [required]="false"
+          [noDataText]="option?.is_determined ? 'Not applicable' : 'Not provided'"
+          [(ngModel)]="option.in_cash">
+        </app-pr-input>
+      </td>
+    }
     <td>
       <app-pr-radio-button
         optionLabel="name"
