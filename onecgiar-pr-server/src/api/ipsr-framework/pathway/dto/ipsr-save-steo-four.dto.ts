@@ -32,10 +32,7 @@ export interface IpsrMaterials {
   link: string;
 }
 
-export interface donorInterfaceToc {
+export class ResulByProjectIpsrDto {
   id: number;
-  funder: number;
-  grant_title: string;
-  center_grant_id: string;
-  lead_center: string;
+  short_name: number;
 }

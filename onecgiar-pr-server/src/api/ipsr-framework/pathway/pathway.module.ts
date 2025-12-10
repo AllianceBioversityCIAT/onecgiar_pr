@@ -16,6 +16,7 @@ import { ResultInstitutionsBudgetRepository } from '../../results/result_budget/
 import { ResultScalingStudyUrl } from '../../results-framework-reporting/result_scaling_study_urls/entities/result_scaling_study_url.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { IpsrPathwayStepFourService } from './ipsr-pathway-step-four.service';
+import { ResultsByProjectsService } from '../../results/results_by_projects/results_by_projects.service';
 
 @Module({
   controllers: [PathwayController],
@@ -33,6 +34,7 @@ import { IpsrPathwayStepFourService } from './ipsr-pathway-step-four.service';
     ResultByIntitutionsRepository,
     ResultInstitutionsBudgetRepository,
     IpsrPathwayStepFourService,
+    ResultsByProjectsService,
   ],
   imports: [
     forwardRef(() => VersioningModule),
