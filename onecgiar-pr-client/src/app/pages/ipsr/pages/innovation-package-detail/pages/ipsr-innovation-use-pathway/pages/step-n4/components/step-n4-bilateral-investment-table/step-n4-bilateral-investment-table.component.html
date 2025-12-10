@@ -7,14 +7,19 @@
 <table>
   <tr>
     <th>Bilateral</th>
-    <th>
-      Current calendar year <br />
-      (in-kind + in-cash USD value)
-    </th>
-    <th>
-      Next calendar year <br />
-      (in-kind + in-cash USD value)
-    </th>
+    @if (!this.api.fieldsManagerSE.isP25()) {
+      <th>
+        Current calendar year <br />
+        (in-kind + in-cash USD value)
+      </th>
+      <th>
+        Next calendar year <br />
+        (in-kind + in-cash USD value)
+      </th>
+    }
+    @if (this.api.fieldsManagerSE.isP25()) {
+      <th>En la mitad</th>
+    }
     <th></th>
     <th *ngIf="!this.rolesSE.readOnly"></th>
   </tr>
