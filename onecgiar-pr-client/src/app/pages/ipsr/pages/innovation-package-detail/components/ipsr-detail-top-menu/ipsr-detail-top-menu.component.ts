@@ -13,7 +13,7 @@ export class IpsrDetailTopMenuComponent {
   fieldsManagerSE = inject(FieldsManagerService);
   menuOptions = computed(() =>
     IPSRDetailRouting.filter(option => !(this.fieldsManagerSE.isP25() && option.path == 'link-to-results')).map(option => {
-      if (option.path == 'ipsr-innovation-use-pathway') option.prName = 'Package and Assess';
+      if (option.path == 'ipsr-innovation-use-pathway' && this.fieldsManagerSE.isP25()) option.prName = 'Package and Assess';
       return option;
     })
   );
