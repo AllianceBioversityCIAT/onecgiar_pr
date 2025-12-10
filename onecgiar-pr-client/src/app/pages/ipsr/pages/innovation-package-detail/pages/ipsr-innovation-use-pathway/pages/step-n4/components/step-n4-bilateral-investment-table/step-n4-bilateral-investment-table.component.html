@@ -18,7 +18,10 @@
       </th>
     }
     @if (this.api.fieldsManagerSE.isP25()) {
-      <th>En la mitad</th>
+      <th>
+        Total USD Value <br />
+        (in-cash + in-kind)
+      </th>
     }
     <th></th>
     <th *ngIf="!this.rolesSE.readOnly"></th>
@@ -39,24 +42,37 @@
           </div>
         </div>
       </td>
-      <td>
-        <app-pr-input
-          placeholder="Enter text"
-          type="currency"
-          [required]="false"
-          [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
-          [(ngModel)]="item.in_kind">
-        </app-pr-input>
-      </td>
-      <td>
-        <app-pr-input
-          placeholder="Enter text"
-          type="currency"
-          [required]="false"
-          [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
-          [(ngModel)]="item.in_cash">
-        </app-pr-input>
-      </td>
+      @if (!this.api.fieldsManagerSE.isP25()) {
+        <td>
+          <app-pr-input
+            placeholder="Enter text"
+            type="currency"
+            [required]="false"
+            [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
+            [(ngModel)]="item.in_kind">
+          </app-pr-input>
+        </td>
+        <td>
+          <app-pr-input
+            placeholder="Enter text"
+            type="currency"
+            [required]="false"
+            [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
+            [(ngModel)]="item.in_cash">
+          </app-pr-input>
+        </td>
+      }
+      @if (this.api.fieldsManagerSE.isP25()) {
+        <th>
+          <app-pr-input
+            placeholder="Enter text"
+            type="currency"
+            [required]="false"
+            [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
+            [(ngModel)]="item.kind_cash">
+          </app-pr-input>
+        </th>
+      }
       <td>
         <app-pr-radio-button
           optionLabel="name"
