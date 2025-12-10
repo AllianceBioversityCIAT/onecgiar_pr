@@ -1,67 +1,77 @@
 <div class="unit_of_time_container">
-    <div>
-        <app-pr-field-header label="Expected CGIAR Bilateral investments in Innovation Package in"
-            [required]="false"></app-pr-field-header>
-    </div>
+  <div>
+    <app-pr-field-header label="Expected CGIAR Bilateral investments in Innovation Package in" [required]="false"></app-pr-field-header>
+  </div>
 </div>
 
 <table>
-    <tr>
-        <th>Bilateral</th>
-        <th>Current calendar year <br> (in-kind + in-cash USD value)</th>
-        <th>Next calendar year <br> (in-kind + in-cash USD value)</th>
-        <th></th>
-        <th *ngIf="!this.rolesSE.readOnly"></th>
-    </tr>
-    @for (item of this.body.bilateral_expected_investment; track $index; let i = $index) {
+  <tr>
+    <th>Bilateral</th>
+    <th>
+      Current calendar year <br />
+      (in-kind + in-cash USD value)
+    </th>
+    <th>
+      Next calendar year <br />
+      (in-kind + in-cash USD value)
+    </th>
+    <th></th>
+    <th *ngIf="!this.rolesSE.readOnly"></th>
+  </tr>
+  @for (item of this.body.bilateral_expected_investment; track $index; let i = $index) {
     <tr [hidden]="item.is_active == false">
-        <td>
-            <div class="editBilateral">
-                <div style="display: flex; align-items: center;">
-                    {{item?.obj_non_pooled_projetct?.grant_title}}
-                </div>
-                <div style=" margin-top: 0px;margin-right: 0px;">
-                    <app-step-n4-edit-bilateral [body]="item" [isonlyread]="true"></app-step-n4-edit-bilateral>
-                    <app-step-n4-edit-bilateral [body]="item" [isonlyread]="false"
-                        *ngIf="isInitiative || this.api.rolesSE.isAdmin"></app-step-n4-edit-bilateral>
-
-                </div>
-            </div>
-        </td>
-        <td>
-            <app-pr-input placeholder="Enter text" type="currency" [required]="false"
-                [noDataText]="item.is_determined ? 'Not applicable':'Not provided'" [(ngModel)]="item.in_kind">
-            </app-pr-input>
-        </td>
-        <td>
-            <app-pr-input placeholder="Enter text" type="currency" [required]="false"
-                [noDataText]="item.is_determined ? 'Not applicable':'Not provided'" [(ngModel)]="item.in_cash">
-            </app-pr-input>
-        </td>
-        <td>
-            <app-pr-radio-button optionLabel="name" optionValue="id"
-                [options]="[{name:'This is yet to be determined',id:true}]" [(ngModel)]="item.is_determined">
-            </app-pr-radio-button>
-        </td>
-        <td *ngIf="!this.rolesSE.readOnly">
-            <div class="center_flex_100">
-                <div class="step-4-delete-button" (click)="deleteBilateral(item)"
-                    *ngIf="isInitiative || this.api.rolesSE.isAdmin">
-                    <i class="material-icons-round">
-                        delete
-                    </i>
-                </div>
-
-            </div>
-
-        </td>
+      <td>
+        <div class="editBilateral">
+          <div style="display: flex; align-items: center">
+            {{ item?.obj_non_pooled_projetct?.grant_title }}
+          </div>
+          <div style="margin-top: 0px; margin-right: 0px">
+            <app-step-n4-edit-bilateral [body]="item" [isonlyread]="true"></app-step-n4-edit-bilateral>
+            <app-step-n4-edit-bilateral
+              [body]="item"
+              [isonlyread]="false"
+              *ngIf="isInitiative || this.api.rolesSE.isAdmin"></app-step-n4-edit-bilateral>
+          </div>
+        </div>
+      </td>
+      <td>
+        <app-pr-input
+          placeholder="Enter text"
+          type="currency"
+          [required]="false"
+          [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
+          [(ngModel)]="item.in_kind">
+        </app-pr-input>
+      </td>
+      <td>
+        <app-pr-input
+          placeholder="Enter text"
+          type="currency"
+          [required]="false"
+          [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
+          [(ngModel)]="item.in_cash">
+        </app-pr-input>
+      </td>
+      <td>
+        <app-pr-radio-button
+          optionLabel="name"
+          optionValue="id"
+          [options]="[{ name: 'This is yet to be determined', id: true }]"
+          [(ngModel)]="item.is_determined">
+        </app-pr-radio-button>
+      </td>
+      <td *ngIf="!this.rolesSE.readOnly">
+        <div class="center_flex_100">
+          <div class="step-4-delete-button" (click)="deleteBilateral(item)" *ngIf="isInitiative || this.api.rolesSE.isAdmin">
+            <i class="material-icons-round"> delete </i>
+          </div>
+        </div>
+      </td>
     </tr>
-    }
+  }
 </table>
 
-<app-no-data-text *ngIf="!hasElementsWithId(this.body.bilateral_expected_investment,'non_pooled_projetct_budget_id')"
-    title="No bilaterals added">
+<app-no-data-text *ngIf="!hasElementsWithId(this.body.bilateral_expected_investment, 'non_pooled_projetct_budget_id')" title="No bilaterals added">
 </app-no-data-text>
-
 
 <app-step-n4-add-bilateral [body]="this.body"></app-step-n4-add-bilateral>
