@@ -66,7 +66,6 @@ export class AowHloTableComponent {
     { title: 'Type', attr: 'type_name', width: '10%' },
     { title: 'Expected target 2025', attr: 'target_value_sum', width: '10%' },
     { title: 'Actual achieved', attr: 'actual_achieved_value_sum', width: '10%' },
-    { title: 'Progress', attr: 'progress_percentage', hideSortIcon: true, width: '112px' },
     { title: 'Status', attr: 'status', hideSortIcon: true, width: '11%' }
   ]);
 

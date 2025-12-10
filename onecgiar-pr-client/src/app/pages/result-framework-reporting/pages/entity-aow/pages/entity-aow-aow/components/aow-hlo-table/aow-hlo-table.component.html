@@ -54,12 +54,6 @@
           <td style="text-align: center">{{ result.target_value_sum }}</td>
           <td style="text-align: center">{{ result.actual_achieved_value_sum }}</td>
           <td>
-            <div class="tab-content_progress">
-              <p-progressbar [value]="getProgress(result.progress_percentage)" [showValue]="false" [style]="{ width: '65px', height: '8px' }" />
-              <p class="tab-content_progress_value">{{ result.progress_percentage }}</p>
-            </div>
-          </td>
-          <td>
             <div
               class="tab-content_chip"
               [ngClass]="{
