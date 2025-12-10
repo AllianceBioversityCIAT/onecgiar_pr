@@ -74,6 +74,18 @@ export class ManageUserModalComponent {
   loadingRoleAssignment = signal<boolean>(true);
   disabledRoleAssignmentOptions = signal([]);
 
+  // Computed signal for all selected entity IDs
+  selectedEntityIds = computed(() => {
+    const roleAssignments = this.addUserForm().role_assignments;
+    const entityIds = new Set<number>();
+    roleAssignments.forEach(item => {
+      if (item.entity_id !== null) {
+        entityIds.add(item.entity_id);
+      }
+    });
+    return entityIds;
+  });
+
   // Admin permissions options for radio button - computed based on CGIAR status
   adminPermissionsOptions = computed(() => {
     if (!this.addUserForm().is_cgiar) {
@@ -113,16 +125,44 @@ export class ManageUserModalComponent {
 
   getAvailableEntities(currentIndex: number) {
     const selectedRoleAssignments = this.addUserForm().role_assignments;
-    const selectedEntities = selectedRoleAssignments
-      .map((item, index) => (index !== currentIndex ? item.entity_id : null))
-      .filter(entityId => entityId !== null);
+    const currentAssignment = selectedRoleAssignments[currentIndex];
+    const currentEntityId = currentAssignment?.entity_id;
 
-    return this.entities()
-      .filter(group => group.name === 'P25')
-      .map(group => ({
-        ...group,
-        entities: group.entities.filter(entity => !selectedEntities.includes(entity.initiative_id))
-      }));
+    // Get all selected entities from computed signal and exclude the current one
+    const allSelectedEntities = this.selectedEntityIds();
+    const selectedEntities = new Set<number>(allSelectedEntities);
+    if (currentEntityId !== null) {
+      selectedEntities.delete(currentEntityId);
+    }
+
+    const allEntities = this.entities();
+    const result: any[] = [];
+
+    // Always include P25 group with available entities
+    const p25Group = allEntities.find(group => group.name === 'P25');
+    if (p25Group) {
+      result.push({
+        ...p25Group,
+        entities: p25Group.entities.filter(entity => !selectedEntities.has(entity.initiative_id))
+      });
+    }
+
+    // If current assignment has a P22 entity, include P22 group but only with that specific entity
+    if (currentEntityId) {
+      const p22Group = allEntities.find(group => group.name === 'P22');
+      if (p22Group) {
+        const currentP22Entity = p22Group.entities.find(entity => entity.initiative_id === currentEntityId);
+        if (currentP22Entity) {
+          // Include P22 group but only with the currently assigned entity
+          result.push({
+            ...p22Group,
+            entities: [currentP22Entity]
+          });
+        }
+      }
+    }
+
+    return result;
   }
 
   onRoleEntityChange(event: number, index: number): void {
