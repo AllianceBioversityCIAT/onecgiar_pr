@@ -5,10 +5,10 @@ import { ApiService } from '../../../../../../../../shared/services/api/api.serv
 import { Router } from '@angular/router';
 
 @Component({
-    selector: 'app-step-n3',
-    templateUrl: './step-n3.component.html',
-    styleUrls: ['./step-n3.component.scss'],
-    standalone: false
+  selector: 'app-step-n3',
+  templateUrl: './step-n3.component.html',
+  styleUrls: ['./step-n3.component.scss'],
+  standalone: false
 })
 export class StepN3Component implements OnInit {
   rangesOptions = [];
@@ -21,7 +21,11 @@ export class StepN3Component implements OnInit {
   showDetailsOfUseLevel = false;
   savingSection = false;
 
-  constructor(public ipsrDataControlSE: IpsrDataControlService, public api: ApiService, private router: Router) {}
+  constructor(
+    public ipsrDataControlSE: IpsrDataControlService,
+    public api: ApiService,
+    private router: Router
+  ) {}
 
   ngOnInit(): void {
     this.GETAllClarisaInnovationReadinessLevels();
@@ -33,7 +37,9 @@ export class StepN3Component implements OnInit {
   openClosed(response) {
     if (this.ipsrStep3Body.result_ip_result_complementary.length) {
       this.ipsrStep3Body.result_ip_result_complementary.forEach((item: any) => {
-        const itemFind = response.result_ip_result_complementary.find(responseItem => responseItem.result_by_innovation_package_id == item.result_by_innovation_package_id);
+        const itemFind = response.result_ip_result_complementary.find(
+          responseItem => responseItem.result_by_innovation_package_id == item.result_by_innovation_package_id
+        );
         if (itemFind) itemFind.open = item?.open;
       });
     }
@@ -132,12 +138,12 @@ export class StepN3Component implements OnInit {
 
   readinessLevelSelfAssessmentText() {
     return `
-    <li><a href="https://drive.google.com/file/d/1muDLtqpeaSCIX60g6qQG_GGOPR61Rq7E/view" class="open_route" target="_blank">Click here</a>  to see all innovation readiness levels</li>
+    <li><a href="https://www.scalingreadiness.org/calculator-readiness-headless/" class="open_route" target="_blank">Click here</a>  to see all innovation readiness levels</li>
     <li><strong>YOUR READINESS SCORE IN JUST 3 CLICKS: TRY THE NEW <a href="https://www.scalingreadiness.org/calculator-readiness-headless/" class="open_route" target="_blank">READINESS CALCULATOR</a>.</strong></li>
     `;
   }
   useLevelDelfAssessment() {
-    return `<li><a href="https://drive.google.com/file/d/1RFDAx3m5ziisZPcFgYdyBYH9oTzOYLvC/view" class="open_route" target="_blank">Click here</a> to see all innovation use levels</li>
+    return `<li><a href="https://www.scalingreadiness.org/calculator-use-headless/" class="open_route" target="_blank">Click here</a> to see all innovation use levels</li>
     <li><strong>YOUR USE SCORE IN JUST 3 CLICKS: TRY THE NEW <a href="https://www.scalingreadiness.org/calculator-use-headless/" class="open_route" target="_blank">USE CALCULATOR</a>.</strong></li>`;
   }
 
