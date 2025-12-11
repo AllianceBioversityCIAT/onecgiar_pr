@@ -1,5 +1,6 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
-import { In, IsNull } from 'typeorm';
+import { DataSource, In, IsNull } from 'typeorm';
+import { env } from 'process';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
 import { ClarisaGlobalUnitRepository } from '../../clarisa/clarisa-global-unit/clarisa-global-unit.repository';
@@ -32,6 +33,7 @@ export class ResultsFrameworkReportingService {
   );
 
   constructor(
+    private readonly dataSource: DataSource,
     private readonly _clarisaInitiativesRepository: ClarisaInitiativesRepository,
     private readonly _roleByUserRepository: RoleByUserRepository,
     private readonly _clarisaGlobalUnitRepository: ClarisaGlobalUnitRepository,
@@ -129,6 +131,12 @@ export class ResultsFrameworkReportingService {
           initiative.official_code.toUpperCase(),
           activeYearValue,
         );
+
+      const resultCountsByUnit = await this.getResultsCountByUnitAndStatus(
+        initiative.id,
+        childUnits.map((u) => u.code),
+      );
+
       let totalTargetValue = 0;
       let totalActualValue = 0;
       const progressByUnit = new Map<
@@ -233,6 +241,10 @@ export class ResultsFrameworkReportingService {
             progressDetails: {
               targetValueSum: totals.targetValue,
               actualAchievedValueSum: totals.actualValue,
+            },
+            resultsCount: {
+              editing: resultCountsByUnit.get(`${unitKey}_1`) ?? 0,
+              submitted: resultCountsByUnit.get(`${unitKey}_3`) ?? 0,
             },
           };
         });
@@ -993,7 +1005,7 @@ export class ResultsFrameworkReportingService {
           editing: number;
           qualityAssessed: number;
           submitted: number;
-          others: number;
+          others: number; 
         }
       >();
 
@@ -1215,6 +1227,7 @@ export class ResultsFrameworkReportingService {
             results_toc_results_id: In(tocResultIdsWithIndicator),
             toc_results_indicator_id: tocResultIndicatorId,
             is_active: true,
+            is_not_aplicable: false,
           },
           select: ['results_toc_results_id'],
         });
@@ -1331,6 +1344,89 @@ export class ResultsFrameworkReportingService {
     }
   }
 
+  private async getResultsCountByUnitAndStatus(
+    initiativeId: number,
+    unitCodes: string[],
+  ): Promise<Map<string, number>> {
+    if (!unitCodes || unitCodes.length === 0) {
+      return new Map();
+    }
+
+    const tocPhaseId = await this.getCurrentTocPhaseId();
+    const placeholders = unitCodes.map(() => '?').join(',');
+
+    let query = `
+      SELECT 
+        UPPER(wp.acronym) AS work_package_acronym,
+        r.status_id,
+        COUNT(DISTINCT r.id) AS result_count
+      FROM 
+        result r
+      INNER JOIN 
+        results_toc_result rtr ON r.id = rtr.results_id 
+          AND rtr.is_active = 1
+      INNER JOIN 
+        results_toc_result_indicators rtri ON rtri.results_toc_results_id = rtr.result_toc_result_id
+          AND rtri.is_active = 1
+          AND rtri.is_not_aplicable = 0
+      INNER JOIN 
+        result_indicators_targets rit ON rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
+          AND rit.is_active = 1
+          AND rit.contributing_indicator IS NOT NULL
+      INNER JOIN 
+        ${env.DB_TOC}.toc_results tr ON tr.id = rtr.toc_result_id
+      INNER JOIN 
+        ${env.DB_TOC}.toc_work_packages wp ON wp.toc_id = tr.wp_id
+      WHERE 
+        r.is_active = 1
+        AND r.source = 'Result'
+        AND r.status_id IN (1, 3)
+        AND rtr.initiative_id = ?
+        AND UPPER(wp.acronym) IN (${placeholders})
+    `;
+
+    const params: (string | number)[] = [
+      initiativeId,
+      ...unitCodes.map((c) => c.toUpperCase()),
+    ];
+
+    if (tocPhaseId) {
+      query += ` AND tr.phase = ?`;
+      params.push(tocPhaseId);
+    }
+
+    query += `
+      GROUP BY 
+        UPPER(wp.acronym),
+        r.status_id
+    `;
+
+    const rawData = await this.dataSource.query(query, params);
+
+    const countsMap = new Map<string, number>();
+    for (const row of rawData) {
+      const key = `${row.work_package_acronym}_${row.status_id}`;
+      countsMap.set(key, Number(row.result_count) || 0);
+    }
+
+    return countsMap;
+  }
+
+  private async getCurrentTocPhaseId(): Promise<string | null> {
+    const query = `
+      SELECT toc_pahse_id
+      FROM version
+      WHERE is_active = 1 AND status = 1 AND app_module_id = 1
+      LIMIT 1
+    `;
+    try {
+      const rows = await this.dataSource.query(query);
+      return rows?.[0]?.toc_pahse_id ?? null;
+    } catch (error) {
+      this._logger.error('Error fetching current TOC phase ID', error);
+      return null;
+    }
+  }
   private buildHttpError(status: number, message: string) {
     const error: any = new Error(message);
     error.response = {};
