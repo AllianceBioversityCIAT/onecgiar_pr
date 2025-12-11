@@ -34,5 +34,5 @@ export interface IpsrMaterials {
 
 export class ResulByProjectIpsrDto {
   id: number;
-  short_name: number;
+  short_name: string;
 }
