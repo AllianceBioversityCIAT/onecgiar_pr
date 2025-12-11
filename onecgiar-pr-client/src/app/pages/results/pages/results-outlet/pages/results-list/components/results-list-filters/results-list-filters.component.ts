@@ -68,7 +68,6 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
 
     if (this.resultsListFilterSE.selectedPhases().length > 0) count++;
     if (this.resultsListFilterSE.selectedSubmittersAdmin().length > 0) count++;
-    // if (!this.isAdmin && this.resultsListFilterSE.selectedSubmitters().length > 0) count++;
     if (this.resultsListFilterSE.selectedIndicatorCategories().length > 0) count++;
     if (this.resultsListFilterSE.selectedStatus().length > 0) count++;
     if (this.resultsListFilterSE.text_to_search().length > 0) count++;
