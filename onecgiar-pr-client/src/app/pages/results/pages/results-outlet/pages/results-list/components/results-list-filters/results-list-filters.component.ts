@@ -127,20 +127,11 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     }
 
     // Submitters
-    let submitterChips = [];
-    // if (this.isAdmin) {
-    submitterChips = this.resultsListFilterSE.selectedSubmittersAdmin().map(submitter => ({
+    const submitterChips = this.resultsListFilterSE.selectedSubmittersAdmin().map(submitter => ({
       label: submitter.official_code,
       filterType: 'submitter',
       item: submitter
     }));
-    // } else {
-    //   submitterChips = this.resultsListFilterSE.selectedSubmitters().map(submitter => ({
-    //     label: submitter.name,
-    //     filterType: 'submitter',
-    //     item: submitter
-    //   }));
-    // }
     if (submitterChips.length > 0) {
       groups.push({
         category: 'Submitter',
@@ -196,14 +187,10 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     });
   }
   ngOnChanges(changes: SimpleChanges): void {
-    // if (changes['isAdmin']) {
     this.getAllInitiatives();
-    // }
   }
 
   getAllInitiatives() {
-    // if (!this.isAdmin) return;
-
     this.api.resultsSE.GET_AllInitiatives().subscribe({
       next: ({ response }) => {
         // Handle null or undefined response
@@ -309,11 +296,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
         break;
 
       case 'submitter':
-        // if (this.isAdmin) {
         this.resultsListFilterSE.selectedSubmittersAdmin.set(this.resultsListFilterSE.selectedSubmittersAdmin().filter(s => s !== chip.item));
-        // } else {
-        //   this.resultsListFilterSE.selectedSubmitters.set(this.resultsListFilterSE.selectedSubmitters().filter(s => s !== chip.item));
-        // }
         break;
 
       case 'indicatorCategory':
