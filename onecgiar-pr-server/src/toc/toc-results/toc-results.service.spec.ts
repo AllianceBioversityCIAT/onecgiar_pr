@@ -247,6 +247,7 @@ describe('TocResultsService', () => {
         yearRecord,
         [10],
         7,
+        ['NODE-1'],
       );
       expect(repository.getResultIndicatorMappings).toHaveBeenCalledWith(1, 2, [
         10,
@@ -311,6 +312,7 @@ describe('TocResultsService', () => {
         yearRecord,
         [20],
         7,
+        [],
       );
       expect(repository.getResultIndicatorMappings).toHaveBeenCalledWith(4, 5, [
         20,

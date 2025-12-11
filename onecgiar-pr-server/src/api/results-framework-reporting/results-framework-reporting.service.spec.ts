@@ -1394,6 +1394,15 @@ describe('ResultsFrameworkReportingService', () => {
           where: expect.objectContaining({
             toc_result_id: 5,
             is_active: true,
+            obj_results: { is_active: true },
+            obj_results_toc_result_indicators: expect.objectContaining({
+              toc_results_indicator_id: 'IND-55',
+              is_active: true,
+              is_not_aplicable: false,
+              obj_result_indicator_targets: expect.objectContaining({
+                is_active: true,
+              }),
+            }),
           }),
         }),
       );

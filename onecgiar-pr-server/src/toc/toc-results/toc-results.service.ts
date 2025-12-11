@@ -168,19 +168,32 @@ export class TocResultsService {
         );
 
         if (tocResultIds.length) {
-          const [indicatorRows, mappingRows] = await Promise.all([
-            this._tocResultsRepository.getTocIndicatorsByResultIds(
+          const mappingRows =
+            await this._tocResultsRepository.getResultIndicatorMappings(
+              result_id,
+              init_id,
+              tocResultIds,
+            );
+
+          const linkedIndicatorNodeIds = Array.from(
+            new Set(
+              (mappingRows ?? [])
+                .map((row) => row?.toc_results_indicator_id)
+                .filter(
+                  (identifier): identifier is string =>
+                    typeof identifier === 'string' && identifier.trim() !== '',
+                ),
+            ),
+          );
+
+          const indicatorRows =
+            await this._tocResultsRepository.getTocIndicatorsByResultIds(
               result,
               year,
               tocResultIds,
               result?.result_type_id,
-            ),
-            this._tocResultsRepository.getResultIndicatorMappings(
-              result_id,
-              init_id,
-              tocResultIds,
-            ),
-          ]);
+              linkedIndicatorNodeIds,
+            );
 
           const indicatorMap = new Map<
             number,
