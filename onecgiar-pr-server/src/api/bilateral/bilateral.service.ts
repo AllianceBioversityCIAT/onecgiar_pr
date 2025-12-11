@@ -150,8 +150,9 @@ export class BilateralService {
             );
             const userId = createdByUser.id;
 
+            const submittedPayload = this.resolveSubmitterPayload(bilateralDto);
             const submittedUser = await this.findOrCreateUser(
-              bilateralDto.submitted_by,
+              submittedPayload,
               createdByUser,
             );
             const submittedUserId = submittedUser.id;
@@ -395,8 +396,9 @@ export class BilateralService {
       );
       const userId = createdByUser.id;
 
+      const submittedPayload = this.resolveSubmitterPayload(bilateralDto);
       const submittedUser = await this.findOrCreateUser(
-        bilateralDto.submitted_by,
+        submittedPayload,
         createdByUser,
       );
       const submittedUserId = submittedUser.id;
@@ -713,6 +715,13 @@ export class BilateralService {
       first_name: 'System',
       last_name: 'Bilateral',
     };
+  }
+
+  private resolveSubmitterPayload(bilateralDto: CreateBilateralDto) {
+    if (bilateralDto?.submitted_by?.email) {
+      return bilateralDto.submitted_by;
+    }
+    return bilateralDto?.created_by;
   }
 
   private async handleTocMapping(
