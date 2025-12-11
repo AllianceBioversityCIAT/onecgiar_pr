@@ -1380,7 +1380,6 @@ export class ResultsFrameworkReportingService {
         ${env.DB_TOC}.toc_work_packages wp ON wp.toc_id = tr.wp_id
       WHERE 
         r.is_active = 1
-        AND r.source = 'Result'
         AND r.status_id IN (1, 3)
         AND rtr.initiative_id = ?
         AND UPPER(wp.acronym) IN (${placeholders})
