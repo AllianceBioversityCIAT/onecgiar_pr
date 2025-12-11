@@ -19,6 +19,15 @@ describe('ResultsListFiltersComponent', () => {
 
   const createSignal = <T>(initial: T) => signal<T>(initial);
 
+  const clearAllFilters = () => {
+    mockResultsListFilterService.selectedPhases.set([]);
+    mockResultsListFilterService.selectedSubmitters.set([]);
+    mockResultsListFilterService.selectedSubmittersAdmin.set([]);
+    mockResultsListFilterService.selectedIndicatorCategories.set([]);
+    mockResultsListFilterService.selectedStatus.set([]);
+    mockResultsListFilterService.text_to_search.set('');
+  };
+
   beforeEach(async () => {
     // ResultsListFilterService mock with all signals used in the component
     mockResultsListFilterService = {
@@ -84,7 +93,12 @@ describe('ResultsListFiltersComponent', () => {
         GET_allResultStatuses: jest.fn(() => of({ response: [{ id: 1, name: 'Draft' }] })),
         GET_reportingList: jest.fn(() => of({ response: [{ result_code: 'R-1', pdf_link: 'https://localhost:4200/reports/result-details/1' }] })),
         GET_AllInitiatives: jest.fn(() => of({ response: [{ id: 1, name: 'Initiative A' }] })),
-        GET_ClarisaPortfolios: jest.fn(() => of([{ id: 1, name: 'Portfolio A', acronym: 'PA' }, { id: 2, name: 'Portfolio B', acronym: 'PB' }]))
+        GET_ClarisaPortfolios: jest.fn(() =>
+          of([
+            { id: 1, name: 'Portfolio A', acronym: 'PA' },
+            { id: 2, name: 'Portfolio B', acronym: 'PB' }
+          ])
+        )
       },
       rolesSE: {
         isAdmin: false
@@ -199,12 +213,7 @@ describe('ResultsListFiltersComponent', () => {
       component.isAdmin = true;
 
       // Clear all filters first
-      mockResultsListFilterService.selectedPhases.set([]);
-      mockResultsListFilterService.selectedSubmitters.set([]);
-      mockResultsListFilterService.selectedSubmittersAdmin.set([]);
-      mockResultsListFilterService.selectedIndicatorCategories.set([]);
-      mockResultsListFilterService.selectedStatus.set([]);
-      mockResultsListFilterService.text_to_search.set('');
+      clearAllFilters();
 
       expect(component.filtersCount()).toBe(0);
       expect(component.filtersCountText()).toBe('Apply filters');
@@ -220,12 +229,7 @@ describe('ResultsListFiltersComponent', () => {
       component.isAdmin = false;
 
       // Clear all filters first
-      mockResultsListFilterService.selectedPhases.set([]);
-      mockResultsListFilterService.selectedSubmitters.set([]);
-      mockResultsListFilterService.selectedSubmittersAdmin.set([]);
-      mockResultsListFilterService.selectedIndicatorCategories.set([]);
-      mockResultsListFilterService.selectedStatus.set([]);
-      mockResultsListFilterService.text_to_search.set('');
+      clearAllFilters();
 
       expect(component.filtersCount()).toBe(0);
       expect(component.filtersCountText()).toBe('Apply filters');
@@ -241,12 +245,7 @@ describe('ResultsListFiltersComponent', () => {
       component.isAdmin = true;
 
       // Clear all filters first
-      mockResultsListFilterService.selectedPhases.set([]);
-      mockResultsListFilterService.selectedSubmitters.set([]);
-      mockResultsListFilterService.selectedSubmittersAdmin.set([]);
-      mockResultsListFilterService.selectedIndicatorCategories.set([]);
-      mockResultsListFilterService.selectedStatus.set([]);
-      mockResultsListFilterService.text_to_search.set('');
+      clearAllFilters();
 
       // Add all possible filters
       mockResultsListFilterService.selectedPhases.set([{ id: 1 }]);
@@ -263,12 +262,7 @@ describe('ResultsListFiltersComponent', () => {
       component.isAdmin = false;
 
       // Clear all filters
-      mockResultsListFilterService.selectedPhases.set([]);
-      mockResultsListFilterService.selectedSubmitters.set([]);
-      mockResultsListFilterService.selectedSubmittersAdmin.set([]);
-      mockResultsListFilterService.selectedIndicatorCategories.set([]);
-      mockResultsListFilterService.selectedStatus.set([]);
-      mockResultsListFilterService.text_to_search.set('');
+      clearAllFilters();
 
       expect(component.filtersCount()).toBe(0);
       expect(component.filtersCountText()).toBe('Apply filters');
@@ -278,12 +272,7 @@ describe('ResultsListFiltersComponent', () => {
       component.isAdmin = true;
 
       // Clear all filters first
-      mockResultsListFilterService.selectedPhases.set([]);
-      mockResultsListFilterService.selectedSubmitters.set([]);
-      mockResultsListFilterService.selectedSubmittersAdmin.set([]);
-      mockResultsListFilterService.selectedIndicatorCategories.set([]);
-      mockResultsListFilterService.selectedStatus.set([]);
-      mockResultsListFilterService.text_to_search.set('');
+      clearAllFilters();
 
       // Add both admin and regular submitters (only admin should count)
       mockResultsListFilterService.selectedSubmitters.set([{ id: 1, name: 'Regular User' }]);
@@ -464,9 +453,7 @@ describe('ResultsListFiltersComponent', () => {
     it('should create displayName from official_code and name', () => {
       component.isAdmin = true;
       const mockResponse = {
-        response: [
-          { id: 1, name: 'Test Initiative', official_code: 'TST-01' }
-        ]
+        response: [{ id: 1, name: 'Test Initiative', official_code: 'TST-01' }]
       };
       mockApiService.resultsSE.GET_AllInitiatives.mockReturnValue(of(mockResponse));
 
