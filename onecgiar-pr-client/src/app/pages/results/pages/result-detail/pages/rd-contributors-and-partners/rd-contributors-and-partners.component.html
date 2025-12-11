@@ -34,10 +34,16 @@
   }
 
   <app-pr-yes-or-not
-    label="Does this result align with your Theory of Change—both in terms of supporting progress and matching a planned result?"
+    label="Does this result align with the Program’s planned TOC indicators?"
     [required]="true"
     [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.planned_result">
   </app-pr-yes-or-not>
+
+  <app-alert-status
+    [description]="
+      'If your response to this question is <strong>YES</strong>, then please return to the Program’s main page in PRMS and report the result through the ToC module by associating it with the corresponding indicators and targets. If the result you plan to submit does not match any 2025 planned indicators and results, then click <strong>NO</strong> and provide a short justification explaining why you are reporting it despite not being part of the 2025 planned results.'
+    ">
+  </app-alert-status>
 
   <!-- ! from toc section end -->
 

@@ -17,17 +17,20 @@ describe('ClarisaInitiativesRepository', () => {
   });
 
   describe('getAllInitiatives', () => {
-    it('calls find with active true and relations', async () => {
+    it('executes query with custom entity type order', async () => {
       const spy = jest
-        .spyOn(repository as any, 'find')
+        .spyOn(repository as any, 'query')
         .mockResolvedValue([{ id: 1 } as ClarisaInitiative]);
       const res = await repository.getAllInitiatives();
       expect(spy).toHaveBeenCalled();
-      const args = (spy as jest.Mock).mock.calls[0][0];
-      expect(args.order).toEqual({ official_code: 'ASC' });
-      expect(args.relations).toEqual({ obj_cgiar_entity_type: true });
-      expect(args.where.active).toBe(true);
-      expect('cgiar_entity_type_id' in args.where).toBe(true);
+      const queryArg = (spy as jest.Mock).mock.calls[0][0];
+      expect(queryArg).toContain(
+        'FIELD(ci.cgiar_entity_type_id, 22, 23, 24, 6, 9, 10)',
+      );
+      expect(queryArg).toContain('ci.active = true');
+      expect(queryArg).toContain(
+        'ci.cgiar_entity_type_id IN (6, 9, 10, 22, 23, 24)',
+      );
       expect(res).toEqual([{ id: 1 }]);
     });
   });
