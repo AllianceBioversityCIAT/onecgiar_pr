@@ -6,6 +6,61 @@ import { EntityDetailsComponent } from './entity-details.component';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { EntityAowService } from '../entity-aow/services/entity-aow.service';
 
+// Shared mock data to avoid duplication
+const createMockDashboardData = () => ({
+  editing: {
+    label: 'Editing Results',
+    total: 10,
+    data: {
+      outputs: {
+        knowledgeProduct: 5,
+        innovationDevelopment: 3,
+        capacitySharingForDevelopment: 2,
+        otherOutput: 1
+      },
+      outcomes: {
+        policyChange: 4,
+        innovationUse: 3,
+        otherOutcome: 2
+      }
+    }
+  },
+  submitted: {
+    label: 'Submitted Results',
+    total: 15,
+    data: {
+      outputs: {
+        knowledgeProduct: 8,
+        innovationDevelopment: 4,
+        capacitySharingForDevelopment: 2,
+        otherOutput: 1
+      },
+      outcomes: {
+        policyChange: 6,
+        innovationUse: 5,
+        otherOutcome: 4
+      }
+    }
+  },
+  qualityAssessed: {
+    label: 'Quality Assessed Results',
+    total: 12,
+    data: {
+      outputs: {
+        knowledgeProduct: 6,
+        innovationDevelopment: 3,
+        capacitySharingForDevelopment: 2,
+        otherOutput: 1
+      },
+      outcomes: {
+        policyChange: 5,
+        innovationUse: 4,
+        otherOutcome: 3
+      }
+    }
+  }
+});
+
 describe('EntityDetailsComponent', () => {
   let component: EntityDetailsComponent;
   let fixture: ComponentFixture<EntityDetailsComponent>;
@@ -105,59 +160,7 @@ describe('EntityDetailsComponent', () => {
   });
 
   describe('Computed Signals', () => {
-    const mockDashboardData = {
-      editing: {
-        label: 'Editing Results',
-        total: 10,
-        data: {
-          outputs: {
-            knowledgeProduct: 5,
-            innovationDevelopment: 3,
-            capacitySharingForDevelopment: 2,
-            otherOutput: 1
-          },
-          outcomes: {
-            policyChange: 4,
-            innovationUse: 3,
-            otherOutcome: 2
-          }
-        }
-      },
-      submitted: {
-        label: 'Submitted Results',
-        total: 15,
-        data: {
-          outputs: {
-            knowledgeProduct: 8,
-            innovationDevelopment: 4,
-            capacitySharingForDevelopment: 2,
-            otherOutput: 1
-          },
-          outcomes: {
-            policyChange: 6,
-            innovationUse: 5,
-            otherOutcome: 4
-          }
-        }
-      },
-      qualityAssessed: {
-        label: 'Quality Assessed Results',
-        total: 12,
-        data: {
-          outputs: {
-            knowledgeProduct: 6,
-            innovationDevelopment: 3,
-            capacitySharingForDevelopment: 2,
-            otherOutput: 1
-          },
-          outcomes: {
-            policyChange: 5,
-            innovationUse: 4,
-            otherOutcome: 3
-          }
-        }
-      }
-    };
+    const mockDashboardData = createMockDashboardData();
 
     beforeEach(() => {
       entityAowServiceMock.dashboardData = signal(mockDashboardData);
@@ -334,59 +337,7 @@ describe('EntityDetailsComponent', () => {
   });
 
   describe('Chart Axis Limit', () => {
-    const mockDashboardData = {
-      editing: {
-        label: 'Editing Results',
-        total: 10,
-        data: {
-          outputs: {
-            knowledgeProduct: 5,
-            innovationDevelopment: 3,
-            capacitySharingForDevelopment: 2,
-            otherOutput: 1
-          },
-          outcomes: {
-            policyChange: 4,
-            innovationUse: 3,
-            otherOutcome: 2
-          }
-        }
-      },
-      submitted: {
-        label: 'Submitted Results',
-        total: 15,
-        data: {
-          outputs: {
-            knowledgeProduct: 8,
-            innovationDevelopment: 4,
-            capacitySharingForDevelopment: 2,
-            otherOutput: 1
-          },
-          outcomes: {
-            policyChange: 6,
-            innovationUse: 5,
-            otherOutcome: 4
-          }
-        }
-      },
-      qualityAssessed: {
-        label: 'Quality Assessed Results',
-        total: 12,
-        data: {
-          outputs: {
-            knowledgeProduct: 6,
-            innovationDevelopment: 3,
-            capacitySharingForDevelopment: 2,
-            otherOutput: 1
-          },
-          outcomes: {
-            policyChange: 5,
-            innovationUse: 4,
-            otherOutcome: 3
-          }
-        }
-      }
-    };
+    const mockDashboardData = createMockDashboardData();
 
     beforeEach(() => {
       entityAowServiceMock.dashboardData = signal(mockDashboardData);
