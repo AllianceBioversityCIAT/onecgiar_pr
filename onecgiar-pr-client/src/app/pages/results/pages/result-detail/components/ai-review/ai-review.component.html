@@ -83,14 +83,14 @@
           <div class="current-version">
             <label class="version-label">Result version</label>
             <div class="radio-button-group">
-              @for (option of resultVersionOptions; track option.id) {
+              @for (option of scoreSE.genderTagScoreList; track option.id) {
                 <div class="radio-button-item" (click)="onResultVersionChange(dacScore, option.id)">
                   <div class="radio-circle" [class.selected]="dacScore.tag_id === option.id">
                     @if (dacScore.tag_id === option.id) {
                       <div class="radio-dot"></div>
                     }
                   </div>
-                  <label class="radio-label">{{ option.full_name }}</label>
+                  <label class="radio-label">{{ option.title }}</label>
                 </div>
               }
             </div>
