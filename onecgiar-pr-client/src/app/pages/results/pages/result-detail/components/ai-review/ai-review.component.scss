@@ -125,6 +125,19 @@
       }
     }
 
+    .component-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 16px;
+
+      .version-label {
+        font-weight: 500;
+        color: var(--pr-color-secondary-400);
+        font-size: 14px;
+      }
+    }
+
     .save-button-custom {
       align-self: flex-start;
     }

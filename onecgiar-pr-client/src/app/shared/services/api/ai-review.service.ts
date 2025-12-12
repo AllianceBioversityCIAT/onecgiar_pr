@@ -242,11 +242,11 @@ export class AiReviewService {
     });
   }
 
-  // Save DAC scores
-  POST_saveDacScore(resultId: number | string, dacScore: Omit<DacScores, 'canSave'>) {
+  // Save DAC score
+  PATCH_saveDacScore(resultId: number | string, dacScore: Omit<DacScores, 'canSave'>) {
     return new Promise((resolve, reject) => {
       return this.http
-        .post<any>(`${this.baseApiBaseUrl}ai/dac-scores/${resultId}`, dacScore)
+        .patch<any>(`${this.baseApiBaseUrl}ai/dac-scores/${resultId}`, dacScore)
         .pipe(this.saveButtonSE.isSavingPipe())
         .subscribe({
           next: (response: any) => {

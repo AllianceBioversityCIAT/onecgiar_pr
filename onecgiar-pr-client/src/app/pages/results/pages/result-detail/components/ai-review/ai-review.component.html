@@ -96,6 +96,24 @@
             </div>
           </div>
 
+          @if (dacScore.tag_id === '3') {
+            <div class="component-section">
+              <label class="version-label">Component</label>
+              <div class="radio-button-group">
+                @for (component of getComponentListByFieldName(dacScore.field_name); track component.id) {
+                  <div class="radio-button-item" (click)="onComponentChange(dacScore, component.id)">
+                    <div class="radio-circle" [class.selected]="dacScore.impact_area_id === component.id">
+                      @if (dacScore.impact_area_id === component.id) {
+                        <div class="radio-dot"></div>
+                      }
+                    </div>
+                    <label class="radio-label">{{ component.name }}</label>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
           <app-pr-button
             [ngClass]="{ globalDisabled: !dacScore.canSave }"
             text="Save changes"

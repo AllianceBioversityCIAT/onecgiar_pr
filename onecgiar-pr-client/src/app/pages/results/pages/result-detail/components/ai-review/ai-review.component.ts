@@ -6,6 +6,7 @@ import { CommonModule } from '@angular/common';
 import { AiReviewService } from '../../../../../../shared/services/api/ai-review.service';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { ScoreService } from '../../../../../../shared/services/global/score.service';
+import { GetImpactAreasScoresService } from '../../../../../../shared/services/global/get-impact-areas-scores.service';
 
 @Component({
   selector: 'app-ai-review',
@@ -16,6 +17,7 @@ import { ScoreService } from '../../../../../../shared/services/global/score.ser
 export class AiReviewComponent {
   aiReviewSE = inject(AiReviewService);
   scoreSE = inject(ScoreService);
+  getImpactAreasScoresComponents = inject(GetImpactAreasScoresService);
 
   // Field values
   titleCurrentVersion = 'Small-scale Fisheries and Aquaculture Ontology';
@@ -32,10 +34,39 @@ export class AiReviewComponent {
     // Actualizar el tag_id del dacScore
     dacScore.tag_id = value;
     dacScore.canSave = true;
+
+    // Si no es Principal (3), limpiar impact_area_id
+    if (value !== '3') {
+      dacScore.impact_area_id = null;
+    }
+  }
+
+  onComponentChange(dacScore: any, value: any) {
+    // Actualizar el impact_area_id del dacScore
+    dacScore.impact_area_id = value;
+    dacScore.canSave = true;
   }
 
   getDacScoreByFieldName(fieldName: string) {
     return this.aiReviewSE.dacScores().find(score => score.field_name === fieldName);
+  }
+
+  getComponentListByFieldName(fieldName: string) {
+    const fieldNameLower = fieldName.toLowerCase();
+
+    if (fieldNameLower.includes('gender')) {
+      return this.getImpactAreasScoresComponents.genderTagScoreList();
+    } else if (fieldNameLower.includes('climate')) {
+      return this.getImpactAreasScoresComponents.climateTagScoreList();
+    } else if (fieldNameLower.includes('nutrition')) {
+      return this.getImpactAreasScoresComponents.nutritionTagScoreList();
+    } else if (fieldNameLower.includes('environment')) {
+      return this.getImpactAreasScoresComponents.environmentalBiodiversityTagScoreList();
+    } else if (fieldNameLower.includes('poverty')) {
+      return this.getImpactAreasScoresComponents.povertyTagScoreList();
+    }
+
+    return [];
   }
 
   async onSaveDacScore(dacScore: any) {
@@ -46,6 +77,13 @@ export class AiReviewComponent {
       // Convertir tag_id a número si es string
       const tagId = typeof dacScore.tag_id === 'string' ? parseInt(dacScore.tag_id, 10) : dacScore.tag_id;
 
+      // Validar que si tag_id es 3 (Principal), debe tener impact_area_id
+      if (tagId === 3 && !dacScore.impact_area_id) {
+        console.error('Component is required when Result version is Principal (2)');
+        alert('Please select a Component before saving');
+        return;
+      }
+
       // Preparar solo el DAC score específico que se está guardando
       const dacScoreToSave = {
         field_name: dacScore.field_name,
@@ -55,7 +93,7 @@ export class AiReviewComponent {
       };
 
       // Guardar solo este DAC score (objeto directo, no array)
-      await this.aiReviewSE.POST_saveDacScore(resultId, dacScoreToSave);
+      await this.aiReviewSE.PATCH_saveDacScore(resultId, dacScoreToSave);
 
       // Deshabilitar el botón de guardar solo para este score
       dacScore.canSave = false;
