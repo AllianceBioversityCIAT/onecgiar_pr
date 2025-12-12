@@ -16,8 +16,9 @@ import { SaveButtonService } from '../../../custom-fields/save-button/save-butto
 import { Router } from '@angular/router';
 export interface DacScores {
   field_name: string;
-  tag_id: string;
-  impact_area_id?: string;
+  tag_id: string | number;
+  impact_area_id?: string | null;
+  change_reason?: string;
   canSave?: boolean;
 }
 
@@ -235,6 +236,24 @@ export class AiReviewService {
             resolve(response);
           },
           error: (error: any) => {
+            reject(error);
+          }
+        });
+    });
+  }
+
+  // Save DAC scores
+  POST_saveDacScore(resultId: number | string, dacScore: Omit<DacScores, 'canSave'>) {
+    return new Promise((resolve, reject) => {
+      return this.http
+        .post<any>(`${this.baseApiBaseUrl}ai/dac-scores/${resultId}`, dacScore)
+        .pipe(this.saveButtonSE.isSavingPipe())
+        .subscribe({
+          next: (response: any) => {
+            resolve(response);
+          },
+          error: (error: any) => {
+            console.error('Error saving DAC score:', error);
             reject(error);
           }
         });

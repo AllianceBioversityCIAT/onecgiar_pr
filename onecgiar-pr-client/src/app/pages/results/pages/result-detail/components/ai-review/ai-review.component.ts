@@ -39,9 +39,30 @@ export class AiReviewComponent {
   }
 
   async onSaveDacScore(dacScore: any) {
-    dacScore.canSave = false;
-    // Aquí se puede agregar la lógica para guardar el DAC score en el backend
-    // await this.aiReviewSE.saveDacScore(dacScore);
-    console.log('Saving DAC score:', dacScore);
+    try {
+      // Obtener el resultId del servicio de data control
+      const resultId = this.aiReviewSE.dataControlSE.currentResultSignal().id;
+
+      // Convertir tag_id a número si es string
+      const tagId = typeof dacScore.tag_id === 'string' ? parseInt(dacScore.tag_id, 10) : dacScore.tag_id;
+
+      // Preparar solo el DAC score específico que se está guardando
+      const dacScoreToSave = {
+        field_name: dacScore.field_name,
+        tag_id: tagId,
+        impact_area_id: tagId === 3 && dacScore.impact_area_id ? dacScore.impact_area_id : null,
+        change_reason: 'Updated after AI review section'
+      };
+
+      // Guardar solo este DAC score (objeto directo, no array)
+      await this.aiReviewSE.POST_saveDacScore(resultId, dacScoreToSave);
+
+      // Deshabilitar el botón de guardar solo para este score
+      dacScore.canSave = false;
+
+      console.log('DAC score saved successfully:', dacScoreToSave);
+    } catch (error) {
+      console.error('Error saving DAC score:', error);
+    }
   }
 }
