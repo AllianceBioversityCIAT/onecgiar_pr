@@ -10,6 +10,7 @@ import { ResultFieldAiStateStatus } from './entities/result-field-ai-state.entit
 import { ResultFieldRevisionProvenance } from './entities/result-field-revision.entity';
 import { ReturnResponseUtil } from '../../shared/utils/response.util';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
+import { DacFieldName } from './constants/dac-field-name.enum';
 
 type MockRepository = {
   findOne: jest.Mock;
@@ -77,6 +78,7 @@ describe('AiService', () => {
     aiStateRepository = createMockRepository();
     resultRepository = createMockRepository();
     innovationsDevRepository = createMockRepository();
+    handlersError.returnErrorRes.mockReset();
 
     service = new AiService(
       sessionRepository as any,
@@ -385,6 +387,185 @@ describe('AiService', () => {
           statusCode: HttpStatus.CREATED,
         }),
       );
+    });
+  });
+
+  describe('getDacScores', () => {
+    it('returns tag and impact area info for each DAC field', async () => {
+      resultRepository.findOne.mockResolvedValue({
+        id: 1,
+        gender_tag_level_id: 2,
+        gender_impact_area_id: 10,
+        climate_change_tag_level_id: 3,
+        climate_impact_area_id: 11,
+        nutrition_tag_level_id: 1,
+        nutrition_impact_area_id: null,
+        environmental_biodiversity_tag_level_id: null,
+        environmental_biodiversity_impact_area_id: null,
+        poverty_tag_level_id: 4,
+        poverty_impact_area_id: 12,
+      });
+
+      const response = await service.getDacScores(1);
+
+      expect(resultRepository.findOne).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 1 } }),
+      );
+      expect(response).toEqual(
+        ReturnResponseUtil.format({
+          response: [
+            {
+              field_name: 'gender',
+              tag_id: 2,
+              impact_area_id: 10,
+            },
+            {
+              field_name: 'climate',
+              tag_id: 3,
+              impact_area_id: 11,
+            },
+            {
+              field_name: 'nutrition',
+              tag_id: 1,
+              impact_area_id: null,
+            },
+            {
+              field_name: 'environmental',
+              tag_id: null,
+              impact_area_id: null,
+            },
+            {
+              field_name: 'poverty',
+              tag_id: 4,
+              impact_area_id: 12,
+            },
+          ],
+          message: 'DAC scores retrieved successfully',
+          statusCode: HttpStatus.OK,
+        }),
+      );
+    });
+
+    it('delegates not found errors to handler', async () => {
+      resultRepository.findOne.mockResolvedValue(null);
+      const handled = { statusCode: 404 };
+      handlersError.returnErrorRes.mockReturnValueOnce(handled);
+
+      const response = await service.getDacScores(77);
+
+      expect(handlersError.returnErrorRes).toHaveBeenCalledWith({
+        error: expect.objectContaining({ message: 'Result not found' }),
+        debug: true,
+      });
+      expect(response).toBe(handled);
+    });
+  });
+
+  describe('updateDacScore', () => {
+    it('updates the selected DAC field and logs revisions', async () => {
+      resultRepository.findOne.mockResolvedValue({
+        id: 5,
+        gender_tag_level_id: 1,
+        gender_impact_area_id: 7,
+      });
+      sessionRepository.findOne.mockResolvedValue({ id: 88 });
+      proposalRepository.save.mockResolvedValue({});
+      revisionRepository.save.mockResolvedValue({});
+      aiStateRepository.upsert.mockResolvedValue({});
+      resultRepository.update.mockResolvedValue({});
+
+      const response = await service.updateDacScore(
+        5,
+        {
+          field_name: DacFieldName.GENDER,
+          tag_id: 2,
+          impact_area_id: null,
+          change_reason: 'manual edit',
+        } as any,
+        user,
+      );
+
+      expect(resultRepository.update).toHaveBeenCalledWith(
+        { id: 5 },
+        expect.objectContaining({
+          gender_tag_level_id: 2,
+          gender_impact_area_id: null,
+          last_updated_by: user.id,
+        }),
+      );
+      expect(proposalRepository.save).toHaveBeenCalledWith({
+        session_id: 88,
+        field_name: DacFieldName.GENDER,
+        original_text: JSON.stringify({
+          tag_id: 1,
+          impact_area_id: 7,
+        }),
+        proposed_text: JSON.stringify({
+          tag_id: 2,
+          impact_area_id: null,
+        }),
+        needs_improvement: null,
+      });
+      expect(revisionRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          field_name: DacFieldName.GENDER,
+          old_value: JSON.stringify({
+            tag_id: 1,
+            impact_area_id: 7,
+          }),
+          new_value: JSON.stringify({
+            tag_id: 2,
+            impact_area_id: null,
+          }),
+          change_reason: 'manual edit',
+        }),
+      );
+      expect(aiStateRepository.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          result_id: 5,
+          field_name: DacFieldName.GENDER,
+          status: ResultFieldAiStateStatus.ACCEPTED,
+          last_updated_by: user.id,
+        }),
+        ['result_id', 'field_name'],
+      );
+      expect(response).toEqual(
+        ReturnResponseUtil.format({
+          response: {
+            field_name: DacFieldName.GENDER,
+            tag_id: 2,
+            impact_area_id: null,
+          },
+          message: 'DAC score updated successfully',
+          statusCode: HttpStatus.OK,
+        }),
+      );
+    });
+
+    it('requires impact area when tag level equals 3', async () => {
+      resultRepository.findOne.mockResolvedValue({ id: 9 });
+      const handled = { statusCode: 400 };
+      handlersError.returnErrorRes.mockReturnValueOnce(handled);
+
+      const response = await service.updateDacScore(
+        9,
+        {
+          field_name: DacFieldName.CLIMATE,
+          tag_id: 3,
+          impact_area_id: null,
+        } as any,
+        user,
+      );
+
+      expect(handlersError.returnErrorRes).toHaveBeenCalledWith({
+        error: expect.objectContaining({
+          message: 'impact_area_id is required when tag_id equals 3',
+        }),
+        debug: true,
+      });
+      expect(resultRepository.update).not.toHaveBeenCalled();
+      expect(proposalRepository.save).not.toHaveBeenCalled();
+      expect(response).toBe(handled);
     });
   });
 

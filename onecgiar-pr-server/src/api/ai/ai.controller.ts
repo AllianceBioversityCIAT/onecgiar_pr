@@ -8,6 +8,7 @@ import {
   HttpCode,
   HttpStatus,
   UseInterceptors,
+  Patch,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -26,11 +27,13 @@ import {
   ResultStateResponseDto,
   UsageStatsResponseDto,
   ResultContextFieldDto,
+  DacScoreResponseDto,
 } from './dto/responses';
 import { CreateEventDto } from './dto/create-event.dto';
 import { CreateProposalsDto } from './dto/create-proposals.dto';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { SaveChangesDto } from './dto/save-changes.dto';
+import { UpdateDacScoreDto } from './dto/update-dac-score.dto';
 import { UserToken } from '../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
@@ -77,6 +80,56 @@ export class AiController {
   })
   async getResultContext(@Param('resultId', ParseIntPipe) resultId: number) {
     return await this.aiService.getResultContext(resultId);
+  }
+
+  @Get('result-context/dac-scores/:resultId')
+  @ApiOperation({
+    summary: 'Get DAC tag selections for a result',
+    description:
+      'Returns the stored tag id and impact area id for each DAC field (gender, climate, environmental, poverty, nutrition).',
+  })
+  @ApiOkResponse({
+    description: 'DAC scores retrieved successfully',
+    type: [DacScoreResponseDto],
+  })
+  async getDacScores(@Param('resultId', ParseIntPipe) resultId: number) {
+    return await this.aiService.getDacScores(resultId);
+  }
+
+  @Patch('dac-scores/:resultId')
+  @ApiOperation({
+    summary: 'Update a DAC score selection',
+    description:
+      'Allows the AI workflow to persist manual adjustments for a DAC dimension while logging the change in AI tracking tables.',
+  })
+  @ApiOkResponse({
+    description: 'DAC score updated successfully',
+    type: DacScoreResponseDto,
+  })
+  @ApiBody({
+    type: UpdateDacScoreDto,
+    examples: {
+      example: {
+        summary: 'Update gender DAC',
+        value: {
+          field_name: 'gender',
+          tag_id: 2,
+          impact_area_id: null,
+          change_reason: 'Updated after AI review section',
+        },
+      },
+    },
+  })
+  async updateDacScore(
+    @Param('resultId', ParseIntPipe) resultId: number,
+    @Body() updateDacScoreDto: UpdateDacScoreDto,
+    @UserToken() user: TokenDto,
+  ) {
+    return await this.aiService.updateDacScore(
+      resultId,
+      updateDacScoreDto,
+      user,
+    );
   }
 
   @Post('sessions')
@@ -179,6 +232,12 @@ export class AiController {
               field_name: 'description',
               original_text: 'Original description',
               proposed_text: 'Enhanced description',
+              needs_improvement: false,
+            },
+            {
+              field_name: 'gender',
+              original_text: '{"tag_id":1,"impact_area_id":null}',
+              proposed_text: '{"tag_id":3,"impact_area_id":45}',
               needs_improvement: false,
             },
           ],

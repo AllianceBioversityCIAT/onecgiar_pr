@@ -1005,7 +1005,7 @@ export class ResultsFrameworkReportingService {
           editing: number;
           qualityAssessed: number;
           submitted: number;
-          others: number; 
+          others: number;
         }
       >();
 
