@@ -1,5 +1,5 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
-import { DataSource, In, Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { ClarisaInitiative } from './entities/clarisa-initiative.entity';
 import { OstTocIdDto } from './dto/ost-toc-id.dto';
 import { env } from 'process';
@@ -28,14 +28,13 @@ export class ClarisaInitiativesRepository extends Repository<ClarisaInitiative> 
 
   async getAllInitiatives() {
     try {
-      return this.find({
-        where: {
-          active: true,
-          cgiar_entity_type_id: In([6, 9, 10, 22, 23, 24]),
-        },
-        relations: { obj_cgiar_entity_type: true },
-        order: { official_code: 'ASC' },
-      });
+      const queryData = `
+        SELECT ci.* FROM clarisa_initiatives ci
+        WHERE ci.active = true
+        AND ci.cgiar_entity_type_id IN (6, 9, 10, 22, 23, 24)
+        ORDER BY FIELD(ci.cgiar_entity_type_id, 22, 23, 24, 6, 9, 10), ci.official_code ASC
+      `;
+      return this.query(queryData);
     } catch (error) {
       throw {
         message: `[${ClarisaInitiativesRepository.name}] => getAllInitiatives error: ${error}`,

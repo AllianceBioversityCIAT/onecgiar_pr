@@ -1,4 +1,4 @@
-import { Component, Output, EventEmitter, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { PrRoute, resultDetailRouting } from '../../../../../shared/routing/routing-data';
 import { ResultLevelService } from '../../result-creator/services/result-level.service';
 import { ResultsApiService } from '../../../../../shared/services/api/results-api.service';
@@ -17,7 +17,6 @@ import { AiReviewService } from '../../../../../shared/services/api/ai-review.se
   standalone: false
 })
 export class PanelMenuComponent {
-  @Output() copyEvent = new EventEmitter();
   navigationOptions: PrRoute[] = resultDetailRouting;
   aiReviewSE = inject(AiReviewService);
 
