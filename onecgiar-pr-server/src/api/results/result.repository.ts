@@ -671,7 +671,13 @@ WHERE
         r.in_qa as inQA,
         ci.portfolio_id,
         cp.name as portfolio_name,
-        cp.acronym as acronym
+        cp.acronym as acronym,
+        EXISTS (
+            SELECT 1
+            FROM results_investment_discontinued_options rido
+            WHERE rido.result_id = r.id
+              AND rido.is_active = TRUE
+        ) AS has_discontinued_options
     FROM
         result r
         INNER JOIN result_type rt ON rt.id = r.result_type_id

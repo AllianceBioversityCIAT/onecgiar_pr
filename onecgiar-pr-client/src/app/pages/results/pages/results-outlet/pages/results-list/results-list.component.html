@@ -91,6 +91,12 @@
                     }
                   }
 
+                  @if (column.attr === 'title' && subResult?.status_id === '4' && (!subResult?.has_discontinued_options || subResult?.has_discontinued_options === '0' || subResult?.has_discontinued_options === 0) && (!subResult?.discontinued_options || !subResult?.discontinued_options?.length || subResult?.discontinued_options?.length === 0)) {
+                    <div class="discontinued-icon">
+                      <i class="pi pi-exclamation-triangle"></i>
+                    </div>
+                  }
+
                   <div
                     [pTooltip]="subResult.inQA ? 'This result is being QAed' : ''"
                     [ngClass]="{ center_flex_100: column.center, 'text-center': column.center, 'truncate-multiline': column.attr === 'full_name' }"
