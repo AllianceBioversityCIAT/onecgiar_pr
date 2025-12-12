@@ -14,6 +14,12 @@ import {
 import { ApiService } from './api.service';
 import { SaveButtonService } from '../../../custom-fields/save-button/save-button.service';
 import { Router } from '@angular/router';
+export interface DacScores {
+  field_name: string;
+  tag_id: string;
+  impact_area_id?: string;
+  canSave?: boolean;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -29,6 +35,7 @@ export class AiReviewService {
   aiReviewButtonState: 'idle' | 'loading' | 'completed' = 'idle';
   currnetFieldsList = signal<any[]>([]);
   aiContext = signal<any>(null);
+  dacScores = signal<DacScores[]>([]);
   api = inject(ApiService);
   saveButtonSE = inject(SaveButtonService);
   router = inject(Router);
@@ -47,6 +54,10 @@ export class AiReviewService {
       await this.POST_createSession();
       await this.GET_aiContext();
       await this.GET_resultContext();
+      const dacScoresData = await this.getDacScores();
+      // Inicializar canSave a false para cada dacScore
+      dacScoresData.forEach(score => (score.canSave = false));
+      this.dacScores.set(dacScoresData);
       const iaBody: POSTPRMSQa = {
         user_id: this.api.authSE.localStorageUser.email,
         result_metadata: this.aiContext()
@@ -142,6 +153,7 @@ export class AiReviewService {
       return this.http.get<any>(`${this.baseApiBaseUrl}ai/result-context/${this.dataControlSE.currentResultSignal().id}`).subscribe({
         next: (response: any) => {
           this.currnetFieldsList.set(response.response);
+          console.log(response.response);
           resolve(response);
         },
         error: (error: any) => {
@@ -149,6 +161,19 @@ export class AiReviewService {
           reject(error);
         }
       });
+    });
+  }
+
+  getDacScores(): Promise<DacScores[]> {
+    return new Promise((resolve, reject) => {
+      return this.http
+        .get<DacScores[]>(`${this.baseApiBaseUrl}ai/result-context/dac-scores/${this.dataControlSE.currentResultSignal().id}`)
+        .subscribe({
+          next: (response: any) => {
+            resolve(response.response);
+            console.log(response.response);
+          }
+        });
     });
   }
 
