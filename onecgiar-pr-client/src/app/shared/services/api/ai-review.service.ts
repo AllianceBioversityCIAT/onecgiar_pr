@@ -14,6 +14,13 @@ import {
 import { ApiService } from './api.service';
 import { SaveButtonService } from '../../../custom-fields/save-button/save-button.service';
 import { Router } from '@angular/router';
+export interface DacScores {
+  field_name: string;
+  tag_id: string | number;
+  impact_area_id?: string | null;
+  change_reason?: string;
+  canSave?: boolean;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -29,6 +36,7 @@ export class AiReviewService {
   aiReviewButtonState: 'idle' | 'loading' | 'completed' = 'idle';
   currnetFieldsList = signal<any[]>([]);
   aiContext = signal<any>(null);
+  dacScores = signal<DacScores[]>([]);
   api = inject(ApiService);
   saveButtonSE = inject(SaveButtonService);
   router = inject(Router);
@@ -47,6 +55,10 @@ export class AiReviewService {
       await this.POST_createSession();
       await this.GET_aiContext();
       await this.GET_resultContext();
+      const dacScoresData = await this.getDacScores();
+      // Inicializar canSave a false para cada dacScore
+      dacScoresData.forEach(score => (score.canSave = false));
+      this.dacScores.set(dacScoresData);
       const iaBody: POSTPRMSQa = {
         user_id: this.api.authSE.localStorageUser.email,
         result_metadata: this.aiContext()
@@ -142,6 +154,7 @@ export class AiReviewService {
       return this.http.get<any>(`${this.baseApiBaseUrl}ai/result-context/${this.dataControlSE.currentResultSignal().id}`).subscribe({
         next: (response: any) => {
           this.currnetFieldsList.set(response.response);
+          console.log(response.response);
           resolve(response);
         },
         error: (error: any) => {
@@ -149,6 +162,19 @@ export class AiReviewService {
           reject(error);
         }
       });
+    });
+  }
+
+  getDacScores(): Promise<DacScores[]> {
+    return new Promise((resolve, reject) => {
+      return this.http
+        .get<DacScores[]>(`${this.baseApiBaseUrl}ai/result-context/dac-scores/${this.dataControlSE.currentResultSignal().id}`)
+        .subscribe({
+          next: (response: any) => {
+            resolve(response.response);
+            console.log(response.response);
+          }
+        });
     });
   }
 
@@ -210,6 +236,24 @@ export class AiReviewService {
             resolve(response);
           },
           error: (error: any) => {
+            reject(error);
+          }
+        });
+    });
+  }
+
+  // Save DAC score
+  PATCH_saveDacScore(resultId: number | string, dacScore: Omit<DacScores, 'canSave'>) {
+    return new Promise((resolve, reject) => {
+      return this.http
+        .patch<any>(`${this.baseApiBaseUrl}ai/dac-scores/${resultId}`, dacScore)
+        .pipe(this.saveButtonSE.isSavingPipe())
+        .subscribe({
+          next: (response: any) => {
+            resolve(response);
+          },
+          error: (error: any) => {
+            console.error('Error saving DAC score:', error);
             reject(error);
           }
         });

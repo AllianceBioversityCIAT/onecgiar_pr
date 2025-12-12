@@ -125,8 +125,87 @@
       }
     }
 
+    .component-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 16px;
+
+      .version-label {
+        font-weight: 500;
+        color: var(--pr-color-secondary-400);
+        font-size: 14px;
+      }
+    }
+
     .save-button-custom {
       align-self: flex-start;
+    }
+  }
+
+  .impact-areas-section {
+    margin-top: 24px;
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #8f8f8f;
+      margin-bottom: 16px;
+      letter-spacing: 0.5px;
+    }
+
+    .impact-areas-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+  }
+
+  .radio-button-group {
+    display: flex;
+    gap: 20px;
+    margin-top: 12px;
+
+    .radio-button-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      user-select: none;
+
+      .radio-circle {
+        width: 18px;
+        height: 18px;
+        border: 2px solid #8b8b8b;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+
+        &.selected {
+          border-color: var(--pr-color-primary-400);
+          background-color: var(--pr-color-primary-400);
+
+          .radio-dot {
+            width: 8px;
+            height: 8px;
+            background-color: white;
+            border-radius: 50%;
+          }
+        }
+      }
+
+      .radio-label {
+        font-size: 14px;
+        color: #333;
+        cursor: pointer;
+        margin: 0;
+      }
+
+      &:hover .radio-circle:not(.selected) {
+        border-color: #666;
+      }
     }
   }
 }

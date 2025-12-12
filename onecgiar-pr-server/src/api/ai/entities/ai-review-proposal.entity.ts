@@ -11,11 +11,17 @@ import {
 import { AiReviewSession } from './ai-review-session.entity';
 import { ResultFieldRevision } from './result-field-revision.entity';
 import { ResultFieldAiState } from './result-field-ai-state.entity';
+import { DacFieldName } from '../constants/dac-field-name.enum';
 
 export enum AiReviewProposalFieldName {
   TITLE = 'title',
   DESCRIPTION = 'description',
   SHORT_TITLE = 'short_title',
+  GENDER = DacFieldName.GENDER,
+  CLIMATE = DacFieldName.CLIMATE,
+  NUTRITION = DacFieldName.NUTRITION,
+  ENVIRONMENTAL = DacFieldName.ENVIRONMENTAL,
+  POVERTY = DacFieldName.POVERTY,
 }
 
 @Entity('ai_review_proposal')
