@@ -81,82 +81,95 @@ export class CreatedByDto {
 export class TocMappingDto {
   @ApiProperty({
     description:
-      'Official code of the science program related to the bilateral',
+      'Official code of the science program related to the bilateral (required)',
     example: 'CLIMATE',
   })
   @IsString()
   @IsNotEmpty()
   science_program_id: string;
 
-  @ApiProperty({
-    description: 'Composite code of the area of work (program-area)',
+  @ApiPropertyOptional({
+    description:
+      'Composite code of the area of work (program-area). If provided along with other fields, will attempt full TOC mapping.',
     example: 'CLIMATE-AGROECOLOGICAL',
   })
+  @IsOptional()
   @IsString()
-  aow_compose_code: string;
+  aow_compose_code?: string;
 
-  @ApiProperty({
-    description: 'Title of the Theory of Change result',
+  @ApiPropertyOptional({
+    description:
+      'Title of the Theory of Change result. If provided along with other fields, will attempt full TOC mapping.',
     example: 'Climate-resilient crop systems adopted',
   })
+  @IsOptional()
   @IsString()
-  result_title: string;
+  result_title?: string;
 
-  @ApiProperty({
-    description: 'Indicator description linked to the ToC result',
+  @ApiPropertyOptional({
+    description:
+      'Indicator description linked to the ToC result. If provided along with other fields, will attempt full TOC mapping.',
     example: 'Number of climate resilient practices documented',
   })
+  @IsOptional()
   @IsString()
-  result_indicator_description: string;
+  result_indicator_description?: string;
 
-  @ApiProperty({
-    description: 'Type name of the indicator (e.g. Output, Outcome)',
+  @ApiPropertyOptional({
+    description:
+      'Type name of the indicator (e.g. Output, Outcome). If provided along with other fields, will attempt full TOC mapping.',
     example: 'Output',
   })
+  @IsOptional()
   @IsString()
-  result_indicator_type_name: string;
+  result_indicator_type_name?: string;
 }
 
 export class ContributingProgramDto {
   @ApiProperty({
-    description: 'Official code of the contributing science program',
+    description:
+      'Official code of the contributing science program (required - minimum to create basic TOC mapping)',
     example: 'NEXUS',
   })
   @IsString()
   @IsNotEmpty()
   science_program_id: string;
 
-  @ApiProperty({
-    description: 'Composite code of the area of work (program-area)',
+  @ApiPropertyOptional({
+    description:
+      'Composite code of the area of work (program-area). Optional - if provided, will attempt full TOC mapping.',
     example: 'NEXUS-FOOD',
   })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  aow_compose_code: string;
+  aow_compose_code?: string;
 
-  @ApiProperty({
-    description: 'Title of the Theory of Change result',
+  @ApiPropertyOptional({
+    description:
+      'Title of the Theory of Change result. Optional - if provided, will attempt full TOC mapping.',
     example: 'Nutrition outcomes improved',
   })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  result_title: string;
+  result_title?: string;
 
-  @ApiProperty({
-    description: 'Indicator description linked to the ToC result',
+  @ApiPropertyOptional({
+    description:
+      'Indicator description linked to the ToC result. Optional - if provided, will attempt full TOC mapping.',
     example: 'Households reached with nutrition interventions',
   })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  result_indicator_description: string;
+  result_indicator_description?: string;
 
-  @ApiProperty({
-    description: 'Type name of the indicator (e.g. Output, Outcome)',
+  @ApiPropertyOptional({
+    description:
+      'Type name of the indicator (e.g. Output, Outcome). Optional - if provided, will attempt full TOC mapping.',
     example: 'Outcome',
   })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  result_indicator_type_name: string;
+  result_indicator_type_name?: string;
 }
 
 export class RegionDto {

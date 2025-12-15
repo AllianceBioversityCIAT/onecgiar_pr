@@ -2774,10 +2774,10 @@ select *
           AND CONVERT(trit.toc_result_indicator_id USING utf8mb4) = CONVERT(tri.related_node_id USING utf8mb4)
         CROSS JOIN ${env.DB_NAME}.year y
         WHERE
-          wp_official_code = '${aow_compose_code}'
-          AND initiativeId = '${science_program_id}'
-          AND tr.result_title LIKE '%${result_title}%'
-          AND (tri.indicator_description LIKE '%${result_indicator_description}%' OR tri.type_value = '${result_indicator_type_name}')
+          wp_official_code = ?
+          AND initiativeId = ?
+          AND tr.result_title LIKE ?
+          AND (tri.indicator_description LIKE ? OR tri.type_value = ?)
           AND y.active = 1
           AND (
             CASE
@@ -2787,13 +2787,16 @@ select *
             END
           ) = y.year
       `;
-      const tocResultData = await this.query(tocResultQuery);
+      const tocResultData = await this.query(tocResultQuery, [
+        aow_compose_code,
+        science_program_id,
+        `%${result_title}%`,
+        `%${result_indicator_description}%`,
+        result_indicator_type_name,
+      ]);
 
-      if (tocResultData.length === 0) {
-        return null;
-      }
-
-      return tocResultData;
+      // Retornar array vacío en lugar de null para consistencia
+      return tocResultData || [];
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,
