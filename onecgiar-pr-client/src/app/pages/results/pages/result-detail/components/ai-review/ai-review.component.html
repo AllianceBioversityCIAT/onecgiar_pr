@@ -67,16 +67,22 @@
         @for (dacScore of aiReviewSE.dacScores(); track dacScore.field_name) {
           <div class="field-section">
           <div class="field-header">
-            <h3 class="field-title">{{ dacScore.field_name }}</h3>
-            <span class="improvement-badge needs-improvement-badge"> <i class="pi pi-exclamation-triangle"></i> Needs improvement</span>
+            <h3 class="field-title">{{ dacScore.display_title || dacScore.field_name }}</h3>
+            @if (dacScore.is_validated) {
+              <span class="improvement-badge updated-badge"> <i class="pi pi-check-circle"></i> AI Validated</span>
+            } @else {
+              <span class="improvement-badge needs-improvement-badge"> <i class="pi pi-exclamation-triangle"></i> Needs improvement</span>
+            }
           </div>
 
-          <div class="proposal-section">
-            <div class="proposal-label"><i class="pi pi-lightbulb"></i> AI review</div>
-            <div class="proposal-content">
-              AI review content here
+          @if (!dacScore.is_validated) {
+            <div class="proposal-section">
+              <div class="proposal-label"><i class="pi pi-lightbulb"></i> AI review</div>
+              <div class="proposal-content">
+                {{ dacScore.ai_recommendation || 'No AI recommendation available' }}
+              </div>
             </div>
-          </div>
+          }
 
           <div class="line-divider"></div>
 
