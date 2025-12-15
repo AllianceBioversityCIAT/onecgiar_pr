@@ -22,8 +22,8 @@ export interface DacScores {
   change_reason?: string;
   canSave?: boolean;
   ai_recommendation?: string;
-  ai_component_recommendation?: string;
   display_title?: string;
+  is_validated?: boolean;
 }
 
 @Injectable({
@@ -72,18 +72,15 @@ export class AiReviewService {
    * @param fieldName - Nombre del campo (gender, climate, nutrition, environmental, poverty)
    * @returns El nombre de la propiedad correspondiente en ImpactAreaScores
    */
-  private mapFieldNameToImpactAreaKey(fieldName: string): {
-    scoreKey: keyof ImpactAreaScores;
-    componentKey?: keyof ImpactAreaScores;
-  } | null {
+  private mapFieldNameToImpactAreaKey(fieldName: string): keyof ImpactAreaScores | null {
     const fieldNameLower = fieldName.toLowerCase();
 
-    const mappings: Record<string, { scoreKey: keyof ImpactAreaScores; componentKey?: keyof ImpactAreaScores }> = {
-      gender: { scoreKey: 'social_inclusion', componentKey: 'social_inclusion_component' },
-      climate: { scoreKey: 'climate_adaptation' },
-      nutrition: { scoreKey: 'food_security', componentKey: 'food_security_component' },
-      environmental: { scoreKey: 'environmental_health' },
-      poverty: { scoreKey: 'poverty_reduction' }
+    const mappings: Record<string, keyof ImpactAreaScores> = {
+      gender: 'social_inclusion',
+      climate: 'climate_adaptation',
+      nutrition: 'food_security',
+      environmental: 'environmental_health',
+      poverty: 'poverty_reduction'
     };
 
     return mappings[fieldNameLower] || null;
@@ -97,23 +94,22 @@ export class AiReviewService {
    */
   private enrichDacScoresWithAIRecommendations(dacScores: DacScores[], impactAreaScores: ImpactAreaScores): DacScores[] {
     return dacScores.map(score => {
-      const mapping = this.mapFieldNameToImpactAreaKey(score.field_name);
+      const mappingKey = this.mapFieldNameToImpactAreaKey(score.field_name);
 
-      if (!mapping) {
-        return { ...score, canSave: false, display_title: this.mapFieldNameToDisplayTitle(score.field_name) };
+      if (!mappingKey) {
+        return { ...score, canSave: false, display_title: this.mapFieldNameToDisplayTitle(score.field_name), is_validated: false };
       }
+
+      const aiRecommendation = impactAreaScores[mappingKey] || '';
+      const isValidated = aiRecommendation.toLowerCase().trim() === 'approved';
 
       const enrichedScore: DacScores = {
         ...score,
         canSave: false,
         display_title: this.mapFieldNameToDisplayTitle(score.field_name),
-        ai_recommendation: impactAreaScores[mapping.scoreKey] || ''
+        ai_recommendation: aiRecommendation,
+        is_validated: isValidated
       };
-
-      // Si existe componente, agregarlo
-      if (mapping.componentKey && impactAreaScores[mapping.componentKey]) {
-        enrichedScore.ai_component_recommendation = impactAreaScores[mapping.componentKey];
-      }
 
       return enrichedScore;
     });
