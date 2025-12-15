@@ -18,7 +18,7 @@ import { HandlersError } from '../../shared/handlers/error.utils';
 import { Result, SourceEnum } from '../results/entities/result.entity';
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
 import { ClarisaRegionsRepository } from '../../clarisa/clarisa-regions/ClariasaRegions.repository';
-import { DataSource, In, Like } from 'typeorm';
+import { DataSource, In, IsNull, Like } from 'typeorm';
 import { ClarisaGeographicScopeRepository } from '../../clarisa/clarisa-geographic-scopes/clarisa-geographic-scopes.repository';
 import { ResultRegionRepository } from '../results/result-regions/result-regions.repository';
 import { ClarisaCountriesRepository } from '../../clarisa/clarisa-countries/ClarisaCountries.repository';
@@ -150,8 +150,9 @@ export class BilateralService {
             );
             const userId = createdByUser.id;
 
+            const submittedPayload = this.resolveSubmitterPayload(bilateralDto);
             const submittedUser = await this.findOrCreateUser(
-              bilateralDto.submitted_by,
+              submittedPayload,
               createdByUser,
             );
             const submittedUserId = submittedUser.id;
@@ -395,8 +396,9 @@ export class BilateralService {
       );
       const userId = createdByUser.id;
 
+      const submittedPayload = this.resolveSubmitterPayload(bilateralDto);
       const submittedUser = await this.findOrCreateUser(
-        bilateralDto.submitted_by,
+        submittedPayload,
         createdByUser,
       );
       const submittedUserId = submittedUser.id;
@@ -715,6 +717,13 @@ export class BilateralService {
     };
   }
 
+  private resolveSubmitterPayload(bilateralDto: CreateBilateralDto) {
+    if (bilateralDto?.submitted_by?.email) {
+      return bilateralDto.submitted_by;
+    }
+    return bilateralDto?.created_by;
+  }
+
   private async handleTocMapping(
     toc,
     contributingPrograms: any[],
@@ -756,74 +765,128 @@ export class BilateralService {
         roleId,
       } = mapping;
 
-      const missingFields = [
-        !science_program_id && 'science_program_id',
-        science_program_id &&
-        !aow_compose_code &&
-        !result_title &&
-        !result_indicator_description &&
-        !result_indicator_type_name
-          ? null
-          : !aow_compose_code && 'aow_compose_code',
-        science_program_id &&
-        !aow_compose_code &&
-        !result_title &&
-        !result_indicator_description &&
-        !result_indicator_type_name
-          ? null
-          : !result_title && 'result_title',
-        science_program_id &&
-        !aow_compose_code &&
-        !result_title &&
-        !result_indicator_description &&
-        !result_indicator_type_name
-          ? null
-          : !result_indicator_description && 'result_indicator_description',
-        science_program_id &&
-        !aow_compose_code &&
-        !result_title &&
-        !result_indicator_description &&
-        !result_indicator_type_name
-          ? null
-          : !result_indicator_type_name && 'result_indicator_type_name',
-      ].filter(Boolean) as string[];
+      this.logger.debug(
+        `Processing TOC mapping: science_program_id=${science_program_id}, roleId=${roleId}, hasData=${!!(aow_compose_code || result_title)}`,
+      );
 
-      if (missingFields.length) {
+      // Validación mínima: science_program_id es requerido
+      if (!science_program_id) {
         this.logger.warn(
-          `TOC mapping missing required fields: ${missingFields.join(', ')} (role ${roleId})`,
+          `TOC mapping missing required field: science_program_id (role ${roleId})`,
         );
         continue;
       }
 
+      // Determinar si tenemos datos suficientes para intentar mapeo completo
+      const hasFullMappingData =
+        aow_compose_code &&
+        result_title &&
+        result_indicator_description &&
+        result_indicator_type_name;
+
+      this.logger.debug(
+        `Processing TOC mapping for ${science_program_id} (role ${roleId}): hasFullMappingData=${hasFullMappingData}`,
+      );
+
       try {
-        const mapToToc =
-          await this._resultsTocResultsRepository.findTocResultsForBilateral(
-            mapping,
-          );
+        let mapToToc: any[] | null = null;
+        let firstMap: any = null;
+        let isInitiativeOnlyMapping = true; // Por defecto, asumimos mapeo básico
 
-        if (!mapToToc || !Array.isArray(mapToToc) || !mapToToc.length) {
-          this.logger.warn(
-            `TOC mapping did not match any ToC results (compose=${aow_compose_code}, program=${science_program_id})`,
+        // Si tenemos datos completos, intentar buscar el mapeo completo del TOC
+        if (hasFullMappingData) {
+          this.logger.debug(
+            `Attempting full TOC mapping search for ${science_program_id}`,
+          );
+          mapToToc =
+            await this._resultsTocResultsRepository.findTocResultsForBilateral(
+              mapping,
+            );
+
+          // El método ahora siempre retorna un array (puede estar vacío)
+          if (
+            Array.isArray(mapToToc) &&
+            mapToToc.length > 0 &&
+            mapToToc[0].toc_result_id &&
+            mapToToc[0].toc_results_indicator_id
+          ) {
+            // Mapeo completo encontrado
+            firstMap = mapToToc[0];
+            isInitiativeOnlyMapping = false;
+            this.logger.debug(
+              `Full TOC mapping found for ${science_program_id}: toc_result_id=${firstMap.toc_result_id}`,
+            );
+          } else {
+            // No se encontró mapeo completo, crear mapeo básico
+            this.logger.warn(
+              `TOC mapping did not match any ToC results (compose=${aow_compose_code}, program=${science_program_id}). Will create basic initiative mapping.`,
+            );
+          }
+        } else {
+          this.logger.debug(
+            `Insufficient data for full TOC mapping for ${science_program_id}, will create basic initiative mapping`,
+          );
+        }
+
+        // Si no hay mapeo completo, crear mapeo básico solo de iniciativa
+        if (isInitiativeOnlyMapping) {
+          firstMap = {
+            toc_result_id: null,
+            toc_results_indicator_id: null,
+            science_program_id: science_program_id,
+            category: null,
+            number_target: null,
+            target_date: null,
+          };
+          this.logger.debug(
+            `Prepared basic initiative mapping for ${science_program_id}`,
+          );
+        }
+
+        // Buscar la iniciativa (normalizar el código para la búsqueda)
+        const normalizedCode = science_program_id?.trim().toUpperCase();
+        this.logger.debug(
+          `Looking up initiative with official_code: ${science_program_id} (normalized: ${normalizedCode})`,
+        );
+        
+        const init = await this._clarisaInitiatives.findOne({
+          where: { official_code: normalizedCode },
+        });
+
+        if (!init) {
+          this.logger.error(
+            `TOC mapping initiative not found for official_code=${science_program_id} (normalized: ${normalizedCode}, role ${roleId}). Cannot create TOC mapping without initiative.`,
           );
           continue;
         }
 
-        const firstMap = mapToToc[0];
-        const isInitiativeOnlyMapping =
-          firstMap.toc_result_id === null &&
-          firstMap.toc_results_indicator_id === null &&
-          firstMap.science_program_id;
-
-        if (
-          !isInitiativeOnlyMapping &&
-          (!firstMap.toc_result_id || !firstMap.toc_results_indicator_id)
-        ) {
+        if (!init.active) {
           this.logger.warn(
-            'TOC mapping repository data missing fields: toc_result_id or toc_results_indicator_id',
+            `TOC mapping initiative found but is not active: id=${init.id}, official_code=${init.official_code} (role ${roleId}). Proceeding anyway.`,
           );
-          continue;
         }
 
+        this.logger.debug(
+          `Found initiative: id=${init.id}, name=${init.name}, official_code=${init.official_code}, active=${init.active}. Processing TOC mapping (role: ${roleId}, isInitiativeOnly: ${isInitiativeOnlyMapping})`,
+        );
+
+        // Crear/actualizar relación result_by_initiative
+        this.logger.debug(
+          `Upserting result_by_initiative: resultId=${resultId}, initiativeId=${init.id}, roleId=${roleId}`,
+        );
+        try {
+          await this.upsertResultInitiative(resultId, init.id, roleId, userId);
+          this.logger.debug(
+            `Successfully upserted result_by_initiative for result ${resultId}, initiative ${init.id}`,
+          );
+        } catch (err) {
+          this.logger.error(
+            `Error upserting result_by_initiative for result ${resultId}, initiative ${init.id}: ${(err as Error).message}`,
+          );
+          throw err; // Re-lanzar para que se capture en el catch externo
+        }
+
+        // Determinar toc_level_id si tenemos categoría
         const categoryToLevelMap = {
           OUTPUT: 1,
           OUTCOME: 2,
@@ -840,38 +903,111 @@ export class BilateralService {
           );
         }
 
-        const init = await this._clarisaInitiatives.findOne({
-          where: { official_code: science_program_id },
-        });
-
-        if (!init) {
-          this.logger.warn(
-            `TOC mapping initiative not found for official_code=${science_program_id}`,
-          );
-          continue;
-        }
-
-        await this.upsertResultInitiative(resultId, init.id, roleId, userId);
-
-        const existingToc = await this._resultsTocResultsRepository.findOneBy({
+        // Buscar si ya existe un mapeo TOC para este resultado e iniciativa
+        // Usar IsNull() cuando toc_result_id es null para búsqueda correcta
+        const whereCondition: any = {
           result_id: resultId,
           initiative_id: init.id,
-          toc_result_id: firstMap.toc_result_id ?? null,
           is_active: true,
+        };
+
+        if (firstMap.toc_result_id === null) {
+          whereCondition.toc_result_id = IsNull();
+          this.logger.debug(
+            `Searching for existing TOC mapping with null toc_result_id for result ${resultId}, initiative ${init.id}`,
+          );
+        } else {
+          whereCondition.toc_result_id = firstMap.toc_result_id;
+          this.logger.debug(
+            `Searching for existing TOC mapping with toc_result_id=${firstMap.toc_result_id} for result ${resultId}, initiative ${init.id}`,
+          );
+        }
+
+        const existingToc = await this._resultsTocResultsRepository.findOne({
+          where: whereCondition,
         });
 
-        const tocMapping =
-          existingToc ??
-          (await this._resultsTocResultsRepository.save({
+        // Crear o actualizar el registro básico en results_toc_result
+        let tocMapping;
+        
+        // Validar que el registro encontrado realmente corresponde a la iniciativa correcta
+        if (existingToc && existingToc.initiative_id !== init.id) {
+          this.logger.warn(
+            `Found TOC mapping (id: ${existingToc.result_toc_result_id}) but initiative_id mismatch: expected ${init.id}, found ${existingToc.initiative_id}. Will create new mapping.`,
+          );
+          // No usar este registro, crear uno nuevo
+          const newTocMappingData = {
             created_by: userId,
             toc_result_id: firstMap.toc_result_id,
             initiative_ids: init.id,
             initiative_id: init.id,
             result_id: resultId,
             toc_level_id: tocLevelId,
-          }));
+            planned_result: true,
+          };
+          this.logger.debug(
+            `Creating new TOC mapping due to initiative_id mismatch`,
+          );
+          tocMapping = await this._resultsTocResultsRepository.save(
+            newTocMappingData,
+          );
+          this.logger.debug(
+            `Successfully created new TOC mapping (id: ${tocMapping.result_toc_result_id}) for result ${resultId}, initiative ${init.id} (${science_program_id})`,
+          );
+        } else if (existingToc) {
+          // El registro existe y corresponde a la iniciativa correcta
+          this.logger.debug(
+            `Found existing TOC mapping (id: ${existingToc.result_toc_result_id}) for result ${resultId}, initiative ${init.id} (${science_program_id})`,
+          );
+          // Actualizar planned_result a true si no está ya establecido
+          if (existingToc.planned_result !== true) {
+            await this._resultsTocResultsRepository.update(
+              { result_toc_result_id: existingToc.result_toc_result_id },
+              { planned_result: true, last_updated_by: userId },
+            );
+            existingToc.planned_result = true;
+            this.logger.debug(
+              `Updated planned_result to true for existing TOC mapping ${existingToc.result_toc_result_id}`,
+            );
+          }
+          tocMapping = existingToc;
+        } else {
+          this.logger.debug(
+            `No existing TOC mapping found. Creating new one for result ${resultId}, initiative ${init.id} (${science_program_id})`,
+          );
+          try {
+            const newTocMappingData = {
+              created_by: userId,
+              toc_result_id: firstMap.toc_result_id,
+              initiative_ids: init.id,
+              initiative_id: init.id,
+              result_id: resultId,
+              toc_level_id: tocLevelId,
+              planned_result: true, // Marcar como planned_result = 1
+            };
+            this.logger.debug(
+              `Attempting to save TOC mapping with data: ${JSON.stringify(newTocMappingData)}`,
+            );
+            const newTocMapping = await this._resultsTocResultsRepository.save(
+              newTocMappingData,
+            );
+            this.logger.debug(
+              `Successfully created new TOC mapping (id: ${newTocMapping.result_toc_result_id}) for result ${resultId}, initiative ${init.id} (${science_program_id}) with planned_result=true, toc_result_id=${firstMap.toc_result_id}`,
+            );
+            tocMapping = newTocMapping;
+          } catch (saveError) {
+            this.logger.error(
+              `Error saving TOC mapping for result ${resultId}, initiative ${init.id} (${science_program_id}): ${(saveError as Error).message}`,
+            );
+            this.logger.error(
+              `Error stack: ${(saveError as Error).stack}`,
+            );
+            throw saveError; // Re-lanzar para que se capture en el catch externo
+          }
+        }
 
-        if (!isInitiativeOnlyMapping) {
+        // Si tenemos mapeo completo (con indicador), crear/actualizar los indicadores
+        if (!isInitiativeOnlyMapping && firstMap.toc_results_indicator_id) {
           const existingIndicator =
             await this._resultsTocResultsIndicatorsRepository.findOne({
               where: {
@@ -917,15 +1053,24 @@ export class BilateralService {
           }
         }
 
+        const mappingType = isInitiativeOnlyMapping
+          ? 'basic initiative'
+          : 'full TOC';
         this.logger.debug(
-          `TOC mapping processed successfully for program ${science_program_id} (role ${roleId})`,
+          `TOC mapping processed successfully for program ${science_program_id} (role ${roleId}) - ${mappingType} mapping`,
         );
       } catch (err) {
         this.logger.error(
-          `TOC mapping unexpected error for program ${mapping.science_program_id}: ${
+          `TOC mapping unexpected error for program ${mapping.science_program_id} (role ${roleId}): ${
             (err as Error).message
           }`,
         );
+        this.logger.error(
+          `TOC mapping error stack: ${(err as Error).stack}`,
+        );
+        // No continuar con el siguiente mapping si hay un error crítico
+        // pero tampoco fallar todo el proceso
+        continue;
       }
     }
   }
