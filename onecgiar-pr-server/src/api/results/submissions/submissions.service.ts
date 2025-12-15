@@ -114,9 +114,15 @@ export class SubmissionsService {
           return;
         }
 
+        const scienceProgram = await this._resultRepository.getScienceProgramByResultId(
+          resultId,
+        );
+
         for (const email of emails) {
           const emailData: Record<string, any> = {
             userName: `${email.first_name} ${email.last_name}`.trim(),
+            SPcode: scienceProgram.official_code,
+            SPname: scienceProgram.name,
             resultUrl: `${process.env.RESULTS_URL}${result.result_code}/general-information?phase=${result.version_id}`,
           };
           const compiledTemplate = handlebars.compile(template.template);
