@@ -5,6 +5,7 @@ import { DataControlService } from '../data-control.service';
 import {
   AISession,
   IAiRecommendation,
+  ImpactAreaScores,
   POSTAIAssistantCreateEvent,
   POSTAIAssistantSaveHistory,
   POSTPRMSQa,
@@ -20,6 +21,9 @@ export interface DacScores {
   impact_area_id?: string | null;
   change_reason?: string;
   canSave?: boolean;
+  ai_recommendation?: string;
+  ai_component_recommendation?: string;
+  display_title?: string;
 }
 
 @Injectable({
@@ -44,6 +48,77 @@ export class AiReviewService {
   // Signal para notificar cuando se guarda en general-information
   generalInformationSaved = signal<number>(0);
 
+  /**
+   * Mapea el field_name a su título completo para mostrar en la UI
+   * @param fieldName - Nombre del campo (gender, climate, nutrition, environmental, poverty)
+   * @returns El título completo del área de impacto
+   */
+  private mapFieldNameToDisplayTitle(fieldName: string): string {
+    const fieldNameLower = fieldName.toLowerCase();
+
+    const titleMappings: Record<string, string> = {
+      gender: 'Gender equality, youth and social inclusion tag',
+      climate: 'Climate adaptation and mitigation',
+      nutrition: 'Nutrition, health and food security',
+      environmental: 'Environmental health and biodiversity tag',
+      poverty: 'Poverty reduction, livelihoods and jobs tag'
+    };
+
+    return titleMappings[fieldNameLower] || fieldName;
+  }
+
+  /**
+   * Mapea el field_name del DAC score al campo correspondiente en impact_area_scores
+   * @param fieldName - Nombre del campo (gender, climate, nutrition, environmental, poverty)
+   * @returns El nombre de la propiedad correspondiente en ImpactAreaScores
+   */
+  private mapFieldNameToImpactAreaKey(fieldName: string): {
+    scoreKey: keyof ImpactAreaScores;
+    componentKey?: keyof ImpactAreaScores;
+  } | null {
+    const fieldNameLower = fieldName.toLowerCase();
+
+    const mappings: Record<string, { scoreKey: keyof ImpactAreaScores; componentKey?: keyof ImpactAreaScores }> = {
+      gender: { scoreKey: 'social_inclusion', componentKey: 'social_inclusion_component' },
+      climate: { scoreKey: 'climate_adaptation' },
+      nutrition: { scoreKey: 'food_security', componentKey: 'food_security_component' },
+      environmental: { scoreKey: 'environmental_health' },
+      poverty: { scoreKey: 'poverty_reduction' }
+    };
+
+    return mappings[fieldNameLower] || null;
+  }
+
+  /**
+   * Enriquece los DAC scores con las recomendaciones de IA
+   * @param dacScores - Array de DAC scores del backend
+   * @param impactAreaScores - Recomendaciones de IA para cada área de impacto
+   * @returns Array de DAC scores enriquecidos con recomendaciones
+   */
+  private enrichDacScoresWithAIRecommendations(dacScores: DacScores[], impactAreaScores: ImpactAreaScores): DacScores[] {
+    return dacScores.map(score => {
+      const mapping = this.mapFieldNameToImpactAreaKey(score.field_name);
+
+      if (!mapping) {
+        return { ...score, canSave: false, display_title: this.mapFieldNameToDisplayTitle(score.field_name) };
+      }
+
+      const enrichedScore: DacScores = {
+        ...score,
+        canSave: false,
+        display_title: this.mapFieldNameToDisplayTitle(score.field_name),
+        ai_recommendation: impactAreaScores[mapping.scoreKey] || ''
+      };
+
+      // Si existe componente, agregarlo
+      if (mapping.componentKey && impactAreaScores[mapping.componentKey]) {
+        enrichedScore.ai_component_recommendation = impactAreaScores[mapping.componentKey];
+      }
+
+      return enrichedScore;
+    });
+  }
+
   // on AI review click
   async onAIReviewClick() {
     try {
@@ -55,15 +130,19 @@ export class AiReviewService {
       await this.POST_createSession();
       await this.GET_aiContext();
       await this.GET_resultContext();
-      const dacScoresData = await this.getDacScores();
-      // Inicializar canSave a false para cada dacScore
-      dacScoresData.forEach(score => (score.canSave = false));
-      this.dacScores.set(dacScoresData);
-      const iaBody: POSTPRMSQa = {
-        user_id: this.api.authSE.localStorageUser.email,
-        result_metadata: this.aiContext()
-      };
-      const { json_content } = await this.POST_prmsQa(iaBody);
+
+      // Obtener DAC scores y recomendaciones de IA en paralelo
+      const [dacScoresData, { json_content }] = await Promise.all([
+        this.getDacScores(),
+        this.POST_prmsQa({
+          user_id: this.api.authSE.localStorageUser.email,
+          result_metadata: this.aiContext()
+        })
+      ]);
+
+      // Combinar DAC scores con recomendaciones de IA
+      const enrichedDacScores = this.enrichDacScoresWithAIRecommendations(dacScoresData, json_content.impact_area_scores);
+      this.dacScores.set(enrichedDacScores);
 
       const customData = [
         { field_name_label: 'Title', field_name: 'new_title' },
