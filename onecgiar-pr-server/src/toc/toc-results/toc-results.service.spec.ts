@@ -318,6 +318,80 @@ describe('TocResultsService', () => {
         20,
       ]);
     });
+
+    it('deduplicates indicators and aggregates targets', async () => {
+      const data = [{ toc_result_id: 30, title: 'Result C' }];
+      const indicatorRows = [
+        {
+          toc_result_id: 30,
+          indicator_id: 1001,
+          toc_result_indicator_id: 'IND-X',
+          related_node_id: 'NODE-X',
+          indicator_description: 'Indicator X',
+          unit_messurament: 'Units',
+          type_value: 'Number',
+          type_name: 'Quantitative',
+          location: 'Global',
+          target_value: 5,
+        },
+        {
+          toc_result_id: 30,
+          indicator_id: 1001,
+          toc_result_indicator_id: 'IND-X',
+          related_node_id: 'NODE-X',
+          indicator_description: 'Indicator X',
+          unit_messurament: 'Units',
+          type_value: 'Number',
+          type_name: 'Quantitative',
+          location: 'Global',
+          target_value: 10,
+        },
+      ];
+      repository.$_getResultTocByConfigV2.mockResolvedValue(data);
+      repository.getTocIndicatorsByResultIds.mockResolvedValue(indicatorRows);
+      repository.getResultIndicatorMappings.mockResolvedValue([
+        {
+          toc_result_id: 30,
+          result_toc_result_id: 800,
+          planned_result: true,
+          toc_progressive_narrative: 'Narrative X',
+          result_toc_result_indicator_id: 900,
+          toc_results_indicator_id: 'NODE-X',
+          indicator_contributing: 1,
+          indicator_status: 1,
+        },
+      ]);
+      returnResponse.format.mockReturnValue({} as any);
+
+      await service.findTocResultByConfigV2(6, 7, 2);
+
+      expect(returnResponse.format).toHaveBeenCalledWith({
+        message: 'Successful response',
+        response: [
+          expect.objectContaining({
+            toc_result_id: 30,
+            indicators: [
+              {
+                indicator_id: 1001,
+                toc_result_indicator_id: 'IND-X',
+                related_node_id: 'NODE-X',
+                indicator_description: 'Indicator X',
+                unit_messurament: 'Units',
+                type_value: 'Number',
+                type_name: 'Quantitative',
+                location: 'Global',
+                result_toc_result_indicator_id: 900,
+                indicator_contributing: 1,
+                status_id: 1,
+                target_value: 5,
+                targets: [{ target_value: 5 }, { target_value: 10 }],
+              },
+            ],
+          }),
+        ],
+        statusCode: HttpStatus.OK,
+      });
+    });
   });
 
   describe('findAllByinitiativeIdV2', () => {
