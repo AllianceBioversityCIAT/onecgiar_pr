@@ -2243,8 +2243,9 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       AND v.is_active = true
     INNER JOIN clarisa_portfolios cp ON v.portfolio_id = cp.id
     WHERE         
-      r.version_id = 34
-        AND r.is_active = true
+        v.phase_name = 'Reporting 2025'
+      AND v.is_active = true
+      AND r.is_active = true
     UNION ALL
     SELECT 
       r.id,
