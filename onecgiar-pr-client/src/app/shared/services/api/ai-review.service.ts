@@ -154,7 +154,6 @@ export class AiReviewService {
       return this.http.get<any>(`${this.baseApiBaseUrl}ai/result-context/${this.dataControlSE.currentResultSignal().id}`).subscribe({
         next: (response: any) => {
           this.currnetFieldsList.set(response.response);
-          console.log(response.response);
           resolve(response);
         },
         error: (error: any) => {
@@ -172,7 +171,6 @@ export class AiReviewService {
         .subscribe({
           next: (response: any) => {
             resolve(response.response);
-            console.log(response.response);
           }
         });
     });

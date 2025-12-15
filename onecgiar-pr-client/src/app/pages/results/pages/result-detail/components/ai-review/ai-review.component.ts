@@ -97,8 +97,6 @@ export class AiReviewComponent {
 
       // Deshabilitar el botón de guardar solo para este score
       dacScore.canSave = false;
-
-      console.log('DAC score saved successfully:', dacScoreToSave);
     } catch (error) {
       console.error('Error saving DAC score:', error);
     }
