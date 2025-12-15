@@ -2290,20 +2290,53 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
   async getResultInnovationDevelopmentByResultId(
     resultId: number,
   ): Promise<boolean> {
-    return await this.createQueryBuilder('r')
-      .innerJoin(
-        'result_answers',
-        'ra',
-        'ra.result_id = r.id AND ra.is_active = true',
-      )
-      .innerJoin(
-        'result_questions',
-        'rq',
-        'rq.result_question_id = ra.result_question_id',
-      )
-      .where('rq.result_question_id = :questionId', { questionId: 110 }) // Id related to: "Yes, please contact me"
-      .andWhere('r.is_active = true')
-      .andWhere('r.id = :resultId', { resultId })
-      .getExists();
+    try {
+      return await this.createQueryBuilder('r')
+        .innerJoin(
+          'result_answers',
+          'ra',
+          'ra.result_id = r.id AND ra.is_active = true',
+        )
+        .innerJoin(
+          'result_questions',
+          'rq',
+          'rq.result_question_id = ra.result_question_id',
+        )
+        .where('rq.result_question_id = :questionId', { questionId: 110 }) // "Yes, please contact me"
+        .andWhere('r.is_active = true')
+        .andWhere('r.id = :resultId', { resultId })
+        .getExists();
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  async getScienceProgramByResultId(resultId: number): Promise<any> {
+    const query = `
+      SELECT
+        ci.official_code,
+        ci.name
+      FROM result r
+      INNER JOIN results_by_inititiative rbi ON r.id = rbi.result_id
+      INNER JOIN clarisa_initiatives ci ON rbi.inititiative_id = ci.id
+        AND ci.active = 1
+      WHERE r.id = ?
+        AND r.is_active = 1;
+    `;
+
+    try {
+      const result = await this.query(query, [resultId]);
+      return result;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
   }
 }
