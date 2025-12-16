@@ -117,16 +117,17 @@
       // align-self: flex-start;
     }
 
+    .version-label {
+      font-weight: 500;
+      color: var(--pr-color-secondary-400);
+      font-size: 14px;
+      margin-bottom: 8px;
+      display: block;
+    }
+
     .current-version {
       display: flex;
       flex-direction: column;
-      gap: 8px;
-
-      .version-label {
-        font-weight: 500;
-        color: var(--pr-color-secondary-400);
-        font-size: 14px;
-      }
     }
 
     .component-section {
@@ -209,8 +210,6 @@
       border: 1px solid rgba(71, 181, 86, 0.3);
       border-radius: 8px;
       padding: 16px;
-      margin: -8px;
-      margin-top: 0;
     }
   }
 }

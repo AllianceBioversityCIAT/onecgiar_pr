@@ -86,8 +86,8 @@
 
           <div class="line-divider"></div>
 
+          <label class="version-label">Result version</label>
           <div class="current-version">
-            <label class="version-label">Result version</label>
             <div class="radio-button-group">
               @for (option of scoreSE.genderTagScoreList; track option.id) {
                 <div class="radio-button-item" (click)="onResultVersionChange(dacScore, option.id)">
