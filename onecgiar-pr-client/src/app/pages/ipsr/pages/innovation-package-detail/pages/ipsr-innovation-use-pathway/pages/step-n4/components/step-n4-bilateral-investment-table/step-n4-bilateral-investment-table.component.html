@@ -106,7 +106,7 @@
 <app-no-data-text *ngIf="!hasElementsWithId(this.body.bilateral_expected_investment, 'non_pooled_projetct_budget_id')" title="No bilaterals added">
 </app-no-data-text>
 
-@if (!this.api.fieldsManagerSE.isP25()) {
+@if (this.api.fieldsManagerSE.isP25()) {
   <app-step-n4-add-project [body]="this.body"></app-step-n4-add-project>
 } @else {
   <app-step-n4-add-bilateral [body]="this.body"></app-step-n4-add-bilateral>
