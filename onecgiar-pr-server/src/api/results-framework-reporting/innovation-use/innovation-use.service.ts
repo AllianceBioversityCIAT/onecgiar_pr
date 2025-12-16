@@ -1,5 +1,8 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
-import { CreateInnovationUseDto } from './dto/create-innovation-use.dto';
+import {
+  CreateInnovationUseDto,
+  InnovUseGroupsDto,
+} from './dto/create-innovation-use.dto';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { LinkedResultsService } from '../../results/linked-results/linked-results.service';
@@ -172,10 +175,7 @@ export class InnovationUseService {
       await this.saveAnticipatedInnoUser(
         InnUseRes.results_id,
         user.id,
-        {
-          ...innovationUseDto,
-          innovation_use: innovation_use,
-        },
+        innovation_use,
         ResultCoreInnovUseSectionEnum.CURRENT,
         innov_use_to_be_determined,
       );
@@ -183,10 +183,7 @@ export class InnovationUseService {
       await this.saveAnticipatedInnoUser(
         InnUseRes.results_id,
         user.id,
-        {
-          ...innovationUseDto,
-          innovation_use: innovationUseDto.innovation_use_2030,
-        },
+        innovationUseDto.innovation_use_2030,
         ResultCoreInnovUseSectionEnum.FUTURE,
         innov_use_2030_to_be_determined,
       );
@@ -223,29 +220,48 @@ export class InnovationUseService {
   async saveAnticipatedInnoUser(
     resultId: number,
     user: number,
-    crtr: CreateInnovationUseDto,
-    section: ResultCoreInnovUseSectionEnum = null,
+    crtr: InnovUseGroupsDto,
+    section: number | null,
     determined?: boolean | null,
   ) {
+    const hasSection = section !== null && section !== undefined;
+
     if (determined === true) {
-      await this._resultActorRepository.update(
-        { result_id: resultId, is_active: true },
-        { is_active: false, last_updated_by: user },
-      );
-      await this._resultByIntitutionsTypeRepository.update(
-        { results_id: resultId, is_active: true },
-        { is_active: false, last_updated_by: user },
-      );
-      await this._resultIpMeasureRepository.update(
-        { result_id: resultId, is_active: true },
-        { is_active: false, last_updated_by: user },
-      );
+      const actorFilter: any = { result_id: resultId, is_active: true };
+      const instFilter: any = {
+        results_id: resultId,
+        is_active: true,
+        institution_roles_id: 5,
+      };
+      const measureFilter: any = { result_id: resultId, is_active: true };
+
+      if (hasSection) {
+        actorFilter.section_id = section;
+        instFilter.section_id = section;
+        measureFilter.section_id = section;
+      }
+
+      await this._resultActorRepository.update(actorFilter, {
+        is_active: false,
+        last_updated_by: user,
+      });
+
+      await this._resultByIntitutionsTypeRepository.update(instFilter, {
+        is_active: false,
+        last_updated_by: user,
+      });
+
+      await this._resultIpMeasureRepository.update(measureFilter, {
+        is_active: false,
+        last_updated_by: user,
+      });
+
       return;
     }
 
     // ==== ACTORS ====
-    if (crtr?.innovation_use?.actors?.length) {
-      for (const el of crtr.innovation_use.actors) {
+    if (crtr?.actors?.length) {
+      for (const el of crtr.actors) {
         if (el?.is_active === false) {
           if (el?.result_actors_id) {
             await this._resultActorRepository.update(
@@ -262,40 +278,48 @@ export class InnovationUseService {
 
         let actorExists: ResultActor = null;
 
-        const whereOptions: any = {
-          actor_type_id: el.actor_type_id,
-          result_id: resultId,
-          result_actors_id: el.result_actors_id ?? IsNull(),
-          section_id: section,
-          is_active: true,
-        };
+        if (el?.result_actors_id) {
+          actorExists = await this._resultActorRepository.findOne({
+            where: { result_actors_id: el.result_actors_id },
+          });
+        } else {
+          const whereOptions: any = {
+            result_id: resultId,
+            is_active: true,
+          };
 
-        if (!el?.result_actors_id && `${el.actor_type_id}` === '5') {
-          whereOptions.other_actor_type = el?.other_actor_type || IsNull();
-        } else if (el?.result_actors_id) {
-          delete whereOptions.actor_type_id;
+          if (hasSection) {
+            whereOptions.section_id = section;
+          }
+
+          whereOptions.actor_type_id = el.actor_type_id;
+
+          if (Number(el.actor_type_id) === 5) {
+            whereOptions.other_actor_type = el?.other_actor_type ?? IsNull();
+          }
+
+          actorExists = await this._resultActorRepository.findOne({
+            where: whereOptions,
+          });
         }
 
-        actorExists = await this._resultActorRepository.findOne({
-          where: whereOptions,
-        });
+        const actorPayload = this.buildActorData(el, user, resultId, section);
 
         if (actorExists) {
+          delete actorPayload.created_by;
           await this._resultActorRepository.update(
             actorExists.result_actors_id,
-            this.buildActorData(el, user, resultId, section),
+            actorPayload,
           );
         } else {
-          await this._resultActorRepository.save(
-            this.buildActorData(el, user, resultId, section),
-          );
+          await this._resultActorRepository.save(actorPayload);
         }
       }
     }
 
     // ==== ORGANIZATIONS ====
-    if (crtr?.innovation_use?.organization?.length) {
-      for (const el of crtr.innovation_use.organization) {
+    if (crtr?.organization?.length) {
+      for (const el of crtr.organization) {
         if (el?.is_active === false) {
           if (el?.id) {
             await this._resultByIntitutionsTypeRepository.update(
@@ -306,48 +330,60 @@ export class InnovationUseService {
           continue;
         }
 
-        if (
-          !el?.institution_types_id &&
-          (el?.id == null || el.id === undefined)
-        ) {
+        if (!el?.id && !el?.institution_types_id) {
           continue;
         }
 
-        const whereOptions: any = {
-          institution_types_id: el.institution_types_id,
-          results_id: resultId,
-          institution_roles_id: 5,
-          section_id: section,
-          is_active: true,
-        };
-
         let ite: ResultsByInstitutionType = null;
+
         if (el?.id) {
           ite = await this._resultByIntitutionsTypeRepository.findOne({
             where: { id: el.id, is_active: true },
           });
-        } else if (el?.institution_types_id != 78) {
+        } else {
+          const whereOptions: any = {
+            results_id: resultId,
+            institution_roles_id: 5,
+            is_active: true,
+          };
+
+          if (hasSection) {
+            whereOptions.section_id = section;
+          }
+
+          whereOptions.institution_types_id = el.institution_types_id;
+
+          if (Number(el.institution_types_id) === 78) {
+            whereOptions.other_institution = el?.other_institution ?? IsNull();
+          }
+
           ite = await this._resultByIntitutionsTypeRepository.findOne({
             where: whereOptions,
           });
         }
 
+        const instPayload = this.buildInstitutionData(
+          el,
+          user,
+          resultId,
+          section,
+        );
+
         if (ite) {
+          delete instPayload.created_by;
           await this._resultByIntitutionsTypeRepository.update(
             ite.id,
-            this.buildInstitutionData(el, user, resultId, section),
+            instPayload,
           );
         } else {
-          await this._resultByIntitutionsTypeRepository.save(
-            this.buildInstitutionData(el, user, resultId, section),
-          );
+          await this._resultByIntitutionsTypeRepository.save(instPayload);
         }
       }
     }
 
     // ==== MEASURES ====
-    if (crtr?.innovation_use?.measures?.length) {
-      for (const el of crtr.innovation_use.measures) {
+    if (crtr?.measures?.length) {
+      for (const el of crtr.measures) {
         if (el?.is_active === false) {
           if (el?.result_ip_measure_id) {
             await this._resultIpMeasureRepository.update(
@@ -363,37 +399,47 @@ export class InnovationUseService {
         }
 
         let ripm: ResultIpMeasure = null;
+
         if (el?.result_ip_measure_id) {
           ripm = await this._resultIpMeasureRepository.findOne({
             where: { result_ip_measure_id: el.result_ip_measure_id },
           });
-        } else if (el?.unit_of_measure) {
-          ripm = await this._resultIpMeasureRepository.findOne({
-            where: {
-              unit_of_measure: el.unit_of_measure,
-              result_id: resultId,
-              quantity: el?.quantity,
-            },
-          });
         } else {
+          const whereOptions: any = {
+            result_id: resultId,
+            is_active: true,
+          };
+
+          if (hasSection) {
+            whereOptions.section_id = section;
+          }
+
+          if (el?.unit_of_measure) {
+            whereOptions.unit_of_measure = el.unit_of_measure;
+          } else {
+            whereOptions.unit_of_measure = IsNull();
+          }
+
           ripm = await this._resultIpMeasureRepository.findOne({
-            where: {
-              unit_of_measure: IsNull(),
-              result_id: resultId,
-              quantity: el?.quantity,
-            },
+            where: whereOptions,
           });
         }
 
+        const measurePayload = this.buildMeasureData(
+          el,
+          user,
+          resultId,
+          section,
+        );
+
         if (ripm) {
+          delete measurePayload.created_by;
           await this._resultIpMeasureRepository.update(
             ripm.result_ip_measure_id,
-            this.buildMeasureData(el, user, resultId, section),
+            measurePayload,
           );
         } else {
-          await this._resultIpMeasureRepository.save(
-            this.buildMeasureData(el, user, resultId, section),
-          );
+          await this._resultIpMeasureRepository.save(measurePayload);
         }
       }
     }
@@ -403,7 +449,12 @@ export class InnovationUseService {
     return data == undefined ? null : data;
   }
 
-  private buildActorData(el, user, resultId, section) {
+  private buildActorData(
+    el: any,
+    user: number,
+    resultId: number,
+    section: ResultCoreInnovUseSectionEnum | null,
+  ) {
     return {
       actor_type_id: this.isNullData(el?.actor_type_id),
       is_active: el?.is_active ?? true,
@@ -426,7 +477,12 @@ export class InnovationUseService {
     };
   }
 
-  private buildInstitutionData(el, user, resultId, section) {
+  private buildInstitutionData(
+    el: any,
+    user: number,
+    resultId: number,
+    section: ResultCoreInnovUseSectionEnum | null,
+  ) {
     return {
       results_id: resultId,
       created_by: user,
@@ -442,7 +498,12 @@ export class InnovationUseService {
     };
   }
 
-  private buildMeasureData(el, user, resultId, section) {
+  private buildMeasureData(
+    el: any,
+    user: number,
+    resultId: number,
+    section: ResultCoreInnovUseSectionEnum | null,
+  ) {
     return {
       result_id: resultId,
       quantity: this.isNullData(el?.quantity),
@@ -808,7 +869,6 @@ export class InnovationUseService {
           },
         });
 
-        console.log('Encontró', rbp);
         if (!rbp) {
           this.logger.error(
             `[saveBillateralInvestment] ResultByProject not found for resultId: ${resultId}, project_id: ${i.id}`,
