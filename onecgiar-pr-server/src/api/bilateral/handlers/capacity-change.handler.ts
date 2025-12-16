@@ -15,8 +15,7 @@ import { CapdevsDeliveryMethodRepository } from '../../results/capdevs-delivery-
 
 @Injectable()
 export class CapacityChangeBilateralHandler
-  implements BilateralResultTypeHandler
-{
+  implements BilateralResultTypeHandler {
   readonly resultType = ResultTypeEnum.CAPACITY_CHANGE;
   private readonly logger = new Logger(CapacityChangeBilateralHandler.name);
   private readonly capdevTermLabelToId = new Map<string, number>([
@@ -47,7 +46,7 @@ export class CapacityChangeBilateralHandler
     private readonly _resultsCapacityDevelopmentsRepository: ResultsCapacityDevelopmentsRepository,
     private readonly _capdevsTermRepository: CapdevsTermRepository,
     private readonly _capdevsDeliveryMethodRepository: CapdevsDeliveryMethodRepository,
-  ) {}
+  ) { }
 
   async afterCreate({
     bilateralDto,
@@ -115,10 +114,25 @@ export class CapacityChangeBilateralHandler
 
   private normalizeCapacityLabel(value?: string | null) {
     if (!value) return '';
+
+    const MAX_LENGTH = 1000;
+    if (value.length > MAX_LENGTH) {
+      value = value.substring(0, MAX_LENGTH);
+    }
+
     let normalized = value.trim().toLowerCase();
-    normalized = normalized.replace(/\s+\//g, '/');
-    normalized = normalized.replace(/\/\s+/g, '/');
-    normalized = normalized.replace(/\s{2,}/g, ' ');
+    normalized = normalized.split(' /').join('/');
+    normalized = normalized.split('/ ').join('/');
+
+    let prevLength = 0;
+    while (normalized.length !== prevLength && normalized.includes('  ')) {
+      prevLength = normalized.length;
+      normalized = normalized.replace('  ', ' ');
+      if (normalized.length >= prevLength && normalized.includes('  ')) {
+        break;
+      }
+    }
+
     return normalized;
   }
 
