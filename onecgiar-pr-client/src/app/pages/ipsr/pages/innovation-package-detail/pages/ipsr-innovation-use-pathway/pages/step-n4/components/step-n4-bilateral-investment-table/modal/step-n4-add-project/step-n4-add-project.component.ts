@@ -1,8 +1,9 @@
-import { Component, Input, DoCheck } from '@angular/core';
+import { Component, Input, DoCheck, OnInit } from '@angular/core';
 import { BilateralexpectedinvestmentStep4, IpsrStep4Body } from '../../../../model/Ipsr-step-4-body.model';
 import { ApiService } from '../../../../../../../../../../../../shared/services/api/api.service';
 import { InstitutionsService } from '../../../../../../../../../../../../shared/services/global/institutions.service';
 import { CentersService } from '../../../../../../../../../../../../shared/services/global/centers.service';
+import { RdContributorsAndPartnersService } from '../../../../../../../../../../../results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.service';
 
 @Component({
     selector: 'app-step-n4-add-project',
@@ -10,7 +11,7 @@ import { CentersService } from '../../../../../../../../../../../../shared/servi
     styleUrls: ['./step-n4-add-project.component.scss'],
     standalone: false
 })
-export class StepN4AddProjectComponent implements DoCheck {
+export class StepN4AddProjectComponent implements DoCheck, OnInit {
   @Input() body: IpsrStep4Body = new IpsrStep4Body();
   visible = false;
   projectBody = new AddProjectBody();
@@ -18,7 +19,16 @@ export class StepN4AddProjectComponent implements DoCheck {
   requesting = false;
   formIsInvalid = false;
 
-  constructor(public institutionsSE: InstitutionsService, public centersSE: CentersService, public api: ApiService) {}
+  constructor(
+    public institutionsSE: InstitutionsService,
+    public centersSE: CentersService,
+    public api: ApiService,
+    public rdPartnersSE: RdContributorsAndPartnersService
+  ) {}
+
+  ngOnInit() {
+    this.rdPartnersSE.loadClarisaProjects();
+  }
 
   onAddProject() {
     this.requesting = true;
@@ -51,8 +61,5 @@ export class StepN4AddProjectComponent implements DoCheck {
 }
 
 class AddProjectBody extends BilateralexpectedinvestmentStep4 {
-  funder: number = null;
-  grant_title: string = null;
-  center_grant_id: string = null;
-  lead_center: string = null;
+  project_id: number = null;
 }

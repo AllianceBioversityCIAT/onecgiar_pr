@@ -12,31 +12,13 @@
   <div class="modal_title">Add project</div>
   <div class="modal_container partners-request-container" *ngIf="showForm">
     <app-pr-select
-      class="segment_title_margin"
-      [options]="this.institutionsSE?.institutionsList"
-      label="Funder name"
-      optionLabel="full_name"
-      optionValue="institutions_id"
-      placeholder="Select funder"
-      [(ngModel)]="projectBody.funder"
-      [showPartnerAlert]="true">
-    </app-pr-select>
-
-    <div class="auto_fit_container">
-      <app-pr-input label="Grant title" [required]="true" [(ngModel)]="projectBody.grant_title" placeholder="Grant title goes here...">
-      </app-pr-input>
-      <app-pr-input label="Center Grant ID" [required]="true" [(ngModel)]="projectBody.center_grant_id" placeholder="e.g. G184"> </app-pr-input>
-    </div>
-
-    <app-pr-select
-      [options]="this.centersSE.centersList"
+      [options]="this.rdPartnersSE.clarisaProjectsList"
+      label="Contributing W3 and/or bilateral projects"
+      optionLabel="fullName"
+      optionValue="project_id"
+      placeholder="Select project"
       [required]="true"
-      label="Lead/Contract Center"
-      optionLabel="full_name"
-      optionValue="lead_center"
-      placeholder="Select donor"
-      [(ngModel)]="projectBody.lead_center"
-      placeholder="Lead/Contract Center goes here...">
+      [(ngModel)]="projectBody.project_id">
     </app-pr-select>
   </div>
   <div class="buttons">

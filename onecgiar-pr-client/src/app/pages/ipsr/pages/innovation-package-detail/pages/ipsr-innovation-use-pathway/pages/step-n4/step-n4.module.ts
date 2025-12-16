@@ -13,6 +13,7 @@ import { StepN4EditBilateralComponent } from './components/step-n4-bilateral-inv
 import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
 import { StepN4ReferenceMaterialLinksComponent } from './components/step-n4-reference-material-links/step-n4-reference-material-links.component';
 import { TermPipe } from '../../../../../../../../internationalization/term.pipe';
+import { StepN4AddProjectComponent } from './components/step-n4-bilateral-investment-table/modal/step-n4-add-project/step-n4-add-project.component';
 
 @NgModule({
   declarations: [
@@ -21,6 +22,7 @@ import { TermPipe } from '../../../../../../../../internationalization/term.pipe
     StepN4BilateralInvestmentTableComponent,
     StepN4PartnerCoInvestmentTableComponent,
     StepN4AddBilateralComponent,
+    StepN4AddProjectComponent,
     StepN4ReferenceMaterialLinksComponent,
     StepN4AddPartnerComponent,
     StepN4EditBilateralComponent
