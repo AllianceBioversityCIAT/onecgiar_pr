@@ -13,7 +13,7 @@ export class EntityResultsByIndicatorCategoryCardComponent {
   readonly reportRequested = output<any>();
 
   onReportClick(): void {
-    this.reportRequested.emit();
+    this.reportRequested.emit(this.item);
   }
 
   getIcon(indicatorType: number) {
