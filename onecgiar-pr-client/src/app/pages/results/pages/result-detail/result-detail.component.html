@@ -1,7 +1,29 @@
+<app-page-header>
+  {{ this.dataControlSE.currentResultSectionName() }}
+  <div actions class="pdf-menu-container">
+    <button type="button" class="pdf-button" (click)="togglePdfMenu()" (keydown.enter)="togglePdfMenu()" aria-label="PDF options menu">
+      <i class="pi pi-file-pdf"></i>
+      <span>PDF</span>
+      <i class="pi pi-angle-down"></i>
+    </button>
+    <div class="pdf-dropdown" *ngIf="showPdfMenu">
+      <div class="pdf-dropdown-header">Options</div>
+      <div class="pdf-dropdown-item" (click)="viewPdf()" (keydown.enter)="viewPdf()" tabindex="0" role="menuitem">
+        <i class="pi pi-file-pdf"></i>
+        <span>View PDF</span>
+      </div>
+      <div class="pdf-dropdown-separator"></div>
+      <div class="pdf-dropdown-item" (click)="copyPdfLink()" (keydown.enter)="copyPdfLink()" tabindex="0" role="menuitem">
+        <i class="pi pi-copy"></i>
+        <span>Copy link</span>
+      </div>
+    </div>
+  </div>
+</app-page-header>
 <div class="local_grid">
   <div>
     <div class="panel_menu">
-      <app-panel-menu (copyEvent)="onCopy()"></app-panel-menu>
+      <app-panel-menu></app-panel-menu>
     </div>
   </div>
   <div>
@@ -11,7 +33,6 @@
 
     <div class="section_container">
       <div class="fixed_data_container">
-        <div class="section_name">{{ this.dataControlSE.currentResultSectionName() }}</div>
         <div class="metadata">
           <div class="item">
             Result code: <span>{{ this.api.resultsSE.currentResultCode }}</span>

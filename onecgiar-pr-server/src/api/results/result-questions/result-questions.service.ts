@@ -72,12 +72,23 @@ export class ResultQuestionsService {
           resultId,
           option.result_question_id,
         );
-        return {
-          ...option,
+
+        const firstAnswer = answers?.[0];
+        const mappedOption: any = {
+          ...Object.fromEntries(
+            Object.entries(option).filter(([key]) => key !== 'subOptions'),
+          ),
           answer_boolean:
-            answers[0] === undefined ? null : answers[0].answer_boolean,
-          answer_text: answers[0] === undefined ? null : answers[0].answer_text,
+            firstAnswer === undefined ? null : firstAnswer.answer_boolean,
+          answer_text:
+            firstAnswer === undefined ? null : firstAnswer.answer_text,
         };
+
+        if (option.subOptions && option.subOptions.length > 0) {
+          mappedOption.subOptions = option.subOptions;
+        }
+
+        return mappedOption;
       }),
     );
   }
@@ -202,6 +213,36 @@ export class ResultQuestionsService {
             answers[0] === undefined ? null : answers[0].answer_boolean,
           answer_text: answers[0] === undefined ? null : answers[0].answer_text,
           subOptions: subOptionsWithAnswers,
+        };
+      }),
+    );
+  }
+
+  private _mapMacroOptionsDiversity(resultId: number, options: any[]) {
+    return Promise.all(
+      options.map(async (option) => {
+        const answers = await this.getAnswersForQuestion(
+          resultId,
+          option.result_question_id,
+        );
+        const subOptions = await this._resultQuestionRepository.find({
+          where: {
+            question_level: 4,
+            parent_question_id: option.result_question_id,
+          },
+        });
+        const subOptionsWithAnswers = await this.mapOptions(
+          resultId,
+          subOptions,
+        );
+        return {
+          ...option,
+          answer_boolean:
+            answers[0] === undefined ? null : answers[0].answer_boolean,
+          answer_text: answers[0] === undefined ? null : answers[0].answer_text,
+          ...(subOptionsWithAnswers.length > 0 && {
+            subOptions: subOptionsWithAnswers,
+          }),
         };
       }),
     );
@@ -472,7 +513,7 @@ export class ResultQuestionsService {
                 },
               );
 
-              const optionsWithAnswers = await this._mapMacroOptions(
+              const optionsWithAnswers = await this._mapMacroOptionsDiversity(
                 resultId,
                 questionOptions,
               );
@@ -536,7 +577,7 @@ export class ResultQuestionsService {
                 },
               );
 
-              const optionsWithAnswers = await this._mapMacroOptions(
+              const optionsWithAnswers = await this._mapMacroOptionsDiversity(
                 resultId,
                 questionOptions,
               );

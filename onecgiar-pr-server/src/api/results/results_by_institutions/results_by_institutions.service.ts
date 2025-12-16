@@ -460,13 +460,16 @@ export class ResultsByInstitutionsService {
             { is_active: false, last_updated_by: user.id },
           );
         } else {
+          const isInnovation = [
+            ResultTypeEnum.INNOVATION_DEVELOPMENT,
+            ResultTypeEnum.INNOVATION_USE,
+          ].includes(incomingResult.result_type_id);
+          console.log('isInnovation', isInnovation);
           await this.handleInstitutions(
             data.institutions ?? [],
             oldPartners,
             !!knowledgeProduct,
-
-            incomingResult.result_type_id ===
-              1 /* ResultTypeEnum.INNOVATION_DEVELOPMENT */,
+            isInnovation,
             data.result_id,
             user.id,
           );
@@ -494,6 +497,16 @@ export class ResultsByInstitutionsService {
               status: syncResult.status,
             };
           }
+
+          const activeProjects = await this._resultsBilateralRepository.find({
+            where: { result_id: data.result_id, is_active: true },
+          });
+
+          await Promise.all(
+            activeProjects.map((project) =>
+              this.updateOrSaveResultProjectBudget(project.id, user),
+            ),
+          );
         }
 
         const current = await this.getInstitutionsPartnersByResultIdV2(
@@ -738,7 +751,7 @@ export class ResultsByInstitutionsService {
     }
   }
 
-  private async updateOrSaveBudget(projectId: number, user: TokenDto) {
+  private async updateOrSaveNonPooledBudget(projectId: number, user: TokenDto) {
     const existingBudget = await this._resultBilateralBudgetRepository.findOne({
       where: { non_pooled_projetct_id: projectId },
     });
@@ -756,6 +769,33 @@ export class ResultsByInstitutionsService {
       });
     } else {
       await this._resultBilateralBudgetRepository.update(projectId, budgetData);
+    }
+  }
+
+  private async updateOrSaveResultProjectBudget(
+    projectId: number,
+    user: TokenDto,
+  ) {
+    const existingBudget = await this._resultBilateralBudgetRepository.findOne({
+      where: { result_project_id: projectId },
+    });
+
+    const budgetData = {
+      result_project_id: projectId,
+      is_active: true,
+      last_updated_by: user.id,
+    };
+
+    if (!existingBudget) {
+      await this._resultBilateralBudgetRepository.save({
+        ...budgetData,
+        created_by: user.id,
+      });
+    } else {
+      await this._resultBilateralBudgetRepository.update(
+        { result_project_id: projectId },
+        budgetData,
+      );
     }
   }
 
@@ -783,7 +823,7 @@ export class ResultsByInstitutionsService {
       });
 
       for (const project of activeProjects) {
-        await this.updateOrSaveBudget(project.id, user);
+        await this.updateOrSaveNonPooledBudget(project.id, user);
       }
     } else {
       await this.updateNonPooledProjectsById(data.result_id, [], user.id);

@@ -29,24 +29,43 @@
         (validateMember(this.api.dataControlSE?.myInitiativesList) !== 6 && this.dataControlSE?.currentResult?.inQA) ||
         this.api.rolesSE.isAdmin
       ">
-      @if (this.api.dataControlSE?.currentResult?.result_type_id != 6) {
+      @if (this.api.dataControlSE?.currentResult?.result_type_id != 6 && this.dataControlSE?.currentResult?.status_id == 1) {
         <div
-          class="ai-review-button"
-          [ngClass]="{
-            loading: aiReviewSE.aiReviewButtonState === 'loading',
-            completed: aiReviewSE.aiReviewButtonState === 'completed'
-          }"
-          (click)="aiReviewSE.onAIReviewClick()">
-          <img src="assets/icons/stars.png" alt="ai-review" />
-          <span>{{
-            aiReviewSE.aiReviewButtonState === 'loading' ? 'Loading...' : aiReviewSE.aiReviewButtonState === 'completed' ? 'Ready!' : 'AI Review'
-          }}</span>
+          style="width: 100%"
+          [pTooltip]="
+            this.dataControlSE?.currentResult?.status_id == 1 && !this.greenChecksSE.submit
+              ? 'This button will become available once all sections are completed.'
+              : ''
+          "
+          tooltipPosition="right">
+          <div
+            class="ai-review-button"
+            [ngClass]="{
+              loading: aiReviewSE.aiReviewButtonState === 'loading',
+              completed: aiReviewSE.aiReviewButtonState === 'completed',
+              globalDisabled:
+                !this.greenChecksSE.submit ||
+                (this.dataControlSE?.currentResult?.inQA &&
+                  this.api.globalVariablesSE.get?.in_qa &&
+                  this.api.dataControlSE?.currentResult?.status_id == 1)
+            }"
+            (click)="aiReviewSE.onAIReviewClick()">
+            <img src="assets/icons/stars.png" alt="ai-review" />
+            <span>{{
+              aiReviewSE.aiReviewButtonState === 'loading' ? 'Loading...' : aiReviewSE.aiReviewButtonState === 'completed' ? 'Ready!' : 'AI Review'
+            }}</span>
+          </div>
         </div>
       }
-      <div style="width: 100%">
+      <div
+        style="width: 100%"
+        [pTooltip]="
+          this.dataControlSE?.currentResult?.status_id == 1 && !this.greenChecksSE.submit
+            ? 'This button will become available once all sections are completed.'
+            : ''
+        "
+        tooltipPosition="right">
         <app-pr-button
-          tooltipText="Enter your username"
-          tooltipTextPosition="top"
           [ngClass]="{
             globalDisabled: !this.greenChecksSE.submit || (this.dataControlSE?.currentResult?.inQA && this.api.globalVariablesSE.get?.in_qa)
           }"
@@ -58,10 +77,6 @@
           *ngIf="this.dataControlSE?.currentResult?.status_id == 3"
           [ngClass]="{ globalDisabled: this.dataControlSE?.currentResult?.inQA && this.api.globalVariablesSE.get?.in_qa }"
           (click)="this.unsubmitModalSE.showModal = true"></app-pr-button>
-      </div>
-
-      <div class="button_access_information pr-body-3" *ngIf="this.dataControlSE?.currentResult?.status_id == 1">
-        This button will become available once all sections are completed.
       </div>
 
       <div class="button_access_information pr-body-3" *ngIf="this.dataControlSE?.currentResult?.status_id == 2">

@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { DataSource } from 'typeorm';
 import { ResultsFrameworkReportingService } from './results-framework-reporting.service';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
@@ -107,6 +108,10 @@ const mockResultsByInstitutionsService = {
   handleContributingCenters: jest.fn(),
 };
 
+const mockDataSource = {
+  query: jest.fn(),
+};
+
 describe('ResultsFrameworkReportingService', () => {
   let service: ResultsFrameworkReportingService;
 
@@ -120,6 +125,10 @@ describe('ResultsFrameworkReportingService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ResultsFrameworkReportingService,
+        {
+          provide: DataSource,
+          useValue: mockDataSource,
+        },
         {
           provide: ClarisaInitiativesRepository,
           useValue: mockClarisaInitiativesRepository,
@@ -188,6 +197,10 @@ describe('ResultsFrameworkReportingService', () => {
   } as any;
 
   describe('getGlobalUnitsByProgram', () => {
+    beforeEach(() => {
+      mockDataSource.query.mockResolvedValue([]);
+    });
+
     it('should return formatted units when all checks pass', async () => {
       mockClarisaInitiativesRepository.findOne.mockResolvedValue({
         id: 5,
@@ -396,6 +409,10 @@ describe('ResultsFrameworkReportingService', () => {
   });
 
   describe('getDashboardStats', () => {
+    beforeEach(() => {
+      mockYearRepository.findOne.mockResolvedValue({ year: 2025 });
+    });
+
     it('should aggregate dashboard stats by status, level, and type', async () => {
       mockClarisaInitiativesRepository.findOne.mockResolvedValue({
         id: 7,
@@ -448,7 +465,14 @@ describe('ResultsFrameworkReportingService', () => {
         where: { official_code: 'SP01', active: true },
         select: ['id', 'official_code', 'name'],
       });
-      expect(mockResultRepository.query).toHaveBeenCalled();
+      expect(mockYearRepository.findOne).toHaveBeenCalledWith({
+        where: { active: true },
+        select: ['year'],
+      });
+      expect(mockResultRepository.query).toHaveBeenCalledWith(
+        expect.any(String),
+        [7, 2025],
+      );
 
       expect(result).toEqual({
         response: {
@@ -779,6 +803,7 @@ describe('ResultsFrameworkReportingService', () => {
 
   describe('getProgramIndicatorContributionSummary', () => {
     beforeEach(() => {
+      mockYearRepository.findOne.mockResolvedValue({ year: 2025 });
       mockResultRepository.getIndicatorContributionSummaryByProgram.mockReset();
       mockResultRepository.getActiveResultTypes.mockReset();
     });
@@ -822,9 +847,13 @@ describe('ResultsFrameworkReportingService', () => {
       const result: any =
         await service.getProgramIndicatorContributionSummary('sp05');
 
+      expect(mockYearRepository.findOne).toHaveBeenCalledWith({
+        where: { active: true },
+        select: ['year'],
+      });
       expect(
         mockResultRepository.getIndicatorContributionSummaryByProgram,
-      ).toHaveBeenCalledWith(15);
+      ).toHaveBeenCalledWith(15, 2025);
       expect(mockResultRepository.getActiveResultTypes).toHaveBeenCalled();
       expect(result.status).toBe(200);
       expect(result.response.program).toEqual({
@@ -1378,6 +1407,15 @@ describe('ResultsFrameworkReportingService', () => {
           where: expect.objectContaining({
             toc_result_id: 5,
             is_active: true,
+            obj_results: { is_active: true },
+            obj_results_toc_result_indicators: expect.objectContaining({
+              toc_results_indicator_id: 'IND-55',
+              is_active: true,
+              is_not_aplicable: false,
+              obj_result_indicator_targets: expect.objectContaining({
+                is_active: true,
+              }),
+            }),
           }),
         }),
       );
@@ -1388,6 +1426,7 @@ describe('ResultsFrameworkReportingService', () => {
           where: expect.objectContaining({
             toc_results_indicator_id: 'IND-55',
             is_active: true,
+            is_not_aplicable: false,
           }),
         }),
       );

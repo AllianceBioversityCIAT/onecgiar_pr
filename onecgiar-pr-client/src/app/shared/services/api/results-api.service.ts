@@ -1364,4 +1364,8 @@ export class ResultsApiService {
   GET_ClarisaProjects() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/projects/get/all`);
   }
+
+  GET_ClarisaPortfolios() {
+    return this.http.get<any>(`${environment.apiBaseUrl}clarisa/portfolios`);
+  }
 }

@@ -34,37 +34,44 @@
   }
 
   <app-pr-yes-or-not
-    label="Does this result align with your Theory of Change—both in terms of supporting progress and matching a planned result?"
+    label="Does this result align with the Program’s planned TOC indicators?"
     [required]="true"
     [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.planned_result">
   </app-pr-yes-or-not>
 
+  <app-alert-status
+    [description]="
+      'If your response to this question is <strong>YES</strong>, then please return to the Program’s main page in PRMS and report the result through the ToC module by associating it with the corresponding indicators and targets. If the result you plan to submit does not match any 2025 planned indicators and results, then click <strong>NO</strong> and provide a short justification explaining why you are reporting it despite not being part of the 2025 planned results.'
+    ">
+  </app-alert-status>
+
   <!-- ! from toc section end -->
 
   <!-- from toc section  -->
-
-  @if (!this.rdPartnersSE.partnersBody.result_toc_result.planned_result) {
-    <app-pr-textarea
-      placeholder="Enter reason"
-      label="Why is the result being reported?"
-      type="text"
-      [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.toc_progressive_narrative"
-      [maxWords]="30"
-      [rows]="2"
-      [autogenerate]="true">
-    </app-pr-textarea>
-  } @else {
-    <div style="z-index: 1; position: relative">
-      <app-multiple-wps
-        [editable]="true"
-        [initiative]="this.rdPartnersSE.partnersBody?.result_toc_result"
-        [initiativeId]="this.rdPartnersSE.initiativeIdSignal"
-        [resultLevelId]="this.resultLevelSE.currentResultLevelId"
-        [isIpsr]="false"
-        [isContributor]="false"
-        [isNotifications]="false"
-        [showMultipleWPsContent]="this.rdPartnersSE.getConsumed()"></app-multiple-wps>
-    </div>
+  @if (this.rdPartnersSE.partnersBody.result_toc_result.planned_result !== null) {
+    @if (!this.rdPartnersSE.partnersBody.result_toc_result.planned_result) {
+      <app-pr-textarea
+        placeholder="Enter reason"
+        label="Why is the result being reported?"
+        type="text"
+        [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.toc_progressive_narrative"
+        [maxWords]="30"
+        [rows]="2"
+        [autogenerate]="true">
+      </app-pr-textarea>
+    } @else {
+      <div style="z-index: 1; position: relative">
+        <app-multiple-wps
+          [editable]="true"
+          [initiative]="this.rdPartnersSE.partnersBody?.result_toc_result"
+          [initiativeId]="this.rdPartnersSE.initiativeIdSignal"
+          [resultLevelId]="this.resultLevelSE.currentResultLevelId"
+          [isIpsr]="false"
+          [isContributor]="false"
+          [isNotifications]="false"
+          [showMultipleWPsContent]="this.rdPartnersSE.getConsumed()"></app-multiple-wps>
+      </div>
+    }
   }
 
   <app-pr-multi-select
