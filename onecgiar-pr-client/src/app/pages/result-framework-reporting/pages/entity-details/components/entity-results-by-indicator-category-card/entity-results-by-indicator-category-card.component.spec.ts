@@ -77,20 +77,6 @@ describe('EntityResultsByIndicatorCategoryCardComponent', () => {
       expect(submittedText).toContain('Submitted:10');
     });
 
-    it('should display quality assessed count', () => {
-      component.item = {
-        resultTypeId: 7,
-        resultTypeName: 'Test Category',
-        editing: 5,
-        submitted: 10,
-        qualityAssessed: 8
-      };
-      fixture.detectChanges();
-
-      const qualityAssessedText = nativeElement.textContent || '';
-      expect(qualityAssessedText).toContain('Quality assessed:8');
-    });
-
     it('should render Report button with correct label', () => {
       component.item = {
         resultTypeId: 7,

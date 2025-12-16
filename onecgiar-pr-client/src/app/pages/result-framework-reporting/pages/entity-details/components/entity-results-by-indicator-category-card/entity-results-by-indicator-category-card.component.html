@@ -22,20 +22,17 @@
           <div class="dot" style="background-color: var(--pr-color-blue-800); margin-right: 3px"></div>
           Submitted:<span class="font-weight-600">{{ item?.submitted }}</span>
         </div>
-
-        <div class="entity-results-by-indicator-category-card_results_item">
-          <div class="dot" style="background-color: var(--pr-color-green-500); margin-right: 3px"></div>
-          Quality assessed:<span class="font-weight-600">{{ item?.qualityAssessed }}</span>
-        </div>
       </div>
     </div>
-    <button
-      pButton
-      label="Report"
-      type="button"
-      class="p-button-outlined pr-body-3 tab-content_actions_button"
-      icon="pi pi-plus"
-      iconPos="right"
-      (click)="reportRequested.emit(item)"></button>
+    <div class="entity-results-by-indicator-category-card_actions">
+      <button type="button" pButton class="p-button-outlined entity-results-by-indicator-category-card_button-full" (click)="onReportClick()">
+        <span>Report</span>
+        <i class="material-icons-round">add</i>
+      </button>
+      <button type="button" pButton class="p-button-outlined entity-results-by-indicator-category-card_button-inline" (click)="onReportClick()">
+        <span>Report result</span>
+        <i class="material-icons-round">add</i>
+      </button>
+    </div>
   </div>
 </div>

@@ -12,6 +12,10 @@ export class EntityResultsByIndicatorCategoryCardComponent {
   @Input() item: any;
   readonly reportRequested = output<any>();
 
+  onReportClick(): void {
+    this.reportRequested.emit();
+  }
+
   getIcon(indicatorType: number) {
     switch (indicatorType) {
       case 7:
