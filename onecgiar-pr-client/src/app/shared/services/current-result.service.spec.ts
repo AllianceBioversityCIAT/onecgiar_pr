@@ -17,6 +17,11 @@ describe('CurrentResultService', () => {
       },
       alertsFe: {
         show: jest.fn()
+      },
+      fieldsManagerSE: {
+        inIpsr: {
+          set: jest.fn()
+        }
       }
     };
 

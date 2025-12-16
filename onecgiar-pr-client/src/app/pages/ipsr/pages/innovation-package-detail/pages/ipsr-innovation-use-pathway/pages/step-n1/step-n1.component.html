@@ -2,9 +2,7 @@
 <app-pr-field-header
   [required]="false"
   [label]="
-    'Core innovation selected and CGIAR ' +
-    ('term.entity.singular' | term: this.ipsrDataControlSE.detailData?.portfolio) +
-    ' leading the development'
+    'Core innovation selected and CGIAR ' + ('term.entity.singular' | term: this.ipsrDataControlSE.detailData?.portfolio) + ' leading the development'
   "></app-pr-field-header>
 
 <div class="ipsr_chip_container">
@@ -25,7 +23,7 @@
   <app-step-n1-eoi-outcomes [body]="this.ipsrStep1Body" *ngIf="this.ipsrDataControlSE?.detailData?.inititiative_id"></app-step-n1-eoi-outcomes>
 
   <div class="ipsr-sub-title-2">Targeted innovation use</div>
-  <app-innovation-use-form [body]="this.ipsrStep1Body"></app-innovation-use-form>
+  <app-innovation-use-form [body]="this.ipsrStep1Body" [saving]="false" [isIpsr]="true"></app-innovation-use-form>
   <app-step-n1-institutions [body]="this.ipsrStep1Body"></app-step-n1-institutions>
   <app-step-n1-scaling-ambition-blurb [body]="this.ipsrStep1Body"></app-step-n1-scaling-ambition-blurb>
 </div>
@@ -92,7 +90,8 @@
   }
 </div>
 
-<app-step-n1-consensus-and-consultation [body]="this.ipsrStep1Body"></app-step-n1-consensus-and-consultation>
+<!-- <app-step-n1-consensus-and-consultation [body]="this.ipsrStep1Body"></app-step-n1-consensus-and-consultation> -->
+
 <app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>
 <div class="toggle_change_step">
   <app-pr-button

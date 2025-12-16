@@ -5,9 +5,12 @@ import { FieldsManagerService } from '../../services/fields-manager.service';
 import { InnovationControlListService } from '../../services/global/innovation-control-list.service';
 import { InnovationUseResultsService } from '../../services/global/innovation-use-results.service';
 import { InnovationDevelopmentLinks } from '../../../pages/results/pages/result-detail/pages/rd-result-types-pages/innovation-dev-info/model/InnovationDevelopmentLinks.model';
-import { Actor, Organization, Measure } from '../../../pages/results/pages/result-detail/pages/rd-result-types-pages/innovation-dev-info/model/innovationDevInfoBody';
+import {
+  Actor,
+  Organization,
+  Measure
+} from '../../../pages/results/pages/result-detail/pages/rd-result-types-pages/innovation-dev-info/model/innovationDevInfoBody';
 import { IpsrStep1Body } from '../../../pages/ipsr/pages/innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n1/model/Ipsr-step-1-body.model';
-
 
 @Component({
   selector: 'app-innovation-use-form',
@@ -20,6 +23,7 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
   institutionsTypeTreeList = [];
   @Input() body = new IpsrStep1Body();
   @Input() saving: boolean = true;
+  @Input() isIpsr: boolean = false;
   innovationDevelopmentLinks: InnovationDevelopmentLinks = new InnovationDevelopmentLinks();
 
   constructor(
@@ -96,9 +100,7 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     </ul>`;
   }
   hasReadinessLevelDiminished() {
-    const currentLevel = this.innovationControlListSE?.readinessLevelsList.find(
-      irl => irl.id === this.body?.innovation_readiness_level_id
-    );
+    const currentLevel = this.innovationControlListSE?.readinessLevelsList.find(irl => irl.id === this.body?.innovation_readiness_level_id);
     const oldLevel = this.innovationControlListSE?.readinessLevelsList.find(irl => irl.id === this.body?.previous_irl);
 
     return Number(currentLevel?.level) < Number(oldLevel?.level);
@@ -247,9 +249,7 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
 
   hasElementsWithId(list, attr) {
     if (!Array.isArray(list)) return 0;
-    const finalList = this.api.rolesSE.readOnly
-      ? list.filter(item => item && item[attr])
-      : list.filter(item => item && item.is_active != false);
+    const finalList = this.api.rolesSE.readOnly ? list.filter(item => item && item[attr]) : list.filter(item => item && item.is_active != false);
     return finalList.length;
   }
 
@@ -346,5 +346,4 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     }
     return option?.title || option?.name || '';
   }
-
 }

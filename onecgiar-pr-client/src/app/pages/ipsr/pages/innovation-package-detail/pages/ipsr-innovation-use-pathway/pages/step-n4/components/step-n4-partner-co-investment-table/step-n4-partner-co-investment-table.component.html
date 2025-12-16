@@ -1,53 +1,86 @@
 <div class="unit_of_time_container">
-    <div>
-        <app-pr-field-header label="Expected partner co-investment (from own resources) in Innovation Package in"
-            [required]="false"></app-pr-field-header>
-    </div>
+  <div>
+    <app-pr-field-header
+      label="Expected partner co-investment (from own resources) in Innovation Package in"
+      [required]="false"></app-pr-field-header>
+  </div>
 </div>
 
 <table>
-    <tr>
-        <th>Partner</th>
-        <th>Current calendar year <br> (in-kind + in-cash USD value)</th>
-        <th>Next calendar year <br> (in-kind + in-cash USD value)</th>
-        <th></th>
-        <th *ngIf="!this.rolesSE.readOnly"></th>
-    </tr>
-    <tr *ngFor="let option of this.body.institutions_expected_investment; let i=index"
-        [hidden]="option.is_active == false">
-        <td>
-            <div class="name">{{option?.obj_result_institution?.obj_institutions?.name}}</div>
-            <div class="type"> <strong>Institution type:</strong> {{option?.obj_result_institution?.obj_institutions?.obj_institution_type_code?.name}}</div>
-        </td>
-        <td>
-            <app-pr-input placeholder="Enter text" type="currency" [required]="false"
-                [noDataText]="option?.is_determined ? 'Not applicable':'Not provided'"
-                [(ngModel)]="option.in_kind">
-            </app-pr-input>
-        </td>
-        <td>
-            <app-pr-input placeholder="Enter text" type="currency" [required]="false"
-                [noDataText]="option?.is_determined ? 'Not applicable':'Not provided'"
-                [(ngModel)]="option.in_cash">
-            </app-pr-input>
-        </td>
-        <td>
-            <app-pr-radio-button optionLabel="name" optionValue="id"
-                [options]="[{name:'This is yet to be determined',id:true}]"
-                [(ngModel)]="option.is_determined">
-            </app-pr-radio-button>
-        </td>
-        <td *ngIf="!this.rolesSE.readOnly">
-            <div class="center_flex_100">
-                <div class="step-4-delete-button" (click)="deletePartner(option)">
-                    <i class="material-icons-round">
-                        delete
-                    </i>
-                </div>
-            </div>
-        </td>
-    </tr>
+  <tr>
+    <th>Partner</th>
+    @if (!this.fieldsManagerSE.isP25()) {
+      <th>
+        Current calendar year <br />
+        (in-kind + in-cash USD value)
+      </th>
+      <th>
+        Next calendar year <br />
+        (in-kind + in-cash USD value)
+      </th>
+    }
+    @if (this.fieldsManagerSE.isP25()) {
+      <th>
+        Total USD Value <br />
+        (in-cash + in-kind)
+      </th>
+    }
+    <th></th>
+    <th *ngIf="!this.rolesSE.readOnly"></th>
+  </tr>
+  <tr *ngFor="let option of this.body.institutions_expected_investment; let i = index" [hidden]="option.is_active == false">
+    <td>
+      <div class="name">{{ option?.obj_result_institution?.obj_institutions?.name }}</div>
+      <div class="type">
+        <strong>Institution type:</strong> {{ option?.obj_result_institution?.obj_institutions?.obj_institution_type_code?.name }}
+      </div>
+    </td>
+    @if (!this.fieldsManagerSE.isP25()) {
+      <td>
+        <app-pr-input
+          placeholder="Enter text"
+          type="currency"
+          [required]="false"
+          [noDataText]="option?.is_determined ? 'Not applicable' : 'Not provided'"
+          [(ngModel)]="option.in_kind">
+        </app-pr-input>
+      </td>
+      <td>
+        <app-pr-input
+          placeholder="Enter text"
+          type="currency"
+          [required]="false"
+          [noDataText]="option?.is_determined ? 'Not applicable' : 'Not provided'"
+          [(ngModel)]="option.in_cash">
+        </app-pr-input>
+      </td>
+    } @else {
+      <td>
+        <app-pr-input
+          placeholder="Enter text"
+          type="currency"
+          [required]="false"
+          [noDataText]="option?.is_determined ? 'Not applicable' : 'Not provided'"
+          [(ngModel)]="option.kind_cash">
+        </app-pr-input>
+      </td>
+    }
+    <td>
+      <app-pr-radio-button
+        optionLabel="name"
+        optionValue="id"
+        [options]="[{ name: 'This is yet to be determined', id: true }]"
+        [(ngModel)]="option.is_determined">
+      </app-pr-radio-button>
+    </td>
+    <td *ngIf="!this.rolesSE.readOnly">
+      <div class="center_flex_100">
+        <div class="step-4-delete-button" (click)="deletePartner(option)">
+          <i class="material-icons-round"> delete </i>
+        </div>
+      </div>
+    </td>
+  </tr>
 </table>
-<app-no-data-text *ngIf="!hasElementsWithId(this.body.institutions_expected_investment)" title="No partners added">
-</app-no-data-text>
-<app-step-n4-add-partner [body]="this.body" [disabledOptionsPartners]="disabledOptionsPartners" ></app-step-n4-add-partner>
+<app-no-data-text *ngIf="!hasElementsWithId(this.body.institutions_expected_investment)" title="No partners added"> </app-no-data-text>
+<app-step-n4-add-partner [body]="this.body" [disabledOptionsPartners]="disabledOptionsPartners"></app-step-n4-add-partner>

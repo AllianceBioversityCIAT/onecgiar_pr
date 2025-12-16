@@ -1,5 +1,5 @@
 /* eslint-disable camelcase */
-import { Component, DoCheck, OnInit } from '@angular/core';
+import { Component, DoCheck, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { IpsrDataControlService } from '../../services/ipsr-data-control.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
@@ -7,15 +7,18 @@ import { SaveButtonService } from '../../../../custom-fields/save-button/save-bu
 import { IpsrCompletenessStatusService } from '../../services/ipsr-completeness-status.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
 import { MessageService } from 'primeng/api';
+import { FieldsManagerService } from '../../../../shared/services/fields-manager.service';
 
 @Component({
-    selector: 'app-innovation-package-detail',
-    templateUrl: './innovation-package-detail.component.html',
-    styleUrls: ['./innovation-package-detail.component.scss'],
-    providers: [MessageService],
-    standalone: false
+  selector: 'app-innovation-package-detail',
+  templateUrl: './innovation-package-detail.component.html',
+  styleUrls: ['./innovation-package-detail.component.scss'],
+  providers: [MessageService],
+  standalone: false
 })
 export class InnovationPackageDetailComponent implements OnInit, DoCheck {
+  fieldsManagerSE = inject(FieldsManagerService);
+
   constructor(
     private readonly activatedRoute: ActivatedRoute,
     private readonly messageSE: MessageService,
@@ -23,7 +26,7 @@ export class InnovationPackageDetailComponent implements OnInit, DoCheck {
     public api: ApiService,
     public saveButtonSE: SaveButtonService,
     private readonly ipsrCompletenessStatusSE: IpsrCompletenessStatusService,
-    private readonly dataControlSE: DataControlService,
+    public dataControlSE: DataControlService,
     private readonly router: Router
   ) {}
   ngOnInit(): void {
