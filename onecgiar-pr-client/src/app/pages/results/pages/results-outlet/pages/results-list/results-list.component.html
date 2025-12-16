@@ -92,7 +92,10 @@
                   }
 
                   @if (column.attr === 'title' && subResult?.status_id === '4' && (!subResult?.has_discontinued_options || subResult?.has_discontinued_options === '0' || subResult?.has_discontinued_options === 0) && (!subResult?.discontinued_options || !subResult?.discontinued_options?.length || subResult?.discontinued_options?.length === 0)) {
-                    <div class="discontinued-icon">
+                    <div
+                      class="discontinued-icon"
+                      pTooltip="This innovation is tagged as discontinued, but no justification has been provided."
+                      tooltipPosition="right">
                       <i class="pi pi-exclamation-triangle"></i>
                     </div>
                   }

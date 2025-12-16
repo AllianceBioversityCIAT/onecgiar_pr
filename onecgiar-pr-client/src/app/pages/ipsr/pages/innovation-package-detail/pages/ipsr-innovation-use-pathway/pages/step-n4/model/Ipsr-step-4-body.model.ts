@@ -22,6 +22,7 @@ export class InstitutionsexpectedinvestmentStep4 {
   in_kind: string;
   in_cash: string;
   is_active: boolean;
+  kind_cash: string;
 }
 
 class Budget {
@@ -46,6 +47,7 @@ export class BilateralexpectedinvestmentStep4 {
   is_determined: number;
   obj_non_pooled_projetct: any;
   is_active: boolean;
+  kind_cash: string;
 }
 
 interface Initiativeexpectedinvestment {
@@ -54,6 +56,7 @@ interface Initiativeexpectedinvestment {
   next_year: string;
   is_determined: number;
   obj_result_initiative: any;
+  kind_cash: string;
 }
 
 export class IpsrpictureStep4 {

@@ -977,16 +977,22 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/innovation-use-levels`);
   }
 
-  GETInnovationPathwayStepFourByRiId() {
-    return this.http
-      .get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/step-four/${this.ipsrDataControlSE.resultInnovationId}`)
-      .pipe(this.saveButtonSE.isGettingSectionPipe());
+  PATCHInnovationPathwayStepFourBilaterals(body) {
+    return this.http.patch<any>(`${this.baseApiBaseUrlV2}ipsr-pathway/save/step-four/bilaterals/${this.ipsrDataControlSE.resultInnovationId}`, body);
   }
 
-  PATCHInnovationPathwayStepFourByRiId(body) {
-    return this.http
-      .patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-four/${this.ipsrDataControlSE.resultInnovationId}`, body)
-      .pipe(this.saveButtonSE.isSavingPipe());
+  GETInnovationPathwayStepFourByRiId(isP25: boolean = false) {
+    const p22Url = `${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/step-four/${this.ipsrDataControlSE.resultInnovationId}`;
+    const p25Url = `${this.baseApiBaseUrlV2}ipsr-pathway/get/step-four/${this.ipsrDataControlSE.resultInnovationId}`;
+
+    return this.http.get<any>(isP25 ? p25Url : p22Url).pipe(this.saveButtonSE.isGettingSectionPipe());
+  }
+
+  PATCHInnovationPathwayStepFourByRiId(body, isP25: boolean = false) {
+    const p22Url = `${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-four/${this.ipsrDataControlSE.resultInnovationId}`;
+    const p25Url = `${this.baseApiBaseUrlV2}ipsr-pathway/save/step-four/${this.ipsrDataControlSE.resultInnovationId}`;
+    const url = isP25 ? p25Url : p22Url;
+    return this.http.patch<any>(url, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 
   PATCHInnovationPathwayStepFourByRiIdPrevious(body, descrip) {

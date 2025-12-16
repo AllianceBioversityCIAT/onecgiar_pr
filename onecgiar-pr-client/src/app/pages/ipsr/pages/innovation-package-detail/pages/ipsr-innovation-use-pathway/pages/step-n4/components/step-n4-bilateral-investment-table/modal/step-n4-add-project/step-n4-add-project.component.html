@@ -1,0 +1,37 @@
+<p-dialog
+  appendTo="body"
+  header="Title"
+  [(visible)]="this.visible"
+  (onHide)="cleanObject()"
+  [draggable]="false"
+  [modal]="true"
+  [closeOnEscape]="true"
+  [showHeader]="false"
+  [dismissableMask]="true"
+  [style]="{ padding: '0px' }">
+  <div class="modal_title">Add project</div>
+  <div class="modal_container partners-request-container" *ngIf="showForm">
+    <app-pr-select
+      [options]="this.rdPartnersSE.clarisaProjectsList"
+      label="Contributing W3 and/or bilateral projects"
+      optionLabel="fullName"
+      optionValue="project_id"
+      placeholder="Select project"
+      [required]="true"
+      [(ngModel)]="projectBody.id">
+    </app-pr-select>
+  </div>
+  <div class="buttons">
+    <app-pr-button padding="medium" text="Cancel" icon="cancel_schedule_send" colorType="secondary" (click)="this.visible = false"> </app-pr-button>
+    <app-pr-button
+      [ngClass]="{ globalDisabled: this.requesting || formIsInvalid }"
+      [text]="this.requesting ? 'Adding project' : 'Add project'"
+      [rotating]="this.requesting"
+      [icon]="this.requesting ? 'loop' : 'send'"
+      padding="medium"
+      (click)="onAddProject()"></app-pr-button>
+  </div>
+</p-dialog>
+<div style="width: 120px">
+  <app-pr-button (click)="visible = true" padding="small" text="Add project" icon="add_box" *ngIf="!this.api.rolesSE.readOnly"></app-pr-button>
+</div>

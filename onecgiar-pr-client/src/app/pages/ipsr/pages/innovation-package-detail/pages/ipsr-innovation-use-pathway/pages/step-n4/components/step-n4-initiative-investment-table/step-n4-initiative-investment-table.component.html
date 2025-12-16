@@ -14,36 +14,56 @@
 <table>
   <tr>
     <th>{{ 'term.entity.singular' | term: this.ipsrDataControlSE.detailData?.portfolio }}</th>
-    <th>
-      Current calendar year <br />
-      (USD value)
-    </th>
-    <th>
-      Next calendar year <br />
-      (USD value)
-    </th>
+    @if (!this.fieldsManagerSE.isP25()) {
+      <th>
+        Current calendar year <br />
+        (USD value)
+      </th>
+      <th>
+        Next calendar year <br />
+        (USD value)
+      </th>
+    }
+    @if (this.fieldsManagerSE.isP25()) {
+      <th>
+        Total USD Value <br />
+        (in-cash + in-kind)
+      </th>
+    }
     <th></th>
   </tr>
   <tr *ngFor="let item of this.body.initiative_expected_investment">
     <td>{{ item.obj_result_initiative.obj_initiative.official_code }} - {{ item.obj_result_initiative.obj_initiative.name }}</td>
-    <td>
-      <app-pr-input
-        [(ngModel)]="item.current_year"
-        placeholder="Enter text"
-        type="currency"
-        [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
-        [required]="false">
-      </app-pr-input>
-    </td>
-    <td>
-      <app-pr-input
-        [(ngModel)]="item.next_year"
-        placeholder="Enter text"
-        type="currency"
-        [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
-        [required]="false">
-      </app-pr-input>
-    </td>
+    @if (!this.fieldsManagerSE.isP25()) {
+      <td>
+        <app-pr-input
+          [(ngModel)]="item.current_year"
+          placeholder="Enter text"
+          type="currency"
+          [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
+          [required]="false">
+        </app-pr-input>
+      </td>
+      <td>
+        <app-pr-input
+          [(ngModel)]="item.next_year"
+          placeholder="Enter text"
+          type="currency"
+          [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
+          [required]="false">
+        </app-pr-input>
+      </td>
+    } @else {
+      <td>
+        <app-pr-input
+          [(ngModel)]="item.kind_cash"
+          placeholder="Enter text"
+          type="currency"
+          [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
+          [required]="false">
+        </app-pr-input>
+      </td>
+    }
     <td>
       <app-pr-radio-button
         [(ngModel)]="item.is_determined"
