@@ -307,7 +307,7 @@ export class TocResultsService {
                   ?.indicatorMappings.get(indicatorKey) ?? null)
               : null;
 
-            const arr = indicatorMap.get(tocId)!;
+            const arr = indicatorMap.get(tocId);
             let idx = -1;
             if (indicator.related_node_id) {
               idx = arr.findIndex(
@@ -356,7 +356,7 @@ export class TocResultsService {
               const targetVal =
                 indicator.target_value === undefined
                   ? null
-                  : indicator.target_value ?? null;
+                  : (indicator.target_value ?? null);
               const already = existing.targets.some(
                 (t) => t.target_value === targetVal,
               );
@@ -385,7 +385,7 @@ export class TocResultsService {
                     target_value:
                       indicator.target_value === undefined
                         ? null
-                        : indicator.target_value ?? null,
+                        : (indicator.target_value ?? null),
                   },
                 ],
               });
