@@ -60,4 +60,3 @@ export class UpdateContributorsPartnersDto extends CreateResultsTocResultV2Dto {
   })
   linked_results?: Array<number | string>;
 }
-

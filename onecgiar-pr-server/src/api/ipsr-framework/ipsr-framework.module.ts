@@ -8,6 +8,10 @@ import { IpsrContributorsPartnersModule } from './ipsr_contributors-partners/ips
 @Module({
   controllers: [IpsrFrameworkController],
   providers: [IpsrFrameworkService],
-  imports: [IpsrGeneralInformationModule, PathwayModule, IpsrContributorsPartnersModule],
+  imports: [
+    IpsrGeneralInformationModule,
+    PathwayModule,
+    IpsrContributorsPartnersModule,
+  ],
 })
 export class IpsrFrameworkModule {}
