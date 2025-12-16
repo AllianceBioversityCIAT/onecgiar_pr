@@ -37,6 +37,10 @@
 
               <div class="new_tag pre" *ngIf="i == 1 && subResult.legacy_id">Pre 2022</div>
 
+              <div class="discontinued-icon" *ngIf="column.attr === 'title' && subResult?.status_id === '4'">
+                <i class="pi pi-exclamation-triangle"></i>
+              </div>
+
               {{ column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date: 'YYYY-MM-dd') }}
             </a>
           </ng-container>
