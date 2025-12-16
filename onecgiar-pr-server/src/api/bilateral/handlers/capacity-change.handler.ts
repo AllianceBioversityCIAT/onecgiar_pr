@@ -114,13 +114,12 @@ export class CapacityChangeBilateralHandler
   }
 
   private normalizeCapacityLabel(value?: string | null) {
-    return value
-      ? value
-          .trim()
-          .toLowerCase()
-          .replace(/\s*\/\s*/g, '/')
-          .replace(/\s+/g, ' ')
-      : '';
+    if (!value) return '';
+    let normalized = value.trim().toLowerCase();
+    normalized = normalized.replace(/\s+\//g, '/');
+    normalized = normalized.replace(/\/\s+/g, '/');
+    normalized = normalized.replace(/\s{2,}/g, ' ');
+    return normalized;
   }
 
   private async resolveCapdevTermId(lengthTraining: string) {
