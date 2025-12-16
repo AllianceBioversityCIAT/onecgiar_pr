@@ -341,7 +341,7 @@
     [text]="alertDiminishedReadinessLevel()"></p-message>
 
   <app-pr-textarea
-    *ngIf="getUseLevelIndex() >= 6 && getUseLevelIndex() <= 9"
+    *ngIf="getUseLevelIndex() > 4 && getUseLevelIndex() <= 9"
     placeholder="Provide a brief explanation here..."
     label="Provide a brief explanation of how the provided evidence/documentation (URL provided under Section 4) justifies the chosen innovation use level"
     description="<strong>Example:</strong> We selected Level 6 because the climate-smart maize drying technology is now being used by farmer cooperatives and individual processors who were not directly connected to the organizations involved in the initial innovation development. This reflects diffusion beyond project-supported activities and demonstrates that the innovation is being adopted through peer learning and local adaptation mechanisms. Although the innovation is being applied independently of the original partners, its use remains limited to a minority of potential users. This pattern of selective but autonomous uptake is consistent with Level 6, where adoption has extended beyond initial networks but has not yet reached broad or mainstream use. ">
