@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, computed } from '@angular/core';
 import { ResultLevel, Resulttype, ResultBody } from '../../../../../shared/interfaces/result.interface';
 import { ApiService } from '../../../../../shared/services/api/api.service';
 import { ResultsListFilterService } from '../../results-outlet/pages/results-list/services/results-list-filter.service';
@@ -9,6 +9,11 @@ import { ResultsListFilterService } from '../../results-outlet/pages/results-lis
 export class ResultLevelService {
   resultLevelList: ResultLevel[];
   resultLevelListSig = signal<ResultLevel[]>([]);
+  outputOutcomeLevelsSig = computed(() => {
+    const levels = this.resultLevelListSig();
+    if (!levels || levels.length < 4) return [];
+    return levels.slice(2, 4).reverse();
+  });
   currentResultTypeList: Resulttype[];
   currentResultTypeListSig = signal<Resulttype[]>([]);
   resultBody = new ResultBody();
@@ -27,17 +32,25 @@ export class ResultLevelService {
   }
 
   onSelectResultLevel(resultLevel: ResultLevel) {
-    this.resultBody.result_level_id = resultLevel.id;
-    this.resultBody['result_level_name'] = resultLevel.name;
+    const levelId = resultLevel.id;
+    const originalLevel = this.resultLevelList?.find(level => level.id === levelId);
+    const levelToUse = originalLevel || resultLevel;
+
+    this.resultBody.result_level_id = levelToUse.id;
+    this.resultBody['result_level_name'] = levelToUse.name;
     this.resultBody.result_type_id = null;
-    this.currentResultTypeList = resultLevel.result_type;
-    this.currentResultTypeListSig.set(resultLevel.result_type || []);
+    this.currentResultTypeList = levelToUse.result_type;
+    this.currentResultTypeListSig.set(levelToUse.result_type || []);
+
     (this.resultLevelList || []).forEach(reLevel => (reLevel.selected = false));
-    resultLevel.selected = !resultLevel.selected;
-    const updated = (this.resultLevelListSig() || []).map(rl => {
-      if (rl.id === resultLevel.id) return { ...rl, selected: resultLevel.selected };
-      return { ...rl, selected: false };
-    });
+    if (originalLevel) {
+      originalLevel.selected = true;
+    }
+
+    const updated = (this.resultLevelListSig() || []).map(rl => ({
+      ...rl,
+      selected: rl.id === levelId
+    }));
     this.resultLevelListSig.set(updated);
   }
 
@@ -65,15 +78,43 @@ export class ResultLevelService {
       return false;
     };
 
-    const targetLevel = this.resultLevelList.find(level => level.result_type?.some(matchesType));
+    let targetLevel = this.resultLevelList.find(level => level.result_type?.some(matchesType));
     if (!targetLevel) return;
 
-    this.onSelectResultLevel(targetLevel);
+    const visibleLevelIds = [3, 4];
+    if (!visibleLevelIds.includes(targetLevel.id)) {
+      const visibleLevel = this.resultLevelList.find(level => visibleLevelIds.includes(level.id) && level.result_type?.some(matchesType));
+      if (visibleLevel) {
+        targetLevel = visibleLevel;
+      } else {
+        const outcomeLevel = this.resultLevelList.find(level => level.id === 3);
+        const outputLevel = this.resultLevelList.find(level => level.id === 4);
+        if (outcomeLevel?.result_type?.some(matchesType)) {
+          targetLevel = outcomeLevel;
+        } else if (outputLevel?.result_type?.some(matchesType)) {
+          targetLevel = outputLevel;
+        }
+      }
+    }
+
+    const targetLevelId = targetLevel.id;
+    (this.resultLevelList || []).forEach(reLevel => {
+      reLevel.selected = reLevel.id === targetLevelId;
+    });
+
+    const updated = this.resultLevelList.map(rl => ({
+      ...rl,
+      selected: rl.id === targetLevelId
+    }));
+
+    this.resultLevelListSig.set(updated);
+    this.resultBody.result_level_id = targetLevel.id;
+    this.resultBody['result_level_name'] = targetLevel.name;
+    this.currentResultTypeList = targetLevel.result_type;
+    this.currentResultTypeListSig.set(targetLevel.result_type || []);
 
     const targetType = targetLevel.result_type?.find(matchesType);
-    if (targetType) {
-      this.resultBody.result_type_id = targetType.id;
-    }
+    this.resultBody.result_type_id = targetType?.id ?? null;
   }
 
   setPendingResultType(resultTypeId?: number, resultTypeName?: string) {
