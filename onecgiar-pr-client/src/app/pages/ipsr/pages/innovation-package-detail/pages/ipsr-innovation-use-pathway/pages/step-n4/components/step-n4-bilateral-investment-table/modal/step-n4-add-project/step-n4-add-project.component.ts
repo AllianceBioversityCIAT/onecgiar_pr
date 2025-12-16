@@ -6,10 +6,10 @@ import { CentersService } from '../../../../../../../../../../../../shared/servi
 import { RdContributorsAndPartnersService } from '../../../../../../../../../../../results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.service';
 
 @Component({
-    selector: 'app-step-n4-add-project',
-    templateUrl: './step-n4-add-project.component.html',
-    styleUrls: ['./step-n4-add-project.component.scss'],
-    standalone: false
+  selector: 'app-step-n4-add-project',
+  templateUrl: './step-n4-add-project.component.html',
+  styleUrls: ['./step-n4-add-project.component.scss'],
+  standalone: false
 })
 export class StepN4AddProjectComponent implements DoCheck, OnInit {
   @Input() body: IpsrStep4Body = new IpsrStep4Body();
@@ -32,7 +32,7 @@ export class StepN4AddProjectComponent implements DoCheck, OnInit {
 
   onAddProject() {
     this.requesting = true;
-    this.api.resultsSE.PATCHInnovationPathwayStep4Bilaterals(this.projectBody).subscribe({
+    this.api.resultsSE.PATCHInnovationPathwayStepFourBilaterals(this.projectBody).subscribe({
       next: ({ response }) => {
         this.requesting = false;
         this.body.bilateral_expected_investment.push(response);
@@ -61,5 +61,6 @@ export class StepN4AddProjectComponent implements DoCheck, OnInit {
 }
 
 class AddProjectBody extends BilateralexpectedinvestmentStep4 {
-  project_id: number = null;
+  id: number = null;
+  short_name: string = null;
 }
