@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { HttpStatus } from '@nestjs/common';
+import { BadRequestException, HttpStatus } from '@nestjs/common';
 import { UserService } from './user.service';
 import { User } from './entities/user.entity';
 import { BcryptPasswordEncoder } from '../../utils/bcrypt.util';
@@ -446,11 +446,10 @@ describe('UserService', () => {
         status: 201,
       });
 
-      const result = await service.createFull(createUserDto, mockTokenDto);
+      const result = await service.createFull(createUserDto, mockTokenDto.id);
 
       const user = result.response as User;
 
-      console.log('RESULT:', result);
       expect(result.status).toBe(201);
       expect(user.id).toBe(10);
       expect(awsCognitoService.createUser).toHaveBeenCalled();
@@ -464,7 +463,7 @@ describe('UserService', () => {
         status: HttpStatus.OK,
       });
 
-      const result = await service.createFull(dto as any, {} as any);
+      const result = await service.createFull(dto as any, mockTokenDto.id);
       expect(result).toEqual(
         expect.objectContaining({
           message: 'The user already exists in the system',
@@ -487,7 +486,7 @@ describe('UserService', () => {
         status: HttpStatus.OK,
       });
 
-      const result = await service.createFull(dto as any, {} as any);
+      const result = await service.createFull(dto as any, mockTokenDto.id);
       expect(result).toEqual(
         expect.objectContaining({
           message: 'Non-CGIAR user cannot have a CGIAR email address',
@@ -529,7 +528,7 @@ describe('UserService', () => {
         response: null,
       });
 
-      const result = await service.createFull(dto as any, mockTokenDto);
+      const result = await service.createFull(dto as any, mockTokenDto.id);
 
       expect(result).toEqual(
         expect.objectContaining({
@@ -549,7 +548,10 @@ describe('UserService', () => {
         status: 500,
       });
 
-      const result = await service.createFull({ email: 'a' } as any, {} as any);
+      const result = await service.createFull(
+        { email: 'a' } as any,
+        mockTokenDto.id,
+      );
 
       expect(handlersError.returnErrorRes).toHaveBeenCalled();
       expect(result.message).toBe('Handled error');
@@ -870,6 +872,99 @@ describe('UserService', () => {
       expect(payload?.emailBody?.subject).toBe(
         'PRMS - Your Account Details Have Been Updated',
       );
+    });
+  });
+
+  describe('updateUserStatus (simplified)', () => {
+    const mockUser = {
+      id: 1,
+      email: 'user@example.com',
+      active: false,
+      is_cgiar: true,
+    } as User;
+
+    const mockToken = { id: 99 } as TokenDto;
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('should activate an inactive user and send notification email', async () => {
+      const dto = { activate: true } as any;
+
+      jest
+        .spyOn(service as any, 'findUserWithRelations')
+        .mockResolvedValue({ ...mockUser });
+      jest
+        .spyOn(userRepository, 'findOne')
+        .mockResolvedValue({ id: mockToken.id } as User);
+      jest
+        .spyOn(userRepository, 'save')
+        .mockResolvedValue({ ...mockUser, active: true });
+      jest
+        .spyOn(service as any, 'sendUserStatusChangedEmail')
+        .mockResolvedValue(undefined);
+
+      const result = await service.updateUserStatus(
+        mockUser.email,
+        dto,
+        mockToken,
+      );
+
+      expect(result).toEqual({
+        response: { id: mockUser.id, email: mockUser.email },
+        message: 'User activated successfully',
+        status: HttpStatus.OK,
+      });
+
+      expect(userRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ active: true }),
+      );
+      expect(service['sendUserStatusChangedEmail']).toHaveBeenCalled();
+    });
+
+    it('should deactivate a user and send notification email', async () => {
+      const dto = { activate: false } as any;
+      const activeUser = { ...mockUser, active: true };
+
+      jest
+        .spyOn(service as any, 'findUserWithRelations')
+        .mockResolvedValue(activeUser);
+      jest
+        .spyOn(userRepository, 'findOne')
+        .mockResolvedValue({ id: mockToken.id } as User);
+      jest.spyOn(service as any, 'deactivateUserCompletely').mockResolvedValue({
+        response: { id: activeUser.id, email: activeUser.email },
+        message: 'User deactivated successfully',
+        status: HttpStatus.OK,
+      });
+      jest
+        .spyOn(service as any, 'sendUserStatusChangedEmail')
+        .mockResolvedValue(undefined);
+
+      const result = await service.updateUserStatus(
+        activeUser.email,
+        dto,
+        mockToken,
+      );
+
+      expect(result).toEqual({
+        response: { id: activeUser.id, email: activeUser.email },
+        message: 'User deactivated successfully',
+        status: HttpStatus.OK,
+      });
+
+      expect(service['deactivateUserCompletely']).toHaveBeenCalledWith(
+        activeUser,
+        { id: mockToken.id },
+      );
+      expect(service['sendUserStatusChangedEmail']).toHaveBeenCalled();
+    });
+
+    it('should throw error if email is empty', async () => {
+      await expect(
+        service.updateUserStatus('', { activate: true } as any, mockToken),
+      ).rejects.toThrow(new BadRequestException('Invalid or missing email'));
     });
   });
 

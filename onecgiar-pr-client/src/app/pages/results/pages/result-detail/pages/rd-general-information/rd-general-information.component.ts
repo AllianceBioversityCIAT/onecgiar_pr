@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, effect } from '@angular/core';
+import { Component, OnInit, inject, effect, ViewChild } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { GeneralInfoBody } from './models/generalInfoBody';
 import { ScoreService } from '../../../../../../shared/services/global/score.service';
@@ -12,6 +12,7 @@ import { CurrentResultService } from '../../../../../../shared/services/current-
 import { UserSearchService } from './services/user-search-service.service';
 import { GetImpactAreasScoresService } from '../../../../../../shared/services/global/get-impact-areas-scores.service';
 import { AiReviewService } from '../../../../../../shared/services/api/ai-review.service';
+import { SaveConfirmationModalComponent } from './components/save-confirmation-modal/save-confirmation-modal.component';
 
 @Component({
   selector: 'app-rd-general-information',
@@ -20,6 +21,8 @@ import { AiReviewService } from '../../../../../../shared/services/api/ai-review
   standalone: false
 })
 export class RdGeneralInformationComponent implements OnInit {
+  @ViewChild('saveConfirmationModal') saveConfirmationModal!: SaveConfirmationModalComponent;
+
   generalInfoBody = new GeneralInfoBody();
   toggle = 0;
   isPhaseOpen = false;
@@ -102,6 +105,19 @@ export class RdGeneralInformationComponent implements OnInit {
       return;
     }
 
+    const isP25 = this.dataControlSE.currentResultSignal()?.portfolio === 'P25';
+    const hasDiscontinuedOptions = this.generalInfoBody.discontinued_options?.some(option => option.value === true);
+
+    if (isP25 && hasDiscontinuedOptions) {
+      this.saveConfirmationModal.show(() => {
+        this.performSave();
+      });
+    } else {
+      this.performSave();
+    }
+  }
+
+  private performSave() {
     this.discontinuedOptionsToIds();
     this.generalInfoBody.institutions_type = this.generalInfoBody.institutions_type.filter(inst => !inst.hasOwnProperty('institutions_id'));
 

@@ -6,6 +6,7 @@ import {
   JoinColumn,
   ManyToOne,
   OneToMany,
+  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -39,6 +40,15 @@ import { AiReviewEvent } from '../../ai/entities/ai-review-event.entity';
 import { Evidence } from '../evidences/entities/evidence.entity';
 import { ResultFieldRevision } from '../../ai/entities/result-field-revision.entity';
 import { ResultFieldAiState } from '../../ai/entities/result-field-ai-state.entity';
+import { ResultsCapacityDevelopments } from '../summary/entities/results-capacity-developments.entity';
+import { ResultsInnovationsDev } from '../summary/entities/results-innovations-dev.entity';
+import { ResultsInnovationsUse } from '../summary/entities/results-innovations-use.entity';
+import { ResultsPolicyChanges } from '../summary/entities/results-policy-changes.entity';
+
+export enum SourceEnum {
+  Result = 'Result',
+  Bilateral = 'API',
+}
 
 @Entity()
 export class Result {
@@ -480,6 +490,43 @@ export class Result {
   @Column({ name: 'is_lead_by_partner', type: 'boolean', nullable: true })
   is_lead_by_partner: boolean;
 
+  @Column({
+    name: 'source',
+    nullable: true,
+    default: 'Result',
+    enum: SourceEnum,
+    type: 'enum',
+    enumName: 'source_enum',
+  })
+  source: SourceEnum = SourceEnum.Result;
+
+  @Column({
+    name: 'external_submitter',
+    nullable: true,
+    type: 'int',
+  })
+  external_submitter: number;
+
+  @ManyToOne(() => User, (u) => u.id, { nullable: true })
+  @JoinColumn({
+    name: 'external_submitter',
+  })
+  obj_external_submitter: User;
+
+  @Column({
+    name: 'external_submitted_date',
+    nullable: true,
+    type: 'text',
+  })
+  external_submitted_date: string;
+
+  @Column({
+    name: 'external_submitted_comment',
+    nullable: true,
+    type: 'text',
+  })
+  external_submitted_comment: string;
+
   // helpers??
   initiative_id!: number;
 
@@ -548,4 +595,24 @@ export class Result {
 
   @OneToMany(() => Evidence, (e) => e.obj_result)
   evidence_array: Evidence[];
+
+  @OneToOne(() => ResultsCapacityDevelopments, (rcd) => rcd.result_object, {
+    nullable: true,
+  })
+  results_capacity_development_object?: ResultsCapacityDevelopments;
+
+  @OneToOne(() => ResultsInnovationsDev, (rid) => rid.result_object, {
+    nullable: true,
+  })
+  results_innovations_dev_object: ResultsInnovationsDev;
+
+  @OneToOne(() => ResultsInnovationsUse, (riu) => riu.obj_result, {
+    nullable: true,
+  })
+  results_innovations_use_object: ResultsInnovationsUse;
+
+  @OneToOne(() => ResultsPolicyChanges, (rpc) => rpc.obj_result, {
+    nullable: true,
+  })
+  results_policy_changes_object: ResultsPolicyChanges;
 }

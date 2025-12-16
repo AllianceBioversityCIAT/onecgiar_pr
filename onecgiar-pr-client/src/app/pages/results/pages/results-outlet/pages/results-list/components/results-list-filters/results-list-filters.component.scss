@@ -156,3 +156,11 @@
   gap: 8px;
   align-items: center;
 }
+
+::ng-deep {
+  .submitter-multiselect-panel,
+  .custom-drawer .p-multiselect-panel {
+    max-width: calc(350px - 48px) !important;
+    width: calc(350px - 48px) !important;
+  }
+}

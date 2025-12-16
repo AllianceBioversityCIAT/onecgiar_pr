@@ -62,7 +62,7 @@ export class CreateInnovationUseDto {
   linked_results: number[];
 
   @ApiProperty({
-    description: 'ID of the innovation use level',
+    description: 'innovation use level',
     example: 3,
   })
   innovation_use_level_id: number;

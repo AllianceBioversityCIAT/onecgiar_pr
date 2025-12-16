@@ -1,10 +1,14 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import {
+  HttpStatus,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   CreateInnovationDevDtoV2,
   OptionV2,
   SubOptionV2,
 } from './dto/create-innovation_dev_v2.dto';
-import { InnovationUseDto } from '../../results/summary/dto/create-innovation-use.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResultByIntitutionsRepository } from '../../results/results_by_institutions/result_by_intitutions.repository';
 import { ResultsInnovationsDevRepository } from '../../results/summary/repositories/results-innovations-dev.repository';
@@ -17,7 +21,6 @@ import { ResultIpMeasureRepository } from '../../ipsr/result-ip-measures/result-
 import { ResultInitiativeBudgetRepository } from '../../results/result_budget/repositories/result_initiative_budget.repository';
 import { ResultByInitiativesRepository } from '../../results/results_by_inititiatives/resultByInitiatives.repository';
 import { NonPooledProjectBudgetRepository } from '../../results/result_budget/repositories/non_pooled_proyect_budget.repository';
-import { NonPooledProjectRepository } from '../../results/non-pooled-projects/non-pooled-projects.repository';
 import { ResultInstitutionsBudgetRepository } from '../../results/result_budget/repositories/result_institutions_budget.repository';
 import { InnoDevService } from '../../results/summary/innovation_dev.service';
 import { ResultsInnovationsDev } from '../../results/summary/entities/results-innovations-dev.entity';
@@ -28,9 +31,12 @@ import { InnovationReadinessLevelByLevel } from './enum/innov-readiness-level.en
 import { InjectRepository } from '@nestjs/typeorm';
 import { ResultAnswerRepository } from '../../results/result-questions/repository/result-answers.repository';
 import { ResultAnswer } from '../../results/result-questions/entities/result-answers.entity';
+import { ResultsByProjectsRepository } from '../../results/results_by_projects/results_by_projects.repository';
+import { InnovationUseService } from '../innovation-use/innovation-use.service';
 
 @Injectable()
 export class InnovationDevService {
+  private readonly logger = new Logger(InnovationDevService.name);
   constructor(
     private readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
     private readonly _resultsInnovationsDevRepository: ResultsInnovationsDevRepository,
@@ -43,16 +49,17 @@ export class InnovationDevService {
     private readonly _resultInitiativesBudgetRepository: ResultInitiativeBudgetRepository,
     private readonly _resultByInitiativeRepository: ResultByInitiativesRepository,
     private readonly _resultBilateralBudgetRepository: NonPooledProjectBudgetRepository,
-    private readonly _nonPooledProjectRepository: NonPooledProjectRepository,
     private readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
     private readonly _innoDevService: InnoDevService,
+    private readonly _innovationUseService: InnovationUseService,
     @InjectRepository(ResultScalingStudyUrl)
     private readonly _resultScalingStudyUrlsRepository: Repository<ResultScalingStudyUrl>,
     private readonly _resultAnswerRepository: ResultAnswerRepository,
+    private readonly _resultByProjectRepository: ResultsByProjectsRepository,
   ) {}
+
   async saveInnovationDev(
     createInnovationDevDto: CreateInnovationDevDtoV2,
-    innovationUseDto: InnovationUseDto,
     resultId: number,
     user: TokenDto,
   ) {
@@ -107,7 +114,7 @@ export class InnovationDevService {
       } else {
         const newInnDev = new ResultsInnovationsDev();
         newInnDev.created_by = user.id;
-        newInnDev.results_id = resultId;
+        newInnDev.result_object = { id: +resultId } as any;
         newInnDev.last_updated_by = user.id;
         newInnDev.short_title = short_title;
         newInnDev.is_active = true;
@@ -128,10 +135,6 @@ export class InnovationDevService {
         InnDevRes = await this._resultsInnovationsDevRepository.save(newInnDev);
       }
 
-      console.log(
-        'Responsible Innovation and Scaling Options:',
-        createInnovationDevDto?.responsible_innovation_and_scaling.q1.options,
-      );
       // * SAVING INNOVATION AND SCALING
       await this.saveOptionsAndSubOptions(
         resultId,
@@ -220,7 +223,9 @@ export class InnovationDevService {
         user.id,
         createInnovationDevDto,
       );
-      await this._innoDevService.saveBillateralInvestment(
+
+      await this.syncBudgetForResults(resultId, user.id);
+      await this.saveBillateralInvestment(
         resultId,
         user.id,
         createInnovationDevDto,
@@ -251,17 +256,20 @@ export class InnovationDevService {
         await this._resultScalingStudyUrlsRepository.save(urlsToSave);
       }
 
-      if (
-        innovation_user_to_be_determined != false ||
-        innovation_user_to_be_determined != null
-      ) {
-        // * Save InnovationUser
-        await this._innoDevService.saveAnticipatedInnoUser(
-          resultId,
-          user.id,
-          innovationUseDto,
-        );
-      }
+      const innovation_use = {
+        actors: createInnovationDevDto.innovatonUse.actors ?? [],
+        organization: createInnovationDevDto.innovatonUse.organization ?? [],
+        measures: createInnovationDevDto.innovatonUse.measures ?? [],
+      };
+
+      // * Save InnovationUser
+      await this._innovationUseService.saveAnticipatedInnoUser(
+        resultId,
+        user.id,
+        innovation_use,
+        null,
+        innovation_user_to_be_determined,
+      );
 
       return {
         response: InnDevRes,
@@ -337,23 +345,22 @@ export class InnovationDevService {
           },
         });
 
-      const npp = await this._nonPooledProjectRepository.find({
+      const rbp = await this._resultByProjectRepository.find({
         where: {
-          results_id: resultId,
+          result_id: resultId,
           is_active: true,
-          non_pooled_project_type_id: 1,
         },
       });
 
       const bilateral_expected_investment =
         await this._resultBilateralBudgetRepository.find({
           where: {
-            non_pooled_projetct_id: In(npp.map((el) => el.id)),
+            result_project_id: In(rbp.map((el) => el.id)),
             is_active: true,
           },
           relations: {
-            obj_non_pooled_projetct: {
-              obj_funder_institution_id: true,
+            obj_result_project: {
+              obj_clarisa_project: true,
             },
           },
         });
@@ -469,5 +476,130 @@ export class InnovationDevService {
         await saveAnswer(subOptionData);
       }
     }
+  }
+
+  async syncBudgetForResults(resultId: number, userId: number) {
+    const resultProjects = await this._resultByProjectRepository.find({
+      where: { result_id: resultId, is_active: true },
+    });
+
+    if (!resultProjects.length) return;
+
+    for (const rp of resultProjects) {
+      const existingBudget =
+        await this._resultBilateralBudgetRepository.findOne({
+          where: {
+            result_project_id: rp.id,
+            is_active: true,
+          },
+        });
+
+      if (!existingBudget) {
+        const newBudget = this._resultBilateralBudgetRepository.create({
+          result_project_id: rp.id,
+          is_active: true,
+          created_by: userId,
+        });
+
+        await this._resultBilateralBudgetRepository.save(newBudget);
+      }
+    }
+  }
+
+  async saveBillateralInvestment(
+    resultId: number,
+    user: number,
+    { bilateral_expected_investment: inv }: CreateInnovationDevDtoV2,
+  ) {
+    try {
+      if (!this.isValidInvestment(inv, resultId)) {
+        return { valid: true };
+      }
+
+      for (const i of inv) {
+        await this.processInvestment(i, resultId, user);
+      }
+      return { valid: true };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  private isValidInvestment(inv: any, resultId: number): boolean {
+    if (!inv || !Array.isArray(inv) || inv.length === 0) {
+      this.logger.log(
+        `[saveBillateralInvestment] No investment_bilateral provided for resultId: ${resultId}. Continuing flow.`,
+      );
+      return false;
+    }
+    return true;
+  }
+
+  private async processInvestment(i: any, resultId: number, user: number) {
+    const rbp = await this.findResultByProject(i, resultId);
+    const rbb = await this.findBilateralBudget(rbp.id);
+
+    if (rbb) {
+      await this.updateBilateralBudget(rbb, i, user);
+    } else {
+      await this.createBilateralBudget(rbp.id, i, user);
+    }
+  }
+
+  private async findResultByProject(i: any, resultId: number) {
+    const rbp = await this._resultByProjectRepository.findOne({
+      where: {
+        result_id: resultId,
+        is_active: true,
+        project_id: i.obj_result_project.project_id,
+      },
+    });
+
+    if (!rbp) {
+      this.logger.error(
+        `[saveBillateralInvestment] ResultByProject not found for resultId: ${resultId}, project_id: ${i.obj_result_project.project_id}`,
+      );
+      throw new NotFoundException({
+        message: `ResultByProject not found for resultId: ${resultId}, project_id: ${i.obj_result_project.project_id}`,
+        resultId,
+        projectId: i.obj_result_project.project_id,
+      });
+    }
+    return rbp;
+  }
+
+  private async findBilateralBudget(resultProjectId: number) {
+    return await this._resultBilateralBudgetRepository.findOne({
+      where: {
+        result_project_id: resultProjectId,
+        is_active: true,
+      },
+    });
+  }
+
+  private async updateBilateralBudget(rbb: any, i: any, user: number) {
+    rbb.kind_cash = i.is_determined === true ? null : Number(i.kind_cash);
+    rbb.is_determined = i.is_determined;
+    rbb.last_updated_by = user;
+    rbb.non_pooled_projetct_id = null;
+
+    await this._resultBilateralBudgetRepository.save(rbb);
+  }
+
+  private async createBilateralBudget(
+    resultProjectId: number,
+    i: any,
+    user: number,
+  ) {
+    const newRbb = this._resultBilateralBudgetRepository.create({
+      result_project_id: resultProjectId,
+      non_pooled_projetct_id: null,
+      kind_cash: i.is_determined === true ? null : Number(i.kind_cash),
+      is_determined: i.is_determined,
+      created_by: user,
+      last_updated_by: user,
+    });
+
+    await this._resultBilateralBudgetRepository.save(newRbb);
   }
 }

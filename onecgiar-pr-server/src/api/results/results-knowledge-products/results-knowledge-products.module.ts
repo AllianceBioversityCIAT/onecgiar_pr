@@ -150,6 +150,7 @@ import { AoWBilateralRepository } from '../results-toc-results/repositories/aow-
     ClarisaInstitutionsRepository,
     DeleteRecoverDataService,
     GlobalParameterRepository,
+    ResultsKnowledgeProductsService,
   ],
 })
 export class ResultsKnowledgeProductsModule {}
