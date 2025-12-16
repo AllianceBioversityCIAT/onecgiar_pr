@@ -168,19 +168,32 @@ export class TocResultsService {
         );
 
         if (tocResultIds.length) {
-          const [indicatorRows, mappingRows] = await Promise.all([
-            this._tocResultsRepository.getTocIndicatorsByResultIds(
+          const mappingRows =
+            await this._tocResultsRepository.getResultIndicatorMappings(
+              result_id,
+              init_id,
+              tocResultIds,
+            );
+
+          const linkedIndicatorNodeIds = Array.from(
+            new Set(
+              (mappingRows ?? [])
+                .map((row) => row?.toc_results_indicator_id)
+                .filter(
+                  (identifier): identifier is string =>
+                    typeof identifier === 'string' && identifier.trim() !== '',
+                ),
+            ),
+          );
+
+          const indicatorRows =
+            await this._tocResultsRepository.getTocIndicatorsByResultIds(
               result,
               year,
               tocResultIds,
               result?.result_type_id,
-            ),
-            this._tocResultsRepository.getResultIndicatorMappings(
-              result_id,
-              init_id,
-              tocResultIds,
-            ),
-          ]);
+              linkedIndicatorNodeIds,
+            );
 
           const indicatorMap = new Map<
             number,
@@ -294,28 +307,89 @@ export class TocResultsService {
                   ?.indicatorMappings.get(indicatorKey) ?? null)
               : null;
 
-            indicatorMap.get(tocId)!.push({
-              indicator_id: Number(indicator.indicator_id),
-              toc_result_indicator_id:
-                indicator.toc_result_indicator_id ?? null,
-              related_node_id: indicator.related_node_id ?? null,
-              indicator_description: indicator.indicator_description ?? null,
-              unit_messurament: indicator.unit_messurament ?? null,
-              type_value: indicator.type_value ?? null,
-              type_name: indicator.type_name ?? null,
-              location: indicator.location ?? null,
-              result_toc_result_indicator_id:
-                mappingInfo?.result_toc_result_indicator_id ?? null,
-              indicator_contributing:
-                mappingInfo?.indicator_contributing ?? null,
-              status_id: mappingInfo?.status_id ?? null,
-              target_value: indicator.target_value ?? null,
-              targets: [
-                {
-                  target_value: indicator.target_value ?? null,
-                },
-              ],
-            });
+            const arr = indicatorMap.get(tocId);
+            let idx = -1;
+            if (indicator.related_node_id) {
+              idx = arr.findIndex(
+                (it) => it.related_node_id === indicator.related_node_id,
+              );
+            } else if (indicator.toc_result_indicator_id) {
+              idx = arr.findIndex(
+                (it) =>
+                  it.toc_result_indicator_id ===
+                  indicator.toc_result_indicator_id,
+              );
+            } else {
+              idx = arr.findIndex(
+                (it) => it.indicator_id === Number(indicator.indicator_id),
+              );
+            }
+
+            if (idx >= 0) {
+              const existing = arr[idx];
+              if (
+                existing.result_toc_result_indicator_id == null &&
+                mappingInfo?.result_toc_result_indicator_id != null
+              ) {
+                existing.result_toc_result_indicator_id =
+                  mappingInfo.result_toc_result_indicator_id;
+              }
+              if (
+                existing.indicator_contributing == null &&
+                mappingInfo?.indicator_contributing != null
+              ) {
+                existing.indicator_contributing =
+                  mappingInfo.indicator_contributing;
+              }
+              if (
+                existing.status_id == null &&
+                mappingInfo?.status_id != null
+              ) {
+                existing.status_id = mappingInfo.status_id;
+              }
+              if (
+                existing.target_value == null &&
+                indicator.target_value != null
+              ) {
+                existing.target_value = indicator.target_value;
+              }
+              const targetVal =
+                indicator.target_value === undefined
+                  ? null
+                  : (indicator.target_value ?? null);
+              const already = existing.targets.some(
+                (t) => t.target_value === targetVal,
+              );
+              if (!already) {
+                existing.targets.push({ target_value: targetVal });
+              }
+            } else {
+              arr.push({
+                indicator_id: Number(indicator.indicator_id),
+                toc_result_indicator_id:
+                  indicator.toc_result_indicator_id ?? null,
+                related_node_id: indicator.related_node_id ?? null,
+                indicator_description: indicator.indicator_description ?? null,
+                unit_messurament: indicator.unit_messurament ?? null,
+                type_value: indicator.type_value ?? null,
+                type_name: indicator.type_name ?? null,
+                location: indicator.location ?? null,
+                result_toc_result_indicator_id:
+                  mappingInfo?.result_toc_result_indicator_id ?? null,
+                indicator_contributing:
+                  mappingInfo?.indicator_contributing ?? null,
+                status_id: mappingInfo?.status_id ?? null,
+                target_value: indicator.target_value ?? null,
+                targets: [
+                  {
+                    target_value:
+                      indicator.target_value === undefined
+                        ? null
+                        : (indicator.target_value ?? null),
+                  },
+                ],
+              });
+            }
           }
 
           enrichedResults = res.map((row) => {
@@ -340,13 +414,15 @@ export class TocResultsService {
           }));
         }
       } else {
-        enrichedResults = res.map((row) => ({
-          ...row,
-          result_toc_result_id: null,
-          planned_result: null,
-          toc_progressive_narrative: null,
-          indicators: [],
-        }));
+        enrichedResults = Array.isArray(res)
+          ? res.map((row) => ({
+              ...row,
+              result_toc_result_id: null,
+              planned_result: null,
+              toc_progressive_narrative: null,
+              indicators: [],
+            }))
+          : [];
       }
 
       return this._returnResponse.format({

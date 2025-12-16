@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { InnovationUseFormComponent } from './innovation-use-form.component';
 import { ApiService } from '../../services/api/api.service';
 import { of } from 'rxjs';
@@ -61,7 +62,8 @@ describe('InnovationUseFormComponent', () => {
         { provide: InnovationControlListService, useValue: innovationControlListServiceMock },
         { provide: InnovationUseResultsService, useValue: innovationUseResultsServiceMock }
       ],
-      imports: [TermPipe, HttpClientTestingModule]
+      imports: [TermPipe, HttpClientTestingModule],
+      schemas: [NO_ERRORS_SCHEMA]
     }).compileComponents();
   });
 
@@ -222,22 +224,24 @@ describe('InnovationUseFormComponent', () => {
     expect(organizationItem.is_active).toBe(false);
   });
 
-  it('should set genderYouth to null when genderYouth is less than 0', () => {
+  it('should set genderYouth to null when genderYouth is less than 0', done => {
     component.body.innovatonUse.actors = [{ women: 10, women_youth: -1, men: 10, men_youth: 5, sex_and_age_disaggregation: false } as Actor];
     const actorItem = component.body.innovatonUse.actors[0];
     component.validateYouth(0, true, actorItem);
     setTimeout(() => {
       expect(actorItem.women_youth).toBeNull();
-    }, 100);
+      done();
+    }, 150);
   });
 
-  it('should set gender to 0 when gender is less than 0', () => {
+  it('should set gender to 0 when gender is less than 0', done => {
     component.body.innovatonUse.actors = [{ women: -1, women_youth: 5, men: 10, men_youth: 5, sex_and_age_disaggregation: false } as Actor];
     const actorItem = component.body.innovatonUse.actors[0];
     component.validateYouth(0, true, actorItem);
     setTimeout(() => {
       expect(actorItem.women).toBe(0);
-    }, 100);
+      done();
+    }, 150);
   });
 
   it('should handle when gender is less than genderYouth', done => {

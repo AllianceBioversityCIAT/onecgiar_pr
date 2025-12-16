@@ -18,7 +18,7 @@
     fieldRef="[general-info]-description"
     [readOnly]="this.dataControlSE.isKnowledgeProduct"
     [(ngModel)]="this.generalInfoBody.result_description"
-    [maxWords]="150"></app-pr-textarea>
+    [maxWords]="300"></app-pr-textarea>
 
   <app-lead-contact-person-field [body]="this.generalInfoBody"></app-lead-contact-person-field>
 
@@ -173,3 +173,4 @@
 </div>
 
 <app-change-result-type-modal [body]="this.generalInfoBody"></app-change-result-type-modal>
+<app-save-confirmation-modal #saveConfirmationModal></app-save-confirmation-modal>

@@ -671,7 +671,13 @@ WHERE
         r.in_qa as inQA,
         ci.portfolio_id,
         cp.name as portfolio_name,
-        cp.acronym as acronym
+        cp.acronym as acronym,
+        EXISTS (
+            SELECT 1
+            FROM results_investment_discontinued_options rido
+            WHERE rido.result_id = r.id
+              AND rido.is_active = TRUE
+        ) AS has_discontinued_options
     FROM
         result r
         INNER JOIN result_type rt ON rt.id = r.result_type_id
@@ -2243,8 +2249,9 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       AND v.is_active = true
     INNER JOIN clarisa_portfolios cp ON v.portfolio_id = cp.id
     WHERE         
-      r.version_id = 34
-        AND r.is_active = true
+        v.phase_name = 'Reporting 2025'
+      AND v.is_active = true
+      AND r.is_active = true
     UNION ALL
     SELECT 
       r.id,
