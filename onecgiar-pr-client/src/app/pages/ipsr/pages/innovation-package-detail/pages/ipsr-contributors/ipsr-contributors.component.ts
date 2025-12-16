@@ -1,26 +1,66 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ContributorsBody } from './model/contributorsBody';
 import { RdTheoryOfChangesServicesService } from '../../../../../results/pages/result-detail/pages/rd-theory-of-change/rd-theory-of-changes-services.service';
+import { RdContributorsAndPartnersService } from '../../../../../results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.service';
+import { CentersService } from '../../../../../../shared/services/global/centers.service';
+import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 
 @Component({
-    selector: 'app-ipsr-contributors',
-    templateUrl: './ipsr-contributors.component.html',
-    styleUrls: ['./ipsr-contributors.component.scss'],
-    standalone: false
+  selector: 'app-ipsr-contributors',
+  templateUrl: './ipsr-contributors.component.html',
+  styleUrls: ['./ipsr-contributors.component.scss'],
+  standalone: false
 })
 export class IpsrContributorsComponent implements OnInit {
   contributorsBody = new ContributorsBody();
   disabledOptions = [];
-
-  constructor(public api: ApiService, public rolesSE: RolesService, public theoryOfChangesServices: RdTheoryOfChangesServicesService) {}
+  rdPartnersSE = inject(RdContributorsAndPartnersService);
+  centersSE = inject(CentersService);
+  contributingInitiativesList = [];
+  fieldsManagerSE = inject(FieldsManagerService);
+  disabledText = 'To remove this center, please contact your librarian';
+  constructor(
+    public api: ApiService,
+    public rolesSE: RolesService,
+    public theoryOfChangesServices: RdTheoryOfChangesServicesService
+  ) {}
 
   ngOnInit(): void {
     this.getSectionInformation();
     this.requestEvent();
     this.api.dataControlSE.detailSectionTitle('Contributors');
     this.api.resultsSE.ipsrDataControlSE.inContributos = true;
+  }
+
+  toggleActiveContributor(item) {
+    item.is_active = !item.is_active;
+  }
+
+  onRemoveContribuiting(index, isAcceptedArray: boolean) {
+    if (isAcceptedArray) {
+      this.rdPartnersSE.partnersBody.contributing_initiatives.accepted_contributing_initiatives.splice(index, 1);
+    } else {
+      this.rdPartnersSE.contributingInitiativeNew.splice(index, 1);
+    }
+  }
+
+  deleteContributingCenter(index: number, updateComponent: boolean = false) {
+    if (updateComponent) {
+      this.rdPartnersSE.updatingLeadData = true;
+    }
+
+    const deletedCenter = this.rdPartnersSE.partnersBody?.contributing_center.splice(index, 1);
+    if (deletedCenter.length === 1 && this.rdPartnersSE.leadCenterCode === deletedCenter[0].code) {
+      //always should happen
+      this.rdPartnersSE.leadCenterCode = null;
+    }
+    if (updateComponent) {
+      setTimeout(() => {
+        this.rdPartnersSE.updatingLeadData = false;
+      }, 50);
+    }
   }
 
   getSectionInformation() {
