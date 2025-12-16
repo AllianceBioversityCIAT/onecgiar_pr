@@ -106,7 +106,7 @@ export class RdGeneralInformationComponent implements OnInit {
     }
 
     const isP25 = this.dataControlSE.currentResultSignal()?.portfolio === 'P25';
-    const hasDiscontinuedOptions = this.generalInfoBody.discontinued_options && this.generalInfoBody.discontinued_options.some(option => option.value === true);
+    const hasDiscontinuedOptions = this.generalInfoBody.discontinued_options?.some(option => option.value === true);
 
     if (isP25 && hasDiscontinuedOptions) {
       this.saveConfirmationModal.show(() => {
