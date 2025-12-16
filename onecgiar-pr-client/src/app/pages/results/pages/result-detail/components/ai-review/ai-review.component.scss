@@ -42,6 +42,10 @@
         font-weight: 600;
         color: var(--pr-color-primary-400);
         margin: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex: 1;
       }
 
       .needs-improvement-badge {
@@ -51,9 +55,9 @@
       }
 
       .updated-badge {
-        background: #fbedff;
-        color: #7a30a8;
-        border: 1px solid #7a30a838;
+        background: #edfff3;
+        color: #47b556;
+        border: 1px solid #47b55680;
       }
 
       .improvement-badge {
@@ -195,17 +199,18 @@
           }
         }
       }
+    }
+  }
 
-      .radio-label {
-        font-size: 14px;
-        color: #333;
-        cursor: pointer;
-        margin: 0;
-      }
-
-      &:hover .radio-circle:not(.selected) {
-        border-color: #666;
-      }
+  // Green styling for AI validated sections
+  .field-section.ai-validated {
+    .current-version {
+      background-color: rgba(169, 243, 179, 0.15);
+      border: 1px solid rgba(71, 181, 86, 0.3);
+      border-radius: 8px;
+      padding: 16px;
+      margin: -8px;
+      margin-top: 0;
     }
   }
 }

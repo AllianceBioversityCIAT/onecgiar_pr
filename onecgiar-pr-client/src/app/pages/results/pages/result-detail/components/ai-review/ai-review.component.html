@@ -65,7 +65,7 @@
 
       <div class="impact-areas-grid">
         @for (dacScore of aiReviewSE.dacScores(); track dacScore.field_name) {
-          <div class="field-section">
+          <div class="field-section" [class.ai-validated]="dacScore.is_validated">
           <div class="field-header">
             <h3 class="field-title">{{ dacScore.display_title || dacScore.field_name }}</h3>
             @if (dacScore.is_validated) {
