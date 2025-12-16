@@ -88,15 +88,36 @@
               : 'To search for results that have already been reported, enter key words into the title box below. If your result has not already been reported, you can add it here.'
           "
           [(ngModel)]="this.resultLevelSE.resultBody.result_name"
-          (ngModelChange)="depthSearch(this.resultLevelSE.resultBody.result_name)">
+          (ngModelChange)="onTitleChange($event)">
         </app-pr-input>
+
+        <!-- Indicador de búsqueda -->
+        <app-alert-status
+          *ngIf="isSearching && this.resultLevelSE.resultBody.result_name && !isKnowledgeProduct"
+          [status]="'info'"
+          description="<strong>Searching for existing results...</strong>">
+        </app-alert-status>
+
+        <!-- Alerta de error: Título ya existe -->
+        <app-alert-status
+          *ngIf="exactTitleFound && searchCompleted && !isSearching && this.resultLevelSE.resultBody.result_name && !isKnowledgeProduct"
+          [status]="'error'"
+          description="<strong>This title already exists in the system.</strong> You cannot create a duplicate result. Please verify if this is the same result and consider mapping it to your Science Program/Accelerator instead, or modify the title to make it unique.">
+        </app-alert-status>
+
+        <!-- Alerta de éxito: Título es único -->
+        <app-alert-status
+          *ngIf="!exactTitleFound && searchCompleted && !isSearching && this.resultLevelSE.resultBody.result_name && this.resultLevelSE.resultBody.result_name.trim().length > 0 && !isKnowledgeProduct"
+          [status]="'success'"
+          description="<strong>This title is unique.</strong> You can proceed to create this result.">
+        </app-alert-status>
       </div>
 
       <div class="report-result-content_left_content_actions">
         <app-save-button
           [editable]="true"
           (clickSave)="onSaveSection()"
-          [disabled]="!this.resultLevelSE.resultBody.initiative_id"
+          [disabled]="!this.resultLevelSE.resultBody.initiative_id || (exactTitleFound && !isKnowledgeProduct)"
           text="Save and continue">
         </app-save-button>
       </div>

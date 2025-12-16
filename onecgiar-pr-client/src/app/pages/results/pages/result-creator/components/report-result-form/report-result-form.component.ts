@@ -1,10 +1,12 @@
-import { Component, OnInit, DoCheck, Output, EventEmitter, Input, signal } from '@angular/core';
+import { Component, OnInit, DoCheck, OnDestroy, Output, EventEmitter, Input, signal } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ResultLevelService } from '../../services/result-level.service';
 import { Router } from '@angular/router';
 import { ResultBody } from '../../../../../../shared/interfaces/result.interface';
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
 import { TerminologyService } from '../../../../../../internationalization/terminology.service';
+import { Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 
 @Component({
   selector: 'app-report-result-form',
@@ -12,11 +14,14 @@ import { TerminologyService } from '../../../../../../internationalization/termi
   styleUrls: ['./report-result-form.component.scss'],
   standalone: false
 })
-export class ReportResultFormComponent implements OnInit, DoCheck {
+export class ReportResultFormComponent implements OnInit, DoCheck, OnDestroy {
   depthSearchList: any[] = [];
   exactTitleFound = false;
+  searchCompleted = false;
+  isSearching = false;
   mqapJson: {};
   validating = false;
+  private searchSubject = new Subject<string>();
   kpAlertDescription = `Please add the handle generated in <strong>CGSpace</strong>, <strong>MELSpace</strong>, or <strong>WorldFish DSpace</strong> to report your knowledge product. Only knowledge products entered into <strong>one of these repositories</strong> are accepted in the PRMS Reporting Tool.<br><br>
 The PRMS Reporting Tool will automatically retrieve all metadata entered into <strong>one of these repositories</strong>. Partners and geographical scope metadata are editable, while the other metadata fields are not.<br><br>
 The handle will be verified, and only knowledge products from <strong>2025</strong> will be accepted. For journal articles, the PRMS Reporting Tool will check the online publication date added in CGSpace ("Date Online"). If the online publication date is missing, the issued date ("Date Issued") will be considered. Articles published online in <strong>2025</strong> but issued in <strong>2026</strong> will be accepted for the <strong>2025</strong> reporting phase.<br><br>
@@ -49,6 +54,16 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
   ) {}
 
   ngOnInit(): void {
+    // Configurar búsqueda con debounce usando RxJS
+    this.searchSubject
+      .pipe(
+        debounceTime(500),
+        distinctUntilChanged()
+      )
+      .subscribe(title => {
+        this.performSearch(title);
+      });
+
     this.api.dataControlSE.getCurrentPhases().subscribe(() => {
       this.api.rolesSE.validateReadOnly().then(() => {
         this.GET_AllInitiatives();
@@ -83,6 +98,10 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
     setTimeout(() => {
       this.getAllPhases();
     }, 600);
+  }
+
+  ngOnDestroy(): void {
+    this.searchSubject.complete();
   }
 
   onSelectInit() {
@@ -171,10 +190,28 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
 
   clean() {
     if (this.resultLevelSE.resultBody.result_type_id == 6) this.resultLevelSE.resultBody.result_name = '';
-    else this.depthSearch(this.resultLevelSE.resultBody.result_name);
+    else this.onTitleChange(this.resultLevelSE.resultBody.result_name);
   }
 
-  depthSearch(title: string) {
+  onTitleChange(title: string) {
+    // Si el título está vacío, resetear todo inmediatamente
+    if (!title || title.trim().length === 0) {
+      this.depthSearchList = [];
+      this.exactTitleFound = false;
+      this.searchCompleted = false;
+      this.isSearching = false;
+      return;
+    }
+
+    // Indicar que está buscando
+    this.isSearching = true;
+    this.searchCompleted = false;
+
+    // Emitir el título al Subject (esto activará el debounce)
+    this.searchSubject.next(title);
+  }
+
+  private performSearch(title: string) {
     const cleanSpaces = (text: string) => text?.replace(/\s+/g, '')?.toLowerCase();
     const legacyType = this.getLegacyType(this.resultTypeName, this.resultLevelName);
 
@@ -186,10 +223,14 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
         }));
 
         this.exactTitleFound = !!this.depthSearchList.find(result => cleanSpaces(result.title) === cleanSpaces(title));
+        this.searchCompleted = true;
+        this.isSearching = false;
       },
       error: () => {
         this.depthSearchList = [];
         this.exactTitleFound = false;
+        this.searchCompleted = true;
+        this.isSearching = false;
       }
     });
   }

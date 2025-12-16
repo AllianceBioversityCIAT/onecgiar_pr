@@ -2,5 +2,7 @@
   <div class="line {{ status }}"></div>
   <div class="text pr-body-2" [innerHTML]="this.description"></div>
   <div class="black_point" *ngIf="status == 'warning'"></div>
-  <i class="material-icons-round icon {{ status }}">{{ status }}</i>
+  <i class="material-icons-round icon {{ status }}">
+    {{ status === 'error' ? 'error' : status === 'success' ? 'check_circle' : status }}
+  </i>
 </div>

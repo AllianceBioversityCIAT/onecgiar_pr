@@ -9,6 +9,14 @@
     color: var(--pr-color-blue-500);
   }
 
+  .error {
+    color: var(--pr-color-red-100);
+  }
+
+  .success {
+    color: var(--pr-color-green-100);
+  }
+
   .line {
     position: absolute;
     left: 0;
@@ -22,6 +30,14 @@
 
     &.info {
       background-color: var(--pr-color-blue-500);
+    }
+
+    &.error {
+      background-color: var(--pr-color-red-100);
+    }
+
+    &.success {
+      background-color: var(--pr-color-green-100);
     }
   }
 
