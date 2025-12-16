@@ -1,6 +1,7 @@
 <div class="partnersindex">
-  <app-ipsr-contributors-toc [contributorsBody]="this.contributorsBody" [disabledOptions]="this.disabledOptions"></app-ipsr-contributors-toc>
-
+  @if (!this.fieldsManagerSE.isP25()) {
+    <app-ipsr-contributors-toc [contributorsBody]="this.contributorsBody" [disabledOptions]="this.disabledOptions"></app-ipsr-contributors-toc>
+  }
   @if (this.fieldsManagerSE.isP25()) {
     <app-pr-multi-select
       [options]="this.centersSE.centersList"
