@@ -59,18 +59,6 @@ export class SubmissionsService {
         };
       }
 
-      const isValid = await this._resultValidationRepository.resultIsValid(
-        result.id,
-      );
-      if (!isValid) {
-        return {
-          response: {},
-          message:
-            'This result cannot be submit, sections are missing to complete',
-          status: HttpStatus.NOT_ACCEPTABLE,
-        };
-      }
-
       const data = await this._resultRepository.update(result.id, {
         status: 1,
         status_id: 3,

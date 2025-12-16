@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
-import { DataSource, In, IsNull, Not } from 'typeorm';
+import { DataSource, In, IsNull } from 'typeorm';
 import { env } from 'process';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
@@ -1005,7 +1005,7 @@ export class ResultsFrameworkReportingService {
           editing: number;
           qualityAssessed: number;
           submitted: number;
-          others: number; 
+          others: number;
         }
       >();
 
@@ -1177,7 +1177,6 @@ export class ResultsFrameworkReportingService {
               is_not_aplicable: false,
               obj_result_indicator_targets: {
                 is_active: true,
-                contributing_indicator: Not(IsNull()),
               },
             },
           },
