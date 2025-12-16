@@ -560,6 +560,8 @@ export class IpsrPathwayStepFourService {
           },
         });
 
+      console.log('bilateral_expected_investment', bilateral_expected_investment);
+      
       const institutions = await this._resultByInstitutionsRepository.find({
         where: [
           {
@@ -645,6 +647,36 @@ export class IpsrPathwayStepFourService {
           rbpipsr.id,
           user.id,
         );
+
+      if (
+        ipsrByProject.response &&
+        typeof ipsrByProject.response === 'object' &&
+        'id' in ipsrByProject.response &&
+        typeof ipsrByProject.response.id === 'number'
+      ) {
+        const resultProjectId = ipsrByProject.response.id;
+
+        const existingBudget =
+          await this._resultBilateralBudgetRepository.findOne({
+            where: {
+              result_project_id: resultProjectId,
+              is_active: true,
+            },
+          });
+
+        if (!existingBudget) {
+          const newBudget = this._resultBilateralBudgetRepository.create({
+            result_project_id: resultProjectId,
+            non_pooled_projetct_id: null,
+            kind_cash: null,
+            is_determined: null,
+            created_by: user.id,
+            last_updated_by: user.id,
+          });
+
+          await this._resultBilateralBudgetRepository.save(newBudget);
+        }
+      }
 
       return {
         response: ipsrByProject.response,
