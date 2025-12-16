@@ -2,7 +2,7 @@
 <div class="title_margin">What do you want to report?</div>
 
   <div class="result-level-cards-grid">
-    @for (resultLevel of resultLevelSE.resultLevelListSig()?.slice(2, 4).reverse(); track $index) {
+    @for (resultLevel of resultLevelSE.outputOutcomeLevelsSig(); track resultLevel.id) {
       <div 
         class="result-level-card" 
         [ngClass]="{ 'selected': resultLevel?.selected }"

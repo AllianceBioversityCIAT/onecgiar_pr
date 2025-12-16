@@ -56,7 +56,7 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
     });
     this.resultLevelSE.resultBody = new ResultBody();
     this.resultLevelSE.currentResultTypeList = [];
-    this.resultLevelSE.resultLevelList?.forEach(reLevel => (reLevel.selected = false));
+    this.resultLevelSE.resetSelection();
     this.resultLevelSE.cleanData();
     this.applyPendingResultTypeSelection();
     this.api.updateUserData(() => {
@@ -177,9 +177,17 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
 
   private applyPendingResultTypeSelection() {
     const pendingSelection = this.resultLevelSE.consumePendingResultType?.();
-    if (pendingSelection) {
-      this.resultLevelSE.preselectResultType(pendingSelection.id, pendingSelection.name);
-    }
+    if (!pendingSelection) return;
+
+    const checkAndApply = () => {
+      const levelList = this.resultLevelSE.resultLevelListSig();
+      if (levelList?.length > 0) {
+        this.resultLevelSE.preselectResultType(pendingSelection.id, pendingSelection.name);
+      } else {
+        setTimeout(checkAndApply, 50);
+      }
+    };
+    setTimeout(checkAndApply, 0);
   }
 
   depthSearch(title: string) {
