@@ -40,7 +40,6 @@
     optionValue="value">
   </app-pr-radio-button>
 }
-
 @if (
   !body.innov_use_to_be_determined ||
   !this.fieldsManagerSE.isP25() ||
@@ -323,7 +322,7 @@
     itemTitle="name"
     itemDescription="definition"
     optionLabel="name"
-    optionValue="id"
+    optionValue="level"
     [options]="this.innovationControlListSE.useLevelsList"
     [(ngModel)]="body.innovation_use_level_id"></app-pr-range-level>
 
