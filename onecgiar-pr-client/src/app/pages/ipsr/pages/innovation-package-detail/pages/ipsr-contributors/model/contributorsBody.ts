@@ -10,6 +10,7 @@ export class ContributorsBody {
   pending_contributing_initiatives: ShareResultRequestInterface[] = [];
   institutions: InstitutionsInterface[] = [];
   contributingInitiativeNew: any = [];
+  bilateral_projects: any[] = [];
 }
 
 interface InstitutionsInterface {

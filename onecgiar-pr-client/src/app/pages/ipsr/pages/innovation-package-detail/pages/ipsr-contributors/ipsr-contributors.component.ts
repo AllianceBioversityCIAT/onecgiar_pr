@@ -139,6 +139,7 @@ export class IpsrContributorsComponent implements OnInit {
       console.log(response);
       //? map by service
       this.rdPartnersSE.partnersBody.contributing_center = this.contributorsBody.contributing_center as ResultsCenterDto[];
+      this.rdPartnersSE.partnersBody.bilateral_projects = this.contributorsBody.bilateral_projects;
       //?
     });
   }
@@ -163,7 +164,8 @@ export class IpsrContributorsComponent implements OnInit {
         ]
       },
       //? map by service
-      contributing_center: this.rdPartnersSE.partnersBody.contributing_center
+      contributing_center: this.rdPartnersSE.partnersBody.contributing_center,
+      bilateral_projects: this.rdPartnersSE.partnersBody.bilateral_projects
       //?
     };
 
