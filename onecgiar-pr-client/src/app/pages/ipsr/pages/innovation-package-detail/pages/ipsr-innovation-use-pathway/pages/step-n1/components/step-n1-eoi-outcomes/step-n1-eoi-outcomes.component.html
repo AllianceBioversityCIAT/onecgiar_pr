@@ -2,14 +2,19 @@
 
 <div appFeedbackValidation labelText="Specify aspired outcomes and impact" [isComplete]="!!this.body.eoiOutcomes.length"></div>
 
-<div class="dropdown-50p" >
-    <app-pr-multi-select [options]="this.eoiList" label="Specify aspired outcomes and impact"
-        description="Specify to which End of Initiative outcomes the scaling of the core innovation is expected to contribute to by 2024 in the specific geo context"
-        optionLabel="title" optionValue="toc_result_id" selectedOptionLabel="title"
-        [required]="true"
-        placeholder="End of Initiative outcome(s)" selectedLabel="End of Initiative outcome(s) selected"
-        [(ngModel)]="this.body.eoiOutcomes">
-    </app-pr-multi-select>
+<div class="dropdown-50p">
+  <app-pr-multi-select
+    [options]="this.eoiList"
+    label="Specify aspired outcomes and impact"
+    [description]="specifyText()"
+    optionLabel="title"
+    optionValue="toc_result_id"
+    selectedOptionLabel="title"
+    [required]="true"
+    placeholder="End of Initiative outcome(s)"
+    selectedLabel="End of Initiative outcome(s) selected"
+    [(ngModel)]="this.body.eoiOutcomes">
+  </app-pr-multi-select>
 </div>
 
 <div class="step_divider"></div>
