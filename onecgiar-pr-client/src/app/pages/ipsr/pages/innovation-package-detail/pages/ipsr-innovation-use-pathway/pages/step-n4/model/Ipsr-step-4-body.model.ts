@@ -48,6 +48,7 @@ export class BilateralexpectedinvestmentStep4 {
   obj_non_pooled_projetct: any;
   is_active: boolean;
   kind_cash: string;
+  obj_result_project: any;
 }
 
 interface Initiativeexpectedinvestment {

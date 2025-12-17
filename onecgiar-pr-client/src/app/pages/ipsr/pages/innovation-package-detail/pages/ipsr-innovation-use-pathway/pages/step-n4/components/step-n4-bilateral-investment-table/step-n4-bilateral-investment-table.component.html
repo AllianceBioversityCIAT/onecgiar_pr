@@ -31,7 +31,9 @@
       <td>
         <div class="editBilateral">
           <div style="display: flex; align-items: center">
-            {{ item?.obj_non_pooled_projetct?.grant_title }}
+            {{
+              this.api.fieldsManagerSE.isP25() ? item?.obj_result_project.obj_clarisa_project.shortName : item?.obj_non_pooled_projetct?.grant_title
+            }}
           </div>
           <div style="margin-top: 0px; margin-right: 0px">
             <app-step-n4-edit-bilateral [body]="item" [isonlyread]="true"></app-step-n4-edit-bilateral>
@@ -73,17 +75,6 @@
         </td>
       }
 
-      @if (this.api.fieldsManagerSE.isP25()) {
-        <th>
-          <app-pr-input
-            placeholder="Enter text"
-            type="currency"
-            [required]="false"
-            [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
-            [(ngModel)]="item.kind_cash">
-          </app-pr-input>
-        </th>
-      }
       <td>
         <app-pr-radio-button
           optionLabel="name"
