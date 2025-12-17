@@ -95,11 +95,13 @@ export class IpsrPathwayStepFourService {
         saveStepFourDto,
       );
 
-      await this.syncScalingStudyUrls(
-        result.id,
-        saveStepFourDto.scaling_studies_urls,
-        user.id,
-      );
+      if (saveStepFourDto.has_scaling_studies === true) {
+        await this.syncScalingStudyUrls(
+          result.id,
+          saveStepFourDto.scaling_studies_urls,
+          user.id,
+        );
+      }
 
       if (!saveStepFourDto.has_scaling_studies) {
         await this._resultScalingStudyUrlsRepository.update(
@@ -304,7 +306,7 @@ export class IpsrPathwayStepFourService {
           where: {
             result_id: resultId,
             is_active: true,
-            project_id: i.result_project_id,
+            id: i.result_project_id,
           },
         });
 
