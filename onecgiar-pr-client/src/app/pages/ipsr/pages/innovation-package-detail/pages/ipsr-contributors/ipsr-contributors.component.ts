@@ -83,7 +83,44 @@ export class IpsrContributorsComponent implements OnInit {
     }
   }
 
-  getTocLogicp25() {}
+  getTocLogicp25() {
+    //     //! TOC
+    // this.partnersBody.linked_results = response.linked_results || [];
+    // this.partnersBody?.contributing_and_primary_initiative.forEach(
+    //   init => (init.full_name = `${init?.official_code} - <strong>${init?.short_name}</strong> - ${init?.initiative_name}`)
+    // );
+    // this.submitter = this.partnersBody.contributing_and_primary_initiative.find(
+    //   init => init.id === this.partnersBody?.result_toc_result?.initiative_id
+    // )?.full_name;
+    // if (this.partnersBody?.impactsTarge)
+    //   this.partnersBody?.impactsTarge.forEach(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
+    // if (this.partnersBody?.sdgTargets)
+    //   this.partnersBody?.sdgTargets.forEach(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
+    // if (this.partnersBody?.result_toc_result?.result_toc_results !== null) {
+    //   this.result_toc_result = this.partnersBody?.result_toc_result;
+    //   this.result_toc_result.planned_result = this.partnersBody?.result_toc_result?.result_toc_results[0]?.planned_result ?? null;
+    //   this.result_toc_result.showMultipleWPsContent = true;
+    // }
+    // if (this.partnersBody?.contributors_result_toc_result !== null) {
+    //   this.contributors_result_toc_result = this.partnersBody?.contributors_result_toc_result;
+    //   this.contributors_result_toc_result.forEach((tab: any, index) => {
+    //     tab.planned_result = tab.result_toc_results[0]?.planned_result ?? null;
+    //     tab.index = index;
+    //     tab.showMultipleWPsContent = true;
+    //   });
+    // }
+    // this.partnersBody.changePrimaryInit = this.partnersBody?.result_toc_result.initiative_id;
+    // this.disabledOptions = [
+    //   ...(this.partnersBody?.contributing_initiatives.accepted_contributing_initiatives || []),
+    //   ...(this.partnersBody?.contributing_initiatives.pending_contributing_initiatives || [])
+    // ];
+    // this.initiativeIdSignal.set(this.partnersBody?.result_toc_result?.initiative_id);
+    // this.getConsumed.set(true);
+    // //! TOC END
+    // this.partnersBody.bilateral_projects.forEach(project => {
+    //   project.fullName = project.obj_clarisa_project.fullName;
+    // });
+  }
 
   getSectionInformation() {
     console.log(this.fieldsManagerSE.isP25());
@@ -122,6 +159,8 @@ export class IpsrContributorsComponent implements OnInit {
         ]
       }
     };
+
+    console.log(sendedData);
 
     this.api.resultsSE.PATCHContributorsByIpsrResultId(sendedData, this.fieldsManagerSE.isP25()).subscribe(({ response }) => {
       this.getSectionInformation();
