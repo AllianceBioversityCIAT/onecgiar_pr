@@ -200,12 +200,6 @@ export class ResultCountriesService {
       );
 
       if (countries?.length) {
-        await this._resultCountryRepository.updateCountries(
-          result.id,
-          countries.map((e) => e.id),
-          geoScopeRoleId,
-        );
-
         const resultCountryArray = await this.handleResultCountryArray(
           result,
           countries,
@@ -235,13 +229,19 @@ export class ResultCountriesService {
     const resultCountryArray: ResultCountry[] = [];
     const existingCountries: ResultCountry[] = [];
 
+    const countryIds = countries.map((c) => c.id);
+    const existingCountriesBatch =
+      await this._resultCountryRepository.getResultCountriesByResultIdAndCountryIds(
+        result.id,
+        countryIds,
+        geoScopeRoleId,
+      );
+    const existingCountryMap = new Map(
+      existingCountriesBatch.map((c) => [c.country_id, c]),
+    );
+
     for (const country of countries) {
-      const exist =
-        await this._resultCountryRepository.getResultCountrieByIdResultAndCountryId(
-          result.id,
-          country.id,
-          geoScopeRoleId,
-        );
+      const exist = existingCountryMap.get(country.id);
 
       if (!exist) {
         const newCountry = new ResultCountry();

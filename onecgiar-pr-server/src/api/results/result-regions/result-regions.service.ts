@@ -200,26 +200,28 @@ export class ResultRegionsService {
           role,
         );
         if (regions?.length) {
-          console.log('regions.length', regions);
-          const resultRegionArray: ResultRegion[] = [];
-          for (let index = 0; index < regions.length; index++) {
-            const exist =
-              await this._resultRegionRepository.getResultRegionByResultIdAndRegionId(
-                result.id,
-                regions[index].id,
-                role,
-              );
-            if (!exist) {
+          const regionIds = regions.map((el) => el.id);
+          const existingRegions =
+            await this._resultRegionRepository.getResultRegionsByResultIdAndRegionIds(
+              result.id,
+              regionIds,
+              role,
+            );
+          const existingRegionIds = new Set(
+            existingRegions.map((r) => r.region_id),
+          );
+
+          const resultRegionArray: ResultRegion[] = regions
+            .filter((region) => !existingRegionIds.has(region.id))
+            .map((region) => {
               const newRegions = new ResultRegion();
-              newRegions.region_id = regions[index].id;
+              newRegions.region_id = region.id;
               newRegions.result_id = result.id;
               newRegions.geo_scope_role_id = role;
-              resultRegionArray.push(newRegions);
-            }
-          }
+              return newRegions;
+            });
 
           if (resultRegionArray.length) {
-            console.log('resultRegionArray.length', resultRegionArray);
             await this._resultRegionRepository.save(resultRegionArray);
           }
         }
