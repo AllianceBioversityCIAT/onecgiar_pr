@@ -44,7 +44,13 @@
       <ng-template pTemplate="header">
         <tr>
           @for (column of columnOrder; track column.attr) {
-            <th (click)="validateOrder(column.attr)" [pSortableColumn]="column.attr" [id]="column.attr" [style.width]="column.width">
+            <th
+              (click)="validateOrder(column.attr)"
+              (keydown.enter)="validateOrder(column.attr)"
+              tabindex="0"
+              [pSortableColumn]="column.attr"
+              [id]="column.attr"
+              [style.width]="column.width">
               <div class="align-center">
                 <p-sortIcon [field]="column.attr"></p-sortIcon>
                 {{ column.title }}
@@ -122,7 +128,13 @@
               <div class="subResults">
                 @for (subResult of result['results']; track subResult) {
                   <div class="icon_container text-center" aria-hidden="false">
-                    <i class="pi pi-ellipsis-v" (click)="menu.toggle($event); onPressAction(subResult)"> </i>
+                    <button
+                      type="button"
+                      class="pi pi-ellipsis-v"
+                      (click)="menu.toggle($event); onPressAction(subResult)"
+                      (keydown.enter)="menu.toggle($event); onPressAction(subResult)"
+                      aria-label="Open actions menu"
+                      style="background: none; border: none; cursor: pointer; padding: 0"></button>
                   </div>
                 }
               </div>
@@ -164,7 +176,10 @@
         [pTooltip]="item.disabled ? item.tooltipText : null"
         tooltipPosition="bottom"
         [ngClass]="{ itemDisabled: item.disabled }"
-        (click)="item.disabled ? null : item.command(); menu.toggle($event)">
+        (click)="item.disabled ? null : item.command(); menu.toggle($event)"
+        (keydown.enter)="item.disabled ? null : item.command(); menu.toggle($event)"
+        tabindex="0"
+        role="menuitem">
         <i [class]="item.icon"></i>
         <span>{{ item.label }}</span>
       </div>

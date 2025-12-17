@@ -7,10 +7,21 @@
     </p-iconfield>
     <!-- apply filters button -->
     <p-overlaybadge value="" [badgeDisabled]="filtersCount() === 0">
-      <app-pr-button (click)="openFiltersDrawer()" [text]="filtersCountText()" [verticalMargin]="-6" icon="filter_alt" [reverse]="true" />
+      <app-pr-button
+        (click)="openFiltersDrawer()"
+        (keydown.enter)="openFiltersDrawer()"
+        [text]="filtersCountText()"
+        [verticalMargin]="-6"
+        icon="filter_alt"
+        [reverse]="true" />
     </p-overlaybadge>
     <!-- celar fitlers -->
-    <app-pr-button (click)="this.clearAllNewFilters()" text="Clear Filters" [verticalMargin]="-6" colorType="secondary" />
+    <app-pr-button
+      (click)="this.clearAllNewFilters()"
+      (keydown.enter)="this.clearAllNewFilters()"
+      text="Clear Filters"
+      [verticalMargin]="-6"
+      colorType="secondary" />
   </div>
 </div>
 
@@ -50,8 +61,15 @@
       tooltipTextPosition="bottom"
       [ngClass]="{ disabledButtons: !activeButtons() }"
       [tooltipText]="!activeButtons() ? 'To update a result, please ensure that you have a role assigned in the active portfolio.' : null"
-      (click)="activeButtons() ? (this.api.dataControlSE.updateResultModal = true) : null"></app-pr-button>
-    <p-button label="Download" variant="outlined" icon="pi pi-download" (click)="onDownLoadTableAsExcel()" [loading]="this.gettingReport()" />
+      (click)="activeButtons() ? (this.api.dataControlSE.updateResultModal = true) : null"
+      (keydown.enter)="activeButtons() ? (this.api.dataControlSE.updateResultModal = true) : null"></app-pr-button>
+    <p-button
+      label="Download"
+      variant="outlined"
+      icon="pi pi-download"
+      (click)="onDownLoadTableAsExcel()"
+      (keydown.enter)="onDownLoadTableAsExcel()"
+      [loading]="this.gettingReport()" />
   </div>
 </div>
 
@@ -168,8 +186,8 @@
 
     <!-- Footer buttons -->
     <div class="drawer-footer">
-      <p-button label="Cancel" variant="outlined" [style]="{ width: '100%' }" (click)="cancelFilters()" />
-      <p-button label="Apply filters" [style]="{ width: '100%' }" (click)="applyFilters()" />
+      <p-button label="Cancel" variant="outlined" [style]="{ width: '100%' }" (click)="cancelFilters()" (keydown.enter)="cancelFilters()" />
+      <p-button label="Apply filters" [style]="{ width: '100%' }" (click)="applyFilters()" (keydown.enter)="applyFilters()" />
     </div>
   </div>
 </div>
