@@ -793,7 +793,7 @@ export class ResultsApiService {
 
   GETInnovationByResultId(resultId, isP25: boolean = false) {
     const p22Url = `${environment.apiBaseUrl}api/ipsr/innovation/${resultId}`;
-    const p25Url = `${this.baseApiBaseUrlV2}ipsr-general-information/innovation/${resultId}`;
+    const p25Url = `${this.baseApiBaseUrlV2}ipsr-framework/ipsr-general-information/innovation/${resultId}`;
     const url = isP25 ? p25Url : p22Url;
 
     return this.http.get<any>(url).pipe(this.saveButtonSE.isGettingSectionPipe());
@@ -822,7 +822,7 @@ export class ResultsApiService {
 
   PATCHIpsrGeneralInfo(body, resulId, isP25: boolean = false) {
     const p22Url = `${environment.apiBaseUrl}api/ipsr/results-innovation-package/general-information/${resulId}`;
-    const p25Url = `${this.baseApiBaseUrlV2}ipsr-general-information/general-information/${resulId}`;
+    const p25Url = `${this.baseApiBaseUrlV2}ipsr-framework/ipsr-general-information/general-information/${resulId}`;
     const url = isP25 ? p25Url : p22Url;
 
     return this.http.patch<any>(url, body).pipe(this.saveButtonSE.isCreatingPipe());
@@ -978,19 +978,22 @@ export class ResultsApiService {
   }
 
   PATCHInnovationPathwayStepFourBilaterals(body) {
-    return this.http.patch<any>(`${this.baseApiBaseUrlV2}ipsr-pathway/save/step-four/bilaterals/${this.ipsrDataControlSE.resultInnovationId}`, body);
+    return this.http.patch<any>(
+      `${this.baseApiBaseUrlV2}ipsr-framework/ipsr-pathway/save/step-four/bilaterals/${this.ipsrDataControlSE.resultInnovationId}`,
+      body
+    );
   }
 
   GETInnovationPathwayStepFourByRiId(isP25: boolean = false) {
     const p22Url = `${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/step-four/${this.ipsrDataControlSE.resultInnovationId}`;
-    const p25Url = `${this.baseApiBaseUrlV2}ipsr-pathway/get/step-four/${this.ipsrDataControlSE.resultInnovationId}`;
+    const p25Url = `${this.baseApiBaseUrlV2}ipsr-framework/ipsr-pathway/get/step-four/${this.ipsrDataControlSE.resultInnovationId}`;
 
     return this.http.get<any>(isP25 ? p25Url : p22Url).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   PATCHInnovationPathwayStepFourByRiId(body, isP25: boolean = false) {
     const p22Url = `${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-four/${this.ipsrDataControlSE.resultInnovationId}`;
-    const p25Url = `${this.baseApiBaseUrlV2}ipsr-pathway/save/step-four/${this.ipsrDataControlSE.resultInnovationId}`;
+    const p25Url = `${this.baseApiBaseUrlV2}ipsr-framework/ipsr-pathway/save/step-four/${this.ipsrDataControlSE.resultInnovationId}`;
     const url = isP25 ? p25Url : p22Url;
     return this.http.patch<any>(url, body).pipe(this.saveButtonSE.isSavingPipe());
   }
