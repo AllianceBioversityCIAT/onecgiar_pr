@@ -200,16 +200,82 @@ export class IpsrContributorsPartnersService {
       const hasProp = (key: string) =>
         Object.prototype.hasOwnProperty.call(payload ?? {}, key);
 
-      const hasUnifiedToc = [
-        'contributing_initiatives',
-        'accepted_contributing_initiatives',
-        'pending_contributing_initiatives',
-        'changePrimaryInit',
-        'email_template',
-        'result_toc_result',
-        'contributors_result_toc_result',
-        'cancel_pending_requests',
-      ].some(hasProp);
+      /**
+       * Detecta si realmente hay cambios de ToC que procesar.
+       * La idea es NO tocar nada de ToC (ni contributors, ni RTR)
+       * cuando el frontend solo manda estructuras vacías o nulas.
+       *
+       * Nota: Esta lógica es específica para el flujo IPSR y no
+       * afecta el módulo de Results Framework.
+       */
+      const hasUnifiedToc = (() => {
+        const ci = (payload as any)?.contributing_initiatives;
+
+        // 1) Nuevas / existentes iniciativas contribuyentes
+        if (
+          Array.isArray(ci?.accepted_contributing_initiatives) &&
+          ci.accepted_contributing_initiatives.length
+        ) {
+          return true;
+        }
+
+        if (
+          Array.isArray(ci?.pending_contributing_initiatives) &&
+          ci.pending_contributing_initiatives.length
+        ) {
+          return true;
+        }
+
+        if (
+          Array.isArray((payload as any)?.accepted_contributing_initiatives) &&
+          (payload as any).accepted_contributing_initiatives.length
+        ) {
+          return true;
+        }
+
+        if (
+          Array.isArray((payload as any)?.pending_contributing_initiatives) &&
+          (payload as any).pending_contributing_initiatives.length
+        ) {
+          return true;
+        }
+
+        // 2) Cambio explícito de primary init o cancelación de requests
+        if ((payload as any)?.changePrimaryInit != null) {
+          return true;
+        }
+
+        if (
+          Array.isArray((payload as any)?.cancel_pending_requests) &&
+          (payload as any).cancel_pending_requests.length
+        ) {
+          return true;
+        }
+
+        // 3) Mapeo ToC primario: solo cuenta si hay result_toc_results reales
+        const primaryRtr = (payload as any)?.result_toc_result;
+        if (
+          Array.isArray(primaryRtr?.result_toc_results) &&
+          primaryRtr.result_toc_results.length
+        ) {
+          return true;
+        }
+
+        // 4) Mapeo ToC de contribuyentes con resultados asociados
+        if (
+          Array.isArray((payload as any)?.contributors_result_toc_result) &&
+          (payload as any).contributors_result_toc_result.some(
+            (c: any) =>
+              Array.isArray(c?.result_toc_results) &&
+              c.result_toc_results.length,
+          )
+        ) {
+          return true;
+        }
+
+        // Si llegamos aquí, no hay cambios "reales" de ToC que procesar
+        return false;
+      })();
 
       const hasUnifiedPartners = [
         'institutions',
