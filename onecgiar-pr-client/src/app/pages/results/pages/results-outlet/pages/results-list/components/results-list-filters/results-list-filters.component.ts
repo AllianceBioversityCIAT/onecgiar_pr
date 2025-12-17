@@ -80,6 +80,10 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     return `Apply filters (${this.filtersCount()})`;
   });
 
+  activeButtons = computed(() => {
+    return this.api.dataControlSE?.myInitiativesListReportingByPortfolio?.length > 0 || this.api.rolesSE?.isAdmin;
+  });
+
   // Computed property to generate grouped chips from applied filters
   filterChipGroups = computed(() => {
     const groups: Array<{
