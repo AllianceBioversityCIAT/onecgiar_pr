@@ -6,6 +6,7 @@ import { RdTheoryOfChangesServicesService } from '../../../../../results/pages/r
 import { RdContributorsAndPartnersService } from '../../../../../results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.service';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
+import { ResultsCenterDto } from '../../../../../results/pages/result-detail/pages/rd-contributors-and-partners/models/contributorsAndPartnersBody';
 
 @Component({
   selector: 'app-ipsr-contributors',
@@ -123,7 +124,6 @@ export class IpsrContributorsComponent implements OnInit {
   }
 
   getSectionInformation() {
-    console.log(this.fieldsManagerSE.isP25());
     this.api.resultsSE.GETContributorsByIpsrResultId(this.fieldsManagerSE.isP25()).subscribe(({ response }) => {
       this.contributorsBody = response;
       this.contributorsBody.institutions.forEach(item => (item.institutions_type_name = item.institutions_name));
@@ -137,6 +137,9 @@ export class IpsrContributorsComponent implements OnInit {
 
       this.contributorsBody.contributingInitiativeNew = [];
       console.log(response);
+      //? map by service
+      this.rdPartnersSE.partnersBody.contributing_center = this.contributorsBody.contributing_center as ResultsCenterDto[];
+      //?
     });
   }
 
@@ -148,6 +151,7 @@ export class IpsrContributorsComponent implements OnInit {
   saveTocLogicp25() {}
 
   onSaveSection() {
+    console.log(this.rdPartnersSE.partnersBody);
     this.fieldsManagerSE.isP25() ? this.saveTocLogicp25() : this.saveTocLogic();
     const sendedData = {
       ...this.contributorsBody,
@@ -157,7 +161,10 @@ export class IpsrContributorsComponent implements OnInit {
           ...this.contributorsBody.contributing_initiatives.pending_contributing_initiatives,
           ...this.contributorsBody.contributingInitiativeNew
         ]
-      }
+      },
+      //? map by service
+      contributing_center: this.rdPartnersSE.partnersBody.contributing_center
+      //?
     };
 
     console.log(sendedData);
