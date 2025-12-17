@@ -1,8 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { IpsrStep4Body } from './model/Ipsr-step-4-body.model';
 import { Router } from '@angular/router';
 import { IpsrDataControlService } from '../../../../../../services/ipsr-data-control.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
+import { InnovationControlListService } from '../../../../../../../../shared/services/global/innovation-control-list.service';
 
 @Component({
   selector: 'app-step-n4',
@@ -13,6 +14,7 @@ import { ApiService } from '../../../../../../../../shared/services/api/api.serv
 export class StepN4Component implements OnInit {
   ipsrStep4Body = new IpsrStep4Body();
   disabledOptionsPartners = [];
+  innovationControlListSE = inject(InnovationControlListService);
 
   constructor(
     public ipsrDataControlSE: IpsrDataControlService,

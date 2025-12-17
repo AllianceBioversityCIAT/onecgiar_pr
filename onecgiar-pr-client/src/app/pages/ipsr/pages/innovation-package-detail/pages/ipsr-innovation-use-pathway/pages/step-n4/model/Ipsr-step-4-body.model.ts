@@ -12,6 +12,8 @@ export class IpsrStep4Body {
   is_result_ip_published: boolean = null;
   ipsr_pdf_report: string = null;
   ipsr_materials: IPSRMaterialsStep4[] = [];
+  has_scaling_studies: boolean = false;
+  innovation_readiness_level_id: number = null;
 }
 
 export class InstitutionsexpectedinvestmentStep4 {
