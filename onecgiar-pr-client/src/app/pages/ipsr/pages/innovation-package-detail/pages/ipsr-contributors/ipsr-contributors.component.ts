@@ -123,7 +123,6 @@ export class IpsrContributorsComponent implements OnInit {
   }
 
   getSectionInformation() {
-    console.log(this.fieldsManagerSE.isP25());
     this.api.resultsSE.GETContributorsByIpsrResultId(this.fieldsManagerSE.isP25()).subscribe(({ response }) => {
       this.contributorsBody = response;
       this.contributorsBody.institutions.forEach(item => (item.institutions_type_name = item.institutions_name));
@@ -136,7 +135,6 @@ export class IpsrContributorsComponent implements OnInit {
       ];
 
       this.contributorsBody.contributingInitiativeNew = [];
-      console.log(response);
     });
   }
 
@@ -159,8 +157,6 @@ export class IpsrContributorsComponent implements OnInit {
         ]
       }
     };
-
-    console.log(sendedData);
 
     this.api.resultsSE.PATCHContributorsByIpsrResultId(sendedData, this.fieldsManagerSE.isP25()).subscribe(({ response }) => {
       this.getSectionInformation();

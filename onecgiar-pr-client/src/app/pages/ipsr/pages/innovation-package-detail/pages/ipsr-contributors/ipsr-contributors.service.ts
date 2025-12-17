@@ -19,7 +19,6 @@ export class IpsrContributorsService {
         response.forEach(project => {
           project.project_id = project.id;
         });
-        console.log(this.clarisaProjectsList);
       },
       error: err => {
         console.error('Error loading Clarisa projects:', err);
