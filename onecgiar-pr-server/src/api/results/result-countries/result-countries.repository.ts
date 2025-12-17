@@ -202,6 +202,46 @@ export class ResultCountryRepository
     }
   }
 
+  async getResultCountriesByResultIdAndCountryIds(
+    resultId: number,
+    countryIds: number[],
+    geoScopeRoleId: number = 1,
+  ) {
+    if (!countryIds || countryIds.length === 0) {
+      return [];
+    }
+
+    const query = `
+      select 
+        rc.result_country_id,
+        rc.is_active,
+        rc.result_id,
+        rc.country_id,
+        rc.created_date,
+        rc.last_updated_date 
+      from result_country rc 
+      where rc.is_active > 0
+        and rc.result_id = ?
+        and rc.country_id IN (${countryIds.map(() => '?').join(', ')})
+        and rc.geo_scope_role_id = ?;
+    `;
+
+    try {
+      const result: ResultCountry[] = await this.query(query, [
+        resultId,
+        ...countryIds,
+        geoScopeRoleId,
+      ]);
+      return result;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultCountryRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
   async updateCountries(
     resultId: number,
     countriesArray: number[],
