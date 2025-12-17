@@ -63,29 +63,35 @@ export class IpsrContributorsComponent implements OnInit {
     }
   }
 
+  getTocLogic() {
+    this.theoryOfChangesServices.theoryOfChangeBody = this.contributorsBody;
+
+    if (this.contributorsBody?.result_toc_result?.result_toc_results !== null) {
+      this.theoryOfChangesServices.result_toc_result = this.contributorsBody?.result_toc_result;
+      this.theoryOfChangesServices.result_toc_result.planned_result =
+        this.contributorsBody?.result_toc_result?.result_toc_results[0]?.planned_result ?? null;
+      this.theoryOfChangesServices.result_toc_result.showMultipleWPsContent = true;
+    }
+
+    if (this.contributorsBody?.contributors_result_toc_result !== null) {
+      this.theoryOfChangesServices.contributors_result_toc_result = this.contributorsBody?.contributors_result_toc_result;
+      this.theoryOfChangesServices.contributors_result_toc_result.forEach((tab: any, index) => {
+        tab.planned_result = tab.result_toc_results[0]?.planned_result ?? null;
+        tab.index = index;
+        tab.showMultipleWPsContent = true;
+      });
+    }
+  }
+
+  getTocLogicp25() {}
+
   getSectionInformation() {
     console.log(this.fieldsManagerSE.isP25());
     this.api.resultsSE.GETContributorsByIpsrResultId(this.fieldsManagerSE.isP25()).subscribe(({ response }) => {
       this.contributorsBody = response;
       this.contributorsBody.institutions.forEach(item => (item.institutions_type_name = item.institutions_name));
 
-      this.theoryOfChangesServices.theoryOfChangeBody = this.contributorsBody;
-
-      if (this.contributorsBody?.result_toc_result?.result_toc_results !== null) {
-        this.theoryOfChangesServices.result_toc_result = this.contributorsBody?.result_toc_result;
-        this.theoryOfChangesServices.result_toc_result.planned_result =
-          this.contributorsBody?.result_toc_result?.result_toc_results[0]?.planned_result ?? null;
-        this.theoryOfChangesServices.result_toc_result.showMultipleWPsContent = true;
-      }
-
-      if (this.contributorsBody?.contributors_result_toc_result !== null) {
-        this.theoryOfChangesServices.contributors_result_toc_result = this.contributorsBody?.contributors_result_toc_result;
-        this.theoryOfChangesServices.contributors_result_toc_result.forEach((tab: any, index) => {
-          tab.planned_result = tab.result_toc_results[0]?.planned_result ?? null;
-          tab.index = index;
-          tab.showMultipleWPsContent = true;
-        });
-      }
+      this.fieldsManagerSE.isP25() ? this.getTocLogicp25() : this.getTocLogic();
 
       this.disabledOptions = [
         ...(this.contributorsBody?.contributing_initiatives.accepted_contributing_initiatives || []),
@@ -93,14 +99,19 @@ export class IpsrContributorsComponent implements OnInit {
       ];
 
       this.contributorsBody.contributingInitiativeNew = [];
+      console.log(response);
     });
   }
 
-  onSaveSection() {
+  saveTocLogic() {
     this.contributorsBody.result_toc_result = this.theoryOfChangesServices.theoryOfChangeBody.result_toc_result;
 
     this.contributorsBody.contributors_result_toc_result = this.theoryOfChangesServices.contributors_result_toc_result;
+  }
+  saveTocLogicp25() {}
 
+  onSaveSection() {
+    this.fieldsManagerSE.isP25() ? this.saveTocLogicp25() : this.saveTocLogic();
     const sendedData = {
       ...this.contributorsBody,
       contributing_initiatives: {
