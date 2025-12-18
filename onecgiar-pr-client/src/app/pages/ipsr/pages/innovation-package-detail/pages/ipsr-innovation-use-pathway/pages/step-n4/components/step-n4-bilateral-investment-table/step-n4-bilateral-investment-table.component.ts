@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit, Output, EventEmitter } from '@angular/core';
 import { IpsrStep4Body } from '../../model/Ipsr-step-4-body.model';
 import { ManageRipUnitTimeService } from '../../services/manage-rip-unit-time.service';
 import { RolesService } from '../../../../../../../../../../shared/services/global/roles.service';
@@ -6,13 +6,14 @@ import { ApiService } from '../../../../../../../../../../shared/services/api/ap
 import { IpsrDataControlService } from '../../../../../../../../services/ipsr-data-control.service';
 
 @Component({
-    selector: 'app-step-n4-bilateral-investment-table',
-    templateUrl: './step-n4-bilateral-investment-table.component.html',
-    styleUrls: ['./step-n4-bilateral-investment-table.component.scss'],
-    standalone: false
+  selector: 'app-step-n4-bilateral-investment-table',
+  templateUrl: './step-n4-bilateral-investment-table.component.html',
+  styleUrls: ['./step-n4-bilateral-investment-table.component.scss'],
+  standalone: false
 })
 export class StepN4BilateralInvestmentTableComponent implements OnInit {
   @Input() body = new IpsrStep4Body();
+  @Output() projectAdded = new EventEmitter<void>();
   showModal = false;
   isInitiative = true;
   constructor(

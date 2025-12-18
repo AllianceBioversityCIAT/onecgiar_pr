@@ -32,7 +32,7 @@
         <div class="editBilateral">
           <div style="display: flex; align-items: center">
             {{
-              this.api.fieldsManagerSE.isP25() ? item?.obj_result_project.obj_clarisa_project.shortName : item?.obj_non_pooled_projetct?.grant_title
+              this.api.fieldsManagerSE.isP25() ? item?.obj_result_project?.obj_clarisa_project?.shortName : item?.obj_non_pooled_projetct?.grant_title
             }}
           </div>
           <div style="margin-top: 0px; margin-right: 0px">
@@ -98,7 +98,7 @@
 </app-no-data-text>
 
 @if (this.api.fieldsManagerSE.isP25()) {
-  <app-step-n4-add-project [body]="this.body"></app-step-n4-add-project>
+  <app-step-n4-add-project [body]="this.body" (projectAdded)="projectAdded.emit()"></app-step-n4-add-project>
 } @else {
   <app-step-n4-add-bilateral [body]="this.body"></app-step-n4-add-bilateral>
 }

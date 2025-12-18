@@ -1,4 +1,4 @@
-import { Component, Input, DoCheck, OnInit } from '@angular/core';
+import { Component, Input, DoCheck, OnInit, Output, EventEmitter } from '@angular/core';
 import { BilateralexpectedinvestmentStep4, IpsrStep4Body } from '../../../../model/Ipsr-step-4-body.model';
 import { ApiService } from '../../../../../../../../../../../../shared/services/api/api.service';
 import { InstitutionsService } from '../../../../../../../../../../../../shared/services/global/institutions.service';
@@ -13,6 +13,7 @@ import { RdContributorsAndPartnersService } from '../../../../../../../../../../
 })
 export class StepN4AddProjectComponent implements DoCheck, OnInit {
   @Input() body: IpsrStep4Body = new IpsrStep4Body();
+  @Output() projectAdded = new EventEmitter<void>();
   visible = false;
   projectBody = new AddProjectBody();
   showForm = true;
@@ -38,6 +39,7 @@ export class StepN4AddProjectComponent implements DoCheck, OnInit {
         this.body.bilateral_expected_investment.push(response);
 
         this.visible = false;
+        this.projectAdded.emit();
         this.api.alertsFe.show({ id: 'project', title: `Project has been added.`, status: 'success' });
       },
       error: err => {
