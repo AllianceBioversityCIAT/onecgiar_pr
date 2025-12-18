@@ -130,7 +130,7 @@ export class BilateralService {
 
     for (const result of incomingResults) {
       try {
-        // Validar datos básicos antes de la transacción
+        // Validate basic data before transaction
         if (!result?.data || typeof result.data !== 'object') {
           throw new BadRequestException(
             'Each result entry must include a "data" object with the bilateral payload.',
@@ -139,7 +139,7 @@ export class BilateralService {
 
         const bilateralDto = result.data;
 
-        // Validar science_program_id ANTES de comenzar la transacción
+        // Validate science_program_id BEFORE starting the transaction
         await this.validateTocMappingInitiatives(
           bilateralDto.toc_mapping,
           bilateralDto.contributing_programs,
@@ -391,7 +391,7 @@ export class BilateralService {
 
     const bilateralDto = firstResult.data;
 
-    // Validar science_program_id antes de comenzar a guardar
+    // Validate science_program_id before starting to save
     await this.validateTocMappingInitiatives(
       bilateralDto.toc_mapping,
       bilateralDto.contributing_programs,
@@ -621,9 +621,9 @@ export class BilateralService {
 
     const scienceProgramIds: string[] = [];
 
-    // Recopilar todos los science_program_id
+    // Collect all science_program_id values
     if (tocMapping && typeof tocMapping === 'object') {
-      // Verificar si existe la propiedad, incluso si es string vacío
+      // Check if property exists, even if it's an empty string
       if (
         'science_program_id' in tocMapping &&
         tocMapping.science_program_id != null
@@ -668,7 +668,7 @@ export class BilateralService {
       });
     }
 
-    // Si no hay science_program_id para validar, salir
+    // If there are no science_program_id to validate, exit
     if (scienceProgramIds.length === 0) {
       this.logger.debug(
         'No science_program_id found to validate. Skipping validation.',
@@ -680,7 +680,7 @@ export class BilateralService {
       `Validating ${scienceProgramIds.length} science_program_id(s): ${scienceProgramIds.join(', ')}`,
     );
 
-    // Validar que todos los science_program_id existan
+    // Validate that all science_program_id exist
     const invalidPrograms: string[] = [];
     for (const programId of scienceProgramIds) {
       const normalizedCode = programId.trim().toUpperCase();
@@ -704,7 +704,7 @@ export class BilateralService {
       }
     }
 
-    // Si hay programas inválidos, retornar error de inmediato
+    // If there are invalid programs, return error immediately
     if (invalidPrograms.length > 0) {
       const errorMessage = `The following science_program_id(s) do not exist in CLARISA: ${invalidPrograms.join(', ')}. Please provide valid initiative codes.`;
       this.logger.error(errorMessage);
@@ -886,7 +886,7 @@ export class BilateralService {
         `Processing TOC mapping: science_program_id=${science_program_id}, roleId=${roleId}, hasData=${!!(aow_compose_code || result_title)}`,
       );
 
-      // Validación mínima: science_program_id es requerido
+      // Minimum validation: science_program_id is required
       if (!science_program_id) {
         this.logger.warn(
           `TOC mapping missing required field: science_program_id (role ${roleId})`,
@@ -894,7 +894,7 @@ export class BilateralService {
         continue;
       }
 
-      // Determinar si tenemos datos suficientes para intentar mapeo completo
+      // Determine if we have enough data to attempt full mapping
       const hasFullMappingData =
         aow_compose_code &&
         result_title &&
@@ -908,9 +908,9 @@ export class BilateralService {
       try {
         let mapToToc: any[] | null = null;
         let firstMap: any = null;
-        let isInitiativeOnlyMapping = true; // Por defecto, asumimos mapeo básico
+        let isInitiativeOnlyMapping = true; // By default, assume basic mapping
 
-        // Si tenemos datos completos, intentar buscar el mapeo completo del TOC
+        // If we have complete data, attempt to find the full TOC mapping
         if (hasFullMappingData) {
           this.logger.debug(
             `Attempting full TOC mapping search for ${science_program_id}`,
@@ -920,21 +920,21 @@ export class BilateralService {
               mapping,
             );
 
-          // El método ahora siempre retorna un array (puede estar vacío)
+          // The method now always returns an array (may be empty)
           if (
             Array.isArray(mapToToc) &&
             mapToToc.length > 0 &&
             mapToToc[0].toc_result_id &&
             mapToToc[0].toc_results_indicator_id
           ) {
-            // Mapeo completo encontrado
+            // Full mapping found
             firstMap = mapToToc[0];
             isInitiativeOnlyMapping = false;
             this.logger.debug(
               `Full TOC mapping found for ${science_program_id}: toc_result_id=${firstMap.toc_result_id}`,
             );
           } else {
-            // No se encontró mapeo completo, crear mapeo básico
+            // Full mapping not found, create basic mapping
             this.logger.warn(
               `TOC mapping did not match any ToC results (compose=${aow_compose_code}, program=${science_program_id}). Will create basic initiative mapping.`,
             );
@@ -945,7 +945,7 @@ export class BilateralService {
           );
         }
 
-        // Si no hay mapeo completo, crear mapeo básico solo de iniciativa
+        // If there is no full mapping, create basic initiative-only mapping
         if (isInitiativeOnlyMapping) {
           firstMap = {
             toc_result_id: null,
@@ -960,7 +960,7 @@ export class BilateralService {
           );
         }
 
-        // Buscar la iniciativa (normalizar el código para la búsqueda)
+        // Search for the initiative (normalize the code for search)
         const normalizedCode = science_program_id?.trim().toUpperCase();
         this.logger.debug(
           `Looking up initiative with official_code: ${science_program_id} (normalized: ${normalizedCode})`,
@@ -987,7 +987,7 @@ export class BilateralService {
           `Found initiative: id=${init.id}, name=${init.name}, official_code=${init.official_code}, active=${init.active}. Processing TOC mapping (role: ${roleId}, isInitiativeOnly: ${isInitiativeOnlyMapping})`,
         );
 
-        // Crear/actualizar relación result_by_initiative
+        // Create/update result_by_initiative relationship
         this.logger.debug(
           `Upserting result_by_initiative: resultId=${resultId}, initiativeId=${init.id}, roleId=${roleId}`,
         );
@@ -1000,10 +1000,10 @@ export class BilateralService {
           this.logger.error(
             `Error upserting result_by_initiative for result ${resultId}, initiative ${init.id}: ${(err as Error).message}`,
           );
-          throw err; // Re-lanzar para que se capture en el catch externo
+          throw err; // Re-throw to be caught by outer catch
         }
 
-        // Determinar toc_level_id si tenemos categoría
+        // Determine toc_level_id if we have category
         const categoryToLevelMap = {
           OUTPUT: 1,
           OUTCOME: 2,
@@ -1020,8 +1020,8 @@ export class BilateralService {
           );
         }
 
-        // Buscar si ya existe un mapeo TOC para este resultado e iniciativa
-        // Usar IsNull() cuando toc_result_id es null para búsqueda correcta
+        // Search if a TOC mapping already exists for this result and initiative
+        // Use IsNull() when toc_result_id is null for correct search
         const whereCondition: any = {
           result_id: resultId,
           initiative_id: init.id,
@@ -1044,15 +1044,15 @@ export class BilateralService {
           where: whereCondition,
         });
 
-        // Crear o actualizar el registro básico en results_toc_result
+        // Create or update the basic record in results_toc_result
         let tocMapping;
 
-        // Validar que el registro encontrado realmente corresponde a la iniciativa correcta
+        // Validate that the found record actually corresponds to the correct initiative
         if (existingToc && existingToc.initiative_id !== init.id) {
           this.logger.warn(
             `Found TOC mapping (id: ${existingToc.result_toc_result_id}) but initiative_id mismatch: expected ${init.id}, found ${existingToc.initiative_id}. Will create new mapping.`,
           );
-          // No usar este registro, crear uno nuevo
+          // Don't use this record, create a new one
           const newTocMappingData = {
             created_by: userId,
             toc_result_id: firstMap.toc_result_id,
@@ -1071,11 +1071,11 @@ export class BilateralService {
             `Successfully created new TOC mapping (id: ${tocMapping.result_toc_result_id}) for result ${resultId}, initiative ${init.id} (${science_program_id})`,
           );
         } else if (existingToc) {
-          // El registro existe y corresponde a la iniciativa correcta
+          // The record exists and corresponds to the correct initiative
           this.logger.debug(
             `Found existing TOC mapping (id: ${existingToc.result_toc_result_id}) for result ${resultId}, initiative ${init.id} (${science_program_id})`,
           );
-          // Actualizar planned_result a true si no está ya establecido
+          // Update planned_result to true if not already set
           if (existingToc.planned_result !== true) {
             await this._resultsTocResultsRepository.update(
               { result_toc_result_id: existingToc.result_toc_result_id },
@@ -1099,7 +1099,7 @@ export class BilateralService {
               initiative_id: init.id,
               result_id: resultId,
               toc_level_id: tocLevelId,
-              planned_result: true, // Marcar como planned_result = 1
+              planned_result: true, // Mark as planned_result = 1
             };
             this.logger.debug(
               `Attempting to save TOC mapping with data: ${JSON.stringify(newTocMappingData)}`,
@@ -1115,11 +1115,11 @@ export class BilateralService {
               `Error saving TOC mapping for result ${resultId}, initiative ${init.id} (${science_program_id}): ${(saveError as Error).message}`,
             );
             this.logger.error(`Error stack: ${(saveError as Error).stack}`);
-            throw saveError; // Re-lanzar para que se capture en el catch externo
+            throw saveError; // Re-throw to be caught by outer catch
           }
         }
 
-        // Si tenemos mapeo completo (con indicador), crear/actualizar los indicadores
+        // If we have full mapping (with indicator), create/update indicators
         if (!isInitiativeOnlyMapping && firstMap.toc_results_indicator_id) {
           const existingIndicator =
             await this._resultsTocResultsIndicatorsRepository.findOne({
@@ -1174,13 +1174,12 @@ export class BilateralService {
         );
       } catch (err) {
         this.logger.error(
-          `TOC mapping unexpected error for program ${mapping.science_program_id} (role ${roleId}): ${
-            (err as Error).message
+          `TOC mapping unexpected error for program ${mapping.science_program_id} (role ${roleId}): ${(err as Error).message
           }`,
         );
         this.logger.error(`TOC mapping error stack: ${(err as Error).stack}`);
-        // No continuar con el siguiente mapping si hay un error crítico
-        // pero tampoco fallar todo el proceso
+        // Don't continue with next mapping if there's a critical error
+        // but also don't fail the entire process
         continue;
       }
     }
@@ -1198,12 +1197,12 @@ export class BilateralService {
     const onlyActive = (arr: any[]) =>
       Array.isArray(arr)
         ? arr.filter(
-            (item) =>
-              item?.is_active === undefined ||
-              item.is_active === null ||
-              item.is_active === true ||
-              item.is_active === 1,
-          )
+          (item) =>
+            item?.is_active === undefined ||
+            item.is_active === null ||
+            item.is_active === true ||
+            item.is_active === 1,
+        )
         : arr;
 
     result.result_region_array = onlyActive(result.result_region_array);
