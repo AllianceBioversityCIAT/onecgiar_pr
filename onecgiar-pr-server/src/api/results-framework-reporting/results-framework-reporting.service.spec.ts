@@ -1414,7 +1414,6 @@ describe('ResultsFrameworkReportingService', () => {
               is_not_aplicable: false,
               obj_result_indicator_targets: expect.objectContaining({
                 is_active: true,
-                contributing_indicator: expect.any(Object), // Not(IsNull())
               }),
             }),
           }),

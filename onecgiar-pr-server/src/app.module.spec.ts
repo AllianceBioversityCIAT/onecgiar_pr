@@ -39,10 +39,16 @@ describe('AppModule metadata', () => {
       JwtMiddleware,
       apiVersionMiddleware,
     );
-    expect(firstChain.exclude).toHaveBeenCalledWith({
-      path: 'api/platform-report/(.*)',
-      method: RequestMethod.ALL,
-    });
+    expect(firstChain.exclude).toHaveBeenCalledWith(
+      {
+        path: 'api/platform-report/(.*)',
+        method: RequestMethod.ALL,
+      },
+      {
+        path: 'api/bilateral/(.*)',
+        method: RequestMethod.ALL,
+      },
+    );
     expect(firstChain.forRoutes).toHaveBeenCalledWith(
       {
         path: 'api/(.*)',

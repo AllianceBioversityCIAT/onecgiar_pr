@@ -7,5 +7,6 @@ import { ClarisaProjectsRepository } from './clarisa-projects.repository';
 @Module({
   controllers: [ClarisaProjectsController],
   providers: [ClarisaProjectsService, HandlersError, ClarisaProjectsRepository],
+  exports: [ClarisaProjectsService, ClarisaProjectsRepository],
 })
 export class ClarisaProjectsModule {}
