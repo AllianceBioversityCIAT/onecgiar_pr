@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ContributorsBody } from './model/contributorsBody';
@@ -24,6 +24,11 @@ export class IpsrContributorsComponent implements OnInit {
   contributingInitiativesList = [];
   fieldsManagerSE = inject(FieldsManagerService);
   disabledText = 'To remove this center, please contact your librarian';
+  submitter: string = '';
+  result_toc_result = null;
+  contributors_result_toc_result = null;
+  initiativeIdSignal = signal<any>(null);
+  getConsumed = signal<boolean>(false);
   constructor(
     public api: ApiService,
     public rolesSE: RolesService,
@@ -104,34 +109,34 @@ export class IpsrContributorsComponent implements OnInit {
     this.rdPartnersSE.partnersBody?.contributing_and_primary_initiative.forEach(
       init => (init.full_name = `${init?.official_code} - <strong>${init?.short_name}</strong> - ${init?.initiative_name}`)
     );
-    // this.submitter = this.partnersBody.contributing_and_primary_initiative.find(
-    //   init => init.id === this.partnersBody?.result_toc_result?.initiative_id
-    // )?.full_name;
-    // if (this.partnersBody?.impactsTarge)
-    //   this.partnersBody?.impactsTarge.forEach(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
-    // if (this.partnersBody?.sdgTargets)
-    //   this.partnersBody?.sdgTargets.forEach(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
-    // if (this.partnersBody?.result_toc_result?.result_toc_results !== null) {
-    //   this.result_toc_result = this.partnersBody?.result_toc_result;
-    //   this.result_toc_result.planned_result = this.partnersBody?.result_toc_result?.result_toc_results[0]?.planned_result ?? null;
-    //   this.result_toc_result.showMultipleWPsContent = true;
-    // }
-    // if (this.partnersBody?.contributors_result_toc_result !== null) {
-    //   this.contributors_result_toc_result = this.partnersBody?.contributors_result_toc_result;
-    //   this.contributors_result_toc_result.forEach((tab: any, index) => {
-    //     tab.planned_result = tab.result_toc_results[0]?.planned_result ?? null;
-    //     tab.index = index;
-    //     tab.showMultipleWPsContent = true;
-    //   });
-    // }
+    this.submitter = this.rdPartnersSE.partnersBody.contributing_and_primary_initiative.find(
+      init => init.id === this.rdPartnersSE.partnersBody?.result_toc_result?.initiative_id
+    )?.full_name;
+    if (this.rdPartnersSE.partnersBody?.impactsTarge)
+      this.rdPartnersSE.partnersBody?.impactsTarge.forEach(item => (item.full_name = `<strong>${item.name}</strong> - ${item.target}`));
+    if (this.rdPartnersSE.partnersBody?.sdgTargets)
+      this.rdPartnersSE.partnersBody?.sdgTargets.forEach(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
+    if (this.rdPartnersSE.partnersBody?.result_toc_result?.result_toc_results !== null) {
+      this.result_toc_result = this.rdPartnersSE.partnersBody?.result_toc_result;
+      this.result_toc_result.planned_result = this.rdPartnersSE.partnersBody?.result_toc_result?.result_toc_results[0]?.planned_result ?? null;
+      this.result_toc_result.showMultipleWPsContent = true;
+    }
+    if (this.rdPartnersSE.partnersBody?.contributors_result_toc_result !== null) {
+      this.contributors_result_toc_result = this.rdPartnersSE.partnersBody?.contributors_result_toc_result;
+      this.contributors_result_toc_result.forEach((tab: any, index) => {
+        tab.planned_result = tab.result_toc_results[0]?.planned_result ?? null;
+        tab.index = index;
+        tab.showMultipleWPsContent = true;
+      });
+    }
     this.rdPartnersSE.partnersBody.changePrimaryInit = this.rdPartnersSE.partnersBody?.result_toc_result.initiative_id;
     console.log(this.rdPartnersSE.partnersBody);
-    // this.disabledOptions = [
-    //   ...(this.partnersBody?.contributing_initiatives.accepted_contributing_initiatives || []),
-    //   ...(this.partnersBody?.contributing_initiatives.pending_contributing_initiatives || [])
-    // ];
-    // this.initiativeIdSignal.set(this.partnersBody?.result_toc_result?.initiative_id);
-    // this.getConsumed.set(true);
+    this.disabledOptions = [
+      ...(this.rdPartnersSE.partnersBody?.contributing_initiatives.accepted_contributing_initiatives || []),
+      ...(this.rdPartnersSE.partnersBody?.contributing_initiatives.pending_contributing_initiatives || [])
+    ];
+    this.initiativeIdSignal.set(this.rdPartnersSE.partnersBody?.result_toc_result?.initiative_id);
+    this.getConsumed.set(true);
     // //! TOC END
     this.contributorsBody.bilateral_projects.forEach(project => {
       project.fullName = project.obj_clarisa_project.fullName;
