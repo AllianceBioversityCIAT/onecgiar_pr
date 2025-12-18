@@ -33,6 +33,7 @@ export class IpsrContributorsComponent implements OnInit {
     this.requestEvent();
     this.api.dataControlSE.detailSectionTitle('Contributors');
     this.api.resultsSE.ipsrDataControlSE.inContributos = true;
+    this.rdPartnersSE.loadClarisaProjects();
   }
 
   toggleActiveContributor(item) {
@@ -118,9 +119,9 @@ export class IpsrContributorsComponent implements OnInit {
     // this.initiativeIdSignal.set(this.partnersBody?.result_toc_result?.initiative_id);
     // this.getConsumed.set(true);
     // //! TOC END
-    // this.partnersBody.bilateral_projects.forEach(project => {
-    //   project.fullName = project.obj_clarisa_project.fullName;
-    // });
+    this.contributorsBody.bilateral_projects.forEach(project => {
+      project.fullName = project.obj_clarisa_project.fullName;
+    });
   }
 
   getSectionInformation() {

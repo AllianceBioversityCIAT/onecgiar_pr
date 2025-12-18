@@ -63,6 +63,7 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   loadClarisaProjects() {
     this.api.resultsSE.GET_ClarisaProjects().subscribe({
       next: ({ response }) => {
+        console.log(response);
         this.clarisaProjectsList = response;
         response.forEach(project => {
           project.project_id = project.id;

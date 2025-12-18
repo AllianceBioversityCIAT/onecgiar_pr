@@ -33,18 +33,19 @@
       </div>
     </div>
 
-    <app-pr-multi-select
-      [options]="this.rdPartnersSE.clarisaProjectsList"
-      [(ngModel)]="this.rdPartnersSE.partnersBody.bilateral_projects"
-      [required]="false"
-      optionLabel="fullName"
-      optionValue="project_id"
-      label="Contributing W3 and/or bilateral projects"
-      selectedLabel="Projects selected"
-      selectedOptionLabel="fullName"
-      placeholder="Select project">
-    </app-pr-multi-select>
-
+    @if (this.rdPartnersSE.clarisaProjectsList.length > 0) {
+      <app-pr-multi-select
+        [options]="this.rdPartnersSE.clarisaProjectsList"
+        [(ngModel)]="this.rdPartnersSE.partnersBody.bilateral_projects"
+        [required]="false"
+        optionLabel="fullName"
+        optionValue="project_id"
+        label="Contributing W3 and/or bilateral projects"
+        selectedLabel="Projects selected"
+        selectedOptionLabel="fullName"
+        placeholder="Select project">
+      </app-pr-multi-select>
+    }
     <app-pr-multi-select
       [options]="this.contributingInitiativesList"
       label="Contributing {{ 'term.entity.orPlatformsPlural' | term: this.api.dataControlSE.currentResult?.portfolio }}"
