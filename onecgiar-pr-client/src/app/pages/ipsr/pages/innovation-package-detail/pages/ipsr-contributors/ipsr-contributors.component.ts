@@ -33,7 +33,18 @@ export class IpsrContributorsComponent implements OnInit {
     this.requestEvent();
     this.api.dataControlSE.detailSectionTitle('Contributors');
     this.api.resultsSE.ipsrDataControlSE.inContributos = true;
-    this.rdPartnersSE.loadClarisaProjects();
+    // only for p25
+    if (this.fieldsManagerSE.isP25()) {
+      this.GET_AllWithoutResults();
+      this.rdPartnersSE.loadClarisaProjects();
+    }
+  }
+
+  GET_AllWithoutResults() {
+    const activePortfolio = this.api.dataControlSE.currentResult?.portfolio;
+    this.api.resultsSE.GET_AllWithoutResults(activePortfolio).subscribe(({ response }) => {
+      this.contributingInitiativesList = response;
+    });
   }
 
   toggleActiveContributor(item) {
