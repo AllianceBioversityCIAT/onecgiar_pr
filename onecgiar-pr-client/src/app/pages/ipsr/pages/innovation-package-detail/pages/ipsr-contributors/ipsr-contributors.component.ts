@@ -168,6 +168,7 @@ export class IpsrContributorsComponent implements OnInit {
   onSaveSection() {
     console.log(this.rdPartnersSE.partnersBody);
     this.fieldsManagerSE.isP25() ? this.saveTocLogicp25() : this.saveTocLogic();
+
     const sendedData = {
       ...this.contributorsBody,
       contributing_initiatives: {
@@ -182,6 +183,15 @@ export class IpsrContributorsComponent implements OnInit {
       bilateral_projects: this.rdPartnersSE.partnersBody.bilateral_projects
       //?
     };
+
+    if (this.fieldsManagerSE.isP25()) {
+      sendedData.contributing_initiatives.pending_contributing_initiatives = [
+        ...this.rdPartnersSE.contributingInitiativeNew,
+        ...this.contributorsBody.contributing_initiatives.pending_contributing_initiatives
+      ];
+    }
+
+    console.log(sendedData);
 
     this.api.resultsSE.PATCHContributorsByIpsrResultId(sendedData, this.fieldsManagerSE.isP25()).subscribe(({ response }) => {
       this.getSectionInformation();
