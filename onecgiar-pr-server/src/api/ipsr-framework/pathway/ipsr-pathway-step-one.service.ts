@@ -1,12 +1,10 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResultRepository } from '../../results/result.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultRegion } from '../../results/result-regions/entities/result-region.entity';
 import { ResultCountry } from '../../results/result-countries/entities/result-country.entity';
 import { ResultRegionRepository } from '../../results/result-regions/result-regions.repository';
 import { ResultCountryRepository } from '../../results/result-countries/result-countries.repository';
-import { Result } from '../../results/entities/result.entity';
 import { ResultInnovationPackageRepository } from '../../ipsr/result-innovation-package/repositories/result-innovation-package.repository';
 import { IpsrRepository } from '../../ipsr/ipsr.repository';
 import { ResultsByInstitution } from '../../results/results_by_institutions/entities/results_by_institution.entity';
@@ -421,4 +419,3 @@ export class IpsrPathwayStepOneService {
     }`;
   }
 }
-
