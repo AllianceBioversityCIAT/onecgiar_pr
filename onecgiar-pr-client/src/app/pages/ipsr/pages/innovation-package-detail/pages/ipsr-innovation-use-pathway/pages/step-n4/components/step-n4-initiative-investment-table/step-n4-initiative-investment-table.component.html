@@ -59,6 +59,7 @@
           [(ngModel)]="item.kind_cash"
           placeholder="Enter text"
           type="currency"
+          [disabled]="!!item.is_determined"
           [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
           [required]="false">
         </app-pr-input>
