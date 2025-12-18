@@ -157,7 +157,6 @@ export class IpsrContributorsComponent implements OnInit {
       });
     }
     this.rdPartnersSE.partnersBody.changePrimaryInit = this.rdPartnersSE.partnersBody?.result_toc_result.initiative_id;
-    console.log(this.rdPartnersSE.partnersBody);
     this.disabledOptions = [
       ...(this.rdPartnersSE.partnersBody?.contributing_initiatives.accepted_contributing_initiatives || []),
       ...(this.rdPartnersSE.partnersBody?.contributing_initiatives.pending_contributing_initiatives || [])
@@ -187,7 +186,6 @@ export class IpsrContributorsComponent implements OnInit {
       this.contributorsBody.contributingInitiativeNew = [];
       // ! Delete later
       this.rdPartnersSE.partnersBody.result_toc_result.planned_result = false;
-      console.log(response);
     });
   }
 
@@ -199,7 +197,6 @@ export class IpsrContributorsComponent implements OnInit {
   saveTocLogicp25() {}
 
   onSaveSection() {
-    console.log(this.rdPartnersSE.partnersBody);
     this.fieldsManagerSE.isP25() ? this.saveTocLogicp25() : this.saveTocLogic();
 
     const sendedData = {
@@ -224,8 +221,6 @@ export class IpsrContributorsComponent implements OnInit {
       ];
       sendedData.result_toc_result = this.rdPartnersSE.partnersBody.result_toc_result;
     }
-
-    console.log(sendedData);
 
     this.api.resultsSE.PATCHContributorsByIpsrResultId(sendedData, this.fieldsManagerSE.isP25()).subscribe(({ response }) => {
       this.getSectionInformation();
