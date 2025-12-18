@@ -39,6 +39,6 @@ import { CPNormalSelectorComponent } from './components/multiple-wps/components/
     TableModule,
     JsonPipe
   ],
-  exports: [CPMultipleWPsComponent]
+  exports: [CPMultipleWPsComponent, CPKnowledgeProductSelectorComponent, CPNormalSelectorComponent]
 })
 export class RdContributorsAndPartnersModule {}

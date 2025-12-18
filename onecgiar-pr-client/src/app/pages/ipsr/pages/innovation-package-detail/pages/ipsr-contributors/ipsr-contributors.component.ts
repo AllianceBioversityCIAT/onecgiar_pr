@@ -8,6 +8,7 @@ import { CentersService } from '../../../../../../shared/services/global/centers
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 import { ResultsCenterDto } from '../../../../../results/pages/result-detail/pages/rd-contributors-and-partners/models/contributorsAndPartnersBody';
 import { ResultLevelService } from '../../../../../results/pages/result-creator/services/result-level.service';
+import { InnovationUseResultsService } from '../../../../../../shared/services/global/innovation-use-results.service';
 
 @Component({
   selector: 'app-ipsr-contributors',
@@ -23,6 +24,7 @@ export class IpsrContributorsComponent implements OnInit {
   resultLevelSE = inject(ResultLevelService);
   contributingInitiativesList = [];
   fieldsManagerSE = inject(FieldsManagerService);
+  innovationUseResultsSE = inject(InnovationUseResultsService);
   disabledText = 'To remove this center, please contact your librarian';
   submitter: string = '';
   result_toc_result = null;
@@ -81,6 +83,31 @@ export class IpsrContributorsComponent implements OnInit {
         this.rdPartnersSE.updatingLeadData = false;
       }, 50);
     }
+  }
+  getMessageLead() {
+    const entity = this.rdPartnersSE.partnersBody.is_lead_by_partner ? 'partner' : 'CG Center';
+    return `Please select the ${entity} leading this result. <b>Only ${entity}s already added in this section can be selected as the result lead.</b>`;
+  }
+
+  formatResultLabel(option: any): string {
+    if (option?.result_code && option?.name) {
+      let phaseInfo = '';
+      if (option?.acronym && option?.phase_year) {
+        phaseInfo = `(${option.acronym} - ${option.phase_year}) `;
+      } else if (option?.acronym) {
+        phaseInfo = `(${option.acronym}) `;
+      } else if (option?.phase_year) {
+        phaseInfo = `(${option.phase_year}) `;
+      }
+
+      const resultType = option?.result_type_name || option?.resultTypeName || option?.type_name || '';
+      const resultTypeInfo = resultType ? ` (${resultType})` : '';
+
+      const title = option?.title ? ` - ${option.title}` : '';
+
+      return `${phaseInfo}${option.result_code} - ${option.name}${resultTypeInfo}${title}`;
+    }
+    return option?.title || option?.name || '';
   }
 
   getTocLogic() {
