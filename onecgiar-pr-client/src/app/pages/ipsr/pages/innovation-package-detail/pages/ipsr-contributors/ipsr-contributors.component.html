@@ -166,9 +166,12 @@
     </div>
   }
 
-  <app-ipsr-contributors-non-cgiar-partners [contributorsBody]="this.contributorsBody"></app-ipsr-contributors-non-cgiar-partners>
+  @if (!this.fieldsManagerSE.isP25()) {
+    <app-ipsr-contributors-non-cgiar-partners [contributorsBody]="this.contributorsBody"></app-ipsr-contributors-non-cgiar-partners>
+  }
 </div>
 
-<app-ipsr-contributors-centers [contributorsBody]="this.contributorsBody"></app-ipsr-contributors-centers>
-
+@if (!this.fieldsManagerSE.isP25()) {
+  <app-ipsr-contributors-centers [contributorsBody]="this.contributorsBody"></app-ipsr-contributors-centers>
+}
 <app-save-button class="position_sticky" (clickSave)="onSaveSection()"> </app-save-button>
