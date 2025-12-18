@@ -7,6 +7,7 @@ import { RdContributorsAndPartnersService } from '../../../../../results/pages/r
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 import { ResultsCenterDto } from '../../../../../results/pages/result-detail/pages/rd-contributors-and-partners/models/contributorsAndPartnersBody';
+import { ResultLevelService } from '../../../../../results/pages/result-creator/services/result-level.service';
 
 @Component({
   selector: 'app-ipsr-contributors',
@@ -19,6 +20,7 @@ export class IpsrContributorsComponent implements OnInit {
   disabledOptions = [];
   rdPartnersSE = inject(RdContributorsAndPartnersService);
   centersSE = inject(CentersService);
+  resultLevelSE = inject(ResultLevelService);
   contributingInitiativesList = [];
   fieldsManagerSE = inject(FieldsManagerService);
   disabledText = 'To remove this center, please contact your librarian';
