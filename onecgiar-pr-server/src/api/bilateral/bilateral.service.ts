@@ -130,16 +130,23 @@ export class BilateralService {
 
     for (const result of incomingResults) {
       try {
+        // Validar datos básicos antes de la transacción
+        if (!result?.data || typeof result.data !== 'object') {
+          throw new BadRequestException(
+            'Each result entry must include a "data" object with the bilateral payload.',
+          );
+        }
+
+        const bilateralDto = result.data;
+
+        // Validar science_program_id ANTES de comenzar la transacción
+        await this.validateTocMappingInitiatives(
+          bilateralDto.toc_mapping,
+          bilateralDto.contributing_programs,
+        );
+
         await this.dataSource.transaction(
           async (_transactionalEntityManager) => {
-            if (!result?.data || typeof result.data !== 'object') {
-              throw new BadRequestException(
-                'Each result entry must include a "data" object with the bilateral payload.',
-              );
-            }
-
-            const bilateralDto = result.data;
-
             const adminUser = await this._userRepository.findOne({
               where: { email: 'admin@prms.pr' },
             });
@@ -383,6 +390,13 @@ export class BilateralService {
     }
 
     const bilateralDto = firstResult.data;
+
+    // Validar science_program_id antes de comenzar a guardar
+    await this.validateTocMappingInitiatives(
+      bilateralDto.toc_mapping,
+      bilateralDto.contributing_programs,
+    );
+
     let resultInfo: any = null;
 
     await this.dataSource.transaction(async () => {
@@ -595,6 +609,109 @@ export class BilateralService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  private async validateTocMappingInitiatives(
+    tocMapping?: any,
+    contributingPrograms?: any[],
+  ): Promise<void> {
+    this.logger.debug(
+      `Validating TOC mapping initiatives. tocMapping: ${JSON.stringify(tocMapping)}, contributingPrograms: ${JSON.stringify(contributingPrograms)}`,
+    );
+
+    const scienceProgramIds: string[] = [];
+
+    // Recopilar todos los science_program_id
+    if (tocMapping && typeof tocMapping === 'object') {
+      // Verificar si existe la propiedad, incluso si es string vacío
+      if (
+        'science_program_id' in tocMapping &&
+        tocMapping.science_program_id != null
+      ) {
+        const programId = String(tocMapping.science_program_id).trim();
+        if (programId) {
+          scienceProgramIds.push(programId);
+          this.logger.debug(
+            `Found science_program_id in toc_mapping: ${programId}`,
+          );
+        } else {
+          this.logger.warn(
+            'toc_mapping.science_program_id is empty or whitespace only',
+          );
+        }
+      } else {
+        this.logger.debug(
+          'toc_mapping.science_program_id is missing or null/undefined',
+        );
+      }
+    } else {
+      this.logger.debug(
+        `toc_mapping is not a valid object: ${typeof tocMapping}`,
+      );
+    }
+
+    if (Array.isArray(contributingPrograms)) {
+      contributingPrograms.forEach((program, index) => {
+        if (
+          program &&
+          typeof program === 'object' &&
+          program.science_program_id
+        ) {
+          const programId = String(program.science_program_id).trim();
+          if (programId) {
+            scienceProgramIds.push(programId);
+            this.logger.debug(
+              `Found science_program_id in contributing_programs[${index}]: ${programId}`,
+            );
+          }
+        }
+      });
+    }
+
+    // Si no hay science_program_id para validar, salir
+    if (scienceProgramIds.length === 0) {
+      this.logger.debug(
+        'No science_program_id found to validate. Skipping validation.',
+      );
+      return;
+    }
+
+    this.logger.debug(
+      `Validating ${scienceProgramIds.length} science_program_id(s): ${scienceProgramIds.join(', ')}`,
+    );
+
+    // Validar que todos los science_program_id existan
+    const invalidPrograms: string[] = [];
+    for (const programId of scienceProgramIds) {
+      const normalizedCode = programId.trim().toUpperCase();
+      this.logger.debug(
+        `Checking initiative with code: ${programId} (normalized: ${normalizedCode})`,
+      );
+
+      const init = await this._clarisaInitiatives.findOne({
+        where: { official_code: normalizedCode },
+      });
+
+      if (!init) {
+        this.logger.warn(
+          `Initiative not found for science_program_id: ${programId} (normalized: ${normalizedCode})`,
+        );
+        invalidPrograms.push(programId);
+      } else {
+        this.logger.debug(
+          `Initiative found: id=${init.id}, code=${init.official_code}`,
+        );
+      }
+    }
+
+    // Si hay programas inválidos, retornar error de inmediato
+    if (invalidPrograms.length > 0) {
+      const errorMessage = `The following science_program_id(s) do not exist in CLARISA: ${invalidPrograms.join(', ')}. Please provide valid initiative codes.`;
+      this.logger.error(errorMessage);
+      throw new BadRequestException(errorMessage);
+    }
+
+    this.logger.debug('All science_program_id(s) are valid.');
   }
 
   private unwrapIncomingResults(
@@ -848,7 +965,7 @@ export class BilateralService {
         this.logger.debug(
           `Looking up initiative with official_code: ${science_program_id} (normalized: ${normalizedCode})`,
         );
-        
+
         const init = await this._clarisaInitiatives.findOne({
           where: { official_code: normalizedCode },
         });
@@ -929,7 +1046,7 @@ export class BilateralService {
 
         // Crear o actualizar el registro básico en results_toc_result
         let tocMapping;
-        
+
         // Validar que el registro encontrado realmente corresponde a la iniciativa correcta
         if (existingToc && existingToc.initiative_id !== init.id) {
           this.logger.warn(
@@ -948,9 +1065,8 @@ export class BilateralService {
           this.logger.debug(
             `Creating new TOC mapping due to initiative_id mismatch`,
           );
-          tocMapping = await this._resultsTocResultsRepository.save(
-            newTocMappingData,
-          );
+          tocMapping =
+            await this._resultsTocResultsRepository.save(newTocMappingData);
           this.logger.debug(
             `Successfully created new TOC mapping (id: ${tocMapping.result_toc_result_id}) for result ${resultId}, initiative ${init.id} (${science_program_id})`,
           );
@@ -988,9 +1104,8 @@ export class BilateralService {
             this.logger.debug(
               `Attempting to save TOC mapping with data: ${JSON.stringify(newTocMappingData)}`,
             );
-            const newTocMapping = await this._resultsTocResultsRepository.save(
-              newTocMappingData,
-            );
+            const newTocMapping =
+              await this._resultsTocResultsRepository.save(newTocMappingData);
             this.logger.debug(
               `Successfully created new TOC mapping (id: ${newTocMapping.result_toc_result_id}) for result ${resultId}, initiative ${init.id} (${science_program_id}) with planned_result=true, toc_result_id=${firstMap.toc_result_id}`,
             );
@@ -999,9 +1114,7 @@ export class BilateralService {
             this.logger.error(
               `Error saving TOC mapping for result ${resultId}, initiative ${init.id} (${science_program_id}): ${(saveError as Error).message}`,
             );
-            this.logger.error(
-              `Error stack: ${(saveError as Error).stack}`,
-            );
+            this.logger.error(`Error stack: ${(saveError as Error).stack}`);
             throw saveError; // Re-lanzar para que se capture en el catch externo
           }
         }
@@ -1065,9 +1178,7 @@ export class BilateralService {
             (err as Error).message
           }`,
         );
-        this.logger.error(
-          `TOC mapping error stack: ${(err as Error).stack}`,
-        );
+        this.logger.error(`TOC mapping error stack: ${(err as Error).stack}`);
         // No continuar con el siguiente mapping si hay un error crítico
         // pero tampoco fallar todo el proceso
         continue;
