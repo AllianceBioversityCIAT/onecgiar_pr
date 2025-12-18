@@ -119,10 +119,12 @@ export class SubmissionsService {
         );
 
         for (const email of emails) {
-          const emailData: Record<string, any> = {
+          const sp = scienceProgram[0];
+
+          const emailData = {
             userName: `${email.first_name} ${email.last_name}`.trim(),
-            SPcode: scienceProgram.official_code,
-            SPname: scienceProgram.name,
+            spCode: sp.official_code,
+            spName: sp.name,
             resultUrl: `${process.env.RESULTS_URL}${result.result_code}/general-information?phase=${result.version_id}`,
           };
           const compiledTemplate = handlebars.compile(template.template);
