@@ -70,6 +70,7 @@
             type="currency"
             [required]="false"
             [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
+            [disabled]="!!item.is_determined"
             [(ngModel)]="item.kind_cash">
           </app-pr-input>
         </td>
