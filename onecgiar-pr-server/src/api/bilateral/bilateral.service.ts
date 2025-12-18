@@ -1274,8 +1274,18 @@ export class BilateralService {
     }
 
     const fuzzyConditions = [];
-    if (name) fuzzyConditions.push({ name: Like(`%${name}%`) });
-    if (acronym) fuzzyConditions.push({ acronym: Like(`%${acronym}%`) });
+    // Build flexible search conditions: if name is provided, search in both name and acronym
+    // and vice versa to handle cases where users send acronym in name field or name in acronym field
+    if (name) {
+      fuzzyConditions.push({ name: Like(`%${name}%`) });
+      // Also search in acronym field using the name value (flexible matching)
+      fuzzyConditions.push({ acronym: Like(`%${name}%`) });
+    }
+    if (acronym) {
+      fuzzyConditions.push({ acronym: Like(`%${acronym}%`) });
+      // Also search in name field using the acronym value (flexible matching)
+      fuzzyConditions.push({ name: Like(`%${acronym}%`) });
+    }
     if (fuzzyConditions.length) {
       const fuzzy = await this._clarisaInstitutionsRepository.find({
         where: fuzzyConditions,
@@ -1389,8 +1399,18 @@ export class BilateralService {
         if (inst) institutionCandidates.push(inst);
       }
       const fuzzyConditions = [];
-      if (name) fuzzyConditions.push({ name: Like(`%${name}%`) });
-      if (acronym) fuzzyConditions.push({ acronym: Like(`%${acronym}%`) });
+      // Build flexible search conditions: if name is provided, search in both name and acronym
+      // and vice versa to handle cases where users send acronym in name field or name in acronym field
+      if (name) {
+        fuzzyConditions.push({ name: Like(`%${name}%`) });
+        // Also search in acronym field using the name value (flexible matching)
+        fuzzyConditions.push({ acronym: Like(`%${name}%`) });
+      }
+      if (acronym) {
+        fuzzyConditions.push({ acronym: Like(`%${acronym}%`) });
+        // Also search in name field using the acronym value (flexible matching)
+        fuzzyConditions.push({ name: Like(`%${acronym}%`) });
+      }
       if (!institution_id && fuzzyConditions.length) {
         const fuzzy = await this._clarisaInstitutionsRepository.find({
           where: fuzzyConditions,
@@ -1538,8 +1558,18 @@ export class BilateralService {
 
       if (!matched && (name || acronym)) {
         const fuzzyConds = [];
-        if (name) fuzzyConds.push({ name: Like(`%${name}%`) });
-        if (acronym) fuzzyConds.push({ acronym: Like(`%${acronym}%`) });
+        // Build flexible search conditions: if name is provided, search in both name and acronym
+        // and vice versa to handle cases where users send acronym in name field or name in acronym field
+        if (name) {
+          fuzzyConds.push({ name: Like(`%${name}%`) });
+          // Also search in acronym field using the name value (flexible matching)
+          fuzzyConds.push({ acronym: Like(`%${name}%`) });
+        }
+        if (acronym) {
+          fuzzyConds.push({ acronym: Like(`%${acronym}%`) });
+          // Also search in name field using the acronym value (flexible matching)
+          fuzzyConds.push({ name: Like(`%${acronym}%`) });
+        }
         if (fuzzyConds.length) {
           const fuzzy = await this._clarisaInstitutionsRepository.find({
             where: fuzzyConds,
