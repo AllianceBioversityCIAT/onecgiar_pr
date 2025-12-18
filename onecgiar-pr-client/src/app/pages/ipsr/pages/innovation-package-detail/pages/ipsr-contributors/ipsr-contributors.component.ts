@@ -98,12 +98,12 @@ export class IpsrContributorsComponent implements OnInit {
     }
   }
 
-  getTocLogicp25() {
+  getTocLogicp25(response: any) {
     //     //! TOC
-    // this.partnersBody.linked_results = response.linked_results || [];
-    // this.partnersBody?.contributing_and_primary_initiative.forEach(
-    //   init => (init.full_name = `${init?.official_code} - <strong>${init?.short_name}</strong> - ${init?.initiative_name}`)
-    // );
+    this.rdPartnersSE.partnersBody.linked_results = response.linked_results || [];
+    this.rdPartnersSE.partnersBody?.contributing_and_primary_initiative.forEach(
+      init => (init.full_name = `${init?.official_code} - <strong>${init?.short_name}</strong> - ${init?.initiative_name}`)
+    );
     // this.submitter = this.partnersBody.contributing_and_primary_initiative.find(
     //   init => init.id === this.partnersBody?.result_toc_result?.initiative_id
     // )?.full_name;
@@ -144,7 +144,7 @@ export class IpsrContributorsComponent implements OnInit {
       this.rdPartnersSE.partnersBody = response;
       this.contributorsBody.institutions.forEach(item => (item.institutions_type_name = item.institutions_name));
 
-      this.fieldsManagerSE.isP25() ? this.getTocLogicp25() : this.getTocLogic();
+      this.fieldsManagerSE.isP25() ? this.getTocLogicp25(response) : this.getTocLogic();
 
       this.disabledOptions = [
         ...(this.contributorsBody?.contributing_initiatives.accepted_contributing_initiatives || []),
