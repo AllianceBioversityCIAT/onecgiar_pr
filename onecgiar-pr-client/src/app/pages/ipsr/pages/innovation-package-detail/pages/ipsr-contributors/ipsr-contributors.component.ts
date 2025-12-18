@@ -144,6 +144,7 @@ export class IpsrContributorsComponent implements OnInit {
   }
 
   getSectionInformation() {
+    this.rdPartnersSE.contributingInitiativeNew = [];
     this.api.resultsSE.GETContributorsByIpsrResultId(this.fieldsManagerSE.isP25()).subscribe(({ response }) => {
       this.contributorsBody = response;
       this.rdPartnersSE.partnersBody = response;
