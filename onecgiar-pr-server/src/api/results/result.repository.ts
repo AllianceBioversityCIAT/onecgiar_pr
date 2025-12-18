@@ -2304,6 +2304,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         )
         .where('rq.result_question_id = :questionId', { questionId: 110 }) // "Yes, please contact me"
         .andWhere('r.is_active = true')
+        .andWhere('ra.answer_boolean = true')
         .andWhere('r.id = :resultId', { resultId })
         .getExists();
     } catch (error) {
