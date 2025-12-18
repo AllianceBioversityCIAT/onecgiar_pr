@@ -14,6 +14,7 @@ import {
 } from './dto/ipsr-save-steo-four.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { IpsrPathwayStepFourService } from './ipsr-pathway-step-four.service';
+import { IpsrPathwayStepOneService } from './ipsr-pathway-step-one.service';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 import { ApiTags } from '@nestjs/swagger/dist/decorators/api-use-tags.decorator';
 
@@ -23,6 +24,7 @@ import { ApiTags } from '@nestjs/swagger/dist/decorators/api-use-tags.decorator'
 export class PathwayController {
   constructor(
     private readonly _ipsrPathwayStepFourService: IpsrPathwayStepFourService,
+    private readonly _ipsrPathwayStepOneService: IpsrPathwayStepOneService,
   ) {}
 
   @Version('2')
@@ -37,6 +39,12 @@ export class PathwayController {
       user,
       saveStepFourDto,
     );
+  }
+
+  @Version('2')
+  @Get('get-step-one/:resultId')
+  getStepOne(@Param('resultId') resultId: string) {
+    return this._ipsrPathwayStepOneService.getStepOne(+resultId);
   }
 
   @Version('2')

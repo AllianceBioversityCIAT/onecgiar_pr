@@ -17,6 +17,20 @@ import { ResultScalingStudyUrl } from '../../results-framework-reporting/result_
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { IpsrPathwayStepFourService } from './ipsr-pathway-step-four.service';
 import { ResultsByProjectsService } from '../../results/results_by_projects/results_by_projects.service';
+import { IpsrPathwayStepOneService } from './ipsr-pathway-step-one.service';
+import { ResultRegionRepository } from '../../results/result-regions/result-regions.repository';
+import { ResultCountryRepository } from '../../results/result-countries/result-countries.repository';
+import { IpsrRepository } from '../../ipsr/ipsr.repository';
+import { ResultByInstitutionsByDeliveriesTypeRepository } from '../../results/result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.repository';
+import { ResultIpSdgTargetRepository } from '../../ipsr/innovation-pathway/repository/result-ip-sdg-targets.repository';
+import { ResultIpEoiOutcomeRepository } from '../../ipsr/innovation-pathway/repository/result-ip-eoi-outcomes.repository';
+import { ResultIpAAOutcomeRepository } from '../../ipsr/innovation-pathway/repository/result-ip-action-area-outcome.repository';
+import { ResultActorRepository } from '../../results/result-actors/repositories/result-actors.repository';
+import { ResultByIntitutionsTypeRepository } from '../../results/results_by_institution_types/result_by_intitutions_type.repository';
+import { ResultIpMeasureRepository } from '../../ipsr/result-ip-measures/result-ip-measures.repository';
+import { ResultIpImpactAreaRepository } from '../../ipsr/innovation-pathway/repository/result-ip-impact-area-targets.repository';
+import { ResultCountrySubnationalRepository } from '../../results/result-countries-sub-national/repositories/result-country-subnational.repository';
+import { ResultIpExpertWorkshopOrganizedRepostory } from '../../ipsr/innovation-pathway/repository/result-ip-expert-workshop-organized.repository';
 
 @Module({
   controllers: [PathwayController],
@@ -35,6 +49,20 @@ import { ResultsByProjectsService } from '../../results/results_by_projects/resu
     ResultInstitutionsBudgetRepository,
     IpsrPathwayStepFourService,
     ResultsByProjectsService,
+    IpsrPathwayStepOneService,
+    ResultRegionRepository,
+    ResultCountryRepository,
+    IpsrRepository,
+    ResultByInstitutionsByDeliveriesTypeRepository,
+    ResultIpSdgTargetRepository,
+    ResultIpEoiOutcomeRepository,
+    ResultIpAAOutcomeRepository,
+    ResultActorRepository,
+    ResultByIntitutionsTypeRepository,
+    ResultIpMeasureRepository,
+    ResultIpImpactAreaRepository,
+    ResultCountrySubnationalRepository,
+    ResultIpExpertWorkshopOrganizedRepostory,
   ],
   imports: [
     forwardRef(() => VersioningModule),

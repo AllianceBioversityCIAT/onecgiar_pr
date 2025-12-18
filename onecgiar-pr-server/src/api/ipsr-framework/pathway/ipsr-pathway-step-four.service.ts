@@ -238,13 +238,13 @@ export class IpsrPathwayStepFourService {
         const rbi = await this._resultByInstitutionsRepository.findOne({
           where: {
             result_id: resultId,
-            institutions_id: partner.result_institution_id,
+            institutions_id: partner.obj_result_institution.institutions_id,
           },
         });
 
         if (!rbi) {
           this.logger.error(
-            `[savePartnerInvestment] Institution relation not found for resultId: ${resultId}, institutionId: ${partner.result_institution_id}`,
+            `[savePartnerInvestment] Partner relation not found for resultId: ${resultId}, partnerId: ${partner.result_institution_id}`,
           );
           throw {
             response: {},
@@ -304,7 +304,7 @@ export class IpsrPathwayStepFourService {
           where: {
             result_id: resultId,
             is_active: true,
-            id: i.result_project_id,
+            project_id: i.obj_result_project.project_id,
           },
         });
 
@@ -379,7 +379,7 @@ export class IpsrPathwayStepFourService {
         const ibr = await this._resultByInitiativeRepository.findOne({
           where: {
             result_id: resultId,
-            initiative_id: initiative.result_initiative_id,
+            initiative_id: initiative.obj_result_initiative.initiative_id,
             is_active: true,
           },
         });
@@ -402,6 +402,8 @@ export class IpsrPathwayStepFourService {
               is_active: true,
             },
           });
+        console.log('rie kind_cash', rie.kind_cash);
+        console.log('initiative kind_cash', initiative.kind_cash);
 
         if (rie) {
           rie.kind_cash =
