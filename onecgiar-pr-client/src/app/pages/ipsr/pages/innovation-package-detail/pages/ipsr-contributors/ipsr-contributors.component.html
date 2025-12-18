@@ -1,10 +1,12 @@
 <div class="partnersindex">
   @if (this.fieldsManagerSE.isP25()) {
-    <app-pr-yes-or-not
-      label="Does this result align with the Program’s planned TOC indicators?"
-      [required]="true"
-      [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.planned_result">
-    </app-pr-yes-or-not>
+    <div class="globalDisabled">
+      <app-pr-yes-or-not
+        label="Does this result align with the Program’s planned TOC indicators?"
+        [required]="true"
+        [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.planned_result">
+      </app-pr-yes-or-not>
+    </div>
 
     <app-alert-status
       [description]="

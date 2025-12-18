@@ -158,6 +158,8 @@ export class IpsrContributorsComponent implements OnInit {
       ];
 
       this.contributorsBody.contributingInitiativeNew = [];
+      // ! Delete later
+      this.rdPartnersSE.partnersBody.result_toc_result.planned_result = false;
       console.log(response);
     });
   }
