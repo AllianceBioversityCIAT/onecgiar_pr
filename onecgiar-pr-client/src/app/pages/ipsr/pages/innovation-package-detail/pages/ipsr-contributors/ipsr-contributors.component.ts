@@ -170,8 +170,6 @@ export class IpsrContributorsComponent implements OnInit {
       //?
     };
 
-    console.log(sendedData);
-
     this.api.resultsSE.PATCHContributorsByIpsrResultId(sendedData, this.fieldsManagerSE.isP25()).subscribe(({ response }) => {
       this.getSectionInformation();
     });

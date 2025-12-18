@@ -468,6 +468,97 @@ describe('IpsrContributorsPartnersService', () => {
       });
     });
 
+    it('should NOT call ToC mapping when payload only has empty/null ToC fields', async () => {
+      resultRepository.getResultById.mockResolvedValue({
+        id: 8264,
+        result_type_id: ResultTypeEnum.INNOVATION_USE_IPSR,
+      } as any);
+      const partnersRes = {
+        response: { partners: true },
+        status: HttpStatus.OK,
+        message: 'Partners updated',
+      } as any;
+      resultsByInstitutionsService.savePartnersInstitutionsByResultV2.mockResolvedValue(
+        partnersRes,
+      );
+
+      const payload: UpdateContributorsPartnersDto = {
+        result_toc_result: {
+          planned_result: null,
+          initiative_id: 55,
+          result_toc_results: null,
+        },
+        contributors_result_toc_result: [],
+        institutions: [],
+        mqap_institutions: [],
+        contributing_center: [],
+        bilateral_projects: [],
+        no_applicable_partner: false,
+        is_lead_by_partner: false,
+      };
+      const user = { id: 2 } as TokenDto;
+
+      const result = await service.updateContributorsAndPartners(
+        8264,
+        payload,
+        user,
+      );
+
+      // ToC should NOT be called when all ToC fields are empty/null
+      expect(
+        resultsTocResultsService.createTocMappingV2,
+      ).not.toHaveBeenCalled();
+
+      // Partners should still be called
+      expect(
+        resultsByInstitutionsService.savePartnersInstitutionsByResultV2,
+      ).toHaveBeenCalled();
+
+      expect(result).toEqual({
+        response: {
+          partners: partnersRes.response,
+        },
+        message: 'Partners updated',
+        status: HttpStatus.OK,
+      });
+    });
+
+    it('should call ToC mapping when contributing_initiatives has content', async () => {
+      resultRepository.getResultById.mockResolvedValue({
+        id: 400,
+        result_type_id: ResultTypeEnum.INNOVATION_USE_IPSR,
+      } as any);
+      const tocRes = {
+        response: { toc: true },
+        status: HttpStatus.OK,
+        message: 'ToC updated',
+      } as any;
+      resultsTocResultsService.createTocMappingV2.mockResolvedValue(tocRes);
+
+      const payload: UpdateContributorsPartnersDto = {
+        contributing_initiatives: {
+          accepted_contributing_initiatives: [{ id: 5 }],
+          pending_contributing_initiatives: [],
+        },
+        result_toc_result: {
+          planned_result: null,
+          result_toc_results: null,
+        },
+        contributors_result_toc_result: [],
+      };
+      const user = { id: 3 } as TokenDto;
+
+      const result = await service.updateContributorsAndPartners(
+        400,
+        payload,
+        user,
+      );
+
+      // ToC SHOULD be called because contributing_initiatives has accepted items
+      expect(resultsTocResultsService.createTocMappingV2).toHaveBeenCalled();
+      expect((result as any).response.toc_mapping).toBeDefined();
+    });
+
     it('should manage innovation linkage for innovation development results', async () => {
       resultRepository.getResultById.mockResolvedValue({
         id: 55,
