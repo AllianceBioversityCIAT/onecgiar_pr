@@ -619,56 +619,11 @@ export class BilateralService {
       `Validating TOC mapping initiatives. tocMapping: ${JSON.stringify(tocMapping)}, contributingPrograms: ${JSON.stringify(contributingPrograms)}`,
     );
 
-    const scienceProgramIds: string[] = [];
+    const scienceProgramIds = this.collectScienceProgramIds(
+      tocMapping,
+      contributingPrograms,
+    );
 
-    // Collect all science_program_id values
-    if (tocMapping && typeof tocMapping === 'object') {
-      // Check if property exists, even if it's an empty string
-      if (
-        'science_program_id' in tocMapping &&
-        tocMapping.science_program_id != null
-      ) {
-        const programId = String(tocMapping.science_program_id).trim();
-        if (programId) {
-          scienceProgramIds.push(programId);
-          this.logger.debug(
-            `Found science_program_id in toc_mapping: ${programId}`,
-          );
-        } else {
-          this.logger.warn(
-            'toc_mapping.science_program_id is empty or whitespace only',
-          );
-        }
-      } else {
-        this.logger.debug(
-          'toc_mapping.science_program_id is missing or null/undefined',
-        );
-      }
-    } else {
-      this.logger.debug(
-        `toc_mapping is not a valid object: ${typeof tocMapping}`,
-      );
-    }
-
-    if (Array.isArray(contributingPrograms)) {
-      contributingPrograms.forEach((program, index) => {
-        if (
-          program &&
-          typeof program === 'object' &&
-          program.science_program_id
-        ) {
-          const programId = String(program.science_program_id).trim();
-          if (programId) {
-            scienceProgramIds.push(programId);
-            this.logger.debug(
-              `Found science_program_id in contributing_programs[${index}]: ${programId}`,
-            );
-          }
-        }
-      });
-    }
-
-    // If there are no science_program_id to validate, exit
     if (scienceProgramIds.length === 0) {
       this.logger.debug(
         'No science_program_id found to validate. Skipping validation.',
@@ -680,8 +635,99 @@ export class BilateralService {
       `Validating ${scienceProgramIds.length} science_program_id(s): ${scienceProgramIds.join(', ')}`,
     );
 
-    // Validate that all science_program_id exist
+    const invalidPrograms = await this.validateInitiatives(scienceProgramIds);
+
+    if (invalidPrograms.length > 0) {
+      const errorMessage = `The following science_program_id(s) do not exist in CLARISA: ${invalidPrograms.join(', ')}. Please provide valid initiative codes.`;
+      this.logger.error(errorMessage);
+      throw new BadRequestException(errorMessage);
+    }
+
+    this.logger.debug('All science_program_id(s) are valid.');
+  }
+
+  private collectScienceProgramIds(
+    tocMapping?: any,
+    contributingPrograms?: any[],
+  ): string[] {
+    const scienceProgramIds: string[] = [];
+
+    const tocProgramId = this.extractProgramIdFromTocMapping(tocMapping);
+    if (tocProgramId) {
+      scienceProgramIds.push(tocProgramId);
+    }
+
+    const contributingIds =
+      this.extractProgramIdsFromContributing(contributingPrograms);
+    scienceProgramIds.push(...contributingIds);
+
+    return scienceProgramIds;
+  }
+
+  private extractProgramIdFromTocMapping(tocMapping?: any): string | null {
+    if (!tocMapping || typeof tocMapping !== 'object') {
+      this.logger.debug(
+        `toc_mapping is not a valid object: ${typeof tocMapping}`,
+      );
+      return null;
+    }
+
+    if (
+      'science_program_id' in tocMapping &&
+      tocMapping.science_program_id != null
+    ) {
+      const programId = String(tocMapping.science_program_id).trim();
+      if (programId) {
+        this.logger.debug(
+          `Found science_program_id in toc_mapping: ${programId}`,
+        );
+        return programId;
+      }
+      this.logger.warn(
+        'toc_mapping.science_program_id is empty or whitespace only',
+      );
+    } else {
+      this.logger.debug(
+        'toc_mapping.science_program_id is missing or null/undefined',
+      );
+    }
+
+    return null;
+  }
+
+  private extractProgramIdsFromContributing(
+    contributingPrograms?: any[],
+  ): string[] {
+    const programIds: string[] = [];
+
+    if (!Array.isArray(contributingPrograms)) {
+      return programIds;
+    }
+
+    contributingPrograms.forEach((program, index) => {
+      if (
+        program &&
+        typeof program === 'object' &&
+        program.science_program_id
+      ) {
+        const programId = String(program.science_program_id).trim();
+        if (programId) {
+          programIds.push(programId);
+          this.logger.debug(
+            `Found science_program_id in contributing_programs[${index}]: ${programId}`,
+          );
+        }
+      }
+    });
+
+    return programIds;
+  }
+
+  private async validateInitiatives(
+    scienceProgramIds: string[],
+  ): Promise<string[]> {
     const invalidPrograms: string[] = [];
+
     for (const programId of scienceProgramIds) {
       const normalizedCode = programId.trim().toUpperCase();
       this.logger.debug(
@@ -704,14 +750,7 @@ export class BilateralService {
       }
     }
 
-    // If there are invalid programs, return error immediately
-    if (invalidPrograms.length > 0) {
-      const errorMessage = `The following science_program_id(s) do not exist in CLARISA: ${invalidPrograms.join(', ')}. Please provide valid initiative codes.`;
-      this.logger.error(errorMessage);
-      throw new BadRequestException(errorMessage);
-    }
-
-    this.logger.debug('All science_program_id(s) are valid.');
+    return invalidPrograms;
   }
 
   private unwrapIncomingResults(
@@ -1174,7 +1213,8 @@ export class BilateralService {
         );
       } catch (err) {
         this.logger.error(
-          `TOC mapping unexpected error for program ${mapping.science_program_id} (role ${roleId}): ${(err as Error).message
+          `TOC mapping unexpected error for program ${mapping.science_program_id} (role ${roleId}): ${
+            (err as Error).message
           }`,
         );
         this.logger.error(`TOC mapping error stack: ${(err as Error).stack}`);
@@ -1197,12 +1237,12 @@ export class BilateralService {
     const onlyActive = (arr: any[]) =>
       Array.isArray(arr)
         ? arr.filter(
-          (item) =>
-            item?.is_active === undefined ||
-            item.is_active === null ||
-            item.is_active === true ||
-            item.is_active === 1,
-        )
+            (item) =>
+              item?.is_active === undefined ||
+              item.is_active === null ||
+              item.is_active === true ||
+              item.is_active === 1,
+          )
         : arr;
 
     result.result_region_array = onlyActive(result.result_region_array);
