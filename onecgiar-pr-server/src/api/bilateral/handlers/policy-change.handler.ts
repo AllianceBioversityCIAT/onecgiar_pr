@@ -168,8 +168,18 @@ export class PolicyChangeBilateralHandler
     }
 
     if (policyStage.id !== undefined && policyStage.id !== null) {
+      // Map simplified IDs (1, 2, 3) to CLARISA IDs (6, 7, 8)
+      const stageIdMapping: Record<number, number> = {
+        1: 6, // Stage 1 -> ID 6
+        2: 7, // Stage 2 -> ID 7
+        3: 8, // Stage 3 -> ID 8
+      };
+
+      const mappedId = stageIdMapping[policyStage.id];
+      const idToLookup = mappedId !== undefined ? mappedId : policyStage.id;
+
       const found = await this._clarisaPolicyStageRepository.findOne({
-        where: { id: policyStage.id },
+        where: { id: idToLookup },
       });
       if (!found) {
         throw new BadRequestException(

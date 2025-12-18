@@ -15,7 +15,8 @@ import { CapdevsDeliveryMethodRepository } from '../../results/capdevs-delivery-
 
 @Injectable()
 export class CapacityChangeBilateralHandler
-  implements BilateralResultTypeHandler {
+  implements BilateralResultTypeHandler
+{
   readonly resultType = ResultTypeEnum.CAPACITY_CHANGE;
   private readonly logger = new Logger(CapacityChangeBilateralHandler.name);
   private readonly capdevTermLabelToId = new Map<string, number>([
@@ -46,7 +47,7 @@ export class CapacityChangeBilateralHandler
     private readonly _resultsCapacityDevelopmentsRepository: ResultsCapacityDevelopmentsRepository,
     private readonly _capdevsTermRepository: CapdevsTermRepository,
     private readonly _capdevsDeliveryMethodRepository: CapdevsDeliveryMethodRepository,
-  ) { }
+  ) {}
 
   async afterCreate({
     bilateralDto,

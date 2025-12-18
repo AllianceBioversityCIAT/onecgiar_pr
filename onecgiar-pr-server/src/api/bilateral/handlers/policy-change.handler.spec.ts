@@ -42,10 +42,10 @@ describe('PolicyChangeBilateralHandler', () => {
       }),
     };
     policyStageRepoStub = {
-      findOne: jest.fn().mockResolvedValue({ id: 1, name: 'Test Stage' }),
+      findOne: jest.fn().mockResolvedValue({ id: 6, name: 'Test Stage' }),
       createQueryBuilder: jest.fn().mockReturnValue({
         where: jest.fn().mockReturnThis(),
-        getOne: jest.fn().mockResolvedValue({ id: 1, name: 'Test Stage' }),
+        getOne: jest.fn().mockResolvedValue({ id: 6, name: 'Test Stage' }),
       }),
     };
     handler = new PolicyChangeBilateralHandler(
@@ -193,14 +193,15 @@ describe('PolicyChangeBilateralHandler', () => {
     expect(policyTypeRepoStub.findOne).toHaveBeenCalledWith({
       where: { id: 2 },
     });
+    // When id: 1 is provided, it maps to CLARISA id: 6
     expect(policyStageRepoStub.findOne).toHaveBeenCalledWith({
-      where: { id: 1 },
+      where: { id: 6 },
     });
     expect(repoStub.create).toHaveBeenCalledWith(
       expect.objectContaining({
         result_id: baseContext.resultId,
         policy_type_id: 2,
-        policy_stage_id: 1,
+        policy_stage_id: 6, // Mapped from 1 to 6
         status_amount: null,
         amount: null,
       }),
@@ -223,11 +224,15 @@ describe('PolicyChangeBilateralHandler', () => {
       },
     });
 
+    // When id: 1 is provided for policy_stage, it maps to CLARISA id: 6
+    expect(policyStageRepoStub.findOne).toHaveBeenCalledWith({
+      where: { id: 6 },
+    });
     expect(repoStub.create).toHaveBeenCalledWith(
       expect.objectContaining({
         result_id: baseContext.resultId,
         policy_type_id: 1,
-        policy_stage_id: 1,
+        policy_stage_id: 6, // Mapped from 1 to 6
         status_amount: '2',
         amount: 500000,
       }),
@@ -254,7 +259,7 @@ describe('PolicyChangeBilateralHandler', () => {
       expect.objectContaining({
         result_id: baseContext.resultId,
         policy_type_id: 2,
-        policy_stage_id: 1,
+        policy_stage_id: 6, // Mock returns id: 6
       }),
     );
     expect(repoStub.save).toHaveBeenCalled();
@@ -270,11 +275,15 @@ describe('PolicyChangeBilateralHandler', () => {
     expect(repoStub.findOne).toHaveBeenCalledWith({
       where: { result_id: baseContext.resultId },
     });
+    // When id: 1 is provided for policy_stage, it maps to CLARISA id: 6
+    expect(policyStageRepoStub.findOne).toHaveBeenCalledWith({
+      where: { id: 6 },
+    });
     expect(repoStub.save).toHaveBeenCalledWith(
       expect.objectContaining({
         result_policy_change_id: 123,
         policy_type_id: 2,
-        policy_stage_id: 1,
+        policy_stage_id: 6, // Mapped from 1 to 6
         last_updated_by: baseContext.userId,
       }),
     );
