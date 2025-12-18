@@ -124,7 +124,8 @@ export class IpsrContributorsComponent implements OnInit {
     //     tab.showMultipleWPsContent = true;
     //   });
     // }
-    // this.partnersBody.changePrimaryInit = this.partnersBody?.result_toc_result.initiative_id;
+    this.rdPartnersSE.partnersBody.changePrimaryInit = this.rdPartnersSE.partnersBody?.result_toc_result.initiative_id;
+    console.log(this.rdPartnersSE.partnersBody);
     // this.disabledOptions = [
     //   ...(this.partnersBody?.contributing_initiatives.accepted_contributing_initiatives || []),
     //   ...(this.partnersBody?.contributing_initiatives.pending_contributing_initiatives || [])
@@ -140,6 +141,7 @@ export class IpsrContributorsComponent implements OnInit {
   getSectionInformation() {
     this.api.resultsSE.GETContributorsByIpsrResultId(this.fieldsManagerSE.isP25()).subscribe(({ response }) => {
       this.contributorsBody = response;
+      this.rdPartnersSE.partnersBody = response;
       this.contributorsBody.institutions.forEach(item => (item.institutions_type_name = item.institutions_name));
 
       this.fieldsManagerSE.isP25() ? this.getTocLogicp25() : this.getTocLogic();
@@ -151,13 +153,6 @@ export class IpsrContributorsComponent implements OnInit {
 
       this.contributorsBody.contributingInitiativeNew = [];
       console.log(response);
-      //? map by service
-      this.rdPartnersSE.partnersBody.contributing_center = this.contributorsBody.contributing_center as ResultsCenterDto[];
-      this.rdPartnersSE.partnersBody.bilateral_projects = this.contributorsBody.bilateral_projects;
-      this.rdPartnersSE.partnersBody.contributing_initiatives.accepted_contributing_initiatives =
-        this.contributorsBody.contributing_initiatives.accepted_contributing_initiatives;
-      this.rdPartnersSE.partnersBody.result_toc_result = this.contributorsBody.result_toc_result as any;
-      //?
     });
   }
 

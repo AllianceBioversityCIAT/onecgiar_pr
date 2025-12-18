@@ -11,6 +11,7 @@ export class ContributorsBody {
   institutions: InstitutionsInterface[] = [];
   contributingInitiativeNew: any = [];
   bilateral_projects: any[] = [];
+  linked_results: any[] = [];
 }
 
 interface InstitutionsInterface {
