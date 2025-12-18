@@ -154,6 +154,7 @@ export class IpsrContributorsComponent implements OnInit {
       this.rdPartnersSE.partnersBody.bilateral_projects = this.contributorsBody.bilateral_projects;
       this.rdPartnersSE.partnersBody.contributing_initiatives.accepted_contributing_initiatives =
         this.contributorsBody.contributing_initiatives.accepted_contributing_initiatives;
+      this.rdPartnersSE.partnersBody.result_toc_result = this.contributorsBody.result_toc_result as any;
       //?
     });
   }
@@ -189,6 +190,7 @@ export class IpsrContributorsComponent implements OnInit {
         ...this.rdPartnersSE.contributingInitiativeNew,
         ...this.contributorsBody.contributing_initiatives.pending_contributing_initiatives
       ];
+      sendedData.result_toc_result = this.rdPartnersSE.partnersBody.result_toc_result;
     }
 
     console.log(sendedData);
