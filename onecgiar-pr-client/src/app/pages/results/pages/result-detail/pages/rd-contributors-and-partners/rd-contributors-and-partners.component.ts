@@ -58,8 +58,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     });
 
     const checkResultsList = setInterval(() => {
-      if (this.innovationUseResultsSE.resultsList?.length > 0 &&
-          this.rdPartnersSE.partnersBody?.linked_results?.length > 0) {
+      if (this.innovationUseResultsSE.resultsList?.length > 0 && this.rdPartnersSE.partnersBody?.linked_results?.length > 0) {
         const linkedResults = this.rdPartnersSE.partnersBody.linked_results;
         const hasIds = linkedResults.some((item: any) => typeof item === 'number');
         if (hasIds) {
@@ -208,7 +207,6 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     const entity = this.rdPartnersSE.partnersBody.is_lead_by_partner ? 'partner' : 'CG Center';
     return `Please select the ${entity} leading this result. <b>Only ${entity}s already added in this section can be selected as the result lead.</b>`;
   }
-
 
   formatResultLabel(option: any): string {
     if (option?.result_code && option?.name) {
