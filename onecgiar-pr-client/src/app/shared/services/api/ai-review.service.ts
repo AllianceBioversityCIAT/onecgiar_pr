@@ -143,7 +143,7 @@ export class AiReviewService {
       const customData = [
         { field_name_label: 'Title', field_name: 'new_title' },
         { field_name_label: 'Description', field_name: 'new_description' },
-        { field_name_label: 'Short Name', field_name: 'short_name' }
+        { field_name_label: 'Innovation Short Title', field_name: 'short_name' }
       ];
 
       this.currnetFieldsList.update(res => {
