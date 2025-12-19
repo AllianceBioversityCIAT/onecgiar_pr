@@ -186,12 +186,7 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
           ...result,
           phase: this.allPhases.find(phase => phase.id === result?.version_id)
         }));
-
-        console.log(this.depthSearchList);
-        console.log(this.depthSearchList.map(result => result.title));
-
         this.exactTitleFound.set(!!this.depthSearchList.find(result => cleanSpaces(result.title) === cleanSpaces(title)));
-        console.log('exactTitleFound', this.exactTitleFound());
       },
       error: () => {
         this.depthSearchList = [];
