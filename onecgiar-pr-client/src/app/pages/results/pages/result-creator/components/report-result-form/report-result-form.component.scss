@@ -86,6 +86,46 @@ p {
   border-radius: 4px;
 }
 
+.title-validation-alert {
+  margin-top: 10px;
+
+  .alert-warning,
+  .alert-success {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    line-height: 1.4;
+
+    i {
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+  }
+
+  .alert-warning {
+    background-color: #fff3cd;
+    border: 1px solid #ffc107;
+    color: #856404;
+
+    i {
+      color: #856404;
+    }
+  }
+
+  .alert-success {
+    background-color: #d4edda;
+    border: 1px solid #28a745;
+    color: #155724;
+
+    i {
+      color: #155724;
+    }
+  }
+}
+
 .report-result-content_right {
   display: flex;
   flex-direction: column;

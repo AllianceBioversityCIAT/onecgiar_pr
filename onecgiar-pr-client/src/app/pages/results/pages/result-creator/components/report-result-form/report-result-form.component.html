@@ -90,13 +90,25 @@
           [(ngModel)]="this.resultLevelSE.resultBody.result_name"
           (ngModelChange)="depthSearch(this.resultLevelSE.resultBody.result_name)">
         </app-pr-input>
+
+        <!-- Alert for exact title match validation -->
+        <div *ngIf="!isKnowledgeProduct && this.resultLevelSE.resultBody.result_name?.trim()?.length > 0" class="title-validation-alert">
+          <div *ngIf="exactTitleFound()" class="alert-warning">
+            <i class="pi pi-exclamation-triangle"></i>
+            <span>A result with this exact title already exists. Please use a different title or map to the existing result.</span>
+          </div>
+          <div *ngIf="!exactTitleFound()" class="alert-success">
+            <i class="pi pi-check-circle"></i>
+            <span>No existing result found with this exact title. You can proceed to create this result.</span>
+          </div>
+        </div>
       </div>
 
       <div class="report-result-content_left_content_actions">
         <app-save-button
           [editable]="true"
           (clickSave)="onSaveSection()"
-          [disabled]="!this.resultLevelSE.resultBody.initiative_id"
+          [disabled]="!this.resultLevelSE.resultBody.initiative_id || (exactTitleFound() && !isKnowledgeProduct) || loadingDepthSearch()"
           text="Save and continue">
         </app-save-button>
       </div>
