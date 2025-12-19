@@ -82,9 +82,9 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
         if (itemFinded) itemFinded.disabled = true;
       });
 
-    this.value?.map(savedListItem => {
-      const savedId = typeof savedListItem === 'object' ? savedListItem?.[this.optionValue] : savedListItem;
-      const itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == savedId);
+      this.value?.map(savedListItem => {
+        const savedId = typeof savedListItem === 'object' ? savedListItem?.[this.optionValue] : savedListItem;
+        const itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == savedId);
 
         if (itemFinded) itemFinded.selected = true;
 
@@ -99,14 +99,14 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
           this.value = [];
         });
 
-    if (this.selectAll === true) {
-      const newSelection: any[] = [];
-      this._optionsIntance.forEach((resp: any) => {
-        if (resp.disabled === true) resp.selected = true;
-        newSelection.push(resp);
-      });
-      this.value = newSelection;
-    }
+      if (this.selectAll === true) {
+        const newSelection: any[] = [];
+        this._optionsIntance.forEach((resp: any) => {
+          if (resp.disabled === true) resp.selected = true;
+          newSelection.push(resp);
+        });
+        this.value = newSelection;
+      }
 
       return this._optionsIntance;
     }
@@ -190,10 +190,8 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
   writeValue(value: any): void {
     // Support receiving array of IDs by mapping them to option objects for chip rendering
     if (Array.isArray(value)) {
-      const source = this.group ? this.getAllChildrenFromGroups(this.options || []) : (this.options || []);
-      const mapped = value
-        .map((v: any) => (typeof v === 'object' ? v : source.find((s: any) => s?.[this.optionValue] == v)))
-        .filter(Boolean);
+      const source = this.group ? this.getAllChildrenFromGroups(this.options || []) : this.options || [];
+      const mapped = value.map((v: any) => (typeof v === 'object' ? v : source.find((s: any) => s?.[this.optionValue] == v))).filter(Boolean);
       this._value = mapped;
       this.syncSelectionFlags();
       return;
@@ -263,7 +261,16 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
     return (children || []).filter((c: any) => {
       const title = (c?.[this.optionLabel] || '').toString().toLowerCase();
       const resultCode = (c?.result_code || '').toString().toLowerCase();
-      return title.includes(searchLower) || resultCode.includes(searchLower);
+      const acronym = (c?.acronym || '').toString().toLowerCase();
+      const phaseYear = (c?.phase_year || '').toString().toLowerCase();
+      const name = (c?.name || '').toString().toLowerCase();
+      return (
+        title.includes(searchLower) ||
+        resultCode.includes(searchLower) ||
+        acronym.includes(searchLower) ||
+        phaseYear.includes(searchLower) ||
+        name.includes(searchLower)
+      );
     });
   }
 
@@ -284,7 +291,16 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
     return options.filter((option: any) => {
       const title = (option?.[this.optionLabel] || '').toString().toLowerCase();
       const resultCode = (option?.result_code || '').toString().toLowerCase();
-      return title.includes(searchLower) || resultCode.includes(searchLower);
+      const acronym = (option?.acronym || '').toString().toLowerCase();
+      const phaseYear = (option?.phase_year || '').toString().toLowerCase();
+      const name = (option?.name || '').toString().toLowerCase();
+      return (
+        title.includes(searchLower) ||
+        resultCode.includes(searchLower) ||
+        acronym.includes(searchLower) ||
+        phaseYear.includes(searchLower) ||
+        name.includes(searchLower)
+      );
     });
   }
 
