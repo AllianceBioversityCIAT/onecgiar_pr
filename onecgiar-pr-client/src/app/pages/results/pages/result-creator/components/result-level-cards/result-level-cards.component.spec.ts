@@ -1,9 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ChangeDetectorRef } from '@angular/core';
+import { ChangeDetectorRef, signal } from '@angular/core';
 import { ResultLevelCardsComponent } from './result-level-cards.component';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ResultLevelService } from '../../services/result-level.service';
-import { signal } from '@angular/core';
 import { ResultLevel } from '../../../../../../shared/interfaces/result.interface';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 

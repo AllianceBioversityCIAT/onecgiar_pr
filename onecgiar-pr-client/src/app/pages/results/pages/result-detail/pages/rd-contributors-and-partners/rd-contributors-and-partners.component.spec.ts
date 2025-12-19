@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ChangeDetectorRef, NO_ERRORS_SCHEMA } from '@angular/core';
+import { ChangeDetectorRef, NO_ERRORS_SCHEMA, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { of, throwError } from 'rxjs';
 import { RdContributorsAndPartnersComponent } from './rd-contributors-and-partners.component';
@@ -14,7 +14,6 @@ import { InnovationUseResultsService } from '../../../../../../shared/services/g
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 import { ContributorsAndPartnersBody } from './models/contributorsAndPartnersBody';
 import { NonPooledProjectDto } from '../rd-partners/models/partnersBody';
-import { signal } from '@angular/core';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { TermPipe } from '../../../../../../internationalization/term.pipe';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
