@@ -129,7 +129,8 @@
                   [filter]="true"
                   filterBy="official_code"
                   optionGroupChildren="entities"
-                  [style]="{ width: '100%', height: '36px' }">
+                  [style]="{ width: '100%', height: '36px' }"
+                  panelStyleClass="entity-select-panel">
                   <ng-template let-group #group>
                     <div class="flex items-center">
                       <span>{{ group.name }}</span>
@@ -138,7 +139,11 @@
                   </ng-template>
 
                   <ng-template let-item #item>
-                    <div>{{ item.official_code }}</div>
+                    <div
+                      class="select-item-text"
+                      style="max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block">
+                      {{ item.official_code }} {{ item.name }}
+                    </div>
                   </ng-template>
                 </p-select>
               </div>
