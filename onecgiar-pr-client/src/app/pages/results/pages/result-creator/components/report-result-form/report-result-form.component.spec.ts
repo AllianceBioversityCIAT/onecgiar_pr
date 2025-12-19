@@ -290,14 +290,14 @@ describe('ReportResultFormComponent', () => {
 
       component.depthSearch('Test Result');
 
-      expect(component.exactTitleFound).toBe(true);
+      expect(component.exactTitleFound()).toBe(true);
     });
 
     it('should handle errors gracefully', () => {
       mockApiService.resultsSE.GET_FindResultsElastic = jest.fn(() => throwError(() => new Error('Error')));
       component.depthSearch('Test');
       expect(component.depthSearchList).toEqual([]);
-      expect(component.exactTitleFound).toBe(false);
+      expect(component.exactTitleFound()).toBe(false);
     });
   });
 

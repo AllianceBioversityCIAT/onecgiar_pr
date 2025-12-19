@@ -182,7 +182,6 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
 
     this.api.resultsSE.GET_FindResultsElastic(title, legacyType).subscribe({
       next: (response: any[]) => {
-        console.log(response);
         this.depthSearchList = response.map(result => ({
           ...result,
           phase: this.allPhases.find(phase => phase.id === result?.version_id)
