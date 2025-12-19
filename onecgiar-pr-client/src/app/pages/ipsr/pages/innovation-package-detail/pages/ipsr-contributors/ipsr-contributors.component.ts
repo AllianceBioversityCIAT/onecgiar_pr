@@ -6,7 +6,6 @@ import { RdTheoryOfChangesServicesService } from '../../../../../results/pages/r
 import { RdContributorsAndPartnersService } from '../../../../../results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.service';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
-import { ResultsCenterDto } from '../../../../../results/pages/result-detail/pages/rd-contributors-and-partners/models/contributorsAndPartnersBody';
 import { ResultLevelService } from '../../../../../results/pages/result-creator/services/result-level.service';
 import { InnovationUseResultsService } from '../../../../../../shared/services/global/innovation-use-results.service';
 
@@ -167,6 +166,12 @@ export class IpsrContributorsComponent implements OnInit {
     this.contributorsBody.bilateral_projects.forEach(project => {
       project.fullName = project.obj_clarisa_project.fullName;
     });
+
+    // Lead center/partner mapping on load
+    this.rdPartnersSE.setPossibleLeadPartners(true);
+    this.rdPartnersSE.setLeadPartnerOnLoad(true);
+    this.rdPartnersSE.setPossibleLeadCenters(true);
+    this.rdPartnersSE.setLeadCenterOnLoad(true);
   }
 
   getSectionInformation() {
@@ -194,12 +199,33 @@ export class IpsrContributorsComponent implements OnInit {
 
     this.contributorsBody.contributors_result_toc_result = this.theoryOfChangesServices.contributors_result_toc_result;
   }
-  saveTocLogicp25() {}
+  saveTocLogicp25() {
+    // Map is_leading_result based on is_lead_by_partner selection
+    if (this.rdPartnersSE.partnersBody.is_lead_by_partner) {
+      this.rdPartnersSE.partnersBody.mqap_institutions?.forEach(mqap => {
+        mqap.is_leading_result = this.rdPartnersSE.leadPartnerId === mqap.institutions_id;
+      });
+      this.rdPartnersSE.partnersBody.institutions?.forEach(i => {
+        i.is_leading_result = this.rdPartnersSE.leadPartnerId === i.institutions_id;
+      });
+      this.rdPartnersSE.partnersBody.contributing_center?.forEach(center => (center.is_leading_result = false));
+    } else {
+      this.rdPartnersSE.partnersBody.contributing_center?.forEach(center => {
+        center.is_leading_result = this.rdPartnersSE.leadCenterCode === center.code;
+      });
+      this.rdPartnersSE.partnersBody.mqap_institutions?.forEach(mqap => {
+        mqap.is_leading_result = false;
+      });
+      this.rdPartnersSE.partnersBody.institutions?.forEach(i => {
+        i.is_leading_result = false;
+      });
+    }
+  }
 
   onSaveSection() {
     this.fieldsManagerSE.isP25() ? this.saveTocLogicp25() : this.saveTocLogic();
 
-    const sendedData = {
+    const sendedData: any = {
       ...this.contributorsBody,
       contributing_initiatives: {
         ...this.contributorsBody.contributing_initiatives,
@@ -220,6 +246,9 @@ export class IpsrContributorsComponent implements OnInit {
         ...this.contributorsBody.contributing_initiatives.pending_contributing_initiatives
       ];
       sendedData.result_toc_result = this.rdPartnersSE.partnersBody.result_toc_result;
+      sendedData.is_lead_by_partner = this.rdPartnersSE.partnersBody.is_lead_by_partner;
+      sendedData.institutions = this.rdPartnersSE.partnersBody.institutions;
+      sendedData.mqap_institutions = this.rdPartnersSE.partnersBody.mqap_institutions;
     }
 
     this.api.resultsSE.PATCHContributorsByIpsrResultId(sendedData, this.fieldsManagerSE.isP25()).subscribe(({ response }) => {
