@@ -175,6 +175,7 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
   }
 
   depthSearch(title: string) {
+    console.log(title);
     const cleanSpaces = (text: string) => text?.replace(/\s+/g, '')?.toLowerCase();
     const legacyType = this.getLegacyType(this.resultTypeName, this.resultLevelName);
 
@@ -186,6 +187,7 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
         }));
 
         this.exactTitleFound = !!this.depthSearchList.find(result => cleanSpaces(result.title) === cleanSpaces(title));
+        console.log('exactTitleFound', this.exactTitleFound);
       },
       error: () => {
         this.depthSearchList = [];
