@@ -14,7 +14,7 @@ import { TerminologyService } from '../../../../../../internationalization/termi
 })
 export class ReportResultFormComponent implements OnInit, DoCheck {
   depthSearchList: any[] = [];
-  exactTitleFound = false;
+  exactTitleFound = signal(false);
   mqapJson: {};
   validating = false;
   kpAlertDescription = `Please add the handle generated in <strong>CGSpace</strong>, <strong>MELSpace</strong>, or <strong>WorldFish DSpace</strong> to report your knowledge product. Only knowledge products entered into <strong>one of these repositories</strong> are accepted in the PRMS Reporting Tool.<br><br>
@@ -181,17 +181,21 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
 
     this.api.resultsSE.GET_FindResultsElastic(title, legacyType).subscribe({
       next: (response: any[]) => {
+        console.log(response);
         this.depthSearchList = response.map(result => ({
           ...result,
           phase: this.allPhases.find(phase => phase.id === result?.version_id)
         }));
 
-        this.exactTitleFound = !!this.depthSearchList.find(result => cleanSpaces(result.title) === cleanSpaces(title));
-        console.log('exactTitleFound', this.exactTitleFound);
+        console.log(this.depthSearchList);
+        console.log(this.depthSearchList.map(result => result.title));
+
+        this.exactTitleFound.set(!!this.depthSearchList.find(result => cleanSpaces(result.title) === cleanSpaces(title)));
+        console.log('exactTitleFound', this.exactTitleFound());
       },
       error: () => {
         this.depthSearchList = [];
-        this.exactTitleFound = false;
+        this.exactTitleFound.set(false);
       }
     });
   }
