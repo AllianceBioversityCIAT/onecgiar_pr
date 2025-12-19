@@ -91,8 +91,6 @@
           (ngModelChange)="depthSearch(this.resultLevelSE.resultBody.result_name)">
         </app-pr-input>
 
-        <h1>exactTitleFound: {{ exactTitleFound() }}</h1>
-
         <!-- Alert for exact title match validation -->
         <div *ngIf="!isKnowledgeProduct && this.resultLevelSE.resultBody.result_name?.trim()?.length > 0" class="title-validation-alert">
           <div *ngIf="exactTitleFound()" class="alert-warning">
@@ -110,7 +108,7 @@
         <app-save-button
           [editable]="true"
           (clickSave)="onSaveSection()"
-          [disabled]="!this.resultLevelSE.resultBody.initiative_id || (exactTitleFound() && !isKnowledgeProduct)"
+          [disabled]="!this.resultLevelSE.resultBody.initiative_id || (exactTitleFound() && !isKnowledgeProduct) || loadingDepthSearch()"
           text="Save and continue">
         </app-save-button>
       </div>
