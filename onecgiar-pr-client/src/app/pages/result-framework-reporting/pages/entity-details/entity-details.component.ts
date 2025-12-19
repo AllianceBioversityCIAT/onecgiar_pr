@@ -17,6 +17,7 @@ import { DialogModule } from 'primeng/dialog';
 import { SplitButtonModule } from 'primeng/splitbutton';
 import { ResultCreatorModule } from '../../../results/pages/result-creator/result-creator.module';
 import { MenuItem } from 'primeng/api';
+import { ResultLevelService } from '../../../results/pages/result-creator/services/result-level.service';
 
 @Component({
   selector: 'app-entity-details',
@@ -43,6 +44,7 @@ export class EntityDetailsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   api = inject(ApiService);
   entityAowService = inject(EntityAowService);
+  resultLevelSE = inject(ResultLevelService);
 
   cd = inject(ChangeDetectorRef);
 
@@ -170,6 +172,27 @@ export class EntityDetailsComponent implements OnInit {
   chartOptionsOutputs = computed<ChartOptions<'bar'>>(() => this.buildChartOptions(this.dataOutputs()));
   chartOptionsOutcomes = computed<ChartOptions<'bar'>>(() => this.buildChartOptions(this.dataOutcomes()));
 
+  groupedIndicatorSummaries = computed(() => {
+    const summaries = this.entityAowService.indicatorSummaries().filter(item => item?.resultTypeName !== 'Innovation Use(IPSR)');
+
+    const outputs = summaries.filter(item => {
+      const name = item?.resultTypeName || '';
+      return (
+        name === 'Innovation development' || name === 'Knowledge product' || name === 'Capacity sharing for development' || name === 'Other output'
+      );
+    });
+
+    const outcomes = summaries.filter(item => {
+      const name = item?.resultTypeName || '';
+      return name === 'Innovation use' || name === 'Policy change' || name === 'Other outcome';
+    });
+
+    return {
+      outputs,
+      outcomes
+    };
+  });
+
   ngOnInit() {
     this.route.params.subscribe(params => {
       this.entityAowService.resetDashboardData();
@@ -260,5 +283,15 @@ export class EntityDetailsComponent implements OnInit {
         }
       }
     };
+  }
+
+  onReportRequested(item: any) {
+    this.resultLevelSE.setPendingResultType(item?.resultTypeId, item?.resultTypeName);
+    this.showReportModal.set(true);
+  }
+
+  onModalClose() {
+    this.showReportModal.set(false);
+    this.resultLevelSE.cleanData?.();
   }
 }
