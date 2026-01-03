@@ -60,7 +60,7 @@ type Params = {
  * @property {'type'} type - Defines the type or category of the item.
  * @property {'status'} status - Represents the current status of the item.
  */
-type ClarisaParam = 'show' | 'from' | 'version' | 'type' | 'status';
+type ClarisaParam = 'show' | 'from' | 'version' | 'type' | 'status' | 'year';
 
 /**
  * Represents the HTTP methods that can be used in requests.
@@ -271,7 +271,7 @@ export class ClarisaEndpoints<Entity, Dto> {
     'GET',
     ClarisaGlobalUnit,
     undefined,
-    { version: 2 },
+    { version: 2, year: 2025 },
   );
 
   /**
@@ -357,7 +357,7 @@ export class ClarisaEndpoints<Entity, Dto> {
     public entity: new () => Entity,
     public mapper?: (data: Dto[]) => DeepPartial<Entity>[],
     public params?: Params,
-  ) {}
+  ) { }
 
   /**
    * Maps an array of `ClarisaInstitutionDto` objects to an array of `DeepPartial<ClarisaInstitution>` objects.
