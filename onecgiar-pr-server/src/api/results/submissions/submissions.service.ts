@@ -114,9 +114,8 @@ export class SubmissionsService {
           return;
         }
 
-        const scienceProgram = await this._resultRepository.getScienceProgramByResultId(
-          resultId,
-        );
+        const scienceProgram =
+          await this._resultRepository.getScienceProgramByResultId(resultId);
 
         for (const email of emails) {
           const sp = scienceProgram[0];
