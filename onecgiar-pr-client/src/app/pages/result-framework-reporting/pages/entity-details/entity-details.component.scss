@@ -346,6 +346,25 @@ p {
   max-height: 688px;
 }
 
+.entity-details_indicator-group {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+
+  &:not(:first-child) {
+    margin-top: 8px;
+  }
+}
+
+.entity-details_indicator-group_title {
+  font-weight: 600;
+  font-style: normal;
+  font-size: 13px;
+  line-height: 100%;
+
+  color: #919191;
+}
+
 .entity-details_card_content_empty {
   @include fonts.pr-typography('h2');
   font-weight: 600;
