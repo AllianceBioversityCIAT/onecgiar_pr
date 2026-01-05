@@ -61,6 +61,7 @@
           type="currency"
           [required]="false"
           [noDataText]="option?.is_determined ? 'Not applicable' : 'Not provided'"
+          [disabled]="!!option.is_determined"
           [(ngModel)]="option.kind_cash">
         </app-pr-input>
       </td>
@@ -70,6 +71,7 @@
         optionLabel="name"
         optionValue="id"
         [options]="[{ name: 'This is yet to be determined', id: true }]"
+        (ngModelChange)="onDeterminedChange(option)"
         [(ngModel)]="option.is_determined">
       </app-pr-radio-button>
     </td>
