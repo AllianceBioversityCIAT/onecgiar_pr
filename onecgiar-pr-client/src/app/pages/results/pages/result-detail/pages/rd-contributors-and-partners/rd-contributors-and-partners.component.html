@@ -225,7 +225,7 @@
       optionLabel="full_name"
       optionValue="code"
       placeholder="Select a lead center..."
-      [required]="!this.rdPartnersSE.partnersBody.is_lead_by_partner"
+      [required]="false"
       [(ngModel)]="this.rdPartnersSE.leadCenterCode"
       *ngIf="!this.rdPartnersSE.updatingLeadData">
     </app-pr-select>
