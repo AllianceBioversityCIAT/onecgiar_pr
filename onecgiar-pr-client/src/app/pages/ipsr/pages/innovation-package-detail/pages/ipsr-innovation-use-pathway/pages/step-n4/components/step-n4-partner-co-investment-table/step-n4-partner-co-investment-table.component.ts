@@ -20,6 +20,12 @@ export class StepN4PartnerCoInvestmentTableComponent {
     partner.is_active = false;
   }
 
+  onDeterminedChange(option: any) {
+    if (!option.is_determined) {
+      option.kind_cash = null;
+    }
+  }
+
   hasElementsWithId(list) {
     const finalList = this.rolesSE.readOnly
       ? list.filter(item => item.obj_result_institution.created_by)

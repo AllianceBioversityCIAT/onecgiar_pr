@@ -33,7 +33,7 @@
 </app-alert-status>
 
 <div class="step_sub_section">
-  <div class="ipsr-sub-title" style="margin-top: 20px">IPSR workshop</div>
+  <div class="ipsr-sub-title" style="margin-top: 20px">Innovation Packaging Experts</div>
 
   <app-pr-radio-button
     label="Was an Innovation Packaging and Scaling Readiness online or in-person expert workshop organized?"
@@ -45,7 +45,10 @@
   </app-pr-radio-button>
 
   <div *ngIf="this.ipsrStep1Body.result_ip.is_expert_workshop_organized === true">
-    <app-pr-field-header label="Facilitators" [required]="false"></app-pr-field-header>
+    <app-pr-field-header
+      label="Facilitators"
+      [required]="false"
+      description="if a workshop was organized, list the facilitators of the IPSR workshop. These should only include the people who led the IPSR workshop sessions, not the people who supported workshop logistics and administration."></app-pr-field-header>
     <div
       style="margin-top: 20px"
       *ngFor="let expertItem of this.ipsrStep1Body.result_ip_expert_workshop_organized; let i = index"

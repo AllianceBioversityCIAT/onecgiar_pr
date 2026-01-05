@@ -15,7 +15,8 @@
     </div>
 
     <app-pr-field-header label="Innovation Readiness level evidence-based"
-        [description]="this.readinessLevelSelfAssessmentText()"></app-pr-field-header>
+        [description]="this.readinessLevelSelfAssessmentText()"
+        [showDescriptionLabel]="false"></app-pr-field-header>
 
     <div>
         <app-pr-range-level itemTitle="name" itemDescription="definition" optionLabel="name" optionValue="id"
@@ -40,7 +41,8 @@
         <div class="fragment_section_divider"></div>
 
         <app-pr-field-header label="Innovation use level evidence-based"
-            [description]="this.useLevelDelfAssessment()"></app-pr-field-header>
+            [description]="this.useLevelDelfAssessment()"
+            [showDescriptionLabel]="false"></app-pr-field-header>
 
         <app-pr-range-level itemTitle="name" itemDescription="definition" optionLabel="name" optionValue="id"
             [options]="this.innovationUseList"

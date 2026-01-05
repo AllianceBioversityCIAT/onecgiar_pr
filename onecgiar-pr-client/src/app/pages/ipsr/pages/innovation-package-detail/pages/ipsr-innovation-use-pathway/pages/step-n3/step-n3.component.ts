@@ -137,14 +137,10 @@ export class StepN3Component implements OnInit {
   }
 
   readinessLevelSelfAssessmentText() {
-    return `
-    <li><a href="https://www.scalingreadiness.org/calculator-readiness-headless/" class="open_route" target="_blank">Click here</a>  to see all innovation readiness levels</li>
-    <li><strong>YOUR READINESS SCORE IN JUST 3 CLICKS: TRY THE NEW <a href="https://www.scalingreadiness.org/calculator-readiness-headless/" class="open_route" target="_blank">READINESS CALCULATOR</a>.</strong></li>
-    `;
+    return 'Please use the Innovation Readiness level calculator to determine your readiness score in 3 simple clicks:';
   }
   useLevelDelfAssessment() {
-    return `<li><a href="https://www.scalingreadiness.org/calculator-use-headless/" class="open_route" target="_blank">Click here</a> to see all innovation use levels</li>
-    <li><strong>YOUR USE SCORE IN JUST 3 CLICKS: TRY THE NEW <a href="https://www.scalingreadiness.org/calculator-use-headless/" class="open_route" target="_blank">USE CALCULATOR</a>.</strong></li>`;
+    return 'Please use the Innovation Use level calculator to determine your use score in 3 simple clicks: <a href="https://www.scalingreadiness.org/calculator-use-headless/" class="open_route" target="_blank">https://www.scalingreadiness.org/calculator-use-headless/</a>';
   }
 
   convertOrganizations(organizations) {
