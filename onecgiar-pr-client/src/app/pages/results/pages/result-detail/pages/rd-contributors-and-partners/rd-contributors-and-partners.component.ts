@@ -234,7 +234,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   formatBilateralProjectLabel(project: any): string {
     const fullName = project?.fullName || project?.obj_clarisa_project?.fullName || '';
     const organizationName = project?.obj_organization?.name || project?.obj_clarisa_project?.obj_organization?.name;
-    
+
     if (organizationName) {
       return `${fullName} (Center: ${organizationName})`;
     }
