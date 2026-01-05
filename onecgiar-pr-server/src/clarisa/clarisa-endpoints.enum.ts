@@ -357,7 +357,7 @@ export class ClarisaEndpoints<Entity, Dto> {
     public entity: new () => Entity,
     public mapper?: (data: Dto[]) => DeepPartial<Entity>[],
     public params?: Params,
-  ) { }
+  ) {}
 
   /**
    * Maps an array of `ClarisaInstitutionDto` objects to an array of `DeepPartial<ClarisaInstitution>` objects.

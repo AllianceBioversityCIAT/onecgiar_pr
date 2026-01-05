@@ -111,7 +111,8 @@ export class ClarisaTaskService {
 
     return this.syncControlList(institutionsPartial, 1).then((data) => {
       this._logger.debug(
-        `All CLARISA Institutions control list data has been created. Updated/created ${data.length ?? 0
+        `All CLARISA Institutions control list data has been created. Updated/created ${
+          data.length ?? 0
         } institutions`,
       );
     });
@@ -654,7 +655,6 @@ export class ClarisaTaskService {
       transformedData = data as unknown as DeepPartial<ClarisaProject>[];
     }
 
-    const repo = this.dataSource.getRepository(ClarisaProject);
     const results: ClarisaProject[] = [];
 
     // Process in a transaction to ensure consistency

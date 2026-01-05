@@ -58,7 +58,12 @@ export class ClarisaProject {
   })
   annual: string | null;
 
-  @Column({ name: 'source_of_funding', type: 'varchar', length: 255, nullable: true })
+  @Column({
+    name: 'source_of_funding',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
   sourceOfFunding: string | null;
 
   @Index('IDX_clarisa_projects_organization_code')
@@ -85,10 +90,20 @@ export class ClarisaProject {
   @Column({ name: 'modification_justification', type: 'text', nullable: true })
   modificationJustification: string | null;
 
-  @Column({ name: 'created_at', type: 'timestamp', precision: 6, nullable: true })
+  @Column({
+    name: 'created_at',
+    type: 'timestamp',
+    precision: 6,
+    nullable: true,
+  })
   createdAt: Date | null;
 
-  @Column({ name: 'updated_at', type: 'timestamp', precision: 6, nullable: true })
+  @Column({
+    name: 'updated_at',
+    type: 'timestamp',
+    precision: 6,
+    nullable: true,
+  })
   updatedAt: Date | null;
 
   @Column({ name: 'is_active', type: 'tinyint', width: 1, nullable: true })
