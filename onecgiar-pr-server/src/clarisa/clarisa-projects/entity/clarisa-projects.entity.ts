@@ -1,5 +1,14 @@
-import { Column, Entity, OneToMany, PrimaryColumn, Index } from 'typeorm';
+import {
+  Column,
+  Entity,
+  OneToMany,
+  PrimaryColumn,
+  Index,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { ResultsByProjects } from '../../../api/results/results_by_projects/entities/results_by_projects.entity';
+import { ClarisaInstitution } from '../../clarisa-institutions/entities/clarisa-institution.entity';
 
 @Entity('clarisa_projects')
 export class ClarisaProject {
@@ -55,6 +64,13 @@ export class ClarisaProject {
   @Index('IDX_clarisa_projects_organization_code')
   @Column({ name: 'organization_code', type: 'bigint', nullable: true })
   organizationCode: number | null;
+
+  @ManyToOne(() => ClarisaInstitution, { nullable: true })
+  @JoinColumn({
+    name: 'organization_code',
+    referencedColumnName: 'id',
+  })
+  obj_organization: ClarisaInstitution | null;
 
   @Index('IDX_clarisa_projects_funder_code')
   @Column({ name: 'funder_code', type: 'bigint', nullable: true })
