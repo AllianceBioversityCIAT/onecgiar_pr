@@ -1,0 +1,125 @@
+::ng-deep .save-confirmation-modal {
+  .p-dialog {
+    border-radius: 12px;
+    overflow: hidden;
+    max-width: 600px !important;
+    width: 90vw;
+    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.15);
+  }
+
+  .p-dialog-content {
+    padding: 0;
+    background-color: white;
+    max-width: 500px !important;
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e8ebed;
+  background-color: white;
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    .warning-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background-color: var(--pr-color-orange-500, #f97316);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      padding-bottom: 5px;
+
+      i {
+        color: white;
+        font-size: 20px;
+      }
+    }
+
+    .modal-title {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #333333;
+    }
+  }
+
+  .close-icon {
+    color: #9c9c9c;
+    font-size: 18px;
+    cursor: pointer;
+    transition: color 0.2s;
+
+    &:hover {
+      color: #666666;
+    }
+  }
+}
+
+.modal-content {
+  padding: 24px;
+  background-color: white;
+
+  .modal-message {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #333333;
+    text-align: left;
+  }
+}
+
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid #e8ebed;
+  background-color: white;
+
+  button {
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+
+    &.btn-cancel  {
+      height: 40px !important;
+      padding: 8px 15px;
+      border: 1px solid var(--pr-color-neutral-1000);
+      background-color: var(--pr-color-white);
+      color: var(--pr-color-secondary-400);
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s ease;
+  
+      &:hover {
+        background-color: var(--pr-color-primary-50);
+        border-color: var(--pr-color-secondary-100);
+      }
+    }
+
+    &.btn-continue {
+      background-color: #273ec5;
+      color: white;
+
+      &:hover {
+        background-color: #1e2fa0;
+      }
+    }
+  }
+}
+

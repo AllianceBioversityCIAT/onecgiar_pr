@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { DataSource } from 'typeorm';
 import { ResultsFrameworkReportingService } from './results-framework-reporting.service';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
@@ -107,6 +108,10 @@ const mockResultsByInstitutionsService = {
   handleContributingCenters: jest.fn(),
 };
 
+const mockDataSource = {
+  query: jest.fn(),
+};
+
 describe('ResultsFrameworkReportingService', () => {
   let service: ResultsFrameworkReportingService;
 
@@ -120,6 +125,10 @@ describe('ResultsFrameworkReportingService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ResultsFrameworkReportingService,
+        {
+          provide: DataSource,
+          useValue: mockDataSource,
+        },
         {
           provide: ClarisaInitiativesRepository,
           useValue: mockClarisaInitiativesRepository,
@@ -188,6 +197,10 @@ describe('ResultsFrameworkReportingService', () => {
   } as any;
 
   describe('getGlobalUnitsByProgram', () => {
+    beforeEach(() => {
+      mockDataSource.query.mockResolvedValue([]);
+    });
+
     it('should return formatted units when all checks pass', async () => {
       mockClarisaInitiativesRepository.findOne.mockResolvedValue({
         id: 5,
@@ -1394,6 +1407,15 @@ describe('ResultsFrameworkReportingService', () => {
           where: expect.objectContaining({
             toc_result_id: 5,
             is_active: true,
+            obj_results: { is_active: true },
+            obj_results_toc_result_indicators: expect.objectContaining({
+              toc_results_indicator_id: 'IND-55',
+              is_active: true,
+              is_not_aplicable: false,
+              obj_result_indicator_targets: expect.objectContaining({
+                is_active: true,
+              }),
+            }),
           }),
         }),
       );
@@ -1404,6 +1426,7 @@ describe('ResultsFrameworkReportingService', () => {
           where: expect.objectContaining({
             toc_results_indicator_id: 'IND-55',
             is_active: true,
+            is_not_aplicable: false,
           }),
         }),
       );

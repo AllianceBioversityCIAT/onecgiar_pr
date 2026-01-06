@@ -126,7 +126,7 @@ describe('UserController', () => {
       expect(result).toEqual(mockCreateUserResponse);
       expect(userService.createFull).toHaveBeenCalledWith(
         mockCreateUserDto,
-        mockTokenDto,
+        mockTokenDto.id,
       );
     });
   });

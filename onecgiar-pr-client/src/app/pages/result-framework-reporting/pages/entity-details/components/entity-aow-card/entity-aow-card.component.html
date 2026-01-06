@@ -21,12 +21,15 @@
     </div>
   </div>
 
-  <div style="width: 100%; height: 37px">
-    <div class="entity-aow-card_progress">
-      <p class="entity-aow-card_progress_title">Progress</p>
-      <p class="entity-aow-card_progress_value">{{ item?.progress || 0 }}%</p>
+  <div class="entity-aow-card_results">
+    <div class="entity-results-by-indicator-category-card_results_item">
+      <div class="dot" style="background-color: var(--pr-color-blue-400); margin-right: 3px"></div>
+      Editing:<span class="font-weight-600">{{ item?.resultsCount?.editing }}</span>
     </div>
 
-    <p-progressbar [value]="item?.progress || 0" [showValue]="false" [style]="{ height: '9px', width: '100%' }" />
+    <div class="entity-results-by-indicator-category-card_results_item">
+      <div class="dot" style="background-color: var(--pr-color-primary-200); margin-right: 3px"></div>
+      Submitted:<span class="font-weight-600">{{ item?.resultsCount?.submitted }}</span>
+    </div>
   </div>
 </div>
