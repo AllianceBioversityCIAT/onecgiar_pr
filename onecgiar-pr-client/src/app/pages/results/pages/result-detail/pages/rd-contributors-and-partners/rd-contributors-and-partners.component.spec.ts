@@ -86,12 +86,7 @@ describe('RdContributorsAndPartnersComponent', () => {
 
     await TestBed.configureTestingModule({
       declarations: [RdContributorsAndPartnersComponent],
-      imports: [
-        HttpClientTestingModule,
-        FormsModule,
-        TermPipe,
-        CustomFieldsModule
-      ],
+      imports: [HttpClientTestingModule, FormsModule, TermPipe, CustomFieldsModule],
       providers: [
         { provide: ApiService, useValue: mockApiService },
         { provide: RdContributorsAndPartnersService, useValue: mockRdPartnersSE },
@@ -144,9 +139,7 @@ describe('RdContributorsAndPartnersComponent', () => {
 
     it('should handle error in GET_AllWithoutResults', () => {
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-      mockApiService.resultsSE.GET_resultById.mockReturnValue(
-        throwError(() => new Error('API Error'))
-      );
+      mockApiService.resultsSE.GET_resultById.mockReturnValue(throwError(() => new Error('API Error')));
       component.ngOnInit();
       expect(consoleSpy).toHaveBeenCalled();
       consoleSpy.mockRestore();
@@ -173,11 +166,7 @@ describe('RdContributorsAndPartnersComponent', () => {
 
   describe('deleteEvidence', () => {
     it('should remove evidence at given index', () => {
-      mockRdPartnersSE.partnersBody.contributing_np_projects = [
-        new NonPooledProjectDto(),
-        new NonPooledProjectDto(),
-        new NonPooledProjectDto()
-      ];
+      mockRdPartnersSE.partnersBody.contributing_np_projects = [new NonPooledProjectDto(), new NonPooledProjectDto(), new NonPooledProjectDto()];
       const initialLength = mockRdPartnersSE.partnersBody.contributing_np_projects.length;
       component.deleteEvidence(1);
       expect(mockRdPartnersSE.partnersBody.contributing_np_projects.length).toBe(initialLength - 1);
@@ -220,29 +209,17 @@ describe('RdContributorsAndPartnersComponent', () => {
 
   describe('validateGranTitle', () => {
     it('should return true if duplicate grant titles exist', () => {
-      mockRdPartnersSE.partnersBody.contributing_np_projects = [
-        { grant_title: 'Grant 1' },
-        { grant_title: 'Grant 1' },
-        { grant_title: 'Grant 2' }
-      ];
+      mockRdPartnersSE.partnersBody.contributing_np_projects = [{ grant_title: 'Grant 1' }, { grant_title: 'Grant 1' }, { grant_title: 'Grant 2' }];
       expect(component.validateGranTitle).toBe(true);
     });
 
     it('should return true if any project has no grant_title', () => {
-      mockRdPartnersSE.partnersBody.contributing_np_projects = [
-        { grant_title: 'Grant 1' },
-        { grant_title: '' },
-        { grant_title: 'Grant 2' }
-      ];
+      mockRdPartnersSE.partnersBody.contributing_np_projects = [{ grant_title: 'Grant 1' }, { grant_title: '' }, { grant_title: 'Grant 2' }];
       expect(component.validateGranTitle).toBe(true);
     });
 
     it('should return false if all grant titles are unique and present', () => {
-      mockRdPartnersSE.partnersBody.contributing_np_projects = [
-        { grant_title: 'Grant 1' },
-        { grant_title: 'Grant 2' },
-        { grant_title: 'Grant 3' }
-      ];
+      mockRdPartnersSE.partnersBody.contributing_np_projects = [{ grant_title: 'Grant 1' }, { grant_title: 'Grant 2' }, { grant_title: 'Grant 3' }];
       expect(component.validateGranTitle).toBe(false);
     });
   });
@@ -306,9 +283,7 @@ describe('RdContributorsAndPartnersComponent', () => {
       mockRdPartnersSE.contributingInitiativeNew = [{ id: 1, name: 'New Initiative' }];
       component.onSaveSection();
       const callArgs = mockApiService.resultsSE.PATCH_ContributorsPartners.mock.calls[0][0];
-      expect(callArgs.contributing_initiatives.pending_contributing_initiatives).toContainEqual(
-        { id: 1, name: 'New Initiative' }
-      );
+      expect(callArgs.contributing_initiatives.pending_contributing_initiatives).toContainEqual({ id: 1, name: 'New Initiative' });
     });
 
     it('should call getSectionInformation after successful save', () => {
@@ -322,18 +297,20 @@ describe('RdContributorsAndPartnersComponent', () => {
     });
   });
 
-  describe('onRemoveContribuiting', () => {
-    it('should remove from accepted_contributing_initiatives when isAcceptedArray is true', () => {
+  describe('onRemoveAcceptedContributing', () => {
+    it('should remove from accepted_contributing_initiatives', () => {
       mockRdPartnersSE.partnersBody.contributing_initiatives = {
         accepted_contributing_initiatives: [{ id: 1 }, { id: 2 }]
       };
-      component.onRemoveContribuiting(0, true);
+      component.onRemoveAcceptedContributing(0);
       expect(mockRdPartnersSE.partnersBody.contributing_initiatives.accepted_contributing_initiatives.length).toBe(1);
     });
+  });
 
-    it('should remove from contributingInitiativeNew when isAcceptedArray is false', () => {
+  describe('onRemoveNewContributing', () => {
+    it('should remove from contributingInitiativeNew', () => {
       mockRdPartnersSE.contributingInitiativeNew = [{ id: 1 }, { id: 2 }];
-      component.onRemoveContribuiting(0, false);
+      component.onRemoveNewContributing(0);
       expect(mockRdPartnersSE.contributingInitiativeNew.length).toBe(1);
     });
   });

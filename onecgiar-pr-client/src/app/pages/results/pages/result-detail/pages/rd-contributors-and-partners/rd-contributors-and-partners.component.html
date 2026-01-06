@@ -149,7 +149,7 @@
             <i
               class="material-icons-round"
               [style.color]="item.is_active ? 'var(--pr-color-red-100)' : 'var(--pr-color-primary-300)'"
-              (click)="onRemoveContribuiting(i, true)">
+              (click)="onRemoveAcceptedContributing(i)">
               {{ item.is_active ? 'backspace' : 'undo' }}
             </i>
           }
@@ -166,7 +166,7 @@
             <i
               class="material-icons-round"
               [style.color]="item.is_active ? 'var(--pr-color-red-100)' : 'var(--pr-color-primary-300)'"
-              (click)="onRemoveContribuiting(i, false)">
+              (click)="onRemoveNewContributing(i)">
               {{ item.is_active ? 'backspace' : 'undo' }}
             </i>
           }
@@ -219,16 +219,29 @@
     </app-pr-select>
   </div>
   <ng-template #selectLeadCenter>
-    <app-pr-select
-      label="Lead center"
-      [options]="this.rdPartnersSE.possibleLeadCenters"
-      optionLabel="full_name"
-      optionValue="code"
-      placeholder="Select a lead center..."
-      [required]="false"
-      [(ngModel)]="this.rdPartnersSE.leadCenterCode"
-      *ngIf="!this.rdPartnersSE.updatingLeadData">
-    </app-pr-select>
+    @if (!this.rdPartnersSE.updatingLeadData) {
+      <app-pr-field-header label="Lead center" [required]="false"></app-pr-field-header>
+      <p-select
+        [options]="this.rdPartnersSE.possibleLeadCenters"
+        [(ngModel)]="this.rdPartnersSE.leadCenterCode"
+        optionLabel="full_name"
+        optionValue="code"
+        placeholder="Select a lead center..."
+        [showClear]="true"
+        [style]="{ width: '100%' }">
+        <ng-template pTemplate="item" let-item>
+          <div style="white-space: normal !important">
+            <div [innerHtml]="item.full_name"></div>
+          </div>
+        </ng-template>
+
+        <ng-template pTemplate="selectedItem" let-item>
+          <div style="white-space: normal !important">
+            <div [innerHtml]="item.full_name"></div>
+          </div>
+        </ng-template>
+      </p-select>
+    }
   </ng-template>
 
   @if (this.api.dataControlSE.currentResultSignal().result_type_id == 2 || this.api.dataControlSE.currentResultSignal().result_type_id == 7) {
