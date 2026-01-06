@@ -78,7 +78,6 @@ export class RdContributorsAndPartnersComponent implements OnInit {
         const activePortfolio = this.api.dataControlSE.currentResult?.portfolio;
         this.api.resultsSE.GET_AllWithoutResults(activePortfolio).subscribe(({ response }) => {
           this.contributingInitiativesList = response;
-          // this.changeDetectorRef.detectChanges();
         });
       },
       error: err => {
@@ -191,12 +190,12 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     });
   }
 
-  onRemoveContribuiting(index, isAcceptedArray: boolean) {
-    if (isAcceptedArray) {
-      this.rdPartnersSE.partnersBody.contributing_initiatives.accepted_contributing_initiatives.splice(index, 1);
-    } else {
-      this.rdPartnersSE.contributingInitiativeNew.splice(index, 1);
-    }
+  onRemoveAcceptedContributing(index: number) {
+    this.rdPartnersSE.partnersBody.contributing_initiatives.accepted_contributing_initiatives.splice(index, 1);
+  }
+
+  onRemoveNewContributing(index: number) {
+    this.rdPartnersSE.contributingInitiativeNew.splice(index, 1);
   }
 
   toggleActiveContributor(item) {
