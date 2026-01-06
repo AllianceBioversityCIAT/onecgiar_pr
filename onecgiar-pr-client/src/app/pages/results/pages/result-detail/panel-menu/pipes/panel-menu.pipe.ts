@@ -10,6 +10,12 @@ export class PanelMenuPipe implements PipeTransform {
   fieldsManager = inject(FieldsManagerService);
   constructor(private dataControlSE: DataControlService) {}
   transform(list: any[], resultTypeId: string, toggle) {
+    // Don't show menu options until portfolio is loaded to avoid showing wrong portfolio menu
+    const portfolio = this.fieldsManager.portfolioAcronym();
+    if (!portfolio) {
+      return [];
+    }
+
     this.dataControlSE?.green_checks?.map(green_check => {
       const optionFinded = list.find(item => item.path == green_check.section_name);
       optionFinded.validation = Number(green_check.validation);
