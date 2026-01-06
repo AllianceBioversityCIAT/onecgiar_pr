@@ -47,7 +47,7 @@ export class FieldsManagerService {
         placeholder: 'Search for a person (min 4 characters)',
         description: `For more precise results, we recommend searching by email or username.
     <br><strong>Examples:</strong> j.smith@cgiar.org; jsmith; JSmith`,
-        required: this.isP25()
+        required: false
       },
       '[general-info]-is_krs': {
         label: 'Is this result featured in a Key Result Story for the reporting year?',

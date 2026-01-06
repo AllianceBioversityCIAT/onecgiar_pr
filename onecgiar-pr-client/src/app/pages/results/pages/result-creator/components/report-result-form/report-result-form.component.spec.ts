@@ -73,7 +73,11 @@ describe('ReportResultFormComponent', () => {
       ],
       resultLevelList: [{ id: 1, selected: false, name: 'Output' }],
       resultLevelListSig: signal([{ id: 1, selected: false, name: 'Output' }]),
-      cleanData: jest.fn()
+      cleanData: jest.fn(),
+      resetSelection: jest.fn(),
+      consumePendingResultType: jest.fn(() => null),
+      preselectResultType: jest.fn(),
+      outputOutcomeLevelsSig: signal([])
     };
 
     mockPhasesService = {

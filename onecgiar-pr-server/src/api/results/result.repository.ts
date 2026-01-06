@@ -671,7 +671,13 @@ WHERE
         r.in_qa as inQA,
         ci.portfolio_id,
         cp.name as portfolio_name,
-        cp.acronym as acronym
+        cp.acronym as acronym,
+        EXISTS (
+            SELECT 1
+            FROM results_investment_discontinued_options rido
+            WHERE rido.result_id = r.id
+              AND rido.is_active = TRUE
+        ) AS has_discontinued_options
     FROM
         result r
         INNER JOIN result_type rt ON rt.id = r.result_type_id
@@ -2243,8 +2249,9 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       AND v.is_active = true
     INNER JOIN clarisa_portfolios cp ON v.portfolio_id = cp.id
     WHERE         
-      r.version_id = 34
-        AND r.is_active = true
+        v.phase_name = 'Reporting 2025'
+      AND v.is_active = true
+      AND r.is_active = true
     UNION ALL
     SELECT 
       r.id,
@@ -2267,6 +2274,60 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
 
     try {
       return await this.query(query);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  async getResultInnovationDevelopmentByResultId(
+    resultId: number,
+  ): Promise<boolean> {
+    try {
+      return await this.createQueryBuilder('r')
+        .innerJoin(
+          'result_answers',
+          'ra',
+          'ra.result_id = r.id AND ra.is_active = true',
+        )
+        .innerJoin(
+          'result_questions',
+          'rq',
+          'rq.result_question_id = ra.result_question_id',
+        )
+        .where('rq.result_question_id = :questionId', { questionId: 110 }) // "Yes, please contact me"
+        .andWhere('r.is_active = true')
+        .andWhere('ra.answer_boolean = true')
+        .andWhere('r.id = :resultId', { resultId })
+        .getExists();
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  async getScienceProgramByResultId(resultId: number): Promise<any> {
+    const query = `
+      SELECT
+        ci.official_code,
+        ci.name
+      FROM result r
+      INNER JOIN results_by_inititiative rbi ON r.id = rbi.result_id
+      INNER JOIN clarisa_initiatives ci ON rbi.inititiative_id = ci.id
+        AND ci.active = 1
+      WHERE r.id = ?
+        AND r.is_active = 1;
+    `;
+
+    try {
+      const result = await this.query(query, [resultId]);
+      return result;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultRepository.name,
