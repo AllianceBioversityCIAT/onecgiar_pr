@@ -306,7 +306,7 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     if (this.fieldsManagerSE.isP25()) {
       return `<ul>
       <li>
-      If the innovation does not target specific groups of actors or people, then please specify the expected innovation use at organizational level or other use.
+      If the innovation does not target specific groups of actors or people, then please specify the expected innovation use at organizational level or other use. The numbers should reflect the expected innovation use by end of 2030.
       </li>
       <li>
       Add information for as many as applicable.
