@@ -75,7 +75,7 @@
             <i
               class="material-icons-round"
               [style.color]="item.is_active ? 'var(--pr-color-red-100)' : 'var(--pr-color-primary-300)'"
-              (click)="onRemoveContribuiting(i, true)">
+              (click)="onRemoveAcceptedContributing(i)">
               {{ item.is_active ? 'backspace' : 'undo' }}
             </i>
           }
@@ -92,7 +92,7 @@
             <i
               class="material-icons-round"
               [style.color]="item.is_active ? 'var(--pr-color-red-100)' : 'var(--pr-color-primary-300)'"
-              (click)="onRemoveContribuiting(i, false)">
+              (click)="onRemoveNewContributing(i)">
               {{ item.is_active ? 'backspace' : 'undo' }}
             </i>
           }
