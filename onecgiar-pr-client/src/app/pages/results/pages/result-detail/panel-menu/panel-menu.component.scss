@@ -134,6 +134,10 @@
       padding-left: 5px;
       gap: 10px;
 
+      &.skeleton-loading {
+        gap: 6px;
+      }
+
       .section_active {
         background-color: var(--pr-color-primary-50);
         color: var(--pr-color-primary-950);
@@ -179,6 +183,49 @@
 
         &:hover {
           background-color: var(--pr-color-accents-1);
+        }
+      }
+
+      // Skeleton loader styles
+      .skeleton-item {
+        padding: 5px 10px 5px 20px;
+        border-radius: 10px;
+        position: relative;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        margin-bottom: 0;
+
+        .skeleton-line {
+          height: 14px;
+          background: linear-gradient(90deg, var(--pr-color-accents-1) 0%, var(--pr-color-accents-2) 50%, var(--pr-color-accents-1) 100%);
+          background-size: 200% 100%;
+          border-radius: 4px;
+          animation: skeleton-shimmer 1.5s ease-in-out infinite;
+          flex: 1;
+          margin-right: 40px;
+        }
+
+        .skeleton-check {
+          position: absolute;
+          width: 20px;
+          height: 20px;
+          right: 15px;
+          top: 50%;
+          transform: translateY(-50%);
+          background: linear-gradient(90deg, var(--pr-color-accents-1) 0%, var(--pr-color-accents-2) 50%, var(--pr-color-accents-1) 100%);
+          background-size: 200% 100%;
+          border-radius: 50%;
+          animation: skeleton-shimmer 1.5s ease-in-out infinite;
+        }
+      }
+
+      @keyframes skeleton-shimmer {
+        0% {
+          background-position: -200% 0;
+        }
+        100% {
+          background-position: 200% 0;
         }
       }
     }
