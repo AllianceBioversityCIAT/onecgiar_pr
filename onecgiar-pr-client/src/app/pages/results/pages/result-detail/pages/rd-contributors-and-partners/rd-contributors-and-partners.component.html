@@ -229,6 +229,8 @@
         optionValue="code"
         placeholder="Select a lead center..."
         [showClear]="true"
+        [readonly]="this.api.rolesSE.readOnly"
+        [disabled]="this.api.rolesSE.readOnly"
         [style]="{ width: '100%' }">
         <ng-template pTemplate="item" let-item>
           <div style="white-space: normal !important">
