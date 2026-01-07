@@ -455,17 +455,6 @@ export class BilateralService {
         isDuplicateResult: false,
       });
 
-      const isKpType =
-        bilateralDto.result_type_id === ResultTypeEnum.KNOWLEDGE_PRODUCT;
-      const isCapacityChange =
-        bilateralDto.result_type_id === ResultTypeEnum.CAPACITY_CHANGE;
-      const isInnovationDev =
-        bilateralDto.result_type_id === ResultTypeEnum.INNOVATION_DEVELOPMENT;
-      const isInnovationUse =
-        bilateralDto.result_type_id === ResultTypeEnum.INNOVATION_USE;
-      const isPolicyChange =
-        bilateralDto.result_type_id === ResultTypeEnum.POLICY_CHANGE;
-
       resultInfo = await this._resultRepository.findOne({
         where: { id: resultId },
         relations: this.buildResultRelations(bilateralDto.result_type_id),
