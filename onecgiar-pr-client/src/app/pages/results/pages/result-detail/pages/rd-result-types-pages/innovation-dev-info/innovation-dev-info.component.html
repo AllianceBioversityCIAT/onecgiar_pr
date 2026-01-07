@@ -90,6 +90,10 @@
     [options]="this.innovationControlListSE.readinessLevelsList"
     [(ngModel)]="innovationDevInfoBody.innovation_readiness_level_id"></app-pr-range-level>
 
+  <div appFeedbackValidation
+    labelText="How would you assess the current readiness of this innovation?"
+    [isComplete]="innovationDevInfoBody.innovation_readiness_level_id !== null && innovationDevInfoBody.innovation_readiness_level_id !== undefined"></div>
+
   <div class="pr_description" style="margin-top: 1rem">
     <a href="https://drive.google.com/file/d/1muDLtqpeaSCIX60g6qQG_GGOPR61Rq7E/view" class="open_route" target="_blank"
       rel="noopener noreferrer">
