@@ -1,7 +1,5 @@
 <div class="detail_container">
   <app-alert-status *ngIf="!this.api.dataControlSE.isKnowledgeProduct" [description]="alertStatusMessage"> </app-alert-status>
-  <!-- Contributing Centers start -->
-  <div appFeedbackValidation labelText="Contributing CGIAR Centers" [isComplete]="!!this.rdPartnersSE.partnersBody.contributing_center?.length"></div>
 
   <!-- ! from toc section -->
   @if (this.rdPartnersSE.getConsumed()) {
@@ -80,6 +78,7 @@
     selectedLabel="Center(s) selected"
     optionLabel="full_name"
     optionValue="code"
+    [required]="false"
     [(ngModel)]="this.rdPartnersSE.partnersBody.contributing_center"
     placeholder="Select center(s)"
     [disableOptions]="this.rdPartnersSE.cgspaceDisabledList"
