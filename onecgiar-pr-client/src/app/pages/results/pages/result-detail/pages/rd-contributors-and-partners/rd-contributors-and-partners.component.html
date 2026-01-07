@@ -273,6 +273,9 @@
         [displayLabelFormatter]="formatResultLabel.bind(this)"
         [required]="true">
       </app-pr-multi-select>
+      <div appFeedbackValidation
+        labelText="Please select a result"
+        [isComplete]="!!this.rdPartnersSE.partnersBody.linked_results?.length"></div>
     }
   }
   <app-alert-status

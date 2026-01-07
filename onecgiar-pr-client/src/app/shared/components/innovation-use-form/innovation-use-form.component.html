@@ -325,6 +325,10 @@
     [options]="this.innovationControlListSE.useLevelsList"
     [(ngModel)]="body.innovation_use_level_id"></app-pr-range-level>
 
+  <div appFeedbackValidation
+    labelText="How would you assess the current use level of the innovation?"
+    [isComplete]="body.innovation_use_level_id !== null && body.innovation_use_level_id !== undefined"></div>
+
   <div class="pr_description" style="margin-top: 1rem">
     <a href="https://drive.google.com/file/d/1RFDAx3m5ziisZPcFgYdyBYH9oTzOYLvC/view" class="open_route" target="_blank" rel="noopener noreferrer">
       Click here
