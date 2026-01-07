@@ -1,8 +1,8 @@
 <div class="local_container section_container">
   <app-pr-select
     class="segment_title_margin"
-    [options]="this.api.rolesSE.isAdmin ? this.allInitiatives : this.api.dataControlSE.myInitiativesListReportingByPortfolio"
-    label="Select Initiative"
+    [options]="this.allInitiatives"
+    label="Select Entity"
     [isStatic]="true"
     optionLabel="full_name"
     optionValue="official_code"

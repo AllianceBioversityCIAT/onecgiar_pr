@@ -34,13 +34,10 @@ export class QualityAssuranceComponent implements OnInit {
     new Observable((observer: any) => {
       observer.next();
       this.qaSE.$qaFirstInitObserver = observer;
-    }).subscribe(resp => {
-      if (this.api.rolesSE.isAdmin) {
+    }).subscribe(() => {
+      this.api.dataControlSE.getCurrentPhases().subscribe(() => {
         this.GET_AllInitiatives();
-      } else {
-        this.official_code = this.api.dataControlSE.myInitiativesList[0]?.official_code;
-        if (this.official_code) this.selectOptionEvent({ official_code: this.official_code });
-      }
+      });
     });
   }
 
@@ -49,8 +46,6 @@ export class QualityAssuranceComponent implements OnInit {
   }
 
   GET_AllInitiatives() {
-    if (!this.api.rolesSE.isAdmin) return;
-
     const activePortfolio = this.api.dataControlSE?.reportingCurrentPhase?.portfolioAcronym;
 
     this.api.resultsSE.GET_AllInitiatives(activePortfolio).subscribe(({ response }) => {
