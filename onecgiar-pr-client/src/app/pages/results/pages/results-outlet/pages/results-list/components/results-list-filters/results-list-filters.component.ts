@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, signal, Input, SimpleChanges, OnChanges } from '@angular/core';
+import { Component, OnInit, computed, signal, Input, SimpleChanges, OnChanges, afterNextRender, OnDestroy } from '@angular/core';
 import { ResultsListFilterService } from '../../services/results-list-filter.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { ExportTablesService } from '../../../../../../../../shared/services/export-tables.service';
@@ -6,7 +6,6 @@ import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
 import { MultiSelectModule } from 'primeng/multiselect';
-import { DrawerModule } from 'primeng/drawer';
 import { ModuleTypeEnum, StatusPhaseEnum } from '../../../../../../../../shared/enum/api.enum';
 import { OverlayBadgeModule } from 'primeng/overlaybadge';
 import { BadgeModule } from 'primeng/badge';
@@ -14,6 +13,10 @@ import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { InputTextModule } from 'primeng/inputtext';
 import { switchMap } from 'rxjs';
+import { ButtonModule } from 'primeng/button';
+import { ChipModule } from 'primeng/chip';
+import { ReversePipe } from '../../../../../../../../shared/pipes/reverse.pipe';
+import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
   selector: 'app-results-list-filters',
@@ -25,58 +28,183 @@ import { switchMap } from 'rxjs';
     FormsModule,
     MultiSelectModule,
     CustomFieldsModule,
-    DrawerModule,
     OverlayBadgeModule,
     BadgeModule,
     IconFieldModule,
     InputIconModule,
-    InputTextModule
+    InputTextModule,
+    ButtonModule,
+    ChipModule,
+    ReversePipe,
+    TooltipModule
   ]
 })
-export class ResultsListFiltersComponent implements OnInit, OnChanges {
+export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy {
   gettingReport = signal(false);
   visible = signal(false);
+  clarisaPortfolios = signal([]);
+  navbarHeight = signal(0);
+  private resizeObserver: ResizeObserver | null = null;
+
+  // Temporary signals for filter selections (before applying)
+  tempSelectedClarisaPortfolios = signal([]);
+  tempSelectedPhases = signal([]);
+  tempSelectedSubmitters = signal([]);
+  tempSelectedSubmittersAdmin = signal([]);
+  tempSelectedIndicatorCategories = signal([]);
+  tempSelectedStatus = signal([]);
+
+  // Computed signal for filtered phases based on selected portfolios
+  filteredPhasesOptions = computed(() => {
+    const selectedPortfolios = this.tempSelectedClarisaPortfolios();
+    if (selectedPortfolios.length === 0) {
+      return this.resultsListFilterSE.phasesOptionsOld();
+    }
+    return this.resultsListFilterSE.phasesOptionsOld().filter(phase => selectedPortfolios.some(portfolio => portfolio.id == phase.portfolio_id));
+  });
+
   filtersCount = computed(() => {
     let count = 0;
 
     if (this.resultsListFilterSE.selectedPhases().length > 0) count++;
-    if (this.isAdmin && this.resultsListFilterSE.selectedSubmittersAdmin().length > 0) count++;
-    if (!this.isAdmin && this.resultsListFilterSE.selectedSubmitters().length > 0) count++;
+    if (this.resultsListFilterSE.selectedSubmittersAdmin().length > 0) count++;
     if (this.resultsListFilterSE.selectedIndicatorCategories().length > 0) count++;
     if (this.resultsListFilterSE.selectedStatus().length > 0) count++;
     if (this.resultsListFilterSE.text_to_search().length > 0) count++;
+    if (this.resultsListFilterSE.selectedClarisaPortfolios().length > 0) count++;
 
     return count;
   });
   filtersCountText = computed(() => {
-    if (this.filtersCount() === 0) return 'See all filters';
-    return `See all filters (${this.filtersCount()})`;
+    if (this.filtersCount() === 0) return 'Apply filters';
+    return `Apply filters (${this.filtersCount()})`;
   });
+
+  // Computed property to generate grouped chips from applied filters
+  filterChipGroups = computed(() => {
+    const groups: Array<{
+      category: string;
+      chips: Array<{ label: string; filterType: string; item?: any }>;
+    }> = [];
+
+    // Clarisa Portfolios
+    const clarisaPortfoliosChips = this.resultsListFilterSE.selectedClarisaPortfolios().map(portfolio => ({
+      label: portfolio.name,
+      filterType: 'clarisaPortfolio',
+      item: portfolio
+    }));
+    if (clarisaPortfoliosChips.length > 0) {
+      groups.push({
+        category: 'Portfolio',
+        chips: clarisaPortfoliosChips
+      });
+    }
+
+    // Phases
+    const phaseChips = this.resultsListFilterSE.selectedPhases().map(phase => ({
+      label: phase.name,
+      filterType: 'phase',
+      item: phase
+    }));
+    if (phaseChips.length > 0) {
+      groups.push({
+        category: 'Phase',
+        chips: phaseChips
+      });
+    }
+
+    // Indicator Categories
+    const indicatorCategoryChips = this.resultsListFilterSE.selectedIndicatorCategories().map(category => ({
+      label: category.name,
+      filterType: 'indicatorCategory',
+      item: category
+    }));
+    if (indicatorCategoryChips.length > 0) {
+      groups.push({
+        category: 'Indicator category',
+        chips: indicatorCategoryChips
+      });
+    }
+
+    // Submitters
+    const submitterChips = this.resultsListFilterSE.selectedSubmittersAdmin().map(submitter => ({
+      label: submitter.official_code,
+      filterType: 'submitter',
+      item: submitter
+    }));
+    if (submitterChips.length > 0) {
+      groups.push({
+        category: 'Submitter',
+        chips: submitterChips
+      });
+    }
+
+    // Status
+    const statusChips = this.resultsListFilterSE.selectedStatus().map(status => ({
+      label: status.name,
+      filterType: 'status',
+      item: status
+    }));
+    if (statusChips.length > 0) {
+      groups.push({
+        category: 'Status',
+        chips: statusChips
+      });
+    }
+
+    return groups;
+  });
+
   @Input() isAdmin = false;
 
   constructor(
     public resultsListFilterSE: ResultsListFilterService,
     public api: ApiService,
     private exportTablesSE: ExportTablesService
-  ) {}
+  ) {
+    // Calculate navbar height after render
+    afterNextRender(() => {
+      this.calculateNavbarHeight();
+      this.setupResizeObserver();
+    });
+  }
 
   ngOnInit(): void {
     this.getData();
     this.getResultStatus();
+    this.getClarisaPortfolios();
+    this.getAllInitiatives();
   }
 
+  getClarisaPortfolios() {
+    this.api.resultsSE.GET_ClarisaPortfolios().subscribe({
+      next: response => {
+        this.clarisaPortfolios.set(response);
+      },
+      error: err => {
+        console.error(err);
+      }
+    });
+  }
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['isAdmin']) {
-      this.getAllInitiatives();
-    }
+    this.getAllInitiatives();
   }
 
   getAllInitiatives() {
-    if (!this.isAdmin) return;
-
     this.api.resultsSE.GET_AllInitiatives().subscribe({
       next: ({ response }) => {
-        this.resultsListFilterSE.submittersOptionsAdminOld.set(response);
+        // Handle null or undefined response
+        if (!response) {
+          this.resultsListFilterSE.submittersOptionsAdminOld.set([]);
+          return;
+        }
+
+        // Add displayName property to each submitter for use with optionLabel
+        const mappedResponse = response.map(submitter => ({
+          ...submitter,
+          displayName: `${submitter.official_code} ${submitter.name}`
+        }));
+        this.resultsListFilterSE.submittersOptionsAdminOld.set(mappedResponse);
       },
       error: err => {
         console.error(err);
@@ -101,11 +229,11 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges {
       this.resultsListFilterSE.phasesOptions().filter(item => this.api.dataControlSE?.reportingCurrentPhase?.portfolioId == item.portfolio_id)
     );
 
-    this.resultsListFilterSE.submittersOptions.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptionsOld()));
-    this.resultsListFilterSE.submittersOptionsAdmin.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptionsAdminOld()));
+    // Show all submitters initially (not filtered by phases)
+    this.resultsListFilterSE.submittersOptionsAdmin.set(this.resultsListFilterSE.submittersOptionsAdminOld());
 
-    this.resultsListFilterSE.selectedSubmitters.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptions()));
-    this.resultsListFilterSE.selectedSubmittersAdmin.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptionsAdmin()));
+    // No submitters selected initially
+    this.resultsListFilterSE.selectedSubmittersAdmin.set([]);
   }
 
   private buildPhaseOptions(response: any[]) {
@@ -122,22 +250,78 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges {
     return options.filter(item => selected.some(phase => phase.portfolio_id == item.portfolio_id));
   }
 
+  private filterOptionsBySelectedPortfolios<T extends { portfolio_id: any }>(options: T[]): T[] {
+    const selectedPortfolios = this.resultsListFilterSE.selectedClarisaPortfolios();
+    // If no portfolios selected, show all options
+    if (selectedPortfolios.length === 0) {
+      return options;
+    }
+    // Filter by selected portfolios
+    return options.filter(item => selectedPortfolios.some(portfolio => portfolio.id == item.portfolio_id));
+  }
+
   clearAllNewFilters() {
-    this.resultsListFilterSE.selectedPhases.set(
-      this.resultsListFilterSE.phasesOptions().filter(item => this.api.dataControlSE?.reportingCurrentPhase?.portfolioId == item.portfolio_id)
-    );
+    this.resultsListFilterSE.selectedClarisaPortfolios.set([]);
+    this.resultsListFilterSE.selectedPhases.set([]);
 
-    // Update available submitter options based on the reset phases
-    this.resultsListFilterSE.submittersOptions.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptionsOld()));
-    this.resultsListFilterSE.submittersOptionsAdmin.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptionsAdminOld()));
+    // When portfolios are cleared, show all submitters (no filtering)
+    this.resultsListFilterSE.submittersOptionsAdmin.set(this.resultsListFilterSE.submittersOptionsAdminOld());
 
-    // Set selected submitters to match the filtered options
-    this.resultsListFilterSE.selectedSubmitters.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptionsOld()));
-    this.resultsListFilterSE.selectedSubmittersAdmin.set(this.filterOptionsBySelectedPhases(this.resultsListFilterSE.submittersOptionsAdminOld()));
+    // Clear selected submitters
+    this.resultsListFilterSE.selectedSubmittersAdmin.set([]);
 
     this.resultsListFilterSE.selectedIndicatorCategories.set([]);
     this.resultsListFilterSE.selectedStatus.set([]);
     this.resultsListFilterSE.text_to_search.set('');
+
+    // Also clear temp values
+    this.tempSelectedClarisaPortfolios.set([]);
+    this.tempSelectedPhases.set([]);
+    this.tempSelectedSubmittersAdmin.set([]);
+    this.tempSelectedIndicatorCategories.set([]);
+    this.tempSelectedStatus.set([]);
+  }
+
+  removeFilter(chip: { label: string; filterType: string; item?: any }) {
+    switch (chip.filterType) {
+      case 'clarisaPortfolio':
+        this.resultsListFilterSE.selectedClarisaPortfolios.set(this.resultsListFilterSE.selectedClarisaPortfolios().filter(p => p !== chip.item));
+        // Update phases and submitters when portfolio changes
+        this.updateOptionsAfterPortfolioChange();
+        break;
+
+      case 'phase':
+        this.resultsListFilterSE.selectedPhases.set(this.resultsListFilterSE.selectedPhases().filter(p => p !== chip.item));
+        // Phases no longer affect submitters
+        break;
+
+      case 'submitter':
+        this.resultsListFilterSE.selectedSubmittersAdmin.set(this.resultsListFilterSE.selectedSubmittersAdmin().filter(s => s !== chip.item));
+        break;
+
+      case 'indicatorCategory':
+        this.resultsListFilterSE.selectedIndicatorCategories.set(this.resultsListFilterSE.selectedIndicatorCategories().filter(c => c !== chip.item));
+        break;
+
+      case 'status':
+        this.resultsListFilterSE.selectedStatus.set(this.resultsListFilterSE.selectedStatus().filter(s => s !== chip.item));
+        break;
+    }
+  }
+
+  private updateOptionsAfterPortfolioChange() {
+    // Update submitter options based on selected portfolios
+    this.resultsListFilterSE.submittersOptionsAdmin.set(this.filterOptionsBySelectedPortfolios(this.resultsListFilterSE.submittersOptionsAdminOld()));
+
+    // Remove submitters that are no longer valid
+    this.resultsListFilterSE.selectedSubmittersAdmin.set(this.filterOptionsBySelectedPortfolios(this.resultsListFilterSE.selectedSubmittersAdmin()));
+
+    // Update phases based on selected portfolios
+    const filteredPhases = this.filterOptionsBySelectedPortfolios(this.resultsListFilterSE.phasesOptionsOld());
+    // Remove phases that are no longer valid
+    this.resultsListFilterSE.selectedPhases.set(
+      this.resultsListFilterSE.selectedPhases().filter(phase => filteredPhases.some(p => p.id === phase.id))
+    );
   }
 
   getResultStatus() {
@@ -146,21 +330,69 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges {
     });
   }
 
-  onSelectPhases() {
-    this.resultsListFilterSE.selectedSubmitters.set([]);
-    this.resultsListFilterSE.selectedSubmittersAdmin.set([]);
+  onSelectPortfolios() {
+    // Update phases based on selected portfolios
+    const filteredPhases =
+      this.tempSelectedClarisaPortfolios().length === 0
+        ? this.resultsListFilterSE.phasesOptionsOld()
+        : this.resultsListFilterSE
+            .phasesOptionsOld()
+            .filter(phase => this.tempSelectedClarisaPortfolios().some(portfolio => portfolio.id == phase.portfolio_id));
 
+    // Reset phases if they don't match selected portfolios
+    this.tempSelectedPhases.set(this.tempSelectedPhases().filter(phase => filteredPhases.some(p => p.id === phase.id)));
+
+    // Update submitter options based on selected portfolios (not phases)
     this.resultsListFilterSE.submittersOptionsAdmin.set(
-      this.resultsListFilterSE
-        .submittersOptionsAdminOld()
-        .filter(item => this.resultsListFilterSE.selectedPhases().some(phase => phase.portfolio_id == item.portfolio_id))
+      this.tempSelectedClarisaPortfolios().length === 0
+        ? this.resultsListFilterSE.submittersOptionsAdminOld()
+        : this.resultsListFilterSE
+            .submittersOptionsAdminOld()
+            .filter(item => this.tempSelectedClarisaPortfolios().some(portfolio => portfolio.id == item.portfolio_id))
     );
 
-    this.resultsListFilterSE.submittersOptions.set(
-      this.resultsListFilterSE
-        .submittersOptionsOld()
-        .filter(item => this.resultsListFilterSE.selectedPhases().some(phase => phase.portfolio_id == item.portfolio_id))
+    // Don't reset selected submitters - they should remain if valid for the selected portfolios
+    this.tempSelectedSubmittersAdmin.set(
+      this.tempSelectedSubmittersAdmin().filter(submitter =>
+        this.resultsListFilterSE.submittersOptionsAdmin().some(option => option.id === submitter.id)
+      )
     );
+  }
+
+  onSelectPhases() {
+    // Phases selection no longer affects submitters
+    // Submitters are now filtered by portfolios only
+  }
+
+  // Initialize temp values when opening the drawer
+  openFiltersDrawer() {
+    this.tempSelectedClarisaPortfolios.set([...this.resultsListFilterSE.selectedClarisaPortfolios()]);
+    this.tempSelectedPhases.set([...this.resultsListFilterSE.selectedPhases()]);
+    this.tempSelectedSubmittersAdmin.set([...this.resultsListFilterSE.selectedSubmittersAdmin()]);
+    this.tempSelectedIndicatorCategories.set([...this.resultsListFilterSE.selectedIndicatorCategories()]);
+    this.tempSelectedStatus.set([...this.resultsListFilterSE.selectedStatus()]);
+    this.visible.set(true);
+  }
+
+  // Apply filters when clicking "Apply filters" button
+  applyFilters() {
+    this.resultsListFilterSE.selectedClarisaPortfolios.set([...this.tempSelectedClarisaPortfolios()]);
+    this.resultsListFilterSE.selectedPhases.set([...this.tempSelectedPhases()]);
+    this.resultsListFilterSE.selectedSubmittersAdmin.set([...this.tempSelectedSubmittersAdmin()]);
+    this.resultsListFilterSE.selectedIndicatorCategories.set([...this.tempSelectedIndicatorCategories()]);
+    this.resultsListFilterSE.selectedStatus.set([...this.tempSelectedStatus()]);
+    this.visible.set(false);
+  }
+
+  // Cancel and discard changes
+  cancelFilters() {
+    // Reset temp values to current applied filters
+    this.tempSelectedClarisaPortfolios.set([...this.resultsListFilterSE.selectedClarisaPortfolios()]);
+    this.tempSelectedPhases.set([...this.resultsListFilterSE.selectedPhases()]);
+    this.tempSelectedSubmittersAdmin.set([...this.resultsListFilterSE.selectedSubmittersAdmin()]);
+    this.tempSelectedIndicatorCategories.set([...this.resultsListFilterSE.selectedIndicatorCategories()]);
+    this.tempSelectedStatus.set([...this.resultsListFilterSE.selectedStatus()]);
+    this.visible.set(false);
   }
 
   onDownLoadTableAsExcel() {
@@ -206,5 +438,46 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges {
         this.gettingReport.set(false);
       }
     });
+  }
+
+  private calculateNavbarHeight() {
+    // Try to find the navbar/header element
+    const navbar =
+      document.querySelector('app-header-panel') ||
+      document.querySelector('header') ||
+      document.querySelector('nav') ||
+      document.querySelector('.navbar') ||
+      document.querySelector('.header');
+
+    if (navbar) {
+      const height = navbar.getBoundingClientRect().height;
+      this.navbarHeight.set(height);
+    } else {
+      // Default fallback height
+      this.navbarHeight.set(60);
+    }
+  }
+
+  private setupResizeObserver() {
+    const navbar =
+      document.querySelector('app-header-panel') ||
+      document.querySelector('header') ||
+      document.querySelector('nav') ||
+      document.querySelector('.navbar') ||
+      document.querySelector('.header');
+
+    if (navbar) {
+      this.resizeObserver = new ResizeObserver(() => {
+        this.calculateNavbarHeight();
+      });
+      this.resizeObserver.observe(navbar);
+    }
+  }
+
+  ngOnDestroy() {
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+      this.resizeObserver = null;
+    }
   }
 }

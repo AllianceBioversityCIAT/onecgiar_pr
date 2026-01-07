@@ -1,5 +1,6 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
-import { In, IsNull, Not } from 'typeorm';
+import { DataSource, In, IsNull } from 'typeorm';
+import { env } from 'process';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
 import { ClarisaGlobalUnitRepository } from '../../clarisa/clarisa-global-unit/clarisa-global-unit.repository';
@@ -32,6 +33,7 @@ export class ResultsFrameworkReportingService {
   );
 
   constructor(
+    private readonly dataSource: DataSource,
     private readonly _clarisaInitiativesRepository: ClarisaInitiativesRepository,
     private readonly _roleByUserRepository: RoleByUserRepository,
     private readonly _clarisaGlobalUnitRepository: ClarisaGlobalUnitRepository,
@@ -129,6 +131,12 @@ export class ResultsFrameworkReportingService {
           initiative.official_code.toUpperCase(),
           activeYearValue,
         );
+
+      const resultCountsByUnit = await this.getResultsCountByUnitAndStatus(
+        initiative.id,
+        childUnits.map((u) => u.code),
+      );
+
       let totalTargetValue = 0;
       let totalActualValue = 0;
       const progressByUnit = new Map<
@@ -233,6 +241,10 @@ export class ResultsFrameworkReportingService {
             progressDetails: {
               targetValueSum: totals.targetValue,
               actualAchievedValueSum: totals.actualValue,
+            },
+            resultsCount: {
+              editing: resultCountsByUnit.get(`${unitKey}_1`) ?? 0,
+              submitted: resultCountsByUnit.get(`${unitKey}_3`) ?? 0,
             },
           };
         });
@@ -365,6 +377,68 @@ export class ResultsFrameworkReportingService {
           status: HttpStatus.NOT_FOUND,
         };
       }
+
+      const enrichIndicatorTargets = async (indicator: any) => {
+        if (!indicator?.indicator_id) {
+          return;
+        }
+
+        const targetsWithCenters =
+          await this._tocResultsRepository.findTargetsWithCentersByIndicatorId(
+            indicator.indicator_id,
+          );
+
+        const centersMap = new Map<
+          number,
+          { center_id: number; center_acronym: string; center_name: string }
+        >();
+
+        const targets = targetsWithCenters.map((target) => {
+          target.centers.forEach((center) => {
+            if (!centersMap.has(center.center_id)) {
+              centersMap.set(center.center_id, {
+                center_id: center.center_id,
+                center_acronym: center.center_acronym,
+                center_name: center.center_name,
+              });
+            }
+          });
+
+          return {
+            toc_indicator_target_id: target.toc_indicator_target_id,
+            year: target.year,
+            target_value: target.target_value,
+            number_target: target.number_target,
+          };
+        });
+
+        indicator.targets_by_center = centersMap.size
+          ? { targets, centers: Array.from(centersMap.values()) }
+          : {};
+      };
+
+      const enrichTocResult = async (tocResult: any) => {
+        if (!Array.isArray(tocResult?.indicators)) {
+          return;
+        }
+
+        await Promise.all(
+          tocResult.indicators.map((indicator) =>
+            enrichIndicatorTargets(indicator),
+          ),
+        );
+      };
+
+      const enrichTocResultsWithTargets = async (tocResultsList: any[]) => {
+        await Promise.all(
+          tocResultsList.map((tocResult) => enrichTocResult(tocResult)),
+        );
+      };
+
+      await Promise.all([
+        enrichTocResultsWithTargets(tocResultsOutcomes),
+        enrichTocResultsWithTargets(tocResultsOutputs),
+      ]);
 
       return {
         response: {
@@ -639,15 +713,17 @@ export class ResultsFrameworkReportingService {
 
         primaryTocRecordId = primaryTocRecord.result_toc_result_id;
 
-        await this.upsertTocIndicators(
-          primaryTocRecord.result_toc_result_id,
-          resolvedTocResultId,
-          payload.indicators ?? null,
-          payload.contributing_indicator ?? null,
-          user.id,
-          payload.number_target ?? null,
-          payload.target_date ?? null,
-        );
+        if (payload.indicators) {
+          await this.upsertTocIndicators(
+            primaryTocRecord.result_toc_result_id,
+            resolvedTocResultId,
+            payload.indicators,
+            payload.contributing_indicator ?? null,
+            user.id,
+            payload.number_target ?? null,
+            payload.target_date ?? null,
+          );
+        }
       }
 
       if (payload.contributors_result_toc_result?.length) {
@@ -909,33 +985,13 @@ export class ResultsFrameworkReportingService {
 
   async getProgramIndicatorContributionSummary(program?: string) {
     try {
-      const normalizedProgram = program?.trim().toUpperCase();
-
-      if (!normalizedProgram) {
-        throw {
-          response: {},
-          message: 'The program identifier is required in the query params.',
-          status: HttpStatus.BAD_REQUEST,
-        };
-      }
-
-      const initiative = await this._clarisaInitiativesRepository.findOne({
-        where: { official_code: normalizedProgram, active: true },
-        select: ['id', 'official_code', 'name'],
-      });
-
-      if (!initiative) {
-        throw {
-          response: {},
-          message:
-            'No initiative was found with the provided program identifier.',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
+      const { initiative, activeYearValue } =
+        await this.resolveInitiativeAndYear(program ?? '');
 
       const [rawSummary, activeResultTypes] = await Promise.all([
         this._resultRepository.getIndicatorContributionSummaryByProgram(
           initiative.id,
+          activeYearValue,
         ),
         this._resultRepository.getActiveResultTypes(),
       ]);
@@ -1117,9 +1173,10 @@ export class ResultsFrameworkReportingService {
             obj_results: { is_active: true },
             obj_results_toc_result_indicators: {
               toc_results_indicator_id: tocResultIndicatorId,
+              is_active: true,
+              is_not_aplicable: false,
               obj_result_indicator_targets: {
                 is_active: true,
-                contributing_indicator: Not(IsNull()),
               },
             },
           },
@@ -1170,6 +1227,7 @@ export class ResultsFrameworkReportingService {
             results_toc_results_id: In(tocResultIdsWithIndicator),
             toc_results_indicator_id: tocResultIndicatorId,
             is_active: true,
+            is_not_aplicable: false,
           },
           select: ['results_toc_results_id'],
         });
@@ -1208,7 +1266,6 @@ export class ResultsFrameworkReportingService {
         { role_id: number | null; role_name: string | null }
       >();
 
-      // Get user's general application roles (roles 1 or 2 where initiative_id is null)
       let userGeneralRole: number | null = null;
       if (Number.isFinite(userId)) {
         const generalRoles = await this._roleByUserRepository.find({
@@ -1258,7 +1315,6 @@ export class ResultsFrameworkReportingService {
           ? rolesByResult.get(numericResultId)
           : undefined;
 
-        // Use specific role for result, or fallback to general application role
         const finalRoleId = roleInfo?.role_id ?? userGeneralRole;
 
         return {
@@ -1288,31 +1344,145 @@ export class ResultsFrameworkReportingService {
     }
   }
 
+  private async getResultsCountByUnitAndStatus(
+    initiativeId: number,
+    unitCodes: string[],
+  ): Promise<Map<string, number>> {
+    if (!unitCodes || unitCodes.length === 0) {
+      return new Map();
+    }
+
+    const tocPhaseId = await this.getCurrentTocPhaseId();
+    const placeholders = unitCodes.map(() => '?').join(',');
+
+    let query = `
+      SELECT 
+        UPPER(wp.acronym) AS work_package_acronym,
+        r.status_id,
+        COUNT(DISTINCT r.id) AS result_count
+      FROM 
+        result r
+      INNER JOIN 
+        results_toc_result rtr ON r.id = rtr.results_id 
+          AND rtr.is_active = 1
+      INNER JOIN 
+        results_toc_result_indicators rtri ON rtri.results_toc_results_id = rtr.result_toc_result_id
+          AND rtri.is_active = 1
+          AND rtri.is_not_aplicable = 0
+      INNER JOIN 
+        result_indicators_targets rit ON rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
+          AND rit.is_active = 1
+          AND rit.contributing_indicator IS NOT NULL
+      INNER JOIN 
+        ${env.DB_TOC}.toc_results tr ON tr.id = rtr.toc_result_id
+      INNER JOIN 
+        ${env.DB_TOC}.toc_work_packages wp ON wp.toc_id = tr.wp_id
+      WHERE 
+        r.is_active = 1
+        AND r.status_id IN (1, 3)
+        AND rtr.initiative_id = ?
+        AND UPPER(wp.acronym) IN (${placeholders})
+    `;
+
+    const params: (string | number)[] = [
+      initiativeId,
+      ...unitCodes.map((c) => c.toUpperCase()),
+    ];
+
+    if (tocPhaseId) {
+      query += ` AND tr.phase = ?`;
+      params.push(tocPhaseId);
+    }
+
+    query += `
+      GROUP BY 
+        UPPER(wp.acronym),
+        r.status_id
+    `;
+
+    const rawData = await this.dataSource.query(query, params);
+
+    const countsMap = new Map<string, number>();
+    for (const row of rawData) {
+      const key = `${row.work_package_acronym}_${row.status_id}`;
+      countsMap.set(key, Number(row.result_count) || 0);
+    }
+
+    return countsMap;
+  }
+
+  private async getCurrentTocPhaseId(): Promise<string | null> {
+    const query = `
+      SELECT toc_pahse_id
+      FROM version
+      WHERE is_active = 1 AND status = 1 AND app_module_id = 1
+      LIMIT 1
+    `;
+    try {
+      const rows = await this.dataSource.query(query);
+      return rows?.[0]?.toc_pahse_id ?? null;
+    } catch (error) {
+      this._logger.error('Error fetching current TOC phase ID', error);
+      return null;
+    }
+  }
+  private buildHttpError(status: number, message: string) {
+    const error: any = new Error(message);
+    error.response = {};
+    error.status = status;
+    return error;
+  }
+
+  private async resolveInitiativeAndYear(programId: string) {
+    const normalizedProgram = programId?.trim().toUpperCase();
+
+    if (!normalizedProgram) {
+      throw this.buildHttpError(
+        HttpStatus.BAD_REQUEST,
+        'The program identifier is required in the query params.',
+      );
+    }
+
+    const initiative = await this._clarisaInitiativesRepository.findOne({
+      where: { official_code: normalizedProgram, active: true },
+      select: ['id', 'official_code', 'name'],
+    });
+
+    if (!initiative) {
+      throw this.buildHttpError(
+        HttpStatus.NOT_FOUND,
+        'No initiative was found with the provided program identifier.',
+      );
+    }
+
+    const activeYear = await this._yearRepository.findOne({
+      where: { active: true },
+      select: ['year'],
+    });
+
+    if (!activeYear) {
+      throw this.buildHttpError(
+        HttpStatus.NOT_FOUND,
+        'No active reporting year was found.',
+      );
+    }
+
+    const activeYearValue = Number(activeYear.year);
+
+    if (!Number.isFinite(activeYearValue) || activeYearValue < 0) {
+      throw this.buildHttpError(
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        'The active reporting year configured is invalid.',
+      );
+    }
+
+    return { initiative, activeYearValue, normalizedProgram };
+  }
+
   async getDashboardStats(programId: string) {
     try {
-      const normalizedProgram = programId?.trim().toUpperCase();
-
-      if (!normalizedProgram) {
-        throw {
-          response: {},
-          message: 'The program identifier is required in the query params.',
-          status: HttpStatus.BAD_REQUEST,
-        };
-      }
-
-      const initiative = await this._clarisaInitiativesRepository.findOne({
-        where: { official_code: normalizedProgram, active: true },
-        select: ['id', 'official_code', 'name'],
-      });
-
-      if (!initiative) {
-        throw {
-          response: {},
-          message:
-            'No initiative was found with the provided program identifier.',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
+      const { initiative, activeYearValue } =
+        await this.resolveInitiativeAndYear(programId);
 
       const rawDashboardData = await this._resultRepository.query(
         `
@@ -1326,17 +1496,20 @@ export class ResultsFrameworkReportingService {
             ON rbi.result_id = r.id
             AND rbi.inititiative_id = ?
             AND rbi.is_active = 1
+          INNER JOIN \`version\` v
+            ON v.id = r.version_id
           WHERE
             r.is_active = 1
             AND r.status_id IN (1, 2, 3)
             AND r.result_level_id IN (3, 4)
             AND r.result_type_id IN (1, 2, 4, 5, 6, 7, 8, 10)
+            AND COALESCE(r.reported_year_id, v.phase_year) = ?
           GROUP BY
             r.status_id,
             r.result_level_id,
             r.result_type_id;
         `,
-        [initiative.id],
+        [initiative.id, activeYearValue],
       );
 
       const statusConfig = new Map([

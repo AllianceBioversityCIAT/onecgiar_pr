@@ -24,6 +24,7 @@ import {
 import { AuthMicroserviceService } from '../../../shared/microservices/auth-microservice/auth-microservice.service';
 import { TemplateRepository } from '../../../api/platform-report/repositories/template.repository';
 import { EmailTemplate } from '../../../shared/microservices/email-notification-management/enum/email-notification.enum';
+import { UserStatus } from './enum/user-status.enum';
 import * as handlebars from 'handlebars';
 import { ActiveDirectoryService } from '../../services/active-directory.service';
 import { EmailNotificationManagementService } from '../../../shared/microservices/email-notification-management/email-notification-management.service';
@@ -69,7 +70,7 @@ export class UserService {
    */
   async createFull(
     createUserDto: CreateUserDto,
-    token: TokenDto,
+    token: number,
   ): Promise<returnFormatUser | returnErrorDto> {
     try {
       await this.validateUserInput(createUserDto);
@@ -256,7 +257,7 @@ export class UserService {
 
   private async saveUserToDB(
     dto: CreateUserDto | ChangeUserStatusDto | UpdateUserDto,
-    token: TokenDto,
+    userId: number,
     changeStatus?: boolean,
     rbu_id?: number,
   ): Promise<returnFormatUser> {
@@ -271,7 +272,11 @@ export class UserService {
       });
 
       const currentUser = await this._userRepository.findOne({
-        where: { id: token.id },
+        where: { id: userId },
+      });
+
+      const adminUser = await this._userRepository.findOne({
+        where: { email: 'admin@prms.pr' },
       });
 
       if (dto.role_assignments?.length) {
@@ -286,8 +291,8 @@ export class UserService {
         }
       }
 
-      dto.created_by = currentUser?.id || null;
-      dto.last_updated_by = currentUser?.id || null;
+      dto.created_by = currentUser?.id || adminUser?.id;
+      dto.last_updated_by = currentUser?.id || adminUser?.id;
 
       let newUser: User;
 
@@ -1053,10 +1058,29 @@ export class UserService {
     });
 
     if (dto.activate) {
+      if (user.active) {
+        return {
+          response: { id: user.id, email: user.email },
+          message: 'User is already active',
+          status: HttpStatus.OK,
+        };
+      }
       const wasInactive = !user.active;
       user.active = true;
       user.last_updated_by = currentUser?.id;
       await this._userRepository.save(user);
+
+      if (dto.role_platform) {
+        const platformRole = this._roleByUserRepository.create({
+          user: user.id,
+          role: dto.role_platform,
+          initiative_id: null,
+          active: true,
+          created_by: currentUser?.id,
+          last_updated_by: currentUser?.id,
+        });
+        await this._roleByUserRepository.save(platformRole);
+      }
 
       if (
         wasInactive &&
@@ -1071,6 +1095,13 @@ export class UserService {
         );
       }
 
+      const updatedUser = await this.findUserWithRolesAndInitiatives(user.id);
+
+      await this.sendUserStatusChangedEmail({
+        user: updatedUser,
+        newStatus: UserStatus.ACTIVE,
+      });
+
       return {
         response: { id: user.id, email: user.email },
         message: 'User activated successfully',
@@ -1084,8 +1115,103 @@ export class UserService {
           status: HttpStatus.OK,
         };
       }
-      return this.deactivateUserCompletely(user, currentUser);
+
+      const deactivationResult = await this.deactivateUserCompletely(
+        user,
+        currentUser,
+      );
+
+      const updatedUser = await this.findUserWithRolesAndInitiatives(user.id);
+      await this.sendUserStatusChangedEmail({
+        user: updatedUser,
+        newStatus: UserStatus.INACTIVE,
+      });
+
+      return deactivationResult;
     }
+  }
+
+  private async findUserWithRolesAndInitiatives(userId: number): Promise<User> {
+    const user = await this._userRepository.findOne({
+      where: { id: userId },
+      relations: [
+        'obj_role_by_user',
+        'obj_role_by_user.obj_role',
+        'obj_role_by_user.obj_initiative',
+      ],
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with id ${userId} not found`);
+    }
+
+    return user;
+  }
+
+  private async sendUserStatusChangedEmail(params: {
+    user: User;
+    newStatus: UserStatus;
+  }): Promise<void> {
+    const { user, newStatus } = params;
+
+    const templateName = EmailTemplate.STATUS_UPDATE;
+
+    const templateDB = await this._templateRepository.findOne({
+      where: { name: templateName },
+    });
+
+    if (!templateDB) {
+      this._logger.warn(
+        `Email template ${templateName} not found. Skipping notification.`,
+      );
+      return;
+    }
+
+    const compiledTemplate = handlebars.compile(templateDB.template);
+
+    const isActivated = newStatus === UserStatus.ACTIVE;
+
+    const new_roles_assigned_per_entity = isActivated
+      ? (user.obj_role_by_user
+          ?.filter((rbu) => rbu.active && rbu.obj_initiative)
+          .map((rbu) => ({
+            initiative_code: rbu.obj_initiative.official_code,
+            initiative_name: rbu.obj_initiative.short_name,
+            role_name: rbu.obj_role?.description ?? '',
+          })) ?? [])
+      : [];
+
+    console.log(new_roles_assigned_per_entity);
+
+    const emailData = {
+      userName: `${user.first_name} ${user.last_name}`.trim(),
+      account_activated: isActivated,
+      account_deactivated: !isActivated,
+      new_roles_assigned_per_entity,
+    };
+
+    const technicalTeamEmailsRecord =
+      await this._globalParametersRepository.findOne({
+        where: { name: 'technical_team_email' },
+        select: { value: true },
+      });
+
+    this._emailNotificationManagementService.sendEmail({
+      from: {
+        email: process.env.EMAIL_SENDER,
+        name: 'PRMS Reporting Tool -',
+      },
+      emailBody: {
+        subject: `PRMS - Your Account Has Been ${newStatus}`,
+        to: [user.email],
+        cc: [],
+        bcc: technicalTeamEmailsRecord.value,
+        message: {
+          text: `Your account has been ${newStatus.toLowerCase()}.`,
+          socketFile: compiledTemplate(emailData),
+        },
+      },
+    });
   }
 
   private async deactivateUserCompletely(
@@ -1113,7 +1239,11 @@ export class UserService {
 
     const user = await this._userRepository.findOne({
       where: { email: cleanEmail },
-      relations: ['obj_role_by_user', 'obj_role_by_user.obj_role'],
+      relations: [
+        'obj_role_by_user',
+        'obj_role_by_user.obj_role',
+        'obj_role_by_user.obj_initiative',
+      ],
     });
 
     if (!user?.email) {
@@ -1284,7 +1414,7 @@ export class UserService {
         await this._roleByUserRepository.save(role);
       }
 
-      await this.saveUserToDB(dto, token);
+      await this.saveUserToDB(dto, token.id);
 
       const newlyAssigned = (dto.role_assignments || []).filter(
         (r) => !existingPairs.has(`${r.entity_id}:${r.role_id}`),

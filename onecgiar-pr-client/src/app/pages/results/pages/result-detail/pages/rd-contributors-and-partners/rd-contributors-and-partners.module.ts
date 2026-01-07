@@ -16,6 +16,7 @@ import { DialogModule } from 'primeng/dialog';
 import { TableModule } from 'primeng/table';
 import { CPKnowledgeProductSelectorComponent } from './components/multiple-wps/components/knowledge-product-selector/knowledge-product-selector.component';
 import { CPNormalSelectorComponent } from './components/multiple-wps/components/normal-selector/normal-selector.component';
+import { SelectModule } from 'primeng/select';
 @NgModule({
   declarations: [
     RdContributorsAndPartnersComponent,
@@ -37,7 +38,8 @@ import { CPNormalSelectorComponent } from './components/multiple-wps/components/
     RdTheoryOfChangeModule,
     DialogModule,
     TableModule,
-    JsonPipe
+    JsonPipe,
+    SelectModule
   ]
 })
 export class RdContributorsAndPartnersModule {}

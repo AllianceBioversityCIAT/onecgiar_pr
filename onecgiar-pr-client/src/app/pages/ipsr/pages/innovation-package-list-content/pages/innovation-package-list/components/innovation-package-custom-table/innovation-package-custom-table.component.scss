@@ -47,10 +47,30 @@ td {
 
 .title {
   a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
     &:not(:first-child) {
       border-top: 1px solid var(--pr-color-accents-2);
       margin-top: 10px;
       padding-top: 10px;
+    }
+  }
+
+  .discontinued-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: var(--pr-color-orange-500, #f97316);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    i {
+      color: white;
+      font-size: 12px;
     }
   }
 }

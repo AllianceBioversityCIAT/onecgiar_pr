@@ -1,4 +1,4 @@
-import { Injectable, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpStatus, Logger } from '@nestjs/common';
 import { env } from 'process';
 import { DataSource, Repository } from 'typeorm';
 import { TocResult } from './entities/toc-result.entity';
@@ -8,6 +8,8 @@ import { RESULT_TYPE_TO_INDICATOR_PATTERN } from '../../shared/constants/indicat
 
 @Injectable()
 export class TocResultsRepository extends Repository<TocResult> {
+  private readonly logger = new Logger(TocResultsRepository.name);
+
   constructor(private dataSource: DataSource) {
     super(TocResult, dataSource.createEntityManager());
   }
@@ -415,6 +417,7 @@ export class TocResultsRepository extends Repository<TocResult> {
     init_id: number,
     toc_level: number,
     resultTypeId?: number,
+    resultId?: number,
   ) {
     const categoryMap = {
       1: 'OUTPUT',
@@ -447,16 +450,39 @@ export class TocResultsRepository extends Repository<TocResult> {
       const likeConditions = allowedPatterns
         .map(() => 'tri.type_value LIKE ?')
         .join(' OR ');
-      indicatorFilter = `
-        AND EXISTS (
-          SELECT 1 
-          FROM ${env.DB_TOC}.toc_results_indicators tri
-          WHERE tri.toc_results_id = tr.id
-            AND tri.is_active = 1
-            AND (${likeConditions})
-        )
-      `;
-      params.push(...allowedPatterns);
+
+      if (resultId && Number.isFinite(resultId) && resultId > 0) {
+        indicatorFilter = `
+          AND (
+            EXISTS (
+              SELECT 1 
+              FROM ${env.DB_TOC}.toc_results_indicators tri
+              WHERE tri.toc_results_id = tr.id
+                AND tri.is_active = 1
+                AND (${likeConditions})
+            )
+            OR EXISTS (
+              SELECT 1
+              FROM ${env.DB_NAME}.results_toc_result rtr
+              WHERE rtr.toc_result_id = tr.id
+                AND rtr.results_id = ?
+                AND rtr.is_active = 1
+            )
+          )
+        `;
+        params.push(...allowedPatterns, resultId);
+      } else {
+        indicatorFilter = `
+          AND EXISTS (
+            SELECT 1 
+            FROM ${env.DB_TOC}.toc_results_indicators tri
+            WHERE tri.toc_results_id = tr.id
+              AND tri.is_active = 1
+              AND (${likeConditions})
+          )
+        `;
+        params.push(...allowedPatterns);
+      }
     }
 
     const queryData = `
@@ -501,6 +527,7 @@ export class TocResultsRepository extends Repository<TocResult> {
     year: Year,
     tocResultIds: Array<number | string>,
     resultTypeId?: number,
+    linkedIndicatorNodeIds?: string[],
   ): Promise<
     Array<{
       toc_result_id: number;
@@ -528,7 +555,8 @@ export class TocResultsRepository extends Repository<TocResult> {
 
     const queryParams: any[] = [targetYear, ...numericIds];
 
-    let typeFilter = '';
+    const indicatorConditions: string[] = [];
+
     if (
       resultTypeId &&
       RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId]?.length
@@ -537,9 +565,23 @@ export class TocResultsRepository extends Repository<TocResult> {
       const likeConditions = allowedPatterns
         .map(() => 'tri.type_value LIKE ?')
         .join(' OR ');
-      typeFilter = `AND (${likeConditions})`;
+      indicatorConditions.push(`(${likeConditions})`);
       queryParams.push(...allowedPatterns);
     }
+
+    const normalizedLinkedIndicators = (linkedIndicatorNodeIds ?? [])
+      .map((value) => `${value}`.trim())
+      .filter((value) => value !== '');
+
+    if (normalizedLinkedIndicators.length) {
+      const placeholders = normalizedLinkedIndicators.map(() => '?').join(', ');
+      indicatorConditions.push(`tri.related_node_id IN (${placeholders})`);
+      queryParams.push(...normalizedLinkedIndicators);
+    }
+
+    const typeFilter = indicatorConditions.length
+      ? `AND (${indicatorConditions.join(' OR ')})`
+      : '';
 
     const query = `
       SELECT
@@ -622,9 +664,28 @@ export class TocResultsRepository extends Repository<TocResult> {
         AND rtr.toc_result_id IN (${placeholders});
     `;
 
+    const params = [resultId, initiativeId, ...numericIds];
+
+    this.logger.debug(
+      `[getResultIndicatorMappings] Running query for result ${resultId} / initiative ${initiativeId} and tocResultIds=[${numericIds.join(', ')}]`,
+    );
+
     try {
-      return await this.query(query, [resultId, initiativeId, ...numericIds]);
+      const rows = await this.query(query, params);
+      if (!rows.length) {
+        this.logger.debug(
+          `[getResultIndicatorMappings] Query returned 0 rows. Params => ${JSON.stringify(
+            params,
+          )}`,
+        );
+      }
+      return rows;
     } catch (error) {
+      this.logger.error(
+        `[getResultIndicatorMappings] Failed query with params ${JSON.stringify(
+          params,
+        )}`,
+      );
       throw {
         message: `[${TocResultsRepository.name}] => getResultIndicatorMappings error: ${error}`,
         response: {},
