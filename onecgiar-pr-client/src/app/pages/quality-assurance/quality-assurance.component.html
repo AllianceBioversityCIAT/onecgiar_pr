@@ -1,15 +1,22 @@
 <div class="local_container section_container">
-  <app-pr-select
-    class="segment_title_margin"
-    [options]="this.allInitiatives"
-    label="Select Entity"
-    [isStatic]="true"
+  <app-pr-field-header label="Select Entity"></app-pr-field-header>
+  <p-select
+    [options]="allInitiatives"
+    [(ngModel)]="official_code"
     optionLabel="full_name"
     optionValue="official_code"
     placeholder="Select Initiative"
-    (selectOptionEvent)="selectOptionEvent($event)"
-    [(ngModel)]="official_code">
-  </app-pr-select>
+    (onChange)="selectOptionEvent($event.value)"
+    [style]="{ width: '100%', 'margin-bottom': '20px' }"
+    filter="true">
+    <ng-template #item let-option>
+      <div [innerHTML]="option.full_name"></div>
+    </ng-template>
+
+    <ng-template #selectedItem let-selectedOption>
+      <div [innerHTML]="selectedOption.full_name"></div>
+    </ng-template>
+  </p-select>
 
   <app-no-data-text
     *ngIf="!this.showIframe || !this.official_code || !this.clarisaQaToken"

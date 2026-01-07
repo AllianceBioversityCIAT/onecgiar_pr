@@ -165,7 +165,7 @@ describe('QualityAssuranceComponent', () => {
       expect(spyGET_AllInitiatives).toHaveBeenCalledWith('TEST-PORT');
       expect(component.allInitiatives).toEqual(mockInitiatives);
       expect(component.official_code).toEqual(1);
-      expect(spySelectOptionEvent).toHaveBeenCalledWith({ official_code: 1 });
+      expect(spySelectOptionEvent).toHaveBeenCalledWith(1);
     });
 
     it('should handle empty initiatives array', () => {
@@ -235,7 +235,7 @@ describe('QualityAssuranceComponent', () => {
       const spyGET_ClarisaQaToken = jest.spyOn(component, 'GET_ClarisaQaToken');
       const spySanitizeUrl = jest.spyOn(component, 'sanitizeUrl');
 
-      component.selectOptionEvent({ official_code: 2 });
+      component.selectOptionEvent(2);
 
       expect(component.official_code).toEqual(2);
       expect(component.showIframe).toBe(false); // Should be false initially
@@ -253,7 +253,7 @@ describe('QualityAssuranceComponent', () => {
       component.official_code = 1;
       const spyGET_ClarisaQaToken = jest.spyOn(component, 'GET_ClarisaQaToken');
 
-      component.selectOptionEvent({});
+      component.selectOptionEvent(undefined);
 
       expect(component.official_code).toBeUndefined();
       expect(spyGET_ClarisaQaToken).toHaveBeenCalled();
@@ -263,7 +263,7 @@ describe('QualityAssuranceComponent', () => {
       component.showIframe = true;
       component.official_code = 1;
 
-      component.selectOptionEvent({ official_code: 2 });
+      component.selectOptionEvent(2);
 
       expect(component.showIframe).toBe(false);
     });
