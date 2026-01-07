@@ -88,6 +88,8 @@
             <input
               type="number"
               placeholder="Enter target"
+              [readonly]="this.api.rolesSE.readOnly"
+              [disabled]="this.api.rolesSE.readOnly"
               [(ngModel)]="activeTab.indicators[0].targets[0].contributing_indicator"
               class="p-inputtext p-component"
               style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem" />
