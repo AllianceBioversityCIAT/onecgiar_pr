@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { ApiService } from '../../shared/services/api/api.service';
 import { ResultLevelService } from '../results/pages/result-creator/services/result-level.service';
 import { DomSanitizer } from '@angular/platform-browser';
@@ -10,7 +10,8 @@ import { QualityAssuranceService } from './quality-assurance.service';
   selector: 'app-quality-assurance',
   templateUrl: './quality-assurance.component.html',
   styleUrls: ['./quality-assurance.component.scss'],
-  standalone: false
+  standalone: false,
+  changeDetection: ChangeDetectionStrategy.Default
 })
 export class QualityAssuranceComponent implements OnInit {
   constructor(
@@ -51,7 +52,7 @@ export class QualityAssuranceComponent implements OnInit {
     this.api.resultsSE.GET_AllInitiatives(activePortfolio).subscribe(({ response }) => {
       this.allInitiatives = response;
       this.official_code = this.allInitiatives[0]?.official_code;
-      if (this.official_code) this.selectOptionEvent({ official_code: this.official_code });
+      if (this.official_code) this.selectOptionEvent(this.official_code);
     });
   }
 
@@ -69,7 +70,7 @@ export class QualityAssuranceComponent implements OnInit {
   }
 
   selectOptionEvent(option) {
-    this.official_code = option?.official_code;
+    this.official_code = option;
     this.showIframe = false;
     this.GET_ClarisaQaToken(() => {
       this.sanitizeUrl();
