@@ -1,27 +1,13 @@
 <div class="local_container section_container">
   <app-pr-select
     class="segment_title_margin"
-    [options]="this.api.dataControlSE.myInitiativesList"
-    *ngIf="!this.api.rolesSE.isAdmin"
-    label="Select entity"
+    [options]="this.api.rolesSE.isAdmin ? this.allInitiatives : this.api.dataControlSE.myInitiativesListReportingByPortfolio"
+    label="Select Initiative"
     [isStatic]="true"
     optionLabel="full_name"
     optionValue="official_code"
-    placeholder="Select entity"
+    placeholder="Select Initiative"
     (selectOptionEvent)="selectOptionEvent($event)"
-    [(ngModel)]="official_code">
-  </app-pr-select>
-
-  <app-pr-select
-    class="segment_title_margin"
-    [options]="this.allInitiatives"
-    label="Select entity"
-    [isStatic]="true"
-    *ngIf="this.api.rolesSE.isAdmin"
-    optionLabel="full_name"
-    optionValue="official_code"
-    (selectOptionEvent)="selectOptionEvent($event)"
-    placeholder="Select entity"
     [(ngModel)]="official_code">
   </app-pr-select>
 
@@ -42,7 +28,7 @@
       {{ this.api.dataControlSE.show_qa_full_screen ? 'Minimize ' : 'Open in full screen' }}
     </div>
 
-    <iframe title="quality-assurance" onload="resizeIframe(this)" class="embedded" [src]="this.sanitizedUrl"></iframe>
+    <iframe title="quality-assurance" class="embedded" [src]="this.sanitizedUrl"></iframe>
   </div>
   <br />
 </div>
