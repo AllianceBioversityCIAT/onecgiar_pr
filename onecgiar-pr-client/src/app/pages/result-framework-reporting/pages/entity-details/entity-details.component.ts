@@ -91,8 +91,8 @@ export class EntityDetailsComponent implements OnInit {
         {
           type: 'bar' as const,
           label: 'Editing',
-          backgroundColor: 'rgba(96, 165, 250, 1)',
-          hoverBackgroundColor: 'rgba(96, 165, 250, 0.8)',
+          backgroundColor: 'rgba(153, 153, 153, 0.6)',
+          hoverBackgroundColor: 'rgba(153, 153, 153, 0.6)',
           data: [
             this.entityAowService.dashboardData()?.editing?.data?.outputs?.knowledgeProduct,
             this.entityAowService.dashboardData()?.editing?.data?.outputs?.innovationDevelopment,
@@ -103,8 +103,8 @@ export class EntityDetailsComponent implements OnInit {
         {
           type: 'bar' as const,
           label: 'Submitted',
-          backgroundColor: 'rgba(142, 155, 232, 1)',
-          hoverBackgroundColor: 'rgba(142, 155, 232, 0.8)',
+          backgroundColor: 'rgba(147, 197, 253, 1)',
+          hoverBackgroundColor: 'rgba(147, 197, 253, 0.8)',
           data: [
             this.entityAowService.dashboardData()?.submitted?.data?.outputs?.knowledgeProduct,
             this.entityAowService.dashboardData()?.submitted?.data?.outputs?.innovationDevelopment,
@@ -135,8 +135,8 @@ export class EntityDetailsComponent implements OnInit {
         {
           type: 'bar' as const,
           label: 'Editing',
-          backgroundColor: 'rgba(96, 165, 250, 1)',
-          hoverBackgroundColor: 'rgba(96, 165, 250, 0.8)',
+          backgroundColor: 'rgba(153, 153, 153, 0.6)',
+          hoverBackgroundColor: 'rgba(153, 153, 153, 0.6)',
           data: [
             this.entityAowService.dashboardData()?.editing?.data?.outcomes?.policyChange,
             this.entityAowService.dashboardData()?.editing?.data?.outcomes?.innovationUse,
@@ -146,8 +146,8 @@ export class EntityDetailsComponent implements OnInit {
         {
           type: 'bar' as const,
           label: 'Submitted',
-          backgroundColor: 'rgba(142, 155, 232, 1)',
-          hoverBackgroundColor: 'rgba(142, 155, 232, 0.8)',
+          backgroundColor: 'rgba(147, 197, 253, 1)',
+          hoverBackgroundColor: 'rgba(147, 197, 253, 0.8)',
           data: [
             this.entityAowService.dashboardData()?.submitted?.data?.outcomes?.policyChange,
             this.entityAowService.dashboardData()?.submitted?.data?.outcomes?.innovationUse,
