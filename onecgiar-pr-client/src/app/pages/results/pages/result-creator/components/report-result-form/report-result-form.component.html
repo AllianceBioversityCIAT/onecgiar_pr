@@ -104,14 +104,16 @@
         </div>
       </div>
 
-      <div class="report-result-content_left_content_actions">
-        <app-save-button
-          [editable]="true"
-          (clickSave)="onSaveSection()"
-          [disabled]="!this.resultLevelSE.resultBody.initiative_id || (exactTitleFound() && !isKnowledgeProduct) || loadingDepthSearch()"
-          text="Save and continue">
-        </app-save-button>
-      </div>
+      @if (this.entityAowService?.canReportResults()) {
+        <div class="report-result-content_left_content_actions">
+          <app-save-button
+            [editable]="true"
+            (clickSave)="onSaveSection()"
+            [disabled]="!this.resultLevelSE.resultBody.initiative_id"
+            text="Save and continue">
+          </app-save-button>
+        </div>
+      }
     </div>
   </div>
 </div>

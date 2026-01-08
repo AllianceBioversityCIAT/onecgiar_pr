@@ -44,6 +44,7 @@ describe('ReportResultFormComponent', () => {
         getCurrentPhases: jest.fn(() => of({})),
         reportingCurrentPhase: { portfolioAcronym: 'P25' },
         myInitiativesListReportingByPortfolio: mockInitiatives,
+        myInitiativesList: [],
         validateBody: jest.fn(),
         someMandatoryFieldIncompleteResultDetail: jest.fn()
       },
@@ -62,7 +63,7 @@ describe('ReportResultFormComponent', () => {
         POST_createWithHandle: jest.fn(() => of({ response: { result_code: 'R001', version_id: 1 } })),
         GET_mqapValidation: jest.fn(() => of({ response: { title: 'Test Title' } }))
       },
-      updateUserData: jest.fn((callback) => callback())
+      updateUserData: jest.fn(callback => callback())
     };
 
     mockResultLevelService = {
@@ -116,7 +117,7 @@ describe('ReportResultFormComponent', () => {
   });
 
   describe('ngOnInit', () => {
-    it('should initialize component and load initiatives for admin', (done) => {
+    it('should initialize component and load initiatives for admin', done => {
       jest.spyOn(component, 'GET_AllInitiatives');
       fixture.detectChanges();
       setTimeout(() => {
@@ -169,17 +170,17 @@ describe('ReportResultFormComponent', () => {
   });
 
   describe('GET_cgiarEntityTypes', () => {
-    it('should fetch entity types and mark them as labels', (done) => {
-      component.GET_cgiarEntityTypes((response) => {
+    it('should fetch entity types and mark them as labels', done => {
+      component.GET_cgiarEntityTypes(response => {
         expect(response).toEqual(mockEntityTypes);
         expect(response.every((item: any) => item.isLabel === true)).toBe(true);
         done();
       });
     });
 
-    it('should handle error gracefully', (done) => {
+    it('should handle error gracefully', done => {
       mockApiService.resultsSE.GET_cgiarEntityTypes = jest.fn(() => throwError(() => new Error('Error')));
-      component.GET_cgiarEntityTypes((response) => {
+      component.GET_cgiarEntityTypes(response => {
         expect(response).toBeUndefined();
         done();
       });
@@ -194,7 +195,7 @@ describe('ReportResultFormComponent', () => {
       expect(mockApiService.resultsSE.GET_AllInitiatives).not.toHaveBeenCalled();
     });
 
-    it('should fetch and organize initiatives for admin', (done) => {
+    it('should fetch and organize initiatives for admin', done => {
       mockApiService.rolesSE.isAdmin = true;
       component.GET_AllInitiatives(() => {
         expect(component.allInitiatives.length).toBeGreaterThanOrEqual(0);
@@ -475,4 +476,3 @@ describe('ReportResultFormComponent', () => {
     });
   });
 });
-
