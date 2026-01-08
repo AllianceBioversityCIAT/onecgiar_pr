@@ -3,6 +3,7 @@
   <app-pr-input fieldRef="[innovation-dev-info]-long_title" [required]="false" [readOnly]="true" [(ngModel)]="innovationDevInfoBody?.result.title">
   </app-pr-input>
   <app-pr-input fieldRef="[innovation-dev-info]-short_title" [maxWords]="10" [(ngModel)]="innovationDevInfoBody.short_title"> </app-pr-input>
+  <div appFeedbackValidation labelText="Short title" [isComplete]="!!innovationDevInfoBody.short_title"></div>
   <app-pr-select
     [options]="this.innovationControlListSE.characteristicsList"
     label="What would be the best way to characterize this innovation?"
