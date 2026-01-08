@@ -19,7 +19,12 @@
       <th></th>
     </tr>
     <tr *ngFor="let item of body.initiative_expected_investment">
-      <div appFeedbackValidation labelText="Total USD Value" [isComplete]="checkValueAlert(item)"></div>
+      <div
+        appFeedbackValidation
+        [labelText]="
+          'Total USD Value of ' + item.obj_result_initiative.obj_initiative.official_code + ' - ' + item.obj_result_initiative.obj_initiative.name
+        "
+        [isComplete]="checkValueAlert(item)"></div>
 
       <td>
         <strong>{{ item.obj_result_initiative.obj_initiative.official_code }}</strong> - {{ item.obj_result_initiative.obj_initiative.name }}
@@ -132,7 +137,10 @@
       <th></th>
     </tr>
     <tr *ngFor="let item of body.institutions_expected_investment">
-      <div appFeedbackValidation labelText="Total USD Value" [isComplete]="checkValueAlert(item)"></div>
+      <div
+        appFeedbackValidation
+        [labelText]="'Total USD Value of ' + item['obj_result_institution']?.obj_institutions.name"
+        [isComplete]="checkValueAlert(item)"></div>
 
       <td>
         <div class="name">{{ item['obj_result_institution']?.obj_institutions.name }}</div>
