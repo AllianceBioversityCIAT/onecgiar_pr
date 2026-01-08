@@ -23,7 +23,7 @@
       <a
         class="field"
         tabindex="0"
-        [id]="this.optionValue + (indexReference || '')"
+        [id]="(this.idKey || this.optionValue) + '_' + (indexReference ?? '')"
         [ngClass]="{ 'select-disable': this.disabled }"
         [ngClass]="{ globalDisabled: fieldDisabled }"
         (focus)="onDropdownOpen()">
