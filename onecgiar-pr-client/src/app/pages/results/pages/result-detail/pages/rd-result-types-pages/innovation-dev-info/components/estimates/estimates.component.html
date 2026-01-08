@@ -67,7 +67,13 @@
       <th></th>
     </tr>
     <tr *ngFor="let item of body.bilateral_expected_investment">
-      <div appFeedbackValidation labelText="Total USD Value" [isComplete]="checkValueAlert(item)"></div>
+      <div
+        appFeedbackValidation
+        [labelText]="
+          'Total USD Value of ' +
+          (this.fieldsManagerSE.isP25() ? item?.obj_result_project.obj_clarisa_project.shortName : item?.obj_non_pooled_projetct?.grant_title)
+        "
+        [isComplete]="checkValueAlert(item)"></div>
 
       <td>
         <div style="display: flex; justify-content: space-between; align-items: center">
