@@ -249,15 +249,17 @@
           }
         </div>
 
-        <div class="report-result-content_left_content_actions" [ngClass]="{ globalDisabled: creatingResult() }">
-          <p-button
-            label="Create and continue"
-            type="button"
-            class="pr-body-2"
-            (click)="createResult()"
-            [loading]="creatingResult()"
-            iconPos="right"></p-button>
-        </div>
+        @if (entityAowService.canReportResults()) {
+          <div class="report-result-content_left_content_actions" [ngClass]="{ globalDisabled: creatingResult() }">
+            <p-button
+              label="Create and continue"
+              type="button"
+              class="pr-body-2"
+              (click)="createResult()"
+              [loading]="creatingResult()"
+              iconPos="right"></p-button>
+          </div>
+        }
       </div>
     </div>
 
