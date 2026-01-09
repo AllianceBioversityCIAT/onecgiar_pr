@@ -46,7 +46,6 @@
             (ngModelChange)="actorItem.other_actor_type = null"
             placeholder="Select type of actor"
             [disableOptions]="removeOther(body?.innovatonUse?.actors)"
-            [required]="!!actorItem?.result_actors_id"
             [(ngModel)]="actorItem.actor_type_id">
           </app-pr-select>
           <div style="margin-top: 13px"></div>
@@ -66,28 +65,20 @@
 
         <div style="margin: 25px 0">
           <div *ngIf="!actorItem.sex_and_age_disaggregation">
-            <app-pr-field-header label="Women" [useColon]="false" [required]="false"></app-pr-field-header>
+            <app-pr-field-header label="Women" [useColon]="false"></app-pr-field-header>
 
             <div style="display: flex; align-items: center; gap: 30px">
-              <app-pr-checkbox label="Youth" (selectOptionEvent)="cleanActor(actorItem)" [(ngModel)]="actorItem.has_women_youth">
-              </app-pr-checkbox>
+              <app-pr-checkbox label="Youth" (selectOptionEvent)="cleanActor(actorItem)" [(ngModel)]="actorItem.has_women_youth"> </app-pr-checkbox>
 
-              <app-pr-checkbox label="Non-youth" (selectOptionEvent)="cleanActor(actorItem)" [(ngModel)]="actorItem.has_women">
-              </app-pr-checkbox>
+              <app-pr-checkbox label="Non-youth" (selectOptionEvent)="cleanActor(actorItem)" [(ngModel)]="actorItem.has_women"> </app-pr-checkbox>
             </div>
 
-            <app-pr-field-header label="Men" [useColon]="false" [required]="false"></app-pr-field-header>
+            <app-pr-field-header label="Men" [useColon]="false"></app-pr-field-header>
 
             <div style="display: flex; align-items: center; gap: 30px">
-              <app-pr-checkbox
-                label="Youth"
-                (selectOptionEvent)="cleanActor(actorItem)"
-                [(ngModel)]="actorItem.has_men_youth"></app-pr-checkbox>
+              <app-pr-checkbox label="Youth" (selectOptionEvent)="cleanActor(actorItem)" [(ngModel)]="actorItem.has_men_youth"></app-pr-checkbox>
 
-              <app-pr-checkbox
-                label="Non-youth"
-                (selectOptionEvent)="cleanActor(actorItem)"
-                [(ngModel)]="actorItem.has_men"></app-pr-checkbox>
+              <app-pr-checkbox label="Non-youth" (selectOptionEvent)="cleanActor(actorItem)" [(ngModel)]="actorItem.has_men"></app-pr-checkbox>
             </div>
           </div>
 

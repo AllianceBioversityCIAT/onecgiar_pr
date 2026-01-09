@@ -2,8 +2,12 @@
   <div id="alert"></div>
   <div
     appFeedbackValidation
-    labelText="What is the main geographic focus of the Output?"
-    [isComplete]="this.geographicLocationBody.geo_scope_id !== undefined"></div>
+    [labelText]="
+      this.fieldsManagerSE.isP25() && this.fieldsManagerSE.isAnInnovation()
+        ? 'What is the current geographic focus of the innovation development, testing and/or use?'
+        : 'What is the main geographic focus of the Output?'
+    "
+    [isComplete]="!!this.geographicLocationBody.geo_scope_id"></div>
 
   <app-alert-status description="Select the geographic location/s where this result is taking place."> </app-alert-status>
 
