@@ -32,9 +32,10 @@
   }
 
   <app-pr-yes-or-not
-    label="Does this result align with the Program’s planned TOC indicators?"
+    label="Does this result align with the Program's planned TOC indicators?"
     [required]="true"
-    [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.planned_result">
+    [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.planned_result"
+    (selectOptionEvent)="onPlannedResultChange($event)">
   </app-pr-yes-or-not>
 
   <app-alert-status
@@ -47,6 +48,18 @@
 
   <!-- from toc section  -->
   @if (this.rdPartnersSE.partnersBody.result_toc_result.planned_result !== null) {
+    <div style="z-index: 1; position: relative">
+      <app-cp-multiple-wps
+        [editable]="true"
+        [initiative]="this.rdPartnersSE.partnersBody?.result_toc_result"
+        [initiativeId]="this.rdPartnersSE.initiativeIdSignal"
+        [resultLevelId]="this.resultLevelSE.currentResultLevelId"
+        [isIpsr]="false"
+        [isContributor]="false"
+        [isNotifications]="false"
+        [isUnplanned]="!this.rdPartnersSE.partnersBody.result_toc_result.planned_result"
+        [showMultipleWPsContent]="this.rdPartnersSE.getConsumed()"></app-cp-multiple-wps>
+    </div>
     @if (!this.rdPartnersSE.partnersBody.result_toc_result.planned_result) {
       <app-pr-textarea
         placeholder="Enter reason"
@@ -57,18 +70,6 @@
         [rows]="2"
         [autogenerate]="true">
       </app-pr-textarea>
-    } @else {
-      <div style="z-index: 1; position: relative">
-        <app-multiple-wps
-          [editable]="true"
-          [initiative]="this.rdPartnersSE.partnersBody?.result_toc_result"
-          [initiativeId]="this.rdPartnersSE.initiativeIdSignal"
-          [resultLevelId]="this.resultLevelSE.currentResultLevelId"
-          [isIpsr]="false"
-          [isContributor]="false"
-          [isNotifications]="false"
-          [showMultipleWPsContent]="this.rdPartnersSE.getConsumed()"></app-multiple-wps>
-      </div>
     }
   }
 
