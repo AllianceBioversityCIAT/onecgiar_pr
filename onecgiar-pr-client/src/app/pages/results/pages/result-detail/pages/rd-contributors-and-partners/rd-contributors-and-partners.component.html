@@ -34,9 +34,10 @@
   }
 
   <app-pr-yes-or-not
-    label="Does this result align with the Program’s planned TOC indicators?"
+    label="Does this result align with the Program's planned TOC indicators?"
     [required]="true"
-    [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.planned_result">
+    [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.planned_result"
+    (selectOptionEvent)="onPlannedResultChange($event)">
   </app-pr-yes-or-not>
 
   <app-alert-status
