@@ -50,7 +50,7 @@
 
   <!-- from toc section  -->
   @if (this.rdPartnersSE.partnersBody.result_toc_result.planned_result !== null) {
-    @if (this?.api?.dataControlSE?.currentResultSignal()?.result_level_id !== 3) {
+    @if (this?.api?.dataControlSE?.currentResultSignal()?.result_level_id !== 3 || this.rdPartnersSE.partnersBody.result_toc_result.planned_result) {
       <div style="z-index: 1; position: relative">
         <app-cp-multiple-wps
           [editable]="true"
