@@ -61,7 +61,7 @@
       </app-pr-textarea>
     } @else {
       <div style="z-index: 1; position: relative">
-        <app-multiple-wps
+        <app-cp-multiple-wps
           [editable]="true"
           [initiative]="this.rdPartnersSE.partnersBody?.result_toc_result"
           [initiativeId]="this.rdPartnersSE.initiativeIdSignal"
@@ -69,7 +69,7 @@
           [isIpsr]="false"
           [isContributor]="false"
           [isNotifications]="false"
-          [showMultipleWPsContent]="this.rdPartnersSE.getConsumed()"></app-multiple-wps>
+          [showMultipleWPsContent]="this.rdPartnersSE.getConsumed()"></app-cp-multiple-wps>
       </div>
     }
   }

@@ -27,7 +27,7 @@ interface Tab {
 }
 
 @Component({
-  selector: 'app-multiple-wps',
+  selector: 'app-cp-multiple-wps',
   templateUrl: './multiple-wps.component.html',
   styleUrls: ['./multiple-wps.component.scss'],
   standalone: false
