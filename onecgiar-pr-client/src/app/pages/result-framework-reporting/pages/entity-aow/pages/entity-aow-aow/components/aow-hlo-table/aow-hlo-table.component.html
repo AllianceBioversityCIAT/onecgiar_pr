@@ -54,12 +54,6 @@
           <td style="text-align: center">{{ result.target_value_sum }}</td>
           <td style="text-align: center">{{ result.actual_achieved_value_sum }}</td>
           <td>
-            <div class="tab-content_progress">
-              <p-progressbar [value]="getProgress(result.progress_percentage)" [showValue]="false" [style]="{ width: '65px', height: '8px' }" />
-              <p class="tab-content_progress_value">{{ result.progress_percentage }}</p>
-            </div>
-          </td>
-          <td>
             <div
               class="tab-content_chip"
               [ngClass]="{
@@ -73,12 +67,14 @@
           </td>
           <td>
             <div class="tab-content_actions">
-              <button
-                pButton
-                label="Report result"
-                type="button"
-                class="pr-body-3 tab-content_actions_button"
-                (click)="openReportResultModal(item, result.indicator_id)"></button>
+              @if (entityAowService.canReportResults()) {
+                <button
+                  pButton
+                  label="Report result"
+                  type="button"
+                  class="pr-body-3 tab-content_actions_button"
+                  (click)="openReportResultModal(item, result.indicator_id)"></button>
+              }
               <button
                 pButton
                 label="View results"
@@ -101,13 +97,20 @@
       <tr>
         <td colspan="8" style="padding: 10px 20px">
           <div class="no-indicators-container">
-            <p class="no-indicators-message">This HLO has no associated indicators. Report results directly using the button below.</p>
-            <button
-              pButton
-              label="Report result"
-              type="button"
-              class="pr-body-3 no-indicators-button"
-              (click)="openReportResultModal(item, null)"></button>
+            <p class="no-indicators-message">
+              This HLO has no associated indicators.
+              @if (entityAowService.canReportResults()) {
+                Report results directly using the button below.
+              }
+            </p>
+            @if (entityAowService.canReportResults()) {
+              <button
+                pButton
+                label="Report result"
+                type="button"
+                class="pr-body-3 no-indicators-button"
+                (click)="openReportResultModal(item, null)"></button>
+            }
           </div>
         </td>
       </tr>

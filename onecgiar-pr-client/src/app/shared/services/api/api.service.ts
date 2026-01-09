@@ -61,10 +61,10 @@ export class ApiService {
       next: resp => {
         const [GET_allRolesByUser, GET_initiativesByUser, GET_initiativesByUserByPortfolio] = resp;
         this.dataControlSE.myInitiativesList = GET_initiativesByUser?.response;
-        this.dataControlSE.myInitiativesListReportingByPortfolio = GET_initiativesByUserByPortfolio?.response?.reporting.sort(
+        this.dataControlSE.myInitiativesListReportingByPortfolio = GET_initiativesByUserByPortfolio?.response?.reporting?.sort(
           (a, b) => a.initiative_id - b.initiative_id
         );
-        this.dataControlSE.myInitiativesListIPSRByPortfolio = GET_initiativesByUserByPortfolio?.response?.ipsr.sort(
+        this.dataControlSE.myInitiativesListIPSRByPortfolio = GET_initiativesByUserByPortfolio?.response?.ipsr?.sort(
           (a, b) => a.initiative_id - b.initiative_id
         );
         this.dataControlSE.myInitiativesLoaded = true;

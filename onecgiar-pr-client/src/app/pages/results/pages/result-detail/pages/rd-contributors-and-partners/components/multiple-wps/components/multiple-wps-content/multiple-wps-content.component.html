@@ -59,7 +59,7 @@
       }
     }
   </div>
-  @if (this.secondFieldLabel()) {
+  @if (this.secondFieldLabel() && !isUnplanned) {
     @if (showIndicators() && activeTab.toc_result_id) {
       @if (this.indicatorsList().length) {
         <app-pr-select
@@ -88,6 +88,8 @@
             <input
               type="number"
               placeholder="Enter target"
+              [readonly]="this.api.rolesSE.readOnly"
+              [disabled]="this.api.rolesSE.readOnly"
               [(ngModel)]="activeTab.indicators[0].targets[0].contributing_indicator"
               class="p-inputtext p-component"
               style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem" />
@@ -99,11 +101,11 @@
 
     <app-alert-status
       status="info"
-      description="Where results are qualitative and do not contribute numerically to the indicator target, provide here a short explanation of how the result supports or aligns with the Program’s TOC pathway."
+      description="Where results are qualitative and do not contribute numerically to the indicator target, provide here a short explanation of how the result supports or aligns with the Program's TOC pathway."
       inlineStyles="margin: 0; margin: 10px 0;"></app-alert-status>
 
     <app-pr-textarea
-      [label]="'Explanation of how the result aligns with/contributes to the Program’s TOC pathway'"
+      label="Explanation of how the result aligns with/contributes to the Program's TOC pathway"
       [required]="false"
       placeholder="Enter text"
       [rows]="3"

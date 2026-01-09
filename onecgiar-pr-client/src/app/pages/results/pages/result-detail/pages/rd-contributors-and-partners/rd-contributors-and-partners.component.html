@@ -34,9 +34,10 @@
   }
 
   <app-pr-yes-or-not
-    label="Does this result align with the Program’s planned TOC indicators?"
+    label="Does this result align with the Program's planned TOC indicators?"
     [required]="true"
-    [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.planned_result">
+    [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.planned_result"
+    (selectOptionEvent)="onPlannedResultChange($event)">
   </app-pr-yes-or-not>
 
   <app-alert-status
@@ -49,6 +50,18 @@
 
   <!-- from toc section  -->
   @if (this.rdPartnersSE.partnersBody.result_toc_result.planned_result !== null) {
+    <div style="z-index: 1; position: relative">
+      <app-cp-multiple-wps
+        [editable]="true"
+        [initiative]="this.rdPartnersSE.partnersBody?.result_toc_result"
+        [initiativeId]="this.rdPartnersSE.initiativeIdSignal"
+        [resultLevelId]="this.resultLevelSE.currentResultLevelId"
+        [isIpsr]="false"
+        [isContributor]="false"
+        [isNotifications]="false"
+        [isUnplanned]="!this.rdPartnersSE.partnersBody.result_toc_result.planned_result"
+        [showMultipleWPsContent]="this.rdPartnersSE.getConsumed()"></app-cp-multiple-wps>
+    </div>
     @if (!this.rdPartnersSE.partnersBody.result_toc_result.planned_result) {
       <app-pr-textarea
         placeholder="Enter reason"
@@ -59,18 +72,6 @@
         [rows]="2"
         [autogenerate]="true">
       </app-pr-textarea>
-    } @else {
-      <div style="z-index: 1; position: relative">
-        <app-multiple-wps
-          [editable]="true"
-          [initiative]="this.rdPartnersSE.partnersBody?.result_toc_result"
-          [initiativeId]="this.rdPartnersSE.initiativeIdSignal"
-          [resultLevelId]="this.resultLevelSE.currentResultLevelId"
-          [isIpsr]="false"
-          [isContributor]="false"
-          [isNotifications]="false"
-          [showMultipleWPsContent]="this.rdPartnersSE.getConsumed()"></app-multiple-wps>
-      </div>
     }
   }
 
@@ -149,7 +150,7 @@
             <i
               class="material-icons-round"
               [style.color]="item.is_active ? 'var(--pr-color-red-100)' : 'var(--pr-color-primary-300)'"
-              (click)="onRemoveContribuiting(i, true)">
+              (click)="onRemoveAcceptedContributing(i)">
               {{ item.is_active ? 'backspace' : 'undo' }}
             </i>
           }
@@ -166,7 +167,7 @@
             <i
               class="material-icons-round"
               [style.color]="item.is_active ? 'var(--pr-color-red-100)' : 'var(--pr-color-primary-300)'"
-              (click)="onRemoveContribuiting(i, false)">
+              (click)="onRemoveNewContributing(i)">
               {{ item.is_active ? 'backspace' : 'undo' }}
             </i>
           }
@@ -219,16 +220,31 @@
     </app-pr-select>
   </div>
   <ng-template #selectLeadCenter>
-    <app-pr-select
-      label="Lead center"
-      [options]="this.rdPartnersSE.possibleLeadCenters"
-      optionLabel="full_name"
-      optionValue="code"
-      placeholder="Select a lead center..."
-      [required]="!this.rdPartnersSE.partnersBody.is_lead_by_partner"
-      [(ngModel)]="this.rdPartnersSE.leadCenterCode"
-      *ngIf="!this.rdPartnersSE.updatingLeadData">
-    </app-pr-select>
+    @if (!this.rdPartnersSE.updatingLeadData) {
+      <app-pr-field-header label="Lead center" [required]="false"></app-pr-field-header>
+      <p-select
+        [options]="this.rdPartnersSE.possibleLeadCenters"
+        [(ngModel)]="this.rdPartnersSE.leadCenterCode"
+        optionLabel="full_name"
+        optionValue="code"
+        placeholder="Select a lead center..."
+        [showClear]="true"
+        [readonly]="this.api.rolesSE.readOnly"
+        [disabled]="this.api.rolesSE.readOnly"
+        [style]="{ width: '100%' }">
+        <ng-template pTemplate="item" let-item>
+          <div style="white-space: normal !important">
+            <div [innerHtml]="item.full_name"></div>
+          </div>
+        </ng-template>
+
+        <ng-template pTemplate="selectedItem" let-item>
+          <div style="white-space: normal !important">
+            <div [innerHtml]="item.full_name"></div>
+          </div>
+        </ng-template>
+      </p-select>
+    }
   </ng-template>
 
   @if (this.api.dataControlSE.currentResultSignal().result_type_id == 2 || this.api.dataControlSE.currentResultSignal().result_type_id == 7) {
