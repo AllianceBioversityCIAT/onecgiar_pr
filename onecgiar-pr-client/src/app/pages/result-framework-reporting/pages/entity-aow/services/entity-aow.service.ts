@@ -54,7 +54,7 @@ export class EntityAowService {
     }
     const myInitiativesList = this.api.dataControlSE.myInitiativesList || [];
     const found = myInitiativesList.find(item => item.official_code === this.entityId());
-    return found;
+    return !!found;
   });
 
   getAllDetailsData() {
