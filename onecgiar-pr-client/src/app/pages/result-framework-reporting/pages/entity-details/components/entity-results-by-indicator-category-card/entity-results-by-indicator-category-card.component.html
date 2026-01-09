@@ -24,18 +24,18 @@
         </div>
       </div>
     </div>
-    <div class="entity-results-by-indicator-category-card_actions">
-      <button type="button" pButton class="p-button-outlined entity-results-by-indicator-category-card_button-full" (click)="onReportClick()">
-        <span>Report</span>
-        <i class="material-icons-round">add</i>
-      </button>
+    @if (this.entityAowService.canReportResults()) {
+      <div class="entity-results-by-indicator-category-card_actions">
+        <button type="button" pButton class="p-button-outlined entity-results-by-indicator-category-card_button-full" (click)="onReportClick()">
+          <span>Report</span>
+          <i class="material-icons-round">add</i>
+        </button>
 
-      @if (this.entityAowService.canReportResults()) {
         <button type="button" pButton class="p-button-outlined entity-results-by-indicator-category-card_button-inline" (click)="onReportClick()">
           <span>Report result</span>
           <i class="material-icons-round">add</i>
         </button>
-      }
-    </div>
+      </div>
+    }
   </div>
 </div>
