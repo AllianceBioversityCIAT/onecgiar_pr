@@ -103,8 +103,8 @@ export class EntityDetailsComponent implements OnInit {
         {
           type: 'bar' as const,
           label: 'Submitted',
-          backgroundColor: '#93C5FD',
-          hoverBackgroundColor: '#93C5FD',
+          backgroundColor: 'rgba(147, 197, 253, 1)',
+          hoverBackgroundColor: 'rgba(147, 197, 253, 0.8)',
           data: [
             this.entityAowService.dashboardData()?.submitted?.data?.outputs?.knowledgeProduct,
             this.entityAowService.dashboardData()?.submitted?.data?.outputs?.innovationDevelopment,
@@ -146,8 +146,8 @@ export class EntityDetailsComponent implements OnInit {
         {
           type: 'bar' as const,
           label: 'Submitted',
-          backgroundColor: '#93C5FD',
-          hoverBackgroundColor: '#93C5FD',
+          backgroundColor: 'rgba(147, 197, 253, 1)',
+          hoverBackgroundColor: 'rgba(147, 197, 253, 0.8)',
           data: [
             this.entityAowService.dashboardData()?.submitted?.data?.outcomes?.policyChange,
             this.entityAowService.dashboardData()?.submitted?.data?.outcomes?.innovationUse,

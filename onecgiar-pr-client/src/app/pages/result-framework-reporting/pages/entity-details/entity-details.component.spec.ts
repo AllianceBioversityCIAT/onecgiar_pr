@@ -238,8 +238,8 @@ describe('EntityDetailsComponent', () => {
         expect(result.datasets[1]).toEqual({
           type: 'bar',
           label: 'Submitted',
-          backgroundColor: '#93C5FD',
-          hoverBackgroundColor: '#93C5FD',
+          backgroundColor: 'rgba(147, 197, 253, 1)',
+          hoverBackgroundColor: 'rgba(147, 197, 253, 0.8)',
           data: [8, 4, 2, 1]
         });
 
@@ -285,8 +285,8 @@ describe('EntityDetailsComponent', () => {
         expect(result.datasets[1]).toEqual({
           type: 'bar',
           label: 'Submitted',
-          backgroundColor: '#93C5FD',
-          hoverBackgroundColor: '#93C5FD',
+          backgroundColor: 'rgba(147, 197, 253, 1)',
+          hoverBackgroundColor: 'rgba(147, 197, 253, 0.8)',
           data: [6, 5, 4]
         });
 

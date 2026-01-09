@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { ResultBody } from '../../../../../../shared/interfaces/result.interface';
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
 import { TerminologyService } from '../../../../../../internationalization/terminology.service';
+import { EntityAowService } from '../../../../../result-framework-reporting/pages/entity-aow/services/entity-aow.service';
 
 @Component({
   selector: 'app-report-result-form',
@@ -45,7 +46,8 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
     public resultLevelSE: ResultLevelService,
     public terminologyService: TerminologyService,
     private router: Router,
-    private phasesService: PhasesService
+    private phasesService: PhasesService,
+    public entityAowService: EntityAowService
   ) {}
 
   ngOnInit(): void {

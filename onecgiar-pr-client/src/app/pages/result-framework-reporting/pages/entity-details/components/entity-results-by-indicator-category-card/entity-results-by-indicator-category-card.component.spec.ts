@@ -1,14 +1,22 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { EntityResultsByIndicatorCategoryCardComponent } from './entity-results-by-indicator-category-card.component';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { EntityAowService } from '../../../entity-aow/services/entity-aow.service';
 
 describe('EntityResultsByIndicatorCategoryCardComponent', () => {
   let component: EntityResultsByIndicatorCategoryCardComponent;
   let fixture: ComponentFixture<EntityResultsByIndicatorCategoryCardComponent>;
   let nativeElement: HTMLElement;
+  let mockEntityAowService: jest.Mocked<EntityAowService>;
 
   beforeEach(async () => {
+    mockEntityAowService = {
+      canReportResults: jest.fn(() => true) as any
+    } as any;
+
     await TestBed.configureTestingModule({
-      imports: [EntityResultsByIndicatorCategoryCardComponent]
+      imports: [EntityResultsByIndicatorCategoryCardComponent, HttpClientTestingModule],
+      providers: [{ provide: EntityAowService, useValue: mockEntityAowService }]
     }).compileComponents();
 
     fixture = TestBed.createComponent(EntityResultsByIndicatorCategoryCardComponent);
@@ -87,7 +95,7 @@ describe('EntityResultsByIndicatorCategoryCardComponent', () => {
       };
       fixture.detectChanges();
 
-      const button = nativeElement.querySelector('button[pButton]');
+      const button = nativeElement.querySelector('button.entity-results-by-indicator-category-card_button-full');
       expect(button).toBeTruthy();
       expect(button?.textContent?.trim()).toContain('Report');
     });
@@ -201,11 +209,13 @@ describe('EntityResultsByIndicatorCategoryCardComponent', () => {
       };
       fixture.detectChanges();
 
-      const button = nativeElement.querySelector('button[pButton]') as HTMLButtonElement;
-      button?.click();
+      const button = nativeElement.querySelector('button.entity-results-by-indicator-category-card_button-full');
+      expect(button).toBeTruthy();
+      (button as HTMLButtonElement).click();
       fixture.detectChanges();
 
       expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledWith(component.item);
     });
 
     it('should have correct button attributes', () => {
@@ -218,9 +228,11 @@ describe('EntityResultsByIndicatorCategoryCardComponent', () => {
       };
       fixture.detectChanges();
 
-      const button = nativeElement.querySelector('button[pButton]') as HTMLButtonElement;
-      expect(button?.type).toBe('button');
-      expect(button?.classList.contains('p-button-outlined')).toBe(true);
+      const button = nativeElement.querySelector('button.entity-results-by-indicator-category-card_button-full');
+      expect(button).toBeTruthy();
+      const htmlButton = button as HTMLButtonElement;
+      expect(htmlButton.type).toBe('button');
+      expect(htmlButton.classList.contains('p-button-outlined')).toBe(true);
     });
   });
 
