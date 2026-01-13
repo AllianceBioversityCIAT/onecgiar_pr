@@ -1,8 +1,12 @@
 <div class="unit_of_time_container">
   <div>
-    <app-pr-field-header
-      label="Expected partner co-investment (from own resources) in Innovation Package in"
-      [required]="false"></app-pr-field-header>
+    @if (this.fieldsManagerSE.isP25()) {
+      <app-pr-field-header label="Estimated total USD-value of (co-)investment by partners during the reporting period"></app-pr-field-header>
+    } @else {
+      <app-pr-field-header
+        label="Expected partner co-investment (from own resources) in Innovation Package in"
+        [required]="false"></app-pr-field-header>
+    }
   </div>
 </div>
 

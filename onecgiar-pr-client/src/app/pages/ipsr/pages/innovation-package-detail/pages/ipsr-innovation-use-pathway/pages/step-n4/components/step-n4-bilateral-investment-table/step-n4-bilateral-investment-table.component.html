@@ -1,6 +1,11 @@
 <div class="unit_of_time_container">
   <div>
-    <app-pr-field-header label="Expected CGIAR Bilateral investments in Innovation Package in" [required]="false"></app-pr-field-header>
+    @if (this.api.fieldsManagerSE.isP25()) {
+      <app-pr-field-header
+        label="Estimated total USD-value of investment by CGIAR W3 or bilateral projects during the reporting period"></app-pr-field-header>
+    } @else {
+      <app-pr-field-header label="Expected CGIAR Bilateral investments in Innovation Package in" [required]="false"></app-pr-field-header>
+    }
   </div>
 </div>
 
@@ -36,11 +41,13 @@
             }}
           </div>
           <div style="margin-top: 0px; margin-right: 0px">
-            <app-step-n4-edit-bilateral [body]="item" [isonlyread]="true"></app-step-n4-edit-bilateral>
-            <app-step-n4-edit-bilateral
-              [body]="item"
-              [isonlyread]="false"
-              *ngIf="isInitiative || this.api.rolesSE.isAdmin"></app-step-n4-edit-bilateral>
+            @if (!this.api.fieldsManagerSE.isP25()) {
+              <app-step-n4-edit-bilateral [body]="item" [isonlyread]="true"></app-step-n4-edit-bilateral>
+              <app-step-n4-edit-bilateral
+                [body]="item"
+                [isonlyread]="false"
+                *ngIf="isInitiative || this.api.rolesSE.isAdmin"></app-step-n4-edit-bilateral>
+            }
           </div>
         </div>
       </td>

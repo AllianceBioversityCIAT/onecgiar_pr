@@ -2,12 +2,18 @@
 <app-pr-field-header [description]="usdQuestionDescription()" [required]="false"></app-pr-field-header>
 <div class="unit_of_time_container">
   <div>
-    <app-pr-field-header
-      [label]="
-        'Expected CGIAR ' +
-        ('term.entity.singular' | term: this.ipsrDataControlSE.detailData?.portfolio) +
-        ' investment in improving the scaling readiness of the Innovation Package in'
-      "></app-pr-field-header>
+    @if (this.fieldsManagerSE.isP25()) {
+      <app-pr-field-header
+        label="Estimation of total USD-value of investment by CGIAR Programs during the reporting period
+        "></app-pr-field-header>
+    } @else {
+      <app-pr-field-header
+        [label]="
+          'Expected CGIAR ' +
+          ('term.entity.singular' | term: this.ipsrDataControlSE.detailData?.portfolio) +
+          ' investment in improving the scaling readiness of the Innovation Package in'
+        "></app-pr-field-header>
+    }
   </div>
 </div>
 
