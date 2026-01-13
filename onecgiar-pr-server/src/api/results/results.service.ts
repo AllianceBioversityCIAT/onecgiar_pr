@@ -2539,24 +2539,24 @@ export class ResultsService {
         gender_tag_level_description:
           result.obj_gender_tag_level?.description || null,
         gender_impact_area_impact_area:
-          result.obj_gender_impact_area?.impact_area || null,
+          result.obj_gender_impact_area?.name || null,
         climate_change_tag_level_description:
           result.obj_climate_change_tag_level?.description || null,
         climate_impact_area_impact_area:
-          result.obj_climate_impact_area?.impact_area || null,
+          result.obj_climate_impact_area?.name || null,
         nutrition_tag_level_description:
           result.obj_nutrition_tag_level?.description || null,
         nutrition_impact_area_impact_area:
-          result.obj_nutrition_impact_area?.impact_area || null,
+          result.obj_nutrition_impact_area?.name || null,
         environmental_biodiversity_tag_level_description:
           result.obj_environmental_biodiversity_tag_level?.description || null,
         environmental_biodiversity_impact_area_impact_area:
-          result.obj_environmental_biodiversity_impact_area?.impact_area ||
+          result.obj_environmental_biodiversity_impact_area?.name ||
           null,
         poverty_tag_level_description:
           result.obj_poverty_tag_level_id?.description || null,
         poverty_impact_area_impact_area:
-          result.obj_poverty_impact_area?.impact_area || null,
+          result.obj_poverty_impact_area?.name || null,
         evidence: evidence,
         centers: centers,
         toc_metadata: tocMetadata,
