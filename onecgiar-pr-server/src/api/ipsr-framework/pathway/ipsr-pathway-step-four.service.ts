@@ -52,7 +52,6 @@ export class IpsrPathwayStepFourService {
     saveStepFourDto: IpsrSaveStepFour,
   ) {
     try {
-      console.log('saveStepFourDto', saveStepFourDto);
       const result = await this._resultRepository.findOne({
         where: {
           id: resultId,
@@ -266,6 +265,7 @@ export class IpsrPathwayStepFourService {
             partner.kind_cash === null ? null : Number(partner.kind_cash);
           existBud.is_determined = partner.is_determined;
           existBud.last_updated_by = user;
+          existBud.is_active = partner.is_active ?? true;
 
           await this._resultInstitutionsBudgetRepository.save(existBud);
         } else {
@@ -336,6 +336,7 @@ export class IpsrPathwayStepFourService {
           rbb.is_determined = i.is_determined;
           rbb.last_updated_by = user;
           rbb.non_pooled_projetct_id = null;
+          rbb.is_active = i.is_active ?? true;
 
           await this._resultBilateralBudgetRepository.save(rbb);
         } else {
@@ -402,8 +403,6 @@ export class IpsrPathwayStepFourService {
               is_active: true,
             },
           });
-        console.log('rie kind_cash', rie.kind_cash);
-        console.log('initiative kind_cash', initiative.kind_cash);
 
         if (rie) {
           rie.kind_cash =
@@ -415,6 +414,7 @@ export class IpsrPathwayStepFourService {
 
           rie.is_determined = initiative.is_determined;
           rie.last_updated_by = user;
+          rie.is_active = initiative.is_active ?? true;
 
           await this._resultInitiativesBudgetRepository.save(rie);
         } else {
@@ -562,10 +562,6 @@ export class IpsrPathwayStepFourService {
           },
         });
 
-      console.log(
-        'bilateral_expected_investment',
-        bilateral_expected_investment,
-      );
 
       const institutions = await this._resultByInstitutionsRepository.find({
         where: [
