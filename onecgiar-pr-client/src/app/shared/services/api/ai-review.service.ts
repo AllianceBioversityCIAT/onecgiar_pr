@@ -140,20 +140,33 @@ export class AiReviewService {
       const enrichedDacScores = this.enrichDacScoresWithAIRecommendations(dacScoresData, json_content.impact_area_scores);
       this.dacScores.set(enrichedDacScores);
 
-      const customData = [
+      const allFieldsMapping = [
         { field_name_label: 'Title', field_name: 'new_title' },
         { field_name_label: 'Description', field_name: 'new_description' },
         { field_name_label: 'Innovation Short Title', field_name: 'short_name' }
       ];
 
+      // Filtrar solo los campos que existen en json_content
+      const availableFields = allFieldsMapping.filter(field => json_content[field.field_name] !== undefined);
+
       this.currnetFieldsList.update(res => {
-        res.forEach((item, index) => {
-          item.proposed_text = json_content[customData[index].field_name];
-          item.needs_improvement = true;
-          item.field_name_label = customData[index].field_name_label;
+        // Filtrar la lista para incluir solo los campos disponibles en json_content
+        const filteredList = res.filter((_, index) => {
+          const fieldMapping = allFieldsMapping[index];
+          return fieldMapping && json_content[fieldMapping.field_name] !== undefined;
         });
 
-        return [...res];
+        // Mapear los campos disponibles con sus datos correspondientes
+        filteredList.forEach((item, index) => {
+          const fieldMapping = availableFields[index];
+          if (fieldMapping) {
+            item.proposed_text = json_content[fieldMapping.field_name];
+            item.needs_improvement = true;
+            item.field_name_label = fieldMapping.field_name_label;
+          }
+        });
+
+        return filteredList;
       });
 
       await this.POST_createProposal({
