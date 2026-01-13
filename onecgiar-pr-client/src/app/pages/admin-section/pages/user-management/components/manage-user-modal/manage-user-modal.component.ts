@@ -281,7 +281,11 @@ export class ManageUserModalComponent {
     this.isLoading.set(true);
 
     const { email, role_assignments, role_platform, first_name, last_name } = this.addUserForm();
-    this.resultsApiService.PATCH_updateUserRoles({ email, role_assignments, role_platform, first_name, last_name }).subscribe({
+
+    // Filter out role assignments that are missing entity_id or role_id
+    const validRoleAssignments = role_assignments.filter(assignment => assignment.entity_id != null && assignment.role_id != null);
+
+    this.resultsApiService.PATCH_updateUserRoles({ email, role_assignments: validRoleAssignments, role_platform, first_name, last_name }).subscribe({
       next: res => {
         this.handleSuccessResponse('updateUserRolesSuccess', res.message, `${email} - ${first_name} ${last_name}`);
       },

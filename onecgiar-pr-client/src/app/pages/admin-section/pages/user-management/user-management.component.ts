@@ -21,6 +21,7 @@ import { MultiSelectModule } from 'primeng/multiselect';
 import { Popover } from 'primeng/popover';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
 import { UserRolesInfoModalComponent } from '../../../../shared/components/user-roles-info-modal/user-roles-info-modal.component';
+import { SelectModule } from 'primeng/select';
 
 interface UserColumn {
   label: string;
@@ -50,6 +51,7 @@ interface CgiarOption {
     InputTextModule,
     DialogModule,
     Popover,
+    SelectModule,
     CustomFieldsModule,
     IconFieldModule,
     InputIconModule,

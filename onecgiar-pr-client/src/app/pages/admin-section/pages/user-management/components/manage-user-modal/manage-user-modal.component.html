@@ -150,7 +150,8 @@
             }
 
             <div style="width: 45%">
-              <app-pr-select
+              <p-select
+                [disabled]="!assignment.entity_id"
                 [options]="getRolesService.roles()"
                 [ngClass]="{ globalDisabled: !addUserForm().is_cgiar }"
                 optionLabel="role_description"
@@ -158,8 +159,8 @@
                 placeholder="Select role"
                 [ngModel]="assignment.role_id"
                 (ngModelChange)="onRoleAssignmentChange($event, $index)"
-                [indexReference]="($index + 1) * 11"
-                [required]="false"></app-pr-select>
+                [required]="false"
+                [style]="{ width: '100%', height: '36px' }"></p-select>
             </div>
 
             <div style="width: 10%" class="remove-button-container">

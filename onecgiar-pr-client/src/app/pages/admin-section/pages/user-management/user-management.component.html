@@ -44,7 +44,8 @@
 
           <div class="status-filter">
             <label class="status-label" for="statusSelect">Status:</label>
-            <app-pr-select
+
+            <p-select
               #statusSelect
               id="statusSelect"
               [options]="statusOptions"
@@ -54,13 +55,13 @@
               [ngModel]="selectedStatus()"
               (ngModelChange)="onStatusChange($event)"
               [required]="false"
-              [indexReference]="1"></app-pr-select>
+              [style]="{ width: '100%' }"></p-select>
           </div>
 
           <!-- CGIAR filter -->
           <div class="cgiar-filter">
             <label class="cgiar-label" for="cgiarSelect">Is CGIAR:</label>
-            <app-pr-select
+            <p-select
               #cgiarSelect
               id="cgiarSelect"
               [options]="isCGIAROptions"
@@ -70,7 +71,7 @@
               [ngModel]="selectedCgiar()"
               (ngModelChange)="onCgiarChange($event)"
               [required]="false"
-              [indexReference]="2"></app-pr-select>
+              [style]="{ width: '100%' }"></p-select>
           </div>
 
           <!-- Entity filter -->
