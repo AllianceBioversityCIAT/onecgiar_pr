@@ -6,7 +6,8 @@
   [(ngModel)]="body.geo_scope_id"
   (ngModelChange)="this.resetHasScope()"
   [label]="this.label ? this.label : this.labelRadioButtons"
-  [description]="this.description ? this.description : this.descriptionRadioButtons">
+  [description]="this.description ? this.description : this.descriptionRadioButtons"
+  [required]="true">
 </app-pr-radio-button>
 <div class="geographic_focus_description" *ngIf="this.internalModule.name === 'reporting'">
   <app-pr-field-header [description]="geographic_focus_description(this.body.geo_scope_id)"></app-pr-field-header>
