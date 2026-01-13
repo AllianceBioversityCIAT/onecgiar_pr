@@ -81,12 +81,13 @@ export class InnovationUseService {
         innov_use_to_be_determined,
       } = innovationUseDto;
 
-      const use_levels = await this._clarisaInnovationUseLevelRepository.findOne({
-        where: { level: innovation_use_level_id },
-        select: ['id'],
-      });
+      const use_levels =
+        await this._clarisaInnovationUseLevelRepository.findOne({
+          where: { level: innovation_use_level_id },
+          select: ['id'],
+        });
       const innovation_use_level = use_levels.id;
-      
+
       let InnUseRes: ResultsInnovationsUse;
       if (resultExist) {
         resultExist.has_innovation_link = has_innovation_link;
