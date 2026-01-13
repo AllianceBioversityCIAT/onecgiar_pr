@@ -13,10 +13,13 @@ import { DataControlService } from '../../../../../../../shared/services/data-co
 export class InnovationUseInfoComponent {
   innovationUseInfoBody = new IpsrStep1Body();
   savingSection = false;
-  constructor(private readonly api: ApiService, private readonly fieldsManagerSE: FieldsManagerService, private readonly dataControlSE: DataControlService) {
+  constructor(
+    private readonly api: ApiService,
+    private readonly fieldsManagerSE: FieldsManagerService,
+    private readonly dataControlSE: DataControlService
+  ) {
     this.api.dataControlSE.currentResultSectionName.set('Innovation use information');
   }
-
 
   OnChangePortfolio = effect(() => {
     if (this.dataControlSE.currentResultSignal()?.portfolio !== undefined) {
@@ -45,7 +48,7 @@ export class InnovationUseInfoComponent {
           this.innovationUseInfoBody.innovation_readiness_level_id = response.innovation_readiness_level_id;
           this.innovationUseInfoBody.readiness_level_explanation = response.readiness_level_explanation || '';
           const hs = response.has_scaling_studies;
-          this.innovationUseInfoBody.has_scaling_studies = (hs === null || hs === undefined) ? undefined : hs === 1;
+          this.innovationUseInfoBody.has_scaling_studies = hs === null || hs === undefined ? undefined : hs === 1;
           this.innovationUseInfoBody.scaling_studies_urls = response.scaling_studies_urls || [];
           this.innovationUseInfoBody.innov_use_to_be_determined = response.innov_use_to_be_determined === 1;
           this.innovationUseInfoBody.innov_use_2030_to_be_determined = response.innov_use_2030_to_be_determined === 1;
@@ -78,7 +81,7 @@ export class InnovationUseInfoComponent {
   onSaveSection() {
     this.savingSection = true;
 
-    const { investment_programs = [], investment_bilateral = [], investment_partners = [] } = (this.innovationUseInfoBody as any);
+    const { investment_programs = [], investment_bilateral = [], investment_partners = [] } = this.innovationUseInfoBody as any;
     const actors = this.innovationUseInfoBody?.innovatonUse?.actors || [];
     const measures = this.innovationUseInfoBody?.innovatonUse?.measures || [];
     // Do not mutate UI-bound state; map payload only
@@ -87,13 +90,15 @@ export class InnovationUseInfoComponent {
       institution_types_id: item?.institution_sub_type_id ?? item?.institution_types_id
     }));
 
-    const innovation_use_2030 = this.innovationUseInfoBody.innovation_use_2030 ? {
-      ...this.innovationUseInfoBody.innovation_use_2030,
-      organization: (this.innovationUseInfoBody.innovation_use_2030.organization || []).map((item: any) => ({
-        ...item,
-        institution_types_id: item?.institution_sub_type_id ?? item?.institution_types_id
-      }))
-    } : this.innovationUseInfoBody.innovation_use_2030;
+    const innovation_use_2030 = this.innovationUseInfoBody.innovation_use_2030
+      ? {
+          ...this.innovationUseInfoBody.innovation_use_2030,
+          organization: (this.innovationUseInfoBody.innovation_use_2030.organization || []).map((item: any) => ({
+            ...item,
+            institution_types_id: item?.institution_sub_type_id ?? item?.institution_types_id
+          }))
+        }
+      : this.innovationUseInfoBody.innovation_use_2030;
 
     const bodyToSend = {
       has_innovation_link: this.innovationUseInfoBody.has_innovation_link,
@@ -118,10 +123,9 @@ export class InnovationUseInfoComponent {
         next: resp => {
           this.getSectionInformationp25();
           this.savingSection = false;
-        },
+        }
       });
-    }
-    else {
+    } else {
       this.api.resultsSE.PATCH_innovationUse(bodyToSend).subscribe({
         next: resp => {
           this.getSectionInformation();
