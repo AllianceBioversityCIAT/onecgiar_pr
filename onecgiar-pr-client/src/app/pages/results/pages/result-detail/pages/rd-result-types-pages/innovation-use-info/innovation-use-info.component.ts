@@ -56,7 +56,7 @@ export class InnovationUseInfoComponent {
           this.innovationUseInfoBody.investment_programs = response.investment_programs || [];
           this.innovationUseInfoBody.investment_bilateral = response.investment_bilateral || [];
           this.innovationUseInfoBody.investment_partners = response.investment_partners || [];
-
+          this.innovationUseInfoBody.innovation_use_level_id = response.innovation_use_level_id;
           this.innovationUseInfoBody.innovatonUse = {
             actors: response.actors || [],
             measures: response.measures || [],
