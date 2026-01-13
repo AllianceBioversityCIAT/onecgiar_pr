@@ -53,6 +53,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   tempSelectedSubmittersAdmin = signal([]);
   tempSelectedIndicatorCategories = signal([]);
   tempSelectedStatus = signal([]);
+  tempSelectedFundingSource = signal([]);
 
   // Computed signal for filtered phases based on selected portfolios
   filteredPhasesOptions = computed(() => {

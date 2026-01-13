@@ -30,6 +30,16 @@ export class ResultsListFilterService {
   selectedClarisaPortfolios = signal([]);
 
   statusOptions = signal([]);
+  fundingSourceOptions = signal([
+    {
+      id: 1,
+      name: 'W1/W2'
+    },
+    {
+      id: 2,
+      name: 'W3/Bilaterals'
+    }
+  ]);
 
   selectedPhases = signal([]);
   selectedSubmitters = signal([]);
