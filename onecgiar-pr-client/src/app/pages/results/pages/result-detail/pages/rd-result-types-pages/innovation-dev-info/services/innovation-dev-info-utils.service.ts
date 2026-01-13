@@ -27,7 +27,7 @@ export class InnovationDevInfoUtilsService {
   }
 
   isMegatrendsComplete(options: any[]): boolean {
-    if (!options || !options.length) return false;
+    if (!options?.length) return false;
     return options.some(option => option?.answer_boolean === true);
   }
 }
