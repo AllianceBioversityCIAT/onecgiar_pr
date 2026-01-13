@@ -681,7 +681,10 @@ export class ResultsTocResultsService {
             : [];
 
         const isPlanned = entry?.planned_result === true;
-        const resultTocResults = isPlanned ? resultArray : null;
+        const isUnplanned = entry?.planned_result === false;
+        const hasUnplannedResults = isUnplanned && resultArray?.length > 0;
+        const resultTocResults =
+          isPlanned || hasUnplannedResults ? resultArray : null;
         const tocProgressiveNarrative = isPlanned
           ? null
           : (resultArray?.[0]?.toc_progressive_narrative ?? null);
@@ -1455,36 +1458,107 @@ export class ResultsTocResultsService {
         result_toc_result &&
         result_toc_result?.planned_result === false
       ) {
-        interface SpecialCaseResultTocResult {
-          planned_result: boolean;
-          initiative_id: number;
-          toc_progressive_narrative: string;
-        }
+        // Handle unplanned results with result_toc_results array
+        if (result_toc_result?.result_toc_results?.length) {
+          // First, deactivate existing records for this result_id and initiative_id
+          const unplannedInitiativeId =
+            normalizeInitiativeId((result_toc_result as any)?.initiative_id) ??
+            primaryInitiativeId;
 
-        const rtr = result_toc_result as unknown as SpecialCaseResultTocResult;
-        const isSpecialCase = rtr.planned_result === false && rtr.initiative_id;
+          if (unplannedInitiativeId != null) {
+            await this._resultsTocResultRepository.update(
+              { result_id, initiative_ids: unplannedInitiativeId },
+              {
+                is_active: false,
+                last_updated_by: user.id,
+              },
+            );
+          }
 
-        if (isSpecialCase) {
-          await this._resultsTocResultRepository.update(
-            { result_id, initiative_ids: rtr.initiative_id },
-            {
-              is_active: false,
+          // Get toc_progressive_narrative from result_toc_result level (always use this for unplanned)
+          const unplannedTocProgressiveNarrative =
+            (result_toc_result as any)?.toc_progressive_narrative ?? null;
+
+          // Process each result_toc_result item
+          for (const t of result_toc_result.result_toc_results) {
+            if (!t?.result_toc_result_id && !t?.toc_result_id) continue;
+
+            const resolvedInitiativeId =
+              normalizeInitiativeId((t as any)?.initiative_id) ??
+              normalizeInitiativeId(
+                (result_toc_result as any)?.initiative_id,
+              ) ??
+              primaryInitiativeId;
+
+            if (t?.result_toc_result_id) {
+              const updatePayload: Record<string, any> = {
+                toc_result_id: t?.toc_result_id ?? null,
+                toc_progressive_narrative: unplannedTocProgressiveNarrative,
+                toc_level_id: t?.toc_level_id ?? null,
+                planned_result: false,
+                action_area_outcome_id: null,
+                is_active: true,
+                last_updated_by: user.id,
+              };
+
+              if (resolvedInitiativeId != null) {
+                updatePayload.initiative_ids = resolvedInitiativeId;
+              }
+
+              await this._resultsTocResultRepository.update(
+                Number(t.result_toc_result_id),
+                updatePayload,
+              );
+            } else {
+              await this._resultsTocResultRepository.insert({
+                initiative_ids: resolvedInitiativeId ?? null,
+                toc_result_id: t?.toc_result_id ?? null,
+                toc_progressive_narrative: unplannedTocProgressiveNarrative,
+                toc_level_id: t?.toc_level_id ?? null,
+                planned_result: false,
+                action_area_outcome_id: null,
+                result_id: result.id,
+                is_active: true,
+                created_by: user.id,
+                last_updated_by: user.id,
+              });
+            }
+          }
+        } else {
+          // Handle unplanned results without result_toc_results (original special case)
+          interface SpecialCaseResultTocResult {
+            planned_result: boolean;
+            initiative_id: number;
+            toc_progressive_narrative: string;
+          }
+
+          const rtr =
+            result_toc_result as unknown as SpecialCaseResultTocResult;
+          const isSpecialCase =
+            rtr.planned_result === false && rtr.initiative_id;
+
+          if (isSpecialCase) {
+            await this._resultsTocResultRepository.update(
+              { result_id, initiative_ids: rtr.initiative_id },
+              {
+                is_active: false,
+                last_updated_by: user.id,
+              },
+            );
+
+            await this._resultsTocResultRepository.insert({
+              initiative_ids: rtr.initiative_id,
+              toc_result_id: null,
+              toc_level_id: null,
+              toc_progressive_narrative: rtr.toc_progressive_narrative ?? null,
+              planned_result: rtr.planned_result,
+              action_area_outcome_id: null,
+              result_id: result.id,
+              is_active: true,
+              created_by: user.id,
               last_updated_by: user.id,
-            },
-          );
-
-          await this._resultsTocResultRepository.insert({
-            initiative_ids: rtr.initiative_id,
-            toc_result_id: null,
-            toc_level_id: null,
-            toc_progressive_narrative: rtr.toc_progressive_narrative ?? null,
-            planned_result: rtr.planned_result,
-            action_area_outcome_id: null,
-            result_id: result.id,
-            is_active: true,
-            created_by: user.id,
-            last_updated_by: user.id,
-          });
+            });
+          }
         }
       }
 
@@ -1652,12 +1726,19 @@ export class ResultsTocResultsService {
       }
 
       const isPrimaryPlanned = result_toc_result?.planned_result === true;
-      const resultTocResults = isPrimaryPlanned ? primaryBox : null;
+      const hasUnplannedResults =
+        result_toc_result?.planned_result === false &&
+        result_toc_result?.result_toc_results?.length > 0;
+      const resultTocResults =
+        isPrimaryPlanned || hasUnplannedResults ? primaryBox : null;
+      // For unplanned results, use toc_progressive_narrative from the DTO level, not from DB
       const tocProgressiveNarrative = isPrimaryPlanned
         ? null
-        : (primaryBox?.[0]?.toc_progressive_narrative ?? null);
+        : hasUnplannedResults
+          ? ((result_toc_result as any)?.toc_progressive_narrative ?? null)
+          : (primaryBox?.[0]?.toc_progressive_narrative ?? null);
       const showMultipleWPsContent =
-        isPrimaryPlanned &&
+        (isPrimaryPlanned || hasUnplannedResults) &&
         (result_toc_result?.result_toc_results?.length ?? 0) > 1;
 
       return {

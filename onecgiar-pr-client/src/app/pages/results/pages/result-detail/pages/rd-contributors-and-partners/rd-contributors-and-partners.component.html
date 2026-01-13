@@ -40,7 +40,7 @@
 
   <app-alert-status
     [description]="
-      'If your answer is <strong>Yes</strong>, please select the relevant <strong>HLO, indicator</strong>, and <strong>contribution to target</strong> below. If the result is not planned for in the 2025 ToC (planned indicators), please select <strong>No</strong> and, where applicable, choose the <strong>HLO</strong> under which it is most appropriate to report the result. Please also provide a short justification explaining why you are reporting it even though it is not reflected in a 2025 ToC indicator. These “No”-flagged results could be reviewed by the Program team as part of the adaptive management process and may inform updates or adjustments to the Program’s 2026 ToC and planned indicators.'
+      'If your response to this question is <strong>YES</strong>, please report the result by associating it with the corresponding indicators and targets. If the result you plan to submit does not match any 2025 planned indicators and results, then click <strong>NO</strong> and provide a short justification explaining why you are reporting it despite not being part of the 2025 planned results. Additionally, you may associate an HLO, if required (optional), that can be mapped to your unplanned result.'
     ">
   </app-alert-status>
 
@@ -48,7 +48,7 @@
 
   <!-- from toc section  -->
   @if (this.rdPartnersSE.partnersBody.result_toc_result.planned_result !== null) {
-    @if (this?.api?.dataControlSE?.currentResultSignal()?.result_level_id !== 3 || this.rdPartnersSE.partnersBody.result_toc_result.planned_result) {
+    @if (this?.api?.dataControlSE?.currentResultSignal()?.result_level_id !== 3) {
       <div style="z-index: 1; position: relative">
         <app-cp-multiple-wps
           [editable]="true"
