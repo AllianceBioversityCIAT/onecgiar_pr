@@ -168,8 +168,6 @@ export class RdContributorsAndPartnersComponent implements OnInit {
       });
     }
 
-    if (!this.rdPartnersSE.partnersBody.result_toc_result.planned_result) this.rdPartnersSE.partnersBody.result_toc_result.result_toc_results = [];
-
     const linkedResultsIds = (this.rdPartnersSE.partnersBody.linked_results || []).map((r: any) => Number(r?.id ?? r));
 
     const sendedData = {
