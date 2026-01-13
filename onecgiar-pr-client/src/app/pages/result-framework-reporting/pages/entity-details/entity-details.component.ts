@@ -17,6 +17,7 @@ import { DialogModule } from 'primeng/dialog';
 import { SplitButtonModule } from 'primeng/splitbutton';
 import { ResultCreatorModule } from '../../../results/pages/result-creator/result-creator.module';
 import { MenuItem } from 'primeng/api';
+import { ResultLevelService } from '../../../results/pages/result-creator/services/result-level.service';
 
 @Component({
   selector: 'app-entity-details',
@@ -43,6 +44,7 @@ export class EntityDetailsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   api = inject(ApiService);
   entityAowService = inject(EntityAowService);
+  resultLevelSE = inject(ResultLevelService);
 
   cd = inject(ChangeDetectorRef);
 
@@ -101,8 +103,8 @@ export class EntityDetailsComponent implements OnInit {
         {
           type: 'bar' as const,
           label: 'Submitted',
-          backgroundColor: '#93C5FD',
-          hoverBackgroundColor: '#93C5FD',
+          backgroundColor: 'rgba(147, 197, 253, 1)',
+          hoverBackgroundColor: 'rgba(147, 197, 253, 0.8)',
           data: [
             this.entityAowService.dashboardData()?.submitted?.data?.outputs?.knowledgeProduct,
             this.entityAowService.dashboardData()?.submitted?.data?.outputs?.innovationDevelopment,
@@ -144,8 +146,8 @@ export class EntityDetailsComponent implements OnInit {
         {
           type: 'bar' as const,
           label: 'Submitted',
-          backgroundColor: '#93C5FD',
-          hoverBackgroundColor: '#93C5FD',
+          backgroundColor: 'rgba(147, 197, 253, 1)',
+          hoverBackgroundColor: 'rgba(147, 197, 253, 0.8)',
           data: [
             this.entityAowService.dashboardData()?.submitted?.data?.outcomes?.policyChange,
             this.entityAowService.dashboardData()?.submitted?.data?.outcomes?.innovationUse,
@@ -169,6 +171,27 @@ export class EntityDetailsComponent implements OnInit {
 
   chartOptionsOutputs = computed<ChartOptions<'bar'>>(() => this.buildChartOptions(this.dataOutputs()));
   chartOptionsOutcomes = computed<ChartOptions<'bar'>>(() => this.buildChartOptions(this.dataOutcomes()));
+
+  groupedIndicatorSummaries = computed(() => {
+    const summaries = this.entityAowService.indicatorSummaries().filter(item => item?.resultTypeName !== 'Innovation Use(IPSR)');
+
+    const outputs = summaries.filter(item => {
+      const name = item?.resultTypeName || '';
+      return (
+        name === 'Innovation development' || name === 'Knowledge product' || name === 'Capacity sharing for development' || name === 'Other output'
+      );
+    });
+
+    const outcomes = summaries.filter(item => {
+      const name = item?.resultTypeName || '';
+      return name === 'Innovation use' || name === 'Policy change' || name === 'Other outcome';
+    });
+
+    return {
+      outputs,
+      outcomes
+    };
+  });
 
   ngOnInit() {
     this.route.params.subscribe(params => {
@@ -260,5 +283,15 @@ export class EntityDetailsComponent implements OnInit {
         }
       }
     };
+  }
+
+  onReportRequested(item: any) {
+    this.resultLevelSE.setPendingResultType(item?.resultTypeId, item?.resultTypeName);
+    this.showReportModal.set(true);
+  }
+
+  onModalClose() {
+    this.showReportModal.set(false);
+    this.resultLevelSE.cleanData?.();
   }
 }

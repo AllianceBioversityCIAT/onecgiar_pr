@@ -176,7 +176,7 @@ export class PolicyChangeBilateralHandler
       };
 
       const mappedId = stageIdMapping[policyStage.id];
-      const idToLookup = mappedId !== undefined ? mappedId : policyStage.id;
+      const idToLookup = mappedId ?? policyStage.id;
 
       const found = await this._clarisaPolicyStageRepository.findOne({
         where: { id: idToLookup },

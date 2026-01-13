@@ -48,6 +48,15 @@ export class EntityAowService {
 
   dashboardData = signal<any>(null);
 
+  canReportResults = computed(() => {
+    if (this.api.rolesSE.isAdmin) {
+      return true;
+    }
+    const myInitiativesList = this.api.dataControlSE.myInitiativesList || [];
+    const found = myInitiativesList.find(item => item.official_code === this.entityId());
+    return !!found;
+  });
+
   getAllDetailsData() {
     this.isLoadingDetails.set(true);
 
