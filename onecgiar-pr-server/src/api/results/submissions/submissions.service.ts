@@ -78,6 +78,65 @@ export class SubmissionsService {
         NotificationTypeEnum.RESULT_SUBMITTED,
       );
 
+      const hasContactRequest =
+        await this._resultRepository.getResultInnovationDevelopmentByResultId(
+          result.id,
+        );
+      if (result.result_type_id === 7 && hasContactRequest) {
+        const emails =
+          await this._intellectualPropertyExpertRepository.getIpExpertsEmailsByResultId(
+            result.id,
+          );
+
+        const bccEmails = await this._globalParametersRepository.findOne({
+          where: { name: 'technical_team_email' },
+          select: { value: true },
+        });
+
+        const template = await this._templateRepository.findOne({
+          where: { name: EmailTemplate.IP_EXPERTS_SUPPORT },
+        });
+        if (!template) {
+          this._logger.warn(
+            'Email template email_template_roles_update not found. Skipping notification.',
+          );
+          return;
+        }
+
+        const scienceProgram =
+          await this._resultRepository.getScienceProgramByResultId(resultId);
+
+        for (const email of emails) {
+          const sp = scienceProgram[0];
+
+          const emailData = {
+            userName: `${email.first_name} ${email.last_name}`.trim(),
+            spCode: sp.official_code,
+            spName: sp.name,
+            resultUrl: `${process.env.RESULTS_URL}${result.result_code}/general-information?phase=${result.version_id}`,
+          };
+          const compiledTemplate = handlebars.compile(template.template);
+
+          this._emailNotificationManagementService.sendEmail({
+            from: {
+              email: process.env.EMAIL_SENDER,
+              name: 'PRMS Reporting Tool -',
+            },
+            emailBody: {
+              subject:
+                'PRMS – IP Support Request for Innovation Development Result',
+              to: [email.email],
+              cc: [],
+              bcc: bccEmails.value,
+              message: {
+                text: 'Account roles updated',
+                socketFile: compiledTemplate(emailData),
+              },
+            },
+          });
+        }
+      }
+
       return {
         response: data,
         message: 'the result has been submitted successfully',

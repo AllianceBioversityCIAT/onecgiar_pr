@@ -10,6 +10,7 @@ import {
 import { User } from '../../../../auth/modules/user/entities/user.entity';
 import { ResultsInnovationsUse } from '../../../results/summary/entities/results-innovations-use.entity';
 import { ResultsInnovationsDev } from '../../../results/summary/entities/results-innovations-dev.entity';
+import { ResultInnovationPackage } from '../../../ipsr/result-innovation-package/entities/result-innovation-package.entity';
 
 @Entity('result_scaling_study_urls')
 export class ResultScalingStudyUrl {
@@ -31,6 +32,21 @@ export class ResultScalingStudyUrl {
     nullable: true,
   })
   result_innov_dev_id!: number;
+
+  @Column({
+    name: 'result_innov_package_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  result_innov_package_id!: number;
+
+  @ManyToOne(() => ResultInnovationPackage, {
+    nullable: false,
+  })
+  @JoinColumn({
+    name: 'result_innov_package_id',
+  })
+  obj_result_innov_package: ResultInnovationPackage;
 
   @ManyToOne(() => ResultsInnovationsDev, {
     nullable: false,
