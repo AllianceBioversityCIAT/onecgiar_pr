@@ -11,3 +11,7 @@
       (ngModelChange)="(checkbox.answer_text)"></app-pr-checkbox>
   </div>
 }
+
+<div appFeedbackValidation
+  labelText="To which of the below Megatrend(s) is this innovation expected to contribute?"
+  [isComplete]="innovationDevInfoUtilsSE.isMegatrendsComplete(options?.megatrends?.options)"></div>
