@@ -41,9 +41,7 @@ describe('StepN1Component', () => {
       measures: []
     },
     geo_scope_id: 4,
-    result_ip_result_core: {
-      obj_result: {}
-    },
+    coreResult: {},
     experts: [
       {
         expertises: [
@@ -180,7 +178,7 @@ describe('StepN1Component', () => {
       expect(spy).toHaveBeenCalledWith(mockGETInnovationPathwayByStepOneResultIdResponse.innovatonUse.organization);
       expect(component.ipsrStep1Body).toEqual(mockGETInnovationPathwayByStepOneResultIdResponse);
       expect(component.ipsrStep1Body.geo_scope_id).toEqual(3);
-      expect(component.coreResult).toEqual(mockGETInnovationPathwayByStepOneResultIdResponse.result_ip_result_core.obj_result);
+      expect(component.coreResult).toEqual(mockGETInnovationPathwayByStepOneResultIdResponse.coreResult);
       expect(component.ipsrStep1Body.innovatonUse.measures).toHaveLength(1);
 
       expect(component.ipsrStep1Body.institutions[0]).toEqual({
@@ -199,7 +197,7 @@ describe('StepN1Component', () => {
       expect(spy).toHaveBeenCalledWith(mockGETInnovationPathwayByStepOneResultIdResponse.innovatonUse.organization);
       expect(component.ipsrStep1Body).toEqual(mockGETInnovationPathwayByStepOneResultIdResponse);
       expect(component.ipsrStep1Body.geo_scope_id).toEqual(3);
-      expect(component.coreResult).toEqual(mockGETInnovationPathwayByStepOneResultIdResponse.result_ip_result_core.obj_result);
+      expect(component.coreResult).toEqual(mockGETInnovationPathwayByStepOneResultIdResponse.coreResult);
       expect(component.ipsrStep1Body.innovatonUse.measures).toHaveLength(1);
       expect(component.ipsrStep1Body.institutions[0]).toEqual({
         institutions_name: 'name',

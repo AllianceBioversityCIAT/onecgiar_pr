@@ -83,7 +83,7 @@ export class StepN1Component implements OnInit {
       this.ipsrStep1Body.innov_use_to_be_determined = false;
       const legacyCountries = 4;
       this.ipsrStep1Body.geo_scope_id = response.geo_scope_id == legacyCountries ? GeoScopeEnum.COUNTRY : response.geo_scope_id;
-      this.coreResult = response?.result_ip_result_core?.obj_result;
+      this.coreResult = response?.coreResult;
 
       if (this.ipsrStep1Body.innovatonUse.measures.length == 0) {
         const oneMessure = new Measure();
