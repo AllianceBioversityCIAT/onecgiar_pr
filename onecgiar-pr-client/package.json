@@ -15,7 +15,8 @@
     "tunnel": "ng serve -c production --port 19971",
     "cypress:open": "cypress open",
     "cypress:run": "cypress run",
-    "cypress:run:record": "cypress run --record --key $CYPRESS_RECORD_KEY"
+    "cypress:run:record": "cypress run --record --key $CYPRESS_RECORD_KEY",
+    "typecheck": "tsc --noEmit"
   },
   "private": true,
   "dependencies": {
