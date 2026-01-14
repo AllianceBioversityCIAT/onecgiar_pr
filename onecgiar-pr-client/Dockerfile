@@ -1,5 +1,5 @@
 #################### BUILD STAGE ####################
-FROM node:20-alpine AS build
+FROM public.ecr.aws/docker/library/node:20-alpine AS build
 
 # Set timezone to Europe/Berlin (CET)
 ENV TZ=Europe/Berlin
@@ -20,7 +20,7 @@ RUN npm i
 RUN npm run build:dev
 
 #################### TESTING STAGE ####################
-FROM node:20-alpine AS test
+FROM public.ecr.aws/docker/library/node:20-alpine AS test
 
 # Set timezone to Europe/Berlin (CET)
 ENV TZ=Europe/Berlin
@@ -41,7 +41,7 @@ RUN npm i
 CMD ["npm", "run", "test:coverage"]
 
 #################### PRODUCTION STAGE ####################
-FROM nginx:alpine
+FROM public.ecr.aws/docker/library/nginx:alpine
 
 # Clean default Nginx html
 RUN rm -rf /usr/share/nginx/html/*
