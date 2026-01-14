@@ -25,6 +25,7 @@ export class ResultCountryRepository
       rc.is_active,
       ${config.new_result_id} as result_id,
       rc.country_id,
+      rc.geo_scope_role_id,
       ${predeterminedDateValidation(
         config?.predetermined_date,
       )} as created_date,
@@ -37,6 +38,7 @@ export class ResultCountryRepository
         is_active,
         result_id,
         country_id,
+        geo_scope_role_id,
         created_date,
         last_updated_date
         )
@@ -44,6 +46,7 @@ export class ResultCountryRepository
         rc.is_active,
         ${config.new_result_id} as result_id,
         rc.country_id,
+        rc.geo_scope_role_id,
         ${predeterminedDateValidation(
           config?.predetermined_date,
         )} as created_date,

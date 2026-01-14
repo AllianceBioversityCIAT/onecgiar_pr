@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { ResultBody } from '../../../../../../shared/interfaces/result.interface';
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
 import { TerminologyService } from '../../../../../../internationalization/terminology.service';
+import { EntityAowService } from '../../../../../result-framework-reporting/pages/entity-aow/services/entity-aow.service';
 
 @Component({
   selector: 'app-report-result-form',
@@ -17,19 +18,11 @@ export class ReportResultFormComponent implements OnInit, DoCheck {
   exactTitleFound = false;
   mqapJson: {};
   validating = false;
-  kpAlertDescription = `Please add the handle generated in CGSpace to report your knowledge product. Only knowledge products entered into CGSpace are accepted in the PRMS Reporting Tool.<br><br>
-  The PRMS Reporting Tool will automatically retrieve all metadata entered into CGSpace. Partners and geographical scope metadata are editable, while the other metadata fields are not.<br><br>
-  The handle will be verified, and only knowledge products from ${
-    this.phasesService?.currentlyActivePhaseOnReporting?.cgspace_year
-  } will be accepted. For journal articles, the PRMS Reporting Tool will check the online publication date added in CGSpace ("Date Online"). If the online publication date is missing, the issued date ("Date Issued") will be considered. Articles published online in ${
-    this.phasesService?.currentlyActivePhaseOnReporting?.cgspace_year
-  } but issued in ${this.phasesService?.currentlyActivePhaseOnReporting?.cgspace_year + 1} will be accepted for the ${
-    this.phasesService?.currentlyActivePhaseOnReporting?.cgspace_year
-  } reporting phase.<br><br>
-  Articles published online in ${this.phasesService?.currentlyActivePhaseOnReporting?.cgspace_year - 1} but issued in ${
-    this.phasesService?.currentlyActivePhaseOnReporting?.cgspace_year
-  } will not be accepted and will need to be reported in the correct reporting period. A new functionality will be implemented in the PRMS Reporting Tool to periodically allow the reporting of results from previous year. Handles already reported will also not be accepted.<br><br>
-  If you need support to modify any of the harvested metadata from CGSpace, contact your Center's knowledge manager.<br><br>`;
+  kpAlertDescription = `Please add the handle generated in <strong>CGSpace</strong>, <strong>MELSpace</strong>, or <strong>WorldFish DSpace</strong> to report your knowledge product. Only knowledge products entered into <strong>one of these repositories</strong> are accepted in the PRMS Reporting Tool.<br><br>
+The PRMS Reporting Tool will automatically retrieve all metadata entered into <strong>one of these repositories</strong>. Partners and geographical scope metadata are editable, while the other metadata fields are not.<br><br>
+The handle will be verified, and only knowledge products from <strong>2025</strong> will be accepted. For journal articles, the PRMS Reporting Tool will check the online publication date added in CGSpace ("Date Online"). If the online publication date is missing, the issued date ("Date Issued") will be considered. Articles published online in <strong>2025</strong> but issued in <strong>2026</strong> will be accepted for the <strong>2025</strong> reporting phase.<br><br>
+Articles published online in <strong>2024</strong> but issued in <strong>2025</strong> will not be accepted and will need to be reported in the correct reporting period. Handles already reported will also not be accepted.<br><br>
+If you need support to modify any of the harvested metadata from <strong>CGSpace</strong>, <strong>MELSpace</strong>, or <strong>WorldFish DSpace</strong>, contact your Center's knowledge manager.`;
   allInitiatives = [];
   availableInitiativesSig = signal<any[]>([]);
   allPhases = [];
@@ -53,7 +46,8 @@ export class ReportResultFormComponent implements OnInit, DoCheck {
     public resultLevelSE: ResultLevelService,
     public terminologyService: TerminologyService,
     private router: Router,
-    private phasesService: PhasesService
+    private phasesService: PhasesService,
+    public entityAowService: EntityAowService
   ) {}
 
   ngOnInit(): void {
@@ -64,8 +58,9 @@ export class ReportResultFormComponent implements OnInit, DoCheck {
     });
     this.resultLevelSE.resultBody = new ResultBody();
     this.resultLevelSE.currentResultTypeList = [];
-    this.resultLevelSE.resultLevelList?.forEach(reLevel => (reLevel.selected = false));
+    this.resultLevelSE.resetSelection();
     this.resultLevelSE.cleanData();
+    this.applyPendingResultTypeSelection();
     this.api.updateUserData(() => {
       if (!this.api.rolesSE.isAdmin) {
         this.availableInitiativesSig.set(
@@ -74,7 +69,8 @@ export class ReportResultFormComponent implements OnInit, DoCheck {
             : []
         );
         if (this._selectedInitiativeId == null && this.api.dataControlSE.myInitiativesListReportingByPortfolio?.length === 1) {
-          this._selectedInitiativeId = this.api.dataControlSE.myInitiativesListReportingByPortfolio[0]?.initiative_id ||
+          this._selectedInitiativeId =
+            this.api.dataControlSE.myInitiativesListReportingByPortfolio[0]?.initiative_id ||
             this.api.dataControlSE.myInitiativesListReportingByPortfolio[0]?.id;
         }
         this.tryApplySelectedInitiative();
@@ -181,6 +177,21 @@ export class ReportResultFormComponent implements OnInit, DoCheck {
     else this.depthSearch(this.resultLevelSE.resultBody.result_name);
   }
 
+  private applyPendingResultTypeSelection() {
+    const pendingSelection = this.resultLevelSE.consumePendingResultType?.();
+    if (!pendingSelection) return;
+
+    const checkAndApply = () => {
+      const levelList = this.resultLevelSE.resultLevelListSig();
+      if (levelList?.length > 0) {
+        this.resultLevelSE.preselectResultType(pendingSelection.id, pendingSelection.name);
+      } else {
+        setTimeout(checkAndApply, 50);
+      }
+    };
+    setTimeout(checkAndApply, 0);
+  }
+
   depthSearch(title: string) {
     const cleanSpaces = (text: string) => text?.replace(/\s+/g, '')?.toLowerCase();
     const legacyType = this.getLegacyType(this.resultTypeName, this.resultLevelName);
@@ -275,15 +286,14 @@ export class ReportResultFormComponent implements OnInit, DoCheck {
     }
 
     const regex =
-      /^https:\/\/(?:(?:cgspace\.cgiar\.org|repo\.mel\.cgiar\.org)\/items\/[0-9a-fA-F-]{36}|hdl\.handle\.net\/(?:10568|20\.500\.11766)\/\d+|cgspace\.cgiar\.org\/handle\/(?:10568|20\.500\.11766)\/\d+)$/;
+      /^https:\/\/(?:(?:cgspace\.cgiar\.org|repo\.mel\.cgiar\.org|digitalarchive\.worldfishcenter\.org)\/items\/[0-9a-fA-F-]{36}|hdl\.handle\.net\/(?:10568|20\.500\.11766|20\.500\.12348)\/\d+|cgspace\.cgiar\.org\/handle\/(?:10568|20\.500\.11766)\/\d+)$/;
 
     const isValid = regex.test(this.resultLevelSE.resultBody.handler);
 
     if (!isValid) {
       this.mqapUrlError = {
         status: true,
-        message:
-          'Please ensure that the handle is from the <a href="https://cgspace.cgiar.org/home" target="_blank" rel="noopener noreferrer">CGSpace repository</a> and not other CGIAR repositories.'
+        message: 'Please ensure that the handle is from the CGSpace, MELSpace or WorldFish repository and not other CGIAR repositories.'
       };
       this.validating = false;
       return;
@@ -331,4 +341,3 @@ export class ReportResultFormComponent implements OnInit, DoCheck {
     return this.availableInitiativesSig();
   }
 }
-

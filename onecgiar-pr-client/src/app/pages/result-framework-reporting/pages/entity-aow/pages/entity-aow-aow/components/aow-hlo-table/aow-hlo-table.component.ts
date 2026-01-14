@@ -66,7 +66,6 @@ export class AowHloTableComponent {
     { title: 'Type', attr: 'type_name', width: '10%' },
     { title: 'Expected target 2025', attr: 'target_value_sum', width: '10%' },
     { title: 'Actual achieved', attr: 'actual_achieved_value_sum', width: '10%' },
-    { title: 'Progress', attr: 'progress_percentage', hideSortIcon: true, width: '112px' },
     { title: 'Status', attr: 'status', hideSortIcon: true, width: '11%' }
   ]);
 
@@ -123,5 +122,10 @@ export class AowHloTableComponent {
 
     this.entityAowService.showTargetDetailsDrawer.set(true);
     this.entityAowService.currentTargetToView.set(selectedCurrentItem);
+  }
+
+  hasTargets(item: any, indicatorId: string): boolean {
+    const indicator = item.indicators?.find((ind: any) => ind.indicator_id === indicatorId);
+    return indicator?.targets_by_center?.centers?.length > 0;
   }
 }

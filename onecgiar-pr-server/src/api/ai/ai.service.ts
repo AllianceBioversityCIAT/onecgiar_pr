@@ -77,11 +77,7 @@ export class AiService {
       });
 
       if (!result) {
-        throw {
-          response: {},
-          message: 'Result not found',
-          status: HttpStatus.NOT_FOUND,
-        };
+        throw this.createHttpError('Result not found', HttpStatus.NOT_FOUND);
       }
 
       const contextFields: ResultContextFieldDto[] = [
@@ -153,11 +149,7 @@ export class AiService {
         where: { id: sessionId },
       });
       if (!session) {
-        throw {
-          response: {},
-          message: 'Session not found',
-          status: HttpStatus.NOT_FOUND,
-        };
+        throw this.createHttpError('Session not found', HttpStatus.NOT_FOUND);
       }
 
       session.closed_at = new Date();
@@ -189,11 +181,7 @@ export class AiService {
         where: { id: sessionId },
       });
       if (!session) {
-        throw {
-          response: {},
-          message: 'Session not found',
-          status: HttpStatus.NOT_FOUND,
-        };
+        throw this.createHttpError('Session not found', HttpStatus.NOT_FOUND);
       }
 
       const proposals = createProposalsDto.proposals.map((proposal) =>
@@ -240,11 +228,7 @@ export class AiService {
         where: { id: createEventDto.session_id },
       });
       if (!session) {
-        throw {
-          response: {},
-          message: 'Session not found',
-          status: HttpStatus.NOT_FOUND,
-        };
+        throw this.createHttpError('Session not found', HttpStatus.NOT_FOUND);
       }
 
       const eventType = this.normalizeEventType(createEventDto.event_type);
@@ -284,11 +268,7 @@ export class AiService {
         where: { id: sessionId },
       });
       if (!session) {
-        throw {
-          response: {},
-          message: 'Session not found',
-          status: HttpStatus.NOT_FOUND,
-        };
+        throw this.createHttpError('Session not found', HttpStatus.NOT_FOUND);
       }
 
       for (const field of saveChangesDto.fields) {
@@ -394,6 +374,12 @@ export class AiService {
     }
   }
 
+  private createHttpError(message: string, status: HttpStatus): Error {
+    const error = new Error(message);
+    Object.assign(error, { response: {}, status });
+    return error;
+  }
+
   private normalizeProposalFieldName(
     fieldName: unknown,
   ): AiReviewProposalFieldName {
@@ -427,11 +413,10 @@ export class AiService {
       if (allowUndefined) {
         return undefined;
       }
-      throw {
-        response: {},
-        message: `${paramName} is required`,
-        status: HttpStatus.BAD_REQUEST,
-      };
+      throw this.createHttpError(
+        `${paramName} is required`,
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const enumValues = Object.values(enumObj);
@@ -605,27 +590,44 @@ export class AiService {
     let innovationDev = await this.getInnovationDevByResultId(resultId);
     if (!innovationDev) {
       try {
-        innovationDev = await this.innovationsDevRepository.save({
-          results_id: resultId,
-          created_by: userId,
-        } as Partial<ResultsInnovationsDev>);
+        await this.innovationsDevRepository.query(
+          `
+            INSERT INTO results_innovations_dev (
+              results_id,
+              created_by,
+              last_updated_by,
+              is_active,
+              created_date,
+              last_updated_date
+            )
+            VALUES (?, ?, ?, 1, NOW(), NOW())
+          `,
+          [resultId, userId, userId],
+        );
       } catch (error) {
-        const isDuplicateKey =
-          error?.code === 'ER_DUP_ENTRY' ||
-          error?.sqlState === '23000' ||
-          error?.errno === 1062;
-        if (!isDuplicateKey) {
+        if (!this.isDuplicateKeyError(error)) {
           throw error;
         }
+      }
 
-        innovationDev = await this.getInnovationDevByResultId(resultId);
-        if (!innovationDev) {
-          throw error;
-        }
+      innovationDev = await this.getInnovationDevByResultId(resultId);
+      if (!innovationDev) {
+        throw this.createHttpError(
+          'Unable to initialize innovation development record',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
       }
     }
 
     return innovationDev;
+  }
+
+  private isDuplicateKeyError(error: any): boolean {
+    return (
+      error?.code === 'ER_DUP_ENTRY' ||
+      error?.sqlState === '23000' ||
+      error?.errno === 1062
+    );
   }
 
   private mapSessionToResponse(

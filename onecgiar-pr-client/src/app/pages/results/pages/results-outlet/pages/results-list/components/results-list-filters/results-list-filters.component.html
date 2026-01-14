@@ -1,40 +1,77 @@
 <div class="filters">
   <div class="filters_items_container_left">
     <!-- Search -->
-    <p-iconfield>
+    <p-iconfield [style]="{ flex: '1', width: '100%' }">
       <p-inputicon styleClass="pi pi-search" />
-      <input type="text" pInputText placeholder="Find result..." [(ngModel)]="this.resultsListFilterSE.text_to_search" [style]="{ width: '350px' }" />
+      <input type="text" pInputText placeholder="Find result..." [(ngModel)]="this.resultsListFilterSE.text_to_search" [style]="{ width: '100%' }" />
     </p-iconfield>
     <!-- apply filters button -->
     <p-overlaybadge value="" [badgeDisabled]="filtersCount() === 0">
-      <app-pr-button (click)="openFiltersDrawer()" [text]="filtersCountText()" [verticalMargin]="-6" icon="filter_alt" [reverse]="true" />
+      <app-pr-button
+        (click)="openFiltersDrawer()"
+        (keydown.enter)="openFiltersDrawer()"
+        [text]="filtersCountText()"
+        [verticalMargin]="-6"
+        icon="filter_alt"
+        [reverse]="true" />
     </p-overlaybadge>
     <!-- celar fitlers -->
-    <app-pr-button (click)="this.clearAllNewFilters()" text="Clear Filters" [verticalMargin]="0" colorType="secondary" />
+    <app-pr-button
+      (click)="this.clearAllNewFilters()"
+      (keydown.enter)="this.clearAllNewFilters()"
+      text="Clear Filters"
+      [verticalMargin]="-6"
+      colorType="secondary" />
   </div>
-
-  <p-button label="Download" variant="outlined" icon="pi pi-download" (click)="onDownLoadTableAsExcel()" [loading]="this.gettingReport()" />
 </div>
 
+<!-- Alert Status -->
+<app-alert-status
+  status="info"
+  description="
+    If you don't know the result code or title, use Apply filters to find the result you want to update. Then, click the three dots at the end of the result row and select Update result.
+  "
+  inlineStyles="margin: 0; margin-bottom: 20px !important;"></app-alert-status>
+
 <!-- Filter Chips Bar -->
-@if (filterChipGroups().length > 0) {
-  <div class="filter-chips-container">
-    <span class="filter-chips-main-label">Results filtered by</span>
-    <div class="filter-chips-groups-wrapper">
-      @for (group of filterChipGroups(); track group.category) {
-        <div class="filter-chip-group">
-          <span class="filter-chip-category-label">{{ group.category }}</span>
-          <span class="filter-chip-arrow">→</span>
-          <div class="filter-chips-list">
-            @for (chip of group.chips; track chip.label) {
-              <p-chip [label]="chip.label" [removable]="true" (onRemove)="removeFilter(chip)" styleClass="filter-chip" />
-            }
+<div class="filter-chips-wrapper">
+  @if (filterChipGroups().length > 0) {
+    <div class="filter-chips-container">
+      <span class="filter-chips-main-label">Results filtered by</span>
+      <div class="filter-chips-groups-wrapper">
+        @for (group of filterChipGroups(); track group.category) {
+          <div class="filter-chip-group">
+            <span class="filter-chip-category-label">{{ group.category }}</span>
+            <span class="filter-chip-arrow">→</span>
+            <div class="filter-chips-list">
+              @for (chip of group.chips; track chip.label) {
+                <p-chip [label]="chip.label" [removable]="true" (onRemove)="removeFilter(chip)" styleClass="filter-chip" />
+              }
+            </div>
           </div>
-        </div>
-      }
+        }
+      </div>
     </div>
+  }
+  <div class="filters_items_container_right">
+    <app-pr-button
+      text="Update result"
+      icon="moving"
+      [reverse]="true"
+      tooltipTextPosition="bottom"
+      [ngClass]="{ disabledButtons: !activeButtons() }"
+      [tooltipText]="!activeButtons() ? 'To update a result, please ensure that you have a role assigned in the active portfolio.' : null"
+      (click)="activeButtons() ? (this.api.dataControlSE.updateResultModal = true) : null"
+      (keydown.enter)="activeButtons() ? (this.api.dataControlSE.updateResultModal = true) : null"></app-pr-button>
+    <p-button
+      label="Download"
+      variant="outlined"
+      icon="pi pi-download"
+      (click)="onDownLoadTableAsExcel()"
+      (keydown.enter)="onDownLoadTableAsExcel()"
+      [loading]="this.gettingReport()" />
   </div>
-}
+</div>
 
 <!-- Custom Drawer -->
 <div class="custom-drawer-container" [class.visible]="visible()" [style.top.px]="navbarHeight()">
@@ -52,16 +89,18 @@
       <div class="filters_items_container_drawer" style="flex-direction: column; margin: 0; gap: 20px">
         <div>
           <app-pr-field-header
-            label="Clarisa Portfolio"
+            label="Portfolio"
             labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
             [required]="false"></app-pr-field-header>
 
           <p-multiselect
             [filter]="false"
+            [showHeader]="false"
             [options]="this.clarisaPortfolios()"
             [(ngModel)]="tempSelectedClarisaPortfolios"
+            (onChange)="onSelectPortfolios()"
             optionLabel="name"
-            placeholder="Select clarisa portfolio"
+            placeholder="Select portfolio"
             [maxSelectedLabels]="1"
             [style]="{ width: '100%' }" />
         </div>
@@ -70,11 +109,10 @@
             label="Phase"
             labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
             [required]="false"></app-pr-field-header>
-
           <p-multiselect
             [filter]="false"
             [showHeader]="false"
-            [options]="this.resultsListFilterSE.phasesOptions()"
+            [options]="filteredPhasesOptions()"
             [(ngModel)]="tempSelectedPhases"
             (onChange)="onSelectPhases()"
             optionLabel="name"
@@ -89,39 +127,19 @@
             labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
             [required]="false"></app-pr-field-header>
 
-          @if (this.isAdmin) {
-            <p-multiselect
-              [filter]="false"
-              [options]="this.resultsListFilterSE.submittersOptionsAdmin()"
-              [(ngModel)]="tempSelectedSubmittersAdmin"
-              placeholder="Select submitter(s)"
-              [maxSelectedLabels]="0"
-              [selectedItemsLabel]="'{0} items selected'"
-              [filter]="true"
-              [style]="{ width: '100%' }"
-              panelStyleClass="submitter-multiselect-panel">
-              <ng-template let-option pTemplate="item">
-                <div
-                  class="multiselect-item-text"
-                  style="max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block">
-                  {{ option.official_code }} {{ option.name }}
-                </div>
-              </ng-template>
-            </p-multiselect>
-          } @else {
-            <p-multiselect
-              [filter]="false"
-              [options]="this.resultsListFilterSE.submittersOptions()"
-              [(ngModel)]="tempSelectedSubmitters"
-              optionLabel="name"
-              placeholder="Select submitter(s)"
-              [maxSelectedLabels]="0"
-              [selectedItemsLabel]="'{0} items selected'"
-              [filter]="true"
-              [style]="{ width: '100%' }" />
-          }
+          <p-multiselect
+            [filter]="this.resultsListFilterSE.submittersOptionsAdmin().length > 0"
+            [showHeader]="false"
+            [options]="this.resultsListFilterSE.submittersOptionsAdmin()"
+            [(ngModel)]="tempSelectedSubmittersAdmin"
+            placeholder="Select submitter(s)"
+            [maxSelectedLabels]="1"
+            optionLabel="displayName"
+            [selectedItemsLabel]="'{0} items selected'"
+            [style]="{ width: '100%' }"
+            panelStyleClass="submitter-multiselect-panel">
+          </p-multiselect>
         </div>
-
         <div>
           <app-pr-field-header
             label="Indicator category(ies)"
@@ -168,8 +186,8 @@
 
     <!-- Footer buttons -->
     <div class="drawer-footer">
-      <p-button label="Cancel" variant="outlined" [style]="{ width: '100%' }" (click)="cancelFilters()" />
-      <p-button label="Apply filters" [style]="{ width: '100%' }" (click)="applyFilters()" />
+      <p-button label="Cancel" variant="outlined" [style]="{ width: '100%' }" (click)="cancelFilters()" (keydown.enter)="cancelFilters()" />
+      <p-button label="Apply filters" [style]="{ width: '100%' }" (click)="applyFilters()" (keydown.enter)="applyFilters()" />
     </div>
   </div>
 </div>

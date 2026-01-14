@@ -82,4 +82,10 @@
   @include fonts.pr-typography('h4');
   font-weight: 500;
   margin-top: 20px;
+
+  &.required::after {
+    content: '*';
+    color: var(--pr-color-red-100);
+    margin-left: 0;
+  }
 }

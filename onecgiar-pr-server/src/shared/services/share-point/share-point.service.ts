@@ -42,6 +42,12 @@ export class SharePointService {
     const link = `${this.microsoftGraphApiUrl}/drives/${driveId}/items/${newFolderId}:/${finalFileName}:/createUploadSession`;
 
     try {
+      console.log({
+        driveId,
+        newFolderId,
+        filePath,
+        finalFileName,
+      });
       const response = await this.httpService
         .post(
           link,
@@ -60,7 +66,20 @@ export class SharePointService {
         statusCode: 200,
       });
     } catch (error) {
-      throw error;
+      console.error('CreateUploadSession error:', {
+        message: error?.message,
+        status: error?.response?.status,
+        data: error?.response?.data,
+        headers: error?.response?.headers,
+        stack: error?.stack,
+      });
+
+      throw new Error(
+        JSON.stringify({
+          status: error?.response?.status,
+          data: error?.response?.data,
+        }),
+      );
     }
   }
 

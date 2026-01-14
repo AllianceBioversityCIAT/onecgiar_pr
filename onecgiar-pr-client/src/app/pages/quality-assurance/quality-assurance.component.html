@@ -1,32 +1,41 @@
 <div class="local_container section_container">
-    <app-pr-select class="segment_title_margin" [options]="this.api.dataControlSE.myInitiativesList"
-        *ngIf="!this.api.rolesSE.isAdmin" label="Select Initiative" [isStatic]="true" optionLabel="full_name"
-        optionValue="official_code" placeholder="Select Initiative" (selectOptionEvent)="selectOptionEvent($event)"
-        [(ngModel)]="official_code">
-    </app-pr-select>
+  <app-pr-field-header label="Select Entity"></app-pr-field-header>
+  <p-select
+    [options]="allInitiatives"
+    [(ngModel)]="official_code"
+    optionLabel="full_name"
+    optionValue="official_code"
+    placeholder="Select Initiative"
+    (onChange)="selectOptionEvent($event.value)"
+    [style]="{ width: '100%', 'margin-bottom': '20px' }"
+    filter="true">
+    <ng-template #item let-option>
+      <div [innerHTML]="option.full_name"></div>
+    </ng-template>
 
-    <app-pr-select class="segment_title_margin" [options]="this.allInitiatives" label="Select Initiative"
-        [isStatic]="true" *ngIf="this.api.rolesSE.isAdmin" optionLabel="full_name" optionValue="official_code"
-        (selectOptionEvent)="selectOptionEvent($event)" placeholder="Select Initiative" [(ngModel)]="official_code">
-    </app-pr-select>
+    <ng-template #selectedItem let-selectedOption>
+      <div [innerHTML]="selectedOption.full_name"></div>
+    </ng-template>
+  </p-select>
 
+  <app-no-data-text
+    *ngIf="!this.showIframe || !this.official_code || !this.clarisaQaToken"
+    title="Select an Initiative to display the content"></app-no-data-text>
 
-    <app-no-data-text *ngIf="!this.showIframe || !this.official_code || !this.clarisaQaToken"
-        title="Select an Initiative to display the content"></app-no-data-text>
+  <br />
 
-    <br>
-
-    <div [ngClass]="{'expand': this.api.dataControlSE.show_qa_full_screen}" class="iframe_container"
-        *ngIf="this.showIframe && this.clarisaQaToken && this.official_code">
-        <div class="expand_icon"
-            (click)="this.api.dataControlSE.show_qa_full_screen = !this.api.dataControlSE.show_qa_full_screen">
-            <i class="material-icons-round">
-                {{this.api.dataControlSE.show_qa_full_screen?'close_fullscreen':'open_in_full'}}
-            </i>
-            {{this.api.dataControlSE.show_qa_full_screen?'Minimize ':'Open in full screen'}}
-        </div>
-
-        <iframe title="quality-assurance"  onload="resizeIframe(this)" class="embedded" [src]="this.sanitizedUrl"></iframe>
+  <div
+    [ngClass]="{ expand: this.api.dataControlSE.show_qa_full_screen }"
+    class="iframe_container"
+    *ngIf="this.showIframe && this.clarisaQaToken && this.official_code">
+    <div class="expand_icon" (click)="this.api.dataControlSE.show_qa_full_screen = !this.api.dataControlSE.show_qa_full_screen">
+      <i class="material-icons-round">
+        {{ this.api.dataControlSE.show_qa_full_screen ? 'close_fullscreen' : 'open_in_full' }}
+      </i>
+      {{ this.api.dataControlSE.show_qa_full_screen ? 'Minimize ' : 'Open in full screen' }}
     </div>
-    <br>
+
+    <iframe title="quality-assurance" class="embedded" [src]="this.sanitizedUrl"></iframe>
+  </div>
+  <br />
 </div>

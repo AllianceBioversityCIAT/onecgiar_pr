@@ -28,6 +28,7 @@ import { ResultInstitutionsBudgetRepository } from '../result_budget/repositorie
 import { InnoDevService } from './innovation_dev.service';
 import { ResultAnswerRepository } from '../result-questions/repository/result-answers.repository';
 import { ResultAnswer } from '../result-questions/entities/result-answers.entity';
+import { Result } from '../entities/result.entity';
 
 @Injectable()
 export class SummaryService {
@@ -181,6 +182,7 @@ export class SummaryService {
         newCapDev.female_using = female_using || 0;
         newCapDev.male_using = male_using || 0;
         newCapDev.has_unkown_using = has_unkown_using || 0;
+        newCapDev.result_object = { id: resultId } as Result;
         newCapDev.non_binary_using = non_binary_using || 0;
         newCapDev.result_id = resultId;
         newCapDev.capdev_delivery_method_id = capdev_delivery_method_id;
@@ -254,10 +256,21 @@ export class SummaryService {
         );
 
       if (!capDevExists) {
-        throw {
-          response: {},
-          message: 'Capacity Developents not found',
-          status: HttpStatus.NOT_FOUND,
+        return {
+          response: {
+            result_capacity_development_id: null,
+            result_id: resultId,
+            male_using: null,
+            female_using: null,
+            non_binary_using: null,
+            has_unkown_using: null,
+            capdev_delivery_method_id: null,
+            capdev_term_id: null,
+            is_attending_for_organization: null,
+            institutions: capDepInstitutions,
+          },
+          message: 'No capacity development data found for this result',
+          status: HttpStatus.OK,
         };
       }
 
@@ -267,7 +280,7 @@ export class SummaryService {
           institutions: capDepInstitutions,
         },
         message: 'Capacity Developents has been created successfully',
-        status: HttpStatus.CREATED,
+        status: HttpStatus.OK,
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });

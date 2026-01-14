@@ -99,7 +99,7 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
     effect(() => {
       this.resultsListFilterSE.text_to_search();
       this.resultsListFilterSE.selectedPhases();
-      this.api?.rolesSE?.isAdmin ? this.resultsListFilterSE.selectedSubmittersAdmin() : this.resultsListFilterSE.selectedSubmitters();
+      this.resultsListFilterSE.selectedSubmittersAdmin();
       this.resultsListFilterSE.selectedIndicatorCategories();
       this.resultsListFilterSE.selectedStatus();
 

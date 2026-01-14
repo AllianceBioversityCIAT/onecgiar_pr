@@ -7,20 +7,30 @@
     </div>
     <div class="segment">
       <div class="name">Sections</div>
-      <div class="sections">
-        @for (navOption of navigationOptions | panelMenu: this.resultLevelSE.currentResultTypeId : green_checks_string; track navOption.path) {
-          <a
-            [hidden]="hideKP(navOption)"
-            [routerLink]="'/result/result-detail/' + this.dataControlSE?.currentResult?.result_code + '/' + navOption.path"
-            [queryParams]="{ phase: this.dataControlSE?.currentResult?.version_id }"
-            routerLinkActive="section_active"
-            class="pr-body-2">
-            {{ $index + 1 }}. {{ navOption.prName }}
-            <img *ngIf="navOption.underConstruction === true" class="under_construction" src="assets/work-in-progress.png" alt="" srcset="" />
-            <div class="check">
-              <i class="material-icons-round {{ navOption.validation ? 'valid' : 'invalid' }}"> check_circle </i>
+      <div class="sections" [class.skeleton-loading]="isLoading()">
+        @if (isLoading()) {
+          <!-- Skeleton loader -->
+          @for (item of getSkeletonArray(); track item) {
+            <div class="skeleton-item">
+              <div class="skeleton-line"></div>
+              <div class="skeleton-check"></div>
             </div>
-          </a>
+          }
+        } @else {
+          @for (navOption of navigationOptions | panelMenu: this.resultLevelSE.currentResultTypeId : green_checks_string; track navOption.path) {
+            <a
+              [hidden]="hideKP(navOption)"
+              [routerLink]="'/result/result-detail/' + this.dataControlSE?.currentResult?.result_code + '/' + navOption.path"
+              [queryParams]="{ phase: this.dataControlSE?.currentResult?.version_id }"
+              routerLinkActive="section_active"
+              class="pr-body-2">
+              {{ $index + 1 }}. {{ navOption.prName }}
+              <img *ngIf="navOption.underConstruction === true" class="under_construction" src="assets/work-in-progress.png" alt="" srcset="" />
+              <div class="check">
+                <i class="material-icons-round {{ navOption.validation ? 'valid' : 'invalid' }}"> check_circle </i>
+              </div>
+            </a>
+          }
         }
       </div>
     </div>
@@ -34,24 +44,43 @@
         (validateMember(this.api.dataControlSE?.myInitiativesList) !== 6 && this.dataControlSE?.currentResult?.inQA) ||
         this.api.rolesSE.isAdmin
       ">
-      @if (this.api.dataControlSE?.currentResult?.result_type_id != 6) {
+      @if (this.api.dataControlSE?.currentResult?.result_type_id != 6 && this.dataControlSE?.currentResult?.status_id == 1) {
         <div
-          class="ai-review-button"
-          [ngClass]="{
-            loading: aiReviewSE.aiReviewButtonState === 'loading',
-            completed: aiReviewSE.aiReviewButtonState === 'completed'
-          }"
-          (click)="aiReviewSE.onAIReviewClick()">
-          <img src="assets/icons/stars.png" alt="ai-review" />
-          <span>{{
-            aiReviewSE.aiReviewButtonState === 'loading' ? 'Loading...' : aiReviewSE.aiReviewButtonState === 'completed' ? 'Ready!' : 'AI Review'
-          }}</span>
+          style="width: 100%"
+          [pTooltip]="
+            this.dataControlSE?.currentResult?.status_id == 1 && !this.greenChecksSE.submit
+              ? 'This button will become available once all sections are completed.'
+              : ''
+          "
+          tooltipPosition="right">
+          <div
+            class="ai-review-button"
+            [ngClass]="{
+              loading: aiReviewSE.aiReviewButtonState === 'loading',
+              completed: aiReviewSE.aiReviewButtonState === 'completed',
+              globalDisabled:
+                !this.greenChecksSE.submit ||
+                (this.dataControlSE?.currentResult?.inQA &&
+                  this.api.globalVariablesSE.get?.in_qa &&
+                  this.api.dataControlSE?.currentResult?.status_id == 1)
+            }"
+            (click)="aiReviewSE.onAIReviewClick()">
+            <img src="assets/icons/stars.png" alt="ai-review" />
+            <span>{{
+              aiReviewSE.aiReviewButtonState === 'loading' ? 'Loading...' : aiReviewSE.aiReviewButtonState === 'completed' ? 'Ready!' : 'AI Review'
+            }}</span>
+          </div>
         </div>
       }
-      <div style="width: 100%">
+      <div
+        style="width: 100%"
+        [pTooltip]="
+          this.dataControlSE?.currentResult?.status_id == 1 && !this.greenChecksSE.submit
+            ? 'This button will become available once all sections are completed.'
+            : ''
+        "
+        tooltipPosition="right">
         <app-pr-button
-          tooltipText="Enter your username"
-          tooltipTextPosition="top"
           [ngClass]="{
             globalDisabled: !this.greenChecksSE.submit || (this.dataControlSE?.currentResult?.inQA && this.api.globalVariablesSE.get?.in_qa)
           }"
@@ -65,10 +94,6 @@
           (click)="this.unsubmitModalSE.showModal = true"></app-pr-button>
       </div>
 
-      <div class="button_access_information pr-body-3" *ngIf="this.dataControlSE?.currentResult?.status_id == 1">
-        This button will become available once all sections are completed.
-      </div>
-
       <div class="button_access_information pr-body-3" *ngIf="this.dataControlSE?.currentResult?.status_id == 2">
         Quality Assessed results cannot be un-submited.
       </div>
@@ -77,9 +102,5 @@
         This result is part of a QA process and cannot be un-submitted for editing.
       </div>
     </div>
-  </div>
-
-  <div style="padding: 0px 35px">
-    <app-pdf-actions (copyEvent)="copyEvent.emit()"></app-pdf-actions>
   </div>
 </div>

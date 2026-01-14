@@ -24,6 +24,10 @@ import { EvidencesModule } from '../../results/evidences/evidences.module';
 import { SharePointModule } from '../../../shared/services/share-point/share-point.module';
 import { EvidencesService } from '../../results/evidences/evidences.service';
 import { VersioningModule } from '../../versioning/versioning.module';
+import { ResultsByProjectsRepository } from '../../results/results_by_projects/results_by_projects.repository';
+import { InnovationUseService } from '../innovation-use/innovation-use.service';
+import { LinkedResultsModule } from '../../results/linked-results/linked-results.module';
+import { ClarisaInnovationUseLevelRepository } from '../../../clarisa/clarisa-innovation-use-levels/clarisa-innovation-use-levels.repository';
 
 @Module({
   imports: [
@@ -32,6 +36,7 @@ import { VersioningModule } from '../../versioning/versioning.module';
     EvidencesModule,
     SharePointModule,
     VersioningModule,
+    LinkedResultsModule,
   ],
   controllers: [InnovationDevController],
   providers: [
@@ -46,6 +51,7 @@ import { VersioningModule } from '../../versioning/versioning.module';
     ResultInitiativeBudgetRepository,
     NonPooledProjectBudgetRepository,
     ResultInstitutionsBudgetRepository,
+    ClarisaInnovationUseLevelRepository,
     ResultsInnovationsDevRepository,
     ResultByIntitutionsRepository,
     ResultByInitiativesRepository,
@@ -53,6 +59,8 @@ import { VersioningModule } from '../../versioning/versioning.module';
     InnoDevService,
     ResultsPolicyChangesRepository,
     EvidencesService,
+    ResultsByProjectsRepository,
+    InnovationUseService,
   ],
 })
 export class InnovationDevModule {}

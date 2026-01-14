@@ -28,6 +28,7 @@ export class DataControlService {
   chagePhaseModal = false;
   updateResultModal = false;
   changeResultTypeModal = false;
+  isProductionSignal = signal(environment.production);
   inNotifications = false;
   currentNotification = null;
   currentResultSectionName = signal('');

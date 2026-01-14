@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnDestroy, OnInit } from '@angular/core';
 import { DrawerModule } from 'primeng/drawer';
 import { EntityAowService } from '../../../../../../services/entity-aow.service';
 import { CommonModule } from '@angular/common';
@@ -41,7 +41,7 @@ export class AowTargetDetailsDrawerComponent implements OnInit, OnDestroy {
       if (target.year) yearsSet.add(target.year);
     });
 
-    return Array.from(yearsSet).sort();
+    return Array.from(yearsSet).sort((a, b) => a.localeCompare(b));
   });
 
   tableData = computed(() => {
