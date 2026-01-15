@@ -633,6 +633,7 @@ WHERE
       resultTypeId?: number | number[];
       portfolioId?: number | number[];
       statusId?: number | number[];
+      fundingSource?: string | string[];
     },
     excludeType = [10, 11],
     pagination?: { limit?: number; offset?: number },
@@ -672,6 +673,7 @@ WHERE
         ci.portfolio_id,
         cp.name as portfolio_name,
         cp.acronym as acronym,
+        IF(r.source = 'Result', 'W1/W2', 'W3/Bilaterals') as source_name,
         EXISTS (
             SELECT 1
             FROM results_investment_discontinued_options rido
@@ -722,6 +724,7 @@ WHERE
       addInGeneric('rt.id', filters?.resultTypeId);
       addInGeneric('ci.portfolio_id', filters?.portfolioId);
       addInGeneric('r.status_id', filters?.statusId);
+      addInGeneric('r.source', filters?.fundingSource);
 
       const limit =
         pagination?.limit && pagination.limit > 0

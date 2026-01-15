@@ -216,6 +216,14 @@ export class ResultsController {
     description: 'Filter by status_id. Comma-separated allowed.',
   })
   @ApiQuery({
+    name: 'funding_source',
+    type: String,
+    required: false,
+    description:
+      'Filter by funding source. Options: "W1/W2" (pool funding/Science Program) or "W3/Bilaterals" (bilateral projects/CG-Center). Comma-separated allowed.',
+    example: 'W1/W2',
+  })
+  @ApiQuery({
     name: 'page',
     type: Number,
     required: false,

@@ -198,29 +198,51 @@ export class BilateralService {
               userId,
             );
 
-            const {
-              scope_code,
-              scope_label,
-              regions,
-              countries,
-              subnational_areas,
-            } = bilateralDto.geo_focus;
-            const scope = await this.findScope(scope_code, scope_label);
-            this.validateGeoFocus(scope, regions, countries, subnational_areas);
+            // For Knowledge Products, geo_focus is optional (obtained from CGSpace)
+            // For other result types, geo_focus is required
+            const isKpType =
+              bilateralDto.result_type_id === ResultTypeEnum.KNOWLEDGE_PRODUCT;
 
-            await this.handleRegions(newResultHeader, scope, regions);
-            await this.handleCountries(
-              newResultHeader,
-              countries,
-              subnational_areas,
-              scope.id,
-              userId,
-            );
+            if (!isKpType && bilateralDto.geo_focus) {
+              const {
+                scope_code,
+                scope_label,
+                regions,
+                countries,
+                subnational_areas,
+              } = bilateralDto.geo_focus;
+              const scope = await this.findScope(scope_code, scope_label);
+              this.validateGeoFocus(
+                scope,
+                regions,
+                countries,
+                subnational_areas,
+              );
 
-            await this._resultRepository.save({
-              ...newResultHeader,
-              geographic_scope_id: this.resolveScopeId(scope.id, countries),
-            });
+              await this.handleRegions(newResultHeader, scope, regions);
+              await this.handleCountries(
+                newResultHeader,
+                countries,
+                subnational_areas,
+                scope.id,
+                userId,
+              );
+
+              await this._resultRepository.save({
+                ...newResultHeader,
+                geographic_scope_id: this.resolveScopeId(scope.id, countries),
+              });
+            } else if (!isKpType) {
+              // For non-KP types, geo_focus is required
+              throw new BadRequestException(
+                'geo_focus is required for non-Knowledge Product results.',
+              );
+            } else {
+              // For KP, save without geographic_scope_id (will be set from CGSpace)
+              await this._resultRepository.save({
+                ...newResultHeader,
+              });
+            }
 
             await this.handleTocMapping(
               bilateralDto.toc_mapping,
@@ -253,9 +275,6 @@ export class BilateralService {
               userId,
               bilateralDto.lead_center,
             );
-
-            const isKpType =
-              bilateralDto.result_type_id === ResultTypeEnum.KNOWLEDGE_PRODUCT;
 
             let kpExtra: any = {};
             if (isKpType) {
@@ -1222,7 +1241,8 @@ export class BilateralService {
         );
       } catch (err) {
         this.logger.error(
-          `TOC mapping unexpected error for program ${mapping.science_program_id} (role ${roleId}): ${(err as Error).message
+          `TOC mapping unexpected error for program ${mapping.science_program_id} (role ${roleId}): ${
+            (err as Error).message
           }`,
         );
         this.logger.error(`TOC mapping error stack: ${(err as Error).stack}`);
@@ -1245,12 +1265,12 @@ export class BilateralService {
     const onlyActive = (arr: any[]) =>
       Array.isArray(arr)
         ? arr.filter(
-          (item) =>
-            item?.is_active === undefined ||
-            item.is_active === null ||
-            item.is_active === true ||
-            item.is_active === 1,
-        )
+            (item) =>
+              item?.is_active === undefined ||
+              item.is_active === null ||
+              item.is_active === true ||
+              item.is_active === 1,
+          )
         : arr;
 
     result.result_region_array = onlyActive(result.result_region_array);

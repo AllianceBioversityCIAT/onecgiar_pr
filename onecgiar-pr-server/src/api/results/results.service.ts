@@ -1167,6 +1167,19 @@ export class ResultsService {
         query.initiative ?? query.initiativeCode ?? undefined,
       );
 
+      // Process funding_source filter: map display names to source enum values
+      const fundingSourceRaw = toStringArray(
+        query.funding_source ?? query.fundingSource,
+      );
+      const fundingSource = fundingSourceRaw
+        ?.map((fs) => {
+          const normalized = fs.trim();
+          if (normalized === 'W1/W2') return 'Result';
+          if (normalized === 'W3/Bilaterals') return 'API';
+          return null;
+        })
+        .filter((fs) => fs !== null) as string[] | undefined;
+
       const filters = {
         initiativeCode,
         versionId: toNumberArray(
@@ -1180,6 +1193,7 @@ export class ResultsService {
           query.portfolio ?? query.portfolio_id ?? query.portfolioId,
         ),
         statusId: toNumberArray(query.status_id ?? query.status),
+        fundingSource,
       };
 
       const repoRes =
