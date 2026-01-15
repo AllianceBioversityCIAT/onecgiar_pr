@@ -138,7 +138,7 @@ export class ResultsReviewTableComponent {
         {
           code: '5620',
           title: 'Capacity building for seed multiplication systems',
-          indicator_category: 'Capacity Development',
+          indicator_category: 'Capacity Sharing for Development',
           status: 'Pending review',
           toc_result: 'AOW03 - Enhanced seed systems supporting wheat production',
           toc_result_id: 'aow03',

@@ -238,10 +238,23 @@ p {
   }
 }
 
+// Indicator-specific section
+.indicator-specific-section {
+  background-color: var(--pr-color-primary-25);
+  border-color: var(--pr-color-primary-100);
+}
+
 // Update explanation section
 .update-explanation-section {
   background-color: #fef3c7;
   border-color: #f59e0b;
+}
+
+// Number input container
+.number-fields-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
 }
 
 // Footer styles
@@ -434,5 +447,19 @@ p {
       padding: 0 24px 20px;
       border-top: none;
     }
+  }
+
+  .p-inputnumber {
+    width: 100%;
+
+    .p-inputnumber-input {
+      @include fonts.pr-typography('body-2');
+      width: 100%;
+    }
+  }
+
+  .p-inputtext {
+    @include fonts.pr-typography('body-2');
+    width: 100%;
   }
 }

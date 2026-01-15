@@ -165,6 +165,63 @@
       </div>
     </div>
 
+    <!-- INDICATOR-SPECIFIC FIELDS Section (Dynamic based on indicator_category) -->
+    @if (currentIndicatorFields.length > 0) {
+      <div class="form-section indicator-specific-section">
+        <p class="form-section_title">{{ resultToReview()?.indicator_category?.toUpperCase() }} - SPECIFIC FIELDS</p>
+
+        @for (field of currentIndicatorFields; track field.name) {
+          @if (isFieldVisible(field)) {
+            <div class="form-field">
+              <label class="form-field_label" [class.required]="field.mandatory">{{ field.label }}</label>
+
+              <!-- Text input -->
+              @if (field.type === 'text') {
+                <input pInputText [(ngModel)]="dynamicFieldValues[field.name]" [style]="{ width: '100%' }" />
+              }
+
+              <!-- Textarea -->
+              @if (field.type === 'textarea') {
+                <textarea pInputTextarea [(ngModel)]="dynamicFieldValues[field.name]" [rows]="3" [style]="{ width: '100%' }"></textarea>
+              }
+
+              <!-- Number input -->
+              @if (field.type === 'number') {
+                <p-inputNumber [(ngModel)]="dynamicFieldValues[field.name]" [style]="{ width: '100%' }" mode="decimal" [useGrouping]="true" />
+              }
+
+              <!-- Select dropdown -->
+              @if (field.type === 'select') {
+                <p-select
+                  [options]="field.options || []"
+                  [(ngModel)]="dynamicFieldValues[field.name]"
+                  optionLabel="label"
+                  optionValue="value"
+                  [placeholder]="'Select ' + field.label"
+                  [style]="{ width: '100%' }" />
+              }
+
+              <!-- Radio buttons -->
+              @if (field.type === 'radio') {
+                <div class="form-field_radio-group">
+                  @for (option of field.options; track option.value) {
+                    <div class="radioButton">
+                      <p-radioButton
+                        [name]="field.name"
+                        [value]="option.value"
+                        [(ngModel)]="dynamicFieldValues[field.name]"
+                        [inputId]="field.name + '_' + option.value"></p-radioButton>
+                      <label [for]="field.name + '_' + option.value" class="form-field_radio-label">{{ option.label }}</label>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+        }
+      </div>
+    }
+
     <!-- Update Explanation (conditional) -->
     @if (hasModifications()) {
       <div class="form-section update-explanation-section">

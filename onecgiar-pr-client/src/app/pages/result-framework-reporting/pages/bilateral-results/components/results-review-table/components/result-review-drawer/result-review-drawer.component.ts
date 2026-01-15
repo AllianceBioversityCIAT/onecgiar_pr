@@ -8,6 +8,8 @@ import { TextareaModule } from 'primeng/textarea';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
+import { InputTextModule } from 'primeng/inputtext';
+import { InputNumberModule } from 'primeng/inputnumber';
 
 export interface ResultToReview {
   code: string;
@@ -30,14 +32,281 @@ export interface ResultToReview {
   countries?: string[];
 }
 
+export interface MdsField {
+  name: string;
+  label: string;
+  type: 'text' | 'textarea' | 'select' | 'multiselect' | 'radio' | 'number';
+  mandatory: boolean;
+  options?: { label: string; value: string }[];
+  value?: any;
+  conditionalOn?: string;
+}
+
 interface SelectOption {
   label: string;
   value: string | number;
 }
 
+// MDS Field configurations by indicator category
+const MDS_FIELDS_CONFIG: { [key: string]: MdsField[] } = {
+  'Capacity Sharing for Development': [
+    { name: 'people_trained_male', label: '# People trained (Male)', type: 'number', mandatory: true },
+    { name: 'people_trained_female', label: '# People trained (Female)', type: 'number', mandatory: true },
+    { name: 'people_trained_non_binary', label: '# People trained (Non-binary)', type: 'number', mandatory: false },
+    { name: 'people_trained_unknown', label: '# People trained (Unknown)', type: 'number', mandatory: false },
+    {
+      name: 'training_term',
+      label: 'Long-term or short-term',
+      type: 'radio',
+      mandatory: true,
+      options: [
+        { label: 'Long-term', value: 'long_term' },
+        { label: 'Short-term', value: 'short_term' }
+      ]
+    },
+    {
+      name: 'delivery_method',
+      label: 'Delivery method',
+      type: 'select',
+      mandatory: false,
+      options: [
+        { label: 'In-person', value: 'in_person' },
+        { label: 'Online', value: 'online' },
+        { label: 'Hybrid', value: 'hybrid' }
+      ]
+    },
+    {
+      name: 'trainees_on_behalf_org',
+      label: 'Trainees attending on behalf of an organization',
+      type: 'radio',
+      mandatory: true,
+      options: [
+        { label: 'Yes', value: 'yes' },
+        { label: 'No', value: 'no' }
+      ]
+    }
+  ],
+  'Knowledge Product': [
+    {
+      name: 'is_melia',
+      label: 'Is it a MELIA?',
+      type: 'radio',
+      mandatory: true,
+      options: [
+        { label: 'Yes', value: 'yes' },
+        { label: 'No', value: 'no' }
+      ]
+    },
+    {
+      name: 'melia_planned_ost',
+      label: 'MELIA previously planned in the OST?',
+      type: 'radio',
+      mandatory: true,
+      conditionalOn: 'is_melia:yes',
+      options: [
+        { label: 'Yes', value: 'yes' },
+        { label: 'No', value: 'no' }
+      ]
+    },
+    { name: 'permanent_identifier', label: 'Permanent unique Identifier (from CGSpace)', type: 'text', mandatory: false },
+    { name: 'issue_date', label: 'Issue date (from CGSpace)', type: 'text', mandatory: false },
+    { name: 'kp_title', label: 'Title (from CGSpace)', type: 'text', mandatory: false },
+    { name: 'authors', label: 'Authors (from CGSpace)', type: 'text', mandatory: false },
+    {
+      name: 'kp_type',
+      label: 'KP type (from CGSpace)',
+      type: 'select',
+      mandatory: false,
+      options: [
+        { label: 'Journal Article', value: 'journal_article' },
+        { label: 'Book', value: 'book' },
+        { label: 'Book Chapter', value: 'book_chapter' },
+        { label: 'Report', value: 'report' },
+        { label: 'Working Paper', value: 'working_paper' },
+        { label: 'Dataset', value: 'dataset' },
+        { label: 'Other', value: 'other' }
+      ]
+    },
+    {
+      name: 'peer_reviewed',
+      label: 'Peer reviewed (from CGSpace)',
+      type: 'radio',
+      mandatory: false,
+      options: [
+        { label: 'Yes', value: 'yes' },
+        { label: 'No', value: 'no' }
+      ]
+    },
+    {
+      name: 'wos_core_collection',
+      label: 'Web of Science Core Collection (from CGSpace)',
+      type: 'radio',
+      mandatory: false,
+      options: [
+        { label: 'Yes', value: 'yes' },
+        { label: 'No', value: 'no' }
+      ]
+    },
+    {
+      name: 'accessibility',
+      label: 'Accessibility (from CGSpace)',
+      type: 'select',
+      mandatory: false,
+      options: [
+        { label: 'Open Access', value: 'open_access' },
+        { label: 'Limited Access', value: 'limited_access' },
+        { label: 'Restricted', value: 'restricted' }
+      ]
+    }
+  ],
+  'Innovation Development': [
+    { name: 'short_title', label: 'Short title (10 words)', type: 'text', mandatory: true },
+    { name: 'long_title', label: 'Long title', type: 'text', mandatory: false },
+    {
+      name: 'innovation_nature',
+      label: 'Innovation nature',
+      type: 'select',
+      mandatory: true,
+      options: [
+        { label: 'Incremental', value: 'incremental' },
+        { label: 'Radical/Disruptive', value: 'radical_disruptive' },
+        { label: 'Other', value: 'other' }
+      ]
+    },
+    {
+      name: 'typology',
+      label: 'Typology',
+      type: 'select',
+      mandatory: true,
+      options: [
+        { label: 'Technology', value: 'technology' },
+        { label: 'Capacity Development', value: 'capacity_dev' },
+        { label: 'Policy', value: 'policy' },
+        { label: 'Other', value: 'other' }
+      ]
+    },
+    {
+      name: 'new_variety_breed',
+      label: 'Are you profiling a new or improved variety or breed?',
+      type: 'radio',
+      mandatory: true,
+      options: [
+        { label: 'Yes', value: 'yes' },
+        { label: 'No', value: 'no' }
+      ]
+    },
+    { name: 'megatrends_contribution', label: 'Contribution to Megatrends', type: 'textarea', mandatory: true },
+    { name: 'anticipated_use', label: 'Anticipated innovation use (actor, org, other)', type: 'textarea', mandatory: true },
+    { name: 'gesi', label: 'Responsible innovation and scaling – GESI', type: 'textarea', mandatory: true },
+    { name: 'unintended_consequences', label: 'Responsible innovation and scaling – Unintended negative consequences', type: 'textarea', mandatory: true },
+    {
+      name: 'ip_rights',
+      label: 'Intellectual property rights',
+      type: 'select',
+      mandatory: true,
+      options: [
+        { label: 'Patent', value: 'patent' },
+        { label: 'Copyright', value: 'copyright' },
+        { label: 'Open Source', value: 'open_source' },
+        { label: 'None', value: 'none' }
+      ]
+    },
+    { name: 'developer', label: 'Developer', type: 'text', mandatory: false },
+    { name: 'collaborators', label: 'Collaborators', type: 'text', mandatory: false },
+    { name: 'team_diversity', label: 'Innovation team diversity', type: 'textarea', mandatory: true },
+    {
+      name: 'readiness_level',
+      label: 'Innovation Readiness Level',
+      type: 'select',
+      mandatory: true,
+      options: [
+        { label: 'Level 1 - Basic research', value: '1' },
+        { label: 'Level 2 - Applied research', value: '2' },
+        { label: 'Level 3 - Proof of concept', value: '3' },
+        { label: 'Level 4 - Pilot testing', value: '4' },
+        { label: 'Level 5 - Validated in real environment', value: '5' },
+        { label: 'Level 6 - Demonstrated at scale', value: '6' },
+        { label: 'Level 7 - Ready for adoption', value: '7' },
+        { label: 'Level 8 - Proven at scale', value: '8' },
+        { label: 'Level 9 - Widely adopted', value: '9' }
+      ]
+    },
+    { name: 'readiness_justification', label: 'Innovation Readiness Level justification', type: 'textarea', mandatory: true },
+    { name: 'estimated_investment', label: 'Estimated USD investment', type: 'number', mandatory: true }
+  ],
+  'Policy Change': [
+    {
+      name: 'link_capacity_dev',
+      label: 'Link to the capacity development of key actors in a policy process OR a policy change',
+      type: 'textarea',
+      mandatory: true
+    },
+    {
+      name: 'link_engagement_activity',
+      label: 'Link to any engagement activity or event',
+      type: 'radio',
+      mandatory: true,
+      options: [
+        { label: 'Yes', value: 'yes' },
+        { label: 'No', value: 'no' }
+      ]
+    },
+    {
+      name: 'policy_type',
+      label: 'Policy type',
+      type: 'select',
+      mandatory: true,
+      options: [
+        { label: 'Legal instrument', value: 'legal' },
+        { label: 'Strategy/Policy', value: 'strategy' },
+        { label: 'Budget/Investment', value: 'budget' },
+        { label: 'Curriculum', value: 'curriculum' },
+        { label: 'Other', value: 'other' }
+      ]
+    },
+    { name: 'usd_amount', label: 'USD amount', type: 'number', mandatory: false },
+    {
+      name: 'usd_status',
+      label: 'Status: Confirmed/estimated/unknown',
+      type: 'select',
+      mandatory: false,
+      options: [
+        { label: 'Confirmed', value: 'confirmed' },
+        { label: 'Estimated', value: 'estimated' },
+        { label: 'Unknown', value: 'unknown' }
+      ]
+    },
+    {
+      name: 'stage',
+      label: 'Stage',
+      type: 'select',
+      mandatory: true,
+      options: [
+        { label: 'Stage 1 - Research taken up', value: '1' },
+        { label: 'Stage 2 - Policy/Strategy formulated', value: '2' },
+        { label: 'Stage 3 - Policy/Strategy implemented', value: '3' }
+      ]
+    },
+    { name: 'policy_implementation', label: 'Policy implementation (Whose policy is this?)', type: 'textarea', mandatory: true }
+  ],
+  'Innovation Use': [{ name: 'current_usage_numbers', label: 'Current Innovation usage numbers + evidence', type: 'textarea', mandatory: true }]
+};
+
 @Component({
   selector: 'app-result-review-drawer',
-  imports: [DrawerModule, CommonModule, FormsModule, RadioButtonModule, SelectModule, TextareaModule, MultiSelectModule, ButtonModule, DialogModule],
+  imports: [
+    DrawerModule,
+    CommonModule,
+    FormsModule,
+    RadioButtonModule,
+    SelectModule,
+    TextareaModule,
+    MultiSelectModule,
+    ButtonModule,
+    DialogModule,
+    InputTextModule,
+    InputNumberModule
+  ],
   templateUrl: './result-review-drawer.component.html',
   styleUrl: './result-review-drawer.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -47,7 +316,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   resultToReview = model<ResultToReview | null>(null);
   drawerFullScreen = signal<boolean>(false);
 
-  // Form state - variables normales para ngModel
+  // Common fields (always visible)
   tocAlignmentValue: boolean = true;
   selectedTocResult: string | null = null;
   selectedIndicator: string | null = null;
@@ -58,7 +327,13 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   updateExplanation: string = '';
   rejectJustification: string = '';
 
-  // Track original values to detect changes
+  // Dynamic MDS fields storage
+  dynamicFieldValues: { [key: string]: any } = {};
+
+  // Current indicator-specific fields
+  currentIndicatorFields: MdsField[] = [];
+
+  // Track original values
   private originalTocResult: string | null = null;
   private originalIndicator: string | null = null;
   private originalTocAlignment: boolean = true;
@@ -66,6 +341,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   private originalGeographicScope: string = '';
   private originalRegions: string[] = [];
   private originalCountries: string[] = [];
+  private originalDynamicValues: { [key: string]: any } = {};
 
   // Dialog state
   showConfirmApproveDialog = signal<boolean>(false);
@@ -74,65 +350,37 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   // Dropdown options
   tocResultOptions: SelectOption[] = [
     {
-      label: 'AOW04 - Ca2030 Outcome - Small-scale producers and other actors use climate advisory services, early warning or adaptive...',
+      label: 'AOW04 - Ca2030 Outcome - Small-scale producers and other actors use climate advisory services...',
       value: 'aow04'
     },
     { label: 'AOW01 - Evidence generated to support policy development in Africa and Asia', value: 'aow01' },
     { label: 'AOW02 - New wheat varieties adopted by farmers in target regions', value: 'aow02' },
     { label: 'AOW03 - Enhanced seed systems supporting wheat production', value: 'aow03' },
     { label: 'AOW05 - Climate-smart farming innovations with evidence at scale', value: 'aow05' },
-    { label: 'AOW06 - Early warning systems for wheat diseases implemented', value: 'aow06' },
-    { label: 'AOW07 - Policies supporting sustainable rice production adopted', value: 'aow07' },
-    { label: 'AOW08 - Water-efficient irrigation systems developed and tested', value: 'aow08' },
-    { label: 'AOW09 - Digital tools adopted by rice farmers and traders', value: 'aow09' },
-    { label: 'AOW10 - Best practices for nutrient management disseminated', value: 'aow10' }
+    { label: 'AOW06 - Early warning systems for wheat diseases implemented', value: 'aow06' }
   ];
 
   indicatorOptions: SelectOption[] = [
-    {
-      label: 'Number of small-scale producers and/or other FLW system actors using climate services, EWS, or adaptive safety nets',
-      value: 'ind01'
-    },
+    { label: 'Number of small-scale producers using climate services', value: 'ind01' },
     { label: 'Number of farmers adopting new learning resources', value: 'ind02' },
     { label: 'Number of policy instruments influenced by research', value: 'ind03' },
-    { label: 'Number of innovations sessions on smart practices delivered', value: 'ind04' },
-    { label: 'Number of farmers adopting drought-resistant varieties', value: 'ind05' },
-    { label: 'Number of seed producers trained in multiplication techniques', value: 'ind06' },
-    { label: 'Number of surveillance stations operational', value: 'ind07' },
-    { label: 'Number of water-saving technologies validated', value: 'ind08' },
-    { label: 'Number of farmers using digital market platforms', value: 'ind09' },
-    { label: 'Number of extension materials distributed to farmers', value: 'ind10' }
+    { label: 'Number of innovations sessions delivered', value: 'ind04' }
   ];
 
   regionOptions: SelectOption[] = [
     { label: 'Africa', value: 'africa' },
     { label: 'Western Africa', value: 'western_africa' },
     { label: 'Eastern Africa', value: 'eastern_africa' },
-    { label: 'Northern Africa', value: 'northern_africa' },
-    { label: 'Southern Africa', value: 'southern_africa' },
     { label: 'Asia', value: 'asia' },
-    { label: 'Southeast Asia', value: 'southeast_asia' },
-    { label: 'South Asia', value: 'south_asia' },
-    { label: 'Latin America', value: 'latin_america' },
-    { label: 'Central America', value: 'central_america' },
-    { label: 'Europe', value: 'europe' }
+    { label: 'Latin America', value: 'latin_america' }
   ];
 
   countryOptions: SelectOption[] = [
     { label: 'Kenya', value: 'kenya' },
     { label: 'Ethiopia', value: 'ethiopia' },
     { label: 'Nigeria', value: 'nigeria' },
-    { label: 'Ghana', value: 'ghana' },
-    { label: 'Tanzania', value: 'tanzania' },
-    { label: 'Uganda', value: 'uganda' },
     { label: 'India', value: 'india' },
-    { label: 'Bangladesh', value: 'bangladesh' },
-    { label: 'Mexico', value: 'mexico' },
-    { label: 'Colombia', value: 'colombia' },
-    { label: 'Vietnam', value: 'vietnam' },
-    { label: 'Philippines', value: 'philippines' },
-    { label: 'Indonesia', value: 'indonesia' },
-    { label: 'Thailand', value: 'thailand' }
+    { label: 'Mexico', value: 'mexico' }
   ];
 
   geographicScopeOptions = [
@@ -144,7 +392,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   ];
 
   constructor() {
-    // Effect to initialize form when result changes
     effect(() => {
       const result = this.resultToReview();
       if (result && this.visible()) {
@@ -154,7 +401,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   }
 
   private initializeFormFromResult(result: ResultToReview): void {
-    // Initialize form fields with result data
+    // Initialize common fields
     this.tocAlignmentValue = result.toc_alignment ?? true;
     this.selectedTocResult = result.toc_result_id ?? 'aow04';
     this.selectedIndicator = result.indicator_id ?? 'ind01';
@@ -164,8 +411,34 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     this.selectedCountries = result.countries ? [...result.countries] : [];
     this.updateExplanation = '';
 
-    // Store original values for comparison
+    // Load indicator-specific fields
+    this.loadIndicatorFields(result.indicator_category);
+
+    // Store original values
     this.storeOriginalValues();
+  }
+
+  loadIndicatorFields(indicatorCategory: string): void {
+    this.currentIndicatorFields = MDS_FIELDS_CONFIG[indicatorCategory] || [];
+    this.dynamicFieldValues = {};
+
+    // Initialize default values for each field
+    this.currentIndicatorFields.forEach(field => {
+      if (field.type === 'number') {
+        this.dynamicFieldValues[field.name] = 0;
+      } else if (field.type === 'radio' || field.type === 'select') {
+        this.dynamicFieldValues[field.name] = field.options?.[0]?.value || null;
+      } else {
+        this.dynamicFieldValues[field.name] = '';
+      }
+    });
+  }
+
+  isFieldVisible(field: MdsField): boolean {
+    if (!field.conditionalOn) return true;
+
+    const [condField, condValue] = field.conditionalOn.split(':');
+    return this.dynamicFieldValues[condField] === condValue;
   }
 
   private storeOriginalValues(): void {
@@ -176,22 +449,24 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     this.originalGeographicScope = this.geographicScope;
     this.originalRegions = [...this.selectedRegions];
     this.originalCountries = [...this.selectedCountries];
+    this.originalDynamicValues = { ...this.dynamicFieldValues };
   }
 
-  // Check if any field was modified
   hasModifications(): boolean {
-    return (
+    const commonModified =
       this.selectedTocResult !== this.originalTocResult ||
       this.selectedIndicator !== this.originalIndicator ||
       this.tocAlignmentValue !== this.originalTocAlignment ||
       this.resultDescription !== this.originalDescription ||
       this.geographicScope !== this.originalGeographicScope ||
       JSON.stringify(this.selectedRegions) !== JSON.stringify(this.originalRegions) ||
-      JSON.stringify(this.selectedCountries) !== JSON.stringify(this.originalCountries)
-    );
+      JSON.stringify(this.selectedCountries) !== JSON.stringify(this.originalCountries);
+
+    const dynamicModified = JSON.stringify(this.dynamicFieldValues) !== JSON.stringify(this.originalDynamicValues);
+
+    return commonModified || dynamicModified;
   }
 
-  // Check if explanation is required and valid
   canApproveOrReject(): boolean {
     if (this.hasModifications()) {
       return this.updateExplanation.trim().length > 0;
@@ -216,51 +491,31 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     this.showConfirmRejectDialog.set(false);
   }
 
-  // Remove a region chip
   removeRegion(regionValue: string): void {
     this.selectedRegions = this.selectedRegions.filter(r => r !== regionValue);
   }
 
-  // Remove a country chip
   removeCountry(countryValue: string): void {
     this.selectedCountries = this.selectedCountries.filter(c => c !== countryValue);
   }
 
-  // Get label for a region value
   getRegionLabel(value: string): string {
     return this.regionOptions.find(r => r.value === value)?.label || value;
   }
 
-  // Get label for a country value
   getCountryLabel(value: string): string {
     return this.countryOptions.find(c => c.value === value)?.label || value;
   }
 
-  // Get label for TOC result value
-  getTocResultLabel(value: string | null): string {
-    if (!value) return '';
-    return this.tocResultOptions.find(t => t.value === value)?.label || value;
-  }
-
-  // Get label for indicator value
-  getIndicatorLabel(value: string | null): string {
-    if (!value) return '';
-    return this.indicatorOptions.find(i => i.value === value)?.label || value;
-  }
-
-  // Save TOC changes
   saveTocChanges(): void {
     console.log('=== SAVE TOC CHANGES ===');
     console.log({
       toc_alignment: this.tocAlignmentValue,
       toc_result_id: this.selectedTocResult,
-      toc_result_label: this.getTocResultLabel(this.selectedTocResult),
-      indicator_id: this.selectedIndicator,
-      indicator_label: this.getIndicatorLabel(this.selectedIndicator)
+      indicator_id: this.selectedIndicator
     });
   }
 
-  // Approve flow
   onApprove(): void {
     if (this.hasModifications() && !this.updateExplanation.trim()) {
       return;
@@ -274,23 +529,19 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
       action: 'APPROVE',
       result_code: result?.code,
       result_title: result?.title,
-      entity_acronym: result?.entity_acronym,
-      entity_code: result?.entity_code,
+      indicator_category: result?.indicator_category,
       toc_alignment: {
         is_aligned: this.tocAlignmentValue,
         toc_result_id: this.selectedTocResult,
-        toc_result_label: this.getTocResultLabel(this.selectedTocResult),
-        indicator_id: this.selectedIndicator,
-        indicator_label: this.getIndicatorLabel(this.selectedIndicator)
+        indicator_id: this.selectedIndicator
       },
       data_standards: {
         result_description: this.resultDescription,
         geographic_scope: this.geographicScope,
         regions: this.selectedRegions,
-        regions_labels: this.selectedRegions.map(r => this.getRegionLabel(r)),
-        countries: this.selectedCountries,
-        countries_labels: this.selectedCountries.map(c => this.getCountryLabel(c))
+        countries: this.selectedCountries
       },
+      indicator_specific_fields: this.dynamicFieldValues,
       has_modifications: this.hasModifications(),
       update_explanation: this.hasModifications() ? this.updateExplanation : null
     };
@@ -307,7 +558,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     this.showConfirmApproveDialog.set(false);
   }
 
-  // Reject flow
   onReject(): void {
     this.showConfirmRejectDialog.set(true);
   }
@@ -322,8 +572,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
       action: 'REJECT',
       result_code: result?.code,
       result_title: result?.title,
-      entity_acronym: result?.entity_acronym,
-      entity_code: result?.entity_code,
       rejection_justification: this.rejectJustification
     };
 
