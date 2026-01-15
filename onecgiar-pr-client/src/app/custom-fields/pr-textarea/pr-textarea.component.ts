@@ -32,7 +32,7 @@ export class PrTextareaComponent implements ControlValueAccessor {
   @Input() labelDescInlineStyles?: string = '';
   @Input() fieldRef: string | number;
   @Input() disabled: boolean;
-
+  @Input() showDescriptionLabel: boolean = true;
   fieldsManager = inject(FieldsManagerService);
 
   private _value: string;
