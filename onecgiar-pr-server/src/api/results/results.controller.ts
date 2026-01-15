@@ -538,4 +538,23 @@ export class ResultsController {
   getAIContext(@Query('resultId') resultId: number) {
     return this.resultsService.getAIContext(resultId);
   }
+
+  @Get('pending-review')
+  @ApiOperation({
+    summary: 'Get pending review count by program',
+    description: 'Returns the count of results pending review for a specific program.',
+  })
+  @ApiQuery({
+    name: 'programId',
+    type: String,
+    required: true,
+    description: 'Program identifier (e.g., SP01)',
+    example: 'SP01',
+  })
+  @ApiOkResponse({
+    description: 'Pending review count retrieved successfully.',
+  })
+  async getPendingReviewCount(@Query('programId') programId: string) {
+    return this.resultsService.getPendingReviewCount(programId);
+  }
 }

@@ -4,6 +4,7 @@ import {
   Injectable,
   Logger,
   Optional,
+  BadRequestException,
 } from '@nestjs/common';
 import { CreateResultDto } from './dto/create-result.dto';
 import { ResultRepository } from './result.repository';
@@ -2569,6 +2570,60 @@ export class ResultsService {
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async getPendingReviewCount(programId: string) {
+    try {
+      if (!programId?.trim()) {
+        throw new BadRequestException(
+          'The programId parameter is required.',
+        );
+      }
+
+      const normalizedProgramId = programId.trim().toUpperCase();
+
+      const query = `
+        SELECT
+          COUNT(r.id) AS pending_review
+        FROM result r
+        JOIN results_toc_result rtr
+          ON r.id = rtr.results_id
+          AND rtr.is_active = 1
+        JOIN Integration_information.toc_results tr 
+          ON rtr.toc_result_id = tr.id
+          AND tr.is_active = 1
+        WHERE 
+          r.source = 'API'
+          AND tr.official_code = ?
+          AND r.is_active = 1
+          AND r.status_id = 1;
+      `;
+
+      const result = await this._resultRepository.query(query, [
+        normalizedProgramId,
+      ]);
+
+      // Extraer el conteo del resultado
+      const pendingReviewCount =
+        result?.length > 0 ? Number(result[0].pending_review) || 0 : 0;
+
+      return {
+        pending_review: pendingReviewCount,
+        programId: normalizedProgramId,
+      };
+    } catch (error) {
+      // Si es un BadRequestException, re-lanzarlo
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
+      // Para otros errores, usar el handler de errores
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsService.name,
+        error: error,
+        debug: true,
+      });
     }
   }
 }
