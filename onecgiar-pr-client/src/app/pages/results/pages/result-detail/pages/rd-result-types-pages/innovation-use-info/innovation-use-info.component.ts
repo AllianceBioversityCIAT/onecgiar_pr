@@ -43,6 +43,7 @@ export class InnovationUseInfoComponent {
     this.api.resultsSE.GET_innovationUseP25().subscribe({
       next: ({ response }) => {
         if (response) {
+          console.log('response', response);
           this.innovationUseInfoBody.has_innovation_link = response.has_innovation_link === 1;
           this.innovationUseInfoBody.linked_results = response.linked_results || [];
           this.innovationUseInfoBody.innovation_readiness_level_id = response.innovation_readiness_level_id;
@@ -56,7 +57,7 @@ export class InnovationUseInfoComponent {
           this.innovationUseInfoBody.investment_programs = response.investment_programs || [];
           this.innovationUseInfoBody.investment_bilateral = response.investment_bilateral || [];
           this.innovationUseInfoBody.investment_partners = response.investment_partners || [];
-          this.innovationUseInfoBody.innovation_use_level_id = response.innovation_use_level_id;
+          this.innovationUseInfoBody.innovation_use_level_id = response.level;
           this.innovationUseInfoBody.innovatonUse = {
             actors: response.actors || [],
             measures: response.measures || [],
