@@ -988,6 +988,10 @@ export class ResultsApiService {
     );
   }
 
+  GETAllClarisaInnovationUseLevelsV2() {
+    return this.http.get<any>(`${environment.apiBaseUrl}v2/clarisa/innovation-use-levels`);
+  }
+
   GETInnovationPathwayStepFourByRiId(isP25: boolean = false) {
     const p22Url = `${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/step-four/${this.ipsrDataControlSE.resultInnovationId}`;
     const p25Url = `${this.baseApiBaseUrlV2}ipsr-framework/ipsr-pathway/get/step-four/${this.ipsrDataControlSE.resultInnovationId}`;
