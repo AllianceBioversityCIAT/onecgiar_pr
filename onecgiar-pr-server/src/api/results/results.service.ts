@@ -4,7 +4,6 @@ import {
   Injectable,
   Logger,
   Optional,
-  BadRequestException,
 } from '@nestjs/common';
 import { CreateResultDto } from './dto/create-result.dto';
 import { ResultRepository } from './result.repository';
@@ -2576,9 +2575,11 @@ export class ResultsService {
   async getPendingReviewCount(programId: string) {
     try {
       if (!programId?.trim()) {
-        throw new BadRequestException(
-          'The programId parameter is required.',
-        );
+        return {
+          response: {},
+          message: 'The programId parameter is required.',
+          status: HttpStatus.BAD_REQUEST,
+        };
       }
 
       const normalizedProgramId = programId.trim().toUpperCase();
@@ -2635,33 +2636,49 @@ export class ResultsService {
         normalizedProgramId,
       ]);
 
-      const totalRow = result?.find((r: any) => r.level === 'TOTAL');
-      const totalPendingReview = totalRow ? Number(totalRow.pending_review) || 0 : 0;
-  
-      const byCenter = (result || [])
-        .filter((r: any) => r.level === 'CENTER')
+
+      if (!result || !Array.isArray(result)) {
+        this._logger.warn(
+          `getPendingReviewCount: Invalid result format for programId ${normalizedProgramId}`,
+        );
+        return {
+          response: {
+            programId: normalizedProgramId,
+            total_pending_review: 0,
+            by_center: [],
+          },
+          message: 'No pending review results found',
+          status: HttpStatus.OK,
+        };
+      }
+
+      const totalRow = result.find((r: any) => r?.level === 'TOTAL');
+      const totalPendingReview = totalRow
+        ? Number(totalRow.pending_review) || 0
+        : 0;
+
+      const byCenter = result
+        .filter((r: any) => r?.level === 'CENTER')
         .map((r: any) => ({
           center_id: r.center_id,
           pending_review: Number(r.pending_review) || 0,
         }));
-  
+
       return {
-        programId: normalizedProgramId,
-        total_pending_review: totalPendingReview,
-        by_center: byCenter,
+        response: {
+          programId: normalizedProgramId,
+          total_pending_review: totalPendingReview,
+          by_center: byCenter,
+        },
+        message: 'Pending review count retrieved successfully',
+        status: HttpStatus.OK,
       };
     } catch (error) {
-      // Si es un BadRequestException, re-lanzarlo
-      if (error instanceof BadRequestException) {
-        throw error;
-      }
-
-      // Para otros errores, usar el handler de errores
-      throw this._handlersError.returnErrorRepository({
-        className: ResultsService.name,
-        error: error,
-        debug: true,
-      });
+      this._logger.error(
+        `Error in getPendingReviewCount for programId ${programId}:`,
+        error,
+      );
+      return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
 
