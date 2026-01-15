@@ -542,7 +542,8 @@ export class ResultsController {
   @Get('pending-review')
   @ApiOperation({
     summary: 'Get pending review count by program',
-    description: 'Returns the count of results pending review for a specific program.',
+    description:
+      'Returns the count of results pending review for a specific program.',
   })
   @ApiQuery({
     name: 'programId',

@@ -2636,7 +2636,6 @@ export class ResultsService {
         normalizedProgramId,
       ]);
 
-
       if (!result || !Array.isArray(result)) {
         this._logger.warn(
           `getPendingReviewCount: Invalid result format for programId ${normalizedProgramId}`,
@@ -2716,10 +2715,11 @@ export class ResultsService {
         }
       }
 
-      const rawResults = await this._resultRepository.getResultsByProgramAndCenters(
-        normalizedProgramId,
-        processedCenterIds,
-      );
+      const rawResults =
+        await this._resultRepository.getResultsByProgramAndCenters(
+          normalizedProgramId,
+          processedCenterIds,
+        );
 
       const mappedResults = rawResults.map((row) => ({
         id: row.id,
