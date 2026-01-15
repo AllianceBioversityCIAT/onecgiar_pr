@@ -1718,11 +1718,16 @@ export class ResultsTocResultsService {
       const resultTocResults =
         isPrimaryPlanned || hasUnplannedResults ? primaryBox : null;
       // For unplanned results, use toc_progressive_narrative from the DTO level, not from DB
-      const tocProgressiveNarrative = isPrimaryPlanned
-        ? null
-        : hasUnplannedResults
-          ? ((result_toc_result as any)?.toc_progressive_narrative ?? null)
-          : (primaryBox?.[0]?.toc_progressive_narrative ?? null);
+      let tocProgressiveNarrative: any = null;
+      if (isPrimaryPlanned) {
+        tocProgressiveNarrative = null;
+      } else if (hasUnplannedResults) {
+        tocProgressiveNarrative =
+          (result_toc_result as any)?.toc_progressive_narrative ?? null;
+      } else {
+        tocProgressiveNarrative =
+          primaryBox?.[0]?.toc_progressive_narrative ?? null;
+      }
       const showMultipleWPsContent =
         (isPrimaryPlanned || hasUnplannedResults) &&
         (result_toc_result?.result_toc_results?.length ?? 0) > 1;
