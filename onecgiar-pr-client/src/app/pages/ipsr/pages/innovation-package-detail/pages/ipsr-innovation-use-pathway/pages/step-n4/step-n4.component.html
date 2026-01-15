@@ -6,7 +6,10 @@
 
 <div class="fragment_section_divider"></div>
 
-<app-step-n4-bilateral-investment-table [body]="this.ipsrStep4Body" (projectAdded)="getSectionInformation()"></app-step-n4-bilateral-investment-table>
+<app-step-n4-bilateral-investment-table
+  [body]="this.ipsrStep4Body"
+  (projectAdded)="getSectionInformation()"
+  (bilateralDeleted)="onSaveSection()"></app-step-n4-bilateral-investment-table>
 
 <div class="fragment_section_divider"></div>
 
@@ -30,7 +33,7 @@
   <app-studies-link *ngIf="ipsrStep4Body.has_scaling_studies" [body]="ipsrStep4Body"></app-studies-link>
 }
 
-<div class="toggle_change_step">
+<div class="toggle_change_step" style="margin-top: 60px">
   <app-pr-button
     (click)="onSavePrevious('previous')"
     padding="big"

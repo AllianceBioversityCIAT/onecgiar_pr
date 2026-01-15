@@ -29,15 +29,22 @@ export class StepN4AddProjectComponent implements DoCheck, OnInit {
 
   ngOnInit() {
     this.rdPartnersSE.loadClarisaProjects();
+    this.filterProjects();
+  }
+
+  filterProjects() {
+    const projects = this.rdPartnersSE.clarisaProjectsList.filter(
+      project => !this.body.bilateral_expected_investment.some(bilateral => bilateral.obj_result_project.project_id === project.project_id)
+    );
+
+    return projects;
   }
 
   onAddProject() {
     this.requesting = true;
     this.api.resultsSE.PATCHInnovationPathwayStepFourBilaterals(this.projectBody).subscribe({
-      next: ({ response }) => {
+      next: () => {
         this.requesting = false;
-        this.body.bilateral_expected_investment.push(response);
-
         this.visible = false;
         this.projectAdded.emit();
         this.api.alertsFe.show({ id: 'project', title: `Project has been added.`, status: 'success' });

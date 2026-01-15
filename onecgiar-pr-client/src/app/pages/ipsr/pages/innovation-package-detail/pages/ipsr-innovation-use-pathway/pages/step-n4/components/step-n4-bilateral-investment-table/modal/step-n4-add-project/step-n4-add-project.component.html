@@ -1,3 +1,5 @@
+@let filteredProjects = this.filterProjects();
+
 <p-dialog
   appendTo="body"
   header="Title"
@@ -11,15 +13,22 @@
   [style]="{ padding: '0px' }">
   <div class="modal_title">Add project</div>
   <div class="modal_container partners-request-container" *ngIf="showForm">
-    <app-pr-select
-      [options]="this.rdPartnersSE.clarisaProjectsList"
-      label="Contributing W3 and/or bilateral projects"
+    <app-pr-field-header label="Contributing W3 and/or bilateral projects" [required]="true"></app-pr-field-header>
+    <p-select
+      [options]="filteredProjects"
       optionLabel="fullName"
       optionValue="project_id"
       placeholder="Select project"
-      [required]="true"
-      [(ngModel)]="projectBody.id">
-    </app-pr-select>
+      [(ngModel)]="projectBody.id"
+      [style]="{ width: '100%' }"
+      [filter]="true">
+      <ng-template let-project #item>
+        <div style="white-space: normal">{{ project.fullName }}</div>
+      </ng-template>
+      <ng-template let-project #selectedItem>
+        <div style="white-space: normal">{{ project.fullName }}</div>
+      </ng-template>
+    </p-select>
   </div>
   <div class="buttons">
     <app-pr-button padding="medium" text="Cancel" icon="cancel_schedule_send" colorType="secondary" (click)="this.visible = false"> </app-pr-button>

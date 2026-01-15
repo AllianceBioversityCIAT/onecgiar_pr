@@ -254,13 +254,15 @@ describe('StepN3Component', () => {
 
   it('should return the expected string on readinessLevelSelfAssessmentText', () => {
     const result = component.readinessLevelSelfAssessmentText();
-    expect(result).toBe(`Please use the Innovation Readiness level calculator to determine your readiness score in 3 simple clicks:`);
+    expect(result).toBe(
+      `Please use the Innovation Readiness level calculator to determine your readiness score in 3 simple clicks: <a href="https://www.scalingreadiness.org/calculator-readiness-headless/" class="open_route" target="_blank">READINESS CALCULATOR</a>`
+    );
   });
 
   it('should return the expected string on useLevelDelfAssessment', () => {
     const result = component.useLevelDelfAssessment();
     expect(result).toBe(
-      `Please use the Innovation Use level calculator to determine your use score in 3 simple clicks: <a href="https://www.scalingreadiness.org/calculator-use-headless/" class="open_route" target="_blank">https://www.scalingreadiness.org/calculator-use-headless/</a>`
+      `Please use the Innovation Use level calculator to determine your use score in 3 simple clicks: <a href="https://www.scalingreadiness.org/calculator-use-headless/" class="open_route" target="_blank">USE CALCULATOR</a>`
     );
   });
 

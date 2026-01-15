@@ -17,6 +17,9 @@
     <app-pr-field-header label="Innovation Readiness level evidence-based"
         [description]="this.readinessLevelSelfAssessmentText()"
         [showDescriptionLabel]="false"></app-pr-field-header>
+    
+    <div appFeedbackValidation labelText="Innovation Readiness level evidence-based"
+        [isComplete]="this.ipsrStep3Body.result_ip_result_core.readiness_level_evidence_based !== null"></div>
 
     <div>
         <app-pr-range-level itemTitle="name" itemDescription="definition" optionLabel="name" optionValue="id"
@@ -28,8 +31,13 @@
             [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.readinees_evidence_link">
         </app-pr-input>
 
-        <p-checkbox name="check" [binary]="true" [(ngModel)]="this.showDetailsOfReadiness" label="I want to provide evidence details."
-        (ngModelChange)="this.ipsrStep3Body.result_ip_result_core.readiness_details_of_evidence = null"></p-checkbox>
+        
+
+        <div style="display: flex; align-items: center;">
+            <p-checkbox inputId="ReadinessDetails" name="check" [binary]="true" [(ngModel)]="this.showDetailsOfReadiness"
+            (ngModelChange)="this.ipsrStep3Body.result_ip_result_core.readiness_details_of_evidence = null"/>
+        <label for="ReadinessDetails" style="margin-left: 10px;"> I want to provide evidence details. </label>
+        </div>
 
         <app-pr-textarea 
             *ngIf="this.showDetailsOfReadiness"
@@ -44,6 +52,9 @@
             [description]="this.useLevelDelfAssessment()"
             [showDescriptionLabel]="false"></app-pr-field-header>
 
+        <div appFeedbackValidation labelText="Innovation use level evidence-based"
+            [isComplete]="this.ipsrStep3Body.result_ip_result_core.use_level_evidence_based !== null"></div>    
+
         <app-pr-range-level itemTitle="name" itemDescription="definition" optionLabel="name" optionValue="id"
             [options]="this.innovationUseList"
             [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.use_level_evidence_based"></app-pr-range-level>
@@ -53,8 +64,11 @@
             [(ngModel)]="this.ipsrStep3Body.result_ip_result_core.use_evidence_link">
         </app-pr-input>
 
-        <p-checkbox name="check" [binary]="true" [(ngModel)]="this.showDetailsOfUseLevel" label="I want to provide evidence details."
-        (ngModelChange)="this.ipsrStep3Body.result_ip_result_core.use_details_of_evidence = null"></p-checkbox>
+        <div style="display: flex; align-items: center;">
+            <p-checkbox inputId="UseDetails" name="check" [binary]="true" [(ngModel)]="this.showDetailsOfUseLevel"
+            (ngModelChange)="this.ipsrStep3Body.result_ip_result_core.use_details_of_evidence = null"/>
+            <label for="UseDetails" style="margin-left: 10px;"> I want to provide evidence details. </label>
+        </div>
 
         <app-pr-textarea 
             *ngIf="this.showDetailsOfUseLevel"
