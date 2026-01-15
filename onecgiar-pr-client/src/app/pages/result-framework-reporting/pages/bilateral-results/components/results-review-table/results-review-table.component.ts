@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
+import { ResultReviewDrawerComponent, ResultToReview } from './components/result-review-drawer/result-review-drawer.component';
 
 interface ResultItem {
   code: string;
@@ -12,6 +13,9 @@ interface ResultItem {
   toc_result: string;
   indicator: string;
   submission_date: string;
+  submitted_by?: string;
+  entity_acronym?: string;
+  entity_code?: string;
 }
 
 interface GroupedResult {
@@ -21,11 +25,13 @@ interface GroupedResult {
 
 @Component({
   selector: 'app-results-review-table',
-  imports: [CommonModule, TableModule, ButtonModule, TooltipModule],
+  imports: [CommonModule, TableModule, ButtonModule, TooltipModule, ResultReviewDrawerComponent],
   templateUrl: './results-review-table.component.html',
   styleUrl: './results-review-table.component.scss'
 })
 export class ResultsReviewTableComponent {
+  showReviewDrawer = signal<boolean>(false);
+  currentResultToReview = signal<ResultToReview | null>(null);
   // Dummy data basado en las imágenes
   tableData = signal<GroupedResult[]>([
     {
@@ -38,16 +44,22 @@ export class ResultsReviewTableComponent {
           status: 'Pending review',
           toc_result: 'AOW01 - Evidence generated to support policy development in Africa and Asia',
           indicator: 'Number of farmers adopting new learning resources',
-          submission_date: '19/08/2025'
+          submission_date: '19/08/2025',
+          submitted_by: 'John Smith',
+          entity_acronym: 'CIMMYT',
+          entity_code: 'V0165-ACIAR-ICCCAD'
         },
         {
           code: '3816',
-          title: 'TEST - Farmers trained on protection against wheat disease apply climate',
+          title: 'TEST - Farmers trained on protection against wheat disease apply CGIAR innovation in their work',
           indicator_category: 'Innovation Use',
           status: 'Pending review',
           toc_result: 'AOW04 - 2030 Outcome - Small-scale producers and other actors use climate advisory services, early warning or...',
           indicator: 'Number of small-scale producers and/or other FLW system actors using climate services, EWS, or...',
-          submission_date: '20/08/2025'
+          submission_date: '20/08/2025',
+          submitted_by: 'Nicoleta Trifa',
+          entity_acronym: 'CIMMYT',
+          entity_code: 'V0165-ACIAR-ICCCAD'
         },
         {
           code: '2417',
@@ -56,7 +68,10 @@ export class ResultsReviewTableComponent {
           status: 'Pending review',
           toc_result: 'AOW05 - Climate-smart farming innovations with evidence at scale',
           indicator: 'Number of innovations sessions on smart practices delivered',
-          submission_date: '18/08/2025'
+          submission_date: '18/08/2025',
+          submitted_by: 'Maria Garcia',
+          entity_acronym: 'CIMMYT',
+          entity_code: 'V0165-ACIAR-ICCCAD'
         },
         {
           code: '2416',
@@ -65,7 +80,10 @@ export class ResultsReviewTableComponent {
           status: 'Pending review',
           toc_result: 'AOW05 - Climate-smart farming innovations with evidence at scale',
           indicator: 'Number of agricultural innovation trials conducted',
-          submission_date: '17/08/2025'
+          submission_date: '17/08/2025',
+          submitted_by: 'Carlos Rodriguez',
+          entity_acronym: 'CIMMYT',
+          entity_code: 'V0165-ACIAR-ICCCAD'
         }
       ]
     },
@@ -79,7 +97,10 @@ export class ResultsReviewTableComponent {
           status: 'Pending review',
           toc_result: 'AOW02 - New wheat varieties adopted by farmers in target regions',
           indicator: 'Number of farmers adopting drought-resistant varieties',
-          submission_date: '22/08/2025'
+          submission_date: '22/08/2025',
+          submitted_by: 'Emma Wilson',
+          entity_acronym: 'CIMMYT',
+          entity_code: 'V0234-CIMMYT-WHEAT'
         },
         {
           code: '5620',
@@ -88,7 +109,10 @@ export class ResultsReviewTableComponent {
           status: 'Pending review',
           toc_result: 'AOW03 - Enhanced seed systems supporting wheat production',
           indicator: 'Number of seed producers trained in multiplication techniques',
-          submission_date: '21/08/2025'
+          submission_date: '21/08/2025',
+          submitted_by: 'David Brown',
+          entity_acronym: 'CIMMYT',
+          entity_code: 'V0234-CIMMYT-WHEAT'
         },
         {
           code: '5619',
@@ -97,7 +121,10 @@ export class ResultsReviewTableComponent {
           status: 'Pending review',
           toc_result: 'AOW06 - Early warning systems for wheat diseases implemented',
           indicator: 'Number of surveillance stations operational',
-          submission_date: '20/08/2025'
+          submission_date: '20/08/2025',
+          submitted_by: 'Sarah Johnson',
+          entity_acronym: 'CIMMYT',
+          entity_code: 'V0234-CIMMYT-WHEAT'
         }
       ]
     },
@@ -111,7 +138,10 @@ export class ResultsReviewTableComponent {
           status: 'Pending review',
           toc_result: 'AOW07 - Policies supporting sustainable rice production adopted',
           indicator: 'Number of policy instruments influenced by research',
-          submission_date: '25/08/2025'
+          submission_date: '25/08/2025',
+          submitted_by: 'Ana Martinez',
+          entity_acronym: 'IRRI',
+          entity_code: 'V0412-IRRI-RICE'
         },
         {
           code: '7833',
@@ -120,7 +150,10 @@ export class ResultsReviewTableComponent {
           status: 'Pending review',
           toc_result: 'AOW08 - Water-efficient irrigation systems developed and tested',
           indicator: 'Number of water-saving technologies validated',
-          submission_date: '24/08/2025'
+          submission_date: '24/08/2025',
+          submitted_by: 'James Lee',
+          entity_acronym: 'IRRI',
+          entity_code: 'V0412-IRRI-RICE'
         },
         {
           code: '7832',
@@ -129,7 +162,10 @@ export class ResultsReviewTableComponent {
           status: 'Pending review',
           toc_result: 'AOW09 - Digital tools adopted by rice farmers and traders',
           indicator: 'Number of farmers using digital market platforms',
-          submission_date: '23/08/2025'
+          submission_date: '23/08/2025',
+          submitted_by: 'Linda Chen',
+          entity_acronym: 'IRRI',
+          entity_code: 'V0412-IRRI-RICE'
         },
         {
           code: '7831',
@@ -138,7 +174,10 @@ export class ResultsReviewTableComponent {
           status: 'Pending review',
           toc_result: 'AOW10 - Best practices for nutrient management disseminated',
           indicator: 'Number of extension materials distributed to farmers',
-          submission_date: '22/08/2025'
+          submission_date: '22/08/2025',
+          submitted_by: 'Michael Wang',
+          entity_acronym: 'IRRI',
+          entity_code: 'V0412-IRRI-RICE'
         }
       ]
     }
@@ -153,8 +192,9 @@ export class ResultsReviewTableComponent {
     return expanded;
   });
 
-  // Acción del botón
+  // Acción del botón para abrir el drawer de review
   reviewResult(result: ResultItem): void {
-    // TODO: Implement review result logic
+    this.currentResultToReview.set(result as ResultToReview);
+    this.showReviewDrawer.set(true);
   }
 }

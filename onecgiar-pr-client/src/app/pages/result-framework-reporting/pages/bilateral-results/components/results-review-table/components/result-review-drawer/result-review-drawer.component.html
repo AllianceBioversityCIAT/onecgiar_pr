@@ -1,0 +1,48 @@
+<p-drawer
+  [(visible)]="visible"
+  [position]="drawerFullScreen() ? 'full' : 'right'"
+  [closable]="false"
+  [style]="{ minWidth: '65vw' }">
+  <ng-template #header>
+    <div class="result-review-drawer-header">
+      <div class="result-review-drawer-header_content">
+        <p class="result-review-drawer-header_subtitle">
+          {{ resultToReview()?.entity_acronym || 'CIMMYT' }}
+          <span class="result-review-drawer-header_separator">|</span>
+          {{ resultToReview()?.entity_code || 'V0165-ACIAR-ICCCAD' }}
+        </p>
+
+        <div class="result-review-drawer-header_icons">
+          <i
+            class="pi {{ drawerFullScreen() ? 'pi-arrow-down-left-and-arrow-up-right-to-center' : 'pi-arrow-up-right-and-arrow-down-left-from-center' }}"
+            style="font-size: 15px; cursor: pointer"
+            (click)="toggleFullScreen()"></i>
+          <i
+            class="pi pi-times"
+            style="font-size: 16px; cursor: pointer"
+            (click)="closeDrawer()"></i>
+        </div>
+      </div>
+
+      <p class="result-review-drawer-header_title">
+        {{ resultToReview()?.title || 'TEST - Farmers trained on protection against wheat disease apply CGIAR innovation in their work' }}
+      </p>
+
+      <div class="result-review-drawer-header_meta">
+        <span class="result-review-drawer-header_meta_item">
+          <i class="material-icons-round">light_mode</i>
+          {{ resultToReview()?.indicator_category || 'Innovation Use' }}
+        </span>
+        <span class="result-review-drawer-header_meta_separator">•</span>
+        <span class="result-review-drawer-header_meta_item">
+          <i class="material-icons-round">person_outline</i>
+          Submitted by {{ resultToReview()?.submitted_by || 'Nicoleta Trifa' }}
+        </span>
+      </div>
+    </div>
+  </ng-template>
+
+  <div class="result-review-drawer-content">
+    <!-- Content will be added here -->
+  </div>
+</p-drawer>

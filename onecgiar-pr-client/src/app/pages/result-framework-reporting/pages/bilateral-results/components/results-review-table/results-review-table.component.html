@@ -80,3 +80,10 @@
     </tr>
   </ng-template>
 </p-table>
+
+@if (showReviewDrawer()) {
+  <app-result-review-drawer
+    [(visible)]="showReviewDrawer"
+    [(resultToReview)]="currentResultToReview">
+  </app-result-review-drawer>
+}
