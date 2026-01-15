@@ -78,7 +78,7 @@
         </app-pr-select>
         @if (activeTab.indicators[0].related_node_id) {
           <div>
-            <app-pr-field-header label="Contribution to indicator target"></app-pr-field-header>
+            <app-pr-field-header label="Contribution to indicator target" [required]="false"></app-pr-field-header>
             <app-alert-status
               status="info"
               description="Indicate in this box the numerical value that your result contributes toward the 2025 target of the indicator.<br>
