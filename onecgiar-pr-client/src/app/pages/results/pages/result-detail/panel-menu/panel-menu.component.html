@@ -37,14 +37,8 @@
   </div>
 
   <div>
-    <div
-      class="submit_button"
-      *ngIf="
-        validateMember(this.api.dataControlSE?.myInitiativesList) !== 6 ||
-        (validateMember(this.api.dataControlSE?.myInitiativesList) !== 6 && this.dataControlSE?.currentResult?.inQA) ||
-        this.api.rolesSE.isAdmin
-      ">
-      @if (this.dataControlSE?.currentResult?.status_id == 1) {
+    <div class="submit_button">
+      @if (this.api.dataControlSE?.currentResult?.result_type_id != 6 && this.dataControlSE?.currentResult?.status_id == 1) {
         <div
           style="width: 100%"
           [pTooltip]="
@@ -72,28 +66,34 @@
           </div>
         </div>
       }
-      <div
-        style="width: 100%"
-        [pTooltip]="
-          this.dataControlSE?.currentResult?.status_id == 1 && !this.greenChecksSE.submit
-            ? 'This button will become available once all sections are completed.'
-            : ''
-        "
-        tooltipPosition="right">
-        <app-pr-button
-          [ngClass]="{
-            globalDisabled: !this.greenChecksSE.submit || (this.dataControlSE?.currentResult?.inQA && this.api.globalVariablesSE.get?.in_qa)
-          }"
-          (click)="this.submissionModalSE.showModal = true"
-          text="Submit result"
-          *ngIf="this.dataControlSE?.currentResult?.status_id == 1"></app-pr-button>
-        <app-pr-button
-          text="Unsubmit result"
-          *ngIf="this.dataControlSE?.currentResult?.status_id == 3"
-          [ngClass]="{ globalDisabled: this.dataControlSE?.currentResult?.inQA && this.api.globalVariablesSE.get?.in_qa }"
-          (click)="this.unsubmitModalSE.showModal = true"></app-pr-button>
-      </div>
 
+      @if (
+        validateMember(this.api.dataControlSE?.myInitiativesList) !== 6 ||
+        (validateMember(this.api.dataControlSE?.myInitiativesList) !== 6 && this.dataControlSE?.currentResult?.inQA) ||
+        this.api.rolesSE.isAdmin
+      ) {
+        <div
+          style="width: 100%"
+          [pTooltip]="
+            this.dataControlSE?.currentResult?.status_id == 1 && !this.greenChecksSE.submit
+              ? 'This button will become available once all sections are completed.'
+              : ''
+          "
+          tooltipPosition="right">
+          <app-pr-button
+            [ngClass]="{
+              globalDisabled: !this.greenChecksSE.submit || (this.dataControlSE?.currentResult?.inQA && this.api.globalVariablesSE.get?.in_qa)
+            }"
+            (click)="this.submissionModalSE.showModal = true"
+            text="Submit result"
+            *ngIf="this.dataControlSE?.currentResult?.status_id == 1"></app-pr-button>
+          <app-pr-button
+            text="Unsubmit result"
+            *ngIf="this.dataControlSE?.currentResult?.status_id == 3"
+            [ngClass]="{ globalDisabled: this.dataControlSE?.currentResult?.inQA && this.api.globalVariablesSE.get?.in_qa }"
+            (click)="this.unsubmitModalSE.showModal = true"></app-pr-button>
+        </div>
+      }
       <div class="button_access_information pr-body-3" *ngIf="this.dataControlSE?.currentResult?.status_id == 2">
         Quality Assessed results cannot be un-submited.
       </div>
