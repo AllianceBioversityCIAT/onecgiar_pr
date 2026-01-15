@@ -2585,7 +2585,10 @@ export class ResultsService {
 
       const query = `
         SELECT
-          COUNT(r.id) AS pending_review
+          tr.official_code,
+          'TOTAL' AS level,
+          NULL AS center_id,
+          COUNT(DISTINCT r.id) AS pending_review
         FROM result r
         JOIN results_toc_result rtr
           ON r.id = rtr.results_id
@@ -2593,24 +2596,59 @@ export class ResultsService {
         JOIN Integration_information.toc_results tr 
           ON rtr.toc_result_id = tr.id
           AND tr.is_active = 1
+        JOIN results_center rc
+          ON r.id = rc.result_id
+          AND rc.is_active = 1
         WHERE 
           r.source = 'API'
           AND tr.official_code = ?
           AND r.is_active = 1
-          AND r.status_id = 1;
+          AND r.status_id = 1
+        UNION ALL
+        SELECT
+          tr.official_code,
+          'CENTER' AS level,
+          rc.center_id,
+          COUNT(DISTINCT r.id) AS pending_review
+        FROM result r
+        JOIN results_toc_result rtr
+          ON r.id = rtr.results_id
+          AND rtr.is_active = 1
+        JOIN Integration_information.toc_results tr 
+          ON rtr.toc_result_id = tr.id
+          AND tr.is_active = 1
+        JOIN results_center rc
+          ON r.id = rc.result_id
+          AND rc.is_active = 1
+        WHERE 
+          r.source = 'API'
+          AND tr.official_code = ?
+          AND r.is_active = 1
+          AND r.status_id = 1
+        GROUP BY
+          tr.official_code,
+          rc.center_id;
       `;
 
       const result = await this._resultRepository.query(query, [
         normalizedProgramId,
+        normalizedProgramId,
       ]);
 
-      // Extraer el conteo del resultado
-      const pendingReviewCount =
-        result?.length > 0 ? Number(result[0].pending_review) || 0 : 0;
-
+      const totalRow = result?.find((r: any) => r.level === 'TOTAL');
+      const totalPendingReview = totalRow ? Number(totalRow.pending_review) || 0 : 0;
+  
+      const byCenter = (result || [])
+        .filter((r: any) => r.level === 'CENTER')
+        .map((r: any) => ({
+          center_id: r.center_id,
+          pending_review: Number(r.pending_review) || 0,
+        }));
+  
       return {
-        pending_review: pendingReviewCount,
         programId: normalizedProgramId,
+        total_pending_review: totalPendingReview,
+        by_center: byCenter,
       };
     } catch (error) {
       // Si es un BadRequestException, re-lanzarlo
