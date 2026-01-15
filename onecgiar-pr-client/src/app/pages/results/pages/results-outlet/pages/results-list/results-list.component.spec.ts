@@ -437,6 +437,7 @@ describe('ResultsListComponent', () => {
       expect(component.columnOrder).toEqual([
         { title: 'Result code', attr: 'result_code', center: true, width: '105px' },
         { title: 'Title', attr: 'title', class: 'notCenter', width: '305px' },
+        { title: 'Funding Source', attr: 'source_name', class: 'notCenter', width: '105px' },
         { title: 'Phase - Portfolio', attr: 'phase_name', width: '155px' },
         { title: 'Indicator category', attr: 'result_type', width: '180px' },
         { title: 'Submitter', attr: 'submitter', center: true, width: '95px' },

@@ -157,6 +157,18 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
       });
     }
 
+    const fundingSourceChips = this.resultsListFilterSE.selectedFundingSource().map(fundingSource => ({
+      label: fundingSource.name,
+      filterType: 'fundingSource',
+      item: fundingSource
+    }));
+    if (fundingSourceChips.length > 0) {
+      groups.push({
+        category: 'Funding Source',
+        chips: fundingSourceChips
+      });
+    }
+
     return groups;
   });
 
@@ -267,6 +279,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
 
   clearAllNewFilters() {
     this.resultsListFilterSE.selectedClarisaPortfolios.set([]);
+    this.resultsListFilterSE.selectedFundingSource.set([]);
     this.resultsListFilterSE.selectedPhases.set([]);
 
     // When portfolios are cleared, show all submitters (no filtering)
@@ -285,12 +298,14 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     this.tempSelectedSubmittersAdmin.set([]);
     this.tempSelectedIndicatorCategories.set([]);
     this.tempSelectedStatus.set([]);
+    this.tempSelectedFundingSource.set([]);
   }
 
   removeFilter(chip: { label: string; filterType: string; item?: any }) {
     switch (chip.filterType) {
       case 'clarisaPortfolio':
         this.resultsListFilterSE.selectedClarisaPortfolios.set(this.resultsListFilterSE.selectedClarisaPortfolios().filter(p => p !== chip.item));
+        this.resultsListFilterSE.selectedFundingSource.set(this.resultsListFilterSE.selectedFundingSource().filter(p => p !== chip.item));
         // Update phases and submitters when portfolio changes
         this.updateOptionsAfterPortfolioChange();
         break;
@@ -310,6 +325,10 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
 
       case 'status':
         this.resultsListFilterSE.selectedStatus.set(this.resultsListFilterSE.selectedStatus().filter(s => s !== chip.item));
+        break;
+
+      case 'fundingSource':
+        this.resultsListFilterSE.selectedFundingSource.set(this.resultsListFilterSE.selectedFundingSource().filter(p => p !== chip.item));
         break;
     }
   }
@@ -372,6 +391,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   // Initialize temp values when opening the drawer
   openFiltersDrawer() {
     this.tempSelectedClarisaPortfolios.set([...this.resultsListFilterSE.selectedClarisaPortfolios()]);
+    this.tempSelectedFundingSource.set([...this.resultsListFilterSE.selectedFundingSource()]);
     this.tempSelectedPhases.set([...this.resultsListFilterSE.selectedPhases()]);
     this.tempSelectedSubmittersAdmin.set([...this.resultsListFilterSE.selectedSubmittersAdmin()]);
     this.tempSelectedIndicatorCategories.set([...this.resultsListFilterSE.selectedIndicatorCategories()]);
@@ -382,6 +402,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   // Apply filters when clicking "Apply filters" button
   applyFilters() {
     this.resultsListFilterSE.selectedClarisaPortfolios.set([...this.tempSelectedClarisaPortfolios()]);
+    this.resultsListFilterSE.selectedFundingSource.set([...this.tempSelectedFundingSource()]);
     this.resultsListFilterSE.selectedPhases.set([...this.tempSelectedPhases()]);
     this.resultsListFilterSE.selectedSubmittersAdmin.set([...this.tempSelectedSubmittersAdmin()]);
     this.resultsListFilterSE.selectedIndicatorCategories.set([...this.tempSelectedIndicatorCategories()]);
@@ -393,6 +414,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   cancelFilters() {
     // Reset temp values to current applied filters
     this.tempSelectedClarisaPortfolios.set([...this.resultsListFilterSE.selectedClarisaPortfolios()]);
+    this.tempSelectedFundingSource.set([...this.resultsListFilterSE.selectedFundingSource()]);
     this.tempSelectedPhases.set([...this.resultsListFilterSE.selectedPhases()]);
     this.tempSelectedSubmittersAdmin.set([...this.resultsListFilterSE.selectedSubmittersAdmin()]);
     this.tempSelectedIndicatorCategories.set([...this.resultsListFilterSE.selectedIndicatorCategories()]);

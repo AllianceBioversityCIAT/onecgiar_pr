@@ -28,6 +28,7 @@ export class ResultsListFilterService {
   submittersOptionsAdmin = signal([]);
   submittersOptionsAdminOld = signal([]);
   selectedClarisaPortfolios = signal([]);
+  selectedFundingSource = signal([]);
 
   statusOptions = signal([]);
   fundingSourceOptions = signal([
