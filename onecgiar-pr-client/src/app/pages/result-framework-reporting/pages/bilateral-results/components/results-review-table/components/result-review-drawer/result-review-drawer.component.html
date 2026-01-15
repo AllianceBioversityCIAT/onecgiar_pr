@@ -5,23 +5,21 @@
   [style]="{ minWidth: '65vw' }">
   <ng-template #header>
     <div class="result-review-drawer-header">
-      <div class="result-review-drawer-header_content">
-        <p class="result-review-drawer-header_entity">
-          <span class="result-review-drawer-header_entity_acronym">{{ resultToReview()?.entity_acronym || 'CIMMYT' }}</span>
-          <span class="result-review-drawer-header_separator">|</span>
-          <span class="result-review-drawer-header_entity_code">{{ resultToReview()?.entity_code || 'V0165-ACIAR-ICCCAD' }}</span>
-        </p>
+      <p class="result-review-drawer-header_entity">
+        <span class="result-review-drawer-header_entity_acronym">{{ resultToReview()?.entity_acronym || 'CIMMYT' }}</span>
+        <span class="result-review-drawer-header_separator">|</span>
+        <span class="result-review-drawer-header_entity_code">{{ resultToReview()?.entity_code || 'V0165-ACIAR-ICCCAD' }}</span>
+      </p>
 
-        <div class="result-review-drawer-header_icons">
-          <i
-            class="pi {{ drawerFullScreen() ? 'pi-arrow-down-left-and-arrow-up-right-to-center' : 'pi-arrow-up-right-and-arrow-down-left-from-center' }}"
-            style="font-size: 15px; cursor: pointer"
-            (click)="toggleFullScreen()"></i>
-          <i
-            class="pi pi-times"
-            style="font-size: 16px; cursor: pointer"
-            (click)="closeDrawer()"></i>
-        </div>
+      <div class="result-review-drawer-header_icons">
+        <i
+          class="pi {{ drawerFullScreen() ? 'pi-arrow-down-left-and-arrow-up-right-to-center' : 'pi-arrow-up-right-and-arrow-down-left-from-center' }}"
+          style="font-size: 15px; cursor: pointer"
+          (click)="toggleFullScreen()"></i>
+        <i
+          class="pi pi-times"
+          style="font-size: 16px; cursor: pointer"
+          (click)="closeDrawer()"></i>
       </div>
     </div>
   </ng-template>

@@ -13,19 +13,12 @@ p {
 // Header styles - Solo entity info
 .result-review-drawer-header {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
   padding: 20px 32px;
   background-color: var(--pr-color-primary-25);
   border-bottom: 1px solid var(--pr-color-accents-2);
   width: 100%;
-}
-
-.result-review-drawer-header_content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  gap: 10px;
 }
 
 .result-review-drawer-header_entity {
