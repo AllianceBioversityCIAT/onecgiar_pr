@@ -390,10 +390,9 @@ p {
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 12px 20px;
+  padding: 20px;
   @include fonts.pr-typography('h4');
   font-weight: 600;
-  height: 47px;
   border-bottom: 1px solid var(--pr-color-accents-2);
 }
 

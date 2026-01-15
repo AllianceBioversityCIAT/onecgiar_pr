@@ -58,8 +58,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     });
 
     const checkResultsList = setInterval(() => {
-      if (this.innovationUseResultsSE.resultsList?.length > 0 &&
-          this.rdPartnersSE.partnersBody?.linked_results?.length > 0) {
+      if (this.innovationUseResultsSE.resultsList?.length > 0 && this.rdPartnersSE.partnersBody?.linked_results?.length > 0) {
         const linkedResults = this.rdPartnersSE.partnersBody.linked_results;
         const hasIds = linkedResults.some((item: any) => typeof item === 'number');
         if (hasIds) {
@@ -79,7 +78,6 @@ export class RdContributorsAndPartnersComponent implements OnInit {
         const activePortfolio = this.api.dataControlSE.currentResult?.portfolio;
         this.api.resultsSE.GET_AllWithoutResults(activePortfolio).subscribe(({ response }) => {
           this.contributingInitiativesList = response;
-          // this.changeDetectorRef.detectChanges();
         });
       },
       error: err => {
@@ -192,12 +190,12 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     });
   }
 
-  onRemoveContribuiting(index, isAcceptedArray: boolean) {
-    if (isAcceptedArray) {
-      this.rdPartnersSE.partnersBody.contributing_initiatives.accepted_contributing_initiatives.splice(index, 1);
-    } else {
-      this.rdPartnersSE.contributingInitiativeNew.splice(index, 1);
-    }
+  onRemoveAcceptedContributing(index: number) {
+    this.rdPartnersSE.partnersBody.contributing_initiatives.accepted_contributing_initiatives.splice(index, 1);
+  }
+
+  onRemoveNewContributing(index: number) {
+    this.rdPartnersSE.contributingInitiativeNew.splice(index, 1);
   }
 
   toggleActiveContributor(item) {
@@ -208,7 +206,6 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     const entity = this.rdPartnersSE.partnersBody.is_lead_by_partner ? 'partner' : 'CG Center';
     return `Please select the ${entity} leading this result. <b>Only ${entity}s already added in this section can be selected as the result lead.</b>`;
   }
-
 
   formatResultLabel(option: any): string {
     if (option?.result_code && option?.name) {
