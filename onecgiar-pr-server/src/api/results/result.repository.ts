@@ -633,6 +633,7 @@ WHERE
       resultTypeId?: number | number[];
       portfolioId?: number | number[];
       statusId?: number | number[];
+      fundingSource?: string | string[];
     },
     excludeType = [10, 11],
     pagination?: { limit?: number; offset?: number },
@@ -672,6 +673,7 @@ WHERE
         ci.portfolio_id,
         cp.name as portfolio_name,
         cp.acronym as acronym,
+        IF(r.source = 'Result', 'W1/W2', 'W3/Bilaterals') as source_name,
         EXISTS (
             SELECT 1
             FROM results_investment_discontinued_options rido
@@ -722,6 +724,7 @@ WHERE
       addInGeneric('rt.id', filters?.resultTypeId);
       addInGeneric('ci.portfolio_id', filters?.portfolioId);
       addInGeneric('r.status_id', filters?.statusId);
+      addInGeneric('r.source', filters?.fundingSource);
 
       const limit =
         pagination?.limit && pagination.limit > 0
@@ -2328,6 +2331,73 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     try {
       const result = await this.query(query, [resultId]);
       return result;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  async getResultsByProgramAndCenters(
+    programId: string,
+    centerIds?: string[],
+  ): Promise<any[]> {
+    const baseQuery = `
+      SELECT 
+        r.id,
+        cp.id AS project_id,
+        cp.short_name AS project_name,
+        r.result_code,
+        r.title AS result_title,
+        NULLIF(TRIM(tri.type_name), '') AS indicator_category,
+        rs.status_name,
+        twp.acronym,
+        tr.result_title AS toc_title,
+        tri.indicator_description AS indicator,
+        r.external_submitted_date AS submission_date
+      FROM result r
+      JOIN results_by_projects rbp
+        ON r.id = rbp.result_id
+        AND rbp.is_active = 1
+      JOIN clarisa_projects cp
+        ON rbp.project_id = cp.id
+      JOIN result_status rs 
+        ON r.status_id = rs.result_status_id
+      JOIN results_toc_result rtr
+        ON r.id = rtr.results_id
+        AND rtr.is_active = 1
+      JOIN Integration_information.toc_results tr 
+        ON rtr.toc_result_id = tr.id
+        AND tr.is_active = 1
+      JOIN Integration_information.toc_work_packages twp
+        ON tr.wp_id = twp.toc_id
+      JOIN Integration_information.toc_results_indicators tri
+        ON tri.toc_results_id = tr.id
+        AND tri.is_active = 1
+      JOIN results_center rc
+        ON r.id = rc.result_id
+        AND rc.is_active = 1
+      WHERE
+        r.source = 'API'
+        AND tr.official_code = ?
+        AND r.is_active = 1
+    `;
+
+    const params: any[] = [programId];
+
+    let finalQuery = baseQuery;
+
+    if (centerIds && centerIds.length > 0) {
+      const placeholders = centerIds.map(() => '?').join(',');
+      finalQuery += ` AND rc.center_id IN (${placeholders})`;
+      params.push(...centerIds);
+    }
+
+    try {
+      const results = await this.query(finalQuery, params);
+      return results;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultRepository.name,

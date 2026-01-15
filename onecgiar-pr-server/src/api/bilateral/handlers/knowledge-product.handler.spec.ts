@@ -38,7 +38,7 @@ describe('KnowledgeProductBilateralHandler', () => {
   let handler: KnowledgeProductBilateralHandler;
   let resultRepository: any;
   let kpRepository: any;
-  let metadataRepository: any;
+  let kpService: any;
 
   beforeEach(() => {
     resultRepository = {
@@ -50,13 +50,15 @@ describe('KnowledgeProductBilateralHandler', () => {
         result_knowledge_product_id: 5,
       }),
     };
-    metadataRepository = {
-      save: jest.fn(),
+    kpService = {
+      populateKPFromCGSpace: jest.fn().mockResolvedValue({
+        result_knowledge_product_id: 5,
+      }),
     };
     handler = new KnowledgeProductBilateralHandler(
       resultRepository,
       kpRepository,
-      metadataRepository,
+      kpService,
     );
   });
 
@@ -107,21 +109,17 @@ describe('KnowledgeProductBilateralHandler', () => {
       expect(kpRepository.save).not.toHaveBeenCalled();
     });
 
-    it('persists KP entity and metadata for new handles', async () => {
+    it('calls populateKPFromCGSpace to fetch and populate KP metadata', async () => {
       await handler.afterCreate(baseAfterContext);
 
-      expect(kpRepository.save).toHaveBeenCalledWith(
+      expect(kpService.populateKPFromCGSpace).toHaveBeenCalledWith(
+        baseAfterContext.resultId,
+        baseDto.knowledge_product.handle,
         expect.objectContaining({
-          handle: baseDto.knowledge_product.handle,
-          name: baseDto.title,
+          id: baseAfterContext.userId,
         }),
       );
-      expect(metadataRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          result_knowledge_product_id: 5,
-          source: 'CG',
-        }),
-      );
+      expect(kpRepository.save).not.toHaveBeenCalled();
     });
 
     it('throws when knowledge_product is omitted at persistence time', async () => {

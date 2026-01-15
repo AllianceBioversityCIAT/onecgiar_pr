@@ -1167,6 +1167,19 @@ export class ResultsService {
         query.initiative ?? query.initiativeCode ?? undefined,
       );
 
+      // Process funding_source filter: map display names to source enum values
+      const fundingSourceRaw = toStringArray(
+        query.funding_source ?? query.fundingSource,
+      );
+      const fundingSource = fundingSourceRaw
+        ?.map((fs) => {
+          const normalized = fs.trim();
+          if (normalized === 'W1/W2') return 'Result';
+          if (normalized === 'W3/Bilaterals') return 'API';
+          return null;
+        })
+        .filter((fs) => fs !== null) as string[] | undefined;
+
       const filters = {
         initiativeCode,
         versionId: toNumberArray(
@@ -1180,6 +1193,7 @@ export class ResultsService {
           query.portfolio ?? query.portfolio_id ?? query.portfolioId,
         ),
         statusId: toNumberArray(query.status_id ?? query.status),
+        fundingSource,
       };
 
       const repoRes =
@@ -2565,6 +2579,204 @@ export class ResultsService {
       return {
         response,
         message: 'AI context retrieved successfully',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async getPendingReviewCount(programId: string) {
+    try {
+      if (!programId?.trim()) {
+        return {
+          response: {},
+          message: 'The programId parameter is required.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const normalizedProgramId = programId.trim().toUpperCase();
+
+      const query = `
+        SELECT
+          tr.official_code,
+          'TOTAL' AS level,
+          NULL AS center_id,
+          COUNT(DISTINCT r.id) AS pending_review
+        FROM result r
+        JOIN results_toc_result rtr
+          ON r.id = rtr.results_id
+          AND rtr.is_active = 1
+        JOIN Integration_information.toc_results tr 
+          ON rtr.toc_result_id = tr.id
+          AND tr.is_active = 1
+        JOIN results_center rc
+          ON r.id = rc.result_id
+          AND rc.is_active = 1
+        WHERE 
+          r.source = 'API'
+          AND tr.official_code = ?
+          AND r.is_active = 1
+          AND r.status_id = 1
+        UNION ALL
+        SELECT
+          tr.official_code,
+          'CENTER' AS level,
+          rc.center_id,
+          COUNT(DISTINCT r.id) AS pending_review
+        FROM result r
+        JOIN results_toc_result rtr
+          ON r.id = rtr.results_id
+          AND rtr.is_active = 1
+        JOIN Integration_information.toc_results tr 
+          ON rtr.toc_result_id = tr.id
+          AND tr.is_active = 1
+        JOIN results_center rc
+          ON r.id = rc.result_id
+          AND rc.is_active = 1
+        WHERE 
+          r.source = 'API'
+          AND tr.official_code = ?
+          AND r.is_active = 1
+          AND r.status_id = 1
+        GROUP BY
+          tr.official_code,
+          rc.center_id;
+      `;
+
+      const result = await this._resultRepository.query(query, [
+        normalizedProgramId,
+        normalizedProgramId,
+      ]);
+
+      if (!result || !Array.isArray(result)) {
+        this._logger.warn(
+          `getPendingReviewCount: Invalid result format for programId ${normalizedProgramId}`,
+        );
+        return {
+          response: {
+            programId: normalizedProgramId,
+            total_pending_review: 0,
+            by_center: [],
+          },
+          message: 'No pending review results found',
+          status: HttpStatus.OK,
+        };
+      }
+
+      const totalRow = result.find((r: any) => r?.level === 'TOTAL');
+      const totalPendingReview = totalRow
+        ? Number(totalRow.pending_review) || 0
+        : 0;
+
+      const byCenter = result
+        .filter((r: any) => r?.level === 'CENTER')
+        .map((r: any) => ({
+          center_id: r.center_id,
+          pending_review: Number(r.pending_review) || 0,
+        }));
+
+      return {
+        response: {
+          programId: normalizedProgramId,
+          total_pending_review: totalPendingReview,
+          by_center: byCenter,
+        },
+        message: 'Pending review count retrieved successfully',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      this._logger.error(
+        `Error in getPendingReviewCount for programId ${programId}:`,
+        error,
+      );
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async getResultsByProgramAndCenters(
+    programId: string,
+    centerIds?: string | string[],
+  ): Promise<ReturnResponseDto<any> | returnErrorDto> {
+    try {
+      // Validar que programId esté presente
+      if (!programId || !programId.trim()) {
+        throw {
+          response: {},
+          message: 'The programId parameter is required.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const normalizedProgramId = programId.trim().toUpperCase();
+
+      let processedCenterIds: string[] | undefined = undefined;
+      if (centerIds) {
+        if (typeof centerIds === 'string') {
+          processedCenterIds = centerIds
+            .split(',')
+            .map((id) => id.trim())
+            .filter((id) => id.length > 0);
+        } else if (Array.isArray(centerIds)) {
+          processedCenterIds = centerIds
+            .map((id) => String(id).trim())
+            .filter((id) => id.length > 0);
+        }
+
+        if (processedCenterIds && processedCenterIds.length === 0) {
+          processedCenterIds = undefined;
+        }
+      }
+
+      const rawResults =
+        await this._resultRepository.getResultsByProgramAndCenters(
+          normalizedProgramId,
+          processedCenterIds,
+        );
+
+      const mappedResults = rawResults.map((row) => ({
+        id: row.id,
+        project_id: row.project_id,
+        project_name: row.project_name,
+        result_code: row.result_code,
+        result_title: row.result_title,
+        indicator_category: row.indicator_category,
+        status_name: row.status_name,
+        acronym: row.acronym,
+        toc_title: row.toc_title,
+        indicator: row.indicator,
+        submission_date: row.submission_date,
+      }));
+
+      const groupedByProject = mappedResults.reduce(
+        (acc, result) => {
+          const projectId = result.project_id;
+          if (!acc[projectId]) {
+            acc[projectId] = {
+              project_id: projectId,
+              project_name: result.project_name,
+              results: [],
+            };
+          }
+          acc[projectId].results.push(result);
+          return acc;
+        },
+        {} as Record<
+          number,
+          {
+            project_id: number;
+            project_name: string;
+            results: typeof mappedResults;
+          }
+        >,
+      );
+
+      const response = Object.values(groupedByProject);
+
+      return {
+        response: response,
+        message: 'Results retrieved and grouped by project successfully',
         status: HttpStatus.OK,
       };
     } catch (error) {

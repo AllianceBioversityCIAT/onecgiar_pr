@@ -216,6 +216,14 @@ export class ResultsController {
     description: 'Filter by status_id. Comma-separated allowed.',
   })
   @ApiQuery({
+    name: 'funding_source',
+    type: String,
+    required: false,
+    description:
+      'Filter by funding source. Options: "W1/W2" (pool funding/Science Program) or "W3/Bilaterals" (bilateral projects/CG-Center). Comma-separated allowed.',
+    example: 'W1/W2',
+  })
+  @ApiQuery({
     name: 'page',
     type: Number,
     required: false,
@@ -537,5 +545,59 @@ export class ResultsController {
   @ApiOkResponse({ description: 'AI context retrieved.' })
   getAIContext(@Query('resultId') resultId: number) {
     return this.resultsService.getAIContext(resultId);
+  }
+
+  @Get('pending-review')
+  @ApiOperation({
+    summary: 'Get pending review count by program',
+    description:
+      'Returns the count of results pending review for a specific program.',
+  })
+  @ApiQuery({
+    name: 'programId',
+    type: String,
+    required: true,
+    description: 'Program identifier (e.g., SP01)',
+    example: 'SP01',
+  })
+  @ApiOkResponse({
+    description: 'Pending review count retrieved successfully.',
+  })
+  async getPendingReviewCount(@Query('programId') programId: string) {
+    return this.resultsService.getPendingReviewCount(programId);
+  }
+
+  @Get('by-program-and-centers')
+  @ApiOperation({
+    summary: 'Get results by program and centers',
+    description:
+      'Returns results grouped by project, filtered by program ID and optionally by center IDs.',
+  })
+  @ApiQuery({
+    name: 'programId',
+    type: String,
+    required: true,
+    description: 'Program identifier (e.g., SP01)',
+    example: 'SP01',
+  })
+  @ApiQuery({
+    name: 'centerIds',
+    type: String,
+    required: false,
+    description:
+      'Center IDs to filter by. Can be a single ID or comma-separated values.',
+    example: 'CT01,CT02,CT03',
+  })
+  @ApiOkResponse({
+    description: 'Results retrieved and grouped by project successfully.',
+  })
+  async getResultsByProgramAndCenters(
+    @Query('programId') programId: string,
+    @Query('centerIds') centerIds?: string | string[],
+  ) {
+    return this.resultsService.getResultsByProgramAndCenters(
+      programId,
+      centerIds,
+    );
   }
 }

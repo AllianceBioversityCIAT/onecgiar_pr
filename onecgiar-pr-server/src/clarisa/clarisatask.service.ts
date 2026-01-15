@@ -17,6 +17,8 @@ import {
   ClarisaGlobalUnitLineage,
   ClarisaGlobalUnitLineageRelationType,
 } from './clarisa-global-unit/entities/clarisa-global-unit-lineage.entity';
+import { ClarisaProject } from './clarisa-projects/entity/clarisa-projects.entity';
+import { ClarisaProjectDto } from './dtos/clarisa-project.dto';
 
 @Injectable()
 export class ClarisaTaskService {
@@ -148,7 +150,7 @@ export class ClarisaTaskService {
         return this.syncControlList(ClarisaEndpoints.PORTFOLIO, index);
       },
       async (index: number) => {
-        return this.syncControlList(ClarisaEndpoints.PROJECTS, index);
+        return this.syncProjects(index);
       },
       async (index: number) => {
         return this.syncControlList(ClarisaEndpoints.CGIAR_ENTITY_TYPES, index);
@@ -626,6 +628,80 @@ export class ClarisaTaskService {
       `[${index}] Data saved for ${ClarisaEndpoints.INITIATIVES.entity.name}`,
     );
     return data;
+  }
+
+  private async syncProjects(index: number): Promise<ClarisaProject[]> {
+    const projectsEndpoint = ClarisaEndpoints.PROJECTS;
+    this._logger.log(
+      `>>>[${index}] Fetching data from CLARISA API for ${projectsEndpoint.entity.name}`,
+    );
+
+    const data: ClarisaProjectDto[] = await this.clarisaConnection
+      .get<ClarisaProjectDto[]>(projectsEndpoint.path, {
+        params: projectsEndpoint.params,
+      })
+      .catch((err) => {
+        this._logger.error(
+          `[${index}] Error fetching data from CLARISA API for ${projectsEndpoint.entity.name} path: ${projectsEndpoint.path}`,
+        );
+        this._logger.error(err);
+        return [];
+      });
+
+    let transformedData: DeepPartial<ClarisaProject>[];
+    if (projectsEndpoint.mapper) {
+      transformedData = projectsEndpoint.mapper(data);
+    } else {
+      transformedData = data as unknown as DeepPartial<ClarisaProject>[];
+    }
+
+    const results: ClarisaProject[] = [];
+
+    // Process in a transaction to ensure consistency
+    await this.dataSource.transaction(async (manager) => {
+      const projectRepo = manager.getRepository(ClarisaProject);
+
+      for (const item of transformedData) {
+        try {
+          const itemId = item.id;
+          if (itemId === undefined || itemId === null) {
+            this._logger.warn(
+              `[${index}] Skipping project without ID: ${JSON.stringify(item)}`,
+            );
+            continue;
+          }
+
+          const existing = await projectRepo.findOne({
+            where: { id: itemId },
+          });
+
+          if (existing) {
+            const updateData = { ...item };
+            delete updateData.id;
+            await projectRepo.update({ id: itemId }, updateData);
+            const updated = await projectRepo.findOne({
+              where: { id: itemId },
+            });
+            if (updated) {
+              results.push(updated);
+            }
+          } else {
+            const saved = await projectRepo.save(item);
+            results.push(saved);
+          }
+        } catch (err) {
+          this._logger.error(
+            `[${index}] Error saving project with id: ${item.id}`,
+          );
+          this._logger.error(err);
+        }
+      }
+    });
+
+    this._logger.log(
+      `[${index}] Data successfully saved for ${projectsEndpoint.entity.name}!`,
+    );
+    return results;
   }
 
   private cgiarEntityInitiativeMapper(

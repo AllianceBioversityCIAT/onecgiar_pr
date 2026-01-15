@@ -1,7 +1,5 @@
 <div class="detail_container">
   <app-alert-status *ngIf="!this.api.dataControlSE.isKnowledgeProduct" [description]="alertStatusMessage"> </app-alert-status>
-  <!-- Contributing Centers start -->
-  <div appFeedbackValidation labelText="Contributing CGIAR Centers" [isComplete]="!!this.rdPartnersSE.partnersBody.contributing_center?.length"></div>
 
   <!-- ! from toc section -->
   @if (this.rdPartnersSE.getConsumed()) {
@@ -41,7 +39,7 @@
 
   <app-alert-status
     [description]="
-      'If your response to this question is <strong>YES</strong>, then please return to the Program’s main page in PRMS and report the result through the ToC module by associating it with the corresponding indicators and targets. If the result you plan to submit does not match any 2025 planned indicators and results, then click <strong>NO</strong> and provide a short justification explaining why you are reporting it despite not being part of the 2025 planned results.'
+      'If your answer is <strong>Yes</strong>, please select the relevant <strong>HLO, indicator</strong>, and <strong>contribution to target</strong> below. If the result is not planned for in the 2025 ToC (planned indicators), please select <strong>No</strong> and, where applicable, choose the <strong>HLO</strong> under which it is most appropriate to report the result. Please also provide a short justification explaining why you are reporting it even though it is not reflected in a 2025 ToC indicator. These “No”-flagged results could be reviewed by the Program team as part of the adaptive management process and may inform updates or adjustments to the Program’s 2026 ToC and planned indicators.'
     ">
   </app-alert-status>
 
@@ -80,6 +78,7 @@
     selectedLabel="Center(s) selected"
     optionLabel="full_name"
     optionValue="code"
+    [required]="false"
     [(ngModel)]="this.rdPartnersSE.partnersBody.contributing_center"
     placeholder="Select center(s)"
     [disableOptions]="this.rdPartnersSE.cgspaceDisabledList"
@@ -113,7 +112,8 @@
     label="Contributing W3 and/or bilateral projects"
     selectedLabel="Projects selected"
     selectedOptionLabel="fullName"
-    placeholder="Select project">
+    placeholder="Select project"
+    [displayLabelFormatter]="formatBilateralProjectLabel.bind(this)">
   </app-pr-multi-select>
 
   <app-pr-multi-select
@@ -270,8 +270,12 @@
         placeholder="Please select a result"
         selectedLabel="Results selected"
         selectedOptionLabel="title"
-        [displayLabelFormatter]="formatResultLabel.bind(this)">
+        [displayLabelFormatter]="formatResultLabel.bind(this)"
+        [required]="true">
       </app-pr-multi-select>
+      <div appFeedbackValidation
+        labelText="Please select a result"
+        [isComplete]="!!this.rdPartnersSE.partnersBody.linked_results?.length"></div>
     }
   }
   <app-alert-status
