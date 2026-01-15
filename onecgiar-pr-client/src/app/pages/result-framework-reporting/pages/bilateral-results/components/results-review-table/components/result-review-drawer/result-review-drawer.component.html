@@ -6,10 +6,10 @@
   <ng-template #header>
     <div class="result-review-drawer-header">
       <div class="result-review-drawer-header_content">
-        <p class="result-review-drawer-header_subtitle">
-          {{ resultToReview()?.entity_acronym || 'CIMMYT' }}
+        <p class="result-review-drawer-header_entity">
+          <span class="result-review-drawer-header_entity_acronym">{{ resultToReview()?.entity_acronym || 'CIMMYT' }}</span>
           <span class="result-review-drawer-header_separator">|</span>
-          {{ resultToReview()?.entity_code || 'V0165-ACIAR-ICCCAD' }}
+          <span class="result-review-drawer-header_entity_code">{{ resultToReview()?.entity_code || 'V0165-ACIAR-ICCCAD' }}</span>
         </p>
 
         <div class="result-review-drawer-header_icons">
@@ -23,26 +23,28 @@
             (click)="closeDrawer()"></i>
         </div>
       </div>
+    </div>
+  </ng-template>
 
-      <p class="result-review-drawer-header_title">
+  <div class="result-review-drawer-content">
+    <div class="result-review-drawer-content_header">
+      <p class="result-review-drawer-content_title">
         {{ resultToReview()?.title || 'TEST - Farmers trained on protection against wheat disease apply CGIAR innovation in their work' }}
       </p>
 
-      <div class="result-review-drawer-header_meta">
-        <span class="result-review-drawer-header_meta_item">
+      <div class="result-review-drawer-content_meta">
+        <span class="result-review-drawer-content_meta_item">
           <i class="material-icons-round">light_mode</i>
           {{ resultToReview()?.indicator_category || 'Innovation Use' }}
         </span>
-        <span class="result-review-drawer-header_meta_separator">•</span>
-        <span class="result-review-drawer-header_meta_item">
+        <span class="result-review-drawer-content_meta_separator">•</span>
+        <span class="result-review-drawer-content_meta_item">
           <i class="material-icons-round">person_outline</i>
           Submitted by {{ resultToReview()?.submitted_by || 'Nicoleta Trifa' }}
         </span>
       </div>
     </div>
-  </ng-template>
 
-  <div class="result-review-drawer-content">
-    <!-- Content will be added here -->
+    <!-- Additional content will be added here -->
   </div>
 </p-drawer>
