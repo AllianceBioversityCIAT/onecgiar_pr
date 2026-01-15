@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, effect, model, OnDestroy, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, model, OnDestroy, OnInit, signal } from '@angular/core';
 import { DrawerModule } from 'primeng/drawer';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -47,53 +47,32 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   resultToReview = model<ResultToReview | null>(null);
   drawerFullScreen = signal<boolean>(false);
 
-  // Form state signals
-  tocAlignmentValue = signal<boolean>(true);
-  selectedTocResult = signal<string | null>(null);
-  selectedIndicator = signal<string | null>(null);
-  resultDescription = signal<string>('');
-  geographicScope = signal<string>('global');
-  selectedRegions = signal<string[]>([]);
-  selectedCountries = signal<string[]>([]);
-  updateExplanation = signal<string>('');
+  // Form state - variables normales para ngModel
+  tocAlignmentValue: boolean = true;
+  selectedTocResult: string | null = null;
+  selectedIndicator: string | null = null;
+  resultDescription: string = '';
+  geographicScope: string = 'global';
+  selectedRegions: string[] = [];
+  selectedCountries: string[] = [];
+  updateExplanation: string = '';
+  rejectJustification: string = '';
 
   // Track original values to detect changes
-  private readonly originalTocResult = signal<string | null>(null);
-  private readonly originalIndicator = signal<string | null>(null);
-  private readonly originalTocAlignment = signal<boolean>(true);
-  private readonly originalDescription = signal<string>('');
-  private readonly originalGeographicScope = signal<string>('');
-  private readonly originalRegions = signal<string[]>([]);
-  private readonly originalCountries = signal<string[]>([]);
+  private originalTocResult: string | null = null;
+  private originalIndicator: string | null = null;
+  private originalTocAlignment: boolean = true;
+  private originalDescription: string = '';
+  private originalGeographicScope: string = '';
+  private originalRegions: string[] = [];
+  private originalCountries: string[] = [];
 
-  // Computed signal to check if any field was modified
-  hasModifications = computed(() => {
-    return (
-      this.selectedTocResult() !== this.originalTocResult() ||
-      this.selectedIndicator() !== this.originalIndicator() ||
-      this.tocAlignmentValue() !== this.originalTocAlignment() ||
-      this.resultDescription() !== this.originalDescription() ||
-      this.geographicScope() !== this.originalGeographicScope() ||
-      JSON.stringify(this.selectedRegions()) !== JSON.stringify(this.originalRegions()) ||
-      JSON.stringify(this.selectedCountries()) !== JSON.stringify(this.originalCountries())
-    );
-  });
-
-  // Computed signal to check if explanation is required and valid
-  canApproveOrReject = computed(() => {
-    if (this.hasModifications()) {
-      return this.updateExplanation().trim().length > 0;
-    }
-    return true;
-  });
-
-  // Dialog signals
+  // Dialog state
   showConfirmApproveDialog = signal<boolean>(false);
   showConfirmRejectDialog = signal<boolean>(false);
-  rejectJustification = signal<string>('');
 
   // Dropdown options
-  tocResultOptions = signal<SelectOption[]>([
+  tocResultOptions: SelectOption[] = [
     {
       label: 'AOW04 - Ca2030 Outcome - Small-scale producers and other actors use climate advisory services, early warning or adaptive...',
       value: 'aow04'
@@ -107,9 +86,9 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     { label: 'AOW08 - Water-efficient irrigation systems developed and tested', value: 'aow08' },
     { label: 'AOW09 - Digital tools adopted by rice farmers and traders', value: 'aow09' },
     { label: 'AOW10 - Best practices for nutrient management disseminated', value: 'aow10' }
-  ]);
+  ];
 
-  indicatorOptions = signal<SelectOption[]>([
+  indicatorOptions: SelectOption[] = [
     {
       label: 'Number of small-scale producers and/or other FLW system actors using climate services, EWS, or adaptive safety nets',
       value: 'ind01'
@@ -123,9 +102,9 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     { label: 'Number of water-saving technologies validated', value: 'ind08' },
     { label: 'Number of farmers using digital market platforms', value: 'ind09' },
     { label: 'Number of extension materials distributed to farmers', value: 'ind10' }
-  ]);
+  ];
 
-  regionOptions = signal<SelectOption[]>([
+  regionOptions: SelectOption[] = [
     { label: 'Africa', value: 'africa' },
     { label: 'Western Africa', value: 'western_africa' },
     { label: 'Eastern Africa', value: 'eastern_africa' },
@@ -137,9 +116,9 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     { label: 'Latin America', value: 'latin_america' },
     { label: 'Central America', value: 'central_america' },
     { label: 'Europe', value: 'europe' }
-  ]);
+  ];
 
-  countryOptions = signal<SelectOption[]>([
+  countryOptions: SelectOption[] = [
     { label: 'Kenya', value: 'kenya' },
     { label: 'Ethiopia', value: 'ethiopia' },
     { label: 'Nigeria', value: 'nigeria' },
@@ -154,7 +133,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     { label: 'Philippines', value: 'philippines' },
     { label: 'Indonesia', value: 'indonesia' },
     { label: 'Thailand', value: 'thailand' }
-  ]);
+  ];
 
   geographicScopeOptions = [
     { label: 'Global', value: 'global' },
@@ -176,27 +155,48 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
   private initializeFormFromResult(result: ResultToReview): void {
     // Initialize form fields with result data
-    this.tocAlignmentValue.set(result.toc_alignment ?? true);
-    this.selectedTocResult.set(result.toc_result_id ?? 'aow04');
-    this.selectedIndicator.set(result.indicator_id ?? 'ind01');
-    this.resultDescription.set(result.result_description ?? '');
-    this.geographicScope.set(result.geographic_scope ?? 'global');
-    this.selectedRegions.set(result.regions ? [...result.regions] : []);
-    this.selectedCountries.set(result.countries ? [...result.countries] : []);
-    this.updateExplanation.set('');
+    this.tocAlignmentValue = result.toc_alignment ?? true;
+    this.selectedTocResult = result.toc_result_id ?? 'aow04';
+    this.selectedIndicator = result.indicator_id ?? 'ind01';
+    this.resultDescription = result.result_description ?? '';
+    this.geographicScope = result.geographic_scope ?? 'global';
+    this.selectedRegions = result.regions ? [...result.regions] : [];
+    this.selectedCountries = result.countries ? [...result.countries] : [];
+    this.updateExplanation = '';
 
     // Store original values for comparison
     this.storeOriginalValues();
   }
 
   private storeOriginalValues(): void {
-    this.originalTocResult.set(this.selectedTocResult());
-    this.originalIndicator.set(this.selectedIndicator());
-    this.originalTocAlignment.set(this.tocAlignmentValue());
-    this.originalDescription.set(this.resultDescription());
-    this.originalGeographicScope.set(this.geographicScope());
-    this.originalRegions.set([...this.selectedRegions()]);
-    this.originalCountries.set([...this.selectedCountries()]);
+    this.originalTocResult = this.selectedTocResult;
+    this.originalIndicator = this.selectedIndicator;
+    this.originalTocAlignment = this.tocAlignmentValue;
+    this.originalDescription = this.resultDescription;
+    this.originalGeographicScope = this.geographicScope;
+    this.originalRegions = [...this.selectedRegions];
+    this.originalCountries = [...this.selectedCountries];
+  }
+
+  // Check if any field was modified
+  hasModifications(): boolean {
+    return (
+      this.selectedTocResult !== this.originalTocResult ||
+      this.selectedIndicator !== this.originalIndicator ||
+      this.tocAlignmentValue !== this.originalTocAlignment ||
+      this.resultDescription !== this.originalDescription ||
+      this.geographicScope !== this.originalGeographicScope ||
+      JSON.stringify(this.selectedRegions) !== JSON.stringify(this.originalRegions) ||
+      JSON.stringify(this.selectedCountries) !== JSON.stringify(this.originalCountries)
+    );
+  }
+
+  // Check if explanation is required and valid
+  canApproveOrReject(): boolean {
+    if (this.hasModifications()) {
+      return this.updateExplanation.trim().length > 0;
+    }
+    return true;
   }
 
   toggleFullScreen(): void {
@@ -210,59 +210,59 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   }
 
   private resetForm(): void {
-    this.updateExplanation.set('');
-    this.rejectJustification.set('');
+    this.updateExplanation = '';
+    this.rejectJustification = '';
     this.showConfirmApproveDialog.set(false);
     this.showConfirmRejectDialog.set(false);
   }
 
   // Remove a region chip
   removeRegion(regionValue: string): void {
-    this.selectedRegions.set(this.selectedRegions().filter(r => r !== regionValue));
+    this.selectedRegions = this.selectedRegions.filter(r => r !== regionValue);
   }
 
   // Remove a country chip
   removeCountry(countryValue: string): void {
-    this.selectedCountries.set(this.selectedCountries().filter(c => c !== countryValue));
+    this.selectedCountries = this.selectedCountries.filter(c => c !== countryValue);
   }
 
   // Get label for a region value
   getRegionLabel(value: string): string {
-    return this.regionOptions().find(r => r.value === value)?.label || value;
+    return this.regionOptions.find(r => r.value === value)?.label || value;
   }
 
   // Get label for a country value
   getCountryLabel(value: string): string {
-    return this.countryOptions().find(c => c.value === value)?.label || value;
+    return this.countryOptions.find(c => c.value === value)?.label || value;
   }
 
   // Get label for TOC result value
   getTocResultLabel(value: string | null): string {
     if (!value) return '';
-    return this.tocResultOptions().find(t => t.value === value)?.label || value;
+    return this.tocResultOptions.find(t => t.value === value)?.label || value;
   }
 
   // Get label for indicator value
   getIndicatorLabel(value: string | null): string {
     if (!value) return '';
-    return this.indicatorOptions().find(i => i.value === value)?.label || value;
+    return this.indicatorOptions.find(i => i.value === value)?.label || value;
   }
 
   // Save TOC changes
   saveTocChanges(): void {
     console.log('=== SAVE TOC CHANGES ===');
     console.log({
-      toc_alignment: this.tocAlignmentValue(),
-      toc_result_id: this.selectedTocResult(),
-      toc_result_label: this.getTocResultLabel(this.selectedTocResult()),
-      indicator_id: this.selectedIndicator(),
-      indicator_label: this.getIndicatorLabel(this.selectedIndicator())
+      toc_alignment: this.tocAlignmentValue,
+      toc_result_id: this.selectedTocResult,
+      toc_result_label: this.getTocResultLabel(this.selectedTocResult),
+      indicator_id: this.selectedIndicator,
+      indicator_label: this.getIndicatorLabel(this.selectedIndicator)
     });
   }
 
   // Approve flow
   onApprove(): void {
-    if (this.hasModifications() && !this.updateExplanation().trim()) {
+    if (this.hasModifications() && !this.updateExplanation.trim()) {
       return;
     }
     this.showConfirmApproveDialog.set(true);
@@ -277,22 +277,22 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
       entity_acronym: result?.entity_acronym,
       entity_code: result?.entity_code,
       toc_alignment: {
-        is_aligned: this.tocAlignmentValue(),
-        toc_result_id: this.selectedTocResult(),
-        toc_result_label: this.getTocResultLabel(this.selectedTocResult()),
-        indicator_id: this.selectedIndicator(),
-        indicator_label: this.getIndicatorLabel(this.selectedIndicator())
+        is_aligned: this.tocAlignmentValue,
+        toc_result_id: this.selectedTocResult,
+        toc_result_label: this.getTocResultLabel(this.selectedTocResult),
+        indicator_id: this.selectedIndicator,
+        indicator_label: this.getIndicatorLabel(this.selectedIndicator)
       },
       data_standards: {
-        result_description: this.resultDescription(),
-        geographic_scope: this.geographicScope(),
-        regions: this.selectedRegions(),
-        regions_labels: this.selectedRegions().map(r => this.getRegionLabel(r)),
-        countries: this.selectedCountries(),
-        countries_labels: this.selectedCountries().map(c => this.getCountryLabel(c))
+        result_description: this.resultDescription,
+        geographic_scope: this.geographicScope,
+        regions: this.selectedRegions,
+        regions_labels: this.selectedRegions.map(r => this.getRegionLabel(r)),
+        countries: this.selectedCountries,
+        countries_labels: this.selectedCountries.map(c => this.getCountryLabel(c))
       },
       has_modifications: this.hasModifications(),
-      update_explanation: this.hasModifications() ? this.updateExplanation() : null
+      update_explanation: this.hasModifications() ? this.updateExplanation : null
     };
 
     console.log('=== APPROVE RESULT - FORM DATA ===');
@@ -313,7 +313,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   }
 
   confirmReject(): void {
-    if (!this.rejectJustification().trim()) {
+    if (!this.rejectJustification.trim()) {
       return;
     }
 
@@ -324,7 +324,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
       result_title: result?.title,
       entity_acronym: result?.entity_acronym,
       entity_code: result?.entity_code,
-      rejection_justification: this.rejectJustification()
+      rejection_justification: this.rejectJustification
     };
 
     console.log('=== REJECT RESULT - FORM DATA ===');
@@ -337,7 +337,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
   cancelReject(): void {
     this.showConfirmRejectDialog.set(false);
-    this.rejectJustification.set('');
+    this.rejectJustification = '';
   }
 
   ngOnInit(): void {

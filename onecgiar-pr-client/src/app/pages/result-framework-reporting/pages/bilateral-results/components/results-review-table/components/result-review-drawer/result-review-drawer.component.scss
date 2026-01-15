@@ -140,20 +140,30 @@ p {
 .form-field_radio-group {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   flex-wrap: wrap;
+}
+
+.radioButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 12px;
 }
 
 .form-field_radio-label {
   @include fonts.pr-typography('body-2');
   font-weight: 400;
   color: var(--pr-color-secondary-600);
-  margin-right: 16px;
   cursor: pointer;
 }
 
 .geographic-scope-group {
-  gap: 8px;
+  gap: 4px;
+
+  .radioButton {
+    margin-right: 8px;
+  }
 }
 
 .form-field_hint {

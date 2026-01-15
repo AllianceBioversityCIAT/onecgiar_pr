@@ -1,8 +1,4 @@
-<p-drawer
-  [(visible)]="visible"
-  [position]="drawerFullScreen() ? 'full' : 'right'"
-  [closable]="false"
-  [style]="{ minWidth: '65vw' }">
+<p-drawer [(visible)]="visible" [position]="drawerFullScreen() ? 'full' : 'right'" [closable]="false" [style]="{ minWidth: '65vw' }">
   <ng-template #header>
     <div class="result-review-drawer-header">
       <p class="result-review-drawer-header_entity">
@@ -13,7 +9,9 @@
 
       <div class="result-review-drawer-header_icons">
         <i
-          class="pi {{ drawerFullScreen() ? 'pi-arrow-down-left-and-arrow-up-right-to-center' : 'pi-arrow-up-right-and-arrow-down-left-from-center' }}"
+          class="pi {{
+            drawerFullScreen() ? 'pi-arrow-down-left-and-arrow-up-right-to-center' : 'pi-arrow-up-right-and-arrow-down-left-from-center'
+          }}"
           style="font-size: 15px; cursor: pointer"
           (click)="toggleFullScreen()"></i>
         <i class="pi pi-times" style="font-size: 16px; cursor: pointer" (click)="closeDrawer()"></i>
@@ -48,18 +46,21 @@
       <div class="form-field">
         <label class="form-field_label">Does this result align with the Program's TOC?</label>
         <div class="form-field_radio-group">
-          <p-radioButton name="tocAlignment" [value]="true" [(ngModel)]="tocAlignmentValue" inputId="toc_yes" />
-          <label for="toc_yes" class="form-field_radio-label">Yes</label>
-
-          <p-radioButton name="tocAlignment" [value]="false" [(ngModel)]="tocAlignmentValue" inputId="toc_no" />
-          <label for="toc_no" class="form-field_radio-label">No</label>
+          <div class="radioButton">
+            <p-radioButton name="tocAlignment" [value]="true" [(ngModel)]="tocAlignmentValue" inputId="toc_yes"></p-radioButton>
+            <label for="toc_yes" class="form-field_radio-label">Yes</label>
+          </div>
+          <div class="radioButton">
+            <p-radioButton name="tocAlignment" [value]="false" [(ngModel)]="tocAlignmentValue" inputId="toc_no"></p-radioButton>
+            <label for="toc_no" class="form-field_radio-label">No</label>
+          </div>
         </div>
       </div>
 
       <div class="form-field">
         <label class="form-field_label">TOC result</label>
         <p-select
-          [options]="tocResultOptions()"
+          [options]="tocResultOptions"
           [(ngModel)]="selectedTocResult"
           optionLabel="label"
           optionValue="value"
@@ -70,7 +71,7 @@
       <div class="form-field">
         <label class="form-field_label">Indicator</label>
         <p-select
-          [options]="indicatorOptions()"
+          [options]="indicatorOptions"
           [(ngModel)]="selectedIndicator"
           optionLabel="label"
           optionValue="value"
@@ -97,8 +98,14 @@
         <label class="form-field_label">Geographic scope</label>
         <div class="form-field_radio-group geographic-scope-group">
           @for (option of geographicScopeOptions; track option.value) {
-            <p-radioButton name="geographicScope" [value]="option.value" [(ngModel)]="geographicScope" [inputId]="'geo_' + option.value" />
-            <label [for]="'geo_' + option.value" class="form-field_radio-label">{{ option.label }}</label>
+            <div class="radioButton">
+              <p-radioButton
+                name="geographicScope"
+                [value]="option.value"
+                [(ngModel)]="geographicScope"
+                [inputId]="'geo_' + option.value"></p-radioButton>
+              <label [for]="'geo_' + option.value" class="form-field_radio-label">{{ option.label }}</label>
+            </div>
           }
         </div>
       </div>
@@ -106,7 +113,7 @@
       <div class="form-field">
         <label class="form-field_label">Regions</label>
         <p-multiSelect
-          [options]="regionOptions()"
+          [options]="regionOptions"
           [(ngModel)]="selectedRegions"
           optionLabel="label"
           optionValue="value"
@@ -115,11 +122,11 @@
           [showClear]="false"
           display="chip"
           [showHeader]="false" />
-        @if (selectedRegions().length > 0) {
+        @if (selectedRegions.length > 0) {
           <div class="chips-container">
             <span class="chips-label">Regions selected</span>
             <div class="chips-list">
-              @for (region of selectedRegions(); track region) {
+              @for (region of selectedRegions; track region) {
                 <span class="chip">
                   {{ getRegionLabel(region) }}
                   <i class="pi pi-times chip-remove" (click)="removeRegion(region)"></i>
@@ -133,7 +140,7 @@
       <div class="form-field">
         <label class="form-field_label">Countries</label>
         <p-multiSelect
-          [options]="countryOptions()"
+          [options]="countryOptions"
           [(ngModel)]="selectedCountries"
           optionLabel="label"
           optionValue="value"
@@ -142,11 +149,11 @@
           [showClear]="false"
           display="chip"
           [showHeader]="false" />
-        @if (selectedCountries().length > 0) {
+        @if (selectedCountries.length > 0) {
           <div class="chips-container">
             <span class="chips-label">Countries selected</span>
             <div class="chips-list">
-              @for (country of selectedCountries(); track country) {
+              @for (country of selectedCountries; track country) {
                 <span class="chip">
                   {{ getCountryLabel(country) }}
                   <i class="pi pi-times chip-remove" (click)="removeCountry(country)"></i>
@@ -228,7 +235,7 @@
   <ng-template #footer>
     <div class="dialog-footer">
       <button pButton class="dialog-cancel-button" (click)="cancelReject()">Cancel</button>
-      <button pButton class="dialog-confirm-button reject" [disabled]="!rejectJustification().trim()" (click)="confirmReject()">
+      <button pButton class="dialog-confirm-button reject" [disabled]="!rejectJustification.trim()" (click)="confirmReject()">
         Confirm Rejection
       </button>
     </div>
