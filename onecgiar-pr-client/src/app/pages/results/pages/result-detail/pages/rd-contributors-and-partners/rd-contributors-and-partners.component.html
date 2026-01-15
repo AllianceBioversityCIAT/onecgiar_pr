@@ -112,7 +112,8 @@
     label="Contributing W3 and/or bilateral projects"
     selectedLabel="Projects selected"
     selectedOptionLabel="fullName"
-    placeholder="Select project">
+    placeholder="Select project"
+    [displayLabelFormatter]="formatBilateralProjectLabel.bind(this)">
   </app-pr-multi-select>
 
   <app-pr-multi-select
