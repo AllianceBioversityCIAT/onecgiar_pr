@@ -15,11 +15,19 @@ export interface ResultToReview {
   indicator_category: string;
   status: string;
   toc_result: string;
+  toc_result_id?: string;
   indicator: string;
+  indicator_id?: string;
   submission_date: string;
   submitted_by?: string;
   entity_acronym?: string;
   entity_code?: string;
+  // MDS fields
+  toc_alignment?: boolean;
+  result_description?: string;
+  geographic_scope?: string;
+  regions?: string[];
+  countries?: string[];
 }
 
 interface SelectOption {
@@ -41,13 +49,11 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
   // Form state signals
   tocAlignmentValue = signal<boolean>(true);
-  selectedTocResult = signal<string | null>('aow04');
-  selectedIndicator = signal<string | null>('ind01');
-  resultDescription = signal<string>(
-    'Farmers from Latin America are trained to use an innovative method which allerts them when a disease might be spreading in the wheat fields.'
-  );
+  selectedTocResult = signal<string | null>(null);
+  selectedIndicator = signal<string | null>(null);
+  resultDescription = signal<string>('');
   geographicScope = signal<string>('global');
-  selectedRegions = signal<string[]>(['africa', 'western_africa', 'eastern_africa', 'northern_africa']);
+  selectedRegions = signal<string[]>([]);
   selectedCountries = signal<string[]>([]);
   updateExplanation = signal<string>('');
 
@@ -96,7 +102,11 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     { label: 'AOW02 - New wheat varieties adopted by farmers in target regions', value: 'aow02' },
     { label: 'AOW03 - Enhanced seed systems supporting wheat production', value: 'aow03' },
     { label: 'AOW05 - Climate-smart farming innovations with evidence at scale', value: 'aow05' },
-    { label: 'AOW06 - Early warning systems for wheat diseases implemented', value: 'aow06' }
+    { label: 'AOW06 - Early warning systems for wheat diseases implemented', value: 'aow06' },
+    { label: 'AOW07 - Policies supporting sustainable rice production adopted', value: 'aow07' },
+    { label: 'AOW08 - Water-efficient irrigation systems developed and tested', value: 'aow08' },
+    { label: 'AOW09 - Digital tools adopted by rice farmers and traders', value: 'aow09' },
+    { label: 'AOW10 - Best practices for nutrient management disseminated', value: 'aow10' }
   ]);
 
   indicatorOptions = signal<SelectOption[]>([
@@ -106,7 +116,13 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     },
     { label: 'Number of farmers adopting new learning resources', value: 'ind02' },
     { label: 'Number of policy instruments influenced by research', value: 'ind03' },
-    { label: 'Number of innovations sessions on smart practices delivered', value: 'ind04' }
+    { label: 'Number of innovations sessions on smart practices delivered', value: 'ind04' },
+    { label: 'Number of farmers adopting drought-resistant varieties', value: 'ind05' },
+    { label: 'Number of seed producers trained in multiplication techniques', value: 'ind06' },
+    { label: 'Number of surveillance stations operational', value: 'ind07' },
+    { label: 'Number of water-saving technologies validated', value: 'ind08' },
+    { label: 'Number of farmers using digital market platforms', value: 'ind09' },
+    { label: 'Number of extension materials distributed to farmers', value: 'ind10' }
   ]);
 
   regionOptions = signal<SelectOption[]>([
@@ -116,7 +132,10 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     { label: 'Northern Africa', value: 'northern_africa' },
     { label: 'Southern Africa', value: 'southern_africa' },
     { label: 'Asia', value: 'asia' },
+    { label: 'Southeast Asia', value: 'southeast_asia' },
+    { label: 'South Asia', value: 'south_asia' },
     { label: 'Latin America', value: 'latin_america' },
+    { label: 'Central America', value: 'central_america' },
     { label: 'Europe', value: 'europe' }
   ]);
 
@@ -130,7 +149,11 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     { label: 'India', value: 'india' },
     { label: 'Bangladesh', value: 'bangladesh' },
     { label: 'Mexico', value: 'mexico' },
-    { label: 'Colombia', value: 'colombia' }
+    { label: 'Colombia', value: 'colombia' },
+    { label: 'Vietnam', value: 'vietnam' },
+    { label: 'Philippines', value: 'philippines' },
+    { label: 'Indonesia', value: 'indonesia' },
+    { label: 'Thailand', value: 'thailand' }
   ]);
 
   geographicScopeOptions = [
@@ -142,12 +165,28 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   ];
 
   constructor() {
-    // Effect to store original values when drawer opens
+    // Effect to initialize form when result changes
     effect(() => {
-      if (this.visible()) {
-        this.storeOriginalValues();
+      const result = this.resultToReview();
+      if (result && this.visible()) {
+        this.initializeFormFromResult(result);
       }
     });
+  }
+
+  private initializeFormFromResult(result: ResultToReview): void {
+    // Initialize form fields with result data
+    this.tocAlignmentValue.set(result.toc_alignment ?? true);
+    this.selectedTocResult.set(result.toc_result_id ?? 'aow04');
+    this.selectedIndicator.set(result.indicator_id ?? 'ind01');
+    this.resultDescription.set(result.result_description ?? '');
+    this.geographicScope.set(result.geographic_scope ?? 'global');
+    this.selectedRegions.set(result.regions ? [...result.regions] : []);
+    this.selectedCountries.set(result.countries ? [...result.countries] : []);
+    this.updateExplanation.set('');
+
+    // Store original values for comparison
+    this.storeOriginalValues();
   }
 
   private storeOriginalValues(): void {
@@ -197,9 +236,28 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     return this.countryOptions().find(c => c.value === value)?.label || value;
   }
 
+  // Get label for TOC result value
+  getTocResultLabel(value: string | null): string {
+    if (!value) return '';
+    return this.tocResultOptions().find(t => t.value === value)?.label || value;
+  }
+
+  // Get label for indicator value
+  getIndicatorLabel(value: string | null): string {
+    if (!value) return '';
+    return this.indicatorOptions().find(i => i.value === value)?.label || value;
+  }
+
   // Save TOC changes
   saveTocChanges(): void {
-    // TODO: Implement save logic
+    console.log('=== SAVE TOC CHANGES ===');
+    console.log({
+      toc_alignment: this.tocAlignmentValue(),
+      toc_result_id: this.selectedTocResult(),
+      toc_result_label: this.getTocResultLabel(this.selectedTocResult()),
+      indicator_id: this.selectedIndicator(),
+      indicator_label: this.getIndicatorLabel(this.selectedIndicator())
+    });
   }
 
   // Approve flow
@@ -211,7 +269,36 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   }
 
   confirmApprove(): void {
-    // TODO: Implement approve API call
+    const result = this.resultToReview();
+    const formData = {
+      action: 'APPROVE',
+      result_code: result?.code,
+      result_title: result?.title,
+      entity_acronym: result?.entity_acronym,
+      entity_code: result?.entity_code,
+      toc_alignment: {
+        is_aligned: this.tocAlignmentValue(),
+        toc_result_id: this.selectedTocResult(),
+        toc_result_label: this.getTocResultLabel(this.selectedTocResult()),
+        indicator_id: this.selectedIndicator(),
+        indicator_label: this.getIndicatorLabel(this.selectedIndicator())
+      },
+      data_standards: {
+        result_description: this.resultDescription(),
+        geographic_scope: this.geographicScope(),
+        regions: this.selectedRegions(),
+        regions_labels: this.selectedRegions().map(r => this.getRegionLabel(r)),
+        countries: this.selectedCountries(),
+        countries_labels: this.selectedCountries().map(c => this.getCountryLabel(c))
+      },
+      has_modifications: this.hasModifications(),
+      update_explanation: this.hasModifications() ? this.updateExplanation() : null
+    };
+
+    console.log('=== APPROVE RESULT - FORM DATA ===');
+    console.log(JSON.stringify(formData, null, 2));
+    console.log('==================================');
+
     this.showConfirmApproveDialog.set(false);
     this.closeDrawer();
   }
@@ -229,7 +316,21 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     if (!this.rejectJustification().trim()) {
       return;
     }
-    // TODO: Implement reject API call
+
+    const result = this.resultToReview();
+    const formData = {
+      action: 'REJECT',
+      result_code: result?.code,
+      result_title: result?.title,
+      entity_acronym: result?.entity_acronym,
+      entity_code: result?.entity_code,
+      rejection_justification: this.rejectJustification()
+    };
+
+    console.log('=== REJECT RESULT - FORM DATA ===');
+    console.log(JSON.stringify(formData, null, 2));
+    console.log('=================================');
+
     this.showConfirmRejectDialog.set(false);
     this.closeDrawer();
   }
