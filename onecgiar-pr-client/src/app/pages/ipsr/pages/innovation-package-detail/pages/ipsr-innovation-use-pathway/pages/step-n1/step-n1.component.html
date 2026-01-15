@@ -58,8 +58,8 @@
       <div class="infoPersons">
         <app-pr-input label="First Name" [required]="true" placeholder="First Name" [(ngModel)]="expertItem.first_name"></app-pr-input>
         <app-pr-input label="Last Name" [required]="true" placeholder="Last Name" [(ngModel)]="expertItem.last_name"></app-pr-input>
-        <app-pr-input label="Email" [required]="false" placeholder="Email" [(ngModel)]="expertItem.email"></app-pr-input>
-        <app-pr-input label="Role" [required]="false" placeholder="Lead/Co-lead" [(ngModel)]="expertItem.workshop_role"></app-pr-input>
+        <app-pr-input label="Email" [required]="false" placeholder="Email" [(ngModel)]="expertItem.email" type="email"></app-pr-input>
+        <app-pr-input label="Role" [required]="true" placeholder="Lead/Co-lead" [(ngModel)]="expertItem.workshop_role"></app-pr-input>
       </div>
     </div>
   </div>
