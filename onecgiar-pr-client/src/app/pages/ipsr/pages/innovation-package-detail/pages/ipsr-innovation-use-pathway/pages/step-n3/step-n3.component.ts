@@ -5,10 +5,10 @@ import { ApiService } from '../../../../../../../../shared/services/api/api.serv
 import { Router } from '@angular/router';
 
 @Component({
-    selector: 'app-step-n3',
-    templateUrl: './step-n3.component.html',
-    styleUrls: ['./step-n3.component.scss'],
-    standalone: false
+  selector: 'app-step-n3',
+  templateUrl: './step-n3.component.html',
+  styleUrls: ['./step-n3.component.scss'],
+  standalone: false
 })
 export class StepN3Component implements OnInit {
   rangesOptions = [];
@@ -21,7 +21,11 @@ export class StepN3Component implements OnInit {
   showDetailsOfUseLevel = false;
   savingSection = false;
 
-  constructor(public ipsrDataControlSE: IpsrDataControlService, public api: ApiService, private router: Router) {}
+  constructor(
+    public ipsrDataControlSE: IpsrDataControlService,
+    public api: ApiService,
+    private router: Router
+  ) {}
 
   ngOnInit(): void {
     this.GETAllClarisaInnovationReadinessLevels();
@@ -33,7 +37,9 @@ export class StepN3Component implements OnInit {
   openClosed(response) {
     if (this.ipsrStep3Body.result_ip_result_complementary.length) {
       this.ipsrStep3Body.result_ip_result_complementary.forEach((item: any) => {
-        const itemFind = response.result_ip_result_complementary.find(responseItem => responseItem.result_by_innovation_package_id == item.result_by_innovation_package_id);
+        const itemFind = response.result_ip_result_complementary.find(
+          responseItem => responseItem.result_by_innovation_package_id == item.result_by_innovation_package_id
+        );
         if (itemFind) itemFind.open = item?.open;
       });
     }
@@ -120,7 +126,7 @@ export class StepN3Component implements OnInit {
   }
 
   GETAllClarisaInnovationUseLevels() {
-    this.api.resultsSE.GETAllClarisaInnovationUseLevels().subscribe(({ response }) => {
+    this.api.resultsSE.GETAllClarisaInnovationUseLevelsV2().subscribe(({ response }) => {
       this.innovationUseList = response;
     });
   }
