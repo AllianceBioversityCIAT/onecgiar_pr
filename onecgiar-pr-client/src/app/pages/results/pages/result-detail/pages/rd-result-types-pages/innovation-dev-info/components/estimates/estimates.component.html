@@ -115,8 +115,15 @@
   <div style="margin-bottom: 45px">
     <p>
       To add additional non-pooled projects, please go to
-      <a class="open_route" [href]="'/result/result-detail/' + resultCode + '/theory-of-change?phase=' + versionId" target="_blank">section 2</a> of
-      this result.
+      @if (this.fieldsManagerSE.isP25()) {
+        <a class="open_route" [href]="'/result/result-detail/' + resultCode + '/contributor-partners?phase=' + versionId" target="_blank">
+          section 2
+        </a>
+        of this result.
+      } @else {
+        <a class="open_route" [href]="'/result/result-detail/' + resultCode + '/theory-of-change?phase=' + versionId" target="_blank"> section 2 </a>
+        of this result.
+      }
     </p>
   </div>
 </div>
@@ -159,22 +166,31 @@
         </app-pr-input>
       </td>
 
-            <td>
-                <app-pr-radio-button optionLabel="name" optionValue="id" [(ngModel)]="item.is_determined"
-                    [options]="[{name:'This is yet to be determined',id:true}]">
-                </app-pr-radio-button>
-            </td>
-            
-        </tr>
-    </table>
+      <td>
+        <app-pr-radio-button
+          optionLabel="name"
+          optionValue="id"
+          [(ngModel)]="item.is_determined"
+          [options]="[{ name: 'This is yet to be determined', id: true }]">
+        </app-pr-radio-button>
+      </td>
+    </tr>
+  </table>
 
   <app-no-data-text *ngIf="!body.institutions_expected_investment.length" title="There are no items available for this table."></app-no-data-text>
 
-    <div style="margin-bottom: 45px;">
-        <p>To add additional partners, please go to <a class="open_route"
-                [href]="'/result/result-detail/'+ resultCode + '/partners?phase=' + versionId" target="_blank">section
-                3</a> of this result.</p>
-    </div>
-
-
+  <div style="margin-bottom: 45px">
+    <p>
+      To add additional partners, please go to
+      @if (this.fieldsManagerSE.isP25()) {
+        <a class="open_route" [href]="'/result/result-detail/' + resultCode + '/contributor-partners?phase=' + versionId" target="_blank">
+          section 2
+        </a>
+        of this result.
+      } @else {
+        <a class="open_route" [href]="'/result/result-detail/' + resultCode + '/partners?phase=' + versionId" target="_blank">section 3</a> of this
+        result.
+      }
+    </p>
+  </div>
 </div>
