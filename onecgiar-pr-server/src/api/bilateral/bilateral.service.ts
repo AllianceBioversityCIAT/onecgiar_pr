@@ -14,6 +14,7 @@ import { ResultRepository } from '../results/result.repository';
 import { VersioningService } from '../versioning/versioning.service';
 import { AppModuleIdEnum } from '../../shared/constants/role-type.enum';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
+import { ResultStatusData } from '../../shared/constants/result-status.enum';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { Result, SourceEnum } from '../results/entities/result.entity';
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
@@ -1221,8 +1222,7 @@ export class BilateralService {
         );
       } catch (err) {
         this.logger.error(
-          `TOC mapping unexpected error for program ${mapping.science_program_id} (role ${roleId}): ${
-            (err as Error).message
+          `TOC mapping unexpected error for program ${mapping.science_program_id} (role ${roleId}): ${(err as Error).message
           }`,
         );
         this.logger.error(`TOC mapping error stack: ${(err as Error).stack}`);
@@ -1245,12 +1245,12 @@ export class BilateralService {
     const onlyActive = (arr: any[]) =>
       Array.isArray(arr)
         ? arr.filter(
-            (item) =>
-              item?.is_active === undefined ||
-              item.is_active === null ||
-              item.is_active === true ||
-              item.is_active === 1,
-          )
+          (item) =>
+            item?.is_active === undefined ||
+            item.is_active === null ||
+            item.is_active === true ||
+            item.is_active === 1,
+        )
         : arr;
 
     result.result_region_array = onlyActive(result.result_region_array);
@@ -1357,6 +1357,7 @@ export class BilateralService {
         created_date: bilateralDto.created_date,
       }),
       source: SourceEnum.Bilateral,
+      status_id: ResultStatusData.PendingReview.value,
     });
 
     return resultHeader;
