@@ -604,6 +604,15 @@ export class IpsrPathwayStepFourService {
           },
         });
 
+        let scaling_studies_urls: string[] = [];
+        const urls = await this._resultScalingStudyUrlsRepository.find({
+          where: {
+            result_innov_package_id: result_ip.result_innovation_package_id,
+            is_active: true,
+          },
+        });
+        scaling_studies_urls = urls.map((u) => u.study_url);
+        
       if (!result_ip) {
         return {
           response: {},
@@ -627,6 +636,8 @@ export class IpsrPathwayStepFourService {
           institutions_expected_investment,
           is_result_ip_published: result_ip.is_result_ip_published,
           ipsr_pdf_report: result_ip.ipsr_pdf_report,
+          has_scaling_studies: result_ip.has_scaling_studies ?? false,
+          scaling_studies_urls,
         },
         message: 'Successful response',
         status: HttpStatus.OK,
