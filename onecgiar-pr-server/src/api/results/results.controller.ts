@@ -557,4 +557,38 @@ export class ResultsController {
   async getPendingReviewCount(@Query('programId') programId: string) {
     return this.resultsService.getPendingReviewCount(programId);
   }
+
+  @Get('by-program-and-centers')
+  @ApiOperation({
+    summary: 'Get results by program and centers',
+    description:
+      'Returns results grouped by project, filtered by program ID and optionally by center IDs.',
+  })
+  @ApiQuery({
+    name: 'programId',
+    type: String,
+    required: true,
+    description: 'Program identifier (e.g., SP01)',
+    example: 'SP01',
+  })
+  @ApiQuery({
+    name: 'centerIds',
+    type: String,
+    required: false,
+    description:
+      'Center IDs to filter by. Can be a single ID or comma-separated values.',
+    example: 'CT01,CT02,CT03',
+  })
+  @ApiOkResponse({
+    description: 'Results retrieved and grouped by project successfully.',
+  })
+  async getResultsByProgramAndCenters(
+    @Query('programId') programId: string,
+    @Query('centerIds') centerIds?: string | string[],
+  ) {
+    return this.resultsService.getResultsByProgramAndCenters(
+      programId,
+      centerIds,
+    );
+  }
 }

@@ -2626,4 +2626,92 @@ export class ResultsService {
       });
     }
   }
+
+  async getResultsByProgramAndCenters(
+    programId: string,
+    centerIds?: string | string[],
+  ): Promise<ReturnResponseDto<any> | returnErrorDto> {
+    try {
+      // Validar que programId esté presente
+      if (!programId || !programId.trim()) {
+        throw {
+          response: {},
+          message: 'The programId parameter is required.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const normalizedProgramId = programId.trim().toUpperCase();
+
+      let processedCenterIds: string[] | undefined = undefined;
+      if (centerIds) {
+        if (typeof centerIds === 'string') {
+          processedCenterIds = centerIds
+            .split(',')
+            .map((id) => id.trim())
+            .filter((id) => id.length > 0);
+        } else if (Array.isArray(centerIds)) {
+          processedCenterIds = centerIds
+            .map((id) => String(id).trim())
+            .filter((id) => id.length > 0);
+        }
+
+        if (processedCenterIds && processedCenterIds.length === 0) {
+          processedCenterIds = undefined;
+        }
+      }
+
+      const rawResults = await this._resultRepository.getResultsByProgramAndCenters(
+        normalizedProgramId,
+        processedCenterIds,
+      );
+
+      const mappedResults = rawResults.map((row) => ({
+        id: row.id,
+        project_id: row.project_id,
+        project_name: row.project_name,
+        result_code: row.result_code,
+        result_title: row.result_title,
+        indicator_category: row.indicator_category,
+        status_name: row.status_name,
+        acronym: row.acronym,
+        toc_title: row.toc_title,
+        indicator: row.indicator,
+        submission_date: row.submission_date,
+      }));
+
+      const groupedByProject = mappedResults.reduce(
+        (acc, result) => {
+          const projectId = result.project_id;
+          if (!acc[projectId]) {
+            acc[projectId] = {
+              project_id: projectId,
+              project_name: result.project_name,
+              results: [],
+            };
+          }
+          acc[projectId].results.push(result);
+          return acc;
+        },
+        {} as Record<
+          number,
+          {
+            project_id: number;
+            project_name: string;
+            results: typeof mappedResults;
+          }
+        >,
+      );
+
+      const response = Object.values(groupedByProject);
+
+      return {
+        response: response,
+        message: 'Results retrieved and grouped by project successfully',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
 }
