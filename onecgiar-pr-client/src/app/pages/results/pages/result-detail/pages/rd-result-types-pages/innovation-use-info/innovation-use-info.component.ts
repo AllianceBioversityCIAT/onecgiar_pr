@@ -43,7 +43,6 @@ export class InnovationUseInfoComponent {
     this.api.resultsSE.GET_innovationUseP25().subscribe({
       next: ({ response }) => {
         if (response) {
-          console.log('response', response);
           this.innovationUseInfoBody.has_innovation_link = response.has_innovation_link === 1;
           this.innovationUseInfoBody.linked_results = response.linked_results || [];
           this.innovationUseInfoBody.innovation_readiness_level_id = response.innovation_readiness_level_id;
