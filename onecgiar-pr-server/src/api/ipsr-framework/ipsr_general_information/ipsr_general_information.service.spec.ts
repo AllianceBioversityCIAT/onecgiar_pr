@@ -355,9 +355,7 @@ describe('IpsrGeneralInformationService', () => {
     it('should return error via handler if something fails', async () => {
       mockResultRepo.findOneBy.mockRejectedValue(new Error('Database error'));
 
-      try {
-        await service.generalInformation(1, mockDto, mockUser);
-      } catch (_error) {}
+      await service.generalInformation(1, mockDto, mockUser);
 
       expect(mockErrorHandler.returnErrorRes).toHaveBeenCalledWith(
         expect.objectContaining({
