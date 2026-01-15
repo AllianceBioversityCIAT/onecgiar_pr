@@ -15,6 +15,8 @@ import { StepN4ReferenceMaterialLinksComponent } from './components/step-n4-refe
 import { TermPipe } from '../../../../../../../../internationalization/term.pipe';
 import { StepN4AddProjectComponent } from './components/step-n4-bilateral-investment-table/modal/step-n4-add-project/step-n4-add-project.component';
 import { InnovationUseFormModule } from '../../../../../../../../shared/components/innovation-use-form/innovation-use-form.module';
+import { SelectModule } from 'primeng/select';
+import { FeedbackValidationDirectiveModule } from '../../../../../../../../shared/directives/feedback-validation-directive.module';
 
 @NgModule({
   declarations: [
@@ -28,6 +30,16 @@ import { InnovationUseFormModule } from '../../../../../../../../shared/componen
     StepN4AddPartnerComponent,
     StepN4EditBilateralComponent
   ],
-  imports: [CommonModule, StepN4RoutingModule, CustomFieldsModule, DialogModule, CustomFieldsModule, TermPipe, InnovationUseFormModule]
+  imports: [
+    CommonModule,
+    StepN4RoutingModule,
+    CustomFieldsModule,
+    DialogModule,
+    CustomFieldsModule,
+    TermPipe,
+    InnovationUseFormModule,
+    SelectModule,
+    FeedbackValidationDirectiveModule
+  ]
 })
 export class StepN4Module {}

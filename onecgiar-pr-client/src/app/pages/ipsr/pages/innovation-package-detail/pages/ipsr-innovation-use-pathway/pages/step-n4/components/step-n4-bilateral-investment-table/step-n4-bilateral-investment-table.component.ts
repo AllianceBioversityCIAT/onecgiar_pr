@@ -14,6 +14,7 @@ import { IpsrDataControlService } from '../../../../../../../../services/ipsr-da
 export class StepN4BilateralInvestmentTableComponent implements OnInit {
   @Input() body = new IpsrStep4Body();
   @Output() projectAdded = new EventEmitter<void>();
+  @Output() bilateralDeleted = new EventEmitter<void>();
   showModal = false;
   isInitiative = true;
   constructor(
@@ -31,10 +32,11 @@ export class StepN4BilateralInvestmentTableComponent implements OnInit {
 
   deleteBilateral(bilateral) {
     bilateral.is_active = false;
+    this.bilateralDeleted.emit();
   }
 
   hasElementsWithId(list, attr) {
-    const finalList = this.api.rolesSE.readOnly ? list.filter(item => item[attr]) : list.filter(item => item.is_active != false);
+    const finalList = this.api.rolesSE.readOnly ? list.filter(item => item[attr]) : list.filter(item => item.is_active);
     return finalList.length;
   }
 }

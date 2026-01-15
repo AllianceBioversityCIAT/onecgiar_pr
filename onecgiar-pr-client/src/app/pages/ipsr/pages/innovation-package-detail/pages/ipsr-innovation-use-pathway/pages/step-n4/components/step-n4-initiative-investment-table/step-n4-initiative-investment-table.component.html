@@ -3,9 +3,11 @@
 <div class="unit_of_time_container">
   <div>
     @if (this.fieldsManagerSE.isP25()) {
-      <app-pr-field-header
-        label="Estimation of total USD-value of investment by CGIAR Programs during the reporting period
-        "></app-pr-field-header>
+      <app-pr-field-header label="Estimation of total USD-value of investment by CGIAR Programs during the reporting period"></app-pr-field-header>
+      <div
+        appFeedbackValidation
+        labelText="Estimation of total USD-value of investment by CGIAR Programs during the reporting period"
+        [isComplete]="!!this.body.initiative_expected_investment?.length"></div>
     } @else {
       <app-pr-field-header
         [label]="
