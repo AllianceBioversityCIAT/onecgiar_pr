@@ -16,15 +16,13 @@
           class="pi {{ drawerFullScreen() ? 'pi-arrow-down-left-and-arrow-up-right-to-center' : 'pi-arrow-up-right-and-arrow-down-left-from-center' }}"
           style="font-size: 15px; cursor: pointer"
           (click)="toggleFullScreen()"></i>
-        <i
-          class="pi pi-times"
-          style="font-size: 16px; cursor: pointer"
-          (click)="closeDrawer()"></i>
+        <i class="pi pi-times" style="font-size: 16px; cursor: pointer" (click)="closeDrawer()"></i>
       </div>
     </div>
   </ng-template>
 
   <div class="result-review-drawer-content">
+    <!-- Result Header Info -->
     <div class="result-review-drawer-content_header">
       <p class="result-review-drawer-content_title">
         {{ resultToReview()?.title || 'TEST - Farmers trained on protection against wheat disease apply CGIAR innovation in their work' }}
@@ -43,6 +41,196 @@
       </div>
     </div>
 
-    <!-- Additional content will be added here -->
+    <!-- TOC ALIGNMENT Section -->
+    <div class="form-section">
+      <p class="form-section_title">TOC ALIGNMENT</p>
+
+      <div class="form-field">
+        <label class="form-field_label">Does this result align with the Program's TOC?</label>
+        <div class="form-field_radio-group">
+          <p-radioButton name="tocAlignment" [value]="true" [(ngModel)]="tocAlignmentValue" inputId="toc_yes" />
+          <label for="toc_yes" class="form-field_radio-label">Yes</label>
+
+          <p-radioButton name="tocAlignment" [value]="false" [(ngModel)]="tocAlignmentValue" inputId="toc_no" />
+          <label for="toc_no" class="form-field_radio-label">No</label>
+        </div>
+      </div>
+
+      <div class="form-field">
+        <label class="form-field_label">TOC result</label>
+        <p-select
+          [options]="tocResultOptions()"
+          [(ngModel)]="selectedTocResult"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Select TOC result"
+          [style]="{ width: '100%' }" />
+      </div>
+
+      <div class="form-field">
+        <label class="form-field_label">Indicator</label>
+        <p-select
+          [options]="indicatorOptions()"
+          [(ngModel)]="selectedIndicator"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Select indicator"
+          [style]="{ width: '100%' }" />
+      </div>
+
+      <button pButton class="save-changes-button" (click)="saveTocChanges()">
+        <span>Save changes</span>
+        <i class="material-icons-round">save</i>
+      </button>
+    </div>
+
+    <!-- DATA STANDARDS Section -->
+    <div class="form-section">
+      <p class="form-section_title">DATA STANDARDS</p>
+
+      <div class="form-field">
+        <label class="form-field_label">Result description</label>
+        <textarea pInputTextarea [(ngModel)]="resultDescription" [rows]="3" [style]="{ width: '100%' }"></textarea>
+      </div>
+
+      <div class="form-field">
+        <label class="form-field_label">Geographic scope</label>
+        <div class="form-field_radio-group geographic-scope-group">
+          @for (option of geographicScopeOptions; track option.value) {
+            <p-radioButton name="geographicScope" [value]="option.value" [(ngModel)]="geographicScope" [inputId]="'geo_' + option.value" />
+            <label [for]="'geo_' + option.value" class="form-field_radio-label">{{ option.label }}</label>
+          }
+        </div>
+      </div>
+
+      <div class="form-field">
+        <label class="form-field_label">Regions</label>
+        <p-multiSelect
+          [options]="regionOptions()"
+          [(ngModel)]="selectedRegions"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Select contributing centers"
+          [style]="{ width: '100%' }"
+          [showClear]="false"
+          display="chip"
+          [showHeader]="false" />
+        @if (selectedRegions().length > 0) {
+          <div class="chips-container">
+            <span class="chips-label">Regions selected</span>
+            <div class="chips-list">
+              @for (region of selectedRegions(); track region) {
+                <span class="chip">
+                  {{ getRegionLabel(region) }}
+                  <i class="pi pi-times chip-remove" (click)="removeRegion(region)"></i>
+                </span>
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="form-field">
+        <label class="form-field_label">Countries</label>
+        <p-multiSelect
+          [options]="countryOptions()"
+          [(ngModel)]="selectedCountries"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Select countries"
+          [style]="{ width: '100%' }"
+          [showClear]="false"
+          display="chip"
+          [showHeader]="false" />
+        @if (selectedCountries().length > 0) {
+          <div class="chips-container">
+            <span class="chips-label">Countries selected</span>
+            <div class="chips-list">
+              @for (country of selectedCountries(); track country) {
+                <span class="chip">
+                  {{ getCountryLabel(country) }}
+                  <i class="pi pi-times chip-remove" (click)="removeCountry(country)"></i>
+                </span>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Update Explanation (conditional) -->
+    @if (hasModifications()) {
+      <div class="form-section update-explanation-section">
+        <div class="form-field">
+          <label class="form-field_label required">Update Explanation</label>
+          <textarea
+            pInputTextarea
+            [(ngModel)]="updateExplanation"
+            [rows]="3"
+            [style]="{ width: '100%' }"
+            placeholder="Please provide a justification for the changes made..."></textarea>
+          <small class="form-field_hint">This field is required when making changes to the form.</small>
+        </div>
+      </div>
+    }
   </div>
+
+  <!-- Footer Actions -->
+  <ng-template #footer>
+    <div class="result-review-drawer-footer">
+      <button pButton class="approve-button" [disabled]="hasModifications() && !canApproveOrReject()" (click)="onApprove()">
+        <i class="pi pi-check"></i>
+        <span>APPROVE</span>
+      </button>
+      <button pButton class="reject-button" (click)="onReject()">
+        <i class="pi pi-times"></i>
+        <span>REJECT</span>
+      </button>
+    </div>
+  </ng-template>
 </p-drawer>
+
+<!-- Confirm Approve Dialog -->
+<p-dialog
+  [(visible)]="showConfirmApproveDialog"
+  [modal]="true"
+  [closable]="true"
+  [style]="{ width: '450px' }"
+  header="Confirm Approval"
+  [draggable]="false">
+  <p class="dialog-message">Are you sure you want to approve this result?</p>
+  @if (hasModifications()) {
+    <p class="dialog-note">Note: Your changes and explanation will be saved.</p>
+  }
+  <ng-template #footer>
+    <div class="dialog-footer">
+      <button pButton class="dialog-cancel-button" (click)="cancelApprove()">Cancel</button>
+      <button pButton class="dialog-confirm-button" (click)="confirmApprove()">Confirm</button>
+    </div>
+  </ng-template>
+</p-dialog>
+
+<!-- Reject Justification Dialog -->
+<p-dialog
+  [(visible)]="showConfirmRejectDialog"
+  [modal]="true"
+  [closable]="true"
+  [style]="{ width: '500px' }"
+  header="Reject Result"
+  [draggable]="false">
+  <p class="dialog-message">Please provide a justification for rejecting this result:</p>
+  <textarea
+    pInputTextarea
+    [(ngModel)]="rejectJustification"
+    [rows]="4"
+    [style]="{ width: '100%' }"
+    placeholder="Enter your justification..."></textarea>
+  <ng-template #footer>
+    <div class="dialog-footer">
+      <button pButton class="dialog-cancel-button" (click)="cancelReject()">Cancel</button>
+      <button pButton class="dialog-confirm-button reject" [disabled]="!rejectJustification().trim()" (click)="confirmReject()">
+        Confirm Rejection
+      </button>
+    </div>
+  </ng-template>
+</p-dialog>

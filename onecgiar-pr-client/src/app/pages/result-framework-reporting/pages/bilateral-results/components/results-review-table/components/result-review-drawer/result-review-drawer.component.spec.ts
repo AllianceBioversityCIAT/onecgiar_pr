@@ -1,7 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ResultReviewDrawerComponent, ResultToReview } from './result-review-drawer.component';
-import { DrawerModule } from 'primeng/drawer';
-import { CommonModule } from '@angular/common';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
 describe('ResultReviewDrawerComponent', () => {
@@ -23,7 +21,7 @@ describe('ResultReviewDrawerComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ResultReviewDrawerComponent, DrawerModule, CommonModule, NoopAnimationsModule]
+      imports: [ResultReviewDrawerComponent, NoopAnimationsModule]
     }).compileComponents();
 
     fixture = TestBed.createComponent(ResultReviewDrawerComponent);
@@ -77,7 +75,103 @@ describe('ResultReviewDrawerComponent', () => {
     component.resultToReview.set(mockResult);
 
     expect(component.resultToReview()).toEqual(mockResult);
-    expect(component.resultToReview()?.title).toBe('TEST - Farmers trained on protection against wheat disease apply CGIAR innovation in their work');
+    expect(component.resultToReview()?.title).toBe(
+      'TEST - Farmers trained on protection against wheat disease apply CGIAR innovation in their work'
+    );
     expect(component.resultToReview()?.indicator_category).toBe('Innovation Use');
+  });
+
+  describe('Form functionality', () => {
+    it('should initialize with default TOC alignment as true', () => {
+      expect(component.tocAlignmentValue()).toBe(true);
+    });
+
+    it('should initialize with default geographic scope as global', () => {
+      expect(component.geographicScope()).toBe('global');
+    });
+
+    it('should have TOC result options', () => {
+      expect(component.tocResultOptions().length).toBeGreaterThan(0);
+    });
+
+    it('should have indicator options', () => {
+      expect(component.indicatorOptions().length).toBeGreaterThan(0);
+    });
+
+    it('should have region options', () => {
+      expect(component.regionOptions().length).toBeGreaterThan(0);
+    });
+
+    it('should have country options', () => {
+      expect(component.countryOptions().length).toBeGreaterThan(0);
+    });
+
+    it('should remove region from selected regions', () => {
+      component.selectedRegions.set(['africa', 'asia']);
+      component.removeRegion('africa');
+      expect(component.selectedRegions()).toEqual(['asia']);
+    });
+
+    it('should remove country from selected countries', () => {
+      component.selectedCountries.set(['kenya', 'ethiopia']);
+      component.removeCountry('kenya');
+      expect(component.selectedCountries()).toEqual(['ethiopia']);
+    });
+
+    it('should get correct region label', () => {
+      const label = component.getRegionLabel('africa');
+      expect(label).toBe('Africa');
+    });
+
+    it('should get correct country label', () => {
+      const label = component.getCountryLabel('kenya');
+      expect(label).toBe('Kenya');
+    });
+  });
+
+  describe('Approval and Rejection flow', () => {
+    it('should show confirm approve dialog on approve', () => {
+      component.onApprove();
+      expect(component.showConfirmApproveDialog()).toBe(true);
+    });
+
+    it('should hide confirm approve dialog on cancel', () => {
+      component.showConfirmApproveDialog.set(true);
+      component.cancelApprove();
+      expect(component.showConfirmApproveDialog()).toBe(false);
+    });
+
+    it('should show confirm reject dialog on reject', () => {
+      component.onReject();
+      expect(component.showConfirmRejectDialog()).toBe(true);
+    });
+
+    it('should hide confirm reject dialog on cancel', () => {
+      component.showConfirmRejectDialog.set(true);
+      component.cancelReject();
+      expect(component.showConfirmRejectDialog()).toBe(false);
+      expect(component.rejectJustification()).toBe('');
+    });
+
+    it('should not confirm reject without justification', () => {
+      component.showConfirmRejectDialog.set(true);
+      component.rejectJustification.set('');
+      component.confirmReject();
+      // Dialog should still be visible because justification is empty
+      expect(component.showConfirmRejectDialog()).toBe(true);
+    });
+
+    it('should require update explanation when modifications are made', () => {
+      // Simulate a modification
+      component.selectedTocResult.set('aow01');
+      fixture.detectChanges();
+
+      expect(component.hasModifications()).toBe(true);
+      expect(component.canApproveOrReject()).toBe(false);
+
+      // Add explanation
+      component.updateExplanation.set('Changed TOC result for better alignment');
+      expect(component.canApproveOrReject()).toBe(true);
+    });
   });
 });
