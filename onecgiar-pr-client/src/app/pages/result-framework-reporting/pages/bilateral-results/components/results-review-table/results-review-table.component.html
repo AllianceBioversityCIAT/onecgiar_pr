@@ -49,7 +49,15 @@
         <td class="title-cell">{{ result.result_title }}</td>
         <td class="category-cell">{{ result.indicator_category }}</td>
         <td class="status-cell">
-          <span class="status-badge pending">{{ result.status_name }}</span>
+          <span
+            class="status-badge"
+            [ngClass]="{
+              'approved': result.status_name === 'Approved',
+              'rejected': result.status_name === 'Rejected',
+              'pending': result.status_name !== 'Approved' && result.status_name !== 'Rejected'
+            }">
+            {{ result.status_name }}
+          </span>
         </td>
         <td class="toc-cell">{{ result.toc_title }}</td>
         <td class="indicator-cell">{{ result.indicator }}</td>
