@@ -1,5 +1,6 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute, Router } from '@angular/router';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
 import { CenterDto } from '../../../../../../shared/interfaces/center.dto';
 import { BilateralResultsService } from '../../bilateral-results.service';
@@ -13,6 +14,8 @@ import { BilateralResultsService } from '../../bilateral-results.service';
 export class IndicatorsSidebarComponent implements OnInit {
   centersService = inject(CentersService);
   bilateralResultsService = inject(BilateralResultsService);
+  router = inject(Router);
+  activatedRoute = inject(ActivatedRoute);
 
   // null = All Centers, string = center code
   selectedCenterCode = signal<string | null>(null);
@@ -24,13 +27,27 @@ export class IndicatorsSidebarComponent implements OnInit {
   getCenters(): void {
     this.centersService.getData().then((centers: CenterDto[]) => {
       this.bilateralResultsService.centers.set(centers);
-      this.selectCenter(null);
+
+      const centerFromUrl = this.activatedRoute.snapshot.queryParams['center'];
+      if (centerFromUrl && centers.some(c => c.code === centerFromUrl)) {
+        this.selectCenter(centerFromUrl, false);
+      } else {
+        this.selectCenter(null, false);
+      }
     });
   }
 
-  selectCenter(centerCode: string | null): void {
+  selectCenter(centerCode: string | null, updateUrl: boolean = true): void {
     this.selectedCenterCode.set(centerCode);
     this.bilateralResultsService.selectCenter(centerCode);
+
+    if (updateUrl) {
+      this.router.navigate([], {
+        relativeTo: this.activatedRoute,
+        queryParams: centerCode ? { center: centerCode } : {},
+        queryParamsHandling: centerCode ? 'merge' : ''
+      });
+    }
   }
 
   isSelected(centerCode: string | null): boolean {
