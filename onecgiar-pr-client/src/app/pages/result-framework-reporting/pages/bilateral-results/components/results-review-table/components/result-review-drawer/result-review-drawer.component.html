@@ -65,7 +65,12 @@
       }
       <h2>Contributing Science Programs</h2>
       @for (program of fields?.contributingInitiatives; track $index) {
-        <p>{{ program.initiative_role }} - {{ program.official_code }}</p>
+        <p>{{ program.official_code }} - {{ program.initiative_role }}</p>
+        <br />
+      }
+      <h2>Contributing Bilateral Projects</h2>
+      @for (project of fields?.contributingProjects; track $index) {
+        <p>{{ project.obj_clarisa_project.shortName }}</p>
         <br />
       }
     </div>
