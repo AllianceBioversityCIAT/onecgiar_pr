@@ -224,9 +224,9 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     this.isLoading.set(true);
     this.api.resultsSE.GET_BilateralResultDetail(resultId).subscribe({
       next: res => {
-        console.log('Bilateral Result Detail Response:', res);
         this.resultDetail.set(res.response);
         this.isLoading.set(false);
+        console.log(res.response);
       },
       error: err => {
         console.error('Error loading result detail:', err);

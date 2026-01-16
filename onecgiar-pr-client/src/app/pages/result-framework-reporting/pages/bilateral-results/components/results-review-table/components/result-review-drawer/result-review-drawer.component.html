@@ -40,52 +40,8 @@
     </div>
 
     <!-- TOC ALIGNMENT Section -->
-    @if (false) {
-      <div class="form-section">
-        <p class="form-section_title">TOC ALIGNMENT</p>
-
-        <div class="form-field">
-          <label class="form-field_label">Does this result align with the Program's TOC?</label>
-          <div class="form-field_radio-group">
-            <div class="radioButton">
-              <p-radioButton name="tocAlignment" [value]="true" [(ngModel)]="tocAlignmentValue" inputId="toc_yes"></p-radioButton>
-              <label for="toc_yes" class="form-field_radio-label">Yes</label>
-            </div>
-            <div class="radioButton">
-              <p-radioButton name="tocAlignment" [value]="false" [(ngModel)]="tocAlignmentValue" inputId="toc_no"></p-radioButton>
-              <label for="toc_no" class="form-field_radio-label">No</label>
-            </div>
-          </div>
-        </div>
-
-        <div class="form-field">
-          <label class="form-field_label">TOC result</label>
-          <p-select
-            [options]="tocResultOptions"
-            [(ngModel)]="selectedTocResult"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Select TOC result"
-            [style]="{ width: '100%' }" />
-        </div>
-
-        <div class="form-field">
-          <label class="form-field_label">Indicator</label>
-          <p-select
-            [options]="indicatorOptions"
-            [(ngModel)]="selectedIndicator"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Select indicator"
-            [style]="{ width: '100%' }" />
-        </div>
-
-        <button pButton class="save-changes-button" (click)="saveTocChanges()">
-          <span>Save changes</span>
-          <i class="material-icons-round">save</i>
-        </button>
-      </div>
-    }
+    Does this result align with the Program's TOC?
+    {{ this.resultDetail()?.tocMetadata[0]?.planned_result ? 'Yes' : 'No' }}
   </div>
 
   <!-- Footer Actions -->
@@ -113,22 +69,18 @@
   [dismissableMask]="true"
   [draggable]="false"
   [style]="{ padding: '0px' }"
-  styleClass="approve-confirmation-modal">
-  <div class="modal-header">
-    <div class="header-left">
-      <div class="success-icon">
-        <i class="pi pi-check"></i>
-      </div>
-      <h2 class="modal-title">APPROVE RESULT – {{ resultToReview()?.result_code }}</h2>
+  styleClass="confirmation-modal approve">
+  <i class="pi pi-times modal-close-icon" (click)="cancelApprove()"></i>
+  <div class="modal-body">
+    <div class="modal-icon approve">
+      <i class="pi pi-check"></i>
     </div>
-    <i class="pi pi-times close-icon" (click)="cancelApprove()"></i>
-  </div>
-  <div class="modal-content">
+    <h2 class="modal-title approve">APPROVE RESULT – {{ resultToReview()?.result_code }}</h2>
     <p class="modal-message">Status will be changed to "Approved", and further changes can be made before the final submission.</p>
   </div>
-  <div class="modal-footer">
+  <div class="modal-actions">
     <button class="btn-cancel" (click)="cancelApprove()" [disabled]="isSaving()">Cancel</button>
-    <button class="btn-confirm" (click)="confirmApprove()" [disabled]="isSaving()">
+    <button class="btn-confirm approve" (click)="confirmApprove()" [disabled]="isSaving()">
       <i class="pi pi-spinner pi-spin" *ngIf="isSaving()"></i>
       {{ isSaving() ? 'Approving...' : 'Confirm' }}
     </button>
@@ -145,18 +97,14 @@
   [dismissableMask]="true"
   [draggable]="false"
   [style]="{ padding: '0px' }"
-  styleClass="reject-confirmation-modal">
-  <div class="modal-header reject">
-    <div class="header-left">
-      <div class="reject-icon">
-        <i class="pi pi-times"></i>
-      </div>
-      <h2 class="modal-title reject">REJECT RESULT – {{ resultToReview()?.result_code }}</h2>
+  styleClass="confirmation-modal reject">
+  <i class="pi pi-times modal-close-icon" (click)="cancelReject()"></i>
+  <div class="modal-body">
+    <div class="modal-icon reject">
+      <i class="pi pi-times"></i>
     </div>
-    <i class="pi pi-times close-icon" (click)="cancelReject()"></i>
-  </div>
-  <div class="modal-content">
-    <p class="modal-message">Status will be changed to "Rejected". Please provide a justification for this decision.</p>
+    <h2 class="modal-title reject">REJECT RESULT – {{ resultToReview()?.result_code }}</h2>
+    <p class="modal-message">Please provide a detailed justification for rejecting this result.</p>
     <div class="modal-field">
       <label class="modal-label required">Justification</label>
       <textarea
@@ -166,7 +114,7 @@
         placeholder="Please explain why this result is being rejected..."></textarea>
     </div>
   </div>
-  <div class="modal-footer">
+  <div class="modal-actions">
     <button class="btn-cancel" (click)="cancelReject()" [disabled]="isSaving()">Cancel</button>
     <button class="btn-confirm reject" [disabled]="!rejectJustification.trim() || isSaving()" (click)="confirmReject()">
       <i class="pi pi-spinner pi-spin" *ngIf="isSaving()"></i>
@@ -174,3 +122,4 @@
     </button>
   </div>
 </p-dialog>
+
