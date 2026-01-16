@@ -58,7 +58,10 @@ import { AoWBilateralRepository } from './results-toc-results/repositories/aow-b
 import { ResultReviewHistoryRepository } from './result-review-history/result-review-history.repository';
 import { ResultsByProjectsRepository } from './results_by_projects/results_by_projects.repository';
 import { GeographicLocationService } from '../results-framework-reporting/geographic-location/geographic-location.service';
-import { ReviewDecisionDto, ReviewDecisionEnum } from './dto/review-decision.dto';
+import {
+  ReviewDecisionDto,
+  ReviewDecisionEnum,
+} from './dto/review-decision.dto';
 import { ResultStatusData } from '../../shared/constants/result-status.enum';
 import { DataSource } from 'typeorm';
 
@@ -1197,15 +1200,15 @@ describe('ResultsService (unit, pure mocks)', () => {
     (
       mockResultsByProjectsRepository.findResultsByProjectsByResultId as jest.Mock
     ).mockResolvedValueOnce(mockProjects);
-    (mockResultRepository.getEvidenceBilateralResult as jest.Mock).mockResolvedValueOnce(
-      mockEvidence,
-    );
+    (
+      mockResultRepository.getEvidenceBilateralResult as jest.Mock
+    ).mockResolvedValueOnce(mockEvidence);
     (
       mockResultRepository.getPolicyChangeBilateralResultById as jest.Mock
     ).mockResolvedValueOnce(mockResultTypeResponse);
-    (mockResultsKnowledgeProductRepository.findOne as jest.Mock).mockResolvedValueOnce(
-      null,
-    );
+    (
+      mockResultsKnowledgeProductRepository.findOne as jest.Mock
+    ).mockResolvedValueOnce(null);
     (mockResultByIntitutionsRepository.find as jest.Mock).mockResolvedValueOnce(
       [],
     );
@@ -1221,7 +1224,9 @@ describe('ResultsService (unit, pure mocks)', () => {
 
     const res = await resultService.getBilateralResultById(999);
     expect((res as returnFormatService).status).toBe(HttpStatus.NOT_FOUND);
-    expect((res as returnFormatService).message).toBe('Bilateral result not found');
+    expect((res as returnFormatService).message).toBe(
+      'Bilateral result not found',
+    );
   });
 
   it('getBilateralResultById returns error when resultId is invalid', async () => {
@@ -1314,7 +1319,9 @@ describe('ResultsService (unit, pure mocks)', () => {
       userTest,
     );
     expect((res as returnFormatService).status).toBe(HttpStatus.BAD_REQUEST);
-    expect((res as returnFormatService).message).toContain('Justification is required');
+    expect((res as returnFormatService).message).toContain(
+      'Justification is required',
+    );
   });
 
   it('reviewBilateralResult returns error when result not found', async () => {
@@ -1338,7 +1345,9 @@ describe('ResultsService (unit, pure mocks)', () => {
       userTest,
     );
     expect((res as returnFormatService).status).toBe(HttpStatus.BAD_REQUEST);
-    expect((res as returnFormatService).message).toContain('Bilateral result not found');
+    expect((res as returnFormatService).message).toContain(
+      'Bilateral result not found',
+    );
   });
 
   it('reviewBilateralResult returns error when status is not PENDING_REVIEW', async () => {
@@ -1368,6 +1377,8 @@ describe('ResultsService (unit, pure mocks)', () => {
       userTest,
     );
     expect((res as returnFormatService).status).toBe(HttpStatus.CONFLICT);
-    expect((res as returnFormatService).message).toContain('Cannot review result');
+    expect((res as returnFormatService).message).toContain(
+      'Cannot review result',
+    );
   });
 });

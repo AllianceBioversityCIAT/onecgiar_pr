@@ -1,4 +1,10 @@
-import { HttpStatus, Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
+import {
+  HttpStatus,
+  Injectable,
+  Logger,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { CreateGeographicLocationDto } from './dto/create-geographic-location.dto';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultRegionsService } from '../../results/result-regions/result-regions.service';

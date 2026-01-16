@@ -19,7 +19,8 @@ export class ReviewDecisionDto {
   decision: ReviewDecisionEnum;
 
   @ApiProperty({
-    description: 'Justification for rejection. Required when decision is REJECT',
+    description:
+      'Justification for rejection. Required when decision is REJECT',
     example: 'The result does not meet the quality standards',
     required: false,
   })

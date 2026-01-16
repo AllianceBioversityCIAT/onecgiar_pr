@@ -93,8 +93,10 @@ import { ResultsInnovationsDevRepository } from './summary/repositories/results-
 import { AoWBilateralRepository } from './results-toc-results/repositories/aow-bilateral.repository';
 import { ResultsByProjectsRepository } from './results_by_projects/results_by_projects.repository';
 import { GeographicLocationService } from '../results-framework-reporting/geographic-location/geographic-location.service';
-import { ReviewDecisionDto, ReviewDecisionEnum } from './dto/review-decision.dto';
-import { ResultReviewHistoryRepository } from './result-review-history/result-review-history.repository';
+import {
+  ReviewDecisionDto,
+  ReviewDecisionEnum,
+} from './dto/review-decision.dto';
 import { ResultReviewHistory } from './result-review-history/entities/result-review-history.entity';
 import { ResultStatusData } from '../../shared/constants/result-status.enum';
 
@@ -141,7 +143,6 @@ export class ResultsService {
     private readonly _resultsTocResultRepository: ResultsTocResultRepository,
     private readonly _tocResultsRepository: AoWBilateralRepository,
     private readonly _dataSource: DataSource,
-    private readonly _resultReviewHistoryRepository: ResultReviewHistoryRepository,
     private readonly _initiativeEntityMapRepository?: InitiativeEntityMapRepository,
     private readonly _roleByUserRepository?: RoleByUserRepository,
     private readonly _resultsInnovationsDevRepository?: ResultsInnovationsDevRepository,
@@ -2806,7 +2807,11 @@ export class ResultsService {
   ): Promise<ReturnResponseDto<any> | returnErrorDto> {
     try {
       const parsedResultId = Number(resultId);
-      if (!parsedResultId || !Number.isFinite(parsedResultId) || parsedResultId <= 0) {
+      if (
+        !parsedResultId ||
+        !Number.isFinite(parsedResultId) ||
+        parsedResultId <= 0
+      ) {
         return {
           response: {},
           message: 'The resultId parameter must be a valid positive number.',
@@ -2826,9 +2831,10 @@ export class ResultsService {
         };
       }
 
-      const commonFields = await this._resultRepository.getCommonFieldsBilateralResultById(
-        resultId,
-      );
+      const commonFields =
+        await this._resultRepository.getCommonFieldsBilateralResultById(
+          resultId,
+        );
 
       if (!commonFields) {
         return {
@@ -2838,9 +2844,8 @@ export class ResultsService {
         };
       }
 
-      const tocMetadata = await this._resultRepository.getTocMetadataBilateralResult(
-        resultId,
-      );
+      const tocMetadata =
+        await this._resultRepository.getTocMetadataBilateralResult(resultId);
 
       if (!tocMetadata) {
         return {
@@ -2852,20 +2857,22 @@ export class ResultsService {
 
       let geoScope: any = null;
       if (this._geographicLocationService) {
-        const geographicScope = await this._geographicLocationService.getGeoScopeV2(
-          resultId,
-        );
+        const geographicScope =
+          await this._geographicLocationService.getGeoScopeV2(resultId);
 
         if (geographicScope?.status !== HttpStatus.OK) {
-          throw new BadRequestException(geographicScope?.message ?? 'GeoScope failed');
+          throw new BadRequestException(
+            geographicScope?.message ?? 'GeoScope failed',
+          );
         }
-        
+
         geoScope = geographicScope.response;
       }
 
-      const contributingCenters = await this._resultsCenterRepository.getAllResultsCenterByResultId(
-        resultId,
-      );
+      const contributingCenters =
+        await this._resultsCenterRepository.getAllResultsCenterByResultId(
+          resultId,
+        );
 
       if (!contributingCenters) {
         return {
@@ -2881,20 +2888,21 @@ export class ResultsService {
           relations: { result_knowledge_product_institution_array: true },
         });
 
-      let contributingInstitutions: any[] = await this._resultByIntitutionsRepository.find({
-        where: {
-          result_id: resultId,
-          is_active: true,
-          institution_roles_id: knowledgeProduct
-            ? InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS
-            : InstitutionRoleEnum.PARTNER,
-        },
-        relations: {
-          delivery: true,
-          obj_institutions: { obj_institution_type_code: true },
-        },
-        order: { id: 'ASC' },
-      });
+      let contributingInstitutions: any[] =
+        await this._resultByIntitutionsRepository.find({
+          where: {
+            result_id: resultId,
+            is_active: true,
+            institution_roles_id: knowledgeProduct
+              ? InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS
+              : InstitutionRoleEnum.PARTNER,
+          },
+          relations: {
+            delivery: true,
+            obj_institutions: { obj_institution_type_code: true },
+          },
+          order: { id: 'ASC' },
+        });
 
       contributingInstitutions = contributingInstitutions.map((i) => ({
         ...i,
@@ -2911,9 +2919,10 @@ export class ResultsService {
           : null,
       }));
 
-      const contributingProjects = await this._resultsByProjectsRepository.findResultsByProjectsByResultId(
-        resultId,
-      );
+      const contributingProjects =
+        await this._resultsByProjectsRepository.findResultsByProjectsByResultId(
+          resultId,
+        );
 
       if (!contributingProjects) {
         return {
@@ -2923,7 +2932,7 @@ export class ResultsService {
         };
       }
 
-/*       const contributingInitiatives = await this._resultRepository.getContributingInitiativesBilateralResult(
+      /*       const contributingInitiatives = await this._resultRepository.getContributingInitiativesBilateralResult(
         resultId,
       );
 
@@ -2935,7 +2944,8 @@ export class ResultsService {
         };
       } */
 
-      const evidence = await this._resultRepository.getEvidenceBilateralResult(resultId);
+      const evidence =
+        await this._resultRepository.getEvidenceBilateralResult(resultId);
 
       if (!evidence) {
         return {
@@ -2948,26 +2958,41 @@ export class ResultsService {
       let resultTypeResponse: any = null;
       const resultTypeId: number = result.result_type_id;
 
-    // ✅ 2) Según el tipo, ejecutamos la query específica
+      // ✅ 2) Según el tipo, ejecutamos la query específica
       switch (resultTypeId) {
         case ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT:
-          resultTypeResponse = await this._resultRepository.getCapacitySharingBilateralResultById(resultId);
+          resultTypeResponse =
+            await this._resultRepository.getCapacitySharingBilateralResultById(
+              resultId,
+            );
           break;
 
         case ResultTypeEnum.KNOWLEDGE_PRODUCT:
-          resultTypeResponse = await this._resultRepository.getKnowledgeProductBilateralResultById(resultId);
+          resultTypeResponse =
+            await this._resultRepository.getKnowledgeProductBilateralResultById(
+              resultId,
+            );
           break;
 
         case ResultTypeEnum.INNOVATION_DEVELOPMENT:
-          resultTypeResponse = await this._resultRepository.getInnovationDevBilateralResultById(resultId);
+          resultTypeResponse =
+            await this._resultRepository.getInnovationDevBilateralResultById(
+              resultId,
+            );
           break;
 
         case ResultTypeEnum.POLICY_CHANGE:
-          resultTypeResponse = await this._resultRepository.getPolicyChangeBilateralResultById(resultId);
+          resultTypeResponse =
+            await this._resultRepository.getPolicyChangeBilateralResultById(
+              resultId,
+            );
           break;
 
         case ResultTypeEnum.INNOVATION_USE:
-          resultTypeResponse = await this._resultRepository.getInnovationUseBilateralResultById(resultId);
+          resultTypeResponse =
+            await this._resultRepository.getInnovationUseBilateralResultById(
+              resultId,
+            );
           break;
 
         default:
@@ -3013,7 +3038,11 @@ export class ResultsService {
   ): Promise<ReturnResponseDto<any> | returnErrorDto> {
     try {
       const parsedResultId = Number(resultId);
-      if (!parsedResultId || !Number.isFinite(parsedResultId) || parsedResultId <= 0) {
+      if (
+        !parsedResultId ||
+        !Number.isFinite(parsedResultId) ||
+        parsedResultId <= 0
+      ) {
         return {
           response: {},
           message: 'The resultId parameter must be a valid positive number.',
@@ -3035,7 +3064,6 @@ export class ResultsService {
       }
 
       return await this._dataSource.transaction(async (manager) => {
-        // Obtener el resultado
         const result = await manager.findOne(Result, {
           where: {
             id: parsedResultId,
@@ -3048,14 +3076,13 @@ export class ResultsService {
           throw new BadRequestException('Bilateral result not found');
         }
 
-        // Validar que el status actual sea PENDING_REVIEW
-        if (result.status_id !== ResultStatusData.PendingReview.value) {
+        const currentStatusId = Number(result.status_id);
+        if (currentStatusId !== ResultStatusData.PendingReview.value) {
           throw new ConflictException(
             `Cannot review result. Current status is not PENDING_REVIEW (status_id: ${result.status_id})`,
           );
         }
 
-        // Determinar el nuevo status según la decisión
         let newStatusId: number;
         if (reviewDecisionDto.decision === ReviewDecisionEnum.APPROVE) {
           newStatusId = ResultStatusData.Approved.value;
@@ -3063,7 +3090,6 @@ export class ResultsService {
           newStatusId = ResultStatusData.Rejected.value;
         }
 
-        // Actualizar el resultado
         await manager.update(
           Result,
           { id: parsedResultId },
@@ -3083,10 +3109,11 @@ export class ResultsService {
         });
         await manager.save(ResultReviewHistory, reviewHistory);
 
-        const decisionVerb = reviewDecisionDto.decision === ReviewDecisionEnum.APPROVE 
-          ? 'approved' 
-          : 'rejected';
-        
+        const decisionVerb =
+          reviewDecisionDto.decision === ReviewDecisionEnum.APPROVE
+            ? 'approved'
+            : 'rejected';
+
         return {
           response: {
             resultId: parsedResultId,
@@ -3097,7 +3124,10 @@ export class ResultsService {
         };
       });
     } catch (error) {
-      if (error instanceof BadRequestException || error instanceof ConflictException) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ConflictException
+      ) {
         return {
           response: {},
           message: error.message,
