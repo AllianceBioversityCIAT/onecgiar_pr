@@ -1216,12 +1216,12 @@ describe('ResultsService (unit, pure mocks)', () => {
     (
       mockResultRepository.getContributingInitiativesBilateralResult as jest.Mock
     ).mockResolvedValueOnce([]);
-    (mockGeographicLocationService.getGeoScopeV2 as jest.Mock).mockResolvedValueOnce(
-      {
-        status: HttpStatus.OK,
-        response: { geo_scope_id: 2 },
-      },
-    );
+    (
+      mockGeographicLocationService.getGeoScopeV2 as jest.Mock
+    ).mockResolvedValueOnce({
+      status: HttpStatus.OK,
+      response: { geo_scope_id: 2 },
+    });
 
     const res = await resultService.getBilateralResultById(100);
     expect((res as returnFormatService).status).toBe(HttpStatus.OK);

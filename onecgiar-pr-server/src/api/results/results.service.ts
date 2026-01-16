@@ -2855,7 +2855,7 @@ export class ResultsService {
       if (this._geographicLocationService) {
         const geographicScope =
           await this._geographicLocationService.getGeoScopeV2(resultId);
-        
+
         if (geographicScope?.status === HttpStatus.OK) {
           geoScope = geographicScope.response;
         } else {
@@ -2868,7 +2868,7 @@ export class ResultsService {
           `GeographicLocationService is not available for Bilateral result (resultId: ${resultId}). GeoScope will be null.`,
         );
       }
-    
+
       const contributingCenters =
         await this._resultsCenterRepository.getAllResultsCenterByResultId(
           resultId,
@@ -2928,15 +2928,16 @@ export class ResultsService {
         );
       }
 
-      const contributingInitiatives = await this._resultRepository.getContributingInitiativesBilateralResult(
-        resultId,
-      );
+      const contributingInitiatives =
+        await this._resultRepository.getContributingInitiativesBilateralResult(
+          resultId,
+        );
 
       if (!contributingInitiatives) {
         this._logger.warn(
           `Contributing initiatives for Bilateral result data not found (resultId: ${resultId})`,
         );
-      } 
+      }
 
       const evidence =
         await this._resultRepository.getEvidenceBilateralResult(resultId);

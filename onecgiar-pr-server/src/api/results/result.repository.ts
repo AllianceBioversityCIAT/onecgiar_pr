@@ -2688,7 +2688,9 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     }
   }
 
-  async getContributingInitiativesBilateralResult(resultId: number): Promise<any[]> {
+  async getContributingInitiativesBilateralResult(
+    resultId: number,
+  ): Promise<any[]> {
     const query = `
       SELECT
         ir.name AS initiative_role,
