@@ -76,6 +76,18 @@
         color: #E78C31;
         border: 1px solid #E78C31;
       }
+
+      &.approved {
+        background-color: transparent;
+        color: #509C55;
+        border: 1px solid #509C55;
+      }
+
+      &.rejected {
+        background-color: transparent;
+        color: #D00416;
+        border: 1px solid #D00416;
+      }
     }
   }
 

@@ -276,8 +276,8 @@ p {
   align-items: center;
   gap: 6px;
   background-color: transparent;
-  color: #10b981;
-  border: 2px solid #10b981;
+  color: #509C55;
+  border: 2px solid #509C55;
   border-radius: 4px;
   padding: 8px 20px;
   cursor: pointer;
@@ -289,7 +289,7 @@ p {
   }
 
   &:hover:not(:disabled) {
-    background-color: #10b981;
+    background-color: #509C55;
     color: white;
   }
 
@@ -304,8 +304,8 @@ p {
   align-items: center;
   gap: 6px;
   background-color: transparent;
-  color: #ef4444;
-  border: 2px solid #ef4444;
+  color: #D00416;
+  border: 2px solid #D00416;
   border-radius: 4px;
   padding: 8px 20px;
   cursor: pointer;
@@ -317,70 +317,201 @@ p {
   }
 
   &:hover {
-    background-color: #ef4444;
+    background-color: #D00416;
     color: white;
   }
 }
 
-// Dialog styles
-.dialog-message {
-  @include fonts.pr-typography('body-1');
-  color: var(--pr-color-secondary-600);
-  margin-bottom: 16px;
-}
-
-.dialog-note {
-  @include fonts.pr-typography('body-2');
-  color: var(--pr-color-accents-5);
-  font-style: italic;
-}
-
-.dialog-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 20px;
-}
-
-.dialog-cancel-button {
-  background-color: transparent;
-  color: var(--pr-color-accents-6);
-  border: 1px solid var(--pr-color-accents-3);
-  border-radius: 4px;
-  padding: 8px 20px;
-  cursor: pointer;
-  @include fonts.pr-typography('body-2');
-  font-weight: 500;
-
-  &:hover {
-    background-color: var(--pr-color-accents-1);
-  }
-}
-
-.dialog-confirm-button {
-  background-color: #10b981;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 8px 20px;
-  cursor: pointer;
-  @include fonts.pr-typography('body-2');
-  font-weight: 500;
-
-  &:hover:not(:disabled) {
-    background-color: #059669;
+// Confirmation Modal Styles (centered layout)
+::ng-deep .confirmation-modal {
+  &.p-dialog {
+    border-radius: 12px !important;
+    overflow: hidden;
+    max-width: 650px !important;
+    width: 650px !important;
+    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.15);
   }
 
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+  .p-dialog-content {
+    padding: 0 !important;
+    background-color: white;
+    position: relative;
   }
 
-  &.reject {
-    background-color: #ef4444;
+  .modal-close-icon {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    color: #9c9c9c;
+    font-size: 18px;
+    cursor: pointer;
+    transition: color 0.2s;
+    z-index: 1;
 
-    &:hover:not(:disabled) {
-      background-color: #dc2626;
+    &:hover {
+      color: #666666;
+    }
+  }
+
+  .modal-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 40px 32px 24px;
+    background-color: white;
+  }
+
+  .modal-icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+
+    i {
+      font-size: 36px;
+    }
+
+    &.approve {
+      border: 3px solid #509C55;
+      background-color: transparent;
+
+      i {
+        color: #509C55;
+      }
+    }
+
+    &.reject {
+      border: 3px solid #D00416;
+      background-color: transparent;
+
+      i {
+        color: #D00416;
+      }
+    }
+  }
+
+  .modal-title {
+    margin: 0 0 16px !important;
+    font-size: 22px !important;
+    font-weight: 700 !important;
+
+    &.approve {
+      color: #509C55;
+    }
+
+    &.reject {
+      color: #D00416;
+    }
+  }
+
+  .modal-message {
+    margin: 0 !important;
+    font-size: 15px;
+    line-height: 1.6;
+    color: #333333;
+    max-width: 420px;
+  }
+
+  .modal-field {
+    width: 100%;
+    margin-top: 20px;
+    text-align: left;
+
+    textarea {
+      width: 100%;
+      resize: vertical;
+    }
+  }
+
+  .modal-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    color: #333333;
+    margin-bottom: 8px;
+
+    &.required::after {
+      content: ' *';
+      color: #ef4444;
+    }
+  }
+
+  .modal-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 0 32px 32px;
+    background-color: white;
+
+    .btn-cancel {
+      height: 44px;
+      padding: 12px 32px;
+      border-radius: 6px;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid var(--pr-color-primary-300);
+      background-color: var(--pr-color-white);
+      color: var(--pr-color-primary-300);
+      min-width: 120px;
+
+      &:hover:not(:disabled) {
+        background-color: var(--pr-color-primary-50);
+        border-color: var(--pr-color-primary-400);
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
+
+    .btn-confirm {
+      height: 44px;
+      padding: 12px 32px;
+      border-radius: 6px;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      color: white;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-width: 120px;
+
+      &.approve {
+        background-color: var(--pr-color-primary-300);
+
+        &:hover:not(:disabled) {
+          background-color: var(--pr-color-primary-400);
+        }
+      }
+
+      &.reject {
+        background-color: #D00416;
+
+        &:hover:not(:disabled) {
+          background-color: #b00313;
+        }
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      i {
+        font-size: 14px;
+      }
     }
   }
 }
@@ -446,6 +577,27 @@ p {
     .p-dialog-footer {
       padding: 0 24px 20px;
       border-top: none;
+    }
+
+    &.confirm-dialog {
+      border-radius: 12px;
+      overflow: hidden;
+
+      .p-dialog-content {
+        padding: 24px 28px 20px;
+      }
+
+      .p-dialog-close-button {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        color: var(--pr-color-accents-5);
+
+        &:hover {
+          color: var(--pr-color-secondary-600);
+          background-color: var(--pr-color-accents-1);
+        }
+      }
     }
   }
 

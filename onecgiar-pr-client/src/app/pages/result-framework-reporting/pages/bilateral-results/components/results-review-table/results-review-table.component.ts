@@ -57,6 +57,7 @@ export class ResultsReviewTableComponent {
 
     this.api.resultsSE.GET_ResultToReview(entityId, centers).subscribe(res => {
       this.tableData.set(res.response);
+      console.log(this.tableData());
     });
   }
 
@@ -73,5 +74,13 @@ export class ResultsReviewTableComponent {
   reviewResult(result: ResultToReview): void {
     this.currentResultToReview.set(result);
     this.showReviewDrawer.set(true);
+  }
+
+  // Refrescar tabla cuando se toma una decisión (aprobar/rechazar)
+  onDecisionMade(): void {
+    const centers = this.bilateralResultsService.currentCenterSelected();
+    if (centers.length > 0) {
+      this.getResultsToReview(centers);
+    }
   }
 }

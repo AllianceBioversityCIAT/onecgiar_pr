@@ -39,50 +39,40 @@
       </div>
     </div>
 
-    <!-- TOC ALIGNMENT Section -->
+    @let fields = this.resultDetail();
     <div class="form-section">
-      <p class="form-section_title">TOC ALIGNMENT</p>
+      <!-- TOC ALIGNMENT Section -->
+      <h3>Does this result align with the Program's TOC?</h3>
+      {{ fields?.tocMetadata[0]?.planned_result ? 'Yes' : 'No' }}
+      <br /><br />
+      <h3>TOC result</h3>
+      {{ fields?.tocMetadata[0]?.acronym + ' - ' + fields?.tocMetadata[0]?.result_title }}
+      <br /><br />
+      <h3>Indicator</h3>
+      {{ fields?.tocMetadata[0]?.indicator_description }}
+    </div>
 
-      <div class="form-field">
-        <label class="form-field_label">Does this result align with the Program's TOC?</label>
-        <div class="form-field_radio-group">
-          <div class="radioButton">
-            <p-radioButton name="tocAlignment" [value]="true" [(ngModel)]="tocAlignmentValue" inputId="toc_yes"></p-radioButton>
-            <label for="toc_yes" class="form-field_radio-label">Yes</label>
-          </div>
-          <div class="radioButton">
-            <p-radioButton name="tocAlignment" [value]="false" [(ngModel)]="tocAlignmentValue" inputId="toc_no"></p-radioButton>
-            <label for="toc_no" class="form-field_radio-label">No</label>
-          </div>
-        </div>
-      </div>
+    <div class="form-section">
+      <h2>Result Description</h2>
+      {{ fields?.commonFields?.result_description }}
+    </div>
 
-      <div class="form-field">
-        <label class="form-field_label">TOC result</label>
-        <p-select
-          [options]="tocResultOptions"
-          [(ngModel)]="selectedTocResult"
-          optionLabel="label"
-          optionValue="value"
-          placeholder="Select TOC result"
-          [style]="{ width: '100%' }" />
-      </div>
-
-      <div class="form-field">
-        <label class="form-field_label">Indicator</label>
-        <p-select
-          [options]="indicatorOptions"
-          [(ngModel)]="selectedIndicator"
-          optionLabel="label"
-          optionValue="value"
-          placeholder="Select indicator"
-          [style]="{ width: '100%' }" />
-      </div>
-
-      <button pButton class="save-changes-button" (click)="saveTocChanges()">
-        <span>Save changes</span>
-        <i class="material-icons-round">save</i>
-      </button>
+    <div class="form-section">
+      <h2>Contributing Centers</h2>
+      @for (center of fields?.contributingCenters; track $index) {
+        <p>{{ center.name }}</p>
+        <br />
+      }
+      <h2>Contributing Science Programs</h2>
+      @for (program of fields?.contributingInitiatives; track $index) {
+        <p>{{ program.official_code }} - {{ program.initiative_role }}</p>
+        <br />
+      }
+      <h2>Contributing Bilateral Projects</h2>
+      @for (project of fields?.contributingProjects; track $index) {
+        <p>{{ project.obj_clarisa_project.shortName }}</p>
+        <br />
+      }
     </div>
   </div>
 
@@ -103,42 +93,64 @@
 
 <!-- Confirm Approve Dialog -->
 <p-dialog
+  appendTo="body"
   [(visible)]="showConfirmApproveDialog"
   [modal]="true"
-  [closable]="true"
-  [style]="{ width: '450px' }"
-  header="Confirm Approval"
-  [draggable]="false">
-  <p class="dialog-message">Are you sure you want to approve this result?</p>
-  <ng-template #footer>
-    <div class="dialog-footer">
-      <button pButton class="dialog-cancel-button" (click)="cancelApprove()">Cancel</button>
-      <button pButton class="dialog-confirm-button" (click)="confirmApprove()">Confirm</button>
+  [closeOnEscape]="true"
+  [showHeader]="false"
+  [dismissableMask]="true"
+  [draggable]="false"
+  [style]="{ padding: '0px' }"
+  styleClass="confirmation-modal approve">
+  <i class="pi pi-times modal-close-icon" (click)="cancelApprove()"></i>
+  <div class="modal-body">
+    <div class="modal-icon approve">
+      <i class="pi pi-check"></i>
     </div>
-  </ng-template>
+    <h2 class="modal-title approve">APPROVE RESULT – {{ resultToReview()?.result_code }}</h2>
+    <p class="modal-message">Status will be changed to "Approved", and further changes can be made before the final submission.</p>
+  </div>
+  <div class="modal-actions">
+    <button class="btn-cancel" (click)="cancelApprove()" [disabled]="isSaving()">Cancel</button>
+    <button class="btn-confirm approve" (click)="confirmApprove()" [disabled]="isSaving()">
+      <i class="pi pi-spinner pi-spin" *ngIf="isSaving()"></i>
+      {{ isSaving() ? 'Approving...' : 'Confirm' }}
+    </button>
+  </div>
 </p-dialog>
 
 <!-- Reject Justification Dialog -->
 <p-dialog
+  appendTo="body"
   [(visible)]="showConfirmRejectDialog"
   [modal]="true"
-  [closable]="true"
-  [style]="{ width: '500px' }"
-  header="Reject Result"
-  [draggable]="false">
-  <p class="dialog-message">Please provide a justification for rejecting this result:</p>
-  <textarea
-    pInputTextarea
-    [(ngModel)]="rejectJustification"
-    [rows]="4"
-    [style]="{ width: '100%' }"
-    placeholder="Enter your justification..."></textarea>
-  <ng-template #footer>
-    <div class="dialog-footer">
-      <button pButton class="dialog-cancel-button" (click)="cancelReject()">Cancel</button>
-      <button pButton class="dialog-confirm-button reject" [disabled]="!rejectJustification.trim()" (click)="confirmReject()">
-        Confirm Rejection
-      </button>
+  [closeOnEscape]="true"
+  [showHeader]="false"
+  [dismissableMask]="true"
+  [draggable]="false"
+  [style]="{ padding: '0px' }"
+  styleClass="confirmation-modal reject">
+  <i class="pi pi-times modal-close-icon" (click)="cancelReject()"></i>
+  <div class="modal-body">
+    <div class="modal-icon reject">
+      <i class="pi pi-times"></i>
     </div>
-  </ng-template>
+    <h2 class="modal-title reject">REJECT RESULT – {{ resultToReview()?.result_code }}</h2>
+    <p class="modal-message">Please provide a detailed justification for rejecting this result.</p>
+    <div class="modal-field">
+      <label class="modal-label required">Justification</label>
+      <textarea
+        pInputTextarea
+        [(ngModel)]="rejectJustification"
+        [rows]="4"
+        placeholder="Please explain why this result is being rejected..."></textarea>
+    </div>
+  </div>
+  <div class="modal-actions">
+    <button class="btn-cancel" (click)="cancelReject()" [disabled]="isSaving()">Cancel</button>
+    <button class="btn-confirm reject" [disabled]="!rejectJustification.trim() || isSaving()" (click)="confirmReject()">
+      <i class="pi pi-spinner pi-spin" *ngIf="isSaving()"></i>
+      {{ isSaving() ? 'Rejecting...' : 'Confirm' }}
+    </button>
+  </div>
 </p-dialog>
