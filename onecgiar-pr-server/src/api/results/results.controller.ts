@@ -600,4 +600,24 @@ export class ResultsController {
       centerIds,
     );
   }
+
+  @Get('bilateral/:resultId')
+  @ApiOperation({
+    summary: 'Get bilateral result by ID',
+    description:
+      'Returns complete information of a bilateral result for the provided result identifier.',
+  })
+  @ApiParam({
+    name: 'resultId',
+    type: Number,
+    required: true,
+    description: 'Result identifier',
+    example: 123,
+  })
+  @ApiOkResponse({
+    description: 'Bilateral result retrieved successfully.',
+  })
+  async getBilateralResultById(@Param('resultId') resultId: number) {
+    return this.resultsService.getBilateralResultById(resultId);
+  }
 }

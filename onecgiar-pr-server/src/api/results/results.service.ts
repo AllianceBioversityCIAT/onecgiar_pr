@@ -4,6 +4,8 @@ import {
   Injectable,
   Logger,
   Optional,
+  BadRequestException,
+  forwardRef,
 } from '@nestjs/common';
 import { CreateResultDto } from './dto/create-result.dto';
 import { ResultRepository } from './result.repository';
@@ -25,7 +27,7 @@ import {
   StatusBreakdownDto,
   VersionProgressDto,
 } from './dto/science-program-progress.dto';
-import { Result } from './entities/result.entity';
+import { Result, SourceEnum } from './entities/result.entity';
 import { CreateGeneralInformationResultDto } from './dto/create-general-information-result.dto';
 import { YearRepository } from './years/year.repository';
 import { Year } from './years/entities/year.entity';
@@ -87,6 +89,8 @@ import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 import { ResultsTocResultRepository } from './results-toc-results/repositories/results-toc-results.repository';
 import { ResultsInnovationsDevRepository } from './summary/repositories/results-innovations-dev.repository';
 import { AoWBilateralRepository } from './results-toc-results/repositories/aow-bilateral.repository';
+import { ResultsByProjectsRepository } from './results_by_projects/results_by_projects.repository';
+import { GeographicLocationService } from '../results-framework-reporting/geographic-location/geographic-location.service';
 
 @Injectable()
 export class ResultsService {
@@ -133,6 +137,11 @@ export class ResultsService {
     private readonly _initiativeEntityMapRepository?: InitiativeEntityMapRepository,
     private readonly _roleByUserRepository?: RoleByUserRepository,
     private readonly _resultsInnovationsDevRepository?: ResultsInnovationsDevRepository,
+    @Optional()
+    private readonly _resultsByProjectsRepository?: ResultsByProjectsRepository,
+    @Optional()
+    @Inject(forwardRef(() => GeographicLocationService))
+    private readonly _geographicLocationService?: GeographicLocationService,
     @Optional()
     @Inject(AdUserService)
     private readonly _adUserService?: AdUserService,
@@ -2724,7 +2733,7 @@ export class ResultsService {
             .filter((id) => id.length > 0);
         }
 
-        if (processedCenterIds && processedCenterIds.length === 0) {
+        if (processedCenterIds?.length === 0) {
           processedCenterIds = undefined;
         }
       }
@@ -2777,6 +2786,211 @@ export class ResultsService {
       return {
         response: response,
         message: 'Results retrieved and grouped by project successfully',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async getBilateralResultById(
+    resultId: number,
+  ): Promise<ReturnResponseDto<any> | returnErrorDto> {
+    try {
+      const parsedResultId = Number(resultId);
+      if (!parsedResultId || !Number.isFinite(parsedResultId) || parsedResultId <= 0) {
+        return {
+          response: {},
+          message: 'The resultId parameter must be a valid positive number.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const result = await this._resultRepository.findOne({
+        where: { id: resultId, source: SourceEnum.Bilateral },
+      });
+
+      if (!result) {
+        return {
+          response: {},
+          message: 'Bilateral result not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const commonFields = await this._resultRepository.getCommonFieldsBilateralResultById(
+        resultId,
+      );
+
+      if (!commonFields) {
+        return {
+          response: {},
+          message: 'Common fields for Bilateral result data not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const tocMetadata = await this._resultRepository.getTocMetadataBilateralResult(
+        resultId,
+      );
+
+      if (!tocMetadata) {
+        return {
+          response: {},
+          message: 'Toc metadata for Bilateral result data not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      let geoScope: any = null;
+      if (this._geographicLocationService) {
+        const geographicScope = await this._geographicLocationService.getGeoScopeV2(
+          resultId,
+        );
+
+        if (geographicScope?.status !== HttpStatus.OK) {
+          throw new BadRequestException(geographicScope?.message ?? 'GeoScope failed');
+        }
+        
+        geoScope = geographicScope.response;
+      }
+
+      const contributingCenters = await this._resultsCenterRepository.getAllResultsCenterByResultId(
+        resultId,
+      );
+
+      if (!contributingCenters) {
+        return {
+          response: {},
+          message: 'Contributing centers for Bilateral result data not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const knowledgeProduct =
+        await this._resultKnowledgeProductRepository.findOne({
+          where: { results_id: resultId },
+          relations: { result_knowledge_product_institution_array: true },
+        });
+
+      let contributingInstitutions: any[] = await this._resultByIntitutionsRepository.find({
+        where: {
+          result_id: resultId,
+          is_active: true,
+          institution_roles_id: knowledgeProduct
+            ? InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS
+            : InstitutionRoleEnum.PARTNER,
+        },
+        relations: {
+          delivery: true,
+          obj_institutions: { obj_institution_type_code: true },
+        },
+        order: { id: 'ASC' },
+      });
+
+      contributingInstitutions = contributingInstitutions.map((i) => ({
+        ...i,
+        delivery: i.delivery.filter((d) => d.is_active),
+        obj_institutions: i.obj_institutions
+          ? {
+              name: i.obj_institutions.name,
+              website_link: i.obj_institutions.website_link,
+              obj_institution_type_code: {
+                id: i.obj_institutions.obj_institution_type_code.code,
+                name: i.obj_institutions.obj_institution_type_code.name,
+              },
+            }
+          : null,
+      }));
+
+      const contributingProjects = await this._resultsByProjectsRepository.findResultsByProjectsByResultId(
+        resultId,
+      );
+
+      if (!contributingProjects) {
+        return {
+          response: {},
+          message: 'Contributing projects for Bilateral result data not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+/*       const contributingInitiatives = await this._resultRepository.getContributingInitiativesBilateralResult(
+        resultId,
+      );
+
+      if (!contributingInitiatives) {
+        return {
+          response: {},
+          message: 'Contributing initiatives for Bilateral result data not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      } */
+
+      const evidence = await this._resultRepository.getEvidenceBilateralResult(resultId);
+
+      if (!evidence) {
+        return {
+          response: {},
+          message: 'Evidence for Bilateral result data not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      let resultTypeResponse: any = null;
+      const resultTypeId: number = result.result_type_id;
+
+    // ✅ 2) Según el tipo, ejecutamos la query específica
+      switch (resultTypeId) {
+        case ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT:
+          resultTypeResponse = await this._resultRepository.getCapacitySharingBilateralResultById(resultId);
+          break;
+
+        case ResultTypeEnum.KNOWLEDGE_PRODUCT:
+          resultTypeResponse = await this._resultRepository.getKnowledgeProductBilateralResultById(resultId);
+          break;
+
+        case ResultTypeEnum.INNOVATION_DEVELOPMENT:
+          resultTypeResponse = await this._resultRepository.getInnovationDevBilateralResultById(resultId);
+          break;
+
+        case ResultTypeEnum.POLICY_CHANGE:
+          resultTypeResponse = await this._resultRepository.getPolicyChangeBilateralResultById(resultId);
+          break;
+
+        case ResultTypeEnum.INNOVATION_USE:
+          resultTypeResponse = await this._resultRepository.getInnovationUseBilateralResultById(resultId);
+          break;
+
+        default:
+          throw new BadRequestException(
+            `Unsupported result_type_id: ${resultTypeId}`,
+          );
+      }
+
+      if (!resultTypeResponse) {
+        return {
+          response: {},
+          message: 'Result type response for Bilateral result data not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const mappedResult = {
+        commonFields: commonFields,
+        tocMetadata: tocMetadata,
+        geographicScope: geoScope,
+        contributingCenters: contributingCenters,
+        contributingInstitutions: contributingInstitutions,
+        contributingProjects: contributingProjects,
+        //contributingInitiatives: contributingInitiatives,
+        evidence: evidence,
+        resultTypeResponse: resultTypeResponse,
+      };
+
+      return {
+        response: mappedResult,
+        message: 'Bilateral result retrieved successfully',
         status: HttpStatus.OK,
       };
     } catch (error) {

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { GeographicLocationService } from './geographic-location.service';
 import { GeographicLocationController } from './geographic-location.controller';
 import {
@@ -13,7 +13,7 @@ import { ElasticModule } from '../../../elastic/elastic.module';
 @Module({
   imports: [
     ResultCountriesModule,
-    ResultsModule,
+    forwardRef(() => ResultsModule),
     ElasticModule,
     ResultRegionsModule,
   ],

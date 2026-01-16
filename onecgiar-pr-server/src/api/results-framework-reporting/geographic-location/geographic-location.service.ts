@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { CreateGeographicLocationDto } from './dto/create-geographic-location.dto';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultRegionsService } from '../../results/result-regions/result-regions.service';
@@ -21,6 +21,7 @@ export class GeographicLocationService {
     private readonly _resultRegionsService: ResultRegionsService,
     private readonly _resultCountriesService: ResultCountriesService,
     private readonly _resultRepository: ResultRepository,
+    @Inject(forwardRef(() => ResultsService))
     private readonly _resultService: ResultsService,
     private readonly _elasticService: ElasticService,
     private readonly _resultRegionRepository: ResultRegionRepository,

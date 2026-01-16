@@ -2345,40 +2345,53 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     centerIds?: string[],
   ): Promise<any[]> {
     const baseQuery = `
+      WITH tri_one AS (
+        SELECT
+          tri.*,
+          ROW_NUMBER() OVER (
+            PARTITION BY tri.toc_results_id
+            ORDER BY tri.id ASC
+          ) AS rn
+        FROM Integration_information.toc_results_indicators tri
+        WHERE tri.is_active = 1
+      )
       SELECT 
         r.id,
         cp.id AS project_id,
         cp.short_name AS project_name,
         r.result_code,
         r.title AS result_title,
-        NULLIF(TRIM(tri.type_name), '') AS indicator_category,
+        rt.name AS result_category,
+        NULLIF(TRIM(t1.type_name), '') AS indicator_category,
         rs.status_name,
         twp.acronym,
         tr.result_title AS toc_title,
-        tri.indicator_description AS indicator,
+        t1.indicator_description AS indicator,
         r.external_submitted_date AS submission_date
       FROM result r
+      JOIN result_type rt
+        ON r.result_type_id = rt.id
       JOIN results_by_projects rbp
         ON r.id = rbp.result_id
-        AND rbp.is_active = 1
+      AND rbp.is_active = 1
       JOIN clarisa_projects cp
         ON rbp.project_id = cp.id
       JOIN result_status rs 
         ON r.status_id = rs.result_status_id
       JOIN results_toc_result rtr
         ON r.id = rtr.results_id
-        AND rtr.is_active = 1
+      AND rtr.is_active = 1
       JOIN Integration_information.toc_results tr 
         ON rtr.toc_result_id = tr.id
-        AND tr.is_active = 1
+      AND tr.is_active = 1
       JOIN Integration_information.toc_work_packages twp
         ON tr.wp_id = twp.toc_id
-      JOIN Integration_information.toc_results_indicators tri
-        ON tri.toc_results_id = tr.id
-        AND tri.is_active = 1
-      JOIN results_center rc
+      JOIN tri_one t1
+        ON t1.toc_results_id = tr.id
+      AND t1.rn = 1
+      LEFT JOIN results_center rc
         ON r.id = rc.result_id
-        AND rc.is_active = 1
+      AND rc.is_active = 1
       WHERE
         r.source = 'API'
         AND tr.official_code = ?
@@ -2397,6 +2410,279 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
 
     try {
       const results = await this.query(finalQuery, params);
+      return results;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  async getCommonFieldsBilateralResultById(resultId: number): Promise<any> {
+    const query = `
+      SELECT 
+        cp.short_name AS project_name,
+        ci.acronym AS center_name,
+        r.id,
+        r.result_code,
+        r.external_submitter,
+        CONCAT(u.first_name, ' ', u.last_name) AS submitter_name,
+        r.result_level_id,
+        r.title AS result_title,
+        r.description AS result_description,
+        rt.name AS result_category
+      FROM result r
+      JOIN result_type rt
+        ON r.result_type_id = rt.id
+      LEFT JOIN results_by_projects rbp
+        ON r.id = rbp.result_id
+        AND rbp.is_active = 1
+      LEFT JOIN clarisa_projects cp
+        ON rbp.project_id = cp.id
+      JOIN results_toc_result rtr
+        ON r.id = rtr.results_id
+        AND rtr.is_active = 1
+      JOIN Integration_information.toc_results tr 
+        ON rtr.toc_result_id = tr.id
+        AND tr.is_active = 1
+      JOIN results_center rc
+        ON r.id = rc.result_id
+        AND rc.is_active = 1
+      JOIN clarisa_center cc
+        ON rc.center_id = cc.code
+      JOIN clarisa_institutions ci
+        ON cc.institutionId = ci.id
+      LEFT JOIN users u 
+        ON r.external_submitter = u.id
+      WHERE
+        r.id = ?
+        AND r.is_active = 1;
+    `;
+
+    try {
+      const results = await this.query(query, [resultId]);
+      return results.length > 0 ? results[0] : null;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  async getCapacitySharingBilateralResultById(
+    resultId: number,
+  ): Promise<any[]> {
+    const query = `
+      SELECT 
+        rcd.female_using,
+        rcd.male_using,
+        rcd.non_binary_using,
+        rcd.has_unkown_using,
+        rcd.capdev_term_id,
+        rcd.capdev_delivery_method_id 
+      FROM result r
+      JOIN results_capacity_developments rcd 
+        ON r.id = rcd.result_id
+      WHERE
+        r.id = ?
+        AND r.is_active = 1;
+    `;
+
+    try {
+      const results = await this.query(query, [resultId]);
+      return results;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  async getKnowledgeProductBilateralResultById(
+    resultId: number,
+  ): Promise<any[]> {
+    const query = `
+      SELECT 
+        rkm.source,
+        rkm.\`year\`,
+        rkp.knowledge_product_type,
+        rkm.is_peer_reviewed,
+        rkm.is_isi,
+        rkm.accesibility,
+        rkp.licence,
+        rkk.is_agrovoc,
+        rkk.keyword
+      FROM result r
+      JOIN results_knowledge_product rkp 
+        ON r.id = rkp.results_id
+      LEFT JOIN results_kp_metadata rkm 
+        ON rkp.result_knowledge_product_id = rkm.result_knowledge_product_id
+      LEFT JOIN results_kp_keywords rkk 
+        ON rkp.result_knowledge_product_id = rkk.result_knowledge_product_id
+      WHERE
+        r.id = ?
+        AND r.is_active = 1;
+    `;
+
+    try {
+      const results = await this.query(query, [resultId]);
+      return results;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  async getInnovationDevBilateralResultById(resultId: number): Promise<any[]> {
+    const query = `
+      SELECT
+        rid.innovation_nature_id,
+        cit.name,
+        rid.innovation_developers,
+        rid.innovation_readiness_level_id,
+        cirl.level,
+        cirl.name
+      FROM result r
+      JOIN results_innovations_dev rid
+        ON r.id = rid.results_id
+      LEFT JOIN clarisa_innovation_type cit
+        ON rid.innovation_nature_id = cit.code
+      LEFT JOIN clarisa_innovation_readiness_level cirl 
+        ON rid.innovation_readiness_level_id = cirl.id
+      WHERE 
+        r.id = ?
+        AND r.is_active = 1;
+    `;
+
+    try {
+      const results = await this.query(query, [resultId]);
+      return results;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  async getPolicyChangeBilateralResultById(resultId: number): Promise<any[]> {
+    const query = `
+      SELECT 
+        rpc.policy_type_id,
+        rpc.policy_stage_id,
+        ci.acronym 
+      FROM result r
+      JOIN results_policy_changes rpc
+        ON r.id = rpc.result_id
+      LEFT JOIN results_by_institution rbi
+        ON r.id = rbi.result_id
+      LEFT JOIN clarisa_institutions ci
+        ON rbi.institutions_id = ci.id
+      WHERE
+        r.id = ?
+        AND r.is_active = 1;
+    `;
+
+    try {
+      const results = await this.query(query, [resultId]);
+      return results;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  async getInnovationUseBilateralResultById(resultId: number): Promise<any[]> {
+    const query = `
+      SELECT *
+      FROM result r
+      JOIN results_innovations_use riu
+        ON r.id = riu.results_id
+      LEFT JOIN result_actors ra
+        ON r.id = ra.result_id
+      LEFT JOIN results_by_institution rbi
+        ON r.id = rbi.result_id
+      LEFT JOIN results_innovations_use_measures rium
+        ON riu.result_innovation_use_id = rium.result_innovation_use_id
+      WHERE
+        r.id = ?
+        AND r.is_active = 1;
+    `;
+
+    try {
+      const results = await this.query(query, [resultId]);
+      return results;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  async getEvidenceBilateralResult(resultId: number): Promise<any[]> {
+    const query = `
+      SELECT
+        e.link
+      FROM result r
+      JOIN evidence e 
+        ON r.id = e.result_id
+      WHERE
+        r.id = ?
+        AND r.is_active = 1;
+    `;
+
+    try {
+      const results = await this.query(query, [resultId]);
+      return results;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  async getTocMetadataBilateralResult(resultId: number): Promise<any[]> {
+    const query = `
+      SELECT
+        rtr.planned_result,
+        twp.acronym,
+        tr.result_title,
+        tri.indicator_description
+      FROM result r
+      JOIN results_toc_result rtr
+        ON r.id = rtr.results_id
+        AND rtr.is_active = 1
+      JOIN Integration_information.toc_results tr 
+        ON rtr.toc_result_id = tr.id
+        AND tr.is_active = 1
+      JOIN Integration_information.toc_work_packages twp
+        ON tr.wp_id = twp.toc_id
+      JOIN Integration_information.toc_results_indicators tri
+        ON tri.toc_results_id = tr.id
+        AND tri.is_active = 1
+      WHERE
+        r.id = ?;
+    `;
+
+    try {
+      const results = await this.query(query, [resultId]);
       return results;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
