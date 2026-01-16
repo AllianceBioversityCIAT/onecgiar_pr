@@ -1,15 +1,13 @@
-import { Component, OnInit, effect, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { ScoreService } from '../../../../../../shared/services/global/score.service';
 import { IpsrDataControlService } from '../../../../services/ipsr-data-control.service';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { IpsrGeneralInformationBody } from './model/ipsr-general-information.model';
-import { User } from '../../../../../results/pages/result-detail/pages/rd-general-information/models/userSearchResponse';
-import { debounceTime, distinctUntilChanged, Subject, switchMap } from 'rxjs';
 import { UserSearchService } from '../../../../../results/pages/result-detail/pages/rd-general-information/services/user-search-service.service';
-import { DataControlService } from '../../../../../../shared/services/data-control.service';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 import { GetImpactAreasScoresService } from '../../../../../../shared/services/global/get-impact-areas-scores.service';
 import { environment } from '../../../../../../../environments/environment';
+import { IpsrCompletenessStatusService } from '../../../../services/ipsr-completeness-status.service';
 
 @Component({
   selector: 'app-ipsr-general-information',
@@ -20,7 +18,6 @@ import { environment } from '../../../../../../../environments/environment';
 export class IpsrGeneralInformationComponent implements OnInit {
   ipsrGeneralInformationBody = new IpsrGeneralInformationBody();
 
-  dataControlSE = inject(DataControlService);
   fieldsManagerSE = inject(FieldsManagerService);
   getImpactAreasScoresComponents = inject(GetImpactAreasScoresService);
 
@@ -28,7 +25,8 @@ export class IpsrGeneralInformationComponent implements OnInit {
     public api: ApiService,
     public scoreSE: ScoreService,
     public ipsrDataControlSE: IpsrDataControlService,
-    private userSearchService: UserSearchService
+    private userSearchService: UserSearchService,
+    private readonly ipsrCompletenessStatusSE: IpsrCompletenessStatusService
   ) {}
 
   ngOnInit(): void {
@@ -41,11 +39,10 @@ export class IpsrGeneralInformationComponent implements OnInit {
     this.api.dataControlSE.detailSectionTitle('General information');
   }
 
-  getSectionInformationp25() {}
-
   getSectionInformation() {
     this.api.resultsSE.GETInnovationByResultId(this.ipsrDataControlSE.resultInnovationId, this.fieldsManagerSE.isP25()).subscribe(({ response }) => {
       this.ipsrGeneralInformationBody = response;
+      this.ipsrCompletenessStatusSE.updateGreenChecks();
     });
   }
 
@@ -82,7 +79,7 @@ export class IpsrGeneralInformationComponent implements OnInit {
   }
 
   onSaveSection() {
-    if (this.userSearchService.searchQuery.trim() && !this.userSearchService.selectedUser) {
+    if (this.fieldsManagerSE.isP22() && this.userSearchService.searchQuery.trim() && !this.userSearchService.selectedUser) {
       this.userSearchService.hasValidContact = false;
       this.userSearchService.showContactError = true;
       return;
