@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-
+import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { ResultsReviewTableComponent } from './results-review-table.component';
 
 describe('ResultsReviewTableComponent', () => {
@@ -8,7 +9,7 @@ describe('ResultsReviewTableComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ResultsReviewTableComponent]
+      imports: [ResultsReviewTableComponent, HttpClientTestingModule, NoopAnimationsModule]
     })
     .compileComponents();
 

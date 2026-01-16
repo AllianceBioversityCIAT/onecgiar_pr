@@ -7,23 +7,17 @@ describe('ResultReviewDrawerComponent', () => {
   let fixture: ComponentFixture<ResultReviewDrawerComponent>;
 
   const mockResult: ResultToReview = {
-    code: '3816',
-    title: 'TEST - Farmers trained on protection against wheat disease apply CGIAR innovation in their work',
+    id: '1',
+    project_id: 'proj-001',
+    project_name: 'Test Project',
+    result_code: '3816',
+    result_title: 'TEST - Farmers trained on protection against wheat disease apply CGIAR innovation in their work',
     indicator_category: 'Innovation Use',
-    status: 'Pending review',
-    toc_result: 'AOW04 - 2030 Outcome',
-    toc_result_id: 'aow04',
+    status_name: 'Pending review',
+    acronym: 'aow04',
+    toc_title: 'AOW04 - 2030 Outcome',
     indicator: 'Number of farmers',
-    indicator_id: 'ind01',
-    submission_date: '20/08/2025',
-    submitted_by: 'Nicoleta Trifa',
-    entity_acronym: 'CIMMYT',
-    entity_code: 'V0165-ACIAR-ICCCAD',
-    toc_alignment: true,
-    result_description: 'Farmers are trained on wheat disease protection.',
-    geographic_scope: 'global',
-    regions: ['africa', 'western_africa'],
-    countries: ['kenya', 'ethiopia']
+    submission_date: '20/08/2025'
   };
 
   beforeEach(async () => {
@@ -82,57 +76,17 @@ describe('ResultReviewDrawerComponent', () => {
     component.resultToReview.set(mockResult);
 
     expect(component.resultToReview()).toEqual(mockResult);
-    expect(component.resultToReview()?.title).toBe('TEST - Farmers trained on protection against wheat disease apply CGIAR innovation in their work');
+    expect(component.resultToReview()?.result_title).toBe('TEST - Farmers trained on protection against wheat disease apply CGIAR innovation in their work');
     expect(component.resultToReview()?.indicator_category).toBe('Innovation Use');
   });
 
   describe('Form functionality', () => {
     it('should have TOC result options', () => {
-      expect(component.tocResultOptions().length).toBeGreaterThan(0);
+      expect(component.tocResultOptions.length).toBeGreaterThan(0);
     });
 
     it('should have indicator options', () => {
-      expect(component.indicatorOptions().length).toBeGreaterThan(0);
-    });
-
-    it('should have region options', () => {
-      expect(component.regionOptions().length).toBeGreaterThan(0);
-    });
-
-    it('should have country options', () => {
-      expect(component.countryOptions().length).toBeGreaterThan(0);
-    });
-
-    it('should remove region from selected regions', () => {
-      component.selectedRegions.set(['africa', 'asia']);
-      component.removeRegion('africa');
-      expect(component.selectedRegions()).toEqual(['asia']);
-    });
-
-    it('should remove country from selected countries', () => {
-      component.selectedCountries.set(['kenya', 'ethiopia']);
-      component.removeCountry('kenya');
-      expect(component.selectedCountries()).toEqual(['ethiopia']);
-    });
-
-    it('should get correct region label', () => {
-      const label = component.getRegionLabel('africa');
-      expect(label).toBe('Africa');
-    });
-
-    it('should get correct country label', () => {
-      const label = component.getCountryLabel('kenya');
-      expect(label).toBe('Kenya');
-    });
-
-    it('should get correct TOC result label', () => {
-      const label = component.getTocResultLabel('aow01');
-      expect(label).toContain('AOW01');
-    });
-
-    it('should get correct indicator label', () => {
-      const label = component.getIndicatorLabel('ind01');
-      expect(label).toContain('small-scale producers');
+      expect(component.indicatorOptions.length).toBeGreaterThan(0);
     });
   });
 
@@ -157,70 +111,42 @@ describe('ResultReviewDrawerComponent', () => {
       component.showConfirmRejectDialog.set(true);
       component.cancelReject();
       expect(component.showConfirmRejectDialog()).toBe(false);
-      expect(component.rejectJustification()).toBe('');
+      expect(component.rejectJustification).toBe('');
     });
 
     it('should not confirm reject without justification', () => {
       component.showConfirmRejectDialog.set(true);
-      component.rejectJustification.set('');
+      component.rejectJustification = '';
       component.confirmReject();
       expect(component.showConfirmRejectDialog()).toBe(true);
     });
 
-    it('should require update explanation when modifications are made', () => {
-      // First set initial values
-      component.selectedTocResult.set('aow04');
-      component.selectedIndicator.set('ind01');
-      component.tocAlignmentValue.set(true);
-      component.resultDescription.set('Test description');
-      component.geographicScope.set('global');
-      component.selectedRegions.set(['africa']);
-      component.selectedCountries.set([]);
-
-      // Store original values
+    it('should confirm reject with justification', () => {
       component.visible.set(true);
-      fixture.detectChanges();
-
-      // Simulate a modification
-      component.selectedTocResult.set('aow01');
-      fixture.detectChanges();
-
-      expect(component.hasModifications()).toBe(true);
-      expect(component.canApproveOrReject()).toBe(false);
-
-      // Add explanation
-      component.updateExplanation.set('Changed TOC result for better alignment');
-      expect(component.canApproveOrReject()).toBe(true);
+      component.showConfirmRejectDialog.set(true);
+      component.rejectJustification = 'Result does not meet quality standards';
+      component.confirmReject();
+      expect(component.showConfirmRejectDialog()).toBe(false);
+      expect(component.visible()).toBe(false);
     });
 
-    it('should log form data on confirm approve', () => {
-      const consoleSpy = jest.spyOn(console, 'log');
-
+    it('should close drawer on confirm approve', () => {
+      component.visible.set(true);
       component.resultToReview.set(mockResult);
-      component.selectedTocResult.set('aow04');
-      component.selectedIndicator.set('ind01');
-      component.tocAlignmentValue.set(true);
-      component.resultDescription.set('Test description');
-      component.geographicScope.set('global');
-      component.selectedRegions.set(['africa']);
-      component.selectedCountries.set(['kenya']);
+      component.selectedTocResult = 'aow04';
+      component.selectedIndicator = 'ind01';
+      component.tocAlignmentValue = true;
 
       component.confirmApprove();
 
-      expect(consoleSpy).toHaveBeenCalledWith('=== APPROVE RESULT - FORM DATA ===');
-      consoleSpy.mockRestore();
+      expect(component.showConfirmApproveDialog()).toBe(false);
+      expect(component.visible()).toBe(false);
     });
+  });
 
-    it('should log form data on confirm reject', () => {
-      const consoleSpy = jest.spyOn(console, 'log');
-
-      component.resultToReview.set(mockResult);
-      component.rejectJustification.set('Result does not meet quality standards');
-
-      component.confirmReject();
-
-      expect(consoleSpy).toHaveBeenCalledWith('=== REJECT RESULT - FORM DATA ===');
-      consoleSpy.mockRestore();
+  describe('TOC Changes', () => {
+    it('should call saveTocChanges without error', () => {
+      expect(() => component.saveTocChanges()).not.toThrow();
     });
   });
 });
