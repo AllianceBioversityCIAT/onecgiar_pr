@@ -2,9 +2,9 @@
   <ng-template #header>
     <div class="result-review-drawer-header">
       <p class="result-review-drawer-header_entity">
-        <span class="result-review-drawer-header_entity_acronym">{{ resultToReview()?.entity_acronym || 'CIMMYT' }}</span>
+        <span class="result-review-drawer-header_entity_acronym">{{ resultToReview()?.acronym }}</span>
         <span class="result-review-drawer-header_separator">|</span>
-        <span class="result-review-drawer-header_entity_code">{{ resultToReview()?.entity_code || 'V0165-ACIAR-ICCCAD' }}</span>
+        <span class="result-review-drawer-header_entity_code">{{ resultToReview()?.project_name }}</span>
       </p>
 
       <div class="result-review-drawer-header_icons">
@@ -23,18 +23,18 @@
     <!-- Result Header Info -->
     <div class="result-review-drawer-content_header">
       <p class="result-review-drawer-content_title">
-        {{ resultToReview()?.title || 'TEST - Farmers trained on protection against wheat disease apply CGIAR innovation in their work' }}
+        {{ resultToReview()?.result_title }}
       </p>
 
       <div class="result-review-drawer-content_meta">
         <span class="result-review-drawer-content_meta_item">
           <i class="material-icons-round">light_mode</i>
-          {{ resultToReview()?.indicator_category || 'Innovation Use' }}
+          {{ resultToReview()?.indicator_category }}
         </span>
         <span class="result-review-drawer-content_meta_separator">•</span>
         <span class="result-review-drawer-content_meta_item">
-          <i class="material-icons-round">person_outline</i>
-          Submitted by {{ resultToReview()?.submitted_by || 'Nicoleta Trifa' }}
+          <i class="material-icons-round">tag</i>
+          Result code: {{ resultToReview()?.result_code }}
         </span>
       </div>
     </div>
@@ -84,165 +84,12 @@
         <i class="material-icons-round">save</i>
       </button>
     </div>
-
-    <!-- DATA STANDARDS Section -->
-    <div class="form-section">
-      <p class="form-section_title">DATA STANDARDS</p>
-
-      <div class="form-field">
-        <label class="form-field_label">Result description</label>
-        <textarea pInputTextarea [(ngModel)]="resultDescription" [rows]="3" [style]="{ width: '100%' }"></textarea>
-      </div>
-
-      <div class="form-field">
-        <label class="form-field_label">Geographic scope</label>
-        <div class="form-field_radio-group geographic-scope-group">
-          @for (option of geographicScopeOptions; track option.value) {
-            <div class="radioButton">
-              <p-radioButton
-                name="geographicScope"
-                [value]="option.value"
-                [(ngModel)]="geographicScope"
-                [inputId]="'geo_' + option.value"></p-radioButton>
-              <label [for]="'geo_' + option.value" class="form-field_radio-label">{{ option.label }}</label>
-            </div>
-          }
-        </div>
-      </div>
-
-      <div class="form-field">
-        <label class="form-field_label">Regions</label>
-        <p-multiSelect
-          [options]="regionOptions"
-          [(ngModel)]="selectedRegions"
-          optionLabel="label"
-          optionValue="value"
-          placeholder="Select contributing centers"
-          [style]="{ width: '100%' }"
-          [showClear]="false"
-          display="chip"
-          [showHeader]="false" />
-        @if (selectedRegions.length > 0) {
-          <div class="chips-container">
-            <span class="chips-label">Regions selected</span>
-            <div class="chips-list">
-              @for (region of selectedRegions; track region) {
-                <span class="chip">
-                  {{ getRegionLabel(region) }}
-                  <i class="pi pi-times chip-remove" (click)="removeRegion(region)"></i>
-                </span>
-              }
-            </div>
-          </div>
-        }
-      </div>
-
-      <div class="form-field">
-        <label class="form-field_label">Countries</label>
-        <p-multiSelect
-          [options]="countryOptions"
-          [(ngModel)]="selectedCountries"
-          optionLabel="label"
-          optionValue="value"
-          placeholder="Select countries"
-          [style]="{ width: '100%' }"
-          [showClear]="false"
-          display="chip"
-          [showHeader]="false" />
-        @if (selectedCountries.length > 0) {
-          <div class="chips-container">
-            <span class="chips-label">Countries selected</span>
-            <div class="chips-list">
-              @for (country of selectedCountries; track country) {
-                <span class="chip">
-                  {{ getCountryLabel(country) }}
-                  <i class="pi pi-times chip-remove" (click)="removeCountry(country)"></i>
-                </span>
-              }
-            </div>
-          </div>
-        }
-      </div>
-    </div>
-
-    <!-- INDICATOR-SPECIFIC FIELDS Section (Dynamic based on indicator_category) -->
-    @if (currentIndicatorFields.length > 0) {
-      <div class="form-section indicator-specific-section">
-        <p class="form-section_title">{{ resultToReview()?.indicator_category?.toUpperCase() }} - SPECIFIC FIELDS</p>
-
-        @for (field of currentIndicatorFields; track field.name) {
-          @if (isFieldVisible(field)) {
-            <div class="form-field">
-              <label class="form-field_label" [class.required]="field.mandatory">{{ field.label }}</label>
-
-              <!-- Text input -->
-              @if (field.type === 'text') {
-                <input pInputText [(ngModel)]="dynamicFieldValues[field.name]" [style]="{ width: '100%' }" />
-              }
-
-              <!-- Textarea -->
-              @if (field.type === 'textarea') {
-                <textarea pInputTextarea [(ngModel)]="dynamicFieldValues[field.name]" [rows]="3" [style]="{ width: '100%' }"></textarea>
-              }
-
-              <!-- Number input -->
-              @if (field.type === 'number') {
-                <p-inputNumber [(ngModel)]="dynamicFieldValues[field.name]" [style]="{ width: '100%' }" mode="decimal" [useGrouping]="true" />
-              }
-
-              <!-- Select dropdown -->
-              @if (field.type === 'select') {
-                <p-select
-                  [options]="field.options || []"
-                  [(ngModel)]="dynamicFieldValues[field.name]"
-                  optionLabel="label"
-                  optionValue="value"
-                  [placeholder]="'Select ' + field.label"
-                  [style]="{ width: '100%' }" />
-              }
-
-              <!-- Radio buttons -->
-              @if (field.type === 'radio') {
-                <div class="form-field_radio-group">
-                  @for (option of field.options; track option.value) {
-                    <div class="radioButton">
-                      <p-radioButton
-                        [name]="field.name"
-                        [value]="option.value"
-                        [(ngModel)]="dynamicFieldValues[field.name]"
-                        [inputId]="field.name + '_' + option.value"></p-radioButton>
-                      <label [for]="field.name + '_' + option.value" class="form-field_radio-label">{{ option.label }}</label>
-                    </div>
-                  }
-                </div>
-              }
-            </div>
-          }
-        }
-      </div>
-    }
-
-    <!-- Update Explanation (conditional) -->
-    @if (hasModifications()) {
-      <div class="form-section update-explanation-section">
-        <div class="form-field">
-          <label class="form-field_label required">Update Explanation</label>
-          <textarea
-            pInputTextarea
-            [(ngModel)]="updateExplanation"
-            [rows]="3"
-            [style]="{ width: '100%' }"
-            placeholder="Please provide a justification for the changes made..."></textarea>
-          <small class="form-field_hint">This field is required when making changes to the form.</small>
-        </div>
-      </div>
-    }
   </div>
 
   <!-- Footer Actions -->
   <ng-template #footer>
     <div class="result-review-drawer-footer">
-      <button pButton class="approve-button" [disabled]="hasModifications() && !canApproveOrReject()" (click)="onApprove()">
+      <button pButton class="approve-button" (click)="onApprove()">
         <i class="pi pi-check"></i>
         <span>APPROVE</span>
       </button>
@@ -263,9 +110,6 @@
   header="Confirm Approval"
   [draggable]="false">
   <p class="dialog-message">Are you sure you want to approve this result?</p>
-  @if (hasModifications()) {
-    <p class="dialog-note">Note: Your changes and explanation will be saved.</p>
-  }
   <ng-template #footer>
     <div class="dialog-footer">
       <button pButton class="dialog-cancel-button" (click)="cancelApprove()">Cancel</button>

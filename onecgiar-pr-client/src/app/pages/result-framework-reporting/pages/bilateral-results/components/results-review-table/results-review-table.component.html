@@ -1,15 +1,15 @@
 <p-table
   styleClass="p-datatable-gridlines p-datatable-sm bilateral-results-table"
   [value]="tableData()"
-  sortField="group_title"
+  sortField="project_name"
   [sortOrder]="1"
   responsiveLayout="scroll"
-  dataKey="group_title"
+  dataKey="project_name"
   sortMode="single"
   rowGroupMode="subheader"
-  groupRowsBy="group_title"
+  groupRowsBy="project_name"
   [expandedRowKeys]="expandedRowKeys()">
-  
+
   <!-- Header -->
   <ng-template pTemplate="header">
     <tr>
@@ -35,7 +35,7 @@
             class="p-button-text p-button-rounded group-toggle-button"
             [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'">
           </button>
-          <span class="group-title">{{ item.group_title }}</span>
+          <span class="group-title">{{ item.project_name }}</span>
         </div>
       </td>
     </tr>
@@ -43,17 +43,17 @@
 
   <!-- Expanded Rows -->
   <ng-template #expandedrow let-group>
-    @for (result of group.results; track result.code) {
+    @for (result of group.results; track result.id) {
       <tr>
-        <td class="code-cell">{{ result.code }}</td>
-        <td class="title-cell">{{ result.title }}</td>
+        <td class="code-cell">{{ result.result_code }}</td>
+        <td class="title-cell">{{ result.result_title }}</td>
         <td class="category-cell">{{ result.indicator_category }}</td>
         <td class="status-cell">
-          <span class="status-badge pending">{{ result.status }}</span>
+          <span class="status-badge pending">{{ result.status_name }}</span>
         </td>
-        <td class="toc-cell">{{ result.toc_result }}</td>
+        <td class="toc-cell">{{ result.toc_title }}</td>
         <td class="indicator-cell">{{ result.indicator }}</td>
-        <td class="date-cell">{{ result.submission_date }}</td>
+        <td class="date-cell">{{ result.submission_date | date: 'dd/MM/yyyy' }}</td>
         <td class="actions-cell">
           <button
             pButton
