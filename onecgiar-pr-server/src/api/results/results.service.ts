@@ -3083,12 +3083,16 @@ export class ResultsService {
         });
         await manager.save(ResultReviewHistory, reviewHistory);
 
+        const decisionVerb = reviewDecisionDto.decision === ReviewDecisionEnum.APPROVE 
+          ? 'approved' 
+          : 'rejected';
+        
         return {
           response: {
             resultId: parsedResultId,
             status: newStatusId,
           },
-          message: `Result ${reviewDecisionDto.decision.toLowerCase()}d successfully`,
+          message: `Result ${decisionVerb} successfully`,
           status: HttpStatus.OK,
         };
       });
