@@ -40,15 +40,22 @@
     </div>
 
     @let fields = this.resultDetail();
-    <!-- TOC ALIGNMENT Section -->
-    <h3>Does this result align with the Program's TOC?</h3>
-    {{ fields?.tocMetadata[0]?.planned_result ? 'Yes' : 'No' }}
-    <br /><br />
-    <h3>TOC result</h3>
-    {{ fields?.tocMetadata[0]?.acronym + ' - ' + fields?.tocMetadata[0]?.result_title }}
-    <br /><br />
-    <h3>Indicator</h3>
-    {{ fields?.tocMetadata[0]?.indicator_description }}
+    <div class="form-section">
+      <!-- TOC ALIGNMENT Section -->
+      <h3>Does this result align with the Program's TOC?</h3>
+      {{ fields?.tocMetadata[0]?.planned_result ? 'Yes' : 'No' }}
+      <br /><br />
+      <h3>TOC result</h3>
+      {{ fields?.tocMetadata[0]?.acronym + ' - ' + fields?.tocMetadata[0]?.result_title }}
+      <br /><br />
+      <h3>Indicator</h3>
+      {{ fields?.tocMetadata[0]?.indicator_description }}
+    </div>
+
+    <div class="form-section">
+      <h2>Result Description</h2>
+      {{ fields?.commonFields?.result_description }}
+    </div>
   </div>
 
   <!-- Footer Actions -->
