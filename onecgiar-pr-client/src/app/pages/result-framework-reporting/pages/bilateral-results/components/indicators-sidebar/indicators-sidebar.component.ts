@@ -25,6 +25,7 @@ export class IndicatorsSidebarComponent implements OnInit {
   getCenters(): void {
     this.centersService.getData().then((centers: CenterDto[]) => {
       this.centers.set(centers);
+      console.log(centers);
     });
   }
 
