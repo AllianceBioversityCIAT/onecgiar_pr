@@ -2,6 +2,7 @@ import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
 import { CenterDto } from '../../../../../../shared/interfaces/center.dto';
+import { BilateralResultsService } from '../../bilateral-results.service';
 
 @Component({
   selector: 'app-indicators-sidebar',
@@ -11,12 +12,10 @@ import { CenterDto } from '../../../../../../shared/interfaces/center.dto';
 })
 export class IndicatorsSidebarComponent implements OnInit {
   centersService = inject(CentersService);
+  bilateralResultsService = inject(BilateralResultsService);
 
   // null = All Centers, string = center code
   selectedCenterCode = signal<string | null>(null);
-
-  // Lista de centros desde el servicio
-  centers = signal<CenterDto[]>([]);
 
   ngOnInit(): void {
     this.getCenters();
@@ -24,8 +23,7 @@ export class IndicatorsSidebarComponent implements OnInit {
 
   getCenters(): void {
     this.centersService.getData().then((centers: CenterDto[]) => {
-      this.centers.set(centers);
-      console.log(centers);
+      this.bilateralResultsService.centers.set(centers);
     });
   }
 

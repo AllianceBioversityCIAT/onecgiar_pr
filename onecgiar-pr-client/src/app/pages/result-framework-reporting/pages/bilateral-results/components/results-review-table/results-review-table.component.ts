@@ -1,10 +1,11 @@
-import { Component, signal, computed, inject } from '@angular/core';
+import { Component, signal, computed, inject, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 import { ResultReviewDrawerComponent, ResultToReview } from './components/result-review-drawer/result-review-drawer.component';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
+import { BilateralResultsService } from '../../bilateral-results.service';
 
 interface GroupedResult {
   group_title: string;
@@ -19,7 +20,7 @@ interface GroupedResult {
 })
 export class ResultsReviewTableComponent {
   api = inject(ApiService);
-
+  bilateralResultsService = inject(BilateralResultsService);
   showReviewDrawer = signal<boolean>(false);
   currentResultToReview = signal<ResultToReview | null>(null);
 
@@ -271,6 +272,10 @@ export class ResultsReviewTableComponent {
       ]
     }
   ]);
+
+  onChangeCenterSelected = effect(() => {
+    console.log(this.bilateralResultsService.allCenters());
+  });
 
   ngOnInit(): void {
     this.api.resultsSE.GET_ResultToReview('SP01', ['CENTER-01']).subscribe(res => {
