@@ -339,6 +339,23 @@ p {
   }
 }
 
+// Reject Confirmation Modal Styles
+::ng-deep .reject-confirmation-modal {
+  .p-dialog {
+    border-radius: 12px;
+    overflow: hidden;
+    max-width: 600px !important;
+    width: 90vw;
+    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.15);
+  }
+
+  .p-dialog-content {
+    padding: 0;
+    background-color: white;
+    max-width: 500px !important;
+  }
+}
+
 .modal-header {
   display: flex;
   justify-content: space-between;
@@ -368,11 +385,31 @@ p {
       }
     }
 
+    .reject-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background-color: #ef4444;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+
+      i {
+        color: white;
+        font-size: 20px;
+      }
+    }
+
     .modal-title {
       margin: 0;
       font-size: 18px;
       font-weight: 600;
       color: #10b981;
+
+      &.reject {
+        color: #ef4444;
+      }
     }
   }
 
@@ -398,6 +435,28 @@ p {
     line-height: 1.5;
     color: #333333;
     text-align: left;
+  }
+
+  .modal-field {
+    margin-top: 16px;
+
+    textarea {
+      width: 100%;
+      resize: vertical;
+    }
+  }
+
+  .modal-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    color: #333333;
+    margin-bottom: 8px;
+
+    &.required::after {
+      content: ' *';
+      color: #ef4444;
+    }
   }
 }
 
@@ -460,6 +519,14 @@ p {
 
       i {
         font-size: 14px;
+      }
+
+      &.reject {
+        background-color: #ef4444;
+
+        &:hover:not(:disabled) {
+          background-color: #dc2626;
+        }
       }
     }
   }
