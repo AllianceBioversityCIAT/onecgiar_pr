@@ -104,12 +104,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   }
 
   saveTocChanges(): void {
-    console.log('=== SAVE TOC CHANGES ===');
-    console.log({
-      toc_alignment: this.tocAlignmentValue,
-      toc_result_id: this.selectedTocResult,
-      indicator_id: this.selectedIndicator
-    });
+    // TODO: Implement API call to save TOC changes
   }
 
   onApprove(): void {
@@ -129,9 +124,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
       }
     };
 
-    console.log('=== APPROVE RESULT - FORM DATA ===');
-    console.log(JSON.stringify(formData, null, 2));
-    console.log('==================================');
+    // TODO: Implement API call to approve result with formData
 
     this.showConfirmApproveDialog.set(false);
     this.closeDrawer();
@@ -158,9 +151,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
       rejection_justification: this.rejectJustification
     };
 
-    console.log('=== REJECT RESULT - FORM DATA ===');
-    console.log(JSON.stringify(formData, null, 2));
-    console.log('=================================');
+    // TODO: Implement API call to reject result with formData
 
     this.showConfirmRejectDialog.set(false);
     this.closeDrawer();

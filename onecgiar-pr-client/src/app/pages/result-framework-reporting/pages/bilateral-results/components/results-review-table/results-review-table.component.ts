@@ -32,12 +32,13 @@ export class ResultsReviewTableComponent {
     return data
       .map(group => ({
         ...group,
-        results: group.results.filter(result =>
-          result.result_code?.toLowerCase().includes(searchText) ||
-          result.result_title?.toLowerCase().includes(searchText) ||
-          result.indicator_category?.toLowerCase().includes(searchText) ||
-          result.toc_title?.toLowerCase().includes(searchText) ||
-          result.indicator?.toLowerCase().includes(searchText)
+        results: group.results.filter(
+          result =>
+            result.result_code?.toLowerCase().includes(searchText) ||
+            result.result_title?.toLowerCase().includes(searchText) ||
+            result.indicator_category?.toLowerCase().includes(searchText) ||
+            result.toc_title?.toLowerCase().includes(searchText) ||
+            result.indicator?.toLowerCase().includes(searchText)
         )
       }))
       .filter(group => group.results.length > 0);
@@ -45,7 +46,6 @@ export class ResultsReviewTableComponent {
 
   onChangeCenterSelected = effect(() => {
     const centers = this.bilateralResultsService.currentCenterSelected();
-    console.log(centers);
     if (centers.length > 0) {
       this.getResultsToReview(centers);
     }
@@ -53,11 +53,9 @@ export class ResultsReviewTableComponent {
 
   getResultsToReview(centers: string[]): void {
     const entityId = this.bilateralResultsService.entityId();
-    console.log(entityId);
     if (!entityId) return;
 
     this.api.resultsSE.GET_ResultToReview(entityId, centers).subscribe(res => {
-      console.log(res.response);
       this.tableData.set(res.response);
     });
   }
