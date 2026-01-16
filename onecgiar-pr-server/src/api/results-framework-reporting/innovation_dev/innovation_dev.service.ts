@@ -128,10 +128,6 @@ export class InnovationDevService {
         InnDevRes = await this._resultsInnovationsDevRepository.save(newInnDev);
       }
 
-      console.log(
-        'Responsible Innovation and Scaling Options:',
-        createInnovationDevDto?.responsible_innovation_and_scaling.q1.options,
-      );
       // * SAVING INNOVATION AND SCALING
       await this.saveOptionsAndSubOptions(
         resultId,

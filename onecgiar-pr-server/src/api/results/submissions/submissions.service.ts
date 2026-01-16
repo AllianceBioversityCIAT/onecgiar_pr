@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { submissionRepository } from './submissions.repository';
@@ -16,9 +16,16 @@ import {
   NotificationTypeEnum,
 } from '../../notification/enum/notification.enum';
 import { UserNotificationSettingsService } from '../../user-notification-settings/user-notification-settings.service';
+import { IntellectualPropertyExpertRepository } from '../intellectual_property_experts/repositories/intellectual_property_experts.repository';
+import * as handlebars from 'handlebars';
+import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
+import { EmailTemplate } from '../../../shared/microservices/email-notification-management/enum/email-notification.enum';
+import { TemplateRepository } from '../../platform-report/repositories/template.repository';
+import { EmailNotificationManagementService } from '../../../shared/microservices/email-notification-management/email-notification-management.service';
 
 @Injectable()
 export class SubmissionsService {
+  private readonly _logger: Logger = new Logger(SubmissionsService.name);
   constructor(
     private readonly _handlersError: HandlersError,
     private readonly _submissionRepository: submissionRepository,
@@ -29,6 +36,10 @@ export class SubmissionsService {
     private readonly _resultInnovationPackageValidationService: ResultsInnovationPackagesValidationModuleService,
     private readonly _notificationService: NotificationService,
     private readonly _userNotificationSettingsService: UserNotificationSettingsService,
+    private readonly _intellectualPropertyExpertRepository: IntellectualPropertyExpertRepository,
+    private readonly _globalParametersRepository: GlobalParameterRepository,
+    private readonly _templateRepository: TemplateRepository,
+    private readonly _emailNotificationManagementService: EmailNotificationManagementService,
   ) {}
 
   async submitFunction(
@@ -56,18 +67,6 @@ export class SubmissionsService {
           response: {},
           message: 'Results Not Found',
           status: HttpStatus.NOT_FOUND,
-        };
-      }
-
-      const isValid = await this._resultValidationRepository.resultIsValid(
-        result.id,
-      );
-      if (!isValid) {
-        return {
-          response: {},
-          message:
-            'This result cannot be submit, sections are missing to complete',
-          status: HttpStatus.NOT_ACCEPTABLE,
         };
       }
 
@@ -115,8 +114,9 @@ export class SubmissionsService {
           return;
         }
 
-        const scienceProgram =
-          await this._resultRepository.getScienceProgramByResultId(resultId);
+        const scienceProgram = await this._resultRepository.getScienceProgramByResultId(
+          resultId,
+        );
 
         for (const email of emails) {
           const sp = scienceProgram[0];
