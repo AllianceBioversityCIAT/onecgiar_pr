@@ -50,4 +50,5 @@ export interface CurrentResult {
   portfolio?: string;
   portfolio_id?: number;
   acronym?: string;
+  result_id?: number;
 }

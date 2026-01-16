@@ -68,6 +68,10 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   }
 
   tocResultListFiltered = computed(() => {
+    if (this.isIpsr) {
+      return this.tocInitiativeOutcomeListsSE.tocResultList().filter(item => item.toc_level_id !== 1);
+    }
+
     switch (this.reusltlevelSE.currentResultLevelIdSignal()) {
       case 3:
         return this.tocInitiativeOutcomeListsSE.tocResultList().filter(item => item.toc_level_id !== 1);
