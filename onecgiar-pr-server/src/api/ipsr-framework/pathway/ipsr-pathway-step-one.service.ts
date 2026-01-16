@@ -187,29 +187,59 @@ export class IpsrPathwayStepOneService {
         relations: { obj_result: true },
       });
 
+      // Construir valores con marcadores para datos faltantes
+      const initiativeName = resInitLead?.obj_initiative?.short_name || '<Initiative short name not provided>';
+      
+      const institutionsString = institutions && institutions.length > 0
+        ? this.arrayToStringAnd(institutions.map((el) => el['institutions_name']))
+        : ' <Institutions not provided>';
+      
+      const coreResultTitle = coreData?.obj_result?.title || '<Core result title not provided>';
+      
+      const innovationUseStr = this.innovationUseString(
+        innovatonUse.actors.map((el) => el),
+        innovatonUse.organization.map((el) => el),
+        innovatonUse.measures.map((el) => el),
+      );
+      
+      let geoScopeString = '';
+      if (geo_scope_id !== 1 && geo_scope_id !== undefined && geo_scope_id !== null) {
+        if (geo_scope_id === 2) {
+          if (regions && regions.length > 0) {
+            geoScopeString = `in ${this.arrayToStringGeoScopeAnd(
+              geo_scope_id,
+              regions.map((el) => el),
+              countries.map((el) => el),
+            )}`;
+          } else {
+            geoScopeString = 'in <Regions not provided>';
+          }
+        } else if (geo_scope_id === 3 || geo_scope_id === 4) {
+          if (countries && countries.length > 0) {
+            geoScopeString = `in ${this.arrayToStringGeoScopeAnd(
+              geo_scope_id,
+              regions.map((el) => el),
+              countries.map((el) => el),
+            )}`;
+          } else {
+            geoScopeString = 'in <Countries not provided>';
+          }
+        } else {
+          geoScopeString = `in ${this.arrayToStringGeoScopeAnd(
+            geo_scope_id,
+            regions.map((el) => el),
+            countries.map((el) => el),
+          )}`;
+        }
+      }
+      
+      const eoiOutcomesString = eoiOutcomes && eoiOutcomes.length > 0
+        ? this.arrayToStringAnd(eoiOutcomes.map((el) => el['title']))
+        : '<EOI outcomes not provided>';
+
       const scalig_ambition = {
         title: `2030 Scaling Ambition Statement`,
-        body: `By 2030, the ${
-          resInitLead?.obj_initiative?.short_name
-        } will work together with${this.arrayToStringAnd(
-          institutions?.map((el) => el['institutions_name']),
-        )} to accomplish the use of ${
-          coreData?.obj_result?.title
-        } by${this.innovationUseString(
-          innovatonUse.actors.map((el) => el),
-          innovatonUse.organization.map((el) => el),
-          innovatonUse.measures.map((el) => el),
-        )}, ${
-          geo_scope_id == 1
-            ? ''
-            : `in ${this.arrayToStringGeoScopeAnd(
-                geo_scope_id,
-                regions.map((el) => el),
-                countries.map((el) => el),
-              )}`
-        } to contribute achieving ${this.arrayToStringAnd(
-          eoiOutcomes?.map((el) => el['title']),
-        )}.`,
+        body: `By 2030, the ${initiativeName} will work together with${institutionsString} to accomplish the use of ${coreResultTitle} by${innovationUseStr}, ${geoScopeString} to contribute achieving ${eoiOutcomesString}.`,
       };
 
       const scalingText = scalig_ambition['body'];
