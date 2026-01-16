@@ -21,6 +21,28 @@ export class ResultsReviewTableComponent {
 
   tableData = signal<GroupedResult[]>([]);
 
+  filteredTableData = computed(() => {
+    const searchText = this.bilateralResultsService.searchText().toLowerCase().trim();
+    const data = this.tableData();
+
+    if (!searchText) {
+      return data;
+    }
+
+    return data
+      .map(group => ({
+        ...group,
+        results: group.results.filter(result =>
+          result.result_code?.toLowerCase().includes(searchText) ||
+          result.result_title?.toLowerCase().includes(searchText) ||
+          result.indicator_category?.toLowerCase().includes(searchText) ||
+          result.toc_title?.toLowerCase().includes(searchText) ||
+          result.indicator?.toLowerCase().includes(searchText)
+        )
+      }))
+      .filter(group => group.results.length > 0);
+  });
+
   onChangeCenterSelected = effect(() => {
     const centers = this.bilateralResultsService.currentCenterSelected();
     console.log(centers);
@@ -43,7 +65,7 @@ export class ResultsReviewTableComponent {
   // Configuración para expandir todas las filas por defecto
   expandedRowKeys = computed(() => {
     const expanded: { [key: string]: boolean } = {};
-    this.tableData().forEach((item: GroupedResult) => {
+    this.filteredTableData().forEach((item: GroupedResult) => {
       expanded[item.project_name] = true;
     });
     return expanded;

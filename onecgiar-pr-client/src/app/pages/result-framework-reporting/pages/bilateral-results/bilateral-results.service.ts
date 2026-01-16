@@ -11,6 +11,8 @@ export class BilateralResultsService {
 
   currentCenterSelected = signal<string[]>([]);
 
+  searchText = signal<string>('');
+
   selectCenter(centerCode: string | null): void {
     if (centerCode === null) {
       this.currentCenterSelected.set(this.centers().map(center => center.code));
