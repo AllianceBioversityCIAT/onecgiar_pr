@@ -326,6 +326,10 @@
     [options]="this.innovationControlListSE.useLevelsList"
     [(ngModel)]="body.innovation_use_level_id"></app-pr-range-level>
 
+  <div appFeedbackValidation
+    labelText="How would you assess the current use level of the innovation?"
+    [isComplete]="body.innovation_use_level_id !== null && body.innovation_use_level_id !== undefined"></div>
+
   <div class="pr_description" style="margin-top: 1rem">
     <a href="https://drive.google.com/file/d/1RFDAx3m5ziisZPcFgYdyBYH9oTzOYLvC/view" class="open_route" target="_blank" rel="noopener noreferrer">
       Click here
@@ -342,6 +346,9 @@
     [text]="alertDiminishedReadinessLevel()"></p-message>
 
   <app-pr-textarea
+    [disabled]="saving"
+    [maxWords]="50"
+    [(ngModel)]="body.readiness_level_explanation"
     *ngIf="getUseLevelIndex() > 4 && getUseLevelIndex() <= 9"
     placeholder="Provide a brief explanation here..."
     label="Provide a brief explanation of how the provided evidence/documentation (URL provided under Section 4) justifies the chosen innovation use level"
