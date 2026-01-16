@@ -17,12 +17,9 @@ export class BilateralResultsReviewComponent implements OnInit {
 
   ngOnInit(): void {
     const programId = this.activatedRoute.snapshot.params['entityId'];
-    console.log(programId);
     if (programId) {
-      this.api.resultsSE.GET_ResultToReview(programId).subscribe(res => {
-        console.log(res);
-        const count = res.response?.reduce((total: number, group: any) => total + (group.results?.length || 0), 0) || 0;
-        this.pendingCount.set(count);
+      this.api.resultsSE.GET_PendingReviewCount(programId).subscribe(res => {
+        this.pendingCount.set(res.response?.total_pending_review || 0);
       });
     }
   }

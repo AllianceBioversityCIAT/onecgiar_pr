@@ -1365,4 +1365,8 @@ export class ResultsApiService {
     }
     return this.http.get<any>(url);
   }
+
+  GET_PendingReviewCount(programId: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results/pending-review?programId=${programId}`);
+  }
 }
