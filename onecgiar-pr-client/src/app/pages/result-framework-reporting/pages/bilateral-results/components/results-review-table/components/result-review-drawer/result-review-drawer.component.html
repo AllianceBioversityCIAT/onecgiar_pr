@@ -39,9 +39,13 @@
       </div>
     </div>
 
+    @let fields = this.resultDetail();
     <!-- TOC ALIGNMENT Section -->
-    Does this result align with the Program's TOC?
-    {{ this.resultDetail()?.tocMetadata[0]?.planned_result ? 'Yes' : 'No' }}
+    <h3>Does this result align with the Program's TOC?</h3>
+    {{ fields?.tocMetadata[0]?.planned_result ? 'Yes' : 'No' }}
+    <br /><br />
+    <h3>TOC result</h3>
+    {{ fields?.tocMetadata[0]?.acronym + ' - ' + fields?.tocMetadata[0]?.result_title }}
   </div>
 
   <!-- Footer Actions -->
@@ -122,4 +126,3 @@
     </button>
   </div>
 </p-dialog>
-
