@@ -19,5 +19,6 @@ import { ElasticModule } from '../../../elastic/elastic.module';
   ],
   controllers: [GeographicLocationController],
   providers: [GeographicLocationService, HandlersError, ReturnResponse],
+  exports: [GeographicLocationService],
 })
 export class GeographicLocationModule {}

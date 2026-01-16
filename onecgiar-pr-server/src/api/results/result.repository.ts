@@ -2441,12 +2441,6 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         AND rbp.is_active = 1
       LEFT JOIN clarisa_projects cp
         ON rbp.project_id = cp.id
-      JOIN results_toc_result rtr
-        ON r.id = rtr.results_id
-        AND rtr.is_active = 1
-      JOIN Integration_information.toc_results tr 
-        ON rtr.toc_result_id = tr.id
-        AND tr.is_active = 1
       JOIN results_center rc
         ON r.id = rc.result_id
         AND rc.is_active = 1
@@ -2677,6 +2671,37 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       JOIN Integration_information.toc_results_indicators tri
         ON tri.toc_results_id = tr.id
         AND tri.is_active = 1
+      WHERE
+        r.id = ?
+        AND r.is_active = 1;
+    `;
+
+    try {
+      const results = await this.query(query, [resultId]);
+      return results;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  async getContributingInitiativesBilateralResult(
+    resultId: number,
+  ): Promise<any[]> {
+    const query = `
+      SELECT
+        ir.name AS initiative_role,
+        ci.official_code
+      FROM result r
+      JOIN results_by_inititiative rbi
+        ON r.id = rbi.result_id
+      JOIN clarisa_initiatives ci
+        ON rbi.inititiative_id = ci.id
+      LEFT JOIN initiative_roles ir
+        ON rbi.initiative_role_id = ir.id
       WHERE
         r.id = ?
         AND r.is_active = 1;
