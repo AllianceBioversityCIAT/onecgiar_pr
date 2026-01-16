@@ -1,10 +1,14 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { ResultReviewDrawerComponent, ResultToReview } from './result-review-drawer.component';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { ApiService } from '../../../../../../../../shared/services/api/api.service';
+import { of } from 'rxjs';
 
 describe('ResultReviewDrawerComponent', () => {
   let component: ResultReviewDrawerComponent;
   let fixture: ComponentFixture<ResultReviewDrawerComponent>;
+  let mockApiService: any;
 
   const mockResult: ResultToReview = {
     id: '1',
@@ -21,8 +25,16 @@ describe('ResultReviewDrawerComponent', () => {
   };
 
   beforeEach(async () => {
+    mockApiService = {
+      resultsSE: {
+        PATCH_BilateralReviewDecision: jest.fn().mockReturnValue(of({ response: {} })),
+        GET_BilateralResultDetail: jest.fn().mockReturnValue(of({ response: {} }))
+      }
+    };
+
     await TestBed.configureTestingModule({
-      imports: [ResultReviewDrawerComponent, NoopAnimationsModule]
+      imports: [ResultReviewDrawerComponent, NoopAnimationsModule, HttpClientTestingModule],
+      providers: [{ provide: ApiService, useValue: mockApiService }]
     }).compileComponents();
 
     fixture = TestBed.createComponent(ResultReviewDrawerComponent);
@@ -123,6 +135,7 @@ describe('ResultReviewDrawerComponent', () => {
 
     it('should confirm reject with justification', () => {
       component.visible.set(true);
+      component.resultToReview.set(mockResult);
       component.showConfirmRejectDialog.set(true);
       component.rejectJustification = 'Result does not meet quality standards';
       component.confirmReject();

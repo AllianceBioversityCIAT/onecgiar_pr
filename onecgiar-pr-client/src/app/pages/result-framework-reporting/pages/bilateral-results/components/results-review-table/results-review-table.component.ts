@@ -57,7 +57,6 @@ export class ResultsReviewTableComponent {
 
     this.api.resultsSE.GET_ResultToReview(entityId, centers).subscribe(res => {
       this.tableData.set(res.response);
-      console.log(this.tableData());
     });
   }
 
