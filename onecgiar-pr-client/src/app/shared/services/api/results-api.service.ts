@@ -1357,4 +1357,9 @@ export class ResultsApiService {
   GET_ClarisaPortfolios() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/portfolios`);
   }
+
+  GET_ResultToReview(resultId: string, centerIds: string[]) {
+    const centerIdsString = centerIds.join(',');
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results/by-program-and-centers?programId=${resultId}&centerIds=${centerIdsString}`);
+  }
 }

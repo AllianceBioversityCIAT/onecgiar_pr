@@ -1,9 +1,10 @@
-import { Component, signal, computed } from '@angular/core';
+import { Component, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 import { ResultReviewDrawerComponent, ResultToReview } from './components/result-review-drawer/result-review-drawer.component';
+import { ApiService } from '../../../../../../shared/services/api/api.service';
 
 interface GroupedResult {
   group_title: string;
@@ -17,6 +18,8 @@ interface GroupedResult {
   styleUrl: './results-review-table.component.scss'
 })
 export class ResultsReviewTableComponent {
+  api = inject(ApiService);
+
   showReviewDrawer = signal<boolean>(false);
   currentResultToReview = signal<ResultToReview | null>(null);
 
@@ -218,8 +221,7 @@ export class ResultsReviewTableComponent {
           entity_code: 'V0412-IRRI-RICE',
           // MDS fields
           toc_alignment: true,
-          result_description:
-            'Development and field testing of alternate wetting and drying (AWD) technology for water-efficient rice production.',
+          result_description: 'Development and field testing of alternate wetting and drying (AWD) technology for water-efficient rice production.',
           geographic_scope: 'country',
           regions: ['southeast_asia'],
           countries: ['indonesia', 'vietnam']
@@ -269,6 +271,12 @@ export class ResultsReviewTableComponent {
       ]
     }
   ]);
+
+  ngOnInit(): void {
+    this.api.resultsSE.GET_ResultToReview('SP01', ['CENTER-01']).subscribe(res => {
+      console.log(res);
+    });
+  }
 
   // Configuración para expandir todas las filas por defecto
   expandedRowKeys = computed(() => {
