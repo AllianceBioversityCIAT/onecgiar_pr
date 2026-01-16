@@ -282,7 +282,11 @@ export class ResultsReviewTableComponent {
   });
 
   getResultsToReview(centers: string[]): void {
-    this.api.resultsSE.GET_ResultToReview('SP01', centers).subscribe(res => {
+    const entityId = this.bilateralResultsService.entityId();
+    console.log(entityId);
+    if (!entityId) return;
+
+    this.api.resultsSE.GET_ResultToReview(entityId, centers).subscribe(res => {
       console.log(res.response[0]);
       console.log(res.response);
     });

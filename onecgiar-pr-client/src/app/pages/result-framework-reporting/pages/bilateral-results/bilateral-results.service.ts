@@ -5,6 +5,8 @@ import { CenterDto } from '../../../../shared/interfaces/center.dto';
   providedIn: 'root'
 })
 export class BilateralResultsService {
+  entityId = signal<string>('');
+
   centers = signal<CenterDto[]>([]);
 
   currentCenterSelected = signal<string[]>([]);
