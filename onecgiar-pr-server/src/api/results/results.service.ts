@@ -2436,6 +2436,7 @@ export class ResultsService {
           'result_country_array.country_object',
           'obj_result_by_initiatives.obj_initiative',
           'evidence_array',
+          'evidence_array.evidenceSharepointArray',
           'obj_results_toc_result.obj_results_toc_result_indicators.obj_result_indicator_targets',
           'obj_version',
           'result_center_array.clarisa_center_object.clarisa_institution',
@@ -2479,6 +2480,11 @@ export class ResultsService {
         .map((e) => ({
           link: e.link,
           description: e.description,
+          is_sharepoint: e.is_sharepoint,
+          is_public_file:
+            e.evidenceSharepointArray?.find(
+              (sp) => sp?.is_public_file !== undefined,
+            )?.is_public_file ?? null,
         }))
         .filter((e) => e.link || e.description);
 

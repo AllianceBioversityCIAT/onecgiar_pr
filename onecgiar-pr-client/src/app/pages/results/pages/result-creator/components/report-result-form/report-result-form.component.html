@@ -44,7 +44,7 @@
             *ngIf="isKnowledgeProduct"
             [isStatic]="true"
             placeholder="Handle..."
-            label="CGSpace link"
+            label="Repository link/handle"
             type="text"
             [(ngModel)]="this.resultLevelSE.resultBody.handler">
           </app-pr-input>
@@ -72,13 +72,19 @@
           [isStatic]="true"
           *ngIf="this.resultLevelSE.resultBody.result_type_id"
           [placeholder]="resultTypeNamePlaceholder + ''"
-          label="Title of Result"
+          [label]="isKnowledgeProduct ? 'Title retrieved from the repository' : 'Title of result'"
           type="text"
           [maxWords]="30"
           [required]="resultLevelSE.resultBody.result_type_id != 6"
           [description]="
             isKnowledgeProduct
-              ? 'Title retrieved from CGSpace'
+              ? this.resultLevelSE.resultBody.handler?.includes('20.500.11766')
+                ? 'Title retrieved from MELSpace'
+                : this.resultLevelSE.resultBody.handler?.includes('20.500.12348')
+                  ? 'Title retrieved from WorldFish DSpace'
+                  : this.resultLevelSE.resultBody.handler
+                    ? 'Title retrieved from CGSpace'
+                    : 'Title retrieved from the repository'
               : 'To search for results that have already been reported, enter key words into the title box below. If your result has not already been reported, you can add it here.'
           "
           [(ngModel)]="this.resultLevelSE.resultBody.result_name"

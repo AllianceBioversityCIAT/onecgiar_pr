@@ -19,6 +19,7 @@ type MockRepository = {
   update: jest.Mock;
   createQueryBuilder: jest.Mock;
   upsert: jest.Mock;
+  query: jest.Mock;
 };
 
 const createMockRepository = (): MockRepository => ({
@@ -29,6 +30,7 @@ const createMockRepository = (): MockRepository => ({
   update: jest.fn(),
   createQueryBuilder: jest.fn(),
   upsert: jest.fn(),
+  query: jest.fn(),
 });
 
 const createQueryBuilderMock = () => {
@@ -269,15 +271,16 @@ describe('AiService', () => {
       });
       const innovationFetchQB = createQueryBuilderMock();
       innovationFetchQB.getOne.mockResolvedValue(null);
-      innovationsDevRepository.createQueryBuilder.mockReturnValueOnce(
-        innovationFetchQB,
-      );
+      const innovationFetchAfterInsertQB = createQueryBuilderMock();
       const savedInnovation = {
         results_id: 88,
         created_by: user.id,
         short_title: null,
       };
-      innovationsDevRepository.save.mockResolvedValue(savedInnovation);
+      innovationFetchAfterInsertQB.getOne.mockResolvedValue(savedInnovation);
+      innovationsDevRepository.createQueryBuilder
+        .mockReturnValueOnce(innovationFetchQB)
+        .mockReturnValueOnce(innovationFetchAfterInsertQB);
 
       const createdEvent = {
         session_id: 101,
@@ -300,11 +303,9 @@ describe('AiService', () => {
         user,
       );
 
-      expect(innovationsDevRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          results_id: 88,
-          created_by: user.id,
-        }),
+      expect(innovationsDevRepository.query).toHaveBeenCalledWith(
+        expect.stringContaining('INSERT INTO results_innovations_dev'),
+        [88, user.id, user.id],
       );
       expect(eventRepository.save).toHaveBeenCalledWith(createdEvent);
       expect(response).toEqual(
@@ -333,7 +334,6 @@ describe('AiService', () => {
         id: 89,
         result_type_id: ResultTypeEnum.INNOVATION_DEVELOPMENT,
       });
-
       const initialFetchQB = createQueryBuilderMock();
       initialFetchQB.getOne.mockResolvedValue(null);
       const refetchedQB = createQueryBuilderMock();
@@ -346,7 +346,7 @@ describe('AiService', () => {
         .mockReturnValueOnce(refetchedQB);
 
       const duplicateError = { code: 'ER_DUP_ENTRY' };
-      innovationsDevRepository.save.mockRejectedValueOnce(duplicateError);
+      innovationsDevRepository.query.mockRejectedValueOnce(duplicateError);
 
       const createdEvent = {
         session_id: 102,
@@ -369,7 +369,7 @@ describe('AiService', () => {
         user,
       );
 
-      expect(innovationsDevRepository.save).toHaveBeenCalled();
+      expect(innovationsDevRepository.query).toHaveBeenCalled();
       expect(response).toEqual(
         ReturnResponseUtil.format({
           response: {

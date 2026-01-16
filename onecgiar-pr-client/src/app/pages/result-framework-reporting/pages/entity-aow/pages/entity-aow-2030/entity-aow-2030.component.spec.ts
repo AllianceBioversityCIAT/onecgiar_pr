@@ -12,13 +12,20 @@ describe('EntityAow2030Component', () => {
   beforeEach(async () => {
     mockEntityAowService = {
       entityId: signal<string>('test-entity-id'),
+      entityDetails: signal<any>({}),
+      currentAowSelected: jest.fn(() => ({})),
       get2030Outcomes: jest.fn(),
       tocResults2030Outcomes: signal<any[]>([]),
       isLoadingTocResults2030Outcomes: signal<boolean>(false),
       isLoadingTocResultsByAowId: signal<boolean>(false),
       showReportResultModal: signal<boolean>(false),
       showViewResultDrawer: signal<boolean>(false),
-      currentResultToView: signal<any>({})
+      viewResultDrawerFullScreen: signal<boolean>(false),
+      currentResultToView: signal<any>({}),
+      showTargetDetailsDrawer: signal<boolean>(false),
+      targetDetailsDrawerFullScreen: signal<boolean>(false),
+      currentTargetToView: signal<any>({}),
+      existingResultsContributors: signal<any[]>([])
     } as any;
 
     await TestBed.configureTestingModule({

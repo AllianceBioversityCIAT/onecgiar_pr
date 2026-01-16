@@ -11,7 +11,7 @@ import { EntityAowService } from '../entity-aow/services/entity-aow.service';
 import { SkeletonModule } from 'primeng/skeleton';
 import { ChartModule } from 'primeng/chart';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
-import { Chart } from 'chart.js';
+import { Chart, ChartData, ChartDataset, ChartOptions } from 'chart.js';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { SplitButtonModule } from 'primeng/splitbutton';
@@ -65,6 +65,8 @@ export class EntityDetailsComponent implements OnInit {
     }
   ];
 
+  private readonly axisPaddingValue = 10;
+
   summaryInsightsData = computed(() => {
     return [
       {
@@ -76,11 +78,6 @@ export class EntityDetailsComponent implements OnInit {
         label: this.entityAowService.dashboardData()?.submitted?.label,
         value: this.entityAowService.dashboardData()?.submitted?.total,
         icon: '../../../../../assets/result-framework-reporting/submitted_results.png'
-      },
-      {
-        label: this.entityAowService.dashboardData()?.qualityAssessed?.label,
-        value: this.entityAowService.dashboardData()?.qualityAssessed?.total,
-        icon: '../../../../../assets/result-framework-reporting/quality_assessed_results.png'
       }
     ];
   });
@@ -90,7 +87,7 @@ export class EntityDetailsComponent implements OnInit {
       labels: ['Knowledge product', 'Innovation development', 'Capacity sharing for development', 'Other output'],
       datasets: [
         {
-          type: 'bar',
+          type: 'bar' as const,
           label: 'Editing',
           backgroundColor: 'rgba(153, 153, 153, 0.6)',
           hoverBackgroundColor: 'rgba(153, 153, 153, 0.6)',
@@ -102,7 +99,7 @@ export class EntityDetailsComponent implements OnInit {
           ]
         },
         {
-          type: 'bar',
+          type: 'bar' as const,
           label: 'Submitted',
           backgroundColor: '#93C5FD',
           hoverBackgroundColor: '#93C5FD',
@@ -114,7 +111,7 @@ export class EntityDetailsComponent implements OnInit {
           ]
         },
         {
-          type: 'bar',
+          type: 'bar' as const,
           label: 'Quality assessed',
           backgroundColor: '#38DF7B',
           hoverBackgroundColor: '#38DF7B',
@@ -134,7 +131,7 @@ export class EntityDetailsComponent implements OnInit {
       labels: ['Policy change', 'Innovation use', 'Other outcome'],
       datasets: [
         {
-          type: 'bar',
+          type: 'bar' as const,
           label: 'Editing',
           backgroundColor: 'rgba(153, 153, 153, 0.6)',
           hoverBackgroundColor: 'rgba(153, 153, 153, 0.6)',
@@ -145,7 +142,7 @@ export class EntityDetailsComponent implements OnInit {
           ]
         },
         {
-          type: 'bar',
+          type: 'bar' as const,
           label: 'Submitted',
           backgroundColor: '#93C5FD',
           hoverBackgroundColor: '#93C5FD',
@@ -156,7 +153,7 @@ export class EntityDetailsComponent implements OnInit {
           ]
         },
         {
-          type: 'bar',
+          type: 'bar' as const,
           label: 'Quality assessed',
           backgroundColor: '#38DF7B',
           hoverBackgroundColor: '#38DF7B',
@@ -170,6 +167,9 @@ export class EntityDetailsComponent implements OnInit {
     };
   });
 
+  chartOptionsOutputs = computed<ChartOptions<'bar'>>(() => this.buildChartOptions(this.dataOutputs()));
+  chartOptionsOutcomes = computed<ChartOptions<'bar'>>(() => this.buildChartOptions(this.dataOutcomes()));
+
   ngOnInit() {
     this.route.params.subscribe(params => {
       this.entityAowService.resetDashboardData();
@@ -180,70 +180,85 @@ export class EntityDetailsComponent implements OnInit {
     this.initChart();
   }
 
-  options: any;
-
   platformId = inject(PLATFORM_ID);
 
   initChart() {
     if (isPlatformBrowser(this.platformId)) {
       Chart.register(ChartDataLabels);
+      this.cd.markForCheck();
+    }
+  }
 
-      this.options = {
-        responsive: true,
-        maintainAspectRatio: false,
-        aspectRatio: 0.8,
-        indexAxis: 'y',
-        plugins: {
-          tooltip: {
-            mode: 'index',
-            intersect: true
-          },
-          datalabels: {
-            color: '#fff',
-            font: {
-              weight: '400',
-              size: 9
-            },
-            formatter: (value: number) => {
-              return value > 1 ? value : '';
-            },
-            anchor: 'center',
-            align: 'center'
-          },
-          legend: {
-            labels: {
-              boxWidth: 10,
-              font: {
-                size: 8
-              }
-            }
-          }
+  private calculateDatasetMax(data: ChartData<'bar'>): number {
+    return data.datasets.reduce((maxValue: number, dataset: ChartDataset<'bar'>) => {
+      const values = (dataset.data as Array<number | null | undefined>) ?? [];
+      const datasetMax = values.reduce((currentMax, value) => {
+        const numericValue = typeof value === 'number' ? value : 0;
+        return Math.max(currentMax, numericValue);
+      }, 0);
+      return Math.max(datasetMax, maxValue);
+    }, 0);
+  }
+
+  private buildChartOptions(data: ChartData<'bar'>): ChartOptions<'bar'> {
+    const dataMax = this.calculateDatasetMax(data);
+    const axisMax = dataMax > 0 ? dataMax + this.axisPaddingValue : this.axisPaddingValue;
+
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      aspectRatio: 0.8,
+      indexAxis: 'y',
+      plugins: {
+        tooltip: {
+          mode: 'index',
+          intersect: true
         },
-        scales: {
-          x: {
-            stacked: true,
-            ticks: {
-              font: {
-                size: 8
-              },
-              padding: 0,
-              minRotation: 45,
-              stepSize: 1,
-              precision: 0
-            }
+        datalabels: {
+          color: '#fff',
+          font: {
+            weight: 400,
+            size: 9
           },
-          y: {
-            stacked: true,
-            ticks: {
-              font: {
-                size: 8
-              },
-              padding: 0
+          formatter: (value: number) => {
+            return value > 1 ? value : '';
+          },
+          anchor: 'center',
+          align: 'center'
+        },
+        legend: {
+          labels: {
+            boxWidth: 10,
+            font: {
+              size: 8
             }
           }
         }
-      };
-      this.cd.markForCheck();
-    }
+      },
+      scales: {
+        x: {
+          stacked: true,
+          max: axisMax,
+          ticks: {
+            font: {
+              size: 8
+            },
+            padding: 0,
+            minRotation: 45,
+            stepSize: 1,
+            precision: 0
+          }
+        },
+        y: {
+          stacked: true,
+          ticks: {
+            font: {
+              size: 8
+            },
+            padding: 0
+          }
+        }
+      }
+    };
   }
 }

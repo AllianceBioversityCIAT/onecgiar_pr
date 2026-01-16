@@ -20,6 +20,7 @@ import { ResultBudgetModule } from '../../results/result_budget/result_budget.mo
 import { ResultsByInstitutionsModule } from '../../results/results_by_institutions/results_by_institutions.module';
 import { ResultRepository } from '../../results/result.repository';
 import { ResultsByProjectsRepository } from '../../results/results_by_projects/results_by_projects.repository';
+import { ClarisaInnovationUseLevelRepository } from '../../../clarisa/clarisa-innovation-use-levels/clarisa-innovation-use-levels.repository';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { ResultsByProjectsRepository } from '../../results/results_by_projects/r
     NonPooledProjectBudgetRepository,
     ResultRepository,
     ResultsByProjectsRepository,
+    ClarisaInnovationUseLevelRepository,
   ],
 })
 export class InnovationUseModule {}

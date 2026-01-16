@@ -6,6 +6,7 @@ import {
   ManyToOne,
   OneToOne,
   PrimaryGeneratedColumn,
+  RelationId,
   UpdateDateColumn,
 } from 'typeorm';
 import { Result } from '../../entities/result.entity';
@@ -21,10 +22,15 @@ export class ResultsInnovationsDev {
   })
   result_innovation_dev_id: number;
 
-  @OneToOne(() => Result, (r) => r.id, { nullable: false })
+  @OneToOne(() => Result, (r) => r.results_innovations_dev_object, {
+    nullable: false,
+  })
   @JoinColumn({
     name: 'results_id',
   })
+  result_object: Result;
+
+  @RelationId((rid: ResultsInnovationsDev) => rid.result_object)
   results_id: number;
 
   @Column({

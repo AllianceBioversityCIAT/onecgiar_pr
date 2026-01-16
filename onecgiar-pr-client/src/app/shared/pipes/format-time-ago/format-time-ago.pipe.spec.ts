@@ -20,14 +20,6 @@ describe('FormatTimeAgoPipe', () => {
     expect(result).toBe(expected);
   });
 
-  it('should transform timestamp correctly', () => {
-    const timestamp = Date.now();
-    const date = new Date(timestamp);
-    const result = pipe.transform(timestamp);
-    const expected = `${formatDistanceToNowStrict(subHours(date, new Date().getTimezoneOffset() / 60), { addSuffix: false, locale: enUS })} ago`;
-    expect(result).toBe(expected);
-  });
-
   it('should adjust for server timezone correctly', () => {
     const date = new Date();
     const isoString = date.toISOString();

@@ -12,6 +12,7 @@ export class PrButtonComponent implements OnInit {
   @Input() reverse: boolean = false;
   @Input() rotating: boolean = false;
   @Input() rotateRight: boolean = false;
+  @Input() variant: 'outlined' | 'filled' = 'outlined';
   @Input() underConstruction: boolean = false;
   @Input() showBackground: boolean = true;
   @Input() iconsStylesClass: 'material-icons-round' | 'material-icons-outlined' | 'pi' = 'material-icons-round';

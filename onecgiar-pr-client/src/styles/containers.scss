@@ -1,8 +1,7 @@
 .section_container {
   background-color: var(--pr-color-white);
   @extend %global-shadow-1;
-  border-radius: 15px;
-
+  border-radius: 8px;
   margin-left: auto;
   margin-right: auto;
 }
@@ -40,7 +39,7 @@
 }
 
 %global-shadow-1 {
-  box-shadow: 0px 2px 5px 2px rgba(var(--pr-color-black-rgb), 0.08);
+  box-shadow: 0px 2px 5px 2px rgba(var(--pr-color-black-rgb), 0.02);
 }
 
 .center_flex_100 {
