@@ -63,6 +63,11 @@
         <p>{{ center.name }}</p>
         <br />
       }
+      <h2>Contributing Science Programs</h2>
+      @for (program of fields?.contributingInitiatives; track $index) {
+        <p>{{ program.initiative_role }} - {{ program.official_code }}</p>
+        <br />
+      }
     </div>
   </div>
 
