@@ -56,6 +56,14 @@
       <h2>Result Description</h2>
       {{ fields?.commonFields?.result_description }}
     </div>
+
+    <div class="form-section">
+      <h2>Contributing Centers</h2>
+      @for (center of fields?.contributingCenters; track $index) {
+        <p>{{ center.name }}</p>
+        <br />
+      }
+    </div>
   </div>
 
   <!-- Footer Actions -->
