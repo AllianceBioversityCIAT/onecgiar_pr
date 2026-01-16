@@ -19,9 +19,18 @@ export class ResultsInnovationsUse {
   })
   result_innovation_use_id: number;
 
-  @OneToOne(() => Result, (r) => r.id, { nullable: false })
+  @OneToOne(() => Result, (r) => r.results_innovations_use_object, {
+    nullable: false,
+  })
   @JoinColumn({
     name: 'results_id',
+  })
+  obj_result: Result;
+
+  @Column({
+    name: 'results_id',
+    type: 'bigint',
+    nullable: false,
   })
   results_id: number;
 

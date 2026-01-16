@@ -49,6 +49,7 @@ import { AuthMicroserviceModule } from './shared/microservices/auth-microservice
 import { AdUsersModule } from './api/ad_users/ad_users.module';
 import { InitiativeEntityMapModule } from './api/initiative_entity_map/initiative_entity_map.module';
 import { apiVersionMiddleware } from './shared/middleware/api-versioning.middleware';
+import { BilateralModule } from './api/bilateral/bilateral.module';
 import { ResultsFrameworkReportingModule } from './api/results-framework-reporting/results-framework-reporting.module';
 import { AiModule } from './api/ai/ai.module';
 import { IpsrFrameworkModule } from './api/ipsr-framework/ipsr-framework.module';
@@ -100,6 +101,7 @@ import { IpsrFrameworkModule } from './api/ipsr-framework/ipsr-framework.module'
     AuthMicroserviceModule,
     AdUsersModule,
     InitiativeEntityMapModule,
+    BilateralModule,
     ResultsFrameworkReportingModule,
     AiModule,
     IpsrFrameworkModule,
@@ -125,7 +127,10 @@ export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
       .apply(JwtMiddleware, apiVersionMiddleware)
-      .exclude({ path: 'api/platform-report/(.*)', method: RequestMethod.ALL })
+      .exclude(
+        { path: 'api/platform-report/(.*)', method: RequestMethod.ALL },
+        { path: 'api/bilateral/(.*)', method: RequestMethod.ALL },
+      )
       .forRoutes(
         { path: 'api/(.*)', method: RequestMethod.ALL },
         { path: 'v2/(.*)', method: RequestMethod.ALL },

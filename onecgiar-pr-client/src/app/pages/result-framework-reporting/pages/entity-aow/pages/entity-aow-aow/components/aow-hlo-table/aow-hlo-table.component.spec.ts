@@ -3,6 +3,7 @@ import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 import { AowHloTableComponent } from './aow-hlo-table.component';
 import { EntityAowService } from '../../../../services/entity-aow.service';
+import { ResultLevelService } from '../../../../../../../results/pages/result-creator/services/result-level.service';
 import { signal } from '@angular/core';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 
@@ -10,7 +11,138 @@ describe('AowHloTableComponent', () => {
   let component: AowHloTableComponent;
   let fixture: ComponentFixture<AowHloTableComponent>;
   let mockEntityAowService: jest.Mocked<EntityAowService>;
+  let mockResultLevelService: jest.Mocked<ResultLevelService>;
   let mockActivatedRoute: any;
+
+  // Helper functions for creating mock data
+  const createMockItem = (overrides?: any) => ({
+    id: 'result-1',
+    title: 'Test Result',
+    description: 'Test Description',
+    status: 'active',
+    indicators: [
+      { indicator_id: 'indicator-1', name: 'Indicator 1', type_name: 'Number of knowledge products' },
+      { indicator_id: 'indicator-2', name: 'Indicator 2', type_name: 'Outcome indicator' },
+      { indicator_id: 'indicator-3', name: 'Indicator 3', type_name: 'Impact indicator' }
+    ],
+    ...overrides
+  });
+
+  // Helper function to test modal/drawer opening behavior
+  const testModalDrawerOpening = (
+    methodName: 'openReportResultModal' | 'openViewResultDrawer' | 'openTargetDetailsDrawer',
+    showSignalName: string,
+    currentItemSignalName: string
+  ) => {
+    describe(methodName, () => {
+      it('should filter indicators by currentItemId and update service signals', () => {
+        const mockItem = createMockItem();
+        const currentItemId = 'indicator-2';
+
+        component[methodName](mockItem, currentItemId);
+
+        expect(mockEntityAowService[showSignalName].set).toHaveBeenCalledWith(true);
+        expect(mockEntityAowService[currentItemSignalName].set).toHaveBeenCalledWith({
+          id: 'result-1',
+          title: 'Test Result',
+          description: 'Test Description',
+          status: 'active',
+          indicators: [{ indicator_id: 'indicator-2', name: 'Indicator 2', type_name: 'Outcome indicator' }]
+        });
+      });
+
+      it('should handle item with no matching indicators', () => {
+        const mockItem = createMockItem();
+        const currentItemId = 'non-existent-indicator';
+
+        component[methodName](mockItem, currentItemId);
+
+        expect(mockEntityAowService[showSignalName].set).toHaveBeenCalledWith(true);
+        expect(mockEntityAowService[currentItemSignalName].set).toHaveBeenCalledWith({
+          id: 'result-1',
+          title: 'Test Result',
+          description: 'Test Description',
+          status: 'active',
+          indicators: []
+        });
+      });
+
+      it('should handle item with empty indicators array', () => {
+        const mockItem = createMockItem({ indicators: [] });
+        const currentItemId = 'any-indicator';
+
+        component[methodName](mockItem, currentItemId);
+
+        expect(mockEntityAowService[showSignalName].set).toHaveBeenCalledWith(true);
+        expect(mockEntityAowService[currentItemSignalName].set).toHaveBeenCalledWith({
+          id: 'result-1',
+          title: 'Test Result',
+          description: 'Test Description',
+          status: 'active',
+          indicators: []
+        });
+      });
+
+      it('should handle item with undefined indicators', () => {
+        const mockItem = createMockItem({ indicators: undefined });
+        delete mockItem.indicators;
+        const currentItemId = 'any-indicator';
+
+        expect(() => {
+          component[methodName](mockItem, currentItemId);
+        }).toThrow();
+      });
+
+      it('should preserve all item properties except indicators', () => {
+        const mockItem = createMockItem();
+        const currentItemId = 'indicator-1';
+
+        component[methodName](mockItem, currentItemId);
+
+        expect(mockEntityAowService[currentItemSignalName].set).toHaveBeenCalledWith({
+          id: 'result-1',
+          title: 'Test Result',
+          description: 'Test Description',
+          status: 'active',
+          indicators: [{ indicator_id: 'indicator-1', name: 'Indicator 1', type_name: 'Number of knowledge products' }]
+        });
+      });
+
+      it('should handle multiple indicators with same indicator_id', () => {
+        const mockItem = createMockItem({
+          indicators: [
+            { indicator_id: 'indicator-1', name: 'Indicator 1', type_name: 'Number of knowledge products' },
+            { indicator_id: 'indicator-1', name: 'Indicator 1 Duplicate', type_name: 'Outcome indicator' },
+            { indicator_id: 'indicator-2', name: 'Indicator 2', type_name: 'Impact indicator' }
+          ]
+        });
+        const currentItemId = 'indicator-1';
+
+        component[methodName](mockItem, currentItemId);
+
+        expect(mockEntityAowService[currentItemSignalName].set).toHaveBeenCalledWith({
+          id: 'result-1',
+          title: 'Test Result',
+          description: 'Test Description',
+          status: 'active',
+          indicators: [
+            { indicator_id: 'indicator-1', name: 'Indicator 1', type_name: 'Number of knowledge products' },
+            { indicator_id: 'indicator-1', name: 'Indicator 1 Duplicate', type_name: 'Outcome indicator' }
+          ]
+        });
+      });
+
+      it(`should always set ${showSignalName} to true regardless of item content`, () => {
+        const mockItem = createMockItem({ indicators: [] });
+        const currentItemId = 'any-indicator';
+
+        component[methodName](mockItem, currentItemId);
+
+        expect(mockEntityAowService[showSignalName].set).toHaveBeenCalledWith(true);
+        expect(mockEntityAowService[showSignalName].set).toHaveBeenCalledTimes(1);
+      });
+    });
+  };
 
   beforeEach(async () => {
     const mockShowReportResultModal = signal<boolean>(false);
@@ -55,6 +187,19 @@ describe('AowHloTableComponent', () => {
     jest.spyOn(mockCurrentTargetToView, 'set');
     jest.spyOn(mockExistingResultsContributors, 'set');
 
+    mockResultLevelService = {
+      resultLevelList: [],
+      resultLevelListSig: signal([]),
+      currentResultTypeList: [],
+      currentResultTypeListSig: signal([]),
+      resultBody: {} as any,
+      currentResultLevelId: null,
+      currentResultLevelIdSignal: signal<number | null>(null),
+      currentResultLevelName: null,
+      currentResultTypeId: null,
+      resultHandle: ''
+    } as any;
+
     mockActivatedRoute = {
       params: of({ aowId: 'test-aow-id' })
     };
@@ -63,6 +208,7 @@ describe('AowHloTableComponent', () => {
       imports: [AowHloTableComponent, HttpClientTestingModule],
       providers: [
         { provide: EntityAowService, useValue: mockEntityAowService },
+        { provide: ResultLevelService, useValue: mockResultLevelService },
         { provide: ActivatedRoute, useValue: mockActivatedRoute }
       ]
     }).compileComponents();
@@ -83,13 +229,13 @@ describe('AowHloTableComponent', () => {
         { title: 'Type', attr: 'type_name', width: '10%' },
         { title: 'Expected target 2025', attr: 'target_value_sum', width: '10%' },
         { title: 'Actual achieved', attr: 'actual_achieved_value_sum', width: '10%' },
-        { title: 'Progress', attr: 'progress_percentage', hideSortIcon: true, width: '112px' },
         { title: 'Status', attr: 'status', hideSortIcon: true, width: '11%' }
       ]);
     });
 
     it('should inject dependencies correctly', () => {
       expect(component.entityAowService).toBeDefined();
+      expect(component.resultLevelService).toBeDefined();
     });
   });
 
@@ -97,7 +243,7 @@ describe('AowHloTableComponent', () => {
     it('should have correct column order structure', () => {
       const columns = component.columnOrder();
 
-      expect(columns).toHaveLength(6);
+      expect(columns).toHaveLength(5);
       expect(columns[0]).toEqual({
         title: 'Indicator name',
         attr: 'indicator_description',
@@ -113,11 +259,22 @@ describe('AowHloTableComponent', () => {
         attr: 'target_value_sum',
         width: '10%'
       });
+      expect(columns[3]).toEqual({
+        title: 'Actual achieved',
+        attr: 'actual_achieved_value_sum',
+        width: '10%'
+      });
+      expect(columns[4]).toEqual({
+        title: 'Status',
+        attr: 'status',
+        hideSortIcon: true,
+        width: '11%'
+      });
     });
 
     it('should have all required column attributes', () => {
       const columns = component.columnOrder();
-      const requiredAttrs = ['indicator_description', 'type_name', 'target_value_sum', 'actual_achieved_value_sum', 'progress_percentage', 'status'];
+      const requiredAttrs = ['indicator_description', 'type_name', 'target_value_sum', 'actual_achieved_value_sum', 'status'];
 
       columns.forEach(column => {
         expect(requiredAttrs).toContain(column.attr);
@@ -196,39 +353,17 @@ describe('AowHloTableComponent', () => {
   });
 
   describe('getStatusLabel Function', () => {
-    it('should return "Not started" for 0%', () => {
-      const result = component.getStatusLabel('0%');
-      expect(result).toBe('Not started');
-    });
-
-    it('should return "In progress" for 1%', () => {
-      const result = component.getStatusLabel('1%');
-      expect(result).toBe('In progress');
-    });
-
-    it('should return "In progress" for 50%', () => {
-      const result = component.getStatusLabel('50%');
-      expect(result).toBe('In progress');
-    });
-
-    it('should return "In progress" for 99%', () => {
-      const result = component.getStatusLabel('99%');
-      expect(result).toBe('In progress');
-    });
-
-    it('should return "Achieved" for 100%', () => {
-      const result = component.getStatusLabel('100%');
-      expect(result).toBe('Achieved');
-    });
-
-    it('should return "Overachieved" for 101%', () => {
-      const result = component.getStatusLabel('101%');
-      expect(result).toBe('Overachieved');
-    });
-
-    it('should return "Overachieved" for 150%', () => {
-      const result = component.getStatusLabel('150%');
-      expect(result).toBe('Overachieved');
+    it.each([
+      ['0%', 'Not started'],
+      ['1%', 'In progress'],
+      ['50%', 'In progress'],
+      ['99%', 'In progress'],
+      ['100%', 'Achieved'],
+      ['101%', 'Overachieved'],
+      ['150%', 'Overachieved']
+    ])('should return "%s" for %s', (input, expected) => {
+      const result = component.getStatusLabel(input);
+      expect(result).toBe(expected);
     });
   });
 
@@ -328,56 +463,11 @@ describe('AowHloTableComponent', () => {
     });
   });
 
-  describe('openReportResultModal', () => {
-    it('should filter indicators by currentItemId and update service signals', () => {
-      const mockItem = {
-        id: 'result-1',
-        title: 'Test Result',
-        indicators: [
-          { indicator_id: 'indicator-1', name: 'Indicator 1', type_name: 'Number of knowledge products' },
-          { indicator_id: 'indicator-2', name: 'Indicator 2', type_name: 'Outcome indicator' },
-          { indicator_id: 'indicator-3', name: 'Indicator 3', type_name: 'Impact indicator' }
-        ]
-      };
-      const currentItemId = 'indicator-2';
+  testModalDrawerOpening('openReportResultModal', 'showReportResultModal', 'currentResultToReport');
 
-      component.openReportResultModal(mockItem, currentItemId);
-
-      expect(mockEntityAowService.showReportResultModal.set).toHaveBeenCalledWith(true);
-      expect(mockEntityAowService.currentResultToReport.set).toHaveBeenCalledWith({
-        id: 'result-1',
-        title: 'Test Result',
-        indicators: [{ indicator_id: 'indicator-2', name: 'Indicator 2', type_name: 'Outcome indicator' }]
-      });
-    });
-
-    it('should handle item with no matching indicators', () => {
-      const mockItem = {
-        id: 'result-1',
-        title: 'Test Result',
-        indicators: [
-          { indicator_id: 'indicator-1', name: 'Indicator 1', type_name: 'Number of knowledge products' },
-          { indicator_id: 'indicator-2', name: 'Indicator 2', type_name: 'Outcome indicator' }
-        ]
-      };
-      const currentItemId = 'non-existent-indicator';
-
-      component.openReportResultModal(mockItem, currentItemId);
-
-      expect(mockEntityAowService.showReportResultModal.set).toHaveBeenCalledWith(true);
-      expect(mockEntityAowService.currentResultToReport.set).toHaveBeenCalledWith({
-        id: 'result-1',
-        title: 'Test Result',
-        indicators: []
-      });
-    });
-
+  describe('openReportResultModal - Additional Tests', () => {
     it('should handle null currentItemId (no indicators case)', () => {
-      const mockItem = {
-        id: 'result-1',
-        title: 'Test Result',
-        indicators: [{ indicator_id: 'indicator-1', name: 'Indicator 1', type_name: 'Number of knowledge products' }]
-      };
+      const mockItem = createMockItem();
       const currentItemId = null;
 
       component.openReportResultModal(mockItem, currentItemId);
@@ -386,250 +476,205 @@ describe('AowHloTableComponent', () => {
       expect(mockEntityAowService.currentResultToReport.set).toHaveBeenCalledWith({
         id: 'result-1',
         title: 'Test Result',
-        indicators: []
-      });
-    });
-
-    it('should handle item with empty indicators array', () => {
-      const mockItem = {
-        id: 'result-1',
-        title: 'Test Result',
-        indicators: []
-      };
-      const currentItemId = 'any-indicator';
-
-      component.openReportResultModal(mockItem, currentItemId);
-
-      expect(mockEntityAowService.showReportResultModal.set).toHaveBeenCalledWith(true);
-      expect(mockEntityAowService.currentResultToReport.set).toHaveBeenCalledWith({
-        id: 'result-1',
-        title: 'Test Result',
-        indicators: []
-      });
-    });
-
-    it('should handle item with undefined indicators', () => {
-      const mockItem = {
-        id: 'result-1',
-        title: 'Test Result'
-      };
-      const currentItemId = 'any-indicator';
-
-      expect(() => {
-        component.openReportResultModal(mockItem, currentItemId);
-      }).toThrow();
-    });
-
-    it('should preserve all item properties except indicators', () => {
-      const mockItem = {
-        id: 'result-1',
-        title: 'Test Result',
         description: 'Test Description',
         status: 'active',
-        indicators: [
-          { indicator_id: 'indicator-1', name: 'Indicator 1', type_name: 'Number of knowledge products' },
-          { indicator_id: 'indicator-2', name: 'Indicator 2', type_name: 'Outcome indicator' }
-        ]
-      };
-      const currentItemId = 'indicator-1';
-
-      component.openReportResultModal(mockItem, currentItemId);
-
-      expect(mockEntityAowService.currentResultToReport.set).toHaveBeenCalledWith({
-        id: 'result-1',
-        title: 'Test Result',
-        description: 'Test Description',
-        status: 'active',
-        indicators: [{ indicator_id: 'indicator-1', name: 'Indicator 1', type_name: 'Number of knowledge products' }]
-      });
-    });
-
-    it('should handle multiple indicators with same indicator_id', () => {
-      const mockItem = {
-        id: 'result-1',
-        title: 'Test Result',
-        indicators: [
-          { indicator_id: 'indicator-1', name: 'Indicator 1', type_name: 'Number of knowledge products' },
-          { indicator_id: 'indicator-1', name: 'Indicator 1 Duplicate', type_name: 'Outcome indicator' },
-          { indicator_id: 'indicator-2', name: 'Indicator 2', type_name: 'Impact indicator' }
-        ]
-      };
-      const currentItemId = 'indicator-1';
-
-      component.openReportResultModal(mockItem, currentItemId);
-
-      expect(mockEntityAowService.currentResultToReport.set).toHaveBeenCalledWith({
-        id: 'result-1',
-        title: 'Test Result',
-        indicators: [
-          { indicator_id: 'indicator-1', name: 'Indicator 1', type_name: 'Number of knowledge products' },
-          { indicator_id: 'indicator-1', name: 'Indicator 1 Duplicate', type_name: 'Outcome indicator' }
-        ]
-      });
-    });
-
-    it('should always set showReportResultModal to true regardless of item content', () => {
-      const mockItem = {
-        id: 'result-1',
-        title: 'Test Result',
         indicators: []
-      };
-      const currentItemId = 'any-indicator';
-
-      component.openReportResultModal(mockItem, currentItemId);
-
-      expect(mockEntityAowService.showReportResultModal.set).toHaveBeenCalledWith(true);
-      expect(mockEntityAowService.showReportResultModal.set).toHaveBeenCalledTimes(1);
+      });
     });
   });
 
-  describe('openViewResultDrawer', () => {
-    it('should filter indicators by currentItemId and update service signals', () => {
-      const mockItem = {
-        id: 'result-1',
-        title: 'Test Result',
-        indicators: [
-          { indicator_id: 'indicator-1', name: 'Indicator 1', type_name: 'Number of knowledge products' },
-          { indicator_id: 'indicator-2', name: 'Indicator 2', type_name: 'Outcome indicator' },
-          { indicator_id: 'indicator-3', name: 'Indicator 3', type_name: 'Impact indicator' }
-        ]
-      };
-      const currentItemId = 'indicator-2';
+  testModalDrawerOpening('openViewResultDrawer', 'showViewResultDrawer', 'currentResultToView');
 
-      component.openViewResultDrawer(mockItem, currentItemId);
-
-      expect(mockEntityAowService.showViewResultDrawer.set).toHaveBeenCalledWith(true);
-      expect(mockEntityAowService.currentResultToView.set).toHaveBeenCalledWith({
-        id: 'result-1',
-        title: 'Test Result',
-        indicators: [{ indicator_id: 'indicator-2', name: 'Indicator 2', type_name: 'Outcome indicator' }]
-      });
-    });
-
-    it('should handle item with no matching indicators', () => {
-      const mockItem = {
-        id: 'result-1',
-        title: 'Test Result',
-        indicators: [
-          { indicator_id: 'indicator-1', name: 'Indicator 1', type_name: 'Number of knowledge products' },
-          { indicator_id: 'indicator-2', name: 'Indicator 2', type_name: 'Outcome indicator' }
-        ]
-      };
-      const currentItemId = 'non-existent-indicator';
-
-      component.openViewResultDrawer(mockItem, currentItemId);
-
-      expect(mockEntityAowService.showViewResultDrawer.set).toHaveBeenCalledWith(true);
-      expect(mockEntityAowService.currentResultToView.set).toHaveBeenCalledWith({
-        id: 'result-1',
-        title: 'Test Result',
-        indicators: []
-      });
-    });
-
-    it('should handle item with empty indicators array', () => {
-      const mockItem = {
-        id: 'result-1',
-        title: 'Test Result',
-        indicators: []
-      };
-      const currentItemId = 'any-indicator';
-
-      component.openViewResultDrawer(mockItem, currentItemId);
-
-      expect(mockEntityAowService.showViewResultDrawer.set).toHaveBeenCalledWith(true);
-      expect(mockEntityAowService.currentResultToView.set).toHaveBeenCalledWith({
-        id: 'result-1',
-        title: 'Test Result',
-        indicators: []
-      });
-    });
-
-    it('should handle item with undefined indicators', () => {
-      const mockItem = {
-        id: 'result-1',
-        title: 'Test Result'
-      };
-      const currentItemId = 'any-indicator';
-
-      expect(() => {
-        component.openViewResultDrawer(mockItem, currentItemId);
-      }).toThrow();
-    });
-
-    it('should preserve all item properties except indicators', () => {
-      const mockItem = {
-        id: 'result-1',
-        title: 'Test Result',
-        description: 'Test Description',
-        status: 'active',
-        indicators: [
-          { indicator_id: 'indicator-1', name: 'Indicator 1', type_name: 'Number of knowledge products' },
-          { indicator_id: 'indicator-2', name: 'Indicator 2', type_name: 'Outcome indicator' }
-        ]
-      };
-      const currentItemId = 'indicator-1';
-
-      component.openViewResultDrawer(mockItem, currentItemId);
-
-      expect(mockEntityAowService.currentResultToView.set).toHaveBeenCalledWith({
-        id: 'result-1',
-        title: 'Test Result',
-        description: 'Test Description',
-        status: 'active',
-        indicators: [{ indicator_id: 'indicator-1', name: 'Indicator 1', type_name: 'Number of knowledge products' }]
-      });
-    });
-
-    it('should handle multiple indicators with same indicator_id', () => {
-      const mockItem = {
-        id: 'result-1',
-        title: 'Test Result',
-        indicators: [
-          { indicator_id: 'indicator-1', name: 'Indicator 1', type_name: 'Number of knowledge products' },
-          { indicator_id: 'indicator-1', name: 'Indicator 1 Duplicate', type_name: 'Outcome indicator' },
-          { indicator_id: 'indicator-2', name: 'Indicator 2', type_name: 'Impact indicator' }
-        ]
-      };
-      const currentItemId = 'indicator-1';
-
-      component.openViewResultDrawer(mockItem, currentItemId);
-
-      expect(mockEntityAowService.currentResultToView.set).toHaveBeenCalledWith({
-        id: 'result-1',
-        title: 'Test Result',
-        indicators: [
-          { indicator_id: 'indicator-1', name: 'Indicator 1', type_name: 'Number of knowledge products' },
-          { indicator_id: 'indicator-1', name: 'Indicator 1 Duplicate', type_name: 'Outcome indicator' }
-        ]
-      });
-    });
-
-    it('should always set showViewResultDrawer to true regardless of item content', () => {
-      const mockItem = {
-        id: 'result-1',
-        title: 'Test Result',
-        indicators: []
-      };
-      const currentItemId = 'any-indicator';
-
-      component.openViewResultDrawer(mockItem, currentItemId);
-
-      expect(mockEntityAowService.showViewResultDrawer.set).toHaveBeenCalledWith(true);
-      expect(mockEntityAowService.showViewResultDrawer.set).toHaveBeenCalledTimes(1);
-    });
-
+  describe('openViewResultDrawer - Additional Tests', () => {
     it('should clear previous contributors before opening a new drawer', () => {
-      const mockItem = {
-        id: 'result-1',
-        title: 'Test Result',
-        indicators: [{ indicator_id: 'indicator-1', name: 'Indicator 1' }]
-      };
+      const mockItem = createMockItem();
 
       component.openViewResultDrawer(mockItem, 'indicator-1');
 
       expect(mockEntityAowService.existingResultsContributors.set).toHaveBeenCalledWith([]);
       expect(mockEntityAowService.existingResultsContributors.set).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('expandedRowKeys computed', () => {
+    it('should return expanded keys for all items in tableData', () => {
+      const mockData = [
+        { result_title: 'Result 1', indicators: [] },
+        { result_title: 'Result 2', indicators: [] },
+        { result_title: 'Result 3', indicators: [] }
+      ];
+      mockEntityAowService.tocResultsOutputsByAowId.set(mockData);
+      component.tableType = 'outputs';
+
+      const expandedKeys = component.expandedRowKeys();
+
+      expect(expandedKeys).toEqual({
+        'Result 1': true,
+        'Result 2': true,
+        'Result 3': true
+      });
+    });
+
+    it('should handle empty tableData', () => {
+      mockEntityAowService.tocResultsOutputsByAowId.set([]);
+      component.tableType = 'outputs';
+
+      const expandedKeys = component.expandedRowKeys();
+
+      expect(expandedKeys).toEqual({});
+    });
+
+    it('should handle tableData with duplicate result_title', () => {
+      const mockData = [
+        { result_title: 'Result 1', indicators: [] },
+        { result_title: 'Result 1', indicators: [] },
+        { result_title: 'Result 2', indicators: [] }
+      ];
+      mockEntityAowService.tocResultsOutputsByAowId.set(mockData);
+      component.tableType = 'outputs';
+
+      const expandedKeys = component.expandedRowKeys();
+
+      expect(expandedKeys).toEqual({
+        'Result 1': true,
+        'Result 2': true
+      });
+    });
+
+    it('should reactively update when tableData changes', () => {
+      const initialData = [{ result_title: 'Result 1', indicators: [] }];
+      const updatedData = [
+        { result_title: 'Result 1', indicators: [] },
+        { result_title: 'Result 2', indicators: [] }
+      ];
+
+      mockEntityAowService.tocResultsOutputsByAowId.set(initialData);
+      component.tableType = 'outputs';
+
+      let expandedKeys = component.expandedRowKeys();
+      expect(expandedKeys).toEqual({ 'Result 1': true });
+
+      mockEntityAowService.tocResultsOutputsByAowId.set(updatedData);
+      expandedKeys = component.expandedRowKeys();
+      expect(expandedKeys).toEqual({
+        'Result 1': true,
+        'Result 2': true
+      });
+    });
+  });
+
+  testModalDrawerOpening('openTargetDetailsDrawer', 'showTargetDetailsDrawer', 'currentTargetToView');
+
+  describe('hasTargets', () => {
+    it('should return true when indicator has targets with centers', () => {
+      const mockItem = {
+        id: 'result-1',
+        title: 'Test Result',
+        indicators: [
+          {
+            indicator_id: 'indicator-1',
+            targets_by_center: {
+              centers: [
+                { center_id: 'center-1', target_value: 100 },
+                { center_id: 'center-2', target_value: 200 }
+              ]
+            }
+          },
+          {
+            indicator_id: 'indicator-2',
+            targets_by_center: {
+              centers: []
+            }
+          }
+        ]
+      };
+
+      expect(component.hasTargets(mockItem, 'indicator-1')).toBe(true);
+      expect(component.hasTargets(mockItem, 'indicator-2')).toBe(false);
+    });
+
+    it('should return false when indicator has no targets', () => {
+      const mockItem = {
+        id: 'result-1',
+        title: 'Test Result',
+        indicators: [
+          {
+            indicator_id: 'indicator-1',
+            targets_by_center: {
+              centers: []
+            }
+          }
+        ]
+      };
+
+      expect(component.hasTargets(mockItem, 'indicator-1')).toBe(false);
+    });
+
+    it('should return false when indicator does not exist', () => {
+      const mockItem = {
+        id: 'result-1',
+        title: 'Test Result',
+        indicators: [
+          {
+            indicator_id: 'indicator-1',
+            targets_by_center: {
+              centers: [{ center_id: 'center-1', target_value: 100 }]
+            }
+          }
+        ]
+      };
+
+      expect(component.hasTargets(mockItem, 'non-existent-indicator')).toBe(false);
+    });
+
+    it('should return false when indicator has undefined targets_by_center', () => {
+      const mockItem = {
+        id: 'result-1',
+        title: 'Test Result',
+        indicators: [
+          {
+            indicator_id: 'indicator-1'
+          }
+        ]
+      };
+
+      expect(component.hasTargets(mockItem, 'indicator-1')).toBe(false);
+    });
+
+    it('should return false when item has no indicators', () => {
+      const mockItem = {
+        id: 'result-1',
+        title: 'Test Result',
+        indicators: []
+      };
+
+      expect(component.hasTargets(mockItem, 'indicator-1')).toBe(false);
+    });
+
+    it('should return false when item has undefined indicators', () => {
+      const mockItem = {
+        id: 'result-1',
+        title: 'Test Result'
+      };
+
+      expect(component.hasTargets(mockItem, 'indicator-1')).toBe(false);
+    });
+
+    it('should handle targets_by_center with null centers', () => {
+      const mockItem = {
+        id: 'result-1',
+        title: 'Test Result',
+        indicators: [
+          {
+            indicator_id: 'indicator-1',
+            targets_by_center: {
+              centers: null
+            }
+          }
+        ]
+      };
+
+      expect(component.hasTargets(mockItem, 'indicator-1')).toBe(false);
     });
   });
 });

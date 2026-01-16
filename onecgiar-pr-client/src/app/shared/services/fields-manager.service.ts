@@ -23,6 +23,19 @@ export class FieldsManagerService {
 
   scoresImpactAreaLabel = 'Which component of the Impact Area is this result intended to impact?';
 
+  // Helper para reducir duplicación en campos de Impact Area
+  private impactAreaField = (): CustomField => ({
+    label: this.scoresImpactAreaLabel,
+    hide: this.isP22(),
+    required: true
+  });
+
+  // Helper para campos tag/score con label dinámico
+  private tagScoreField = (topic: string): CustomField => ({
+    label: `${topic} ${this.isP25() ? 'tag' : 'score'}`,
+    required: true
+  });
+
   fields = computed<Record<string, CustomField>>(() => {
     const fields: Record<string, CustomField> = {
       '[general-info]-title': {
@@ -58,49 +71,25 @@ export class FieldsManagerService {
       },
       //? score 1
       '[general-info]-gender_tag_id': {
-        label: this.isP25() ? 'Gender equality, youth and social inclusion tag' : 'Gender equality score'
-      },
-      '[general-info]-gender_impact_area_id': {
-        label: this.scoresImpactAreaLabel,
-        hide: this.isP22(),
+        label: this.isP25() ? 'Gender equality, youth and social inclusion tag' : 'Gender equality scoren',
         required: true
       },
+      '[general-info]-gender_impact_area_id': this.impactAreaField(),
       //? score 2
       '[general-info]-climate_change_tag_id': {
-        label: this.isP25() ? 'Climate adaptation and mitigation tag' : 'Climate change score'
-      },
-      '[general-info]-climate_impact_area_id': {
-        label: this.scoresImpactAreaLabel,
-        hide: this.isP22(),
+        label: this.isP25() ? 'Climate adaptation and mitigation tag' : 'Climate change score',
         required: true
       },
+      '[general-info]-climate_impact_area_id': this.impactAreaField(),
       //? score 3
-      '[general-info]-nutrition_tag_level_id': {
-        label: `Nutrition, health and food security ${this.isP25() ? 'tag' : 'score'}`
-      },
-      '[general-info]-nutrition_impact_area_id': {
-        label: this.scoresImpactAreaLabel,
-        hide: this.isP22(),
-        required: true
-      },
+      '[general-info]-nutrition_tag_level_id': this.tagScoreField('Nutrition, health and food security'),
+      '[general-info]-nutrition_impact_area_id': this.impactAreaField(),
       //? score 4
-      '[general-info]-environmental_biodiversity_tag_level_id': {
-        label: `Environmental health and biodiversity ${this.isP25() ? 'tag' : 'score'}`
-      },
-      '[general-info]-environmental_biodiversity_impact_area_id': {
-        label: this.scoresImpactAreaLabel,
-        hide: this.isP22(),
-        required: true
-      },
+      '[general-info]-environmental_biodiversity_tag_level_id': this.tagScoreField('Environmental health and biodiversity'),
+      '[general-info]-environmental_biodiversity_impact_area_id': this.impactAreaField(),
       //? score 5
-      '[general-info]-poverty_tag_level_id': {
-        label: `Poverty reduction, livelihoods and jobs ${this.isP25() ? 'tag' : 'score'}`
-      },
-      '[general-info]-poverty_impact_area_id': {
-        label: this.scoresImpactAreaLabel,
-        hide: this.isP22(),
-        required: true
-      },
+      '[general-info]-poverty_tag_level_id': this.tagScoreField('Poverty reduction, livelihoods and jobs'),
+      '[general-info]-poverty_impact_area_id': this.impactAreaField(),
       '[geoscope-management]-has_extra_geo_scope': {
         label: 'Are there any other geographic areas where  the innovation could be impactful (beyond current development and use)?',
         description:

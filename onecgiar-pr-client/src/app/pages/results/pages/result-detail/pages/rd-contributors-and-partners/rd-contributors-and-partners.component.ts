@@ -58,8 +58,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     });
 
     const checkResultsList = setInterval(() => {
-      if (this.innovationUseResultsSE.resultsList?.length > 0 &&
-          this.rdPartnersSE.partnersBody?.linked_results?.length > 0) {
+      if (this.innovationUseResultsSE.resultsList?.length > 0 && this.rdPartnersSE.partnersBody?.linked_results?.length > 0) {
         const linkedResults = this.rdPartnersSE.partnersBody.linked_results;
         const hasIds = linkedResults.some((item: any) => typeof item === 'number');
         if (hasIds) {
@@ -79,7 +78,6 @@ export class RdContributorsAndPartnersComponent implements OnInit {
         const activePortfolio = this.api.dataControlSE.currentResult?.portfolio;
         this.api.resultsSE.GET_AllWithoutResults(activePortfolio).subscribe(({ response }) => {
           this.contributingInitiativesList = response;
-          // this.changeDetectorRef.detectChanges();
         });
       },
       error: err => {
@@ -170,8 +168,6 @@ export class RdContributorsAndPartnersComponent implements OnInit {
       });
     }
 
-    if (!this.rdPartnersSE.partnersBody.result_toc_result.planned_result) this.rdPartnersSE.partnersBody.result_toc_result.result_toc_results = [];
-
     const linkedResultsIds = (this.rdPartnersSE.partnersBody.linked_results || []).map((r: any) => Number(r?.id ?? r));
 
     const sendedData = {
@@ -192,12 +188,12 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     });
   }
 
-  onRemoveContribuiting(index, isAcceptedArray: boolean) {
-    if (isAcceptedArray) {
-      this.rdPartnersSE.partnersBody.contributing_initiatives.accepted_contributing_initiatives.splice(index, 1);
-    } else {
-      this.rdPartnersSE.contributingInitiativeNew.splice(index, 1);
-    }
+  onRemoveAcceptedContributing(index: number) {
+    this.rdPartnersSE.partnersBody.contributing_initiatives.accepted_contributing_initiatives.splice(index, 1);
+  }
+
+  onRemoveNewContributing(index: number) {
+    this.rdPartnersSE.contributingInitiativeNew.splice(index, 1);
   }
 
   toggleActiveContributor(item) {
@@ -209,6 +205,21 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     return `Please select the ${entity} leading this result. <b>Only ${entity}s already added in this section can be selected as the result lead.</b>`;
   }
 
+  onPlannedResultChange(value: boolean) {
+    if (!value) {
+      // When changing to "No" (unplanned), clear the Indicator and Explanation fields
+      this.rdPartnersSE.partnersBody.result_toc_result?.result_toc_results?.forEach((tab: any) => {
+        if (tab.indicators?.[0]) {
+          tab.indicators[0].related_node_id = null;
+          tab.indicators[0].toc_results_indicator_id = null;
+          if (tab.indicators[0].targets?.[0]) {
+            tab.indicators[0].targets[0].contributing_indicator = null;
+          }
+        }
+        tab.toc_progressive_narrative = null;
+      });
+    }
+  }
 
   formatResultLabel(option: any): string {
     if (option?.result_code && option?.name) {

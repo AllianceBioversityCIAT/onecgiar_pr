@@ -20,6 +20,10 @@ export class CurrentResultService {
 
   GET_resultById() {
     this.api.fieldsManagerSE.inIpsr.set(false);
+    // Clear previous result data to avoid showing wrong portfolio menu during loading
+    this.resultLevelSE.currentResultTypeId = null;
+    this.dataControlSE.currentResultSignal.set({});
+
     this.api.resultsSE.GET_resultById().subscribe({
       next: ({ response }) => {
         this.rolesSE.validateReadOnly(response);

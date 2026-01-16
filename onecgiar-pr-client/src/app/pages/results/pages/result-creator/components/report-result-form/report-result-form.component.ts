@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { ResultBody } from '../../../../../../shared/interfaces/result.interface';
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
 import { TerminologyService } from '../../../../../../internationalization/terminology.service';
+import { EntityAowService } from '../../../../../result-framework-reporting/pages/entity-aow/services/entity-aow.service';
 
 @Component({
   selector: 'app-report-result-form',
@@ -45,7 +46,8 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
     public resultLevelSE: ResultLevelService,
     public terminologyService: TerminologyService,
     private router: Router,
-    private phasesService: PhasesService
+    private phasesService: PhasesService,
+    public entityAowService: EntityAowService
   ) {}
 
   ngOnInit(): void {
@@ -56,8 +58,9 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
     });
     this.resultLevelSE.resultBody = new ResultBody();
     this.resultLevelSE.currentResultTypeList = [];
-    this.resultLevelSE.resultLevelList?.forEach(reLevel => (reLevel.selected = false));
+    this.resultLevelSE.resetSelection();
     this.resultLevelSE.cleanData();
+    this.applyPendingResultTypeSelection();
     this.api.updateUserData(() => {
       if (!this.api.rolesSE.isAdmin) {
         this.availableInitiativesSig.set(
@@ -172,6 +175,21 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
   clean() {
     if (this.resultLevelSE.resultBody.result_type_id == 6) this.resultLevelSE.resultBody.result_name = '';
     else this.depthSearch(this.resultLevelSE.resultBody.result_name);
+  }
+
+  private applyPendingResultTypeSelection() {
+    const pendingSelection = this.resultLevelSE.consumePendingResultType?.();
+    if (!pendingSelection) return;
+
+    const checkAndApply = () => {
+      const levelList = this.resultLevelSE.resultLevelListSig();
+      if (levelList?.length > 0) {
+        this.resultLevelSE.preselectResultType(pendingSelection.id, pendingSelection.name);
+      } else {
+        setTimeout(checkAndApply, 50);
+      }
+    };
+    setTimeout(checkAndApply, 0);
   }
 
   depthSearch(title: string) {
