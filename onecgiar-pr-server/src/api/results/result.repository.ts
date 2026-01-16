@@ -2441,12 +2441,6 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         AND rbp.is_active = 1
       LEFT JOIN clarisa_projects cp
         ON rbp.project_id = cp.id
-      JOIN results_toc_result rtr
-        ON r.id = rtr.results_id
-        AND rtr.is_active = 1
-      JOIN Integration_information.toc_results tr 
-        ON rtr.toc_result_id = tr.id
-        AND tr.is_active = 1
       JOIN results_center rc
         ON r.id = rc.result_id
         AND rc.is_active = 1
