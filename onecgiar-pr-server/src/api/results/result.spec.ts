@@ -92,6 +92,7 @@ describe('ResultsService (unit, pure mocks)', () => {
     getPolicyChangeBilateralResultById: jest.fn().mockResolvedValue([]),
     getInnovationUseBilateralResultById: jest.fn().mockResolvedValue([]),
     getEvidenceBilateralResult: jest.fn().mockResolvedValue([]),
+    getContributingInitiativesBilateralResult: jest.fn().mockResolvedValue([]),
     getResultAndLevelTypeById: jest
       .fn()
       .mockImplementation(async (id: number) =>
@@ -1211,6 +1212,15 @@ describe('ResultsService (unit, pure mocks)', () => {
     ).mockResolvedValueOnce(null);
     (mockResultByIntitutionsRepository.find as jest.Mock).mockResolvedValueOnce(
       [],
+    );
+    (
+      mockResultRepository.getContributingInitiativesBilateralResult as jest.Mock
+    ).mockResolvedValueOnce([]);
+    (mockGeographicLocationService.getGeoScopeV2 as jest.Mock).mockResolvedValueOnce(
+      {
+        status: HttpStatus.OK,
+        response: { geo_scope_id: 2 },
+      },
     );
 
     const res = await resultService.getBilateralResultById(100);
