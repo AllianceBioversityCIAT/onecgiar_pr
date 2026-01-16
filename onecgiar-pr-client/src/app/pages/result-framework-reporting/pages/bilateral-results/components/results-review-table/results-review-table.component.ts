@@ -274,12 +274,17 @@ export class ResultsReviewTableComponent {
   ]);
 
   onChangeCenterSelected = effect(() => {
-    console.log(this.bilateralResultsService.currentCenterSelected());
+    const centers = this.bilateralResultsService.currentCenterSelected();
+    console.log(centers);
+    if (centers.length > 0) {
+      this.getResultsToReview(centers);
+    }
   });
 
-  ngOnInit(): void {
-    this.api.resultsSE.GET_ResultToReview('SP01', ['CENTER-01']).subscribe(res => {
-      console.log(res);
+  getResultsToReview(centers: string[]): void {
+    this.api.resultsSE.GET_ResultToReview('SP01', centers).subscribe(res => {
+      console.log(res.response[0]);
+      console.log(res.response);
     });
   }
 
