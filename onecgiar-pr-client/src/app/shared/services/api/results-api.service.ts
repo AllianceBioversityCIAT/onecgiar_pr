@@ -825,7 +825,7 @@ export class ResultsApiService {
     const p25Url = `${this.baseApiBaseUrlV2}ipsr-framework/ipsr-general-information/general-information/${resulId}`;
     const url = isP25 ? p25Url : p22Url;
 
-    return this.http.patch<any>(url, body).pipe(this.saveButtonSE.isCreatingPipe());
+    return this.http.patch<any>(url, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 
   GETContributorsByIpsrResultId() {
