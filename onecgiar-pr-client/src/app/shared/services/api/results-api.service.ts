@@ -1391,4 +1391,12 @@ export class ResultsApiService {
   GET_PendingReviewCount(programId: string) {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results/pending-review?programId=${programId}`);
   }
+
+  GET_BilateralResultDetail(resultId: string | number) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results/bilateral/${resultId}`);
+  }
+
+  PATCH_BilateralReviewDecision(resultId: string | number, body: { decision: 'APPROVE' | 'REJECT'; justification: string }) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/results/bilateral/${resultId}/review-decision`, body);
+  }
 }

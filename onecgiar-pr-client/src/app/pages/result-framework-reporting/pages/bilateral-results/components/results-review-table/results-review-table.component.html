@@ -84,6 +84,7 @@
 @if (showReviewDrawer()) {
   <app-result-review-drawer
     [(visible)]="showReviewDrawer"
-    [(resultToReview)]="currentResultToReview">
+    [(resultToReview)]="currentResultToReview"
+    (decisionMade)="onDecisionMade()">
   </app-result-review-drawer>
 }

@@ -103,19 +103,34 @@
 
 <!-- Confirm Approve Dialog -->
 <p-dialog
+  appendTo="body"
   [(visible)]="showConfirmApproveDialog"
   [modal]="true"
-  [closable]="true"
-  [style]="{ width: '450px' }"
-  header="Confirm Approval"
-  [draggable]="false">
-  <p class="dialog-message">Are you sure you want to approve this result?</p>
-  <ng-template #footer>
-    <div class="dialog-footer">
-      <button pButton class="dialog-cancel-button" (click)="cancelApprove()">Cancel</button>
-      <button pButton class="dialog-confirm-button" (click)="confirmApprove()">Confirm</button>
+  [closeOnEscape]="true"
+  [showHeader]="false"
+  [dismissableMask]="true"
+  [draggable]="false"
+  [style]="{ padding: '0px' }"
+  styleClass="approve-confirmation-modal">
+  <div class="modal-header">
+    <div class="header-left">
+      <div class="success-icon">
+        <i class="pi pi-check"></i>
+      </div>
+      <h2 class="modal-title">APPROVE RESULT – {{ resultToReview()?.result_code }}</h2>
     </div>
-  </ng-template>
+    <i class="pi pi-times close-icon" (click)="cancelApprove()"></i>
+  </div>
+  <div class="modal-content">
+    <p class="modal-message">Status will be changed to "Approved", and further changes can be made before the final submission.</p>
+  </div>
+  <div class="modal-footer">
+    <button class="btn-cancel" (click)="cancelApprove()" [disabled]="isSaving()">Cancel</button>
+    <button class="btn-confirm" (click)="confirmApprove()" [disabled]="isSaving()">
+      <i class="pi pi-spinner pi-spin" *ngIf="isSaving()"></i>
+      {{ isSaving() ? 'Approving...' : 'Confirm' }}
+    </button>
+  </div>
 </p-dialog>
 
 <!-- Reject Justification Dialog -->
@@ -123,22 +138,37 @@
   [(visible)]="showConfirmRejectDialog"
   [modal]="true"
   [closable]="true"
-  [style]="{ width: '500px' }"
-  header="Reject Result"
-  [draggable]="false">
-  <p class="dialog-message">Please provide a justification for rejecting this result:</p>
-  <textarea
-    pInputTextarea
-    [(ngModel)]="rejectJustification"
-    [rows]="4"
-    [style]="{ width: '100%' }"
-    placeholder="Enter your justification..."></textarea>
-  <ng-template #footer>
-    <div class="dialog-footer">
-      <button pButton class="dialog-cancel-button" (click)="cancelReject()">Cancel</button>
-      <button pButton class="dialog-confirm-button reject" [disabled]="!rejectJustification.trim()" (click)="confirmReject()">
-        Confirm Rejection
-      </button>
+  [style]="{ width: '480px' }"
+  [draggable]="false"
+  [showHeader]="false"
+  styleClass="confirm-dialog reject-dialog">
+  <div class="confirm-dialog-content">
+    <div class="confirm-dialog-icon reject">
+      <i class="pi pi-times-circle"></i>
     </div>
-  </ng-template>
+    <h3 class="confirm-dialog-title">Reject Result</h3>
+    <p class="confirm-dialog-message">
+      You are about to reject <strong>{{ resultToReview()?.result_code }}</strong>
+    </p>
+    <p class="confirm-dialog-subtitle">{{ resultToReview()?.result_title }}</p>
+
+    <div class="confirm-dialog-field">
+      <label class="confirm-dialog-label required">Justification</label>
+      <textarea
+        pInputTextarea
+        [(ngModel)]="rejectJustification"
+        [rows]="4"
+        placeholder="Please explain why this result is being rejected..."></textarea>
+      <small class="confirm-dialog-hint">A justification is required to reject this result</small>
+    </div>
+  </div>
+
+  <div class="confirm-dialog-actions">
+    <button pButton class="dialog-cancel-button" (click)="cancelReject()" [disabled]="isSaving()">Cancel</button>
+    <button pButton class="dialog-confirm-button reject" [disabled]="!rejectJustification.trim() || isSaving()" (click)="confirmReject()">
+      <i class="pi pi-times" *ngIf="!isSaving()"></i>
+      <i class="pi pi-spinner pi-spin" *ngIf="isSaving()"></i>
+      {{ isSaving() ? 'Rejecting...' : 'Reject Result' }}
+    </button>
+  </div>
 </p-dialog>
