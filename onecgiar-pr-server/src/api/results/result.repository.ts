@@ -2678,7 +2678,8 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         ON tri.toc_results_id = tr.id
         AND tri.is_active = 1
       WHERE
-        r.id = ?;
+        r.id = ?
+        AND r.is_active = 1;
     `;
 
     try {

@@ -6,7 +6,9 @@ import {
   Optional,
   BadRequestException,
   forwardRef,
+  ConflictException,
 } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { CreateResultDto } from './dto/create-result.dto';
 import { ResultRepository } from './result.repository';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
@@ -91,6 +93,10 @@ import { ResultsInnovationsDevRepository } from './summary/repositories/results-
 import { AoWBilateralRepository } from './results-toc-results/repositories/aow-bilateral.repository';
 import { ResultsByProjectsRepository } from './results_by_projects/results_by_projects.repository';
 import { GeographicLocationService } from '../results-framework-reporting/geographic-location/geographic-location.service';
+import { ReviewDecisionDto, ReviewDecisionEnum } from './dto/review-decision.dto';
+import { ResultReviewHistoryRepository } from './result-review-history/result-review-history.repository';
+import { ResultReviewHistory } from './result-review-history/entities/result-review-history.entity';
+import { ResultStatusData } from '../../shared/constants/result-status.enum';
 
 @Injectable()
 export class ResultsService {
@@ -134,6 +140,8 @@ export class ResultsService {
     private readonly _resultsCenterRepository: ResultsCenterRepository,
     private readonly _resultsTocResultRepository: ResultsTocResultRepository,
     private readonly _tocResultsRepository: AoWBilateralRepository,
+    private readonly _dataSource: DataSource,
+    private readonly _resultReviewHistoryRepository: ResultReviewHistoryRepository,
     private readonly _initiativeEntityMapRepository?: InitiativeEntityMapRepository,
     private readonly _roleByUserRepository?: RoleByUserRepository,
     private readonly _resultsInnovationsDevRepository?: ResultsInnovationsDevRepository,
@@ -2627,7 +2635,7 @@ export class ResultsService {
           r.source = 'API'
           AND tr.official_code = ?
           AND r.is_active = 1
-          AND r.status_id = 1
+          AND r.status_id = 5
         UNION ALL
         SELECT
           tr.official_code,
@@ -2648,7 +2656,7 @@ export class ResultsService {
           r.source = 'API'
           AND tr.official_code = ?
           AND r.is_active = 1
-          AND r.status_id = 1
+          AND r.status_id = 5
         GROUP BY
           tr.official_code,
           rc.center_id;
@@ -2994,6 +3002,104 @@ export class ResultsService {
         status: HttpStatus.OK,
       };
     } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async reviewBilateralResult(
+    resultId: number,
+    reviewDecisionDto: ReviewDecisionDto,
+    user: TokenDto,
+  ): Promise<ReturnResponseDto<any> | returnErrorDto> {
+    try {
+      const parsedResultId = Number(resultId);
+      if (!parsedResultId || !Number.isFinite(parsedResultId) || parsedResultId <= 0) {
+        return {
+          response: {},
+          message: 'The resultId parameter must be a valid positive number.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      // Validar que la justificación esté presente si es REJECT
+      if (
+        reviewDecisionDto.decision === ReviewDecisionEnum.REJECT &&
+        (!reviewDecisionDto.justification ||
+          !reviewDecisionDto.justification.trim())
+      ) {
+        return {
+          response: {},
+          message: 'Justification is required when decision is REJECT',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      return await this._dataSource.transaction(async (manager) => {
+        // Obtener el resultado
+        const result = await manager.findOne(Result, {
+          where: {
+            id: parsedResultId,
+            source: SourceEnum.Bilateral,
+            is_active: true,
+          },
+        });
+
+        if (!result) {
+          throw new BadRequestException('Bilateral result not found');
+        }
+
+        // Validar que el status actual sea PENDING_REVIEW
+        if (result.status_id !== ResultStatusData.PendingReview.value) {
+          throw new ConflictException(
+            `Cannot review result. Current status is not PENDING_REVIEW (status_id: ${result.status_id})`,
+          );
+        }
+
+        // Determinar el nuevo status según la decisión
+        let newStatusId: number;
+        if (reviewDecisionDto.decision === ReviewDecisionEnum.APPROVE) {
+          newStatusId = ResultStatusData.Approved.value;
+        } else {
+          newStatusId = ResultStatusData.Rejected.value;
+        }
+
+        // Actualizar el resultado
+        await manager.update(
+          Result,
+          { id: parsedResultId },
+          {
+            status_id: newStatusId,
+            reviewed_by: user.id,
+            reviewed_at: new Date(),
+          },
+        );
+
+        // Crear el historial de revisión usando el manager de la transacción
+        const reviewHistory = manager.create(ResultReviewHistory, {
+          result_id: parsedResultId,
+          action: reviewDecisionDto.decision as any,
+          comment: reviewDecisionDto.justification || null,
+          created_by: user.id,
+        });
+        await manager.save(ResultReviewHistory, reviewHistory);
+
+        return {
+          response: {
+            resultId: parsedResultId,
+            status: newStatusId,
+          },
+          message: `Result ${reviewDecisionDto.decision.toLowerCase()}d successfully`,
+          status: HttpStatus.OK,
+        };
+      });
+    } catch (error) {
+      if (error instanceof BadRequestException || error instanceof ConflictException) {
+        return {
+          response: {},
+          message: error.message,
+          status: error.getStatus(),
+        };
+      }
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }

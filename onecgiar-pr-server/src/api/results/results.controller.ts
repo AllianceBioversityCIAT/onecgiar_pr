@@ -17,6 +17,7 @@ import { CreateGeneralInformationResultDto } from './dto/create-general-informat
 import { CreateResultGeoDto } from './dto/create-result-geo-scope.dto';
 import { ScienceProgramProgressResponseDto } from './dto/science-program-progress.dto';
 import { UserToken } from 'src/shared/decorators/user-token.decorator';
+import { ReviewDecisionDto } from './dto/review-decision.dto';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 import {
   ApiBody,
@@ -619,5 +620,34 @@ export class ResultsController {
   })
   async getBilateralResultById(@Param('resultId') resultId: number) {
     return this.resultsService.getBilateralResultById(resultId);
+  }
+
+  @Patch('bilateral/:resultId/review-decision')
+  @ApiOperation({
+    summary: 'Review decision for bilateral result',
+    description:
+      'Approve or reject a bilateral result that is in PENDING_REVIEW status. Requires justification when rejecting.',
+  })
+  @ApiParam({
+    name: 'resultId',
+    type: Number,
+    required: true,
+    description: 'Result identifier',
+    example: 123,
+  })
+  @ApiBody({ type: ReviewDecisionDto })
+  @ApiOkResponse({
+    description: 'Review decision processed successfully.',
+  })
+  async reviewBilateralResult(
+    @Param('resultId') resultId: number,
+    @Body() reviewDecisionDto: ReviewDecisionDto,
+    @UserToken() user: TokenDto,
+  ) {
+    return this.resultsService.reviewBilateralResult(
+      resultId,
+      reviewDecisionDto,
+      user,
+    );
   }
 }
