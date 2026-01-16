@@ -1,44 +1,45 @@
-<app-pr-radio-button
-  [readOnly]="saving"
-  fieldRef="[innovation-use-form]-has-innovation-link"
-  [options]="[
-    { value: true, label: 'Yes' },
-    { value: false, label: 'No' }
-  ]"
-  optionLabel="label"
-  [(ngModel)]="body.has_innovation_link"
-  optionValue="value">
-</app-pr-radio-button>
-
-<div *ngIf="body.has_innovation_link && this.fieldsManagerSE.isP25()">
-  <app-pr-multi-select
+@if (!this.isIpsr) {
+  <app-pr-radio-button
     [readOnly]="saving"
-    [options]="this.innovationUseResultsSE.resultsList"
-    [(ngModel)]="body.linked_results"
-    optionLabel="title"
-    optionValue="id"
-    optionGroupLabel="name"
-    optionGroupChildren="options"
-    label="Please select a result"
-    placeholder="Please select a result"
-    selectedLabel="Results selected"
-    selectedOptionLabel="title"
-    [displayLabelFormatter]="formatResultLabel.bind(this)">
-  </app-pr-multi-select>
-</div>
+    fieldRef="[innovation-use-form]-has-innovation-link"
+    [options]="[
+      { value: true, label: 'Yes' },
+      { value: false, label: 'No' }
+    ]"
+    optionLabel="label"
+    [(ngModel)]="body.has_innovation_link"
+    optionValue="value">
+  </app-pr-radio-button>
 
-@if (!this.fieldsManagerSE.isP25()) {
-  <app-pr-field-header [label]="currentUseHeaderLabel()" [useColon]="!this.fieldsManagerSE.isP25()"></app-pr-field-header>
+  <div *ngIf="body.has_innovation_link && this.fieldsManagerSE.isP25()">
+    <app-pr-multi-select
+      [readOnly]="saving"
+      [options]="this.innovationUseResultsSE.resultsList"
+      [(ngModel)]="body.linked_results"
+      optionLabel="title"
+      optionValue="id"
+      optionGroupLabel="name"
+      optionGroupChildren="options"
+      label="Please select a result"
+      placeholder="Please select a result"
+      selectedLabel="Results selected"
+      selectedOptionLabel="title"
+      [displayLabelFormatter]="formatResultLabel.bind(this)">
+    </app-pr-multi-select>
+  </div>
+
+  @if (!this.fieldsManagerSE.isP25()) {
+    <app-pr-field-header [label]="currentUseHeaderLabel()" [useColon]="!this.fieldsManagerSE.isP25()"></app-pr-field-header>
+  }
+  <app-pr-radio-button
+    [readOnly]="saving"
+    fieldRef="[innovation-use-form]-core-innovation"
+    [options]="[{ value: true, label: 'This is yet to be determined' }]"
+    optionLabel="label"
+    [(ngModel)]="body.innov_use_to_be_determined"
+    optionValue="value">
+  </app-pr-radio-button>
 }
-<app-pr-radio-button
-  [readOnly]="saving"
-  fieldRef="[innovation-use-form]-core-innovation"
-  [options]="[{ value: true, label: 'This is yet to be determined' }]"
-  optionLabel="label"
-  [(ngModel)]="body.innov_use_to_be_determined"
-  optionValue="value">
-</app-pr-radio-button>
-
 @if (
   !body.innov_use_to_be_determined ||
   !this.fieldsManagerSE.isP25() ||
@@ -310,7 +311,7 @@
   <app-add-button name="Add other" *ngIf="!this.api.rolesSE.readOnly" [disabled]="saving" (clickEvent)="addOther()"></app-add-button>
 }
 
-@if (this.fieldsManagerSE.isP25()) {
+@if (this.fieldsManagerSE.isP25() && !this.isIpsr) {
   <div style="padding-top: 12px !important">
     <app-pr-field-header
       label="How would you assess the current use level of the innovation?"

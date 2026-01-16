@@ -2,7 +2,8 @@
   [label]="this.label"
   [description]="this.description"
   [required]="this.required"
-  [labelDescInlineStyles]="this.labelDescInlineStyles">
+  [labelDescInlineStyles]="this.labelDescInlineStyles"
+  [showDescriptionLabel]="this.showDescriptionLabel">
 </app-pr-field-header>
 <div class="custom_select">
   <a class="field" tabindex="0" [id]="this.optionValue" *ngIf="(!hideSelect && !(readOnly || this.rolesSE.readOnly)) || isStatic">

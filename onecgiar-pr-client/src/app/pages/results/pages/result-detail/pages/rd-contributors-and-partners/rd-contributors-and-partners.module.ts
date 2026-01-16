@@ -40,6 +40,7 @@ import { SelectModule } from 'primeng/select';
     TableModule,
     JsonPipe,
     SelectModule
-  ]
+  ],
+  exports: [CPMultipleWPsComponent, CPKnowledgeProductSelectorComponent, CPNormalSelectorComponent]
 })
 export class RdContributorsAndPartnersModule {}

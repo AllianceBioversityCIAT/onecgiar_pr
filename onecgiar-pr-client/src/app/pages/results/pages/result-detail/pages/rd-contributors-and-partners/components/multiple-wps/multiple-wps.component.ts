@@ -1,9 +1,8 @@
-import { Component, Input, OnChanges, OnInit, WritableSignal, computed, effect, inject, signal } from '@angular/core';
+import { Component, Input, OnChanges, WritableSignal, computed, effect, inject, signal } from '@angular/core';
 import { CustomizedAlertsFeService } from '../../../../../../../../shared/services/customized-alerts-fe.service';
 
 import { FieldsManagerService } from '../../../../../../../../shared/services/fields-manager.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
-import { RdTheoryOfChangesServicesService } from '../../../rd-theory-of-change/rd-theory-of-changes-services.service';
 import { RdContributorsAndPartnersService } from '../../rd-contributors-and-partners.service';
 import { ResultToResultInterfaceToc } from '../../../../../../../ipsr/pages/innovation-package-detail/pages/ipsr-contributors/model/contributorsBody';
 import { TocTab } from '../../../../../../../../shared/interfaces/toc-tab.interface';
@@ -53,7 +52,7 @@ export class CPMultipleWPsComponent implements OnChanges {
   });
 
   ngOnChanges() {
-    this.initiative?.result_toc_results.forEach((tab: any, index: number) => {
+    this.initiative?.result_toc_results?.forEach((tab: any, index: number) => {
       tab.uniqueId = index.toString();
     });
 
@@ -82,7 +81,10 @@ export class CPMultipleWPsComponent implements OnChanges {
   GET_outputList() {
     this.api.tocApiSE
       .GET_tocLevelsByconfig(
-        this.api.dataControlSE.currentNotification?.result_id || this.activeTab?.results_id || this.api.dataControlSE?.currentResult?.id,
+        this.api.dataControlSE.currentNotification?.result_id ||
+          this.activeTab?.results_id ||
+          this.api.dataControlSE?.currentResult?.id ||
+          this.api.dataControlSE.currentResultSignal()?.result_id,
         this.initiativeId(),
         1,
         this.fieldsManagerSE.isP25()
@@ -101,7 +103,10 @@ export class CPMultipleWPsComponent implements OnChanges {
   GET_outcomeList() {
     this.api.tocApiSE
       .GET_tocLevelsByconfig(
-        this.api.dataControlSE.currentNotification?.result_id || this.activeTab?.results_id || this.api.dataControlSE?.currentResult?.id,
+        this.api.dataControlSE.currentNotification?.result_id ||
+          this.activeTab?.results_id ||
+          this.api.dataControlSE?.currentResult?.id ||
+          this.api.dataControlSE.currentResultSignal()?.result_id,
         this.initiativeId(),
         2,
         this.fieldsManagerSE.isP25()
@@ -120,7 +125,10 @@ export class CPMultipleWPsComponent implements OnChanges {
   GET_EOIList() {
     this.api.tocApiSE
       .GET_tocLevelsByconfig(
-        this.api.dataControlSE.currentNotification?.result_id || this.activeTab?.results_id || this.api.dataControlSE?.currentResult?.id,
+        this.api.dataControlSE.currentNotification?.result_id ||
+          this.activeTab?.results_id ||
+          this.api.dataControlSE?.currentResult?.id ||
+          this.api.dataControlSE.currentResultSignal()?.result_id,
         this.initiativeId(),
         3,
         this.fieldsManagerSE.isP25()

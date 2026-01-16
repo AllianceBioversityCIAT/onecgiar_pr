@@ -89,10 +89,22 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
   });
 
   currentVal = null;
-  onSelect() {
-    this.selectOptionEvent.emit();
-    if (this.currentVal === this.value) this.value = null;
 
+  onSelect(clickedValue: any) {
+    this.selectOptionEvent.emit();
+
+    // If clicking the already-selected option, deselect it
+    if (this.value === clickedValue && clickedValue !== null) {
+      this.value = null;
+      this.currentVal = null;
+    }
+  }
+
+  onValueChange(newValue: any) {
+    // Update current value for next comparison
+    this.currentVal = newValue;
+
+    // Clear sub-options when value changes
     if (this.checkboxConfig.listAttr) {
       this.options.forEach((option: any) => {
         if (option.subOptions) {
@@ -103,8 +115,6 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
         }
       });
     }
-
-    this.currentVal = this.value;
   }
 
   get valueName() {

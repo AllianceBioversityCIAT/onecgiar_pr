@@ -1,13 +1,16 @@
-import { Component, Input, OnInit, OnChanges } from '@angular/core';
+import { Component, Input, OnInit, OnChanges, computed } from '@angular/core';
 import { ApiService } from '../../services/api/api.service';
 import { TerminologyService } from '../../../internationalization/terminology.service';
 import { FieldsManagerService } from '../../services/fields-manager.service';
 import { InnovationControlListService } from '../../services/global/innovation-control-list.service';
 import { InnovationUseResultsService } from '../../services/global/innovation-use-results.service';
 import { InnovationDevelopmentLinks } from '../../../pages/results/pages/result-detail/pages/rd-result-types-pages/innovation-dev-info/model/InnovationDevelopmentLinks.model';
-import { Actor, Organization, Measure } from '../../../pages/results/pages/result-detail/pages/rd-result-types-pages/innovation-dev-info/model/innovationDevInfoBody';
+import {
+  Actor,
+  Organization,
+  Measure
+} from '../../../pages/results/pages/result-detail/pages/rd-result-types-pages/innovation-dev-info/model/innovationDevInfoBody';
 import { IpsrStep1Body } from '../../../pages/ipsr/pages/innovation-package-detail/pages/ipsr-innovation-use-pathway/pages/step-n1/model/Ipsr-step-1-body.model';
-
 
 @Component({
   selector: 'app-innovation-use-form',
@@ -20,6 +23,7 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
   institutionsTypeTreeList = [];
   @Input() body = new IpsrStep1Body();
   @Input() saving: boolean = true;
+  @Input() isIpsr: boolean = false;
   innovationDevelopmentLinks: InnovationDevelopmentLinks = new InnovationDevelopmentLinks();
 
   constructor(
@@ -96,9 +100,7 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     </ul>`;
   }
   hasReadinessLevelDiminished() {
-    const currentLevel = this.innovationControlListSE?.readinessLevelsList.find(
-      irl => irl.id === this.body?.innovation_readiness_level_id
-    );
+    const currentLevel = this.innovationControlListSE?.readinessLevelsList.find(irl => irl.id === this.body?.innovation_readiness_level_id);
     const oldLevel = this.innovationControlListSE?.readinessLevelsList.find(irl => irl.id === this.body?.previous_irl);
 
     return Number(currentLevel?.level) < Number(oldLevel?.level);
@@ -247,9 +249,7 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
 
   hasElementsWithId(list, attr) {
     if (!Array.isArray(list)) return 0;
-    const finalList = this.api.rolesSE.readOnly
-      ? list.filter(item => item && item[attr])
-      : list.filter(item => item && item.is_active != false);
+    const finalList = this.api.rolesSE.readOnly ? list.filter(item => item && item[attr]) : list.filter(item => item && item.is_active != false);
     return finalList.length;
   }
 
@@ -302,7 +302,23 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
       : 'Specify the current use of the innovation in number of users (actors/ organizations/ other) that can be supported by evidence';
   }
 
-  narrativeActors() {
+  narrativeActors = computed(() => {
+    if (this.fieldsManagerSE.isP25()) {
+      return `<ul>
+      <li>
+      If the innovation does not target specific groups of actors or people, then please specify the expected innovation use at organizational level or other use. The numbers should reflect the expected innovation use by end of 2030.
+      </li>
+      <li>
+      Add information for as many as applicable.
+      </li>
+      <li>
+      CGIAR follows the United Nations definition of 'youth' as those persons between the ages of 15 and 24 years.
+      </li>
+      <li>
+      If age disaggregation does not apply then please apply a 50/50% rule in dividing women or men across the youth/non-youth category.
+      </li>
+      </ul>`;
+    }
     return `<ul>
     <li>
     If the innovation does not target specific groups of actors or people, then please specify the expected innovation use at organizational level or other use below.
@@ -314,7 +330,7 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     The numbers for 'youth' and 'non-youth' equal the total number for 'Women' or 'Men'.
     </li>
     </ul>`;
-  }
+  });
 
   getUseLevelIndex(): number {
     const selectedId = this.body?.innovation_use_level_id;
@@ -346,5 +362,4 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     }
     return option?.title || option?.name || '';
   }
-
 }
