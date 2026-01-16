@@ -1,55 +1,13 @@
 <div class="partnersindex">
-  @if (this.fieldsManagerSE.isP25()) {
-    <div class="globalDisabled">
-      <app-pr-yes-or-not
-        label="Does this result align with the Program’s planned TOC indicators?"
-        [required]="true"
-        [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.planned_result">
-      </app-pr-yes-or-not>
-    </div>
-
-    <app-alert-status
-      [description]="
-        'If your response to this question is <strong>YES</strong>, then please return to the Program’s main page in PRMS and report the result through the ToC module by associating it with the corresponding indicators and targets. If the result you plan to submit does not match any 2025 planned indicators and results, then click <strong>NO</strong> and provide a short justification explaining why you are reporting it despite not being part of the 2025 planned results.'
-      ">
-    </app-alert-status>
-
-    <!-- ! from toc section end -->
-
-    <!-- from toc section  -->
-    @if (this.rdPartnersSE.partnersBody.result_toc_result.planned_result !== null) {
-      @if (!this.rdPartnersSE.partnersBody.result_toc_result.planned_result) {
-        <app-pr-textarea
-          placeholder="Enter reason"
-          label="Why is the result being reported?"
-          type="text"
-          [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.toc_progressive_narrative"
-          [maxWords]="30"
-          [rows]="2"
-          [autogenerate]="true">
-        </app-pr-textarea>
-      } @else {
-        <div style="z-index: 1; position: relative">
-          <app-cp-multiple-wps
-            [editable]="true"
-            [initiative]="this.rdPartnersSE.partnersBody?.result_toc_result"
-            [initiativeId]="this.rdPartnersSE.initiativeIdSignal"
-            [resultLevelId]="this.resultLevelSE.currentResultLevelId"
-            [isIpsr]="false"
-            [isContributor]="false"
-            [isNotifications]="false"
-            [showMultipleWPsContent]="this.rdPartnersSE.getConsumed()"></app-cp-multiple-wps>
-        </div>
-      }
-    }
-  } @else {
+  @if (this.fieldsManagerSE.isP22()) {
     <app-ipsr-contributors-toc [contributorsBody]="this.contributorsBody" [disabledOptions]="this.disabledOptions"></app-ipsr-contributors-toc>
   }
   @if (this.fieldsManagerSE.isP25()) {
     <app-pr-multi-select
       [options]="this.centersSE.centersList"
       label="Contributing CGIAR Centers"
-      selectedLabel="Center(s) selected"
+      description="CG Center that you collaborated with or are currently collaborating with to generate this result."
+      [showDescriptionLabel]="false"
       optionLabel="full_name"
       optionValue="code"
       [(ngModel)]="this.rdPartnersSE.partnersBody.contributing_center"
@@ -202,34 +160,6 @@
       </app-pr-select>
     </ng-template>
 
-    @if (this.api.dataControlSE.currentResultSignal().result_type_id == 2 || this.api.dataControlSE.currentResultSignal().result_type_id == 7) {
-      <app-pr-radio-button
-        fieldRef="[innovation-use-form]-has-innovation-link"
-        [options]="[
-          { value: true, label: 'Yes' },
-          { value: false, label: 'No' }
-        ]"
-        optionLabel="label"
-        [(ngModel)]="this.rdPartnersSE.partnersBody.has_innovation_link"
-        optionValue="value">
-      </app-pr-radio-button>
-
-      @if (this.rdPartnersSE.partnersBody.has_innovation_link && this.fieldsManagerSE.isP25()) {
-        <app-pr-multi-select
-          [options]="this.innovationUseResultsSE.resultsList"
-          [(ngModel)]="this.rdPartnersSE.partnersBody.linked_results"
-          optionLabel="title"
-          optionValue="id"
-          optionGroupLabel="name"
-          optionGroupChildren="options"
-          label="Please select a result"
-          placeholder="Please select a result"
-          selectedLabel="Results selected"
-          selectedOptionLabel="title"
-          [displayLabelFormatter]="formatResultLabel.bind(this)">
-        </app-pr-multi-select>
-      }
-    }
     <app-alert-status
       *ngIf="this.api.dataControlSE.isKnowledgeProduct"
       description="In this section you can enter CGIAR Center partners. If you notice any discrepancies, such as partners appearing in CGSpace but not here, please reach out to PRMSTechSupport@cgiar.org for assistance. ">
@@ -238,12 +168,12 @@
     <!-- Sync -->
   }
 
-  @if (!this.fieldsManagerSE.isP25()) {
+  @if (this.fieldsManagerSE.isP22()) {
     <app-ipsr-contributors-non-cgiar-partners [contributorsBody]="this.contributorsBody"></app-ipsr-contributors-non-cgiar-partners>
   }
 </div>
 
-@if (!this.fieldsManagerSE.isP25()) {
+@if (this.fieldsManagerSE.isP22()) {
   <app-ipsr-contributors-centers [contributorsBody]="this.contributorsBody"></app-ipsr-contributors-centers>
 }
 <app-save-button class="position_sticky" (clickSave)="onSaveSection()"> </app-save-button>

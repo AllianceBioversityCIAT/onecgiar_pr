@@ -14,6 +14,7 @@ export class IpsrDetailTopMenuComponent {
   menuOptions = computed(() =>
     IPSRDetailRouting.filter(option => !(this.fieldsManagerSE.isP25() && option.path == 'link-to-results')).map(option => {
       if (option.path == 'ipsr-innovation-use-pathway' && this.fieldsManagerSE.isP25()) option.prName = 'Package and Assess';
+      if (option.path == 'contributors' && this.fieldsManagerSE.isP25()) option.prName = 'Contributors and Partners';
       return option;
     })
   );
