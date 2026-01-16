@@ -1,0 +1,144 @@
+<p-drawer [(visible)]="visible" [position]="drawerFullScreen() ? 'full' : 'right'" [closable]="false" [style]="{ minWidth: '65vw' }">
+  <ng-template #header>
+    <div class="result-review-drawer-header">
+      <p class="result-review-drawer-header_entity">
+        <span class="result-review-drawer-header_entity_acronym">{{ resultToReview()?.acronym }}</span>
+        <span class="result-review-drawer-header_separator">|</span>
+        <span class="result-review-drawer-header_entity_code">{{ resultToReview()?.project_name }}</span>
+      </p>
+
+      <div class="result-review-drawer-header_icons">
+        <i
+          class="pi {{
+            drawerFullScreen() ? 'pi-arrow-down-left-and-arrow-up-right-to-center' : 'pi-arrow-up-right-and-arrow-down-left-from-center'
+          }}"
+          style="font-size: 15px; cursor: pointer"
+          (click)="toggleFullScreen()"></i>
+        <i class="pi pi-times" style="font-size: 16px; cursor: pointer" (click)="closeDrawer()"></i>
+      </div>
+    </div>
+  </ng-template>
+
+  <div class="result-review-drawer-content">
+    <!-- Result Header Info -->
+    <div class="result-review-drawer-content_header">
+      <p class="result-review-drawer-content_title">
+        {{ resultToReview()?.result_title }}
+      </p>
+
+      <div class="result-review-drawer-content_meta">
+        <span class="result-review-drawer-content_meta_item">
+          <i class="material-icons-round">light_mode</i>
+          {{ resultToReview()?.indicator_category }}
+        </span>
+        <span class="result-review-drawer-content_meta_separator">•</span>
+        <span class="result-review-drawer-content_meta_item">
+          <i class="material-icons-round">tag</i>
+          Result code: {{ resultToReview()?.result_code }}
+        </span>
+      </div>
+    </div>
+
+    <!-- TOC ALIGNMENT Section -->
+    <div class="form-section">
+      <p class="form-section_title">TOC ALIGNMENT</p>
+
+      <div class="form-field">
+        <label class="form-field_label">Does this result align with the Program's TOC?</label>
+        <div class="form-field_radio-group">
+          <div class="radioButton">
+            <p-radioButton name="tocAlignment" [value]="true" [(ngModel)]="tocAlignmentValue" inputId="toc_yes"></p-radioButton>
+            <label for="toc_yes" class="form-field_radio-label">Yes</label>
+          </div>
+          <div class="radioButton">
+            <p-radioButton name="tocAlignment" [value]="false" [(ngModel)]="tocAlignmentValue" inputId="toc_no"></p-radioButton>
+            <label for="toc_no" class="form-field_radio-label">No</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-field">
+        <label class="form-field_label">TOC result</label>
+        <p-select
+          [options]="tocResultOptions"
+          [(ngModel)]="selectedTocResult"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Select TOC result"
+          [style]="{ width: '100%' }" />
+      </div>
+
+      <div class="form-field">
+        <label class="form-field_label">Indicator</label>
+        <p-select
+          [options]="indicatorOptions"
+          [(ngModel)]="selectedIndicator"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Select indicator"
+          [style]="{ width: '100%' }" />
+      </div>
+
+      <button pButton class="save-changes-button" (click)="saveTocChanges()">
+        <span>Save changes</span>
+        <i class="material-icons-round">save</i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Footer Actions -->
+  <ng-template #footer>
+    <div class="result-review-drawer-footer">
+      <button pButton class="approve-button" (click)="onApprove()">
+        <i class="pi pi-check"></i>
+        <span>APPROVE</span>
+      </button>
+      <button pButton class="reject-button" (click)="onReject()">
+        <i class="pi pi-times"></i>
+        <span>REJECT</span>
+      </button>
+    </div>
+  </ng-template>
+</p-drawer>
+
+<!-- Confirm Approve Dialog -->
+<p-dialog
+  [(visible)]="showConfirmApproveDialog"
+  [modal]="true"
+  [closable]="true"
+  [style]="{ width: '450px' }"
+  header="Confirm Approval"
+  [draggable]="false">
+  <p class="dialog-message">Are you sure you want to approve this result?</p>
+  <ng-template #footer>
+    <div class="dialog-footer">
+      <button pButton class="dialog-cancel-button" (click)="cancelApprove()">Cancel</button>
+      <button pButton class="dialog-confirm-button" (click)="confirmApprove()">Confirm</button>
+    </div>
+  </ng-template>
+</p-dialog>
+
+<!-- Reject Justification Dialog -->
+<p-dialog
+  [(visible)]="showConfirmRejectDialog"
+  [modal]="true"
+  [closable]="true"
+  [style]="{ width: '500px' }"
+  header="Reject Result"
+  [draggable]="false">
+  <p class="dialog-message">Please provide a justification for rejecting this result:</p>
+  <textarea
+    pInputTextarea
+    [(ngModel)]="rejectJustification"
+    [rows]="4"
+    [style]="{ width: '100%' }"
+    placeholder="Enter your justification..."></textarea>
+  <ng-template #footer>
+    <div class="dialog-footer">
+      <button pButton class="dialog-cancel-button" (click)="cancelReject()">Cancel</button>
+      <button pButton class="dialog-confirm-button reject" [disabled]="!rejectJustification.trim()" (click)="confirmReject()">
+        Confirm Rejection
+      </button>
+    </div>
+  </ng-template>
+</p-dialog>

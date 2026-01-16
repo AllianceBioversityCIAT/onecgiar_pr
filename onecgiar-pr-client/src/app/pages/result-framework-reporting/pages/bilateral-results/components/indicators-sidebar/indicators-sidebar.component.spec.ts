@@ -1,5 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { ActivatedRoute } from '@angular/router';
+import { of } from 'rxjs';
 import { IndicatorsSidebarComponent } from './indicators-sidebar.component';
 
 describe('IndicatorsSidebarComponent', () => {
@@ -8,7 +10,16 @@ describe('IndicatorsSidebarComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [IndicatorsSidebarComponent, HttpClientTestingModule]
+      imports: [IndicatorsSidebarComponent, HttpClientTestingModule],
+      providers: [
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            params: of({}),
+            snapshot: { params: {} }
+          }
+        }
+      ]
     })
     .compileComponents();
 

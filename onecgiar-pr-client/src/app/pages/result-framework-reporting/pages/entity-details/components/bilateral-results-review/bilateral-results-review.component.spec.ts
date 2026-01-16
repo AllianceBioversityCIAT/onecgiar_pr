@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { of } from 'rxjs';
 import { BilateralResultsReviewComponent } from './bilateral-results-review.component';
 
@@ -9,7 +10,7 @@ describe('BilateralResultsReviewComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [BilateralResultsReviewComponent],
+      imports: [BilateralResultsReviewComponent, HttpClientTestingModule],
       providers: [
         {
           provide: ActivatedRoute,
