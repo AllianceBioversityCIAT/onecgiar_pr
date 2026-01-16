@@ -1,13 +1,19 @@
-import { computed, Injectable, signal } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { CenterDto } from '../../../../shared/interfaces/center.dto';
 
 @Injectable({
   providedIn: 'root'
 })
 export class BilateralResultsService {
-  currentCenterSelected = signal<any>(null);
-
   centers = signal<CenterDto[]>([]);
 
-  allCenters = computed(() => this.centers().map(center => center.code));
+  currentCenterSelected = signal<string[]>([]);
+
+  selectCenter(centerCode: string | null): void {
+    if (centerCode === null) {
+      this.currentCenterSelected.set(this.centers().map(center => center.code));
+    } else {
+      this.currentCenterSelected.set([centerCode]);
+    }
+  }
 }

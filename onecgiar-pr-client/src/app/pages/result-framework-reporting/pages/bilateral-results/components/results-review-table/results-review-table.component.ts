@@ -274,7 +274,7 @@ export class ResultsReviewTableComponent {
   ]);
 
   onChangeCenterSelected = effect(() => {
-    console.log(this.bilateralResultsService.allCenters());
+    console.log(this.bilateralResultsService.currentCenterSelected());
   });
 
   ngOnInit(): void {

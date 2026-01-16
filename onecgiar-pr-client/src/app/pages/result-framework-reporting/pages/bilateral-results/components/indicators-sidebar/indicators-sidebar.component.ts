@@ -24,11 +24,13 @@ export class IndicatorsSidebarComponent implements OnInit {
   getCenters(): void {
     this.centersService.getData().then((centers: CenterDto[]) => {
       this.bilateralResultsService.centers.set(centers);
+      this.selectCenter(null);
     });
   }
 
   selectCenter(centerCode: string | null): void {
     this.selectedCenterCode.set(centerCode);
+    this.bilateralResultsService.selectCenter(centerCode);
   }
 
   isSelected(centerCode: string | null): boolean {
