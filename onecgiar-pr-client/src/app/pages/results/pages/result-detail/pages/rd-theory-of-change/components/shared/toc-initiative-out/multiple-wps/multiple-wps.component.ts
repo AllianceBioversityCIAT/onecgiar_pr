@@ -3,25 +3,7 @@ import { RdTheoryOfChangesServicesService } from '../../../../rd-theory-of-chang
 import { CustomizedAlertsFeService } from '../../../../../../../../../../shared/services/customized-alerts-fe.service';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 import { FieldsManagerService } from '../../../../../../../../../../shared/services/fields-manager.service';
-
-interface Tab {
-  action_area_outcome_id: number | null;
-  created_by: number | null;
-  created_date: string | null;
-  initiative_id: number | null;
-  is_active: number | null;
-  last_updated_by: number | null;
-  last_updated_date: string | null;
-  name: string | null;
-  official_code: string | null;
-  planned_result: number | null;
-  result_toc_result_id: string | null;
-  results_id: string | null;
-  short_name: string | null;
-  toc_level_id: number | null;
-  toc_result_id: number | null;
-  uniqueId: string | null;
-}
+import { TocTab } from '../../../../../../../../../../shared/interfaces/toc-tab.interface';
 
 @Component({
   selector: 'app-multiple-wps',
@@ -37,7 +19,7 @@ export class MultipleWPsComponent implements OnChanges, OnInit {
   @Input() resultLevelId: number | string;
   @Input() isIpsr: boolean = false;
   @Input() showMultipleWPsContent: boolean = true;
-  activeTab: Tab;
+  activeTab: TocTab;
 
   currentPlannedResult = null;
   outcomeList = [];
@@ -208,7 +190,7 @@ export class MultipleWPsComponent implements OnChanges, OnInit {
     this.onActiveTab(this.initiative.result_toc_results[this.initiative.result_toc_results.length - 1]);
   }
 
-  onDeleteTab(tab: Tab, tabNumber = 0) {
+  onDeleteTab(tab: TocTab, tabNumber = 0) {
     const confirmationMessage = `Are you sure you want to delete contribution TOC-${this.initiative?.planned_result && this.resultLevelId === 1 ? 'Output' : 'Outcome'} N° ${tabNumber} to the TOC?`;
 
     this.customizedAlertsFeSE.show(
