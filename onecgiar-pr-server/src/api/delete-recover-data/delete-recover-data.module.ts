@@ -97,6 +97,7 @@ import { InitiativeEntityMapRepository } from '../initiative_entity_map/initiati
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
 import { ImpactAreasScoresComponentsModule } from '../results/impact_areas_scores_components/impact_areas_scores_components.module';
 import { AoWBilateralRepository } from '../results/results-toc-results/repositories/aow-bilateral.repository';
+import { ResultReviewHistoryRepository } from '../results/result-review-history/result-review-history.repository';
 
 @Module({
   controllers: [DeleteRecoverDataController],
@@ -192,6 +193,7 @@ import { AoWBilateralRepository } from '../results/results-toc-results/repositor
     InitiativeEntityMapRepository,
     RoleByUserRepository,
     AoWBilateralRepository,
+    ResultReviewHistoryRepository,
   ],
   imports: [
     HttpModule,

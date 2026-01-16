@@ -17,6 +17,7 @@ import { CreateGeneralInformationResultDto } from './dto/create-general-informat
 import { CreateResultGeoDto } from './dto/create-result-geo-scope.dto';
 import { ScienceProgramProgressResponseDto } from './dto/science-program-progress.dto';
 import { UserToken } from 'src/shared/decorators/user-token.decorator';
+import { ReviewDecisionDto } from './dto/review-decision.dto';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 import {
   ApiBody,
@@ -214,6 +215,14 @@ export class ResultsController {
     type: String,
     required: false,
     description: 'Filter by status_id. Comma-separated allowed.',
+  })
+  @ApiQuery({
+    name: 'funding_source',
+    type: String,
+    required: false,
+    description:
+      'Filter by funding source. Options: "W1/W2" (pool funding/Science Program) or "W3/Bilaterals" (bilateral projects/CG-Center). Comma-separated allowed.',
+    example: 'W1/W2',
   })
   @ApiQuery({
     name: 'page',
@@ -590,6 +599,55 @@ export class ResultsController {
     return this.resultsService.getResultsByProgramAndCenters(
       programId,
       centerIds,
+    );
+  }
+
+  @Get('bilateral/:resultId')
+  @ApiOperation({
+    summary: 'Get bilateral result by ID',
+    description:
+      'Returns complete information of a bilateral result for the provided result identifier.',
+  })
+  @ApiParam({
+    name: 'resultId',
+    type: Number,
+    required: true,
+    description: 'Result identifier',
+    example: 123,
+  })
+  @ApiOkResponse({
+    description: 'Bilateral result retrieved successfully.',
+  })
+  async getBilateralResultById(@Param('resultId') resultId: number) {
+    return this.resultsService.getBilateralResultById(resultId);
+  }
+
+  @Patch('bilateral/:resultId/review-decision')
+  @ApiOperation({
+    summary: 'Review decision for bilateral result',
+    description:
+      'Approve or reject a bilateral result that is in PENDING_REVIEW status. Requires justification when rejecting.',
+  })
+  @ApiParam({
+    name: 'resultId',
+    type: Number,
+    required: true,
+    description: 'Result identifier',
+    example: 123,
+  })
+  @ApiBody({ type: ReviewDecisionDto })
+  @ApiOkResponse({
+    description: 'Review decision processed successfully.',
+  })
+  async reviewBilateralResult(
+    @Param('resultId') resultId: number,
+    @Body() reviewDecisionDto: ReviewDecisionDto,
+    @UserToken() user: TokenDto,
+  ) {
+    return this.resultsService.reviewBilateralResult(
+      resultId,
+      reviewDecisionDto,
+      user,
     );
   }
 }

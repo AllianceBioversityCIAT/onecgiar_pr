@@ -97,6 +97,8 @@ import { ResultsTocTargetIndicatorRepository } from './results-toc-results/repos
 import { ResultsTocResultIndicatorsService } from './results-toc-results/results-toc-result-indicators.service';
 import { AoWBilateralRepository } from './results-toc-results/repositories/aow-bilateral.repository';
 import { IntellectualPropertyExpertsModule } from './intellectual_property_experts/intellectual_property_experts.module';
+import { ResultReviewHistoryRepository } from './result-review-history/result-review-history.repository';
+import { GeographicLocationModule } from '../results-framework-reporting/geographic-location/geographic-location.module';
 
 @Module({
   controllers: [ResultsController],
@@ -156,6 +158,7 @@ import { IntellectualPropertyExpertsModule } from './intellectual_property_exper
     ImpactAreasScoresComponentsModule,
     ResultsByProjectsModule,
     IntellectualPropertyExpertsModule,
+    forwardRef(() => GeographicLocationModule),
   ],
   providers: [
     ResultsService,
@@ -191,6 +194,7 @@ import { IntellectualPropertyExpertsModule } from './intellectual_property_exper
     ResultsTocTargetIndicatorRepository,
     ResultsTocResultIndicatorsService,
     AoWBilateralRepository,
+    ResultReviewHistoryRepository,
   ],
   exports: [ResultRepository, JwtMiddleware, ResultsService],
 })

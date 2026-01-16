@@ -161,8 +161,8 @@ export class IpsrContributorsComponent implements OnInit {
       ...(this.rdPartnersSE.partnersBody?.contributing_initiatives.pending_contributing_initiatives || [])
     ];
     this.initiativeIdSignal.set(this.rdPartnersSE.partnersBody?.result_toc_result?.initiative_id);
+
     this.getConsumed.set(true);
-    // //! TOC END
     this.contributorsBody.bilateral_projects.forEach(project => {
       project.fullName = project.obj_clarisa_project.fullName;
     });
@@ -189,8 +189,6 @@ export class IpsrContributorsComponent implements OnInit {
       ];
 
       this.contributorsBody.contributingInitiativeNew = [];
-      // ! Delete later
-      this.rdPartnersSE.partnersBody.result_toc_result.planned_result = false;
     });
   }
 
@@ -234,10 +232,8 @@ export class IpsrContributorsComponent implements OnInit {
           ...this.contributorsBody.contributingInitiativeNew
         ]
       },
-      //? map by service
       contributing_center: this.rdPartnersSE.partnersBody.contributing_center,
       bilateral_projects: this.rdPartnersSE.partnersBody.bilateral_projects
-      //?
     };
 
     if (this.fieldsManagerSE.isP25()) {
@@ -249,6 +245,9 @@ export class IpsrContributorsComponent implements OnInit {
       sendedData.is_lead_by_partner = this.rdPartnersSE.partnersBody.is_lead_by_partner;
       sendedData.institutions = this.rdPartnersSE.partnersBody.institutions;
       sendedData.mqap_institutions = this.rdPartnersSE.partnersBody.mqap_institutions;
+      if (!this.rdPartnersSE.partnersBody.result_toc_result.planned_result) {
+        sendedData.result_toc_result.result_toc_results = null;
+      }
     }
 
     this.api.resultsSE.PATCHContributorsByIpsrResultId(sendedData, this.fieldsManagerSE.isP25()).subscribe(({ response }) => {

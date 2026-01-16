@@ -4,7 +4,11 @@ import {
   Injectable,
   Logger,
   Optional,
+  BadRequestException,
+  forwardRef,
+  ConflictException,
 } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { CreateResultDto } from './dto/create-result.dto';
 import { ResultRepository } from './result.repository';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
@@ -25,7 +29,7 @@ import {
   StatusBreakdownDto,
   VersionProgressDto,
 } from './dto/science-program-progress.dto';
-import { Result } from './entities/result.entity';
+import { Result, SourceEnum } from './entities/result.entity';
 import { CreateGeneralInformationResultDto } from './dto/create-general-information-result.dto';
 import { YearRepository } from './years/year.repository';
 import { Year } from './years/entities/year.entity';
@@ -87,6 +91,14 @@ import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 import { ResultsTocResultRepository } from './results-toc-results/repositories/results-toc-results.repository';
 import { ResultsInnovationsDevRepository } from './summary/repositories/results-innovations-dev.repository';
 import { AoWBilateralRepository } from './results-toc-results/repositories/aow-bilateral.repository';
+import { ResultsByProjectsRepository } from './results_by_projects/results_by_projects.repository';
+import { GeographicLocationService } from '../results-framework-reporting/geographic-location/geographic-location.service';
+import {
+  ReviewDecisionDto,
+  ReviewDecisionEnum,
+} from './dto/review-decision.dto';
+import { ResultReviewHistory } from './result-review-history/entities/result-review-history.entity';
+import { ResultStatusData } from '../../shared/constants/result-status.enum';
 
 @Injectable()
 export class ResultsService {
@@ -130,9 +142,15 @@ export class ResultsService {
     private readonly _resultsCenterRepository: ResultsCenterRepository,
     private readonly _resultsTocResultRepository: ResultsTocResultRepository,
     private readonly _tocResultsRepository: AoWBilateralRepository,
+    private readonly _dataSource: DataSource,
     private readonly _initiativeEntityMapRepository?: InitiativeEntityMapRepository,
     private readonly _roleByUserRepository?: RoleByUserRepository,
     private readonly _resultsInnovationsDevRepository?: ResultsInnovationsDevRepository,
+    @Optional()
+    private readonly _resultsByProjectsRepository?: ResultsByProjectsRepository,
+    @Optional()
+    @Inject(forwardRef(() => GeographicLocationService))
+    private readonly _geographicLocationService?: GeographicLocationService,
     @Optional()
     @Inject(AdUserService)
     private readonly _adUserService?: AdUserService,
@@ -1167,6 +1185,19 @@ export class ResultsService {
         query.initiative ?? query.initiativeCode ?? undefined,
       );
 
+      // Process funding_source filter: map display names to source enum values
+      const fundingSourceRaw = toStringArray(
+        query.funding_source ?? query.fundingSource,
+      );
+      const fundingSource = fundingSourceRaw
+        ?.map((fs) => {
+          const normalized = fs.trim();
+          if (normalized === 'W1/W2') return 'Result';
+          if (normalized === 'W3/Bilaterals') return 'API';
+          return null;
+        })
+        .filter((fs) => fs !== null) as string[] | undefined;
+
       const filters = {
         initiativeCode,
         versionId: toNumberArray(
@@ -1180,6 +1211,7 @@ export class ResultsService {
           query.portfolio ?? query.portfolio_id ?? query.portfolioId,
         ),
         statusId: toNumberArray(query.status_id ?? query.status),
+        fundingSource,
       };
 
       const repoRes =
@@ -2604,7 +2636,7 @@ export class ResultsService {
           r.source = 'API'
           AND tr.official_code = ?
           AND r.is_active = 1
-          AND r.status_id = 1
+          AND r.status_id = 5
         UNION ALL
         SELECT
           tr.official_code,
@@ -2625,7 +2657,7 @@ export class ResultsService {
           r.source = 'API'
           AND tr.official_code = ?
           AND r.is_active = 1
-          AND r.status_id = 1
+          AND r.status_id = 5
         GROUP BY
           tr.official_code,
           rc.center_id;
@@ -2710,7 +2742,7 @@ export class ResultsService {
             .filter((id) => id.length > 0);
         }
 
-        if (processedCenterIds && processedCenterIds.length === 0) {
+        if (processedCenterIds?.length === 0) {
           processedCenterIds = undefined;
         }
       }
@@ -2766,6 +2798,334 @@ export class ResultsService {
         status: HttpStatus.OK,
       };
     } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async getBilateralResultById(
+    resultId: number,
+  ): Promise<ReturnResponseDto<any> | returnErrorDto> {
+    try {
+      const parsedResultId = Number(resultId);
+      if (
+        !parsedResultId ||
+        !Number.isFinite(parsedResultId) ||
+        parsedResultId <= 0
+      ) {
+        return {
+          response: {},
+          message: 'The resultId parameter must be a valid positive number.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const result = await this._resultRepository.findOne({
+        where: { id: resultId, source: SourceEnum.Bilateral },
+      });
+
+      if (!result) {
+        return {
+          response: {},
+          message: 'Bilateral result not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const commonFields =
+        await this._resultRepository.getCommonFieldsBilateralResultById(
+          resultId,
+        );
+
+      if (!commonFields) {
+        this._logger.warn(
+          `Common fields for Bilateral result data not found (resultId: ${resultId})`,
+        );
+      }
+
+      const tocMetadata =
+        await this._resultRepository.getTocMetadataBilateralResult(resultId);
+
+      if (!tocMetadata) {
+        this._logger.warn(
+          `Toc metadata for Bilateral result data not found (resultId: ${resultId})`,
+        );
+      }
+
+      let geoScope: any = null;
+      if (this._geographicLocationService) {
+        const geographicScope =
+          await this._geographicLocationService.getGeoScopeV2(resultId);
+
+        if (geographicScope?.status === HttpStatus.OK) {
+          geoScope = geographicScope.response;
+        } else {
+          this._logger.warn(
+            `GeoScope failed for Bilateral result (resultId: ${resultId}): ${geographicScope?.message ?? 'Unknown error'}`,
+          );
+        }
+      } else {
+        this._logger.warn(
+          `GeographicLocationService is not available for Bilateral result (resultId: ${resultId}). GeoScope will be null.`,
+        );
+      }
+
+      const contributingCenters =
+        await this._resultsCenterRepository.getAllResultsCenterByResultId(
+          resultId,
+        );
+
+      if (!contributingCenters) {
+        this._logger.warn(
+          `Contributing centers for Bilateral result data not found (resultId: ${resultId})`,
+        );
+      }
+
+      const knowledgeProduct =
+        await this._resultKnowledgeProductRepository.findOne({
+          where: { results_id: resultId },
+          relations: { result_knowledge_product_institution_array: true },
+        });
+
+      let contributingInstitutions: any[] =
+        await this._resultByIntitutionsRepository.find({
+          where: {
+            result_id: resultId,
+            is_active: true,
+            institution_roles_id: knowledgeProduct
+              ? InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS
+              : InstitutionRoleEnum.PARTNER,
+          },
+          relations: {
+            delivery: true,
+            obj_institutions: { obj_institution_type_code: true },
+          },
+          order: { id: 'ASC' },
+        });
+
+      contributingInstitutions = contributingInstitutions.map((i) => ({
+        ...i,
+        delivery: i.delivery.filter((d) => d.is_active),
+        obj_institutions: i.obj_institutions
+          ? {
+              name: i.obj_institutions.name,
+              website_link: i.obj_institutions.website_link,
+              obj_institution_type_code: {
+                id: i.obj_institutions.obj_institution_type_code.code,
+                name: i.obj_institutions.obj_institution_type_code.name,
+              },
+            }
+          : null,
+      }));
+
+      const contributingProjects =
+        await this._resultsByProjectsRepository?.findResultsByProjectsByResultId(
+          resultId,
+        );
+
+      if (!contributingProjects) {
+        this._logger.warn(
+          `Contributing projects for Bilateral result data not found (resultId: ${resultId})`,
+        );
+      }
+
+      const contributingInitiatives =
+        await this._resultRepository.getContributingInitiativesBilateralResult(
+          resultId,
+        );
+
+      if (!contributingInitiatives) {
+        this._logger.warn(
+          `Contributing initiatives for Bilateral result data not found (resultId: ${resultId})`,
+        );
+      }
+
+      const evidence =
+        await this._resultRepository.getEvidenceBilateralResult(resultId);
+
+      if (!evidence) {
+        this._logger.warn(
+          `Evidence for Bilateral result data not found (resultId: ${resultId})`,
+        );
+      }
+
+      let resultTypeResponse: any = null;
+      const resultTypeId: number = result.result_type_id;
+
+      switch (resultTypeId) {
+        case ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT:
+          resultTypeResponse =
+            await this._resultRepository.getCapacitySharingBilateralResultById(
+              resultId,
+            );
+          break;
+
+        case ResultTypeEnum.KNOWLEDGE_PRODUCT:
+          resultTypeResponse =
+            await this._resultRepository.getKnowledgeProductBilateralResultById(
+              resultId,
+            );
+          break;
+
+        case ResultTypeEnum.INNOVATION_DEVELOPMENT:
+          resultTypeResponse =
+            await this._resultRepository.getInnovationDevBilateralResultById(
+              resultId,
+            );
+          break;
+
+        case ResultTypeEnum.POLICY_CHANGE:
+          resultTypeResponse =
+            await this._resultRepository.getPolicyChangeBilateralResultById(
+              resultId,
+            );
+          break;
+
+        case ResultTypeEnum.INNOVATION_USE:
+          resultTypeResponse =
+            await this._resultRepository.getInnovationUseBilateralResultById(
+              resultId,
+            );
+          break;
+
+        default:
+          this._logger.warn(
+            `Unsupported result_type_id: ${resultTypeId} for Bilateral result (resultId: ${resultId}). Continuing with null resultTypeResponse.`,
+          );
+          // resultTypeResponse remains null, code continues normally
+          break;
+      }
+
+      if (!resultTypeResponse) {
+        this._logger.warn(
+          `Result type response for Bilateral result data not found (resultId: ${resultId}, resultTypeId: ${resultTypeId})`,
+        );
+      }
+
+      const mappedResult = {
+        commonFields: commonFields ?? null,
+        tocMetadata: tocMetadata ?? [],
+        geographicScope: geoScope ?? null,
+        contributingCenters: contributingCenters ?? [],
+        contributingInstitutions: contributingInstitutions ?? [],
+        contributingProjects: contributingProjects ?? [],
+        contributingInitiatives: contributingInitiatives ?? [],
+        evidence: evidence ?? [],
+        resultTypeResponse: resultTypeResponse ?? null,
+      };
+
+      return {
+        response: mappedResult,
+        message: 'Bilateral result retrieved successfully',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async reviewBilateralResult(
+    resultId: number,
+    reviewDecisionDto: ReviewDecisionDto,
+    user: TokenDto,
+  ): Promise<ReturnResponseDto<any> | returnErrorDto> {
+    try {
+      const parsedResultId = Number(resultId);
+      if (
+        !parsedResultId ||
+        !Number.isFinite(parsedResultId) ||
+        parsedResultId <= 0
+      ) {
+        return {
+          response: {},
+          message: 'The resultId parameter must be a valid positive number.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      // Validar que la justificación esté presente si es REJECT
+      if (
+        reviewDecisionDto.decision === ReviewDecisionEnum.REJECT &&
+        (!reviewDecisionDto.justification ||
+          !reviewDecisionDto.justification.trim())
+      ) {
+        return {
+          response: {},
+          message: 'Justification is required when decision is REJECT',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      return await this._dataSource.transaction(async (manager) => {
+        const result = await manager.findOne(Result, {
+          where: {
+            id: parsedResultId,
+            source: SourceEnum.Bilateral,
+            is_active: true,
+          },
+        });
+
+        if (!result) {
+          throw new BadRequestException('Bilateral result not found');
+        }
+
+        const currentStatusId = Number(result.status_id);
+        if (currentStatusId !== ResultStatusData.PendingReview.value) {
+          throw new ConflictException(
+            `Cannot review result. Current status is not PENDING_REVIEW (status_id: ${result.status_id})`,
+          );
+        }
+
+        let newStatusId: number;
+        if (reviewDecisionDto.decision === ReviewDecisionEnum.APPROVE) {
+          newStatusId = ResultStatusData.Approved.value;
+        } else {
+          newStatusId = ResultStatusData.Rejected.value;
+        }
+
+        await manager.update(
+          Result,
+          { id: parsedResultId },
+          {
+            status_id: newStatusId,
+            reviewed_by: user.id,
+            reviewed_at: new Date(),
+          },
+        );
+
+        // Crear el historial de revisión usando el manager de la transacción
+        const reviewHistory = manager.create(ResultReviewHistory, {
+          result_id: parsedResultId,
+          action: reviewDecisionDto.decision as any,
+          comment: reviewDecisionDto.justification || null,
+          created_by: user.id,
+        });
+        await manager.save(ResultReviewHistory, reviewHistory);
+
+        const decisionVerb =
+          reviewDecisionDto.decision === ReviewDecisionEnum.APPROVE
+            ? 'approved'
+            : 'rejected';
+
+        return {
+          response: {
+            resultId: parsedResultId,
+            status: newStatusId,
+          },
+          message: `Result ${decisionVerb} successfully`,
+          status: HttpStatus.OK,
+        };
+      });
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ConflictException
+      ) {
+        return {
+          response: {},
+          message: error.message,
+          status: error.getStatus(),
+        };
+      }
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }
