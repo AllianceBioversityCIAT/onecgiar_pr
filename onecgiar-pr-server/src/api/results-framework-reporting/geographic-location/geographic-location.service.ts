@@ -94,11 +94,12 @@ export class GeographicLocationService {
 
   async getGeoScopeV2(resultId: number) {
     try {
-      const result = await this._resultRepository.getResultById(resultId);
-      console.log('result', result.id);
+      const result = await this._resultRepository.findOne({
+        where: { id: resultId },
+      });
 
       if (!result?.id) {
-        throw {
+        return {
           response: {},
           message: 'Results Not Found',
           status: HttpStatus.NOT_FOUND,

@@ -2855,7 +2855,7 @@ export class ResultsService {
       if (this._geographicLocationService) {
         const geographicScope =
           await this._geographicLocationService.getGeoScopeV2(resultId);
-
+        
         if (geographicScope?.status === HttpStatus.OK) {
           geoScope = geographicScope.response;
         } else {
