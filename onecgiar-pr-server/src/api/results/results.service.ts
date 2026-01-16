@@ -2863,8 +2863,12 @@ export class ResultsService {
             `GeoScope failed for Bilateral result (resultId: ${resultId}): ${geographicScope?.message ?? 'Unknown error'}`,
           );
         }
+      } else {
+        this._logger.warn(
+          `GeographicLocationService is not available for Bilateral result (resultId: ${resultId}). GeoScope will be null.`,
+        );
       }
-
+    
       const contributingCenters =
         await this._resultsCenterRepository.getAllResultsCenterByResultId(
           resultId,
@@ -2924,17 +2928,15 @@ export class ResultsService {
         );
       }
 
-      /*       const contributingInitiatives = await this._resultRepository.getContributingInitiativesBilateralResult(
+      const contributingInitiatives = await this._resultRepository.getContributingInitiativesBilateralResult(
         resultId,
       );
 
       if (!contributingInitiatives) {
-        return {
-          response: {},
-          message: 'Contributing initiatives for Bilateral result data not found',
-          status: HttpStatus.NOT_FOUND,
-        };
-      } */
+        this._logger.warn(
+          `Contributing initiatives for Bilateral result data not found (resultId: ${resultId})`,
+        );
+      } 
 
       const evidence =
         await this._resultRepository.getEvidenceBilateralResult(resultId);
@@ -2948,7 +2950,6 @@ export class ResultsService {
       let resultTypeResponse: any = null;
       const resultTypeId: number = result.result_type_id;
 
-      // ✅ 2) Según el tipo, ejecutamos la query específica
       switch (resultTypeId) {
         case ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT:
           resultTypeResponse =
@@ -3006,7 +3007,7 @@ export class ResultsService {
         contributingCenters: contributingCenters ?? [],
         contributingInstitutions: contributingInstitutions ?? [],
         contributingProjects: contributingProjects ?? [],
-        //contributingInitiatives: contributingInitiatives,
+        contributingInitiatives: contributingInitiatives ?? [],
         evidence: evidence ?? [],
         resultTypeResponse: resultTypeResponse ?? null,
       };

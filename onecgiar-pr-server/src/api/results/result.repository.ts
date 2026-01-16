@@ -2687,4 +2687,33 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       });
     }
   }
+
+  async getContributingInitiativesBilateralResult(resultId: number): Promise<any[]> {
+    const query = `
+      SELECT
+        ir.name AS initiative_role,
+        ci.official_code
+      FROM result r
+      JOIN results_by_inititiative rbi
+        ON r.id = rbi.result_id
+      JOIN clarisa_initiatives ci
+        ON rbi.inititiative_id = ci.id
+      LEFT JOIN initiative_roles ir
+        ON rbi.initiative_role_id = ir.id
+      WHERE
+        r.id = ?
+        AND r.is_active = 1;
+    `;
+
+    try {
+      const results = await this.query(query, [resultId]);
+      return results;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
 }
