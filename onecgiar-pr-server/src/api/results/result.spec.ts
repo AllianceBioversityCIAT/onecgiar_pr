@@ -45,7 +45,7 @@ import { CreateResultDto } from './dto/create-result.dto';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 import { ResultLevelEnum } from '../../shared/constants/result-level.enum';
 import { returnFormatService } from '../../shared/extendsGlobalDTO/returnServices.dto';
-import { Result } from './entities/result.entity';
+import { Result, SourceEnum } from './entities/result.entity';
 import { CreateGeneralInformationResultDto } from './dto/create-general-information-result.dto';
 import { GeneralInformationDto } from './dto/general-information.dto';
 import { CreateResultGeoDto } from './dto/create-result-geo-scope.dto';
@@ -55,6 +55,15 @@ import { ImpactAreasScoresComponentRepository } from './impact_areas_scores_comp
 import { ResultsTocResultRepository } from './results-toc-results/repositories/results-toc-results.repository';
 import { ResultsInnovationsDevRepository } from './summary/repositories/results-innovations-dev.repository';
 import { AoWBilateralRepository } from './results-toc-results/repositories/aow-bilateral.repository';
+import { ResultReviewHistoryRepository } from './result-review-history/result-review-history.repository';
+import { ResultsByProjectsRepository } from './results_by_projects/results_by_projects.repository';
+import { GeographicLocationService } from '../results-framework-reporting/geographic-location/geographic-location.service';
+import {
+  ReviewDecisionDto,
+  ReviewDecisionEnum,
+} from './dto/review-decision.dto';
+import { ResultStatusData } from '../../shared/constants/result-status.enum';
+import { DataSource } from 'typeorm';
 
 describe('ResultsService (unit, pure mocks)', () => {
   let module: TestingModule;
@@ -73,6 +82,16 @@ describe('ResultsService (unit, pure mocks)', () => {
       .mockImplementation(async (id: number) =>
         id > 0 ? { id: id.toString(), result_type_id: 1, status_id: 1 } : null,
       ),
+    query: jest.fn().mockResolvedValue([]),
+    getResultsByProgramAndCenters: jest.fn().mockResolvedValue([]),
+    getCommonFieldsBilateralResultById: jest.fn().mockResolvedValue(null),
+    getTocMetadataBilateralResult: jest.fn().mockResolvedValue([]),
+    getCapacitySharingBilateralResultById: jest.fn().mockResolvedValue([]),
+    getKnowledgeProductBilateralResultById: jest.fn().mockResolvedValue([]),
+    getInnovationDevBilateralResultById: jest.fn().mockResolvedValue([]),
+    getPolicyChangeBilateralResultById: jest.fn().mockResolvedValue([]),
+    getInnovationUseBilateralResultById: jest.fn().mockResolvedValue([]),
+    getEvidenceBilateralResult: jest.fn().mockResolvedValue([]),
     getResultAndLevelTypeById: jest
       .fn()
       .mockImplementation(async (id: number) =>
@@ -159,6 +178,7 @@ describe('ResultsService (unit, pure mocks)', () => {
     save: jest.fn().mockImplementation(async (items: any[]) => items || []),
     logicalElimination: jest.fn().mockResolvedValue(undefined),
     getResultByInstitutionActorsFull: jest.fn().mockResolvedValue([]),
+    find: jest.fn().mockResolvedValue([]),
   } as any;
 
   const mockResultByInitiativesRepository = {
@@ -242,7 +262,7 @@ describe('ResultsService (unit, pure mocks)', () => {
   } as any;
 
   const mockResultsKnowledgeProductRepository = {
-    findOne: jest.fn(),
+    findOne: jest.fn().mockResolvedValue(null),
     findOneBy: jest.fn(),
   } as any;
 
@@ -323,6 +343,35 @@ describe('ResultsService (unit, pure mocks)', () => {
 
   const mockAoWBilateralRepository = {
     getIndicatorContributions: jest.fn().mockResolvedValue(new Map()),
+  } as any;
+
+  const mockResultReviewHistoryRepository = {
+    create: jest.fn(),
+    save: jest.fn().mockResolvedValue({ id: 1 }),
+    createReviewHistory: jest.fn().mockResolvedValue({ id: 1 }),
+  } as any;
+
+  const mockResultsByProjectsRepository = {
+    findResultsByProjectsByResultId: jest.fn().mockResolvedValue([]),
+  } as any;
+
+  const mockGeographicLocationService = {
+    getGeoScopeV2: jest.fn().mockResolvedValue({
+      status: HttpStatus.OK,
+      response: { geo_scope_id: 2 },
+    }),
+  } as any;
+
+  const mockDataSource = {
+    transaction: jest.fn().mockImplementation(async (callback) => {
+      const manager = {
+        findOne: jest.fn(),
+        update: jest.fn().mockResolvedValue({ affected: 1 }),
+        create: jest.fn(),
+        save: jest.fn().mockResolvedValue({ id: 1 }),
+      };
+      return callback(manager);
+    }),
   } as any;
 
   beforeEach(async () => {
@@ -452,6 +501,22 @@ describe('ResultsService (unit, pure mocks)', () => {
         {
           provide: AoWBilateralRepository,
           useValue: mockAoWBilateralRepository,
+        },
+        {
+          provide: ResultReviewHistoryRepository,
+          useValue: mockResultReviewHistoryRepository,
+        },
+        {
+          provide: ResultsByProjectsRepository,
+          useValue: mockResultsByProjectsRepository,
+        },
+        {
+          provide: GeographicLocationService,
+          useValue: mockGeographicLocationService,
+        },
+        {
+          provide: DataSource,
+          useValue: mockDataSource,
         },
       ],
     }).compile();
@@ -1030,5 +1095,290 @@ describe('ResultsService (unit, pure mocks)', () => {
     const res = await resultService.findAllByRoleFiltered(1, {});
     expect(res.status).toBe(HttpStatus.NOT_FOUND);
     expect(res.message).toBe('Results Not Found');
+  });
+
+  it('getPendingReviewCount returns count successfully', async () => {
+    (mockResultRepository.query as jest.Mock).mockResolvedValueOnce([
+      { level: 'TOTAL', pending_review: 5 },
+      { level: 'CENTER', center_id: 'CT01', pending_review: 3 },
+      { level: 'CENTER', center_id: 'CT02', pending_review: 2 },
+    ]);
+
+    const res = await resultService.getPendingReviewCount('SP01');
+    expect(res.status).toBe(HttpStatus.OK);
+    const response = res.response as any;
+    expect(response.programId).toBe('SP01');
+    expect(response.total_pending_review).toBe(5);
+    expect(response.by_center).toHaveLength(2);
+  });
+
+  it('getPendingReviewCount returns error when programId is empty', async () => {
+    const res = await resultService.getPendingReviewCount('');
+    expect(res.status).toBe(HttpStatus.BAD_REQUEST);
+    expect(res.message).toBe('The programId parameter is required.');
+  });
+
+  it('getResultsByProgramAndCenters returns results grouped by project', async () => {
+    const mockResults = [
+      {
+        id: 1,
+        project_id: 10,
+        project_name: 'Project 1',
+        result_code: 1001,
+        result_title: 'Result 1',
+        indicator_category: 'Category 1',
+        status_name: 'Submitted',
+        acronym: 'P1',
+        toc_title: 'TOC Title 1',
+        indicator: 'Indicator 1',
+        submission_date: new Date(),
+      },
+      {
+        id: 2,
+        project_id: 10,
+        project_name: 'Project 1',
+        result_code: 1002,
+        result_title: 'Result 2',
+        indicator_category: 'Category 2',
+        status_name: 'Submitted',
+        acronym: 'P1',
+        toc_title: 'TOC Title 2',
+        indicator: 'Indicator 2',
+        submission_date: new Date(),
+      },
+    ];
+
+    (
+      mockResultRepository.getResultsByProgramAndCenters as jest.Mock
+    ).mockResolvedValueOnce(mockResults);
+
+    const res = await resultService.getResultsByProgramAndCenters('SP01');
+    expect((res as returnFormatService).status).toBe(HttpStatus.OK);
+    expect(Array.isArray(res.response)).toBe(true);
+    if (Array.isArray(res.response)) {
+      expect(res.response[0].project_id).toBe(10);
+      expect(res.response[0].results).toHaveLength(2);
+    }
+  });
+
+  it('getResultsByProgramAndCenters returns error when programId is empty', async () => {
+    const res = await resultService.getResultsByProgramAndCenters('');
+    expect((res as returnFormatService).status).toBe(HttpStatus.BAD_REQUEST);
+  });
+
+  it('getBilateralResultById returns result successfully', async () => {
+    const mockResult = {
+      id: 100,
+      result_type_id: 1,
+      source: SourceEnum.Bilateral,
+    };
+
+    const mockCommonFields = {
+      project_name: 'Test Project',
+      center_name: 'Test Center',
+      result_code: 1001,
+    };
+
+    const mockTocMetadata = [{ planned_result: 1, acronym: 'WP1' }];
+    const mockCenters = [{ id: 1, center: 'CT01' }];
+    const mockProjects = [{ project_id: 10 }];
+    const mockEvidence = [{ link: 'https://example.com' }];
+    const mockResultTypeResponse = [{ policy_type_id: 1 }];
+
+    (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce(
+      mockResult,
+    );
+    (
+      mockResultRepository.getCommonFieldsBilateralResultById as jest.Mock
+    ).mockResolvedValueOnce(mockCommonFields);
+    (
+      mockResultRepository.getTocMetadataBilateralResult as jest.Mock
+    ).mockResolvedValueOnce(mockTocMetadata);
+    (
+      mockResultsCenterRepository.getAllResultsCenterByResultId as jest.Mock
+    ).mockResolvedValueOnce(mockCenters);
+    (
+      mockResultsByProjectsRepository.findResultsByProjectsByResultId as jest.Mock
+    ).mockResolvedValueOnce(mockProjects);
+    (
+      mockResultRepository.getEvidenceBilateralResult as jest.Mock
+    ).mockResolvedValueOnce(mockEvidence);
+    (
+      mockResultRepository.getPolicyChangeBilateralResultById as jest.Mock
+    ).mockResolvedValueOnce(mockResultTypeResponse);
+    (
+      mockResultsKnowledgeProductRepository.findOne as jest.Mock
+    ).mockResolvedValueOnce(null);
+    (mockResultByIntitutionsRepository.find as jest.Mock).mockResolvedValueOnce(
+      [],
+    );
+
+    const res = await resultService.getBilateralResultById(100);
+    expect((res as returnFormatService).status).toBe(HttpStatus.OK);
+    expect(res.response.commonFields).toBeDefined();
+    expect(res.response.tocMetadata).toBeDefined();
+  });
+
+  it('getBilateralResultById returns error when result not found', async () => {
+    (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce(null);
+
+    const res = await resultService.getBilateralResultById(999);
+    expect((res as returnFormatService).status).toBe(HttpStatus.NOT_FOUND);
+    expect((res as returnFormatService).message).toBe(
+      'Bilateral result not found',
+    );
+  });
+
+  it('getBilateralResultById returns error when resultId is invalid', async () => {
+    const res = await resultService.getBilateralResultById(-1);
+    expect((res as returnFormatService).status).toBe(HttpStatus.BAD_REQUEST);
+  });
+
+  it('reviewBilateralResult approves result successfully', async () => {
+    const mockResult = {
+      id: 100,
+      status_id: ResultStatusData.PendingReview.value,
+      source: SourceEnum.Bilateral,
+    };
+
+    const reviewDecision: ReviewDecisionDto = {
+      decision: ReviewDecisionEnum.APPROVE,
+    };
+
+    mockDataSource.transaction.mockImplementationOnce(async (callback) => {
+      const manager = {
+        findOne: jest.fn().mockResolvedValueOnce(mockResult),
+        update: jest.fn().mockResolvedValue({ affected: 1 }),
+        create: jest.fn().mockReturnValue({ id: 1 }),
+        save: jest.fn().mockResolvedValue({ id: 1 }),
+      };
+      return callback(manager);
+    });
+
+    const res = await resultService.reviewBilateralResult(
+      100,
+      reviewDecision,
+      userTest,
+    );
+    expect((res as returnFormatService).status).toBe(HttpStatus.OK);
+    expect((res as returnFormatService).message).toContain('approved');
+  });
+
+  it('reviewBilateralResult rejects result successfully', async () => {
+    const mockResult = {
+      id: 100,
+      status_id: ResultStatusData.PendingReview.value,
+      source: SourceEnum.Bilateral,
+    };
+
+    const reviewDecision: ReviewDecisionDto = {
+      decision: ReviewDecisionEnum.REJECT,
+      justification: 'Does not meet quality standards',
+    };
+
+    mockDataSource.transaction.mockImplementationOnce(async (callback) => {
+      const manager = {
+        findOne: jest.fn().mockResolvedValueOnce(mockResult),
+        update: jest.fn().mockResolvedValue({ affected: 1 }),
+        create: jest.fn().mockReturnValue({ id: 1 }),
+        save: jest.fn().mockResolvedValue({ id: 1 }),
+      };
+      return callback(manager);
+    });
+
+    const res = await resultService.reviewBilateralResult(
+      100,
+      reviewDecision,
+      userTest,
+    );
+    expect((res as returnFormatService).status).toBe(HttpStatus.OK);
+    expect((res as returnFormatService).message).toContain('rejected');
+  });
+
+  it('reviewBilateralResult returns error when resultId is invalid', async () => {
+    const reviewDecision: ReviewDecisionDto = {
+      decision: ReviewDecisionEnum.APPROVE,
+    };
+
+    const res = await resultService.reviewBilateralResult(
+      -1,
+      reviewDecision,
+      userTest,
+    );
+    expect((res as returnFormatService).status).toBe(HttpStatus.BAD_REQUEST);
+  });
+
+  it('reviewBilateralResult returns error when justification is missing for REJECT', async () => {
+    const reviewDecision: ReviewDecisionDto = {
+      decision: ReviewDecisionEnum.REJECT,
+    };
+
+    const res = await resultService.reviewBilateralResult(
+      100,
+      reviewDecision,
+      userTest,
+    );
+    expect((res as returnFormatService).status).toBe(HttpStatus.BAD_REQUEST);
+    expect((res as returnFormatService).message).toContain(
+      'Justification is required',
+    );
+  });
+
+  it('reviewBilateralResult returns error when result not found', async () => {
+    const reviewDecision: ReviewDecisionDto = {
+      decision: ReviewDecisionEnum.APPROVE,
+    };
+
+    mockDataSource.transaction.mockImplementationOnce(async (callback) => {
+      const manager = {
+        findOne: jest.fn().mockResolvedValueOnce(null),
+        update: jest.fn(),
+        create: jest.fn(),
+        save: jest.fn(),
+      };
+      return callback(manager);
+    });
+
+    const res = await resultService.reviewBilateralResult(
+      999,
+      reviewDecision,
+      userTest,
+    );
+    expect((res as returnFormatService).status).toBe(HttpStatus.BAD_REQUEST);
+    expect((res as returnFormatService).message).toContain(
+      'Bilateral result not found',
+    );
+  });
+
+  it('reviewBilateralResult returns error when status is not PENDING_REVIEW', async () => {
+    const mockResult = {
+      id: 100,
+      status_id: ResultStatusData.Submitted.value,
+      source: SourceEnum.Bilateral,
+    };
+
+    const reviewDecision: ReviewDecisionDto = {
+      decision: ReviewDecisionEnum.APPROVE,
+    };
+
+    mockDataSource.transaction.mockImplementationOnce(async (callback) => {
+      const manager = {
+        findOne: jest.fn().mockResolvedValueOnce(mockResult),
+        update: jest.fn(),
+        create: jest.fn(),
+        save: jest.fn(),
+      };
+      return callback(manager);
+    });
+
+    const res = await resultService.reviewBilateralResult(
+      100,
+      reviewDecision,
+      userTest,
+    );
+    expect((res as returnFormatService).status).toBe(HttpStatus.CONFLICT);
+    expect((res as returnFormatService).message).toContain(
+      'Cannot review result',
+    );
   });
 });

@@ -14,6 +14,7 @@ import { ResultRepository } from '../results/result.repository';
 import { VersioningService } from '../versioning/versioning.service';
 import { AppModuleIdEnum } from '../../shared/constants/role-type.enum';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
+import { ResultStatusData } from '../../shared/constants/result-status.enum';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { Result, SourceEnum } from '../results/entities/result.entity';
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
@@ -197,29 +198,51 @@ export class BilateralService {
               userId,
             );
 
-            const {
-              scope_code,
-              scope_label,
-              regions,
-              countries,
-              subnational_areas,
-            } = bilateralDto.geo_focus;
-            const scope = await this.findScope(scope_code, scope_label);
-            this.validateGeoFocus(scope, regions, countries, subnational_areas);
+            // For Knowledge Products, geo_focus is optional (obtained from CGSpace)
+            // For other result types, geo_focus is required
+            const isKpType =
+              bilateralDto.result_type_id === ResultTypeEnum.KNOWLEDGE_PRODUCT;
 
-            await this.handleRegions(newResultHeader, scope, regions);
-            await this.handleCountries(
-              newResultHeader,
-              countries,
-              subnational_areas,
-              scope.id,
-              userId,
-            );
+            if (!isKpType && bilateralDto.geo_focus) {
+              const {
+                scope_code,
+                scope_label,
+                regions,
+                countries,
+                subnational_areas,
+              } = bilateralDto.geo_focus;
+              const scope = await this.findScope(scope_code, scope_label);
+              this.validateGeoFocus(
+                scope,
+                regions,
+                countries,
+                subnational_areas,
+              );
 
-            await this._resultRepository.save({
-              ...newResultHeader,
-              geographic_scope_id: this.resolveScopeId(scope.id, countries),
-            });
+              await this.handleRegions(newResultHeader, scope, regions);
+              await this.handleCountries(
+                newResultHeader,
+                countries,
+                subnational_areas,
+                scope.id,
+                userId,
+              );
+
+              await this._resultRepository.save({
+                ...newResultHeader,
+                geographic_scope_id: this.resolveScopeId(scope.id, countries),
+              });
+            } else if (!isKpType) {
+              // For non-KP types, geo_focus is required
+              throw new BadRequestException(
+                'geo_focus is required for non-Knowledge Product results.',
+              );
+            } else {
+              // For KP, save without geographic_scope_id (will be set from CGSpace)
+              await this._resultRepository.save({
+                ...newResultHeader,
+              });
+            }
 
             await this.handleTocMapping(
               bilateralDto.toc_mapping,
@@ -252,9 +275,6 @@ export class BilateralService {
               userId,
               bilateralDto.lead_center,
             );
-
-            const isKpType =
-              bilateralDto.result_type_id === ResultTypeEnum.KNOWLEDGE_PRODUCT;
 
             let kpExtra: any = {};
             if (isKpType) {
@@ -1357,6 +1377,7 @@ export class BilateralService {
         created_date: bilateralDto.created_date,
       }),
       source: SourceEnum.Bilateral,
+      status_id: ResultStatusData.PendingReview.value,
     });
 
     return resultHeader;
