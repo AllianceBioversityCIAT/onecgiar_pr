@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
-import { ResultReviewDrawerComponent, ResultToReview } from './result-review-drawer.component';
+import { ResultReviewDrawerComponent } from './result-review-drawer.component';
+import { ResultToReview } from './result-review-drawer.interfaces';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { of } from 'rxjs';
@@ -92,16 +93,6 @@ describe('ResultReviewDrawerComponent', () => {
     expect(component.resultToReview()?.indicator_category).toBe('Innovation Use');
   });
 
-  describe('Form functionality', () => {
-    it('should have TOC result options', () => {
-      expect(component.tocResultOptions.length).toBeGreaterThan(0);
-    });
-
-    it('should have indicator options', () => {
-      expect(component.indicatorOptions.length).toBeGreaterThan(0);
-    });
-  });
-
   describe('Approval and Rejection flow', () => {
     it('should show confirm approve dialog on approve', () => {
       component.onApprove();
@@ -146,20 +137,11 @@ describe('ResultReviewDrawerComponent', () => {
     it('should close drawer on confirm approve', () => {
       component.visible.set(true);
       component.resultToReview.set(mockResult);
-      component.selectedTocResult = 'aow04';
-      component.selectedIndicator = 'ind01';
-      component.tocAlignmentValue = true;
 
       component.confirmApprove();
 
       expect(component.showConfirmApproveDialog()).toBe(false);
       expect(component.visible()).toBe(false);
-    });
-  });
-
-  describe('TOC Changes', () => {
-    it('should call saveTocChanges without error', () => {
-      expect(() => component.saveTocChanges()).not.toThrow();
     });
   });
 });
