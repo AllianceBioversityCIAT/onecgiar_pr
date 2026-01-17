@@ -54,6 +54,10 @@
     </div>
 
     <div class="form-section">
+      <div class="form-section_title">DATA STANDARDS</div>
+      <h2>Result Description</h2>
+      {{ fields?.commonFields?.result_description }}
+      <br /><br />
       <h2>Geographic Location</h2>
       @if (fields?.geographicScope) {
         <app-geoscope-management
@@ -88,12 +92,6 @@
           }
         }
       }
-    </div>
-
-    <div class="form-section">
-      <div class="form-section_title">DATA STANDARDS</div>
-      <h2>Result Description</h2>
-      {{ fields?.commonFields?.result_description }}
     </div>
 
     <div class="form-section">
