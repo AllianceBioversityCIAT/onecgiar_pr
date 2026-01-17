@@ -47,16 +47,28 @@
       {{ fields?.tocMetadata[0]?.planned_result ? 'Yes' : 'No' }}
       <br /><br />
       <h3>TOC result</h3>
-      {{ fields?.tocMetadata[0]?.acronym + ' - ' + fields?.tocMetadata[0]?.result_title }}
+      @if (fields?.tocMetadata?.[0]?.acronym || fields?.tocMetadata?.[0]?.result_title) {
+        {{ fields?.tocMetadata[0]?.acronym + ' - ' + fields?.tocMetadata[0]?.result_title }}
+      } @else {
+        <p class="not_provided_text">Not provided</p>
+      }
       <br /><br />
       <h3>Indicator</h3>
-      {{ fields?.tocMetadata[0]?.indicator_description }}
+      @if (fields?.tocMetadata?.[0]?.indicator_description) {
+        {{ fields?.tocMetadata[0]?.indicator_description }}
+      } @else {
+        <p class="not_provided_text">Not provided</p>
+      }
     </div>
 
     <div class="form-section">
       <div class="form-section_title">DATA STANDARDS</div>
       <h2>Result Description</h2>
-      {{ fields?.commonFields?.result_description }}
+      @if (fields?.commonFields?.result_description) {
+        {{ fields?.commonFields?.result_description }}
+      } @else {
+        <p class="not_provided_text">Not provided</p>
+      }
       <br />
       <hr class="form-section_separator" />
       <h2>Geographic Location</h2>
@@ -92,6 +104,8 @@
             }
           }
         }
+      } @else {
+        <p class="not_provided_text">Not provided</p>
       }
       <br />
       <hr class="form-section_separator" />
@@ -100,6 +114,7 @@
         <p>{{ center.name || 'Not provided' }}</p>
         <br />
       }
+      @if (!fields?.contributingCenters?.length) { <p class="not_provided_text">Not provided</p> }
       <h2>Contributing Science Programs</h2>
       @for (program of fields?.contributingInitiatives; track $index) {
         <p>{{ program.official_code }} - {{ program.initiative_role }}</p>
