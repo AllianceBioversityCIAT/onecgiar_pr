@@ -76,7 +76,7 @@ p {
 .result-review-drawer-content_title {
   @include fonts.pr-typography('h3');
   font-weight: 600;
-  color: var(--pr-color-secondary-400);
+  color: #273EC5;
   line-height: 1.4;
 }
 
@@ -90,14 +90,14 @@ p {
 .result-review-drawer-content_meta_item {
   @include fonts.pr-typography('body-2');
   font-weight: 400;
-  color: var(--pr-color-accents-6);
+  color: #919191;
   display: flex;
   align-items: center;
   gap: 6px;
 
   i {
     font-size: 18px;
-    color: var(--pr-color-accents-5);
+    color: #9CA0F9;
   }
 }
 

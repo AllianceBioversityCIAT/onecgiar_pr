@@ -2,9 +2,9 @@
   <ng-template #header>
     <div class="result-review-drawer-header">
       <p class="result-review-drawer-header_entity">
-        <span class="result-review-drawer-header_entity_acronym">{{ resultToReview()?.acronym }}</span>
+        <span class="result-review-drawer-header_entity_acronym">{{ resultDetail()?.commonFields?.center_name }}</span>
         <span class="result-review-drawer-header_separator">|</span>
-        <span class="result-review-drawer-header_entity_code">{{ resultToReview()?.project_name }}</span>
+        <span class="result-review-drawer-header_entity_code">{{ resultDetail()?.commonFields?.project_name }}</span>
       </p>
 
       <div class="result-review-drawer-header_icons">
