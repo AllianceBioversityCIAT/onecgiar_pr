@@ -247,7 +247,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
       next: res => {
         this.resultDetail.set(res.response);
         this.isLoading.set(false);
-        console.log(res.response);
       },
       error: err => {
         console.error('Error loading result detail:', err);
