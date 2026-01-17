@@ -120,6 +120,12 @@ p {
   margin: 20px 0;
 }
 
+.not_provided_text {
+  color: var(--pr-color-accents-3);
+  font-style: italic;
+  margin-bottom: 20px;
+}
+
 // Form Field styles
 .form-field {
   margin-bottom: 20px;

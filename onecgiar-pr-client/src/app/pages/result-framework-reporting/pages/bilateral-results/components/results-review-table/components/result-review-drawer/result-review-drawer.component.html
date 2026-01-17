@@ -97,7 +97,7 @@
       <hr class="form-section_separator" />
       <h2>Contributing Centers</h2>
       @for (center of fields?.contributingCenters; track $index) {
-        <p>{{ center.name }}</p>
+        <p>{{ center.name || 'Not provided' }}</p>
         <br />
       }
       <h2>Contributing Science Programs</h2>
@@ -105,11 +105,13 @@
         <p>{{ program.official_code }} - {{ program.initiative_role }}</p>
         <br />
       }
+      @if (!fields?.contributingInitiatives?.length) { <p class="not_provided_text">Not provided</p> }
       <h2>Contributing Bilateral Projects</h2>
       @for (project of fields?.contributingProjects; track $index) {
         <p>{{ project.obj_clarisa_project.shortName }}</p>
         <br />
       }
+      @if (!fields?.contributingProjects?.length) { <p class="not_provided_text">Not provided</p> }
     </div>
 
   </div>
