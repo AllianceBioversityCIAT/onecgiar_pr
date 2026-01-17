@@ -147,6 +147,16 @@
      }
       <br />
       <hr class="form-section_separator" />
+      <h2>Evidence</h2>
+      @if (fields?.evidence?.length) {
+        <div class="readonly-chips-container">
+          @for (evidence of fields?.evidence; track $index) {
+            <span class="readonly-chip">{{ evidence.link }}</span>
+          }
+        </div>
+      } @else {
+        <p class="not_provided_text">Not provided</p>
+      }
     </div>
 
   </div>
