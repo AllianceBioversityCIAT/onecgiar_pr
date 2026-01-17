@@ -168,14 +168,16 @@
   <!-- Footer Actions -->
   <ng-template #footer>
     <div class="result-review-drawer-footer">
-      <button pButton class="approve-button" (click)="onApprove()">
-        <i class="pi pi-check"></i>
-        <span>APPROVE</span>
-      </button>
-      <button pButton class="reject-button" (click)="onReject()">
-        <i class="pi pi-times"></i>
-        <span>REJECT</span>
-      </button>
+      @if (resultToReview()?.status_name !== 'Approved' && resultToReview()?.status_name !== 'Rejected') {
+        <button pButton class="approve-button" (click)="onApprove()">
+          <i class="pi pi-check"></i>
+          <span>APPROVE</span>
+        </button>
+        <button pButton class="reject-button" (click)="onReject()">
+          <i class="pi pi-times"></i>
+          <span>REJECT</span>
+        </button>
+      }
     </div>
   </ng-template>
 </p-drawer>
