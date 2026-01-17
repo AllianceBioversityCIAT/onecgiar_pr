@@ -115,6 +115,11 @@ p {
   margin-bottom: 20px;
 }
 
+.form-section_separator {
+  border-top: .5px solid var(--pr-color-accents-2);
+  margin: 20px 0;
+}
+
 // Form Field styles
 .form-field {
   margin-bottom: 20px;
