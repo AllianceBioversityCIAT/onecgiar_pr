@@ -20,26 +20,26 @@
   </ng-template>
 
   <div class="result-review-drawer-content">
+    @let fields = this.resultDetail();
     <!-- Result Header Info -->
     <div class="result-review-drawer-content_header">
       <p class="result-review-drawer-content_title">
-        {{ resultToReview()?.result_title }}
+        {{ fields?.commonFields?.result_title }}
       </p>
 
       <div class="result-review-drawer-content_meta">
         <span class="result-review-drawer-content_meta_item">
-          <i class="material-icons-round">light_mode</i>
-          {{ resultToReview()?.indicator_category }}
+          <i class="material-icons-round">folder</i>
+          {{ fields?.commonFields?.result_category }}
         </span>
         <span class="result-review-drawer-content_meta_separator">•</span>
         <span class="result-review-drawer-content_meta_item">
-          <i class="material-icons-round">tag</i>
-          Result code: {{ resultToReview()?.result_code }}
+          <i class="material-icons-round">person</i>
+          Submitted by {{ fields?.commonFields?.submitter_name }}
         </span>
       </div>
     </div>
 
-    @let fields = this.resultDetail();
     <div class="form-section">
       <div class="form-section_title">TOC ALIGNMENT</div>
       <!-- TOC ALIGNMENT Section -->
