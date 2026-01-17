@@ -41,6 +41,7 @@
 
     @let fields = this.resultDetail();
     <div class="form-section">
+      <div class="form-section_title">TOC ALIGNMENT</div>
       <!-- TOC ALIGNMENT Section -->
       <h3>Does this result align with the Program's TOC?</h3>
       {{ fields?.tocMetadata[0]?.planned_result ? 'Yes' : 'No' }}
@@ -90,6 +91,7 @@
     </div>
 
     <div class="form-section">
+      <div class="form-section_title">DATA STANDARDS</div>
       <h2>Result Description</h2>
       {{ fields?.commonFields?.result_description }}
     </div>
