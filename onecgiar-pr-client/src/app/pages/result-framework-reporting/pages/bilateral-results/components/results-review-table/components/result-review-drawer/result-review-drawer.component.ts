@@ -8,6 +8,7 @@ import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { TextareaModule } from 'primeng/textarea';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
+import { GeoscopeManagementModule } from '../../../../../../../../shared/components/geoscope-management/geoscope-management.module';
 
 export interface ResultToReview {
   id: string;
@@ -162,7 +163,7 @@ export interface BilateralResultTypeResponse {
 
 @Component({
   selector: 'app-result-review-drawer',
-  imports: [DrawerModule, CommonModule, FormsModule, RadioButtonModule, SelectModule, ButtonModule, DialogModule, TextareaModule],
+  imports: [DrawerModule, CommonModule, FormsModule, RadioButtonModule, SelectModule, ButtonModule, DialogModule, TextareaModule, GeoscopeManagementModule],
   templateUrl: './result-review-drawer.component.html',
   styleUrl: './result-review-drawer.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -226,7 +227,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
       next: res => {
         this.resultDetail.set(res.response);
         this.isLoading.set(false);
-        console.log(res.response);
         console.log(res.response.geographicScope);
       },
       error: err => {

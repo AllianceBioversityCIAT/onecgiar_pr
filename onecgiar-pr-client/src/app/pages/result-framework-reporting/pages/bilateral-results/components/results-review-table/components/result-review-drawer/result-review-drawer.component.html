@@ -53,6 +53,43 @@
     </div>
 
     <div class="form-section">
+      <h2>Geographic Location</h2>
+      @if (fields?.geographicScope) {
+        <app-geoscope-management
+          label="What is the main geographic focus of the Output?"
+          [body]="fields.geographicScope"
+          [readOnly]="true"
+          module="reporting">
+        </app-geoscope-management>
+
+        @if (fields.geographicScope.geo_scope_id != 1 && fields.geographicScope.geo_scope_id != 50 && fields.geographicScope.geo_scope_id) {
+          @if (fields.geographicScope.has_extra_geo_scope !== null && fields.geographicScope.has_extra_geo_scope !== undefined) {
+            <div class="extra-geo-scope-section">
+              <p><strong>Are there any regions that you wish to specify for this Output?</strong></p>
+              <p>{{ fields.geographicScope.has_extra_geo_scope ? 'Yes' : 'No' }}</p>
+            </div>
+
+            @if (fields.geographicScope.has_extra_geo_scope) {
+              <app-geoscope-management
+                label="What is the geographic scope where there may be potential impact in other geographic areas?"
+                [body]="{
+                  geo_scope_id: fields.geographicScope.extra_geo_scope_id,
+                  regions: fields.geographicScope.extra_regions,
+                  countries: fields.geographicScope.extra_countries,
+                  has_regions: fields.geographicScope.has_extra_regions,
+                  has_countries: fields.geographicScope.has_extra_countries
+                }"
+                [readOnly]="true"
+                [hideTobeDetermined]="true"
+                module="reporting">
+              </app-geoscope-management>
+            }
+          }
+        }
+      }
+    </div>
+
+    <div class="form-section">
       <h2>Result Description</h2>
       {{ fields?.commonFields?.result_description }}
     </div>
