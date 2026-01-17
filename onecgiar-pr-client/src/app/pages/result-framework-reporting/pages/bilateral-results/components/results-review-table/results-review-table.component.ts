@@ -3,7 +3,8 @@ import { CommonModule } from '@angular/common';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
-import { ResultReviewDrawerComponent, ResultToReview, GroupedResult } from './components/result-review-drawer/result-review-drawer.component';
+import { ResultReviewDrawerComponent } from './components/result-review-drawer/result-review-drawer.component';
+import { ResultToReview, GroupedResult } from './components/result-review-drawer/result-review-drawer.interfaces';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { BilateralResultsService } from '../../bilateral-results.service';
 
