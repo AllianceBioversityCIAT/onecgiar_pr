@@ -102,7 +102,27 @@ export interface BilateralContributingInstitution {
   id?: number;
   name?: string;
   acronym?: string;
+  is_active: boolean;
+  is_predicted: boolean;
+  created_date: string;
+  last_updated_date: string;
+  is_leading_result: boolean;
+  result_id: string;
+  institutions_id: number;
+  institution_roles_id: string;
+  result_kp_mqap_institution_id: string | null;
+  delivery: any[];
+  obj_institutions: {
+    name: string;
+    website_link: string;
+    obj_institution_type_code: {
+      id: number;
+      name: string;
+    };
+  };
 }
+
+
 
 export interface BilateralContributingProject {
   is_active: boolean;
@@ -227,6 +247,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
       next: res => {
         this.resultDetail.set(res.response);
         this.isLoading.set(false);
+        console.log(res.response);
       },
       error: err => {
         console.error('Error loading result detail:', err);

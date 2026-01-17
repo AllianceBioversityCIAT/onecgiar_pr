@@ -110,23 +110,43 @@
       <br />
       <hr class="form-section_separator" />
       <h2>Contributing Centers</h2>
-      @for (center of fields?.contributingCenters; track $index) {
-        <p>{{ center.name || 'Not provided' }}</p>
-        <br />
+      @if (fields?.contributingCenters?.length) {
+        <div class="readonly-chips-container">
+          @for (center of fields?.contributingCenters; track $index) {
+            <span class="readonly-chip">{{ center.name }}</span>
+          }
+        </div>
+      } @else {
+        <p class="not_provided_text">Not provided</p>
       }
-      @if (!fields?.contributingCenters?.length) { <p class="not_provided_text">Not provided</p> }
       <h2>Contributing Science Programs</h2>
-      @for (program of fields?.contributingInitiatives; track $index) {
-        <p>{{ program.official_code }} - {{ program.initiative_role }}</p>
-        <br />
+      @if (fields?.contributingInitiatives?.length) {
+        <div class="readonly-chips-container">
+          @for (program of fields?.contributingInitiatives; track $index) {
+            <span class="readonly-chip">{{ program.official_code }} - {{ program.initiative_role }}</span>
+          }
+        </div>
+      } @else {
+        <p class="not_provided_text">Not provided</p>
       }
-      @if (!fields?.contributingInitiatives?.length) { <p class="not_provided_text">Not provided</p> }
       <h2>Contributing Bilateral Projects</h2>
-      @for (project of fields?.contributingProjects; track $index) {
-        <p>{{ project.obj_clarisa_project.shortName }}</p>
-        <br />
+      @if (fields?.contributingProjects?.length) {
+        <div class="readonly-chips-container">
+          @for (project of fields?.contributingProjects; track $index) {
+            <span class="readonly-chip">{{ project.obj_clarisa_project.shortName }}</span>
+          }
+        </div>
+      } @else {
+        <p class="not_provided_text">Not provided</p>
       }
-      @if (!fields?.contributingProjects?.length) { <p class="not_provided_text">Not provided</p> }
+      <br />
+      <hr class="form-section_separator" />
+      <h2>Partners</h2>
+    @for (partner of fields?.contributingInstitutions; track $index) {
+      <p>{{ partner.obj_institutions.name }}</p>
+     }
+      <br />
+      <hr class="form-section_separator" />
     </div>
 
   </div>
