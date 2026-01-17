@@ -41,18 +41,36 @@
 
     @let fields = this.resultDetail();
     <div class="form-section">
+      <div class="form-section_title">TOC ALIGNMENT</div>
       <!-- TOC ALIGNMENT Section -->
       <h3>Does this result align with the Program's TOC?</h3>
       {{ fields?.tocMetadata[0]?.planned_result ? 'Yes' : 'No' }}
       <br /><br />
       <h3>TOC result</h3>
-      {{ fields?.tocMetadata[0]?.acronym + ' - ' + fields?.tocMetadata[0]?.result_title }}
+      @if (fields?.tocMetadata?.[0]?.acronym || fields?.tocMetadata?.[0]?.result_title) {
+        {{ fields?.tocMetadata[0]?.acronym + ' - ' + fields?.tocMetadata[0]?.result_title }}
+      } @else {
+        <p class="not_provided_text">Not provided</p>
+      }
       <br /><br />
       <h3>Indicator</h3>
-      {{ fields?.tocMetadata[0]?.indicator_description }}
+      @if (fields?.tocMetadata?.[0]?.indicator_description) {
+        {{ fields?.tocMetadata[0]?.indicator_description }}
+      } @else {
+        <p class="not_provided_text">Not provided</p>
+      }
     </div>
 
     <div class="form-section">
+      <div class="form-section_title">DATA STANDARDS</div>
+      <h2>Result Description</h2>
+      @if (fields?.commonFields?.result_description) {
+        {{ fields?.commonFields?.result_description }}
+      } @else {
+        <p class="not_provided_text">Not provided</p>
+      }
+      <br />
+      <hr class="form-section_separator" />
       <h2>Geographic Location</h2>
       @if (fields?.geographicScope) {
         <app-geoscope-management
@@ -86,44 +104,80 @@
             }
           }
         }
+      } @else {
+        <p class="not_provided_text">Not provided</p>
       }
-    </div>
-
-    <div class="form-section">
-      <h2>Result Description</h2>
-      {{ fields?.commonFields?.result_description }}
-    </div>
-
-    <div class="form-section">
+      <br />
+      <hr class="form-section_separator" />
       <h2>Contributing Centers</h2>
-      @for (center of fields?.contributingCenters; track $index) {
-        <p>{{ center.name }}</p>
-        <br />
+      @if (fields?.contributingCenters?.length) {
+        <div class="readonly-chips-container">
+          @for (center of fields?.contributingCenters; track $index) {
+            <span class="readonly-chip">{{ center.name }}</span>
+          }
+        </div>
+      } @else {
+        <p class="not_provided_text">Not provided</p>
       }
       <h2>Contributing Science Programs</h2>
-      @for (program of fields?.contributingInitiatives; track $index) {
-        <p>{{ program.official_code }} - {{ program.initiative_role }}</p>
-        <br />
+      @if (fields?.contributingInitiatives?.length) {
+        <div class="readonly-chips-container">
+          @for (program of fields?.contributingInitiatives; track $index) {
+            <span class="readonly-chip">{{ program.official_code }} - {{ program.initiative_role }}</span>
+          }
+        </div>
+      } @else {
+        <p class="not_provided_text">Not provided</p>
       }
       <h2>Contributing Bilateral Projects</h2>
-      @for (project of fields?.contributingProjects; track $index) {
-        <p>{{ project.obj_clarisa_project.shortName }}</p>
-        <br />
+      @if (fields?.contributingProjects?.length) {
+        <div class="readonly-chips-container">
+          @for (project of fields?.contributingProjects; track $index) {
+            <span class="readonly-chip">{{ project.obj_clarisa_project.shortName }}</span>
+          }
+        </div>
+      } @else {
+        <p class="not_provided_text">Not provided</p>
+      }
+      <br />
+      <hr class="form-section_separator" />
+      <h2>Partners</h2>
+      @if (fields?.contributingInstitutions?.length) {
+        @for (partner of fields?.contributingInstitutions; track $index) {
+          <p>{{ partner.obj_institutions.name }}</p>
+        }
+      } @else {
+        <p class="not_provided_text">Not provided</p>
+      }
+      <br />
+      <hr class="form-section_separator" />
+      <h2>Evidence</h2>
+      @if (fields?.evidence?.length) {
+        <div class="readonly-chips-container">
+          @for (evidence of fields?.evidence; track $index) {
+            <span class="readonly-chip">{{ evidence.link }}</span>
+          }
+        </div>
+      } @else {
+        <p class="not_provided_text">Not provided</p>
       }
     </div>
+
   </div>
 
   <!-- Footer Actions -->
   <ng-template #footer>
     <div class="result-review-drawer-footer">
-      <button pButton class="approve-button" (click)="onApprove()">
-        <i class="pi pi-check"></i>
-        <span>APPROVE</span>
-      </button>
-      <button pButton class="reject-button" (click)="onReject()">
-        <i class="pi pi-times"></i>
-        <span>REJECT</span>
-      </button>
+      @if (resultToReview()?.status_name !== 'Approved' && resultToReview()?.status_name !== 'Rejected') {
+        <button pButton class="approve-button" (click)="onApprove()">
+          <i class="pi pi-check"></i>
+          <span>APPROVE</span>
+        </button>
+        <button pButton class="reject-button" (click)="onReject()">
+          <i class="pi pi-times"></i>
+          <span>REJECT</span>
+        </button>
+      }
     </div>
   </ng-template>
 </p-drawer>

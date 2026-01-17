@@ -53,6 +53,15 @@ p {
 .result-review-drawer-content {
   padding: 24px 32px;
   padding-bottom: 100px; // Space for fixed footer
+
+  * {
+    font-size: 12px;
+  }
+
+  h2 {
+    font-size: 14px;
+    margin-bottom: 8px;
+  }
 }
 
 .result-review-drawer-content_header {
@@ -109,9 +118,20 @@ p {
 .form-section_title {
   @include fonts.pr-typography('body-2');
   font-weight: 600;
-  color: var(--pr-color-accents-5);
+  color: var(--pr-color-accents-3);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  margin-bottom: 20px;
+}
+
+.form-section_separator {
+  border-top: .5px solid var(--pr-color-accents-2);
+  margin: 20px 0;
+}
+
+.not_provided_text {
+  color: var(--pr-color-accents-3);
+  font-style: italic;
   margin-bottom: 20px;
 }
 
@@ -212,6 +232,26 @@ p {
   &:hover {
     color: var(--pr-color-secondary-600);
   }
+}
+
+// Read-only chips for selections
+.readonly-chips-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+  margin-bottom: 16px;
+}
+
+.readonly-chip {
+  display: inline-flex;
+  align-items: center;
+  background-color: #E8EBFF80;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 10px !important;
+  font-weight: 400;
+  color: var(--pr-color-secondary-600);
 }
 
 // Save changes button
