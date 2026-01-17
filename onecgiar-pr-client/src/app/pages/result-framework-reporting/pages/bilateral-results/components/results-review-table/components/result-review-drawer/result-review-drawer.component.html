@@ -142,9 +142,13 @@
       <br />
       <hr class="form-section_separator" />
       <h2>Partners</h2>
-    @for (partner of fields?.contributingInstitutions; track $index) {
-      <p>{{ partner.obj_institutions.name }}</p>
-     }
+      @if (fields?.contributingInstitutions?.length) {
+        @for (partner of fields?.contributingInstitutions; track $index) {
+          <p>{{ partner.obj_institutions.name }}</p>
+        }
+      } @else {
+        <p class="not_provided_text">Not provided</p>
+      }
       <br />
       <hr class="form-section_separator" />
       <h2>Evidence</h2>
