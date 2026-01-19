@@ -233,10 +233,10 @@ export class InnovationPathwayStepOneService {
       });
 
       const scalig_ambition = {
-        title: `2024 Scaling Ambition blurb`,
-        body: `By 2024, the ${
+        title: `2030 Scaling Ambition Statement`,
+        body: `By 2030, the ${
           resInitLead?.obj_initiative?.short_name
-        } and partners will work together with${this.arrayToStringAnd(
+        } will work together with${this.arrayToStringAnd(
           institutions?.map((el) => el['institutions_name']),
         )} to accomplish the use of ${
           coreData?.obj_result?.title

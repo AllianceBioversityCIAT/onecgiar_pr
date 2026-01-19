@@ -12,6 +12,8 @@ export class IpsrStep4Body {
   is_result_ip_published: boolean = null;
   ipsr_pdf_report: string = null;
   ipsr_materials: IPSRMaterialsStep4[] = [];
+  has_scaling_studies: boolean = false;
+  innovation_readiness_level_id: number = null;
 }
 
 export class InstitutionsexpectedinvestmentStep4 {
@@ -22,6 +24,7 @@ export class InstitutionsexpectedinvestmentStep4 {
   in_kind: string;
   in_cash: string;
   is_active: boolean;
+  kind_cash: string;
 }
 
 class Budget {
@@ -46,6 +49,8 @@ export class BilateralexpectedinvestmentStep4 {
   is_determined: number;
   obj_non_pooled_projetct: any;
   is_active: boolean;
+  kind_cash: string;
+  obj_result_project: any;
 }
 
 interface Initiativeexpectedinvestment {
@@ -54,6 +59,7 @@ interface Initiativeexpectedinvestment {
   next_year: string;
   is_determined: number;
   obj_result_initiative: any;
+  kind_cash: string;
 }
 
 export class IpsrpictureStep4 {

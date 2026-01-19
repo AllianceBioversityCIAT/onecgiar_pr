@@ -527,6 +527,26 @@ export class Result {
   })
   external_submitted_comment: string;
 
+  @Column({
+    name: 'reviewed_by',
+    nullable: true,
+    type: 'int',
+  })
+  reviewed_by: number;
+
+  @ManyToOne(() => User, (u) => u.id, { nullable: true })
+  @JoinColumn({
+    name: 'reviewed_by',
+  })
+  obj_reviewed_by: User;
+
+  @Column({
+    name: 'reviewed_at',
+    nullable: true,
+    type: 'timestamp',
+  })
+  reviewed_at: Date;
+
   // helpers??
   initiative_id!: number;
 
