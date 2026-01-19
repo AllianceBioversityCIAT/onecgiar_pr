@@ -2718,4 +2718,64 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       });
     }
   }
+
+  async getPendingReviewCountByProgram(programId: string): Promise<any[]> {
+    const query = `
+      SELECT
+        tr.official_code,
+        'TOTAL' AS level,
+        NULL AS center_id,
+        COUNT(DISTINCT r.id) AS pending_review
+      FROM result r
+      JOIN results_toc_result rtr
+        ON r.id = rtr.results_id
+        AND rtr.is_active = 1
+      JOIN Integration_information.toc_results tr 
+        ON rtr.toc_result_id = tr.id
+        AND tr.is_active = 1
+      JOIN results_center rc
+        ON r.id = rc.result_id
+        AND rc.is_active = 1
+      WHERE 
+        r.source = 'API'
+        AND tr.official_code = ?
+        AND r.is_active = 1
+        AND r.status_id = 5
+      UNION ALL
+      SELECT
+        tr.official_code,
+        'CENTER' AS level,
+        rc.center_id,
+        COUNT(DISTINCT r.id) AS pending_review
+      FROM result r
+      JOIN results_toc_result rtr
+        ON r.id = rtr.results_id
+        AND rtr.is_active = 1
+      JOIN Integration_information.toc_results tr 
+        ON rtr.toc_result_id = tr.id
+        AND tr.is_active = 1
+      JOIN results_center rc
+        ON r.id = rc.result_id
+        AND rc.is_active = 1
+      WHERE 
+        r.source = 'API'
+        AND tr.official_code = ?
+        AND r.is_active = 1
+        AND r.status_id = 5
+      GROUP BY
+        tr.official_code,
+        rc.center_id;
+    `;
+
+    try {
+      const results = await this.query(query, [programId, programId]);
+      return results;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
 }
