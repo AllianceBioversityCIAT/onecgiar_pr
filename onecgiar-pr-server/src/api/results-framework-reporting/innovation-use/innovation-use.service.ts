@@ -53,7 +53,7 @@ export class InnovationUseService {
     private readonly _resultRepository: ResultRepository,
     private readonly _resultByProjectRepository: ResultsByProjectsRepository,
     private readonly _clarisaInnovationUseLevelRepository: ClarisaInnovationUseLevelRepository,
-  ) { }
+  ) {}
 
   async saveInnovationUse(
     innovationUseDto: CreateInnovationUseDto,
@@ -155,7 +155,8 @@ export class InnovationUseService {
         }
 
         try {
-          InnUseRes = await this._resultsInnovationsUseRepository.save(newInnUse);
+          InnUseRes =
+            await this._resultsInnovationsUseRepository.save(newInnUse);
         } catch (saveError: any) {
           // Handle duplicate entry error (race condition)
           if (
@@ -185,7 +186,8 @@ export class InnovationUseService {
               resultExist.has_innovation_link = has_innovation_link;
               resultExist.innovation_use_level_id = innovation_use_level;
               resultExist.last_updated_by = user.id;
-              resultExist.innov_use_to_be_determined = innov_use_to_be_determined;
+              resultExist.innov_use_to_be_determined =
+                innov_use_to_be_determined;
               resultExist.innov_use_2030_to_be_determined =
                 innov_use_2030_to_be_determined;
 
@@ -197,8 +199,7 @@ export class InnovationUseService {
                 if (!has_scaling_studies) {
                   await this._resultScalingStudyUrlsRepository.update(
                     {
-                      result_innov_use_id:
-                        resultExist.result_innovation_use_id,
+                      result_innov_use_id: resultExist.result_innovation_use_id,
                     },
                     { is_active: false },
                   );
@@ -209,8 +210,7 @@ export class InnovationUseService {
 
                 await this._resultScalingStudyUrlsRepository.update(
                   {
-                    result_innov_use_id:
-                      resultExist.result_innovation_use_id,
+                    result_innov_use_id: resultExist.result_innovation_use_id,
                   },
                   { is_active: false },
                 );
