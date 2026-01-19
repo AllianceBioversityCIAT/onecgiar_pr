@@ -83,6 +83,7 @@ describe('ResultsService (unit, pure mocks)', () => {
         id > 0 ? { id: id.toString(), result_type_id: 1, status_id: 1 } : null,
       ),
     query: jest.fn().mockResolvedValue([]),
+    getPendingReviewCountByProgram: jest.fn().mockResolvedValue([]),
     getResultsByProgramAndCenters: jest.fn().mockResolvedValue([]),
     getCommonFieldsBilateralResultById: jest.fn().mockResolvedValue(null),
     getTocMetadataBilateralResult: jest.fn().mockResolvedValue([]),
@@ -1099,7 +1100,9 @@ describe('ResultsService (unit, pure mocks)', () => {
   });
 
   it('getPendingReviewCount returns count successfully', async () => {
-    (mockResultRepository.query as jest.Mock).mockResolvedValueOnce([
+    (
+      mockResultRepository.getPendingReviewCountByProgram as jest.Mock
+    ).mockResolvedValueOnce([
       { level: 'TOTAL', pending_review: 5 },
       { level: 'CENTER', center_id: 'CT01', pending_review: 3 },
       { level: 'CENTER', center_id: 'CT02', pending_review: 2 },

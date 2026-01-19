@@ -8,7 +8,7 @@ import {
   forwardRef,
   ConflictException,
 } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, In, IsNull } from 'typeorm';
 import { CreateResultDto } from './dto/create-result.dto';
 import { ResultRepository } from './result.repository';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
@@ -78,7 +78,6 @@ import { GeneralInformationDto } from './dto/general-information.dto';
 import { EnvironmentExtractor } from '../../shared/utils/environment-extractor';
 import { AdUserRepository, AdUserService } from '../ad_users';
 import { InitiativeEntityMapRepository } from '../initiative_entity_map/initiative_entity_map.repository';
-import { In, IsNull } from 'typeorm';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
 import { NotificationService } from '../notification/notification.service';
 import {
@@ -2616,57 +2615,9 @@ export class ResultsService {
 
       const normalizedProgramId = programId.trim().toUpperCase();
 
-      const query = `
-        SELECT
-          tr.official_code,
-          'TOTAL' AS level,
-          NULL AS center_id,
-          COUNT(DISTINCT r.id) AS pending_review
-        FROM result r
-        JOIN results_toc_result rtr
-          ON r.id = rtr.results_id
-          AND rtr.is_active = 1
-        JOIN Integration_information.toc_results tr 
-          ON rtr.toc_result_id = tr.id
-          AND tr.is_active = 1
-        JOIN results_center rc
-          ON r.id = rc.result_id
-          AND rc.is_active = 1
-        WHERE 
-          r.source = 'API'
-          AND tr.official_code = ?
-          AND r.is_active = 1
-          AND r.status_id = 5
-        UNION ALL
-        SELECT
-          tr.official_code,
-          'CENTER' AS level,
-          rc.center_id,
-          COUNT(DISTINCT r.id) AS pending_review
-        FROM result r
-        JOIN results_toc_result rtr
-          ON r.id = rtr.results_id
-          AND rtr.is_active = 1
-        JOIN Integration_information.toc_results tr 
-          ON rtr.toc_result_id = tr.id
-          AND tr.is_active = 1
-        JOIN results_center rc
-          ON r.id = rc.result_id
-          AND rc.is_active = 1
-        WHERE 
-          r.source = 'API'
-          AND tr.official_code = ?
-          AND r.is_active = 1
-          AND r.status_id = 5
-        GROUP BY
-          tr.official_code,
-          rc.center_id;
-      `;
-
-      const result = await this._resultRepository.query(query, [
+      const result = await this._resultRepository.getPendingReviewCountByProgram(
         normalizedProgramId,
-        normalizedProgramId,
-      ]);
+      );
 
       if (!result || !Array.isArray(result)) {
         this._logger.warn(
@@ -2718,9 +2669,9 @@ export class ResultsService {
     centerIds?: string | string[],
   ): Promise<ReturnResponseDto<any> | returnErrorDto> {
     try {
-      // Validar que programId esté presente
-      if (!programId || !programId.trim()) {
-        throw {
+
+      if (!programId?.trim()) {
+        return {
           response: {},
           message: 'The programId parameter is required.',
           status: HttpStatus.BAD_REQUEST,
@@ -2806,17 +2757,9 @@ export class ResultsService {
     resultId: number,
   ): Promise<ReturnResponseDto<any> | returnErrorDto> {
     try {
-      const parsedResultId = Number(resultId);
-      if (
-        !parsedResultId ||
-        !Number.isFinite(parsedResultId) ||
-        parsedResultId <= 0
-      ) {
-        return {
-          response: {},
-          message: 'The resultId parameter must be a valid positive number.',
-          status: HttpStatus.BAD_REQUEST,
-        };
+      const validationError = this._validateBilateralResultId(resultId);
+      if (validationError) {
+        return validationError;
       }
 
       const result = await this._resultRepository.findOne({
@@ -2831,175 +2774,20 @@ export class ResultsService {
         };
       }
 
-      const commonFields =
-        await this._resultRepository.getCommonFieldsBilateralResultById(
-          resultId,
-        );
+      const [commonFields, tocMetadata, geoScope, contributingCenters] =
+        await this._loadBilateralBaseData(resultId);
 
-      if (!commonFields) {
-        this._logger.warn(
-          `Common fields for Bilateral result data not found (resultId: ${resultId})`,
-        );
-      }
+      const contributingInstitutions = await this._loadContributingInstitutions(
+        resultId,
+      );
 
-      const tocMetadata =
-        await this._resultRepository.getTocMetadataBilateralResult(resultId);
+      const [contributingProjects, contributingInitiatives, evidence] =
+        await this._loadBilateralRelatedData(resultId);
 
-      if (!tocMetadata) {
-        this._logger.warn(
-          `Toc metadata for Bilateral result data not found (resultId: ${resultId})`,
-        );
-      }
-
-      let geoScope: any = null;
-      if (this._geographicLocationService) {
-        const geographicScope =
-          await this._geographicLocationService.getGeoScopeV2(resultId);
-
-        if (geographicScope?.status === HttpStatus.OK) {
-          geoScope = geographicScope.response;
-        } else {
-          this._logger.warn(
-            `GeoScope failed for Bilateral result (resultId: ${resultId}): ${geographicScope?.message ?? 'Unknown error'}`,
-          );
-        }
-      } else {
-        this._logger.warn(
-          `GeographicLocationService is not available for Bilateral result (resultId: ${resultId}). GeoScope will be null.`,
-        );
-      }
-
-      const contributingCenters =
-        await this._resultsCenterRepository.getAllResultsCenterByResultId(
-          resultId,
-        );
-
-      if (!contributingCenters) {
-        this._logger.warn(
-          `Contributing centers for Bilateral result data not found (resultId: ${resultId})`,
-        );
-      }
-
-      const knowledgeProduct =
-        await this._resultKnowledgeProductRepository.findOne({
-          where: { results_id: resultId },
-          relations: { result_knowledge_product_institution_array: true },
-        });
-
-      let contributingInstitutions: any[] =
-        await this._resultByIntitutionsRepository.find({
-          where: {
-            result_id: resultId,
-            is_active: true,
-            institution_roles_id: knowledgeProduct
-              ? InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS
-              : InstitutionRoleEnum.PARTNER,
-          },
-          relations: {
-            delivery: true,
-            obj_institutions: { obj_institution_type_code: true },
-          },
-          order: { id: 'ASC' },
-        });
-
-      contributingInstitutions = contributingInstitutions.map((i) => ({
-        ...i,
-        delivery: i.delivery.filter((d) => d.is_active),
-        obj_institutions: i.obj_institutions
-          ? {
-              name: i.obj_institutions.name,
-              website_link: i.obj_institutions.website_link,
-              obj_institution_type_code: {
-                id: i.obj_institutions.obj_institution_type_code.code,
-                name: i.obj_institutions.obj_institution_type_code.name,
-              },
-            }
-          : null,
-      }));
-
-      const contributingProjects =
-        await this._resultsByProjectsRepository?.findResultsByProjectsByResultId(
-          resultId,
-        );
-
-      if (!contributingProjects) {
-        this._logger.warn(
-          `Contributing projects for Bilateral result data not found (resultId: ${resultId})`,
-        );
-      }
-
-      const contributingInitiatives =
-        await this._resultRepository.getContributingInitiativesBilateralResult(
-          resultId,
-        );
-
-      if (!contributingInitiatives) {
-        this._logger.warn(
-          `Contributing initiatives for Bilateral result data not found (resultId: ${resultId})`,
-        );
-      }
-
-      const evidence =
-        await this._resultRepository.getEvidenceBilateralResult(resultId);
-
-      if (!evidence) {
-        this._logger.warn(
-          `Evidence for Bilateral result data not found (resultId: ${resultId})`,
-        );
-      }
-
-      let resultTypeResponse: any = null;
-      const resultTypeId: number = result.result_type_id;
-
-      switch (resultTypeId) {
-        case ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT:
-          resultTypeResponse =
-            await this._resultRepository.getCapacitySharingBilateralResultById(
-              resultId,
-            );
-          break;
-
-        case ResultTypeEnum.KNOWLEDGE_PRODUCT:
-          resultTypeResponse =
-            await this._resultRepository.getKnowledgeProductBilateralResultById(
-              resultId,
-            );
-          break;
-
-        case ResultTypeEnum.INNOVATION_DEVELOPMENT:
-          resultTypeResponse =
-            await this._resultRepository.getInnovationDevBilateralResultById(
-              resultId,
-            );
-          break;
-
-        case ResultTypeEnum.POLICY_CHANGE:
-          resultTypeResponse =
-            await this._resultRepository.getPolicyChangeBilateralResultById(
-              resultId,
-            );
-          break;
-
-        case ResultTypeEnum.INNOVATION_USE:
-          resultTypeResponse =
-            await this._resultRepository.getInnovationUseBilateralResultById(
-              resultId,
-            );
-          break;
-
-        default:
-          this._logger.warn(
-            `Unsupported result_type_id: ${resultTypeId} for Bilateral result (resultId: ${resultId}). Continuing with null resultTypeResponse.`,
-          );
-          // resultTypeResponse remains null, code continues normally
-          break;
-      }
-
-      if (!resultTypeResponse) {
-        this._logger.warn(
-          `Result type response for Bilateral result data not found (resultId: ${resultId}, resultTypeId: ${resultTypeId})`,
-        );
-      }
+      const resultTypeResponse = await this._loadBilateralResultTypeData(
+        resultId,
+        result.result_type_id,
+      );
 
       const mappedResult = {
         commonFields: commonFields ?? null,
@@ -3021,6 +2809,204 @@ export class ResultsService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  private _validateBilateralResultId(
+    resultId: number,
+  ): returnErrorDto | null {
+    const parsedResultId = Number(resultId);
+    if (
+      !parsedResultId ||
+      !Number.isFinite(parsedResultId) ||
+      parsedResultId <= 0
+    ) {
+      return {
+        response: {} as any,
+        message: 'The resultId parameter must be a valid positive number.',
+        status: HttpStatus.BAD_REQUEST,
+      };
+    }
+    return null;
+  }
+
+  private async _loadBilateralBaseData(resultId: number) {
+    const [commonFields, tocMetadata, contributingCenters] = await Promise.all([
+      this._resultRepository.getCommonFieldsBilateralResultById(resultId),
+      this._resultRepository.getTocMetadataBilateralResult(resultId),
+      this._resultsCenterRepository.getAllResultsCenterByResultId(resultId),
+    ]);
+
+    if (!commonFields) {
+      this._logger.warn(
+        `Common fields for Bilateral result data not found (resultId: ${resultId})`,
+      );
+    }
+
+    if (!tocMetadata) {
+      this._logger.warn(
+        `Toc metadata for Bilateral result data not found (resultId: ${resultId})`,
+      );
+    }
+
+    if (!contributingCenters) {
+      this._logger.warn(
+        `Contributing centers for Bilateral result data not found (resultId: ${resultId})`,
+      );
+    }
+
+    const geoScope = await this._loadBilateralGeoScope(resultId);
+
+    return [commonFields, tocMetadata, geoScope, contributingCenters];
+  }
+
+  private async _loadBilateralGeoScope(resultId: number): Promise<any> {
+    if (!this._geographicLocationService) {
+      this._logger.warn(
+        `GeographicLocationService is not available for Bilateral result (resultId: ${resultId}). GeoScope will be null.`,
+      );
+      return null;
+    }
+
+    const geographicScope =
+      await this._geographicLocationService.getGeoScopeV2(resultId);
+
+    if (geographicScope?.status === HttpStatus.OK) {
+      return geographicScope.response;
+    }
+
+    this._logger.warn(
+      `GeoScope failed for Bilateral result (resultId: ${resultId}): ${geographicScope?.message ?? 'Unknown error'}`,
+    );
+    return null;
+  }
+
+  private async _loadContributingInstitutions(resultId: number): Promise<any[]> {
+    const knowledgeProduct =
+      await this._resultKnowledgeProductRepository.findOne({
+        where: { results_id: resultId },
+        relations: { result_knowledge_product_institution_array: true },
+      });
+
+    const contributingInstitutions =
+      await this._resultByIntitutionsRepository.find({
+        where: {
+          result_id: resultId,
+          is_active: true,
+        },
+        relations: {
+          delivery: true,
+          obj_institutions: { obj_institution_type_code: true },
+        },
+        order: { id: 'ASC' },
+      });
+
+      console.log('contributingInstitutions', contributingInstitutions);
+      console.log('knowledgeProduct', knowledgeProduct);
+    return contributingInstitutions.map((i) => ({
+      ...i,
+      delivery: i.delivery.filter((d) => d.is_active),
+      obj_institutions: i.obj_institutions
+        ? {
+            name: i.obj_institutions.name,
+            website_link: i.obj_institutions.website_link,
+            obj_institution_type_code: {
+              id: i.obj_institutions.obj_institution_type_code.code,
+              name: i.obj_institutions.obj_institution_type_code.name,
+            },
+          }
+        : null,
+    }));
+  }
+
+  private async _loadBilateralRelatedData(resultId: number) {
+    const [contributingProjects, contributingInitiatives, evidence] =
+      await Promise.all([
+        this._resultsByProjectsRepository?.findResultsByProjectsByResultId(
+          resultId,
+        ),
+        this._resultRepository.getContributingInitiativesBilateralResult(
+          resultId,
+        ),
+        this._resultRepository.getEvidenceBilateralResult(resultId),
+      ]);
+
+    if (!contributingProjects) {
+      this._logger.warn(
+        `Contributing projects for Bilateral result data not found (resultId: ${resultId})`,
+      );
+    }
+
+    if (!contributingInitiatives) {
+      this._logger.warn(
+        `Contributing initiatives for Bilateral result data not found (resultId: ${resultId})`,
+      );
+    }
+
+    if (!evidence) {
+      this._logger.warn(
+        `Evidence for Bilateral result data not found (resultId: ${resultId})`,
+      );
+    }
+
+    return [contributingProjects, contributingInitiatives, evidence];
+  }
+
+  private async _loadBilateralResultTypeData(
+    resultId: number,
+    resultTypeId: number,
+  ): Promise<any> {
+    let resultTypeResponse: any = null;
+
+    switch (resultTypeId) {
+      case ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT:
+        resultTypeResponse =
+          await this._resultRepository.getCapacitySharingBilateralResultById(
+            resultId,
+          );
+        break;
+
+      case ResultTypeEnum.KNOWLEDGE_PRODUCT:
+        resultTypeResponse =
+          await this._resultRepository.getKnowledgeProductBilateralResultById(
+            resultId,
+          );
+        break;
+
+      case ResultTypeEnum.INNOVATION_DEVELOPMENT:
+        resultTypeResponse =
+          await this._resultRepository.getInnovationDevBilateralResultById(
+            resultId,
+          );
+        break;
+
+      case ResultTypeEnum.POLICY_CHANGE:
+        resultTypeResponse =
+          await this._resultRepository.getPolicyChangeBilateralResultById(
+            resultId,
+          );
+        break;
+
+      case ResultTypeEnum.INNOVATION_USE:
+        resultTypeResponse =
+          await this._resultRepository.getInnovationUseBilateralResultById(
+            resultId,
+          );
+        break;
+
+      default:
+        this._logger.warn(
+          `Unsupported result_type_id: ${resultTypeId} for Bilateral result (resultId: ${resultId}). Continuing with null resultTypeResponse.`,
+        );
+        break;
+    }
+
+    if (!resultTypeResponse) {
+      this._logger.warn(
+        `Result type response for Bilateral result data not found (resultId: ${resultId}, resultTypeId: ${resultTypeId})`,
+      );
+    }
+
+    return resultTypeResponse;
   }
 
   async reviewBilateralResult(
@@ -3045,8 +3031,7 @@ export class ResultsService {
       // Validar que la justificación esté presente si es REJECT
       if (
         reviewDecisionDto.decision === ReviewDecisionEnum.REJECT &&
-        (!reviewDecisionDto.justification ||
-          !reviewDecisionDto.justification.trim())
+        !reviewDecisionDto.justification?.trim()
       ) {
         return {
           response: {},
