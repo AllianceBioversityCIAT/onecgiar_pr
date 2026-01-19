@@ -1,13 +1,18 @@
 @use '../../../../../../../styles/fonts.scss' as fonts;
 .page_section_header {
-  border-bottom: 1px solid rgb(200, 200, 200);
+  display: grid;
   color: var(--pr-color-primary-800);
   font-size: 14px;
   font-weight: 600;
-  padding: 5px 22px;
-  display: flex;
-  justify-content: space-between;
+  padding: 5px 30px;
+
   align-items: center;
+}
+
+.title_section_header {
+  font-size: 14px;
+  font-weight: 500;
+  padding: 20px 0;
 }
 .action_buttons {
   display: grid;
@@ -32,7 +37,6 @@
     gap: 10px;
     align-items: center;
     padding: 10px 10px;
-
   }
 }
 

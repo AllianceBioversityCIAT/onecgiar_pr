@@ -11,5 +11,6 @@ import { ClarisaInnovationUseLevelRepository } from './clarisa-innovation-use-le
     HandlersError,
     ClarisaInnovationUseLevelRepository,
   ],
+  exports: [ClarisaInnovationUseLevelRepository],
 })
 export class ClarisaInnovationUseLevelsModule {}

@@ -16,6 +16,7 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { IpsrDataControlService } from '../../../../../../pages/ipsr/services/ipsr-data-control.service';
 import { ScoreService } from '../../../../../../shared/services/global/score.service';
 import { UserSearchService } from '../../../../../results/pages/result-detail/pages/rd-general-information/services/user-search-service.service';
+import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 
 describe('IpsrGeneralInformationComponent', () => {
   let component: IpsrGeneralInformationComponent;
@@ -24,7 +25,7 @@ describe('IpsrGeneralInformationComponent', () => {
   let mockIpsrDataControlService: any;
   let mockScoreService: any;
   let mockUserSearchService: any;
-
+  let mockFieldsManagerService: any;
   const mockGETInnovationByResultIdResponse = {
     is_krs: '',
     lead_contact_person: '',
@@ -73,7 +74,8 @@ describe('IpsrGeneralInformationComponent', () => {
         PATCHIpsrGeneralInfo: jest.fn(() => of({ response: mockPATCHIpsrGeneralInfoResponse })),
         GET_investmentDiscontinuedOptions: jest.fn(() => {
           return of({ response: mockGET_investmentDiscontinuedOptionsResponse });
-        })
+        }),
+        GET_impactAreasScoresComponentsAll: jest.fn(() => of({ response: [] }))
       },
       alertsFe: {
         show: jest.fn()
@@ -101,6 +103,10 @@ describe('IpsrGeneralInformationComponent', () => {
       searchQuery: '',
       hasValidContact: false,
       showContactError: false
+    };
+    mockFieldsManagerService = {
+      isP25: jest.fn().mockReturnValue(false),
+      isP22: jest.fn().mockReturnValue(true)
     };
 
     await TestBed.configureTestingModule({
@@ -133,6 +139,10 @@ describe('IpsrGeneralInformationComponent', () => {
         {
           provide: UserSearchService,
           useValue: mockUserSearchService
+        },
+        {
+          provide: FieldsManagerService,
+          useValue: mockFieldsManagerService
         }
       ]
     }).compileComponents();
@@ -203,7 +213,6 @@ describe('IpsrGeneralInformationComponent', () => {
       mockUserSearchService.searchQuery = 'invalid user';
       mockUserSearchService.selectedUser = null;
       mockUserSearchService.hasValidContact = false;
-
       const spyPATCHIpsrGeneralInfo = jest.spyOn(mockApiService.resultsSE, 'PATCHIpsrGeneralInfo');
 
       component.onSaveSection();

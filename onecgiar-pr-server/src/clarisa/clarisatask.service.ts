@@ -334,14 +334,26 @@ export class ClarisaTaskService {
         return this.buildGlobalUnitKey(composeCode, effectiveYear, code);
       };
 
+      const allUnitsToDeactivate: ClarisaGlobalUnit[] = [];
       for (const u of existingUnits) {
-        const key = buildIndexKey(
-          u.composeCode,
-          u.year,
-          u.code,
-          u.entityTypeId,
+        if (u.isActive) {
+          u.isActive = false;
+          allUnitsToDeactivate.push(u);
+        }
+      }
+      if (allUnitsToDeactivate.length > 0) {
+        await globalUnitRepo.save(allUnitsToDeactivate, { chunk: 1000 });
+        deactivated += allUnitsToDeactivate.length;
+        this._logger.log(
+          `[${index}] Deactivated ${allUnitsToDeactivate.length} existing global units`,
         );
-        unitsByKey.set(key, u);
+      }
+
+      for (const u of existingUnits) {
+        const exactKey = this.buildGlobalUnitKey(u.composeCode, u.year, u.code);
+        if (!unitsByKey.has(exactKey)) {
+          unitsByKey.set(exactKey, u);
+        }
         registerInCodeIndex(u);
       }
 
@@ -365,23 +377,11 @@ export class ClarisaTaskService {
         }
 
         const entityTypeCode = item.entity_type?.code;
-        const key = buildIndexKey(composeCode, year, code, entityTypeCode);
-        const existing = unitsByKey.get(key);
+        const exactKey = this.buildGlobalUnitKey(composeCode, year, code);
+        const existing = unitsByKey.get(exactKey);
 
         const entity = existing ?? globalUnitRepo.create();
         const wasActive = entity.isActive ?? true;
-
-        const prevKey = existing
-          ? buildIndexKey(
-              existing.composeCode,
-              existing.year,
-              existing.code,
-              existing.entityTypeId,
-            )
-          : null;
-        const prevCodeKey = existing
-          ? this.normalizeIdentifier(existing.code) || null
-          : null;
 
         entity.composeCode = composeCode;
         entity.code = code;
@@ -407,18 +407,13 @@ export class ClarisaTaskService {
         }
 
         toUpsert.push(entity);
-
-        if (prevKey && prevKey !== key) {
-          unitsByKey.delete(prevKey);
-        }
-        if (prevCodeKey) {
-          const lst = unitsByCode.get(prevCodeKey);
-          if (lst) {
-            const idx = lst.findIndex((x) => x.id === entity.id);
-            if (idx >= 0) lst.splice(idx, 1);
-            if (!lst.length) unitsByCode.delete(prevCodeKey);
-          }
-        }
+        const newExactKey = this.buildGlobalUnitKey(
+          entity.composeCode,
+          entity.year,
+          entity.code,
+        );
+        unitsByKey.set(newExactKey, entity);
+        registerInCodeIndex(entity);
       }
 
       const savedBatch = toUpsert.length
@@ -450,12 +445,7 @@ export class ClarisaTaskService {
         if (!composeCode || !code) continue;
 
         const child = unitsByKey.get(
-          buildIndexKey(
-            composeCode,
-            year,
-            code,
-            item.entity_type?.code ?? null,
-          ),
+          this.buildGlobalUnitKey(composeCode, year, code),
         );
         if (!child) continue;
 
@@ -499,21 +489,6 @@ export class ClarisaTaskService {
       if (parentUpdates.length) {
         const res = await globalUnitRepo.save(parentUpdates, { chunk: 1000 });
         parentLinksUpdated = res.length;
-      }
-
-      const unitsToDeactivate: ClarisaGlobalUnit[] = [];
-      for (const unit of existingUnits) {
-        if (!processedUnitIds.has(unit.id) && unit.isActive) {
-          unit.isActive = false;
-          unitsToDeactivate.push(unit);
-        }
-      }
-
-      if (unitsToDeactivate.length) {
-        const res = await globalUnitRepo.save(unitsToDeactivate, {
-          chunk: 1000,
-        });
-        deactivated += res.length;
       }
 
       const lineageRecords: ClarisaGlobalUnitLineage[] = [];

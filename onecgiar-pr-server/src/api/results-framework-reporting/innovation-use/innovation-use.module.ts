@@ -48,5 +48,6 @@ import { ClarisaInnovationUseLevelRepository } from '../../../clarisa/clarisa-in
     ResultsByProjectsRepository,
     ClarisaInnovationUseLevelRepository,
   ],
+  exports: [InnovationUseService],
 })
 export class InnovationUseModule {}

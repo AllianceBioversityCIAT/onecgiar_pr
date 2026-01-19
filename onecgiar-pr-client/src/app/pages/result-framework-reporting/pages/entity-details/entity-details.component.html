@@ -86,7 +86,7 @@
 
     <div class="entity-details_card">
       <div class="entity-details_card_header">
-        Reporting by indicator category
+        Reporting by Result Category
         <p-splitbutton
           label="Report"
           icon="pi pi-plus-circle"
@@ -104,13 +104,27 @@
             <p-skeleton width="100%" height="125px" />
           }
         } @else {
-          @if (entityAowService.indicatorSummaries().length > 0) {
-            @for (item of entityAowService.indicatorSummaries(); track $index) {
-              @if (item?.resultTypeName !== 'Innovation Use(IPSR)') {
-                <app-entity-results-by-indicator-category-card
-                  [item]="item"
-                  (reportRequested)="showReportModal.set(true)"></app-entity-results-by-indicator-category-card>
-              }
+          @if (groupedIndicatorSummaries().outputs.length > 0 || groupedIndicatorSummaries().outcomes.length > 0) {
+            @if (groupedIndicatorSummaries().outputs.length > 0) {
+              <div class="entity-details_indicator-group">
+                <h3 class="entity-details_indicator-group_title">OUTPUTS</h3>
+                @for (item of groupedIndicatorSummaries().outputs; track item?.resultTypeId) {
+                  <app-entity-results-by-indicator-category-card
+                    [item]="item"
+                    (reportRequested)="onReportRequested($event)"></app-entity-results-by-indicator-category-card>
+                }
+              </div>
+            }
+
+            @if (groupedIndicatorSummaries().outcomes.length > 0) {
+              <div class="entity-details_indicator-group">
+                <h3 class="entity-details_indicator-group_title">OUTCOMES</h3>
+                @for (item of groupedIndicatorSummaries().outcomes; track item?.resultTypeId) {
+                  <app-entity-results-by-indicator-category-card
+                    [item]="item"
+                    (reportRequested)="onReportRequested($event)"></app-entity-results-by-indicator-category-card>
+                }
+              </div>
             }
           } @else {
             <h1 class="entity-details_card_content_empty">No results found for this science program</h1>
@@ -131,12 +145,14 @@
     [showHeader]="false"
     [dismissableMask]="true"
     [styleClass]="'report-result-dialog'"
-    (onHide)="showReportModal.set(false)">
+    (onHide)="onModalClose()">
     <div class="report-result-header">
-      <span style="font-weight: 550; color: #000000; padding-left: 30px; font-size: 16px !important">Unplanned result</span>
+      <span style="font-weight: 550; color: #000000; font-size: 16px !important; padding-left: 30px">
+        This reporting pathway is intended for results that are not planned for in the Program’s ToC
+      </span>
       <button
         type="button"
-        (click)="showReportModal.set(false)"
+        (click)="onModalClose()"
         aria-label="Close modal"
         style="background: none; border: none; cursor: pointer; padding: 0; display: flex; align-items: center">
         <i class="material-icons-round" style="font-size: 20px">close</i>
@@ -145,7 +161,7 @@
     <app-report-result-form
       [selectedInitiativeId]="entityAowService.entityDetails()?.id"
       [disableInitiativeSelect]="true"
-      (resultCreated)="showReportModal.set(false)">
+      (resultCreated)="onModalClose()">
     </app-report-result-form>
   </p-dialog>
 }

@@ -1,44 +1,45 @@
-<app-pr-radio-button
-  [readOnly]="saving"
-  fieldRef="[innovation-use-form]-has-innovation-link"
-  [options]="[
-    { value: true, label: 'Yes' },
-    { value: false, label: 'No' }
-  ]"
-  optionLabel="label"
-  [(ngModel)]="body.has_innovation_link"
-  optionValue="value">
-</app-pr-radio-button>
-
-<div *ngIf="body.has_innovation_link && this.fieldsManagerSE.isP25()">
-  <app-pr-multi-select
+@if (!this.isIpsr) {
+  <app-pr-radio-button
     [readOnly]="saving"
-    [options]="this.innovationUseResultsSE.resultsList"
-    [(ngModel)]="body.linked_results"
-    optionLabel="title"
-    optionValue="id"
-    optionGroupLabel="name"
-    optionGroupChildren="options"
-    label="Please select a result"
-    placeholder="Please select a result"
-    selectedLabel="Results selected"
-    selectedOptionLabel="title"
-    [displayLabelFormatter]="formatResultLabel.bind(this)">
-  </app-pr-multi-select>
-</div>
+    fieldRef="[innovation-use-form]-has-innovation-link"
+    [options]="[
+      { value: true, label: 'Yes' },
+      { value: false, label: 'No' }
+    ]"
+    optionLabel="label"
+    [(ngModel)]="body.has_innovation_link"
+    optionValue="value">
+  </app-pr-radio-button>
 
-@if (!this.fieldsManagerSE.isP25()) {
-  <app-pr-field-header [label]="currentUseHeaderLabel()" [useColon]="!this.fieldsManagerSE.isP25()"></app-pr-field-header>
+  <div *ngIf="body.has_innovation_link && this.fieldsManagerSE.isP25()">
+    <app-pr-multi-select
+      [readOnly]="saving"
+      [options]="this.innovationUseResultsSE.resultsList"
+      [(ngModel)]="body.linked_results"
+      optionLabel="title"
+      optionValue="id"
+      optionGroupLabel="name"
+      optionGroupChildren="options"
+      label="Please select a result"
+      placeholder="Please select a result"
+      selectedLabel="Results selected"
+      selectedOptionLabel="title"
+      [displayLabelFormatter]="formatResultLabel.bind(this)">
+    </app-pr-multi-select>
+  </div>
+
+  @if (!this.fieldsManagerSE.isP25()) {
+    <app-pr-field-header [label]="currentUseHeaderLabel()" [useColon]="!this.fieldsManagerSE.isP25()"></app-pr-field-header>
+  }
+  <app-pr-radio-button
+    [readOnly]="saving"
+    fieldRef="[innovation-use-form]-core-innovation"
+    [options]="[{ value: true, label: 'This is yet to be determined' }]"
+    optionLabel="label"
+    [(ngModel)]="body.innov_use_to_be_determined"
+    optionValue="value">
+  </app-pr-radio-button>
 }
-<app-pr-radio-button
-  [readOnly]="saving"
-  fieldRef="[innovation-use-form]-core-innovation"
-  [options]="[{ value: true, label: 'This is yet to be determined' }]"
-  optionLabel="label"
-  [(ngModel)]="body.innov_use_to_be_determined"
-  optionValue="value">
-</app-pr-radio-button>
-
 @if (
   !body.innov_use_to_be_determined ||
   !this.fieldsManagerSE.isP25() ||
@@ -310,7 +311,7 @@
   <app-add-button name="Add other" *ngIf="!this.api.rolesSE.readOnly" [disabled]="saving" (clickEvent)="addOther()"></app-add-button>
 }
 
-@if (this.fieldsManagerSE.isP25()) {
+@if (this.fieldsManagerSE.isP25() && !this.isIpsr) {
   <div style="padding-top: 12px !important">
     <app-pr-field-header
       label="How would you assess the current use level of the innovation?"
@@ -324,6 +325,10 @@
     optionValue="level"
     [options]="this.innovationControlListSE.useLevelsList"
     [(ngModel)]="body.innovation_use_level_id"></app-pr-range-level>
+
+  <div appFeedbackValidation
+    labelText="How would you assess the current use level of the innovation?"
+    [isComplete]="body.innovation_use_level_id !== null && body.innovation_use_level_id !== undefined"></div>
 
   <div class="pr_description" style="margin-top: 1rem">
     <a href="https://drive.google.com/file/d/1RFDAx3m5ziisZPcFgYdyBYH9oTzOYLvC/view" class="open_route" target="_blank" rel="noopener noreferrer">
@@ -342,9 +347,10 @@
 
   <app-pr-textarea
     [disabled]="saving"
-    placeholder="Provide a brief explanation here..."
     [maxWords]="50"
     [(ngModel)]="body.readiness_level_explanation"
+    *ngIf="getUseLevelIndex() > 4 && getUseLevelIndex() <= 9"
+    placeholder="Provide a brief explanation here..."
     label="Provide a brief explanation of how the provided evidence/documentation (URL provided under Section 4) justifies the chosen innovation use level"
     description="<strong>Example:</strong> We selected Level 6 because the climate-smart maize drying technology is now being used by farmer cooperatives and individual processors who were not directly connected to the organizations involved in the initial innovation development. This reflects diffusion beyond project-supported activities and demonstrates that the innovation is being adopted through peer learning and local adaptation mechanisms. Although the innovation is being applied independently of the original partners, its use remains limited to a minority of potential users. This pattern of selective but autonomous uptake is consistent with Level 6, where adoption has extended beyond initial networks but has not yet reached broad or mainstream use. ">
   </app-pr-textarea>
@@ -352,7 +358,7 @@
   <!-- Innovation Links Component -->
   <app-pr-radio-button
     [readOnly]="saving"
-    *ngIf="getUseLevelIndex() >= 6"
+    *ngIf="getUseLevelIndex() >= 5"
     fieldRef="[innovation-use-form]-has-studies-links"
     [options]="[
       { value: true, label: 'Yes' },

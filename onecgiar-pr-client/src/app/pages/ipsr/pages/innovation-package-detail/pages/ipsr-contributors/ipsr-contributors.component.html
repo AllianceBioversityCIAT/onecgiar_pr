@@ -1,10 +1,214 @@
 <div class="partnersindex">
-  <app-ipsr-contributors-toc [contributorsBody]="this.contributorsBody" [disabledOptions]="this.disabledOptions"></app-ipsr-contributors-toc>
+  @if (this.fieldsManagerSE.isP25()) {
+    <app-pr-yes-or-not
+      label="Does this result align with the Program's planned TOC indicators?"
+      [required]="true"
+      [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.planned_result">
+    </app-pr-yes-or-not>
 
-  <app-ipsr-non-pooled-projects [contributorsBody]="this.contributorsBody"></app-ipsr-non-pooled-projects>
-  <app-ipsr-contributors-non-cgiar-partners [contributorsBody]="this.contributorsBody"></app-ipsr-contributors-non-cgiar-partners>
+    <app-alert-status
+      description="If your response to this question is <strong>YES</strong>, then please return to the Program's main page in PRMS and report the result through the ToC module by associating it with the corresponding indicators and targets. If the result you plan to submit does not match any 2025 planned indicators and results, then click <strong>NO</strong> and provide a short justification explaining why you are reporting it despite not being part of the 2025 planned results.">
+    </app-alert-status>
+
+    @if (this.rdPartnersSE.partnersBody.result_toc_result.planned_result !== null) {
+      @if (!this.rdPartnersSE.partnersBody.result_toc_result.planned_result) {
+        <app-pr-textarea
+          placeholder="Enter reason"
+          label="Why is the result being reported?"
+          type="text"
+          [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.toc_progressive_narrative"
+          [maxWords]="30"
+          [rows]="2"
+          [autogenerate]="true">
+        </app-pr-textarea>
+      } @else {
+        <div style="z-index: 1; position: relative">
+          <app-cp-multiple-wps
+            [editable]="true"
+            [initiative]="this.rdPartnersSE.partnersBody?.result_toc_result"
+            [initiativeId]="this.initiativeIdSignal"
+            [resultLevelId]="this.resultLevelSE.currentResultLevelId"
+            [isIpsr]="true"
+            [isContributor]="false"
+            [isNotifications]="false"></app-cp-multiple-wps>
+        </div>
+      }
+    }
+  } @else {
+    <app-ipsr-contributors-toc [contributorsBody]="this.contributorsBody" [disabledOptions]="this.disabledOptions"></app-ipsr-contributors-toc>
+  }
+  @if (this.fieldsManagerSE.isP25()) {
+    <app-pr-multi-select
+      [options]="this.centersSE.centersList"
+      label="Contributing CGIAR Centers"
+      description="CG Center that you collaborated with or are currently collaborating with to generate this result."
+      [showDescriptionLabel]="false"
+      optionLabel="full_name"
+      optionValue="code"
+      [(ngModel)]="this.rdPartnersSE.partnersBody.contributing_center"
+      placeholder="Select center(s)"
+      [disableOptions]="this.rdPartnersSE.cgspaceDisabledList"
+      (selectOptionEvent)="this.rdPartnersSE.setPossibleLeadCenters(true)">
+    </app-pr-multi-select>
+
+    <div class="medal_selector selected_container">
+      <div class="centers chips_container">
+        <div
+          class="center pr_chip_selected"
+          [pTooltip]="this.disabledText"
+          [tooltipDisabled]="!center.from_cgspace"
+          *ngFor="let center of this.rdPartnersSE.partnersBody.contributing_center; let i = index">
+          <div class="name" [innerHtml]="center?.name"></div>
+          <i
+            *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status && !center.from_cgspace"
+            class="material-icons-round"
+            (click)="deleteContributingCenter(i); this.rdPartnersSE.setPossibleLeadCenters(true)"
+            >cancel</i
+          >
+        </div>
+      </div>
+    </div>
+
+    @if (this.rdPartnersSE.clarisaProjectsList.length > 0) {
+      <app-pr-multi-select
+        [options]="this.rdPartnersSE.clarisaProjectsList"
+        [(ngModel)]="this.rdPartnersSE.partnersBody.bilateral_projects"
+        [required]="false"
+        optionLabel="fullName"
+        optionValue="project_id"
+        label="Contributing W3 and/or bilateral projects"
+        selectedLabel="Projects selected"
+        selectedOptionLabel="fullName"
+        placeholder="Select project">
+      </app-pr-multi-select>
+    }
+    <app-pr-multi-select
+      [options]="this.contributingInitiativesList"
+      label="Contributing {{ 'term.entity.orPlatformsPlural' | term: this.api.dataControlSE.currentResult?.portfolio }}"
+      [disableOptions]="this.rdPartnersSE.disabledOptions"
+      optionLabel="full_name"
+      optionValue="id"
+      (selectOptionEvent)="this.rdPartnersSE.onSelectContributingInitiative()"
+      [required]="false"
+      selectedOptionLabel="full_name"
+      [(ngModel)]="this.rdPartnersSE.contributingInitiativeNew"
+      [confirmDeletion]="true"
+      [placeholder]="'Select ' + ('term.entity.orPlatformsWith()' | term: this.api.dataControlSE.currentResult?.portfolio)">
+    </app-pr-multi-select>
+
+    <div class="selected_container custom_scroll">
+      <app-pr-field-header [description]="('term.entity.singularWith()' | term: this.api.dataControlSE.currentResult?.portfolio) + ' selected:'">
+      </app-pr-field-header>
+
+      <div class="chips_container">
+        @for (
+          item of this.rdPartnersSE.result_toc_result?.contributing_initiatives?.accepted_contributing_initiatives || [];
+          track item.id;
+          let i = $index
+        ) {
+          <div class="pr_chip_selected">
+            <div class="name" [ngClass]="{ text_inactive: !item.is_active }">
+              <strong>{{ item.official_code }}</strong> {{ item.initiative_name }}
+            </div>
+
+            @if (!this.api.rolesSE.readOnly) {
+              <i
+                class="material-icons-round"
+                [style.color]="item.is_active ? 'var(--pr-color-red-100)' : 'var(--pr-color-primary-300)'"
+                (click)="onRemoveContribuiting(i, true)">
+                {{ item.is_active ? 'backspace' : 'undo' }}
+              </i>
+            }
+          </div>
+        }
+
+        @for (item of this.rdPartnersSE.contributingInitiativeNew; track item.id; let i = $index) {
+          <div class="pr_chip_selected pending">
+            <div class="name" [ngClass]="{ text_inactive: !item.is_active }">
+              <strong>{{ item.official_code }}</strong> {{ item.name }} - <b style="font-style: italic"> Not saved yet </b>
+            </div>
+
+            @if (!this.api.rolesSE.readOnly) {
+              <i
+                class="material-icons-round"
+                [style.color]="item.is_active ? 'var(--pr-color-red-100)' : 'var(--pr-color-primary-300)'"
+                (click)="onRemoveContribuiting(i, false)">
+                {{ item.is_active ? 'backspace' : 'undo' }}
+              </i>
+            }
+          </div>
+        }
+
+        @for (item of this.rdPartnersSE.partnersBody?.contributing_initiatives?.pending_contributing_initiatives || []; track item.id) {
+          <div class="pr_chip_selected pending">
+            <div class="name" [ngClass]="{ text_inactive: !item.is_active }">
+              <strong>{{ item.official_code }}</strong> {{ item.initiative_name }} - <b style="font-style: italic"> Pending confirmation </b>
+            </div>
+
+            @if (!this.api.rolesSE.readOnly) {
+              <i
+                class="material-icons-round"
+                [style.color]="item.is_active ? 'var(--pr-color-red-100)' : 'var(--pr-color-primary-300)'"
+                (click)="toggleActiveContributor(item)">
+                {{ item.is_active ? 'backspace' : 'undo' }}
+              </i>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    <app-knowledge-product-selector *ngIf="this.api.dataControlSE.isKnowledgeProduct"></app-knowledge-product-selector>
+    <app-normal-selector></app-normal-selector>
+
+    <!-- Lead partner/center start -->
+    <app-pr-yes-or-not
+      label="Is this result being led by an external partner?"
+      [required]="true"
+      [(ngModel)]="this.rdPartnersSE.partnersBody.is_lead_by_partner"
+      (selectOptionEvent)="$event ? (this.rdPartnersSE.leadCenterCode = null) : (this.rdPartnersSE.leadPartnerId = null)"
+      [readOnly]="!this.api.dataControlSE.isKnowledgeProduct && this.rdPartnersSE.partnersBody.no_applicable_partner">
+    </app-pr-yes-or-not>
+    <app-alert-status [description]="getMessageLead()"></app-alert-status>
+    <div *ngIf="this.rdPartnersSE.partnersBody.is_lead_by_partner; else selectLeadCenter">
+      <app-pr-select
+        label="Lead partner"
+        [options]="this.rdPartnersSE.possibleLeadPartners"
+        optionLabel="full_name"
+        optionValue="institutions_id"
+        placeholder="Select a lead partner..."
+        [required]="this.rdPartnersSE.partnersBody.is_lead_by_partner"
+        [(ngModel)]="this.rdPartnersSE.leadPartnerId"
+        *ngIf="!this.rdPartnersSE.updatingLeadData">
+      </app-pr-select>
+    </div>
+    <ng-template #selectLeadCenter>
+      <app-pr-select
+        label="Lead center"
+        [options]="this.rdPartnersSE.possibleLeadCenters"
+        optionLabel="full_name"
+        optionValue="code"
+        placeholder="Select a lead center..."
+        [required]="!this.rdPartnersSE.partnersBody.is_lead_by_partner"
+        [(ngModel)]="this.rdPartnersSE.leadCenterCode"
+        *ngIf="!this.rdPartnersSE.updatingLeadData">
+      </app-pr-select>
+    </ng-template>
+
+    <app-alert-status
+      *ngIf="this.api.dataControlSE.isKnowledgeProduct"
+      description="In this section you can enter CGIAR Center partners. If you notice any discrepancies, such as partners appearing in CGSpace but not here, please reach out to PRMSTechSupport@cgiar.org for assistance. ">
+    </app-alert-status>
+    <br /><br /><br /><br /><br /><br /><br /><br /><br /><br />
+    <!-- Sync -->
+  }
+
+  @if (this.fieldsManagerSE.isP22()) {
+    <app-ipsr-contributors-non-cgiar-partners [contributorsBody]="this.contributorsBody"></app-ipsr-contributors-non-cgiar-partners>
+  }
 </div>
 
-<app-ipsr-contributors-centers [contributorsBody]="this.contributorsBody"></app-ipsr-contributors-centers>
-
+@if (this.fieldsManagerSE.isP22()) {
+  <app-ipsr-contributors-centers [contributorsBody]="this.contributorsBody"></app-ipsr-contributors-centers>
+}
 <app-save-button class="position_sticky" (clickSave)="onSaveSection()"> </app-save-button>

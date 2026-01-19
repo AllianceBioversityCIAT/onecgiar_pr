@@ -29,5 +29,6 @@ import { ResultsInnovationsUseRepository } from '../../results/summary/repositor
     ResultsTocResultsModule,
     LinkedResultsModule,
   ],
+  exports: [ContributorsPartnersService],
 })
 export class ContributorsPartnersModule {}

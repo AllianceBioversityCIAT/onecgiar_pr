@@ -1,33 +1,14 @@
-import { Component, Input, OnChanges, OnInit, WritableSignal, computed, effect, inject, signal } from '@angular/core';
+import { Component, Input, OnChanges, WritableSignal, computed, effect, inject, signal } from '@angular/core';
 import { CustomizedAlertsFeService } from '../../../../../../../../shared/services/customized-alerts-fe.service';
 
 import { FieldsManagerService } from '../../../../../../../../shared/services/fields-manager.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
-import { RdTheoryOfChangesServicesService } from '../../../rd-theory-of-change/rd-theory-of-changes-services.service';
 import { RdContributorsAndPartnersService } from '../../rd-contributors-and-partners.service';
 import { ResultToResultInterfaceToc } from '../../../../../../../ipsr/pages/innovation-package-detail/pages/ipsr-contributors/model/contributorsBody';
-
-interface Tab {
-  action_area_outcome_id: number | null;
-  created_by: number | null;
-  created_date: string | null;
-  initiative_id: number | null;
-  is_active: number | null;
-  last_updated_by: number | null;
-  last_updated_date: string | null;
-  name: string | null;
-  official_code: string | null;
-  planned_result: number | null;
-  result_toc_result_id: string | null;
-  results_id: string | null;
-  short_name: string | null;
-  toc_level_id: number | null;
-  toc_result_id: number | null;
-  uniqueId: string | null;
-}
+import { TocTab } from '../../../../../../../../shared/interfaces/toc-tab.interface';
 
 @Component({
-  selector: 'app-multiple-wps',
+  selector: 'app-cp-multiple-wps',
   templateUrl: './multiple-wps.component.html',
   styleUrls: ['./multiple-wps.component.scss'],
   standalone: false
@@ -41,8 +22,9 @@ export class CPMultipleWPsComponent implements OnChanges {
   @Input() resultLevelId: number | string;
   @Input() isIpsr: boolean = false;
   @Input() showMultipleWPsContent: boolean = true;
-  activeTab: Tab;
-  activeTabSignal = signal<Tab | null>(null);
+  @Input() isUnplanned: boolean = false;
+  activeTab: TocTab;
+  activeTabSignal = signal<TocTab | null>(null);
   activeTabIndex: number = 0;
 
   currentPlannedResult = null;
@@ -70,7 +52,7 @@ export class CPMultipleWPsComponent implements OnChanges {
   });
 
   ngOnChanges() {
-    this.initiative?.result_toc_results.forEach((tab: any, index: number) => {
+    this.initiative?.result_toc_results?.forEach((tab: any, index: number) => {
       tab.uniqueId = index.toString();
     });
 
@@ -99,7 +81,10 @@ export class CPMultipleWPsComponent implements OnChanges {
   GET_outputList() {
     this.api.tocApiSE
       .GET_tocLevelsByconfig(
-        this.api.dataControlSE.currentNotification?.result_id || this.activeTab?.results_id || this.api.dataControlSE?.currentResult?.id,
+        this.api.dataControlSE.currentNotification?.result_id ||
+          this.activeTab?.results_id ||
+          this.api.dataControlSE?.currentResult?.id ||
+          this.api.dataControlSE.currentResultSignal()?.result_id,
         this.initiativeId(),
         1,
         this.fieldsManagerSE.isP25()
@@ -118,7 +103,10 @@ export class CPMultipleWPsComponent implements OnChanges {
   GET_outcomeList() {
     this.api.tocApiSE
       .GET_tocLevelsByconfig(
-        this.api.dataControlSE.currentNotification?.result_id || this.activeTab?.results_id || this.api.dataControlSE?.currentResult?.id,
+        this.api.dataControlSE.currentNotification?.result_id ||
+          this.activeTab?.results_id ||
+          this.api.dataControlSE?.currentResult?.id ||
+          this.api.dataControlSE.currentResultSignal()?.result_id,
         this.initiativeId(),
         2,
         this.fieldsManagerSE.isP25()
@@ -137,7 +125,10 @@ export class CPMultipleWPsComponent implements OnChanges {
   GET_EOIList() {
     this.api.tocApiSE
       .GET_tocLevelsByconfig(
-        this.api.dataControlSE.currentNotification?.result_id || this.activeTab?.results_id || this.api.dataControlSE?.currentResult?.id,
+        this.api.dataControlSE.currentNotification?.result_id ||
+          this.activeTab?.results_id ||
+          this.api.dataControlSE?.currentResult?.id ||
+          this.api.dataControlSE.currentResultSignal()?.result_id,
         this.initiativeId(),
         3,
         this.fieldsManagerSE.isP25()
@@ -209,7 +200,7 @@ export class CPMultipleWPsComponent implements OnChanges {
     this.onActiveTab(this.initiative?.result_toc_results[lastIndex], lastIndex);
   }
 
-  onDeleteTab(tab: Tab, tabNumber = 0) {
+  onDeleteTab(tab: TocTab, tabNumber = 0) {
     const confirmationMessage = `Are you sure you want to delete contribution TOC-${this.initiative?.planned_result && this.resultLevelId === 1 ? 'Output' : 'Outcome'} N° ${tabNumber} to the TOC?`;
 
     this.customizedAlertsFeSE.show(

@@ -52,7 +52,6 @@ export class IpsrPathwayStepFourService {
     saveStepFourDto: IpsrSaveStepFour,
   ) {
     try {
-      console.log('saveStepFourDto', saveStepFourDto);
       const result = await this._resultRepository.findOne({
         where: {
           id: resultId,
@@ -266,6 +265,7 @@ export class IpsrPathwayStepFourService {
             partner.kind_cash === null ? null : Number(partner.kind_cash);
           existBud.is_determined = partner.is_determined;
           existBud.last_updated_by = user;
+          existBud.is_active = partner.is_active ?? true;
 
           await this._resultInstitutionsBudgetRepository.save(existBud);
         } else {
@@ -336,6 +336,7 @@ export class IpsrPathwayStepFourService {
           rbb.is_determined = i.is_determined;
           rbb.last_updated_by = user;
           rbb.non_pooled_projetct_id = null;
+          rbb.is_active = i.is_active ?? true;
 
           await this._resultBilateralBudgetRepository.save(rbb);
         } else {
@@ -415,6 +416,7 @@ export class IpsrPathwayStepFourService {
 
           rie.is_determined = initiative.is_determined;
           rie.last_updated_by = user;
+          rie.is_active = initiative.is_active ?? true;
 
           await this._resultInitiativesBudgetRepository.save(rie);
         } else {
@@ -604,15 +606,15 @@ export class IpsrPathwayStepFourService {
           },
         });
 
-      let scaling_studies_urls: string[] = [];
-      const urls = await this._resultScalingStudyUrlsRepository.find({
-        where: {
-          result_innov_package_id: result_ip.result_innovation_package_id,
-          is_active: true,
-        },
-      });
-      scaling_studies_urls = urls.map((u) => u.study_url);
-
+        let scaling_studies_urls: string[] = [];
+        const urls = await this._resultScalingStudyUrlsRepository.find({
+          where: {
+            result_innov_package_id: result_ip.result_innovation_package_id,
+            is_active: true,
+          },
+        });
+        scaling_studies_urls = urls.map((u) => u.study_url);
+        
       if (!result_ip) {
         return {
           response: {},

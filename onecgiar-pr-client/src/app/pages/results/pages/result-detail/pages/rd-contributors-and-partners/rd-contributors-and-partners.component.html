@@ -1,7 +1,5 @@
 <div class="detail_container">
   <app-alert-status *ngIf="!this.api.dataControlSE.isKnowledgeProduct" [description]="alertStatusMessage"> </app-alert-status>
-  <!-- Contributing Centers start -->
-  <div appFeedbackValidation labelText="Contributing CGIAR Centers" [isComplete]="!!this.rdPartnersSE.partnersBody.contributing_center?.length"></div>
 
   <!-- ! from toc section -->
   @if (this.rdPartnersSE.getConsumed()) {
@@ -34,14 +32,15 @@
   }
 
   <app-pr-yes-or-not
-    label="Does this result align with the Program’s planned TOC indicators?"
+    label="Does this result align with the Program's planned TOC indicators?"
     [required]="true"
-    [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.planned_result">
+    [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.planned_result"
+    (selectOptionEvent)="onPlannedResultChange($event)">
   </app-pr-yes-or-not>
 
   <app-alert-status
     [description]="
-      'If your response to this question is <strong>YES</strong>, then please return to the Program’s main page in PRMS and report the result through the ToC module by associating it with the corresponding indicators and targets. If the result you plan to submit does not match any 2025 planned indicators and results, then click <strong>NO</strong> and provide a short justification explaining why you are reporting it despite not being part of the 2025 planned results.'
+      'If your answer is <strong>Yes</strong>, please select the relevant <strong>HLO, indicator</strong>, and <strong>contribution to target</strong> below. If the result is not planned for in the 2025 ToC (planned indicators), please select <strong>No</strong> and, where applicable, choose the <strong>HLO</strong> under which it is most appropriate to report the result. Please also provide a short justification explaining why you are reporting it even though it is not reflected in a 2025 ToC indicator. These “No”-flagged results could be reviewed by the Program team as part of the adaptive management process and may inform updates or adjustments to the Program’s 2026 ToC and planned indicators.'
     ">
   </app-alert-status>
 
@@ -49,6 +48,20 @@
 
   <!-- from toc section  -->
   @if (this.rdPartnersSE.partnersBody.result_toc_result.planned_result !== null) {
+    @if (this?.api?.dataControlSE?.currentResultSignal()?.result_level_id !== 3 || this.rdPartnersSE.partnersBody.result_toc_result.planned_result) {
+      <div style="z-index: 1; position: relative">
+        <app-cp-multiple-wps
+          [editable]="true"
+          [initiative]="this.rdPartnersSE.partnersBody?.result_toc_result"
+          [initiativeId]="this.rdPartnersSE.initiativeIdSignal"
+          [resultLevelId]="this.resultLevelSE.currentResultLevelId"
+          [isIpsr]="false"
+          [isContributor]="false"
+          [isNotifications]="false"
+          [isUnplanned]="!this.rdPartnersSE.partnersBody.result_toc_result.planned_result"
+          [showMultipleWPsContent]="this.rdPartnersSE.getConsumed()"></app-cp-multiple-wps>
+      </div>
+    }
     @if (!this.rdPartnersSE.partnersBody.result_toc_result.planned_result) {
       <app-pr-textarea
         placeholder="Enter reason"
@@ -59,18 +72,6 @@
         [rows]="2"
         [autogenerate]="true">
       </app-pr-textarea>
-    } @else {
-      <div style="z-index: 1; position: relative">
-        <app-multiple-wps
-          [editable]="true"
-          [initiative]="this.rdPartnersSE.partnersBody?.result_toc_result"
-          [initiativeId]="this.rdPartnersSE.initiativeIdSignal"
-          [resultLevelId]="this.resultLevelSE.currentResultLevelId"
-          [isIpsr]="false"
-          [isContributor]="false"
-          [isNotifications]="false"
-          [showMultipleWPsContent]="this.rdPartnersSE.getConsumed()"></app-multiple-wps>
-      </div>
     }
   }
 
@@ -80,6 +81,7 @@
     selectedLabel="Center(s) selected"
     optionLabel="full_name"
     optionValue="code"
+    [required]="false"
     [(ngModel)]="this.rdPartnersSE.partnersBody.contributing_center"
     placeholder="Select center(s)"
     [disableOptions]="this.rdPartnersSE.cgspaceDisabledList"
@@ -149,7 +151,7 @@
             <i
               class="material-icons-round"
               [style.color]="item.is_active ? 'var(--pr-color-red-100)' : 'var(--pr-color-primary-300)'"
-              (click)="onRemoveContribuiting(i, true)">
+              (click)="onRemoveAcceptedContributing(i)">
               {{ item.is_active ? 'backspace' : 'undo' }}
             </i>
           }
@@ -166,7 +168,7 @@
             <i
               class="material-icons-round"
               [style.color]="item.is_active ? 'var(--pr-color-red-100)' : 'var(--pr-color-primary-300)'"
-              (click)="onRemoveContribuiting(i, false)">
+              (click)="onRemoveNewContributing(i)">
               {{ item.is_active ? 'backspace' : 'undo' }}
             </i>
           }
@@ -219,16 +221,31 @@
     </app-pr-select>
   </div>
   <ng-template #selectLeadCenter>
-    <app-pr-select
-      label="Lead center"
-      [options]="this.rdPartnersSE.possibleLeadCenters"
-      optionLabel="full_name"
-      optionValue="code"
-      placeholder="Select a lead center..."
-      [required]="!this.rdPartnersSE.partnersBody.is_lead_by_partner"
-      [(ngModel)]="this.rdPartnersSE.leadCenterCode"
-      *ngIf="!this.rdPartnersSE.updatingLeadData">
-    </app-pr-select>
+    @if (!this.rdPartnersSE.updatingLeadData) {
+      <app-pr-field-header label="Lead center" [required]="false"></app-pr-field-header>
+      <p-select
+        [options]="this.rdPartnersSE.possibleLeadCenters"
+        [(ngModel)]="this.rdPartnersSE.leadCenterCode"
+        optionLabel="full_name"
+        optionValue="code"
+        placeholder="Select a lead center..."
+        [showClear]="true"
+        [readonly]="this.api.rolesSE.readOnly"
+        [disabled]="this.api.rolesSE.readOnly"
+        [style]="{ width: '100%' }">
+        <ng-template pTemplate="item" let-item>
+          <div style="white-space: normal !important">
+            <div [innerHtml]="item.full_name"></div>
+          </div>
+        </ng-template>
+
+        <ng-template pTemplate="selectedItem" let-item>
+          <div style="white-space: normal !important">
+            <div [innerHtml]="item.full_name"></div>
+          </div>
+        </ng-template>
+      </p-select>
+    }
   </ng-template>
 
   @if (this.api.dataControlSE.currentResultSignal().result_type_id == 2 || this.api.dataControlSE.currentResultSignal().result_type_id == 7) {
@@ -255,8 +272,10 @@
         placeholder="Please select a result"
         selectedLabel="Results selected"
         selectedOptionLabel="title"
-        [displayLabelFormatter]="formatResultLabel.bind(this)">
+        [displayLabelFormatter]="formatResultLabel.bind(this)"
+        [required]="true">
       </app-pr-multi-select>
+      <div appFeedbackValidation labelText="Please select a result" [isComplete]="!!this.rdPartnersSE.partnersBody.linked_results?.length"></div>
     }
   }
   <app-alert-status

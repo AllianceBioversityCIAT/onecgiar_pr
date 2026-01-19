@@ -39,7 +39,8 @@ export class ResultCountrySubnationalRepository
               rc2.result_id = ${config.new_result_id}
               AND rc2.country_id = rc.country_id
           ) AS result_country_id,
-          rcs.clarisa_subnational_scope_code
+          rcs.clarisa_subnational_scope_code,
+          rcs.geo_scope_role_id
       FROM
           result_country_subnational rcs
           LEFT JOIN result_country rc ON rc.result_country_id = rcs.result_country_id
@@ -57,7 +58,8 @@ export class ResultCountrySubnationalRepository
             created_by,
             last_updated_by,
             result_country_id,
-            clarisa_subnational_scope_code
+            clarisa_subnational_scope_code,
+            geo_scope_role_id
         )
       SELECT
           rcs.is_active,
@@ -78,7 +80,8 @@ export class ResultCountrySubnationalRepository
               rc2.result_id = ${config.new_result_id}
               AND rc2.country_id = rc.country_id
           ) AS result_country_id,
-          rcs.clarisa_subnational_scope_code
+          rcs.clarisa_subnational_scope_code,
+          rcs.geo_scope_role_id
       FROM
           result_country_subnational rcs
           LEFT JOIN result_country rc ON rc.result_country_id = rcs.result_country_id

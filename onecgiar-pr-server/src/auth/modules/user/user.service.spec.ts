@@ -446,11 +446,10 @@ describe('UserService', () => {
         status: 201,
       });
 
-      const result = await service.createFull(createUserDto, mockTokenDto);
+      const result = await service.createFull(createUserDto, mockTokenDto.id);
 
       const user = result.response as User;
 
-      console.log('RESULT:', result);
       expect(result.status).toBe(201);
       expect(user.id).toBe(10);
       expect(awsCognitoService.createUser).toHaveBeenCalled();
@@ -464,7 +463,7 @@ describe('UserService', () => {
         status: HttpStatus.OK,
       });
 
-      const result = await service.createFull(dto as any, {} as any);
+      const result = await service.createFull(dto as any, mockTokenDto.id);
       expect(result).toEqual(
         expect.objectContaining({
           message: 'The user already exists in the system',
@@ -487,7 +486,7 @@ describe('UserService', () => {
         status: HttpStatus.OK,
       });
 
-      const result = await service.createFull(dto as any, {} as any);
+      const result = await service.createFull(dto as any, mockTokenDto.id);
       expect(result).toEqual(
         expect.objectContaining({
           message: 'Non-CGIAR user cannot have a CGIAR email address',
@@ -529,7 +528,7 @@ describe('UserService', () => {
         response: null,
       });
 
-      const result = await service.createFull(dto as any, mockTokenDto);
+      const result = await service.createFull(dto as any, mockTokenDto.id);
 
       expect(result).toEqual(
         expect.objectContaining({
@@ -549,7 +548,10 @@ describe('UserService', () => {
         status: 500,
       });
 
-      const result = await service.createFull({ email: 'a' } as any, {} as any);
+      const result = await service.createFull(
+        { email: 'a' } as any,
+        mockTokenDto.id,
+      );
 
       expect(handlersError.returnErrorRes).toHaveBeenCalled();
       expect(result.message).toBe('Handled error');
