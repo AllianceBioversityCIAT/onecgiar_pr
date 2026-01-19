@@ -35,10 +35,12 @@ export class ContributorsPartnersController {
   updateUnplannedResult(
     @Param('resultId') resultId: number,
     @Body() body: UpdatePlannedResultDto,
+    @UserToken() user: TokenDto,
   ) {
     return this.contributorsPartnersService.updateUnplannedResult(
       resultId,
       body.planned_result,
+      user,
     );
   }
 

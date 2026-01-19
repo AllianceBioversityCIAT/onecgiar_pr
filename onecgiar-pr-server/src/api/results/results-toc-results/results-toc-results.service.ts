@@ -1929,19 +1929,72 @@ export class ResultsTocResultsService {
     }
   }
 
-  async updatePlannedResult(resultId: number, plannedResult: boolean) {
+  async updatePlannedResult(
+    resultId: number,
+    plannedResult: boolean,
+    userId: number,
+  ) {
     try {
-      const updateQuery = `
+      // Get the first active record to obtain initiative_id
+      const firstRecordQuery = `
+        SELECT initiative_id
+        FROM results_toc_result
+        WHERE results_id = ?
+          AND is_active = 1
+        ORDER BY created_date ASC
+        LIMIT 1
+      `;
+      const firstRecord = await this._resultsTocResultRepository.query(
+        firstRecordQuery,
+        [resultId],
+      );
+
+      if (!firstRecord || firstRecord.length === 0) {
+        return {
+          response: { resultId },
+          message: 'No active records found for this result',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const initiativeId = firstRecord[0].initiative_id;
+
+      // Inactivate all active records for this result
+      const deactivateQuery = `
         UPDATE results_toc_result
-        SET planned_result = ?,
-            last_updated_date = NOW()
+        SET is_active = 0,
+            last_updated_date = NOW(),
+            last_updated_by = ?
         WHERE results_id = ?
           AND is_active = 1
       `;
-
-      await this._resultsTocResultRepository.query(updateQuery, [
-        plannedResult ? 1 : 0,
+      await this._resultsTocResultRepository.query(deactivateQuery, [
+        userId,
         resultId,
+      ]);
+
+      // Create a new record with the updated planned_result status
+      // and null values for toc_result_id and toc_progressive_narrative
+      const insertQuery = `
+        INSERT INTO results_toc_result (
+          results_id,
+          initiative_id,
+          planned_result,
+          toc_result_id,
+          toc_progressive_narrative,
+          is_active,
+          created_by,
+          last_updated_by,
+          created_date,
+          last_updated_date
+        ) VALUES (?, ?, ?, NULL, NULL, 1, ?, ?, NOW(), NOW())
+      `;
+      await this._resultsTocResultRepository.query(insertQuery, [
+        resultId,
+        initiativeId,
+        plannedResult ? 1 : 0,
+        userId,
+        userId,
       ]);
 
       return {
