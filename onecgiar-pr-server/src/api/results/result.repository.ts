@@ -2423,7 +2423,9 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
   async getCommonFieldsBilateralResultById(resultId: number): Promise<any> {
     const query = `
       SELECT 
+        cp.id AS project_id,
         cp.short_name AS project_name,
+        ci.id AS center_id,
         ci.acronym AS center_name,
         r.id,
         r.result_code,
@@ -2471,7 +2473,8 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     resultId: number,
   ): Promise<any[]> {
     const query = `
-      SELECT 
+      SELECT
+      	rcd.result_capacity_development_id ,
         rcd.female_using,
         rcd.male_using,
         rcd.non_binary_using,
@@ -2503,6 +2506,8 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
   ): Promise<any[]> {
     const query = `
       SELECT 
+        rkp.result_knowledge_product_id,
+      	rkm.result_kp_metadata_id,
         rkm.source,
         rkm.\`year\`,
         rkp.knowledge_product_type,
@@ -2510,6 +2515,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         rkm.is_isi,
         rkm.accesibility,
         rkp.licence,
+        rkk.result_kp_keyword_id,
         rkk.is_agrovoc,
         rkk.keyword
       FROM result r
@@ -2539,10 +2545,13 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
   async getInnovationDevBilateralResultById(resultId: number): Promise<any[]> {
     const query = `
       SELECT
+        rid.result_innovation_dev_id, 
         rid.innovation_nature_id,
-        cit.name,
+        cit.code AS innovation_type_id,
+        cit.name AS innovation_type_name,
         rid.innovation_developers,
         rid.innovation_readiness_level_id,
+        cirl.id AS readinness_level_id,
         cirl.level,
         cirl.name
       FROM result r
@@ -2572,8 +2581,10 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
   async getPolicyChangeBilateralResultById(resultId: number): Promise<any[]> {
     const query = `
       SELECT 
+        rpc.result_policy_change_id,
         rpc.policy_type_id,
         rpc.policy_stage_id,
+        ci.id AS institution_id,
         ci.acronym 
       FROM result r
       JOIN results_policy_changes rpc
@@ -2601,7 +2612,25 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
 
   async getInnovationUseBilateralResultById(resultId: number): Promise<any[]> {
     const query = `
-      SELECT *
+      SELECT
+        riu.result_innovation_use_id,
+        riu.innov_use_to_be_determined,
+        ra.result_actors_id,
+        ra.has_men,
+        ra.has_men_youth,
+        ra.has_women,
+        ra.has_women_youth,
+        ra.how_many,
+        ra.women,
+        ra.women_youth,
+        ra.men,
+        ra.men_youth,
+        ra.actor_type_id,
+        rbi.institutions_id,
+        rium.result_innovations_use_measure_id,
+        rium.unit_of_measure_id,
+        rium.unit_of_measure,
+        rium.quantity
       FROM result r
       JOIN results_innovations_use riu
         ON r.id = riu.results_id
@@ -2655,25 +2684,27 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
   async getTocMetadataBilateralResult(resultId: number): Promise<any[]> {
     const query = `
       SELECT
-        rtr.planned_result,
-        twp.acronym,
-        tr.result_title,
-        tri.indicator_description
-      FROM result r
-      JOIN results_toc_result rtr
-        ON r.id = rtr.results_id
-        AND rtr.is_active = 1
-      JOIN Integration_information.toc_results tr 
-        ON rtr.toc_result_id = tr.id
-        AND tr.is_active = 1
-      JOIN Integration_information.toc_work_packages twp
-        ON tr.wp_id = twp.toc_id
-      JOIN Integration_information.toc_results_indicators tri
-        ON tri.toc_results_id = tr.id
-        AND tri.is_active = 1
-      WHERE
-        r.id = ?
-        AND r.is_active = 1;
+          rtr.planned_result,
+          twp.acronym,
+          tr.id AS toc_result_id,
+          tr.result_title,
+          tri.id AS indicator_id,
+          tri.indicator_description
+        FROM result r
+        JOIN results_toc_result rtr
+          ON r.id = rtr.results_id
+          AND rtr.is_active = 1
+        JOIN Integration_information.toc_results tr 
+          ON rtr.toc_result_id = tr.id
+          AND tr.is_active = 1
+        JOIN Integration_information.toc_work_packages twp
+          ON tr.wp_id = twp.toc_id
+        JOIN Integration_information.toc_results_indicators tri
+          ON tri.toc_results_id = tr.id
+          AND tri.is_active = 1
+        WHERE
+          r.id = ?
+          AND r.is_active = 1;
     `;
 
     try {
