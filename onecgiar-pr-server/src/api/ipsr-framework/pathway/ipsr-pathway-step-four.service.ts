@@ -606,15 +606,15 @@ export class IpsrPathwayStepFourService {
           },
         });
 
-        let scaling_studies_urls: string[] = [];
-        const urls = await this._resultScalingStudyUrlsRepository.find({
-          where: {
-            result_innov_package_id: result_ip.result_innovation_package_id,
-            is_active: true,
-          },
-        });
-        scaling_studies_urls = urls.map((u) => u.study_url);
-        
+      let scaling_studies_urls: string[] = [];
+      const urls = await this._resultScalingStudyUrlsRepository.find({
+        where: {
+          result_innov_package_id: result_ip.result_innovation_package_id,
+          is_active: true,
+        },
+      });
+      scaling_studies_urls = urls.map((u) => u.study_url);
+
       if (!result_ip) {
         return {
           response: {},

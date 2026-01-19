@@ -2615,9 +2615,10 @@ export class ResultsService {
 
       const normalizedProgramId = programId.trim().toUpperCase();
 
-      const result = await this._resultRepository.getPendingReviewCountByProgram(
-        normalizedProgramId,
-      );
+      const result =
+        await this._resultRepository.getPendingReviewCountByProgram(
+          normalizedProgramId,
+        );
 
       if (!result || !Array.isArray(result)) {
         this._logger.warn(
@@ -2669,7 +2670,6 @@ export class ResultsService {
     centerIds?: string | string[],
   ): Promise<ReturnResponseDto<any> | returnErrorDto> {
     try {
-
       if (!programId?.trim()) {
         return {
           response: {},
@@ -2777,9 +2777,8 @@ export class ResultsService {
       const [commonFields, tocMetadata, geoScope, contributingCenters] =
         await this._loadBilateralBaseData(resultId);
 
-      const contributingInstitutions = await this._loadContributingInstitutions(
-        resultId,
-      );
+      const contributingInstitutions =
+        await this._loadContributingInstitutions(resultId);
 
       const [contributingProjects, contributingInitiatives, evidence] =
         await this._loadBilateralRelatedData(resultId);
@@ -2811,9 +2810,7 @@ export class ResultsService {
     }
   }
 
-  private _validateBilateralResultId(
-    resultId: number,
-  ): returnErrorDto | null {
+  private _validateBilateralResultId(resultId: number): returnErrorDto | null {
     const parsedResultId = Number(resultId);
     if (
       !parsedResultId ||
@@ -2880,13 +2877,9 @@ export class ResultsService {
     return null;
   }
 
-  private async _loadContributingInstitutions(resultId: number): Promise<any[]> {
-    const knowledgeProduct =
-      await this._resultKnowledgeProductRepository.findOne({
-        where: { results_id: resultId },
-        relations: { result_knowledge_product_institution_array: true },
-      });
-
+  private async _loadContributingInstitutions(
+    resultId: number,
+  ): Promise<any[]> {
     const contributingInstitutions =
       await this._resultByIntitutionsRepository.find({
         where: {
