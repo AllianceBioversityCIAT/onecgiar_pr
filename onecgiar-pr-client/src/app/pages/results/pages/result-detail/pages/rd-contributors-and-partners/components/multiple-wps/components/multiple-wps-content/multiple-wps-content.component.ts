@@ -32,6 +32,7 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   @Input() resultLevelId: number | string;
   @Input() isIpsr: boolean = false;
   @Input() showMultipleWPsContent: boolean = true;
+  @Input() isUnplanned: boolean = false;
   @Input() allTabsCreated = [];
   @Input() outcomeList: WritableSignal<any[]>;
   @Input() outputList: WritableSignal<any[]>;
@@ -67,6 +68,10 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   }
 
   tocResultListFiltered = computed(() => {
+    if (this.isIpsr) {
+      return this.tocInitiativeOutcomeListsSE.tocResultList().filter(item => item.toc_level_id !== 1);
+    }
+
     switch (this.reusltlevelSE.currentResultLevelIdSignal()) {
       case 3:
         return this.tocInitiativeOutcomeListsSE.tocResultList().filter(item => item.toc_level_id !== 1);

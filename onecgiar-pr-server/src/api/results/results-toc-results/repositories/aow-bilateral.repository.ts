@@ -549,9 +549,16 @@ export class AoWBilateralRepository {
         tr.official_code AS official_code,
         trp.project_id AS project_id, 
         trp.name AS project_name,
-        trp.project_summary AS project_summary
+        trp.project_summary AS project_summary,
+        cp.organization_code AS organization_code,
+        ci.id AS organization_id,
+        ci.name AS organization_name,
+        ci.acronym AS organization_acronym,
+        ci.website_link AS organization_website_link
       FROM ${env.DB_TOC}.toc_results tr
       JOIN ${env.DB_TOC}.toc_result_projects trp ON trp.toc_result_id_toc = tr.related_node_id
+      LEFT JOIN clarisa_projects cp ON cp.id = trp.project_id
+      LEFT JOIN clarisa_institutions ci ON ci.id = cp.organization_code
       WHERE tr.id = ?
     `;
     const params: (string | number)[] = [tocResultId];

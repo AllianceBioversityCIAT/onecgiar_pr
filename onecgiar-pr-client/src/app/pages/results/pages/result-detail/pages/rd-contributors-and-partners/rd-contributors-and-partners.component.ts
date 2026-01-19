@@ -168,8 +168,6 @@ export class RdContributorsAndPartnersComponent implements OnInit {
       });
     }
 
-    if (!this.rdPartnersSE.partnersBody.result_toc_result.planned_result) this.rdPartnersSE.partnersBody.result_toc_result.result_toc_results = [];
-
     const linkedResultsIds = (this.rdPartnersSE.partnersBody.linked_results || []).map((r: any) => Number(r?.id ?? r));
 
     const sendedData = {
@@ -207,6 +205,22 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     return `Please select the ${entity} leading this result. <b>Only ${entity}s already added in this section can be selected as the result lead.</b>`;
   }
 
+  onPlannedResultChange(value: boolean) {
+    if (!value) {
+      // When changing to "No" (unplanned), clear the Indicator and Explanation fields
+      this.rdPartnersSE.partnersBody.result_toc_result?.result_toc_results?.forEach((tab: any) => {
+        if (tab.indicators?.[0]) {
+          tab.indicators[0].related_node_id = null;
+          tab.indicators[0].toc_results_indicator_id = null;
+          if (tab.indicators[0].targets?.[0]) {
+            tab.indicators[0].targets[0].contributing_indicator = null;
+          }
+        }
+        tab.toc_progressive_narrative = null;
+      });
+    }
+  }
+
   formatResultLabel(option: any): string {
     if (option?.result_code && option?.name) {
       let phaseInfo = '';
@@ -226,5 +240,15 @@ export class RdContributorsAndPartnersComponent implements OnInit {
       return `${phaseInfo}${option.result_code} - ${option.name}${resultTypeInfo}${title}`;
     }
     return option?.title || option?.name || '';
+  }
+
+  formatBilateralProjectLabel(project: any): string {
+    const fullName = project?.fullName || project?.obj_clarisa_project?.fullName || '';
+    const organizationName = project?.obj_organization?.name || project?.obj_clarisa_project?.obj_organization?.name;
+
+    if (organizationName) {
+      return `${fullName} (Center: ${organizationName})`;
+    }
+    return fullName;
   }
 }
