@@ -67,21 +67,24 @@ export class IpsrGeneralInformationService {
         });
       }
 
-      const titleValidate = await this._resultRepository
-        .createQueryBuilder('result')
-        .where('result.title like :title', { title: `${req.title}` })
-        .andWhere('result.is_active = 1')
-        .getMany();
+      // Only validate title uniqueness if title is not empty
+      if (req.title && req.title.trim() !== '') {
+        const titleValidate = await this._resultRepository
+          .createQueryBuilder('result')
+          .where('result.title like :title', { title: `${req.title}` })
+          .andWhere('result.is_active = 1')
+          .getMany();
 
-      if (titleValidate.length > 1) {
-        if (!titleValidate.find((tv) => tv.id === resultId)) {
-          throw {
-            response: titleValidate.map((tv) => tv.id),
-            message: `The title already exists, in the following results: ${titleValidate.map(
-              (tv) => tv.result_code,
-            )}`,
-            status: HttpStatus.BAD_REQUEST,
-          };
+        if (titleValidate.length > 1) {
+          if (!titleValidate.find((tv) => tv.id === resultId)) {
+            throw {
+              response: titleValidate.map((tv) => tv.id),
+              message: `The title already exists, in the following results: ${titleValidate.map(
+                (tv) => tv.result_code,
+              )}`,
+              status: HttpStatus.BAD_REQUEST,
+            };
+          }
         }
       }
 
