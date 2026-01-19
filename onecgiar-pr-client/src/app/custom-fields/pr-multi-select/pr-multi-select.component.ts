@@ -43,6 +43,7 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
   @Input() labelDescInlineStyles?: string = '';
   @Input() selectedPrimary?: any;
   @Input() displayLabelFormatter?: (option: any) => string;
+  @Input() showDescriptionLabel?: boolean = true;
   @Output() selectOptionEvent = new EventEmitter<any>();
   @Output() removeOptionEvent = new EventEmitter<any>();
   selectAll = null;

@@ -429,6 +429,9 @@ describe('InnovationPathwayStepFourService', () => {
         results_innovations_use_object: null,
         results_policy_changes_object: null,
         obj_external_submitter: null,
+        reviewed_by: null,
+        obj_reviewed_by: null,
+        reviewed_at: null,
         obj_lead_contact_person: {
           id: 1,
           cn: 'Test User',

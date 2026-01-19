@@ -36,6 +36,7 @@ import { CustomValidationTooltipComponent } from './custom-validation-tooltip/cu
 import { TooltipModule } from 'primeng/tooltip';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
+import { MessageModule } from 'primeng/message';
 import { LeadContactPersonFieldComponent } from './lead-contact-person-field/lead-contact-person-field.component';
 import { SSelectComponent } from './s-select/s-select.component';
 
@@ -87,7 +88,8 @@ const fieldComponents = [
     InputNumberModule,
     TooltipModule,
     IconFieldModule,
-    InputIconModule
+    InputIconModule,
+    MessageModule
   ]
 })
 export class CustomFieldsModule {}
