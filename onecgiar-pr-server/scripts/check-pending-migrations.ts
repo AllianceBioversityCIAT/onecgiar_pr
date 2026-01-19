@@ -54,10 +54,11 @@ async function checkPendingMigrations() {
           // Look for 'name' property in the next few lines (usually right after class declaration)
           const classBodyStart = classLineIndex + 1;
           const classBodyLines = lines.slice(classBodyStart, classBodyStart + 5);
-          const namePropertyMatch = classBodyLines.join('\n').match(/^\s*name\s*=\s*['"]([^'"]+)['"]/m);
+          // Use backreference to ensure opening and closing quotes match (prevents ReDoS)
+          const namePropertyMatch = classBodyLines.join('\n').match(/^\s*name\s*=\s*(['"])([^'"]+)\1/m);
 
           if (namePropertyMatch) {
-            migrationFiles.push(namePropertyMatch[1]);
+            migrationFiles.push(namePropertyMatch[2]);
           } else {
             // Use class name (TypeORM uses class name by default)
             migrationFiles.push(className);

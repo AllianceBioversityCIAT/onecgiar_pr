@@ -1935,42 +1935,35 @@ export class ResultsTocResultsService {
     userId: number,
   ) {
     try {
-      // Get the first active record to obtain initiative_id
-      const firstRecordQuery = `
-        SELECT initiative_id
-        FROM results_toc_result
-        WHERE results_id = ?
-          AND is_active = 1
-        ORDER BY created_date ASC
-        LIMIT 1
-      `;
-      const firstRecord = await this._resultsTocResultRepository.query(
-        firstRecordQuery,
-        [resultId],
-      );
+      // Get the owner initiative for this result
+      const ownerInitiative =
+        await this._resultByInitiativesRepository.getOwnerInitiativeByResult(
+          resultId,
+        );
 
-      if (!firstRecord || firstRecord.length === 0) {
+      if (!ownerInitiative?.id) {
         return {
           response: { resultId },
-          message: 'No active records found for this result',
+          message: 'Owner initiative not found for this result',
           status: HttpStatus.NOT_FOUND,
         };
       }
 
-      const initiativeId = firstRecord[0].initiative_id;
-
-      // Inactivate all active records for this result
+      // Inactivate active records for this result and initiative only
+      // (preserves TOC mappings for contributor initiatives)
       const deactivateQuery = `
         UPDATE results_toc_result
         SET is_active = 0,
             last_updated_date = NOW(),
             last_updated_by = ?
         WHERE results_id = ?
+          AND initiative_id = ?
           AND is_active = 1
       `;
       await this._resultsTocResultRepository.query(deactivateQuery, [
         userId,
         resultId,
+        ownerInitiative.id,
       ]);
 
       // Create a new record with the updated planned_result status
@@ -1991,7 +1984,7 @@ export class ResultsTocResultsService {
       `;
       await this._resultsTocResultRepository.query(insertQuery, [
         resultId,
-        initiativeId,
+        ownerInitiative.id,
         plannedResult ? 1 : 0,
         userId,
         userId,
