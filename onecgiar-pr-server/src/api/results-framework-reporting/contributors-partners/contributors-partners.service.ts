@@ -556,7 +556,11 @@ export class ContributorsPartnersService {
       .filter((id) => Number.isFinite(id) && ids.includes(id));
   }
 
-  async updateUnplannedResult(resultId: number, plannedResult: boolean) {
+  async updateUnplannedResult(
+    resultId: number,
+    plannedResult: boolean,
+    user: TokenDto,
+  ) {
     try {
       console.log('updateUnplannedResult', resultId, plannedResult);
       const result = await this._resultRepository.getResultById(resultId);
@@ -572,6 +576,7 @@ export class ContributorsPartnersService {
       return await this._resultsTocResultsService.updatePlannedResult(
         resultId,
         plannedResult,
+        user.id,
       );
     } catch (error) {
       return this._handlersError.returnErrorRes({
