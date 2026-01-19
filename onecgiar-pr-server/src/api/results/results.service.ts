@@ -2900,8 +2900,6 @@ export class ResultsService {
         order: { id: 'ASC' },
       });
 
-      console.log('contributingInstitutions', contributingInstitutions);
-      console.log('knowledgeProduct', knowledgeProduct);
     return contributingInstitutions.map((i) => ({
       ...i,
       delivery: i.delivery.filter((d) => d.is_active),
