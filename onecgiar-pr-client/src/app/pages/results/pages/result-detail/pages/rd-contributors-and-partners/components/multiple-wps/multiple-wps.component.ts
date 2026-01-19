@@ -42,7 +42,7 @@ export class CPMultipleWPsComponent implements OnChanges {
   constructor(
     public api: ApiService,
     private customizedAlertsFeSE: CustomizedAlertsFeService
-  ) {}
+  ) { }
 
   onChangesInitiative = effect(() => {
     if (!this.initiativeId()) return;
@@ -82,9 +82,9 @@ export class CPMultipleWPsComponent implements OnChanges {
     this.api.tocApiSE
       .GET_tocLevelsByconfig(
         this.api.dataControlSE.currentNotification?.result_id ||
-          this.activeTab?.results_id ||
-          this.api.dataControlSE?.currentResult?.id ||
-          this.api.dataControlSE.currentResultSignal()?.result_id,
+        this.activeTab?.results_id ||
+        this.api.dataControlSE?.currentResult?.id ||
+        this.api.dataControlSE.currentResultSignal()?.result_id,
         this.initiativeId(),
         1,
         this.fieldsManagerSE.isP25()
@@ -104,9 +104,9 @@ export class CPMultipleWPsComponent implements OnChanges {
     this.api.tocApiSE
       .GET_tocLevelsByconfig(
         this.api.dataControlSE.currentNotification?.result_id ||
-          this.activeTab?.results_id ||
-          this.api.dataControlSE?.currentResult?.id ||
-          this.api.dataControlSE.currentResultSignal()?.result_id,
+        this.activeTab?.results_id ||
+        this.api.dataControlSE?.currentResult?.id ||
+        this.api.dataControlSE.currentResultSignal()?.result_id,
         this.initiativeId(),
         2,
         this.fieldsManagerSE.isP25()
@@ -126,9 +126,9 @@ export class CPMultipleWPsComponent implements OnChanges {
     this.api.tocApiSE
       .GET_tocLevelsByconfig(
         this.api.dataControlSE.currentNotification?.result_id ||
-          this.activeTab?.results_id ||
-          this.api.dataControlSE?.currentResult?.id ||
-          this.api.dataControlSE.currentResultSignal()?.result_id,
+        this.activeTab?.results_id ||
+        this.api.dataControlSE?.currentResult?.id ||
+        this.api.dataControlSE.currentResultSignal()?.result_id,
         this.initiativeId(),
         3,
         this.fieldsManagerSE.isP25()

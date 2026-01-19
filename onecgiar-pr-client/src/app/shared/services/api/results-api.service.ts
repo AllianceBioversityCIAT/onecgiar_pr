@@ -1372,6 +1372,10 @@ export class ResultsApiService {
     return this.http.patch<any>(`${this.baseApiBaseUrlV2}contributors-partners/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 
+  PATCH_updateUnplannedResult(body: any) {
+    return this.http.patch<any>(`${this.baseApiBaseUrl}contributors-partners/update/unplanned/result/${this.currentResultId}`, body);
+  }
+
   GET_ClarisaProjects() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/projects/get/all`);
   }
