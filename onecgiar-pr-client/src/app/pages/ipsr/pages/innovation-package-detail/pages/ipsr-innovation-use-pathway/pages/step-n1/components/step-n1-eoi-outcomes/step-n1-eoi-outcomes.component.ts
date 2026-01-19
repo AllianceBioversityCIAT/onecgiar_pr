@@ -31,7 +31,7 @@ export class StepN1EoiOutcomesComponent implements OnInit {
 
   GET_EOIList() {
     this.tocApiSE
-      .GET_tocLevelsByconfig(this.ipsrDataControlSE?.detailData?.result_id, this.ipsrDataControlSE?.detailData?.inititiative_id, 3)
+      .GET_tocLevelsByconfig(this.ipsrDataControlSE?.detailData?.result_id, this.ipsrDataControlSE?.detailData?.inititiative_id, 3, this.fieldsManagerSE.isP25())
       .subscribe({
         next: ({ response }) => {
           this.eoiList = response;
