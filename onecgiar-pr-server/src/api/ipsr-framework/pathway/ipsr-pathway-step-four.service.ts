@@ -403,6 +403,8 @@ export class IpsrPathwayStepFourService {
               is_active: true,
             },
           });
+        console.log('rie kind_cash', rie.kind_cash);
+        console.log('initiative kind_cash', initiative.kind_cash);
 
         if (rie) {
           rie.kind_cash =
@@ -562,6 +564,10 @@ export class IpsrPathwayStepFourService {
           },
         });
 
+      console.log(
+        'bilateral_expected_investment',
+        bilateral_expected_investment,
+      );
 
       const institutions = await this._resultByInstitutionsRepository.find({
         where: [
@@ -600,15 +606,15 @@ export class IpsrPathwayStepFourService {
           },
         });
 
-      let scaling_studies_urls: string[] = [];
-      const urls = await this._resultScalingStudyUrlsRepository.find({
-        where: {
-          result_innov_package_id: result_ip.result_innovation_package_id,
-          is_active: true,
-        },
-      });
-      scaling_studies_urls = urls.map((u) => u.study_url);
-
+        let scaling_studies_urls: string[] = [];
+        const urls = await this._resultScalingStudyUrlsRepository.find({
+          where: {
+            result_innov_package_id: result_ip.result_innovation_package_id,
+            is_active: true,
+          },
+        });
+        scaling_studies_urls = urls.map((u) => u.study_url);
+        
       if (!result_ip) {
         return {
           response: {},
