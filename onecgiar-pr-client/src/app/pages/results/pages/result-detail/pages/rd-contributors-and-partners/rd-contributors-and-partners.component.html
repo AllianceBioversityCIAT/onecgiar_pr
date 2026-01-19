@@ -35,7 +35,7 @@
     label="Does this result align with the Program's planned TOC indicators?"
     [required]="true"
     [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.planned_result"
-    (selectOptionEvent)="onPlannedResultChange($event)">
+    (selectOptionEvent)="onPlannedResultChange()">
   </app-pr-yes-or-not>
 
   <app-alert-status
@@ -45,10 +45,9 @@
   </app-alert-status>
 
   <!-- ! from toc section end -->
-
   <!-- from toc section  -->
   @if (this.rdPartnersSE.partnersBody.result_toc_result.planned_result !== null) {
-    @if (this?.api?.dataControlSE?.currentResultSignal()?.result_level_id !== 3 || this.rdPartnersSE.partnersBody.result_toc_result.planned_result) {
+    @if ((this?.api?.dataControlSE?.currentResultSignal()?.result_level_id !== 3 || this.rdPartnersSE.partnersBody.result_toc_result.planned_result) && this.tocConsumed) {
       <div style="z-index: 1; position: relative">
         <app-cp-multiple-wps
           [editable]="true"
