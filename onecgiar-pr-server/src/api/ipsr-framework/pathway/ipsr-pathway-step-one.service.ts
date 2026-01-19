@@ -1,7 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { ResultRepository } from '../../results/result.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
-import { UpdateInnovationPathwayDto } from '../../ipsr/innovation-pathway/dto/update-innovation-pathway.dto';
 import { ResultRegion } from '../../results/result-regions/entities/result-region.entity';
 import { ResultCountry } from '../../results/result-countries/entities/result-country.entity';
 import { ResultRegionRepository } from '../../results/result-regions/result-regions.repository';
@@ -21,13 +20,10 @@ import { ResultByIntitutionsTypeRepository } from '../../results/results_by_inst
 import { ResultIpMeasureRepository } from '../../ipsr/result-ip-measures/result-ip-measures.repository';
 import { ResultIpMeasure } from '../../ipsr/result-ip-measures/entities/result-ip-measure.entity';
 import { ResultIpImpactAreaRepository } from '../../ipsr/innovation-pathway/repository/result-ip-impact-area-targets.repository';
-import { ResultInnovationPackage } from '../../ipsr/result-innovation-package/entities/result-innovation-package.entity';
-import { ResultByInstitutionsByDeliveriesType } from '../../results/result-by-institutions-by-deliveries-type/entities/result-by-institutions-by-deliveries-type.entity';
 import { In } from 'typeorm';
 import { ResultsByInstitutionType } from '../../results/results_by_institution_types/entities/results_by_institution_type.entity';
 import { ResultByInitiativesRepository } from '../../results/results_by_inititiatives/resultByInitiatives.repository';
 import { ResultCountrySubnationalRepository } from '../../results/result-countries-sub-national/repositories/result-country-subnational.repository';
-import { ResultCountrySubnational } from '../../results/result-countries-sub-national/entities/result-country-subnational.entity';
 import { ResultIpExpertWorkshopOrganizedRepostory } from '../../ipsr/innovation-pathway/repository/result-ip-expert-workshop-organized.repository';
 import { EvidencesRepository } from '../../results/evidences/evidences.repository';
 
@@ -67,14 +63,22 @@ export class IpsrPathwayStepOneService {
       }
 
       const geo_scope_id = result.geographic_scope_id;
-      const [coreResult, regions, countries, eoiOutcomes, resultInnovationPackage] =
-        await this._loadGeographicAndCoreData(resultId);
+      const [
+        coreResult,
+        regions,
+        countries,
+        eoiOutcomes,
+        resultInnovationPackage,
+      ] = await this._loadGeographicAndCoreData(resultId);
 
       const institutions = await this._loadAndProcessInstitutions(resultId);
-      const countriesWithSubnational = await this._processCountriesSubnational(countries);
+      const countriesWithSubnational =
+        await this._processCountriesSubnational(countries);
       const innovatonUse = await this._loadInnovationUseData(result.id);
       const result_ip = await this._loadResultInnovationPackage(result.id);
-      const [resInitLead, coreData] = await this._loadInitiativeAndCoreData(result.id);
+      const [resInitLead, coreData] = await this._loadInitiativeAndCoreData(
+        result.id,
+      );
 
       const scalig_ambition = this._buildScalingAmbition({
         resInitLead,
@@ -92,8 +96,11 @@ export class IpsrPathwayStepOneService {
         { scaling_ambition_blurb: scalig_ambition.body },
       );
 
-      const [link_workshop_list, result_ip_expert_workshop_organized, result_core] =
-        await this._loadFinalData(resultId, result_ip);
+      const [
+        link_workshop_list,
+        result_ip_expert_workshop_organized,
+        result_core,
+      ] = await this._loadFinalData(resultId, result_ip);
 
       return {
         response: {
@@ -147,7 +154,9 @@ export class IpsrPathwayStepOneService {
     ]);
   }
 
-  private async _loadAndProcessInstitutions(resultId: number): Promise<ResultsByInstitution[]> {
+  private async _loadAndProcessInstitutions(
+    resultId: number,
+  ): Promise<ResultsByInstitution[]> {
     const institutions =
       await this._resultByIntitutionsRepository.getGenericAllResultByInstitutionByRole(
         resultId,
@@ -170,13 +179,14 @@ export class IpsrPathwayStepOneService {
   private async _processCountriesSubnational(
     countries: ResultCountry[],
   ): Promise<ResultCountry[]> {
-    const sub_national_counties = await this._resultCountrySubnationalRepository.find({
-      where: {
-        result_country_id: In(countries.map((el) => el.result_country_id)),
-        is_active: true,
-      },
-      relations: { clarisa_subnational_scope_object: true },
-    });
+    const sub_national_counties =
+      await this._resultCountrySubnationalRepository.find({
+        where: {
+          result_country_id: In(countries.map((el) => el.result_country_id)),
+          is_active: true,
+        },
+        relations: { clarisa_subnational_scope_object: true },
+      });
 
     countries.forEach((el) => {
       el['sub_national'] = sub_national_counties
@@ -216,7 +226,8 @@ export class IpsrPathwayStepOneService {
       }),
       organization: organization.map((el) => ({
         ...el,
-        parent_institution_type_id: el.obj_institution_types?.obj_parent?.obj_parent?.code
+        parent_institution_type_id: el.obj_institution_types?.obj_parent
+          ?.obj_parent?.code
           ? el.obj_institution_types?.obj_parent?.obj_parent?.code
           : el.obj_institution_types?.obj_parent?.code || null,
       })),
@@ -258,7 +269,11 @@ export class IpsrPathwayStepOneService {
     regions: ResultRegion[],
     countries: ResultCountry[],
   ): string {
-    if (geo_scope_id === 1 || geo_scope_id === undefined || geo_scope_id === null) {
+    if (
+      geo_scope_id === 1 ||
+      geo_scope_id === undefined ||
+      geo_scope_id === null
+    ) {
       return '';
     }
 
@@ -288,11 +303,14 @@ export class IpsrPathwayStepOneService {
     eoiOutcomes: ResultIpEoiOutcome[];
   }) {
     const initiativeName =
-      params.resInitLead?.obj_initiative?.short_name || '<Initiative short name not provided>';
+      params.resInitLead?.obj_initiative?.short_name ||
+      '<Initiative short name not provided>';
 
     const institutionsString =
       params.institutions && params.institutions.length > 0
-        ? this.arrayToStringAnd(params.institutions.map((el) => el['institutions_name']))
+        ? this.arrayToStringAnd(
+            params.institutions.map((el) => el['institutions_name']),
+          )
         : ' <Institutions not provided>';
 
     const coreResultTitle =
