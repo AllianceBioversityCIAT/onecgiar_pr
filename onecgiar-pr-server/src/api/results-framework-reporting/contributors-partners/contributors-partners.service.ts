@@ -562,7 +562,6 @@ export class ContributorsPartnersService {
     user: TokenDto,
   ) {
     try {
-      console.log('updateUnplannedResult', resultId, plannedResult);
       const result = await this._resultRepository.getResultById(resultId);
 
       if (!result?.id) {
