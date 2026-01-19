@@ -230,9 +230,7 @@ describe('StepN3Component', () => {
   });
 
   it('should call GETAllClarisaInnovationUseLevels on GETAllClarisaInnovationUseLevels', () => {
-    const GETAllClarisaInnovationUseLevelsSpy = jest
-      .spyOn(component.api.resultsSE, 'GETAllClarisaInnovationUseLevelsV2')
-      .mockReturnValue(of({ response: {} }));
+    const GETAllClarisaInnovationUseLevelsSpy = jest.spyOn(component.api.resultsSE, 'GETAllClarisaInnovationUseLevelsV2').mockReturnValue(of({ response: {} }));
 
     component.GETAllClarisaInnovationUseLevels();
 

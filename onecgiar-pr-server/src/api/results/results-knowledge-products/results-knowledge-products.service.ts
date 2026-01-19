@@ -1,4 +1,9 @@
-import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import {
+  HttpStatus,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { FindOptionsRelations, In, Like } from 'typeorm';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import {
@@ -1118,11 +1123,7 @@ export class ResultsKnowledgeProductsService {
       });
 
       if (!existingResult) {
-        throw {
-          response: {},
-          message: `Result with id ${resultId} not found`,
-          status: HttpStatus.NOT_FOUND,
-        };
+        throw new NotFoundException(`Result with id ${resultId} not found`);
       }
 
       // Get global parameter for confidence threshold
