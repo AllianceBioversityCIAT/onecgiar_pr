@@ -24,7 +24,8 @@ import { EnvironmentExtractor } from '../../shared/utils/environment-extractor';
 @Injectable()
 export class ResultRepository
   extends BaseRepository<Result>
-  implements LogicalDelete<Result> {
+  implements LogicalDelete<Result>
+{
   createQueries(
     config: ReplicableConfigInterface<Result>,
   ): ConfigCustomQueryInterface {
@@ -42,7 +43,8 @@ export class ResultRepository
         1 as status_id,
         ${config.user.id} as created_by,
         ${config.user.id} as last_updated_by,
-        (select v.phase_year  from \`version\` v where v.id = ${config.phase
+        (select v.phase_year  from \`version\` v where v.id = ${
+          config.phase
         }) as reported_year_id,
         ${predeterminedDateValidation(
           config?.predetermined_date,
@@ -60,7 +62,8 @@ export class ResultRepository
         r2.lead_contact_person,
         r2.result_code,
         true as is_replicated
-        from \`result\` r2 WHERE r2.id = ${config.old_result_id
+        from \`result\` r2 WHERE r2.id = ${
+          config.old_result_id
         } and r2.is_active > 0`,
       insertQuery: `
       insert into \`result\` (
@@ -103,7 +106,8 @@ export class ResultRepository
         1 as status_id,
         ${config.user.id} as created_by,
         ${config.user.id} as last_updated_by,
-        (select v.phase_year  from \`version\` v where v.id = ${config.phase
+        (select v.phase_year  from \`version\` v where v.id = ${
+          config.phase
         }) as reported_year_id,
         ${predeterminedDateValidation(
           config?.predetermined_date,
@@ -124,7 +128,8 @@ export class ResultRepository
         r2.environmental_biodiversity_tag_level_id,
         r2.poverty_tag_level_id,
         true as is_replicated
-        from \`result\` r2 WHERE r2.id = ${config.old_result_id
+        from \`result\` r2 WHERE r2.id = ${
+          config.old_result_id
         } and r2.is_active > 0`,
       returnQuery: `
       select
@@ -329,11 +334,12 @@ export class ResultRepository
         lr.indicator_type,
         is_legacy
         ) as q1
-    ${id
+    ${
+      id
         ? `where
       q1.id = ?`
         : ''
-      }
+    }
     ;
     `;
 
@@ -732,8 +738,8 @@ WHERE
           : undefined;
       const offset =
         limit !== undefined &&
-          pagination?.offset !== undefined &&
-          pagination.offset >= 0
+        pagination?.offset !== undefined &&
+        pagination.offset >= 0
           ? pagination.offset
           : undefined;
 
@@ -1378,15 +1384,17 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     let whereClause = '';
 
     if (parameters.resultIds) {
-      whereClause = `WHERE r.id ${parameters.resultIds.length
+      whereClause = `WHERE r.id ${
+        parameters.resultIds.length
           ? `in (${parameters.resultIds.join(',')})`
           : '= 0'
-        } and r.is_active > 0`;
+      } and r.is_active > 0`;
     }
 
     if (parameters.initiativeIds) {
-      whereClause = `${whereClause.length ? 'AND' : 'WHERE'
-        } rbi.inititiative_id in (${parameters.initiativeIds.join(',')})
+      whereClause = `${
+        whereClause.length ? 'AND' : 'WHERE'
+      } rbi.inititiative_id in (${parameters.initiativeIds.join(',')})
       AND r.status_id = 2`;
     }
 
@@ -1943,20 +1951,23 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
   ) {
     let whereClause = '';
     if (parameters.resultIds) {
-      whereClause = `WHERE r.id ${parameters.resultIds.length
+      whereClause = `WHERE r.id ${
+        parameters.resultIds.length
           ? `in (${parameters.resultIds.join(',')})`
           : '= 0'
-        } and rtr.is_active`;
+      } and rtr.is_active`;
     }
 
     if (parameters.initiativeIds) {
-      whereClause = `${whereClause.length ? 'AND' : 'WHERE'
-        } rbi.inititiative_id in (${parameters.initiativeIds.join(
-          ',',
-        )}) AND r.status_id = 3 ${parameters.phases
+      whereClause = `${
+        whereClause.length ? 'AND' : 'WHERE'
+      } rbi.inititiative_id in (${parameters.initiativeIds.join(
+        ',',
+      )}) AND r.status_id = 3 ${
+        parameters.phases
           ? `and r.version_id in (${parameters.phases.join(',')})`
           : ''
-        }`;
+      }`;
     }
 
     const query = `
@@ -2001,10 +2012,11 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       ) as "SDG(s)"
     from result r
     LEFT JOIN prdb.results_toc_result rtr ON rtr.results_id = r.id
-    ${parameters.initiativeIds
+    ${
+      parameters.initiativeIds
         ? 'left join results_by_inititiative rbi on rbi.result_id = r.id'
         : ''
-      }
+    }
     ${whereClause}
     ;
     `;
@@ -2129,10 +2141,11 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         LEFT JOIN results_toc_result_indicators rtri ON rtri.results_toc_results_id = rtr.result_toc_result_id
         LEFT JOIN Integration_information.toc_results tr ON tr.id = rtr.toc_result_id
         LEFT JOIN Integration_information.work_packages wp ON wp.id = tr.work_packages_id
-        LEFT JOIN Integration_information.toc_results_indicators tri ON tr.id = tri.toc_results_id AND tri.toc_result_indicator_id = rtri.toc_results_indicator_id ${!EnvironmentExtractor.isProduction()
-        ? `COLLATE utf8mb3_general_ci`
-        : ``
-      }
+        LEFT JOIN Integration_information.toc_results_indicators tri ON tr.id = tri.toc_results_id AND tri.toc_result_indicator_id = rtri.toc_results_indicator_id ${
+          !EnvironmentExtractor.isProduction()
+            ? `COLLATE utf8mb3_general_ci`
+            : ``
+        }
     WHERE
         r.id ${resultIds.length ? `in (${resultIds})` : '= 0'}
         AND rbi.is_active = 1

@@ -13,6 +13,7 @@ import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.in
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { UpdateContributorsPartnersDto } from './dto/update-contributors-partners.dto';
+import { UpdatePlannedResultDto } from './dto/update-planned-result.dto';
 
 @Controller()
 @UseInterceptors(ResponseInterceptor)
@@ -27,6 +28,17 @@ export class ContributorsPartnersController {
   getContributorsPartners(@Param('resultId') resultId: number) {
     return this.contributorsPartnersService.getContributorsPartnersByResultId(
       resultId,
+    );
+  }
+
+  @Patch('update/unplanned/result/:resultId')
+  updateUnplannedResult(
+    @Param('resultId') resultId: number,
+    @Body() body: UpdatePlannedResultDto,
+  ) {
+    return this.contributorsPartnersService.updateUnplannedResult(
+      resultId,
+      body.planned_result,
     );
   }
 
