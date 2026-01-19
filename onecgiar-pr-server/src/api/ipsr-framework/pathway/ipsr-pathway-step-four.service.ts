@@ -403,9 +403,6 @@ export class IpsrPathwayStepFourService {
               is_active: true,
             },
           });
-        console.log('rie kind_cash', rie.kind_cash);
-        console.log('initiative kind_cash', initiative.kind_cash);
-
         if (rie) {
           rie.kind_cash =
             initiative.is_determined === true
@@ -563,11 +560,6 @@ export class IpsrPathwayStepFourService {
             },
           },
         });
-
-      console.log(
-        'bilateral_expected_investment',
-        bilateral_expected_investment,
-      );
 
       const institutions = await this._resultByInstitutionsRepository.find({
         where: [
