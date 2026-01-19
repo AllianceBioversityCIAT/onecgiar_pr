@@ -20,13 +20,10 @@ import { ResultByIntitutionsTypeRepository } from '../../results/results_by_inst
 import { ResultIpMeasureRepository } from '../../ipsr/result-ip-measures/result-ip-measures.repository';
 import { ResultIpMeasure } from '../../ipsr/result-ip-measures/entities/result-ip-measure.entity';
 import { ResultIpImpactAreaRepository } from '../../ipsr/innovation-pathway/repository/result-ip-impact-area-targets.repository';
-import { ResultInnovationPackage } from '../../ipsr/result-innovation-package/entities/result-innovation-package.entity';
-import { ResultByInstitutionsByDeliveriesType } from '../../results/result-by-institutions-by-deliveries-type/entities/result-by-institutions-by-deliveries-type.entity';
 import { In } from 'typeorm';
 import { ResultsByInstitutionType } from '../../results/results_by_institution_types/entities/results_by_institution_type.entity';
 import { ResultByInitiativesRepository } from '../../results/results_by_inititiatives/resultByInitiatives.repository';
 import { ResultCountrySubnationalRepository } from '../../results/result-countries-sub-national/repositories/result-country-subnational.repository';
-import { ResultCountrySubnational } from '../../results/result-countries-sub-national/entities/result-country-subnational.entity';
 import { ResultIpExpertWorkshopOrganizedRepostory } from '../../ipsr/innovation-pathway/repository/result-ip-expert-workshop-organized.repository';
 import { EvidencesRepository } from '../../results/evidences/evidences.repository';
 
@@ -56,18 +53,7 @@ export class IpsrPathwayStepOneService {
 
   async getStepOne(resultId: number) {
     try {
-      const resultByInnovationPackageId =
-        await this._innovationByResultRepository.findOneBy({
-          result_innovation_package_id: resultId,
-        });
-
-      const result = await this._resultRepository.findOne({
-        where: {
-          id: resultId,
-          is_active: true,
-        },
-      });
-      // * Validate if the query incoming empty
+      const result = await this._loadBaseData(resultId);
       if (!result) {
         return {
           response: result,
@@ -77,178 +63,44 @@ export class IpsrPathwayStepOneService {
       }
 
       const geo_scope_id = result.geographic_scope_id;
-      const coreResult =
-        await this._innovationByResultRepository.getInnovationCoreStepOne(
-          resultId,
-        );
-      const regions: ResultRegion[] =
-        await this._resultRegionRepository.getResultRegionByResultId(resultId);
-      const countries: ResultCountry[] =
-        await this._resultCountryRepository.getResultCountriesByResultId(
-          resultId,
-        );
-      const eoiOutcomes: ResultIpEoiOutcome[] =
-        await this._resultIpEoiOutcomes.getEoiOutcomes(
-          resultByInnovationPackageId.result_by_innovation_package_id,
-        );
-      const resultInnovationPackage: ResultInnovationPackage[] =
-        await this._resultInnovationPackageRepository.findBy({
-          result_innovation_package_id: resultId,
-          is_active: true,
-        });
-      const institutions: ResultsByInstitution[] =
-        await this._resultByIntitutionsRepository.getGenericAllResultByInstitutionByRole(
-          resultId,
-          5,
-        );
-      const deliveries: ResultByInstitutionsByDeliveriesType[] =
-        await this._resultByInstitutionsByDeliveriesTypeRepository.getDeliveryByResultByInstitution(
-          institutions?.map((el) => el.id),
-        );
-      institutions?.forEach((int) => {
-        int['deliveries'] = deliveries
-          ?.filter((del) => del.result_by_institution_id == int.id)
-          .map((del) => del.partner_delivery_type_id);
-      });
+      const [
+        coreResult,
+        regions,
+        countries,
+        eoiOutcomes,
+        resultInnovationPackage,
+      ] = await this._loadGeographicAndCoreData(resultId);
 
-      const sub_national_counties: ResultCountrySubnational[] =
-        await this._resultCountrySubnationalRepository.find({
-          where: {
-            result_country_id: In(countries.map((el) => el.result_country_id)),
-            is_active: true,
-          },
-          relations: {
-            clarisa_subnational_scope_object: true,
-          },
-        });
+      const institutions = await this._loadAndProcessInstitutions(resultId);
+      const countriesWithSubnational =
+        await this._processCountriesSubnational(countries);
+      const innovatonUse = await this._loadInnovationUseData(result.id);
+      const result_ip = await this._loadResultInnovationPackage(result.id);
+      const [resInitLead, coreData] = await this._loadInitiativeAndCoreData(
+        result.id,
+      );
 
-      countries.forEach((el) => {
-        el['sub_national'] = sub_national_counties
-          .filter((seb) => seb.result_country_id == el.result_country_id)
-          .map((el) => el.clarisa_subnational_scope_object);
+      const scalig_ambition = this._buildScalingAmbition({
+        resInitLead,
+        institutions,
+        coreData,
+        innovatonUse,
+        geo_scope_id,
+        regions,
+        countries: countriesWithSubnational,
+        eoiOutcomes,
       });
-
-      const actorsData = await this._resultActorRepository.find({
-        where: { result_id: result.id, is_active: true },
-        relations: { obj_actor_type: true },
-      });
-      actorsData.forEach((el) => {
-        el['men_non_youth'] = el.men - el.men_youth;
-        el['women_non_youth'] = el.women - el.women_youth;
-      });
-      const innovatonUse = {
-        actors: actorsData,
-        measures: await this._resultIpMeasureRepository.find({
-          where: { result_id: result.id, is_active: true },
-        }),
-        organization: (
-          await this._resultByIntitutionsTypeRepository.find({
-            where: {
-              results_id: result.id,
-              institution_roles_id: 5,
-              is_active: true,
-            },
-            relations: {
-              obj_institution_types: { obj_parent: { obj_parent: true } },
-            },
-          })
-        ).map((el) => ({
-          ...el,
-          parent_institution_type_id: el.obj_institution_types?.obj_parent
-            ?.obj_parent?.code
-            ? el.obj_institution_types?.obj_parent?.obj_parent?.code
-            : el.obj_institution_types?.obj_parent?.code || null,
-        })),
-      };
-      const result_ip = await this._resultInnovationPackageRepository.findOne({
-        where: {
-          result_innovation_package_id: result.id,
-          is_active: true,
-        },
-      });
-
-      const resInitLead = await this._resultByInitiativesRepository.findOne({
-        where: {
-          result_id: result.id,
-          is_active: true,
-          initiative_role_id: 1,
-        },
-        relations: {
-          obj_initiative: true,
-        },
-      });
-
-      const coreData = await this._innovationByResultRepository.findOne({
-        where: {
-          result_innovation_package_id: result.id,
-          is_active: true,
-          ipsr_role_id: 1,
-        },
-        relations: { obj_result: true },
-      });
-
-      const scalig_ambition = {
-        title: `2030 Scaling Ambition Statement`,
-        body: `By 2030, the ${
-          resInitLead?.obj_initiative?.short_name
-        } will work together with${this.arrayToStringAnd(
-          institutions?.map((el) => el['institutions_name']),
-        )} to accomplish the use of ${
-          coreData?.obj_result?.title
-        } by${this.innovationUseString(
-          innovatonUse.actors.map((el) => el),
-          innovatonUse.organization.map((el) => el),
-          innovatonUse.measures.map((el) => el),
-        )}, ${
-          geo_scope_id == 1
-            ? ''
-            : `in ${this.arrayToStringGeoScopeAnd(
-                geo_scope_id,
-                regions.map((el) => el),
-                countries.map((el) => el),
-              )}`
-        } to contribute achieving ${this.arrayToStringAnd(
-          eoiOutcomes?.map((el) => el['title']),
-        )}.`,
-      };
-
-      const scalingText = scalig_ambition['body'];
 
       await this._resultInnovationPackageRepository.update(
         { result_innovation_package_id: result.id },
-        {
-          scaling_ambition_blurb: scalingText,
-        },
+        { scaling_ambition_blurb: scalig_ambition.body },
       );
 
-      const link_workshop_list = await this._evidenceRepository.findOne({
-        where: {
-          result_id: resultId,
-          is_active: 1,
-          evidence_type_id: 5,
-        },
-      });
-
-      const result_ip_expert_workshop_organized =
-        await this._resultIpExpertWorkshopRepository.find({
-          where: {
-            result_id: resultId,
-            is_active: true,
-          },
-        });
-
-      const result_core = await this._innovationByResultRepository.findOne({
-        where: {
-          ipsr_role_id: 1,
-          result_innovation_package_id: result_ip.result_innovation_package_id,
-          is_active: true,
-        },
-        relations: [
-          'obj_result',
-          'obj_readiness_level_evidence_based',
-          'obj_use_level_evidence_based',
-        ],
-      });
+      const [
+        link_workshop_list,
+        result_ip_expert_workshop_organized,
+        result_core,
+      ] = await this._loadFinalData(resultId, result_ip);
 
       return {
         response: {
@@ -261,7 +113,7 @@ export class IpsrPathwayStepOneService {
           innovatonUse,
           result,
           regions,
-          countries,
+          countries: countriesWithSubnational,
           eoiOutcomes,
           resultInnovationPackage,
           result_ip_expert_workshop_organized,
@@ -274,6 +126,247 @@ export class IpsrPathwayStepOneService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  private async _loadBaseData(resultId: number) {
+    return await this._resultRepository.findOne({
+      where: { id: resultId, is_active: true },
+    });
+  }
+
+  private async _loadGeographicAndCoreData(resultId: number) {
+    const resultByInnovationPackageId =
+      await this._innovationByResultRepository.findOneBy({
+        result_innovation_package_id: resultId,
+      });
+
+    return Promise.all([
+      this._innovationByResultRepository.getInnovationCoreStepOne(resultId),
+      this._resultRegionRepository.getResultRegionByResultId(resultId),
+      this._resultCountryRepository.getResultCountriesByResultId(resultId),
+      this._resultIpEoiOutcomes.getEoiOutcomes(
+        resultByInnovationPackageId.result_by_innovation_package_id,
+      ),
+      this._resultInnovationPackageRepository.findBy({
+        result_innovation_package_id: resultId,
+        is_active: true,
+      }),
+    ]);
+  }
+
+  private async _loadAndProcessInstitutions(
+    resultId: number,
+  ): Promise<ResultsByInstitution[]> {
+    const institutions =
+      await this._resultByIntitutionsRepository.getGenericAllResultByInstitutionByRole(
+        resultId,
+        5,
+      );
+    const deliveries =
+      await this._resultByInstitutionsByDeliveriesTypeRepository.getDeliveryByResultByInstitution(
+        institutions?.map((el) => el.id),
+      );
+
+    institutions?.forEach((int) => {
+      int['deliveries'] = deliveries
+        ?.filter((del) => del.result_by_institution_id == int.id)
+        .map((del) => del.partner_delivery_type_id);
+    });
+
+    return institutions;
+  }
+
+  private async _processCountriesSubnational(
+    countries: ResultCountry[],
+  ): Promise<ResultCountry[]> {
+    const sub_national_counties =
+      await this._resultCountrySubnationalRepository.find({
+        where: {
+          result_country_id: In(countries.map((el) => el.result_country_id)),
+          is_active: true,
+        },
+        relations: { clarisa_subnational_scope_object: true },
+      });
+
+    countries.forEach((el) => {
+      el['sub_national'] = sub_national_counties
+        .filter((seb) => seb.result_country_id == el.result_country_id)
+        .map((el) => el.clarisa_subnational_scope_object);
+    });
+
+    return countries;
+  }
+
+  private async _loadInnovationUseData(resultId: number) {
+    const actorsData = await this._resultActorRepository.find({
+      where: { result_id: resultId, is_active: true },
+      relations: { obj_actor_type: true },
+    });
+
+    actorsData.forEach((el) => {
+      el['men_non_youth'] = el.men - el.men_youth;
+      el['women_non_youth'] = el.women - el.women_youth;
+    });
+
+    const organization = await this._resultByIntitutionsTypeRepository.find({
+      where: {
+        results_id: resultId,
+        institution_roles_id: 5,
+        is_active: true,
+      },
+      relations: {
+        obj_institution_types: { obj_parent: { obj_parent: true } },
+      },
+    });
+
+    return {
+      actors: actorsData,
+      measures: await this._resultIpMeasureRepository.find({
+        where: { result_id: resultId, is_active: true },
+      }),
+      organization: organization.map((el) => ({
+        ...el,
+        parent_institution_type_id: el.obj_institution_types?.obj_parent
+          ?.obj_parent?.code
+          ? el.obj_institution_types?.obj_parent?.obj_parent?.code
+          : el.obj_institution_types?.obj_parent?.code || null,
+      })),
+    };
+  }
+
+  private async _loadResultInnovationPackage(resultId: number) {
+    return await this._resultInnovationPackageRepository.findOne({
+      where: {
+        result_innovation_package_id: resultId,
+        is_active: true,
+      },
+    });
+  }
+
+  private async _loadInitiativeAndCoreData(resultId: number) {
+    return Promise.all([
+      this._resultByInitiativesRepository.findOne({
+        where: {
+          result_id: resultId,
+          is_active: true,
+          initiative_role_id: 1,
+        },
+        relations: { obj_initiative: true },
+      }),
+      this._innovationByResultRepository.findOne({
+        where: {
+          result_innovation_package_id: resultId,
+          is_active: true,
+          ipsr_role_id: 1,
+        },
+        relations: { obj_result: true },
+      }),
+    ]);
+  }
+
+  private _buildGeoScopeString(
+    geo_scope_id: number,
+    regions: ResultRegion[],
+    countries: ResultCountry[],
+  ): string {
+    if (
+      geo_scope_id === 1 ||
+      geo_scope_id === undefined ||
+      geo_scope_id === null
+    ) {
+      return '';
+    }
+
+    if (geo_scope_id === 2) {
+      return regions && regions.length > 0
+        ? `in ${this.arrayToStringGeoScopeAnd(geo_scope_id, regions, countries)}`
+        : 'in <Regions not provided>';
+    }
+
+    if (geo_scope_id === 3 || geo_scope_id === 4) {
+      return countries && countries.length > 0
+        ? `in ${this.arrayToStringGeoScopeAnd(geo_scope_id, regions, countries)}`
+        : 'in <Countries not provided>';
+    }
+
+    return `in ${this.arrayToStringGeoScopeAnd(geo_scope_id, regions, countries)}`;
+  }
+
+  private _buildScalingAmbition(params: {
+    resInitLead: any;
+    institutions: ResultsByInstitution[];
+    coreData: any;
+    innovatonUse: any;
+    geo_scope_id: number;
+    regions: ResultRegion[];
+    countries: ResultCountry[];
+    eoiOutcomes: ResultIpEoiOutcome[];
+  }) {
+    const initiativeName =
+      params.resInitLead?.obj_initiative?.short_name ||
+      '<Initiative short name not provided>';
+
+    const institutionsString =
+      params.institutions && params.institutions.length > 0
+        ? this.arrayToStringAnd(
+            params.institutions.map((el) => el['institutions_name']),
+          )
+        : ' <Institutions not provided>';
+
+    const coreResultTitle =
+      params.coreData?.obj_result?.title || '<Core result title not provided>';
+
+    const innovationUseStr = this.innovationUseString(
+      params.innovatonUse.actors,
+      params.innovatonUse.organization,
+      params.innovatonUse.measures,
+    );
+
+    const geoScopeString = this._buildGeoScopeString(
+      params.geo_scope_id,
+      params.regions,
+      params.countries,
+    );
+
+    const eoiOutcomesString =
+      params.eoiOutcomes && params.eoiOutcomes.length > 0
+        ? this.arrayToStringAnd(params.eoiOutcomes.map((el) => el['title']))
+        : '<EOI outcomes not provided>';
+
+    return {
+      title: `2030 Scaling Ambition Statement`,
+      body: `By 2030, the ${initiativeName} will work together with${institutionsString} to accomplish the use of ${coreResultTitle} by${innovationUseStr}, ${geoScopeString} to contribute achieving ${eoiOutcomesString}.`,
+    };
+  }
+
+  private async _loadFinalData(resultId: number, result_ip: any) {
+    return Promise.all([
+      this._evidenceRepository.findOne({
+        where: {
+          result_id: resultId,
+          is_active: 1,
+          evidence_type_id: 5,
+        },
+      }),
+      this._resultIpExpertWorkshopRepository.find({
+        where: {
+          result_id: resultId,
+          is_active: true,
+        },
+      }),
+      this._innovationByResultRepository.findOne({
+        where: {
+          ipsr_role_id: 1,
+          result_innovation_package_id: result_ip.result_innovation_package_id,
+          is_active: true,
+        },
+        relations: [
+          'obj_result',
+          'obj_readiness_level_evidence_based',
+          'obj_use_level_evidence_based',
+        ],
+      }),
+    ]);
   }
 
   innovationUseString(

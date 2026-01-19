@@ -199,6 +199,8 @@ p {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  overflow-y: auto;
+  max-height: 82vh;
 }
 
 .report-result-content_right_title {

@@ -126,7 +126,7 @@ export class StepN3Component implements OnInit {
   }
 
   GETAllClarisaInnovationUseLevels() {
-    this.api.resultsSE.GETAllClarisaInnovationUseLevels().subscribe(({ response }) => {
+    this.api.resultsSE.GETAllClarisaInnovationUseLevelsV2().subscribe(({ response }) => {
       this.innovationUseList = response;
     });
   }

@@ -633,6 +633,7 @@ WHERE
       resultTypeId?: number | number[];
       portfolioId?: number | number[];
       statusId?: number | number[];
+      fundingSource?: string | string[];
     },
     excludeType = [10, 11],
     pagination?: { limit?: number; offset?: number },
@@ -672,6 +673,7 @@ WHERE
         ci.portfolio_id,
         cp.name as portfolio_name,
         cp.acronym as acronym,
+        IF(r.source = 'Result', 'W1/W2', 'W3/Bilaterals') as source_name,
         EXISTS (
             SELECT 1
             FROM results_investment_discontinued_options rido
@@ -722,6 +724,7 @@ WHERE
       addInGeneric('rt.id', filters?.resultTypeId);
       addInGeneric('ci.portfolio_id', filters?.portfolioId);
       addInGeneric('r.status_id', filters?.statusId);
+      addInGeneric('r.source', filters?.fundingSource);
 
       const limit =
         pagination?.limit && pagination.limit > 0
@@ -2328,6 +2331,476 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     try {
       const result = await this.query(query, [resultId]);
       return result;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  async getResultsByProgramAndCenters(
+    programId: string,
+    centerIds?: string[],
+  ): Promise<any[]> {
+    const baseQuery = `
+      WITH tri_one AS (
+        SELECT
+          tri.*,
+          ROW_NUMBER() OVER (
+            PARTITION BY tri.toc_results_id
+            ORDER BY tri.id ASC
+          ) AS rn
+        FROM Integration_information.toc_results_indicators tri
+        WHERE tri.is_active = 1
+      )
+      SELECT 
+        r.id,
+        cp.id AS project_id,
+        cp.short_name AS project_name,
+        r.result_code,
+        r.title AS result_title,
+        rt.name AS result_category,
+        NULLIF(TRIM(t1.type_name), '') AS indicator_category,
+        rs.status_name,
+        twp.acronym,
+        tr.result_title AS toc_title,
+        t1.indicator_description AS indicator,
+        r.external_submitted_date AS submission_date
+      FROM result r
+      JOIN result_type rt
+        ON r.result_type_id = rt.id
+      JOIN results_by_projects rbp
+        ON r.id = rbp.result_id
+      AND rbp.is_active = 1
+      JOIN clarisa_projects cp
+        ON rbp.project_id = cp.id
+      JOIN result_status rs 
+        ON r.status_id = rs.result_status_id
+      JOIN results_toc_result rtr
+        ON r.id = rtr.results_id
+      AND rtr.is_active = 1
+      JOIN Integration_information.toc_results tr 
+        ON rtr.toc_result_id = tr.id
+      AND tr.is_active = 1
+      JOIN Integration_information.toc_work_packages twp
+        ON tr.wp_id = twp.toc_id
+      JOIN tri_one t1
+        ON t1.toc_results_id = tr.id
+      AND t1.rn = 1
+      LEFT JOIN results_center rc
+        ON r.id = rc.result_id
+      AND rc.is_active = 1
+      WHERE
+        r.source = 'API'
+        AND tr.official_code = ?
+        AND r.is_active = 1
+    `;
+
+    const params: any[] = [programId];
+
+    let finalQuery = baseQuery;
+
+    if (centerIds && centerIds.length > 0) {
+      const placeholders = centerIds.map(() => '?').join(',');
+      finalQuery += ` AND rc.center_id IN (${placeholders})`;
+      params.push(...centerIds);
+    }
+
+    try {
+      const results = await this.query(finalQuery, params);
+      return results;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  async getCommonFieldsBilateralResultById(resultId: number): Promise<any> {
+    const query = `
+      SELECT 
+        cp.id AS project_id,
+        cp.short_name AS project_name,
+        ci.id AS center_id,
+        ci.acronym AS center_name,
+        r.id,
+        r.result_code,
+        r.external_submitter,
+        CONCAT(u.first_name, ' ', u.last_name) AS submitter_name,
+        r.result_level_id,
+        r.title AS result_title,
+        r.description AS result_description,
+        rt.name AS result_category
+      FROM result r
+      JOIN result_type rt
+        ON r.result_type_id = rt.id
+      LEFT JOIN results_by_projects rbp
+        ON r.id = rbp.result_id
+        AND rbp.is_active = 1
+      LEFT JOIN clarisa_projects cp
+        ON rbp.project_id = cp.id
+      JOIN results_center rc
+        ON r.id = rc.result_id
+        AND rc.is_active = 1
+      JOIN clarisa_center cc
+        ON rc.center_id = cc.code
+      JOIN clarisa_institutions ci
+        ON cc.institutionId = ci.id
+      LEFT JOIN users u 
+        ON r.external_submitter = u.id
+      WHERE
+        r.id = ?
+        AND r.is_active = 1;
+    `;
+
+    try {
+      const results = await this.query(query, [resultId]);
+      return results.length > 0 ? results[0] : null;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  async getCapacitySharingBilateralResultById(
+    resultId: number,
+  ): Promise<any[]> {
+    const query = `
+      SELECT
+      	rcd.result_capacity_development_id ,
+        rcd.female_using,
+        rcd.male_using,
+        rcd.non_binary_using,
+        rcd.has_unkown_using,
+        rcd.capdev_term_id,
+        rcd.capdev_delivery_method_id 
+      FROM result r
+      JOIN results_capacity_developments rcd 
+        ON r.id = rcd.result_id
+      WHERE
+        r.id = ?
+        AND r.is_active = 1;
+    `;
+
+    try {
+      const results = await this.query(query, [resultId]);
+      return results;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  async getKnowledgeProductBilateralResultById(
+    resultId: number,
+  ): Promise<any[]> {
+    const query = `
+      SELECT 
+        rkp.result_knowledge_product_id,
+      	rkm.result_kp_metadata_id,
+        rkm.source,
+        rkm.\`year\`,
+        rkp.knowledge_product_type,
+        rkm.is_peer_reviewed,
+        rkm.is_isi,
+        rkm.accesibility,
+        rkp.licence,
+        rkk.result_kp_keyword_id,
+        rkk.is_agrovoc,
+        rkk.keyword
+      FROM result r
+      JOIN results_knowledge_product rkp 
+        ON r.id = rkp.results_id
+      LEFT JOIN results_kp_metadata rkm 
+        ON rkp.result_knowledge_product_id = rkm.result_knowledge_product_id
+      LEFT JOIN results_kp_keywords rkk 
+        ON rkp.result_knowledge_product_id = rkk.result_knowledge_product_id
+      WHERE
+        r.id = ?
+        AND r.is_active = 1;
+    `;
+
+    try {
+      const results = await this.query(query, [resultId]);
+      return results;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  async getInnovationDevBilateralResultById(resultId: number): Promise<any[]> {
+    const query = `
+      SELECT
+        rid.result_innovation_dev_id, 
+        rid.innovation_nature_id,
+        cit.code AS innovation_type_id,
+        cit.name AS innovation_type_name,
+        rid.innovation_developers,
+        rid.innovation_readiness_level_id,
+        cirl.id AS readinness_level_id,
+        cirl.level,
+        cirl.name
+      FROM result r
+      JOIN results_innovations_dev rid
+        ON r.id = rid.results_id
+      LEFT JOIN clarisa_innovation_type cit
+        ON rid.innovation_nature_id = cit.code
+      LEFT JOIN clarisa_innovation_readiness_level cirl 
+        ON rid.innovation_readiness_level_id = cirl.id
+      WHERE 
+        r.id = ?
+        AND r.is_active = 1;
+    `;
+
+    try {
+      const results = await this.query(query, [resultId]);
+      return results;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  async getPolicyChangeBilateralResultById(resultId: number): Promise<any[]> {
+    const query = `
+      SELECT 
+        rpc.result_policy_change_id,
+        rpc.policy_type_id,
+        rpc.policy_stage_id,
+        ci.id AS institution_id,
+        ci.acronym 
+      FROM result r
+      JOIN results_policy_changes rpc
+        ON r.id = rpc.result_id
+      LEFT JOIN results_by_institution rbi
+        ON r.id = rbi.result_id
+      LEFT JOIN clarisa_institutions ci
+        ON rbi.institutions_id = ci.id
+      WHERE
+        r.id = ?
+        AND r.is_active = 1;
+    `;
+
+    try {
+      const results = await this.query(query, [resultId]);
+      return results;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  async getInnovationUseBilateralResultById(resultId: number): Promise<any[]> {
+    const query = `
+      SELECT
+        riu.result_innovation_use_id,
+        riu.innov_use_to_be_determined,
+        ra.result_actors_id,
+        ra.has_men,
+        ra.has_men_youth,
+        ra.has_women,
+        ra.has_women_youth,
+        ra.how_many,
+        ra.women,
+        ra.women_youth,
+        ra.men,
+        ra.men_youth,
+        ra.actor_type_id,
+        rbi.institutions_id,
+        rium.result_innovations_use_measure_id,
+        rium.unit_of_measure_id,
+        rium.unit_of_measure,
+        rium.quantity
+      FROM result r
+      JOIN results_innovations_use riu
+        ON r.id = riu.results_id
+      LEFT JOIN result_actors ra
+        ON r.id = ra.result_id
+      LEFT JOIN results_by_institution rbi
+        ON r.id = rbi.result_id
+      LEFT JOIN results_innovations_use_measures rium
+        ON riu.result_innovation_use_id = rium.result_innovation_use_id
+      WHERE
+        r.id = ?
+        AND r.is_active = 1;
+    `;
+
+    try {
+      const results = await this.query(query, [resultId]);
+      return results;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  async getEvidenceBilateralResult(resultId: number): Promise<any[]> {
+    const query = `
+      SELECT
+        e.link
+      FROM result r
+      JOIN evidence e 
+        ON r.id = e.result_id
+      WHERE
+        r.id = ?
+        AND r.is_active = 1;
+    `;
+
+    try {
+      const results = await this.query(query, [resultId]);
+      return results;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  async getTocMetadataBilateralResult(resultId: number): Promise<any[]> {
+    const query = `
+      SELECT
+          rtr.planned_result,
+          twp.acronym,
+          tr.id AS toc_result_id,
+          tr.result_title,
+          tri.id AS indicator_id,
+          tri.indicator_description
+        FROM result r
+        JOIN results_toc_result rtr
+          ON r.id = rtr.results_id
+          AND rtr.is_active = 1
+        JOIN Integration_information.toc_results tr 
+          ON rtr.toc_result_id = tr.id
+          AND tr.is_active = 1
+        JOIN Integration_information.toc_work_packages twp
+          ON tr.wp_id = twp.toc_id
+        JOIN Integration_information.toc_results_indicators tri
+          ON tri.toc_results_id = tr.id
+          AND tri.is_active = 1
+        WHERE
+          r.id = ?
+          AND r.is_active = 1;
+    `;
+
+    try {
+      const results = await this.query(query, [resultId]);
+      return results;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  async getContributingInitiativesBilateralResult(
+    resultId: number,
+  ): Promise<any[]> {
+    const query = `
+      SELECT
+        ir.name AS initiative_role,
+        ci.official_code
+      FROM result r
+      JOIN results_by_inititiative rbi
+        ON r.id = rbi.result_id
+      JOIN clarisa_initiatives ci
+        ON rbi.inititiative_id = ci.id
+      LEFT JOIN initiative_roles ir
+        ON rbi.initiative_role_id = ir.id
+      WHERE
+        r.id = ?
+        AND r.is_active = 1;
+    `;
+
+    try {
+      const results = await this.query(query, [resultId]);
+      return results;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  async getPendingReviewCountByProgram(programId: string): Promise<any[]> {
+    const query = `
+      SELECT
+        tr.official_code,
+        'TOTAL' AS level,
+        NULL AS center_id,
+        COUNT(DISTINCT r.id) AS pending_review
+      FROM result r
+      JOIN results_toc_result rtr
+        ON r.id = rtr.results_id
+        AND rtr.is_active = 1
+      JOIN Integration_information.toc_results tr 
+        ON rtr.toc_result_id = tr.id
+        AND tr.is_active = 1
+      JOIN results_center rc
+        ON r.id = rc.result_id
+        AND rc.is_active = 1
+      WHERE 
+        r.source = 'API'
+        AND tr.official_code = ?
+        AND r.is_active = 1
+        AND r.status_id = 5
+      UNION ALL
+      SELECT
+        tr.official_code,
+        'CENTER' AS level,
+        rc.center_id,
+        COUNT(DISTINCT r.id) AS pending_review
+      FROM result r
+      JOIN results_toc_result rtr
+        ON r.id = rtr.results_id
+        AND rtr.is_active = 1
+      JOIN Integration_information.toc_results tr 
+        ON rtr.toc_result_id = tr.id
+        AND tr.is_active = 1
+      JOIN results_center rc
+        ON r.id = rc.result_id
+        AND rc.is_active = 1
+      WHERE 
+        r.source = 'API'
+        AND tr.official_code = ?
+        AND r.is_active = 1
+        AND r.status_id = 5
+      GROUP BY
+        tr.official_code,
+        rc.center_id;
+    `;
+
+    try {
+      const results = await this.query(query, [programId, programId]);
+      return results;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultRepository.name,
