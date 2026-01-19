@@ -555,4 +555,29 @@ export class ContributorsPartnersService {
       .map((row) => Number(row.id))
       .filter((id) => Number.isFinite(id) && ids.includes(id));
   }
+
+  async updateUnplannedResult(resultId: number, plannedResult: boolean) {
+    try {
+      console.log('updateUnplannedResult', resultId, plannedResult);
+      const result = await this._resultRepository.getResultById(resultId);
+
+      if (!result?.id) {
+        throw {
+          response: { resultId },
+          message: 'Result not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      return await this._resultsTocResultsService.updatePlannedResult(
+        resultId,
+        plannedResult,
+      );
+    } catch (error) {
+      return this._handlersError.returnErrorRes({
+        error,
+        debug: true,
+      });
+    }
+  }
 }

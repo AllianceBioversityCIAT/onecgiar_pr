@@ -1941,4 +1941,32 @@ export class ResultsTocResultsService {
       return this._handlersError.returnErrorRes({ error });
     }
   }
+
+  async updatePlannedResult(resultId: number, plannedResult: boolean) {
+    try {
+      const updateQuery = `
+        UPDATE results_toc_result
+        SET planned_result = ?,
+            last_updated_date = NOW()
+        WHERE results_id = ?
+          AND is_active = 1
+      `;
+
+      await this._resultsTocResultRepository.query(updateQuery, [
+        plannedResult ? 1 : 0,
+        resultId,
+      ]);
+
+      return {
+        response: { resultId, plannedResult },
+        message: 'Planned result updated successfully',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({
+        error,
+        debug: true,
+      });
+    }
+  }
 }
