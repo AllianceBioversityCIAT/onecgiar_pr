@@ -191,7 +191,7 @@ export class RegionDto {
 }
 
 /**
- * DTO para país
+ * DTO for country
  */
 export class CountryDto {
   @ApiPropertyOptional({
@@ -225,7 +225,7 @@ export class CountryDto {
 }
 
 /**
- * DTO para área subnacional
+ * DTO for subnational area
  */
 export class SubnationalAreaDto {
   @ApiPropertyOptional({
@@ -740,7 +740,7 @@ export class PolicyChangeDetailsDto {
 }
 
 /**
- * DTO principal: GeoFocus
+ * DTO for geographic focus
  */
 export class GeoFocusDto {
   // --- Scope ---
@@ -918,37 +918,41 @@ export class MetadataCGDto {
 export class KnowledgeProductDto {
   @ApiProperty({
     description:
-      'Handle or identifier of the knowledge product in the source repository',
+      'Handle or identifier of the knowledge product in the source repository. Required to fetch metadata from CGSpace.',
     example: '10568/135621',
   })
   @IsString()
   @IsNotEmpty()
   handle: string;
 
-  @ApiProperty({
-    description: 'Type or category of the knowledge product',
+  @ApiPropertyOptional({
+    description:
+      'Type or category of the knowledge product. Optional - will be obtained from CGSpace if not provided.',
     example: 'Journal Article',
   })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  knowledge_product_type: string;
+  knowledge_product_type?: string;
 
-  @ApiProperty({
-    description: 'Metadata information from CGSpace or related source',
+  @ApiPropertyOptional({
+    description:
+      'Metadata information from CGSpace or related source. Optional - will be obtained from CGSpace if not provided.',
     type: () => MetadataCGDto,
   })
+  @IsOptional()
   @IsObject()
   @ValidateNested()
   @Type(() => MetadataCGDto)
-  metadataCG: MetadataCGDto;
+  metadataCG?: MetadataCGDto;
 
-  @ApiProperty({
-    description: 'Licence under which the knowledge product is distributed',
+  @ApiPropertyOptional({
+    description:
+      'Licence under which the knowledge product is distributed. Optional - will be obtained from CGSpace if not provided.',
     example: 'CC-BY-4.0',
   })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  licence: string;
+  licence?: string;
 }
 
 export class LeadCenterDto {
@@ -1032,22 +1036,26 @@ export class CreateBilateralDto {
   @Type(() => LeadCenterDto)
   lead_center: LeadCenterDto;
 
-  @ApiProperty({
-    description: 'Title of the bilateral project',
+  @ApiPropertyOptional({
+    description:
+      'Title of the bilateral project. Optional for KNOWLEDGE_PRODUCT results (obtained from CGSpace).',
     example: 'Sustainable intensification of Andean bean systems',
   })
+  @ValidateIf((o) => o.result_type_id !== ResultTypeEnum.KNOWLEDGE_PRODUCT)
   @IsString()
   @IsNotEmpty()
-  title: string;
+  title?: string;
 
-  @ApiProperty({
-    description: 'Detailed description of the bilateral project',
+  @ApiPropertyOptional({
+    description:
+      'Detailed description of the bilateral project. Optional for KNOWLEDGE_PRODUCT results (obtained from CGSpace).',
     example:
       'This project aims to scale climate resilient bean varieties across Andean regions.',
   })
+  @ValidateIf((o) => o.result_type_id !== ResultTypeEnum.KNOWLEDGE_PRODUCT)
   @IsString()
   @IsNotEmpty()
-  description: string;
+  description?: string;
 
   @ApiProperty({
     description:
@@ -1070,14 +1078,16 @@ export class CreateBilateralDto {
   @Type(() => ContributingProgramDto)
   contributing_programs?: ContributingProgramDto[];
 
-  @ApiProperty({
-    description: 'Geographic focus definition for the bilateral',
+  @ApiPropertyOptional({
+    description:
+      'Geographic focus definition for the bilateral. Optional for KNOWLEDGE_PRODUCT results (obtained from CGSpace).',
     type: () => GeoFocusDto,
   })
+  @ValidateIf((o) => o.result_type_id !== ResultTypeEnum.KNOWLEDGE_PRODUCT)
   @IsObject()
   @ValidateNested()
   @Type(() => GeoFocusDto)
-  geo_focus: GeoFocusDto;
+  geo_focus?: GeoFocusDto;
 
   @ApiProperty({
     description: 'List of contributing CGIAR centers',
