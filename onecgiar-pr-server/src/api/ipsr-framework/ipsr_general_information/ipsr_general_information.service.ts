@@ -55,38 +55,191 @@ export class IpsrGeneralInformationService {
       const resultExist = await this._resultRepository.findOneBy({
         id: resultId,
       });
+      const req = updateGeneralInformationDto;
 
-      await this.validateAndGetActiveVersion();
-      await this.validateTitle(resultId, updateGeneralInformationDto.title);
-
-      const status = this.calculateStatus(
-        resultExist.status_id,
-        updateGeneralInformationDto.is_discontinued,
+      const version = await this._versioningService.$_findActivePhase(
+        AppModuleIdEnum.IPSR,
       );
+      if (!version) {
+        throw this._handlersError.returnErrorRes({
+          error: version,
+          debug: true,
+        });
+      }
 
-      const leadContactPersonId =
-        await this.processLeadContactPerson(
-          updateGeneralInformationDto.lead_contact_person_data,
+      const titleValidate = await this._resultRepository
+        .createQueryBuilder('result')
+        .where('result.title like :title', { title: `${req.title}` })
+        .andWhere('result.is_active = 1')
+        .getMany();
+
+      if (titleValidate.length > 1) {
+        if (!titleValidate.find((tv) => tv.id === resultId)) {
+          throw {
+            response: titleValidate.map((tv) => tv.id),
+            message: `The title already exists, in the following results: ${titleValidate.map(
+              (tv) => tv.result_code,
+            )}`,
+            status: HttpStatus.BAD_REQUEST,
+          };
+        }
+      }
+
+      let status: number;
+
+      if (req?.is_discontinued) {
+        status = 4;
+      } else if (resultExist.status_id == 4) {
+        status = 1;
+      } else {
+        status = resultExist.status_id;
+      }
+
+      let leadContactPersonId: number = null;
+
+      if (req.lead_contact_person_data?.mail && this._adUserService) {
+        try {
+          let adUser = await this._adUserService.getUserByIdentifier(
+            req.lead_contact_person_data.mail,
+          );
+
+          if (!adUser) {
+            const adUserRepository = this._adUserService['adUserRepository'];
+            if (adUserRepository && adUserRepository.saveFromADUser) {
+              adUser = await adUserRepository.saveFromADUser(
+                req.lead_contact_person_data,
+              );
+
+              this._logger.log(
+                `Created new AD user: ${adUser.mail} with ID: ${adUser.id}`,
+              );
+            }
+          } else {
+            this._logger.log(
+              `Found existing AD user: ${adUser.mail} with ID: ${adUser.id}`,
+            );
+          }
+
+          leadContactPersonId = adUser?.id || null;
+        } catch (error) {
+          this._logger.warn(
+            `Failed to process lead_contact_person_data: ${error.message}`,
+          );
+        }
+      } else if (req.lead_contact_person_data?.mail && !this._adUserService) {
+        this._logger.warn(
+          'AdUserService not available, skipping lead_contact_person_data processing',
+        );
+      }
+
+      const { tag: genderTag, component: genderTagComponent } =
+        await this.validateTagAndComponent(
+          req.gender_tag_level_id,
+          req.gender_impact_area_id,
+          'Gender',
         );
 
-      const tagsData = await this.validateAllTagsAndComponents(
-        updateGeneralInformationDto,
+      const { tag: climateTag, component: climateTagComponent } =
+        await this.validateTagAndComponent(
+          req.climate_change_tag_level_id,
+          req.climate_impact_area_id,
+          'Climate change',
+        );
+
+      const { tag: nutritionTag, component: nutritionTagComponent } =
+        await this.validateTagAndComponent(
+          req.nutrition_tag_level_id,
+          req.nutrition_impact_area_id,
+          'Nutrition',
+        );
+
+      const {
+        tag: environmentalBiodiversityTag,
+        component: environmentalBiodiversityTagComponent,
+      } = await this.validateTagAndComponent(
+        req.environmental_biodiversity_tag_level_id,
+        req.environmental_biodiversity_impact_area_id,
+        'Environmental or/and biodiversity',
       );
 
-      await this.updateResult(resultId, {
-        ...updateGeneralInformationDto,
-        leadContactPersonId,
-        tagsData,
-        status,
-        geographicScopeId: resultExist.geographic_scope_id,
-        userId: user.id,
+      const { tag: povertyTag, component: povertyTagComponent } =
+        await this.validateTagAndComponent(
+          req.poverty_tag_level_id,
+          req.poverty_impact_area_id,
+          'Poverty',
+        );
+
+      await this._resultRepository.update(resultId, {
+        title: req?.title,
+        description: req?.description,
+        lead_contact_person: req?.lead_contact_person,
+        lead_contact_person_id: leadContactPersonId,
+        gender_tag_level_id: genderTag?.id ?? null,
+        gender_impact_area_id: genderTagComponent?.id ?? null,
+        climate_change_tag_level_id: climateTag?.id ?? null,
+        climate_impact_area_id: climateTagComponent?.id ?? null,
+        nutrition_tag_level_id: nutritionTag?.id ?? null,
+        nutrition_impact_area_id: nutritionTagComponent?.id ?? null,
+        environmental_biodiversity_tag_level_id:
+          environmentalBiodiversityTag?.id ?? null,
+        environmental_biodiversity_impact_area_id:
+          environmentalBiodiversityTagComponent?.id ?? null,
+        poverty_tag_level_id: povertyTag?.id ?? null,
+        poverty_impact_area_id: povertyTagComponent?.id ?? null,
+        geographic_scope_id: resultExist.geographic_scope_id,
+        last_updated_by: user.id,
+        is_discontinued: req?.is_discontinued,
+        status_id: status,
       });
 
-      await this.handleDiscontinuedOptions(
-        resultId,
-        updateGeneralInformationDto,
-        user.id,
-      );
+      if (req?.is_discontinued) {
+        await this._resultsInvestmentDiscontinuedOptionRepository.inactiveData(
+          req.discontinued_options.map(
+            (el) => el.investment_discontinued_option_id,
+          ),
+          resultId,
+          user.id,
+        );
+        for (const i of req.discontinued_options) {
+          const res =
+            await this._resultsInvestmentDiscontinuedOptionRepository.findOne({
+              where: {
+                result_id: resultId,
+                investment_discontinued_option_id:
+                  i.investment_discontinued_option_id,
+              },
+            });
+
+          if (res) {
+            await this._resultsInvestmentDiscontinuedOptionRepository.update(
+              res.results_investment_discontinued_option_id,
+              {
+                is_active: i.value,
+                description: i?.description,
+                last_updated_by: user.id,
+              },
+            );
+          } else {
+            await this._resultsInvestmentDiscontinuedOptionRepository.save({
+              result_id: resultId,
+              investment_discontinued_option_id:
+                i.investment_discontinued_option_id,
+              description: i?.description,
+              is_active: Boolean(i.value),
+              created_by: user.id,
+              last_updated_by: user.id,
+            });
+          }
+        }
+      } else {
+        await this._resultsInvestmentDiscontinuedOptionRepository.update(
+          { result_id: resultId },
+          {
+            is_active: false,
+            last_updated_by: user.id,
+          },
+        );
+      }
 
       const { response } = await this._ipsrService.findOneInnovation(resultId);
 
@@ -97,245 +250,6 @@ export class IpsrGeneralInformationService {
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
-    }
-  }
-
-  private async validateAndGetActiveVersion() {
-    const version = await this._versioningService.$_findActivePhase(
-      AppModuleIdEnum.IPSR,
-    );
-    if (!version) {
-      throw this._handlersError.returnErrorRes({
-        error: version,
-        debug: true,
-      });
-    }
-    return version;
-  }
-
-      // Only validate title uniqueness if title is not empty
-      if (req.title && req.title.trim() !== '') {
-        const titleValidate = await this._resultRepository
-          .createQueryBuilder('result')
-          .where('result.title like :title', { title: `${req.title}` })
-          .andWhere('result.is_active = 1')
-          .getMany();
-
-        if (titleValidate.length > 1) {
-          if (!titleValidate.find((tv) => tv.id === resultId)) {
-            throw {
-              response: titleValidate.map((tv) => tv.id),
-              message: `The title already exists, in the following results: ${titleValidate.map(
-                (tv) => tv.result_code,
-              )}`,
-              status: HttpStatus.BAD_REQUEST,
-            };
-          }
-        }
-      }
-
-  private calculateStatus(
-    currentStatusId: number,
-    isDiscontinued?: boolean,
-  ): number {
-    if (isDiscontinued) {
-      return 4;
-    }
-    if (currentStatusId === 4) {
-      return 1;
-    }
-    return currentStatusId;
-  }
-
-  private async processLeadContactPerson(
-    leadContactPersonData?: { mail?: string; name?: string },
-  ): Promise<number | null> {
-    if (!leadContactPersonData?.mail) {
-      return null;
-    }
-
-    if (!this._adUserService) {
-      this._logger.warn(
-        'AdUserService not available, skipping lead_contact_person_data processing',
-      );
-      return null;
-    }
-
-    try {
-      let adUser = await this._adUserService.getUserByIdentifier(
-        leadContactPersonData.mail,
-      );
-
-      if (!adUser) {
-        const adUserRepository = this._adUserService['adUserRepository'];
-        if (adUserRepository?.saveFromADUser) {
-          adUser = await adUserRepository.saveFromADUser(leadContactPersonData);
-          this._logger.log(
-            `Created new AD user: ${adUser.mail} with ID: ${adUser.id}`,
-          );
-        }
-      } else {
-        this._logger.log(
-          `Found existing AD user: ${adUser.mail} with ID: ${adUser.id}`,
-        );
-      }
-
-      return adUser?.id || null;
-    } catch (error) {
-      this._logger.warn(
-        `Failed to process lead_contact_person_data: ${error.message}`,
-      );
-      return null;
-    }
-  }
-
-  private async validateAllTagsAndComponents(
-    dto: UpdateIpsrGeneralInformationDto,
-  ) {
-    const [gender, climate, nutrition, environmental, poverty] =
-      await Promise.all([
-        this.validateTagAndComponent(
-          dto.gender_tag_level_id,
-          dto.gender_impact_area_id,
-          'Gender',
-        ),
-        this.validateTagAndComponent(
-          dto.climate_change_tag_level_id,
-          dto.climate_impact_area_id,
-          'Climate change',
-        ),
-        this.validateTagAndComponent(
-          dto.nutrition_tag_level_id,
-          dto.nutrition_impact_area_id,
-          'Nutrition',
-        ),
-        this.validateTagAndComponent(
-          dto.environmental_biodiversity_tag_level_id,
-          dto.environmental_biodiversity_impact_area_id,
-          'Environmental or/and biodiversity',
-        ),
-        this.validateTagAndComponent(
-          dto.poverty_tag_level_id,
-          dto.poverty_impact_area_id,
-          'Poverty',
-        ),
-      ]);
-
-    return {
-      gender,
-      climate,
-      nutrition,
-      environmental,
-      poverty,
-    };
-  }
-
-  private async updateResult(
-    resultId: number,
-    data: {
-      title?: string;
-      description?: string;
-      lead_contact_person?: string;
-      leadContactPersonId: number | null;
-      tagsData: {
-        gender: { tag: any; component: any };
-        climate: { tag: any; component: any };
-        nutrition: { tag: any; component: any };
-        environmental: { tag: any; component: any };
-        poverty: { tag: any; component: any };
-      };
-      status: number;
-      geographicScopeId: number;
-      userId: number;
-      is_discontinued?: boolean;
-    },
-  ) {
-    await this._resultRepository.update(resultId, {
-      title: data.title,
-      description: data.description,
-      lead_contact_person: data.lead_contact_person,
-      lead_contact_person_id: data.leadContactPersonId,
-      gender_tag_level_id: data.tagsData.gender.tag?.id ?? null,
-      gender_impact_area_id: data.tagsData.gender.component?.id ?? null,
-      climate_change_tag_level_id: data.tagsData.climate.tag?.id ?? null,
-      climate_impact_area_id: data.tagsData.climate.component?.id ?? null,
-      nutrition_tag_level_id: data.tagsData.nutrition.tag?.id ?? null,
-      nutrition_impact_area_id: data.tagsData.nutrition.component?.id ?? null,
-      environmental_biodiversity_tag_level_id:
-        data.tagsData.environmental.tag?.id ?? null,
-      environmental_biodiversity_impact_area_id:
-        data.tagsData.environmental.component?.id ?? null,
-      poverty_tag_level_id: data.tagsData.poverty.tag?.id ?? null,
-      poverty_impact_area_id: data.tagsData.poverty.component?.id ?? null,
-      geographic_scope_id: data.geographicScopeId,
-      last_updated_by: data.userId,
-      is_discontinued: data.is_discontinued,
-      status_id: data.status,
-    });
-  }
-
-  private async handleDiscontinuedOptions(
-    resultId: number,
-    dto: UpdateIpsrGeneralInformationDto,
-    userId: number,
-  ) {
-    if (dto.is_discontinued) {
-      await this._resultsInvestmentDiscontinuedOptionRepository.inactiveData(
-        dto.discontinued_options.map(
-          (el) => el.investment_discontinued_option_id,
-        ),
-        resultId,
-        userId,
-      );
-
-      for (const option of dto.discontinued_options) {
-        await this.upsertDiscontinuedOption(resultId, option, userId);
-      }
-    } else {
-      await this._resultsInvestmentDiscontinuedOptionRepository.update(
-        { result_id: resultId },
-        {
-          is_active: false,
-          last_updated_by: userId,
-        },
-      );
-    }
-  }
-
-  private async upsertDiscontinuedOption(
-    resultId: number,
-    option: { investment_discontinued_option_id: number; value: boolean; description?: string },
-    userId: number,
-  ) {
-    const existing = await this._resultsInvestmentDiscontinuedOptionRepository.findOne(
-      {
-        where: {
-          result_id: resultId,
-          investment_discontinued_option_id:
-            option.investment_discontinued_option_id,
-        },
-      },
-    );
-
-    if (existing) {
-      await this._resultsInvestmentDiscontinuedOptionRepository.update(
-        existing.results_investment_discontinued_option_id,
-        {
-          is_active: option.value,
-          description: option?.description,
-          last_updated_by: userId,
-        },
-      );
-    } else {
-      await this._resultsInvestmentDiscontinuedOptionRepository.save({
-        result_id: resultId,
-        investment_discontinued_option_id:
-          option.investment_discontinued_option_id,
-        description: option?.description,
-        is_active: Boolean(option.value),
-        created_by: userId,
-        last_updated_by: userId,
-      });
     }
   }
 
