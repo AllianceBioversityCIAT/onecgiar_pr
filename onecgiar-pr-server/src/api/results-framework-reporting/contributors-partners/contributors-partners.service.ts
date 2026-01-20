@@ -565,11 +565,10 @@ export class ContributorsPartnersService {
       const result = await this._resultRepository.getResultById(resultId);
 
       if (!result?.id) {
-        throw {
-          response: { resultId },
-          message: 'Result not found',
-          status: HttpStatus.NOT_FOUND,
-        };
+        const error = new Error('Result not found');
+        (error as any).response = { resultId };
+        (error as any).status = HttpStatus.NOT_FOUND;
+        throw error;
       }
 
       return await this._resultsTocResultsService.updatePlannedResult(
