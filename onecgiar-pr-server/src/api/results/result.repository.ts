@@ -2529,16 +2529,70 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         ON r.id = rkp.results_id
       LEFT JOIN results_kp_metadata rkm 
         ON rkp.result_knowledge_product_id = rkm.result_knowledge_product_id
+        AND rkm.is_active = 1
       LEFT JOIN results_kp_keywords rkk 
         ON rkp.result_knowledge_product_id = rkk.result_knowledge_product_id
+        AND rkk.is_active = 1
       WHERE
         r.id = ?
-        AND r.is_active = 1;
+        AND r.is_active = 1
+        AND rkp.is_active = 1;
     `;
 
     try {
       const results = await this.query(query, [resultId]);
-      return results;
+
+      const knowledgeProductsMap = new Map<number, any>();
+      const keywordsMap = new Map<number, Set<number>>();
+
+      for (const row of results) {
+        const kpId = row.result_knowledge_product_id;
+
+        if (!knowledgeProductsMap.has(kpId)) {
+          knowledgeProductsMap.set(kpId, {
+            result_knowledge_product_id: kpId,
+            knowledge_product_type: row.knowledge_product_type,
+            licence: row.licence,
+            metadata: [],
+            keywords: [],
+          });
+          keywordsMap.set(kpId, new Set());
+        }
+
+        const kp = knowledgeProductsMap.get(kpId);
+        const keywordsSet = keywordsMap.get(kpId);
+
+        if (row.result_kp_metadata_id) {
+          const metadataExists = kp.metadata.some(
+            (m: any) => m.result_kp_metadata_id === row.result_kp_metadata_id,
+          );
+
+          if (!metadataExists) {
+            kp.metadata.push({
+              result_kp_metadata_id: row.result_kp_metadata_id,
+              source: row.source,
+              year: row.year,
+              is_peer_reviewed: row.is_peer_reviewed,
+              is_isi: row.is_isi,
+              accesibility: row.accesibility,
+            });
+          }
+        }
+
+        if (
+          row.result_kp_keyword_id &&
+          !keywordsSet.has(row.result_kp_keyword_id)
+        ) {
+          keywordsSet.add(row.result_kp_keyword_id);
+          kp.keywords.push({
+            result_kp_keyword_id: row.result_kp_keyword_id,
+            is_agrovoc: row.is_agrovoc,
+            keyword: row.keyword,
+          });
+        }
+      }
+
+      return Array.from(knowledgeProductsMap.values());
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultRepository.name,
