@@ -24,6 +24,8 @@
     "migration:generate": "cross-replace npm run typeorm migration:generate -- ./src/migrations/${npm_config_name} -d ./src/config/orm.config.ts",
     "migration:revert": "npm run typeorm migration:revert -- -d ./src/config/orm.config.ts",
     "migration:run": "npm run typeorm migration:run -- -d ./src/config/orm.config.ts",
+    "migration:check": "ts-node -r tsconfig-paths/register ./scripts/check-pending-migrations.ts",
+    "migration:check:ci": "ts-node -r tsconfig-paths/register ./scripts/check-pending-migrations.ts --quiet",
     "lambda:test": "sls offline start",
     "lambda:deploy": "sls deploy -v"
   },

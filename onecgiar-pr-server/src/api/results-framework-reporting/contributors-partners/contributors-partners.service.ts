@@ -555,4 +555,32 @@ export class ContributorsPartnersService {
       .map((row) => Number(row.id))
       .filter((id) => Number.isFinite(id) && ids.includes(id));
   }
+
+  async updateUnplannedResult(
+    resultId: number,
+    plannedResult: boolean,
+    user: TokenDto,
+  ) {
+    try {
+      const result = await this._resultRepository.getResultById(resultId);
+
+      if (!result?.id) {
+        const error = new Error('Result not found');
+        (error as any).response = { resultId };
+        (error as any).status = HttpStatus.NOT_FOUND;
+        throw error;
+      }
+
+      return await this._resultsTocResultsService.updatePlannedResult(
+        resultId,
+        plannedResult,
+        user.id,
+      );
+    } catch (error) {
+      return this._handlersError.returnErrorRes({
+        error,
+        debug: true,
+      });
+    }
+  }
 }

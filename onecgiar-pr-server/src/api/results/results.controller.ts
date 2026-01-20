@@ -236,6 +236,12 @@ export class ResultsController {
     required: false,
     description: 'Items per page. Returns meta when used.',
   })
+  @ApiQuery({
+    name: 'title',
+    type: String,
+    required: false,
+    description: 'Search term to filter results by title.',
+  })
   findAllResultRolesFiltered(
     @Param('userId') userId: number,
     @Query() query: Record<string, any>,

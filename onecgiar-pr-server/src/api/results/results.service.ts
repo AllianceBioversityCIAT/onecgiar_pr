@@ -1197,6 +1197,8 @@ export class ResultsService {
         })
         .filter((fs) => fs !== null) as string[] | undefined;
 
+      const title = query.title ? String(query.title).trim() : undefined;
+
       const filters = {
         initiativeCode,
         versionId: toNumberArray(
@@ -1211,6 +1213,7 @@ export class ResultsService {
         ),
         statusId: toNumberArray(query.status_id ?? query.status),
         fundingSource,
+        title: title && title.length > 0 ? title : undefined,
       };
 
       const repoRes =

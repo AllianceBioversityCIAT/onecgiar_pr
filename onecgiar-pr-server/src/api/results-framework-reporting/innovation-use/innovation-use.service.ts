@@ -53,7 +53,7 @@ export class InnovationUseService {
     private readonly _resultRepository: ResultRepository,
     private readonly _resultByProjectRepository: ResultsByProjectsRepository,
     private readonly _clarisaInnovationUseLevelRepository: ClarisaInnovationUseLevelRepository,
-  ) {}
+  ) { }
 
   async saveInnovationUse(
     innovationUseDto: CreateInnovationUseDto,
@@ -70,8 +70,14 @@ export class InnovationUseService {
         };
       }
 
-      const resultExist =
-        await this._resultsInnovationsUseRepository.InnovUseExists(resultId);
+      let resultExist = await this._resultsInnovationsUseRepository.findOne({
+        where: { results_id: resultId, is_active: true },
+      });
+
+      if (!resultExist) {
+        resultExist =
+          await this._resultsInnovationsUseRepository.InnovUseExists(resultId);
+      }
 
       const {
         has_innovation_link,
@@ -148,7 +154,74 @@ export class InnovationUseService {
           }
         }
 
-        InnUseRes = await this._resultsInnovationsUseRepository.save(newInnUse);
+        try {
+          InnUseRes =
+            await this._resultsInnovationsUseRepository.save(newInnUse);
+        } catch (saveError: any) {
+          // Handle duplicate entry error (race condition)
+          if (saveError?.driverError?.code === 'ER_DUP_ENTRY') {
+            this.logger.warn(
+              `Duplicate entry detected for resultId ${resultId}, fetching existing record and updating instead`,
+            );
+            // Fetch the existing record that was created by another concurrent request
+            resultExist = await this._resultsInnovationsUseRepository.findOne({
+              where: { results_id: resultId, is_active: true },
+            });
+
+            if (!resultExist) {
+              // If still not found, try the complex query
+              resultExist =
+                await this._resultsInnovationsUseRepository.InnovUseExists(
+                  resultId,
+                );
+            }
+
+            if (resultExist) {
+              // Update the existing record with the new data
+              resultExist.has_innovation_link = has_innovation_link;
+              resultExist.innovation_use_level_id = innovation_use_level;
+              resultExist.last_updated_by = user.id;
+              resultExist.innov_use_to_be_determined =
+                innov_use_to_be_determined;
+              resultExist.innov_use_2030_to_be_determined =
+                innov_use_2030_to_be_determined;
+
+              if (innovation_use_level >= InnovationUseLevel.Level_6) {
+                resultExist.readiness_level_explanation =
+                  readiness_level_explanation ?? null;
+                resultExist.has_scaling_studies = !!has_scaling_studies;
+
+                if (!has_scaling_studies) {
+                  await this._resultScalingStudyUrlsRepository.update(
+                    {
+                      result_innov_use_id: resultExist.result_innovation_use_id,
+                    },
+                    { is_active: false },
+                  );
+                }
+              } else {
+                resultExist.readiness_level_explanation = null;
+                resultExist.has_scaling_studies = false;
+
+                await this._resultScalingStudyUrlsRepository.update(
+                  {
+                    result_innov_use_id: resultExist.result_innovation_use_id,
+                  },
+                  { is_active: false },
+                );
+              }
+
+              InnUseRes =
+                await this._resultsInnovationsUseRepository.save(resultExist);
+            } else {
+              // If we still can't find it, re-throw the original error
+              throw saveError;
+            }
+          } else {
+            // Re-throw if it's not a duplicate entry error
+            throw saveError;
+          }
+        }
       }
 
       const scalingStudiesUrls: string[] = (scaling_studies_urls ?? []).filter(

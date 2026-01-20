@@ -634,6 +634,7 @@ WHERE
       portfolioId?: number | number[];
       statusId?: number | number[];
       fundingSource?: string | string[];
+      title?: string;
     },
     excludeType = [10, 11],
     pagination?: { limit?: number; offset?: number },
@@ -725,6 +726,11 @@ WHERE
       addInGeneric('ci.portfolio_id', filters?.portfolioId);
       addInGeneric('r.status_id', filters?.statusId);
       addInGeneric('r.source', filters?.fundingSource);
+
+      if (filters?.title) {
+        where.push('AND LOWER(r.title) LIKE LOWER(?)');
+        params.push(`%${filters.title}%`);
+      }
 
       const limit =
         pagination?.limit && pagination.limit > 0

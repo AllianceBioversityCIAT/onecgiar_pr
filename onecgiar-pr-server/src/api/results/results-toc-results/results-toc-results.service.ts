@@ -1928,4 +1928,78 @@ export class ResultsTocResultsService {
       return this._handlersError.returnErrorRes({ error });
     }
   }
+
+  async updatePlannedResult(
+    resultId: number,
+    plannedResult: boolean,
+    userId: number,
+  ) {
+    try {
+      // Get the owner initiative for this result
+      const ownerInitiative =
+        await this._resultByInitiativesRepository.getOwnerInitiativeByResult(
+          resultId,
+        );
+
+      if (!ownerInitiative?.id) {
+        return {
+          response: { resultId },
+          message: 'Owner initiative not found for this result',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      // Inactivate active records for this result and initiative only
+      // (preserves TOC mappings for contributor initiatives)
+      const deactivateQuery = `
+        UPDATE results_toc_result
+        SET is_active = 0,
+            last_updated_date = NOW(),
+            last_updated_by = ?
+        WHERE results_id = ?
+          AND initiative_id = ?
+          AND is_active = 1
+      `;
+      await this._resultsTocResultRepository.query(deactivateQuery, [
+        userId,
+        resultId,
+        ownerInitiative.id,
+      ]);
+
+      // Create a new record with the updated planned_result status
+      // and null values for toc_result_id and toc_progressive_narrative
+      const insertQuery = `
+        INSERT INTO results_toc_result (
+          results_id,
+          initiative_id,
+          planned_result,
+          toc_result_id,
+          toc_progressive_narrative,
+          is_active,
+          created_by,
+          last_updated_by,
+          created_date,
+          last_updated_date
+        ) VALUES (?, ?, ?, NULL, NULL, 1, ?, ?, NOW(), NOW())
+      `;
+      await this._resultsTocResultRepository.query(insertQuery, [
+        resultId,
+        ownerInitiative.id,
+        plannedResult ? 1 : 0,
+        userId,
+        userId,
+      ]);
+
+      return {
+        response: { resultId, plannedResult },
+        message: 'Planned result updated successfully',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({
+        error,
+        debug: true,
+      });
+    }
+  }
 }
