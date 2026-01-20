@@ -8,7 +8,7 @@ import {
   forwardRef,
   ConflictException,
 } from '@nestjs/common';
-import { DataSource, In, IsNull } from 'typeorm';
+import { DataSource, In, IsNull, Not } from 'typeorm';
 import { CreateResultDto } from './dto/create-result.dto';
 import { ResultRepository } from './result.repository';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
@@ -2713,7 +2713,7 @@ export class ResultsService {
         project_name: row.project_name,
         result_code: row.result_code,
         result_title: row.result_title,
-        indicator_category: row.indicator_category,
+        indicator_category: row.result_category,
         status_name: row.status_name,
         acronym: row.acronym,
         toc_title: row.toc_title,
@@ -2888,6 +2888,7 @@ export class ResultsService {
         where: {
           result_id: resultId,
           is_active: true,
+          institutions_id: Not(IsNull()),
         },
         relations: {
           delivery: true,
