@@ -53,7 +53,7 @@ export class InnovationUseService {
     private readonly _resultRepository: ResultRepository,
     private readonly _resultByProjectRepository: ResultsByProjectsRepository,
     private readonly _clarisaInnovationUseLevelRepository: ClarisaInnovationUseLevelRepository,
-  ) { }
+  ) {}
 
   async saveInnovationUse(
     innovationUseDto: CreateInnovationUseDto,

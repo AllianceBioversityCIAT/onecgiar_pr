@@ -198,12 +198,15 @@ export class BilateralService {
               userId,
             );
 
-            // For Knowledge Products, geo_focus is optional (obtained from CGSpace)
-            // For other result types, geo_focus is required
             const isKpType =
               bilateralDto.result_type_id === ResultTypeEnum.KNOWLEDGE_PRODUCT;
 
-            if (!isKpType && bilateralDto.geo_focus) {
+            if (isKpType) {
+              // For KP, save without geographic_scope_id (will be set from CGSpace)
+              await this._resultRepository.save({
+                ...newResultHeader,
+              });
+            } else if (bilateralDto.geo_focus) {
               const {
                 scope_code,
                 scope_label,
@@ -232,16 +235,11 @@ export class BilateralService {
                 ...newResultHeader,
                 geographic_scope_id: this.resolveScopeId(scope.id, countries),
               });
-            } else if (!isKpType) {
+            } else {
               // For non-KP types, geo_focus is required
               throw new BadRequestException(
                 'geo_focus is required for non-Knowledge Product results.',
               );
-            } else {
-              // For KP, save without geographic_scope_id (will be set from CGSpace)
-              await this._resultRepository.save({
-                ...newResultHeader,
-              });
             }
 
             await this.handleTocMapping(
@@ -1674,6 +1672,8 @@ export class BilateralService {
   }
 
   private async handleEvidence(resultId, evidence, userId) {
+    if (!Array.isArray(evidence) || !evidence.length) return;
+
     const evidencesArray = evidence.filter((e) => !!e?.link);
     const testDuplicate = evidencesArray.map((e) => e.link);
     if (new Set(testDuplicate).size !== testDuplicate.length) {

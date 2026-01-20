@@ -1098,23 +1098,27 @@ export class CreateBilateralDto {
   @Type(() => InstitutionDto)
   contributing_center: InstitutionDto[];
 
-  @ApiProperty({
-    description: 'List of contributing partner institutions',
+  @ApiPropertyOptional({
+    description:
+      'List of contributing partner institutions. Optional for KNOWLEDGE_PRODUCT results.',
     type: [InstitutionDto],
   })
+  @ValidateIf((o) => o.result_type_id !== ResultTypeEnum.KNOWLEDGE_PRODUCT)
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => InstitutionDto)
-  contributing_partners: InstitutionDto[];
+  contributing_partners?: InstitutionDto[];
 
-  @ApiProperty({
-    description: 'Evidence references supporting the bilateral project',
+  @ApiPropertyOptional({
+    description:
+      'Evidence references supporting the bilateral project. Optional for KNOWLEDGE_PRODUCT results.',
     type: [EvidenceDto],
   })
+  @ValidateIf((o) => o.result_type_id !== ResultTypeEnum.KNOWLEDGE_PRODUCT)
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => EvidenceDto)
-  evidence: EvidenceDto[];
+  evidence?: EvidenceDto[];
 
   @ApiProperty({
     description: 'List of contributing bilateral project grants',
