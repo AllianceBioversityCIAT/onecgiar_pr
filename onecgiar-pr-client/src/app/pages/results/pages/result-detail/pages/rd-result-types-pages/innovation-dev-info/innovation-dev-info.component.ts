@@ -25,7 +25,6 @@ export class InnovationDevInfoComponent {
   innovationDevelopmentLinks: InnovationDevelopmentLinks = new InnovationDevelopmentLinks();
 
   evidencesBody: EvidencesBody = new EvidencesBody();
-  isOptional: boolean = false;
 
   constructor(
     private api: ApiService,

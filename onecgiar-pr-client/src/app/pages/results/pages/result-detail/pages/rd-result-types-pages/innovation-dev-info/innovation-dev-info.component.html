@@ -47,7 +47,7 @@
       <app-pr-field-header label="Evidence of user need/user demand" [required]="false"></app-pr-field-header>
 
       <div class="evidence evidenceItem" *ngFor="let evidence of this.evidencesBody.evidences; let i = index">
-        <app-user-evidence [evidence]="evidence" [index]="i + 1" (deleteEvent)="deleteEvidence(i)" [isOptional]="isOptional"> </app-user-evidence>
+        <app-user-evidence [evidence]="evidence" [index]="i + 1" (deleteEvent)="deleteEvidence(i)" [isOptional]="true"> </app-user-evidence>
       </div>
     </div>
     <app-add-button name="Add evidence" (clickEvent)="addEvidence()" [disabled]="savingSection" *ngIf="this.evidencesBody.evidences.length < 6">
