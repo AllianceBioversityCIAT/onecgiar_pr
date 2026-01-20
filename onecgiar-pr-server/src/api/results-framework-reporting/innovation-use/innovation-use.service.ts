@@ -53,7 +53,7 @@ export class InnovationUseService {
     private readonly _resultRepository: ResultRepository,
     private readonly _resultByProjectRepository: ResultsByProjectsRepository,
     private readonly _clarisaInnovationUseLevelRepository: ClarisaInnovationUseLevelRepository,
-  ) {}
+  ) { }
 
   async saveInnovationUse(
     innovationUseDto: CreateInnovationUseDto,
@@ -159,12 +159,7 @@ export class InnovationUseService {
             await this._resultsInnovationsUseRepository.save(newInnUse);
         } catch (saveError: any) {
           // Handle duplicate entry error (race condition)
-          if (
-            saveError?.code === 'ER_DUP_ENTRY' ||
-            (saveError?.message &&
-              saveError.message.includes('Duplicate entry') &&
-              saveError.message.includes('REL_600e71f264a8c0a91819901c48'))
-          ) {
+          if (saveError?.driverError?.code === 'ER_DUP_ENTRY') {
             this.logger.warn(
               `Duplicate entry detected for resultId ${resultId}, fetching existing record and updating instead`,
             );
