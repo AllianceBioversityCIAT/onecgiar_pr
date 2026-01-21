@@ -3,17 +3,18 @@
 
 FROM public.ecr.aws/lambda/nodejs:20
 
-# Set working directory
+# Set working directory to Lambda task root
 WORKDIR ${LAMBDA_TASK_ROOT}
 
-# Copy package files
+# Copy package files first (for better layer caching)
 COPY package*.json ./
 
 # Install production dependencies only
 RUN npm ci --omit=dev
 
-# Copy compiled application
-COPY dist/ ./dist/
+# Copy compiled application to root (not in dist subfolder)
+COPY dist/ ./
 
-# Set the handler
-CMD ["dist/lambda.handler"]
+# Set the handler - Lambda expects module.function format
+# lambda.js exports handler function
+CMD ["lambda.handler"]
