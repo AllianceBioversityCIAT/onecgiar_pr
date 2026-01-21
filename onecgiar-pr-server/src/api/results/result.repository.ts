@@ -2377,10 +2377,16 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       FROM result r
       JOIN result_type rt
         ON r.result_type_id = rt.id
-      JOIN results_by_projects rbp
+      JOIN results_by_inititiative rbi
+        ON r.id = rbi.result_id
+      AND rbi.is_active = 1
+      JOIN clarisa_initiatives ci
+        ON rbi.inititiative_id = ci.id
+      AND ci.active = 1
+      LEFT JOIN results_by_projects rbp
         ON r.id = rbp.result_id
       AND rbp.is_active = 1
-      JOIN clarisa_projects cp
+      LEFT JOIN clarisa_projects cp
         ON rbp.project_id = cp.id
       JOIN result_status rs 
         ON r.status_id = rs.result_status_id
@@ -2400,7 +2406,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       AND rc.is_active = 1
       WHERE
         r.source = 'API'
-        AND tr.official_code = ?
+        AND ci.official_code = ?
         AND r.is_active = 1
     `;
 
@@ -2438,6 +2444,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         r.external_submitter,
         CONCAT(u.first_name, ' ', u.last_name) AS submitter_name,
         r.result_level_id,
+        r.result_type_id,
         r.title AS result_title,
         r.description AS result_description,
         rt.name AS result_category
