@@ -15,7 +15,7 @@
       <th id="code" style="width: 5%">Code</th>
       <th id="title" style="width: 15%">Title</th>
       <th id="indicator-category" style="width: 10%">Indicator category</th>
-      @if (selectedCenters().length > 1) {
+      @if (this.bilateralResultsService.currentCenterSelected().length > 1) {
         <th id="lead-center" style="width: 10%">Lead center</th>
       }
       <th id="status" style="width: 8%">Status</th>
@@ -29,7 +29,7 @@
   <!-- Group Header -->
   <ng-template pTemplate="groupheader" let-item let-expanded="expanded">
     <tr>
-      <td [attr.colspan]="selectedCenters().length > 1 ? 9 : 8" class="group-header-cell">
+      <td [attr.colspan]="this.bilateralResultsService.currentCenterSelected().length > 1 ? 9 : 8" class="group-header-cell">
         <div class="group-header-content" pRipple [pRowToggler]="item">
           <button
             type="button"
@@ -51,7 +51,7 @@
         <td class="code-cell">{{ result.result_code }}</td>
         <td class="title-cell">{{ result.result_title }}</td>
         <td>{{ result.indicator_category }}</td>
-        @if (selectedCenters().length > 1) {
+        @if (this.bilateralResultsService.currentCenterSelected().length > 1) {
           <td>{{ result.lead_center ?? 'Not specified' }}</td>
         }
         <td>
@@ -88,7 +88,9 @@
   <!-- Empty Message -->
   <ng-template pTemplate="emptymessage">
     <tr style="height: 200px">
-      <td [attr.colspan]="selectedCenters().length > 1 ? 9 : 8" style="text-align: center; font-weight: 600">No results found.</td>
+      <td [attr.colspan]="this.bilateralResultsService.currentCenterSelected().length > 1 ? 9 : 8" style="text-align: center; font-weight: 600">
+        No results found.
+      </td>
     </tr>
   </ng-template>
 </p-table>
