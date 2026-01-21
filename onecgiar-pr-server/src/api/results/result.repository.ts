@@ -2350,6 +2350,9 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     programId: string,
     centerIds?: string[],
   ): Promise<any[]> {
+    const hasCenterFilter = centerIds && centerIds.length > 0;
+    const joinType = hasCenterFilter ? 'INNER' : 'LEFT';
+    
     const baseQuery = `
       WITH tri_one AS (
         SELECT
@@ -2422,12 +2425,25 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       LEFT JOIN tri_one t1
         ON t1.toc_results_id = tr.id
       AND t1.rn = 1
-      LEFT JOIN lead_centers lc
+      ${joinType} JOIN lead_centers lc
         ON r.id = lc.result_id
       WHERE
         r.source = 'API'
         AND ci.official_code = ?
         AND r.is_active = 1
+    `;
+
+    const params: any[] = [programId];
+
+    let finalQuery = baseQuery;
+
+    if (hasCenterFilter) {
+      const placeholders = centerIds.map(() => '?').join(',');
+      finalQuery += ` AND lc.center_id IN (${placeholders})`;
+      params.push(...centerIds);
+    }
+
+    finalQuery += `
       GROUP BY 
         r.id,
         r.result_code,
@@ -2436,16 +2452,6 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         rs.status_name,
         r.external_submitted_date
     `;
-
-    const params: any[] = [programId];
-
-    let finalQuery = baseQuery;
-
-    if (centerIds && centerIds.length > 0) {
-      const placeholders = centerIds.map(() => '?').join(',');
-      finalQuery += ` AND (lc.center_id IN (${placeholders}) OR lc.center_id IS NULL)`;
-      params.push(...centerIds);
-    }
 
     try {
       const results = await this.query(finalQuery, params);
