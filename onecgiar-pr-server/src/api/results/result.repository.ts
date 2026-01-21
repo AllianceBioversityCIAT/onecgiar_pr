@@ -2483,12 +2483,12 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         AND rbp.is_active = 1
       LEFT JOIN clarisa_projects cp
         ON rbp.project_id = cp.id
-      JOIN results_center rc
+      LEFT JOIN results_center rc
         ON r.id = rc.result_id
         AND rc.is_active = 1
-      JOIN clarisa_center cc
+      LEFT JOIN clarisa_center cc
         ON rc.center_id = cc.code
-      JOIN clarisa_institutions ci
+      LEFT JOIN clarisa_institutions ci
         ON cc.institutionId = ci.id
       LEFT JOIN users u 
         ON r.external_submitter = u.id
