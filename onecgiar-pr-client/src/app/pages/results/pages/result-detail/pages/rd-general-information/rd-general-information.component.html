@@ -39,13 +39,38 @@
       <div id="gender_tag_alert" [hidden]="this.generalInfoBody.gender_tag_id != 3"></div>
     </div>
     @if (this.generalInfoBody.gender_tag_id == 3) {
-      <app-pr-radio-button
-        [options]="this.getImpactAreasScoresComponents.genderTagScoreList()"
-        optionLabel="name"
-        optionValue="id"
-        fieldRef="[general-info]-gender_impact_area_id"
-        [(ngModel)]="this.generalInfoBody.gender_impact_area_id">
-      </app-pr-radio-button>
+      @if (this.dataControlSE.currentResultSignal()?.portfolio === 'P25') {
+        <app-pr-field-header
+          [label]="this.getImpactAreaFieldLabel('[general-info]-gender_impact_area_id')"
+          [description]="this.getImpactAreaFieldDescription('[general-info]-gender_impact_area_id')"
+          [required]="this.getImpactAreaFieldRequired('[general-info]-gender_impact_area_id')"
+          [useColon]="false">
+        </app-pr-field-header>
+        <div class="pr-field">
+          <div class="radioButtonList">
+            @for (option of this.getImpactAreasScoresComponents.genderTagScoreList(); track option.id; let i = $index) {
+              <div class="radioButton">
+                <p-checkbox
+                  [binary]="true"
+                  [inputId]="'gender_checkbox_' + i"
+                  [ngModel]="this.isImpactAreaSelected('gender_impact_area_id', option.id)"
+                  (ngModelChange)="this.toggleImpactAreaSelection('gender_impact_area_id', option.id)"
+                  [disabled]="this.dataControlSE.isKnowledgeProduct || this.rolesSE.readOnly">
+                </p-checkbox>
+                <label [for]="'gender_checkbox_' + i" class="name pr-body-2">{{ option.name }}</label>
+              </div>
+            }
+          </div>
+        </div>
+      } @else {
+        <app-pr-radio-button
+          [options]="this.getImpactAreasScoresComponents.genderTagScoreList()"
+          optionLabel="name"
+          optionValue="id"
+          fieldRef="[general-info]-gender_impact_area_id"
+          [(ngModel)]="this.generalInfoBody.gender_impact_area_id">
+        </app-pr-radio-button>
+      }
     }
   </div>
 
@@ -63,13 +88,38 @@
       <div id="climate_change_tag_alert" [hidden]="this.generalInfoBody.climate_change_tag_id != 3"></div>
     </div>
     @if (this.generalInfoBody.climate_change_tag_id == 3) {
-      <app-pr-radio-button
-        [options]="this.getImpactAreasScoresComponents.climateTagScoreList()"
-        optionLabel="name"
-        optionValue="id"
-        fieldRef="[general-info]-climate_impact_area_id"
-        [(ngModel)]="this.generalInfoBody.climate_impact_area_id">
-      </app-pr-radio-button>
+      @if (this.dataControlSE.currentResultSignal()?.portfolio === 'P25') {
+        <app-pr-field-header
+          [label]="this.getImpactAreaFieldLabel('[general-info]-climate_impact_area_id')"
+          [description]="this.getImpactAreaFieldDescription('[general-info]-climate_impact_area_id')"
+          [required]="this.getImpactAreaFieldRequired('[general-info]-climate_impact_area_id')"
+          [useColon]="false">
+        </app-pr-field-header>
+        <div class="pr-field">
+          <div class="radioButtonList">
+            @for (option of this.getImpactAreasScoresComponents.climateTagScoreList(); track option.id; let i = $index) {
+              <div class="radioButton">
+                <p-checkbox
+                  [binary]="true"
+                  [inputId]="'climate_checkbox_' + i"
+                  [ngModel]="this.isImpactAreaSelected('climate_impact_area_id', option.id)"
+                  (ngModelChange)="this.toggleImpactAreaSelection('climate_impact_area_id', option.id)"
+                  [disabled]="this.dataControlSE.isKnowledgeProduct || this.rolesSE.readOnly">
+                </p-checkbox>
+                <label [for]="'climate_checkbox_' + i" class="name pr-body-2">{{ option.name }}</label>
+              </div>
+            }
+          </div>
+        </div>
+      } @else {
+        <app-pr-radio-button
+          [options]="this.getImpactAreasScoresComponents.climateTagScoreList()"
+          optionLabel="name"
+          optionValue="id"
+          fieldRef="[general-info]-climate_impact_area_id"
+          [(ngModel)]="this.generalInfoBody.climate_impact_area_id">
+        </app-pr-radio-button>
+      }
     }
   </div>
 
@@ -87,13 +137,38 @@
       <div id="nutrition_tag_alert" [hidden]="this.generalInfoBody.nutrition_tag_level_id != 3"></div>
     </div>
     @if (this.generalInfoBody.nutrition_tag_level_id == 3) {
-      <app-pr-radio-button
-        [options]="this.getImpactAreasScoresComponents.nutritionTagScoreList()"
-        optionLabel="name"
-        optionValue="id"
-        fieldRef="[general-info]-nutrition_impact_area_id"
-        [(ngModel)]="this.generalInfoBody.nutrition_impact_area_id">
-      </app-pr-radio-button>
+      @if (this.dataControlSE.currentResultSignal()?.portfolio === 'P25') {
+        <app-pr-field-header
+          [label]="this.getImpactAreaFieldLabel('[general-info]-nutrition_impact_area_id')"
+          [description]="this.getImpactAreaFieldDescription('[general-info]-nutrition_impact_area_id')"
+          [required]="this.getImpactAreaFieldRequired('[general-info]-nutrition_impact_area_id')"
+          [useColon]="false">
+        </app-pr-field-header>
+        <div class="pr-field">
+          <div class="radioButtonList">
+            @for (option of this.getImpactAreasScoresComponents.nutritionTagScoreList(); track option.id; let i = $index) {
+              <div class="radioButton">
+                <p-checkbox
+                  [binary]="true"
+                  [inputId]="'nutrition_checkbox_' + i"
+                  [ngModel]="this.isImpactAreaSelected('nutrition_impact_area_id', option.id)"
+                  (ngModelChange)="this.toggleImpactAreaSelection('nutrition_impact_area_id', option.id)"
+                  [disabled]="this.dataControlSE.isKnowledgeProduct || this.rolesSE.readOnly">
+                </p-checkbox>
+                <label [for]="'nutrition_checkbox_' + i" class="name pr-body-2">{{ option.name }}</label>
+              </div>
+            }
+          </div>
+        </div>
+      } @else {
+        <app-pr-radio-button
+          [options]="this.getImpactAreasScoresComponents.nutritionTagScoreList()"
+          optionLabel="name"
+          optionValue="id"
+          fieldRef="[general-info]-nutrition_impact_area_id"
+          [(ngModel)]="this.generalInfoBody.nutrition_impact_area_id">
+        </app-pr-radio-button>
+      }
     }
   </div>
 
@@ -111,13 +186,38 @@
       <div id="environment_tag_alert" [hidden]="this.generalInfoBody.environmental_biodiversity_tag_level_id != 3"></div>
     </div>
     @if (this.generalInfoBody.environmental_biodiversity_tag_level_id == 3) {
-      <app-pr-radio-button
-        [options]="this.getImpactAreasScoresComponents.environmentalBiodiversityTagScoreList()"
-        optionLabel="name"
-        optionValue="id"
-        fieldRef="[general-info]-environmental_biodiversity_impact_area_id"
-        [(ngModel)]="this.generalInfoBody.environmental_biodiversity_impact_area_id">
-      </app-pr-radio-button>
+      @if (this.dataControlSE.currentResultSignal()?.portfolio === 'P25') {
+        <app-pr-field-header
+          [label]="this.getImpactAreaFieldLabel('[general-info]-environmental_biodiversity_impact_area_id')"
+          [description]="this.getImpactAreaFieldDescription('[general-info]-environmental_biodiversity_impact_area_id')"
+          [required]="this.getImpactAreaFieldRequired('[general-info]-environmental_biodiversity_impact_area_id')"
+          [useColon]="false">
+        </app-pr-field-header>
+        <div class="pr-field">
+          <div class="radioButtonList">
+            @for (option of this.getImpactAreasScoresComponents.environmentalBiodiversityTagScoreList(); track option.id; let i = $index) {
+              <div class="radioButton">
+                <p-checkbox
+                  [binary]="true"
+                  [inputId]="'environmental_checkbox_' + i"
+                  [ngModel]="this.isImpactAreaSelected('environmental_biodiversity_impact_area_id', option.id)"
+                  (ngModelChange)="this.toggleImpactAreaSelection('environmental_biodiversity_impact_area_id', option.id)"
+                  [disabled]="this.dataControlSE.isKnowledgeProduct || this.rolesSE.readOnly">
+                </p-checkbox>
+                <label [for]="'environmental_checkbox_' + i" class="name pr-body-2">{{ option.name }}</label>
+              </div>
+            }
+          </div>
+        </div>
+      } @else {
+        <app-pr-radio-button
+          [options]="this.getImpactAreasScoresComponents.environmentalBiodiversityTagScoreList()"
+          optionLabel="name"
+          optionValue="id"
+          fieldRef="[general-info]-environmental_biodiversity_impact_area_id"
+          [(ngModel)]="this.generalInfoBody.environmental_biodiversity_impact_area_id">
+        </app-pr-radio-button>
+      }
     }
   </div>
 
@@ -135,13 +235,38 @@
       <div id="poverty_tag_alert" [hidden]="this.generalInfoBody.poverty_tag_level_id != 3"></div>
     </div>
     @if (this.generalInfoBody.poverty_tag_level_id == 3) {
-      <app-pr-radio-button
-        [options]="this.getImpactAreasScoresComponents.povertyTagScoreList()"
-        optionLabel="name"
-        optionValue="id"
-        fieldRef="[general-info]-poverty_impact_area_id"
-        [(ngModel)]="this.generalInfoBody.poverty_impact_area_id">
-      </app-pr-radio-button>
+      @if (this.dataControlSE.currentResultSignal()?.portfolio === 'P25') {
+        <app-pr-field-header
+          [label]="this.getImpactAreaFieldLabel('[general-info]-poverty_impact_area_id')"
+          [description]="this.getImpactAreaFieldDescription('[general-info]-poverty_impact_area_id')"
+          [required]="this.getImpactAreaFieldRequired('[general-info]-poverty_impact_area_id')"
+          [useColon]="false">
+        </app-pr-field-header>
+        <div class="pr-field">
+          <div class="radioButtonList">
+            @for (option of this.getImpactAreasScoresComponents.povertyTagScoreList(); track option.id; let i = $index) {
+              <div class="radioButton">
+                <p-checkbox
+                  [binary]="true"
+                  [inputId]="'poverty_checkbox_' + i"
+                  [ngModel]="this.isImpactAreaSelected('poverty_impact_area_id', option.id)"
+                  (ngModelChange)="this.toggleImpactAreaSelection('poverty_impact_area_id', option.id)"
+                  [disabled]="this.dataControlSE.isKnowledgeProduct || this.rolesSE.readOnly">
+                </p-checkbox>
+                <label [for]="'poverty_checkbox_' + i" class="name pr-body-2">{{ option.name }}</label>
+              </div>
+            }
+          </div>
+        </div>
+      } @else {
+        <app-pr-radio-button
+          [options]="this.getImpactAreasScoresComponents.povertyTagScoreList()"
+          optionLabel="name"
+          optionValue="id"
+          fieldRef="[general-info]-poverty_impact_area_id"
+          [(ngModel)]="this.generalInfoBody.poverty_impact_area_id">
+        </app-pr-radio-button>
+      }
     }
   </div>
 
