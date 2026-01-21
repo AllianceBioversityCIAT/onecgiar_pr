@@ -14,6 +14,7 @@
           }}"
           style="font-size: 15px; cursor: pointer"
           (click)="toggleFullScreen()"></i>
+
         <i class="pi pi-times" style="font-size: 16px; cursor: pointer" (click)="closeDrawer()"></i>
       </div>
     </div>
@@ -29,12 +30,14 @@
 
       <div class="result-review-drawer-content_meta">
         <span class="result-review-drawer-content_meta_item">
-          <i class="material-icons-round">folder</i>
+          <i class="pi pi-folder-open"></i>
           {{ fields?.commonFields?.result_category }}
         </span>
+
         <span class="result-review-drawer-content_meta_separator">•</span>
+
         <span class="result-review-drawer-content_meta_item">
-          <i class="material-icons-round">person</i>
+          <i class="pi pi-user"></i>
           Submitted by {{ fields?.commonFields?.submitter_name }}
         </span>
       </div>
@@ -43,19 +46,29 @@
     <div class="form-section">
       <div class="form-section_title">TOC ALIGNMENT</div>
       <!-- TOC ALIGNMENT Section -->
-      <h3>Does this result align with the Program's TOC?</h3>
-      {{ fields?.tocMetadata[0]?.planned_result ? 'Yes' : 'No' }}
-      <br /><br />
-      <h3>TOC result</h3>
+      <h4 class="pr-h4 font-weight-600 text-black">Does this result align with the Program's TOC?</h4>
+      <p class="pr-body-2 font-weight-400 text-black">
+        {{ fields?.tocMetadata[0]?.planned_result ? 'Yes' : 'No' }}
+      </p>
+
+      <br />
+
+      <h4 class="pr-h4 font-weight-600 text-black">TOC result</h4>
       @if (fields?.tocMetadata?.[0]?.acronym || fields?.tocMetadata?.[0]?.result_title) {
-        {{ fields?.tocMetadata[0]?.acronym + ' - ' + fields?.tocMetadata[0]?.result_title }}
+        <p class="pr-body-2 font-weight-400 text-black">
+          {{ fields?.tocMetadata[0]?.acronym + ' - ' + fields?.tocMetadata[0]?.result_title }}
+        </p>
       } @else {
         <p class="not_provided_text">Not provided</p>
       }
-      <br /><br />
-      <h3>Indicator</h3>
+
+      <br />
+
+      <h4 class="pr-h4 font-weight-600 text-black">Indicator</h4>
       @if (fields?.tocMetadata?.[0]?.indicator_description) {
-        {{ fields?.tocMetadata[0]?.indicator_description }}
+        <p class="pr-body-2 font-weight-400 text-black">
+          {{ fields?.tocMetadata[0]?.indicator_description }}
+        </p>
       } @else {
         <p class="not_provided_text">Not provided</p>
       }
@@ -63,15 +76,20 @@
 
     <div class="form-section">
       <div class="form-section_title">DATA STANDARDS</div>
-      <h2>Result Description</h2>
+
+      <h4 class="pr-h4 font-weight-600 text-black" style="margin-bottom: 5px">Result Description</h4>
       @if (fields?.commonFields?.result_description) {
-        {{ fields?.commonFields?.result_description }}
+        <p class="pr-body-2 font-weight-400 text-black">
+          {{ fields?.commonFields?.result_description }}
+        </p>
       } @else {
         <p class="not_provided_text">Not provided</p>
       }
-      <br />
+
       <hr class="form-section_separator" />
-      <h2>Geographic Location</h2>
+
+      <h4 class="pr-h4 font-weight-600 text-black">Geographic Location</h4>
+
       @if (fields?.geographicScope) {
         <app-geoscope-management
           label="What is the main geographic focus of the Output?"
@@ -107,9 +125,10 @@
       } @else {
         <p class="not_provided_text">Not provided</p>
       }
-      <br />
+
       <hr class="form-section_separator" />
-      <h2>Contributing Centers</h2>
+
+      <h4 class="pr-h4 font-weight-600 text-black">Contributing Centers</h4>
       @if (fields?.contributingCenters?.length) {
         <div class="readonly-chips-container">
           @for (center of fields?.contributingCenters; track $index) {
@@ -119,7 +138,8 @@
       } @else {
         <p class="not_provided_text">Not provided</p>
       }
-      <h2>Contributing Science Programs</h2>
+
+      <h4 class="pr-h4 font-weight-600 text-black">Contributing Science Programs</h4>
       @if (fields?.contributingInitiatives?.length) {
         <div class="readonly-chips-container">
           @for (program of fields?.contributingInitiatives; track $index) {
@@ -129,7 +149,8 @@
       } @else {
         <p class="not_provided_text">Not provided</p>
       }
-      <h2>Contributing Bilateral Projects</h2>
+
+      <h4 class="pr-h4 font-weight-600 text-black">Contributing Bilateral Projects</h4>
       @if (fields?.contributingProjects?.length) {
         <div class="readonly-chips-container">
           @for (project of fields?.contributingProjects; track $index) {
@@ -139,19 +160,21 @@
       } @else {
         <p class="not_provided_text">Not provided</p>
       }
-      <br />
+
       <hr class="form-section_separator" />
-      <h2>Partners</h2>
+
+      <h4 class="pr-h4 font-weight-600 text-black">Partners</h4>
       @if (fields?.contributingInstitutions?.length) {
         @for (partner of fields?.contributingInstitutions; track $index) {
-          <p>{{ partner.obj_institutions.name }}</p>
+          <p class="pr-body-2 font-weight-400 text-black">{{ partner?.obj_institutions?.name ?? 'No partner selected' }}</p>
         }
       } @else {
         <p class="not_provided_text">Not provided</p>
       }
-      <br />
+
       <hr class="form-section_separator" />
-      <h2>Evidence</h2>
+
+      <h4 class="pr-h4 font-weight-600 text-black">Evidence</h4>
       @if (fields?.evidence?.length) {
         <div class="readonly-chips-container">
           @for (evidence of fields?.evidence; track $index) {
@@ -162,21 +185,14 @@
         <p class="not_provided_text">Not provided</p>
       }
     </div>
-
   </div>
 
   <!-- Footer Actions -->
   <ng-template #footer>
     <div class="result-review-drawer-footer">
       @if (resultToReview()?.status_name !== 'Approved' && resultToReview()?.status_name !== 'Rejected') {
-        <button pButton class="approve-button" (click)="onApprove()">
-          <i class="pi pi-check"></i>
-          <span>APPROVE</span>
-        </button>
-        <button pButton class="reject-button" (click)="onReject()">
-          <i class="pi pi-times"></i>
-          <span>REJECT</span>
-        </button>
+        <p-button label="APPROVE" styleClass="approve-button" (click)="onApprove()" icon="pi pi-check-circle" variant="outlined" size="large" />
+        <p-button label="REJECT" styleClass="reject-button" (click)="onReject()" icon="pi pi-times-circle" variant="outlined" size="large" />
       }
     </div>
   </ng-template>
@@ -198,15 +214,14 @@
     <div class="modal-icon approve">
       <i class="pi pi-check"></i>
     </div>
+
     <h2 class="modal-title approve">APPROVE RESULT – {{ resultToReview()?.result_code }}</h2>
     <p class="modal-message">Status will be changed to "Approved", and further changes can be made before the final submission.</p>
   </div>
+
   <div class="modal-actions">
-    <button class="btn-cancel" (click)="cancelApprove()" [disabled]="isSaving()">Cancel</button>
-    <button class="btn-confirm approve" (click)="confirmApprove()" [disabled]="isSaving()">
-      <i class="pi pi-spinner pi-spin" *ngIf="isSaving()"></i>
-      {{ isSaving() ? 'Approving...' : 'Confirm' }}
-    </button>
+    <p-button label="Cancel" size="large" (click)="cancelApprove()" [disabled]="isSaving()" variant="outlined"></p-button>
+    <p-button label="Confirm" size="large" (click)="confirmApprove()" [disabled]="isSaving()" [loading]="isSaving()"></p-button>
   </div>
 </p-dialog>
 
@@ -229,10 +244,11 @@
     <h2 class="modal-title reject">REJECT RESULT – {{ resultToReview()?.result_code }}</h2>
     <p class="modal-message">Please provide a detailed justification for rejecting this result.</p>
     <div class="modal-field">
-      <label class="modal-label required">Justification</label>
+      <label class="modal-label required" for="rejectJustification">Justification</label>
       <textarea
         pInputTextarea
         [(ngModel)]="rejectJustification"
+        id="rejectJustification"
         [rows]="4"
         placeholder="Please explain why this result is being rejected..."></textarea>
     </div>

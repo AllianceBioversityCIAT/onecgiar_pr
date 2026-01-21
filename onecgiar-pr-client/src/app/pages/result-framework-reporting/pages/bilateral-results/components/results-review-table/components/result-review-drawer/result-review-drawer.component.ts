@@ -17,7 +17,7 @@ import { ResultToReview, BilateralResultDetail } from './result-review-drawer.in
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
-  private api = inject(ApiService);
+  private readonly api = inject(ApiService);
 
   visible = model<boolean>(false);
   resultToReview = model<ResultToReview | null>(null);
@@ -81,13 +81,11 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   confirmApprove(): void {
     const result = this.resultToReview();
     if (!result) return;
-
     this.isSaving.set(true);
     const body = {
       decision: 'APPROVE' as const,
       justification: 'Approved'
     };
-
     this.api.resultsSE.PATCH_BilateralReviewDecision(result.id, body).subscribe({
       next: () => {
         this.showConfirmApproveDialog.set(false);
