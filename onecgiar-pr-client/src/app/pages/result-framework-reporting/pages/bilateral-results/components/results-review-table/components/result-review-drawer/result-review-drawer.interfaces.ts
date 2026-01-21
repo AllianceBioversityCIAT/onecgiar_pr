@@ -30,7 +30,12 @@ export interface BilateralResultDetail {
   resultTypeResponse: BilateralResultTypeResponse[];
 }
 
+export interface BilateralInnovationDevResponse {
+  innovation_type_name: string;
+}
+
 export interface BilateralCommonFields {
+  result_type_id: number;
   project_name: string;
   center_name: string;
   id: string;
@@ -150,6 +155,7 @@ export interface BilateralEvidence {
 }
 
 export interface BilateralResultTypeResponse {
+  metadata: BilateralResultTypeMetadata[];
   source: string;
   year: string;
   knowledge_product_type: string;
@@ -159,4 +165,39 @@ export interface BilateralResultTypeResponse {
   licence: string;
   is_agrovoc: number;
   keyword: string;
+  keywords: BilateralKeyword[];
+  innovation_type_name: string;
+  innovation_developers: string;
+  level: string;
+  name: string;
+  policy_type_name: string;
+  policy_stage_name: string;
+  implementing_organization: BilateralImplementingOrganization[];
+  male_using: string;
+  female_using: string;
+  non_binary_using: string;
+  has_unkown_using: string;
+  term_name: string;
+  delivery_method_name: string;
+}
+
+export interface BilateralImplementingOrganization {
+  acronym: string;
+  institution_id: number;
+  institution_name: string;
+}
+
+export interface BilateralKeyword {
+  result_kp_keyword_id: string;
+  is_agrovoc: number;
+  keyword: string;
+}
+
+export interface BilateralResultTypeMetadata {
+  result_kp_metadata_id: string;
+  source: string;
+  year: string;
+  is_peer_reviewed: number;
+  is_isi: number;
+  accesibility: string;
 }

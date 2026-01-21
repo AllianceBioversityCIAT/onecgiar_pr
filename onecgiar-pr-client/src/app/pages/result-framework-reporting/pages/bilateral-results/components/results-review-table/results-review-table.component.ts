@@ -21,6 +21,7 @@ export class ResultsReviewTableComponent {
   currentResultToReview = signal<ResultToReview | null>(null);
 
   tableData = signal<GroupedResult[]>([]);
+  selectedCenters = signal<string[]>([]);
 
   filteredTableData = computed(() => {
     const searchText = this.bilateralResultsService.searchText().toLowerCase().trim();
@@ -49,7 +50,9 @@ export class ResultsReviewTableComponent {
     const centers = this.bilateralResultsService.currentCenterSelected();
     if (centers.length > 0) {
       this.getResultsToReview(centers);
+      this.selectedCenters.set(centers);
     }
+    this.tableData.set([]);
   });
 
   getResultsToReview(centers: string[]): void {

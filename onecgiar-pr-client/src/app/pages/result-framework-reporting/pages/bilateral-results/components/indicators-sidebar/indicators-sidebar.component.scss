@@ -1,15 +1,15 @@
+@use '../../../../../../../styles/fonts.scss' as fonts;
+
 .sidebar-container {
-  padding: 16px 12px;
   height: 100%;
-  background-color: #E8E8E8;
+  background-color: rgba(var(--pr-color-secondary-rgb), 0.1);
+  padding: 16px 24px;
 }
 
 .sidebar-title {
-  font-size: 18px;
+  @include fonts.pr-typography('h4');
   font-weight: 700;
-  color: #2C3E50;
-  margin: 0 0 12px 0;
-  padding: 0 6px;
+  color: var(--pr-color-secondary-400);
 }
 
 .centers-list {
@@ -29,53 +29,32 @@
   gap: 10px;
 
   &:hover {
-    background-color: rgba(123, 127, 184, 0.1);
+    background-color: rgba(var(--pr-color-secondary-rgb), 0.1);
   }
 
   &.selected {
-    background-color: #7B7FB8;
-    color: #FFFFFF;
+    background-color: var(--pr-color-secondary-200);
+    color: var(--pr-color-white);
 
     .center-icon,
     .center-name {
-      color: #FFFFFF;
-    }
-
-    .center-count {
-      background-color: rgba(255, 255, 255, 0.25);
-      color: #FFFFFF;
+      color: var(--pr-color-white);
     }
   }
 }
 
 .center-icon {
   font-size: 18px;
-  color: #2C3E50;
+  color: var(--pr-color-secondary-400);
   flex-shrink: 0;
 }
 
 .center-name {
   flex: 1;
-  font-size: 12px;
+  @include fonts.pr-typography('body-2');
   font-weight: 500;
-  color: #2C3E50;
+  color: var(--pr-color-secondary-400);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
-.center-count {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 22px;
-  height: 22px;
-  padding: 0 6px;
-  border-radius: 50%;
-  background-color: #C5CAE9;
-  color: #3949AB;
-  font-size: 11px;
-  font-weight: 600;
-  flex-shrink: 0;
-}
-

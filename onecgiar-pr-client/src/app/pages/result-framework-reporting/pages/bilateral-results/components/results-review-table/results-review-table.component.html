@@ -9,33 +9,36 @@
   rowGroupMode="subheader"
   groupRowsBy="project_name"
   [expandedRowKeys]="expandedRowKeys()">
-
   <!-- Header -->
   <ng-template pTemplate="header">
     <tr>
-      <th style="width: 5%">Code</th>
-      <th style="width: 15%">Title</th>
-      <th style="width: 10%">Indicator category</th>
-      <th style="width: 8%">Status</th>
-      <th style="width: 18%">TOC result</th>
-      <th style="width: 15%">Indicator</th>
-      <th style="width: 10%">Submission date</th>
-      <th style="width: 19%; text-align: center">Actions</th>
+      <th id="code" style="width: 5%">Code</th>
+      <th id="title" style="width: 15%">Title</th>
+      <th id="indicator-category" style="width: 10%">Indicator category</th>
+      @if (selectedCenters().length > 1) {
+        <th id="lead-center" style="width: 10%">Lead center</th>
+      }
+      <th id="status" style="width: 8%">Status</th>
+      <th id="toc-result" style="width: 18%">TOC result</th>
+      <th id="indicator" style="width: 15%">Indicator</th>
+      <th id="submission-date" style="width: 10%">Submission date</th>
+      <th id="actions" style="width: 19%; text-align: center">Actions</th>
     </tr>
   </ng-template>
 
   <!-- Group Header -->
   <ng-template pTemplate="groupheader" let-item let-expanded="expanded">
     <tr>
-      <td colspan="8" class="group-header-cell">
+      <td [attr.colspan]="selectedCenters().length > 1 ? 9 : 8" class="group-header-cell">
         <div class="group-header-content" pRipple [pRowToggler]="item">
           <button
             type="button"
             pButton
-            class="p-button-text p-button-rounded group-toggle-button"
-            [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'">
-          </button>
-          <span class="group-title">{{ item.project_name }}</span>
+            class="p-button-text p-button-rounded"
+            style="border: none; box-shadow: none !important"
+            [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"></button>
+
+          <span style="font-weight: bold">{{ item.project_name }}</span>
         </div>
       </td>
     </tr>
@@ -47,20 +50,23 @@
       <tr>
         <td class="code-cell">{{ result.result_code }}</td>
         <td class="title-cell">{{ result.result_title }}</td>
-        <td class="category-cell">{{ result.indicator_category }}</td>
-        <td class="status-cell">
-          <span
+        <td>{{ result.indicator_category }}</td>
+        @if (selectedCenters().length > 1) {
+          <td>{{ result.lead_center ?? 'Not specified' }}</td>
+        }
+        <td>
+          <div
             class="status-badge"
             [ngClass]="{
-              'approved': result.status_name === 'Approved',
-              'rejected': result.status_name === 'Rejected',
-              'pending': result.status_name !== 'Approved' && result.status_name !== 'Rejected'
+              approved: result.status_name === 'Approved',
+              rejected: result.status_name === 'Rejected',
+              pending: result.status_name !== 'Approved' && result.status_name !== 'Rejected'
             }">
             {{ result.status_name }}
-          </span>
+          </div>
         </td>
-        <td class="toc-cell">{{ result.toc_title }}</td>
-        <td class="indicator-cell">{{ result.indicator }}</td>
+        <td class="toc-cell">{{ result.toc_title ?? 'Not specified' }}</td>
+        <td class="indicator-cell">{{ result.indicator ?? 'Not specified' }}</td>
         <td class="date-cell">{{ result.submission_date | date: 'dd/MM/yyyy' }}</td>
         <td class="actions-cell">
           <button
@@ -72,7 +78,7 @@
             pTooltip="Review result"
             tooltipPosition="top">
             <i class="material-icons-outlined">edit</i>
-            <span>Review result</span>
+            Review result
           </button>
         </td>
       </tr>
@@ -82,17 +88,12 @@
   <!-- Empty Message -->
   <ng-template pTemplate="emptymessage">
     <tr style="height: 200px">
-      <td colspan="8" class="empty-message">
-        No results found.
-      </td>
+      <td [attr.colspan]="selectedCenters().length > 1 ? 9 : 8" style="text-align: center; font-weight: 600">No results found.</td>
     </tr>
   </ng-template>
 </p-table>
 
 @if (showReviewDrawer()) {
-  <app-result-review-drawer
-    [(visible)]="showReviewDrawer"
-    [(resultToReview)]="currentResultToReview"
-    (decisionMade)="onDecisionMade()">
+  <app-result-review-drawer [(visible)]="showReviewDrawer" [(resultToReview)]="currentResultToReview" (decisionMade)="onDecisionMade()">
   </app-result-review-drawer>
 }
