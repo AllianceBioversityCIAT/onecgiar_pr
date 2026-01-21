@@ -73,7 +73,7 @@ describe('EmailNotificationManagementService', () => {
   });
 
   describe('sendEmail', () => {
-    it('should emit the email with correct payload', () => {
+    it('should emit the email with correct payload', async () => {
       const email: ConfigMessageDto = {
         from: { email: 'support@prms.pr', name: '[PRMS]' },
         emailBody: {
@@ -92,7 +92,7 @@ describe('EmailNotificationManagementService', () => {
         },
         data: email,
       };
-      service.sendEmail(email);
+      await service.sendEmail(email);
       expect(clientProxy.emit).toHaveBeenCalledWith('send', expectedPayload);
     });
   });

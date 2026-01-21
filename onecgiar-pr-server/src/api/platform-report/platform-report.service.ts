@@ -1,4 +1,10 @@
-import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  OnModuleInit,
+  Optional,
+} from '@nestjs/common';
 import { PlatformReportRepository } from './repositories/platform-report.repository';
 import { PlatformReportEnum } from './entities/platform-report.enum';
 import {
@@ -10,6 +16,7 @@ import { ResultRepository } from '../results/result.repository';
 import { Result } from '../results/entities/result.entity';
 import axios from 'axios';
 import { ClientProxy } from '@nestjs/microservices';
+import { RabbitMQLazyService } from '../../shared/microservices/rabbitmq/rabbitmq-lazy.service';
 
 @Injectable()
 export class PlatformReportService implements OnModuleInit {
@@ -27,20 +34,65 @@ export class PlatformReportService implements OnModuleInit {
     private readonly _platformReportRepository: PlatformReportRepository,
     private readonly _handlerError: HandlersError,
     private readonly _resultRepository: ResultRepository,
-    @Inject('REPORT_SERVICE') private client: ClientProxy,
+    @Optional()
+    @Inject('REPORT_SERVICE')
+    private client: ClientProxy | null,
+    @Optional() private readonly _lazyService: RabbitMQLazyService | null,
   ) {}
 
+  /**
+   * Check if running in Lambda environment
+   */
+  private isLambda(): boolean {
+    return !!env.AWS_LAMBDA_FUNCTION_NAME || !!env.LAMBDA_TASK_ROOT;
+  }
+
   async onModuleInit() {
-    try {
-      await this.client.connect();
+    // In Lambda, skip automatic connection - use lazy connection instead
+    if (this.isLambda()) {
       this._logger.log(
-        'Successfully connected to RabbitMQ Reports MicroService',
+        'Lambda environment detected - RabbitMQ connection will be lazy',
       );
+      return;
+    }
+
+    // In non-Lambda environments, connect normally
+    if (this.client) {
+      try {
+        await this.client.connect();
+        this._logger.log(
+          'Successfully connected to RabbitMQ Reports MicroService',
+        );
+      } catch (error) {
+        this._logger.error(
+          'Failed to connect to RabbitMQ Reports MicroService',
+          error.message,
+        );
+      }
+    }
+  }
+
+  /**
+   * Emit message to report queue (with lazy support for Lambda)
+   */
+  private async emitToReportQueue(pattern: string, data: any): Promise<boolean> {
+    try {
+      // In Lambda, use lazy connection
+      if (this.isLambda() && this._lazyService) {
+        return await this._lazyService.emitReport(pattern, data);
+      }
+
+      // Standard connection
+      if (this.client) {
+        this.client.emit(pattern, data);
+        return true;
+      }
+
+      this._logger.warn('No RabbitMQ client available for report queue');
+      return false;
     } catch (error) {
-      this._logger.error(
-        'Failed to connect to RabbitMQ Reports MicroService',
-        error.message,
-      );
+      this._logger.error('Failed to emit to report queue', error.message);
+      return false;
     }
   }
 
@@ -274,7 +326,7 @@ export class PlatformReportService implements OnModuleInit {
         credentials: this.authHeaderMs2,
       };
 
-      this.client.emit('pdf.generate', info);
+      await this.emitToReportQueue('pdf.generate', info);
       const url = await this.fetchPDF(env.AWS_BUCKET_NAME, fileName);
       return url;
     } catch (error) {

@@ -1,9 +1,16 @@
-import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  OnModuleInit,
+  Optional,
+} from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { env } from 'process';
 import { ConfigMessageDto } from './dto/send-email.dto';
 import { EmailTemplate } from './enum/email-notification.enum';
 import { BuildEmailDataDto } from './dto/email-template.dto';
+import { RabbitMQLazyService } from '../rabbitmq/rabbitmq-lazy.service';
 
 @Injectable()
 export class EmailNotificationManagementService implements OnModuleInit {
@@ -15,26 +22,77 @@ export class EmailNotificationManagementService implements OnModuleInit {
     password: env.MS_NOTIFICATION_PASSWORD,
   };
 
-  constructor(@Inject('EMAIL_SERVICE') private readonly _client: ClientProxy) {}
+  constructor(
+    @Optional()
+    @Inject('EMAIL_SERVICE')
+    private readonly _client: ClientProxy | null,
+    @Optional() private readonly _lazyService: RabbitMQLazyService | null,
+  ) {}
+
+  /**
+   * Check if running in Lambda environment
+   */
+  private isLambda(): boolean {
+    return !!env.AWS_LAMBDA_FUNCTION_NAME || !!env.LAMBDA_TASK_ROOT;
+  }
 
   async onModuleInit() {
-    try {
-      await this._client.connect();
-      this._logger.log('Successfully connected to RabbitMQ Email MicroService');
-    } catch (error) {
-      this._logger.error(
-        'Failed to connect to RabbitMQ Email MicroService',
-        error.message,
+    // In Lambda, skip automatic connection - use lazy connection instead
+    if (this.isLambda()) {
+      this._logger.log(
+        'Lambda environment detected - RabbitMQ connection will be lazy',
       );
+      return;
+    }
+
+    // In non-Lambda environments, connect normally
+    if (this._client) {
+      try {
+        await this._client.connect();
+        this._logger.log(
+          'Successfully connected to RabbitMQ Email MicroService',
+        );
+      } catch (error) {
+        this._logger.error(
+          'Failed to connect to RabbitMQ Email MicroService',
+          error.message,
+        );
+      }
     }
   }
 
-  sendEmail(configMessageDto: ConfigMessageDto) {
+  /**
+   * Send email via RabbitMQ
+   * Handles failures gracefully - API continues to work even if RabbitMQ is down
+   */
+  async sendEmail(configMessageDto: ConfigMessageDto): Promise<boolean> {
     const payload = {
       auth: this.authHeaderMs1,
       data: configMessageDto,
     };
-    this._client.emit('send', payload);
+
+    try {
+      // In Lambda or when lazy service is available, use lazy connection
+      if (this.isLambda() && this._lazyService) {
+        const sent = await this._lazyService.emitEmail('send', payload);
+        if (!sent) {
+          this._logger.warn('Email not sent - RabbitMQ unavailable (Lambda)');
+        }
+        return sent;
+      }
+
+      // Standard connection
+      if (this._client) {
+        this._client.emit('send', payload);
+        return true;
+      }
+
+      this._logger.warn('No RabbitMQ client available for sending email');
+      return false;
+    } catch (error) {
+      this._logger.error('Failed to send email via RabbitMQ', error.message);
+      return false;
+    }
   }
 
   public buildEmailData(emailTemplate: EmailTemplate, data: BuildEmailDataDto) {

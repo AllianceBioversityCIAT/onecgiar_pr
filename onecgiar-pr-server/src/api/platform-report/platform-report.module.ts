@@ -11,22 +11,38 @@ import { ResultRepository } from '../results/result.repository';
 import { TemplateRepository } from './repositories/template.repository';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { env } from 'process';
+import { RabbitMQLazyModule } from '../../shared/microservices/rabbitmq/rabbitmq-lazy.module';
+
+/**
+ * Check if running in Lambda environment
+ */
+const isLambda = (): boolean => {
+  return !!env.AWS_LAMBDA_FUNCTION_NAME || !!env.LAMBDA_TASK_ROOT;
+};
 
 @Module({
   imports: [
-    ClientsModule.register([
-      {
-        name: 'REPORT_SERVICE',
-        transport: Transport.RMQ,
-        options: {
-          urls: [env.RABBITMQ_URL],
-          queue: env.REPORT_QUEUE,
-          queueOptions: {
-            durable: true,
-          },
-        },
-      },
-    ]),
+    // Import lazy module for Lambda support
+    RabbitMQLazyModule,
+    // Only register ClientsModule if not in Lambda
+    // This prevents automatic connection during bootstrap
+    ...(isLambda()
+      ? []
+      : [
+          ClientsModule.register([
+            {
+              name: 'REPORT_SERVICE',
+              transport: Transport.RMQ,
+              options: {
+                urls: [env.RABBITMQ_URL],
+                queue: env.REPORT_QUEUE,
+                queueOptions: {
+                  durable: true,
+                },
+              },
+            },
+          ]),
+        ]),
   ],
   controllers: [PlatformReportController],
   providers: [
