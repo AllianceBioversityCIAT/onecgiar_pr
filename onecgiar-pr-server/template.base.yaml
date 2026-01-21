@@ -1,0 +1,96 @@
+# ============================================================
+# BASE TEMPLATE REFERENCE
+# The template.yaml file is automatically generated from .env
+# using: npm run sam:generate
+# 
+# DO NOT edit template.yaml directly - edit this file
+# if you need to change the template structure
+# ============================================================
+
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: PRMS Reporting API - Lambda Function with API Gateway
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    Description: Environment name (dev, staging, prod)
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 1024
+    Runtime: nodejs20.x
+
+Resources:
+  # Main Lambda Function
+  PrmsReportingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'prstaging-${Environment}-main'
+      Handler: dist/lambda.handler
+      CodeUri: .sam-build/
+      Description: PRMS Reporting API Lambda Function
+      Environment:
+        Variables:
+          NODE_ENV: !Ref Environment
+          # ↓↓↓ Variables from .env are automatically injected here ↓↓↓
+      Events:
+        ApiGateway:
+          Type: HttpApi
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+            ApiId: !Ref PrmsReportingApi
+
+  # API Gateway HTTP API
+  PrmsReportingApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Name: !Sub 'prstaging-${Environment}'
+      Description: PRMS Reporting API Gateway
+      CorsConfiguration:
+        AllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          - OPTIONS
+          - HEAD
+        AllowHeaders:
+          - Content-Type
+          - X-Amz-Date
+          - Authorization
+          - X-Api-Key
+          - X-Amz-Security-Token
+        AllowOrigins:
+          - '*'
+        MaxAge: 300
+
+  # CloudWatch Log Group
+  PrmsReportingLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/prstaging-${Environment}-main'
+      RetentionInDays: 14
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub 'https://${PrmsReportingApi}.execute-api.${AWS::Region}.amazonaws.com'
+    Export:
+      Name: !Sub '${AWS::StackName}-ApiUrl'
+  
+  FunctionName:
+    Description: Lambda Function Name
+    Value: !Ref PrmsReportingFunction
+    Export:
+      Name: !Sub '${AWS::StackName}-FunctionName'
+  
+  FunctionArn:
+    Description: Lambda Function ARN
+    Value: !GetAtt PrmsReportingFunction.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-FunctionArn'

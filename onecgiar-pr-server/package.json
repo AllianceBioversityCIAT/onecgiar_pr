@@ -27,7 +27,17 @@
     "migration:check": "ts-node -r tsconfig-paths/register ./scripts/check-pending-migrations.ts",
     "migration:check:ci": "ts-node -r tsconfig-paths/register ./scripts/check-pending-migrations.ts --quiet",
     "lambda:test": "sls offline start",
-    "lambda:deploy": "sls deploy -v"
+    "lambda:deploy": "sls deploy -v",
+    "sam:generate": "node scripts/sam-env-inject.js --generate-template",
+    "sam:generate:docker": "node scripts/sam-env-inject.js --generate-template --docker",
+    "sam:list-env": "node scripts/sam-env-inject.js --list",
+    "sam:build": "node scripts/sam-env-inject.js --generate-template && sam build",
+    "sam:build:docker": "node scripts/sam-env-inject.js --generate-template --docker && sam build",
+    "sam:deploy": "node scripts/sam-deploy.js",
+    "sam:deploy:docker": "npm run build && npm run sam:generate:docker && sam build && sam deploy --resolve-image-repos",
+    "sam:prepare": "node scripts/sam-deploy.js --dry-run",
+    "sam:prepare:docker": "npm run build && npm run sam:generate:docker && sam build && sam deploy --no-execute-changeset --resolve-image-repos",
+    "sam:local": "node scripts/sam-env-inject.js --generate-template && sam local start-api"
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.804.0",

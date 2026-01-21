@@ -40,5 +40,11 @@ lerna-debug.log*
 .build
 .serverless
 
+# SAM (template.yaml is automatically generated from .env)
+.aws-sam
+.sam-build
+.sam-parameters.json
+template.yaml
+
 #aws_secret_access_key
 .aws

@@ -1,0 +1,34 @@
+# SAM CLI Configuration
+# This file defines default parameters for sam build, sam deploy, etc.
+#
+# IMPORTANT: Environment variables are automatically injected from .env
+# The template.yaml is dynamically generated with: npm run sam:deploy
+# No need to define parameter_overrides here
+
+version = 0.1
+
+[default]
+[default.global.parameters]
+stack_name = "prstaging-dev"
+
+[default.build.parameters]
+cached = false
+parallel = false
+# Use container to avoid long path issues on Windows
+# use_container = true  # Uncomment if you have Docker installed
+
+[default.deploy.parameters]
+capabilities = "CAPABILITY_IAM"
+confirm_changeset = false
+resolve_s3 = true
+region = "us-east-1"
+# Use configured AWS profile (optional)
+# profile = "serverless-deploy"
+
+[default.package.parameters]
+resolve_s3 = true
+
+[default.local_start_api.parameters]
+warm_containers = "EAGER"
+debug_port = 5858
+debug_args = ""

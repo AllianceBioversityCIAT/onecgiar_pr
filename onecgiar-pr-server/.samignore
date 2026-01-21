@@ -1,0 +1,58 @@
+# Files and directories to exclude from SAM package
+# This helps reduce the deployment package size
+
+# Development files
+.git
+.gitignore
+.vscode
+.idea
+*.md
+README*
+LICENSE
+Dockerfile
+docker-compose*
+
+# Test files
+test
+tests
+*.spec.ts
+*.test.ts
+coverage
+.nyc_output
+jest.config.*
+
+# Source files (we only need dist)
+src
+tsconfig*.json
+nest-cli.json
+eslint*
+.eslintrc*
+.prettier*
+
+# Development dependencies and configs
+.env.example
+env.example
+*.log
+npm-debug.log*
+
+# SAM/Serverless specific
+.aws-sam
+.serverless
+samconfig.toml
+template.base.yaml
+serverless.yaml
+Jenkinsfile*
+
+# Scripts (not needed in Lambda)
+scripts
+
+# Node modules dev dependencies (handled by bundling)
+node_modules/.cache
+node_modules/@types
+node_modules/typescript
+node_modules/jest*
+node_modules/eslint*
+node_modules/prettier
+node_modules/@typescript-eslint
+node_modules/ts-node
+node_modules/ts-jest

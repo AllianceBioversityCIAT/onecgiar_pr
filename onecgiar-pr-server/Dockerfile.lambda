@@ -1,0 +1,19 @@
+# Lambda Docker Image for PRMS Reporting API
+# Uses AWS Lambda Node.js base image
+
+FROM public.ecr.aws/lambda/nodejs:20
+
+# Set working directory
+WORKDIR ${LAMBDA_TASK_ROOT}
+
+# Copy package files
+COPY package*.json ./
+
+# Install production dependencies only
+RUN npm ci --omit=dev
+
+# Copy compiled application
+COPY dist/ ./dist/
+
+# Set the handler
+CMD ["dist/lambda.handler"]
