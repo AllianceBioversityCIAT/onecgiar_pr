@@ -5,8 +5,7 @@ import { ApiService } from '../../../../../../../shared/services/api/api.service
 import { InnovationDevelopmentQuestions } from './model/InnovationDevelopmentQuestions.model';
 import { InnovationDevInfoUtilsService } from './services/innovation-dev-info-utils.service';
 import { InnovationDevelopmentLinks } from './model/InnovationDevelopmentLinks.model';
-import { TerminologyService } from '../../../../../../../internationalization/terminology.service';
-import { EvidencesBody, EvidencesCreateInterface } from '../../../../result-detail/pages/rd-evidences/model/evidencesBody.model';
+import { EvidencesBody } from '../../../../result-detail/pages/rd-evidences/model/evidencesBody.model';
 import { FieldsManagerService } from '../../../../../../../shared/services/fields-manager.service';
 import { DataControlService } from '../../../../../../../shared/services/data-control.service';
 import { firstValueFrom } from 'rxjs';
@@ -27,10 +26,9 @@ export class InnovationDevInfoComponent {
   evidencesBody: EvidencesBody = new EvidencesBody();
 
   constructor(
-    private api: ApiService,
+    private readonly api: ApiService,
     public innovationControlListSE: InnovationControlListService,
-    private innovationDevInfoUtilsSE: InnovationDevInfoUtilsService,
-    private terminologyService: TerminologyService,
+    private readonly innovationDevInfoUtilsSE: InnovationDevInfoUtilsService,
     public fieldsManagerSE: FieldsManagerService,
     public dataControlSE: DataControlService
   ) {
@@ -99,13 +97,7 @@ export class InnovationDevInfoComponent {
 
   private getEvidenceDemandP25() {
     this.api.resultsSE.GET_evidenceDemandP25().subscribe(({ response }) => {
-      this.evidencesBody = response || new EvidencesBody();
-      if (!Array.isArray(this.evidencesBody.evidences)) {
-        this.evidencesBody.evidences = [] as unknown as Array<EvidencesCreateInterface>;
-      }
-      if (this.evidencesBody.evidences.length === 0) {
-        this.evidencesBody.evidences.push({ is_sharepoint: false } as any);
-      }
+      this.evidencesBody = response ?? new EvidencesBody();
     });
   }
 
@@ -297,9 +289,6 @@ export class InnovationDevInfoComponent {
 
   deleteEvidence(index: number) {
     this.evidencesBody.evidences.splice(index, 1);
-    if (this.evidencesBody.evidences.length === 0) {
-      this.evidencesBody.evidences.push({ is_sharepoint: false } as any);
-    }
   }
 
   getReadinessLevelIndex(): number {
