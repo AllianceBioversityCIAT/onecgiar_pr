@@ -64,6 +64,7 @@ import {
 } from './dto/review-decision.dto';
 import { ResultStatusData } from '../../shared/constants/result-status.enum';
 import { DataSource } from 'typeorm';
+import { ResultImpactAreaScoresService } from '../result-impact-area-scores/result-impact-area-scores.service';
 
 describe('ResultsService (unit, pure mocks)', () => {
   let module: TestingModule;
@@ -333,6 +334,17 @@ describe('ResultsService (unit, pure mocks)', () => {
 
   const mockImpactAreasScoresComponentRepository = {
     findOne: jest.fn().mockResolvedValue({ id: 123 }),
+    // Default: devolver un superset de IDs válidos usados en tests (201-205),
+    // para que validateImpactAreaScores no marque faltantes.
+    find: jest
+      .fn()
+      .mockResolvedValue([
+        { id: 201 },
+        { id: 202 },
+        { id: 203 },
+        { id: 204 },
+        { id: 205 },
+      ]),
   };
 
   const mockResultsTocResultRepository = {
@@ -374,6 +386,11 @@ describe('ResultsService (unit, pure mocks)', () => {
       };
       return callback(manager);
     }),
+  } as any;
+
+  const mockResultImpactAreaScoresService = {
+    create: jest.fn().mockResolvedValue([]),
+    find: jest.fn().mockResolvedValue([]),
   } as any;
 
   beforeEach(async () => {
@@ -519,6 +536,10 @@ describe('ResultsService (unit, pure mocks)', () => {
         {
           provide: DataSource,
           useValue: mockDataSource,
+        },
+        {
+          provide: ResultImpactAreaScoresService,
+          useValue: mockResultImpactAreaScoresService,
         },
       ],
     }).compile();

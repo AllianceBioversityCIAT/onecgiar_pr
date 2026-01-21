@@ -98,6 +98,7 @@ import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser
 import { ImpactAreasScoresComponentsModule } from '../results/impact_areas_scores_components/impact_areas_scores_components.module';
 import { AoWBilateralRepository } from '../results/results-toc-results/repositories/aow-bilateral.repository';
 import { ResultReviewHistoryRepository } from '../results/result-review-history/result-review-history.repository';
+import { ResultImpactAreaScoresModule } from '../result-impact-area-scores/result-impact-area-scores.module';
 
 @Module({
   controllers: [DeleteRecoverDataController],
@@ -200,6 +201,7 @@ import { ResultReviewHistoryRepository } from '../results/result-review-history/
     PrmsTablesTypesModule,
     SharePointModule,
     ImpactAreasScoresComponentsModule,
+    ResultImpactAreaScoresModule,
   ],
   exports: [
     EvidencesService,

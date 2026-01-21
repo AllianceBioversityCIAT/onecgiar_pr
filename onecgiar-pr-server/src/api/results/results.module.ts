@@ -99,6 +99,7 @@ import { AoWBilateralRepository } from './results-toc-results/repositories/aow-b
 import { IntellectualPropertyExpertsModule } from './intellectual_property_experts/intellectual_property_experts.module';
 import { ResultReviewHistoryRepository } from './result-review-history/result-review-history.repository';
 import { GeographicLocationModule } from '../results-framework-reporting/geographic-location/geographic-location.module';
+import { ResultImpactAreaScoresModule } from '../result-impact-area-scores/result-impact-area-scores.module';
 
 @Module({
   controllers: [ResultsController],
@@ -159,6 +160,7 @@ import { GeographicLocationModule } from '../results-framework-reporting/geograp
     ResultsByProjectsModule,
     IntellectualPropertyExpertsModule,
     forwardRef(() => GeographicLocationModule),
+    ResultImpactAreaScoresModule,
   ],
   providers: [
     ResultsService,
