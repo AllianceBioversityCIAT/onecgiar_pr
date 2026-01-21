@@ -8,10 +8,26 @@ import { TextareaModule } from 'primeng/textarea';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { GeoscopeManagementModule } from '../../../../../../../../shared/components/geoscope-management/geoscope-management.module';
 import { ResultToReview, BilateralResultDetail } from './result-review-drawer.interfaces';
+import { KpContentComponent } from './components/kp-content/kp-content.component';
+import { InnoDevContentComponent } from './components/inno-dev-content/inno-dev-content.component';
+import { CapSharingContentComponent } from './components/cap-sharing-content/cap-sharing-content.component';
+import { PolicyChangeContentComponent } from './components/policy-change-content/policy-change-content.component';
 
 @Component({
   selector: 'app-result-review-drawer',
-  imports: [DrawerModule, CommonModule, FormsModule, ButtonModule, DialogModule, TextareaModule, GeoscopeManagementModule],
+  imports: [
+    DrawerModule,
+    CommonModule,
+    FormsModule,
+    ButtonModule,
+    DialogModule,
+    TextareaModule,
+    GeoscopeManagementModule,
+    KpContentComponent,
+    InnoDevContentComponent,
+    CapSharingContentComponent,
+    PolicyChangeContentComponent
+  ],
   templateUrl: './result-review-drawer.component.html',
   styleUrl: './result-review-drawer.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

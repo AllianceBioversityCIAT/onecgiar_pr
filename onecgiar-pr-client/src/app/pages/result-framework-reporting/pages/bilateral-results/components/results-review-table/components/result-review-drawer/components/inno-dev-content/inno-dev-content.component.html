@@ -1,0 +1,14 @@
+<h4 class="pr-h4 font-weight-600 text-black">Innovation type:</h4>
+<div class="readonly-chips-container">
+  <span class="readonly-chip">{{ resultDetail?.resultTypeResponse?.[0]?.innovation_type_name }}</span>
+</div>
+
+<h4 class="pr-h4 font-weight-600 text-black">Innovation developer:</h4>
+<div class="readonly-chips-container">
+  <span class="readonly-chip">{{ resultDetail?.resultTypeResponse?.[0]?.innovation_developers }}</span>
+</div>
+
+<h4 class="pr-h4 font-weight-600 text-black">Current readiness of this innovation:</h4>
+<div class="readonly-chips-container">
+  <span class="readonly-chip">{{ resultDetail?.resultTypeResponse?.[0]?.level }} - {{ resultDetail?.resultTypeResponse?.[0]?.name }}</span>
+</div>

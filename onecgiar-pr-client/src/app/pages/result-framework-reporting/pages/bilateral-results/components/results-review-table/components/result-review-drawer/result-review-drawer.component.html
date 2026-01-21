@@ -4,7 +4,9 @@
       <p class="result-review-drawer-header_entity">
         <span class="result-review-drawer-header_entity_acronym">{{ resultDetail()?.commonFields?.center_name }}</span>
         <span class="result-review-drawer-header_separator">|</span>
-        <span class="result-review-drawer-header_entity_code">{{ resultDetail()?.commonFields?.project_name }}</span>
+        <span class="result-review-drawer-header_entity_code">{{
+          resultDetail()?.commonFields?.project_name ?? 'Bilateral Project - Not specified'
+        }}</span>
       </p>
 
       <div class="result-review-drawer-header_icons">
@@ -44,7 +46,7 @@
     </div>
 
     <div class="form-section">
-      <div class="form-section_title">TOC ALIGNMENT</div>
+      <h3 class="form-section_title">TOC ALIGNMENT</h3>
       <!-- TOC ALIGNMENT Section -->
       <h4 class="pr-h4 font-weight-600 text-black">Does this result align with the Program's TOC?</h4>
       <p class="pr-body-2 font-weight-400 text-black">
@@ -75,7 +77,7 @@
     </div>
 
     <div class="form-section">
-      <div class="form-section_title">DATA STANDARDS</div>
+      <h3 class="form-section_title">DATA STANDARDS</h3>
 
       <h4 class="pr-h4 font-weight-600 text-black" style="margin-bottom: 5px">Result Description</h4>
       @if (fields?.commonFields?.result_description) {
@@ -100,9 +102,9 @@
 
         @if (fields.geographicScope.geo_scope_id != 1 && fields.geographicScope.geo_scope_id != 50 && fields.geographicScope.geo_scope_id) {
           @if (fields.geographicScope.has_extra_geo_scope !== null && fields.geographicScope.has_extra_geo_scope !== undefined) {
-            <div class="extra-geo-scope-section">
-              <p><strong>Are there any regions that you wish to specify for this Output?</strong></p>
-              <p>{{ fields.geographicScope.has_extra_geo_scope ? 'Yes' : 'No' }}</p>
+            <div class="extra-geo-scope-section mt-20">
+              <h4 class="pr-h4 font-weight-600 text-black">Are there any regions that you wish to specify for this Output?</h4>
+              <p class="pr-body-2 font-weight-400 text-black">{{ fields.geographicScope.has_extra_geo_scope ? 'Yes' : 'No' }}</p>
             </div>
 
             @if (fields.geographicScope.has_extra_geo_scope) {
@@ -183,6 +185,36 @@
         </div>
       } @else {
         <p class="not_provided_text">Not provided</p>
+      }
+
+      @if (
+        fields?.commonFields?.result_type_id === 1 ||
+        fields?.commonFields?.result_type_id === 5 ||
+        fields?.commonFields?.result_type_id === 6 ||
+        fields?.commonFields?.result_type_id === 7
+      ) {
+        <hr class="form-section_separator" />
+        <br />
+        <h3 class="form-section_title">{{ fields?.commonFields?.result_category }}</h3>
+
+        @if (resultDetail()?.resultTypeResponse?.length > 0) {
+          @switch (fields?.commonFields?.result_type_id) {
+            @case (1) {
+              <app-policy-change-content [resultDetail]="resultDetail()"></app-policy-change-content>
+            }
+            @case (5) {
+              <app-cap-sharing-content [resultDetail]="resultDetail()"></app-cap-sharing-content>
+            }
+            @case (6) {
+              <app-kp-content [resultDetail]="resultDetail()"></app-kp-content>
+            }
+            @case (7) {
+              <app-inno-dev-content [resultDetail]="resultDetail()"></app-inno-dev-content>
+            }
+          }
+        } @else {
+          <p class="not_provided_text">Information not provided</p>
+        }
       }
     </div>
   </div>

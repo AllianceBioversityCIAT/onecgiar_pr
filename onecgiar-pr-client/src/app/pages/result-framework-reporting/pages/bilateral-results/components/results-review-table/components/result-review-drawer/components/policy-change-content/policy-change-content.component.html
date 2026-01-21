@@ -1,0 +1,16 @@
+<h4 class="pr-h4 font-weight-600 text-black">Policy type:</h4>
+<div class="readonly-chips-container">
+  <span class="readonly-chip">{{ resultDetail?.resultTypeResponse?.[0]?.policy_type_name }}</span>
+</div>
+
+<h4 class="pr-h4 font-weight-600 text-black">Stage in policy process:</h4>
+<div class="readonly-chips-container">
+  <span class="readonly-chip">{{ resultDetail?.resultTypeResponse?.[0]?.policy_stage_name }}</span>
+</div>
+
+<h4 class="pr-h4 font-weight-600 text-black">Policy implementing organizations:</h4>
+<div class="readonly-chips-container">
+  @for (organization of resultDetail?.resultTypeResponse?.[0]?.implementing_organization; track $index) {
+    <span class="readonly-chip">{{ organization.acronym }} - {{ organization.institution_name }}</span>
+  }
+</div>
