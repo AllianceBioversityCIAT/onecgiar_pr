@@ -1360,9 +1360,10 @@ export class ResultsApiService {
 
   GET_ResultToReview(programId: string, centerIds?: string[]) {
     let url = `${environment.apiBaseUrl}api/results/by-program-and-centers?programId=${programId}`;
-    if (centerIds?.length) {
+    if (centerIds?.length === 1) {
       url += `&centerIds=${centerIds.join(',')}`;
     }
+
     return this.http.get<any>(url);
   }
 
