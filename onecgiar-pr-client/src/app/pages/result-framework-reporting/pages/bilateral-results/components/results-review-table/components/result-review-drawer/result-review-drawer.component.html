@@ -286,10 +286,12 @@
     </div>
   </div>
   <div class="modal-actions">
-    <button class="btn-cancel" (click)="cancelReject()" [disabled]="isSaving()">Cancel</button>
-    <button class="btn-confirm reject" [disabled]="!rejectJustification.trim() || isSaving()" (click)="confirmReject()">
-      <i class="pi pi-spinner pi-spin" *ngIf="isSaving()"></i>
-      {{ isSaving() ? 'Rejecting...' : 'Confirm' }}
-    </button>
+    <p-button label="Cancel" size="large" (click)="cancelReject()" [disabled]="isSaving()" variant="outlined"></p-button>
+    <p-button
+      label="Confirm"
+      size="large"
+      (click)="confirmReject()"
+      [disabled]="!rejectJustification.trim() || isSaving()"
+      [loading]="isSaving()"></p-button>
   </div>
 </p-dialog>
