@@ -10,7 +10,7 @@ WORKDIR ${LAMBDA_TASK_ROOT}
 COPY package*.json ./
 
 # Install production dependencies only
-RUN npm ci --omit=dev
+RUN npm ci
 
 # Copy compiled application to root (not in dist subfolder)
 COPY dist/ ./
