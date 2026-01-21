@@ -2360,20 +2360,41 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
           ) AS rn
         FROM Integration_information.toc_results_indicators tri
         WHERE tri.is_active = 1
+      ),
+      lead_centers AS (
+        SELECT 
+          rc.result_id,
+          rc.center_id,
+          ci2.acronym AS center_name,
+          CASE 
+            WHEN rc.is_leading_result = 1 OR rc.is_primary = 1 THEN 1
+            ELSE 0
+          END AS is_lead
+        FROM results_center rc
+        LEFT JOIN clarisa_center cc
+          ON rc.center_id = cc.code
+        LEFT JOIN clarisa_institutions ci2
+          ON cc.institutionId = ci2.id
+        WHERE rc.is_active = 1
+          AND (rc.is_leading_result = 1 OR rc.is_primary = 1)
       )
       SELECT 
         r.id,
-        cp.id AS project_id,
-        cp.short_name AS project_name,
+        MAX(cp.id) AS project_id,
+        MAX(cp.short_name) AS project_name,
         r.result_code,
         r.title AS result_title,
         rt.name AS result_category,
-        NULLIF(TRIM(t1.type_name), '') AS indicator_category,
+        MAX(NULLIF(TRIM(t1.type_name), '')) AS indicator_category,
         rs.status_name,
-        twp.acronym,
-        tr.result_title AS toc_title,
-        t1.indicator_description AS indicator,
-        r.external_submitted_date AS submission_date
+        MAX(twp.acronym) AS acronym,
+        MAX(tr.result_title) AS toc_title,
+        MAX(t1.indicator_description) AS indicator,
+        r.external_submitted_date AS submission_date,
+        CASE 
+          WHEN MAX(lc.center_name) IS NOT NULL THEN MAX(lc.center_name)
+          ELSE 'Not specified'
+        END AS lead_center
       FROM result r
       JOIN result_type rt
         ON r.result_type_id = rt.id
@@ -2390,24 +2411,30 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         ON rbp.project_id = cp.id
       JOIN result_status rs 
         ON r.status_id = rs.result_status_id
-      JOIN results_toc_result rtr
+      LEFT JOIN results_toc_result rtr
         ON r.id = rtr.results_id
       AND rtr.is_active = 1
-      JOIN Integration_information.toc_results tr 
+      LEFT JOIN Integration_information.toc_results tr 
         ON rtr.toc_result_id = tr.id
       AND tr.is_active = 1
-      JOIN Integration_information.toc_work_packages twp
+      LEFT JOIN Integration_information.toc_work_packages twp
         ON tr.wp_id = twp.toc_id
-      JOIN tri_one t1
+      LEFT JOIN tri_one t1
         ON t1.toc_results_id = tr.id
       AND t1.rn = 1
-      LEFT JOIN results_center rc
-        ON r.id = rc.result_id
-      AND rc.is_active = 1
+      LEFT JOIN lead_centers lc
+        ON r.id = lc.result_id
       WHERE
         r.source = 'API'
         AND ci.official_code = ?
         AND r.is_active = 1
+      GROUP BY 
+        r.id,
+        r.result_code,
+        r.title,
+        rt.name,
+        rs.status_name,
+        r.external_submitted_date
     `;
 
     const params: any[] = [programId];
@@ -2416,7 +2443,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
 
     if (centerIds && centerIds.length > 0) {
       const placeholders = centerIds.map(() => '?').join(',');
-      finalQuery += ` AND rc.center_id IN (${placeholders})`;
+      finalQuery += ` AND (lc.center_id IN (${placeholders}) OR lc.center_id IS NULL)`;
       params.push(...centerIds);
     }
 
@@ -2493,10 +2520,17 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         rcd.non_binary_using,
         rcd.has_unkown_using,
         rcd.capdev_term_id,
-        rcd.capdev_delivery_method_id 
+        rcd.capdev_delivery_method_id,
+        cdm.name AS delivery_method_name,
+        ct.name AS term_name,
+        ct.term AS term_term
       FROM result r
       JOIN results_capacity_developments rcd 
         ON r.id = rcd.result_id
+      JOIN capdevs_delivery_methods cdm
+        ON rcd.capdev_delivery_method_id = cdm.capdev_delivery_method_id
+      JOIN capdevs_term ct
+        ON rcd.capdev_term_id = ct.capdev_term_id
       WHERE
         r.id = ?
         AND r.is_active = 1;
@@ -2652,14 +2686,22 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         rpc.policy_type_id,
         rpc.policy_stage_id,
         ci.id AS institution_id,
-        ci.acronym 
+        ci.acronym,
+        ci.name AS institution_name,
+        cps.name AS policy_stage_name,
+        cpt.name AS policy_type_name
       FROM result r
       JOIN results_policy_changes rpc
         ON r.id = rpc.result_id
       LEFT JOIN results_by_institution rbi
         ON r.id = rbi.result_id
+        AND rbi.is_active = 1
       LEFT JOIN clarisa_institutions ci
         ON rbi.institutions_id = ci.id
+      JOIN clarisa_policy_stage cps
+        ON rpc.policy_stage_id = cps.id
+      JOIN clarisa_policy_type cpt
+        ON rpc.policy_type_id = cpt.id
       WHERE
         r.id = ?
         AND r.is_active = 1;
@@ -2667,7 +2709,51 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
 
     try {
       const results = await this.query(query, [resultId]);
-      return results;
+
+      if (!results || results.length === 0) {
+        return [];
+      }
+
+      const policyChangeMap = new Map<number, any>();
+
+      for (const row of results) {
+        const policyChangeId = row.result_policy_change_id;
+
+        if (!policyChangeMap.has(policyChangeId)) {
+          policyChangeMap.set(policyChangeId, {
+            result_policy_change_id: policyChangeId,
+            policy_type_id: row.policy_type_id,
+            policy_stage_id: row.policy_stage_id,
+            policy_stage_name: row.policy_stage_name,
+            policy_type_name: row.policy_type_name,
+            implementing_organization: [
+              {
+                institution_id: row.institution_id,
+                acronym: row.acronym,
+                institution_name: row.institution_name,
+              },
+            ],
+          });
+        }
+
+        const policyChange = policyChangeMap.get(policyChangeId);
+
+        if (row.institution_id && row.acronym) {
+          const institutionExists = policyChange.implementing_organization.some(
+            (inst: any) => inst.institution_id === row.institution_id,
+          );
+
+          if (!institutionExists) {
+            policyChange.implementing_organization.push({
+              institution_id: row.institution_id,
+              acronym: row.acronym,
+              institution_name: row.institution_name,
+            });
+          }
+        }
+      }
+
+      return Array.from(policyChangeMap.values());
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultRepository.name,

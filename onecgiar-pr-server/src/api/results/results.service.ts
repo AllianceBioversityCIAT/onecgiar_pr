@@ -2755,6 +2755,7 @@ export class ResultsService {
         toc_title: row.toc_title,
         indicator: row.indicator,
         submission_date: row.submission_date,
+        lead_center: row.lead_center,
       }));
 
       const groupedByProject = mappedResults.reduce(
@@ -2763,7 +2764,8 @@ export class ResultsService {
           if (!acc[projectId]) {
             acc[projectId] = {
               project_id: projectId,
-              project_name: result.project_name,
+              project_name:
+                result.project_name || 'Bilateral Project - Not specified',
               results: [],
             };
           }
