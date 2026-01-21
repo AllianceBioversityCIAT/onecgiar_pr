@@ -17,4 +17,4 @@ COPY dist/ ./
 
 # Set the handler - Lambda expects module.function format
 # lambda.js exports handler function
-CMD ["lambda.handler"]
+CMD ["src/lambda.handler"]
