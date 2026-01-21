@@ -2438,6 +2438,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         r.external_submitter,
         CONCAT(u.first_name, ' ', u.last_name) AS submitter_name,
         r.result_level_id,
+        r.result_type_id,
         r.title AS result_title,
         r.description AS result_description,
         rt.name AS result_category
