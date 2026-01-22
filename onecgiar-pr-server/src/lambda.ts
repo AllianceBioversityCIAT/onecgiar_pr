@@ -6,13 +6,18 @@ import helmet from 'helmet';
 import { json, urlencoded } from 'express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger, VersioningType } from '@nestjs/common';
-import express from 'express';
-import * as awsServerlessExpress from 'aws-serverless-express';
-import { APIGatewayProxyEvent, Context } from 'aws-lambda';
+import express, { Express } from 'express';
+import serverlessExpress from '@codegenie/serverless-express';
+import {
+  APIGatewayProxyEvent,
+  APIGatewayProxyEventV2,
+  Context,
+  Handler,
+} from 'aws-lambda';
 
-let cachedServer: any;
+let cachedHandler: Handler;
 
-async function createServer() {
+async function createApp(): Promise<Express> {
   const expressApp = express();
   const adapter = new ExpressAdapter(expressApp);
   const logger: Logger = new Logger('Lambda');
@@ -69,40 +74,48 @@ async function createServer() {
   });
 
   await app.init();
-  return awsServerlessExpress.createServer(expressApp);
+  return expressApp;
 }
 
-export const handler = async (
-  event: APIGatewayProxyEvent,
+// Type guard to detect HTTP API v2.0 payload
+function isHttpApiV2(
+  event: APIGatewayProxyEvent | APIGatewayProxyEventV2,
+): event is APIGatewayProxyEventV2 {
+  return 'rawPath' in event && 'requestContext' in event;
+}
+
+export const handler: Handler = async (
+  event: APIGatewayProxyEvent | APIGatewayProxyEventV2,
   context: Context,
 ) => {
   context.callbackWaitsForEmptyEventLoop = false;
 
-  // Debug logging to diagnose path stripping issue
   const logger = new Logger('Lambda Handler');
-  logger.debug(`event.path: ${event.path}`);
-  logger.debug(`event.requestContext?.path: ${event.requestContext?.path}`);
-  logger.debug(
-    `event.requestContext?.resourcePath: ${event.requestContext?.resourcePath}`,
-  );
 
-  // Fix: API Gateway/Base Path Mapping strips /api prefix before request reaches Lambda.
-  // If the original path (requestContext.path) starts with /api but event.path doesn't,
-  // restore the /api prefix so NestJS routing works correctly.
-  const originalPath = event.requestContext?.path || '';
-  const currentPath = event.path || '/';
+  // Unique log marker to confirm requests hit this Lambda
+  logger.log('[PRMS-LAMBDA-HIT] Request received');
 
-  if (originalPath.startsWith('/api') && !currentPath.startsWith('/api')) {
-    // API Gateway stripped /api, restore it
-    const restoredPath = currentPath === '/' ? '/api' : `/api${currentPath}`;
-    event.path = restoredPath;
-    logger.debug(`Restored path from "${currentPath}" to "${event.path}"`);
+  // Debug: log payload format detection
+  const isV2 = isHttpApiV2(event);
+  logger.debug(`[PRMS-LAMBDA] Payload version: ${isV2 ? 'v2.0 (HTTP API)' : 'v1.0 (REST API)'}`);
+
+  if (isV2) {
+    // HTTP API v2.0 payload
+    const v2Event = event as APIGatewayProxyEventV2;
+    logger.debug(`[PRMS-LAMBDA] rawPath: ${v2Event.rawPath}`);
+    logger.debug(`[PRMS-LAMBDA] requestContext.http.path: ${v2Event.requestContext?.http?.path}`);
+    logger.debug(`[PRMS-LAMBDA] requestContext.http.method: ${v2Event.requestContext?.http?.method}`);
+  } else {
+    // REST API v1.0 payload
+    const v1Event = event as APIGatewayProxyEvent;
+    logger.debug(`[PRMS-LAMBDA] path: ${v1Event.path}`);
+    logger.debug(`[PRMS-LAMBDA] requestContext.path: ${v1Event.requestContext?.path}`);
   }
 
-  if (!cachedServer) {
-    cachedServer = await createServer();
+  if (!cachedHandler) {
+    const expressApp = await createApp();
+    cachedHandler = serverlessExpress({ app: expressApp });
   }
 
-  return awsServerlessExpress.proxy(cachedServer, event, context, 'PROMISE')
-    .promise;
+  return cachedHandler(event, context, () => {});
 };
