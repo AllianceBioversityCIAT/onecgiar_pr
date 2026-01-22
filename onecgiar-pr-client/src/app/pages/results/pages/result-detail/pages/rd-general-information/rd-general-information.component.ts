@@ -428,23 +428,29 @@ export class RdGeneralInformationComponent implements OnInit {
       position: 'beforeend'
     });
     this.requestEvent();
-    try {
-      document.getElementById('partnerRequest').addEventListener('click', e => {
-        this.api.dataControlSE.showPartnersRequest = true;
-      });
-    } catch (error) {
-      console.error(error);
+    const partnerRequestElement = document.getElementById('partnerRequest');
+    if (partnerRequestElement) {
+      try {
+        partnerRequestElement.addEventListener('click', e => {
+          this.api.dataControlSE.showPartnersRequest = true;
+        });
+      } catch (error) {
+        console.error(error);
+      }
     }
   }
 
   requestEvent() {
     this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {
-      try {
-        document.querySelector('.alert-event').addEventListener('click', e => {
-          this.api.dataControlSE.showPartnersRequest = true;
-        });
-      } catch (error) {
-        console.error(error);
+      const alertEventElement = document.querySelector('.alert-event');
+      if (alertEventElement) {
+        try {
+          alertEventElement.addEventListener('click', e => {
+            this.api.dataControlSE.showPartnersRequest = true;
+          });
+        } catch (error) {
+          console.error(error);
+        }
       }
     });
   }
