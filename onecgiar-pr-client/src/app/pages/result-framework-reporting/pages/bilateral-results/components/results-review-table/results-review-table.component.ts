@@ -1,4 +1,4 @@
-import { Component, signal, computed, inject, effect } from '@angular/core';
+import { Component, signal, computed, inject, effect, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
@@ -14,7 +14,7 @@ import { BilateralResultsService } from '../../bilateral-results.service';
   templateUrl: './results-review-table.component.html',
   styleUrl: './results-review-table.component.scss'
 })
-export class ResultsReviewTableComponent {
+export class ResultsReviewTableComponent implements OnDestroy {
   api = inject(ApiService);
   bilateralResultsService = inject(BilateralResultsService);
 
@@ -105,5 +105,9 @@ export class ResultsReviewTableComponent {
     if (centers.length > 0) {
       this.getResultsToReview(centers);
     }
+  }
+
+  ngOnDestroy(): void {
+    this.bilateralResultsService.searchText.set('');
   }
 }
