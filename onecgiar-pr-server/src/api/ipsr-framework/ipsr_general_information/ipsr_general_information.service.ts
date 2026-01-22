@@ -42,7 +42,7 @@ export class IpsrGeneralInformationService {
     @Inject(AdUserService)
     private readonly _adUserService?: AdUserService,
     private readonly _adUserRepository?: AdUserRepository,
-  ) {}
+  ) { }
 
   /**
    * Create a new IP result general information for Portfolio P25
@@ -319,7 +319,7 @@ export class IpsrGeneralInformationService {
         }
       }
       const resultImpactAreaScores =
-        await this._resultImpactAreaScoresService.find(result.id, undefined, {
+        await this._resultImpactAreaScoresService.find(resultId, undefined, {
           impact_area_score: true,
         });
 
