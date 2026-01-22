@@ -148,11 +148,11 @@ a {
   margin-top: 2px;
   margin-bottom: 2px;
   padding: 1px 5px;
-  border-radius: 1px;
   @include fonts.pr-typography('body-3');
   font-weight: 700;
   text-align: center;
   font-style: normal;
+  border-radius: 5px;
 }
 
 .label-status-styles {

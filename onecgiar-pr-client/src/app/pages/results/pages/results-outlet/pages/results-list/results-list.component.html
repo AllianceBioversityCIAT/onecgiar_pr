@@ -70,7 +70,7 @@
       <ng-template pTemplate="body" let-result>
         <tr>
           @for (column of columnOrder; track column.attr; let i = $index) {
-            <td [class]="column.attr">
+            <td [class]="column.attr" [style.width]="column.width" [style.max-width]="column.width" [style.min-width]="column.width">
               @for (subResult of result['results']; track subResult) {
                 <a
                   [class]="column.class"
@@ -100,10 +100,21 @@
                     </div>
                   }
 
-                  <div
-                    [pTooltip]="subResult.inQA ? 'This result is being QAed' : ''"
-                    [ngClass]="{ center_flex_100: column.center, 'text-center': column.center, 'truncate-multiline': column.attr === 'full_name' }"
-                    [innerHTML]="column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date: 'YYYY-MM-dd')"></div>
+                  @if (column.attr === 'full_status_name_html') {
+                    <div>
+                      <div [class]="`status_tag status_${subResult.status_id}`" [pTooltip]="subResult.inQA ? 'This result is being QAed' : ''">
+                        {{ subResult.status_name }}
+                      </div>
+                      @if (subResult.inQA) {
+                        <div class="in-qa-tag">In QA</div>
+                      }
+                    </div>
+                  } @else {
+                    <div
+                      [pTooltip]="subResult.inQA ? 'This result is being QAed' : ''"
+                      [ngClass]="{ center_flex_100: column.center, 'text-center': column.center, 'truncate-multiline': column.attr === 'full_name' }"
+                      [innerHTML]="column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date: 'YYYY-MM-dd')"></div>
+                  }
                 </a>
               }
             </td>
@@ -155,7 +166,7 @@
 
       <ng-template pTemplate="emptymessage">
         <tr style="height: 200px">
-          <td colspan="10" class="noDataText">There are no results for the selected filters.</td>
+          <td [attr.colspan]="columnOrder.length + 2" class="noDataText">There are no results for the selected filters.</td>
         </tr>
       </ng-template>
     </p-table>
