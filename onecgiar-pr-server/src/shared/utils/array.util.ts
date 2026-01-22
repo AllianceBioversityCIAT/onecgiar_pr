@@ -201,4 +201,11 @@ export const removeDuplicatesByKeys = <T>(
   });
 };
 
+export const extractPropertyValues = <Entity>(
+  array: Entity[],
+  key: keyof Entity,
+) => {
+  return array.map((item) => item[key]);
+};
+
 export type ArrayType<T> = T extends (infer U)[] ? U : T;

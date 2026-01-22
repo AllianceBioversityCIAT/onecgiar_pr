@@ -100,7 +100,7 @@ import { ResultReviewHistory } from './result-review-history/entities/result-rev
 import { ResultStatusData } from '../../shared/constants/result-status.enum';
 import { ResultImpactAreaScoresService } from '../result-impact-area-scores/result-impact-area-scores.service';
 import { isEmpty } from '../../shared/utils/object.utils';
-import { transformDataToArray } from '../../shared/utils/array.util';
+import { extractPropertyValues } from '../../shared/utils/array.util';
 import { ResultImpactAreaScore } from '../result-impact-area-scores/entities/result-impact-area-score.entity';
 import { ImpactAreaNames } from './impact_areas_scores_components/enum/impact-area-names.enum';
 
@@ -401,42 +401,6 @@ export class ResultsService {
     }
   }
 
-  async validateImpactAreaScores(
-    impactAreaIds: number | number[],
-    impactAreaScoresToAdd: Partial<ResultImpactAreaScore>[],
-  ) {
-    if (!isEmpty(impactAreaIds)) {
-      const impactAreaIdsArray = transformDataToArray(impactAreaIds);
-      const impactAreaScores = await this._impactAreasScoresComponentRepository
-        .find({
-          where: { id: In(impactAreaIdsArray) },
-        })
-        .then((components) =>
-          components.map((component) => ({
-            impact_area_score_id: component.id,
-          })),
-        );
-      const foundIds = new Set(
-        impactAreaScores.map((c) => Number(c.impact_area_score_id)),
-      );
-      const missingIds = impactAreaIdsArray.filter(
-        (id) => !foundIds.has(Number(id)),
-      );
-      if (missingIds.length) {
-        throw {
-          response: {},
-          message: `The impact area scores ${missingIds.join(', ')} do not exist`,
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
-      impactAreaScoresToAdd.push(...impactAreaScores);
-    }
-  }
-
-  extractPropertyValues<Entity>(array: Entity[], key: keyof Entity) {
-    return array.map((item) => item[key]);
-  }
-
   /**
    * Create a new result general information
    * @param resultGeneralInformation
@@ -501,7 +465,7 @@ export class ResultsService {
       const resultImpactAreaScores: Partial<ResultImpactAreaScore>[] = [];
 
       if (Number(genderTag?.id) === 3 && !isEmpty(gender_impact_area_id)) {
-        await this.validateImpactAreaScores(
+        await this._resultImpactAreaScoresService.validateImpactAreaScores(
           gender_impact_area_id,
           resultImpactAreaScores,
         );
@@ -519,7 +483,7 @@ export class ResultsService {
       }
 
       if (Number(climateTag?.id) === 3 && !isEmpty(climate_impact_area_id)) {
-        await this.validateImpactAreaScores(
+        await this._resultImpactAreaScoresService.validateImpactAreaScores(
           climate_impact_area_id,
           resultImpactAreaScores,
         );
@@ -540,7 +504,7 @@ export class ResultsService {
         Number(nutritionTag?.id) === 3 &&
         !isEmpty(nutrition_impact_area_id)
       ) {
-        await this.validateImpactAreaScores(
+        await this._resultImpactAreaScoresService.validateImpactAreaScores(
           nutrition_impact_area_id,
           resultImpactAreaScores,
         );
@@ -564,7 +528,7 @@ export class ResultsService {
         Number(environmentalBiodiversityTag?.id) === 3 &&
         !isEmpty(environmental_biodiversity_impact_area_id)
       ) {
-        await this.validateImpactAreaScores(
+        await this._resultImpactAreaScoresService.validateImpactAreaScores(
           environmental_biodiversity_impact_area_id,
           resultImpactAreaScores,
         );
@@ -582,7 +546,7 @@ export class ResultsService {
       }
 
       if (Number(povertyTag?.id) === 3 && !isEmpty(poverty_impact_area_id)) {
-        await this.validateImpactAreaScores(
+        await this._resultImpactAreaScoresService.validateImpactAreaScores(
           poverty_impact_area_id,
           resultImpactAreaScores,
         );
@@ -2036,28 +2000,28 @@ export class ResultsService {
           result_name: result.title ?? null,
           result_description: result.description ?? null,
           gender_tag_id: result.gender_tag_level_id || null,
-          gender_impact_area_id: this.extractPropertyValues(
+          gender_impact_area_id: extractPropertyValues(
             ender_impact_area,
             'impact_area_score_id',
           ) as number[],
           climate_change_tag_id: result.climate_change_tag_level_id || null,
-          climate_impact_area_id: this.extractPropertyValues(
+          climate_impact_area_id: extractPropertyValues(
             climate_impact_area,
             'impact_area_score_id',
           ) as number[],
           nutrition_tag_level_id: result.nutrition_tag_level_id || null,
-          nutrition_impact_area_id: this.extractPropertyValues(
+          nutrition_impact_area_id: extractPropertyValues(
             nutrition_impact_area,
             'impact_area_score_id',
           ) as number[],
           environmental_biodiversity_tag_level_id:
             result.environmental_biodiversity_tag_level_id || null,
-          environmental_biodiversity_impact_area_id: this.extractPropertyValues(
+          environmental_biodiversity_impact_area_id: extractPropertyValues(
             environmental_biodiversity_impact_area,
             'impact_area_score_id',
           ) as number[],
           poverty_tag_level_id: result.poverty_tag_level_id || null,
-          poverty_impact_area_id: this.extractPropertyValues(
+          poverty_impact_area_id: extractPropertyValues(
             poverty_impact_area,
             'impact_area_score_id',
           ) as number[],
