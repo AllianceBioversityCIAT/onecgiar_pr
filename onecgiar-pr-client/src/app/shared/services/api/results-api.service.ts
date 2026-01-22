@@ -1357,4 +1357,24 @@ export class ResultsApiService {
   GET_ClarisaPortfolios() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/portfolios`);
   }
+
+  GET_ResultToReview(programId: string, centerIds?: string[]) {
+    let url = `${environment.apiBaseUrl}api/results/by-program-and-centers?programId=${programId}`;
+    if (centerIds?.length === 1) {
+      url += `&centerIds=${centerIds.join(',')}`;
+    }
+
+    return this.http.get<any>(url);
+  }
+
+  GET_PendingReviewCount(programId: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results/pending-review?programId=${programId}`);
+  }
+  GET_BilateralResultDetail(resultId: string | number) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results/bilateral/${resultId}`);
+  }
+
+  PATCH_BilateralReviewDecision(resultId: string | number, body: { decision: 'APPROVE' | 'REJECT'; justification: string }) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/results/bilateral/${resultId}/review-decision`, body);
+  }
 }

@@ -1,0 +1,48 @@
+<h4 class="pr-h4 font-weight-600 text-black"># of people trained</h4>
+
+<div class="form-section_metadata">
+  <div>
+    <h4 class="pr-h4 font-weight-600 text-black">Male:</h4>
+    <div class="readonly-chips-container">
+      <span class="readonly-chip">{{ resultDetail?.resultTypeResponse?.[0]?.male_using || 0 }}</span>
+    </div>
+  </div>
+
+  <div>
+    <h4 class="pr-h4 font-weight-600 text-black">Female:</h4>
+    <div class="readonly-chips-container">
+      <span class="readonly-chip">{{ resultDetail?.resultTypeResponse?.[0]?.female_using || 0 }}</span>
+    </div>
+  </div>
+
+  <div>
+    <h4 class="pr-h4 font-weight-600 text-black">Non-binary:</h4>
+    <div class="readonly-chips-container">
+      <span class="readonly-chip">{{ resultDetail?.resultTypeResponse?.[0]?.non_binary_using || 0 }}</span>
+    </div>
+  </div>
+
+  <div>
+    <h4 class="pr-h4 font-weight-600 text-black">Unknown:</h4>
+    <div class="readonly-chips-container">
+      <span class="readonly-chip">{{ resultDetail?.resultTypeResponse?.[0]?.has_unkown_using || 0 }}</span>
+    </div>
+  </div>
+
+  <div>
+    <h4 class="pr-h4 font-weight-600 text-black">Total:</h4>
+    <div class="readonly-chips-container">
+      <span class="readonly-chip">{{ this.getTotalParticipants() }}</span>
+    </div>
+  </div>
+</div>
+
+<h4 class="pr-h4 font-weight-600 text-black">Length of training:</h4>
+<div class="readonly-chips-container">
+  <span class="readonly-chip">{{ resultDetail?.resultTypeResponse?.[0]?.term_name }}</span>
+</div>
+
+<h4 class="pr-h4 font-weight-600 text-black">Delivery method:</h4>
+<div class="readonly-chips-container">
+  <span class="readonly-chip">{{ resultDetail?.resultTypeResponse?.[0]?.delivery_method_name }}</span>
+</div>
