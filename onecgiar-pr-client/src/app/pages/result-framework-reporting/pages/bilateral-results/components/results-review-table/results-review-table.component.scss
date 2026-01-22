@@ -1,5 +1,8 @@
 ::ng-deep .bilateral-results-table {
   font-size: 12px;
+  .p-datatable-mask {
+    height: 250px;
+  }
 
   // Group header styling
   .group-header-cell {

@@ -8,7 +8,8 @@
   sortMode="single"
   rowGroupMode="subheader"
   groupRowsBy="project_name"
-  [expandedRowKeys]="expandedRowKeys()">
+  [expandedRowKeys]="expandedRowKeys()"
+  [loading]="isLoading()">
   <!-- Header -->
   <ng-template pTemplate="header">
     <tr>
@@ -69,16 +70,18 @@
         <td class="indicator-cell">{{ result.indicator ?? 'Not specified' }}</td>
         <td class="date-cell">{{ result.submission_date | date: 'dd/MM/yyyy' }}</td>
         <td class="actions-cell">
+          @let isPendingReview = result.status_name === 'Pending Review';
+
           <button
             pButton
             type="button"
             variant="outlined"
             class="review-result-button"
             (click)="reviewResult(result)"
-            pTooltip="Review result"
+            [pTooltip]="isPendingReview ? 'Review result' : 'See result'"
             tooltipPosition="top">
-            <i class="material-icons-outlined">edit</i>
-            Review result
+            <i class="material-icons-outlined">{{ isPendingReview ? 'edit' : 'visibility' }}</i>
+            {{ isPendingReview ? 'Review result' : 'See result' }}
           </button>
         </td>
       </tr>

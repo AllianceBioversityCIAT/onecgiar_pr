@@ -16,12 +16,12 @@ describe('BilateralResultsComponent', () => {
           provide: ActivatedRoute,
           useValue: {
             params: of({}),
-            snapshot: { params: { entityId: 'test-entity-id' } }
+            queryParams: of({}),
+            snapshot: { params: { entityId: 'test-entity-id' }, queryParams: { center: 'test-center-code' } }
           }
         }
       ]
-    })
-    .compileComponents();
+    }).compileComponents();
 
     fixture = TestBed.createComponent(BilateralResultsComponent);
     component = fixture.componentInstance;

@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ResultsReviewFiltersComponent } from './results-review-filters.component';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 
 describe('ResultsReviewFiltersComponent', () => {
   let component: ResultsReviewFiltersComponent;
@@ -8,9 +9,8 @@ describe('ResultsReviewFiltersComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ResultsReviewFiltersComponent]
-    })
-    .compileComponents();
+      imports: [ResultsReviewFiltersComponent, HttpClientTestingModule]
+    }).compileComponents();
 
     fixture = TestBed.createComponent(ResultsReviewFiltersComponent);
     component = fixture.componentInstance;

@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
@@ -16,9 +16,6 @@ export class IndicatorsSidebarComponent implements OnInit {
   bilateralResultsService = inject(BilateralResultsService);
   router = inject(Router);
   activatedRoute = inject(ActivatedRoute);
-
-  // null = All Centers, string = center code
-  selectedCenterCode = signal<string | null>(null);
 
   ngOnInit(): void {
     this.getCenters();
@@ -38,7 +35,7 @@ export class IndicatorsSidebarComponent implements OnInit {
   }
 
   selectCenter(centerCode: string | null, updateUrl: boolean = true): void {
-    this.selectedCenterCode.set(centerCode);
+    this.bilateralResultsService.selectedCenterCode.set(centerCode);
     this.bilateralResultsService.selectCenter(centerCode);
 
     if (updateUrl) {
@@ -51,6 +48,6 @@ export class IndicatorsSidebarComponent implements OnInit {
   }
 
   isSelected(centerCode: string | null): boolean {
-    return this.selectedCenterCode() === centerCode;
+    return this.bilateralResultsService.selectedCenterCode() === centerCode;
   }
 }
