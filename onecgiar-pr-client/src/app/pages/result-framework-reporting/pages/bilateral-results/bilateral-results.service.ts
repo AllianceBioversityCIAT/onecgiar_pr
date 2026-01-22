@@ -1,14 +1,19 @@
-import { Injectable, signal } from '@angular/core';
+import { inject, Injectable, signal } from '@angular/core';
 import { CenterDto } from '../../../../shared/interfaces/center.dto';
+import { ApiService } from '../../../../shared/services/api/api.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class BilateralResultsService {
+  api = inject(ApiService);
+
   entityId = signal<string>('');
+  entityDetails = signal<any>({});
   centers = signal<CenterDto[]>([]);
   currentCenterSelected = signal<string[]>([]);
   searchText = signal<string>('');
+  selectedCenterCode = signal<string | null>(null);
 
   selectCenter(centerCode: string | null): void {
     if (centerCode === null) {
@@ -16,5 +21,11 @@ export class BilateralResultsService {
     } else {
       this.currentCenterSelected.set([centerCode]);
     }
+  }
+
+  getEntityDetails() {
+    this.api.resultsSE.GET_ClarisaGlobalUnits(this.entityId()).subscribe(res => {
+      this.entityDetails.set(res.response.initiative);
+    });
   }
 }

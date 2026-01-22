@@ -1,3 +1,43 @@
+@use '../../../../../styles/fonts.scss' as fonts;
+
+.bilateral-results_breadcrumb {
+  @include fonts.pr-typography('body-1');
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0 30px;
+  gap: 6px;
+  border-bottom: 1px solid var(--pr-color-accents-2);
+  background-color: var(--pr-color-white);
+}
+
+.bilateral-results_breadcrumb_homeLink {
+  font-weight: 400;
+  color: var(--pr-color-accents-5);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--pr-color-accents-6);
+  }
+}
+
+.bilateral-results_breadcrumb_separator {
+  color: var(--pr-color-accents-5);
+}
+
+.bilateral-results_breadcrumb_link {
+  color: var(--pr-color-accents-5);
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.breadcrumb_link {
+  color: var(--pr-color-primary-300);
+  font-weight: 600;
+  cursor: default;
+}
+
 .bilateral-results-layout {
   display: flex;
   flex-direction: column;

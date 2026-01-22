@@ -20,7 +20,28 @@ export class ResultsReviewTableComponent {
   showReviewDrawer = signal<boolean>(false);
   currentResultToReview = signal<ResultToReview | null>(null);
 
-  tableData = signal<GroupedResult[]>([]);
+  tableData = signal<GroupedResult[]>([
+    {
+      project_id: '',
+      project_name: '',
+      results: [
+        {
+          id: '',
+          project_id: '',
+          project_name: '',
+          result_code: '',
+          result_title: '',
+          indicator_category: '',
+          status_name: '',
+          acronym: '',
+          toc_title: '',
+          indicator: '',
+          submission_date: ''
+        }
+      ]
+    }
+  ]);
+  isLoading = signal<boolean>(false);
 
   filteredTableData = computed(() => {
     const searchText = this.bilateralResultsService.searchText().toLowerCase().trim();
@@ -57,8 +78,11 @@ export class ResultsReviewTableComponent {
     const entityId = this.bilateralResultsService.entityId();
     if (!entityId) return;
 
+    this.isLoading.set(true);
+
     this.api.resultsSE.GET_ResultToReview(entityId, centers).subscribe(res => {
       this.tableData.set(res.response);
+      this.isLoading.set(false);
     });
   }
 

@@ -10,6 +10,7 @@ export interface ResultToReview {
   toc_title: string;
   indicator: string;
   submission_date: string;
+  lead_center?: string;
 }
 
 export interface GroupedResult {

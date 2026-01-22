@@ -8,7 +8,8 @@
   sortMode="single"
   rowGroupMode="subheader"
   groupRowsBy="project_name"
-  [expandedRowKeys]="expandedRowKeys()">
+  [expandedRowKeys]="expandedRowKeys()"
+  [loading]="isLoading()">
   <!-- Header -->
   <ng-template pTemplate="header">
     <tr>
