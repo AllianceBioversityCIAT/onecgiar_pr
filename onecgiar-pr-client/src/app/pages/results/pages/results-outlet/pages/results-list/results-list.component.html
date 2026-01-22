@@ -194,8 +194,8 @@
         (keydown.enter)="item.disabled ? null : item.command(); menu.toggle($event)"
         tabindex="0"
         role="menuitem">
-        <i [class]="item.icon"></i>
-        <span>{{ item.label }}</span>
+        <i [class]="item.icon" [style]="item.inlineStyle"></i>
+        <span [style]="item.inlineStyle">{{ item.label }}</span>
       </div>
     }
   }

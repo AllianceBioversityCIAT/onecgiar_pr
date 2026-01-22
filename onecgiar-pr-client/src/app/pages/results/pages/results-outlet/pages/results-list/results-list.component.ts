@@ -20,6 +20,7 @@ interface ItemMenu {
   tooltipText?: string;
   tooltipShow?: boolean;
   disabled?: boolean;
+  inlineStyle?: string;
 }
 
 @Component({
@@ -49,23 +50,26 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   items: ItemMenu[] = [
     {
       label: 'Map to TOC',
-      icon: 'pi pi-fw pi-sitemap',
+      icon: 'pi pi-sitemap',
       visible: true,
+      inlineStyle: 'color: var(--pr-color-primary-300);',
       command: () => {
         this.api.dataControlSE.showShareRequest = true;
       }
     },
     {
       label: 'Update result',
-      icon: 'pi pi-fw pi-clone',
+      icon: 'pi pi-clone',
       visible: true,
+      inlineStyle: 'color: var(--pr-color-primary-300);',
       command: () => {
         this.api.dataControlSE.chagePhaseModal = true;
       }
     },
     {
       label: 'Review result',
-      icon: 'pi pi-fw pi-eye',
+      icon: 'pi pi-eye',
+      inlineStyle: 'color: var(--pr-color-primary-300);',
       visible: false,
       command: () => {
         this.navigateToResult(this.api.dataControlSE.currentResult);
@@ -75,31 +79,35 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   itemsWithDelete: ItemMenu[] = [
     {
       label: 'Map to TOC',
-      icon: 'pi pi-fw pi-sitemap',
+      icon: 'pi pi-sitemap',
       visible: true,
+      inlineStyle: 'color: var(--pr-color-primary-300);',
       command: () => {
         this.api.dataControlSE.showShareRequest = true;
       }
     },
     {
       label: 'Update result',
-      icon: 'pi pi-fw pi-clone',
+      icon: 'pi pi-clone',
       visible: true,
+      inlineStyle: 'color: var(--pr-color-primary-300);',
       command: () => {
         this.api.dataControlSE.chagePhaseModal = true;
       }
     },
     {
       label: 'Review result',
-      icon: 'pi pi-fw pi-eye',
+      icon: 'pi pi-pencil',
       visible: false,
+      inlineStyle: 'color: var(--pr-color-primary-300);',
       command: () => {
         this.navigateToResult(this.api.dataControlSE.currentResult);
       }
     },
     {
       label: 'Delete',
-      icon: 'pi pi-fw pi-trash',
+      icon: 'pi pi-trash',
+      inlineStyle: 'color: var(--pr-color-red-300);',
       command: () => {
         this.onDeleteREsult();
       }
@@ -199,13 +207,19 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
 
     const canUpdate = this.api.shouldShowUpdate(result, this.api.dataControlSE.reportingCurrentPhase);
 
-    if (this.api.dataControlSE?.currentResult?.source_name == 'W3/Bilaterals') {
+    if (result?.source_name == 'W3/Bilaterals') {
       this.itemsWithDelete[0].visible = false;
       this.itemsWithDelete[1].visible = false;
-      this.itemsWithDelete[2].visible = true;
       this.items[0].visible = false;
       this.items[1].visible = false;
+
+      this.itemsWithDelete[2].visible = true;
+      this.itemsWithDelete[2].label = result?.status_name == 'Pending Review' ? 'Review result' : 'See result';
+      this.itemsWithDelete[2].icon = result?.status_name == 'Pending Review' ? 'pi pi-pencil' : 'pi pi-eye';
+
       this.items[2].visible = true;
+      this.items[2].label = result?.status_name == 'Pending Review' ? 'Review result' : 'See result';
+      this.items[2].icon = result?.status_name == 'Pending Review' ? 'pi pi-pencil' : 'pi pi-eye';
     } else {
       this.itemsWithDelete[0].visible = true;
       this.itemsWithDelete[2].visible = false;
