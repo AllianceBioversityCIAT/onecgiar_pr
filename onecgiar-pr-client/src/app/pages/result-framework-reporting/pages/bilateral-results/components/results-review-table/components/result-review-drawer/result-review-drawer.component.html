@@ -1,0 +1,297 @@
+<p-drawer [(visible)]="visible" [position]="drawerFullScreen() ? 'full' : 'right'" [closable]="false" [style]="{ minWidth: '65vw' }">
+  <ng-template #header>
+    <div class="result-review-drawer-header">
+      <p class="result-review-drawer-header_entity">
+        <span class="result-review-drawer-header_entity_acronym">{{ resultDetail()?.commonFields?.center_name }}</span>
+        <span class="result-review-drawer-header_separator">|</span>
+        <span class="result-review-drawer-header_entity_code">{{
+          resultDetail()?.commonFields?.project_name ?? 'Bilateral Project - Not specified'
+        }}</span>
+      </p>
+
+      <div class="result-review-drawer-header_icons">
+        <i
+          class="pi {{
+            drawerFullScreen() ? 'pi-arrow-down-left-and-arrow-up-right-to-center' : 'pi-arrow-up-right-and-arrow-down-left-from-center'
+          }}"
+          style="font-size: 15px; cursor: pointer"
+          (click)="toggleFullScreen()"></i>
+
+        <i class="pi pi-times" style="font-size: 16px; cursor: pointer" (click)="closeDrawer()"></i>
+      </div>
+    </div>
+  </ng-template>
+
+  <div class="result-review-drawer-content">
+    @let fields = this.resultDetail();
+    <!-- Result Header Info -->
+    <div class="result-review-drawer-content_header">
+      <p class="result-review-drawer-content_title">
+        {{ fields?.commonFields?.result_title }}
+      </p>
+
+      <div class="result-review-drawer-content_meta">
+        <span class="result-review-drawer-content_meta_item">
+          <i class="pi pi-folder-open"></i>
+          {{ fields?.commonFields?.result_category }}
+        </span>
+
+        <span class="result-review-drawer-content_meta_separator">•</span>
+
+        <span class="result-review-drawer-content_meta_item">
+          <i class="pi pi-user"></i>
+          Submitted by {{ fields?.commonFields?.submitter_name }}
+        </span>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3 class="form-section_title">TOC ALIGNMENT</h3>
+      <!-- TOC ALIGNMENT Section -->
+      <h4 class="pr-h4 font-weight-600 text-black">Does this result align with the Program's TOC?</h4>
+      <p class="pr-body-2 font-weight-400 text-black">
+        {{ fields?.tocMetadata[0]?.planned_result ? 'Yes' : 'No' }}
+      </p>
+
+      <br />
+
+      <h4 class="pr-h4 font-weight-600 text-black">TOC result</h4>
+      @if (fields?.tocMetadata?.[0]?.acronym || fields?.tocMetadata?.[0]?.result_title) {
+        <p class="pr-body-2 font-weight-400 text-black">
+          {{ fields?.tocMetadata[0]?.acronym + ' - ' + fields?.tocMetadata[0]?.result_title }}
+        </p>
+      } @else {
+        <p class="not_provided_text">Not provided</p>
+      }
+
+      <br />
+
+      <h4 class="pr-h4 font-weight-600 text-black">Indicator</h4>
+      @if (fields?.tocMetadata?.[0]?.indicator_description) {
+        <p class="pr-body-2 font-weight-400 text-black">
+          {{ fields?.tocMetadata[0]?.indicator_description }}
+        </p>
+      } @else {
+        <p class="not_provided_text">Not provided</p>
+      }
+    </div>
+
+    <div class="form-section">
+      <h3 class="form-section_title">DATA STANDARDS</h3>
+
+      <h4 class="pr-h4 font-weight-600 text-black" style="margin-bottom: 5px">Result Description</h4>
+      @if (fields?.commonFields?.result_description) {
+        <p class="pr-body-2 font-weight-400 text-black">
+          {{ fields?.commonFields?.result_description }}
+        </p>
+      } @else {
+        <p class="not_provided_text">Not provided</p>
+      }
+
+      <hr class="form-section_separator" />
+
+      <h4 class="pr-h4 font-weight-600 text-black">Geographic Location</h4>
+
+      @if (fields?.geographicScope) {
+        <app-geoscope-management
+          label="What is the main geographic focus of the Output?"
+          [body]="fields.geographicScope"
+          [readOnly]="true"
+          module="reporting">
+        </app-geoscope-management>
+
+        @if (fields.geographicScope.geo_scope_id != 1 && fields.geographicScope.geo_scope_id != 50 && fields.geographicScope.geo_scope_id) {
+          @if (fields.geographicScope.has_extra_geo_scope !== null && fields.geographicScope.has_extra_geo_scope !== undefined) {
+            <div class="extra-geo-scope-section mt-20">
+              <h4 class="pr-h4 font-weight-600 text-black">Are there any regions that you wish to specify for this Output?</h4>
+              <p class="pr-body-2 font-weight-400 text-black">{{ fields.geographicScope.has_extra_geo_scope ? 'Yes' : 'No' }}</p>
+            </div>
+
+            @if (fields.geographicScope.has_extra_geo_scope) {
+              <app-geoscope-management
+                label="What is the geographic scope where there may be potential impact in other geographic areas?"
+                [body]="{
+                  geo_scope_id: fields.geographicScope.extra_geo_scope_id,
+                  regions: fields.geographicScope.extra_regions,
+                  countries: fields.geographicScope.extra_countries,
+                  has_regions: fields.geographicScope.has_extra_regions,
+                  has_countries: fields.geographicScope.has_extra_countries
+                }"
+                [readOnly]="true"
+                [hideTobeDetermined]="true"
+                module="reporting">
+              </app-geoscope-management>
+            }
+          }
+        }
+      } @else {
+        <p class="not_provided_text">Not provided</p>
+      }
+
+      <hr class="form-section_separator" />
+
+      <h4 class="pr-h4 font-weight-600 text-black">Contributing Centers</h4>
+      @if (fields?.contributingCenters?.length) {
+        <div class="readonly-chips-container">
+          @for (center of fields?.contributingCenters; track $index) {
+            <span class="readonly-chip">{{ center.name }}</span>
+          }
+        </div>
+      } @else {
+        <p class="not_provided_text">Not provided</p>
+      }
+
+      <h4 class="pr-h4 font-weight-600 text-black">Contributing Science Programs</h4>
+      @if (fields?.contributingInitiatives?.length) {
+        <div class="readonly-chips-container">
+          @for (program of fields?.contributingInitiatives; track $index) {
+            <span class="readonly-chip">{{ program.official_code }} - {{ program.initiative_role }}</span>
+          }
+        </div>
+      } @else {
+        <p class="not_provided_text">Not provided</p>
+      }
+
+      <h4 class="pr-h4 font-weight-600 text-black">Contributing Bilateral Projects</h4>
+      @if (fields?.contributingProjects?.length) {
+        <div class="readonly-chips-container">
+          @for (project of fields?.contributingProjects; track $index) {
+            <span class="readonly-chip">{{ project.obj_clarisa_project.shortName }}</span>
+          }
+        </div>
+      } @else {
+        <p class="not_provided_text">Not provided</p>
+      }
+
+      <hr class="form-section_separator" />
+
+      <h4 class="pr-h4 font-weight-600 text-black">Partners</h4>
+      @if (fields?.contributingInstitutions?.length) {
+        @for (partner of fields?.contributingInstitutions; track $index) {
+          <p class="pr-body-2 font-weight-400 text-black">{{ partner?.obj_institutions?.name ?? 'No partner selected' }}</p>
+        }
+      } @else {
+        <p class="not_provided_text">Not provided</p>
+      }
+
+      <hr class="form-section_separator" />
+
+      <h4 class="pr-h4 font-weight-600 text-black">Evidence</h4>
+      @if (fields?.evidence?.length) {
+        <div class="readonly-chips-container">
+          @for (evidence of fields?.evidence; track $index) {
+            <span class="readonly-chip">{{ evidence.link }}</span>
+          }
+        </div>
+      } @else {
+        <p class="not_provided_text">Not provided</p>
+      }
+
+      @if (
+        fields?.commonFields?.result_type_id === 1 ||
+        fields?.commonFields?.result_type_id === 5 ||
+        fields?.commonFields?.result_type_id === 6 ||
+        fields?.commonFields?.result_type_id === 7
+      ) {
+        <hr class="form-section_separator" />
+        <br />
+        <h3 class="form-section_title">{{ fields?.commonFields?.result_category }}</h3>
+
+        @if (resultDetail()?.resultTypeResponse?.length > 0) {
+          @switch (fields?.commonFields?.result_type_id) {
+            @case (1) {
+              <app-policy-change-content [resultDetail]="resultDetail()"></app-policy-change-content>
+            }
+            @case (5) {
+              <app-cap-sharing-content [resultDetail]="resultDetail()"></app-cap-sharing-content>
+            }
+            @case (6) {
+              <app-kp-content [resultDetail]="resultDetail()"></app-kp-content>
+            }
+            @case (7) {
+              <app-inno-dev-content [resultDetail]="resultDetail()"></app-inno-dev-content>
+            }
+          }
+        } @else {
+          <p class="not_provided_text">Information not provided</p>
+        }
+      }
+    </div>
+  </div>
+
+  <!-- Footer Actions -->
+  <ng-template #footer>
+    <div class="result-review-drawer-footer">
+      @if (resultToReview()?.status_name !== 'Approved' && resultToReview()?.status_name !== 'Rejected') {
+        <p-button label="APPROVE" styleClass="approve-button" (click)="onApprove()" icon="pi pi-check-circle" variant="outlined" size="large" />
+        <p-button label="REJECT" styleClass="reject-button" (click)="onReject()" icon="pi pi-times-circle" variant="outlined" size="large" />
+      }
+    </div>
+  </ng-template>
+</p-drawer>
+
+<!-- Confirm Approve Dialog -->
+<p-dialog
+  appendTo="body"
+  [(visible)]="showConfirmApproveDialog"
+  [modal]="true"
+  [closeOnEscape]="true"
+  [showHeader]="false"
+  [dismissableMask]="true"
+  [draggable]="false"
+  [style]="{ padding: '0px' }"
+  styleClass="confirmation-modal approve">
+  <i class="pi pi-times modal-close-icon" (click)="cancelApprove()"></i>
+  <div class="modal-body">
+    <div class="modal-icon approve">
+      <i class="pi pi-check"></i>
+    </div>
+
+    <h2 class="modal-title approve">APPROVE RESULT – {{ resultToReview()?.result_code }}</h2>
+    <p class="modal-message">Status will be changed to "Approved", and further changes can be made before the final submission.</p>
+  </div>
+
+  <div class="modal-actions">
+    <p-button label="Cancel" size="large" (click)="cancelApprove()" [disabled]="isSaving()" variant="outlined"></p-button>
+    <p-button label="Confirm" size="large" (click)="confirmApprove()" [disabled]="isSaving()" [loading]="isSaving()"></p-button>
+  </div>
+</p-dialog>
+
+<!-- Reject Justification Dialog -->
+<p-dialog
+  appendTo="body"
+  [(visible)]="showConfirmRejectDialog"
+  [modal]="true"
+  [closeOnEscape]="true"
+  [showHeader]="false"
+  [dismissableMask]="true"
+  [draggable]="false"
+  [style]="{ padding: '0px' }"
+  styleClass="confirmation-modal reject">
+  <i class="pi pi-times modal-close-icon" (click)="cancelReject()"></i>
+  <div class="modal-body">
+    <div class="modal-icon reject">
+      <i class="pi pi-times"></i>
+    </div>
+    <h2 class="modal-title reject">REJECT RESULT – {{ resultToReview()?.result_code }}</h2>
+    <p class="modal-message">Please provide a detailed justification for rejecting this result.</p>
+    <div class="modal-field">
+      <label class="modal-label required" for="rejectJustification">Justification</label>
+      <textarea
+        pInputTextarea
+        [(ngModel)]="rejectJustification"
+        id="rejectJustification"
+        [rows]="4"
+        placeholder="Please explain why this result is being rejected..."></textarea>
+    </div>
+  </div>
+  <div class="modal-actions">
+    <p-button label="Cancel" size="large" (click)="cancelReject()" [disabled]="isSaving()" variant="outlined"></p-button>
+    <p-button
+      label="Confirm"
+      size="large"
+      (click)="confirmReject()"
+      [disabled]="!rejectJustification.trim() || isSaving()"
+      [loading]="isSaving()"></p-button>
+  </div>
+</p-dialog>
