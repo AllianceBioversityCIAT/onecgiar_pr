@@ -460,6 +460,15 @@ export class ManageUserModalComponent {
       return false;
     }
 
+    if (form.role_assignments.length > 0) {
+      const hasEntitySelected = form.role_assignments.some(assignment => assignment.entity_id !== null);
+      const hasRoleSelected = form.role_assignments.some(assignment => assignment.role_id == null || assignment.role_id === undefined);
+
+      if (hasEntitySelected && hasRoleSelected) {
+        return false;
+      }
+    }
+
     // CGIAR users: Solo necesitamos el email
     if (form.is_cgiar) {
       return !!form.email;
