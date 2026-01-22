@@ -70,12 +70,14 @@
       <ng-template pTemplate="body" let-result>
         <tr>
           @for (column of columnOrder; track column.attr; let i = $index) {
-            <td [class]="column.attr" [style.width]="column.width" [style.max-width]="column.width" [style.min-width]="column.width">
+            <td
+              [class]="column.attr"
+              [style.width]="column.width"
+              [style.max-width]="column.width"
+              [style.min-width]="column.width"
+              style="cursor: pointer">
               @for (subResult of result['results']; track subResult) {
-                <a
-                  [class]="column.class"
-                  [routerLink]="'/result/result-detail/' + subResult?.result_code"
-                  [queryParams]="{ phase: subResult?.version_id }">
+                <a [class]="column.class" (click)="navigateToResult(subResult)">
                   @if (i == 1) {
                     @if (subResult.is_new && !subResult.legacy_id) {
                       <div class="new_tag">New</div>
@@ -144,7 +146,7 @@
                       type="button"
                       class="pi pi-ellipsis-v"
                       (click)="menu.toggle($event); onPressAction(subResult)"
-                      (keydown.enter)="menu.toggle($event); onPressAction(subResult)"
+                      (keydown.enter)="menu.toggle($event)"
                       aria-label="Open actions menu"
                       style="background: none; border: none; cursor: pointer; padding: 0"></button>
                   </div>

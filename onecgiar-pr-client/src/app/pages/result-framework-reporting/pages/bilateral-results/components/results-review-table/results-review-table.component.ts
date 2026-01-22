@@ -17,8 +17,6 @@ import { BilateralResultsService } from '../../bilateral-results.service';
 export class ResultsReviewTableComponent {
   api = inject(ApiService);
   bilateralResultsService = inject(BilateralResultsService);
-  showReviewDrawer = signal<boolean>(false);
-  currentResultToReview = signal<ResultToReview | null>(null);
 
   tableData = signal<GroupedResult[]>([
     {
@@ -97,8 +95,8 @@ export class ResultsReviewTableComponent {
 
   // Acción del botón para abrir el drawer de review
   reviewResult(result: ResultToReview): void {
-    this.currentResultToReview.set(result);
-    this.showReviewDrawer.set(true);
+    this.bilateralResultsService.currentResultToReview.set(result);
+    this.bilateralResultsService.showReviewDrawer.set(true);
   }
 
   // Refrescar tabla cuando se toma una decisión (aprobar/rechazar)

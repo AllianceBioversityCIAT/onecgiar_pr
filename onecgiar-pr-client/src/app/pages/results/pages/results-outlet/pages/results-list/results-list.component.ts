@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, AfterViewInit, ViewChild, effect } from '@angular/core';
+import { Component, OnDestroy, OnInit, AfterViewInit, ViewChild, effect, inject } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { CurrentResult } from '../../../../../../shared/interfaces/current-result.interface';
 import { ResultsListService } from './services/results-list.service';
@@ -9,6 +9,8 @@ import { PhasesService } from '../../../../../../shared/services/global/phases.s
 import { Table } from 'primeng/table';
 import { ResultsNotificationsService } from '../results-notifications/results-notifications.service';
 import { ResultsListFilterService } from './services/results-list-filter.service';
+import { Router } from '@angular/router';
+import { BilateralResultsService } from '../../../../../result-framework-reporting/pages/bilateral-results/bilateral-results.service';
 
 interface ItemMenu {
   label: string;
@@ -27,6 +29,9 @@ interface ItemMenu {
   standalone: false
 })
 export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
+  router = inject(Router);
+  bilateralResultsService = inject(BilateralResultsService);
+
   gettingReport = false;
   combine = true;
 
@@ -57,6 +62,14 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
       command: () => {
         this.api.dataControlSE.chagePhaseModal = true;
       }
+    },
+    {
+      label: 'Review result',
+      icon: 'pi pi-fw pi-eye',
+      visible: false,
+      command: () => {
+        this.navigateToResult(this.api.dataControlSE.currentResult);
+      }
     }
   ];
   itemsWithDelete: ItemMenu[] = [
@@ -74,6 +87,14 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
       visible: true,
       command: () => {
         this.api.dataControlSE.chagePhaseModal = true;
+      }
+    },
+    {
+      label: 'Review result',
+      icon: 'pi pi-fw pi-eye',
+      visible: false,
+      command: () => {
+        this.navigateToResult(this.api.dataControlSE.currentResult);
       }
     },
     {
@@ -177,16 +198,37 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
     this.api.dataControlSE.currentResult = result;
 
     const canUpdate = this.api.shouldShowUpdate(result, this.api.dataControlSE.reportingCurrentPhase);
-    this.items[1].visible = canUpdate;
-    this.itemsWithDelete[1].visible =
-      this.api.dataControlSE.reportingCurrentPhase.portfolioAcronym !== 'P25'
-        ? this.api.dataControlSE.currentResult?.phase_year < this.api.dataControlSE.reportingCurrentPhase.phaseYear &&
-          this.api.dataControlSE.currentResult?.phase_year !== this.api.dataControlSE.reportingCurrentPhase.phaseYear
-        : canUpdate;
 
-    if (!this.api.rolesSE.isAdmin) {
-      this.itemsWithDelete[2] = {
-        ...this.itemsWithDelete[2],
+    if (this.api.dataControlSE?.currentResult?.source_name == 'W3/Bilaterals') {
+      this.itemsWithDelete[0].visible = false;
+      this.itemsWithDelete[1].visible = false;
+      this.itemsWithDelete[2].visible = true;
+      this.items[0].visible = false;
+      this.items[1].visible = false;
+      this.items[2].visible = true;
+    } else {
+      this.itemsWithDelete[0].visible = true;
+      this.itemsWithDelete[2].visible = false;
+      this.items[0].visible = true;
+      this.items[1].visible = canUpdate;
+      this.items[2].visible = false;
+      this.itemsWithDelete[1].visible =
+        this.api.dataControlSE.reportingCurrentPhase.portfolioAcronym === 'P25'
+          ? canUpdate
+          : this.api.dataControlSE.currentResult?.phase_year < this.api.dataControlSE.reportingCurrentPhase.phaseYear &&
+            this.api.dataControlSE.currentResult?.phase_year !== this.api.dataControlSE.reportingCurrentPhase.phaseYear;
+    }
+
+    if (this.api.rolesSE.isAdmin) {
+      this.itemsWithDelete[3] = {
+        ...this.itemsWithDelete[3],
+        disabled: this.api.dataControlSE.currentResult?.status_id == '2',
+        tooltipShow: this.api.dataControlSE.currentResult?.status_id == '2',
+        tooltipText: 'You are not allowed to perform this action because the result is in the status "QAed".'
+      };
+    } else {
+      this.itemsWithDelete[3] = {
+        ...this.itemsWithDelete[3],
         disabled:
           (this.api.dataControlSE.currentResult?.role_id !== 3 &&
             this.api.dataControlSE.currentResult?.role_id !== 4 &&
@@ -199,19 +241,12 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
           this.api.dataControlSE.currentResult?.status_id == '2',
         tooltipText: this.getDeleteTooltipText()
       };
-    } else {
-      this.itemsWithDelete[2] = {
-        ...this.itemsWithDelete[2],
-        disabled: this.api.dataControlSE.currentResult?.status_id == '2',
-        tooltipShow: this.api.dataControlSE.currentResult?.status_id == '2',
-        tooltipText: 'You are not allowed to perform this action because the result is in the status "QAed".'
-      };
     }
 
     if (this.api.dataControlSE.reportingCurrentPhase.portfolioAcronym == this.api.dataControlSE.currentResult?.acronym) {
-      this.itemsWithDelete[2].visible = true;
+      this.itemsWithDelete[3].visible = true;
     } else {
-      this.itemsWithDelete[2].visible = false;
+      this.itemsWithDelete[3].visible = false;
     }
   }
 
@@ -264,6 +299,21 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
         });
       }
     );
+  }
+
+  navigateToResult(result: CurrentResult) {
+    if (result?.source_name == 'W3/Bilaterals') {
+      const url = '/result-framework-reporting/entity-details/' + result.submitter + '/results-review';
+      this.bilateralResultsService.currentResultToReview.set(result);
+
+      this.router.navigateByUrl(url).then(() => {
+        this.bilateralResultsService.showReviewDrawer.set(true);
+      });
+    } else {
+      const url = '/result/result-detail/' + result.result_code + '/general-information?phase=' + result.version_id;
+
+      this.router.navigateByUrl(url);
+    }
   }
 
   ngOnDestroy(): void {
