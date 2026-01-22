@@ -78,6 +78,27 @@ export const handler = async (
 ) => {
   context.callbackWaitsForEmptyEventLoop = false;
 
+  // Debug logging to diagnose path stripping issue
+  const logger = new Logger('Lambda Handler');
+  logger.debug(`event.path: ${event.path}`);
+  logger.debug(`event.requestContext?.path: ${event.requestContext?.path}`);
+  logger.debug(
+    `event.requestContext?.resourcePath: ${event.requestContext?.resourcePath}`,
+  );
+
+  // Fix: API Gateway/Base Path Mapping strips /api prefix before request reaches Lambda.
+  // If the original path (requestContext.path) starts with /api but event.path doesn't,
+  // restore the /api prefix so NestJS routing works correctly.
+  const originalPath = event.requestContext?.path || '';
+  const currentPath = event.path || '/';
+
+  if (originalPath.startsWith('/api') && !currentPath.startsWith('/api')) {
+    // API Gateway stripped /api, restore it
+    const restoredPath = currentPath === '/' ? '/api' : `/api${currentPath}`;
+    event.path = restoredPath;
+    logger.debug(`Restored path from "${currentPath}" to "${event.path}"`);
+  }
+
   if (!cachedServer) {
     cachedServer = await createServer();
   }
