@@ -35,8 +35,6 @@ export class IndicatorsSidebarComponent implements OnInit {
   }
 
   selectCenter(centerCode: string | null, updateUrl: boolean = true): void {
-    if (centerCode === this.bilateralResultsService.selectedCenterCode()) return;
-
     this.bilateralResultsService.selectedCenterCode.set(centerCode);
     this.bilateralResultsService.selectCenter(centerCode);
 
