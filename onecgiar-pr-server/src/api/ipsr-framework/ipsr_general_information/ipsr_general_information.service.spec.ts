@@ -13,6 +13,7 @@ import { AdUserRepository, AdUserService } from '../../ad_users';
 import { UpdateIpsrGeneralInformationDto } from './dto/update-ipsr_general_information.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
+import { ResultImpactAreaScoresService } from '../../result-impact-area-scores/result-impact-area-scores.service';
 
 describe('IpsrGeneralInformationService', () => {
   let service: IpsrGeneralInformationService;
@@ -70,6 +71,12 @@ describe('IpsrGeneralInformationService', () => {
     findOne: jest.fn(),
   };
 
+  const mockResultImpactAreaScoresService = {
+    validateImpactAreaScores: jest.fn().mockResolvedValue(undefined),
+    create: jest.fn().mockResolvedValue([]),
+    find: jest.fn().mockResolvedValue([]),
+  };
+
   const mockUser: TokenDto = {
     id: 10,
     first_name: 'Test',
@@ -104,6 +111,10 @@ describe('IpsrGeneralInformationService', () => {
         { provide: GenderTagRepository, useValue: mockGenderTagRepo },
         { provide: IpsrRepository, useValue: mockIpsrRepo },
         { provide: IpsrService, useValue: mockIpsrService },
+        {
+          provide: ResultImpactAreaScoresService,
+          useValue: mockResultImpactAreaScoresService,
+        },
         { provide: AdUserService, useValue: mockAdUserService },
         { provide: AdUserRepository, useValue: mockAdUserRepo },
       ],
@@ -275,19 +286,17 @@ describe('IpsrGeneralInformationService', () => {
       };
 
       const level3Tag = { id: 3, name: 'Level 3 Tag' };
-      const component = { id: 5, name: 'Test Component' };
 
       mockGenderTagRepo.findOne.mockResolvedValue(level3Tag);
-      mockImpactAreaCompRepo.findOne.mockResolvedValue(component);
 
       await service.generalInformation(1, dtoWithComponent, mockUser);
 
       expect(mockGenderTagRepo.findOne).toHaveBeenCalledWith({
         where: { id: 3 },
       });
-      expect(mockImpactAreaCompRepo.findOne).toHaveBeenCalledWith({
-        where: { id: 5 },
-      });
+      expect(
+        mockResultImpactAreaScoresService.validateImpactAreaScores,
+      ).toHaveBeenCalledWith(5, expect.any(Array));
     });
 
     it('should throw error when tag does not exist', async () => {
@@ -357,7 +366,7 @@ describe('IpsrGeneralInformationService', () => {
 
       try {
         await service.generalInformation(1, mockDto, mockUser);
-      } catch (_error) {}
+      } catch (_error) { }
 
       expect(mockErrorHandler.returnErrorRes).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -435,7 +444,7 @@ describe('IpsrGeneralInformationService', () => {
       mockDiscontinuedRepo.find.mockResolvedValue([]);
       mockAdUserRepo.findOne.mockRejectedValue(new Error('User not found'));
 
-      jest.spyOn(console, 'warn').mockImplementation(() => {});
+      jest.spyOn(console, 'warn').mockImplementation(() => { });
 
       const result = await service.findOneInnovation(1);
 
@@ -452,7 +461,7 @@ describe('IpsrGeneralInformationService', () => {
     it('should handle result not found', async () => {
       mockIpsrRepo.getResultInnovationById.mockResolvedValue([]);
 
-      await service.findOneInnovation(999).catch(() => {});
+      await service.findOneInnovation(999).catch(() => { });
 
       expect(mockErrorHandler.returnErrorRes).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -467,7 +476,7 @@ describe('IpsrGeneralInformationService', () => {
         new Error('Some DB error'),
       );
 
-      await service.findOneInnovation(1).catch(() => {});
+      await service.findOneInnovation(1).catch(() => { });
 
       expect(mockErrorHandler.returnErrorRes).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -481,23 +490,26 @@ describe('IpsrGeneralInformationService', () => {
   describe('validateTagAndComponent (private method)', () => {
     it('should validate tag and component for level 3', async () => {
       const tag = { id: 3, name: 'Level 3 Tag' };
-      const component = { id: 5, name: 'Test Component' };
+      const impactAreaScoresToAdd: Array<{ impact_area_score_id: number }> = [];
 
       mockGenderTagRepo.findOne.mockResolvedValue(tag);
-      mockImpactAreaCompRepo.findOne.mockResolvedValue(component);
 
       const result = await (service as any).validateTagAndComponent(
         3,
         5,
         'Gender',
+        impactAreaScoresToAdd,
       );
 
-      expect(result.tag).toEqual(tag);
-      expect(result.component).toEqual(component);
+      expect(result).toEqual(tag);
+      expect(
+        mockResultImpactAreaScoresService.validateImpactAreaScores,
+      ).toHaveBeenCalledWith(5, impactAreaScoresToAdd);
     });
 
     it('should validate tag without component for non-level 3', async () => {
       const tag = { id: 1, name: 'Level 1 Tag' };
+      const impactAreaScoresToAdd: Array<{ impact_area_score_id: number }> = [];
 
       mockGenderTagRepo.findOne.mockResolvedValue(tag);
 
@@ -505,11 +517,13 @@ describe('IpsrGeneralInformationService', () => {
         1,
         null,
         'Gender',
+        impactAreaScoresToAdd,
       );
 
-      expect(result.tag).toEqual(tag);
-      expect(result.component).toBeNull();
-      expect(mockImpactAreaCompRepo.findOne).not.toHaveBeenCalled();
+      expect(result).toEqual(tag);
+      expect(
+        mockResultImpactAreaScoresService.validateImpactAreaScores,
+      ).not.toHaveBeenCalled();
     });
   });
 });
