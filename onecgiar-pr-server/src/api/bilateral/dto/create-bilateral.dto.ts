@@ -1089,14 +1089,16 @@ export class CreateBilateralDto {
   @Type(() => GeoFocusDto)
   geo_focus?: GeoFocusDto;
 
-  @ApiProperty({
-    description: 'List of contributing CGIAR centers',
+  @ApiPropertyOptional({
+    description:
+      'List of contributing CGIAR centers. Optional for KNOWLEDGE_PRODUCT results (obtained from CGSpace).',
     type: [InstitutionDto],
   })
+  @ValidateIf((o) => o.result_type_id !== ResultTypeEnum.KNOWLEDGE_PRODUCT)
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => InstitutionDto)
-  contributing_center: InstitutionDto[];
+  contributing_center?: InstitutionDto[];
 
   @ApiPropertyOptional({
     description:
