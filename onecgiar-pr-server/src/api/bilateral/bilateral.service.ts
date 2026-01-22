@@ -1326,6 +1326,7 @@ export class BilateralService {
         result_id: resultId,
         project_id: project.id,
         created_by: userId,
+        is_lead: nonpp?.is_lead === 1,
       });
     }
   }

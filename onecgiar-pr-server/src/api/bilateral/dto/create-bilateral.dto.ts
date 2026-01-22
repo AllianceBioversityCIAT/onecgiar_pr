@@ -17,7 +17,7 @@ import {
   IsInt,
   Min,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 
@@ -873,6 +873,25 @@ export class BilateralProjectDto {
   @IsString()
   @IsNotEmpty()
   grant_title: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Flag indicating if this project is the lead project. Accepts true/false or 1/0',
+    example: 1,
+    oneOf: [{ type: 'boolean' }, { type: 'number' }],
+  })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === undefined || value === null) return 0;
+    if (value === true || value === 1 || value === '1') return 1;
+    if (value === false || value === 0 || value === '0') return 0;
+    // Try to convert string numbers
+    const numValue = Number(value);
+    if (!Number.isNaN(numValue)) return numValue ? 1 : 0;
+    // Default to false for any other value
+    return 0;
+  })
+  is_lead?: number | boolean;
 }
 
 export class MetadataCGDto {
