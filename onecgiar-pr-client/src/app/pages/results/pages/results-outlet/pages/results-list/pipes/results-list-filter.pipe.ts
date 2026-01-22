@@ -16,22 +16,35 @@ export class ResultsListFilterPipe implements PipeTransform {
     selectedSubmitters: any[],
     selectedIndicatorCategories: any[],
     selectedStatus: any[],
-    selectedClarisaPortfolios: any[]
+    selectedClarisaPortfolios: any[],
+    selectedFundingSource: any[]
   ): any {
     return this.convertList(
-      this.filterByPhase(
-        this.filterBySubmitters(
-          this.filterByIndicatorCategories(
-            this.filterByClarisaPortfolios(this.filterByStatus(this.filterByText(resultList, word), selectedStatus), selectedClarisaPortfolios),
-            selectedIndicatorCategories
+      this.filterByFundingSource(
+        this.filterByPhase(
+          this.filterBySubmitters(
+            this.filterByIndicatorCategories(
+              this.filterByClarisaPortfolios(this.filterByStatus(this.filterByText(resultList, word), selectedStatus), selectedClarisaPortfolios),
+              selectedIndicatorCategories
+            ),
+            selectedSubmitters
           ),
-          selectedSubmitters
+          selectedPhases
         ),
-        selectedPhases
+        selectedFundingSource
       ),
-
       combine
     );
+  }
+
+  filterByFundingSource(resultList: any[], selectedFundingSource: any[]) {
+    if (!selectedFundingSource.length) return resultList;
+
+    const resultsFilter = resultList.filter(result => selectedFundingSource.some(fundingSource => fundingSource.name == result.source_name));
+
+    if (!resultsFilter.length && selectedFundingSource.length === 0) return resultList;
+
+    return resultsFilter;
   }
 
   filterByClarisaPortfolios(resultList: any[], selectedClarisaPortfolios: any[]) {

@@ -98,7 +98,10 @@
   </ng-template>
 </p-table>
 
-@if (showReviewDrawer()) {
-  <app-result-review-drawer [(visible)]="showReviewDrawer" [(resultToReview)]="currentResultToReview" (decisionMade)="onDecisionMade()">
+@if (bilateralResultsService.showReviewDrawer()) {
+  <app-result-review-drawer
+    [(visible)]="bilateralResultsService.showReviewDrawer"
+    [(resultToReview)]="bilateralResultsService.currentResultToReview"
+    (decisionMade)="onDecisionMade()">
   </app-result-review-drawer>
 }
