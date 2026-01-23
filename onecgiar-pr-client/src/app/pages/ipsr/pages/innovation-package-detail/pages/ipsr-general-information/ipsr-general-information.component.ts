@@ -137,16 +137,17 @@ export class IpsrGeneralInformationComponent implements OnInit {
     if (this.fieldsManagerSE.isP25()) {
       return `<strong>Nutrition, health and food security</strong>
 
-      <ul>
-        <li><strong>Example topics:</strong> Improving diets, nutrition, and food security (affordability, accessibility, desirability, stability); human health; and managing zoonotic diseases, food safety, and anti-microbial resistance.</li>
-        <li>
-          <strong>Collective global targets:</strong>
-          <ul>
-            <li>To end hunger for all and enable affordable, healthy diets for the 3 billion people who do not currently have access to safe and nutritious food.</li>
-            <li>To reduce cases of foodborne illness (600 million annually) and zoonotic disease (1 billion annually) by one third.</li>
-          </ul>
-        </li>
-      </ul>`;
+    <ul>
+      <li><strong>Example topics:</strong> Improving diets, nutrition, and food security (affordability, accessibility, desirability, stability); human health; and managing zoonotic diseases, food safety, and anti-microbial resistance.</li>
+      <br/>
+      <li>
+        <strong>Collective global targets:</strong>
+        <ul>
+          <li>To end hunger for all and enable affordable, healthy diets for the 3 billion people who do not currently have access to safe and nutritious food.</li>
+          <li>To reduce cases of foodborne illness (600 million annually) and zoonotic disease (1 billion annually) by one third.</li>
+        </ul>
+      </li>
+    </ul>`;
     }
 
     return `<strong>Nutrition, health and food security tag guidance</strong>
@@ -207,15 +208,16 @@ export class IpsrGeneralInformationComponent implements OnInit {
     if (this.fieldsManagerSE.isP25()) {
       return `<strong>Poverty reduction, livelihoods and jobs</strong>
 
-      <ul>
-        <li><strong>Example topics:</strong> Improving social protection and employment opportunities by supporting access to resources and markets; developing solutions for resilient, income-generating agriculture for small farmers; and reducing poverty through adoption of new varieties and breeds with better yields.</li>
-        <li><strong>Collective global targets:</strong>
-          <ul>
-            <li>Lift at least 500 million people living in rural areas above the extreme poverty line of US $1.90 per day (2011 PPP).</li>
-            <li>Reduce by at least half the proportion of men, women and children of all ages living in poverty in all its dimensions, according to national definitions.</li>
-          </ul>
-        </li>
-      </ul>`;
+    <ul>
+      <li><strong>Example topics:</strong> Improving social protection and employment opportunities by supporting access to resources and markets; developing solutions for resilient, income-generating agriculture for small farmers; and reducing poverty through adoption of new varieties and breeds with better yields.</li>
+      <br/>
+      <li><strong>Collective global targets:</strong>
+        <ul>
+          <li>Lift at least 500 million people living in rural areas above the extreme poverty line of US $1.90 per day (2011 PPP).</li>
+          <li>Reduce by at least half the proportion of men, women and children of all ages living in poverty in all its dimensions, according to national definitions.</li>
+        </ul>
+      </li>
+    </ul>`;
     }
 
     return `<strong>Poverty reduction, livelihoods and jobs tag guidance</strong>
@@ -240,18 +242,19 @@ export class IpsrGeneralInformationComponent implements OnInit {
   genderInformation() {
     if (this.fieldsManagerSE.isP25()) {
       return `<strong>Gender equality, youth and social inclusion</strong>
-      <br/>
+    <br/>
 
-      <ul>
-        <li><strong>Example topics:</strong> Empowering women and youth, encouraging women and youth entrepreneurship, and addressing socio-political barriers to social inclusion in food systems; ensuring equal access to resources; and meeting the specific crop and breed requirements and preferences of women, youth, and disadvantaged groups.</li>
-        <li><strong>Collective global targets:</strong>
-          <ul>
-            <li>To close the gender gap in rights to economic resources, access to ownership and control over land and natural resources for over 500 million women who work in food, land and water systems.</li>
-            <li>To offer rewardable opportunities to 267 million young people who are not in employment, education or training.</li>
-          </ul>
-        </li>
-        <li><strong>Note:</strong> Specific enhanced instructions related to scoring for gender equality, elaborated by the GENDER Platform, are available <a href="https://cgiar.sharepoint.com/:b:/r/sites/WGonpoolednon-pooledalignment/Shared%20Documents/General/QA/CGIAR%20Technical%20Reporting%20Guidance%20for%20Impact%20Area%20Scoring.pdf?csf=1&web=1&e=CFLArZ" target="_blank" rel="noopener noreferrer">here</a>.</li>
-      </ul>`;
+    <ul>
+      <li><strong>Example topics:</strong> Empowering women and youth, encouraging women and youth entrepreneurship, and addressing socio-political barriers to social inclusion in food systems; ensuring equal access to resources; and meeting the specific crop and breed requirements and preferences of women, youth, and disadvantaged groups.</li>
+      <br/>
+      <li><strong>Collective global targets:</strong>
+        <ul>
+          <li>To close the gender gap in rights to economic resources, access to ownership and control over land and natural resources for over 500 million women who work in food, land and water systems.</li>
+          <li>To offer rewardable opportunities to 267 million young people who are not in employment, education or training.</li>
+        </ul>
+      </li>
+      <li><strong>Note:</strong> Additional guidance on scoring for gender equality can be found in <a href="https://docs.google.com/document/d/1krxwqVsmCfiQREh-DwGNcS72EPYRA7cn/edit?usp=sharing&ouid=100701138371542982320&rtpof=true&sd=true" target="_blank" rel="noopener noreferrer" class="open_route">this document</a> on result-level Impact Area scoring.</li>
+    </ul>`;
     }
 
     return `<strong>Gender equality tag guidance</strong>
@@ -288,8 +291,12 @@ export class IpsrGeneralInformationComponent implements OnInit {
     <ul>
     <li>Every result should have at least one score of 1 or 2. Results with scores of 0 for all IAs should be rare cases.</li>
     <li>No more than two IAs should receive scores of 2 for a given result. Results with three IAs with scores of 2 should be rare cases.</li>
-    <li>Scores should not be assigned solely based on relevance to the collective global targets, but rather to the IA as more broadly defined in the 2030 Strategy and by the IA Platforms, indicated below.</li>
-    <li>Scoring should be based on the relevance of the IAs to a given result and not on other criteria such as a specific donor's level of interest in an IA.</li>
+    ${
+      this.fieldsManagerSE.isP25()
+        ? '<li>Scores should not be assigned solely based on relevance to the collective global targets, but rather to the IA as more broadly defined in the <a href="https://hdl.handle.net/10568/110918" target="_blank" rel="noopener noreferrer" class="open_route">CGIAR 2030 Research and Innovation Strategy</a>.</li>'
+        : '<li>Scores should not be assigned solely based on relevance to the collective global targets, but rather to the IA as more broadly defined in the 2030 Strategy and by the IA Platforms, indicated below.</li>'
+    }
+    <li>Scoring should be based on the relevance of the IAs to a given result and not on other criteria such as a specific donor’s level of interest in an IA.</li>
     </ul>`;
   }
 
