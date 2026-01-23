@@ -29,6 +29,7 @@ export class RdGeneralInformationComponent implements OnInit {
   isPhaseOpen = false;
 
   getImpactAreasScoresComponents = inject(GetImpactAreasScoresService);
+  fieldsManagerSE = inject(FieldsManagerService);
   isP25 = computed(() => this.dataControlSE.currentResultSignal()?.portfolio === 'P25');
 
   constructor(
