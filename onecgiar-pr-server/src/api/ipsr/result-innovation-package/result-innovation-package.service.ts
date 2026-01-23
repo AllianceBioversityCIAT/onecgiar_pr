@@ -751,17 +751,11 @@ export class ResultInnovationPackageService {
         lead_contact_person: req?.lead_contact_person,
         lead_contact_person_id: leadContactPersonId,
         gender_tag_level_id: req?.gender_tag_level_id,
-        gender_impact_area_id: req?.gender_impact_area_id,
         climate_change_tag_level_id: req?.climate_change_tag_level_id,
-        climate_impact_area_id: req?.climate_impact_area_id,
         nutrition_tag_level_id: req?.nutrition_tag_level_id,
-        nutrition_impact_area_id: req?.nutrition_impact_area_id,
         environmental_biodiversity_tag_level_id:
           req?.environmental_biodiversity_tag_level_id,
-        environmental_biodiversity_impact_area_id:
-          req?.environmental_biodiversity_impact_area_id,
         poverty_tag_level_id: req?.poverty_tag_level_id,
-        poverty_impact_area_id: req?.poverty_impact_area_id,
         is_krs: req?.is_krs,
         krs_url: req?.krs_url,
         geographic_scope_id: resultExist.geographic_scope_id,

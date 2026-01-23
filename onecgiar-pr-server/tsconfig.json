@@ -18,6 +18,6 @@
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
     "esModuleInterop": true,
-    "types": ["@nestjs/schedule", "jest"]
+    "types": ["@nestjs/schedule", "jest", "node"]
   }
 }

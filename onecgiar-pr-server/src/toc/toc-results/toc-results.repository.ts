@@ -441,8 +441,39 @@ export class TocResultsRepository extends Repository<TocResult> {
       params.push(tocPhaseId);
     }
 
+    let isUnplanned = false;
+    if (resultId && Number.isFinite(resultId) && resultId > 0) {
+      try {
+        const firstResultTocQuery = `
+          SELECT planned_result
+          FROM ${env.DB_NAME}.results_toc_result
+          WHERE results_id = ?
+            AND initiative_id = ?
+            AND is_active = 1
+          ORDER BY created_date ASC
+          LIMIT 1
+        `;
+        const firstResultToc = await this.query(firstResultTocQuery, [
+          resultId,
+          init_id,
+        ]);
+        if (
+          firstResultToc?.length > 0 &&
+          firstResultToc[0]?.planned_result === 0
+        ) {
+          isUnplanned = true;
+        }
+      } catch (error) {
+        this.logger.warn(
+          `Error checking planned_result for result ${resultId}: ${error}`,
+        );
+      }
+    }
+
     let indicatorFilter = '';
+    // Si es unplanned, no aplicar filtro de type_value
     if (
+      !isUnplanned &&
       resultTypeId &&
       RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId]?.length
     ) {
@@ -528,6 +559,8 @@ export class TocResultsRepository extends Repository<TocResult> {
     tocResultIds: Array<number | string>,
     resultTypeId?: number,
     linkedIndicatorNodeIds?: string[],
+    resultId?: number,
+    initId?: number,
   ): Promise<
     Array<{
       toc_result_id: number;
@@ -555,9 +588,40 @@ export class TocResultsRepository extends Repository<TocResult> {
 
     const queryParams: any[] = [targetYear, ...numericIds];
 
+    // Verificar si el resultado es unplanned (planned_result = 0 en el primer registro)
+    let isUnplanned = false;
+    if (resultId && initId && Number.isFinite(resultId) && resultId > 0) {
+      try {
+        const firstResultTocQuery = `
+          SELECT planned_result
+          FROM ${env.DB_NAME}.results_toc_result
+          WHERE results_id = ?
+            AND initiative_id = ?
+            AND is_active = 1
+          ORDER BY created_date ASC
+          LIMIT 1
+        `;
+        const firstResultToc = await this.query(firstResultTocQuery, [
+          resultId,
+          initId,
+        ]);
+        if (
+          firstResultToc?.length > 0 &&
+          firstResultToc[0]?.planned_result === 0
+        ) {
+          isUnplanned = true;
+        }
+      } catch (error) {
+        this.logger.warn(
+          `Error checking planned_result for result ${resultId} in getTocIndicatorsByResultIds: ${error}`,
+        );
+      }
+    }
+
     const indicatorConditions: string[] = [];
 
     if (
+      !isUnplanned &&
       resultTypeId &&
       RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId]?.length
     ) {

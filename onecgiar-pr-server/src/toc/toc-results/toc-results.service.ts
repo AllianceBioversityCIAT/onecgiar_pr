@@ -193,6 +193,8 @@ export class TocResultsService {
               tocResultIds,
               result?.result_type_id,
               linkedIndicatorNodeIds,
+              result_id,
+              init_id,
             );
 
           const indicatorMap = new Map<

@@ -8,6 +8,7 @@
       optionValue="id"
       (ngModelChange)="cleanSource($event)"
       label="Source of the evidence"
+      [required]="false"
       [(ngModel)]="this.evidence.is_sharepoint">
     </app-pr-radio-button>
 

@@ -14,6 +14,7 @@ import { ResultRepository } from '../results/result.repository';
 import { VersioningService } from '../versioning/versioning.service';
 import { AppModuleIdEnum } from '../../shared/constants/role-type.enum';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
+import { ResultStatusData } from '../../shared/constants/result-status.enum';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { Result, SourceEnum } from '../results/entities/result.entity';
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
@@ -197,29 +198,49 @@ export class BilateralService {
               userId,
             );
 
-            const {
-              scope_code,
-              scope_label,
-              regions,
-              countries,
-              subnational_areas,
-            } = bilateralDto.geo_focus;
-            const scope = await this.findScope(scope_code, scope_label);
-            this.validateGeoFocus(scope, regions, countries, subnational_areas);
+            const isKpType =
+              bilateralDto.result_type_id === ResultTypeEnum.KNOWLEDGE_PRODUCT;
 
-            await this.handleRegions(newResultHeader, scope, regions);
-            await this.handleCountries(
-              newResultHeader,
-              countries,
-              subnational_areas,
-              scope.id,
-              userId,
-            );
+            if (isKpType) {
+              // For KP, save without geographic_scope_id (will be set from CGSpace)
+              await this._resultRepository.save({
+                ...newResultHeader,
+              });
+            } else if (bilateralDto.geo_focus) {
+              const {
+                scope_code,
+                scope_label,
+                regions,
+                countries,
+                subnational_areas,
+              } = bilateralDto.geo_focus;
+              const scope = await this.findScope(scope_code, scope_label);
+              this.validateGeoFocus(
+                scope,
+                regions,
+                countries,
+                subnational_areas,
+              );
 
-            await this._resultRepository.save({
-              ...newResultHeader,
-              geographic_scope_id: this.resolveScopeId(scope.id, countries),
-            });
+              await this.handleRegions(newResultHeader, scope, regions);
+              await this.handleCountries(
+                newResultHeader,
+                countries,
+                subnational_areas,
+                scope.id,
+                userId,
+              );
+
+              await this._resultRepository.save({
+                ...newResultHeader,
+                geographic_scope_id: this.resolveScopeId(scope.id, countries),
+              });
+            } else {
+              // For non-KP types, geo_focus is required
+              throw new BadRequestException(
+                'geo_focus is required for non-Knowledge Product results.',
+              );
+            }
 
             await this.handleTocMapping(
               bilateralDto.toc_mapping,
@@ -253,18 +274,6 @@ export class BilateralService {
               bilateralDto.lead_center,
             );
 
-            const isKpType =
-              bilateralDto.result_type_id === ResultTypeEnum.KNOWLEDGE_PRODUCT;
-            const isCapacityChange =
-              bilateralDto.result_type_id === ResultTypeEnum.CAPACITY_CHANGE;
-            const isInnovationDev =
-              bilateralDto.result_type_id ===
-              ResultTypeEnum.INNOVATION_DEVELOPMENT;
-            const isInnovationUse =
-              bilateralDto.result_type_id === ResultTypeEnum.INNOVATION_USE;
-            const isPolicyChange =
-              bilateralDto.result_type_id === ResultTypeEnum.POLICY_CHANGE;
-
             let kpExtra: any = {};
             if (isKpType) {
               const kp = await this._resultsKnowledgeProductsRepository.findOne(
@@ -289,52 +298,7 @@ export class BilateralService {
 
             resultInfo = await this._resultRepository.findOne({
               where: { id: newResultHeader.id },
-              relations: {
-                obj_geographic_scope: true,
-                obj_result_type: true,
-                obj_result_level: true,
-                obj_created: true,
-                obj_external_submitter: true,
-                result_region_array: {
-                  region_object: true,
-                },
-                result_country_array: {
-                  country_object: true,
-                  result_countries_subnational_array: true,
-                },
-                result_by_institution_array: {
-                  obj_institutions: {
-                    obj_institution_type_code: true,
-                  },
-                },
-                result_center_array: {
-                  clarisa_center_object: {
-                    clarisa_institution: true,
-                  },
-                },
-                obj_results_toc_result: true,
-                obj_result_by_project: {
-                  obj_clarisa_project: true,
-                },
-                ...(isKpType && {
-                  result_knowledge_product_array: {
-                    result_knowledge_product_keyword_array: true,
-                    result_knowledge_product_metadata_array: true,
-                  },
-                }),
-                ...(isCapacityChange && {
-                  results_capacity_development_object: true,
-                }),
-                ...(isInnovationDev && {
-                  results_innovations_dev_object: true,
-                }),
-                ...(isInnovationUse && {
-                  results_innovations_use_object: true,
-                }),
-                ...(isPolicyChange && {
-                  results_policy_changes_object: true,
-                }),
-              },
+              relations: this.buildResultRelations(bilateralDto.result_type_id),
             });
 
             this.logger.log(
@@ -509,65 +473,9 @@ export class BilateralService {
         isDuplicateResult: false,
       });
 
-      const isKpType =
-        bilateralDto.result_type_id === ResultTypeEnum.KNOWLEDGE_PRODUCT;
-      const isCapacityChange =
-        bilateralDto.result_type_id === ResultTypeEnum.CAPACITY_CHANGE;
-      const isInnovationDev =
-        bilateralDto.result_type_id === ResultTypeEnum.INNOVATION_DEVELOPMENT;
-      const isInnovationUse =
-        bilateralDto.result_type_id === ResultTypeEnum.INNOVATION_USE;
-      const isPolicyChange =
-        bilateralDto.result_type_id === ResultTypeEnum.POLICY_CHANGE;
-
       resultInfo = await this._resultRepository.findOne({
         where: { id: resultId },
-        relations: {
-          obj_geographic_scope: true,
-          obj_result_type: true,
-          obj_result_level: true,
-          obj_created: true,
-          obj_external_submitter: true,
-          result_region_array: {
-            region_object: true,
-          },
-          result_country_array: {
-            country_object: true,
-            result_countries_subnational_array: true,
-          },
-          result_by_institution_array: {
-            obj_institutions: {
-              obj_institution_type_code: true,
-            },
-          },
-          result_center_array: {
-            clarisa_center_object: {
-              clarisa_institution: true,
-            },
-          },
-          obj_results_toc_result: true,
-          obj_result_by_project: {
-            obj_clarisa_project: true,
-          },
-          ...(isKpType && {
-            result_knowledge_product_array: {
-              result_knowledge_product_keyword_array: true,
-              result_knowledge_product_metadata_array: true,
-            },
-          }),
-          ...(isCapacityChange && {
-            results_capacity_development_object: true,
-          }),
-          ...(isInnovationDev && {
-            results_innovations_dev_object: true,
-          }),
-          ...(isInnovationUse && {
-            results_innovations_use_object: true,
-          }),
-          ...(isPolicyChange && {
-            results_policy_changes_object: true,
-          }),
-        },
+        relations: this.buildResultRelations(bilateralDto.result_type_id),
       });
 
       resultInfo = this.filterActiveRelations(resultInfo);
@@ -609,6 +517,124 @@ export class BilateralService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  async findOne(id: number) {
+    if (!id) {
+      throw new BadRequestException('Result id is required.');
+    }
+
+    const result = await this._resultRepository.findOne({
+      where: { id, source: SourceEnum.Bilateral },
+    });
+
+    if (!result) {
+      throw new NotFoundException('Bilateral result not found.');
+    }
+
+    const resultTypeId = result.result_type_id;
+    const resultInfo = await this._resultRepository.findOne({
+      where: { id },
+      relations: this.buildResultRelations(resultTypeId),
+    });
+
+    if (!resultInfo) {
+      throw new NotFoundException('Bilateral result not found.');
+    }
+
+    const filteredResult = this.filterActiveRelations(resultInfo);
+
+    return {
+      response: filteredResult,
+      message: 'Bilateral result retrieved successfully.',
+      status: 200,
+    };
+  }
+
+  async findAll(limit: number = 10) {
+    const takeLimit = limit && limit > 0 ? limit : 10;
+
+    const results = await this._resultRepository.find({
+      where: { source: SourceEnum.Bilateral, is_active: true },
+      order: { id: 'DESC' },
+      take: takeLimit,
+    });
+
+    const resultsWithRelations = await Promise.all(
+      results.map(async (result) => {
+        const resultTypeId = result.result_type_id;
+        const resultWithRelations = await this._resultRepository.findOne({
+          where: { id: result.id },
+          relations: this.buildResultRelations(resultTypeId),
+        });
+        return this.filterActiveRelations(resultWithRelations);
+      }),
+    );
+
+    return {
+      response: resultsWithRelations,
+      message: 'Bilateral results retrieved successfully.',
+      status: 200,
+    };
+  }
+
+  private buildResultRelations(resultTypeId?: number) {
+    const isKpType = resultTypeId === ResultTypeEnum.KNOWLEDGE_PRODUCT;
+    const isCapacityChange = resultTypeId === ResultTypeEnum.CAPACITY_CHANGE;
+    const isInnovationDev =
+      resultTypeId === ResultTypeEnum.INNOVATION_DEVELOPMENT;
+    const isInnovationUse = resultTypeId === ResultTypeEnum.INNOVATION_USE;
+    const isPolicyChange = resultTypeId === ResultTypeEnum.POLICY_CHANGE;
+
+    return {
+      obj_result_by_initiatives: {
+        obj_initiative: true,
+      },
+      obj_geographic_scope: true,
+      obj_result_type: true,
+      obj_result_level: true,
+      obj_created: true,
+      obj_external_submitter: true,
+      result_region_array: {
+        region_object: true,
+      },
+      result_country_array: {
+        country_object: true,
+        result_countries_subnational_array: true,
+      },
+      result_by_institution_array: {
+        obj_institutions: {
+          obj_institution_type_code: true,
+        },
+      },
+      result_center_array: {
+        clarisa_center_object: {
+          clarisa_institution: true,
+        },
+      },
+      obj_results_toc_result: true,
+      obj_result_by_project: {
+        obj_clarisa_project: true,
+      },
+      ...(isKpType && {
+        result_knowledge_product_array: {
+          result_knowledge_product_keyword_array: true,
+          result_knowledge_product_metadata_array: true,
+        },
+      }),
+      ...(isCapacityChange && {
+        results_capacity_development_object: true,
+      }),
+      ...(isInnovationDev && {
+        results_innovations_dev_object: true,
+      }),
+      ...(isInnovationUse && {
+        results_innovations_use_object: true,
+      }),
+      ...(isPolicyChange && {
+        results_policy_changes_object: true,
+      }),
+    };
   }
 
   private async validateTocMappingInitiatives(
@@ -1213,8 +1239,7 @@ export class BilateralService {
         );
       } catch (err) {
         this.logger.error(
-          `TOC mapping unexpected error for program ${mapping.science_program_id} (role ${roleId}): ${
-            (err as Error).message
+          `TOC mapping unexpected error for program ${mapping.science_program_id} (role ${roleId}): ${(err as Error).message
           }`,
         );
         this.logger.error(`TOC mapping error stack: ${(err as Error).stack}`);
@@ -1237,12 +1262,12 @@ export class BilateralService {
     const onlyActive = (arr: any[]) =>
       Array.isArray(arr)
         ? arr.filter(
-            (item) =>
-              item?.is_active === undefined ||
-              item.is_active === null ||
-              item.is_active === true ||
-              item.is_active === 1,
-          )
+          (item) =>
+            item?.is_active === undefined ||
+            item.is_active === null ||
+            item.is_active === true ||
+            item.is_active === 1,
+        )
         : arr;
 
     result.result_region_array = onlyActive(result.result_region_array);
@@ -1300,6 +1325,7 @@ export class BilateralService {
         result_id: resultId,
         project_id: project.id,
         created_by: userId,
+        is_lead: nonpp?.is_lead === 1,
       });
     }
   }
@@ -1349,6 +1375,7 @@ export class BilateralService {
         created_date: bilateralDto.created_date,
       }),
       source: SourceEnum.Bilateral,
+      status_id: ResultStatusData.PendingReview.value,
     });
 
     return resultHeader;
@@ -1390,6 +1417,20 @@ export class BilateralService {
     }
   }
 
+  /**
+   * Normalizes institution name/acronym values.
+   * Maps "ABC" to "CIAT (Alliance)" for exact matching with the institution name.
+   */
+  private normalizeInstitutionValue(value: string | undefined): string | undefined {
+    if (!value) return value;
+    const normalized = value.trim().toUpperCase();
+    if (normalized === 'ABC') {
+      this.logger.debug('Normalizing ABC to CIAT (Alliance) for institution matching');
+      return 'CIAT (Alliance)';
+    }
+    return value;
+  }
+
   private async handleLeadCenter(
     resultId: number,
     leadCenter: { name?: string; acronym?: string; institution_id?: number },
@@ -1402,7 +1443,12 @@ export class BilateralService {
       return;
     }
 
-    const { name, acronym, institution_id } = leadCenter;
+    // Normalize ABC to CIAT
+    const normalizedName = this.normalizeInstitutionValue(leadCenter.name);
+    const normalizedAcronym = this.normalizeInstitutionValue(leadCenter.acronym);
+    const { institution_id } = leadCenter;
+    const name = normalizedName;
+    const acronym = normalizedAcronym;
     if (!name && !acronym && !institution_id) {
       this.logger.warn(
         'lead_center must include at least one of name, acronym, institution_id',
@@ -1523,20 +1569,29 @@ export class BilateralService {
 
     for (const centerInput of centers) {
       if (!centerInput) continue;
-      const { name, acronym, institution_id } = centerInput;
+      // Normalize ABC to CIAT
+      const normalizedName = this.normalizeInstitutionValue(centerInput.name);
+      const normalizedAcronym = this.normalizeInstitutionValue(centerInput.acronym);
+      const { institution_id } = centerInput;
+      const name = normalizedName;
+      const acronym = normalizedAcronym;
       if (!name && !acronym && !institution_id) continue;
+
+      // Normalize leadCenter values for comparison
+      const normalizedLeadName = this.normalizeInstitutionValue(leadCenter?.name);
+      const normalizedLeadAcronym = this.normalizeInstitutionValue(leadCenter?.acronym);
 
       if (
         leadCenter &&
         ((leadCenter.institution_id &&
           institution_id &&
           leadCenter.institution_id === institution_id) ||
-          (leadCenter.acronym &&
+          (normalizedLeadAcronym &&
             acronym &&
-            leadCenter.acronym.toLowerCase() === acronym.toLowerCase()) ||
-          (leadCenter.name &&
+            normalizedLeadAcronym.toLowerCase() === acronym.toLowerCase()) ||
+          (normalizedLeadName &&
             name &&
-            leadCenter.name.toLowerCase() === name.toLowerCase()))
+            normalizedLeadName.toLowerCase() === name.toLowerCase()))
       ) {
         continue;
       }
@@ -1645,6 +1700,8 @@ export class BilateralService {
   }
 
   private async handleEvidence(resultId, evidence, userId) {
+    if (!Array.isArray(evidence) || !evidence.length) return;
+
     const evidencesArray = evidence.filter((e) => !!e?.link);
     const testDuplicate = evidencesArray.map((e) => e.link);
     if (new Set(testDuplicate).size !== testDuplicate.length) {
@@ -1697,7 +1754,12 @@ export class BilateralService {
 
     for (const input of institutions) {
       if (!input) continue;
-      const { institution_id, name, acronym } = input;
+      // Normalize ABC to CIAT
+      const normalizedName = this.normalizeInstitutionValue(input.name);
+      const normalizedAcronym = this.normalizeInstitutionValue(input.acronym);
+      const { institution_id } = input;
+      const name = normalizedName;
+      const acronym = normalizedAcronym;
       let matched: ClarisaInstitution | null = null;
 
       if (institution_id) {

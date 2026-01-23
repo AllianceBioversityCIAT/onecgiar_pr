@@ -1,4 +1,10 @@
-import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import {
+  HttpStatus,
+  Injectable,
+  Logger,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { CreateGeographicLocationDto } from './dto/create-geographic-location.dto';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultRegionsService } from '../../results/result-regions/result-regions.service';
@@ -21,6 +27,7 @@ export class GeographicLocationService {
     private readonly _resultRegionsService: ResultRegionsService,
     private readonly _resultCountriesService: ResultCountriesService,
     private readonly _resultRepository: ResultRepository,
+    @Inject(forwardRef(() => ResultsService))
     private readonly _resultService: ResultsService,
     private readonly _elasticService: ElasticService,
     private readonly _resultRegionRepository: ResultRegionRepository,
@@ -87,11 +94,12 @@ export class GeographicLocationService {
 
   async getGeoScopeV2(resultId: number) {
     try {
-      const result = await this._resultRepository.getResultById(resultId);
-      console.log('result', result.id);
+      const result = await this._resultRepository.findOne({
+        where: { id: resultId },
+      });
 
       if (!result?.id) {
-        throw {
+        return {
           response: {},
           message: 'Results Not Found',
           status: HttpStatus.NOT_FOUND,
