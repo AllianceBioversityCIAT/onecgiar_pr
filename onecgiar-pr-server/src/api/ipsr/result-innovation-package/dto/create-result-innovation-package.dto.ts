@@ -1,13 +1,20 @@
 import { ResultInnovationPackage } from '../entities/result-innovation-package.entity';
 import { ClarisaSubnationalScope } from '../../../../clarisa/clarisa-subnational-scope/entities/clarisa-subnational-scope.entity';
 import { ADUser } from '../../../../auth/services/active-directory.service';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateResultInnovationPackageDto {
+  @ApiProperty({ description: 'The result id' })
   public result_id: number;
+  @ApiProperty({ description: 'The initiative id' })
   public initiative_id: number;
+  @ApiProperty({ description: 'The geo scope id' })
   public geo_scope_id: number;
+  @ApiProperty({ description: 'The result innocation package' })
   public result_innocation_package: ResultInnovationPackage;
+  @ApiProperty({ description: 'The regions' })
   public regions: regionsInterface[];
+  @ApiProperty({ description: 'The countries' })
   public countries: countriesInterface[];
 }
 export interface regionsInterface {
