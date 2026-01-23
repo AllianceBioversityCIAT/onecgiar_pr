@@ -199,13 +199,14 @@ export class RdGeneralInformationComponent implements OnInit {
   }
 
   onSaveSection() {
-    if (this.userSearchService.searchQuery.trim() && !this.userSearchService.selectedUser) {
+    const isP25 = this.dataControlSE.currentResultSignal()?.portfolio === 'P25';
+
+    if (this.userSearchService.searchQuery.trim() && !this.userSearchService.selectedUser && !isP25) {
       this.userSearchService.hasValidContact = false;
       this.userSearchService.showContactError = true;
       return;
     }
 
-    const isP25 = this.dataControlSE.currentResultSignal()?.portfolio === 'P25';
     const hasDiscontinuedOptions = this.generalInfoBody.discontinued_options?.some(option => option.value === true);
 
     if (isP25 && hasDiscontinuedOptions) {
