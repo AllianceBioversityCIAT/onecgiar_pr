@@ -104,7 +104,7 @@ export class ResultInnovationPackageService {
     @Optional() private readonly _adUserRepository?: AdUserRepository,
     private readonly _roleByUserRepository?: RoleByUserRepository,
     private readonly _versionRepository?: VersionRepository,
-  ) { }
+  ) {}
 
   async findUnitTime() {
     try {
@@ -231,7 +231,11 @@ export class ResultInnovationPackageService {
           i.inititiative_id === createResultInnovationPackageDto.initiative_id,
       );
 
-      const validateSpLegacyInits = await this._resultInnovationPackageRepository.validateSpLegacyInits(createResultInnovationPackageDto.initiative_id, initiativeRole);
+      const validateSpLegacyInits =
+        await this._resultInnovationPackageRepository.validateSpLegacyInits(
+          createResultInnovationPackageDto.initiative_id,
+          initiativeRole,
+        );
 
       if (!(mapInits || validateSpLegacyInits)) {
         return {
@@ -295,9 +299,11 @@ export class ResultInnovationPackageService {
         if (result.title.endsWith('.')) {
           result.title = result.title.replace(/\.$/, '');
         }
-        innovationTitle = `Innovation Package and Scaling Readiness assessment for ${result.title
-          } in ${regionsList.slice(0, -1).join(', ')}${regionsList.length > 1 ? ' and ' : ''
-          }${regionsList[regionsList.length - 1]}`;
+        innovationTitle = `Innovation Package and Scaling Readiness assessment for ${
+          result.title
+        } in ${regionsList.slice(0, -1).join(', ')}${
+          regionsList.length > 1 ? ' and ' : ''
+        }${regionsList[regionsList.length - 1]}`;
       } else if (
         [3, 4, 5].includes(createResultInnovationPackageDto.geo_scope_id)
       ) {
@@ -1179,7 +1185,8 @@ export class ResultInnovationPackageService {
     }
     return `Innovation Package and Scaling Readiness assessment for ${result.title.toLocaleLowerCase()} in ${countriesList
       .slice(0, -1)
-      .join(', ')}${countriesList.length > 1 ? ' and ' : ''}${countriesList[countriesList.length - 1]
-      }`;
+      .join(', ')}${countriesList.length > 1 ? ' and ' : ''}${
+      countriesList[countriesList.length - 1]
+    }`;
   }
 }

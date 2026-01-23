@@ -14,7 +14,8 @@ import { InitiativeByResultDTO } from '../../../results/results_by_inititiatives
 @Injectable()
 export class ResultInnovationPackageRepository
   extends BaseRepository<ResultInnovationPackage>
-  implements LogicalDelete<ResultInnovationPackage> {
+  implements LogicalDelete<ResultInnovationPackage>
+{
   createQueries(
     config: ReplicableConfigInterface<ResultInnovationPackage>,
   ): ConfigCustomQueryInterface {
@@ -23,8 +24,8 @@ export class ResultInnovationPackageRepository
       SELECT
           is_active,
           ${predeterminedDateValidation(
-        config.predetermined_date,
-      )} AS created_date,
+            config.predetermined_date,
+          )} AS created_date,
           last_updated_date,
           ${config.user.id} AS created_by,
           ${config.user.id} AS last_updated_by,
@@ -87,8 +88,8 @@ export class ResultInnovationPackageRepository
       SELECT
           is_active,
           ${predeterminedDateValidation(
-        config.predetermined_date,
-      )} AS created_date,
+            config.predetermined_date,
+          )} AS created_date,
           last_updated_date,
           ${config.user.id} AS created_by,
           ${config.user.id} AS last_updated_by,
@@ -162,14 +163,20 @@ export class ResultInnovationPackageRepository
       );
   }
 
-  async validateSpLegacyInits(initiativeId: number, initiatives: InitiativeByResultDTO[]) {
+  async validateSpLegacyInits(
+    initiativeId: number,
+    initiatives: InitiativeByResultDTO[],
+  ) {
     const query = `select count(iem.id) > 0 existing_data  
                   from initiative_entity_map iem 
                   where iem.entity_id = ? 
                     and iem.initiative_id in (?)
                     and iem.is_active = true`;
-    const result = await this.dataSource.query<{ existing_data: boolean }[]>(query, [initiativeId, initiatives.map(item => item.inititiative_id)])
-      .then(res => res?.length > 0 ? Boolean(res[0].existing_data) : false);
+    const result = await this.dataSource
+      .query<
+        { existing_data: boolean }[]
+      >(query, [initiativeId, initiatives.map((item) => item.inititiative_id)])
+      .then((res) => (res?.length > 0 ? Boolean(res[0].existing_data) : false));
     return result;
   }
 }
