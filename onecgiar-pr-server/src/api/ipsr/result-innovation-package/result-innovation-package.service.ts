@@ -231,7 +231,13 @@ export class ResultInnovationPackageService {
           i.inititiative_id === createResultInnovationPackageDto.initiative_id,
       );
 
-      if (!mapInits) {
+      const validateSpLegacyInits =
+        await this._resultInnovationPackageRepository.validateSpLegacyInits(
+          createResultInnovationPackageDto.initiative_id,
+          initiativeRole,
+        );
+
+      if (!(mapInits || validateSpLegacyInits)) {
         return {
           response: mapInits,
           message:

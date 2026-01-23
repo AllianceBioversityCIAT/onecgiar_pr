@@ -6,8 +6,8 @@ import { HandlersError } from '../../shared/handlers/error.utils';
 import { ResultCountriesSubNational } from '../results/result-countries-sub-national/entities/result-countries-sub-national.entity';
 import { LogicalDelete } from '../../shared/globalInterfaces/delete.interface';
 import {
-    ConfigCustomQueryInterface,
-    ReplicableConfigInterface,
+  ConfigCustomQueryInterface,
+  ReplicableConfigInterface,
 } from '../../shared/globalInterfaces/replicable.interface';
 import { predeterminedDateValidation } from '../../shared/utils/versioning.utils';
 import { BaseRepository } from '../../shared/extendsGlobalDTO/base-repository';
@@ -17,18 +17,19 @@ import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 
 @Injectable()
 export class IpsrRepository
-    extends BaseRepository<Ipsr>
-    implements LogicalDelete<Ipsr> {
-    createQueries(
-        config: ReplicableConfigInterface<Ipsr>,
-    ): ConfigCustomQueryInterface {
-        return {
-            findQuery: `
+  extends BaseRepository<Ipsr>
+  implements LogicalDelete<Ipsr>
+{
+  createQueries(
+    config: ReplicableConfigInterface<Ipsr>,
+  ): ConfigCustomQueryInterface {
+    return {
+      findQuery: `
       SELECT
           is_active,
           ${predeterminedDateValidation(
-                config.predetermined_date,
-            )} AS created_date,
+            config.predetermined_date,
+          )} AS created_date,
           last_updated_date,
           ${config.user.id} AS created_by,
           ${config.user.id} AS last_updated_by,
@@ -51,7 +52,7 @@ export class IpsrRepository
       WHERE
           result_innovation_package_id = ${config.old_result_id}
           AND is_active > 0;`,
-            insertQuery: `
+      insertQuery: `
       INSERT INTO
           result_by_innovation_package (
               is_active,
@@ -76,8 +77,8 @@ export class IpsrRepository
       SELECT
           is_active,
           ${predeterminedDateValidation(
-                config.predetermined_date,
-            )} AS created_date,
+            config.predetermined_date,
+          )} AS created_date,
           last_updated_date,
           ${config.user.id} AS created_by,
           ${config.user.id} AS last_updated_by,
@@ -100,7 +101,7 @@ export class IpsrRepository
           result_innovation_package_id = ${config.old_result_id}
           AND is_active > 0;
       `,
-            returnQuery: `
+      returnQuery: `
       SELECT
         result_by_innovation_package_id
       FROM
@@ -109,49 +110,51 @@ export class IpsrRepository
           r1.result_innovation_package_id = ${config.new_result_id}
           AND r1.is_active > 0
           AND r1.ipsr_role_id = 1`,
-        };
-    }
+    };
+  }
 
-    constructor(
-        private dataSource: DataSource,
-        private readonly _handlersError: HandlersError,
-    ) {
-        super(Ipsr, dataSource.createEntityManager());
-    }
+  constructor(
+    private dataSource: DataSource,
+    private readonly _handlersError: HandlersError,
+  ) {
+    super(Ipsr, dataSource.createEntityManager());
+  }
 
-    fisicalDelete(resultId: number): Promise<any> {
-        const dataQuery = `delete rbip from result_by_innovation_package rbip where rbip.result_innovation_package_id = ?;`;
-        return this.query(dataQuery, [resultId])
-            .then((res) => res)
-            .catch((err) =>
-                this._handlersError.returnErrorRepository({
-                    error: err,
-                    className: IpsrRepository.name,
-                    debug: true,
-                }),
-            );
-    }
+  fisicalDelete(resultId: number): Promise<any> {
+    const dataQuery = `delete rbip from result_by_innovation_package rbip where rbip.result_innovation_package_id = ?;`;
+    return this.query(dataQuery, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: IpsrRepository.name,
+          debug: true,
+        }),
+      );
+  }
 
-    logicalDelete(resultId: number): Promise<Ipsr> {
-        const dataQuery = `update result_by_innovation_package rbip set rbip.is_active = 0 where rbip.result_innovation_package_id = ?;`;
-        return this.query(dataQuery, [resultId])
-            .then((res) => res)
-            .catch((err) =>
-                this._handlersError.returnErrorRepository({
-                    error: err,
-                    className: IpsrRepository.name,
-                    debug: true,
-                }),
-            );
-    }
+  logicalDelete(resultId: number): Promise<Ipsr> {
+    const dataQuery = `update result_by_innovation_package rbip set rbip.is_active = 0 where rbip.result_innovation_package_id = ?;`;
+    return this.query(dataQuery, [resultId])
+      .then((res) => res)
+      .catch((err) =>
+        this._handlersError.returnErrorRepository({
+          error: err,
+          className: IpsrRepository.name,
+          debug: true,
+        }),
+      );
+  }
 
-    async getResultsInnovation(initiativeId: number[]) {
-        const initativeQuery = `select iem.initiative_id  
+  async getResultsInnovation(initiativeId: number[]) {
+    const initativeQuery = `select iem.initiative_id  
                             from initiative_entity_map iem 
                             where iem.entity_id IN (?)`;
-        const initiativeIds = await this.dataSource.query<{ initiative_id: number }[]>(initativeQuery, [initiativeId]).then((res) => res.map((item) => item.initiative_id));
-        initiativeIds.push(...initiativeId);
-        const resultInnovationQuery = `
+    const initiativeIds = await this.dataSource
+      .query<{ initiative_id: number }[]>(initativeQuery, [initiativeId])
+      .then((res) => res.map((item) => item.initiative_id));
+    initiativeIds.push(...initiativeId);
+    const resultInnovationQuery = `
         SELECT
             DISTINCT r.id AS result_id,
             r.result_code,
@@ -208,23 +211,23 @@ export class IpsrRepository
             r.created_date ASC;
         `;
 
-        try {
-            const resultInnovation: any[] = await this.dataSource.query(
-                resultInnovationQuery,
-                [initiativeIds],
-            );
-            return resultInnovation;
-        } catch (error) {
-            throw this._handlersError.returnErrorRepository({
-                className: IpsrRepository.name,
-                error: error,
-                debug: true,
-            });
-        }
+    try {
+      const resultInnovation: any[] = await this.dataSource.query(
+        resultInnovationQuery,
+        [initiativeIds],
+      );
+      return resultInnovation;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: IpsrRepository.name,
+        error: error,
+        debug: true,
+      });
     }
+  }
 
-    async getResultInnovationDetail(resultId: number) {
-        const resultInnovationByIdQuery = `
+  async getResultInnovationDetail(resultId: number) {
+    const resultInnovationByIdQuery = `
         SELECT
             r.id AS result_id,
             r.result_code,
@@ -278,24 +281,24 @@ export class IpsrRepository
             AND r.id = ?;
         `;
 
-        try {
-            const resultInnovation: any[] = await this.dataSource.query(
-                resultInnovationByIdQuery,
-                [resultId],
-            );
+    try {
+      const resultInnovation: any[] = await this.dataSource.query(
+        resultInnovationByIdQuery,
+        [resultId],
+      );
 
-            return resultInnovation[0];
-        } catch (error) {
-            throw this._handlersError.returnErrorRepository({
-                className: IpsrRepository.name,
-                error: error,
-                debug: true,
-            });
-        }
+      return resultInnovation[0];
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: IpsrRepository.name,
+        error: error,
+        debug: true,
+      });
     }
+  }
 
-    async getResultInnovationById(resultId: number) {
-        const resultInnovationByIdQuery = `
+  async getResultInnovationById(resultId: number) {
+    const resultInnovationByIdQuery = `
         SELECT
             r.id AS result_id,
             r.result_code,
@@ -483,7 +486,7 @@ export class IpsrRepository
             AND rbi.initiative_role_id = 1;
         `;
 
-        const countryQuery = `
+    const countryQuery = `
         SELECT
             rc.result_country_id,
             rc.country_id AS id,
@@ -496,7 +499,7 @@ export class IpsrRepository
             AND rc.is_active = 1;
         `;
 
-        const subNationalQuery = `
+    const subNationalQuery = `
         SELECT
         	*
         from
@@ -513,7 +516,7 @@ export class IpsrRepository
         and rcsn.is_active = true;
         `;
 
-        const regionsQuery = `
+    const regionsQuery = `
         SELECT
             rr.result_region_id,
             rr.region_id AS id,
@@ -525,71 +528,71 @@ export class IpsrRepository
             AND rr.is_active = 1;
         `;
 
-        try {
-            const resultInnovation: any[] = await this.dataSource.query(
-                resultInnovationByIdQuery,
-                [resultId],
-            );
-            const regions: any[] = await this.dataSource.query(regionsQuery, [
-                resultId,
-            ]);
-            const countries: any[] = await this.dataSource.query(countryQuery, [
-                resultId,
-            ]);
-            const sub_national: ResultCountriesSubNational[] =
-                await this.dataSource.query(subNationalQuery, [resultId]);
+    try {
+      const resultInnovation: any[] = await this.dataSource.query(
+        resultInnovationByIdQuery,
+        [resultId],
+      );
+      const regions: any[] = await this.dataSource.query(regionsQuery, [
+        resultId,
+      ]);
+      const countries: any[] = await this.dataSource.query(countryQuery, [
+        resultId,
+      ]);
+      const sub_national: ResultCountriesSubNational[] =
+        await this.dataSource.query(subNationalQuery, [resultId]);
 
-            if (resultInnovation[0]?.lead_contact_person_id) {
-                const leadContactQuery = `
+      if (resultInnovation[0]?.lead_contact_person_id) {
+        const leadContactQuery = `
         SELECT id, mail, displayName, givenName, surname
         FROM ad_users
         WHERE id = ? AND is_active = 1
       `;
 
-                try {
-                    const leadContactData = await this.dataSource.query(
-                        leadContactQuery,
-                        [resultInnovation[0].lead_contact_person_id],
-                    );
+        try {
+          const leadContactData = await this.dataSource.query(
+            leadContactQuery,
+            [resultInnovation[0].lead_contact_person_id],
+          );
 
-                    if (leadContactData.length > 0) {
-                        resultInnovation[0].lead_contact_person_data = leadContactData[0];
-                    }
-                } catch (error) {
-                    console.warn('Failed to get lead contact person data:', error);
-                }
-            }
-
-            resultInnovation.map((ri) => {
-                ri['hasRegions'] = regions.filter((r) => {
-                    return r.result_id === ri.result_id;
-                });
-
-                ri['hasCountries'] = countries
-                    .filter((c) => {
-                        return c.result_id === ri.result_id;
-                    })
-                    .map((cid) => {
-                        cid['result_countries_sub_national'] = sub_national.filter(
-                            (el) => el.result_countries_id == cid['result_country_id'],
-                        );
-                        return cid;
-                    });
-            });
-
-            return [resultInnovation[0]];
+          if (leadContactData.length > 0) {
+            resultInnovation[0].lead_contact_person_data = leadContactData[0];
+          }
         } catch (error) {
-            throw this._handlersError.returnErrorRepository({
-                className: IpsrRepository.name,
-                error: error,
-                debug: true,
-            });
+          console.warn('Failed to get lead contact person data:', error);
         }
-    }
+      }
 
-    async getAllInnovationPackages(user: TokenDto) {
-        const user_id = user.id;
-        const innovationPackagesQuery = `
+      resultInnovation.map((ri) => {
+        ri['hasRegions'] = regions.filter((r) => {
+          return r.result_id === ri.result_id;
+        });
+
+        ri['hasCountries'] = countries
+          .filter((c) => {
+            return c.result_id === ri.result_id;
+          })
+          .map((cid) => {
+            cid['result_countries_sub_national'] = sub_national.filter(
+              (el) => el.result_countries_id == cid['result_country_id'],
+            );
+            return cid;
+          });
+      });
+
+      return [resultInnovation[0]];
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: IpsrRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async getAllInnovationPackages(user: TokenDto) {
+    const user_id = user.id;
+    const innovationPackagesQuery = `
         SELECT
             DISTINCT r.id,
             r.result_code,
@@ -664,33 +667,33 @@ export class IpsrRepository
             r.result_code ASC;
         `;
 
-        try {
-            const getAllInnovationPackages: any[] = await this.dataSource.query(
-                innovationPackagesQuery,
-                [user_id],
-            );
-            return getAllInnovationPackages;
-        } catch (error) {
-            throw this._handlersError.returnErrorRepository({
-                className: IpsrRepository.name,
-                error: error,
-                debug: true,
-            });
-        }
+    try {
+      const getAllInnovationPackages: any[] = await this.dataSource.query(
+        innovationPackagesQuery,
+        [user_id],
+      );
+      return getAllInnovationPackages;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: IpsrRepository.name,
+        error: error,
+        debug: true,
+      });
     }
+  }
 
-    async getAllInnovationPackagesFiltered(
-        filters?: {
-            initiativeCode?: string;
-            versionId?: number | number[];
-            submitterId?: number | number[];
-            resultTypeId?: number | number[];
-            portfolioId?: number | number[];
-            statusId?: number | number[];
-        },
-        pagination?: { limit?: number; offset?: number },
-    ) {
-        const baseQuery = `
+  async getAllInnovationPackagesFiltered(
+    filters?: {
+      initiativeCode?: string;
+      versionId?: number | number[];
+      submitterId?: number | number[];
+      resultTypeId?: number | number[];
+      portfolioId?: number | number[];
+      statusId?: number | number[];
+    },
+    pagination?: { limit?: number; offset?: number },
+  ) {
+    const baseQuery = `
         SELECT
             DISTINCT r.id,
             r.result_code,
@@ -743,72 +746,72 @@ export class IpsrRepository
             AND rbi.is_active = 1
             AND rbi.initiative_role_id = 1`;
 
-        const params: (string | number)[] = [];
-        const where: string[] = [];
+    const params: (string | number)[] = [];
+    const where: string[] = [];
 
-        const addFilter = (clause: string, values: (number | string)[]) => {
-            where.push(clause);
-            params.push(...values);
-        };
+    const addFilter = (clause: string, values: (number | string)[]) => {
+      where.push(clause);
+      params.push(...values);
+    };
 
-        const addIn = (field: string, values?: number | number[]) => {
-            if (values === undefined || values === null) return;
-            const arr = Array.isArray(values) ? values : [values];
-            if (!arr.length) return;
-            const placeholders = arr.map(() => '?').join(',');
-            where.push(`AND ${field} IN (${placeholders})`);
-            params.push(...arr);
-        };
+    const addIn = (field: string, values?: number | number[]) => {
+      if (values === undefined || values === null) return;
+      const arr = Array.isArray(values) ? values : [values];
+      if (!arr.length) return;
+      const placeholders = arr.map(() => '?').join(',');
+      where.push(`AND ${field} IN (${placeholders})`);
+      params.push(...arr);
+    };
 
-        try {
-            if (filters?.initiativeCode) {
-                addFilter('AND ci.official_code = ?', [filters.initiativeCode]);
-            }
-            addIn('r.version_id', filters?.versionId);
-            addIn('ci.id', filters?.submitterId);
-            addIn('rt.id', filters?.resultTypeId);
-            addIn('ci.portfolio_id', filters?.portfolioId);
-            addIn('r.status_id', filters?.statusId);
+    try {
+      if (filters?.initiativeCode) {
+        addFilter('AND ci.official_code = ?', [filters.initiativeCode]);
+      }
+      addIn('r.version_id', filters?.versionId);
+      addIn('ci.id', filters?.submitterId);
+      addIn('rt.id', filters?.resultTypeId);
+      addIn('ci.portfolio_id', filters?.portfolioId);
+      addIn('r.status_id', filters?.statusId);
 
-            const limit =
-                pagination?.limit && pagination.limit > 0
-                    ? pagination.limit
-                    : undefined;
-            const offset =
-                limit !== undefined &&
-                    pagination?.offset !== undefined &&
-                    pagination.offset >= 0
-                    ? pagination.offset
-                    : undefined;
+      const limit =
+        pagination?.limit && pagination.limit > 0
+          ? pagination.limit
+          : undefined;
+      const offset =
+        limit !== undefined &&
+        pagination?.offset !== undefined &&
+        pagination.offset >= 0
+          ? pagination.offset
+          : undefined;
 
-            const orderClause = ` ORDER BY r.result_code ASC`;
-            const paginatedClause =
-                limit !== undefined
-                    ? ` LIMIT ${limit}${offset !== undefined ? ` OFFSET ${offset}` : ''}`
-                    : '';
+      const orderClause = ` ORDER BY r.result_code ASC`;
+      const paginatedClause =
+        limit !== undefined
+          ? ` LIMIT ${limit}${offset !== undefined ? ` OFFSET ${offset}` : ''}`
+          : '';
 
-            const queryData = `${baseQuery} ${where.join(' ')}${orderClause}${paginatedClause};`;
-            const results = await this.query(queryData, params);
+      const queryData = `${baseQuery} ${where.join(' ')}${orderClause}${paginatedClause};`;
+      const results = await this.query(queryData, params);
 
-            if (limit !== undefined) {
-                const countQuery = `SELECT COUNT(1) as total FROM (${baseQuery} ${where.join(' ')}) as sub`;
-                const totalRows = await this.query(countQuery, params);
-                const total = totalRows?.[0]?.total ?? 0;
-                return { results, total };
-            }
+      if (limit !== undefined) {
+        const countQuery = `SELECT COUNT(1) as total FROM (${baseQuery} ${where.join(' ')}) as sub`;
+        const totalRows = await this.query(countQuery, params);
+        const total = totalRows?.[0]?.total ?? 0;
+        return { results, total };
+      }
 
-            return { results, total: results.length };
-        } catch (error) {
-            throw this._handlersError.returnErrorRepository({
-                className: IpsrRepository.name,
-                error,
-                debug: true,
-            });
-        }
+      return { results, total: results.length };
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: IpsrRepository.name,
+        error,
+        debug: true,
+      });
     }
+  }
 
-    async getStepTwoOne(resultId: number) {
-        const query = `
+  async getStepTwoOne(resultId: number) {
+    const query = `
         SELECT
             rbip.result_by_innovation_package_id,
         	rbip.result_id,
@@ -836,22 +839,22 @@ export class IpsrRepository
             and rbip.ipsr_role_id = 2
         	and rbip.is_active = true;
         `;
-        try {
-            const results: GetInnovationComInterface[] = await this.query(query, [
-                resultId,
-            ]);
-            return results;
-        } catch (error) {
-            throw this._handlersError.returnErrorRepository({
-                className: IpsrRepository.name,
-                error: error,
-                debug: true,
-            });
-        }
+    try {
+      const results: GetInnovationComInterface[] = await this.query(query, [
+        resultId,
+      ]);
+      return results;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: IpsrRepository.name,
+        error: error,
+        debug: true,
+      });
     }
+  }
 
-    async getInnovationCoreStepOne(resultId: number) {
-        const innovationByIdQuery = `
+  async getInnovationCoreStepOne(resultId: number) {
+    const innovationByIdQuery = `
         SELECT
             rbip.result_id
         FROM
@@ -860,7 +863,7 @@ export class IpsrRepository
           rbip.result_innovation_package_id = ?;
         `;
 
-        const coreInnovationQuery = `
+    const coreInnovationQuery = `
         SELECT
             r.result_code,
             r.title,
@@ -880,51 +883,51 @@ export class IpsrRepository
             AND r.id = ?;
         `;
 
-        try {
-            const innovationById: any[] = await this.dataSource.query(
-                innovationByIdQuery,
-                [resultId],
-            );
-            const coreId: number = innovationById[0].result_id;
-            const coreInnovation: any[] = await this.dataSource.query(
-                coreInnovationQuery,
-                [coreId],
-            );
-            return coreInnovation[0];
-        } catch (error) {
-            throw this._handlersError.returnErrorRepository({
-                className: IpsrRepository.name,
-                error: error,
-                debug: true,
-            });
-        }
+    try {
+      const innovationById: any[] = await this.dataSource.query(
+        innovationByIdQuery,
+        [resultId],
+      );
+      const coreId: number = innovationById[0].result_id;
+      const coreInnovation: any[] = await this.dataSource.query(
+        coreInnovationQuery,
+        [coreId],
+      );
+      return coreInnovation[0];
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: IpsrRepository.name,
+        error: error,
+        debug: true,
+      });
     }
+  }
 
-    async getIpsrList(excelReportDto: ExcelReportDto) {
-        const { inits, phases, searchText } = excelReportDto;
-        const initIds = inits.map((init) => {
-            return init.id;
-        });
-        const phaseIds = phases.map((phase) => {
-            return phase.id;
-        });
+  async getIpsrList(excelReportDto: ExcelReportDto) {
+    const { inits, phases, searchText } = excelReportDto;
+    const initIds = inits.map((init) => {
+      return init.id;
+    });
+    const phaseIds = phases.map((phase) => {
+      return phase.id;
+    });
 
-        const initClause =
-            initIds.length > 0
-                ? `AND r.id IN (
+    const initClause =
+      initIds.length > 0
+        ? `AND r.id IN (
            SELECT result_id
            FROM results_by_inititiative
            WHERE inititiative_id IN (${initIds.join(',')})
              AND initiative_role_id = 1
              AND is_active > 0
          )`
-                : '';
+        : '';
 
-        const phaseClause =
-            phaseIds.length > 0 ? `AND r.version_id IN (${phaseIds.join(',')})` : '';
+    const phaseClause =
+      phaseIds.length > 0 ? `AND r.version_id IN (${phaseIds.join(',')})` : '';
 
-        const searchClause = searchText
-            ? `AND (
+    const searchClause = searchText
+      ? `AND (
             r.result_code LIKE '%${searchText}%'
             OR r.title LIKE '%${searchText}%'
             OR ci.official_code LIKE '%${searchText}%'
@@ -932,9 +935,9 @@ export class IpsrRepository
             OR v.phase_year LIKE '%${searchText}%'
             OR v.phase_name LIKE '%${searchText}%'
         )`
-            : '';
+      : '';
 
-        const ipsrListQuery = `
+    const ipsrListQuery = `
     SELECT
         r.result_code AS result_code,
         v.phase_name AS phase_name,
@@ -1277,50 +1280,50 @@ export class IpsrRepository
         r.created_date DESC;
     `;
 
-        try {
-            const ipsrList: any[] = await this.dataSource.query(ipsrListQuery, [
-                '?',
-                '?',
-            ]);
+    try {
+      const ipsrList: any[] = await this.dataSource.query(ipsrListQuery, [
+        '?',
+        '?',
+      ]);
 
-            return ipsrList;
-        } catch (error) {
-            throw this._handlersError.returnErrorRepository({
-                className: IpsrRepository.name,
-                error,
-                debug: true,
-            });
-        }
+      return ipsrList;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: IpsrRepository.name,
+        error,
+        debug: true,
+      });
     }
+  }
 }
 
 export class GetInnovationComInterface {
-    public result_by_innovation_package_id: number;
-    public result_id: number;
-    public result_code: number;
-    public title: string;
-    public short_title: string;
-    public description: string;
-    public other_funcions: string;
-    public initiative_id: number;
-    public initiative_official_code: string;
-    public is_active: boolean;
-    public complementaryFunctions: ComplementaryFunctionsInterface[];
-    public referenceMaterials: ReferenceMaterialsInterface[];
-    complementary_innovation_enabler_types_one: GetEnablersType[];
-    complementary_innovation_enabler_types_two: GetEnablersType[];
+  public result_by_innovation_package_id: number;
+  public result_id: number;
+  public result_code: number;
+  public title: string;
+  public short_title: string;
+  public description: string;
+  public other_funcions: string;
+  public initiative_id: number;
+  public initiative_official_code: string;
+  public is_active: boolean;
+  public complementaryFunctions: ComplementaryFunctionsInterface[];
+  public referenceMaterials: ReferenceMaterialsInterface[];
+  complementary_innovation_enabler_types_one: GetEnablersType[];
+  complementary_innovation_enabler_types_two: GetEnablersType[];
 }
 
 export interface ComplementaryFunctionsInterface {
-    complementary_innovation_functions_id: number;
+  complementary_innovation_functions_id: number;
 }
 export interface ReferenceMaterialsInterface {
-    link: string;
+  link: string;
 }
 
 export class GetEnablersType {
-    complementary_innovation_enabler_types_id: string;
-    group: string;
-    type: string;
-    level: number;
+  complementary_innovation_enabler_types_id: string;
+  group: string;
+  type: string;
+  level: number;
 }
