@@ -15,7 +15,9 @@
     "tunnel": "ng serve -c production --port 19971",
     "cypress:open": "cypress open",
     "cypress:run": "cypress run",
-    "cypress:run:record": "cypress run --record --key $CYPRESS_RECORD_KEY"
+    "cypress:run:record": "cypress run --record --key $CYPRESS_RECORD_KEY",
+    "env:generate": "bash scripts/generate-env.sh",
+    "deploy:staging": "bash scripts/deploy-s3-cloudfront.sh"
   },
   "private": true,
   "dependencies": {
