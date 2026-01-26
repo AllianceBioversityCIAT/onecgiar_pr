@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, effect, inject, model, OnDestroy, OnInit, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, model, OnDestroy, OnInit, output, signal } from '@angular/core';
 import { DrawerModule } from 'primeng/drawer';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -12,6 +12,8 @@ import { KpContentComponent } from './components/kp-content/kp-content.component
 import { InnoDevContentComponent } from './components/inno-dev-content/inno-dev-content.component';
 import { CapSharingContentComponent } from './components/cap-sharing-content/cap-sharing-content.component';
 import { PolicyChangeContentComponent } from './components/policy-change-content/policy-change-content.component';
+import { RolesService } from '../../../../../../../../shared/services/global/roles.service';
+import { BilateralResultsService } from '../../../../bilateral-results.service';
 
 @Component({
   selector: 'app-result-review-drawer',
@@ -34,6 +36,8 @@ import { PolicyChangeContentComponent } from './components/policy-change-content
 })
 export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   private readonly api = inject(ApiService);
+  bilateralResultsService = inject(BilateralResultsService);
+  rolesSE = inject(RolesService);
 
   visible = model<boolean>(false);
   resultToReview = model<ResultToReview | null>(null);
@@ -49,6 +53,15 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
   showConfirmApproveDialog = signal<boolean>(false);
   showConfirmRejectDialog = signal<boolean>(false);
+
+  canReviewResults = computed(() => {
+    if (this.api.rolesSE.isAdmin) {
+      return true;
+    }
+    const myInitiativesList = this.api.dataControlSE.myInitiativesList || [];
+    const found = myInitiativesList.find(item => item.official_code === this.bilateralResultsService.entityId());
+    return !!found;
+  });
 
   constructor() {
     effect(() => {

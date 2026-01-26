@@ -220,14 +220,14 @@
   </div>
 
   <!-- Footer Actions -->
-  <ng-template #footer>
-    <div class="result-review-drawer-footer">
-      @if (resultToReview()?.status_name !== 'Approved' && resultToReview()?.status_name !== 'Rejected') {
+  @if (canReviewResults() && resultToReview()?.status_name === 'Pending Review') {
+    <ng-template #footer>
+      <div class="result-review-drawer-footer">
         <p-button label="APPROVE" styleClass="approve-button" (click)="onApprove()" icon="pi pi-check-circle" variant="outlined" size="large" />
         <p-button label="REJECT" styleClass="reject-button" (click)="onReject()" icon="pi pi-times-circle" variant="outlined" size="large" />
-      }
-    </div>
-  </ng-template>
+      </div>
+    </ng-template>
+  }
 </p-drawer>
 
 <!-- Confirm Approve Dialog -->

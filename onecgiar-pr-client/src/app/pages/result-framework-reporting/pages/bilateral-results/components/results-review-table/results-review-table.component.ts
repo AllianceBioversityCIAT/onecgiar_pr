@@ -39,6 +39,14 @@ export class ResultsReviewTableComponent implements OnDestroy {
       ]
     }
   ]);
+  canReviewResults = computed(() => {
+    if (this.api.rolesSE.isAdmin) {
+      return true;
+    }
+    const myInitiativesList = this.api.dataControlSE.myInitiativesList || [];
+    const found = myInitiativesList.find(item => item.official_code === this.bilateralResultsService.entityId());
+    return !!found;
+  });
   isLoading = signal<boolean>(false);
 
   filteredTableData = computed(() => {

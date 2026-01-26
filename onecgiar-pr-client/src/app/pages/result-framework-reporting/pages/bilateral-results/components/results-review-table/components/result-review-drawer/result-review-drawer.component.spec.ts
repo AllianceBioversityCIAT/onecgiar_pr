@@ -30,6 +30,12 @@ describe('ResultReviewDrawerComponent', () => {
       resultsSE: {
         PATCH_BilateralReviewDecision: jest.fn().mockReturnValue(of({ response: {} })),
         GET_BilateralResultDetail: jest.fn().mockReturnValue(of({ response: {} }))
+      },
+      dataControlSE: {
+        myInitiativesList: []
+      },
+      rolesSE: {
+        isAdmin: false
       }
     };
 
@@ -89,7 +95,9 @@ describe('ResultReviewDrawerComponent', () => {
     component.resultToReview.set(mockResult);
 
     expect(component.resultToReview()).toEqual(mockResult);
-    expect(component.resultToReview()?.result_title).toBe('TEST - Farmers trained on protection against wheat disease apply CGIAR innovation in their work');
+    expect(component.resultToReview()?.result_title).toBe(
+      'TEST - Farmers trained on protection against wheat disease apply CGIAR innovation in their work'
+    );
     expect(component.resultToReview()?.indicator_category).toBe('Innovation Use');
   });
 
