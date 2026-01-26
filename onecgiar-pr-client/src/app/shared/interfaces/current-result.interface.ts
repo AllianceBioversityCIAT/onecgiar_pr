@@ -1,5 +1,6 @@
 export interface CurrentResult {
   id?: string | number;
+  source_name?: string;
   result_code?: string;
   description?: string;
   is_active?: number;

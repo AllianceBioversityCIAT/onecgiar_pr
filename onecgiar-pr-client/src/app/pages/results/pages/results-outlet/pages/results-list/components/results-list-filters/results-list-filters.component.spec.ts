@@ -58,6 +58,7 @@ describe('ResultsListFiltersComponent', () => {
       selectedIndicatorCategories: createSignal<any[]>([]),
       selectedStatus: createSignal<any[]>([]),
       selectedClarisaPortfolios: createSignal<any[]>([]),
+      selectedFundingSource: createSignal<any[]>([]),
       text_to_search: createSignal<string>(''),
       phasesOptions: createSignal<any[]>([]),
       phasesOptionsOld: createSignal<any[]>([]),
@@ -67,7 +68,8 @@ describe('ResultsListFiltersComponent', () => {
       filters: { resultLevel: [] },
       submittersOptionsAdmin: createSignal<any[]>([]),
       submittersOptionsAdminOld: createSignal<any[]>([]),
-      selectedSubmittersAdmin: createSignal<any[]>([])
+      selectedSubmittersAdmin: createSignal<any[]>([]),
+      fundingSourceOptions: createSignal<any[]>([])
     };
 
     // Create spy for the set method
