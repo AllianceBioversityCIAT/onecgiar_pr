@@ -34,7 +34,7 @@ describe('Tree', () => {
     const visited: number[] = [];
     tree.forEach((n) => visited.push(n.data));
 
-    expect(visited.sort()).toEqual([1, 2, 3]);
+    expect(visited.sort((a, b) => a - b)).toEqual([1, 2, 3]);
   });
 
   it('isDescendant / isAncestor deben identificar relaciones', () => {
@@ -59,7 +59,7 @@ describe('Tree', () => {
     tree.add(3, 2);
     tree.add(4, 1);
 
-    const descendants = tree.getAllDescendants().map((n) => n.data).sort();
+    const descendants = tree.getAllDescendants().map((n) => n.data).sort((a, b) => a - b);
     // Por la lógica actual, retorna hojas: 3 y 4 (no el nodo 2 porque tiene hijo)
     expect(descendants).toEqual([3, 4]);
   });

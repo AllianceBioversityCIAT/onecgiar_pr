@@ -37,8 +37,8 @@ describe('WorldRegionTree', () => {
     const all = tree.getAllDescendantRegions(makeRegion(1), false);
     const leafs = tree.getAllDescendantRegions(makeRegion(1), true);
 
-    expect(all.map((r) => r.um49Code).sort()).toEqual([3, 4]);
-    expect(leafs.map((r) => r.um49Code).sort()).toEqual([3, 4]);
+    expect(all.map((r) => r.um49Code).sort((a, b) => a - b)).toEqual([3, 4]);
+    expect(leafs.map((r) => r.um49Code).sort((a, b) => a - b)).toEqual([3, 4]);
   });
 });
 

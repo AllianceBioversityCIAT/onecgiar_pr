@@ -60,7 +60,7 @@ describe('object.utils', () => {
     it('debe retornar isValid=false y campos inválidos cuando falten', () => {
       const res = validObject({ a: '', b: 2 } as any, ['a', 'c'] as any);
       expect(res.isValid).toBe(false);
-      expect(res.invalidFields.sort()).toEqual(['a', 'c']);
+      expect(res.invalidFields.sort((a, b) => a.localeCompare(b))).toEqual(['a', 'c']);
     });
 
     it('debe retornar isValid=true cuando todos estén presentes', () => {
