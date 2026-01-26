@@ -132,38 +132,39 @@
 
       <hr class="form-section_separator" />
 
-      <h4 class="pr-h4 font-weight-600 text-black">Contributing Centers</h4>
-      @if (fields?.contributingCenters?.length) {
-        <div class="readonly-chips-container">
-          @for (center of fields?.contributingCenters; track $index) {
-            <span class="readonly-chip">{{ center.name }}</span>
-          }
-        </div>
-      } @else {
-        <p class="not_provided_text">Not provided</p>
-      }
+      <app-pr-multi-select
+        [options]="centersSE.centersList"
+        label="Contributing CGIAR Centers"
+        selectedLabel="Center(s) selected"
+        optionLabel="full_name"
+        optionValue="code"
+        [required]="false"
+        [(ngModel)]="fields.contributingCenters"
+        placeholder="Select center(s)">
+      </app-pr-multi-select>
 
-      <h4 class="pr-h4 font-weight-600 text-black">Contributing Science Programs</h4>
-      @if (fields?.contributingInitiatives?.length) {
-        <div class="readonly-chips-container">
-          @for (program of fields?.contributingInitiatives; track $index) {
-            <span class="readonly-chip">{{ program.official_code }} - {{ program.initiative_role }}</span>
-          }
-        </div>
-      } @else {
-        <p class="not_provided_text">Not provided</p>
-      }
+      <app-pr-multi-select
+        [options]="clarisaProjectsList()"
+        [(ngModel)]="fields.contributingProjects"
+        [required]="false"
+        optionLabel="fullName"
+        optionValue="project_id"
+        label="Contributing W3 and/or bilateral projects"
+        selectedLabel="Projects selected"
+        selectedOptionLabel="fullName"
+        placeholder="Select project">
+      </app-pr-multi-select>
 
-      <h4 class="pr-h4 font-weight-600 text-black">Contributing Bilateral Projects</h4>
-      @if (fields?.contributingProjects?.length) {
-        <div class="readonly-chips-container">
-          @for (project of fields?.contributingProjects; track $index) {
-            <span class="readonly-chip">{{ project.obj_clarisa_project.shortName }}</span>
-          }
-        </div>
-      } @else {
-        <p class="not_provided_text">Not provided</p>
-      }
+      <app-pr-multi-select
+        [options]="contributingInitiativesList()"
+        label="Contributing Science Programs"
+        optionLabel="full_name"
+        optionValue="id"
+        [required]="false"
+        selectedOptionLabel="full_name"
+        [(ngModel)]="fields.contributingInitiatives"
+        placeholder="Select Science Programs">
+      </app-pr-multi-select>
 
       <hr class="form-section_separator" />
 

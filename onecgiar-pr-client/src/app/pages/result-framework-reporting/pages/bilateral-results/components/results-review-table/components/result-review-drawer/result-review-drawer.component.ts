@@ -15,6 +15,7 @@ import { PolicyChangeContentComponent } from './components/policy-change-content
 import { RolesService } from '../../../../../../../../shared/services/global/roles.service';
 import { BilateralResultsService } from '../../../../bilateral-results.service';
 import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
+import { CentersService } from '../../../../../../../../shared/services/global/centers.service';
 
 @Component({
   selector: 'app-result-review-drawer',
@@ -40,6 +41,11 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   private readonly api = inject(ApiService);
   bilateralResultsService = inject(BilateralResultsService);
   rolesSE = inject(RolesService);
+  centersSE = inject(CentersService);
+
+  // Contributing lists
+  clarisaProjectsList = signal<any[]>([]);
+  contributingInitiativesList = signal<any[]>([]);
 
   visible = model<boolean>(false);
   resultToReview = model<ResultToReview | null>(null);
@@ -77,6 +83,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
   private loadResultDetail(resultId: string): void {
     this.isLoading.set(true);
+    this.loadContributingLists();
     this.api.resultsSE.GET_BilateralResultDetail(resultId).subscribe({
       next: res => {
         this.resultDetail.set(res.response);
@@ -87,6 +94,27 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         this.isLoading.set(false);
       }
     });
+  }
+
+  private loadContributingLists(): void {
+    // Load CLARISA projects
+    this.api.resultsSE.GET_ClarisaProjects().subscribe({
+      next: ({ response }) => {
+        this.clarisaProjectsList.set(response || []);
+      },
+      error: () => this.clarisaProjectsList.set([])
+    });
+
+    // Load contributing initiatives
+    const activePortfolio = this.api.dataControlSE.currentResult?.portfolio;
+    if (activePortfolio) {
+      this.api.resultsSE.GET_AllWithoutResults(activePortfolio).subscribe({
+        next: ({ response }) => {
+          this.contributingInitiativesList.set(response || []);
+        },
+        error: () => this.contributingInitiativesList.set([])
+      });
+    }
   }
 
   toggleFullScreen(): void {
