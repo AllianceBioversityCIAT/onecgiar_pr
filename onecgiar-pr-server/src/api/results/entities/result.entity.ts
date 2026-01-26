@@ -44,6 +44,7 @@ import { ResultsCapacityDevelopments } from '../summary/entities/results-capacit
 import { ResultsInnovationsDev } from '../summary/entities/results-innovations-dev.entity';
 import { ResultsInnovationsUse } from '../summary/entities/results-innovations-use.entity';
 import { ResultsPolicyChanges } from '../summary/entities/results-policy-changes.entity';
+import { ResultImpactAreaScore } from '../../result-impact-area-scores/entities/result-impact-area-score.entity';
 
 export enum SourceEnum {
   Result = 'Result',
@@ -635,4 +636,7 @@ export class Result {
     nullable: true,
   })
   results_policy_changes_object: ResultsPolicyChanges;
+
+  @OneToMany(() => ResultImpactAreaScore, (ria) => ria.result)
+  result_impact_area_scores: ResultImpactAreaScore[];
 }
