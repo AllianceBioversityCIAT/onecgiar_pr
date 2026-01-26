@@ -1,26 +1,21 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
+import { DataSource, In } from 'typeorm';
 import { BaseServiceSimple } from '../../shared/entities/base-service';
-import { ResultImpactAreaScore } from './entities/result-impact-area-score.entity';
-import { DataSource, In, Repository } from 'typeorm';
-import { CurrentUserUtil } from '../../shared/utils/current-user.util';
 import { ImpactAreasScoresComponent } from '../results/impact_areas_scores_components/entities/impact_areas_scores_component.entity';
 import { transformDataToArray } from '../../shared/utils/array.util';
 import { isEmpty } from 'class-validator';
+import { ResultImpactAreaScore } from './entities/result-impact-area-score.entity';
 
 @Injectable()
 export class ResultImpactAreaScoresService extends BaseServiceSimple<
   ResultImpactAreaScore,
-  Repository<ResultImpactAreaScore>
+  any
 > {
-  constructor(
-    private dataSource: DataSource,
-    currentUser: CurrentUserUtil,
-  ) {
+  constructor(private readonly dataSource: DataSource) {
     super(
       ResultImpactAreaScore,
-      dataSource.getRepository(ResultImpactAreaScore),
+      dataSource.getRepository(ResultImpactAreaScore) as any,
       'result_id',
-      currentUser,
     );
   }
 
