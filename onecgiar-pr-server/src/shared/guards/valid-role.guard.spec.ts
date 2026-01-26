@@ -18,7 +18,7 @@ describe('ValidRoleGuard', () => {
       }),
     }) as any;
 
-  it('debe retornar true cuando el rol es válido y cumple role <= requerido', async () => {
+  it('should return true when role is valid and satisfies role <= required', async () => {
     const repo = { $_isValidRole: jest.fn().mockResolvedValue(RoleEnum.ADMIN) } as any;
     const reflector: Partial<Reflector> = {
       get: jest.fn().mockReturnValue({
@@ -35,7 +35,7 @@ describe('ValidRoleGuard', () => {
     expect(repo.$_isValidRole).toHaveBeenCalledWith(tokenId, RoleTypeEnum.APPLICATION);
   });
 
-  it('debe retornar false cuando el rol no cumple el requerido', async () => {
+  it('should return false when role does not satisfy the required one', async () => {
     const repo = { $_isValidRole: jest.fn().mockResolvedValue(RoleEnum.MEMBER) } as any;
     const reflector: Partial<Reflector> = {
       get: jest.fn().mockReturnValue({

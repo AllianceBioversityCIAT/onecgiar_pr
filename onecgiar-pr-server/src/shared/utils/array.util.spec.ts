@@ -16,27 +16,27 @@ import {
 
 describe('array.util', () => {
   describe('transformDataToArray', () => {
-    it('debe envolver un elemento en array', () => {
+    it('should wrap a single element in an array', () => {
       expect(transformDataToArray(5)).toEqual([5]);
     });
-    it('debe retornar el mismo array si ya lo es', () => {
+    it('should return the same array if it is already an array', () => {
       expect(transformDataToArray([1, 2])).toEqual([1, 2]);
     });
   });
 
   describe('isNotEmpty / formatDataToArray', () => {
-    it('isNotEmpty debe ser false para null/undefined y []', () => {
+    it('isNotEmpty should be false for null/undefined and []', () => {
       expect(isNotEmpty(undefined as any)).toBe(false);
       expect(isNotEmpty(null as any)).toBe(false);
       expect(isNotEmpty([] as any)).toBe(false);
     });
 
-    it('isNotEmpty debe ser true para dato no-array y array con elementos', () => {
+    it('isNotEmpty should be true for non-array data and arrays with elements', () => {
       expect(isNotEmpty({} as any)).toBe(true);
       expect(isNotEmpty([1] as any)).toBe(true);
     });
 
-    it('formatDataToArray debe retornar [] para empty y array para non-empty', () => {
+    it('formatDataToArray should return [] for empty and an array for non-empty', () => {
       expect(formatDataToArray(undefined as any)).toEqual([]);
       expect(formatDataToArray(null as any)).toEqual([]);
       expect(formatDataToArray([] as any)).toEqual([]);
@@ -46,7 +46,7 @@ describe('array.util', () => {
   });
 
   describe('validTypeOfArray', () => {
-    it('debe convertir a string y eliminar caracteres no alfanuméricos', () => {
+    it('should convert to string and remove non-alphanumeric characters', () => {
       expect(validTypeOfArray(['a-b', 'c d', 12, 'x_y'] as any)).toEqual([
         'ab',
         'cd',
@@ -65,7 +65,7 @@ describe('array.util', () => {
       is_active?: boolean;
     };
 
-    it('debe agregar parent a todos los items del cliente y mergear con backend por comparisonKey', () => {
+    it('should add parent to all client items and merge with backend by comparisonKey', () => {
       const client: Partial<E>[] = [{ code: 'A', other: 'client' }];
       const backend: E[] = [{ id: 10, code: 'A', other: 'backend' }];
 
@@ -89,7 +89,7 @@ describe('array.util', () => {
       );
     });
 
-    it('debe push de backend no encontrado como is_active=false, excepto si está en notDeleteIds', () => {
+    it('should push missing backend items as is_active=false, except those in notDeleteIds', () => {
       const client: Partial<E>[] = [];
       const backend: E[] = [
         { id: 1, code: 'A' },
@@ -118,7 +118,7 @@ describe('array.util', () => {
   });
 
   describe('filterPersistKey', () => {
-    it('debe retornar solo los ids definidos', () => {
+    it('should return only defined ids', () => {
       const res = filterPersistKey<any>('id', [
         { id: 1, is_active: true },
         { id: undefined, is_active: true },
@@ -130,20 +130,20 @@ describe('array.util', () => {
 
   describe('isArrayOfType', () => {
     const isNumber = (x: unknown): x is number => typeof x === 'number';
-    it('debe validar el tipo por elemento', () => {
+    it('should validate the type per element', () => {
       expect(isArrayOfType([1, 2, 3], isNumber)).toBe(true);
       expect(isArrayOfType([1, '2', 3] as any, isNumber)).toBe(false);
     });
   });
 
   describe('intersection', () => {
-    it('debe retornar intersección', () => {
+    it('should return the intersection', () => {
       expect(intersection([1, 2, 3], [2, 3, 4])).toEqual([2, 3]);
     });
   });
 
   describe('mergeArraysWithPriority', () => {
-    it('debe mantener A y agregar de B los que no estén por key', () => {
+    it('should keep A and add from B those not present by key', () => {
       const res = mergeArraysWithPriority<any>(
         [{ id: 1, v: 'a' }],
         [{ id: 1, v: 'b' }, { id: 2, v: 'c' }],
@@ -154,11 +154,11 @@ describe('array.util', () => {
   });
 
   describe('getItemsAtLevel', () => {
-    it('level<1 retorna []', () => {
+    it('level<1 should return []', () => {
       expect(getItemsAtLevel([{ children: [] } as any], 0)).toEqual([]);
     });
 
-    it('level=1 retorna items sin children', () => {
+    it('level=1 should return items without children', () => {
       const res = getItemsAtLevel(
         [{ id: 1, children: [{ id: 2 }] as any } as any],
         1,
@@ -166,7 +166,7 @@ describe('array.util', () => {
       expect(res).toEqual([{ id: 1 }]);
     });
 
-    it('level>1 retorna items del nivel indicado', () => {
+    it('level>1 should return items at the specified level', () => {
       const tree: any[] = [
         { id: 1, children: [{ id: 2, children: [{ id: 3 }] }] },
       ];
@@ -176,7 +176,7 @@ describe('array.util', () => {
   });
 
   describe('filterByUniqueKeyWithPriority', () => {
-    it('debe mantener un elemento por key priorizando el que tenga priorityField', () => {
+    it('should keep one element per key prioritizing the one with priorityField', () => {
       const res = filterByUniqueKeyWithPriority<any>(
         [
           { id: 1, flag: null },
@@ -192,7 +192,7 @@ describe('array.util', () => {
   });
 
   describe('removeDuplicatesByKeys', () => {
-    it('debe remover duplicados por composite key (incluyendo objetos)', () => {
+    it('should remove duplicates by composite key (including objects)', () => {
       const res = removeDuplicatesByKeys<any>(
         [
           { a: 1, b: { x: 1 } },
@@ -208,7 +208,7 @@ describe('array.util', () => {
   });
 
   describe('extractPropertyValues', () => {
-    it('debe extraer valores de una propiedad', () => {
+    it('should extract values from a property', () => {
       expect(extractPropertyValues([{ id: 1 }, { id: 2 }], 'id')).toEqual([
         1,
         2,

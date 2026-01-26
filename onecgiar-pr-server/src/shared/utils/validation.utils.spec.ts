@@ -1,7 +1,7 @@
 import { validationAttr } from './validation.utils';
 
 describe('validationAttr', () => {
-  it('debe retornar false si alguna key requerida es undefined/null/""', () => {
+  it('should return false if any required key is undefined/null/""', () => {
     const BASE = { a: true, b: true };
 
     expect(validationAttr({ a: 1, b: undefined }, BASE)).toBe(false);
@@ -9,7 +9,7 @@ describe('validationAttr', () => {
     expect(validationAttr({ a: 1, b: '' }, BASE)).toBe(false);
   });
 
-  it('debe retornar true cuando todas las keys requeridas están presentes', () => {
+  it('should return true when all required keys are present', () => {
     const BASE = { a: true, b: true, c: true };
     expect(validationAttr({ a: 1, b: 'x', c: 0 }, BASE)).toBe(true);
   });

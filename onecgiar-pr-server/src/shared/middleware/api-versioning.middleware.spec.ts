@@ -1,7 +1,7 @@
 import { apiVersionMiddleware } from './api-versioning.middleware';
 
 describe('apiVersionMiddleware', () => {
-  it('debe setear apiVersion con prefijo v cuando version no lo trae', () => {
+  it('should set apiVersion with v prefix when version does not include it', () => {
     const req: any = { query: { version: '1' } };
     const res: any = {};
     const next = jest.fn();
@@ -12,7 +12,7 @@ describe('apiVersionMiddleware', () => {
     expect(next).toHaveBeenCalledTimes(1);
   });
 
-  it('debe respetar apiVersion cuando version ya trae prefijo v', () => {
+  it('should keep apiVersion when version already includes v prefix', () => {
     const req: any = { query: { version: 'v2' } };
     const res: any = {};
     const next = jest.fn();
@@ -23,7 +23,7 @@ describe('apiVersionMiddleware', () => {
     expect(next).toHaveBeenCalledTimes(1);
   });
 
-  it('debe setear apiVersion vacío cuando no hay version', () => {
+  it('should set apiVersion to empty when version is not provided', () => {
     const req: any = { query: {} };
     const res: any = {};
     const next = jest.fn();

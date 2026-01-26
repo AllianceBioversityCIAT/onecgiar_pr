@@ -1,17 +1,17 @@
 import { ObjectFlattener } from './object-flattener';
 
 describe('ObjectFlattener', () => {
-  it('debe aplanar un objeto anidado usando dot notation', () => {
+  it('should flatten a nested object using dot notation', () => {
     const res = ObjectFlattener.flattenObjects({ a: { b: 1 }, c: 2 });
     expect(res).toEqual({ 'a.b': 1, c: 2 });
   });
 
-  it('debe aplanar una lista de objetos', () => {
+  it('should flatten a list of objects', () => {
     const res = ObjectFlattener.flattenObjects([{ a: { b: 1 }, c: 2 }]);
     expect(res).toEqual([{ 'a.b': 1, c: 2 }]);
   });
 
-  it('debe mantener null como valor (no recursar)', () => {
+  it('should keep null as a value (do not recurse)', () => {
     const res = ObjectFlattener.flattenObjects({ a: null });
     expect(res).toEqual({ a: null });
   });

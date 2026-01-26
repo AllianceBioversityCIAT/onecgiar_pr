@@ -41,7 +41,7 @@ describe('SharePointService', () => {
     jest.restoreAllMocks();
   });
 
-  it('getToken debe consumir token si no hay expiresIn', async () => {
+  it('getToken should fetch a token when expiresIn is not set', async () => {
     const http = makeHttp();
     http.post.mockReturnValue({
       toPromise: jest.fn().mockResolvedValue({
@@ -60,7 +60,7 @@ describe('SharePointService', () => {
     expect(http.post).toHaveBeenCalledTimes(1);
   });
 
-  it('getToken debe retornar token cacheado si no expiró', async () => {
+  it('getToken should return cached token when it has not expired', async () => {
     const http = makeHttp();
     const service = new SharePointService(
       http as any,
@@ -76,7 +76,7 @@ describe('SharePointService', () => {
     expect(http.post).not.toHaveBeenCalled();
   });
 
-  it('getAllFilePermissions debe retornar ids con link.webUrl', async () => {
+  it('getAllFilePermissions should return ids with link.webUrl', async () => {
     const http = makeHttp();
     http.get.mockReturnValue({
       toPromise: jest.fn().mockResolvedValue({
@@ -104,7 +104,7 @@ describe('SharePointService', () => {
     expect(ids).toEqual(['p1']);
   });
 
-  it('removeAllFilePermissions debe llamar removeFilePermission por cada permiso', async () => {
+  it('removeAllFilePermissions should call removeFilePermission for each permission', async () => {
     const service = new SharePointService(
       makeHttp() as any,
       makeGpCache() as any,
@@ -122,7 +122,7 @@ describe('SharePointService', () => {
     expect(removeSpy).toHaveBeenCalledTimes(2);
   });
 
-  it('replicateFile debe copiar y retornar id del archivo replicado', async () => {
+  it('replicateFile should copy and return the replicated file id', async () => {
     const service = new SharePointService(
       makeHttp() as any,
       makeGpCache() as any,
@@ -139,7 +139,7 @@ describe('SharePointService', () => {
     await expect(service.replicateFile('file', '/path')).resolves.toBe('id123');
   });
 
-  it('generateFilePath debe construir filePath con phase_name y result_code', async () => {
+  it('generateFilePath should build filePath using phase_name and result_code', async () => {
     const service = new SharePointService(
       makeHttp() as any,
       makeGpCache() as any,
@@ -153,7 +153,7 @@ describe('SharePointService', () => {
     );
   });
 
-  it('createUploadSession debe retornar uploadUrl formateado', async () => {
+  it('createUploadSession should return a formatted uploadUrl', async () => {
     const http = makeHttp();
     http.post.mockReturnValue({
       toPromise: jest.fn().mockResolvedValue({ data: { uploadUrl: 'upload-url' } }),
@@ -189,7 +189,7 @@ describe('SharePointService', () => {
     );
   });
 
-  it('createFileFolder debe crear carpeta y borrar .folder-reference cuando aplica', async () => {
+  it('createFileFolder should create folder and delete .folder-reference when applicable', async () => {
     const http = makeHttp();
     http.put.mockReturnValue({
       toPromise: jest.fn().mockResolvedValue({
@@ -215,7 +215,7 @@ describe('SharePointService', () => {
     expect(delSpy).toHaveBeenCalledWith('tmp-id');
   });
 
-  it('deleteFile / getFileInfo / copyFile / getFolderFilesList deben usar httpService', async () => {
+  it('deleteFile / getFileInfo / copyFile / getFolderFilesList should use httpService', async () => {
     const http = makeHttp();
     http.delete.mockReturnValue({ toPromise: jest.fn().mockResolvedValue({ ok: true }) });
     http.get
@@ -243,7 +243,7 @@ describe('SharePointService', () => {
     await expect(service.getFolderFilesList('folder')).resolves.toEqual([{ id: 'c1' }]);
   });
 
-  it('addFileAccess debe crear link con scope correcto', async () => {
+  it('addFileAccess should create a link with the correct scope', async () => {
     const http = makeHttp();
     http.post.mockReturnValue({
       toPromise: jest.fn().mockResolvedValue({ data: { link: { webUrl: 'x' } } }),
@@ -265,7 +265,7 @@ describe('SharePointService', () => {
     expect(body).toEqual(expect.objectContaining({ scope: 'anonymous', type: 'view' }));
   });
 
-  it('removeFilePermission debe llamar DELETE y retornar response', async () => {
+  it('removeFilePermission should call DELETE and return response', async () => {
     const http = makeHttp();
     http.delete.mockReturnValue({
       toPromise: jest.fn().mockResolvedValue({ deleted: true }),
@@ -284,7 +284,7 @@ describe('SharePointService', () => {
     });
   });
 
-  it('isTokenExpired debe reflejar expiración según creationTime/expiresIn', () => {
+  it('isTokenExpired should reflect expiration based on creationTime/expiresIn', () => {
     const service = new SharePointService(
       makeHttp() as any,
       makeGpCache() as any,
