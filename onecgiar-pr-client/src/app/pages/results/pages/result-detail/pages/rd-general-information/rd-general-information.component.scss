@@ -7,6 +7,18 @@
   }
 }
 
+.radioButtonList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 30px;
+
+  .radioButton {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
 .general_header {
   display: flex;
   justify-content: space-between;

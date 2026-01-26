@@ -62,6 +62,32 @@
   <app-alert-status [description]="impactAreaScoresInfo()"> </app-alert-status>
 }
 
+<!-- Template reutilizable para checkboxes de áreas de impacto -->
+<ng-template #impactAreaCheckboxes let-fieldRef="fieldRef" let-fieldName="fieldName" let-optionsList="optionsList" let-prefix="prefix">
+  <app-pr-field-header
+    [label]="this.getImpactAreaFieldLabel(fieldRef)"
+    [description]="this.getImpactAreaFieldDescription(fieldRef)"
+    [required]="this.getImpactAreaFieldRequired(fieldRef)"
+    [useColon]="false">
+  </app-pr-field-header>
+  <div class="pr-field">
+    <div class="radioButtonList">
+      @for (option of optionsList; track option.id; let i = $index) {
+        <div class="radioButton">
+          <p-checkbox
+            [binary]="true"
+            [inputId]="prefix + '_checkbox_' + i"
+            [ngModel]="this.isImpactAreaSelected(fieldName, option.id)"
+            (ngModelChange)="this.toggleImpactAreaSelection(fieldName, option.id)"
+            [disabled]="this.rolesSE.readOnly">
+          </p-checkbox>
+          <label [for]="prefix + '_checkbox_' + i" class="name pr-body-2">{{ option.name }}</label>
+        </div>
+      }
+    </div>
+  </div>
+</ng-template>
+
 <div class="block_container">
   <app-alert-status [description]="genderInformation()"></app-alert-status>
 
@@ -85,13 +111,22 @@
   </div>
 
   @if (this.ipsrGeneralInformationBody.gender_tag_level_id == 3) {
-    <app-pr-radio-button
-      [options]="this.getImpactAreasScoresComponents.genderTagScoreList()"
-      optionLabel="name"
-      optionValue="id"
-      fieldRef="[general-info]-gender_impact_area_id"
-      [(ngModel)]="this.ipsrGeneralInformationBody.gender_impact_area_id">
-    </app-pr-radio-button>
+    @if (this.fieldsManagerSE.isP25()) {
+      <ng-container *ngTemplateOutlet="impactAreaCheckboxes; context: {
+        fieldRef: '[general-info]-gender_impact_area_id',
+        fieldName: 'gender_impact_area_id',
+        optionsList: this.getImpactAreasScoresComponents.genderTagScoreList(),
+        prefix: 'gender'
+      }"></ng-container>
+    } @else {
+      <app-pr-radio-button
+        [options]="this.getImpactAreasScoresComponents.genderTagScoreList()"
+        optionLabel="name"
+        optionValue="id"
+        fieldRef="[general-info]-gender_impact_area_id"
+        [(ngModel)]="this.ipsrGeneralInformationBody.gender_impact_area_id">
+      </app-pr-radio-button>
+    }
   }
 
   @if (!this.fieldsManagerSE.isP25()) {
@@ -129,13 +164,22 @@
   </div>
 
   @if (this.ipsrGeneralInformationBody.climate_change_tag_level_id == 3) {
-    <app-pr-radio-button
-      [options]="this.getImpactAreasScoresComponents.climateTagScoreList()"
-      optionLabel="name"
-      optionValue="id"
-      fieldRef="[general-info]-climate_impact_area_id"
-      [(ngModel)]="this.ipsrGeneralInformationBody.climate_impact_area_id">
-    </app-pr-radio-button>
+    @if (this.fieldsManagerSE.isP25()) {
+      <ng-container *ngTemplateOutlet="impactAreaCheckboxes; context: {
+        fieldRef: '[general-info]-climate_impact_area_id',
+        fieldName: 'climate_impact_area_id',
+        optionsList: this.getImpactAreasScoresComponents.climateTagScoreList(),
+        prefix: 'climate'
+      }"></ng-container>
+    } @else {
+      <app-pr-radio-button
+        [options]="this.getImpactAreasScoresComponents.climateTagScoreList()"
+        optionLabel="name"
+        optionValue="id"
+        fieldRef="[general-info]-climate_impact_area_id"
+        [(ngModel)]="this.ipsrGeneralInformationBody.climate_impact_area_id">
+      </app-pr-radio-button>
+    }
   }
 
   @if (!this.fieldsManagerSE.isP25()) {
@@ -174,13 +218,22 @@
   </div>
 
   @if (this.ipsrGeneralInformationBody.nutrition_tag_level_id == 3) {
-    <app-pr-radio-button
-      [options]="this.getImpactAreasScoresComponents.nutritionTagScoreList()"
-      optionLabel="name"
-      optionValue="id"
-      fieldRef="[general-info]-nutrition_impact_area_id"
-      [(ngModel)]="this.ipsrGeneralInformationBody.nutrition_impact_area_id">
-    </app-pr-radio-button>
+    @if (this.fieldsManagerSE.isP25()) {
+      <ng-container *ngTemplateOutlet="impactAreaCheckboxes; context: {
+        fieldRef: '[general-info]-nutrition_impact_area_id',
+        fieldName: 'nutrition_impact_area_id',
+        optionsList: this.getImpactAreasScoresComponents.nutritionTagScoreList(),
+        prefix: 'nutrition'
+      }"></ng-container>
+    } @else {
+      <app-pr-radio-button
+        [options]="this.getImpactAreasScoresComponents.nutritionTagScoreList()"
+        optionLabel="name"
+        optionValue="id"
+        fieldRef="[general-info]-nutrition_impact_area_id"
+        [(ngModel)]="this.ipsrGeneralInformationBody.nutrition_impact_area_id">
+      </app-pr-radio-button>
+    }
   }
 
   @if (!this.fieldsManagerSE.isP25()) {
@@ -219,13 +272,22 @@
   </div>
 
   @if (this.ipsrGeneralInformationBody.environmental_biodiversity_tag_level_id == 3) {
-    <app-pr-radio-button
-      [options]="this.getImpactAreasScoresComponents.environmentalBiodiversityTagScoreList()"
-      optionLabel="name"
-      optionValue="id"
-      fieldRef="[general-info]-environmental_biodiversity_impact_area_id"
-      [(ngModel)]="this.ipsrGeneralInformationBody.environmental_biodiversity_impact_area_id">
-    </app-pr-radio-button>
+    @if (this.fieldsManagerSE.isP25()) {
+      <ng-container *ngTemplateOutlet="impactAreaCheckboxes; context: {
+        fieldRef: '[general-info]-environmental_biodiversity_impact_area_id',
+        fieldName: 'environmental_biodiversity_impact_area_id',
+        optionsList: this.getImpactAreasScoresComponents.environmentalBiodiversityTagScoreList(),
+        prefix: 'environmental'
+      }"></ng-container>
+    } @else {
+      <app-pr-radio-button
+        [options]="this.getImpactAreasScoresComponents.environmentalBiodiversityTagScoreList()"
+        optionLabel="name"
+        optionValue="id"
+        fieldRef="[general-info]-environmental_biodiversity_impact_area_id"
+        [(ngModel)]="this.ipsrGeneralInformationBody.environmental_biodiversity_impact_area_id">
+      </app-pr-radio-button>
+    }
   }
 
   @if (!this.fieldsManagerSE.isP25()) {
@@ -264,13 +326,22 @@
   </div>
 
   @if (this.ipsrGeneralInformationBody.poverty_tag_level_id == 3) {
-    <app-pr-radio-button
-      [options]="this.getImpactAreasScoresComponents.povertyTagScoreList()"
-      optionLabel="name"
-      optionValue="id"
-      fieldRef="[general-info]-poverty_impact_area_id"
-      [(ngModel)]="this.ipsrGeneralInformationBody.poverty_impact_area_id">
-    </app-pr-radio-button>
+    @if (this.fieldsManagerSE.isP25()) {
+      <ng-container *ngTemplateOutlet="impactAreaCheckboxes; context: {
+        fieldRef: '[general-info]-poverty_impact_area_id',
+        fieldName: 'poverty_impact_area_id',
+        optionsList: this.getImpactAreasScoresComponents.povertyTagScoreList(),
+        prefix: 'poverty'
+      }"></ng-container>
+    } @else {
+      <app-pr-radio-button
+        [options]="this.getImpactAreasScoresComponents.povertyTagScoreList()"
+        optionLabel="name"
+        optionValue="id"
+        fieldRef="[general-info]-poverty_impact_area_id"
+        [(ngModel)]="this.ipsrGeneralInformationBody.poverty_impact_area_id">
+      </app-pr-radio-button>
+    }
   }
 
   @if (!this.fieldsManagerSE.isP25()) {
