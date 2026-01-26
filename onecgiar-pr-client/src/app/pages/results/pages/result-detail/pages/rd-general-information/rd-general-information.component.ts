@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, effect, ViewChild } from '@angular/core';
+import { Component, OnInit, inject, effect, ViewChild, computed } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { GeneralInfoBody } from './models/generalInfoBody';
 import { ScoreService } from '../../../../../../shared/services/global/score.service';
@@ -28,6 +28,7 @@ export class RdGeneralInformationComponent implements OnInit {
   isPhaseOpen = false;
 
   getImpactAreasScoresComponents = inject(GetImpactAreasScoresService);
+  isP25 = computed(() => this.dataControlSE.currentResultSignal()?.portfolio === 'P25');
 
   constructor(
     public api: ApiService,
@@ -99,13 +100,14 @@ export class RdGeneralInformationComponent implements OnInit {
   }
 
   onSaveSection() {
-    if (this.userSearchService.searchQuery.trim() && !this.userSearchService.selectedUser) {
+    const isP25 = this.dataControlSE.currentResultSignal()?.portfolio === 'P25';
+
+    if (this.userSearchService.searchQuery.trim() && !this.userSearchService.selectedUser && !isP25) {
       this.userSearchService.hasValidContact = false;
       this.userSearchService.showContactError = true;
       return;
     }
 
-    const isP25 = this.dataControlSE.currentResultSignal()?.portfolio === 'P25';
     const hasDiscontinuedOptions = this.generalInfoBody.discontinued_options?.some(option => option.value === true);
 
     if (isP25 && hasDiscontinuedOptions) {
@@ -164,32 +166,58 @@ export class RdGeneralInformationComponent implements OnInit {
     <ul>
     <li>Every result should have at least one score of 1 or 2. Results with scores of 0 for all IAs should be rare cases.</li>
     <li>No more than two IAs should receive scores of 2 for a given result. Results with three IAs with scores of 2 should be rare cases.</li>
-    <li>Scores should not be assigned solely based on relevance to the collective global targets, but rather to the IA as more broadly defined in the 2030 Strategy and by the IA Platforms, indicated below.</li>
+    ${
+      this.isP25()
+        ? '<li>Scores should not be assigned solely based on relevance to the collective global targets, but rather to the IA as more broadly defined in the <a href="https://hdl.handle.net/10568/110918" target="_blank" rel="noopener noreferrer" class="open_route">CGIAR 2030 Research and Innovation Strategy</a>.</li>'
+        : '<li>Scores should not be assigned solely based on relevance to the collective global targets, but rather to the IA as more broadly defined in the 2030 Strategy and by the IA Platforms, indicated below.</li>'
+    }
     <li>Scoring should be based on the relevance of the IAs to a given result and not on other criteria such as a specific donor’s level of interest in an IA.</li>
     </ul>`;
   }
 
   genderInformation() {
-    return `<strong>Gender equality, youth and social inclusion</strong>
+    if (this.isP25()) {
+      return `<strong>Gender equality, youth and social inclusion</strong>
     <br/>
 
     <ul>
       <li><strong>Example topics:</strong> Empowering women and youth, encouraging women and youth entrepreneurship, and addressing socio-political barriers to social inclusion in food systems; ensuring equal access to resources; and meeting the specific crop and breed requirements and preferences of women, youth, and disadvantaged groups.</li>
+      <br/>
       <li><strong>Collective global targets:</strong>
         <ul>
           <li>To close the gender gap in rights to economic resources, access to ownership and control over land and natural resources for over 500 million women who work in food, land and water systems.</li>
           <li>To offer rewardable opportunities to 267 million young people who are not in employment, education or training.</li>
         </ul>
       </li>
-      <li><strong>Note:</strong> Specific enhanced instructions related to scoring for gender equality, elaborated by the GENDER Platform, are available <a href="https://cgiar.sharepoint.com/:b:/r/sites/WGonpoolednon-pooledalignment/Shared%20Documents/General/QA/CGIAR%20Technical%20Reporting%20Guidance%20for%20Impact%20Area%20Scoring.pdf?csf=1&web=1&e=CFLArZ" target="_blank" rel="noopener noreferrer">here</a>.</li>
+      <li><strong>Note:</strong> Additional guidance on scoring for gender equality can be found in <a href="https://docs.google.com/document/d/1krxwqVsmCfiQREh-DwGNcS72EPYRA7cn/edit?usp=sharing&ouid=100701138371542982320&rtpof=true&sd=true" target="_blank" rel="noopener noreferrer" class="open_route">this document</a> on result-level Impact Area scoring.</li>
+    </ul>`;
+    }
+
+    return `<strong>Gender equality tag guidance</strong>
+    <br/>
+
+    There are two gender-related targets at systems level.
+
+    <ul>
+    <li>To close the gender gap in rights to economic resources, access to ownership and control over land and natural resources for over 500 million women who work in food, land and water systems.</li>
+    <li>To offer rewardable opportunities to 267 million young people who are not in employment, education or training.</li>
+    </ul>
+
+    Three scores are possible:
+    <ul>
+    <li><strong>0 = Not targeted:</strong>  The output/outcome/activity has been screened against the marker but has not been found to target gender equality.</li>
+    <li><strong>1 = Significant:</strong> Gender equality is an important and deliberate objective, but not the principal reason for undertaking the output/outcome/activity.</li>
+    <li><strong>2 = Principal:</strong> Gender equality is the main objective of the output/outcome/activity and is fundamental in its design and expected results. The output/outcome/activity would not have been undertaken without this gender equality objective.</li>
     </ul>`;
   }
 
   nutritionInformation() {
-    return `<strong>Nutrition, health and food security</strong>
+    if (this.isP25()) {
+      return `<strong>Nutrition, health and food security</strong>
 
     <ul>
       <li><strong>Example topics:</strong> Improving diets, nutrition, and food security (affordability, accessibility, desirability, stability); human health; and managing zoonotic diseases, food safety, and anti-microbial resistance.</li>
+      <br/>
       <li>
         <strong>Collective global targets:</strong>
         <ul>
@@ -198,13 +226,34 @@ export class RdGeneralInformationComponent implements OnInit {
         </ul>
       </li>
     </ul>`;
+    }
+
+    return `<strong>Nutrition, health and food security tag guidance</strong>
+    <br>
+
+    There are two food security and nutrition targets for at systems level:
+
+    <ul>
+      <li>To end hunger for all and enable affordable, healthy diets for the 3 billion people who do not currently have access to safe and nutritious food. </li>
+      <li>To reduce cases of foodborne illness (600 million annually) and zoonotic disease (1 billion annually) by one third.</li>
+    </ul>
+
+    Three scores are possible:
+
+    <ul>
+    <li><strong>0 = Not targeted:</strong> The output/outcome/activity has been screened against the marker but has not been found to target any aspects of nutrition, health and food security.</li>
+    <li><strong>1 = Significant:</strong> The output/outcome/activity has made a significant contribution to any of the above-described aspects of nutrition, health and food security, but nutrition, health and food security is not the principal reason for undertaking the output/outcome/activity.</li>
+    <li><strong>2 = Principal:</strong> The output/outcome/activity is principally meeting any aspect of nutrition, health and food security, and this is fundamental in its design and expected results. The output/outcome/activity would not have been undertaken without this objective.</li>
+    </ul>`;
   }
 
   environmentInformation() {
-    return `<strong>Environmental health and biodiversity</strong>
+    if (this.isP25()) {
+      return `<strong>Environmental health and biodiversity</strong>
 
     <ul>
       <li><strong>Example topics:</strong> Supporting actions to stay within planetary boundaries for natural resource use and biodiversity through digital tools; improving management of water, land, soil, nutrients, waste, and pollution, including through nature-based, ecosystem-based, and agroecological approaches; conserving biodiversity through ex situ facilities (e.g. genebanks, community seed-banks) or in situ conservation areas; and breeding to reduce environmental footprint.</li>
+      <br/>
       <li><strong>Collective global targets:</strong>
         <ul>
           <li>Stay within planetary and regional environmental boundaries: consumptive water use in food production of less than 2,500 km3 per year (with a focus on the most stressed basins), zero net deforestation, nitrogen application of 90 Tg per year (with a redistribution towards low-input farming systems) and increased use efficiency; and phosphorus application of 10 Tg per year.</li>
@@ -212,13 +261,35 @@ export class RdGeneralInformationComponent implements OnInit {
         </ul>
       </li>
     </ul>`;
+    }
+
+    return `<strong>Environmental health and biodiversity tag guidance</strong>
+    <br>
+
+    There are three environmental targets and one biodiversity target at systems level:
+
+    <ul>
+      <li>Stay within planetary and regional environmental boundaries: consumptive water use in food production of less than 2,500 km³ per year (with a focus on the most stressed basins), zero net deforestation, nitrogen application of 90 Tg per year (with a redistribution towards low-input farming systems) and increased use efficiency; and phosphorus application of 10 Tg per year.</li>
+      <li>Maintain the genetic diversity of seed varieties, cultivated plants and farmed and domesticated animals and their related wild species, including through soundly managed genebanks at the national, regional, and international levels.</li>
+      <li>In addition, water conservation and management, restoration of degraded lands/soils, restoration of biodiversity in situ, and management of pollution related to food systems are key areas of environmental impacts to which the CGIAR should contribute. </li>
+    </ul>
+
+    Three scores are possible:
+
+    <ul>
+    <li><strong>0 = Not targeted:</strong> The output/outcome/activity has been screened against the marker (see reference list above), but it has not been found to target any aspect of environmental health and biodiversity.</li>
+    <li><strong>1 = Significant:</strong> The output/outcome/activity has made a significant contribution to any of the above-described aspects of environmental health and biodiversity, but environmental health and biodiversity is not the principal reason for undertaking the output/outcome/activity.</li>
+    <li><strong>2 = Principal:</strong> The output/outcome/activity is principally meeting any aspect of environmental health and biodiversity, and this is fundamental in its design and expected results. The output/outcome/activity would not have been undertaken without this objective.</li>
+    </ul>`;
   }
 
   povertyInformation() {
-    return `<strong>Poverty reduction, livelihoods and jobs</strong>
+    if (this.isP25()) {
+      return `<strong>Poverty reduction, livelihoods and jobs</strong>
 
     <ul>
       <li><strong>Example topics:</strong> Improving social protection and employment opportunities by supporting access to resources and markets; developing solutions for resilient, income-generating agriculture for small farmers; and reducing poverty through adoption of new varieties and breeds with better yields.</li>
+      <br/>
       <li><strong>Collective global targets:</strong>
         <ul>
           <li>Lift at least 500 million people living in rural areas above the extreme poverty line of US $1.90 per day (2011 PPP).</li>
@@ -226,13 +297,34 @@ export class RdGeneralInformationComponent implements OnInit {
         </ul>
       </li>
     </ul>`;
+    }
+
+    return `<strong>Poverty reduction, livelihoods and jobs tag guidance</strong>
+    <br>
+
+    There are two poverty reduction, livelihoods and jobs targets at systems level:
+
+    <ul>
+      <li>Lift at least 500 million people living in rural areas above the extreme poverty line of US $1.90 per day (2011 PPP).</li>
+      <li>Reduce by at least half the proportion of men, women and children of all ages living in poverty in all its dimensions, according to national definitions.</li>
+    </ul>
+
+    Three scores are possible:
+
+    <ul>
+    <li><strong>0 = Not targeted:</strong> The output/outcome/activity has been screened against the marker but has not been found to target any aspects of poverty reduction, livelihoods and jobs.</li>
+    <li><strong>1 = Significant:</strong> The output/outcome/activity has made a significant contribution to any aspect of poverty reduction, livelihoods and jobs, but poverty reduction, livelihoods and jobs is not the principal reason for undertaking the output/outcome/activity.</li>
+    <li><strong>2 = Principal:</strong> The output/outcome/activity is principally meeting any aspect of poverty reduction, livelihoods and jobs, and this is fundamental in its design and expected results. The output/outcome/activity would not have been undertaken without this objective.</li>
+    </ul>`;
   }
 
   climateInformation() {
-    return `<strong>Climate adaptation and mitigation</strong>
+    if (this.isP25()) {
+      return `<strong>Climate adaptation and mitigation</strong>
 
     <ul>
-      <li><strong>Example topics:</strong> Generating scientific evidence on the impact of climate change on food, land and water systems, and vice-versa; developing evidence-based solutions that support climate action, including via policies, institutions and finance; enhancing adaptive capacity of small-scale producers while reducing GHG emissions/carbon footprints; providing affordable, accessible climate-informed services; developing climate-resilient crop varieties and breeds; securing genetic resources for future climate needs; and improving methods (e.g. for modeling, forecasts). </li>
+      <li><strong>Example topics:</strong> Generating scientific evidence on the impact of climate change on food, land and water systems, and vice-versa; developing evidence-based solutions that support climate action, including via policies, institutions and finance; enhancing adaptive capacity of small-scale producers while reducing GHG emissions/carbon footprints; providing affordable, accessible climate-informed services; developing climate-resilient crop varieties and breeds; securing genetic resources for future climate needs; and improving methods (e.g. for modeling, forecasts).</li>
+      <br/>
       <li><strong>Collective global targets:</strong>
         <ul>
           <li>Turn agriculture and forest systems into a net sink for carbon by 2050.</li>
@@ -240,6 +332,25 @@ export class RdGeneralInformationComponent implements OnInit {
           <li>Support countries in implementing National Adaptation Plans and Nationally Determined Contributions, and increased ambition in climate actions by 2030. education or training.</li>
         </ul>
       </li>
+    </ul>`;
+    }
+
+    return `<strong>Nutrition, health and food security tag guidance</strong>
+    <br>
+
+    There are two food security and nutrition targets for at systems level:
+
+    <ul>
+      <li>To end hunger for all and enable affordable, healthy diets for the 3 billion people who do not currently have access to safe and nutritious food. </li>
+      <li>To reduce cases of foodborne illness (600 million annually) and zoonotic disease (1 billion annually) by one third.</li>
+    </ul>
+
+    Three scores are possible:
+
+    <ul>
+    <li><strong>0 = Not targeted:</strong> The output/outcome/activity has been screened against the marker but has not been found to target any aspects of nutrition, health and food security.</li>
+    <li><strong>1 = Significant:</strong> The output/outcome/activity has made a significant contribution to any of the above-described aspects of nutrition, health and food security, but nutrition, health and food security is not the principal reason for undertaking the output/outcome/activity.</li>
+    <li><strong>2 = Principal:</strong> The output/outcome/activity is principally meeting any aspect of nutrition, health and food security, and this is fundamental in its design and expected results. The output/outcome/activity would not have been undertaken without this objective.</li>
     </ul>`;
   }
 
