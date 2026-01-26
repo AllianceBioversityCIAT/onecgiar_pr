@@ -55,6 +55,7 @@ import { InitiativeEntityMapRepository } from '../../initiative_entity_map/initi
 import { ImpactAreasScoresComponentsModule } from '../impact_areas_scores_components/impact_areas_scores_components.module';
 import { NotificationModule } from '../../notification/notification.module';
 import { AoWBilateralRepository } from '../results-toc-results/repositories/aow-bilateral.repository';
+import { ResultImpactAreaScoresModule } from '../../result-impact-area-scores/result-impact-area-scores.module';
 
 @Module({
   imports: [
@@ -76,6 +77,7 @@ import { AoWBilateralRepository } from '../results-toc-results/repositories/aow-
     ResultsInvestmentDiscontinuedOptionsModule,
     ImpactAreasScoresComponentsModule,
     NotificationModule,
+    ResultImpactAreaScoresModule,
   ],
   controllers: [ResultsKnowledgeProductsController],
   providers: [

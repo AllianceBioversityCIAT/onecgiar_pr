@@ -13,6 +13,7 @@ import { UserSearchService } from './services/user-search-service.service';
 import { GetImpactAreasScoresService } from '../../../../../../shared/services/global/get-impact-areas-scores.service';
 import { AiReviewService } from '../../../../../../shared/services/api/ai-review.service';
 import { SaveConfirmationModalComponent } from './components/save-confirmation-modal/save-confirmation-modal.component';
+import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 
 @Component({
   selector: 'app-rd-general-information',
@@ -29,6 +30,7 @@ export class RdGeneralInformationComponent implements OnInit {
 
   getImpactAreasScoresComponents = inject(GetImpactAreasScoresService);
   isP25 = computed(() => this.dataControlSE.currentResultSignal()?.portfolio === 'P25');
+  fieldsManagerSE = inject(FieldsManagerService);
 
   constructor(
     public api: ApiService,
@@ -63,15 +65,113 @@ export class RdGeneralInformationComponent implements OnInit {
     return this.generalInfoBody.institutions;
   }
 
+  // Helper methods for checkbox selection
+  isImpactAreaSelected(fieldName: string, optionId: number | string): boolean {
+    const fieldValue = this.generalInfoBody[fieldName];
+    if (!fieldValue || !Array.isArray(fieldValue)) {
+      return false;
+    }
+    return fieldValue.some((id: any) => Number(id) === Number(optionId));
+  }
+
+  toggleImpactAreaSelection(fieldName: string, optionId: number | string): void {
+    const fieldValue = this.generalInfoBody[fieldName] || [];
+    const currentArray = Array.isArray(fieldValue) ? [...fieldValue] : [];
+    const idNum = Number(optionId);
+
+    const index = currentArray.findIndex((id: any) => Number(id) === idNum);
+
+    if (index >= 0) {
+      // Remove if already selected
+      currentArray.splice(index, 1);
+    } else {
+      // Add if not selected
+      currentArray.push(idNum);
+    }
+
+    this.generalInfoBody[fieldName] = currentArray;
+  }
+
+  // Helper methods to get field labels and descriptions from FieldsManagerService
+  getImpactAreaFieldLabel(fieldRef: string): string {
+    const field = this.fieldsManagerSE.fields()[fieldRef];
+    return field?.label || '';
+  }
+
+  getImpactAreaFieldDescription(fieldRef: string): string {
+    const field = this.fieldsManagerSE.fields()[fieldRef];
+    return field?.description || '';
+  }
+
+  getImpactAreaFieldRequired(fieldRef: string): boolean {
+    const field = this.fieldsManagerSE.fields()[fieldRef];
+    return field?.required ?? true;
+  }
+
   getSectionInformation() {
     this.api.resultsSE.GET_generalInformationByResultId(this.dataControlSE.currentResultSignal()?.portfolio === 'P25').subscribe(({ response }) => {
       this.generalInfoBody = response;
       this.generalInfoBody.reporting_year = response['phase_year'];
       this.generalInfoBody.institutions_type = [...this.generalInfoBody.institutions_type, ...this.generalInfoBody.institutions] as any;
 
+      // Normalize impact area fields to arrays (backend returns arrays, but handle single numbers for backward compatibility)
+      this.normalizeImpactAreaFields();
+
       this.GET_investmentDiscontinuedOptions(response.result_type_id);
       this.isPhaseOpen = !!this.api?.dataControlSE?.currentResult?.is_phase_open;
     });
+  }
+
+  private normalizeImpactAreaFields() {
+    // Normalize to arrays: handle both single number and array responses
+    const isP25 = this.dataControlSE.currentResultSignal()?.portfolio === 'P25';
+
+    if (isP25) {
+      // For P25, always use arrays
+      this.generalInfoBody.gender_impact_area_id = this.toArray(this.generalInfoBody.gender_impact_area_id);
+      this.generalInfoBody.climate_impact_area_id = this.toArray(this.generalInfoBody.climate_impact_area_id);
+      this.generalInfoBody.nutrition_impact_area_id = this.toArray(this.generalInfoBody.nutrition_impact_area_id);
+      this.generalInfoBody.environmental_biodiversity_impact_area_id = this.toArray(this.generalInfoBody.environmental_biodiversity_impact_area_id);
+      this.generalInfoBody.poverty_impact_area_id = this.toArray(this.generalInfoBody.poverty_impact_area_id);
+    } else {
+      // For non-P25, keep as single number (null or number)
+      // Backend may return arrays, so convert single-element arrays to numbers
+      this.generalInfoBody.gender_impact_area_id = this.toSingleNumber(this.generalInfoBody.gender_impact_area_id);
+      this.generalInfoBody.climate_impact_area_id = this.toSingleNumber(this.generalInfoBody.climate_impact_area_id);
+      this.generalInfoBody.nutrition_impact_area_id = this.toSingleNumber(this.generalInfoBody.nutrition_impact_area_id);
+      this.generalInfoBody.environmental_biodiversity_impact_area_id = this.toSingleNumber(this.generalInfoBody.environmental_biodiversity_impact_area_id);
+      this.generalInfoBody.poverty_impact_area_id = this.toSingleNumber(this.generalInfoBody.poverty_impact_area_id);
+    }
+  }
+
+  private toArray(value: any): number[] {
+    if (value === null || value === undefined) {
+      return [];
+    }
+    if (Array.isArray(value)) {
+      // Extract IDs from objects if they are objects, otherwise use the values directly
+      return value.map((item: any) => {
+        if (typeof item === 'object' && item !== null) {
+          // Extract the ID property (can be string or number, convert to number)
+          const id = item.id ?? null;
+          return id !== null && id !== undefined ? Number(id) : null;
+        }
+        // If it's already a number or string, convert to number
+        return item !== null && item !== undefined ? Number(item) : null;
+      }).filter((id: any) => id !== null && id !== undefined && !Number.isNaN(id));
+    }
+    // Single value: convert to number and return as array
+    return value !== null && value !== undefined ? [Number(value)] : [];
+  }
+
+  private toSingleNumber(value: any): number | null {
+    if (value === null || value === undefined) {
+      return null;
+    }
+    if (Array.isArray(value)) {
+      return value.length > 0 ? value[0] : null;
+    }
+    return value;
   }
 
   GET_investmentDiscontinuedOptions(result_type_id) {
@@ -125,7 +225,25 @@ export class RdGeneralInformationComponent implements OnInit {
 
     if (!this.generalInfoBody.is_discontinued) this.generalInfoBody.discontinued_options = [];
 
-    this.api.resultsSE.PATCH_generalInformation(this.generalInfoBody, this.dataControlSE.currentResultSignal()?.portfolio === 'P25').subscribe({
+    // Ensure impact area fields are arrays for P25, or single numbers for non-P25
+    const isP25 = this.dataControlSE.currentResultSignal()?.portfolio === 'P25';
+    if (isP25) {
+      // For P25, ensure all impact area fields are arrays
+      this.generalInfoBody.gender_impact_area_id = this.toArray(this.generalInfoBody.gender_impact_area_id);
+      this.generalInfoBody.climate_impact_area_id = this.toArray(this.generalInfoBody.climate_impact_area_id);
+      this.generalInfoBody.nutrition_impact_area_id = this.toArray(this.generalInfoBody.nutrition_impact_area_id);
+      this.generalInfoBody.environmental_biodiversity_impact_area_id = this.toArray(this.generalInfoBody.environmental_biodiversity_impact_area_id);
+      this.generalInfoBody.poverty_impact_area_id = this.toArray(this.generalInfoBody.poverty_impact_area_id);
+    } else {
+      // For non-P25, convert arrays to single numbers (backward compatibility)
+      this.generalInfoBody.gender_impact_area_id = this.toSingleNumber(this.generalInfoBody.gender_impact_area_id);
+      this.generalInfoBody.climate_impact_area_id = this.toSingleNumber(this.generalInfoBody.climate_impact_area_id);
+      this.generalInfoBody.nutrition_impact_area_id = this.toSingleNumber(this.generalInfoBody.nutrition_impact_area_id);
+      this.generalInfoBody.environmental_biodiversity_impact_area_id = this.toSingleNumber(this.generalInfoBody.environmental_biodiversity_impact_area_id);
+      this.generalInfoBody.poverty_impact_area_id = this.toSingleNumber(this.generalInfoBody.poverty_impact_area_id);
+    }
+
+    this.api.resultsSE.PATCH_generalInformation(this.generalInfoBody, isP25).subscribe({
       next: resp => {
         this.currentResultSE.GET_resultById();
         this.getSectionInformation();
@@ -421,23 +539,29 @@ export class RdGeneralInformationComponent implements OnInit {
       position: 'beforeend'
     });
     this.requestEvent();
-    try {
-      document.getElementById('partnerRequest').addEventListener('click', e => {
-        this.api.dataControlSE.showPartnersRequest = true;
-      });
-    } catch (error) {
-      console.error(error);
+    const partnerRequestElement = document.getElementById('partnerRequest');
+    if (partnerRequestElement) {
+      try {
+        partnerRequestElement.addEventListener('click', e => {
+          this.api.dataControlSE.showPartnersRequest = true;
+        });
+      } catch (error) {
+        console.error(error);
+      }
     }
   }
 
   requestEvent() {
     this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {
-      try {
-        document.querySelector('.alert-event').addEventListener('click', e => {
-          this.api.dataControlSE.showPartnersRequest = true;
-        });
-      } catch (error) {
-        console.error(error);
+      const alertEventElement = document.querySelector('.alert-event');
+      if (alertEventElement) {
+        try {
+          alertEventElement.addEventListener('click', e => {
+            this.api.dataControlSE.showPartnersRequest = true;
+          });
+        } catch (error) {
+          console.error(error);
+        }
       }
     });
   }
