@@ -677,7 +677,9 @@ export class ShareResultRequestService {
     return {
       obj_request_status: true,
       obj_result: {
-        obj_version: true,
+        obj_version: {
+          obj_portfolio: true,
+        },
         obj_result_type: true,
         obj_result_level: true,
       },
