@@ -1,9 +1,12 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { BilateralResultDetail } from '../../result-review-drawer.interfaces';
+import { CustomFieldsModule } from '../../../../../../../../../../custom-fields/custom-fields.module';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-cap-sharing-content',
-  imports: [],
+  imports: [CustomFieldsModule, CommonModule, FormsModule],
   templateUrl: './cap-sharing-content.component.html',
   styleUrl: '../../result-review-drawer.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

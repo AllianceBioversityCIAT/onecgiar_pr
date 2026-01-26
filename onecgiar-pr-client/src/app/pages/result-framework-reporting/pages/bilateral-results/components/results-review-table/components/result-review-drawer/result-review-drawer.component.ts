@@ -14,6 +14,7 @@ import { CapSharingContentComponent } from './components/cap-sharing-content/cap
 import { PolicyChangeContentComponent } from './components/policy-change-content/policy-change-content.component';
 import { RolesService } from '../../../../../../../../shared/services/global/roles.service';
 import { BilateralResultsService } from '../../../../bilateral-results.service';
+import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
 
 @Component({
   selector: 'app-result-review-drawer',
@@ -28,7 +29,8 @@ import { BilateralResultsService } from '../../../../bilateral-results.service';
     KpContentComponent,
     InnoDevContentComponent,
     CapSharingContentComponent,
-    PolicyChangeContentComponent
+    PolicyChangeContentComponent,
+    CustomFieldsModule
   ],
   templateUrl: './result-review-drawer.component.html',
   styleUrl: './result-review-drawer.component.scss',
@@ -50,6 +52,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   resultDetail = signal<BilateralResultDetail | null>(null);
 
   rejectJustification: string = '';
+  evidenceLinkInput: string = '';
 
   showConfirmApproveDialog = signal<boolean>(false);
   showConfirmRejectDialog = signal<boolean>(false);
@@ -168,6 +171,29 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   cancelReject(): void {
     this.showConfirmRejectDialog.set(false);
     this.rejectJustification = '';
+  }
+
+  addEvidenceLink(): void {
+    if (!this.evidenceLinkInput?.trim()) return;
+
+    const detail = this.resultDetail();
+    if (!detail) return;
+
+    if (!detail.evidence) {
+      detail.evidence = [];
+    }
+
+    detail.evidence.push({ link: this.evidenceLinkInput.trim() });
+    this.resultDetail.set({ ...detail });
+    this.evidenceLinkInput = '';
+  }
+
+  removeEvidenceLink(index: number): void {
+    const detail = this.resultDetail();
+    if (!detail?.evidence) return;
+
+    detail.evidence.splice(index, 1);
+    this.resultDetail.set({ ...detail });
   }
 
   ngOnInit(): void {

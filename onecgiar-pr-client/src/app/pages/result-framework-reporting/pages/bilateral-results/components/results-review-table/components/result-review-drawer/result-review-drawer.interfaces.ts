@@ -52,7 +52,9 @@ export interface BilateralCommonFields {
 export interface BilateralTocMetadata {
   planned_result: number;
   acronym: string;
+  toc_result_id: number;
   result_title: string;
+  indicator_id: string;
   indicator_description: string;
 }
 

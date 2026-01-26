@@ -48,10 +48,11 @@
     <div class="form-section">
       <h3 class="form-section_title">TOC ALIGNMENT</h3>
       <!-- TOC ALIGNMENT Section -->
-      <h4 class="pr-h4 font-weight-600 text-black">Does this result align with the Program's TOC?</h4>
-      <p class="pr-body-2 font-weight-400 text-black">
-        {{ fields?.tocMetadata[0]?.planned_result ? 'Yes' : 'No' }}
-      </p>
+      <app-pr-yes-or-not
+        label="Does this result align with the Program's TOC?"
+        [required]="true"
+        [ngModel]="fields?.tocMetadata?.[0]?.planned_result">
+      </app-pr-yes-or-not>
 
       <br />
 
@@ -79,14 +80,12 @@
     <div class="form-section">
       <h3 class="form-section_title">DATA STANDARDS</h3>
 
-      <h4 class="pr-h4 font-weight-600 text-black" style="margin-bottom: 5px">Result Description</h4>
-      @if (fields?.commonFields?.result_description) {
-        <p class="pr-body-2 font-weight-400 text-black">
-          {{ fields?.commonFields?.result_description }}
-        </p>
-      } @else {
-        <p class="not_provided_text">Not provided</p>
-      }
+      <app-pr-textarea
+        label="Result Description"
+        placeholder="Enter text"
+        [required]="false"
+        [(ngModel)]="fields.commonFields.result_description">
+      </app-pr-textarea>
 
       <hr class="form-section_separator" />
 
@@ -96,36 +95,39 @@
         <app-geoscope-management
           label="What is the main geographic focus of the Output?"
           [body]="fields.geographicScope"
-          [readOnly]="true"
+          [readOnly]="false"
           module="reporting">
         </app-geoscope-management>
 
-        @if (fields.geographicScope.geo_scope_id != 1 && fields.geographicScope.geo_scope_id != 50 && fields.geographicScope.geo_scope_id) {
-          @if (fields.geographicScope.has_extra_geo_scope !== null && fields.geographicScope.has_extra_geo_scope !== undefined) {
-            <div class="extra-geo-scope-section mt-20">
-              <h4 class="pr-h4 font-weight-600 text-black">Are there any regions that you wish to specify for this Output?</h4>
-              <p class="pr-body-2 font-weight-400 text-black">{{ fields.geographicScope.has_extra_geo_scope ? 'Yes' : 'No' }}</p>
-            </div>
+        @if (fields.geographicScope.geo_scope_id && fields.geographicScope.geo_scope_id !== 1 && fields.geographicScope.geo_scope_id !== 50) {
+          <br />
+          <app-pr-radio-button
+            [options]="[
+              { value: true, label: 'Yes' },
+              { value: false, label: 'No' }
+            ]"
+            optionLabel="label"
+            optionValue="value"
+            label="Are there any regions that you wish to specify for this Output?"
+            [(ngModel)]="fields.geographicScope.has_extra_geo_scope">
+          </app-pr-radio-button>
 
-            @if (fields.geographicScope.has_extra_geo_scope) {
-              <app-geoscope-management
-                label="What is the geographic scope where there may be potential impact in other geographic areas?"
-                [body]="{
-                  geo_scope_id: fields.geographicScope.extra_geo_scope_id,
-                  regions: fields.geographicScope.extra_regions,
-                  countries: fields.geographicScope.extra_countries,
-                  has_regions: fields.geographicScope.has_extra_regions,
-                  has_countries: fields.geographicScope.has_extra_countries
-                }"
-                [readOnly]="true"
-                [hideTobeDetermined]="true"
-                module="reporting">
-              </app-geoscope-management>
-            }
+          @if (fields.geographicScope.has_extra_geo_scope) {
+            <app-geoscope-management
+              label="What is the geographic scope where there may be potential impact in other geographic areas?"
+              [body]="{
+                geo_scope_id: fields.geographicScope.extra_geo_scope_id,
+                regions: fields.geographicScope.extra_regions || [],
+                countries: fields.geographicScope.extra_countries || [],
+                has_regions: fields.geographicScope.has_extra_regions,
+                has_countries: fields.geographicScope.has_extra_countries
+              }"
+              [readOnly]="false"
+              [hideTobeDetermined]="true"
+              module="reporting">
+            </app-geoscope-management>
           }
         }
-      } @else {
-        <p class="not_provided_text">Not provided</p>
       }
 
       <hr class="form-section_separator" />
@@ -176,15 +178,27 @@
 
       <hr class="form-section_separator" />
 
-      <h4 class="pr-h4 font-weight-600 text-black">Evidence</h4>
+      <app-pr-input
+        label="Evidence"
+        placeholder="Paste the link"
+        type="link"
+        [required]="false"
+        [(ngModel)]="evidenceLinkInput"
+        (keyup.enter)="addEvidenceLink()">
+      </app-pr-input>
+
       @if (fields?.evidence?.length) {
-        <div class="readonly-chips-container">
-          @for (evidence of fields?.evidence; track $index) {
-            <span class="readonly-chip">{{ evidence.link }}</span>
-          }
+        <div class="evidence-chips-container" style="margin-top: 8px;">
+          <p style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">Evidences links</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+            @for (evidence of fields.evidence; track $index) {
+              <span class="evidence-chip" style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; background-color: #f3f4f6; border-radius: 16px; font-size: 14px;">
+                <a [href]="evidence.link" target="_blank" style="color: #5569dd; text-decoration: none;">{{ evidence.link }}</a>
+                <i class="pi pi-times" style="cursor: pointer; font-size: 12px; color: #6b7280;" (click)="removeEvidenceLink($index)"></i>
+              </span>
+            }
+          </div>
         </div>
-      } @else {
-        <p class="not_provided_text">Not provided</p>
       }
 
       @if (
