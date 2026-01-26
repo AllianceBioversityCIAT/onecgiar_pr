@@ -16,6 +16,7 @@ import { RolesService } from '../../../../../../../../shared/services/global/rol
 import { BilateralResultsService } from '../../../../bilateral-results.service';
 import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
 import { CentersService } from '../../../../../../../../shared/services/global/centers.service';
+import { InstitutionsService } from '../../../../../../../../shared/services/global/institutions.service';
 
 @Component({
   selector: 'app-result-review-drawer',
@@ -42,6 +43,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   bilateralResultsService = inject(BilateralResultsService);
   rolesSE = inject(RolesService);
   centersSE = inject(CentersService);
+  institutionsSE = inject(InstitutionsService);
 
   // Contributing lists
   clarisaProjectsList = signal<any[]>([]);

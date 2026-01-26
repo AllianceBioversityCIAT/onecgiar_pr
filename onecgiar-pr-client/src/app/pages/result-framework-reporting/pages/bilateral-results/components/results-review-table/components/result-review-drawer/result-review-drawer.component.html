@@ -168,14 +168,17 @@
 
       <hr class="form-section_separator" />
 
-      <h4 class="pr-h4 font-weight-600 text-black">Partners</h4>
-      @if (fields?.contributingInstitutions?.length) {
-        @for (partner of fields?.contributingInstitutions; track $index) {
-          <p class="pr-body-2 font-weight-400 text-black">{{ partner?.obj_institutions?.name ?? 'No partner selected' }}</p>
-        }
-      } @else {
-        <p class="not_provided_text">Not provided</p>
-      }
+      <app-pr-multi-select
+        [options]="institutionsSE.institutionsWithoutCentersListPartners"
+        label="Partners"
+        selectedLabel="Partner(s) selected"
+        selectedOptionLabel="institutions_name"
+        optionLabel="full_name"
+        optionValue="institutions_id"
+        [required]="false"
+        [(ngModel)]="fields.contributingInstitutions"
+        placeholder="Select partner">
+      </app-pr-multi-select>
 
       <hr class="form-section_separator" />
 
