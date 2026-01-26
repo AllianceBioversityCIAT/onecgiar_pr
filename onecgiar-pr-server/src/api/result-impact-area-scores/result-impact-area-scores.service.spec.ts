@@ -25,9 +25,7 @@ describe('ResultImpactAreaScoresService', () => {
       }),
     } as unknown as DataSource;
 
-    const currentUser: any = { audit: jest.fn(() => ({})) };
-
-    const service = new ResultImpactAreaScoresService(dataSource, currentUser);
+    const service = new ResultImpactAreaScoresService(dataSource);
     return { service, dataSource, mainRepo, impactRepo };
   };
 

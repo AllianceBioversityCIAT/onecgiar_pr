@@ -16,7 +16,25 @@ import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity
 import { isEmpty } from '../utils/object.utils';
 import { BaseEntity } from './base-entity';
 import { selectManager } from '../utils/orm.util';
-import { CurrentUserUtil, SetAutitEnum } from '../utils/current-user.util';
+
+function withAuditFields<T extends Record<string, any>>(
+  data: T,
+  userId?: number,
+): T & Partial<BaseEntity> {
+  if (userId === undefined || userId === null) return data as any;
+
+  // Preserve existing created_by when present; always set last_updated_by.
+  const created_by =
+    data.created_by === undefined || data.created_by === null
+      ? userId
+      : data.created_by;
+
+  return {
+    ...data,
+    created_by,
+    last_updated_by: userId,
+  } as any;
+}
 
 export abstract class BaseServiceProperties<
   Entity extends BaseEntity,
@@ -27,7 +45,6 @@ export abstract class BaseServiceProperties<
     protected readonly mainRepo: RepositoryData,
     protected readonly resultKey: keyof Entity & string = null,
     protected readonly roleKey: keyof Entity & string = null,
-    public readonly currentUser: CurrentUserUtil,
   ) {
     this.primaryKey = this.mainRepo.metadata.primaryColumns?.[0]
       .propertyName as keyof Entity & string;
@@ -40,11 +57,10 @@ export abstract class BaseDeleteService<
 > extends BaseServiceProperties<Entity, RepositoryData> {
   constructor(
     mainRepo: RepositoryData,
-    currentUser: CurrentUserUtil,
     resultKey: keyof Entity & string = null,
     roleKey: keyof Entity & string = null,
   ) {
-    super(mainRepo, resultKey, roleKey, currentUser);
+    super(mainRepo, resultKey, roleKey);
   }
   /**
    * @param resultId (required)
@@ -59,6 +75,7 @@ export abstract class BaseDeleteService<
     resultId: number,
     roleId?: Enum,
     date?: Date,
+    userId?: number,
   ): Promise<void> {
     const whereData: any = {
       [this.resultKey]: resultId,
@@ -72,6 +89,7 @@ export abstract class BaseDeleteService<
     const updateData: any = {
       is_active: false,
       deleted_at: date,
+      ...(userId !== undefined ? { last_updated_by: userId } : {}),
     };
 
     await this.mainRepo.update(whereData, updateData);
@@ -95,10 +113,9 @@ export abstract class BaseServiceSimple<
     protected readonly entity: new () => Entity,
     mainRepo: RepositoryData,
     resultKey: keyof Entity & string,
-    currentUser: CurrentUserUtil,
     roleKey: keyof Entity & string = null,
   ) {
-    super(mainRepo, currentUser, resultKey, roleKey);
+    super(mainRepo, resultKey, roleKey);
   }
 
   /**
@@ -116,16 +133,61 @@ export abstract class BaseServiceSimple<
     resultId: number,
     dataToSave: Partial<Entity> | Partial<Entity>[],
     generalCompareKey: keyof Entity & string,
+    options?: {
+      dataRole?: Enum;
+      manager?: EntityManager;
+      otherAttributes?: (keyof Entity & string)[];
+      deleteOthersAttributes?: { [K in keyof Entity]?: Entity[K] };
+      notDeleteIds?: number[];
+      userId?: number;
+    },
+  ): Promise<Entity[]>;
+  public async create<Enum extends string | number>(
+    resultId: number,
+    dataToSave: Partial<Entity> | Partial<Entity>[],
+    generalCompareKey: keyof Entity & string,
     dataRole?: Enum,
     manager?: EntityManager,
     otherAttributes?: (keyof Entity & string)[],
     deleteOthersAttributes: { [K in keyof Entity]?: Entity[K] } = {},
     notDeleteIds?: number[],
+    userId?: number,
   ) {
+    const isOptionsObject =
+      typeof dataRole === 'object' && dataRole !== null && !Array.isArray(dataRole);
+
+    const opts = (isOptionsObject ? (dataRole as any) : undefined) as
+      | {
+        dataRole?: Enum;
+        manager?: EntityManager;
+        otherAttributes?: (keyof Entity & string)[];
+        deleteOthersAttributes?: { [K in keyof Entity]?: Entity[K] };
+        notDeleteIds?: number[];
+        userId?: number;
+      }
+      | undefined;
+
+    const resolvedDataRole: Enum | undefined = isOptionsObject
+      ? opts?.dataRole
+      : (dataRole as any);
+    const resolvedManager: EntityManager | undefined = isOptionsObject
+      ? opts?.manager
+      : manager;
+    const resolvedOtherAttributes: (keyof Entity & string)[] | undefined =
+      isOptionsObject ? opts?.otherAttributes : otherAttributes;
+    const resolvedDeleteOthersAttributes: { [K in keyof Entity]?: Entity[K] } =
+      isOptionsObject
+        ? (opts?.deleteOthersAttributes ?? {})
+        : deleteOthersAttributes;
+    const resolvedNotDeleteIds: number[] | undefined = isOptionsObject
+      ? opts?.notDeleteIds
+      : notDeleteIds;
+    const resolvedUserId: number | undefined = isOptionsObject ? opts?.userId : userId;
+
     const entityManager: RepositoryData | Repository<Entity> = selectManager<
       Entity,
       RepositoryData
-    >(manager, this.entity, this.mainRepo);
+    >(resolvedManager, this.entity, this.mainRepo);
 
     const dataToSaveArray = formatDataToArray<Partial<Entity>>(
       dataToSave,
@@ -142,9 +204,9 @@ export abstract class BaseServiceSimple<
 
     const formatWhitDataRole: any = {};
 
-    if (dataRole && this.roleKey) {
-      whereData[this.roleKey] = dataRole;
-      formatWhitDataRole[this.roleKey] = dataRole;
+    if (resolvedDataRole && this.roleKey) {
+      whereData[this.roleKey] = resolvedDataRole;
+      formatWhitDataRole[this.roleKey] = resolvedDataRole;
     }
 
     const existData = await entityManager.find({
@@ -153,7 +215,7 @@ export abstract class BaseServiceSimple<
 
     const formatData: Partial<Entity>[] = dataToSaveArray.map((data) => ({
       ...formatWhitDataRole,
-      ...this.setOtherAttributes(otherAttributes, data),
+      ...this.setOtherAttributes(resolvedOtherAttributes, data),
       [this.primaryKey]: data?.[this.primaryKey],
       [generalCompareKey]: data?.[generalCompareKey],
     })) as Partial<Entity>[];
@@ -167,7 +229,7 @@ export abstract class BaseServiceSimple<
         value: resultId,
       },
       this.primaryKey,
-      notDeleteIds,
+      resolvedNotDeleteIds,
     );
 
     const persistId = filterPersistKey<Entity>(this.primaryKey, newDataToSave);
@@ -175,26 +237,23 @@ export abstract class BaseServiceSimple<
     const updateWhere: FindOptionsWhere<any> = {
       [this.resultKey]: resultId,
       [this.primaryKey]: Not(In(persistId)),
-      ...(dataRole ? { [this.roleKey]: dataRole } : {}),
+      ...(resolvedDataRole ? { [this.roleKey]: resolvedDataRole } : {}),
     };
 
     const inactiveData: QueryDeepPartialEntity<any> = {
       is_active: false,
     };
 
-    Object.keys(deleteOthersAttributes)?.forEach((key) => {
-      inactiveData[key] = deleteOthersAttributes[key];
+    Object.keys(resolvedDeleteOthersAttributes)?.forEach((key) => {
+      inactiveData[key] = resolvedDeleteOthersAttributes[key];
     });
 
     await entityManager.update(updateWhere, inactiveData);
 
     const finalDataToSave = this.lastRefactoredAfterSave(
       newDataToSave,
-      dataRole,
-    ).map((data) => ({
-      ...data,
-      ...this.currentUser.audit(SetAutitEnum.BOTH),
-    }));
+      resolvedDataRole,
+    ).map((data) => withAuditFields(data as any, resolvedUserId));
 
     const response = (
       await entityManager.save(finalDataToSave as DeepPartial<Entity>[])
@@ -321,6 +380,7 @@ export abstract class BaseServiceSimple<
     dataRole?: Enum,
     manager?: EntityManager,
     otherAttributes?: (keyof Entity & string)[],
+    userId?: number,
   ): Promise<Entity[]> {
     const entityManager: RepositoryData | Repository<Entity> = selectManager<
       Entity,
@@ -438,10 +498,7 @@ export abstract class BaseServiceSimple<
     const finalDataToSave = this.lastRefactoredAfterSave(
       processedData,
       dataRole,
-    ).map((data) => ({
-      ...data,
-      ...this.currentUser.audit(SetAutitEnum.BOTH),
-    }));
+    ).map((data) => withAuditFields(data as any, userId));
 
     const savedRecords = (await entityManager.save(
       finalDataToSave as DeepPartial<Entity>[],

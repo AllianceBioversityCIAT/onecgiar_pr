@@ -200,6 +200,7 @@ export class IpsrGeneralInformationService {
         resultId,
         resultImpactAreaScores,
         'impact_area_score_id',
+        { userId: user.id },
       );
 
       if (req?.is_discontinued) {
