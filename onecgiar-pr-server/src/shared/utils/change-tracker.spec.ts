@@ -2,7 +2,7 @@ import { ChangeTracker } from './change-tracker';
 
 describe('ChangeTracker', () => {
   describe('trackChangesForObjects', () => {
-    it('debe detectar added (incluyendo los sin key) y removed por key', () => {
+    it('should detect added (including items without key) and removed by key', () => {
       type E = { id?: number; name: string };
 
       const oldList: E[] = [
@@ -25,7 +25,7 @@ describe('ChangeTracker', () => {
   });
 
   describe('trackChangesForArrays', () => {
-    it('debe detectar added y removed para arrays simples', () => {
+    it('should detect added and removed for simple arrays', () => {
       const res = ChangeTracker.trackChangesForArrays([1, 2, 3], [2, 3, 4]);
       expect(res.added).toEqual([4]);
       expect(res.removed).toEqual([1]);

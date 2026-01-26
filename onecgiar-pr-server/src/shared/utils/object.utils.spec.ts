@@ -10,7 +10,7 @@ import {
 
 describe('object.utils', () => {
   describe('isEmpty', () => {
-    it('debe retornar true para null/undefined/""/NaN/[]', () => {
+    it('should return true for null/undefined/""/NaN/[]', () => {
       expect(isEmpty(null)).toBe(true);
       expect(isEmpty(undefined)).toBe(true);
       expect(isEmpty('' as any)).toBe(true);
@@ -18,7 +18,7 @@ describe('object.utils', () => {
       expect(isEmpty([] as any)).toBe(true);
     });
 
-    it('debe retornar false para valores válidos', () => {
+    it('should return false for valid values', () => {
       expect(isEmpty(0 as any)).toBe(false);
       expect(isEmpty(false as any)).toBe(false);
       expect(isEmpty('x' as any)).toBe(false);
@@ -28,7 +28,7 @@ describe('object.utils', () => {
   });
 
   describe('cleanObject', () => {
-    it('debe eliminar null, "" y NaN (number)', () => {
+    it('should remove null, "" and NaN (number)', () => {
       const input = {
         a: 'ok',
         b: '',
@@ -47,7 +47,7 @@ describe('object.utils', () => {
   });
 
   describe('parseBoolean', () => {
-    it('debe convertir "true" a true y el resto a false', () => {
+    it('should convert "true" to true and everything else to false', () => {
       expect(parseBoolean({ a: 'true', b: 'false', c: '1' } as any)).toEqual({
         a: true,
         b: false,
@@ -57,53 +57,53 @@ describe('object.utils', () => {
   });
 
   describe('validObject', () => {
-    it('debe retornar isValid=false y campos inválidos cuando falten', () => {
+    it('should return isValid=false and invalidFields when required fields are missing', () => {
       const res = validObject({ a: '', b: 2 } as any, ['a', 'c'] as any);
       expect(res.isValid).toBe(false);
-      expect(res.invalidFields.sort()).toEqual(['a', 'c']);
+      expect(res.invalidFields.sort((a, b) => a.localeCompare(b))).toEqual(['a', 'c']);
     });
 
-    it('debe retornar isValid=true cuando todos estén presentes', () => {
+    it('should return isValid=true when all required fields are present', () => {
       const res = validObject({ a: 1, b: 'x' } as any, ['a', 'b'] as any);
       expect(res).toEqual({ isValid: true, invalidFields: [] });
     });
   });
 
   describe('setDefaultValueInObject', () => {
-    it('debe retornar {} si obj no es objeto', () => {
+    it('should return {} if obj is not an object', () => {
       expect(setDefaultValueInObject(null as any, ['a'] as any)).toEqual({});
       expect(setDefaultValueInObject(undefined as any, ['a'] as any)).toEqual({});
       expect(setDefaultValueInObject('x' as any, ['a'] as any)).toEqual({});
     });
 
-    it('debe setear atributos en el objeto (y retornar copia)', () => {
+    it('should set attributes on the object (and return a copy)', () => {
       const obj: any = { a: 1 };
       const res = setDefaultValueInObject(obj, ['a', 'b'] as any, 9);
       expect(res).toEqual({ a: 9, b: 9 });
-      // Mutación esperada por la implementación actual
+      // Mutation is expected by the current implementation
       expect(obj).toEqual({ a: 9, b: 9 });
     });
   });
 
   describe('setNull', () => {
-    it('debe convertir empty a null', () => {
+    it('should convert empty values to null', () => {
       expect(setNull('' as any)).toBeNull();
       expect(setNull([] as any)).toBeNull();
       expect(setNull(undefined as any)).toBeNull();
     });
 
-    it('debe dejar valores no vacíos intactos', () => {
+    it('should keep non-empty values unchanged', () => {
       expect(setNull('x' as any)).toBe('x');
       expect(setNull(0 as any)).toBe(0);
     });
   });
 
   describe('defaultValue', () => {
-    it('debe retornar data cuando condition=true', () => {
+    it('should return data when condition=true', () => {
       expect(defaultValue('x', true, 'y')).toBe('x');
     });
 
-    it('debe retornar defaultValue cuando condition=false', () => {
+    it('should return defaultValue when condition=false', () => {
       expect(defaultValue('x', false, 'y')).toBe('y');
       expect(defaultValue('x', false)).toBeNull();
     });

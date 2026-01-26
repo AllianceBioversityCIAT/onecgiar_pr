@@ -27,21 +27,21 @@ describe('ContributionToIndicatorsRepository', () => {
     return { repo, dataSource, handlersError, resultsRepo };
   };
 
-  it('_flattenedResultsQuery debe envolver query base', () => {
+  it('_flattenedResultsQuery should wrap base query', () => {
     const { repo, resultsRepo } = makeRepo();
     const sql = repo._flattenedResultsQuery();
     expect(resultsRepo.getContributingResultsQuery).toHaveBeenCalledTimes(1);
     expect(sql).toContain('from (SELECT 1) inner_q');
   });
 
-  it('_getTocResultSubquery debe generar SQL con outerRelationName', () => {
+  it('_getTocResultSubquery should generate SQL with outerRelationName', () => {
     const { repo } = makeRepo();
     const q = repo._getTocResultSubquery('eoi');
     expect(q).toContain('"toc_result_id", eoi.id');
     expect(q).toContain('json_object');
   });
 
-  it('_query debe retornar data cuando dataSource.query resuelve', async () => {
+  it('_query should return data when dataSource.query resolves', async () => {
     const { repo, dataSource } = makeRepo();
     dataSource.query.mockResolvedValue([{ a: 1 }]);
 
@@ -49,7 +49,7 @@ describe('ContributionToIndicatorsRepository', () => {
     expect(dataSource.query).toHaveBeenCalledWith('SQL', [1]);
   });
 
-  it('_query debe lanzar error formateado cuando dataSource.query falla', async () => {
+  it('_query should throw formatted error when dataSource.query fails', async () => {
     const { repo, dataSource, handlersError } = makeRepo();
     dataSource.query.mockRejectedValue(new Error('x'));
 
@@ -57,7 +57,7 @@ describe('ContributionToIndicatorsRepository', () => {
     expect(handlersError.returnErrorRepository).toHaveBeenCalledTimes(1);
   });
 
-  it('_supportingResults debe remover inactivos usando resultsRepo.removeInactives', async () => {
+  it('_supportingResults should remove inactive items using resultsRepo.removeInactives', async () => {
     const { repo, dataSource, resultsRepo } = makeRepo();
     dataSource.query.mockResolvedValue([
       {
@@ -77,7 +77,7 @@ describe('ContributionToIndicatorsRepository', () => {
     ]);
   });
 
-  it('_enrichIndicators debe setear indicator_supporting_results', async () => {
+  it('_enrichIndicators should set indicator_supporting_results', async () => {
     const { repo } = makeRepo();
     const supportingSpy = jest
       .spyOn(repo, '_supportingResults')
@@ -92,7 +92,7 @@ describe('ContributionToIndicatorsRepository', () => {
     expect(toc[0].indicators[0].indicator_supporting_results).toEqual([{ ok: true }]);
   });
 
-  it('findAllEoisByInitiativeCode debe usar _query y _enrichIndicators', async () => {
+  it('findAllEoisByInitiativeCode should use _query and _enrichIndicators', async () => {
     const { repo } = makeRepo();
     jest.spyOn(repo, '_query').mockResolvedValue([
       { eois: [{ indicators: [{ indicator_uuid: 'u1' }] }] },
@@ -106,7 +106,7 @@ describe('ContributionToIndicatorsRepository', () => {
     expect(enrichSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('findAllOutcomesByInitiativeCode debe mapear workpackage y enriquecer', async () => {
+  it('findAllOutcomesByInitiativeCode should map workpackage and enrich', async () => {
     const { repo } = makeRepo();
     jest.spyOn(repo, '_query').mockResolvedValue([
       { workpackage: { toc_results: [{ indicators: [{ indicator_uuid: 'u1' }] }] } },

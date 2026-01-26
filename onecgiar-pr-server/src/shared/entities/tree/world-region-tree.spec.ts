@@ -8,7 +8,7 @@ describe('WorldRegionTree', () => {
     return r;
   };
 
-  it('findById debe encontrar por um49Code', () => {
+  it('findById should find by um49Code', () => {
     const root = makeRegion(1);
     const tree = new WorldRegionTree(root);
     tree.add(makeRegion(2), makeRegion(1));
@@ -17,7 +17,7 @@ describe('WorldRegionTree', () => {
     expect(node?.data?.um49Code).toBe(2);
   });
 
-  it('getAllDescendantRegions debe retornar [] y loggear error si no existe la región', () => {
+  it('getAllDescendantRegions should return [] and log an error when the region does not exist', () => {
     const tree = new WorldRegionTree(makeRegion(1));
     const errorSpy = jest
       .spyOn((tree as any)._logger, 'error')
@@ -28,7 +28,7 @@ describe('WorldRegionTree', () => {
     expect(errorSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('getAllDescendantRegions debe soportar onlyLeafs=true', () => {
+  it('getAllDescendantRegions should support onlyLeafs=true', () => {
     const tree = new WorldRegionTree(makeRegion(1));
     tree.add(makeRegion(2), makeRegion(1));
     tree.add(makeRegion(3), makeRegion(2));
@@ -37,8 +37,8 @@ describe('WorldRegionTree', () => {
     const all = tree.getAllDescendantRegions(makeRegion(1), false);
     const leafs = tree.getAllDescendantRegions(makeRegion(1), true);
 
-    expect(all.map((r) => r.um49Code).sort()).toEqual([3, 4]);
-    expect(leafs.map((r) => r.um49Code).sort()).toEqual([3, 4]);
+    expect(all.map((r) => r.um49Code).sort((a, b) => a - b)).toEqual([3, 4]);
+    expect(leafs.map((r) => r.um49Code).sort((a, b) => a - b)).toEqual([3, 4]);
   });
 });
 

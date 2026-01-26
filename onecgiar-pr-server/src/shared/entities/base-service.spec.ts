@@ -32,7 +32,7 @@ describe('BaseServiceSimple / BaseDeleteService', () => {
   });
 
   describe('transformArrayToSaveObject', () => {
-    it('debe mapear a objetos usando primaryKey del metadata', () => {
+    it('should map to objects using metadata primaryKey', () => {
       const repo = makeRepo();
       const currentUser = makeCurrentUser();
       const service = new DummyService(repo, currentUser);
@@ -46,7 +46,7 @@ describe('BaseServiceSimple / BaseDeleteService', () => {
   });
 
   describe('find', () => {
-    it('debe construir where con resultKey e is_active=true', async () => {
+    it('should build where with resultKey and is_active=true', async () => {
       const repo = makeRepo();
       repo.find.mockResolvedValue([{ id: 1 }]);
       const currentUser = makeCurrentUser();
@@ -70,7 +70,7 @@ describe('BaseServiceSimple / BaseDeleteService', () => {
   });
 
   describe('unsetMultiplesPrimary', () => {
-    it('debe desmarcar todos si hay más de uno is_primary=true', () => {
+    it('should uncheck all if there is more than one is_primary=true', () => {
       const repo = makeRepo();
       const currentUser = makeCurrentUser();
       const service = new DummyService(repo, currentUser);
@@ -86,7 +86,7 @@ describe('BaseServiceSimple / BaseDeleteService', () => {
   });
 
   describe('create', () => {
-    it('debe upsert por generalCompareKey, inactivar otros y agregar auditoría', async () => {
+    it('should upsert by generalCompareKey, deactivate others and add audit fields', async () => {
       const repo = makeRepo();
       const currentUser = makeCurrentUser();
       const service = new DummyService(repo, currentUser, 'role_id');
@@ -119,13 +119,13 @@ describe('BaseServiceSimple / BaseDeleteService', () => {
         ['other'] as any,
       );
 
-      // update para inactivar otros
+      // update to deactivate others
       expect(repo.update).toHaveBeenCalledTimes(1);
       expect(repo.update.mock.calls[0][1]).toEqual(
         expect.objectContaining({ is_active: false }),
       );
 
-      // save con auditoría BOTH
+      // save with BOTH audit
       expect(currentUser.audit).toHaveBeenCalledWith(SetAutitEnum.BOTH);
       expect(repo.save).toHaveBeenCalledTimes(1);
       const savedArg = repo.save.mock.calls[0][0];
@@ -140,14 +140,14 @@ describe('BaseServiceSimple / BaseDeleteService', () => {
         }),
       );
 
-      // retorna solo activos
+      // returns only active items
       expect(res).toHaveLength(1);
       expect(res[0]).toEqual(expect.objectContaining({ is_active: true }));
     });
   });
 
   describe('upsertByCompositeKeys', () => {
-    it('si dataToSave está vacío, debe inactivar todo y retornar []', async () => {
+    it('if dataToSave is empty, should deactivate everything and return []', async () => {
       const repo = makeRepo();
       const currentUser = makeCurrentUser();
       const service = new DummyService(repo, currentUser, 'role_id');
@@ -172,7 +172,7 @@ describe('BaseServiceSimple / BaseDeleteService', () => {
       );
     });
 
-    it('debe reutilizar existentes por compositeKey y desactivar los no presentes', async () => {
+    it('should reuse existing items by compositeKey and deactivate missing ones', async () => {
       const repo = makeRepo();
       const currentUser = makeCurrentUser();
       const service = new DummyService(repo, currentUser);
@@ -204,7 +204,7 @@ describe('BaseServiceSimple / BaseDeleteService', () => {
         ['number', 'unit', 'description'] as any,
       );
 
-      // una actualización para desactivar idsToDeactivate (id=2)
+      // one update to deactivate idsToDeactivate (id=2)
       expect(repo.update).toHaveBeenCalledTimes(1);
       expect(repo.save).toHaveBeenCalledTimes(1);
       expect(currentUser.audit).toHaveBeenCalledWith(SetAutitEnum.BOTH);

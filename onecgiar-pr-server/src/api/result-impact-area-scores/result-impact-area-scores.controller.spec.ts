@@ -19,7 +19,7 @@ describe('ResultImpactAreaScoresController', () => {
     controller = module.get(ResultImpactAreaScoresController);
   });
 
-  it('debe estar definido', () => {
+  it('should be defined', () => {
     expect(controller).toBeDefined();
   });
 });

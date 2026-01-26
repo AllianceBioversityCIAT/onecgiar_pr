@@ -334,8 +334,6 @@ describe('ResultsService (unit, pure mocks)', () => {
 
   const mockImpactAreasScoresComponentRepository = {
     findOne: jest.fn().mockResolvedValue({ id: 123 }),
-    // Default: devolver un superset de IDs válidos usados en tests (201-205),
-    // para que validateImpactAreaScores no marque faltantes.
     find: jest
       .fn()
       .mockResolvedValue([

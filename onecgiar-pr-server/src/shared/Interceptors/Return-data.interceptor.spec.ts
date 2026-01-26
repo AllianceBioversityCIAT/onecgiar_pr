@@ -18,7 +18,7 @@ describe('ResponseInterceptor', () => {
       }),
     }) as any;
 
-  it('debe envolver respuesta y hacer warn cuando statusCode > 300', async () => {
+  it('should wrap response and warn when statusCode > 300', async () => {
     const interceptor = new ResponseInterceptor();
     const warnSpy = jest
       .spyOn((interceptor as any)._logger, 'warn')
@@ -42,7 +42,7 @@ describe('ResponseInterceptor', () => {
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('debe usar statusCode por defecto (200) y hacer verbose cuando statusCode <= 300', async () => {
+  it('should use default statusCode (200) and log verbose when statusCode <= 300', async () => {
     const interceptor = new ResponseInterceptor();
     const verboseSpy = jest
       .spyOn((interceptor as any)._logger, 'verbose')

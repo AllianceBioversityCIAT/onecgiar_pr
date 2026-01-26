@@ -7,7 +7,7 @@ describe('AdUserRepository', () => {
     return { repo, dataSource };
   };
 
-  it('searchLocalUsers debe retornar [] si query es vacío o <2 chars', async () => {
+  it('searchLocalUsers should return [] if query is empty or <2 chars', async () => {
     const { repo } = makeRepo();
     repo.find = jest.fn();
 
@@ -16,7 +16,7 @@ describe('AdUserRepository', () => {
     expect(repo.find).not.toHaveBeenCalled();
   });
 
-  it('searchLocalUsers debe llamar find con where/or y order', async () => {
+  it('searchLocalUsers should call find with where/or and order', async () => {
     const { repo } = makeRepo();
     repo.find = jest.fn().mockResolvedValue([{ id: 1 }]);
 
@@ -51,7 +51,7 @@ describe('AdUserRepository', () => {
     });
   });
 
-  it('saveFromADUser debe update cuando existe y save cuando no existe', async () => {
+  it('saveFromADUser should update when it exists and save when it does not', async () => {
     const { repo } = makeRepo();
 
     repo.findByEmail = jest.fn().mockResolvedValueOnce({ id: 10 });
@@ -78,7 +78,7 @@ describe('AdUserRepository', () => {
     expect(created).toEqual({ id: 11, mail: 'c@d.com' });
   });
 
-  it('getUsersNeedingSync debe armar query builder y retornar getMany', async () => {
+  it('getUsersNeedingSync should build query builder and return getMany', async () => {
     const { repo } = makeRepo();
     const qb = {
       where: jest.fn().mockReturnThis(),

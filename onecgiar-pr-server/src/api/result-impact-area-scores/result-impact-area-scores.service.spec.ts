@@ -31,7 +31,7 @@ describe('ResultImpactAreaScoresService', () => {
     return { service, dataSource, mainRepo, impactRepo };
   };
 
-  it('no debe consultar DB cuando impactAreaIds está vacío', async () => {
+  it('should not query DB when impactAreaIds is empty', async () => {
     const { service, impactRepo } = makeService();
     const toAdd: any[] = [];
 
@@ -41,7 +41,7 @@ describe('ResultImpactAreaScoresService', () => {
     expect(toAdd).toEqual([]);
   });
 
-  it('debe lanzar NOT_FOUND cuando falten IDs', async () => {
+  it('should throw NOT_FOUND when some IDs are missing', async () => {
     const { service } = makeService(async () => [{ id: 1 }]);
     const toAdd: any[] = [];
 
@@ -56,7 +56,7 @@ describe('ResultImpactAreaScoresService', () => {
     expect(toAdd).toEqual([]);
   });
 
-  it('debe agregar los impact area scores encontrados al array destino', async () => {
+  it('should add found impact area scores to destination array', async () => {
     const { service, impactRepo } = makeService(async ({ where }: any) => {
       // where: { id: In([...]) }
       return [{ id: (where.id as any)._value?.[0] ?? 5 }];

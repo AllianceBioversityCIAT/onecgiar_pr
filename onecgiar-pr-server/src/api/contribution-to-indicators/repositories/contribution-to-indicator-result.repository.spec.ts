@@ -19,7 +19,7 @@ describe('ContributionToIndicatorResultsRepository', () => {
     return { repo, dataSource, handlersError };
   };
 
-  it('removeInactives debe filtrar por is_active cuando contribution_id existe', () => {
+  it('removeInactives should filter by is_active when contribution_id exists', () => {
     const { repo } = makeRepo();
     expect(
       repo.removeInactives([
@@ -33,14 +33,14 @@ describe('ContributionToIndicatorResultsRepository', () => {
     ]);
   });
 
-  it('getContributingResultsQuery debe retornar SQL', () => {
+  it('getContributingResultsQuery should return SQL', () => {
     const { repo } = makeRepo();
     const sql = repo.getContributingResultsQuery();
     expect(sql).toContain('select');
     expect(sql).toContain('union');
   });
 
-  it('findResultContributionsByTocId debe consultar y aplicar removeInactives', async () => {
+  it('findResultContributionsByTocId should query and apply removeInactives', async () => {
     const { repo, dataSource } = makeRepo();
     dataSource.query.mockResolvedValue([
       { contribution_id: 1, is_active: false },
@@ -55,7 +55,7 @@ describe('ContributionToIndicatorResultsRepository', () => {
     ]);
   });
 
-  it('findBasicContributionIndicatorDataByTocId debe retornar primer row o lanzar error formateado', async () => {
+  it('findBasicContributionIndicatorDataByTocId should return first row or throw formatted error', async () => {
     const { repo, dataSource, handlersError } = makeRepo();
     dataSource.query.mockResolvedValueOnce([{ a: 1 }]);
     await expect(repo.findBasicContributionIndicatorDataByTocId('x')).resolves.toEqual({

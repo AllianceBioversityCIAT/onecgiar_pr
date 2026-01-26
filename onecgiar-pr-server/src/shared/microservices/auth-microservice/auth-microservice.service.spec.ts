@@ -334,7 +334,7 @@ describe('AuthMicroserviceService', () => {
   });
 
   describe('createUser', () => {
-    it('✅ debe crear el usuario correctamente', async () => {
+    it('✅ should create the user correctly', async () => {
       const mockResponse: AxiosResponse = {
         data: { id: 'user-123', username: 'natalia.higuita' },
         status: 201,
@@ -365,7 +365,7 @@ describe('AuthMicroserviceService', () => {
       expect(result).toEqual(mockResponse.data);
     });
 
-    it('❌ debe lanzar un error si la creación falla', async () => {
+    it('❌ should throw an error if creation fails', async () => {
       const errorResponse = {
         response: {
           data: { message: 'Creation failed' },

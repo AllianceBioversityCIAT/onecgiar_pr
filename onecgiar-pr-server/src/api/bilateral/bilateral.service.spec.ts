@@ -94,7 +94,7 @@ describe('BilateralService (unit)', () => {
 
     Object.assign(service, overrides);
 
-    // Silenciar logs del Logger interno (sin reemplazar la instancia readonly)
+    // Silence internal Logger logs (without replacing the readonly instance)
     jest.spyOn(service.logger, 'debug').mockImplementation(() => undefined as any);
     jest.spyOn(service.logger, 'warn').mockImplementation(() => undefined as any);
     jest.spyOn(service.logger, 'error').mockImplementation(() => undefined as any);
@@ -118,7 +118,7 @@ describe('BilateralService (unit)', () => {
     };
   };
 
-  it('unwrapIncomingResults debe soportar results[], result y data', () => {
+  it('unwrapIncomingResults should support results[], result and data', () => {
     const { service } = makeService();
     expect(service.unwrapIncomingResults(undefined)).toEqual([]);
     expect(service.unwrapIncomingResults({ results: [{ x: 1 }] } as any)).toEqual([
@@ -132,7 +132,7 @@ describe('BilateralService (unit)', () => {
     ]);
   });
 
-  it('buildResultRelations debe incluir relaciones por tipo', () => {
+  it('buildResultRelations should include relations by type', () => {
     const { service } = makeService();
     const kp = service.buildResultRelations(ResultTypeEnum.KNOWLEDGE_PRODUCT);
     expect(kp).toEqual(expect.objectContaining({ result_knowledge_product_array: expect.anything() }));
@@ -143,7 +143,7 @@ describe('BilateralService (unit)', () => {
     );
   });
 
-  it('filterActiveRelations debe filtrar arrays por is_active (incluye null/undefined/1/true)', () => {
+  it('filterActiveRelations should filter arrays by is_active (includes null/undefined/1/true)', () => {
     const { service } = makeService();
     const res = service.filterActiveRelations({
       result_region_array: [{ id: 1, is_active: true }, { id: 2, is_active: false }],
@@ -194,7 +194,7 @@ describe('BilateralService (unit)', () => {
     ).toEqual(['X', 'Y']);
   });
 
-  it('validateInitiatives debe retornar ids inválidos (según clarisaInitiatives.findOne)', async () => {
+  it('validateInitiatives should return invalid ids (based on clarisaInitiatives.findOne)', async () => {
     const { service, stubs } = makeService();
     stubs.clarisaInitiatives.findOne
       .mockResolvedValueOnce(null)
@@ -204,7 +204,7 @@ describe('BilateralService (unit)', () => {
     expect(invalid).toEqual(['bad']);
   });
 
-  it('validateTocMappingInitiatives debe retornar si no hay ids y lanzar si hay inválidos', async () => {
+  it('validateTocMappingInitiatives should return if there are no ids and throw if there are invalid ids', async () => {
     const { service } = makeService();
     await expect(
       service.validateTocMappingInitiatives(undefined, undefined),
@@ -220,7 +220,7 @@ describe('BilateralService (unit)', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('getSystemUserToken debe retornar admin si existe o fallback', async () => {
+  it('getSystemUserToken should return admin if it exists or fallback', async () => {
     const { service, stubs } = makeService();
     stubs.userRepository.findOne.mockResolvedValueOnce({
       id: 7,
@@ -239,7 +239,7 @@ describe('BilateralService (unit)', () => {
     );
   });
 
-  it('resolveSubmitterPayload debe priorizar submitted_by.email', () => {
+  it('resolveSubmitterPayload should prioritize submitted_by.email', () => {
     const { service } = makeService();
     expect(
       service.resolveSubmitterPayload({
@@ -256,12 +256,12 @@ describe('BilateralService (unit)', () => {
     ).toEqual({ email: 'y@example.com' });
   });
 
-  it('handleTocMapping debe retornar si toc no es objeto', async () => {
+  it('handleTocMapping should return if toc is not an object', async () => {
     const { service } = makeService();
     await expect(service.handleTocMapping(null, [], 1, 1)).resolves.toBeUndefined();
   });
 
-  it('resetTocData debe llamar logicalDelete en repos', async () => {
+  it('resetTocData should call logicalDelete in repositories', async () => {
     const { service, stubs } = makeService();
     await service.resetTocData(10);
     expect(stubs.resultsTocTargetIndicatorRepository.logicalDelete).toHaveBeenCalledWith(10);
@@ -290,7 +290,7 @@ describe('BilateralService (unit)', () => {
     expect(service.resolveScopeId(3, [{ id: 1 }, { id: 2 }])).toBe(3);
   });
 
-  it('ensureUniqueTitle debe validar título y unicidad', async () => {
+  it('ensureUniqueTitle should validate title and uniqueness', async () => {
     const { service, stubs } = makeService();
     await expect(service.ensureUniqueTitle('   ')).rejects.toBeInstanceOf(BadRequestException);
 
@@ -301,7 +301,7 @@ describe('BilateralService (unit)', () => {
     await expect(service.ensureUniqueTitle('Title')).resolves.toBeUndefined();
   });
 
-  it('runResultTypeHandlers debe invocar afterCreate del handler', async () => {
+  it('runResultTypeHandlers should call handler.afterCreate', async () => {
     const { service, handlers } = makeService();
     await service.runResultTypeHandlers({
       resultId: 1,
@@ -312,7 +312,7 @@ describe('BilateralService (unit)', () => {
     expect(handlers.knowledgeProductHandler.afterCreate).toHaveBeenCalledTimes(1);
   });
 
-  it('initializeResultHeader debe usar handler.initializeResultHeader si retorna resultHeader', async () => {
+  it('initializeResultHeader should use handler.initializeResultHeader if it returns resultHeader', async () => {
     const { service, stubs, handlers } = makeService();
     handlers.knowledgeProductHandler.initializeResultHeader = jest.fn(async () => ({
       resultHeader: { id: 999 },
@@ -331,7 +331,7 @@ describe('BilateralService (unit)', () => {
     expect(stubs.resultRepository.save).not.toHaveBeenCalled();
   });
 
-  it('findScope debe retornar scope o lanzar NotFoundException', async () => {
+  it('findScope should return scope or throw NotFoundException', async () => {
     const { service } = makeService();
     const geoRepo = (service as any)._geoScopeRepository;
 
@@ -352,7 +352,7 @@ describe('BilateralService (unit)', () => {
     const resultCountryRepo = (service as any)._resultCountryRepository;
 
     const result: any = { id: 1 };
-    const scope: any = { id: 3 }; // fuerza la limpieza de regiones
+    const scope: any = { id: 3 }; // forces region cleanup
 
     await service.handleRegions(result, scope, undefined);
     expect(resultRegionRepo.updateRegions).toHaveBeenCalledWith(1, []);
@@ -369,7 +369,7 @@ describe('BilateralService (unit)', () => {
     ).resolves.toBeUndefined();
   });
 
-  it('findOrCreateUser debe validar email y retornar usuario existente', async () => {
+  it('findOrCreateUser should validate email and return existing user', async () => {
     const { service, stubs } = makeService();
     await expect(service.findOrCreateUser({}, { id: 1 })).rejects.toBeInstanceOf(
       BadRequestException,
@@ -381,7 +381,7 @@ describe('BilateralService (unit)', () => {
     ).resolves.toEqual({ id: 9, email: 'u@x.com' });
   });
 
-  it('handleNonPooledProject debe retornar si no hay lista válida', async () => {
+  it('handleNonPooledProject should return if there is no valid list', async () => {
     const { service } = makeService();
     await expect(
       service.handleNonPooledProject(1, 1, undefined),
@@ -389,7 +389,7 @@ describe('BilateralService (unit)', () => {
     await expect(service.handleNonPooledProject(1, 1, [])).resolves.toBeUndefined();
   });
 
-  it('handleLeadCenter debe retornar temprano si leadCenter es inválido o vacío', async () => {
+  it('handleLeadCenter should return early if leadCenter is invalid or empty', async () => {
     const { service } = makeService();
     await expect(service.handleLeadCenter(1, null as any, 1)).resolves.toBeUndefined();
     await expect(service.handleLeadCenter(1, {} as any, 1)).resolves.toBeUndefined();
