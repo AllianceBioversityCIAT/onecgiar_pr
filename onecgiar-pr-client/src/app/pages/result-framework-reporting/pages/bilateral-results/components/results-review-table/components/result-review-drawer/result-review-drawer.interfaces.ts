@@ -182,6 +182,8 @@ export interface BilateralResultTypeResponse {
   has_unkown_using: string;
   term_name: string;
   delivery_method_name: string;
+  capdev_term_id: number;
+  capdev_delivery_method_id: number;
 }
 
 export interface BilateralImplementingOrganization {

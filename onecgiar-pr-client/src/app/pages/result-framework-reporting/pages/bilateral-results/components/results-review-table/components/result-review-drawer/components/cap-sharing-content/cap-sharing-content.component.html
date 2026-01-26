@@ -41,12 +41,23 @@
   </div>
 </div>
 
-<h4 class="pr-h4 font-weight-600 text-black" style="margin-top: 16px;">Length of training:</h4>
-<div class="readonly-chips-container">
-  <span class="readonly-chip">{{ resultDetail?.resultTypeResponse?.[0]?.term_name }}</span>
-</div>
+<app-pr-radio-button
+  label="Length of training"
+  [description]="lengthOfTrainingDescription()"
+  [(ngModel)]="resultDetail.resultTypeResponse[0].capdev_term_id"
+  [options]="capdevsTerms()"
+  optionLabel="name"
+  optionValue="capdev_term_id"
+  [required]="true">
+</app-pr-radio-button>
 
-<h4 class="pr-h4 font-weight-600 text-black" style="margin-top: 16px;">Delivery method:</h4>
-<div class="readonly-chips-container">
-  <span class="readonly-chip">{{ resultDetail?.resultTypeResponse?.[0]?.delivery_method_name }}</span>
-</div>
+<br />
+
+<app-pr-radio-button
+  label="Delivery Method"
+  [(ngModel)]="resultDetail.resultTypeResponse[0].capdev_delivery_method_id"
+  [options]="deliveryMethodOptions()"
+  optionLabel="name"
+  optionValue="capdev_delivery_method_id"
+  [required]="false">
+</app-pr-radio-button>
