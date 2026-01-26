@@ -8,6 +8,7 @@ import { FieldsManagerService } from '../../../../../../shared/services/fields-m
 import { GetImpactAreasScoresService } from '../../../../../../shared/services/global/get-impact-areas-scores.service';
 import { environment } from '../../../../../../../environments/environment';
 import { IpsrCompletenessStatusService } from '../../../../services/ipsr-completeness-status.service';
+import { RolesService } from '../../../../../../shared/services/global/roles.service';
 
 @Component({
   selector: 'app-ipsr-general-information',
@@ -26,7 +27,8 @@ export class IpsrGeneralInformationComponent implements OnInit {
     public scoreSE: ScoreService,
     public ipsrDataControlSE: IpsrDataControlService,
     private userSearchService: UserSearchService,
-    private readonly ipsrCompletenessStatusSE: IpsrCompletenessStatusService
+    private readonly ipsrCompletenessStatusSE: IpsrCompletenessStatusService,
+    public rolesSE: RolesService
   ) {}
 
   ngOnInit(): void {
@@ -37,6 +39,46 @@ export class IpsrGeneralInformationComponent implements OnInit {
     }
     this.getSectionInformation();
     this.api.dataControlSE.detailSectionTitle('General information');
+  }
+
+  // Helper methods for checkbox selection
+  isImpactAreaSelected(fieldName: string, optionId: number | string): boolean {
+    const fieldValue = this.ipsrGeneralInformationBody[fieldName];
+    if (!fieldValue || !Array.isArray(fieldValue)) {
+      return false;
+    }
+    return fieldValue.some((id: any) => Number(id) === Number(optionId));
+  }
+
+  toggleImpactAreaSelection(fieldName: string, optionId: number | string): void {
+    const fieldValue = this.ipsrGeneralInformationBody[fieldName] || [];
+    const currentArray = Array.isArray(fieldValue) ? [...fieldValue] : [];
+    const idNum = Number(optionId);
+
+    const index = currentArray.findIndex((id: any) => Number(id) === idNum);
+
+    if (index >= 0) {
+      currentArray.splice(index, 1);
+    } else {
+      currentArray.push(idNum);
+    }
+
+    this.ipsrGeneralInformationBody[fieldName] = currentArray;
+  }
+
+  getImpactAreaFieldLabel(fieldRef: string): string {
+    const field = this.fieldsManagerSE.fields()[fieldRef];
+    return field?.label || '';
+  }
+
+  getImpactAreaFieldDescription(fieldRef: string): string {
+    const field = this.fieldsManagerSE.fields()[fieldRef];
+    return field?.description || '';
+  }
+
+  getImpactAreaFieldRequired(fieldRef: string): boolean {
+    const field = this.fieldsManagerSE.fields()[fieldRef];
+    return field?.required ?? true;
   }
 
   getSectionInformation() {
