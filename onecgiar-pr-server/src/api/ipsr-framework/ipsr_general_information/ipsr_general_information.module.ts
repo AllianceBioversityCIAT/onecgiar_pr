@@ -11,6 +11,7 @@ import { IpsrService } from '../../ipsr/ipsr.service';
 import { AdUsersModule } from '../../ad_users';
 import { VersioningModule } from '../../versioning/versioning.module';
 import { InitiativeEntityMapRepository } from '../../initiative_entity_map/initiative_entity_map.repository';
+import { ResultImpactAreaScoresModule } from '../../result-impact-area-scores/result-impact-area-scores.module';
 
 @Module({
   controllers: [IpsrGeneralInformationController],
@@ -25,6 +26,10 @@ import { InitiativeEntityMapRepository } from '../../initiative_entity_map/initi
     GenderTagRepository,
     IpsrService,
   ],
-  imports: [forwardRef(() => VersioningModule), AdUsersModule],
+  imports: [
+    forwardRef(() => VersioningModule),
+    AdUsersModule,
+    ResultImpactAreaScoresModule,
+  ],
 })
 export class IpsrGeneralInformationModule {}

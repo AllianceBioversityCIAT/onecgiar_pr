@@ -147,7 +147,20 @@
       "^.+\\.(t|j)s$": "ts-jest"
     },
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "**/*.(t|j)s",
+      "!**/*.spec.ts",
+      "!**/*.e2e-spec.ts",
+      "!**/*.module.ts",
+      "!**/*.dto.ts",
+      "!**/*.entity.ts",
+      "!**/*.enum.ts",
+      "!**/*.constant.ts",
+      "!**/*.routes.ts",
+      "!**/*.interface.ts",
+      "!**/index.ts",
+      "!main.ts",
+      "!**/migrations/**",
+      "!**/shared/test/**"
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
