@@ -18,6 +18,7 @@ import { ScrollingModule } from '@angular/cdk/scrolling';
 import { PrFieldHeaderComponent } from '../../../../../../custom-fields/pr-field-header/pr-field-header.component';
 import { ShareRequestBody } from './model/shareRequestBody.model';
 import { ResultsNotificationsService } from '../../../results-outlet/pages/results-notifications/results-notifications.service';
+import { SelectModule } from 'primeng/select';
 
 jest.useFakeTimers();
 describe('ShareRequestModalComponent', () => {
@@ -73,7 +74,7 @@ describe('ShareRequestModalComponent', () => {
         ListFilterByTextAndAttrPipe,
         PrFieldHeaderComponent
       ],
-      imports: [HttpClientTestingModule, RouterTestingModule, DialogModule, FormsModule, TooltipModule, ScrollingModule],
+      imports: [HttpClientTestingModule, RouterTestingModule, DialogModule, FormsModule, TooltipModule, ScrollingModule, SelectModule],
       providers: [
         {
           provide: ApiService,

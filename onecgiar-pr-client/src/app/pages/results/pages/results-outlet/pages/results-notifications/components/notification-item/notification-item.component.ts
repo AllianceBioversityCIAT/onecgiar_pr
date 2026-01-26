@@ -60,8 +60,6 @@ export class NotificationItemComponent {
       initiative_id: obj_owner_initiative?.id,
       portfolio: obj_result?.obj_version?.obj_portfolio?.acronym
     });
-    console.log('currentResultSignal', this.api.dataControlSE.currentResultSignal());
-    console.log('currentResult', this.api.dataControlSE.currentResult);
 
     this.retrieveModalSE = {
       ...this.retrieveModalSE,

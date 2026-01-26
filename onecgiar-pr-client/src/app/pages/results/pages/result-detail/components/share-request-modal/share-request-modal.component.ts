@@ -36,7 +36,6 @@ export class ShareRequestModalComponent implements OnInit {
   ngOnInit(): void {
     this.shareRequestModalSE.shareRequestBody = new ShareRequestBody();
     this.GET_AllInitiatives();
-    console.log(this.fieldsManagerSE.isP25());
   }
 
   validateAcceptOrReject() {
