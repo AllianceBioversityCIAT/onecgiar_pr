@@ -26,7 +26,7 @@ export interface BilateralResultDetail {
   contributingCenters: BilateralContributingCenter[];
   contributingInstitutions: BilateralContributingInstitution[];
   contributingProjects: BilateralContributingProject[];
-  contributingInitiatives: BilateralContributingInitiative[];
+  contributingInitiatives: BilateralContributingInitiative[] | BilateralContributingInitiativesObject;
   evidence: BilateralEvidence[];
   resultTypeResponse: BilateralResultTypeResponse[];
 }
@@ -149,8 +149,21 @@ export interface BilateralClarisaProject {
 }
 
 export interface BilateralContributingInitiative {
-  initiative_role: string;
+  initiative_role?: string;
   official_code: string;
+  id?: number;
+  initiative_name?: string;
+  short_name?: string;
+  initiative_role_id?: number | null;
+  request_status_id?: number;
+  share_result_request_id?: number;
+  is_active?: number;
+}
+
+export interface BilateralContributingInitiativesObject {
+  contributing_and_primary_initiative?: BilateralContributingInitiative[];
+  accepted_contributing_initiatives: BilateralContributingInitiative[];
+  pending_contributing_initiatives: BilateralContributingInitiative[];
 }
 
 export interface BilateralEvidence {

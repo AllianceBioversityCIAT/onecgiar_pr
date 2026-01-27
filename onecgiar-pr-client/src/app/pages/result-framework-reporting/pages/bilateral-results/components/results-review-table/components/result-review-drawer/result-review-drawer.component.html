@@ -145,6 +145,7 @@
         [options]="centersSE.centersList"
         label="Contributing CGIAR Centers"
         selectedLabel="Center(s) selected"
+        selectedOptionLabel="full_name"
         optionLabel="full_name"
         optionValue="code"
         [required]="false"
@@ -158,7 +159,7 @@
         [required]="false"
         optionLabel="fullName"
         optionValue="project_id"
-        label="Contributing W3 and/or bilateral projects"
+        label="Contributing Bilateral Projects"
         selectedLabel="Projects selected"
         selectedOptionLabel="fullName"
         placeholder="Select project">
@@ -171,6 +172,7 @@
         optionValue="id"
         [required]="false"
         selectedOptionLabel="full_name"
+        [disableOptions]="disabledInitiativesOptions()"
         [(ngModel)]="fields.contributingInitiatives"
         placeholder="Select Science Programs">
       </app-pr-multi-select>
