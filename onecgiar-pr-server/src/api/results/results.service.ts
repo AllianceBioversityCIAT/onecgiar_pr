@@ -8,7 +8,7 @@ import {
   forwardRef,
   ConflictException,
 } from '@nestjs/common';
-import { DataSource, In, IsNull, Not } from 'typeorm';
+import { DataSource, In, IsNull } from 'typeorm';
 import { CreateResultDto } from './dto/create-result.dto';
 import { ResultRepository } from './result.repository';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
@@ -96,13 +96,27 @@ import {
   ReviewDecisionDto,
   ReviewDecisionEnum,
 } from './dto/review-decision.dto';
-import { ResultReviewHistory } from './result-review-history/entities/result-review-history.entity';
+import { ReviewUpdateDto } from './dto/review-update.dto';
+import {
+  ResultReviewHistory,
+  ReviewActionEnum,
+} from './result-review-history/entities/result-review-history.entity';
 import { ResultStatusData } from '../../shared/constants/result-status.enum';
 import { ResultImpactAreaScoresService } from '../result-impact-area-scores/result-impact-area-scores.service';
 import { isEmpty } from '../../shared/utils/object.utils';
 import { extractPropertyValues } from '../../shared/utils/array.util';
 import { ResultImpactAreaScore } from '../result-impact-area-scores/entities/result-impact-area-score.entity';
 import { ImpactAreaNames } from './impact_areas_scores_components/enum/impact-area-names.enum';
+import { ResultsByInstitutionsService } from './results_by_institutions/results_by_institutions.service';
+import { ContributorsPartnersService } from '../results-framework-reporting/contributors-partners/contributors-partners.service';
+import { EvidencesService } from './evidences/evidences.service';
+import { SavePartnersV2Dto } from './results_by_institutions/dto/save-partners-v2.dto';
+import { CreateResultsTocResultV2Dto } from './results-toc-results/dto/create-results-toc-result-v2.dto';
+import { CreateEvidenceDto } from './evidences/dto/create-evidence.dto';
+import { SummaryService } from './summary/summary.service';
+import { InnovationDevService } from '../results-framework-reporting/innovation_dev/innovation_dev.service';
+import { InnovationUseService } from '../results-framework-reporting/innovation-use/innovation-use.service';
+import { UpdateTocMetadataDto } from './dto/update-toc-metadata.dto';
 
 @Injectable()
 export class ResultsService {
@@ -142,6 +156,7 @@ export class ResultsService {
     private readonly _versioningService: VersioningService,
     private readonly _returnResponse: ReturnResponse,
     private readonly _resultsInvestmentDiscontinuedOptionRepository: ResultsInvestmentDiscontinuedOptionRepository,
+    private readonly _resultsByInstitutionsService: ResultsByInstitutionsService,
     private readonly _resultInitiativeBudgetRepository: ResultInitiativeBudgetRepository,
     private readonly _resultsCenterRepository: ResultsCenterRepository,
     private readonly _resultsTocResultRepository: ResultsTocResultRepository,
@@ -161,6 +176,19 @@ export class ResultsService {
     private readonly _adUserService?: AdUserService,
     @Optional() private readonly _adUserRepository?: AdUserRepository,
     @Optional() private readonly _notificationService?: NotificationService,
+    @Optional()
+    @Inject(forwardRef(() => ContributorsPartnersService))
+    private readonly _contributorsPartnersService?: ContributorsPartnersService,
+    @Optional()
+    private readonly _evidencesService?: EvidencesService,
+    @Optional()
+    private readonly _summaryService?: SummaryService,
+    @Optional()
+    @Inject(forwardRef(() => InnovationDevService))
+    private readonly _innovationDevService?: InnovationDevService,
+    @Optional()
+    @Inject(forwardRef(() => InnovationUseService))
+    private readonly _innovationUseService?: InnovationUseService,
   ) {}
 
   async createOwnerResult(
@@ -2886,47 +2914,51 @@ export class ResultsService {
   private async _loadContributingInstitutions(
     resultId: number,
   ): Promise<any[]> {
-    const contributingInstitutions =
-      await this._resultByIntitutionsRepository.find({
-        where: {
-          result_id: resultId,
-          is_active: true,
-          institutions_id: Not(IsNull()),
-        },
-        relations: {
-          delivery: true,
-          obj_institutions: { obj_institution_type_code: true },
-        },
-        order: { id: 'ASC' },
-      });
+      const partnersSnapshot =
+      await this._resultsByInstitutionsService.getInstitutionsPartnersByResultIdV2(
+        resultId,
+      );
 
-    return contributingInstitutions.map((i) => ({
-      ...i,
-      delivery: i.delivery.filter((d) => d.is_active),
-      obj_institutions: i.obj_institutions
-        ? {
-            name: i.obj_institutions.name,
-            website_link: i.obj_institutions.website_link,
-            obj_institution_type_code: {
-              id: i.obj_institutions.obj_institution_type_code.code,
-              name: i.obj_institutions.obj_institution_type_code.name,
-            },
-          }
-        : null,
-    }));
+    const partnersResponse = (partnersSnapshot?.response ?? {}) as Record<
+      string,
+      any
+    >;
+
+    const institutionsData = (partnersResponse.institutions ?? []).map(
+      (inst: any) => ({
+        ...inst,
+        delivery: (inst.delivery ?? []).filter((d) => d.is_active),
+      }),
+    );
+
+    return institutionsData;
   }
 
   private async _loadBilateralRelatedData(resultId: number) {
-    const [contributingProjects, contributingInitiatives, evidence] =
+    const [contributingProjects, evidence] =
       await Promise.all([
         this._resultsByProjectsRepository?.findResultsByProjectsByResultId(
           resultId,
         ),
-        this._resultRepository.getContributingInitiativesBilateralResult(
-          resultId,
-        ),
         this._resultRepository.getEvidenceBilateralResult(resultId),
       ]);
+
+      const [conAccepted, conPending, contributingAndPrimary] =
+      await Promise.all([
+        this._resultByInitiativesRepository.getContributorInitiativeByResult(
+          resultId,
+        ),
+        this._resultByInitiativesRepository.getPendingInit(resultId),
+        this._resultByInitiativesRepository.getContributorInitiativeAndPrimaryByResult(
+          resultId,
+        ),
+      ]);
+
+    const contributingInitiatives = {
+      contributing_and_primary_initiative: contributingAndPrimary ?? [],
+      accepted_contributing_initiatives: conAccepted ?? [],
+      pending_contributing_initiatives: conPending ?? [],
+    };
 
     if (!contributingProjects) {
       this._logger.warn(
@@ -2934,9 +2966,21 @@ export class ResultsService {
       );
     }
 
-    if (!contributingInitiatives) {
+    if (!conAccepted) {
       this._logger.warn(
-        `Contributing initiatives for Bilateral result data not found (resultId: ${resultId})`,
+        `Contributing ACCEPTED initiatives for Bilateral result data not found (resultId: ${resultId})`,
+      );
+    }
+
+    if (!conPending) {
+      this._logger.warn(
+        `Contributing PENDING initiatives for Bilateral result data not found (resultId: ${resultId})`,
+      );
+    }
+
+    if (!contributingAndPrimary) {
+      this._logger.warn(
+        `Contributing AND PRIMARY initiatives for Bilateral result data not found (resultId: ${resultId})`,
       );
     }
 
@@ -3095,6 +3139,505 @@ export class ResultsService {
             status: newStatusId,
           },
           message: `Result ${decisionVerb} successfully`,
+          status: HttpStatus.OK,
+        };
+      });
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ConflictException
+      ) {
+        return {
+          response: {},
+          message: error.message,
+          status: error.getStatus(),
+        };
+      }
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async updateBilateralResultReview(
+    resultId: number,
+    reviewUpdateDto: ReviewUpdateDto,
+    user: TokenDto,
+  ): Promise<ReturnResponseDto<any> | returnErrorDto> {
+    try {
+      const parsedResultId = Number(resultId);
+      if (
+        !parsedResultId ||
+        !Number.isFinite(parsedResultId) ||
+        parsedResultId <= 0
+      ) {
+        return {
+          response: {},
+          message: 'The resultId parameter must be a valid positive number.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      // Validar que el ID del DTO coincida con el parámetro
+      if (
+        reviewUpdateDto.commonFields?.id &&
+        reviewUpdateDto.commonFields.id !== parsedResultId
+      ) {
+        return {
+          response: {},
+          message: 'The result ID in commonFields must match the URL parameter.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      return await this._dataSource.transaction(async (manager) => {
+        const result = await manager.findOne(Result, {
+          where: {
+            id: parsedResultId,
+            source: SourceEnum.Bilateral,
+            is_active: true,
+          },
+        });
+
+        if (!result) {
+          throw new BadRequestException('Bilateral result not found');
+        }
+
+        const currentStatusId = Number(result.status_id);
+        if (currentStatusId !== ResultStatusData.PendingReview.value) {
+          throw new ConflictException(
+            `Cannot update result. Current status is not PENDING_REVIEW (status_id: ${result.status_id})`,
+          );
+        }
+
+        // Get actual data from the result
+        const [currentCommonFields, currentBilateralData] = await Promise.all([
+          this._resultRepository.getCommonFieldsBilateralResultById(
+            parsedResultId,
+          ),
+          this.getBilateralResultById(parsedResultId),
+        ]);
+
+        const currentBilateralResponse = currentBilateralData?.response || {};
+
+        // Evaluate changes in Minimum Data Standard
+        const minDataStandardChanges: Record<string, any> = {};
+        let hasMinDataStandardChanges = false;
+
+        if (
+          reviewUpdateDto.commonFields?.result_description !== undefined &&
+          reviewUpdateDto.commonFields.result_description !==
+            currentCommonFields?.result_description
+        ) {
+          minDataStandardChanges.description = {
+            old: currentCommonFields?.result_description || null,
+            new: reviewUpdateDto.commonFields.result_description,
+          };
+          hasMinDataStandardChanges = true;
+        }
+
+        // Evaluate changes in ToC (contributingInitiatives)
+        let hasTocChanges = false;
+        const tocChanges: Record<string, any> = {};
+
+        if (reviewUpdateDto.contributingInitiatives !== undefined) {
+          const currentContributingInitiatives =
+            currentBilateralResponse.contributingInitiatives || {};
+          const currentAccepted =
+            currentContributingInitiatives.accepted_contributing_initiatives ||
+            [];
+          const currentPending =
+            currentContributingInitiatives.pending_contributing_initiatives ||
+            [];
+
+          const newAccepted =
+            reviewUpdateDto.contributingInitiatives
+              ?.accepted_contributing_initiatives || [];
+          const newPending =
+            reviewUpdateDto.contributingInitiatives
+              ?.pending_contributing_initiatives || [];
+
+          const currentAcceptedIds = (currentAccepted || [])
+            .map((i: any) => i?.id)
+            .filter((id: any) => id !== undefined && id !== null)
+            .sort((a: number, b: number) => a - b);
+          const newAcceptedIds = (newAccepted || [])
+            .map((i: any) => i?.id)
+            .filter((id: any) => id !== undefined && id !== null)
+            .sort((a: number, b: number) => a - b);
+          const acceptedChanged =
+            JSON.stringify(currentAcceptedIds) !==
+            JSON.stringify(newAcceptedIds);
+
+          const currentPendingIds = (currentPending || [])
+            .map((i: any) => i?.id)
+            .filter((id: any) => id !== undefined && id !== null)
+            .sort((a: number, b: number) => a - b);
+          const newPendingIds = (newPending || [])
+            .map((i: any) => i?.id)
+            .filter((id: any) => id !== undefined && id !== null)
+            .sort((a: number, b: number) => a - b);
+          const pendingChanged =
+            JSON.stringify(currentPendingIds) !== JSON.stringify(newPendingIds);
+
+          if (acceptedChanged || pendingChanged) {
+            tocChanges.contributing_initiatives = {
+              old: {
+                accepted: currentAcceptedIds,
+                pending: currentPendingIds,
+              },
+              new: {
+                accepted: newAcceptedIds,
+                pending: newPendingIds,
+              },
+            };
+            hasTocChanges = true;
+          }
+        }
+
+        // Verificar cambios en otros campos ToC (geographicScope, contributingCenters, etc.)
+        const hasOtherChanges =
+          reviewUpdateDto.geographicScope !== undefined ||
+          reviewUpdateDto.contributingCenters !== undefined ||
+          reviewUpdateDto.contributingProjects !== undefined ||
+          reviewUpdateDto.contributingInstitutions !== undefined ||
+          reviewUpdateDto.evidence !== undefined ||
+          reviewUpdateDto.resultTypeResponse !== undefined;
+
+        const hasChanges =
+          hasMinDataStandardChanges || hasTocChanges || hasOtherChanges;
+
+        // Si hay cambios en ToC o Minimum Data Standard, validar que updateExplanation esté presente
+        if (hasChanges && !reviewUpdateDto.updateExplanation?.trim()) {
+          throw new BadRequestException(
+            'updateExplanation is required when ToC fields or Minimum Data Standard fields are modified',
+          );
+        }
+
+        // Si no hay cambios reales, retornar éxito sin insertar audit log
+        if (!hasChanges) {
+          return {
+            response: {
+              resultId: parsedResultId,
+              message: 'No changes detected',
+            },
+            message: 'No changes detected. Result not updated.',
+            status: HttpStatus.OK,
+          };
+        }
+
+        // Actualizar campos Minimum Data Standard
+        const updateData: Partial<Result> = {};
+        if (hasMinDataStandardChanges) {
+          if (reviewUpdateDto.commonFields?.result_description !== undefined) {
+            updateData.description =
+              reviewUpdateDto.commonFields.result_description;
+          }
+        }
+
+        if (Object.keys(updateData).length > 0) {
+          await manager.update(Result, { id: parsedResultId }, updateData);
+        }
+
+        // Actualizar geographicScope
+        if (
+          reviewUpdateDto.geographicScope !== undefined &&
+          this._geographicLocationService
+        ) {
+          const geoScopeDto = {
+            ...reviewUpdateDto.geographicScope,
+            result_id: parsedResultId,
+          };
+          const geoScopeResult =
+            await this._geographicLocationService.saveGeoScopeV2(
+              geoScopeDto,
+              user,
+            );
+          if (geoScopeResult.status !== HttpStatus.OK) {
+            this._logger.warn(
+              `Failed to update geographic scope for result ${parsedResultId}`,
+            );
+          }
+        }
+
+        // Actualizar contributingCenters, contributingProjects, contributingInstitutions
+        if (
+          (reviewUpdateDto.contributingCenters !== undefined ||
+            reviewUpdateDto.contributingProjects !== undefined ||
+            reviewUpdateDto.contributingInstitutions !== undefined) &&
+          this._contributorsPartnersService
+        ) {
+          const partnersPayload: SavePartnersV2Dto = {
+            result_id: parsedResultId,
+            contributing_center: reviewUpdateDto.contributingCenters,
+            bilateral_project: reviewUpdateDto.contributingProjects,
+            institutions: reviewUpdateDto.contributingInstitutions,
+          };
+
+          const partnersResult =
+            await this._contributorsPartnersService.updatePartnersV2(
+              parsedResultId,
+              partnersPayload,
+              user,
+            );
+          if (partnersResult.status !== HttpStatus.OK) {
+            this._logger.warn(
+              `Failed to update partners for result ${parsedResultId}`,
+            );
+          }
+        }
+
+        // Actualizar contributingInitiatives
+        if (
+          reviewUpdateDto.contributingInitiatives !== undefined &&
+          this._contributorsPartnersService
+        ) {
+          const contributingInitiatives = reviewUpdateDto.contributingInitiatives as any;
+          const tocPayload: CreateResultsTocResultV2Dto & {
+            contributing_initiatives?: any;
+          } = {
+            contributing_initiatives: contributingInitiatives,
+            accepted_contributing_initiatives:
+              contributingInitiatives?.accepted_contributing_initiatives,
+            pending_contributing_initiatives:
+              contributingInitiatives?.pending_contributing_initiatives,
+          };
+
+          const tocResult =
+            await this._contributorsPartnersService.updateTocMappingV2(
+              parsedResultId,
+              tocPayload,
+              user,
+            );
+          if (tocResult.status !== HttpStatus.OK) {
+            this._logger.warn(
+              `Failed to update ToC mapping for result ${parsedResultId}`,
+            );
+          }
+        }
+
+        // Actualizar evidence
+        if (
+          reviewUpdateDto.evidence !== undefined &&
+          this._evidencesService
+        ) {
+
+          const evidenceDto: CreateEvidenceDto = JSON.parse(
+            reviewUpdateDto.evidence.jsonData,
+          );
+
+          const evidenceResult = await this._evidencesService.create(
+            evidenceDto,
+            user,
+          );
+          if (evidenceResult.status !== HttpStatus.OK) {
+            this._logger.warn(
+              `Failed to update evidence for result ${parsedResultId}`,
+            );
+          }
+        }
+
+        // Actualizar resultTypeResponse según el tipo de resultado
+        if (
+          reviewUpdateDto.resultTypeResponse !== undefined &&
+          reviewUpdateDto.commonFields?.result_type_id
+        ) {
+          const resultTypeId = Number(reviewUpdateDto.commonFields.result_type_id);
+
+          try {
+            switch (resultTypeId) {
+              case ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT: // 5
+                if (this._summaryService) {
+                  await this._summaryService.saveCapacityDevelopents(
+                    reviewUpdateDto.resultTypeResponse as any,
+                    parsedResultId,
+                    user,
+                  );
+                } else {
+                  this._logger.warn(
+                    `SummaryService not available for result ${parsedResultId}`,
+                  );
+                }
+                break;
+
+              case ResultTypeEnum.INNOVATION_DEVELOPMENT: // 7
+                if (this._innovationDevService) {
+                  await this._innovationDevService.saveInnovationDev(
+                    reviewUpdateDto.resultTypeResponse as any,
+                    parsedResultId,
+                    user,
+                  );
+                } else {
+                  this._logger.warn(
+                    `InnovationDevService not available for result ${parsedResultId}`,
+                  );
+                }
+                break;
+
+              case ResultTypeEnum.POLICY_CHANGE: // 1
+                if (this._summaryService) {
+                  await this._summaryService.savePolicyChanges(
+                    reviewUpdateDto.resultTypeResponse as any,
+                    parsedResultId,
+                    user,
+                  );
+                } else {
+                  this._logger.warn(
+                    `SummaryService not available for result ${parsedResultId}`,
+                  );
+                }
+                break;
+
+              case ResultTypeEnum.INNOVATION_USE: // 2
+                if (this._innovationUseService) {
+                  await this._innovationUseService.saveInnovationUse(
+                    reviewUpdateDto.resultTypeResponse as any,
+                    parsedResultId,
+                    user,
+                  );
+                } else {
+                  this._logger.warn(
+                    `InnovationUseService not available for result ${parsedResultId}`,
+                  );
+                }
+                break;
+
+              default:
+                this._logger.warn(
+                  `Unsupported result_type_id: ${resultTypeId} for result ${parsedResultId}`,
+                );
+                break;
+            }
+          } catch (error) {
+            this._logger.error(
+              `Failed to update resultTypeResponse for result ${parsedResultId}, type ${resultTypeId}: ${error.message}`,
+            );
+            throw error;
+          }
+        }
+
+        // Crear el historial de revisión
+        const changedFields = {
+          ...(hasMinDataStandardChanges ? minDataStandardChanges : {}),
+          ...(hasTocChanges ? tocChanges : {}),
+          ...(hasOtherChanges ? { other_fields: 'updated' } : {}),
+        };
+
+        const reviewHistory = manager.create(ResultReviewHistory, {
+          result_id: parsedResultId,
+          action: ReviewActionEnum.UPDATE,
+          comment: reviewUpdateDto.updateExplanation || null,
+          created_by: user.id,
+        });
+        await manager.save(ResultReviewHistory, reviewHistory);
+
+        return {
+          response: {
+            resultId: parsedResultId,
+            changedFields: Object.keys(changedFields).length > 0 ? changedFields : undefined,
+          },
+          message: 'Result updated successfully',
+          status: HttpStatus.OK,
+        };
+      });
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ConflictException
+      ) {
+        return {
+          response: {},
+          message: error.message,
+          status: error.getStatus(),
+        };
+      }
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async updateBilateralResultTocMetadata(
+    resultId: number,
+    updateTocMetadataDto: UpdateTocMetadataDto,
+    user: TokenDto,
+  ): Promise<ReturnResponseDto<any> | returnErrorDto> {
+    try {
+      const parsedResultId = Number(resultId);
+      if (
+        !parsedResultId ||
+        !Number.isFinite(parsedResultId) ||
+        parsedResultId <= 0
+      ) {
+        return {
+          response: {},
+          message: 'The resultId parameter must be a valid positive number.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      return await this._dataSource.transaction(async (manager) => {
+        const result = await manager.findOne(Result, {
+          where: {
+            id: parsedResultId,
+            source: SourceEnum.Bilateral,
+            is_active: true,
+          },
+        });
+
+        if (!result) {
+          throw new BadRequestException('Bilateral result not found');
+        }
+
+        const currentStatusId = Number(result.status_id);
+        if (currentStatusId !== ResultStatusData.PendingReview.value) {
+          throw new ConflictException(
+            `Cannot update result. Current status is not PENDING_REVIEW (status_id: ${result.status_id})`,
+          );
+        }
+
+        // Validar que updateExplanation esté presente
+        if (!updateTocMetadataDto.updateExplanation?.trim()) {
+          throw new BadRequestException(
+            'updateExplanation is required when ToC metadata is modified',
+          );
+        }
+
+        // Actualizar result_toc_result usando ContributorsPartnersService
+        if (!this._contributorsPartnersService) {
+          throw new BadRequestException(
+            'ContributorsPartnersService is not available',
+          );
+        }
+
+        const tocPayload: CreateResultsTocResultV2Dto = {
+          result_toc_result: updateTocMetadataDto.tocMetadata,
+        };
+
+        const tocResult =
+          await this._contributorsPartnersService.updateTocMappingV2(
+            parsedResultId,
+            tocPayload,
+            user,
+          );
+
+        if (tocResult.status !== HttpStatus.OK) {
+          throw new BadRequestException(
+            `Failed to update ToC metadata: ${tocResult.message || 'Unknown error'}`,
+          );
+        }
+
+        // Crear el historial de revisión
+        const reviewHistory = manager.create(ResultReviewHistory, {
+          result_id: parsedResultId,
+          action: ReviewActionEnum.UPDATE,
+          comment: updateTocMetadataDto.updateExplanation,
+          created_by: user.id,
+        });
+        await manager.save(ResultReviewHistory, reviewHistory);
+
+        return {
+          response: {
+            resultId: parsedResultId,
+            tocMetadata: tocResult.response,
+          },
+          message: 'ToC metadata updated successfully',
           status: HttpStatus.OK,
         };
       });
