@@ -630,36 +630,7 @@ export class ResultsController {
     return this.resultsService.getBilateralResultById(resultId);
   }
 
-  @Patch('bilateral/:resultId/review-decision')
-  @ApiOperation({
-    summary: 'Review decision for bilateral result',
-    description:
-      'Approve or reject a bilateral result that is in PENDING_REVIEW status. Requires justification when rejecting.',
-  })
-  @ApiParam({
-    name: 'resultId',
-    type: Number,
-    required: true,
-    description: 'Result identifier',
-    example: 123,
-  })
-  @ApiBody({ type: ReviewDecisionDto })
-  @ApiOkResponse({
-    description: 'Review decision processed successfully.',
-  })
-  async reviewBilateralResult(
-    @Param('resultId') resultId: number,
-    @Body() reviewDecisionDto: ReviewDecisionDto,
-    @UserToken() user: TokenDto,
-  ) {
-    return this.resultsService.reviewBilateralResult(
-      resultId,
-      reviewDecisionDto,
-      user,
-    );
-  }
-
-  @Patch('bilateral/:resultId/review-update/data-standard')
+  @Patch('bilateral/review-update/data-standard/:resultId')
   @ApiOperation({
     summary: 'Update bilateral result from review screen',
     description:
@@ -688,7 +659,7 @@ export class ResultsController {
     );
   }
 
-  @Patch('bilateral/:resultId/review-update/toc-metadata')
+  @Patch('bilateral/review-update/toc-metadata/:resultId')
   @ApiOperation({
     summary: 'Update bilateral result ToC metadata from review screen',
     description:
@@ -713,6 +684,35 @@ export class ResultsController {
     return this.resultsService.updateBilateralResultTocMetadata(
       resultId,
       updateTocMetadataDto,
+      user,
+    );
+  }
+
+  @Patch('bilateral/:resultId/review-decision')
+  @ApiOperation({
+    summary: 'Review decision for bilateral result',
+    description:
+      'Approve or reject a bilateral result that is in PENDING_REVIEW status. Requires justification when rejecting.',
+  })
+  @ApiParam({
+    name: 'resultId',
+    type: Number,
+    required: true,
+    description: 'Result identifier',
+    example: 123,
+  })
+  @ApiBody({ type: ReviewDecisionDto })
+  @ApiOkResponse({
+    description: 'Review decision processed successfully.',
+  })
+  async reviewBilateralResult(
+    @Param('resultId') resultId: number,
+    @Body() reviewDecisionDto: ReviewDecisionDto,
+    @UserToken() user: TokenDto,
+  ) {
+    return this.resultsService.reviewBilateralResult(
+      resultId,
+      reviewDecisionDto,
       user,
     );
   }

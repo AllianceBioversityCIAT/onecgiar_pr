@@ -64,6 +64,7 @@ import {
 } from './dto/review-decision.dto';
 import { ResultStatusData } from '../../shared/constants/result-status.enum';
 import { DataSource } from 'typeorm';
+import { ResultsByInstitutionsService } from './results_by_institutions/results_by_institutions.service';
 
 describe('ResultsService (unit, pure mocks)', () => {
   let module: TestingModule;
@@ -187,6 +188,9 @@ describe('ResultsService (unit, pure mocks)', () => {
     save: jest.fn().mockResolvedValue({ id: 1 }),
     logicalElimination: jest.fn().mockResolvedValue(undefined),
     getResultByInitiativeOwnerFull: jest.fn().mockResolvedValue({ id: 1 }),
+    getContributorInitiativeByResult: jest.fn().mockResolvedValue([]),
+    getPendingInit: jest.fn().mockResolvedValue([]),
+    getContributorInitiativeAndPrimaryByResult: jest.fn().mockResolvedValue([]),
   } as any;
 
   const mockResultByIntitutionsTypeRepository = {
@@ -364,6 +368,19 @@ describe('ResultsService (unit, pure mocks)', () => {
     }),
   } as any;
 
+  const mockResultsByInstitutionsService = {
+    updatePartnersV2: jest.fn().mockResolvedValue({
+      status: HttpStatus.OK,
+      response: {},
+    }),
+    getInstitutionsPartnersByResultIdV2: jest.fn().mockResolvedValue({
+      status: HttpStatus.OK,
+      response: {
+        institutions: [],
+      },
+    }),
+  } as any;
+
   const mockDataSource = {
     transaction: jest.fn().mockImplementation(async (callback) => {
       const manager = {
@@ -515,6 +532,10 @@ describe('ResultsService (unit, pure mocks)', () => {
         {
           provide: GeographicLocationService,
           useValue: mockGeographicLocationService,
+        },
+        {
+          provide: ResultsByInstitutionsService,
+          useValue: mockResultsByInstitutionsService,
         },
         {
           provide: DataSource,
@@ -1225,6 +1246,23 @@ describe('ResultsService (unit, pure mocks)', () => {
       status: HttpStatus.OK,
       response: { geo_scope_id: 2 },
     });
+    (
+      mockResultsByInstitutionsService.getInstitutionsPartnersByResultIdV2 as jest.Mock
+    ).mockResolvedValueOnce({
+      status: HttpStatus.OK,
+      response: {
+        institutions: [],
+      },
+    });
+    (
+      mockResultByInitiativesRepository.getContributorInitiativeByResult as jest.Mock
+    ).mockResolvedValueOnce([]);
+    (
+      mockResultByInitiativesRepository.getPendingInit as jest.Mock
+    ).mockResolvedValueOnce([]);
+    (
+      mockResultByInitiativesRepository.getContributorInitiativeAndPrimaryByResult as jest.Mock
+    ).mockResolvedValueOnce([]);
 
     const res = await resultService.getBilateralResultById(100);
     expect((res as returnFormatService).status).toBe(HttpStatus.OK);
