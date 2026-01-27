@@ -108,6 +108,9 @@ import { EvidencesService } from './evidences/evidences.service';
 import { SavePartnersV2Dto } from './results_by_institutions/dto/save-partners-v2.dto';
 import { CreateResultsTocResultV2Dto } from './results-toc-results/dto/create-results-toc-result-v2.dto';
 import { CreateEvidenceDto } from './evidences/dto/create-evidence.dto';
+import { SummaryService } from './summary/summary.service';
+import { InnovationDevService } from '../results-framework-reporting/innovation_dev/innovation_dev.service';
+import { InnovationUseService } from '../results-framework-reporting/innovation-use/innovation-use.service';
 
 @Injectable()
 export class ResultsService {
@@ -171,6 +174,14 @@ export class ResultsService {
     private readonly _contributorsPartnersService?: ContributorsPartnersService,
     @Optional()
     private readonly _evidencesService?: EvidencesService,
+    @Optional()
+    private readonly _summaryService?: SummaryService,
+    @Optional()
+    @Inject(forwardRef(() => InnovationDevService))
+    private readonly _innovationDevService?: InnovationDevService,
+    @Optional()
+    @Inject(forwardRef(() => InnovationUseService))
+    private readonly _innovationUseService?: InnovationUseService,
   ) {}
 
   async createOwnerResult(
@@ -3425,14 +3436,80 @@ export class ResultsService {
         // Actualizar resultTypeResponse según el tipo de resultado
         if (
           reviewUpdateDto.resultTypeResponse !== undefined &&
-          result.result_type_id
+          reviewUpdateDto.commonFields?.result_type_id
         ) {
-          // La actualización de resultTypeResponse se maneja según el tipo
-          // Por ahora, solo registramos que hubo cambios
-          // La implementación completa requeriría usar los handlers específicos
-          this._logger.debug(
-            `Result type response update requested for result ${parsedResultId}, type ${result.result_type_id}`,
-          );
+          const resultTypeId = Number(reviewUpdateDto.commonFields.result_type_id);
+
+          try {
+            switch (resultTypeId) {
+              case ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT: // 5
+                if (this._summaryService) {
+                  await this._summaryService.saveCapacityDevelopents(
+                    reviewUpdateDto.resultTypeResponse as any,
+                    parsedResultId,
+                    user,
+                  );
+                } else {
+                  this._logger.warn(
+                    `SummaryService not available for result ${parsedResultId}`,
+                  );
+                }
+                break;
+
+              case ResultTypeEnum.INNOVATION_DEVELOPMENT: // 7
+                if (this._innovationDevService) {
+                  await this._innovationDevService.saveInnovationDev(
+                    reviewUpdateDto.resultTypeResponse as any,
+                    parsedResultId,
+                    user,
+                  );
+                } else {
+                  this._logger.warn(
+                    `InnovationDevService not available for result ${parsedResultId}`,
+                  );
+                }
+                break;
+
+              case ResultTypeEnum.POLICY_CHANGE: // 1
+                if (this._summaryService) {
+                  await this._summaryService.savePolicyChanges(
+                    reviewUpdateDto.resultTypeResponse as any,
+                    parsedResultId,
+                    user,
+                  );
+                } else {
+                  this._logger.warn(
+                    `SummaryService not available for result ${parsedResultId}`,
+                  );
+                }
+                break;
+
+              case ResultTypeEnum.INNOVATION_USE: // 2
+                if (this._innovationUseService) {
+                  await this._innovationUseService.saveInnovationUse(
+                    reviewUpdateDto.resultTypeResponse as any,
+                    parsedResultId,
+                    user,
+                  );
+                } else {
+                  this._logger.warn(
+                    `InnovationUseService not available for result ${parsedResultId}`,
+                  );
+                }
+                break;
+
+              default:
+                this._logger.warn(
+                  `Unsupported result_type_id: ${resultTypeId} for result ${parsedResultId}`,
+                );
+                break;
+            }
+          } catch (error) {
+            this._logger.error(
+              `Failed to update resultTypeResponse for result ${parsedResultId}, type ${resultTypeId}: ${error.message}`,
+            );
+            throw error;
+          }
         }
 
         // Crear el historial de revisión

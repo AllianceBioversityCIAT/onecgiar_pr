@@ -34,6 +34,14 @@ export class CommonFieldsDto {
     @IsOptional()
     @IsString()
     result_description?: string;
+
+    @ApiProperty({
+        description: 'Result type identifier',
+        example: 1,
+    })
+    @IsNotEmpty()
+    @IsNumber()
+    result_type_id: number;
 }
 
 export class ReviewUpdateDto {
