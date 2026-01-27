@@ -1132,10 +1132,10 @@ export class CreateBilateralDto {
 
   @ApiPropertyOptional({
     description:
-      'Evidence references supporting the bilateral project. Optional for KNOWLEDGE_PRODUCT results.',
+      'Evidence references supporting the bilateral project. Optional for all result types.',
     type: [EvidenceDto],
   })
-  @ValidateIf((o) => o.result_type_id !== ResultTypeEnum.KNOWLEDGE_PRODUCT)
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => EvidenceDto)
