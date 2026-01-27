@@ -111,6 +111,7 @@ import { CreateEvidenceDto } from './evidences/dto/create-evidence.dto';
 import { SummaryService } from './summary/summary.service';
 import { InnovationDevService } from '../results-framework-reporting/innovation_dev/innovation_dev.service';
 import { InnovationUseService } from '../results-framework-reporting/innovation-use/innovation-use.service';
+import { UpdateTocMetadataDto } from './dto/update-toc-metadata.dto';
 
 @Injectable()
 export class ResultsService {
@@ -3533,6 +3534,109 @@ export class ResultsService {
             changedFields: Object.keys(changedFields).length > 0 ? changedFields : undefined,
           },
           message: 'Result updated successfully',
+          status: HttpStatus.OK,
+        };
+      });
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ConflictException
+      ) {
+        return {
+          response: {},
+          message: error.message,
+          status: error.getStatus(),
+        };
+      }
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async updateBilateralResultTocMetadata(
+    resultId: number,
+    updateTocMetadataDto: UpdateTocMetadataDto,
+    user: TokenDto,
+  ): Promise<ReturnResponseDto<any> | returnErrorDto> {
+    try {
+      const parsedResultId = Number(resultId);
+      if (
+        !parsedResultId ||
+        !Number.isFinite(parsedResultId) ||
+        parsedResultId <= 0
+      ) {
+        return {
+          response: {},
+          message: 'The resultId parameter must be a valid positive number.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      return await this._dataSource.transaction(async (manager) => {
+        const result = await manager.findOne(Result, {
+          where: {
+            id: parsedResultId,
+            source: SourceEnum.Bilateral,
+            is_active: true,
+          },
+        });
+
+        if (!result) {
+          throw new BadRequestException('Bilateral result not found');
+        }
+
+        const currentStatusId = Number(result.status_id);
+        if (currentStatusId !== ResultStatusData.PendingReview.value) {
+          throw new ConflictException(
+            `Cannot update result. Current status is not PENDING_REVIEW (status_id: ${result.status_id})`,
+          );
+        }
+
+        // Validar que updateExplanation esté presente
+        if (!updateTocMetadataDto.updateExplanation?.trim()) {
+          throw new BadRequestException(
+            'updateExplanation is required when ToC metadata is modified',
+          );
+        }
+
+        // Actualizar result_toc_result usando ContributorsPartnersService
+        if (!this._contributorsPartnersService) {
+          throw new BadRequestException(
+            'ContributorsPartnersService is not available',
+          );
+        }
+
+        const tocPayload: CreateResultsTocResultV2Dto = {
+          result_toc_result: updateTocMetadataDto.tocMetadata,
+        };
+
+        const tocResult =
+          await this._contributorsPartnersService.updateTocMappingV2(
+            parsedResultId,
+            tocPayload,
+            user,
+          );
+
+        if (tocResult.status !== HttpStatus.OK) {
+          throw new BadRequestException(
+            `Failed to update ToC metadata: ${tocResult.message || 'Unknown error'}`,
+          );
+        }
+
+        // Crear el historial de revisión
+        const reviewHistory = manager.create(ResultReviewHistory, {
+          result_id: parsedResultId,
+          action: ReviewActionEnum.UPDATE,
+          comment: updateTocMetadataDto.updateExplanation,
+          created_by: user.id,
+        });
+        await manager.save(ResultReviewHistory, reviewHistory);
+
+        return {
+          response: {
+            resultId: parsedResultId,
+            tocMetadata: tocResult.response,
+          },
+          message: 'ToC metadata updated successfully',
           status: HttpStatus.OK,
         };
       });

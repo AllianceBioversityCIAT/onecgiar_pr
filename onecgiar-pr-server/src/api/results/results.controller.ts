@@ -19,6 +19,7 @@ import { ScienceProgramProgressResponseDto } from './dto/science-program-progres
 import { UserToken } from 'src/shared/decorators/user-token.decorator';
 import { ReviewDecisionDto } from './dto/review-decision.dto';
 import { ReviewUpdateDto } from './dto/review-update.dto';
+import { UpdateTocMetadataDto } from './dto/update-toc-metadata.dto';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 import {
   ApiBody,
@@ -687,5 +688,32 @@ export class ResultsController {
     );
   }
 
-  
+  @Patch('bilateral/:resultId/review-update/toc-metadata')
+  @ApiOperation({
+    summary: 'Update bilateral result ToC metadata from review screen',
+    description:
+      'Updates ToC metadata (result_toc_result) of a bilateral result in PENDING_REVIEW status. Requires updateExplanation.',
+  })
+  @ApiParam({
+    name: 'resultId',
+    type: Number,
+    required: true,
+    description: 'Result identifier',
+    example: 123,
+  })
+  @ApiBody({ type: UpdateTocMetadataDto })
+  @ApiOkResponse({
+    description: 'ToC metadata updated successfully.',
+  })
+  async updateBilateralResultTocMetadata(
+    @Param('resultId') resultId: number,
+    @Body() updateTocMetadataDto: UpdateTocMetadataDto,
+    @UserToken() user: TokenDto,
+  ) {
+    return this.resultsService.updateBilateralResultTocMetadata(
+      resultId,
+      updateTocMetadataDto,
+      user,
+    );
+  }
 }
