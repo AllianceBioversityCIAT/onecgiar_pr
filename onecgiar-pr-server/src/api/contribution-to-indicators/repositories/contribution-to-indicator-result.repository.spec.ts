@@ -58,15 +58,16 @@ describe('ContributionToIndicatorResultsRepository', () => {
   it('findBasicContributionIndicatorDataByTocId should return first row or throw formatted error', async () => {
     const { repo, dataSource, handlersError } = makeRepo();
     dataSource.query.mockResolvedValueOnce([{ a: 1 }]);
-    await expect(repo.findBasicContributionIndicatorDataByTocId('x')).resolves.toEqual({
+    await expect(
+      repo.findBasicContributionIndicatorDataByTocId('x'),
+    ).resolves.toEqual({
       a: 1,
     });
 
     dataSource.query.mockResolvedValueOnce([]);
-    await expect(repo.findBasicContributionIndicatorDataByTocId('x')).rejects.toBeInstanceOf(
-      Error,
-    );
+    await expect(
+      repo.findBasicContributionIndicatorDataByTocId('x'),
+    ).rejects.toBeInstanceOf(Error);
     expect(handlersError.returnErrorRepository).toHaveBeenCalled();
   });
 });
-

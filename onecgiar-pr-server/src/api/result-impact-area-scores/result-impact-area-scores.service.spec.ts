@@ -15,7 +15,8 @@ describe('ResultImpactAreaScoresService', () => {
   const makeService = (impactRepoFindImpl?: any) => {
     const mainRepo = makeRepo();
     const impactRepo = makeRepo();
-    if (impactRepoFindImpl) impactRepo.find.mockImplementation(impactRepoFindImpl);
+    if (impactRepoFindImpl)
+      impactRepo.find.mockImplementation(impactRepoFindImpl);
 
     const dataSource = {
       getRepository: jest.fn((entity: any) => {
@@ -67,4 +68,3 @@ describe('ResultImpactAreaScoresService', () => {
     expect(toAdd).toEqual([{ impact_area_score_id: 5 }]);
   });
 });
-

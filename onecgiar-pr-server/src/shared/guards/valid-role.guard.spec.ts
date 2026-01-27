@@ -10,7 +10,7 @@ describe('ValidRoleGuard', () => {
 
   const makeContext = (authHeader: string) =>
     ({
-      getHandler: () => function handler() { },
+      getHandler: () => function handler() {},
       switchToHttp: () => ({
         getRequest: () => ({
           headers: { auth: authHeader },
@@ -19,7 +19,9 @@ describe('ValidRoleGuard', () => {
     }) as any;
 
   it('should return true when role is valid and satisfies role <= required', async () => {
-    const repo = { $_isValidRole: jest.fn().mockResolvedValue(RoleEnum.ADMIN) } as any;
+    const repo = {
+      $_isValidRole: jest.fn().mockResolvedValue(RoleEnum.ADMIN),
+    } as any;
     const reflector: Partial<Reflector> = {
       get: jest.fn().mockReturnValue({
         roles: RoleEnum.GUEST,
@@ -32,11 +34,16 @@ describe('ValidRoleGuard', () => {
     const ctx = makeContext(makeAuthHeader({ id: tokenId }));
 
     await expect(guard.canActivate(ctx)).resolves.toBe(true);
-    expect(repo.$_isValidRole).toHaveBeenCalledWith(tokenId, RoleTypeEnum.APPLICATION);
+    expect(repo.$_isValidRole).toHaveBeenCalledWith(
+      tokenId,
+      RoleTypeEnum.APPLICATION,
+    );
   });
 
   it('should return false when role does not satisfy the required one', async () => {
-    const repo = { $_isValidRole: jest.fn().mockResolvedValue(RoleEnum.MEMBER) } as any;
+    const repo = {
+      $_isValidRole: jest.fn().mockResolvedValue(RoleEnum.MEMBER),
+    } as any;
     const reflector: Partial<Reflector> = {
       get: jest.fn().mockReturnValue({
         roles: RoleEnum.GUEST,
@@ -50,4 +57,3 @@ describe('ValidRoleGuard', () => {
     await expect(guard.canActivate(ctx)).resolves.toBe(false);
   });
 });
-

@@ -366,7 +366,7 @@ describe('IpsrGeneralInformationService', () => {
 
       try {
         await service.generalInformation(1, mockDto, mockUser);
-      } catch (_error) { }
+      } catch (_error) {}
 
       expect(mockErrorHandler.returnErrorRes).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -444,7 +444,7 @@ describe('IpsrGeneralInformationService', () => {
       mockDiscontinuedRepo.find.mockResolvedValue([]);
       mockAdUserRepo.findOne.mockRejectedValue(new Error('User not found'));
 
-      jest.spyOn(console, 'warn').mockImplementation(() => { });
+      jest.spyOn(console, 'warn').mockImplementation(() => {});
 
       const result = await service.findOneInnovation(1);
 
@@ -461,7 +461,7 @@ describe('IpsrGeneralInformationService', () => {
     it('should handle result not found', async () => {
       mockIpsrRepo.getResultInnovationById.mockResolvedValue([]);
 
-      await service.findOneInnovation(999).catch(() => { });
+      await service.findOneInnovation(999).catch(() => {});
 
       expect(mockErrorHandler.returnErrorRes).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -476,7 +476,7 @@ describe('IpsrGeneralInformationService', () => {
         new Error('Some DB error'),
       );
 
-      await service.findOneInnovation(1).catch(() => { });
+      await service.findOneInnovation(1).catch(() => {});
 
       expect(mockErrorHandler.returnErrorRes).toHaveBeenCalledWith(
         expect.objectContaining({
