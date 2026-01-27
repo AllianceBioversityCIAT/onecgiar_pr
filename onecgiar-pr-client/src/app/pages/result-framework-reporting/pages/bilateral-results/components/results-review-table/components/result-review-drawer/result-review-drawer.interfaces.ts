@@ -21,7 +21,7 @@ export interface GroupedResult {
 
 export interface BilateralResultDetail {
   commonFields: BilateralCommonFields;
-  tocMetadata: BilateralTocMetadata[];
+  tocMetadata: BilateralTocMetadata | BilateralTocMetadata[];
   geographicScope: BilateralGeographicScope;
   contributingCenters: BilateralContributingCenter[];
   contributingInstitutions: BilateralContributingInstitution[];
@@ -50,12 +50,44 @@ export interface BilateralCommonFields {
 }
 
 export interface BilateralTocMetadata {
-  planned_result: number;
-  acronym: string;
+  planned_result: boolean | number;
+  initiative_id?: number;
+  official_code?: string;
+  short_name?: string;
+  result_toc_results?: BilateralTocResult[];
+  // Legacy format fields
+  acronym?: string;
+  toc_result_id?: number;
+  result_title?: string;
+  indicator_id?: string;
+  indicator_description?: string;
+}
+
+export interface BilateralTocResult {
+  result_toc_result_id: number;
   toc_result_id: number;
-  result_title: string;
-  indicator_id: string;
-  indicator_description: string;
+  planned_result: boolean;
+  initiative_id: number;
+  toc_progressive_narrative: string | null;
+  toc_level_id: number;
+  indicators: BilateralTocIndicator[];
+}
+
+export interface BilateralTocIndicator {
+  result_toc_result_indicator_id: number;
+  toc_results_indicator_id: string;
+  indicator_contributing: number | null;
+  status_id: number | null;
+  targets: BilateralTocIndicatorTarget[];
+}
+
+export interface BilateralTocIndicatorTarget {
+  indicators_targets: number;
+  number_target: number;
+  contributing_indicator: number;
+  target_date: number;
+  target_progress_narrative: string | null;
+  indicator_question: string | null;
 }
 
 export interface BilateralGeographicScope {

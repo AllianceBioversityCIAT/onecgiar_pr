@@ -55,33 +55,33 @@
 
     <div class="form-section">
       <h3 class="form-section_title">TOC ALIGNMENT</h3>
-      <!-- TOC ALIGNMENT Section -->
+      
       <app-pr-yes-or-not
-        label="Does this result align with the Program's TOC?"
+        label="Does this result align with the Program's planned TOC indicators?"
         [required]="true"
-        [ngModel]="fields?.tocMetadata?.[0]?.planned_result">
+        [ngModel]="tocInitiative?.planned_result"
+        (ngModelChange)="onPlannedResultChangeValue($event)"
+        (selectOptionEvent)="onPlannedResultChange()">
       </app-pr-yes-or-not>
 
-      <br />
 
-      <h4 class="pr-h4 font-weight-600 text-black">TOC result</h4>
-      @if (fields?.tocMetadata?.[0]?.acronym || fields?.tocMetadata?.[0]?.result_title) {
-        <p class="pr-body-2 font-weight-400 text-black">
-          {{ fields?.tocMetadata[0]?.acronym + ' - ' + fields?.tocMetadata[0]?.result_title }}
-        </p>
-      } @else {
-        <p class="not_provided_text">Not provided</p>
-      }
-
-      <br />
-
-      <h4 class="pr-h4 font-weight-600 text-black">Indicator</h4>
-      @if (fields?.tocMetadata?.[0]?.indicator_description) {
-        <p class="pr-body-2 font-weight-400 text-black">
-          {{ fields?.tocMetadata[0]?.indicator_description }}
-        </p>
-      } @else {
-        <p class="not_provided_text">Not provided</p>
+      @if (tocInitiative?.planned_result !== null) {
+        @if (tocConsumed()) {
+          <div style="z-index: 1; position: relative">
+            <app-cp-multiple-wps
+              [editable]="true"
+              [initiative]="tocInitiative"
+              [initiativeId]="initiativeIdSignal"
+              [resultLevelId]="fields?.commonFields?.result_level_id"
+              [isIpsr]="false"
+              [isContributor]="false"
+              [isNotifications]="false"
+              [isUnplanned]="!tocInitiative.planned_result"
+              [showMultipleWPsContent]="tocConsumed()"
+              [hidden]="true">
+            </app-cp-multiple-wps>
+          </div>
+        }
       }
     </div>
 
