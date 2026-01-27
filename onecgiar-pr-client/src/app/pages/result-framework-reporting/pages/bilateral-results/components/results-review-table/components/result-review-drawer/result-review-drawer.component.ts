@@ -60,15 +60,12 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     
     // Map disabled initiatives to option objects from the list
     return disabled.map((disabledInit: any) => {
-      // If it's already an object with id, find it in the list
       if (typeof disabledInit === 'object' && disabledInit.id) {
         return initiativesList.find((opt: any) => opt.id === disabledInit.id);
       }
-      // If it has official_code, find it by official_code
       if (typeof disabledInit === 'object' && disabledInit.official_code) {
         return initiativesList.find((opt: any) => opt.official_code === disabledInit.official_code);
       }
-      // If it's a string (official_code) or number (id), find it
       if (typeof disabledInit === 'string') {
         return initiativesList.find((opt: any) => opt.official_code === disabledInit);
       }
@@ -112,27 +109,23 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
       }
     });
 
-    // Effect to map contributingInitiatives from official_code to id when options list is available
     effect(() => {
       const detail = this.resultDetail();
       const initiativesList = this.contributingInitiativesList();
       const disabledInitiatives = this.disabledContributingInitiatives();
       
       if (detail?.contributingInitiatives && Array.isArray(detail.contributingInitiatives) && initiativesList.length > 0) {
-        // Check if we need to map official_code to id
         const needsMapping = detail.contributingInitiatives.some((init: any) => {
-          if (typeof init === 'number') return false; // Already an id
-          if (typeof init === 'string') return true; // official_code needs mapping
+          if (typeof init === 'number') return false;
+          if (typeof init === 'string') return true;
           return false;
         });
         
         if (needsMapping) {
           const mappedInitiatives = detail.contributingInitiatives.map((initiative: any) => {
-            // If it's already a number (id), return it
             if (typeof initiative === 'number') {
               return initiative;
             }
-            // If it's a string (official_code), find the id
             if (typeof initiative === 'string') {
               const found = initiativesList.find((opt: any) => opt.official_code === initiative);
               return found?.id || initiative;
@@ -140,7 +133,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
             return initiative;
           });
           
-          // Also map disabled initiatives from official_code to id
           if (disabledInitiatives.length > 0) {
             const mappedDisabled = disabledInitiatives.map((initiative: any) => {
               if (typeof initiative === 'object' && initiative.official_code) {
@@ -174,12 +166,8 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     this.api.resultsSE.GET_BilateralResultDetail(resultId).subscribe({
       next: res => {
         const detail = res.response;
-        
-        // Load contributing initiatives using the portfolio
-        // Similar to rd-contributors-and-partners: GET_AllWithoutResults needs the portfolio and currentResultId
-        // Set currentResultId first (required by GET_AllWithoutResults)
+      
         this.api.resultsSE.currentResultId = Number.parseInt(resultId, 10);
-        // For bilateral results, use 'SP' (Science Programs) as default, or get from currentResult if available
         const activePortfolio = this.api.dataControlSE.currentResult?.portfolio || 'SP';
         this.api.resultsSE.GET_AllWithoutResults(activePortfolio).subscribe({
           next: ({ response }) => {
@@ -196,11 +184,8 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         }
         
         // Transform contributingProjects from objects to array of project_ids
-        // The service returns: [{ project_id: "271", obj_clarisa_project: { id: "271", ... }, ... }]
         if (detail.contributingProjects && Array.isArray(detail.contributingProjects)) {
           detail.contributingProjects = detail.contributingProjects.map((project: any) => {
-            // Use project_id from the project object, or fallback to obj_clarisa_project.id
-            // Convert to string to match the format expected by the multi-select
             const projectId = project.project_id || project.obj_clarisa_project?.id || project.id;
             return projectId ? String(projectId) : projectId;
           });
@@ -209,12 +194,8 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         }
         
         // Transform contributingInitiatives from object with contributing_and_primary/accepted/pending arrays to array of official_codes
-        // The service returns: { contributing_and_primary_initiative: [], accepted_contributing_initiatives: [], pending_contributing_initiatives: [] }
-        // contributing_and_primary_initiative should be disabled (cannot be removed)
-        // We'll map to id later when the options list is available
         if (detail.contributingInitiatives) {
           if (Array.isArray(detail.contributingInitiatives)) {
-            // Legacy format: array of initiatives
             detail.contributingInitiatives = detail.contributingInitiatives.map((initiative: any) => {
               return initiative.official_code || initiative.id || initiative;
             });
@@ -225,10 +206,8 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
             const accepted = detail.contributingInitiatives.accepted_contributing_initiatives || [];
             const pending = detail.contributingInitiatives.pending_contributing_initiatives || [];
             
-            // Save contributing_and_primary_initiative for disableOptions (these cannot be removed)
             this.disabledContributingInitiatives.set(contributingAndPrimary);
             
-            // Combine all initiatives: contributing_and_primary should appear first, then accepted, then pending
             const allInitiatives = [...contributingAndPrimary, ...accepted, ...pending];
             detail.contributingInitiatives = allInitiatives.map((initiative: any) => {
               return initiative.official_code || initiative.id || initiative;
@@ -244,22 +223,34 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         
         // Transform contributingInstitutions from objects to array of institutions_id
         if (detail.contributingInstitutions && Array.isArray(detail.contributingInstitutions)) {
-          detail.contributingInstitutions = detail.contributingInstitutions.map((institution: any) => 
-            institution.institutions_id || institution.id
-          );
+          detail.contributingInstitutions = detail.contributingInstitutions.map((institution: any) => {
+            const institutionId = institution.institutions_id || institution.id;
+            return institutionId ? Number(institutionId) : institutionId;
+          });
         } else {
           detail.contributingInstitutions = [];
+        }
+        
+        if (detail.resultTypeResponse && Array.isArray(detail.resultTypeResponse)) {
+          detail.resultTypeResponse = detail.resultTypeResponse.map((resultType: any) => {
+            if (resultType.implementing_organization && Array.isArray(resultType.implementing_organization)) {
+              resultType.institutions = resultType.implementing_organization.map((org: any) => {
+                const institutionId = org.institution_id || org.institutions_id || org.id;
+                return institutionId ? Number(institutionId) : institutionId;
+              });
+            } else if (!resultType.institutions) {
+              resultType.institutions = [];
+            }
+            return resultType;
+          });
         }
         
         this.resultDetail.set(detail);
         this.isLoading.set(false);
         
-        // Force update after options are loaded to ensure pr-multi-select can map values correctly
-        // Use a longer delay to ensure all option lists are loaded
         setTimeout(() => {
           const currentDetail = this.resultDetail();
           if (currentDetail) {
-            // Create new array references to trigger writeValue in pr-multi-select
             const updatedDetail = { ...currentDetail };
             if (updatedDetail.contributingCenters?.length) {
               updatedDetail.contributingCenters = [...updatedDetail.contributingCenters];
@@ -287,8 +278,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     this.api.resultsSE.GET_ClarisaProjects().subscribe({
       next: ({ response }) => {
         const projects = response || [];
-        // Map id to project_id for compatibility with multi-select
-        // Convert to string to match the format from the response
         projects.forEach((project: any) => {
           project.project_id = project.id ? String(project.id) : project.id;
         });
