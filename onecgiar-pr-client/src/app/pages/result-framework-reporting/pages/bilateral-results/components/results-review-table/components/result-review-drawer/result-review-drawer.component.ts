@@ -196,10 +196,13 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         }
         
         // Transform contributingProjects from objects to array of project_ids
+        // The service returns: [{ project_id: "271", obj_clarisa_project: { id: "271", ... }, ... }]
         if (detail.contributingProjects && Array.isArray(detail.contributingProjects)) {
           detail.contributingProjects = detail.contributingProjects.map((project: any) => {
-            // project_id can be in project_id field or in obj_clarisa_project.id
-            return project.project_id || project.obj_clarisa_project?.id || project.id;
+            // Use project_id from the project object, or fallback to obj_clarisa_project.id
+            // Convert to string to match the format expected by the multi-select
+            const projectId = project.project_id || project.obj_clarisa_project?.id || project.id;
+            return projectId ? String(projectId) : projectId;
           });
         } else {
           detail.contributingProjects = [];
@@ -283,7 +286,13 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     // Load CLARISA projects
     this.api.resultsSE.GET_ClarisaProjects().subscribe({
       next: ({ response }) => {
-        this.clarisaProjectsList.set(response || []);
+        const projects = response || [];
+        // Map id to project_id for compatibility with multi-select
+        // Convert to string to match the format from the response
+        projects.forEach((project: any) => {
+          project.project_id = project.id ? String(project.id) : project.id;
+        });
+        this.clarisaProjectsList.set(projects);
       },
       error: () => this.clarisaProjectsList.set([])
     });
