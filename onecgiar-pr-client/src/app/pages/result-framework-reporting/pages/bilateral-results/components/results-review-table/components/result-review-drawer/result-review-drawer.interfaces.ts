@@ -175,7 +175,10 @@ export interface BilateralResultTypeResponse {
   name: string;
   policy_type_name: string;
   policy_stage_name: string;
+  policy_type_id: number;
+  policy_stage_id: number;
   implementing_organization: BilateralImplementingOrganization[];
+  institutions: any[];
   male_using: string;
   female_using: string;
   non_binary_using: string;
