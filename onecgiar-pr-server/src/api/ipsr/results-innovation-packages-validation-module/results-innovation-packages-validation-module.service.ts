@@ -21,7 +21,7 @@ export class ResultsInnovationPackagesValidationModuleService {
     private readonly _ipsrReposotory: IpsrRepository,
     private readonly _resultInnovationPackageValidationModuleRepository: ResultsInnovationPackagesValidationModuleRepository,
     private readonly _dataSource: DataSource,
-  ) {}
+  ) { }
 
   async getGreenchecksByinnovationPackage(
     resultId: number,
@@ -148,7 +148,6 @@ export class ResultsInnovationPackagesValidationModuleService {
           resultId,
           sectionsTwo,
         );
-      console.log(responsePathwayStepTwo);
       const formatStepTwo = responsePathwayStepTwo.map((item) => ({
         subSection: item.section_name.split(' ')[1],
         sectionName: item.section_name,
