@@ -89,14 +89,18 @@ describe('ContributionToIndicatorsRepository', () => {
     await repo._enrichIndicators(toc);
 
     expect(supportingSpy).toHaveBeenCalledTimes(2);
-    expect(toc[0].indicators[0].indicator_supporting_results).toEqual([{ ok: true }]);
+    expect(toc[0].indicators[0].indicator_supporting_results).toEqual([
+      { ok: true },
+    ]);
   });
 
   it('findAllEoisByInitiativeCode should use _query and _enrichIndicators', async () => {
     const { repo } = makeRepo();
-    jest.spyOn(repo, '_query').mockResolvedValue([
-      { eois: [{ indicators: [{ indicator_uuid: 'u1' }] }] },
-    ]);
+    jest
+      .spyOn(repo, '_query')
+      .mockResolvedValue([
+        { eois: [{ indicators: [{ indicator_uuid: 'u1' }] }] },
+      ]);
     const enrichSpy = jest
       .spyOn(repo, '_enrichIndicators')
       .mockResolvedValue(undefined as any);
@@ -109,7 +113,11 @@ describe('ContributionToIndicatorsRepository', () => {
   it('findAllOutcomesByInitiativeCode should map workpackage and enrich', async () => {
     const { repo } = makeRepo();
     jest.spyOn(repo, '_query').mockResolvedValue([
-      { workpackage: { toc_results: [{ indicators: [{ indicator_uuid: 'u1' }] }] } },
+      {
+        workpackage: {
+          toc_results: [{ indicators: [{ indicator_uuid: 'u1' }] }],
+        },
+      },
     ]);
     const enrichSpy = jest
       .spyOn(repo, '_enrichIndicators')
@@ -120,4 +128,3 @@ describe('ContributionToIndicatorsRepository', () => {
     expect(enrichSpy).toHaveBeenCalledTimes(1);
   });
 });
-

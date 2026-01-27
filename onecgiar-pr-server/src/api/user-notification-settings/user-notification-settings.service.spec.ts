@@ -68,9 +68,9 @@ describe('UserNotificationSettingsService', () => {
       ],
     }).compile();
 
-    jest.spyOn(Logger.prototype, 'log').mockImplementation(() => { });
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => { });
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => { });
+    jest.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
 
     service = module.get<UserNotificationSettingsService>(
       UserNotificationSettingsService,

@@ -130,7 +130,9 @@ describe('SharePointService', () => {
     );
 
     jest.spyOn(service, 'createFileFolder').mockResolvedValue('folder' as any);
-    jest.spyOn(service, 'getFileInfo').mockResolvedValue({ name: 'a.txt' } as any);
+    jest
+      .spyOn(service, 'getFileInfo')
+      .mockResolvedValue({ name: 'a.txt' } as any);
     jest.spyOn(service, 'copyFile').mockResolvedValue({} as any);
     jest
       .spyOn(service, 'getFolderFilesList')
@@ -146,7 +148,9 @@ describe('SharePointService', () => {
       makeEvidencesRepo() as any,
     );
 
-    const { filePath, pathInformation } = await service.generateFilePath(1 as any);
+    const { filePath, pathInformation } = await service.generateFilePath(
+      1 as any,
+    );
     expect(filePath).toBe('/Phase/Result R1');
     expect(pathInformation).toEqual(
       expect.objectContaining({ phase_name: 'Phase', result_code: 'R1' }),
@@ -156,7 +160,9 @@ describe('SharePointService', () => {
   it('createUploadSession should return a formatted uploadUrl', async () => {
     const http = makeHttp();
     http.post.mockReturnValue({
-      toPromise: jest.fn().mockResolvedValue({ data: { uploadUrl: 'upload-url' } }),
+      toPromise: jest
+        .fn()
+        .mockResolvedValue({ data: { uploadUrl: 'upload-url' } }),
     });
 
     const service = new SharePointService(
@@ -167,12 +173,10 @@ describe('SharePointService', () => {
 
     (service as any).microsoftGraphApiUrl = 'https://graph.example';
     jest.spyOn(service, 'getToken').mockResolvedValue('token' as any);
-    jest
-      .spyOn(service, 'generateFilePath')
-      .mockResolvedValue({
-        filePath: '/Phase/Result R1',
-        pathInformation: { result_code: 'R1', date_as_name: '20260123' },
-      } as any);
+    jest.spyOn(service, 'generateFilePath').mockResolvedValue({
+      filePath: '/Phase/Result R1',
+      pathInformation: { result_code: 'R1', date_as_name: '20260123' },
+    } as any);
     jest.spyOn(service, 'createFileFolder').mockResolvedValue('folder' as any);
 
     const res = await service.createUploadSession({
@@ -208,7 +212,9 @@ describe('SharePointService', () => {
     );
     (service as any).microsoftGraphApiUrl = 'https://graph.example';
     jest.spyOn(service, 'getToken').mockResolvedValue('token' as any);
-    const delSpy = jest.spyOn(service, 'deleteFile').mockResolvedValue({} as any);
+    const delSpy = jest
+      .spyOn(service, 'deleteFile')
+      .mockResolvedValue({} as any);
 
     const folderId = await service.createFileFolder('/x');
     expect(folderId).toBe('parent-id');
@@ -217,13 +223,19 @@ describe('SharePointService', () => {
 
   it('deleteFile / getFileInfo / copyFile / getFolderFilesList should use httpService', async () => {
     const http = makeHttp();
-    http.delete.mockReturnValue({ toPromise: jest.fn().mockResolvedValue({ ok: true }) });
+    http.delete.mockReturnValue({
+      toPromise: jest.fn().mockResolvedValue({ ok: true }),
+    });
     http.get
       .mockReturnValueOnce({
-        toPromise: jest.fn().mockResolvedValue({ data: { id: 'f1', name: 'a.txt' } }),
+        toPromise: jest
+          .fn()
+          .mockResolvedValue({ data: { id: 'f1', name: 'a.txt' } }),
       })
       .mockReturnValueOnce({
-        toPromise: jest.fn().mockResolvedValue({ data: { value: [{ id: 'c1' }] } }),
+        toPromise: jest
+          .fn()
+          .mockResolvedValue({ data: { value: [{ id: 'c1' }] } }),
       });
     http.post.mockReturnValue({
       toPromise: jest.fn().mockResolvedValue({ data: { started: true } }),
@@ -238,15 +250,24 @@ describe('SharePointService', () => {
     jest.spyOn(service, 'getToken').mockResolvedValue('token' as any);
 
     await expect(service.deleteFile('file')).resolves.toEqual({ ok: true });
-    await expect(service.getFileInfo('file')).resolves.toEqual({ id: 'f1', name: 'a.txt' });
-    await expect(service.copyFile('f', 'dest', 'a.txt')).resolves.toEqual({ started: true });
-    await expect(service.getFolderFilesList('folder')).resolves.toEqual([{ id: 'c1' }]);
+    await expect(service.getFileInfo('file')).resolves.toEqual({
+      id: 'f1',
+      name: 'a.txt',
+    });
+    await expect(service.copyFile('f', 'dest', 'a.txt')).resolves.toEqual({
+      started: true,
+    });
+    await expect(service.getFolderFilesList('folder')).resolves.toEqual([
+      { id: 'c1' },
+    ]);
   });
 
   it('addFileAccess should create a link with the correct scope', async () => {
     const http = makeHttp();
     http.post.mockReturnValue({
-      toPromise: jest.fn().mockResolvedValue({ data: { link: { webUrl: 'x' } } }),
+      toPromise: jest
+        .fn()
+        .mockResolvedValue({ data: { link: { webUrl: 'x' } } }),
     });
 
     const service = new SharePointService(
@@ -256,13 +277,17 @@ describe('SharePointService', () => {
     );
     (service as any).microsoftGraphApiUrl = 'https://graph.example';
     jest.spyOn(service, 'getToken').mockResolvedValue('token' as any);
-    jest.spyOn(service, 'removeAllFilePermissions').mockResolvedValue(undefined as any);
+    jest
+      .spyOn(service, 'removeAllFilePermissions')
+      .mockResolvedValue(undefined as any);
 
     const res = await service.addFileAccess('file-id', true);
     expect(res).toEqual({ link: { webUrl: 'x' } });
 
     const body = http.post.mock.calls[0][1];
-    expect(body).toEqual(expect.objectContaining({ scope: 'anonymous', type: 'view' }));
+    expect(body).toEqual(
+      expect.objectContaining({ scope: 'anonymous', type: 'view' }),
+    );
   });
 
   it('removeFilePermission should call DELETE and return response', async () => {
@@ -279,9 +304,11 @@ describe('SharePointService', () => {
     (service as any).microsoftGraphApiUrl = 'https://graph.example';
     jest.spyOn(service, 'getToken').mockResolvedValue('token' as any);
 
-    await expect(service.removeFilePermission('file', 'perm')).resolves.toEqual({
-      deleted: true,
-    });
+    await expect(service.removeFilePermission('file', 'perm')).resolves.toEqual(
+      {
+        deleted: true,
+      },
+    );
   });
 
   it('isTokenExpired should reflect expiration based on creationTime/expiresIn', () => {
@@ -300,4 +327,3 @@ describe('SharePointService', () => {
     expect((service as any).isTokenExpired()).toBe(false);
   });
 });
-

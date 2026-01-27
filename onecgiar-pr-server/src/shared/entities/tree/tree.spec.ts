@@ -59,9 +59,11 @@ describe('Tree', () => {
     tree.add(3, 2);
     tree.add(4, 1);
 
-    const descendants = tree.getAllDescendants().map((n) => n.data).sort((a, b) => a - b);
+    const descendants = tree
+      .getAllDescendants()
+      .map((n) => n.data)
+      .sort((a, b) => a - b);
     // With the current logic, it returns leafs: 3 and 4 (not node 2 because it has a child)
     expect(descendants).toEqual([3, 4]);
   });
 });
-
