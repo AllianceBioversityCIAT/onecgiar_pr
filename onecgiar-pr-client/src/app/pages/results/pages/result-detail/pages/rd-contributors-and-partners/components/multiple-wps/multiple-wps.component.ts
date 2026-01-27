@@ -23,6 +23,7 @@ export class CPMultipleWPsComponent implements OnChanges {
   @Input() isIpsr: boolean = false;
   @Input() showMultipleWPsContent: boolean = true;
   @Input() isUnplanned: boolean = false;
+  @Input() hidden: boolean = false; 
   activeTab: TocTab;
   activeTabSignal = signal<TocTab | null>(null);
   activeTabIndex: number = 0;
