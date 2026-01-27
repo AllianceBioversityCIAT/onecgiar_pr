@@ -133,10 +133,13 @@ describe('ResultsService (unit, pure mocks)', () => {
     AllResults: jest.fn().mockResolvedValue([{ id: '1' }]),
     resultsForElasticSearch: jest.fn().mockResolvedValue([{}]),
     getResultByIdElastic: jest.fn(),
-    transformResultCode: jest.fn(),
+    transformResultCode: jest.fn().mockResolvedValue({ transformed_code: 'R-2024-001' }),
     AllResultsByRoleUserAndInitiativeFiltered: jest
       .fn()
       .mockResolvedValue({ results: [], total: 0 }),
+    AllResultsLegacyNewByTitle: jest.fn().mockResolvedValue([]),
+    getResultsForInnovUse: jest.fn().mockResolvedValue([]),
+    getResultDataForBasicReport: jest.fn().mockResolvedValue([]),
     findOne: jest.fn().mockImplementation(async (opts: any) => {
       const id = opts?.where?.id;
       if (id === 3) return { id: '3', status_id: 2, result_type_id: 1 };
@@ -228,6 +231,7 @@ describe('ResultsService (unit, pure mocks)', () => {
 
   const mockResultLegacyRepository = {
     update: jest.fn().mockResolvedValue(undefined),
+    findAllResultsLegacyNew: jest.fn().mockResolvedValue([]),
   } as any;
 
   const mockClarisaInstitutionsRepository = {
@@ -1961,6 +1965,264 @@ describe('ResultsService (unit, pure mocks)', () => {
       expect(
         mockContributorsPartnersService.updateTocMappingV2,
       ).toHaveBeenCalled();
+    });
+  });
+
+  describe('findResultById', () => {
+    it('should return result by id successfully', async () => {
+      const mockResult = {
+        id: 100,
+        title: 'Test Result',
+        result_type_id: 1,
+      };
+      (mockResultRepository.getResultById as jest.Mock).mockResolvedValueOnce(
+        mockResult,
+      );
+
+      const res = await resultService.findResultById(100);
+      expect((res as returnFormatService).status).toBe(HttpStatus.OK);
+      expect((res as returnFormatService).response).toEqual(mockResult);
+    });
+
+    it('should return error when result not found', async () => {
+      (mockResultRepository.getResultById as jest.Mock).mockResolvedValueOnce(
+        null,
+      );
+
+      const res = await resultService.findResultById(999);
+      expect((res as returnFormatService).status).toBe(HttpStatus.NOT_FOUND);
+    });
+  });
+
+  describe('transformResultCode', () => {
+    it('should transform result code successfully', async () => {
+      const mockTransformed = { transformed_code: 'R-2024-001' };
+      (mockVersioningService.$_findPhase as jest.Mock).mockResolvedValueOnce(
+        null,
+      );
+      (mockResultRepository.transformResultCode as jest.Mock)
+        .mockResolvedValueOnce(mockTransformed);
+
+      const res = await resultService.transformResultCode(1001);
+      expect(res.statusCode).toBe(HttpStatus.OK);
+      expect(res.response).toEqual(mockTransformed);
+    });
+
+    it('should transform result code with phase_id', async () => {
+      const mockTransformed = { transformed_code: 'R-2024-001' };
+      const mockPhase = { id: 5 };
+      (mockVersioningService.$_findPhase as jest.Mock).mockResolvedValueOnce(
+        mockPhase,
+      );
+      (mockResultRepository.transformResultCode as jest.Mock)
+        .mockResolvedValueOnce(mockTransformed);
+
+      const res = await resultService.transformResultCode(1001, 5);
+      expect(res.statusCode).toBe(HttpStatus.OK);
+      expect(mockResultRepository.transformResultCode).toHaveBeenCalledWith(
+        1001,
+        5,
+      );
+    });
+
+    it('should return error when result not found', async () => {
+      (mockVersioningService.$_findPhase as jest.Mock).mockResolvedValueOnce(
+        null,
+      );
+      (mockResultRepository.transformResultCode as jest.Mock)
+        .mockResolvedValueOnce(null);
+
+      const res = await resultService.transformResultCode(999);
+      expect(res.statusCode).toBe(HttpStatus.NOT_FOUND);
+    });
+  });
+
+  describe('getAllResultsForInnovUse', () => {
+    it('should return all results for innovation use successfully', async () => {
+      const mockResults = [
+        { id: 1, result_type_id: ResultTypeEnum.INNOVATION_USE },
+        { id: 2, result_type_id: ResultTypeEnum.INNOVATION_USE },
+      ];
+      (mockResultRepository.getResultsForInnovUse as jest.Mock).mockResolvedValueOnce(
+        mockResults,
+      );
+
+      const res = await resultService.getAllResultsForInnovUse();
+      expect((res as returnFormatService).status).toBe(200);
+      expect((res as returnFormatService).response).toEqual(mockResults);
+    });
+  });
+
+  describe('versioningResultsById', () => {
+    it('should version result successfully', async () => {
+      const mockResult = {
+        id: 100,
+        result_code: 1001,
+        version_id: 1,
+      };
+      (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce(
+        mockResult,
+      );
+
+      await resultService.versioningResultsById(100, userTest);
+      expect(mockResultRepository.findOne).toHaveBeenCalledWith({
+        where: { id: 100 },
+      });
+    });
+  });
+
+  describe('findAllResultsLegacyNew', () => {
+    it('should return legacy results successfully', async () => {
+      const mockResults = [
+        { id: 1, title: 'Legacy Result 1' },
+        { id: 2, title: 'Legacy Result 2' },
+      ];
+      (mockResultRepository.AllResultsLegacyNewByTitle as jest.Mock) =
+        jest.fn().mockResolvedValueOnce(mockResults);
+
+      const res = await resultService.findAllResultsLegacyNew('test');
+      expect((res as returnFormatService).status).toBe(HttpStatus.OK);
+      expect((res as returnFormatService).response).toEqual(mockResults);
+    });
+
+    it('should return error when no results found', async () => {
+      (mockResultRepository.AllResultsLegacyNewByTitle as jest.Mock) =
+        jest.fn().mockResolvedValueOnce([]);
+
+      const res = await resultService.findAllResultsLegacyNew('nonexistent');
+      expect((res as returnFormatService).status).toBe(HttpStatus.NOT_FOUND);
+    });
+  });
+
+  describe('saveGeoScope', () => {
+    it('should save geo scope successfully', async () => {
+      const createResultGeo: CreateResultGeoDto = {
+        result_id: 100,
+        geo_scope_id: 1,
+        has_countries: true,
+        has_regions: true,
+        regions: [{ id: 1 }, { id: 2 }],
+        countries: [{ id: 3 }, { id: 4 }],
+      };
+      (mockResultRegionsService.create as jest.Mock).mockResolvedValueOnce({});
+      (mockResultCountriesService.create as jest.Mock).mockResolvedValueOnce({});
+      (mockResultRepository.resultsForElasticSearch as jest.Mock) =
+        jest.fn().mockResolvedValueOnce([{ id: 100 }]);
+      (mockElasticService.getBulkElasticOperationResults as jest.Mock)
+        .mockReturnValueOnce('{}');
+      (mockElasticService.sendBulkOperationToElastic as jest.Mock)
+        .mockResolvedValueOnce(undefined);
+
+      const res = await resultService.saveGeoScope(createResultGeo, userTest);
+      expect((res as returnFormatService).status).toBe(HttpStatus.OK);
+      expect(mockResultRegionsService.create).toHaveBeenCalled();
+      expect(mockResultCountriesService.create).toHaveBeenCalled();
+    });
+  });
+
+  describe('getResultDataForBasicReport', () => {
+    it('should return result data for basic report successfully', async () => {
+      const initDate = new Date('2024-01-01');
+      const endDate = new Date('2024-12-31');
+      const mockData = [
+        { id: 1, title: 'Result 1', created_date: '2024-06-01' },
+        { id: 2, title: 'Result 2', created_date: '2024-07-01' },
+      ];
+      (mockResultRepository.getResultDataForBasicReport as jest.Mock).mockResolvedValueOnce(
+        mockData,
+      );
+
+      const res = await resultService.getResultDataForBasicReport(
+        initDate,
+        endDate,
+      );
+      expect((res as returnFormatService).status).toBe(HttpStatus.OK);
+      expect((res as returnFormatService).response).toEqual(mockData);
+    });
+  });
+
+  describe('createOwnerResult - additional edge cases', () => {
+    it('should return error when result type is 3', async () => {
+      const newResult: CreateResultDto = {
+        initiative_id: 1,
+        result_type_id: 3,
+        result_level_id: ResultLevelEnum.INITIATIVE_OUTCOME,
+        result_name: 'Test Result',
+        handler: null,
+      };
+
+      const res = await resultService.createOwnerResult(newResult, userTest);
+      expect((res as returnFormatService).status).toBe(HttpStatus.BAD_REQUEST);
+      expect((res as returnFormatService).message).toContain(
+        'not allowed',
+      );
+    });
+
+    it('should return error when initiative not found', async () => {
+      const newResult: CreateResultDto = {
+        initiative_id: 999,
+        result_type_id: ResultTypeEnum.POLICY_CHANGE,
+        result_level_id: ResultLevelEnum.INITIATIVE_OUTCOME,
+        result_name: 'Test Result',
+        handler: null,
+      };
+      (mockClarisaInitiativesRepository.findOne as jest.Mock).mockImplementationOnce(
+        async ({ where: { id } }) => {
+          if (id === 999) return null;
+          return id > 0 ? { id } : null;
+        },
+      );
+
+      const res = await resultService.createOwnerResult(newResult, userTest);
+      expect((res as returnFormatService).status).toBe(HttpStatus.NOT_FOUND);
+      expect((res as returnFormatService).message).toContain('Initiative');
+    });
+
+    it('should return error when result level not found', async () => {
+      const newResult: CreateResultDto = {
+        initiative_id: 1,
+        result_type_id: ResultTypeEnum.POLICY_CHANGE,
+        result_level_id: 999,
+        result_name: 'Test Result',
+        handler: null,
+      };
+      (mockClarisaInitiativesRepository.find as jest.Mock).mockResolvedValueOnce(
+        [{ id: 1 }],
+      );
+      (mockResultLevelRepository.findOne as jest.Mock).mockResolvedValueOnce(
+        null,
+      );
+
+      const res = await resultService.createOwnerResult(newResult, userTest);
+      expect((res as returnFormatService).status).toBe(HttpStatus.NOT_FOUND);
+      expect((res as returnFormatService).message).toContain('Level');
+    });
+
+    it('should return error when type and level are not compatible', async () => {
+      const newResult: CreateResultDto = {
+        initiative_id: 1,
+        result_type_id: ResultTypeEnum.POLICY_CHANGE,
+        result_level_id: ResultLevelEnum.INITIATIVE_OUTCOME,
+        result_name: 'Test Result',
+        handler: null,
+      };
+      (mockClarisaInitiativesRepository.find as jest.Mock).mockResolvedValueOnce(
+        [{ id: 1 }],
+      );
+      (mockResultLevelRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        id: 1,
+      });
+      (mockResultTypesService.findOneResultType as jest.Mock)
+        .mockResolvedValueOnce({
+          status: HttpStatus.OK,
+          response: { id: 1 },
+        });
+      (mockResultByLevelRepository.getByTypeAndLevel as jest.Mock)
+        .mockResolvedValueOnce(null);
+
+      const res = await resultService.createOwnerResult(newResult, userTest);
+      expect((res as returnFormatService).status).toBe(HttpStatus.BAD_REQUEST);
+      expect((res as returnFormatService).message).toContain('compatible');
     });
   });
 });
