@@ -18,6 +18,7 @@ import { CreateResultGeoDto } from './dto/create-result-geo-scope.dto';
 import { ScienceProgramProgressResponseDto } from './dto/science-program-progress.dto';
 import { UserToken } from 'src/shared/decorators/user-token.decorator';
 import { ReviewDecisionDto } from './dto/review-decision.dto';
+import { ReviewUpdateDto } from './dto/review-update.dto';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 import {
   ApiBody,
@@ -656,4 +657,35 @@ export class ResultsController {
       user,
     );
   }
+
+  @Patch('bilateral/:resultId/review-update/data-standard')
+  @ApiOperation({
+    summary: 'Update bilateral result from review screen',
+    description:
+      'Updates ToC fields and Minimum Data Standard fields of a bilateral result in PENDING_REVIEW status. Requires updateExplanation if any field is modified.',
+  })
+  @ApiParam({
+    name: 'resultId',
+    type: Number,
+    required: true,
+    description: 'Result identifier',
+    example: 123,
+  })
+  @ApiBody({ type: ReviewUpdateDto })
+  @ApiOkResponse({
+    description: 'Result updated successfully.',
+  })
+  async updateBilateralResultReview(
+    @Param('resultId') resultId: number,
+    @Body() reviewUpdateDto: ReviewUpdateDto,
+    @UserToken() user: TokenDto,
+  ) {
+    return this.resultsService.updateBilateralResultReview(
+      resultId,
+      reviewUpdateDto,
+      user,
+    );
+  }
+
+  
 }
