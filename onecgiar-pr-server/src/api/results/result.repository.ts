@@ -2819,7 +2819,9 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
   async getEvidenceBilateralResult(resultId: number): Promise<any[]> {
     const query = `
       SELECT
-        e.link
+    	  e.id,
+        e.link,
+        e.is_sharepoint 
       FROM result r
       JOIN evidence e 
         ON r.id = e.result_id

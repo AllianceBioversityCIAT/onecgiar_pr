@@ -66,6 +66,15 @@ import { ResultStatusData } from '../../shared/constants/result-status.enum';
 import { DataSource } from 'typeorm';
 import { ResultImpactAreaScoresService } from '../result-impact-area-scores/result-impact-area-scores.service';
 import { ResultsByInstitutionsService } from './results_by_institutions/results_by_institutions.service';
+import { ContributorsPartnersService } from '../results-framework-reporting/contributors-partners/contributors-partners.service';
+import { EvidencesService } from './evidences/evidences.service';
+import { SummaryService } from './summary/summary.service';
+import { InnovationDevService } from '../results-framework-reporting/innovation_dev/innovation_dev.service';
+import { InnovationUseService } from '../results-framework-reporting/innovation-use/innovation-use.service';
+import { ReviewUpdateDto } from './dto/review-update.dto';
+import { UpdateTocMetadataDto } from './dto/update-toc-metadata.dto';
+import { ReviewActionEnum } from './result-review-history/entities/result-review-history.entity';
+import { BadRequestException, ConflictException } from '@nestjs/common';
 
 describe('ResultsService (unit, pure mocks)', () => {
   let module: TestingModule;
@@ -376,6 +385,10 @@ describe('ResultsService (unit, pure mocks)', () => {
       status: HttpStatus.OK,
       response: { geo_scope_id: 2 },
     }),
+    saveGeoScopeV2: jest.fn().mockResolvedValue({
+      status: HttpStatus.OK,
+      response: { geo_scope_id: 2 },
+    }),
   } as any;
 
   const mockResultsByInstitutionsService = {
@@ -388,6 +401,49 @@ describe('ResultsService (unit, pure mocks)', () => {
       response: {
         institutions: [],
       },
+    }),
+  } as any;
+
+  const mockContributorsPartnersService = {
+    updatePartnersV2: jest.fn().mockResolvedValue({
+      status: HttpStatus.OK,
+      response: {},
+    }),
+    updateTocMappingV2: jest.fn().mockResolvedValue({
+      status: HttpStatus.OK,
+      response: {},
+    }),
+  } as any;
+
+  const mockEvidencesService = {
+    create: jest.fn().mockResolvedValue({
+      status: HttpStatus.OK,
+      response: {},
+    }),
+  } as any;
+
+  const mockSummaryService = {
+    saveCapacityDevelopents: jest.fn().mockResolvedValue({
+      status: HttpStatus.OK,
+      response: {},
+    }),
+    savePolicyChanges: jest.fn().mockResolvedValue({
+      status: HttpStatus.OK,
+      response: {},
+    }),
+  } as any;
+
+  const mockInnovationDevService = {
+    saveInnovationDev: jest.fn().mockResolvedValue({
+      status: HttpStatus.OK,
+      response: {},
+    }),
+  } as any;
+
+  const mockInnovationUseService = {
+    saveInnovationUse: jest.fn().mockResolvedValue({
+      status: HttpStatus.OK,
+      response: {},
     }),
   } as any;
 
@@ -567,6 +623,26 @@ describe('ResultsService (unit, pure mocks)', () => {
         {
           provide: ResultsByInstitutionsService,
           useValue: mockResultsByInstitutionsService,
+        },
+        {
+          provide: ContributorsPartnersService,
+          useValue: mockContributorsPartnersService,
+        },
+        {
+          provide: EvidencesService,
+          useValue: mockEvidencesService,
+        },
+        {
+          provide: SummaryService,
+          useValue: mockSummaryService,
+        },
+        {
+          provide: InnovationDevService,
+          useValue: mockInnovationDevService,
+        },
+        {
+          provide: InnovationUseService,
+          useValue: mockInnovationUseService,
         },
         {
           provide: DataSource,
