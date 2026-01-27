@@ -170,7 +170,9 @@ export interface BilateralResultTypeResponse {
   keyword: string;
   keywords: BilateralKeyword[];
   innovation_type_name: string;
+  innovation_nature_id: number;
   innovation_developers: string;
+  innovation_readiness_level_id: number;
   level: string;
   name: string;
   policy_type_name: string;
