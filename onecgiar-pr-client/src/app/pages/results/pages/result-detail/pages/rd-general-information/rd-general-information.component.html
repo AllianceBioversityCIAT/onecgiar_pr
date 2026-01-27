@@ -42,7 +42,7 @@
               [inputId]="prefix + '_checkbox_' + i"
               [ngModel]="this.isImpactAreaSelected(fieldName, option.id)"
               (ngModelChange)="this.toggleImpactAreaSelection(fieldName, option.id)"
-              [disabled]="this.dataControlSE.isKnowledgeProduct || this.rolesSE.readOnly">
+              [disabled]="this.rolesSE.readOnly">
             </p-checkbox>
             <label [for]="prefix + '_checkbox_' + i" class="name pr-body-2">{{ option.name }}</label>
           </div>
@@ -66,12 +66,16 @@
     </div>
     @if (this.generalInfoBody.gender_tag_id == 3) {
       @if (this.dataControlSE.currentResultSignal()?.portfolio === 'P25') {
-        <ng-container *ngTemplateOutlet="impactAreaCheckboxes; context: {
-          fieldRef: '[general-info]-gender_impact_area_id',
-          fieldName: 'gender_impact_area_id',
-          optionsList: this.getImpactAreasScoresComponents.genderTagScoreList(),
-          prefix: 'gender'
-        }"></ng-container>
+        <ng-container
+          *ngTemplateOutlet="
+            impactAreaCheckboxes;
+            context: {
+              fieldRef: '[general-info]-gender_impact_area_id',
+              fieldName: 'gender_impact_area_id',
+              optionsList: this.getImpactAreasScoresComponents.genderTagScoreList(),
+              prefix: 'gender'
+            }
+          "></ng-container>
       } @else {
         <app-pr-radio-button
           [options]="this.getImpactAreasScoresComponents.genderTagScoreList()"
@@ -99,12 +103,16 @@
     </div>
     @if (this.generalInfoBody.climate_change_tag_id == 3) {
       @if (this.dataControlSE.currentResultSignal()?.portfolio === 'P25') {
-        <ng-container *ngTemplateOutlet="impactAreaCheckboxes; context: {
-          fieldRef: '[general-info]-climate_impact_area_id',
-          fieldName: 'climate_impact_area_id',
-          optionsList: this.getImpactAreasScoresComponents.climateTagScoreList(),
-          prefix: 'climate'
-        }"></ng-container>
+        <ng-container
+          *ngTemplateOutlet="
+            impactAreaCheckboxes;
+            context: {
+              fieldRef: '[general-info]-climate_impact_area_id',
+              fieldName: 'climate_impact_area_id',
+              optionsList: this.getImpactAreasScoresComponents.climateTagScoreList(),
+              prefix: 'climate'
+            }
+          "></ng-container>
       } @else {
         <app-pr-radio-button
           [options]="this.getImpactAreasScoresComponents.climateTagScoreList()"
@@ -132,12 +140,16 @@
     </div>
     @if (this.generalInfoBody.nutrition_tag_level_id == 3) {
       @if (this.dataControlSE.currentResultSignal()?.portfolio === 'P25') {
-        <ng-container *ngTemplateOutlet="impactAreaCheckboxes; context: {
-          fieldRef: '[general-info]-nutrition_impact_area_id',
-          fieldName: 'nutrition_impact_area_id',
-          optionsList: this.getImpactAreasScoresComponents.nutritionTagScoreList(),
-          prefix: 'nutrition'
-        }"></ng-container>
+        <ng-container
+          *ngTemplateOutlet="
+            impactAreaCheckboxes;
+            context: {
+              fieldRef: '[general-info]-nutrition_impact_area_id',
+              fieldName: 'nutrition_impact_area_id',
+              optionsList: this.getImpactAreasScoresComponents.nutritionTagScoreList(),
+              prefix: 'nutrition'
+            }
+          "></ng-container>
       } @else {
         <app-pr-radio-button
           [options]="this.getImpactAreasScoresComponents.nutritionTagScoreList()"
@@ -165,12 +177,16 @@
     </div>
     @if (this.generalInfoBody.environmental_biodiversity_tag_level_id == 3) {
       @if (this.dataControlSE.currentResultSignal()?.portfolio === 'P25') {
-        <ng-container *ngTemplateOutlet="impactAreaCheckboxes; context: {
-          fieldRef: '[general-info]-environmental_biodiversity_impact_area_id',
-          fieldName: 'environmental_biodiversity_impact_area_id',
-          optionsList: this.getImpactAreasScoresComponents.environmentalBiodiversityTagScoreList(),
-          prefix: 'environmental'
-        }"></ng-container>
+        <ng-container
+          *ngTemplateOutlet="
+            impactAreaCheckboxes;
+            context: {
+              fieldRef: '[general-info]-environmental_biodiversity_impact_area_id',
+              fieldName: 'environmental_biodiversity_impact_area_id',
+              optionsList: this.getImpactAreasScoresComponents.environmentalBiodiversityTagScoreList(),
+              prefix: 'environmental'
+            }
+          "></ng-container>
       } @else {
         <app-pr-radio-button
           [options]="this.getImpactAreasScoresComponents.environmentalBiodiversityTagScoreList()"
@@ -198,12 +214,16 @@
     </div>
     @if (this.generalInfoBody.poverty_tag_level_id == 3) {
       @if (this.dataControlSE.currentResultSignal()?.portfolio === 'P25') {
-        <ng-container *ngTemplateOutlet="impactAreaCheckboxes; context: {
-          fieldRef: '[general-info]-poverty_impact_area_id',
-          fieldName: 'poverty_impact_area_id',
-          optionsList: this.getImpactAreasScoresComponents.povertyTagScoreList(),
-          prefix: 'poverty'
-        }"></ng-container>
+        <ng-container
+          *ngTemplateOutlet="
+            impactAreaCheckboxes;
+            context: {
+              fieldRef: '[general-info]-poverty_impact_area_id',
+              fieldName: 'poverty_impact_area_id',
+              optionsList: this.getImpactAreasScoresComponents.povertyTagScoreList(),
+              prefix: 'poverty'
+            }
+          "></ng-container>
       } @else {
         <app-pr-radio-button
           [options]="this.getImpactAreasScoresComponents.povertyTagScoreList()"
