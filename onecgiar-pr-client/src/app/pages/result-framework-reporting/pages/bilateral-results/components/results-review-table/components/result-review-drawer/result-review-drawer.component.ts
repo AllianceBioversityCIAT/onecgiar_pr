@@ -259,21 +259,29 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   }
 
   private executeSaveTocChanges(): void {
-    if (!this.tocInitiative || !this.isTocFormValid()) return;
+    if (!this.tocInitiative || this.tocInitiative.planned_result === undefined) {
+      this.isSaving.set(false);
+      this.showConfirmSaveChangesDialog.set(false);
+      this.cdr.markForCheck();
+      return;
+    }
 
     const detail = this.resultDetail();
     if (!detail?.commonFields?.id) {
       console.error('Result ID not available');
+      this.isSaving.set(false);
+      this.showConfirmSaveChangesDialog.set(false);
+      this.cdr.markForCheck();
       return;
     }
 
     const resultId = Number.parseInt(detail.commonFields.id, 10);
 
-    const resultTocResults = this.tocInitiative.result_toc_results.map((tab: any) => {
+    const resultTocResults = (this.tocInitiative.result_toc_results || []).map((tab: any) => {
       const resultTocResult: any = {
-        toc_result_id: tab.toc_result_id,
+        toc_result_id: tab.toc_result_id || null,
         toc_progressive_narrative: tab.toc_progressive_narrative || null,
-        toc_level_id: tab.toc_level_id
+        toc_level_id: tab.toc_level_id || null
       };
 
       if (tab.result_toc_result_id) {
@@ -286,8 +294,8 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     const body = {
       tocMetadata: {
         planned_result: this.tocInitiative.planned_result,
-        initiative_id: this.tocInitiative.initiative_id || this.initiativeIdSignal(),
-        result_toc_results: resultTocResults
+        initiative_id: this.tocInitiative.initiative_id || this.initiativeIdSignal() || null,
+        result_toc_results: resultTocResults.length > 0 ? resultTocResults : []
       },
       updateExplanation: this.saveChangesJustification
     };
@@ -295,7 +303,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     // Call the API
     this.api.resultsSE.PATCH_BilateralTocMetadata(resultId, body).subscribe({
       next: response => {
-        // Reload the result detail to get updated data
         this.loadResultDetail(String(resultId));
         this.showConfirmSaveChangesDialog.set(false);
         this.saveChangesJustification = '';
@@ -306,8 +313,10 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
       error: err => {
         console.error('Error saving TOC metadata:', err);
         this.isSaving.set(false);
+        this.showConfirmSaveChangesDialog.set(false);
+        this.saveChangesJustification = '';
+        this.saveChangesType = null;
         this.cdr.markForCheck();
-        // You might want to show an error message to the user here
       }
     });
   }
@@ -714,7 +723,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
   private ensureInstitutionsLoaded(): Promise<void> {
     return new Promise(resolve => {
-      // If institutions are already loaded, resolve immediately
       if (this.institutionsSE.institutionsList && this.institutionsSE.institutionsList.length > 0) {
         resolve();
         return;
@@ -728,14 +736,11 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         }
       };
 
-      // Otherwise, wait for the loadedInstitutions event
       const subscription = this.institutionsSE.loadedInstitutions.subscribe(() => {
         subscription.unsubscribe();
         doResolve();
       });
 
-      // Timeout fallback (in case the service is already loaded but event was missed)
-      // Check periodically if institutions are loaded
       const checkInterval = setInterval(() => {
         if (this.institutionsSE.institutionsList && this.institutionsSE.institutionsList.length > 0) {
           clearInterval(checkInterval);
@@ -744,7 +749,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         }
       }, 100);
 
-      // Maximum wait time of 3 seconds
       setTimeout(() => {
         clearInterval(checkInterval);
         subscription.unsubscribe();
@@ -823,17 +827,14 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         if (detail.contributingInitiatives) {
           if (Array.isArray(detail.contributingInitiatives)) {
             detail.contributingInitiatives = detail.contributingInitiatives.map((initiative: any) => {
-              // Prioritize id over official_code since optionValue="id" in the multi-select
               return initiative.id || initiative.official_code || initiative;
             });
             this.disabledContributingInitiatives.set([]);
           } else if (typeof detail.contributingInitiatives === 'object') {
-            // New format: object with contributing_and_primary, accepted and pending arrays
             const contributingAndPrimary = detail.contributingInitiatives.contributing_and_primary_initiative || [];
             const accepted = detail.contributingInitiatives.accepted_contributing_initiatives || [];
             const pending = detail.contributingInitiatives.pending_contributing_initiatives || [];
 
-            // Get primary initiative ID from contributing_and_primary_initiative
             if (contributingAndPrimary.length > 0 && contributingAndPrimary[0].id) {
               primaryInitiativeId = contributingAndPrimary[0].id;
             }
@@ -842,7 +843,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
             const allInitiatives = [...contributingAndPrimary, ...accepted, ...pending];
             detail.contributingInitiatives = allInitiatives.map((initiative: any) => {
-              // Prioritize id over official_code since optionValue="id" in the multi-select
               return initiative.id || initiative.official_code || initiative;
             });
           } else {
@@ -854,7 +854,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
           this.disabledContributingInitiatives.set([]);
         }
 
-        // Transform contributingInstitutions from objects to array of institutions_id
         if (detail.contributingInstitutions && Array.isArray(detail.contributingInstitutions)) {
           detail.contributingInstitutions = detail.contributingInstitutions.map((institution: any) => {
             const institutionId = institution.institutions_id || institution.id;
