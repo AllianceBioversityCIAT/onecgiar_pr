@@ -221,12 +221,13 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   }
 
   onSaveTocChanges(): void {
-    if (!this.tocInitiative || !this.isTocFormValid()) return;
+    if (!this.tocInitiative || this.tocInitiative.planned_result === null || this.tocInitiative.planned_result === undefined) {
+      return;
+    }
     this.saveChangesType = 'toc';
     this.saveChangesJustification = '';
     this.showConfirmSaveChangesDialog.set(true);
   }
-
   onSaveDataStandardChanges(): void {
     this.saveChangesType = 'dataStandard';
     this.saveChangesJustification = '';

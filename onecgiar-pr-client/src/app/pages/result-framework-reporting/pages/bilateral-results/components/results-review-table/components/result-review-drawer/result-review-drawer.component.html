@@ -82,18 +82,19 @@
               [forceP25]="true">
             </app-cp-multiple-wps>
           </div>
-          
-          <div style="margin-top: 20px; display: flex; justify-content: flex-end">
-            <p-button
-              label="Save changes"
-              icon="pi pi-save"
-              [disabled]="!isTocFormValid()"
-              (onClick)="onSaveTocChanges()"
-              styleClass="p-button-primary">
-            </p-button>
-          </div>
         }
       }
+
+      <!-- Save changes button - always visible, enabled only when Yes/No is selected -->
+      <div style="margin-top: 20px; display: flex; justify-content: flex-end">
+        <p-button
+          label="Save changes"
+          icon="pi pi-save"
+          [disabled]="tocInitiative?.planned_result === null || tocInitiative?.planned_result === undefined"
+          (onClick)="onSaveTocChanges()"
+          styleClass="p-button-primary">
+        </p-button>
+      </div>
     </div>
 
     @if (fields?.commonFields) {
