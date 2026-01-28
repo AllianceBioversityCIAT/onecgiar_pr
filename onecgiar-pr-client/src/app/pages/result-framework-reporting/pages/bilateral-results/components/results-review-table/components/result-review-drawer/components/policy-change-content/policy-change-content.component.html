@@ -1,0 +1,39 @@
+@if (resultDetail && resultDetail.resultTypeResponse && resultDetail.resultTypeResponse.length > 0) {
+  <app-pr-select
+    [options]="policyControlListSE.policyTypesList"
+    label="Policy type"
+    description="Select policy type"
+    optionLabel="name"
+    optionValue="id"
+    placeholder="Select policy type"
+    [required]="false"
+    [(ngModel)]="resultDetail.resultTypeResponse[0].policy_type_id">
+  </app-pr-select>
+
+  <br />
+
+  <app-pr-select
+    [options]="policyControlListSE.policyStages"
+    label="Stage in policy process"
+    description="Select stage"
+    optionLabel="full_name"
+    optionValue="id"
+    placeholder="Select stage"
+    [required]="false"
+    [(ngModel)]="resultDetail.resultTypeResponse[0].policy_stage_id">
+  </app-pr-select>
+
+  <br />
+
+  <app-pr-multi-select
+    [options]="institutionsService.institutionsList"
+    label="Whose policy is this? (Implementing organizations)"
+    selectedLabel="Organization"
+    selectedOptionLabel="full_name"
+    optionLabel="full_name"
+    optionValue="institutions_id"
+    placeholder="Select organization(s)"
+    [required]="false"
+    [(ngModel)]="resultDetail.resultTypeResponse[0].institutions">
+  </app-pr-multi-select>
+}

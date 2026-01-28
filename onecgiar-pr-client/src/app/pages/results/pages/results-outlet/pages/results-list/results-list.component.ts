@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, AfterViewInit, ViewChild, effect } from '@angular/core';
+import { Component, OnDestroy, OnInit, AfterViewInit, ViewChild, effect, inject } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { CurrentResult } from '../../../../../../shared/interfaces/current-result.interface';
 import { ResultsListService } from './services/results-list.service';
@@ -9,6 +9,8 @@ import { PhasesService } from '../../../../../../shared/services/global/phases.s
 import { Table } from 'primeng/table';
 import { ResultsNotificationsService } from '../results-notifications/results-notifications.service';
 import { ResultsListFilterService } from './services/results-list-filter.service';
+import { Router } from '@angular/router';
+import { BilateralResultsService } from '../../../../../result-framework-reporting/pages/bilateral-results/bilateral-results.service';
 
 interface ItemMenu {
   label: string;
@@ -18,6 +20,7 @@ interface ItemMenu {
   tooltipText?: string;
   tooltipShow?: boolean;
   disabled?: boolean;
+  inlineStyle?: string;
 }
 
 @Component({
@@ -27,57 +30,84 @@ interface ItemMenu {
   standalone: false
 })
 export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
+  router = inject(Router);
+  bilateralResultsService = inject(BilateralResultsService);
+
   gettingReport = false;
   combine = true;
 
   columnOrder = [
-    { title: 'Result code', attr: 'result_code', center: true, width: '105px' },
+    { title: 'Result code', attr: 'result_code', center: true, width: '95px' },
     { title: 'Title', attr: 'title', class: 'notCenter', width: '305px' },
+    { title: 'Funding Source', attr: 'source_name', class: 'notCenter', width: '105px' },
     { title: 'Phase - Portfolio', attr: 'phase_name', width: '155px' },
-    { title: 'Indicator category', attr: 'result_type', width: '180px' },
-    { title: 'Submitter', attr: 'submitter', center: true, width: '95px' },
-    { title: 'Status', attr: 'full_status_name_html', center: true, width: '75px' },
+    { title: 'Indicator category', attr: 'result_type', width: '150px' },
+    { title: 'Submitter', attr: 'submitter', center: true, width: '60px' },
+    { title: 'Status', attr: 'full_status_name_html', center: true, width: '124px' },
     { title: 'Creation date	', attr: 'created_date', center: true, width: '120px' },
     { title: 'Created by	', attr: 'full_name', width: '120px' }
   ];
   items: ItemMenu[] = [
     {
       label: 'Map to TOC',
-      icon: 'pi pi-fw pi-sitemap',
+      icon: 'pi pi-sitemap',
       visible: true,
+      inlineStyle: 'color: var(--pr-color-primary-300);',
       command: () => {
         this.api.dataControlSE.showShareRequest = true;
       }
     },
     {
       label: 'Update result',
-      icon: 'pi pi-fw pi-clone',
+      icon: 'pi pi-clone',
       visible: true,
+      inlineStyle: 'color: var(--pr-color-primary-300);',
       command: () => {
         this.api.dataControlSE.chagePhaseModal = true;
+      }
+    },
+    {
+      label: 'Review result',
+      icon: 'pi pi-eye',
+      inlineStyle: 'color: var(--pr-color-primary-300);',
+      visible: false,
+      command: () => {
+        this.navigateToResult(this.api.dataControlSE.currentResult);
       }
     }
   ];
   itemsWithDelete: ItemMenu[] = [
     {
       label: 'Map to TOC',
-      icon: 'pi pi-fw pi-sitemap',
+      icon: 'pi pi-sitemap',
       visible: true,
+      inlineStyle: 'color: var(--pr-color-primary-300);',
       command: () => {
         this.api.dataControlSE.showShareRequest = true;
       }
     },
     {
       label: 'Update result',
-      icon: 'pi pi-fw pi-clone',
+      icon: 'pi pi-clone',
       visible: true,
+      inlineStyle: 'color: var(--pr-color-primary-300);',
       command: () => {
         this.api.dataControlSE.chagePhaseModal = true;
       }
     },
     {
+      label: 'Review result',
+      icon: 'pi pi-pencil',
+      visible: false,
+      inlineStyle: 'color: var(--pr-color-primary-300);',
+      command: () => {
+        this.navigateToResult(this.api.dataControlSE.currentResult);
+      }
+    },
+    {
       label: 'Delete',
-      icon: 'pi pi-fw pi-trash',
+      icon: 'pi pi-trash',
+      inlineStyle: 'color: var(--pr-color-red-300);',
       command: () => {
         this.onDeleteREsult();
       }
@@ -176,16 +206,43 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
     this.api.dataControlSE.currentResult = result;
 
     const canUpdate = this.api.shouldShowUpdate(result, this.api.dataControlSE.reportingCurrentPhase);
-    this.items[1].visible = canUpdate;
-    this.itemsWithDelete[1].visible =
-      this.api.dataControlSE.reportingCurrentPhase.portfolioAcronym !== 'P25'
-        ? this.api.dataControlSE.currentResult?.phase_year < this.api.dataControlSE.reportingCurrentPhase.phaseYear &&
-          this.api.dataControlSE.currentResult?.phase_year !== this.api.dataControlSE.reportingCurrentPhase.phaseYear
-        : canUpdate;
 
-    if (!this.api.rolesSE.isAdmin) {
-      this.itemsWithDelete[2] = {
-        ...this.itemsWithDelete[2],
+    if (result?.source_name == 'W3/Bilaterals') {
+      this.itemsWithDelete[0].visible = false;
+      this.itemsWithDelete[1].visible = false;
+      this.items[0].visible = false;
+      this.items[1].visible = false;
+
+      this.itemsWithDelete[2].visible = true;
+      this.itemsWithDelete[2].label = result?.status_name == 'Pending Review' ? 'Review result' : 'See result';
+      this.itemsWithDelete[2].icon = result?.status_name == 'Pending Review' ? 'pi pi-pencil' : 'pi pi-eye';
+
+      this.items[2].visible = true;
+      this.items[2].label = result?.status_name == 'Pending Review' ? 'Review result' : 'See result';
+      this.items[2].icon = result?.status_name == 'Pending Review' ? 'pi pi-pencil' : 'pi pi-eye';
+    } else {
+      this.itemsWithDelete[0].visible = true;
+      this.itemsWithDelete[2].visible = false;
+      this.items[0].visible = true;
+      this.items[1].visible = canUpdate;
+      this.items[2].visible = false;
+      this.itemsWithDelete[1].visible =
+        this.api.dataControlSE.reportingCurrentPhase.portfolioAcronym === 'P25'
+          ? canUpdate
+          : this.api.dataControlSE.currentResult?.phase_year < this.api.dataControlSE.reportingCurrentPhase.phaseYear &&
+            this.api.dataControlSE.currentResult?.phase_year !== this.api.dataControlSE.reportingCurrentPhase.phaseYear;
+    }
+
+    if (this.api.rolesSE.isAdmin) {
+      this.itemsWithDelete[3] = {
+        ...this.itemsWithDelete[3],
+        disabled: this.api.dataControlSE.currentResult?.status_id == '2',
+        tooltipShow: this.api.dataControlSE.currentResult?.status_id == '2',
+        tooltipText: 'You are not allowed to perform this action because the result is in the status "QAed".'
+      };
+    } else {
+      this.itemsWithDelete[3] = {
+        ...this.itemsWithDelete[3],
         disabled:
           (this.api.dataControlSE.currentResult?.role_id !== 3 &&
             this.api.dataControlSE.currentResult?.role_id !== 4 &&
@@ -198,19 +255,12 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
           this.api.dataControlSE.currentResult?.status_id == '2',
         tooltipText: this.getDeleteTooltipText()
       };
-    } else {
-      this.itemsWithDelete[2] = {
-        ...this.itemsWithDelete[2],
-        disabled: this.api.dataControlSE.currentResult?.status_id == '2',
-        tooltipShow: this.api.dataControlSE.currentResult?.status_id == '2',
-        tooltipText: 'You are not allowed to perform this action because the result is in the status "QAed".'
-      };
     }
 
     if (this.api.dataControlSE.reportingCurrentPhase.portfolioAcronym == this.api.dataControlSE.currentResult?.acronym) {
-      this.itemsWithDelete[2].visible = true;
+      this.itemsWithDelete[3].visible = true;
     } else {
-      this.itemsWithDelete[2].visible = false;
+      this.itemsWithDelete[3].visible = false;
     }
   }
 
@@ -263,6 +313,21 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
         });
       }
     );
+  }
+
+  navigateToResult(result: CurrentResult) {
+    if (result?.source_name == 'W3/Bilaterals') {
+      const url = '/result-framework-reporting/entity-details/' + result.submitter + '/results-review';
+      this.bilateralResultsService.currentResultToReview.set(result);
+
+      this.router.navigateByUrl(url).then(() => {
+        this.bilateralResultsService.showReviewDrawer.set(true);
+      });
+    } else {
+      const url = '/result/result-detail/' + result.result_code + '/general-information?phase=' + result.version_id;
+
+      this.router.navigateByUrl(url);
+    }
   }
 
   ngOnDestroy(): void {
