@@ -33,6 +33,7 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   @Input() isIpsr: boolean = false;
   @Input() showMultipleWPsContent: boolean = true;
   @Input() isUnplanned: boolean = false;
+  @Input() hidden: boolean = false;
   @Input() allTabsCreated = [];
   @Input() outcomeList: WritableSignal<any[]>;
   @Input() outputList: WritableSignal<any[]>;
@@ -62,8 +63,10 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   }
 
   setActiveTabSignal() {
-    this.activeTabSignal.update(prev => {
-      return { ...prev, toc_level_id: this.activeTab.toc_level_id };
+    const currentTab = this.activeTabSignal();
+    this.activeTabSignal.set({
+      ...currentTab,
+      toc_level_id: this.activeTab.toc_level_id
     });
   }
 

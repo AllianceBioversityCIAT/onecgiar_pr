@@ -88,11 +88,64 @@ describe('TocInitiativeOutcomeListsService', () => {
       ]
     });
 
-    const errorService = TestBed.inject(TocInitiativeOutcomeListsService);
+    TestBed.inject(TocInitiativeOutcomeListsService);
 
     setTimeout(() => {
       expect(spyConsoleError).toHaveBeenCalledWith(errorMessage);
       done();
     }, 100);
+  });
+
+  describe('onChangePortfolio effect', () => {
+    it('should not call API when portfolio is undefined', done => {
+      const spy = jest.spyOn(mockApiService.tocApiSE, 'GET_AllTocLevels');
+
+      const noPortfolioDataControlService = {
+        currentResultSignal: jest.fn().mockReturnValue({ portfolio: undefined })
+      };
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [HttpClientTestingModule],
+        providers: [
+          TocInitiativeOutcomeListsService,
+          { provide: ApiService, useValue: mockApiService },
+          { provide: FieldsManagerService, useValue: mockFieldsManagerService },
+          { provide: DataControlService, useValue: noPortfolioDataControlService }
+        ]
+      });
+
+      TestBed.inject(TocInitiativeOutcomeListsService);
+
+      setTimeout(() => {
+        expect(spy).not.toHaveBeenCalled();
+        done();
+      }, 100);
+    });
+
+    it('should call API with isP25 true when isP25 returns true', done => {
+      const spy = jest.spyOn(mockApiService.tocApiSE, 'GET_AllTocLevels');
+      const trueFieldsManagerService = {
+        isP25: jest.fn().mockReturnValue(true)
+      };
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [HttpClientTestingModule],
+        providers: [
+          TocInitiativeOutcomeListsService,
+          { provide: ApiService, useValue: mockApiService },
+          { provide: FieldsManagerService, useValue: trueFieldsManagerService },
+          { provide: DataControlService, useValue: mockDataControlService }
+        ]
+      });
+
+      TestBed.inject(TocInitiativeOutcomeListsService);
+
+      setTimeout(() => {
+        expect(spy).toHaveBeenCalledWith(true);
+        done();
+      }, 100);
+    });
   });
 });

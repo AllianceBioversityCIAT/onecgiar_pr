@@ -21,12 +21,12 @@ export interface GroupedResult {
 
 export interface BilateralResultDetail {
   commonFields: BilateralCommonFields;
-  tocMetadata: BilateralTocMetadata[];
+  tocMetadata: BilateralTocMetadata | BilateralTocMetadata[];
   geographicScope: BilateralGeographicScope;
   contributingCenters: BilateralContributingCenter[];
   contributingInstitutions: BilateralContributingInstitution[];
   contributingProjects: BilateralContributingProject[];
-  contributingInitiatives: BilateralContributingInitiative[];
+  contributingInitiatives: BilateralContributingInitiative[] | BilateralContributingInitiativesObject;
   evidence: BilateralEvidence[];
   resultTypeResponse: BilateralResultTypeResponse[];
 }
@@ -50,10 +50,44 @@ export interface BilateralCommonFields {
 }
 
 export interface BilateralTocMetadata {
-  planned_result: number;
-  acronym: string;
-  result_title: string;
-  indicator_description: string;
+  planned_result: boolean | number;
+  initiative_id?: number;
+  official_code?: string;
+  short_name?: string;
+  result_toc_results?: BilateralTocResult[];
+  // Legacy format fields
+  acronym?: string;
+  toc_result_id?: number;
+  result_title?: string;
+  indicator_id?: string;
+  indicator_description?: string;
+}
+
+export interface BilateralTocResult {
+  result_toc_result_id: number;
+  toc_result_id: number;
+  planned_result: boolean;
+  initiative_id: number;
+  toc_progressive_narrative: string | null;
+  toc_level_id: number;
+  indicators: BilateralTocIndicator[];
+}
+
+export interface BilateralTocIndicator {
+  result_toc_result_indicator_id: number;
+  toc_results_indicator_id: string;
+  indicator_contributing: number | null;
+  status_id: number | null;
+  targets: BilateralTocIndicatorTarget[];
+}
+
+export interface BilateralTocIndicatorTarget {
+  indicators_targets: number;
+  number_target: number;
+  contributing_indicator: number;
+  target_date: number;
+  target_progress_narrative: string | null;
+  indicator_question: string | null;
 }
 
 export interface BilateralGeographicScope {
@@ -147,8 +181,21 @@ export interface BilateralClarisaProject {
 }
 
 export interface BilateralContributingInitiative {
-  initiative_role: string;
+  initiative_role?: string;
   official_code: string;
+  id?: number;
+  initiative_name?: string;
+  short_name?: string;
+  initiative_role_id?: number | null;
+  request_status_id?: number;
+  share_result_request_id?: number;
+  is_active?: number;
+}
+
+export interface BilateralContributingInitiativesObject {
+  contributing_and_primary_initiative?: BilateralContributingInitiative[];
+  accepted_contributing_initiatives: BilateralContributingInitiative[];
+  pending_contributing_initiatives: BilateralContributingInitiative[];
 }
 
 export interface BilateralEvidence {
@@ -168,18 +215,25 @@ export interface BilateralResultTypeResponse {
   keyword: string;
   keywords: BilateralKeyword[];
   innovation_type_name: string;
+  innovation_nature_id: number;
   innovation_developers: string;
+  innovation_readiness_level_id: number;
   level: string;
   name: string;
   policy_type_name: string;
   policy_stage_name: string;
+  policy_type_id: number;
+  policy_stage_id: number;
   implementing_organization: BilateralImplementingOrganization[];
+  institutions: any[];
   male_using: string;
   female_using: string;
   non_binary_using: string;
   has_unkown_using: string;
   term_name: string;
   delivery_method_name: string;
+  capdev_term_id: number;
+  capdev_delivery_method_id: number;
 }
 
 export interface BilateralImplementingOrganization {
