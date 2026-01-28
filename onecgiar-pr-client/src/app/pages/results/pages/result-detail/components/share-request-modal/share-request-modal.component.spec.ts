@@ -45,7 +45,8 @@ describe('ShareRequestModalComponent', () => {
         show: jest.fn()
       },
       dataControlSE: {
-        showShareRequest: false
+        showShareRequest: false,
+        currentResultSignal: () => of({ portfolio: 'P25' })
       },
       rolesSE: {
         isAdmin: true

@@ -164,7 +164,9 @@ export class ShareRequestModalComponent implements OnInit {
 
     this.requesting = true;
 
-    this.api.resultsSE.PATCH_updateRequest(body).subscribe({
+    const isP25 = this.api.dataControlSE.currentResultSignal()?.portfolio === 'P25';
+
+    this.api.resultsSE.PATCH_updateRequest(body, isP25).subscribe({
       next: resp => {
         this.api.dataControlSE.showShareRequest = false;
         this.api.alertsFe.show({
@@ -180,6 +182,7 @@ export class ShareRequestModalComponent implements OnInit {
         }
       },
       error: err => {
+        console.error('error', err);
         this.api.dataControlSE.showShareRequest = false;
         this.api.alertsFe.show({ id: 'noti-error', title: 'Error when requesting ', description: '', status: 'error' });
         this.requesting = false;

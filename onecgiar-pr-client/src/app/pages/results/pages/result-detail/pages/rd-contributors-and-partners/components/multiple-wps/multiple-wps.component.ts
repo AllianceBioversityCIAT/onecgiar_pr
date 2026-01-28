@@ -16,7 +16,7 @@ import { TocTab } from '../../../../../../../../shared/interfaces/toc-tab.interf
 export class CPMultipleWPsComponent implements OnChanges {
   @Input() editable: boolean;
   @Input() initiative: ResultToResultInterfaceToc | null | any;
-  @Input() initiativeId: WritableSignal<number | null>;
+  @Input() initiativeId: number | null;
   @Input() isContributor?: boolean = false;
   @Input() isNotifications?: boolean = false;
   @Input() resultLevelId: number | string;
@@ -42,10 +42,10 @@ export class CPMultipleWPsComponent implements OnChanges {
   constructor(
     public api: ApiService,
     private customizedAlertsFeSE: CustomizedAlertsFeService
-  ) { }
+  ) {}
 
   onChangesInitiative = effect(() => {
-    if (!this.initiativeId()) return;
+    if (!this.initiativeId) return;
     this.GET_outcomeList();
     this.GET_outputList();
     this.GET_EOIList();
@@ -82,10 +82,10 @@ export class CPMultipleWPsComponent implements OnChanges {
     this.api.tocApiSE
       .GET_tocLevelsByconfig(
         this.api.dataControlSE.currentNotification?.result_id ||
-        this.activeTab?.results_id ||
-        this.api.dataControlSE?.currentResult?.id ||
-        this.api.dataControlSE.currentResultSignal()?.result_id,
-        this.initiativeId(),
+          this.activeTab?.results_id ||
+          this.api.dataControlSE?.currentResult?.id ||
+          this.api.dataControlSE.currentResultSignal()?.result_id,
+        this.initiativeId,
         1,
         this.fieldsManagerSE.isP25()
       )
@@ -104,10 +104,10 @@ export class CPMultipleWPsComponent implements OnChanges {
     this.api.tocApiSE
       .GET_tocLevelsByconfig(
         this.api.dataControlSE.currentNotification?.result_id ||
-        this.activeTab?.results_id ||
-        this.api.dataControlSE?.currentResult?.id ||
-        this.api.dataControlSE.currentResultSignal()?.result_id,
-        this.initiativeId(),
+          this.activeTab?.results_id ||
+          this.api.dataControlSE?.currentResult?.id ||
+          this.api.dataControlSE.currentResultSignal()?.result_id,
+        this.initiativeId,
         2,
         this.fieldsManagerSE.isP25()
       )
@@ -126,10 +126,10 @@ export class CPMultipleWPsComponent implements OnChanges {
     this.api.tocApiSE
       .GET_tocLevelsByconfig(
         this.api.dataControlSE.currentNotification?.result_id ||
-        this.activeTab?.results_id ||
-        this.api.dataControlSE?.currentResult?.id ||
-        this.api.dataControlSE.currentResultSignal()?.result_id,
-        this.initiativeId(),
+          this.activeTab?.results_id ||
+          this.api.dataControlSE?.currentResult?.id ||
+          this.api.dataControlSE.currentResultSignal()?.result_id,
+        this.initiativeId,
         3,
         this.fieldsManagerSE.isP25()
       )
@@ -183,7 +183,7 @@ export class CPMultipleWPsComponent implements OnChanges {
     const newIndex = this.initiative?.result_toc_results.length;
     this.initiative.result_toc_results.push({
       action_area_outcome_id: null,
-      initiative_id: this.initiativeId(),
+      initiative_id: this.initiativeId,
       official_code: this.initiative?.official_code,
       planned_result: this.initiative?.planned_result,
       results_id: null,
