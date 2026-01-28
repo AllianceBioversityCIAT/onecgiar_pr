@@ -2352,7 +2352,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
   ): Promise<any[]> {
     const hasCenterFilter = centerIds && centerIds.length > 0;
     const joinType = hasCenterFilter ? 'INNER' : 'LEFT';
-    
+
     const baseQuery = `
       WITH tri_one AS (
         SELECT

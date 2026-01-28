@@ -75,7 +75,6 @@ import { ReviewUpdateDto } from './dto/review-update.dto';
 import { ResultsTocResultsService } from './results-toc-results/results-toc-results.service';
 
 describe('ResultsService (unit, pure mocks)', () => {
-  
   let module: TestingModule;
   let resultService: ResultsService;
   let currentResultId: number;
@@ -87,13 +86,11 @@ describe('ResultsService (unit, pure mocks)', () => {
       id: data?.id ?? 999,
       result_code: data?.result_code ?? 101,
     })),
-    getResultById: jest
-      .fn()
-      .mockImplementation(async (id: number) => {
-        if (id <= 0) return null;
-        // Retornar un objeto con id como número para que funcione correctamente
-        return { id: id, result_type_id: 1, status_id: 1 };
-      }),
+    getResultById: jest.fn().mockImplementation(async (id: number) => {
+      if (id <= 0) return null;
+      // Retornar un objeto con id como número para que funcione correctamente
+      return { id: id, result_type_id: 1, status_id: 1 };
+    }),
     query: jest.fn().mockResolvedValue([]),
     getPendingReviewCountByProgram: jest.fn().mockResolvedValue([]),
     getResultsByProgramAndCenters: jest.fn().mockResolvedValue([]),
@@ -138,7 +135,9 @@ describe('ResultsService (unit, pure mocks)', () => {
     AllResults: jest.fn().mockResolvedValue([{ id: '1' }]),
     resultsForElasticSearch: jest.fn().mockResolvedValue([{}]),
     getResultByIdElastic: jest.fn(),
-    transformResultCode: jest.fn().mockResolvedValue({ transformed_code: 'R-2024-001' }),
+    transformResultCode: jest
+      .fn()
+      .mockResolvedValue({ transformed_code: 'R-2024-001' }),
     AllResultsByRoleUserAndInitiativeFiltered: jest
       .fn()
       .mockResolvedValue({ results: [], total: 0 }),
@@ -1677,9 +1676,9 @@ describe('ResultsService (unit, pure mocks)', () => {
     it('should call elastic service with correct parameters', async () => {
       const documentName = 'results';
       const id = '123';
-      (mockElasticService.findForElasticSearch as jest.Mock).mockResolvedValueOnce(
-        { hits: [] },
-      );
+      (
+        mockElasticService.findForElasticSearch as jest.Mock
+      ).mockResolvedValueOnce({ hits: [] });
 
       await resultService.findForElasticSearch(documentName, id);
       expect(mockElasticService.findForElasticSearch).toHaveBeenCalledWith(
@@ -1690,9 +1689,9 @@ describe('ResultsService (unit, pure mocks)', () => {
 
     it('should call elastic service without id', async () => {
       const documentName = 'results';
-      (mockElasticService.findForElasticSearch as jest.Mock).mockResolvedValueOnce(
-        { hits: [] },
-      );
+      (
+        mockElasticService.findForElasticSearch as jest.Mock
+      ).mockResolvedValueOnce({ hits: [] });
 
       await resultService.findForElasticSearch(documentName);
       expect(mockElasticService.findForElasticSearch).toHaveBeenCalledWith(
@@ -1705,8 +1704,9 @@ describe('ResultsService (unit, pure mocks)', () => {
   describe('findAllSimplified', () => {
     it('should return simplified results successfully', async () => {
       const mockResults = [{ id: 1, title: 'Result 1' }];
-      (mockResultRepository.resultsForElasticSearch as jest.Mock) =
-        jest.fn().mockResolvedValueOnce(mockResults);
+      (mockResultRepository.resultsForElasticSearch as jest.Mock) = jest
+        .fn()
+        .mockResolvedValueOnce(mockResults);
 
       const res = await resultService.findAllSimplified();
       expect((res as returnFormatService).status).toBe(HttpStatus.OK);
@@ -1715,8 +1715,9 @@ describe('ResultsService (unit, pure mocks)', () => {
 
     it('should call with id and allowDeleted parameters', async () => {
       const mockResults = [{ id: 1, title: 'Result 1' }];
-      (mockResultRepository.resultsForElasticSearch as jest.Mock) =
-        jest.fn().mockResolvedValueOnce(mockResults);
+      (mockResultRepository.resultsForElasticSearch as jest.Mock) = jest
+        .fn()
+        .mockResolvedValueOnce(mockResults);
 
       await resultService.findAllSimplified('123', true);
       expect(mockResultRepository.resultsForElasticSearch).toHaveBeenCalledWith(
@@ -1754,7 +1755,9 @@ describe('ResultsService (unit, pure mocks)', () => {
       const res = await resultService.getGeoScope(100);
       expect((res as returnFormatService).status).toBe(HttpStatus.OK);
       expect((res as returnFormatService).response.geo_scope_id).toBe(1);
-      expect((res as returnFormatService).response.regions).toEqual(mockRegions);
+      expect((res as returnFormatService).response.regions).toEqual(
+        mockRegions,
+      );
       expect((res as returnFormatService).response.countries).toEqual(
         mockCountries,
       );
@@ -1937,8 +1940,9 @@ describe('ResultsService (unit, pure mocks)', () => {
       (
         mockResultRepository.getCommonFieldsBilateralResultById as jest.Mock
       ).mockResolvedValueOnce(mockCommonFields);
-      (resultService.getBilateralResultById as jest.Mock) =
-        jest.fn().mockResolvedValueOnce(mockBilateralData);
+      (resultService.getBilateralResultById as jest.Mock) = jest
+        .fn()
+        .mockResolvedValueOnce(mockBilateralData);
       (
         mockContributorsPartnersService.updatePartnersV2 as jest.Mock
       ).mockResolvedValueOnce({
@@ -1963,12 +1967,13 @@ describe('ResultsService (unit, pure mocks)', () => {
           id: 100,
           result_type_id: ResultTypeEnum.POLICY_CHANGE,
         },
-        evidence: {
-          jsonData: JSON.stringify({
-            result_id: 100,
+        evidence: [
+          {
+            id: '12',
             link: 'https://example.com',
-          }),
-        },
+            is_sharepoint: 0,
+          },
+        ],
         updateExplanation: 'Updated evidence',
       };
 
@@ -1985,8 +1990,9 @@ describe('ResultsService (unit, pure mocks)', () => {
       (
         mockResultRepository.getCommonFieldsBilateralResultById as jest.Mock
       ).mockResolvedValueOnce(mockCommonFields);
-      (resultService.getBilateralResultById as jest.Mock) =
-        jest.fn().mockResolvedValueOnce(mockBilateralData);
+      (resultService.getBilateralResultById as jest.Mock) = jest
+        .fn()
+        .mockResolvedValueOnce(mockBilateralData);
       (mockEvidencesService.create as jest.Mock).mockResolvedValueOnce({
         status: HttpStatus.OK,
         response: {},
@@ -2027,8 +2033,9 @@ describe('ResultsService (unit, pure mocks)', () => {
       (
         mockResultRepository.getCommonFieldsBilateralResultById as jest.Mock
       ).mockResolvedValueOnce(mockCommonFields);
-      (resultService.getBilateralResultById as jest.Mock) =
-        jest.fn().mockResolvedValueOnce(mockBilateralData);
+      (resultService.getBilateralResultById as jest.Mock) = jest
+        .fn()
+        .mockResolvedValueOnce(mockBilateralData);
       (
         mockContributorsPartnersService.updateTocMappingV2 as jest.Mock
       ).mockResolvedValueOnce({
@@ -2086,8 +2093,9 @@ describe('ResultsService (unit, pure mocks)', () => {
       (mockVersioningService.$_findPhase as jest.Mock).mockResolvedValueOnce(
         null,
       );
-      (mockResultRepository.transformResultCode as jest.Mock)
-        .mockResolvedValueOnce(mockTransformed);
+      (
+        mockResultRepository.transformResultCode as jest.Mock
+      ).mockResolvedValueOnce(mockTransformed);
 
       const res = await resultService.transformResultCode(1001);
       expect(res.statusCode).toBe(HttpStatus.OK);
@@ -2100,8 +2108,9 @@ describe('ResultsService (unit, pure mocks)', () => {
       (mockVersioningService.$_findPhase as jest.Mock).mockResolvedValueOnce(
         mockPhase,
       );
-      (mockResultRepository.transformResultCode as jest.Mock)
-        .mockResolvedValueOnce(mockTransformed);
+      (
+        mockResultRepository.transformResultCode as jest.Mock
+      ).mockResolvedValueOnce(mockTransformed);
 
       const res = await resultService.transformResultCode(1001, 5);
       expect(res.statusCode).toBe(HttpStatus.OK);
@@ -2115,8 +2124,9 @@ describe('ResultsService (unit, pure mocks)', () => {
       (mockVersioningService.$_findPhase as jest.Mock).mockResolvedValueOnce(
         null,
       );
-      (mockResultRepository.transformResultCode as jest.Mock)
-        .mockResolvedValueOnce(null);
+      (
+        mockResultRepository.transformResultCode as jest.Mock
+      ).mockResolvedValueOnce(null);
 
       const res = await resultService.transformResultCode(999);
       expect(res.statusCode).toBe(HttpStatus.NOT_FOUND);
@@ -2129,9 +2139,9 @@ describe('ResultsService (unit, pure mocks)', () => {
         { id: 1, result_type_id: ResultTypeEnum.INNOVATION_USE },
         { id: 2, result_type_id: ResultTypeEnum.INNOVATION_USE },
       ];
-      (mockResultRepository.getResultsForInnovUse as jest.Mock).mockResolvedValueOnce(
-        mockResults,
-      );
+      (
+        mockResultRepository.getResultsForInnovUse as jest.Mock
+      ).mockResolvedValueOnce(mockResults);
 
       const res = await resultService.getAllResultsForInnovUse();
       expect((res as returnFormatService).status).toBe(200);
@@ -2163,8 +2173,9 @@ describe('ResultsService (unit, pure mocks)', () => {
         { id: 1, title: 'Legacy Result 1' },
         { id: 2, title: 'Legacy Result 2' },
       ];
-      (mockResultRepository.AllResultsLegacyNewByTitle as jest.Mock) =
-        jest.fn().mockResolvedValueOnce(mockResults);
+      (mockResultRepository.AllResultsLegacyNewByTitle as jest.Mock) = jest
+        .fn()
+        .mockResolvedValueOnce(mockResults);
 
       const res = await resultService.findAllResultsLegacyNew('test');
       expect((res as returnFormatService).status).toBe(HttpStatus.OK);
@@ -2172,8 +2183,9 @@ describe('ResultsService (unit, pure mocks)', () => {
     });
 
     it('should return error when no results found', async () => {
-      (mockResultRepository.AllResultsLegacyNewByTitle as jest.Mock) =
-        jest.fn().mockResolvedValueOnce([]);
+      (mockResultRepository.AllResultsLegacyNewByTitle as jest.Mock) = jest
+        .fn()
+        .mockResolvedValueOnce([]);
 
       const res = await resultService.findAllResultsLegacyNew('nonexistent');
       expect((res as returnFormatService).status).toBe(HttpStatus.NOT_FOUND);
@@ -2191,13 +2203,18 @@ describe('ResultsService (unit, pure mocks)', () => {
         countries: [{ id: 3 }, { id: 4 }],
       };
       (mockResultRegionsService.create as jest.Mock).mockResolvedValueOnce({});
-      (mockResultCountriesService.create as jest.Mock).mockResolvedValueOnce({});
-      (mockResultRepository.resultsForElasticSearch as jest.Mock) =
-        jest.fn().mockResolvedValueOnce([{ id: 100 }]);
-      (mockElasticService.getBulkElasticOperationResults as jest.Mock)
-        .mockReturnValueOnce('{}');
-      (mockElasticService.sendBulkOperationToElastic as jest.Mock)
-        .mockResolvedValueOnce(undefined);
+      (mockResultCountriesService.create as jest.Mock).mockResolvedValueOnce(
+        {},
+      );
+      (mockResultRepository.resultsForElasticSearch as jest.Mock) = jest
+        .fn()
+        .mockResolvedValueOnce([{ id: 100 }]);
+      (
+        mockElasticService.getBulkElasticOperationResults as jest.Mock
+      ).mockReturnValueOnce('{}');
+      (
+        mockElasticService.sendBulkOperationToElastic as jest.Mock
+      ).mockResolvedValueOnce(undefined);
 
       const res = await resultService.saveGeoScope(createResultGeo, userTest);
       expect((res as returnFormatService).status).toBe(HttpStatus.OK);
@@ -2214,9 +2231,9 @@ describe('ResultsService (unit, pure mocks)', () => {
         { id: 1, title: 'Result 1', created_date: '2024-06-01' },
         { id: 2, title: 'Result 2', created_date: '2024-07-01' },
       ];
-      (mockResultRepository.getResultDataForBasicReport as jest.Mock).mockResolvedValueOnce(
-        mockData,
-      );
+      (
+        mockResultRepository.getResultDataForBasicReport as jest.Mock
+      ).mockResolvedValueOnce(mockData);
 
       const res = await resultService.getResultDataForBasicReport(
         initDate,
@@ -2239,9 +2256,7 @@ describe('ResultsService (unit, pure mocks)', () => {
 
       const res = await resultService.createOwnerResult(newResult, userTest);
       expect((res as returnFormatService).status).toBe(HttpStatus.BAD_REQUEST);
-      expect((res as returnFormatService).message).toContain(
-        'not allowed',
-      );
+      expect((res as returnFormatService).message).toContain('not allowed');
     });
 
     it('should return error when initiative not found', async () => {
@@ -2252,12 +2267,12 @@ describe('ResultsService (unit, pure mocks)', () => {
         result_name: 'Test Result',
         handler: null,
       };
-      (mockClarisaInitiativesRepository.findOne as jest.Mock).mockImplementationOnce(
-        async ({ where: { id } }) => {
-          if (id === 999) return null;
-          return id > 0 ? { id } : null;
-        },
-      );
+      (
+        mockClarisaInitiativesRepository.findOne as jest.Mock
+      ).mockImplementationOnce(async ({ where: { id } }) => {
+        if (id === 999) return null;
+        return id > 0 ? { id } : null;
+      });
 
       const res = await resultService.createOwnerResult(newResult, userTest);
       expect((res as returnFormatService).status).toBe(HttpStatus.NOT_FOUND);
@@ -2272,9 +2287,9 @@ describe('ResultsService (unit, pure mocks)', () => {
         result_name: 'Test Result',
         handler: null,
       };
-      (mockClarisaInitiativesRepository.find as jest.Mock).mockResolvedValueOnce(
-        [{ id: 1 }],
-      );
+      (
+        mockClarisaInitiativesRepository.find as jest.Mock
+      ).mockResolvedValueOnce([{ id: 1 }]);
       (mockResultLevelRepository.findOne as jest.Mock).mockResolvedValueOnce(
         null,
       );
@@ -2292,19 +2307,21 @@ describe('ResultsService (unit, pure mocks)', () => {
         result_name: 'Test Result',
         handler: null,
       };
-      (mockClarisaInitiativesRepository.find as jest.Mock).mockResolvedValueOnce(
-        [{ id: 1 }],
-      );
+      (
+        mockClarisaInitiativesRepository.find as jest.Mock
+      ).mockResolvedValueOnce([{ id: 1 }]);
       (mockResultLevelRepository.findOne as jest.Mock).mockResolvedValueOnce({
         id: 1,
       });
-      (mockResultTypesService.findOneResultType as jest.Mock)
-        .mockResolvedValueOnce({
-          status: HttpStatus.OK,
-          response: { id: 1 },
-        });
-      (mockResultByLevelRepository.getByTypeAndLevel as jest.Mock)
-        .mockResolvedValueOnce(null);
+      (
+        mockResultTypesService.findOneResultType as jest.Mock
+      ).mockResolvedValueOnce({
+        status: HttpStatus.OK,
+        response: { id: 1 },
+      });
+      (
+        mockResultByLevelRepository.getByTypeAndLevel as jest.Mock
+      ).mockResolvedValueOnce(null);
 
       const res = await resultService.createOwnerResult(newResult, userTest);
       expect((res as returnFormatService).status).toBe(HttpStatus.BAD_REQUEST);

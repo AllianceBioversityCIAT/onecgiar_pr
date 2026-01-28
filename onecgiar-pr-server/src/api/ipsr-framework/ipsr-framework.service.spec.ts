@@ -40,9 +40,13 @@ describe('IpsrFrameworkService', () => {
     it('should handle different ids correctly', () => {
       const id1 = 1;
       const id2 = 999;
-      
-      expect(service.findOne(id1)).toBe(`This action returns a #${id1} ipsrFramework`);
-      expect(service.findOne(id2)).toBe(`This action returns a #${id2} ipsrFramework`);
+
+      expect(service.findOne(id1)).toBe(
+        `This action returns a #${id1} ipsrFramework`,
+      );
+      expect(service.findOne(id2)).toBe(
+        `This action returns a #${id2} ipsrFramework`,
+      );
     });
   });
 
@@ -56,9 +60,13 @@ describe('IpsrFrameworkService', () => {
     it('should handle different ids correctly', () => {
       const id1 = 1;
       const id2 = 999;
-      
-      expect(service.update(id1)).toBe(`This action updates a #${id1} ipsrFramework`);
-      expect(service.update(id2)).toBe(`This action updates a #${id2} ipsrFramework`);
+
+      expect(service.update(id1)).toBe(
+        `This action updates a #${id1} ipsrFramework`,
+      );
+      expect(service.update(id2)).toBe(
+        `This action updates a #${id2} ipsrFramework`,
+      );
     });
   });
 
@@ -72,9 +80,13 @@ describe('IpsrFrameworkService', () => {
     it('should handle different ids correctly', () => {
       const id1 = 1;
       const id2 = 999;
-      
-      expect(service.remove(id1)).toBe(`This action removes a #${id1} ipsrFramework`);
-      expect(service.remove(id2)).toBe(`This action removes a #${id2} ipsrFramework`);
+
+      expect(service.remove(id1)).toBe(
+        `This action removes a #${id1} ipsrFramework`,
+      );
+      expect(service.remove(id2)).toBe(
+        `This action removes a #${id2} ipsrFramework`,
+      );
     });
   });
 });
