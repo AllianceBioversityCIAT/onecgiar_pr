@@ -4,7 +4,10 @@ import { DataSource, Repository } from 'typeorm';
 import { TocResult } from './entities/toc-result.entity';
 import { Result } from '../../api/results/entities/result.entity';
 import { Year } from '../../api/results/years/entities/year.entity';
-import { RESULT_TYPE_TO_INDICATOR_PATTERN } from '../../shared/constants/indicator-type-mapping.constant';
+import {
+  getOtherTypesIndicatorPatterns,
+  RESULT_TYPE_TO_INDICATOR_PATTERN,
+} from '../../shared/constants/indicator-type-mapping.constant';
 
 @Injectable()
 export class TocResultsRepository extends Repository<TocResult> {
@@ -450,21 +453,43 @@ export class TocResultsRepository extends Repository<TocResult> {
       resultTypeId &&
       RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId]?.length
     ) {
-      const allowedPatterns = RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId];
-      const likeConditions = allowedPatterns
+      const currentTypePatterns = RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId];
+      const otherTypesPatterns = getOtherTypesIndicatorPatterns(resultTypeId);
+
+      const currentLikeConditions = currentTypePatterns
         .map(() => 'tri.type_value LIKE ?')
         .join(' OR ');
+
+      const currentTypeExists = `
+        EXISTS (
+          SELECT 1
+          FROM ${env.DB_TOC}.toc_results_indicators tri
+          WHERE tri.toc_results_id = tr.id
+            AND tri.is_active = 1
+            AND (${currentLikeConditions})
+        )
+      `;
+
+      let otherTypesCondition = '';
+      if (otherTypesPatterns.length > 0) {
+        const otherLikeConditions = otherTypesPatterns
+          .map(() => 'tri_other.type_value LIKE ?')
+          .join(' OR ');
+        otherTypesCondition = `
+          OR NOT EXISTS (
+            SELECT 1
+            FROM ${env.DB_TOC}.toc_results_indicators tri_other
+            WHERE tri_other.toc_results_id = tr.id
+              AND tri_other.is_active = 1
+              AND (${otherLikeConditions})
+          )
+        `;
+      }
 
       if (resultId && Number.isFinite(resultId) && resultId > 0) {
         indicatorFilter = `
           AND (
-            EXISTS (
-              SELECT 1 
-              FROM ${env.DB_TOC}.toc_results_indicators tri
-              WHERE tri.toc_results_id = tr.id
-                AND tri.is_active = 1
-                AND (${likeConditions})
-            )
+            (${currentTypeExists} ${otherTypesCondition})
             OR EXISTS (
               SELECT 1
               FROM ${env.DB_NAME}.results_toc_result rtr
@@ -474,18 +499,12 @@ export class TocResultsRepository extends Repository<TocResult> {
             )
           )
         `;
-        params.push(...allowedPatterns, resultId);
+        params.push(...currentTypePatterns, ...otherTypesPatterns, resultId);
       } else {
         indicatorFilter = `
-          AND EXISTS (
-            SELECT 1 
-            FROM ${env.DB_TOC}.toc_results_indicators tri
-            WHERE tri.toc_results_id = tr.id
-              AND tri.is_active = 1
-              AND (${likeConditions})
-          )
+          AND (${currentTypeExists} ${otherTypesCondition})
         `;
-        params.push(...allowedPatterns);
+        params.push(...currentTypePatterns, ...otherTypesPatterns);
       }
     }
 
