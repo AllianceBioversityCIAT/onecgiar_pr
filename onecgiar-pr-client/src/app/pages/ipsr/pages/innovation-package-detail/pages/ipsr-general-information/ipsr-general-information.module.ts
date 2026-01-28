@@ -6,9 +6,10 @@ import { IpsrGeneralInformationComponent } from './ipsr-general-information.comp
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { IpsrAnnualUpdatingComponent } from './components/ipsr-annual-updating/ipsr-annual-updating.component';
 import { FeedbackValidationDirectiveModule } from '../../../../../../shared/directives/feedback-validation-directive.module';
+import { CheckboxModule } from 'primeng/checkbox';
 
 @NgModule({
   declarations: [IpsrGeneralInformationComponent, IpsrAnnualUpdatingComponent],
-  imports: [CommonModule, IpsrGeneralInformationRoutingModule, CustomFieldsModule, FeedbackValidationDirectiveModule]
+  imports: [CommonModule, IpsrGeneralInformationRoutingModule, CustomFieldsModule, FeedbackValidationDirectiveModule, CheckboxModule]
 })
 export class IpsrGeneralInformationModule {}

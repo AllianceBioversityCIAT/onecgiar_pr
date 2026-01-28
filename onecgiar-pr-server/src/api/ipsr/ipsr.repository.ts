@@ -147,6 +147,13 @@ export class IpsrRepository
   }
 
   async getResultsInnovation(initiativeId: number[]) {
+    const initativeQuery = `select iem.initiative_id  
+                            from initiative_entity_map iem 
+                            where iem.entity_id IN (?)`;
+    const initiativeIds = await this.dataSource
+      .query<{ initiative_id: number }[]>(initativeQuery, [initiativeId])
+      .then((res) => res.map((item) => item.initiative_id));
+    initiativeIds.push(...initiativeId);
     const resultInnovationQuery = `
         SELECT
             DISTINCT r.id AS result_id,
@@ -207,7 +214,7 @@ export class IpsrRepository
     try {
       const resultInnovation: any[] = await this.dataSource.query(
         resultInnovationQuery,
-        [initiativeId],
+        [initiativeIds],
       );
       return resultInnovation;
     } catch (error) {
