@@ -3556,14 +3556,9 @@ export class ResultsService {
       return;
     }
 
-    const evidenceDto: CreateEvidenceDto = {
-      evidences: reviewUpdateDto.evidence,
-      result_id: resultId,
-      supplementary: [],
-    };
-
-    const evidenceResult = await this._evidencesService.create(
-      evidenceDto,
+    const evidenceResult = await this._evidencesService.updateEvidencesPartial(
+      reviewUpdateDto.evidence,
+      resultId,
       user,
     );
     if (evidenceResult.status !== HttpStatus.OK) {

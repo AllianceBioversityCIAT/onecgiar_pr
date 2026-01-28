@@ -42,12 +42,13 @@ export class CommonFieldsDto {
 }
 
 export class EvidenceDto {
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Evidence identifier',
     example: 11179,
   })
   @IsString()
-  id: string;
+  @IsOptional()
+  id?: string;
 
   @ApiProperty({
     description: 'Evidence link or URL',
@@ -139,7 +140,7 @@ export class ImplementingOrganizationDto {
     })
     @IsOptional()
     @IsNumber()
-    institution_id?: number | null;
+    institutions_id?: number | null;
 
     @ApiPropertyOptional({
       description: 'Institution acronym',
@@ -206,7 +207,7 @@ export class PolicyChangeDto {
       description: 'Organizations implementing the policy change',
       example: [
         {
-          institution_id: null,
+          institutions_id: null,
           acronym: null,
           institution_name: null,
         },

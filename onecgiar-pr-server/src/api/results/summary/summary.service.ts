@@ -818,7 +818,7 @@ export class SummaryService {
     await this._resultByIntitutionsRepository.updateGenericIstitutions(
       resultId,
       institutions,
-      4, // institution_roles_id = 4 para implementing organizations
+      4, // institution_roles_id = 4 for implementing organizations
       userId,
     );
 
