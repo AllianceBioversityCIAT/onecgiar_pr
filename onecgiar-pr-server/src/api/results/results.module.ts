@@ -129,7 +129,7 @@ import { InnovationUseModule } from '../results-framework-reporting/innovation-u
     ResultRegionsModule,
     ResultCountriesModule,
     LinkedResultsModule,
-    ResultsTocResultsModule,
+    forwardRef(() => ResultsTocResultsModule),
     NonPooledProjectsModule,
     ResultsCentersModule,
     ResultsKnowledgeProductsModule,
