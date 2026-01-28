@@ -31,11 +31,12 @@ describe('BaseServiceSimple / BaseDeleteService', () => {
       const repo = makeRepo();
       const service = new DummyService(repo);
 
-      expect(service.transformArrayToSaveObject([1, 2], { result_id: 10 } as any))
-        .toEqual([
-          { id: 1, result_id: 10 },
-          { id: 2, result_id: 10 },
-        ]);
+      expect(
+        service.transformArrayToSaveObject([1, 2], { result_id: 10 } as any),
+      ).toEqual([
+        { id: 1, result_id: 10 },
+        { id: 2, result_id: 10 },
+      ]);
     });
   });
 
@@ -202,8 +203,9 @@ describe('BaseServiceSimple / BaseDeleteService', () => {
       );
 
       expect(res).toHaveLength(1);
-      expect(res[0]).toEqual(expect.objectContaining({ id: 1, is_active: true }));
+      expect(res[0]).toEqual(
+        expect.objectContaining({ id: 1, is_active: true }),
+      );
     });
   });
 });
-

@@ -82,13 +82,6 @@ export class SubmissionsService {
       newSubmissions.results_id = result.id;
       await this._submissionRepository.save(newSubmissions);
 
-      await this.sentNotification(
-        result,
-        user,
-        NotificationLevelEnum.RESULT,
-        NotificationTypeEnum.RESULT_SUBMITTED,
-      );
-
       const hasContactRequest =
         await this._resultRepository.getResultInnovationDevelopmentByResultId(
           result.id,
@@ -216,13 +209,6 @@ export class SubmissionsService {
           result.id,
         );
 
-      await this.sentNotification(
-        result,
-        user,
-        NotificationLevelEnum.RESULT,
-        NotificationTypeEnum.RESULT_SUBMITTED,
-      );
-
       return {
         response: {
           innoPckg: ipsr.response,
@@ -283,13 +269,6 @@ export class SubmissionsService {
       newSubmissions.comment = createSubmissionDto.comment;
       newSubmissions.results_id = result.id;
       await this._submissionRepository.save(newSubmissions);
-
-      await this.sentNotification(
-        result,
-        user,
-        NotificationLevelEnum.RESULT,
-        NotificationTypeEnum.RESULT_UNSUBMITTED,
-      );
 
       return {
         response: data,
@@ -352,13 +331,6 @@ export class SubmissionsService {
         await this._generalInformationIpsrService.findInnovationDetail(
           result.id,
         );
-
-      await this.sentNotification(
-        result,
-        user,
-        NotificationLevelEnum.RESULT,
-        NotificationTypeEnum.RESULT_UNSUBMITTED,
-      );
 
       return {
         response: {
