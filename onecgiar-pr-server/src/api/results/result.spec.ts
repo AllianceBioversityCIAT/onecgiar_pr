@@ -64,6 +64,7 @@ import {
 } from './dto/review-decision.dto';
 import { ResultStatusData } from '../../shared/constants/result-status.enum';
 import { DataSource } from 'typeorm';
+import { ResultImpactAreaScoresService } from '../result-impact-area-scores/result-impact-area-scores.service';
 import { ResultsByInstitutionsService } from './results_by_institutions/results_by_institutions.service';
 import { ContributorsPartnersService } from '../results-framework-reporting/contributors-partners/contributors-partners.service';
 import { EvidencesService } from './evidences/evidences.service';
@@ -109,28 +110,28 @@ describe('ResultsService (unit, pure mocks)', () => {
       .mockImplementation(async (id: number) =>
         id > 0
           ? {
-              id,
-              title: `Result ${id}`,
-              description: `Desc ${id}`,
-              result_type_id: 1,
-              result_type_name: 'Type',
-              result_level_id: 1,
-              result_level_name: 'Level',
-              status_id: 1,
-              geographic_scope_id: 2,
-              has_countries: true,
-              has_regions: true,
-              gender_tag_level_id: 1,
-              climate_change_tag_level_id: 1,
-              nutrition_tag_level_id: 1,
-              environmental_biodiversity_tag_level_id: 1,
-              poverty_tag_level_id: 1,
-              krs_url: 'https://example.org',
-              is_krs: true,
-              phase_name: 'Reporting',
-              phase_year: 2023,
-              is_discontinued: null,
-            }
+            id,
+            title: `Result ${id}`,
+            description: `Desc ${id}`,
+            result_type_id: 1,
+            result_type_name: 'Type',
+            result_level_id: 1,
+            result_level_name: 'Level',
+            status_id: 1,
+            geographic_scope_id: 2,
+            has_countries: true,
+            has_regions: true,
+            gender_tag_level_id: 1,
+            climate_change_tag_level_id: 1,
+            nutrition_tag_level_id: 1,
+            environmental_biodiversity_tag_level_id: 1,
+            poverty_tag_level_id: 1,
+            krs_url: 'https://example.org',
+            is_krs: true,
+            phase_name: 'Reporting',
+            phase_year: 2023,
+            is_discontinued: null,
+          }
           : null,
       ),
     AllResults: jest.fn().mockResolvedValue([{ id: '1' }]),
@@ -359,6 +360,15 @@ describe('ResultsService (unit, pure mocks)', () => {
 
   const mockImpactAreasScoresComponentRepository = {
     findOne: jest.fn().mockResolvedValue({ id: 123 }),
+    find: jest
+      .fn()
+      .mockResolvedValue([
+        { id: 201 },
+        { id: 202 },
+        { id: 203 },
+        { id: 204 },
+        { id: 205 },
+      ]),
   };
 
   const mockResultsTocResultRepository = {
@@ -474,6 +484,27 @@ describe('ResultsService (unit, pure mocks)', () => {
       };
       return callback(manager);
     }),
+  } as any;
+
+  const mockResultImpactAreaScoresService = {
+    validateImpactAreaScores: jest
+      .fn()
+      .mockImplementation(
+        async (
+          impactAreaIds: number | number[],
+          impactAreaScoresToAdd: Array<{ impact_area_score_id: number }>,
+        ) => {
+          const ids = Array.isArray(impactAreaIds)
+            ? impactAreaIds
+            : [impactAreaIds];
+          for (const id of ids) {
+            if (id == null) continue;
+            impactAreaScoresToAdd.push({ impact_area_score_id: Number(id) });
+          }
+        },
+      ),
+    create: jest.fn().mockResolvedValue([]),
+    find: jest.fn().mockResolvedValue([]),
   } as any;
 
   beforeEach(async () => {
@@ -648,6 +679,10 @@ describe('ResultsService (unit, pure mocks)', () => {
         {
           provide: DataSource,
           useValue: mockDataSource,
+        },
+        {
+          provide: ResultImpactAreaScoresService,
+          useValue: mockResultImpactAreaScoresService,
         },
       ],
     }).compile();

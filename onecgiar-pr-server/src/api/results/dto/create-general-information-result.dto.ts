@@ -45,7 +45,7 @@ export class CreateGeneralInformationResultDto {
       'Gender impact area component identifier linked to the result.',
     required: false,
   })
-  public gender_impact_area_id?: number;
+  public gender_impact_area_id?: number | number[];
 
   @ApiProperty({
     description: 'Climate change tag identifier linked to the result.',
@@ -58,7 +58,7 @@ export class CreateGeneralInformationResultDto {
       'Climate change impact area component identifier linked to the result.',
     required: false,
   })
-  public climate_impact_area_id?: number;
+  public climate_impact_area_id?: number | number[];
 
   @ApiProperty({
     description: 'Nutrition tag identifier linked to the result.',
@@ -71,7 +71,7 @@ export class CreateGeneralInformationResultDto {
       'Nutrition impact area component identifier linked to the result.',
     required: false,
   })
-  public nutrition_impact_area_id?: number;
+  public nutrition_impact_area_id?: number | number[];
 
   @ApiProperty({
     description:
@@ -83,7 +83,7 @@ export class CreateGeneralInformationResultDto {
     description:
       'Environmental biodiversity impact area component identifier linked to the result.',
   })
-  public environmental_biodiversity_impact_area_id: number;
+  public environmental_biodiversity_impact_area_id: number | number[];
 
   @ApiProperty({ description: 'Poverty tag identifier linked to the result.' })
   public poverty_tag_level_id: number;
@@ -92,7 +92,7 @@ export class CreateGeneralInformationResultDto {
     description:
       'Poverty impact area component identifier linked to the result.',
   })
-  public poverty_impact_area_id: number;
+  public poverty_impact_area_id: number | number[];
 
   @ApiProperty({
     description: 'Institutions associated with the result.',

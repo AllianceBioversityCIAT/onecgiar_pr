@@ -98,6 +98,7 @@ import { AoWBilateralRepository } from './results-toc-results/repositories/aow-b
 import { IntellectualPropertyExpertsModule } from './intellectual_property_experts/intellectual_property_experts.module';
 import { ResultReviewHistoryRepository } from './result-review-history/result-review-history.repository';
 import { GeographicLocationModule } from '../results-framework-reporting/geographic-location/geographic-location.module';
+import { ResultImpactAreaScoresModule } from '../result-impact-area-scores/result-impact-area-scores.module';
 import { ContributorsPartnersModule } from '../results-framework-reporting/contributors-partners/contributors-partners.module';
 import { InnovationDevModule } from '../results-framework-reporting/innovation_dev/innovation_dev.module';
 import { InnovationUseModule } from '../results-framework-reporting/innovation-use/innovation-use.module';
@@ -161,6 +162,7 @@ import { InnovationUseModule } from '../results-framework-reporting/innovation-u
     ResultsByProjectsModule,
     IntellectualPropertyExpertsModule,
     forwardRef(() => GeographicLocationModule),
+    ResultImpactAreaScoresModule,
     forwardRef(() => ContributorsPartnersModule),
     forwardRef(() => InnovationDevModule),
     forwardRef(() => InnovationUseModule),

@@ -17,6 +17,10 @@ import { AppModuleIdEnum } from '../../../shared/constants/role-type.enum';
 import { ImpactAreasScoresComponentRepository } from '../../results/impact_areas_scores_components/repositories/impact_areas_scores_components.repository';
 import { GenderTagRepository } from '../../results/gender_tag_levels/genderTag.repository';
 import { IpsrRepository } from '../../ipsr/ipsr.repository';
+import { extractPropertyValues } from '../../../shared/utils/array.util';
+import { ResultImpactAreaScore } from '../../result-impact-area-scores/entities/result-impact-area-score.entity';
+import { ResultImpactAreaScoresService } from '../../result-impact-area-scores/result-impact-area-scores.service';
+import { ImpactAreaNames } from '../../results/impact_areas_scores_components/enum/impact-area-names.enum';
 
 @Injectable()
 export class IpsrGeneralInformationService {
@@ -33,11 +37,12 @@ export class IpsrGeneralInformationService {
     protected readonly _ipsrRespository: IpsrRepository,
     private readonly _genderTagRepository: GenderTagRepository,
     private readonly _ipsrService: IpsrService,
+    private readonly _resultImpactAreaScoresService: ResultImpactAreaScoresService,
     @Optional()
     @Inject(AdUserService)
     private readonly _adUserService?: AdUserService,
     private readonly _adUserRepository?: AdUserRepository,
-  ) {}
+  ) { }
 
   /**
    * Create a new IP result general information for Portfolio P25
@@ -132,42 +137,42 @@ export class IpsrGeneralInformationService {
         );
       }
 
-      const { tag: genderTag, component: genderTagComponent } =
-        await this.validateTagAndComponent(
-          req.gender_tag_level_id,
-          req.gender_impact_area_id,
-          'Gender',
-        );
+      const resultImpactAreaScores: Partial<ResultImpactAreaScore>[] = [];
 
-      const { tag: climateTag, component: climateTagComponent } =
-        await this.validateTagAndComponent(
-          req.climate_change_tag_level_id,
-          req.climate_impact_area_id,
-          'Climate change',
-        );
+      const genderTag = await this.validateTagAndComponent(
+        req.gender_tag_level_id,
+        req.gender_impact_area_id,
+        'Gender',
+        resultImpactAreaScores,
+      );
 
-      const { tag: nutritionTag, component: nutritionTagComponent } =
-        await this.validateTagAndComponent(
-          req.nutrition_tag_level_id,
-          req.nutrition_impact_area_id,
-          'Nutrition',
-        );
+      const climateTag = await this.validateTagAndComponent(
+        req.climate_change_tag_level_id,
+        req.climate_impact_area_id,
+        'Climate change',
+        resultImpactAreaScores,
+      );
 
-      const {
-        tag: environmentalBiodiversityTag,
-        component: environmentalBiodiversityTagComponent,
-      } = await this.validateTagAndComponent(
+      const nutritionTag = await this.validateTagAndComponent(
+        req.nutrition_tag_level_id,
+        req.nutrition_impact_area_id,
+        'Nutrition',
+        resultImpactAreaScores,
+      );
+
+      const environmentalBiodiversityTag = await this.validateTagAndComponent(
         req.environmental_biodiversity_tag_level_id,
         req.environmental_biodiversity_impact_area_id,
         'Environmental or/and biodiversity',
+        resultImpactAreaScores,
       );
 
-      const { tag: povertyTag, component: povertyTagComponent } =
-        await this.validateTagAndComponent(
-          req.poverty_tag_level_id,
-          req.poverty_impact_area_id,
-          'Poverty',
-        );
+      const povertyTag = await this.validateTagAndComponent(
+        req.poverty_tag_level_id,
+        req.poverty_impact_area_id,
+        'Poverty',
+        resultImpactAreaScores,
+      );
 
       await this._resultRepository.update(resultId, {
         title: req?.title,
@@ -175,22 +180,28 @@ export class IpsrGeneralInformationService {
         lead_contact_person: req?.lead_contact_person,
         lead_contact_person_id: leadContactPersonId,
         gender_tag_level_id: genderTag?.id ?? null,
-        gender_impact_area_id: genderTagComponent?.id ?? null,
+        gender_impact_area_id: null,
         climate_change_tag_level_id: climateTag?.id ?? null,
-        climate_impact_area_id: climateTagComponent?.id ?? null,
+        climate_impact_area_id: null,
         nutrition_tag_level_id: nutritionTag?.id ?? null,
-        nutrition_impact_area_id: nutritionTagComponent?.id ?? null,
+        nutrition_impact_area_id: null,
         environmental_biodiversity_tag_level_id:
           environmentalBiodiversityTag?.id ?? null,
-        environmental_biodiversity_impact_area_id:
-          environmentalBiodiversityTagComponent?.id ?? null,
+        environmental_biodiversity_impact_area_id: null,
         poverty_tag_level_id: povertyTag?.id ?? null,
-        poverty_impact_area_id: povertyTagComponent?.id ?? null,
+        poverty_impact_area_id: null,
         geographic_scope_id: resultExist.geographic_scope_id,
         last_updated_by: user.id,
         is_discontinued: req?.is_discontinued,
         status_id: status,
       });
+
+      await this._resultImpactAreaScoresService.create(
+        resultId,
+        resultImpactAreaScores,
+        'impact_area_score_id',
+        { userId: user.id },
+      );
 
       if (req?.is_discontinued) {
         await this._resultsInvestmentDiscontinuedOptionRepository.inactiveData(
@@ -255,8 +266,9 @@ export class IpsrGeneralInformationService {
 
   private async validateTagAndComponent(
     tagId: number,
-    impactAreaId: number | null | undefined,
+    impactAreaId: number | number[],
     tagName: string,
+    impactAreaScoresToAdd: Partial<ResultImpactAreaScore>[],
   ) {
     const tag = await this._genderTagRepository.findOne({
       where: { id: tagId },
@@ -270,22 +282,14 @@ export class IpsrGeneralInformationService {
       };
     }
 
-    let component = null;
     if (Number(tag.id) === 3 && impactAreaId != null) {
-      component = await this._impactAreasScoresComponentRepository.findOne({
-        where: { id: impactAreaId },
-      });
-
-      if (!component) {
-        throw {
-          response: {},
-          message: `The ${tagName} tag component does not exist`,
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
+      await this._resultImpactAreaScoresService.validateImpactAreaScores(
+        impactAreaId,
+        impactAreaScoresToAdd,
+      );
     }
 
-    return { tag, component };
+    return tag;
   }
 
   async findOneInnovation(resultId: number) {
@@ -315,6 +319,49 @@ export class IpsrGeneralInformationService {
           console.warn('Failed to get lead contact person data:', error);
         }
       }
+      const resultImpactAreaScores =
+        await this._resultImpactAreaScoresService.find(resultId, undefined, {
+          impact_area_score: true,
+        });
+
+      const ender_impact_area = resultImpactAreaScores.filter(
+        (r) => r.impact_area_score.impact_area === ImpactAreaNames.GENDER,
+      );
+      const climate_impact_area = resultImpactAreaScores.filter(
+        (r) => r.impact_area_score.impact_area === ImpactAreaNames.CLIMATE,
+      );
+      const nutrition_impact_area = resultImpactAreaScores.filter(
+        (r) => r.impact_area_score.impact_area === ImpactAreaNames.NUTRITION,
+      );
+      const environmental_biodiversity_impact_area =
+        resultImpactAreaScores.filter(
+          (r) =>
+            r.impact_area_score.impact_area === ImpactAreaNames.ENVIRONMENTAL,
+        );
+      const poverty_impact_area = resultImpactAreaScores.filter(
+        (r) => r.impact_area_score.impact_area === ImpactAreaNames.POVERTY,
+      );
+
+      result.gender_impact_area_id = extractPropertyValues(
+        ender_impact_area,
+        'impact_area_score_id',
+      ) as number[];
+      result.climate_impact_area_id = extractPropertyValues(
+        climate_impact_area,
+        'impact_area_score_id',
+      ) as number[];
+      result.nutrition_impact_area_id = extractPropertyValues(
+        nutrition_impact_area,
+        'impact_area_score_id',
+      ) as number[];
+      result.environmental_biodiversity_impact_area_id = extractPropertyValues(
+        environmental_biodiversity_impact_area,
+        'impact_area_score_id',
+      ) as number[];
+      result.poverty_impact_area_id = extractPropertyValues(
+        poverty_impact_area,
+        'impact_area_score_id',
+      ) as number[];
       result.lead_contact_person_data = leadContactPersonData;
       result.discontinued_options = discontinued_options;
 
