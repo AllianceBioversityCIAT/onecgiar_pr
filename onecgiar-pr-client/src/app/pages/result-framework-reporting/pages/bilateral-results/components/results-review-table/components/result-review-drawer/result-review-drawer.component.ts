@@ -53,7 +53,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   contributingInitiativesList = signal<any[]>([]);
   disabledContributingInitiatives = signal<any[]>([]);
 
-  // TOC properties - using mutable object instead of signal so app-cp-multiple-wps can modify it directly
   tocInitiative: any = {
     planned_result: null,
     initiative_id: null,
@@ -79,14 +78,12 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   initiativeIdSignal = signal<number | null>(null);
   tocConsumed = signal<boolean>(true);
 
-  // Computed signal to get disabled initiatives in the format expected by pr-multi-select
   disabledInitiativesOptions = computed(() => {
     const disabled = this.disabledContributingInitiatives();
     const initiativesList = this.contributingInitiativesList();
     
     if (!disabled.length || !initiativesList.length) return [];
     
-    // Map disabled initiatives to option objects from the list
     return disabled.map((disabledInit: any) => {
       if (typeof disabledInit === 'object' && disabledInit.id) {
         return initiativesList.find((opt: any) => opt.id === disabledInit.id);
@@ -132,7 +129,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   getTocMetadata(): any {
     const detail = this.resultDetail();
     if (!detail?.tocMetadata) return null;
-    // Handle both array (legacy) and object (new) formats
     return Array.isArray(detail.tocMetadata) ? detail.tocMetadata[0] : detail.tocMetadata;
   }
 
@@ -143,17 +139,13 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   onPlannedResultChangeValue(value: boolean | null): void {
     if (!this.tocInitiative) return;
     
-    // Update planned_result value directly on the mutable object
     this.tocInitiative.planned_result = value;
     this.cdr.markForCheck();
   }
 
   onTocProgressiveNarrativeChange(value: string): void {
     if (!this.tocInitiative) return;
-    
-    // Update toc_progressive_narrative value directly on the mutable object
     this.tocInitiative.toc_progressive_narrative = value;
-    // Also update in the first result_toc_result if it exists
     if (this.tocInitiative.result_toc_results && this.tocInitiative.result_toc_results.length > 0) {
       this.tocInitiative.result_toc_results[0].toc_progressive_narrative = value;
     }
@@ -256,40 +248,30 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
       
         this.api.resultsSE.currentResultId = Number.parseInt(resultId, 10);
         
-        // Set currentResult and currentResultSignal FIRST for app-cp-multiple-wps component to work correctly
-        // It needs access to currentResult for API calls and currentResultSignal for TocInitiativeOutcomeListsService
-        // This must be set before mapping TOC data so the services can load the lists
-        // IMPORTANT: Always use P25 for bilateral results drawer to ensure correct TOC endpoints
         if (detail.commonFields) {
           const currentResultData = {
             id: Number.parseInt(detail.commonFields.id, 10),
             result_id: Number.parseInt(detail.commonFields.id, 10),
             result_code: detail.commonFields.result_code,
             result_level_id: detail.commonFields.result_level_id,
-            result_type_id: detail.commonFields.result_type_id, // Needed for filtering Level dropdown
-            result_category: detail.commonFields.result_category, // Needed for filtering Level dropdown
-            portfolio: 'P25' // Always use P25 for bilateral results drawer to ensure correct TOC endpoints
+            result_type_id: detail.commonFields.result_type_id,
+            result_category: detail.commonFields.result_category,
+            portfolio: 'P25'
           } as any;
           
           this.api.dataControlSE.currentResult = currentResultData;
-          // Also set the signal so TocInitiativeOutcomeListsService can load tocResultList
-          // This triggers the effect in TocInitiativeOutcomeListsService to load GET_AllTocLevels
-          // Setting portfolio to 'P25' ensures isP25() returns true, forcing P25 endpoints
           this.api.dataControlSE.currentResultSignal.set(currentResultData);
         }
         
-        // Get primary initiative ID for TOC if not available in tocMetadata
-        // Declare early so it's available in all callbacks
         let primaryInitiativeId: number | null = null;
-        let finalInitiativeId: number | null = null; // Will hold the final initiative_id to use
+        let finalInitiativeId: number | null = null;
         
-        // Helper function to set initiativeIdSignal when we have a valid ID
         const setInitiativeIdIfNeeded = (initiativeId: number | null) => {
           if (initiativeId && (!this.initiativeIdSignal() || this.initiativeIdSignal() !== initiativeId)) {
+            this.initiativeIdSignal.set(initiativeId);
             setTimeout(() => {
-              this.initiativeIdSignal.set(initiativeId);
               this.cdr.markForCheck();
-            }, 100);
+            }, 50);
           }
         };
         
@@ -297,18 +279,13 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         this.api.resultsSE.GET_AllWithoutResults(activePortfolio).subscribe({
           next: ({ response }) => {
             this.contributingInitiativesList.set(response || []);
-            // If primaryInitiativeId is still null after loading initiatives list, try to get it from the first available initiative
-            // This ensures initiativeIdSignal always has a valid value for loading TOC lists
             if (!primaryInitiativeId && response && response.length > 0 && response[0].id) {
               primaryInitiativeId = response[0].id;
             }
-            // Update finalInitiativeId if we have a valid primaryInitiativeId and finalInitiativeId is not set
-            // This handles the case where GET_AllWithoutResults completes after tocMetadata processing
             if (primaryInitiativeId && !finalInitiativeId) {
               finalInitiativeId = primaryInitiativeId;
               setInitiativeIdIfNeeded(finalInitiativeId);
             }
-            // Also update if initiativeIdSignal is null and we now have a valid ID
             if (primaryInitiativeId && !this.initiativeIdSignal()) {
               setInitiativeIdIfNeeded(primaryInitiativeId);
             }
@@ -316,14 +293,12 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
           error: () => this.contributingInitiativesList.set([])
         });
         
-        // Transform contributingCenters from objects to array of codes
         if (detail.contributingCenters && Array.isArray(detail.contributingCenters)) {
           detail.contributingCenters = detail.contributingCenters.map((center: any) => center.code);
         } else {
           detail.contributingCenters = [];
         }
         
-        // Transform contributingProjects from objects to array of project_ids
         if (detail.contributingProjects && Array.isArray(detail.contributingProjects)) {
           detail.contributingProjects = detail.contributingProjects.map((project: any) => {
             const projectId = project.project_id || project.obj_clarisa_project?.id || project.id;
@@ -333,7 +308,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
           detail.contributingProjects = [];
         }
         
-        // Transform contributingInitiatives from object with contributing_and_primary/accepted/pending arrays to array of official_codes
         if (detail.contributingInitiatives) {
           if (Array.isArray(detail.contributingInitiatives)) {
             detail.contributingInitiatives = detail.contributingInitiatives.map((initiative: any) => {
@@ -390,14 +364,10 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
           });
         }
         
-        // Map tocMetadata to the format expected by app-cp-multiple-wps
-        // The response has: { planned_result: true, initiative_id: 58, result_toc_results: [...] }
-        // The component expects: { planned_result: boolean, initiative_id: number, result_toc_results: array, ... }
         if (detail.tocMetadata) {
           const tocMeta = Array.isArray(detail.tocMetadata) ? detail.tocMetadata[0] : detail.tocMetadata;
           
           if (tocMeta) {
-            // Create the initiative object in the format expected by app-cp-multiple-wps
             const tocInitiative: any = {
               planned_result: tocMeta.planned_result ?? null,
               initiative_id: tocMeta.initiative_id ?? null,
@@ -407,13 +377,10 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
               toc_progressive_narrative: null
             };
             
-            // Ensure result_toc_results is an array and has the correct structure
             if (!Array.isArray(tocInitiative.result_toc_results)) {
               tocInitiative.result_toc_results = [];
             }
             
-            // If result_toc_results is empty, initialize with at least one empty tab
-            // This is required for app-cp-multiple-wps to render correctly
             if (tocInitiative.result_toc_results.length === 0) {
               tocInitiative.result_toc_results = [{
                 uniqueId: '0',
@@ -426,12 +393,10 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
               }];
             }
             
-            // Add uniqueId to each tab for the component and set toc_progressive_narrative from first tab
             tocInitiative.result_toc_results.forEach((tab: any, index: number) => {
               if (!tab.uniqueId) {
                 tab.uniqueId = index.toString();
               }
-              // Ensure indicators array exists
               if (!tab.indicators || !Array.isArray(tab.indicators)) {
                 tab.indicators = [];
               }

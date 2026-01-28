@@ -63,8 +63,10 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   }
 
   setActiveTabSignal() {
-    this.activeTabSignal.update(prev => {
-      return { ...prev, toc_level_id: this.activeTab.toc_level_id };
+    const currentTab = this.activeTabSignal();
+    this.activeTabSignal.set({
+      ...currentTab,
+      toc_level_id: this.activeTab.toc_level_id
     });
   }
 

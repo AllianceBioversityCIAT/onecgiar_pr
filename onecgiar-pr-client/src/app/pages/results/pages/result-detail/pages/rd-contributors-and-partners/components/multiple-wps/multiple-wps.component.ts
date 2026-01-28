@@ -52,6 +52,24 @@ export class CPMultipleWPsComponent implements OnChanges {
     this.GET_EOIList();
   });
 
+  onChangesActiveTab = effect(() => {
+    const activeTab = this.activeTabSignal();
+    const tocLevelId = activeTab?.toc_level_id;
+    
+    if (!this.initiativeId() || tocLevelId === null || tocLevelId === undefined) return;
+    switch (tocLevelId) {
+      case 1:
+        this.GET_outputList();
+        break;
+      case 2:
+        this.GET_outcomeList();
+        break;
+      case 3:
+        this.GET_EOIList();
+        break;
+    }
+  });
+
   ngOnChanges() {
     this.initiative?.result_toc_results?.forEach((tab: any, index: number) => {
       tab.uniqueId = index.toString();
@@ -80,19 +98,25 @@ export class CPMultipleWPsComponent implements OnChanges {
   }
 
   GET_outputList() {
+    if (!this.initiativeId()) return;
+    const resultId = this.api.dataControlSE.currentNotification?.result_id ||
+      this.activeTab?.results_id ||
+      this.api.dataControlSE?.currentResult?.id ||
+      this.api.dataControlSE.currentResultSignal()?.result_id ||
+      this.api.dataControlSE.currentResultSignal()?.id;
+    
+    if (!resultId) return;
+    
     this.api.tocApiSE
       .GET_tocLevelsByconfig(
-        this.api.dataControlSE.currentNotification?.result_id ||
-        this.activeTab?.results_id ||
-        this.api.dataControlSE?.currentResult?.id ||
-        this.api.dataControlSE.currentResultSignal()?.result_id,
+        resultId,
         this.initiativeId(),
         1,
         this.fieldsManagerSE.isP25()
       )
       .subscribe({
         next: ({ response }) => {
-          this.outputList.set(response);
+          this.outputList.set(response || []);
         },
         error: err => {
           this.outputList.set([]);
@@ -102,19 +126,25 @@ export class CPMultipleWPsComponent implements OnChanges {
   }
 
   GET_outcomeList() {
+    if (!this.initiativeId()) return;
+    const resultId = this.api.dataControlSE.currentNotification?.result_id ||
+      this.activeTab?.results_id ||
+      this.api.dataControlSE?.currentResult?.id ||
+      this.api.dataControlSE.currentResultSignal()?.result_id ||
+      this.api.dataControlSE.currentResultSignal()?.id;
+    
+    if (!resultId) return;
+    
     this.api.tocApiSE
       .GET_tocLevelsByconfig(
-        this.api.dataControlSE.currentNotification?.result_id ||
-        this.activeTab?.results_id ||
-        this.api.dataControlSE?.currentResult?.id ||
-        this.api.dataControlSE.currentResultSignal()?.result_id,
+        resultId,
         this.initiativeId(),
         2,
         this.fieldsManagerSE.isP25()
       )
       .subscribe({
         next: ({ response }) => {
-          this.outcomeList.set(response);
+          this.outcomeList.set(response || []);
         },
         error: err => {
           this.outcomeList.set([]);
@@ -124,22 +154,32 @@ export class CPMultipleWPsComponent implements OnChanges {
   }
 
   GET_EOIList() {
+    if (!this.initiativeId()) return;
+    const resultId = this.api.dataControlSE.currentNotification?.result_id ||
+      this.activeTab?.results_id ||
+      this.api.dataControlSE?.currentResult?.id ||
+      this.api.dataControlSE.currentResultSignal()?.result_id ||
+      this.api.dataControlSE.currentResultSignal()?.id;
+    
+    if (!resultId) return;
+    
     this.api.tocApiSE
       .GET_tocLevelsByconfig(
-        this.api.dataControlSE.currentNotification?.result_id ||
-        this.activeTab?.results_id ||
-        this.api.dataControlSE?.currentResult?.id ||
-        this.api.dataControlSE.currentResultSignal()?.result_id,
+        resultId,
         this.initiativeId(),
         3,
         this.fieldsManagerSE.isP25()
       )
       .subscribe({
         next: ({ response }) => {
-          response.forEach((item, index) => {
-            item.uniqueId = `${item.toc_result_id}-${index}`;
-          });
-          this.eoiList.set(response);
+          if (response && Array.isArray(response)) {
+            response.forEach((item, index) => {
+              item.uniqueId = `${item.toc_result_id}-${index}`;
+            });
+            this.eoiList.set(response);
+          } else {
+            this.eoiList.set([]);
+          }
         },
         error: err => {
           this.eoiList.set([]);
