@@ -78,6 +78,7 @@ import { ReviewActionEnum } from './result-review-history/entities/result-review
 import { BadRequestException, ConflictException } from '@nestjs/common';
 
 describe('ResultsService (unit, pure mocks)', () => {
+  
   let module: TestingModule;
   let resultService: ResultsService;
   let currentResultId: number;
