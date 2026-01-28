@@ -1,11 +1,11 @@
 import {
+  forwardRef,
   HttpStatus,
   Inject,
   Injectable,
   Logger,
   Optional,
   BadRequestException,
-  forwardRef,
   ConflictException,
 } from '@nestjs/common';
 import { DataSource, In, IsNull } from 'typeorm';
@@ -112,6 +112,7 @@ import { SummaryService } from './summary/summary.service';
 import { InnovationDevService } from '../results-framework-reporting/innovation_dev/innovation_dev.service';
 import { InnovationUseService } from '../results-framework-reporting/innovation-use/innovation-use.service';
 import { UpdateTocMetadataDto } from './dto/update-toc-metadata.dto';
+import { ResultsTocResultsService } from './results-toc-results/results-toc-results.service';
 
 @Injectable()
 export class ResultsService {
@@ -141,6 +142,8 @@ export class ResultsService {
     private readonly _resultKnowledgeProductRepository: ResultsKnowledgeProductsRepository,
     private readonly _elasticService: ElasticService,
     private readonly _resultValidationRepository: resultValidationRepository,
+    @Inject(forwardRef(() => ResultsTocResultsService))
+    private readonly _resultsTocResultsService: ResultsTocResultsService,
     private readonly _resultsKnowledgeProductAltmetricRepository: ResultsKnowledgeProductAltmetricRepository,
     private readonly _resultsKnowledgeProductAuthorRepository: ResultsKnowledgeProductAuthorRepository,
     private readonly _resultsKnowledgeProductInstitutionRepository: ResultsKnowledgeProductInstitutionRepository,
@@ -2821,9 +2824,12 @@ export class ResultsService {
         result.result_type_id,
       );
 
+      const tocResponse =
+        (tocMetadata?.response as Record<string, any>) ?? {};
+
       const mappedResult = {
         commonFields: commonFields ?? null,
-        tocMetadata: tocMetadata ?? [],
+        tocMetadata: tocResponse.result_toc_result ?? null,
         geographicScope: geoScope ?? null,
         contributingCenters: contributingCenters ?? [],
         contributingInstitutions: contributingInstitutions ?? [],
@@ -2862,7 +2868,7 @@ export class ResultsService {
   private async _loadBilateralBaseData(resultId: number) {
     const [commonFields, tocMetadata, contributingCenters] = await Promise.all([
       this._resultRepository.getCommonFieldsBilateralResultById(resultId),
-      this._resultRepository.getTocMetadataBilateralResult(resultId),
+      this._resultsTocResultsService.getTocByResultV2(resultId),
       this._resultsCenterRepository.getAllResultsCenterByResultId(resultId),
     ]);
 

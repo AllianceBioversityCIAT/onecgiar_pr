@@ -71,6 +71,7 @@ import { SummaryService } from './summary/summary.service';
 import { InnovationDevService } from '../results-framework-reporting/innovation_dev/innovation_dev.service';
 import { InnovationUseService } from '../results-framework-reporting/innovation-use/innovation-use.service';
 import { ReviewUpdateDto } from './dto/review-update.dto';
+import { ResultsTocResultsService } from './results-toc-results/results-toc-results.service';
 
 describe('ResultsService (unit, pure mocks)', () => {
   let module: TestingModule;
@@ -86,9 +87,11 @@ describe('ResultsService (unit, pure mocks)', () => {
     })),
     getResultById: jest
       .fn()
-      .mockImplementation(async (id: number) =>
-        id > 0 ? { id: id.toString(), result_type_id: 1, status_id: 1 } : null,
-      ),
+      .mockImplementation(async (id: number) => {
+        if (id <= 0) return null;
+        // Retornar un objeto con id como número para que funcione correctamente
+        return { id: id, result_type_id: 1, status_id: 1 };
+      }),
     query: jest.fn().mockResolvedValue([]),
     getPendingReviewCountByProgram: jest.fn().mockResolvedValue([]),
     getResultsByProgramAndCenters: jest.fn().mockResolvedValue([]),
@@ -197,6 +200,7 @@ describe('ResultsService (unit, pure mocks)', () => {
     save: jest.fn().mockResolvedValue({ id: 1 }),
     logicalElimination: jest.fn().mockResolvedValue(undefined),
     getResultByInitiativeOwnerFull: jest.fn().mockResolvedValue({ id: 1 }),
+    getOwnerInitiativeByResult: jest.fn().mockResolvedValue({ id: 1 }),
     getContributorInitiativeByResult: jest.fn().mockResolvedValue([]),
     getPendingInit: jest.fn().mockResolvedValue([]),
     getContributorInitiativeAndPrimaryByResult: jest.fn().mockResolvedValue([]),
@@ -359,6 +363,7 @@ describe('ResultsService (unit, pure mocks)', () => {
 
   const mockResultsTocResultRepository = {
     findOne: jest.fn().mockResolvedValue({ id: 123 }),
+    getRTRPrimaryV2: jest.fn().mockResolvedValue([]),
   } as any;
 
   const mockResultsInnovationsDevRepository = {
@@ -443,6 +448,19 @@ describe('ResultsService (unit, pure mocks)', () => {
     saveInnovationUse: jest.fn().mockResolvedValue({
       status: HttpStatus.OK,
       response: {},
+    }),
+  } as any;
+
+  const mockResultsTocResultsService = {
+    getTocByResultV2: jest.fn().mockResolvedValue({
+      status: HttpStatus.OK,
+      response: {
+        result_toc_result: {
+          planned_result: true,
+          initiative_id: 1,
+          result_toc_results: [],
+        },
+      },
     }),
   } as any;
 
@@ -622,6 +640,10 @@ describe('ResultsService (unit, pure mocks)', () => {
         {
           provide: InnovationUseService,
           useValue: mockInnovationUseService,
+        },
+        {
+          provide: ResultsTocResultsService,
+          useValue: mockResultsTocResultsService,
         },
         {
           provide: DataSource,
@@ -952,7 +974,7 @@ describe('ResultsService (unit, pure mocks)', () => {
     const results = await resultService.findResultById(resultId);
     expect(results.response).toBeDefined();
     const resData = <Result>results.response;
-    expect(resData.id).toBe(resultId.toString());
+    expect(resData.id).toBe(resultId);
   });
 
   it('should error when send an invalid id', async () => {
@@ -1299,12 +1321,29 @@ describe('ResultsService (unit, pure mocks)', () => {
     (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce(
       mockResult,
     );
+    // Mock para getResultById usado por getTocByResultV2 internamente
+    (mockResultRepository.getResultById as jest.Mock).mockResolvedValueOnce({
+      id: 100,
+      result_type_id: 1,
+      status_id: 1,
+    });
+    (
+      mockResultByInitiativesRepository.getOwnerInitiativeByResult as jest.Mock
+    ).mockResolvedValueOnce({ id: 1 });
+    (
+      mockResultsTocResultRepository.getRTRPrimaryV2 as jest.Mock
+    ).mockResolvedValueOnce([]);
     (
       mockResultRepository.getCommonFieldsBilateralResultById as jest.Mock
     ).mockResolvedValueOnce(mockCommonFields);
     (
-      mockResultRepository.getTocMetadataBilateralResult as jest.Mock
-    ).mockResolvedValueOnce(mockTocMetadata);
+      mockResultsTocResultsService.getTocByResultV2 as jest.Mock
+    ).mockResolvedValueOnce({
+      status: HttpStatus.OK,
+      response: {
+        result_toc_result: mockTocMetadata,
+      },
+    });
     (
       mockResultsCenterRepository.getAllResultsCenterByResultId as jest.Mock
     ).mockResolvedValueOnce(mockCenters);
@@ -1662,6 +1701,7 @@ describe('ResultsService (unit, pure mocks)', () => {
       const mockRegions = [{ region_id: 1 }];
       const mockCountries = [{ country_id: 1 }];
 
+      (mockResultRepository.getResultById as jest.Mock).mockReset();
       (mockResultRepository.getResultById as jest.Mock).mockResolvedValueOnce(
         mockResult,
       );
@@ -1685,12 +1725,14 @@ describe('ResultsService (unit, pure mocks)', () => {
     });
 
     it('should return error when result not found', async () => {
+      (mockResultRepository.getResultById as jest.Mock).mockReset();
       (mockResultRepository.getResultById as jest.Mock).mockResolvedValueOnce(
         null,
       );
 
       const res = await resultService.getGeoScope(100);
       expect((res as returnFormatService).status).toBe(HttpStatus.NOT_FOUND);
+      expect((res as returnFormatService).message).toBe('Results Not Found');
     });
 
     it('should handle geographic_scope_id 3 and 4 as scope 3', async () => {
@@ -1700,6 +1742,7 @@ describe('ResultsService (unit, pure mocks)', () => {
         has_countries: true,
         has_regions: true,
       };
+      (mockResultRepository.getResultById as jest.Mock).mockReset();
       (mockResultRepository.getResultById as jest.Mock).mockResolvedValueOnce(
         mockResult,
       );
@@ -1724,6 +1767,7 @@ describe('ResultsService (unit, pure mocks)', () => {
         has_countries: true,
         has_regions: true,
       };
+      (mockResultRepository.getResultById as jest.Mock).mockReset();
       (mockResultRepository.getResultById as jest.Mock).mockResolvedValueOnce(
         mockResult,
       );
@@ -1745,8 +1789,8 @@ describe('ResultsService (unit, pure mocks)', () => {
   describe('getCenters', () => {
     it('should return centers successfully', async () => {
       const mockCenters = [
-        { center_id: 1, center_name: 'Center 1' },
-        { center_id: 2, center_name: 'Center 2' },
+        { id: 1, code: 'CT01', name: 'Center 1', acronym: 'C1' },
+        { id: 2, code: 'CT02', name: 'Center 2', acronym: 'C2' },
       ];
       (
         mockResultsCenterRepository.getAllResultsCenterByResultId as jest.Mock
@@ -1974,7 +2018,11 @@ describe('ResultsService (unit, pure mocks)', () => {
         id: 100,
         title: 'Test Result',
         result_type_id: 1,
+        geographic_scope_id: 50,
+        has_countries: true,
+        has_regions: true,
       };
+      (mockResultRepository.getResultById as jest.Mock).mockReset();
       (mockResultRepository.getResultById as jest.Mock).mockResolvedValueOnce(
         mockResult,
       );
@@ -1985,12 +2033,14 @@ describe('ResultsService (unit, pure mocks)', () => {
     });
 
     it('should return error when result not found', async () => {
+      (mockResultRepository.getResultById as jest.Mock).mockReset();
       (mockResultRepository.getResultById as jest.Mock).mockResolvedValueOnce(
         null,
       );
 
       const res = await resultService.findResultById(999);
       expect((res as returnFormatService).status).toBe(HttpStatus.NOT_FOUND);
+      expect((res as returnFormatService).message).toBe('Results Not Found');
     });
   });
 
