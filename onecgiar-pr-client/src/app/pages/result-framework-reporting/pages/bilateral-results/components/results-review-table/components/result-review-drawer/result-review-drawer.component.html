@@ -176,7 +176,8 @@
         placeholder="Select project">
       </app-pr-multi-select>
 
-      <app-pr-multi-select
+      <!-- Contributing Science Programs - Temporarily commented, showing read-only primary initiatives -->
+      <!-- <app-pr-multi-select
         [options]="contributingInitiativesList()"
         label="Contributing Science Programs"
         optionLabel="full_name"
@@ -187,7 +188,27 @@
         [disableOptions]="disabledInitiativesOptions()"
         [(ngModel)]="fields.contributingInitiatives"
         placeholder="Select Science Programs">
-      </app-pr-multi-select>
+      </app-pr-multi-select> -->
+
+      <!-- Read-only display of primary initiatives -->
+      <div style="margin-bottom: 16px;">
+        <app-pr-field-header
+          [label]="'Contributing Science Programs'"
+          [required]="false"
+          [showDescriptionLabel]="true">
+        </app-pr-field-header>
+        @if (disabledContributingInitiatives() && disabledContributingInitiatives().length > 0) {
+          <div class="readonly-chips-container">
+            @for (initiative of disabledContributingInitiatives(); track initiative.id || initiative.official_code) {
+              <span class="readonly-chip">{{ initiative.official_code }} - {{ initiative.initiative_name || initiative.short_name || initiative.name }}</span>
+            }
+          </div>
+        } @else {
+          <div class="readonly-chips-container">
+            <span class="readonly-chip" style="font-style: italic; color: var(--pr-color-accents-6);">No primary initiatives available</span>
+          </div>
+        }
+      </div>
 
       <hr class="form-section_separator" />
 
