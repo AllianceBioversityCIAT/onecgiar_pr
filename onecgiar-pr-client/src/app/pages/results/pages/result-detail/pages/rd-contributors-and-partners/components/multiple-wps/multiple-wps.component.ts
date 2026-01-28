@@ -23,7 +23,8 @@ export class CPMultipleWPsComponent implements OnChanges {
   @Input() isIpsr: boolean = false;
   @Input() showMultipleWPsContent: boolean = true;
   @Input() isUnplanned: boolean = false;
-  @Input() hidden: boolean = false; 
+  @Input() hidden: boolean = false;
+  @Input() forceP25: boolean = false; 
   activeTab: TocTab;
   activeTabSignal = signal<TocTab | null>(null);
   activeTabIndex: number = 0;
@@ -112,7 +113,7 @@ export class CPMultipleWPsComponent implements OnChanges {
         resultId,
         this.initiativeId(),
         1,
-        this.fieldsManagerSE.isP25()
+        this.forceP25 ? true : this.fieldsManagerSE.isP25()
       )
       .subscribe({
         next: ({ response }) => {
@@ -140,7 +141,7 @@ export class CPMultipleWPsComponent implements OnChanges {
         resultId,
         this.initiativeId(),
         2,
-        this.fieldsManagerSE.isP25()
+        this.forceP25 ? true : this.fieldsManagerSE.isP25()
       )
       .subscribe({
         next: ({ response }) => {
@@ -168,7 +169,7 @@ export class CPMultipleWPsComponent implements OnChanges {
         resultId,
         this.initiativeId(),
         3,
-        this.fieldsManagerSE.isP25()
+        this.forceP25 ? true : this.fieldsManagerSE.isP25()
       )
       .subscribe({
         next: ({ response }) => {
