@@ -11,7 +11,6 @@ import { ResultsCenterDto } from '../results-centers/dto/results-center.dto';
 import { CreateResultsTocResultDto } from '../../results/results-toc-results/dto/create-results-toc-result.dto';
 import { BilateralProjectLinkDto } from '../results_by_institutions/dto/save-partners-v2.dto';
 import { ResultsByInstitution } from '../../results/results_by_institutions/entities/results_by_institution.entity';
-import { FormDataJson } from '../../../shared/globalInterfaces/form-data-json.interface';
 import { CapdevDto } from '../summary/dto/create-capacity-developents.dto';
 import { CreateInnovationDevDtoV2 } from '../../results-framework-reporting/innovation_dev/dto/create-innovation_dev_v2.dto';
 import { PolicyChangesDto } from '../summary/dto/create-policy-changes.dto';
@@ -42,6 +41,29 @@ export class CommonFieldsDto {
     @IsNotEmpty()
     @IsNumber()
     result_type_id: number;
+}
+
+export class EvidenceDto {
+    @ApiProperty({
+        description: 'Evidence identifier',
+        example: 11179,
+    })
+    @IsString()
+    id: string;
+
+    @ApiProperty({
+        description: 'Evidence link or URL',
+        example: 'https://example.org/paper-123',
+    })
+    @IsString()
+    link: string;
+
+    @ApiProperty({
+        description: 'Indicates whether the evidence is stored in SharePoint',
+        example: false,
+    })
+    @IsNumber()
+    is_sharepoint: number;
 }
 
 export class ReviewUpdateDto {
@@ -199,26 +221,19 @@ export class ReviewUpdateDto {
     contributingInstitutions?: ResultsByInstitution[];
 
     @ApiPropertyOptional({
-        description: 'Evidence of the result.',
-        example: {
-            innovation_readiness_level_id: null,
-            result_id: '9276',
-            gender_tag_level: null,
-            climate_change_tag_level: null,
-            nutrition_tag_level: null,
-            environmental_biodiversity_tag_level: null,
-            poverty_tag_level: null,
-            evidences: [
-              {
-                is_sharepoint: false,
-                link: 'Testing.evidence.com',
-              },
-            ],
-            supplementary: [],
-          },
+        type: () => [EvidenceDto],
+        description: 'List of evidences associated with the result',
+        example: [
+        {
+            id: 11179,
+            link: 'https://example.org/paper-123',
+            is_sharepoint: false,
+        },
+        ],
     })
-    @IsOptional()
-    evidence?: FormDataJson;
+    @ValidateNested({ each: true })
+    @Type(() => EvidenceDto)
+    evidence: EvidenceDto[];
 
     @ApiPropertyOptional({
         description: 'Capacity development of the result.',

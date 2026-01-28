@@ -3423,12 +3423,14 @@ export class ResultsService {
         // Actualizar evidence
         if (
           reviewUpdateDto.evidence !== undefined &&
+          reviewUpdateDto.evidence.length > 0 &&
           this._evidencesService
         ) {
-
-          const evidenceDto: CreateEvidenceDto = JSON.parse(
-            reviewUpdateDto.evidence.jsonData,
-          );
+          const evidenceDto: CreateEvidenceDto = {
+            evidences: reviewUpdateDto.evidence,
+            result_id: parsedResultId,
+            supplementary: [],
+          };
 
           const evidenceResult = await this._evidencesService.create(
             evidenceDto,
