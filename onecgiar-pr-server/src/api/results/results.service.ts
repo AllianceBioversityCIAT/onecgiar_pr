@@ -3181,7 +3181,6 @@ export class ResultsService {
         };
       }
 
-      // Validar que el ID del DTO coincida con el parámetro
       if (
         reviewUpdateDto.commonFields?.id &&
         reviewUpdateDto.commonFields.id !== parsedResultId
@@ -3214,7 +3213,6 @@ export class ResultsService {
           );
         }
 
-        // Get actual data from the result
         const [currentCommonFields, currentBilateralData] = await Promise.all([
           this._resultRepository.getCommonFieldsBilateralResultById(
             parsedResultId,
@@ -3224,7 +3222,6 @@ export class ResultsService {
 
         const currentBilateralResponse = currentBilateralData?.response || {};
 
-        // Evaluate changes in Minimum Data Standard
         const minDataStandardChanges: Record<string, any> = {};
         let hasMinDataStandardChanges = false;
 
@@ -3240,7 +3237,6 @@ export class ResultsService {
           hasMinDataStandardChanges = true;
         }
 
-        // Evaluate changes in ToC (contributingInitiatives)
         let hasTocChanges = false;
         const tocChanges: Record<string, any> = {};
 
@@ -3299,7 +3295,6 @@ export class ResultsService {
           }
         }
 
-        // Verificar cambios en otros campos ToC (geographicScope, contributingCenters, etc.)
         const hasOtherChanges =
           reviewUpdateDto.geographicScope !== undefined ||
           reviewUpdateDto.contributingCenters !== undefined ||
@@ -3311,14 +3306,12 @@ export class ResultsService {
         const hasChanges =
           hasMinDataStandardChanges || hasTocChanges || hasOtherChanges;
 
-        // Si hay cambios en ToC o Minimum Data Standard, validar que updateExplanation esté presente
         if (hasChanges && !reviewUpdateDto.updateExplanation?.trim()) {
           throw new BadRequestException(
             'updateExplanation is required when ToC fields or Minimum Data Standard fields are modified',
           );
         }
 
-        // Si no hay cambios reales, retornar éxito sin insertar audit log
         if (!hasChanges) {
           return {
             response: {
@@ -3330,7 +3323,6 @@ export class ResultsService {
           };
         }
 
-        // Actualizar campos Minimum Data Standard
         const updateData: Partial<Result> = {};
         if (hasMinDataStandardChanges) {
           if (reviewUpdateDto.commonFields?.result_description !== undefined) {
@@ -3343,7 +3335,6 @@ export class ResultsService {
           await manager.update(Result, { id: parsedResultId }, updateData);
         }
 
-        // Actualizar geographicScope
         if (
           reviewUpdateDto.geographicScope !== undefined &&
           this._geographicLocationService
@@ -3364,7 +3355,6 @@ export class ResultsService {
           }
         }
 
-        // Actualizar contributingCenters, contributingProjects, contributingInstitutions
         if (
           (reviewUpdateDto.contributingCenters !== undefined ||
             reviewUpdateDto.contributingProjects !== undefined ||
@@ -3391,7 +3381,6 @@ export class ResultsService {
           }
         }
 
-        // Actualizar contributingInitiatives
         if (
           reviewUpdateDto.contributingInitiatives !== undefined &&
           this._contributorsPartnersService
@@ -3421,7 +3410,6 @@ export class ResultsService {
           }
         }
 
-        // Actualizar evidence
         if (
           reviewUpdateDto.evidence !== undefined &&
           reviewUpdateDto.evidence.length > 0 &&
@@ -3444,7 +3432,6 @@ export class ResultsService {
           }
         }
 
-        // Actualizar resultTypeResponse según el tipo de resultado
         if (
           reviewUpdateDto.resultTypeResponse !== undefined &&
           reviewUpdateDto.commonFields?.result_type_id
@@ -3525,7 +3512,6 @@ export class ResultsService {
           }
         }
 
-        // Crear el historial de revisión
         const changedFields = {
           ...(hasMinDataStandardChanges ? minDataStandardChanges : {}),
           ...(hasTocChanges ? tocChanges : {}),
@@ -3604,14 +3590,12 @@ export class ResultsService {
           );
         }
 
-        // Validar que updateExplanation esté presente
         if (!updateTocMetadataDto.updateExplanation?.trim()) {
           throw new BadRequestException(
             'updateExplanation is required when ToC metadata is modified',
           );
         }
 
-        // Actualizar result_toc_result usando ContributorsPartnersService
         if (!this._contributorsPartnersService) {
           throw new BadRequestException(
             'ContributorsPartnersService is not available',
@@ -3635,7 +3619,6 @@ export class ResultsService {
           );
         }
 
-        // Crear el historial de revisión
         const reviewHistory = manager.create(ResultReviewHistory, {
           result_id: parsedResultId,
           action: ReviewActionEnum.UPDATE,
