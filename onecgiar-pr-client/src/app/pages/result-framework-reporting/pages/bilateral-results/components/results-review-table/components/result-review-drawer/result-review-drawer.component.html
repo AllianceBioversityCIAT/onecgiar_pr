@@ -90,7 +90,7 @@
         <p-button
           label="Save changes"
           icon="pi pi-save"
-          [disabled]="tocInitiative?.planned_result === null || tocInitiative?.planned_result === undefined"
+          [disabled]="tocInitiative?.planned_result === undefined"
           (onClick)="onSaveTocChanges()"
           styleClass="p-button-primary">
         </p-button>

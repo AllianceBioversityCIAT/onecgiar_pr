@@ -1,63 +1,65 @@
-<h4 class="pr-h4 font-weight-600 text-black"># of people trained</h4>
+@if (resultDetail && resultDetail.resultTypeResponse && resultDetail.resultTypeResponse.length > 0) {
+  <h4 class="pr-h4 font-weight-600 text-black"># of people trained</h4>
 
-<div class="peopleFields" style="display: flex; gap: 16px; flex-wrap: wrap;">
-  <app-pr-input
-    placeholder="Type quantity"
-    label="Women"
-    type="number"
-    [required]="false"
-    [(ngModel)]="resultDetail.resultTypeResponse[0].female_using">
-  </app-pr-input>
+  <div class="peopleFields" style="display: flex; gap: 16px; flex-wrap: wrap;">
+    <app-pr-input
+      placeholder="Type quantity"
+      label="Women"
+      type="number"
+      [required]="false"
+      [(ngModel)]="resultDetail.resultTypeResponse[0].female_using">
+    </app-pr-input>
 
-  <app-pr-input
-    placeholder="Type quantity"
-    label="Men"
-    type="number"
-    [required]="false"
-    [(ngModel)]="resultDetail.resultTypeResponse[0].male_using">
-  </app-pr-input>
+    <app-pr-input
+      placeholder="Type quantity"
+      label="Men"
+      type="number"
+      [required]="false"
+      [(ngModel)]="resultDetail.resultTypeResponse[0].male_using">
+    </app-pr-input>
 
-  <app-pr-input
-    placeholder="Type quantity"
-    label="Non-binary"
-    type="number"
-    [required]="false"
-    [(ngModel)]="resultDetail.resultTypeResponse[0].non_binary_using">
-  </app-pr-input>
+    <app-pr-input
+      placeholder="Type quantity"
+      label="Non-binary"
+      type="number"
+      [required]="false"
+      [(ngModel)]="resultDetail.resultTypeResponse[0].non_binary_using">
+    </app-pr-input>
 
-  <app-pr-input
-    placeholder="Type quantity"
-    label="Unknown"
-    type="number"
-    [required]="false"
-    [(ngModel)]="resultDetail.resultTypeResponse[0].has_unkown_using">
-  </app-pr-input>
-</div>
-
-<div style="margin-top: 16px;">
-  <h4 class="pr-h4 font-weight-600 text-black">Total:</h4>
-  <div class="readonly-chips-container">
-    <span class="readonly-chip">{{ this.getTotalParticipants() }}</span>
+    <app-pr-input
+      placeholder="Type quantity"
+      label="Unknown"
+      type="number"
+      [required]="false"
+      [(ngModel)]="resultDetail.resultTypeResponse[0].has_unkown_using">
+    </app-pr-input>
   </div>
-</div>
 
-<app-pr-radio-button
-  label="Length of training"
-  [description]="lengthOfTrainingDescription()"
-  [(ngModel)]="resultDetail.resultTypeResponse[0].capdev_term_id"
-  [options]="capdevsTerms()"
-  optionLabel="name"
-  optionValue="capdev_term_id"
-  [required]="true">
-</app-pr-radio-button>
+  <div style="margin-top: 16px;">
+    <h4 class="pr-h4 font-weight-600 text-black">Total:</h4>
+    <div class="readonly-chips-container">
+      <span class="readonly-chip">{{ this.getTotalParticipants() }}</span>
+    </div>
+  </div>
 
-<br />
+  <app-pr-radio-button
+    label="Length of training"
+    [description]="lengthOfTrainingDescription()"
+    [(ngModel)]="resultDetail.resultTypeResponse[0].capdev_term_id"
+    [options]="capdevsTerms()"
+    optionLabel="name"
+    optionValue="capdev_term_id"
+    [required]="true">
+  </app-pr-radio-button>
 
-<app-pr-radio-button
-  label="Delivery Method"
-  [(ngModel)]="resultDetail.resultTypeResponse[0].capdev_delivery_method_id"
-  [options]="deliveryMethodOptions()"
-  optionLabel="name"
-  optionValue="capdev_delivery_method_id"
-  [required]="false">
-</app-pr-radio-button>
+  <br />
+
+  <app-pr-radio-button
+    label="Delivery Method"
+    [(ngModel)]="resultDetail.resultTypeResponse[0].capdev_delivery_method_id"
+    [options]="deliveryMethodOptions()"
+    optionLabel="name"
+    optionValue="capdev_delivery_method_id"
+    [required]="false">
+  </app-pr-radio-button>
+}

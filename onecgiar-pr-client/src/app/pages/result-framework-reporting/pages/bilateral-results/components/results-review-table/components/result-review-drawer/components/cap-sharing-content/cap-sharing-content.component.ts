@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, Input, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, Input, OnInit, signal } from '@angular/core';
 import { BilateralResultDetail } from '../../result-review-drawer.interfaces';
 import { CustomFieldsModule } from '../../../../../../../../../../custom-fields/custom-fields.module';
 import { CommonModule } from '@angular/common';
@@ -13,7 +13,44 @@ import { ApiService } from '../../../../../../../../../../shared/services/api/ap
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CapSharingContentComponent implements OnInit {
-  @Input() resultDetail: BilateralResultDetail;
+  @Input() set resultDetail(value: BilateralResultDetail) {
+    if (!value) {
+      this._resultDetail = value;
+      return;
+    }
+
+    const newDetail = { ...value };
+
+    if (!newDetail.resultTypeResponse || !Array.isArray(newDetail.resultTypeResponse) || newDetail.resultTypeResponse.length === 0) {
+      newDetail.resultTypeResponse = [{
+        result_capacity_development_id: null,
+        male_using: null,
+        female_using: null,
+        non_binary_using: null,
+        has_unkown_using: null,
+        capdev_delivery_method_id: null,
+        capdev_term_id: null
+      } as any];
+    } else {
+      const firstItem: any = { ...newDetail.resultTypeResponse[0] };
+      if (firstItem.male_using === undefined) firstItem.male_using = null;
+      if (firstItem.female_using === undefined) firstItem.female_using = null;
+      if (firstItem.non_binary_using === undefined) firstItem.non_binary_using = null;
+      if (firstItem.has_unkown_using === undefined) firstItem.has_unkown_using = null;
+      if (firstItem.capdev_delivery_method_id === undefined) firstItem.capdev_delivery_method_id = null;
+      if (firstItem.capdev_term_id === undefined) firstItem.capdev_term_id = null;
+      newDetail.resultTypeResponse = [{ ...firstItem }];
+    }
+
+    this._resultDetail = newDetail;
+    this.cdr.markForCheck();
+  }
+  get resultDetail(): BilateralResultDetail {
+    return this._resultDetail;
+  }
+  private _resultDetail: BilateralResultDetail;
+
+  private readonly cdr = inject(ChangeDetectorRef);
 
   private readonly api = inject(ApiService);
 
@@ -28,7 +65,6 @@ export class CapSharingContentComponent implements OnInit {
   private loadCapdevsTerms(): void {
     this.api.resultsSE.GET_capdevsTerms().subscribe({
       next: ({ response }) => {
-        // Get Long-term and Short-term options (indices 2 and 3 after splice)
         const terms = response.slice(2, 4);
         this.capdevsTerms.set(terms);
       },

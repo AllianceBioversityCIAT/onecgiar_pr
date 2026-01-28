@@ -149,6 +149,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   decisionMade = output<void>();
 
   resultDetail = signal<BilateralResultDetail | null>(null);
+  originalContributingInitiatives: any = null;
 
   rejectJustification: string = '';
   saveChangesJustification: string = '';
@@ -221,7 +222,9 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   }
 
   onSaveTocChanges(): void {
-    if (!this.tocInitiative || this.tocInitiative.planned_result === null || this.tocInitiative.planned_result === undefined) {
+    // Only check if planned_result has been selected (Yes or No)
+    // Since null is now treated as false, we only need to check for undefined
+    if (!this.tocInitiative || this.tocInitiative.planned_result === undefined) {
       return;
     }
     this.saveChangesType = 'toc';
@@ -898,8 +901,11 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
               }
             }
 
+            // If planned_result is null, treat it as false (No)
+            const plannedResult = tocMeta.planned_result === null || tocMeta.planned_result === undefined ? false : tocMeta.planned_result;
+
             const tocInitiative: any = {
-              planned_result: tocMeta.planned_result ?? null,
+              planned_result: plannedResult,
               initiative_id: tocMeta.initiative_id ?? null,
               official_code: tocMeta.official_code ?? null,
               short_name: tocMeta.short_name ?? null,
@@ -959,7 +965,13 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
               });
             }
 
-            Object.assign(this.tocInitiative, tocInitiative);
+            // Create a new object reference to force change detection
+            this.tocInitiative = { ...this.tocInitiative, ...tocInitiative };
+            // Force change detection after updating tocInitiative
+            // Use setTimeout to ensure ngModel binding updates
+            setTimeout(() => {
+              this.cdr.markForCheck();
+            }, 0);
 
             finalInitiativeId = tocMeta.initiative_id ?? primaryInitiativeId;
 
@@ -974,7 +986,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
           } else {
             finalInitiativeId = primaryInitiativeId;
             Object.assign(this.tocInitiative, {
-              planned_result: null,
+              planned_result: false, // null treated as false (No)
               initiative_id: primaryInitiativeId,
               official_code: null,
               short_name: null,
@@ -983,7 +995,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
                   uniqueId: '0',
                   toc_level_id: null,
                   toc_result_id: null,
-                  planned_result: null,
+                  planned_result: false, // null treated as false (No)
                   initiative_id: primaryInitiativeId,
                   toc_progressive_narrative: null,
                   indicators: [
@@ -1011,41 +1023,42 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
           }
         } else {
           finalInitiativeId = primaryInitiativeId;
-          Object.assign(this.tocInitiative, {
-            planned_result: null,
-            initiative_id: primaryInitiativeId,
-            official_code: null,
-            short_name: null,
-            result_toc_results: [
-              {
-                uniqueId: '0',
-                toc_level_id: null,
-                toc_result_id: null,
-                planned_result: null,
-                initiative_id: primaryInitiativeId,
-                toc_progressive_narrative: null,
-                indicators: [
-                  {
-                    related_node_id: null,
-                    toc_results_indicator_id: null,
-                    targets: [
-                      {
-                        contributing_indicator: null
-                      }
-                    ]
-                  }
-                ]
-              }
-            ],
-            toc_progressive_narrative: null
-          });
-          if (finalInitiativeId) {
-            setInitiativeIdIfNeeded(finalInitiativeId);
-          }
-          setTimeout(() => {
-            this.tocConsumed.set(true);
+            Object.assign(this.tocInitiative, {
+              planned_result: false, // null treated as false (No)
+              initiative_id: primaryInitiativeId,
+              official_code: null,
+              short_name: null,
+              result_toc_results: [
+                {
+                  uniqueId: '0',
+                  toc_level_id: null,
+                  toc_result_id: null,
+                  planned_result: false, // null treated as false (No)
+                  initiative_id: primaryInitiativeId,
+                  toc_progressive_narrative: null,
+                  indicators: [
+                    {
+                      related_node_id: null,
+                      toc_results_indicator_id: null,
+                      targets: [
+                        {
+                          contributing_indicator: null
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              toc_progressive_narrative: null
+            });
             this.cdr.markForCheck();
-          }, 100);
+            if (finalInitiativeId) {
+              setInitiativeIdIfNeeded(finalInitiativeId);
+            }
+            setTimeout(() => {
+              this.tocConsumed.set(true);
+              this.cdr.markForCheck();
+            }, 100);
         }
 
         const detailWithNewReference = {
@@ -1129,9 +1142,10 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   private resetForm(): void {
     this.rejectJustification = '';
     this.resultDetail.set(null);
+    this.originalContributingInitiatives = null;
     this.disabledContributingInitiatives.set([]);
     Object.assign(this.tocInitiative, {
-      planned_result: null,
+      planned_result: null, // Reset to null for initial state
       initiative_id: null,
       official_code: null,
       short_name: null,
@@ -1140,7 +1154,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
           uniqueId: '0',
           toc_level_id: null,
           toc_result_id: null,
-          planned_result: null,
+          planned_result: null, // Reset to null for initial state
           initiative_id: null,
           toc_progressive_narrative: null,
           indicators: [
