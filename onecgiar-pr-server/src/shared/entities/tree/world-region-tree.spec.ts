@@ -41,4 +41,3 @@ describe('WorldRegionTree', () => {
     expect(leafs.map((r) => r.um49Code).sort((a, b) => a - b)).toEqual([3, 4]);
   });
 });
-

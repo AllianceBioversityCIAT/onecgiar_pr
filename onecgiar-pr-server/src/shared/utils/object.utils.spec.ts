@@ -60,7 +60,10 @@ describe('object.utils', () => {
     it('should return isValid=false and invalidFields when required fields are missing', () => {
       const res = validObject({ a: '', b: 2 } as any, ['a', 'c'] as any);
       expect(res.isValid).toBe(false);
-      expect(res.invalidFields.sort((a, b) => a.localeCompare(b))).toEqual(['a', 'c']);
+      expect(res.invalidFields.sort((a, b) => a.localeCompare(b))).toEqual([
+        'a',
+        'c',
+      ]);
     });
 
     it('should return isValid=true when all required fields are present', () => {
@@ -72,7 +75,9 @@ describe('object.utils', () => {
   describe('setDefaultValueInObject', () => {
     it('should return {} if obj is not an object', () => {
       expect(setDefaultValueInObject(null as any, ['a'] as any)).toEqual({});
-      expect(setDefaultValueInObject(undefined as any, ['a'] as any)).toEqual({});
+      expect(setDefaultValueInObject(undefined as any, ['a'] as any)).toEqual(
+        {},
+      );
       expect(setDefaultValueInObject('x' as any, ['a'] as any)).toEqual({});
     });
 
@@ -109,4 +114,3 @@ describe('object.utils', () => {
     });
   });
 });
-

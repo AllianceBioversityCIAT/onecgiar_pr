@@ -161,7 +161,7 @@ export class ResultsService {
     private readonly _adUserService?: AdUserService,
     @Optional() private readonly _adUserRepository?: AdUserRepository,
     @Optional() private readonly _notificationService?: NotificationService,
-  ) {}
+  ) { }
 
   async createOwnerResult(
     createResultDto: CreateResultDto,
@@ -291,12 +291,6 @@ export class ResultsService {
       });
 
       await this.insertResultIntoElastic(newResultHeader);
-
-      await this.emitResultCreatedNotification(
-        newResultHeader,
-        Number(initiative.id),
-        user.id,
-      );
 
       return {
         response: newResultHeader,
@@ -739,6 +733,7 @@ export class ResultsService {
         result.id,
         resultImpactAreaScores,
         'impact_area_score_id',
+        { userId: user.id },
       );
 
       const toAddFromElastic = await this.findAllSimplified(
@@ -1087,11 +1082,11 @@ export class ResultsService {
           ...item,
           initiative_entity_map: entityMaps.length
             ? entityMaps.map((entityMap) => ({
-                id: entityMap.id,
-                entityId: entityMap.entityId,
-                initiativeId: entityMap.initiativeId,
-                entityName: entityMap.entity_obj?.name ?? null,
-              }))
+              id: entityMap.id,
+              entityId: entityMap.entityId,
+              initiativeId: entityMap.initiativeId,
+              entityName: entityMap.entity_obj?.name ?? null,
+            }))
             : [],
           initiative_entity_user: initiativesPortfolio3,
         };
@@ -1211,11 +1206,11 @@ export class ResultsService {
           ...item,
           initiative_entity_map: entityMaps.length
             ? entityMaps.map((entityMap) => ({
-                id: entityMap.id,
-                entityId: entityMap.entityId,
-                initiativeId: entityMap.initiativeId,
-                entityName: entityMap.entity_obj?.name ?? null,
-              }))
+              id: entityMap.id,
+              entityId: entityMap.entityId,
+              initiativeId: entityMap.initiativeId,
+              entityName: entityMap.entity_obj?.name ?? null,
+            }))
             : [],
           initiative_entity_user: initiativesPortfolio3,
         };
@@ -1233,14 +1228,14 @@ export class ResultsService {
         response:
           limit !== undefined
             ? {
-                items: result,
-                meta: {
-                  total,
-                  page: page ?? 1,
-                  limit,
-                  totalPages: Math.max(1, Math.ceil(total / limit)),
-                },
-              }
+              items: result,
+              meta: {
+                total,
+                page: page ?? 1,
+                limit,
+                totalPages: Math.max(1, Math.ceil(total / limit)),
+              },
+            }
             : { items: result },
         message: 'Successful response',
         status: HttpStatus.OK,
@@ -2901,13 +2896,13 @@ export class ResultsService {
       delivery: i.delivery.filter((d) => d.is_active),
       obj_institutions: i.obj_institutions
         ? {
-            name: i.obj_institutions.name,
-            website_link: i.obj_institutions.website_link,
-            obj_institution_type_code: {
-              id: i.obj_institutions.obj_institution_type_code.code,
-              name: i.obj_institutions.obj_institution_type_code.name,
-            },
-          }
+          name: i.obj_institutions.name,
+          website_link: i.obj_institutions.website_link,
+          obj_institution_type_code: {
+            id: i.obj_institutions.obj_institution_type_code.code,
+            name: i.obj_institutions.obj_institution_type_code.name,
+          },
+        }
         : null,
     }));
   }

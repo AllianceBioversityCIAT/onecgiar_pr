@@ -1,6 +1,5 @@
 import { BaseEntity } from './base-entity';
 import { BaseServiceSimple } from './base-service';
-import { SetAutitEnum } from '../utils/current-user.util';
 
 class DummyEntity extends BaseEntity {
   id!: number;
@@ -14,8 +13,8 @@ class DummyEntity extends BaseEntity {
 }
 
 class DummyService extends BaseServiceSimple<DummyEntity, any> {
-  constructor(repo: any, currentUser: any, roleKey: string | null = null) {
-    super(DummyEntity, repo, 'result_id' as any, currentUser, roleKey as any);
+  constructor(repo: any, roleKey: string | null = null) {
+    super(DummyEntity, repo, 'result_id' as any, roleKey as any);
   }
 }
 
@@ -27,21 +26,17 @@ describe('BaseServiceSimple / BaseDeleteService', () => {
     save: jest.fn(),
   });
 
-  const makeCurrentUser = () => ({
-    audit: jest.fn(() => ({ created_by: 7, last_updated_by: 7 })),
-  });
-
   describe('transformArrayToSaveObject', () => {
     it('should map to objects using metadata primaryKey', () => {
       const repo = makeRepo();
-      const currentUser = makeCurrentUser();
-      const service = new DummyService(repo, currentUser);
+      const service = new DummyService(repo);
 
-      expect(service.transformArrayToSaveObject([1, 2], { result_id: 10 } as any))
-        .toEqual([
-          { id: 1, result_id: 10 },
-          { id: 2, result_id: 10 },
-        ]);
+      expect(
+        service.transformArrayToSaveObject([1, 2], { result_id: 10 } as any),
+      ).toEqual([
+        { id: 1, result_id: 10 },
+        { id: 2, result_id: 10 },
+      ]);
     });
   });
 
@@ -49,8 +44,7 @@ describe('BaseServiceSimple / BaseDeleteService', () => {
     it('should build where with resultKey and is_active=true', async () => {
       const repo = makeRepo();
       repo.find.mockResolvedValue([{ id: 1 }]);
-      const currentUser = makeCurrentUser();
-      const service = new DummyService(repo, currentUser, 'role_id');
+      const service = new DummyService(repo, 'role_id');
 
       await service.find([10, 11] as any, 2 as any, { rel: true } as any);
 
@@ -72,8 +66,7 @@ describe('BaseServiceSimple / BaseDeleteService', () => {
   describe('unsetMultiplesPrimary', () => {
     it('should uncheck all if there is more than one is_primary=true', () => {
       const repo = makeRepo();
-      const currentUser = makeCurrentUser();
-      const service = new DummyService(repo, currentUser);
+      const service = new DummyService(repo);
 
       const input = [
         { is_primary: true },
@@ -88,8 +81,7 @@ describe('BaseServiceSimple / BaseDeleteService', () => {
   describe('create', () => {
     it('should upsert by generalCompareKey, deactivate others and add audit fields', async () => {
       const repo = makeRepo();
-      const currentUser = makeCurrentUser();
-      const service = new DummyService(repo, currentUser, 'role_id');
+      const service = new DummyService(repo, 'role_id');
 
       repo.find.mockResolvedValue([
         {
@@ -114,9 +106,7 @@ describe('BaseServiceSimple / BaseDeleteService', () => {
           { id: 2, name: '' }, // filtrado por isEmpty
         ],
         'name' as any,
-        2 as any,
-        undefined,
-        ['other'] as any,
+        { dataRole: 2 as any, otherAttributes: ['other'] as any, userId: 7 },
       );
 
       // update to deactivate others
@@ -125,8 +115,6 @@ describe('BaseServiceSimple / BaseDeleteService', () => {
         expect.objectContaining({ is_active: false }),
       );
 
-      // save with BOTH audit
-      expect(currentUser.audit).toHaveBeenCalledWith(SetAutitEnum.BOTH);
       expect(repo.save).toHaveBeenCalledTimes(1);
       const savedArg = repo.save.mock.calls[0][0];
       expect(savedArg[0]).toEqual(
@@ -149,8 +137,7 @@ describe('BaseServiceSimple / BaseDeleteService', () => {
   describe('upsertByCompositeKeys', () => {
     it('if dataToSave is empty, should deactivate everything and return []', async () => {
       const repo = makeRepo();
-      const currentUser = makeCurrentUser();
-      const service = new DummyService(repo, currentUser, 'role_id');
+      const service = new DummyService(repo, 'role_id');
 
       repo.update.mockResolvedValue(undefined);
 
@@ -174,8 +161,7 @@ describe('BaseServiceSimple / BaseDeleteService', () => {
 
     it('should reuse existing items by compositeKey and deactivate missing ones', async () => {
       const repo = makeRepo();
-      const currentUser = makeCurrentUser();
-      const service = new DummyService(repo, currentUser);
+      const service = new DummyService(repo);
 
       repo.find.mockResolvedValue([
         {
@@ -202,16 +188,24 @@ describe('BaseServiceSimple / BaseDeleteService', () => {
         10,
         [{ number: 1, unit: 'kg', description: 'a' }],
         ['number', 'unit', 'description'] as any,
+        undefined,
+        undefined,
+        undefined,
+        7,
       );
 
       // one update to deactivate idsToDeactivate (id=2)
       expect(repo.update).toHaveBeenCalledTimes(1);
       expect(repo.save).toHaveBeenCalledTimes(1);
-      expect(currentUser.audit).toHaveBeenCalledWith(SetAutitEnum.BOTH);
+      const savedArg = repo.save.mock.calls[0][0];
+      expect(savedArg[0]).toEqual(
+        expect.objectContaining({ created_by: 7, last_updated_by: 7 }),
+      );
 
       expect(res).toHaveLength(1);
-      expect(res[0]).toEqual(expect.objectContaining({ id: 1, is_active: true }));
+      expect(res[0]).toEqual(
+        expect.objectContaining({ id: 1, is_active: true }),
+      );
     });
   });
 });
-
