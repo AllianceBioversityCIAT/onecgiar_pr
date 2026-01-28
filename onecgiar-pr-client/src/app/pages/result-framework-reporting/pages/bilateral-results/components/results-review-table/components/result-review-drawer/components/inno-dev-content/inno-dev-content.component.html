@@ -1,37 +1,41 @@
-<app-pr-select
-  [options]="innovationControlListSE.typeList"
-  label="Which of the below typologies best fits the nature of the innovation?"
-  description="Choose 'other' if you feel the Innovation does not fit well with the proposed categories."
-  optionLabel="extraInformation"
-  optionValue="code"
-  placeholder="Select innovation type"
-  [extraInformation]="true"
-  [required]="false"
-  [(ngModel)]="resultDetail.resultTypeResponse[0].innovation_nature_id">
-</app-pr-select>
+@if (resultDetail && resultDetail.resultTypeResponse && resultDetail.resultTypeResponse.length > 0) {
+  <app-pr-select
+    [options]="innovationControlListSE.typeList"
+    label="Which of the below typologies best fits the nature of the innovation?"
+    description="Choose 'other' if you feel the Innovation does not fit well with the proposed categories."
+    optionLabel="extraInformation"
+    optionValue="code"
+    placeholder="Select innovation type"
+    [extraInformation]="true"
+    [required]="false"
+    [(ngModel)]="resultDetail.resultTypeResponse[0].innovation_nature_id">
+  </app-pr-select>
 
-<br />
+  <br />
 
-<app-pr-textarea
-  placeholder="Contact persons info goes here..."
-  [required]="false"
-  label="Innovation Developer"
-  description="Provide the full name(s), email address and organizational affiliation(s) of the innovation developer/ contact person."
-  [(ngModel)]="resultDetail.resultTypeResponse[0].innovation_developers">
-</app-pr-textarea>
+  <app-pr-textarea
+    placeholder="Contact persons info goes here..."
+    [required]="false"
+    label="Innovation Developer"
+    description="Provide the full name(s), email address and organizational affiliation(s) of the innovation developer/ contact person."
+    [(ngModel)]="resultDetail.resultTypeResponse[0].innovation_developers">
+  </app-pr-textarea>
 
-<br />
+  <br />
 
-<app-pr-field-header
-  label="How would you assess the current readiness of this innovation?"
-  [description]="readinessDescription()">
-</app-pr-field-header>
+  <app-pr-field-header
+    label="How would you assess the current readiness of this innovation?"
+    [description]="readinessDescription()">
+  </app-pr-field-header>
 
-<app-pr-range-level
-  itemTitle="name"
-  itemDescription="definition"
-  optionLabel="name"
-  optionValue="id"
-  [options]="innovationControlListSE.readinessLevelsList"
-  [(ngModel)]="resultDetail.resultTypeResponse[0].innovation_readiness_level_id">
-</app-pr-range-level>
+  <div style="display: flex; justify-content: center; width: 100%;">
+    <app-pr-range-level
+      itemTitle="name"
+      itemDescription="definition"
+      optionLabel="name"
+      optionValue="id"
+      [options]="innovationControlListSE.readinessLevelsList"
+      [(ngModel)]="resultDetail.resultTypeResponse[0].innovation_readiness_level_id">
+    </app-pr-range-level>
+  </div>
+}

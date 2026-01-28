@@ -1,4 +1,4 @@
-import { Component, inject, Input } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BilateralResultDetail } from '../../result-review-drawer.interfaces';
@@ -9,11 +9,55 @@ import { InnovationControlListService } from '../../../../../../../../../../shar
   selector: 'app-inno-dev-content',
   imports: [CommonModule, FormsModule, CustomFieldsModule],
   templateUrl: './inno-dev-content.component.html',
-  styleUrl: '../../result-review-drawer.component.scss'
+  styleUrl: '../../result-review-drawer.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class InnoDevContentComponent {
-  @Input() resultDetail: BilateralResultDetail;
+  @Input() set resultDetail(value: BilateralResultDetail) {
+    if (!value) {
+      this._resultDetail = value;
+      return;
+    }
 
+    // Create a new object reference to ensure change detection
+    const newDetail = { ...value };
+
+    // Ensure resultTypeResponse[0] exists for Innovation Development
+    if (!newDetail.resultTypeResponse || !Array.isArray(newDetail.resultTypeResponse) || newDetail.resultTypeResponse.length === 0) {
+      newDetail.resultTypeResponse = [{
+        result_innovation_dev_id: null,
+        innovation_nature_id: null,
+        innovation_type_id: null,
+        innovation_type_name: null,
+        innovation_developers: null,
+        innovation_readiness_level_id: null,
+        readinness_level_id: null,
+        level: null,
+        name: null
+      } as any];
+    } else {
+      // Ensure all required properties exist in the existing object
+      const firstItem: any = { ...newDetail.resultTypeResponse[0] };
+      if (firstItem.innovation_nature_id === undefined) firstItem.innovation_nature_id = null;
+      if (firstItem.innovation_type_id === undefined) firstItem.innovation_type_id = null;
+      if (firstItem.innovation_type_name === undefined) firstItem.innovation_type_name = null;
+      if (firstItem.innovation_developers === undefined) firstItem.innovation_developers = null;
+      if (firstItem.innovation_readiness_level_id === undefined) firstItem.innovation_readiness_level_id = null;
+      if (firstItem.readinness_level_id === undefined) firstItem.readinness_level_id = null;
+      if (firstItem.level === undefined) firstItem.level = null;
+      if (firstItem.name === undefined) firstItem.name = null;
+      newDetail.resultTypeResponse = [{ ...firstItem }];
+    }
+
+    this._resultDetail = newDetail;
+    this.cdr.markForCheck();
+  }
+  get resultDetail(): BilateralResultDetail {
+    return this._resultDetail;
+  }
+  private _resultDetail: BilateralResultDetail;
+
+  private readonly cdr = inject(ChangeDetectorRef);
   innovationControlListSE = inject(InnovationControlListService);
 
   readinessDescription(): string {
