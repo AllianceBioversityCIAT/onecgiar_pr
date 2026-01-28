@@ -47,7 +47,7 @@ export class PolicyChangeContentComponent implements OnChanges, OnInit, OnDestro
     }
 
     this._resultDetail = value;
-    
+
     setTimeout(() => {
       if (this.institutionsService.institutionsList && this.institutionsService.institutionsList.length > 0) {
         this.ensureInstitutionsMapped();
