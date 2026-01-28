@@ -73,9 +73,6 @@ import { InnovationDevService } from '../results-framework-reporting/innovation_
 import { InnovationUseService } from '../results-framework-reporting/innovation-use/innovation-use.service';
 import { ReviewUpdateDto } from './dto/review-update.dto';
 import { ResultsTocResultsService } from './results-toc-results/results-toc-results.service';
-import { UpdateTocMetadataDto } from './dto/update-toc-metadata.dto';
-import { ReviewActionEnum } from './result-review-history/entities/result-review-history.entity';
-import { BadRequestException, ConflictException } from '@nestjs/common';
 
 describe('ResultsService (unit, pure mocks)', () => {
   
