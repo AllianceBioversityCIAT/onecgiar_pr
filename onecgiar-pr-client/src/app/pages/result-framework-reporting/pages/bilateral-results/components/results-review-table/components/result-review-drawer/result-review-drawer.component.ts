@@ -12,6 +12,7 @@ import { KpContentComponent } from './components/kp-content/kp-content.component
 import { InnoDevContentComponent } from './components/inno-dev-content/inno-dev-content.component';
 import { CapSharingContentComponent } from './components/cap-sharing-content/cap-sharing-content.component';
 import { PolicyChangeContentComponent } from './components/policy-change-content/policy-change-content.component';
+import { SaveChangesJustificationDialogComponent } from './components/save-changes-justification-dialog/save-changes-justification-dialog.component';
 import { RolesService } from '../../../../../../../../shared/services/global/roles.service';
 import { BilateralResultsService } from '../../../../bilateral-results.service';
 import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
@@ -33,6 +34,7 @@ import { RdContributorsAndPartnersModule } from '../../../../../../../../pages/r
     InnoDevContentComponent,
     CapSharingContentComponent,
     PolicyChangeContentComponent,
+    SaveChangesJustificationDialogComponent,
     CustomFieldsModule,
     RdContributorsAndPartnersModule
   ],
@@ -48,7 +50,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   centersSE = inject(CentersService);
   institutionsSE = inject(InstitutionsService);
 
-  // Contributing lists
   clarisaProjectsList = signal<any[]>([]);
   contributingInitiativesList = signal<any[]>([]);
   disabledContributingInitiatives = signal<any[]>([]);
@@ -101,6 +102,24 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     }).filter(Boolean);
   });
 
+  isTocFormValid = computed(() => {
+    if (!this.tocInitiative?.result_toc_results || this.tocInitiative.result_toc_results.length === 0) {
+      return false;
+    }
+
+    return this.tocInitiative.result_toc_results.every((tab: any) => {
+      if (!tab.toc_level_id) return false;
+      
+      if (!tab.toc_result_id) return false;
+      
+      if (tab.indicators && tab.indicators.length > 0) {
+        if (!tab.indicators[0].related_node_id) return false;
+      }
+      
+      return true;
+    });
+  });
+
   visible = model<boolean>(false);
   resultToReview = model<ResultToReview | null>(null);
   drawerFullScreen = signal<boolean>(false);
@@ -112,10 +131,13 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   resultDetail = signal<BilateralResultDetail | null>(null);
 
   rejectJustification: string = '';
+  saveChangesJustification: string = '';
+  saveChangesType: 'toc' | 'dataStandard' | null = null;
   evidenceLinkInput: string = '';
 
   showConfirmApproveDialog = signal<boolean>(false);
   showConfirmRejectDialog = signal<boolean>(false);
+  showConfirmSaveChangesDialog = signal<boolean>(false);
 
   canReviewResults = computed(() => {
     if (this.api.rolesSE.isAdmin) {
@@ -155,7 +177,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   onPlannedResultChange(): void {
     if (!this.tocInitiative) return;
 
-    // Clear TOC data when planned_result changes
     if (this.tocInitiative.result_toc_results) {
       this.tocInitiative.result_toc_results.forEach((tab: any) => {
         if (tab.indicators?.[0]) {
@@ -173,11 +194,405 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
     this.tocConsumed.set(false);
     
-    // Set consumed after a short delay to allow component to update
     setTimeout(() => {
       this.tocConsumed.set(true);
       this.cdr.markForCheck();
     }, 100);
+  }
+
+  onSaveTocChanges(): void {
+    if (!this.tocInitiative || !this.isTocFormValid()) return;
+    this.saveChangesType = 'toc';
+    this.saveChangesJustification = '';
+    this.showConfirmSaveChangesDialog.set(true);
+  }
+
+  onSaveDataStandardChanges(): void {
+    this.saveChangesType = 'dataStandard';
+    this.saveChangesJustification = '';
+    this.showConfirmSaveChangesDialog.set(true);
+  }
+
+  cancelSaveChanges(): void {
+    this.showConfirmSaveChangesDialog.set(false);
+    this.saveChangesJustification = '';
+    this.saveChangesType = null;
+  }
+
+  confirmSaveChanges(justification: string): void {
+    if (!justification.trim()) return;
+    
+    this.saveChangesJustification = justification;
+    
+    this.isSaving.set(true);
+    this.cdr.markForCheck();
+
+    if (this.saveChangesType === 'toc') {
+      this.executeSaveTocChanges();
+    } else if (this.saveChangesType === 'dataStandard') {
+      this.executeSaveDataStandardChanges();
+    }
+  }
+
+  private executeSaveTocChanges(): void {
+    if (!this.tocInitiative || !this.isTocFormValid()) return;
+
+    const detail = this.resultDetail();
+    if (!detail?.commonFields?.id) {
+      console.error('Result ID not available');
+      return;
+    }
+
+    const resultId = Number.parseInt(detail.commonFields.id, 10);
+
+    const resultTocResults = this.tocInitiative.result_toc_results.map((tab: any) => {
+      const resultTocResult: any = {
+        toc_result_id: tab.toc_result_id,
+        toc_progressive_narrative: tab.toc_progressive_narrative || null,
+        toc_level_id: tab.toc_level_id
+      };
+
+      if (tab.result_toc_result_id) {
+        resultTocResult.result_toc_result_id = tab.result_toc_result_id;
+      }
+
+      return resultTocResult;
+    });
+
+    const body = {
+      tocMetadata: {
+        planned_result: this.tocInitiative.planned_result,
+        initiative_id: this.tocInitiative.initiative_id || this.initiativeIdSignal(),
+        result_toc_results: resultTocResults
+      },
+      updateExplanation: this.saveChangesJustification
+    };
+
+    // Call the API
+    this.api.resultsSE.PATCH_BilateralTocMetadata(resultId, body).subscribe({
+      next: (response) => {
+        // Reload the result detail to get updated data
+        this.loadResultDetail(String(resultId));
+        this.showConfirmSaveChangesDialog.set(false);
+        this.saveChangesJustification = '';
+        this.saveChangesType = null;
+        this.isSaving.set(false);
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        console.error('Error saving TOC metadata:', err);
+        this.isSaving.set(false);
+        this.cdr.markForCheck();
+        // You might want to show an error message to the user here
+      }
+    });
+  }
+
+  private executeSaveDataStandardChanges(): void {
+    const detail = this.resultDetail();
+    if (!detail?.commonFields?.id) {
+      console.error('Result ID not available');
+      return;
+    }
+
+    const resultId = Number.parseInt(detail.commonFields.id, 10);
+
+    // Build the request body
+    const body: any = {
+      commonFields: {
+        id: resultId,
+        result_description: detail.commonFields.result_description || null,
+        result_type_id: detail.commonFields.result_type_id
+      },
+      updateExplanation: this.saveChangesJustification
+    };
+
+    if (detail.geographicScope) {
+      const geoScope = detail.geographicScope;
+      body.geographicScope = {
+        has_countries: geoScope.has_countries || false,
+        has_regions: geoScope.has_regions || false,
+        regions: geoScope.regions?.map((r: any) => ({ id: r.id || r.region_id })) || [],
+        countries: geoScope.countries?.map((c: any) => ({ id: c.id || c.country_id })) || [],
+        geo_scope_id: geoScope.geo_scope_id || null,
+        extra_geo_scope_id: geoScope.extra_geo_scope_id || null,
+        extra_regions: geoScope.extra_regions?.map((r: any) => ({ id: r.id || r.region_id })) || [],
+        extra_countries: geoScope.extra_countries?.map((c: any) => ({ id: c.id || c.country_id })) || [],
+        has_extra_countries: geoScope.has_extra_countries || false,
+        has_extra_regions: geoScope.has_extra_regions || false,
+        has_extra_geo_scope: geoScope.has_extra_geo_scope || false
+      };
+    }
+
+    if (detail.contributingCenters && Array.isArray(detail.contributingCenters)) {
+      const centersArray: any[] = detail.contributingCenters;
+      
+      const codes = centersArray.map((item: any) => {
+        if (typeof item === 'string') return item;
+        if (item && item.code) return item.code;
+        return null;
+      }).filter(Boolean);
+      
+      body.contributingCenters = codes
+        .map((code: string, index: number) => {
+          const center = this.centersSE.centersList.find((c: any) => c.code === code);
+          if (!center) return null;
+          
+          return {
+            ...center,
+            result_id: String(resultId),
+            is_leading_result: index === 0 ? 1 : null,
+            selected: true,
+            new: true,
+            is_active: true
+          };
+        })
+        .filter(Boolean);
+    }
+
+    if (detail.contributingInitiatives) {
+      if (Array.isArray(detail.contributingInitiatives)) {
+        body.contributingInitiatives = {
+          accepted_contributing_initiatives: [],
+          pending_contributing_initiatives: detail.contributingInitiatives.map((init: any) => {
+            if (typeof init === 'object' && init.id) {
+              return {
+                ...init,
+                selected: true,
+                new: true,
+                is_active: true
+              };
+            }
+            return init;
+          })
+        };
+      } else if (typeof detail.contributingInitiatives === 'object') {
+        body.contributingInitiatives = {
+          accepted_contributing_initiatives: detail.contributingInitiatives.accepted_contributing_initiatives || [],
+          pending_contributing_initiatives: (detail.contributingInitiatives.pending_contributing_initiatives || []).map((init: any) => ({
+            ...init,
+            selected: true,
+            new: true,
+            is_active: true
+          }))
+        };
+      }
+    }
+
+    if (detail.contributingProjects && Array.isArray(detail.contributingProjects)) {
+      body.contributingProjects = detail.contributingProjects.map((project: any) => {
+        const projectId = project.project_id || project.id;
+        return { project_id: projectId };
+      });
+    }
+
+    if (detail.contributingInstitutions && Array.isArray(detail.contributingInstitutions)) {
+      body.contributingInstitutions = detail.contributingInstitutions.map((inst: any) => ({
+        id: inst.id || null,
+        institution_id: inst.institution_id || inst.institutions_id || inst.id,
+        institution_roles_id: inst.institution_roles_id || 2,
+        is_active: inst.is_active !== undefined ? inst.is_active : 1,
+        result_id: resultId
+      }));
+    }
+
+    if (detail.evidence && Array.isArray(detail.evidence)) {
+      body.evidence = detail.evidence.map((ev: any) => ({
+        id: ev.id || null,
+        link: ev.link || ev.evidence_link || '',
+        is_sharepoint: ev.is_sharepoint !== undefined ? ev.is_sharepoint : 0
+      }));
+    }
+
+    const latestDetail = this.resultDetail();
+    const resultTypeId = latestDetail?.commonFields?.result_type_id || detail.commonFields?.result_type_id;
+    const resultTypeResponse = latestDetail?.resultTypeResponse || detail.resultTypeResponse;
+    
+    if (resultTypeResponse && Array.isArray(resultTypeResponse) && resultTypeResponse.length > 0) {
+      const resultType: any = resultTypeResponse[0];
+      
+      switch (resultTypeId) {
+        case 1: { 
+          let implementingOrgs: any[] = [];
+      
+          if (resultType.implementing_organization && Array.isArray(resultType.implementing_organization) && resultType.implementing_organization.length > 0) {
+            const hasValidData = resultType.implementing_organization.some((org: any) => org.institution_id !== null && org.institution_id !== undefined);
+            if (hasValidData) {
+              implementingOrgs = resultType.implementing_organization;
+            }
+          }
+          
+          if (implementingOrgs.length === 0 && resultType.institutions && Array.isArray(resultType.institutions) && resultType.institutions.length > 0) {
+            const firstItem = resultType.institutions[0];
+
+            if (firstItem && typeof firstItem === 'object') {
+              implementingOrgs = resultType.institutions.map((item: any) => {
+                if (!item || typeof item !== 'object') return null;
+                
+                // If it already has institution_id, use it
+                if (item.institution_id !== null && item.institution_id !== undefined) {
+                  return {
+                    institution_id: typeof item.institution_id === 'string' ? Number.parseInt(item.institution_id, 10) : Number(item.institution_id),
+                    acronym: item.acronym || null,
+                    institution_name: item.institution_name || item.institutions_name || item.full_name || null
+                  };
+                }
+                
+                const instId = item.institutions_id || item.id || item.institution_id;
+                if (instId !== null && instId !== undefined) {
+                  const numId = typeof instId === 'string' ? Number.parseInt(instId, 10) : Number(instId);
+                  if (!isNaN(numId)) {
+                    const institution = this.institutionsSE.institutionsList?.find((inst: any) => {
+                      const instIdNum = typeof inst.institutions_id === 'string' ? Number.parseInt(inst.institutions_id, 10) : Number(inst.institutions_id);
+                      const instIdAlt = typeof inst.id === 'string' ? Number.parseInt(inst.id, 10) : Number(inst.id);
+                      return instIdNum === numId || instIdAlt === numId;
+                    });
+                    
+                    return {
+                      institution_id: numId,
+                      acronym: institution?.acronym || item.acronym || null,
+                      institution_name: institution?.institutions_name || institution?.full_name || item.institution_name || item.institutions_name || item.full_name || null
+                    };
+                  }
+                }
+                return null;
+              }).filter((org: any) => org !== null && org.institution_id !== null && !isNaN(org.institution_id));
+              
+              if (implementingOrgs.length > 0) {
+                console.log('Policy save - Using institutions objects directly:', implementingOrgs);
+              } else {
+                console.log('Policy save - Objects mapping failed, trying ID extraction');
+              }
+            }
+            
+            if (implementingOrgs.length === 0) {
+              const validInstitutionIds = resultType.institutions
+                .map((item: any) => {
+                  if (typeof item === 'number') return item;
+                  if (typeof item === 'string' && item !== '') {
+                    const num = Number.parseInt(item, 10);
+                    return !isNaN(num) ? num : null;
+                  }
+                  if (typeof item === 'object' && item !== null) {
+                    return item.institutions_id || item.id || item.institution_id || null;
+                  }
+                  return null;
+                })
+                .filter((id: any) => id !== null && id !== undefined && !isNaN(id))
+                .map((id: any) => typeof id === 'string' ? Number.parseInt(id, 10) : Number(id))
+                .filter((id: number) => !isNaN(id));
+              
+              console.log('Policy save - validInstitutionIds:', validInstitutionIds);
+              console.log('Policy save - institutions array items:', resultType.institutions);
+              
+              if (validInstitutionIds.length > 0 && this.institutionsSE.institutionsList && this.institutionsSE.institutionsList.length > 0) {
+              implementingOrgs = validInstitutionIds.map((instId: number) => {
+                const institution = this.institutionsSE.institutionsList.find((inst: any) => {
+                  const instIdNum = typeof inst.institutions_id === 'string' ? Number.parseInt(inst.institutions_id, 10) : Number(inst.institutions_id);
+                  const instIdAlt = typeof inst.id === 'string' ? Number.parseInt(inst.id, 10) : Number(inst.id);
+                  const instIdAlt2 = typeof inst.institution_id === 'string' ? Number.parseInt(inst.institution_id, 10) : Number(inst.institution_id);
+                  
+                  return instIdNum === instId || instIdAlt === instId || instIdAlt2 === instId;
+                });
+                
+                console.log(`Policy save - Institution ${instId} found:`, institution);
+                
+                if (institution) {
+                  const finalId = institution.institutions_id || institution.id || institution.institution_id || instId;
+                  return {
+                    institution_id: typeof finalId === 'string' ? Number.parseInt(finalId, 10) : Number(finalId),
+                    acronym: institution.acronym || null,
+                    institution_name: institution.institutions_name || institution.full_name || institution.institution_name || null
+                  };
+                }
+                
+                return {
+                  institution_id: instId,
+                  acronym: null,
+                  institution_name: null
+                };
+              }).filter((org: any) => org.institution_id !== null && org.institution_id !== undefined && !isNaN(org.institution_id));
+              
+                console.log('Policy save - Mapped implementingOrgs:', implementingOrgs);
+              } else {
+                console.log('Policy save - Cannot map: validInstitutionIds.length =', validInstitutionIds.length, 'institutionsList.length =', this.institutionsSE.institutionsList?.length);
+              }
+            }
+          } else {
+            console.log('Policy save - institutions array is empty or invalid');
+          }
+          
+          console.log('Policy save - Final implementingOrgs:', implementingOrgs);
+          
+          body.resultTypeResponse = {
+            result_policy_change_id: resultType.result_policy_change_id || null,
+            policy_type_id: resultType.policy_type_id || null,
+            policy_stage_id: resultType.policy_stage_id || null,
+            policy_stage_name: resultType.policy_stage_name || null,
+            policy_type_name: resultType.policy_type_name || null,
+            implementing_organization: implementingOrgs.length > 0 ? implementingOrgs : []
+          };
+          
+          console.log('Policy save - Final body.resultTypeResponse:', body.resultTypeResponse);
+          break;
+        }
+          
+        case 5: // Capacity Development
+          body.resultTypeResponse = {
+            result_capacity_development_id: resultType.result_capacity_development_id || null,
+            male_using: resultType.male_using ? Number(resultType.male_using) : null,
+            female_using: resultType.female_using ? Number(resultType.female_using) : null,
+            non_binary_using: resultType.non_binary_using ? Number(resultType.non_binary_using) : null,
+            has_unkown_using: resultType.has_unkown_using !== undefined ? Number(resultType.has_unkown_using) : null,
+            capdev_delivery_method_id: resultType.capdev_delivery_method_id || null,
+            capdev_term_id: resultType.capdev_term_id || null
+          };
+          break;
+          
+        case 6: // Knowledge Product
+          body.resultTypeResponse = {
+            result_knowledge_product_id: resultType.result_knowledge_product_id || null,
+            knowledge_product_type: resultType.knowledge_product_type || null,
+            licence: resultType.licence || null,
+            metadata: resultType.metadata || [],
+            keywords: resultType.keywords || []
+          };
+          break;
+          
+        case 7: // Innovation Development
+          body.resultTypeResponse = {
+            result_innovation_dev_id: resultType.result_innovation_dev_id || null,
+            innovation_nature_id: resultType.innovation_nature_id || null,
+            innovation_type_id: resultType.innovation_type_id || null,
+            innovation_type_name: resultType.innovation_type_name || null,
+            innovation_developers: resultType.innovation_developers || null,
+            innovation_readiness_level_id: resultType.innovation_readiness_level_id || null,
+            readinness_level_id: resultType.readinness_level_id || resultType.innovation_readiness_level_id || null,
+            level: resultType.level || null,
+            name: resultType.name || null
+          };
+          break;
+      }
+    }
+
+    // Call the API
+    this.api.resultsSE.PATCH_BilateralDataStandard(resultId, body).subscribe({
+      next: (response) => {
+        // Reload the result detail to get updated data
+        this.loadResultDetail(String(resultId));
+        this.showConfirmSaveChangesDialog.set(false);
+        this.saveChangesJustification = '';
+        this.saveChangesType = null;
+        this.isSaving.set(false);
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        console.error('Error saving data standard:', err);
+        this.isSaving.set(false);
+        this.cdr.markForCheck();
+        // You might want to show an error message to the user here
+      }
+    });
   }
 
   constructor() {
@@ -197,17 +612,33 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         const needsMapping = detail.contributingInitiatives.some((init: any) => {
           if (typeof init === 'number') return false;
           if (typeof init === 'string') return true;
+          // Also check if it's an object that needs to be converted to ID
+          if (typeof init === 'object' && init !== null) {
+            return !init.id || (init.official_code && !init.id);
+          }
           return false;
         });
         
         if (needsMapping) {
           const mappedInitiatives = detail.contributingInitiatives.map((initiative: any) => {
+            // If it's already a number (ID), return as is
             if (typeof initiative === 'number') {
               return initiative;
             }
+            // If it's a string (official_code), find the matching initiative and return its ID
             if (typeof initiative === 'string') {
-              const found = initiativesList.find((opt: any) => opt.official_code === initiative);
+              const found = initiativesList.find((opt: any) => opt.official_code === initiative || opt.id === Number(initiative));
               return found?.id || initiative;
+            }
+            // If it's an object, extract the ID if available, otherwise try to find it
+            if (typeof initiative === 'object' && initiative !== null) {
+              if (initiative.id) {
+                return initiative.id;
+              }
+              if (initiative.official_code) {
+                const found = initiativesList.find((opt: any) => opt.official_code === initiative.official_code);
+                return found?.id || initiative;
+              }
             }
             return initiative;
           });
@@ -242,6 +673,54 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     // Load CLARISA projects first
     this.loadContributingLists();
     
+    // Ensure institutions are loaded before processing the result
+    this.ensureInstitutionsLoaded().then(() => {
+      this.fetchAndProcessResultDetail(resultId);
+    });
+  }
+
+  private ensureInstitutionsLoaded(): Promise<void> {
+    return new Promise((resolve) => {
+      // If institutions are already loaded, resolve immediately
+      if (this.institutionsSE.institutionsList && this.institutionsSE.institutionsList.length > 0) {
+        resolve();
+        return;
+      }
+      
+      let resolved = false;
+      const doResolve = () => {
+        if (!resolved) {
+          resolved = true;
+          resolve();
+        }
+      };
+      
+      // Otherwise, wait for the loadedInstitutions event
+      const subscription = this.institutionsSE.loadedInstitutions.subscribe(() => {
+        subscription.unsubscribe();
+        doResolve();
+      });
+      
+      // Timeout fallback (in case the service is already loaded but event was missed)
+      // Check periodically if institutions are loaded
+      const checkInterval = setInterval(() => {
+        if (this.institutionsSE.institutionsList && this.institutionsSE.institutionsList.length > 0) {
+          clearInterval(checkInterval);
+          subscription.unsubscribe();
+          doResolve();
+        }
+      }, 100);
+      
+      // Maximum wait time of 3 seconds
+      setTimeout(() => {
+        clearInterval(checkInterval);
+        subscription.unsubscribe();
+        doResolve();
+      }, 3000);
+    });
+  }
+
+  private fetchAndProcessResultDetail(resultId: string): void {
     this.api.resultsSE.GET_BilateralResultDetail(resultId).subscribe({
       next: res => {
         const detail = res.response;
@@ -311,7 +790,8 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         if (detail.contributingInitiatives) {
           if (Array.isArray(detail.contributingInitiatives)) {
             detail.contributingInitiatives = detail.contributingInitiatives.map((initiative: any) => {
-              return initiative.official_code || initiative.id || initiative;
+              // Prioritize id over official_code since optionValue="id" in the multi-select
+              return initiative.id || initiative.official_code || initiative;
             });
             this.disabledContributingInitiatives.set([]);
           } else if (typeof detail.contributingInitiatives === 'object') {
@@ -329,7 +809,8 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
             
             const allInitiatives = [...contributingAndPrimary, ...accepted, ...pending];
             detail.contributingInitiatives = allInitiatives.map((initiative: any) => {
-              return initiative.official_code || initiative.id || initiative;
+              // Prioritize id over official_code since optionValue="id" in the multi-select
+              return initiative.id || initiative.official_code || initiative;
             });
           } else {
             detail.contributingInitiatives = [];
@@ -352,15 +833,19 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         
         if (detail.resultTypeResponse && Array.isArray(detail.resultTypeResponse)) {
           detail.resultTypeResponse = detail.resultTypeResponse.map((resultType: any) => {
-            if (resultType.implementing_organization && Array.isArray(resultType.implementing_organization)) {
-              resultType.institutions = resultType.implementing_organization.map((org: any) => {
+            const newResultType = { ...resultType };
+            
+            if (newResultType.implementing_organization && Array.isArray(newResultType.implementing_organization) && newResultType.implementing_organization.length > 0) {
+              newResultType.institutions = newResultType.implementing_organization.map((org: any) => {
                 const institutionId = org.institution_id || org.institutions_id || org.id;
-                return institutionId ? Number(institutionId) : institutionId;
-              });
-            } else if (!resultType.institutions) {
-              resultType.institutions = [];
+                return institutionId ? Number(institutionId) : null;
+              }).filter((id: any) => id !== null);
+            } else {
+              if (!newResultType.institutions) {
+                newResultType.institutions = [];
+              }
             }
-            return resultType;
+            return newResultType;
           });
         }
         
@@ -368,19 +853,28 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
           const tocMeta = Array.isArray(detail.tocMetadata) ? detail.tocMetadata[0] : detail.tocMetadata;
           
           if (tocMeta) {
+            let resultTocResults: any[] = [];
+            if (tocMeta.result_toc_results !== null && tocMeta.result_toc_results !== undefined) {
+              if (Array.isArray(tocMeta.result_toc_results)) {
+                resultTocResults = tocMeta.result_toc_results;
+              } else {
+                resultTocResults = [];
+              }
+            }
+            
             const tocInitiative: any = {
               planned_result: tocMeta.planned_result ?? null,
               initiative_id: tocMeta.initiative_id ?? null,
               official_code: tocMeta.official_code ?? null,
               short_name: tocMeta.short_name ?? null,
-              result_toc_results: tocMeta.result_toc_results || [],
-              toc_progressive_narrative: null
+              result_toc_results: resultTocResults,
+              toc_progressive_narrative: tocMeta.toc_progressive_narrative ?? null
             };
             
             if (!Array.isArray(tocInitiative.result_toc_results)) {
               tocInitiative.result_toc_results = [];
             }
-            
+
             if (tocInitiative.result_toc_results.length === 0) {
               tocInitiative.result_toc_results = [{
                 uniqueId: '0',
@@ -393,41 +887,40 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
               }];
             }
             
-            tocInitiative.result_toc_results.forEach((tab: any, index: number) => {
-              if (!tab.uniqueId) {
-                tab.uniqueId = index.toString();
-              }
-              if (!tab.indicators || !Array.isArray(tab.indicators)) {
-                tab.indicators = [];
-              }
-              // If no indicators, add an empty one for the component to work
-              if (tab.indicators.length === 0) {
-                tab.indicators = [{
-                  related_node_id: null,
-                  toc_results_indicator_id: null,
-                  targets: [{
-                    contributing_indicator: null
-                  }]
-                }];
-              }
-              // Ensure targets array exists in first indicator
-              if (tab.indicators[0] && (!tab.indicators[0].targets || !Array.isArray(tab.indicators[0].targets))) {
-                tab.indicators[0].targets = [{ contributing_indicator: null }];
-              }
-              // Set toc_progressive_narrative from the first tab if not already set
-              if (index === 0 && tab.toc_progressive_narrative && !tocInitiative.toc_progressive_narrative) {
-                tocInitiative.toc_progressive_narrative = tab.toc_progressive_narrative;
-              }
-            });
+            if (Array.isArray(tocInitiative.result_toc_results)) {
+              tocInitiative.result_toc_results.forEach((tab: any, index: number) => {
+                if (!tab || typeof tab !== 'object') {
+                  return;
+                }
+                
+                if (!tab.uniqueId) {
+                  tab.uniqueId = index.toString();
+                }
+                if (!tab.indicators || !Array.isArray(tab.indicators)) {
+                  tab.indicators = [];
+                }
+                if (tab.indicators.length === 0) {
+                  tab.indicators = [{
+                    related_node_id: null,
+                    toc_results_indicator_id: null,
+                    targets: [{
+                      contributing_indicator: null
+                    }]
+                  }];
+                }
+                if (tab.indicators[0] && (!tab.indicators[0].targets || !Array.isArray(tab.indicators[0].targets))) {
+                  tab.indicators[0].targets = [{ contributing_indicator: null }];
+                }
+                if (index === 0 && tab.toc_progressive_narrative && !tocInitiative.toc_progressive_narrative) {
+                  tocInitiative.toc_progressive_narrative = tab.toc_progressive_narrative;
+                }
+              });
+            }
             
-            // Assign the object directly (mutable reference)
             Object.assign(this.tocInitiative, tocInitiative);
             
-            // Use initiative_id from tocMeta, or fallback to primaryInitiativeId
             finalInitiativeId = tocMeta.initiative_id ?? primaryInitiativeId;
             
-            // Set initiativeIdSignal - this triggers the effect in multiple-wps to load the lists
-            // This will load outcomeList, outputList, and eoiList for the dropdowns
             if (finalInitiativeId) {
               setInitiativeIdIfNeeded(finalInitiativeId);
             }
@@ -437,7 +930,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
               this.cdr.markForCheck();
             }, 100);
           } else {
-            // Initialize empty if no TOC data, but use primaryInitiativeId if available
             finalInitiativeId = primaryInitiativeId;
             Object.assign(this.tocInitiative, {
               planned_result: null,
@@ -470,7 +962,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
             }, 100);
           }
         } else {
-          // Initialize empty if no tocMetadata, but use primaryInitiativeId if available
           finalInitiativeId = primaryInitiativeId;
           Object.assign(this.tocInitiative, {
             planned_result: null,
@@ -503,7 +994,12 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
           }, 100);
         }
         
-        this.resultDetail.set(detail);
+        const detailWithNewReference = {
+          ...detail,
+          resultTypeResponse: detail.resultTypeResponse ? detail.resultTypeResponse.map((rt: any) => ({ ...rt })) : detail.resultTypeResponse
+        };
+        
+        this.resultDetail.set(detailWithNewReference);
         this.isLoading.set(false);
         
         setTimeout(() => {
@@ -519,6 +1015,22 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
             if (updatedDetail.contributingInstitutions?.length) {
               updatedDetail.contributingInstitutions = [...updatedDetail.contributingInstitutions];
             }
+            if (updatedDetail.resultTypeResponse && Array.isArray(updatedDetail.resultTypeResponse)) {
+              updatedDetail.resultTypeResponse = updatedDetail.resultTypeResponse.map((resultType: any) => {
+                const newResultType = { ...resultType };
+                if (resultType.implementing_organization && Array.isArray(resultType.implementing_organization) && resultType.implementing_organization.length > 0) {
+                  if (!newResultType.institutions || newResultType.institutions.length === 0) {
+                    newResultType.institutions = resultType.implementing_organization.map((org: any) => {
+                      const institutionId = org.institution_id || org.institutions_id || org.id;
+                      return institutionId ? Number(institutionId) : null;
+                    }).filter((id: any) => id !== null);
+                  }
+                } else if (!newResultType.institutions) {
+                  newResultType.institutions = [];
+                }
+                return newResultType;
+              });
+            }
             this.resultDetail.set(updatedDetail);
             this.cdr.markForCheck();
           }
@@ -532,7 +1044,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   }
 
   private loadContributingLists(): void {
-    // Load CLARISA projects
     this.api.resultsSE.GET_ClarisaProjects().subscribe({
       next: ({ response }) => {
         const projects = response || [];

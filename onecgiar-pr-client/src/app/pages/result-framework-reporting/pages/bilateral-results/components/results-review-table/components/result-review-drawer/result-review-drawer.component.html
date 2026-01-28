@@ -78,8 +78,19 @@
               [isNotifications]="false"
               [isUnplanned]="!tocInitiative.planned_result"
               [showMultipleWPsContent]="tocConsumed()"
-              [hidden]="true">
+              [hidden]="true"
+              [forceP25]="true">
             </app-cp-multiple-wps>
+          </div>
+          
+          <div style="margin-top: 20px; display: flex; justify-content: flex-end">
+            <p-button
+              label="Save changes"
+              icon="pi pi-save"
+              [disabled]="!isTocFormValid()"
+              (onClick)="onSaveTocChanges()"
+              styleClass="p-button-primary">
+            </p-button>
           </div>
         }
       }
@@ -171,6 +182,7 @@
         optionLabel="full_name"
         optionValue="id"
         [required]="false"
+        selectedLabel="Science Programs selected"
         selectedOptionLabel="full_name"
         [disableOptions]="disabledInitiativesOptions()"
         [(ngModel)]="fields.contributingInitiatives"
@@ -207,9 +219,9 @@
           <p style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">Evidences links</p>
           <div style="display: flex; flex-wrap: wrap; gap: 8px;">
             @for (evidence of fields.evidence; track $index) {
-              <span class="evidence-chip" style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; background-color: #f3f4f6; border-radius: 16px; font-size: 14px;">
-                <a [href]="evidence.link" target="_blank" style="color: #5569dd; text-decoration: none;">{{ evidence.link }}</a>
-                <i class="pi pi-times" style="cursor: pointer; font-size: 12px; color: #6b7280;" (click)="removeEvidenceLink($index)"></i>
+              <span class="evidence-chip" style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; background-color: #f3f4f6; border-radius: 16px; font-size: 14px; max-width: 100%;">
+                <a [href]="evidence.link" target="_blank" style="color: #5569dd; text-decoration: none; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; max-width: 400px; word-break: break-word;">{{ evidence.link }}</a>
+                <i class="pi pi-times" style="cursor: pointer; font-size: 12px; color: #6b7280; flex-shrink: 0;" (click)="removeEvidenceLink($index)"></i>
               </span>
             }
           </div>
@@ -226,25 +238,30 @@
         <br />
         <h3 class="form-section_title">{{ fields?.commonFields?.result_category }}</h3>
 
-        @if (resultDetail()?.resultTypeResponse?.length > 0) {
-          @switch (fields?.commonFields?.result_type_id) {
-            @case (1) {
-              <app-policy-change-content [resultDetail]="resultDetail()"></app-policy-change-content>
-            }
-            @case (5) {
-              <app-cap-sharing-content [resultDetail]="resultDetail()"></app-cap-sharing-content>
-            }
-            @case (6) {
-              <app-kp-content [resultDetail]="resultDetail()"></app-kp-content>
-            }
-            @case (7) {
-              <app-inno-dev-content [resultDetail]="resultDetail()"></app-inno-dev-content>
-            }
+        @switch (fields?.commonFields?.result_type_id) {
+          @case (1) {
+            <app-policy-change-content [resultDetail]="resultDetail()"></app-policy-change-content>
           }
-        } @else {
-          <p class="not_provided_text">Information not provided</p>
+          @case (5) {
+            <app-cap-sharing-content [resultDetail]="resultDetail()"></app-cap-sharing-content>
+          }
+          @case (6) {
+            <app-kp-content [resultDetail]="resultDetail()"></app-kp-content>
+          }
+          @case (7) {
+            <app-inno-dev-content [resultDetail]="resultDetail()"></app-inno-dev-content>
+          }
         }
       }
+
+      <div style="margin-top: 20px; display: flex; justify-content: flex-end">
+        <p-button
+          label="Save changes"
+          icon="pi pi-save"
+          (onClick)="onSaveDataStandardChanges()"
+          styleClass="p-button-primary">
+        </p-button>
+      </div>
     </div>
   }
   </div>
@@ -325,3 +342,13 @@
       [loading]="isSaving()"></p-button>
   </div>
 </p-dialog>
+
+<!-- Save Changes Justification Dialog -->
+<app-save-changes-justification-dialog
+  [(visible)]="showConfirmSaveChangesDialog"
+  [resultCode]="resultToReview()?.result_code || ''"
+  [isSaving]="isSaving()"
+  [(justification)]="saveChangesJustification"
+  (cancel)="cancelSaveChanges()"
+  (confirm)="confirmSaveChanges($event)">
+</app-save-changes-justification-dialog>
