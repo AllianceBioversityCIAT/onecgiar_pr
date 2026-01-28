@@ -418,7 +418,10 @@ export class TocResultsRepository extends Repository<TocResult> {
     toc_level: number,
     resultTypeId?: number,
     resultId?: number,
+    planned?: boolean | string,
   ) {
+    const isPlanned = planned === true || planned === 'true';
+
     const categoryMap = {
       1: 'OUTPUT',
       2: 'OUTCOME',
@@ -441,39 +444,9 @@ export class TocResultsRepository extends Repository<TocResult> {
       params.push(tocPhaseId);
     }
 
-    let isUnplanned = false;
-    if (resultId && Number.isFinite(resultId) && resultId > 0) {
-      try {
-        const firstResultTocQuery = `
-          SELECT planned_result
-          FROM ${env.DB_NAME}.results_toc_result
-          WHERE results_id = ?
-            AND initiative_id = ?
-            AND is_active = 1
-          ORDER BY created_date ASC
-          LIMIT 1
-        `;
-        const firstResultToc = await this.query(firstResultTocQuery, [
-          resultId,
-          init_id,
-        ]);
-        if (
-          firstResultToc?.length > 0 &&
-          firstResultToc[0]?.planned_result === 0
-        ) {
-          isUnplanned = true;
-        }
-      } catch (error) {
-        this.logger.warn(
-          `Error checking planned_result for result ${resultId}: ${error}`,
-        );
-      }
-    }
-
     let indicatorFilter = '';
-    // Si es unplanned, no aplicar filtro de type_value
     if (
-      !isUnplanned &&
+      isPlanned &&
       resultTypeId &&
       RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId]?.length
     ) {
