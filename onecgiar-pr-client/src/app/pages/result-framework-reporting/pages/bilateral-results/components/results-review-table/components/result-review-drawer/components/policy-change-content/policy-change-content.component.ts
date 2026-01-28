@@ -15,7 +15,50 @@ import { Subscription } from 'rxjs';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PolicyChangeContentComponent implements OnChanges, OnInit, OnDestroy {
-  @Input() resultDetail: BilateralResultDetail;
+  private _resultDetail: BilateralResultDetail;
+
+  @Input() set resultDetail(value: BilateralResultDetail) {
+    if (!value) {
+      this._resultDetail = value;
+      return;
+    }
+
+    if (!value.resultTypeResponse || !Array.isArray(value.resultTypeResponse) || value.resultTypeResponse.length === 0) {
+      value.resultTypeResponse = [
+        {
+          policy_type_id: null,
+          policy_stage_id: null,
+          implementing_organization: [],
+          institutions: [],
+          result_policy_change_id: null
+        } as any
+      ];
+    } else {
+      const firstItem: any = value.resultTypeResponse[0];
+      if (firstItem.policy_type_id === undefined) firstItem.policy_type_id = null;
+      if (firstItem.policy_stage_id === undefined) firstItem.policy_stage_id = null;
+      if (!firstItem.implementing_organization || !Array.isArray(firstItem.implementing_organization)) {
+        firstItem.implementing_organization = [];
+      }
+      if (!firstItem.institutions || !Array.isArray(firstItem.institutions)) {
+        firstItem.institutions = [];
+      }
+      if (firstItem.result_policy_change_id === undefined) firstItem.result_policy_change_id = null;
+    }
+
+    this._resultDetail = value;
+    
+    setTimeout(() => {
+      if (this.institutionsService.institutionsList && this.institutionsService.institutionsList.length > 0) {
+        this.ensureInstitutionsMapped();
+      }
+      this.cdr.markForCheck();
+    }, 0);
+  }
+
+  get resultDetail(): BilateralResultDetail {
+    return this._resultDetail;
+  }
 
   policyControlListSE = inject(PolicyControlListService);
   institutionsService = inject(InstitutionsService);
