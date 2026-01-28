@@ -75,6 +75,7 @@ import { ReviewUpdateDto } from './dto/review-update.dto';
 import { ResultsTocResultsService } from './results-toc-results/results-toc-results.service';
 
 describe('ResultsService (unit, pure mocks)', () => {
+  
   let module: TestingModule;
   let resultService: ResultsService;
   let currentResultId: number;
