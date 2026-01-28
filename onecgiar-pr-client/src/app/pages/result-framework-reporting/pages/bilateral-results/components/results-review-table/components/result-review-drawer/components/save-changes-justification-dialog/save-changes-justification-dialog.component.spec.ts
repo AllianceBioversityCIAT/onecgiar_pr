@@ -9,8 +9,7 @@ describe('SaveChangesJustificationDialogComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [SaveChangesJustificationDialogComponent]
-    })
-    .compileComponents();
+    }).compileComponents();
 
     fixture = TestBed.createComponent(SaveChangesJustificationDialogComponent);
     component = fixture.componentInstance;

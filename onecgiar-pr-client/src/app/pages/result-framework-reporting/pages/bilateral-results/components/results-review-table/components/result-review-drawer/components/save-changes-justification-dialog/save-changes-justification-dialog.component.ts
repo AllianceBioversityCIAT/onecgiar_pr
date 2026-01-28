@@ -20,13 +20,13 @@ export class SaveChangesJustificationDialogComponent {
 
   @Output() visibleChange = new EventEmitter<boolean>();
   @Output() justificationChange = new EventEmitter<string>();
-  @Output() cancel = new EventEmitter<void>();
+  @Output() onCancelEvent = new EventEmitter<void>();
   @Output() confirm = new EventEmitter<string>();
 
   onCancel(): void {
     if (this.isSaving) return; // Prevent canceling while saving
     this.visibleChange.emit(false);
-    this.cancel.emit();
+    this.onCancelEvent.emit();
   }
 
   onConfirm(): void {

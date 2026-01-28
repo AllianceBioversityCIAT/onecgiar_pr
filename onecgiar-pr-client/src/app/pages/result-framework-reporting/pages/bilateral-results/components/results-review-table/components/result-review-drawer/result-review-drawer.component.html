@@ -370,6 +370,6 @@
   [resultCode]="resultToReview()?.result_code || ''"
   [isSaving]="isSaving()"
   [(justification)]="saveChangesJustification"
-  (cancel)="cancelSaveChanges()"
+  (onCancelEvent)="cancelSaveChanges()"
   (confirm)="confirmSaveChanges($event)">
 </app-save-changes-justification-dialog>

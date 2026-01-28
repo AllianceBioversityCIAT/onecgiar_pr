@@ -28,7 +28,7 @@ export class PolicyChangeContentComponent implements OnChanges, OnInit, OnDestro
         this.ensureInstitutionsMapped();
       }
     });
-    
+
     if (this.institutionsService.institutionsList && this.institutionsService.institutionsList.length > 0) {
       if (this.resultDetail?.resultTypeResponse?.[0]) {
         this.ensureInstitutionsMapped();
@@ -44,16 +44,22 @@ export class PolicyChangeContentComponent implements OnChanges, OnInit, OnDestro
 
   private ensureInstitutionsMapped(): void {
     if (!this.resultDetail?.resultTypeResponse?.[0]) return;
-    
+
     const resultType = this.resultDetail.resultTypeResponse[0];
-    
-    if (resultType.implementing_organization && Array.isArray(resultType.implementing_organization) && resultType.implementing_organization.length > 0) {
+
+    if (
+      resultType.implementing_organization &&
+      Array.isArray(resultType.implementing_organization) &&
+      resultType.implementing_organization.length > 0
+    ) {
       if (!resultType.institutions || resultType.institutions.length === 0) {
-        resultType.institutions = resultType.implementing_organization.map((org: any) => {
-          const institutionId = org.institution_id || org.institutions_id || org.id;
-          return institutionId ? Number(institutionId) : null;
-        }).filter((id: any) => id !== null);
-        
+        resultType.institutions = resultType.implementing_organization
+          .map((org: any) => {
+            const institutionId = org.institution_id || org.institutions_id || org.id;
+            return institutionId ? Number(institutionId) : null;
+          })
+          .filter((id: any) => id !== null);
+
         setTimeout(() => {
           this.cdr.markForCheck();
         }, 0);

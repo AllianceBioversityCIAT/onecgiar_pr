@@ -24,7 +24,7 @@ export class CPMultipleWPsComponent implements OnChanges {
   @Input() showMultipleWPsContent: boolean = true;
   @Input() isUnplanned: boolean = false;
   @Input() hidden: boolean = false;
-  @Input() forceP25: boolean = false; 
+  @Input() forceP25: boolean = false;
   activeTab: TocTab;
   activeTabSignal = signal<TocTab | null>(null);
   activeTabIndex: number = 0;
@@ -44,7 +44,7 @@ export class CPMultipleWPsComponent implements OnChanges {
   constructor(
     public api: ApiService,
     private customizedAlertsFeSE: CustomizedAlertsFeService
-  ) { }
+  ) {}
 
   onChangesInitiative = effect(() => {
     if (!this.initiativeId()) return;
@@ -56,7 +56,7 @@ export class CPMultipleWPsComponent implements OnChanges {
   onChangesActiveTab = effect(() => {
     const activeTab = this.activeTabSignal();
     const tocLevelId = activeTab?.toc_level_id;
-    
+
     if (!this.initiativeId() || tocLevelId === null || tocLevelId === undefined) return;
     switch (tocLevelId) {
       case 1:
@@ -100,93 +100,75 @@ export class CPMultipleWPsComponent implements OnChanges {
 
   GET_outputList() {
     if (!this.initiativeId()) return;
-    const resultId = this.api.dataControlSE.currentNotification?.result_id ||
+    const resultId =
+      this.api.dataControlSE.currentNotification?.result_id ||
       this.activeTab?.results_id ||
       this.api.dataControlSE?.currentResult?.id ||
       this.api.dataControlSE.currentResultSignal()?.result_id ||
       this.api.dataControlSE.currentResultSignal()?.id;
-    
+
     if (!resultId) return;
-    
-    this.api.tocApiSE
-      .GET_tocLevelsByconfig(
-        resultId,
-        this.initiativeId(),
-        1,
-        this.forceP25 ? true : this.fieldsManagerSE.isP25()
-      )
-      .subscribe({
-        next: ({ response }) => {
-          this.outputList.set(response || []);
-        },
-        error: err => {
-          this.outputList.set([]);
-          console.error(err);
-        }
-      });
+
+    this.api.tocApiSE.GET_tocLevelsByconfig(resultId, this.initiativeId(), 1, this.forceP25 ? true : this.fieldsManagerSE.isP25()).subscribe({
+      next: ({ response }) => {
+        this.outputList.set(response || []);
+      },
+      error: err => {
+        this.outputList.set([]);
+        console.error(err);
+      }
+    });
   }
 
   GET_outcomeList() {
     if (!this.initiativeId()) return;
-    const resultId = this.api.dataControlSE.currentNotification?.result_id ||
+    const resultId =
+      this.api.dataControlSE.currentNotification?.result_id ||
       this.activeTab?.results_id ||
       this.api.dataControlSE?.currentResult?.id ||
       this.api.dataControlSE.currentResultSignal()?.result_id ||
       this.api.dataControlSE.currentResultSignal()?.id;
-    
+
     if (!resultId) return;
-    
-    this.api.tocApiSE
-      .GET_tocLevelsByconfig(
-        resultId,
-        this.initiativeId(),
-        2,
-        this.forceP25 ? true : this.fieldsManagerSE.isP25()
-      )
-      .subscribe({
-        next: ({ response }) => {
-          this.outcomeList.set(response || []);
-        },
-        error: err => {
-          this.outcomeList.set([]);
-          console.error(err);
-        }
-      });
+
+    this.api.tocApiSE.GET_tocLevelsByconfig(resultId, this.initiativeId(), 2, this.forceP25 ? true : this.fieldsManagerSE.isP25()).subscribe({
+      next: ({ response }) => {
+        this.outcomeList.set(response || []);
+      },
+      error: err => {
+        this.outcomeList.set([]);
+        console.error(err);
+      }
+    });
   }
 
   GET_EOIList() {
     if (!this.initiativeId()) return;
-    const resultId = this.api.dataControlSE.currentNotification?.result_id ||
+    const resultId =
+      this.api.dataControlSE.currentNotification?.result_id ||
       this.activeTab?.results_id ||
       this.api.dataControlSE?.currentResult?.id ||
       this.api.dataControlSE.currentResultSignal()?.result_id ||
       this.api.dataControlSE.currentResultSignal()?.id;
-    
+
     if (!resultId) return;
-    
-    this.api.tocApiSE
-      .GET_tocLevelsByconfig(
-        resultId,
-        this.initiativeId(),
-        3,
-        this.forceP25 ? true : this.fieldsManagerSE.isP25()
-      )
-      .subscribe({
-        next: ({ response }) => {
-          if (response && Array.isArray(response)) {
-            response.forEach((item, index) => {
-              item.uniqueId = `${item.toc_result_id}-${index}`;
-            });
-            this.eoiList.set(response);
-          } else {
-            this.eoiList.set([]);
-          }
-        },
-        error: err => {
+
+    this.api.tocApiSE.GET_tocLevelsByconfig(resultId, this.initiativeId(), 3, this.forceP25 ? true : this.fieldsManagerSE.isP25()).subscribe({
+      next: ({ response }) => {
+        if (response && Array.isArray(response)) {
+          response.forEach((item, index) => {
+            item.uniqueId = `${item.toc_result_id}-${index}`;
+          });
+          this.eoiList.set(response);
+        } else {
           this.eoiList.set([]);
-          console.error(err);
         }
-      });
+      },
+      error: err => {
+        this.eoiList.set([]);
+        console.error(err);
+      }
+    });
   }
 
   dynamicTabTitle = computed(() => {

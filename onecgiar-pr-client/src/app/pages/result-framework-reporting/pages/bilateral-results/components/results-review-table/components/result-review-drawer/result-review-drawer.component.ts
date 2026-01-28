@@ -459,12 +459,12 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
               }).filter((org: any) => org !== null && org.institution_id !== null && !isNaN(org.institution_id));
               
               if (implementingOrgs.length > 0) {
-                console.log('Policy save - Using institutions objects directly:', implementingOrgs);
+                // Using institutions objects directly
               } else {
-                console.log('Policy save - Objects mapping failed, trying ID extraction');
+                // Objects mapping failed, trying ID extraction
               }
             }
-            
+
             if (implementingOrgs.length === 0) {
               const validInstitutionIds = resultType.institutions
                 .map((item: any) => {
@@ -481,22 +481,17 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
                 .filter((id: any) => id !== null && id !== undefined && !isNaN(id))
                 .map((id: any) => typeof id === 'string' ? Number.parseInt(id, 10) : Number(id))
                 .filter((id: number) => !isNaN(id));
-              
-              console.log('Policy save - validInstitutionIds:', validInstitutionIds);
-              console.log('Policy save - institutions array items:', resultType.institutions);
-              
+
               if (validInstitutionIds.length > 0 && this.institutionsSE.institutionsList && this.institutionsSE.institutionsList.length > 0) {
               implementingOrgs = validInstitutionIds.map((instId: number) => {
                 const institution = this.institutionsSE.institutionsList.find((inst: any) => {
                   const instIdNum = typeof inst.institutions_id === 'string' ? Number.parseInt(inst.institutions_id, 10) : Number(inst.institutions_id);
                   const instIdAlt = typeof inst.id === 'string' ? Number.parseInt(inst.id, 10) : Number(inst.id);
                   const instIdAlt2 = typeof inst.institution_id === 'string' ? Number.parseInt(inst.institution_id, 10) : Number(inst.institution_id);
-                  
+
                   return instIdNum === instId || instIdAlt === instId || instIdAlt2 === instId;
                 });
-                
-                console.log(`Policy save - Institution ${instId} found:`, institution);
-                
+
                 if (institution) {
                   const finalId = institution.institutions_id || institution.id || institution.institution_id || instId;
                   return {
@@ -505,25 +500,17 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
                     institution_name: institution.institutions_name || institution.full_name || institution.institution_name || null
                   };
                 }
-                
+
                 return {
                   institution_id: instId,
                   acronym: null,
                   institution_name: null
                 };
               }).filter((org: any) => org.institution_id !== null && org.institution_id !== undefined && !isNaN(org.institution_id));
-              
-                console.log('Policy save - Mapped implementingOrgs:', implementingOrgs);
-              } else {
-                console.log('Policy save - Cannot map: validInstitutionIds.length =', validInstitutionIds.length, 'institutionsList.length =', this.institutionsSE.institutionsList?.length);
               }
             }
-          } else {
-            console.log('Policy save - institutions array is empty or invalid');
           }
-          
-          console.log('Policy save - Final implementingOrgs:', implementingOrgs);
-          
+
           body.resultTypeResponse = {
             result_policy_change_id: resultType.result_policy_change_id || null,
             policy_type_id: resultType.policy_type_id || null,
@@ -532,8 +519,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
             policy_type_name: resultType.policy_type_name || null,
             implementing_organization: implementingOrgs.length > 0 ? implementingOrgs : []
           };
-          
-          console.log('Policy save - Final body.resultTypeResponse:', body.resultTypeResponse);
           break;
         }
           
