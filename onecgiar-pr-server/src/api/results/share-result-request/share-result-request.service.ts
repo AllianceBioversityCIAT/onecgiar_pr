@@ -219,12 +219,6 @@ export class ShareResultRequestService {
       resultId,
       emailTemplate,
     );
-
-    await this.sendSocketNotification(
-      shareInitRequests,
-      resultId,
-      emailTemplate,
-    );
   }
 
   private async sendEmailsForShareRequests(

@@ -323,12 +323,6 @@ export class ResultsService {
 
       await this.insertResultIntoElastic(newResultHeader);
 
-      await this.emitResultCreatedNotification(
-        newResultHeader,
-        Number(initiative.id),
-        user.id,
-      );
-
       return {
         response: newResultHeader,
         message: 'The Result has been created successfully',
