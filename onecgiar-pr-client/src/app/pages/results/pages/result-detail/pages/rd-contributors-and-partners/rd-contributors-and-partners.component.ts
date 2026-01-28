@@ -26,7 +26,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   contributingInitiativesList = [];
   alertStatusMessage: string = `Partner organization or CG Center that you collaborated with or are currently collaborating with to generate this result.`;
   cgCentersMessage: string = `This section displays CGIAR Center partners as they appear in <a class="open_route" href="/result/result-detail/${this.resultCode}/theory-of-change?phase=${this.versionId}" target="_blank">Section 2, Theory of Change</a>.</li> Should you identify any inconsistencies, please update Section 2`;
-  tocConsumed = true
+  tocConsumed = true;
   disabledText = 'To remove this center, please contact your librarian';
   innovationUseResultsSE = inject(InnovationUseResultsService);
   fieldsManagerSE = inject(FieldsManagerService);
@@ -192,7 +192,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   }
 
   onRemoveAcceptedContributing(index: number) {
-    this.rdPartnersSE.partnersBody.contributing_initiatives.accepted_contributing_initiatives.splice(index, 1);
+    this.rdPartnersSE.partnersBody.contributing_initiatives?.accepted_contributing_initiatives?.splice(index, 1);
   }
 
   onRemoveNewContributing(index: number) {
@@ -208,8 +208,8 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     return `Please select the ${entity} leading this result. <b>Only ${entity}s already added in this section can be selected as the result lead.</b>`;
   }
 
-  onPlannedResultChange() {
-    this.rdPartnersSE.partnersBody.result_toc_result?.result_toc_results?.forEach((tab: any) => {
+  onPlannedResultChange(item: any) {
+    item?.result_toc_results?.forEach((tab: any) => {
       if (tab.indicators?.[0]) {
         tab.indicators[0].related_node_id = null;
         tab.indicators[0].toc_results_indicator_id = null;
@@ -224,7 +224,8 @@ export class RdContributorsAndPartnersComponent implements OnInit {
 
     this.tocConsumed = false;
 
-    this.api.resultsSE.PATCH_updateUnplannedResult({ planned_result: this.rdPartnersSE.partnersBody.result_toc_result.planned_result })
+    this.api.resultsSE
+      .PATCH_updateUnplannedResult({ planned_result: item.planned_result })
       .pipe(
         finalize(() => {
           this.tocConsumed = true;
@@ -237,10 +238,20 @@ export class RdContributorsAndPartnersComponent implements OnInit {
             this.multipleWpsComponent.GET_outputList();
           }
         },
-        error: (err) => {
+        error: err => {
           console.error('Error updating planned result:', err);
         }
       });
+  }
+
+  getContributorDescription(contributor: any) {
+    const contributorsText = `<strong>${contributor?.official_code} ${contributor?.short_name}</strong> - Does this result align with the Program's planned TOC indicators?`;
+
+    if (!contributor?.result_toc_results?.length) {
+      return `<strong>${contributor?.official_code} ${contributor?.short_name}</strong> - Pending confirmation`;
+    }
+
+    return contributorsText;
   }
 
   formatResultLabel(option: any): string {

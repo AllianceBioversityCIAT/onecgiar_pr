@@ -64,6 +64,7 @@
             [icon]="this.requestingAccept ? 'loop' : ''"
             [tooltipText]="this.isQAed ? 'This result has been Quality Assessed and no additional contributors can be added.' : ''"
             [verticalMargin]="0"
+            [style]="{ whiteSpace: 'nowrap' }"
             tooltipStyleClass="tooltip-w-300"></app-pr-button>
 
           <app-pr-button
@@ -73,6 +74,7 @@
             [rotating]="this.requestingReject"
             [icon]="this.requestingReject ? 'loop' : ''"
             [verticalMargin]="0"
+            [style]="{ whiteSpace: 'nowrap' }"
             [ngClass]="{ globalDisabled: invalidateRequest() }"></app-pr-button>
         </div>
       }

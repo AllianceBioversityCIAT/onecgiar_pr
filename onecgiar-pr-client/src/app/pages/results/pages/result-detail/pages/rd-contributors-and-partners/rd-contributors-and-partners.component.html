@@ -35,7 +35,7 @@
     label="Does this result align with the Program's planned TOC indicators?"
     [required]="true"
     [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.planned_result"
-    (selectOptionEvent)="onPlannedResultChange()">
+    (selectOptionEvent)="onPlannedResultChange(this.rdPartnersSE.partnersBody?.result_toc_result)">
   </app-pr-yes-or-not>
 
   <app-alert-status
@@ -52,7 +52,7 @@
         <app-cp-multiple-wps
           [editable]="true"
           [initiative]="this.rdPartnersSE.partnersBody?.result_toc_result"
-          [initiativeId]="this.rdPartnersSE.initiativeIdSignal"
+          [initiativeId]="this.rdPartnersSE.initiativeIdSignal()"
           [resultLevelId]="this.resultLevelSE.currentResultLevelId"
           [isIpsr]="false"
           [isContributor]="false"
@@ -138,7 +138,7 @@
 
     <div class="chips_container">
       @for (
-        item of this.rdPartnersSE.result_toc_result?.contributing_initiatives?.accepted_contributing_initiatives || [];
+        item of this.rdPartnersSE.partnersBody?.contributing_initiatives?.accepted_contributing_initiatives || [];
         track item.id;
         let i = $index
       ) {
@@ -192,6 +192,52 @@
         </div>
       }
     </div>
+  </div>
+
+  <div *ngIf="this.rdPartnersSE.partnersBody?.contributors_result_toc_result?.length">
+    <app-pr-field-header label="Other contributors" [required]="false" [simpleStyle]="true"> </app-pr-field-header>
+
+    @for (contributor of this.rdPartnersSE.partnersBody?.contributors_result_toc_result; track contributor.initiative_id) {
+      <app-pr-yes-or-not
+        [label]="getContributorDescription(contributor)"
+        [required]="!!contributor?.result_toc_results?.length"
+        [(ngModel)]="contributor.planned_result"
+        (selectOptionEvent)="onPlannedResultChange(contributor)"
+        [hideOptions]="!contributor?.result_toc_results?.length">
+      </app-pr-yes-or-not>
+
+      @if (!contributor?.result_toc_results?.length) {
+        <div class="pr-message">
+          <i class="material-icons-round" style="font-size: 20px; color: var(--pr-color-orange-400)">info</i>
+          <p>
+            <b> {{ contributor?.official_code }} {{ contributor.short_name }} </b>
+            has not confirmed its contribution to this result, so its ToC mapping is currently unavailable.
+          </p>
+        </div>
+      }
+
+      <!-- <app-alert-status
+        [description]="
+          'If your answer is <strong>Yes</strong>, please select the relevant <strong>HLO, indicator</strong>, and <strong>contribution to target</strong> below. If the result is not planned for in the 2025 ToC (planned indicators), please select <strong>No</strong> and, where applicable, choose the <strong>HLO</strong> under which it is most appropriate to report the result. Please also provide a short justification explaining why you are reporting it even though it is not reflected in a 2025 ToC indicator. These “No”-flagged results could be reviewed by the Program team as part of the adaptive management process and may inform updates or adjustments to the Program’s 2026 ToC and planned indicators.'
+        ">
+      </app-alert-status> -->
+      @if (this.rdPartnersSE.partnersBody?.contributors_result_toc_result?.length && contributor.planned_result !== null) {
+        @if (this.tocConsumed) {
+          <div style="z-index: 1; position: relative">
+            <app-cp-multiple-wps
+              [editable]="true"
+              [initiative]="contributor"
+              [initiativeId]="contributor?.initiative_id"
+              [resultLevelId]="this.resultLevelSE.currentResultLevelId"
+              [isIpsr]="false"
+              [isContributor]="true"
+              [isNotifications]="false"
+              [isUnplanned]="!contributor.planned_result"
+              [showMultipleWPsContent]="this.rdPartnersSE.getConsumed()"></app-cp-multiple-wps>
+          </div>
+        }
+      }
+    }
   </div>
 
   <!-- Contributing Centers end -->

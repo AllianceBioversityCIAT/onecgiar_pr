@@ -687,6 +687,9 @@ export class ResultsTocResultsService {
         const tocProgressiveNarrative = isPlanned
           ? null
           : (resultArray?.[0]?.toc_progressive_narrative ?? null);
+        const tocLevelId = isPlanned
+          ? null
+          : (resultArray?.[0]?.toc_level_id ?? null);
 
         return {
           planned_result: entry?.planned_result ?? null,
@@ -696,7 +699,10 @@ export class ResultsTocResultsService {
           result_toc_results: resultTocResults,
           ...(isPlanned
             ? {}
-            : { toc_progressive_narrative: tocProgressiveNarrative }),
+            : {
+                toc_progressive_narrative: tocProgressiveNarrative,
+                toc_level_id: tocLevelId,
+              }),
         };
       };
 
@@ -727,8 +733,9 @@ export class ResultsTocResultsService {
             initiative_id: pendingId,
             official_code: pending?.official_code ?? null,
             short_name: pending?.short_name ?? null,
-            result_toc_results: [],
+            result_toc_results: null,
             toc_progressive_narrative: null,
+            toc_level_id: null,
           });
         }
       }

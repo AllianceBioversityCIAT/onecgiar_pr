@@ -4,10 +4,10 @@ import { ShareRequestModalService } from '../../../../../result-detail/component
 import { RetrieveModalService } from '../../../../../result-detail/components/retrieve-modal/retrieve-modal.service';
 
 @Component({
-    selector: 'app-notification-item',
-    templateUrl: './notification-item.component.html',
-    styleUrls: ['./notification-item.component.scss'],
-    standalone: false
+  selector: 'app-notification-item',
+  templateUrl: './notification-item.component.html',
+  styleUrls: ['./notification-item.component.scss'],
+  standalone: false
 })
 export class NotificationItemComponent {
   @Input() notification: any;
@@ -47,8 +47,19 @@ export class NotificationItemComponent {
       submitter: `${obj_owner_initiative?.official_code} - ${obj_owner_initiative?.name}`,
       result_level_id: obj_result?.obj_result_level?.id,
       result_type: obj_result?.obj_result_type?.name,
-      initiative_id: obj_owner_initiative?.id
+      initiative_id: obj_owner_initiative?.id,
+      portfolio: obj_result?.obj_version?.obj_portfolio?.acronym
     };
+
+    this.api.dataControlSE.currentResultSignal.set({
+      ...this.api.dataControlSE.currentResultSignal(),
+      title: obj_result?.title,
+      submitter: `${obj_owner_initiative?.official_code} - ${obj_owner_initiative?.name}`,
+      result_level_id: obj_result?.obj_result_level?.id,
+      result_type: obj_result?.obj_result_type?.name,
+      initiative_id: obj_owner_initiative?.id,
+      portfolio: obj_result?.obj_version?.obj_portfolio?.acronym
+    });
 
     this.retrieveModalSE = {
       ...this.retrieveModalSE,

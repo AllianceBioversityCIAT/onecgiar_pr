@@ -703,8 +703,8 @@ export class ResultsApiService {
     return this.http.put<any>(`${environment.apiBaseUrl}api/global-parameters/update/variable`, body);
   }
 
-  PATCH_updateRequest(body) {
-    return this.http.patch<any>(`${this.apiBaseUrl}request/update`, body);
+  PATCH_updateRequest(body, isP25: boolean = false) {
+    return this.http.patch<any>(`${isP25 ? this.apiBaseUrlV2 : this.apiBaseUrl}request/update`, body);
   }
 
   POST_updateRequest(body) {

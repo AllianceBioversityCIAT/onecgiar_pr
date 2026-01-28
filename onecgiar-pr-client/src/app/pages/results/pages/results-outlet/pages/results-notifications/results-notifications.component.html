@@ -3,7 +3,7 @@
 
   <div class="options">
     <div class="tabs">
-      <a class="tab disabled" style="opacity: 0.5; cursor: not-allowed; pointer-events: none">
+      <a class="tab" routerLinkActive="active" routerLink="requests" (click)="this.clearFilters()">
         <i class="material-icons-round" style="font-size: 20px"> mark_unread_chat_alt </i>
         Requests
       </a>
@@ -38,55 +38,41 @@
   </p>
 
   <div class="notifications_filters" *ngIf="!router.url.includes('/results-notifications/settings')">
-    <app-pr-select
-      label="Phases"
-      [group]="true"
-      groupName="groupLabel"
-      [options]="this.phaseList"
-      [isStatic]="true"
-      [required]="false"
-      optionLabel="phase_name_status"
-      optionValue="id"
-      placeholder="Select phase"
-      [(ngModel)]="this.resultsNotificationsSE.phaseFilter"
-      [truncateSelectionText]="true">
-    </app-pr-select>
+    <div>
+      <app-pr-field-header label="Phases"></app-pr-field-header>
+      <p-select
+        [options]="this.phaseList"
+        optionLabel="phase_name_status"
+        optionValue="id"
+        placeholder="Select phase"
+        [style]="{ width: '100%' }"
+        [(ngModel)]="this.resultsNotificationsSE.phaseFilter">
+      </p-select>
+    </div>
 
     <div *ngIf="this.resultsNotificationsSE.hideInitFilter">
-      <app-pr-select
-        [options]="this.api.dataControlSE.myInitiativesList"
-        *ngIf="!this.api.rolesSE.isAdmin"
-        label="Initiative"
-        [isStatic]="true"
-        [required]="false"
-        optionLabel="full_name"
-        optionValue="initiative_id"
-        placeholder="Select Initiative"
-        [(ngModel)]="this.resultsNotificationsSE.initiativeIdFilter"
-        [truncateSelectionText]="true">
-      </app-pr-select>
-
-      <app-pr-select
-        [options]="this.allInitiatives"
-        label="Entity"
-        [required]="false"
-        [isStatic]="true"
-        *ngIf="this.api.rolesSE.isAdmin"
+      <app-pr-field-header label="Entity"></app-pr-field-header>
+      <p-select
+        [options]="this.api.rolesSE.isAdmin ? this.allInitiatives : this.api.dataControlSE.myInitiativesList"
         optionLabel="full_name"
         optionValue="initiative_id"
         placeholder="Select Entity"
         [(ngModel)]="this.resultsNotificationsSE.initiativeIdFilter"
-        [truncateSelectionText]="true">
-      </app-pr-select>
+        [filter]="true"
+        [style]="{ width: '100%' }">
+        <ng-template #selectedItem let-selectedOption>
+          <div [innerHtml]="selectedOption.full_name"></div>
+        </ng-template>
+        <ng-template let-item #item>
+          <div [innerHtml]="item.full_name"></div>
+        </ng-template>
+      </p-select>
     </div>
 
-    <app-pr-input
-      label="Search"
-      placeholder="Search"
-      [isStatic]="true"
-      [required]="false"
-      style="grid-column: span 2 / span 2"
-      [(ngModel)]="this.resultsNotificationsSE.searchFilter"></app-pr-input>
+    <div>
+      <app-pr-field-header label="Search"></app-pr-field-header>
+      <input type="text" pInputText placeholder="Search" [(ngModel)]="this.resultsNotificationsSE.searchFilter" [style]="{ width: '100%' }" />
+    </div>
   </div>
 
   <router-outlet></router-outlet>
