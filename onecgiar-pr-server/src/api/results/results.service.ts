@@ -192,7 +192,7 @@ export class ResultsService {
     @Optional()
     @Inject(forwardRef(() => InnovationUseService))
     private readonly _innovationUseService?: InnovationUseService,
-  ) { }
+  ) {}
 
   async createOwnerResult(
     createResultDto: CreateResultDto,
@@ -1119,11 +1119,11 @@ export class ResultsService {
           ...item,
           initiative_entity_map: entityMaps.length
             ? entityMaps.map((entityMap) => ({
-              id: entityMap.id,
-              entityId: entityMap.entityId,
-              initiativeId: entityMap.initiativeId,
-              entityName: entityMap.entity_obj?.name ?? null,
-            }))
+                id: entityMap.id,
+                entityId: entityMap.entityId,
+                initiativeId: entityMap.initiativeId,
+                entityName: entityMap.entity_obj?.name ?? null,
+              }))
             : [],
           initiative_entity_user: initiativesPortfolio3,
         };
@@ -1243,11 +1243,11 @@ export class ResultsService {
           ...item,
           initiative_entity_map: entityMaps.length
             ? entityMaps.map((entityMap) => ({
-              id: entityMap.id,
-              entityId: entityMap.entityId,
-              initiativeId: entityMap.initiativeId,
-              entityName: entityMap.entity_obj?.name ?? null,
-            }))
+                id: entityMap.id,
+                entityId: entityMap.entityId,
+                initiativeId: entityMap.initiativeId,
+                entityName: entityMap.entity_obj?.name ?? null,
+              }))
             : [],
           initiative_entity_user: initiativesPortfolio3,
         };
@@ -1265,14 +1265,14 @@ export class ResultsService {
         response:
           limit !== undefined
             ? {
-              items: result,
-              meta: {
-                total,
-                page: page ?? 1,
-                limit,
-                totalPages: Math.max(1, Math.ceil(total / limit)),
-              },
-            }
+                items: result,
+                meta: {
+                  total,
+                  page: page ?? 1,
+                  limit,
+                  totalPages: Math.max(1, Math.ceil(total / limit)),
+                },
+              }
             : { items: result },
         message: 'Successful response',
         status: HttpStatus.OK,
@@ -2825,8 +2825,7 @@ export class ResultsService {
         result.result_type_id,
       );
 
-      const tocResponse =
-        (tocMetadata?.response as Record<string, any>) ?? {};
+      const tocResponse = (tocMetadata?.response as Record<string, any>) ?? {};
 
       const mappedResult = {
         commonFields: commonFields ?? null,
@@ -2920,7 +2919,7 @@ export class ResultsService {
   private async _loadContributingInstitutions(
     resultId: number,
   ): Promise<any[]> {
-      const partnersSnapshot =
+    const partnersSnapshot =
       await this._resultsByInstitutionsService.getInstitutionsPartnersByResultIdV2(
         resultId,
       );
@@ -2941,16 +2940,15 @@ export class ResultsService {
   }
 
   private async _loadBilateralRelatedData(resultId: number) {
-    const [contributingProjects, evidence] =
-      await Promise.all([
-        this._resultsByProjectsRepository?.findResultsByProjectsByResultId(
-          resultId,
-        ),
-        this._resultRepository.getEvidenceBilateralResult(resultId),
-      ]);
+    const [contributingProjects, evidence] = await Promise.all([
+      this._resultsByProjectsRepository?.findResultsByProjectsByResultId(
+        resultId,
+      ),
+      this._resultRepository.getEvidenceBilateralResult(resultId),
+    ]);
 
-      const [conAccepted, conPending, contributingAndPrimary] =
-      await Promise.all([
+    const [conAccepted, conPending, contributingAndPrimary] = await Promise.all(
+      [
         this._resultByInitiativesRepository.getContributorInitiativeByResult(
           resultId,
         ),
@@ -2958,7 +2956,8 @@ export class ResultsService {
         this._resultByInitiativesRepository.getContributorInitiativeAndPrimaryByResult(
           resultId,
         ),
-      ]);
+      ],
+    );
 
     const contributingInitiatives = {
       contributing_and_primary_initiative: contributingAndPrimary ?? [],
@@ -3189,7 +3188,8 @@ export class ResultsService {
       ) {
         return {
           response: {},
-          message: 'The result ID in commonFields must match the URL parameter.',
+          message:
+            'The result ID in commonFields must match the URL parameter.',
           status: HttpStatus.BAD_REQUEST,
         };
       }
@@ -3396,7 +3396,8 @@ export class ResultsService {
           reviewUpdateDto.contributingInitiatives !== undefined &&
           this._contributorsPartnersService
         ) {
-          const contributingInitiatives = reviewUpdateDto.contributingInitiatives as any;
+          const contributingInitiatives =
+            reviewUpdateDto.contributingInitiatives as any;
           const tocPayload: CreateResultsTocResultV2Dto & {
             contributing_initiatives?: any;
           } = {
@@ -3448,7 +3449,9 @@ export class ResultsService {
           reviewUpdateDto.resultTypeResponse !== undefined &&
           reviewUpdateDto.commonFields?.result_type_id
         ) {
-          const resultTypeId = Number(reviewUpdateDto.commonFields.result_type_id);
+          const resultTypeId = Number(
+            reviewUpdateDto.commonFields.result_type_id,
+          );
 
           try {
             switch (resultTypeId) {
@@ -3540,7 +3543,8 @@ export class ResultsService {
         return {
           response: {
             resultId: parsedResultId,
-            changedFields: Object.keys(changedFields).length > 0 ? changedFields : undefined,
+            changedFields:
+              Object.keys(changedFields).length > 0 ? changedFields : undefined,
           },
           message: 'Result updated successfully',
           status: HttpStatus.OK,

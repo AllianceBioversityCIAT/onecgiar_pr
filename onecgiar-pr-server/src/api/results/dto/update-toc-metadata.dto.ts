@@ -1,12 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsString, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
-import {
-  ResultTocResultBlockDto,
-} from '../results-toc-results/dto/create-results-toc-result-v2.dto';
+import { ResultTocResultBlockDto } from '../results-toc-results/dto/create-results-toc-result-v2.dto';
 
 export class UpdateTocMetadataDto {
-
   @ApiProperty({
     type: () => ResultTocResultBlockDto,
     description: 'ToC result block containing ToC mapping information',
