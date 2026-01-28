@@ -1797,6 +1797,293 @@ export class ResultsTocResultsService {
     }
   }
 
+  async updateTocResultPartial(
+    resultId: number,
+    resultTocResult: CreateResultsTocResultV2Dto['result_toc_result'],
+    user: TokenDto,
+  ) {
+    try {
+
+      const result = await this._resultRepository.getResultById(resultId);
+      if (!result?.id) {
+        return {
+          response: { resultId },
+          message: 'Result Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const initSubmitter = await this._resultByInitiativesRepository.findOne({
+        where: { result_id: resultId, initiative_role_id: 1 },
+      });
+
+      console.log('initSubmitter', initSubmitter);
+      const normalizeInitiativeId = (value: any): number | null => {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+      };
+
+      const primaryInitiativeId =
+        normalizeInitiativeId((resultTocResult as any)?.initiative_id) ??
+        normalizeInitiativeId(initSubmitter?.initiative_id) ??
+        normalizeInitiativeId(result?.initiative_id);
+
+      // Extraer IDs de result_toc_results que vienen en el payload
+      const incomingIdsPrimary: number[] = (
+        resultTocResult?.result_toc_results ?? []
+      )
+        .map((t) => Number(t.result_toc_result_id))
+        .filter(Boolean);
+
+      const keepIds = new Set<number>(incomingIdsPrimary);
+
+      // Obtener todas las evidencias existentes del resultado
+      const existingAll = await this._resultsTocResultRepository.find({
+        where: { result_id: resultId },
+      });
+
+      // Desactivar las que no vienen en el payload
+      await Promise.all(
+        existingAll.map(async (row) => {
+          if (row.is_active && !keepIds.has(Number(row.result_toc_result_id))) {
+            await this._resultsTocResultRepository.update(
+              row.result_toc_result_id,
+              {
+                is_active: false,
+                last_updated_by: user.id,
+              },
+            );
+          }
+        }),
+      );
+
+      // Manejar planned_result = true
+      if (resultTocResult && resultTocResult?.planned_result === true) {
+        if (resultTocResult?.result_toc_results?.length) {
+          for (const t of resultTocResult.result_toc_results) {
+            if (!t?.result_toc_result_id && !t?.toc_result_id) continue;
+
+            if (t?.result_toc_result_id) {
+              // Actualizar existente
+              const resolvedInitiativeId =
+                normalizeInitiativeId((t as any)?.initiative_id) ??
+                primaryInitiativeId;
+
+              const updatePayload: Record<string, any> = {
+                toc_result_id: t?.toc_result_id ?? null,
+                toc_progressive_narrative: t?.toc_progressive_narrative ?? null,
+                toc_level_id: t?.toc_level_id ?? null,
+                planned_result: resultTocResult?.planned_result ?? null,
+                action_area_outcome_id: null,
+                is_active: true,
+                last_updated_by: user.id,
+              };
+
+              if (resolvedInitiativeId != null) {
+                updatePayload.initiative_ids = resolvedInitiativeId;
+              }
+
+              await this._resultsTocResultRepository.update(
+                Number(t.result_toc_result_id),
+                updatePayload,
+              );
+            } else {
+              // Crear nuevo
+              const resolvedInitiativeId =
+                normalizeInitiativeId((t as any)?.initiative_id) ??
+                primaryInitiativeId;
+
+              await this._resultsTocResultRepository.insert({
+                initiative_ids: resolvedInitiativeId ?? null,
+                toc_result_id: t?.toc_result_id ?? null,
+                toc_progressive_narrative: t?.toc_progressive_narrative ?? null,
+                toc_level_id: t?.toc_level_id ?? null,
+                planned_result: resultTocResult?.planned_result ?? null,
+                action_area_outcome_id: null,
+                result_id: result.id,
+                is_active: true,
+                created_by: user.id,
+                last_updated_by: user.id,
+              });
+            }
+          }
+        } else {
+          // Caso especial: planned_result = true sin result_toc_results
+          const plannedInitiativeId =
+            normalizeInitiativeId((resultTocResult as any)?.initiative_id) ??
+            primaryInitiativeId;
+
+          if (plannedInitiativeId != null) {
+            const existingRecord =
+              await this._resultsTocResultRepository.findOne({
+                where: {
+                  result_id: resultId,
+                  initiative_ids: plannedInitiativeId,
+                  is_active: true,
+                },
+              });
+
+            if (existingRecord) {
+              await this._resultsTocResultRepository.update(
+                existingRecord.result_toc_result_id,
+                {
+                  planned_result: true,
+                  last_updated_by: user.id,
+                },
+              );
+            } else {
+              await this._resultsTocResultRepository.insert({
+                initiative_ids: plannedInitiativeId,
+                toc_result_id: null,
+                toc_progressive_narrative: null,
+                toc_level_id: null,
+                planned_result: true,
+                action_area_outcome_id: null,
+                result_id: result.id,
+                is_active: true,
+                created_by: user.id,
+                last_updated_by: user.id,
+              });
+            }
+          }
+        }
+      } else if (
+        resultTocResult &&
+        resultTocResult?.planned_result === false
+      ) {
+        // Desactivar todos los registros activos
+        const allActiveRecords = await this._resultsTocResultRepository.find({
+          where: { result_id: resultId, is_active: true },
+        });
+
+        for (const record of allActiveRecords ?? []) {
+          await this._resultsTocResultRepository.update(
+            record.result_toc_result_id,
+            {
+              is_active: false,
+              last_updated_by: user.id,
+            },
+          );
+        }
+
+        if (resultTocResult?.result_toc_results?.length) {
+          const unplannedTocProgressiveNarrative =
+            (resultTocResult as any)?.toc_progressive_narrative ?? null;
+
+          for (const t of resultTocResult.result_toc_results) {
+            if (!t?.result_toc_result_id && !t?.toc_result_id) continue;
+
+            const resolvedInitiativeId =
+              normalizeInitiativeId((t as any)?.initiative_id) ??
+              normalizeInitiativeId(
+                (resultTocResult as any)?.initiative_id,
+              ) ??
+              primaryInitiativeId;
+
+            if (t?.result_toc_result_id) {
+              // Actualizar existente
+              const updatePayload: Record<string, any> = {
+                toc_result_id: t?.toc_result_id ?? null,
+                toc_progressive_narrative: unplannedTocProgressiveNarrative,
+                toc_level_id: t?.toc_level_id ?? null,
+                planned_result: false,
+                action_area_outcome_id: null,
+                is_active: true,
+                last_updated_by: user.id,
+              };
+
+              if (resolvedInitiativeId != null) {
+                updatePayload.initiative_ids = resolvedInitiativeId;
+              }
+
+              await this._resultsTocResultRepository.update(
+                Number(t.result_toc_result_id),
+                updatePayload,
+              );
+            } else {
+              // Crear nuevo
+              await this._resultsTocResultRepository.insert({
+                initiative_ids: resolvedInitiativeId ?? null,
+                toc_result_id: t?.toc_result_id ?? null,
+                toc_progressive_narrative: unplannedTocProgressiveNarrative,
+                toc_level_id: t?.toc_level_id ?? null,
+                planned_result: false,
+                action_area_outcome_id: null,
+                result_id: result.id,
+                is_active: true,
+                created_by: user.id,
+                last_updated_by: user.id,
+              });
+            }
+          }
+        } else {
+          // Caso especial: unplanned sin result_toc_results
+          interface SpecialCaseResultTocResult {
+            planned_result: boolean;
+            initiative_id: number;
+            toc_progressive_narrative: string;
+          }
+
+          const rtr =
+            resultTocResult as unknown as SpecialCaseResultTocResult;
+          const isSpecialCase =
+            rtr.planned_result === false && rtr.initiative_id;
+
+          if (isSpecialCase) {
+            await this._resultsTocResultRepository.update(
+              { result_id: resultId, initiative_ids: rtr.initiative_id },
+              {
+                is_active: false,
+                last_updated_by: user.id,
+              },
+            );
+
+            await this._resultsTocResultRepository.insert({
+              initiative_ids: rtr.initiative_id,
+              toc_result_id: null,
+              toc_level_id: null,
+              toc_progressive_narrative: rtr.toc_progressive_narrative ?? null,
+              planned_result: rtr.planned_result,
+              action_area_outcome_id: null,
+              result_id: result.id,
+              is_active: true,
+              created_by: user.id,
+              last_updated_by: user.id,
+            });
+          }
+        }
+      }
+
+      // Manejar indicadores si el resultado tiene nivel > 2
+      const hasPrimaryIndicators =
+        Array.isArray(resultTocResult?.result_toc_results) &&
+        resultTocResult.result_toc_results.some((item) =>
+          Array.isArray((item as any)?.indicators),
+        );
+
+      if (result.result_level_id > 2 && hasPrimaryIndicators) {
+        const indicatorsPayload = {
+          result_id: resultId,
+          result_toc_result: resultTocResult,
+        } as CreateResultsTocResultDto;
+
+        await this._resultsTocResultRepository.saveIndicatorsPrimarySubmitter(
+          indicatorsPayload,
+          resultId,
+          user.id,
+        );
+      }
+
+      return {
+        response: { result_id: resultId },
+        message: 'ToC result updated successfully',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
   async getVersionIdV2(result_id: number, init: number) {
     try {
       const initiative = await this._clarisaInitiatives.findOne({

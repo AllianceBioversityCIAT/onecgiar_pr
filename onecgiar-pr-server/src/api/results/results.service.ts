@@ -112,7 +112,6 @@ import { ContributorsPartnersService } from '../results-framework-reporting/cont
 import { EvidencesService } from './evidences/evidences.service';
 import { SavePartnersV2Dto } from './results_by_institutions/dto/save-partners-v2.dto';
 import { CreateResultsTocResultV2Dto } from './results-toc-results/dto/create-results-toc-result-v2.dto';
-import { CreateEvidenceDto } from './evidences/dto/create-evidence.dto';
 import { SummaryService } from './summary/summary.service';
 import { InnovationDevService } from '../results-framework-reporting/innovation_dev/innovation_dev.service';
 import { InnovationUseService } from '../results-framework-reporting/innovation-use/innovation-use.service';
@@ -3726,22 +3725,18 @@ export class ResultsService {
           );
         }
 
-        if (!this._contributorsPartnersService) {
-          throw new BadRequestException(
-            'ContributorsPartnersService is not available',
+        if (!this._resultsTocResultsService) {
+          this._logger.warn(
+            'ResultsTocResultsService is not available',
           );
+          return;
         }
 
-        const tocPayload: CreateResultsTocResultV2Dto = {
-          result_toc_result: updateTocMetadataDto.tocMetadata,
-        };
-
-        const tocResult =
-          await this._contributorsPartnersService.updateTocMappingV2(
-            parsedResultId,
-            tocPayload,
-            user,
-          );
+        const tocResult = await this._resultsTocResultsService.updateTocResultPartial(
+          parsedResultId,
+          updateTocMetadataDto.tocMetadata,
+          user,
+        );
 
         if (tocResult.status !== HttpStatus.OK) {
           throw new BadRequestException(
