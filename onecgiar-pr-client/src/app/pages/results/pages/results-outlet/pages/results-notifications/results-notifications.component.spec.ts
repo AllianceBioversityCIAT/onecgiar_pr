@@ -15,6 +15,29 @@ describe('ResultsNotificationsComponent', () => {
   let resultsNotificationsServiceMock: any;
   let routerMock: any;
   let activatedRouteMock: any;
+  const mockPhaseResponse = [
+    {
+      id: 101,
+      app_module_id: 1,
+      status: true,
+      phase_year: 2023,
+      phase_name: 'Reporting 2023'
+    },
+    {
+      id: 102,
+      app_module_id: 1,
+      status: false,
+      phase_year: 2022,
+      phase_name: 'Reporting 2022'
+    },
+    {
+      id: 201,
+      app_module_id: 2,
+      status: true,
+      phase_year: 2024,
+      phase_name: 'IPSR 2024'
+    }
+  ];
 
   beforeEach(async () => {
     apiServiceMock = {
@@ -22,7 +45,7 @@ describe('ResultsNotificationsComponent', () => {
       dataControlSE: { myInitiativesList: [], getCurrentPhases: jest.fn(() => of({})) },
       resultsSE: {
         GET_AllInitiatives: jest.fn().mockReturnValue(of({ response: [] })),
-        GET_versioning: jest.fn().mockReturnValue(of({ response: [] }))
+        GET_versioning: jest.fn().mockReturnValue(of({ response: mockPhaseResponse }))
       },
       updateUserData: jest.fn(callback => callback())
     };
@@ -78,7 +101,13 @@ describe('ResultsNotificationsComponent', () => {
 
     component.ngOnInit();
 
-    expect(component.phaseList).toEqual([]);
+    expect(component.phaseList).toEqual([
+      { isLabel: true, groupLabel: 'Reporting' },
+      mockPhaseResponse[1],
+      mockPhaseResponse[0],
+      { isLabel: true, groupLabel: 'IPSR' },
+      mockPhaseResponse[2]
+    ]);
     expect(shareRequestModalServiceMock.inNotifications).toBe(true);
     expect(resultsNotificationsServiceMock.phaseFilter).toBe('somePhase');
     expect(resultsNotificationsServiceMock.initiativeIdFilter).toBe('someInit');
@@ -132,7 +161,13 @@ describe('ResultsNotificationsComponent', () => {
 
   it('should get all phases', () => {
     component.getAllPhases();
-    expect(apiServiceMock.resultsSE.GET_versioning).toHaveBeenCalledWith(StatusPhaseEnum.ALL, ModuleTypeEnum.REPORTING);
-    expect(component.phaseList).toEqual([]);
+    expect(apiServiceMock.resultsSE.GET_versioning).toHaveBeenCalledWith(StatusPhaseEnum.ALL, ModuleTypeEnum.ALL);
+    expect(component.phaseList).toEqual([
+      { isLabel: true, groupLabel: 'Reporting' },
+      mockPhaseResponse[1],
+      mockPhaseResponse[0],
+      { isLabel: true, groupLabel: 'IPSR' },
+      mockPhaseResponse[2]
+    ]);
   });
 });
