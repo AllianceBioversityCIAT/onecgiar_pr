@@ -14,4 +14,3 @@ describe('validationAttr', () => {
     expect(validationAttr({ a: 1, b: 'x', c: 0 }, BASE)).toBe(true);
   });
 });
-
