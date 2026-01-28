@@ -1,4 +1,16 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, effect, inject, model, OnDestroy, OnInit, output, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  computed,
+  effect,
+  inject,
+  model,
+  OnDestroy,
+  OnInit,
+  output,
+  signal
+} from '@angular/core';
 import { DrawerModule } from 'primeng/drawer';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -59,21 +71,27 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     initiative_id: null,
     official_code: null,
     short_name: null,
-    result_toc_results: [{
-      uniqueId: '0',
-      toc_level_id: null,
-      toc_result_id: null,
-      planned_result: null,
-      initiative_id: null,
-      toc_progressive_narrative: null,
-      indicators: [{
-        related_node_id: null,
-        toc_results_indicator_id: null,
-        targets: [{
-          contributing_indicator: null
-        }]
-      }]
-    }],
+    result_toc_results: [
+      {
+        uniqueId: '0',
+        toc_level_id: null,
+        toc_result_id: null,
+        planned_result: null,
+        initiative_id: null,
+        toc_progressive_narrative: null,
+        indicators: [
+          {
+            related_node_id: null,
+            toc_results_indicator_id: null,
+            targets: [
+              {
+                contributing_indicator: null
+              }
+            ]
+          }
+        ]
+      }
+    ],
     toc_progressive_narrative: null
   };
   initiativeIdSignal = signal<number | null>(null);
@@ -82,24 +100,26 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   disabledInitiativesOptions = computed(() => {
     const disabled = this.disabledContributingInitiatives();
     const initiativesList = this.contributingInitiativesList();
-    
+
     if (!disabled.length || !initiativesList.length) return [];
-    
-    return disabled.map((disabledInit: any) => {
-      if (typeof disabledInit === 'object' && disabledInit.id) {
-        return initiativesList.find((opt: any) => opt.id === disabledInit.id);
-      }
-      if (typeof disabledInit === 'object' && disabledInit.official_code) {
-        return initiativesList.find((opt: any) => opt.official_code === disabledInit.official_code);
-      }
-      if (typeof disabledInit === 'string') {
-        return initiativesList.find((opt: any) => opt.official_code === disabledInit);
-      }
-      if (typeof disabledInit === 'number') {
-        return initiativesList.find((opt: any) => opt.id === disabledInit);
-      }
-      return null;
-    }).filter(Boolean);
+
+    return disabled
+      .map((disabledInit: any) => {
+        if (typeof disabledInit === 'object' && disabledInit.id) {
+          return initiativesList.find((opt: any) => opt.id === disabledInit.id);
+        }
+        if (typeof disabledInit === 'object' && disabledInit.official_code) {
+          return initiativesList.find((opt: any) => opt.official_code === disabledInit.official_code);
+        }
+        if (typeof disabledInit === 'string') {
+          return initiativesList.find((opt: any) => opt.official_code === disabledInit);
+        }
+        if (typeof disabledInit === 'number') {
+          return initiativesList.find((opt: any) => opt.id === disabledInit);
+        }
+        return null;
+      })
+      .filter(Boolean);
   });
 
   isTocFormValid = computed(() => {
@@ -109,13 +129,13 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
     return this.tocInitiative.result_toc_results.every((tab: any) => {
       if (!tab.toc_level_id) return false;
-      
+
       if (!tab.toc_result_id) return false;
-      
+
       if (tab.indicators && tab.indicators.length > 0) {
         if (!tab.indicators[0].related_node_id) return false;
       }
-      
+
       return true;
     });
   });
@@ -160,7 +180,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
   onPlannedResultChangeValue(value: boolean | null): void {
     if (!this.tocInitiative) return;
-    
+
     this.tocInitiative.planned_result = value;
     this.cdr.markForCheck();
   }
@@ -193,7 +213,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     }
 
     this.tocConsumed.set(false);
-    
+
     setTimeout(() => {
       this.tocConsumed.set(true);
       this.cdr.markForCheck();
@@ -221,9 +241,9 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
   confirmSaveChanges(justification: string): void {
     if (!justification.trim()) return;
-    
+
     this.saveChangesJustification = justification;
-    
+
     this.isSaving.set(true);
     this.cdr.markForCheck();
 
@@ -270,7 +290,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
     // Call the API
     this.api.resultsSE.PATCH_BilateralTocMetadata(resultId, body).subscribe({
-      next: (response) => {
+      next: response => {
         // Reload the result detail to get updated data
         this.loadResultDetail(String(resultId));
         this.showConfirmSaveChangesDialog.set(false);
@@ -279,7 +299,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         this.isSaving.set(false);
         this.cdr.markForCheck();
       },
-      error: (err) => {
+      error: err => {
         console.error('Error saving TOC metadata:', err);
         this.isSaving.set(false);
         this.cdr.markForCheck();
@@ -326,18 +346,20 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
     if (detail.contributingCenters && Array.isArray(detail.contributingCenters)) {
       const centersArray: any[] = detail.contributingCenters;
-      
-      const codes = centersArray.map((item: any) => {
-        if (typeof item === 'string') return item;
-        if (item && item.code) return item.code;
-        return null;
-      }).filter(Boolean);
-      
+
+      const codes = centersArray
+        .map((item: any) => {
+          if (typeof item === 'string') return item;
+          if (item && item.code) return item.code;
+          return null;
+        })
+        .filter(Boolean);
+
       body.contributingCenters = codes
         .map((code: string, index: number) => {
           const center = this.centersSE.centersList.find((c: any) => c.code === code);
           if (!center) return null;
-          
+
           return {
             ...center,
             result_id: String(resultId),
@@ -407,57 +429,78 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     const latestDetail = this.resultDetail();
     const resultTypeId = latestDetail?.commonFields?.result_type_id || detail.commonFields?.result_type_id;
     const resultTypeResponse = latestDetail?.resultTypeResponse || detail.resultTypeResponse;
-    
+
     if (resultTypeResponse && Array.isArray(resultTypeResponse) && resultTypeResponse.length > 0) {
       const resultType: any = resultTypeResponse[0];
-      
+
       switch (resultTypeId) {
-        case 1: { 
+        case 1: {
           let implementingOrgs: any[] = [];
-      
-          if (resultType.implementing_organization && Array.isArray(resultType.implementing_organization) && resultType.implementing_organization.length > 0) {
-            const hasValidData = resultType.implementing_organization.some((org: any) => org.institution_id !== null && org.institution_id !== undefined);
+
+          if (
+            resultType.implementing_organization &&
+            Array.isArray(resultType.implementing_organization) &&
+            resultType.implementing_organization.length > 0
+          ) {
+            const hasValidData = resultType.implementing_organization.some(
+              (org: any) => org.institution_id !== null && org.institution_id !== undefined
+            );
             if (hasValidData) {
               implementingOrgs = resultType.implementing_organization;
             }
           }
-          
-          if (implementingOrgs.length === 0 && resultType.institutions && Array.isArray(resultType.institutions) && resultType.institutions.length > 0) {
+
+          if (
+            implementingOrgs.length === 0 &&
+            resultType.institutions &&
+            Array.isArray(resultType.institutions) &&
+            resultType.institutions.length > 0
+          ) {
             const firstItem = resultType.institutions[0];
 
             if (firstItem && typeof firstItem === 'object') {
-              implementingOrgs = resultType.institutions.map((item: any) => {
-                if (!item || typeof item !== 'object') return null;
-                
-                // If it already has institution_id, use it
-                if (item.institution_id !== null && item.institution_id !== undefined) {
-                  return {
-                    institution_id: typeof item.institution_id === 'string' ? Number.parseInt(item.institution_id, 10) : Number(item.institution_id),
-                    acronym: item.acronym || null,
-                    institution_name: item.institution_name || item.institutions_name || item.full_name || null
-                  };
-                }
-                
-                const instId = item.institutions_id || item.id || item.institution_id;
-                if (instId !== null && instId !== undefined) {
-                  const numId = typeof instId === 'string' ? Number.parseInt(instId, 10) : Number(instId);
-                  if (!isNaN(numId)) {
-                    const institution = this.institutionsSE.institutionsList?.find((inst: any) => {
-                      const instIdNum = typeof inst.institutions_id === 'string' ? Number.parseInt(inst.institutions_id, 10) : Number(inst.institutions_id);
-                      const instIdAlt = typeof inst.id === 'string' ? Number.parseInt(inst.id, 10) : Number(inst.id);
-                      return instIdNum === numId || instIdAlt === numId;
-                    });
-                    
+              implementingOrgs = resultType.institutions
+                .map((item: any) => {
+                  if (!item || typeof item !== 'object') return null;
+
+                  // If it already has institution_id, use it
+                  if (item.institution_id !== null && item.institution_id !== undefined) {
                     return {
-                      institution_id: numId,
-                      acronym: institution?.acronym || item.acronym || null,
-                      institution_name: institution?.institutions_name || institution?.full_name || item.institution_name || item.institutions_name || item.full_name || null
+                      institution_id:
+                        typeof item.institution_id === 'string' ? Number.parseInt(item.institution_id, 10) : Number(item.institution_id),
+                      acronym: item.acronym || null,
+                      institution_name: item.institution_name || item.institutions_name || item.full_name || null
                     };
                   }
-                }
-                return null;
-              }).filter((org: any) => org !== null && org.institution_id !== null && !isNaN(org.institution_id));
-              
+
+                  const instId = item.institutions_id || item.id || item.institution_id;
+                  if (instId !== null && instId !== undefined) {
+                    const numId = typeof instId === 'string' ? Number.parseInt(instId, 10) : Number(instId);
+                    if (!isNaN(numId)) {
+                      const institution = this.institutionsSE.institutionsList?.find((inst: any) => {
+                        const instIdNum =
+                          typeof inst.institutions_id === 'string' ? Number.parseInt(inst.institutions_id, 10) : Number(inst.institutions_id);
+                        const instIdAlt = typeof inst.id === 'string' ? Number.parseInt(inst.id, 10) : Number(inst.id);
+                        return instIdNum === numId || instIdAlt === numId;
+                      });
+
+                      return {
+                        institution_id: numId,
+                        acronym: institution?.acronym || item.acronym || null,
+                        institution_name:
+                          institution?.institutions_name ||
+                          institution?.full_name ||
+                          item.institution_name ||
+                          item.institutions_name ||
+                          item.full_name ||
+                          null
+                      };
+                    }
+                  }
+                  return null;
+                })
+                .filter((org: any) => org !== null && org.institution_id !== null && !isNaN(org.institution_id));
+
               if (implementingOrgs.length > 0) {
                 // Using institutions objects directly
               } else {
@@ -479,34 +522,38 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
                   return null;
                 })
                 .filter((id: any) => id !== null && id !== undefined && !isNaN(id))
-                .map((id: any) => typeof id === 'string' ? Number.parseInt(id, 10) : Number(id))
+                .map((id: any) => (typeof id === 'string' ? Number.parseInt(id, 10) : Number(id)))
                 .filter((id: number) => !isNaN(id));
 
               if (validInstitutionIds.length > 0 && this.institutionsSE.institutionsList && this.institutionsSE.institutionsList.length > 0) {
-              implementingOrgs = validInstitutionIds.map((instId: number) => {
-                const institution = this.institutionsSE.institutionsList.find((inst: any) => {
-                  const instIdNum = typeof inst.institutions_id === 'string' ? Number.parseInt(inst.institutions_id, 10) : Number(inst.institutions_id);
-                  const instIdAlt = typeof inst.id === 'string' ? Number.parseInt(inst.id, 10) : Number(inst.id);
-                  const instIdAlt2 = typeof inst.institution_id === 'string' ? Number.parseInt(inst.institution_id, 10) : Number(inst.institution_id);
+                implementingOrgs = validInstitutionIds
+                  .map((instId: number) => {
+                    const institution = this.institutionsSE.institutionsList.find((inst: any) => {
+                      const instIdNum =
+                        typeof inst.institutions_id === 'string' ? Number.parseInt(inst.institutions_id, 10) : Number(inst.institutions_id);
+                      const instIdAlt = typeof inst.id === 'string' ? Number.parseInt(inst.id, 10) : Number(inst.id);
+                      const instIdAlt2 =
+                        typeof inst.institution_id === 'string' ? Number.parseInt(inst.institution_id, 10) : Number(inst.institution_id);
 
-                  return instIdNum === instId || instIdAlt === instId || instIdAlt2 === instId;
-                });
+                      return instIdNum === instId || instIdAlt === instId || instIdAlt2 === instId;
+                    });
 
-                if (institution) {
-                  const finalId = institution.institutions_id || institution.id || institution.institution_id || instId;
-                  return {
-                    institution_id: typeof finalId === 'string' ? Number.parseInt(finalId, 10) : Number(finalId),
-                    acronym: institution.acronym || null,
-                    institution_name: institution.institutions_name || institution.full_name || institution.institution_name || null
-                  };
-                }
+                    if (institution) {
+                      const finalId = institution.institutions_id || institution.id || institution.institution_id || instId;
+                      return {
+                        institution_id: typeof finalId === 'string' ? Number.parseInt(finalId, 10) : Number(finalId),
+                        acronym: institution.acronym || null,
+                        institution_name: institution.institutions_name || institution.full_name || institution.institution_name || null
+                      };
+                    }
 
-                return {
-                  institution_id: instId,
-                  acronym: null,
-                  institution_name: null
-                };
-              }).filter((org: any) => org.institution_id !== null && org.institution_id !== undefined && !isNaN(org.institution_id));
+                    return {
+                      institution_id: instId,
+                      acronym: null,
+                      institution_name: null
+                    };
+                  })
+                  .filter((org: any) => org.institution_id !== null && org.institution_id !== undefined && !isNaN(org.institution_id));
               }
             }
           }
@@ -521,7 +568,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
           };
           break;
         }
-          
+
         case 5: // Capacity Development
           body.resultTypeResponse = {
             result_capacity_development_id: resultType.result_capacity_development_id || null,
@@ -533,7 +580,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
             capdev_term_id: resultType.capdev_term_id || null
           };
           break;
-          
+
         case 6: // Knowledge Product
           body.resultTypeResponse = {
             result_knowledge_product_id: resultType.result_knowledge_product_id || null,
@@ -543,7 +590,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
             keywords: resultType.keywords || []
           };
           break;
-          
+
         case 7: // Innovation Development
           body.resultTypeResponse = {
             result_innovation_dev_id: resultType.result_innovation_dev_id || null,
@@ -562,7 +609,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
     // Call the API
     this.api.resultsSE.PATCH_BilateralDataStandard(resultId, body).subscribe({
-      next: (response) => {
+      next: response => {
         // Reload the result detail to get updated data
         this.loadResultDetail(String(resultId));
         this.showConfirmSaveChangesDialog.set(false);
@@ -571,7 +618,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         this.isSaving.set(false);
         this.cdr.markForCheck();
       },
-      error: (err) => {
+      error: err => {
         console.error('Error saving data standard:', err);
         this.isSaving.set(false);
         this.cdr.markForCheck();
@@ -592,7 +639,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
       const detail = this.resultDetail();
       const initiativesList = this.contributingInitiativesList();
       const disabledInitiatives = this.disabledContributingInitiatives();
-      
+
       if (detail?.contributingInitiatives && Array.isArray(detail.contributingInitiatives) && initiativesList.length > 0) {
         const needsMapping = detail.contributingInitiatives.some((init: any) => {
           if (typeof init === 'number') return false;
@@ -603,7 +650,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
           }
           return false;
         });
-        
+
         if (needsMapping) {
           const mappedInitiatives = detail.contributingInitiatives.map((initiative: any) => {
             // If it's already a number (ID), return as is
@@ -627,7 +674,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
             }
             return initiative;
           });
-          
+
           if (disabledInitiatives.length > 0) {
             const mappedDisabled = disabledInitiatives.map((initiative: any) => {
               if (typeof initiative === 'object' && initiative.official_code) {
@@ -638,26 +685,23 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
             });
             this.disabledContributingInitiatives.set(mappedDisabled);
           }
-          
+
           // Only update if the mapping actually changed something
-          const hasChanged = mappedInitiatives.some((mapped: any, index: number) => 
-            mapped !== detail.contributingInitiatives[index]
-          );
-          
+          const hasChanged = mappedInitiatives.some((mapped: any, index: number) => mapped !== detail.contributingInitiatives[index]);
+
           if (hasChanged) {
             this.resultDetail.set({ ...detail, contributingInitiatives: mappedInitiatives });
           }
         }
       }
     });
-
   }
 
   private loadResultDetail(resultId: string): void {
     this.isLoading.set(true);
     // Load CLARISA projects first
     this.loadContributingLists();
-    
+
     // Ensure institutions are loaded before processing the result
     this.ensureInstitutionsLoaded().then(() => {
       this.fetchAndProcessResultDetail(resultId);
@@ -665,13 +709,13 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   }
 
   private ensureInstitutionsLoaded(): Promise<void> {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       // If institutions are already loaded, resolve immediately
       if (this.institutionsSE.institutionsList && this.institutionsSE.institutionsList.length > 0) {
         resolve();
         return;
       }
-      
+
       let resolved = false;
       const doResolve = () => {
         if (!resolved) {
@@ -679,13 +723,13 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
           resolve();
         }
       };
-      
+
       // Otherwise, wait for the loadedInstitutions event
       const subscription = this.institutionsSE.loadedInstitutions.subscribe(() => {
         subscription.unsubscribe();
         doResolve();
       });
-      
+
       // Timeout fallback (in case the service is already loaded but event was missed)
       // Check periodically if institutions are loaded
       const checkInterval = setInterval(() => {
@@ -695,7 +739,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
           doResolve();
         }
       }, 100);
-      
+
       // Maximum wait time of 3 seconds
       setTimeout(() => {
         clearInterval(checkInterval);
@@ -709,9 +753,9 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     this.api.resultsSE.GET_BilateralResultDetail(resultId).subscribe({
       next: res => {
         const detail = res.response;
-      
+
         this.api.resultsSE.currentResultId = Number.parseInt(resultId, 10);
-        
+
         if (detail.commonFields) {
           const currentResultData = {
             id: Number.parseInt(detail.commonFields.id, 10),
@@ -722,14 +766,14 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
             result_category: detail.commonFields.result_category,
             portfolio: 'P25'
           } as any;
-          
+
           this.api.dataControlSE.currentResult = currentResultData;
           this.api.dataControlSE.currentResultSignal.set(currentResultData);
         }
-        
+
         let primaryInitiativeId: number | null = null;
         let finalInitiativeId: number | null = null;
-        
+
         const setInitiativeIdIfNeeded = (initiativeId: number | null) => {
           if (initiativeId && (!this.initiativeIdSignal() || this.initiativeIdSignal() !== initiativeId)) {
             this.initiativeIdSignal.set(initiativeId);
@@ -738,7 +782,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
             }, 50);
           }
         };
-        
+
         const activePortfolio = this.api.dataControlSE.currentResult?.portfolio || 'SP';
         this.api.resultsSE.GET_AllWithoutResults(activePortfolio).subscribe({
           next: ({ response }) => {
@@ -756,13 +800,13 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
           },
           error: () => this.contributingInitiativesList.set([])
         });
-        
+
         if (detail.contributingCenters && Array.isArray(detail.contributingCenters)) {
           detail.contributingCenters = detail.contributingCenters.map((center: any) => center.code);
         } else {
           detail.contributingCenters = [];
         }
-        
+
         if (detail.contributingProjects && Array.isArray(detail.contributingProjects)) {
           detail.contributingProjects = detail.contributingProjects.map((project: any) => {
             const projectId = project.project_id || project.obj_clarisa_project?.id || project.id;
@@ -771,7 +815,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         } else {
           detail.contributingProjects = [];
         }
-        
+
         if (detail.contributingInitiatives) {
           if (Array.isArray(detail.contributingInitiatives)) {
             detail.contributingInitiatives = detail.contributingInitiatives.map((initiative: any) => {
@@ -784,14 +828,14 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
             const contributingAndPrimary = detail.contributingInitiatives.contributing_and_primary_initiative || [];
             const accepted = detail.contributingInitiatives.accepted_contributing_initiatives || [];
             const pending = detail.contributingInitiatives.pending_contributing_initiatives || [];
-            
+
             // Get primary initiative ID from contributing_and_primary_initiative
             if (contributingAndPrimary.length > 0 && contributingAndPrimary[0].id) {
               primaryInitiativeId = contributingAndPrimary[0].id;
             }
-            
+
             this.disabledContributingInitiatives.set(contributingAndPrimary);
-            
+
             const allInitiatives = [...contributingAndPrimary, ...accepted, ...pending];
             detail.contributingInitiatives = allInitiatives.map((initiative: any) => {
               // Prioritize id over official_code since optionValue="id" in the multi-select
@@ -805,7 +849,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
           detail.contributingInitiatives = [];
           this.disabledContributingInitiatives.set([]);
         }
-        
+
         // Transform contributingInstitutions from objects to array of institutions_id
         if (detail.contributingInstitutions && Array.isArray(detail.contributingInstitutions)) {
           detail.contributingInstitutions = detail.contributingInstitutions.map((institution: any) => {
@@ -815,16 +859,22 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         } else {
           detail.contributingInstitutions = [];
         }
-        
+
         if (detail.resultTypeResponse && Array.isArray(detail.resultTypeResponse)) {
           detail.resultTypeResponse = detail.resultTypeResponse.map((resultType: any) => {
             const newResultType = { ...resultType };
-            
-            if (newResultType.implementing_organization && Array.isArray(newResultType.implementing_organization) && newResultType.implementing_organization.length > 0) {
-              newResultType.institutions = newResultType.implementing_organization.map((org: any) => {
-                const institutionId = org.institution_id || org.institutions_id || org.id;
-                return institutionId ? Number(institutionId) : null;
-              }).filter((id: any) => id !== null);
+
+            if (
+              newResultType.implementing_organization &&
+              Array.isArray(newResultType.implementing_organization) &&
+              newResultType.implementing_organization.length > 0
+            ) {
+              newResultType.institutions = newResultType.implementing_organization
+                .map((org: any) => {
+                  const institutionId = org.institution_id || org.institutions_id || org.id;
+                  return institutionId ? Number(institutionId) : null;
+                })
+                .filter((id: any) => id !== null);
             } else {
               if (!newResultType.institutions) {
                 newResultType.institutions = [];
@@ -833,10 +883,10 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
             return newResultType;
           });
         }
-        
+
         if (detail.tocMetadata) {
           const tocMeta = Array.isArray(detail.tocMetadata) ? detail.tocMetadata[0] : detail.tocMetadata;
-          
+
           if (tocMeta) {
             let resultTocResults: any[] = [];
             if (tocMeta.result_toc_results !== null && tocMeta.result_toc_results !== undefined) {
@@ -846,7 +896,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
                 resultTocResults = [];
               }
             }
-            
+
             const tocInitiative: any = {
               planned_result: tocMeta.planned_result ?? null,
               initiative_id: tocMeta.initiative_id ?? null,
@@ -855,29 +905,31 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
               result_toc_results: resultTocResults,
               toc_progressive_narrative: tocMeta.toc_progressive_narrative ?? null
             };
-            
+
             if (!Array.isArray(tocInitiative.result_toc_results)) {
               tocInitiative.result_toc_results = [];
             }
 
             if (tocInitiative.result_toc_results.length === 0) {
-              tocInitiative.result_toc_results = [{
-                uniqueId: '0',
-                toc_level_id: null,
-                toc_result_id: null,
-                planned_result: tocInitiative.planned_result,
-                initiative_id: tocInitiative.initiative_id,
-                toc_progressive_narrative: null,
-                indicators: []
-              }];
+              tocInitiative.result_toc_results = [
+                {
+                  uniqueId: '0',
+                  toc_level_id: null,
+                  toc_result_id: null,
+                  planned_result: tocInitiative.planned_result,
+                  initiative_id: tocInitiative.initiative_id,
+                  toc_progressive_narrative: null,
+                  indicators: []
+                }
+              ];
             }
-            
+
             if (Array.isArray(tocInitiative.result_toc_results)) {
               tocInitiative.result_toc_results.forEach((tab: any, index: number) => {
                 if (!tab || typeof tab !== 'object') {
                   return;
                 }
-                
+
                 if (!tab.uniqueId) {
                   tab.uniqueId = index.toString();
                 }
@@ -885,13 +937,17 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
                   tab.indicators = [];
                 }
                 if (tab.indicators.length === 0) {
-                  tab.indicators = [{
-                    related_node_id: null,
-                    toc_results_indicator_id: null,
-                    targets: [{
-                      contributing_indicator: null
-                    }]
-                  }];
+                  tab.indicators = [
+                    {
+                      related_node_id: null,
+                      toc_results_indicator_id: null,
+                      targets: [
+                        {
+                          contributing_indicator: null
+                        }
+                      ]
+                    }
+                  ];
                 }
                 if (tab.indicators[0] && (!tab.indicators[0].targets || !Array.isArray(tab.indicators[0].targets))) {
                   tab.indicators[0].targets = [{ contributing_indicator: null }];
@@ -901,15 +957,15 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
                 }
               });
             }
-            
+
             Object.assign(this.tocInitiative, tocInitiative);
-            
+
             finalInitiativeId = tocMeta.initiative_id ?? primaryInitiativeId;
-            
+
             if (finalInitiativeId) {
               setInitiativeIdIfNeeded(finalInitiativeId);
             }
-            
+
             setTimeout(() => {
               this.tocConsumed.set(true);
               this.cdr.markForCheck();
@@ -921,21 +977,27 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
               initiative_id: primaryInitiativeId,
               official_code: null,
               short_name: null,
-              result_toc_results: [{
-                uniqueId: '0',
-                toc_level_id: null,
-                toc_result_id: null,
-                planned_result: null,
-                initiative_id: primaryInitiativeId,
-                toc_progressive_narrative: null,
-                indicators: [{
-                  related_node_id: null,
-                  toc_results_indicator_id: null,
-                  targets: [{
-                    contributing_indicator: null
-                  }]
-                }]
-              }],
+              result_toc_results: [
+                {
+                  uniqueId: '0',
+                  toc_level_id: null,
+                  toc_result_id: null,
+                  planned_result: null,
+                  initiative_id: primaryInitiativeId,
+                  toc_progressive_narrative: null,
+                  indicators: [
+                    {
+                      related_node_id: null,
+                      toc_results_indicator_id: null,
+                      targets: [
+                        {
+                          contributing_indicator: null
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
               toc_progressive_narrative: null
             });
             if (finalInitiativeId) {
@@ -953,21 +1015,27 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
             initiative_id: primaryInitiativeId,
             official_code: null,
             short_name: null,
-            result_toc_results: [{
-              uniqueId: '0',
-              toc_level_id: null,
-              toc_result_id: null,
-              planned_result: null,
-              initiative_id: primaryInitiativeId,
-              toc_progressive_narrative: null,
-              indicators: [{
-                related_node_id: null,
-                toc_results_indicator_id: null,
-                targets: [{
-                  contributing_indicator: null
-                }]
-              }]
-            }],
+            result_toc_results: [
+              {
+                uniqueId: '0',
+                toc_level_id: null,
+                toc_result_id: null,
+                planned_result: null,
+                initiative_id: primaryInitiativeId,
+                toc_progressive_narrative: null,
+                indicators: [
+                  {
+                    related_node_id: null,
+                    toc_results_indicator_id: null,
+                    targets: [
+                      {
+                        contributing_indicator: null
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
             toc_progressive_narrative: null
           });
           if (finalInitiativeId) {
@@ -978,15 +1046,15 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
             this.cdr.markForCheck();
           }, 100);
         }
-        
+
         const detailWithNewReference = {
           ...detail,
           resultTypeResponse: detail.resultTypeResponse ? detail.resultTypeResponse.map((rt: any) => ({ ...rt })) : detail.resultTypeResponse
         };
-        
+
         this.resultDetail.set(detailWithNewReference);
         this.isLoading.set(false);
-        
+
         setTimeout(() => {
           const currentDetail = this.resultDetail();
           if (currentDetail) {
@@ -1003,12 +1071,18 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
             if (updatedDetail.resultTypeResponse && Array.isArray(updatedDetail.resultTypeResponse)) {
               updatedDetail.resultTypeResponse = updatedDetail.resultTypeResponse.map((resultType: any) => {
                 const newResultType = { ...resultType };
-                if (resultType.implementing_organization && Array.isArray(resultType.implementing_organization) && resultType.implementing_organization.length > 0) {
+                if (
+                  resultType.implementing_organization &&
+                  Array.isArray(resultType.implementing_organization) &&
+                  resultType.implementing_organization.length > 0
+                ) {
                   if (!newResultType.institutions || newResultType.institutions.length === 0) {
-                    newResultType.institutions = resultType.implementing_organization.map((org: any) => {
-                      const institutionId = org.institution_id || org.institutions_id || org.id;
-                      return institutionId ? Number(institutionId) : null;
-                    }).filter((id: any) => id !== null);
+                    newResultType.institutions = resultType.implementing_organization
+                      .map((org: any) => {
+                        const institutionId = org.institution_id || org.institutions_id || org.id;
+                        return institutionId ? Number(institutionId) : null;
+                      })
+                      .filter((id: any) => id !== null);
                   }
                 } else if (!newResultType.institutions) {
                   newResultType.institutions = [];
@@ -1060,21 +1134,27 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
       initiative_id: null,
       official_code: null,
       short_name: null,
-      result_toc_results: [{
-        uniqueId: '0',
-        toc_level_id: null,
-        toc_result_id: null,
-        planned_result: null,
-        initiative_id: null,
-        toc_progressive_narrative: null,
-        indicators: [{
-          related_node_id: null,
-          toc_results_indicator_id: null,
-          targets: [{
-            contributing_indicator: null
-          }]
-        }]
-      }],
+      result_toc_results: [
+        {
+          uniqueId: '0',
+          toc_level_id: null,
+          toc_result_id: null,
+          planned_result: null,
+          initiative_id: null,
+          toc_progressive_narrative: null,
+          indicators: [
+            {
+              related_node_id: null,
+              toc_results_indicator_id: null,
+              targets: [
+                {
+                  contributing_indicator: null
+                }
+              ]
+            }
+          ]
+        }
+      ],
       toc_progressive_narrative: null
     });
     this.initiativeIdSignal.set(null);
