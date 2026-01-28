@@ -19,10 +19,9 @@ export class CapSharingContentComponent implements OnInit {
       return;
     }
 
-    const newDetail = { ...value };
-
-    if (!newDetail.resultTypeResponse || !Array.isArray(newDetail.resultTypeResponse) || newDetail.resultTypeResponse.length === 0) {
-      newDetail.resultTypeResponse = [{
+    // Modify the original object to ensure changes are reflected in the parent
+    if (!value.resultTypeResponse || !Array.isArray(value.resultTypeResponse) || value.resultTypeResponse.length === 0) {
+      value.resultTypeResponse = [{
         result_capacity_development_id: null,
         male_using: null,
         female_using: null,
@@ -32,17 +31,18 @@ export class CapSharingContentComponent implements OnInit {
         capdev_term_id: null
       } as any];
     } else {
-      const firstItem: any = { ...newDetail.resultTypeResponse[0] };
+      // Ensure all required properties exist in the existing object (modify original)
+      const firstItem: any = value.resultTypeResponse[0];
       if (firstItem.male_using === undefined) firstItem.male_using = null;
       if (firstItem.female_using === undefined) firstItem.female_using = null;
       if (firstItem.non_binary_using === undefined) firstItem.non_binary_using = null;
       if (firstItem.has_unkown_using === undefined) firstItem.has_unkown_using = null;
       if (firstItem.capdev_delivery_method_id === undefined) firstItem.capdev_delivery_method_id = null;
       if (firstItem.capdev_term_id === undefined) firstItem.capdev_term_id = null;
-      newDetail.resultTypeResponse = [{ ...firstItem }];
     }
 
-    this._resultDetail = newDetail;
+    // Store reference to the original object (not a copy) so changes are reflected
+    this._resultDetail = value;
     this.cdr.markForCheck();
   }
   get resultDetail(): BilateralResultDetail {

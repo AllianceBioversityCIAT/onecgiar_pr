@@ -19,12 +19,10 @@ export class InnoDevContentComponent {
       return;
     }
 
-    // Create a new object reference to ensure change detection
-    const newDetail = { ...value };
-
+    // Modify the original object to ensure changes are reflected in the parent
     // Ensure resultTypeResponse[0] exists for Innovation Development
-    if (!newDetail.resultTypeResponse || !Array.isArray(newDetail.resultTypeResponse) || newDetail.resultTypeResponse.length === 0) {
-      newDetail.resultTypeResponse = [{
+    if (!value.resultTypeResponse || !Array.isArray(value.resultTypeResponse) || value.resultTypeResponse.length === 0) {
+      value.resultTypeResponse = [{
         result_innovation_dev_id: null,
         innovation_nature_id: null,
         innovation_type_id: null,
@@ -37,7 +35,7 @@ export class InnoDevContentComponent {
       } as any];
     } else {
       // Ensure all required properties exist in the existing object
-      const firstItem: any = { ...newDetail.resultTypeResponse[0] };
+      const firstItem: any = value.resultTypeResponse[0];
       if (firstItem.innovation_nature_id === undefined) firstItem.innovation_nature_id = null;
       if (firstItem.innovation_type_id === undefined) firstItem.innovation_type_id = null;
       if (firstItem.innovation_type_name === undefined) firstItem.innovation_type_name = null;
@@ -46,10 +44,10 @@ export class InnoDevContentComponent {
       if (firstItem.readinness_level_id === undefined) firstItem.readinness_level_id = null;
       if (firstItem.level === undefined) firstItem.level = null;
       if (firstItem.name === undefined) firstItem.name = null;
-      newDetail.resultTypeResponse = [{ ...firstItem }];
     }
 
-    this._resultDetail = newDetail;
+    // Store reference to the original object (not a copy) so changes are reflected
+    this._resultDetail = value;
     this.cdr.markForCheck();
   }
   get resultDetail(): BilateralResultDetail {
