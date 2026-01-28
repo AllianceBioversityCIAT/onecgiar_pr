@@ -98,6 +98,11 @@ import {
 } from './dto/review-decision.dto';
 import { ResultReviewHistory } from './result-review-history/entities/result-review-history.entity';
 import { ResultStatusData } from '../../shared/constants/result-status.enum';
+import { ResultImpactAreaScoresService } from '../result-impact-area-scores/result-impact-area-scores.service';
+import { isEmpty } from '../../shared/utils/object.utils';
+import { extractPropertyValues } from '../../shared/utils/array.util';
+import { ResultImpactAreaScore } from '../result-impact-area-scores/entities/result-impact-area-score.entity';
+import { ImpactAreaNames } from './impact_areas_scores_components/enum/impact-area-names.enum';
 
 @Injectable()
 export class ResultsService {
@@ -142,6 +147,7 @@ export class ResultsService {
     private readonly _resultsTocResultRepository: ResultsTocResultRepository,
     private readonly _tocResultsRepository: AoWBilateralRepository,
     private readonly _dataSource: DataSource,
+    private readonly _resultImpactAreaScoresService: ResultImpactAreaScoresService,
     private readonly _initiativeEntityMapRepository?: InitiativeEntityMapRepository,
     private readonly _roleByUserRepository?: RoleByUserRepository,
     private readonly _resultsInnovationsDevRepository?: ResultsInnovationsDevRepository,
@@ -155,7 +161,7 @@ export class ResultsService {
     private readonly _adUserService?: AdUserService,
     @Optional() private readonly _adUserRepository?: AdUserRepository,
     @Optional() private readonly _notificationService?: NotificationService,
-  ) {}
+  ) { }
 
   async createOwnerResult(
     createResultDto: CreateResultDto,
@@ -285,12 +291,6 @@ export class ResultsService {
       });
 
       await this.insertResultIntoElastic(newResultHeader);
-
-      await this.emitResultCreatedNotification(
-        newResultHeader,
-        Number(initiative.id),
-        user.id,
-      );
 
       return {
         response: newResultHeader,
@@ -456,19 +456,13 @@ export class ResultsService {
         };
       }
 
-      let genderTagComponent = null;
-      if (Number(genderTag?.id) === 3 && gender_impact_area_id != null) {
-        genderTagComponent =
-          await this._impactAreasScoresComponentRepository.findOne({
-            where: { id: gender_impact_area_id },
-          });
-        if (!genderTagComponent) {
-          throw {
-            response: {},
-            message: 'The Gender tag component does not exist',
-            status: HttpStatus.NOT_FOUND,
-          };
-        }
+      const resultImpactAreaScores: Partial<ResultImpactAreaScore>[] = [];
+
+      if (Number(genderTag?.id) === 3 && !isEmpty(gender_impact_area_id)) {
+        await this._resultImpactAreaScoresService.validateImpactAreaScores(
+          gender_impact_area_id,
+          resultImpactAreaScores,
+        );
       }
 
       const climateTag = await this._genderTagRepository.findOne({
@@ -482,19 +476,11 @@ export class ResultsService {
         };
       }
 
-      let climateTagComponent = null;
-      if (Number(climateTag?.id) === 3 && climate_impact_area_id != null) {
-        climateTagComponent =
-          await this._impactAreasScoresComponentRepository.findOne({
-            where: { id: climate_impact_area_id },
-          });
-        if (!climateTagComponent) {
-          throw {
-            response: {},
-            message: 'The Climate change tag component does not exist',
-            status: HttpStatus.NOT_FOUND,
-          };
-        }
+      if (Number(climateTag?.id) === 3 && !isEmpty(climate_impact_area_id)) {
+        await this._resultImpactAreaScoresService.validateImpactAreaScores(
+          climate_impact_area_id,
+          resultImpactAreaScores,
+        );
       }
 
       const nutritionTag = await this._genderTagRepository.findOne({
@@ -508,19 +494,14 @@ export class ResultsService {
         };
       }
 
-      let nutritionTagComponent = null;
-      if (Number(nutritionTag?.id) === 3 && nutrition_impact_area_id != null) {
-        nutritionTagComponent =
-          await this._impactAreasScoresComponentRepository.findOne({
-            where: { id: nutrition_impact_area_id },
-          });
-        if (!nutritionTagComponent) {
-          throw {
-            response: {},
-            message: 'The Nutrition tag component does not exist',
-            status: HttpStatus.NOT_FOUND,
-          };
-        }
+      if (
+        Number(nutritionTag?.id) === 3 &&
+        !isEmpty(nutrition_impact_area_id)
+      ) {
+        await this._resultImpactAreaScoresService.validateImpactAreaScores(
+          nutrition_impact_area_id,
+          resultImpactAreaScores,
+        );
       }
 
       const environmentalBiodiversityTag =
@@ -537,25 +518,14 @@ export class ResultsService {
         };
       }
 
-      let environmentalBiodiversityTagComponent = null;
       if (
         Number(environmentalBiodiversityTag?.id) === 3 &&
-        environmental_biodiversity_impact_area_id != null
+        !isEmpty(environmental_biodiversity_impact_area_id)
       ) {
-        environmentalBiodiversityTagComponent =
-          await this._impactAreasScoresComponentRepository.findOne({
-            where: {
-              id: environmental_biodiversity_impact_area_id,
-            },
-          });
-        if (!environmentalBiodiversityTagComponent) {
-          throw {
-            response: {},
-            message:
-              'The Environmental or/and biodiversity tag component does not exist',
-            status: HttpStatus.NOT_FOUND,
-          };
-        }
+        await this._resultImpactAreaScoresService.validateImpactAreaScores(
+          environmental_biodiversity_impact_area_id,
+          resultImpactAreaScores,
+        );
       }
 
       const povertyTag = await this._genderTagRepository.findOne({
@@ -569,19 +539,11 @@ export class ResultsService {
         };
       }
 
-      let povertyTagComponent = null;
-      if (Number(povertyTag?.id) === 3 && poverty_impact_area_id != null) {
-        povertyTagComponent =
-          await this._impactAreasScoresComponentRepository.findOne({
-            where: { id: poverty_impact_area_id },
-          });
-        if (!povertyTagComponent) {
-          throw {
-            response: {},
-            message: 'The Poverty tag component does not exist',
-            status: HttpStatus.NOT_FOUND,
-          };
-        }
+      if (Number(povertyTag?.id) === 3 && !isEmpty(poverty_impact_area_id)) {
+        await this._resultImpactAreaScoresService.validateImpactAreaScores(
+          poverty_impact_area_id,
+          resultImpactAreaScores,
+        );
       }
 
       if (resultGeneralInformation.institutions.length) {
@@ -735,34 +697,23 @@ export class ResultsService {
         gender_tag_level_id: resultGeneralInformation.gender_tag_id
           ? genderTag.id
           : null,
-        gender_impact_area_id: genderTagComponent
-          ? genderTagComponent.id
-          : null,
+        gender_impact_area_id: null,
         climate_change_tag_level_id:
           resultGeneralInformation.climate_change_tag_id ? climateTag.id : null,
-        climate_impact_area_id: climateTagComponent
-          ? climateTagComponent.id
-          : null,
+        climate_impact_area_id: null,
         nutrition_tag_level_id: resultGeneralInformation.nutrition_tag_level_id
           ? nutritionTag.id
           : null,
-        nutrition_impact_area_id: nutritionTagComponent
-          ? nutritionTagComponent.id
-          : null,
+        nutrition_impact_area_id: null,
         environmental_biodiversity_tag_level_id:
           resultGeneralInformation.environmental_biodiversity_tag_level_id
             ? environmentalBiodiversityTag.id
             : null,
-        environmental_biodiversity_impact_area_id:
-          environmentalBiodiversityTagComponent
-            ? environmentalBiodiversityTagComponent.id
-            : null,
+        environmental_biodiversity_impact_area_id: null,
         poverty_tag_level_id: resultGeneralInformation.poverty_tag_level_id
           ? povertyTag.id
           : null,
-        poverty_impact_area_id: povertyTagComponent
-          ? povertyTagComponent.id
-          : null,
+        poverty_impact_area_id: null,
         krs_url: resultGeneralInformation.krs_url,
         is_krs: resultGeneralInformation.is_krs,
         last_updated_by: user.id,
@@ -777,6 +728,13 @@ export class ResultsService {
                 : result.status_id
             : result.status_id,
       });
+
+      await this._resultImpactAreaScoresService.create(
+        result.id,
+        resultImpactAreaScores,
+        'impact_area_score_id',
+        { userId: user.id },
+      );
 
       const toAddFromElastic = await this.findAllSimplified(
         updateResult.id.toString(),
@@ -1124,11 +1082,11 @@ export class ResultsService {
           ...item,
           initiative_entity_map: entityMaps.length
             ? entityMaps.map((entityMap) => ({
-                id: entityMap.id,
-                entityId: entityMap.entityId,
-                initiativeId: entityMap.initiativeId,
-                entityName: entityMap.entity_obj?.name ?? null,
-              }))
+              id: entityMap.id,
+              entityId: entityMap.entityId,
+              initiativeId: entityMap.initiativeId,
+              entityName: entityMap.entity_obj?.name ?? null,
+            }))
             : [],
           initiative_entity_user: initiativesPortfolio3,
         };
@@ -1248,11 +1206,11 @@ export class ResultsService {
           ...item,
           initiative_entity_map: entityMaps.length
             ? entityMaps.map((entityMap) => ({
-                id: entityMap.id,
-                entityId: entityMap.entityId,
-                initiativeId: entityMap.initiativeId,
-                entityName: entityMap.entity_obj?.name ?? null,
-              }))
+              id: entityMap.id,
+              entityId: entityMap.entityId,
+              initiativeId: entityMap.initiativeId,
+              entityName: entityMap.entity_obj?.name ?? null,
+            }))
             : [],
           initiative_entity_user: initiativesPortfolio3,
         };
@@ -1270,14 +1228,14 @@ export class ResultsService {
         response:
           limit !== undefined
             ? {
-                items: result,
-                meta: {
-                  total,
-                  page: page ?? 1,
-                  limit,
-                  totalPages: Math.max(1, Math.ceil(total / limit)),
-                },
-              }
+              items: result,
+              meta: {
+                total,
+                page: page ?? 1,
+                limit,
+                totalPages: Math.max(1, Math.ceil(total / limit)),
+              },
+            }
             : { items: result },
         message: 'Successful response',
         status: HttpStatus.OK,
@@ -1989,6 +1947,29 @@ export class ResultsService {
           },
         });
 
+      const resultImpactAreaScores =
+        await this._resultImpactAreaScoresService.find(result.id, undefined, {
+          impact_area_score: true,
+        });
+
+      const ender_impact_area = resultImpactAreaScores.filter(
+        (r) => r.impact_area_score.impact_area === ImpactAreaNames.GENDER,
+      );
+      const climate_impact_area = resultImpactAreaScores.filter(
+        (r) => r.impact_area_score.impact_area === ImpactAreaNames.CLIMATE,
+      );
+      const nutrition_impact_area = resultImpactAreaScores.filter(
+        (r) => r.impact_area_score.impact_area === ImpactAreaNames.NUTRITION,
+      );
+      const environmental_biodiversity_impact_area =
+        resultImpactAreaScores.filter(
+          (r) =>
+            r.impact_area_score.impact_area === ImpactAreaNames.ENVIRONMENTAL,
+        );
+      const poverty_impact_area = resultImpactAreaScores.filter(
+        (r) => r.impact_area_score.impact_area === ImpactAreaNames.POVERTY,
+      );
+
       let leadContactPersonData = null;
       if (result.lead_contact_person_id && this._adUserRepository) {
         try {
@@ -2014,17 +1995,31 @@ export class ResultsService {
           result_name: result.title ?? null,
           result_description: result.description ?? null,
           gender_tag_id: result.gender_tag_level_id || null,
-          gender_impact_area_id: result.gender_impact_area_id || null,
+          gender_impact_area_id: extractPropertyValues(
+            ender_impact_area,
+            'impact_area_score_id',
+          ) as number[],
           climate_change_tag_id: result.climate_change_tag_level_id || null,
-          climate_impact_area_id: result.climate_impact_area_id || null,
+          climate_impact_area_id: extractPropertyValues(
+            climate_impact_area,
+            'impact_area_score_id',
+          ) as number[],
           nutrition_tag_level_id: result.nutrition_tag_level_id || null,
-          nutrition_impact_area_id: result.nutrition_impact_area_id || null,
+          nutrition_impact_area_id: extractPropertyValues(
+            nutrition_impact_area,
+            'impact_area_score_id',
+          ) as number[],
           environmental_biodiversity_tag_level_id:
             result.environmental_biodiversity_tag_level_id || null,
-          environmental_biodiversity_impact_area_id:
-            result.environmental_biodiversity_impact_area_id || null,
+          environmental_biodiversity_impact_area_id: extractPropertyValues(
+            environmental_biodiversity_impact_area,
+            'impact_area_score_id',
+          ) as number[],
           poverty_tag_level_id: result.poverty_tag_level_id || null,
-          poverty_impact_area_id: result.poverty_impact_area_id || null,
+          poverty_impact_area_id: extractPropertyValues(
+            poverty_impact_area,
+            'impact_area_score_id',
+          ) as number[],
           institutions: institutions,
           institutions_type: institutionsType,
           krs_url: result.krs_url ?? null,
@@ -2904,13 +2899,13 @@ export class ResultsService {
       delivery: i.delivery.filter((d) => d.is_active),
       obj_institutions: i.obj_institutions
         ? {
-            name: i.obj_institutions.name,
-            website_link: i.obj_institutions.website_link,
-            obj_institution_type_code: {
-              id: i.obj_institutions.obj_institution_type_code.code,
-              name: i.obj_institutions.obj_institution_type_code.name,
-            },
-          }
+          name: i.obj_institutions.name,
+          website_link: i.obj_institutions.website_link,
+          obj_institution_type_code: {
+            id: i.obj_institutions.obj_institution_type_code.code,
+            name: i.obj_institutions.obj_institution_type_code.name,
+          },
+        }
         : null,
     }));
   }

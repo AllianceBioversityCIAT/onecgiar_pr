@@ -381,6 +381,7 @@ describe('InnovationPathwayStepFourService', () => {
         is_lead_by_partner: false,
         initiative_id: 1,
         source: SourceEnum.Result,
+        result_impact_area_scores: [],
         obj_result_type: null,
         obj_result_level: null,
         obj_gender_tag_level: null,

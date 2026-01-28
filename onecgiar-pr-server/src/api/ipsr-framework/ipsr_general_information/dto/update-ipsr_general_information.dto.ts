@@ -35,7 +35,7 @@ export class UpdateIpsrGeneralInformationDto {
     description: 'ID of the impact area related to gender.',
     example: 4,
   })
-  gender_impact_area_id?: number;
+  gender_impact_area_id?: number | number[];
 
   @ApiPropertyOptional({
     description: 'Climate change tag level.',
@@ -47,7 +47,7 @@ export class UpdateIpsrGeneralInformationDto {
     description: 'ID of the impact area related to climate change.',
     example: 3,
   })
-  climate_impact_area_id?: number;
+  climate_impact_area_id?: number | number[];
 
   @ApiPropertyOptional({
     description: 'Nutrition tag level.',
@@ -59,7 +59,7 @@ export class UpdateIpsrGeneralInformationDto {
     description: 'ID of the impact area related to nutrition.',
     example: 5,
   })
-  nutrition_impact_area_id?: number;
+  nutrition_impact_area_id?: number | number[];
 
   @ApiPropertyOptional({
     description: 'Environmental & biodiversity tag level.',
@@ -71,7 +71,7 @@ export class UpdateIpsrGeneralInformationDto {
     description: 'ID of the impact area related to biodiversity.',
     example: 6,
   })
-  environmental_biodiversity_impact_area_id?: number;
+  environmental_biodiversity_impact_area_id?: number | number[];
 
   @ApiPropertyOptional({
     description: 'Poverty tag level.',
@@ -83,7 +83,7 @@ export class UpdateIpsrGeneralInformationDto {
     description: 'ID of the impact area related to poverty.',
     example: 2,
   })
-  poverty_impact_area_id?: number;
+  poverty_impact_area_id?: number | number[];
 
   @ApiProperty({
     description: 'Indicates if the IPSR was discontinued.',

@@ -64,6 +64,7 @@ import {
 } from './dto/review-decision.dto';
 import { ResultStatusData } from '../../shared/constants/result-status.enum';
 import { DataSource } from 'typeorm';
+import { ResultImpactAreaScoresService } from '../result-impact-area-scores/result-impact-area-scores.service';
 
 describe('ResultsService (unit, pure mocks)', () => {
   let module: TestingModule;
@@ -333,6 +334,15 @@ describe('ResultsService (unit, pure mocks)', () => {
 
   const mockImpactAreasScoresComponentRepository = {
     findOne: jest.fn().mockResolvedValue({ id: 123 }),
+    find: jest
+      .fn()
+      .mockResolvedValue([
+        { id: 201 },
+        { id: 202 },
+        { id: 203 },
+        { id: 204 },
+        { id: 205 },
+      ]),
   };
 
   const mockResultsTocResultRepository = {
@@ -374,6 +384,27 @@ describe('ResultsService (unit, pure mocks)', () => {
       };
       return callback(manager);
     }),
+  } as any;
+
+  const mockResultImpactAreaScoresService = {
+    validateImpactAreaScores: jest
+      .fn()
+      .mockImplementation(
+        async (
+          impactAreaIds: number | number[],
+          impactAreaScoresToAdd: Array<{ impact_area_score_id: number }>,
+        ) => {
+          const ids = Array.isArray(impactAreaIds)
+            ? impactAreaIds
+            : [impactAreaIds];
+          for (const id of ids) {
+            if (id == null) continue;
+            impactAreaScoresToAdd.push({ impact_area_score_id: Number(id) });
+          }
+        },
+      ),
+    create: jest.fn().mockResolvedValue([]),
+    find: jest.fn().mockResolvedValue([]),
   } as any;
 
   beforeEach(async () => {
@@ -519,6 +550,10 @@ describe('ResultsService (unit, pure mocks)', () => {
         {
           provide: DataSource,
           useValue: mockDataSource,
+        },
+        {
+          provide: ResultImpactAreaScoresService,
+          useValue: mockResultImpactAreaScoresService,
         },
       ],
     }).compile();
