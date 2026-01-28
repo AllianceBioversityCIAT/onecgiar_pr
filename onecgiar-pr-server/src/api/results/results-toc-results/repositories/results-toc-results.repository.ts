@@ -21,9 +21,8 @@ import { predeterminedDateValidation } from '../../../../shared/utils/versioning
 export class ResultsTocResultRepository
   extends Repository<ResultsTocResult>
   implements
-    ReplicableInterface<ResultsTocResult>,
-    LogicalDelete<ResultsTocResult>
-{
+  ReplicableInterface<ResultsTocResult>,
+  LogicalDelete<ResultsTocResult> {
   private readonly _logger: Logger = new Logger(
     ResultsTocResultRepository.name,
   );
@@ -79,8 +78,8 @@ export class ResultsTocResultRepository
           null as planned_result,
           rtr.is_active,
           ${predeterminedDateValidation(
-            config?.predetermined_date,
-          )} as created_date,
+          config?.predetermined_date,
+        )} as created_date,
           null as last_updated_date,
           null as toc_result_id,
           ? as results_id,
@@ -291,11 +290,10 @@ export class ResultsTocResultRepository
       results_toc_result rtr
       left join clarisa_initiatives ci on ci.id = rtr.initiative_id 
       left JOIN ${env.DB_TOC}.toc_results tr on tr.id = rtr.toc_result_id
-    where ${
-      RtRId
+    where ${RtRId
         ? `rtr.result_toc_result_id = ${RtRId}`
         : `rtr.initiative_id = ${initiativeId} and rtr.results_id = ${resultId}`
-    };
+      };
     `;
     try {
       const resultTocResult: ResultsTocResult[] = await this.query(queryData);
@@ -344,15 +342,12 @@ export class ResultsTocResultRepository
       left join results_toc_result_indicators rtri on rtri.results_toc_results_id = rtr.result_toc_result_id
       left join result_indicators_targets ritt on ritt.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
     where rtr.results_id = ?
-      and rtr.initiative_id ${isPrimary ? '' : 'not'} in (${
-        initiativeId ? initiativeId.toString() : null
+      and rtr.initiative_id ${isPrimary ? '' : 'not'} in (${initiativeId ? initiativeId.toString() : null
       })
-      ${
-        isPrimary
-          ? ''
-          : `and rtr.initiative_id in (${
-              initiativeArray.length ? initiativeArray.toString() : null
-            })`
+      ${isPrimary
+        ? ''
+        : `and rtr.initiative_id in (${initiativeArray.length ? initiativeArray.toString() : null
+        })`
       }
       and rtr.is_active > 0;
     `;
@@ -565,15 +560,12 @@ export class ResultsTocResultRepository
       results_toc_result rtr	
       inner join clarisa_initiatives ci on ci.id = rtr.initiative_id 
     where rtr.results_id = ?
-      and rtr.initiative_id ${isPrimary ? '' : 'not'} in (${
-        initiativeId.length ? initiativeId.toString() : null
+      and rtr.initiative_id ${isPrimary ? '' : 'not'} in (${initiativeId.length ? initiativeId.toString() : null
       })
-      ${
-        isPrimary
-          ? ''
-          : `and rtr.initiative_id in (${
-              initiativeArray.length ? initiativeArray.toString() : null
-            })`
+      ${isPrimary
+        ? ''
+        : `and rtr.initiative_id in (${initiativeArray.length ? initiativeArray.toString() : null
+        })`
       }
       and rtr.is_active > 0;
     `;
@@ -1714,7 +1706,7 @@ export class ResultsTocResultRepository
                 ),
                 indicator_question:
                   target.indicator_question === null ||
-                  target.indicator_question === undefined
+                    target.indicator_question === undefined
                     ? null
                     : Boolean(target.indicator_question),
                 target_progress_narrative:
@@ -1779,7 +1771,7 @@ export class ResultsTocResultRepository
                 ),
                 indicator_question:
                   target.indicator_question === null ||
-                  target.indicator_question === undefined
+                    target.indicator_question === undefined
                     ? null
                     : Boolean(target.indicator_question),
                 is_active: true,
@@ -2526,7 +2518,18 @@ select *
   }
 
   async processContributor(contributor: any, result_id: any, userId?: number) {
-    for (const toc of contributor.result_toc_results) {
+    // Ensure result_toc_results is an array before iterating
+    let resultTocResults: any[] = [];
+    if (Array.isArray(contributor.result_toc_results)) {
+      resultTocResults = contributor.result_toc_results;
+    } else if (
+      contributor.result_toc_results === null ||
+      contributor.result_toc_results === undefined
+    ) {
+      resultTocResults = [];
+    }
+
+    for (const toc of resultTocResults) {
       if (toc?.toc_result_id && Array.isArray(toc?.indicators)) {
         await this.processToc(toc, result_id, userId);
       }
@@ -2534,28 +2537,62 @@ select *
   }
 
   async processToc(toc: any, result_id: number, userId?: number) {
+    // Build search criteria - handle both initiative_id and initiative_ids field names
+    const searchResultId = toc?.results_id || result_id;
+    const searchInitiativeId = toc?.initiative_id;
+    const searchTocResultId = toc?.toc_result_id;
+
+    // If we have a result_toc_result_id, try to find by that first
+    if (toc?.result_toc_result_id) {
+      const rtrById = await this.findOne({
+        where: {
+          result_toc_result_id: toc.result_toc_result_id,
+          is_active: true,
+        },
+      });
+
+      if (rtrById) {
+        await this.updateAndSave(rtrById, toc);
+        await this.saveInditicatorsContributing(
+          Array.isArray(toc?.indicators) ? toc.indicators : [],
+          rtrById?.result_toc_result_id,
+          searchResultId,
+          userId,
+        );
+        return;
+      }
+    }
+
+    // Fallback: search by result_id, initiative_id, and toc_result_id
+    if (!searchTocResultId || !searchInitiativeId) {
+      // Skip if required fields are missing
+      return;
+    }
+
     const rtrExist = await this.findOne({
       where: {
-        result_id: toc?.results_id || result_id,
-        initiative_id: toc?.initiative_id,
-        toc_result_id: toc?.toc_result_id,
+        result_id: searchResultId,
+        initiative_ids: searchInitiativeId, // Use initiative_ids (property name in entity)
+        toc_result_id: searchTocResultId,
         is_active: true,
       },
     });
 
     if (!rtrExist) {
-      return this._handlersError.returnErrorRepository({
+      // Log warning but don't throw error - this might be expected for some cases
+      this._logger.warn({
         className: ResultsTocResultRepository.name,
-        error: `The result indicators result id ${toc?.result_toc_result_id} does not exist`,
+        error: `Result ToC mapping not found for result_id: ${searchResultId}, initiative_id: ${searchInitiativeId}, toc_result_id: ${searchTocResultId}`,
         debug: true,
       });
+      return;
     }
 
     await this.updateAndSave(rtrExist, toc);
     await this.saveInditicatorsContributing(
       Array.isArray(toc?.indicators) ? toc.indicators : [],
       rtrExist?.result_toc_result_id,
-      toc?.results_id || result_id,
+      searchResultId,
       userId,
     );
   }

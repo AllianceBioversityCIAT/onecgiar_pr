@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   UseInterceptors,
+  Version,
 } from '@nestjs/common';
 import { ShareResultRequestService } from './share-result-request.service';
 import { CreateTocShareResult } from './dto/create-toc-share-result.dto';
@@ -272,6 +273,59 @@ export class ShareResultRequestController {
     @Body() createShareResultsRequestDto: CreateShareResultRequestDto,
   ) {
     return this.shareResultRequestService.updateResultRequestByUser(
+      createShareResultsRequestDto,
+      user,
+    );
+  }
+
+  @Version('2')
+  @Patch('update')
+  @ApiOperation({
+    summary: 'Update a share result request (v2)',
+    description:
+      'Updates an existing share result request. This endpoint allows changing the request status (e.g., approve, reject) and updating the Theory of Change (ToC) mapping associated with the request. The user must have appropriate permissions to update the request. Version 2 includes enhanced ToC level mapping support.',
+  })
+  @ApiBody({
+    type: CreateShareResultRequestDto,
+    description:
+      'Updated share result request data including status, result request details, and ToC mapping',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Share result request successfully updated',
+    schema: {
+      example: {
+        response: {
+          share_result_request_id: 1,
+          result_id: 123,
+          request_status_id: 2,
+          approved_by: 5,
+          aprovaed_date: '2024-01-16T14:20:00Z',
+        },
+        message: 'Request successfully updated',
+        status: 200,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Bad Request - Invalid input data, missing required fields, or invalid request status',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Invalid or missing authentication token',
+  })
+  @ApiResponse({
+    status: 403,
+    description:
+      'Forbidden - User does not have permission to update this request',
+  })
+  updateRequestV2(
+    @UserToken() user: TokenDto,
+    @Body() createShareResultsRequestDto: CreateShareResultRequestDto,
+  ) {
+    return this.shareResultRequestService.updateResultRequestByUserV2(
       createShareResultsRequestDto,
       user,
     );
