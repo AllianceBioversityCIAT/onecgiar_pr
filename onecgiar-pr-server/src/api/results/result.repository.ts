@@ -2938,6 +2938,9 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       JOIN clarisa_initiatives ci
         ON rbi.inititiative_id = ci.id
         AND ci.active = 1
+      JOIN result_type rt
+        ON r.result_type_id = rt.id
+        AND rt.is_active = 1
       WHERE
         r.source = 'API'
         AND ci.official_code = ?
@@ -2959,6 +2962,9 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         AND ci.active = 1
       LEFT JOIN lead_centers lc
         ON r.id = lc.result_id
+      JOIN result_type rt
+        ON r.result_type_id = rt.id
+        AND rt.is_active = 1
       WHERE
         r.source = 'API'
         AND ci.official_code = ?
