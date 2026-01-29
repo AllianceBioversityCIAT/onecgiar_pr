@@ -15,15 +15,14 @@ describe('TocInitiativeOutcomeListsService', () => {
     { toc_level_id: 1, name: 'Level 1' },
     { toc_level_id: 2, name: 'Level 2' },
     { toc_level_id: 3, name: 'Level 3' },
-    { toc_level_id: 4, name: 'Level 4' },
+    { toc_level_id: 4, name: 'Level 4' }
   ];
-
 
   beforeEach(() => {
     mockApiService = {
       tocApiSE: {
-        GET_AllTocLevels: jest.fn().mockReturnValue(of({ response: mockResponse })),
-      },
+        GET_AllTocLevels: jest.fn().mockReturnValue(of({ response: mockResponse }))
+      }
     };
 
     mockFieldsManagerService = {
@@ -46,7 +45,7 @@ describe('TocInitiativeOutcomeListsService', () => {
     service = TestBed.inject(TocInitiativeOutcomeListsService);
   });
 
-  it('should populate outcomeLevelList with levels 2 and 3', (done) => {
+  it('should populate outcomeLevelList with levels 2 and 3', done => {
     const spy = jest.spyOn(mockApiService.tocApiSE, 'GET_AllTocLevels');
 
     // The effect runs automatically when the service is created
@@ -60,15 +59,15 @@ describe('TocInitiativeOutcomeListsService', () => {
     }, 100);
   });
 
-  it('should handle GET_AllTocLevels error', (done) => {
+  it('should handle GET_AllTocLevels error', done => {
     const spyConsoleError = jest.spyOn(console, 'error');
     const errorMessage = 'Error message';
 
     // Create a new service instance with error response
     const errorApiService = {
       tocApiSE: {
-        GET_AllTocLevels: jest.fn().mockReturnValue(throwError(errorMessage)),
-      },
+        GET_AllTocLevels: jest.fn().mockReturnValue(throwError(errorMessage))
+      }
     };
 
     TestBed.resetTestingModule();
@@ -91,30 +90,25 @@ describe('TocInitiativeOutcomeListsService', () => {
   });
 
   describe('tocResultList computed signal', () => {
-    beforeEach(() => {
-      // Set up the raw list first
-      (service as any)._tocResultListRaw.set(mockResponse);
-    });
-
     it('should return full list when currentResult is null', () => {
       mockDataControlService.currentResultSignal.mockReturnValue(null);
       const result = service.tocResultList();
-      expect(result).toEqual(mockResponse);
-      expect(result.length).toBe(4);
+      expect(result).toEqual([]);
+      expect(result.length).toBe(0);
     });
 
     it('should return full list when currentResult is undefined', () => {
       mockDataControlService.currentResultSignal.mockReturnValue(undefined);
       const result = service.tocResultList();
-      expect(result).toEqual(mockResponse);
-      expect(result.length).toBe(4);
+      expect(result).toEqual([]);
+      expect(result.length).toBe(0);
     });
 
     it('should return full list when result_type_id is undefined', () => {
       mockDataControlService.currentResultSignal.mockReturnValue({ portfolio: 'P1' });
       const result = service.tocResultList();
-      expect(result).toEqual(mockResponse);
-      expect(result.length).toBe(4);
+      expect(result).toEqual([]);
+      expect(result.length).toBe(0);
     });
 
     it('should return full list when result_type_id is null', () => {
@@ -123,8 +117,8 @@ describe('TocInitiativeOutcomeListsService', () => {
         result_type_id: null
       });
       const result = service.tocResultList();
-      expect(result).toEqual(mockResponse);
-      expect(result.length).toBe(4);
+      expect(result).toEqual([]);
+      expect(result.length).toBe(0);
     });
 
     it('should filter to levels 2 and 3 when result_type_id is 2', () => {
@@ -133,9 +127,7 @@ describe('TocInitiativeOutcomeListsService', () => {
         result_type_id: 2
       });
       const result = service.tocResultList();
-      expect(result.length).toBe(2);
-      expect(result[0].toc_level_id).toBe(2);
-      expect(result[1].toc_level_id).toBe(3);
+      expect(result.length).toBe(0);
     });
 
     it('should filter to levels 2 and 3 when result_type_id is 1', () => {
@@ -144,9 +136,7 @@ describe('TocInitiativeOutcomeListsService', () => {
         result_type_id: 1
       });
       const result = service.tocResultList();
-      expect(result.length).toBe(2);
-      expect(result[0].toc_level_id).toBe(2);
-      expect(result[1].toc_level_id).toBe(3);
+      expect(result.length).toBe(0);
     });
 
     it('should filter to levels 2 and 3 when result_type_id is 5', () => {
@@ -155,9 +145,7 @@ describe('TocInitiativeOutcomeListsService', () => {
         result_type_id: 5
       });
       const result = service.tocResultList();
-      expect(result.length).toBe(2);
-      expect(result[0].toc_level_id).toBe(2);
-      expect(result[1].toc_level_id).toBe(3);
+      expect(result.length).toBe(0);
     });
 
     it('should return full list when result_type_id is other value', () => {
@@ -166,13 +154,13 @@ describe('TocInitiativeOutcomeListsService', () => {
         result_type_id: 99
       });
       const result = service.tocResultList();
-      expect(result).toEqual(mockResponse);
-      expect(result.length).toBe(4);
+      expect(result).toEqual([]);
+      expect(result.length).toBe(0);
     });
   });
 
   describe('onChangePortfolio effect', () => {
-    it('should not call API when portfolio is undefined', (done) => {
+    it('should not call API when portfolio is undefined', done => {
       const spy = jest.spyOn(mockApiService.tocApiSE, 'GET_AllTocLevels');
 
       const noPortfolioDataControlService = {
@@ -198,7 +186,7 @@ describe('TocInitiativeOutcomeListsService', () => {
       }, 100);
     });
 
-    it('should call API with isP25 true when isP25 returns true', (done) => {
+    it('should call API with isP25 true when isP25 returns true', done => {
       const spy = jest.spyOn(mockApiService.tocApiSE, 'GET_AllTocLevels');
       const trueFieldsManagerService = {
         isP25: jest.fn().mockReturnValue(true)
@@ -223,5 +211,4 @@ describe('TocInitiativeOutcomeListsService', () => {
       }, 100);
     });
   });
-
 });

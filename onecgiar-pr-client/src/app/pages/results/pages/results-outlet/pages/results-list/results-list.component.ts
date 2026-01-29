@@ -262,6 +262,13 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
     } else {
       this.itemsWithDelete[3].visible = false;
     }
+
+    this.api.dataControlSE.currentResultSignal.set({
+      ...this.api.dataControlSE.currentResult,
+      portfolio: this.api.dataControlSE.currentResult?.acronym,
+      result_level_id: this.api.dataControlSE.currentResult?.result_level_id
+    });
+    this.ResultLevelSE.currentResultLevelIdSignal.set(this.api.dataControlSE.currentResult?.result_level_id);
   }
 
   private getDeleteTooltipText(): string {

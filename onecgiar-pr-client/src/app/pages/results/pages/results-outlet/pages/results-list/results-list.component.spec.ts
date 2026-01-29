@@ -23,6 +23,7 @@ import { CustomFieldsModule } from '../../../../../../custom-fields/custom-field
 import { ResultsListFilterService } from './services/results-list-filter.service';
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
 import { ResultsNotificationsService } from '../results-notifications/results-notifications.service';
+import { signal } from '@angular/core';
 
 jest.useFakeTimers();
 
@@ -59,6 +60,7 @@ describe('ResultsListComponent', () => {
         currentResult: {
           phase_year: 2023
         },
+        currentResultSignal: signal({}),
         myInitiativesList: [
           { id: 1, selected: false },
           { id: 2, selected: false }
@@ -82,7 +84,8 @@ describe('ResultsListComponent', () => {
     };
 
     mockResultLevelService = {
-      removeResultTypes: jest.fn()
+      removeResultTypes: jest.fn(),
+      currentResultLevelIdSignal: signal(null)
     };
 
     mockRetrieveModalService = {
