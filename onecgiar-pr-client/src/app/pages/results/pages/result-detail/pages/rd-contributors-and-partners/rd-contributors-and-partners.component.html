@@ -201,6 +201,7 @@
         [required]="!!contributor?.result_toc_results?.length"
         [(ngModel)]="contributor.planned_result"
         (selectOptionEvent)="onPlannedResultChange(contributor)"
+        [readOnly]="true"
         [hideOptions]="!contributor?.result_toc_results?.length">
       </app-pr-yes-or-not>
 
@@ -218,7 +219,7 @@
         @if (this.tocConsumed) {
           <div style="z-index: 1; position: relative">
             <app-cp-multiple-wps
-              [editable]="!this.api.rolesSE.readOnly"
+              [editable]="false"
               [initiative]="contributor"
               [initiativeId]="contributor?.initiative_id"
               [resultLevelId]="this.resultLevelSE.currentResultLevelId"
