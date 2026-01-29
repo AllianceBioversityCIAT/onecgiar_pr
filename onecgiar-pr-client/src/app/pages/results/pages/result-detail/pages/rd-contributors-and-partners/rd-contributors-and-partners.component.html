@@ -48,7 +48,7 @@
     @if (this.tocConsumed) {
       <div style="z-index: 1; position: relative">
         <app-cp-multiple-wps
-          [editable]="true"
+          [editable]="!this.api.rolesSE.readOnly"
           [initiative]="this.rdPartnersSE.partnersBody?.result_toc_result"
           [initiativeId]="this.rdPartnersSE.initiativeIdSignal()"
           [resultLevelId]="this.resultLevelSE.currentResultLevelId"
