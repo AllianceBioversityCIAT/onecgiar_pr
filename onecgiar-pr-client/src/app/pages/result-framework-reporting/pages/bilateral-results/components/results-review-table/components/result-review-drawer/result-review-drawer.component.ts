@@ -150,6 +150,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
   resultDetail = signal<BilateralResultDetail | null>(null);
   originalContributingInitiatives: any = null;
+  originalContributingInstitutions: any[] | null = null;
 
   rejectJustification: string = '';
   saveChangesJustification: string = '';
@@ -222,8 +223,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   }
 
   onSaveTocChanges(): void {
-    // Only check if planned_result has been selected (Yes or No)
-    // Since null is now treated as false, we only need to check for undefined
     if (!this.tocInitiative || this.tocInitiative.planned_result === undefined) {
       return;
     }
@@ -422,13 +421,36 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     }
 
     if (detail.contributingInstitutions && Array.isArray(detail.contributingInstitutions)) {
-      body.contributingInstitutions = detail.contributingInstitutions.map((inst: any) => ({
-        id: inst.id || null,
-        institution_id: inst.institution_id || inst.institutions_id || inst.id,
-        institution_roles_id: inst.institution_roles_id || 2,
-        is_active: inst.is_active !== undefined ? inst.is_active : 1,
-        result_id: resultId
-      }));
+      body.contributingInstitutions = detail.contributingInstitutions.map((inst: any) => {
+        const institutionId = typeof inst === 'object' && inst != null
+          ? (inst.institutions_id ?? inst.institution_id ?? inst.id)
+          : inst;
+        
+        // Try to find the original record id from the GET response
+        let originalId: number | null = null;
+        if (typeof inst === 'object' && inst != null && inst.id != null) {
+          // If the current object has an id, use it
+          originalId = typeof inst.id === 'string' ? Number.parseInt(inst.id, 10) : Number(inst.id);
+        } else if (this.originalContributingInstitutions && institutionId != null) {
+          // Otherwise, look it up in the original GET response
+          const original = this.originalContributingInstitutions.find((orig: any) => 
+            (orig.institutions_id ?? orig.institution_id) == institutionId
+          );
+          if (original && original.id != null) {
+            originalId = typeof original.id === 'string' ? Number.parseInt(original.id, 10) : Number(original.id);
+          }
+        }
+        
+        return {
+          id: originalId, // Use the preserved id from GET response, or null for new records
+          institutions_id: institutionId ?? null,
+          institution_roles_id: typeof inst === 'object' && inst?.institution_roles_id != null 
+            ? (typeof inst.institution_roles_id === 'string' ? Number.parseInt(inst.institution_roles_id, 10) : Number(inst.institution_roles_id))
+            : 2,
+          is_active: typeof inst === 'object' && inst?.is_active !== undefined ? inst.is_active : 1,
+          result_id: resultId
+        };
+      });
     }
 
     if (detail.evidence && Array.isArray(detail.evidence)) {
@@ -855,12 +877,38 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         }
 
         if (detail.contributingInstitutions && Array.isArray(detail.contributingInstitutions)) {
-          detail.contributingInstitutions = detail.contributingInstitutions.map((institution: any) => {
-            const institutionId = institution.institutions_id || institution.id;
-            return institutionId ? Number(institutionId) : institutionId;
-          });
+          this.originalContributingInstitutions = detail.contributingInstitutions.map((inst: any) => ({
+            id: inst.id,
+            institutions_id: inst.institutions_id ?? inst.institution_id,
+            institution_roles_id: inst.institution_roles_id
+          }));
+          
+          const partnersOptions = this.institutionsSE.institutionsWithoutCentersListPartners || [];
+          detail.contributingInstitutions = detail.contributingInstitutions
+            .map((institution: any) => {
+              const institutionId = institution.institutions_id ?? institution.institution_id;
+              if (institutionId == null) return null;
+              const id = typeof institutionId === 'string' ? Number(institutionId) : Number(institutionId);
+              if (!Number.isFinite(id)) return null;
+              
+              const originalId = institution.id ? (typeof institution.id === 'string' ? Number(institution.id) : Number(institution.id)) : null;
+              const institutionRolesId = institution.institution_roles_id ? (typeof institution.institution_roles_id === 'string' ? Number(institution.institution_roles_id) : Number(institution.institution_roles_id)) : 2;
+              const isActive = institution.is_active !== undefined ? institution.is_active : true;
+              
+              const option = partnersOptions.find((o: any) => (o.institutions_id ?? o.id) == id);
+              return {
+                ...(option || {}),
+                id: originalId,
+                institutions_id: id,
+                institution_roles_id: institutionRolesId,
+                is_active: isActive,
+                result_id: institution.result_id
+              };
+            })
+            .filter((v: any) => v != null);
         } else {
           detail.contributingInstitutions = [];
+          this.originalContributingInstitutions = [];
         }
 
         if (detail.resultTypeResponse && Array.isArray(detail.resultTypeResponse)) {
@@ -1142,6 +1190,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     this.rejectJustification = '';
     this.resultDetail.set(null);
     this.originalContributingInitiatives = null;
+    this.originalContributingInstitutions = null;
     this.disabledContributingInitiatives.set([]);
     Object.assign(this.tocInitiative, {
       planned_result: null, // Reset to null for initial state
