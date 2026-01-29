@@ -3397,7 +3397,7 @@ export class ResultsService {
     reviewUpdateDto: ReviewUpdateDto,
     user: TokenDto,
   ): Promise<void> {
-    console.log('Updating PARTNERS');
+
     const hasPartnerChanges =
       reviewUpdateDto.contributingCenters !== undefined ||
       reviewUpdateDto.contributingProjects !== undefined ||
@@ -3407,11 +3407,18 @@ export class ResultsService {
       return;
     }
 
+    const institutionsNormalized = reviewUpdateDto.contributingInstitutions?.map(
+      (ci) => ({
+        ...ci,
+        id: (ci as any).id ?? undefined,
+      }),
+    );
+
     const partnersPayload: SavePartnersV2Dto = {
       result_id: resultId,
       contributing_center: reviewUpdateDto.contributingCenters,
       bilateral_project: reviewUpdateDto.contributingProjects,
-      institutions: reviewUpdateDto.contributingInstitutions,
+      institutions: institutionsNormalized,
     };
 
     const partnersResult =
@@ -3506,6 +3513,7 @@ export class ResultsService {
         user,
       );
     }
+    console.log('Updated TOC mapping for resultId:', resultId);
 
   }
 

@@ -79,6 +79,7 @@ export class ResultsByProjectsService {
     userId: number,
   ) {
     try {
+      console.log('BILATERAL PROJECTS', incomingProjects);
       const incomingIds = Array.from(
         new Set(
           (incomingProjects || [])
