@@ -67,6 +67,22 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   contributingInitiativesList = signal<any[]>([]);
   disabledContributingInitiatives = signal<any[]>([]);
 
+  contributingInitiativesFormatter = (option: any): string => {
+    if (!option) return '';
+    const initiativeId = typeof option.id === 'string' ? Number.parseInt(option.id, 10) : Number(option.id);
+    if (Number.isNaN(initiativeId)) return option.full_name || option.initiative_name || option.name || '';
+
+    const status = this.contributingInitiativesStatusMap().get(initiativeId);
+    const name = option.full_name || option.initiative_name || option.name || '';
+    
+    if (status === 'accepted') {
+      return `${name} - <strong>Accepted</strong>`;
+    } else if (status === 'pending') {
+      return `${name} - <strong>Pending</strong>`;
+    }
+    return name;
+  };
+
   tocInitiative: any = {
     planned_result: null,
     initiative_id: null,
@@ -126,6 +142,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
   resultDetail = signal<BilateralResultDetail | null>(null);
   originalAcceptedContributingInitiatives: any[] = [];
+  contributingInitiativesStatusMap = signal<Map<number, 'accepted' | 'pending'>>(new Map());
   private _lastContributingInitiativesReapplyKey: string = '';
   originalContributingInitiatives: any = null;
   originalContributingInstitutions: any[] | null = null;
@@ -816,17 +833,20 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
               return initiative.id || initiative.official_code || initiative;
             });
             this.disabledContributingInitiatives.set([]);
+            this.contributingInitiativesStatusMap.set(new Map());
             this.originalAcceptedContributingInitiatives = [];
           } else if (typeof detail.contributingInitiatives === 'object') {
             const contributingAndPrimary = detail.contributingInitiatives.contributing_and_primary_initiative || [];
             const accepted = detail.contributingInitiatives.accepted_contributing_initiatives || [];
             const pending = detail.contributingInitiatives.pending_contributing_initiatives || [];
 
-            if (contributingAndPrimary.length > 0 && contributingAndPrimary[0].id) {
-              primaryInitiativeId = contributingAndPrimary[0].id;
-            }
+            // Filter primary: only initiatives with initiative_role_id === 1 (or "1")
+            const primaryInitiatives = contributingAndPrimary.filter((init: any) => {
+              const roleId = init.initiative_role_id;
+              return roleId === 1 || roleId === '1';
+            });
 
-            this.disabledContributingInitiatives.set(contributingAndPrimary);
+            this.disabledContributingInitiatives.set(primaryInitiatives);
 
             this.originalAcceptedContributingInitiatives = (accepted || []).map((a: any) => ({
               id: a.id,
@@ -835,9 +855,22 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
               initiative_id: a.initiative_id ?? a.id
             }));
 
-            const allInitiatives = [...contributingAndPrimary, ...accepted, ...pending];
+            // Build status map for tags: accepted or pending
+            const statusMap = new Map<number, 'accepted' | 'pending'>();
+            (accepted || []).forEach((a: any) => {
+              const id = typeof a.id === 'string' ? Number.parseInt(a.id, 10) : Number(a.id);
+              if (!Number.isNaN(id)) statusMap.set(id, 'accepted');
+            });
+            (pending || []).forEach((p: any) => {
+              const id = typeof p.id === 'string' ? Number.parseInt(p.id, 10) : Number(p.id);
+              if (!Number.isNaN(id)) statusMap.set(id, 'pending');
+            });
+            this.contributingInitiativesStatusMap.set(statusMap);
 
-            detail.contributingInitiatives = allInitiatives.map((initiative: any) => {
+            // Pre-select only accepted and pending (NOT primary with role_id === 1)
+            const nonPrimaryInitiatives = [...accepted, ...pending];
+
+            detail.contributingInitiatives = nonPrimaryInitiatives.map((initiative: any) => {
               if (initiative.id != null) {
                 return typeof initiative.id === 'string' ? Number.parseInt(initiative.id, 10) : Number(initiative.id);
               }
@@ -846,11 +879,13 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
           } else {
             detail.contributingInitiatives = [];
             this.disabledContributingInitiatives.set([]);
+            this.contributingInitiativesStatusMap.set(new Map());
             this.originalAcceptedContributingInitiatives = [];
           }
         } else {
           detail.contributingInitiatives = [];
           this.disabledContributingInitiatives.set([]);
+          this.contributingInitiativesStatusMap.set(new Map());
           this.originalAcceptedContributingInitiatives = [];
         }
 
@@ -1153,6 +1188,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     this.originalContributingInitiatives = null;
     this.originalContributingInstitutions = null;
     this.originalAcceptedContributingInitiatives = [];
+    this.contributingInitiativesStatusMap.set(new Map());
     this._lastContributingInitiativesReapplyKey = '';
     this.disabledContributingInitiatives.set([]);
     Object.assign(this.tocInitiative, {

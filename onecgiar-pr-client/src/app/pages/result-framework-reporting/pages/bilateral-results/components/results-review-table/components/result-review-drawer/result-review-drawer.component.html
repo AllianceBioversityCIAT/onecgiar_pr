@@ -211,6 +211,7 @@
         selectedLabel="Science Programs selected"
         selectedOptionLabel="full_name"
         [disableOptions]="disabledContributingInitiatives()"
+        [displayLabelFormatter]="contributingInitiativesFormatter"
         [(ngModel)]="fields.contributingInitiatives"
         placeholder="Select Science Programs"
         [readOnly]="!canReviewResults()">
