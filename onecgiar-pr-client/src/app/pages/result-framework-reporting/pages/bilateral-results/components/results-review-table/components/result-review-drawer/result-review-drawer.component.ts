@@ -74,7 +74,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
     const status = this.contributingInitiativesStatusMap().get(initiativeId);
     const name = option.full_name || option.initiative_name || option.name || '';
-    
+
     if (status === 'accepted') {
       return `${name} - <strong>Accepted</strong>`;
     } else if (status === 'pending') {
