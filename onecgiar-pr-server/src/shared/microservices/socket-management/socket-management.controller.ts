@@ -6,7 +6,7 @@ import { SelfApp } from "../../broker/self.app";
 
 @Controller('socket-management')
 export class SocketManagementController {
-    constructor(private readonly socketManagementService: SocketManagementService, private readonly selfApp: SelfApp) { }
+    constructor(private readonly socketManagementService: SocketManagementService) { }
 
     @EventPattern('send-notification')
     async sendNotification(@Payload() payload: SendNotificationSocketDto) {
