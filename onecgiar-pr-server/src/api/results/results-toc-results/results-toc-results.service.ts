@@ -1124,27 +1124,39 @@ export class ResultsTocResultsService {
     result_id: number,
   ) {
     try {
-      if (createResultsTocResultDto) {
-        for (const contributor of createResultsTocResultDto) {
-          if (!contributor.result_toc_results?.length) {
-            contributor.result_toc_results = [];
+      if (!createResultsTocResultDto?.length) return;
+
+      for (const contributor of createResultsTocResultDto) {
+        const resultTocResults = contributor.result_toc_results ?? [];
+        for (const rtrc of resultTocResults) {
+          if (!rtrc?.result_toc_result_id && !rtrc?.toc_result_id) {
+            continue;
           }
-          for (const rtrc of contributor.result_toc_results) {
-            if (!rtrc?.result_toc_result_id && !rtrc?.toc_result_id) {
-              continue;
-            }
-            await this._resultsTocResultRepository.insert({
-              initiative_ids: contributor?.initiative_id,
-              toc_result_id: rtrc?.toc_result_id,
-              created_by: user.id,
-              last_updated_by: user.id,
-              result_id: result_id,
-              planned_result: contributor?.planned_result,
-              action_area_outcome_id: rtrc?.action_area_outcome_id || null,
-              is_active: true,
-              toc_progressive_narrative:
-                rtrc?.toc_progressive_narrative || null,
-            });
+          const saved = await this._resultsTocResultRepository.save({
+            initiative_ids: contributor?.initiative_id,
+            toc_result_id: rtrc?.toc_result_id ?? null,
+            created_by: user.id,
+            last_updated_by: user.id,
+            result_id,
+            planned_result: contributor?.planned_result ?? null,
+            action_area_outcome_id: rtrc?.action_area_outcome_id ?? null,
+            is_active: true,
+            toc_progressive_narrative: rtrc?.toc_progressive_narrative ?? null,
+            toc_level_id: rtrc?.toc_level_id ?? null,
+          });
+
+          const resultTocResultId = saved?.result_toc_result_id;
+          if (
+            resultTocResultId &&
+            Array.isArray(rtrc?.indicators) &&
+            rtrc.indicators.length > 0
+          ) {
+            await this._resultsTocResultRepository.saveInditicatorsContributing(
+              rtrc.indicators,
+              resultTocResultId,
+              result_id,
+              user.id,
+            );
           }
         }
       }

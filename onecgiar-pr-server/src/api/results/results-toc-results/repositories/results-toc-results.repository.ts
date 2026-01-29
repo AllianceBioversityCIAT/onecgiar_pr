@@ -1642,7 +1642,8 @@ export class ResultsTocResultRepository
           await this._resultsTocResultIndicatorRepository.findOne({
             where: {
               results_toc_results_id: id_result_toc_result,
-              toc_results_indicator_id: itemIndicator.toc_results_indicator_id,
+              toc_results_indicator_id:
+                itemIndicator.toc_results_indicator_id ?? indicatorId,
             },
           });
 
@@ -1651,7 +1652,8 @@ export class ResultsTocResultRepository
           await this._resultsTocResultIndicatorRepository.update(
             {
               results_toc_results_id: id_result_toc_result,
-              toc_results_indicator_id: itemIndicator.toc_results_indicator_id,
+              toc_results_indicator_id:
+                itemIndicator.toc_results_indicator_id ?? indicatorId,
             },
             {
               is_active: true,
@@ -1674,16 +1676,14 @@ export class ResultsTocResultRepository
               const canonical = await getCanonicalTarget(indicatorId);
               const resolvedNumberTarget =
                 canonical?.number_target ??
-                this.toNumberOrNull(target.number_target);
-
-              if (resolvedNumberTarget === null) {
-                continue;
-              }
+                this.toNumberOrNull(target.number_target) ??
+                0;
 
               const resolvedTargetDate =
                 phaseYear ??
                 canonical?.target_date ??
-                this.toNumberOrNull(target.target_date);
+                this.toNumberOrNull(target.target_date) ??
+                null;
 
               let targetInfo = null;
               if (target.indicators_targets) {
@@ -1750,7 +1750,8 @@ export class ResultsTocResultRepository
           const resultTocResultIndicator =
             await this._resultsTocResultIndicatorRepository.save({
               results_toc_results_id: id_result_toc_result,
-              toc_results_indicator_id: itemIndicator.toc_results_indicator_id,
+              toc_results_indicator_id:
+                itemIndicator.toc_results_indicator_id ?? indicatorId,
               is_active: true,
               created_by: userId ?? undefined,
               last_updated_by: userId ?? undefined,
@@ -1760,16 +1761,14 @@ export class ResultsTocResultRepository
               const canonical = await getCanonicalTarget(indicatorId);
               const resolvedNumberTarget =
                 canonical?.number_target ??
-                this.toNumberOrNull(target.number_target);
-
-              if (resolvedNumberTarget === null) {
-                continue;
-              }
+                this.toNumberOrNull(target.number_target) ??
+                0;
 
               const resolvedTargetDate =
                 phaseYear ??
                 canonical?.target_date ??
-                this.toNumberOrNull(target.target_date);
+                this.toNumberOrNull(target.target_date) ??
+                null;
 
               await this._resultTocIndicatorTargetRepository.save({
                 result_toc_result_indicator_id:
