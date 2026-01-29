@@ -1032,7 +1032,7 @@ export class ResultsByInstitutionsService {
     await this._resultInstitutionsBudgetRepository.save(updatedNewBudgets);
 
     const dtoHasDelivery = (dto: any): boolean =>
-    dto != null && Object.prototype.hasOwnProperty.call(dto, 'delivery');
+      dto != null && Object.prototype.hasOwnProperty.call(dto, 'delivery');
 
     for (const inst of toUpdate.concat(added)) {
       if (inst['isNew']) {

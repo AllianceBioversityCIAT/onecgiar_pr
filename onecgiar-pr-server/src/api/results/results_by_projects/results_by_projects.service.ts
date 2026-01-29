@@ -79,7 +79,6 @@ export class ResultsByProjectsService {
     userId: number,
   ) {
     try {
-      console.log('BILATERAL PROJECTS', incomingProjects);
       const incomingIds = Array.from(
         new Set(
           (incomingProjects || [])
@@ -101,7 +100,6 @@ export class ResultsByProjectsService {
           { is_active: false, last_updated_by: userId },
         );
       }
-
       let created = 0;
       let reactivated = 0;
       let unchanged = 0;

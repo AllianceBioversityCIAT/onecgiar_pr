@@ -200,7 +200,6 @@ export class ResultRegionsService {
           role,
         );
         if (regions?.length) {
-          console.log('regions.length', regions);
           const resultRegionArray: ResultRegion[] = [];
           for (let index = 0; index < regions.length; index++) {
             const exist =
@@ -219,7 +218,6 @@ export class ResultRegionsService {
           }
 
           if (resultRegionArray.length) {
-            console.log('resultRegionArray.length', resultRegionArray);
             await this._resultRegionRepository.save(resultRegionArray);
           }
         }

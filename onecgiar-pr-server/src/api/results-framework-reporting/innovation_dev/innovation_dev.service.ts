@@ -624,7 +624,8 @@ export class InnovationDevService {
       }
 
       if (innovationDevDto.innovation_nature_id !== undefined) {
-        innDevExists.innovation_nature_id = innovationDevDto.innovation_nature_id;
+        innDevExists.innovation_nature_id =
+          innovationDevDto.innovation_nature_id;
       }
 
       if (innovationDevDto.innovation_developers !== undefined) {
@@ -643,8 +644,9 @@ export class InnovationDevService {
 
       innDevExists.last_updated_by = user.id;
 
-      const updatedInnDev =
-        await this._resultsInnovationsDevRepository.save(innDevExists as any);
+      const updatedInnDev = await this._resultsInnovationsDevRepository.save(
+        innDevExists as any,
+      );
 
       return {
         response: updatedInnDev,

@@ -117,7 +117,7 @@ import { ResultsTocResultsService } from './results-toc-results/results-toc-resu
 import { CapdevDto } from './summary/dto/create-capacity-developents.dto';
 import { CreateTocShareResult } from './share-result-request/dto/create-toc-share-result.dto';
 import { ShareResultRequestService } from './share-result-request/share-result-request.service';
-import {EvidencesService} from "../results/evidences/evidences.service";
+import { EvidencesService } from '../results/evidences/evidences.service';
 import { SavePartnersV2Dto } from './results_by_institutions/dto/save-partners-v2.dto';
 
 @Injectable()
@@ -3186,7 +3186,9 @@ export class ResultsService {
       }
 
       const currentCommonFields =
-        await this._resultRepository.getCommonFieldsBilateralResultById(parsedResultId);
+        await this._resultRepository.getCommonFieldsBilateralResultById(
+          parsedResultId,
+        );
 
       const hasMinDataStandardChanges = this._detectMinDataStandardChanges(
         reviewUpdateDto,
@@ -3215,29 +3217,16 @@ export class ResultsService {
           reviewUpdateDto,
           user,
         );
-      
       });
 
       // Update GeoScope
-      await this._updateGeographicScope(
-        parsedResultId,
-        reviewUpdateDto,
-        user,
-      );
+      await this._updateGeographicScope(parsedResultId, reviewUpdateDto, user);
 
       // Update Partners/Institutions - Projects - Centers
-      await this._updatePartners(
-        parsedResultId,
-        reviewUpdateDto,
-        user,
-      );
+      await this._updatePartners(parsedResultId, reviewUpdateDto, user);
 
       // Update Initiatives/Science Programs
-      await this._updateTocMapping(
-        parsedResultId,
-        reviewUpdateDto,
-        user,
-      );
+      await this._updateTocMapping(parsedResultId, reviewUpdateDto, user);
 
       // Update Evidence
       await this._updateEvidence(parsedResultId, reviewUpdateDto, user);
@@ -3250,9 +3239,9 @@ export class ResultsService {
       );
 
       const changedFields = {
-      ...(hasMinDataStandardChanges ? { min_data_standard: 'updated' } : {}),
-      ...(hasOtherChanges ? { other_fields: 'updated' } : {}),
-    };
+        ...(hasMinDataStandardChanges ? { min_data_standard: 'updated' } : {}),
+        ...(hasOtherChanges ? { other_fields: 'updated' } : {}),
+      };
 
       return {
         response: {
@@ -3263,7 +3252,6 @@ export class ResultsService {
         message: 'Result updated successfully',
         status: HttpStatus.OK,
       };
-
     } catch (error) {
       if (
         error instanceof BadRequestException ||
@@ -3311,7 +3299,7 @@ export class ResultsService {
       reviewUpdateDto.commonFields?.result_description !== undefined &&
       reviewUpdateDto.commonFields.result_description !==
         currentCommonFields?.result_description
-    )
+    );
   }
 
   private _extractInitiativeIds(initiatives: any[]): number[] {
@@ -3357,8 +3345,7 @@ export class ResultsService {
 
     const updateData: Partial<Result> = {};
     if (reviewUpdateDto.commonFields?.result_description !== undefined) {
-      updateData.description =
-        reviewUpdateDto.commonFields.result_description;
+      updateData.description = reviewUpdateDto.commonFields.result_description;
     }
 
     if (Object.keys(updateData).length > 0) {
@@ -3382,9 +3369,10 @@ export class ResultsService {
       ...reviewUpdateDto.geographicScope,
       result_id: resultId,
     };
-    console.log('Updating geographic scope with DTO:', geoScopeDto);
-    const geoScopeResult =
-      await this._geographicLocationService.saveGeoScopeV2(geoScopeDto, user);
+    const geoScopeResult = await this._geographicLocationService.saveGeoScopeV2(
+      geoScopeDto,
+      user,
+    );
     if (geoScopeResult.status !== HttpStatus.OK) {
       this._logger.warn(
         `Failed to update geographic scope for result ${resultId}`,
@@ -3397,7 +3385,6 @@ export class ResultsService {
     reviewUpdateDto: ReviewUpdateDto,
     user: TokenDto,
   ): Promise<void> {
-
     const hasPartnerChanges =
       reviewUpdateDto.contributingCenters !== undefined ||
       reviewUpdateDto.contributingProjects !== undefined ||
@@ -3407,12 +3394,11 @@ export class ResultsService {
       return;
     }
 
-    const institutionsNormalized = reviewUpdateDto.contributingInstitutions?.map(
-      (ci) => ({
+    const institutionsNormalized =
+      reviewUpdateDto.contributingInstitutions?.map((ci) => ({
         ...ci,
         id: (ci as any).id ?? undefined,
-      }),
-    );
+      }));
 
     const partnersPayload: SavePartnersV2Dto = {
       result_id: resultId,
@@ -3437,7 +3423,6 @@ export class ResultsService {
     reviewUpdateDto: ReviewUpdateDto,
     user: TokenDto,
   ): Promise<void> {
-
     if (reviewUpdateDto.contributingInitiatives === undefined) return;
 
     if (!this._contributorsPartnersService) {
@@ -3449,11 +3434,15 @@ export class ResultsService {
 
     const contributing = reviewUpdateDto.contributingInitiatives;
 
-    let acceptedIds: number[] = (contributing.accepted_contributing_initiatives ?? [])
+    let acceptedIds: number[] = (
+      contributing.accepted_contributing_initiatives ?? []
+    )
       .map(Number)
       .filter((n) => Number.isFinite(n) && n > 0);
 
-    let pendingIds: number[] = (contributing.pending_contributing_initiatives ?? [])
+    let pendingIds: number[] = (
+      contributing.pending_contributing_initiatives ?? []
+    )
       .map(Number)
       .filter((n) => Number.isFinite(n) && n > 0);
 
@@ -3471,10 +3460,9 @@ export class ResultsService {
       );
     }
     if (contributing?.pending_contributing_initiatives?.length) {
-      pendingIds =
-        contributing.pending_contributing_initiatives.map(
-          (i) => i.id,
-        );
+      pendingIds = contributing.pending_contributing_initiatives.map(
+        (i) => i.id,
+      );
     }
 
     const contributingInit =
@@ -3505,7 +3493,7 @@ export class ResultsService {
       const dataRequest: CreateTocShareResult = {
         isToc: false,
         initiativeShareId: pendingIds,
-        email_template: "email_template_contribution",
+        email_template: 'email_template_contribution',
       };
       await this._shareResultRequestService.resultRequest(
         dataRequest,
@@ -3513,8 +3501,6 @@ export class ResultsService {
         user,
       );
     }
-    console.log('Updated TOC mapping for resultId:', resultId);
-
   }
 
   private async _updateEvidence(
@@ -3555,7 +3541,12 @@ export class ResultsService {
     const resultTypeId = Number(reviewUpdateDto.commonFields.result_type_id);
 
     try {
-      await this._handleResultTypeUpdate(resultTypeId, resultId, reviewUpdateDto, user);
+      await this._handleResultTypeUpdate(
+        resultTypeId,
+        resultId,
+        reviewUpdateDto,
+        user,
+      );
     } catch (error) {
       this._logger.error(
         `Failed to update resultTypeResponse for result ${resultId}, type ${resultTypeId}: ${error.message}`,
@@ -3574,7 +3565,7 @@ export class ResultsService {
       case ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT: // 5
         if (this._summaryService) {
           const capdevDto: CapdevDto = {
-            ...reviewUpdateDto.resultTypeResponse as any,
+            ...(reviewUpdateDto.resultTypeResponse as any),
             institutions: [],
             is_attending_for_organization: false,
           };
@@ -3701,17 +3692,16 @@ export class ResultsService {
         }
 
         if (!this._resultsTocResultsService) {
-          this._logger.warn(
-            'ResultsTocResultsService is not available',
-          );
+          this._logger.warn('ResultsTocResultsService is not available');
           return;
         }
 
-        const tocResult = await this._resultsTocResultsService.updateTocResultPartial(
-          parsedResultId,
-          updateTocMetadataDto.tocMetadata,
-          user,
-        );
+        const tocResult =
+          await this._resultsTocResultsService.updateTocResultPartial(
+            parsedResultId,
+            updateTocMetadataDto.tocMetadata,
+            user,
+          );
 
         if (tocResult.status !== HttpStatus.OK) {
           throw new BadRequestException(

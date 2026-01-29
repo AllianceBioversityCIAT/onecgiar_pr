@@ -1803,7 +1803,6 @@ export class ResultsTocResultsService {
     user: TokenDto,
   ) {
     try {
-
       const result = await this._resultRepository.getResultById(resultId);
       if (!result?.id) {
         return {
@@ -1817,7 +1816,6 @@ export class ResultsTocResultsService {
         where: { result_id: resultId, initiative_role_id: 1 },
       });
 
-      console.log('initSubmitter', initSubmitter);
       const normalizeInitiativeId = (value: any): number | null => {
         const parsed = Number(value);
         return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
@@ -1940,10 +1938,7 @@ export class ResultsTocResultsService {
             }
           }
         }
-      } else if (
-        resultTocResult &&
-        resultTocResult?.planned_result === false
-      ) {
+      } else if (resultTocResult && resultTocResult?.planned_result === false) {
         const allActiveRecords = await this._resultsTocResultRepository.find({
           where: { result_id: resultId, is_active: true },
         });
@@ -1967,9 +1962,7 @@ export class ResultsTocResultsService {
 
             const resolvedInitiativeId =
               normalizeInitiativeId((t as any)?.initiative_id) ??
-              normalizeInitiativeId(
-                (resultTocResult as any)?.initiative_id,
-              ) ??
+              normalizeInitiativeId((resultTocResult as any)?.initiative_id) ??
               primaryInitiativeId;
 
             if (t?.result_toc_result_id) {
@@ -2014,8 +2007,7 @@ export class ResultsTocResultsService {
             toc_progressive_narrative: string;
           }
 
-          const rtr =
-            resultTocResult as unknown as SpecialCaseResultTocResult;
+          const rtr = resultTocResult as unknown as SpecialCaseResultTocResult;
           const isSpecialCase =
             rtr.planned_result === false && rtr.initiative_id;
 
