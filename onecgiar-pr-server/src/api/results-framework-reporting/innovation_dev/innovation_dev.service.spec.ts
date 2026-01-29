@@ -46,6 +46,9 @@ describe('InnovationDevService', () => {
     last_updated_by: 1,
   };
 
+  // Helper function to create fresh mock copies
+  const createMockCopy = () => JSON.parse(JSON.stringify(mockInnovationDev));
+
   beforeEach(async () => {
     const mockResultsInnovationsDevRepo = {
       InnovationDevExists: jest.fn(),
@@ -159,8 +162,10 @@ describe('InnovationDevService', () => {
         name: 'Prototype',
       };
 
+      const mockCopy = createMockCopy();
+
       const updatedMock = {
-        ...mockInnovationDev,
+        ...mockCopy,
         innovation_nature_id: 15,
         innovation_developers: 'Ms. Yodalieva Markhabo',
         innovation_readiness_level_id: 12,
@@ -170,7 +175,7 @@ describe('InnovationDevService', () => {
 
       (
         mockResultsInnovationsDevRepository.InnovationDevExists as jest.Mock
-      ).mockResolvedValueOnce(mockInnovationDev);
+      ).mockResolvedValueOnce(mockCopy);
       (mockResultsInnovationsDevRepository.save as jest.Mock).mockResolvedValueOnce(
         updatedMock,
       );
@@ -200,25 +205,25 @@ describe('InnovationDevService', () => {
 
     it('should update innovation development with partial fields (only innovation_nature_id)', async () => {
       const resultId = 100;
-      // Crear un DTO que solo actualice innovation_nature_id
       const innovationDevDto: Partial<InnovationDevelopmentDto> = {
         result_innovation_dev_id: 1882,
         innovation_nature_id: 20,
         innovation_type_id: 13,
         innovation_type_name: 'Capacity development innovation',
-        // No incluir innovation_readiness_level_id, level, innovation_developers
         name: 'Idea',
       };
 
+      const mockCopy = createMockCopy();
+      
       const updatedMock = {
-        ...mockInnovationDev,
+        ...mockCopy,
         innovation_nature_id: 20,
         last_updated_by: userTest.id,
       };
 
       (
         mockResultsInnovationsDevRepository.InnovationDevExists as jest.Mock
-      ).mockResolvedValueOnce(mockInnovationDev);
+      ).mockResolvedValueOnce(mockCopy);
       (mockResultsInnovationsDevRepository.save as jest.Mock).mockResolvedValueOnce(
         updatedMock,
       );
@@ -235,9 +240,9 @@ describe('InnovationDevService', () => {
       ).toHaveBeenCalledWith(
         expect.objectContaining({
           innovation_nature_id: 20,
-          innovation_developers: 'Original Developer', // No cambió
-          innovation_readiness_level_id: 11, // No cambió (valor original del mock)
-          readiness_level: '0', // No cambió (valor original del mock)
+          innovation_developers: 'Original Developer', 
+          innovation_readiness_level_id: 11, 
+          readiness_level: '0', 
           last_updated_by: userTest.id,
         }),
       );
@@ -245,33 +250,29 @@ describe('InnovationDevService', () => {
 
     it('should update innovation development with only innovation_developers', async () => {
       const resultId = 100;
-      const innovationDevDto: InnovationDevelopmentDto = {
+      const innovationDevDto: Partial<InnovationDevelopmentDto> = {
         result_innovation_dev_id: 1882,
-        innovation_nature_id: 13,
-        innovation_type_id: 13,
-        innovation_type_name: 'Capacity development innovation',
         innovation_developers: 'New Developer Name',
-        innovation_readiness_level_id: 11,
-        level: '0',
-        name: 'Idea',
       };
 
+      const mockCopy = createMockCopy();
+
       const updatedMock = {
-        ...mockInnovationDev,
+        ...mockCopy,
         innovation_developers: 'New Developer Name',
         last_updated_by: userTest.id,
       };
 
       (
         mockResultsInnovationsDevRepository.InnovationDevExists as jest.Mock
-      ).mockResolvedValueOnce(mockInnovationDev);
+      ).mockResolvedValueOnce(mockCopy);
       (mockResultsInnovationsDevRepository.save as jest.Mock).mockResolvedValueOnce(
         updatedMock,
       );
 
       const result = await service.updateInnovationDevPartial(
         resultId,
-        innovationDevDto,
+        innovationDevDto as InnovationDevelopmentDto,
         userTest,
       );
 
@@ -289,18 +290,16 @@ describe('InnovationDevService', () => {
 
     it('should update innovation development with only innovation_readiness_level_id and level', async () => {
       const resultId = 100;
-      const innovationDevDto: InnovationDevelopmentDto = {
+      const innovationDevDto: Partial<InnovationDevelopmentDto> = {
         result_innovation_dev_id: 1882,
-        innovation_nature_id: 13,
-        innovation_type_id: 13,
-        innovation_type_name: 'Capacity development innovation',
         innovation_readiness_level_id: 15,
         level: '2',
-        name: 'Validation',
       };
 
+      const mockCopy = createMockCopy();
+
       const updatedMock = {
-        ...mockInnovationDev,
+        ...mockCopy,
         innovation_readiness_level_id: 15,
         readiness_level: '2',
         last_updated_by: userTest.id,
@@ -308,14 +307,14 @@ describe('InnovationDevService', () => {
 
       (
         mockResultsInnovationsDevRepository.InnovationDevExists as jest.Mock
-      ).mockResolvedValueOnce(mockInnovationDev);
+      ).mockResolvedValueOnce(mockCopy);
       (mockResultsInnovationsDevRepository.save as jest.Mock).mockResolvedValueOnce(
         updatedMock,
       );
 
       const result = await service.updateInnovationDevPartial(
         resultId,
-        innovationDevDto,
+        innovationDevDto as InnovationDevelopmentDto,
         userTest,
       );
 
@@ -362,30 +361,26 @@ describe('InnovationDevService', () => {
 
     it('should handle undefined fields correctly (only update defined fields)', async () => {
       const resultId = 100;
-      // Crear un DTO parcial sin los campos que no queremos actualizar
       const innovationDevDto: Partial<InnovationDevelopmentDto> = {
         result_innovation_dev_id: 1882,
         innovation_nature_id: 15,
-        innovation_type_id: 13,
-        innovation_type_name: 'Capacity development innovation',
-        // innovation_developers no está presente (undefined implícito)
         innovation_readiness_level_id: 12,
-        // level no está presente (undefined implícito)
-        name: 'Prototype',
       };
 
+      const mockCopy = createMockCopy();
+
       const updatedMock = {
-        ...mockInnovationDev,
+        ...mockCopy,
         innovation_nature_id: 15,
         innovation_readiness_level_id: 12,
-        innovation_developers: 'Original Developer', // Se mantiene
-        readiness_level: '0', // Se mantiene
+        innovation_developers: 'Original Developer', 
+        readiness_level: '0', 
         last_updated_by: userTest.id,
       };
 
       (
         mockResultsInnovationsDevRepository.InnovationDevExists as jest.Mock
-      ).mockResolvedValueOnce(mockInnovationDev);
+      ).mockResolvedValueOnce(mockCopy);
       (mockResultsInnovationsDevRepository.save as jest.Mock).mockResolvedValueOnce(
         updatedMock,
       );
@@ -443,29 +438,25 @@ describe('InnovationDevService', () => {
 
     it('should always update last_updated_by with user id', async () => {
       const resultId = 100;
-      const innovationDevDto: InnovationDevelopmentDto = {
+      const innovationDevDto: Partial<InnovationDevelopmentDto> = {
         result_innovation_dev_id: 1882,
-        innovation_nature_id: 13,
-        innovation_type_id: 13,
-        innovation_type_name: 'Capacity development innovation',
-        innovation_readiness_level_id: 11,
-        level: '0',
-        name: 'Idea',
       };
+
+      const mockCopy = createMockCopy();
 
       (
         mockResultsInnovationsDevRepository.InnovationDevExists as jest.Mock
-      ).mockResolvedValueOnce(mockInnovationDev);
+      ).mockResolvedValueOnce(mockCopy);
       (mockResultsInnovationsDevRepository.save as jest.Mock).mockResolvedValueOnce(
         {
-          ...mockInnovationDev,
+          ...mockCopy,
           last_updated_by: userTest.id,
         },
       );
 
       await service.updateInnovationDevPartial(
         resultId,
-        innovationDevDto,
+        innovationDevDto as InnovationDevelopmentDto,
         userTest,
       );
 

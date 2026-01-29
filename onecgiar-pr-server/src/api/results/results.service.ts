@@ -2798,6 +2798,14 @@ export class ResultsService {
     resultId: number,
   ): Promise<ReturnResponseDto<any> | returnErrorDto> {
     try {
+      // Validate that resultId is a positive number
+      if (!resultId || resultId <= 0) {
+        return {
+          response: {},
+          message: 'Invalid resultId. Must be a positive number.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
 
       const result = await this._resultRepository.findOne({
         where: { id: resultId, source: SourceEnum.Bilateral },
@@ -3481,6 +3489,12 @@ export class ResultsService {
     }
 
     if (pendingIds.length) {
+      if (!this._shareResultRequestService) {
+        this._logger.warn(
+          `ShareResultRequestService is not available for result ${resultId}. Skipping email notifications.`,
+        );
+        return;
+      }
       const dataRequest: CreateTocShareResult = {
         isToc: false,
         initiativeShareId: pendingIds,

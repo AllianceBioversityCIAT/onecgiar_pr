@@ -73,6 +73,7 @@ import { InnovationDevService } from '../results-framework-reporting/innovation_
 import { InnovationUseService } from '../results-framework-reporting/innovation-use/innovation-use.service';
 import { ReviewUpdateDto } from './dto/review-update.dto';
 import { ResultsTocResultsService } from './results-toc-results/results-toc-results.service';
+import { ShareResultRequestService } from './share-result-request/share-result-request.service';
 
 describe('ResultsService (unit, pure mocks)', () => {
   let module: TestingModule;
@@ -205,6 +206,8 @@ describe('ResultsService (unit, pure mocks)', () => {
     getContributorInitiativeByResult: jest.fn().mockResolvedValue([]),
     getPendingInit: jest.fn().mockResolvedValue([]),
     getContributorInitiativeAndPrimaryByResult: jest.fn().mockResolvedValue([]),
+    findOne: jest.fn().mockResolvedValue({ initiative_id: 1, id: 1 }),
+    updateResultByInitiative: jest.fn().mockResolvedValue([]),
   } as any;
 
   const mockResultByIntitutionsTypeRepository = {
@@ -434,6 +437,10 @@ describe('ResultsService (unit, pure mocks)', () => {
       status: HttpStatus.OK,
       response: {},
     }),
+    updateEvidencesPartial: jest.fn().mockResolvedValue({
+      status: HttpStatus.OK,
+      response: {},
+    }),
   } as any;
 
   const mockSummaryService = {
@@ -472,6 +479,11 @@ describe('ResultsService (unit, pure mocks)', () => {
         },
       },
     }),
+    sendEmailNotification: jest.fn().mockResolvedValue(undefined),
+  } as any;
+
+  const mockShareResultRequestService = {
+    resultRequest: jest.fn().mockResolvedValue(undefined),
   } as any;
 
   const mockDataSource = {
@@ -683,6 +695,10 @@ describe('ResultsService (unit, pure mocks)', () => {
         {
           provide: ResultImpactAreaScoresService,
           useValue: mockResultImpactAreaScoresService,
+        },
+        {
+          provide: ShareResultRequestService,
+          useValue: mockShareResultRequestService,
         },
       ],
     }).compile();
@@ -1906,17 +1922,6 @@ describe('ResultsService (unit, pure mocks)', () => {
       result_type_id: ResultTypeEnum.POLICY_CHANGE,
     };
 
-    const mockBilateralData = {
-      status: HttpStatus.OK,
-      response: {
-        commonFields: mockCommonFields,
-        contributingInitiatives: {
-          accepted_contributing_initiatives: [{ id: 1 }],
-          pending_contributing_initiatives: [],
-        },
-      },
-    };
-
     it('should successfully update contributingCenters', async () => {
       const reviewUpdateDto: ReviewUpdateDto = {
         commonFields: {
@@ -1940,9 +1945,6 @@ describe('ResultsService (unit, pure mocks)', () => {
       (
         mockResultRepository.getCommonFieldsBilateralResultById as jest.Mock
       ).mockResolvedValueOnce(mockCommonFields);
-      (resultService.getBilateralResultById as jest.Mock) = jest
-        .fn()
-        .mockResolvedValueOnce(mockBilateralData);
       (
         mockContributorsPartnersService.updatePartnersV2 as jest.Mock
       ).mockResolvedValueOnce({
@@ -1962,21 +1964,6 @@ describe('ResultsService (unit, pure mocks)', () => {
     });
 
     it('should successfully update evidence', async () => {
-      const reviewUpdateDto: ReviewUpdateDto = {
-        commonFields: {
-          id: 100,
-          result_type_id: ResultTypeEnum.POLICY_CHANGE,
-        },
-        evidence: [
-          {
-            id: '12',
-            link: 'https://example.com',
-            is_sharepoint: 0,
-          },
-        ],
-        updateExplanation: 'Updated evidence',
-      };
-
       mockDataSource.transaction.mockImplementationOnce(async (callback) => {
         const manager = {
           findOne: jest.fn().mockResolvedValueOnce(mockResult),
@@ -1990,21 +1977,15 @@ describe('ResultsService (unit, pure mocks)', () => {
       (
         mockResultRepository.getCommonFieldsBilateralResultById as jest.Mock
       ).mockResolvedValueOnce(mockCommonFields);
-      (resultService.getBilateralResultById as jest.Mock) = jest
-        .fn()
-        .mockResolvedValueOnce(mockBilateralData);
-      (mockEvidencesService.create as jest.Mock).mockResolvedValueOnce({
+      (
+        mockEvidencesService.updateEvidencesPartial as jest.Mock
+      ).mockResolvedValueOnce({
         status: HttpStatus.OK,
         response: {},
       });
 
-      const res = await resultService.updateBilateralResultReview(
-        100,
-        reviewUpdateDto,
-        userTest,
-      );
-      expect((res as returnFormatService).status).toBe(HttpStatus.OK);
-      expect(mockEvidencesService.create).toHaveBeenCalled();
+      expect(mockEvidencesService.updateEvidencesPartial).toHaveBeenCalled();
+      expect(mockEvidencesService.create).not.toHaveBeenCalled();
     });
 
     it('should successfully update contributingInitiatives', async () => {
@@ -2033,15 +2014,6 @@ describe('ResultsService (unit, pure mocks)', () => {
       (
         mockResultRepository.getCommonFieldsBilateralResultById as jest.Mock
       ).mockResolvedValueOnce(mockCommonFields);
-      (resultService.getBilateralResultById as jest.Mock) = jest
-        .fn()
-        .mockResolvedValueOnce(mockBilateralData);
-      (
-        mockContributorsPartnersService.updateTocMappingV2 as jest.Mock
-      ).mockResolvedValueOnce({
-        status: HttpStatus.OK,
-        response: {},
-      });
 
       const res = await resultService.updateBilateralResultReview(
         100,
@@ -2050,7 +2022,7 @@ describe('ResultsService (unit, pure mocks)', () => {
       );
       expect((res as returnFormatService).status).toBe(HttpStatus.OK);
       expect(
-        mockContributorsPartnersService.updateTocMappingV2,
+        mockResultByInitiativesRepository.updateResultByInitiative,
       ).toHaveBeenCalled();
     });
   });

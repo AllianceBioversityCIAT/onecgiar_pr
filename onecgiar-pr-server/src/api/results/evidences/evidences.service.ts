@@ -676,7 +676,7 @@ export class EvidencesService {
 
   private _validateDuplicateLinks(
     evidences: EvidenceDto[],
-  ): { response: {}; message: string; status: HttpStatus } | null {
+  ): { response: Record<string, unknown>; message: string; status: HttpStatus } | null {
     const testDuplicate = evidences.map((e) => e.link);
     if (new Set(testDuplicate).size !== testDuplicate.length) {
       return {
@@ -723,8 +723,10 @@ export class EvidencesService {
   ): Promise<void> {
     // Validar que tenga link o is_sharepoint
     const hasLink = evidenceDto.link && evidenceDto.link.trim().length > 0;
-    const hasSharepoint = evidenceDto.is_sharepoint !== undefined && evidenceDto.is_sharepoint !== 0;
-    
+    const hasSharepoint =
+      evidenceDto.is_sharepoint !== undefined &&
+      evidenceDto.is_sharepoint !== 0;
+
     if (!hasLink && !hasSharepoint) {
       return;
     }
@@ -738,9 +740,7 @@ export class EvidencesService {
     newEvidence.evidence_type_id = 1;
 
     if (hasLink) {
-      newEvidence.link = await this.getHandleFromRegularLink(
-        evidenceDto.link,
-      );
+      newEvidence.link = await this.getHandleFromRegularLink(evidenceDto.link);
     } else {
       // Si no hay link pero hay is_sharepoint, usar un link vacío o placeholder
       newEvidence.link = '';
@@ -749,9 +749,10 @@ export class EvidencesService {
     // Intentar encontrar knowledge product relacionado si hay link
     if (hasLink && evidenceDto.link) {
       const queryIndex = evidenceDto.link.indexOf('?');
-      const linkToProcess = queryIndex >= 0 
-        ? evidenceDto.link.slice(0, queryIndex)
-        : evidenceDto.link;
+      const linkToProcess =
+        queryIndex >= 0
+          ? evidenceDto.link.slice(0, queryIndex)
+          : evidenceDto.link;
       const linkSplit = linkToProcess.split('/');
       const handleId = linkSplit.slice(-2).join('/');
 
