@@ -2401,6 +2401,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       FROM result r
       JOIN result_type rt
         ON r.result_type_id = rt.id
+        AND rt.is_active = 1
       JOIN results_by_inititiative rbi
         ON r.id = rbi.result_id
       AND rbi.is_active = 1
