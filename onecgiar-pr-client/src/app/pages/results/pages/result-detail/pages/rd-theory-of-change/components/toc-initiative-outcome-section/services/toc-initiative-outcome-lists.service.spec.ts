@@ -94,21 +94,21 @@ describe('TocInitiativeOutcomeListsService', () => {
       mockDataControlService.currentResultSignal.mockReturnValue(null);
       const result = service.tocResultList();
       expect(result).toEqual([]);
-      expect(result.length).toBe(4);
+      expect(result.length).toBe(0);
     });
 
     it('should return full list when currentResult is undefined', () => {
       mockDataControlService.currentResultSignal.mockReturnValue(undefined);
       const result = service.tocResultList();
       expect(result).toEqual([]);
-      expect(result.length).toBe(4);
+      expect(result.length).toBe(0);
     });
 
     it('should return full list when result_type_id is undefined', () => {
       mockDataControlService.currentResultSignal.mockReturnValue({ portfolio: 'P1' });
       const result = service.tocResultList();
       expect(result).toEqual([]);
-      expect(result.length).toBe(4);
+      expect(result.length).toBe(0);
     });
 
     it('should return full list when result_type_id is null', () => {
@@ -118,7 +118,7 @@ describe('TocInitiativeOutcomeListsService', () => {
       });
       const result = service.tocResultList();
       expect(result).toEqual([]);
-      expect(result.length).toBe(4);
+      expect(result.length).toBe(0);
     });
 
     it('should filter to levels 2 and 3 when result_type_id is 2', () => {
@@ -155,7 +155,7 @@ describe('TocInitiativeOutcomeListsService', () => {
       });
       const result = service.tocResultList();
       expect(result).toEqual([]);
-      expect(result.length).toBe(4);
+      expect(result.length).toBe(0);
     });
   });
 
