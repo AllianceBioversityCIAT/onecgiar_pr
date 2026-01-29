@@ -183,24 +183,9 @@
       </app-pr-multi-select>
 
       <!-- Contributing Science Programs - Temporarily commented, showing read-only primary initiatives -->
-      <app-pr-multi-select
-        [options]="contributingInitiativesList()"
-        label="Contributing Science Programs"
-        optionLabel="full_name"
-        optionValue="id"
-        [required]="false"
-        selectedLabel="Science Programs selected"
-        selectedOptionLabel="full_name"
-        [disableOptions]="disabledInitiativesOptions()"
-        [(ngModel)]="fields.contributingInitiatives"
-        placeholder="Select Science Programs"
-        [readOnly]="!canReviewResults()">
-      </app-pr-multi-select>
-
-      <!-- Read-only display of primary initiatives -->
       <div style="margin-bottom: 16px;">
         <app-pr-field-header
-          [label]="'Contributing Science Programs'"
+          [label]="'Primary Contributing Science Program'"
           [required]="false"
           [showDescriptionLabel]="true">
         </app-pr-field-header>
@@ -216,6 +201,20 @@
           </div>
         }
       </div>
+      
+      <app-pr-multi-select
+        [options]="contributingInitiativesList()"
+        label="Contributing Science Programs"
+        optionLabel="full_name"
+        optionValue="id"
+        [required]="false"
+        selectedLabel="Science Programs selected"
+        selectedOptionLabel="full_name"
+        [disableOptions]="disabledContributingInitiatives()"
+        [(ngModel)]="fields.contributingInitiatives"
+        placeholder="Select Science Programs"
+        [readOnly]="!canReviewResults()">
+      </app-pr-multi-select>
 
       <hr class="form-section_separator" />
 
