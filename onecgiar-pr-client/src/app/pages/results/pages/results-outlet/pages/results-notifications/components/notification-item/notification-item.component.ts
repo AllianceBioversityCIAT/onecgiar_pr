@@ -2,6 +2,8 @@ import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { ShareRequestModalService } from '../../../../../result-detail/components/share-request-modal/share-request-modal.service';
 import { RetrieveModalService } from '../../../../../result-detail/components/retrieve-modal/retrieve-modal.service';
+import { ResultLevelService } from '../../../../../result-creator/services/result-level.service';
+import { FieldsManagerService } from '../../../../../../../../shared/services/fields-manager.service';
 
 @Component({
   selector: 'app-notification-item',
@@ -18,8 +20,10 @@ export class NotificationItemComponent {
 
   constructor(
     public api: ApiService,
+    public resultLevelSE: ResultLevelService,
     private shareRequestModalSE: ShareRequestModalService,
-    private retrieveModalSE: RetrieveModalService
+    private retrieveModalSE: RetrieveModalService,
+    private readonly fieldsManagerSE: FieldsManagerService
   ) {}
 
   invalidateRequest() {
@@ -60,6 +64,8 @@ export class NotificationItemComponent {
       initiative_id: obj_owner_initiative?.id,
       portfolio: obj_result?.obj_version?.obj_portfolio?.acronym
     });
+
+    this.resultLevelSE.currentResultLevelIdSignal.set(obj_result?.obj_result_level?.id);
 
     this.retrieveModalSE = {
       ...this.retrieveModalSE,
@@ -111,7 +117,7 @@ export class NotificationItemComponent {
     if (isAccept) this.requestingAccept = true;
     else this.requestingReject = true;
 
-    this.api.resultsSE.PATCH_updateRequest(body).subscribe({
+    this.api.resultsSE.PATCH_updateRequest(body, this.fieldsManagerSE.isP25()).subscribe({
       next: resp => {
         this.requestingAccept = false;
         this.requestingReject = false;

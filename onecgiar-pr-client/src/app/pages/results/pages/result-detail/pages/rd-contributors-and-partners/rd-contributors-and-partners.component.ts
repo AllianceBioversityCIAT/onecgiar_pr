@@ -1,5 +1,4 @@
-import { Component, OnInit, inject, ChangeDetectorRef, ViewChild } from '@angular/core';
-import { finalize } from 'rxjs/operators';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
@@ -11,7 +10,6 @@ import { ContributorsAndPartnersBody } from './models/contributorsAndPartnersBod
 import { ResultLevelService } from '../../../result-creator/services/result-level.service';
 import { InnovationUseResultsService } from '../../../../../../shared/services/global/innovation-use-results.service';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
-import { CPMultipleWPsComponent } from './components/multiple-wps/multiple-wps.component';
 
 @Component({
   selector: 'app-rd-contributors-and-partners',
@@ -30,7 +28,6 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   disabledText = 'To remove this center, please contact your librarian';
   innovationUseResultsSE = inject(InnovationUseResultsService);
   fieldsManagerSE = inject(FieldsManagerService);
-  @ViewChild(CPMultipleWPsComponent) multipleWpsComponent: CPMultipleWPsComponent;
   constructor(
     public api: ApiService,
     public institutionsSE: InstitutionsService,
@@ -38,7 +35,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     public rdPartnersSE: RdContributorsAndPartnersService,
     private readonly customizedAlertsFeSE: CustomizedAlertsFeService,
     public centersSE: CentersService,
-    private cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef
   ) {
     this.api.dataControlSE.currentResultSectionName.set('Partners & Contributors');
   }
@@ -224,24 +221,10 @@ export class RdContributorsAndPartnersComponent implements OnInit {
 
     this.tocConsumed = false;
 
-    this.api.resultsSE
-      .PATCH_updateUnplannedResult({ planned_result: item.planned_result })
-      .pipe(
-        finalize(() => {
-          this.tocConsumed = true;
-          this.cdr.detectChanges();
-        })
-      )
-      .subscribe({
-        next: () => {
-          if (this.multipleWpsComponent) {
-            this.multipleWpsComponent.GET_outputList();
-          }
-        },
-        error: err => {
-          console.error('Error updating planned result:', err);
-        }
-      });
+    setTimeout(() => {
+      this.tocConsumed = true;
+      this.cdr.detectChanges();
+    }, 200);
   }
 
   getContributorDescription(contributor: any) {

@@ -44,8 +44,6 @@
     ">
   </app-alert-status>
 
-  <!-- ! from toc section end -->
-  <!-- from toc section  -->
   @if (this.rdPartnersSE.partnersBody.result_toc_result.planned_result !== null) {
     @if (this.tocConsumed) {
       <div style="z-index: 1; position: relative">
@@ -216,11 +214,6 @@
         </div>
       }
 
-      <!-- <app-alert-status
-        [description]="
-          'If your answer is <strong>Yes</strong>, please select the relevant <strong>HLO, indicator</strong>, and <strong>contribution to target</strong> below. If the result is not planned for in the 2025 ToC (planned indicators), please select <strong>No</strong> and, where applicable, choose the <strong>HLO</strong> under which it is most appropriate to report the result. Please also provide a short justification explaining why you are reporting it even though it is not reflected in a 2025 ToC indicator. These “No”-flagged results could be reviewed by the Program team as part of the adaptive management process and may inform updates or adjustments to the Program’s 2026 ToC and planned indicators.'
-        ">
-      </app-alert-status> -->
       @if (this.rdPartnersSE.partnersBody?.contributors_result_toc_result?.length && contributor.planned_result !== null) {
         @if (this.tocConsumed) {
           <div style="z-index: 1; position: relative">

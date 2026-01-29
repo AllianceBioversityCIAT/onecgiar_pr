@@ -616,11 +616,10 @@ export class BilateralService {
 
     // Filter by bilateral flag if true (only results with contributing_bilateral_projects)
     if (bilateral === true) {
-      const resultIdsWithProjects =
-        await this._resultsByProjectsRepository
-          .createQueryBuilder('rbp')
-          .select('DISTINCT rbp.result_id', 'result_id')
-          .getRawMany();
+      const resultIdsWithProjects = await this._resultsByProjectsRepository
+        .createQueryBuilder('rbp')
+        .select('DISTINCT rbp.result_id', 'result_id')
+        .getRawMany();
 
       const ids = resultIdsWithProjects.map((r) => r.result_id);
       if (ids.length > 0) {

@@ -21,6 +21,7 @@ export class ShareRequestModalComponent implements OnInit {
   showForm = true;
   showTocOut = true;
   disabledOptions = [{ initiative_id: 10 }];
+  tocConsumed = true;
 
   constructor(
     public retrieveModalSE: RetrieveModalService,
@@ -194,5 +195,39 @@ export class ShareRequestModalComponent implements OnInit {
     this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
       this.allInitiatives = response;
     });
+  }
+
+  onPlannedResultChange(item: any) {
+    item?.result_toc_results?.forEach((tab: any) => {
+      if (tab.indicators?.[0]) {
+        tab.indicators[0].related_node_id = null;
+        tab.indicators[0].toc_results_indicator_id = null;
+        if (tab.indicators[0].targets?.[0]) {
+          tab.indicators[0].targets[0].contributing_indicator = null;
+        }
+      } else {
+        tab.indicators = [
+          {
+            related_node_id: null,
+            toc_results_indicator_id: null,
+            targets: [
+              {
+                contributing_indicator: null
+              }
+            ]
+          }
+        ];
+      }
+
+      tab.toc_progressive_narrative = null;
+      tab.toc_result_id = null;
+      tab.toc_level_id = null;
+    });
+
+    this.tocConsumed = false;
+
+    setTimeout(() => {
+      this.tocConsumed = true;
+    }, 200);
   }
 }
