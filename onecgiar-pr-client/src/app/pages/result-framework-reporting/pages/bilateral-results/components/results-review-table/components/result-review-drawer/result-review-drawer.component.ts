@@ -67,20 +67,15 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   contributingInitiativesList = signal<any[]>([]);
   disabledContributingInitiatives = signal<any[]>([]);
 
+  /** Chip label: only "SP01 - Breeding for Tomorrow" (official_code - initiative_name/short_name) */
   contributingInitiativesFormatter = (option: any): string => {
     if (!option) return '';
-    const initiativeId = typeof option.id === 'string' ? Number.parseInt(option.id, 10) : Number(option.id);
-    if (Number.isNaN(initiativeId)) return option.full_name || option.initiative_name || option.name || '';
-
-    const status = this.contributingInitiativesStatusMap().get(initiativeId);
-    const name = option.full_name || option.initiative_name || option.name || '';
-
-    if (status === 'accepted') {
-      return `${name} - <strong>Accepted</strong>`;
-    } else if (status === 'pending') {
-      return `${name} - <strong>Pending</strong>`;
-    }
-    return name;
+    const code = option.official_code ?? option.acronym ?? '';
+    const name = option.initiative_name ?? option.short_name ?? option.name ?? option.full_name ?? '';
+    if (!code && !name) return option.full_name || '';
+    if (!code) return name;
+    if (!name) return String(code);
+    return `${code} - ${name}`;
   };
 
   tocInitiative: any = {
