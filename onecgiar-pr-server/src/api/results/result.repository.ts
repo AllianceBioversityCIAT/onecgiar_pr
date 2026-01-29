@@ -2481,7 +2481,8 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         r.result_type_id,
         r.title AS result_title,
         r.description AS result_description,
-        rt.name AS result_category
+        rt.name AS result_category,
+        r.status_id 
       FROM result r
       JOIN result_type rt
         ON r.result_type_id = rt.id
@@ -2918,13 +2919,8 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       WITH lead_centers AS (
         SELECT 
           rc.result_id,
-          rc.center_id,
-          ci2.acronym AS center_name
+          rc.center_id
         FROM results_center rc
-        LEFT JOIN clarisa_center cc
-          ON rc.center_id = cc.code
-        LEFT JOIN clarisa_institutions ci2
-          ON cc.institutionId = ci2.id
         WHERE rc.is_active = 1
           AND (rc.is_leading_result = 1 OR rc.is_primary = 1)
       )
@@ -2937,6 +2933,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       JOIN results_by_inititiative rbi
         ON r.id = rbi.result_id
         AND rbi.is_active = 1
+        AND rbi.initiative_role_id = 1
       JOIN clarisa_initiatives ci
         ON rbi.inititiative_id = ci.id
         AND ci.active = 1
@@ -2955,6 +2952,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       JOIN results_by_inititiative rbi
         ON r.id = rbi.result_id
         AND rbi.is_active = 1
+        AND rbi.initiative_role_id = 1
       JOIN clarisa_initiatives ci
         ON rbi.inititiative_id = ci.id
         AND ci.active = 1
@@ -2965,7 +2963,6 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         AND ci.official_code = ?
         AND r.is_active = 1
         AND r.status_id = 5
-        AND lc.center_id IS NOT NULL
       GROUP BY
         ci.official_code,
         lc.center_id;
