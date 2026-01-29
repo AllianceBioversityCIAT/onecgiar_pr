@@ -1146,7 +1146,7 @@ export class ResultsTocResultsService {
     }
   }
 
-  private async sendEmailNotification(
+  public async sendEmailNotification(
     contributingInit: number[],
     result_id: number,
     initSubmitter: number,
@@ -1828,7 +1828,6 @@ export class ResultsTocResultsService {
         normalizeInitiativeId(initSubmitter?.initiative_id) ??
         normalizeInitiativeId(result?.initiative_id);
 
-      // Extraer IDs de result_toc_results que vienen en el payload
       const incomingIdsPrimary: number[] = (
         resultTocResult?.result_toc_results ?? []
       )
@@ -1837,12 +1836,10 @@ export class ResultsTocResultsService {
 
       const keepIds = new Set<number>(incomingIdsPrimary);
 
-      // Obtener todas las evidencias existentes del resultado
       const existingAll = await this._resultsTocResultRepository.find({
         where: { result_id: resultId },
       });
 
-      // Desactivar las que no vienen en el payload
       await Promise.all(
         existingAll.map(async (row) => {
           if (row.is_active && !keepIds.has(Number(row.result_toc_result_id))) {
@@ -1857,14 +1854,12 @@ export class ResultsTocResultsService {
         }),
       );
 
-      // Manejar planned_result = true
       if (resultTocResult && resultTocResult?.planned_result === true) {
         if (resultTocResult?.result_toc_results?.length) {
           for (const t of resultTocResult.result_toc_results) {
             if (!t?.result_toc_result_id && !t?.toc_result_id) continue;
 
             if (t?.result_toc_result_id) {
-              // Actualizar existente
               const resolvedInitiativeId =
                 normalizeInitiativeId((t as any)?.initiative_id) ??
                 primaryInitiativeId;
@@ -1888,7 +1883,6 @@ export class ResultsTocResultsService {
                 updatePayload,
               );
             } else {
-              // Crear nuevo
               const resolvedInitiativeId =
                 normalizeInitiativeId((t as any)?.initiative_id) ??
                 primaryInitiativeId;
@@ -1908,7 +1902,6 @@ export class ResultsTocResultsService {
             }
           }
         } else {
-          // Caso especial: planned_result = true sin result_toc_results
           const plannedInitiativeId =
             normalizeInitiativeId((resultTocResult as any)?.initiative_id) ??
             primaryInitiativeId;
@@ -1951,7 +1944,6 @@ export class ResultsTocResultsService {
         resultTocResult &&
         resultTocResult?.planned_result === false
       ) {
-        // Desactivar todos los registros activos
         const allActiveRecords = await this._resultsTocResultRepository.find({
           where: { result_id: resultId, is_active: true },
         });
@@ -1981,7 +1973,6 @@ export class ResultsTocResultsService {
               primaryInitiativeId;
 
             if (t?.result_toc_result_id) {
-              // Actualizar existente
               const updatePayload: Record<string, any> = {
                 toc_result_id: t?.toc_result_id ?? null,
                 toc_progressive_narrative: unplannedTocProgressiveNarrative,
@@ -2017,7 +2008,6 @@ export class ResultsTocResultsService {
             }
           }
         } else {
-          // Caso especial: unplanned sin result_toc_results
           interface SpecialCaseResultTocResult {
             planned_result: boolean;
             initiative_id: number;
@@ -2054,7 +2044,6 @@ export class ResultsTocResultsService {
         }
       }
 
-      // Manejar indicadores si el resultado tiene nivel > 2
       const hasPrimaryIndicators =
         Array.isArray(resultTocResult?.result_toc_results) &&
         resultTocResult.result_toc_results.some((item) =>
