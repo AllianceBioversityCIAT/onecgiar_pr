@@ -453,7 +453,8 @@ export class TocResultsRepository extends Repository<TocResult> {
       resultTypeId &&
       RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId]?.length
     ) {
-      const currentTypePatterns = RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId];
+      const currentTypePatterns =
+        RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId];
       const otherTypesPatterns = getOtherTypesIndicatorPatterns(resultTypeId);
 
       const currentLikeConditions = currentTypePatterns
@@ -617,7 +618,8 @@ export class TocResultsRepository extends Repository<TocResult> {
       resultTypeId &&
       RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId]?.length
     ) {
-      const currentTypePatterns = RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId];
+      const currentTypePatterns =
+        RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId];
       const otherTypesPatterns = getOtherTypesIndicatorPatterns(resultTypeId);
 
       // Indicadores que hacen match con el tipo del resultado

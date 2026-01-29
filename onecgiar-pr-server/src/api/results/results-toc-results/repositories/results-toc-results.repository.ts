@@ -2030,8 +2030,8 @@ export class ResultsTocResultRepository
   async saveImpact(
     id_result_toc_result: number,
     impactAreaTargets: any[],
-    result_id: number,
-    init: number,
+    result_id?: number,
+    init?: number,
   ) {
     try {
       if (!id_result_toc_result) return;
@@ -2078,8 +2078,20 @@ export class ResultsTocResultRepository
         ]);
 
         if (returnInfo.length == 0) {
-          const queryTocIndicators = `select * from results_toc_result where results_id = ${result_id} and is_active = true and initiative_id = ${init};`;
-          const innovatonUseInterface = await this.query(queryTocIndicators);
+          const validResultId =
+            result_id != null &&
+            Number.isFinite(Number(result_id)) &&
+            Number(result_id) > 0;
+          const validInit =
+            init != null && Number.isFinite(Number(init)) && Number(init) > 0;
+          if (!validResultId || !validInit) {
+            return;
+          }
+          const queryTocIndicators = `select * from results_toc_result where results_id = ? and is_active = true and initiative_id = ?`;
+          const innovatonUseInterface = await this.query(queryTocIndicators, [
+            result_id,
+            init,
+          ]);
 
           if (
             innovatonUseInterface != null &&
@@ -2130,7 +2142,7 @@ export class ResultsTocResultRepository
   async saveSdg(
     id_result_toc_result: number,
     sdgTargets: any[],
-    result_id: number,
+    result_id?: number,
   ) {
     try {
       if (!id_result_toc_result) return;
@@ -2178,8 +2190,17 @@ export class ResultsTocResultRepository
         ]);
 
         if (returnInfo.length == 0) {
-          const queryTocIndicators = `select * from results_toc_result where result_toc_result_id = ${id_result_toc_result};`;
-          const innovatonUseInterface = await this.query(queryTocIndicators);
+          const validResultId =
+            result_id != null &&
+            Number.isFinite(Number(result_id)) &&
+            Number(result_id) > 0;
+          if (!validResultId) {
+            return;
+          }
+          const queryTocIndicators = `select * from results_toc_result where result_toc_result_id = ?`;
+          const innovatonUseInterface = await this.query(queryTocIndicators, [
+            id_result_toc_result,
+          ]);
 
           if (
             innovatonUseInterface != null &&
@@ -2537,17 +2558,31 @@ select *
       resultTocResults = [];
     }
 
+    const contributorInitiativeId =
+      contributor?.initiative_id != null &&
+      Number.isFinite(Number(contributor.initiative_id))
+        ? Number(contributor.initiative_id)
+        : undefined;
+
     for (const toc of resultTocResults) {
       if (toc?.toc_result_id && Array.isArray(toc?.indicators)) {
-        await this.processToc(toc, result_id, userId);
+        await this.processToc(toc, result_id, userId, contributorInitiativeId);
       }
     }
   }
 
-  async processToc(toc: any, result_id: number, userId?: number) {
+  async processToc(
+    toc: any,
+    result_id: number,
+    userId?: number,
+    contributorInitiativeId?: number,
+  ) {
     // Build search criteria - handle both initiative_id and initiative_ids field names
-    const searchResultId = toc?.results_id || result_id;
-    const searchInitiativeId = toc?.initiative_id;
+    const searchResultId = toc?.results_id ?? result_id;
+    const searchInitiativeId =
+      toc?.initiative_id != null && Number.isFinite(Number(toc.initiative_id))
+        ? Number(toc.initiative_id)
+        : contributorInitiativeId;
     const searchTocResultId = toc?.toc_result_id;
 
     // If we have a result_toc_result_id, try to find by that first
@@ -2560,7 +2595,12 @@ select *
       });
 
       if (rtrById) {
-        await this.updateAndSave(rtrById, toc);
+        await this.updateAndSave(
+          rtrById,
+          toc,
+          searchResultId,
+          searchInitiativeId,
+        );
         await this.saveInditicatorsContributing(
           Array.isArray(toc?.indicators) ? toc.indicators : [],
           rtrById?.result_toc_result_id,
@@ -2596,7 +2636,7 @@ select *
       return;
     }
 
-    await this.updateAndSave(rtrExist, toc);
+    await this.updateAndSave(rtrExist, toc, searchResultId, searchInitiativeId);
     await this.saveInditicatorsContributing(
       Array.isArray(toc?.indicators) ? toc.indicators : [],
       rtrExist?.result_toc_result_id,
@@ -2605,23 +2645,30 @@ select *
     );
   }
 
-  async updateAndSave(rtrExist, toc) {
+  async updateAndSave(
+    rtrExist: any,
+    toc: any,
+    resultId?: number,
+    initiativeId?: number,
+  ) {
     await this.update(
       { result_toc_result_id: rtrExist?.result_toc_result_id },
       {
         is_sdg_action_impact: toc?.is_sdg_action_impact,
       },
     );
+    const effectiveResultId = resultId ?? toc?.results_id;
+    const effectiveInitiativeId = initiativeId ?? toc?.initiative_id;
     await this.saveImpact(
       rtrExist?.result_toc_result_id,
       toc?.impactAreasTargets,
-      toc?.results_id,
-      toc?.initiative_id,
+      effectiveResultId,
+      effectiveInitiativeId,
     );
     await this.saveSdg(
       rtrExist?.result_toc_result_id,
       toc?.sdgTargest,
-      toc?.results_id,
+      effectiveResultId,
     );
     await this.saveActionAreaToc(
       rtrExist.result_toc_result_id,
