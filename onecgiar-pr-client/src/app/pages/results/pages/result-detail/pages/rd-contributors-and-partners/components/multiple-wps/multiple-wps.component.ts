@@ -52,7 +52,7 @@ export class CPMultipleWPsComponent implements OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['initiativeId'] || changes['initiative']) {
+    if (changes['initiativeId'] || changes['initiative'] || changes['isUnplanned']) {
       this.fetchListsForInitiative();
     }
 
@@ -93,7 +93,8 @@ export class CPMultipleWPsComponent implements OnChanges {
 
     if (!resultId) return;
 
-    this.api.tocApiSE.GET_tocLevelsByconfig(resultId, this.initiativeId, 1, this.forceP25 ? true : this.fieldsManagerSE.isP25()).subscribe({
+    const isPlanned = !this.isUnplanned;
+    this.api.tocApiSE.GET_tocLevelsByconfig(resultId, this.initiativeId, 1, this.forceP25 ? true : this.fieldsManagerSE.isP25(), isPlanned).subscribe({
       next: ({ response }) => {
         this.outputList.set(response || []);
       },
@@ -115,7 +116,8 @@ export class CPMultipleWPsComponent implements OnChanges {
 
     if (!resultId) return;
 
-    this.api.tocApiSE.GET_tocLevelsByconfig(resultId, this.initiativeId, 2, this.forceP25 ? true : this.fieldsManagerSE.isP25()).subscribe({
+    const isPlanned = !this.isUnplanned;
+    this.api.tocApiSE.GET_tocLevelsByconfig(resultId, this.initiativeId, 2, this.forceP25 ? true : this.fieldsManagerSE.isP25(), isPlanned).subscribe({
       next: ({ response }) => {
         this.outcomeList.set(response || []);
       },
@@ -137,7 +139,8 @@ export class CPMultipleWPsComponent implements OnChanges {
 
     if (!resultId) return;
 
-    this.api.tocApiSE.GET_tocLevelsByconfig(resultId, this.initiativeId, 3, this.forceP25 ? true : this.fieldsManagerSE.isP25()).subscribe({
+    const isPlanned = !this.isUnplanned;
+    this.api.tocApiSE.GET_tocLevelsByconfig(resultId, this.initiativeId, 3, this.forceP25 ? true : this.fieldsManagerSE.isP25(), isPlanned).subscribe({
       next: ({ response }) => {
         if (response && Array.isArray(response)) {
           response.forEach((item, index) => {
