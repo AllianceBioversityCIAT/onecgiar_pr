@@ -218,7 +218,7 @@
         @if (this.tocConsumed) {
           <div style="z-index: 1; position: relative">
             <app-cp-multiple-wps
-              [editable]="true"
+              [editable]="!this.api.rolesSE.readOnly"
               [initiative]="contributor"
               [initiativeId]="contributor?.initiative_id"
               [resultLevelId]="this.resultLevelSE.currentResultLevelId"
