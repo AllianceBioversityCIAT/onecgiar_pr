@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, ValidateNested } from 'class-validator';
+import { IsNotEmpty, IsString, ValidateNested, IsObject } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ResultTocResultBlockDto } from '../results-toc-results/dto/create-results-toc-result-v2.dto';
 
@@ -20,6 +20,7 @@ export class UpdateTocMetadataDto {
       ],
     },
   })
+  @IsObject()
   @IsNotEmpty()
   @ValidateNested()
   @Type(() => ResultTocResultBlockDto)

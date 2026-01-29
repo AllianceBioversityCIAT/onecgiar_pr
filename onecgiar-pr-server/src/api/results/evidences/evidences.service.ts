@@ -4,6 +4,7 @@ import {
   EvidencesCreateInterface,
 } from './dto/create-evidence.dto';
 import { UpdateEvidenceDto } from './dto/update-evidence.dto';
+import { EvidenceDto } from '../dto/review-update.dto';
 import { EvidencesRepository } from './evidences.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
@@ -44,6 +45,7 @@ export class EvidencesService {
       const result = await this._resultRepository.getResultById(
         createEvidenceDto.result_id,
       );
+      console.log('createEvidenceDto', createEvidenceDto);
       await this._versionRepository.getBaseVersion();
       if (createEvidenceDto?.evidences?.length) {
         const evidencesArray = createEvidenceDto?.evidences.filter(
@@ -613,6 +615,169 @@ export class EvidencesService {
 
   update(id: number, updateEvidenceDto: UpdateEvidenceDto) {
     return `This action updates a #${id} evidence ${updateEvidenceDto}`;
+  }
+
+  async updateEvidencesPartial(
+    evidences: EvidenceDto[],
+    resultId: number,
+    user: TokenDto,
+  ) {
+    try {
+      const result = await this._resultRepository.getResultById(resultId);
+
+      if (!result) {
+        return {
+          response: {},
+          message: 'Result not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      // Validar duplicados en el payload
+      const duplicateCheck = this._validateDuplicateLinks(evidences);
+      if (duplicateCheck) {
+        return duplicateCheck;
+      }
+
+      // Obtener todas las evidencias activas del resultado
+      const existingEvidences = await this._evidencesRepository.find({
+        where: {
+          result_id: resultId,
+          is_active: 1,
+        },
+      });
+
+      console.log('EXISTENCIAS EXISTENTES', existingEvidences);
+
+      // Extraer IDs de evidencias que vienen en el payload (solo las que tienen id)
+      const payloadEvidenceIds = evidences
+        .filter((e) => e.id)
+        .map((e) => Number(e.id));
+
+      // Desactivar evidencias que están en BD pero no en el payload
+      await this._deactivateMissingEvidences(
+        existingEvidences,
+        payloadEvidenceIds,
+        user,
+      );
+
+      // Crear nuevas evidencias que vienen sin id en el payload
+      await this._createNewEvidences(evidences, resultId, user);
+
+      return {
+        response: evidences,
+        message: 'Evidences updated successfully',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  private _validateDuplicateLinks(
+    evidences: EvidenceDto[],
+  ): { response: Record<string, unknown>; message: string; status: HttpStatus } | null {
+    const testDuplicate = evidences.map((e) => e.link);
+    if (new Set(testDuplicate).size !== testDuplicate.length) {
+      return {
+        response: {},
+        message: 'Duplicate links found in the evidence',
+        status: HttpStatus.BAD_REQUEST,
+      };
+    }
+    return null;
+  }
+
+  private async _deactivateMissingEvidences(
+    existingEvidences: Evidence[],
+    payloadEvidenceIds: number[],
+    user: TokenDto,
+  ): Promise<void> {
+    for (const existingEvidence of existingEvidences) {
+      // Si la evidencia existe en BD pero no viene en el payload, desactivarla
+      if (!payloadEvidenceIds.includes(existingEvidence.id)) {
+        existingEvidence.is_active = 0;
+        existingEvidence.last_updated_by = user.id;
+        await this._evidencesRepository.save(existingEvidence);
+      }
+    }
+  }
+
+  private async _createNewEvidences(
+    evidences: EvidenceDto[],
+    resultId: number,
+    user: TokenDto,
+  ): Promise<void> {
+    for (const evidenceDto of evidences) {
+      // Solo crear evidencias que no tienen id
+      if (!evidenceDto.id) {
+        await this._createNewEvidence(evidenceDto, resultId, user);
+      }
+    }
+  }
+
+  private async _createNewEvidence(
+    evidenceDto: EvidenceDto,
+    resultId: number,
+    user: TokenDto,
+  ): Promise<void> {
+    // Validar que tenga link o is_sharepoint
+    const hasLink = evidenceDto.link && evidenceDto.link.trim().length > 0;
+    const hasSharepoint =
+      evidenceDto.is_sharepoint !== undefined &&
+      evidenceDto.is_sharepoint !== 0;
+
+    if (!hasLink && !hasSharepoint) {
+      return;
+    }
+
+    const newEvidence = new Evidence();
+    newEvidence.created_by = user.id;
+    newEvidence.last_updated_by = user.id;
+    newEvidence.is_sharepoint = evidenceDto.is_sharepoint ?? 0;
+    newEvidence.is_supplementary = false;
+    newEvidence.result_id = resultId;
+    newEvidence.evidence_type_id = 1;
+
+    if (hasLink) {
+      newEvidence.link = await this.getHandleFromRegularLink(evidenceDto.link);
+    } else {
+      // Si no hay link pero hay is_sharepoint, usar un link vacío o placeholder
+      newEvidence.link = '';
+    }
+
+    // Intentar encontrar knowledge product relacionado si hay link
+    if (hasLink && evidenceDto.link) {
+      const queryIndex = evidenceDto.link.indexOf('?');
+      const linkToProcess =
+        queryIndex >= 0
+          ? evidenceDto.link.slice(0, queryIndex)
+          : evidenceDto.link;
+      const linkSplit = linkToProcess.split('/');
+      const handleId = linkSplit.slice(-2).join('/');
+
+      const knowledgeProduct =
+        await this._resultsKnowledgeProductsRepository.findOne({
+          where: { handle: Like(handleId) },
+          relations: { result_object: true },
+        });
+
+      if (knowledgeProduct) {
+        newEvidence.knowledge_product_related =
+          knowledgeProduct.result_object.id;
+      }
+    }
+
+    const evidenceSaved = await this._evidencesRepository.save(newEvidence);
+    if (evidenceSaved?.id) {
+      // Guardar datos de SharePoint si aplica
+      const evidenceForSP: EvidencesCreateInterface = {
+        id: evidenceSaved.id.toString(),
+        link: evidenceDto.link || '',
+        is_sharepoint: evidenceDto.is_sharepoint ?? 0,
+      };
+      await this.saveSPData(evidenceForSP, evidenceSaved.id);
+    }
   }
 
   remove(id: number) {
