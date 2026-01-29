@@ -578,6 +578,90 @@ export class BilateralService {
     };
   }
 
+  async getResultsForSync(
+    bilateral?: boolean,
+    type?: string,
+  ): Promise<Array<{ type: string; result_id: number; data: any }>> {
+    // Build where clause
+    const where: any = {
+      source: SourceEnum.Bilateral,
+      is_active: true,
+    };
+
+    // Filter by result type if provided
+    if (type) {
+      const typeMap: Record<string, number> = {
+        knowledge_product: ResultTypeEnum.KNOWLEDGE_PRODUCT,
+        capacity_sharing: ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+        innovation_development: ResultTypeEnum.INNOVATION_DEVELOPMENT,
+        innovation_use: ResultTypeEnum.INNOVATION_USE,
+        other_output: ResultTypeEnum.OTHER_OUTPUT,
+        other_outcome: ResultTypeEnum.OTHER_OUTCOME,
+        policy_change: ResultTypeEnum.POLICY_CHANGE,
+      };
+
+      const resultTypeId = typeMap[type.toLowerCase()];
+      if (resultTypeId) {
+        where.result_type_id = resultTypeId;
+      } else {
+        this.logger.warn(`Unknown result type: ${type}`);
+      }
+    }
+
+    // Get all results matching the criteria (no limit)
+    let results = await this._resultRepository.find({
+      where,
+      order: { id: 'DESC' },
+    });
+
+    // Filter by bilateral flag if true (only results with contributing_bilateral_projects)
+    if (bilateral === true) {
+      const resultIdsWithProjects = await this._resultsByProjectsRepository
+        .createQueryBuilder('rbp')
+        .select('DISTINCT rbp.result_id', 'result_id')
+        .getRawMany();
+
+      const ids = resultIdsWithProjects.map((r) => r.result_id);
+      if (ids.length > 0) {
+        results = results.filter((r) => ids.includes(r.id));
+      } else {
+        // No results have projects, return empty array
+        results = [];
+      }
+    }
+
+    // Build relations and filter active relations for each result
+    const resultsWithRelations = await Promise.all(
+      results.map(async (result) => {
+        const resultTypeId = result.result_type_id;
+        const resultWithRelations = await this._resultRepository.findOne({
+          where: { id: result.id },
+          relations: this.buildResultRelations(resultTypeId),
+        });
+        const filteredResult = this.filterActiveRelations(resultWithRelations);
+
+        // Map result type ID to string type name
+        const typeMap: Record<number, string> = {
+          [ResultTypeEnum.KNOWLEDGE_PRODUCT]: 'knowledge_product',
+          [ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT]: 'capacity_sharing',
+          [ResultTypeEnum.INNOVATION_DEVELOPMENT]: 'innovation_development',
+          [ResultTypeEnum.INNOVATION_USE]: 'innovation_use',
+          [ResultTypeEnum.OTHER_OUTPUT]: 'other_output',
+          [ResultTypeEnum.OTHER_OUTCOME]: 'other_outcome',
+          [ResultTypeEnum.POLICY_CHANGE]: 'policy_change',
+        };
+
+        return {
+          type: typeMap[resultTypeId] || 'unknown',
+          result_id: result.id,
+          data: filteredResult,
+        };
+      }),
+    );
+
+    return resultsWithRelations;
+  }
+
   private buildResultRelations(resultTypeId?: number) {
     const isKpType = resultTypeId === ResultTypeEnum.KNOWLEDGE_PRODUCT;
     const isCapacityChange = resultTypeId === ResultTypeEnum.CAPACITY_CHANGE;

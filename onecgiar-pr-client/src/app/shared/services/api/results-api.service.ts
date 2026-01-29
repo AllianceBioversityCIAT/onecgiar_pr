@@ -703,8 +703,8 @@ export class ResultsApiService {
     return this.http.put<any>(`${environment.apiBaseUrl}api/global-parameters/update/variable`, body);
   }
 
-  PATCH_updateRequest(body) {
-    return this.http.patch<any>(`${this.apiBaseUrl}request/update`, body);
+  PATCH_updateRequest(body, isP25: boolean = false) {
+    return this.http.patch<any>(`${isP25 ? this.apiBaseUrlV2 : this.apiBaseUrl}request/update`, body);
   }
 
   POST_updateRequest(body) {
@@ -1374,6 +1374,14 @@ export class ResultsApiService {
 
   PATCH_updateUnplannedResult(body: any) {
     return this.http.patch<any>(`${this.baseApiBaseUrl}contributors-partners/update/unplanned/result/${this.currentResultId}`, body);
+  }
+
+  PATCH_BilateralTocMetadata(resultId: number | string, body: any) {
+    return this.http.patch<any>(`${this.baseApiBaseUrl}results/bilateral/review-update/toc-metadata/${resultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+  }
+
+  PATCH_BilateralDataStandard(resultId: number | string, body: any) {
+    return this.http.patch<any>(`${this.baseApiBaseUrl}results/bilateral/review-update/data-standard/${resultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 
   GET_ClarisaProjects() {

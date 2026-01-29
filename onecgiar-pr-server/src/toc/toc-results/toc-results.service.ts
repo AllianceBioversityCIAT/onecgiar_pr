@@ -122,6 +122,7 @@ export class TocResultsService {
     result_id: number,
     init_id: number,
     toc_level: number,
+    planned?: boolean,
   ) {
     try {
       const result = await this._resultRepository.findOne({
@@ -154,6 +155,7 @@ export class TocResultsService {
         toc_level,
         result?.result_type_id,
         result_id,
+        planned ?? true,
       );
 
       let enrichedResults = res ?? [];

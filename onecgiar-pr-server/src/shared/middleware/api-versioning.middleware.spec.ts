@@ -34,4 +34,3 @@ describe('apiVersionMiddleware', () => {
     expect(next).toHaveBeenCalledTimes(1);
   });
 });
-

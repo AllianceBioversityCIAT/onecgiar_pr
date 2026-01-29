@@ -146,10 +146,16 @@ describe('array.util', () => {
     it('should keep A and add from B those not present by key', () => {
       const res = mergeArraysWithPriority<any>(
         [{ id: 1, v: 'a' }],
-        [{ id: 1, v: 'b' }, { id: 2, v: 'c' }],
+        [
+          { id: 1, v: 'b' },
+          { id: 2, v: 'c' },
+        ],
         'id',
       );
-      expect(res).toEqual([{ id: 1, v: 'a' }, { id: 2, v: 'c' }]);
+      expect(res).toEqual([
+        { id: 1, v: 'a' },
+        { id: 2, v: 'c' },
+      ]);
     });
   });
 
@@ -210,10 +216,8 @@ describe('array.util', () => {
   describe('extractPropertyValues', () => {
     it('should extract values from a property', () => {
       expect(extractPropertyValues([{ id: 1 }, { id: 2 }], 'id')).toEqual([
-        1,
-        2,
+        1, 2,
       ]);
     });
   });
 });
-

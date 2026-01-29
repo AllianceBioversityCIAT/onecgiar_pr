@@ -33,7 +33,7 @@ export class WebsocketService {
     public resultsNotificationsService: ResultsNotificationsService,
     public resultFrameworkReportingHomeService: ResultFrameworkReportingHomeService
   ) {
-    this.runsockets();
+    // this.runsockets();
   }
 
   runsockets() {

@@ -17,8 +17,6 @@ import { BilateralResultsService } from '../../bilateral-results.service';
 export class ResultsReviewTableComponent implements OnDestroy {
   api = inject(ApiService);
   bilateralResultsService = inject(BilateralResultsService);
-  showReviewDrawer = signal<boolean>(false);
-  currentResultToReview = signal<ResultToReview | null>(null);
 
   tableData = signal<GroupedResult[]>([
     {
@@ -41,6 +39,14 @@ export class ResultsReviewTableComponent implements OnDestroy {
       ]
     }
   ]);
+  canReviewResults = computed(() => {
+    if (this.api.rolesSE.isAdmin) {
+      return true;
+    }
+    const myInitiativesList = this.api.dataControlSE.myInitiativesList || [];
+    const found = myInitiativesList.find(item => item.official_code === this.bilateralResultsService.entityId());
+    return !!found;
+  });
   isLoading = signal<boolean>(false);
 
   filteredTableData = computed(() => {
@@ -97,8 +103,8 @@ export class ResultsReviewTableComponent implements OnDestroy {
 
   // Acción del botón para abrir el drawer de review
   reviewResult(result: ResultToReview): void {
-    this.currentResultToReview.set(result);
-    this.showReviewDrawer.set(true);
+    this.bilateralResultsService.currentResultToReview.set(result);
+    this.bilateralResultsService.showReviewDrawer.set(true);
   }
 
   // Refrescar tabla cuando se toma una decisión (aprobar/rechazar)

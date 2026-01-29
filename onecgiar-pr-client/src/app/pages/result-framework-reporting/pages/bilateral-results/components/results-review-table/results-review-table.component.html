@@ -78,10 +78,10 @@
             variant="outlined"
             class="review-result-button"
             (click)="reviewResult(result)"
-            [pTooltip]="isPendingReview ? 'Review result' : 'See result'"
+            [pTooltip]="isPendingReview && canReviewResults() ? 'Review result' : 'See result'"
             tooltipPosition="top">
-            <i class="material-icons-outlined">{{ isPendingReview ? 'edit' : 'visibility' }}</i>
-            {{ isPendingReview ? 'Review result' : 'See result' }}
+            <i class="material-icons-outlined">{{ isPendingReview && canReviewResults() ? 'edit' : 'visibility' }}</i>
+            {{ isPendingReview && canReviewResults() ? 'Review result' : 'See result' }}
           </button>
         </td>
       </tr>
@@ -98,7 +98,10 @@
   </ng-template>
 </p-table>
 
-@if (showReviewDrawer()) {
-  <app-result-review-drawer [(visible)]="showReviewDrawer" [(resultToReview)]="currentResultToReview" (decisionMade)="onDecisionMade()">
+@if (bilateralResultsService.showReviewDrawer()) {
+  <app-result-review-drawer
+    [(visible)]="bilateralResultsService.showReviewDrawer"
+    [(resultToReview)]="bilateralResultsService.currentResultToReview"
+    (decisionMade)="onDecisionMade()">
   </app-result-review-drawer>
 }

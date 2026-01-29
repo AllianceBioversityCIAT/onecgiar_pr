@@ -23,4 +23,3 @@ describe('ResultImpactAreaScoresController', () => {
     expect(controller).toBeDefined();
   });
 });
-
