@@ -4,6 +4,12 @@ describe('main bootstrap', () => {
   const runMain = async () => {
     jest.resetModules();
 
+    const flushPromises = async (times = 5) => {
+      for (let i = 0; i < times; i++) {
+        await new Promise<void>((resolve) => setImmediate(resolve));
+      }
+    };
+
     const useMock = jest.fn();
     const listenMock = jest.fn().mockResolvedValue(undefined);
     const enableVersioningMock = jest.fn();
@@ -15,6 +21,11 @@ describe('main bootstrap', () => {
     };
 
     const createMock = jest.fn().mockResolvedValue(nestAppMock);
+    const microserviceListenMock = jest.fn().mockResolvedValue(undefined);
+    const microserviceMock = {
+      listen: microserviceListenMock,
+    };
+    const createMicroserviceMock = jest.fn().mockResolvedValue(microserviceMock);
     const documentBuilderChain = {
       setTitle: jest.fn().mockReturnThis(),
       setDescription: jest.fn().mockReturnThis(),
@@ -27,12 +38,17 @@ describe('main bootstrap', () => {
     const createDocumentMock = jest.fn().mockReturnValue({ doc: true });
     const setupMock = jest.fn();
 
-    const AppModuleMock = class AppModuleMock {};
+    const AppModuleMock = class AppModuleMock { };
+    const AppMicroserviceModuleMock = class AppMicroserviceModuleMock { };
 
     jest.doMock('./app.module', () => ({ AppModule: AppModuleMock }));
+    jest.doMock('./app-microservice.module', () => ({
+      AppMicroserviceModule: AppMicroserviceModuleMock,
+    }));
     jest.doMock('@nestjs/core', () => ({
       NestFactory: {
         create: createMock,
+        createMicroservice: createMicroserviceMock,
       },
     }));
     jest.doMock('@nestjs/swagger', () => ({
@@ -59,11 +75,16 @@ describe('main bootstrap', () => {
     process.env.PORT = '4500';
 
     await import('./main');
-    await Promise.resolve();
+    // main.ts triggers bootstrap() without awaiting it; we need to flush the event loop
+    // so both httpService() and microservice() complete before assertions.
+    await flushPromises(10);
 
     return {
       AppModuleMock,
+      AppMicroserviceModuleMock,
       createMock,
+      createMicroserviceMock,
+      microserviceListenMock,
       useMock,
       listenMock,
       enableVersioningMock,
@@ -76,7 +97,10 @@ describe('main bootstrap', () => {
   it('should create Nest application with AppModule and configure middlewares', async () => {
     const {
       AppModuleMock,
+      AppMicroserviceModuleMock,
       createMock,
+      createMicroserviceMock,
+      microserviceListenMock,
       useMock,
       listenMock,
       enableVersioningMock,
@@ -87,6 +111,10 @@ describe('main bootstrap', () => {
 
     expect(createMock).toHaveBeenCalledWith(AppModuleMock, {
       cors: true,
+    });
+    expect(createMicroserviceMock).toHaveBeenCalledWith(AppMicroserviceModuleMock, {
+      transport: expect.anything(),
+      options: expect.anything(),
     });
     expect(useMock).toHaveBeenCalledWith('json-middleware');
     expect(useMock).toHaveBeenCalledWith('urlencoded-middleware');
@@ -110,5 +138,6 @@ describe('main bootstrap', () => {
       },
     );
     expect(listenMock).toHaveBeenCalledWith('4500');
+    expect(microserviceListenMock).toHaveBeenCalledTimes(1);
   });
 });

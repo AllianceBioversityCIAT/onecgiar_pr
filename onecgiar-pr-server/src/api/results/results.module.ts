@@ -99,6 +99,7 @@ import { IntellectualPropertyExpertsModule } from './intellectual_property_exper
 import { ResultReviewHistoryRepository } from './result-review-history/result-review-history.repository';
 import { GeographicLocationModule } from '../results-framework-reporting/geographic-location/geographic-location.module';
 import { ResultImpactAreaScoresModule } from '../result-impact-area-scores/result-impact-area-scores.module';
+import { SelfApp } from '../../shared/broker/self.app';
 
 @Module({
   controllers: [ResultsController],
@@ -195,6 +196,7 @@ import { ResultImpactAreaScoresModule } from '../result-impact-area-scores/resul
     ResultsTocTargetIndicatorRepository,
     AoWBilateralRepository,
     ResultReviewHistoryRepository,
+    SelfApp,
   ],
   exports: [ResultRepository, JwtMiddleware, ResultsService],
 })

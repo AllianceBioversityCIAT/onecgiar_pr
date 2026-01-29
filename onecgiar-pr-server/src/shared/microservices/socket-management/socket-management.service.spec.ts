@@ -3,17 +3,24 @@ import { HttpStatus } from '@nestjs/common';
 import { SocketManagementService } from './socket-management.service';
 import axios from 'axios';
 import { NotificationDto } from './dto/create-socket.dto';
+import { SelfApp } from '../../broker/self.app';
 
 jest.mock('axios');
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 describe('SocketManagementService', () => {
   let service: SocketManagementService;
+  const selfAppMock = {
+    emitToPattern: jest.fn(),
+  };
 
   beforeEach(async () => {
     process.env.SOCKET_URL = 'http://socket-service';
     const module: TestingModule = await Test.createTestingModule({
-      providers: [SocketManagementService],
+      providers: [
+        SocketManagementService,
+        { provide: SelfApp, useValue: selfAppMock },
+      ],
     }).compile();
 
     service = module.get<SocketManagementService>(SocketManagementService);
@@ -64,7 +71,10 @@ describe('SocketManagementService', () => {
     it('should short-circuit when SOCKET_URL is missing', async () => {
       delete process.env.SOCKET_URL;
       const module: TestingModule = await Test.createTestingModule({
-        providers: [SocketManagementService],
+        providers: [
+          SocketManagementService,
+          { provide: SelfApp, useValue: selfAppMock },
+        ],
       }).compile();
       const localService = module.get<SocketManagementService>(
         SocketManagementService,
@@ -81,8 +91,7 @@ describe('SocketManagementService', () => {
 
   describe('sendNotificationToUsers', () => {
     it('should send notification successfully', async () => {
-      const mockResponse = { data: 'Notification sent' };
-      mockedAxios.post.mockResolvedValue(mockResponse);
+      selfAppMock.emitToPattern.mockResolvedValue(undefined);
 
       const notificationDto: NotificationDto = {
         title: 'Test',
@@ -93,15 +102,22 @@ describe('SocketManagementService', () => {
         ['user1'],
         notificationDto,
       );
+      expect(selfAppMock.emitToPattern).toHaveBeenCalledWith(
+        'send-notification',
+        {
+          userId: 'user1',
+          notification: notificationDto,
+        },
+      );
       expect(result).toEqual({
-        response: mockResponse.data,
+        response: { success: true },
         message: 'Notification sent successfully',
         status: HttpStatus.OK,
       });
     });
 
     it('should handle error', async () => {
-      mockedAxios.post.mockRejectedValue(new Error('Network Error'));
+      selfAppMock.emitToPattern.mockRejectedValue(new Error('Network Error'));
 
       const notificationDto: NotificationDto = {
         title: 'Test',
@@ -122,7 +138,10 @@ describe('SocketManagementService', () => {
     it('should short-circuit when SOCKET_URL is missing', async () => {
       delete process.env.SOCKET_URL;
       const module: TestingModule = await Test.createTestingModule({
-        providers: [SocketManagementService],
+        providers: [
+          SocketManagementService,
+          { provide: SelfApp, useValue: selfAppMock },
+        ],
       }).compile();
       const localService = module.get<SocketManagementService>(
         SocketManagementService,
@@ -137,6 +156,7 @@ describe('SocketManagementService', () => {
         ['user1'],
         notificationDto,
       );
+      expect(selfAppMock.emitToPattern).not.toHaveBeenCalled();
       expect(result).toEqual({
         response: null,
         message: 'Socket service not configured',

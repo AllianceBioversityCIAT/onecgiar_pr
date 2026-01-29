@@ -2,12 +2,14 @@ import { HttpStatus, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { env } from 'process';
 import { NotificationDto } from './dto/create-socket.dto';
 import axios from 'axios';
+import { SelfApp } from '../../broker/self.app';
+import { SendNotificationSocketDto } from './dto/send-notification-socket.dto';
 
 @Injectable()
 export class SocketManagementService implements OnModuleInit {
   private readonly _logger = new Logger(SocketManagementService.name);
   private readonly url = env.SOCKET_URL;
-
+  constructor(private readonly selfApp: SelfApp) { }
   async onModuleInit() {
     try {
       this._logger.log(
@@ -51,6 +53,23 @@ export class SocketManagementService implements OnModuleInit {
     }
   }
 
+  async sendtoQueueNotification(userIds: string[], notification: NotificationDto) {
+    try {
+      return await axios.post(`${this.url}/socket/notification`, {
+        userIds,
+        platform: this.environmentCheck(),
+        notification,
+      }).then(response => response.data);
+    } catch (error) {
+      this._logger.error(`Error sending notification to users: ${userIds.join(', ')}`, error);
+      return {
+        response: null,
+        message: 'An error occurred while sending notification',
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
   async sendNotificationToUsers(
     userIds: string[],
     notification: NotificationDto,
@@ -74,15 +93,17 @@ export class SocketManagementService implements OnModuleInit {
           status: HttpStatus.OK,
         };
       }
-      const response = await axios.post(`${this.url}/socket/notification`, {
-        userIds,
-        platform: this.environmentCheck(),
-        notification,
-      });
-      const data = response.data;
+
+      for (const userId of userIds) {
+        const message = {
+          userId,
+          notification,
+        };
+        await this.selfApp.emitToPattern<SendNotificationSocketDto>('send-notification', message);
+      }
 
       return {
-        response: data,
+        response: { success: true },
         message: 'Notification sent successfully',
         status: HttpStatus.OK,
       };

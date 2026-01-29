@@ -7,9 +7,39 @@ import { env } from 'process';
 import { json, urlencoded } from 'express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger, VersioningType } from '@nestjs/common';
+import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { AppMicroserviceModule } from './app-microservice.module';
 
-async function bootstrap() {
-  const logger: Logger = new Logger('Bootstrap');
+const logger: Logger = new Logger('Bootstrap');
+
+async function microservice() {
+  const queueHost: string = env.RABBITMQ_URL;
+  const appSocket = await NestFactory.createMicroservice<MicroserviceOptions>(
+    AppMicroserviceModule,
+    {
+      transport: Transport.RMQ,
+      options: {
+        urls: [queueHost],
+        queue: env.RABBITMQ_QUEUE,
+        queueOptions: {
+          durable: true,
+        },
+      },
+    },
+  );
+
+  await appSocket
+    .listen()
+    .then(() => {
+      logger.debug(`Microservice is already listening`);
+    })
+    .catch((err) => {
+      logger.error(`Microservice present an error`);
+      logger.error(err);
+    });
+}
+
+async function httpService() {
   const app = await NestFactory.create(AppModule, { cors: true });
   app.use(json({ limit: '50mb' }));
   app.use(urlencoded({ extended: true, limit: '50mb' }));
@@ -68,5 +98,10 @@ async function bootstrap() {
       logger.error(`Application failed to start on port ${portValue}`);
       logger.error(err);
     });
+}
+
+async function bootstrap() {
+  await httpService();
+  await microservice();
 }
 bootstrap();
