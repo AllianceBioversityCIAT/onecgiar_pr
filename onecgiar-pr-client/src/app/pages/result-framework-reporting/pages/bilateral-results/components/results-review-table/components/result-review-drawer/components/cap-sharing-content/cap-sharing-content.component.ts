@@ -13,13 +13,13 @@ import { ApiService } from '../../../../../../../../../../shared/services/api/ap
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CapSharingContentComponent implements OnInit {
+  @Input() disabled: boolean = false;
   @Input() set resultDetail(value: BilateralResultDetail) {
     if (!value) {
       this._resultDetail = value;
       return;
     }
 
-    // Modify the original object to ensure changes are reflected in the parent
     if (!value.resultTypeResponse || !Array.isArray(value.resultTypeResponse) || value.resultTypeResponse.length === 0) {
       value.resultTypeResponse = [{
         result_capacity_development_id: null,
@@ -31,7 +31,6 @@ export class CapSharingContentComponent implements OnInit {
         capdev_term_id: null
       } as any];
     } else {
-      // Ensure all required properties exist in the existing object (modify original)
       const firstItem: any = value.resultTypeResponse[0];
       if (firstItem.male_using === undefined) firstItem.male_using = null;
       if (firstItem.female_using === undefined) firstItem.female_using = null;
@@ -41,7 +40,6 @@ export class CapSharingContentComponent implements OnInit {
       if (firstItem.capdev_term_id === undefined) firstItem.capdev_term_id = null;
     }
 
-    // Store reference to the original object (not a copy) so changes are reflected
     this._resultDetail = value;
     this.cdr.markForCheck();
   }

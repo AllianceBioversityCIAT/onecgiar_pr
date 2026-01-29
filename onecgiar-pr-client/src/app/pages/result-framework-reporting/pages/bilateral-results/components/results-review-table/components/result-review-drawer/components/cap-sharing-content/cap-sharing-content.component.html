@@ -7,7 +7,8 @@
       label="Women"
       type="number"
       [required]="false"
-      [(ngModel)]="resultDetail.resultTypeResponse[0].female_using">
+      [(ngModel)]="resultDetail.resultTypeResponse[0].female_using"
+      [disabled]="disabled">
     </app-pr-input>
 
     <app-pr-input
@@ -15,7 +16,8 @@
       label="Men"
       type="number"
       [required]="false"
-      [(ngModel)]="resultDetail.resultTypeResponse[0].male_using">
+      [(ngModel)]="resultDetail.resultTypeResponse[0].male_using"
+      [disabled]="disabled">
     </app-pr-input>
 
     <app-pr-input
@@ -23,7 +25,8 @@
       label="Non-binary"
       type="number"
       [required]="false"
-      [(ngModel)]="resultDetail.resultTypeResponse[0].non_binary_using">
+      [(ngModel)]="resultDetail.resultTypeResponse[0].non_binary_using"
+      [disabled]="disabled">
     </app-pr-input>
 
     <app-pr-input
@@ -31,7 +34,8 @@
       label="Unknown"
       type="number"
       [required]="false"
-      [(ngModel)]="resultDetail.resultTypeResponse[0].has_unkown_using">
+      [(ngModel)]="resultDetail.resultTypeResponse[0].has_unkown_using"
+      [disabled]="disabled">
     </app-pr-input>
   </div>
 
@@ -49,7 +53,8 @@
     [options]="capdevsTerms()"
     optionLabel="name"
     optionValue="capdev_term_id"
-    [required]="true">
+    [required]="true"
+    [disabled]="disabled">
   </app-pr-radio-button>
 
   <br />
@@ -60,6 +65,7 @@
     [options]="deliveryMethodOptions()"
     optionLabel="name"
     optionValue="capdev_delivery_method_id"
-    [required]="false">
+    [required]="false"
+    [disabled]="disabled">
   </app-pr-radio-button>
 }
