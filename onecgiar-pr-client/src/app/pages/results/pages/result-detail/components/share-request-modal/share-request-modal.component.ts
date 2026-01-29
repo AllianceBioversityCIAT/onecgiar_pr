@@ -70,6 +70,16 @@ export class ShareRequestModalComponent implements OnInit {
     }, 0);
   }
 
+  get entitiesList(): any[] {
+    if (this.api.rolesSE.isAdmin) {
+      return this.allInitiatives;
+    }
+
+    return this.api.dataControlSE.myInitiativesList.filter(
+      initiative => initiative.official_code !== this.api.dataControlSE.currentResult?.submitter
+    );
+  }
+
   onRequest() {
     this.requesting = true;
 
@@ -79,7 +89,7 @@ export class ShareRequestModalComponent implements OnInit {
       isToc: true,
       contributors_result_toc_result: [
         {
-          planned_result: true,
+          planned_result: this.shareRequestModalSE.shareRequestBody.planned_result,
           initiative_id: this.shareRequestModalSE.shareRequestBody.initiative_id,
           result_toc_results: this.shareRequestModalSE.shareRequestBody.result_toc_results
         }

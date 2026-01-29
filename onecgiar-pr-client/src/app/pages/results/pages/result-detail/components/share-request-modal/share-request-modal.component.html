@@ -24,7 +24,7 @@
 
     <app-pr-field-header label="Select entity"></app-pr-field-header>
     <p-select
-      [options]="!this.api.rolesSE.isAdmin ? this.api.dataControlSE.myInitiativesList : this.allInitiatives"
+      [options]="entitiesList"
       optionLabel="full_name"
       optionValue="initiative_id"
       placeholder="Select entity"
