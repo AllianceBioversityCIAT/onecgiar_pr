@@ -2404,6 +2404,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       JOIN results_by_inititiative rbi
         ON r.id = rbi.result_id
       AND rbi.is_active = 1
+      AND rbi.initiative_role_id = 1
       JOIN clarisa_initiatives ci
         ON rbi.inititiative_id = ci.id
       AND ci.active = 1
