@@ -2485,6 +2485,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       FROM result r
       JOIN result_type rt
         ON r.result_type_id = rt.id
+        AND rt.is_active = 1
       LEFT JOIN results_by_projects rbp
         ON r.id = rbp.result_id
         AND rbp.is_active = 1
