@@ -160,6 +160,12 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     return !!found;
   });
 
+  canEditInDrawer = computed(() => {
+    if (!this.canReviewResults()) return false;
+    const statusId = this.resultDetail()?.commonFields?.status_id;
+    return statusId === 5;
+  });
+
   getTocMetadata(): any {
     const detail = this.resultDetail();
     if (!detail?.tocMetadata) return null;

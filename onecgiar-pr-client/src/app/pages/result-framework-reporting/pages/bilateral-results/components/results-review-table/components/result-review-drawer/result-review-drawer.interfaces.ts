@@ -47,6 +47,7 @@ export interface BilateralCommonFields {
   result_title: string;
   result_description: string | null;
   result_category: string;
+  status_id?: number;
 }
 
 export interface BilateralTocMetadata {
@@ -55,7 +56,6 @@ export interface BilateralTocMetadata {
   official_code?: string;
   short_name?: string;
   result_toc_results?: BilateralTocResult[];
-  // Legacy format fields
   acronym?: string;
   toc_result_id?: number;
   result_title?: string;
