@@ -61,15 +61,16 @@
         [required]="true"
         [ngModel]="tocInitiative?.planned_result"
         (ngModelChange)="onPlannedResultChangeValue($event)"
-        (selectOptionEvent)="onPlannedResultChange()">
+        (selectOptionEvent)="onPlannedResultChange()"
+        [disabled]="!canReviewResults()">
       </app-pr-yes-or-not>
 
 
       @if (tocInitiative?.planned_result !== null) {
         @if (tocConsumed()) {
-          <div style="z-index: 1; position: relative">
+          <div class="toc-multiple-wps-in-drawer" style="z-index: 1; position: relative">
             <app-cp-multiple-wps
-              [editable]="true"
+              [editable]="canReviewResults()"
               [initiative]="tocInitiative"
               [initiativeId]="initiativeIdSignal()"
               [resultLevelId]="fields?.commonFields?.result_level_id"
@@ -84,17 +85,17 @@
           </div>
         }
       }
-
-      <!-- Save changes button - always visible, enabled only when Yes/No is selected -->
+      @if (canReviewResults()) {
       <div style="margin-top: 20px; display: flex; justify-content: flex-end">
         <p-button
           label="Save changes"
           icon="pi pi-save"
-          [disabled]="tocInitiative?.planned_result === undefined"
+          [disabled]="tocInitiative?.planned_result === undefined || !canReviewResults()"
           (onClick)="onSaveTocChanges()"
           styleClass="p-button-primary">
         </p-button>
       </div>
+      }
     </div>
 
     @if (fields?.commonFields) {
@@ -105,7 +106,8 @@
         label="Result Description"
         placeholder="Enter text"
         [required]="false"
-        [(ngModel)]="fields.commonFields.result_description">
+        [(ngModel)]="fields.commonFields.result_description"
+        [disabled]="!canReviewResults()">
       </app-pr-textarea>
 
       <hr class="form-section_separator" />
@@ -116,7 +118,7 @@
         <app-geoscope-management
           label="What is the main geographic focus of the Output?"
           [body]="fields.geographicScope"
-          [readOnly]="false"
+          [readOnly]="!canReviewResults()"
           module="reporting">
         </app-geoscope-management>
 
@@ -130,7 +132,8 @@
             optionLabel="label"
             optionValue="value"
             label="Are there any regions that you wish to specify for this Output?"
-            [(ngModel)]="fields.geographicScope.has_extra_geo_scope">
+            [(ngModel)]="fields.geographicScope.has_extra_geo_scope"
+            [disabled]="!canReviewResults()">
           </app-pr-radio-button>
 
           @if (fields.geographicScope.has_extra_geo_scope) {
@@ -143,7 +146,7 @@
                 has_regions: fields.geographicScope.has_extra_regions,
                 has_countries: fields.geographicScope.has_extra_countries
               }"
-              [readOnly]="false"
+              [readOnly]="!canReviewResults()"
               [hideTobeDetermined]="true"
               module="reporting">
             </app-geoscope-management>
@@ -162,7 +165,8 @@
         optionValue="code"
         [required]="false"
         [(ngModel)]="fields.contributingCenters"
-        placeholder="Select center(s)">
+        placeholder="Select center(s)"
+        [readOnly]="!canReviewResults()">
       </app-pr-multi-select>
 
       <app-pr-multi-select
@@ -174,27 +178,14 @@
         label="Contributing Bilateral Projects"
         selectedLabel="Projects selected"
         selectedOptionLabel="fullName"
-        placeholder="Select project">
+        placeholder="Select project"
+        [readOnly]="!canReviewResults()">
       </app-pr-multi-select>
 
       <!-- Contributing Science Programs - Temporarily commented, showing read-only primary initiatives -->
-      <!-- <app-pr-multi-select
-        [options]="contributingInitiativesList()"
-        label="Contributing Science Programs"
-        optionLabel="full_name"
-        optionValue="id"
-        [required]="false"
-        selectedLabel="Science Programs selected"
-        selectedOptionLabel="full_name"
-        [disableOptions]="disabledInitiativesOptions()"
-        [(ngModel)]="fields.contributingInitiatives"
-        placeholder="Select Science Programs">
-      </app-pr-multi-select> -->
-
-      <!-- Read-only display of primary initiatives -->
       <div style="margin-bottom: 16px;">
         <app-pr-field-header
-          [label]="'Contributing Science Programs'"
+          [label]="'Primary Contributing Science Program'"
           [required]="false"
           [showDescriptionLabel]="true">
         </app-pr-field-header>
@@ -210,6 +201,20 @@
           </div>
         }
       </div>
+      
+      <app-pr-multi-select
+        [options]="contributingInitiativesList()"
+        label="Contributing Science Programs"
+        optionLabel="full_name"
+        optionValue="id"
+        [required]="false"
+        selectedLabel="Science Programs selected"
+        selectedOptionLabel="full_name"
+        [disableOptions]="disabledContributingInitiatives()"
+        [(ngModel)]="fields.contributingInitiatives"
+        placeholder="Select Science Programs"
+        [readOnly]="!canReviewResults()">
+      </app-pr-multi-select>
 
       <hr class="form-section_separator" />
 
@@ -222,19 +227,23 @@
         optionValue="institutions_id"
         [required]="false"
         [(ngModel)]="fields.contributingInstitutions"
-        placeholder="Select partner">
+        placeholder="Select partner"
+        [readOnly]="!canReviewResults()">
       </app-pr-multi-select>
 
       <hr class="form-section_separator" />
 
+      @if (canReviewResults()) {
       <app-pr-input
         label="Evidence"
         placeholder="Paste the link"
         type="link"
         [required]="false"
         [(ngModel)]="evidenceLinkInput"
-        (keyup.enter)="addEvidenceLink()">
+        (keyup.enter)="addEvidenceLink()"
+        [disabled]="!canReviewResults()">
       </app-pr-input>
+      }
 
       @if (fields?.evidence?.length) {
         <div class="evidence-chips-container" style="margin-top: 8px;">
@@ -243,7 +252,10 @@
             @for (evidence of fields.evidence; track $index) {
               <span class="evidence-chip" style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; background-color: #f3f4f6; border-radius: 16px; font-size: 14px; max-width: 100%;">
                 <a [href]="evidence.link" target="_blank" style="color: #5569dd; text-decoration: none; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; max-width: 400px; word-break: break-word;">{{ evidence.link }}</a>
-                <i class="pi pi-times" style="cursor: pointer; font-size: 12px; color: #6b7280; flex-shrink: 0;" (click)="removeEvidenceLink($index)"></i>
+               
+                @if (canReviewResults()) {
+                <i class="pi pi-times" style="cursor: pointer; font-size: 12px; color: #6b7280; flex-shrink: 0;" [style.cursor]="canReviewResults() ? 'pointer' : 'not-allowed'" [style.opacity]="canReviewResults() ? '1' : '0.5'" (click)="canReviewResults() ? removeEvidenceLink($index) : null"></i>
+                }
               </span>
             }
           </div>
@@ -262,28 +274,31 @@
 
         @switch (fields?.commonFields?.result_type_id) {
           @case (1) {
-            <app-policy-change-content [resultDetail]="resultDetail()"></app-policy-change-content>
+            <app-policy-change-content [resultDetail]="resultDetail()" [disabled]="!canReviewResults()"></app-policy-change-content>
           }
           @case (5) {
-            <app-cap-sharing-content [resultDetail]="resultDetail()"></app-cap-sharing-content>
+            <app-cap-sharing-content [resultDetail]="resultDetail()" [disabled]="!canReviewResults()"></app-cap-sharing-content>
           }
           @case (6) {
             <app-kp-content [resultDetail]="resultDetail()"></app-kp-content>
           }
           @case (7) {
-            <app-inno-dev-content [resultDetail]="resultDetail()"></app-inno-dev-content>
+            <app-inno-dev-content [resultDetail]="resultDetail()" [disabled]="!canReviewResults()"></app-inno-dev-content>
           }
         }
       }
 
+      @if (canReviewResults()) {
       <div style="margin-top: 20px; display: flex; justify-content: flex-end">
         <p-button
           label="Save changes"
           icon="pi pi-save"
+          [disabled]="!canReviewResults()"
           (onClick)="onSaveDataStandardChanges()"
           styleClass="p-button-primary">
         </p-button>
       </div>
+      }
     </div>
   }
   </div>

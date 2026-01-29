@@ -16,6 +16,7 @@ import { Subscription } from 'rxjs';
 })
 export class PolicyChangeContentComponent implements OnChanges, OnInit, OnDestroy {
   private _resultDetail: BilateralResultDetail;
+  @Input() disabled: boolean = false;
 
   @Input() set resultDetail(value: BilateralResultDetail) {
     if (!value) {

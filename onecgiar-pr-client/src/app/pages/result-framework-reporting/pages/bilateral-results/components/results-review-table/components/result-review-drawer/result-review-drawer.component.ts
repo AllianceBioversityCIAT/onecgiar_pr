@@ -9,7 +9,8 @@ import {
   OnDestroy,
   OnInit,
   output,
-  signal
+  signal,
+  untracked
 } from '@angular/core';
 import { DrawerModule } from 'primeng/drawer';
 import { CommonModule } from '@angular/common';
@@ -97,31 +98,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   initiativeIdSignal = signal<number | null>(null);
   tocConsumed = signal<boolean>(true);
 
-  disabledInitiativesOptions = computed(() => {
-    const disabled = this.disabledContributingInitiatives();
-    const initiativesList = this.contributingInitiativesList();
-
-    if (!disabled.length || !initiativesList.length) return [];
-
-    return disabled
-      .map((disabledInit: any) => {
-        if (typeof disabledInit === 'object' && disabledInit.id) {
-          return initiativesList.find((opt: any) => opt.id === disabledInit.id);
-        }
-        if (typeof disabledInit === 'object' && disabledInit.official_code) {
-          return initiativesList.find((opt: any) => opt.official_code === disabledInit.official_code);
-        }
-        if (typeof disabledInit === 'string') {
-          return initiativesList.find((opt: any) => opt.official_code === disabledInit);
-        }
-        if (typeof disabledInit === 'number') {
-          return initiativesList.find((opt: any) => opt.id === disabledInit);
-        }
-        return null;
-      })
-      .filter(Boolean);
-  });
-
   isTocFormValid = computed(() => {
     if (!this.tocInitiative?.result_toc_results || this.tocInitiative.result_toc_results.length === 0) {
       return false;
@@ -149,7 +125,10 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   decisionMade = output<void>();
 
   resultDetail = signal<BilateralResultDetail | null>(null);
+  originalAcceptedContributingInitiatives: any[] = [];
+  private _lastContributingInitiativesReapplyKey: string = '';
   originalContributingInitiatives: any = null;
+  originalContributingInstitutions: any[] | null = null;
 
   rejectJustification: string = '';
   saveChangesJustification: string = '';
@@ -222,8 +201,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   }
 
   onSaveTocChanges(): void {
-    // Only check if planned_result has been selected (Yes or No)
-    // Since null is now treated as false, we only need to check for undefined
     if (!this.tocInitiative || this.tocInitiative.planned_result === undefined) {
       return;
     }
@@ -386,32 +363,37 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     }
 
     if (detail.contributingInitiatives) {
-      if (Array.isArray(detail.contributingInitiatives)) {
-        body.contributingInitiatives = {
-          accepted_contributing_initiatives: [],
-          pending_contributing_initiatives: detail.contributingInitiatives.map((init: any) => {
-            if (typeof init === 'object' && init.id) {
-              return {
-                ...init,
-                selected: true,
-                new: true,
-                is_active: true
-              };
-            }
-            return init;
-          })
-        };
-      } else if (typeof detail.contributingInitiatives === 'object') {
-        body.contributingInitiatives = {
-          accepted_contributing_initiatives: detail.contributingInitiatives.accepted_contributing_initiatives || [],
-          pending_contributing_initiatives: (detail.contributingInitiatives.pending_contributing_initiatives || []).map((init: any) => ({
-            ...init,
-            selected: true,
-            new: true,
-            is_active: true
-          }))
-        };
+      const currentSelection = Array.isArray(detail.contributingInitiatives)
+        ? detail.contributingInitiatives
+        : [];
+      const selectedInitiativeIds = currentSelection.map((init: any) =>
+        typeof init === 'object' && init != null && init.id != null
+          ? (typeof init.id === 'string' ? Number.parseInt(init.id, 10) : Number(init.id))
+          : typeof init === 'number' ? init : Number(init)
+      ).filter((id: any) => id != null && !Number.isNaN(id));
+
+      const acceptedPayload: { id: number; share_result_request_id?: number; is_active?: boolean }[] = [];
+      const pendingPayload: { id: number }[] = [];
+
+      for (const initiativeId of selectedInitiativeIds) {
+        const existing = this.originalAcceptedContributingInitiatives.find(
+          (a: any) => (a.initiative_id != null ? a.initiative_id === initiativeId : a.id === initiativeId)
+        );
+        if (existing && existing.share_result_request_id != null) {
+          acceptedPayload.push({
+            id: existing.id,
+            share_result_request_id: existing.share_result_request_id,
+            is_active: existing.is_active !== undefined ? !!existing.is_active : true
+          });
+        } else {
+          pendingPayload.push({ id: initiativeId });
+        }
       }
+
+      body.contributingInitiatives = {
+        accepted_contributing_initiatives: acceptedPayload,
+        pending_contributing_initiatives: pendingPayload
+      };
     }
 
     if (detail.contributingProjects && Array.isArray(detail.contributingProjects)) {
@@ -422,13 +404,36 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     }
 
     if (detail.contributingInstitutions && Array.isArray(detail.contributingInstitutions)) {
-      body.contributingInstitutions = detail.contributingInstitutions.map((inst: any) => ({
-        id: inst.id || null,
-        institution_id: inst.institution_id || inst.institutions_id || inst.id,
-        institution_roles_id: inst.institution_roles_id || 2,
-        is_active: inst.is_active !== undefined ? inst.is_active : 1,
-        result_id: resultId
-      }));
+      body.contributingInstitutions = detail.contributingInstitutions.map((inst: any) => {
+        const institutionId = typeof inst === 'object' && inst != null
+          ? (inst.institutions_id ?? inst.institution_id ?? inst.id)
+          : inst;
+
+        // Try to find the original record id from the GET response
+        let originalId: number | null = null;
+        if (typeof inst === 'object' && inst != null && inst.id != null) {
+          // If the current object has an id, use it
+          originalId = typeof inst.id === 'string' ? Number.parseInt(inst.id, 10) : Number(inst.id);
+        } else if (this.originalContributingInstitutions && institutionId != null) {
+          // Otherwise, look it up in the original GET response
+          const original = this.originalContributingInstitutions.find((orig: any) =>
+            (orig.institutions_id ?? orig.institution_id) == institutionId
+          );
+          if (original && original.id != null) {
+            originalId = typeof original.id === 'string' ? Number.parseInt(original.id, 10) : Number(original.id);
+          }
+        }
+
+        return {
+          id: originalId, // Use the preserved id from GET response, or null for new records
+          institutions_id: institutionId ?? null,
+          institution_roles_id: typeof inst === 'object' && inst?.institution_roles_id != null
+            ? (typeof inst.institution_roles_id === 'string' ? Number.parseInt(inst.institution_roles_id, 10) : Number(inst.institution_roles_id))
+            : 2,
+          is_active: typeof inst === 'object' && inst?.is_active !== undefined ? inst.is_active : 1,
+          result_id: resultId
+        };
+      });
     }
 
     if (detail.evidence && Array.isArray(detail.evidence)) {
@@ -648,64 +653,70 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
       }
     });
 
+    // Effect: when options list is available, ensure contributingInitiatives (primary + accepted + pending) are selected
     effect(() => {
       const detail = this.resultDetail();
       const initiativesList = this.contributingInitiativesList();
-      const disabledInitiatives = this.disabledContributingInitiatives();
 
-      if (detail?.contributingInitiatives && Array.isArray(detail.contributingInitiatives) && initiativesList.length > 0) {
-        const needsMapping = detail.contributingInitiatives.some((init: any) => {
-          if (typeof init === 'number') return false;
-          if (typeof init === 'string') return true;
-          // Also check if it's an object that needs to be converted to ID
-          if (typeof init === 'object' && init !== null) {
-            return !init.id || (init.official_code && !init.id);
-          }
-          return false;
-        });
+      if (!detail?.contributingInitiatives || !Array.isArray(detail.contributingInitiatives) || initiativesList.length === 0) {
+        return;
+      }
 
-        if (needsMapping) {
-          const mappedInitiatives = detail.contributingInitiatives.map((initiative: any) => {
-            // If it's already a number (ID), return as is
-            if (typeof initiative === 'number') {
-              return initiative;
-            }
-            // If it's a string (official_code), find the matching initiative and return its ID
-            if (typeof initiative === 'string') {
-              const found = initiativesList.find((opt: any) => opt.official_code === initiative || opt.id === Number(initiative));
-              return found?.id || initiative;
-            }
-            // If it's an object, extract the ID if available, otherwise try to find it
-            if (typeof initiative === 'object' && initiative !== null) {
-              if (initiative.id) {
-                return initiative.id;
+      const allAreNumbers = detail.contributingInitiatives.every((init: any) => typeof init === 'number');
+
+      if (allAreNumbers) {
+        const reapplyKey = `${detail.commonFields?.id ?? ''}-${initiativesList.length}-${detail.contributingInitiatives.length}`;
+        if (reapplyKey !== this._lastContributingInitiativesReapplyKey) {
+          this._lastContributingInitiativesReapplyKey = reapplyKey;
+          untracked(() => {
+            setTimeout(() => {
+              const currentDetail = this.resultDetail();
+              if (currentDetail && Array.isArray(currentDetail.contributingInitiatives) && currentDetail.contributingInitiatives.length > 0) {
+                this.resultDetail.set({
+                  ...currentDetail,
+                  contributingInitiatives: [...currentDetail.contributingInitiatives]
+                });
+                this.cdr.markForCheck();
               }
-              if (initiative.official_code) {
-                const found = initiativesList.find((opt: any) => opt.official_code === initiative.official_code);
-                return found?.id || initiative;
-              }
-            }
-            return initiative;
+            }, 0);
           });
+        }
+        return;
+      }
 
-          if (disabledInitiatives.length > 0) {
-            const mappedDisabled = disabledInitiatives.map((initiative: any) => {
-              if (typeof initiative === 'object' && initiative.official_code) {
-                const found = initiativesList.find((opt: any) => opt.official_code === initiative.official_code);
-                return found ? { ...initiative, id: found.id } : initiative;
-              }
-              return initiative;
-            });
-            this.disabledContributingInitiatives.set(mappedDisabled);
+      const mappedInitiatives = detail.contributingInitiatives.map((initiative: any) => {
+        if (typeof initiative === 'number') return initiative;
+        if (typeof initiative === 'string') {
+          const found = initiativesList.find((opt: any) => opt.official_code === initiative || opt.id === Number(initiative));
+          return found?.id ?? Number(initiative) ?? initiative;
+        }
+        if (typeof initiative === 'object' && initiative !== null) {
+          if (initiative.id != null) {
+            return typeof initiative.id === 'string' ? Number.parseInt(initiative.id, 10) : Number(initiative.id);
           }
-
-          // Only update if the mapping actually changed something
-          const hasChanged = mappedInitiatives.some((mapped: any, index: number) => mapped !== detail.contributingInitiatives[index]);
-
-          if (hasChanged) {
-            this.resultDetail.set({ ...detail, contributingInitiatives: mappedInitiatives });
+          if (initiative.official_code) {
+            const found = initiativesList.find((opt: any) => opt.official_code === initiative.official_code);
+            return found?.id ?? initiative;
           }
         }
+        return initiative;
+      }).filter((id: any) => id != null && id !== undefined);
+
+      const currentIds = detail.contributingInitiatives.map((id: any) => String(id)).join(',');
+      const mappedIds = mappedInitiatives.map((id: any) => String(id)).join(',');
+      if (currentIds !== mappedIds) {
+        untracked(() => {
+          setTimeout(() => {
+            const currentDetail = this.resultDetail();
+            if (currentDetail && Array.isArray(currentDetail.contributingInitiatives)) {
+              const newIds = currentDetail.contributingInitiatives.map((id: any) => String(id)).join(',');
+              if (newIds !== mappedIds) {
+                this.resultDetail.set({ ...currentDetail, contributingInitiatives: mappedInitiatives });
+                this.cdr.markForCheck();
+              }
+            }
+          }, 0);
+        });
       }
     });
   }
@@ -805,6 +816,8 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
             if (primaryInitiativeId && !this.initiativeIdSignal()) {
               setInitiativeIdIfNeeded(primaryInitiativeId);
             }
+            // Note: The effect will automatically handle mapping when initiativesList is available
+            // No need to force update here as it could cause infinite loops
           },
           error: () => this.contributingInitiativesList.set([])
         });
@@ -826,10 +839,12 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
         if (detail.contributingInitiatives) {
           if (Array.isArray(detail.contributingInitiatives)) {
+            // Legacy format: array of initiatives
             detail.contributingInitiatives = detail.contributingInitiatives.map((initiative: any) => {
               return initiative.id || initiative.official_code || initiative;
             });
             this.disabledContributingInitiatives.set([]);
+            this.originalAcceptedContributingInitiatives = [];
           } else if (typeof detail.contributingInitiatives === 'object') {
             const contributingAndPrimary = detail.contributingInitiatives.contributing_and_primary_initiative || [];
             const accepted = detail.contributingInitiatives.accepted_contributing_initiatives || [];
@@ -841,26 +856,51 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
             this.disabledContributingInitiatives.set(contributingAndPrimary);
 
+            this.originalAcceptedContributingInitiatives = (accepted || []).map((a: any) => ({
+              id: a.id,
+              share_result_request_id: a.share_result_request_id,
+              is_active: a.is_active,
+              initiative_id: a.initiative_id ?? a.id
+            }));
+
             const allInitiatives = [...contributingAndPrimary, ...accepted, ...pending];
+
             detail.contributingInitiatives = allInitiatives.map((initiative: any) => {
-              return initiative.id || initiative.official_code || initiative;
-            });
+              if (initiative.id != null) {
+                return typeof initiative.id === 'string' ? Number.parseInt(initiative.id, 10) : Number(initiative.id);
+              }
+              return initiative.official_code || initiative;
+            }).filter((id: any) => id != null && id !== undefined);
           } else {
             detail.contributingInitiatives = [];
             this.disabledContributingInitiatives.set([]);
+            this.originalAcceptedContributingInitiatives = [];
           }
         } else {
           detail.contributingInitiatives = [];
           this.disabledContributingInitiatives.set([]);
+          this.originalAcceptedContributingInitiatives = [];
         }
 
         if (detail.contributingInstitutions && Array.isArray(detail.contributingInstitutions)) {
-          detail.contributingInstitutions = detail.contributingInstitutions.map((institution: any) => {
-            const institutionId = institution.institutions_id || institution.id;
-            return institutionId ? Number(institutionId) : institutionId;
-          });
+          this.originalContributingInstitutions = detail.contributingInstitutions.map((inst: any) => ({
+            id: inst.id,
+            institutions_id: inst.institutions_id ?? inst.institution_id,
+            institution_roles_id: inst.institution_roles_id
+          }));
+
+          detail.contributingInstitutions = detail.contributingInstitutions
+            .map((institution: any) => {
+              const institutionId = institution.institutions_id ?? institution.institution_id;
+              if (institutionId == null) return null;
+              const id = typeof institutionId === 'string' ? Number(institutionId) : Number(institutionId);
+              if (!Number.isFinite(id)) return null;
+              return id;
+            })
+            .filter((id: any) => id != null && id !== undefined);
         } else {
           detail.contributingInstitutions = [];
+          this.originalContributingInstitutions = [];
         }
 
         if (detail.resultTypeResponse && Array.isArray(detail.resultTypeResponse)) {
@@ -964,10 +1004,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
               });
             }
 
-            // Create a new object reference to force change detection
             this.tocInitiative = { ...this.tocInitiative, ...tocInitiative };
-            // Force change detection after updating tocInitiative
-            // Use setTimeout to ensure ngModel binding updates
             setTimeout(() => {
               this.cdr.markForCheck();
             }, 0);
@@ -1142,6 +1179,9 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     this.rejectJustification = '';
     this.resultDetail.set(null);
     this.originalContributingInitiatives = null;
+    this.originalContributingInstitutions = null;
+    this.originalAcceptedContributingInitiatives = [];
+    this._lastContributingInitiativesReapplyKey = '';
     this.disabledContributingInitiatives.set([]);
     Object.assign(this.tocInitiative, {
       planned_result: null, // Reset to null for initial state

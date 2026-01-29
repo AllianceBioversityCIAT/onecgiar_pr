@@ -114,6 +114,25 @@ p {
   margin-bottom: 12px;
 }
 
+// TOC multiple-wps en el drawer: quitar padding, margin, shadow y border para alinearlo con el yes/no
+.toc-multiple-wps-in-drawer {
+  ::ng-deep .local_container.section_container,
+  ::ng-deep .local_container {
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  ::ng-deep .multiple-wps-container .container {
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+}
+
 .form-section_separator {
   border-top: 0.5px solid var(--pr-color-accents-2);
   margin: 12px 0;

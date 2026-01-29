@@ -13,14 +13,13 @@ import { InnovationControlListService } from '../../../../../../../../../../shar
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class InnoDevContentComponent {
+  @Input() disabled: boolean = false;
   @Input() set resultDetail(value: BilateralResultDetail) {
     if (!value) {
       this._resultDetail = value;
       return;
     }
 
-    // Modify the original object to ensure changes are reflected in the parent
-    // Ensure resultTypeResponse[0] exists for Innovation Development
     if (!value.resultTypeResponse || !Array.isArray(value.resultTypeResponse) || value.resultTypeResponse.length === 0) {
       value.resultTypeResponse = [{
         result_innovation_dev_id: null,
@@ -34,7 +33,6 @@ export class InnoDevContentComponent {
         name: null
       } as any];
     } else {
-      // Ensure all required properties exist in the existing object
       const firstItem: any = value.resultTypeResponse[0];
       if (firstItem.innovation_nature_id === undefined) firstItem.innovation_nature_id = null;
       if (firstItem.innovation_type_id === undefined) firstItem.innovation_type_id = null;
@@ -46,7 +44,6 @@ export class InnoDevContentComponent {
       if (firstItem.name === undefined) firstItem.name = null;
     }
 
-    // Store reference to the original object (not a copy) so changes are reflected
     this._resultDetail = value;
     this.cdr.markForCheck();
   }

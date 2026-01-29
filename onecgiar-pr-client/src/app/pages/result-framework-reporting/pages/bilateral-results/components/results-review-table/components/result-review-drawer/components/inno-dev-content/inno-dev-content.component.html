@@ -8,7 +8,8 @@
     placeholder="Select innovation type"
     [extraInformation]="true"
     [required]="false"
-    [(ngModel)]="resultDetail.resultTypeResponse[0].innovation_nature_id">
+    [(ngModel)]="resultDetail.resultTypeResponse[0].innovation_nature_id"
+    [disabled]="disabled">
   </app-pr-select>
 
   <br />
@@ -18,7 +19,8 @@
     [required]="false"
     label="Innovation Developer"
     description="Provide the full name(s), email address and organizational affiliation(s) of the innovation developer/ contact person."
-    [(ngModel)]="resultDetail.resultTypeResponse[0].innovation_developers">
+    [(ngModel)]="resultDetail.resultTypeResponse[0].innovation_developers"
+    [disabled]="disabled">
   </app-pr-textarea>
 
   <br />
@@ -35,7 +37,8 @@
       optionLabel="name"
       optionValue="id"
       [options]="innovationControlListSE.readinessLevelsList"
-      [(ngModel)]="resultDetail.resultTypeResponse[0].innovation_readiness_level_id">
+      [(ngModel)]="resultDetail.resultTypeResponse[0].innovation_readiness_level_id"
+      [disabled]="disabled">
     </app-pr-range-level>
   </div>
 }
