@@ -59,6 +59,7 @@
     @if (fieldsManagerSE.isP25()) {
       <app-pr-yes-or-not
         label="Does this result align with the Program's planned TOC indicators?"
+        [editable]="true"
         [required]="true"
         [(ngModel)]="shareRequestModalSE.shareRequestBody.planned_result"
         (selectOptionEvent)="onPlannedResultChange(shareRequestModalSE.shareRequestBody)"
