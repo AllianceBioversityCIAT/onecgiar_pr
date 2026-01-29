@@ -18,6 +18,8 @@ import { CreateResultGeoDto } from './dto/create-result-geo-scope.dto';
 import { ScienceProgramProgressResponseDto } from './dto/science-program-progress.dto';
 import { UserToken } from 'src/shared/decorators/user-token.decorator';
 import { ReviewDecisionDto } from './dto/review-decision.dto';
+import { ReviewUpdateDto } from './dto/review-update.dto';
+import { UpdateTocMetadataDto } from './dto/update-toc-metadata.dto';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 import {
   ApiBody,
@@ -626,6 +628,64 @@ export class ResultsController {
   })
   async getBilateralResultById(@Param('resultId') resultId: number) {
     return this.resultsService.getBilateralResultById(resultId);
+  }
+
+  @Patch('bilateral/review-update/data-standard/:resultId')
+  @ApiOperation({
+    summary: 'Update bilateral result from review screen',
+    description:
+      'Updates ToC fields and Minimum Data Standard fields of a bilateral result in PENDING_REVIEW status. Requires updateExplanation if any field is modified.',
+  })
+  @ApiParam({
+    name: 'resultId',
+    type: Number,
+    required: true,
+    description: 'Result identifier',
+    example: 123,
+  })
+  @ApiBody({ type: ReviewUpdateDto })
+  @ApiOkResponse({
+    description: 'Result updated successfully.',
+  })
+  async updateBilateralResultReview(
+    @Param('resultId') resultId: number,
+    @Body() reviewUpdateDto: ReviewUpdateDto,
+    @UserToken() user: TokenDto,
+  ) {
+    return this.resultsService.updateBilateralResultReview(
+      resultId,
+      reviewUpdateDto,
+      user,
+    );
+  }
+
+  @Patch('bilateral/review-update/toc-metadata/:resultId')
+  @ApiOperation({
+    summary: 'Update bilateral result ToC metadata from review screen',
+    description:
+      'Updates ToC metadata (result_toc_result) of a bilateral result in PENDING_REVIEW status. Requires updateExplanation.',
+  })
+  @ApiParam({
+    name: 'resultId',
+    type: Number,
+    required: true,
+    description: 'Result identifier',
+    example: 123,
+  })
+  @ApiBody({ type: UpdateTocMetadataDto })
+  @ApiOkResponse({
+    description: 'ToC metadata updated successfully.',
+  })
+  async updateBilateralResultTocMetadata(
+    @Param('resultId') resultId: number,
+    @Body() updateTocMetadataDto: UpdateTocMetadataDto,
+    @UserToken() user: TokenDto,
+  ) {
+    return this.resultsService.updateBilateralResultTocMetadata(
+      resultId,
+      updateTocMetadataDto,
+      user,
+    );
   }
 
   @Patch('bilateral/:resultId/review-decision')
