@@ -7,7 +7,8 @@
     optionValue="id"
     placeholder="Select policy type"
     [required]="false"
-    [(ngModel)]="resultDetail.resultTypeResponse[0].policy_type_id">
+    [(ngModel)]="resultDetail.resultTypeResponse[0].policy_type_id"
+    [disabled]="disabled">
   </app-pr-select>
 
   <br />
@@ -20,7 +21,8 @@
     optionValue="id"
     placeholder="Select stage"
     [required]="false"
-    [(ngModel)]="resultDetail.resultTypeResponse[0].policy_stage_id">
+    [(ngModel)]="resultDetail.resultTypeResponse[0].policy_stage_id"
+    [disabled]="disabled">
   </app-pr-select>
 
   <br />
@@ -34,6 +36,7 @@
     optionValue="institutions_id"
     placeholder="Select organization(s)"
     [required]="false"
-    [(ngModel)]="resultDetail.resultTypeResponse[0].institutions">
+    [(ngModel)]="resultDetail.resultTypeResponse[0].institutions"
+    [readOnly]="disabled">
   </app-pr-multi-select>
 }

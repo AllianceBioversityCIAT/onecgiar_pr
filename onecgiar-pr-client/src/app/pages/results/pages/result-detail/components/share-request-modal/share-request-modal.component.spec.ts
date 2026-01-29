@@ -183,7 +183,7 @@ describe('ShareRequestModalComponent', () => {
         isToc: true,
         contributors_result_toc_result: [
           {
-            planned_result: true,
+            planned_result: null,
             initiative_id: null,
             result_toc_results: []
           }
@@ -214,7 +214,7 @@ describe('ShareRequestModalComponent', () => {
         isToc: true,
         contributors_result_toc_result: [
           {
-            planned_result: true,
+            planned_result: null,
             initiative_id: null,
             result_toc_results: []
           }
@@ -247,7 +247,7 @@ describe('ShareRequestModalComponent', () => {
         isToc: true,
         contributors_result_toc_result: [
           {
-            planned_result: true,
+            planned_result: null,
             initiative_id: null,
             result_toc_results: []
           }
