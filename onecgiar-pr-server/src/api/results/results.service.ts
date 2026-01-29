@@ -2838,7 +2838,7 @@ export class ResultsService {
         contributingProjects: contributingProjects ?? [],
         contributingInitiatives: contributingInitiatives ?? [],
         evidence: evidence ?? [],
-        resultTypeResponse: resultTypeResponse ?? null,
+        resultTypeResponse: resultTypeResponse ?? [],
       };
 
       return {
