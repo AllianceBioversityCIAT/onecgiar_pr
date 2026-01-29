@@ -42,7 +42,7 @@
       </ng-template>
     </p-select>
 
-    @if (shouldShowTocInitiativeOut) {
+    @if (shouldShowTocInitiativeOut && !fieldsManagerSE.isP25()) {
       <app-toc-initiative-out
         [initiative]="shareRequestModalSE.shareRequestBody"
         [isNotifications]="true"
@@ -54,6 +54,31 @@
         "
         [resultLevelId]="this.api.dataControlSE?.currentResult?.result_level_id === 4 && !this.api.resultsSE.ipsrDataControlSE.inIpsr ? 1 : 2">
       </app-toc-initiative-out>
+    }
+
+    @if (fieldsManagerSE.isP25()) {
+      <app-pr-yes-or-not
+        label="Does this result align with the Program's planned TOC indicators?"
+        [required]="true"
+        [(ngModel)]="shareRequestModalSE.shareRequestBody.planned_result"
+        (selectOptionEvent)="onPlannedResultChange(shareRequestModalSE.shareRequestBody)"
+        [hideOptions]="!shareRequestModalSE.shareRequestBody.result_toc_results?.length">
+      </app-pr-yes-or-not>
+
+      @if (shareRequestModalSE.shareRequestBody.planned_result !== null) {
+        @if (this.tocConsumed) {
+          <app-cp-multiple-wps
+            [editable]="true"
+            [initiative]="shareRequestModalSE.shareRequestBody"
+            [initiativeId]="shareRequestModalSE.shareRequestBody?.initiative_id"
+            [resultLevelId]="this.api.dataControlSE.currentResultSignal()?.result_level_id"
+            [isNotifications]="true"
+            [isIpsr]="false"
+            [isUnplanned]="!shareRequestModalSE.shareRequestBody.planned_result"
+            [showMultipleWPsContent]="this.tocConsumed"
+            [forceP25]="true"></app-cp-multiple-wps>
+        }
+      }
     }
   </div>
 
