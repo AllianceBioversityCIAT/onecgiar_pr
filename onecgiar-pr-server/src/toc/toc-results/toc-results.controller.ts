@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Param,
+  Query,
   UseInterceptors,
   Version,
 } from '@nestjs/common';
@@ -56,11 +57,13 @@ export class TocResultsController {
     @Param('resultId') resultId: string,
     @Param('initiativeId') initiativeId: string,
     @Param('levelId') levelId: string,
+    @Query('planned') planned: boolean,
   ) {
     return this.tocResultsService.findTocResultByConfigV2(
       +resultId,
       +initiativeId,
       +levelId,
+      planned,
     );
   }
 

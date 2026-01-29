@@ -18,6 +18,7 @@ import { ScrollingModule } from '@angular/cdk/scrolling';
 import { PrFieldHeaderComponent } from '../../../../../../custom-fields/pr-field-header/pr-field-header.component';
 import { ShareRequestBody } from './model/shareRequestBody.model';
 import { ResultsNotificationsService } from '../../../results-outlet/pages/results-notifications/results-notifications.service';
+import { SelectModule } from 'primeng/select';
 
 jest.useFakeTimers();
 describe('ShareRequestModalComponent', () => {
@@ -44,7 +45,8 @@ describe('ShareRequestModalComponent', () => {
         show: jest.fn()
       },
       dataControlSE: {
-        showShareRequest: false
+        showShareRequest: false,
+        currentResultSignal: () => of({ portfolio: 'P25' })
       },
       rolesSE: {
         isAdmin: true
@@ -73,7 +75,7 @@ describe('ShareRequestModalComponent', () => {
         ListFilterByTextAndAttrPipe,
         PrFieldHeaderComponent
       ],
-      imports: [HttpClientTestingModule, RouterTestingModule, DialogModule, FormsModule, TooltipModule, ScrollingModule],
+      imports: [HttpClientTestingModule, RouterTestingModule, DialogModule, FormsModule, TooltipModule, ScrollingModule, SelectModule],
       providers: [
         {
           provide: ApiService,
@@ -181,7 +183,7 @@ describe('ShareRequestModalComponent', () => {
         isToc: true,
         contributors_result_toc_result: [
           {
-            planned_result: true,
+            planned_result: null,
             initiative_id: null,
             result_toc_results: []
           }
@@ -212,7 +214,7 @@ describe('ShareRequestModalComponent', () => {
         isToc: true,
         contributors_result_toc_result: [
           {
-            planned_result: true,
+            planned_result: null,
             initiative_id: null,
             result_toc_results: []
           }
@@ -245,7 +247,7 @@ describe('ShareRequestModalComponent', () => {
         isToc: true,
         contributors_result_toc_result: [
           {
-            planned_result: true,
+            planned_result: null,
             initiative_id: null,
             result_toc_results: []
           }

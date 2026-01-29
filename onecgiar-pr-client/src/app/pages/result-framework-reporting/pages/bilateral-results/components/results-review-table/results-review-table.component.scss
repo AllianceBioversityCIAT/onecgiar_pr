@@ -1,0 +1,79 @@
+::ng-deep .bilateral-results-table {
+  font-size: 12px;
+  .p-datatable-mask {
+    height: 250px;
+  }
+
+  // Group header styling
+  .group-header-cell {
+    background: var(--pr-color-primary-25);
+    border-bottom: 1px solid var(--pr-color-secondary-50);
+  }
+
+  .group-header-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    width: 100%;
+  }
+
+  .title-cell {
+    line-height: 1.4;
+  }
+
+  .status-badge {
+    padding: 2px 5px;
+    border: 1px solid;
+    text-align: center;
+    border-radius: 5px;
+    font-weight: 500;
+
+    &.pending {
+      border-color: var(--pr-color-orange-600);
+      color: var(--pr-color-orange-600);
+    }
+
+    &.approved {
+      border-color: var(--pr-color-green-600);
+      color: var(--pr-color-green-600);
+    }
+
+    &.rejected {
+      border-color: var(--pr-color-red-300);
+      color: var(--pr-color-red-300);
+    }
+  }
+
+  .toc-cell {
+    line-height: 1.3;
+  }
+
+  .indicator-cell {
+    line-height: 1.3;
+  }
+
+  .actions-cell {
+    text-align: center;
+  }
+
+  .review-result-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    border-radius: 4px !important;
+    border: none !important;
+    background-color: transparent !important;
+    color: var(--pr-color-primary-300) !important;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    height: 32px;
+
+    i {
+      font-size: 16px;
+    }
+  }
+}
