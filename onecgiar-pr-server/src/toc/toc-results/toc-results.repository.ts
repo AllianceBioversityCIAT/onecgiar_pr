@@ -617,12 +617,24 @@ export class TocResultsRepository extends Repository<TocResult> {
       resultTypeId &&
       RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId]?.length
     ) {
-      const allowedPatterns = RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId];
-      const likeConditions = allowedPatterns
+      const currentTypePatterns = RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId];
+      const otherTypesPatterns = getOtherTypesIndicatorPatterns(resultTypeId);
+
+      // Indicadores que hacen match con el tipo del resultado
+      const currentLikeConditions = currentTypePatterns
         .map(() => 'tri.type_value LIKE ?')
         .join(' OR ');
-      indicatorConditions.push(`(${likeConditions})`);
-      queryParams.push(...allowedPatterns);
+      indicatorConditions.push(`(${currentLikeConditions})`);
+      queryParams.push(...currentTypePatterns);
+
+      // Indicadores que no hacen match con ningún "otro" tipo (ToC neutros / no estándar)
+      if (otherTypesPatterns.length > 0) {
+        const otherNotLikeConditions = otherTypesPatterns
+          .map(() => 'tri.type_value NOT LIKE ?')
+          .join(' AND ');
+        indicatorConditions.push(`(${otherNotLikeConditions})`);
+        queryParams.push(...otherTypesPatterns);
+      }
     }
 
     const normalizedLinkedIndicators = (linkedIndicatorNodeIds ?? [])
