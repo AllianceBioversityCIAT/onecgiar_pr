@@ -44,6 +44,7 @@ describe('NotificationItemComponent', () => {
       },
       resultsSE: {
         currentResultId: 1,
+        GET_TypeByResultLevel: () => of({}),
         PATCH_updateRequest: () => of({ response: {} })
       }
     };
