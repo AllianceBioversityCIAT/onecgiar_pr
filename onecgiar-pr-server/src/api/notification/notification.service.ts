@@ -29,7 +29,7 @@ export class NotificationService {
     private readonly _shareResultRequestService: ShareResultRequestService,
     private readonly _userRepository: UserRepository,
     private readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
-  ) { }
+  ) {}
 
   async emitResultNotification(
     notificationLevel: NotificationLevelEnum,
@@ -107,8 +107,8 @@ export class NotificationService {
 
       const emitterName = resultData?.obj_emitter_user
         ? `${resultData.obj_emitter_user.first_name ?? ''} ${resultData.obj_emitter_user.last_name ?? ''}`.trim() ||
-        resultData.obj_emitter_user.email ||
-        null
+          resultData.obj_emitter_user.email ||
+          null
         : null;
 
       const desc = this.buildResultNotificationDescription(
@@ -123,13 +123,12 @@ export class NotificationService {
         result: resultData,
         byUser: resultData?.obj_emitter_user
           ? {
-            id: resultData.obj_emitter_user.id ?? null,
-            name: emitterName,
-            email: resultData.obj_emitter_user.email ?? null,
-          }
+              id: resultData.obj_emitter_user.id ?? null,
+              name: emitterName,
+              email: resultData.obj_emitter_user.email ?? null,
+            }
           : null,
       };
-
 
       await this._socketManagementService.sendNotificationToUsers(
         matchUsers.map(String),
@@ -253,7 +252,7 @@ export class NotificationService {
 
         const emitterName = notification.obj_emitter_user
           ? `${notification.obj_emitter_user.first_name ?? ''} ${notification.obj_emitter_user.last_name ?? ''}`.trim() ||
-          null
+            null
           : null;
 
         return {
@@ -595,9 +594,9 @@ export class NotificationService {
       const notifications = isError
         ? notificationsUpdates
         : [
-          ...notificationsUpdates,
-          ...(Array.isArray(shareResultPendings) ? shareResultPendings : []),
-        ];
+            ...notificationsUpdates,
+            ...(Array.isArray(shareResultPendings) ? shareResultPendings : []),
+          ];
 
       return {
         response: notifications,

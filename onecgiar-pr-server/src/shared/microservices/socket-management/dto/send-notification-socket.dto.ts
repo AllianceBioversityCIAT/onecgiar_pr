@@ -1,6 +1,6 @@
-import { NotificationDto } from "./create-socket.dto";
+import { NotificationDto } from './create-socket.dto';
 
 export class SendNotificationSocketDto {
-    userId: string;
-    notification: NotificationDto;
+  userId: string;
+  notification: NotificationDto;
 }

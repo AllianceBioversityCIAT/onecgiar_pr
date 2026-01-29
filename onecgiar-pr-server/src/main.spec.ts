@@ -25,7 +25,9 @@ describe('main bootstrap', () => {
     const microserviceMock = {
       listen: microserviceListenMock,
     };
-    const createMicroserviceMock = jest.fn().mockResolvedValue(microserviceMock);
+    const createMicroserviceMock = jest
+      .fn()
+      .mockResolvedValue(microserviceMock);
     const documentBuilderChain = {
       setTitle: jest.fn().mockReturnThis(),
       setDescription: jest.fn().mockReturnThis(),
@@ -38,8 +40,8 @@ describe('main bootstrap', () => {
     const createDocumentMock = jest.fn().mockReturnValue({ doc: true });
     const setupMock = jest.fn();
 
-    const AppModuleMock = class AppModuleMock { };
-    const AppMicroserviceModuleMock = class AppMicroserviceModuleMock { };
+    const AppModuleMock = class AppModuleMock {};
+    const AppMicroserviceModuleMock = class AppMicroserviceModuleMock {};
 
     jest.doMock('./app.module', () => ({ AppModule: AppModuleMock }));
     jest.doMock('./app-microservice.module', () => ({
@@ -112,10 +114,13 @@ describe('main bootstrap', () => {
     expect(createMock).toHaveBeenCalledWith(AppModuleMock, {
       cors: true,
     });
-    expect(createMicroserviceMock).toHaveBeenCalledWith(AppMicroserviceModuleMock, {
-      transport: expect.anything(),
-      options: expect.anything(),
-    });
+    expect(createMicroserviceMock).toHaveBeenCalledWith(
+      AppMicroserviceModuleMock,
+      {
+        transport: expect.anything(),
+        options: expect.anything(),
+      },
+    );
     expect(useMock).toHaveBeenCalledWith('json-middleware');
     expect(useMock).toHaveBeenCalledWith('urlencoded-middleware');
     expect(useMock).toHaveBeenCalledWith('helmet-middleware');

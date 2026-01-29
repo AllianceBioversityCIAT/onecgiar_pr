@@ -1,7 +1,7 @@
 import { CurrentUserUtil, SetAutitEnum } from './current-user.util';
 
 describe('CurrentUserUtil', () => {
-  const makeRequest = (user?: any) => ({ user } as any);
+  const makeRequest = (user?: any) => ({ user }) as any;
 
   it('should take the user from request when there is no systemUser', () => {
     const util = new CurrentUserUtil(makeRequest({ id: 7, email: 'a@b.c' }));
@@ -43,4 +43,3 @@ describe('CurrentUserUtil', () => {
     });
   });
 });
-

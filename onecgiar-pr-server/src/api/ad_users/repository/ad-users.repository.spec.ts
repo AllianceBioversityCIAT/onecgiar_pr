@@ -94,4 +94,3 @@ describe('AdUserRepository', () => {
     expect(res).toEqual([{ id: 1 }]);
   });
 });
-

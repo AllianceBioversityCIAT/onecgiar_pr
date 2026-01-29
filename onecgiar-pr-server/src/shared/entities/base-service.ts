@@ -154,17 +154,19 @@ export abstract class BaseServiceSimple<
     userId?: number,
   ) {
     const isOptionsObject =
-      typeof dataRole === 'object' && dataRole !== null && !Array.isArray(dataRole);
+      typeof dataRole === 'object' &&
+      dataRole !== null &&
+      !Array.isArray(dataRole);
 
     const opts = (isOptionsObject ? (dataRole as any) : undefined) as
       | {
-        dataRole?: Enum;
-        manager?: EntityManager;
-        otherAttributes?: (keyof Entity & string)[];
-        deleteOthersAttributes?: { [K in keyof Entity]?: Entity[K] };
-        notDeleteIds?: number[];
-        userId?: number;
-      }
+          dataRole?: Enum;
+          manager?: EntityManager;
+          otherAttributes?: (keyof Entity & string)[];
+          deleteOthersAttributes?: { [K in keyof Entity]?: Entity[K] };
+          notDeleteIds?: number[];
+          userId?: number;
+        }
       | undefined;
 
     const resolvedDataRole: Enum | undefined = isOptionsObject
@@ -182,7 +184,9 @@ export abstract class BaseServiceSimple<
     const resolvedNotDeleteIds: number[] | undefined = isOptionsObject
       ? opts?.notDeleteIds
       : notDeleteIds;
-    const resolvedUserId: number | undefined = isOptionsObject ? opts?.userId : userId;
+    const resolvedUserId: number | undefined = isOptionsObject
+      ? opts?.userId
+      : userId;
 
     const entityManager: RepositoryData | Repository<Entity> = selectManager<
       Entity,

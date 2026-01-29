@@ -8,6 +8,4 @@ export class SelfApp extends BrokerConnectionBase {
   constructor() {
     super(env.RABBITMQ_QUEUE);
   }
-
-
 }

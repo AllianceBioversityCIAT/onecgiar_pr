@@ -8,4 +8,4 @@ import { SelfApp } from '../../broker/self.app';
   providers: [SocketManagementService, SelfApp],
   exports: [SocketManagementService, SelfApp],
 })
-export class SocketManagementModule { }
+export class SocketManagementModule {}

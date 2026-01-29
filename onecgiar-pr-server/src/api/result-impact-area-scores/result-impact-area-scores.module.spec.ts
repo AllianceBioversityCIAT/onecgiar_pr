@@ -14,4 +14,3 @@ describe('ResultImpactAreaScoresModule', () => {
     expect(module).toBeDefined();
   });
 });
-

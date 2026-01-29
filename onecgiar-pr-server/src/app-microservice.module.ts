@@ -6,4 +6,4 @@ import { SocketManagementModule } from './shared/microservices/socket-management
   controllers: [],
   providers: [],
 })
-export class AppMicroserviceModule { }
+export class AppMicroserviceModule {}

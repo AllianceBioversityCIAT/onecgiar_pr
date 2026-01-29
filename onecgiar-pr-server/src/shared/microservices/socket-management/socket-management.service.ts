@@ -9,7 +9,7 @@ import { SendNotificationSocketDto } from './dto/send-notification-socket.dto';
 export class SocketManagementService implements OnModuleInit {
   private readonly _logger = new Logger(SocketManagementService.name);
   private readonly url = env.SOCKET_URL;
-  constructor(private readonly selfApp: SelfApp) { }
+  constructor(private readonly selfApp: SelfApp) {}
   async onModuleInit() {
     try {
       this._logger.log(
@@ -53,15 +53,23 @@ export class SocketManagementService implements OnModuleInit {
     }
   }
 
-  async sendtoQueueNotification(userIds: string[], notification: NotificationDto) {
+  async sendtoQueueNotification(
+    userIds: string[],
+    notification: NotificationDto,
+  ) {
     try {
-      return await axios.post(`${this.url}/socket/notification`, {
-        userIds,
-        platform: this.environmentCheck(),
-        notification,
-      }).then(response => response.data);
+      return await axios
+        .post(`${this.url}/socket/notification`, {
+          userIds,
+          platform: this.environmentCheck(),
+          notification,
+        })
+        .then((response) => response.data);
     } catch (error) {
-      this._logger.error(`Error sending notification to users: ${userIds.join(', ')}`, error);
+      this._logger.error(
+        `Error sending notification to users: ${userIds.join(', ')}`,
+        error,
+      );
       return {
         response: null,
         message: 'An error occurred while sending notification',
@@ -99,7 +107,10 @@ export class SocketManagementService implements OnModuleInit {
           userId,
           notification,
         };
-        await this.selfApp.emitToPattern<SendNotificationSocketDto>('send-notification', message);
+        await this.selfApp.emitToPattern<SendNotificationSocketDto>(
+          'send-notification',
+          message,
+        );
       }
 
       return {

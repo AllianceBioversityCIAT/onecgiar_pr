@@ -16,4 +16,3 @@ describe('ObjectFlattener', () => {
     expect(res).toEqual({ a: null });
   });
 });
-

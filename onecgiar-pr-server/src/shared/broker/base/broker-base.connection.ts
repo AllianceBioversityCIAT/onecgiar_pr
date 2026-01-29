@@ -31,18 +31,18 @@ export abstract class BrokerConnectionBase {
     logger: boolean = false,
   ): Promise<Y> {
     const parsedMessage: string = JSON.stringify(message);
-    return firstValueFrom(this.client.emit(pattern, parsedMessage)).then(
-      (response: Y) => {
+    return firstValueFrom(this.client.emit(pattern, parsedMessage))
+      .then((response: Y) => {
         if (logger) {
           this.log.log(`Message emitted to pattern: ${pattern}`);
           this.log.log(`Message: ${JSON.stringify(response)}`);
         }
         return response;
-      },
-    ).catch(error => {
-      this.log.error(`Error emitting to pattern: ${pattern}`, error);
-      throw error;
-    });
+      })
+      .catch((error) => {
+        this.log.error(`Error emitting to pattern: ${pattern}`, error);
+        throw error;
+      });
   }
 
   async sendToPattern<T, Y = T>(
