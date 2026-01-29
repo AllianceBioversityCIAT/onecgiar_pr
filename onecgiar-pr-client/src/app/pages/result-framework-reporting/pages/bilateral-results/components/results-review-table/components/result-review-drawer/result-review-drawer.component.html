@@ -68,7 +68,7 @@
 
       @if (tocInitiative?.planned_result !== null) {
         @if (tocConsumed()) {
-          <div style="z-index: 1; position: relative">
+          <div class="toc-multiple-wps-in-drawer" style="z-index: 1; position: relative">
             <app-cp-multiple-wps
               [editable]="canReviewResults()"
               [initiative]="tocInitiative"
