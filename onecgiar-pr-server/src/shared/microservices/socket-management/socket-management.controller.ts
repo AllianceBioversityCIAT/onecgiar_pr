@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
 import { SocketManagementService } from './socket-management.service';
 import { Payload, EventPattern } from '@nestjs/microservices';
 import { SendNotificationSocketDto } from './dto/send-notification-socket.dto';
