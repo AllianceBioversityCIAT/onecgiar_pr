@@ -45,7 +45,6 @@ export class EvidencesService {
       const result = await this._resultRepository.getResultById(
         createEvidenceDto.result_id,
       );
-      console.log('createEvidenceDto', createEvidenceDto);
       await this._versionRepository.getBaseVersion();
       if (createEvidenceDto?.evidences?.length) {
         const evidencesArray = createEvidenceDto?.evidences.filter(
@@ -647,8 +646,6 @@ export class EvidencesService {
         },
       });
 
-      console.log('EXISTENCIAS EXISTENTES', existingEvidences);
-
       // Extraer IDs de evidencias que vienen en el payload (solo las que tienen id)
       const payloadEvidenceIds = evidences
         .filter((e) => e.id)
@@ -674,9 +671,11 @@ export class EvidencesService {
     }
   }
 
-  private _validateDuplicateLinks(
-    evidences: EvidenceDto[],
-  ): { response: Record<string, unknown>; message: string; status: HttpStatus } | null {
+  private _validateDuplicateLinks(evidences: EvidenceDto[]): {
+    response: Record<string, unknown>;
+    message: string;
+    status: HttpStatus;
+  } | null {
     const testDuplicate = evidences.map((e) => e.link);
     if (new Set(testDuplicate).size !== testDuplicate.length) {
       return {

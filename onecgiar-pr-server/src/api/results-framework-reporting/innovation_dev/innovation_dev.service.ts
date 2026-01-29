@@ -623,9 +623,9 @@ export class InnovationDevService {
         };
       }
 
-      // Actualizar solo los campos que vienen en el DTO
       if (innovationDevDto.innovation_nature_id !== undefined) {
-        innDevExists.innovation_nature_id = innovationDevDto.innovation_nature_id;
+        innDevExists.innovation_nature_id =
+          innovationDevDto.innovation_nature_id;
       }
 
       if (innovationDevDto.innovation_developers !== undefined) {
@@ -638,15 +638,15 @@ export class InnovationDevService {
           innovationDevDto.innovation_readiness_level_id;
       }
 
-      // Si viene el campo readiness_level (level), actualizarlo
       if (innovationDevDto.level !== undefined) {
         innDevExists.readiness_level = innovationDevDto.level;
       }
 
       innDevExists.last_updated_by = user.id;
 
-      const updatedInnDev =
-        await this._resultsInnovationsDevRepository.save(innDevExists as any);
+      const updatedInnDev = await this._resultsInnovationsDevRepository.save(
+        innDevExists as any,
+      );
 
       return {
         response: updatedInnDev,

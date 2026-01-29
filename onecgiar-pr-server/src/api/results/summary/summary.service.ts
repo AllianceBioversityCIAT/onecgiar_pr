@@ -810,7 +810,10 @@ export class SummaryService {
     userId: number,
   ): Promise<void> {
     const institutions = organizations
-      .filter((org) => org.institution_id !== null && org.institution_id !== undefined)
+      .filter(
+        (org) =>
+          org.institution_id !== null && org.institution_id !== undefined,
+      )
       .map((org) => ({
         institutions_id: org.institution_id,
       }));
