@@ -1964,6 +1964,21 @@ describe('ResultsService (unit, pure mocks)', () => {
     });
 
     it('should successfully update evidence', async () => {
+      const reviewUpdateDto: ReviewUpdateDto = {
+        commonFields: {
+          id: 100,
+          result_type_id: ResultTypeEnum.POLICY_CHANGE,
+        },
+        evidence: [
+          {
+            id: '12',
+            link: 'https://example.com',
+            is_sharepoint: 0,
+          },
+        ],
+        updateExplanation: 'Updated evidence',
+      };
+
       mockDataSource.transaction.mockImplementationOnce(async (callback) => {
         const manager = {
           findOne: jest.fn().mockResolvedValueOnce(mockResult),
@@ -1984,6 +1999,13 @@ describe('ResultsService (unit, pure mocks)', () => {
         response: {},
       });
 
+      const res = await resultService.updateBilateralResultReview(
+        100,
+        reviewUpdateDto,
+        userTest,
+      );
+
+      expect((res as returnFormatService).status).toBe(HttpStatus.OK);
       expect(mockEvidencesService.updateEvidencesPartial).toHaveBeenCalled();
       expect(mockEvidencesService.create).not.toHaveBeenCalled();
     });
