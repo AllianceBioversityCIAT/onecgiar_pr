@@ -47,7 +47,7 @@ export interface BilateralCommonFields {
   result_title: string;
   result_description: string | null;
   result_category: string;
-  status_id?: number;
+  status_id?: string;
 }
 
 export interface BilateralTocMetadata {
