@@ -265,6 +265,34 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         resultTocResult.result_toc_result_id = tab.result_toc_result_id;
       }
 
+      if (tab.indicators && Array.isArray(tab.indicators)) {
+        resultTocResult.indicators = tab.indicators.map((ind: any) => {
+          const indicator: any = {
+            toc_results_indicator_id: ind.toc_results_indicator_id ?? ind.related_node_id ?? null,
+            indicator_contributing: ind.indicator_contributing ?? null,
+            status_id: ind.status_id ?? null,
+            related_node_id: ind.related_node_id ?? ind.toc_results_indicator_id ?? null,
+            targets: []
+          };
+          if (ind.result_toc_result_indicator_id != null) {
+            indicator.result_toc_result_indicator_id = ind.result_toc_result_indicator_id;
+          }
+          if (ind.targets && Array.isArray(ind.targets)) {
+            indicator.targets = ind.targets.map((t: any) => ({
+              indicators_targets: t.indicators_targets ?? t.id ?? null,
+              number_target: t.number_target ?? null,
+              contributing_indicator: t.contributing_indicator ?? null,
+              target_date: t.target_date ?? null,
+              target_progress_narrative: t.target_progress_narrative ?? null,
+              indicator_question: t.indicator_question ?? null
+            }));
+          }
+          return indicator;
+        });
+      } else {
+        resultTocResult.indicators = [];
+      }
+
       return resultTocResult;
     });
 
@@ -298,6 +326,47 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     });
   }
 
+  private buildImplementingOrgsFromSelection(currentInstitutions: any[]): Array<{ institution_id: number; acronym: string | null; institution_name: string | null }> {
+    if (!currentInstitutions?.length) return [];
+
+    const toNum = (v: any): number | null => {
+      if (v == null) return null;
+      const n = typeof v === 'string' ? Number.parseInt(v, 10) : Number(v);
+      return Number.isNaN(n) ? null : n;
+    };
+
+    const resolveId = (item: any): number | null => {
+      if (typeof item === 'number') return toNum(item);
+      if (typeof item === 'string' && item !== '') return toNum(item);
+      if (item && typeof item === 'object') return toNum(item.institutions_id ?? item.institution_id ?? item.id);
+      return null;
+    };
+
+    const list = this.institutionsSE.institutionsList ?? [];
+
+    return currentInstitutions
+      .map((item: any) => {
+        const id = resolveId(item);
+        if (id == null) return null;
+
+        const institution =
+          typeof item === 'object' && item !== null && (item.acronym != null || item.institution_name != null || item.institutions_name != null || item.full_name != null)
+            ? item
+            : list.find((inst: any) => {
+                const a = toNum(inst.institutions_id ?? inst.institution_id ?? inst.id);
+                return a !== null && a === id;
+              });
+
+        const inst = institution as any;
+        const institutionId = institution ? (toNum(inst.institutions_id ?? inst.institution_id ?? inst.id) ?? id) : id;
+        const acronym = institution ? (inst.acronym ?? null) : null;
+        const institutionName = institution ? (inst.institution_name ?? inst.institutions_name ?? inst.full_name ?? null) : null;
+
+        return { institution_id: institutionId, acronym, institution_name: institutionName };
+      })
+      .filter((org): org is { institution_id: number; acronym: string | null; institution_name: string | null } => org !== null && org.institution_id != null && !Number.isNaN(org.institution_id));
+  }
+
   private executeSaveDataStandardChanges(): void {
     const detail = this.resultDetail();
     if (!detail?.commonFields?.id) {
@@ -319,15 +388,36 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
     if (detail.geographicScope) {
       const geoScope = detail.geographicScope;
+
+      const mapCountryWithSubNational = (c: any) => {
+        const countryId = c.id ?? c.country_id;
+        const subNational = Array.isArray(c.sub_national)
+          ? c.sub_national.map((sub: any) => ({
+              id: sub.id,
+              code: sub.code,
+              name: sub.name,
+              country_id: sub.country_id,
+              local_name: sub.local_name ?? '',
+              other_names: sub.other_names,
+              language_iso_2: sub.language_iso_2,
+              country_iso_alpha_2: sub.country_iso_alpha_2,
+              romanization_system_name: sub.romanization_system_name,
+              subnational_category_name: sub.subnational_category_name,
+              is_active: sub.is_active
+            }))
+          : [];
+        return { id: countryId, sub_national: subNational };
+      };
+
       body.geographicScope = {
         has_countries: geoScope.has_countries || false,
         has_regions: geoScope.has_regions || false,
         regions: geoScope.regions?.map((r: any) => ({ id: r.id || r.region_id })) || [],
-        countries: geoScope.countries?.map((c: any) => ({ id: c.id || c.country_id })) || [],
+        countries: geoScope.countries?.map(mapCountryWithSubNational) || [],
         geo_scope_id: geoScope.geo_scope_id || null,
         extra_geo_scope_id: geoScope.extra_geo_scope_id || null,
         extra_regions: geoScope.extra_regions?.map((r: any) => ({ id: r.id || r.region_id })) || [],
-        extra_countries: geoScope.extra_countries?.map((c: any) => ({ id: c.id || c.country_id })) || [],
+        extra_countries: geoScope.extra_countries?.map(mapCountryWithSubNational) || [],
         has_extra_countries: geoScope.has_extra_countries || false,
         has_extra_regions: geoScope.has_extra_regions || false,
         has_extra_geo_scope: geoScope.has_extra_geo_scope || false
@@ -453,128 +543,10 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
       switch (resultTypeId) {
         case 1: {
-          let implementingOrgs: any[] = [];
-
-          if (
-            resultType.implementing_organization &&
-            Array.isArray(resultType.implementing_organization) &&
-            resultType.implementing_organization.length > 0
-          ) {
-            const hasValidData = resultType.implementing_organization.some(
-              (org: any) => org.institution_id !== null && org.institution_id !== undefined
-            );
-            if (hasValidData) {
-              implementingOrgs = resultType.implementing_organization;
-            }
-          }
-
-          if (
-            implementingOrgs.length === 0 &&
-            resultType.institutions &&
-            Array.isArray(resultType.institutions) &&
-            resultType.institutions.length > 0
-          ) {
-            const firstItem = resultType.institutions[0];
-
-            if (firstItem && typeof firstItem === 'object') {
-              implementingOrgs = resultType.institutions
-                .map((item: any) => {
-                  if (!item || typeof item !== 'object') return null;
-
-                  // If it already has institution_id, use it
-                  if (item.institution_id !== null && item.institution_id !== undefined) {
-                    return {
-                      institution_id:
-                        typeof item.institution_id === 'string' ? Number.parseInt(item.institution_id, 10) : Number(item.institution_id),
-                      acronym: item.acronym || null,
-                      institution_name: item.institution_name || item.institutions_name || item.full_name || null
-                    };
-                  }
-
-                  const instId = item.institutions_id || item.id || item.institution_id;
-                  if (instId !== null && instId !== undefined) {
-                    const numId = typeof instId === 'string' ? Number.parseInt(instId, 10) : Number(instId);
-                    if (!isNaN(numId)) {
-                      const institution = this.institutionsSE.institutionsList?.find((inst: any) => {
-                        const instIdNum =
-                          typeof inst.institutions_id === 'string' ? Number.parseInt(inst.institutions_id, 10) : Number(inst.institutions_id);
-                        const instIdAlt = typeof inst.id === 'string' ? Number.parseInt(inst.id, 10) : Number(inst.id);
-                        return instIdNum === numId || instIdAlt === numId;
-                      });
-
-                      return {
-                        institution_id: numId,
-                        acronym: institution?.acronym || item.acronym || null,
-                        institution_name:
-                          institution?.institutions_name ||
-                          institution?.full_name ||
-                          item.institution_name ||
-                          item.institutions_name ||
-                          item.full_name ||
-                          null
-                      };
-                    }
-                  }
-                  return null;
-                })
-                .filter((org: any) => org !== null && org.institution_id !== null && !isNaN(org.institution_id));
-
-              if (implementingOrgs.length > 0) {
-                // Using institutions objects directly
-              } else {
-                // Objects mapping failed, trying ID extraction
-              }
-            }
-
-            if (implementingOrgs.length === 0) {
-              const validInstitutionIds = resultType.institutions
-                .map((item: any) => {
-                  if (typeof item === 'number') return item;
-                  if (typeof item === 'string' && item !== '') {
-                    const num = Number.parseInt(item, 10);
-                    return !isNaN(num) ? num : null;
-                  }
-                  if (typeof item === 'object' && item !== null) {
-                    return item.institutions_id || item.id || item.institution_id || null;
-                  }
-                  return null;
-                })
-                .filter((id: any) => id !== null && id !== undefined && !isNaN(id))
-                .map((id: any) => (typeof id === 'string' ? Number.parseInt(id, 10) : Number(id)))
-                .filter((id: number) => !isNaN(id));
-
-              if (validInstitutionIds.length > 0 && this.institutionsSE.institutionsList && this.institutionsSE.institutionsList.length > 0) {
-                implementingOrgs = validInstitutionIds
-                  .map((instId: number) => {
-                    const institution = this.institutionsSE.institutionsList.find((inst: any) => {
-                      const instIdNum =
-                        typeof inst.institutions_id === 'string' ? Number.parseInt(inst.institutions_id, 10) : Number(inst.institutions_id);
-                      const instIdAlt = typeof inst.id === 'string' ? Number.parseInt(inst.id, 10) : Number(inst.id);
-                      const instIdAlt2 =
-                        typeof inst.institution_id === 'string' ? Number.parseInt(inst.institution_id, 10) : Number(inst.institution_id);
-
-                      return instIdNum === instId || instIdAlt === instId || instIdAlt2 === instId;
-                    });
-
-                    if (institution) {
-                      const finalId = institution.institutions_id || institution.id || institution.institution_id || instId;
-                      return {
-                        institution_id: typeof finalId === 'string' ? Number.parseInt(finalId, 10) : Number(finalId),
-                        acronym: institution.acronym || null,
-                        institution_name: institution.institutions_name || institution.full_name || institution.institution_name || null
-                      };
-                    }
-
-                    return {
-                      institution_id: instId,
-                      acronym: null,
-                      institution_name: null
-                    };
-                  })
-                  .filter((org: any) => org.institution_id !== null && org.institution_id !== undefined && !isNaN(org.institution_id));
-              }
-            }
-          }
+          // Implementing Organization = only what is selected in "Whose policy is this?" (resultType.institutions).
+          // If user removed an org from the dropdown, it is not sent so the PATCH removes it.
+          const currentInstitutions = Array.isArray(resultType.institutions) ? [...resultType.institutions] : [];
+          const implementingOrgs = this.buildImplementingOrgsFromSelection(currentInstitutions);
 
           body.resultTypeResponse = {
             result_policy_change_id: resultType.result_policy_change_id || null,
@@ -582,7 +554,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
             policy_stage_id: resultType.policy_stage_id || null,
             policy_stage_name: resultType.policy_stage_name || null,
             policy_type_name: resultType.policy_type_name || null,
-            implementing_organization: implementingOrgs.length > 0 ? implementingOrgs : []
+            implementing_organization: implementingOrgs
           };
           break;
         }
