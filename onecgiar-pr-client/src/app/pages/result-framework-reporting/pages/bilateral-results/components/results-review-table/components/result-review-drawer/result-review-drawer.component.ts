@@ -408,7 +408,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         const institutionId = typeof inst === 'object' && inst != null
           ? (inst.institutions_id ?? inst.institution_id ?? inst.id)
           : inst;
-        
+
         // Try to find the original record id from the GET response
         let originalId: number | null = null;
         if (typeof inst === 'object' && inst != null && inst.id != null) {
@@ -416,18 +416,18 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
           originalId = typeof inst.id === 'string' ? Number.parseInt(inst.id, 10) : Number(inst.id);
         } else if (this.originalContributingInstitutions && institutionId != null) {
           // Otherwise, look it up in the original GET response
-          const original = this.originalContributingInstitutions.find((orig: any) => 
+          const original = this.originalContributingInstitutions.find((orig: any) =>
             (orig.institutions_id ?? orig.institution_id) == institutionId
           );
           if (original && original.id != null) {
             originalId = typeof original.id === 'string' ? Number.parseInt(original.id, 10) : Number(original.id);
           }
         }
-        
+
         return {
           id: originalId, // Use the preserved id from GET response, or null for new records
           institutions_id: institutionId ?? null,
-          institution_roles_id: typeof inst === 'object' && inst?.institution_roles_id != null 
+          institution_roles_id: typeof inst === 'object' && inst?.institution_roles_id != null
             ? (typeof inst.institution_roles_id === 'string' ? Number.parseInt(inst.institution_roles_id, 10) : Number(inst.institution_roles_id))
             : 2,
           is_active: typeof inst === 'object' && inst?.is_active !== undefined ? inst.is_active : 1,
@@ -864,7 +864,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
             }));
 
             const allInitiatives = [...contributingAndPrimary, ...accepted, ...pending];
-            
+
             detail.contributingInitiatives = allInitiatives.map((initiative: any) => {
               if (initiative.id != null) {
                 return typeof initiative.id === 'string' ? Number.parseInt(initiative.id, 10) : Number(initiative.id);
@@ -888,7 +888,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
             institutions_id: inst.institutions_id ?? inst.institution_id,
             institution_roles_id: inst.institution_roles_id
           }));
-          
+
           detail.contributingInstitutions = detail.contributingInstitutions
             .map((institution: any) => {
               const institutionId = institution.institutions_id ?? institution.institution_id;
