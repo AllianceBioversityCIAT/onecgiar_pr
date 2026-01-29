@@ -265,6 +265,34 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         resultTocResult.result_toc_result_id = tab.result_toc_result_id;
       }
 
+      if (tab.indicators && Array.isArray(tab.indicators)) {
+        resultTocResult.indicators = tab.indicators.map((ind: any) => {
+          const indicator: any = {
+            toc_results_indicator_id: ind.toc_results_indicator_id ?? ind.related_node_id ?? null,
+            indicator_contributing: ind.indicator_contributing ?? null,
+            status_id: ind.status_id ?? null,
+            related_node_id: ind.related_node_id ?? ind.toc_results_indicator_id ?? null,
+            targets: []
+          };
+          if (ind.result_toc_result_indicator_id != null) {
+            indicator.result_toc_result_indicator_id = ind.result_toc_result_indicator_id;
+          }
+          if (ind.targets && Array.isArray(ind.targets)) {
+            indicator.targets = ind.targets.map((t: any) => ({
+              indicators_targets: t.indicators_targets ?? t.id ?? null,
+              number_target: t.number_target ?? null,
+              contributing_indicator: t.contributing_indicator ?? null,
+              target_date: t.target_date ?? null,
+              target_progress_narrative: t.target_progress_narrative ?? null,
+              indicator_question: t.indicator_question ?? null
+            }));
+          }
+          return indicator;
+        });
+      } else {
+        resultTocResult.indicators = [];
+      }
+
       return resultTocResult;
     });
 
@@ -319,15 +347,36 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
     if (detail.geographicScope) {
       const geoScope = detail.geographicScope;
+
+      const mapCountryWithSubNational = (c: any) => {
+        const countryId = c.id ?? c.country_id;
+        const subNational = Array.isArray(c.sub_national)
+          ? c.sub_national.map((sub: any) => ({
+              id: sub.id,
+              code: sub.code,
+              name: sub.name,
+              country_id: sub.country_id,
+              local_name: sub.local_name ?? '',
+              other_names: sub.other_names,
+              language_iso_2: sub.language_iso_2,
+              country_iso_alpha_2: sub.country_iso_alpha_2,
+              romanization_system_name: sub.romanization_system_name,
+              subnational_category_name: sub.subnational_category_name,
+              is_active: sub.is_active
+            }))
+          : [];
+        return { id: countryId, sub_national: subNational };
+      };
+
       body.geographicScope = {
         has_countries: geoScope.has_countries || false,
         has_regions: geoScope.has_regions || false,
         regions: geoScope.regions?.map((r: any) => ({ id: r.id || r.region_id })) || [],
-        countries: geoScope.countries?.map((c: any) => ({ id: c.id || c.country_id })) || [],
+        countries: geoScope.countries?.map(mapCountryWithSubNational) || [],
         geo_scope_id: geoScope.geo_scope_id || null,
         extra_geo_scope_id: geoScope.extra_geo_scope_id || null,
         extra_regions: geoScope.extra_regions?.map((r: any) => ({ id: r.id || r.region_id })) || [],
-        extra_countries: geoScope.extra_countries?.map((c: any) => ({ id: c.id || c.country_id })) || [],
+        extra_countries: geoScope.extra_countries?.map(mapCountryWithSubNational) || [],
         has_extra_countries: geoScope.has_extra_countries || false,
         has_extra_regions: geoScope.has_extra_regions || false,
         has_extra_geo_scope: geoScope.has_extra_geo_scope || false
