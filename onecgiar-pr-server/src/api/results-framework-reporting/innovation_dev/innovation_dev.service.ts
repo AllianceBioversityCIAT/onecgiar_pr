@@ -10,6 +10,7 @@ import {
   SubOptionV2,
 } from './dto/create-innovation_dev_v2.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
+import { InnovationDevelopmentDto } from '../../results/dto/review-update.dto';
 import { ResultByIntitutionsRepository } from '../../results/results_by_institutions/result_by_intitutions.repository';
 import { ResultsInnovationsDevRepository } from '../../results/summary/repositories/results-innovations-dev.repository';
 import { ResultRepository } from '../../results/result.repository';
@@ -601,5 +602,59 @@ export class InnovationDevService {
     });
 
     await this._resultBilateralBudgetRepository.save(newRbb);
+  }
+
+  async updateInnovationDevPartial(
+    resultId: number,
+    innovationDevDto: InnovationDevelopmentDto,
+    user: TokenDto,
+  ) {
+    try {
+      const innDevExists =
+        await this._resultsInnovationsDevRepository.InnovationDevExists(
+          resultId,
+        );
+
+      if (!innDevExists) {
+        return {
+          response: {},
+          message: 'Innovation development record not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      if (innovationDevDto.innovation_nature_id !== undefined) {
+        innDevExists.innovation_nature_id =
+          innovationDevDto.innovation_nature_id;
+      }
+
+      if (innovationDevDto.innovation_developers !== undefined) {
+        innDevExists.innovation_developers =
+          innovationDevDto.innovation_developers;
+      }
+
+      if (innovationDevDto.innovation_readiness_level_id !== undefined) {
+        innDevExists.innovation_readiness_level_id =
+          innovationDevDto.innovation_readiness_level_id;
+      }
+
+      if (innovationDevDto.level !== undefined) {
+        innDevExists.readiness_level = innovationDevDto.level;
+      }
+
+      innDevExists.last_updated_by = user.id;
+
+      const updatedInnDev = await this._resultsInnovationsDevRepository.save(
+        innDevExists as any,
+      );
+
+      return {
+        response: updatedInnDev,
+        message: 'Innovation development updated successfully',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
   }
 }

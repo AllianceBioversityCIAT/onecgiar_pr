@@ -6,16 +6,16 @@
       <div class="choices" *ngIf="!hideOptions">
         <div
           class="choice"
-          [ngClass]="{ yes: this.value == true }"
-          *ngIf="editable ? true : !(readOnly || this.rolesSE.readOnly) || this.value == true"
-          (click)="editable ? onclickYes() : readOnly || this.rolesSE.readOnly ? null : onclickYes()">
+          [ngClass]="{ yes: this.value == true, disabled: disabled || readOnly || this.rolesSE.readOnly }"
+          *ngIf="editable ? true : !(readOnly || this.rolesSE.readOnly || disabled) || this.value == true"
+          (click)="(disabled || readOnly || this.rolesSE.readOnly) ? null : (editable ? onclickYes() : onclickYes())">
           Yes
         </div>
         <div
           class="choice"
-          [ngClass]="{ no: this.value == false }"
-          *ngIf="editable ? true : !(readOnly || this.rolesSE.readOnly) || this.value == false"
-          (click)="editable ? onClickNo() : readOnly || this.rolesSE.readOnly ? null : onClickNo()">
+          [ngClass]="{ no: this.value == false, disabled: disabled || readOnly || this.rolesSE.readOnly }"
+          *ngIf="editable ? true : !(readOnly || this.rolesSE.readOnly || disabled) || this.value == false"
+          (click)="(disabled || readOnly || this.rolesSE.readOnly) ? null : (editable ? onClickNo() : onClickNo())">
           No
         </div>
       </div>
