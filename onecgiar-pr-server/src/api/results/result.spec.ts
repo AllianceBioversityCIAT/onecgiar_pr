@@ -89,7 +89,6 @@ describe('ResultsService (unit, pure mocks)', () => {
     })),
     getResultById: jest.fn().mockImplementation(async (id: number) => {
       if (id <= 0) return null;
-      // Retornar un objeto con id como número para que funcione correctamente
       return { id: id, result_type_id: 1, status_id: 1 };
     }),
     query: jest.fn().mockResolvedValue([]),
@@ -803,7 +802,7 @@ describe('ResultsService (unit, pure mocks)', () => {
       result_name: `Result test: fail result level`,
       handler: null,
     };
-    // Make result level not found for this test
+    
     mockResultLevelRepository.findOne.mockResolvedValueOnce(null);
     const response: returnFormatService = await resultService.createOwnerResult(
       newResult,
@@ -877,7 +876,7 @@ describe('ResultsService (unit, pure mocks)', () => {
     const mySp = payload.mySciencePrograms[0];
     expect(mySp.initiativeCode).toBe('SP01');
     expect(mySp.totalResults).toBe(1);
-    expect(mySp.progress).toBe(0); // 0 porque no hay contribuciones a indicadores en el mock
+    expect(mySp.progress).toBe(0);
     expect(mySp.entityTypeCode).toBe(101);
     expect(mySp.entityTypeName).toBe('Science Program');
     expect(mySp.versions[0].totalResults).toBe(1);
@@ -1037,7 +1036,6 @@ describe('ResultsService (unit, pure mocks)', () => {
 
   it('should return all results legacy new', async () => {
     const title = 'Assessment of the pote';
-    // Prepare success path
     (mockResultRepository as any).AllResultsLegacyNewByTitle = jest
       .fn()
       .mockResolvedValue([{ id: '10' }]);
@@ -1115,7 +1113,6 @@ describe('ResultsService (unit, pure mocks)', () => {
   });
 
   it('should map geo_scope_id to 3 when result.geographic_scope_id is 3 or 4', async () => {
-    // 3 => returns 3
     (mockResultRepository.getResultById as jest.Mock).mockResolvedValueOnce({
       id: 222,
       result_type_id: 1,
@@ -1128,7 +1125,6 @@ describe('ResultsService (unit, pure mocks)', () => {
     expect(res.status).toBe(HttpStatus.OK);
     expect(res.response.geo_scope_id).toBe(3);
 
-    // 4 => maps to 3
     (mockResultRepository.getResultById as jest.Mock).mockResolvedValueOnce({
       id: 223,
       result_type_id: 1,
@@ -1372,7 +1368,6 @@ describe('ResultsService (unit, pure mocks)', () => {
     (mockResultRepository.findOne as jest.Mock).mockResolvedValueOnce(
       mockResult,
     );
-    // Mock para getResultById usado por getTocByResultV2 internamente
     (mockResultRepository.getResultById as jest.Mock).mockResolvedValueOnce({
       id: 100,
       result_type_id: 1,

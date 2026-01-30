@@ -2792,7 +2792,7 @@ export class ResultsService {
     resultId: number,
   ): Promise<ReturnResponseDto<any> | returnErrorDto> {
     try {
-      // Validate that resultId is a positive number
+
       if (!resultId || resultId <= 0) {
         return {
           response: {},
@@ -3061,7 +3061,6 @@ export class ResultsService {
         };
       }
 
-      // Validar que la justificación esté presente si es REJECT
       if (
         reviewDecisionDto.decision === ReviewDecisionEnum.REJECT &&
         !reviewDecisionDto.justification?.trim()
@@ -3110,7 +3109,6 @@ export class ResultsService {
           },
         );
 
-        // Crear el historial de revisión usando el manager de la transacción
         const reviewHistory = manager.create(ResultReviewHistory, {
           result_id: parsedResultId,
           action: reviewDecisionDto.decision as any,

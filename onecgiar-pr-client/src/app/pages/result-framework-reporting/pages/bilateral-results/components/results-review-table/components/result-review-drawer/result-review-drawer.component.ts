@@ -382,7 +382,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
         return { institution_id: institutionId, acronym, institution_name: institutionName };
       })
-      .filter((org): org is { institution_id: number; acronym: string | null; institution_name: string | null } => org !== null && org.institution_id != null && !Number.isNaN(org.institution_id));
+      .filter((org): org is { institution_id: number; acronym: string | null; institution_name: string | null } => org?.institution_id != null && !Number.isNaN(org.institution_id));
   }
 
   private executeSaveDataStandardChanges(): void {
