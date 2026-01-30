@@ -46,7 +46,10 @@ describe('ShareRequestModalComponent', () => {
       },
       dataControlSE: {
         showShareRequest: false,
-        currentResultSignal: () => of({ portfolio: 'P25' })
+        currentResultSignal: () => of({ portfolio: 'P25' }),
+        reportingCurrentPhase: {
+          portfolioId: 1
+        }
       },
       rolesSE: {
         isAdmin: true
