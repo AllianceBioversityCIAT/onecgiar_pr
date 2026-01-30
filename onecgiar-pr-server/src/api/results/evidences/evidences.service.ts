@@ -632,13 +632,11 @@ export class EvidencesService {
         };
       }
 
-      // Validar duplicados en el payload
       const duplicateCheck = this._validateDuplicateLinks(evidences);
       if (duplicateCheck) {
         return duplicateCheck;
       }
 
-      // Obtener todas las evidencias activas del resultado
       const existingEvidences = await this._evidencesRepository.find({
         where: {
           result_id: resultId,
@@ -646,19 +644,16 @@ export class EvidencesService {
         },
       });
 
-      // Extraer IDs de evidencias que vienen en el payload (solo las que tienen id)
       const payloadEvidenceIds = evidences
         .filter((e) => e.id)
         .map((e) => Number(e.id));
 
-      // Desactivar evidencias que están en BD pero no en el payload
       await this._deactivateMissingEvidences(
         existingEvidences,
         payloadEvidenceIds,
         user,
       );
 
-      // Crear nuevas evidencias que vienen sin id en el payload
       await this._createNewEvidences(evidences, resultId, user);
 
       return {
@@ -693,7 +688,6 @@ export class EvidencesService {
     user: TokenDto,
   ): Promise<void> {
     for (const existingEvidence of existingEvidences) {
-      // Si la evidencia existe en BD pero no viene en el payload, desactivarla
       if (!payloadEvidenceIds.includes(existingEvidence.id)) {
         existingEvidence.is_active = 0;
         existingEvidence.last_updated_by = user.id;
@@ -708,7 +702,6 @@ export class EvidencesService {
     user: TokenDto,
   ): Promise<void> {
     for (const evidenceDto of evidences) {
-      // Solo crear evidencias que no tienen id
       if (!evidenceDto.id) {
         await this._createNewEvidence(evidenceDto, resultId, user);
       }
@@ -720,7 +713,6 @@ export class EvidencesService {
     resultId: number,
     user: TokenDto,
   ): Promise<void> {
-    // Validar que tenga link o is_sharepoint
     const hasLink = evidenceDto.link && evidenceDto.link.trim().length > 0;
     const hasSharepoint =
       evidenceDto.is_sharepoint !== undefined &&
@@ -741,11 +733,9 @@ export class EvidencesService {
     if (hasLink) {
       newEvidence.link = await this.getHandleFromRegularLink(evidenceDto.link);
     } else {
-      // Si no hay link pero hay is_sharepoint, usar un link vacío o placeholder
       newEvidence.link = '';
     }
 
-    // Intentar encontrar knowledge product relacionado si hay link
     if (hasLink && evidenceDto.link) {
       const queryIndex = evidenceDto.link.indexOf('?');
       const linkToProcess =
@@ -769,7 +759,6 @@ export class EvidencesService {
 
     const evidenceSaved = await this._evidencesRepository.save(newEvidence);
     if (evidenceSaved?.id) {
-      // Guardar datos de SharePoint si aplica
       const evidenceForSP: EvidencesCreateInterface = {
         id: evidenceSaved.id.toString(),
         link: evidenceDto.link || '',

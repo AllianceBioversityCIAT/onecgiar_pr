@@ -28,7 +28,7 @@ export class ResultRegionsService {
           status: HttpStatus.BAD_REQUEST,
         };
       }
-      //!importante hay una tabla por cada uno pero fijo se mandara a un solo enpoint y que el haga el restos
+
       const result: Result = await this._resultRepository.getResultById(
         createResultRegionDto.result_id,
       );
