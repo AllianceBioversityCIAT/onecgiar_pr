@@ -87,7 +87,7 @@ export class ApiService {
     });
   }
 
-  GETInnovationPackageDetail() {
+  GETInnovationPackageDetail(onDetailLoaded?: () => void) {
     this.fieldsManagerSE.inIpsr.set(true);
     this.dataControlSE.currentResultSignal.set(null);
     this.resultsSE.GETInnovationPackageDetail().subscribe(({ response }) => {
@@ -112,6 +112,7 @@ export class ApiService {
       this.ipsrDataControlSE.initiative_id = response?.inititiative_id;
       this.ipsrDataControlSE.resultInnovationPhase = response?.version_id;
       this.ipsrDataControlSE.detailData = response;
+      onDetailLoaded?.();
     });
   }
 
