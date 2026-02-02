@@ -1015,9 +1015,10 @@ export class InnovationUseService {
           where: {
             result_id: resultId,
             institutions_id: partner.id,
+            is_active: true,
           },
         });
-
+        
         if (!rbi) {
           this.logger.error(
             `[savePartnerInvestment] Institution relation not found for resultId: ${resultId}, institutionId: ${partner.id}`,

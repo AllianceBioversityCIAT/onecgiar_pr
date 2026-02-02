@@ -102,7 +102,7 @@ export class SubmissionsService {
         });
         if (!template) {
           this._logger.warn(
-            'Email template email_template_roles_update not found. Skipping notification.',
+            'Email template technical_team_email not found. Skipping notification.',
           );
           return;
         }
@@ -128,7 +128,7 @@ export class SubmissionsService {
             },
             emailBody: {
               subject:
-                'PRMS – IP Support Request for Innovation Development Result',
+                `PRMS – IP Support Request for Innovation Development Result | Result Code: ${result.result_code}`,
               to: [email.email],
               cc: [],
               bcc: bccEmails.value,
