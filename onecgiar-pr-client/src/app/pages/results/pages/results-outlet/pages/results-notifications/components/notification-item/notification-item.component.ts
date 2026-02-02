@@ -134,7 +134,7 @@ export class NotificationItemComponent {
           this.api.alertsFe.show({
             id: 'noti',
             title: isAccept ? 'Request successfully accepted' : 'Request successfully rejected',
-            status: 'success'
+            status: isAccept ? 'success' : 'information'
           });
         },
         error: err => {
