@@ -127,8 +127,7 @@ export class SubmissionsService {
               name: 'PRMS Reporting Tool -',
             },
             emailBody: {
-              subject:
-                `PRMS – IP Support Request for Innovation Development Result | Result Code: ${result.result_code}`,
+              subject: `PRMS – IP Support Request for Innovation Development Result | Result Code: ${result.result_code}`,
               to: [email.email],
               cc: [],
               bcc: bccEmails.value,
