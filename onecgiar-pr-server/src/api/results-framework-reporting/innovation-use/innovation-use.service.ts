@@ -832,7 +832,7 @@ export class InnovationUseService {
           },
         },
       });
-
+      console.log(investment_partners_raw);
     return investment_partners_raw.map((item) => ({
       id: item.obj_result_institution?.obj_institutions?.id ?? null,
       kind_cash:
@@ -846,7 +846,7 @@ export class InnovationUseService {
     }));
   }
 
-  async getBilateralInnovationUseData(resultId: number) {
+  async getBilateralInnovationUseData(resultId: number): Promise<any[]> {
     try {
       const actorsData = await this.getActorsData(resultId);
       const measures = await this.getMeasuresData(resultId);
@@ -864,12 +864,16 @@ export class InnovationUseService {
 
       const investment_partners = await this.getInvestmentPartners(resultId);
 
-      return {
+      const inno_use = {
         actors: actors_current,
         organizations: organizations_current,
         measures: measures_current,
         investment_partners,
       };
+
+      return [
+        inno_use,
+      ];
     } catch (error) {
       this.logger.error(
         `Error getting bilateral innovation use data for resultId: ${resultId}`,
@@ -1076,6 +1080,7 @@ export class InnovationUseService {
           where: {
             result_id: resultId,
             institutions_id: partner.id,
+            is_active: true,
           },
         });
 

@@ -3635,13 +3635,17 @@ export class ResultsService {
       return;
     }
 
-    const resultTypeData = reviewUpdateDto.resultTypeResponse as any;
+    // resultTypeResponse puede venir como array o como objeto
+    const resultTypeResponse = reviewUpdateDto.resultTypeResponse as any;
+    const resultTypeData = Array.isArray(resultTypeResponse)
+      ? resultTypeResponse[0]
+      : resultTypeResponse;
 
     // Guardar actors, organizations y measures en la sección CURRENT
     const innovationUseGroups = {
-      actors: resultTypeData.actors ?? [],
-      organization: resultTypeData.organization ?? [],
-      measures: resultTypeData.measures ?? [],
+      actors: resultTypeData?.actors ?? [],
+      organization: resultTypeData?.organizations ?? [],
+      measures: resultTypeData?.measures ?? [],
     };
 
     await this._innovationUseService.saveAnticipatedInnoUser(
@@ -3649,11 +3653,11 @@ export class ResultsService {
       user.id,
       innovationUseGroups,
       ResultCoreInnovUseSectionEnum.CURRENT,
-      resultTypeData.innov_use_to_be_determined ?? null,
+      resultTypeData?.innov_use_to_be_determined ?? null,
     );
 
     // Guardar investment_partners
-    if (resultTypeData.investment_partners) {
+    if (resultTypeData?.investment_partners) {
       await this._innovationUseService.savePartnerInvestment(
         resultId,
         user.id,
