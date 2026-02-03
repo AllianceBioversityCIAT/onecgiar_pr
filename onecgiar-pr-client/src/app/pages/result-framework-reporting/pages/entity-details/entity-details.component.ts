@@ -19,6 +19,7 @@ import { ResultCreatorModule } from '../../../results/pages/result-creator/resul
 import { MenuItem } from 'primeng/api';
 import { BilateralResultsReviewComponent } from './components/bilateral-results-review/bilateral-results-review.component';
 import { ResultLevelService } from '../../../results/pages/result-creator/services/result-level.service';
+import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 
 @Component({
   selector: 'app-entity-details',
@@ -47,6 +48,7 @@ export class EntityDetailsComponent implements OnInit {
   api = inject(ApiService);
   entityAowService = inject(EntityAowService);
   resultLevelSE = inject(ResultLevelService);
+  private readonly resultFrameworkReportingHomeService = inject(ResultFrameworkReportingHomeService);
 
   cd = inject(ChangeDetectorRef);
 
@@ -290,6 +292,40 @@ export class EntityDetailsComponent implements OnInit {
         }
       }
     };
+  }
+
+  get entityDisplayShortName(): string {
+    const details = this.entityAowService.entityDetails();
+    if (details?.shortName) return details.shortName;
+    const entityId = this.entityAowService.entityId();
+    if (entityId === 'SGP-02' || entityId === 'SGP02') {
+      const list = this.api.dataControlSE.myInitiativesListReportingByPortfolio ?? this.api.dataControlSE.myInitiativesList ?? [];
+      let found = list.find((item: { official_code?: string }) => item?.official_code === 'SGP-02' || item?.official_code === 'SGP02');
+      if (found) {
+        const raw = found as { short_name?: string; shortName?: string; name?: string };
+        return raw?.short_name ?? raw?.shortName ?? raw?.name ?? 'No information loaded';
+      }
+      const mySPs = this.resultFrameworkReportingHomeService.mySPsList() ?? [];
+      const otherSPs = this.resultFrameworkReportingHomeService.otherSPsList() ?? [];
+      const sp = [...mySPs, ...otherSPs].find((item: { initiativeCode?: string }) => item?.initiativeCode === 'SGP-02' || item?.initiativeCode === 'SGP02');
+      if (sp) {
+        const raw = sp as { initiativeShortName?: string; initiativeName?: string };
+        return raw?.initiativeShortName ?? raw?.initiativeName ?? 'No information loaded';
+      }
+    }
+    return 'No information loaded';
+  }
+
+  get reportFormSelectedInitiativeId(): number | string | null | undefined {
+    const details = this.entityAowService.entityDetails();
+    if (details?.id != null) return details.id;
+    const entityId = this.entityAowService.entityId();
+    if (entityId === 'SGP-02' || entityId === 'SGP02') {
+      const list = this.api.dataControlSE.myInitiativesListReportingByPortfolio ?? this.api.dataControlSE.myInitiativesList ?? [];
+      const found = list.find((item: { official_code?: string; id?: number; initiative_id?: number }) => item?.official_code === 'SGP-02' || item?.official_code === 'SGP02');
+      return found ? (found.id ?? found.initiative_id) : undefined;
+    }
+    return undefined;
   }
 
   onReportRequested(item: any) {
