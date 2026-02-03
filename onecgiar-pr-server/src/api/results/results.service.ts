@@ -204,6 +204,7 @@ export class ResultsService {
     user: TokenDto,
     isAdmin?: boolean,
     versionId?: number,
+    source?: SourceEnum,
   ): Promise<returnFormatResult | returnErrorDto> {
     try {
       if (
@@ -297,7 +298,7 @@ export class ResultsService {
       }
 
       const last_code = await this._resultRepository.getLastResultCode();
-      const newResultHeader: Result = await this._resultRepository.save({
+      const saveResult: Partial<Result> = {
         created_by: user.id,
         last_updated_by: user.id,
         result_type_id: rt.id,
@@ -309,7 +310,14 @@ export class ResultsService {
         reported_year_id: year.year,
         result_level_id: rl.id,
         result_code: last_code + 1,
-      });
+      };
+
+      if (source) {
+        saveResult['source'] = source;
+      }
+
+      const newResultHeader: Result =
+        await this._resultRepository.save(saveResult);
 
       const resultByInitiative = await this._resultByInitiativesRepository.save(
         {
@@ -2353,11 +2361,25 @@ export class ResultsService {
     isAdmin?: boolean,
     versionId?: number,
   ): Promise<returnFormatResult | returnErrorDto> {
+    const initiative = await this._dataSource
+      .getRepository(ClarisaInitiative)
+      .findOne({
+        where: {
+          id: createResultDto.initiative_id,
+        },
+      });
+
+    let source: SourceEnum = null;
+    if (initiative?.official_code === 'SGP-02') {
+      source = SourceEnum.Bilateral;
+    }
+
     const result = await this.createOwnerResult(
       createResultDto,
       user,
       isAdmin,
       versionId,
+      source,
     );
 
     if (
