@@ -68,27 +68,25 @@
   }
 
   <div class="entity-details_cards">
-    @if (showBilateralResultsReview()) {
-      <div class="entity-details_card">
-        <div class="entity-details_card_header">Reporting by Theory of Change</div>
+    <div class="entity-details_card">
+      <div class="entity-details_card_header">Reporting by Theory of Change</div>
 
-        <div class="entity-details_card_content">
-          @if (entityAowService.isLoadingDetails()) {
-            @for (item of [0, 1, 2]; track $index) {
-              <p-skeleton width="100%" height="125px" />
+      <div class="entity-details_card_content">
+        @if (entityAowService.isLoadingDetails()) {
+          @for (item of [0, 1, 2]; track $index) {
+            <p-skeleton width="100%" height="125px" />
+          }
+        } @else {
+          @if (entityAowService.entityAows().length > 0) {
+            @for (item of entityAowService.entityAows(); track $index) {
+              <app-entity-aow-card [item]="item"></app-entity-aow-card>
             }
           } @else {
-            @if (entityAowService.entityAows().length > 0) {
-              @for (item of entityAowService.entityAows(); track $index) {
-                <app-entity-aow-card [item]="item"></app-entity-aow-card>
-              }
-            } @else {
-              <h1 class="entity-details_card_content_empty">No areas of work found for this science program</h1>
-            }
+            <h1 class="entity-details_card_content_empty">No areas of work found for this science program</h1>
           }
-        </div>
+        }
       </div>
-    }
+    </div>
     <div class="entity-details_card">
       <div class="entity-details_card_header">
         Reporting by Result Category
