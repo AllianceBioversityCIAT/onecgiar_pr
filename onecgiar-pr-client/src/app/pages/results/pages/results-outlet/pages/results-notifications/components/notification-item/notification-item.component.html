@@ -70,9 +70,7 @@
           <app-pr-button
             text="Reject"
             colorType="danger"
-            (click)="acceptOrReject(false)"
-            [rotating]="this.requestingReject"
-            [icon]="this.requestingReject ? 'loop' : ''"
+            (click)="showConfirmRejectDialog.set(true)"
             [verticalMargin]="0"
             [style]="{ whiteSpace: 'nowrap' }"
             [ngClass]="{ globalDisabled: invalidateRequest() }"></app-pr-button>
@@ -166,3 +164,57 @@
     </div>
   </div>
 </div>
+
+<!-- Reject contribution Dialog -->
+<p-dialog
+  appendTo="body"
+  [(visible)]="showConfirmRejectDialog"
+  [modal]="true"
+  [closeOnEscape]="true"
+  [showHeader]="false"
+  [dismissableMask]="true"
+  [draggable]="false"
+  [style]="{ padding: '0px' }"
+  styleClass="confirmation-modal reject">
+  <i class="pi pi-times modal-close-icon" (click)="showConfirmRejectDialog.set(false)"></i>
+  <div class="modal-body">
+    <div class="modal-icon reject">
+      <i class="pi pi-times-circle" style="font-size: 40px; margin-bottom: 10px"></i>
+    </div>
+    <h2 class="modal-title reject">REJECT CONTRIBUTION</h2>
+    <p class="modal-message">Are you sure that you want to reject this contribution?</p>
+
+    <p class="notification_content_body_text" style="margin-top: 10px; max-width: 500px">
+      <b>
+        {{ notification?.obj_requested_by?.first_name }} {{ notification?.obj_requested_by?.last_name }} from
+        {{ notification?.is_map_to_toc ? notification?.obj_shared_inititiative?.official_code : notification?.obj_owner_initiative?.official_code }}
+        has requested {{ notification?.is_map_to_toc ? 'contribution' : 'inclusion of' }}
+      </b>
+
+      @if (!notification?.is_map_to_toc) {
+        <b>{{ notification?.obj_shared_inititiative?.official_code }}</b>
+
+        <b> as a contributor </b>
+      }
+
+      to result
+
+      <span style="text-decoration: underline; color: var(--pr-color-black)">
+        {{ notification?.obj_result?.result_code }} - {{ notification?.obj_result?.title }}
+      </span>
+
+      @if (notification?.is_map_to_toc) {
+        <b> submitted by {{ notification?.obj_owner_initiative?.official_code }} </b>
+      }
+    </p>
+  </div>
+  <div class="modal-actions">
+    <p-button label="Cancel" size="large" (click)="showConfirmRejectDialog.set(false)" variant="outlined" [disabled]="requestingReject"></p-button>
+    <p-button
+      label="Confirm"
+      size="large"
+      (click)="acceptOrReject(false)"
+      [disabled]="invalidateRequest() || requestingReject"
+      [loading]="requestingReject"></p-button>
+  </div>
+</p-dialog>
