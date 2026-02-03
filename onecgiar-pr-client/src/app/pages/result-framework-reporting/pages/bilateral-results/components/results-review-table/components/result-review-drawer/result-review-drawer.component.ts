@@ -33,6 +33,7 @@ import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom
 import { CentersService } from '../../../../../../../../shared/services/global/centers.service';
 import { InstitutionsService } from '../../../../../../../../shared/services/global/institutions.service';
 import { RdContributorsAndPartnersModule } from '../../../../../../../../pages/results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.module';
+import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
   selector: 'app-result-review-drawer',
@@ -51,7 +52,8 @@ import { RdContributorsAndPartnersModule } from '../../../../../../../../pages/r
     InnovationUseContentComponent,
     SaveChangesJustificationDialogComponent,
     CustomFieldsModule,
-    RdContributorsAndPartnersModule
+    RdContributorsAndPartnersModule,
+    TooltipModule
   ],
   templateUrl: './result-review-drawer.component.html',
   styleUrl: './result-review-drawer.component.scss',
@@ -152,6 +154,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   showConfirmApproveDialog = signal<boolean>(false);
   showConfirmRejectDialog = signal<boolean>(false);
   showConfirmSaveChangesDialog = signal<boolean>(false);
+  isToCCompleted = signal<boolean>(false);
 
   canReviewResults = computed(() => {
     if (this.api.rolesSE.isAdmin) {
@@ -167,6 +170,27 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     const statusId = this.resultDetail()?.commonFields?.status_id;
     return statusId === '5';
   });
+
+  validateIsToCCompleted(): void {
+    if (
+      this.tocInitiative?.planned_result !== null &&
+      this.tocInitiative?.planned_result !== undefined &&
+      this.tocInitiative?.result_toc_results.length > 0 &&
+      this.tocInitiative?.result_toc_results.every((tab: any) => {
+        if (tab.toc_level_id === null || tab.toc_level_id === undefined) return false;
+        if (tab.toc_result_id === null || tab.toc_result_id === undefined) return false;
+
+        if (this.tocInitiative.planned_result === true && tab.indicators.length > 0) {
+          if (tab.indicators?.[0]?.toc_results_indicator_id === null || tab.indicators?.[0]?.toc_results_indicator_id === undefined) return false;
+        }
+        return true;
+      })
+    ) {
+      this.isToCCompleted.set(true);
+    } else {
+      this.isToCCompleted.set(false);
+    }
+  }
 
   getTocMetadata(): any {
     const detail = this.resultDetail();
@@ -334,6 +358,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         this.saveChangesType = null;
         this.isSaving.set(false);
         this.cdr.markForCheck();
+        this.validateIsToCCompleted();
       },
       error: err => {
         console.error('Error saving TOC metadata:', err);
@@ -342,6 +367,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         this.saveChangesJustification = '';
         this.saveChangesType = null;
         this.cdr.markForCheck();
+        this.validateIsToCCompleted();
       }
     });
   }
@@ -1030,6 +1056,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
             }
 
             this.tocInitiative = { ...this.tocInitiative, ...tocInitiative };
+            this.validateIsToCCompleted();
             setTimeout(() => {
               this.cdr.markForCheck();
             }, 0);
