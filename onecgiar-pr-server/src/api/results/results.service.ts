@@ -2792,7 +2792,6 @@ export class ResultsService {
     resultId: number,
   ): Promise<ReturnResponseDto<any> | returnErrorDto> {
     try {
-
       if (!resultId || resultId <= 0) {
         return {
           response: {},

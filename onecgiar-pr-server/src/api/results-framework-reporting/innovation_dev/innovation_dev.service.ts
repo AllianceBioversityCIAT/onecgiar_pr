@@ -467,9 +467,7 @@ export class InnovationDevService {
         return;
       }
 
-      const existingActiveAnswer = activeAnswerMap.get(
-        data.result_question_id,
-      );
+      const existingActiveAnswer = activeAnswerMap.get(data.result_question_id);
 
       if (existingActiveAnswer) {
         await this._updateExistingActiveAnswer(
