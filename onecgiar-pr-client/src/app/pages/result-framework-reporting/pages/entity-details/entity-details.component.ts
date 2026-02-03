@@ -300,7 +300,7 @@ export class EntityDetailsComponent implements OnInit {
     const entityId = this.entityAowService.entityId();
     if (entityId === 'SGP-02' || entityId === 'SGP02') {
       const list = this.api.dataControlSE.myInitiativesListReportingByPortfolio ?? this.api.dataControlSE.myInitiativesList ?? [];
-      let found = list.find((item: { official_code?: string }) => item?.official_code === 'SGP-02' || item?.official_code === 'SGP02');
+      const found = list.find((item: { official_code?: string }) => item?.official_code === 'SGP-02' || item?.official_code === 'SGP02');
       if (found) {
         const raw = found as { short_name?: string; shortName?: string; name?: string };
         return raw?.short_name ?? raw?.shortName ?? raw?.name ?? 'No information loaded';

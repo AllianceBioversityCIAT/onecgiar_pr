@@ -110,7 +110,7 @@ export class EntityAowService {
     if (this.isSgp02(id)) {
       this.api.resultsSE.GET_IndicatorContributionSummary(id).subscribe({
         next: ({ response }) => {
-          let initiative = this.getSgp02InitiativeFromList(id);
+          const initiative = this.getSgp02InitiativeFromList(id);
           if (initiative) {
             this.entityDetails.set(initiative);
           } else {
