@@ -174,7 +174,6 @@ export class EntityDetailsComponent implements OnInit {
   chartOptionsOutputs = computed<ChartOptions<'bar'>>(() => this.buildChartOptions(this.dataOutputs()));
   chartOptionsOutcomes = computed<ChartOptions<'bar'>>(() => this.buildChartOptions(this.dataOutcomes()));
 
-  /** Hide bilateral results review for initiative 41 (SGP-02 / AVISA). Use entityId (code) as it is always available from the route. */
   showBilateralResultsReview = computed(() => this.entityAowService.entityId() !== 'SGP-02');
 
   groupedIndicatorSummaries = computed(() => {
@@ -199,13 +198,16 @@ export class EntityDetailsComponent implements OnInit {
   });
 
   ngOnInit() {
+    this.initChart();
     this.route.params.subscribe(params => {
       this.entityAowService.resetDashboardData();
-      this.entityAowService.entityId.set(params['entityId']);
+      const entityId = params['entityId'];
+      this.entityAowService.entityId.set(entityId);
+      if (entityId) {
+        this.entityAowService.getAllDetailsData(entityId);
+        this.entityAowService.getDashboardData();
+      }
     });
-    this.entityAowService.getAllDetailsData();
-    this.entityAowService.getDashboardData();
-    this.initChart();
   }
 
   platformId = inject(PLATFORM_ID);

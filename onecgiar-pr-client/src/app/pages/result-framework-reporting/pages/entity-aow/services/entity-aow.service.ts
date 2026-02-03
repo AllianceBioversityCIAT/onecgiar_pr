@@ -57,17 +57,41 @@ export class EntityAowService {
     return !!found;
   });
 
-  getAllDetailsData() {
+  private isSgp02(entityId: string): boolean {
+    return entityId === 'SGP-02' || entityId === 'SGP02';
+  }
+
+  getAllDetailsData(entityId?: string) {
+    const id = entityId ?? this.entityId();
+    if (!id) {
+      this.isLoadingDetails.set(false);
+      return;
+    }
     this.isLoadingDetails.set(true);
 
+    if (this.isSgp02(id)) {
+      this.api.resultsSE.GET_IndicatorContributionSummary(id).subscribe({
+        next: ({ response }) => {
+          this.entityDetails.set({} as Initiative);
+          this.entityAows.set([]);
+          this.indicatorSummaries.set(response?.totalsByType ?? []);
+          this.isLoadingDetails.set(false);
+        },
+        error: () => {
+          this.indicatorSummaries.set([]);
+          this.isLoadingDetails.set(false);
+        }
+      });
+      return;
+    }
+
     forkJoin({
-      clarisaGlobalUnits: this.api.resultsSE.GET_ClarisaGlobalUnits(this.entityId()),
-      indicatorSummaries: this.api.resultsSE.GET_IndicatorContributionSummary(this.entityId())
+      clarisaGlobalUnits: this.api.resultsSE.GET_ClarisaGlobalUnits(id),
+      indicatorSummaries: this.api.resultsSE.GET_IndicatorContributionSummary(id)
     }).subscribe({
       next: ({ clarisaGlobalUnits, indicatorSummaries }) => {
         this.entityDetails.set(clarisaGlobalUnits?.response?.initiative);
         this.entityAows.set(clarisaGlobalUnits?.response?.units ?? []);
-
         this.indicatorSummaries.set(indicatorSummaries?.response?.totalsByType ?? []);
 
         if (this.entityAows().length) {
