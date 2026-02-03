@@ -802,7 +802,7 @@ describe('ResultsService (unit, pure mocks)', () => {
       result_name: `Result test: fail result level`,
       handler: null,
     };
-    
+
     mockResultLevelRepository.findOne.mockResolvedValueOnce(null);
     const response: returnFormatService = await resultService.createOwnerResult(
       newResult,
