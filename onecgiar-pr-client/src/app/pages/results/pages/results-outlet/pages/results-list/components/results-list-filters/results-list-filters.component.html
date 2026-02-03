@@ -181,6 +181,22 @@
             [maxSelectedLabels]="3"
             [style]="{ width: '100%' }" />
         </div>
+
+        <div>
+          <app-pr-field-header
+            label="Funding Source"
+            labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
+            [required]="false"></app-pr-field-header>
+
+          <p-multiselect
+            [filter]="false"
+            [showHeader]="false"
+            [options]="this.resultsListFilterSE.fundingSourceOptions()"
+            [(ngModel)]="tempSelectedFundingSource"
+            optionLabel="name"
+            placeholder="Select funding source"
+            [style]="{ width: '100%' }" />
+        </div>
       </div>
     </div>
 

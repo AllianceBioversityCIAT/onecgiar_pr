@@ -6,12 +6,14 @@ import { FilterNotificationByPhasePipe } from '../../pipes/filter-notification-b
 import { FilterNotificationByInitiativePipe } from '../../pipes/filter-notification-by-initiative.pipe';
 import { FilterNotificationBySearchPipe } from '../../pipes/filter-notification-by-search.pipe';
 import { FormatTimeAgoPipe } from '../../../../../../../../shared/pipes/format-time-ago/format-time-ago.pipe';
+import { DialogModule } from 'primeng/dialog';
+import { ButtonModule } from 'primeng/button';
 
 const modules = [NotificationItemComponent, FilterNotificationByPhasePipe, FilterNotificationByInitiativePipe, FilterNotificationBySearchPipe];
 
 @NgModule({
   declarations: [...modules],
-  imports: [CommonModule, CustomFieldsModule, FormatTimeAgoPipe],
+  imports: [CommonModule, CustomFieldsModule, FormatTimeAgoPipe, DialogModule, ButtonModule],
   exports: [...modules]
 })
 export class NotificationItemModule {}

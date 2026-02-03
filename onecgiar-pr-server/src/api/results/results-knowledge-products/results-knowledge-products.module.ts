@@ -56,6 +56,8 @@ import { ImpactAreasScoresComponentsModule } from '../impact_areas_scores_compon
 import { NotificationModule } from '../../notification/notification.module';
 import { AoWBilateralRepository } from '../results-toc-results/repositories/aow-bilateral.repository';
 import { ResultImpactAreaScoresModule } from '../../result-impact-area-scores/result-impact-area-scores.module';
+import { ResultsTocResultsModule } from '../results-toc-results/results-toc-results.module';
+import { ResultsByInstitutionsModule } from '../results_by_institutions/results_by_institutions.module';
 
 @Module({
   imports: [
@@ -78,6 +80,8 @@ import { ResultImpactAreaScoresModule } from '../../result-impact-area-scores/re
     ImpactAreasScoresComponentsModule,
     NotificationModule,
     ResultImpactAreaScoresModule,
+    ResultsTocResultsModule,
+    ResultsByInstitutionsModule,
   ],
   controllers: [ResultsKnowledgeProductsController],
   providers: [

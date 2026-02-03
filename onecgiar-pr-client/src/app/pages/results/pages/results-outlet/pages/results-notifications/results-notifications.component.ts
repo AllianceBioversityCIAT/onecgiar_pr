@@ -17,10 +17,10 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
 
   constructor(
     public api: ApiService,
-    private shareRequestModalSE: ShareRequestModalService,
+    private readonly shareRequestModalSE: ShareRequestModalService,
     public resultsNotificationsSE: ResultsNotificationsService,
     public router: Router,
-    private activatedRoute: ActivatedRoute
+    private readonly activatedRoute: ActivatedRoute
   ) {}
 
   ngOnInit(): void {

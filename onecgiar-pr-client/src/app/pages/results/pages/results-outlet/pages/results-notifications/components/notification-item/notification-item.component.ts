@@ -1,13 +1,16 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, signal } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { ShareRequestModalService } from '../../../../../result-detail/components/share-request-modal/share-request-modal.service';
 import { RetrieveModalService } from '../../../../../result-detail/components/retrieve-modal/retrieve-modal.service';
+import { ResultLevelService } from '../../../../../result-creator/services/result-level.service';
+import { FieldsManagerService } from '../../../../../../../../shared/services/fields-manager.service';
+import { finalize } from 'rxjs/operators';
 
 @Component({
-    selector: 'app-notification-item',
-    templateUrl: './notification-item.component.html',
-    styleUrls: ['./notification-item.component.scss'],
-    standalone: false
+  selector: 'app-notification-item',
+  templateUrl: './notification-item.component.html',
+  styleUrls: ['./notification-item.component.scss'],
+  standalone: false
 })
 export class NotificationItemComponent {
   @Input() notification: any;
@@ -15,11 +18,14 @@ export class NotificationItemComponent {
   @Output() requestEvent = new EventEmitter<any>();
   requestingAccept = false;
   requestingReject = false;
+  showConfirmRejectDialog = signal(false);
 
   constructor(
     public api: ApiService,
+    public resultLevelSE: ResultLevelService,
     private shareRequestModalSE: ShareRequestModalService,
-    private retrieveModalSE: RetrieveModalService
+    private retrieveModalSE: RetrieveModalService,
+    private readonly fieldsManagerSE: FieldsManagerService
   ) {}
 
   invalidateRequest() {
@@ -47,8 +53,21 @@ export class NotificationItemComponent {
       submitter: `${obj_owner_initiative?.official_code} - ${obj_owner_initiative?.name}`,
       result_level_id: obj_result?.obj_result_level?.id,
       result_type: obj_result?.obj_result_type?.name,
-      initiative_id: obj_owner_initiative?.id
+      initiative_id: obj_owner_initiative?.id,
+      portfolio: obj_result?.obj_version?.obj_portfolio?.acronym
     };
+
+    this.api.dataControlSE.currentResultSignal.set({
+      ...this.api.dataControlSE.currentResultSignal(),
+      title: obj_result?.title,
+      submitter: `${obj_owner_initiative?.official_code} - ${obj_owner_initiative?.name}`,
+      result_level_id: obj_result?.obj_result_level?.id,
+      result_type: obj_result?.obj_result_type?.name,
+      initiative_id: obj_owner_initiative?.id,
+      portfolio: obj_result?.obj_version?.obj_portfolio?.acronym
+    });
+
+    this.resultLevelSE.currentResultLevelIdSignal.set(obj_result?.obj_result_level?.id);
 
     this.retrieveModalSE = {
       ...this.retrieveModalSE,
@@ -100,24 +119,28 @@ export class NotificationItemComponent {
     if (isAccept) this.requestingAccept = true;
     else this.requestingReject = true;
 
-    this.api.resultsSE.PATCH_updateRequest(body).subscribe({
-      next: resp => {
-        this.requestingAccept = false;
-        this.requestingReject = false;
-        this.api.alertsFe.show({
-          id: 'noti',
-          title: isAccept ? 'Request successfully accepted' : 'Request successfully rejected',
-          status: 'success'
-        });
-        this.requestEvent.emit();
-      },
-      error: err => {
-        this.requestingAccept = false;
-        this.requestingReject = false;
-        console.error(err);
-        this.api.alertsFe.show({ id: 'noti-error', title: 'Error when requesting', description: '', status: 'error' });
-        this.requestEvent.emit();
-      }
-    });
+    this.api.resultsSE
+      .PATCH_updateRequest(body, this.fieldsManagerSE.isP25())
+      .pipe(
+        finalize(() => {
+          this.requestingAccept = false;
+          this.requestingReject = false;
+          this.showConfirmRejectDialog.set(false);
+          this.requestEvent.emit();
+        })
+      )
+      .subscribe({
+        next: () => {
+          this.api.alertsFe.show({
+            id: 'noti',
+            title: isAccept ? 'Request successfully accepted' : 'Request successfully rejected',
+            status: isAccept ? 'success' : 'information'
+          });
+        },
+        error: err => {
+          console.error(err);
+          this.api.alertsFe.show({ id: 'noti-error', title: 'Error when requesting', description: '', status: 'error' });
+        }
+      });
   }
 }

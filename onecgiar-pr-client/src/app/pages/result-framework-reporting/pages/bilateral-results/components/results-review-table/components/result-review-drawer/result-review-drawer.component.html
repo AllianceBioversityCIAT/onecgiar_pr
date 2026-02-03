@@ -1,0 +1,392 @@
+<p-drawer [(visible)]="visible" [position]="drawerFullScreen() ? 'full' : 'right'" [closable]="false" [style]="{ minWidth: '65vw' }">
+  <ng-template #header>
+    <div class="result-review-drawer-header">
+      <p class="result-review-drawer-header_entity">
+        <span class="result-review-drawer-header_entity_acronym">{{ resultDetail()?.commonFields?.center_name ?? 'Center - Not specified' }}</span>
+        <span class="result-review-drawer-header_separator">|</span>
+        <span class="result-review-drawer-header_entity_code">{{
+          resultDetail()?.commonFields?.project_name ?? 'Bilateral Project - Not specified'
+        }}</span>
+      </p>
+
+      <div class="result-review-drawer-header_icons">
+        <i
+          class="pi {{
+            drawerFullScreen() ? 'pi-arrow-down-left-and-arrow-up-right-to-center' : 'pi-arrow-up-right-and-arrow-down-left-from-center'
+          }}"
+          style="font-size: 15px; cursor: pointer"
+          (click)="toggleFullScreen()"></i>
+
+        <i class="pi pi-times" style="font-size: 16px; cursor: pointer" (click)="closeDrawer()"></i>
+      </div>
+    </div>
+  </ng-template>
+
+  <div class="result-review-drawer-content">
+    @let fields = this.resultDetail();
+    <!-- Result Header Info -->
+    <div class="result-review-drawer-content_header">
+      <p class="result-review-drawer-content_title">
+        {{ fields?.commonFields?.result_title }}
+      </p>
+
+      <div class="result-review-drawer-content_meta">
+    
+        <span class="result-review-drawer-content_meta_item">
+          <i class="pi pi-tag"></i>
+          Code {{ fields?.commonFields?.result_code }}
+        </span>
+
+        <span class="result-review-drawer-content_meta_separator">•</span>
+
+        <span class="result-review-drawer-content_meta_item">
+          <i class="pi pi-folder-open"></i>
+          {{ fields?.commonFields?.result_category }}
+        </span>
+
+        <span class="result-review-drawer-content_meta_separator">•</span>
+
+        <span class="result-review-drawer-content_meta_item">
+          <i class="pi pi-user"></i>
+          Submitted by {{ fields?.commonFields?.submitter_name }}
+        </span>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3 class="form-section_title">TOC ALIGNMENT</h3>
+      
+      <app-pr-yes-or-not
+        label="Does this result align with the Program's planned TOC indicators?"
+        [required]="true"
+        [ngModel]="tocInitiative?.planned_result"
+        (ngModelChange)="onPlannedResultChangeValue($event)"
+        (selectOptionEvent)="onPlannedResultChange()"
+        [disabled]="!canEditInDrawer()">
+      </app-pr-yes-or-not>
+
+
+      @if (tocInitiative?.planned_result !== null) {
+        @if (tocConsumed()) {
+          <div class="toc-multiple-wps-in-drawer" style="z-index: 1; position: relative">
+            <app-cp-multiple-wps
+              [editable]="canEditInDrawer()"
+              [initiative]="tocInitiative"
+              [initiativeId]="initiativeIdSignal()"
+              [resultLevelId]="fields?.commonFields?.result_level_id"
+              [isIpsr]="false"
+              [isContributor]="false"
+              [isNotifications]="false"
+              [isUnplanned]="!tocInitiative.planned_result"
+              [showMultipleWPsContent]="tocConsumed()"
+              [hidden]="true"
+              [forceP25]="true">
+            </app-cp-multiple-wps>
+          </div>
+        }
+      }
+      @if (canEditInDrawer()) {
+      <div style="margin-top: 20px; display: flex; justify-content: flex-end">
+        <p-button
+          label="Save changes"
+          icon="pi pi-save"
+          [disabled]="tocInitiative?.planned_result === undefined || !canEditInDrawer()"
+          (onClick)="onSaveTocChanges()"
+          styleClass="p-button-primary">
+        </p-button>
+      </div>
+      }
+    </div>
+
+    @if (fields?.commonFields) {
+    <div class="form-section">
+      <h3 class="form-section_title">DATA STANDARDS</h3>
+
+      <app-pr-textarea
+        label="Result Description"
+        placeholder="Enter text"
+        [required]="false"
+        [(ngModel)]="fields.commonFields.result_description"
+        [disabled]="!canEditInDrawer()">
+      </app-pr-textarea>
+
+      <hr class="form-section_separator" />
+
+      <h4 class="pr-h4 font-weight-600 text-black">Geographic Location</h4>
+
+      @if (fields?.geographicScope) {
+        <app-geoscope-management
+          label="What is the main geographic focus of the Output?"
+          [body]="fields.geographicScope"
+          [readOnly]="!canEditInDrawer()"
+          module="reporting">
+        </app-geoscope-management>
+
+        @if (fields.geographicScope.geo_scope_id && fields.geographicScope.geo_scope_id !== 1 && fields.geographicScope.geo_scope_id !== 50) {
+          <br />
+          <app-pr-radio-button
+            [options]="[
+              { value: true, label: 'Yes' },
+              { value: false, label: 'No' }
+            ]"
+            optionLabel="label"
+            optionValue="value"
+            label="Are there any regions that you wish to specify for this Output?"
+            [(ngModel)]="fields.geographicScope.has_extra_geo_scope"
+            [disabled]="!canEditInDrawer()">
+          </app-pr-radio-button>
+
+          @if (fields.geographicScope.has_extra_geo_scope) {
+            <app-geoscope-management
+              label="What is the geographic scope where there may be potential impact in other geographic areas?"
+              [body]="{
+                geo_scope_id: fields.geographicScope.extra_geo_scope_id,
+                regions: fields.geographicScope.extra_regions || [],
+                countries: fields.geographicScope.extra_countries || [],
+                has_regions: fields.geographicScope.has_extra_regions,
+                has_countries: fields.geographicScope.has_extra_countries
+              }"
+              [readOnly]="!canEditInDrawer()"
+              [hideTobeDetermined]="true"
+              module="reporting">
+            </app-geoscope-management>
+          }
+        }
+      }
+
+      <hr class="form-section_separator" />
+
+      <app-pr-multi-select
+        [options]="centersSE.centersList"
+        label="Contributing CGIAR Centers"
+        selectedLabel="Center(s) selected"
+        selectedOptionLabel="full_name"
+        optionLabel="full_name"
+        optionValue="code"
+        [required]="false"
+        [(ngModel)]="fields.contributingCenters"
+        placeholder="Select center(s)"
+        [readOnly]="!canEditInDrawer()">
+      </app-pr-multi-select>
+
+      <app-pr-multi-select
+        [options]="clarisaProjectsList()"
+        [(ngModel)]="fields.contributingProjects"
+        [required]="false"
+        optionLabel="fullName"
+        optionValue="project_id"
+        label="Contributing Bilateral Projects"
+        selectedLabel="Projects selected"
+        selectedOptionLabel="fullName"
+        placeholder="Select project"
+        [readOnly]="!canEditInDrawer()">
+      </app-pr-multi-select>
+
+      <!-- Contributing Science Programs - Temporarily commented, showing read-only primary initiatives -->
+      <div style="margin-bottom: 16px;">
+        <app-pr-field-header
+          [label]="'Primary Contributing Science Program'"
+          [required]="false"
+          [showDescriptionLabel]="true">
+        </app-pr-field-header>
+        @if (disabledContributingInitiatives() && disabledContributingInitiatives().length > 0) {
+          <div class="readonly-chips-container">
+            @for (initiative of disabledContributingInitiatives(); track initiative.id || initiative.official_code) {
+              <span class="readonly-chip">{{ initiative.official_code }} - {{ initiative.initiative_name || initiative.short_name || initiative.name }}</span>
+            }
+          </div>
+        } @else {
+          <div class="readonly-chips-container">
+            <span class="readonly-chip" style="font-style: italic; color: var(--pr-color-accents-6);">No primary initiatives available</span>
+          </div>
+        }
+      </div>
+      
+      <app-pr-multi-select
+        [options]="contributingInitiativesList()"
+        label="Contributing Science Programs"
+        optionLabel="full_name"
+        optionValue="id"
+        [required]="false"
+        selectedLabel="Science Programs selected"
+        selectedOptionLabel="full_name"
+        [disableOptions]="disabledContributingInitiatives()"
+        [displayLabelFormatter]="contributingInitiativesFormatter"
+        [(ngModel)]="fields.contributingInitiatives"
+        placeholder="Select Science Programs"
+        [readOnly]="!canEditInDrawer()">
+      </app-pr-multi-select>
+
+      <hr class="form-section_separator" />
+
+      <app-pr-multi-select
+        [options]="institutionsSE.institutionsWithoutCentersListPartners"
+        label="Partners"
+        selectedLabel="Partner(s) selected"
+        selectedOptionLabel="institutions_name"
+        optionLabel="full_name"
+        optionValue="institutions_id"
+        [required]="false"
+        [(ngModel)]="fields.contributingInstitutions"
+        placeholder="Select partner"
+        [readOnly]="!canEditInDrawer()">
+      </app-pr-multi-select>
+
+      <hr class="form-section_separator" />
+
+      @if (canEditInDrawer()) {
+      <app-pr-input
+        label="Evidence"
+        placeholder="Paste the link"
+        type="link"
+        [required]="false"
+        [(ngModel)]="evidenceLinkInput"
+        (keyup.enter)="addEvidenceLink()"
+        [disabled]="!canEditInDrawer()">
+      </app-pr-input>
+      }
+
+      @if (fields?.evidence?.length) {
+        <div class="evidence-chips-container" style="margin-top: 8px;">
+          <p style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">Evidences links</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+            @for (evidence of fields.evidence; track $index) {
+              <span class="evidence-chip" style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; background-color: #f3f4f6; border-radius: 16px; font-size: 14px; max-width: 100%;">
+                <a [href]="evidence.link" target="_blank" style="color: #5569dd; text-decoration: none; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; max-width: 400px; word-break: break-word;">{{ evidence.link }}</a>
+               
+                @if (canEditInDrawer()) {
+                <i class="pi pi-times" style="cursor: pointer; font-size: 12px; color: #6b7280; flex-shrink: 0;" [style.cursor]="canEditInDrawer() ? 'pointer' : 'not-allowed'" [style.opacity]="canEditInDrawer() ? '1' : '0.5'" (click)="canEditInDrawer() ? removeEvidenceLink($index) : null"></i>
+                }
+              </span>
+            }
+          </div>
+        </div>
+      }
+
+      @if (
+        fields?.commonFields?.result_type_id === 1 ||
+        fields?.commonFields?.result_type_id === 5 ||
+        fields?.commonFields?.result_type_id === 6 ||
+        fields?.commonFields?.result_type_id === 7
+      ) {
+        <hr class="form-section_separator" />
+        <br />
+        <h3 class="form-section_title">{{ fields?.commonFields?.result_category }}</h3>
+
+        @switch (fields?.commonFields?.result_type_id) {
+          @case (1) {
+            <app-policy-change-content [resultDetail]="resultDetail()" [disabled]="!canEditInDrawer()"></app-policy-change-content>
+          }
+          @case (5) {
+            <app-cap-sharing-content [resultDetail]="resultDetail()" [disabled]="!canEditInDrawer()"></app-cap-sharing-content>
+          }
+          @case (6) {
+            <app-kp-content [resultDetail]="resultDetail()"></app-kp-content>
+          }
+          @case (7) {
+            <app-inno-dev-content [resultDetail]="resultDetail()" [disabled]="!canEditInDrawer()"></app-inno-dev-content>
+          }
+        }
+      }
+
+      @if (canEditInDrawer()) {
+      <div style="margin-top: 20px; display: flex; justify-content: flex-end">
+        <p-button
+          label="Save changes"
+          icon="pi pi-save"
+          [disabled]="!canEditInDrawer()"
+          (onClick)="onSaveDataStandardChanges()"
+          styleClass="p-button-primary">
+        </p-button>
+      </div>
+      }
+    </div>
+  }
+  </div>
+
+  <!-- Footer Actions -->
+  @if (canEditInDrawer() && resultToReview()?.status_name === 'Pending Review') {
+    <ng-template #footer>
+      <div class="result-review-drawer-footer">
+        <p-button label="APPROVE" styleClass="approve-button" (click)="onApprove()" icon="pi pi-check-circle" variant="outlined" size="large" />
+        <p-button label="REJECT" styleClass="reject-button" (click)="onReject()" icon="pi pi-times-circle" variant="outlined" size="large" />
+      </div>
+    </ng-template>
+  }
+</p-drawer>
+
+<!-- Confirm Approve Dialog -->
+<p-dialog
+  appendTo="body"
+  [(visible)]="showConfirmApproveDialog"
+  [modal]="true"
+  [closeOnEscape]="true"
+  [showHeader]="false"
+  [dismissableMask]="true"
+  [draggable]="false"
+  [style]="{ padding: '0px' }"
+  styleClass="confirmation-modal approve">
+  <i class="pi pi-times modal-close-icon" (click)="cancelApprove()"></i>
+  <div class="modal-body">
+    <div class="modal-icon approve">
+      <i class="pi pi-check"></i>
+    </div>
+
+    <h2 class="modal-title approve">APPROVE RESULT – {{ resultToReview()?.result_code }}</h2>
+    <p class="modal-message">Status will be changed to "Approved", and result will be submitted.</p>
+  </div>
+
+  <div class="modal-actions">
+    <p-button label="Cancel" size="large" (click)="cancelApprove()" [disabled]="isSaving()" variant="outlined"></p-button>
+    <p-button label="Confirm" size="large" (click)="confirmApprove()" [disabled]="isSaving()" [loading]="isSaving()"></p-button>
+  </div>
+</p-dialog>
+
+<!-- Reject Justification Dialog -->
+<p-dialog
+  appendTo="body"
+  [(visible)]="showConfirmRejectDialog"
+  [modal]="true"
+  [closeOnEscape]="true"
+  [showHeader]="false"
+  [dismissableMask]="true"
+  [draggable]="false"
+  [style]="{ padding: '0px' }"
+  styleClass="confirmation-modal reject">
+  <i class="pi pi-times modal-close-icon" (click)="cancelReject()"></i>
+  <div class="modal-body">
+    <div class="modal-icon reject">
+      <i class="pi pi-times"></i>
+    </div>
+    <h2 class="modal-title reject">REJECT RESULT – {{ resultToReview()?.result_code }}</h2>
+    <p class="modal-message">Please provide a detailed justification for rejecting this result.</p>
+    <div class="modal-field">
+      <label class="modal-label required" for="rejectJustification">Justification</label>
+      <textarea
+        pInputTextarea
+        [(ngModel)]="rejectJustification"
+        id="rejectJustification"
+        [rows]="4"
+        placeholder="Please explain why this result is being rejected..."></textarea>
+    </div>
+  </div>
+  <div class="modal-actions">
+    <p-button label="Cancel" size="large" (click)="cancelReject()" [disabled]="isSaving()" variant="outlined"></p-button>
+    <p-button
+      label="Confirm"
+      size="large"
+      (click)="confirmReject()"
+      [disabled]="!rejectJustification.trim() || isSaving()"
+      [loading]="isSaving()"></p-button>
+  </div>
+</p-dialog>
+
+<!-- Save Changes Justification Dialog -->
+<app-save-changes-justification-dialog
+  [(visible)]="showConfirmSaveChangesDialog"
+  [resultCode]="resultToReview()?.result_code || ''"
+  [isSaving]="isSaving()"
+  [(justification)]="saveChangesJustification"
+  (cancelEvent)="cancelSaveChanges()"
+  (confirm)="confirmSaveChanges($event)">
+</app-save-changes-justification-dialog>

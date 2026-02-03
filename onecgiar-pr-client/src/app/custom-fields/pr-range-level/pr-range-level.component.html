@@ -1,11 +1,11 @@
-<div class="local_container">
+<div class="local_container" [ngClass]="{ 'pr-range-level--disabled': disabled }">
   <div class="line">
     <div
       class="circle"
       [ngClass]="{ active: (options ? item[optionValue] : item) == this.value }"
       #circle
       *ngFor="let item of options ? options : sizeArray; let i = index"
-      (click)="onSelectLevel(options ? item[optionValue] : item, circle)"
+      (click)="disabled ? null : onSelectLevel(options ? item[optionValue] : item, circle)"
       (mouseenter)="itemTitle || itemDescription ? this.hoverData.handleMouseEnter(item, i) : null"
       (mouseleave)="itemTitle || itemDescription ? this.hoverData.handleMouseLeave() : null">
       {{ options ? i : item }}
