@@ -202,6 +202,43 @@ export interface BilateralEvidence {
   link: string;
 }
 
+export interface BilateralInnovationUseResponse {
+  actors?: BilateralInnovationUseActor[];
+  organizations?: any[];
+  measures?: BilateralInnovationUseMeasure[];
+  investment_partners?: BilateralInnovationUseInvestmentPartner[];
+}
+
+export interface BilateralInnovationUseActor {
+  is_active?: boolean;
+  result_actors_id?: string;
+  women?: number | string | null;
+  women_youth?: number | string | null;
+  women_non_youth?: number | string | null;
+  men?: number | string | null;
+  men_youth?: number | string | null;
+  men_non_youth?: number | string | null;
+  other_actor_type?: string | null;
+  sex_and_age_disaggregation?: boolean;
+  how_many?: number | string | null;
+  actor_type_id?: string | number | null;
+  obj_actor_type?: { actor_type_id: string | number; name: string };
+}
+
+export interface BilateralInnovationUseMeasure {
+  is_active?: boolean;
+  result_ip_measure_id?: string;
+  unit_of_measure?: string;
+  quantity?: number | null;
+}
+
+export interface BilateralInnovationUseInvestmentPartner {
+  id?: number;
+  name?: string;
+  kind_cash?: number | null;
+  is_determined?: boolean | null;
+}
+
 export interface BilateralResultTypeResponse {
   metadata: BilateralResultTypeMetadata[];
   source: string;
