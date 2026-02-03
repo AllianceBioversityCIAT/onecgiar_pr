@@ -445,28 +445,23 @@ export class InnovationDevService {
         return;
       }
 
-      const existingAnswer = await this._resultAnswerRepository.findOne({
+      const existingActiveAnswer = await this._resultAnswerRepository.findOne({
         where: {
           result_id: resultId,
           result_question_id: data.result_question_id,
+          is_active: true,
         },
       });
 
-      if (existingAnswer) {
-        existingAnswer.answer_boolean = data.answer_boolean;
-        existingAnswer.answer_text = data.answer_text ? data.answer_text : null;
-        existingAnswer.last_updated_by = user;
-        await this._resultAnswerRepository.save(existingAnswer);
+      if (existingActiveAnswer) {
+        await this._updateExistingActiveAnswer(
+          existingActiveAnswer,
+          data,
+          resultId,
+          user,
+        );
       } else {
-        const newAnswer = new ResultAnswer();
-        newAnswer.result_question_id = data.result_question_id;
-        newAnswer.answer_boolean = data.answer_boolean;
-        newAnswer.answer_text = data.answer_text ? data.answer_text : null;
-        newAnswer.result_id = resultId;
-        newAnswer.created_by = user;
-        newAnswer.last_updated_by = user;
-
-        await this._resultAnswerRepository.save(newAnswer);
+        await this._createNewAnswer(data, resultId, user);
       }
     };
 
@@ -476,6 +471,87 @@ export class InnovationDevService {
       for (const subOptionData of optionData.subOptions ?? []) {
         await saveAnswer(subOptionData);
       }
+    }
+  }
+
+  private async _updateExistingActiveAnswer(
+    existingActiveAnswer: ResultAnswer,
+    data: OptionV2 | SubOptionV2,
+    resultId: number,
+    user: number,
+  ): Promise<void> {
+    existingActiveAnswer.answer_boolean = data.answer_boolean;
+    existingActiveAnswer.answer_text = data.answer_text
+      ? data.answer_text
+      : null;
+    existingActiveAnswer.last_updated_by = user;
+    await this._resultAnswerRepository.save(existingActiveAnswer);
+
+    await this._deactivateOtherAnswers(
+      resultId,
+      data.result_question_id,
+      existingActiveAnswer.result_answer_id,
+      user,
+    );
+  }
+
+  private async _createNewAnswer(
+    data: OptionV2 | SubOptionV2,
+    resultId: number,
+    user: number,
+  ): Promise<void> {
+    await this._deactivateAllAnswers(resultId, data.result_question_id, user);
+
+    const newAnswer = new ResultAnswer();
+    newAnswer.result_question_id = data.result_question_id;
+    newAnswer.answer_boolean = data.answer_boolean;
+    newAnswer.answer_text = data.answer_text ? data.answer_text : null;
+    newAnswer.result_id = resultId;
+    newAnswer.is_active = true;
+    newAnswer.created_by = user;
+    newAnswer.last_updated_by = user;
+
+    await this._resultAnswerRepository.save(newAnswer);
+  }
+
+  private async _deactivateOtherAnswers(
+    resultId: number,
+    resultQuestionId: number,
+    excludeAnswerId: number,
+    user: number,
+  ): Promise<void> {
+    const allOtherAnswers = await this._resultAnswerRepository.find({
+      where: {
+        result_id: resultId,
+        result_question_id: resultQuestionId,
+      },
+    });
+
+    for (const answer of allOtherAnswers) {
+      if (answer.result_answer_id !== excludeAnswerId) {
+        answer.is_active = false;
+        answer.last_updated_by = user;
+        await this._resultAnswerRepository.save(answer);
+      }
+    }
+  }
+
+  private async _deactivateAllAnswers(
+    resultId: number,
+    resultQuestionId: number,
+    user: number,
+  ): Promise<void> {
+    const allExistingAnswers = await this._resultAnswerRepository.find({
+      where: {
+        result_id: resultId,
+        result_question_id: resultQuestionId,
+      },
+    });
+
+    for (const answer of allExistingAnswers) {
+      answer.is_active = false;
+      answer.last_updated_by = user;
+      await this._resultAnswerRepository.save(answer);
     }
   }
 
