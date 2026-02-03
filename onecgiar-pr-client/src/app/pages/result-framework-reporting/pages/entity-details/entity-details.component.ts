@@ -174,6 +174,9 @@ export class EntityDetailsComponent implements OnInit {
   chartOptionsOutputs = computed<ChartOptions<'bar'>>(() => this.buildChartOptions(this.dataOutputs()));
   chartOptionsOutcomes = computed<ChartOptions<'bar'>>(() => this.buildChartOptions(this.dataOutcomes()));
 
+  /** Hide bilateral results review for initiative 41 (SGP-02 / AVISA). Use entityId (code) as it is always available from the route. */
+  showBilateralResultsReview = computed(() => this.entityAowService.entityId() !== 'SGP-02');
+
   groupedIndicatorSummaries = computed(() => {
     const summaries = this.entityAowService.indicatorSummaries().filter(item => item?.resultTypeName !== 'Innovation Use(IPSR)');
 
