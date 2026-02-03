@@ -202,7 +202,6 @@ export interface BilateralEvidence {
   link: string;
 }
 
-/** Innovation Use (result_type_id 2) – API returns resultTypeResponse as this object. */
 export interface BilateralInnovationUseResponse {
   actors?: BilateralInnovationUseActor[];
   organizations?: any[];

@@ -563,20 +563,18 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
       switch (resultTypeId) {
         case 2: {
-          // Innovation Use: resultTypeResponse is [ { actors, organizations, measures, investment_partners } ]
           body.resultTypeResponse = [
             {
-              actors: resultType.actors ? resultType.actors.map((a: any) => ({ ...a })) : [],
-              organizations: resultType.organizations ? resultType.organizations.map((o: any) => ({ ...o })) : [],
-              measures: resultType.measures ? resultType.measures.map((m: any) => ({ ...m })) : [],
-              investment_partners: resultType.investment_partners ? resultType.investment_partners.map((p: any) => ({ ...p })) : []
+              ...resultType,
+              actors: Array.isArray(resultType.actors) ? resultType.actors.map((a: any) => ({ ...a })) : [],
+              organizations: Array.isArray(resultType.organizations) ? resultType.organizations.map((o: any) => ({ ...o })) : [],
+              measures: Array.isArray(resultType.measures) ? resultType.measures.map((m: any) => ({ ...m })) : [],
+              investment_partners: Array.isArray(resultType.investment_partners) ? resultType.investment_partners.map((p: any) => ({ ...p })) : []
             }
           ];
           break;
         }
         case 1: {
-          // Implementing Organization = only what is selected in "Whose policy is this?" (resultType.institutions).
-          // If user removed an org from the dropdown, it is not sent so the PATCH removes it.
           const currentInstitutions = Array.isArray(resultType.institutions) ? [...resultType.institutions] : [];
           const implementingOrgs = this.buildImplementingOrgsFromSelection(currentInstitutions);
 
@@ -644,7 +642,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         console.error('Error saving data standard:', err);
         this.isSaving.set(false);
         this.cdr.markForCheck();
-        // You might want to show an error message to the user here
       }
     });
   }
@@ -657,7 +654,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
       }
     });
 
-    // Effect: when options list is available, ensure contributingInitiatives (primary + accepted + pending) are selected
     effect(() => {
       const detail = this.resultDetail();
       const initiativesList = this.contributingInitiativesList();
@@ -843,7 +839,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
         if (detail.contributingInitiatives) {
           if (Array.isArray(detail.contributingInitiatives)) {
-            // Legacy format: array of initiatives
             detail.contributingInitiatives = detail.contributingInitiatives.map((initiative: any) => {
               return initiative.id || initiative.official_code || initiative;
             });
@@ -929,7 +924,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
           detail.resultTypeResponse = detail.resultTypeResponse.map((resultType: any) => {
             const newResultType = { ...resultType };
 
-            // Innovation Use (case 2): first element has actors, organizations, measures, investment_partners
             if ('actors' in newResultType || 'measures' in newResultType || 'investment_partners' in newResultType) {
               if (!newResultType.actors) newResultType.actors = [];
               if (!newResultType.organizations) newResultType.organizations = [];
@@ -938,7 +932,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
               return newResultType;
             }
 
-            // Policy Change (case 1): implementing_organization -> institutions
             if (
               newResultType.implementing_organization &&
               Array.isArray(newResultType.implementing_organization) &&

@@ -67,7 +67,6 @@ export class InnovationUseContentComponent implements OnInit {
     });
   }
 
-  /** resultTypeResponse is []. For case 2 the first element is { actors, organizations, measures, investment_partners }. Accepts also plain object. */
   private getInnovationUseBodyFromResponse(r: any): BilateralInnovationUseResponse | null {
     if (r == null) return null;
     if (Array.isArray(r) && r.length > 0) {
