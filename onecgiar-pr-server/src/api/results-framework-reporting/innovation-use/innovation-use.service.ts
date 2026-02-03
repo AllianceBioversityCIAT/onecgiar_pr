@@ -832,7 +832,7 @@ export class InnovationUseService {
           },
         },
       });
-      console.log(investment_partners_raw);
+
     return investment_partners_raw.map((item) => ({
       id: item.obj_result_institution?.obj_institutions?.id ?? null,
       kind_cash:
