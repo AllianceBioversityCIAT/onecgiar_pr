@@ -10,7 +10,7 @@
 
     <div>
       <p class="framework-reporting-card-item_header_desc">{{ item?.initiativeCode }} - {{ item?.entityTypeName }}</p>
-      <h3 class="framework-reporting-card-item_header_title">{{ item?.initiativeName }}</h3>
+      <h3 class="framework-reporting-card-item_header_title">{{ (item?.initiativeId === 41 || item?.initiativeCode === 'SGP-02') ? (item?.initiativeShortName ?? item?.initiativeName) : item?.initiativeName }}</h3>
     </div>
   </div>
 </div>
