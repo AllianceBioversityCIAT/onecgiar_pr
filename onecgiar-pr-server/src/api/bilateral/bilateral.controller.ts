@@ -118,10 +118,7 @@ export class BilateralController {
     @Query('bilateral') bilateral?: string,
     @Query('type') type?: string,
   ) {
-    return this.bilateralService.getResultsForSync(
-      bilateral === 'true',
-      type,
-    );
+    return this.bilateralService.getResultsForSync(bilateral === 'true', type);
   }
 
   @Get(':id')

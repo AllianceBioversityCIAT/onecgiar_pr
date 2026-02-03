@@ -382,7 +382,6 @@ describe('BilateralService (unit)', () => {
       submittedUserId: 2,
       version: { id: 3 },
       year: { year: 2024 },
-      lastCode: 10,
     });
 
     expect(out).toEqual({ id: 999 });

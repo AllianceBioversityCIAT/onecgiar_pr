@@ -179,15 +179,12 @@ export class BilateralService {
             });
             if (!year) throw new NotFoundException('Active year not found');
 
-            const lastCode = await this._resultRepository.getLastResultCode();
-
             const resultHeader = await this.initializeResultHeader({
               bilateralDto,
               userId,
               submittedUserId,
               version,
               year,
-              lastCode,
             });
             const newResultHeader = resultHeader;
             const resultId = resultHeader.id;
@@ -616,11 +613,10 @@ export class BilateralService {
 
     // Filter by bilateral flag if true (only results with contributing_bilateral_projects)
     if (bilateral === true) {
-      const resultIdsWithProjects =
-        await this._resultsByProjectsRepository
-          .createQueryBuilder('rbp')
-          .select('DISTINCT rbp.result_id', 'result_id')
-          .getRawMany();
+      const resultIdsWithProjects = await this._resultsByProjectsRepository
+        .createQueryBuilder('rbp')
+        .select('DISTINCT rbp.result_id', 'result_id')
+        .getRawMany();
 
       const ids = resultIdsWithProjects.map((r) => r.result_id);
       if (ids.length > 0) {
@@ -923,6 +919,7 @@ export class BilateralService {
         const createdUserWrapper = await this._userService.createFull(
           createUserDto,
           adminUser?.id,
+          { skipCgiarAdLookup: true },
         );
 
         let createdUser: any = createdUserWrapper;
@@ -1324,7 +1321,8 @@ export class BilateralService {
         );
       } catch (err) {
         this.logger.error(
-          `TOC mapping unexpected error for program ${mapping.science_program_id} (role ${roleId}): ${(err as Error).message
+          `TOC mapping unexpected error for program ${mapping.science_program_id} (role ${roleId}): ${
+            (err as Error).message
           }`,
         );
         this.logger.error(`TOC mapping error stack: ${(err as Error).stack}`);
@@ -1347,12 +1345,12 @@ export class BilateralService {
     const onlyActive = (arr: any[]) =>
       Array.isArray(arr)
         ? arr.filter(
-          (item) =>
-            item?.is_active === undefined ||
-            item.is_active === null ||
-            item.is_active === true ||
-            item.is_active === 1,
-        )
+            (item) =>
+              item?.is_active === undefined ||
+              item.is_active === null ||
+              item.is_active === true ||
+              item.is_active === 1,
+          )
         : arr;
 
     result.result_region_array = onlyActive(result.result_region_array);
@@ -1421,14 +1419,12 @@ export class BilateralService {
     submittedUserId,
     version,
     year,
-    lastCode,
   }: {
     bilateralDto: CreateBilateralDto;
     userId: number;
     submittedUserId: number;
     version: any;
     year: any;
-    lastCode: number;
   }): Promise<Result> {
     const handler = this.resultTypeHandlerMap.get(bilateralDto.result_type_id);
     if (handler?.initializeResultHeader) {
@@ -1438,18 +1434,21 @@ export class BilateralService {
         submittedUserId,
         version,
         year,
-        lastCode,
       });
-      if (custom?.resultHeader) return custom.resultHeader;
+      if (custom?.resultHeader) {
+        return this._resultRepository.findOne({
+          where: { id: custom.resultHeader.id },
+        });
+      }
     }
 
-    const resultHeader = await this._resultRepository.save({
+    const saved = await this._resultRepository.save({
       created_by: userId,
       version_id: version.id,
       title: bilateralDto.title,
       description: bilateralDto.description,
       reported_year_id: year.year,
-      result_code: lastCode + 1,
+      result_code: 0,
       result_type_id: bilateralDto.result_type_id,
       result_level_id: bilateralDto.result_level_id,
       external_submitter: submittedUserId,
@@ -1463,7 +1462,9 @@ export class BilateralService {
       status_id: ResultStatusData.PendingReview.value,
     });
 
-    return resultHeader;
+    return this._resultRepository.findOne({
+      where: { id: saved.id },
+    });
   }
 
   private async runResultTypeHandlers(context: {
@@ -1506,11 +1507,15 @@ export class BilateralService {
    * Normalizes institution name/acronym values.
    * Maps "ABC" to "CIAT (Alliance)" for exact matching with the institution name.
    */
-  private normalizeInstitutionValue(value: string | undefined): string | undefined {
+  private normalizeInstitutionValue(
+    value: string | undefined,
+  ): string | undefined {
     if (!value) return value;
     const normalized = value.trim().toUpperCase();
     if (normalized === 'ABC') {
-      this.logger.debug('Normalizing ABC to CIAT (Alliance) for institution matching');
+      this.logger.debug(
+        'Normalizing ABC to CIAT (Alliance) for institution matching',
+      );
       return 'CIAT (Alliance)';
     }
     return value;
@@ -1530,7 +1535,9 @@ export class BilateralService {
 
     // Normalize ABC to CIAT
     const normalizedName = this.normalizeInstitutionValue(leadCenter.name);
-    const normalizedAcronym = this.normalizeInstitutionValue(leadCenter.acronym);
+    const normalizedAcronym = this.normalizeInstitutionValue(
+      leadCenter.acronym,
+    );
     const { institution_id } = leadCenter;
     const name = normalizedName;
     const acronym = normalizedAcronym;
@@ -1656,27 +1663,30 @@ export class BilateralService {
       if (!centerInput) continue;
       // Normalize ABC to CIAT
       const normalizedName = this.normalizeInstitutionValue(centerInput.name);
-      const normalizedAcronym = this.normalizeInstitutionValue(centerInput.acronym);
+      const normalizedAcronym = this.normalizeInstitutionValue(
+        centerInput.acronym,
+      );
       const { institution_id } = centerInput;
       const name = normalizedName;
       const acronym = normalizedAcronym;
       if (!name && !acronym && !institution_id) continue;
 
       // Normalize leadCenter values for comparison
-      const normalizedLeadName = this.normalizeInstitutionValue(leadCenter?.name);
-      const normalizedLeadAcronym = this.normalizeInstitutionValue(leadCenter?.acronym);
+      const normalizedLeadName = this.normalizeInstitutionValue(
+        leadCenter?.name,
+      );
+      const normalizedLeadAcronym = this.normalizeInstitutionValue(
+        leadCenter?.acronym,
+      );
 
       if (
         leadCenter &&
         ((leadCenter.institution_id &&
           institution_id &&
           leadCenter.institution_id === institution_id) ||
-          (normalizedLeadAcronym &&
-            acronym &&
-            normalizedLeadAcronym.toLowerCase() === acronym.toLowerCase()) ||
-          (normalizedLeadName &&
-            name &&
-            normalizedLeadName.toLowerCase() === name.toLowerCase()))
+          (acronym &&
+            normalizedLeadAcronym?.toLowerCase() === acronym?.toLowerCase()) ||
+          (name && normalizedLeadName?.toLowerCase() === name?.toLowerCase()))
       ) {
         continue;
       }
