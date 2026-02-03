@@ -25,7 +25,7 @@ import { NonPooledProjectBudgetRepository } from '../../results/result_budget/re
 import { ResultInstitutionsBudgetRepository } from '../../results/result_budget/repositories/result_institutions_budget.repository';
 import { InnoDevService } from '../../results/summary/innovation_dev.service';
 import { ResultsInnovationsDev } from '../../results/summary/entities/results-innovations-dev.entity';
-import { In, Repository } from 'typeorm';
+import { In, Not, Repository } from 'typeorm';
 import { ResultsByInstitution } from '../../results/results_by_institutions/entities/results_by_institution.entity';
 import { ResultScalingStudyUrl } from '../result_scaling_study_urls/entities/result_scaling_study_url.entity';
 import { InnovationReadinessLevelByLevel } from './enum/innov-readiness-level.enum';
@@ -429,7 +429,29 @@ export class InnovationDevService {
       return (data as OptionV2).subOptions !== undefined;
     };
 
+    const allQuestionIds = new Set<number>();
+    for (const optionData of options) {
+      allQuestionIds.add(optionData.result_question_id);
+      for (const subOptionData of optionData.subOptions ?? []) {
+        allQuestionIds.add(subOptionData.result_question_id);
+      }
+    }
+
+    const activeAnswers = await this._resultAnswerRepository.find({
+      where: {
+        result_id: resultId,
+        result_question_id: In(Array.from(allQuestionIds)),
+        is_active: true,
+      },
+    });
+
+    const activeAnswerMap = new Map<number, ResultAnswer>();
+    for (const answer of activeAnswers) {
+      activeAnswerMap.set(answer.result_question_id, answer);
+    }
+
     const saveAnswer = async (data: OptionV2 | SubOptionV2) => {
+      // Preserve radioButtonValue logic: only applies to OptionV2, not SubOptionV2
       if (isOptionV2(data)) {
         if (
           radioButtonValue != null &&
@@ -445,13 +467,7 @@ export class InnovationDevService {
         return;
       }
 
-      const existingActiveAnswer = await this._resultAnswerRepository.findOne({
-        where: {
-          result_id: resultId,
-          result_question_id: data.result_question_id,
-          is_active: true,
-        },
-      });
+      const existingActiveAnswer = activeAnswerMap.get(data.result_question_id);
 
       if (existingActiveAnswer) {
         await this._updateExistingActiveAnswer(
@@ -460,6 +476,7 @@ export class InnovationDevService {
           resultId,
           user,
         );
+        activeAnswerMap.set(data.result_question_id, existingActiveAnswer);
       } else {
         await this._createNewAnswer(data, resultId, user);
       }
@@ -520,20 +537,17 @@ export class InnovationDevService {
     excludeAnswerId: number,
     user: number,
   ): Promise<void> {
-    const allOtherAnswers = await this._resultAnswerRepository.find({
-      where: {
+    await this._resultAnswerRepository.update(
+      {
         result_id: resultId,
         result_question_id: resultQuestionId,
+        result_answer_id: Not(excludeAnswerId),
       },
-    });
-
-    for (const answer of allOtherAnswers) {
-      if (answer.result_answer_id !== excludeAnswerId) {
-        answer.is_active = false;
-        answer.last_updated_by = user;
-        await this._resultAnswerRepository.save(answer);
-      }
-    }
+      {
+        is_active: false,
+        last_updated_by: user,
+      },
+    );
   }
 
   private async _deactivateAllAnswers(
@@ -541,18 +555,16 @@ export class InnovationDevService {
     resultQuestionId: number,
     user: number,
   ): Promise<void> {
-    const allExistingAnswers = await this._resultAnswerRepository.find({
-      where: {
+    await this._resultAnswerRepository.update(
+      {
         result_id: resultId,
         result_question_id: resultQuestionId,
       },
-    });
-
-    for (const answer of allExistingAnswers) {
-      answer.is_active = false;
-      answer.last_updated_by = user;
-      await this._resultAnswerRepository.save(answer);
-    }
+      {
+        is_active: false,
+        last_updated_by: user,
+      },
+    );
   }
 
   async syncBudgetForResults(resultId: number, userId: number) {
