@@ -25,6 +25,7 @@ import { KpContentComponent } from './components/kp-content/kp-content.component
 import { InnoDevContentComponent } from './components/inno-dev-content/inno-dev-content.component';
 import { CapSharingContentComponent } from './components/cap-sharing-content/cap-sharing-content.component';
 import { PolicyChangeContentComponent } from './components/policy-change-content/policy-change-content.component';
+import { InnovationUseContentComponent } from './components/innovation-use-content/innovation-use-content.component';
 import { SaveChangesJustificationDialogComponent } from './components/save-changes-justification-dialog/save-changes-justification-dialog.component';
 import { RolesService } from '../../../../../../../../shared/services/global/roles.service';
 import { BilateralResultsService } from '../../../../bilateral-results.service';
@@ -47,6 +48,7 @@ import { RdContributorsAndPartnersModule } from '../../../../../../../../pages/r
     InnoDevContentComponent,
     CapSharingContentComponent,
     PolicyChangeContentComponent,
+    InnovationUseContentComponent,
     SaveChangesJustificationDialogComponent,
     CustomFieldsModule,
     RdContributorsAndPartnersModule
@@ -560,6 +562,18 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
       const resultType: any = resultTypeResponse[0];
 
       switch (resultTypeId) {
+        case 2: {
+          // Innovation Use: resultTypeResponse is [ { actors, organizations, measures, investment_partners } ]
+          body.resultTypeResponse = [
+            {
+              actors: resultType.actors ? resultType.actors.map((a: any) => ({ ...a })) : [],
+              organizations: resultType.organizations ? resultType.organizations.map((o: any) => ({ ...o })) : [],
+              measures: resultType.measures ? resultType.measures.map((m: any) => ({ ...m })) : [],
+              investment_partners: resultType.investment_partners ? resultType.investment_partners.map((p: any) => ({ ...p })) : []
+            }
+          ];
+          break;
+        }
         case 1: {
           // Implementing Organization = only what is selected in "Whose policy is this?" (resultType.institutions).
           // If user removed an org from the dropdown, it is not sent so the PATCH removes it.
@@ -915,6 +929,16 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
           detail.resultTypeResponse = detail.resultTypeResponse.map((resultType: any) => {
             const newResultType = { ...resultType };
 
+            // Innovation Use (case 2): first element has actors, organizations, measures, investment_partners
+            if ('actors' in newResultType || 'measures' in newResultType || 'investment_partners' in newResultType) {
+              if (!newResultType.actors) newResultType.actors = [];
+              if (!newResultType.organizations) newResultType.organizations = [];
+              if (!newResultType.measures) newResultType.measures = [];
+              if (!newResultType.investment_partners) newResultType.investment_partners = [];
+              return newResultType;
+            }
+
+            // Policy Change (case 1): implementing_organization -> institutions
             if (
               newResultType.implementing_organization &&
               Array.isArray(newResultType.implementing_organization) &&
@@ -1107,7 +1131,11 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
         const detailWithNewReference = {
           ...detail,
-          resultTypeResponse: detail.resultTypeResponse ? detail.resultTypeResponse.map((rt: any) => ({ ...rt })) : detail.resultTypeResponse
+          resultTypeResponse: detail.resultTypeResponse
+            ? Array.isArray(detail.resultTypeResponse)
+              ? detail.resultTypeResponse.map((rt: any) => ({ ...rt }))
+              : { ...detail.resultTypeResponse }
+            : detail.resultTypeResponse
         };
 
         this.resultDetail.set(detailWithNewReference);
