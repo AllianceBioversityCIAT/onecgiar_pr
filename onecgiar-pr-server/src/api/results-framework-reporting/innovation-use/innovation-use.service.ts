@@ -846,7 +846,7 @@ export class InnovationUseService {
     }));
   }
 
-  async getBilateralInnovationUseData(resultId: number) {
+  async getBilateralInnovationUseData(resultId: number): Promise<any[]> {
     try {
       const actorsData = await this.getActorsData(resultId);
       const measures = await this.getMeasuresData(resultId);
@@ -864,12 +864,16 @@ export class InnovationUseService {
 
       const investment_partners = await this.getInvestmentPartners(resultId);
 
-      return {
+      const inno_use = {
         actors: actors_current,
         organizations: organizations_current,
         measures: measures_current,
         investment_partners,
       };
+
+      return [
+        inno_use,
+      ];
     } catch (error) {
       this.logger.error(
         `Error getting bilateral innovation use data for resultId: ${resultId}`,
