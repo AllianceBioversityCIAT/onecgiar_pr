@@ -373,6 +373,7 @@ describe('BilateralService (unit)', () => {
         resultHeader: { id: 999 },
       }),
     );
+    stubs.resultRepository.findOne.mockResolvedValue({ id: 999 });
 
     const out = await service.initializeResultHeader({
       bilateralDto: {
@@ -386,6 +387,9 @@ describe('BilateralService (unit)', () => {
 
     expect(out).toEqual({ id: 999 });
     expect(stubs.resultRepository.save).not.toHaveBeenCalled();
+    expect(stubs.resultRepository.findOne).toHaveBeenCalledWith({
+      where: { id: 999 },
+    });
   });
 
   it('findScope should return scope or throw NotFoundException', async () => {
