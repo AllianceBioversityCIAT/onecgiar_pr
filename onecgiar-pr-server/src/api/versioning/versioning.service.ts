@@ -388,9 +388,27 @@ export class VersioningService {
         entity_id: entity_id,
       };
 
+      const portfolioP25 = await this._versionRepository.findOne({
+        select: {
+          id: true,
+          portfolio_id: true,
+          obj_portfolio: {
+            id: true,
+            acronym: true,
+          },
+        },
+        where: {
+          id: Number(phase.id),
+          status: true,
+          app_module_id: AppModuleIdEnum.IPSR,
+        },
+      });
+
       // RESULT
       await this._resultByInitiativesRepository.replicate(manager, config);
-      await this._shareResultRequestRepository.replicate(manager, config);
+      if (!portfolioP25) {
+        await this._shareResultRequestRepository.replicate(manager, config);
+      }
       await this._nonPooledProjectRepository.replicate(manager, config);
       await this._resultsCenterRepository.replicate(manager, config);
       await this._resultByIntitutionsRepository.replicate(manager, config);
