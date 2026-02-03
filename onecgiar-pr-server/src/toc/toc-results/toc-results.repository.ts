@@ -630,11 +630,14 @@ export class TocResultsRepository extends Repository<TocResult> {
       queryParams.push(...currentTypePatterns);
 
       // Indicadores que no hacen match con ningún "otro" tipo (ToC neutros / no estándar)
+      // Incluir también type_value NULL o vacío (en SQL NULL NOT LIKE 'x' no es TRUE)
       if (otherTypesPatterns.length > 0) {
         const otherNotLikeConditions = otherTypesPatterns
           .map(() => 'tri.type_value NOT LIKE ?')
           .join(' AND ');
-        indicatorConditions.push(`(${otherNotLikeConditions})`);
+        indicatorConditions.push(
+          `((${otherNotLikeConditions}) OR (tri.type_value IS NULL OR tri.type_value = ''))`,
+        );
         queryParams.push(...otherTypesPatterns);
       }
     }
