@@ -6,7 +6,16 @@
   (keydown.space)="$event.preventDefault(); frameworkReportingCardItem.click()"
   (keydown.enter)="frameworkReportingCardItem.click()">
   <div class="framework-reporting-card-item_header">
-    <img src="/assets/result-framework-reporting/SPs-Icons/{{ item?.initiativeCode }}.png" [alt]="item?.initiativeCode" width="24" height="24" />
+    @if (!imageLoadError()) {
+      <img
+        src="/assets/result-framework-reporting/SPs-Icons/{{ item?.initiativeCode }}.png"
+        [alt]="item?.initiativeCode"
+        width="24"
+        height="24"
+        (error)="imageLoadError.set(true)" />
+    } @else {
+      <div class="framework-reporting-card-item_icon-placeholder" aria-hidden="true"></div>
+    }
 
     <div>
       <p class="framework-reporting-card-item_header_desc">{{ item?.initiativeCode }} - {{ item?.entityTypeName }}</p>
