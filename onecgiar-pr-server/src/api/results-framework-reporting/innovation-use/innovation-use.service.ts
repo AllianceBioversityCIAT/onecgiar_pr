@@ -871,9 +871,7 @@ export class InnovationUseService {
         investment_partners,
       };
 
-      return [
-        inno_use,
-      ];
+      return [inno_use];
     } catch (error) {
       this.logger.error(
         `Error getting bilateral innovation use data for resultId: ${resultId}`,
