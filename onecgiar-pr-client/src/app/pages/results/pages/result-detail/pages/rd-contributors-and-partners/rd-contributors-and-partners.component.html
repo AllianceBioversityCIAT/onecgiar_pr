@@ -33,9 +33,10 @@
 
   <app-pr-yes-or-not
     label="Does this result align with the Program's planned TOC indicators?"
-    [required]="true"
+    [required]="!isAvisaInitiative()"
     [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.planned_result"
-    (selectOptionEvent)="onPlannedResultChange(this.rdPartnersSE.partnersBody?.result_toc_result)">
+    (selectOptionEvent)="onPlannedResultChange(this.rdPartnersSE.partnersBody?.result_toc_result)"
+    [readOnly]="isAvisaInitiative()">
   </app-pr-yes-or-not>
 
   <app-alert-status
