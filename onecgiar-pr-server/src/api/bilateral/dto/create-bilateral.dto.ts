@@ -1110,10 +1110,10 @@ export class CreateBilateralDto {
 
   @ApiPropertyOptional({
     description:
-      'List of contributing CGIAR centers. Optional for KNOWLEDGE_PRODUCT results (obtained from CGSpace).',
+      'List of contributing CGIAR centers. Optional for all result types.',
     type: [InstitutionDto],
   })
-  @ValidateIf((o) => o.result_type_id !== ResultTypeEnum.KNOWLEDGE_PRODUCT)
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => InstitutionDto)
@@ -1121,10 +1121,10 @@ export class CreateBilateralDto {
 
   @ApiPropertyOptional({
     description:
-      'List of contributing partner institutions. Optional for KNOWLEDGE_PRODUCT results.',
+      'List of contributing partner institutions. Optional for all result types.',
     type: [InstitutionDto],
   })
-  @ValidateIf((o) => o.result_type_id !== ResultTypeEnum.KNOWLEDGE_PRODUCT)
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => InstitutionDto)

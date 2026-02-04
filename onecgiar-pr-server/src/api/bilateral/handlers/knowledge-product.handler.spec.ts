@@ -25,7 +25,6 @@ describe('KnowledgeProductBilateralHandler', () => {
     submittedUserId: 20,
     version: { id: 1 },
     year: { year: 2024 },
-    lastCode: 100,
   };
 
   const baseAfterContext = {
