@@ -22,11 +22,11 @@ import { BadgeModule } from 'primeng/badge';
 import { OverlayBadgeModule } from 'primeng/overlaybadge';
 import { SatPopoverModule } from '@ncstate/sat-popover';
 import { PopUpNotificationItemComponent } from './shared/components/header-panel/components/pop-up-notification-item/pop-up-notification-item.component';
-import { SocketIoModule } from 'ngx-socket-io';
+// import { SocketIoModule } from 'ngx-socket-io';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
-import { WebsocketService } from './sockets/websocket.service';
-import { environment } from '../environments/environment';
+// import { WebsocketService } from './sockets/websocket.service';
+// import { environment } from '../environments/environment';
 import { ClarityService } from './shared/services/clarity.service';
 import { TooltipModule } from 'primeng/tooltip';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
@@ -62,8 +62,8 @@ function initializeClarityService(clarityService: ClarityService) {
     ToastModule,
     TooltipModule,
     PopUpNotificationItemComponent,
-    UserRolesInfoModalComponent,
-    SocketIoModule.forRoot({ url: environment.webSocketUrl, options: {} })
+    UserRolesInfoModalComponent
+    // SocketIoModule.forRoot({ url: environment.webSocketUrl, options: {} })
   ],
   providers: [
     { provide: HTTP_INTERCEPTORS, useClass: GeneralInterceptorService, multi: true },
@@ -82,8 +82,8 @@ function initializeClarityService(clarityService: ClarityService) {
           darkModeSelector: 'light'
         }
       }
-    }),
-    WebsocketService
+    })
+    // WebsocketService
   ]
 })
 export class AppModule {}

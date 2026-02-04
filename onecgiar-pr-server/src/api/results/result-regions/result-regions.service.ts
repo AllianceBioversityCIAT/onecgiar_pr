@@ -28,7 +28,7 @@ export class ResultRegionsService {
           status: HttpStatus.BAD_REQUEST,
         };
       }
-      //!importante hay una tabla por cada uno pero fijo se mandara a un solo enpoint y que el haga el restos
+
       const result: Result = await this._resultRepository.getResultById(
         createResultRegionDto.result_id,
       );
@@ -132,7 +132,7 @@ export class ResultRegionsService {
         };
       }
 
-      // 🔹 Manejar REGIONS
+      //REGIONS
       await this.handleRegions({
         regions: createResultRegionDto.regions,
         result,
@@ -141,7 +141,7 @@ export class ResultRegionsService {
         role: EnumGeoScopeRole.MAIN,
       });
 
-      // 🔹 Manejar EXTRA REGIONS
+      // EXTRA REGIONS
       await this.handleRegions({
         regions: createResultRegionDto.extra_regions,
         result,
@@ -150,7 +150,7 @@ export class ResultRegionsService {
         role: EnumGeoScopeRole.EXTRA,
       });
 
-      // 🔹 Actualizar scopes en Result
+      // scopes in result
       result.geographic_scope_id = [4, 50].includes(geo_scope_id)
         ? 50
         : geo_scope_id;
@@ -200,7 +200,6 @@ export class ResultRegionsService {
           role,
         );
         if (regions?.length) {
-          console.log('regions.length', regions);
           const resultRegionArray: ResultRegion[] = [];
           for (let index = 0; index < regions.length; index++) {
             const exist =
@@ -219,7 +218,6 @@ export class ResultRegionsService {
           }
 
           if (resultRegionArray.length) {
-            console.log('resultRegionArray.length', resultRegionArray);
             await this._resultRegionRepository.save(resultRegionArray);
           }
         }

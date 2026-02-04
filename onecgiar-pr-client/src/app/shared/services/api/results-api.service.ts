@@ -703,8 +703,8 @@ export class ResultsApiService {
     return this.http.put<any>(`${environment.apiBaseUrl}api/global-parameters/update/variable`, body);
   }
 
-  PATCH_updateRequest(body) {
-    return this.http.patch<any>(`${this.apiBaseUrl}request/update`, body);
+  PATCH_updateRequest(body, isP25: boolean = false) {
+    return this.http.patch<any>(`${isP25 ? this.apiBaseUrlV2 : this.apiBaseUrl}request/update`, body);
   }
 
   POST_updateRequest(body) {
@@ -1376,11 +1376,39 @@ export class ResultsApiService {
     return this.http.patch<any>(`${this.baseApiBaseUrl}contributors-partners/update/unplanned/result/${this.currentResultId}`, body);
   }
 
+  PATCH_BilateralTocMetadata(resultId: number | string, body: any) {
+    return this.http.patch<any>(`${this.baseApiBaseUrl}results/bilateral/review-update/toc-metadata/${resultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+  }
+
+  PATCH_BilateralDataStandard(resultId: number | string, body: any) {
+    return this.http.patch<any>(`${this.baseApiBaseUrl}results/bilateral/review-update/data-standard/${resultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+  }
+
   GET_ClarisaProjects() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/projects/get/all`);
   }
 
   GET_ClarisaPortfolios() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/portfolios`);
+  }
+
+  GET_ResultToReview(programId: string, centerIds?: string[]) {
+    let url = `${environment.apiBaseUrl}api/results/by-program-and-centers?programId=${programId}`;
+    if (centerIds?.length === 1) {
+      url += `&centerIds=${centerIds.join(',')}`;
+    }
+
+    return this.http.get<any>(url);
+  }
+
+  GET_PendingReviewCount(programId: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results/pending-review?programId=${programId}`);
+  }
+  GET_BilateralResultDetail(resultId: string | number) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results/bilateral/${resultId}`);
+  }
+
+  PATCH_BilateralReviewDecision(resultId: string | number, body: { decision: 'APPROVE' | 'REJECT'; justification: string }) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/results/bilateral/${resultId}/review-decision`, body);
   }
 }

@@ -105,7 +105,7 @@ export class KnowledgeProductBilateralHandler
     }
 
     this.logger.log(
-      `Fetching KP metadata from CGSpace for handle: ${knowledgeProduct.handle}`,
+      `Fetching KP metadata from DSpace for handle: ${knowledgeProduct.handle}`,
     );
 
     const userToken: TokenDto = {
@@ -123,15 +123,15 @@ export class KnowledgeProductBilateralHandler
       );
 
       this.logger.log(
-        `Successfully populated KP from CGSpace for result ${resultId} with handle ${knowledgeProduct.handle}`,
+        `Successfully populated KP from DSpace for result ${resultId} with handle ${knowledgeProduct.handle}`,
       );
     } catch (error) {
       this.logger.error(
-        `Error populating KP from CGSpace for result ${resultId} with handle ${knowledgeProduct.handle}:`,
+        `Error populating KP from DSpace for result ${resultId} with handle ${knowledgeProduct.handle}:`,
         error,
       );
       throw new BadRequestException(
-        `Failed to fetch and populate Knowledge Product metadata from CGSpace: ${error.message || 'Unknown error'}`,
+        `Failed to fetch and populate Knowledge Product metadata from DSpace: ${error.message || 'Unknown error'}`,
       );
     }
   }

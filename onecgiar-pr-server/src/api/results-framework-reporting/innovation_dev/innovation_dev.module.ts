@@ -39,6 +39,7 @@ import { ClarisaInnovationUseLevelRepository } from '../../../clarisa/clarisa-in
     LinkedResultsModule,
   ],
   controllers: [InnovationDevController],
+  exports: [InnovationDevService],
   providers: [
     HandlersError,
     InnovationDevService,

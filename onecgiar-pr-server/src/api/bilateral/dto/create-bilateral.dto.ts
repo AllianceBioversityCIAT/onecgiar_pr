@@ -17,7 +17,7 @@ import {
   IsInt,
   Min,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 
@@ -873,6 +873,25 @@ export class BilateralProjectDto {
   @IsString()
   @IsNotEmpty()
   grant_title: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Flag indicating if this project is the lead project. Accepts true/false or 1/0',
+    example: 1,
+    oneOf: [{ type: 'boolean' }, { type: 'number' }],
+  })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === undefined || value === null) return 0;
+    if (value === true || value === 1 || value === '1') return 1;
+    if (value === false || value === 0 || value === '0') return 0;
+    // Try to convert string numbers
+    const numValue = Number(value);
+    if (!Number.isNaN(numValue)) return numValue ? 1 : 0;
+    // Default to false for any other value
+    return 0;
+  })
+  is_lead?: number | boolean;
 }
 
 export class MetadataCGDto {
@@ -1089,14 +1108,16 @@ export class CreateBilateralDto {
   @Type(() => GeoFocusDto)
   geo_focus?: GeoFocusDto;
 
-  @ApiProperty({
-    description: 'List of contributing CGIAR centers',
+  @ApiPropertyOptional({
+    description:
+      'List of contributing CGIAR centers. Optional for KNOWLEDGE_PRODUCT results (obtained from CGSpace).',
     type: [InstitutionDto],
   })
+  @ValidateIf((o) => o.result_type_id !== ResultTypeEnum.KNOWLEDGE_PRODUCT)
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => InstitutionDto)
-  contributing_center: InstitutionDto[];
+  contributing_center?: InstitutionDto[];
 
   @ApiPropertyOptional({
     description:
@@ -1111,10 +1132,10 @@ export class CreateBilateralDto {
 
   @ApiPropertyOptional({
     description:
-      'Evidence references supporting the bilateral project. Optional for KNOWLEDGE_PRODUCT results.',
+      'Evidence references supporting the bilateral project. Optional for all result types.',
     type: [EvidenceDto],
   })
-  @ValidateIf((o) => o.result_type_id !== ResultTypeEnum.KNOWLEDGE_PRODUCT)
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => EvidenceDto)

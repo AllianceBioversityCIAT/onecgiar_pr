@@ -1,11 +1,11 @@
 import {
+  forwardRef,
   HttpStatus,
   Inject,
   Injectable,
   Logger,
   Optional,
   BadRequestException,
-  forwardRef,
   ConflictException,
 } from '@nestjs/common';
 import { DataSource, In, IsNull } from 'typeorm';
@@ -96,13 +96,29 @@ import {
   ReviewDecisionDto,
   ReviewDecisionEnum,
 } from './dto/review-decision.dto';
-import { ResultReviewHistory } from './result-review-history/entities/result-review-history.entity';
+import { ReviewUpdateDto } from './dto/review-update.dto';
+import {
+  ResultReviewHistory,
+  ReviewActionEnum,
+} from './result-review-history/entities/result-review-history.entity';
 import { ResultStatusData } from '../../shared/constants/result-status.enum';
 import { ResultImpactAreaScoresService } from '../result-impact-area-scores/result-impact-area-scores.service';
 import { isEmpty } from '../../shared/utils/object.utils';
 import { extractPropertyValues } from '../../shared/utils/array.util';
 import { ResultImpactAreaScore } from '../result-impact-area-scores/entities/result-impact-area-score.entity';
 import { ImpactAreaNames } from './impact_areas_scores_components/enum/impact-area-names.enum';
+import { ResultsByInstitutionsService } from './results_by_institutions/results_by_institutions.service';
+import { ContributorsPartnersService } from '../results-framework-reporting/contributors-partners/contributors-partners.service';
+import { SummaryService } from './summary/summary.service';
+import { InnovationDevService } from '../results-framework-reporting/innovation_dev/innovation_dev.service';
+import { InnovationUseService } from '../results-framework-reporting/innovation-use/innovation-use.service';
+import { UpdateTocMetadataDto } from './dto/update-toc-metadata.dto';
+import { ResultsTocResultsService } from './results-toc-results/results-toc-results.service';
+import { CapdevDto } from './summary/dto/create-capacity-developents.dto';
+import { CreateTocShareResult } from './share-result-request/dto/create-toc-share-result.dto';
+import { ShareResultRequestService } from './share-result-request/share-result-request.service';
+import { EvidencesService } from '../results/evidences/evidences.service';
+import { SavePartnersV2Dto } from './results_by_institutions/dto/save-partners-v2.dto';
 
 @Injectable()
 export class ResultsService {
@@ -132,6 +148,8 @@ export class ResultsService {
     private readonly _resultKnowledgeProductRepository: ResultsKnowledgeProductsRepository,
     private readonly _elasticService: ElasticService,
     private readonly _resultValidationRepository: resultValidationRepository,
+    @Inject(forwardRef(() => ResultsTocResultsService))
+    private readonly _resultsTocResultsService: ResultsTocResultsService,
     private readonly _resultsKnowledgeProductAltmetricRepository: ResultsKnowledgeProductAltmetricRepository,
     private readonly _resultsKnowledgeProductAuthorRepository: ResultsKnowledgeProductAuthorRepository,
     private readonly _resultsKnowledgeProductInstitutionRepository: ResultsKnowledgeProductInstitutionRepository,
@@ -142,6 +160,7 @@ export class ResultsService {
     private readonly _versioningService: VersioningService,
     private readonly _returnResponse: ReturnResponse,
     private readonly _resultsInvestmentDiscontinuedOptionRepository: ResultsInvestmentDiscontinuedOptionRepository,
+    private readonly _resultsByInstitutionsService: ResultsByInstitutionsService,
     private readonly _resultInitiativeBudgetRepository: ResultInitiativeBudgetRepository,
     private readonly _resultsCenterRepository: ResultsCenterRepository,
     private readonly _resultsTocResultRepository: ResultsTocResultRepository,
@@ -161,7 +180,23 @@ export class ResultsService {
     private readonly _adUserService?: AdUserService,
     @Optional() private readonly _adUserRepository?: AdUserRepository,
     @Optional() private readonly _notificationService?: NotificationService,
-  ) { }
+    @Optional()
+    @Inject(forwardRef(() => ContributorsPartnersService))
+    private readonly _contributorsPartnersService?: ContributorsPartnersService,
+    @Optional()
+    private readonly _evidencesService?: EvidencesService,
+    @Optional()
+    private readonly _summaryService?: SummaryService,
+    @Optional()
+    @Inject(forwardRef(() => InnovationDevService))
+    private readonly _innovationDevService?: InnovationDevService,
+    @Optional()
+    @Inject(forwardRef(() => InnovationUseService))
+    private readonly _innovationUseService?: InnovationUseService,
+    @Optional()
+    @Inject(forwardRef(() => ShareResultRequestService))
+    private readonly _shareResultRequestService?: ShareResultRequestService,
+  ) {}
 
   async createOwnerResult(
     createResultDto: CreateResultDto,
@@ -291,12 +326,6 @@ export class ResultsService {
       });
 
       await this.insertResultIntoElastic(newResultHeader);
-
-      await this.emitResultCreatedNotification(
-        newResultHeader,
-        Number(initiative.id),
-        user.id,
-      );
 
       return {
         response: newResultHeader,
@@ -1088,11 +1117,11 @@ export class ResultsService {
           ...item,
           initiative_entity_map: entityMaps.length
             ? entityMaps.map((entityMap) => ({
-              id: entityMap.id,
-              entityId: entityMap.entityId,
-              initiativeId: entityMap.initiativeId,
-              entityName: entityMap.entity_obj?.name ?? null,
-            }))
+                id: entityMap.id,
+                entityId: entityMap.entityId,
+                initiativeId: entityMap.initiativeId,
+                entityName: entityMap.entity_obj?.name ?? null,
+              }))
             : [],
           initiative_entity_user: initiativesPortfolio3,
         };
@@ -1212,11 +1241,11 @@ export class ResultsService {
           ...item,
           initiative_entity_map: entityMaps.length
             ? entityMaps.map((entityMap) => ({
-              id: entityMap.id,
-              entityId: entityMap.entityId,
-              initiativeId: entityMap.initiativeId,
-              entityName: entityMap.entity_obj?.name ?? null,
-            }))
+                id: entityMap.id,
+                entityId: entityMap.entityId,
+                initiativeId: entityMap.initiativeId,
+                entityName: entityMap.entity_obj?.name ?? null,
+              }))
             : [],
           initiative_entity_user: initiativesPortfolio3,
         };
@@ -1234,14 +1263,14 @@ export class ResultsService {
         response:
           limit !== undefined
             ? {
-              items: result,
-              meta: {
-                total,
-                page: page ?? 1,
-                limit,
-                totalPages: Math.max(1, Math.ceil(total / limit)),
-              },
-            }
+                items: result,
+                meta: {
+                  total,
+                  page: page ?? 1,
+                  limit,
+                  totalPages: Math.max(1, Math.ceil(total / limit)),
+                },
+              }
             : { items: result },
         message: 'Successful response',
         status: HttpStatus.OK,
@@ -2714,12 +2743,13 @@ export class ResultsService {
         project_name: row.project_name,
         result_code: row.result_code,
         result_title: row.result_title,
-        indicator_category: row.indicator_category,
+        indicator_category: row.result_category,
         status_name: row.status_name,
         acronym: row.acronym,
         toc_title: row.toc_title,
         indicator: row.indicator,
         submission_date: row.submission_date,
+        lead_center: row.lead_center,
       }));
 
       const groupedByProject = mappedResults.reduce(
@@ -2728,7 +2758,8 @@ export class ResultsService {
           if (!acc[projectId]) {
             acc[projectId] = {
               project_id: projectId,
-              project_name: result.project_name,
+              project_name:
+                result.project_name || 'Bilateral Project - Not specified',
               results: [],
             };
           }
@@ -2761,9 +2792,12 @@ export class ResultsService {
     resultId: number,
   ): Promise<ReturnResponseDto<any> | returnErrorDto> {
     try {
-      const validationError = this._validateBilateralResultId(resultId);
-      if (validationError) {
-        return validationError;
+      if (!resultId || resultId <= 0) {
+        return {
+          response: {},
+          message: 'Invalid resultId. Must be a positive number.',
+          status: HttpStatus.BAD_REQUEST,
+        };
       }
 
       const result = await this._resultRepository.findOne({
@@ -2792,16 +2826,18 @@ export class ResultsService {
         result.result_type_id,
       );
 
+      const tocResponse = (tocMetadata?.response as Record<string, any>) ?? {};
+
       const mappedResult = {
         commonFields: commonFields ?? null,
-        tocMetadata: tocMetadata ?? [],
+        tocMetadata: tocResponse.result_toc_result ?? null,
         geographicScope: geoScope ?? null,
         contributingCenters: contributingCenters ?? [],
         contributingInstitutions: contributingInstitutions ?? [],
         contributingProjects: contributingProjects ?? [],
         contributingInitiatives: contributingInitiatives ?? [],
         evidence: evidence ?? [],
-        resultTypeResponse: resultTypeResponse ?? null,
+        resultTypeResponse: resultTypeResponse ?? [],
       };
 
       return {
@@ -2814,26 +2850,10 @@ export class ResultsService {
     }
   }
 
-  private _validateBilateralResultId(resultId: number): returnErrorDto | null {
-    const parsedResultId = Number(resultId);
-    if (
-      !parsedResultId ||
-      !Number.isFinite(parsedResultId) ||
-      parsedResultId <= 0
-    ) {
-      return {
-        response: {} as any,
-        message: 'The resultId parameter must be a valid positive number.',
-        status: HttpStatus.BAD_REQUEST,
-      };
-    }
-    return null;
-  }
-
   private async _loadBilateralBaseData(resultId: number) {
     const [commonFields, tocMetadata, contributingCenters] = await Promise.all([
       this._resultRepository.getCommonFieldsBilateralResultById(resultId),
-      this._resultRepository.getTocMetadataBilateralResult(resultId),
+      this._resultsTocResultsService.getTocByResultV2(resultId),
       this._resultsCenterRepository.getAllResultsCenterByResultId(resultId),
     ]);
 
@@ -2884,46 +2904,51 @@ export class ResultsService {
   private async _loadContributingInstitutions(
     resultId: number,
   ): Promise<any[]> {
-    const contributingInstitutions =
-      await this._resultByIntitutionsRepository.find({
-        where: {
-          result_id: resultId,
-          is_active: true,
-        },
-        relations: {
-          delivery: true,
-          obj_institutions: { obj_institution_type_code: true },
-        },
-        order: { id: 'ASC' },
-      });
+    const partnersSnapshot =
+      await this._resultsByInstitutionsService.getInstitutionsPartnersByResultIdV2(
+        resultId,
+      );
 
-    return contributingInstitutions.map((i) => ({
-      ...i,
-      delivery: i.delivery.filter((d) => d.is_active),
-      obj_institutions: i.obj_institutions
-        ? {
-          name: i.obj_institutions.name,
-          website_link: i.obj_institutions.website_link,
-          obj_institution_type_code: {
-            id: i.obj_institutions.obj_institution_type_code.code,
-            name: i.obj_institutions.obj_institution_type_code.name,
-          },
-        }
-        : null,
-    }));
+    const partnersResponse = (partnersSnapshot?.response ?? {}) as Record<
+      string,
+      any
+    >;
+
+    const institutionsData = (partnersResponse.institutions ?? []).map(
+      (inst: any) => ({
+        ...inst,
+        delivery: (inst.delivery ?? []).filter((d) => d.is_active),
+      }),
+    );
+
+    return institutionsData;
   }
 
   private async _loadBilateralRelatedData(resultId: number) {
-    const [contributingProjects, contributingInitiatives, evidence] =
-      await Promise.all([
-        this._resultsByProjectsRepository?.findResultsByProjectsByResultId(
+    const [contributingProjects, evidence] = await Promise.all([
+      this._resultsByProjectsRepository?.findResultsByProjectsByResultId(
+        resultId,
+      ),
+      this._resultRepository.getEvidenceBilateralResult(resultId),
+    ]);
+
+    const [conAccepted, conPending, contributingAndPrimary] = await Promise.all(
+      [
+        this._resultByInitiativesRepository.getContributorInitiativeByResult(
           resultId,
         ),
-        this._resultRepository.getContributingInitiativesBilateralResult(
+        this._resultByInitiativesRepository.getPendingInit(resultId),
+        this._resultByInitiativesRepository.getContributorInitiativeAndPrimaryByResult(
           resultId,
         ),
-        this._resultRepository.getEvidenceBilateralResult(resultId),
-      ]);
+      ],
+    );
+
+    const contributingInitiatives = {
+      contributing_and_primary_initiative: contributingAndPrimary ?? [],
+      accepted_contributing_initiatives: conAccepted ?? [],
+      pending_contributing_initiatives: conPending ?? [],
+    };
 
     if (!contributingProjects) {
       this._logger.warn(
@@ -2931,9 +2956,21 @@ export class ResultsService {
       );
     }
 
-    if (!contributingInitiatives) {
+    if (!conAccepted) {
       this._logger.warn(
-        `Contributing initiatives for Bilateral result data not found (resultId: ${resultId})`,
+        `Contributing ACCEPTED initiatives for Bilateral result data not found (resultId: ${resultId})`,
+      );
+    }
+
+    if (!conPending) {
+      this._logger.warn(
+        `Contributing PENDING initiatives for Bilateral result data not found (resultId: ${resultId})`,
+      );
+    }
+
+    if (!contributingAndPrimary) {
+      this._logger.warn(
+        `Contributing AND PRIMARY initiatives for Bilateral result data not found (resultId: ${resultId})`,
       );
     }
 
@@ -3023,7 +3060,6 @@ export class ResultsService {
         };
       }
 
-      // Validar que la justificación esté presente si es REJECT
       if (
         reviewDecisionDto.decision === ReviewDecisionEnum.REJECT &&
         !reviewDecisionDto.justification?.trim()
@@ -3072,7 +3108,6 @@ export class ResultsService {
           },
         );
 
-        // Crear el historial de revisión usando el manager de la transacción
         const reviewHistory = manager.create(ResultReviewHistory, {
           result_id: parsedResultId,
           action: reviewDecisionDto.decision as any,
@@ -3092,6 +3127,593 @@ export class ResultsService {
             status: newStatusId,
           },
           message: `Result ${decisionVerb} successfully`,
+          status: HttpStatus.OK,
+        };
+      });
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ConflictException
+      ) {
+        return {
+          response: {},
+          message: error.message,
+          status: error.getStatus(),
+        };
+      }
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async updateBilateralResultReview(
+    resultId: number,
+    reviewUpdateDto: ReviewUpdateDto,
+    user: TokenDto,
+  ): Promise<ReturnResponseDto<any> | returnErrorDto> {
+    try {
+      const parsedResultId = Number(resultId);
+      if (
+        !parsedResultId ||
+        !Number.isFinite(parsedResultId) ||
+        parsedResultId <= 0
+      ) {
+        return {
+          response: {},
+          message: 'The resultId parameter must be a valid positive number.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      if (
+        reviewUpdateDto.commonFields?.id &&
+        reviewUpdateDto.commonFields.id !== parsedResultId
+      ) {
+        return {
+          response: {},
+          message:
+            'The result ID in commonFields must match the URL parameter.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const currentCommonFields =
+        await this._resultRepository.getCommonFieldsBilateralResultById(
+          parsedResultId,
+        );
+
+      const hasMinDataStandardChanges = this._detectMinDataStandardChanges(
+        reviewUpdateDto,
+        currentCommonFields,
+      );
+
+      const hasOtherChanges = this._detectOtherChanges(reviewUpdateDto);
+      const hasChanges = hasMinDataStandardChanges || hasOtherChanges;
+
+      this._validateUpdateExplanation(hasChanges, reviewUpdateDto);
+
+      await this._dataSource.transaction(async (manager) => {
+        await this._validateBilateralResultForUpdate(manager, parsedResultId);
+
+        //Update description
+        await this._updateMinDataStandardFields(
+          manager,
+          parsedResultId,
+          hasMinDataStandardChanges,
+          reviewUpdateDto,
+        );
+
+        await this._createReviewHistory(
+          manager,
+          parsedResultId,
+          reviewUpdateDto,
+          user,
+        );
+      });
+
+      // Update GeoScope
+      await this._updateGeographicScope(parsedResultId, reviewUpdateDto, user);
+
+      // Update Partners/Institutions - Projects - Centers
+      await this._updatePartners(parsedResultId, reviewUpdateDto, user);
+
+      // Update Initiatives/Science Programs
+      await this._updateTocMapping(parsedResultId, reviewUpdateDto, user);
+
+      // Update Evidence
+      await this._updateEvidence(parsedResultId, reviewUpdateDto, user);
+
+      // Update Result by Category Type
+      await this._updateResultTypeResponse(
+        parsedResultId,
+        reviewUpdateDto,
+        user,
+      );
+
+      const changedFields = {
+        ...(hasMinDataStandardChanges ? { min_data_standard: 'updated' } : {}),
+        ...(hasOtherChanges ? { other_fields: 'updated' } : {}),
+      };
+
+      return {
+        response: {
+          resultId: parsedResultId,
+          changedFields:
+            Object.keys(changedFields).length > 0 ? changedFields : undefined,
+        },
+        message: 'Result updated successfully',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ConflictException
+      ) {
+        return {
+          response: {},
+          message: error.message,
+          status: error.getStatus(),
+        };
+      }
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  private async _validateBilateralResultForUpdate(
+    manager: any,
+    resultId: number,
+  ): Promise<void> {
+    const result = await manager.findOne(Result, {
+      where: {
+        id: resultId,
+        source: SourceEnum.Bilateral,
+        is_active: true,
+      },
+    });
+
+    if (!result) {
+      throw new BadRequestException('Bilateral result not found');
+    }
+
+    const currentStatusId = Number(result.status_id);
+    if (currentStatusId !== ResultStatusData.PendingReview.value) {
+      throw new ConflictException(
+        `Cannot update result. Current status is not PENDING_REVIEW (status_id: ${result.status_id})`,
+      );
+    }
+  }
+
+  private _detectMinDataStandardChanges(
+    reviewUpdateDto: ReviewUpdateDto,
+    currentCommonFields: any,
+  ): boolean {
+    return (
+      reviewUpdateDto.commonFields?.result_description !== undefined &&
+      reviewUpdateDto.commonFields.result_description !==
+        currentCommonFields?.result_description
+    );
+  }
+
+  private _extractInitiativeIds(initiatives: any[]): number[] {
+    return (initiatives || [])
+      .map((i: any) => i?.id)
+      .filter((id: any) => id !== undefined && id !== null)
+      .sort((a: number, b: number) => a - b);
+  }
+
+  private _detectOtherChanges(reviewUpdateDto: ReviewUpdateDto): boolean {
+    return (
+      reviewUpdateDto.contributingInitiatives !== undefined ||
+      reviewUpdateDto.contributingInstitutions !== undefined ||
+      reviewUpdateDto.contributingCenters !== undefined ||
+      reviewUpdateDto.contributingProjects !== undefined ||
+      reviewUpdateDto.geographicScope !== undefined ||
+      reviewUpdateDto.contributingCenters !== undefined ||
+      reviewUpdateDto.contributingProjects !== undefined ||
+      reviewUpdateDto.contributingInstitutions !== undefined ||
+      reviewUpdateDto.evidence !== undefined ||
+      reviewUpdateDto.resultTypeResponse !== undefined
+    );
+  }
+
+  private _validateUpdateExplanation(
+    hasChanges: boolean,
+    reviewUpdateDto: ReviewUpdateDto,
+  ): void {
+    if (hasChanges && !reviewUpdateDto.updateExplanation?.trim()) {
+      throw new BadRequestException(
+        'updateExplanation is required when ToC fields or Minimum Data Standard fields are modified',
+      );
+    }
+  }
+
+  private async _updateMinDataStandardFields(
+    manager: any,
+    resultId: number,
+    hasMinDataStandardChanges: boolean,
+    reviewUpdateDto: ReviewUpdateDto,
+  ): Promise<void> {
+    if (!hasMinDataStandardChanges) return;
+
+    const updateData: Partial<Result> = {};
+    if (reviewUpdateDto.commonFields?.result_description !== undefined) {
+      updateData.description = reviewUpdateDto.commonFields.result_description;
+    }
+
+    if (Object.keys(updateData).length > 0) {
+      await manager.update(Result, { id: resultId }, updateData);
+    }
+  }
+
+  private async _updateGeographicScope(
+    resultId: number,
+    reviewUpdateDto: ReviewUpdateDto,
+    user: TokenDto,
+  ): Promise<void> {
+    if (
+      reviewUpdateDto.geographicScope === undefined ||
+      !this._geographicLocationService
+    ) {
+      return;
+    }
+
+    const geoScopeDto = {
+      ...reviewUpdateDto.geographicScope,
+      result_id: resultId,
+    };
+    const geoScopeResult = await this._geographicLocationService.saveGeoScopeV2(
+      geoScopeDto,
+      user,
+    );
+    if (geoScopeResult.status !== HttpStatus.OK) {
+      this._logger.warn(
+        `Failed to update geographic scope for result ${resultId}`,
+      );
+    }
+  }
+
+  private async _updatePartners(
+    resultId: number,
+    reviewUpdateDto: ReviewUpdateDto,
+    user: TokenDto,
+  ): Promise<void> {
+    const hasPartnerChanges =
+      reviewUpdateDto.contributingCenters !== undefined ||
+      reviewUpdateDto.contributingProjects !== undefined ||
+      reviewUpdateDto.contributingInstitutions !== undefined;
+
+    if (!hasPartnerChanges || !this._contributorsPartnersService) {
+      return;
+    }
+
+    const institutionsNormalized =
+      reviewUpdateDto.contributingInstitutions?.map((ci) => ({
+        ...ci,
+        id: (ci as any).id ?? undefined,
+      }));
+
+    const partnersPayload: SavePartnersV2Dto = {
+      result_id: resultId,
+      contributing_center: reviewUpdateDto.contributingCenters,
+      bilateral_project: reviewUpdateDto.contributingProjects,
+      institutions: institutionsNormalized,
+    };
+
+    const partnersResult =
+      await this._contributorsPartnersService.updatePartnersV2(
+        resultId,
+        partnersPayload,
+        user,
+      );
+    if (partnersResult.status !== HttpStatus.OK) {
+      this._logger.warn(`Failed to update partners for result ${resultId}`);
+    }
+  }
+
+  private async _updateTocMapping(
+    resultId: number,
+    reviewUpdateDto: ReviewUpdateDto,
+    user: TokenDto,
+  ): Promise<void> {
+    if (reviewUpdateDto.contributingInitiatives === undefined) return;
+
+    if (!this._contributorsPartnersService) {
+      this._logger.warn(
+        `ContributorsPartnersService not available _updateTocMapping. resultId=${resultId}`,
+      );
+      return;
+    }
+
+    const contributing = reviewUpdateDto.contributingInitiatives;
+
+    let acceptedIds: number[] = (
+      contributing.accepted_contributing_initiatives ?? []
+    )
+      .map(Number)
+      .filter((n) => Number.isFinite(n) && n > 0);
+
+    let pendingIds: number[] = (
+      contributing.pending_contributing_initiatives ?? []
+    )
+      .map(Number)
+      .filter((n) => Number.isFinite(n) && n > 0);
+
+    const initSubmitter = await this._resultByInitiativesRepository.findOne({
+      where: { result_id: resultId, initiative_role_id: 1 },
+    });
+
+    if (contributing?.accepted_contributing_initiatives?.length) {
+      acceptedIds = contributing.accepted_contributing_initiatives
+        .map((i) => i.id)
+        .filter((id) => id !== initSubmitter.initiative_id);
+    } else {
+      acceptedIds = acceptedIds.filter(
+        (id) => id !== initSubmitter.initiative_id,
+      );
+    }
+    if (contributing?.pending_contributing_initiatives?.length) {
+      pendingIds = contributing.pending_contributing_initiatives.map(
+        (i) => i.id,
+      );
+    }
+
+    const contributingInit =
+      await this._resultByInitiativesRepository.updateResultByInitiative(
+        resultId,
+        acceptedIds,
+        user.id,
+        false,
+        pendingIds,
+      );
+
+    if (contributingInit.length > 0) {
+      await this._resultsTocResultsService.sendEmailNotification(
+        contributingInit,
+        resultId,
+        initSubmitter.initiative_id,
+        user,
+      );
+    }
+
+    if (pendingIds.length) {
+      if (!this._shareResultRequestService) {
+        this._logger.warn(
+          `ShareResultRequestService is not available for result ${resultId}. Skipping email notifications.`,
+        );
+        return;
+      }
+      const dataRequest: CreateTocShareResult = {
+        isToc: false,
+        initiativeShareId: pendingIds,
+        email_template: 'email_template_contribution',
+      };
+      await this._shareResultRequestService.resultRequest(
+        dataRequest,
+        resultId,
+        user,
+      );
+    }
+  }
+
+  private async _updateEvidence(
+    resultId: number,
+    reviewUpdateDto: ReviewUpdateDto,
+    user: TokenDto,
+  ): Promise<void> {
+    if (
+      reviewUpdateDto.evidence === undefined ||
+      reviewUpdateDto.evidence.length === 0 ||
+      !this._evidencesService
+    ) {
+      return;
+    }
+
+    const evidenceResult = await this._evidencesService.updateEvidencesPartial(
+      reviewUpdateDto.evidence,
+      resultId,
+      user,
+    );
+    if (evidenceResult.status !== HttpStatus.OK) {
+      this._logger.warn(`Failed to update evidence for result ${resultId}`);
+    }
+  }
+
+  private async _updateResultTypeResponse(
+    resultId: number,
+    reviewUpdateDto: ReviewUpdateDto,
+    user: TokenDto,
+  ): Promise<void> {
+    if (
+      reviewUpdateDto.resultTypeResponse === undefined ||
+      !reviewUpdateDto.commonFields?.result_type_id
+    ) {
+      return;
+    }
+
+    const resultTypeId = Number(reviewUpdateDto.commonFields.result_type_id);
+
+    try {
+      await this._handleResultTypeUpdate(
+        resultTypeId,
+        resultId,
+        reviewUpdateDto,
+        user,
+      );
+    } catch (error) {
+      this._logger.error(
+        `Failed to update resultTypeResponse for result ${resultId}, type ${resultTypeId}: ${error.message}`,
+      );
+      throw error;
+    }
+  }
+
+  private async _handleResultTypeUpdate(
+    resultTypeId: number,
+    resultId: number,
+    reviewUpdateDto: ReviewUpdateDto,
+    user: TokenDto,
+  ): Promise<void> {
+    switch (resultTypeId) {
+      case ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT: // 5
+        if (this._summaryService) {
+          const capdevDto: CapdevDto = {
+            ...(reviewUpdateDto.resultTypeResponse as any),
+            institutions: [],
+            is_attending_for_organization: false,
+          };
+          await this._summaryService.saveCapacityDevelopents(
+            capdevDto,
+            resultId,
+            user,
+          );
+        } else {
+          this._logger.warn(
+            `SummaryService not available for result ${resultId}`,
+          );
+        }
+        break;
+
+      case ResultTypeEnum.INNOVATION_DEVELOPMENT: // 7
+        if (this._innovationDevService) {
+          await this._innovationDevService.updateInnovationDevPartial(
+            resultId,
+            reviewUpdateDto.resultTypeResponse as any,
+            user,
+          );
+        } else {
+          this._logger.warn(
+            `InnovationDevService not available for result ${resultId}`,
+          );
+        }
+        break;
+
+      case ResultTypeEnum.POLICY_CHANGE: // 1
+        if (this._summaryService) {
+          await this._summaryService.updatePolicyChangesPartial(
+            resultId,
+            reviewUpdateDto.resultTypeResponse as any,
+            user,
+          );
+        } else {
+          this._logger.warn(
+            `SummaryService not available for result ${resultId}`,
+          );
+        }
+        break;
+
+      case ResultTypeEnum.INNOVATION_USE: // 2
+        if (this._innovationUseService) {
+          await this._innovationUseService.saveInnovationUse(
+            reviewUpdateDto.resultTypeResponse as any,
+            resultId,
+            user,
+          );
+        } else {
+          this._logger.warn(
+            `InnovationUseService not available for result ${resultId}`,
+          );
+        }
+        break;
+
+      default:
+        this._logger.warn(
+          `Unsupported result_type_id: ${resultTypeId} for result ${resultId}`,
+        );
+        break;
+    }
+  }
+
+  private async _createReviewHistory(
+    manager: any,
+    resultId: number,
+    reviewUpdateDto: ReviewUpdateDto,
+    user: TokenDto,
+  ): Promise<void> {
+    const reviewHistory = manager.create(ResultReviewHistory, {
+      result_id: resultId,
+      action: ReviewActionEnum.UPDATE,
+      comment: reviewUpdateDto.updateExplanation || null,
+      created_by: user.id,
+    });
+    await manager.save(ResultReviewHistory, reviewHistory);
+  }
+
+  async updateBilateralResultTocMetadata(
+    resultId: number,
+    updateTocMetadataDto: UpdateTocMetadataDto,
+    user: TokenDto,
+  ): Promise<ReturnResponseDto<any> | returnErrorDto> {
+    try {
+      const parsedResultId = Number(resultId);
+      if (
+        !parsedResultId ||
+        !Number.isFinite(parsedResultId) ||
+        parsedResultId <= 0
+      ) {
+        return {
+          response: {},
+          message: 'The resultId parameter must be a valid positive number.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      return await this._dataSource.transaction(async (manager) => {
+        const result = await manager.findOne(Result, {
+          where: {
+            id: parsedResultId,
+            source: SourceEnum.Bilateral,
+            is_active: true,
+          },
+        });
+
+        if (!result) {
+          throw new BadRequestException('Bilateral result not found');
+        }
+
+        const currentStatusId = Number(result.status_id);
+        if (currentStatusId !== ResultStatusData.PendingReview.value) {
+          throw new ConflictException(
+            `Cannot update result. Current status is not PENDING_REVIEW (status_id: ${result.status_id})`,
+          );
+        }
+
+        if (!updateTocMetadataDto.updateExplanation?.trim()) {
+          throw new BadRequestException(
+            'updateExplanation is required when ToC metadata is modified',
+          );
+        }
+
+        if (!this._resultsTocResultsService) {
+          this._logger.warn('ResultsTocResultsService is not available');
+          return;
+        }
+
+        const tocResult =
+          await this._resultsTocResultsService.updateTocResultPartial(
+            parsedResultId,
+            updateTocMetadataDto.tocMetadata,
+            user,
+          );
+
+        if (tocResult.status !== HttpStatus.OK) {
+          throw new BadRequestException(
+            `Failed to update ToC metadata: ${tocResult.message || 'Unknown error'}`,
+          );
+        }
+
+        const reviewHistory = manager.create(ResultReviewHistory, {
+          result_id: parsedResultId,
+          action: ReviewActionEnum.UPDATE,
+          comment: updateTocMetadataDto.updateExplanation,
+          created_by: user.id,
+        });
+        await manager.save(ResultReviewHistory, reviewHistory);
+
+        return {
+          response: {
+            resultId: parsedResultId,
+            tocMetadata: tocResult.response,
+          },
+          message: 'ToC metadata updated successfully',
           status: HttpStatus.OK,
         };
       });

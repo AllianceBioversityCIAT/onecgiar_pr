@@ -12,6 +12,7 @@ import { User } from '../../../../auth/modules/user/entities/user.entity';
 export enum ReviewActionEnum {
   APPROVE = 'APPROVED',
   REJECT = 'REJECTED',
+  UPDATE = 'UPDATE',
 }
 
 @Entity('result_review_history')

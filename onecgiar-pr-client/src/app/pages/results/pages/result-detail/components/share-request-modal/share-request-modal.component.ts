@@ -7,12 +7,13 @@ import { Router } from '@angular/router';
 import { RetrieveModalService } from '../retrieve-modal/retrieve-modal.service';
 import { ResultsNotificationsService } from '../../../results-outlet/pages/results-notifications/results-notifications.service';
 import { RdTheoryOfChangesServicesService } from '../../pages/rd-theory-of-change/rd-theory-of-changes-services.service';
+import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 
 @Component({
-    selector: 'app-share-request-modal',
-    templateUrl: './share-request-modal.component.html',
-    styleUrls: ['./share-request-modal.component.scss'],
-    standalone: false
+  selector: 'app-share-request-modal',
+  templateUrl: './share-request-modal.component.html',
+  styleUrls: ['./share-request-modal.component.scss'],
+  standalone: false
 })
 export class ShareRequestModalComponent implements OnInit {
   requesting = false;
@@ -20,6 +21,7 @@ export class ShareRequestModalComponent implements OnInit {
   showForm = true;
   showTocOut = true;
   disabledOptions = [{ initiative_id: 10 }];
+  tocConsumed = true;
 
   constructor(
     public retrieveModalSE: RetrieveModalService,
@@ -28,7 +30,8 @@ export class ShareRequestModalComponent implements OnInit {
     public shareRequestModalSE: ShareRequestModalService,
     private router: Router,
     public resultsNotificationsSE: ResultsNotificationsService,
-    public theoryOfChangesServices: RdTheoryOfChangesServicesService
+    public theoryOfChangesServices: RdTheoryOfChangesServicesService,
+    public fieldsManagerSE: FieldsManagerService
   ) {}
 
   ngOnInit(): void {
@@ -44,6 +47,20 @@ export class ShareRequestModalComponent implements OnInit {
     return false;
   }
 
+  get shouldShowTocInitiativeOut(): boolean {
+    const hasInitiativeId = !!this.shareRequestModalSE.shareRequestBody?.initiative_id;
+    const inNotifications = this.api.dataControlSE.inNotifications;
+    const resultLevelId = this.api.dataControlSE?.currentResult?.result_level_id;
+    const isAllowedResultLevel = resultLevelId === 3 || resultLevelId === 4;
+
+    if (!hasInitiativeId || !this.showTocOut) {
+      return false;
+    }
+
+    // Show when not in notifications, or when in notifications with allowed result level
+    return !inNotifications || (inNotifications && isAllowedResultLevel);
+  }
+
   cleanObject() {
     this.showForm = false;
     this.shareRequestModalSE.shareRequestBody = new ShareRequestBody();
@@ -51,6 +68,16 @@ export class ShareRequestModalComponent implements OnInit {
     setTimeout(() => {
       this.showForm = true;
     }, 0);
+  }
+
+  get entitiesList(): any[] {
+    if (this.api.rolesSE.isAdmin) {
+      return this.allInitiatives.filter(initiative => initiative.portfolio_id === this.api.dataControlSE.reportingCurrentPhase.portfolioId);
+    }
+
+    return this.api.dataControlSE.myInitiativesList.filter(
+      initiative => initiative.official_code !== this.api.dataControlSE.currentResult?.submitter
+    );
   }
 
   onRequest() {
@@ -62,7 +89,7 @@ export class ShareRequestModalComponent implements OnInit {
       isToc: true,
       contributors_result_toc_result: [
         {
-          planned_result: true,
+          planned_result: this.shareRequestModalSE.shareRequestBody.planned_result,
           initiative_id: this.shareRequestModalSE.shareRequestBody.initiative_id,
           result_toc_results: this.shareRequestModalSE.shareRequestBody.result_toc_results
         }
@@ -148,7 +175,9 @@ export class ShareRequestModalComponent implements OnInit {
 
     this.requesting = true;
 
-    this.api.resultsSE.PATCH_updateRequest(body).subscribe({
+    const isP25 = this.api.dataControlSE.currentResultSignal()?.portfolio === 'P25';
+
+    this.api.resultsSE.PATCH_updateRequest(body, isP25).subscribe({
       next: resp => {
         this.api.dataControlSE.showShareRequest = false;
         this.api.alertsFe.show({
@@ -164,6 +193,7 @@ export class ShareRequestModalComponent implements OnInit {
         }
       },
       error: err => {
+        console.error('error', err);
         this.api.dataControlSE.showShareRequest = false;
         this.api.alertsFe.show({ id: 'noti-error', title: 'Error when requesting ', description: '', status: 'error' });
         this.requesting = false;
@@ -175,5 +205,39 @@ export class ShareRequestModalComponent implements OnInit {
     this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
       this.allInitiatives = response;
     });
+  }
+
+  onPlannedResultChange(item: any) {
+    item?.result_toc_results?.forEach((tab: any) => {
+      if (tab.indicators?.[0]) {
+        tab.indicators[0].related_node_id = null;
+        tab.indicators[0].toc_results_indicator_id = null;
+        if (tab.indicators[0].targets?.[0]) {
+          tab.indicators[0].targets[0].contributing_indicator = null;
+        }
+      } else {
+        tab.indicators = [
+          {
+            related_node_id: null,
+            toc_results_indicator_id: null,
+            targets: [
+              {
+                contributing_indicator: null
+              }
+            ]
+          }
+        ];
+      }
+
+      tab.toc_progressive_narrative = null;
+      tab.toc_result_id = null;
+      tab.toc_level_id = null;
+    });
+
+    this.tocConsumed = false;
+
+    setTimeout(() => {
+      this.tocConsumed = true;
+    }, 200);
   }
 }

@@ -2,7 +2,10 @@ import { of, lastValueFrom } from 'rxjs';
 import { ResponseInterceptor } from './Return-data.interceptor';
 
 describe('ResponseInterceptor', () => {
-  const makeContext = (reqOverrides: Partial<any> = {}, resOverrides: any = {}) =>
+  const makeContext = (
+    reqOverrides: Partial<any> = {},
+    resOverrides: any = {},
+  ) =>
     ({
       switchToHttp: () => ({
         getRequest: () => ({
@@ -26,7 +29,10 @@ describe('ResponseInterceptor', () => {
 
     const res = { status: jest.fn().mockReturnThis() };
     const ctx = makeContext({}, res);
-    const next = { handle: () => of({ response: { ok: false }, status: 400, message: 'bad' }) } as any;
+    const next = {
+      handle: () =>
+        of({ response: { ok: false }, status: 400, message: 'bad' }),
+    } as any;
 
     const out = await lastValueFrom(interceptor.intercept(ctx, next));
 
@@ -50,7 +56,9 @@ describe('ResponseInterceptor', () => {
 
     const res = { status: jest.fn().mockReturnThis() };
     const ctx = makeContext({ url: '/ok', method: 'POST' }, res);
-    const next = { handle: () => of({ response: { ok: true }, message: 'ok' }) } as any;
+    const next = {
+      handle: () => of({ response: { ok: true }, message: 'ok' }),
+    } as any;
 
     const out = await lastValueFrom(interceptor.intercept(ctx, next));
 
@@ -66,4 +74,3 @@ describe('ResponseInterceptor', () => {
     expect(verboseSpy).toHaveBeenCalledTimes(1);
   });
 });
-

@@ -578,6 +578,90 @@ export class BilateralService {
     };
   }
 
+  async getResultsForSync(
+    bilateral?: boolean,
+    type?: string,
+  ): Promise<Array<{ type: string; result_id: number; data: any }>> {
+    // Build where clause
+    const where: any = {
+      source: SourceEnum.Bilateral,
+      is_active: true,
+    };
+
+    // Filter by result type if provided
+    if (type) {
+      const typeMap: Record<string, number> = {
+        knowledge_product: ResultTypeEnum.KNOWLEDGE_PRODUCT,
+        capacity_sharing: ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+        innovation_development: ResultTypeEnum.INNOVATION_DEVELOPMENT,
+        innovation_use: ResultTypeEnum.INNOVATION_USE,
+        other_output: ResultTypeEnum.OTHER_OUTPUT,
+        other_outcome: ResultTypeEnum.OTHER_OUTCOME,
+        policy_change: ResultTypeEnum.POLICY_CHANGE,
+      };
+
+      const resultTypeId = typeMap[type.toLowerCase()];
+      if (resultTypeId) {
+        where.result_type_id = resultTypeId;
+      } else {
+        this.logger.warn(`Unknown result type: ${type}`);
+      }
+    }
+
+    // Get all results matching the criteria (no limit)
+    let results = await this._resultRepository.find({
+      where,
+      order: { id: 'DESC' },
+    });
+
+    // Filter by bilateral flag if true (only results with contributing_bilateral_projects)
+    if (bilateral === true) {
+      const resultIdsWithProjects = await this._resultsByProjectsRepository
+        .createQueryBuilder('rbp')
+        .select('DISTINCT rbp.result_id', 'result_id')
+        .getRawMany();
+
+      const ids = resultIdsWithProjects.map((r) => r.result_id);
+      if (ids.length > 0) {
+        results = results.filter((r) => ids.includes(r.id));
+      } else {
+        // No results have projects, return empty array
+        results = [];
+      }
+    }
+
+    // Build relations and filter active relations for each result
+    const resultsWithRelations = await Promise.all(
+      results.map(async (result) => {
+        const resultTypeId = result.result_type_id;
+        const resultWithRelations = await this._resultRepository.findOne({
+          where: { id: result.id },
+          relations: this.buildResultRelations(resultTypeId),
+        });
+        const filteredResult = this.filterActiveRelations(resultWithRelations);
+
+        // Map result type ID to string type name
+        const typeMap: Record<number, string> = {
+          [ResultTypeEnum.KNOWLEDGE_PRODUCT]: 'knowledge_product',
+          [ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT]: 'capacity_sharing',
+          [ResultTypeEnum.INNOVATION_DEVELOPMENT]: 'innovation_development',
+          [ResultTypeEnum.INNOVATION_USE]: 'innovation_use',
+          [ResultTypeEnum.OTHER_OUTPUT]: 'other_output',
+          [ResultTypeEnum.OTHER_OUTCOME]: 'other_outcome',
+          [ResultTypeEnum.POLICY_CHANGE]: 'policy_change',
+        };
+
+        return {
+          type: typeMap[resultTypeId] || 'unknown',
+          result_id: result.id,
+          data: filteredResult,
+        };
+      }),
+    );
+
+    return resultsWithRelations;
+  }
+
   private buildResultRelations(resultTypeId?: number) {
     const isKpType = resultTypeId === ResultTypeEnum.KNOWLEDGE_PRODUCT;
     const isCapacityChange = resultTypeId === ResultTypeEnum.CAPACITY_CHANGE;
@@ -1326,6 +1410,7 @@ export class BilateralService {
         result_id: resultId,
         project_id: project.id,
         created_by: userId,
+        is_lead: nonpp?.is_lead === 1,
       });
     }
   }
@@ -1417,6 +1502,24 @@ export class BilateralService {
     }
   }
 
+  /**
+   * Normalizes institution name/acronym values.
+   * Maps "ABC" to "CIAT (Alliance)" for exact matching with the institution name.
+   */
+  private normalizeInstitutionValue(
+    value: string | undefined,
+  ): string | undefined {
+    if (!value) return value;
+    const normalized = value.trim().toUpperCase();
+    if (normalized === 'ABC') {
+      this.logger.debug(
+        'Normalizing ABC to CIAT (Alliance) for institution matching',
+      );
+      return 'CIAT (Alliance)';
+    }
+    return value;
+  }
+
   private async handleLeadCenter(
     resultId: number,
     leadCenter: { name?: string; acronym?: string; institution_id?: number },
@@ -1429,7 +1532,14 @@ export class BilateralService {
       return;
     }
 
-    const { name, acronym, institution_id } = leadCenter;
+    // Normalize ABC to CIAT
+    const normalizedName = this.normalizeInstitutionValue(leadCenter.name);
+    const normalizedAcronym = this.normalizeInstitutionValue(
+      leadCenter.acronym,
+    );
+    const { institution_id } = leadCenter;
+    const name = normalizedName;
+    const acronym = normalizedAcronym;
     if (!name && !acronym && !institution_id) {
       this.logger.warn(
         'lead_center must include at least one of name, acronym, institution_id',
@@ -1550,20 +1660,35 @@ export class BilateralService {
 
     for (const centerInput of centers) {
       if (!centerInput) continue;
-      const { name, acronym, institution_id } = centerInput;
+      // Normalize ABC to CIAT
+      const normalizedName = this.normalizeInstitutionValue(centerInput.name);
+      const normalizedAcronym = this.normalizeInstitutionValue(
+        centerInput.acronym,
+      );
+      const { institution_id } = centerInput;
+      const name = normalizedName;
+      const acronym = normalizedAcronym;
       if (!name && !acronym && !institution_id) continue;
+
+      // Normalize leadCenter values for comparison
+      const normalizedLeadName = this.normalizeInstitutionValue(
+        leadCenter?.name,
+      );
+      const normalizedLeadAcronym = this.normalizeInstitutionValue(
+        leadCenter?.acronym,
+      );
 
       if (
         leadCenter &&
         ((leadCenter.institution_id &&
           institution_id &&
           leadCenter.institution_id === institution_id) ||
-          (leadCenter.acronym &&
+          (normalizedLeadAcronym &&
             acronym &&
-            leadCenter.acronym.toLowerCase() === acronym.toLowerCase()) ||
-          (leadCenter.name &&
+            normalizedLeadAcronym.toLowerCase() === acronym.toLowerCase()) ||
+          (normalizedLeadName &&
             name &&
-            leadCenter.name.toLowerCase() === name.toLowerCase()))
+            normalizedLeadName.toLowerCase() === name.toLowerCase()))
       ) {
         continue;
       }
@@ -1726,7 +1851,12 @@ export class BilateralService {
 
     for (const input of institutions) {
       if (!input) continue;
-      const { institution_id, name, acronym } = input;
+      // Normalize ABC to CIAT
+      const normalizedName = this.normalizeInstitutionValue(input.name);
+      const normalizedAcronym = this.normalizeInstitutionValue(input.acronym);
+      const { institution_id } = input;
+      const name = normalizedName;
+      const acronym = normalizedAcronym;
       let matched: ClarisaInstitution | null = null;
 
       if (institution_id) {
