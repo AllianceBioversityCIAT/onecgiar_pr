@@ -45,7 +45,7 @@ export class StepN4Component implements OnInit {
       }));
 
       this.ipsrStep4Body.institutions_expected_investment = this.ipsrStep4Body.institutions_expected_investment.filter(
-        item => item?.obj_result_institution?.institution_roles_id == 7
+        item => item?.obj_result_institution?.institution_roles_id == 7 || item?.obj_result_institution?.institution_roles_id == 2
       );
     });
   }
