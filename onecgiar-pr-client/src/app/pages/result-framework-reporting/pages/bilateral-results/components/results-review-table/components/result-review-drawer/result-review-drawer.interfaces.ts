@@ -1,3 +1,7 @@
+export type NullableNumericValue = number | string | null;
+export type NullableNumericId = string | number | null;
+export type NumericId = string | number;
+
 export interface ResultToReview {
   id: string;
   project_id: string;
@@ -212,17 +216,17 @@ export interface BilateralInnovationUseResponse {
 export interface BilateralInnovationUseActor {
   is_active?: boolean;
   result_actors_id?: string;
-  women?: number | string | null;
-  women_youth?: number | string | null;
-  women_non_youth?: number | string | null;
-  men?: number | string | null;
-  men_youth?: number | string | null;
-  men_non_youth?: number | string | null;
+  women?: NullableNumericValue;
+  women_youth?: NullableNumericValue;
+  women_non_youth?: NullableNumericValue;
+  men?: NullableNumericValue;
+  men_youth?: NullableNumericValue;
+  men_non_youth?: NullableNumericValue;
   other_actor_type?: string | null;
   sex_and_age_disaggregation?: boolean;
-  how_many?: number | string | null;
-  actor_type_id?: string | number | null;
-  obj_actor_type?: { actor_type_id: string | number; name: string };
+  how_many?: NullableNumericValue;
+  actor_type_id?: NullableNumericId;
+  obj_actor_type?: { actor_type_id: NumericId; name: string };
 }
 
 export interface BilateralInnovationUseMeasure {
