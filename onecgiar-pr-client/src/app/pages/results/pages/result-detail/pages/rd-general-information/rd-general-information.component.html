@@ -1,5 +1,19 @@
 <app-rd-annual-updating *ngIf="this.generalInfoBody.is_replicated" [generalInfoBody]="this.generalInfoBody"></app-rd-annual-updating>
+
 <div class="detail_container">
+  @if (!this.api.rolesSE.readOnly && this.isPhaseOpen) {
+    <div style="max-width: 200px">
+      <app-pr-button
+        text="Change result type"
+        icon="move_up"
+        [reverse]="true"
+        (click)="this.api.dataControlSE.changeResultTypeModal = true"
+        [rotateRight]="true"
+        [verticalMargin]="0">
+      </app-pr-button>
+    </div>
+  }
+
   <app-alert-status
     *ngIf="this.api.dataControlSE.isKnowledgeProduct"
     description="In case some of the metadata fields are incorrect, please get in touch with the library staff of your Center to update them in the repository. Before the end of the reporting period, metadata will be automatically refreshed on this page.">
