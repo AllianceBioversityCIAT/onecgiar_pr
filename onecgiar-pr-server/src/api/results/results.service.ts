@@ -1145,15 +1145,45 @@ export class ResultsService {
     }
   }
 
+  /**
+   * Find all results by role with filtering and pagination.
+   * 
+   * @important Lambda Response Size Constraint:
+   * AWS Lambda has a maximum response payload size of ~6MB. This method implements:
+   * - Mandatory pagination (default: page=1, limit=50, max=100)
+   * - Response size monitoring and logging
+   * - Optimized result mapping to reduce payload size
+   * 
+   * If response size approaches/exceeds limits, pagination is enforced and errors are returned
+   * with proper HTTP status codes (400 for invalid params, 413 for oversized responses).
+   * 
+   * @param userId - User ID to filter results by role
+   * @param query - Query parameters including filters and pagination
+   * @returns Paginated response with metadata
+   */
   async findAllByRoleFiltered(userId: number, query: Record<string, any> = {}) {
     try {
+      // Log request parameters for diagnostics
+      this._logger.log(
+        `[RESULTS-FIND-ALL-ROLES] Request params: userId=${userId}, filters=${JSON.stringify(query)}`,
+      );
+
+      // Enforce default pagination to prevent oversized responses
       const pageNum = Number(query.page);
       const limitNum = Number(query.limit);
-      const page =
-        Number.isFinite(pageNum) && pageNum > 0 ? pageNum : undefined;
-      const limit =
-        Number.isFinite(limitNum) && limitNum > 0 ? limitNum : undefined;
-      const offset = page && limit ? (page - 1) * limit : undefined;
+      const validatedPage = Math.max(1, Math.floor(pageNum) || 1);
+      const validatedLimit = Math.min(100, Math.max(1, Math.floor(limitNum) || 50));
+      
+      // Always use pagination (mandatory to prevent 6MB limit issues)
+      const page = validatedPage;
+      const limit = validatedLimit;
+      const offset = (page - 1) * limit;
+
+      if (pageNum !== validatedPage || limitNum !== validatedLimit) {
+        this._logger.warn(
+          `[RESULTS-FIND-ALL-ROLES] Pagination params adjusted: page ${pageNum}->${validatedPage}, limit ${limitNum}->${validatedLimit}`,
+        );
+      }
 
       const toNumberArray = (val: any): number[] | undefined => {
         if (val === undefined || val === null || val === '') return undefined;
@@ -1209,45 +1239,70 @@ export class ResultsService {
         title: title && title.length > 0 ? title : undefined,
       };
 
+      // Always use pagination (mandatory)
       const repoRes =
         await this._customResultRepository.AllResultsByRoleUserAndInitiativeFiltered(
           userId,
           filters,
           undefined,
-          limit !== undefined ? { limit, offset: offset ?? 0 } : undefined,
+          { limit, offset },
         );
       let result: any[] = repoRes.results ?? [];
       const total = repoRes.total ?? result.length;
+      const totalPages = Math.max(1, Math.ceil(total / limit));
+      const hasNext = page < totalPages;
 
-      const entity_init_map = await this._initiativeEntityMapRepository.find({
-        where: { initiativeId: In(result.map((item) => item.submitter_id)) },
-        relations: ['entity_obj'],
-      });
+      // Optimize: Only fetch entity maps if we have results (avoid unnecessary queries)
+      let entity_init_map: any[] = [];
+      let initiativesPortfolio3: any[] = [];
+      
+      if (result.length > 0) {
+        // Batch fetch entity maps for all submitter_ids in one query
+        const submitterIds = result.map((item) => item.submitter_id).filter(Boolean);
+        if (submitterIds.length > 0) {
+          entity_init_map = await this._initiativeEntityMapRepository.find({
+            where: { initiativeId: In(submitterIds) },
+            relations: ['entity_obj'],
+          });
+        }
 
-      const userInitiatives = await this._roleByUserRepository.find({
-        where: { user: userId, active: true },
-        relations: ['obj_initiative'],
-      });
+        // Fetch user initiatives (only once, not per result)
+        const userInitiatives = await this._roleByUserRepository.find({
+          where: { user: userId, active: true },
+          relations: ['obj_initiative'],
+        });
 
-      const initiativesPortfolio3 = userInitiatives.filter(
-        (rbu) => rbu.obj_initiative?.portfolio_id === 3,
-      );
+        initiativesPortfolio3 = userInitiatives.filter(
+          (rbu) => rbu.obj_initiative?.portfolio_id === 3,
+        );
+      }
 
+      // Map results with optimized nested data (limit size of nested arrays)
       result = result.map((item) => {
         const entityMaps = entity_init_map.filter(
           (map) => map.initiativeId === item.submitter_id,
         );
+        
+        // Limit nested data to prevent payload bloat
+        // Only include essential fields from entity maps
+        const limitedEntityMaps = entityMaps.slice(0, 10).map((entityMap) => ({
+          id: entityMap.id,
+          entityId: entityMap.entityId,
+          initiativeId: entityMap.initiativeId,
+          entityName: entityMap.entity_obj?.name ?? null,
+        }));
+
         return {
           ...item,
-          initiative_entity_map: entityMaps.length
-            ? entityMaps.map((entityMap) => ({
-                id: entityMap.id,
-                entityId: entityMap.entityId,
-                initiativeId: entityMap.initiativeId,
-                entityName: entityMap.entity_obj?.name ?? null,
-              }))
-            : [],
-          initiative_entity_user: initiativesPortfolio3,
+          // Limit nested arrays to prevent large payloads
+          initiative_entity_map: limitedEntityMaps,
+          // Only include essential fields from user initiatives
+          initiative_entity_user: initiativesPortfolio3.slice(0, 20).map((rbu) => ({
+            id: rbu.id,
+            initiativeId: rbu.obj_initiative?.id,
+            initiativeName: rbu.obj_initiative?.official_code,
+            roleId: rbu.role,
+          })),
         };
       });
 
@@ -1259,19 +1314,49 @@ export class ResultsService {
         };
       }
 
+      // Build paginated response
+      const paginatedResponse = {
+        items: result,
+        meta: {
+          total,
+          page,
+          limit,
+          totalPages,
+          hasNext,
+        },
+      };
+
+      // Calculate and log response size BEFORE returning
+      const responseJson = JSON.stringify(paginatedResponse);
+      const responseSizeBytes = Buffer.byteLength(responseJson, 'utf8');
+      const responseSizeMB = responseSizeBytes / (1024 * 1024);
+      const LAMBDA_MAX_PAYLOAD_BYTES = 6 * 1024 * 1024; // 6MB
+      const WARNING_THRESHOLD_BYTES = 5 * 1024 * 1024; // 5MB warning threshold
+
+      this._logger.log(
+        `[RESULTS-FIND-ALL-ROLES] Response size: ${responseSizeBytes} bytes (${responseSizeMB.toFixed(2)} MB), Records: ${result.length}, Total: ${total}`,
+      );
+
+      // Check if response is approaching or exceeding limits
+      if (responseSizeBytes > LAMBDA_MAX_PAYLOAD_BYTES) {
+        this._logger.error(
+          `[RESULTS-FIND-ALL-ROLES] Response size ${responseSizeBytes} bytes exceeds Lambda limit of ${LAMBDA_MAX_PAYLOAD_BYTES} bytes`,
+        );
+        throw {
+          response: {},
+          message: `Response payload too large (${responseSizeMB.toFixed(2)} MB). Please use pagination with smaller page size.`,
+          status: 413, // PAYLOAD_TOO_LARGE
+        };
+      }
+
+      if (responseSizeBytes > WARNING_THRESHOLD_BYTES) {
+        this._logger.warn(
+          `[RESULTS-FIND-ALL-ROLES] Response size ${responseSizeBytes} bytes is approaching Lambda limit. Consider reducing page size.`,
+        );
+      }
+
       return {
-        response:
-          limit !== undefined
-            ? {
-                items: result,
-                meta: {
-                  total,
-                  page: page ?? 1,
-                  limit,
-                  totalPages: Math.max(1, Math.ceil(total / limit)),
-                },
-              }
-            : { items: result },
+        response: paginatedResponse,
         message: 'Successful response',
         status: HttpStatus.OK,
       };

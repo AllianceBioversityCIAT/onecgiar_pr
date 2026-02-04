@@ -230,13 +230,15 @@ export class ResultsController {
     name: 'page',
     type: Number,
     required: false,
-    description: 'Page number (1-based). Returns meta when used.',
+    description: 'Page number (1-based, default: 1). Pagination is mandatory to prevent Lambda payload size issues (~6MB limit).',
+    example: 1,
   })
   @ApiQuery({
     name: 'limit',
     type: Number,
     required: false,
-    description: 'Items per page. Returns meta when used.',
+    description: 'Items per page (default: 50, max: 100). Pagination is mandatory to prevent Lambda payload size issues.',
+    example: 50,
   })
   @ApiQuery({
     name: 'title',
