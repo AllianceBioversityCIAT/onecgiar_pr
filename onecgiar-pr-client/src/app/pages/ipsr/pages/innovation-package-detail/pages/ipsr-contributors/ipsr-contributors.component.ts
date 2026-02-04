@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject, signal } from '@angular/core';
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ContributorsBody } from './model/contributorsBody';
@@ -30,10 +30,12 @@ export class IpsrContributorsComponent implements OnInit {
   contributors_result_toc_result = null;
   initiativeIdSignal = signal<any>(null);
   getConsumed = signal<boolean>(false);
+  tocConsumed = true;
   constructor(
     public api: ApiService,
     public rolesSE: RolesService,
-    public theoryOfChangesServices: RdTheoryOfChangesServicesService
+    public theoryOfChangesServices: RdTheoryOfChangesServicesService,
+    private readonly cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
@@ -144,13 +146,13 @@ export class IpsrContributorsComponent implements OnInit {
       this.rdPartnersSE.partnersBody?.sdgTargets.forEach(item => (item.full_name = `<strong>${item.sdg_target_code}</strong> - ${item.sdg_target}`));
     if (this.rdPartnersSE.partnersBody?.result_toc_result?.result_toc_results !== null) {
       this.result_toc_result = this.rdPartnersSE.partnersBody?.result_toc_result;
-      this.result_toc_result.planned_result = this.rdPartnersSE.partnersBody?.result_toc_result?.result_toc_results[0]?.planned_result ?? null;
+      this.result_toc_result.planned_result = this.rdPartnersSE.partnersBody?.result_toc_result?.result_toc_results?.[0]?.planned_result ?? null;
       this.result_toc_result.showMultipleWPsContent = true;
     }
     if (this.rdPartnersSE.partnersBody?.contributors_result_toc_result !== null) {
       this.contributors_result_toc_result = this.rdPartnersSE.partnersBody?.contributors_result_toc_result;
       this.contributors_result_toc_result.forEach((tab: any, index) => {
-        tab.planned_result = tab.result_toc_results[0]?.planned_result ?? null;
+        tab.planned_result = tab.result_toc_results?.[0]?.planned_result ?? null;
         tab.index = index;
         tab.showMultipleWPsContent = true;
       });
@@ -172,6 +174,28 @@ export class IpsrContributorsComponent implements OnInit {
     this.rdPartnersSE.setLeadPartnerOnLoad(true);
     this.rdPartnersSE.setPossibleLeadCenters(true);
     this.rdPartnersSE.setLeadCenterOnLoad(true);
+  }
+
+  onPlannedResultChange(item: any) {
+    item?.result_toc_results?.forEach((tab: any) => {
+      if (tab.indicators?.[0]) {
+        tab.indicators[0].related_node_id = null;
+        tab.indicators[0].toc_results_indicator_id = null;
+        if (tab.indicators[0].targets?.[0]) {
+          tab.indicators[0].targets[0].contributing_indicator = null;
+        }
+      }
+      tab.toc_progressive_narrative = null;
+      tab.toc_result_id = null;
+      tab.toc_level_id = null;
+    });
+
+    this.tocConsumed = false;
+
+    setTimeout(() => {
+      this.tocConsumed = true;
+      this.cdr.detectChanges();
+    }, 200);
   }
 
   getSectionInformation() {

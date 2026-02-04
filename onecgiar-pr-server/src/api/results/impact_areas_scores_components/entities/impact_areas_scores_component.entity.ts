@@ -3,7 +3,9 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  OneToMany,
 } from 'typeorm';
+import { ResultImpactAreaScore } from '../../../result-impact-area-scores/entities/result-impact-area-score.entity';
 
 @Entity('impact_areas_scores_components')
 export class ImpactAreasScoresComponent {
@@ -43,4 +45,7 @@ export class ImpactAreasScoresComponent {
     default: true,
   })
   is_active: boolean;
+
+  @OneToMany(() => ResultImpactAreaScore, (ria) => ria.impact_area_score)
+  result_impact_area_scores: ResultImpactAreaScore[];
 }

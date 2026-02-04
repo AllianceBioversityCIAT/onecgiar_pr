@@ -97,6 +97,9 @@ import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser
 import { ImpactAreasScoresComponentsModule } from '../results/impact_areas_scores_components/impact_areas_scores_components.module';
 import { AoWBilateralRepository } from '../results/results-toc-results/repositories/aow-bilateral.repository';
 import { ResultReviewHistoryRepository } from '../results/result-review-history/result-review-history.repository';
+import { ResultImpactAreaScoresModule } from '../result-impact-area-scores/result-impact-area-scores.module';
+import { ResultsTocResultsModule } from '../results/results-toc-results/results-toc-results.module';
+import { ResultsByInstitutionsModule } from '../results/results_by_institutions/results_by_institutions.module';
 
 @Module({
   controllers: [DeleteRecoverDataController],
@@ -198,6 +201,9 @@ import { ResultReviewHistoryRepository } from '../results/result-review-history/
     PrmsTablesTypesModule,
     SharePointModule,
     ImpactAreasScoresComponentsModule,
+    ResultImpactAreaScoresModule,
+    ResultsTocResultsModule,
+    ResultsByInstitutionsModule,
   ],
   exports: [
     EvidencesService,

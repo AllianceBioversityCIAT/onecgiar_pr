@@ -464,7 +464,6 @@ export class ResultsByInstitutionsService {
             ResultTypeEnum.INNOVATION_DEVELOPMENT,
             ResultTypeEnum.INNOVATION_USE,
           ].includes(incomingResult.result_type_id);
-          console.log('isInnovation', isInnovation);
           await this.handleInstitutions(
             data.institutions ?? [],
             oldPartners,
@@ -951,7 +950,7 @@ export class ResultsByInstitutionsService {
         toAdd.institution_roles_id = isKnowledgeProduct
           ? InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS
           : InstitutionRoleEnum.PARTNER;
-        toAdd.delivery = a.delivery;
+        toAdd.delivery = a.delivery ?? [];
         toAdd['isNew'] = true;
         toAdd.is_leading_result = a.is_leading_result;
         return toAdd;
@@ -1032,16 +1031,26 @@ export class ResultsByInstitutionsService {
     await this._resultByIntitutionsRepository.save(toUpdate);
     await this._resultInstitutionsBudgetRepository.save(updatedNewBudgets);
 
-    for (const toUpdateDeliveries of toUpdate.concat(added)) {
-      await this.handleDeliveries(
-        toUpdateDeliveries['isNew']
-          ? toUpdateDeliveries.delivery
-          : (incomingInstitutions.find((i) => i.id === toUpdateDeliveries.id)
-              ?.delivery ?? []),
-        toUpdateDeliveries['isNew'] ? [] : toUpdateDeliveries.delivery,
-        toUpdateDeliveries.id,
-        userId,
-      );
+    const dtoHasDelivery = (dto: any): boolean =>
+      dto != null && Object.prototype.hasOwnProperty.call(dto, 'delivery');
+
+    for (const inst of toUpdate.concat(added)) {
+      if (inst['isNew']) {
+        const incoming = (inst.delivery ?? []) as any[];
+        if (incoming.length) {
+          await this.handleDeliveries(incoming, [], inst.id, userId);
+        }
+        continue;
+      }
+
+      const dto = incomingInstitutions.find((i) => i.id === inst.id);
+
+      if (!dtoHasDelivery(dto)) continue;
+
+      const incoming = (dto?.delivery ?? []) as any[];
+      const old = (inst.delivery ?? []) as any[];
+
+      await this.handleDeliveries(incoming, old, inst.id, userId);
     }
   }
 }

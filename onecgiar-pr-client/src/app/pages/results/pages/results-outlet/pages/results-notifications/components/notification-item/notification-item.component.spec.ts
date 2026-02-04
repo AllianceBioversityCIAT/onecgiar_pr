@@ -6,6 +6,7 @@ import { ShareRequestModalService } from '../../../../../result-detail/component
 import { RetrieveModalService } from '../../../../../result-detail/components/retrieve-modal/retrieve-modal.service';
 import { of, throwError } from 'rxjs';
 import { FormatTimeAgoPipe } from '../../../../../../../../shared/pipes/format-time-ago/format-time-ago.pipe';
+import { signal } from '@angular/core';
 
 describe('NotificationItemComponent', () => {
   let component: NotificationItemComponent;
@@ -23,6 +24,12 @@ describe('NotificationItemComponent', () => {
           result_level_id: 1,
           result_type: ''
         },
+        currentResultSignal: signal({
+          title: '',
+          submitter: '',
+          result_level_id: 1,
+          result_type: ''
+        }),
         reportingCurrentPhase: {
           phaseId: '30'
         },
@@ -37,6 +44,7 @@ describe('NotificationItemComponent', () => {
       },
       resultsSE: {
         currentResultId: 1,
+        GET_TypeByResultLevel: () => of({}),
         PATCH_updateRequest: () => of({ response: {} })
       }
     };
@@ -304,7 +312,7 @@ describe('NotificationItemComponent', () => {
       expect(spy).toHaveBeenCalledWith({
         id: 'noti',
         title: 'Request successfully rejected',
-        status: 'success'
+        status: 'information'
       });
       expect(component.requestingReject).toBeFalsy();
       expect(emitSpy).toHaveBeenCalled();
