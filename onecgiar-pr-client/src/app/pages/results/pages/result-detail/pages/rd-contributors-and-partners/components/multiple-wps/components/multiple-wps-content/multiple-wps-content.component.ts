@@ -34,6 +34,7 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   @Input() showMultipleWPsContent: boolean = true;
   @Input() isUnplanned: boolean = false;
   @Input() hidden: boolean = false;
+  @Input() isAvisa: boolean = false;
   @Input() allTabsCreated = [];
   @Input() outcomeList: WritableSignal<any[]>;
   @Input() outputList: WritableSignal<any[]>;
@@ -70,18 +71,33 @@ export class CPMultipleWPsContentComponent implements OnChanges {
     });
   }
 
+  private static readonly AVISA_LEVEL_NAMES: Record<number, string> = {
+    1: 'Output',
+    2: 'Intermediate Outcome',
+    3: 'End-of-Initiative Outcome'
+  };
+
   tocResultListFiltered = computed(() => {
+    const list = this.tocInitiativeOutcomeListsSE.tocResultList();
+
+    if (this.isAvisa) {
+      return list.map(item => ({
+        ...item,
+        name: CPMultipleWPsContentComponent.AVISA_LEVEL_NAMES[item.toc_level_id] ?? item.name
+      }));
+    }
+
     if (this.isIpsr) {
-      return this.tocInitiativeOutcomeListsSE.tocResultList().filter(item => item.toc_level_id !== 1);
+      return list.filter(item => item.toc_level_id !== 1);
     }
 
     switch (this.reusltlevelSE.currentResultLevelIdSignal()) {
       case 3:
-        return this.tocInitiativeOutcomeListsSE.tocResultList().filter(item => item.toc_level_id !== 1);
+        return list.filter(item => item.toc_level_id !== 1);
       case 4:
-        return this.tocInitiativeOutcomeListsSE.tocResultList().filter(item => item.toc_level_id == 1);
+        return list.filter(item => item.toc_level_id == 1);
     }
-    return this.tocInitiativeOutcomeListsSE.tocResultList();
+    return list;
   });
 
   constructor(
