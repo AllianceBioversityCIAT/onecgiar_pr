@@ -1149,13 +1149,16 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
             }, 100);
         }
 
+        let resultTypeResponseCopy = detail.resultTypeResponse;
+        if (detail.resultTypeResponse) {
+          resultTypeResponseCopy = Array.isArray(detail.resultTypeResponse)
+            ? detail.resultTypeResponse.map((rt: any) => ({ ...rt }))
+            : { ...detail.resultTypeResponse };
+        }
+
         const detailWithNewReference = {
           ...detail,
-          resultTypeResponse: detail.resultTypeResponse
-            ? Array.isArray(detail.resultTypeResponse)
-              ? detail.resultTypeResponse.map((rt: any) => ({ ...rt }))
-              : { ...detail.resultTypeResponse }
-            : detail.resultTypeResponse
+          resultTypeResponse: resultTypeResponseCopy
         };
 
         this.resultDetail.set(detailWithNewReference);
