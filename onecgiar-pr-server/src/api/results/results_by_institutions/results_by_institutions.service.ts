@@ -463,6 +463,7 @@ export class ResultsByInstitutionsService {
           const isInnovation = [
             ResultTypeEnum.INNOVATION_DEVELOPMENT,
             ResultTypeEnum.INNOVATION_USE,
+            ResultTypeEnum.INNOVATION_USE_IPSR,
           ].includes(incomingResult.result_type_id);
           await this.handleInstitutions(
             data.institutions ?? [],
