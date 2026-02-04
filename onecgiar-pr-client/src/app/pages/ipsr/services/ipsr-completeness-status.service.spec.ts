@@ -12,6 +12,11 @@ class MockIpsrDataControlService {
   detailData: any = { validResult: false };
 }
 
+class MockFieldsManagerService {
+  isP25 = jest.fn().mockReturnValue(false);
+  portfolioAcronym = jest.fn().mockReturnValue(undefined);
+}
+
 describe('IpsrCompletenessStatusService', () => {
   let service: IpsrCompletenessStatusService;
   let api: MockApiService;
@@ -36,6 +41,10 @@ describe('IpsrCompletenessStatusService', () => {
       providers: [
         { provide: (jest.requireActual('../../../shared/services/api/api.service') as any).ApiService, useValue: api },
         { provide: (jest.requireActual('./ipsr-data-control.service') as any).IpsrDataControlService, useValue: ipsrData },
+        {
+          provide: (jest.requireActual('../../../shared/services/fields-manager.service') as any).FieldsManagerService,
+          useClass: MockFieldsManagerService
+        },
         IpsrCompletenessStatusService
       ]
     });
@@ -54,7 +63,7 @@ describe('IpsrCompletenessStatusService', () => {
 
   it('updateGreenChecks should set validResult and build flatList from response', () => {
     service.updateGreenChecks();
-    expect(api.resultsSE.getCompletenessStatus).toHaveBeenCalled();
+    expect(api.resultsSE.getCompletenessStatus).toHaveBeenCalledWith(false);
     expect(ipsrData.detailData.validResult).toBe(true);
     expect(service.flatList).toEqual({ sectionA: true, 'sectionB.sub1': false, 'sectionB.sub2': true });
   });

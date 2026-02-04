@@ -323,7 +323,7 @@ p {
       color: var(--pr-color-green-600);
       border-color: var(--pr-color-green-600);
 
-      &:hover {
+      &:hover:not(.not-hover) {
         background-color: var(--pr-color-green-600);
         color: var(--pr-color-white);
         border-color: var(--pr-color-green-600);
