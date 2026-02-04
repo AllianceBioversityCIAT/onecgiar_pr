@@ -34,8 +34,7 @@ export class InnovationPackageDetailComponent implements OnInit, DoCheck {
     this.ipsrDataControlSE.resultInnovationCode = this.activatedRoute.snapshot.paramMap.get('id');
     this.ipsrDataControlSE.resultInnovationPhase = this.activatedRoute.snapshot.queryParams['phase'];
     this.GET_resultIdToCode(() => {
-      this.api.GETInnovationPackageDetail();
-      this.ipsrCompletenessStatusSE.updateGreenChecks();
+      this.api.GETInnovationPackageDetail(() => this.ipsrCompletenessStatusSE.updateGreenChecks());
       this.getIPSRPhases();
     });
   }

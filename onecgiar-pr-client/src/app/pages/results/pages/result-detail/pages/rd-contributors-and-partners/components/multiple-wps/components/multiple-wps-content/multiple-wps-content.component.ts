@@ -45,6 +45,7 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   @Input() selectedOptionsOutcome = [];
   @Input() selectedOptionsEOI = [];
   reusltlevelSE = inject(ResultLevelService);
+  resultLevelIdSignal = signal<number | string | undefined>(undefined);
   indicatorsList = signal<any[]>([]);
   indicatorView = false;
   showIndicators = signal<boolean>(false);
@@ -59,6 +60,9 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   });
 
   ngOnChanges(): void {
+    if (this.resultLevelId !== undefined && this.resultLevelId !== null) {
+      this.resultLevelIdSignal.set(this.resultLevelId);
+    }
     this.pushSelectedOptions();
     this.updateSelectedIndicatorData();
   }
@@ -91,7 +95,13 @@ export class CPMultipleWPsContentComponent implements OnChanges {
       return list.filter(item => item.toc_level_id !== 1);
     }
 
-    switch (this.reusltlevelSE.currentResultLevelIdSignal()) {
+    const inputLevel = this.resultLevelIdSignal();
+    const effectiveLevel =
+      inputLevel === 3 || inputLevel === 4 || inputLevel === '3' || inputLevel === '4'
+        ? Number(inputLevel)
+        : this.reusltlevelSE.currentResultLevelIdSignal();
+
+    switch (effectiveLevel) {
       case 3:
         return list.filter(item => item.toc_level_id !== 1);
       case 4:
