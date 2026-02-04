@@ -75,6 +75,11 @@ import { ResultAnswerRepository } from '../results/result-questions/repository/r
 import { MQAPService } from '../m-qap/m-qap.service';
 import { MQAPModule } from '../m-qap/m-qap.module';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
+import {
+  ModuleTypeEnum,
+  StatusPhaseEnum,
+  ActiveEnum,
+} from '../../shared/constants/role-type.enum';
 
 describe('VersioningService', () => {
   let service: VersioningService;
@@ -178,12 +183,18 @@ describe('VersioningService', () => {
           useValue: {
             findOne: jest.fn(),
             replicate: jest.fn(),
+            find: jest.fn(),
+            count: jest.fn(),
+            createQueryBuilder: jest.fn(),
           },
         },
         {
           provide: VersionRepository,
           useValue: {
             findOne: jest.fn(),
+            find: jest.fn(),
+            count: jest.fn(),
+            createQueryBuilder: jest.fn(),
             $_getAllInovationDevToReplicate: jest.fn(),
           },
         },
@@ -447,5 +458,297 @@ describe('VersioningService', () => {
         statusCode: HttpStatus.OK,
       }),
     );
+  });
+
+  describe('find (paginated)', () => {
+    const mockVersion = {
+      id: 1,
+      phase_name: 'Test Phase',
+      start_date: '2023-01-01',
+      end_date: '2023-12-31',
+      phase_year: 2023,
+      status: true,
+      previous_phase: null,
+      app_module_id: 1,
+      reporting_phase: null,
+      portfolio_id: 1,
+      is_active: true,
+      obj_previous_phase: null,
+      obj_reporting_phase: null,
+      obj_portfolio: { id: 1, acronym: 'TEST' },
+    };
+
+    beforeEach(() => {
+      // Reset mocks
+      versionRepository.find.mockClear();
+      versionRepository.count.mockClear();
+      resultRepository.createQueryBuilder.mockClear();
+      versionRepository.createQueryBuilder.mockClear();
+    });
+
+    it('should return paginated results with default pagination (page=1, limit=50)', async () => {
+      versionRepository.count.mockResolvedValueOnce(25);
+      versionRepository.find.mockResolvedValueOnce([mockVersion]);
+
+      const mockQueryBuilder = {
+        select: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getRawMany: jest.fn().mockResolvedValue([]),
+      };
+
+      resultRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+      versionRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      const result = await service.find(
+        ModuleTypeEnum.REPORTING,
+        StatusPhaseEnum.OPEN,
+        ActiveEnum.ACTIVE,
+      );
+
+      expect(versionRepository.count).toHaveBeenCalled();
+      expect(versionRepository.find).toHaveBeenCalledWith({
+        where: { app_module_id: 1, is_active: true, status: true },
+        relations: {
+          obj_previous_phase: true,
+          obj_reporting_phase: true,
+          obj_portfolio: true,
+        },
+        skip: 0,
+        take: 50,
+        order: { phase_year: 'DESC', id: 'DESC' },
+      });
+
+      expect(result.response.items).toHaveLength(1);
+      expect(result.response.page).toBe(1);
+      expect(result.response.limit).toBe(50);
+      expect(result.response.total).toBe(25);
+      expect(result.response.hasNext).toBe(false);
+      expect(result.response.totalPages).toBe(1);
+      expect(result.statusCode).toBe(HttpStatus.OK);
+    });
+
+    it('should support custom pagination parameters', async () => {
+      versionRepository.count.mockResolvedValueOnce(100);
+      versionRepository.find.mockResolvedValueOnce([
+        mockVersion,
+        { ...mockVersion, id: 2 },
+      ]);
+
+      const mockQueryBuilder = {
+        select: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getRawMany: jest.fn().mockResolvedValue([]),
+      };
+
+      resultRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+      versionRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      const result = await service.find(
+        ModuleTypeEnum.REPORTING,
+        StatusPhaseEnum.OPEN,
+        ActiveEnum.ACTIVE,
+        2,
+        10,
+      );
+
+      expect(versionRepository.find).toHaveBeenCalledWith({
+        where: { app_module_id: 1, is_active: true, status: true },
+        relations: {
+          obj_previous_phase: true,
+          obj_reporting_phase: true,
+          obj_portfolio: true,
+        },
+        skip: 10,
+        take: 10,
+        order: { phase_year: 'DESC', id: 'DESC' },
+      });
+
+      expect(result.response.page).toBe(2);
+      expect(result.response.limit).toBe(10);
+      expect(result.response.total).toBe(100);
+      expect(result.response.hasNext).toBe(true);
+      expect(result.response.totalPages).toBe(10);
+    });
+
+    it('should enforce maximum limit of 100', async () => {
+      versionRepository.count.mockResolvedValueOnce(200);
+      versionRepository.find.mockResolvedValueOnce([mockVersion]);
+
+      const mockQueryBuilder = {
+        select: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getRawMany: jest.fn().mockResolvedValue([]),
+      };
+
+      resultRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+      versionRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      const result = await service.find(
+        ModuleTypeEnum.REPORTING,
+        StatusPhaseEnum.OPEN,
+        ActiveEnum.ACTIVE,
+        1,
+        150, // Requesting 150, should be capped at 100
+      );
+
+      expect(versionRepository.find).toHaveBeenCalledWith(
+        expect.objectContaining({
+          take: 100, // Should be capped at 100
+        }),
+      );
+
+      expect(result.response.limit).toBe(100);
+    });
+
+    it('should calculate can_be_deleted correctly', async () => {
+      versionRepository.count.mockResolvedValueOnce(1);
+      versionRepository.find.mockResolvedValueOnce([mockVersion]);
+
+      // Mock query builder for versions with results
+      const mockResultQueryBuilder = {
+        select: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getRawMany: jest.fn().mockResolvedValue([
+          { version_id: 1 }, // Version 1 has results
+        ]),
+      };
+
+      // Mock query builder for versions as previous phase
+      const mockVersionQueryBuilder = {
+        select: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getRawMany: jest.fn().mockResolvedValue([]),
+      };
+
+      resultRepository.createQueryBuilder.mockReturnValue(
+        mockResultQueryBuilder,
+      );
+      versionRepository.createQueryBuilder.mockReturnValue(
+        mockVersionQueryBuilder,
+      );
+
+      const result = await service.find(
+        ModuleTypeEnum.REPORTING,
+        StatusPhaseEnum.OPEN,
+        ActiveEnum.ACTIVE,
+      );
+
+      expect(result.response.items[0].can_be_deleted).toBe(false); // Has results
+    });
+
+    it('should handle IPSR module type', async () => {
+      versionRepository.count.mockResolvedValueOnce(5);
+      versionRepository.find.mockResolvedValueOnce([mockVersion]);
+
+      const mockQueryBuilder = {
+        select: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getRawMany: jest.fn().mockResolvedValue([]),
+      };
+
+      resultRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+      versionRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      await service.find(
+        ModuleTypeEnum.IPSR,
+        StatusPhaseEnum.OPEN,
+        ActiveEnum.ACTIVE,
+      );
+
+      expect(versionRepository.find).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ app_module_id: 2 }),
+        }),
+      );
+    });
+
+    it('should handle CLOSE status', async () => {
+      versionRepository.count.mockResolvedValueOnce(3);
+      versionRepository.find.mockResolvedValueOnce([mockVersion]);
+
+      const mockQueryBuilder = {
+        select: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getRawMany: jest.fn().mockResolvedValue([]),
+      };
+
+      resultRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+      versionRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      await service.find(
+        ModuleTypeEnum.REPORTING,
+        StatusPhaseEnum.CLOSE,
+        ActiveEnum.ACTIVE,
+      );
+
+      expect(versionRepository.find).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ status: false }),
+        }),
+      );
+    });
+
+    it('should return proper pagination metadata when hasNext is true', async () => {
+      versionRepository.count.mockResolvedValueOnce(150);
+      versionRepository.find.mockResolvedValueOnce(
+        Array(50).fill(mockVersion),
+      );
+
+      const mockQueryBuilder = {
+        select: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getRawMany: jest.fn().mockResolvedValue([]),
+      };
+
+      resultRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+      versionRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      const result = await service.find(
+        ModuleTypeEnum.REPORTING,
+        StatusPhaseEnum.OPEN,
+        ActiveEnum.ACTIVE,
+        1,
+        50,
+      );
+
+      expect(result.response.total).toBe(150);
+      expect(result.response.hasNext).toBe(true);
+      expect(result.response.totalPages).toBe(3);
+      expect(result.response.items).toHaveLength(50);
+    });
+
+    it('should handle empty results gracefully', async () => {
+      versionRepository.count.mockResolvedValueOnce(0);
+      versionRepository.find.mockResolvedValueOnce([]);
+
+      const mockQueryBuilder = {
+        select: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getRawMany: jest.fn().mockResolvedValue([]),
+      };
+
+      resultRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+      versionRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      const result = await service.find(
+        ModuleTypeEnum.REPORTING,
+        StatusPhaseEnum.OPEN,
+        ActiveEnum.ACTIVE,
+      );
+
+      expect(result.response.items).toHaveLength(0);
+      expect(result.response.total).toBe(0);
+      expect(result.response.hasNext).toBe(false);
+      expect(result.response.totalPages).toBe(0);
+    });
   });
 });

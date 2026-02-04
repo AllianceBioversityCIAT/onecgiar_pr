@@ -35,6 +35,8 @@ import {
 import { ValidRoleGuard } from '../../shared/guards/valid-role.guard';
 import { UpdateQaResults } from './dto/update-qa.dto';
 import { ChangePhaseDto } from './dto/change-phase.dto';
+import { PaginationQueryDto } from './dto/pagination-query.dto';
+import { PaginatedVersioningResponseDto } from './dto/versioning-response.dto';
 
 @ApiTags('Versioning')
 @UseInterceptors(ResponseInterceptor)
@@ -164,16 +166,37 @@ export class VersioningController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Find phases by module, status and active' })
+  @ApiOperation({
+    summary: 'Find phases by module, status and active (paginated)',
+    description:
+      'Returns paginated list of phases. Default pagination: page=1, limit=50. Maximum limit: 100 to prevent Lambda payload size issues (~6MB limit).',
+  })
   @ApiQuery({ name: 'module', enum: ModuleTypeEnum, required: false })
   @ApiQuery({ name: 'status', enum: StatusPhaseEnum, required: false })
   @ApiQuery({ name: 'active', enum: ActiveEnum, required: false })
+  @ApiQuery({
+    name: 'page',
+    type: Number,
+    required: false,
+    description: 'Page number (1-indexed, default: 1)',
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    type: Number,
+    required: false,
+    description: 'Items per page (default: 50, max: 100)',
+    example: 50,
+  })
   find(
     @Query('module') module_type: ModuleTypeEnum = ModuleTypeEnum.ALL,
     @Query('status') status: StatusPhaseEnum = StatusPhaseEnum.OPEN,
     @Query('active') active: ActiveEnum = ActiveEnum.ACTIVE,
+    @Query() pagination: PaginationQueryDto,
   ) {
-    return this.versioningService.find(module_type, status, active);
+    const page = pagination?.page || 1;
+    const limit = pagination?.limit || 50;
+    return this.versioningService.find(module_type, status, active, page, limit);
   }
 
   @Get('result/:resultId')

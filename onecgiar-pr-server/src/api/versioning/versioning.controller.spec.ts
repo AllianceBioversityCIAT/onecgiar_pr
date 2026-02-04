@@ -5,6 +5,11 @@ import { CreateVersioningDto } from './dto/create-versioning.dto';
 import { UpdateVersioningDto } from './dto/update-versioning.dto';
 import { UpdateQaResults } from './dto/update-qa.dto';
 import { ValidRoleGuard } from '../../shared/guards/valid-role.guard';
+import {
+  ModuleTypeEnum,
+  StatusPhaseEnum,
+  ActiveEnum,
+} from '../../shared/constants/role-type.enum';
 
 describe('VersioningController', () => {
   let controller: VersioningController;
@@ -107,9 +112,47 @@ describe('VersioningController', () => {
     expect(service.getNumberRresultsReplicated).toHaveBeenCalledWith(1, 2);
   });
 
-  it('should call find on find', async () => {
+  it('should call find on find with default pagination', async () => {
     await controller.find();
-    expect(service.find).toHaveBeenCalled();
+    expect(service.find).toHaveBeenCalledWith(
+      ModuleTypeEnum.ALL,
+      StatusPhaseEnum.OPEN,
+      ActiveEnum.ACTIVE,
+      1,
+      50,
+    );
+  });
+
+  it('should call find with custom pagination parameters', async () => {
+    await controller.find(
+      ModuleTypeEnum.REPORTING,
+      StatusPhaseEnum.OPEN,
+      ActiveEnum.ACTIVE,
+      { page: 2, limit: 25 },
+    );
+    expect(service.find).toHaveBeenCalledWith(
+      ModuleTypeEnum.REPORTING,
+      StatusPhaseEnum.OPEN,
+      ActiveEnum.ACTIVE,
+      2,
+      25,
+    );
+  });
+
+  it('should handle query params status=open&module=reporting', async () => {
+    await controller.find(
+      ModuleTypeEnum.REPORTING,
+      StatusPhaseEnum.OPEN,
+      ActiveEnum.ACTIVE,
+      { page: 1, limit: 50 },
+    );
+    expect(service.find).toHaveBeenCalledWith(
+      ModuleTypeEnum.REPORTING,
+      StatusPhaseEnum.OPEN,
+      ActiveEnum.ACTIVE,
+      1,
+      50,
+    );
   });
 
   it('should call getVersionOfAResult on findVersionOfAResult', async () => {

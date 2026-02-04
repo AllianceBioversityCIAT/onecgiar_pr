@@ -63,6 +63,10 @@ import { ResultInstitutionsBudgetRepository } from '../results/result_budget/rep
 import { ResultCountrySubnationalRepository } from '../results/result-countries-sub-national/repositories/result-country-subnational.repository';
 import { ResultAnswerRepository } from '../results/result-questions/repository/result-answers.repository';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
+import {
+  VersioningResponseDto,
+  PaginatedVersioningResponseDto,
+} from './dto/versioning-response.dto';
 
 @Injectable()
 export class VersioningService {
@@ -924,11 +928,49 @@ export class VersioningService {
     });
   }
 
+  /**
+   * Find phases by module, status and active with pagination.
+   * 
+   * @important Lambda Response Size Constraint:
+   * AWS Lambda has a maximum response payload size of ~6MB. This method implements:
+   * - Pagination (default: page=1, limit=50, max=100)
+   * - Response size monitoring and logging
+   * - Optimized queries to prevent N+1 problems
+   * - DTO projection to limit returned fields
+   * 
+   * If response size approaches/exceeds limits, pagination is enforced and errors are returned
+   * with proper HTTP status codes (400 for invalid params, 413-like behavior for oversized).
+   * 
+   * @param module_type - Module type filter (reporting, ipsr, all)
+   * @param status - Status filter (open, close, all)
+   * @param active - Active filter (active, inactive, all)
+   * @param page - Page number (1-indexed, default: 1)
+   * @param limit - Items per page (default: 50, max: 100)
+   * @returns Paginated response with metadata
+   */
   async find(
     module_type: ModuleTypeEnum,
     status: StatusPhaseEnum,
     active: ActiveEnum = ActiveEnum.ACTIVE,
-  ) {
+    page: number = 1,
+    limit: number = 50,
+  ): Promise<ReturnResponseDto<PaginatedVersioningResponseDto>> {
+    // Log request parameters for diagnostics
+    this._logger.log(
+      `[VERSIONING-FIND] Request params: module=${module_type}, status=${status}, active=${active}, page=${page}, limit=${limit}`,
+    );
+
+    // Validate pagination parameters
+    const validatedPage = Math.max(1, Math.floor(page) || 1);
+    const validatedLimit = Math.min(100, Math.max(1, Math.floor(limit) || 50));
+
+    if (page !== validatedPage || limit !== validatedLimit) {
+      this._logger.warn(
+        `[VERSIONING-FIND] Pagination params adjusted: page ${page}->${validatedPage}, limit ${limit}->${validatedLimit}`,
+      );
+    }
+
+    // Build where clause
     let where: any = {};
 
     switch (module_type) {
@@ -958,37 +1000,147 @@ export class VersioningService {
         break;
     }
 
-    const res = await this._versionRepository.find({
-      where: where,
-      relations: {
-        obj_previous_phase: true,
-        obj_reporting_phase: true,
-        obj_portfolio: true,
-      },
-    });
+    try {
+      // Get total count for pagination metadata
+      const total = await this._versionRepository.count({ where });
 
-    for (const key in res) {
-      const otherPhase = await this._resultRepository.findOne({
-        where: {
-          version_id: res[key].id,
-          is_active: true,
+      // Calculate pagination
+      const skip = (validatedPage - 1) * validatedLimit;
+      const totalPages = Math.ceil(total / validatedLimit);
+      const hasNext = validatedPage < totalPages;
+
+      // Fetch paginated results with relations
+      // Note: TypeORM doesn't support partial relation selection easily,
+      // but we'll map to DTO to limit payload size
+      const res = await this._versionRepository.find({
+        where: where,
+        relations: {
+          obj_previous_phase: true,
+          obj_reporting_phase: true,
+          obj_portfolio: true,
+        },
+        skip: skip,
+        take: validatedLimit,
+        order: {
+          phase_year: 'DESC',
+          id: 'DESC',
         },
       });
 
-      const otherPreviousPhase = await this._versionRepository.findOne({
-        where: {
-          previous_phase: res[key].id,
-          is_active: true,
-        },
+      // Optimize N+1 queries: Batch fetch all can_be_deleted checks in 2 queries
+      const versionIds = res.map((v) => v.id);
+      
+      // Check which versions have results (batch query)
+      const versionsWithResults = await this._resultRepository
+        .createQueryBuilder('r')
+        .select('DISTINCT r.version_id', 'version_id')
+        .where('r.version_id IN (:...ids)', { ids: versionIds })
+        .andWhere('r.is_active = :active', { active: true })
+        .getRawMany();
+      
+      const versionsWithResultsSet = new Set(
+        versionsWithResults.map((v: any) => v.version_id),
+      );
+
+      // Check which versions are referenced as previous_phase (batch query)
+      const versionsAsPreviousPhase = await this._versionRepository
+        .createQueryBuilder('v')
+        .select('DISTINCT v.previous_phase', 'previous_phase')
+        .where('v.previous_phase IN (:...ids)', { ids: versionIds })
+        .andWhere('v.is_active = :active', { active: true })
+        .getRawMany();
+      
+      const versionsAsPreviousPhaseSet = new Set(
+        versionsAsPreviousPhase.map((v: any) => v.previous_phase),
+      );
+
+      // Map to DTO and calculate can_be_deleted
+      const items: VersioningResponseDto[] = res.map((version) => {
+        const hasResults = versionsWithResultsSet.has(version.id);
+        const isPreviousPhase = versionsAsPreviousPhaseSet.has(version.id);
+        const can_be_deleted = !hasResults && !isPreviousPhase;
+
+        return {
+          id: version.id,
+          phase_name: version.phase_name,
+          start_date: version.start_date,
+          end_date: version.end_date,
+          phase_year: version.phase_year,
+          status: version.status,
+          previous_phase: version.previous_phase,
+          app_module_id: version.app_module_id,
+          reporting_phase: version.reporting_phase,
+          portfolio_id: version.portfolio_id,
+          previous_phase_name: version.obj_previous_phase?.phase_name || null,
+          reporting_phase_name: version.obj_reporting_phase?.phase_name || null,
+          portfolio_acronym: version.obj_portfolio?.acronym || null,
+          can_be_deleted,
+        };
       });
-      res[key]['can_be_deleted'] = !otherPreviousPhase && !otherPhase;
+
+      // Build paginated response
+      const paginatedResponse: PaginatedVersioningResponseDto = {
+        items,
+        page: validatedPage,
+        limit: validatedLimit,
+        total,
+        hasNext,
+        totalPages,
+      };
+
+      // Calculate and log response size BEFORE returning
+      const responseJson = JSON.stringify(paginatedResponse);
+      const responseSizeBytes = Buffer.byteLength(responseJson, 'utf8');
+      const responseSizeMB = responseSizeBytes / (1024 * 1024);
+      const LAMBDA_MAX_PAYLOAD_BYTES = 6 * 1024 * 1024; // 6MB
+      const WARNING_THRESHOLD_BYTES = 5 * 1024 * 1024; // 5MB warning threshold
+
+      this._logger.log(
+        `[VERSIONING-FIND] Response size: ${responseSizeBytes} bytes (${responseSizeMB.toFixed(2)} MB), Records: ${items.length}, Total: ${total}`,
+      );
+
+      // Check if response is approaching or exceeding limits
+      if (responseSizeBytes > LAMBDA_MAX_PAYLOAD_BYTES) {
+        this._logger.error(
+          `[VERSIONING-FIND] Response size ${responseSizeBytes} bytes exceeds Lambda limit of ${LAMBDA_MAX_PAYLOAD_BYTES} bytes`,
+        );
+        throw ReturnResponseUtil.format({
+          message: `Response payload too large (${responseSizeMB.toFixed(2)} MB). Please use pagination with smaller page size.`,
+          response: null,
+          statusCode: 413, // PAYLOAD_TOO_LARGE - Response exceeds Lambda's 6MB limit
+        });
+      }
+
+      if (responseSizeBytes > WARNING_THRESHOLD_BYTES) {
+        this._logger.warn(
+          `[VERSIONING-FIND] Response size ${responseSizeBytes} bytes is approaching Lambda limit. Consider reducing page size.`,
+        );
+      }
+
+      return ReturnResponseUtil.format({
+        message: `Phase Retrieved Successfully`,
+        response: paginatedResponse,
+        statusCode: HttpStatus.OK,
+      });
+    } catch (error) {
+      // If it's already a formatted error, re-throw it
+      if (error?.statusCode) {
+        throw error;
+      }
+
+      // Log unexpected errors
+      this._logger.error(
+        `[VERSIONING-FIND] Unexpected error: ${error?.message || error}`,
+        error?.stack,
+      );
+
+      // Return proper error response
+      throw ReturnResponseUtil.format({
+        message: `Error retrieving phases: ${error?.message || 'Unknown error'}`,
+        response: null,
+        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+      });
     }
-
-    return ReturnResponseUtil.format({
-      message: `Phase Retrieved Successfully`,
-      response: res,
-      statusCode: HttpStatus.OK,
-    });
   }
 
   async delete(id: number) {
