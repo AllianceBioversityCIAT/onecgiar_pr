@@ -197,7 +197,7 @@ export class ResultsService {
     @Optional()
     @Inject(forwardRef(() => ShareResultRequestService))
     private readonly _shareResultRequestService?: ShareResultRequestService,
-  ) { }
+  ) {}
 
   async createOwnerResult(
     createResultDto: CreateResultDto,
@@ -1126,11 +1126,11 @@ export class ResultsService {
           ...item,
           initiative_entity_map: entityMaps.length
             ? entityMaps.map((entityMap) => ({
-              id: entityMap.id,
-              entityId: entityMap.entityId,
-              initiativeId: entityMap.initiativeId,
-              entityName: entityMap.entity_obj?.name ?? null,
-            }))
+                id: entityMap.id,
+                entityId: entityMap.entityId,
+                initiativeId: entityMap.initiativeId,
+                entityName: entityMap.entity_obj?.name ?? null,
+              }))
             : [],
           initiative_entity_user: initiativesPortfolio3,
         };
@@ -1250,11 +1250,11 @@ export class ResultsService {
           ...item,
           initiative_entity_map: entityMaps.length
             ? entityMaps.map((entityMap) => ({
-              id: entityMap.id,
-              entityId: entityMap.entityId,
-              initiativeId: entityMap.initiativeId,
-              entityName: entityMap.entity_obj?.name ?? null,
-            }))
+                id: entityMap.id,
+                entityId: entityMap.entityId,
+                initiativeId: entityMap.initiativeId,
+                entityName: entityMap.entity_obj?.name ?? null,
+              }))
             : [],
           initiative_entity_user: initiativesPortfolio3,
         };
@@ -1272,14 +1272,14 @@ export class ResultsService {
         response:
           limit !== undefined
             ? {
-              items: result,
-              meta: {
-                total,
-                page: page ?? 1,
-                limit,
-                totalPages: Math.max(1, Math.ceil(total / limit)),
-              },
-            }
+                items: result,
+                meta: {
+                  total,
+                  page: page ?? 1,
+                  limit,
+                  totalPages: Math.max(1, Math.ceil(total / limit)),
+                },
+              }
             : { items: result },
         message: 'Successful response',
         status: HttpStatus.OK,
@@ -3322,7 +3322,7 @@ export class ResultsService {
     return (
       reviewUpdateDto.commonFields?.result_description !== undefined &&
       reviewUpdateDto.commonFields.result_description !==
-      currentCommonFields?.result_description
+        currentCommonFields?.result_description
     );
   }
 

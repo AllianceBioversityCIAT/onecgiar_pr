@@ -107,36 +107,40 @@ export class SubmissionsService {
           return;
         }
 
-        const scienceProgram =
-          await this._resultRepository.getScienceProgramByResultId(resultId);
+        if (!emails || emails.length === 0) {
+          this._logger.warn('No lead center found');
+        } else {
+          const scienceProgram =
+            await this._resultRepository.getScienceProgramByResultId(resultId);
 
-        for (const email of emails) {
-          const sp = scienceProgram[0];
+          for (const email of emails) {
+            const sp = scienceProgram[0];
 
-          const emailData = {
-            userName: `${email.first_name} ${email.last_name}`.trim(),
-            spCode: sp.official_code,
-            spName: sp.name,
-            resultUrl: `${process.env.RESULTS_URL}${result.result_code}/general-information?phase=${result.version_id}`,
-          };
-          const compiledTemplate = handlebars.compile(template.template);
+            const emailData = {
+              userName: `${email.first_name} ${email.last_name}`.trim(),
+              spCode: sp.official_code,
+              spName: sp.name,
+              resultUrl: `${process.env.RESULTS_URL}${result.result_code}/general-information?phase=${result.version_id}`,
+            };
+            const compiledTemplate = handlebars.compile(template.template);
 
-          this._emailNotificationManagementService.sendEmail({
-            from: {
-              email: process.env.EMAIL_SENDER,
-              name: 'PRMS Reporting Tool -',
-            },
-            emailBody: {
-              subject: `PRMS – IP Support Request for Innovation Development Result | Result Code: ${result.result_code}`,
-              to: [email.email],
-              cc: [],
-              bcc: bccEmails.value,
-              message: {
-                text: 'Account roles updated',
-                socketFile: compiledTemplate(emailData),
+            this._emailNotificationManagementService.sendEmail({
+              from: {
+                email: process.env.EMAIL_SENDER,
+                name: 'PRMS Reporting Tool -',
               },
-            },
-          });
+              emailBody: {
+                subject: `PRMS – IP Support Request for Innovation Development Result | Result Code: ${result.result_code}`,
+                to: [email.email],
+                cc: [],
+                bcc: bccEmails.value,
+                message: {
+                  text: 'Account roles updated',
+                  socketFile: compiledTemplate(emailData),
+                },
+              },
+            });
+          }
         }
       }
 
