@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, HttpStatus } from '@nestjs/common';
 import { KnowledgeProductBilateralHandler } from './knowledge-product.handler';
 
 describe('KnowledgeProductBilateralHandler', () => {
@@ -23,7 +23,7 @@ describe('KnowledgeProductBilateralHandler', () => {
     bilateralDto: baseDto,
     userId: 10,
     submittedUserId: 20,
-    version: { id: 1 },
+    version: { id: 1, phase_year: 2024 },
     year: { year: 2024 },
   };
 
@@ -50,6 +50,7 @@ describe('KnowledgeProductBilateralHandler', () => {
       }),
     };
     kpService = {
+      findOnCGSpace: jest.fn().mockResolvedValue({ status: HttpStatus.OK }),
       populateKPFromCGSpace: jest.fn().mockResolvedValue({
         result_knowledge_product_id: 5,
       }),
@@ -71,6 +72,44 @@ describe('KnowledgeProductBilateralHandler', () => {
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
+    it('throws when knowledge_product.handle is missing', async () => {
+      await expect(
+        handler.initializeResultHeader({
+          ...baseInitContext,
+          bilateralDto: {
+            ...baseDto,
+            knowledge_product: { ...baseDto.knowledge_product, handle: '' },
+          },
+        }),
+      ).rejects.toThrow(BadRequestException);
+      expect(kpService.findOnCGSpace).not.toHaveBeenCalled();
+      expect(resultRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('throws when MQAP validation fails (e.g. year mismatch) and does not create result', async () => {
+      kpService.findOnCGSpace.mockResolvedValue({
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+        message:
+          'Reporting knowledge products from years outside the current reporting cycle (2024) is not possible.',
+      });
+
+      await expect(
+        handler.initializeResultHeader(baseInitContext),
+      ).rejects.toThrow(BadRequestException);
+      expect(resultRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('calls findOnCGSpace with handle, user token, version year and validateExisting false before any insert', async () => {
+      await handler.initializeResultHeader(baseInitContext);
+
+      expect(kpService.findOnCGSpace).toHaveBeenCalledWith(
+        baseDto.knowledge_product.handle,
+        expect.objectContaining({ id: baseInitContext.userId }),
+        baseInitContext.version.phase_year,
+        false,
+      );
+    });
+
     it('throws when KP handle already exists', async () => {
       kpRepository.findOne.mockResolvedValue({
         result_object: { id: 99 },
@@ -81,9 +120,10 @@ describe('KnowledgeProductBilateralHandler', () => {
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
-    it('creates a new result when handle is unique', async () => {
+    it('creates a new result when handle is unique and MQAP validation passes', async () => {
       const response = await handler.initializeResultHeader(baseInitContext);
 
+      expect(kpService.findOnCGSpace).toHaveBeenCalled();
       expect(resultRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
           title: baseDto.title,

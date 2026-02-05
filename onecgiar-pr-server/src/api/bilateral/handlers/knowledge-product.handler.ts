@@ -1,4 +1,9 @@
-import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpStatus,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import {
   BilateralResultTypeHandler,
   HandlerAfterCreateContext,
@@ -36,6 +41,30 @@ export class KnowledgeProductBilateralHandler
       throw new BadRequestException(
         'knowledge_product object is required for KNOWLEDGE_PRODUCT results.',
       );
+    }
+
+    const handle = bilateralDto.knowledge_product.handle;
+    if (!handle) {
+      throw new BadRequestException(
+        'knowledge_product.handle is required for KNOWLEDGE_PRODUCT results.',
+      );
+    }
+
+    // Validate KP against MQAP (CGSpace) before any insert: issue year must match active version
+    const versionYear =
+      context.version?.phase_year ?? context.version?.cgspace_year;
+    const userToken: TokenDto = { id: context.userId } as TokenDto;
+    const mqapValidation = await this._resultsKnowledgeProductsService.findOnCGSpace(
+      handle,
+      userToken,
+      versionYear,
+      false,
+    );
+    if ((mqapValidation as any)?.status !== HttpStatus.OK) {
+      const message =
+        (mqapValidation as any)?.message ||
+        'The Knowledge Product could not be validated against CGSpace for this reporting cycle.';
+      throw new BadRequestException(message);
     }
 
     this.logger.log(

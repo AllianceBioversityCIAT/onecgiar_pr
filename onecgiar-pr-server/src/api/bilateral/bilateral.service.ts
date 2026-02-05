@@ -179,6 +179,22 @@ export class BilateralService {
             });
             if (!year) throw new NotFoundException('Active year not found');
 
+            if (
+              bilateralDto.result_type_id === ResultTypeEnum.KNOWLEDGE_PRODUCT &&
+              bilateralDto.knowledge_product?.metadataCG?.issue_year != null
+            ) {
+              const issueYearVal =
+                bilateralDto.knowledge_product.metadataCG.issue_year;
+              const issueYearRecord = await this._yearRepository.findOne({
+                where: { year: issueYearVal },
+              });
+              if (!issueYearRecord) {
+                throw new BadRequestException(
+                  `issue_year (${issueYearVal}) is not a valid year in the system. Please use a year that exists in the system.`,
+                );
+              }
+            }
+
             const resultHeader = await this.initializeResultHeader({
               bilateralDto,
               userId,
