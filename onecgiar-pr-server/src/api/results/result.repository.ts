@@ -2153,11 +2153,11 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         LEFT JOIN results_toc_result_indicators rtri ON rtri.results_toc_results_id = rtr.result_toc_result_id
         LEFT JOIN Integration_information.toc_results tr ON tr.id = rtr.toc_result_id
         LEFT JOIN Integration_information.work_packages wp ON wp.id = tr.work_packages_id
-        LEFT JOIN Integration_information.toc_results_indicators tri ON tr.id = tri.toc_results_id AND tri.toc_result_indicator_id = rtri.toc_results_indicator_id ${
-          !EnvironmentExtractor.isProduction()
-            ? `COLLATE utf8mb3_general_ci`
-            : ``
-        }
+        LEFT JOIN Integration_information.toc_results_indicators tri ON tr.id = tri.toc_results_id 
+          AND CONVERT(tri.toc_result_indicator_id USING utf8mb4) = CONVERT(rtri.toc_results_indicator_id USING utf8mb4)
+        -- Fix: Use CONVERT to normalize both sides to utf8mb4 instead of COLLATE utf8mb3_general_ci
+        -- This prevents "COLLATION 'utf8mb3_general_ci' is not valid for CHARACTER SET 'utf8mb4'" error
+        -- The rtri.toc_results_indicator_id column uses utf8mb4_0900_ai_ci collation
     WHERE
         r.id ${resultIds.length ? `in (${resultIds})` : '= 0'}
         AND rbi.is_active = 1
