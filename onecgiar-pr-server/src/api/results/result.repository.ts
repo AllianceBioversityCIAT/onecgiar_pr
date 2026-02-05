@@ -743,12 +743,24 @@ WHERE
           ? pagination.offset
           : undefined;
 
+      /**
+       * Add explicit ORDER BY to ensure deterministic, consistent ordering across environments.
+       * 
+       * Previous issue: The query had no ORDER BY clause, causing non-deterministic ordering
+       * that varied between environments (e.g., current env showed IDs 78,76,75 while production
+       * showed 26053,26052).
+       * 
+       * Fix: Order by r.id DESC (matching production behavior of showing newest/highest IDs first),
+       * with secondary sort by r.created_date DESC for complete determinism.
+       */
+      const orderByClause = ` ORDER BY r.id DESC, r.created_date DESC`;
+
       const paginatedClause =
         limit !== undefined
           ? ` LIMIT ${limit}${offset !== undefined ? ` OFFSET ${offset}` : ''}`
           : '';
 
-      const queryData = `${baseQuery} ${where.join(' ')}${paginatedClause};`;
+      const queryData = `${baseQuery} ${where.join(' ')}${orderByClause}${paginatedClause};`;
       const results = await this.query(queryData, params);
 
       if (limit !== undefined) {
