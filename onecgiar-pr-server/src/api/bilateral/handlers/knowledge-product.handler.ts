@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  HttpStatus,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import {
   BilateralResultTypeHandler,
   HandlerAfterCreateContext,
@@ -13,9 +8,7 @@ import {
 import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 import { ResultStatusData } from '../../../shared/constants/result-status.enum';
 import { ResultRepository } from '../../results/result.repository';
-import { ResultsKnowledgeProductsRepository } from '../../results/results-knowledge-products/repositories/results-knowledge-products.repository';
 import { ResultsKnowledgeProductsService } from '../../results/results-knowledge-products/results-knowledge-products.service';
-import { Like } from 'typeorm';
 import { SourceEnum } from '../../results/entities/result.entity';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 
@@ -28,7 +21,6 @@ export class KnowledgeProductBilateralHandler
 
   constructor(
     private readonly _resultRepository: ResultRepository,
-    private readonly _resultsKnowledgeProductsRepository: ResultsKnowledgeProductsRepository,
     private readonly _resultsKnowledgeProductsService: ResultsKnowledgeProductsService,
   ) {}
 
@@ -50,43 +42,7 @@ export class KnowledgeProductBilateralHandler
       );
     }
 
-    // Validate KP against MQAP (CGSpace) before any insert: issue year must match active version
-    const versionYear =
-      context.version?.phase_year ?? context.version?.cgspace_year;
-    const userToken: TokenDto = { id: context.userId } as TokenDto;
-    const mqapValidation = await this._resultsKnowledgeProductsService.findOnCGSpace(
-      handle,
-      userToken,
-      versionYear,
-      false,
-    );
-    if ((mqapValidation as any)?.status !== HttpStatus.OK) {
-      const message =
-        (mqapValidation as any)?.message ||
-        'The Knowledge Product could not be validated against CGSpace for this reporting cycle.';
-      throw new BadRequestException(message);
-    }
-
-    this.logger.log(
-      'KP creation with DSpace sync - validating handle uniqueness',
-    );
-    const existingKp = await this._resultsKnowledgeProductsRepository.findOne({
-      where: {
-        handle: Like(bilateralDto.knowledge_product.handle),
-        result_object: { is_active: true },
-      },
-      relations: { result_object: true },
-    });
-
-    if (existingKp) {
-      this.logger.warn(
-        `Knowledge Product with handle ${bilateralDto.knowledge_product.handle} already exists (result_id=${existingKp.result_object.id}), aborting bilateral creation.`,
-      );
-      throw new BadRequestException(
-        `Knowledge Product with handle ${bilateralDto.knowledge_product.handle} already exists.`,
-      );
-    }
-
+    // Duplicate handle and MQAP/year validation are done in BilateralService before any insert
     const resultHeader = await this._resultRepository.save({
       created_by: context.userId,
       version_id: context.version.id,

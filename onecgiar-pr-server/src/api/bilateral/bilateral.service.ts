@@ -37,6 +37,7 @@ import { EvidencesService } from '../results/evidences/evidences.service';
 import { EvidencesRepository } from '../results/evidences/evidences.repository';
 import { Evidence } from '../results/evidences/entities/evidence.entity';
 import { ResultsKnowledgeProductsRepository } from '../results/results-knowledge-products/repositories/results-knowledge-products.repository';
+import { ResultsKnowledgeProductsService } from '../results/results-knowledge-products/results-knowledge-products.service';
 import { ClarisaCentersRepository } from '../../clarisa/clarisa-centers/clarisa-centers.repository';
 import { UserService } from '../../auth/modules/user/user.service';
 import { CreateUserDto } from '../../auth/modules/user/dto/create-user.dto';
@@ -82,6 +83,7 @@ export class BilateralService {
     private readonly _evidencesRepository: EvidencesRepository,
     private readonly _evidencesService: EvidencesService,
     private readonly _resultsKnowledgeProductsRepository: ResultsKnowledgeProductsRepository,
+    private readonly _resultsKnowledgeProductsService: ResultsKnowledgeProductsService,
     private readonly _clarisaCenters: ClarisaCentersRepository,
     private readonly _userService: UserService,
     private readonly _resultsTocResultsRepository: ResultsTocResultRepository,
@@ -193,6 +195,16 @@ export class BilateralService {
                   `issue_year (${issueYearVal}) is not a valid year in the system. Please use a year that exists in the system.`,
                 );
               }
+            }
+
+            if (
+              bilateralDto.result_type_id === ResultTypeEnum.KNOWLEDGE_PRODUCT
+            ) {
+              await this.validateKnowledgeProductBeforeCreate(
+                bilateralDto,
+                version,
+                userId,
+              );
             }
 
             const resultHeader = await this.initializeResultHeader({
@@ -1426,6 +1438,63 @@ export class BilateralService {
         created_by: userId,
         is_lead: nonpp?.is_lead === 1,
       });
+    }
+  }
+
+  /**
+   * Validates KP payload before any insert: handle required, no duplicate handle, MQAP year match.
+   * Call this only when result_type_id is KNOWLEDGE_PRODUCT; throws if validation fails.
+   */
+  private async validateKnowledgeProductBeforeCreate(
+    bilateralDto: CreateBilateralDto,
+    version: { phase_year?: number; cgspace_year?: number },
+    userId: number,
+  ): Promise<void> {
+    if (!bilateralDto.knowledge_product) {
+      throw new BadRequestException(
+        'knowledge_product object is required for KNOWLEDGE_PRODUCT results.',
+      );
+    }
+    const handleRaw = bilateralDto.knowledge_product.handle?.trim?.() ?? '';
+    if (!handleRaw) {
+      throw new BadRequestException(
+        'knowledge_product.handle is required for KNOWLEDGE_PRODUCT results.',
+      );
+    }
+
+    // Normalize handle the same way CGSpace/mapper do (e.g. "10568/12345" from URL or raw)
+    const handle =
+      this._resultsKnowledgeProductsService.extractHandleIdentifier(handleRaw);
+
+    const existingKp =
+      await this._resultsKnowledgeProductsService.validateKPExistanceByHandle(
+        handle,
+      );
+    if (existingKp) {
+      this.logger.warn(
+        `Knowledge Product with handle ${handle} already exists, aborting bilateral creation.`,
+      );
+      throw new BadRequestException(
+        existingKp.message ??
+          `Knowledge Product with handle ${handle} already exists.`,
+      );
+    }
+
+    const versionYear =
+      version?.phase_year ?? version?.cgspace_year;
+    const userToken: TokenDto = { id: userId } as TokenDto;
+    const mqapValidation =
+      await this._resultsKnowledgeProductsService.findOnCGSpace(
+        handle,
+        userToken,
+        versionYear,
+        false,
+      );
+    if ((mqapValidation as any)?.status !== HttpStatus.OK) {
+      const message =
+        (mqapValidation as any)?.message ||
+        'The Knowledge Product could not be validated against CGSpace for this reporting cycle.';
+      throw new BadRequestException(message);
     }
   }
 
