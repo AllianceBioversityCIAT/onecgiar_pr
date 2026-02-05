@@ -63,6 +63,8 @@ export class InnovationPackageDetailComponent implements OnInit, DoCheck {
   }
 
   ngDoCheck(): void {
-    this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.section_container');
+    setTimeout(() => {
+      this.dataControlSE.someMandatoryFieldIncompleteResultDetail('.section_container');
+    }, 0);
   }
 }

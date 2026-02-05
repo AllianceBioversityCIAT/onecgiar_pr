@@ -78,6 +78,9 @@
       </app-pr-radio-button>
       <div id="gender_tag_alert" [hidden]="this.generalInfoBody.gender_tag_id != 3"></div>
     </div>
+    <div appFeedbackValidation
+      [labelText]="this.getImpactAreaFieldLabel('[general-info]-gender_impact_area_id')"
+      [isComplete]="(this.generalInfoBody.gender_tag_id != 3 || !this.isP25()) || this.isImpactAreaComplete('gender_impact_area_id')"></div>
     @if (this.generalInfoBody.gender_tag_id == 3) {
       @if (this.dataControlSE.currentResultSignal()?.portfolio === 'P25') {
         <ng-container
@@ -115,6 +118,9 @@
       </app-pr-radio-button>
       <div id="climate_change_tag_alert" [hidden]="this.generalInfoBody.climate_change_tag_id != 3"></div>
     </div>
+    <div appFeedbackValidation
+      [labelText]="this.getImpactAreaFieldLabel('[general-info]-climate_impact_area_id')"
+      [isComplete]="(this.generalInfoBody.climate_change_tag_id != 3 || !this.isP25()) || this.isImpactAreaComplete('climate_impact_area_id')"></div>
     @if (this.generalInfoBody.climate_change_tag_id == 3) {
       @if (this.dataControlSE.currentResultSignal()?.portfolio === 'P25') {
         <ng-container
@@ -152,6 +158,9 @@
       </app-pr-radio-button>
       <div id="nutrition_tag_alert" [hidden]="this.generalInfoBody.nutrition_tag_level_id != 3"></div>
     </div>
+    <div appFeedbackValidation
+      [labelText]="this.getImpactAreaFieldLabel('[general-info]-nutrition_impact_area_id')"
+      [isComplete]="(this.generalInfoBody.nutrition_tag_level_id != 3 || !this.isP25()) || this.isImpactAreaComplete('nutrition_impact_area_id')"></div>
     @if (this.generalInfoBody.nutrition_tag_level_id == 3) {
       @if (this.dataControlSE.currentResultSignal()?.portfolio === 'P25') {
         <ng-container
@@ -189,6 +198,9 @@
       </app-pr-radio-button>
       <div id="environment_tag_alert" [hidden]="this.generalInfoBody.environmental_biodiversity_tag_level_id != 3"></div>
     </div>
+    <div appFeedbackValidation
+      [labelText]="this.getImpactAreaFieldLabel('[general-info]-environmental_biodiversity_impact_area_id')"
+      [isComplete]="(this.generalInfoBody.environmental_biodiversity_tag_level_id != 3 || !this.isP25()) || this.isImpactAreaComplete('environmental_biodiversity_impact_area_id')"></div>
     @if (this.generalInfoBody.environmental_biodiversity_tag_level_id == 3) {
       @if (this.dataControlSE.currentResultSignal()?.portfolio === 'P25') {
         <ng-container
@@ -226,6 +238,9 @@
       </app-pr-radio-button>
       <div id="poverty_tag_alert" [hidden]="this.generalInfoBody.poverty_tag_level_id != 3"></div>
     </div>
+    <div appFeedbackValidation
+      [labelText]="this.getImpactAreaFieldLabel('[general-info]-poverty_impact_area_id')"
+      [isComplete]="(this.generalInfoBody.poverty_tag_level_id != 3 || !this.isP25()) || this.isImpactAreaComplete('poverty_impact_area_id')"></div>
     @if (this.generalInfoBody.poverty_tag_level_id == 3) {
       @if (this.dataControlSE.currentResultSignal()?.portfolio === 'P25') {
         <ng-container
