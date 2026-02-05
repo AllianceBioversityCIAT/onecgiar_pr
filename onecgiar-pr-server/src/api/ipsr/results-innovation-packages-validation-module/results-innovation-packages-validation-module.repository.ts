@@ -3,6 +3,7 @@ import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultsInnovationPackagesValidationModule } from './entities/results-innovation-packages-validation-module.entity';
 import { GetValidationSectionInnoPckgDto } from './dto/get-validation-section-inno-pckg.dto';
+import { ValidationMapsEnum } from '../../results/results-validation-module/enum/validation-maps.enum';
 
 @Injectable()
 export class ResultsInnovationPackagesValidationModuleRepository extends Repository<ResultsInnovationPackagesValidationModule> {
@@ -223,6 +224,17 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
         debug: true,
       });
     }
+  }
+
+  async queryValidation(
+    resultId: number,
+    sections: ValidationMapsEnum[],
+  ): Promise<{ section_name: string; validation: string }[]> {
+    const sectionsString = JSON.stringify(sections ?? []);
+    const tempResultId = Number(resultId ?? 0);
+    return this.query(
+      `CALL validate_sections_mapped_batch(${tempResultId}, '${sectionsString}');`,
+    ).then((res) => res?.[0]);
   }
 
   async contributors(resultId: number) {

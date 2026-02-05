@@ -44,9 +44,13 @@ export class StepN4Component implements OnInit {
         institutions_id: item?.obj_result_institution?.institutions_id
       }));
 
-      this.ipsrStep4Body.institutions_expected_investment = this.ipsrStep4Body.institutions_expected_investment.filter(
-        item => item?.obj_result_institution?.institution_roles_id == 7
-      );
+      this.ipsrStep4Body.institutions_expected_investment = this.ipsrStep4Body.institutions_expected_investment.filter(item => {
+        if (this.api.fieldsManagerSE.isP25()) {
+          return item?.obj_result_institution?.institution_roles_id == 2;
+        } else {
+          return item?.obj_result_institution?.institution_roles_id == 7;
+        }
+      });
     });
   }
 

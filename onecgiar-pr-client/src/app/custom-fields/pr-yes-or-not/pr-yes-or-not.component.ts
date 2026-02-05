@@ -21,6 +21,7 @@ export class PrYesOrNotComponent {
   @Input() label: string;
   @Input() description: string;
   @Input() readOnly: boolean;
+  @Input() disabled: boolean = false;
   @Input() isStatic: boolean = false;
   @Input() required: boolean = true;
   @Input() hideOptions: boolean;

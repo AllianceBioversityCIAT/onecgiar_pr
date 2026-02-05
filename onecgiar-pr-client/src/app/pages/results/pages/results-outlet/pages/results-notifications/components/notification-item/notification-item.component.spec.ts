@@ -312,7 +312,7 @@ describe('NotificationItemComponent', () => {
       expect(spy).toHaveBeenCalledWith({
         id: 'noti',
         title: 'Request successfully rejected',
-        status: 'success'
+        status: 'information'
       });
       expect(component.requestingReject).toBeFalsy();
       expect(emitSpy).toHaveBeenCalled();

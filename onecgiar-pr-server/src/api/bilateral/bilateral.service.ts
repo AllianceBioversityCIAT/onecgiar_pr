@@ -37,6 +37,7 @@ import { EvidencesService } from '../results/evidences/evidences.service';
 import { EvidencesRepository } from '../results/evidences/evidences.repository';
 import { Evidence } from '../results/evidences/entities/evidence.entity';
 import { ResultsKnowledgeProductsRepository } from '../results/results-knowledge-products/repositories/results-knowledge-products.repository';
+import { ResultsKnowledgeProductsService } from '../results/results-knowledge-products/results-knowledge-products.service';
 import { ClarisaCentersRepository } from '../../clarisa/clarisa-centers/clarisa-centers.repository';
 import { UserService } from '../../auth/modules/user/user.service';
 import { CreateUserDto } from '../../auth/modules/user/dto/create-user.dto';
@@ -82,6 +83,7 @@ export class BilateralService {
     private readonly _evidencesRepository: EvidencesRepository,
     private readonly _evidencesService: EvidencesService,
     private readonly _resultsKnowledgeProductsRepository: ResultsKnowledgeProductsRepository,
+    private readonly _resultsKnowledgeProductsService: ResultsKnowledgeProductsService,
     private readonly _clarisaCenters: ClarisaCentersRepository,
     private readonly _userService: UserService,
     private readonly _resultsTocResultsRepository: ResultsTocResultRepository,
@@ -179,7 +181,31 @@ export class BilateralService {
             });
             if (!year) throw new NotFoundException('Active year not found');
 
-            const lastCode = await this._resultRepository.getLastResultCode();
+            if (
+              bilateralDto.result_type_id === ResultTypeEnum.KNOWLEDGE_PRODUCT &&
+              bilateralDto.knowledge_product?.metadataCG?.issue_year != null
+            ) {
+              const issueYearVal =
+                bilateralDto.knowledge_product.metadataCG.issue_year;
+              const issueYearRecord = await this._yearRepository.findOne({
+                where: { year: issueYearVal },
+              });
+              if (!issueYearRecord) {
+                throw new BadRequestException(
+                  `issue_year (${issueYearVal}) is not a valid year in the system. Please use a year that exists in the system.`,
+                );
+              }
+            }
+
+            if (
+              bilateralDto.result_type_id === ResultTypeEnum.KNOWLEDGE_PRODUCT
+            ) {
+              await this.validateKnowledgeProductBeforeCreate(
+                bilateralDto,
+                version,
+                userId,
+              );
+            }
 
             const resultHeader = await this.initializeResultHeader({
               bilateralDto,
@@ -187,7 +213,6 @@ export class BilateralService {
               submittedUserId,
               version,
               year,
-              lastCode,
             });
             const newResultHeader = resultHeader;
             const resultId = resultHeader.id;
@@ -922,6 +947,7 @@ export class BilateralService {
         const createdUserWrapper = await this._userService.createFull(
           createUserDto,
           adminUser?.id,
+          { skipCgiarAdLookup: true },
         );
 
         let createdUser: any = createdUserWrapper;
@@ -1415,20 +1441,75 @@ export class BilateralService {
     }
   }
 
+  /**
+   * Validates KP payload before any insert: handle required, no duplicate handle, MQAP year match.
+   * Call this only when result_type_id is KNOWLEDGE_PRODUCT; throws if validation fails.
+   */
+  private async validateKnowledgeProductBeforeCreate(
+    bilateralDto: CreateBilateralDto,
+    version: { phase_year?: number; cgspace_year?: number },
+    userId: number,
+  ): Promise<void> {
+    if (!bilateralDto.knowledge_product) {
+      throw new BadRequestException(
+        'knowledge_product object is required for KNOWLEDGE_PRODUCT results.',
+      );
+    }
+    const handleRaw = bilateralDto.knowledge_product.handle?.trim?.() ?? '';
+    if (!handleRaw) {
+      throw new BadRequestException(
+        'knowledge_product.handle is required for KNOWLEDGE_PRODUCT results.',
+      );
+    }
+
+    // Normalize handle the same way CGSpace/mapper do (e.g. "10568/12345" from URL or raw)
+    const handle =
+      this._resultsKnowledgeProductsService.extractHandleIdentifier(handleRaw);
+
+    const existingKp =
+      await this._resultsKnowledgeProductsService.validateKPExistanceByHandle(
+        handle,
+      );
+    if (existingKp) {
+      this.logger.warn(
+        `Knowledge Product with handle ${handle} already exists, aborting bilateral creation.`,
+      );
+      throw new BadRequestException(
+        existingKp.message ??
+          `Knowledge Product with handle ${handle} already exists.`,
+      );
+    }
+
+    const versionYear =
+      version?.phase_year ?? version?.cgspace_year;
+    const userToken: TokenDto = { id: userId } as TokenDto;
+    const mqapValidation =
+      await this._resultsKnowledgeProductsService.findOnCGSpace(
+        handle,
+        userToken,
+        versionYear,
+        false,
+      );
+    if ((mqapValidation as any)?.status !== HttpStatus.OK) {
+      const message =
+        (mqapValidation as any)?.message ||
+        'The Knowledge Product could not be validated against CGSpace for this reporting cycle.';
+      throw new BadRequestException(message);
+    }
+  }
+
   private async initializeResultHeader({
     bilateralDto,
     userId,
     submittedUserId,
     version,
     year,
-    lastCode,
   }: {
     bilateralDto: CreateBilateralDto;
     userId: number;
     submittedUserId: number;
     version: any;
     year: any;
-    lastCode: number;
   }): Promise<Result> {
     const handler = this.resultTypeHandlerMap.get(bilateralDto.result_type_id);
     if (handler?.initializeResultHeader) {
@@ -1438,18 +1519,21 @@ export class BilateralService {
         submittedUserId,
         version,
         year,
-        lastCode,
       });
-      if (custom?.resultHeader) return custom.resultHeader;
+      if (custom?.resultHeader) {
+        return this._resultRepository.findOne({
+          where: { id: custom.resultHeader.id },
+        });
+      }
     }
 
-    const resultHeader = await this._resultRepository.save({
+    const saved = await this._resultRepository.save({
       created_by: userId,
       version_id: version.id,
       title: bilateralDto.title,
       description: bilateralDto.description,
       reported_year_id: year.year,
-      result_code: lastCode + 1,
+      result_code: 0,
       result_type_id: bilateralDto.result_type_id,
       result_level_id: bilateralDto.result_level_id,
       external_submitter: submittedUserId,
@@ -1463,7 +1547,9 @@ export class BilateralService {
       status_id: ResultStatusData.PendingReview.value,
     });
 
-    return resultHeader;
+    return this._resultRepository.findOne({
+      where: { id: saved.id },
+    });
   }
 
   private async runResultTypeHandlers(context: {
@@ -1683,12 +1769,9 @@ export class BilateralService {
         ((leadCenter.institution_id &&
           institution_id &&
           leadCenter.institution_id === institution_id) ||
-          (normalizedLeadAcronym &&
-            acronym &&
-            normalizedLeadAcronym.toLowerCase() === acronym.toLowerCase()) ||
-          (normalizedLeadName &&
-            name &&
-            normalizedLeadName.toLowerCase() === name.toLowerCase()))
+          (acronym &&
+            normalizedLeadAcronym?.toLowerCase() === acronym?.toLowerCase()) ||
+          (name && normalizedLeadName?.toLowerCase() === name?.toLowerCase()))
       ) {
         continue;
       }
