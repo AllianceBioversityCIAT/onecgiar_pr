@@ -2433,6 +2433,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         r.source = 'API'
         AND ci.official_code = ?
         AND r.is_active = 1
+        AND r.status_id IN (5, 6, 7) 
     `;
 
     const params: any[] = [programId];

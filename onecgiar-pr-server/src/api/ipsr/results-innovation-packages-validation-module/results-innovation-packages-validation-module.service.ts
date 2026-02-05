@@ -21,7 +21,7 @@ export class ResultsInnovationPackagesValidationModuleService {
     private readonly _ipsrReposotory: IpsrRepository,
     private readonly _resultInnovationPackageValidationModuleRepository: ResultsInnovationPackagesValidationModuleRepository,
     private readonly _dataSource: DataSource,
-  ) { }
+  ) {}
 
   async getGreenchecksByinnovationPackage(
     resultId: number,
