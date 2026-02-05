@@ -149,9 +149,9 @@ export class ResultsInnovationPackagesValidationModuleService {
           sectionsTwo,
         );
       const formatStepTwo = responsePathwayStepTwo.map((item) => ({
-        subSection: item.section_name.split(' ')[1],
+        subSection: item.section_name.split(' ')?.[1],
         sectionName: item.section_name,
-        validation: Boolean(item.validation),
+        validation: Boolean(Number(item.validation)),
       }));
 
       const baseStepTwo = {
@@ -175,9 +175,9 @@ export class ResultsInnovationPackagesValidationModuleService {
           sectionsOtherSteps,
         );
       const baseOtherSteps = responsePathwayOtherSteps.map((item) => ({
-        step: Number(item.section_name.split(' ')[1]),
+        step: Number(item.section_name.split(' ')?.[1]),
         sectionName: item.section_name,
-        validation: Boolean(item.validation),
+        validation: Boolean(Number(item.validation)),
       }));
 
       pathway.push(baseStepTwo);
@@ -193,15 +193,9 @@ export class ResultsInnovationPackagesValidationModuleService {
           commonSections,
         );
       const formatCommonSections = responseCommonSections.map((item) => ({
-        sectionName: this.nameMappers[item.section_name],
-        validation: Boolean(item.validation),
+        sectionName: this.nameMappers?.[item.section_name],
+        validation: Boolean(Number(item.validation)),
       }));
-
-      // DEPRECATED: No longer used but kept to avoid potential frontend compatibility issues
-      formatCommonSections.push({
-        sectionName: 'Link to results',
-        validation: true,
-      });
 
       formatCommonSections.push({
         sectionName: 'IPSR Innovation use pathway',

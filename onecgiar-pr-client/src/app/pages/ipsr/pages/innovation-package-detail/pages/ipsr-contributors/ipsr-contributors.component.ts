@@ -8,6 +8,7 @@ import { CentersService } from '../../../../../../shared/services/global/centers
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 import { ResultLevelService } from '../../../../../results/pages/result-creator/services/result-level.service';
 import { InnovationUseResultsService } from '../../../../../../shared/services/global/innovation-use-results.service';
+import { IpsrCompletenessStatusService } from '../../../../services/ipsr-completeness-status.service';
 
 @Component({
   selector: 'app-ipsr-contributors',
@@ -24,6 +25,7 @@ export class IpsrContributorsComponent implements OnInit {
   contributingInitiativesList = [];
   fieldsManagerSE = inject(FieldsManagerService);
   innovationUseResultsSE = inject(InnovationUseResultsService);
+  ipsrCompletenessStatusSE = inject(IpsrCompletenessStatusService);
   disabledText = 'To remove this center, please contact your librarian';
   submitter: string = '';
   result_toc_result = null;
@@ -276,6 +278,7 @@ export class IpsrContributorsComponent implements OnInit {
 
     this.api.resultsSE.PATCHContributorsByIpsrResultId(sendedData, this.fieldsManagerSE.isP25()).subscribe(({ response }) => {
       this.getSectionInformation();
+      this.ipsrCompletenessStatusSE.updateGreenChecks();
     });
   }
 
