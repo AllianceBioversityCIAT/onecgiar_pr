@@ -265,7 +265,6 @@
 
       @if (
         fields?.commonFields?.result_type_id === 1 ||
-        fields?.commonFields?.result_type_id === 2 ||
         fields?.commonFields?.result_type_id === 5 ||
         fields?.commonFields?.result_type_id === 6 ||
         fields?.commonFields?.result_type_id === 7
@@ -277,9 +276,6 @@
         @switch (fields?.commonFields?.result_type_id) {
           @case (1) {
             <app-policy-change-content [resultDetail]="resultDetail()" [disabled]="!canEditInDrawer()"></app-policy-change-content>
-          }
-          @case (2) {
-            <app-innovation-use-content [resultDetail]="resultDetail()" [disabled]="!canEditInDrawer()"></app-innovation-use-content>
           }
           @case (5) {
             <app-cap-sharing-content [resultDetail]="resultDetail()" [disabled]="!canEditInDrawer()"></app-cap-sharing-content>
