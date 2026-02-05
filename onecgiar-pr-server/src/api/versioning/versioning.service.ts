@@ -1030,29 +1030,40 @@ export class VersioningService {
       // Optimize N+1 queries: Batch fetch all can_be_deleted checks in 2 queries
       const versionIds = res.map((v) => v.id);
       
-      // Check which versions have results (batch query)
-      const versionsWithResults = await this._resultRepository
-        .createQueryBuilder('r')
-        .select('DISTINCT r.version_id', 'version_id')
-        .where('r.version_id IN (:...ids)', { ids: versionIds })
-        .andWhere('r.is_active = :active', { active: true })
-        .getRawMany();
+      // Guard against empty IN () clause which causes SQL syntax errors
+      // If no versions found, skip queries and use empty sets
+      // This prevents: "You have an error in your SQL syntax... near ') AND `r`.`is_active` = true'"
+      let versionsWithResultsSet = new Set<number>();
+      let versionsAsPreviousPhaseSet = new Set<number>();
       
-      const versionsWithResultsSet = new Set(
-        versionsWithResults.map((v: any) => v.version_id),
-      );
+      if (versionIds.length > 0) {
+        this._logger.debug(
+          `[VERSIONING-FIND] Checking can_be_deleted for ${versionIds.length} versions`,
+        );
+        // Check which versions have results (batch query)
+        const versionsWithResults = await this._resultRepository
+          .createQueryBuilder('r')
+          .select('DISTINCT r.version_id', 'version_id')
+          .where('r.version_id IN (:...ids)', { ids: versionIds })
+          .andWhere('r.is_active = :active', { active: true })
+          .getRawMany();
+        
+        versionsWithResultsSet = new Set(
+          versionsWithResults.map((v: any) => v.version_id),
+        );
 
-      // Check which versions are referenced as previous_phase (batch query)
-      const versionsAsPreviousPhase = await this._versionRepository
-        .createQueryBuilder('v')
-        .select('DISTINCT v.previous_phase', 'previous_phase')
-        .where('v.previous_phase IN (:...ids)', { ids: versionIds })
-        .andWhere('v.is_active = :active', { active: true })
-        .getRawMany();
-      
-      const versionsAsPreviousPhaseSet = new Set(
-        versionsAsPreviousPhase.map((v: any) => v.previous_phase),
-      );
+        // Check which versions are referenced as previous_phase (batch query)
+        const versionsAsPreviousPhase = await this._versionRepository
+          .createQueryBuilder('v')
+          .select('DISTINCT v.previous_phase', 'previous_phase')
+          .where('v.previous_phase IN (:...ids)', { ids: versionIds })
+          .andWhere('v.is_active = :active', { active: true })
+          .getRawMany();
+        
+        versionsAsPreviousPhaseSet = new Set(
+          versionsAsPreviousPhase.map((v: any) => v.previous_phase),
+        );
+      }
 
       // Map to DTO and calculate can_be_deleted
       const items: VersioningResponseDto[] = res.map((version) => {

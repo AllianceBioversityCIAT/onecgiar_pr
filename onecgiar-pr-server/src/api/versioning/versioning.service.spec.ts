@@ -750,5 +750,39 @@ describe('VersioningService', () => {
       expect(result.response.hasNext).toBe(false);
       expect(result.response.totalPages).toBe(0);
     });
+
+    it('should handle IPSR module with empty results without SQL syntax error', async () => {
+      // Regression test: This scenario caused "IN ()" SQL syntax error
+      // when status=open&module=ipsr returned no results
+      versionRepository.count.mockResolvedValueOnce(0);
+      versionRepository.find.mockResolvedValueOnce([]);
+
+      // When versionIds is empty, queries should NOT be executed
+      // to avoid generating invalid "IN ()" SQL
+      const mockQueryBuilder = {
+        select: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getRawMany: jest.fn().mockResolvedValue([]),
+      };
+
+      resultRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+      versionRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
+      const result = await service.find(
+        ModuleTypeEnum.IPSR,
+        StatusPhaseEnum.OPEN,
+        ActiveEnum.ACTIVE,
+      );
+
+      // Should return empty results without throwing SQL syntax error
+      expect(result.response.items).toHaveLength(0);
+      expect(result.response.total).toBe(0);
+      
+      // Verify that createQueryBuilder was NOT called when versionIds is empty
+      // (the guard prevents execution of queries with empty IN clauses)
+      expect(resultRepository.createQueryBuilder).not.toHaveBeenCalled();
+      expect(versionRepository.createQueryBuilder).not.toHaveBeenCalled();
+    });
   });
 });
