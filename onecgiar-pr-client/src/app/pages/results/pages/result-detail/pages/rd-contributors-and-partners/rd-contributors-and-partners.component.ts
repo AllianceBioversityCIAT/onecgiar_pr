@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef, computed } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
@@ -70,6 +70,11 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     }, 100);
     setTimeout(() => clearInterval(checkResultsList), 5000);
   }
+
+  isAvisaInitiative = computed(() => {
+    const code = this.api.dataControlSE.currentResultSignal?.()?.initiative_official_code ?? this.api.dataControlSE.currentResult?.initiative_official_code;
+    return code === 'SGP-02' || code === 'SGP02';
+  });
 
   GET_AllWithoutResults() {
     this.api.resultsSE.GET_resultById().subscribe({

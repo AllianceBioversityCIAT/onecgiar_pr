@@ -179,15 +179,12 @@ export class BilateralService {
             });
             if (!year) throw new NotFoundException('Active year not found');
 
-            const lastCode = await this._resultRepository.getLastResultCode();
-
             const resultHeader = await this.initializeResultHeader({
               bilateralDto,
               userId,
               submittedUserId,
               version,
               year,
-              lastCode,
             });
             const newResultHeader = resultHeader;
             const resultId = resultHeader.id;
@@ -922,6 +919,7 @@ export class BilateralService {
         const createdUserWrapper = await this._userService.createFull(
           createUserDto,
           adminUser?.id,
+          { skipCgiarAdLookup: true },
         );
 
         let createdUser: any = createdUserWrapper;
@@ -1421,14 +1419,12 @@ export class BilateralService {
     submittedUserId,
     version,
     year,
-    lastCode,
   }: {
     bilateralDto: CreateBilateralDto;
     userId: number;
     submittedUserId: number;
     version: any;
     year: any;
-    lastCode: number;
   }): Promise<Result> {
     const handler = this.resultTypeHandlerMap.get(bilateralDto.result_type_id);
     if (handler?.initializeResultHeader) {
@@ -1438,18 +1434,21 @@ export class BilateralService {
         submittedUserId,
         version,
         year,
-        lastCode,
       });
-      if (custom?.resultHeader) return custom.resultHeader;
+      if (custom?.resultHeader) {
+        return this._resultRepository.findOne({
+          where: { id: custom.resultHeader.id },
+        });
+      }
     }
 
-    const resultHeader = await this._resultRepository.save({
+    const saved = await this._resultRepository.save({
       created_by: userId,
       version_id: version.id,
       title: bilateralDto.title,
       description: bilateralDto.description,
       reported_year_id: year.year,
-      result_code: lastCode + 1,
+      result_code: 0,
       result_type_id: bilateralDto.result_type_id,
       result_level_id: bilateralDto.result_level_id,
       external_submitter: submittedUserId,
@@ -1463,7 +1462,9 @@ export class BilateralService {
       status_id: ResultStatusData.PendingReview.value,
     });
 
-    return resultHeader;
+    return this._resultRepository.findOne({
+      where: { id: saved.id },
+    });
   }
 
   private async runResultTypeHandlers(context: {
@@ -1683,12 +1684,9 @@ export class BilateralService {
         ((leadCenter.institution_id &&
           institution_id &&
           leadCenter.institution_id === institution_id) ||
-          (normalizedLeadAcronym &&
-            acronym &&
-            normalizedLeadAcronym.toLowerCase() === acronym.toLowerCase()) ||
-          (normalizedLeadName &&
-            name &&
-            normalizedLeadName.toLowerCase() === name.toLowerCase()))
+          (acronym &&
+            normalizedLeadAcronym?.toLowerCase() === acronym?.toLowerCase()) ||
+          (name && normalizedLeadName?.toLowerCase() === name?.toLowerCase()))
       ) {
         continue;
       }

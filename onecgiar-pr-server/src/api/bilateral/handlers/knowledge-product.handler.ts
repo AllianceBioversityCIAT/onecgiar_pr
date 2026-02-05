@@ -67,7 +67,7 @@ export class KnowledgeProductBilateralHandler
       description:
         bilateralDto.description || 'Metadata will be loaded from CGSpace',
       reported_year_id: context.year.year,
-      result_code: context.lastCode + 1,
+      result_code: 0,
       result_type_id: bilateralDto.result_type_id,
       result_level_id: bilateralDto.result_level_id,
       external_submitter: context.submittedUserId,

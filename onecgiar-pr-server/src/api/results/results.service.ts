@@ -196,13 +196,14 @@ export class ResultsService {
     @Optional()
     @Inject(forwardRef(() => ShareResultRequestService))
     private readonly _shareResultRequestService?: ShareResultRequestService,
-  ) {}
+  ) { }
 
   async createOwnerResult(
     createResultDto: CreateResultDto,
     user: TokenDto,
     isAdmin?: boolean,
     versionId?: number,
+    source?: SourceEnum,
   ): Promise<returnFormatResult | returnErrorDto> {
     try {
       if (
@@ -296,7 +297,7 @@ export class ResultsService {
       }
 
       const last_code = await this._resultRepository.getLastResultCode();
-      const newResultHeader: Result = await this._resultRepository.save({
+      const saveResult: Partial<Result> = {
         created_by: user.id,
         last_updated_by: user.id,
         result_type_id: rt.id,
@@ -308,7 +309,14 @@ export class ResultsService {
         reported_year_id: year.year,
         result_level_id: rl.id,
         result_code: last_code + 1,
-      });
+      };
+
+      if (source) {
+        saveResult['source'] = source;
+      }
+
+      const newResultHeader: Result =
+        await this._resultRepository.save(saveResult);
 
       const resultByInitiative = await this._resultByInitiativesRepository.save(
         {
@@ -1117,11 +1125,11 @@ export class ResultsService {
           ...item,
           initiative_entity_map: entityMaps.length
             ? entityMaps.map((entityMap) => ({
-                id: entityMap.id,
-                entityId: entityMap.entityId,
-                initiativeId: entityMap.initiativeId,
-                entityName: entityMap.entity_obj?.name ?? null,
-              }))
+              id: entityMap.id,
+              entityId: entityMap.entityId,
+              initiativeId: entityMap.initiativeId,
+              entityName: entityMap.entity_obj?.name ?? null,
+            }))
             : [],
           initiative_entity_user: initiativesPortfolio3,
         };
@@ -1241,11 +1249,11 @@ export class ResultsService {
           ...item,
           initiative_entity_map: entityMaps.length
             ? entityMaps.map((entityMap) => ({
-                id: entityMap.id,
-                entityId: entityMap.entityId,
-                initiativeId: entityMap.initiativeId,
-                entityName: entityMap.entity_obj?.name ?? null,
-              }))
+              id: entityMap.id,
+              entityId: entityMap.entityId,
+              initiativeId: entityMap.initiativeId,
+              entityName: entityMap.entity_obj?.name ?? null,
+            }))
             : [],
           initiative_entity_user: initiativesPortfolio3,
         };
@@ -1263,14 +1271,14 @@ export class ResultsService {
         response:
           limit !== undefined
             ? {
-                items: result,
-                meta: {
-                  total,
-                  page: page ?? 1,
-                  limit,
-                  totalPages: Math.max(1, Math.ceil(total / limit)),
-                },
-              }
+              items: result,
+              meta: {
+                total,
+                page: page ?? 1,
+                limit,
+                totalPages: Math.max(1, Math.ceil(total / limit)),
+              },
+            }
             : { items: result },
         message: 'Successful response',
         status: HttpStatus.OK,
@@ -2352,11 +2360,25 @@ export class ResultsService {
     isAdmin?: boolean,
     versionId?: number,
   ): Promise<returnFormatResult | returnErrorDto> {
+    const initiative = await this._dataSource
+      .getRepository(ClarisaInitiative)
+      .findOne({
+        where: {
+          id: createResultDto.initiative_id,
+        },
+      });
+
+    let source: SourceEnum = null;
+    if (initiative?.official_code === 'SGP-02') {
+      source = SourceEnum.Bilateral;
+    }
+
     const result = await this.createOwnerResult(
       createResultDto,
       user,
       isAdmin,
       versionId,
+      source,
     );
 
     if (
@@ -3289,7 +3311,7 @@ export class ResultsService {
     return (
       reviewUpdateDto.commonFields?.result_description !== undefined &&
       reviewUpdateDto.commonFields.result_description !==
-        currentCommonFields?.result_description
+      currentCommonFields?.result_description
     );
   }
 
