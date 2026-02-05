@@ -2697,6 +2697,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         rpc.policy_type_id,
         rpc.policy_stage_id,
         ci.id AS institution_id,
+        rbi.institution_roles_id,
         ci.acronym,
         ci.name AS institution_name,
         cps.name AS policy_stage_name,
@@ -2732,25 +2733,36 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         const policyChangeId = row.result_policy_change_id;
 
         if (!policyChangeMap.has(policyChangeId)) {
+          const implementingOrg = [];
+          if (
+            row.institution_roles_id === 4 &&
+            row.institution_id &&
+            row.acronym
+          ) {
+            implementingOrg.push({
+              institution_id: row.institution_id,
+              acronym: row.acronym,
+              institution_name: row.institution_name,
+            });
+          }
+
           policyChangeMap.set(policyChangeId, {
             result_policy_change_id: policyChangeId,
             policy_type_id: row.policy_type_id,
             policy_stage_id: row.policy_stage_id,
             policy_stage_name: row.policy_stage_name,
             policy_type_name: row.policy_type_name,
-            implementing_organization: [
-              {
-                institution_id: row.institution_id,
-                acronym: row.acronym,
-                institution_name: row.institution_name,
-              },
-            ],
+            implementing_organization: implementingOrg,
           });
         }
 
         const policyChange = policyChangeMap.get(policyChangeId);
 
-        if (row.institution_id && row.acronym) {
+        if (
+          row.institution_roles_id === 4 &&
+          row.institution_id &&
+          row.acronym
+        ) {
           const institutionExists = policyChange.implementing_organization.some(
             (inst: any) => inst.institution_id === row.institution_id,
           );
