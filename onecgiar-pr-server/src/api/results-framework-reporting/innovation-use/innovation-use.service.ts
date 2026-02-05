@@ -1015,6 +1015,7 @@ export class InnovationUseService {
           where: {
             result_id: resultId,
             institutions_id: partner.id,
+            is_active: true,
           },
         });
 

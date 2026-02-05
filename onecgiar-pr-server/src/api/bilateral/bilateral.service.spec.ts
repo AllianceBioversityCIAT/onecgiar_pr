@@ -26,6 +26,11 @@ describe('BilateralService (unit)', () => {
     const evidencesRepository = {} as any;
     const evidencesService = {} as any;
     const resultsKnowledgeProductsRepository = {} as any;
+    const resultsKnowledgeProductsService = {
+      extractHandleIdentifier: jest.fn((raw: string) => raw?.split('/').slice(-2).join('/') ?? raw),
+      validateKPExistanceByHandle: jest.fn().mockResolvedValue(null),
+      findOnCGSpace: jest.fn().mockResolvedValue({ status: 200 }),
+    } as any;
     const clarisaCenters = {} as any;
     const userService = { createFull: jest.fn() };
     const resultsTocResultsRepository = { logicalDelete: jest.fn() };
@@ -75,6 +80,7 @@ describe('BilateralService (unit)', () => {
       evidencesRepository,
       evidencesService,
       resultsKnowledgeProductsRepository,
+      resultsKnowledgeProductsService,
       clarisaCenters,
       userService as any,
       resultsTocResultsRepository as any,
@@ -121,6 +127,7 @@ describe('BilateralService (unit)', () => {
         resultsTocResultsIndicatorsRepository,
         resultsTocResultsRepository,
         resultByInitiativesRepository,
+        resultsKnowledgeProductsService,
       },
       handlers: {
         knowledgeProductHandler,
