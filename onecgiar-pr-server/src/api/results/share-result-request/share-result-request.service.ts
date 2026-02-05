@@ -602,10 +602,23 @@ export class ShareResultRequestService {
   }
 
   private async getRequest(whereCondition: any) {
-    return await this._shareResultRequestRepository.find({
+    const results = await this._shareResultRequestRepository.find({
       select: this.getRequestSelectFields(),
       relations: this.getRequestRelations(),
       where: whereCondition,
+    });
+
+    return results.map((result: any) => {
+      if (result.obj_result && !Array.isArray(result.obj_result)) {
+        result.obj_result = {
+          ...result.obj_result,
+          source_name:
+            result.obj_result.source === 'Result'
+              ? 'W1/W2'
+              : 'W3/Bilaterals',
+        };
+      }
+      return result;
     });
   }
 
@@ -622,6 +635,7 @@ export class ShareResultRequestService {
         name: true,
       },
       obj_result: {
+        source: true,
         result_code: true,
         title: true,
         status_id: true,
