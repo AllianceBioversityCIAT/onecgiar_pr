@@ -197,12 +197,6 @@ export class ResultsInnovationPackagesValidationModuleService {
         validation: Boolean(item.validation),
       }));
 
-      // DEPRECATED: No longer used but kept to avoid potential frontend compatibility issues
-      formatCommonSections.push({
-        sectionName: 'Link to results',
-        validation: true,
-      });
-
       formatCommonSections.push({
         sectionName: 'IPSR Innovation use pathway',
         validation: pathway.reduce((acc, item) => acc && item.validation, true),
