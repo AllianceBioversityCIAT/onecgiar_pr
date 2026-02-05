@@ -2707,6 +2707,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       LEFT JOIN results_by_institution rbi
         ON r.id = rbi.result_id
         AND rbi.is_active = 1
+        AND rbi.institution_roles_id = 4
       LEFT JOIN clarisa_institutions ci
         ON rbi.institutions_id = ci.id
       JOIN clarisa_policy_stage cps
