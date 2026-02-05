@@ -89,7 +89,12 @@ export class RdGeneralInformationComponent implements OnInit {
       currentArray.push(idNum);
     }
 
-    this.generalInfoBody[fieldName] = currentArray;
+    this.generalInfoBody[fieldName] = currentArray.length ? currentArray : [];
+  }
+
+  isImpactAreaComplete(fieldName: string): boolean {
+    const value = this.generalInfoBody[fieldName];
+    return Array.isArray(value) && value.length > 0;
   }
 
   // Helper methods to get field labels and descriptions from FieldsManagerService
