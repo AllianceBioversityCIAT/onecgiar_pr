@@ -16,7 +16,7 @@ COPY package*.json ./
 COPY . .
 RUN npm i
 
-# Build in dev mode as per team requirement
+# Build in dev mode as per team requirement.
 RUN npm run build:dev
 
 #################### TESTING STAGE ####################
