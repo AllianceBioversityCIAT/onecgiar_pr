@@ -62,9 +62,8 @@ export class PhaseManagementTableComponent implements OnInit {
 
   ngOnInit(): void {
     this.setupColumnOrder();
-    // Initial load: PrimeNG lazy loading will trigger onLazyLoad on init
-    // But we also call it manually to ensure data loads even if table doesn't trigger event
-    this.getAllPhases(1, this.pageSize);
+    // Initial load: PrimeNG lazy loading will trigger onLazyLoad automatically when table initializes
+    // No need to call getAllPhases manually - let the table handle it via lazy loading
     this.getTocPhases();
     this.get_resultYears();
     this.getPortfolios();
@@ -187,11 +186,18 @@ export class PhaseManagementTableComponent implements OnInit {
 
   getAllPhases(page: number = 1, limit: number = 50) {
     this.loading = true;
+    
     this.resultsSE.GET_versioning(StatusPhaseEnum.ALL, this.moduleType, page, limit).subscribe({
-      next: ({ response, pagination }) => {
+      next: (result) => {
         // Response is always an array (for backward compatibility)
         // Pagination metadata is exposed separately if available
-        this.phaseList = response || [];
+        const response = result?.response;
+        const pagination = result?.pagination;
+        
+        // Ensure response is an array
+        const items = Array.isArray(response) ? response : [];
+        
+        this.phaseList = items;
         this.previousPhaseList = [...this.phaseList];
         this.previousPhaseList.push({
           phase_name: 'N/A',
@@ -214,7 +220,9 @@ export class PhaseManagementTableComponent implements OnInit {
         this.loading = false;
       },
       error: (err) => {
-        console.error('Error loading phases:', err);
+        console.error('[PhaseManagementTable] Error loading phases:', err);
+        this.phaseList = [];
+        this.totalRecords = 0;
         this.loading = false;
       }
     });
@@ -228,21 +236,16 @@ export class PhaseManagementTableComponent implements OnInit {
   onPageChange(event: any) {
     // PrimeNG lazy load event: first = offset (0-based), rows = page size
     const newPage = Math.floor(event.first / event.rows) + 1; // Convert offset to 1-based page number
-    const newLimit = event.rows;
+    const newLimit = event.rows || this.pageSize;
     
-    // Skip duplicate initial load (ngOnInit already calls getAllPhases)
+    // Mark that initial load is complete after first event
     if (this.isInitialLoad) {
       this.isInitialLoad = false;
-      // If the initial lazy load event matches what we already loaded, skip
-      if (newPage === 1 && newLimit === this.pageSize && this.phaseList.length > 0) {
-        return;
-      }
     }
     
-    // Only fetch if page or limit actually changed to avoid unnecessary requests
-    if (newPage !== this.currentPage || newLimit !== this.pageSize) {
-      this.getAllPhases(newPage, newLimit);
-    }
+    // Always fetch data when lazy load event fires (including initial load)
+    // This ensures data loads even if page/limit haven't changed
+    this.getAllPhases(newPage, newLimit);
   }
 
   savePhase(phase) {

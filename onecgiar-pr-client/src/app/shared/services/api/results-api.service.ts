@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
-import { map, Observable, firstValueFrom } from 'rxjs';
+import { map, Observable, firstValueFrom, catchError, of } from 'rxjs';
 import { ResultBody } from '../../interfaces/result.interface';
 import { GeneralInfoBody } from '../../../pages/results/pages/result-detail/pages/rd-general-information/models/generalInfoBody';
 import { PartnersBody } from '../../../pages/results/pages/result-detail/pages/rd-partners/models/partnersBody';
@@ -1113,30 +1113,56 @@ export class ResultsApiService {
     return this.http.get<any>(url).pipe(
       map(resp => {
         // Handle paginated response (new format) or legacy array response (backward compatibility)
-        const isPaginated = resp?.response?.items !== undefined;
-        const items = isPaginated ? resp.response.items : (resp?.response || []);
+        // The ResponseInterceptor wraps responses as: { response: <data>, statusCode, message, ... }
+        // So we need to check resp.response for the actual data
         
+        let items: any[] = [];
+        let paginationData: any = null;
+        
+        // Check if resp.response exists and has the expected structure
+        if (resp?.response) {
+          // Check if response has items property (paginated format)
+          if (typeof resp.response === 'object' && 
+              !Array.isArray(resp.response) && 
+              'items' in resp.response) {
+            // New paginated format: { response: { items: [...], page, limit, total, ... } }
+            items = Array.isArray(resp.response.items) ? resp.response.items : [];
+            paginationData = {
+              page: resp.response.page ?? 1,
+              limit: resp.response.limit ?? 50,
+              total: resp.response.total ?? 0,
+              totalPages: resp.response.totalPages ?? 0,
+              hasNext: resp.response.hasNext ?? false
+            };
+          } else if (Array.isArray(resp.response)) {
+            // Legacy format: { response: [...] }
+            items = resp.response;
+          }
+        }
+        
+        // Process items to add phase_name_status
         items.forEach((phase: any) => {
-          phase.phase_name_status = `${phase.phase_name} - (${phase.status ? 'Open' : 'Closed'})`;
+          if (phase && typeof phase === 'object') {
+            phase.phase_name_status = `${phase.phase_name || ''} - (${phase.status ? 'Open' : 'Closed'})`;
+          }
         });
         
-        // For backward compatibility: return items as response array (old code expects response to be array)
-        // But also expose pagination metadata for components that need it
-        if (isPaginated) {
-          return {
-            ...resp,
-            response: items, // Backward compatibility: response is array
-            pagination: { // Expose pagination metadata for components that need it
-              page: resp.response.page,
-              limit: resp.response.limit,
-              total: resp.response.total,
-              totalPages: resp.response.totalPages,
-              hasNext: resp.response.hasNext
-            }
-          };
-        }
-        // Legacy format: response is directly an array (no pagination metadata)
-        return { ...resp, response: items };
+        // Return response as array for backward compatibility, with pagination metadata if available
+        return {
+          ...resp,
+          response: items, // Always return as array for backward compatibility
+          pagination: paginationData // Expose pagination metadata if available
+        };
+      }),
+      catchError(error => {
+        console.error('[GET_versioning] API Error:', error);
+        // Return empty response structure on error
+        return of({
+          response: [],
+          pagination: null,
+          statusCode: error?.status || 500,
+          message: error?.message || 'Error loading versioning data'
+        });
       })
     );
   }
