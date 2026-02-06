@@ -38,7 +38,7 @@ RUN echo "{\"compilerOptions\": {\
     }}" > tsconfig.json
 
 
-# RUN npm run migration:run
+# RUN npm run migration:run.
 
 RUN npm run build
 
