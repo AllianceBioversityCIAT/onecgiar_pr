@@ -30,6 +30,18 @@ export class PhaseManagementTableComponent implements OnInit {
   textToFind = '';
   disabledActionsText = 'Finish editing the phase to be able to edit or delete this phase.';
   @ViewChild('dt') table: Table;
+  
+  // Pagination state for server-side pagination
+  currentPage: number = 1;
+  pageSize: number = 50;
+  totalRecords: number = 0;
+  loading: boolean = false;
+  isInitialLoad: boolean = true;
+  
+  // Computed property for PrimeNG table first (offset)
+  get tableFirst(): number {
+    return (this.currentPage - 1) * this.pageSize;
+  }
   status = [
     {
       status: true,
@@ -50,7 +62,9 @@ export class PhaseManagementTableComponent implements OnInit {
 
   ngOnInit(): void {
     this.setupColumnOrder();
-    this.getAllPhases();
+    // Initial load: PrimeNG lazy loading will trigger onLazyLoad on init
+    // But we also call it manually to ensure data loads even if table doesn't trigger event
+    this.getAllPhases(1, this.pageSize);
     this.getTocPhases();
     this.get_resultYears();
     this.getPortfolios();
@@ -160,30 +174,83 @@ export class PhaseManagementTableComponent implements OnInit {
   }
 
   getReportingPhases() {
+    // For reporting phases dropdown, fetch all (no pagination needed for dropdown)
+    // Note: This will get first page (default 50 items) which should be enough for dropdown
     this.resultsSE.GET_versioning(StatusPhaseEnum.ALL, ModuleTypeEnum.REPORTING).subscribe({
       next: ({ response }) => {
-        this.reportingPhasesList = response;
+        // Handle paginated response or legacy array
+        const items = response?.items || response || [];
+        this.reportingPhasesList = items;
       }
     });
   }
 
-  getAllPhases() {
-    this.resultsSE.GET_versioning(StatusPhaseEnum.ALL, this.moduleType).subscribe(({ response }) => {
-      this.phaseList = response;
-      this.previousPhaseList = [...response];
-      this.previousPhaseList.push({
-        phase_name: 'N/A',
-        id: null
-      });
-      this.phaseList.forEach((phaseItem: Phase) => this.updateVariablesToSave(phaseItem));
+  getAllPhases(page: number = 1, limit: number = 50) {
+    this.loading = true;
+    this.resultsSE.GET_versioning(StatusPhaseEnum.ALL, this.moduleType, page, limit).subscribe({
+      next: ({ response, pagination }) => {
+        // Response is always an array (for backward compatibility)
+        // Pagination metadata is exposed separately if available
+        this.phaseList = response || [];
+        this.previousPhaseList = [...this.phaseList];
+        this.previousPhaseList.push({
+          phase_name: 'N/A',
+          id: null
+        });
+        this.phaseList.forEach((phaseItem: Phase) => this.updateVariablesToSave(phaseItem));
+        
+        // Update pagination metadata if available
+        if (pagination) {
+          this.totalRecords = pagination.total;
+          this.currentPage = pagination.page;
+          this.pageSize = pagination.limit;
+        } else {
+          // Fallback: use array length if no pagination metadata (legacy response)
+          this.totalRecords = this.phaseList.length;
+          this.currentPage = page;
+          this.pageSize = limit;
+        }
+        
+        this.loading = false;
+      },
+      error: (err) => {
+        console.error('Error loading phases:', err);
+        this.loading = false;
+      }
     });
+  }
+
+  /**
+   * Handle pagination change event from PrimeNG table (lazy loading)
+   * Triggers new API request with updated page/limit
+   * @param event - PrimeNG LazyLoadEvent with first (offset), rows (limit), etc.
+   */
+  onPageChange(event: any) {
+    // PrimeNG lazy load event: first = offset (0-based), rows = page size
+    const newPage = Math.floor(event.first / event.rows) + 1; // Convert offset to 1-based page number
+    const newLimit = event.rows;
+    
+    // Skip duplicate initial load (ngOnInit already calls getAllPhases)
+    if (this.isInitialLoad) {
+      this.isInitialLoad = false;
+      // If the initial lazy load event matches what we already loaded, skip
+      if (newPage === 1 && newLimit === this.pageSize && this.phaseList.length > 0) {
+        return;
+      }
+    }
+    
+    // Only fetch if page or limit actually changed to avoid unnecessary requests
+    if (newPage !== this.currentPage || newLimit !== this.pageSize) {
+      this.getAllPhases(newPage, newLimit);
+    }
   }
 
   savePhase(phase) {
     this.updateMainVariables(phase);
     this.resultsSE.PATCH_updatePhase(phase.id, phase).subscribe({
       next: () => {
-        this.getAllPhases();
+        // Reload current page to reflect changes
+        this.getAllPhases(this.currentPage, this.pageSize);
         this.customizedAlertsFeSE.show({ id: 'manage-phase-save', title: 'Phase saved', status: 'success', closeIn: 500 });
         this.phasesService.getNewPhases();
         this.phaseUpdate.emit();
@@ -207,7 +274,8 @@ export class PhaseManagementTableComponent implements OnInit {
 
     this.resultsSE.POST_createPhase(phase).subscribe({
       next: () => {
-        this.getAllPhases();
+        // Reload current page to show new phase
+        this.getAllPhases(this.currentPage, this.pageSize);
         this.customizedAlertsFeSE.show({ id: 'manage-phase-save', title: 'Phase created', status: 'success', closeIn: 500 });
         phase.isNew = false;
         this.phasesService.getNewPhases();
@@ -244,7 +312,11 @@ export class PhaseManagementTableComponent implements OnInit {
       () => {
         this.resultsSE.DELETE_updatePhase(id).subscribe({
           next: () => {
-            this.getAllPhases();
+            // Reload current page after deletion
+            // If current page becomes empty, go to previous page
+            const shouldGoToPreviousPage = this.phaseList.length === 1 && this.currentPage > 1;
+            const pageToLoad = shouldGoToPreviousPage ? this.currentPage - 1 : this.currentPage;
+            this.getAllPhases(pageToLoad, this.pageSize);
             this.phaseUpdate.emit();
           },
           error: err => {

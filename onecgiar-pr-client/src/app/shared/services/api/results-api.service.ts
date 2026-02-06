@@ -1102,11 +1102,41 @@ export class ResultsApiService {
     return this.http.delete<any>(`${environment.apiBaseUrl}v2/api/ipsr/innovation-pathway/delete/complementary-innovation/${idResult}`);
   }
 
-  GET_versioning(status, modules) {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/versioning?status=${status}&module=${modules}`).pipe(
+  GET_versioning(status, modules, page?: number, limit?: number) {
+    let url = `${environment.apiBaseUrl}api/versioning?status=${status}&module=${modules}`;
+    if (page !== undefined && page !== null) {
+      url += `&page=${page}`;
+    }
+    if (limit !== undefined && limit !== null) {
+      url += `&limit=${limit}`;
+    }
+    return this.http.get<any>(url).pipe(
       map(resp => {
-        resp?.response.map(phase => (phase.phase_name_status = `${phase.phase_name} - (${phase.status ? 'Open' : 'Closed'})`));
-        return resp;
+        // Handle paginated response (new format) or legacy array response (backward compatibility)
+        const isPaginated = resp?.response?.items !== undefined;
+        const items = isPaginated ? resp.response.items : (resp?.response || []);
+        
+        items.forEach((phase: any) => {
+          phase.phase_name_status = `${phase.phase_name} - (${phase.status ? 'Open' : 'Closed'})`;
+        });
+        
+        // For backward compatibility: return items as response array (old code expects response to be array)
+        // But also expose pagination metadata for components that need it
+        if (isPaginated) {
+          return {
+            ...resp,
+            response: items, // Backward compatibility: response is array
+            pagination: { // Expose pagination metadata for components that need it
+              page: resp.response.page,
+              limit: resp.response.limit,
+              total: resp.response.total,
+              totalPages: resp.response.totalPages,
+              hasNext: resp.response.hasNext
+            }
+          };
+        }
+        // Legacy format: response is directly an array (no pagination metadata)
+        return { ...resp, response: items };
       })
     );
   }
