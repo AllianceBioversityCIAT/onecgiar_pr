@@ -56,8 +56,12 @@ describe('PolicyChangeBilateralHandler', () => {
       save: jest.fn().mockResolvedValue(undefined),
     };
     clarisaInstitutionsRepoStub = {
-      findOne: jest.fn().mockResolvedValue({ id: 123, name: 'Test Inst', acronym: 'TI' }),
-      find: jest.fn().mockResolvedValue([{ id: 123, name: 'Test Inst', acronym: 'TI' }]),
+      findOne: jest
+        .fn()
+        .mockResolvedValue({ id: 123, name: 'Test Inst', acronym: 'TI' }),
+      find: jest
+        .fn()
+        .mockResolvedValue([{ id: 123, name: 'Test Inst', acronym: 'TI' }]),
     };
     handler = new PolicyChangeBilateralHandler(
       repoStub,

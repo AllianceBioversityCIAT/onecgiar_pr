@@ -47,10 +47,7 @@ describe('KnowledgeProductBilateralHandler', () => {
         result_knowledge_product_id: 5,
       }),
     };
-    handler = new KnowledgeProductBilateralHandler(
-      resultRepository,
-      kpService,
-    );
+    handler = new KnowledgeProductBilateralHandler(resultRepository, kpService);
   });
 
   describe('initializeResultHeader', () => {

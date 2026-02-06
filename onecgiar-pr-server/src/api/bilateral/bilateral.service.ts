@@ -32,6 +32,8 @@ import { ResultRegion } from '../results/result-regions/entities/result-region.e
 import { InstitutionRoleEnum } from '../results/results_by_institutions/entities/institution_role.enum';
 import { ResultByIntitutionsRepository } from '../results/results_by_institutions/result_by_intitutions.repository';
 import { ResultsByInstitution } from '../results/results_by_institutions/entities/results_by_institution.entity';
+import { ResultInstitutionsBudgetRepository } from '../results/result_budget/repositories/result_institutions_budget.repository';
+import { ResultInstitutionsBudget } from '../results/result_budget/entities/result_institutions_budget.entity';
 import { ClarisaInstitutionsRepository } from '../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
 import { EvidencesService } from '../results/evidences/evidences.service';
 import { EvidencesRepository } from '../results/evidences/evidences.repository';
@@ -79,6 +81,7 @@ export class BilateralService {
     private readonly _clarisaSubnationalAreasRepository: ClarisaSubnationalScopeRepository,
     private readonly _resultCountrySubnationalRepository: ResultCountrySubnationalRepository,
     private readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
+    private readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
     private readonly _clarisaInstitutionsRepository: ClarisaInstitutionsRepository,
     private readonly _evidencesRepository: EvidencesRepository,
     private readonly _evidencesService: EvidencesService,
@@ -104,7 +107,7 @@ export class BilateralService {
   ) {
     this.resultTypeHandlerMap = new Map<number, BilateralResultTypeHandler>([
       [_knowledgeProductHandler.resultType, _knowledgeProductHandler],
-      [_capacityChangeHandler.resultType, _capacityChangeHandler],
+      [ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT, _capacityChangeHandler],
       [_innovationDevelopmentHandler.resultType, _innovationDevelopmentHandler],
       [_innovationUseHandler.resultType, _innovationUseHandler],
       [_policyChangeHandler.resultType, _policyChangeHandler],
@@ -182,7 +185,8 @@ export class BilateralService {
             if (!year) throw new NotFoundException('Active year not found');
 
             if (
-              bilateralDto.result_type_id === ResultTypeEnum.KNOWLEDGE_PRODUCT &&
+              bilateralDto.result_type_id ===
+                ResultTypeEnum.KNOWLEDGE_PRODUCT &&
               bilateralDto.knowledge_product?.metadataCG?.issue_year != null
             ) {
               const issueYearVal =
@@ -277,6 +281,7 @@ export class BilateralService {
               resultId,
               bilateralDto.contributing_partners || [],
               userId,
+              bilateralDto.result_type_id,
             );
             await this.handleEvidence(resultId, bilateralDto.evidence, userId);
             await this.handleNonPooledProject(
@@ -472,6 +477,7 @@ export class BilateralService {
         resultId,
         bilateralDto.contributing_partners || [],
         userId,
+        bilateralDto.result_type_id,
       );
 
       await this._evidencesRepository.logicalDelete(resultId);
@@ -689,7 +695,8 @@ export class BilateralService {
 
   private buildResultRelations(resultTypeId?: number) {
     const isKpType = resultTypeId === ResultTypeEnum.KNOWLEDGE_PRODUCT;
-    const isCapacityChange = resultTypeId === ResultTypeEnum.CAPACITY_CHANGE;
+    const isCapacitySharing =
+      resultTypeId === ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT;
     const isInnovationDev =
       resultTypeId === ResultTypeEnum.INNOVATION_DEVELOPMENT;
     const isInnovationUse = resultTypeId === ResultTypeEnum.INNOVATION_USE;
@@ -731,7 +738,7 @@ export class BilateralService {
           result_knowledge_product_metadata_array: true,
         },
       }),
-      ...(isCapacityChange && {
+      ...(isCapacitySharing && {
         results_capacity_development_object: true,
       }),
       ...(isInnovationDev && {
@@ -1480,8 +1487,7 @@ export class BilateralService {
       );
     }
 
-    const versionYear =
-      version?.phase_year ?? version?.cgspace_year;
+    const versionYear = version?.phase_year ?? version?.cgspace_year;
     const userToken: TokenDto = { id: userId } as TokenDto;
     const mqapValidation =
       await this._resultsKnowledgeProductsService.findOnCGSpace(
@@ -1927,7 +1933,12 @@ export class BilateralService {
     }
   }
 
-  private async handleInstitutions(resultId, institutions, userId) {
+  private async handleInstitutions(
+    resultId: number,
+    institutions: any[],
+    userId: number,
+    resultTypeId?: number,
+  ) {
     if (!Array.isArray(institutions) || !institutions.length) return;
 
     const resolvedInstitutionIds: number[] = [];
@@ -2015,7 +2026,27 @@ export class BilateralService {
     }
 
     if (toPersist.length) {
-      await this._resultByIntitutionsRepository.save(toPersist);
+      const savedPartners =
+        await this._resultByIntitutionsRepository.save(toPersist);
+
+      const isInnovationDevOrUse = [
+        ResultTypeEnum.INNOVATION_DEVELOPMENT,
+        ResultTypeEnum.INNOVATION_USE,
+        ResultTypeEnum.INNOVATION_USE_IPSR,
+      ].includes(resultTypeId);
+
+      if (isInnovationDevOrUse && savedPartners.length) {
+        const budgets = (
+          Array.isArray(savedPartners) ? savedPartners : [savedPartners]
+        ).map((rbi) => {
+          const budget = new ResultInstitutionsBudget();
+          budget.created_by = userId;
+          budget.result_institution_id = rbi.id;
+          budget.is_active = true;
+          return budget;
+        });
+        await this._resultInstitutionsBudgetRepository.save(budgets);
+      }
     }
   }
 
