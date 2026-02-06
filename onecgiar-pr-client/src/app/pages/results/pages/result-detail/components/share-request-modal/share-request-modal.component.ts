@@ -47,6 +47,10 @@ export class ShareRequestModalComponent implements OnInit {
     return false;
   }
 
+  get isBilateralResult(): boolean {
+    return this.api.dataControlSE?.currentResult?.source_name === 'W3/Bilaterals';
+  }
+
   get shouldShowTocInitiativeOut(): boolean {
     const hasInitiativeId = !!this.shareRequestModalSE.shareRequestBody?.initiative_id;
     const inNotifications = this.api.dataControlSE.inNotifications;
