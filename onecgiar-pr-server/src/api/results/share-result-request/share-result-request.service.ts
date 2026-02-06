@@ -635,6 +635,7 @@ export class ShareResultRequestService {
         name: true,
       },
       obj_result: {
+        id: true,
         source: true,
         result_code: true,
         title: true,
@@ -656,6 +657,22 @@ export class ShareResultRequestService {
           result_toc_result_id: true,
           initiative_id: true,
           is_active: true,
+        },
+        result_center_array: {
+          center_id: true,
+          is_primary: true,
+          is_leading_result: true,
+          is_active: true,
+          clarisa_center_object: {
+            code: true,
+            institutionId: true,
+            financial_code: true,
+            clarisa_institution: {
+              id: true,
+              name: true,
+              acronym: true,
+            },
+          },
         },
       },
       obj_requested_by: {
@@ -690,6 +707,11 @@ export class ShareResultRequestService {
         },
         obj_result_type: true,
         obj_result_level: true,
+        result_center_array: {
+          clarisa_center_object: {
+            clarisa_institution: true,
+          },
+        },
       },
       obj_requested_by: true,
       obj_approved_by: true,

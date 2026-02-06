@@ -240,6 +240,62 @@ export class ResultByInitiativesRepository
     }
   }
 
+  async getDraftInit(resultId: number) {
+    try {
+      // Get result status_id
+      const statusQuery = `
+        SELECT status_id
+        FROM result
+        WHERE id = ?
+          AND is_active > 0;
+      `;
+      const statusResult = await this.query(statusQuery, [resultId]);
+      
+      if (!statusResult || statusResult.length === 0) {
+        return [];
+      }
+
+      const statusId = Number(statusResult[0]?.status_id);
+      const requestStatusId = statusId === 5 ? 4 : 1;
+
+      const queryData = `
+        SELECT
+          ci.id,
+          ci.official_code,
+          ci.name as initiative_name,
+          ci.short_name,
+          null as initiative_role_id,
+          srr.request_status_id,
+          srr.share_result_request_id,
+          srr.is_active
+        FROM
+          share_result_request srr
+        inner join clarisa_initiatives ci on
+          ci.id = srr.shared_inititiative_id
+          and srr.request_status_id = ?
+        WHERE
+          srr.result_id = ?
+          and srr.is_active > 0;
+      `;
+      
+      const completeUser: InitiativeByResultDTO[] = await this.query(
+        queryData,
+        [requestStatusId, resultId],
+      );
+      completeUser?.map((e) => {
+        e['is_active'] = e['is_active'] == 1 ? 1 : 0;
+      });
+
+      return completeUser;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultByInitiativesRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
   async getContributorInitiativeByResult(resultId: number) {
     const queryData = `
     select 

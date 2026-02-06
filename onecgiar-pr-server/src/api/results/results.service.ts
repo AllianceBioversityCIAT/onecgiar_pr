@@ -2963,7 +2963,7 @@ export class ResultsService {
         this._resultByInitiativesRepository.getContributorInitiativeByResult(
           resultId,
         ),
-        this._resultByInitiativesRepository.getPendingInit(resultId),
+        this._resultByInitiativesRepository.getDraftInit(resultId),
         this._resultByInitiativesRepository.getContributorInitiativeAndPrimaryByResult(
           resultId,
         ),
@@ -3172,6 +3172,10 @@ export class ResultsService {
           };
 
           await this._updateTocMapping(parsedResultId, contributing_initiatives, user);
+        } else {
+          await this._shareResultRequestRepository.update(parsedResultId, {
+            is_active: false,
+          });
         }
 
         return {
