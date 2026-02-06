@@ -95,9 +95,7 @@ export class KnowledgeProductBilateralHandler
         knowledgeProduct.handle,
       );
 
-    this.logger.log(
-      `Fetching KP metadata from DSpace for handle: ${handleId}`,
-    );
+    this.logger.log(`Fetching KP metadata from DSpace for handle: ${handleId}`);
 
     const userToken: TokenDto = {
       id: userId,

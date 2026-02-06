@@ -42,7 +42,7 @@ export class IpsrGeneralInformationService {
     @Inject(AdUserService)
     private readonly _adUserService?: AdUserService,
     private readonly _adUserRepository?: AdUserRepository,
-  ) { }
+  ) {}
 
   /**
    * Create a new IP result general information for Portfolio P25
