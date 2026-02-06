@@ -174,13 +174,11 @@ export class PolicyChangeBilateralHandler
     }
   }
 
-  private async resolveOneInstitution(
-    input: {
-      institutions_id?: number;
-      institutions_acronym?: string;
-      institutions_name?: string;
-    },
-  ): Promise<ClarisaInstitution | null> {
+  private async resolveOneInstitution(input: {
+    institutions_id?: number;
+    institutions_acronym?: string;
+    institutions_name?: string;
+  }): Promise<ClarisaInstitution | null> {
     if (input.institutions_id) {
       const found = await this._clarisaInstitutionsRepository.findOne({
         where: { id: input.institutions_id },
@@ -192,8 +190,12 @@ export class PolicyChangeBilateralHandler
     if (!name && !acronym) return null;
 
     const fuzzyConds = [
-      ...(name ? [{ name: Like(`%${name}%`) }, { acronym: Like(`%${name}%`) }] : []),
-      ...(acronym ? [{ acronym: Like(`%${acronym}%`) }, { name: Like(`%${acronym}%`) }] : []),
+      ...(name
+        ? [{ name: Like(`%${name}%`) }, { acronym: Like(`%${name}%`) }]
+        : []),
+      ...(acronym
+        ? [{ acronym: Like(`%${acronym}%`) }, { name: Like(`%${acronym}%`) }]
+        : []),
     ];
     if (!fuzzyConds.length) return null;
     const fuzzy = await this._clarisaInstitutionsRepository.find({
