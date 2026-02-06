@@ -1,12 +1,16 @@
-import { Controller, Get, Post, Body, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { BiReportsService } from './bi-reports.service';
 import { CreateBiReportDto } from './dto/create-bi-report.dto';
 import { GetBiSubpagesDto } from './dto/get-bi-subpages.dto';
+import { DisabledEndpoint } from '../../shared/decorators/disabled-endpoint.decorator';
+import { DisabledEndpointGuard } from '../../shared/guards/disabled-endpoint.guard';
 
 @Controller()
+@UseGuards(DisabledEndpointGuard)
 export class BiReportsController {
-  constructor(private readonly biReportsService: BiReportsService) {}
+  constructor(private readonly biReportsService: BiReportsService) { }
 
+  @DisabledEndpoint()
   @Post()
   create(@Body() createBiReportDto: CreateBiReportDto) {
     return this.biReportsService.create(createBiReportDto);
@@ -27,6 +31,7 @@ export class BiReportsController {
     return this.biReportsService.findOne(+id);
   }
 
+  @DisabledEndpoint()
   @Post('/reportName')
   findOneReportName(@Body() getBiSubpagesDto: GetBiSubpagesDto) {
     return this.biReportsService.findOneReportName(getBiSubpagesDto);
