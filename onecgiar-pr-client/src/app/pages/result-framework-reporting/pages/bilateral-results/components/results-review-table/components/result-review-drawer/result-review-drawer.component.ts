@@ -112,6 +112,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   };
   initiativeIdSignal = signal<number | null>(null);
   tocConsumed = signal<boolean>(true);
+  hasUnsavedTocChanges = signal<boolean>(false);
 
   isTocFormValid = computed(() => {
     if (!this.tocInitiative?.result_toc_results || this.tocInitiative.result_toc_results.length === 0) {
@@ -172,6 +173,11 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   });
 
   validateIsToCCompleted(): void {
+    if (this.tocInitiative?.planned_result === false && !this.hasUnsavedTocChanges()) {
+      this.isToCCompleted.set(true);
+      return;
+    }
+
     if (
       this.tocInitiative?.planned_result !== null &&
       this.tocInitiative?.planned_result !== undefined &&
@@ -206,6 +212,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     if (!this.tocInitiative) return;
 
     this.tocInitiative.planned_result = value;
+    this.hasUnsavedTocChanges.set(true);
     this.cdr.markForCheck();
   }
 
@@ -215,6 +222,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     if (this.tocInitiative.result_toc_results && this.tocInitiative.result_toc_results.length > 0) {
       this.tocInitiative.result_toc_results[0].toc_progressive_narrative = value;
     }
+    this.hasUnsavedTocChanges.set(true);
     this.cdr.markForCheck();
   }
 
@@ -237,6 +245,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     }
 
     this.tocConsumed.set(false);
+    this.hasUnsavedTocChanges.set(true);
 
     setTimeout(() => {
       this.tocConsumed.set(true);
@@ -352,6 +361,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     // Call the API
     this.api.resultsSE.PATCH_BilateralTocMetadata(resultId, body).subscribe({
       next: response => {
+        this.hasUnsavedTocChanges.set(false);
         this.loadResultDetail(String(resultId));
         this.showConfirmSaveChangesDialog.set(false);
         this.saveChangesJustification = '';
@@ -372,7 +382,9 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     });
   }
 
-  private buildImplementingOrgsFromSelection(currentInstitutions: any[]): Array<{ institution_id: number; acronym: string | null; institution_name: string | null }> {
+  private buildImplementingOrgsFromSelection(
+    currentInstitutions: any[]
+  ): Array<{ institution_id: number; acronym: string | null; institution_name: string | null }> {
     if (!currentInstitutions?.length) return [];
 
     const toNum = (v: any): number | null => {
@@ -396,7 +408,9 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         if (id == null) return null;
 
         const institution =
-          typeof item === 'object' && item !== null && (item.acronym != null || item.institution_name != null || item.institutions_name != null || item.full_name != null)
+          typeof item === 'object' &&
+          item !== null &&
+          (item.acronym != null || item.institution_name != null || item.institutions_name != null || item.full_name != null)
             ? item
             : list.find((inst: any) => {
                 const a = toNum(inst.institutions_id ?? inst.institution_id ?? inst.id);
@@ -410,7 +424,10 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
         return { institution_id: institutionId, acronym, institution_name: institutionName };
       })
-      .filter((org): org is { institution_id: number; acronym: string | null; institution_name: string | null } => org?.institution_id != null && !Number.isNaN(org.institution_id));
+      .filter(
+        (org): org is { institution_id: number; acronym: string | null; institution_name: string | null } =>
+          org?.institution_id != null && !Number.isNaN(org.institution_id)
+      );
   }
 
   private executeSaveDataStandardChanges(): void {
@@ -470,50 +487,63 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
       };
     }
 
-    if (detail.contributingCenters && Array.isArray(detail.contributingCenters)) {
-      const centersArray: any[] = detail.contributingCenters;
+    const centersArray = Array.isArray(detail.contributingCenters) ? detail.contributingCenters : [];
+    const codes = centersArray
+      .map((item: any) => {
+        if (typeof item === 'string') return item;
+        if (item && item.code) return item.code;
+        return null;
+      })
+      .filter(Boolean);
 
-      const codes = centersArray
-        .map((item: any) => {
-          if (typeof item === 'string') return item;
-          if (item && item.code) return item.code;
-          return null;
-        })
-        .filter(Boolean);
+    body.contributingCenters = codes
+      .map((code: string, index: number) => {
+        const center = this.centersSE.centersList.find((c: any) => c.code === code);
+        if (!center) return null;
 
-      body.contributingCenters = codes
-        .map((code: string, index: number) => {
-          const center = this.centersSE.centersList.find((c: any) => c.code === code);
-          if (!center) return null;
+        return {
+          ...center,
+          result_id: String(resultId),
+          is_leading_result: index === 0 ? 1 : null,
+          selected: true,
+          new: true,
+          is_active: true
+        };
+      })
+      .filter(Boolean);
 
-          return {
-            ...center,
-            result_id: String(resultId),
-            is_leading_result: index === 0 ? 1 : null,
-            selected: true,
-            new: true,
-            is_active: true
-          };
-        })
-        .filter(Boolean);
-    }
+    // Always send current contributingProjects so clearing centers does not clear bilateral projects
+    const projectsArray = Array.isArray(detail.contributingProjects) ? detail.contributingProjects : [];
+    body.contributingProjects = projectsArray
+      .map((project: any) => {
+        let projectId: string | number | null = null;
+        if (project != null) {
+          projectId = typeof project === 'object' ? (project.project_id ?? project.id ?? project.obj_clarisa_project?.id ?? null) : project;
+        }
+        return projectId != null ? { project_id: projectId } : null;
+      })
+      .filter((item): item is { project_id: string | number } => item != null);
 
     if (detail.contributingInitiatives) {
-      const currentSelection = Array.isArray(detail.contributingInitiatives)
-        ? detail.contributingInitiatives
-        : [];
-      const selectedInitiativeIds = currentSelection.map((init: any) =>
-        typeof init === 'object' && init != null && init.id != null
-          ? (typeof init.id === 'string' ? Number.parseInt(init.id, 10) : Number(init.id))
-          : typeof init === 'number' ? init : Number(init)
-      ).filter((id: any) => id != null && !Number.isNaN(id));
+      const currentSelection = Array.isArray(detail.contributingInitiatives) ? detail.contributingInitiatives : [];
+      const selectedInitiativeIds = currentSelection
+        .map((init: any) =>
+          typeof init === 'object' && init != null && init.id != null
+            ? typeof init.id === 'string'
+              ? Number.parseInt(init.id, 10)
+              : Number(init.id)
+            : typeof init === 'number'
+              ? init
+              : Number(init)
+        )
+        .filter((id: any) => id != null && !Number.isNaN(id));
 
       const acceptedPayload: { id: number; share_result_request_id?: number; is_active?: boolean }[] = [];
       const pendingPayload: { id: number }[] = [];
 
       for (const initiativeId of selectedInitiativeIds) {
-        const existing = this.originalAcceptedContributingInitiatives.find(
-          (a: any) => (a.initiative_id != null ? a.initiative_id === initiativeId : a.id === initiativeId)
+        const existing = this.originalAcceptedContributingInitiatives.find((a: any) =>
+          a.initiative_id != null ? a.initiative_id === initiativeId : a.id === initiativeId
         );
         if (existing && existing.share_result_request_id != null) {
           acceptedPayload.push({
@@ -532,18 +562,9 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
       };
     }
 
-    if (detail.contributingProjects && Array.isArray(detail.contributingProjects)) {
-      body.contributingProjects = detail.contributingProjects.map((project: any) => {
-        const projectId = project.project_id || project.id;
-        return { project_id: projectId };
-      });
-    }
-
     if (detail.contributingInstitutions && Array.isArray(detail.contributingInstitutions)) {
       body.contributingInstitutions = detail.contributingInstitutions.map((inst: any) => {
-        const institutionId = typeof inst === 'object' && inst != null
-          ? (inst.institutions_id ?? inst.institution_id ?? inst.id)
-          : inst;
+        const institutionId = typeof inst === 'object' && inst != null ? (inst.institutions_id ?? inst.institution_id ?? inst.id) : inst;
 
         // Try to find the original record id from the GET response
         let originalId: number | null = null;
@@ -552,9 +573,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
           originalId = typeof inst.id === 'string' ? Number.parseInt(inst.id, 10) : Number(inst.id);
         } else if (this.originalContributingInstitutions && institutionId != null) {
           // Otherwise, look it up in the original GET response
-          const original = this.originalContributingInstitutions.find((orig: any) =>
-            (orig.institutions_id ?? orig.institution_id) == institutionId
-          );
+          const original = this.originalContributingInstitutions.find((orig: any) => (orig.institutions_id ?? orig.institution_id) == institutionId);
           if (original && original.id != null) {
             originalId = typeof original.id === 'string' ? Number.parseInt(original.id, 10) : Number(original.id);
           }
@@ -563,9 +582,12 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         return {
           id: originalId, // Use the preserved id from GET response, or null for new records
           institutions_id: institutionId ?? null,
-          institution_roles_id: typeof inst === 'object' && inst?.institution_roles_id != null
-            ? (typeof inst.institution_roles_id === 'string' ? Number.parseInt(inst.institution_roles_id, 10) : Number(inst.institution_roles_id))
-            : 2,
+          institution_roles_id:
+            typeof inst === 'object' && inst?.institution_roles_id != null
+              ? typeof inst.institution_roles_id === 'string'
+                ? Number.parseInt(inst.institution_roles_id, 10)
+                : Number(inst.institution_roles_id)
+              : 2,
           is_active: typeof inst === 'object' && inst?.is_active !== undefined ? inst.is_active : 1,
           result_id: resultId
         };
@@ -710,23 +732,25 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         return;
       }
 
-      const mappedInitiatives = detail.contributingInitiatives.map((initiative: any) => {
-        if (typeof initiative === 'number') return initiative;
-        if (typeof initiative === 'string') {
-          const found = initiativesList.find((opt: any) => opt.official_code === initiative || opt.id === Number(initiative));
-          return found?.id ?? Number(initiative) ?? initiative;
-        }
-        if (typeof initiative === 'object' && initiative !== null) {
-          if (initiative.id != null) {
-            return typeof initiative.id === 'string' ? Number.parseInt(initiative.id, 10) : Number(initiative.id);
+      const mappedInitiatives = detail.contributingInitiatives
+        .map((initiative: any) => {
+          if (typeof initiative === 'number') return initiative;
+          if (typeof initiative === 'string') {
+            const found = initiativesList.find((opt: any) => opt.official_code === initiative || opt.id === Number(initiative));
+            return found?.id ?? Number(initiative) ?? initiative;
           }
-          if (initiative.official_code) {
-            const found = initiativesList.find((opt: any) => opt.official_code === initiative.official_code);
-            return found?.id ?? initiative;
+          if (typeof initiative === 'object' && initiative !== null) {
+            if (initiative.id != null) {
+              return typeof initiative.id === 'string' ? Number.parseInt(initiative.id, 10) : Number(initiative.id);
+            }
+            if (initiative.official_code) {
+              const found = initiativesList.find((opt: any) => opt.official_code === initiative.official_code);
+              return found?.id ?? initiative;
+            }
           }
-        }
-        return initiative;
-      }).filter((id: any) => id != null && id !== undefined);
+          return initiative;
+        })
+        .filter((id: any) => id != null && id !== undefined);
 
       const currentIds = detail.contributingInitiatives.map((id: any) => String(id)).join(',');
       const mappedIds = mappedInitiatives.map((id: any) => String(id)).join(',');
@@ -906,12 +930,14 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
             // Pre-select only accepted and pending (NOT primary with role_id === 1)
             const nonPrimaryInitiatives = [...accepted, ...pending];
 
-            detail.contributingInitiatives = nonPrimaryInitiatives.map((initiative: any) => {
-              if (initiative.id != null) {
-                return typeof initiative.id === 'string' ? Number.parseInt(initiative.id, 10) : Number(initiative.id);
-              }
-              return initiative.official_code || initiative;
-            }).filter((id: any) => id != null && id !== undefined);
+            detail.contributingInitiatives = nonPrimaryInitiatives
+              .map((initiative: any) => {
+                if (initiative.id != null) {
+                  return typeof initiative.id === 'string' ? Number.parseInt(initiative.id, 10) : Number(initiative.id);
+                }
+                return initiative.official_code || initiative;
+              })
+              .filter((id: any) => id != null && id !== undefined);
           } else {
             detail.contributingInitiatives = [];
             this.disabledContributingInitiatives.set([]);
@@ -1056,6 +1082,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
             }
 
             this.tocInitiative = { ...this.tocInitiative, ...tocInitiative };
+            this.hasUnsavedTocChanges.set(false);
             this.validateIsToCCompleted();
             setTimeout(() => {
               this.cdr.markForCheck();
@@ -1101,6 +1128,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
               ],
               toc_progressive_narrative: null
             });
+            this.hasUnsavedTocChanges.set(false);
             if (finalInitiativeId) {
               setInitiativeIdIfNeeded(finalInitiativeId);
             }
@@ -1111,42 +1139,43 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
           }
         } else {
           finalInitiativeId = primaryInitiativeId;
-            Object.assign(this.tocInitiative, {
-              planned_result: false, // null treated as false (No)
-              initiative_id: primaryInitiativeId,
-              official_code: null,
-              short_name: null,
-              result_toc_results: [
-                {
-                  uniqueId: '0',
-                  toc_level_id: null,
-                  toc_result_id: null,
-                  planned_result: false, // null treated as false (No)
-                  initiative_id: primaryInitiativeId,
-                  toc_progressive_narrative: null,
-                  indicators: [
-                    {
-                      related_node_id: null,
-                      toc_results_indicator_id: null,
-                      targets: [
-                        {
-                          contributing_indicator: null
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ],
-              toc_progressive_narrative: null
-            });
+          Object.assign(this.tocInitiative, {
+            planned_result: false, // null treated as false (No)
+            initiative_id: primaryInitiativeId,
+            official_code: null,
+            short_name: null,
+            result_toc_results: [
+              {
+                uniqueId: '0',
+                toc_level_id: null,
+                toc_result_id: null,
+                planned_result: false, // null treated as false (No)
+                initiative_id: primaryInitiativeId,
+                toc_progressive_narrative: null,
+                indicators: [
+                  {
+                    related_node_id: null,
+                    toc_results_indicator_id: null,
+                    targets: [
+                      {
+                        contributing_indicator: null
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            toc_progressive_narrative: null
+          });
+          this.hasUnsavedTocChanges.set(false);
+          this.cdr.markForCheck();
+          if (finalInitiativeId) {
+            setInitiativeIdIfNeeded(finalInitiativeId);
+          }
+          setTimeout(() => {
+            this.tocConsumed.set(true);
             this.cdr.markForCheck();
-            if (finalInitiativeId) {
-              setInitiativeIdIfNeeded(finalInitiativeId);
-            }
-            setTimeout(() => {
-              this.tocConsumed.set(true);
-              this.cdr.markForCheck();
-            }, 100);
+          }, 100);
         }
 
         let resultTypeResponseCopy = detail.resultTypeResponse;

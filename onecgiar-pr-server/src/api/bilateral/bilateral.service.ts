@@ -283,7 +283,14 @@ export class BilateralService {
               userId,
               bilateralDto.result_type_id,
             );
-            await this.handleEvidence(resultId, bilateralDto.evidence, userId);
+            // KP evidence is created only in populateKPFromCGSpace; avoid double/malformed evidence
+            if (!isKpType) {
+              await this.handleEvidence(
+                resultId,
+                bilateralDto.evidence,
+                userId,
+              );
+            }
             await this.handleNonPooledProject(
               resultId,
               userId,
@@ -481,7 +488,13 @@ export class BilateralService {
       );
 
       await this._evidencesRepository.logicalDelete(resultId);
-      await this.handleEvidence(resultId, bilateralDto.evidence || [], userId);
+      if (bilateralDto.result_type_id !== ResultTypeEnum.KNOWLEDGE_PRODUCT) {
+        await this.handleEvidence(
+          resultId,
+          bilateralDto.evidence || [],
+          userId,
+        );
+      }
 
       await this._resultsByProjectsRepository.delete({ result_id: resultId });
       await this.handleNonPooledProject(
@@ -1422,6 +1435,9 @@ export class BilateralService {
     ) {
       return;
     }
+    // If only one project, mark as lead; if more than one, use value from payload
+    const isSingleProject = bilateralProjects.length === 1;
+
     for (const nonpp of bilateralProjects) {
       if (!nonpp?.grant_title) continue;
 
@@ -1439,11 +1455,16 @@ export class BilateralService {
         continue;
       }
 
+      // Single project → always lead; multiple → use payload (accept 1 or true)
+      const isLead = isSingleProject
+        ? true
+        : nonpp?.is_lead === 1 || nonpp?.is_lead === true;
+
       await this._resultsByProjectsRepository.save({
         result_id: resultId,
         project_id: project.id,
         created_by: userId,
-        is_lead: nonpp?.is_lead === 1,
+        is_lead: isLead,
       });
     }
   }
