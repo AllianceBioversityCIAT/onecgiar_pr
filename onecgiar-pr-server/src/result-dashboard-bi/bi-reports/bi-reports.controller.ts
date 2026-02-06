@@ -31,7 +31,6 @@ export class BiReportsController {
     return this.biReportsService.findOne(+id);
   }
 
-  @DisabledEndpoint()
   @Post('/reportName')
   findOneReportName(@Body() getBiSubpagesDto: GetBiSubpagesDto) {
     return this.biReportsService.findOneReportName(getBiSubpagesDto);
