@@ -283,7 +283,10 @@ export class BilateralService {
               userId,
               bilateralDto.result_type_id,
             );
-            await this.handleEvidence(resultId, bilateralDto.evidence, userId);
+            // KP evidence is created only in populateKPFromCGSpace; avoid double/malformed evidence
+            if (!isKpType) {
+              await this.handleEvidence(resultId, bilateralDto.evidence, userId);
+            }
             await this.handleNonPooledProject(
               resultId,
               userId,
@@ -481,7 +484,9 @@ export class BilateralService {
       );
 
       await this._evidencesRepository.logicalDelete(resultId);
-      await this.handleEvidence(resultId, bilateralDto.evidence || [], userId);
+      if (bilateralDto.result_type_id !== ResultTypeEnum.KNOWLEDGE_PRODUCT) {
+        await this.handleEvidence(resultId, bilateralDto.evidence || [], userId);
+      }
 
       await this._resultsByProjectsRepository.delete({ result_id: resultId });
       await this.handleNonPooledProject(

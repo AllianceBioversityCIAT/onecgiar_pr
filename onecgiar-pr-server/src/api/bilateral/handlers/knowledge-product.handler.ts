@@ -89,8 +89,14 @@ export class KnowledgeProductBilateralHandler
       );
     }
 
+    // Bilateral sends full URL; normalize to short form (e.g. 10568/175322)
+    const handleId =
+      this._resultsKnowledgeProductsService.extractHandleIdentifier(
+        knowledgeProduct.handle,
+      );
+
     this.logger.log(
-      `Fetching KP metadata from DSpace for handle: ${knowledgeProduct.handle}`,
+      `Fetching KP metadata from DSpace for handle: ${handleId}`,
     );
 
     const userToken: TokenDto = {
@@ -103,16 +109,16 @@ export class KnowledgeProductBilateralHandler
     try {
       await this._resultsKnowledgeProductsService.populateKPFromCGSpace(
         resultId,
-        knowledgeProduct.handle,
+        handleId,
         userToken,
       );
 
       this.logger.log(
-        `Successfully populated KP from DSpace for result ${resultId} with handle ${knowledgeProduct.handle}`,
+        `Successfully populated KP from DSpace for result ${resultId} with handle ${handleId}`,
       );
     } catch (error) {
       this.logger.error(
-        `Error populating KP from DSpace for result ${resultId} with handle ${knowledgeProduct.handle}:`,
+        `Error populating KP from DSpace for result ${resultId} with handle ${handleId}:`,
         error,
       );
       throw new BadRequestException(
