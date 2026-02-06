@@ -532,12 +532,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
       };
     }
 
-    if (detail.contributingProjects && Array.isArray(detail.contributingProjects)) {
-      body.contributingProjects = detail.contributingProjects.map((project: any) => {
-        const projectId = project.project_id || project.id;
-        return { project_id: projectId };
-      });
-    }
+    body.contributingProjects = detail.contributingProjects;
 
     if (detail.contributingInstitutions && Array.isArray(detail.contributingInstitutions)) {
       body.contributingInstitutions = detail.contributingInstitutions.map((inst: any) => {
