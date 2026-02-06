@@ -134,7 +134,7 @@ export class EntityDetailsComponent implements OnInit {
 
   dataOutcomes = computed(() => {
     return {
-      labels: ['Policy change', 'Innovation use', 'Other outcome'],
+      labels: ['Policy change', 'Innovation use', 'Other outcome', 'IPSR'],
       datasets: [
         {
           type: 'bar' as const,
@@ -144,7 +144,8 @@ export class EntityDetailsComponent implements OnInit {
           data: [
             this.entityAowService.dashboardData()?.editing?.data?.outcomes?.policyChange,
             this.entityAowService.dashboardData()?.editing?.data?.outcomes?.innovationUse,
-            this.entityAowService.dashboardData()?.editing?.data?.outcomes?.otherOutcome
+            this.entityAowService.dashboardData()?.editing?.data?.outcomes?.otherOutcome,
+            this.entityAowService.dashboardData()?.editing?.data?.outcomes?.innovationUseIpsr
           ]
         },
         {
@@ -155,7 +156,8 @@ export class EntityDetailsComponent implements OnInit {
           data: [
             this.entityAowService.dashboardData()?.submitted?.data?.outcomes?.policyChange,
             this.entityAowService.dashboardData()?.submitted?.data?.outcomes?.innovationUse,
-            this.entityAowService.dashboardData()?.submitted?.data?.outcomes?.otherOutcome
+            this.entityAowService.dashboardData()?.submitted?.data?.outcomes?.otherOutcome,
+            this.entityAowService.dashboardData()?.submitted?.data?.outcomes?.innovationUseIpsr
           ]
         },
         {
@@ -166,7 +168,8 @@ export class EntityDetailsComponent implements OnInit {
           data: [
             this.entityAowService.dashboardData()?.qualityAssessed?.data?.outcomes?.policyChange,
             this.entityAowService.dashboardData()?.qualityAssessed?.data?.outcomes?.innovationUse,
-            this.entityAowService.dashboardData()?.qualityAssessed?.data?.outcomes?.otherOutcome
+            this.entityAowService.dashboardData()?.qualityAssessed?.data?.outcomes?.otherOutcome,
+            this.entityAowService.dashboardData()?.qualityAssessed?.data?.outcomes?.innovationUseIpsr
           ]
         }
       ]
@@ -307,7 +310,9 @@ export class EntityDetailsComponent implements OnInit {
       }
       const mySPs = this.resultFrameworkReportingHomeService.mySPsList() ?? [];
       const otherSPs = this.resultFrameworkReportingHomeService.otherSPsList() ?? [];
-      const sp = [...mySPs, ...otherSPs].find((item: { initiativeCode?: string }) => item?.initiativeCode === 'SGP-02' || item?.initiativeCode === 'SGP02');
+      const sp = [...mySPs, ...otherSPs].find(
+        (item: { initiativeCode?: string }) => item?.initiativeCode === 'SGP-02' || item?.initiativeCode === 'SGP02'
+      );
       if (sp) {
         const raw = sp as { initiativeShortName?: string; initiativeName?: string };
         return raw?.initiativeShortName ?? raw?.initiativeName ?? 'No information loaded';
@@ -322,7 +327,9 @@ export class EntityDetailsComponent implements OnInit {
     const entityId = this.entityAowService.entityId();
     if (entityId === 'SGP-02' || entityId === 'SGP02') {
       const list = this.api.dataControlSE.myInitiativesListReportingByPortfolio ?? this.api.dataControlSE.myInitiativesList ?? [];
-      const found = list.find((item: { official_code?: string; id?: number; initiative_id?: number }) => item?.official_code === 'SGP-02' || item?.official_code === 'SGP02');
+      const found = list.find(
+        (item: { official_code?: string; id?: number; initiative_id?: number }) => item?.official_code === 'SGP-02' || item?.official_code === 'SGP02'
+      );
       return found ? (found.id ?? found.initiative_id) : undefined;
     }
     return undefined;
