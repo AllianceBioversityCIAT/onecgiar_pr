@@ -153,7 +153,7 @@ export class DeleteRecoverDataService {
     private readonly _logRepository: LogRepository,
     private readonly _roleByUserRepository: RoleByUserRepository,
     private readonly _versionRepository: VersionRepository,
-  ) { }
+  ) {}
 
   async deleteResult(result_id: number, user: TokenDto) {
     try {
