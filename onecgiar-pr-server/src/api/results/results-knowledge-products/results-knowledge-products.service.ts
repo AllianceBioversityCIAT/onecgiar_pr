@@ -109,7 +109,7 @@ export class ResultsKnowledgeProductsService {
     private readonly _returnResponse: ReturnResponse,
     private readonly _resultByInstitutionRepository: ResultByIntitutionsRepository,
     private readonly _globalParameterRepository: GlobalParameterRepository,
-  ) { }
+  ) {}
 
   async syncAgain(resultId: number, user: TokenDto) {
     try {
@@ -282,7 +282,7 @@ export class ResultsKnowledgeProductsService {
       updatedKnowledgeProduct.result_knowledge_product_institution_array =
         await this._resultsKnowledgeProductInstitutionRepository.save(
           updatedKnowledgeProduct.result_knowledge_product_institution_array ??
-          [],
+            [],
         );
 
       const resultByInstitutions =
@@ -388,8 +388,8 @@ export class ResultsKnowledgeProductsService {
         currentFairFieldIndex < 0
           ? new ResultsKnowledgeProductFairScore()
           : (knowledgeProduct.result_knowledge_product_fair_score_array ?? [])[
-          currentFairFieldIndex
-          ];
+              currentFairFieldIndex
+            ];
 
       if (!currentFairFieldObject.fair_field_id) {
         currentFairFieldObject.fair_field_id = allFairFields.find(
@@ -507,7 +507,7 @@ export class ResultsKnowledgeProductsService {
           ).find(
             (orc) =>
               normalize(orc.country_object?.iso_alpha_2) ==
-              normalize(mqapValue) ||
+                normalize(mqapValue) ||
               normalize(orc.country_object?.name) === normalize(mqapValue),
           );
           if (country) {
@@ -692,8 +692,9 @@ export class ResultsKnowledgeProductsService {
 
       return {
         response: response,
-        message: `The Result Knowledge Product ${!validateExisting ? 'is yet to be created' : 'can be updated'
-          }`,
+        message: `The Result Knowledge Product ${
+          !validateExisting ? 'is yet to be created' : 'can be updated'
+        }`,
         status: HttpStatus.OK,
       };
     } catch (error) {
@@ -1284,26 +1285,8 @@ export class ResultsKnowledgeProductsService {
         },
       );
 
-      // Link existing evidences to this KP
-      this._evidenceRepository
-        .findBy({ link: Like(`%${handleId}%`) })
-        .then((re) => {
-          return Promise.all(
-            re.map((e) => {
-              this._evidenceRepository.update(
-                { id: e.id },
-                {
-                  knowledge_product_related: resultId,
-                  result_id: resultId,
-                  evidence_type_id: 1,
-                },
-              );
-            }),
-          );
-        })
-        .catch((error) => this._handlersError.returnErrorRes({ error }));
-
       // Create evidence linking KP to itself (if not already exists)
+      // Do not link/activate other evidences by handle: bilateral only gets this one evidence
       const evidenceLink = `https://hdl.handle.net/${handleId}`;
       const existingEvidence = await this._evidenceRepository.findOne({
         where: {
@@ -1791,16 +1774,16 @@ export class ResultsKnowledgeProductsService {
     if (response.doi?.length < 1) {
       warnings.push(
         'Journal articles without the DOI will directly go to ' +
-        'the Quality Assurance. In case you need support to add the DOI in CGSPACE, ' +
-        'please contact the librarian of your Center.',
+          'the Quality Assurance. In case you need support to add the DOI in CGSPACE, ' +
+          'please contact the librarian of your Center.',
       );
     }
 
     if (response.doi?.length > 1 && !response.altmetric_detail_url) {
       warnings.push(
         'Please make sure the DOI is valid otherwise the journal article will directly go ' +
-        'to the Quality Assurance. In case you need support to correct the DOI in CGSPACE, ' +
-        'please contact the librarian of your Center.',
+          'to the Quality Assurance. In case you need support to correct the DOI in CGSPACE, ' +
+          'please contact the librarian of your Center.',
       );
     }
 
@@ -1815,18 +1798,18 @@ export class ResultsKnowledgeProductsService {
       ) {
         warnings.push(
           'The year of publication is automatically retrieved from an external service (Web ' +
-          'of Science or Scopus). In case of inconsistencies, the CGIAR Quality Assurance ' +
-          'team will manually validate the record. We remind you that only knowledge products ' +
-          `published in ${cgspaceYear} can be reported.`,
+            'of Science or Scopus). In case of inconsistencies, the CGIAR Quality Assurance ' +
+            'team will manually validate the record. We remind you that only knowledge products ' +
+            `published in ${cgspaceYear} can be reported.`,
         );
       }
 
       if ((wosMetadata?.issue_year ?? 0) < 1) {
         warnings.push(
           'The year of publication is automatically retrieved from an external service (Web ' +
-          'of Science or Scopus). If the year does not show, it might be due to a delay in ' +
-          'the indexing. The CGIAR Quality Assurance team will validate this information at ' +
-          'the end of the reporting cycle.',
+            'of Science or Scopus). If the year does not show, it might be due to a delay in ' +
+            'the indexing. The CGIAR Quality Assurance team will validate this information at ' +
+            'the end of the reporting cycle.',
         );
       }
     }
