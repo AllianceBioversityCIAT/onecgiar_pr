@@ -164,7 +164,9 @@ describe('BilateralService (unit)', () => {
       }),
     );
 
-    const cap = service.buildResultRelations(ResultTypeEnum.CAPACITY_CHANGE);
+    const cap = service.buildResultRelations(
+      ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+    );
     expect(cap).toEqual(
       expect.objectContaining({ results_capacity_development_object: true }),
     );

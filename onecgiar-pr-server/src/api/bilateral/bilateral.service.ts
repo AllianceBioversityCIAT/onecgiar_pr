@@ -107,7 +107,7 @@ export class BilateralService {
   ) {
     this.resultTypeHandlerMap = new Map<number, BilateralResultTypeHandler>([
       [_knowledgeProductHandler.resultType, _knowledgeProductHandler],
-      [_capacityChangeHandler.resultType, _capacityChangeHandler],
+      [ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT, _capacityChangeHandler],
       [_innovationDevelopmentHandler.resultType, _innovationDevelopmentHandler],
       [_innovationUseHandler.resultType, _innovationUseHandler],
       [_policyChangeHandler.resultType, _policyChangeHandler],
@@ -695,7 +695,8 @@ export class BilateralService {
 
   private buildResultRelations(resultTypeId?: number) {
     const isKpType = resultTypeId === ResultTypeEnum.KNOWLEDGE_PRODUCT;
-    const isCapacityChange = resultTypeId === ResultTypeEnum.CAPACITY_CHANGE;
+    const isCapacitySharing =
+      resultTypeId === ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT;
     const isInnovationDev =
       resultTypeId === ResultTypeEnum.INNOVATION_DEVELOPMENT;
     const isInnovationUse = resultTypeId === ResultTypeEnum.INNOVATION_USE;
@@ -737,7 +738,7 @@ export class BilateralService {
           result_knowledge_product_metadata_array: true,
         },
       }),
-      ...(isCapacityChange && {
+      ...(isCapacitySharing && {
         results_capacity_development_object: true,
       }),
       ...(isInnovationDev && {
