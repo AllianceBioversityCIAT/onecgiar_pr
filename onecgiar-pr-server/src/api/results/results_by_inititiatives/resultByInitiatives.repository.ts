@@ -250,7 +250,7 @@ export class ResultByInitiativesRepository
           AND is_active > 0;
       `;
       const statusResult = await this.query(statusQuery, [resultId]);
-      
+
       if (!statusResult || statusResult.length === 0) {
         return [];
       }
@@ -277,7 +277,7 @@ export class ResultByInitiativesRepository
           srr.result_id = ?
           and srr.is_active > 0;
       `;
-      
+
       const completeUser: InitiativeByResultDTO[] = await this.query(
         queryData,
         [requestStatusId, resultId],
