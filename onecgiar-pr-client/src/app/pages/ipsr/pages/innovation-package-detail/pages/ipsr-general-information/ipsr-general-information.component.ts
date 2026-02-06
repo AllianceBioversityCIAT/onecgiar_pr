@@ -90,6 +90,7 @@ export class IpsrGeneralInformationComponent implements OnInit {
     this.api.resultsSE.GETInnovationByResultId(this.ipsrDataControlSE.resultInnovationId, this.fieldsManagerSE.isP25()).subscribe(({ response }) => {
       this.ipsrGeneralInformationBody = response;
       this.ipsrCompletenessStatusSE.updateGreenChecks();
+      this.GET_investmentDiscontinuedOptions(response.result_type_id);
     });
   }
 

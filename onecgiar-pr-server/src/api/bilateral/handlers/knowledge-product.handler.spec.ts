@@ -43,6 +43,10 @@ describe('KnowledgeProductBilateralHandler', () => {
       save: jest.fn().mockResolvedValue({ id: 1 }),
     };
     kpService = {
+      extractHandleIdentifier: jest.fn((url: string) => {
+        const parts = (url ?? '').split('/').filter(Boolean);
+        return parts.length >= 2 ? parts.slice(-2).join('/') : (url ?? '');
+      }),
       populateKPFromCGSpace: jest.fn().mockResolvedValue({
         result_knowledge_product_id: 5,
       }),
@@ -103,9 +107,12 @@ describe('KnowledgeProductBilateralHandler', () => {
     it('calls populateKPFromCGSpace to fetch and populate KP metadata', async () => {
       await handler.afterCreate(baseAfterContext);
 
+      expect(kpService.extractHandleIdentifier).toHaveBeenCalledWith(
+        baseDto.knowledge_product.handle,
+      );
       expect(kpService.populateKPFromCGSpace).toHaveBeenCalledWith(
         baseAfterContext.resultId,
-        baseDto.knowledge_product.handle,
+        baseDto.knowledge_product.handle, // mock returns same when already short (123/handle)
         expect.objectContaining({
           id: baseAfterContext.userId,
         }),
