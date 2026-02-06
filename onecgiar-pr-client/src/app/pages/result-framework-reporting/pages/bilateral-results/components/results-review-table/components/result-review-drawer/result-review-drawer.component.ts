@@ -470,33 +470,45 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
       };
     }
 
-    if (detail.contributingCenters && Array.isArray(detail.contributingCenters)) {
-      const centersArray: any[] = detail.contributingCenters;
+    const centersArray = Array.isArray(detail.contributingCenters) ? detail.contributingCenters : [];
+    const codes = centersArray
+      .map((item: any) => {
+        if (typeof item === 'string') return item;
+        if (item && item.code) return item.code;
+        return null;
+      })
+      .filter(Boolean);
 
-      const codes = centersArray
-        .map((item: any) => {
-          if (typeof item === 'string') return item;
-          if (item && item.code) return item.code;
-          return null;
-        })
-        .filter(Boolean);
+    body.contributingCenters = codes
+      .map((code: string, index: number) => {
+        const center = this.centersSE.centersList.find((c: any) => c.code === code);
+        if (!center) return null;
 
-      body.contributingCenters = codes
-        .map((code: string, index: number) => {
-          const center = this.centersSE.centersList.find((c: any) => c.code === code);
-          if (!center) return null;
+        return {
+          ...center,
+          result_id: String(resultId),
+          is_leading_result: index === 0 ? 1 : null,
+          selected: true,
+          new: true,
+          is_active: true
+        };
+      })
+      .filter(Boolean);
 
-          return {
-            ...center,
-            result_id: String(resultId),
-            is_leading_result: index === 0 ? 1 : null,
-            selected: true,
-            new: true,
-            is_active: true
-          };
-        })
-        .filter(Boolean);
-    }
+    // Always send current contributingProjects so clearing centers does not clear bilateral projects
+    const projectsArray = Array.isArray(detail.contributingProjects) ? detail.contributingProjects : [];
+    body.contributingProjects = projectsArray
+      .map((project: any) => {
+        let projectId: string | number | null = null;
+        if (project != null) {
+          projectId =
+            typeof project === 'object'
+              ? (project.project_id ?? project.id ?? project.obj_clarisa_project?.id ?? null)
+              : project;
+        }
+        return projectId != null ? { project_id: projectId } : null;
+      })
+      .filter((item): item is { project_id: string | number } => item != null);
 
     if (detail.contributingInitiatives) {
       const currentSelection = Array.isArray(detail.contributingInitiatives)
@@ -530,13 +542,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         accepted_contributing_initiatives: acceptedPayload,
         pending_contributing_initiatives: pendingPayload
       };
-    }
-
-    if (detail.contributingProjects && Array.isArray(detail.contributingProjects)) {
-      body.contributingProjects = detail.contributingProjects.map((project: any) => {
-        const projectId = project.project_id || project.id;
-        return { project_id: projectId };
-      });
     }
 
     if (detail.contributingInstitutions && Array.isArray(detail.contributingInstitutions)) {
