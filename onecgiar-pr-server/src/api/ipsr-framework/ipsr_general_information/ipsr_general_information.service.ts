@@ -42,7 +42,7 @@ export class IpsrGeneralInformationService {
     @Inject(AdUserService)
     private readonly _adUserService?: AdUserService,
     private readonly _adUserRepository?: AdUserRepository,
-  ) {}
+  ) { }
 
   /**
    * Create a new IP result general information for Portfolio P25
@@ -270,6 +270,9 @@ export class IpsrGeneralInformationService {
     tagName: string,
     impactAreaScoresToAdd: Partial<ResultImpactAreaScore>[],
   ) {
+    if (!tagId) {
+      return null;
+    }
     const tag = await this._genderTagRepository.findOne({
       where: { id: tagId },
     });
