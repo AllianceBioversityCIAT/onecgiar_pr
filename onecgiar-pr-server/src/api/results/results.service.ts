@@ -1129,11 +1129,11 @@ export class ResultsService {
           ...item,
           initiative_entity_map: entityMaps.length
             ? entityMaps.map((entityMap) => ({
-              id: entityMap.id,
-              entityId: entityMap.entityId,
-              initiativeId: entityMap.initiativeId,
-              entityName: entityMap.entity_obj?.name ?? null,
-            }))
+                id: entityMap.id,
+                entityId: entityMap.entityId,
+                initiativeId: entityMap.initiativeId,
+                entityName: entityMap.entity_obj?.name ?? null,
+              }))
             : [],
           initiative_entity_user: initiativesPortfolio3,
         };
@@ -1253,11 +1253,11 @@ export class ResultsService {
           ...item,
           initiative_entity_map: entityMaps.length
             ? entityMaps.map((entityMap) => ({
-              id: entityMap.id,
-              entityId: entityMap.entityId,
-              initiativeId: entityMap.initiativeId,
-              entityName: entityMap.entity_obj?.name ?? null,
-            }))
+                id: entityMap.id,
+                entityId: entityMap.entityId,
+                initiativeId: entityMap.initiativeId,
+                entityName: entityMap.entity_obj?.name ?? null,
+              }))
             : [],
           initiative_entity_user: initiativesPortfolio3,
         };
@@ -1275,14 +1275,14 @@ export class ResultsService {
         response:
           limit !== undefined
             ? {
-              items: result,
-              meta: {
-                total,
-                page: page ?? 1,
-                limit,
-                totalPages: Math.max(1, Math.ceil(total / limit)),
-              },
-            }
+                items: result,
+                meta: {
+                  total,
+                  page: page ?? 1,
+                  limit,
+                  totalPages: Math.max(1, Math.ceil(total / limit)),
+                },
+              }
             : { items: result },
         message: 'Successful response',
         status: HttpStatus.OK,
@@ -3148,13 +3148,14 @@ export class ResultsService {
             : 'rejected';
 
         if (reviewDecisionDto.decision === ReviewDecisionEnum.APPROVE) {
-          const shareResultRequests = await this._shareResultRequestRepository.find({
-            where: {
-              result_id: parsedResultId,
-              is_active: true,
-              request_status_id: In([2, 4]),
-            },
-          });
+          const shareResultRequests =
+            await this._shareResultRequestRepository.find({
+              where: {
+                result_id: parsedResultId,
+                is_active: true,
+                request_status_id: In([2, 4]),
+              },
+            });
 
           const contributing_initiatives = {
             accepted_contributing_initiatives: shareResultRequests
@@ -3171,11 +3172,17 @@ export class ResultsService {
               })),
           };
 
-          await this._updateTocMapping(parsedResultId, contributing_initiatives, user);
+          await this._updateTocMapping(
+            parsedResultId,
+            contributing_initiatives,
+            user,
+          );
         } else {
-          await this._shareResultRequestRepository.update(parsedResultId, {
-            is_active: false,
-          });
+          // When result is rejected, deactivate all active share result requests for this result
+          await this._shareResultRequestRepository.update(
+            { result_id: parsedResultId, is_active: true },
+            { is_active: false },
+          );
         }
 
         return {
@@ -3350,7 +3357,7 @@ export class ResultsService {
     return (
       reviewUpdateDto.commonFields?.result_description !== undefined &&
       reviewUpdateDto.commonFields.result_description !==
-      currentCommonFields?.result_description
+        currentCommonFields?.result_description
     );
   }
 
@@ -3554,6 +3561,7 @@ export class ResultsService {
         initiativeShareId: pendingIds,
         email_template: 'email_template_contribution',
       };
+
       await this._shareResultRequestService.resultRequest(
         dataRequest,
         resultId,
@@ -3576,8 +3584,10 @@ export class ResultsService {
     }
 
     const { contributingInitiatives } = reviewUpdateDto;
-    const { accepted_contributing_initiatives, pending_contributing_initiatives } =
-      contributingInitiatives;
+    const {
+      accepted_contributing_initiatives,
+      pending_contributing_initiatives,
+    } = contributingInitiatives;
 
     // Get owner_initiative_id
     const ownerInitiative = await this._resultByInitiativesRepository.findOne({

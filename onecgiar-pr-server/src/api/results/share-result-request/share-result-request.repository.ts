@@ -111,35 +111,51 @@ export class ShareResultRequestRepository
     ownerInitId: number,
     shareInitId: number,
   ) {
-    const queryData = `
-    SELECT
-    	srr.share_result_request_id,
-    	srr.is_active,
-    	srr.requested_date,
-    	srr.aprovaed_date,
-    	srr.result_id,
-    	srr.owner_initiative_id,
-    	srr.shared_inititiative_id,
-    	srr.approving_inititiative_id,
-    	srr.toc_result_id,
-    	srr.action_area_outcome_id,
-    	srr.request_status_id,
-    	srr.requested_by,
-    	srr.approved_by
-    FROM
-    	share_result_request srr
-    WHERE
-    	srr.result_id = ?
-    	and srr.owner_initiative_id = ?
-    	and srr.shared_inititiative_id = ?
-      and srr.request_status_id in (1)
-	  and srr.is_active > 0;
-    `;
     try {
+      // Check if there are active records with request_status_id = 4 for this result
+      const checkDraftQuery = `
+        SELECT COUNT(*) as count
+        FROM share_result_request srr
+        WHERE srr.result_id = ?
+          AND srr.request_status_id = 4
+          AND srr.is_active > 0;
+      `;
+      const draftResult = await this.query(checkDraftQuery, [resultId]);
+      const hasDraftRequests = draftResult[0]?.count > 0;
+
+      // Determine which request_status_id to search for
+      const requestStatusId = hasDraftRequests ? 4 : 1;
+
+      const queryData = `
+        SELECT
+          srr.share_result_request_id,
+          srr.is_active,
+          srr.requested_date,
+          srr.aprovaed_date,
+          srr.result_id,
+          srr.owner_initiative_id,
+          srr.shared_inititiative_id,
+          srr.approving_inititiative_id,
+          srr.toc_result_id,
+          srr.action_area_outcome_id,
+          srr.request_status_id,
+          srr.requested_by,
+          srr.approved_by
+        FROM
+          share_result_request srr
+        WHERE
+          srr.result_id = ?
+          AND srr.owner_initiative_id = ?
+          AND srr.shared_inititiative_id = ?
+          AND srr.request_status_id IN (?)
+          AND srr.is_active > 0;
+      `;
+
       const shareResultRequest: ShareResultRequest[] = await this.query(
         queryData,
-        [resultId, ownerInitId, shareInitId],
+        [resultId, ownerInitId, shareInitId, requestStatusId],
       );
+
       return shareResultRequest.length ? shareResultRequest[0] : undefined;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

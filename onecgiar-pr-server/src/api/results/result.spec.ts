@@ -74,6 +74,7 @@ import { InnovationUseService } from '../results-framework-reporting/innovation-
 import { ReviewUpdateDto } from './dto/review-update.dto';
 import { ResultsTocResultsService } from './results-toc-results/results-toc-results.service';
 import { ShareResultRequestService } from './share-result-request/share-result-request.service';
+import { ShareResultRequestRepository } from './share-result-request/share-result-request.repository';
 
 describe('ResultsService (unit, pure mocks)', () => {
   let module: TestingModule;
@@ -485,6 +486,13 @@ describe('ResultsService (unit, pure mocks)', () => {
     resultRequest: jest.fn().mockResolvedValue(undefined),
   } as any;
 
+  const mockShareResultRequestRepository = {
+    find: jest.fn().mockResolvedValue([]),
+    update: jest.fn().mockResolvedValue({ affected: 1 }),
+    findOne: jest.fn().mockResolvedValue(null),
+    save: jest.fn().mockResolvedValue({}),
+  } as any;
+
   const mockDataSource = {
     transaction: jest.fn().mockImplementation(async (callback) => {
       const manager = {
@@ -698,6 +706,10 @@ describe('ResultsService (unit, pure mocks)', () => {
         {
           provide: ShareResultRequestService,
           useValue: mockShareResultRequestService,
+        },
+        {
+          provide: ShareResultRequestRepository,
+          useValue: mockShareResultRequestRepository,
         },
       ],
     }).compile();
@@ -1477,6 +1489,9 @@ describe('ResultsService (unit, pure mocks)', () => {
       return callback(manager);
     });
 
+    // Mock ShareResultRequestRepository.find for approved case
+    mockShareResultRequestRepository.find.mockResolvedValueOnce([]);
+
     const res = await resultService.reviewBilateralResult(
       100,
       reviewDecision,
@@ -1506,6 +1521,11 @@ describe('ResultsService (unit, pure mocks)', () => {
         save: jest.fn().mockResolvedValue({ id: 1 }),
       };
       return callback(manager);
+    });
+
+    // Mock ShareResultRequestRepository.update for rejected case
+    mockShareResultRequestRepository.update.mockResolvedValueOnce({
+      affected: 1,
     });
 
     const res = await resultService.reviewBilateralResult(
@@ -2031,6 +2051,16 @@ describe('ResultsService (unit, pure mocks)', () => {
       (
         mockResultRepository.getCommonFieldsBilateralResultById as jest.Mock
       ).mockResolvedValueOnce(mockCommonFields);
+
+      // Mock ShareResultRequestRepository methods needed for _updateContributingInitiatives
+      mockShareResultRequestRepository.find.mockResolvedValueOnce([]);
+      mockShareResultRequestRepository.update.mockResolvedValueOnce({
+        affected: 0,
+      });
+      // Mock findOne for owner initiative
+      (
+        mockResultByInitiativesRepository.findOne as jest.Mock
+      ).mockResolvedValueOnce({ initiative_id: 1 });
 
       const res = await resultService.updateBilateralResultReview(
         100,
