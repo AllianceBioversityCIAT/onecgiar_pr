@@ -50,6 +50,11 @@ export class IpsrGeneralInformationComponent implements OnInit {
     return fieldValue.some((id: any) => Number(id) === Number(optionId));
   }
 
+  isImpactAreaComplete(fieldName: string): boolean {
+    const value = this.ipsrGeneralInformationBody[fieldName];
+    return Array.isArray(value) && value.length > 0;
+  }
+
   toggleImpactAreaSelection(fieldName: string, optionId: number | string): void {
     const fieldValue = this.ipsrGeneralInformationBody[fieldName] || [];
     const currentArray = Array.isArray(fieldValue) ? [...fieldValue] : [];

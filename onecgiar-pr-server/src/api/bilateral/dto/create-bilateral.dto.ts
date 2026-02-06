@@ -1164,10 +1164,12 @@ export class CreateBilateralDto {
 
   @ApiPropertyOptional({
     description:
-      'Capacity sharing metadata (required when result_type_id is CAPACITY_CHANGE)',
+      'Capacity sharing metadata (required when result_type_id is CAPACITY_SHARING_FOR_DEVELOPMENT)',
     type: () => CapacitySharingDto,
   })
-  @ValidateIf((o) => o.result_type_id === ResultTypeEnum.CAPACITY_CHANGE)
+  @ValidateIf(
+    (o) => o.result_type_id === ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+  )
   @IsDefined()
   @ValidateNested()
   @Type(() => CapacitySharingDto)

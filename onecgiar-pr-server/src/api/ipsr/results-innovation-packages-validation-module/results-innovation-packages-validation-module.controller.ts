@@ -87,7 +87,7 @@ export class ResultsInnovationPackagesValidationModuleController {
   })
   @Get('get/green-checks/:resultId')
   findAllV2(@Param('resultId') resultId: number) {
-    return this.resultsInnovationPackagesValidationModuleService.getGreenchecksByinnovationPackageV2(
+    return this.resultsInnovationPackagesValidationModuleService.getGreenchecksByinnovationPackageSPV2(
       resultId,
     );
   }
