@@ -4,7 +4,7 @@ import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 
 describe('CapacityChangeBilateralHandler', () => {
   const baseDto: any = {
-    result_type_id: ResultTypeEnum.CAPACITY_CHANGE,
+    result_type_id: ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
     capacity_sharing: {
       number_people_trained: {
         women: 10,
@@ -50,7 +50,7 @@ describe('CapacityChangeBilateralHandler', () => {
       handler.afterCreate({
         ...baseContext,
         bilateralDto: {
-          result_type_id: ResultTypeEnum.CAPACITY_CHANGE,
+          result_type_id: ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
         } as any,
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
