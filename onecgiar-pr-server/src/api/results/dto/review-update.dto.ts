@@ -12,8 +12,10 @@ import { CreateResultsTocResultDto } from '../../results/results-toc-results/dto
 import { BilateralProjectLinkDto } from '../results_by_institutions/dto/save-partners-v2.dto';
 import { ResultsByInstitution } from '../../results/results_by_institutions/entities/results_by_institution.entity';
 import { CapdevDto } from '../summary/dto/create-capacity-developents.dto';
-import { CreateInnovationUseDto } from '../../results-framework-reporting/innovation-use/dto/create-innovation-use.dto';
+import { ResultIpMeasure } from '../../ipsr/result-ip-measures/entities/result-ip-measure.entity';
 import { Type } from 'class-transformer';
+import { ResultActor } from '../result-actors/entities/result-actor.entity';
+import { ResultsByInstitutionType } from '../results_by_institution_types/entities/results_by_institution_type.entity';
 
 export class CommonFieldsDto {
   @ApiProperty({
@@ -130,6 +132,58 @@ export class InnovationDevelopmentDto {
   })
   @IsString()
   name: string;
+}
+
+export class InvesmentDto {
+  @ApiProperty({
+    description: 'Entity providing the investment',
+    example: '15',
+    type: Number,
+  })
+  id: number;
+
+  @ApiProperty({
+    description: 'Total value of the investment',
+    example: '1000000',
+    type: String,
+  })
+  kind_cash: string;
+
+  @ApiProperty({
+    description: 'Indicates whether the investment is determined',
+    example: true,
+    type: Boolean,
+  })
+  is_determined: boolean;
+}
+export class InnovUseDto {
+  @ApiProperty({
+    description: 'List of actors related to the result',
+    type: [ResultActor],
+  })
+  @IsOptional()
+  actors?: ResultActor[];
+
+  @ApiProperty({
+    description: 'Measures associated with the result',
+    type: [ResultIpMeasure],
+  })
+  @IsOptional()
+  measures?: ResultIpMeasure[];
+
+  @ApiProperty({
+    description: 'Organizations involved, classified by institution type',
+    type: [ResultsByInstitutionType],
+  })
+  @IsOptional()
+  organizations?: ResultsByInstitutionType[];
+
+  @ApiProperty({
+    description: 'Investment partners related to the innovation use',
+    type: [InvesmentDto],
+  })
+  @IsOptional()
+  investment_partners?: InvesmentDto[];
 }
 
 export class ImplementingOrganizationDto {
@@ -386,7 +440,7 @@ export class ReviewUpdateDto {
     | CapdevDto
     | InnovationDevelopmentDto
     | PolicyChangeDto
-    | CreateInnovationUseDto;
+    | InnovUseDto;
 
   @ApiProperty({
     description:
