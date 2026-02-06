@@ -562,6 +562,8 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
       };
     }
 
+    body.contributingProjects = detail.contributingProjects;
+
     if (detail.contributingInstitutions && Array.isArray(detail.contributingInstitutions)) {
       body.contributingInstitutions = detail.contributingInstitutions.map((inst: any) => {
         const institutionId = typeof inst === 'object' && inst != null ? (inst.institutions_id ?? inst.institution_id ?? inst.id) : inst;
