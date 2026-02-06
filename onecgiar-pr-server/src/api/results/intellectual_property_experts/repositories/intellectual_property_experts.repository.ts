@@ -25,6 +25,7 @@ export class IntellectualPropertyExpertRepository {
         { resultId },
       )
       .where('rie.is_active = true')
+      .andWhere('rc.is_leading_result = true')
       .getRawMany();
   }
 }

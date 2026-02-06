@@ -1,11 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  ChangeDetectorRef,
-  Component,
-  inject,
-  Input,
-  OnInit
-} from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BilateralResultDetail, BilateralInnovationUseResponse } from '../../result-review-drawer.interfaces';
@@ -83,11 +76,7 @@ export class InnovationUseContentComponent implements OnInit {
   }
 
   private isInnovationUseShape(obj: any): boolean {
-    return (
-      obj != null &&
-      typeof obj === 'object' &&
-      ('actors' in obj || 'organizations' in obj || 'measures' in obj || 'investment_partners' in obj)
-    );
+    return obj != null && typeof obj === 'object' && ('actors' in obj || 'organizations' in obj || 'measures' in obj || 'investment_partners' in obj);
   }
 
   private defaultInnovationUseBody(): BilateralInnovationUseResponse {
@@ -156,9 +145,9 @@ export class InnovationUseContentComponent implements OnInit {
   hasElementsWithId(list: any[] | undefined, attr: string): boolean {
     if (!Array.isArray(list)) return false;
     if (this.disabled) {
-      return list.some(item => item && item[attr]);
+      return list.some(item => item?.[attr]);
     }
-    return list.some(item => item && item.is_active !== false);
+    return list.some(item => item?.is_active !== false);
   }
 
   checkValueAlert(item: any): boolean {

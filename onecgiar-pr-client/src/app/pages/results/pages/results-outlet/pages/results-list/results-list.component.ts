@@ -200,14 +200,21 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
     this.api.dataControlSE.myInitiativesList.forEach(item => (item.selected = false));
   }
 
+  private isW3BilateralsAvisa(result: CurrentResult): boolean {
+    if (result?.source_name !== 'W3/Bilaterals') return false;
+    const code = result?.submitter ?? result?.initiative_official_code ?? '';
+    return code === 'SGP-02' || code === 'SGP02';
+  }
+
   onPressAction(result: CurrentResult): void {
     this.retrieveModalSE.title = result?.title ?? '';
     this.api.resultsSE.currentResultId = result?.id;
     this.api.dataControlSE.currentResult = result;
 
     const canUpdate = this.api.shouldShowUpdate(result, this.api.dataControlSE.reportingCurrentPhase);
+    const useBilateralFlow = result?.source_name == 'W3/Bilaterals' && !this.isW3BilateralsAvisa(result);
 
-    if (result?.source_name == 'W3/Bilaterals') {
+    if (useBilateralFlow) {
       this.itemsWithDelete[0].visible = false;
       this.itemsWithDelete[1].visible = false;
       this.items[0].visible = false;
@@ -323,6 +330,11 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   navigateToResult(result: CurrentResult) {
+    if (this.isW3BilateralsAvisa(result)) {
+      const url = '/result/result-detail/' + result.result_code + '/general-information?phase=' + result.version_id;
+      this.router.navigateByUrl(url);
+      return;
+    }
     if (result?.source_name == 'W3/Bilaterals') {
       const url = '/result-framework-reporting/entity-details/' + result.submitter + '/results-review';
       this.bilateralResultsService.currentResultToReview.set(result);
@@ -330,11 +342,10 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
       this.router.navigateByUrl(url).then(() => {
         this.bilateralResultsService.showReviewDrawer.set(true);
       });
-    } else {
-      const url = '/result/result-detail/' + result.result_code + '/general-information?phase=' + result.version_id;
-
-      this.router.navigateByUrl(url);
+      return;
     }
+    const url = '/result/result-detail/' + result.result_code + '/general-information?phase=' + result.version_id;
+    this.router.navigateByUrl(url);
   }
 
   ngOnDestroy(): void {

@@ -1,4 +1,6 @@
 import { TocResultsRepository } from './toc-results.repository';
+import { ClarisaInitiative } from '../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
+import { GlobalParameter } from '../../api/global-parameter/entities/global-parameter.entity';
 
 describe('TocResultsRepository', () => {
   let repository: TocResultsRepository;
@@ -6,7 +8,10 @@ describe('TocResultsRepository', () => {
   let mockDataSource: {
     createEntityManager: jest.Mock;
     query: jest.Mock;
+    getRepository: jest.Mock;
   };
+  let initiativeRepo: { findOne: jest.Mock };
+  let globalParamRepo: { findOne: jest.Mock };
 
   beforeAll(() => {
     process.env.DB_TOC = 'db_toc';
@@ -15,9 +20,28 @@ describe('TocResultsRepository', () => {
   });
 
   beforeEach(() => {
+    initiativeRepo = {
+      // default: no SGP-02 behavior, so repository uses getCurrentTocPhaseId()
+      findOne: jest.fn().mockResolvedValue(null),
+    };
+    globalParamRepo = {
+      findOne: jest
+        .fn()
+        .mockResolvedValue({ value: 'phase-from-global-param' }),
+    };
+
     mockDataSource = {
       createEntityManager: jest.fn().mockReturnValue({}),
       query: jest.fn(),
+      getRepository: jest.fn((entity: unknown) => {
+        if (entity === ClarisaInitiative) {
+          return initiativeRepo as any;
+        }
+        if (entity === GlobalParameter) {
+          return globalParamRepo as any;
+        }
+        return { findOne: jest.fn().mockResolvedValue(null) } as any;
+      }),
     };
 
     repository = new TocResultsRepository(mockDataSource as any);

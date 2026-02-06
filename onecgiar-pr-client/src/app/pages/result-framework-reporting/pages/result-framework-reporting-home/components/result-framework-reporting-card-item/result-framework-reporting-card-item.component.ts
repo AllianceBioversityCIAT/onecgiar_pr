@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, signal } from '@angular/core';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { SPProgress } from '../../../../../../shared/interfaces/SP-progress.interface';
 import { RouterLink } from '@angular/router';
@@ -12,4 +12,5 @@ import { RouterLink } from '@angular/router';
 })
 export class ResultFrameworkReportingCardItemComponent {
   @Input() item: SPProgress;
+  imageLoadError = signal(false);
 }

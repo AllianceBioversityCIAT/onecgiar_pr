@@ -22,10 +22,20 @@ describe('BilateralService (unit)', () => {
     const clarisaSubnationalAreasRepository = {} as any;
     const resultCountrySubnationalRepository = {} as any;
     const resultByInstitutionsRepository = {} as any;
+    const resultInstitutionsBudgetRepository = {
+      save: jest.fn().mockResolvedValue([]),
+    } as any;
     const clarisaInstitutionsRepository = {} as any;
     const evidencesRepository = {} as any;
     const evidencesService = {} as any;
     const resultsKnowledgeProductsRepository = {} as any;
+    const resultsKnowledgeProductsService = {
+      extractHandleIdentifier: jest.fn(
+        (raw: string) => raw?.split('/').slice(-2).join('/') ?? raw,
+      ),
+      validateKPExistanceByHandle: jest.fn().mockResolvedValue(null),
+      findOnCGSpace: jest.fn().mockResolvedValue({ status: 200 }),
+    } as any;
     const clarisaCenters = {} as any;
     const userService = { createFull: jest.fn() };
     const resultsTocResultsRepository = { logicalDelete: jest.fn() };
@@ -71,10 +81,12 @@ describe('BilateralService (unit)', () => {
       clarisaSubnationalAreasRepository,
       resultCountrySubnationalRepository,
       resultByInstitutionsRepository,
+      resultInstitutionsBudgetRepository,
       clarisaInstitutionsRepository,
       evidencesRepository,
       evidencesService,
       resultsKnowledgeProductsRepository,
+      resultsKnowledgeProductsService,
       clarisaCenters,
       userService as any,
       resultsTocResultsRepository as any,
@@ -121,6 +133,7 @@ describe('BilateralService (unit)', () => {
         resultsTocResultsIndicatorsRepository,
         resultsTocResultsRepository,
         resultByInitiativesRepository,
+        resultsKnowledgeProductsService,
       },
       handlers: {
         knowledgeProductHandler,
@@ -151,7 +164,9 @@ describe('BilateralService (unit)', () => {
       }),
     );
 
-    const cap = service.buildResultRelations(ResultTypeEnum.CAPACITY_CHANGE);
+    const cap = service.buildResultRelations(
+      ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+    );
     expect(cap).toEqual(
       expect.objectContaining({ results_capacity_development_object: true }),
     );
