@@ -27,6 +27,8 @@ describe('PolicyChangeBilateralHandler', () => {
   let repoStub: any;
   let policyTypeRepoStub: any;
   let policyStageRepoStub: any;
+  let resultByInstitutionsRepoStub: any;
+  let clarisaInstitutionsRepoStub: any;
 
   beforeEach(() => {
     repoStub = {
@@ -48,10 +50,25 @@ describe('PolicyChangeBilateralHandler', () => {
         getOne: jest.fn().mockResolvedValue({ id: 6, name: 'Test Stage' }),
       }),
     };
+    resultByInstitutionsRepoStub = {
+      updateInstitutions: jest.fn().mockResolvedValue(undefined),
+      getResultByInstitutionExists: jest.fn().mockResolvedValue(undefined),
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    clarisaInstitutionsRepoStub = {
+      findOne: jest
+        .fn()
+        .mockResolvedValue({ id: 123, name: 'Test Inst', acronym: 'TI' }),
+      find: jest
+        .fn()
+        .mockResolvedValue([{ id: 123, name: 'Test Inst', acronym: 'TI' }]),
+    };
     handler = new PolicyChangeBilateralHandler(
       repoStub,
       policyTypeRepoStub,
       policyStageRepoStub,
+      resultByInstitutionsRepoStub,
+      clarisaInstitutionsRepoStub,
     );
   });
 

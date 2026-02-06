@@ -72,7 +72,7 @@ export class ShareRequestModalComponent implements OnInit {
 
   get entitiesList(): any[] {
     if (this.api.rolesSE.isAdmin) {
-      return this.allInitiatives;
+      return this.allInitiatives.filter(initiative => initiative.portfolio_id === this.api.dataControlSE.reportingCurrentPhase.portfolioId);
     }
 
     return this.api.dataControlSE.myInitiativesList.filter(

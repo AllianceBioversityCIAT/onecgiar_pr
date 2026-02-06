@@ -11,4 +11,9 @@ export enum ValidationMapsEnum {
   POLICY_CHANGE = 'policy-change1-info',
   LINK_RESULT = 'links-to-results',
   CONTRIBUTOR_PARTNERS = 'contributor-partners',
+  IPSR_STEP_ONE = 'Step 1',
+  IPSR_STEP_FOUR = 'Step 4',
+  IPSR_STEP_THREE = 'Step 3',
+  IPSR_STEP_TWO_ONE = 'Step 2.1',
+  IPSR_STEP_TWO_TWO = 'Step 2.2',
 }

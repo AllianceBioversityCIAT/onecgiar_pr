@@ -167,6 +167,7 @@ describe('EntityAowService', () => {
     });
 
     it('should update entityDetails, entityAows, and indicatorSummaries on successful API calls', async () => {
+      service.entityId.set('SP01');
       jest.spyOn(mockApiService.resultsSE, 'GET_ClarisaGlobalUnits').mockReturnValue(of(mockApiResponse));
       jest.spyOn(mockApiService.resultsSE, 'GET_IndicatorContributionSummary').mockReturnValue(of(mockIndicatorApiResponse));
 
@@ -182,6 +183,7 @@ describe('EntityAowService', () => {
     });
 
     it('should handle empty units array', async () => {
+      service.entityId.set('SP01');
       const responseWithEmptyUnits = {
         ...mockApiResponse,
         response: {
@@ -202,6 +204,7 @@ describe('EntityAowService', () => {
     });
 
     it('should handle empty indicator summaries', async () => {
+      service.entityId.set('SP01');
       const responseWithEmptyIndicators = {
         ...mockIndicatorApiResponse,
         response: {
@@ -222,6 +225,7 @@ describe('EntityAowService', () => {
     });
 
     it('should handle null/undefined units', async () => {
+      service.entityId.set('SP01');
       const responseWithNullUnits = {
         ...mockApiResponse,
         response: {
@@ -242,6 +246,7 @@ describe('EntityAowService', () => {
     });
 
     it('should handle null/undefined indicator summaries', async () => {
+      service.entityId.set('SP01');
       const responseWithNullIndicators = {
         ...mockIndicatorApiResponse,
         response: {
@@ -262,6 +267,7 @@ describe('EntityAowService', () => {
     });
 
     it('should call setSideBarItems when units are available', async () => {
+      service.entityId.set('SP01');
       const setSideBarItemsSpy = jest.spyOn(service, 'setSideBarItems');
       jest.spyOn(mockApiService.resultsSE, 'GET_ClarisaGlobalUnits').mockReturnValue(of(mockApiResponse));
       jest.spyOn(mockApiService.resultsSE, 'GET_IndicatorContributionSummary').mockReturnValue(of(mockIndicatorApiResponse));
@@ -274,6 +280,7 @@ describe('EntityAowService', () => {
     });
 
     it('should not call setSideBarItems when no units are available', async () => {
+      service.entityId.set('SP01');
       const responseWithEmptyUnits = {
         ...mockApiResponse,
         response: {
