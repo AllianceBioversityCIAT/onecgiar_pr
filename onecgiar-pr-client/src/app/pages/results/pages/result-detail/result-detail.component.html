@@ -50,6 +50,9 @@
             Submitter:
             <span>{{ this.dataControlSE.currentResult?.initiative_official_code }} - {{ this.dataControlSE.currentResult?.initiative_name }}</span>
           </div>
+          <div class="item">
+            Funding source: <span>{{ this.dataControlSE.currentResult?.source_name }}</span>
+          </div>
         </div>
       </div>
       <router-outlet *ngIf="this.currentResultSE.resultIdIsconverted"></router-outlet>
