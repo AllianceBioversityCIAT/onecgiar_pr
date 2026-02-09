@@ -2858,6 +2858,8 @@ export class ResultsService {
       const mappedResult = {
         commonFields: commonFields ?? null,
         tocMetadata: tocResponse.result_toc_result ?? null,
+        contributors_result_toc_result:
+          tocResponse.contributors_result_toc_result ?? [],
         geographicScope: geoScope ?? null,
         contributingCenters: contributingCenters ?? [],
         contributingInstitutions: contributingInstitutions ?? [],

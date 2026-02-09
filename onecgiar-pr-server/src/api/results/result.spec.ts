@@ -209,18 +209,20 @@ describe('ResultsService (unit, pure mocks)', () => {
     getContributorInitiativeAndPrimaryByResult: jest.fn().mockResolvedValue([]),
     findOne: jest.fn().mockResolvedValue({ initiative_id: 1, id: 1 }),
     updateResultByInitiative: jest.fn().mockResolvedValue([]),
-    query: jest.fn().mockImplementation(async (query: string, params: any[]) => {
-      // Mock for getDraftInit status query
-      if (query && query.includes('SELECT status_id FROM result')) {
-        return [{ status_id: 1 }]; // Default status_id = 1 (not 5, so request_status_id will be 1)
-      }
-      // Mock for getDraftInit main query
-      if (query && query.includes('FROM share_result_request')) {
+    query: jest
+      .fn()
+      .mockImplementation(async (query: string, _params: any[]) => {
+        // Mock for getDraftInit status query
+        if (query && query.includes('SELECT status_id FROM result')) {
+          return [{ status_id: 1 }]; // Default status_id = 1 (not 5, so request_status_id will be 1)
+        }
+        // Mock for getDraftInit main query
+        if (query && query.includes('FROM share_result_request')) {
+          return [];
+        }
+        // Default return for any other query
         return [];
-      }
-      // Default return for any other query
-      return [];
-    }),
+      }),
   } as any;
 
   const mockResultByIntitutionsTypeRepository = {
@@ -540,8 +542,8 @@ describe('ResultsService (unit, pure mocks)', () => {
   } as any;
 
   beforeEach(async () => {
-    jest.clearAllMocks(); 
-    
+    jest.clearAllMocks();
+
     module = await Test.createTestingModule({
       providers: [
         ResultsService,
@@ -2081,8 +2083,7 @@ describe('ResultsService (unit, pure mocks)', () => {
       // Mock findOne for owner initiative (called in _updateContributingInitiatives)
       (
         mockResultByInitiativesRepository.findOne as jest.Mock
-      )
-        .mockResolvedValueOnce({ initiative_id: 1, is_active: true }); // Owner initiative
+      ).mockResolvedValueOnce({ initiative_id: 1, is_active: true }); // Owner initiative
 
       const res = await resultService.updateBilateralResultReview(
         100,
