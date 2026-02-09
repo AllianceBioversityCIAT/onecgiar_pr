@@ -34,6 +34,7 @@ import { ResultAnswerRepository } from '../../results/result-questions/repositor
 import { ResultAnswer } from '../../results/result-questions/entities/result-answers.entity';
 import { ResultsByProjectsRepository } from '../../results/results_by_projects/results_by_projects.repository';
 import { InnovationUseService } from '../innovation-use/innovation-use.service';
+import { ResultsCenterRepository } from '../../results/results-centers/results-centers.repository';
 
 @Injectable()
 export class InnovationDevService {
@@ -57,6 +58,7 @@ export class InnovationDevService {
     private readonly _resultScalingStudyUrlsRepository: Repository<ResultScalingStudyUrl>,
     private readonly _resultAnswerRepository: ResultAnswerRepository,
     private readonly _resultByProjectRepository: ResultsByProjectsRepository,
+    private readonly _resultsByCentersRepository: ResultsCenterRepository,
   ) {}
 
   async saveInnovationDev(
@@ -399,6 +401,28 @@ export class InnovationDevService {
         scaling_studies_urls = urls.map((u) => u.study_url);
       }
 
+      const hasLeadCenter = await this._resultsByCentersRepository.findOne({
+        where: {
+          result_id: resultId,
+          is_leading_result: true,
+          is_active: true,
+        },
+      });
+
+      const ipSupportCenter = await this._resultsInnovationsDevRepository.findOne({
+        where: {
+          results_id: resultId,
+          is_active: true,
+        },
+        relations: {
+          ip_support_center_object: true,
+        },
+      });
+
+      const ipSupportCenterId = hasLeadCenter
+        ? hasLeadCenter.center_id
+        : ipSupportCenter?.ip_support_center_object?.code ?? null;
+
       return {
         response: {
           ...innDevExists,
@@ -410,6 +434,8 @@ export class InnovationDevService {
           scaling_studies_urls,
           reference_materials,
           result,
+          has_lead_center: !!hasLeadCenter,
+          ip_support_center_id: ipSupportCenterId,
         },
         message: 'Successful response',
         status: HttpStatus.OK,
