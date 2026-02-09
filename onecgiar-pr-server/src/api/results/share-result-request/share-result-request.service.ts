@@ -18,6 +18,10 @@ import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 import { CreateShareResultRequestDto } from './dto/create-share-result-request.dto';
 import {
+  GetResultRequestQueryDto,
+  OrderDirection,
+} from './dto/get-result-request-query.dto';
+import {
   FindOptionsRelations,
   FindOptionsSelect,
   In,
@@ -450,11 +454,23 @@ export class ShareResultRequestService {
     );
   }
 
-  async getReceivedResultRequest(user: TokenDto) {
+  async getReceivedResultRequest(
+    user: TokenDto,
+    query?: GetResultRequestQueryDto,
+  ) {
     try {
       const role = await this._roleByUserRepository.$_getMaxRoleByUser(user.id);
       const inits = await this.getUserInitiatives(user);
-      const whereConditions = this.buildWhereReceivedConditions(inits, role);
+
+      const extraConditions: any = {};
+      if (query?.version_id != null) {
+        extraConditions.obj_result = { version_id: query.version_id };
+      }
+      const whereConditions = this.buildWhereReceivedConditions(
+        inits,
+        role,
+        Object.keys(extraConditions).length ? extraConditions : undefined,
+      );
 
       const receivedContributionsPendingOwner = await this.getRequest(
         whereConditions.pendingOwner,
@@ -466,13 +482,30 @@ export class ShareResultRequestService {
         whereConditions.done,
       );
 
+      let receivedContributionsPending = this.combineAndDistinct(
+        receivedContributionsPendingOwner,
+        receivedContributionsPendingShared,
+      );
+      let receivedContributionsDoneList = receivedContributionsDone;
+
+      if (query?.orderDirection != null || query?.limit != null) {
+        const direction = query.orderDirection ?? 'DESC';
+        receivedContributionsPending = this.sortAndLimitByRequestedDate(
+          receivedContributionsPending,
+          direction,
+          query.limit,
+        );
+        receivedContributionsDoneList = this.sortAndLimitByRequestedDate(
+          receivedContributionsDoneList,
+          direction,
+          query.limit,
+        );
+      }
+
       return {
         response: {
-          receivedContributionsPending: this.combineAndDistinct(
-            receivedContributionsPendingOwner,
-            receivedContributionsPendingShared,
-          ),
-          receivedContributionsDone,
+          receivedContributionsPending,
+          receivedContributionsDone: receivedContributionsDoneList,
         },
         message: 'Successful response',
         status: HttpStatus.OK,
@@ -480,6 +513,19 @@ export class ShareResultRequestService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  private sortAndLimitByRequestedDate(
+    items: any[],
+    orderDirection: OrderDirection,
+    limit?: number,
+  ): any[] {
+    const sorted = [...items].sort((a, b) => {
+      const aDate = a.requested_date ? new Date(a.requested_date).getTime() : 0;
+      const bDate = b.requested_date ? new Date(b.requested_date).getTime() : 0;
+      return orderDirection === 'ASC' ? aDate - bDate : bDate - aDate;
+    });
+    return limit != null ? sorted.slice(0, limit) : sorted;
   }
 
   async getReceivedResultRequestPopUp(user: TokenDto) {
@@ -693,14 +739,15 @@ export class ShareResultRequestService {
     );
   }
 
-  async getSentResultRequest(user: TokenDto) {
+  async getSentResultRequest(user: TokenDto, query?: GetResultRequestQueryDto) {
     try {
       const role = await this._roleByUserRepository.$_getMaxRoleByUser(user.id);
       const inits = await this.getUserInitiatives(user);
 
-      const extraContidions: any = {
-        requested_by: user.id,
-      };
+      const extraContidions: any = { requested_by: user.id };
+      if (query?.version_id != null) {
+        extraContidions.obj_result = { version_id: query.version_id };
+      }
       const whereConditions = this.buildWhereSentConditions(
         inits,
         role,
@@ -715,13 +762,30 @@ export class ShareResultRequestService {
       );
       const sentContributionsDone = await this.getRequest(whereConditions.done);
 
+      let sentContributionsPending = this.combineAndDistinct(
+        sentContributionsPendingOwner,
+        sentContributionsPendingShared,
+      );
+      let sentContributionsDoneList = sentContributionsDone;
+
+      if (query?.orderDirection != null || query?.limit != null) {
+        const direction = query.orderDirection ?? 'DESC';
+        sentContributionsPending = this.sortAndLimitByRequestedDate(
+          sentContributionsPending,
+          direction,
+          query.limit,
+        );
+        sentContributionsDoneList = this.sortAndLimitByRequestedDate(
+          sentContributionsDoneList,
+          direction,
+          query.limit,
+        );
+      }
+
       return {
         response: {
-          sentContributionsPending: this.combineAndDistinct(
-            sentContributionsPendingOwner,
-            sentContributionsPendingShared,
-          ),
-          sentContributionsDone,
+          sentContributionsPending,
+          sentContributionsDone: sentContributionsDoneList,
         },
         message: 'Successful response',
         status: HttpStatus.OK,
