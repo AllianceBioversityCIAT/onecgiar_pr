@@ -42,7 +42,7 @@ export class ResultsNotificationsService {
 
   get_sent_notifications(versionId?, callback?) {
     this.loadingSent = true;
-    this.sentData = { sentContributionsPending: null, sentContributionsDone: null };
+    this.sentData = { sentContributionsPending: [], sentContributionsDone: [] };
     console.log('[SENT] Fetching with version_id:', versionId);
     this.api.resultsSE.GET_sentRequest(versionId).subscribe({
       next: ({ response }) => {
@@ -72,7 +72,7 @@ export class ResultsNotificationsService {
 
   get_section_information(versionId?, callback?) {
     this.loadingReceived = true;
-    this.receivedData = { receivedContributionsPending: null, receivedContributionsDone: null };
+    this.receivedData = { receivedContributionsPending: [], receivedContributionsDone: [] };
     console.log('[RECEIVED] Fetching with version_id:', versionId);
     this.api.resultsSE.GET_allRequest(versionId).subscribe({
       next: ({ response }) => {
