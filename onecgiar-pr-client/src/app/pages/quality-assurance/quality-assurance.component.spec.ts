@@ -34,6 +34,7 @@ describe('QualityAssuranceComponent', () => {
         validateReadOnly: jest.fn()
       },
       dataControlSE: {
+        myInitiativesListReportingByPortfolio: mockInitiatives,
         detailSectionTitle: jest.fn(),
         getCurrentPhases: jest.fn().mockReturnValue(of({ response: [] })),
         reportingCurrentPhase: {
@@ -157,6 +158,7 @@ describe('QualityAssuranceComponent', () => {
 
   describe('GET_AllInitiatives', () => {
     it('should get initiatives and select first one', () => {
+      mockApiService.rolesSE.isAdmin = true;
       const spyGET_AllInitiatives = jest.spyOn(mockApiService.resultsSE, 'GET_AllInitiatives');
       const spySelectOptionEvent = jest.spyOn(component, 'selectOptionEvent');
 
@@ -169,6 +171,7 @@ describe('QualityAssuranceComponent', () => {
     });
 
     it('should handle empty initiatives array', () => {
+      mockApiService.rolesSE.isAdmin = true;
       jest.spyOn(mockApiService.resultsSE, 'GET_AllInitiatives').mockReturnValue(of({ response: [] }));
       const spySelectOptionEvent = jest.spyOn(component, 'selectOptionEvent');
 
@@ -180,6 +183,7 @@ describe('QualityAssuranceComponent', () => {
     });
 
     it('should handle null portfolioAcronym', () => {
+      mockApiService.rolesSE.isAdmin = true;
       mockApiService.dataControlSE.reportingCurrentPhase.portfolioAcronym = null;
       const spyGET_AllInitiatives = jest.spyOn(mockApiService.resultsSE, 'GET_AllInitiatives');
 

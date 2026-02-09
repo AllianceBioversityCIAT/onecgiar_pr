@@ -47,6 +47,12 @@ export class QualityAssuranceComponent implements OnInit {
   }
 
   GET_AllInitiatives() {
+    if (!this.api.rolesSE.isAdmin) {
+      this.official_code = this.api.dataControlSE.myInitiativesListReportingByPortfolio[0]?.official_code;
+      if (this.official_code) this.selectOptionEvent(this.official_code);
+      return;
+    }
+
     const activePortfolio = this.api.dataControlSE?.reportingCurrentPhase?.portfolioAcronym;
 
     this.api.resultsSE.GET_AllInitiatives(activePortfolio).subscribe(({ response }) => {
