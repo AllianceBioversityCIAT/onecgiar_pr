@@ -1,5 +1,4 @@
-import { Component, OnInit, inject, ChangeDetectorRef, ViewChild } from '@angular/core';
-import { finalize } from 'rxjs/operators';
+import { Component, OnInit, inject, ChangeDetectorRef, computed } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
@@ -11,7 +10,6 @@ import { ContributorsAndPartnersBody } from './models/contributorsAndPartnersBod
 import { ResultLevelService } from '../../../result-creator/services/result-level.service';
 import { InnovationUseResultsService } from '../../../../../../shared/services/global/innovation-use-results.service';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
-import { CPMultipleWPsComponent } from './components/multiple-wps/multiple-wps.component';
 
 @Component({
   selector: 'app-rd-contributors-and-partners',
@@ -26,11 +24,10 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   contributingInitiativesList = [];
   alertStatusMessage: string = `Partner organization or CG Center that you collaborated with or are currently collaborating with to generate this result.`;
   cgCentersMessage: string = `This section displays CGIAR Center partners as they appear in <a class="open_route" href="/result/result-detail/${this.resultCode}/theory-of-change?phase=${this.versionId}" target="_blank">Section 2, Theory of Change</a>.</li> Should you identify any inconsistencies, please update Section 2`;
-  tocConsumed = true
+  tocConsumed = true;
   disabledText = 'To remove this center, please contact your librarian';
   innovationUseResultsSE = inject(InnovationUseResultsService);
   fieldsManagerSE = inject(FieldsManagerService);
-  @ViewChild(CPMultipleWPsComponent) multipleWpsComponent: CPMultipleWPsComponent;
   constructor(
     public api: ApiService,
     public institutionsSE: InstitutionsService,
@@ -38,7 +35,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     public rdPartnersSE: RdContributorsAndPartnersService,
     private readonly customizedAlertsFeSE: CustomizedAlertsFeService,
     public centersSE: CentersService,
-    private cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef
   ) {
     this.api.dataControlSE.currentResultSectionName.set('Partners & Contributors');
   }
@@ -73,6 +70,11 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     }, 100);
     setTimeout(() => clearInterval(checkResultsList), 5000);
   }
+
+  isAvisaInitiative = computed(() => {
+    const code = this.api.dataControlSE.currentResultSignal?.()?.initiative_official_code ?? this.api.dataControlSE.currentResult?.initiative_official_code;
+    return code === 'SGP-02' || code === 'SGP02';
+  });
 
   GET_AllWithoutResults() {
     this.api.resultsSE.GET_resultById().subscribe({
@@ -192,7 +194,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   }
 
   onRemoveAcceptedContributing(index: number) {
-    this.rdPartnersSE.partnersBody.contributing_initiatives.accepted_contributing_initiatives.splice(index, 1);
+    this.rdPartnersSE.partnersBody.contributing_initiatives?.accepted_contributing_initiatives?.splice(index, 1);
   }
 
   onRemoveNewContributing(index: number) {
@@ -208,8 +210,8 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     return `Please select the ${entity} leading this result. <b>Only ${entity}s already added in this section can be selected as the result lead.</b>`;
   }
 
-  onPlannedResultChange() {
-    this.rdPartnersSE.partnersBody.result_toc_result?.result_toc_results?.forEach((tab: any) => {
+  onPlannedResultChange(item: any) {
+    item?.result_toc_results?.forEach((tab: any) => {
       if (tab.indicators?.[0]) {
         tab.indicators[0].related_node_id = null;
         tab.indicators[0].toc_results_indicator_id = null;
@@ -224,23 +226,20 @@ export class RdContributorsAndPartnersComponent implements OnInit {
 
     this.tocConsumed = false;
 
-    this.api.resultsSE.PATCH_updateUnplannedResult({ planned_result: this.rdPartnersSE.partnersBody.result_toc_result.planned_result })
-      .pipe(
-        finalize(() => {
-          this.tocConsumed = true;
-          this.cdr.detectChanges();
-        })
-      )
-      .subscribe({
-        next: () => {
-          if (this.multipleWpsComponent) {
-            this.multipleWpsComponent.GET_outputList();
-          }
-        },
-        error: (err) => {
-          console.error('Error updating planned result:', err);
-        }
-      });
+    setTimeout(() => {
+      this.tocConsumed = true;
+      this.cdr.detectChanges();
+    }, 200);
+  }
+
+  getContributorDescription(contributor: any) {
+    const contributorsText = `<strong>${contributor?.official_code} ${contributor?.short_name}</strong> - Does this result align with the Program's planned TOC indicators?`;
+
+    if (!contributor?.result_toc_results?.length) {
+      return `<strong>${contributor?.official_code} ${contributor?.short_name}</strong> - Pending confirmation`;
+    }
+
+    return contributorsText;
   }
 
   formatResultLabel(option: any): string {

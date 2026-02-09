@@ -173,14 +173,21 @@ export class RdContributorsAndPartnersService implements OnDestroy {
 
         if (this.partnersBody?.result_toc_result?.result_toc_results !== null) {
           this.result_toc_result = this.partnersBody?.result_toc_result;
-          this.result_toc_result.planned_result = this.partnersBody?.result_toc_result?.result_toc_results[0]?.planned_result ?? null;
+          this.result_toc_result.planned_result = this.partnersBody?.result_toc_result?.result_toc_results?.[0]?.planned_result ?? null;
           this.result_toc_result.showMultipleWPsContent = true;
+        }
+        const primaryInit = this.partnersBody?.contributing_and_primary_initiative?.find(
+          (i: { id?: number }) => i?.id === this.partnersBody?.result_toc_result?.initiative_id
+        );
+        const initiativeCode = primaryInit?.official_code ?? this.api.dataControlSE.currentResult?.initiative_official_code ?? this.api.dataControlSE.currentResultSignal?.()?.initiative_official_code;
+        if ((initiativeCode === 'SGP-02' || initiativeCode === 'SGP02') && this.partnersBody?.result_toc_result) {
+          this.partnersBody.result_toc_result.planned_result = false;
         }
 
         if (this.partnersBody?.contributors_result_toc_result !== null) {
           this.contributors_result_toc_result = this.partnersBody?.contributors_result_toc_result;
           this.contributors_result_toc_result.forEach((tab: any, index) => {
-            tab.planned_result = tab.result_toc_results[0]?.planned_result ?? null;
+            tab.planned_result = tab.result_toc_results?.[0]?.planned_result ?? null;
             tab.index = index;
             tab.showMultipleWPsContent = true;
           });

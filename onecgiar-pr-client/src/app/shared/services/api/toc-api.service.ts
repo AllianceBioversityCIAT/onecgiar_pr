@@ -15,14 +15,19 @@ export class TocApiService {
     return this.http.get<any>(`${dynamicApiBaseURl}level/get/all`);
   }
 
-  GET_tocLevelsByconfig(result_id, initiativeId, levelId, isP25: boolean = false) {
+  GET_tocLevelsByconfig(result_id, initiativeId, levelId, isP25: boolean = false, isPlanned?: boolean) {
     const dynamicApiBaseURl = isP25 ? this.apiBaseUrlV2 : this.apiBaseUrl;
-    return this.http.get<any>(`${dynamicApiBaseURl}result/${result_id}/initiative/${initiativeId}/level/${levelId}`).pipe(
+    const queryParam = `?planned=${!!isPlanned}`;
+
+    return this.http.get<any>(`${dynamicApiBaseURl}result/${result_id}/initiative/${initiativeId}/level/${levelId}${queryParam}`).pipe(
       map(resp => {
-        resp?.response.map(
-          innovation =>
-            (innovation.extraInformation = `<strong>${innovation.wp_short_name}</strong> <br> <div class="select_item_description">${innovation.title}</div>`)
-        );
+        resp?.response.map(innovation => {
+          const wpLabel = innovation.wp_short_name ?? '';
+          innovation.extraInformation = wpLabel
+            ? `<strong>${wpLabel}</strong> <br> <div class="select_item_description">${innovation.title ?? ''}</div>`
+            : `<div class="select_item_description">${innovation.title ?? ''}</div>`;
+          return innovation;
+        });
         return resp;
       })
     );

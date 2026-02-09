@@ -1,10 +1,8 @@
-import { Component, Input, OnChanges, WritableSignal, computed, effect, inject, signal } from '@angular/core';
+import { Component, Input, OnChanges, SimpleChanges, computed, inject, signal } from '@angular/core';
 import { CustomizedAlertsFeService } from '../../../../../../../../shared/services/customized-alerts-fe.service';
-
 import { FieldsManagerService } from '../../../../../../../../shared/services/fields-manager.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { RdContributorsAndPartnersService } from '../../rd-contributors-and-partners.service';
-import { ResultToResultInterfaceToc } from '../../../../../../../ipsr/pages/innovation-package-detail/pages/ipsr-contributors/model/contributorsBody';
 import { TocTab } from '../../../../../../../../shared/interfaces/toc-tab.interface';
 
 @Component({
@@ -15,14 +13,17 @@ import { TocTab } from '../../../../../../../../shared/interfaces/toc-tab.interf
 })
 export class CPMultipleWPsComponent implements OnChanges {
   @Input() editable: boolean;
-  @Input() initiative: ResultToResultInterfaceToc | null | any;
-  @Input() initiativeId: WritableSignal<number | null>;
+  @Input() initiative: any;
+  @Input() initiativeId: number | null;
   @Input() isContributor?: boolean = false;
   @Input() isNotifications?: boolean = false;
   @Input() resultLevelId: number | string;
   @Input() isIpsr: boolean = false;
   @Input() showMultipleWPsContent: boolean = true;
   @Input() isUnplanned: boolean = false;
+  @Input() hidden: boolean = false;
+  @Input() forceP25: boolean = false;
+  @Input() isAvisa: boolean = false;
   activeTab: TocTab;
   activeTabSignal = signal<TocTab | null>(null);
   activeTabIndex: number = 0;
@@ -41,17 +42,21 @@ export class CPMultipleWPsComponent implements OnChanges {
   rdPartnersSE = inject(RdContributorsAndPartnersService);
   constructor(
     public api: ApiService,
-    private customizedAlertsFeSE: CustomizedAlertsFeService
-  ) { }
+    private readonly customizedAlertsFeSE: CustomizedAlertsFeService
+  ) {}
 
-  onChangesInitiative = effect(() => {
-    if (!this.initiativeId()) return;
+  private fetchListsForInitiative(): void {
+    if (!this.initiativeId) return;
     this.GET_outcomeList();
-    this.GET_outputList();
     this.GET_EOIList();
-  });
+    this.GET_outputList();
+  }
 
-  ngOnChanges() {
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['initiativeId'] || changes['initiative'] || changes['isUnplanned']) {
+      this.fetchListsForInitiative();
+    }
+
     this.initiative?.result_toc_results?.forEach((tab: any, index: number) => {
       tab.uniqueId = index.toString();
     });
@@ -73,78 +78,85 @@ export class CPMultipleWPsComponent implements OnChanges {
       this.activeTabSignal.set(this.activeTab);
     } else {
       this.activeTabIndex = 0;
-      this.activeTab = this.initiative?.result_toc_results[0];
+      this.activeTab = this.initiative?.result_toc_results?.[0];
       this.activeTabSignal.set(this.activeTab);
     }
   }
 
   GET_outputList() {
-    this.api.tocApiSE
-      .GET_tocLevelsByconfig(
-        this.api.dataControlSE.currentNotification?.result_id ||
-        this.activeTab?.results_id ||
-        this.api.dataControlSE?.currentResult?.id ||
-        this.api.dataControlSE.currentResultSignal()?.result_id,
-        this.initiativeId(),
-        1,
-        this.fieldsManagerSE.isP25()
-      )
-      .subscribe({
-        next: ({ response }) => {
-          this.outputList.set(response);
-        },
-        error: err => {
-          this.outputList.set([]);
-          console.error(err);
-        }
-      });
+    if (!this.initiativeId) return;
+    const resultId =
+      this.api.dataControlSE.currentNotification?.result_id ||
+      this.activeTab?.results_id ||
+      this.api.dataControlSE?.currentResult?.id ||
+      this.api.dataControlSE.currentResultSignal()?.result_id ||
+      this.api.dataControlSE.currentResultSignal()?.id;
+
+    if (!resultId) return;
+
+    const isPlanned = !this.isUnplanned;
+    this.api.tocApiSE.GET_tocLevelsByconfig(resultId, this.initiativeId, 1, this.forceP25 ? true : this.fieldsManagerSE.isP25(), isPlanned).subscribe({
+      next: ({ response }) => {
+        this.outputList.set(response || []);
+      },
+      error: err => {
+        this.outputList.set([]);
+        console.error(err);
+      }
+    });
   }
 
   GET_outcomeList() {
-    this.api.tocApiSE
-      .GET_tocLevelsByconfig(
-        this.api.dataControlSE.currentNotification?.result_id ||
-        this.activeTab?.results_id ||
-        this.api.dataControlSE?.currentResult?.id ||
-        this.api.dataControlSE.currentResultSignal()?.result_id,
-        this.initiativeId(),
-        2,
-        this.fieldsManagerSE.isP25()
-      )
-      .subscribe({
-        next: ({ response }) => {
-          this.outcomeList.set(response);
-        },
-        error: err => {
-          this.outcomeList.set([]);
-          console.error(err);
-        }
-      });
+    if (!this.initiativeId) return;
+    const resultId =
+      this.api.dataControlSE.currentNotification?.result_id ||
+      this.activeTab?.results_id ||
+      this.api.dataControlSE?.currentResult?.id ||
+      this.api.dataControlSE.currentResultSignal()?.result_id ||
+      this.api.dataControlSE.currentResultSignal()?.id;
+
+    if (!resultId) return;
+
+    const isPlanned = !this.isUnplanned;
+    this.api.tocApiSE.GET_tocLevelsByconfig(resultId, this.initiativeId, 2, this.forceP25 ? true : this.fieldsManagerSE.isP25(), isPlanned).subscribe({
+      next: ({ response }) => {
+        this.outcomeList.set(response || []);
+      },
+      error: err => {
+        this.outcomeList.set([]);
+        console.error(err);
+      }
+    });
   }
 
   GET_EOIList() {
-    this.api.tocApiSE
-      .GET_tocLevelsByconfig(
-        this.api.dataControlSE.currentNotification?.result_id ||
-        this.activeTab?.results_id ||
-        this.api.dataControlSE?.currentResult?.id ||
-        this.api.dataControlSE.currentResultSignal()?.result_id,
-        this.initiativeId(),
-        3,
-        this.fieldsManagerSE.isP25()
-      )
-      .subscribe({
-        next: ({ response }) => {
+    if (!this.initiativeId) return;
+    const resultId =
+      this.api.dataControlSE.currentNotification?.result_id ||
+      this.activeTab?.results_id ||
+      this.api.dataControlSE?.currentResult?.id ||
+      this.api.dataControlSE.currentResultSignal()?.result_id ||
+      this.api.dataControlSE.currentResultSignal()?.id;
+
+    if (!resultId) return;
+
+    const isPlanned = !this.isUnplanned;
+    this.api.tocApiSE.GET_tocLevelsByconfig(resultId, this.initiativeId, 3, this.forceP25 ? true : this.fieldsManagerSE.isP25(), isPlanned).subscribe({
+      next: ({ response }) => {
+        if (response && Array.isArray(response)) {
           response.forEach((item, index) => {
             item.uniqueId = `${item.toc_result_id}-${index}`;
           });
           this.eoiList.set(response);
-        },
-        error: err => {
+        } else {
           this.eoiList.set([]);
-          console.error(err);
         }
-      });
+      },
+      error: err => {
+        this.eoiList.set([]);
+        console.error(err);
+      }
+    });
   }
 
   dynamicTabTitle = computed(() => {
@@ -183,7 +195,7 @@ export class CPMultipleWPsComponent implements OnChanges {
     const newIndex = this.initiative?.result_toc_results.length;
     this.initiative.result_toc_results.push({
       action_area_outcome_id: null,
-      initiative_id: this.initiativeId(),
+      initiative_id: this.initiativeId,
       official_code: this.initiative?.official_code,
       planned_result: this.initiative?.planned_result,
       results_id: null,
@@ -233,7 +245,7 @@ export class CPMultipleWPsComponent implements OnChanges {
     });
 
     this.activeTabIndex = 0;
-    this.activeTab = this.initiative?.result_toc_results[0];
+    this.activeTab = this.initiative?.result_toc_results?.[0];
     this.activeTabSignal.set(this.activeTab);
     this.rdPartnersSE.savedActiveTabIndex = 0;
 

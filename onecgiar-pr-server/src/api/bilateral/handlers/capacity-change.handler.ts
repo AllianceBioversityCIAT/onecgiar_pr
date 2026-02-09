@@ -17,7 +17,7 @@ import { CapdevsDeliveryMethodRepository } from '../../results/capdevs-delivery-
 export class CapacityChangeBilateralHandler
   implements BilateralResultTypeHandler
 {
-  readonly resultType = ResultTypeEnum.CAPACITY_CHANGE;
+  readonly resultType = ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT;
   private readonly logger = new Logger(CapacityChangeBilateralHandler.name);
   private readonly capdevTermLabelToId = new Map<string, number>([
     ['phd', 1],
@@ -54,12 +54,16 @@ export class CapacityChangeBilateralHandler
     resultId,
     userId,
   }: HandlerAfterCreateContext): Promise<void> {
-    if (bilateralDto.result_type_id !== ResultTypeEnum.CAPACITY_CHANGE) return;
+    if (
+      bilateralDto.result_type_id !==
+      ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT
+    )
+      return;
 
     const capacitySharing = bilateralDto.capacity_sharing;
     if (!capacitySharing) {
       throw new BadRequestException(
-        'capacity_sharing object is required for CAPACITY_CHANGE results.',
+        'capacity_sharing object is required for capacity sharing results.',
       );
     }
 
@@ -95,7 +99,7 @@ export class CapacityChangeBilateralHandler
         last_updated_by: userId,
       });
       this.logger.debug(
-        `Updated capacity sharing data for result ${resultId} (CAPACITY_CHANGE).`,
+        `Updated capacity sharing data for result ${resultId} (CAPACITY_SHARING).`,
       );
       return;
     }
@@ -109,7 +113,7 @@ export class CapacityChangeBilateralHandler
 
     await this._resultsCapacityDevelopmentsRepository.save(newRecord);
     this.logger.log(
-      `Stored capacity sharing data for result ${resultId} (CAPACITY_CHANGE).`,
+      `Stored capacity sharing data for result ${resultId} (CAPACITY_SHARING).`,
     );
   }
 

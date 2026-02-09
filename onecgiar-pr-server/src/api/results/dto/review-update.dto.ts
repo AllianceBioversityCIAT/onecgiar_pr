@@ -1,0 +1,454 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsString,
+  IsOptional,
+  IsNumber,
+  IsNotEmpty,
+  ValidateNested,
+} from 'class-validator';
+import { CreateGeographicLocationDto } from '../../results-framework-reporting/geographic-location/dto/create-geographic-location.dto';
+import { ResultsCenterDto } from '../results-centers/dto/results-center.dto';
+import { CreateResultsTocResultDto } from '../../results/results-toc-results/dto/create-results-toc-result.dto';
+import { BilateralProjectLinkDto } from '../results_by_institutions/dto/save-partners-v2.dto';
+import { ResultsByInstitution } from '../../results/results_by_institutions/entities/results_by_institution.entity';
+import { CapdevDto } from '../summary/dto/create-capacity-developents.dto';
+import { ResultIpMeasure } from '../../ipsr/result-ip-measures/entities/result-ip-measure.entity';
+import { Type } from 'class-transformer';
+import { ResultActor } from '../result-actors/entities/result-actor.entity';
+import { ResultsByInstitutionType } from '../results_by_institution_types/entities/results_by_institution_type.entity';
+
+export class CommonFieldsDto {
+  @ApiProperty({
+    description: 'Result identifier',
+    example: 9270,
+  })
+  @IsNotEmpty()
+  @IsNumber()
+  id: number;
+
+  @ApiPropertyOptional({
+    description: 'Description of the result (Minimum Data Standard field)',
+    example: 'Updated result description',
+  })
+  @IsOptional()
+  @IsString()
+  result_description?: string;
+
+  @ApiProperty({
+    description: 'Result type identifier',
+    example: 1,
+  })
+  @IsNotEmpty()
+  @IsNumber()
+  result_type_id: number;
+}
+
+export class EvidenceDto {
+  @ApiPropertyOptional({
+    description: 'Evidence identifier',
+    example: 11179,
+  })
+  @IsString()
+  @IsOptional()
+  id?: string;
+
+  @ApiProperty({
+    description: 'Evidence link or URL',
+    example: 'https://example.org/paper-123',
+  })
+  @IsString()
+  link: string;
+
+  @ApiProperty({
+    description: 'Indicates whether the evidence is stored in SharePoint',
+    example: false,
+  })
+  @IsNumber()
+  is_sharepoint: number;
+}
+
+export class InnovationDevelopmentDto {
+  @ApiProperty({
+    description: 'Innovation development identifier',
+    example: 1882,
+  })
+  @IsNumber()
+  result_innovation_dev_id: number;
+
+  @ApiProperty({
+    description: 'Innovation nature identifier',
+    example: 13,
+  })
+  @IsNumber()
+  innovation_nature_id: number;
+
+  @ApiProperty({
+    description: 'Innovation type identifier',
+    example: 13,
+  })
+  @IsNumber()
+  innovation_type_id: number;
+
+  @ApiProperty({
+    description: 'Innovation type name',
+    example: 'Capacity development innovation',
+  })
+  @IsString()
+  innovation_type_name: string;
+
+  @ApiPropertyOptional({
+    description: 'Developers involved in the innovation',
+    example: 'Ms. Yodalieva Markhabo',
+  })
+  @IsOptional()
+  @IsString()
+  innovation_developers?: string;
+
+  @ApiProperty({
+    description: 'Innovation readiness level identifier',
+    example: 11,
+  })
+  @IsNumber()
+  innovation_readiness_level_id: number;
+
+  @ApiPropertyOptional({
+    description: 'Readiness level identifier (legacy or duplicated field)',
+    example: 11,
+  })
+  @IsOptional()
+  @IsNumber()
+  readinness_level_id?: number;
+
+  @ApiProperty({
+    description: 'Readiness level code',
+    example: '0',
+  })
+  @IsString()
+  level: string;
+
+  @ApiProperty({
+    description: 'Readiness level name',
+    example: 'Idea',
+  })
+  @IsString()
+  name: string;
+}
+
+export class InvesmentDto {
+  @ApiProperty({
+    description: 'Entity providing the investment',
+    example: '15',
+    type: Number,
+  })
+  id: number;
+
+  @ApiProperty({
+    description: 'Total value of the investment',
+    example: '1000000',
+    type: String,
+  })
+  kind_cash: string;
+
+  @ApiProperty({
+    description: 'Indicates whether the investment is determined',
+    example: true,
+    type: Boolean,
+  })
+  is_determined: boolean;
+}
+export class InnovUseDto {
+  @ApiProperty({
+    description: 'List of actors related to the result',
+    type: [ResultActor],
+  })
+  @IsOptional()
+  actors?: ResultActor[];
+
+  @ApiProperty({
+    description: 'Measures associated with the result',
+    type: [ResultIpMeasure],
+  })
+  @IsOptional()
+  measures?: ResultIpMeasure[];
+
+  @ApiProperty({
+    description: 'Organizations involved, classified by institution type',
+    type: [ResultsByInstitutionType],
+  })
+  @IsOptional()
+  organizations?: ResultsByInstitutionType[];
+
+  @ApiProperty({
+    description: 'Investment partners related to the innovation use',
+    type: [InvesmentDto],
+  })
+  @IsOptional()
+  investment_partners?: InvesmentDto[];
+}
+
+export class ImplementingOrganizationDto {
+  @ApiPropertyOptional({
+    description: 'Institution identifier',
+    example: 25,
+    nullable: true,
+  })
+  @IsOptional()
+  @IsNumber()
+  institutions_id?: number | null;
+
+  @ApiPropertyOptional({
+    description: 'Institution acronym',
+    example: 'CIAT',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  acronym?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Institution name',
+    example: 'International Center for Tropical Agriculture',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  institution_name?: string | null;
+}
+
+export class PolicyChangeDto {
+  @ApiPropertyOptional({
+    description: 'Policy change identifier',
+    example: 168,
+  })
+  @IsOptional()
+  @IsNumber()
+  result_policy_change_id?: number;
+
+  @ApiPropertyOptional({
+    description: 'Policy type identifier',
+    example: 3,
+  })
+  @IsNumber()
+  @IsOptional()
+  policy_type_id: number;
+
+  @ApiPropertyOptional({
+    description: 'Policy stage identifier',
+    example: 7,
+  })
+  @IsNumber()
+  @IsOptional()
+  policy_stage_id: number;
+
+  @ApiPropertyOptional({
+    description: 'Policy stage name',
+    example: 'Stage 2',
+  })
+  @IsString()
+  @IsOptional()
+  policy_stage_name: string;
+
+  @ApiPropertyOptional({
+    description: 'Policy type name',
+    example: 'Policy or strategy',
+  })
+  @IsString()
+  @IsOptional()
+  policy_type_name: string;
+
+  @ApiPropertyOptional({
+    type: () => [ImplementingOrganizationDto],
+    description: 'Organizations implementing the policy change',
+    example: [
+      {
+        institutions_id: null,
+        acronym: null,
+        institution_name: null,
+      },
+    ],
+  })
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => ImplementingOrganizationDto)
+  implementing_organization?: ImplementingOrganizationDto[];
+}
+
+export class ReviewUpdateDto {
+  @ApiProperty({
+    type: () => CommonFieldsDto,
+    description: 'Common fields of the result',
+    example: {
+      id: 9270,
+      result_description: 'Updated result description',
+    },
+  })
+  @IsNotEmpty()
+  @Type(() => CommonFieldsDto)
+  @ValidateNested()
+  commonFields: CommonFieldsDto;
+
+  @ApiPropertyOptional({
+    type: () => CreateGeographicLocationDto,
+    description: 'Geographic scope of the result',
+    example: {
+      has_countries: true,
+      has_regions: true,
+      regions: [{ id: 53 }, { id: 29 }],
+      countries: [{ id: 4 }, { id: 248 }],
+      geo_scope_id: 2,
+      extra_geo_scope_id: 2,
+      extra_regions: [{ id: 61 }, { id: 154 }],
+      extra_countries: [{ id: 36 }],
+      has_extra_countries: true,
+      has_extra_regions: true,
+      has_extra_geo_scope: true,
+    },
+  })
+  @IsOptional()
+  geographicScope?: CreateGeographicLocationDto;
+
+  @ApiPropertyOptional({
+    type: () => [ResultsCenterDto],
+    description:
+      'List of contributing CGIAR centers associated with the result.',
+    example: [
+      {
+        id: 12362,
+        primary: 1,
+        from_cgspace: 0,
+        is_active: 1,
+        created_date: '2026-01-22T20:45:22.944Z',
+        last_updated_date: '2026-01-22T20:45:22.944Z',
+        result_id: '9270',
+        created_by: 1028,
+        last_updated_by: null,
+        code: 'CENTER-03',
+        name: 'Alliance of Bioversity and CIAT - Regional Hub (International Center for Tropical Agriculture / Centro Internacional de Agricultura Tropical)',
+        acronym: 'CIAT (Alliance)',
+        is_leading_result: 1,
+      },
+      {
+        id: 12364,
+        primary: 0,
+        from_cgspace: 1,
+        is_active: 1,
+        created_date: '2026-01-22T20:45:24.849Z',
+        last_updated_date: '2026-01-22T20:45:24.849Z',
+        result_id: '9270',
+        created_by: 1028,
+        last_updated_by: null,
+        code: 'CENTER-07',
+        name: 'International Center for Agricultural Research in the Dry Areas',
+        acronym: 'ICARDA',
+        is_leading_result: null,
+      },
+    ],
+  })
+  @IsOptional()
+  contributingCenters?: ResultsCenterDto[];
+
+  @ApiPropertyOptional({
+    description:
+      'Contributing initiatives grouped by accepted and pending status.',
+    type: () => Object,
+    example: {
+      accepted_contributing_initiatives: [],
+      pending_contributing_initiatives: [
+        {
+          id: 54,
+          official_code: 'SP05',
+          name: 'Better Diets and Nutrition',
+          short_name: 'Better Diets and Nutrition',
+          active: 1,
+          action_area_id: null,
+          toc_id: null,
+          portfolio_name: 'CGIAR portfolio 2025-2030',
+          portfolio_start_date: 2025,
+          portfolio_end_date: 2030,
+          portfolio_is_active: 0,
+          full_name:
+            'SP05 - <strong>Better Diets and Nutrition</strong> - Better Diets and Nutrition',
+          selected: true,
+          new: true,
+          is_active: true,
+        },
+        {
+          id: 55,
+          official_code: 'SP06',
+          name: 'Climate Action',
+          short_name: 'Climate Action',
+          active: 1,
+          action_area_id: null,
+          toc_id: null,
+          portfolio_name: 'CGIAR portfolio 2025-2030',
+          portfolio_start_date: 2025,
+          portfolio_end_date: 2030,
+          portfolio_is_active: 0,
+          full_name: 'SP06 - <strong>Climate Action</strong> - Climate Action',
+          selected: true,
+          new: true,
+          is_active: true,
+        },
+      ],
+    },
+  })
+  @IsOptional()
+  contributingInitiatives?: CreateResultsTocResultDto['contributing_initiatives'];
+
+  @ApiPropertyOptional({
+    type: () => [BilateralProjectLinkDto],
+    description: 'Bilateral projects linked to the result.',
+    example: [{ project_id: 142 }, { project_id: 4 }],
+  })
+  @IsOptional()
+  contributingProjects?: Array<number | string | BilateralProjectLinkDto>;
+
+  @ApiPropertyOptional({
+    type: () => [ResultsByInstitution],
+    description: 'Institutions contributing to the result.',
+  })
+  @IsOptional()
+  contributingInstitutions?: ResultsByInstitution[];
+
+  @ApiPropertyOptional({
+    type: () => [EvidenceDto],
+    description: 'List of evidences associated with the result',
+    example: [
+      {
+        id: 11179,
+        link: 'https://example.org/paper-123',
+        is_sharepoint: false,
+      },
+    ],
+  })
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => EvidenceDto)
+  evidence?: EvidenceDto[];
+
+  @ApiPropertyOptional({
+    description: 'Capacity development of the result.',
+    example: {
+      result_capacity_development_id: 123,
+      male_using: 1,
+      female_using: 1,
+      non_binary_using: 1,
+    },
+  })
+  @IsOptional()
+  resultTypeResponse?:
+    | CapdevDto
+    | InnovationDevelopmentDto
+    | PolicyChangeDto
+    | InnovUseDto;
+
+  @ApiProperty({
+    description:
+      'Explanation for the update. Required if any ToC or Minimum Data Standard field was modified.',
+    example: 'Updated title and ToC mapping based on reviewer feedback',
+    required: false,
+  })
+  @IsString()
+  @IsNotEmpty()
+  updateExplanation: string;
+}
