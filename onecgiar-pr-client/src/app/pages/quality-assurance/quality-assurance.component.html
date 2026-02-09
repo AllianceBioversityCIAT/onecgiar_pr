@@ -1,7 +1,7 @@
 <div class="local_container section_container">
   <app-pr-field-header label="Select Entity"></app-pr-field-header>
   <p-select
-    [options]="allInitiatives"
+    [options]="this.api.rolesSE.isAdmin ? allInitiatives : this.api.dataControlSE.myInitiativesListReportingByPortfolio"
     [(ngModel)]="official_code"
     optionLabel="full_name"
     optionValue="official_code"
