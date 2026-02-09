@@ -353,17 +353,20 @@ describe('BilateralService (unit)', () => {
 
   it('ensureUniqueTitle should validate title and uniqueness', async () => {
     const { service, stubs } = makeService();
-    await expect(service.ensureUniqueTitle('   ')).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
+    const versionId = 1;
+    await expect(
+      service.ensureUniqueTitle('   ', versionId),
+    ).rejects.toBeInstanceOf(BadRequestException);
 
     stubs.resultRepository.findOne.mockResolvedValueOnce({ id: 1 });
-    await expect(service.ensureUniqueTitle('Title')).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
+    await expect(
+      service.ensureUniqueTitle('Title', versionId),
+    ).rejects.toBeInstanceOf(BadRequestException);
 
     stubs.resultRepository.findOne.mockResolvedValueOnce(null);
-    await expect(service.ensureUniqueTitle('Title')).resolves.toBeUndefined();
+    await expect(
+      service.ensureUniqueTitle('Title', versionId),
+    ).resolves.toBeUndefined();
   });
 
   it('runResultTypeHandlers should call handler.afterCreate', async () => {
