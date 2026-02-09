@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { BiReportsService } from './bi-reports.service';
 import { CreateBiReportDto } from './dto/create-bi-report.dto';
 import { GetBiSubpagesDto } from './dto/get-bi-subpages.dto';
@@ -8,7 +16,7 @@ import { DisabledEndpointGuard } from '../../shared/guards/disabled-endpoint.gua
 @Controller()
 @UseGuards(DisabledEndpointGuard)
 export class BiReportsController {
-  constructor(private readonly biReportsService: BiReportsService) { }
+  constructor(private readonly biReportsService: BiReportsService) {}
 
   @DisabledEndpoint()
   @Post()
