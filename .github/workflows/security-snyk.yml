@@ -2,10 +2,14 @@ name: Security Scan (Snyk)
 
 on:
   pull_request:
+    branches:
+      - master
+      - dev
+      - staging
   push:
     branches:
-      - main
       - master
+      - staging-security-scanning
   schedule:
     # Weekly on Monday at 09:00 UTC
     - cron: '0 9 * * 1'
