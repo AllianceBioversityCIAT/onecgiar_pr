@@ -35,7 +35,10 @@
   <div class="updates_container_content">
     <h1 class="updates_container_header_title">Unread</h1>
 
-    @if (notificationsPending.length > 0) {
+    @if (this.resultsNotificationsSE.loadingUpdates) {
+      <app-skeleton-notification-item></app-skeleton-notification-item>
+      <app-skeleton-notification-item></app-skeleton-notification-item>
+    } @else if (notificationsPending.length > 0) {
       <div class="updates_container_content_item">
         @for (item of notificationsPending; track $index) {
           <app-update-notification [notification]="item" />
@@ -49,7 +52,10 @@
   <div class="updates_container_content">
     <h1 class="updates_container_header_title">Latest</h1>
 
-    @if (notificationsViewed.length > 0) {
+    @if (this.resultsNotificationsSE.loadingUpdates) {
+      <app-skeleton-notification-item></app-skeleton-notification-item>
+      <app-skeleton-notification-item></app-skeleton-notification-item>
+    } @else if (notificationsViewed.length > 0) {
       <div class="updates_container_content_item">
         @for (item of notificationsViewed; track $index) {
           <app-update-notification [notification]="item" />

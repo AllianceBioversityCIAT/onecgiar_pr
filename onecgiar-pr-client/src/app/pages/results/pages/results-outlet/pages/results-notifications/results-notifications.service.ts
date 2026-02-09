@@ -23,6 +23,10 @@ export class ResultsNotificationsService {
 
   updatesPopUpData = [];
 
+  loadingReceived = false;
+  loadingSent = false;
+  loadingUpdates = false;
+
   dataIPSR = [];
   notificationLength = null;
   phaseFilter = null;
@@ -37,9 +41,12 @@ export class ResultsNotificationsService {
   ) {}
 
   get_sent_notifications(versionId?, callback?) {
+    this.loadingSent = true;
+    this.sentData = { sentContributionsPending: null, sentContributionsDone: null };
     console.log('[SENT] Fetching with version_id:', versionId);
     this.api.resultsSE.GET_sentRequest(versionId).subscribe({
       next: ({ response }) => {
+        console.log('[SENT] Response:', response);
         if (!response) {
           return;
         }
@@ -56,14 +63,20 @@ export class ResultsNotificationsService {
         };
       },
       error: err => console.error(err),
-      complete: () => callback?.()
+      complete: () => {
+        this.loadingSent = false;
+        callback?.();
+      }
     });
   }
 
   get_section_information(versionId?, callback?) {
+    this.loadingReceived = true;
+    this.receivedData = { receivedContributionsPending: null, receivedContributionsDone: null };
     console.log('[RECEIVED] Fetching with version_id:', versionId);
     this.api.resultsSE.GET_allRequest(versionId).subscribe({
       next: ({ response }) => {
+        console.log('[RECEIVED] Response:', response);
         if (!response) {
           return;
         }
@@ -84,14 +97,20 @@ export class ResultsNotificationsService {
         };
       },
       error: err => console.error(err),
-      complete: () => callback?.()
+      complete: () => {
+        this.loadingReceived = false;
+        callback?.();
+      }
     });
   }
 
   get_updates_notifications(versionId?) {
+    this.loadingUpdates = true;
+    this.updatesData = { notificationAnnouncements: [], notificationsPending: [], notificationsViewed: [] };
     console.log('[UPDATES] Fetching with version_id:', versionId);
     this.api.resultsSE.GET_requestUpdates(versionId).subscribe({
       next: ({ response }) => {
+        console.log('[UPDATES] Response:', response);
         const { notificationsPending, notificationsViewed, notificationAnnouncement } = response;
 
         const orderedNotificationsPending = notificationsPending.sort((a, b) => Date.parse(b.created_date) - Date.parse(a.created_date));
@@ -104,7 +123,10 @@ export class ResultsNotificationsService {
           notificationsViewed: orderedNotificationsViewed
         };
       },
-      error: err => console.error(err)
+      error: err => console.error(err),
+      complete: () => {
+        this.loadingUpdates = false;
+      }
     });
   }
 
