@@ -33,6 +33,7 @@ export class CreateInnovationDevDtoV2 {
   public institutions_expected_investment: ResultInstitutionsBudget[];
   public has_scaling_studies: boolean;
   public scaling_studies_urls: string[];
+  public ip_support_center_id: string;
 }
 export interface SubOptionV2 {
   result_question_id: number;

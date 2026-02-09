@@ -88,6 +88,7 @@ export class InnovationDevService {
         innovation_user_to_be_determined,
         has_scaling_studies,
         scaling_studies_urls,
+        ip_support_center_id,
       } = createInnovationDevDto;
 
       let InnDevRes: ResultsInnovationsDev = undefined;
@@ -111,6 +112,7 @@ export class InnovationDevService {
         innDevExists.innovation_user_to_be_determined =
           innovation_user_to_be_determined;
         innDevExists.has_scaling_studies = has_scaling_studies;
+        (innDevExists as any).ip_support_center_id = ip_support_center_id;
         InnDevRes = await this._resultsInnovationsDevRepository.save(
           innDevExists as any,
         );
@@ -135,6 +137,7 @@ export class InnovationDevService {
         newInnDev.innovation_user_to_be_determined =
           innovation_user_to_be_determined;
         newInnDev.has_scaling_studies = has_scaling_studies;
+        newInnDev.ip_support_center_id = ip_support_center_id;
         InnDevRes = await this._resultsInnovationsDevRepository.save(newInnDev);
       }
 
