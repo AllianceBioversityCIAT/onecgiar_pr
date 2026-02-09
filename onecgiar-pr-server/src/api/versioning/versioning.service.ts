@@ -965,6 +965,9 @@ export class VersioningService {
         obj_reporting_phase: true,
         obj_portfolio: true,
       },
+      order: {
+        phase_name: 'ASC',
+      },
     });
 
     for (const key in res) {
@@ -983,6 +986,12 @@ export class VersioningService {
       });
       res[key]['can_be_deleted'] = !otherPreviousPhase && !otherPhase;
     }
+
+    res.sort((a, b) =>
+      (a.phase_name ?? '').localeCompare(b.phase_name ?? '', undefined, {
+        numeric: true,
+      }),
+    );
 
     return ReturnResponseUtil.format({
       message: `Phase Retrieved Successfully`,
