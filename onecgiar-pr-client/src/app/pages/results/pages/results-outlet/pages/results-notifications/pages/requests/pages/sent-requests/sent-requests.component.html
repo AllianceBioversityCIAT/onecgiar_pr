@@ -4,13 +4,11 @@
 @let sentContributionsPending =
   this.resultsNotificationsSE?.sentData.sentContributionsPending
     | filterNotificationByInitiative: this.resultsNotificationsSE.initiativeIdFilter
-    | filterNotificationByPhase: this.resultsNotificationsSE.phaseFilter
     | appFilterNotificationBySearch: this.resultsNotificationsSE.searchFilter;
 
 @let sentContributionsDone =
   this.resultsNotificationsSE?.sentData.sentContributionsDone
     | filterNotificationByInitiative: this.resultsNotificationsSE.initiativeIdFilter
-    | filterNotificationByPhase: this.resultsNotificationsSE.phaseFilter
     | appFilterNotificationBySearch: this.resultsNotificationsSE.searchFilter;
 
 <div class="sent_container">
@@ -23,7 +21,7 @@
             <app-notification-item
               [notification]="notification"
               [isSent]="true"
-              (requestEvent)="this.resultsNotificationsSE.get_section_information()"></app-notification-item>
+              (requestEvent)="this.resultsNotificationsSE.get_sent_notifications(this.resultsNotificationsSE.phaseFilter)"></app-notification-item>
           }
         </div>
       } @else {

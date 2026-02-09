@@ -36,8 +36,9 @@ export class ResultsNotificationsService {
     private readonly router: Router
   ) {}
 
-  get_sent_notifications(callback?) {
-    this.api.resultsSE.GET_sentRequest().subscribe({
+  get_sent_notifications(versionId?, callback?) {
+    console.log('[SENT] Fetching with version_id:', versionId);
+    this.api.resultsSE.GET_sentRequest(versionId).subscribe({
       next: ({ response }) => {
         if (!response) {
           return;
@@ -59,8 +60,9 @@ export class ResultsNotificationsService {
     });
   }
 
-  get_section_information(callback?) {
-    this.api.resultsSE.GET_allRequest().subscribe({
+  get_section_information(versionId?, callback?) {
+    console.log('[RECEIVED] Fetching with version_id:', versionId);
+    this.api.resultsSE.GET_allRequest(versionId).subscribe({
       next: ({ response }) => {
         if (!response) {
           return;
@@ -86,8 +88,9 @@ export class ResultsNotificationsService {
     });
   }
 
-  get_updates_notifications() {
-    this.api.resultsSE.GET_requestUpdates().subscribe({
+  get_updates_notifications(versionId?) {
+    console.log('[UPDATES] Fetching with version_id:', versionId);
+    this.api.resultsSE.GET_requestUpdates(versionId).subscribe({
       next: ({ response }) => {
         const { notificationsPending, notificationsViewed, notificationAnnouncement } = response;
 

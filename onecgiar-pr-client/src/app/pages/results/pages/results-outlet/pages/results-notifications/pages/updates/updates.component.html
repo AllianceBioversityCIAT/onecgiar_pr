@@ -1,12 +1,10 @@
 @let notificationsPending =
   this.resultsNotificationsSE?.updatesData.notificationsPending
-    | filterNotificationByPhase: this.resultsNotificationsSE.phaseFilter
     | filterNotificationByInitiative: this.resultsNotificationsSE.initiativeIdFilter
     | appFilterNotificationBySearch: this.resultsNotificationsSE.searchFilter : true;
 
 @let notificationsViewed =
   this.resultsNotificationsSE?.updatesData?.notificationsViewed
-    | filterNotificationByPhase: this.resultsNotificationsSE.phaseFilter
     | filterNotificationByInitiative: this.resultsNotificationsSE.initiativeIdFilter
     | appFilterNotificationBySearch: this.resultsNotificationsSE.searchFilter : true;
 

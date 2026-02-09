@@ -46,7 +46,8 @@
         optionValue="id"
         placeholder="Select phase"
         [style]="{ width: '100%' }"
-        [(ngModel)]="this.resultsNotificationsSE.phaseFilter">
+        [(ngModel)]="this.resultsNotificationsSE.phaseFilter"
+        (ngModelChange)="onPhaseChange($event)">
       </p-select>
     </div>
 
