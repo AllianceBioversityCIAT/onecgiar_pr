@@ -132,7 +132,7 @@ describe('ResultsNotificationsComponent', () => {
 
   it('should get all phases', () => {
     component.getAllPhases();
-    expect(apiServiceMock.resultsSE.GET_versioning).toHaveBeenCalledWith(StatusPhaseEnum.ALL, ModuleTypeEnum.REPORTING);
+    expect(apiServiceMock.resultsSE.GET_versioning).toHaveBeenCalledWith(StatusPhaseEnum.ALL, ModuleTypeEnum.ALL);
     expect(component.phaseList).toEqual([]);
   });
 });

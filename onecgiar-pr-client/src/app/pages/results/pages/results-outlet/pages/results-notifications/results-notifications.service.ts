@@ -43,10 +43,8 @@ export class ResultsNotificationsService {
   get_sent_notifications(versionId?, callback?) {
     this.loadingSent = true;
     this.sentData = { sentContributionsPending: [], sentContributionsDone: [] };
-    console.log('[SENT] Fetching with version_id:', versionId);
     this.api.resultsSE.GET_sentRequest(versionId).subscribe({
       next: ({ response }) => {
-        console.log('[SENT] Response:', response);
         if (!response) {
           return;
         }
@@ -73,10 +71,8 @@ export class ResultsNotificationsService {
   get_section_information(versionId?, callback?) {
     this.loadingReceived = true;
     this.receivedData = { receivedContributionsPending: [], receivedContributionsDone: [] };
-    console.log('[RECEIVED] Fetching with version_id:', versionId);
     this.api.resultsSE.GET_allRequest(versionId).subscribe({
       next: ({ response }) => {
-        console.log('[RECEIVED] Response:', response);
         if (!response) {
           return;
         }
@@ -107,10 +103,8 @@ export class ResultsNotificationsService {
   get_updates_notifications(versionId?) {
     this.loadingUpdates = true;
     this.updatesData = { notificationAnnouncements: [], notificationsPending: [], notificationsViewed: [] };
-    console.log('[UPDATES] Fetching with version_id:', versionId);
     this.api.resultsSE.GET_requestUpdates(versionId).subscribe({
       next: ({ response }) => {
-        console.log('[UPDATES] Response:', response);
         const { notificationsPending, notificationsViewed, notificationAnnouncement } = response;
 
         const orderedNotificationsPending = notificationsPending.sort((a, b) => Date.parse(b.created_date) - Date.parse(a.created_date));
