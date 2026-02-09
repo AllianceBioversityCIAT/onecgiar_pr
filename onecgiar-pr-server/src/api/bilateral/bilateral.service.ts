@@ -209,6 +209,11 @@ export class BilateralService {
                 version,
                 userId,
               );
+            } else {
+              await this.ensureUniqueTitle(
+                bilateralDto.title ?? '',
+                version.id,
+              );
             }
 
             const resultHeader = await this.initializeResultHeader({
@@ -1597,18 +1602,25 @@ export class BilateralService {
     });
   }
 
-  private async ensureUniqueTitle(title: string) {
+  private async ensureUniqueTitle(title: string, versionId: number) {
     const normalizedTitle = (title || '').trim();
     if (!normalizedTitle) {
       throw new BadRequestException('Result title is required.');
     }
 
     const existing = await this._resultRepository.findOne({
-      where: { title: normalizedTitle, is_active: true },
+      where: {
+        title: normalizedTitle,
+        is_active: true,
+        version_id: versionId,
+      },
       select: { id: true },
     });
 
     if (existing) {
+      this.logger.warn(
+        `Duplicate result title rejected: "${normalizedTitle}" (existing result id: ${existing.id})`,
+      );
       throw new BadRequestException(
         `A result with the title "${normalizedTitle}" already exists.`,
       );
