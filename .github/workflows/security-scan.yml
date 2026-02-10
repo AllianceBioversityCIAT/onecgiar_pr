@@ -408,7 +408,7 @@ jobs:
       - name: Send Slack notification
         if: always() && !cancelled() && steps.upload-s3.outputs.repo_name != ''
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_VULNERABILITY_WEBHOOK_URL }}
           SERVER_JSON_URL: ${{ steps.presign-urls.outputs.server_json_url }}
           CLIENT_JSON_URL: ${{ steps.presign-urls.outputs.client_json_url }}
         run: |
