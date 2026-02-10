@@ -2395,6 +2395,8 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         MAX(tr.result_title) AS toc_title,
         MAX(t1.indicator_description) AS indicator,
         r.external_submitted_date AS submission_date,
+        ir.id AS initiative_role_id,
+        ir.name AS initiative_role_name,
         CASE 
           WHEN MAX(lc.center_name) IS NOT NULL THEN MAX(lc.center_name)
           ELSE 'Not specified'
@@ -2406,7 +2408,8 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       JOIN results_by_inititiative rbi
         ON r.id = rbi.result_id
       AND rbi.is_active = 1
-      AND rbi.initiative_role_id = 1
+      JOIN initiative_roles ir
+      	ON rbi.initiative_role_id = ir.id
       JOIN clarisa_initiatives ci
         ON rbi.inititiative_id = ci.id
       AND ci.active = 1
@@ -2454,7 +2457,9 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         r.title,
         rt.name,
         rs.status_name,
-        r.external_submitted_date
+        r.external_submitted_date,
+        ir.id,
+        ir.name
     `;
 
     try {
