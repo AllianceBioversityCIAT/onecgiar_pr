@@ -3,8 +3,9 @@ name: Security Scan (Snyk → S3)
 on:
   push:
     branches:
-      - main
       - master
+      - dev
+      - staging
       - staging-security-scanning
   pull_request:
   workflow_dispatch:
@@ -225,28 +226,8 @@ jobs:
             echo "  ⚠️ S3 upload will fail - credentials are invalid"
             exit 0
           fi
-          echo ""
+          echo ""       
           
-          # 5. Validate S3 target
-          echo "🪣 S3 Target Validation:"
-          echo "----------------------------------------"
-          echo "  S3_BUCKET: ${S3_BUCKET}"
-          echo "  S3_PREFIX: ${S3_PREFIX}"
-          echo ""
-          echo "  Checking bucket access..."
-          BUCKET_CHECK=$(aws s3 ls "s3://${S3_BUCKET}" 2>&1)
-          BUCKET_EXIT=$?
-          if [ $BUCKET_EXIT -eq 0 ]; then
-            echo "  ✅ Bucket accessible"
-            echo "  Bucket listing (first 5 items):"
-            echo "${BUCKET_CHECK}" | head -5 || echo "  (empty or listing failed)"
-          else
-            echo "  ❌ Bucket access FAILED"
-            echo "  Error output: ${BUCKET_CHECK}"
-            echo "  ⚠️ S3 upload will fail - bucket is not accessible"
-            exit 0
-          fi
-          echo ""
           echo "=========================================="
 
       - name: Upload reports to S3
