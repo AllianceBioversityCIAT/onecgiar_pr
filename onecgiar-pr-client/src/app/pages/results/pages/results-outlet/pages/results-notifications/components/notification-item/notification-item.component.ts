@@ -5,6 +5,8 @@ import { RetrieveModalService } from '../../../../../result-detail/components/re
 import { ResultLevelService } from '../../../../../result-creator/services/result-level.service';
 import { FieldsManagerService } from '../../../../../../../../shared/services/fields-manager.service';
 import { finalize } from 'rxjs/operators';
+import { Router } from '@angular/router';
+import { BilateralResultsService } from '../../../../../../../result-framework-reporting/pages/bilateral-results/bilateral-results.service';
 
 @Component({
   selector: 'app-notification-item',
@@ -25,8 +27,26 @@ export class NotificationItemComponent {
     public resultLevelSE: ResultLevelService,
     private shareRequestModalSE: ShareRequestModalService,
     private retrieveModalSE: RetrieveModalService,
-    private readonly fieldsManagerSE: FieldsManagerService
+    private readonly fieldsManagerSE: FieldsManagerService,
+    private router: Router,
+    private bilateralResultsService: BilateralResultsService
   ) {}
+
+  get isBilateralResult() {
+    return this.notification?.obj_result?.source_name === 'W3/Bilaterals';
+  }
+
+  get requesterCode() {
+    return this.notification?.is_map_to_toc
+      ? this.notification?.obj_shared_inititiative?.official_code
+      : this.notification?.obj_owner_initiative?.official_code;
+  }
+
+  get responderCode() {
+    return this.notification?.is_map_to_toc
+      ? this.notification?.obj_owner_initiative?.official_code
+      : this.notification?.obj_shared_inititiative?.official_code;
+  }
 
   invalidateRequest() {
     return (
@@ -54,7 +74,8 @@ export class NotificationItemComponent {
       result_level_id: obj_result?.obj_result_level?.id,
       result_type: obj_result?.obj_result_type?.name,
       initiative_id: obj_owner_initiative?.id,
-      portfolio: obj_result?.obj_version?.obj_portfolio?.acronym
+      portfolio: obj_result?.obj_version?.obj_portfolio?.acronym,
+      source_name: obj_result?.source_name
     };
 
     this.api.dataControlSE.currentResultSignal.set({
@@ -64,7 +85,8 @@ export class NotificationItemComponent {
       result_level_id: obj_result?.obj_result_level?.id,
       result_type: obj_result?.obj_result_type?.name,
       initiative_id: obj_owner_initiative?.id,
-      portfolio: obj_result?.obj_version?.obj_portfolio?.acronym
+      portfolio: obj_result?.obj_version?.obj_portfolio?.acronym,
+      source_name: obj_result?.source_name
     });
 
     this.resultLevelSE.currentResultLevelIdSignal.set(obj_result?.obj_result_level?.id);
@@ -103,6 +125,16 @@ export class NotificationItemComponent {
 
   get isQAed() {
     return this.notification?.obj_result?.status_id == 2 && this.notification?.request_status_id == 1;
+  }
+
+  navigateToResult(notification) {
+    const url = `/result-framework-reporting/entity-details/${this.requesterCode}/results-review`;
+
+    this.bilateralResultsService.currentResultToReview.set(notification?.obj_result);
+
+    this.router.navigateByUrl(url).then(() => {
+      this.bilateralResultsService.showReviewDrawer.set(true);
+    });
   }
 
   resultUrl(notification) {

@@ -138,7 +138,8 @@ export class ShareResultRequestService {
         ),
       ]);
 
-      if (!this.shouldCreateNewShareRequest(requestExist, initExist)) {
+      // If initiative is already an active contributor, skip
+      if (initExist?.is_active) {
         continue;
       }
 
@@ -150,6 +151,27 @@ export class ShareResultRequestService {
         };
       }
 
+      // If request exists with status_id = 4, add it to shareInitRequests to update later
+      if (requestExist?.request_status_id === 4) {
+        const newShareBilateral = new ShareResultRequest();
+
+        newShareBilateral.share_result_request_id =
+          requestExist.share_result_request_id;
+        newShareBilateral.is_active = true;
+        newShareBilateral.requested_by = user.id;
+        newShareBilateral.requested_date = new Date();
+        newShareBilateral.request_status_id = 1;
+
+        shareInitRequests.push(newShareBilateral);
+        continue;
+      }
+
+      // If request exists with other status_id, skip (don't create duplicate)
+      if (requestExist) {
+        continue;
+      }
+
+      // Create new request only if it doesn't exist
       const newShare = this.buildShareResultRequest(
         createTocShareResult,
         resultId,
@@ -169,17 +191,6 @@ export class ShareResultRequestService {
     }
 
     return shareInitRequests;
-  }
-
-  private shouldCreateNewShareRequest(
-    requestExist: any,
-    initExist: any,
-  ): boolean {
-    return (
-      !requestExist &&
-      requestExist?.request_status_id !== 1 &&
-      !initExist?.is_active
-    );
   }
 
   private buildShareResultRequest(
@@ -602,10 +613,21 @@ export class ShareResultRequestService {
   }
 
   private async getRequest(whereCondition: any) {
-    return await this._shareResultRequestRepository.find({
+    const results = await this._shareResultRequestRepository.find({
       select: this.getRequestSelectFields(),
       relations: this.getRequestRelations(),
       where: whereCondition,
+    });
+
+    return results.map((result: any) => {
+      if (result.obj_result && !Array.isArray(result.obj_result)) {
+        result.obj_result = {
+          ...result.obj_result,
+          source_name:
+            result.obj_result.source === 'Result' ? 'W1/W2' : 'W3/Bilaterals',
+        };
+      }
+      return result;
     });
   }
 
@@ -622,6 +644,8 @@ export class ShareResultRequestService {
         name: true,
       },
       obj_result: {
+        id: true,
+        source: true,
         result_code: true,
         title: true,
         status_id: true,
@@ -642,6 +666,22 @@ export class ShareResultRequestService {
           result_toc_result_id: true,
           initiative_id: true,
           is_active: true,
+        },
+        result_center_array: {
+          center_id: true,
+          is_primary: true,
+          is_leading_result: true,
+          is_active: true,
+          clarisa_center_object: {
+            code: true,
+            institutionId: true,
+            financial_code: true,
+            clarisa_institution: {
+              id: true,
+              name: true,
+              acronym: true,
+            },
+          },
         },
       },
       obj_requested_by: {
@@ -676,6 +716,11 @@ export class ShareResultRequestService {
         },
         obj_result_type: true,
         obj_result_level: true,
+        result_center_array: {
+          clarisa_center_object: {
+            clarisa_institution: true,
+          },
+        },
       },
       obj_requested_by: true,
       obj_approved_by: true,

@@ -8,6 +8,8 @@ import {
   getOtherTypesIndicatorPatterns,
   RESULT_TYPE_TO_INDICATOR_PATTERN,
 } from '../../shared/constants/indicator-type-mapping.constant';
+import { ClarisaInitiative } from '../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
+import { GlobalParameter } from '../../api/global-parameter/entities/global-parameter.entity';
 
 @Injectable()
 export class TocResultsRepository extends Repository<TocResult> {
@@ -416,6 +418,26 @@ export class TocResultsRepository extends Repository<TocResult> {
     }
   }
 
+  async $_initiativeValidation(init_id: number) {
+    const initiative = await this.dataSource
+      .getRepository(ClarisaInitiative)
+      .findOne({
+        where: {
+          id: init_id,
+        },
+      });
+
+    if (!initiative) {
+      return false;
+    }
+
+    if (initiative?.official_code === 'SGP-02') {
+      return true;
+    }
+
+    return false;
+  }
+
   async $_getResultTocByConfigV2(
     init_id: number,
     toc_level: number,
@@ -440,11 +462,31 @@ export class TocResultsRepository extends Repository<TocResult> {
       };
     }
 
-    const tocPhaseId = await this.getCurrentTocPhaseId();
+    const isInitiativeValidation = await this.$_initiativeValidation(init_id);
+    let tocPhaseId: string = null;
+
+    if (isInitiativeValidation) {
+      tocPhaseId = await this.dataSource
+        .getRepository(GlobalParameter)
+        .findOne({
+          where: {
+            name: 'sgp_02_toc_version',
+          },
+        })
+        .then((el) => el.value);
+    } else {
+      tocPhaseId = await this.getCurrentTocPhaseId();
+    }
 
     const params: (string | number)[] = [init_id, category];
+    let whereTocPhaseId = '';
     if (tocPhaseId) {
       params.push(tocPhaseId);
+      if (isInitiativeValidation) {
+        whereTocPhaseId = `AND tr.version_id = ?`;
+      } else {
+        whereTocPhaseId = `AND tr.phase = ?`;
+      }
     }
 
     let indicatorFilter = '';
@@ -529,7 +571,7 @@ export class TocResultsRepository extends Repository<TocResult> {
       WHERE tr.is_active > 0
         AND ci.id = ?
         AND tr.category = ?
-        ${tocPhaseId ? 'AND tr.phase = ?' : ''}
+        ${whereTocPhaseId}
         ${indicatorFilter}
       ORDER BY wp.acronym, tr.result_title ASC;
     `;
@@ -581,7 +623,7 @@ export class TocResultsRepository extends Repository<TocResult> {
 
     const queryParams: any[] = [targetYear, ...numericIds];
 
-    // Verificar si el resultado es unplanned (planned_result = 0 en el primer registro)
+    // Check if the result is unplanned (planned_result = 0 in the first record)
     let isUnplanned = false;
     if (resultId && initId && Number.isFinite(resultId) && resultId > 0) {
       try {
@@ -622,19 +664,22 @@ export class TocResultsRepository extends Repository<TocResult> {
         RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId];
       const otherTypesPatterns = getOtherTypesIndicatorPatterns(resultTypeId);
 
-      // Indicadores que hacen match con el tipo del resultado
+      // Indicators that match the type of result
       const currentLikeConditions = currentTypePatterns
         .map(() => 'tri.type_value LIKE ?')
         .join(' OR ');
       indicatorConditions.push(`(${currentLikeConditions})`);
       queryParams.push(...currentTypePatterns);
 
-      // Indicadores que no hacen match con ningún "otro" tipo (ToC neutros / no estándar)
+      // Indicators that do not match any "other" type (neutral/non-standard ToCs)
+      // Also include type_value NULL or empty (in SQL NULL NOT LIKE 'x' is not TRUE)
       if (otherTypesPatterns.length > 0) {
         const otherNotLikeConditions = otherTypesPatterns
           .map(() => 'tri.type_value NOT LIKE ?')
           .join(' AND ');
-        indicatorConditions.push(`(${otherNotLikeConditions})`);
+        indicatorConditions.push(
+          `((${otherNotLikeConditions}) OR (tri.type_value IS NULL OR tri.type_value = ''))`,
+        );
         queryParams.push(...otherTypesPatterns);
       }
     }

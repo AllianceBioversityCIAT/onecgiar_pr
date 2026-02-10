@@ -1,3 +1,7 @@
+export type NullableNumericValue = number | string | null;
+export type NullableNumericId = string | number | null;
+export type NumericId = string | number;
+
 export interface ResultToReview {
   id: string;
   project_id: string;
@@ -29,6 +33,7 @@ export interface BilateralResultDetail {
   contributingInitiatives: BilateralContributingInitiative[] | BilateralContributingInitiativesObject;
   evidence: BilateralEvidence[];
   resultTypeResponse: BilateralResultTypeResponse[];
+  contributors_result_toc_result: any[];
 }
 
 export interface BilateralInnovationDevResponse {
@@ -200,6 +205,43 @@ export interface BilateralContributingInitiativesObject {
 
 export interface BilateralEvidence {
   link: string;
+}
+
+export interface BilateralInnovationUseResponse {
+  actors?: BilateralInnovationUseActor[];
+  organizations?: any[];
+  measures?: BilateralInnovationUseMeasure[];
+  investment_partners?: BilateralInnovationUseInvestmentPartner[];
+}
+
+export interface BilateralInnovationUseActor {
+  is_active?: boolean;
+  result_actors_id?: string;
+  women?: NullableNumericValue;
+  women_youth?: NullableNumericValue;
+  women_non_youth?: NullableNumericValue;
+  men?: NullableNumericValue;
+  men_youth?: NullableNumericValue;
+  men_non_youth?: NullableNumericValue;
+  other_actor_type?: string | null;
+  sex_and_age_disaggregation?: boolean;
+  how_many?: NullableNumericValue;
+  actor_type_id?: NullableNumericId;
+  obj_actor_type?: { actor_type_id: NumericId; name: string };
+}
+
+export interface BilateralInnovationUseMeasure {
+  is_active?: boolean;
+  result_ip_measure_id?: string;
+  unit_of_measure?: string;
+  quantity?: number | null;
+}
+
+export interface BilateralInnovationUseInvestmentPartner {
+  id?: number;
+  name?: string;
+  kind_cash?: number | null;
+  is_determined?: boolean | null;
 }
 
 export interface BilateralResultTypeResponse {

@@ -74,6 +74,7 @@ import { InnovationUseService } from '../results-framework-reporting/innovation-
 import { ReviewUpdateDto } from './dto/review-update.dto';
 import { ResultsTocResultsService } from './results-toc-results/results-toc-results.service';
 import { ShareResultRequestService } from './share-result-request/share-result-request.service';
+import { ShareResultRequestRepository } from './share-result-request/share-result-request.repository';
 
 describe('ResultsService (unit, pure mocks)', () => {
   let module: TestingModule;
@@ -204,9 +205,24 @@ describe('ResultsService (unit, pure mocks)', () => {
     getOwnerInitiativeByResult: jest.fn().mockResolvedValue({ id: 1 }),
     getContributorInitiativeByResult: jest.fn().mockResolvedValue([]),
     getPendingInit: jest.fn().mockResolvedValue([]),
+    getDraftInit: jest.fn().mockResolvedValue([]),
     getContributorInitiativeAndPrimaryByResult: jest.fn().mockResolvedValue([]),
     findOne: jest.fn().mockResolvedValue({ initiative_id: 1, id: 1 }),
     updateResultByInitiative: jest.fn().mockResolvedValue([]),
+    query: jest
+      .fn()
+      .mockImplementation(async (query: string, _params: any[]) => {
+        // Mock for getDraftInit status query
+        if (query && query.includes('SELECT status_id FROM result')) {
+          return [{ status_id: 1 }]; // Default status_id = 1 (not 5, so request_status_id will be 1)
+        }
+        // Mock for getDraftInit main query
+        if (query && query.includes('FROM share_result_request')) {
+          return [];
+        }
+        // Default return for any other query
+        return [];
+      }),
   } as any;
 
   const mockResultByIntitutionsTypeRepository = {
@@ -485,6 +501,13 @@ describe('ResultsService (unit, pure mocks)', () => {
     resultRequest: jest.fn().mockResolvedValue(undefined),
   } as any;
 
+  const mockShareResultRequestRepository = {
+    find: jest.fn().mockResolvedValue([]),
+    update: jest.fn().mockResolvedValue({ affected: 1 }),
+    findOne: jest.fn().mockResolvedValue(null),
+    save: jest.fn().mockResolvedValue({}),
+  } as any;
+
   const mockDataSource = {
     transaction: jest.fn().mockImplementation(async (callback) => {
       const manager = {
@@ -519,6 +542,8 @@ describe('ResultsService (unit, pure mocks)', () => {
   } as any;
 
   beforeEach(async () => {
+    jest.clearAllMocks();
+
     module = await Test.createTestingModule({
       providers: [
         ResultsService,
@@ -699,6 +724,15 @@ describe('ResultsService (unit, pure mocks)', () => {
           provide: ShareResultRequestService,
           useValue: mockShareResultRequestService,
         },
+        {
+          provide: ShareResultRequestRepository,
+          useValue: mockShareResultRequestRepository,
+        },
+        // Also provide ShareResultRequestRepository with the token name for optional injection
+        {
+          provide: 'ShareResultRequestRepository',
+          useValue: mockShareResultRequestRepository,
+        },
       ],
     }).compile();
 
@@ -802,7 +836,7 @@ describe('ResultsService (unit, pure mocks)', () => {
       result_name: `Result test: fail result level`,
       handler: null,
     };
-    
+
     mockResultLevelRepository.findOne.mockResolvedValueOnce(null);
     const response: returnFormatService = await resultService.createOwnerResult(
       newResult,
@@ -1428,15 +1462,15 @@ describe('ResultsService (unit, pure mocks)', () => {
     (
       mockResultByInitiativesRepository.getContributorInitiativeByResult as jest.Mock
     ).mockResolvedValueOnce([]);
-    (
-      mockResultByInitiativesRepository.getPendingInit as jest.Mock
-    ).mockResolvedValueOnce([]);
+    // Mock getPendingInit - the mock is already configured in the mock object definition
+    // No need to reconfigure it here since it's already set up with mockImplementation
+    // The mock will intercept the call and return [] without executing the real method
     (
       mockResultByInitiativesRepository.getContributorInitiativeAndPrimaryByResult as jest.Mock
     ).mockResolvedValueOnce([]);
 
     const res = await resultService.getBilateralResultById(100);
-    expect((res as returnFormatService).status).toBe(HttpStatus.OK);
+    expect(res).toMatchObject({ status: HttpStatus.OK });
     expect(res.response.commonFields).toBeDefined();
     expect(res.response.tocMetadata).toBeDefined();
   });
@@ -1477,6 +1511,9 @@ describe('ResultsService (unit, pure mocks)', () => {
       return callback(manager);
     });
 
+    // Mock ShareResultRequestRepository.find for approved case
+    mockShareResultRequestRepository.find.mockResolvedValueOnce([]);
+
     const res = await resultService.reviewBilateralResult(
       100,
       reviewDecision,
@@ -1506,6 +1543,11 @@ describe('ResultsService (unit, pure mocks)', () => {
         save: jest.fn().mockResolvedValue({ id: 1 }),
       };
       return callback(manager);
+    });
+
+    // Mock ShareResultRequestRepository.update for rejected case
+    mockShareResultRequestRepository.update.mockResolvedValueOnce({
+      affected: 1,
     });
 
     const res = await resultService.reviewBilateralResult(
@@ -2032,15 +2074,29 @@ describe('ResultsService (unit, pure mocks)', () => {
         mockResultRepository.getCommonFieldsBilateralResultById as jest.Mock
       ).mockResolvedValueOnce(mockCommonFields);
 
+      // Mock ShareResultRequestRepository methods needed for _updateContributingInitiatives
+      // Since pending_contributing_initiatives is empty, it will call update to deactivate all with request_status_id = 4
+      mockShareResultRequestRepository.find.mockResolvedValueOnce([]);
+      mockShareResultRequestRepository.update.mockResolvedValueOnce({
+        affected: 0,
+      });
+      // Mock findOne for owner initiative (called in _updateContributingInitiatives)
+      (
+        mockResultByInitiativesRepository.findOne as jest.Mock
+      ).mockResolvedValueOnce({ initiative_id: 1, is_active: true }); // Owner initiative
+
       const res = await resultService.updateBilateralResultReview(
         100,
         reviewUpdateDto,
         userTest,
       );
       expect((res as returnFormatService).status).toBe(HttpStatus.OK);
-      expect(
-        mockResultByInitiativesRepository.updateResultByInitiative,
-      ).toHaveBeenCalled();
+      // _updateContributingInitiatives doesn't call updateResultByInitiative
+      // It only manages share_result_request entries with request_status_id = 4
+      // When pending_contributing_initiatives is empty, it calls update to deactivate all with request_status_id = 4
+      // So we verify that _updateContributingInitiatives was called by checking share_result_request operations
+      expect(mockShareResultRequestRepository.update).toHaveBeenCalled();
+      expect(mockResultByInitiativesRepository.findOne).toHaveBeenCalled();
     });
   });
 

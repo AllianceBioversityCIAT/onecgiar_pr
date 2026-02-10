@@ -25,6 +25,7 @@ import { KpContentComponent } from './components/kp-content/kp-content.component
 import { InnoDevContentComponent } from './components/inno-dev-content/inno-dev-content.component';
 import { CapSharingContentComponent } from './components/cap-sharing-content/cap-sharing-content.component';
 import { PolicyChangeContentComponent } from './components/policy-change-content/policy-change-content.component';
+import { InnovationUseContentComponent } from './components/innovation-use-content/innovation-use-content.component';
 import { SaveChangesJustificationDialogComponent } from './components/save-changes-justification-dialog/save-changes-justification-dialog.component';
 import { RolesService } from '../../../../../../../../shared/services/global/roles.service';
 import { BilateralResultsService } from '../../../../bilateral-results.service';
@@ -32,6 +33,7 @@ import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom
 import { CentersService } from '../../../../../../../../shared/services/global/centers.service';
 import { InstitutionsService } from '../../../../../../../../shared/services/global/institutions.service';
 import { RdContributorsAndPartnersModule } from '../../../../../../../../pages/results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.module';
+import { TooltipModule } from 'primeng/tooltip';
 
 @Component({
   selector: 'app-result-review-drawer',
@@ -47,9 +49,11 @@ import { RdContributorsAndPartnersModule } from '../../../../../../../../pages/r
     InnoDevContentComponent,
     CapSharingContentComponent,
     PolicyChangeContentComponent,
+    InnovationUseContentComponent,
     SaveChangesJustificationDialogComponent,
     CustomFieldsModule,
-    RdContributorsAndPartnersModule
+    RdContributorsAndPartnersModule,
+    TooltipModule
   ],
   templateUrl: './result-review-drawer.component.html',
   styleUrl: './result-review-drawer.component.scss',
@@ -150,6 +154,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   showConfirmApproveDialog = signal<boolean>(false);
   showConfirmRejectDialog = signal<boolean>(false);
   showConfirmSaveChangesDialog = signal<boolean>(false);
+  isToCCompleted = signal<boolean>(false);
 
   canReviewResults = computed(() => {
     if (this.api.rolesSE.isAdmin) {
@@ -165,6 +170,27 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     const statusId = this.resultDetail()?.commonFields?.status_id;
     return statusId === '5';
   });
+
+  validateIsToCCompleted(): void {
+    if (
+      this.tocInitiative?.planned_result !== null &&
+      this.tocInitiative?.planned_result !== undefined &&
+      this.tocInitiative?.result_toc_results.length > 0 &&
+      this.tocInitiative?.result_toc_results.every((tab: any) => {
+        if (tab.toc_level_id === null || tab.toc_level_id === undefined) return false;
+        if (tab.toc_result_id === null || tab.toc_result_id === undefined) return false;
+
+        if (this.tocInitiative.planned_result === true && tab.indicators.length > 0) {
+          if (tab.indicators?.[0]?.toc_results_indicator_id === null || tab.indicators?.[0]?.toc_results_indicator_id === undefined) return false;
+        }
+        return true;
+      })
+    ) {
+      this.isToCCompleted.set(true);
+    } else {
+      this.isToCCompleted.set(false);
+    }
+  }
 
   getTocMetadata(): any {
     const detail = this.resultDetail();
@@ -332,6 +358,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         this.saveChangesType = null;
         this.isSaving.set(false);
         this.cdr.markForCheck();
+        this.validateIsToCCompleted();
       },
       error: err => {
         console.error('Error saving TOC metadata:', err);
@@ -340,6 +367,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         this.saveChangesJustification = '';
         this.saveChangesType = null;
         this.cdr.markForCheck();
+        this.validateIsToCCompleted();
       }
     });
   }
@@ -504,12 +532,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
       };
     }
 
-    if (detail.contributingProjects && Array.isArray(detail.contributingProjects)) {
-      body.contributingProjects = detail.contributingProjects.map((project: any) => {
-        const projectId = project.project_id || project.id;
-        return { project_id: projectId };
-      });
-    }
+    body.contributingProjects = detail.contributingProjects;
 
     if (detail.contributingInstitutions && Array.isArray(detail.contributingInstitutions)) {
       body.contributingInstitutions = detail.contributingInstitutions.map((inst: any) => {
@@ -560,9 +583,19 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
       const resultType: any = resultTypeResponse[0];
 
       switch (resultTypeId) {
+        case 2: {
+          body.resultTypeResponse = [
+            {
+              ...resultType,
+              actors: Array.isArray(resultType.actors) ? resultType.actors.map((a: any) => ({ ...a })) : [],
+              organizations: Array.isArray(resultType.organizations) ? resultType.organizations.map((o: any) => ({ ...o })) : [],
+              measures: Array.isArray(resultType.measures) ? resultType.measures.map((m: any) => ({ ...m })) : [],
+              investment_partners: Array.isArray(resultType.investment_partners) ? resultType.investment_partners.map((p: any) => ({ ...p })) : []
+            }
+          ];
+          break;
+        }
         case 1: {
-          // Implementing Organization = only what is selected in "Whose policy is this?" (resultType.institutions).
-          // If user removed an org from the dropdown, it is not sent so the PATCH removes it.
           const currentInstitutions = Array.isArray(resultType.institutions) ? [...resultType.institutions] : [];
           const implementingOrgs = this.buildImplementingOrgsFromSelection(currentInstitutions);
 
@@ -630,7 +663,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         console.error('Error saving data standard:', err);
         this.isSaving.set(false);
         this.cdr.markForCheck();
-        // You might want to show an error message to the user here
       }
     });
   }
@@ -643,7 +675,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
       }
     });
 
-    // Effect: when options list is available, ensure contributingInitiatives (primary + accepted + pending) are selected
     effect(() => {
       const detail = this.resultDetail();
       const initiativesList = this.contributingInitiativesList();
@@ -829,7 +860,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
         if (detail.contributingInitiatives) {
           if (Array.isArray(detail.contributingInitiatives)) {
-            // Legacy format: array of initiatives
             detail.contributingInitiatives = detail.contributingInitiatives.map((initiative: any) => {
               return initiative.id || initiative.official_code || initiative;
             });
@@ -914,6 +944,14 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         if (detail.resultTypeResponse && Array.isArray(detail.resultTypeResponse)) {
           detail.resultTypeResponse = detail.resultTypeResponse.map((resultType: any) => {
             const newResultType = { ...resultType };
+
+            if ('actors' in newResultType || 'measures' in newResultType || 'investment_partners' in newResultType) {
+              if (!newResultType.actors) newResultType.actors = [];
+              if (!newResultType.organizations) newResultType.organizations = [];
+              if (!newResultType.measures) newResultType.measures = [];
+              if (!newResultType.investment_partners) newResultType.investment_partners = [];
+              return newResultType;
+            }
 
             if (
               newResultType.implementing_organization &&
@@ -1013,6 +1051,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
             }
 
             this.tocInitiative = { ...this.tocInitiative, ...tocInitiative };
+            this.validateIsToCCompleted();
             setTimeout(() => {
               this.cdr.markForCheck();
             }, 0);
@@ -1105,9 +1144,16 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
             }, 100);
         }
 
+        let resultTypeResponseCopy = detail.resultTypeResponse;
+        if (detail.resultTypeResponse) {
+          resultTypeResponseCopy = Array.isArray(detail.resultTypeResponse)
+            ? detail.resultTypeResponse.map((rt: any) => ({ ...rt }))
+            : { ...detail.resultTypeResponse };
+        }
+
         const detailWithNewReference = {
           ...detail,
-          resultTypeResponse: detail.resultTypeResponse ? detail.resultTypeResponse.map((rt: any) => ({ ...rt })) : detail.resultTypeResponse
+          resultTypeResponse: resultTypeResponseCopy
         };
 
         this.resultDetail.set(detailWithNewReference);

@@ -61,7 +61,7 @@
         [required]="true"
         [ngModel]="tocInitiative?.planned_result"
         (ngModelChange)="onPlannedResultChangeValue($event)"
-        (selectOptionEvent)="onPlannedResultChange()"
+        (selectOptionEvent)="onPlannedResultChange(); validateIsToCCompleted()"
         [disabled]="!canEditInDrawer()">
       </app-pr-yes-or-not>
 
@@ -217,6 +217,50 @@
         [readOnly]="!canEditInDrawer()">
       </app-pr-multi-select>
 
+        <div *ngIf="fields?.contributors_result_toc_result?.length">
+    <app-pr-field-header label="Other contributors" [required]="false" [simpleStyle]="true"> </app-pr-field-header>
+
+    @for (contributor of fields?.contributors_result_toc_result; track contributor.initiative_id) {
+      <app-pr-yes-or-not
+        [label]="`${contributor?.official_code} - ${contributor?.short_name}`"
+        [required]="!!contributor?.result_toc_results?.length"
+        [(ngModel)]="contributor.planned_result"
+        (selectOptionEvent)="onPlannedResultChange()"
+        [readOnly]="true"
+        [hideOptions]="!contributor?.result_toc_results?.length">
+      </app-pr-yes-or-not>
+
+      @if (!contributor?.result_toc_results?.length) {
+        <div class="pending-message">
+          <i class="material-icons-round" style="font-size: 20px; color: var(--pr-color-orange-400)">info</i>
+          <p>
+            <b> {{ contributor?.official_code }} {{ contributor.short_name }} </b>
+            has not confirmed its contribution to this result, so its ToC mapping is currently unavailable.
+          </p>
+        </div>
+      }
+
+      @if (fields?.contributors_result_toc_result?.length && contributor.planned_result !== null) {
+        @if (this.tocConsumed) {
+          <div style="z-index: 1; position: relative">
+            <app-cp-multiple-wps
+              [editable]="false"
+              [initiative]="contributor"
+              [initiativeId]="contributor?.initiative_id"
+              [resultLevelId]="fields?.commonFields?.result_level_id"
+              [isIpsr]="false"
+              [isContributor]="true"
+              [isNotifications]="false"
+              [isUnplanned]="!contributor.planned_result"
+              [hidden]="true"
+              [forceP25]="true"
+              [showMultipleWPsContent]="tocConsumed()"></app-cp-multiple-wps>
+          </div>
+        }
+      }
+    }
+  </div>
+
       <hr class="form-section_separator" />
 
       <app-pr-multi-select
@@ -253,7 +297,7 @@
             @for (evidence of fields.evidence; track $index) {
               <span class="evidence-chip" style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; background-color: #f3f4f6; border-radius: 16px; font-size: 14px; max-width: 100%;">
                 <a [href]="evidence.link" target="_blank" style="color: #5569dd; text-decoration: none; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; max-width: 400px; word-break: break-word;">{{ evidence.link }}</a>
-               
+                
                 @if (canEditInDrawer()) {
                 <i class="pi pi-times" style="cursor: pointer; font-size: 12px; color: #6b7280; flex-shrink: 0;" [style.cursor]="canEditInDrawer() ? 'pointer' : 'not-allowed'" [style.opacity]="canEditInDrawer() ? '1' : '0.5'" (click)="canEditInDrawer() ? removeEvidenceLink($index) : null"></i>
                 }
@@ -265,6 +309,7 @@
 
       @if (
         fields?.commonFields?.result_type_id === 1 ||
+        fields?.commonFields?.result_type_id === 2 ||
         fields?.commonFields?.result_type_id === 5 ||
         fields?.commonFields?.result_type_id === 6 ||
         fields?.commonFields?.result_type_id === 7
@@ -276,6 +321,9 @@
         @switch (fields?.commonFields?.result_type_id) {
           @case (1) {
             <app-policy-change-content [resultDetail]="resultDetail()" [disabled]="!canEditInDrawer()"></app-policy-change-content>
+          }
+          @case (2) {
+            <app-innovation-use-content [resultDetail]="resultDetail()" [disabled]="!canEditInDrawer()"></app-innovation-use-content>
           }
           @case (5) {
             <app-cap-sharing-content [resultDetail]="resultDetail()" [disabled]="!canEditInDrawer()"></app-cap-sharing-content>
@@ -308,7 +356,16 @@
   @if (canEditInDrawer() && resultToReview()?.status_name === 'Pending Review') {
     <ng-template #footer>
       <div class="result-review-drawer-footer">
-        <p-button label="APPROVE" styleClass="approve-button" (click)="onApprove()" icon="pi pi-check-circle" variant="outlined" size="large" />
+          <p-button
+          label="APPROVE"
+          [disabled]="!isToCCompleted()"
+          styleClass="approve-button {{ !isToCCompleted() ? 'not-hover' : '' }}"
+          (click)="isToCCompleted() ? onApprove() : null"
+          icon="pi pi-check-circle"
+          variant="outlined"
+          [pTooltip]="!isToCCompleted() ? 'Please complete and save the TOC data before approving the result' : ''"
+          tooltipPosition="top"
+          size="large" />
         <p-button label="REJECT" styleClass="reject-button" (click)="onReject()" icon="pi pi-times-circle" variant="outlined" size="large" />
       </div>
     </ng-template>
