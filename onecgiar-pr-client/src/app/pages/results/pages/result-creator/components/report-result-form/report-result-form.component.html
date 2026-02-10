@@ -109,7 +109,12 @@
           <app-save-button
             [editable]="true"
             (clickSave)="onSaveSection()"
-            [disabled]="!this.resultLevelSE.resultBody.initiative_id"
+            [disabled]="
+              !this.resultLevelSE.resultBody.initiative_id ||
+              !this.resultLevelSE.resultBody.result_name?.trim() ||
+              exactTitleFound() ||
+              loadingDepthSearch()
+            "
             text="Save and continue">
           </app-save-button>
         </div>
