@@ -55,6 +55,14 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
     }
   }
 
+  clearAllFilters() {
+    this.resultsNotificationsSE.phaseFilter =
+      this.phaseList.find(phase => phase.status && phase.phase_name?.includes('Reporting'))?.id ??
+      this.phaseList.find(phase => phase.status)?.id;
+    this.resultsNotificationsSE.resetFilters();
+    this.onPhaseChange(this.resultsNotificationsSE.phaseFilter);
+  }
+
   updateQueryParams() {
     this.router.navigate([], {
       relativeTo: this.activatedRoute,
@@ -74,11 +82,20 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
     });
   }
 
+  onPhaseChange(phaseId) {
+    this.resultsNotificationsSE.get_updates_notifications(phaseId);
+    this.resultsNotificationsSE.get_section_information(phaseId);
+    this.resultsNotificationsSE.get_sent_notifications(phaseId);
+  }
+
   getAllPhases() {
-    this.api.resultsSE.GET_versioning(StatusPhaseEnum.ALL, ModuleTypeEnum.REPORTING).subscribe(({ response }) => {
+    this.api.resultsSE.GET_versioning(StatusPhaseEnum.ALL, ModuleTypeEnum.ALL).subscribe(({ response }) => {
       this.phaseList = response;
       if (!this.activatedRoute.snapshot.queryParams['phase'])
-        this.resultsNotificationsSE.phaseFilter = this.phaseList.find(phase => phase.status)?.id;
+        this.resultsNotificationsSE.phaseFilter =
+          this.phaseList.find(phase => phase.status && phase.phase_name?.includes('Reporting'))?.id ??
+          this.phaseList.find(phase => phase.status)?.id;
+      this.onPhaseChange(this.resultsNotificationsSE.phaseFilter);
     });
   }
 }

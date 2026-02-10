@@ -46,7 +46,8 @@
         optionValue="id"
         placeholder="Select phase"
         [style]="{ width: '100%' }"
-        [(ngModel)]="this.resultsNotificationsSE.phaseFilter">
+        [(ngModel)]="this.resultsNotificationsSE.phaseFilter"
+        (ngModelChange)="onPhaseChange($event)">
       </p-select>
     </div>
 
@@ -72,6 +73,16 @@
     <div>
       <app-pr-field-header label="Search"></app-pr-field-header>
       <input type="text" pInputText placeholder="Search" [(ngModel)]="this.resultsNotificationsSE.searchFilter" [style]="{ width: '100%' }" />
+    </div>
+
+    <div class="clear_filters_container">
+      <app-pr-button
+        [text]="'Clear filters'"
+        [verticalMargin]="0.5"
+        icon="filter_list_off"
+        [colorType]="'primary'"
+        [reverse]="true"
+        (click)="clearAllFilters()"></app-pr-button>
     </div>
   </div>
 

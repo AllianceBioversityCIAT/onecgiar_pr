@@ -639,16 +639,19 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.apiBaseUrl}request/get/all`);
   }
 
-  GET_allRequest() {
-    return this.http.get<any>(`${this.apiBaseUrl}request/get/received`);
+  GET_allRequest(versionId?) {
+    const params = versionId ? `?version_id=${versionId}` : '';
+    return this.http.get<any>(`${this.apiBaseUrl}request/get/received${params}`);
   }
 
-  GET_sentRequest() {
-    return this.http.get<any>(`${this.apiBaseUrl}request/get/sent`);
+  GET_sentRequest(versionId?) {
+    const params = versionId ? `?version_id=${versionId}` : '';
+    return this.http.get<any>(`${this.apiBaseUrl}request/get/sent${params}`);
   }
 
-  GET_requestUpdates() {
-    return this.http.get<any>(`${this.baseApiBaseUrl}notification/updates`);
+  GET_requestUpdates(versionId?) {
+    const params = versionId ? `?version_id=${versionId}` : '';
+    return this.http.get<any>(`${this.baseApiBaseUrl}notification/updates${params}`);
   }
 
   GET_notificationsPopUp() {
