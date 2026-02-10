@@ -93,8 +93,8 @@ jobs:
           AWS_SECURITY_ACCESS_KEY_ID: ${{ secrets.AWS_SECURITY_ACCESS_KEY_ID }}
           AWS_SECURITY_SECRET_ACCESS: ${{ secrets.AWS_SECURITY_SECRET_ACCESS }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
-          S3_BUCKET: ${{ secrets.S3_BUCKET || 'snyk-security-reports' }}
-          S3_PREFIX: ${{ secrets.S3_PREFIX || 'snyk-reports' }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET || 'ibd-snyk-security-reports' }}
+          S3_PREFIX: ${{ secrets.S3_PREFIX || 'ibd-snyk-reports' }}
         run: |
           # Build S3 object path with repository, branch, timestamp, and run ID
           REPO_NAME="${{ github.repository }}"
