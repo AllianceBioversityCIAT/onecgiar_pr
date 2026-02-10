@@ -138,8 +138,11 @@ export class ShareResultRequestService {
         ),
       ]);
 
-      // If initiative is already an active contributor, skip
-      if (initExist?.is_active) {
+      // If initiative is already an active contributor, or is a pending/accepted/rejected contribution, skip
+      if (
+        initExist?.is_active ||
+        (requestExist && requestExist.request_status_id !== 4)
+      ) {
         continue;
       }
 
@@ -151,26 +154,6 @@ export class ShareResultRequestService {
         };
       }
 
-      // If request exists with status_id = 4, add it to shareInitRequests to update later
-      if (requestExist?.request_status_id === 4) {
-        const newShareBilateral = new ShareResultRequest();
-
-        newShareBilateral.share_result_request_id =
-          requestExist.share_result_request_id;
-        newShareBilateral.is_active = true;
-        newShareBilateral.requested_by = user.id;
-        newShareBilateral.requested_date = new Date();
-        newShareBilateral.request_status_id = 1;
-
-        shareInitRequests.push(newShareBilateral);
-        continue;
-      }
-
-      // If request exists with other status_id, skip (don't create duplicate)
-      if (requestExist) {
-        continue;
-      }
-
       // Create new request only if it doesn't exist
       const newShare = this.buildShareResultRequest(
         createTocShareResult,
@@ -178,6 +161,7 @@ export class ShareResultRequestService {
         initiativeId,
         shareInitId,
         user,
+        requestExist?.request_status_id,
       );
       shareInitRequests.push(newShare);
 
@@ -199,10 +183,11 @@ export class ShareResultRequestService {
     initiativeId: number | null,
     shareInitId: number,
     user: TokenDto,
+    requestStatusId: number = 1,
   ): ShareResultRequest {
     const newShare = new ShareResultRequest();
     newShare.result_id = resultId;
-    newShare.request_status_id = 1;
+    newShare.request_status_id = requestStatusId;
     newShare.owner_initiative_id = initiativeId;
     newShare.requester_initiative_id = createTocShareResult?.isToc
       ? initiativeId
