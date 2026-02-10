@@ -58,11 +58,14 @@ jobs:
         run: |
           # Scan server project: run Snyk test inside onecgiar-pr-server directory
           # This ensures we analyze the correct package.json and dependencies
-          # Continue even if vulnerabilities are found (exit code 1)
-          snyk test --json-file-output=../../snyk-server.json --file=package.json || true
+          # Use absolute path to repository root for reliable file output
+          OUTPUT_FILE="${GITHUB_WORKSPACE}/snyk-server.json"
           
-          # Check if report was generated (path is relative to working-directory)
-          if [ -f ../../snyk-server.json ]; then
+          # Continue even if vulnerabilities are found (exit code 1)
+          snyk test --json-file-output="${OUTPUT_FILE}" --file=package.json || true
+          
+          # Check if report was generated in repository root
+          if [ -f "${OUTPUT_FILE}" ]; then
             echo "report_exists=true" >> $GITHUB_OUTPUT
             echo "✅ Snyk server JSON report generated"
           else
@@ -77,9 +80,12 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: |
           # Generate SARIF report for server project
-          snyk test --sarif-file-output=../../snyk-server.sarif --file=package.json || true
+          # Use absolute path to repository root for reliable file output
+          OUTPUT_FILE="${GITHUB_WORKSPACE}/snyk-server.sarif"
           
-          if [ -f ../../snyk-server.sarif ]; then
+          snyk test --sarif-file-output="${OUTPUT_FILE}" --file=package.json || true
+          
+          if [ -f "${OUTPUT_FILE}" ]; then
             echo "sarif_exists=true" >> $GITHUB_OUTPUT
             echo "✅ Snyk server SARIF report generated"
           else
@@ -95,11 +101,14 @@ jobs:
         run: |
           # Scan client project: run Snyk test inside onecgiar-pr-client directory
           # This ensures we analyze the correct package.json and dependencies
-          # Continue even if vulnerabilities are found (exit code 1)
-          snyk test --json-file-output=../../snyk-client.json --file=package.json || true
+          # Use absolute path to repository root for reliable file output
+          OUTPUT_FILE="${GITHUB_WORKSPACE}/snyk-client.json"
           
-          # Check if report was generated (path is relative to working-directory)
-          if [ -f ../../snyk-client.json ]; then
+          # Continue even if vulnerabilities are found (exit code 1)
+          snyk test --json-file-output="${OUTPUT_FILE}" --file=package.json || true
+          
+          # Check if report was generated in repository root
+          if [ -f "${OUTPUT_FILE}" ]; then
             echo "report_exists=true" >> $GITHUB_OUTPUT
             echo "✅ Snyk client JSON report generated"
           else
@@ -114,9 +123,12 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: |
           # Generate SARIF report for client project
-          snyk test --sarif-file-output=../../snyk-client.sarif --file=package.json || true
+          # Use absolute path to repository root for reliable file output
+          OUTPUT_FILE="${GITHUB_WORKSPACE}/snyk-client.sarif"
           
-          if [ -f ../../snyk-client.sarif ]; then
+          snyk test --sarif-file-output="${OUTPUT_FILE}" --file=package.json || true
+          
+          if [ -f "${OUTPUT_FILE}" ]; then
             echo "sarif_exists=true" >> $GITHUB_OUTPUT
             echo "✅ Snyk client SARIF report generated"
           else
@@ -208,10 +220,8 @@ jobs:
           IDENTITY_EXIT=$?
           if [ $IDENTITY_EXIT -eq 0 ]; then
             echo "  ✅ AWS credentials valid"
-            echo "  Identity: ${IDENTITY_OUTPUT}"
           else
             echo "  ❌ AWS credentials validation FAILED"
-            echo "  Error output: ${IDENTITY_OUTPUT}"
             echo "  ⚠️ S3 upload will fail - credentials are invalid"
             exit 0
           fi
@@ -316,47 +326,51 @@ jobs:
           }
           
           # Upload server JSON report if it exists
-          if [ -f snyk-server.json ]; then
+          SERVER_JSON_FILE="${GITHUB_WORKSPACE}/snyk-server.json"
+          if [ -f "${SERVER_JSON_FILE}" ]; then
             SERVER_JSON_KEY="${S3_BASE_PREFIX}/server/snyk-server.json"
-            if upload_file "snyk-server.json" "${SERVER_JSON_KEY}" "Server JSON"; then
+            if upload_file "${SERVER_JSON_FILE}" "${SERVER_JSON_KEY}" "Server JSON"; then
               echo "server_json_key=${SERVER_JSON_KEY}" >> $GITHUB_OUTPUT
               UPLOADED_FILES="${UPLOADED_FILES}Server JSON, "
             fi
           else
-            echo "⚠️ snyk-server.json not found - skipping"
+            echo "⚠️ ${SERVER_JSON_FILE} not found - skipping"
           fi
           
           # Upload server SARIF report if it exists
-          if [ -f snyk-server.sarif ]; then
+          SERVER_SARIF_FILE="${GITHUB_WORKSPACE}/snyk-server.sarif"
+          if [ -f "${SERVER_SARIF_FILE}" ]; then
             SERVER_SARIF_KEY="${S3_BASE_PREFIX}/server/snyk-server.sarif"
-            if upload_file "snyk-server.sarif" "${SERVER_SARIF_KEY}" "Server SARIF"; then
+            if upload_file "${SERVER_SARIF_FILE}" "${SERVER_SARIF_KEY}" "Server SARIF"; then
               echo "server_sarif_key=${SERVER_SARIF_KEY}" >> $GITHUB_OUTPUT
               UPLOADED_FILES="${UPLOADED_FILES}Server SARIF, "
             fi
           else
-            echo "⚠️ snyk-server.sarif not found - skipping"
+            echo "⚠️ ${SERVER_SARIF_FILE} not found - skipping"
           fi
           
           # Upload client JSON report if it exists
-          if [ -f snyk-client.json ]; then
+          CLIENT_JSON_FILE="${GITHUB_WORKSPACE}/snyk-client.json"
+          if [ -f "${CLIENT_JSON_FILE}" ]; then
             CLIENT_JSON_KEY="${S3_BASE_PREFIX}/client/snyk-client.json"
-            if upload_file "snyk-client.json" "${CLIENT_JSON_KEY}" "Client JSON"; then
+            if upload_file "${CLIENT_JSON_FILE}" "${CLIENT_JSON_KEY}" "Client JSON"; then
               echo "client_json_key=${CLIENT_JSON_KEY}" >> $GITHUB_OUTPUT
               UPLOADED_FILES="${UPLOADED_FILES}Client JSON, "
             fi
           else
-            echo "⚠️ snyk-client.json not found - skipping"
+            echo "⚠️ ${CLIENT_JSON_FILE} not found - skipping"
           fi
           
           # Upload client SARIF report if it exists
-          if [ -f snyk-client.sarif ]; then
+          CLIENT_SARIF_FILE="${GITHUB_WORKSPACE}/snyk-client.sarif"
+          if [ -f "${CLIENT_SARIF_FILE}" ]; then
             CLIENT_SARIF_KEY="${S3_BASE_PREFIX}/client/snyk-client.sarif"
-            if upload_file "snyk-client.sarif" "${CLIENT_SARIF_KEY}" "Client SARIF"; then
+            if upload_file "${CLIENT_SARIF_FILE}" "${CLIENT_SARIF_KEY}" "Client SARIF"; then
               echo "client_sarif_key=${CLIENT_SARIF_KEY}" >> $GITHUB_OUTPUT
               UPLOADED_FILES="${UPLOADED_FILES}Client SARIF, "
             fi
           else
-            echo "⚠️ snyk-client.sarif not found - skipping"
+            echo "⚠️ ${CLIENT_SARIF_FILE} not found - skipping"
           fi
           
           # Save metadata for Slack notification (always set)
