@@ -8,6 +8,9 @@ on:
       - staging
       - staging-security-scanning
   pull_request:
+      - master
+      - dev
+      - staging
   workflow_dispatch:
 
 permissions:
