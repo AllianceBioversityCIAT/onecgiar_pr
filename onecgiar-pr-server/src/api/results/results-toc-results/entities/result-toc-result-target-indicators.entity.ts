@@ -27,7 +27,7 @@ export class ResultIndicatorTarget extends BaseEntity {
 
   @Column({
     type: 'decimal',
-    precision: 9,
+    precision: 12,
     scale: 2,
     name: 'contributing_indicator',
     nullable: true,
