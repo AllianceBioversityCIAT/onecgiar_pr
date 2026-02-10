@@ -412,19 +412,20 @@ export class InnovationDevService {
         },
       });
 
-      const ipSupportCenter = await this._resultsInnovationsDevRepository.findOne({
-        where: {
-          results_id: resultId,
-          is_active: true,
-        },
-        relations: {
-          ip_support_center_object: true,
-        },
-      });
+      const ipSupportCenter =
+        await this._resultsInnovationsDevRepository.findOne({
+          where: {
+            results_id: resultId,
+            is_active: true,
+          },
+          relations: {
+            ip_support_center_object: true,
+          },
+        });
 
       const ipSupportCenterId = hasLeadCenter
         ? hasLeadCenter.center_id
-        : ipSupportCenter?.ip_support_center_object?.code ?? null;
+        : (ipSupportCenter?.ip_support_center_object?.code ?? null);
 
       return {
         response: {
