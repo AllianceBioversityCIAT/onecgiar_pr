@@ -2777,6 +2777,8 @@ export class ResultsService {
         indicator: row.indicator,
         submission_date: row.submission_date,
         lead_center: row.lead_center,
+        initiative_role_id: row.initiative_role_id,
+        initiative_role_name: row.initiative_role_name,
       }));
 
       const groupedByProject = mappedResults.reduce(
