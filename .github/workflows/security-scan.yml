@@ -1,0 +1,272 @@
+name: Security Scan (Snyk → S3)
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - staging-security-scanning
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  snyk-scan:
+    name: Snyk Security Scan
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Install Snyk CLI
+        run: npm install -g snyk
+
+      - name: Run Snyk test (JSON report)
+        id: snyk-json
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: |
+          # Run Snyk test and generate JSON report
+          # Continue even if vulnerabilities are found (exit code 1)
+          snyk test --json-file-output=snyk.json --file=package.json || true
+          
+          # Check if report was generated
+          if [ -f snyk.json ]; then
+            echo "report_exists=true" >> $GITHUB_OUTPUT
+            echo "✅ Snyk JSON report generated"
+          else
+            echo "report_exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Snyk JSON report not generated"
+          fi
+
+      - name: Run Snyk test (SARIF report)
+        id: snyk-sarif
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: |
+          # Generate SARIF report for GitHub Code Scanning compatibility
+          snyk test --sarif-file-output=snyk.sarif --file=package.json || true
+          
+          if [ -f snyk.sarif ]; then
+            echo "sarif_exists=true" >> $GITHUB_OUTPUT
+            echo "✅ Snyk SARIF report generated"
+          else
+            echo "sarif_exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Snyk SARIF report not generated"
+          fi
+
+      - name: Configure AWS credentials
+        if: always() && !cancelled()
+        env:
+          AWS_SECURITY_ACCESS_KEY_ID: ${{ secrets.AWS_SECURITY_ACCESS_KEY_ID }}
+          AWS_SECURITY_SECRET_ACCESS: ${{ secrets.AWS_SECURITY_SECRET_ACCESS }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+        run: |
+          # Configure AWS CLI with IAM User credentials
+          aws configure set aws_access_key_id "$AWS_SECURITY_ACCESS_KEY_ID"
+          aws configure set aws_secret_access_key "$AWS_SECURITY_SECRET_ACCESS"
+          aws configure set region "$AWS_REGION"
+          aws configure set output json
+          echo "✅ AWS credentials configured"
+
+      - name: Upload reports to S3
+        id: upload-s3
+        if: always() && !cancelled()
+        env:
+          AWS_SECURITY_ACCESS_KEY_ID: ${{ secrets.AWS_SECURITY_ACCESS_KEY_ID }}
+          AWS_SECURITY_SECRET_ACCESS: ${{ secrets.AWS_SECURITY_SECRET_ACCESS }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET || 'snyk-security-reports' }}
+          S3_PREFIX: ${{ secrets.S3_PREFIX || 'snyk-reports' }}
+        run: |
+          # Build S3 object path with repository, branch, timestamp, and run ID
+          REPO_NAME="${{ github.repository }}"
+          BRANCH_NAME="${{ github.head_ref || github.ref_name }}"
+          TIMESTAMP=$(date -u +"%Y%m%d-%H%M%S")
+          RUN_ID="${{ github.run_id }}"
+          
+          # Sanitize branch name (replace / with -)
+          BRANCH_NAME_SANITIZED=$(echo "$BRANCH_NAME" | tr '/' '-')
+          
+          # S3 key structure: prefix/repo-name/branch/timestamp-runid/filename
+          S3_KEY_PREFIX="${S3_PREFIX}/${REPO_NAME}/${BRANCH_NAME_SANITIZED}/${TIMESTAMP}-${RUN_ID}"
+          
+          echo "📦 Uploading reports to S3..."
+          echo "Bucket: ${S3_BUCKET}"
+          echo "Prefix: ${S3_KEY_PREFIX}"
+          
+          UPLOADED_FILES=""
+          
+          # Upload JSON report if it exists
+          if [ -f snyk.json ]; then
+            JSON_KEY="${S3_KEY_PREFIX}/snyk.json"
+            aws s3 cp snyk.json "s3://${S3_BUCKET}/${JSON_KEY}" --content-type "application/json"
+            echo "✅ Uploaded: ${JSON_KEY}"
+            echo "json_key=${JSON_KEY}" >> $GITHUB_OUTPUT
+            UPLOADED_FILES="${UPLOADED_FILES}JSON, "
+          fi
+          
+          # Upload SARIF report if it exists
+          if [ -f snyk.sarif ]; then
+            SARIF_KEY="${S3_KEY_PREFIX}/snyk.sarif"
+            aws s3 cp snyk.sarif "s3://${S3_BUCKET}/${SARIF_KEY}" --content-type "application/json"
+            echo "✅ Uploaded: ${SARIF_KEY}"
+            echo "sarif_key=${SARIF_KEY}" >> $GITHUB_OUTPUT
+            UPLOADED_FILES="${UPLOADED_FILES}SARIF, "
+          fi
+          
+          # Save metadata for Slack notification
+          echo "s3_bucket=${S3_BUCKET}" >> $GITHUB_OUTPUT
+          echo "s3_prefix=${S3_KEY_PREFIX}" >> $GITHUB_OUTPUT
+          echo "repo_name=${REPO_NAME}" >> $GITHUB_OUTPUT
+          echo "branch_name=${BRANCH_NAME}" >> $GITHUB_OUTPUT
+          echo "uploaded_files=${UPLOADED_FILES}" >> $GITHUB_OUTPUT
+
+      - name: Generate pre-signed S3 URLs
+        id: presign-urls
+        if: always() && !cancelled() && steps.upload-s3.outputs.json_key != ''
+        env:
+          AWS_SECURITY_ACCESS_KEY_ID: ${{ secrets.AWS_SECURITY_ACCESS_KEY_ID }}
+          AWS_SECURITY_SECRET_ACCESS: ${{ secrets.AWS_SECURITY_SECRET_ACCESS }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+        run: |
+          # Generate pre-signed URL valid for 7 days (604800 seconds)
+          EXPIRY_SECONDS=604800
+          S3_BUCKET="${{ steps.upload-s3.outputs.s3_bucket }}"
+          
+          # Pre-signed URL for JSON report
+          if [ -n "${{ steps.upload-s3.outputs.json_key }}" ]; then
+            JSON_URL=$(aws s3 presign "s3://${S3_BUCKET}/${{ steps.upload-s3.outputs.json_key }}" --expires-in ${EXPIRY_SECONDS})
+            echo "json_url=${JSON_URL}" >> $GITHUB_OUTPUT
+            echo "✅ Generated pre-signed URL for JSON report (expires in 7 days)"
+          fi
+          
+          # Pre-signed URL for SARIF report
+          if [ -n "${{ steps.upload-s3.outputs.sarif_key }}" ]; then
+            SARIF_URL=$(aws s3 presign "s3://${S3_BUCKET}/${{ steps.upload-s3.outputs.sarif_key }}" --expires-in ${EXPIRY_SECONDS})
+            echo "sarif_url=${SARIF_URL}" >> $GITHUB_OUTPUT
+            echo "✅ Generated pre-signed URL for SARIF report (expires in 7 days)"
+          fi
+
+      - name: Send Slack notification
+        if: always() && !cancelled() && steps.upload-s3.outputs.repo_name != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          JSON_URL: ${{ steps.presign-urls.outputs.json_url }}
+          SARIF_URL: ${{ steps.presign-urls.outputs.sarif_url }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "⚠️ Slack webhook not configured, skipping notification."
+            exit 0
+          fi
+          
+          REPO_NAME="${{ steps.upload-s3.outputs.repo_name }}"
+          BRANCH_NAME="${{ steps.upload-s3.outputs.branch_name }}"
+          GITHUB_RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          GITHUB_RUN_NUMBER="${{ github.run_number }}"
+          UPLOADED_FILES="${{ steps.upload-s3.outputs.uploaded_files }}"
+          
+          # Clean up trailing comma and space from uploaded files
+          UPLOADED_FILES_CLEAN=$(echo "$UPLOADED_FILES" | sed 's/, $//')
+          
+          # Build download links
+          DOWNLOAD_LINKS=""
+          if [ -n "$JSON_URL" ]; then
+            DOWNLOAD_LINKS="<${JSON_URL}|Download JSON Report>"
+          fi
+          if [ -n "$SARIF_URL" ]; then
+            if [ -n "$DOWNLOAD_LINKS" ]; then
+              DOWNLOAD_LINKS="${DOWNLOAD_LINKS} | <${SARIF_URL}|Download SARIF Report>"
+            else
+              DOWNLOAD_LINKS="<${SARIF_URL}|Download SARIF Report>"
+            fi
+          fi
+          
+          # Determine scan status
+          if [ "${{ steps.snyk-json.outputs.report_exists }}" = "true" ] || [ "${{ steps.snyk-sarif.outputs.sarif_exists }}" = "true" ]; then
+            STATUS_EMOJI="✅"
+            STATUS_TEXT="completed"
+          else
+            STATUS_EMOJI="⚠️"
+            STATUS_TEXT="completed with warnings"
+          fi
+          
+          # Build Slack message payload
+          PAYLOAD=$(cat <<EOF
+          {
+            "text": "${STATUS_EMOJI} Security scan ${STATUS_TEXT} — ${REPO_NAME}",
+            "blocks": [
+              {
+                "type": "header",
+                "text": {
+                  "type": "plain_text",
+                  "text": "${STATUS_EMOJI} Snyk Security Scan ${STATUS_TEXT}"
+                }
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Repository:*\n\`${REPO_NAME}\`"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Branch:*\n\`${BRANCH_NAME}\`"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Reports Generated:*\n${UPLOADED_FILES_CLEAN}"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*GitHub Run:*\n<${GITHUB_RUN_URL}|View Run #${GITHUB_RUN_NUMBER}>"
+                  }
+                ]
+              }
+          EOF
+          )
+          
+          # Add download links section if reports were uploaded
+          if [ -n "$DOWNLOAD_LINKS" ]; then
+            DOWNLOAD_SECTION=$(cat <<EOF
+              ,
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*📥 Download Reports (valid for 7 days):*\n${DOWNLOAD_LINKS}"
+                }
+              }
+          EOF
+          )
+          PAYLOAD="${PAYLOAD}${DOWNLOAD_SECTION}"
+          fi
+          
+          # Close blocks array
+          PAYLOAD="${PAYLOAD}]}"
+          
+          # Send to Slack
+          curl -s -X POST \
+            -H 'Content-type: application/json' \
+            --data "$PAYLOAD" \
+            "$SLACK_WEBHOOK_URL" || echo "⚠️ Failed to send Slack notification"
+          
+          echo "✅ Slack notification sent"
