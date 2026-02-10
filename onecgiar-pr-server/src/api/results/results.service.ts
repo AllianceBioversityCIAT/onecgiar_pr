@@ -3112,7 +3112,7 @@ export class ResultsService {
         };
       }
 
-      return await this._dataSource.transaction(async (manager) => {
+      await this._dataSource.transaction(async (manager) => {
         const result = await manager.findOne(Result, {
           where: {
             id: parsedResultId,
@@ -3156,59 +3156,60 @@ export class ResultsService {
           created_by: user.id,
         });
         await manager.save(ResultReviewHistory, reviewHistory);
-
-        const decisionVerb =
-          reviewDecisionDto.decision === ReviewDecisionEnum.APPROVE
-            ? 'approved'
-            : 'rejected';
-
-        if (reviewDecisionDto.decision === ReviewDecisionEnum.APPROVE) {
-          const shareResultRequests =
-            await this._shareResultRequestRepository.find({
-              where: {
-                result_id: parsedResultId,
-                is_active: true,
-                request_status_id: In([2, 4]),
-              },
-            });
-
-          const contributing_initiatives = {
-            accepted_contributing_initiatives: shareResultRequests
-              .filter((req) => req.request_status_id === 2)
-              .map((req) => ({
-                id: req.shared_inititiative_id,
-              })),
-            pending_contributing_initiatives: shareResultRequests
-              .filter((req) => req.request_status_id === 4)
-              .map((req) => ({
-                id: req.shared_inititiative_id,
-                share_result_request_id: req.share_result_request_id,
-                is_active: req.is_active,
-              })),
-          };
-
-          await this._updateTocMapping(
-            parsedResultId,
-            contributing_initiatives,
-            user,
-          );
-        } else {
-          // When result is rejected, deactivate all active share result requests for this result
-          await this._shareResultRequestRepository.update(
-            { result_id: parsedResultId, is_active: true },
-            { is_active: false },
-          );
-        }
-
-        return {
-          response: {
-            resultId: parsedResultId,
-            status: newStatusId,
-          },
-          message: `Result ${decisionVerb} successfully`,
-          status: HttpStatus.OK,
-        };
       });
+
+      const decisionVerb =
+        reviewDecisionDto.decision === ReviewDecisionEnum.APPROVE
+          ? 'approved'
+          : 'rejected';
+
+      let newStatusId: number;
+      if (reviewDecisionDto.decision === ReviewDecisionEnum.APPROVE) {
+        const shareResultRequests =
+          await this._shareResultRequestRepository.find({
+            where: {
+              result_id: parsedResultId,
+              is_active: true,
+              request_status_id: In([2, 4]),
+            },
+          });
+
+        const contributing_initiatives = {
+          accepted_contributing_initiatives: shareResultRequests
+            .filter((req) => req.request_status_id === 2)
+            .map((req) => ({
+              id: req.shared_inititiative_id,
+            })),
+          pending_contributing_initiatives: shareResultRequests
+            .filter((req) => req.request_status_id === 4)
+            .map((req) => ({
+              id: req.shared_inititiative_id,
+              share_result_request_id: req.share_result_request_id,
+              is_active: req.is_active,
+            })),
+        };
+
+        await this._updateTocMapping(
+          parsedResultId,
+          contributing_initiatives,
+          user,
+        );
+      } else {
+        // When result is rejected, deactivate all active share result requests for this result
+        await this._shareResultRequestRepository.update(
+          { result_id: parsedResultId, is_active: true },
+          { is_active: false },
+        );
+      }
+
+      return {
+        response: {
+          resultId: parsedResultId,
+          status: newStatusId,
+        },
+        message: `Result ${decisionVerb} successfully`,
+        status: HttpStatus.OK,
+      };
     } catch (error) {
       if (
         error instanceof BadRequestException ||
