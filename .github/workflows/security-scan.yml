@@ -138,6 +138,107 @@ jobs:
           aws configure set output json
           echo "✅ AWS credentials configured"
 
+      - name: S3 Upload Diagnostics
+        if: always() && !cancelled()
+        env:
+          AWS_SECURITY_ACCESS_KEY_ID: ${{ secrets.AWS_SECURITY_ACCESS_KEY_ID }}
+          AWS_SECURITY_SECRET_ACCESS: ${{ secrets.AWS_SECURITY_SECRET_ACCESS }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET || 'ibd-snyk-security-reports' }}
+          S3_PREFIX: ${{ secrets.S3_PREFIX || 'ibd-snyk-reports' }}
+        run: |
+          echo "=========================================="
+          echo "🔍 S3 UPLOAD DIAGNOSTICS"
+          echo "=========================================="
+          
+          # 1. Check repository root location and files
+          echo ""
+          echo "📂 Repository Root Location:"
+          echo "  pwd: $(pwd)"
+          echo "  GITHUB_WORKSPACE: ${GITHUB_WORKSPACE}"
+          echo ""
+          echo "📋 Files in repository root:"
+          ls -lah . | head -20
+          echo ""
+          
+          # 2. Check for expected report files with detailed info
+          echo "📄 Expected Report Files Status:"
+          echo "----------------------------------------"
+          
+          check_file() {
+            FILE="$1"
+            if test -f "$FILE"; then
+              SIZE=$(wc -c < "$FILE" 2>/dev/null || echo "0")
+              STAT_INFO=$(stat "$FILE" 2>/dev/null || echo "stat failed")
+              echo "  ✅ $FILE EXISTS"
+              echo "     Size: ${SIZE} bytes"
+              echo "     Stat: ${STAT_INFO}"
+              echo "     Will upload: YES"
+            else
+              echo "  ❌ $FILE NOT FOUND"
+              echo "     Will upload: NO"
+            fi
+          }
+          
+          check_file "snyk-server.json"
+          check_file "snyk-server.sarif"
+          check_file "snyk-client.json"
+          check_file "snyk-client.sarif"
+          echo ""
+          
+          # 3. Validate AWS CLI availability
+          echo "🔧 AWS CLI Validation:"
+          echo "----------------------------------------"
+          if command -v aws >/dev/null 2>&1; then
+            echo "  ✅ AWS CLI found"
+            aws --version || echo "  ⚠️ aws --version failed"
+            echo ""
+            echo "  AWS Configuration:"
+            aws configure list 2>&1 || echo "  ⚠️ aws configure list failed"
+            echo ""
+          else
+            echo "  ❌ AWS CLI NOT FOUND"
+            echo "  ⚠️ S3 upload will fail - AWS CLI is missing"
+            exit 0
+          fi
+          
+          # 4. Validate AWS credentials
+          echo "  Verifying AWS credentials..."
+          IDENTITY_OUTPUT=$(aws sts get-caller-identity 2>&1)
+          IDENTITY_EXIT=$?
+          if [ $IDENTITY_EXIT -eq 0 ]; then
+            echo "  ✅ AWS credentials valid"
+            echo "  Identity: ${IDENTITY_OUTPUT}"
+          else
+            echo "  ❌ AWS credentials validation FAILED"
+            echo "  Error output: ${IDENTITY_OUTPUT}"
+            echo "  ⚠️ S3 upload will fail - credentials are invalid"
+            exit 0
+          fi
+          echo ""
+          
+          # 5. Validate S3 target
+          echo "🪣 S3 Target Validation:"
+          echo "----------------------------------------"
+          echo "  S3_BUCKET: ${S3_BUCKET}"
+          echo "  S3_PREFIX: ${S3_PREFIX}"
+          echo ""
+          echo "  Checking bucket access..."
+          BUCKET_CHECK=$(aws s3 ls "s3://${S3_BUCKET}" 2>&1)
+          BUCKET_EXIT=$?
+          if [ $BUCKET_EXIT -eq 0 ]; then
+            echo "  ✅ Bucket accessible"
+            echo "  Bucket listing (first 5 items):"
+            echo "${BUCKET_CHECK}" | head -5 || echo "  (empty or listing failed)"
+          else
+            echo "  ❌ Bucket access FAILED"
+            echo "  Error output: ${BUCKET_CHECK}"
+            echo "  ⚠️ S3 upload will fail - bucket is not accessible"
+            exit 0
+          fi
+          echo ""
+          echo "=========================================="
+
       - name: Upload reports to S3
         id: upload-s3
         if: always() && !cancelled()
@@ -148,6 +249,9 @@ jobs:
           S3_BUCKET: ${{ secrets.S3_BUCKET || 'ibd-snyk-security-reports' }}
           S3_PREFIX: ${{ secrets.S3_PREFIX || 'ibd-snyk-reports' }}
         run: |
+          # Enable command tracing to see exact commands executed
+          set -x
+          
           # Build S3 object path with repository, branch, timestamp, run ID, and project name
           REPO_NAME="${{ github.repository }}"
           BRANCH_NAME="${{ github.head_ref || github.ref_name }}"
@@ -161,53 +265,110 @@ jobs:
           S3_BASE_PREFIX="${S3_PREFIX}/${REPO_NAME}/${BRANCH_NAME_SANITIZED}/${TIMESTAMP}-${RUN_ID}"
           
           echo "📦 Uploading reports to S3..."
+          echo "Current directory: $(pwd)"
           echo "Bucket: ${S3_BUCKET}"
           echo "Base prefix: ${S3_BASE_PREFIX}"
+          echo ""
           
+          # Initialize outputs (always set, even if empty)
           UPLOADED_FILES=""
+          echo "server_json_key=" >> $GITHUB_OUTPUT
+          echo "server_sarif_key=" >> $GITHUB_OUTPUT
+          echo "client_json_key=" >> $GITHUB_OUTPUT
+          echo "client_sarif_key=" >> $GITHUB_OUTPUT
+          
+          # Helper function to upload file with error capture
+          upload_file() {
+            LOCAL_FILE="$1"
+            S3_KEY="$2"
+            FILE_NAME="$3"
+            
+            if [ ! -f "$LOCAL_FILE" ]; then
+              echo "⚠️ File not found: ${LOCAL_FILE} - skipping upload"
+              return 1
+            fi
+            
+            echo "📤 Uploading ${FILE_NAME}..."
+            echo "  Source: ${LOCAL_FILE}"
+            echo "  Target: s3://${S3_BUCKET}/${S3_KEY}"
+            
+            # Capture both stdout and stderr
+            UPLOAD_OUTPUT=$(aws s3 cp "$LOCAL_FILE" "s3://${S3_BUCKET}/${S3_KEY}" --content-type "application/json" 2>&1)
+            UPLOAD_EXIT=$?
+            
+            if [ $UPLOAD_EXIT -eq 0 ]; then
+              echo "  ✅ Upload successful"
+              # Verify object exists in S3
+              VERIFY_OUTPUT=$(aws s3 ls "s3://${S3_BUCKET}/${S3_KEY}" 2>&1)
+              if [ $? -eq 0 ]; then
+                echo "  ✅ Verified: Object exists in S3"
+                echo "  ${VERIFY_OUTPUT}"
+              else
+                echo "  ⚠️ Warning: Upload reported success but verification failed"
+                echo "  Verification error: ${VERIFY_OUTPUT}"
+              fi
+              return 0
+            else
+              echo "  ❌ Upload FAILED (exit code: ${UPLOAD_EXIT})"
+              echo "  Error output: ${UPLOAD_OUTPUT}"
+              return 1
+            fi
+          }
           
           # Upload server JSON report if it exists
           if [ -f snyk-server.json ]; then
             SERVER_JSON_KEY="${S3_BASE_PREFIX}/server/snyk-server.json"
-            aws s3 cp snyk-server.json "s3://${S3_BUCKET}/${SERVER_JSON_KEY}" --content-type "application/json"
-            echo "✅ Uploaded server JSON: ${SERVER_JSON_KEY}"
-            echo "server_json_key=${SERVER_JSON_KEY}" >> $GITHUB_OUTPUT
-            UPLOADED_FILES="${UPLOADED_FILES}Server JSON, "
+            if upload_file "snyk-server.json" "${SERVER_JSON_KEY}" "Server JSON"; then
+              echo "server_json_key=${SERVER_JSON_KEY}" >> $GITHUB_OUTPUT
+              UPLOADED_FILES="${UPLOADED_FILES}Server JSON, "
+            fi
+          else
+            echo "⚠️ snyk-server.json not found - skipping"
           fi
           
           # Upload server SARIF report if it exists
           if [ -f snyk-server.sarif ]; then
             SERVER_SARIF_KEY="${S3_BASE_PREFIX}/server/snyk-server.sarif"
-            aws s3 cp snyk-server.sarif "s3://${S3_BUCKET}/${SERVER_SARIF_KEY}" --content-type "application/json"
-            echo "✅ Uploaded server SARIF: ${SERVER_SARIF_KEY}"
-            echo "server_sarif_key=${SERVER_SARIF_KEY}" >> $GITHUB_OUTPUT
-            UPLOADED_FILES="${UPLOADED_FILES}Server SARIF, "
+            if upload_file "snyk-server.sarif" "${SERVER_SARIF_KEY}" "Server SARIF"; then
+              echo "server_sarif_key=${SERVER_SARIF_KEY}" >> $GITHUB_OUTPUT
+              UPLOADED_FILES="${UPLOADED_FILES}Server SARIF, "
+            fi
+          else
+            echo "⚠️ snyk-server.sarif not found - skipping"
           fi
           
           # Upload client JSON report if it exists
           if [ -f snyk-client.json ]; then
             CLIENT_JSON_KEY="${S3_BASE_PREFIX}/client/snyk-client.json"
-            aws s3 cp snyk-client.json "s3://${S3_BUCKET}/${CLIENT_JSON_KEY}" --content-type "application/json"
-            echo "✅ Uploaded client JSON: ${CLIENT_JSON_KEY}"
-            echo "client_json_key=${CLIENT_JSON_KEY}" >> $GITHUB_OUTPUT
-            UPLOADED_FILES="${UPLOADED_FILES}Client JSON, "
+            if upload_file "snyk-client.json" "${CLIENT_JSON_KEY}" "Client JSON"; then
+              echo "client_json_key=${CLIENT_JSON_KEY}" >> $GITHUB_OUTPUT
+              UPLOADED_FILES="${UPLOADED_FILES}Client JSON, "
+            fi
+          else
+            echo "⚠️ snyk-client.json not found - skipping"
           fi
           
           # Upload client SARIF report if it exists
           if [ -f snyk-client.sarif ]; then
             CLIENT_SARIF_KEY="${S3_BASE_PREFIX}/client/snyk-client.sarif"
-            aws s3 cp snyk-client.sarif "s3://${S3_BUCKET}/${CLIENT_SARIF_KEY}" --content-type "application/json"
-            echo "✅ Uploaded client SARIF: ${CLIENT_SARIF_KEY}"
-            echo "client_sarif_key=${CLIENT_SARIF_KEY}" >> $GITHUB_OUTPUT
-            UPLOADED_FILES="${UPLOADED_FILES}Client SARIF, "
+            if upload_file "snyk-client.sarif" "${CLIENT_SARIF_KEY}" "Client SARIF"; then
+              echo "client_sarif_key=${CLIENT_SARIF_KEY}" >> $GITHUB_OUTPUT
+              UPLOADED_FILES="${UPLOADED_FILES}Client SARIF, "
+            fi
+          else
+            echo "⚠️ snyk-client.sarif not found - skipping"
           fi
           
-          # Save metadata for Slack notification
+          # Save metadata for Slack notification (always set)
           echo "s3_bucket=${S3_BUCKET}" >> $GITHUB_OUTPUT
           echo "s3_base_prefix=${S3_BASE_PREFIX}" >> $GITHUB_OUTPUT
           echo "repo_name=${REPO_NAME}" >> $GITHUB_OUTPUT
           echo "branch_name=${BRANCH_NAME}" >> $GITHUB_OUTPUT
           echo "uploaded_files=${UPLOADED_FILES}" >> $GITHUB_OUTPUT
+          
+          echo ""
+          echo "📊 Upload Summary:"
+          echo "  Files uploaded: ${UPLOADED_FILES}"
 
       - name: Generate pre-signed S3 URLs
         id: presign-urls
