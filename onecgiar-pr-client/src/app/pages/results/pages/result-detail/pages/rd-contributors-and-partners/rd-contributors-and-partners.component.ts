@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef, computed } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
@@ -24,7 +24,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   contributingInitiativesList = [];
   alertStatusMessage: string = `Partner organization or CG Center that you collaborated with or are currently collaborating with to generate this result.`;
   cgCentersMessage: string = `This section displays CGIAR Center partners as they appear in <a class="open_route" href="/result/result-detail/${this.resultCode}/theory-of-change?phase=${this.versionId}" target="_blank">Section 2, Theory of Change</a>.</li> Should you identify any inconsistencies, please update Section 2`;
-
+  tocConsumed = true;
   disabledText = 'To remove this center, please contact your librarian';
   innovationUseResultsSE = inject(InnovationUseResultsService);
   fieldsManagerSE = inject(FieldsManagerService);
@@ -35,7 +35,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     public rdPartnersSE: RdContributorsAndPartnersService,
     private readonly customizedAlertsFeSE: CustomizedAlertsFeService,
     public centersSE: CentersService,
-    private cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef
   ) {
     this.api.dataControlSE.currentResultSectionName.set('Partners & Contributors');
   }
@@ -58,8 +58,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     });
 
     const checkResultsList = setInterval(() => {
-      if (this.innovationUseResultsSE.resultsList?.length > 0 &&
-          this.rdPartnersSE.partnersBody?.linked_results?.length > 0) {
+      if (this.innovationUseResultsSE.resultsList?.length > 0 && this.rdPartnersSE.partnersBody?.linked_results?.length > 0) {
         const linkedResults = this.rdPartnersSE.partnersBody.linked_results;
         const hasIds = linkedResults.some((item: any) => typeof item === 'number');
         if (hasIds) {
@@ -72,6 +71,11 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     setTimeout(() => clearInterval(checkResultsList), 5000);
   }
 
+  isAvisaInitiative = computed(() => {
+    const code = this.api.dataControlSE.currentResultSignal?.()?.initiative_official_code ?? this.api.dataControlSE.currentResult?.initiative_official_code;
+    return code === 'SGP-02' || code === 'SGP02';
+  });
+
   GET_AllWithoutResults() {
     this.api.resultsSE.GET_resultById().subscribe({
       next: ({ response }) => {
@@ -79,7 +83,6 @@ export class RdContributorsAndPartnersComponent implements OnInit {
         const activePortfolio = this.api.dataControlSE.currentResult?.portfolio;
         this.api.resultsSE.GET_AllWithoutResults(activePortfolio).subscribe(({ response }) => {
           this.contributingInitiativesList = response;
-          // this.changeDetectorRef.detectChanges();
         });
       },
       error: err => {
@@ -170,8 +173,6 @@ export class RdContributorsAndPartnersComponent implements OnInit {
       });
     }
 
-    if (!this.rdPartnersSE.partnersBody.result_toc_result.planned_result) this.rdPartnersSE.partnersBody.result_toc_result.result_toc_results = [];
-
     const linkedResultsIds = (this.rdPartnersSE.partnersBody.linked_results || []).map((r: any) => Number(r?.id ?? r));
 
     const sendedData = {
@@ -192,12 +193,12 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     });
   }
 
-  onRemoveContribuiting(index, isAcceptedArray: boolean) {
-    if (isAcceptedArray) {
-      this.rdPartnersSE.partnersBody.contributing_initiatives.accepted_contributing_initiatives.splice(index, 1);
-    } else {
-      this.rdPartnersSE.contributingInitiativeNew.splice(index, 1);
-    }
+  onRemoveAcceptedContributing(index: number) {
+    this.rdPartnersSE.partnersBody.contributing_initiatives?.accepted_contributing_initiatives?.splice(index, 1);
+  }
+
+  onRemoveNewContributing(index: number) {
+    this.rdPartnersSE.contributingInitiativeNew.splice(index, 1);
   }
 
   toggleActiveContributor(item) {
@@ -209,6 +210,37 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     return `Please select the ${entity} leading this result. <b>Only ${entity}s already added in this section can be selected as the result lead.</b>`;
   }
 
+  onPlannedResultChange(item: any) {
+    item?.result_toc_results?.forEach((tab: any) => {
+      if (tab.indicators?.[0]) {
+        tab.indicators[0].related_node_id = null;
+        tab.indicators[0].toc_results_indicator_id = null;
+        if (tab.indicators[0].targets?.[0]) {
+          tab.indicators[0].targets[0].contributing_indicator = null;
+        }
+      }
+      tab.toc_progressive_narrative = null;
+      tab.toc_result_id = null;
+      tab.toc_level_id = null;
+    });
+
+    this.tocConsumed = false;
+
+    setTimeout(() => {
+      this.tocConsumed = true;
+      this.cdr.detectChanges();
+    }, 200);
+  }
+
+  getContributorDescription(contributor: any) {
+    const contributorsText = `<strong>${contributor?.official_code} ${contributor?.short_name}</strong> - Does this result align with the Program's planned TOC indicators?`;
+
+    if (!contributor?.result_toc_results?.length) {
+      return `<strong>${contributor?.official_code} ${contributor?.short_name}</strong> - Pending confirmation`;
+    }
+
+    return contributorsText;
+  }
 
   formatResultLabel(option: any): string {
     if (option?.result_code && option?.name) {
@@ -229,5 +261,15 @@ export class RdContributorsAndPartnersComponent implements OnInit {
       return `${phaseInfo}${option.result_code} - ${option.name}${resultTypeInfo}${title}`;
     }
     return option?.title || option?.name || '';
+  }
+
+  formatBilateralProjectLabel(project: any): string {
+    const fullName = project?.fullName || project?.obj_clarisa_project?.fullName || '';
+    const organizationName = project?.obj_organization?.name || project?.obj_clarisa_project?.obj_organization?.name;
+
+    if (organizationName) {
+      return `${fullName} (Center: ${organizationName})`;
+    }
+    return fullName;
   }
 }

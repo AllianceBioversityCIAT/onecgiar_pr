@@ -170,6 +170,14 @@ export class ResultInnovationPackage extends BaseEntity {
   scaling_ambition_blurb!: string;
 
   @Column({
+    name: 'has_scaling_studies',
+    type: 'boolean',
+    nullable: true,
+    default: null,
+  })
+  has_scaling_studies: boolean;
+
+  @Column({
     name: 'participants_consent',
     type: 'boolean',
     nullable: true,

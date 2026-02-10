@@ -381,6 +381,7 @@ describe('InnovationPathwayStepFourService', () => {
         is_lead_by_partner: false,
         initiative_id: 1,
         source: SourceEnum.Result,
+        result_impact_area_scores: [],
         obj_result_type: null,
         obj_result_level: null,
         obj_gender_tag_level: null,
@@ -429,6 +430,9 @@ describe('InnovationPathwayStepFourService', () => {
         results_innovations_use_object: null,
         results_policy_changes_object: null,
         obj_external_submitter: null,
+        reviewed_by: null,
+        obj_reviewed_by: null,
+        reviewed_at: null,
         obj_lead_contact_person: {
           id: 1,
           cn: 'Test User',

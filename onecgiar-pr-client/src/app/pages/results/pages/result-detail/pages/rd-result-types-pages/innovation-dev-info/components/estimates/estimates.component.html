@@ -19,7 +19,12 @@
       <th></th>
     </tr>
     <tr *ngFor="let item of body.initiative_expected_investment">
-      <div appFeedbackValidation labelText="Total USD Value" [isComplete]="checkValueAlert(item)"></div>
+      <div
+        appFeedbackValidation
+        [labelText]="
+          'Total USD Value of ' + item.obj_result_initiative.obj_initiative.official_code + ' - ' + item.obj_result_initiative.obj_initiative.name
+        "
+        [isComplete]="checkValueAlert(item)"></div>
 
       <td>
         <strong>{{ item.obj_result_initiative.obj_initiative.official_code }}</strong> - {{ item.obj_result_initiative.obj_initiative.name }}
@@ -67,7 +72,13 @@
       <th></th>
     </tr>
     <tr *ngFor="let item of body.bilateral_expected_investment">
-      <div appFeedbackValidation labelText="Total USD Value" [isComplete]="checkValueAlert(item)"></div>
+      <div
+        appFeedbackValidation
+        [labelText]="
+          'Total USD Value of ' +
+          (this.fieldsManagerSE.isP25() ? item?.obj_result_project.obj_clarisa_project.shortName : item?.obj_non_pooled_projetct?.grant_title)
+        "
+        [isComplete]="checkValueAlert(item)"></div>
 
       <td>
         <div style="display: flex; justify-content: space-between; align-items: center">
@@ -104,8 +115,15 @@
   <div style="margin-bottom: 45px">
     <p>
       To add additional non-pooled projects, please go to
-      <a class="open_route" [href]="'/result/result-detail/' + resultCode + '/theory-of-change?phase=' + versionId" target="_blank">section 2</a> of
-      this result.
+      @if (this.fieldsManagerSE.isP25()) {
+        <a class="open_route" [href]="'/result/result-detail/' + resultCode + '/contributor-partners?phase=' + versionId" target="_blank">
+          section 2
+        </a>
+        of this result.
+      } @else {
+        <a class="open_route" [href]="'/result/result-detail/' + resultCode + '/theory-of-change?phase=' + versionId" target="_blank"> section 2 </a>
+        of this result.
+      }
     </p>
   </div>
 </div>
@@ -126,7 +144,10 @@
       <th></th>
     </tr>
     <tr *ngFor="let item of body.institutions_expected_investment">
-      <div appFeedbackValidation labelText="Total USD Value" [isComplete]="checkValueAlert(item)"></div>
+      <div
+        appFeedbackValidation
+        [labelText]="'Total USD Value of ' + item['obj_result_institution']?.obj_institutions.name"
+        [isComplete]="checkValueAlert(item)"></div>
 
       <td>
         <div class="name">{{ item['obj_result_institution']?.obj_institutions.name }}</div>
@@ -161,8 +182,15 @@
   <div style="margin-bottom: 45px">
     <p>
       To add additional partners, please go to
-      <a class="open_route" [href]="'/result/result-detail/' + resultCode + '/partners?phase=' + versionId" target="_blank">section 3</a> of this
-      result.
+      @if (this.fieldsManagerSE.isP25()) {
+        <a class="open_route" [href]="'/result/result-detail/' + resultCode + '/contributor-partners?phase=' + versionId" target="_blank">
+          section 2
+        </a>
+        of this result.
+      } @else {
+        <a class="open_route" [href]="'/result/result-detail/' + resultCode + '/partners?phase=' + versionId" target="_blank">section 3</a> of this
+        result.
+      }
     </p>
   </div>
 </div>

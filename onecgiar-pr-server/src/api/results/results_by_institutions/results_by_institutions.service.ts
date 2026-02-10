@@ -463,8 +463,8 @@ export class ResultsByInstitutionsService {
           const isInnovation = [
             ResultTypeEnum.INNOVATION_DEVELOPMENT,
             ResultTypeEnum.INNOVATION_USE,
+            ResultTypeEnum.INNOVATION_USE_IPSR,
           ].includes(incomingResult.result_type_id);
-          console.log('isInnovation', isInnovation);
           await this.handleInstitutions(
             data.institutions ?? [],
             oldPartners,
@@ -940,24 +940,77 @@ export class ResultsByInstitutionsService {
     }
 
     if (added.length) {
-      added = added.map((a) => {
-        const toAdd = new ResultsByInstitution();
+      const institutionRoleId = isKnowledgeProduct
+        ? InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS
+        : InstitutionRoleEnum.PARTNER;
 
-        toAdd.created_by = userId;
-        toAdd.last_updated_by = userId;
-        toAdd.is_active = true;
-        toAdd.result_id = resultId;
-        toAdd.institutions_id = a.institutions_id;
-        toAdd.institution_roles_id = isKnowledgeProduct
-          ? InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS
-          : InstitutionRoleEnum.PARTNER;
-        toAdd.delivery = a.delivery;
-        toAdd['isNew'] = true;
-        toAdd.is_leading_result = a.is_leading_result;
-        return toAdd;
-      });
+      // Check for existing institutions (active or inactive) to avoid duplicates
+      // OPTIMIZATION: Single query to fetch all potentially existing records
+      const incomingInstitutionIds = added
+        .map((a) => a.institutions_id)
+        .filter((id) => id != null);
 
-      added = await this._resultByIntitutionsRepository.save(added);
+      const existingInstitutions =
+        incomingInstitutionIds.length > 0
+          ? await this._resultByIntitutionsRepository.find({
+              where: {
+                result_id: resultId,
+                institutions_id: In(incomingInstitutionIds),
+                institution_roles_id: institutionRoleId,
+              },
+            })
+          : [];
+
+      // Build map for O(1) lookup: institutions_id -> existing ResultsByInstitution
+      const existingMap = new Map<number, ResultsByInstitution>();
+      for (const existing of existingInstitutions) {
+        existingMap.set(existing.institutions_id, existing);
+      }
+
+      const institutionsToReactivate: ResultsByInstitution[] = [];
+      const institutionsToCreate: ResultsByInstitution[] = [];
+
+      for (const a of added) {
+        const existing = existingMap.get(a.institutions_id);
+
+        if (existing) {
+          // Reactivate and update existing record instead of creating duplicate
+          existing.is_active = true;
+          existing.last_updated_by = userId;
+          existing.institutions_id = a.institutions_id;
+          existing.is_leading_result = a.is_leading_result;
+          existing.delivery = a.delivery ?? [];
+          institutionsToReactivate.push(existing);
+        } else {
+          // Create new only if no existing record found
+          const toAdd = new ResultsByInstitution();
+          toAdd.created_by = userId;
+          toAdd.last_updated_by = userId;
+          toAdd.is_active = true;
+          toAdd.result_id = resultId;
+          toAdd.institutions_id = a.institutions_id;
+          toAdd.institution_roles_id = institutionRoleId;
+          toAdd.delivery = a.delivery ?? [];
+          toAdd['isNew'] = true;
+          toAdd.is_leading_result = a.is_leading_result;
+          institutionsToCreate.push(toAdd);
+        }
+      }
+
+      // Save reactivated and new institutions separately
+      if (institutionsToReactivate.length) {
+        await this._resultByIntitutionsRepository.save(
+          institutionsToReactivate,
+        );
+      }
+
+      if (institutionsToCreate.length) {
+        const created =
+          await this._resultByIntitutionsRepository.save(institutionsToCreate);
+        added = [...institutionsToReactivate, ...created];
+      } else {
+        added = institutionsToReactivate;
+      }
 
       if (isInnoDev) {
         const resultInstitutionsBudgets = added.map((a) => {
@@ -1032,16 +1085,26 @@ export class ResultsByInstitutionsService {
     await this._resultByIntitutionsRepository.save(toUpdate);
     await this._resultInstitutionsBudgetRepository.save(updatedNewBudgets);
 
-    for (const toUpdateDeliveries of toUpdate.concat(added)) {
-      await this.handleDeliveries(
-        toUpdateDeliveries['isNew']
-          ? toUpdateDeliveries.delivery
-          : (incomingInstitutions.find((i) => i.id === toUpdateDeliveries.id)
-              ?.delivery ?? []),
-        toUpdateDeliveries['isNew'] ? [] : toUpdateDeliveries.delivery,
-        toUpdateDeliveries.id,
-        userId,
-      );
+    const dtoHasDelivery = (dto: any): boolean =>
+      dto != null && Object.prototype.hasOwnProperty.call(dto, 'delivery');
+
+    for (const inst of toUpdate.concat(added)) {
+      if (inst['isNew']) {
+        const incoming = (inst.delivery ?? []) as any[];
+        if (incoming.length) {
+          await this.handleDeliveries(incoming, [], inst.id, userId);
+        }
+        continue;
+      }
+
+      const dto = incomingInstitutions.find((i) => i.id === inst.id);
+
+      if (!dtoHasDelivery(dto)) continue;
+
+      const incoming = (dto?.delivery ?? []) as any[];
+      const old = (inst.delivery ?? []) as any[];
+
+      await this.handleDeliveries(incoming, old, inst.id, userId);
     }
   }
 }

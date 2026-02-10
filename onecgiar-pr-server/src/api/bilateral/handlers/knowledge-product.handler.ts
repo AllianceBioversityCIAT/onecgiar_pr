@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import {
   BilateralResultTypeHandler,
   HandlerAfterCreateContext,
@@ -6,11 +6,11 @@ import {
   HandlerInitializeResult,
 } from './bilateral-result-type-handler.interface';
 import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
+import { ResultStatusData } from '../../../shared/constants/result-status.enum';
 import { ResultRepository } from '../../results/result.repository';
-import { ResultsKnowledgeProductsRepository } from '../../results/results-knowledge-products/repositories/results-knowledge-products.repository';
-import { ResultsKnowledgeProductMetadataRepository } from '../../results/results-knowledge-products/repositories/results-knowledge-product-metadata.repository';
-import { Like } from 'typeorm';
+import { ResultsKnowledgeProductsService } from '../../results/results-knowledge-products/results-knowledge-products.service';
 import { SourceEnum } from '../../results/entities/result.entity';
+import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 
 @Injectable()
 export class KnowledgeProductBilateralHandler
@@ -21,8 +21,7 @@ export class KnowledgeProductBilateralHandler
 
   constructor(
     private readonly _resultRepository: ResultRepository,
-    private readonly _resultsKnowledgeProductsRepository: ResultsKnowledgeProductsRepository,
-    private readonly _resultsKnowledgeProductMetadataRepository: ResultsKnowledgeProductMetadataRepository,
+    private readonly _resultsKnowledgeProductsService: ResultsKnowledgeProductsService,
   ) {}
 
   async initializeResultHeader(
@@ -36,31 +35,24 @@ export class KnowledgeProductBilateralHandler
       );
     }
 
-    this.logger.log('Direct KP creation (no CGSpace sync)');
-    const existingKp = await this._resultsKnowledgeProductsRepository.findOne({
-      where: {
-        handle: Like(bilateralDto.knowledge_product.handle),
-        result_object: { is_active: true },
-      },
-      relations: { result_object: true },
-    });
-
-    if (existingKp) {
-      this.logger.warn(
-        `Knowledge Product with handle ${bilateralDto.knowledge_product.handle} already exists (result_id=${existingKp.result_object.id}), aborting bilateral creation.`,
-      );
+    const handle = bilateralDto.knowledge_product.handle;
+    if (!handle) {
       throw new BadRequestException(
-        `Knowledge Product with handle ${bilateralDto.knowledge_product.handle} already exists.`,
+        'knowledge_product.handle is required for KNOWLEDGE_PRODUCT results.',
       );
     }
 
+    // Duplicate handle and MQAP/year validation are done in BilateralService before any insert
     const resultHeader = await this._resultRepository.save({
       created_by: context.userId,
       version_id: context.version.id,
-      title: bilateralDto.title,
-      description: bilateralDto.description,
+      title:
+        bilateralDto.title ||
+        `Loading from CGSpace: ${bilateralDto.knowledge_product.handle}`,
+      description:
+        bilateralDto.description || 'Metadata will be loaded from CGSpace',
       reported_year_id: context.year.year,
-      result_code: context.lastCode + 1,
+      result_code: 0,
       result_type_id: bilateralDto.result_type_id,
       result_level_id: bilateralDto.result_level_id,
       external_submitter: context.submittedUserId,
@@ -71,6 +63,7 @@ export class KnowledgeProductBilateralHandler
         created_date: bilateralDto.created_date,
       }),
       source: SourceEnum.Bilateral,
+      status_id: ResultStatusData.PendingReview.value,
     });
 
     return { resultHeader, isDuplicate: false };
@@ -90,39 +83,45 @@ export class KnowledgeProductBilateralHandler
     }
 
     const knowledgeProduct = bilateralDto.knowledge_product;
-    if (!knowledgeProduct) {
+    if (!knowledgeProduct?.handle) {
       throw new BadRequestException(
-        'knowledge_product object is required for KNOWLEDGE_PRODUCT results.',
+        'knowledge_product.handle is required for KNOWLEDGE_PRODUCT results to fetch metadata from CGSpace.',
       );
     }
 
-    const kpEntity: any = {
-      results_id: resultId,
-      created_by: userId,
-      handle: knowledgeProduct.handle,
-      name: bilateralDto.title,
-      description: bilateralDto.description,
-      knowledge_product_type: knowledgeProduct.knowledge_product_type,
-      licence: knowledgeProduct.licence,
-      is_active: true,
-    };
-    const savedKp =
-      await this._resultsKnowledgeProductsRepository.save(kpEntity);
+    // Bilateral sends full URL; normalize to short form (e.g. 10568/175322)
+    const handleId =
+      this._resultsKnowledgeProductsService.extractHandleIdentifier(
+        knowledgeProduct.handle,
+      );
 
-    if (knowledgeProduct.metadataCG) {
-      const meta = knowledgeProduct.metadataCG;
-      await this._resultsKnowledgeProductMetadataRepository.save({
-        result_knowledge_product_id: savedKp.result_knowledge_product_id,
-        source: meta.source,
-        is_isi: meta.is_isi ?? null,
-        accesibility: meta.accessibility ? 'Open' : 'Restricted',
-        year: meta.issue_year ?? null,
-        online_year: meta.issue_year ?? null,
-        is_peer_reviewed: meta.is_peer_reviewed ?? null,
-        doi: null,
-        created_by: userId,
-        is_active: true,
-      });
+    this.logger.log(`Fetching KP metadata from DSpace for handle: ${handleId}`);
+
+    const userToken: TokenDto = {
+      id: userId,
+      email: '',
+      first_name: '',
+      last_name: '',
+    } as TokenDto;
+
+    try {
+      await this._resultsKnowledgeProductsService.populateKPFromCGSpace(
+        resultId,
+        handleId,
+        userToken,
+      );
+
+      this.logger.log(
+        `Successfully populated KP from DSpace for result ${resultId} with handle ${handleId}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Error populating KP from DSpace for result ${resultId} with handle ${handleId}:`,
+        error,
+      );
+      throw new BadRequestException(
+        `Failed to fetch and populate Knowledge Product metadata from DSpace: ${error.message || 'Unknown error'}`,
+      );
     }
   }
 }

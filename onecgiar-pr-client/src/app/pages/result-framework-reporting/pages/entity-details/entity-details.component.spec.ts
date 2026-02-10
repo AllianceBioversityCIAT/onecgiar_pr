@@ -3,8 +3,9 @@ import { NO_ERRORS_SCHEMA, signal, PLATFORM_ID, ChangeDetectorRef } from '@angul
 import { BehaviorSubject, of } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
 import { EntityDetailsComponent } from './entity-details.component';
-import { ApiService } from '../../../../shared/services/api/api.service';
 import { EntityAowService } from '../entity-aow/services/entity-aow.service';
+import { ApiService } from '../../../../shared/services/api/api.service';
+import { ResultLevelService } from '../../../results/pages/result-creator/services/result-level.service';
 
 // Shared mock data to avoid duplication
 const createMockDashboardData = () => ({
@@ -21,7 +22,8 @@ const createMockDashboardData = () => ({
       outcomes: {
         policyChange: 4,
         innovationUse: 3,
-        otherOutcome: 2
+        otherOutcome: 2,
+        innovationUseIpsr: 1
       }
     }
   },
@@ -38,7 +40,8 @@ const createMockDashboardData = () => ({
       outcomes: {
         policyChange: 6,
         innovationUse: 5,
-        otherOutcome: 4
+        otherOutcome: 4,
+        innovationUseIpsr: 1
       }
     }
   },
@@ -55,7 +58,8 @@ const createMockDashboardData = () => ({
       outcomes: {
         policyChange: 5,
         innovationUse: 4,
-        otherOutcome: 3
+        otherOutcome: 3,
+        innovationUseIpsr: 1
       }
     }
   }
@@ -68,6 +72,7 @@ describe('EntityDetailsComponent', () => {
   let apiServiceMock: any;
   let entityAowServiceMock: any;
   let changeDetectorRefMock: any;
+  let resultLevelServiceMock: any;
 
   beforeEach(async () => {
     params$ = new BehaviorSubject({ entityId: '123' });
@@ -97,12 +102,18 @@ describe('EntityDetailsComponent', () => {
       resetDashboardData: jest.fn()
     };
 
+    resultLevelServiceMock = {
+      setPendingResultType: jest.fn(),
+      cleanData: jest.fn()
+    };
+
     await TestBed.configureTestingModule({
       imports: [EntityDetailsComponent],
       providers: [
         { provide: ActivatedRoute, useValue: { params: params$.asObservable() } },
         { provide: ApiService, useValue: apiServiceMock },
         { provide: EntityAowService, useValue: entityAowServiceMock },
+        { provide: ResultLevelService, useValue: resultLevelServiceMock },
         { provide: ChangeDetectorRef, useValue: changeDetectorRefMock },
         { provide: PLATFORM_ID, useValue: 'browser' }
       ],
@@ -230,8 +241,8 @@ describe('EntityDetailsComponent', () => {
         expect(result.datasets[1]).toEqual({
           type: 'bar',
           label: 'Submitted',
-          backgroundColor: '#93C5FD',
-          hoverBackgroundColor: '#93C5FD',
+          backgroundColor: 'rgba(147, 197, 253, 1)',
+          hoverBackgroundColor: 'rgba(147, 197, 253, 0.8)',
           data: [8, 4, 2, 1]
         });
 
@@ -260,7 +271,7 @@ describe('EntityDetailsComponent', () => {
       it('should compute data outcomes correctly', () => {
         const result = component.dataOutcomes();
 
-        expect(result.labels).toEqual(['Policy change', 'Innovation use', 'Other outcome']);
+        expect(result.labels).toEqual(['Policy change', 'Innovation use', 'Other outcome', 'IPSR']);
 
         expect(result.datasets).toHaveLength(3);
 
@@ -270,16 +281,16 @@ describe('EntityDetailsComponent', () => {
           label: 'Editing',
           backgroundColor: 'rgba(153, 153, 153, 0.6)',
           hoverBackgroundColor: 'rgba(153, 153, 153, 0.6)',
-          data: [4, 3, 2]
+          data: [4, 3, 2, 1]
         });
 
         // Check submitted dataset
         expect(result.datasets[1]).toEqual({
           type: 'bar',
           label: 'Submitted',
-          backgroundColor: '#93C5FD',
-          hoverBackgroundColor: '#93C5FD',
-          data: [6, 5, 4]
+          backgroundColor: 'rgba(147, 197, 253, 1)',
+          hoverBackgroundColor: 'rgba(147, 197, 253, 0.8)',
+          data: [6, 5, 4, 1]
         });
 
         // Check quality assessed dataset
@@ -288,7 +299,7 @@ describe('EntityDetailsComponent', () => {
           label: 'Quality assessed',
           backgroundColor: '#38DF7B',
           hoverBackgroundColor: '#38DF7B',
-          data: [5, 4, 3]
+          data: [5, 4, 3, 1]
         });
       });
 
@@ -297,9 +308,9 @@ describe('EntityDetailsComponent', () => {
 
         const result = component.dataOutcomes();
 
-        expect(result.datasets[0].data).toEqual([undefined, undefined, undefined]);
-        expect(result.datasets[1].data).toEqual([undefined, undefined, undefined]);
-        expect(result.datasets[2].data).toEqual([undefined, undefined, undefined]);
+        expect(result.datasets[0].data).toEqual([undefined, undefined, undefined, undefined]);
+        expect(result.datasets[1].data).toEqual([undefined, undefined, undefined, undefined]);
+        expect(result.datasets[2].data).toEqual([undefined, undefined, undefined, undefined]);
       });
     });
   });

@@ -3,6 +3,7 @@ import { DataSource, Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultsInnovationPackagesValidationModule } from './entities/results-innovation-packages-validation-module.entity';
 import { GetValidationSectionInnoPckgDto } from './dto/get-validation-section-inno-pckg.dto';
+import { ValidationMapsEnum } from '../../results/results-validation-module/enum/validation-maps.enum';
 
 @Injectable()
 export class ResultsInnovationPackagesValidationModuleRepository extends Repository<ResultsInnovationPackagesValidationModule> {
@@ -141,6 +142,99 @@ export class ResultsInnovationPackagesValidationModuleRepository extends Reposit
         debug: true,
       });
     }
+  }
+
+  async generalInformationV2(resultId: number) {
+    const giQuery = `
+        SELECT
+            'general-information' as sectionName,
+            CASE
+                WHEN r.title IS NULL
+                OR r.title = ''
+                OR r.description IS NULL
+                OR r.description = ''
+                OR (
+                    r.lead_contact_person IS NULL
+                    OR r.lead_contact_person = ''
+                )
+                OR (
+                    r.gender_tag_level_id IS NULL
+                    OR r.gender_tag_level_id = 0
+                )
+                OR (
+                    r.climate_change_tag_level_id IS NULL
+                    OR r.climate_change_tag_level_id = 0
+                )
+                OR (
+                    r.nutrition_tag_level_id IS NULL
+                    OR r.nutrition_tag_level_id = 0
+                )
+                OR (
+                    r.environmental_biodiversity_tag_level_id IS NULL
+                    OR r.environmental_biodiversity_tag_level_id = 0
+                )
+                OR (
+                    r.poverty_tag_level_id IS NULL
+                    OR r.poverty_tag_level_id = 0
+                )
+                OR (
+                    r.gender_tag_level_id = 3
+					AND (r.gender_impact_area_id IS NULL OR r.gender_impact_area_id = 0)
+                )
+                OR (
+                    r.climate_change_tag_level_id = 3
+                    AND (r.climate_impact_area_id IS NULL OR r.climate_impact_area_id = 0)
+                )
+                OR (
+                    r.environmental_biodiversity_tag_level_id = 3
+                    AND (r.environmental_biodiversity_impact_area_id IS NULL OR r.environmental_biodiversity_impact_area_id = 0)
+                )
+                OR (
+                    r.poverty_tag_level_id = 3
+                    AND (r.poverty_impact_area_id IS NULL OR r.poverty_impact_area_id = 0)
+                )
+                OR (
+                    r.nutrition_tag_level_id = 3
+                    AND (r.nutrition_impact_area_id IS NULL OR r.nutrition_impact_area_id = 0)
+                )
+                OR (
+                    if(r.is_discontinued = 0 or r.is_replicated = 0, 
+                        0, 
+                        (select sum(if(rido.investment_discontinued_option_id = 6, if(rido.description <> '' and rido.description is not null, 1, 0),1)) - count(rido.results_investment_discontinued_option_id) as datas 
+                        from results_investment_discontinued_options rido 
+                        where rido.is_active > 0 and rido.result_id = r.id))
+                ) THEN FALSE
+                ELSE TRUE
+            END AS validation
+        FROM
+            result r
+        WHERE
+            r.is_active = true
+            AND r.id = ?;
+        `;
+
+    try {
+      const generalInformation: GetValidationSectionInnoPckgDto[] =
+        await this.query(giQuery, [resultId]);
+      return generalInformation[0];
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsInnovationPackagesValidationModuleRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async queryValidation(
+    resultId: number,
+    sections: ValidationMapsEnum[],
+  ): Promise<{ section_name: string; validation: string }[]> {
+    const sectionsString = JSON.stringify(sections ?? []);
+    const tempResultId = Number(resultId ?? 0);
+    return this.query(
+      `CALL validate_sections_mapped_batch(${tempResultId}, '${sectionsString}');`,
+    ).then((res) => res?.[0]);
   }
 
   async contributors(resultId: number) {

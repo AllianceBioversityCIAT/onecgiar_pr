@@ -1,14 +1,21 @@
 @use '../../../../../../../styles/fonts.scss' as fonts;
+
 .page_section_header {
-  border-bottom: 1px solid rgb(200, 200, 200);
+  display: grid;
   color: var(--pr-color-primary-800);
   font-size: 14px;
   font-weight: 600;
-  padding: 5px 22px;
-  display: flex;
-  justify-content: space-between;
+  padding: 5px 30px;
+
   align-items: center;
 }
+
+.title_section_header {
+  font-size: 14px;
+  font-weight: 500;
+  padding: 20px 0;
+}
+
 .action_buttons {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -27,12 +34,12 @@
 .table {
   padding-bottom: 100px;
   position: relative;
+
   .align-center {
     display: flex;
     gap: 10px;
     align-items: center;
     padding: 10px 10px;
-
   }
 }
 
@@ -137,6 +144,51 @@ td {
     padding: 0.25rem !important;
   }
 }
+
 .disabledButtons {
   opacity: 0.5;
+}
+
+.status_tag {
+  padding: 2px 5px;
+  border: 1px solid;
+  text-align: center;
+  border-radius: 5px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.status_1 {
+  border-color: var(--pr-color-blue-400);
+  color: var(--pr-color-blue-400);
+}
+
+.status_2 {
+  border-color: var(--pr-color-yellow-400);
+  color: var(--pr-color-yellow-400);
+}
+
+.status_3 {
+  border-color: var(--pr-color-green-600);
+  color: var(--pr-color-green-600);
+}
+
+.status_4 {
+  border-color: var(--pr-color-secondary-400);
+  color: var(--pr-color-secondary-400);
+}
+
+.status_5 {
+  border-color: var(--pr-color-orange-600);
+  color: var(--pr-color-orange-600);
+}
+
+.status_6 {
+  border-color: var(--pr-color-green-600);
+  color: var(--pr-color-green-600);
+}
+
+.status_7 {
+  border-color: var(--pr-color-red-300);
+  color: var(--pr-color-red-300);
 }

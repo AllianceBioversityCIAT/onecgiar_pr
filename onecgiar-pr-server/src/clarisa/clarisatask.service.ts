@@ -17,6 +17,8 @@ import {
   ClarisaGlobalUnitLineage,
   ClarisaGlobalUnitLineageRelationType,
 } from './clarisa-global-unit/entities/clarisa-global-unit-lineage.entity';
+import { ClarisaProject } from './clarisa-projects/entity/clarisa-projects.entity';
+import { ClarisaProjectDto } from './dtos/clarisa-project.dto';
 
 @Injectable()
 export class ClarisaTaskService {
@@ -148,7 +150,7 @@ export class ClarisaTaskService {
         return this.syncControlList(ClarisaEndpoints.PORTFOLIO, index);
       },
       async (index: number) => {
-        return this.syncControlList(ClarisaEndpoints.PROJECTS, index);
+        return this.syncProjects(index);
       },
       async (index: number) => {
         return this.syncControlList(ClarisaEndpoints.CGIAR_ENTITY_TYPES, index);
@@ -334,14 +336,26 @@ export class ClarisaTaskService {
         return this.buildGlobalUnitKey(composeCode, effectiveYear, code);
       };
 
+      const allUnitsToDeactivate: ClarisaGlobalUnit[] = [];
       for (const u of existingUnits) {
-        const key = buildIndexKey(
-          u.composeCode,
-          u.year,
-          u.code,
-          u.entityTypeId,
+        if (u.isActive) {
+          u.isActive = false;
+          allUnitsToDeactivate.push(u);
+        }
+      }
+      if (allUnitsToDeactivate.length > 0) {
+        await globalUnitRepo.save(allUnitsToDeactivate, { chunk: 1000 });
+        deactivated += allUnitsToDeactivate.length;
+        this._logger.log(
+          `[${index}] Deactivated ${allUnitsToDeactivate.length} existing global units`,
         );
-        unitsByKey.set(key, u);
+      }
+
+      for (const u of existingUnits) {
+        const exactKey = this.buildGlobalUnitKey(u.composeCode, u.year, u.code);
+        if (!unitsByKey.has(exactKey)) {
+          unitsByKey.set(exactKey, u);
+        }
         registerInCodeIndex(u);
       }
 
@@ -365,23 +379,11 @@ export class ClarisaTaskService {
         }
 
         const entityTypeCode = item.entity_type?.code;
-        const key = buildIndexKey(composeCode, year, code, entityTypeCode);
-        const existing = unitsByKey.get(key);
+        const exactKey = this.buildGlobalUnitKey(composeCode, year, code);
+        const existing = unitsByKey.get(exactKey);
 
         const entity = existing ?? globalUnitRepo.create();
         const wasActive = entity.isActive ?? true;
-
-        const prevKey = existing
-          ? buildIndexKey(
-              existing.composeCode,
-              existing.year,
-              existing.code,
-              existing.entityTypeId,
-            )
-          : null;
-        const prevCodeKey = existing
-          ? this.normalizeIdentifier(existing.code) || null
-          : null;
 
         entity.composeCode = composeCode;
         entity.code = code;
@@ -407,18 +409,13 @@ export class ClarisaTaskService {
         }
 
         toUpsert.push(entity);
-
-        if (prevKey && prevKey !== key) {
-          unitsByKey.delete(prevKey);
-        }
-        if (prevCodeKey) {
-          const lst = unitsByCode.get(prevCodeKey);
-          if (lst) {
-            const idx = lst.findIndex((x) => x.id === entity.id);
-            if (idx >= 0) lst.splice(idx, 1);
-            if (!lst.length) unitsByCode.delete(prevCodeKey);
-          }
-        }
+        const newExactKey = this.buildGlobalUnitKey(
+          entity.composeCode,
+          entity.year,
+          entity.code,
+        );
+        unitsByKey.set(newExactKey, entity);
+        registerInCodeIndex(entity);
       }
 
       const savedBatch = toUpsert.length
@@ -450,12 +447,7 @@ export class ClarisaTaskService {
         if (!composeCode || !code) continue;
 
         const child = unitsByKey.get(
-          buildIndexKey(
-            composeCode,
-            year,
-            code,
-            item.entity_type?.code ?? null,
-          ),
+          this.buildGlobalUnitKey(composeCode, year, code),
         );
         if (!child) continue;
 
@@ -499,21 +491,6 @@ export class ClarisaTaskService {
       if (parentUpdates.length) {
         const res = await globalUnitRepo.save(parentUpdates, { chunk: 1000 });
         parentLinksUpdated = res.length;
-      }
-
-      const unitsToDeactivate: ClarisaGlobalUnit[] = [];
-      for (const unit of existingUnits) {
-        if (!processedUnitIds.has(unit.id) && unit.isActive) {
-          unit.isActive = false;
-          unitsToDeactivate.push(unit);
-        }
-      }
-
-      if (unitsToDeactivate.length) {
-        const res = await globalUnitRepo.save(unitsToDeactivate, {
-          chunk: 1000,
-        });
-        deactivated += res.length;
       }
 
       const lineageRecords: ClarisaGlobalUnitLineage[] = [];
@@ -651,6 +628,80 @@ export class ClarisaTaskService {
       `[${index}] Data saved for ${ClarisaEndpoints.INITIATIVES.entity.name}`,
     );
     return data;
+  }
+
+  private async syncProjects(index: number): Promise<ClarisaProject[]> {
+    const projectsEndpoint = ClarisaEndpoints.PROJECTS;
+    this._logger.log(
+      `>>>[${index}] Fetching data from CLARISA API for ${projectsEndpoint.entity.name}`,
+    );
+
+    const data: ClarisaProjectDto[] = await this.clarisaConnection
+      .get<ClarisaProjectDto[]>(projectsEndpoint.path, {
+        params: projectsEndpoint.params,
+      })
+      .catch((err) => {
+        this._logger.error(
+          `[${index}] Error fetching data from CLARISA API for ${projectsEndpoint.entity.name} path: ${projectsEndpoint.path}`,
+        );
+        this._logger.error(err);
+        return [];
+      });
+
+    let transformedData: DeepPartial<ClarisaProject>[];
+    if (projectsEndpoint.mapper) {
+      transformedData = projectsEndpoint.mapper(data);
+    } else {
+      transformedData = data as unknown as DeepPartial<ClarisaProject>[];
+    }
+
+    const results: ClarisaProject[] = [];
+
+    // Process in a transaction to ensure consistency
+    await this.dataSource.transaction(async (manager) => {
+      const projectRepo = manager.getRepository(ClarisaProject);
+
+      for (const item of transformedData) {
+        try {
+          const itemId = item.id;
+          if (itemId === undefined || itemId === null) {
+            this._logger.warn(
+              `[${index}] Skipping project without ID: ${JSON.stringify(item)}`,
+            );
+            continue;
+          }
+
+          const existing = await projectRepo.findOne({
+            where: { id: itemId },
+          });
+
+          if (existing) {
+            const updateData = { ...item };
+            delete updateData.id;
+            await projectRepo.update({ id: itemId }, updateData);
+            const updated = await projectRepo.findOne({
+              where: { id: itemId },
+            });
+            if (updated) {
+              results.push(updated);
+            }
+          } else {
+            const saved = await projectRepo.save(item);
+            results.push(saved);
+          }
+        } catch (err) {
+          this._logger.error(
+            `[${index}] Error saving project with id: ${item.id}`,
+          );
+          this._logger.error(err);
+        }
+      }
+    });
+
+    this._logger.log(
+      `[${index}] Data successfully saved for ${projectsEndpoint.entity.name}!`,
+    );
+    return results;
   }
 
   private cgiarEntityInitiativeMapper(

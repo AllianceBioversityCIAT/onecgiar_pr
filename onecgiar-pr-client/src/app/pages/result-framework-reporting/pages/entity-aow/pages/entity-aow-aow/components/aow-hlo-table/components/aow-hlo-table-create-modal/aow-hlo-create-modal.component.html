@@ -141,6 +141,7 @@
             selectedLabel="Center(s) selected"
             optionLabel="full_name"
             optionValue="code"
+            [required]="false"
             [(ngModel)]="createResultBody().contributing_center"
             placeholder="Select center(s)">
           </app-pr-multi-select>
@@ -220,7 +221,9 @@
             [disabled]="creatingResult()">
             <ng-template let-project #item>
               <div class="flex items-center gap-2">
-                <div style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 400px">{{ project.project_name }}</div>
+                <div style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 400px">
+                  {{ project.project_name }}@if (project.organization_name) {<span> (Center: {{ project.organization_name }})</span>}
+                </div>
               </div>
             </ng-template>
           </p-multiselect>
@@ -230,8 +233,12 @@
               @for (project of entityAowService.selectedW3BilateralProjects(); track $index) {
                 <div class="selected_bilateral_item">
                   <div class="selected_bilateral_item_content">
+                    
                     <p class="pr-body-1 font-weight-300">
                       {{ project.project_name }}
+                    </p>
+                    <p class="pr-body-2 font-weight-300">
+                      <span class="font-weight-500 normal">Center:</span> {{ project.organization_name }}
                     </p>
                     <p class="pr-body-2 font-weight-300 italic">
                       <span class="font-weight-500 normal">Grant title:</span> {{ project.project_summary }}
@@ -249,15 +256,17 @@
           }
         </div>
 
-        <div class="report-result-content_left_content_actions" [ngClass]="{ globalDisabled: creatingResult() }">
-          <p-button
-            label="Create and continue"
-            type="button"
-            class="pr-body-2"
-            (click)="createResult()"
-            [loading]="creatingResult()"
-            iconPos="right"></p-button>
-        </div>
+        @if (entityAowService.canReportResults()) {
+          <div class="report-result-content_left_content_actions" [ngClass]="{ globalDisabled: creatingResult() }">
+            <p-button
+              label="Create and continue"
+              type="button"
+              class="pr-body-2"
+              (click)="createResult()"
+              [loading]="creatingResult()"
+              iconPos="right"></p-button>
+          </div>
+        }
       </div>
     </div>
 

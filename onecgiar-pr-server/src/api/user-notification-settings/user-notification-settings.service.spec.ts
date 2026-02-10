@@ -8,7 +8,6 @@ import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { ClarisaInitiative } from '../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
-import { OrmConfigTestModule } from '../../shared/test/orm-connection.module';
 import { ResultRepository } from '../results/result.repository';
 import { Result } from '../results/entities/result.entity';
 import { RoleByUser } from '../../auth/modules/role-by-user/entities/role-by-user.entity';
@@ -67,7 +66,6 @@ describe('UserNotificationSettingsService', () => {
         },
         Logger,
       ],
-      imports: [OrmConfigTestModule],
     }).compile();
 
     jest.spyOn(Logger.prototype, 'log').mockImplementation(() => {});

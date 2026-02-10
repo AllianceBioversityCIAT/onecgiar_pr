@@ -21,6 +21,7 @@ export class JwtMiddleware implements NestMiddleware {
     '/login/provider',
     '/login/custom',
     '/validate/code',
+    '/api/bilateral',
   ];
 
   constructor(

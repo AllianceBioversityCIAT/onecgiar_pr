@@ -18,7 +18,6 @@ import { UpdateUserStatus } from '../../interfaces/updateUserStatus.interface';
 import { SearchParams } from './api.service';
 import { EntityDetails } from '../../../pages/result-framework-reporting/pages/entity-details/interfaces/entity-details.interface';
 import { ExtraGeographicLocationBody } from '../../../pages/results/pages/result-detail/pages/rd-geographic-location/models/extraGeographicLocationBody';
-import { FieldsManagerService } from '../fields-manager.service';
 
 @Injectable({
   providedIn: 'root'
@@ -704,8 +703,8 @@ export class ResultsApiService {
     return this.http.put<any>(`${environment.apiBaseUrl}api/global-parameters/update/variable`, body);
   }
 
-  PATCH_updateRequest(body) {
-    return this.http.patch<any>(`${this.apiBaseUrl}request/update`, body);
+  PATCH_updateRequest(body, isP25: boolean = false) {
+    return this.http.patch<any>(`${isP25 ? this.apiBaseUrlV2 : this.apiBaseUrl}request/update`, body);
   }
 
   POST_updateRequest(body) {
@@ -792,8 +791,12 @@ export class ResultsApiService {
     return this.http.post<any>(`${environment.apiBaseUrl}api/ipsr/all-innovations`, initiativesList);
   }
 
-  GETInnovationByResultId(resultId) {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/innovation/${resultId}`).pipe(this.saveButtonSE.isGettingSectionPipe());
+  GETInnovationByResultId(resultId, isP25: boolean = false) {
+    const p22Url = `${environment.apiBaseUrl}api/ipsr/innovation/${resultId}`;
+    const p25Url = `${this.baseApiBaseUrlV2}ipsr-framework/ipsr-general-information/innovation/${resultId}`;
+    const url = isP25 ? p25Url : p22Url;
+
+    return this.http.get<any>(url).pipe(this.saveButtonSE.isGettingSectionPipe());
   }
 
   GET_globalNarratives(name: string) {
@@ -817,14 +820,19 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/all-innovation-packages`);
   }
 
-  PATCHIpsrGeneralInfo(body, resulId) {
-    return this.http
-      .patch<any>(`${environment.apiBaseUrl}api/ipsr/results-innovation-package/general-information/${resulId}`, body)
-      .pipe(this.saveButtonSE.isCreatingPipe());
+  PATCHIpsrGeneralInfo(body, resulId, isP25: boolean = false) {
+    const p22Url = `${environment.apiBaseUrl}api/ipsr/results-innovation-package/general-information/${resulId}`;
+    const p25Url = `${this.baseApiBaseUrlV2}ipsr-framework/ipsr-general-information/general-information/${resulId}`;
+    const url = isP25 ? p25Url : p22Url;
+
+    return this.http.patch<any>(url, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 
-  GETContributorsByIpsrResultId() {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/ipsr/contributors/get/${this.ipsrDataControlSE.resultInnovationId}`).pipe(
+  GETContributorsByIpsrResultId(isP25: boolean = false) {
+    const p22Url = `${environment.apiBaseUrl}api/ipsr/contributors/get/${this.ipsrDataControlSE.resultInnovationId}`;
+    const p25Url = `${this.baseApiBaseUrlV2}ipsr-framework/ipsr-contributors-partners/${this.ipsrDataControlSE.resultInnovationId}`;
+    const url = isP25 ? p25Url : p22Url;
+    return this.http.get<any>(url).pipe(
       map(resp => {
         resp?.response?.contributing_initiatives?.accepted_contributing_initiatives.map(
           initiative =>
@@ -838,10 +846,11 @@ export class ResultsApiService {
     );
   }
 
-  PATCHContributorsByIpsrResultId(body) {
-    return this.http
-      .patch<any>(`${environment.apiBaseUrl}api/ipsr/contributors/save/${this.ipsrDataControlSE.resultInnovationId}`, body)
-      .pipe(this.saveButtonSE.isSavingPipe());
+  PATCHContributorsByIpsrResultId(body, isP25: boolean = false) {
+    const p22Url = `${environment.apiBaseUrl}api/ipsr/contributors/save/${this.ipsrDataControlSE.resultInnovationId}`;
+    const p25Url = `${this.baseApiBaseUrlV2}ipsr-framework/ipsr-contributors-partners/${this.ipsrDataControlSE.resultInnovationId}`;
+    const url = isP25 ? p25Url : p22Url;
+    return this.http.patch<any>(url, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 
   GETInnovationPackageDetail() {
@@ -972,16 +981,29 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/innovation-use-levels`);
   }
 
-  GETInnovationPathwayStepFourByRiId() {
-    return this.http
-      .get<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/step-four/${this.ipsrDataControlSE.resultInnovationId}`)
-      .pipe(this.saveButtonSE.isGettingSectionPipe());
+  GETAllClarisaInnovationUseLevelsV2() {
+    return this.http.get<any>(`${environment.apiBaseUrl}v2/clarisa/innovation-use-levels`);
   }
 
-  PATCHInnovationPathwayStepFourByRiId(body) {
-    return this.http
-      .patch<any>(`${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-four/${this.ipsrDataControlSE.resultInnovationId}`, body)
-      .pipe(this.saveButtonSE.isSavingPipe());
+  PATCHInnovationPathwayStepFourBilaterals(body) {
+    return this.http.patch<any>(
+      `${this.baseApiBaseUrlV2}ipsr-framework/ipsr-pathway/save/step-four/bilaterals/${this.ipsrDataControlSE.resultInnovationId}`,
+      body
+    );
+  }
+
+  GETInnovationPathwayStepFourByRiId(isP25: boolean = false) {
+    const p22Url = `${environment.apiBaseUrl}api/ipsr/innovation-pathway/get/step-four/${this.ipsrDataControlSE.resultInnovationId}`;
+    const p25Url = `${this.baseApiBaseUrlV2}ipsr-framework/ipsr-pathway/get/step-four/${this.ipsrDataControlSE.resultInnovationId}`;
+
+    return this.http.get<any>(isP25 ? p25Url : p22Url).pipe(this.saveButtonSE.isGettingSectionPipe());
+  }
+
+  PATCHInnovationPathwayStepFourByRiId(body, isP25: boolean = false) {
+    const p22Url = `${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/step-four/${this.ipsrDataControlSE.resultInnovationId}`;
+    const p25Url = `${this.baseApiBaseUrlV2}ipsr-framework/ipsr-pathway/save/step-four/${this.ipsrDataControlSE.resultInnovationId}`;
+    const url = isP25 ? p25Url : p22Url;
+    return this.http.patch<any>(url, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 
   PATCHInnovationPathwayStepFourByRiIdPrevious(body, descrip) {
@@ -1012,9 +1034,9 @@ export class ResultsApiService {
     );
   }
 
-  getCompletenessStatus(): Observable<any> {
+  getCompletenessStatus(isP25: boolean = false): Observable<any> {
     return this.http.get<any>(
-      `${environment.apiBaseUrl}api/ipsr/results-innovation-packages-validation-module/get/green-checks/${this.ipsrDataControlSE.resultInnovationId}`
+      `${isP25 ? this.baseApiBaseUrlV2 : this.baseApiBaseUrl}ipsr/results-innovation-packages-validation-module/get/green-checks/${this.ipsrDataControlSE.resultInnovationId}`
     );
   }
 
@@ -1350,11 +1372,43 @@ export class ResultsApiService {
     return this.http.patch<any>(`${this.baseApiBaseUrlV2}contributors-partners/${this.currentResultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
   }
 
+  PATCH_updateUnplannedResult(body: any) {
+    return this.http.patch<any>(`${this.baseApiBaseUrl}contributors-partners/update/unplanned/result/${this.currentResultId}`, body);
+  }
+
+  PATCH_BilateralTocMetadata(resultId: number | string, body: any) {
+    return this.http.patch<any>(`${this.baseApiBaseUrl}results/bilateral/review-update/toc-metadata/${resultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+  }
+
+  PATCH_BilateralDataStandard(resultId: number | string, body: any) {
+    return this.http.patch<any>(`${this.baseApiBaseUrl}results/bilateral/review-update/data-standard/${resultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+  }
+
   GET_ClarisaProjects() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/projects/get/all`);
   }
 
   GET_ClarisaPortfolios() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/portfolios`);
+  }
+
+  GET_ResultToReview(programId: string, centerIds?: string[]) {
+    let url = `${environment.apiBaseUrl}api/results/by-program-and-centers?programId=${programId}`;
+    if (centerIds?.length === 1) {
+      url += `&centerIds=${centerIds.join(',')}`;
+    }
+
+    return this.http.get<any>(url);
+  }
+
+  GET_PendingReviewCount(programId: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results/pending-review?programId=${programId}`);
+  }
+  GET_BilateralResultDetail(resultId: string | number) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results/bilateral/${resultId}`);
+  }
+
+  PATCH_BilateralReviewDecision(resultId: string | number, body: { decision: 'APPROVE' | 'REJECT'; justification: string }) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/results/bilateral/${resultId}/review-decision`, body);
   }
 }

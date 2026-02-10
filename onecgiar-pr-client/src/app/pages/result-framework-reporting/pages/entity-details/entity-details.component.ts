@@ -17,6 +17,9 @@ import { DialogModule } from 'primeng/dialog';
 import { SplitButtonModule } from 'primeng/splitbutton';
 import { ResultCreatorModule } from '../../../results/pages/result-creator/result-creator.module';
 import { MenuItem } from 'primeng/api';
+import { BilateralResultsReviewComponent } from './components/bilateral-results-review/bilateral-results-review.component';
+import { ResultLevelService } from '../../../results/pages/result-creator/services/result-level.service';
+import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 
 @Component({
   selector: 'app-entity-details',
@@ -33,7 +36,8 @@ import { MenuItem } from 'primeng/api';
     ButtonModule,
     DialogModule,
     SplitButtonModule,
-    ResultCreatorModule
+    ResultCreatorModule,
+    BilateralResultsReviewComponent
   ],
   templateUrl: './entity-details.component.html',
   styleUrl: './entity-details.component.scss',
@@ -43,6 +47,8 @@ export class EntityDetailsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   api = inject(ApiService);
   entityAowService = inject(EntityAowService);
+  resultLevelSE = inject(ResultLevelService);
+  private readonly resultFrameworkReportingHomeService = inject(ResultFrameworkReportingHomeService);
 
   cd = inject(ChangeDetectorRef);
 
@@ -101,8 +107,8 @@ export class EntityDetailsComponent implements OnInit {
         {
           type: 'bar' as const,
           label: 'Submitted',
-          backgroundColor: '#93C5FD',
-          hoverBackgroundColor: '#93C5FD',
+          backgroundColor: 'rgba(147, 197, 253, 1)',
+          hoverBackgroundColor: 'rgba(147, 197, 253, 0.8)',
           data: [
             this.entityAowService.dashboardData()?.submitted?.data?.outputs?.knowledgeProduct,
             this.entityAowService.dashboardData()?.submitted?.data?.outputs?.innovationDevelopment,
@@ -128,7 +134,7 @@ export class EntityDetailsComponent implements OnInit {
 
   dataOutcomes = computed(() => {
     return {
-      labels: ['Policy change', 'Innovation use', 'Other outcome'],
+      labels: ['Policy change', 'Innovation use', 'Other outcome', 'IPSR'],
       datasets: [
         {
           type: 'bar' as const,
@@ -138,18 +144,20 @@ export class EntityDetailsComponent implements OnInit {
           data: [
             this.entityAowService.dashboardData()?.editing?.data?.outcomes?.policyChange,
             this.entityAowService.dashboardData()?.editing?.data?.outcomes?.innovationUse,
-            this.entityAowService.dashboardData()?.editing?.data?.outcomes?.otherOutcome
+            this.entityAowService.dashboardData()?.editing?.data?.outcomes?.otherOutcome,
+            this.entityAowService.dashboardData()?.editing?.data?.outcomes?.innovationUseIpsr
           ]
         },
         {
           type: 'bar' as const,
           label: 'Submitted',
-          backgroundColor: '#93C5FD',
-          hoverBackgroundColor: '#93C5FD',
+          backgroundColor: 'rgba(147, 197, 253, 1)',
+          hoverBackgroundColor: 'rgba(147, 197, 253, 0.8)',
           data: [
             this.entityAowService.dashboardData()?.submitted?.data?.outcomes?.policyChange,
             this.entityAowService.dashboardData()?.submitted?.data?.outcomes?.innovationUse,
-            this.entityAowService.dashboardData()?.submitted?.data?.outcomes?.otherOutcome
+            this.entityAowService.dashboardData()?.submitted?.data?.outcomes?.otherOutcome,
+            this.entityAowService.dashboardData()?.submitted?.data?.outcomes?.innovationUseIpsr
           ]
         },
         {
@@ -160,7 +168,8 @@ export class EntityDetailsComponent implements OnInit {
           data: [
             this.entityAowService.dashboardData()?.qualityAssessed?.data?.outcomes?.policyChange,
             this.entityAowService.dashboardData()?.qualityAssessed?.data?.outcomes?.innovationUse,
-            this.entityAowService.dashboardData()?.qualityAssessed?.data?.outcomes?.otherOutcome
+            this.entityAowService.dashboardData()?.qualityAssessed?.data?.outcomes?.otherOutcome,
+            this.entityAowService.dashboardData()?.qualityAssessed?.data?.outcomes?.innovationUseIpsr
           ]
         }
       ]
@@ -170,14 +179,40 @@ export class EntityDetailsComponent implements OnInit {
   chartOptionsOutputs = computed<ChartOptions<'bar'>>(() => this.buildChartOptions(this.dataOutputs()));
   chartOptionsOutcomes = computed<ChartOptions<'bar'>>(() => this.buildChartOptions(this.dataOutcomes()));
 
+  showBilateralResultsReview = computed(() => this.entityAowService.entityId() !== 'SGP-02');
+
+  groupedIndicatorSummaries = computed(() => {
+    const summaries = this.entityAowService.indicatorSummaries().filter(item => item?.resultTypeName !== 'Innovation Use(IPSR)');
+
+    const outputs = summaries.filter(item => {
+      const name = item?.resultTypeName || '';
+      return (
+        name === 'Innovation development' || name === 'Knowledge product' || name === 'Capacity sharing for development' || name === 'Other output'
+      );
+    });
+
+    const outcomes = summaries.filter(item => {
+      const name = item?.resultTypeName || '';
+      return name === 'Innovation use' || name === 'Policy change' || name === 'Other outcome';
+    });
+
+    return {
+      outputs,
+      outcomes
+    };
+  });
+
   ngOnInit() {
+    this.initChart();
     this.route.params.subscribe(params => {
       this.entityAowService.resetDashboardData();
-      this.entityAowService.entityId.set(params['entityId']);
+      const entityId = params['entityId'];
+      this.entityAowService.entityId.set(entityId);
+      if (entityId) {
+        this.entityAowService.getAllDetailsData(entityId);
+        this.entityAowService.getDashboardData();
+      }
     });
-    this.entityAowService.getAllDetailsData();
-    this.entityAowService.getDashboardData();
-    this.initChart();
   }
 
   platformId = inject(PLATFORM_ID);
@@ -260,5 +295,53 @@ export class EntityDetailsComponent implements OnInit {
         }
       }
     };
+  }
+
+  get entityDisplayShortName(): string {
+    const details = this.entityAowService.entityDetails();
+    if (details?.shortName) return details.shortName;
+    const entityId = this.entityAowService.entityId();
+    if (entityId === 'SGP-02' || entityId === 'SGP02') {
+      const list = this.api.dataControlSE.myInitiativesListReportingByPortfolio ?? this.api.dataControlSE.myInitiativesList ?? [];
+      const found = list.find((item: { official_code?: string }) => item?.official_code === 'SGP-02' || item?.official_code === 'SGP02');
+      if (found) {
+        const raw = found as { short_name?: string; shortName?: string; name?: string };
+        return raw?.short_name ?? raw?.shortName ?? raw?.name ?? 'No information loaded';
+      }
+      const mySPs = this.resultFrameworkReportingHomeService.mySPsList() ?? [];
+      const otherSPs = this.resultFrameworkReportingHomeService.otherSPsList() ?? [];
+      const sp = [...mySPs, ...otherSPs].find(
+        (item: { initiativeCode?: string }) => item?.initiativeCode === 'SGP-02' || item?.initiativeCode === 'SGP02'
+      );
+      if (sp) {
+        const raw = sp as { initiativeShortName?: string; initiativeName?: string };
+        return raw?.initiativeShortName ?? raw?.initiativeName ?? 'No information loaded';
+      }
+    }
+    return 'No information loaded';
+  }
+
+  get reportFormSelectedInitiativeId(): number | string | null | undefined {
+    const details = this.entityAowService.entityDetails();
+    if (details?.id != null) return details.id;
+    const entityId = this.entityAowService.entityId();
+    if (entityId === 'SGP-02' || entityId === 'SGP02') {
+      const list = this.api.dataControlSE.myInitiativesListReportingByPortfolio ?? this.api.dataControlSE.myInitiativesList ?? [];
+      const found = list.find(
+        (item: { official_code?: string; id?: number; initiative_id?: number }) => item?.official_code === 'SGP-02' || item?.official_code === 'SGP02'
+      );
+      return found ? (found.id ?? found.initiative_id) : undefined;
+    }
+    return undefined;
+  }
+
+  onReportRequested(item: any) {
+    this.resultLevelSE.setPendingResultType(item?.resultTypeId, item?.resultTypeName);
+    this.showReportModal.set(true);
+  }
+
+  onModalClose() {
+    this.showReportModal.set(false);
+    this.resultLevelSE.cleanData?.();
   }
 }

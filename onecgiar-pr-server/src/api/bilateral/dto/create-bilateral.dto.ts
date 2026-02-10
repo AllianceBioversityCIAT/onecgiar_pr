@@ -17,7 +17,7 @@ import {
   IsInt,
   Min,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 
@@ -191,7 +191,7 @@ export class RegionDto {
 }
 
 /**
- * DTO para país
+ * DTO for country
  */
 export class CountryDto {
   @ApiPropertyOptional({
@@ -225,7 +225,7 @@ export class CountryDto {
 }
 
 /**
- * DTO para área subnacional
+ * DTO for subnational area
  */
 export class SubnationalAreaDto {
   @ApiPropertyOptional({
@@ -740,7 +740,7 @@ export class PolicyChangeDetailsDto {
 }
 
 /**
- * DTO principal: GeoFocus
+ * DTO for geographic focus
  */
 export class GeoFocusDto {
   // --- Scope ---
@@ -873,6 +873,25 @@ export class BilateralProjectDto {
   @IsString()
   @IsNotEmpty()
   grant_title: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Flag indicating if this project is the lead project. Accepts true/false or 1/0',
+    example: 1,
+    oneOf: [{ type: 'boolean' }, { type: 'number' }],
+  })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === undefined || value === null) return 0;
+    if (value === true || value === 1 || value === '1') return 1;
+    if (value === false || value === 0 || value === '0') return 0;
+    // Try to convert string numbers
+    const numValue = Number(value);
+    if (!Number.isNaN(numValue)) return numValue ? 1 : 0;
+    // Default to false for any other value
+    return 0;
+  })
+  is_lead?: number | boolean;
 }
 
 export class MetadataCGDto {
@@ -918,37 +937,41 @@ export class MetadataCGDto {
 export class KnowledgeProductDto {
   @ApiProperty({
     description:
-      'Handle or identifier of the knowledge product in the source repository',
+      'Handle or identifier of the knowledge product in the source repository. Required to fetch metadata from CGSpace.',
     example: '10568/135621',
   })
   @IsString()
   @IsNotEmpty()
   handle: string;
 
-  @ApiProperty({
-    description: 'Type or category of the knowledge product',
+  @ApiPropertyOptional({
+    description:
+      'Type or category of the knowledge product. Optional - will be obtained from CGSpace if not provided.',
     example: 'Journal Article',
   })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  knowledge_product_type: string;
+  knowledge_product_type?: string;
 
-  @ApiProperty({
-    description: 'Metadata information from CGSpace or related source',
+  @ApiPropertyOptional({
+    description:
+      'Metadata information from CGSpace or related source. Optional - will be obtained from CGSpace if not provided.',
     type: () => MetadataCGDto,
   })
+  @IsOptional()
   @IsObject()
   @ValidateNested()
   @Type(() => MetadataCGDto)
-  metadataCG: MetadataCGDto;
+  metadataCG?: MetadataCGDto;
 
-  @ApiProperty({
-    description: 'Licence under which the knowledge product is distributed',
+  @ApiPropertyOptional({
+    description:
+      'Licence under which the knowledge product is distributed. Optional - will be obtained from CGSpace if not provided.',
     example: 'CC-BY-4.0',
   })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  licence: string;
+  licence?: string;
 }
 
 export class LeadCenterDto {
@@ -1032,22 +1055,26 @@ export class CreateBilateralDto {
   @Type(() => LeadCenterDto)
   lead_center: LeadCenterDto;
 
-  @ApiProperty({
-    description: 'Title of the bilateral project',
+  @ApiPropertyOptional({
+    description:
+      'Title of the bilateral project. Optional for KNOWLEDGE_PRODUCT results (obtained from CGSpace).',
     example: 'Sustainable intensification of Andean bean systems',
   })
+  @ValidateIf((o) => o.result_type_id !== ResultTypeEnum.KNOWLEDGE_PRODUCT)
   @IsString()
   @IsNotEmpty()
-  title: string;
+  title?: string;
 
-  @ApiProperty({
-    description: 'Detailed description of the bilateral project',
+  @ApiPropertyOptional({
+    description:
+      'Detailed description of the bilateral project. Optional for KNOWLEDGE_PRODUCT results (obtained from CGSpace).',
     example:
       'This project aims to scale climate resilient bean varieties across Andean regions.',
   })
+  @ValidateIf((o) => o.result_type_id !== ResultTypeEnum.KNOWLEDGE_PRODUCT)
   @IsString()
   @IsNotEmpty()
-  description: string;
+  description?: string;
 
   @ApiProperty({
     description:
@@ -1070,41 +1097,49 @@ export class CreateBilateralDto {
   @Type(() => ContributingProgramDto)
   contributing_programs?: ContributingProgramDto[];
 
-  @ApiProperty({
-    description: 'Geographic focus definition for the bilateral',
+  @ApiPropertyOptional({
+    description:
+      'Geographic focus definition for the bilateral. Optional for KNOWLEDGE_PRODUCT results (obtained from CGSpace).',
     type: () => GeoFocusDto,
   })
+  @ValidateIf((o) => o.result_type_id !== ResultTypeEnum.KNOWLEDGE_PRODUCT)
   @IsObject()
   @ValidateNested()
   @Type(() => GeoFocusDto)
-  geo_focus: GeoFocusDto;
+  geo_focus?: GeoFocusDto;
 
-  @ApiProperty({
-    description: 'List of contributing CGIAR centers',
+  @ApiPropertyOptional({
+    description:
+      'List of contributing CGIAR centers. Optional for all result types.',
     type: [InstitutionDto],
   })
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => InstitutionDto)
-  contributing_center: InstitutionDto[];
+  contributing_center?: InstitutionDto[];
 
-  @ApiProperty({
-    description: 'List of contributing partner institutions',
+  @ApiPropertyOptional({
+    description:
+      'List of contributing partner institutions. Optional for all result types.',
     type: [InstitutionDto],
   })
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => InstitutionDto)
-  contributing_partners: InstitutionDto[];
+  contributing_partners?: InstitutionDto[];
 
-  @ApiProperty({
-    description: 'Evidence references supporting the bilateral project',
+  @ApiPropertyOptional({
+    description:
+      'Evidence references supporting the bilateral project. Optional for all result types.',
     type: [EvidenceDto],
   })
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => EvidenceDto)
-  evidence: EvidenceDto[];
+  evidence?: EvidenceDto[];
 
   @ApiProperty({
     description: 'List of contributing bilateral project grants',
@@ -1129,10 +1164,12 @@ export class CreateBilateralDto {
 
   @ApiPropertyOptional({
     description:
-      'Capacity sharing metadata (required when result_type_id is CAPACITY_CHANGE)',
+      'Capacity sharing metadata (required when result_type_id is CAPACITY_SHARING_FOR_DEVELOPMENT)',
     type: () => CapacitySharingDto,
   })
-  @ValidateIf((o) => o.result_type_id === ResultTypeEnum.CAPACITY_CHANGE)
+  @ValidateIf(
+    (o) => o.result_type_id === ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+  )
   @IsDefined()
   @ValidateNested()
   @Type(() => CapacitySharingDto)

@@ -29,7 +29,7 @@
       <div class="p-fluid input_container" *ngSwitchCase="false">
         <div class="input-validation">{{ value }}</div>
         <input
-          *ngIf="this.type != 'currency' && this.type != 'number'"
+          *ngIf="this.type != 'currency' && this.type != 'number' && this.type != 'email'"
           [disabled]="this.disabled"
           pInputText
           [type]="this.type"
@@ -43,6 +43,36 @@
             warning: wordCount > maxWords && autogenerate
           }"
           [style]="{ 'max-height': this.variant === 'sm' ? '30px' : this.variant === 'xs' ? '25px' : 'auto', width: '100%' }" />
+
+        <div style="display: flex; flex-direction: column; gap: 2px" *ngIf="this.type == 'email'">
+          <input
+            [disabled]="this.disabled"
+            pInputText
+            type="email"
+            [placeholder]="this.placeholder"
+            [(ngModel)]="value"
+            #emailInput="ngModel"
+            [required]="this.required"
+            email
+            [attr.prValid]="true"
+            [ngClass]="{
+              'pr-valid': true,
+              'pr-body-2': true,
+              invalid: emailInput.invalid || (wordCount > maxWords && !autogenerate),
+              warning: wordCount > maxWords && autogenerate
+            }"
+            [style]="{ 'max-height': this.variant === 'sm' ? '30px' : this.variant === 'xs' ? '25px' : 'auto', width: '100%' }" />
+          @if (emailInput.invalid) {
+            <p-message severity="error" size="small" variant="simple">
+              @if (emailInput.hasError('required')) {
+                Email is Required.
+              }
+              @if (emailInput.hasError('email')) {
+                Please enter a valid email.
+              }
+            </p-message>
+          }
+        </div>
 
         <p-inputNumber
           class=""

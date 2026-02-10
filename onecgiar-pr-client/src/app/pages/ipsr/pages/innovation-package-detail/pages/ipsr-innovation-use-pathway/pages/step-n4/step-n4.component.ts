@@ -1,18 +1,20 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { IpsrStep4Body } from './model/Ipsr-step-4-body.model';
 import { Router } from '@angular/router';
 import { IpsrDataControlService } from '../../../../../../services/ipsr-data-control.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
+import { InnovationControlListService } from '../../../../../../../../shared/services/global/innovation-control-list.service';
 
 @Component({
-    selector: 'app-step-n4',
-    templateUrl: './step-n4.component.html',
-    styleUrls: ['./step-n4.component.scss'],
-    standalone: false
+  selector: 'app-step-n4',
+  templateUrl: './step-n4.component.html',
+  styleUrls: ['./step-n4.component.scss'],
+  standalone: false
 })
 export class StepN4Component implements OnInit {
   ipsrStep4Body = new IpsrStep4Body();
   disabledOptionsPartners = [];
+  innovationControlListSE = inject(InnovationControlListService);
 
   constructor(
     public ipsrDataControlSE: IpsrDataControlService,
@@ -35,21 +37,25 @@ export class StepN4Component implements OnInit {
   }
 
   getSectionInformation() {
-    this.api.resultsSE.GETInnovationPathwayStepFourByRiId().subscribe(({ response }) => {
+    this.api.resultsSE.GETInnovationPathwayStepFourByRiId(this.api.fieldsManagerSE.isP25()).subscribe(({ response }) => {
       this.ipsrStep4Body = response;
 
       this.disabledOptionsPartners = this.ipsrStep4Body.institutions_expected_investment.map(item => ({
         institutions_id: item?.obj_result_institution?.institutions_id
       }));
 
-      this.ipsrStep4Body.institutions_expected_investment = this.ipsrStep4Body.institutions_expected_investment.filter(
-        item => item?.obj_result_institution?.institution_roles_id == 7
-      );
+      this.ipsrStep4Body.institutions_expected_investment = this.ipsrStep4Body.institutions_expected_investment.filter(item => {
+        if (this.api.fieldsManagerSE.isP25()) {
+          return item?.obj_result_institution?.institution_roles_id == 2;
+        } else {
+          return item?.obj_result_institution?.institution_roles_id == 7;
+        }
+      });
     });
   }
 
   onSaveSection() {
-    this.api.resultsSE.PATCHInnovationPathwayStepFourByRiId(this.ipsrStep4Body).subscribe(({ response }) => {
+    this.api.resultsSE.PATCHInnovationPathwayStepFourByRiId(this.ipsrStep4Body, this.api.fieldsManagerSE.isP25()).subscribe(({ response }) => {
       this.getSectionInformation();
     });
   }

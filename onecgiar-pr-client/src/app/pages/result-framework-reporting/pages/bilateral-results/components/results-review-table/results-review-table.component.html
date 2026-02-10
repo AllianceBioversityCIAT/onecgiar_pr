@@ -1,0 +1,107 @@
+<p-table
+  styleClass="p-datatable-gridlines p-datatable-sm bilateral-results-table"
+  [value]="filteredTableData()"
+  sortField="project_name"
+  [sortOrder]="1"
+  responsiveLayout="scroll"
+  dataKey="project_name"
+  sortMode="single"
+  rowGroupMode="subheader"
+  groupRowsBy="project_name"
+  [expandedRowKeys]="expandedRowKeys()"
+  [loading]="isLoading()">
+  <!-- Header -->
+  <ng-template pTemplate="header">
+    <tr>
+      <th id="code" style="width: 5%">Code</th>
+      <th id="title" style="width: 15%">Title</th>
+      <th id="indicator-category" style="width: 10%">Indicator category</th>
+      @if (this.bilateralResultsService.currentCenterSelected().length > 1) {
+        <th id="lead-center" style="width: 10%">Lead center</th>
+      }
+      <th id="status" style="width: 8%">Status</th>
+      <th id="toc-result" style="width: 18%">TOC result</th>
+      <th id="indicator" style="width: 15%">Indicator</th>
+      <th id="submission-date" style="width: 10%">Submission date</th>
+      <th id="actions" style="width: 19%; text-align: center">Actions</th>
+    </tr>
+  </ng-template>
+
+  <!-- Group Header -->
+  <ng-template pTemplate="groupheader" let-item let-expanded="expanded">
+    <tr>
+      <td [attr.colspan]="this.bilateralResultsService.currentCenterSelected().length > 1 ? 9 : 8" class="group-header-cell">
+        <div class="group-header-content" pRipple [pRowToggler]="item">
+          <button
+            type="button"
+            pButton
+            class="p-button-text p-button-rounded"
+            style="border: none; box-shadow: none !important"
+            [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"></button>
+
+          <span style="font-weight: bold">{{ item.project_name }}</span>
+        </div>
+      </td>
+    </tr>
+  </ng-template>
+
+  <!-- Expanded Rows -->
+  <ng-template #expandedrow let-group>
+    @for (result of group.results; track result.id) {
+      <tr>
+        <td class="code-cell">{{ result.result_code }}</td>
+        <td class="title-cell">{{ result.result_title }}</td>
+        <td>{{ result.indicator_category }}</td>
+        @if (this.bilateralResultsService.currentCenterSelected().length > 1) {
+          <td>{{ result.lead_center ?? 'Not specified' }}</td>
+        }
+        <td>
+          <div
+            class="status-badge"
+            [ngClass]="{
+              approved: result.status_name === 'Approved',
+              rejected: result.status_name === 'Rejected',
+              pending: result.status_name !== 'Approved' && result.status_name !== 'Rejected'
+            }">
+            {{ result.status_name }}
+          </div>
+        </td>
+        <td class="toc-cell">{{ result.toc_title ?? 'Not specified' }}</td>
+        <td class="indicator-cell">{{ result.indicator ?? 'Not specified' }}</td>
+        <td class="date-cell">{{ result.submission_date | date: 'dd/MM/yyyy' }}</td>
+        <td class="actions-cell">
+          @let isPendingReview = result.status_name === 'Pending Review';
+
+          <button
+            pButton
+            type="button"
+            variant="outlined"
+            class="review-result-button"
+            (click)="reviewResult(result)"
+            [pTooltip]="isPendingReview && canReviewResults() ? 'Review result' : 'See result'"
+            tooltipPosition="top">
+            <i class="material-icons-outlined">{{ isPendingReview && canReviewResults() ? 'edit' : 'visibility' }}</i>
+            {{ isPendingReview && canReviewResults() ? 'Review result' : 'See result' }}
+          </button>
+        </td>
+      </tr>
+    }
+  </ng-template>
+
+  <!-- Empty Message -->
+  <ng-template pTemplate="emptymessage">
+    <tr style="height: 200px">
+      <td [attr.colspan]="this.bilateralResultsService.currentCenterSelected().length > 1 ? 9 : 8" style="text-align: center; font-weight: 600">
+        No results found.
+      </td>
+    </tr>
+  </ng-template>
+</p-table>
+
+@if (bilateralResultsService.showReviewDrawer()) {
+  <app-result-review-drawer
+    [(visible)]="bilateralResultsService.showReviewDrawer"
+    [(resultToReview)]="bilateralResultsService.currentResultToReview"
+    (decisionMade)="onDecisionMade()">
+  </app-result-review-drawer>
+}
