@@ -241,7 +241,7 @@
       }
 
       @if (fields?.contributors_result_toc_result?.length && contributor.planned_result !== null) {
-        @if (this.tocConsumed) {
+        @if (this.tocConsumed()) {
           <div style="z-index: 1; position: relative">
             <app-cp-multiple-wps
               [editable]="false"
