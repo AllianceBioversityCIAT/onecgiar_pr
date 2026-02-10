@@ -84,7 +84,7 @@
     height: 32px;
 
     i {
-      @include fonts.pr-typography('body-2');
+      font-size: 16px;
     }
   }
 }
