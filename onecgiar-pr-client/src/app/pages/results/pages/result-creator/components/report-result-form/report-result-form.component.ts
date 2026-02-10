@@ -17,6 +17,7 @@ export class ReportResultFormComponent implements OnInit, DoCheck {
   depthSearchList: any[] = [];
   exactTitleFound = signal(false);
   loadingDepthSearch = signal(false);
+  private debounceTimer: any = null;
   mqapJson: {};
   validating = false;
   kpAlertDescription = `Please add the handle generated in <strong>CGSpace</strong>, <strong>MELSpace</strong>, or <strong>WorldFish DSpace</strong> to report your knowledge product. Only knowledge products entered into <strong>one of these repositories</strong> are accepted in the PRMS Reporting Tool.<br><br>
@@ -175,7 +176,7 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
 
   clean() {
     if (this.resultLevelSE.resultBody.result_type_id == 6) this.resultLevelSE.resultBody.result_name = '';
-    else this.depthSearch(this.resultLevelSE.resultBody.result_name);
+    else this.onTitleChange(this.resultLevelSE.resultBody.result_name);
   }
 
   private applyPendingResultTypeSelection() {
@@ -193,8 +194,23 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
     setTimeout(checkAndApply, 0);
   }
 
-  depthSearch(title: string) {
+  onTitleChange(title: string) {
+    clearTimeout(this.debounceTimer);
     this.loadingDepthSearch.set(true);
+    this.exactTitleFound.set(false);
+
+    if (!title?.trim()) {
+      this.depthSearchList = [];
+      this.loadingDepthSearch.set(false);
+      return;
+    }
+
+    this.debounceTimer = setTimeout(() => {
+      this.depthSearch(title);
+    }, 500);
+  }
+
+  depthSearch(title: string) {
     const cleanSpaces = (text: string) => text?.replace(/\s+/g, '')?.toLowerCase();
     const legacyType = this.getLegacyType(this.resultTypeName, this.resultLevelName);
 

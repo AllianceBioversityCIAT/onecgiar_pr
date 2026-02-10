@@ -90,7 +90,8 @@ p {
   margin-top: 10px;
 
   .alert-warning,
-  .alert-success {
+  .alert-success,
+  .alert-validating {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -102,6 +103,16 @@ p {
     i {
       font-size: 1.1rem;
       flex-shrink: 0;
+    }
+  }
+
+  .alert-validating {
+    background-color: #d6e9f8;
+    border: 1px solid #4a90d9;
+    color: #1a4a7a;
+
+    i {
+      color: #1a4a7a;
     }
   }
 
