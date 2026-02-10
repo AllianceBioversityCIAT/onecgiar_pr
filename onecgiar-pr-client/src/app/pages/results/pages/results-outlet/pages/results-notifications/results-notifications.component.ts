@@ -55,6 +55,12 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
     }
   }
 
+  clearAllFilters() {
+    this.resultsNotificationsSE.phaseFilter = this.phaseList.find(phase => phase.status)?.id;
+    this.resultsNotificationsSE.resetFilters();
+    this.onPhaseChange(this.resultsNotificationsSE.phaseFilter);
+  }
+
   updateQueryParams() {
     this.router.navigate([], {
       relativeTo: this.activatedRoute,
