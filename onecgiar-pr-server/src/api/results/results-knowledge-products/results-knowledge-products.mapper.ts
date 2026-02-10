@@ -41,6 +41,7 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProductDto.melia_previous_submitted = null; //null, as this info is mapped by the user
     knowledgeProductDto.melia_type_id = null; //null, as this info is mapped by the user
     knowledgeProductDto.ost_melia_study_id = null; //null, as this info is mapped by the user
+    knowledgeProductDto.toc_melia_study_id = null; //null, as this info is mapped by the user
     knowledgeProductDto.title = mqapResponseDto?.Title;
     knowledgeProductDto.sponsor = (mqapResponseDto?.['Funding source'] ?? [])
       .map((f) => f.name)
@@ -386,6 +387,7 @@ export class ResultsKnowledgeProductMapper {
       entity.melia_previous_submitted;
     knowledgeProductDto.melia_type_id = entity.melia_type_id;
     knowledgeProductDto.ost_melia_study_id = entity.ost_melia_study_id;
+    knowledgeProductDto.toc_melia_study_id = entity.toc_melia_study_id;
     knowledgeProductDto.cgspace_phase_year =
       entity?.result_object?.obj_version?.cgspace_year;
 
