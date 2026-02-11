@@ -258,34 +258,26 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
       return;
     }
 
+    let request$;
     if (this.resultLevelSE.resultBody.result_type_id != 6) {
       this.api.dataControlSE.validateBody(this.resultLevelSE.resultBody);
-      this.api.resultsSE.POST_resultCreateHeader(this.resultLevelSE.resultBody, true).subscribe({
-        next: (resp: any) => {
-          this.resultCreated.emit(resp?.response);
-          this.router.navigate([`/result/result-detail/${resp?.response?.result_code}/general-information`], {
-            queryParams: { phase: resp?.response?.version_id }
-          });
-          this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
-        },
-        error: err => {
-          this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
-        }
-      });
+      request$ = this.api.resultsSE.POST_resultCreateHeader(this.resultLevelSE.resultBody, true);
     } else {
-      this.api.resultsSE.POST_createWithHandle({ ...this.mqapJson, result_data: this.resultLevelSE.resultBody }).subscribe({
-        next: (resp: any) => {
-          this.resultCreated.emit(resp?.response);
-          this.router.navigate([`/result/result-detail/${resp?.response?.result_code}/general-information`], {
-            queryParams: { phase: resp?.response?.version_id }
-          });
-          this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
-        },
-        error: err => {
-          this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
-        }
-      });
+      request$ = this.api.resultsSE.POST_createWithHandle({ ...this.mqapJson, result_data: this.resultLevelSE.resultBody });
     }
+
+    request$.subscribe({
+      next: (resp: any) => {
+        this.resultCreated.emit(resp?.response);
+        this.router.navigate([`/result/result-detail/${resp?.response?.result_code}/general-information`], {
+          queryParams: { phase: resp?.response?.version_id }
+        });
+        this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
+      },
+      error: err => {
+        this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
+      }
+    });
   }
 
   ngDoCheck(): void {
@@ -356,7 +348,4 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
     this.onSelectInit();
   }
 
-  private getAvailableInitiatives() {
-    return this.availableInitiativesSig();
-  }
 }
