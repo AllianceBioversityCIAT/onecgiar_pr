@@ -1859,6 +1859,7 @@ export class ResultsKnowledgeProductsService {
       if (!sectionSevenData.isMeliaProduct) {
         sectionSevenData.ostSubmitted = null;
         sectionSevenData.ostMeliaId = null;
+        sectionSevenData.tocMeliaStudyId = undefined;
         sectionSevenData.clarisaMeliaTypeId = null;
       }
 
@@ -1879,6 +1880,7 @@ export class ResultsKnowledgeProductsService {
           melia_previous_submitted: sectionSevenData.ostSubmitted,
           melia_type_id: sectionSevenData.clarisaMeliaTypeId,
           ost_melia_study_id: sectionSevenData.ostMeliaId,
+          toc_melia_study_id: sectionSevenData.tocMeliaStudyId ?? undefined,
         },
       );
 
