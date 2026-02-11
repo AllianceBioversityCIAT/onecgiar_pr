@@ -1,6 +1,16 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, Input } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  inject,
+  Input,
+  OnDestroy,
+  OnInit
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { BilateralResultDetail } from '../../result-review-drawer.interfaces';
 import { CustomFieldsModule } from '../../../../../../../../../../custom-fields/custom-fields.module';
 import { InnovationControlListService } from '../../../../../../../../../../shared/services/global/innovation-control-list.service';
@@ -12,7 +22,7 @@ import { InnovationControlListService } from '../../../../../../../../../../shar
   styleUrl: '../../result-review-drawer.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class InnoDevContentComponent {
+export class InnoDevContentComponent implements OnInit, OnDestroy {
   @Input() disabled: boolean = false;
   @Input() set resultDetail(value: BilateralResultDetail) {
     if (!value) {
@@ -46,6 +56,7 @@ export class InnoDevContentComponent {
 
     this._resultDetail = value;
     this.cdr.markForCheck();
+    queueMicrotask(() => this.cdr.markForCheck());
   }
   get resultDetail(): BilateralResultDetail {
     return this._resultDetail;
@@ -54,6 +65,18 @@ export class InnoDevContentComponent {
 
   private readonly cdr = inject(ChangeDetectorRef);
   innovationControlListSE = inject(InnovationControlListService);
+  private readonly destroy$ = new Subject<void>();
+
+  ngOnInit(): void {
+    this.innovationControlListSE.readinessLevelsLoaded$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.cdr.markForCheck());
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
 
   readinessDescription(): string {
     return 'Use the slider to select the appropriate readiness level. Readiness levels range from 1 (basic research) to 9 (proven in operational environment).';
