@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { ApiService } from '../api/api.service';
+import { Subject } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -9,6 +10,8 @@ export class InnovationControlListService {
   characteristicsList = [];
   readinessLevelsList = [];
   useLevelsList = [];
+  readonly readinessLevelsLoaded$ = new Subject<void>();
+
   constructor(private api: ApiService) {
     this.GET_clarisaInnovationType();
     this.GET_clarisaInnovationCharacteristics();
@@ -31,6 +34,7 @@ export class InnovationControlListService {
     this.api.resultsSE.GET_clarisaInnovationReadinessLevels().subscribe(({ response }) => {
       //(response);
       this.readinessLevelsList = response;
+      this.readinessLevelsLoaded$.next();
     });
   }
   GET_clarisaInnovationUseLevels() {

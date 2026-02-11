@@ -5,8 +5,10 @@ import { ApiService } from '../../../../../../../shared/services/api/api.service
 import { FairSpecificData, FullFairData, KnowledgeProductBody } from './model/knowledgeProductBody';
 import { KnowledgeProductBodyMapped } from './model/KnowledgeProductBodyMapped';
 import { KnowledgeProductSaveDto } from './model/knowledge-product-save.dto';
+import { TocMeliaStudyItem } from './model/toc-melia-study.interface';
 import { RolesService } from '../../../../../../../shared/services/global/roles.service';
 import { CustomizedAlertsFeService } from '../../../../../../../shared/services/customized-alerts-fe.service';
+import { FieldsManagerService } from '../../../../../../../shared/services/fields-manager.service';
 
 @Component({
   selector: 'app-knowledge-product-info',
@@ -19,11 +21,13 @@ export class KnowledgeProductInfoComponent implements OnInit {
   sectionData: KnowledgeProductSaveDto = new KnowledgeProductSaveDto();
   meliaTypes = [];
   ostMeliaStudies = [];
+  tocMeliaStudiesList: TocMeliaStudyItem[] = [];
   private readonly kpGradientScale = chroma.scale(['#f44444', '#dcdf38', '#38df7b']).mode('hcl');
   fair_data: Array<{ key: string; value: FairSpecificData }>;
 
   constructor(
     public api: ApiService,
+    public fieldsManagerSE: FieldsManagerService,
     public rolesSE: RolesService,
     private customizedAlertsFeSE: CustomizedAlertsFeService
   ) {
@@ -46,12 +50,23 @@ export class KnowledgeProductInfoComponent implements OnInit {
       this.sectionData.isMeliaProduct = response.is_melia;
       this.sectionData.ostMeliaId = response.ost_melia_study_id;
       this.sectionData.ostSubmitted = response.melia_previous_submitted;
+      if (this.api.fieldsManagerSE.isP25()) {
+        this.sectionData.tocMeliaStudyId = response.toc_melia_study_id ?? null;
+        const currentResult = this.api.dataControlSE.currentResultSignal() ?? this.api.dataControlSE.currentResult;
+        const programId = currentResult?.initiative_id;
+        if (programId != null) {
+          this.api.resultsSE.GET_meliaStudiesByToc(programId).subscribe(({ response: tocResponse }) => {
+            this.tocMeliaStudiesList = tocResponse ?? [];
+          });
+        }
+      } else {
+        this.api.resultsSE.GET_ostMeliaStudiesByResultId().subscribe(({ response: ostResponse }) => {
+          this.ostMeliaStudies = ostResponse ?? [];
+        });
+      }
     });
     this.api.resultsSE.GET_allClarisaMeliaStudyTypes().subscribe(({ response }) => {
       this.meliaTypes = response;
-    });
-    this.api.resultsSE.GET_ostMeliaStudiesByResultId().subscribe(({ response }) => {
-      this.ostMeliaStudies = response;
     });
   }
 

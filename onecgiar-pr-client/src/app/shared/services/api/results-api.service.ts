@@ -210,6 +210,12 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.apiBaseUrl}melia-studies/get/all/result/${this.currentResultId}`);
   }
 
+  GET_meliaStudiesByToc(programId: string | number) {
+    return this.http.get<{ response: Array<{ melia_id: string; title: string; official_code: string }> }>(
+      `${this.baseApiBaseUrlV2}results/melia-studies/get/all/toc/${programId}`
+    );
+  }
+
   PATCH_partnersSection(body: PartnersBody) {
     return this.http
       .patch<any>(`${this.apiBaseUrl}results-by-institutions/create/partners/${this.currentResultId}`, body)
