@@ -32,6 +32,7 @@ import { ClarisaPolicyTypesModule } from '../../clarisa/clarisa-policy-types/cla
 import { ClarisaPolicyStagesModule } from '../../clarisa/clarisa-policy-stages/clarisa-policy-stages.module';
 import { InnovationUseModule } from '../results-framework-reporting/innovation-use/innovation-use.module';
 import { ResultsByInititiativesModule } from '../results/results_by_inititiatives/results_by_inititiatives.module';
+import { ShareResultRequestModule } from '../results/share-result-request/share-result-request.module';
 import { KnowledgeProductBilateralHandler } from './handlers/knowledge-product.handler';
 import { CapacityChangeBilateralHandler } from './handlers/capacity-change.handler';
 import { InnovationDevelopmentBilateralHandler } from './handlers/innovation-development.handler';
@@ -75,6 +76,7 @@ import { NoopBilateralHandler } from './handlers/noop.handler';
     ClarisaPolicyStagesModule,
     InnovationUseModule,
     ResultsByInititiativesModule,
+    ShareResultRequestModule,
   ],
   controllers: [BilateralController],
   providers: [

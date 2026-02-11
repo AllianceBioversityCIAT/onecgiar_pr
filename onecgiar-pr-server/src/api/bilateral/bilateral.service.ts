@@ -62,6 +62,7 @@ import { BilateralResultTypeHandler } from './handlers/bilateral-result-type-han
 import { NoopBilateralHandler } from './handlers/noop.handler';
 import { ResultByInitiativesRepository } from '../results/results_by_inititiatives/resultByInitiatives.repository';
 import { ResultsService } from '../results/results.service';
+import { ShareResultRequestRepository } from '../results/share-result-request/share-result-request.repository';
 
 @Injectable()
 export class BilateralService {
@@ -97,6 +98,7 @@ export class BilateralService {
     private readonly _clarisaProjectsRepository: ClarisaProjectsRepository,
     private readonly _resultsByProjectsRepository: ResultsByProjectsRepository,
     private readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
+    private readonly _shareResultRequestRepository: ShareResultRequestRepository,
     private readonly _knowledgeProductHandler: KnowledgeProductBilateralHandler,
     private readonly _capacityChangeHandler: CapacityChangeBilateralHandler,
     private readonly _innovationDevelopmentHandler: InnovationDevelopmentBilateralHandler,
@@ -1072,6 +1074,9 @@ export class BilateralService {
       );
     }
 
+    let ownerInitiativeId: number | null = null;
+    const REQUEST_STATUS_CONTRIBUTING = 4;
+
     for (const mapping of mappings) {
       const {
         science_program_id,
@@ -1093,6 +1098,64 @@ export class BilateralService {
         );
         continue;
       }
+
+      // Search for the initiative (normalize the code for search)
+      const normalizedCode = science_program_id?.trim().toUpperCase();
+      const init = await this._clarisaInitiatives.findOne({
+        where: { official_code: normalizedCode },
+      });
+
+      if (!init) {
+        this.logger.error(
+          `TOC mapping initiative not found for official_code=${science_program_id} (normalized: ${normalizedCode}, role ${roleId}). Cannot create TOC mapping without initiative.`,
+        );
+        continue;
+      }
+
+      // Contributing programs (roleId 2): store in share_result_request with request_status_id = 4 only
+      if (roleId === 2) {
+        if (ownerInitiativeId == null) {
+          this.logger.warn(
+            'Contributing program processed before owner initiative; skipping. Ensure toc_mapping (role 1) is sent first.',
+          );
+          continue;
+        }
+        try {
+          const existingShare =
+            await this._shareResultRequestRepository.findOne({
+              where: {
+                result_id: resultId,
+                owner_initiative_id: ownerInitiativeId,
+                shared_inititiative_id: init.id,
+                request_status_id: REQUEST_STATUS_CONTRIBUTING,
+                is_active: true,
+              },
+            });
+          if (!existingShare) {
+            await this._shareResultRequestRepository.save({
+              result_id: resultId,
+              owner_initiative_id: ownerInitiativeId,
+              shared_inititiative_id: init.id,
+              approving_inititiative_id: init.id,
+              request_status_id: REQUEST_STATUS_CONTRIBUTING,
+              requested_by: userId,
+              is_active: true,
+            });
+            this.logger.debug(
+              `Created share_result_request (request_status_id=${REQUEST_STATUS_CONTRIBUTING}) for result ${resultId}, owner=${ownerInitiativeId}, shared=${init.id} (${science_program_id})`,
+            );
+          }
+        } catch (err) {
+          this.logger.error(
+            `Error saving share_result_request for contributing program ${science_program_id}: ${(err as Error).message}`,
+          );
+          throw err;
+        }
+        continue;
+      }
+
+      // From here: roleId === 1 (main toc) — full flow: results_by_initiative + results_toc_result
+      ownerInitiativeId = init.id;
 
       // Determine if we have enough data to attempt full mapping
       const hasFullMappingData =
@@ -1160,23 +1223,6 @@ export class BilateralService {
           );
         }
 
-        // Search for the initiative (normalize the code for search)
-        const normalizedCode = science_program_id?.trim().toUpperCase();
-        this.logger.debug(
-          `Looking up initiative with official_code: ${science_program_id} (normalized: ${normalizedCode})`,
-        );
-
-        const init = await this._clarisaInitiatives.findOne({
-          where: { official_code: normalizedCode },
-        });
-
-        if (!init) {
-          this.logger.error(
-            `TOC mapping initiative not found for official_code=${science_program_id} (normalized: ${normalizedCode}, role ${roleId}). Cannot create TOC mapping without initiative.`,
-          );
-          continue;
-        }
-
         if (!init.active) {
           this.logger.warn(
             `TOC mapping initiative found but is not active: id=${init.id}, official_code=${init.official_code} (role ${roleId}). Proceeding anyway.`,
@@ -1187,7 +1233,7 @@ export class BilateralService {
           `Found initiative: id=${init.id}, name=${init.name}, official_code=${init.official_code}, active=${init.active}. Processing TOC mapping (role: ${roleId}, isInitiativeOnly: ${isInitiativeOnlyMapping})`,
         );
 
-        // Create/update result_by_initiative relationship
+        // Create/update result_by_initiative relationship (main toc only)
         this.logger.debug(
           `Upserting result_by_initiative: resultId=${resultId}, initiativeId=${init.id}, roleId=${roleId}`,
         );
@@ -1391,6 +1437,7 @@ export class BilateralService {
     await this._resultsTocResultsIndicatorsRepository.logicalDelete(resultId);
     await this._resultsTocResultsRepository.logicalDelete(resultId);
     await this._resultByInitiativesRepository.logicalDelete(resultId);
+    await this._shareResultRequestRepository.logicalDelete(resultId);
   }
 
   private filterActiveRelations(result: any) {
