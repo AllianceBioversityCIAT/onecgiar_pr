@@ -161,7 +161,6 @@ export class ShareResultRequestService {
         initiativeId,
         shareInitId,
         user,
-        requestExist?.request_status_id,
       );
       shareInitRequests.push(newShare);
 
@@ -183,11 +182,10 @@ export class ShareResultRequestService {
     initiativeId: number | null,
     shareInitId: number,
     user: TokenDto,
-    requestStatusId: number = 1,
   ): ShareResultRequest {
     const newShare = new ShareResultRequest();
     newShare.result_id = resultId;
-    newShare.request_status_id = requestStatusId;
+    newShare.request_status_id = 1;
     newShare.owner_initiative_id = initiativeId;
     newShare.requester_initiative_id = createTocShareResult?.isToc
       ? initiativeId
