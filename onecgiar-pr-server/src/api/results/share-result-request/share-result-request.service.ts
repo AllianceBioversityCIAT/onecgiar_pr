@@ -158,15 +158,31 @@ export class ShareResultRequestService {
         };
       }
 
-      // Create new request only if it doesn't exist
-      const newShare = this.buildShareResultRequest(
-        createTocShareResult,
-        resultId,
-        initiativeId,
-        shareInitId,
-        user,
-      );
-      shareInitRequests.push(newShare);
+      // If request exists with status_id = 4, update it; otherwise create new
+      if (requestExist?.request_status_id === 4) {
+        const existingShare = this.buildShareResultRequest(
+          createTocShareResult,
+          resultId,
+          initiativeId,
+          shareInitId,
+          user,
+        );
+        existingShare.share_result_request_id =
+          requestExist.share_result_request_id;
+        existingShare.is_active = true;
+
+        shareInitRequests.push(existingShare);
+      } else {
+        // Create new request only if it doesn't exist
+        const newShare = this.buildShareResultRequest(
+          createTocShareResult,
+          resultId,
+          initiativeId,
+          shareInitId,
+          user,
+        );
+        shareInitRequests.push(newShare);
+      }
 
       if (createTocShareResult.isToc === true) {
         await this._resultsTocResultService.saveMapToToc(
@@ -209,7 +225,35 @@ export class ShareResultRequestService {
     resultId: number,
     user: TokenDto,
   ) {
-    await this._shareResultRequestRepository.save(shareInitRequests);
+    // Separate existing requests (with ID) from new ones (without ID)
+    const existingRequests = shareInitRequests.filter(
+      (req) => req.share_result_request_id,
+    );
+    const newRequests = shareInitRequests.filter(
+      (req) => !req.share_result_request_id,
+    );
+
+    // Update existing requests
+    if (existingRequests.length > 0) {
+      await Promise.all(
+        existingRequests.map((req) =>
+          this._shareResultRequestRepository.update(
+            req.share_result_request_id,
+            {
+              request_status_id: req.request_status_id,
+              is_active: req.is_active,
+              requested_by: req.requested_by,
+              requested_date: req.requested_date,
+            },
+          ),
+        ),
+      );
+    }
+
+    // Save only new requests
+    if (newRequests.length > 0) {
+      await this._shareResultRequestRepository.save(newRequests);
+    }
 
     await this.sendEmailsForShareRequests(
       shareInitRequests,
