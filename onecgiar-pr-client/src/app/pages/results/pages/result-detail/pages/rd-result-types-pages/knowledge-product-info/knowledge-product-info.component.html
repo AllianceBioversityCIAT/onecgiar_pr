@@ -30,15 +30,27 @@
       [(ngModel)]="this.sectionData.clarisaMeliaTypeId"
       *ngIf="this.sectionData.ostSubmitted === false">
     </app-pr-select>
+    <!-- Non-P25: OST MELIA studies by result, value ostMeliaId -->
     <app-pr-select
+      *ngIf="this.sectionData.ostSubmitted === true && !api.fieldsManagerSE.isP25()"
       [options]="this.ostMeliaStudies"
       [label]="api.fieldsManagerSE.fields()['[knowledge-product-info]-ost_melia_select']?.label"
       [placeholder]="api.fieldsManagerSE.fields()['[knowledge-product-info]-ost_melia_select']?.placeholder"
       optionLabel="melia_study_title"
       optionValue="melia_id"
       [required]="true"
-      [(ngModel)]="this.sectionData.ostMeliaId"
-      *ngIf="this.sectionData.ostSubmitted === true">
+      [(ngModel)]="this.sectionData.ostMeliaId">
+    </app-pr-select>
+    <!-- P25: MELIA studies from TOC, value tocMeliaStudyId (PATCH: tocMeliaStudyId, GET: toc_melia_study_id) -->
+    <app-pr-select
+      *ngIf="this.sectionData.ostSubmitted === true && api.fieldsManagerSE.isP25()"
+      [options]="tocMeliaStudiesList"
+      label="Select the MELIA study from the drop-down (this drop-down is synced with your TOC)"
+      placeholder="Select the MELIA study from the drop-down (this drop-down is synced with your TOC)"
+      optionLabel="title"
+      optionValue="melia_id"
+      [required]="true"
+      [(ngModel)]="this.sectionData.tocMeliaStudyId">
     </app-pr-select>
   </div>
 
