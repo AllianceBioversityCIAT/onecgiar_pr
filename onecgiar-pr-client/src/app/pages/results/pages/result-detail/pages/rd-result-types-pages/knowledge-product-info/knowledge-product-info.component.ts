@@ -8,7 +8,7 @@ import { KnowledgeProductSaveDto } from './model/knowledge-product-save.dto';
 import { TocMeliaStudyItem } from './model/toc-melia-study.interface';
 import { RolesService } from '../../../../../../../shared/services/global/roles.service';
 import { CustomizedAlertsFeService } from '../../../../../../../shared/services/customized-alerts-fe.service';
-import { FieldsManagerService } from 'src/app/shared/services/fields-manager.service';
+import { FieldsManagerService } from '../../../../../../../shared/services/fields-manager.service';
 
 @Component({
   selector: 'app-knowledge-product-info',
@@ -27,7 +27,7 @@ export class KnowledgeProductInfoComponent implements OnInit {
 
   constructor(
     public api: ApiService,
-    public fieldsManagerSE: FieldsManagerService, 
+    public fieldsManagerSE: FieldsManagerService,
     public rolesSE: RolesService,
     private customizedAlertsFeSE: CustomizedAlertsFeService
   ) {
@@ -53,7 +53,6 @@ export class KnowledgeProductInfoComponent implements OnInit {
       if (this.api.fieldsManagerSE.isP25()) {
         this.sectionData.tocMeliaStudyId = response.toc_melia_study_id ?? null;
         const currentResult = this.api.dataControlSE.currentResultSignal() ?? this.api.dataControlSE.currentResult;
-        console.log(currentResult);
         const programId = currentResult?.initiative_id;
         if (programId != null) {
           this.api.resultsSE.GET_meliaStudiesByToc(programId).subscribe(({ response: tocResponse }) => {
