@@ -711,26 +711,28 @@ export class ResultsKnowledgeProductMapper {
     upsert = false,
   ) {
     if (dto.clarisa_regions === undefined) return;
-  
+
     const incoming = new Set(dto.clarisa_regions ?? []);
     const existing = knowledgeProduct.result_object.result_region_array ?? [];
-  
+
     if (!upsert) {
-      knowledgeProduct.result_object.result_region_array = [...incoming].map((r) => {
-        const rr = new ResultRegion();
-        rr.region_id = r;
-        rr.result_id = knowledgeProduct.results_id;
-        rr.is_active = true;
-        return rr;
-      });
+      knowledgeProduct.result_object.result_region_array = [...incoming].map(
+        (r) => {
+          const rr = new ResultRegion();
+          rr.region_id = r;
+          rr.result_id = knowledgeProduct.results_id;
+          rr.is_active = true;
+          return rr;
+        },
+      );
       return;
     }
-  
+
     const byRegionId = new Map<number, ResultRegion>();
     for (const e of existing) byRegionId.set(e.region_id, e);
-  
+
     const final: ResultRegion[] = [];
-  
+
     for (const r of incoming) {
       const rr = byRegionId.get(r) ?? new ResultRegion();
       rr.region_id = r;
@@ -738,14 +740,14 @@ export class ResultsKnowledgeProductMapper {
       rr.is_active = true;
       final.push(rr);
     }
-  
+
     for (const e of existing) {
       if (!incoming.has(e.region_id)) {
         if (e.result_region_id) e.is_active = false;
         final.push(e);
       }
     }
-  
+
     knowledgeProduct.result_object.result_region_array = final;
   }
 
