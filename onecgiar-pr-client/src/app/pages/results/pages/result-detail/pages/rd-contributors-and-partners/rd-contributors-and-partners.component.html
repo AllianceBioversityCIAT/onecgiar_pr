@@ -61,7 +61,7 @@
           [isAvisa]="isAvisaInitiative()"></app-cp-multiple-wps>
       </div>
     }
-    @if (!this.rdPartnersSE.partnersBody.result_toc_result.planned_result) {
+    @if (!this.rdPartnersSE.partnersBody.result_toc_result.planned_result && !this.hideWhyReportedField()) {
       <app-pr-textarea
         placeholder="Enter reason"
         label="Why is the result being reported?"
