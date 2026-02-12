@@ -76,6 +76,11 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     return code === 'SGP-02' || code === 'SGP02';
   });
 
+  hideWhyReportedField = computed(() => {
+    const initiativeId = this.api.dataControlSE.currentResultSignal?.()?.initiative_id ?? this.api.dataControlSE.currentResult?.initiative_id;
+    return initiativeId === 41 && this.fieldsManagerSE.isP25();
+  });
+
   GET_AllWithoutResults() {
     this.api.resultsSE.GET_resultById().subscribe({
       next: ({ response }) => {
