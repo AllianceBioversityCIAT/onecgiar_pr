@@ -358,12 +358,12 @@
       <div class="result-review-drawer-footer">
           <p-button
           label="APPROVE"
-          [disabled]="!isToCCompleted()"
-          styleClass="approve-button {{ !isToCCompleted() ? 'not-hover' : '' }}"
-          (click)="isToCCompleted() ? onApprove() : null"
+          [disabled]="!canApprove()"
+          styleClass="approve-button {{ !canApprove() ? 'not-hover' : '' }}"
+          (click)="canApprove() ? onApprove() : null"
           icon="pi pi-check-circle"
           variant="outlined"
-          [pTooltip]="!isToCCompleted() ? 'Please save the TOC data before approving the result' : ''"
+          [pTooltip]="getApproveButtonTooltip()"
           tooltipPosition="top"
           size="large" />
         <p-button label="REJECT" styleClass="reject-button" (click)="onReject()" icon="pi pi-times-circle" variant="outlined" size="large" />
