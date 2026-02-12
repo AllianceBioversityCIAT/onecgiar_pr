@@ -213,11 +213,11 @@ describe('ResultsService (unit, pure mocks)', () => {
       .fn()
       .mockImplementation(async (query: string, _params: any[]) => {
         // Mock for getDraftInit status query
-        if (query && query.includes('SELECT status_id FROM result')) {
+        if (query?.includes('SELECT status_id FROM result')) {
           return [{ status_id: 1 }]; // Default status_id = 1 (not 5, so request_status_id will be 1)
         }
         // Mock for getDraftInit main query
-        if (query && query.includes('FROM share_result_request')) {
+        if (query?.includes('FROM share_result_request')) {
           return [];
         }
         // Default return for any other query
