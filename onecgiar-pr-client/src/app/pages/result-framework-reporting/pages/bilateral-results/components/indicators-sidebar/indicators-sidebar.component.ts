@@ -44,9 +44,8 @@ export class IndicatorsSidebarComponent implements OnInit {
         queryParams: centerCode ? { center: centerCode } : {},
         queryParamsHandling: centerCode ? 'merge' : ''
       });
+      this.bilateralResultsService.searchText.set('');
     }
-
-    this.bilateralResultsService.searchText.set('');
   }
 
   isSelected(centerCode: string | null): boolean {
