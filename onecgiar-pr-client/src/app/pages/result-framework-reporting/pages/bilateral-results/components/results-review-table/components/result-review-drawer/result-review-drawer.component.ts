@@ -200,14 +200,16 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** Coerce value to number or null (handles string, number, null, undefined, NaN). */
+  private toNum(v: any): number | null {
+    if (v == null) return null;
+    const n = typeof v === 'string' ? Number.parseInt(v, 10) : Number(v);
+    return Number.isNaN(n) ? null : n;
+  }
+
   /** Normalize data standards for snapshot comparison (description, geo, centers, initiatives, evidence, etc.). */
   private normalizeDataStandardForComparison(detail: BilateralResultDetail | null): object {
     if (!detail) return {};
-    const toNum = (v: any): number | null => {
-      if (v == null) return null;
-      const n = typeof v === 'string' ? Number.parseInt(v, 10) : Number(v);
-      return Number.isNaN(n) ? null : n;
-    };
 
     const centers = Array.isArray(detail.contributingCenters)
       ? detail.contributingCenters
@@ -225,8 +227,8 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
     const mapInitiativeId = (init: any): number | null => {
       if (typeof init === 'number') return init;
-      if (typeof init === 'object' && init?.id != null) return toNum(init.id);
-      return toNum(init);
+      if (typeof init === 'object' && init?.id != null) return this.toNum(init.id);
+      return this.toNum(init);
     };
     const initiatives = Array.isArray(detail.contributingInitiatives)
       ? detail.contributingInitiatives
@@ -237,7 +239,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
     const mapInstitutionId = (inst: any): number | null => {
       if (typeof inst === 'number') return inst;
-      if (typeof inst === 'object' && inst != null) return toNum(inst.institutions_id ?? inst.institution_id ?? inst.id);
+      if (typeof inst === 'object' && inst != null) return this.toNum(inst.institutions_id ?? inst.institution_id ?? inst.id);
       return null;
     };
     const institutions = Array.isArray(detail.contributingInstitutions)
@@ -481,16 +483,10 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   ): Array<{ institution_id: number; acronym: string | null; institution_name: string | null }> {
     if (!currentInstitutions?.length) return [];
 
-    const toNum = (v: any): number | null => {
-      if (v == null) return null;
-      const n = typeof v === 'string' ? Number.parseInt(v, 10) : Number(v);
-      return Number.isNaN(n) ? null : n;
-    };
-
     const resolveId = (item: any): number | null => {
-      if (typeof item === 'number') return toNum(item);
-      if (typeof item === 'string' && item !== '') return toNum(item);
-      if (item && typeof item === 'object') return toNum(item.institutions_id ?? item.institution_id ?? item.id);
+      if (typeof item === 'number') return this.toNum(item);
+      if (typeof item === 'string' && item !== '') return this.toNum(item);
+      if (item && typeof item === 'object') return this.toNum(item.institutions_id ?? item.institution_id ?? item.id);
       return null;
     };
 
@@ -507,12 +503,12 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
           (item.acronym != null || item.institution_name != null || item.institutions_name != null || item.full_name != null)
             ? item
             : list.find((inst: any) => {
-                const a = toNum(inst.institutions_id ?? inst.institution_id ?? inst.id);
+                const a = this.toNum(inst.institutions_id ?? inst.institution_id ?? inst.id);
                 return a !== null && a === id;
               });
 
         const inst = institution as any;
-        const institutionId = institution ? (toNum(inst.institutions_id ?? inst.institution_id ?? inst.id) ?? id) : id;
+        const institutionId = institution ? (this.toNum(inst.institutions_id ?? inst.institution_id ?? inst.id) ?? id) : id;
         const acronym = institution ? (inst.acronym ?? null) : null;
         const institutionName = institution ? (inst.institution_name ?? inst.institutions_name ?? inst.full_name ?? null) : null;
 
