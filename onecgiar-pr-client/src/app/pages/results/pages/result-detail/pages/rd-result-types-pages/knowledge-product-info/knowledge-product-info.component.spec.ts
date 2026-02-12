@@ -14,6 +14,7 @@ import { of } from 'rxjs';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { SaveButtonComponent } from '../../../../../../../custom-fields/save-button/save-button.component';
 import { CustomizedAlertsFeService } from '../../../../../../../shared/services/customized-alerts-fe.service';
+import { FieldsManagerService } from '../../../../../../../shared/services/fields-manager.service';
 import { signal } from '@angular/core';
 
 describe('KnowledgeProductInfoComponent', () => {
@@ -74,6 +75,7 @@ describe('KnowledgeProductInfoComponent', () => {
         GET_resultknowledgeProducts: () => of({ response: mockGET_resultknowledgeProductsResponse }),
         GET_allClarisaMeliaStudyTypes: () => of({ response: [] }),
         GET_ostMeliaStudiesByResultId: () => of({ response: [] }),
+        GET_meliaStudiesByToc: () => of({ response: [] }),
         PATCH_resyncKnowledgeProducts: () => of({ response: [] }),
         PATCH_knowledgeProductSection: () => of({ response: [] })
       },
@@ -82,7 +84,16 @@ describe('KnowledgeProductInfoComponent', () => {
       },
       dataControlSE: {
         isKnowledgeProduct: true,
-        currentResultSectionName: signal<string>('Knowledge product information')
+        currentResultSectionName: signal<string>('Knowledge product information'),
+        currentResultSignal: () => ({}),
+        currentResult: null
+      },
+      fieldsManagerSE: {
+        isP25: () => false,
+        fields: () => ({
+          '[knowledge-product-info]-ost_submitted': { label: '' },
+          '[knowledge-product-info]-ost_melia_select': { label: '', placeholder: '' }
+        })
       }
     };
 
@@ -114,6 +125,10 @@ describe('KnowledgeProductInfoComponent', () => {
         {
           provide: CustomizedAlertsFeService,
           useValue: mockCustomizedAlertsFeService
+        },
+        {
+          provide: FieldsManagerService,
+          useValue: { isP25: () => false, fields: () => ({}) }
         }
       ]
     }).compileComponents();

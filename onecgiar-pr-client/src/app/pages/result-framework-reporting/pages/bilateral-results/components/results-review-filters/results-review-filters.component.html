@@ -7,7 +7,7 @@
       pInputText
       placeholder="Find result"
       [ngModel]="bilateralResultsService.searchText()"
-      (ngModelChange)="bilateralResultsService.searchText.set($event)"
+      (ngModelChange)="onSearchChange($event)"
       [style]="{ width: '350px' }" />
   </p-iconfield>
 </div>

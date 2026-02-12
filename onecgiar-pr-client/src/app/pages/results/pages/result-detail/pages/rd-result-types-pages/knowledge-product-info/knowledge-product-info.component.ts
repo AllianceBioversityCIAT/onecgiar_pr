@@ -5,8 +5,10 @@ import { ApiService } from '../../../../../../../shared/services/api/api.service
 import { FairSpecificData, FullFairData, KnowledgeProductBody } from './model/knowledgeProductBody';
 import { KnowledgeProductBodyMapped } from './model/KnowledgeProductBodyMapped';
 import { KnowledgeProductSaveDto } from './model/knowledge-product-save.dto';
+import { TocMeliaStudyItem } from './model/toc-melia-study.interface';
 import { RolesService } from '../../../../../../../shared/services/global/roles.service';
 import { CustomizedAlertsFeService } from '../../../../../../../shared/services/customized-alerts-fe.service';
+import { FieldsManagerService } from '../../../../../../../shared/services/fields-manager.service';
 
 @Component({
   selector: 'app-knowledge-product-info',
@@ -19,19 +21,22 @@ export class KnowledgeProductInfoComponent implements OnInit {
   sectionData: KnowledgeProductSaveDto = new KnowledgeProductSaveDto();
   meliaTypes = [];
   ostMeliaStudies = [];
+  tocMeliaStudiesList: TocMeliaStudyItem[] = [];
   private readonly kpGradientScale = chroma.scale(['#f44444', '#dcdf38', '#38df7b']).mode('hcl');
   fair_data: Array<{ key: string; value: FairSpecificData }>;
-  get fairGuideline(): string {
-    const repositoryName = this.knowledgeProductBody?.source || 'the repository';
-    return `FAIR (findability, accessibility, interoperability, and reusability) scores are used to support reporting that aligns with the <a href="https://cgspace.cgiar.org/handle/10568/113623" target="_blank">CGIAR Open and FAIR Data Assets Policy</a>. FAIR scores are calculated based on the presence or absence of metadata in ${repositoryName}. If you wish to enhance the FAIR score for a knowledge product, review the metadata flagged with a red icon below and liaise with your Center's knowledge management team to implement improvements.`;
-  }
 
   constructor(
     public api: ApiService,
+    public fieldsManagerSE: FieldsManagerService,
     public rolesSE: RolesService,
     private customizedAlertsFeSE: CustomizedAlertsFeService
   ) {
     this.api.dataControlSE.currentResultSectionName.set('Knowledge product information');
+  }
+
+  get fairGuideline(): string {
+    const repositoryName = this.knowledgeProductBody?.source || 'the repository';
+    return `FAIR (findability, accessibility, interoperability, and reusability) scores are used to support reporting that aligns with the <a href="https://cgspace.cgiar.org/handle/10568/113623" target="_blank">CGIAR Open and FAIR Data Assets Policy</a>. FAIR scores are calculated based on the presence or absence of metadata in ${repositoryName}. If you wish to enhance the FAIR score for a knowledge product, review the metadata flagged with a red icon below and liaise with your Center's knowledge management team to implement improvements.`;
   }
 
   ngOnInit(): void {
@@ -45,12 +50,23 @@ export class KnowledgeProductInfoComponent implements OnInit {
       this.sectionData.isMeliaProduct = response.is_melia;
       this.sectionData.ostMeliaId = response.ost_melia_study_id;
       this.sectionData.ostSubmitted = response.melia_previous_submitted;
+      if (this.api.fieldsManagerSE.isP25()) {
+        this.sectionData.tocMeliaStudyId = response.toc_melia_study_id ?? null;
+        const currentResult = this.api.dataControlSE.currentResultSignal() ?? this.api.dataControlSE.currentResult;
+        const programId = currentResult?.initiative_id;
+        if (programId != null) {
+          this.api.resultsSE.GET_meliaStudiesByToc(programId).subscribe(({ response: tocResponse }) => {
+            this.tocMeliaStudiesList = tocResponse ?? [];
+          });
+        }
+      } else {
+        this.api.resultsSE.GET_ostMeliaStudiesByResultId().subscribe(({ response: ostResponse }) => {
+          this.ostMeliaStudies = ostResponse ?? [];
+        });
+      }
     });
     this.api.resultsSE.GET_allClarisaMeliaStudyTypes().subscribe(({ response }) => {
       this.meliaTypes = response;
-    });
-    this.api.resultsSE.GET_ostMeliaStudiesByResultId().subscribe(({ response }) => {
-      this.ostMeliaStudies = response;
     });
   }
 

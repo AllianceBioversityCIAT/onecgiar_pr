@@ -118,6 +118,8 @@ import { ResultsTocResultsService } from './results-toc-results/results-toc-resu
 import { CapdevDto } from './summary/dto/create-capacity-developents.dto';
 import { CreateTocShareResult } from './share-result-request/dto/create-toc-share-result.dto';
 import { ShareResultRequestService } from './share-result-request/share-result-request.service';
+import { ShareResultRequestRepository } from './share-result-request/share-result-request.repository';
+import { ShareResultRequest } from './share-result-request/entities/share-result-request.entity';
 import { EvidencesService } from '../results/evidences/evidences.service';
 import { SavePartnersV2Dto } from './results_by_institutions/dto/save-partners-v2.dto';
 
@@ -197,6 +199,8 @@ export class ResultsService {
     @Optional()
     @Inject(forwardRef(() => ShareResultRequestService))
     private readonly _shareResultRequestService?: ShareResultRequestService,
+    @Optional()
+    private readonly _shareResultRequestRepository?: ShareResultRequestRepository,
   ) {}
 
   async createOwnerResult(
@@ -2773,6 +2777,8 @@ export class ResultsService {
         indicator: row.indicator,
         submission_date: row.submission_date,
         lead_center: row.lead_center,
+        initiative_role_id: row.initiative_role_id,
+        initiative_role_name: row.initiative_role_name,
       }));
 
       const groupedByProject = mappedResults.reduce(
@@ -2854,6 +2860,8 @@ export class ResultsService {
       const mappedResult = {
         commonFields: commonFields ?? null,
         tocMetadata: tocResponse.result_toc_result ?? null,
+        contributors_result_toc_result:
+          tocResponse.contributors_result_toc_result ?? [],
         geographicScope: geoScope ?? null,
         contributingCenters: contributingCenters ?? [],
         contributingInstitutions: contributingInstitutions ?? [],
@@ -2960,7 +2968,7 @@ export class ResultsService {
         this._resultByInitiativesRepository.getContributorInitiativeByResult(
           resultId,
         ),
-        this._resultByInitiativesRepository.getPendingInit(resultId),
+        this._resultByInitiativesRepository.getDraftInit(resultId),
         this._resultByInitiativesRepository.getContributorInitiativeAndPrimaryByResult(
           resultId,
         ),
@@ -3104,7 +3112,7 @@ export class ResultsService {
         };
       }
 
-      return await this._dataSource.transaction(async (manager) => {
+      await this._dataSource.transaction(async (manager) => {
         const result = await manager.findOne(Result, {
           where: {
             id: parsedResultId,
@@ -3148,21 +3156,60 @@ export class ResultsService {
           created_by: user.id,
         });
         await manager.save(ResultReviewHistory, reviewHistory);
-
-        const decisionVerb =
-          reviewDecisionDto.decision === ReviewDecisionEnum.APPROVE
-            ? 'approved'
-            : 'rejected';
-
-        return {
-          response: {
-            resultId: parsedResultId,
-            status: newStatusId,
-          },
-          message: `Result ${decisionVerb} successfully`,
-          status: HttpStatus.OK,
-        };
       });
+
+      const decisionVerb =
+        reviewDecisionDto.decision === ReviewDecisionEnum.APPROVE
+          ? 'approved'
+          : 'rejected';
+
+      let newStatusId: number;
+      if (reviewDecisionDto.decision === ReviewDecisionEnum.APPROVE) {
+        const shareResultRequests =
+          await this._shareResultRequestRepository.find({
+            where: {
+              result_id: parsedResultId,
+              is_active: true,
+              request_status_id: In([2, 4]),
+            },
+          });
+
+        const contributing_initiatives = {
+          accepted_contributing_initiatives: shareResultRequests
+            .filter((req) => req.request_status_id === 2)
+            .map((req) => ({
+              id: req.shared_inititiative_id,
+            })),
+          pending_contributing_initiatives: shareResultRequests
+            .filter((req) => req.request_status_id === 4)
+            .map((req) => ({
+              id: req.shared_inititiative_id,
+              share_result_request_id: req.share_result_request_id,
+              is_active: req.is_active,
+            })),
+        };
+
+        await this._updateTocMapping(
+          parsedResultId,
+          contributing_initiatives,
+          user,
+        );
+      } else {
+        // When result is rejected, deactivate all active share result requests for this result
+        await this._shareResultRequestRepository.update(
+          { result_id: parsedResultId, is_active: true },
+          { is_active: false },
+        );
+      }
+
+      return {
+        response: {
+          resultId: parsedResultId,
+          status: newStatusId,
+        },
+        message: `Result ${decisionVerb} successfully`,
+        status: HttpStatus.OK,
+      };
     } catch (error) {
       if (
         error instanceof BadRequestException ||
@@ -3250,7 +3297,11 @@ export class ResultsService {
       await this._updatePartners(parsedResultId, reviewUpdateDto, user);
 
       // Update Initiatives/Science Programs
-      await this._updateTocMapping(parsedResultId, reviewUpdateDto, user);
+      await this._updateContributingInitiatives(
+        parsedResultId,
+        reviewUpdateDto,
+        user,
+      );
 
       // Update Evidence
       await this._updateEvidence(parsedResultId, reviewUpdateDto, user);
@@ -3444,10 +3495,17 @@ export class ResultsService {
 
   private async _updateTocMapping(
     resultId: number,
-    reviewUpdateDto: ReviewUpdateDto,
+    contributingInitiatives: {
+      accepted_contributing_initiatives: Array<{ id: number }>;
+      pending_contributing_initiatives: Array<{
+        id: number;
+        share_result_request_id: number;
+        is_active: boolean;
+      }>;
+    },
     user: TokenDto,
   ): Promise<void> {
-    if (reviewUpdateDto.contributingInitiatives === undefined) return;
+    if (!contributingInitiatives) return;
 
     if (!this._contributorsPartnersService) {
       this._logger.warn(
@@ -3456,7 +3514,7 @@ export class ResultsService {
       return;
     }
 
-    const contributing = reviewUpdateDto.contributingInitiatives;
+    const contributing = contributingInitiatives;
 
     let acceptedIds: number[] = (
       contributing.accepted_contributing_initiatives ?? []
@@ -3519,10 +3577,160 @@ export class ResultsService {
         initiativeShareId: pendingIds,
         email_template: 'email_template_contribution',
       };
+
       await this._shareResultRequestService.resultRequest(
         dataRequest,
         resultId,
         user,
+      );
+    }
+  }
+
+  private async _updateContributingInitiatives(
+    resultId: number,
+    reviewUpdateDto: ReviewUpdateDto,
+    user: TokenDto,
+  ): Promise<void> {
+    if (
+      !reviewUpdateDto.contributingInitiatives ||
+      !this._shareResultRequestRepository ||
+      !this._resultByInitiativesRepository
+    ) {
+      return;
+    }
+
+    const { contributingInitiatives } = reviewUpdateDto;
+    const {
+      accepted_contributing_initiatives,
+      pending_contributing_initiatives,
+    } = contributingInitiatives;
+
+    // Get owner_initiative_id
+    const ownerInitiative = await this._resultByInitiativesRepository.findOne({
+      where: { result_id: resultId, initiative_role_id: 1, is_active: true },
+    });
+
+    if (!ownerInitiative) {
+      this._logger.warn(
+        `Owner initiative not found for result ${resultId}. Skipping contributing initiatives update.`,
+      );
+      return;
+    }
+
+    const ownerInitiativeId = ownerInitiative.initiative_id;
+
+    // Verify accepted_contributing_initiatives exist in database
+    if (accepted_contributing_initiatives?.length) {
+      for (const acceptedInit of accepted_contributing_initiatives) {
+        const exists = await this._resultByInitiativesRepository.findOne({
+          where: {
+            result_id: resultId,
+            initiative_id: acceptedInit.id,
+            initiative_role_id: 2,
+            is_active: true,
+          },
+        });
+
+        if (!exists) {
+          this._logger.warn(
+            `Accepted contributing initiative ${acceptedInit.id} does not exist in database for result ${resultId}`,
+          );
+        }
+      }
+    }
+
+    // Handle pending_contributing_initiatives
+    if (!pending_contributing_initiatives?.length) {
+      // If there are no pending in the payload, delete all with request_status_id = 4
+      await this._shareResultRequestRepository.update(
+        {
+          result_id: resultId,
+          request_status_id: 4,
+          is_active: true,
+        },
+        {
+          is_active: false,
+        },
+      );
+      return;
+    }
+
+    // Get existing share result requests with request_status_id = 4
+    const existingRequests = await this._shareResultRequestRepository.find({
+      where: {
+        result_id: resultId,
+        request_status_id: 4,
+        is_active: true,
+      },
+    });
+
+    const payloadInitiativeIds = pending_contributing_initiatives.map(
+      (init) => init.id,
+    );
+    const existingInitiativeIds = existingRequests.map(
+      (req) => req.shared_inititiative_id,
+    );
+
+    // Create new share result requests for initiatives that don't exist
+    const newInitiativeIds = payloadInitiativeIds.filter(
+      (id) => !existingInitiativeIds.includes(id),
+    );
+
+    if (newInitiativeIds.length > 0) {
+      const newRequests: ShareResultRequest[] = newInitiativeIds.map(
+        (initiativeId) => {
+          const newRequest = new ShareResultRequest();
+          newRequest.result_id = resultId;
+          newRequest.owner_initiative_id = ownerInitiativeId;
+          newRequest.shared_inititiative_id = initiativeId;
+          newRequest.approving_inititiative_id = ownerInitiativeId;
+          newRequest.requester_initiative_id = ownerInitiativeId;
+          newRequest.request_status_id = 4; // Draft
+          newRequest.requested_by = user.id;
+          newRequest.is_map_to_toc = false;
+          newRequest.is_active = true;
+          return newRequest;
+        },
+      );
+
+      await this._shareResultRequestRepository.save(newRequests);
+    }
+
+    // Delete (is_active=false) those that exist in DB but not in payload
+    const toDeleteInitiativeIds = existingInitiativeIds.filter(
+      (id) => !payloadInitiativeIds.includes(id),
+    );
+
+    if (toDeleteInitiativeIds.length > 0) {
+      await this._shareResultRequestRepository.update(
+        {
+          result_id: resultId,
+          shared_inititiative_id: In(toDeleteInitiativeIds),
+          request_status_id: 4,
+          is_active: true,
+        },
+        {
+          is_active: false,
+        },
+      );
+    }
+
+    // Update those that exist (keep active if they are in the payload)
+    const toUpdateInitiativeIds = payloadInitiativeIds.filter((id) =>
+      existingInitiativeIds.includes(id),
+    );
+
+    if (toUpdateInitiativeIds.length > 0) {
+      // Ensure they are active
+      await this._shareResultRequestRepository.update(
+        {
+          result_id: resultId,
+          shared_inititiative_id: In(toUpdateInitiativeIds),
+          request_status_id: 4,
+        },
+        {
+          is_active: true,
+        },
       );
     }
   }

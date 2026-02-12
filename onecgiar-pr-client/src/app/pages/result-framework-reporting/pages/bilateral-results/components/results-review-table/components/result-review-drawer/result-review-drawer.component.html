@@ -217,6 +217,50 @@
         [readOnly]="!canEditInDrawer()">
       </app-pr-multi-select>
 
+        <div *ngIf="fields?.contributors_result_toc_result?.length">
+    <app-pr-field-header label="Other contributors" [required]="false" [simpleStyle]="true"> </app-pr-field-header>
+
+    @for (contributor of fields?.contributors_result_toc_result; track contributor.initiative_id) {
+      <app-pr-yes-or-not
+        [label]="`${contributor?.official_code} - ${contributor?.short_name}`"
+        [required]="!!contributor?.result_toc_results?.length"
+        [(ngModel)]="contributor.planned_result"
+        (selectOptionEvent)="onPlannedResultChange()"
+        [readOnly]="true"
+        [hideOptions]="!contributor?.result_toc_results?.length">
+      </app-pr-yes-or-not>
+
+      @if (!contributor?.result_toc_results?.length) {
+        <div class="pending-message">
+          <i class="material-icons-round" style="font-size: 20px; color: var(--pr-color-orange-400)">info</i>
+          <p>
+            <b> {{ contributor?.official_code }} {{ contributor.short_name }} </b>
+            has not confirmed its contribution to this result, so its ToC mapping is currently unavailable.
+          </p>
+        </div>
+      }
+
+      @if (fields?.contributors_result_toc_result?.length && contributor.planned_result !== null) {
+        @if (this.tocConsumed()) {
+          <div style="z-index: 1; position: relative">
+            <app-cp-multiple-wps
+              [editable]="false"
+              [initiative]="contributor"
+              [initiativeId]="contributor?.initiative_id"
+              [resultLevelId]="fields?.commonFields?.result_level_id"
+              [isIpsr]="false"
+              [isContributor]="true"
+              [isNotifications]="false"
+              [isUnplanned]="!contributor.planned_result"
+              [hidden]="true"
+              [forceP25]="true"
+              [showMultipleWPsContent]="tocConsumed()"></app-cp-multiple-wps>
+          </div>
+        }
+      }
+    }
+  </div>
+
       <hr class="form-section_separator" />
 
       <app-pr-multi-select
@@ -314,12 +358,12 @@
       <div class="result-review-drawer-footer">
           <p-button
           label="APPROVE"
-          [disabled]="!isToCCompleted()"
-          styleClass="approve-button {{ !isToCCompleted() ? 'not-hover' : '' }}"
-          (click)="isToCCompleted() ? onApprove() : null"
+          [disabled]="!canApprove()"
+          styleClass="approve-button {{ !canApprove() ? 'not-hover' : '' }}"
+          (click)="canApprove() ? onApprove() : null"
           icon="pi pi-check-circle"
           variant="outlined"
-          [pTooltip]="!isToCCompleted() ? 'Please save the TOC data before approving the result' : ''"
+          [pTooltip]="getApproveButtonTooltip()"
           tooltipPosition="top"
           size="large" />
         <p-button label="REJECT" styleClass="reject-button" (click)="onReject()" icon="pi pi-times-circle" variant="outlined" size="large" />
