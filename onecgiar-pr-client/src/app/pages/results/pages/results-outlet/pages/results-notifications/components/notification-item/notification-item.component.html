@@ -213,8 +213,8 @@
     <div class="modal-icon reject">
       <i class="pi pi-times-circle" style="font-size: 40px; margin-bottom: 10px"></i>
     </div>
-    <h2 class="modal-title reject">REJECT CONTRIBUTION</h2>
-    <p class="modal-message">Are you sure that you want to reject this contribution?</p>
+    <h2 class="modal-title reject">{{ isBilateralResult ? 'DECLINE' : 'REJECT' }} CONTRIBUTION</h2>
+    <p class="modal-message">Are you sure that you want to {{ isBilateralResult ? 'decline' : 'reject' }} this contribution?</p>
 
     <p class="notification_content_body_text" style="margin-top: 10px; max-width: 500px">
       <b>
