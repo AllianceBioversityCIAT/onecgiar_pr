@@ -363,7 +363,7 @@
           (click)="isToCCompleted() ? onApprove() : null"
           icon="pi pi-check-circle"
           variant="outlined"
-          [pTooltip]="!isToCCompleted() ? 'Please complete and save the TOC data before approving the result' : ''"
+          [pTooltip]="!isToCCompleted() ? 'Please save the TOC data before approving the result' : ''"
           tooltipPosition="top"
           size="large" />
         <p-button label="REJECT" styleClass="reject-button" (click)="onReject()" icon="pi pi-times-circle" variant="outlined" size="large" />

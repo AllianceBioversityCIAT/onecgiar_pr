@@ -112,6 +112,7 @@ import { ContributorsPartnersService } from '../results-framework-reporting/cont
 import { SummaryService } from './summary/summary.service';
 import { InnovationDevService } from '../results-framework-reporting/innovation_dev/innovation_dev.service';
 import { InnovationUseService } from '../results-framework-reporting/innovation-use/innovation-use.service';
+import { ResultCoreInnovUseSectionEnum } from '../results-framework-reporting/result_innov_section/enum/result_innov_section.enum';
 import { UpdateTocMetadataDto } from './dto/update-toc-metadata.dto';
 import { ResultsTocResultsService } from './results-toc-results/results-toc-results.service';
 import { CapdevDto } from './summary/dto/create-capacity-developents.dto';
@@ -3049,10 +3050,20 @@ export class ResultsService {
         break;
 
       case ResultTypeEnum.INNOVATION_USE:
-        resultTypeResponse =
-          await this._resultRepository.getInnovationUseBilateralResultById(
-            resultId,
+        if (this._innovationUseService) {
+          resultTypeResponse =
+            await this._innovationUseService.getBilateralInnovationUseData(
+              resultId,
+            );
+        } else {
+          this._logger.warn(
+            `InnovationUseService not available for resultId: ${resultId}`,
           );
+          resultTypeResponse =
+            await this._resultRepository.getInnovationUseBilateralResultById(
+              resultId,
+            );
+        }
         break;
 
       default:
@@ -3831,17 +3842,7 @@ export class ResultsService {
         break;
 
       case ResultTypeEnum.INNOVATION_USE: // 2
-        if (this._innovationUseService) {
-          await this._innovationUseService.saveInnovationUse(
-            reviewUpdateDto.resultTypeResponse as any,
-            resultId,
-            user,
-          );
-        } else {
-          this._logger.warn(
-            `InnovationUseService not available for result ${resultId}`,
-          );
-        }
+        await this._updateInnovationUsePartial(resultId, reviewUpdateDto, user);
         break;
 
       default:
@@ -3849,6 +3850,49 @@ export class ResultsService {
           `Unsupported result_type_id: ${resultTypeId} for result ${resultId}`,
         );
         break;
+    }
+  }
+
+  private async _updateInnovationUsePartial(
+    resultId: number,
+    reviewUpdateDto: ReviewUpdateDto,
+    user: TokenDto,
+  ): Promise<void> {
+    if (!this._innovationUseService) {
+      this._logger.warn(
+        `InnovationUseService not available for result ${resultId}`,
+      );
+      return;
+    }
+
+    // resultTypeResponse puede venir como array o como objeto
+    const resultTypeResponse = reviewUpdateDto.resultTypeResponse as any;
+    const resultTypeData = Array.isArray(resultTypeResponse)
+      ? resultTypeResponse[0]
+      : resultTypeResponse;
+
+    // Guardar actors, organizations y measures en la sección CURRENT
+    const innovationUseGroups = {
+      actors: resultTypeData?.actors ?? [],
+      organization: resultTypeData?.organizations ?? [],
+      measures: resultTypeData?.measures ?? [],
+    };
+
+    await this._innovationUseService.saveAnticipatedInnoUser(
+      resultId,
+      user.id,
+      innovationUseGroups,
+      ResultCoreInnovUseSectionEnum.CURRENT,
+      resultTypeData?.innov_use_to_be_determined ?? null,
+    );
+
+    // Guardar investment_partners
+    if (resultTypeData?.investment_partners) {
+      await this._innovationUseService.savePartnerInvestment(
+        resultId,
+        user.id,
+        { investment_partners: resultTypeData.investment_partners } as any,
+      );
     }
   }
 

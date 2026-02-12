@@ -81,6 +81,8 @@ import { VersionRepository } from '../versioning/versioning.repository';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
 import { RoleEnum } from '../../shared/constants/role-type.enum';
 
+const P25_PORTFOLIO_ACRONYM = 'P25';
+
 @Injectable()
 export class DeleteRecoverDataService {
   private readonly _logger = new Logger(DeleteRecoverDataService.name);
@@ -524,6 +526,7 @@ export class DeleteRecoverDataService {
         new_result_level,
         result.result_type_id,
         result.result_level_id,
+        result.version_id,
       );
 
       if (returnDelete.statusCode >= 300) {
@@ -646,6 +649,7 @@ export class DeleteRecoverDataService {
    * @param _new_result_level
    * @param _old_result_type
    * @param _old_result_level
+   * @param version_id - Used to validate if portfolio is P25; when P25, also deletes results_toc_result (rtr)
    * @returns
    * @description This method is used to delete the data of a result that has changed its type
    */
@@ -655,14 +659,21 @@ export class DeleteRecoverDataService {
     new_result_level: ResultLevelEnum,
     old_result_type: ResultTypeEnum,
     old_result_level: ResultLevelEnum,
+    version_id?: number,
   ) {
     try {
+      const isP25Portfolio = await this._isP25Portfolio(version_id);
+
       await this._resultsImpactAreaIndicatorRepository.fisicalDelete(result_id);
       await this._resultCountriesSubNationalRepository.fisicalDelete(result_id);
       await this._resultsTocSdgTargetRepository.fisicalDelete(result_id);
       await this._resultsTocImpactAreaTargetRepository.fisicalDelete(result_id);
       await this._resultsTocTargetIndicatorRepository.fisicalDelete(result_id);
       await this._resultsTocResultIndicatorsRepository.fisicalDelete(result_id);
+
+      if (isP25Portfolio) {
+        await this._resultsTocResultRepository.fisicalDelete(result_id);
+      }
 
       if (old_result_type == ResultTypeEnum.KNOWLEDGE_PRODUCT) {
         await this._resultByIntitutionsRepository.fisicalDeleteByTypeAndResultId(
@@ -731,6 +742,19 @@ export class DeleteRecoverDataService {
         error,
         !EnvironmentExtractor.isProduction(),
       );
+    }
+  }
+
+  private async _isP25Portfolio(version_id?: number): Promise<boolean> {
+    if (!version_id) return false;
+    try {
+      const version = await this._versionRepository.findOne({
+        where: { id: version_id },
+        relations: ['obj_portfolio'],
+      });
+      return version?.obj_portfolio?.acronym === P25_PORTFOLIO_ACRONYM;
+    } catch {
+      return false;
     }
   }
 

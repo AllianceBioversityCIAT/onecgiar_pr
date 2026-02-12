@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import {
   BilateralResultTypeHandler,
   HandlerAfterCreateContext,
@@ -8,9 +8,7 @@ import {
 import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 import { ResultStatusData } from '../../../shared/constants/result-status.enum';
 import { ResultRepository } from '../../results/result.repository';
-import { ResultsKnowledgeProductsRepository } from '../../results/results-knowledge-products/repositories/results-knowledge-products.repository';
 import { ResultsKnowledgeProductsService } from '../../results/results-knowledge-products/results-knowledge-products.service';
-import { Like } from 'typeorm';
 import { SourceEnum } from '../../results/entities/result.entity';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 
@@ -23,7 +21,6 @@ export class KnowledgeProductBilateralHandler
 
   constructor(
     private readonly _resultRepository: ResultRepository,
-    private readonly _resultsKnowledgeProductsRepository: ResultsKnowledgeProductsRepository,
     private readonly _resultsKnowledgeProductsService: ResultsKnowledgeProductsService,
   ) {}
 
@@ -38,26 +35,14 @@ export class KnowledgeProductBilateralHandler
       );
     }
 
-    this.logger.log(
-      'KP creation with DSpace sync - validating handle uniqueness',
-    );
-    const existingKp = await this._resultsKnowledgeProductsRepository.findOne({
-      where: {
-        handle: Like(bilateralDto.knowledge_product.handle),
-        result_object: { is_active: true },
-      },
-      relations: { result_object: true },
-    });
-
-    if (existingKp) {
-      this.logger.warn(
-        `Knowledge Product with handle ${bilateralDto.knowledge_product.handle} already exists (result_id=${existingKp.result_object.id}), aborting bilateral creation.`,
-      );
+    const handle = bilateralDto.knowledge_product.handle;
+    if (!handle) {
       throw new BadRequestException(
-        `Knowledge Product with handle ${bilateralDto.knowledge_product.handle} already exists.`,
+        'knowledge_product.handle is required for KNOWLEDGE_PRODUCT results.',
       );
     }
 
+    // Duplicate handle and MQAP/year validation are done in BilateralService before any insert
     const resultHeader = await this._resultRepository.save({
       created_by: context.userId,
       version_id: context.version.id,
@@ -104,9 +89,13 @@ export class KnowledgeProductBilateralHandler
       );
     }
 
-    this.logger.log(
-      `Fetching KP metadata from DSpace for handle: ${knowledgeProduct.handle}`,
-    );
+    // Bilateral sends full URL; normalize to short form (e.g. 10568/175322)
+    const handleId =
+      this._resultsKnowledgeProductsService.extractHandleIdentifier(
+        knowledgeProduct.handle,
+      );
+
+    this.logger.log(`Fetching KP metadata from DSpace for handle: ${handleId}`);
 
     const userToken: TokenDto = {
       id: userId,
@@ -118,16 +107,16 @@ export class KnowledgeProductBilateralHandler
     try {
       await this._resultsKnowledgeProductsService.populateKPFromCGSpace(
         resultId,
-        knowledgeProduct.handle,
+        handleId,
         userToken,
       );
 
       this.logger.log(
-        `Successfully populated KP from DSpace for result ${resultId} with handle ${knowledgeProduct.handle}`,
+        `Successfully populated KP from DSpace for result ${resultId} with handle ${handleId}`,
       );
     } catch (error) {
       this.logger.error(
-        `Error populating KP from DSpace for result ${resultId} with handle ${knowledgeProduct.handle}:`,
+        `Error populating KP from DSpace for result ${resultId} with handle ${handleId}:`,
         error,
       );
       throw new BadRequestException(

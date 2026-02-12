@@ -1113,6 +1113,9 @@ export class ResultsKnowledgeProductsService {
     user: TokenDto,
   ): Promise<ResultsKnowledgeProduct> {
     try {
+      // Normalize to short form (e.g. 10568/175322); bilateral sends full URL
+      const handleId = this.extractHandleIdentifier(handle);
+
       // Get the existing result
       const existingResult = await this._resultRepository.findOne({
         where: { id: resultId },
@@ -1148,7 +1151,7 @@ export class ResultsKnowledgeProductsService {
 
       // Get metadata from CGSpace (validateExisting=false to avoid duplicate checks)
       const cgspaceResponse = await this.findOnCGSpace(
-        handle,
+        handleId,
         user,
         currentVersion?.phase_year ?? null,
         false, // Don't validate existing - bilateral already handles this
@@ -1282,37 +1285,21 @@ export class ResultsKnowledgeProductsService {
         },
       );
 
-      // Link existing evidences to this KP
-      this._evidenceRepository
-        .findBy({ link: Like(handle) })
-        .then((re) => {
-          return Promise.all(
-            re.map((e) => {
-              this._evidenceRepository.update(
-                { id: e.id },
-                {
-                  knowledge_product_related: resultId,
-                  result_id: resultId,
-                  evidence_type_id: 1,
-                },
-              );
-            }),
-          );
-        })
-        .catch((error) => this._handlersError.returnErrorRes({ error }));
-
       // Create evidence linking KP to itself (if not already exists)
+      // Do not link/activate other evidences by handle: bilateral only gets this one evidence
+      const evidenceLink = `https://hdl.handle.net/${handleId}`;
       const existingEvidence = await this._evidenceRepository.findOne({
         where: {
-          link: `https://hdl.handle.net/${handle}`,
+          link: evidenceLink,
           result_id: resultId,
         },
       });
 
       if (!existingEvidence) {
         await this._evidenceRepository.save({
-          link: `https://hdl.handle.net/${handle}`,
+          link: evidenceLink,
           result_id: resultId,
+          knowledge_product_related: resultId,
           created_by: user.id,
           is_supplementary: false,
           evidence_type_id: 1,
@@ -1872,6 +1859,7 @@ export class ResultsKnowledgeProductsService {
       if (!sectionSevenData.isMeliaProduct) {
         sectionSevenData.ostSubmitted = null;
         sectionSevenData.ostMeliaId = null;
+        sectionSevenData.tocMeliaStudyId = undefined;
         sectionSevenData.clarisaMeliaTypeId = null;
       }
 
@@ -1892,6 +1880,7 @@ export class ResultsKnowledgeProductsService {
           melia_previous_submitted: sectionSevenData.ostSubmitted,
           melia_type_id: sectionSevenData.clarisaMeliaTypeId,
           ost_melia_study_id: sectionSevenData.ostMeliaId,
+          toc_melia_study_id: sectionSevenData.tocMeliaStudyId ?? undefined,
         },
       );
 
