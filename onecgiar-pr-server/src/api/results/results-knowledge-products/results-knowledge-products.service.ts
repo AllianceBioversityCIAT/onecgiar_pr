@@ -163,16 +163,12 @@ export class ResultsKnowledgeProductsService {
         false,
       );
 
-      console.log('CGSpace response:', cgspaceResponse);
-
       if (cgspaceResponse.status !== HttpStatus.OK) {
         throw this._handlersError.returnErrorRes({ error: cgspaceResponse });
       }
 
       const newMetadata =
         cgspaceResponse.response as ResultsKnowledgeProductDto;
-
-      console.log('New Metadata:', newMetadata);
 
       const updatedKnowledgeProduct =
         this._resultsKnowledgeProductMapper.updateEntity(
@@ -1509,6 +1505,7 @@ export class ResultsKnowledgeProductsService {
         (cr) => rr.region_id == cr.um49Code,
       );
       if (inProcessed > -1) {
+        rr.is_active = true;
         cleanedResultRegions.push(rr);
         processedCleanedRegions.splice(inProcessed, 1);
       } else {
