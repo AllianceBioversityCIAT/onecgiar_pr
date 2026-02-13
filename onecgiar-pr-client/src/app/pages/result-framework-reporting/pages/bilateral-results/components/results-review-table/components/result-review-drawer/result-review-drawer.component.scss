@@ -188,6 +188,23 @@ p {
   border-top: 1px solid var(--pr-color-accents-2);
 }
 
+.pending-message {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: var(--pr-color-orange-100);
+  padding: 10px 15px;
+  border-radius: 5px;
+  color: var(--pr-color-black);
+  margin-top: 1rem;
+  margin-bottom: 30px;
+
+  p {
+    margin: 0;
+  }
+}
+
 // Confirmation Modal Styles (centered layout)
 ::ng-deep .confirmation-modal {
   &.p-dialog {
@@ -323,7 +340,7 @@ p {
       color: var(--pr-color-green-600);
       border-color: var(--pr-color-green-600);
 
-      &:hover {
+      &:hover:not(.not-hover) {
         background-color: var(--pr-color-green-600);
         color: var(--pr-color-white);
         border-color: var(--pr-color-green-600);

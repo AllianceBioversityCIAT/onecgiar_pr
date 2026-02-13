@@ -50,7 +50,15 @@
     @for (result of group.results; track result.id) {
       <tr>
         <td class="code-cell">{{ result.result_code }}</td>
-        <td class="title-cell">{{ result.result_title }}</td>
+        <td class="title-cell">
+          @let isContributor = result.initiative_role_name === 'Contributor';
+          <p style="margin: 0; margin-bottom: 10px">
+            {{ result.result_title }}
+          </p>
+          @if (isContributor) {
+            <span class="contributor-badge">Contributor</span>
+          }
+        </td>
         <td>{{ result.indicator_category }}</td>
         @if (this.bilateralResultsService.currentCenterSelected().length > 1) {
           <td>{{ result.lead_center ?? 'Not specified' }}</td>

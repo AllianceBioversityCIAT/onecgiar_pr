@@ -22,10 +22,20 @@ describe('BilateralService (unit)', () => {
     const clarisaSubnationalAreasRepository = {} as any;
     const resultCountrySubnationalRepository = {} as any;
     const resultByInstitutionsRepository = {} as any;
+    const resultInstitutionsBudgetRepository = {
+      save: jest.fn().mockResolvedValue([]),
+    } as any;
     const clarisaInstitutionsRepository = {} as any;
     const evidencesRepository = {} as any;
     const evidencesService = {} as any;
     const resultsKnowledgeProductsRepository = {} as any;
+    const resultsKnowledgeProductsService = {
+      extractHandleIdentifier: jest.fn(
+        (raw: string) => raw?.split('/').slice(-2).join('/') ?? raw,
+      ),
+      validateKPExistanceByHandle: jest.fn().mockResolvedValue(null),
+      findOnCGSpace: jest.fn().mockResolvedValue({ status: 200 }),
+    } as any;
     const clarisaCenters = {} as any;
     const userService = { createFull: jest.fn() };
     const resultsTocResultsRepository = { logicalDelete: jest.fn() };
@@ -36,6 +46,11 @@ describe('BilateralService (unit)', () => {
     const clarisaProjectsRepository = { findOne: jest.fn() };
     const resultsByProjectsRepository = { save: jest.fn() };
     const resultByInitiativesRepository = { logicalDelete: jest.fn() };
+    const shareResultRequestRepository = {
+      findOne: jest.fn().mockResolvedValue(null),
+      save: jest.fn().mockResolvedValue({}),
+      logicalDelete: jest.fn().mockResolvedValue(undefined),
+    } as any;
 
     const makeHandler = (resultType: number) => ({
       resultType,
@@ -71,10 +86,12 @@ describe('BilateralService (unit)', () => {
       clarisaSubnationalAreasRepository,
       resultCountrySubnationalRepository,
       resultByInstitutionsRepository,
+      resultInstitutionsBudgetRepository,
       clarisaInstitutionsRepository,
       evidencesRepository,
       evidencesService,
       resultsKnowledgeProductsRepository,
+      resultsKnowledgeProductsService,
       clarisaCenters,
       userService as any,
       resultsTocResultsRepository as any,
@@ -85,6 +102,7 @@ describe('BilateralService (unit)', () => {
       clarisaProjectsRepository as any,
       resultsByProjectsRepository as any,
       resultByInitiativesRepository as any,
+      shareResultRequestRepository,
       knowledgeProductHandler as any,
       capacityChangeHandler as any,
       innovationDevelopmentHandler as any,
@@ -121,6 +139,7 @@ describe('BilateralService (unit)', () => {
         resultsTocResultsIndicatorsRepository,
         resultsTocResultsRepository,
         resultByInitiativesRepository,
+        resultsKnowledgeProductsService,
       },
       handlers: {
         knowledgeProductHandler,
@@ -151,7 +170,9 @@ describe('BilateralService (unit)', () => {
       }),
     );
 
-    const cap = service.buildResultRelations(ResultTypeEnum.CAPACITY_CHANGE);
+    const cap = service.buildResultRelations(
+      ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
+    );
     expect(cap).toEqual(
       expect.objectContaining({ results_capacity_development_object: true }),
     );
@@ -338,17 +359,20 @@ describe('BilateralService (unit)', () => {
 
   it('ensureUniqueTitle should validate title and uniqueness', async () => {
     const { service, stubs } = makeService();
-    await expect(service.ensureUniqueTitle('   ')).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
+    const versionId = 1;
+    await expect(
+      service.ensureUniqueTitle('   ', versionId),
+    ).rejects.toBeInstanceOf(BadRequestException);
 
     stubs.resultRepository.findOne.mockResolvedValueOnce({ id: 1 });
-    await expect(service.ensureUniqueTitle('Title')).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
+    await expect(
+      service.ensureUniqueTitle('Title', versionId),
+    ).rejects.toBeInstanceOf(BadRequestException);
 
     stubs.resultRepository.findOne.mockResolvedValueOnce(null);
-    await expect(service.ensureUniqueTitle('Title')).resolves.toBeUndefined();
+    await expect(
+      service.ensureUniqueTitle('Title', versionId),
+    ).resolves.toBeUndefined();
   });
 
   it('runResultTypeHandlers should call handler.afterCreate', async () => {
@@ -373,6 +397,7 @@ describe('BilateralService (unit)', () => {
         resultHeader: { id: 999 },
       }),
     );
+    stubs.resultRepository.findOne.mockResolvedValue({ id: 999 });
 
     const out = await service.initializeResultHeader({
       bilateralDto: {
@@ -382,11 +407,13 @@ describe('BilateralService (unit)', () => {
       submittedUserId: 2,
       version: { id: 3 },
       year: { year: 2024 },
-      lastCode: 10,
     });
 
     expect(out).toEqual({ id: 999 });
     expect(stubs.resultRepository.save).not.toHaveBeenCalled();
+    expect(stubs.resultRepository.findOne).toHaveBeenCalledWith({
+      where: { id: 999 },
+    });
   });
 
   it('findScope should return scope or throw NotFoundException', async () => {

@@ -15,7 +15,9 @@ import { EntityAowService } from '../../../../../result-framework-reporting/page
 })
 export class ReportResultFormComponent implements OnInit, DoCheck {
   depthSearchList: any[] = [];
-  exactTitleFound = false;
+  exactTitleFound = signal(false);
+  loadingDepthSearch = signal(false);
+  private debounceTimer: any = null;
   mqapJson: {};
   validating = false;
   kpAlertDescription = `Please add the handle generated in <strong>CGSpace</strong>, <strong>MELSpace</strong>, or <strong>WorldFish DSpace</strong> to report your knowledge product. Only knowledge products entered into <strong>one of these repositories</strong> are accepted in the PRMS Reporting Tool.<br><br>
@@ -174,7 +176,7 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
 
   clean() {
     if (this.resultLevelSE.resultBody.result_type_id == 6) this.resultLevelSE.resultBody.result_name = '';
-    else this.depthSearch(this.resultLevelSE.resultBody.result_name);
+    else this.onTitleChange(this.resultLevelSE.resultBody.result_name);
   }
 
   private applyPendingResultTypeSelection() {
@@ -192,6 +194,22 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
     setTimeout(checkAndApply, 0);
   }
 
+  onTitleChange(title: string) {
+    clearTimeout(this.debounceTimer);
+    this.loadingDepthSearch.set(true);
+    this.exactTitleFound.set(false);
+
+    if (!title?.trim()) {
+      this.depthSearchList = [];
+      this.loadingDepthSearch.set(false);
+      return;
+    }
+
+    this.debounceTimer = setTimeout(() => {
+      this.depthSearch(title);
+    }, 500);
+  }
+
   depthSearch(title: string) {
     const cleanSpaces = (text: string) => text?.replace(/\s+/g, '')?.toLowerCase();
     const legacyType = this.getLegacyType(this.resultTypeName, this.resultLevelName);
@@ -202,12 +220,13 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
           ...result,
           phase: this.allPhases.find(phase => phase.id === result?.version_id)
         }));
-
-        this.exactTitleFound = !!this.depthSearchList.find(result => cleanSpaces(result.title) === cleanSpaces(title));
+        this.exactTitleFound.set(!!this.depthSearchList.find(result => cleanSpaces(result.title) === cleanSpaces(title)));
+        this.loadingDepthSearch.set(false);
       },
       error: () => {
         this.depthSearchList = [];
-        this.exactTitleFound = false;
+        this.exactTitleFound.set(false);
+        this.loadingDepthSearch.set(false);
       }
     });
   }
@@ -239,34 +258,26 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
       return;
     }
 
+    let request$;
     if (this.resultLevelSE.resultBody.result_type_id != 6) {
       this.api.dataControlSE.validateBody(this.resultLevelSE.resultBody);
-      this.api.resultsSE.POST_resultCreateHeader(this.resultLevelSE.resultBody, true).subscribe({
-        next: (resp: any) => {
-          this.resultCreated.emit(resp?.response);
-          this.router.navigate([`/result/result-detail/${resp?.response?.result_code}/general-information`], {
-            queryParams: { phase: resp?.response?.version_id }
-          });
-          this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
-        },
-        error: err => {
-          this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
-        }
-      });
+      request$ = this.api.resultsSE.POST_resultCreateHeader(this.resultLevelSE.resultBody, true);
     } else {
-      this.api.resultsSE.POST_createWithHandle({ ...this.mqapJson, result_data: this.resultLevelSE.resultBody }).subscribe({
-        next: (resp: any) => {
-          this.resultCreated.emit(resp?.response);
-          this.router.navigate([`/result/result-detail/${resp?.response?.result_code}/general-information`], {
-            queryParams: { phase: resp?.response?.version_id }
-          });
-          this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
-        },
-        error: err => {
-          this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
-        }
-      });
+      request$ = this.api.resultsSE.POST_createWithHandle({ ...this.mqapJson, result_data: this.resultLevelSE.resultBody });
     }
+
+    request$.subscribe({
+      next: (resp: any) => {
+        this.resultCreated.emit(resp?.response);
+        this.router.navigate([`/result/result-detail/${resp?.response?.result_code}/general-information`], {
+          queryParams: { phase: resp?.response?.version_id }
+        });
+        this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
+      },
+      error: err => {
+        this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
+      }
+    });
   }
 
   ngDoCheck(): void {
@@ -337,7 +348,4 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
     this.onSelectInit();
   }
 
-  private getAvailableInitiatives() {
-    return this.availableInitiativesSig();
-  }
 }

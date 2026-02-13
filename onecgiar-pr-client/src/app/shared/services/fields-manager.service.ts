@@ -169,6 +169,21 @@ export class FieldsManagerService {
         label: 'Is this innovation linked or bundled with another CGIAR-reported result (such as another innovation or a different type of result)?',
         hide: this.isP22(),
         required: true
+      },
+      '[knowledge-product-info]-ost_submitted': {
+        label: this.isP25()
+          ? 'Do you have a MELIA study planned in your TOC?'
+          : 'Was it planned in your Initiative proposal?',
+        required: true
+      },
+      '[knowledge-product-info]-ost_melia_select': {
+        label: this.isP25()
+          ? 'Select the MELIA study from the drop-down (this drop-down is synced with your TOC)'
+          : 'Select MELIA from those included in OST Section 6.3',
+        placeholder: this.isP25()
+          ? 'Select the MELIA study from the drop-down (this drop-down is synced with your TOC)'
+          : 'Select MELIA from those included in OST Section 6.3',
+        required: true
       }
     };
     return fields;

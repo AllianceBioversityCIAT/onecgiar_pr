@@ -50,6 +50,11 @@ export class IpsrGeneralInformationComponent implements OnInit {
     return fieldValue.some((id: any) => Number(id) === Number(optionId));
   }
 
+  isImpactAreaComplete(fieldName: string): boolean {
+    const value = this.ipsrGeneralInformationBody[fieldName];
+    return Array.isArray(value) && value.length > 0;
+  }
+
   toggleImpactAreaSelection(fieldName: string, optionId: number | string): void {
     const fieldValue = this.ipsrGeneralInformationBody[fieldName] || [];
     const currentArray = Array.isArray(fieldValue) ? [...fieldValue] : [];
@@ -85,6 +90,7 @@ export class IpsrGeneralInformationComponent implements OnInit {
     this.api.resultsSE.GETInnovationByResultId(this.ipsrDataControlSE.resultInnovationId, this.fieldsManagerSE.isP25()).subscribe(({ response }) => {
       this.ipsrGeneralInformationBody = response;
       this.ipsrCompletenessStatusSE.updateGreenChecks();
+      this.GET_investmentDiscontinuedOptions(response.result_type_id);
     });
   }
 

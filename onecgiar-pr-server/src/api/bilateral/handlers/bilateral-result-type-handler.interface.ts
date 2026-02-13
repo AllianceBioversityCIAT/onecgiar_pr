@@ -7,7 +7,6 @@ export interface HandlerInitializeContext {
   submittedUserId: number;
   version: any;
   year: any;
-  lastCode: number;
 }
 
 export interface HandlerInitializeResult {

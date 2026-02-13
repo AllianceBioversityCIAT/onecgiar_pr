@@ -2394,6 +2394,8 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         MAX(tr.result_title) AS toc_title,
         MAX(t1.indicator_description) AS indicator,
         r.external_submitted_date AS submission_date,
+        ir.id AS initiative_role_id,
+        ir.name AS initiative_role_name,
         CASE 
           WHEN MAX(lc.center_name) IS NOT NULL THEN MAX(lc.center_name)
           ELSE 'Not specified'
@@ -2405,7 +2407,8 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       JOIN results_by_inititiative rbi
         ON r.id = rbi.result_id
       AND rbi.is_active = 1
-      AND rbi.initiative_role_id = 1
+      JOIN initiative_roles ir
+      	ON rbi.initiative_role_id = ir.id
       JOIN clarisa_initiatives ci
         ON rbi.inititiative_id = ci.id
       AND ci.active = 1
@@ -2433,6 +2436,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         r.source = 'API'
         AND ci.official_code = ?
         AND r.is_active = 1
+        AND r.status_id IN (5, 6, 7) 
     `;
 
     const params: any[] = [programId];
@@ -2452,7 +2456,9 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         r.title,
         rt.name,
         rs.status_name,
-        r.external_submitted_date
+        r.external_submitted_date,
+        ir.id,
+        ir.name
     `;
 
     try {
@@ -2696,6 +2702,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         rpc.policy_type_id,
         rpc.policy_stage_id,
         ci.id AS institution_id,
+        rbi.institution_roles_id,
         ci.acronym,
         ci.name AS institution_name,
         cps.name AS policy_stage_name,
@@ -2706,6 +2713,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       LEFT JOIN results_by_institution rbi
         ON r.id = rbi.result_id
         AND rbi.is_active = 1
+        AND rbi.institution_roles_id = 4
       LEFT JOIN clarisa_institutions ci
         ON rbi.institutions_id = ci.id
       JOIN clarisa_policy_stage cps
@@ -2730,25 +2738,36 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         const policyChangeId = row.result_policy_change_id;
 
         if (!policyChangeMap.has(policyChangeId)) {
+          const implementingOrg = [];
+          if (
+            row.institution_roles_id === 4 &&
+            row.institution_id &&
+            row.acronym
+          ) {
+            implementingOrg.push({
+              institution_id: row.institution_id,
+              acronym: row.acronym,
+              institution_name: row.institution_name,
+            });
+          }
+
           policyChangeMap.set(policyChangeId, {
             result_policy_change_id: policyChangeId,
             policy_type_id: row.policy_type_id,
             policy_stage_id: row.policy_stage_id,
             policy_stage_name: row.policy_stage_name,
             policy_type_name: row.policy_type_name,
-            implementing_organization: [
-              {
-                institution_id: row.institution_id,
-                acronym: row.acronym,
-                institution_name: row.institution_name,
-              },
-            ],
+            implementing_organization: implementingOrg,
           });
         }
 
         const policyChange = policyChangeMap.get(policyChangeId);
 
-        if (row.institution_id && row.acronym) {
+        if (
+          row.institution_roles_id === 4 &&
+          row.institution_id &&
+          row.acronym
+        ) {
           const institutionExists = policyChange.implementing_organization.some(
             (inst: any) => inst.institution_id === row.institution_id,
           );

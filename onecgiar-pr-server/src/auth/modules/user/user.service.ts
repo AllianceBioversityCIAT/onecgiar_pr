@@ -67,10 +67,12 @@ export class UserService {
    * Create a new user with complete information
    * @param createUserDto User information
    * @param token User token
+   * @param options.skipCgiarAdLookup When true, CGIAR users are created without validating against Active Directory (e.g. for bilateral API)
    */
   async createFull(
     createUserDto: CreateUserDto,
     token: number,
+    options?: { skipCgiarAdLookup?: boolean },
   ): Promise<returnFormatUser | returnErrorDto> {
     try {
       await this.validateUserInput(createUserDto);
@@ -87,7 +89,20 @@ export class UserService {
       let shouldSendConfirmationEmail = true;
 
       if (createUserDto.is_cgiar) {
-        shouldSendConfirmationEmail = await this.handleCgiarUser(createUserDto);
+        if (options?.skipCgiarAdLookup) {
+          createUserDto.first_name = createUserDto.first_name || '(no name)';
+          createUserDto.last_name = createUserDto.last_name || '(external)';
+          if (
+            !createUserDto.role_platform ||
+            !createUserDto.role_assignments ||
+            createUserDto.role_assignments.length === 0
+          ) {
+            createUserDto.role_platform = 2;
+          }
+        } else {
+          shouldSendConfirmationEmail =
+            await this.handleCgiarUser(createUserDto);
+        }
       } else {
         await this.handleNonCgiarUser(createUserDto);
         shouldSendConfirmationEmail =
