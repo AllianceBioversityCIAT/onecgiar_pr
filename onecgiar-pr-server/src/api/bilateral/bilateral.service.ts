@@ -63,6 +63,7 @@ import { NoopBilateralHandler } from './handlers/noop.handler';
 import { ResultByInitiativesRepository } from '../results/results_by_inititiatives/resultByInitiatives.repository';
 import { ResultsService } from '../results/results.service';
 import { ShareResultRequestRepository } from '../results/share-result-request/share-result-request.repository';
+import { NonPooledProjectBudgetRepository } from '../results/result_budget/repositories/non_pooled_proyect_budget.repository';
 
 @Injectable()
 export class BilateralService {
@@ -99,6 +100,7 @@ export class BilateralService {
     private readonly _resultsByProjectsRepository: ResultsByProjectsRepository,
     private readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
     private readonly _shareResultRequestRepository: ShareResultRequestRepository,
+    private readonly _nonPooledProjectBudgetRepository: NonPooledProjectBudgetRepository,
     private readonly _knowledgeProductHandler: KnowledgeProductBilateralHandler,
     private readonly _capacityChangeHandler: CapacityChangeBilateralHandler,
     private readonly _innovationDevelopmentHandler: InnovationDevelopmentBilateralHandler,
@@ -302,6 +304,7 @@ export class BilateralService {
               resultId,
               userId,
               bilateralDto.contributing_bilateral_projects,
+              bilateralDto.result_type_id,
             );
 
             await this.runResultTypeHandlers({
@@ -508,6 +511,7 @@ export class BilateralService {
         resultId,
         userId,
         bilateralDto.contributing_bilateral_projects,
+        bilateralDto.result_type_id,
       );
 
       await this.handleContributingCenters(
@@ -1489,6 +1493,7 @@ export class BilateralService {
     resultId: number,
     userId: number,
     bilateralProjects: any[],
+    resultTypeId: number,
   ) {
     if (
       !bilateralProjects ||
@@ -1497,38 +1502,145 @@ export class BilateralService {
     ) {
       return;
     }
-    // If only one project, mark as lead; if more than one, use value from payload
+
+    const isInnovationDevOrUse = this.isInnovationType(resultTypeId);
     const isSingleProject = bilateralProjects.length === 1;
 
     for (const nonpp of bilateralProjects) {
       if (!nonpp?.grant_title) continue;
 
-      const project = await this._clarisaProjectsRepository.findOne({
-        where: [
-          { shortName: nonpp.grant_title },
-          { fullName: nonpp.grant_title },
-        ],
-      });
+      const project = await this.findProjectByGrantTitle(nonpp.grant_title);
+      if (!project) continue;
 
-      if (!project) {
-        this.logger.warn(
-          `Project not found for grant_title: ${nonpp.grant_title}`,
-        );
-        continue;
+      const isLead = this.determineIsLead(isSingleProject, nonpp);
+      const savedResultProject = await this.saveResultProject(
+        resultId,
+        project.id,
+        userId,
+        isLead,
+      );
+
+      if (isInnovationDevOrUse && savedResultProject) {
+        await this.createOrUpdateBudget(savedResultProject, nonpp, userId);
       }
-
-      // Single project → always lead; multiple → use payload (accept 1 or true)
-      const isLead = isSingleProject
-        ? true
-        : nonpp?.is_lead === 1 || nonpp?.is_lead === true;
-
-      await this._resultsByProjectsRepository.save({
-        result_id: resultId,
-        project_id: project.id,
-        created_by: userId,
-        is_lead: isLead,
-      });
     }
+  }
+
+  private isInnovationType(resultTypeId: number): boolean {
+    return [
+      ResultTypeEnum.INNOVATION_DEVELOPMENT,
+      ResultTypeEnum.INNOVATION_USE,
+      ResultTypeEnum.INNOVATION_USE_IPSR,
+    ].includes(resultTypeId);
+  }
+
+  private async findProjectByGrantTitle(grantTitle: string) {
+    const project = await this._clarisaProjectsRepository.findOne({
+      where: [{ shortName: grantTitle }, { fullName: grantTitle }],
+    });
+
+    if (!project) {
+      this.logger.warn(`Project not found for grant_title: ${grantTitle}`);
+    }
+
+    return project;
+  }
+
+  private determineIsLead(isSingleProject: boolean, nonpp: any): boolean {
+    return isSingleProject
+      ? true
+      : nonpp?.is_lead === 1 || nonpp?.is_lead === true;
+  }
+
+  private async saveResultProject(
+    resultId: number,
+    projectId: number,
+    userId: number,
+    isLead: boolean,
+  ) {
+    return await this._resultsByProjectsRepository.save({
+      result_id: resultId,
+      project_id: projectId,
+      created_by: userId,
+      is_lead: isLead,
+    });
+  }
+
+  private async createOrUpdateBudget(
+    savedResultProject: any,
+    nonpp: any,
+    userId: number,
+  ) {
+    const resultProjectId = Array.isArray(savedResultProject)
+      ? savedResultProject[0].id
+      : savedResultProject.id;
+
+    const existingBudget = await this._nonPooledProjectBudgetRepository.findOne(
+      {
+        where: {
+          result_project_id: resultProjectId,
+          is_active: true,
+        },
+      },
+    );
+
+    const kindCashValue = this.calculateKindCash(nonpp);
+
+    if (existingBudget) {
+      await this.updateExistingBudget(
+        existingBudget,
+        kindCashValue,
+        nonpp,
+        userId,
+      );
+    } else {
+      await this.createNewBudget(resultProjectId, kindCashValue, nonpp, userId);
+    }
+  }
+
+  private calculateKindCash(nonpp: any): number | null {
+    if (nonpp.is_determined === true) {
+      return null;
+    }
+
+    if (nonpp.usd_budget === null || nonpp.usd_budget === undefined) {
+      return null;
+    }
+
+    return Number(nonpp.usd_budget);
+  }
+
+  private async updateExistingBudget(
+    existingBudget: any,
+    kindCashValue: number | null,
+    nonpp: any,
+    userId: number,
+  ) {
+    existingBudget.kind_cash = kindCashValue;
+    existingBudget.is_determined = nonpp.is_determined;
+    existingBudget.last_updated_by = userId;
+    existingBudget.non_pooled_projetct_id = null;
+
+    await this._nonPooledProjectBudgetRepository.save(existingBudget);
+  }
+
+  private async createNewBudget(
+    resultProjectId: number,
+    kindCashValue: number | null,
+    nonpp: any,
+    userId: number,
+  ) {
+    const newBudget = this._nonPooledProjectBudgetRepository.create({
+      result_project_id: resultProjectId,
+      non_pooled_projetct_id: null,
+      kind_cash: kindCashValue,
+      is_determined: nonpp.is_determined,
+      created_by: userId,
+      last_updated_by: userId,
+      is_active: true,
+    });
+
+    await this._nonPooledProjectBudgetRepository.save(newBudget);
   }
 
   /**
@@ -2119,12 +2231,7 @@ export class BilateralService {
       const savedPartners =
         await this._resultByIntitutionsRepository.save(toPersist);
 
-      const isInnovationDevOrUse = [
-        ResultTypeEnum.INNOVATION_DEVELOPMENT,
-        ResultTypeEnum.INNOVATION_USE,
-        ResultTypeEnum.INNOVATION_USE_IPSR,
-      ].includes(resultTypeId);
-
+      const isInnovationDevOrUse = this.isInnovationType(resultTypeId);
       if (isInnovationDevOrUse && savedPartners.length) {
         const budgets = (
           Array.isArray(savedPartners) ? savedPartners : [savedPartners]
