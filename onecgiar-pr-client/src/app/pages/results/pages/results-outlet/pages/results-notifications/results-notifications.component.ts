@@ -56,11 +56,8 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
   }
 
   clearAllFilters() {
-    this.resultsNotificationsSE.phaseFilter =
-      this.phaseList.find(phase => phase.status && phase.phase_name?.includes('Reporting'))?.id ??
-      this.phaseList.find(phase => phase.status)?.id;
+    this.resultsNotificationsSE.phaseFilter = null;
     this.resultsNotificationsSE.resetFilters();
-    this.onPhaseChange(this.resultsNotificationsSE.phaseFilter);
   }
 
   updateQueryParams() {
@@ -91,11 +88,9 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
   getAllPhases() {
     this.api.resultsSE.GET_versioning(StatusPhaseEnum.ALL, ModuleTypeEnum.ALL).subscribe(({ response }) => {
       this.phaseList = response;
-      if (!this.activatedRoute.snapshot.queryParams['phase'])
-        this.resultsNotificationsSE.phaseFilter =
-          this.phaseList.find(phase => phase.status && phase.phase_name?.includes('Reporting'))?.id ??
-          this.phaseList.find(phase => phase.status)?.id;
-      this.onPhaseChange(this.resultsNotificationsSE.phaseFilter);
+      if (this.resultsNotificationsSE.phaseFilter) {
+        this.onPhaseChange(this.resultsNotificationsSE.phaseFilter);
+      }
     });
   }
 }
