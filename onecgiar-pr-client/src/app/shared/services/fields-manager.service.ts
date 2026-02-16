@@ -20,6 +20,8 @@ export class FieldsManagerService {
   isAnInnovation = computed(
     () => this.dataControlSE.currentResultSignal()?.result_type_id == 2 || this.dataControlSE.currentResultSignal()?.result_type_id == 7
   );
+  activeIndicatorsLength = signal<number>(0);
+  hasSelectedIndicator = signal<boolean>(false);
 
   scoresImpactAreaLabel = 'Which component of the Impact Area is this result intended to impact?';
 
@@ -171,9 +173,7 @@ export class FieldsManagerService {
         required: true
       },
       '[knowledge-product-info]-ost_submitted': {
-        label: this.isP25()
-          ? 'Do you have a MELIA study planned in your TOC?'
-          : 'Was it planned in your Initiative proposal?',
+        label: this.isP25() ? 'Do you have a MELIA study planned in your TOC?' : 'Was it planned in your Initiative proposal?',
         required: true
       },
       '[knowledge-product-info]-ost_melia_select': {
