@@ -112,6 +112,7 @@ import { ContributorsPartnersService } from '../results-framework-reporting/cont
 import { SummaryService } from './summary/summary.service';
 import { InnovationDevService } from '../results-framework-reporting/innovation_dev/innovation_dev.service';
 import { InnovationUseService } from '../results-framework-reporting/innovation-use/innovation-use.service';
+import { ResultCoreInnovUseSectionEnum } from '../results-framework-reporting/result_innov_section/enum/result_innov_section.enum';
 import { UpdateTocMetadataDto } from './dto/update-toc-metadata.dto';
 import { ResultsTocResultsService } from './results-toc-results/results-toc-results.service';
 import { CapdevDto } from './summary/dto/create-capacity-developents.dto';
@@ -2776,6 +2777,8 @@ export class ResultsService {
         indicator: row.indicator,
         submission_date: row.submission_date,
         lead_center: row.lead_center,
+        initiative_role_id: row.initiative_role_id,
+        initiative_role_name: row.initiative_role_name,
       }));
 
       const groupedByProject = mappedResults.reduce(
@@ -3047,10 +3050,20 @@ export class ResultsService {
         break;
 
       case ResultTypeEnum.INNOVATION_USE:
-        resultTypeResponse =
-          await this._resultRepository.getInnovationUseBilateralResultById(
-            resultId,
+        if (this._innovationUseService) {
+          resultTypeResponse =
+            await this._innovationUseService.getBilateralInnovationUseData(
+              resultId,
+            );
+        } else {
+          this._logger.warn(
+            `InnovationUseService not available for resultId: ${resultId}`,
           );
+          resultTypeResponse =
+            await this._resultRepository.getInnovationUseBilateralResultById(
+              resultId,
+            );
+        }
         break;
 
       default:
@@ -3099,7 +3112,7 @@ export class ResultsService {
         };
       }
 
-      return await this._dataSource.transaction(async (manager) => {
+      await this._dataSource.transaction(async (manager) => {
         const result = await manager.findOne(Result, {
           where: {
             id: parsedResultId,
@@ -3143,59 +3156,60 @@ export class ResultsService {
           created_by: user.id,
         });
         await manager.save(ResultReviewHistory, reviewHistory);
-
-        const decisionVerb =
-          reviewDecisionDto.decision === ReviewDecisionEnum.APPROVE
-            ? 'approved'
-            : 'rejected';
-
-        if (reviewDecisionDto.decision === ReviewDecisionEnum.APPROVE) {
-          const shareResultRequests =
-            await this._shareResultRequestRepository.find({
-              where: {
-                result_id: parsedResultId,
-                is_active: true,
-                request_status_id: In([2, 4]),
-              },
-            });
-
-          const contributing_initiatives = {
-            accepted_contributing_initiatives: shareResultRequests
-              .filter((req) => req.request_status_id === 2)
-              .map((req) => ({
-                id: req.shared_inititiative_id,
-              })),
-            pending_contributing_initiatives: shareResultRequests
-              .filter((req) => req.request_status_id === 4)
-              .map((req) => ({
-                id: req.shared_inititiative_id,
-                share_result_request_id: req.share_result_request_id,
-                is_active: req.is_active,
-              })),
-          };
-
-          await this._updateTocMapping(
-            parsedResultId,
-            contributing_initiatives,
-            user,
-          );
-        } else {
-          // When result is rejected, deactivate all active share result requests for this result
-          await this._shareResultRequestRepository.update(
-            { result_id: parsedResultId, is_active: true },
-            { is_active: false },
-          );
-        }
-
-        return {
-          response: {
-            resultId: parsedResultId,
-            status: newStatusId,
-          },
-          message: `Result ${decisionVerb} successfully`,
-          status: HttpStatus.OK,
-        };
       });
+
+      const decisionVerb =
+        reviewDecisionDto.decision === ReviewDecisionEnum.APPROVE
+          ? 'approved'
+          : 'rejected';
+
+      let newStatusId: number;
+      if (reviewDecisionDto.decision === ReviewDecisionEnum.APPROVE) {
+        const shareResultRequests =
+          await this._shareResultRequestRepository.find({
+            where: {
+              result_id: parsedResultId,
+              is_active: true,
+              request_status_id: In([2, 4]),
+            },
+          });
+
+        const contributing_initiatives = {
+          accepted_contributing_initiatives: shareResultRequests
+            .filter((req) => req.request_status_id === 2)
+            .map((req) => ({
+              id: req.shared_inititiative_id,
+            })),
+          pending_contributing_initiatives: shareResultRequests
+            .filter((req) => req.request_status_id === 4)
+            .map((req) => ({
+              id: req.shared_inititiative_id,
+              share_result_request_id: req.share_result_request_id,
+              is_active: req.is_active,
+            })),
+        };
+
+        await this._updateTocMapping(
+          parsedResultId,
+          contributing_initiatives,
+          user,
+        );
+      } else {
+        // When result is rejected, deactivate all active share result requests for this result
+        await this._shareResultRequestRepository.update(
+          { result_id: parsedResultId, is_active: true },
+          { is_active: false },
+        );
+      }
+
+      return {
+        response: {
+          resultId: parsedResultId,
+          status: newStatusId,
+        },
+        message: `Result ${decisionVerb} successfully`,
+        status: HttpStatus.OK,
+      };
     } catch (error) {
       if (
         error instanceof BadRequestException ||
@@ -3828,17 +3842,7 @@ export class ResultsService {
         break;
 
       case ResultTypeEnum.INNOVATION_USE: // 2
-        if (this._innovationUseService) {
-          await this._innovationUseService.saveInnovationUse(
-            reviewUpdateDto.resultTypeResponse as any,
-            resultId,
-            user,
-          );
-        } else {
-          this._logger.warn(
-            `InnovationUseService not available for result ${resultId}`,
-          );
-        }
+        await this._updateInnovationUsePartial(resultId, reviewUpdateDto, user);
         break;
 
       default:
@@ -3846,6 +3850,49 @@ export class ResultsService {
           `Unsupported result_type_id: ${resultTypeId} for result ${resultId}`,
         );
         break;
+    }
+  }
+
+  private async _updateInnovationUsePartial(
+    resultId: number,
+    reviewUpdateDto: ReviewUpdateDto,
+    user: TokenDto,
+  ): Promise<void> {
+    if (!this._innovationUseService) {
+      this._logger.warn(
+        `InnovationUseService not available for result ${resultId}`,
+      );
+      return;
+    }
+
+    // resultTypeResponse puede venir como array o como objeto
+    const resultTypeResponse = reviewUpdateDto.resultTypeResponse as any;
+    const resultTypeData = Array.isArray(resultTypeResponse)
+      ? resultTypeResponse[0]
+      : resultTypeResponse;
+
+    // Guardar actors, organizations y measures en la sección CURRENT
+    const innovationUseGroups = {
+      actors: resultTypeData?.actors ?? [],
+      organization: resultTypeData?.organizations ?? [],
+      measures: resultTypeData?.measures ?? [],
+    };
+
+    await this._innovationUseService.saveAnticipatedInnoUser(
+      resultId,
+      user.id,
+      innovationUseGroups,
+      ResultCoreInnovUseSectionEnum.CURRENT,
+      resultTypeData?.innov_use_to_be_determined ?? null,
+    );
+
+    // Guardar investment_partners
+    if (resultTypeData?.investment_partners) {
+      await this._innovationUseService.savePartnerInvestment(
+        resultId,
+        user.id,
+        { investment_partners: resultTypeData.investment_partners } as any,
+      );
     }
   }
 

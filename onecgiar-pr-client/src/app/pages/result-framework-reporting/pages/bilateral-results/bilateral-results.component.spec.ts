@@ -17,7 +17,11 @@ describe('BilateralResultsComponent', () => {
           useValue: {
             params: of({}),
             queryParams: of({}),
-            snapshot: { params: { entityId: 'test-entity-id' }, queryParams: { center: 'test-center-code' } }
+            snapshot: {
+              params: { entityId: 'test-entity-id' },
+              queryParams: { center: 'test-center-code' },
+              queryParamMap: new Map([['search', ''], ['center', 'test-center-code']])
+            }
           }
         }
       ]

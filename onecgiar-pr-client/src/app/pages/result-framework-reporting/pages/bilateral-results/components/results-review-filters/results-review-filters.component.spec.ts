@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ResultsReviewFiltersComponent } from './results-review-filters.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { RouterTestingModule } from '@angular/router/testing';
 
 describe('ResultsReviewFiltersComponent', () => {
   let component: ResultsReviewFiltersComponent;
@@ -9,7 +10,7 @@ describe('ResultsReviewFiltersComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ResultsReviewFiltersComponent, HttpClientTestingModule]
+      imports: [ResultsReviewFiltersComponent, HttpClientTestingModule, RouterTestingModule]
     }).compileComponents();
 
     fixture = TestBed.createComponent(ResultsReviewFiltersComponent);

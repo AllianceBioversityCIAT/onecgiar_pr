@@ -264,12 +264,12 @@ describe('ReportResultFormComponent', () => {
       expect(mockResultLevelService.resultBody.result_name).toBe('');
     });
 
-    it('should call depthSearch for non-knowledge products', () => {
+    it('should call onTitleChange for non-knowledge products', () => {
       mockResultLevelService.resultBody.result_type_id = 1;
       mockResultLevelService.resultBody.result_name = 'Test Name';
-      jest.spyOn(component, 'depthSearch');
+      jest.spyOn(component, 'onTitleChange');
       component.clean();
-      expect(component.depthSearch).toHaveBeenCalledWith('Test Name');
+      expect(component.onTitleChange).toHaveBeenCalledWith('Test Name');
     });
   });
 
@@ -295,14 +295,14 @@ describe('ReportResultFormComponent', () => {
 
       component.depthSearch('Test Result');
 
-      expect(component.exactTitleFound).toBe(true);
+      expect(component.exactTitleFound()).toBe(true);
     });
 
     it('should handle errors gracefully', () => {
       mockApiService.resultsSE.GET_FindResultsElastic = jest.fn(() => throwError(() => new Error('Error')));
       component.depthSearch('Test');
       expect(component.depthSearchList).toEqual([]);
-      expect(component.exactTitleFound).toBe(false);
+      expect(component.exactTitleFound()).toBe(false);
     });
   });
 
