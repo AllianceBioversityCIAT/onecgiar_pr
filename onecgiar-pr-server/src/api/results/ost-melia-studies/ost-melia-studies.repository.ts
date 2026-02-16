@@ -6,7 +6,7 @@ import { MeliaStudyTocDto } from './dto/melia-study-toc.dto';
 
 @Injectable()
 export class OstMeliaStudiesRepository {
-  constructor(private dataSource: DataSource) { }
+  constructor(private dataSource: DataSource) {}
 
   async getMeliaStudiesFromResultId(
     initiativeId: number,
