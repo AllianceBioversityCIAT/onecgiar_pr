@@ -40,7 +40,7 @@ export class SubmissionsService {
     private readonly _globalParametersRepository: GlobalParameterRepository,
     private readonly _templateRepository: TemplateRepository,
     private readonly _emailNotificationManagementService: EmailNotificationManagementService,
-  ) {}
+  ) { }
 
   async submitFunction(
     resultId: number,
@@ -183,7 +183,7 @@ export class SubmissionsService {
       }
 
       const isValid =
-        await this._resultInnovationPackageValidationService.getGreenchecksByinnovationPackage(
+        await this._resultInnovationPackageValidationService.getGreenchecksByinnovationPackageSPV2(
           result.id,
         );
       if (!isValid.response.validResult) {
