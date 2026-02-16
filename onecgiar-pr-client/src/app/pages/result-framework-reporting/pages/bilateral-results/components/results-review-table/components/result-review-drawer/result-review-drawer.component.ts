@@ -4,6 +4,7 @@ import {
   Component,
   computed,
   effect,
+  EffectRef,
   inject,
   model,
   OnDestroy,
@@ -159,20 +160,17 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   showConfirmSaveChangesDialog = signal<boolean>(false);
   isToCCompleted = signal<boolean>(false);
 
-  canReviewResults = computed(() => {
-    if (this.api.rolesSE.isAdmin) {
-      return true;
-    }
+  canEditInDrawer = computed(() => {
+    const statusId = this.resultToReview()?.status_id ?? this.resultDetail()?.commonFields?.status_id;
+    if (statusId != 5) return false;
+    if (this.api.rolesSE?.isAdmin) return true;
     const myInitiativesList = this.api.dataControlSE.myInitiativesList || [];
     const found = myInitiativesList.find(item => item.official_code === this.bilateralResultsService.entityId());
     return !!found;
   });
 
-  canEditInDrawer = computed(() => {
-    if (!this.canReviewResults()) return false;
-    const statusId = this.resultDetail()?.commonFields?.status_id;
-    return statusId === '5';
-  });
+  private savedReadOnly: boolean | null = null;
+  private readonly drawerReadOnlyEffectRef = signal<EffectRef | undefined>(undefined);
 
   validateIsToCCompleted(): void {
     if (this.tocInitiative?.planned_result === false) {
@@ -800,6 +798,21 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         this.loadResultDetail(result.id);
       }
     });
+
+    this.drawerReadOnlyEffectRef.set(
+      effect(() => {
+        const visible = this.visible();
+        const canEdit = this.canEditInDrawer();
+        if (visible && canEdit) {
+          this.savedReadOnly ??= this.rolesSE.readOnly;
+          this.rolesSE.readOnly = false;
+        }
+        if (!(visible && canEdit) && this.savedReadOnly !== null) {
+          this.rolesSE.readOnly = this.savedReadOnly;
+          this.savedReadOnly = null;
+        }
+      })
+    );
 
     effect(() => {
       const detail = this.resultDetail();
@@ -1500,6 +1513,10 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.drawerReadOnlyEffectRef()?.destroy();
+    if (this.savedReadOnly !== null) {
+      this.rolesSE.readOnly = this.savedReadOnly;
+    }
     document.body.style.overflow = 'auto';
   }
 }

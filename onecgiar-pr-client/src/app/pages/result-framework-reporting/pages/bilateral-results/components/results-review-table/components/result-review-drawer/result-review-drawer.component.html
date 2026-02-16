@@ -62,7 +62,8 @@
         [ngModel]="tocInitiative?.planned_result"
         (ngModelChange)="onPlannedResultChangeValue($event)"
         (selectOptionEvent)="onPlannedResultChange(); validateIsToCCompleted()"
-        [disabled]="!canEditInDrawer()">
+        [editable]="canEditInDrawer()"
+        [readOnly]="!canEditInDrawer()">
       </app-pr-yes-or-not>
 
 
