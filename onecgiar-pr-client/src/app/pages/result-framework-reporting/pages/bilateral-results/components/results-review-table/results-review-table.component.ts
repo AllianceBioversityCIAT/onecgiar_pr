@@ -78,6 +78,7 @@ export class ResultsReviewTableComponent implements OnDestroy {
       this.getResultsToReview(centers);
     }
     this.tableData.set([]);
+    this.bilateralResultsService.tableResults.set([]);
   });
 
   getResultsToReview(centers: string[]): void {
@@ -87,7 +88,14 @@ export class ResultsReviewTableComponent implements OnDestroy {
     this.isLoading.set(true);
 
     this.api.resultsSE.GET_ResultToReview(entityId, centers).subscribe(res => {
-      this.tableData.set(res.response);
+      const grouped = res.response ?? [];
+      this.tableData.set(grouped);
+      const flat = grouped.flatMap((g: GroupedResult) => g.results ?? []);
+      this.bilateralResultsService.tableResults.set(flat);
+      const allCenters = this.bilateralResultsService.centers();
+      if (allCenters.length > 0 && centers.length === allCenters.length) {
+        this.bilateralResultsService.allResultsForCounts.set(flat);
+      }
       this.isLoading.set(false);
     });
   }

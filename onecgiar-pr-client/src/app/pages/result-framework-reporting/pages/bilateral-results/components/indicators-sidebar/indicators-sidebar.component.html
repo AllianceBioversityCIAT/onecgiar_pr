@@ -13,6 +13,9 @@
       role="button">
       <span class="material-icons-round center-icon">list</span>
       <span class="center-name">All Centers</span>
+      @if (bilateralResultsService.totalPendingCount() > 0) {
+        <span class="pending-count">{{ bilateralResultsService.totalPendingCount() }}</span>
+      }
     </div>
 
     <!-- Centros desde el servicio -->
@@ -27,6 +30,9 @@
         role="button">
         <span class="material-icons-round center-icon">apartment</span>
         <span class="center-name">{{ center.acronym }}</span>
+        @if ((bilateralResultsService.pendingCountByAcronym()[center.acronym] ?? 0) > 0) {
+          <span class="pending-count">{{ bilateralResultsService.pendingCountByAcronym()[center.acronym] }}</span>
+        }
       </div>
     }
   </div>
