@@ -70,7 +70,7 @@
         <td class="indicator-cell">{{ result.indicator ?? 'Not specified' }}</td>
         <td class="date-cell">{{ result.submission_date | date: 'dd/MM/yyyy' }}</td>
         <td class="actions-cell">
-          @let isPendingReview = result.status_name === 'Pending Review';
+          @let isPendingReview = result.status_id == 5;
 
           <button
             pButton

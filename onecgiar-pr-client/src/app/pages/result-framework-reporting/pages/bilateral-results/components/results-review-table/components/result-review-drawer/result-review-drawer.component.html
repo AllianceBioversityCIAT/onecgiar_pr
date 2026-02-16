@@ -309,7 +309,7 @@
   </div>
 
   <!-- Footer Actions -->
-  @if (canEditInDrawer() && resultToReview()?.status_name === 'Pending Review') {
+  @if (canEditInDrawer() && resultToReview()?.status_id == 5) {
     <ng-template #footer>
       <div class="result-review-drawer-footer">
           <p-button

@@ -47,7 +47,7 @@ export class BilateralResultsService {
 
   pendingCountByAcronym = computed(() => {
     const results = this.allResultsForCounts();
-    const pending = results.filter(r => r.status_name === 'Pending Review');
+    const pending = results.filter(r => r.status_id == 5);
     const byAcronym: Record<string, number> = {};
     for (const r of pending) {
       const key = r.lead_center ?? '';
@@ -57,7 +57,7 @@ export class BilateralResultsService {
   });
 
   totalPendingCount = computed(() => {
-    return this.allResultsForCounts().filter(r => r.status_name === 'Pending Review').length;
+    return this.allResultsForCounts().filter(r => r.status_id == 5).length;
   });
 
   private readonly centerAcronymsWithResults = computed(() => {
