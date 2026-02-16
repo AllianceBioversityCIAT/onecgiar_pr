@@ -83,3 +83,35 @@ src/app/
 - **PrimeNG** is used for UI components.
 - API methods follow the naming pattern: `HTTP_METHOD_descriptiveName` (e.g., `GET_allRequest`, `PATCH_readNotification`).
 - The interceptor automatically attaches the `auth` header to all requests except Elasticsearch calls.
+
+## Commit Convention
+
+Commits follow the format:
+
+```
+<emoji> <type>(<scope>) [ticket]: <description>
+```
+
+### Emojis & Types
+
+| Emoji | Type       | Usage                                  |
+| ----- | ---------- | -------------------------------------- |
+| ✨    | `feat`     | New features or functionality          |
+| ♻️    | `refactor` | Code refactoring without behavior change |
+| 🔧    | `fix`      | Bug fixes                              |
+| 🎨    | `style`    | UI/style changes, formatting           |
+
+### Rules
+
+- **scope**: Component or service name in parentheses (e.g., `results-notifications`, `bilateral.service`).
+- **ticket** (optional): Jira ticket ID after the scope, before the colon (e.g., `P2-2498`).
+- **description**: Starts with a capital letter verb describing the change (e.g., `Update`, `Add`, `Enhance`, `Simplify`).
+
+### Examples
+
+```
+✨ feat(knowledge-product-info): Integrate FieldsManagerService and enhance test coverage
+♻️ refactor(result-review-drawer) P2-2498: Extract toNum function for number coercion
+🔧 fix(submissions.service): Correct formatting and remove unnecessary comment
+🎨 style(share-request-modal) P2-2498: Update modal title layout and button styles
+```
