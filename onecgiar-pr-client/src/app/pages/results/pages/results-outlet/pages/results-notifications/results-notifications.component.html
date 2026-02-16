@@ -52,12 +52,12 @@
     </div>
 
     <div *ngIf="this.resultsNotificationsSE.hideInitFilter">
-      <app-pr-field-header label="Entity"></app-pr-field-header>
+      <app-pr-field-header [label]="entityLabel"></app-pr-field-header>
       <p-select
-        [options]="this.api.rolesSE.isAdmin ? this.allInitiatives : this.api.dataControlSE.myInitiativesList"
+        [options]="this.filteredInitiatives"
         optionLabel="full_name"
         optionValue="initiative_id"
-        placeholder="Select Entity"
+        [placeholder]="'Select ' + entityLabel"
         [(ngModel)]="this.resultsNotificationsSE.initiativeIdFilter"
         [filter]="true"
         [style]="{ width: '100%' }">
