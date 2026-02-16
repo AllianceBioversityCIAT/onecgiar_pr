@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal, computed } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal, computed } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
@@ -28,7 +28,7 @@ import { ChipModule } from 'primeng/chip';
   templateUrl: './results-review-filters.component.html',
   styleUrl: './results-review-filters.component.scss'
 })
-export class ResultsReviewFiltersComponent implements OnInit {
+export class ResultsReviewFiltersComponent implements OnInit, OnDestroy {
   bilateralResultsService = inject(BilateralResultsService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
