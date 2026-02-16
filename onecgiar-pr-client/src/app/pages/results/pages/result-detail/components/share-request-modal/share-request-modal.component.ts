@@ -40,7 +40,13 @@ export class ShareRequestModalComponent implements OnInit {
   }
 
   validateAcceptOrReject() {
-    const resultWithoutTRI = this.shareRequestModalSE.shareRequestBody.result_toc_results.find(result => !result.toc_result_id);
+    const plannedResult = this.shareRequestModalSE.shareRequestBody.planned_result;
+    const resultWithoutTRI = this.shareRequestModalSE.shareRequestBody.result_toc_results.some(result => {
+      const missingTocIds = !result.toc_result_id || !result?.toc_level_id;
+      const missingIndicator = plannedResult && this.fieldsManagerSE.activeIndicatorsLength() > 0 && !this.fieldsManagerSE.hasSelectedIndicator();
+
+      return missingTocIds || missingIndicator;
+    });
 
     if (this.requesting || !this.shareRequestModalSE.shareRequestBody.initiative_id || resultWithoutTRI) return true;
 
