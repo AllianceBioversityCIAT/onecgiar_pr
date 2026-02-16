@@ -302,4 +302,14 @@ export class IpsrContributorsComponent implements OnInit {
       }
     });
   }
+
+  getContributorDescription(contributor: any) {
+    const contributorsText = `<strong>${contributor?.official_code} ${contributor?.short_name}</strong> - Does this result align with the Program's planned TOC indicators?`;
+
+    if (!contributor?.result_toc_results?.length) {
+      return `<strong>${contributor?.official_code} ${contributor?.short_name}</strong> - Pending confirmation`;
+    }
+
+    return contributorsText;
+  }
 }
