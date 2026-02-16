@@ -846,6 +846,47 @@ export class InnovationUseService {
     }));
   }
 
+  async getInvestmentProjects(resultId: number) {
+    const resultProjects = await this._resultByProjectRepository.find({
+      where: { result_id: resultId, is_active: true },
+    });
+
+    if (!resultProjects || resultProjects.length === 0) {
+      return [];
+    }
+
+    const resultProjectIds = resultProjects.map((el) => el.id);
+
+    const investment_projects_raw =
+      await this._resultBilateralBudgetRepository.find({
+        where: {
+          result_project_id: In(resultProjectIds),
+          is_active: true,
+        },
+        relations: {
+          obj_result_project: {
+            obj_clarisa_project: true,
+          },
+        },
+      });
+
+    return investment_projects_raw.map((item) => {
+      const project = item.obj_result_project?.obj_clarisa_project ?? null;
+
+      return {
+        non_pooled_projetct_budget_id:
+          item.non_pooled_projetct_budget_id ?? null,
+        project_id: project?.id ?? null,
+        kind_cash:
+          item.kind_cash !== null && item.kind_cash !== undefined
+            ? Number(item.kind_cash)
+            : null,
+        is_determined: item.is_determined ?? null,
+        name: project?.shortName ?? project?.fullName ?? null,
+      };
+    });
+  }
+
   async getBilateralInnovationUseData(resultId: number): Promise<any[]> {
     try {
       const actorsData = await this.getActorsData(resultId);
@@ -863,12 +904,14 @@ export class InnovationUseService {
       );
 
       const investment_partners = await this.getInvestmentPartners(resultId);
+      const investment_projects = await this.getInvestmentProjects(resultId);
 
       const inno_use = {
         actors: actors_current,
         organizations: organizations_current,
         measures: measures_current,
         investment_partners,
+        investment_projects,
       };
 
       return [inno_use];

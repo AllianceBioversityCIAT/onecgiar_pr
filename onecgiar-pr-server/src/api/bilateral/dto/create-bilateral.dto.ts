@@ -170,6 +170,23 @@ export class ContributingProgramDto {
   @IsOptional()
   @IsString()
   result_indicator_type_name?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Budget in USD allocated from this contributing science program',
+    example: 15000,
+  })
+  @IsOptional()
+  @IsNumber()
+  usd_budget?: number;
+
+  @ApiPropertyOptional({
+    description: 'Indicates whether the budget amount is to be determined',
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  is_determined?: boolean;
 }
 
 export class RegionDto {
@@ -846,6 +863,23 @@ export class InstitutionDto {
   @ValidateIf((o) => !o.institution_id && !o.acronym)
   @IsString()
   name?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Budget in USD allocated from this contributing science program',
+    example: 15000,
+  })
+  @IsOptional()
+  @IsNumber()
+  usd_budget?: number;
+
+  @ApiPropertyOptional({
+    description: 'Indicates whether the budget amount is to be determined',
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  is_determined?: boolean;
 }
 
 export class EvidenceDto {
@@ -892,6 +926,23 @@ export class BilateralProjectDto {
     return 0;
   })
   is_lead?: number | boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Budget in USD allocated from this contributing science program',
+    example: 15000,
+  })
+  @IsOptional()
+  @IsNumber()
+  usd_budget?: number;
+
+  @ApiPropertyOptional({
+    description: 'Indicates whether the budget amount is to be determined',
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  is_determined?: boolean;
 }
 
 export class MetadataCGDto {

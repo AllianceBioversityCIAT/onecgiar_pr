@@ -666,22 +666,24 @@ export class InnovationDevService {
   }
 
   private async findResultByProject(i: any, resultId: number) {
+    const projectId = i.obj_result_project?.project_id || i.project_id || i.id;
+
     const rbp = await this._resultByProjectRepository.findOne({
       where: {
         result_id: resultId,
         is_active: true,
-        project_id: i.obj_result_project.project_id,
+        project_id: projectId,
       },
     });
 
     if (!rbp) {
       this.logger.error(
-        `[saveBillateralInvestment] ResultByProject not found for resultId: ${resultId}, project_id: ${i.obj_result_project.project_id}`,
+        `[saveBillateralInvestment] ResultByProject not found for resultId: ${resultId}, project_id: ${projectId}`,
       );
       throw new NotFoundException({
-        message: `ResultByProject not found for resultId: ${resultId}, project_id: ${i.obj_result_project.project_id}`,
+        message: `ResultByProject not found for resultId: ${resultId}, project_id: ${projectId}`,
         resultId,
-        projectId: i.obj_result_project.project_id,
+        projectId,
       });
     }
     return rbp;
@@ -766,6 +768,9 @@ export class InnovationDevService {
         innDevExists as any,
       );
 
+      // Update or delete project budgets
+      await this._updateProjectBudgets(resultId, innovationDevDto, user.id);
+
       return {
         response: updatedInnDev,
         message: 'Innovation development updated successfully',
@@ -773,6 +778,78 @@ export class InnovationDevService {
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  private async _updateProjectBudgets(
+    resultId: number,
+    innovationDevDto: InnovationDevelopmentDto,
+    userId: number,
+  ): Promise<void> {
+    try {
+      // If the individual fields come (project_id, kind_cash, is_determined)
+      if (
+        innovationDevDto.project_id !== null &&
+        innovationDevDto.project_id !== undefined
+      ) {
+        await this.processInvestment(
+          {
+            id: innovationDevDto.budget_id,
+            project_id: innovationDevDto.project_id,
+            kind_cash: innovationDevDto.kind_cash,
+            is_determined: innovationDevDto.is_determined,
+          },
+          resultId,
+          userId,
+        );
+      } else {
+        // If nothing comes, delete existing budgets
+        await this._deleteProjectBudgetsForResult(resultId, userId);
+      }
+    } catch (error) {
+      this.logger.error(
+        `Error updating project budgets for result ${resultId}: ${error.message}`,
+      );
+      // No throw error to not interrupt the main flow
+    }
+  }
+
+  private async _deleteProjectBudgetsForResult(
+    resultId: number,
+    userId: number,
+  ): Promise<void> {
+    try {
+      // Get all result_project_id for this result
+      const resultProjects = await this._resultByProjectRepository.find({
+        where: { result_id: resultId, is_active: true },
+      });
+
+      if (resultProjects.length === 0) {
+        return;
+      }
+
+      const resultProjectIds = resultProjects.map((rp) => rp.id);
+
+      // Delete (deactivate) all associated budgets
+      const budgets = await this._resultBilateralBudgetRepository.find({
+        where: {
+          result_project_id: In(resultProjectIds),
+          is_active: true,
+        },
+      });
+
+      if (budgets && budgets.length > 0) {
+        for (const budget of budgets) {
+          budget.is_active = false;
+          budget.last_updated_by = userId;
+        }
+        await this._resultBilateralBudgetRepository.save(budgets);
+      }
+    } catch (error) {
+      this.logger.error(
+        `Error deleting project budgets for result ${resultId}: ${error.message}`,
+      );
+      // No throw error to not interrupt the main flow
     }
   }
 }

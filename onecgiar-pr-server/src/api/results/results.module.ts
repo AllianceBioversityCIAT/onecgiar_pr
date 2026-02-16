@@ -77,6 +77,7 @@ import { InvestmentDiscontinuedOptionsModule } from './investment-discontinued-o
 import { ResultsInvestmentDiscontinuedOptionsModule } from './results-investment-discontinued-options/results-investment-discontinued-options.module';
 import { ResultsInvestmentDiscontinuedOptionRepository } from './results-investment-discontinued-options/results-investment-discontinued-options.repository';
 import { ResultInitiativeBudgetRepository } from './result_budget/repositories/result_initiative_budget.repository';
+import { NonPooledProjectBudgetRepository } from './result_budget/repositories/non_pooled_proyect_budget.repository';
 import { ResultFoldersModule } from './result-folders/result-folders.module';
 import { AdUsersModule } from '../ad_users';
 import { InitiativeEntityMapRepository } from '../initiative_entity_map/initiative_entity_map.repository';
@@ -188,6 +189,7 @@ import { InnovationUseModule } from '../results-framework-reporting/innovation-u
     ResultAnswerRepository,
     ResultsInvestmentDiscontinuedOptionRepository,
     ResultInitiativeBudgetRepository,
+    NonPooledProjectBudgetRepository,
     InitiativeEntityMapRepository,
     NotificationService,
     NotificationRepository,

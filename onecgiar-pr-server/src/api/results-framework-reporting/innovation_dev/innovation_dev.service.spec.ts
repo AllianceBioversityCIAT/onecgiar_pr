@@ -165,6 +165,10 @@ describe('InnovationDevService', () => {
         innovation_readiness_level_id: 12,
         level: '1',
         name: 'Prototype',
+        budget_id: 1,
+        kind_cash: 1000000,
+        is_determined: true,
+        project_id: 1,
       };
 
       const mockCopy = createMockCopy();
@@ -342,6 +346,10 @@ describe('InnovationDevService', () => {
         innovation_readiness_level_id: 12,
         level: '1',
         name: 'Prototype',
+        budget_id: 1,
+        kind_cash: 1000000,
+        is_determined: true,
+        project_id: 1,
       };
 
       (
@@ -415,6 +423,10 @@ describe('InnovationDevService', () => {
         innovation_readiness_level_id: 12,
         level: '1',
         name: 'Prototype',
+        budget_id: 1,
+        kind_cash: 1000000,
+        is_determined: true,
+        project_id: 1,
       };
 
       const error = new Error('Database connection failed');

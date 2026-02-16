@@ -91,6 +91,7 @@ import { ResultsTocResultRepository } from './results-toc-results/repositories/r
 import { ResultsInnovationsDevRepository } from './summary/repositories/results-innovations-dev.repository';
 import { AoWBilateralRepository } from './results-toc-results/repositories/aow-bilateral.repository';
 import { ResultsByProjectsRepository } from './results_by_projects/results_by_projects.repository';
+import { NonPooledProjectBudgetRepository } from './result_budget/repositories/non_pooled_proyect_budget.repository';
 import { GeographicLocationService } from '../results-framework-reporting/geographic-location/geographic-location.service';
 import {
   ReviewDecisionDto,
@@ -175,6 +176,8 @@ export class ResultsService {
     private readonly _resultsInnovationsDevRepository?: ResultsInnovationsDevRepository,
     @Optional()
     private readonly _resultsByProjectsRepository?: ResultsByProjectsRepository,
+    @Optional()
+    private readonly _nonPooledProjectBudgetRepository?: NonPooledProjectBudgetRepository,
     @Optional()
     @Inject(forwardRef(() => GeographicLocationService))
     private readonly _geographicLocationService?: GeographicLocationService,
@@ -2771,6 +2774,7 @@ export class ResultsService {
         result_code: row.result_code,
         result_title: row.result_title,
         indicator_category: row.result_category,
+        status_id: row.status_id,
         status_name: row.status_name,
         acronym: row.acronym,
         toc_title: row.toc_title,
@@ -3865,13 +3869,13 @@ export class ResultsService {
       return;
     }
 
-    // resultTypeResponse puede venir como array o como objeto
+    // resultTypeResponse can come as array or as object
     const resultTypeResponse = reviewUpdateDto.resultTypeResponse as any;
     const resultTypeData = Array.isArray(resultTypeResponse)
       ? resultTypeResponse[0]
       : resultTypeResponse;
 
-    // Guardar actors, organizations y measures en la sección CURRENT
+    // Save actors, organizations and measures in the CURRENT section
     const innovationUseGroups = {
       actors: resultTypeData?.actors ?? [],
       organization: resultTypeData?.organizations ?? [],
@@ -3886,13 +3890,75 @@ export class ResultsService {
       resultTypeData?.innov_use_to_be_determined ?? null,
     );
 
-    // Guardar investment_partners
+    // Save investment_partners
     if (resultTypeData?.investment_partners) {
       await this._innovationUseService.savePartnerInvestment(
         resultId,
         user.id,
         { investment_partners: resultTypeData.investment_partners } as any,
       );
+    }
+
+    // Save or update investment_projects (investment_bilateral)
+    if (resultTypeData?.investment_projects) {
+      const investmentData = resultTypeData.investment_projects;
+      await this._innovationUseService.saveBillateralInvestment(
+        resultId,
+        user.id,
+        { investment_bilateral: investmentData } as any,
+      );
+    } else {
+      // If investment_projects doesn't come, delete existing budgets
+      await this._deleteProjectBudgetsForResult(resultId, user.id);
+    }
+  }
+
+  private async _deleteProjectBudgetsForResult(
+    resultId: number,
+    userId: number,
+  ): Promise<void> {
+    if (
+      !this._resultsByProjectsRepository ||
+      !this._nonPooledProjectBudgetRepository
+    ) {
+      this._logger.warn(
+        `Repositories not available for deleting budgets for result ${resultId}`,
+      );
+      return;
+    }
+
+    try {
+      // Get all result_project_id for this result
+      const resultProjects = await this._resultsByProjectsRepository.find({
+        where: { result_id: resultId, is_active: true },
+      });
+
+      if (!resultProjects || resultProjects.length === 0) {
+        return;
+      }
+
+      const resultProjectIds = resultProjects.map((rp) => rp.id);
+
+      // Delete (deactivate) all associated budgets
+      const budgets = await this._nonPooledProjectBudgetRepository.find({
+        where: {
+          result_project_id: In(resultProjectIds),
+          is_active: true,
+        },
+      });
+
+      if (budgets && budgets.length > 0) {
+        for (const budget of budgets) {
+          budget.is_active = false;
+          budget.last_updated_by = userId;
+        }
+        await this._nonPooledProjectBudgetRepository.save(budgets);
+      }
+    } catch (error) {
+      this._logger.error(
+        `Error deleting project budgets for result ${resultId}: ${error.message}`,
+      );
+      // No throw error to not interrupt the main flow
     }
   }
 
