@@ -10,6 +10,7 @@ export interface ResultToReview {
   result_title: string;
   indicator_category: string;
   status_name: string;
+  status_id?: string | number;
   acronym: string;
   toc_title: string;
   indicator: string;
