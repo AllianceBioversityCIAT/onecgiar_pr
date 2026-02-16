@@ -18,21 +18,23 @@
       }
     </div>
 
-    @for (center of bilateralResultsService.centersToShowInSidebar(); track center.code) {
-      <div
-        class="center-item"
-        [class.selected]="isSelected(center.code)"
-        (click)="selectCenter(center.code)"
-        (keydown.enter)="selectCenter(center.code)"
-        (keydown.space)="selectCenter(center.code)"
-        tabindex="0"
-        role="button">
-        <span class="material-icons-round center-icon">apartment</span>
-        <span class="center-name">{{ center.acronym }}</span>
-        @if ((bilateralResultsService.pendingCountByAcronym()[center.acronym] ?? 0) > 0) {
-          <span class="pending-count">{{ bilateralResultsService.pendingCountByAcronym()[center.acronym] }}</span>
-        }
-      </div>
+    @if (bilateralResultsService.centerAcronymsWithResults().size > 0) {
+      @for (center of bilateralResultsService.centersToShowInSidebar(); track center.code) {
+        <div
+          class="center-item"
+          [class.selected]="isSelected(center.code)"
+          (click)="selectCenter(center.code)"
+          (keydown.enter)="selectCenter(center.code)"
+          (keydown.space)="selectCenter(center.code)"
+          tabindex="0"
+          role="button">
+          <span class="material-icons-round center-icon">apartment</span>
+          <span class="center-name">{{ center.acronym }}</span>
+          @if ((bilateralResultsService.pendingCountByAcronym()[center.acronym] ?? 0) > 0) {
+            <span class="pending-count">{{ bilateralResultsService.pendingCountByAcronym()[center.acronym] }}</span>
+          }
+        </div>
+      }
     }
   </div>
 </div>

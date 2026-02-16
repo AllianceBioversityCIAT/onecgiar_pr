@@ -60,7 +60,7 @@ export class BilateralResultsService {
     return this.allResultsForCounts().filter(r => r.status_id == 5).length;
   });
 
-  private readonly centerAcronymsWithResults = computed(() => {
+  centerAcronymsWithResults = computed(() => {
     const results = this.allResultsForCounts();
     const set = new Set(results.map(r => r.lead_center).filter((ac): ac is string => !!ac));
     return set;
