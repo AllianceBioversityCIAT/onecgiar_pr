@@ -18,8 +18,7 @@
       }
     </div>
 
-    <!-- Centros desde el servicio -->
-    @for (center of bilateralResultsService.centers(); track center.code) {
+    @for (center of bilateralResultsService.centersToShowInSidebar(); track center.code) {
       <div
         class="center-item"
         [class.selected]="isSelected(center.code)"
