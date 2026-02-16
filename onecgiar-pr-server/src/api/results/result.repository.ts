@@ -2390,6 +2390,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         r.title AS result_title,
         rt.name AS result_category,
         MAX(NULLIF(TRIM(t1.type_name), '')) AS indicator_category,
+        rs.result_status_id,
         rs.status_name,
         MAX(twp.acronym) AS acronym,
         MAX(tr.result_title) AS toc_title,

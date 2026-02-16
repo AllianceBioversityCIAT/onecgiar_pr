@@ -38,14 +38,22 @@ describe('BilateralService (unit)', () => {
     } as any;
     const clarisaCenters = {} as any;
     const userService = { createFull: jest.fn() };
-    const resultsTocResultsRepository = { logicalDelete: jest.fn().mockResolvedValue(undefined) };
+    const resultsTocResultsRepository = {
+      logicalDelete: jest.fn().mockResolvedValue(undefined),
+    };
     const clarisaInitiatives = { findOne: jest.fn() };
-    const resultsTocResultsIndicatorsRepository = { logicalDelete: jest.fn().mockResolvedValue(undefined) };
-    const resultsTocTargetIndicatorRepository = { logicalDelete: jest.fn().mockResolvedValue(undefined) };
+    const resultsTocResultsIndicatorsRepository = {
+      logicalDelete: jest.fn().mockResolvedValue(undefined),
+    };
+    const resultsTocTargetIndicatorRepository = {
+      logicalDelete: jest.fn().mockResolvedValue(undefined),
+    };
     const resultsCenterRepository = {} as any;
     const clarisaProjectsRepository = { findOne: jest.fn() };
     const resultsByProjectsRepository = { save: jest.fn() };
-    const resultByInitiativesRepository = { logicalDelete: jest.fn().mockResolvedValue(undefined) };
+    const resultByInitiativesRepository = {
+      logicalDelete: jest.fn().mockResolvedValue(undefined),
+    };
     const shareResultRequestRepository = {
       findOne: jest.fn().mockResolvedValue(null),
       save: jest.fn().mockResolvedValue({}),
