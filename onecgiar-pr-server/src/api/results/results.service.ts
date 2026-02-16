@@ -3900,7 +3900,11 @@ export class ResultsService {
     }
 
     // Save or update investment_projects (investment_bilateral)
-    if (resultTypeData?.investment_projects) {
+    if (
+      resultTypeData?.investment_projects &&
+      Array.isArray(resultTypeData.investment_projects) &&
+      resultTypeData.investment_projects.length > 0
+    ) {
       const investmentData = resultTypeData.investment_projects;
       await this._innovationUseService.saveBillateralInvestment(
         resultId,
@@ -3908,7 +3912,7 @@ export class ResultsService {
         { investment_bilateral: investmentData } as any,
       );
     } else {
-      // If investment_projects doesn't come, delete existing budgets
+      // If investment_projects doesn't come or is empty, delete existing budgets
       await this._deleteProjectBudgetsForResult(resultId, user.id);
     }
   }
