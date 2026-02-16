@@ -2672,6 +2672,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         cirl.level,
         cirl.name,
         cp.short_name AS project_name,
+        cp.id AS project_id,
         nppb.non_pooled_projetct_budget_id,
         nppb.kind_cash,
         nppb.is_determined

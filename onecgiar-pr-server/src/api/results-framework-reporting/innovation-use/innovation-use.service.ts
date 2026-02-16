@@ -874,7 +874,9 @@ export class InnovationUseService {
       const project = item.obj_result_project?.obj_clarisa_project ?? null;
 
       return {
-        id: project?.id ?? null,
+        non_pooled_projetct_budget_id:
+          item.non_pooled_projetct_budget_id ?? null,
+        project_id: project?.id ?? null,
         kind_cash:
           item.kind_cash !== null && item.kind_cash !== undefined
             ? Number(item.kind_cash)

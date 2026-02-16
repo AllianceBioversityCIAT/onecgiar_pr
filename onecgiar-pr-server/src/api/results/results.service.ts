@@ -3824,12 +3824,6 @@ export class ResultsService {
             reviewUpdateDto.resultTypeResponse as any,
             user,
           );
-          // Actualizar o eliminar budgets de proyectos
-          await this._updateProjectBudgetsForInnovationDev(
-            resultId,
-            reviewUpdateDto,
-            user,
-          );
         } else {
           this._logger.warn(
             `InnovationDevService not available for result ${resultId}`,
@@ -3875,13 +3869,13 @@ export class ResultsService {
       return;
     }
 
-    // resultTypeResponse puede venir como array o como objeto
+    // resultTypeResponse can come as array or as object
     const resultTypeResponse = reviewUpdateDto.resultTypeResponse as any;
     const resultTypeData = Array.isArray(resultTypeResponse)
       ? resultTypeResponse[0]
       : resultTypeResponse;
 
-    // Guardar actors, organizations y measures en la sección CURRENT
+    // Save actors, organizations and measures in the CURRENT section
     const innovationUseGroups = {
       actors: resultTypeData?.actors ?? [],
       organization: resultTypeData?.organizations ?? [],
@@ -3896,7 +3890,7 @@ export class ResultsService {
       resultTypeData?.innov_use_to_be_determined ?? null,
     );
 
-    // Guardar investment_partners
+    // Save investment_partners
     if (resultTypeData?.investment_partners) {
       await this._innovationUseService.savePartnerInvestment(
         resultId,
@@ -3905,52 +3899,16 @@ export class ResultsService {
       );
     }
 
-    // Guardar o actualizar investment_projects (investment_bilateral)
-    if (resultTypeData?.investment_projects || resultTypeData?.investment_bilateral) {
-      const investmentData = resultTypeData.investment_projects || resultTypeData.investment_bilateral;
+    // Save or update investment_projects (investment_bilateral)
+    if (resultTypeData?.investment_projects) {
+      const investmentData = resultTypeData.investment_projects;
       await this._innovationUseService.saveBillateralInvestment(
         resultId,
         user.id,
         { investment_bilateral: investmentData } as any,
       );
     } else {
-      // Si no viene investment_projects, eliminar budgets existentes
-      await this._deleteProjectBudgetsForResult(resultId, user.id);
-    }
-  }
-
-  private async _updateProjectBudgetsForInnovationDev(
-    resultId: number,
-    reviewUpdateDto: ReviewUpdateDto,
-    user: TokenDto,
-  ): Promise<void> {
-    if (!this._innovationUseService) {
-      this._logger.warn(
-        `InnovationUseService not available for updating budgets for result ${resultId}`,
-      );
-      return;
-    }
-
-    const resultTypeResponse = reviewUpdateDto.resultTypeResponse as any;
-    const resultTypeData = Array.isArray(resultTypeResponse)
-      ? resultTypeResponse[0]
-      : resultTypeResponse;
-
-    // Guardar o actualizar investment_projects (bilateral_expected_investment)
-    if (
-      resultTypeData?.investment_projects ||
-      resultTypeData?.bilateral_expected_investment
-    ) {
-      const investmentData =
-        resultTypeData.investment_projects ||
-        resultTypeData.bilateral_expected_investment;
-      await this._innovationUseService.saveBillateralInvestment(
-        resultId,
-        user.id,
-        { investment_bilateral: investmentData } as any,
-      );
-    } else {
-      // Si no viene investment_projects, eliminar budgets existentes
+      // If investment_projects doesn't come, delete existing budgets
       await this._deleteProjectBudgetsForResult(resultId, user.id);
     }
   }
@@ -3959,7 +3917,10 @@ export class ResultsService {
     resultId: number,
     userId: number,
   ): Promise<void> {
-    if (!this._resultsByProjectsRepository || !this._nonPooledProjectBudgetRepository) {
+    if (
+      !this._resultsByProjectsRepository ||
+      !this._nonPooledProjectBudgetRepository
+    ) {
       this._logger.warn(
         `Repositories not available for deleting budgets for result ${resultId}`,
       );
@@ -3967,7 +3928,7 @@ export class ResultsService {
     }
 
     try {
-      // Obtener todos los result_project_id para este resultado
+      // Get all result_project_id for this result
       const resultProjects = await this._resultsByProjectsRepository.find({
         where: { result_id: resultId, is_active: true },
       });
@@ -3978,7 +3939,7 @@ export class ResultsService {
 
       const resultProjectIds = resultProjects.map((rp) => rp.id);
 
-      // Eliminar (desactivar) todos los budgets asociados
+      // Delete (deactivate) all associated budgets
       const budgets = await this._nonPooledProjectBudgetRepository.find({
         where: {
           result_project_id: In(resultProjectIds),
@@ -3997,7 +3958,7 @@ export class ResultsService {
       this._logger.error(
         `Error deleting project budgets for result ${resultId}: ${error.message}`,
       );
-      // No lanzar error para no interrumpir el flujo principal
+      // No throw error to not interrupt the main flow
     }
   }
 
