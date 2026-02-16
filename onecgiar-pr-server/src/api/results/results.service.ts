@@ -2774,6 +2774,7 @@ export class ResultsService {
         result_code: row.result_code,
         result_title: row.result_title,
         indicator_category: row.result_category,
+        status_id: row.status_id,
         status_name: row.status_name,
         acronym: row.acronym,
         toc_title: row.toc_title,
