@@ -709,7 +709,14 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
               actors: Array.isArray(resultType.actors) ? resultType.actors.map((a: any) => ({ ...a })) : [],
               organizations: Array.isArray(resultType.organizations) ? resultType.organizations.map((o: any) => ({ ...o })) : [],
               measures: Array.isArray(resultType.measures) ? resultType.measures.map((m: any) => ({ ...m })) : [],
-              investment_partners: Array.isArray(resultType.investment_partners) ? resultType.investment_partners.map((p: any) => ({ ...p })) : []
+              investment_partners: Array.isArray(resultType.investment_partners) ? resultType.investment_partners.map((p: any) => ({ ...p })) : [],
+              investment_projects: Array.isArray(resultType.investment_projects) ? resultType.investment_projects.map((p: any) => ({
+                non_pooled_projetct_budget_id: p.non_pooled_projetct_budget_id ?? p.non_pooled_project_budget_id,
+                project_id: p.project_id,
+                kind_cash: p.kind_cash,
+                is_determined: p.is_determined,
+                name: p.name
+              })) : []
             }
           ];
           break;
@@ -1068,11 +1075,12 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
           detail.resultTypeResponse = detail.resultTypeResponse.map((resultType: any) => {
             const newResultType = { ...resultType };
 
-            if ('actors' in newResultType || 'measures' in newResultType || 'investment_partners' in newResultType) {
+            if ('actors' in newResultType || 'measures' in newResultType || 'investment_partners' in newResultType || 'investment_projects' in newResultType) {
               if (!newResultType.actors) newResultType.actors = [];
               if (!newResultType.organizations) newResultType.organizations = [];
               if (!newResultType.measures) newResultType.measures = [];
               if (!newResultType.investment_partners) newResultType.investment_partners = [];
+              if (!newResultType.investment_projects) newResultType.investment_projects = [];
               return newResultType;
             }
 

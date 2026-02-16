@@ -10,7 +10,7 @@ import { ApiService } from '../../../../../../../../../../shared/services/api/ap
   selector: 'app-innovation-use-content',
   imports: [CommonModule, FormsModule, CustomFieldsModule, YmzListStructureItemModule],
   templateUrl: './innovation-use-content.component.html',
-  styleUrl: '../../result-review-drawer.component.scss',
+  styleUrls: ['../../result-review-drawer.component.scss', './innovation-use-content.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class InnovationUseContentComponent implements OnInit {
@@ -33,6 +33,7 @@ export class InnovationUseContentComponent implements OnInit {
       if (!Array.isArray(iuBody.organizations)) iuBody.organizations = [];
       if (!Array.isArray(iuBody.measures)) iuBody.measures = [];
       if (!Array.isArray(iuBody.investment_partners)) iuBody.investment_partners = [];
+      if (!Array.isArray(iuBody.investment_projects)) iuBody.investment_projects = [];
     }
     this._resultDetail = value;
     this.cdr.markForCheck();
@@ -76,7 +77,7 @@ export class InnovationUseContentComponent implements OnInit {
   }
 
   private isInnovationUseShape(obj: any): boolean {
-    return obj != null && typeof obj === 'object' && ('actors' in obj || 'organizations' in obj || 'measures' in obj || 'investment_partners' in obj);
+    return obj != null && typeof obj === 'object' && ('actors' in obj || 'organizations' in obj || 'measures' in obj || 'investment_partners' in obj || 'investment_projects' in obj);
   }
 
   private defaultInnovationUseBody(): BilateralInnovationUseResponse {
@@ -84,7 +85,8 @@ export class InnovationUseContentComponent implements OnInit {
       actors: [],
       organizations: [],
       measures: [],
-      investment_partners: []
+      investment_partners: [],
+      investment_projects: []
     };
   }
 
@@ -164,6 +166,12 @@ export class InnovationUseContentComponent implements OnInit {
   onInputChange(item: any): void {
     if (item?.kind_cash) item.is_determined = null;
     this.cdr.markForCheck();
+  }
+
+  headerDescriptionsN2(): string {
+    return `<ul>
+    <li>Estimated total USD-value of investment by CGIAR W3 or bilateral projects during the reporting period (in-cash + in-kind)</li>
+    </ul>`;
   }
 
   headerDescriptionsN3(): string {

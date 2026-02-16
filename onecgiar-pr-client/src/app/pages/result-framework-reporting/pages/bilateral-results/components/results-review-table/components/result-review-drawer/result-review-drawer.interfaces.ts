@@ -213,6 +213,15 @@ export interface BilateralInnovationUseResponse {
   organizations?: any[];
   measures?: BilateralInnovationUseMeasure[];
   investment_partners?: BilateralInnovationUseInvestmentPartner[];
+  investment_projects?: BilateralInnovationUseInvestmentProject[];
+}
+
+export interface BilateralInnovationUseInvestmentProject {
+  non_pooled_projetct_budget_id?: string;
+  project_id?: string;
+  kind_cash?: number | null;
+  is_determined?: boolean | null;
+  name?: string;
 }
 
 export interface BilateralInnovationUseActor {
