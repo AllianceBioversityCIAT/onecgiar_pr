@@ -112,7 +112,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   };
   initiativeIdSignal = signal<number | null>(null);
   tocConsumed = signal<boolean>(true);
-  hasUnsavedTocChanges = signal<boolean>(false);
 
   isTocFormValid = computed(() => {
     if (!this.tocInitiative?.result_toc_results || this.tocInitiative.result_toc_results.length === 0) {
@@ -147,6 +146,9 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   originalContributingInitiatives: any = null;
   originalContributingInstitutions: any[] | null = null;
 
+  /** Snapshot for detecting unsaved data standard changes (baseline after load/save). */
+  private originalDataStandardSnapshot: string | null = null;
+
   rejectJustification: string = '';
   saveChangesJustification: string = '';
   saveChangesType: 'toc' | 'dataStandard' | null = null;
@@ -173,7 +175,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   });
 
   validateIsToCCompleted(): void {
-    if (this.tocInitiative?.planned_result === false && !this.hasUnsavedTocChanges()) {
+    if (this.tocInitiative?.planned_result === false) {
       this.isToCCompleted.set(true);
       return;
     }
@@ -198,6 +200,104 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** Coerce value to number or null (handles string, number, null, undefined, NaN). */
+  private toNum(v: any): number | null {
+    if (v == null) return null;
+    const n = typeof v === 'string' ? Number.parseInt(v, 10) : Number(v);
+    return Number.isNaN(n) ? null : n;
+  }
+
+  /** Normalize data standards for snapshot comparison (description, geo, centers, initiatives, evidence, etc.). */
+  private normalizeDataStandardForComparison(detail: BilateralResultDetail | null): object {
+    if (!detail) return {};
+
+    const centers = Array.isArray(detail.contributingCenters)
+      ? detail.contributingCenters
+          .map((c: any) => (typeof c === 'string' ? c : (c?.code ?? null)))
+          .filter(Boolean)
+          .sort((a, b) => String(a).localeCompare(String(b)))
+      : [];
+
+    const projects = Array.isArray(detail.contributingProjects)
+      ? detail.contributingProjects
+          .map((p: any) => (typeof p === 'string' || typeof p === 'number' ? String(p) : (p?.project_id ?? p?.id ?? null)))
+          .filter(Boolean)
+          .sort((a, b) => String(a).localeCompare(String(b)))
+      : [];
+
+    const mapInitiativeId = (init: any): number | null => {
+      if (typeof init === 'number') return init;
+      if (typeof init === 'object' && init?.id != null) return this.toNum(init.id);
+      return this.toNum(init);
+    };
+    const initiatives = Array.isArray(detail.contributingInitiatives)
+      ? detail.contributingInitiatives
+          .map(mapInitiativeId)
+          .filter((id): id is number => id != null && !Number.isNaN(id))
+          .sort((a, b) => a - b)
+      : [];
+
+    const mapInstitutionId = (inst: any): number | null => {
+      if (typeof inst === 'number') return inst;
+      if (typeof inst === 'object' && inst != null) return this.toNum(inst.institutions_id ?? inst.institution_id ?? inst.id);
+      return null;
+    };
+    const institutions = Array.isArray(detail.contributingInstitutions)
+      ? detail.contributingInstitutions
+          .map(mapInstitutionId)
+          .filter((id): id is number => id != null && !Number.isNaN(id))
+          .sort((a, b) => a - b)
+      : [];
+
+    const evidence = Array.isArray(detail.evidence)
+      ? detail.evidence.map((ev: any) => ({
+          id: ev?.id ?? null,
+          link: String(ev?.link ?? ev?.evidence_link ?? ''),
+          is_sharepoint: ev?.is_sharepoint !== undefined ? ev.is_sharepoint : 0
+        }))
+      : [];
+
+    const geo = detail.geographicScope ? structuredClone(detail.geographicScope) : null;
+
+    const resultType = detail.resultTypeResponse?.[0];
+    const resultTypeNorm = resultType ? structuredClone(resultType) : null;
+
+    return {
+      result_description: detail.commonFields?.result_description ?? null,
+      result_type_id: detail.commonFields?.result_type_id ?? null,
+      contributingCenters: centers,
+      contributingProjects: projects,
+      contributingInitiatives: initiatives,
+      contributingInstitutions: institutions,
+      evidence,
+      geographicScope: geo,
+      resultTypeResponse: resultTypeNorm
+    };
+  }
+
+  private captureDataStandardSnapshot(): void {
+    const detail = this.resultDetail();
+    this.originalDataStandardSnapshot = JSON.stringify(this.normalizeDataStandardForComparison(detail));
+  }
+
+  /** True when data standards were modified since last load/save. */
+  hasDataStandardUnsavedChanges(): boolean {
+    if (this.originalDataStandardSnapshot == null) return false;
+    const current = JSON.stringify(this.normalizeDataStandardForComparison(this.resultDetail()));
+    return current !== this.originalDataStandardSnapshot;
+  }
+
+  /** Whether the result can be approved (TOC complete, no unsaved Data Standards changes). */
+  canApprove(): boolean {
+    return this.isToCCompleted() && !this.hasDataStandardUnsavedChanges();
+  }
+
+  getApproveButtonTooltip(): string {
+    if (!this.isToCCompleted()) return 'Please complete and save the TOC data before approving the result';
+    if (this.hasDataStandardUnsavedChanges()) return 'Please save the Data Standards changes before approving the result';
+    return '';
+  }
+
   getTocMetadata(): any {
     const detail = this.resultDetail();
     if (!detail?.tocMetadata) return null;
@@ -212,7 +312,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     if (!this.tocInitiative) return;
 
     this.tocInitiative.planned_result = value;
-    this.hasUnsavedTocChanges.set(true);
     this.cdr.markForCheck();
   }
 
@@ -222,7 +321,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     if (this.tocInitiative.result_toc_results && this.tocInitiative.result_toc_results.length > 0) {
       this.tocInitiative.result_toc_results[0].toc_progressive_narrative = value;
     }
-    this.hasUnsavedTocChanges.set(true);
     this.cdr.markForCheck();
   }
 
@@ -245,7 +343,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     }
 
     this.tocConsumed.set(false);
-    this.hasUnsavedTocChanges.set(true);
 
     setTimeout(() => {
       this.tocConsumed.set(true);
@@ -361,7 +458,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     // Call the API
     this.api.resultsSE.PATCH_BilateralTocMetadata(resultId, body).subscribe({
       next: response => {
-        this.hasUnsavedTocChanges.set(false);
         this.loadResultDetail(String(resultId));
         this.showConfirmSaveChangesDialog.set(false);
         this.saveChangesJustification = '';
@@ -387,16 +483,10 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   ): Array<{ institution_id: number; acronym: string | null; institution_name: string | null }> {
     if (!currentInstitutions?.length) return [];
 
-    const toNum = (v: any): number | null => {
-      if (v == null) return null;
-      const n = typeof v === 'string' ? Number.parseInt(v, 10) : Number(v);
-      return Number.isNaN(n) ? null : n;
-    };
-
     const resolveId = (item: any): number | null => {
-      if (typeof item === 'number') return toNum(item);
-      if (typeof item === 'string' && item !== '') return toNum(item);
-      if (item && typeof item === 'object') return toNum(item.institutions_id ?? item.institution_id ?? item.id);
+      if (typeof item === 'number') return this.toNum(item);
+      if (typeof item === 'string' && item !== '') return this.toNum(item);
+      if (item && typeof item === 'object') return this.toNum(item.institutions_id ?? item.institution_id ?? item.id);
       return null;
     };
 
@@ -413,12 +503,12 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
           (item.acronym != null || item.institution_name != null || item.institutions_name != null || item.full_name != null)
             ? item
             : list.find((inst: any) => {
-                const a = toNum(inst.institutions_id ?? inst.institution_id ?? inst.id);
+                const a = this.toNum(inst.institutions_id ?? inst.institution_id ?? inst.id);
                 return a !== null && a === id;
               });
 
         const inst = institution as any;
-        const institutionId = institution ? (toNum(inst.institutions_id ?? inst.institution_id ?? inst.id) ?? id) : id;
+        const institutionId = institution ? (this.toNum(inst.institutions_id ?? inst.institution_id ?? inst.id) ?? id) : id;
         const acronym = institution ? (inst.acronym ?? null) : null;
         const institutionName = institution ? (inst.institution_name ?? inst.institutions_name ?? inst.full_name ?? null) : null;
 
@@ -561,6 +651,8 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         pending_contributing_initiatives: pendingPayload
       };
     }
+
+    body.contributingProjects = detail.contributingProjects;
 
     if (detail.contributingInstitutions && Array.isArray(detail.contributingInstitutions)) {
       body.contributingInstitutions = detail.contributingInstitutions.map((inst: any) => {
@@ -1082,7 +1174,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
             }
 
             this.tocInitiative = { ...this.tocInitiative, ...tocInitiative };
-            this.hasUnsavedTocChanges.set(false);
             this.validateIsToCCompleted();
             setTimeout(() => {
               this.cdr.markForCheck();
@@ -1128,7 +1219,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
               ],
               toc_progressive_narrative: null
             });
-            this.hasUnsavedTocChanges.set(false);
             if (finalInitiativeId) {
               setInitiativeIdIfNeeded(finalInitiativeId);
             }
@@ -1167,7 +1257,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
             ],
             toc_progressive_narrative: null
           });
-          this.hasUnsavedTocChanges.set(false);
           this.cdr.markForCheck();
           if (finalInitiativeId) {
             setInitiativeIdIfNeeded(finalInitiativeId);
@@ -1229,6 +1318,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
               });
             }
             this.resultDetail.set(updatedDetail);
+            this.captureDataStandardSnapshot();
             this.cdr.markForCheck();
           }
         }, 300);
@@ -1266,6 +1356,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   private resetForm(): void {
     this.rejectJustification = '';
     this.resultDetail.set(null);
+    this.originalDataStandardSnapshot = null;
     this.originalContributingInitiatives = null;
     this.originalContributingInstitutions = null;
     this.originalAcceptedContributingInitiatives = [];

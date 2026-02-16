@@ -2831,6 +2831,7 @@ select *
         result_title,
         result_indicator_description,
         result_indicator_type_name,
+        initiative_id,
       } = tocResult;
 
       const hasOnlyScienceProgramId =
@@ -2850,6 +2851,51 @@ select *
         ];
       }
 
+      const hasTitle = !!result_title?.trim();
+      const hasAow = !!aow_compose_code?.trim();
+      const hasIndicatorFilter =
+        !!result_indicator_description?.trim() ||
+        !!result_indicator_type_name?.trim();
+
+      const conditions: string[] = [];
+      const params: any[] = [];
+
+      if (hasAow) {
+        conditions.push('wp_official_code = ?');
+        params.push(aow_compose_code.trim());
+      }
+      conditions.push('initiativeId = ?');
+      const initiativeParam =
+        initiative_id !== undefined &&
+        initiative_id !== null &&
+        initiative_id !== ''
+          ? initiative_id
+          : science_program_id;
+      params.push(initiativeParam);
+      if (hasTitle) {
+        conditions.push('tr.result_title LIKE ?');
+        params.push(`%${result_title.trim()}%`);
+      }
+      if (hasIndicatorFilter) {
+        conditions.push(
+          '(tri.indicator_description LIKE ? OR tri.type_value = ?)',
+        );
+        params.push(
+          `%${(result_indicator_description || '').trim()}%`,
+          result_indicator_type_name || '',
+        );
+      }
+      conditions.push('y.active = 1');
+      conditions.push(`
+            (
+            CASE
+              WHEN trit.target_date REGEXP '^[0-9]{4}-' THEN YEAR(trit.target_date)
+              WHEN trit.target_date REGEXP '^[0-9]{4}$' THEN CAST(trit.target_date AS SIGNED)
+              ELSE NULL
+            END
+          ) = y.year
+      `);
+
       const tocResultQuery = `
         SELECT
           tr.id AS toc_result_id,
@@ -2865,26 +2911,71 @@ select *
           AND CONVERT(trit.toc_result_indicator_id USING utf8mb4) = CONVERT(tri.related_node_id USING utf8mb4)
         CROSS JOIN ${env.DB_NAME}.year y
         WHERE
-          wp_official_code = ?
-          AND initiativeId = ?
-          AND tr.result_title LIKE ?
-          AND (tri.indicator_description LIKE ? OR tri.type_value = ?)
-          AND y.active = 1
-          AND (
-            CASE
-              WHEN trit.target_date REGEXP '^[0-9]{4}-' THEN YEAR(trit.target_date)
-              WHEN trit.target_date REGEXP '^[0-9]{4}$' THEN CAST(trit.target_date AS SIGNED)
-              ELSE NULL
-            END
-          ) = y.year
+          ${conditions.join(' AND ')}
       `;
-      const tocResultData = await this.query(tocResultQuery, [
-        aow_compose_code,
-        science_program_id,
-        `%${result_title}%`,
-        `%${result_indicator_description}%`,
-        result_indicator_type_name,
-      ]);
+      let tocResultData = await this.query(tocResultQuery, params);
+
+      // Fallback 1: by initiative + title via toc_work_packages (when wp_id is set)
+      if (
+        (!tocResultData || tocResultData.length === 0) &&
+        hasTitle &&
+        science_program_id
+      ) {
+        const titleOnlyConditions: string[] = [];
+        const titleOnlyParams: any[] = [];
+        titleOnlyConditions.push('twp.initiativeId = ?');
+        titleOnlyParams.push(initiativeParam);
+        titleOnlyConditions.push('tr.result_title LIKE ?');
+        titleOnlyParams.push(`%${result_title.trim()}%`);
+        const titleOnlyQuery = `
+          SELECT
+            tr.id AS toc_result_id,
+            NULL AS toc_results_indicator_id,
+            tr.category AS category,
+            NULL AS number_target,
+            NULL AS target_date
+          FROM
+            ${env.DB_TOC}.toc_work_packages twp
+          JOIN ${env.DB_TOC}.toc_results tr ON tr.wp_id = twp.toc_id
+          WHERE
+            ${titleOnlyConditions.join(' AND ')}
+          LIMIT 1
+        `;
+        const titleOnlyData = await this.query(titleOnlyQuery, titleOnlyParams);
+        if (titleOnlyData && titleOnlyData.length > 0) {
+          tocResultData = titleOnlyData;
+        }
+      }
+
+      // Fallback 2: toc_results directly by official_code + result_title (EOI etc. with wp_id null don't use toc_work_packages)
+      if (
+        (!tocResultData || tocResultData.length === 0) &&
+        hasTitle &&
+        science_program_id
+      ) {
+        const byOfficialCodeQuery = `
+          SELECT
+            tr.id AS toc_result_id,
+            NULL AS toc_results_indicator_id,
+            tr.category AS category,
+            NULL AS number_target,
+            NULL AS target_date
+          FROM
+            ${env.DB_TOC}.toc_results tr
+          WHERE
+            tr.official_code = ?
+            AND tr.result_title LIKE ?
+            AND tr.is_active = 1
+          LIMIT 1
+        `;
+        const byOfficialCodeData = await this.query(byOfficialCodeQuery, [
+          science_program_id,
+          `%${result_title.trim()}%`,
+        ]);
+        if (byOfficialCodeData && byOfficialCodeData.length > 0) {
+          tocResultData = byOfficialCodeData;
+        }
+      }
 
       // Retornar array vacío en lugar de null para consistencia
       return tocResultData || [];

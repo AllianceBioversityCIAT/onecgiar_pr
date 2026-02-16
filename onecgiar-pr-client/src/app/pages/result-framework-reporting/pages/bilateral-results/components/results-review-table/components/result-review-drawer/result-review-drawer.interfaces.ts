@@ -34,6 +34,7 @@ export interface BilateralResultDetail {
   contributingInitiatives: BilateralContributingInitiative[] | BilateralContributingInitiativesObject;
   evidence: BilateralEvidence[];
   resultTypeResponse: BilateralResultTypeResponse[];
+  contributors_result_toc_result: any[];
 }
 
 export interface BilateralInnovationDevResponse {

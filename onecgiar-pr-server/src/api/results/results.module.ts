@@ -51,6 +51,7 @@ import { CapdevsDeliveryMethodsModule } from './capdevs-delivery-methods/capdevs
 import { ResultsImpactAreaTargetModule } from './results-impact-area-target/results-impact-area-target.module';
 import { ResultsImpactAreaIndicatorsModule } from './results-impact-area-indicators/results-impact-area-indicators.module';
 import { ShareResultRequestModule } from './share-result-request/share-result-request.module';
+import { ShareResultRequestRepository } from './share-result-request/share-result-request.repository';
 import { LegacyIndicatorsLocationsModule } from './legacy_indicators_locations/legacy_indicators_locations.module';
 import { LegacyIndicatorsPartnersModule } from './legacy_indicators_partners/legacy_indicators_partners.module';
 import { ResultLegacyRepository } from './legacy-result/legacy-result.repository';
@@ -138,7 +139,7 @@ import { InnovationUseModule } from '../results-framework-reporting/innovation-u
     CapdevsDeliveryMethodsModule,
     ResultsImpactAreaTargetModule,
     ResultsImpactAreaIndicatorsModule,
-    ShareResultRequestModule,
+    forwardRef(() => ShareResultRequestModule),
     LegacyIndicatorsLocationsModule,
     LegacyIndicatorsPartnersModule,
     ElasticModule,
@@ -201,6 +202,7 @@ import { InnovationUseModule } from '../results-framework-reporting/innovation-u
     ResultsTocTargetIndicatorRepository,
     AoWBilateralRepository,
     ResultReviewHistoryRepository,
+    ShareResultRequestRepository,
   ],
   exports: [ResultRepository, JwtMiddleware, ResultsService],
 })

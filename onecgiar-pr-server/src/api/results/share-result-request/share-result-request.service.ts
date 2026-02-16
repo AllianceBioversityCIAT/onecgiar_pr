@@ -138,7 +138,11 @@ export class ShareResultRequestService {
         ),
       ]);
 
-      if (!this.shouldCreateNewShareRequest(requestExist, initExist)) {
+      // If initiative is already an active contributor, or is a pending/accepted/rejected contribution, skip
+      if (
+        initExist?.is_active ||
+        (requestExist && requestExist.request_status_id !== 4)
+      ) {
         continue;
       }
 
@@ -150,14 +154,31 @@ export class ShareResultRequestService {
         };
       }
 
-      const newShare = this.buildShareResultRequest(
-        createTocShareResult,
-        resultId,
-        initiativeId,
-        shareInitId,
-        user,
-      );
-      shareInitRequests.push(newShare);
+      // If request exists with status_id = 4, update it; otherwise create new
+      if (requestExist?.request_status_id === 4) {
+        const existingShare = this.buildShareResultRequest(
+          createTocShareResult,
+          resultId,
+          initiativeId,
+          shareInitId,
+          user,
+        );
+        existingShare.share_result_request_id =
+          requestExist.share_result_request_id;
+        existingShare.is_active = true;
+
+        shareInitRequests.push(existingShare);
+      } else {
+        // Create new request only if it doesn't exist
+        const newShare = this.buildShareResultRequest(
+          createTocShareResult,
+          resultId,
+          initiativeId,
+          shareInitId,
+          user,
+        );
+        shareInitRequests.push(newShare);
+      }
 
       if (createTocShareResult.isToc === true) {
         await this._resultsTocResultService.saveMapToToc(
@@ -169,17 +190,6 @@ export class ShareResultRequestService {
     }
 
     return shareInitRequests;
-  }
-
-  private shouldCreateNewShareRequest(
-    requestExist: any,
-    initExist: any,
-  ): boolean {
-    return (
-      !requestExist &&
-      requestExist?.request_status_id !== 1 &&
-      !initExist?.is_active
-    );
   }
 
   private buildShareResultRequest(
@@ -211,7 +221,35 @@ export class ShareResultRequestService {
     resultId: number,
     user: TokenDto,
   ) {
-    await this._shareResultRequestRepository.save(shareInitRequests);
+    // Separate existing requests (with ID) from new ones (without ID)
+    const existingRequests = shareInitRequests.filter(
+      (req) => req.share_result_request_id,
+    );
+    const newRequests = shareInitRequests.filter(
+      (req) => !req.share_result_request_id,
+    );
+
+    // Update existing requests
+    if (existingRequests.length > 0) {
+      await Promise.all(
+        existingRequests.map((req) =>
+          this._shareResultRequestRepository.update(
+            req.share_result_request_id,
+            {
+              request_status_id: req.request_status_id,
+              is_active: req.is_active,
+              requested_by: req.requested_by,
+              requested_date: req.requested_date,
+            },
+          ),
+        ),
+      );
+    }
+
+    // Save only new requests
+    if (newRequests.length > 0) {
+      await this._shareResultRequestRepository.save(newRequests);
+    }
 
     await this.sendEmailsForShareRequests(
       shareInitRequests,
@@ -602,10 +640,21 @@ export class ShareResultRequestService {
   }
 
   private async getRequest(whereCondition: any) {
-    return await this._shareResultRequestRepository.find({
+    const results = await this._shareResultRequestRepository.find({
       select: this.getRequestSelectFields(),
       relations: this.getRequestRelations(),
       where: whereCondition,
+    });
+
+    return results.map((result: any) => {
+      if (result.obj_result && !Array.isArray(result.obj_result)) {
+        result.obj_result = {
+          ...result.obj_result,
+          source_name:
+            result.obj_result.source === 'Result' ? 'W1/W2' : 'W3/Bilaterals',
+        };
+      }
+      return result;
     });
   }
 
@@ -622,6 +671,8 @@ export class ShareResultRequestService {
         name: true,
       },
       obj_result: {
+        id: true,
+        source: true,
         result_code: true,
         title: true,
         status_id: true,
@@ -642,6 +693,22 @@ export class ShareResultRequestService {
           result_toc_result_id: true,
           initiative_id: true,
           is_active: true,
+        },
+        result_center_array: {
+          center_id: true,
+          is_primary: true,
+          is_leading_result: true,
+          is_active: true,
+          clarisa_center_object: {
+            code: true,
+            institutionId: true,
+            financial_code: true,
+            clarisa_institution: {
+              id: true,
+              name: true,
+              acronym: true,
+            },
+          },
         },
       },
       obj_requested_by: {
@@ -676,6 +743,11 @@ export class ShareResultRequestService {
         },
         obj_result_type: true,
         obj_result_level: true,
+        result_center_array: {
+          clarisa_center_object: {
+            clarisa_institution: true,
+          },
+        },
       },
       obj_requested_by: true,
       obj_approved_by: true,

@@ -1,16 +1,16 @@
-import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, inject, OnInit, signal, computed } from '@angular/core';
+import { CommonModule, Location } from '@angular/common';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { InputTextModule } from 'primeng/inputtext';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
+import { BilateralResultsService } from '../../bilateral-results.service';
+import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { ButtonModule } from 'primeng/button';
 import { OverlayBadgeModule } from 'primeng/overlaybadge';
 import { ChipModule } from 'primeng/chip';
-import { BilateralResultsService } from '../../bilateral-results.service';
-import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
-
 @Component({
   selector: 'app-results-review-filters',
   imports: [
@@ -28,9 +28,34 @@ import { CustomFieldsModule } from '../../../../../../custom-fields/custom-field
   templateUrl: './results-review-filters.component.html',
   styleUrl: './results-review-filters.component.scss'
 })
-export class ResultsReviewFiltersComponent implements OnInit, OnDestroy {
+export class ResultsReviewFiltersComponent implements OnInit {
   bilateralResultsService = inject(BilateralResultsService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly location = inject(Location);
 
+  ngOnInit(): void {
+    const searchParam = this.route.snapshot.queryParamMap.get('search');
+    if (searchParam) {
+      this.bilateralResultsService.searchText.set(searchParam);
+    }
+    this.calculateNavbarHeight();
+    this.setupResizeObserver();
+  }
+
+  onSearchChange(value: string): void {
+    this.bilateralResultsService.searchText.set(value);
+    this.updateQueryParam(value);
+  }
+
+  private updateQueryParam(search: string): void {
+    const urlTree = this.router.createUrlTree([], {
+      relativeTo: this.route,
+      queryParams: { search: search || null },
+      queryParamsHandling: 'merge'
+    });
+    this.location.replaceState(this.router.serializeUrl(urlTree));
+  }
   visible = signal(false);
   navbarHeight = signal(60);
 
@@ -75,11 +100,6 @@ export class ResultsReviewFiltersComponent implements OnInit, OnDestroy {
   });
 
   private resizeObserver: ResizeObserver | null = null;
-
-  ngOnInit(): void {
-    this.calculateNavbarHeight();
-    this.setupResizeObserver();
-  }
 
   private calculateNavbarHeight(): void {
     const navbar =
