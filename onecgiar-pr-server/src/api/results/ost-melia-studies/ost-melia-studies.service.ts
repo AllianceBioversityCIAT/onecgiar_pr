@@ -9,7 +9,7 @@ export class OstMeliaStudiesService {
     private readonly _handlersError: HandlersError,
     private readonly _ostMeliaStudiesRepository: OstMeliaStudiesRepository,
     private readonly _clarisaInitiativesRepository: ClarisaInitiativesRepository,
-  ) { }
+  ) {}
 
   async getMeliaStudiesFromResultId(initiativeId: number) {
     try {
@@ -60,5 +60,4 @@ export class OstMeliaStudiesService {
       return this._handlersError.returnErrorRes({ error });
     }
   }
-
 }
