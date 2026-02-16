@@ -1,7 +1,10 @@
 import { inject, Injectable, signal, computed } from '@angular/core';
 import { CenterDto } from '../../../../shared/interfaces/center.dto';
 import { ApiService } from '../../../../shared/services/api/api.service';
-import { ResultToReview } from './components/results-review-table/components/result-review-drawer/result-review-drawer.interfaces';
+import {
+  ResultToReview,
+  GroupedResult
+} from './components/results-review-table/components/result-review-drawer/result-review-drawer.interfaces';
 
 @Injectable({
   providedIn: 'root'
@@ -63,6 +66,17 @@ export class BilateralResultsService {
   getEntityDetails() {
     this.api.resultsSE.GET_ClarisaGlobalUnits(this.entityId()).subscribe(res => {
       this.entityDetails.set(res.response.initiative);
+    });
+  }
+
+  refreshAllResultsForCounts(): void {
+    const entityId = this.entityId();
+    const allCodes = this.centers().map(c => c.code);
+    if (!entityId || allCodes.length === 0) return;
+    this.api.resultsSE.GET_ResultToReview(entityId, allCodes).subscribe(res => {
+      const grouped = (res.response ?? []) as GroupedResult[];
+      const flat = grouped.flatMap(g => g.results ?? []);
+      this.allResultsForCounts.set(flat);
     });
   }
 }

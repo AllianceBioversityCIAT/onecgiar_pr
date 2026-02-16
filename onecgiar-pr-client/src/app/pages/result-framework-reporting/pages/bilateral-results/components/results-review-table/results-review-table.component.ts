@@ -121,6 +121,7 @@ export class ResultsReviewTableComponent implements OnDestroy {
     if (centers.length > 0) {
       this.getResultsToReview(centers);
     }
+    this.bilateralResultsService.refreshAllResultsForCounts();
   }
 
   ngOnDestroy(): void {
