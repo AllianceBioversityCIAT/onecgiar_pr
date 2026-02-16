@@ -51,23 +51,35 @@ export class ResultsReviewTableComponent implements OnDestroy {
 
   filteredTableData = computed(() => {
     const searchText = this.bilateralResultsService.searchText().toLowerCase().trim();
+    const selectedIndicatorCategories = this.bilateralResultsService.selectedIndicatorCategories();
+    const selectedStatus = this.bilateralResultsService.selectedStatus();
+    const selectedLeadCenters = this.bilateralResultsService.selectedLeadCenters();
     const data = this.tableData();
-
-    if (!searchText) {
-      return data;
-    }
 
     return data
       .map(group => ({
         ...group,
-        results: group.results.filter(
-          result =>
-            result.result_code?.toLowerCase().includes(searchText) ||
-            result.result_title?.toLowerCase().includes(searchText) ||
-            result.indicator_category?.toLowerCase().includes(searchText) ||
-            result.toc_title?.toLowerCase().includes(searchText) ||
-            result.indicator?.toLowerCase().includes(searchText)
-        )
+        results: (group.results ?? []).filter(result => {
+          if (searchText) {
+            const matchesSearch =
+              result.result_code?.toLowerCase().includes(searchText) ||
+              result.result_title?.toLowerCase().includes(searchText) ||
+              result.indicator_category?.toLowerCase().includes(searchText) ||
+              result.toc_title?.toLowerCase().includes(searchText) ||
+              result.indicator?.toLowerCase().includes(searchText);
+            if (!matchesSearch) return false;
+          }
+          if (selectedIndicatorCategories.length > 0 && !selectedIndicatorCategories.includes(result.indicator_category ?? '')) {
+            return false;
+          }
+          if (selectedStatus.length > 0 && !selectedStatus.includes(result.status_name ?? '')) {
+            return false;
+          }
+          if (selectedLeadCenters.length > 0 && !selectedLeadCenters.includes(result.lead_center ?? '')) {
+            return false;
+          }
+          return true;
+        })
       }))
       .filter(group => group.results.length > 0);
   });
@@ -79,6 +91,7 @@ export class ResultsReviewTableComponent implements OnDestroy {
     }
     this.tableData.set([]);
     this.bilateralResultsService.tableResults.set([]);
+    this.bilateralResultsService.clearBilateralTableFilters();
   });
 
   getResultsToReview(centers: string[]): void {

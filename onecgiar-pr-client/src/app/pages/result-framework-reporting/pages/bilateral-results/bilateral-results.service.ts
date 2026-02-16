@@ -19,6 +19,28 @@ export class BilateralResultsService {
   searchText = signal<string>('');
   selectedCenterCode = signal<string | null>(null);
 
+  /** Table filters (client-side, no pagination) */
+  selectedIndicatorCategories = signal<string[]>([]);
+  selectedStatus = signal<string[]>([]);
+  selectedLeadCenters = signal<string[]>([]);
+
+  /** Filter options derived from current table data */
+  indicatorCategoryOptions = computed(() => {
+    const results = this.tableResults();
+    const set = new Set(results.map(r => r.indicator_category).filter((v): v is string => !!v));
+    return [...set].sort((a, b) => a.localeCompare(b));
+  });
+  statusOptions = computed(() => {
+    const results = this.tableResults();
+    const set = new Set(results.map(r => r.status_name).filter((v): v is string => !!v));
+    return [...set].sort((a, b) => a.localeCompare(b));
+  });
+  leadCenterOptions = computed(() => {
+    const results = this.tableResults();
+    const set = new Set(results.map(r => r.lead_center).filter((v): v is string => !!v));
+    return [...set].sort((a, b) => a.localeCompare(b));
+  });
+
   tableResults = signal<ResultToReview[]>([]);
 
   allResultsForCounts = signal<ResultToReview[]>([]);
@@ -67,6 +89,12 @@ export class BilateralResultsService {
     this.api.resultsSE.GET_ClarisaGlobalUnits(this.entityId()).subscribe(res => {
       this.entityDetails.set(res.response.initiative);
     });
+  }
+
+  clearBilateralTableFilters(): void {
+    this.selectedIndicatorCategories.set([]);
+    this.selectedStatus.set([]);
+    this.selectedLeadCenters.set([]);
   }
 
   refreshAllResultsForCounts(): void {
