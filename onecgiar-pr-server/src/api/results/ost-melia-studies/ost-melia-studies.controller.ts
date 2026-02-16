@@ -16,7 +16,7 @@ import { ApiTags } from '@nestjs/swagger';
 export class OstMeliaStudiesController {
   constructor(
     private readonly ostMeliaStudiesService: OstMeliaStudiesService,
-  ) { }
+  ) {}
 
   @Get('get/all/result/:resultId')
   getMeliaStudiesFromResultId(@Param('resultId') resultId: number) {
@@ -25,9 +25,7 @@ export class OstMeliaStudiesController {
 
   @Version('2')
   @Get('get/all/toc/:programId')
-  getMeliaStudiesFromToC(
-    @Param('programId', ParseIntPipe) programId: number,
-  ) {
+  getMeliaStudiesFromToC(@Param('programId', ParseIntPipe) programId: number) {
     return this.ostMeliaStudiesService.getMeliaStudiesFromToC(programId);
   }
 }
