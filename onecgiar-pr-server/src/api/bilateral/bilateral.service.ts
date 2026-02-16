@@ -1157,15 +1157,27 @@ export class BilateralService {
       // From here: roleId === 1 (main toc) — full flow: results_by_initiative + results_toc_result
       ownerInitiativeId = init.id;
 
-      // Determine if we have enough data to attempt full mapping
+      // Flexible: attempt toc_result_id mapping when we have at least result_title (from ToC); otherwise initiative-only
+      const hasTitleForToc = !!result_title?.trim();
       const hasFullMappingData =
-        aow_compose_code &&
-        result_title &&
-        result_indicator_description &&
-        result_indicator_type_name;
+        hasTitleForToc &&
+        (!!aow_compose_code?.trim() ||
+          !!result_indicator_description?.trim() ||
+          !!result_indicator_type_name?.trim());
+      const attemptTocSearch = hasTitleForToc;
+
+      if (!attemptTocSearch) {
+        this.logger.log(
+          `[TOC] No result_title provided for ${science_program_id} → initiative-only mapping (no toc_result_id lookup)`,
+        );
+      } else if (!hasFullMappingData) {
+        this.logger.log(
+          `[TOC] result_title provided for ${science_program_id} → attempting ToC search by title (and initiative); optional aow/indicator fields may be empty`,
+        );
+      }
 
       this.logger.debug(
-        `Processing TOC mapping for ${science_program_id} (role ${roleId}): hasFullMappingData=${hasFullMappingData}`,
+        `Processing TOC mapping for ${science_program_id} (role ${roleId}): attemptTocSearch=${attemptTocSearch}, hasFullMappingData=${hasFullMappingData}`,
       );
 
       try {
@@ -1173,38 +1185,36 @@ export class BilateralService {
         let firstMap: any = null;
         let isInitiativeOnlyMapping = true; // By default, assume basic mapping
 
-        // If we have complete data, attempt to find the full TOC mapping
-        if (hasFullMappingData) {
-          this.logger.debug(
-            `Attempting full TOC mapping search for ${science_program_id}`,
+        // If we have result_title, attempt to find ToC mapping (flexible: by title + initiative; aow/indicator optional)
+        if (attemptTocSearch) {
+          this.logger.log(
+            `[TOC] Attempting ToC mapping search for ${science_program_id} (result_title length=${result_title?.length ?? 0})`,
           );
           mapToToc =
-            await this._resultsTocResultsRepository.findTocResultsForBilateral(
-              mapping,
-            );
+            await this._resultsTocResultsRepository.findTocResultsForBilateral({
+              ...mapping,
+              initiative_id: init.id,
+            });
 
-          // The method now always returns an array (may be empty)
-          if (
+          const foundWithTocResultId =
             Array.isArray(mapToToc) &&
             mapToToc.length > 0 &&
-            mapToToc[0].toc_result_id &&
-            mapToToc[0].toc_results_indicator_id
-          ) {
-            // Full mapping found
+            mapToToc[0].toc_result_id;
+
+          if (foundWithTocResultId) {
             firstMap = mapToToc[0];
             isInitiativeOnlyMapping = false;
             this.logger.debug(
-              `Full TOC mapping found for ${science_program_id}: toc_result_id=${firstMap.toc_result_id}`,
+              `ToC mapping found for ${science_program_id}: toc_result_id=${firstMap.toc_result_id}`,
             );
           } else {
-            // Full mapping not found, create basic mapping
             this.logger.warn(
-              `TOC mapping did not match any ToC results (compose=${aow_compose_code}, program=${science_program_id}). Will create basic initiative mapping.`,
+              `TOC search did not match any ToC results for ${science_program_id}. Will create initiative-only mapping (toc_result_id=null).`,
             );
           }
         } else {
           this.logger.debug(
-            `Insufficient data for full TOC mapping for ${science_program_id}, will create basic initiative mapping`,
+            `No result_title for ${science_program_id}, will create initiative-only mapping`,
           );
         }
 
