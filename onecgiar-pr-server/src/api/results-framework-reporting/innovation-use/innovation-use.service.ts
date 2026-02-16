@@ -1041,40 +1041,71 @@ export class InnovationUseService {
       }
 
       for (const i of inv) {
+        // Support both i.id and i.project_id formats
+        const investmentItem = i as any;
+        const projectId = investmentItem.project_id || investmentItem.id;
+        
+        if (!projectId) {
+          this.logger.warn(
+            `[saveBillateralInvestment] Missing project_id/id for investment item in resultId: ${resultId}`,
+          );
+          continue;
+        }
+
         const rbp = await this._resultByProjectRepository.findOne({
           where: {
             result_id: resultId,
             is_active: true,
-            project_id: i.id,
+            project_id: projectId,
           },
         });
 
         if (!rbp) {
           this.logger.error(
-            `[saveBillateralInvestment] ResultByProject not found for resultId: ${resultId}, project_id: ${i.id}`,
+            `[saveBillateralInvestment] ResultByProject not found for resultId: ${resultId}, project_id: ${projectId}`,
           );
           throw {
             response: {},
-            message: `ResultByProject not found for resultId: ${resultId}, project_id: ${i.id}`,
+            message: `ResultByProject not found for resultId: ${resultId}, project_id: ${projectId}`,
             status: HttpStatus.NOT_FOUND,
           };
         }
 
-        const rbb = await this._resultBilateralBudgetRepository.findOne({
-          where: {
-            result_project_id: rbp.id,
-            is_active: true,
-          },
-        });
+        // If non_pooled_projetct_budget_id is provided, use it to find the specific budget
+        let rbb = null;
+        if (investmentItem.non_pooled_projetct_budget_id) {
+          rbb = await this._resultBilateralBudgetRepository.findOne({
+            where: {
+              non_pooled_projetct_budget_id: Number(investmentItem.non_pooled_projetct_budget_id),
+              is_active: true,
+            },
+          });
+        }
+
+        // If not found by budget_id, search by result_project_id
+        if (!rbb) {
+          rbb = await this._resultBilateralBudgetRepository.findOne({
+            where: {
+              result_project_id: rbp.id,
+              is_active: true,
+            },
+          });
+        }
+
+        // Calculate kind_cash value
+        let kindCashValue: number | null = null;
+        if (investmentItem.is_determined !== true) {
+          if (
+            investmentItem.kind_cash !== null &&
+            investmentItem.kind_cash !== undefined
+          ) {
+            kindCashValue = Number(investmentItem.kind_cash);
+          }
+        }
 
         if (rbb) {
-          rbb.kind_cash =
-            i.is_determined === true
-              ? null
-              : i.kind_cash === null
-                ? null
-                : Number(i.kind_cash);
-          rbb.is_determined = i.is_determined;
+          rbb.kind_cash = kindCashValue;
+          rbb.is_determined = investmentItem.is_determined;
           rbb.last_updated_by = user;
           rbb.non_pooled_projetct_id = null;
 
@@ -1083,15 +1114,11 @@ export class InnovationUseService {
           const newRbb = this._resultBilateralBudgetRepository.create({
             result_project_id: rbp.id,
             non_pooled_projetct_id: null,
-            kind_cash:
-              i.is_determined === true
-                ? null
-                : i.kind_cash === null
-                  ? null
-                  : Number(i.kind_cash),
-            is_determined: i.is_determined,
+            kind_cash: kindCashValue,
+            is_determined: investmentItem.is_determined,
             created_by: user,
             last_updated_by: user,
+            is_active: true,
           });
 
           await this._resultBilateralBudgetRepository.save(newRbb);
