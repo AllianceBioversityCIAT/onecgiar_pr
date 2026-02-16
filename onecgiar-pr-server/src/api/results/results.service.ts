@@ -91,6 +91,7 @@ import { ResultsTocResultRepository } from './results-toc-results/repositories/r
 import { ResultsInnovationsDevRepository } from './summary/repositories/results-innovations-dev.repository';
 import { AoWBilateralRepository } from './results-toc-results/repositories/aow-bilateral.repository';
 import { ResultsByProjectsRepository } from './results_by_projects/results_by_projects.repository';
+import { NonPooledProjectBudgetRepository } from './result_budget/repositories/non_pooled_proyect_budget.repository';
 import { GeographicLocationService } from '../results-framework-reporting/geographic-location/geographic-location.service';
 import {
   ReviewDecisionDto,
@@ -175,6 +176,8 @@ export class ResultsService {
     private readonly _resultsInnovationsDevRepository?: ResultsInnovationsDevRepository,
     @Optional()
     private readonly _resultsByProjectsRepository?: ResultsByProjectsRepository,
+    @Optional()
+    private readonly _nonPooledProjectBudgetRepository?: NonPooledProjectBudgetRepository,
     @Optional()
     @Inject(forwardRef(() => GeographicLocationService))
     private readonly _geographicLocationService?: GeographicLocationService,
@@ -3820,6 +3823,12 @@ export class ResultsService {
             reviewUpdateDto.resultTypeResponse as any,
             user,
           );
+          // Actualizar o eliminar budgets de proyectos
+          await this._updateProjectBudgetsForInnovationDev(
+            resultId,
+            reviewUpdateDto,
+            user,
+          );
         } else {
           this._logger.warn(
             `InnovationDevService not available for result ${resultId}`,
@@ -3893,6 +3902,101 @@ export class ResultsService {
         user.id,
         { investment_partners: resultTypeData.investment_partners } as any,
       );
+    }
+
+    // Guardar o actualizar investment_projects (investment_bilateral)
+    if (resultTypeData?.investment_projects || resultTypeData?.investment_bilateral) {
+      const investmentData = resultTypeData.investment_projects || resultTypeData.investment_bilateral;
+      await this._innovationUseService.saveBillateralInvestment(
+        resultId,
+        user.id,
+        { investment_bilateral: investmentData } as any,
+      );
+    } else {
+      // Si no viene investment_projects, eliminar budgets existentes
+      await this._deleteProjectBudgetsForResult(resultId, user.id);
+    }
+  }
+
+  private async _updateProjectBudgetsForInnovationDev(
+    resultId: number,
+    reviewUpdateDto: ReviewUpdateDto,
+    user: TokenDto,
+  ): Promise<void> {
+    if (!this._innovationUseService) {
+      this._logger.warn(
+        `InnovationUseService not available for updating budgets for result ${resultId}`,
+      );
+      return;
+    }
+
+    const resultTypeResponse = reviewUpdateDto.resultTypeResponse as any;
+    const resultTypeData = Array.isArray(resultTypeResponse)
+      ? resultTypeResponse[0]
+      : resultTypeResponse;
+
+    // Guardar o actualizar investment_projects (bilateral_expected_investment)
+    if (
+      resultTypeData?.investment_projects ||
+      resultTypeData?.bilateral_expected_investment
+    ) {
+      const investmentData =
+        resultTypeData.investment_projects ||
+        resultTypeData.bilateral_expected_investment;
+      await this._innovationUseService.saveBillateralInvestment(
+        resultId,
+        user.id,
+        { investment_bilateral: investmentData } as any,
+      );
+    } else {
+      // Si no viene investment_projects, eliminar budgets existentes
+      await this._deleteProjectBudgetsForResult(resultId, user.id);
+    }
+  }
+
+  private async _deleteProjectBudgetsForResult(
+    resultId: number,
+    userId: number,
+  ): Promise<void> {
+    if (!this._resultsByProjectsRepository || !this._nonPooledProjectBudgetRepository) {
+      this._logger.warn(
+        `Repositories not available for deleting budgets for result ${resultId}`,
+      );
+      return;
+    }
+
+    try {
+      // Obtener todos los result_project_id para este resultado
+      const resultProjects = await this._resultsByProjectsRepository.find({
+        where: { result_id: resultId, is_active: true },
+      });
+
+      if (!resultProjects || resultProjects.length === 0) {
+        return;
+      }
+
+      const resultProjectIds = resultProjects.map((rp) => rp.id);
+
+      // Eliminar (desactivar) todos los budgets asociados
+      const budgets = await this._nonPooledProjectBudgetRepository.find({
+        where: {
+          result_project_id: In(resultProjectIds),
+          is_active: true,
+        },
+      });
+
+      if (budgets && budgets.length > 0) {
+        for (const budget of budgets) {
+          budget.is_active = false;
+          budget.last_updated_by = userId;
+        }
+        await this._nonPooledProjectBudgetRepository.save(budgets);
+      }
+    } catch (error) {
+      this._logger.error(
+        `Error deleting project budgets for result ${resultId}: ${error.message}`,
+      );
+      // No lanzar error para no interrumpir el flujo principal
     }
   }
 
