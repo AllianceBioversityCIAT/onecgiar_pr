@@ -40,7 +40,7 @@ export class SubmissionsService {
     private readonly _globalParametersRepository: GlobalParameterRepository,
     private readonly _templateRepository: TemplateRepository,
     private readonly _emailNotificationManagementService: EmailNotificationManagementService,
-  ) {}
+  ) { }
 
   async submitFunction(
     resultId: number,
@@ -301,7 +301,7 @@ export class SubmissionsService {
           message: 'The user does not have the necessary role for this action.',
           status: HttpStatus.UNAUTHORIZED,
         };
-      } //d
+      }
       if (!result) {
         return {
           response: {},
