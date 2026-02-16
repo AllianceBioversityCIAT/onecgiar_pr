@@ -183,7 +183,7 @@ export class SubmissionsService {
       }
 
       const isValid =
-        await this._resultInnovationPackageValidationService.getGreenchecksByinnovationPackage(
+        await this._resultInnovationPackageValidationService.getGreenchecksByinnovationPackageSPV2(
           result.id,
         );
       if (!isValid.response.validResult) {
@@ -301,7 +301,7 @@ export class SubmissionsService {
           message: 'The user does not have the necessary role for this action.',
           status: HttpStatus.UNAUTHORIZED,
         };
-      }
+      } //d
       if (!result) {
         return {
           response: {},
