@@ -129,7 +129,7 @@ describe('PolicyChangeBilateralHandler', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('throws when policy type id is 1 and status_amount is missing', async () => {
+  it('saves when policy type id is 1 and status_amount is missing (stores null)', async () => {
     policyTypeRepoStub.findOne.mockResolvedValue({ id: 1 });
 
     await expect(
@@ -144,10 +144,12 @@ describe('PolicyChangeBilateralHandler', () => {
           },
         },
       }),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).resolves.toBeUndefined();
+
+    expect(repoStub.save).toHaveBeenCalled();
   });
 
-  it('throws when policy type id is 1 and amount is missing', async () => {
+  it('saves when policy type id is 1 and amount is missing (stores null)', async () => {
     policyTypeRepoStub.findOne.mockResolvedValue({ id: 1 });
 
     await expect(
@@ -162,7 +164,9 @@ describe('PolicyChangeBilateralHandler', () => {
           },
         },
       }),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).resolves.toBeUndefined();
+
+    expect(repoStub.save).toHaveBeenCalled();
   });
 
   it('throws when policy type by id is invalid', async () => {
