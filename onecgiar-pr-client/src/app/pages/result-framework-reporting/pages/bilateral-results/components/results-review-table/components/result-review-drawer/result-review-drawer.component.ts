@@ -73,6 +73,13 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   disabledContributingInitiatives = signal<any[]>([]);
   leadProjectIds = signal<string[]>([]);
 
+  disabledContributingProjectOptions = computed(() => {
+    const ids = this.leadProjectIds();
+    const list = this.clarisaProjectsList();
+    if (!ids.length || !list?.length) return [];
+    return list.filter((p: any) => ids.includes(String(p.project_id ?? p.id ?? '')));
+  });
+
   /** Chip label: only "SP01 - Breeding for Tomorrow" (official_code - initiative_name/short_name) */
   contributingInitiativesFormatter = (option: any): string => {
     if (!option) return '';

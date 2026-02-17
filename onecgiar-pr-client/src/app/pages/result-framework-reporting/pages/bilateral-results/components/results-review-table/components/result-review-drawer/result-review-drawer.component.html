@@ -181,6 +181,7 @@
         selectedOptionLabel="fullName"
         placeholder="Select project"
         [readOnly]="!canEditInDrawer()"
+        [disableOptions]="disabledContributingProjectOptions()"
         [cannotRemoveOptionValues]="leadProjectIds()"
         (ngModelChange)="onContributingProjectsChange($event)">
       </app-pr-multi-select>
