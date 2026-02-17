@@ -102,7 +102,6 @@ export class InnovationDevService {
         innDevExists.innovation_developers = innovation_developers;
         innDevExists.evidences_justification = evidences_justification;
         innDevExists.innovation_collaborators = innovation_collaborators;
-        innDevExists.result_innovation_dev_id = result_innovation_dev_id;
         innDevExists.innovation_readiness_level_id =
           innovation_readiness_level_id;
         innDevExists.innovation_characterization_id =
@@ -112,7 +111,7 @@ export class InnovationDevService {
         innDevExists.innovation_user_to_be_determined =
           innovation_user_to_be_determined;
         innDevExists.has_scaling_studies = has_scaling_studies;
-        (innDevExists as any).ip_support_center_id = ip_support_center_id;
+        innDevExists.ip_support_center_id = ip_support_center_id;
         InnDevRes = await this._resultsInnovationsDevRepository.save(
           innDevExists as any,
         );
@@ -137,10 +136,8 @@ export class InnovationDevService {
         newInnDev.innovation_user_to_be_determined =
           innovation_user_to_be_determined;
         newInnDev.has_scaling_studies = has_scaling_studies;
-        newInnDev.ip_support_center_id = ip_support_center_id;
         InnDevRes = await this._resultsInnovationsDevRepository.save(newInnDev);
       }
-
       // * SAVING INNOVATION AND SCALING
       await this.saveOptionsAndSubOptions(
         resultId,
@@ -415,7 +412,7 @@ export class InnovationDevService {
       const ipSupportCenter =
         await this._resultsInnovationsDevRepository.findOne({
           where: {
-            results_id: resultId,
+            result_object: { id: resultId },
             is_active: true,
           },
           relations: {
