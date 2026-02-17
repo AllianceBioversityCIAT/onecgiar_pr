@@ -73,29 +73,22 @@ export class PolicyChangeBilateralHandler
       policyChange.policy_stage,
     );
 
-    // Validate special requirements for policy type id = 1
+    // For policy type id = 1, persist status_amount and amount when provided; otherwise save rest with nulls
     let statusAmount: string | null = null;
     let amount: number | null = null;
 
-    if (policyTypeId === 1) {
-      if (!policyChange.policy_type.status_amount) {
-        throw new BadRequestException(
-          'status_amount is required when policy_type id is 1.',
+    if (policyTypeId === 1 && policyChange.policy_type) {
+      if (policyChange.policy_type.status_amount) {
+        statusAmount = await this.resolveStatusAmount(
+          policyChange.policy_type.status_amount,
         );
       }
       if (
-        policyChange.policy_type.amount === undefined ||
-        policyChange.policy_type.amount === null
+        policyChange.policy_type.amount !== undefined &&
+        policyChange.policy_type.amount !== null
       ) {
-        throw new BadRequestException(
-          'amount is required when policy_type id is 1.',
-        );
+        amount = policyChange.policy_type.amount;
       }
-
-      statusAmount = await this.resolveStatusAmount(
-        policyChange.policy_type.status_amount,
-      );
-      amount = policyChange.policy_type.amount;
     }
 
     const existing = await this._resultsPolicyChangesRepository.findOne({
@@ -178,6 +171,7 @@ export class PolicyChangeBilateralHandler
     institutions_id?: number;
     institutions_acronym?: string;
     institutions_name?: string;
+    name?: string;
   }): Promise<ClarisaInstitution | null> {
     if (input.institutions_id) {
       const found = await this._clarisaInstitutionsRepository.findOne({
@@ -185,7 +179,11 @@ export class PolicyChangeBilateralHandler
       });
       if (found) return found;
     }
-    const name = (input.institutions_name ?? '').trim();
+    const name = (
+      input.institutions_name ??
+      (input as { name?: string }).name ??
+      ''
+    ).trim();
     const acronym = (input.institutions_acronym ?? '').trim();
     if (!name && !acronym) return null;
 
@@ -198,9 +196,21 @@ export class PolicyChangeBilateralHandler
         : []),
     ];
     if (!fuzzyConds.length) return null;
-    const fuzzy = await this._clarisaInstitutionsRepository.find({
+    let fuzzy = await this._clarisaInstitutionsRepository.find({
       where: fuzzyConds,
     });
+    const parts = name?.split(/\s+/)?.filter(Boolean);
+    if (!fuzzy?.length && parts?.length) {
+      const lastWord = parts.at(-1);
+      if (lastWord) {
+        fuzzy = await this._clarisaInstitutionsRepository.find({
+          where: [
+            { name: Like(`%${lastWord}%`) },
+            { acronym: Like(`%${lastWord}%`) },
+          ],
+        });
+      }
+    }
     return fuzzy?.length ? fuzzy[0] : null;
   }
 
@@ -209,6 +219,7 @@ export class PolicyChangeBilateralHandler
       institutions_id?: number;
       institutions_acronym?: string;
       institutions_name?: string;
+      name?: string;
     }>,
   ): Promise<number[]> {
     const ids: number[] = [];
@@ -271,10 +282,27 @@ export class PolicyChangeBilateralHandler
 
     if (policyType.name) {
       const normalized = policyType.name.trim().toLowerCase();
-      const found = await this._clarisaPolicyTypeRepository
+      let found = await this._clarisaPolicyTypeRepository
         .createQueryBuilder('pt')
         .where('LOWER(pt.name) = :name', { name: normalized })
         .getOne();
+      if (!found) {
+        const normalizeForMatch = (s: string) =>
+          s
+            .trim()
+            .toLowerCase()
+            .split(',')
+            .join(' ')
+            .split(/\s+/)
+            .filter(Boolean)
+            .join(' ')
+            .trim();
+        const inputNormalized = normalizeForMatch(policyType.name);
+        const all = await this._clarisaPolicyTypeRepository.find();
+        found = all.find(
+          (pt) => pt.name && normalizeForMatch(pt.name) === inputNormalized,
+        ) ?? null;
+      }
       if (!found) {
         throw new BadRequestException(
           `Invalid policy_type name: "${policyType.name}". Please provide a valid policy type name.`,
