@@ -121,7 +121,6 @@ export class ApiService {
   }
 
   updateResultsList(searchParams?: SearchParams) {
-    console.log(searchParams);
 
     this.resultsListSE.showLoadingResultSpinner = true;
     this.resultsSE.GET_AllResultsWithUseRole(this.authSE.localStorageUser.id, searchParams).subscribe({
