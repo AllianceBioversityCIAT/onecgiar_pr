@@ -22,6 +22,7 @@ import { GlobalParameterRepository } from '../../global-parameter/repositories/g
 import { EmailTemplate } from '../../../shared/microservices/email-notification-management/enum/email-notification.enum';
 import { TemplateRepository } from '../../platform-report/repositories/template.repository';
 import { EmailNotificationManagementService } from '../../../shared/microservices/email-notification-management/email-notification-management.service';
+import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
 
 @Injectable()
 export class SubmissionsService {
@@ -40,6 +41,7 @@ export class SubmissionsService {
     private readonly _globalParametersRepository: GlobalParameterRepository,
     private readonly _templateRepository: TemplateRepository,
     private readonly _emailNotificationManagementService: EmailNotificationManagementService,
+    private readonly _resultCenterRepository: ResultsCenterRepository,
   ) {}
 
   async submitFunction(
@@ -92,6 +94,29 @@ export class SubmissionsService {
             result.id,
           );
 
+        const leadCenter = await this._resultCenterRepository.findOne({
+          where: { result_id: result.id, is_leading_result: true },
+          select: { clarisa_center_object: { clarisa_institution: { acronym: true }}},
+        });
+
+        const contributingCentersList = await this._resultCenterRepository.find({
+          where: { 
+            result_id: result.id, 
+            is_active: true 
+          },
+          relations: {
+            clarisa_center_object: {
+              clarisa_institution: true,
+            },
+          },
+        });
+
+        const contributingCenters = contributingCentersList
+          .filter((center) => !center.is_leading_result)
+          .map((center) => center.clarisa_center_object?.clarisa_institution?.acronym)
+          .filter(Boolean)
+          .join(', ') || 'N/A';
+
         const bccEmails = await this._globalParametersRepository.findOne({
           where: { name: 'technical_team_email' },
           select: { value: true },
@@ -121,6 +146,10 @@ export class SubmissionsService {
               spCode: sp.official_code,
               spName: sp.name,
               resultUrl: `${process.env.RESULTS_URL}${result.result_code}/general-information?phase=${result.version_id}`,
+              resultTitle: result.title,
+              leadCenter: leadCenter.clarisa_center_object.clarisa_institution.acronym,
+              contactPerson: result.lead_contact_person,
+              contributingCenters: contributingCenters,
             };
             const compiledTemplate = handlebars.compile(template.template);
 
