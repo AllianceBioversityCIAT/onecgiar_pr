@@ -71,6 +71,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   clarisaProjectsList = signal<any[]>([]);
   contributingInitiativesList = signal<any[]>([]);
   disabledContributingInitiatives = signal<any[]>([]);
+  leadProjectIds = signal<string[]>([]);
 
   /** Chip label: only "SP01 - Breeding for Tomorrow" (official_code - initiative_name/short_name) */
   contributingInitiativesFormatter = (option: any): string => {
@@ -991,11 +992,17 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         }
 
         if (detail.contributingProjects && Array.isArray(detail.contributingProjects)) {
+          const leadIds = detail.contributingProjects
+            .filter((p: any) => p.is_lead === true)
+            .map((p: any) => String(p.project_id || p.obj_clarisa_project?.id || p.id))
+            .filter(Boolean);
+          this.leadProjectIds.set(leadIds);
           detail.contributingProjects = detail.contributingProjects.map((project: any) => {
             const projectId = project.project_id || project.obj_clarisa_project?.id || project.id;
             return projectId ? String(projectId) : projectId;
           });
         } else {
+          this.leadProjectIds.set([]);
           detail.contributingProjects = [];
         }
 
@@ -1374,12 +1381,53 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     this.resetForm();
   }
 
+  /** Sync Contributing Bilateral Projects selection to Innovation Use investment_projects table. */
+  onContributingProjectsChange(selectedProjects: any[]): void {
+    const detail = this.resultDetail();
+    if (!detail?.resultTypeResponse || !Array.isArray(detail.resultTypeResponse) || detail.resultTypeResponse.length === 0) return;
+    const resultType = detail.resultTypeResponse[0];
+    if (!resultType || !('investment_projects' in resultType)) return;
+
+    const projectIds = (selectedProjects ?? []).map((p: any) =>
+      typeof p === 'object' && p != null ? String(p.project_id ?? p.id ?? '') : String(p)
+    ).filter(Boolean);
+    const projectsList = this.clarisaProjectsList();
+    const existingByProjectId = new Map<string, any>();
+    const currentInvestmentProjects = (resultType as any).investment_projects;
+    (Array.isArray(currentInvestmentProjects) ? currentInvestmentProjects : []).forEach((ip: any) => {
+      const id = String(ip.project_id ?? ip.non_pooled_projetct_budget_id ?? '');
+      if (id) existingByProjectId.set(id, ip);
+    });
+
+    const investment_projects = projectIds.map((projectId: string) => {
+      const existing = existingByProjectId.get(projectId);
+      const option = projectsList.find((pr: any) => String(pr.project_id ?? pr.id ?? '') === projectId);
+      const name = option?.fullName ?? option?.shortName ?? existing?.name ?? projectId;
+      return {
+        non_pooled_projetct_budget_id: existing?.non_pooled_projetct_budget_id,
+        project_id: projectId,
+        kind_cash: existing?.kind_cash ?? null,
+        is_determined: existing?.is_determined ?? null,
+        name
+      };
+    });
+
+    this.resultDetail.set({
+      ...detail,
+      resultTypeResponse: [
+        { ...resultType, investment_projects } as any
+      ]
+    });
+    this.cdr.markForCheck();
+  }
+
   private resetForm(): void {
     this.rejectJustification = '';
     this.resultDetail.set(null);
     this.originalDataStandardSnapshot = null;
     this.originalContributingInitiatives = null;
     this.originalContributingInstitutions = null;
+    this.leadProjectIds.set([]);
     this.originalAcceptedContributingInitiatives = [];
     this.contributingInitiativesStatusMap.set(new Map());
     this._lastContributingInitiativesReapplyKey = '';
