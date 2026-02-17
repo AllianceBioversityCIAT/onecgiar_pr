@@ -173,7 +173,7 @@
   <div class="fragment_section_divider"></div>
 
   <!-- Estimated total USD-value of (co-)investment by partners -->
-  <div class="segment">
+  <!-- <div class="segment">
     <app-pr-field-header
       label="Estimated total USD-value of (co-)investment by partners during the reporting period"
       [description]="headerDescriptionsN3()"
@@ -214,5 +214,49 @@
     </table>
 
     <app-no-data-text *ngIf="!body.investment_partners?.length" title="There are no items available for this table."></app-no-data-text>
+  </div> -->
+
+  <!-- Estimated total USD-value of investment by CGIAR W3 or bilateral projects -->
+  <div class="segment">
+    <app-pr-field-header
+      label="Estimated total USD-value of investment by CGIAR W3 or bilateral projects during the reporting period"
+      [description]="headerDescriptionsN2()"
+      [useColon]="false"></app-pr-field-header>
+
+    <table style="margin-bottom: 5px;" aria-label="Table showing estimated total USD-value of investment by CGIAR W3 or bilateral projects during the reporting period">
+      <tr>
+        <th>Entity</th>
+        <th>Total USD Value <br> <span>(in-cash + in-kind)</span></th>
+        <th></th>
+      </tr>
+      <tr *ngFor="let item of body.investment_projects">
+        <td>
+          <div class="name">{{ item.name }}</div>
+        </td>
+        <td>
+          <app-pr-input
+            placeholder="Write some..."
+            type="currency"
+            [(ngModel)]="item.kind_cash"
+            [disabled]="disabled"
+            [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
+            [required]="false"
+            (ngModelChange)="onInputChange(item)">
+          </app-pr-input>
+        </td>
+        <td>
+          <app-pr-radio-button
+            optionLabel="name"
+            optionValue="id"
+            [(ngModel)]="item.is_determined"
+            [readOnly]="disabled"
+            [options]="[{ name: 'This is yet to be determined', id: true }]"
+            (ngModelChange)="onRadioChange(item)">
+          </app-pr-radio-button>
+        </td>
+      </tr>
+    </table>
+
+    <app-no-data-text *ngIf="!body.investment_projects?.length" title="There are no items available for this table."></app-no-data-text>
   </div>
 }

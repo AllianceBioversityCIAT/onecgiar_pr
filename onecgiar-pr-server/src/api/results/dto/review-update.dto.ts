@@ -67,6 +67,36 @@ export class EvidenceDto {
   is_sharepoint: number;
 }
 
+export class InvesmentDto {
+  @ApiProperty({
+    description: 'Entity providing the investment',
+    example: '15',
+    type: Number,
+  })
+  id: number;
+
+  @ApiProperty({
+    description: 'Project identifier associated with the investment',
+    example: 123,
+    type: Number,
+  })
+  project_id: number;
+
+  @ApiProperty({
+    description: 'Total value of the investment',
+    example: '1000000',
+    type: String,
+  })
+  kind_cash: string;
+
+  @ApiProperty({
+    description: 'Indicates whether the investment is determined',
+    example: true,
+    type: Boolean,
+  })
+  is_determined: boolean;
+}
+
 export class InnovationDevelopmentDto {
   @ApiProperty({
     description: 'Innovation development identifier',
@@ -132,29 +162,34 @@ export class InnovationDevelopmentDto {
   })
   @IsString()
   name: string;
-}
 
-export class InvesmentDto {
-  @ApiProperty({
-    description: 'Entity providing the investment',
-    example: '15',
+  @ApiPropertyOptional({
+    description: 'Budget identifier for the project investment',
+    example: 123,
     type: Number,
   })
-  id: number;
+  budget_id: number;
 
-  @ApiProperty({
-    description: 'Total value of the investment',
-    example: '1000000',
-    type: String,
+  @ApiPropertyOptional({
+    description: 'Total value of the investment in cash',
+    example: 1000000,
+    type: Number,
   })
-  kind_cash: string;
+  kind_cash: number;
 
-  @ApiProperty({
-    description: 'Indicates whether the investment is determined',
+  @ApiPropertyOptional({
+    description: 'Indicates whether the investment amount is to be determined',
     example: true,
     type: Boolean,
   })
   is_determined: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Project identifier associated with the investment',
+    example: 456,
+    type: Number,
+  })
+  project_id: number;
 }
 export class InnovUseDto {
   @ApiProperty({
@@ -184,6 +219,13 @@ export class InnovUseDto {
   })
   @IsOptional()
   investment_partners?: InvesmentDto[];
+
+  @ApiProperty({
+    description: 'Investment projects related to the innovation use',
+    type: [InvesmentDto],
+  })
+  @IsOptional()
+  investment_projects?: InvesmentDto[];
 }
 
 export class ImplementingOrganizationDto {

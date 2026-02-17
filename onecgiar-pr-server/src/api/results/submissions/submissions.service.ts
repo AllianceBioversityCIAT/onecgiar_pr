@@ -183,7 +183,7 @@ export class SubmissionsService {
       }
 
       const isValid =
-        await this._resultInnovationPackageValidationService.getGreenchecksByinnovationPackage(
+        await this._resultInnovationPackageValidationService.getGreenchecksByinnovationPackageSPV2(
           result.id,
         );
       if (!isValid.response.validResult) {

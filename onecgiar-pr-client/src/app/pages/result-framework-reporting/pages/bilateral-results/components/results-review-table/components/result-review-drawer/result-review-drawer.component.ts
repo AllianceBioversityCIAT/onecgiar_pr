@@ -4,6 +4,7 @@ import {
   Component,
   computed,
   effect,
+  EffectRef,
   inject,
   model,
   OnDestroy,
@@ -159,20 +160,17 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   showConfirmSaveChangesDialog = signal<boolean>(false);
   isToCCompleted = signal<boolean>(false);
 
-  canReviewResults = computed(() => {
-    if (this.api.rolesSE.isAdmin) {
-      return true;
-    }
+  canEditInDrawer = computed(() => {
+    const statusId = this.resultToReview()?.status_id ?? this.resultDetail()?.commonFields?.status_id;
+    if (statusId != 5) return false;
+    if (this.api.rolesSE?.isAdmin) return true;
     const myInitiativesList = this.api.dataControlSE.myInitiativesList || [];
     const found = myInitiativesList.find(item => item.official_code === this.bilateralResultsService.entityId());
     return !!found;
   });
 
-  canEditInDrawer = computed(() => {
-    if (!this.canReviewResults()) return false;
-    const statusId = this.resultDetail()?.commonFields?.status_id;
-    return statusId === '5';
-  });
+  private savedReadOnly: boolean | null = null;
+  private readonly drawerReadOnlyEffectRef = signal<EffectRef | undefined>(undefined);
 
   validateIsToCCompleted(): void {
     if (this.tocInitiative?.planned_result === false) {
@@ -709,7 +707,14 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
               actors: Array.isArray(resultType.actors) ? resultType.actors.map((a: any) => ({ ...a })) : [],
               organizations: Array.isArray(resultType.organizations) ? resultType.organizations.map((o: any) => ({ ...o })) : [],
               measures: Array.isArray(resultType.measures) ? resultType.measures.map((m: any) => ({ ...m })) : [],
-              investment_partners: Array.isArray(resultType.investment_partners) ? resultType.investment_partners.map((p: any) => ({ ...p })) : []
+              investment_partners: Array.isArray(resultType.investment_partners) ? resultType.investment_partners.map((p: any) => ({ ...p })) : [],
+              investment_projects: Array.isArray(resultType.investment_projects) ? resultType.investment_projects.map((p: any) => ({
+                non_pooled_projetct_budget_id: p.non_pooled_projetct_budget_id ?? p.non_pooled_project_budget_id,
+                project_id: p.project_id,
+                kind_cash: p.kind_cash,
+                is_determined: p.is_determined,
+                name: p.name
+              })) : []
             }
           ];
           break;
@@ -793,6 +798,21 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         this.loadResultDetail(result.id);
       }
     });
+
+    this.drawerReadOnlyEffectRef.set(
+      effect(() => {
+        const visible = this.visible();
+        const canEdit = this.canEditInDrawer();
+        if (visible && canEdit) {
+          this.savedReadOnly ??= this.rolesSE.readOnly;
+          this.rolesSE.readOnly = false;
+        }
+        if (!(visible && canEdit) && this.savedReadOnly !== null) {
+          this.rolesSE.readOnly = this.savedReadOnly;
+          this.savedReadOnly = null;
+        }
+      })
+    );
 
     effect(() => {
       const detail = this.resultDetail();
@@ -1068,11 +1088,12 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
           detail.resultTypeResponse = detail.resultTypeResponse.map((resultType: any) => {
             const newResultType = { ...resultType };
 
-            if ('actors' in newResultType || 'measures' in newResultType || 'investment_partners' in newResultType) {
+            if ('actors' in newResultType || 'measures' in newResultType || 'investment_partners' in newResultType || 'investment_projects' in newResultType) {
               if (!newResultType.actors) newResultType.actors = [];
               if (!newResultType.organizations) newResultType.organizations = [];
               if (!newResultType.measures) newResultType.measures = [];
               if (!newResultType.investment_partners) newResultType.investment_partners = [];
+              if (!newResultType.investment_projects) newResultType.investment_projects = [];
               return newResultType;
             }
 
@@ -1492,6 +1513,10 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.drawerReadOnlyEffectRef()?.destroy();
+    if (this.savedReadOnly !== null) {
+      this.rolesSE.readOnly = this.savedReadOnly;
+    }
     document.body.style.overflow = 'auto';
   }
 }

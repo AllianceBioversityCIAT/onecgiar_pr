@@ -10,6 +10,7 @@ export interface ResultToReview {
   result_title: string;
   indicator_category: string;
   status_name: string;
+  status_id?: string | number;
   acronym: string;
   toc_title: string;
   indicator: string;
@@ -212,6 +213,15 @@ export interface BilateralInnovationUseResponse {
   organizations?: any[];
   measures?: BilateralInnovationUseMeasure[];
   investment_partners?: BilateralInnovationUseInvestmentPartner[];
+  investment_projects?: BilateralInnovationUseInvestmentProject[];
+}
+
+export interface BilateralInnovationUseInvestmentProject {
+  non_pooled_projetct_budget_id?: string;
+  project_id?: string;
+  kind_cash?: number | null;
+  is_determined?: boolean | null;
+  name?: string;
 }
 
 export interface BilateralInnovationUseActor {
