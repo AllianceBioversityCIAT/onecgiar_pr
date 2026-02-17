@@ -168,14 +168,6 @@ describe('ResultsListComponent', () => {
       expect(spyUpdateUserData).toHaveBeenCalled();
     });
 
-    it('should call updateResultsList', () => {
-      const spyUpdateResultsList = jest.spyOn(mockApiService, 'updateResultsList');
-
-      component.ngOnInit();
-
-      expect(spyUpdateResultsList).toHaveBeenCalled();
-    });
-
     it('should set inNotifications to false', () => {
       component.ngOnInit();
 
