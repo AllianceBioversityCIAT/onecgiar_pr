@@ -1072,11 +1072,13 @@ export class InnovationUseService {
         }
 
         // If non_pooled_projetct_budget_id is provided, use it to find the specific budget
+        // SECURITY: Always verify that the budget belongs to the current result_project_id
         let rbb = null;
         if (investmentItem.non_pooled_projetct_budget_id) {
           rbb = await this._resultBilateralBudgetRepository.findOne({
             where: {
               non_pooled_projetct_budget_id: Number(investmentItem.non_pooled_projetct_budget_id),
+              result_project_id: rbp.id,
               is_active: true,
             },
           });

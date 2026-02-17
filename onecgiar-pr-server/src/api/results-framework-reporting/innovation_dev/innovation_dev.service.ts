@@ -768,8 +768,10 @@ export class InnovationDevService {
         innDevExists as any,
       );
 
-      // Update or delete project budgets
-      await this._updateProjectBudgets(resultId, innovationDevDto, user.id);
+      // Update or delete project budgets only if budget-related fields are present
+      if (this._hasBudgetFields(innovationDevDto)) {
+        await this._updateProjectBudgets(resultId, innovationDevDto, user.id);
+      }
 
       return {
         response: updatedInnDev,
@@ -781,13 +783,24 @@ export class InnovationDevService {
     }
   }
 
+  private _hasBudgetFields(
+    innovationDevDto: InnovationDevelopmentDto,
+  ): boolean {
+    return (
+      innovationDevDto.budget_id !== undefined ||
+      innovationDevDto.kind_cash !== undefined ||
+      innovationDevDto.is_determined !== undefined ||
+      innovationDevDto.project_id !== undefined
+    );
+  }
+
   private async _updateProjectBudgets(
     resultId: number,
     innovationDevDto: InnovationDevelopmentDto,
     userId: number,
   ): Promise<void> {
     try {
-      // If the individual fields come (project_id, kind_cash, is_determined)
+      // If project_id is explicitly provided (not null), process the investment
       if (
         innovationDevDto.project_id !== null &&
         innovationDevDto.project_id !== undefined
@@ -802,10 +815,11 @@ export class InnovationDevService {
           resultId,
           userId,
         );
-      } else {
-        // If nothing comes, delete existing budgets
+      } else if (innovationDevDto.project_id === null) {
+        // If project_id is explicitly null, delete existing budgets
         await this._deleteProjectBudgetsForResult(resultId, userId);
       }
+      // If project_id is undefined (not provided), do nothing to preserve existing budgets
     } catch (error) {
       this.logger.error(
         `Error updating project budgets for result ${resultId}: ${error.message}`,
