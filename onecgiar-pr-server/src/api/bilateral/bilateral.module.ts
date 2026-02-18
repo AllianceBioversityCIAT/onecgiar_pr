@@ -42,6 +42,7 @@ import { ResultsInnovationsDevRepository } from '../results/summary/repositories
 import { ResultsInnovationsUseRepository } from '../results/summary/repositories/results-innovations-use.repository';
 import { ResultsPolicyChangesRepository } from '../results/summary/repositories/results-policy-changes.repository';
 import { NoopBilateralHandler } from './handlers/noop.handler';
+import { NonPooledProjectBudgetRepository } from '../results/result_budget/repositories/non_pooled_proyect_budget.repository';
 
 @Module({
   imports: [
@@ -90,6 +91,7 @@ import { NoopBilateralHandler } from './handlers/noop.handler';
     ResultsInnovationsDevRepository,
     ResultsInnovationsUseRepository,
     ResultsPolicyChangesRepository,
+    NonPooledProjectBudgetRepository,
   ],
 })
 export class BilateralModule {}

@@ -2396,6 +2396,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         r.title AS result_title,
         rt.name AS result_category,
         MAX(NULLIF(TRIM(t1.type_name), '')) AS indicator_category,
+        rs.result_status_id,
         rs.status_name,
         MAX(twp.acronym) AS acronym,
         MAX(tr.result_title) AS toc_title,
@@ -2677,7 +2678,12 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         rid.innovation_readiness_level_id,
         cirl.id AS readinness_level_id,
         cirl.level,
-        cirl.name
+        cirl.name,
+        cp.short_name AS project_name,
+        cp.id AS project_id,
+        nppb.non_pooled_projetct_budget_id,
+        nppb.kind_cash,
+        nppb.is_determined
       FROM result r
       JOIN results_innovations_dev rid
         ON r.id = rid.results_id
@@ -2685,6 +2691,14 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         ON rid.innovation_nature_id = cit.code
       LEFT JOIN clarisa_innovation_readiness_level cirl 
         ON rid.innovation_readiness_level_id = cirl.id
+      LEFT JOIN results_by_projects rbp
+        ON r.id = rbp.result_id
+        AND rbp.is_active = 1
+      LEFT JOIN non_pooled_projetct_budget nppb
+        ON rbp.id = nppb.result_project_id
+        AND nppb.is_active = 1
+      LEFT JOIN clarisa_projects cp
+        ON rbp.project_id = cp.id
       WHERE 
         r.id = ?
         AND r.is_active = 1;

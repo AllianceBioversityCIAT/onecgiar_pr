@@ -40,7 +40,7 @@ export class SubmissionsService {
     private readonly _globalParametersRepository: GlobalParameterRepository,
     private readonly _templateRepository: TemplateRepository,
     private readonly _emailNotificationManagementService: EmailNotificationManagementService,
-  ) { }
+  ) {}
 
   async submitFunction(
     resultId: number,

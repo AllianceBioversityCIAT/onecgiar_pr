@@ -264,8 +264,6 @@ export class ResultRegionRepository
   ): Promise<void> {
     try {
       if (regionArray.length > 0) {
-        console.log('Regions to update', roleId, regionArray);
-
         await this.query(
           `
           UPDATE result_region
@@ -290,10 +288,7 @@ export class ResultRegionRepository
           `,
           [roleId, resultId, ...regionArray],
         );
-
-        console.log('Regions updated', regionArray, roleId);
       } else {
-        console.log('No regions to update', roleId);
         await this.query(
           `
           UPDATE result_region
