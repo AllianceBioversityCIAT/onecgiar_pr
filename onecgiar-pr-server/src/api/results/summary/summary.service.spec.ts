@@ -66,6 +66,7 @@ describe('SummaryService', () => {
     mockResultRepository = {
       findOne: jest.fn(),
       getResultById: jest.fn(),
+      update: jest.fn().mockResolvedValue(undefined),
     };
     mockVersionsService = {};
     mockEvidencesRepository = {
