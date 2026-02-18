@@ -96,7 +96,11 @@ export class SubmissionsService {
 
         const leadCenter = await this._resultCenterRepository.findOne({
           where: { result_id: result.id, is_leading_result: true },
-          select: { clarisa_center_object: { clarisa_institution: { acronym: true }}},
+          relations: {
+            clarisa_center_object: {
+              clarisa_institution: true,
+            },
+          },
         });
 
         const contributingCentersList = await this._resultCenterRepository.find({
@@ -132,8 +136,12 @@ export class SubmissionsService {
           return;
         }
 
+        if (!leadCenter) {
+          this._logger.warn('No lead center found for result');
+        }
+
         if (!emails || emails.length === 0) {
-          this._logger.warn('No lead center found');
+          this._logger.warn('No IP experts emails found');
         } else {
           const scienceProgram =
             await this._resultRepository.getScienceProgramByResultId(resultId);
@@ -147,7 +155,7 @@ export class SubmissionsService {
               spName: sp.name,
               resultUrl: `${process.env.RESULTS_URL}${result.result_code}/general-information?phase=${result.version_id}`,
               resultTitle: result.title,
-              leadCenter: leadCenter.clarisa_center_object.clarisa_institution.acronym,
+              leadCenter: leadCenter?.clarisa_center_object?.clarisa_institution?.name || undefined,
               contactPerson: result.lead_contact_person,
               contributingCenters: contributingCenters,
             };
