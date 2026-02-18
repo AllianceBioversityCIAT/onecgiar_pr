@@ -215,6 +215,12 @@ export class EvidencesService {
         }
         await this._evidencesRepository.save(newsEvidencesArray);
       }
+
+      await this._resultRepository.update(createEvidenceDto.result_id, {
+        last_updated_by: user.id,
+        last_updated_date: new Date(),
+      });
+
       return {
         response: createEvidenceDto,
         message: 'The data was updated correctly',

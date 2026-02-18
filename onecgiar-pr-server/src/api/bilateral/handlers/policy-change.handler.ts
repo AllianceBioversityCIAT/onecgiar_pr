@@ -299,9 +299,10 @@ export class PolicyChangeBilateralHandler
             .trim();
         const inputNormalized = normalizeForMatch(policyType.name);
         const all = await this._clarisaPolicyTypeRepository.find();
-        found = all.find(
-          (pt) => pt.name && normalizeForMatch(pt.name) === inputNormalized,
-        ) ?? null;
+        found =
+          all.find(
+            (pt) => pt.name && normalizeForMatch(pt.name) === inputNormalized,
+          ) ?? null;
       }
       if (!found) {
         throw new BadRequestException(
