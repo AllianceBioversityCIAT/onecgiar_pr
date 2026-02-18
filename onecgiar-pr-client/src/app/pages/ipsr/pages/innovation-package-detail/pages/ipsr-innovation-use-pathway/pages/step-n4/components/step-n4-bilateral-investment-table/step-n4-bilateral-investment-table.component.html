@@ -2,11 +2,8 @@
   <div>
     @if (this.api.fieldsManagerSE.isP25()) {
       <app-pr-field-header
+        [required]="false"
         label="Estimated total USD-value of investment by CGIAR W3 or bilateral projects during the reporting period"></app-pr-field-header>
-      <div
-        appFeedbackValidation
-        labelText="Estimated total USD-value of investment by CGIAR W3 or bilateral projects during the reporting period"
-        [isComplete]="!!this.body.bilateral_expected_investment?.length"></div>
     } @else {
       <app-pr-field-header label="Expected CGIAR Bilateral investments in Innovation Package in" [required]="false"></app-pr-field-header>
     }
