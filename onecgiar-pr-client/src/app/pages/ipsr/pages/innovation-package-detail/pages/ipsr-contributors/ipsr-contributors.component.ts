@@ -210,8 +210,8 @@ export class IpsrContributorsComponent implements OnInit {
       this.fieldsManagerSE.isP25() ? this.getTocLogicp25(response) : this.getTocLogic();
 
       this.disabledOptions = [
-        ...(this.contributorsBody?.contributing_initiatives.accepted_contributing_initiatives || []),
-        ...(this.contributorsBody?.contributing_initiatives.pending_contributing_initiatives || [])
+        ...(this.rdPartnersSE.partnersBody?.contributing_initiatives.accepted_contributing_initiatives || []),
+        ...(this.rdPartnersSE.partnersBody?.contributing_initiatives.pending_contributing_initiatives || [])
       ];
 
       this.contributorsBody.contributingInitiativeNew = [];

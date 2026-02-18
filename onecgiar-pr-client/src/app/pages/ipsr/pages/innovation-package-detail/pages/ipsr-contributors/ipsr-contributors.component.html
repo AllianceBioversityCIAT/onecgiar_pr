@@ -90,7 +90,7 @@
     <app-pr-multi-select
       [options]="this.contributingInitiativesList"
       label="Contributing {{ 'term.entity.orPlatformsPlural' | term: this.api.dataControlSE.currentResult?.portfolio }}"
-      [disableOptions]="this.rdPartnersSE.disabledOptions"
+      [disableOptions]="this.disabledOptions"
       optionLabel="full_name"
       optionValue="id"
       (selectOptionEvent)="this.rdPartnersSE.onSelectContributingInitiative()"
