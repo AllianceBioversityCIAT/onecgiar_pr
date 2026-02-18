@@ -69,6 +69,8 @@ describe('ResultsListFiltersComponent', () => {
       submittersOptionsAdmin: createSignal<any[]>([]),
       submittersOptionsAdminOld: createSignal<any[]>([]),
       selectedSubmittersAdmin: createSignal<any[]>([]),
+      selectedLeadCenters: createSignal<any[]>([]),
+      centerOptions: createSignal<any[]>([]),
       fundingSourceOptions: createSignal<any[]>([])
     };
 
@@ -122,7 +124,8 @@ describe('ResultsListFiltersComponent', () => {
             { id: 1, name: 'Portfolio A', acronym: 'PA' },
             { id: 2, name: 'Portfolio B', acronym: 'PB' }
           ])
-        )
+        ),
+        GET_AllCLARISACenters: jest.fn(() => of({ response: [] }))
       },
       rolesSE: {
         isAdmin: false

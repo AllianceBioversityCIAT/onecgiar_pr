@@ -54,6 +54,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   tempSelectedIndicatorCategories = signal([]);
   tempSelectedStatus = signal([]);
   tempSelectedFundingSource = signal([]);
+  tempSelectedLeadCenters = signal<any[]>([]);
 
   // Computed signal for filtered phases based on selected portfolios
   filteredPhasesOptions = computed(() => {
@@ -73,6 +74,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     if (this.resultsListFilterSE.selectedStatus().length > 0) count++;
     if (this.resultsListFilterSE.text_to_search().length > 0) count++;
     if (this.resultsListFilterSE.selectedClarisaPortfolios().length > 0) count++;
+    if (this.resultsListFilterSE.selectedLeadCenters().length > 0) count++;
 
     return count;
   });
@@ -169,6 +171,18 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
       });
     }
 
+    const centerChips = this.resultsListFilterSE.selectedLeadCenters().map((center: any) => ({
+      label: center?.acronym ?? center?.name ?? 'Center',
+      filterType: 'center',
+      item: center
+    }));
+    if (centerChips.length > 0) {
+      groups.push({
+        category: 'Center',
+        chips: centerChips
+      });
+    }
+
     return groups;
   });
 
@@ -190,6 +204,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     this.getData();
     this.getResultStatus();
     this.getClarisaPortfolios();
+    this.getCenters();
     this.getAllInitiatives();
   }
 
@@ -197,6 +212,17 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     this.api.resultsSE.GET_ClarisaPortfolios().subscribe({
       next: response => {
         this.clarisaPortfolios.set(response);
+      },
+      error: err => {
+        console.error(err);
+      }
+    });
+  }
+
+  getCenters() {
+    this.api.resultsSE.GET_AllCLARISACenters().subscribe({
+      next: ({ response }) => {
+        this.resultsListFilterSE.centerOptions.set(response ?? []);
       },
       error: err => {
         console.error(err);
@@ -290,6 +316,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
 
     this.resultsListFilterSE.selectedIndicatorCategories.set([]);
     this.resultsListFilterSE.selectedStatus.set([]);
+    this.resultsListFilterSE.selectedLeadCenters.set([]);
     this.resultsListFilterSE.text_to_search.set('');
 
     // Also clear temp values
@@ -299,6 +326,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     this.tempSelectedIndicatorCategories.set([]);
     this.tempSelectedStatus.set([]);
     this.tempSelectedFundingSource.set([]);
+    this.tempSelectedLeadCenters.set([]);
   }
 
   removeFilter(chip: { label: string; filterType: string; item?: any }) {
@@ -329,6 +357,12 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
 
       case 'fundingSource':
         this.resultsListFilterSE.selectedFundingSource.set(this.resultsListFilterSE.selectedFundingSource().filter(p => p !== chip.item));
+        break;
+
+      case 'center':
+        this.resultsListFilterSE.selectedLeadCenters.set(
+          this.resultsListFilterSE.selectedLeadCenters().filter(c => c !== chip.item)
+        );
         break;
     }
   }
@@ -396,6 +430,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     this.tempSelectedSubmittersAdmin.set([...this.resultsListFilterSE.selectedSubmittersAdmin()]);
     this.tempSelectedIndicatorCategories.set([...this.resultsListFilterSE.selectedIndicatorCategories()]);
     this.tempSelectedStatus.set([...this.resultsListFilterSE.selectedStatus()]);
+    this.tempSelectedLeadCenters.set([...this.resultsListFilterSE.selectedLeadCenters()]);
     this.visible.set(true);
   }
 
@@ -407,6 +442,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     this.resultsListFilterSE.selectedSubmittersAdmin.set([...this.tempSelectedSubmittersAdmin()]);
     this.resultsListFilterSE.selectedIndicatorCategories.set([...this.tempSelectedIndicatorCategories()]);
     this.resultsListFilterSE.selectedStatus.set([...this.tempSelectedStatus()]);
+    this.resultsListFilterSE.selectedLeadCenters.set([...this.tempSelectedLeadCenters()]);
     this.visible.set(false);
   }
 
@@ -419,6 +455,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     this.tempSelectedSubmittersAdmin.set([...this.resultsListFilterSE.selectedSubmittersAdmin()]);
     this.tempSelectedIndicatorCategories.set([...this.resultsListFilterSE.selectedIndicatorCategories()]);
     this.tempSelectedStatus.set([...this.resultsListFilterSE.selectedStatus()]);
+    this.tempSelectedLeadCenters.set([...this.resultsListFilterSE.selectedLeadCenters()]);
     this.visible.set(false);
   }
 
