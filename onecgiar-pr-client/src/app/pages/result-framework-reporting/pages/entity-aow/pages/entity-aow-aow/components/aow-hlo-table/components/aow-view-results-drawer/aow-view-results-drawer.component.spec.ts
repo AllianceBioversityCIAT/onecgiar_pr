@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { Router } from '@angular/router';
@@ -11,8 +11,10 @@ describe('AowViewResultsDrawer', () => {
   let fixture: ComponentFixture<AowViewResultsDrawerComponent>;
   let mockEntityAowService: jest.Mocked<EntityAowService>;
   let mockRouter: jest.Mocked<Router>;
+  let currentResultToViewSignal: ReturnType<typeof signal<any>>;
 
   beforeEach(() => {
+    currentResultToViewSignal = signal<any>({});
     mockEntityAowService = {
       aowId: signal<string>('test-aow-id'),
       entityId: signal<string>('test-entity-id'),
@@ -21,14 +23,15 @@ describe('AowViewResultsDrawer', () => {
       tocResultsOutcomesByAowId: signal<any[]>([]),
       isLoadingTocResultsByAowId: signal<boolean>(false),
       viewResultDrawerFullScreen: signal<boolean>(false),
-      currentResultToView: signal<any>({}),
+      currentResultToView: currentResultToViewSignal,
       getExistingResultsContributors: jest.fn(),
       existingResultsContributors: signal<any[]>([])
     } as any;
 
     mockRouter = {
+      navigate: jest.fn().mockResolvedValue(true),
       createUrlTree: jest.fn().mockReturnValue({}),
-      serializeUrl: jest.fn().mockReturnValue('/test-url')
+      serializeUrl: jest.fn().mockReturnValue('/result/result-detail/R-123/general-information?phase=1')
     } as any;
 
     TestBed.configureTestingModule({
@@ -117,6 +120,80 @@ describe('AowViewResultsDrawer', () => {
 
       component.actionItems.set(newActions);
       expect(component.actionItems()).toEqual(newActions);
+    });
+  });
+
+  describe('navigateToResult', () => {
+    it('should not navigate when selectedProduct is null', () => {
+      component.selectedProduct = null;
+      component.navigateToResult();
+      expect(mockRouter.navigate).not.toHaveBeenCalled();
+    });
+
+    it('should navigate to result detail when selectedProduct is set', () => {
+      component.selectedProduct = { result_code: 'R-123', version_id: 5 };
+      component.navigateToResult();
+      expect(mockRouter.navigate).toHaveBeenCalledWith(
+        ['/result/result-detail/R-123/general-information'],
+        { queryParams: { phase: 5 } }
+      );
+    });
+  });
+
+  describe('setSelectedProduct', () => {
+    it('should set selectedProduct', () => {
+      const product = { result_code: 'R-456', version_id: 2 };
+      component.setSelectedProduct(product);
+      expect(component.selectedProduct).toBe(product);
+    });
+  });
+
+  describe('navigateToResultDirect', () => {
+    it('should create url and open in new tab', () => {
+      const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
+      const product = { result_code: 'R-789', version_id: 3 };
+      component.navigateToResultDirect(product);
+      expect(mockRouter.createUrlTree).toHaveBeenCalledWith(
+        ['/result/result-detail/R-789/general-information'],
+        { queryParams: { phase: 3 } }
+      );
+      expect(mockRouter.serializeUrl).toHaveBeenCalled();
+      expect(openSpy).toHaveBeenCalledWith(expect.any(String), '_blank');
+      openSpy.mockRestore();
+    });
+  });
+
+  describe('ngOnInit', () => {
+    it('should set loading and call getExistingResultsContributors with current result data', () => {
+      currentResultToViewSignal.set({ toc_result_id: 10, indicators: [{ related_node_id: 20 }] });
+      fixture = TestBed.createComponent(AowViewResultsDrawerComponent);
+      component = fixture.componentInstance;
+      component.ngOnInit();
+      expect(component.isLoadingResults()).toBe(true);
+      expect(mockEntityAowService.getExistingResultsContributors).toHaveBeenCalledWith(10, 20);
+    });
+
+    it('should set body overflow hidden', () => {
+      document.body.style.overflow = '';
+      component.ngOnInit();
+      expect(document.body.style.overflow).toBe('hidden');
+    });
+
+    it('should set isLoadingResults to false after timeout', fakeAsync(() => {
+      fixture = TestBed.createComponent(AowViewResultsDrawerComponent);
+      component = fixture.componentInstance;
+      component.ngOnInit();
+      expect(component.isLoadingResults()).toBe(true);
+      tick(1000);
+      expect(component.isLoadingResults()).toBe(false);
+    }));
+  });
+
+  describe('ngOnDestroy', () => {
+    it('should restore body overflow to auto', () => {
+      document.body.style.overflow = 'hidden';
+      component.ngOnDestroy();
+      expect(document.body.style.overflow).toBe('auto');
     });
   });
 });

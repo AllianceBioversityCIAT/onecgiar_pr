@@ -37,12 +37,13 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   combine = true;
 
   columnOrder = [
-    { title: 'Result code', attr: 'result_code', center: true, width: '95px' },
+    { title: 'Result code', attr: 'result_code', center: true, width: '90px' },
     { title: 'Title', attr: 'title', class: 'notCenter', width: '305px' },
-    { title: 'Funding Source', attr: 'source_name', class: 'notCenter', width: '105px' },
+    { title: 'Funding Source', attr: 'source_name', center: true, width: '100px' },
+    { title: 'Center', attr: 'lead_center', center: true, width: '100px' },
     { title: 'Phase - Portfolio', attr: 'phase_name', width: '155px' },
-    { title: 'Indicator category', attr: 'result_type', width: '150px' },
-    { title: 'Submitter', attr: 'submitter', center: true, width: '60px' },
+    { title: 'Indicator category', attr: 'result_type', center: true, width: '100px' },
+    { title: 'Submitter', attr: 'submitter', center: true, width: '30px' },
     { title: 'Status', attr: 'full_status_name_html', center: true, width: '124px' },
     { title: 'Creation date	', attr: 'created_date', center: true, width: '120px' },
     { title: 'Created by	', attr: 'full_name', width: '120px' }
