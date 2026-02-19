@@ -171,8 +171,7 @@ export class InnovationUseContentComponent implements OnInit {
   headerDescriptionsN2(): string {
     return `<ul>
     <li>Estimated total USD-value of investment by CGIAR W3 or bilateral projects during the reporting period (in-cash + in-kind)</li>
-    </ul>
-    <p><strong>Note: To correctly display the matrix and reflect the added bilateral projects, you must click Save first. Once the information is saved, the bilateral projects will appear in the matrix.</strong></p>`;
+    </ul>`;
   }
 
   headerDescriptionsN3(): string {

@@ -680,7 +680,8 @@ WHERE
             FROM results_investment_discontinued_options rido
             WHERE rido.result_id = r.id
               AND rido.is_active = TRUE
-        ) AS has_discontinued_options
+        ) AS has_discontinued_options,
+        ci2.acronym as lead_center
     FROM
         result r
         INNER JOIN result_type rt ON rt.id = r.result_type_id
@@ -696,6 +697,12 @@ WHERE
         left join users u on u.id = r.created_by
         inner join version v on v.id = r.version_id
         INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
+        left join results_center rc 
+          on rc.result_id = r.id 
+          and rc.is_leading_result = 1 
+          and rc.is_active = 1
+        left join clarisa_center cc on cc.code = rc.center_id
+        left join clarisa_institutions ci2 on ci2.id = cc.institutionId
     WHERE
         r.is_active > 0
         AND rbi.is_active > 0

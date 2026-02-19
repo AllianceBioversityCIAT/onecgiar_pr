@@ -210,8 +210,8 @@ export class IpsrContributorsComponent implements OnInit {
       this.fieldsManagerSE.isP25() ? this.getTocLogicp25(response) : this.getTocLogic();
 
       this.disabledOptions = [
-        ...(this.contributorsBody?.contributing_initiatives.accepted_contributing_initiatives || []),
-        ...(this.contributorsBody?.contributing_initiatives.pending_contributing_initiatives || [])
+        ...(this.rdPartnersSE.partnersBody?.contributing_initiatives.accepted_contributing_initiatives || []),
+        ...(this.rdPartnersSE.partnersBody?.contributing_initiatives.pending_contributing_initiatives || [])
       ];
 
       this.contributorsBody.contributingInitiativeNew = [];
@@ -301,5 +301,15 @@ export class IpsrContributorsComponent implements OnInit {
         console.error(error);
       }
     });
+  }
+
+  getContributorDescription(contributor: any) {
+    const contributorsText = `<strong>${contributor?.official_code} ${contributor?.short_name}</strong> - Does this result align with the Program's planned TOC indicators?`;
+
+    if (!contributor?.result_toc_results?.length) {
+      return `<strong>${contributor?.official_code} ${contributor?.short_name}</strong> - Pending confirmation`;
+    }
+
+    return contributorsText;
   }
 }

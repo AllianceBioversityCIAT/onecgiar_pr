@@ -19,6 +19,7 @@ export class DataControlService {
   myInitiativesListIPSRByPortfolio = [];
   myInitiativesLoaded = false;
   resultsList: ResultItem[] = [];
+  resultsListSignal: WritableSignal<ResultItem[]> = signal([]);
   currentResult: CurrentResult = {};
   currentResultSignal: WritableSignal<CurrentResult> = signal({});
   showSectionSpinner = false;

@@ -121,6 +121,25 @@
             [style]="{ width: '100%' }" />
         </div>
 
+
+
+        <div>
+          <app-pr-field-header
+            label="Center"
+            labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
+            [required]="false"></app-pr-field-header>
+
+          <p-multiselect
+            [filter]="true"
+            [showHeader]="false"
+            [options]="this.resultsListFilterSE.centerOptions()"
+            [(ngModel)]="tempSelectedLeadCenters"
+            optionLabel="acronym"
+            placeholder="Select center(s)"
+            [maxSelectedLabels]="2"
+            [style]="{ width: '100%' }" />
+        </div>
+
         <div>
           <app-pr-field-header
             label="Submitter(s)"

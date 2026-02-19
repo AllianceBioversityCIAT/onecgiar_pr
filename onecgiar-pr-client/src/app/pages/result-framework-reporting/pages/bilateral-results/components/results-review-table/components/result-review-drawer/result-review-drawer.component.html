@@ -182,7 +182,10 @@
         selectedLabel="Projects selected"
         selectedOptionLabel="fullName"
         placeholder="Select project"
-        [readOnly]="!canEditInDrawer()">
+        [readOnly]="!canEditInDrawer()"
+        [disableOptions]="disabledContributingProjectOptions()"
+        [cannotRemoveOptionValues]="leadProjectIds()"
+        (ngModelChange)="onContributingProjectsChange($event)">
       </app-pr-multi-select>
 
       <!-- Contributing Science Programs - Temporarily commented, showing read-only primary initiatives -->
