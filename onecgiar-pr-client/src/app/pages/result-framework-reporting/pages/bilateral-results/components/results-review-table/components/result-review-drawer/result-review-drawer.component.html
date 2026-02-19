@@ -10,6 +10,11 @@
       </p>
 
       <div class="result-review-drawer-header_icons">
+        <p-button
+          label="Return to Result Center"
+          styleClass="p-button-primary"
+          [style.margin-right.rem]="1.5"
+          (onClick)="navigateToResultCenter()"></p-button>
         <i
           class="pi {{
             drawerFullScreen() ? 'pi-arrow-down-left-and-arrow-up-right-to-center' : 'pi-arrow-up-right-and-arrow-down-left-from-center'
