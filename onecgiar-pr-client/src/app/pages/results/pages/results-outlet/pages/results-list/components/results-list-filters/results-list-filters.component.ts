@@ -339,8 +339,8 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
         break;
 
       case 'phase':
+        if (this.resultsListFilterSE.selectedPhases().length <= 1) return;
         this.resultsListFilterSE.selectedPhases.set(this.resultsListFilterSE.selectedPhases().filter(p => p !== chip.item));
-        // Phases no longer affect submitters
         break;
 
       case 'submitter':
@@ -360,9 +360,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
         break;
 
       case 'center':
-        this.resultsListFilterSE.selectedLeadCenters.set(
-          this.resultsListFilterSE.selectedLeadCenters().filter(c => c !== chip.item)
-        );
+        this.resultsListFilterSE.selectedLeadCenters.set(this.resultsListFilterSE.selectedLeadCenters().filter(c => c !== chip.item));
         break;
     }
   }

@@ -160,6 +160,9 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   /** Snapshot for detecting unsaved data standard changes (baseline after load/save). */
   private originalDataStandardSnapshot: string | null = null;
 
+  /** Dirty flag: true when user has modified TOC data since last load/save. */
+  isTocDirty = signal<boolean>(false);
+
   rejectJustification: string = '';
   saveChangesJustification: string = '';
   saveChangesType: 'toc' | 'dataStandard' | null = null;
@@ -295,13 +298,22 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     return current !== this.originalDataStandardSnapshot;
   }
 
-  /** Whether the result can be approved (TOC complete, no unsaved Data Standards changes). */
+  markTocAsDirty(): void {
+    this.isTocDirty.set(true);
+  }
+
+  hasTocUnsavedChanges(): boolean {
+    return this.isTocDirty();
+  }
+
+  /** Whether the result can be approved (TOC complete, no unsaved changes). */
   canApprove(): boolean {
-    return this.isToCCompleted() && !this.hasDataStandardUnsavedChanges();
+    return this.isToCCompleted() && !this.hasDataStandardUnsavedChanges() && !this.hasTocUnsavedChanges();
   }
 
   getApproveButtonTooltip(): string {
     if (!this.isToCCompleted()) return 'Please complete and save the TOC data before approving the result';
+    if (this.hasTocUnsavedChanges()) return 'Please save the TOC changes before approving the result';
     if (this.hasDataStandardUnsavedChanges()) return 'Please save the Data Standards changes before approving the result';
     return '';
   }
@@ -1212,6 +1224,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
             this.tocInitiative = { ...this.tocInitiative, ...tocInitiative };
             this.validateIsToCCompleted();
+            this.isTocDirty.set(false);
             setTimeout(() => {
               this.cdr.markForCheck();
             }, 0);
@@ -1259,6 +1272,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
             if (finalInitiativeId) {
               setInitiativeIdIfNeeded(finalInitiativeId);
             }
+            this.isTocDirty.set(false);
             setTimeout(() => {
               this.tocConsumed.set(true);
               this.cdr.markForCheck();
@@ -1298,6 +1312,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
           if (finalInitiativeId) {
             setInitiativeIdIfNeeded(finalInitiativeId);
           }
+          this.isTocDirty.set(false);
           setTimeout(() => {
             this.tocConsumed.set(true);
             this.cdr.markForCheck();
