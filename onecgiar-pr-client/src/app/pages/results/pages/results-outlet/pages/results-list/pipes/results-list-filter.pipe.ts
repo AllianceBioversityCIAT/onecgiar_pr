@@ -12,7 +12,6 @@ export class ResultsListFilterPipe implements PipeTransform {
     resultList: any[],
     word: string,
     combine: boolean,
-    selectedPhases: any[],
     selectedSubmitters: any[],
     selectedIndicatorCategories: any[],
     selectedStatus: any[],
@@ -23,15 +22,12 @@ export class ResultsListFilterPipe implements PipeTransform {
     return this.convertList(
       this.filterByLeadCenter(
         this.filterByFundingSource(
-          this.filterByPhase(
-            this.filterBySubmitters(
-              this.filterByIndicatorCategories(
-                this.filterByClarisaPortfolios(this.filterByStatus(this.filterByText(resultList, word), selectedStatus), selectedClarisaPortfolios),
-                selectedIndicatorCategories
-              ),
-              selectedSubmitters
+          this.filterBySubmitters(
+            this.filterByIndicatorCategories(
+              this.filterByClarisaPortfolios(this.filterByStatus(this.filterByText(resultList, word), selectedStatus), selectedClarisaPortfolios),
+              selectedIndicatorCategories
             ),
-            selectedPhases
+            selectedSubmitters
           ),
           selectedFundingSource
         ),
@@ -45,9 +41,7 @@ export class ResultsListFilterPipe implements PipeTransform {
     if (!selectedLeadCenters?.length) return resultList;
     const matchCenter = (result: any) => {
       const leadCenter = result.lead_center ?? '';
-      return selectedLeadCenters.some(
-        (c: any) => c?.acronym === leadCenter || c?.code === leadCenter
-      );
+      return selectedLeadCenters.some((c: any) => c?.acronym === leadCenter || c?.code === leadCenter);
     };
     return resultList.filter(matchCenter);
   }
@@ -102,16 +96,6 @@ export class ResultsListFilterPipe implements PipeTransform {
     const resultsFilter = resultList.filter(result => selectedSubmitters.some(submitter => submitter.official_code == result.submitter));
 
     if (!resultsFilter.length && selectedSubmitters.length === 0) return resultList;
-
-    return resultsFilter;
-  }
-
-  filterByPhase(resultList: any[], selectedPhases: any[]) {
-    if (!selectedPhases.length) return resultList;
-
-    const resultsFilter = resultList.filter(result => selectedPhases.some(phase => phase.attr == result.phase_name));
-
-    if (!resultsFilter.length && selectedPhases.length === 0) return resultList;
 
     return resultsFilter;
   }

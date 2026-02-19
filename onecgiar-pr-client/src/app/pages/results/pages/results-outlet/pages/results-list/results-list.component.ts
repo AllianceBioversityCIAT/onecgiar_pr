@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, AfterViewInit, ViewChild, effect, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, AfterViewInit, ViewChild, effect, inject, computed, untracked } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { CurrentResult } from '../../../../../../shared/interfaces/current-result.interface';
 import { ResultsListService } from './services/results-list.service';
@@ -32,6 +32,13 @@ interface ItemMenu {
 export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   router = inject(Router);
   bilateralResultsService = inject(BilateralResultsService);
+
+  private readonly selectedPhaseIds = computed(() =>
+    this.resultsListFilterSE
+      .selectedPhases()
+      .map(phase => phase.id)
+      .join(',')
+  );
 
   gettingReport = false;
   combine = true;
@@ -129,15 +136,28 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   ) {
     effect(() => {
       this.resultsListFilterSE.text_to_search();
-      this.resultsListFilterSE.selectedPhases();
       this.resultsListFilterSE.selectedSubmittersAdmin();
       this.resultsListFilterSE.selectedIndicatorCategories();
-      this.resultsListFilterSE.selectedStatus();
 
       if (this.table) {
         this.resetTable();
         this.applyDefaultSort();
       }
+    });
+
+    effect(() => {
+      const versionIds = this.selectedPhaseIds();
+
+      untracked(() => {
+        if (versionIds) {
+          this.api.updateResultsList({ version_id: versionIds });
+        }
+
+        if (this.table) {
+          this.resetTable();
+          this.applyDefaultSort();
+        }
+      });
     });
   }
 
@@ -162,7 +182,6 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
     } else {
       this.api.updateUserData(() => {});
     }
-    this.api.updateResultsList();
     this.shareRequestModalSE.inNotifications = false;
     this.api.dataControlSE.getCurrentPhases();
   }
@@ -317,7 +336,10 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
               description: ``,
               status: 'success'
             });
-            this.api.updateResultsList();
+            const deleteSearchParams: any = {};
+            const versionIds = this.selectedPhaseIds();
+            if (versionIds) deleteSearchParams.version_id = versionIds;
+            this.api.updateResultsList(Object.keys(deleteSearchParams).length ? deleteSearchParams : undefined);
             this.resultsListService.showDeletingResultSpinner = false;
           },
           error: err => {
