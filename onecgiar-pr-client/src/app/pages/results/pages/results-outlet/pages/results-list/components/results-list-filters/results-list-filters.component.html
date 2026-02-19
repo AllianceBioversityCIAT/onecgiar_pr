@@ -45,7 +45,11 @@
             <span class="filter-chip-arrow">→</span>
             <div class="filter-chips-list">
               @for (chip of group.chips; track chip.label) {
-                <p-chip [label]="chip.label" [removable]="true" (onRemove)="removeFilter(chip)" styleClass="filter-chip" />
+                <p-chip
+                  [label]="chip.label"
+                  [removable]="!(chip.filterType === 'phase' && group.chips.length === 1)"
+                  (onRemove)="removeFilter(chip)"
+                  styleClass="filter-chip" />
               }
             </div>
           </div>
@@ -120,8 +124,6 @@
             [maxSelectedLabels]="1"
             [style]="{ width: '100%' }" />
         </div>
-
-
 
         <div>
           <app-pr-field-header

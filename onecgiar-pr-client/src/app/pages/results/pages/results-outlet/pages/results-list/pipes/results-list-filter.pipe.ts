@@ -22,13 +22,13 @@ export class ResultsListFilterPipe implements PipeTransform {
     return this.convertList(
       this.filterByLeadCenter(
         this.filterByFundingSource(
-            this.filterBySubmitters(
-              this.filterByIndicatorCategories(
-                this.filterByClarisaPortfolios(this.filterByStatus(this.filterByText(resultList, word), selectedStatus), selectedClarisaPortfolios),
-                selectedIndicatorCategories
-              ),
-              selectedSubmitters
+          this.filterBySubmitters(
+            this.filterByIndicatorCategories(
+              this.filterByClarisaPortfolios(this.filterByStatus(this.filterByText(resultList, word), selectedStatus), selectedClarisaPortfolios),
+              selectedIndicatorCategories
             ),
+            selectedSubmitters
+          ),
           selectedFundingSource
         ),
         selectedLeadCenters
@@ -41,9 +41,7 @@ export class ResultsListFilterPipe implements PipeTransform {
     if (!selectedLeadCenters?.length) return resultList;
     const matchCenter = (result: any) => {
       const leadCenter = result.lead_center ?? '';
-      return selectedLeadCenters.some(
-        (c: any) => c?.acronym === leadCenter || c?.code === leadCenter
-      );
+      return selectedLeadCenters.some((c: any) => c?.acronym === leadCenter || c?.code === leadCenter);
     };
     return resultList.filter(matchCenter);
   }
