@@ -121,15 +121,11 @@ export class ApiService {
   }
 
   updateResultsList(searchParams?: SearchParams) {
-
     this.resultsListSE.showLoadingResultSpinner = true;
     this.resultsSE.GET_AllResultsWithUseRole(this.authSE.localStorageUser.id, searchParams).subscribe({
       next: resp => {
         resp.response.items.forEach((result: any) => {
-          return {
-            ...result,
-            full_status_name_html: `<div>${result.status_name} ${result.inQA ? '<div class="in-qa-tag">In QA</div>' : ''}</div>`
-          };
+          result.full_status_name_html = `<div>${result.status_name} ${result.inQA ? '<div class="in-qa-tag">In QA</div>' : ''}</div>`;
         });
 
         this.dataControlSE.resultsList = resp.response.items;
