@@ -10,10 +10,13 @@ import { PlatformReportRepository } from './repositories/platform-report.reposit
 import { ResultRepository } from '../results/result.repository';
 import { TemplateRepository } from './repositories/template.repository';
 import { ClientsModule, Transport } from '@nestjs/microservices';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { env } from 'process';
+import { Version } from '../versioning/entities/version.entity';
 
 @Module({
   imports: [
+    TypeOrmModule.forFeature([Version]),
     ClientsModule.register([
       {
         name: 'REPORT_SERVICE',
