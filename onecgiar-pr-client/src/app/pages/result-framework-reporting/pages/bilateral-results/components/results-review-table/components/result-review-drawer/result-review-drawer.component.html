@@ -10,14 +10,20 @@
       </p>
 
       <div class="result-review-drawer-header_icons">
+        <p-button
+          label="Go to result center"
+          styleClass="p-button-link"
+          [style.margin-right.rem]="0.5"
+          (onClick)="navigateToResultCenter()"></p-button>
         <i
           class="pi {{
             drawerFullScreen() ? 'pi-arrow-down-left-and-arrow-up-right-to-center' : 'pi-arrow-up-right-and-arrow-down-left-from-center'
           }}"
-          style="font-size: 15px; cursor: pointer"
+          style="font-size: 14px; cursor: pointer"
+          [style.margin-right.rem]="0.2"
           (click)="toggleFullScreen()"></i>
 
-        <i class="pi pi-times" style="font-size: 16px; cursor: pointer" (click)="closeDrawer()"></i>
+        <i class="pi pi-times" style="font-size: 15px; cursor: pointer" (click)="closeDrawer()"></i>
       </div>
     </div>
   </ng-template>

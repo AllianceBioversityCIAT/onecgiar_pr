@@ -65,6 +65,72 @@ export class ExportTablesService {
         this.saveAsExcelFile(buffer, fileName);
       });
     } catch (error) {
+      console.error('Error generating file', error);
+      this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: 'Error generating file', status: 'error' });
+    }
+  }
+
+  /**
+   * Export Excel with multiple sheets grouped by a key field.
+   * @param sheetsData Object where keys are sheet names and values are arrays of data
+   * @param fileName Name of the Excel file
+   * @param wscols Column configuration (same for all sheets)
+   * @param cellsToLink Cells to convert to hyperlinks (same for all sheets)
+   */
+  async exportExcelMultipleSheets(
+    sheetsData: Record<string, any[]>,
+    fileName: string,
+    wscols?: any[],
+    cellsToLink?: {
+      cellNumber: number;
+      cellKey: string;
+    }[]
+  ): Promise<void> {
+    try {
+      const ExcelJSModule = await import('exceljs');
+      const ExcelJS = ExcelJSModule.default;
+      const workbook = new ExcelJS.Workbook();
+
+      // Helper to sanitize sheet names (Excel limit: 31 chars, no : \ / ? * [ ])
+      const sanitizeSheetName = (name: string): string => {
+        let sanitized = name
+          .replace(/[:\\/?#*[\]]/g, '')
+          .substring(0, 31);
+        if (!sanitized) sanitized = 'Sheet';
+        return sanitized;
+      };
+
+      // Create a worksheet for each group
+      Object.entries(sheetsData).forEach(([sheetName, list]) => {
+        const sanitizedName = sanitizeSheetName(sheetName);
+        const worksheet = workbook.addWorksheet(sanitizedName);
+
+        if (wscols) {
+          worksheet.columns = wscols;
+        }
+
+        list.forEach(data => {
+          const row = worksheet.addRow(
+            Object.fromEntries(Object.entries(data).map(([key, value]) => [key, value ?? 'Not provided']))
+          );
+
+          if (cellsToLink) {
+            cellsToLink.forEach(cell => {
+              row.getCell(cell.cellNumber).value = {
+                text: data[cell.cellKey],
+                hyperlink: data[cell.cellKey],
+                tooltip: data[cell.cellKey]
+              };
+            });
+          }
+        });
+
+        this.formatWorksheet(worksheet);
+      });
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      this.saveAsExcelFile(buffer, fileName);
+    } catch (error) {
       this.customAlertService.show({ id: 'loginAlert', title: 'Oops!', description: 'Error generating file', status: 'error' });
     }
   }

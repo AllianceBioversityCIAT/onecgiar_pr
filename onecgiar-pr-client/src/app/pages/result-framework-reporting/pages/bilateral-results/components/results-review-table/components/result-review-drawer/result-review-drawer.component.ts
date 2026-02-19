@@ -33,6 +33,7 @@ import { BilateralResultsService } from '../../../../bilateral-results.service';
 import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
 import { CentersService } from '../../../../../../../../shared/services/global/centers.service';
 import { InstitutionsService } from '../../../../../../../../shared/services/global/institutions.service';
+import { Router } from '@angular/router';
 import { RdContributorsAndPartnersModule } from '../../../../../../../../pages/results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.module';
 import { TooltipModule } from 'primeng/tooltip';
 
@@ -63,6 +64,7 @@ import { TooltipModule } from 'primeng/tooltip';
 export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   private readonly api = inject(ApiService);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly router = inject(Router);
   bilateralResultsService = inject(BilateralResultsService);
   rolesSE = inject(RolesService);
   centersSE = inject(CentersService);
@@ -1401,6 +1403,11 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     this.visible.set(false);
     this.drawerFullScreen.set(false);
     this.resetForm();
+  }
+
+  navigateToResultCenter(): void {
+    this.closeDrawer();
+    this.router.navigate(['/result/results-outlet/results-list']);
   }
 
   /** Sync Contributing Bilateral Projects selection to Innovation Use investment_projects table. */
