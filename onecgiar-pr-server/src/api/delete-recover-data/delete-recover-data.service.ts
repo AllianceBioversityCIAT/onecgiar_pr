@@ -775,6 +775,7 @@ export class DeleteRecoverDataService {
     );
     await this._resultsInnovationsUseRepository.fisicalDelete(result_id);
     await this._resultsPolicyChangesRepository.fisicalDelete(result_id);
+    await this._evidenceSharepointRepository.fisicalDelete(result_id);
     await this._evidencesRepository.fisicalDelete(result_id);
     await this._resultCountryRepository.fisicalDelete(result_id);
     await this._resultRegionRepository.fisicalDelete(result_id);
