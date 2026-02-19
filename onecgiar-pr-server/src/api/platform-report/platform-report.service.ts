@@ -7,7 +7,7 @@ import {
 } from '../../shared/handlers/error.utils';
 import { env } from 'process';
 import { ResultRepository } from '../results/result.repository';
-import { Result } from '../results/entities/result.entity';
+import { Result, SourceEnum } from '../results/entities/result.entity';
 import axios from 'axios';
 import { ClientProxy } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -89,6 +89,26 @@ export class PlatformReportService implements OnModuleInit {
         const error: returnErrorDto = {
           status: 404,
           message: `The provided phase code "${phase}" is not valid`,
+          response: null,
+        };
+        throw error;
+      }
+
+      const resultToCheck = await this._resultRepository.findOne({
+        where: {
+          result_code: cleanResultCodeInput,
+          version_id: cleanPhaseInput,
+          is_active: true,
+        },
+        select: ['source'],
+      });
+      if (resultToCheck?.source === SourceEnum.Bilateral) {
+        this._logger.warn(
+          `PDF for W3/Bilateral is not available (result_code=${cleanResultCodeInput}, phase=${cleanPhaseInput})`,
+        );
+        const error: returnErrorDto = {
+          status: 404,
+          message: 'PDF for W3/Bilateral is not available',
           response: null,
         };
         throw error;
@@ -276,9 +296,8 @@ export class PlatformReportService implements OnModuleInit {
         data.generation_date_filename +
         '.pdf';
 
-      const portfolioAcronym = await this.getPortfolioAcronymForPhase(
-        cleanPhaseInput,
-      );
+      const portfolioAcronym =
+        await this.getPortfolioAcronymForPhase(cleanPhaseInput);
       const bucketName = env.AWS_BUCKET_NAME;
 
       if (this.isP25Portfolio(portfolioAcronym)) {
@@ -289,7 +308,7 @@ export class PlatformReportService implements OnModuleInit {
             p25Payload,
           ),
         );
-        // eslint-disable-next-line no-console
+
         console.log('P25 queue response:', response);
         if (!response?.data?.url) {
           const error: returnErrorDto = {

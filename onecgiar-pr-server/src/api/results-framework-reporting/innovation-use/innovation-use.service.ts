@@ -1044,7 +1044,7 @@ export class InnovationUseService {
         // Support both i.id and i.project_id formats
         const investmentItem = i as any;
         const projectId = investmentItem.project_id || investmentItem.id;
-        
+
         if (!projectId) {
           this.logger.warn(
             `[saveBillateralInvestment] Missing project_id/id for investment item in resultId: ${resultId}`,
@@ -1077,7 +1077,9 @@ export class InnovationUseService {
         if (investmentItem.non_pooled_projetct_budget_id) {
           rbb = await this._resultBilateralBudgetRepository.findOne({
             where: {
-              non_pooled_projetct_budget_id: Number(investmentItem.non_pooled_projetct_budget_id),
+              non_pooled_projetct_budget_id: Number(
+                investmentItem.non_pooled_projetct_budget_id,
+              ),
               result_project_id: rbp.id,
               is_active: true,
             },
