@@ -48,6 +48,8 @@ export class ResultsListFilterService {
 
   selectedIndicatorCategories = signal([]);
   selectedStatus = signal([]);
+  selectedLeadCenters = signal<any[]>([]);
+  centerOptions = signal<any[]>([]);
   text_to_search = signal('');
 
   updateMyInitiatives(initiatives) {

@@ -16,21 +16,34 @@ export class ResultsListFilterPipe implements PipeTransform {
     selectedIndicatorCategories: any[],
     selectedStatus: any[],
     selectedClarisaPortfolios: any[],
-    selectedFundingSource: any[]
+    selectedFundingSource: any[],
+    selectedLeadCenters: any[] = []
   ): any {
     return this.convertList(
-      this.filterByFundingSource(
-        this.filterBySubmitters(
-          this.filterByIndicatorCategories(
-            this.filterByClarisaPortfolios(this.filterByStatus(this.filterByText(resultList, word), selectedStatus), selectedClarisaPortfolios),
-            selectedIndicatorCategories
+      this.filterByLeadCenter(
+        this.filterByFundingSource(
+          this.filterBySubmitters(
+            this.filterByIndicatorCategories(
+              this.filterByClarisaPortfolios(this.filterByStatus(this.filterByText(resultList, word), selectedStatus), selectedClarisaPortfolios),
+              selectedIndicatorCategories
+            ),
+            selectedSubmitters
           ),
-          selectedSubmitters
+          selectedFundingSource
         ),
-        selectedFundingSource
+        selectedLeadCenters
       ),
       combine
     );
+  }
+
+  filterByLeadCenter(resultList: any[], selectedLeadCenters: any[]) {
+    if (!selectedLeadCenters?.length) return resultList;
+    const matchCenter = (result: any) => {
+      const leadCenter = result.lead_center ?? '';
+      return selectedLeadCenters.some((c: any) => c?.acronym === leadCenter || c?.code === leadCenter);
+    };
+    return resultList.filter(matchCenter);
   }
 
   filterByFundingSource(resultList: any[], selectedFundingSource: any[]) {

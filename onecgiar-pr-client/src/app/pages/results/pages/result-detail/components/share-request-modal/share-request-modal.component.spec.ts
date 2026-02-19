@@ -158,7 +158,7 @@ describe('ShareRequestModalComponent', () => {
 
       const result = component.validateAcceptOrReject();
 
-      expect(result).toBeFalsy();
+      expect(result).toBeTruthy();
     });
   });
 

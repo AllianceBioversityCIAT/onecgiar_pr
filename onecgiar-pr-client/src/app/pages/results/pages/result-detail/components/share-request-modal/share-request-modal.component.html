@@ -96,26 +96,13 @@
       (click)="this.api.dataControlSE.showShareRequest = false">
     </app-pr-button>
 
-    @if (!this.api.dataControlSE.inNotifications) {
-      <app-pr-button
-        [text]="this.requesting ? 'Saving' : 'Send Request'"
-        [rotating]="this.requesting"
-        [ngClass]="{ globalDisabled: validateAcceptOrReject() }"
-        [icon]="this.requesting ? 'loop' : 'send'"
-        padding="medium"
-        (click)="onRequest()">
-      </app-pr-button>
-    }
-
-    @if (this.api.dataControlSE.inNotifications) {
-      <app-pr-button
-        [text]="this.requesting ? 'Saving' : 'Accept'"
-        [rotating]="this.requesting"
-        [ngClass]="{ globalDisabled: this.api.dataControlSE?.currentResult?.result_level_id === 4 && validateAcceptOrReject() }"
-        [icon]="this.requesting ? 'loop' : 'send'"
-        padding="medium"
-        (click)="acceptOrReject()">
-      </app-pr-button>
-    }
+    <app-pr-button
+      [text]="this.requesting ? 'Saving' : 'Accept'"
+      [rotating]="this.requesting"
+      [ngClass]="{ globalDisabled: validateAcceptOrReject() }"
+      [icon]="this.requesting ? 'loop' : 'send'"
+      padding="medium"
+      (click)="this.api.dataControlSE.inNotifications ? acceptOrReject() : onRequest()">
+    </app-pr-button>
   </div>
 </p-dialog>
