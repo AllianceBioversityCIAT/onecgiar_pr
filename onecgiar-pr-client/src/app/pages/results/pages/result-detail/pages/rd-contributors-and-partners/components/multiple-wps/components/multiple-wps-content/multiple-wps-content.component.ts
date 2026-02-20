@@ -146,7 +146,6 @@ export class CPMultipleWPsContentComponent implements OnChanges {
 
   hideIndicators() {
     this.showIndicators.set(false);
-    this.activeTab.indicators[0].related_node_id = null;
     this.fieldsManagerSE.hasSelectedIndicator.set(false);
 
     setTimeout(() => {
