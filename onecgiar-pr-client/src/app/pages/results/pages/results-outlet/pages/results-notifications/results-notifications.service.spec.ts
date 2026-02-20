@@ -239,7 +239,7 @@ describe('ResultsNotificationsService', () => {
 
       expect(spy).toHaveBeenCalled();
       expect(consoleSpy).toHaveBeenCalledWith('error');
-      expect(service.sentData).toEqual({ sentContributionsDone: null, sentContributionsPending: null });
+      expect(service.sentData).toEqual({ sentContributionsDone: [], sentContributionsPending: [] });
     });
 
     it('should not update sentData when response is empty', () => {
@@ -248,7 +248,7 @@ describe('ResultsNotificationsService', () => {
       service.get_sent_notifications();
 
       expect(spy).toHaveBeenCalled();
-      expect(service.sentData).toEqual({ sentContributionsDone: null, sentContributionsPending: null });
+      expect(service.sentData).toEqual({ sentContributionsDone: [], sentContributionsPending: [] });
     });
   });
 

@@ -680,7 +680,8 @@ WHERE
             FROM results_investment_discontinued_options rido
             WHERE rido.result_id = r.id
               AND rido.is_active = TRUE
-        ) AS has_discontinued_options
+        ) AS has_discontinued_options,
+        ci2.acronym as lead_center
     FROM
         result r
         INNER JOIN result_type rt ON rt.id = r.result_type_id
@@ -696,6 +697,12 @@ WHERE
         left join users u on u.id = r.created_by
         inner join version v on v.id = r.version_id
         INNER JOIN result_status rs ON rs.result_status_id = r.status_id 
+        left join results_center rc 
+          on rc.result_id = r.id 
+          and rc.is_leading_result = 1 
+          and rc.is_active = 1
+        left join clarisa_center cc on cc.code = rc.center_id
+        left join clarisa_institutions ci2 on ci2.id = cc.institutionId
     WHERE
         r.is_active > 0
         AND rbi.is_active > 0
@@ -2354,17 +2361,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     const joinType = hasCenterFilter ? 'INNER' : 'LEFT';
 
     const baseQuery = `
-      WITH tri_one AS (
-        SELECT
-          tri.*,
-          ROW_NUMBER() OVER (
-            PARTITION BY tri.toc_results_id
-            ORDER BY tri.id ASC
-          ) AS rn
-        FROM Integration_information.toc_results_indicators tri
-        WHERE tri.is_active = 1
-      ),
-      lead_centers AS (
+      WITH lead_centers AS (
         SELECT 
           rc.result_id,
           rc.center_id,
@@ -2388,12 +2385,18 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         r.result_code,
         r.title AS result_title,
         rt.name AS result_category,
-        MAX(NULLIF(TRIM(t1.type_name), '')) AS indicator_category,
+        COALESCE(
+          MAX(NULLIF(TRIM(t_selected.type_name), '')),
+          'Not Applicable'
+        ) AS indicator_category,
         rs.result_status_id,
         rs.status_name,
         MAX(twp.acronym) AS acronym,
         MAX(tr.result_title) AS toc_title,
-        MAX(t1.indicator_description) AS indicator,
+        COALESCE(
+          MAX(t_selected.indicator_description),
+          'Not Applicable'
+        ) AS indicator,
         r.external_submitted_date AS submission_date,
         ir.id AS initiative_role_id,
         ir.name AS initiative_role_name,
@@ -2428,9 +2431,19 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       AND tr.is_active = 1
       LEFT JOIN Integration_information.toc_work_packages twp
         ON tr.wp_id = twp.toc_id
-      LEFT JOIN tri_one t1
-        ON t1.toc_results_id = tr.id
-      AND t1.rn = 1
+      LEFT JOIN results_toc_result_indicators rtri
+        ON rtri.results_toc_results_id = rtr.result_toc_result_id
+      AND rtri.is_active = 1
+      AND (rtri.is_not_aplicable = 0 OR rtri.is_not_aplicable IS NULL)
+      LEFT JOIN Integration_information.toc_results_indicators t_selected
+        ON (
+            (CONVERT(t_selected.related_node_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+             = CONVERT(rtri.toc_results_indicator_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+             OR CONVERT(CAST(t_selected.id AS CHAR) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+             = CONVERT(rtri.toc_results_indicator_id USING utf8mb4) COLLATE utf8mb4_unicode_ci)
+          AND t_selected.toc_results_id = tr.id
+          AND t_selected.is_active = 1
+        )
       ${joinType} JOIN lead_centers lc
         ON r.id = lc.result_id
       WHERE

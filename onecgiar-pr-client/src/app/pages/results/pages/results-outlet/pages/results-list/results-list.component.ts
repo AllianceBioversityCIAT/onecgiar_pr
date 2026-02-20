@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, AfterViewInit, ViewChild, effect, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, AfterViewInit, ViewChild, effect, inject, computed, untracked } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { CurrentResult } from '../../../../../../shared/interfaces/current-result.interface';
 import { ResultsListService } from './services/results-list.service';
@@ -33,16 +33,24 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   router = inject(Router);
   bilateralResultsService = inject(BilateralResultsService);
 
+  private readonly selectedPhaseIds = computed(() =>
+    this.resultsListFilterSE
+      .selectedPhases()
+      .map(phase => phase.id)
+      .join(',')
+  );
+
   gettingReport = false;
   combine = true;
 
   columnOrder = [
-    { title: 'Result code', attr: 'result_code', center: true, width: '95px' },
+    { title: 'Result code', attr: 'result_code', center: true, width: '90px' },
     { title: 'Title', attr: 'title', class: 'notCenter', width: '305px' },
-    { title: 'Funding Source', attr: 'source_name', class: 'notCenter', width: '105px' },
+    { title: 'Funding Source', attr: 'source_name', center: true, width: '100px' },
+    { title: 'Center', attr: 'lead_center', center: true, width: '100px' },
     { title: 'Phase - Portfolio', attr: 'phase_name', width: '155px' },
-    { title: 'Indicator category', attr: 'result_type', width: '150px' },
-    { title: 'Submitter', attr: 'submitter', center: true, width: '60px' },
+    { title: 'Indicator category', attr: 'result_type', center: true, width: '100px' },
+    { title: 'Submitter', attr: 'submitter', center: true, width: '30px' },
     { title: 'Status', attr: 'full_status_name_html', center: true, width: '124px' },
     { title: 'Creation date	', attr: 'created_date', center: true, width: '120px' },
     { title: 'Created by	', attr: 'full_name', width: '120px' }
@@ -128,15 +136,28 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   ) {
     effect(() => {
       this.resultsListFilterSE.text_to_search();
-      this.resultsListFilterSE.selectedPhases();
       this.resultsListFilterSE.selectedSubmittersAdmin();
       this.resultsListFilterSE.selectedIndicatorCategories();
-      this.resultsListFilterSE.selectedStatus();
 
       if (this.table) {
         this.resetTable();
         this.applyDefaultSort();
       }
+    });
+
+    effect(() => {
+      const versionIds = this.selectedPhaseIds();
+
+      untracked(() => {
+        if (versionIds) {
+          this.api.updateResultsList({ version_id: versionIds });
+        }
+
+        if (this.table) {
+          this.resetTable();
+          this.applyDefaultSort();
+        }
+      });
     });
   }
 
@@ -161,7 +182,6 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
     } else {
       this.api.updateUserData(() => {});
     }
-    this.api.updateResultsList();
     this.shareRequestModalSE.inNotifications = false;
     this.api.dataControlSE.getCurrentPhases();
   }
@@ -316,7 +336,10 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
               description: ``,
               status: 'success'
             });
-            this.api.updateResultsList();
+            const deleteSearchParams: any = {};
+            const versionIds = this.selectedPhaseIds();
+            if (versionIds) deleteSearchParams.version_id = versionIds;
+            this.api.updateResultsList(Object.keys(deleteSearchParams).length ? deleteSearchParams : undefined);
             this.resultsListService.showDeletingResultSpinner = false;
           },
           error: err => {

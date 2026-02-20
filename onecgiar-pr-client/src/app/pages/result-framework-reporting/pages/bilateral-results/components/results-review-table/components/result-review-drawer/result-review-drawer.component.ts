@@ -33,6 +33,7 @@ import { BilateralResultsService } from '../../../../bilateral-results.service';
 import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
 import { CentersService } from '../../../../../../../../shared/services/global/centers.service';
 import { InstitutionsService } from '../../../../../../../../shared/services/global/institutions.service';
+import { Router } from '@angular/router';
 import { RdContributorsAndPartnersModule } from '../../../../../../../../pages/results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.module';
 import { TooltipModule } from 'primeng/tooltip';
 
@@ -63,6 +64,7 @@ import { TooltipModule } from 'primeng/tooltip';
 export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   private readonly api = inject(ApiService);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly router = inject(Router);
   bilateralResultsService = inject(BilateralResultsService);
   rolesSE = inject(RolesService);
   centersSE = inject(CentersService);
@@ -71,6 +73,14 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   clarisaProjectsList = signal<any[]>([]);
   contributingInitiativesList = signal<any[]>([]);
   disabledContributingInitiatives = signal<any[]>([]);
+  leadProjectIds = signal<string[]>([]);
+
+  disabledContributingProjectOptions = computed(() => {
+    const ids = this.leadProjectIds();
+    const list = this.clarisaProjectsList();
+    if (!ids.length || !list?.length) return [];
+    return list.filter((p: any) => ids.includes(String(p.project_id ?? p.id ?? '')));
+  });
 
   /** Chip label: only "SP01 - Breeding for Tomorrow" (official_code - initiative_name/short_name) */
   contributingInitiativesFormatter = (option: any): string => {
@@ -149,6 +159,9 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
   /** Snapshot for detecting unsaved data standard changes (baseline after load/save). */
   private originalDataStandardSnapshot: string | null = null;
+
+  /** Dirty flag: true when user has modified TOC data since last load/save. */
+  isTocDirty = signal<boolean>(false);
 
   rejectJustification: string = '';
   saveChangesJustification: string = '';
@@ -285,13 +298,22 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     return current !== this.originalDataStandardSnapshot;
   }
 
-  /** Whether the result can be approved (TOC complete, no unsaved Data Standards changes). */
+  markTocAsDirty(): void {
+    this.isTocDirty.set(true);
+  }
+
+  hasTocUnsavedChanges(): boolean {
+    return this.isTocDirty();
+  }
+
+  /** Whether the result can be approved (TOC complete, no unsaved changes). */
   canApprove(): boolean {
-    return this.isToCCompleted() && !this.hasDataStandardUnsavedChanges();
+    return this.isToCCompleted() && !this.hasDataStandardUnsavedChanges() && !this.hasTocUnsavedChanges();
   }
 
   getApproveButtonTooltip(): string {
     if (!this.isToCCompleted()) return 'Please complete and save the TOC data before approving the result';
+    if (this.hasTocUnsavedChanges()) return 'Please save the TOC changes before approving the result';
     if (this.hasDataStandardUnsavedChanges()) return 'Please save the Data Standards changes before approving the result';
     return '';
   }
@@ -991,11 +1013,17 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
         }
 
         if (detail.contributingProjects && Array.isArray(detail.contributingProjects)) {
+          const leadIds = detail.contributingProjects
+            .filter((p: any) => p.is_lead === true)
+            .map((p: any) => String(p.project_id || p.obj_clarisa_project?.id || p.id))
+            .filter(Boolean);
+          this.leadProjectIds.set(leadIds);
           detail.contributingProjects = detail.contributingProjects.map((project: any) => {
             const projectId = project.project_id || project.obj_clarisa_project?.id || project.id;
             return projectId ? String(projectId) : projectId;
           });
         } else {
+          this.leadProjectIds.set([]);
           detail.contributingProjects = [];
         }
 
@@ -1196,6 +1224,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
             this.tocInitiative = { ...this.tocInitiative, ...tocInitiative };
             this.validateIsToCCompleted();
+            this.isTocDirty.set(false);
             setTimeout(() => {
               this.cdr.markForCheck();
             }, 0);
@@ -1243,6 +1272,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
             if (finalInitiativeId) {
               setInitiativeIdIfNeeded(finalInitiativeId);
             }
+            this.isTocDirty.set(false);
             setTimeout(() => {
               this.tocConsumed.set(true);
               this.cdr.markForCheck();
@@ -1282,6 +1312,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
           if (finalInitiativeId) {
             setInitiativeIdIfNeeded(finalInitiativeId);
           }
+          this.isTocDirty.set(false);
           setTimeout(() => {
             this.tocConsumed.set(true);
             this.cdr.markForCheck();
@@ -1374,12 +1405,58 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     this.resetForm();
   }
 
+  navigateToResultCenter(): void {
+    this.closeDrawer();
+    this.router.navigate(['/result/results-outlet/results-list']);
+  }
+
+  /** Sync Contributing Bilateral Projects selection to Innovation Use investment_projects table. */
+  onContributingProjectsChange(selectedProjects: any[]): void {
+    const detail = this.resultDetail();
+    if (!detail?.resultTypeResponse || !Array.isArray(detail.resultTypeResponse) || detail.resultTypeResponse.length === 0) return;
+    const resultType = detail.resultTypeResponse[0];
+    if (!resultType || !('investment_projects' in resultType)) return;
+
+    const projectIds = (selectedProjects ?? []).map((p: any) =>
+      typeof p === 'object' && p != null ? String(p.project_id ?? p.id ?? '') : String(p)
+    ).filter(Boolean);
+    const projectsList = this.clarisaProjectsList();
+    const existingByProjectId = new Map<string, any>();
+    const currentInvestmentProjects = (resultType as any).investment_projects;
+    (Array.isArray(currentInvestmentProjects) ? currentInvestmentProjects : []).forEach((ip: any) => {
+      const id = String(ip.project_id ?? ip.non_pooled_projetct_budget_id ?? '');
+      if (id) existingByProjectId.set(id, ip);
+    });
+
+    const investment_projects = projectIds.map((projectId: string) => {
+      const existing = existingByProjectId.get(projectId);
+      const option = projectsList.find((pr: any) => String(pr.project_id ?? pr.id ?? '') === projectId);
+      const name = option?.fullName ?? option?.shortName ?? existing?.name ?? projectId;
+      return {
+        non_pooled_projetct_budget_id: existing?.non_pooled_projetct_budget_id,
+        project_id: projectId,
+        kind_cash: existing?.kind_cash ?? null,
+        is_determined: existing?.is_determined ?? null,
+        name
+      };
+    });
+
+    this.resultDetail.set({
+      ...detail,
+      resultTypeResponse: [
+        { ...resultType, investment_projects } as any
+      ]
+    });
+    this.cdr.markForCheck();
+  }
+
   private resetForm(): void {
     this.rejectJustification = '';
     this.resultDetail.set(null);
     this.originalDataStandardSnapshot = null;
     this.originalContributingInitiatives = null;
     this.originalContributingInstitutions = null;
+    this.leadProjectIds.set([]);
     this.originalAcceptedContributingInitiatives = [];
     this.contributingInitiativesStatusMap.set(new Map());
     this._lastContributingInitiativesReapplyKey = '';

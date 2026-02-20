@@ -4,6 +4,7 @@ import { ApiService } from '../../../../../../../../../../shared/services/api/ap
 import { TocInitiativeOutcomeListsService } from '../../../../../rd-theory-of-change/components/toc-initiative-outcome-section/services/toc-initiative-outcome-lists.service';
 import { RdTheoryOfChangesServicesService } from '../../../../../rd-theory-of-change/rd-theory-of-changes-services.service';
 import { ResultLevelService } from '../../../../../../../../../../pages/results/pages/result-creator/services/result-level.service';
+import { FieldsManagerService } from '../../../../../../../../../../shared/services/fields-manager.service';
 
 interface TocResultItem {
   toc_result_id: string;
@@ -45,6 +46,7 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   @Input() selectedOptionsOutcome = [];
   @Input() selectedOptionsEOI = [];
   reusltlevelSE = inject(ResultLevelService);
+  fieldsManagerSE = inject(FieldsManagerService);
   resultLevelIdSignal = signal<number | string | undefined>(undefined);
   indicatorsList = signal<any[]>([]);
   indicatorView = false;
@@ -122,6 +124,8 @@ export class CPMultipleWPsContentComponent implements OnChanges {
       if (!list.length) return;
       const itemSelected = list.find(item => item.toc_result_id === this.activeTab.toc_result_id);
       this.indicatorsList.set(itemSelected?.indicators || []);
+      this.fieldsManagerSE.activeIndicatorsLength.set(this.indicatorsList().length);
+
       this.activeTab.indicators[0].related_node_id = this.activeTab.indicators[0].toc_results_indicator_id;
       if (!this.activeTab.toc_progressive_narrative) this.activeTab.toc_progressive_narrative = '';
     };
@@ -142,12 +146,15 @@ export class CPMultipleWPsContentComponent implements OnChanges {
 
   hideIndicators() {
     this.showIndicators.set(false);
+    this.fieldsManagerSE.hasSelectedIndicator.set(false);
+
     setTimeout(() => {
       this.showIndicators.set(true);
     }, 100);
   }
 
   mapTocResultsIndicatorId() {
+    this.fieldsManagerSE.hasSelectedIndicator.set(true);
     this.activeTab.indicators[0].toc_results_indicator_id = this.activeTab.indicators[0].related_node_id;
     this.updateSelectedIndicatorData();
   }

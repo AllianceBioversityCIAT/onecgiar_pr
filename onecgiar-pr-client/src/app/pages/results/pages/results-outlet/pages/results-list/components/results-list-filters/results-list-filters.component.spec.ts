@@ -69,6 +69,8 @@ describe('ResultsListFiltersComponent', () => {
       submittersOptionsAdmin: createSignal<any[]>([]),
       submittersOptionsAdminOld: createSignal<any[]>([]),
       selectedSubmittersAdmin: createSignal<any[]>([]),
+      selectedLeadCenters: createSignal<any[]>([]),
+      centerOptions: createSignal<any[]>([]),
       fundingSourceOptions: createSignal<any[]>([])
     };
 
@@ -104,7 +106,8 @@ describe('ResultsListFiltersComponent', () => {
     mockResultsListFilterService.submittersOptionsOld.set(mockSubmitters);
 
     mockExportTablesService = {
-      exportExcel: jest.fn()
+      exportExcel: jest.fn(),
+      exportExcelMultipleSheets: jest.fn()
     };
 
     mockApiService = {
@@ -122,7 +125,8 @@ describe('ResultsListFiltersComponent', () => {
             { id: 1, name: 'Portfolio A', acronym: 'PA' },
             { id: 2, name: 'Portfolio B', acronym: 'PB' }
           ])
-        )
+        ),
+        GET_AllCLARISACenters: jest.fn(() => of({ response: [] }))
       },
       rolesSE: {
         isAdmin: false
@@ -291,20 +295,26 @@ describe('ResultsListFiltersComponent', () => {
     expect(mockResultsListFilterService.submittersOptions()).toEqual([]);
   });
 
-  it('onDownLoadTableAsExcel should export and toggle gettingReport', () => {
-    // ensure false initially
+  it('onDownLoadTableAsExcel should export and toggle gettingReport', (done) => {
     expect(component.gettingReport()).toBe(false);
 
     component.onDownLoadTableAsExcel();
 
-    expect(component.gettingReport()).toBe(false);
     expect(mockApiService.resultsSE.GET_reportingList).toHaveBeenCalled();
-    expect(mockExportTablesService.exportExcel).toHaveBeenCalled();
+    expect(mockExportTablesService.exportExcelMultipleSheets).toHaveBeenCalled();
 
-    const [, fileName, wscols, hyperlinkCols] = mockExportTablesService.exportExcel.mock.calls[0];
+    const [sheetsData, fileName, wscols, hyperlinkCols] = mockExportTablesService.exportExcelMultipleSheets.mock.calls[0];
     expect(fileName).toBe('results_list');
     expect(Array.isArray(wscols)).toBe(true);
-    expect(hyperlinkCols).toEqual([{ cellNumber: 23, cellKey: 'pdf_link' }]);
+    expect(hyperlinkCols).toEqual([{ cellNumber: 20, cellKey: 'pdf_link' }]);
+    expect(sheetsData).toBeDefined();
+    expect(typeof sheetsData).toBe('object');
+
+    // gettingReport is set to false in the subscribe next callback; allow one microtask for sync observable to run
+    setTimeout(() => {
+      expect(component.gettingReport()).toBe(false);
+      done();
+    }, 0);
   });
 
   it('onDownLoadTableAsExcel should reset gettingReport on error', () => {
