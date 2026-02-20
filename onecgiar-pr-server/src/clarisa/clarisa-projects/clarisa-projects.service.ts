@@ -11,7 +11,11 @@ export class ClarisaProjectsService {
 
   async findAll() {
     try {
-      const clarisaProjects = await this._clarisaProjectsRepository.find();
+      const clarisaProjects = await this._clarisaProjectsRepository.find({
+        relations: {
+          obj_organization: true,
+        },
+      });
 
       return {
         response: clarisaProjects,

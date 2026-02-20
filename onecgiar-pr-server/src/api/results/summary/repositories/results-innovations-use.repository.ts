@@ -180,13 +180,26 @@ export class ResultsInnovationsUseRepository
         riu.has_scaling_studies,
         riu.readiness_level_explanation,
         riu.innov_use_to_be_determined,
-        riu.innov_use_2030_to_be_determined
+        riu.innov_use_2030_to_be_determined,
+        ciul.level AS level
       FROM result r
-      left join version v on r.version_id = v.id
-      right JOIN results_innovations_use riu on riu.results_id = r.id and riu.is_active
-      LEFT JOIN version previous_v on v.previous_phase = previous_v.id
-      left join result previous_r on r.result_code = previous_r.result_code and previous_r.version_id = previous_v.id
-      WHERE r.id = ? AND r.is_active;
+      JOIN results_innovations_use riu
+        ON riu.results_id = r.id
+      AND riu.is_active = 1
+      JOIN clarisa_innovation_use_levels ciul
+        ON ciul.id = riu.innovation_use_level_id
+      LEFT JOIN version v
+        ON v.id = r.version_id
+      AND v.is_active = 1
+      LEFT JOIN version previous_v
+        ON previous_v.id = v.previous_phase
+      AND previous_v.is_active = 1
+      LEFT JOIN result previous_r
+        ON previous_r.result_code = r.result_code
+      AND previous_r.version_id = previous_v.id
+      AND previous_r.is_active = 1
+      WHERE r.id = ?
+      AND r.is_active = 1;
     `;
     try {
       const InnovUseResult: ResultsInnovationsUse[] = await this.query(

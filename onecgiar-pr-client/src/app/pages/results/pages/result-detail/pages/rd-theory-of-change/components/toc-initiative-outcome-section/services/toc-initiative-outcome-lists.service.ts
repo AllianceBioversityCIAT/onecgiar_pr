@@ -10,8 +10,9 @@ export class TocInitiativeOutcomeListsService {
   outcomeLevelList = [];
   fieldsManagerSE = inject(FieldsManagerService);
   dataControlSE = inject(DataControlService);
-  tocResultList = signal<any[]>([]);
   api = inject(ApiService);
+  tocResultList = signal<any[]>([]);
+
   onChangePortfolio = effect(() => {
     if (this.dataControlSE.currentResultSignal()?.portfolio !== undefined) {
       this.api.tocApiSE.GET_AllTocLevels(this.fieldsManagerSE.isP25()).subscribe({

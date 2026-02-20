@@ -32,4 +32,7 @@ export class ResultsByProjects extends BaseEntity {
   })
   @JoinColumn({ name: 'project_id' })
   obj_clarisa_project: ClarisaProject;
+
+  @Column({ type: 'boolean', nullable: true, default: false })
+  is_lead: boolean;
 }

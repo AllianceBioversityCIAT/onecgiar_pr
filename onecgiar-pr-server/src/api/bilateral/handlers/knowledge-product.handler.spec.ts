@@ -23,9 +23,8 @@ describe('KnowledgeProductBilateralHandler', () => {
     bilateralDto: baseDto,
     userId: 10,
     submittedUserId: 20,
-    version: { id: 1 },
+    version: { id: 1, phase_year: 2024 },
     year: { year: 2024 },
-    lastCode: 100,
   };
 
   const baseAfterContext = {
@@ -37,27 +36,22 @@ describe('KnowledgeProductBilateralHandler', () => {
 
   let handler: KnowledgeProductBilateralHandler;
   let resultRepository: any;
-  let kpRepository: any;
-  let metadataRepository: any;
+  let kpService: any;
 
   beforeEach(() => {
     resultRepository = {
       save: jest.fn().mockResolvedValue({ id: 1 }),
     };
-    kpRepository = {
-      findOne: jest.fn().mockResolvedValue(undefined),
-      save: jest.fn().mockResolvedValue({
+    kpService = {
+      extractHandleIdentifier: jest.fn((url: string) => {
+        const parts = (url ?? '').split('/').filter(Boolean);
+        return parts.length >= 2 ? parts.slice(-2).join('/') : (url ?? '');
+      }),
+      populateKPFromCGSpace: jest.fn().mockResolvedValue({
         result_knowledge_product_id: 5,
       }),
     };
-    metadataRepository = {
-      save: jest.fn(),
-    };
-    handler = new KnowledgeProductBilateralHandler(
-      resultRepository,
-      kpRepository,
-      metadataRepository,
-    );
+    handler = new KnowledgeProductBilateralHandler(resultRepository, kpService);
   });
 
   describe('initializeResultHeader', () => {
@@ -70,17 +64,20 @@ describe('KnowledgeProductBilateralHandler', () => {
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
-    it('throws when KP handle already exists', async () => {
-      kpRepository.findOne.mockResolvedValue({
-        result_object: { id: 99 },
-      });
-
+    it('throws when knowledge_product.handle is missing', async () => {
       await expect(
-        handler.initializeResultHeader(baseInitContext),
-      ).rejects.toBeInstanceOf(BadRequestException);
+        handler.initializeResultHeader({
+          ...baseInitContext,
+          bilateralDto: {
+            ...baseDto,
+            knowledge_product: { ...baseDto.knowledge_product, handle: '' },
+          },
+        }),
+      ).rejects.toThrow(BadRequestException);
+      expect(resultRepository.save).not.toHaveBeenCalled();
     });
 
-    it('creates a new result when handle is unique', async () => {
+    it('creates a new result when knowledge_product and handle are present', async () => {
       const response = await handler.initializeResultHeader(baseInitContext);
 
       expect(resultRepository.save).toHaveBeenCalledWith(
@@ -104,22 +101,20 @@ describe('KnowledgeProductBilateralHandler', () => {
         isDuplicateResult: true,
       });
 
-      expect(kpRepository.save).not.toHaveBeenCalled();
+      expect(kpService.populateKPFromCGSpace).not.toHaveBeenCalled();
     });
 
-    it('persists KP entity and metadata for new handles', async () => {
+    it('calls populateKPFromCGSpace to fetch and populate KP metadata', async () => {
       await handler.afterCreate(baseAfterContext);
 
-      expect(kpRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          handle: baseDto.knowledge_product.handle,
-          name: baseDto.title,
-        }),
+      expect(kpService.extractHandleIdentifier).toHaveBeenCalledWith(
+        baseDto.knowledge_product.handle,
       );
-      expect(metadataRepository.save).toHaveBeenCalledWith(
+      expect(kpService.populateKPFromCGSpace).toHaveBeenCalledWith(
+        baseAfterContext.resultId,
+        baseDto.knowledge_product.handle, // mock returns same when already short (123/handle)
         expect.objectContaining({
-          result_knowledge_product_id: 5,
-          source: 'CG',
+          id: baseAfterContext.userId,
         }),
       );
     });

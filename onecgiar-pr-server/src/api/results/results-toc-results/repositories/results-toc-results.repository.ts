@@ -1642,7 +1642,8 @@ export class ResultsTocResultRepository
           await this._resultsTocResultIndicatorRepository.findOne({
             where: {
               results_toc_results_id: id_result_toc_result,
-              toc_results_indicator_id: itemIndicator.toc_results_indicator_id,
+              toc_results_indicator_id:
+                itemIndicator.toc_results_indicator_id ?? indicatorId,
             },
           });
 
@@ -1651,7 +1652,8 @@ export class ResultsTocResultRepository
           await this._resultsTocResultIndicatorRepository.update(
             {
               results_toc_results_id: id_result_toc_result,
-              toc_results_indicator_id: itemIndicator.toc_results_indicator_id,
+              toc_results_indicator_id:
+                itemIndicator.toc_results_indicator_id ?? indicatorId,
             },
             {
               is_active: true,
@@ -1674,16 +1676,14 @@ export class ResultsTocResultRepository
               const canonical = await getCanonicalTarget(indicatorId);
               const resolvedNumberTarget =
                 canonical?.number_target ??
-                this.toNumberOrNull(target.number_target);
-
-              if (resolvedNumberTarget === null) {
-                continue;
-              }
+                this.toNumberOrNull(target.number_target) ??
+                0;
 
               const resolvedTargetDate =
                 phaseYear ??
                 canonical?.target_date ??
-                this.toNumberOrNull(target.target_date);
+                this.toNumberOrNull(target.target_date) ??
+                null;
 
               let targetInfo = null;
               if (target.indicators_targets) {
@@ -1750,7 +1750,8 @@ export class ResultsTocResultRepository
           const resultTocResultIndicator =
             await this._resultsTocResultIndicatorRepository.save({
               results_toc_results_id: id_result_toc_result,
-              toc_results_indicator_id: itemIndicator.toc_results_indicator_id,
+              toc_results_indicator_id:
+                itemIndicator.toc_results_indicator_id ?? indicatorId,
               is_active: true,
               created_by: userId ?? undefined,
               last_updated_by: userId ?? undefined,
@@ -1760,16 +1761,14 @@ export class ResultsTocResultRepository
               const canonical = await getCanonicalTarget(indicatorId);
               const resolvedNumberTarget =
                 canonical?.number_target ??
-                this.toNumberOrNull(target.number_target);
-
-              if (resolvedNumberTarget === null) {
-                continue;
-              }
+                this.toNumberOrNull(target.number_target) ??
+                0;
 
               const resolvedTargetDate =
                 phaseYear ??
                 canonical?.target_date ??
-                this.toNumberOrNull(target.target_date);
+                this.toNumberOrNull(target.target_date) ??
+                null;
 
               await this._resultTocIndicatorTargetRepository.save({
                 result_toc_result_indicator_id:
@@ -2030,8 +2029,8 @@ export class ResultsTocResultRepository
   async saveImpact(
     id_result_toc_result: number,
     impactAreaTargets: any[],
-    result_id: number,
-    init: number,
+    result_id?: number,
+    init?: number,
   ) {
     try {
       if (!id_result_toc_result) return;
@@ -2078,8 +2077,20 @@ export class ResultsTocResultRepository
         ]);
 
         if (returnInfo.length == 0) {
-          const queryTocIndicators = `select * from results_toc_result where results_id = ${result_id} and is_active = true and initiative_id = ${init};`;
-          const innovatonUseInterface = await this.query(queryTocIndicators);
+          const validResultId =
+            result_id != null &&
+            Number.isFinite(Number(result_id)) &&
+            Number(result_id) > 0;
+          const validInit =
+            init != null && Number.isFinite(Number(init)) && Number(init) > 0;
+          if (!validResultId || !validInit) {
+            return;
+          }
+          const queryTocIndicators = `select * from results_toc_result where results_id = ? and is_active = true and initiative_id = ?`;
+          const innovatonUseInterface = await this.query(queryTocIndicators, [
+            result_id,
+            init,
+          ]);
 
           if (
             innovatonUseInterface != null &&
@@ -2130,7 +2141,7 @@ export class ResultsTocResultRepository
   async saveSdg(
     id_result_toc_result: number,
     sdgTargets: any[],
-    result_id: number,
+    result_id?: number,
   ) {
     try {
       if (!id_result_toc_result) return;
@@ -2178,8 +2189,17 @@ export class ResultsTocResultRepository
         ]);
 
         if (returnInfo.length == 0) {
-          const queryTocIndicators = `select * from results_toc_result where result_toc_result_id = ${id_result_toc_result};`;
-          const innovatonUseInterface = await this.query(queryTocIndicators);
+          const validResultId =
+            result_id != null &&
+            Number.isFinite(Number(result_id)) &&
+            Number(result_id) > 0;
+          if (!validResultId) {
+            return;
+          }
+          const queryTocIndicators = `select * from results_toc_result where result_toc_result_id = ?`;
+          const innovatonUseInterface = await this.query(queryTocIndicators, [
+            id_result_toc_result,
+          ]);
 
           if (
             innovatonUseInterface != null &&
@@ -2526,57 +2546,128 @@ select *
   }
 
   async processContributor(contributor: any, result_id: any, userId?: number) {
-    for (const toc of contributor.result_toc_results) {
+    // Ensure result_toc_results is an array before iterating
+    let resultTocResults: any[] = [];
+    if (Array.isArray(contributor.result_toc_results)) {
+      resultTocResults = contributor.result_toc_results;
+    } else if (
+      contributor.result_toc_results === null ||
+      contributor.result_toc_results === undefined
+    ) {
+      resultTocResults = [];
+    }
+
+    const contributorInitiativeId =
+      contributor?.initiative_id != null &&
+      Number.isFinite(Number(contributor.initiative_id))
+        ? Number(contributor.initiative_id)
+        : undefined;
+
+    for (const toc of resultTocResults) {
       if (toc?.toc_result_id && Array.isArray(toc?.indicators)) {
-        await this.processToc(toc, result_id, userId);
+        await this.processToc(toc, result_id, userId, contributorInitiativeId);
       }
     }
   }
 
-  async processToc(toc: any, result_id: number, userId?: number) {
+  async processToc(
+    toc: any,
+    result_id: number,
+    userId?: number,
+    contributorInitiativeId?: number,
+  ) {
+    // Build search criteria - handle both initiative_id and initiative_ids field names
+    const searchResultId = toc?.results_id ?? result_id;
+    const searchInitiativeId =
+      toc?.initiative_id != null && Number.isFinite(Number(toc.initiative_id))
+        ? Number(toc.initiative_id)
+        : contributorInitiativeId;
+    const searchTocResultId = toc?.toc_result_id;
+
+    // If we have a result_toc_result_id, try to find by that first
+    if (toc?.result_toc_result_id) {
+      const rtrById = await this.findOne({
+        where: {
+          result_toc_result_id: toc.result_toc_result_id,
+          is_active: true,
+        },
+      });
+
+      if (rtrById) {
+        await this.updateAndSave(
+          rtrById,
+          toc,
+          searchResultId,
+          searchInitiativeId,
+        );
+        await this.saveInditicatorsContributing(
+          Array.isArray(toc?.indicators) ? toc.indicators : [],
+          rtrById?.result_toc_result_id,
+          searchResultId,
+          userId,
+        );
+        return;
+      }
+    }
+
+    // Fallback: search by result_id, initiative_id, and toc_result_id
+    if (!searchTocResultId || !searchInitiativeId) {
+      // Skip if required fields are missing
+      return;
+    }
+
     const rtrExist = await this.findOne({
       where: {
-        result_id: toc?.results_id || result_id,
-        initiative_id: toc?.initiative_id,
-        toc_result_id: toc?.toc_result_id,
+        result_id: searchResultId,
+        initiative_ids: searchInitiativeId, // Use initiative_ids (property name in entity)
+        toc_result_id: searchTocResultId,
         is_active: true,
       },
     });
 
     if (!rtrExist) {
-      return this._handlersError.returnErrorRepository({
+      // Log warning but don't throw error - this might be expected for some cases
+      this._logger.warn({
         className: ResultsTocResultRepository.name,
-        error: `The result indicators result id ${toc?.result_toc_result_id} does not exist`,
+        error: `Result ToC mapping not found for result_id: ${searchResultId}, initiative_id: ${searchInitiativeId}, toc_result_id: ${searchTocResultId}`,
         debug: true,
       });
+      return;
     }
 
-    await this.updateAndSave(rtrExist, toc);
+    await this.updateAndSave(rtrExist, toc, searchResultId, searchInitiativeId);
     await this.saveInditicatorsContributing(
       Array.isArray(toc?.indicators) ? toc.indicators : [],
       rtrExist?.result_toc_result_id,
-      toc?.results_id || result_id,
+      searchResultId,
       userId,
     );
   }
 
-  async updateAndSave(rtrExist, toc) {
+  async updateAndSave(
+    rtrExist: any,
+    toc: any,
+    resultId?: number,
+    initiativeId?: number,
+  ) {
     await this.update(
       { result_toc_result_id: rtrExist?.result_toc_result_id },
       {
         is_sdg_action_impact: toc?.is_sdg_action_impact,
       },
     );
+    const effectiveResultId = resultId ?? toc?.results_id;
+    const effectiveInitiativeId = initiativeId ?? toc?.initiative_id;
     await this.saveImpact(
       rtrExist?.result_toc_result_id,
       toc?.impactAreasTargets,
-      toc?.results_id,
-      toc?.initiative_id,
+      effectiveResultId,
+      effectiveInitiativeId,
     );
     await this.saveSdg(
       rtrExist?.result_toc_result_id,
       toc?.sdgTargest,
-      toc?.results_id,
+      effectiveResultId,
     );
     await this.saveActionAreaToc(
       rtrExist.result_toc_result_id,
@@ -2740,6 +2831,7 @@ select *
         result_title,
         result_indicator_description,
         result_indicator_type_name,
+        initiative_id,
       } = tocResult;
 
       const hasOnlyScienceProgramId =
@@ -2759,6 +2851,51 @@ select *
         ];
       }
 
+      const hasTitle = !!result_title?.trim();
+      const hasAow = !!aow_compose_code?.trim();
+      const hasIndicatorFilter =
+        !!result_indicator_description?.trim() ||
+        !!result_indicator_type_name?.trim();
+
+      const conditions: string[] = [];
+      const params: any[] = [];
+
+      if (hasAow) {
+        conditions.push('wp_official_code = ?');
+        params.push(aow_compose_code.trim());
+      }
+      conditions.push('initiativeId = ?');
+      const initiativeParam =
+        initiative_id !== undefined &&
+        initiative_id !== null &&
+        initiative_id !== ''
+          ? initiative_id
+          : science_program_id;
+      params.push(initiativeParam);
+      if (hasTitle) {
+        conditions.push('tr.result_title LIKE ?');
+        params.push(`%${result_title.trim()}%`);
+      }
+      if (hasIndicatorFilter) {
+        conditions.push(
+          '(tri.indicator_description LIKE ? OR tri.type_value = ?)',
+        );
+        params.push(
+          `%${(result_indicator_description || '').trim()}%`,
+          result_indicator_type_name || '',
+        );
+      }
+      conditions.push('y.active = 1');
+      conditions.push(`
+            (
+            CASE
+              WHEN trit.target_date REGEXP '^[0-9]{4}-' THEN YEAR(trit.target_date)
+              WHEN trit.target_date REGEXP '^[0-9]{4}$' THEN CAST(trit.target_date AS SIGNED)
+              ELSE NULL
+            END
+          ) = y.year
+      `);
+
       const tocResultQuery = `
         SELECT
           tr.id AS toc_result_id,
@@ -2774,26 +2911,71 @@ select *
           AND CONVERT(trit.toc_result_indicator_id USING utf8mb4) = CONVERT(tri.related_node_id USING utf8mb4)
         CROSS JOIN ${env.DB_NAME}.year y
         WHERE
-          wp_official_code = ?
-          AND initiativeId = ?
-          AND tr.result_title LIKE ?
-          AND (tri.indicator_description LIKE ? OR tri.type_value = ?)
-          AND y.active = 1
-          AND (
-            CASE
-              WHEN trit.target_date REGEXP '^[0-9]{4}-' THEN YEAR(trit.target_date)
-              WHEN trit.target_date REGEXP '^[0-9]{4}$' THEN CAST(trit.target_date AS SIGNED)
-              ELSE NULL
-            END
-          ) = y.year
+          ${conditions.join(' AND ')}
       `;
-      const tocResultData = await this.query(tocResultQuery, [
-        aow_compose_code,
-        science_program_id,
-        `%${result_title}%`,
-        `%${result_indicator_description}%`,
-        result_indicator_type_name,
-      ]);
+      let tocResultData = await this.query(tocResultQuery, params);
+
+      // Fallback 1: by initiative + title via toc_work_packages (when wp_id is set)
+      if (
+        (!tocResultData || tocResultData.length === 0) &&
+        hasTitle &&
+        science_program_id
+      ) {
+        const titleOnlyConditions: string[] = [];
+        const titleOnlyParams: any[] = [];
+        titleOnlyConditions.push('twp.initiativeId = ?');
+        titleOnlyParams.push(initiativeParam);
+        titleOnlyConditions.push('tr.result_title LIKE ?');
+        titleOnlyParams.push(`%${result_title.trim()}%`);
+        const titleOnlyQuery = `
+          SELECT
+            tr.id AS toc_result_id,
+            NULL AS toc_results_indicator_id,
+            tr.category AS category,
+            NULL AS number_target,
+            NULL AS target_date
+          FROM
+            ${env.DB_TOC}.toc_work_packages twp
+          JOIN ${env.DB_TOC}.toc_results tr ON tr.wp_id = twp.toc_id
+          WHERE
+            ${titleOnlyConditions.join(' AND ')}
+          LIMIT 1
+        `;
+        const titleOnlyData = await this.query(titleOnlyQuery, titleOnlyParams);
+        if (titleOnlyData && titleOnlyData.length > 0) {
+          tocResultData = titleOnlyData;
+        }
+      }
+
+      // Fallback 2: toc_results directly by official_code + result_title (EOI etc. with wp_id null don't use toc_work_packages)
+      if (
+        (!tocResultData || tocResultData.length === 0) &&
+        hasTitle &&
+        science_program_id
+      ) {
+        const byOfficialCodeQuery = `
+          SELECT
+            tr.id AS toc_result_id,
+            NULL AS toc_results_indicator_id,
+            tr.category AS category,
+            NULL AS number_target,
+            NULL AS target_date
+          FROM
+            ${env.DB_TOC}.toc_results tr
+          WHERE
+            tr.official_code = ?
+            AND tr.result_title LIKE ?
+            AND tr.is_active = 1
+          LIMIT 1
+        `;
+        const byOfficialCodeData = await this.query(byOfficialCodeQuery, [
+          science_program_id,
+          `%${result_title.trim()}%`,
+        ]);
+        if (byOfficialCodeData && byOfficialCodeData.length > 0) {
+          tocResultData = byOfficialCodeData;
+        }
+      }
 
       // Retornar array vacío en lugar de null para consistencia
       return tocResultData || [];

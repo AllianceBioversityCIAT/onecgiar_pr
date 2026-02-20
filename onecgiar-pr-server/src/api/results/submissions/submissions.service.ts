@@ -82,13 +82,6 @@ export class SubmissionsService {
       newSubmissions.results_id = result.id;
       await this._submissionRepository.save(newSubmissions);
 
-      await this.sentNotification(
-        result,
-        user,
-        NotificationLevelEnum.RESULT,
-        NotificationTypeEnum.RESULT_SUBMITTED,
-      );
-
       const hasContactRequest =
         await this._resultRepository.getResultInnovationDevelopmentByResultId(
           result.id,
@@ -109,42 +102,45 @@ export class SubmissionsService {
         });
         if (!template) {
           this._logger.warn(
-            'Email template email_template_roles_update not found. Skipping notification.',
+            'Email template technical_team_email not found. Skipping notification.',
           );
           return;
         }
 
-        const scienceProgram =
-          await this._resultRepository.getScienceProgramByResultId(resultId);
+        if (!emails || emails.length === 0) {
+          this._logger.warn('No lead center found');
+        } else {
+          const scienceProgram =
+            await this._resultRepository.getScienceProgramByResultId(resultId);
 
-        for (const email of emails) {
-          const sp = scienceProgram[0];
+          for (const email of emails) {
+            const sp = scienceProgram[0];
 
-          const emailData = {
-            userName: `${email.first_name} ${email.last_name}`.trim(),
-            spCode: sp.official_code,
-            spName: sp.name,
-            resultUrl: `${process.env.RESULTS_URL}${result.result_code}/general-information?phase=${result.version_id}`,
-          };
-          const compiledTemplate = handlebars.compile(template.template);
+            const emailData = {
+              userName: `${email.first_name} ${email.last_name}`.trim(),
+              spCode: sp.official_code,
+              spName: sp.name,
+              resultUrl: `${process.env.RESULTS_URL}${result.result_code}/general-information?phase=${result.version_id}`,
+            };
+            const compiledTemplate = handlebars.compile(template.template);
 
-          this._emailNotificationManagementService.sendEmail({
-            from: {
-              email: process.env.EMAIL_SENDER,
-              name: 'PRMS Reporting Tool -',
-            },
-            emailBody: {
-              subject:
-                'PRMS – IP Support Request for Innovation Development Result',
-              to: [email.email],
-              cc: [],
-              bcc: bccEmails.value,
-              message: {
-                text: 'Account roles updated',
-                socketFile: compiledTemplate(emailData),
+            this._emailNotificationManagementService.sendEmail({
+              from: {
+                email: process.env.EMAIL_SENDER,
+                name: 'PRMS Reporting Tool -',
               },
-            },
-          });
+              emailBody: {
+                subject: `PRMS – IP Support Request for Innovation Development Result | Result Code: ${result.result_code}`,
+                to: [email.email],
+                cc: [],
+                bcc: bccEmails.value,
+                message: {
+                  text: 'Account roles updated',
+                  socketFile: compiledTemplate(emailData),
+                },
+              },
+            });
+          }
         }
       }
 
@@ -187,7 +183,7 @@ export class SubmissionsService {
       }
 
       const isValid =
-        await this._resultInnovationPackageValidationService.getGreenchecksByinnovationPackage(
+        await this._resultInnovationPackageValidationService.getGreenchecksByinnovationPackageSPV2(
           result.id,
         );
       if (!isValid.response.validResult) {
@@ -215,13 +211,6 @@ export class SubmissionsService {
         await this._generalInformationIpsrService.findInnovationDetail(
           result.id,
         );
-
-      await this.sentNotification(
-        result,
-        user,
-        NotificationLevelEnum.RESULT,
-        NotificationTypeEnum.RESULT_SUBMITTED,
-      );
 
       return {
         response: {
@@ -284,13 +273,6 @@ export class SubmissionsService {
       newSubmissions.results_id = result.id;
       await this._submissionRepository.save(newSubmissions);
 
-      await this.sentNotification(
-        result,
-        user,
-        NotificationLevelEnum.RESULT,
-        NotificationTypeEnum.RESULT_UNSUBMITTED,
-      );
-
       return {
         response: data,
         message: 'the result has been unsubmitted successfully',
@@ -352,13 +334,6 @@ export class SubmissionsService {
         await this._generalInformationIpsrService.findInnovationDetail(
           result.id,
         );
-
-      await this.sentNotification(
-        result,
-        user,
-        NotificationLevelEnum.RESULT,
-        NotificationTypeEnum.RESULT_UNSUBMITTED,
-      );
 
       return {
         response: {

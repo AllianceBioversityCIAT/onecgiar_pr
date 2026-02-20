@@ -10,6 +10,7 @@ import {
   SubOptionV2,
 } from './dto/create-innovation_dev_v2.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
+import { InnovationDevelopmentDto } from '../../results/dto/review-update.dto';
 import { ResultByIntitutionsRepository } from '../../results/results_by_institutions/result_by_intitutions.repository';
 import { ResultsInnovationsDevRepository } from '../../results/summary/repositories/results-innovations-dev.repository';
 import { ResultRepository } from '../../results/result.repository';
@@ -24,7 +25,7 @@ import { NonPooledProjectBudgetRepository } from '../../results/result_budget/re
 import { ResultInstitutionsBudgetRepository } from '../../results/result_budget/repositories/result_institutions_budget.repository';
 import { InnoDevService } from '../../results/summary/innovation_dev.service';
 import { ResultsInnovationsDev } from '../../results/summary/entities/results-innovations-dev.entity';
-import { In, Repository } from 'typeorm';
+import { In, Not, Repository } from 'typeorm';
 import { ResultsByInstitution } from '../../results/results_by_institutions/entities/results_by_institution.entity';
 import { ResultScalingStudyUrl } from '../result_scaling_study_urls/entities/result_scaling_study_url.entity';
 import { InnovationReadinessLevelByLevel } from './enum/innov-readiness-level.enum';
@@ -428,7 +429,29 @@ export class InnovationDevService {
       return (data as OptionV2).subOptions !== undefined;
     };
 
+    const allQuestionIds = new Set<number>();
+    for (const optionData of options) {
+      allQuestionIds.add(optionData.result_question_id);
+      for (const subOptionData of optionData.subOptions ?? []) {
+        allQuestionIds.add(subOptionData.result_question_id);
+      }
+    }
+
+    const activeAnswers = await this._resultAnswerRepository.find({
+      where: {
+        result_id: resultId,
+        result_question_id: In(Array.from(allQuestionIds)),
+        is_active: true,
+      },
+    });
+
+    const activeAnswerMap = new Map<number, ResultAnswer>();
+    for (const answer of activeAnswers) {
+      activeAnswerMap.set(answer.result_question_id, answer);
+    }
+
     const saveAnswer = async (data: OptionV2 | SubOptionV2) => {
+      // Preserve radioButtonValue logic: only applies to OptionV2, not SubOptionV2
       if (isOptionV2(data)) {
         if (
           radioButtonValue != null &&
@@ -444,28 +467,18 @@ export class InnovationDevService {
         return;
       }
 
-      const existingAnswer = await this._resultAnswerRepository.findOne({
-        where: {
-          result_id: resultId,
-          result_question_id: data.result_question_id,
-        },
-      });
+      const existingActiveAnswer = activeAnswerMap.get(data.result_question_id);
 
-      if (existingAnswer) {
-        existingAnswer.answer_boolean = data.answer_boolean;
-        existingAnswer.answer_text = data.answer_text ? data.answer_text : null;
-        existingAnswer.last_updated_by = user;
-        await this._resultAnswerRepository.save(existingAnswer);
+      if (existingActiveAnswer) {
+        await this._updateExistingActiveAnswer(
+          existingActiveAnswer,
+          data,
+          resultId,
+          user,
+        );
+        activeAnswerMap.set(data.result_question_id, existingActiveAnswer);
       } else {
-        const newAnswer = new ResultAnswer();
-        newAnswer.result_question_id = data.result_question_id;
-        newAnswer.answer_boolean = data.answer_boolean;
-        newAnswer.answer_text = data.answer_text ? data.answer_text : null;
-        newAnswer.result_id = resultId;
-        newAnswer.created_by = user;
-        newAnswer.last_updated_by = user;
-
-        await this._resultAnswerRepository.save(newAnswer);
+        await this._createNewAnswer(data, resultId, user);
       }
     };
 
@@ -476,6 +489,82 @@ export class InnovationDevService {
         await saveAnswer(subOptionData);
       }
     }
+  }
+
+  private async _updateExistingActiveAnswer(
+    existingActiveAnswer: ResultAnswer,
+    data: OptionV2 | SubOptionV2,
+    resultId: number,
+    user: number,
+  ): Promise<void> {
+    existingActiveAnswer.answer_boolean = data.answer_boolean;
+    existingActiveAnswer.answer_text = data.answer_text
+      ? data.answer_text
+      : null;
+    existingActiveAnswer.last_updated_by = user;
+    await this._resultAnswerRepository.save(existingActiveAnswer);
+
+    await this._deactivateOtherAnswers(
+      resultId,
+      data.result_question_id,
+      existingActiveAnswer.result_answer_id,
+      user,
+    );
+  }
+
+  private async _createNewAnswer(
+    data: OptionV2 | SubOptionV2,
+    resultId: number,
+    user: number,
+  ): Promise<void> {
+    await this._deactivateAllAnswers(resultId, data.result_question_id, user);
+
+    const newAnswer = new ResultAnswer();
+    newAnswer.result_question_id = data.result_question_id;
+    newAnswer.answer_boolean = data.answer_boolean;
+    newAnswer.answer_text = data.answer_text ? data.answer_text : null;
+    newAnswer.result_id = resultId;
+    newAnswer.is_active = true;
+    newAnswer.created_by = user;
+    newAnswer.last_updated_by = user;
+
+    await this._resultAnswerRepository.save(newAnswer);
+  }
+
+  private async _deactivateOtherAnswers(
+    resultId: number,
+    resultQuestionId: number,
+    excludeAnswerId: number,
+    user: number,
+  ): Promise<void> {
+    await this._resultAnswerRepository.update(
+      {
+        result_id: resultId,
+        result_question_id: resultQuestionId,
+        result_answer_id: Not(excludeAnswerId),
+      },
+      {
+        is_active: false,
+        last_updated_by: user,
+      },
+    );
+  }
+
+  private async _deactivateAllAnswers(
+    resultId: number,
+    resultQuestionId: number,
+    user: number,
+  ): Promise<void> {
+    await this._resultAnswerRepository.update(
+      {
+        result_id: resultId,
+        result_question_id: resultQuestionId,
+      },
+      {
+        is_active: false,
+        last_updated_by: user,
+      },
+    );
   }
 
   async syncBudgetForResults(resultId: number, userId: number) {
@@ -547,22 +636,24 @@ export class InnovationDevService {
   }
 
   private async findResultByProject(i: any, resultId: number) {
+    const projectId = i.obj_result_project?.project_id || i.project_id || i.id;
+
     const rbp = await this._resultByProjectRepository.findOne({
       where: {
         result_id: resultId,
         is_active: true,
-        project_id: i.obj_result_project.project_id,
+        project_id: projectId,
       },
     });
 
     if (!rbp) {
       this.logger.error(
-        `[saveBillateralInvestment] ResultByProject not found for resultId: ${resultId}, project_id: ${i.obj_result_project.project_id}`,
+        `[saveBillateralInvestment] ResultByProject not found for resultId: ${resultId}, project_id: ${projectId}`,
       );
       throw new NotFoundException({
-        message: `ResultByProject not found for resultId: ${resultId}, project_id: ${i.obj_result_project.project_id}`,
+        message: `ResultByProject not found for resultId: ${resultId}, project_id: ${projectId}`,
         resultId,
-        projectId: i.obj_result_project.project_id,
+        projectId,
       });
     }
     return rbp;
@@ -601,5 +692,148 @@ export class InnovationDevService {
     });
 
     await this._resultBilateralBudgetRepository.save(newRbb);
+  }
+
+  async updateInnovationDevPartial(
+    resultId: number,
+    innovationDevDto: InnovationDevelopmentDto,
+    user: TokenDto,
+  ) {
+    try {
+      const innDevExists =
+        await this._resultsInnovationsDevRepository.InnovationDevExists(
+          resultId,
+        );
+
+      if (!innDevExists) {
+        return {
+          response: {},
+          message: 'Innovation development record not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      if (innovationDevDto.innovation_nature_id !== undefined) {
+        innDevExists.innovation_nature_id =
+          innovationDevDto.innovation_nature_id;
+      }
+
+      if (innovationDevDto.innovation_developers !== undefined) {
+        innDevExists.innovation_developers =
+          innovationDevDto.innovation_developers;
+      }
+
+      if (innovationDevDto.innovation_readiness_level_id !== undefined) {
+        innDevExists.innovation_readiness_level_id =
+          innovationDevDto.innovation_readiness_level_id;
+      }
+
+      if (innovationDevDto.level !== undefined) {
+        innDevExists.readiness_level = innovationDevDto.level;
+      }
+
+      innDevExists.last_updated_by = user.id;
+
+      const updatedInnDev = await this._resultsInnovationsDevRepository.save(
+        innDevExists as any,
+      );
+
+      // Update or delete project budgets only if budget-related fields are present
+      if (this._hasBudgetFields(innovationDevDto)) {
+        await this._updateProjectBudgets(resultId, innovationDevDto, user.id);
+      }
+
+      return {
+        response: updatedInnDev,
+        message: 'Innovation development updated successfully',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  private _hasBudgetFields(
+    innovationDevDto: InnovationDevelopmentDto,
+  ): boolean {
+    return (
+      innovationDevDto.budget_id !== undefined ||
+      innovationDevDto.kind_cash !== undefined ||
+      innovationDevDto.is_determined !== undefined ||
+      innovationDevDto.project_id !== undefined
+    );
+  }
+
+  private async _updateProjectBudgets(
+    resultId: number,
+    innovationDevDto: InnovationDevelopmentDto,
+    userId: number,
+  ): Promise<void> {
+    try {
+      // If project_id is explicitly provided (not null), process the investment
+      if (
+        innovationDevDto.project_id !== null &&
+        innovationDevDto.project_id !== undefined
+      ) {
+        await this.processInvestment(
+          {
+            id: innovationDevDto.budget_id,
+            project_id: innovationDevDto.project_id,
+            kind_cash: innovationDevDto.kind_cash,
+            is_determined: innovationDevDto.is_determined,
+          },
+          resultId,
+          userId,
+        );
+      } else if (innovationDevDto.project_id === null) {
+        // If project_id is explicitly null, delete existing budgets
+        await this._deleteProjectBudgetsForResult(resultId, userId);
+      }
+      // If project_id is undefined (not provided), do nothing to preserve existing budgets
+    } catch (error) {
+      this.logger.error(
+        `Error updating project budgets for result ${resultId}: ${error.message}`,
+      );
+      // No throw error to not interrupt the main flow
+    }
+  }
+
+  private async _deleteProjectBudgetsForResult(
+    resultId: number,
+    userId: number,
+  ): Promise<void> {
+    try {
+      // Get all result_project_id for this result
+      const resultProjects = await this._resultByProjectRepository.find({
+        where: { result_id: resultId, is_active: true },
+      });
+
+      if (resultProjects.length === 0) {
+        return;
+      }
+
+      const resultProjectIds = resultProjects.map((rp) => rp.id);
+
+      // Delete (deactivate) all associated budgets
+      const budgets = await this._resultBilateralBudgetRepository.find({
+        where: {
+          result_project_id: In(resultProjectIds),
+          is_active: true,
+        },
+      });
+
+      if (budgets && budgets.length > 0) {
+        for (const budget of budgets) {
+          budget.is_active = false;
+          budget.last_updated_by = userId;
+        }
+        await this._resultBilateralBudgetRepository.save(budgets);
+      }
+    } catch (error) {
+      this.logger.error(
+        `Error deleting project budgets for result ${resultId}: ${error.message}`,
+      );
+      // No throw error to not interrupt the main flow
+    }
   }
 }

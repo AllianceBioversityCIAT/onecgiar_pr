@@ -41,6 +41,10 @@ import { ResultsByProjectsModule } from '../results_by_projects/results_by_proje
     NonPooledProjectBudgetRepository,
   ],
   imports: [ResultsByProjectsModule],
-  exports: [ResultsByInstitutionsService, ResultByIntitutionsRepository],
+  exports: [
+    ResultsByInstitutionsService,
+    ResultByIntitutionsRepository,
+    ResultInstitutionsBudgetRepository,
+  ],
 })
 export class ResultsByInstitutionsModule {}

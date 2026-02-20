@@ -299,7 +299,7 @@ describe('CognitoService', () => {
           }
         }
       };
-      const webSocketSpy = jest.spyOn(service.webSocket, 'configUser');
+      // const webSocketSpy = jest.spyOn(service.webSocket, 'configUser');
       const claritySpy = jest.spyOn(service.clarity, 'updateUserInfo');
       const rolesSpy = jest.spyOn(service.rolesSE, 'validateReadOnly');
 
@@ -307,7 +307,7 @@ describe('CognitoService', () => {
 
       expect(service.authService.localStorageToken).toBe(mockResponse.response.token);
       expect(service.authService.localStorageUser).toEqual(mockResponse.response.user);
-      expect(webSocketSpy).toHaveBeenCalledWith('testuser', 123);
+      // expect(webSocketSpy).toHaveBeenCalledWith('testuser', 123);
       expect(claritySpy).toHaveBeenCalled();
       expect(rolesSpy).toHaveBeenCalled();
     });

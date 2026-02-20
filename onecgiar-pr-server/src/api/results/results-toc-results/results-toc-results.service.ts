@@ -677,10 +677,16 @@ export class ResultsTocResultsService {
             : [];
 
         const isPlanned = entry?.planned_result === true;
-        const resultTocResults = isPlanned ? resultArray : null;
+        const isUnplanned = entry?.planned_result === false;
+        const hasUnplannedResults = isUnplanned && resultArray?.length > 0;
+        const resultTocResults =
+          isPlanned || hasUnplannedResults ? resultArray : null;
         const tocProgressiveNarrative = isPlanned
           ? null
           : (resultArray?.[0]?.toc_progressive_narrative ?? null);
+        const tocLevelId = isPlanned
+          ? null
+          : (resultArray?.[0]?.toc_level_id ?? null);
 
         return {
           planned_result: entry?.planned_result ?? null,
@@ -690,7 +696,10 @@ export class ResultsTocResultsService {
           result_toc_results: resultTocResults,
           ...(isPlanned
             ? {}
-            : { toc_progressive_narrative: tocProgressiveNarrative }),
+            : {
+                toc_progressive_narrative: tocProgressiveNarrative,
+                toc_level_id: tocLevelId,
+              }),
         };
       };
 
@@ -721,8 +730,9 @@ export class ResultsTocResultsService {
             initiative_id: pendingId,
             official_code: pending?.official_code ?? null,
             short_name: pending?.short_name ?? null,
-            result_toc_results: [],
+            result_toc_results: null,
             toc_progressive_narrative: null,
+            toc_level_id: null,
           });
         }
       }
@@ -1114,27 +1124,39 @@ export class ResultsTocResultsService {
     result_id: number,
   ) {
     try {
-      if (createResultsTocResultDto) {
-        for (const contributor of createResultsTocResultDto) {
-          if (!contributor.result_toc_results?.length) {
-            contributor.result_toc_results = [];
+      if (!createResultsTocResultDto?.length) return;
+
+      for (const contributor of createResultsTocResultDto) {
+        const resultTocResults = contributor.result_toc_results ?? [];
+        for (const rtrc of resultTocResults) {
+          if (!rtrc?.result_toc_result_id && !rtrc?.toc_result_id) {
+            continue;
           }
-          for (const rtrc of contributor.result_toc_results) {
-            if (!rtrc?.result_toc_result_id && !rtrc?.toc_result_id) {
-              continue;
-            }
-            await this._resultsTocResultRepository.insert({
-              initiative_ids: contributor?.initiative_id,
-              toc_result_id: rtrc?.toc_result_id,
-              created_by: user.id,
-              last_updated_by: user.id,
-              result_id: result_id,
-              planned_result: contributor?.planned_result,
-              action_area_outcome_id: rtrc?.action_area_outcome_id || null,
-              is_active: true,
-              toc_progressive_narrative:
-                rtrc?.toc_progressive_narrative || null,
-            });
+          const saved = await this._resultsTocResultRepository.save({
+            initiative_ids: contributor?.initiative_id,
+            toc_result_id: rtrc?.toc_result_id ?? null,
+            created_by: user.id,
+            last_updated_by: user.id,
+            result_id,
+            planned_result: contributor?.planned_result ?? null,
+            action_area_outcome_id: rtrc?.action_area_outcome_id ?? null,
+            is_active: true,
+            toc_progressive_narrative: rtrc?.toc_progressive_narrative ?? null,
+            toc_level_id: rtrc?.toc_level_id ?? null,
+          });
+
+          const resultTocResultId = saved?.result_toc_result_id;
+          if (
+            resultTocResultId &&
+            Array.isArray(rtrc?.indicators) &&
+            rtrc.indicators.length > 0
+          ) {
+            await this._resultsTocResultRepository.saveInditicatorsContributing(
+              rtrc.indicators,
+              resultTocResultId,
+              result_id,
+              user.id,
+            );
           }
         }
       }
@@ -1143,7 +1165,7 @@ export class ResultsTocResultsService {
     }
   }
 
-  private async sendEmailNotification(
+  public async sendEmailNotification(
     contributingInit: number[],
     result_id: number,
     initSubmitter: number,
@@ -1388,47 +1410,186 @@ export class ResultsTocResultsService {
         }),
       );
 
-      if (
-        result_toc_result?.result_toc_results?.length &&
-        result_toc_result?.planned_result === true
-      ) {
-        for (const t of result_toc_result.result_toc_results) {
-          if (!t?.result_toc_result_id && !t?.toc_result_id) continue;
+      if (result_toc_result && result_toc_result?.planned_result === true) {
+        if (result_toc_result?.result_toc_results?.length) {
+          for (const t of result_toc_result.result_toc_results) {
+            if (!t?.result_toc_result_id && !t?.toc_result_id) continue;
 
-          if (t?.result_toc_result_id) {
-            const resolvedInitiativeId =
-              normalizeInitiativeId((t as any)?.initiative_id) ??
-              primaryInitiativeId;
+            if (t?.result_toc_result_id) {
+              const resolvedInitiativeId =
+                normalizeInitiativeId((t as any)?.initiative_id) ??
+                primaryInitiativeId;
 
-            const updatePayload: Record<string, any> = {
-              toc_result_id: t?.toc_result_id ?? null,
-              toc_progressive_narrative: t?.toc_progressive_narrative ?? null,
-              toc_level_id: t?.toc_level_id ?? null,
-              planned_result: result_toc_result?.planned_result ?? null,
-              action_area_outcome_id: null,
-              is_active: true,
-              last_updated_by: user.id,
-            };
+              const updatePayload: Record<string, any> = {
+                toc_result_id: t?.toc_result_id ?? null,
+                toc_progressive_narrative: t?.toc_progressive_narrative ?? null,
+                toc_level_id: t?.toc_level_id ?? null,
+                planned_result: result_toc_result?.planned_result ?? null,
+                action_area_outcome_id: null,
+                is_active: true,
+                last_updated_by: user.id,
+              };
 
-            if (resolvedInitiativeId != null) {
-              updatePayload.initiative_ids = resolvedInitiativeId;
+              if (resolvedInitiativeId != null) {
+                updatePayload.initiative_ids = resolvedInitiativeId;
+              }
+
+              await this._resultsTocResultRepository.update(
+                Number(t.result_toc_result_id),
+                updatePayload,
+              );
+            } else {
+              const resolvedInitiativeId =
+                normalizeInitiativeId((t as any)?.initiative_id) ??
+                primaryInitiativeId;
+
+              await this._resultsTocResultRepository.insert({
+                initiative_ids: resolvedInitiativeId ?? null,
+                toc_result_id: t?.toc_result_id ?? null,
+                toc_progressive_narrative: t?.toc_progressive_narrative ?? null,
+                toc_level_id: t?.toc_level_id ?? null,
+                planned_result: result_toc_result?.planned_result ?? null,
+                action_area_outcome_id: null,
+                result_id: result.id,
+                is_active: true,
+                created_by: user.id,
+                last_updated_by: user.id,
+              });
             }
+          }
+        } else {
+          const plannedInitiativeId =
+            normalizeInitiativeId((result_toc_result as any)?.initiative_id) ??
+            primaryInitiativeId;
 
-            await this._resultsTocResultRepository.update(
-              Number(t.result_toc_result_id),
-              updatePayload,
-            );
-          } else {
+          if (plannedInitiativeId != null) {
+            const existingRecord =
+              await this._resultsTocResultRepository.findOne({
+                where: {
+                  result_id,
+                  initiative_ids: plannedInitiativeId,
+                  is_active: true,
+                },
+              });
+
+            if (existingRecord) {
+              await this._resultsTocResultRepository.update(
+                existingRecord.result_toc_result_id,
+                {
+                  planned_result: true,
+                  last_updated_by: user.id,
+                },
+              );
+            } else {
+              await this._resultsTocResultRepository.insert({
+                initiative_ids: plannedInitiativeId,
+                toc_result_id: null,
+                toc_progressive_narrative: null,
+                toc_level_id: null,
+                planned_result: true,
+                action_area_outcome_id: null,
+                result_id: result.id,
+                is_active: true,
+                created_by: user.id,
+                last_updated_by: user.id,
+              });
+            }
+          }
+        }
+      } else if (
+        result_toc_result &&
+        result_toc_result?.planned_result === false
+      ) {
+        const allActiveRecords = await this._resultsTocResultRepository.find({
+          where: { result_id, is_active: true },
+        });
+
+        for (const record of allActiveRecords ?? []) {
+          await this._resultsTocResultRepository.update(
+            record.result_toc_result_id,
+            {
+              is_active: false,
+              last_updated_by: user.id,
+            },
+          );
+        }
+
+        if (result_toc_result?.result_toc_results?.length) {
+          const unplannedTocProgressiveNarrative =
+            (result_toc_result as any)?.toc_progressive_narrative ?? null;
+
+          for (const t of result_toc_result.result_toc_results) {
+            if (!t?.result_toc_result_id && !t?.toc_result_id) continue;
+
             const resolvedInitiativeId =
               normalizeInitiativeId((t as any)?.initiative_id) ??
+              normalizeInitiativeId(
+                (result_toc_result as any)?.initiative_id,
+              ) ??
               primaryInitiativeId;
+
+            if (t?.result_toc_result_id) {
+              const updatePayload: Record<string, any> = {
+                toc_result_id: t?.toc_result_id ?? null,
+                toc_progressive_narrative: unplannedTocProgressiveNarrative,
+                toc_level_id: t?.toc_level_id ?? null,
+                planned_result: false,
+                action_area_outcome_id: null,
+                is_active: true,
+                last_updated_by: user.id,
+              };
+
+              if (resolvedInitiativeId != null) {
+                updatePayload.initiative_ids = resolvedInitiativeId;
+              }
+
+              await this._resultsTocResultRepository.update(
+                Number(t.result_toc_result_id),
+                updatePayload,
+              );
+            } else {
+              await this._resultsTocResultRepository.insert({
+                initiative_ids: resolvedInitiativeId ?? null,
+                toc_result_id: t?.toc_result_id ?? null,
+                toc_progressive_narrative: unplannedTocProgressiveNarrative,
+                toc_level_id: t?.toc_level_id ?? null,
+                planned_result: false,
+                action_area_outcome_id: null,
+                result_id: result.id,
+                is_active: true,
+                created_by: user.id,
+                last_updated_by: user.id,
+              });
+            }
+          }
+        } else {
+          // Handle unplanned results without result_toc_results (original special case)
+          interface SpecialCaseResultTocResult {
+            planned_result: boolean;
+            initiative_id: number;
+            toc_progressive_narrative: string;
+          }
+
+          const rtr =
+            result_toc_result as unknown as SpecialCaseResultTocResult;
+          const isSpecialCase =
+            rtr.planned_result === false && rtr.initiative_id;
+
+          if (isSpecialCase) {
+            await this._resultsTocResultRepository.update(
+              { result_id, initiative_ids: rtr.initiative_id },
+              {
+                is_active: false,
+                last_updated_by: user.id,
+              },
+            );
 
             await this._resultsTocResultRepository.insert({
-              initiative_ids: resolvedInitiativeId ?? null,
-              toc_result_id: t?.toc_result_id ?? null,
-              toc_progressive_narrative: t?.toc_progressive_narrative ?? null,
-              toc_level_id: t?.toc_level_id ?? null,
-              planned_result: result_toc_result?.planned_result ?? null,
+              initiative_ids: rtr.initiative_id,
+              toc_result_id: null,
+              toc_level_id: null,
+              toc_progressive_narrative: rtr.toc_progressive_narrative ?? null,
+              planned_result: rtr.planned_result,
               action_area_outcome_id: null,
               result_id: result.id,
               is_active: true,
@@ -1436,41 +1597,6 @@ export class ResultsTocResultsService {
               last_updated_by: user.id,
             });
           }
-        }
-      } else if (
-        result_toc_result &&
-        result_toc_result?.planned_result === false
-      ) {
-        interface SpecialCaseResultTocResult {
-          planned_result: boolean;
-          initiative_id: number;
-          toc_progressive_narrative: string;
-        }
-
-        const rtr = result_toc_result as unknown as SpecialCaseResultTocResult;
-        const isSpecialCase = rtr.planned_result === false && rtr.initiative_id;
-
-        if (isSpecialCase) {
-          await this._resultsTocResultRepository.update(
-            { result_id, initiative_ids: rtr.initiative_id },
-            {
-              is_active: false,
-              last_updated_by: user.id,
-            },
-          );
-
-          await this._resultsTocResultRepository.insert({
-            initiative_ids: rtr.initiative_id,
-            toc_result_id: null,
-            toc_level_id: null,
-            toc_progressive_narrative: rtr.toc_progressive_narrative ?? null,
-            planned_result: rtr.planned_result,
-            action_area_outcome_id: null,
-            result_id: result.id,
-            is_active: true,
-            created_by: user.id,
-            last_updated_by: user.id,
-          });
         }
       }
 
@@ -1638,12 +1764,24 @@ export class ResultsTocResultsService {
       }
 
       const isPrimaryPlanned = result_toc_result?.planned_result === true;
-      const resultTocResults = isPrimaryPlanned ? primaryBox : null;
-      const tocProgressiveNarrative = isPrimaryPlanned
-        ? null
-        : (primaryBox?.[0]?.toc_progressive_narrative ?? null);
+      const hasUnplannedResults =
+        result_toc_result?.planned_result === false &&
+        result_toc_result?.result_toc_results?.length > 0;
+      const resultTocResults =
+        isPrimaryPlanned || hasUnplannedResults ? primaryBox : null;
+      // For unplanned results, use toc_progressive_narrative from the DTO level, not from DB
+      let tocProgressiveNarrative: any = null;
+      if (!isPrimaryPlanned) {
+        if (hasUnplannedResults) {
+          tocProgressiveNarrative =
+            (result_toc_result as any)?.toc_progressive_narrative ?? null;
+        } else {
+          tocProgressiveNarrative =
+            primaryBox?.[0]?.toc_progressive_narrative ?? null;
+        }
+      }
       const showMultipleWPsContent =
-        isPrimaryPlanned &&
+        (isPrimaryPlanned || hasUnplannedResults) &&
         (result_toc_result?.result_toc_results?.length ?? 0) > 1;
 
       return {
@@ -1675,6 +1813,453 @@ export class ResultsTocResultsService {
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async updateTocResultPartial(
+    resultId: number,
+    resultTocResult: CreateResultsTocResultV2Dto['result_toc_result'],
+    user: TokenDto,
+  ) {
+    try {
+      const result = await this._resultRepository.getResultById(resultId);
+      if (!result?.id) {
+        return {
+          response: { resultId },
+          message: 'Result Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const initSubmitter = await this._resultByInitiativesRepository.findOne({
+        where: { result_id: resultId, initiative_role_id: 1 },
+      });
+
+      const primaryInitiativeId = this._normalizeInitiativeId(
+        (resultTocResult as any)?.initiative_id,
+        initSubmitter?.initiative_id,
+        result?.initiative_id,
+      );
+
+      const incomingIds = this._extractIncomingIds(resultTocResult);
+      await this._deactivateMissingRecords(resultId, incomingIds, user);
+
+      if (resultTocResult?.planned_result === true) {
+        await this._handlePlannedResult(
+          resultId,
+          result,
+          resultTocResult,
+          primaryInitiativeId,
+          user,
+        );
+      } else if (resultTocResult?.planned_result === false) {
+        await this._handleUnplannedResult(
+          resultId,
+          result,
+          resultTocResult,
+          primaryInitiativeId,
+          user,
+        );
+      }
+
+      await this._handleIndicators(result, resultId, resultTocResult, user);
+
+      return {
+        response: { result_id: resultId },
+        message: 'ToC result updated successfully',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  private _normalizeInitiativeId(
+    ...values: Array<string | number | null | undefined>
+  ): number | null {
+    for (const value of values) {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed) && parsed > 0) {
+        return parsed;
+      }
+    }
+    return null;
+  }
+
+  private _extractIncomingIds(
+    resultTocResult: CreateResultsTocResultV2Dto['result_toc_result'],
+  ): Set<number> {
+    const incomingIdsPrimary: number[] = (
+      resultTocResult?.result_toc_results ?? []
+    )
+      .map((t) => Number(t.result_toc_result_id))
+      .filter(Boolean);
+    return new Set<number>(incomingIdsPrimary);
+  }
+
+  private async _deactivateMissingRecords(
+    resultId: number,
+    keepIds: Set<number>,
+    user: TokenDto,
+  ): Promise<void> {
+    const existingAll = await this._resultsTocResultRepository.find({
+      where: { result_id: resultId },
+    });
+
+    await Promise.all(
+      existingAll.map(async (row) => {
+        if (row.is_active && !keepIds.has(Number(row.result_toc_result_id))) {
+          await this._resultsTocResultRepository.update(
+            row.result_toc_result_id,
+            {
+              is_active: false,
+              last_updated_by: user.id,
+            },
+          );
+        }
+      }),
+    );
+  }
+
+  private async _handlePlannedResult(
+    resultId: number,
+    result: any,
+    resultTocResult: CreateResultsTocResultV2Dto['result_toc_result'],
+    primaryInitiativeId: number | null,
+    user: TokenDto,
+  ): Promise<void> {
+    if (resultTocResult?.result_toc_results?.length) {
+      await this._processPlannedTocResults(
+        result,
+        resultTocResult,
+        primaryInitiativeId,
+        user,
+      );
+    } else {
+      await this._handlePlannedResultWithoutTocResults(
+        resultId,
+        result,
+        resultTocResult,
+        primaryInitiativeId,
+        user,
+      );
+    }
+  }
+
+  private async _processPlannedTocResults(
+    result: any,
+    resultTocResult: CreateResultsTocResultV2Dto['result_toc_result'],
+    primaryInitiativeId: number | null,
+    user: TokenDto,
+  ): Promise<void> {
+    for (const t of resultTocResult.result_toc_results) {
+      if (!t?.result_toc_result_id && !t?.toc_result_id) continue;
+
+      const resolvedInitiativeId =
+        this._normalizeInitiativeId((t as any)?.initiative_id) ??
+        primaryInitiativeId;
+
+      if (t?.result_toc_result_id) {
+        await this._updatePlannedTocResult(
+          t,
+          resultTocResult,
+          resolvedInitiativeId,
+          user,
+        );
+      } else {
+        await this._insertPlannedTocResult(
+          result,
+          t,
+          resultTocResult,
+          resolvedInitiativeId,
+          user,
+        );
+      }
+    }
+  }
+
+  private async _updatePlannedTocResult(
+    t: any,
+    resultTocResult: CreateResultsTocResultV2Dto['result_toc_result'],
+    resolvedInitiativeId: number | null,
+    user: TokenDto,
+  ): Promise<void> {
+    const updatePayload: Record<string, any> = {
+      toc_result_id: t?.toc_result_id ?? null,
+      toc_progressive_narrative: t?.toc_progressive_narrative ?? null,
+      toc_level_id: t?.toc_level_id ?? null,
+      planned_result: resultTocResult?.planned_result ?? null,
+      action_area_outcome_id: null,
+      is_active: true,
+      last_updated_by: user.id,
+    };
+
+    if (resolvedInitiativeId != null) {
+      updatePayload.initiative_ids = resolvedInitiativeId;
+    }
+
+    await this._resultsTocResultRepository.update(
+      Number(t.result_toc_result_id),
+      updatePayload,
+    );
+  }
+
+  private async _insertPlannedTocResult(
+    result: any,
+    t: any,
+    resultTocResult: CreateResultsTocResultV2Dto['result_toc_result'],
+    resolvedInitiativeId: number | null,
+    user: TokenDto,
+  ): Promise<void> {
+    await this._resultsTocResultRepository.insert({
+      initiative_ids: resolvedInitiativeId ?? null,
+      toc_result_id: t?.toc_result_id ?? null,
+      toc_progressive_narrative: t?.toc_progressive_narrative ?? null,
+      toc_level_id: t?.toc_level_id ?? null,
+      planned_result: resultTocResult?.planned_result ?? null,
+      action_area_outcome_id: null,
+      result_id: result.id,
+      is_active: true,
+      created_by: user.id,
+      last_updated_by: user.id,
+    });
+  }
+
+  private async _handlePlannedResultWithoutTocResults(
+    resultId: number,
+    result: any,
+    resultTocResult: CreateResultsTocResultV2Dto['result_toc_result'],
+    primaryInitiativeId: number | null,
+    user: TokenDto,
+  ): Promise<void> {
+    const plannedInitiativeId =
+      this._normalizeInitiativeId((resultTocResult as any)?.initiative_id) ??
+      primaryInitiativeId;
+
+    if (plannedInitiativeId == null) return;
+
+    const existingRecord = await this._resultsTocResultRepository.findOne({
+      where: {
+        result_id: resultId,
+        initiative_ids: plannedInitiativeId,
+        is_active: true,
+      },
+    });
+
+    if (existingRecord) {
+      await this._resultsTocResultRepository.update(
+        existingRecord.result_toc_result_id,
+        {
+          planned_result: true,
+          last_updated_by: user.id,
+        },
+      );
+    } else {
+      await this._resultsTocResultRepository.insert({
+        initiative_ids: plannedInitiativeId,
+        toc_result_id: null,
+        toc_progressive_narrative: null,
+        toc_level_id: null,
+        planned_result: true,
+        action_area_outcome_id: null,
+        result_id: result.id,
+        is_active: true,
+        created_by: user.id,
+        last_updated_by: user.id,
+      });
+    }
+  }
+
+  private async _handleUnplannedResult(
+    resultId: number,
+    result: any,
+    resultTocResult: CreateResultsTocResultV2Dto['result_toc_result'],
+    primaryInitiativeId: number | null,
+    user: TokenDto,
+  ): Promise<void> {
+    await this._deactivateAllActiveRecords(resultId, user);
+
+    if (resultTocResult?.result_toc_results?.length) {
+      await this._processUnplannedTocResults(
+        result,
+        resultTocResult,
+        primaryInitiativeId,
+        user,
+      );
+    } else {
+      await this._handleUnplannedSpecialCase(
+        resultId,
+        result,
+        resultTocResult,
+        user,
+      );
+    }
+  }
+
+  private async _deactivateAllActiveRecords(
+    resultId: number,
+    user: TokenDto,
+  ): Promise<void> {
+    const allActiveRecords = await this._resultsTocResultRepository.find({
+      where: { result_id: resultId, is_active: true },
+    });
+
+    for (const record of allActiveRecords ?? []) {
+      await this._resultsTocResultRepository.update(
+        record.result_toc_result_id,
+        {
+          is_active: false,
+          last_updated_by: user.id,
+        },
+      );
+    }
+  }
+
+  private async _processUnplannedTocResults(
+    result: any,
+    resultTocResult: CreateResultsTocResultV2Dto['result_toc_result'],
+    primaryInitiativeId: number | null,
+    user: TokenDto,
+  ): Promise<void> {
+    const unplannedTocProgressiveNarrative =
+      (resultTocResult as any)?.toc_progressive_narrative ?? null;
+
+    for (const t of resultTocResult.result_toc_results) {
+      if (!t?.result_toc_result_id && !t?.toc_result_id) continue;
+
+      const resolvedInitiativeId =
+        this._normalizeInitiativeId((t as any)?.initiative_id) ??
+        this._normalizeInitiativeId((resultTocResult as any)?.initiative_id) ??
+        primaryInitiativeId;
+
+      if (t?.result_toc_result_id) {
+        await this._updateUnplannedTocResult(
+          t,
+          unplannedTocProgressiveNarrative,
+          resolvedInitiativeId,
+          user,
+        );
+      } else {
+        await this._insertUnplannedTocResult(
+          result,
+          t,
+          unplannedTocProgressiveNarrative,
+          resolvedInitiativeId,
+          user,
+        );
+      }
+    }
+  }
+
+  private async _updateUnplannedTocResult(
+    t: any,
+    unplannedTocProgressiveNarrative: string | null,
+    resolvedInitiativeId: number | null,
+    user: TokenDto,
+  ): Promise<void> {
+    const updatePayload: Record<string, any> = {
+      toc_result_id: t?.toc_result_id ?? null,
+      toc_progressive_narrative: unplannedTocProgressiveNarrative,
+      toc_level_id: t?.toc_level_id ?? null,
+      planned_result: false,
+      action_area_outcome_id: null,
+      is_active: true,
+      last_updated_by: user.id,
+    };
+
+    if (resolvedInitiativeId != null) {
+      updatePayload.initiative_ids = resolvedInitiativeId;
+    }
+
+    await this._resultsTocResultRepository.update(
+      Number(t.result_toc_result_id),
+      updatePayload,
+    );
+  }
+
+  private async _insertUnplannedTocResult(
+    result: any,
+    t: any,
+    unplannedTocProgressiveNarrative: string | null,
+    resolvedInitiativeId: number | null,
+    user: TokenDto,
+  ): Promise<void> {
+    await this._resultsTocResultRepository.insert({
+      initiative_ids: resolvedInitiativeId ?? null,
+      toc_result_id: t?.toc_result_id ?? null,
+      toc_progressive_narrative: unplannedTocProgressiveNarrative,
+      toc_level_id: t?.toc_level_id ?? null,
+      planned_result: false,
+      action_area_outcome_id: null,
+      result_id: result.id,
+      is_active: true,
+      created_by: user.id,
+      last_updated_by: user.id,
+    });
+  }
+
+  private async _handleUnplannedSpecialCase(
+    resultId: number,
+    result: any,
+    resultTocResult: CreateResultsTocResultV2Dto['result_toc_result'],
+    user: TokenDto,
+  ): Promise<void> {
+    interface SpecialCaseResultTocResult {
+      planned_result: boolean;
+      initiative_id: number;
+      toc_progressive_narrative: string;
+    }
+
+    const rtr = resultTocResult as unknown as SpecialCaseResultTocResult;
+    const isSpecialCase = rtr.planned_result === false && rtr.initiative_id;
+
+    if (!isSpecialCase) return;
+
+    await this._resultsTocResultRepository.update(
+      { result_id: resultId, initiative_ids: rtr.initiative_id },
+      {
+        is_active: false,
+        last_updated_by: user.id,
+      },
+    );
+
+    await this._resultsTocResultRepository.insert({
+      initiative_ids: rtr.initiative_id,
+      toc_result_id: null,
+      toc_level_id: null,
+      toc_progressive_narrative: rtr.toc_progressive_narrative ?? null,
+      planned_result: rtr.planned_result,
+      action_area_outcome_id: null,
+      result_id: result.id,
+      is_active: true,
+      created_by: user.id,
+      last_updated_by: user.id,
+    });
+  }
+
+  private async _handleIndicators(
+    result: any,
+    resultId: number,
+    resultTocResult: CreateResultsTocResultV2Dto['result_toc_result'],
+    user: TokenDto,
+  ): Promise<void> {
+    const hasPrimaryIndicators =
+      Array.isArray(resultTocResult?.result_toc_results) &&
+      resultTocResult.result_toc_results.some((item) =>
+        Array.isArray((item as any)?.indicators),
+      );
+
+    if (result.result_level_id > 2 && hasPrimaryIndicators) {
+      const indicatorsPayload = {
+        result_id: resultId,
+        result_toc_result: resultTocResult,
+      } as CreateResultsTocResultDto;
+
+      await this._resultsTocResultRepository.saveIndicatorsPrimarySubmitter(
+        indicatorsPayload,
+        resultId,
+        user.id,
+      );
     }
   }
 
@@ -1807,6 +2392,80 @@ export class ResultsTocResultsService {
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  async updatePlannedResult(
+    resultId: number,
+    plannedResult: boolean,
+    userId: number,
+  ) {
+    try {
+      // Get the owner initiative for this result
+      const ownerInitiative =
+        await this._resultByInitiativesRepository.getOwnerInitiativeByResult(
+          resultId,
+        );
+
+      if (!ownerInitiative?.id) {
+        return {
+          response: { resultId },
+          message: 'Owner initiative not found for this result',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      // Inactivate active records for this result and initiative only
+      // (preserves TOC mappings for contributor initiatives)
+      const deactivateQuery = `
+        UPDATE results_toc_result
+        SET is_active = 0,
+            last_updated_date = NOW(),
+            last_updated_by = ?
+        WHERE results_id = ?
+          AND initiative_id = ?
+          AND is_active = 1
+      `;
+      await this._resultsTocResultRepository.query(deactivateQuery, [
+        userId,
+        resultId,
+        ownerInitiative.id,
+      ]);
+
+      // Create a new record with the updated planned_result status
+      // and null values for toc_result_id and toc_progressive_narrative
+      const insertQuery = `
+        INSERT INTO results_toc_result (
+          results_id,
+          initiative_id,
+          planned_result,
+          toc_result_id,
+          toc_progressive_narrative,
+          is_active,
+          created_by,
+          last_updated_by,
+          created_date,
+          last_updated_date
+        ) VALUES (?, ?, ?, NULL, NULL, 1, ?, ?, NOW(), NOW())
+      `;
+      await this._resultsTocResultRepository.query(insertQuery, [
+        resultId,
+        ownerInitiative.id,
+        plannedResult ? 1 : 0,
+        userId,
+        userId,
+      ]);
+
+      return {
+        response: { resultId, plannedResult },
+        message: 'Planned result updated successfully',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({
+        error,
+        debug: true,
+      });
     }
   }
 }

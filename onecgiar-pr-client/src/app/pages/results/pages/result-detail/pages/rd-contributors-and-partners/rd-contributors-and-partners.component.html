@@ -32,9 +32,11 @@
   }
 
   <app-pr-yes-or-not
-    label="Does this result align with the Program’s planned TOC indicators?"
-    [required]="true"
-    [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.planned_result">
+    label="Does this result align with the Program's planned TOC indicators?"
+    [required]="!isAvisaInitiative()"
+    [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.planned_result"
+    (selectOptionEvent)="onPlannedResultChange(this.rdPartnersSE.partnersBody?.result_toc_result)"
+    [readOnly]="isAvisaInitiative()">
   </app-pr-yes-or-not>
 
   <app-alert-status
@@ -43,11 +45,23 @@
     ">
   </app-alert-status>
 
-  <!-- ! from toc section end -->
-
-  <!-- from toc section  -->
   @if (this.rdPartnersSE.partnersBody.result_toc_result.planned_result !== null) {
-    @if (!this.rdPartnersSE.partnersBody.result_toc_result.planned_result) {
+    @if (this.tocConsumed) {
+      <div style="z-index: 1; position: relative">
+        <app-cp-multiple-wps
+          [editable]="!this.api.rolesSE.readOnly"
+          [initiative]="this.rdPartnersSE.partnersBody?.result_toc_result"
+          [initiativeId]="this.rdPartnersSE.initiativeIdSignal()"
+          [resultLevelId]="this.resultLevelSE.currentResultLevelId"
+          [isIpsr]="false"
+          [isContributor]="false"
+          [isNotifications]="false"
+          [isUnplanned]="!this.rdPartnersSE.partnersBody.result_toc_result.planned_result"
+          [showMultipleWPsContent]="this.rdPartnersSE.getConsumed()"
+          [isAvisa]="isAvisaInitiative()"></app-cp-multiple-wps>
+      </div>
+    }
+    @if (!this.rdPartnersSE.partnersBody.result_toc_result.planned_result && !this.hideWhyReportedField()) {
       <app-pr-textarea
         placeholder="Enter reason"
         label="Why is the result being reported?"
@@ -57,18 +71,6 @@
         [rows]="2"
         [autogenerate]="true">
       </app-pr-textarea>
-    } @else {
-      <div style="z-index: 1; position: relative">
-        <app-multiple-wps
-          [editable]="true"
-          [initiative]="this.rdPartnersSE.partnersBody?.result_toc_result"
-          [initiativeId]="this.rdPartnersSE.initiativeIdSignal"
-          [resultLevelId]="this.resultLevelSE.currentResultLevelId"
-          [isIpsr]="false"
-          [isContributor]="false"
-          [isNotifications]="false"
-          [showMultipleWPsContent]="this.rdPartnersSE.getConsumed()"></app-multiple-wps>
-      </div>
     }
   }
 
@@ -112,7 +114,8 @@
     label="Contributing W3 and/or bilateral projects"
     selectedLabel="Projects selected"
     selectedOptionLabel="fullName"
-    placeholder="Select project">
+    placeholder="Select project"
+    [displayLabelFormatter]="formatBilateralProjectLabel.bind(this)">
   </app-pr-multi-select>
 
   <app-pr-multi-select
@@ -135,7 +138,7 @@
 
     <div class="chips_container">
       @for (
-        item of this.rdPartnersSE.result_toc_result?.contributing_initiatives?.accepted_contributing_initiatives || [];
+        item of this.rdPartnersSE.partnersBody?.contributing_initiatives?.accepted_contributing_initiatives || [];
         track item.id;
         let i = $index
       ) {
@@ -189,6 +192,48 @@
         </div>
       }
     </div>
+  </div>
+
+  <div *ngIf="this.rdPartnersSE.partnersBody?.contributors_result_toc_result?.length">
+    <app-pr-field-header label="Other contributors" [required]="false" [simpleStyle]="true"> </app-pr-field-header>
+
+    @for (contributor of this.rdPartnersSE.partnersBody?.contributors_result_toc_result; track contributor.initiative_id) {
+      <app-pr-yes-or-not
+        [label]="getContributorDescription(contributor)"
+        [required]="!!contributor?.result_toc_results?.length"
+        [(ngModel)]="contributor.planned_result"
+        (selectOptionEvent)="onPlannedResultChange(contributor)"
+        [readOnly]="true"
+        [hideOptions]="!contributor?.result_toc_results?.length">
+      </app-pr-yes-or-not>
+
+      @if (!contributor?.result_toc_results?.length) {
+        <div class="pr-message">
+          <i class="material-icons-round" style="font-size: 20px; color: var(--pr-color-orange-400)">info</i>
+          <p>
+            <b> {{ contributor?.official_code }} {{ contributor.short_name }} </b>
+            has not confirmed its contribution to this result, so its ToC mapping is currently unavailable.
+          </p>
+        </div>
+      }
+
+      @if (this.rdPartnersSE.partnersBody?.contributors_result_toc_result?.length && contributor.planned_result !== null) {
+        @if (this.tocConsumed) {
+          <div style="z-index: 1; position: relative">
+            <app-cp-multiple-wps
+              [editable]="false"
+              [initiative]="contributor"
+              [initiativeId]="contributor?.initiative_id"
+              [resultLevelId]="this.resultLevelSE.currentResultLevelId"
+              [isIpsr]="false"
+              [isContributor]="true"
+              [isNotifications]="false"
+              [isUnplanned]="!contributor.planned_result"
+              [showMultipleWPsContent]="this.rdPartnersSE.getConsumed()"></app-cp-multiple-wps>
+          </div>
+        }
+      }
+    }
   </div>
 
   <!-- Contributing Centers end -->
@@ -272,9 +317,7 @@
         [displayLabelFormatter]="formatResultLabel.bind(this)"
         [required]="true">
       </app-pr-multi-select>
-      <div appFeedbackValidation
-        labelText="Please select a result"
-        [isComplete]="!!this.rdPartnersSE.partnersBody.linked_results?.length"></div>
+      <div appFeedbackValidation labelText="Please select a result" [isComplete]="!!this.rdPartnersSE.partnersBody.linked_results?.length"></div>
     }
   }
   <app-alert-status

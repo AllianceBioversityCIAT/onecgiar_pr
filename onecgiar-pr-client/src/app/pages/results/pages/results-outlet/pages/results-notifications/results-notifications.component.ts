@@ -12,20 +12,20 @@ import { ActivatedRoute, Router } from '@angular/router';
   standalone: false
 })
 export class ResultsNotificationsComponent implements OnInit, OnDestroy {
-  allInitiatives = [];
+  filteredInitiatives = [];
   phaseList = [];
+  entityLabel = 'Entity';
 
   constructor(
     public api: ApiService,
-    private shareRequestModalSE: ShareRequestModalService,
+    private readonly shareRequestModalSE: ShareRequestModalService,
     public resultsNotificationsSE: ResultsNotificationsService,
     public router: Router,
-    private activatedRoute: ActivatedRoute
+    private readonly activatedRoute: ActivatedRoute
   ) {}
 
   ngOnInit(): void {
     this.getAllPhases();
-    if (this.api.rolesSE.isAdmin) this.GET_AllInitiatives();
     this.shareRequestModalSE.inNotifications = true;
     this.setQueryParams();
     this.api.dataControlSE.getCurrentPhases().subscribe();
@@ -55,6 +55,13 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
     }
   }
 
+  clearAllFilters() {
+    this.resultsNotificationsSE.phaseFilter = null;
+    this.entityLabel = 'Entity';
+    this.filteredInitiatives = [];
+    this.resultsNotificationsSE.resetFilters();
+  }
+
   updateQueryParams() {
     this.router.navigate([], {
       relativeTo: this.activatedRoute,
@@ -67,18 +74,37 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
     });
   }
 
-  GET_AllInitiatives() {
-    if (!this.api.rolesSE.isAdmin) return;
-    this.api.resultsSE.GET_AllInitiatives().subscribe(({ response }) => {
-      this.allInitiatives = response;
-    });
+  onPhaseChange(phaseId) {
+    this.resultsNotificationsSE.get_updates_notifications(phaseId);
+    this.resultsNotificationsSE.get_section_information(phaseId);
+    this.resultsNotificationsSE.get_sent_notifications(phaseId);
+    this.filterInitiativesByPhase(phaseId);
+  }
+
+  filterInitiativesByPhase(phaseId) {
+    const selectedPhase = this.phaseList.find(p => p.id == phaseId);
+    if (!selectedPhase) return;
+
+    const portfolioId = selectedPhase.obj_portfolio?.id;
+    const portfolioAcronym = selectedPhase.obj_portfolio?.acronym?.toLowerCase();
+
+    this.entityLabel = portfolioId === 2 ? 'Initiative' : 'Entity';
+
+    if (this.api.rolesSE.isAdmin) {
+      this.api.resultsSE.GET_AllInitiatives(portfolioAcronym).subscribe(({ response }) => {
+        this.filteredInitiatives = response;
+      });
+    } else {
+      this.filteredInitiatives = this.api.dataControlSE.myInitiativesList.filter(init => init.portfolio_id === portfolioId);
+    }
   }
 
   getAllPhases() {
-    this.api.resultsSE.GET_versioning(StatusPhaseEnum.ALL, ModuleTypeEnum.REPORTING).subscribe(({ response }) => {
+    this.api.resultsSE.GET_versioning(StatusPhaseEnum.ALL, ModuleTypeEnum.ALL).subscribe(({ response }) => {
       this.phaseList = response;
-      if (!this.activatedRoute.snapshot.queryParams['phase'])
-        this.resultsNotificationsSE.phaseFilter = this.phaseList.find(phase => phase.status)?.id;
+      if (this.resultsNotificationsSE.phaseFilter) {
+        this.onPhaseChange(this.resultsNotificationsSE.phaseFilter);
+      }
     });
   }
 }

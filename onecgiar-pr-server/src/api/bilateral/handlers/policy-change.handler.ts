@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import { Like } from 'typeorm';
 import {
   BilateralResultTypeHandler,
   HandlerAfterCreateContext,
@@ -7,6 +8,11 @@ import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
 import { ResultsPolicyChangesRepository } from '../../results/summary/repositories/results-policy-changes.repository';
 import { ClarisaPolicyTypeRepository } from '../../../clarisa/clarisa-policy-types/clarisa-policy-types.repository';
 import { ClarisaPolicyStageRepository } from '../../../clarisa/clarisa-policy-stages/clarisa-policy-stages.repository';
+import { ResultByIntitutionsRepository } from '../../results/results_by_institutions/result_by_intitutions.repository';
+import { ClarisaInstitutionsRepository } from '../../../clarisa/clarisa-institutions/ClariasaInstitutions.repository';
+import { ClarisaInstitution } from '../../../clarisa/clarisa-institutions/entities/clarisa-institution.entity';
+import { InstitutionRoleEnum } from '../../results/results_by_institutions/entities/institution_role.enum';
+import { ResultsByInstitution } from '../../results/results_by_institutions/entities/results_by_institution.entity';
 
 @Injectable()
 export class PolicyChangeBilateralHandler
@@ -19,6 +25,8 @@ export class PolicyChangeBilateralHandler
     private readonly _resultsPolicyChangesRepository: ResultsPolicyChangesRepository,
     private readonly _clarisaPolicyTypeRepository: ClarisaPolicyTypeRepository,
     private readonly _clarisaPolicyStageRepository: ClarisaPolicyStageRepository,
+    private readonly _resultByInstitutionsRepository: ResultByIntitutionsRepository,
+    private readonly _clarisaInstitutionsRepository: ClarisaInstitutionsRepository,
   ) {}
 
   async afterCreate({
@@ -65,29 +73,22 @@ export class PolicyChangeBilateralHandler
       policyChange.policy_stage,
     );
 
-    // Validate special requirements for policy type id = 1
+    // For policy type id = 1, persist status_amount and amount when provided; otherwise save rest with nulls
     let statusAmount: string | null = null;
     let amount: number | null = null;
 
-    if (policyTypeId === 1) {
-      if (!policyChange.policy_type.status_amount) {
-        throw new BadRequestException(
-          'status_amount is required when policy_type id is 1.',
+    if (policyTypeId === 1 && policyChange.policy_type) {
+      if (policyChange.policy_type.status_amount) {
+        statusAmount = await this.resolveStatusAmount(
+          policyChange.policy_type.status_amount,
         );
       }
       if (
-        policyChange.policy_type.amount === undefined ||
-        policyChange.policy_type.amount === null
+        policyChange.policy_type.amount !== undefined &&
+        policyChange.policy_type.amount !== null
       ) {
-        throw new BadRequestException(
-          'amount is required when policy_type id is 1.',
-        );
+        amount = policyChange.policy_type.amount;
       }
-
-      statusAmount = await this.resolveStatusAmount(
-        policyChange.policy_type.status_amount,
-      );
-      amount = policyChange.policy_type.amount;
     }
 
     const existing = await this._resultsPolicyChangesRepository.findOne({
@@ -102,22 +103,161 @@ export class PolicyChangeBilateralHandler
       existing.last_updated_by = userId;
       await this._resultsPolicyChangesRepository.save(existing);
       this.logger.debug(`Updated policy change data for result ${resultId}.`);
+    } else {
+      const newRecord = this._resultsPolicyChangesRepository.create({
+        result_id: resultId,
+        created_by: userId,
+        is_active: true,
+        policy_type_id: policyTypeId,
+        policy_stage_id: policyStageId,
+        status_amount: statusAmount,
+        amount: amount,
+        linked_innovation_dev: false,
+        linked_innovation_use: false,
+      });
+      await this._resultsPolicyChangesRepository.save(newRecord);
+      this.logger.log(`Stored policy change data for result ${resultId}.`);
+    }
+
+    await this.saveImplementingOrganizations(
+      resultId,
+      policyChange.implementing_organization,
+      userId,
+    );
+  }
+
+  /**
+   * Resolves implementing_organization to Clarisa institution ids and persists
+   * them in results_by_institution with institution_roles_id = 4 (POLICY_OWNER).
+   */
+  private async saveImplementingOrganizations(
+    resultId: number,
+    implementingOrg: Array<{
+      institutions_id?: number;
+      institutions_acronym?: string;
+      institutions_name?: string;
+    }>,
+    userId: number,
+  ): Promise<void> {
+    if (!Array.isArray(implementingOrg) || !implementingOrg.length) return;
+
+    const resolvedIds = await this.resolveImplementingOrgToIds(implementingOrg);
+    if (!resolvedIds.length) {
+      this.logger.warn(
+        `Policy change result ${resultId}: no implementing organizations resolved; skipping institutions save.`,
+      );
       return;
     }
 
-    const newRecord = this._resultsPolicyChangesRepository.create({
-      result_id: resultId,
-      created_by: userId,
-      is_active: true,
-      policy_type_id: policyTypeId,
-      policy_stage_id: policyStageId,
-      status_amount: statusAmount,
-      amount: amount,
-      linked_innovation_dev: false,
-      linked_innovation_use: false,
+    await this._resultByInstitutionsRepository.updateInstitutions(
+      resultId,
+      resolvedIds.map((id) => ({ institutions_id: id })),
+      userId,
+      false,
+      [InstitutionRoleEnum.POLICY_OWNER],
+    );
+
+    const toPersist = await this.buildNewImplementingOrgRecords(
+      resultId,
+      resolvedIds,
+      userId,
+    );
+    if (toPersist.length) {
+      await this._resultByInstitutionsRepository.save(toPersist);
+    }
+  }
+
+  private async resolveOneInstitution(input: {
+    institutions_id?: number;
+    institutions_acronym?: string;
+    institutions_name?: string;
+    name?: string;
+  }): Promise<ClarisaInstitution | null> {
+    if (input.institutions_id) {
+      const found = await this._clarisaInstitutionsRepository.findOne({
+        where: { id: input.institutions_id },
+      });
+      if (found) return found;
+    }
+    const name = (
+      input.institutions_name ??
+      (input as { name?: string }).name ??
+      ''
+    ).trim();
+    const acronym = (input.institutions_acronym ?? '').trim();
+    if (!name && !acronym) return null;
+
+    const fuzzyConds = [
+      ...(name
+        ? [{ name: Like(`%${name}%`) }, { acronym: Like(`%${name}%`) }]
+        : []),
+      ...(acronym
+        ? [{ acronym: Like(`%${acronym}%`) }, { name: Like(`%${acronym}%`) }]
+        : []),
+    ];
+    if (!fuzzyConds.length) return null;
+    let fuzzy = await this._clarisaInstitutionsRepository.find({
+      where: fuzzyConds,
     });
-    await this._resultsPolicyChangesRepository.save(newRecord);
-    this.logger.log(`Stored policy change data for result ${resultId}.`);
+    const parts = name?.split(/\s+/)?.filter(Boolean);
+    if (!fuzzy?.length && parts?.length) {
+      const lastWord = parts.at(-1);
+      if (lastWord) {
+        fuzzy = await this._clarisaInstitutionsRepository.find({
+          where: [
+            { name: Like(`%${lastWord}%`) },
+            { acronym: Like(`%${lastWord}%`) },
+          ],
+        });
+      }
+    }
+    return fuzzy?.length ? fuzzy[0] : null;
+  }
+
+  private async resolveImplementingOrgToIds(
+    implementingOrg: Array<{
+      institutions_id?: number;
+      institutions_acronym?: string;
+      institutions_name?: string;
+      name?: string;
+    }>,
+  ): Promise<number[]> {
+    const ids: number[] = [];
+    for (const input of implementingOrg) {
+      if (!input) continue;
+      const matched = await this.resolveOneInstitution(input);
+      if (matched && !ids.includes(matched.id)) ids.push(matched.id);
+    }
+    return ids;
+  }
+
+  private async buildNewImplementingOrgRecords(
+    resultId: number,
+    resolvedIds: number[],
+    userId: number,
+  ): Promise<ResultsByInstitution[]> {
+    const toPersist: ResultsByInstitution[] = [];
+    for (const instId of resolvedIds) {
+      const exists =
+        await this._resultByInstitutionsRepository.getResultByInstitutionExists(
+          resultId,
+          instId,
+          InstitutionRoleEnum.POLICY_OWNER,
+        );
+      if (!exists) {
+        toPersist.push(
+          Object.assign(new ResultsByInstitution(), {
+            created_by: userId,
+            last_updated_by: userId,
+            result_id: resultId,
+            institution_roles_id: InstitutionRoleEnum.POLICY_OWNER,
+            institutions_id: instId,
+            is_active: true,
+          }),
+        );
+      }
+    }
+    return toPersist;
   }
 
   private async resolvePolicyTypeId(policyType?: {
@@ -142,10 +282,28 @@ export class PolicyChangeBilateralHandler
 
     if (policyType.name) {
       const normalized = policyType.name.trim().toLowerCase();
-      const found = await this._clarisaPolicyTypeRepository
+      let found = await this._clarisaPolicyTypeRepository
         .createQueryBuilder('pt')
         .where('LOWER(pt.name) = :name', { name: normalized })
         .getOne();
+      if (!found) {
+        const normalizeForMatch = (s: string) =>
+          s
+            .trim()
+            .toLowerCase()
+            .split(',')
+            .join(' ')
+            .split(/\s+/)
+            .filter(Boolean)
+            .join(' ')
+            .trim();
+        const inputNormalized = normalizeForMatch(policyType.name);
+        const all = await this._clarisaPolicyTypeRepository.find();
+        found =
+          all.find(
+            (pt) => pt.name && normalizeForMatch(pt.name) === inputNormalized,
+          ) ?? null;
+      }
       if (!found) {
         throw new BadRequestException(
           `Invalid policy_type name: "${policyType.name}". Please provide a valid policy type name.`,

@@ -148,11 +148,11 @@ a {
   margin-top: 2px;
   margin-bottom: 2px;
   padding: 1px 5px;
-  border-radius: 1px;
   @include fonts.pr-typography('body-3');
   font-weight: 700;
   text-align: center;
   font-style: normal;
+  border-radius: 5px;
 }
 
 .label-status-styles {
@@ -383,33 +383,33 @@ a {
 @mixin generate-margin-right-classes($max: 100) {
   @for $i from 1 through $max {
     .m-#{$i} {
-      margin: generate-margin-right($i);
+      margin: generate-margin-right($i) !important;
     }
 
     .mr-#{$i} {
-      margin-right: generate-margin-right($i);
+      margin-right: generate-margin-right($i) !important;
     }
 
     .ml-#{$i} {
-      margin-left: generate-margin-right($i);
+      margin-left: generate-margin-right($i) !important;
     }
 
     .mt-#{$i} {
-      margin-top: generate-margin-right($i);
+      margin-top: generate-margin-right($i) !important;
     }
 
     .mb-#{$i} {
-      margin-bottom: generate-margin-right($i);
+      margin-bottom: generate-margin-right($i) !important;
     }
 
     .mx-#{$i} {
-      margin-left: generate-margin-right($i);
-      margin-right: generate-margin-right($i);
+      margin-left: generate-margin-right($i) !important;
+      margin-right: generate-margin-right($i) !important;
     }
 
     .my-#{$i} {
-      margin-top: generate-margin-right($i);
-      margin-bottom: generate-margin-right($i);
+      margin-top: generate-margin-right($i) !important;
+      margin-bottom: generate-margin-right($i) !important;
     }
   }
 }

@@ -27,6 +27,8 @@ describe('PolicyChangeBilateralHandler', () => {
   let repoStub: any;
   let policyTypeRepoStub: any;
   let policyStageRepoStub: any;
+  let resultByInstitutionsRepoStub: any;
+  let clarisaInstitutionsRepoStub: any;
 
   beforeEach(() => {
     repoStub = {
@@ -48,10 +50,25 @@ describe('PolicyChangeBilateralHandler', () => {
         getOne: jest.fn().mockResolvedValue({ id: 6, name: 'Test Stage' }),
       }),
     };
+    resultByInstitutionsRepoStub = {
+      updateInstitutions: jest.fn().mockResolvedValue(undefined),
+      getResultByInstitutionExists: jest.fn().mockResolvedValue(undefined),
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    clarisaInstitutionsRepoStub = {
+      findOne: jest
+        .fn()
+        .mockResolvedValue({ id: 123, name: 'Test Inst', acronym: 'TI' }),
+      find: jest
+        .fn()
+        .mockResolvedValue([{ id: 123, name: 'Test Inst', acronym: 'TI' }]),
+    };
     handler = new PolicyChangeBilateralHandler(
       repoStub,
       policyTypeRepoStub,
       policyStageRepoStub,
+      resultByInstitutionsRepoStub,
+      clarisaInstitutionsRepoStub,
     );
   });
 
@@ -112,7 +129,7 @@ describe('PolicyChangeBilateralHandler', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('throws when policy type id is 1 and status_amount is missing', async () => {
+  it('saves when policy type id is 1 and status_amount is missing (stores null)', async () => {
     policyTypeRepoStub.findOne.mockResolvedValue({ id: 1 });
 
     await expect(
@@ -127,10 +144,12 @@ describe('PolicyChangeBilateralHandler', () => {
           },
         },
       }),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).resolves.toBeUndefined();
+
+    expect(repoStub.save).toHaveBeenCalled();
   });
 
-  it('throws when policy type id is 1 and amount is missing', async () => {
+  it('saves when policy type id is 1 and amount is missing (stores null)', async () => {
     policyTypeRepoStub.findOne.mockResolvedValue({ id: 1 });
 
     await expect(
@@ -145,7 +164,9 @@ describe('PolicyChangeBilateralHandler', () => {
           },
         },
       }),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).resolves.toBeUndefined();
+
+    expect(repoStub.save).toHaveBeenCalled();
   });
 
   it('throws when policy type by id is invalid', async () => {

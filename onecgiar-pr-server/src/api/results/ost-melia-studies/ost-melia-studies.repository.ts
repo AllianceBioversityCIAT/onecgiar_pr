@@ -1,7 +1,8 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { MeliaStudyDto } from './dto/melia-study.dto';
 import { env } from 'process';
+import { MeliaStudyTocDto } from './dto/melia-study-toc.dto';
 
 @Injectable()
 export class OstMeliaStudiesRepository {
@@ -32,11 +33,36 @@ export class OstMeliaStudiesRepository {
       ]);
       return studies;
     } catch (error) {
-      throw {
-        message: `[${OstMeliaStudiesRepository.name}] => getMeliaStudiesFromInitiativeId error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throw new InternalServerErrorException(
+        `[${OstMeliaStudiesRepository.name}] => getMeliaStudiesFromInitiativeId error: ${error}`,
+      );
+    }
+  }
+
+  async getMeliaStudiesByOfficialCode(
+    programId: string,
+  ): Promise<MeliaStudyTocDto[]> {
+    const query = `
+      SELECT DISTINCT
+        trm.melia_id,
+        trm.title,
+        tr.official_code
+      FROM
+        ${env.DB_TOC}.toc_results tr
+        INNER JOIN ${env.DB_TOC}.toc_results_melias trm ON trm.toc_result_id = tr.id
+      WHERE
+        tr.is_active = 1
+        AND tr.official_code = ?
+    `;
+    try {
+      const rows: MeliaStudyTocDto[] = await this.dataSource.query(query, [
+        programId,
+      ]);
+      return rows;
+    } catch (error) {
+      throw new InternalServerErrorException(
+        `[${OstMeliaStudiesRepository.name}] => getMeliaStudiesByOfficialCode error: ${error}`,
+      );
     }
   }
 }

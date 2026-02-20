@@ -1,0 +1,127 @@
+<div class="bilateral-filters-block">
+  <div class="filters">
+    <div class="filters_items_container_left">
+      <!-- Search -->
+      <p-iconfield>
+        <p-inputicon styleClass="pi pi-search" />
+        <input
+          type="text"
+          pInputText
+          placeholder="Find result"
+          [ngModel]="bilateralResultsService.searchText()"
+          (ngModelChange)="onSearchChange($event)"
+          [style]="{ width: '350px' }" />
+      </p-iconfield>
+
+      <!-- Apply filters button -->
+      <p-overlaybadge value="" [badgeDisabled]="filtersCount() === 0">
+        <app-pr-button
+          (click)="openFiltersDrawer()"
+          (keydown.enter)="openFiltersDrawer()"
+          [text]="filtersCountText()"
+          [verticalMargin]="-6"
+          icon="filter_alt"
+          [reverse]="true" />
+      </p-overlaybadge>
+      <!-- Clear filters -->
+      <app-pr-button
+        (click)="clearAllNewFilters()"
+        (keydown.enter)="clearAllNewFilters()"
+        text="Clear Filters"
+        [verticalMargin]="-6"
+        colorType="secondary" />
+    </div>
+  </div>
+
+  <!-- Filter Chips Bar (siempre debajo, nunca al lado) -->
+  @if (filterChipGroups().length > 0) {
+    <div class="filter-chips-wrapper">
+    <div class="filter-chips-container">
+      <span class="filter-chips-main-label">Results filtered by</span>
+      <div class="filter-chips-groups-wrapper">
+        @for (group of filterChipGroups(); track group.category) {
+          <div class="filter-chip-group">
+            <span class="filter-chip-category-label">{{ group.category }}</span>
+            <span class="filter-chip-arrow">→</span>
+            <div class="filter-chips-list">
+              @for (chip of group.chips; track chip.label) {
+                <p-chip [label]="chip.label" [removable]="true" (onRemove)="removeFilter(chip)" styleClass="filter-chip" />
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+  }
+</div>
+
+<!-- Custom Drawer -->
+<div class="custom-drawer-container" [class.visible]="visible()" [style.top.px]="navbarHeight()">
+  <div class="custom-drawer" [class.open]="visible()">
+    <div class="drawer-content">
+      <div class="drawer-header">
+        <h3 class="drawer-title">Table Filters</h3>
+        <button class="close-button" (click)="cancelFilters()" aria-label="Close" type="button">
+          <i class="pi pi-times"></i>
+        </button>
+      </div>
+
+      <p class="drawer-description">Filter your table data by applying custom criteria.</p>
+
+      <div class="filters_items_container_drawer" style="flex-direction: column; margin: 0; gap: 20px">
+        <div>
+          <app-pr-field-header
+            label="Indicator category(ies)"
+            labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
+            [required]="false"></app-pr-field-header>
+          <p-multiselect
+            [options]="bilateralResultsService.indicatorCategoryOptions()"
+            [ngModel]="tempSelectedIndicatorCategories()"
+            (ngModelChange)="tempSelectedIndicatorCategories.set($event)"
+            placeholder="Select indicator category(ies)"
+            [showHeader]="false"
+            [filter]="bilateralResultsService.indicatorCategoryOptions().length > 5"
+            [maxSelectedLabels]="2"
+            [style]="{ width: '100%' }" />
+        </div>
+        <div>
+          <app-pr-field-header
+            label="Status"
+            labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
+            [required]="false"></app-pr-field-header>
+          <p-multiselect
+            [options]="bilateralResultsService.statusOptions()"
+            [ngModel]="tempSelectedStatus()"
+            (ngModelChange)="tempSelectedStatus.set($event)"
+            placeholder="Select status"
+            [showHeader]="false"
+            [filter]="false"
+            [maxSelectedLabels]="2"
+            [style]="{ width: '100%' }" />
+        </div>
+        <div>
+          <app-pr-field-header
+            label="Lead center"
+            labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
+            [required]="false"></app-pr-field-header>
+          <p-multiselect
+            [options]="bilateralResultsService.leadCenterOptions()"
+            [ngModel]="tempSelectedLeadCenters()"
+            (ngModelChange)="tempSelectedLeadCenters.set($event)"
+            placeholder="Select lead center(s)"
+            [showHeader]="false"
+            [filter]="bilateralResultsService.leadCenterOptions().length > 5"
+            [maxSelectedLabels]="2"
+            [style]="{ width: '100%' }" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer buttons -->
+    <div class="drawer-footer">
+      <p-button label="Cancel" variant="outlined" [style]="{ width: '100%' }" (click)="cancelFilters()" (keydown.enter)="cancelFilters()"></p-button>
+      <p-button label="Apply filters" [style]="{ width: '100%' }" (click)="applyFilters()" (keydown.enter)="applyFilters()"></p-button>
+    </div>
+  </div>
+</div>

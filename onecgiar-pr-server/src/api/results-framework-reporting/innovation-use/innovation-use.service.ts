@@ -70,8 +70,14 @@ export class InnovationUseService {
         };
       }
 
-      const resultExist =
-        await this._resultsInnovationsUseRepository.InnovUseExists(resultId);
+      let resultExist = await this._resultsInnovationsUseRepository.findOne({
+        where: { results_id: resultId, is_active: true },
+      });
+
+      if (!resultExist) {
+        resultExist =
+          await this._resultsInnovationsUseRepository.InnovUseExists(resultId);
+      }
 
       const {
         has_innovation_link,
@@ -148,7 +154,74 @@ export class InnovationUseService {
           }
         }
 
-        InnUseRes = await this._resultsInnovationsUseRepository.save(newInnUse);
+        try {
+          InnUseRes =
+            await this._resultsInnovationsUseRepository.save(newInnUse);
+        } catch (saveError: any) {
+          // Handle duplicate entry error (race condition)
+          if (saveError?.driverError?.code === 'ER_DUP_ENTRY') {
+            this.logger.warn(
+              `Duplicate entry detected for resultId ${resultId}, fetching existing record and updating instead`,
+            );
+            // Fetch the existing record that was created by another concurrent request
+            resultExist = await this._resultsInnovationsUseRepository.findOne({
+              where: { results_id: resultId, is_active: true },
+            });
+
+            if (!resultExist) {
+              // If still not found, try the complex query
+              resultExist =
+                await this._resultsInnovationsUseRepository.InnovUseExists(
+                  resultId,
+                );
+            }
+
+            if (resultExist) {
+              // Update the existing record with the new data
+              resultExist.has_innovation_link = has_innovation_link;
+              resultExist.innovation_use_level_id = innovation_use_level;
+              resultExist.last_updated_by = user.id;
+              resultExist.innov_use_to_be_determined =
+                innov_use_to_be_determined;
+              resultExist.innov_use_2030_to_be_determined =
+                innov_use_2030_to_be_determined;
+
+              if (innovation_use_level >= InnovationUseLevel.Level_6) {
+                resultExist.readiness_level_explanation =
+                  readiness_level_explanation ?? null;
+                resultExist.has_scaling_studies = !!has_scaling_studies;
+
+                if (!has_scaling_studies) {
+                  await this._resultScalingStudyUrlsRepository.update(
+                    {
+                      result_innov_use_id: resultExist.result_innovation_use_id,
+                    },
+                    { is_active: false },
+                  );
+                }
+              } else {
+                resultExist.readiness_level_explanation = null;
+                resultExist.has_scaling_studies = false;
+
+                await this._resultScalingStudyUrlsRepository.update(
+                  {
+                    result_innov_use_id: resultExist.result_innovation_use_id,
+                  },
+                  { is_active: false },
+                );
+              }
+
+              InnUseRes =
+                await this._resultsInnovationsUseRepository.save(resultExist);
+            } else {
+              // If we still can't find it, re-throw the original error
+              throw saveError;
+            }
+          } else {
+            // Re-throw if it's not a duplicate entry error
+            throw saveError;
+          }
+        }
       }
 
       const scalingStudiesUrls: string[] = (scaling_studies_urls ?? []).filter(
@@ -529,69 +602,15 @@ export class InnovationUseService {
           status: HttpStatus.NOT_FOUND,
         };
       }
+
       const linked_results: number[] =
         await this._resultsInnovationsUseRepository.getLinkedResultsByOrigin(
           resultId,
         );
 
-      // Actors
-      const actorsData = await this._resultActorRepository.find({
-        where: { result_id: resultId, is_active: true },
-        relations: { obj_actor_type: true },
-      });
-
-      actorsData.forEach((el) => {
-        if (el.sex_and_age_disaggregation == true) {
-          return;
-        }
-
-        const men = Number(el.men) || 0;
-        const women = Number(el.women) || 0;
-        const men_youth = Number(el.men_youth) || 0;
-        const women_youth = Number(el.women_youth) || 0;
-
-        let men_non_youth = men - men_youth;
-        let women_non_youth = women - women_youth;
-
-        el['men_non_youth'] = men_non_youth > 0 ? men_non_youth : 0;
-        el['women_non_youth'] = women_non_youth > 0 ? women_non_youth : 0;
-
-        if ((el.women === null || el.women === 0) && women_youth > 0) {
-          el.women = women_youth;
-          women_non_youth = 0;
-        }
-        if ((el.men === null || el.men === 0) && men_youth > 0) {
-          el.men = men_youth;
-          men_non_youth = 0;
-        }
-
-        el.how_many = women + men;
-      });
-
-      // Measures
-      const measures = await this._resultIpMeasureRepository.find({
-        where: { result_id: resultId, is_active: true },
-      });
-
-      // Organizations
-      const organization = (
-        await this._resultByIntitutionsTypeRepository.find({
-          where: {
-            results_id: resultId,
-            institution_roles_id: 5,
-            is_active: true,
-          },
-          relations: {
-            obj_institution_types: { obj_parent: { obj_parent: true } },
-          },
-        })
-      ).map((el) => ({
-        ...el,
-        parent_institution_type_id:
-          el.obj_institution_types?.obj_parent?.obj_parent?.code ??
-          el.obj_institution_types?.obj_parent?.code ??
-          null,
-      }));
+      const actorsData = await this.getActorsData(resultId);
+      const measures = await this.getMeasuresData(resultId);
+      const organization = await this.getOrganizationsData(resultId);
 
       const actors_current = actorsData.filter(
         (a) => Number(a.section_id) === 1,
@@ -609,115 +628,11 @@ export class InnovationUseService {
         measures: measures.filter((m) => Number(m.section_id) === 2),
       };
 
-      let scaling_studies_urls: string[] = [];
-      if (innDevExists.innovation_use_level_id >= InnovationUseLevel.Level_6) {
-        const urls = await this._resultScalingStudyUrlsRepository.find({
-          where: {
-            result_innov_use_id: innDevExists.result_innovation_use_id,
-            is_active: true,
-          },
-        });
-        scaling_studies_urls = urls.map((u) => u.study_url);
-      }
-
-      const initiatives = await this._resultByInitiativeRepository.find({
-        where: {
-          result_id: resultId,
-          is_active: true,
-        },
-      });
-
-      const investment_programs_raw =
-        await this._resultInitiativesBudgetRepository.find({
-          where: {
-            result_initiative_id: In(initiatives.map((el) => el.id)),
-            is_active: true,
-          },
-          relations: {
-            obj_result_initiative: {
-              obj_initiative: true,
-            },
-          },
-        });
-
-      const investment_programs = investment_programs_raw.map((item) => ({
-        id: item.obj_result_initiative?.obj_initiative?.id ?? null,
-        kind_cash:
-          item.kind_cash !== null && item.kind_cash !== undefined
-            ? Number(item.kind_cash)
-            : null,
-        is_determined: item.is_determined ?? null,
-        official_code:
-          item.obj_result_initiative?.obj_initiative?.official_code ?? null,
-        name: item.obj_result_initiative?.obj_initiative?.name ?? null,
-      }));
-
-      const rbp = await this._resultByProjectRepository.find({
-        where: { result_id: resultId, is_active: true },
-      });
-      const rbpIds = rbp.map((el) => el.id);
-
-      const investment_bilateral_raw =
-        await this._resultBilateralBudgetRepository.find({
-          where: {
-            result_project_id: In(rbpIds),
-            is_active: true,
-          },
-          relations: {
-            obj_result_project: {
-              obj_clarisa_project: true,
-            },
-          },
-        });
-
-      const investment_bilateral = investment_bilateral_raw.map((item) => {
-        const funder = item.obj_result_project?.obj_clarisa_project ?? null;
-
-        const name =
-          item.obj_result_project?.obj_clarisa_project?.shortName ?? null;
-
-        return {
-          id: funder?.id ?? null,
-          kind_cash:
-            item.kind_cash !== null && item.kind_cash !== undefined
-              ? Number(item.kind_cash)
-              : null,
-          is_determined: item.is_determined ?? null,
-          official_code: null,
-          name,
-        };
-      });
-
-      const institutions: ResultsByInstitution[] =
-        await this._resultByIntitutionsRepository.find({
-          where: { result_id: resultId, is_active: true },
-        });
-      const investment_partners_raw =
-        await this._resultInstitutionsBudgetRepository.find({
-          where: {
-            result_institution_id: In(institutions.map((el) => el.id)),
-            is_active: true,
-          },
-          relations: {
-            obj_result_institution: {
-              obj_institutions: {
-                obj_institution_type_code: true,
-              },
-            },
-          },
-        });
-
-      const investment_partners = investment_partners_raw.map((item) => ({
-        id: item.obj_result_institution?.obj_institutions?.id ?? null,
-        kind_cash:
-          item.kind_cash !== null && item.kind_cash !== undefined
-            ? Number(item.kind_cash)
-            : null,
-        is_determined: item.is_determined ?? null,
-        official_code:
-          item.obj_result_institution?.obj_institutions?.acronym ?? null,
-        name: item.obj_result_institution?.obj_institutions?.name ?? null,
-      }));
+      const scaling_studies_urls =
+        await this.getScalingStudiesUrls(innDevExists);
+      const investment_programs = await this.getInvestmentPrograms(resultId);
+      const investment_bilateral = await this.getInvestmentBilateral(resultId);
+      const investment_partners = await this.getInvestmentPartners(resultId);
 
       const innovationUse = {
         ...innDevExists,
@@ -742,6 +657,270 @@ export class InnovationUseService {
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
+    }
+  }
+
+  private async getActorsData(resultId: number) {
+    const actorsData = await this._resultActorRepository.find({
+      where: { result_id: resultId, is_active: true },
+      relations: { obj_actor_type: true },
+    });
+
+    actorsData.forEach((el) => {
+      if (el.sex_and_age_disaggregation == true) {
+        return;
+      }
+
+      const men = Number(el.men) || 0;
+      const women = Number(el.women) || 0;
+      const men_youth = Number(el.men_youth) || 0;
+      const women_youth = Number(el.women_youth) || 0;
+
+      let men_non_youth = men - men_youth;
+      let women_non_youth = women - women_youth;
+
+      el['men_non_youth'] = men_non_youth > 0 ? men_non_youth : 0;
+      el['women_non_youth'] = women_non_youth > 0 ? women_non_youth : 0;
+
+      if ((el.women === null || el.women === 0) && women_youth > 0) {
+        el.women = women_youth;
+        women_non_youth = 0;
+      }
+      if ((el.men === null || el.men === 0) && men_youth > 0) {
+        el.men = men_youth;
+        men_non_youth = 0;
+      }
+
+      el.how_many = women + men;
+    });
+
+    return actorsData;
+  }
+
+  private async getOrganizationsData(resultId: number) {
+    const organization = await this._resultByIntitutionsTypeRepository.find({
+      where: {
+        results_id: resultId,
+        institution_roles_id: 5,
+        is_active: true,
+      },
+      relations: {
+        obj_institution_types: { obj_parent: { obj_parent: true } },
+      },
+    });
+
+    return organization.map((el) => ({
+      ...el,
+      parent_institution_type_id:
+        el.obj_institution_types?.obj_parent?.obj_parent?.code ??
+        el.obj_institution_types?.obj_parent?.code ??
+        null,
+    }));
+  }
+
+  private async getMeasuresData(resultId: number) {
+    return await this._resultIpMeasureRepository.find({
+      where: { result_id: resultId, is_active: true },
+    });
+  }
+
+  private async getScalingStudiesUrls(
+    innDevExists: ResultsInnovationsUse,
+  ): Promise<string[]> {
+    if (innDevExists.innovation_use_level_id < InnovationUseLevel.Level_6) {
+      return [];
+    }
+
+    const urls = await this._resultScalingStudyUrlsRepository.find({
+      where: {
+        result_innov_use_id: innDevExists.result_innovation_use_id,
+        is_active: true,
+      },
+    });
+
+    return urls.map((u) => u.study_url);
+  }
+
+  private async getInvestmentPrograms(resultId: number) {
+    const initiatives = await this._resultByInitiativeRepository.find({
+      where: {
+        result_id: resultId,
+        is_active: true,
+      },
+    });
+
+    const investment_programs_raw =
+      await this._resultInitiativesBudgetRepository.find({
+        where: {
+          result_initiative_id: In(initiatives.map((el) => el.id)),
+          is_active: true,
+        },
+        relations: {
+          obj_result_initiative: {
+            obj_initiative: true,
+          },
+        },
+      });
+
+    return investment_programs_raw.map((item) => ({
+      id: item.obj_result_initiative?.obj_initiative?.id ?? null,
+      kind_cash:
+        item.kind_cash !== null && item.kind_cash !== undefined
+          ? Number(item.kind_cash)
+          : null,
+      is_determined: item.is_determined ?? null,
+      official_code:
+        item.obj_result_initiative?.obj_initiative?.official_code ?? null,
+      name: item.obj_result_initiative?.obj_initiative?.name ?? null,
+    }));
+  }
+
+  private async getInvestmentBilateral(resultId: number) {
+    const rbp = await this._resultByProjectRepository.find({
+      where: { result_id: resultId, is_active: true },
+    });
+    const rbpIds = rbp.map((el) => el.id);
+
+    const investment_bilateral_raw =
+      await this._resultBilateralBudgetRepository.find({
+        where: {
+          result_project_id: In(rbpIds),
+          is_active: true,
+        },
+        relations: {
+          obj_result_project: {
+            obj_clarisa_project: true,
+          },
+        },
+      });
+
+    return investment_bilateral_raw.map((item) => {
+      const funder = item.obj_result_project?.obj_clarisa_project ?? null;
+      const name =
+        item.obj_result_project?.obj_clarisa_project?.shortName ?? null;
+
+      return {
+        id: funder?.id ?? null,
+        kind_cash:
+          item.kind_cash !== null && item.kind_cash !== undefined
+            ? Number(item.kind_cash)
+            : null,
+        is_determined: item.is_determined ?? null,
+        official_code: null,
+        name,
+      };
+    });
+  }
+
+  async getInvestmentPartners(resultId: number) {
+    const institutions: ResultsByInstitution[] =
+      await this._resultByIntitutionsRepository.find({
+        where: { result_id: resultId, is_active: true },
+      });
+
+    const investment_partners_raw =
+      await this._resultInstitutionsBudgetRepository.find({
+        where: {
+          result_institution_id: In(institutions.map((el) => el.id)),
+          is_active: true,
+        },
+        relations: {
+          obj_result_institution: {
+            obj_institutions: {
+              obj_institution_type_code: true,
+            },
+          },
+        },
+      });
+
+    return investment_partners_raw.map((item) => ({
+      id: item.obj_result_institution?.obj_institutions?.id ?? null,
+      kind_cash:
+        item.kind_cash !== null && item.kind_cash !== undefined
+          ? Number(item.kind_cash)
+          : null,
+      is_determined: item.is_determined ?? null,
+      official_code:
+        item.obj_result_institution?.obj_institutions?.acronym ?? null,
+      name: item.obj_result_institution?.obj_institutions?.name ?? null,
+    }));
+  }
+
+  async getInvestmentProjects(resultId: number) {
+    const resultProjects = await this._resultByProjectRepository.find({
+      where: { result_id: resultId, is_active: true },
+    });
+
+    if (!resultProjects || resultProjects.length === 0) {
+      return [];
+    }
+
+    const resultProjectIds = resultProjects.map((el) => el.id);
+
+    const investment_projects_raw =
+      await this._resultBilateralBudgetRepository.find({
+        where: {
+          result_project_id: In(resultProjectIds),
+          is_active: true,
+        },
+        relations: {
+          obj_result_project: {
+            obj_clarisa_project: true,
+          },
+        },
+      });
+
+    return investment_projects_raw.map((item) => {
+      const project = item.obj_result_project?.obj_clarisa_project ?? null;
+
+      return {
+        non_pooled_projetct_budget_id:
+          item.non_pooled_projetct_budget_id ?? null,
+        project_id: project?.id ?? null,
+        kind_cash:
+          item.kind_cash !== null && item.kind_cash !== undefined
+            ? Number(item.kind_cash)
+            : null,
+        is_determined: item.is_determined ?? null,
+        name: project?.shortName ?? project?.fullName ?? null,
+      };
+    });
+  }
+
+  async getBilateralInnovationUseData(resultId: number): Promise<any[]> {
+    try {
+      const actorsData = await this.getActorsData(resultId);
+      const measures = await this.getMeasuresData(resultId);
+      const organization = await this.getOrganizationsData(resultId);
+
+      const actors_current = actorsData.filter(
+        (a) => Number(a.section_id) === 1,
+      );
+      const organizations_current = organization.filter(
+        (o) => Number(o.section_id) === 1,
+      );
+      const measures_current = measures.filter(
+        (m) => Number(m.section_id) === 1,
+      );
+
+      const investment_partners = await this.getInvestmentPartners(resultId);
+      const investment_projects = await this.getInvestmentProjects(resultId);
+
+      const inno_use = {
+        actors: actors_current,
+        organizations: organizations_current,
+        measures: measures_current,
+        investment_partners,
+        investment_projects,
+      };
+
+      return [inno_use];
+    } catch (error) {
+      this.logger.error(
+        `Error getting bilateral innovation use data for resultId: ${resultId}`,
+        error,
+      );
+      throw error;
     }
   }
 
@@ -862,40 +1041,75 @@ export class InnovationUseService {
       }
 
       for (const i of inv) {
+        // Support both i.id and i.project_id formats
+        const investmentItem = i as any;
+        const projectId = investmentItem.project_id || investmentItem.id;
+
+        if (!projectId) {
+          this.logger.warn(
+            `[saveBillateralInvestment] Missing project_id/id for investment item in resultId: ${resultId}`,
+          );
+          continue;
+        }
+
         const rbp = await this._resultByProjectRepository.findOne({
           where: {
             result_id: resultId,
             is_active: true,
-            project_id: i.id,
+            project_id: projectId,
           },
         });
 
         if (!rbp) {
           this.logger.error(
-            `[saveBillateralInvestment] ResultByProject not found for resultId: ${resultId}, project_id: ${i.id}`,
+            `[saveBillateralInvestment] ResultByProject not found for resultId: ${resultId}, project_id: ${projectId}`,
           );
           throw {
             response: {},
-            message: `ResultByProject not found for resultId: ${resultId}, project_id: ${i.id}`,
+            message: `ResultByProject not found for resultId: ${resultId}, project_id: ${projectId}`,
             status: HttpStatus.NOT_FOUND,
           };
         }
 
-        const rbb = await this._resultBilateralBudgetRepository.findOne({
-          where: {
-            result_project_id: rbp.id,
-            is_active: true,
-          },
-        });
+        // If non_pooled_projetct_budget_id is provided, use it to find the specific budget
+        // SECURITY: Always verify that the budget belongs to the current result_project_id
+        let rbb = null;
+        if (investmentItem.non_pooled_projetct_budget_id) {
+          rbb = await this._resultBilateralBudgetRepository.findOne({
+            where: {
+              non_pooled_projetct_budget_id: Number(
+                investmentItem.non_pooled_projetct_budget_id,
+              ),
+              result_project_id: rbp.id,
+              is_active: true,
+            },
+          });
+        }
+
+        // If not found by budget_id, search by result_project_id
+        if (!rbb) {
+          rbb = await this._resultBilateralBudgetRepository.findOne({
+            where: {
+              result_project_id: rbp.id,
+              is_active: true,
+            },
+          });
+        }
+
+        // Calculate kind_cash value
+        let kindCashValue: number | null = null;
+        if (investmentItem.is_determined !== true) {
+          if (
+            investmentItem.kind_cash !== null &&
+            investmentItem.kind_cash !== undefined
+          ) {
+            kindCashValue = Number(investmentItem.kind_cash);
+          }
+        }
 
         if (rbb) {
-          rbb.kind_cash =
-            i.is_determined === true
-              ? null
-              : i.kind_cash === null
-                ? null
-                : Number(i.kind_cash);
-          rbb.is_determined = i.is_determined;
+          rbb.kind_cash = kindCashValue;
+          rbb.is_determined = investmentItem.is_determined;
           rbb.last_updated_by = user;
           rbb.non_pooled_projetct_id = null;
 
@@ -904,15 +1118,11 @@ export class InnovationUseService {
           const newRbb = this._resultBilateralBudgetRepository.create({
             result_project_id: rbp.id,
             non_pooled_projetct_id: null,
-            kind_cash:
-              i.is_determined === true
-                ? null
-                : i.kind_cash === null
-                  ? null
-                  : Number(i.kind_cash),
-            is_determined: i.is_determined,
+            kind_cash: kindCashValue,
+            is_determined: investmentItem.is_determined,
             created_by: user,
             last_updated_by: user,
+            is_active: true,
           });
 
           await this._resultBilateralBudgetRepository.save(newRbb);
@@ -942,6 +1152,7 @@ export class InnovationUseService {
           where: {
             result_id: resultId,
             institutions_id: partner.id,
+            is_active: true,
           },
         });
 

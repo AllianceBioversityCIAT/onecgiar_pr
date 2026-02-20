@@ -52,6 +52,9 @@ import { apiVersionMiddleware } from './shared/middleware/api-versioning.middlew
 import { BilateralModule } from './api/bilateral/bilateral.module';
 import { ResultsFrameworkReportingModule } from './api/results-framework-reporting/results-framework-reporting.module';
 import { AiModule } from './api/ai/ai.module';
+import { IpsrFrameworkModule } from './api/ipsr-framework/ipsr-framework.module';
+import { ResultImpactAreaScoresModule } from './api/result-impact-area-scores/result-impact-area-scores.module';
+import { GlobalUtilsModule } from './shared/utils/global-utils.module';
 
 @Module({
   imports: [
@@ -103,6 +106,9 @@ import { AiModule } from './api/ai/ai.module';
     BilateralModule,
     ResultsFrameworkReportingModule,
     AiModule,
+    IpsrFrameworkModule,
+    ResultImpactAreaScoresModule,
+    GlobalUtilsModule,
   ],
   controllers: [AppController],
   providers: [

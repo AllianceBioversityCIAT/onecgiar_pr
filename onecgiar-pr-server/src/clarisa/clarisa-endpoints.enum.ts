@@ -600,6 +600,18 @@ export class ClarisaEndpoints<Entity, Dto> {
       endDate: item.end_date ?? null,
       totalBudget: item.total_budget ?? null,
       remaining: item.remaining ?? null,
+      annual: item.annual ?? null,
+      sourceOfFunding: item.source_of_funding ?? null,
+      organizationCode: item.organization_code ?? null,
+      funderCode: item.funder_code ?? null,
+      interimDirectorReview: item.interim_director_review ?? null,
+      projectResults: item.project_results ?? null,
+      modificationJustification: item.modification_justification ?? null,
+      createdAt: item.created_at ? new Date(item.created_at) : null,
+      updatedAt: item.updated_at ? new Date(item.updated_at) : null,
+      isActive: item.is_active ?? null,
+      createdBy: item.created_by ?? null,
+      updatedBy: item.updated_by ?? null,
     }));
   }
 }

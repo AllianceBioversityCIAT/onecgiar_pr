@@ -1,4 +1,9 @@
-import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import {
+  HttpStatus,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { FindOptionsRelations, In, Like } from 'typeorm';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import {
@@ -158,16 +163,12 @@ export class ResultsKnowledgeProductsService {
         false,
       );
 
-      console.log('CGSpace response:', cgspaceResponse);
-
       if (cgspaceResponse.status !== HttpStatus.OK) {
         throw this._handlersError.returnErrorRes({ error: cgspaceResponse });
       }
 
       const newMetadata =
         cgspaceResponse.response as ResultsKnowledgeProductDto;
-
-      console.log('New Metadata:', newMetadata);
 
       const updatedKnowledgeProduct =
         this._resultsKnowledgeProductMapper.updateEntity(
@@ -602,7 +603,9 @@ export class ResultsKnowledgeProductsService {
 
       const isAdmin = await this._roleByUseRepository.isUserAdmin(user.id);
 
-      if (validateExisting) {
+      // Always get versionCgspaceYear if not provided (needed for year validation)
+      // This matches the original flow behavior
+      if (!versionCgspaceYear) {
         const currentVersion: Version =
           await this._versioningService.$_findActivePhase(
             AppModuleIdEnum.REPORTING,
@@ -1092,6 +1095,223 @@ export class ResultsKnowledgeProductsService {
     }
   }
 
+  /**
+   * Helper method to populate a Knowledge Product from CGSpace metadata
+   * Used by bilateral API to create KP from handle only
+   * @param resultId - The ID of the already created Result entity
+   * @param handle - The CGSpace handle identifier
+   * @param user - The user creating the KP
+   * @returns The created ResultsKnowledgeProduct entity
+   */
+  async populateKPFromCGSpace(
+    resultId: number,
+    handle: string,
+    user: TokenDto,
+  ): Promise<ResultsKnowledgeProduct> {
+    try {
+      // Normalize to short form (e.g. 10568/175322); bilateral sends full URL
+      const handleId = this.extractHandleIdentifier(handle);
+
+      // Get the existing result
+      const existingResult = await this._resultRepository.findOne({
+        where: { id: resultId },
+        relations: {
+          result_region_array: true,
+          result_country_array: true,
+        },
+      });
+
+      if (!existingResult) {
+        throw new NotFoundException(`Result with id ${resultId} not found`);
+      }
+
+      // Get global parameter for confidence threshold
+      const globalParameter = await this._globalParameterRepository.findOne({
+        where: { name: 'kp_mqap_institutions_confidence' },
+        select: ['value'],
+      });
+
+      if (!globalParameter) {
+        throw new Error(
+          "Global parameter 'kp_mqap_institutions_confidence' not found",
+        );
+      }
+
+      const confidenceThreshold = +globalParameter.value;
+
+      // Get the active version to pass the correct year for validation
+      const currentVersion: Version =
+        await this._versioningService.$_findActivePhase(
+          AppModuleIdEnum.REPORTING,
+        );
+
+      // Get metadata from CGSpace (validateExisting=false to avoid duplicate checks)
+      const cgspaceResponse = await this.findOnCGSpace(
+        handleId,
+        user,
+        currentVersion?.phase_year ?? null,
+        false, // Don't validate existing - bilateral already handles this
+      );
+
+      if (cgspaceResponse.status !== HttpStatus.OK) {
+        throw this._handlersError.returnErrorRes({ error: cgspaceResponse });
+      }
+
+      const resultsKnowledgeProductDto: ResultsKnowledgeProductDto =
+        cgspaceResponse.response as ResultsKnowledgeProductDto;
+
+      // Create the Knowledge Product entity
+      let newKnowledgeProduct: ResultsKnowledgeProduct =
+        new ResultsKnowledgeProduct();
+      newKnowledgeProduct = this._resultsKnowledgeProductMapper.updateEntity(
+        newKnowledgeProduct,
+        resultsKnowledgeProductDto,
+        user.id,
+        resultId,
+      );
+
+      newKnowledgeProduct.is_melia = false;
+      newKnowledgeProduct.result_object = existingResult;
+
+      newKnowledgeProduct =
+        await this._resultsKnowledgeProductRepository.save(newKnowledgeProduct);
+
+      // Populate all KP relations
+      newKnowledgeProduct =
+        this._resultsKnowledgeProductMapper.populateKPRelations(
+          newKnowledgeProduct,
+          resultsKnowledgeProductDto,
+          confidenceThreshold,
+        );
+
+      // Save all relations
+      await this._resultsKnowledgeProductAltmetricRepository.save(
+        newKnowledgeProduct.result_knowledge_product_altmetric_array ?? [],
+      );
+      await this._resultsKnowledgeProductAuthorRepository.save(
+        newKnowledgeProduct.result_knowledge_product_author_array ?? [],
+      );
+
+      // Save institutions
+      newKnowledgeProduct.result_knowledge_product_institution_array =
+        await this._resultsKnowledgeProductInstitutionRepository.save(
+          newKnowledgeProduct.result_knowledge_product_institution_array ?? [],
+        );
+
+      const resultByInstitutions =
+        newKnowledgeProduct.result_knowledge_product_institution_array.map(
+          (rkpi) => {
+            if (rkpi.result_by_institution_object) {
+              rkpi.result_by_institution_object.result_kp_mqap_institution_id =
+                rkpi.result_kp_mqap_institution_id;
+            }
+            return rkpi.result_by_institution_object;
+          },
+        );
+      await this._resultByInstitutionRepository.save(
+        resultByInstitutions ?? [],
+      );
+
+      await this.separateCentersFromCgspacePartners(newKnowledgeProduct, false);
+
+      await this._resultsKnowledgeProductKeywordRepository.save(
+        newKnowledgeProduct.result_knowledge_product_keyword_array ?? [],
+      );
+      await this._resultsKnowledgeProductMetadataRepository.save(
+        newKnowledgeProduct.result_knowledge_product_metadata_array ?? [],
+      );
+
+      // Handle geolocation from CGSpace
+      // Merge with existing regions/countries from bilateral geo_focus
+      await this.updateCountries(
+        newKnowledgeProduct,
+        resultsKnowledgeProductDto,
+        false,
+      );
+
+      for (const country of newKnowledgeProduct.result_object
+        .result_country_array ?? []) {
+        country.geo_scope_role_id = 1;
+      }
+      await this._resultCountryRepository.save(
+        newKnowledgeProduct.result_object.result_country_array ?? [],
+      );
+
+      await this.updateGeoLocation(
+        existingResult,
+        newKnowledgeProduct,
+        resultsKnowledgeProductDto,
+      );
+
+      for (const region of existingResult.result_region_array ?? []) {
+        region.geo_scope_role_id = 1;
+      }
+      await this._resultRegionRepository.save(
+        existingResult.result_region_array ?? [],
+      );
+
+      // Update FAIR scores
+      await this.updateFair(
+        newKnowledgeProduct,
+        resultsKnowledgeProductDto,
+        false,
+      );
+      await this._resultsKnowledgeProductFairScoreRepository.save(
+        newKnowledgeProduct.result_knowledge_product_fair_score_array ?? [],
+      );
+      await this._resultsKnowledgeProductRepository.update(
+        {
+          result_knowledge_product_id:
+            newKnowledgeProduct.result_knowledge_product_id,
+        },
+        {
+          findable: newKnowledgeProduct.findable,
+          accesible: newKnowledgeProduct.accesible,
+          interoperable: newKnowledgeProduct.interoperable,
+          reusable: newKnowledgeProduct.reusable,
+        },
+      );
+
+      // Update Result with title and description from CGSpace
+      await this._resultRepository.update(
+        { id: resultId },
+        {
+          title: resultsKnowledgeProductDto.title,
+          description: resultsKnowledgeProductDto.description,
+        },
+      );
+
+      // Create evidence linking KP to itself (if not already exists)
+      // Do not link/activate other evidences by handle: bilateral only gets this one evidence
+      const evidenceLink = `https://hdl.handle.net/${handleId}`;
+      const existingEvidence = await this._evidenceRepository.findOne({
+        where: {
+          link: evidenceLink,
+          result_id: resultId,
+        },
+      });
+
+      if (!existingEvidence) {
+        await this._evidenceRepository.save({
+          link: evidenceLink,
+          result_id: resultId,
+          knowledge_product_related: resultId,
+          created_by: user.id,
+          is_supplementary: false,
+          evidence_type_id: 1,
+        });
+      }
+
+      return newKnowledgeProduct;
+    } catch (error) {
+      this._logger.error(
+        `Error populating KP from CGSpace for result ${resultId} with handle ${handle}:`,
+        error,
+      );
+      throw error;
+    }
+  }
+
   async separateCentersFromCgspacePartners(
     knowledgeProduct: ResultsKnowledgeProduct,
     upsert = false,
@@ -1285,6 +1505,7 @@ export class ResultsKnowledgeProductsService {
         (cr) => rr.region_id == cr.um49Code,
       );
       if (inProcessed > -1) {
+        rr.is_active = true;
         cleanedResultRegions.push(rr);
         processedCleanedRegions.splice(inProcessed, 1);
       } else {
@@ -1635,6 +1856,7 @@ export class ResultsKnowledgeProductsService {
       if (!sectionSevenData.isMeliaProduct) {
         sectionSevenData.ostSubmitted = null;
         sectionSevenData.ostMeliaId = null;
+        sectionSevenData.tocMeliaStudyId = undefined;
         sectionSevenData.clarisaMeliaTypeId = null;
       }
 
@@ -1655,6 +1877,7 @@ export class ResultsKnowledgeProductsService {
           melia_previous_submitted: sectionSevenData.ostSubmitted,
           melia_type_id: sectionSevenData.clarisaMeliaTypeId,
           ost_melia_study_id: sectionSevenData.ostMeliaId,
+          toc_melia_study_id: sectionSevenData.tocMeliaStudyId ?? undefined,
         },
       );
 

@@ -1,8 +1,17 @@
-import { Controller, Get, Param, UseInterceptors } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  UseInterceptors,
+  Version,
+} from '@nestjs/common';
 import { OstMeliaStudiesService } from './ost-melia-studies.service';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
+import { ApiTags } from '@nestjs/swagger';
 
 @Controller()
+@ApiTags('MELIA Studies')
 @UseInterceptors(ResponseInterceptor)
 export class OstMeliaStudiesController {
   constructor(
@@ -12,5 +21,11 @@ export class OstMeliaStudiesController {
   @Get('get/all/result/:resultId')
   getMeliaStudiesFromResultId(@Param('resultId') resultId: number) {
     return this.ostMeliaStudiesService.getMeliaStudiesFromResultId(resultId);
+  }
+
+  @Version('2')
+  @Get('get/all/toc/:programId')
+  getMeliaStudiesFromToC(@Param('programId', ParseIntPipe) programId: number) {
+    return this.ostMeliaStudiesService.getMeliaStudiesFromToC(programId);
   }
 }

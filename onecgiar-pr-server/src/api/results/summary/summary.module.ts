@@ -54,6 +54,6 @@ import { InnoDevService } from './innovation_dev.service';
     NonPooledProjectRepository,
     ResultInstitutionsBudgetRepository,
   ],
-  exports: [ResultsInnovationsUseRepository],
+  exports: [ResultsInnovationsUseRepository, SummaryService],
 })
 export class SummaryModule {}

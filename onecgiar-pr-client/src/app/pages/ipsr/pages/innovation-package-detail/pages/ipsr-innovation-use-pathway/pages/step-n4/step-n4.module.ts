@@ -13,6 +13,10 @@ import { StepN4EditBilateralComponent } from './components/step-n4-bilateral-inv
 import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
 import { StepN4ReferenceMaterialLinksComponent } from './components/step-n4-reference-material-links/step-n4-reference-material-links.component';
 import { TermPipe } from '../../../../../../../../internationalization/term.pipe';
+import { StepN4AddProjectComponent } from './components/step-n4-bilateral-investment-table/modal/step-n4-add-project/step-n4-add-project.component';
+import { InnovationUseFormModule } from '../../../../../../../../shared/components/innovation-use-form/innovation-use-form.module';
+import { SelectModule } from 'primeng/select';
+import { FeedbackValidationDirectiveModule } from '../../../../../../../../shared/directives/feedback-validation-directive.module';
 
 @NgModule({
   declarations: [
@@ -21,10 +25,21 @@ import { TermPipe } from '../../../../../../../../internationalization/term.pipe
     StepN4BilateralInvestmentTableComponent,
     StepN4PartnerCoInvestmentTableComponent,
     StepN4AddBilateralComponent,
+    StepN4AddProjectComponent,
     StepN4ReferenceMaterialLinksComponent,
     StepN4AddPartnerComponent,
     StepN4EditBilateralComponent
   ],
-  imports: [CommonModule, StepN4RoutingModule, CustomFieldsModule, DialogModule, CustomFieldsModule, TermPipe]
+  imports: [
+    CommonModule,
+    StepN4RoutingModule,
+    CustomFieldsModule,
+    DialogModule,
+    CustomFieldsModule,
+    TermPipe,
+    InnovationUseFormModule,
+    SelectModule,
+    FeedbackValidationDirectiveModule
+  ]
 })
 export class StepN4Module {}

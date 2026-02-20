@@ -1550,6 +1550,7 @@ export class ResultsFrameworkReportingService {
             policyChange: 0,
             innovationUse: 0,
             otherOutcome: 0,
+            innovationUseIpsr: 0,
           },
         },
       });
@@ -1580,6 +1581,7 @@ export class ResultsFrameworkReportingService {
         [ResultTypeEnum.POLICY_CHANGE, 'policyChange'],
         [ResultTypeEnum.INNOVATION_USE, 'innovationUse'],
         [ResultTypeEnum.OTHER_OUTCOME, 'otherOutcome'],
+        [ResultTypeEnum.INNOVATION_USE_IPSR, 'innovationUseIpsr'],
       ]);
 
       for (const row of rawDashboardData ?? []) {

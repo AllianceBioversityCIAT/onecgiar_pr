@@ -42,7 +42,9 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
   @Input() logicalDeletion: boolean = false;
   @Input() labelDescInlineStyles?: string = '';
   @Input() selectedPrimary?: any;
+  @Input() cannotRemoveOptionValues: any[] = [];
   @Input() displayLabelFormatter?: (option: any) => string;
+  @Input() showDescriptionLabel?: boolean = true;
   @Output() selectOptionEvent = new EventEmitter<any>();
   @Output() removeOptionEvent = new EventEmitter<any>();
   selectAll = null;
@@ -170,6 +172,10 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
   }
 
   validateShowDeleteButton(option) {
+    if (this.cannotRemoveOptionValues?.length) {
+      const id = typeof option === 'object' && option != null ? option[this.optionValue] : option;
+      if (id != null && this.cannotRemoveOptionValues.includes(id)) return false;
+    }
     if (this.selectedPrimary) {
       return !this.readOnly && !this.rolesSE.readOnly && !this.isStatic && this.selectedPrimary !== option.id;
     }

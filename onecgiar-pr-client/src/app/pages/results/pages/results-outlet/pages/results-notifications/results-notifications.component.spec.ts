@@ -118,21 +118,23 @@ describe('ResultsNotificationsComponent', () => {
     expect(resultsNotificationsServiceMock.resetFilters).not.toHaveBeenCalled();
   });
 
-  it('should GET all initiatives if admin', () => {
-    component.GET_AllInitiatives();
-    expect(apiServiceMock.resultsSE.GET_AllInitiatives).toHaveBeenCalled();
-    expect(component.allInitiatives).toEqual([]);
+  it('should GET all initiatives if admin when filtering by phase', () => {
+    component.phaseList = [{ id: 1, obj_portfolio: { id: 2, acronym: 'INIT' } }];
+    component.filterInitiativesByPhase(1);
+    expect(apiServiceMock.resultsSE.GET_AllInitiatives).toHaveBeenCalledWith('init');
+    expect(component.filteredInitiatives).toEqual([]);
   });
 
-  it('should not GET all initiatives if not admin', () => {
+  it('should not GET all initiatives if not admin when filtering by phase', () => {
     apiServiceMock.rolesSE.isAdmin = false;
-    component.GET_AllInitiatives();
+    component.phaseList = [{ id: 1, obj_portfolio: { id: 2, acronym: 'INIT' } }];
+    component.filterInitiativesByPhase(1);
     expect(apiServiceMock.resultsSE.GET_AllInitiatives).not.toHaveBeenCalled();
   });
 
   it('should get all phases', () => {
     component.getAllPhases();
-    expect(apiServiceMock.resultsSE.GET_versioning).toHaveBeenCalledWith(StatusPhaseEnum.ALL, ModuleTypeEnum.REPORTING);
+    expect(apiServiceMock.resultsSE.GET_versioning).toHaveBeenCalledWith(StatusPhaseEnum.ALL, ModuleTypeEnum.ALL);
     expect(component.phaseList).toEqual([]);
   });
 });

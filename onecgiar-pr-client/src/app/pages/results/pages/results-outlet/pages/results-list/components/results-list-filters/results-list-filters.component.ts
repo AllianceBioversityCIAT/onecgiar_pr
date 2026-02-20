@@ -53,6 +53,8 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   tempSelectedSubmittersAdmin = signal([]);
   tempSelectedIndicatorCategories = signal([]);
   tempSelectedStatus = signal([]);
+  tempSelectedFundingSource = signal([]);
+  tempSelectedLeadCenters = signal<any[]>([]);
 
   // Computed signal for filtered phases based on selected portfolios
   filteredPhasesOptions = computed(() => {
@@ -72,6 +74,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     if (this.resultsListFilterSE.selectedStatus().length > 0) count++;
     if (this.resultsListFilterSE.text_to_search().length > 0) count++;
     if (this.resultsListFilterSE.selectedClarisaPortfolios().length > 0) count++;
+    if (this.resultsListFilterSE.selectedLeadCenters().length > 0) count++;
 
     return count;
   });
@@ -156,6 +159,30 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
       });
     }
 
+    const fundingSourceChips = this.resultsListFilterSE.selectedFundingSource().map(fundingSource => ({
+      label: fundingSource.name,
+      filterType: 'fundingSource',
+      item: fundingSource
+    }));
+    if (fundingSourceChips.length > 0) {
+      groups.push({
+        category: 'Funding Source',
+        chips: fundingSourceChips
+      });
+    }
+
+    const centerChips = this.resultsListFilterSE.selectedLeadCenters().map((center: any) => ({
+      label: center?.acronym ?? center?.name ?? 'Center',
+      filterType: 'center',
+      item: center
+    }));
+    if (centerChips.length > 0) {
+      groups.push({
+        category: 'Center',
+        chips: centerChips
+      });
+    }
+
     return groups;
   });
 
@@ -177,6 +204,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     this.getData();
     this.getResultStatus();
     this.getClarisaPortfolios();
+    this.getCenters();
     this.getAllInitiatives();
   }
 
@@ -184,6 +212,17 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     this.api.resultsSE.GET_ClarisaPortfolios().subscribe({
       next: response => {
         this.clarisaPortfolios.set(response);
+      },
+      error: err => {
+        console.error(err);
+      }
+    });
+  }
+
+  getCenters() {
+    this.api.resultsSE.GET_AllCLARISACenters().subscribe({
+      next: ({ response }) => {
+        this.resultsListFilterSE.centerOptions.set(response ?? []);
       },
       error: err => {
         console.error(err);
@@ -266,6 +305,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
 
   clearAllNewFilters() {
     this.resultsListFilterSE.selectedClarisaPortfolios.set([]);
+    this.resultsListFilterSE.selectedFundingSource.set([]);
     this.resultsListFilterSE.selectedPhases.set([]);
 
     // When portfolios are cleared, show all submitters (no filtering)
@@ -276,6 +316,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
 
     this.resultsListFilterSE.selectedIndicatorCategories.set([]);
     this.resultsListFilterSE.selectedStatus.set([]);
+    this.resultsListFilterSE.selectedLeadCenters.set([]);
     this.resultsListFilterSE.text_to_search.set('');
 
     // Also clear temp values
@@ -284,19 +325,22 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     this.tempSelectedSubmittersAdmin.set([]);
     this.tempSelectedIndicatorCategories.set([]);
     this.tempSelectedStatus.set([]);
+    this.tempSelectedFundingSource.set([]);
+    this.tempSelectedLeadCenters.set([]);
   }
 
   removeFilter(chip: { label: string; filterType: string; item?: any }) {
     switch (chip.filterType) {
       case 'clarisaPortfolio':
         this.resultsListFilterSE.selectedClarisaPortfolios.set(this.resultsListFilterSE.selectedClarisaPortfolios().filter(p => p !== chip.item));
+        this.resultsListFilterSE.selectedFundingSource.set(this.resultsListFilterSE.selectedFundingSource().filter(p => p !== chip.item));
         // Update phases and submitters when portfolio changes
         this.updateOptionsAfterPortfolioChange();
         break;
 
       case 'phase':
+        if (this.resultsListFilterSE.selectedPhases().length <= 1) return;
         this.resultsListFilterSE.selectedPhases.set(this.resultsListFilterSE.selectedPhases().filter(p => p !== chip.item));
-        // Phases no longer affect submitters
         break;
 
       case 'submitter':
@@ -309,6 +353,14 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
 
       case 'status':
         this.resultsListFilterSE.selectedStatus.set(this.resultsListFilterSE.selectedStatus().filter(s => s !== chip.item));
+        break;
+
+      case 'fundingSource':
+        this.resultsListFilterSE.selectedFundingSource.set(this.resultsListFilterSE.selectedFundingSource().filter(p => p !== chip.item));
+        break;
+
+      case 'center':
+        this.resultsListFilterSE.selectedLeadCenters.set(this.resultsListFilterSE.selectedLeadCenters().filter(c => c !== chip.item));
         break;
     }
   }
@@ -371,20 +423,24 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   // Initialize temp values when opening the drawer
   openFiltersDrawer() {
     this.tempSelectedClarisaPortfolios.set([...this.resultsListFilterSE.selectedClarisaPortfolios()]);
+    this.tempSelectedFundingSource.set([...this.resultsListFilterSE.selectedFundingSource()]);
     this.tempSelectedPhases.set([...this.resultsListFilterSE.selectedPhases()]);
     this.tempSelectedSubmittersAdmin.set([...this.resultsListFilterSE.selectedSubmittersAdmin()]);
     this.tempSelectedIndicatorCategories.set([...this.resultsListFilterSE.selectedIndicatorCategories()]);
     this.tempSelectedStatus.set([...this.resultsListFilterSE.selectedStatus()]);
+    this.tempSelectedLeadCenters.set([...this.resultsListFilterSE.selectedLeadCenters()]);
     this.visible.set(true);
   }
 
   // Apply filters when clicking "Apply filters" button
   applyFilters() {
     this.resultsListFilterSE.selectedClarisaPortfolios.set([...this.tempSelectedClarisaPortfolios()]);
+    this.resultsListFilterSE.selectedFundingSource.set([...this.tempSelectedFundingSource()]);
     this.resultsListFilterSE.selectedPhases.set([...this.tempSelectedPhases()]);
     this.resultsListFilterSE.selectedSubmittersAdmin.set([...this.tempSelectedSubmittersAdmin()]);
     this.resultsListFilterSE.selectedIndicatorCategories.set([...this.tempSelectedIndicatorCategories()]);
     this.resultsListFilterSE.selectedStatus.set([...this.tempSelectedStatus()]);
+    this.resultsListFilterSE.selectedLeadCenters.set([...this.tempSelectedLeadCenters()]);
     this.visible.set(false);
   }
 
@@ -392,10 +448,12 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   cancelFilters() {
     // Reset temp values to current applied filters
     this.tempSelectedClarisaPortfolios.set([...this.resultsListFilterSE.selectedClarisaPortfolios()]);
+    this.tempSelectedFundingSource.set([...this.resultsListFilterSE.selectedFundingSource()]);
     this.tempSelectedPhases.set([...this.resultsListFilterSE.selectedPhases()]);
     this.tempSelectedSubmittersAdmin.set([...this.resultsListFilterSE.selectedSubmittersAdmin()]);
     this.tempSelectedIndicatorCategories.set([...this.resultsListFilterSE.selectedIndicatorCategories()]);
     this.tempSelectedStatus.set([...this.resultsListFilterSE.selectedStatus()]);
+    this.tempSelectedLeadCenters.set([...this.resultsListFilterSE.selectedLeadCenters()]);
     this.visible.set(false);
   }
 
@@ -403,45 +461,53 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     this.gettingReport.set(true);
     this.api.resultsSE.GET_reportingList().subscribe({
       next: ({ response }) => {
-        const wscols = [
-          { header: 'Result code', key: 'result_code', width: 13 },
-          { header: 'Reporting phase', key: 'phase_name', width: 17.5 },
-          { header: 'Reporting year', key: 'reported_year_id', width: 13 },
-          { header: 'Result title', key: 'title', width: 125 },
-          { header: 'Description', key: 'description', width: 125 },
-          { header: 'Result type', key: 'result_type', width: 45 },
-          { header: 'Is Key Result Story', key: 'is_key_result', width: 45 },
-          { header: 'Gender tag level', key: 'gender_tag_level', width: 20 },
-          { header: 'Climate tag level', key: 'climate_tag_level', width: 20 },
-          { header: 'Nutrition tag level', key: 'nutrition_tag_level', width: 20 },
-          { header: 'Environment/biodiversity tag level', key: 'environment_tag_level', width: 38 },
-          { header: 'Poverty tag level', key: 'poverty_tag_level', width: 20 },
-          { header: 'Submitter', key: 'official_code', width: 14 },
-          { header: 'Status', key: 'status_name', width: 17 },
-          { header: 'Creation date', key: 'creation_date', width: 15 },
-          { header: 'Work package id', key: 'work_package_id', width: 18 },
-          { header: 'Work package title', key: 'work_package_title', width: 125 },
-          { header: 'ToC result id', key: 'toc_result_id', width: 15 },
-          { header: 'ToC result title', key: 'toc_result_title', width: 125 },
-          { header: 'Action Area(s)', key: 'action_areas', width: 53 },
-          { header: 'Center(s)', key: 'centers', width: 80 },
-          { header: 'Contributing Initiative(s)', key: 'contributing_initiative', width: 26 },
-          { header: 'PDF Link', key: 'pdf_link', width: 65 }
-        ];
-
-        this.exportTablesSE.exportExcel(response, 'results_list', wscols, [
-          {
-            cellNumber: 23,
-            cellKey: 'pdf_link'
-          }
-        ]);
-        this.gettingReport.set(false);
+        void this.buildAndDownloadExcelReport(response);
       },
       error: err => {
         console.error(err);
         this.gettingReport.set(false);
       }
     });
+  }
+
+  private async buildAndDownloadExcelReport(response: any[]): Promise<void> {
+    const wscols = [
+      { header: 'Result code', key: 'result_code', width: 13 },
+      { header: 'Reporting phase', key: 'phase_name', width: 17.5 },
+      { header: 'Reporting year', key: 'reported_year_id', width: 13 },
+      { header: 'Result title', key: 'title', width: 125 },
+      { header: 'Description', key: 'description', width: 125 },
+      { header: 'Result type', key: 'result_type', width: 45 },
+      { header: 'Gender tag level', key: 'gender_tag_level', width: 20 },
+      { header: 'Climate tag level', key: 'climate_tag_level', width: 20 },
+      { header: 'Nutrition tag level', key: 'nutrition_tag_level', width: 20 },
+      { header: 'Environment/biodiversity tag level', key: 'environment_tag_level', width: 38 },
+      { header: 'Poverty tag level', key: 'poverty_tag_level', width: 20 },
+      { header: 'Submitter', key: 'official_code', width: 14 },
+      { header: 'Status', key: 'status_name', width: 17 },
+      { header: 'Creation date', key: 'creation_date', width: 15 },
+      { header: 'Area of work id', key: 'work_package_id', width: 18 },
+      { header: 'Area of work title', key: 'work_package_title', width: 125 },
+      { header: 'ToC result id', key: 'toc_result_id', width: 15 },
+      { header: 'ToC result title', key: 'toc_result_title', width: 125 },
+      { header: 'Center(s)', key: 'centers', width: 80 },
+      { header: 'Contributing Science program', key: 'contributing_initiative', width: 26 },
+      { header: 'PDF Link', key: 'pdf_link', width: 65 }
+    ];
+
+    const groupedByResultType: Record<string, any[]> = {};
+    (response || []).forEach((result: any) => {
+      const resultType = result.result_type || 'Unknown';
+      if (!groupedByResultType[resultType]) {
+        groupedByResultType[resultType] = [];
+      }
+      groupedByResultType[resultType].push(result);
+    });
+
+    await this.exportTablesSE.exportExcelMultipleSheets(groupedByResultType, 'results_list', wscols, [
+      { cellNumber: 20, cellKey: 'pdf_link' }
+    ]);
+    this.gettingReport.set(false);
   }
 
   private calculateNavbarHeight() {

@@ -7,6 +7,7 @@ import { ResultsApiService } from './results-api.service';
 import { DataControlService } from '../data-control.service';
 import { RolesService } from '../global/roles.service';
 import { Title } from '@angular/platform-browser';
+import { FieldsManagerService } from '../fields-manager.service';
 
 describe('ApiService', () => {
   let service: ApiService;
@@ -15,20 +16,41 @@ describe('ApiService', () => {
   let dataControlServiceSpy;
   let rolesServiceSpy;
   let titleServiceSpy;
+  let fieldsManagerServiceSpy;
 
   beforeEach(() => {
     authServiceSpy = {
-      GET_allRolesByUser: jest.fn().mockReturnValue(of({ response: [] })),
-      GET_initiativesByUser: jest.fn().mockReturnValue(of({ response: [] }))
+      GET_allRolesByUser: jest.fn().mockReturnValue(of({ response: { initiative: [] } })),
+      GET_initiativesByUser: jest.fn().mockReturnValue(of({ response: [] })),
+      GET_initiativesByUserByPortfolio: jest.fn().mockReturnValue(of({ response: { reporting: [], ipsr: [] } })),
+      localStorageUser: { id: 1 }
     };
 
     resultsApiServiceSpy = {
       GETInnovationPackageDetail: jest.fn().mockReturnValue(of({ response: {} }))
     };
 
-    dataControlServiceSpy = {};
-    rolesServiceSpy = { validateReadOnly: jest.fn() };
+    dataControlServiceSpy = {
+      currentResultSignal: {
+        set: jest.fn()
+      },
+      currentResult: null,
+      myInitiativesList: [],
+      myInitiativesListReportingByPortfolio: [],
+      myInitiativesListIPSRByPortfolio: [],
+      myInitiativesLoaded: false
+    };
+    rolesServiceSpy = {
+      validateReadOnly: jest.fn(),
+      readOnly: false,
+      isAdmin: false
+    };
     titleServiceSpy = { setTitle: jest.fn() };
+    fieldsManagerServiceSpy = {
+      inIpsr: {
+        set: jest.fn()
+      }
+    };
 
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
@@ -38,7 +60,19 @@ describe('ApiService', () => {
         { provide: ResultsApiService, useValue: resultsApiServiceSpy },
         { provide: DataControlService, useValue: dataControlServiceSpy },
         { provide: RolesService, useValue: rolesServiceSpy },
-        { provide: Title, useValue: titleServiceSpy }
+        { provide: Title, useValue: titleServiceSpy },
+        { provide: FieldsManagerService, useValue: fieldsManagerServiceSpy },
+        { provide: 'EndpointsService', useValue: {} },
+        { provide: 'ResultsListService', useValue: { showLoadingResultSpinner: false } },
+        { provide: 'CustomizedAlertsFsService', useValue: {} },
+        { provide: 'QualityAssuranceService', useValue: { $qaFirstInitObserver: { next: jest.fn() } } },
+        { provide: 'CustomizedAlertsFeService', useValue: {} },
+        { provide: 'ResultsListFilterService', useValue: { updateMyInitiatives: jest.fn() } },
+        { provide: 'WordCounterService', useValue: {} },
+        { provide: 'TocApiService', useValue: {} },
+        { provide: 'IpsrListFilterService', useValue: { updateMyInitiatives: jest.fn() } },
+        { provide: 'GlobalVariablesService', useValue: {} },
+        { provide: 'IpsrDataControlService', useValue: { initiative_id: null, resultInnovationPhase: null, detailData: null } }
       ]
     });
 

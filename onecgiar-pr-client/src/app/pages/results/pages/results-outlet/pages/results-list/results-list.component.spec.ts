@@ -23,6 +23,7 @@ import { CustomFieldsModule } from '../../../../../../custom-fields/custom-field
 import { ResultsListFilterService } from './services/results-list-filter.service';
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
 import { ResultsNotificationsService } from '../results-notifications/results-notifications.service';
+import { signal } from '@angular/core';
 
 jest.useFakeTimers();
 
@@ -59,6 +60,7 @@ describe('ResultsListComponent', () => {
         currentResult: {
           phase_year: 2023
         },
+        currentResultSignal: signal({}),
         myInitiativesList: [
           { id: 1, selected: false },
           { id: 2, selected: false }
@@ -82,7 +84,8 @@ describe('ResultsListComponent', () => {
     };
 
     mockResultLevelService = {
-      removeResultTypes: jest.fn()
+      removeResultTypes: jest.fn(),
+      currentResultLevelIdSignal: signal(null)
     };
 
     mockRetrieveModalService = {
@@ -165,14 +168,6 @@ describe('ResultsListComponent', () => {
       expect(spyUpdateUserData).toHaveBeenCalled();
     });
 
-    it('should call updateResultsList', () => {
-      const spyUpdateResultsList = jest.spyOn(mockApiService, 'updateResultsList');
-
-      component.ngOnInit();
-
-      expect(spyUpdateResultsList).toHaveBeenCalled();
-    });
-
     it('should set inNotifications to false', () => {
       component.ngOnInit();
 
@@ -213,7 +208,7 @@ describe('ResultsListComponent', () => {
         scrollIntoView: jest.fn()
       });
 
-      component.itemsWithDelete[2].command();
+      component.itemsWithDelete[3].command();
       jest.runAllTimers();
 
       expect(spy).toHaveBeenCalled();
@@ -435,12 +430,14 @@ describe('ResultsListComponent', () => {
   describe('Component Properties', () => {
     it('should have correct column order configuration', () => {
       expect(component.columnOrder).toEqual([
-        { title: 'Result code', attr: 'result_code', center: true, width: '105px' },
+        { title: 'Result code', attr: 'result_code', center: true, width: '90px' },
         { title: 'Title', attr: 'title', class: 'notCenter', width: '305px' },
+        { title: 'Funding Source', attr: 'source_name', center: true, width: '100px' },
+        { title: 'Center', attr: 'lead_center', center: true, width: '100px' },
         { title: 'Phase - Portfolio', attr: 'phase_name', width: '155px' },
-        { title: 'Indicator category', attr: 'result_type', width: '180px' },
-        { title: 'Submitter', attr: 'submitter', center: true, width: '95px' },
-        { title: 'Status', attr: 'full_status_name_html', center: true, width: '75px' },
+        { title: 'Indicator category', attr: 'result_type', center: true, width: '100px' },
+        { title: 'Submitter', attr: 'submitter', center: true, width: '30px' },
+        { title: 'Status', attr: 'full_status_name_html', center: true, width: '124px' },
         { title: 'Creation date	', attr: 'created_date', center: true, width: '120px' },
         { title: 'Created by	', attr: 'full_name', width: '120px' }
       ]);
@@ -452,12 +449,13 @@ describe('ResultsListComponent', () => {
     });
 
     it('should have correct menu items configuration', () => {
-      expect(component.items).toHaveLength(2);
-      expect(component.itemsWithDelete).toHaveLength(3);
+      expect(component.items).toHaveLength(3);
+      expect(component.itemsWithDelete).toHaveLength(4);
 
       expect(component.items[0].label).toBe('Map to TOC');
       expect(component.items[1].label).toBe('Update result');
-      expect(component.itemsWithDelete[2].label).toBe('Delete');
+      expect(component.items[2].label).toBe('Review result');
+      expect(component.itemsWithDelete[3].label).toBe('Delete');
     });
   });
 

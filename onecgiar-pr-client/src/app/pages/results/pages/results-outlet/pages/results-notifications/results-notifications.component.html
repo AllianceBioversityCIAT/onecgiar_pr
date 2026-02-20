@@ -3,7 +3,7 @@
 
   <div class="options">
     <div class="tabs">
-      <a class="tab disabled" style="opacity: 0.5; cursor: not-allowed; pointer-events: none;">
+      <a class="tab" routerLinkActive="active" routerLink="requests" (click)="this.clearFilters()">
         <i class="material-icons-round" style="font-size: 20px"> mark_unread_chat_alt </i>
         Requests
       </a>
@@ -38,53 +38,56 @@
   </p>
 
   <div class="notifications_filters" *ngIf="!router.url.includes('/results-notifications/settings')">
-    <app-pr-select
-      label="Phases"
-      [options]="this.phaseList"
-      [isStatic]="true"
-      [required]="false"
-      optionLabel="phase_name_status"
-      optionValue="id"
-      placeholder="Select phase"
-      [(ngModel)]="this.resultsNotificationsSE.phaseFilter"
-      [truncateSelectionText]="true">
-    </app-pr-select>
-
-    <div *ngIf="this.resultsNotificationsSE.hideInitFilter">
-      <app-pr-select
-        [options]="this.api.dataControlSE.myInitiativesList"
-        *ngIf="!this.api.rolesSE.isAdmin"
-        label="Initiative"
-        [isStatic]="true"
-        [required]="false"
-        optionLabel="full_name"
-        optionValue="initiative_id"
-        placeholder="Select Initiative"
-        [(ngModel)]="this.resultsNotificationsSE.initiativeIdFilter"
-        [truncateSelectionText]="true">
-      </app-pr-select>
-
-      <app-pr-select
-        [options]="this.allInitiatives"
-        label="Entity"
-        [required]="false"
-        [isStatic]="true"
-        *ngIf="this.api.rolesSE.isAdmin"
-        optionLabel="full_name"
-        optionValue="initiative_id"
-        placeholder="Select Entity"
-        [(ngModel)]="this.resultsNotificationsSE.initiativeIdFilter"
-        [truncateSelectionText]="true">
-      </app-pr-select>
+    <div>
+      <app-pr-field-header label="Phases"></app-pr-field-header>
+      <p-select
+        [options]="this.phaseList"
+        optionLabel="phase_name_status"
+        optionValue="id"
+        placeholder="Select phase"
+        appendTo="body"
+        [style]="{ width: '100%' }"
+        [(ngModel)]="this.resultsNotificationsSE.phaseFilter"
+        (ngModelChange)="onPhaseChange($event)">
+      </p-select>
     </div>
 
-    <app-pr-input
-      label="Search"
-      placeholder="Search"
-      [isStatic]="true"
-      [required]="false"
-      style="grid-column: span 2 / span 2"
-      [(ngModel)]="this.resultsNotificationsSE.searchFilter"></app-pr-input>
+    <div
+      [pTooltip]="!this.resultsNotificationsSE.phaseFilter ? 'Please select a phase first to enable this filter' : ''"
+      tooltipPosition="right">
+      <app-pr-field-header [label]="entityLabel"></app-pr-field-header>
+      <p-select
+        [options]="this.filteredInitiatives"
+        optionLabel="full_name"
+        optionValue="initiative_id"
+        [placeholder]="!this.resultsNotificationsSE.phaseFilter ? 'Select a phase first' : 'Select ' + entityLabel"
+        [(ngModel)]="this.resultsNotificationsSE.initiativeIdFilter"
+        [disabled]="!this.resultsNotificationsSE.phaseFilter"
+        [filter]="true"
+        [style]="{ width: '100%' }">
+        <ng-template #selectedItem let-selectedOption>
+          <div [innerHtml]="selectedOption.full_name"></div>
+        </ng-template>
+        <ng-template let-item #item>
+          <div [innerHtml]="item.full_name"></div>
+        </ng-template>
+      </p-select>
+    </div>
+
+    <div>
+      <app-pr-field-header label="Search"></app-pr-field-header>
+      <input type="text" pInputText placeholder="Search" [(ngModel)]="this.resultsNotificationsSE.searchFilter" [style]="{ width: '100%' }" />
+    </div>
+
+    <div class="clear_filters_container">
+      <app-pr-button
+        [text]="'Clear filters'"
+        [verticalMargin]="0.5"
+        icon="filter_list_off"
+        [colorType]="'primary'"
+        [reverse]="true"
+        (click)="clearAllFilters()"></app-pr-button>
+    </div>
   </div>
 
   <router-outlet></router-outlet>

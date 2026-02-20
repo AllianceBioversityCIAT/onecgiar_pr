@@ -20,6 +20,9 @@
 
         <div class="chips_container  custom_scroll partners_selected">
             <div class="pr_chip_selected" *ngFor="let option of body.institutions; let i=index">
+                <div appFeedbackValidation [labelText]="'Partner role (' + option.institutions_name + ')'"
+                    [isComplete]="!!option?.deliveries?.length"></div>
+
                 <div class="name">{{option?.institutions_name}}</div>
                 <div class="type"> <strong>Institution type:</strong> {{option?.institutions_type_name}}</div>
                 <div style="margin-top: -10px;margin-bottom: -20px;">

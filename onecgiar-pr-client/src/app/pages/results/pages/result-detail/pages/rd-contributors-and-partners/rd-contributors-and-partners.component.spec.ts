@@ -264,11 +264,11 @@ describe('RdContributorsAndPartnersComponent', () => {
       expect(mockRdPartnersSE.partnersBody.institutions[1].is_leading_result).toBe(false);
     });
 
-    it('should clear result_toc_results if planned_result is false', () => {
+    it('should not clear result_toc_results if planned_result is false', () => {
       mockRdPartnersSE.partnersBody.result_toc_result.planned_result = false;
       mockRdPartnersSE.partnersBody.result_toc_result.result_toc_results = [{ id: 1 }];
       component.onSaveSection();
-      expect(mockRdPartnersSE.partnersBody.result_toc_result.result_toc_results).toEqual([]);
+      expect(mockRdPartnersSE.partnersBody.result_toc_result.result_toc_results).toEqual([{ id: 1 }]);
     });
 
     it('should convert linked_results to array of numbers', () => {

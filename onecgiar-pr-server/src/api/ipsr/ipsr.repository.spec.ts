@@ -54,9 +54,12 @@ describe('IpsrRepository (unit)', () => {
 
   it('getResultsInnovation returns array and uses IN (?) parameter', async () => {
     const rows = [{ id: 1 }];
+    // 1) initiative_entity_map lookup
+    dsQuery.mockResolvedValueOnce([]);
+    // 2) main results query
     dsQuery.mockResolvedValueOnce(rows);
     const res = await repo.getResultsInnovation([1, 2, 3]);
-    expect(dsQuery).toHaveBeenCalledTimes(1);
+    expect(dsQuery).toHaveBeenCalledTimes(2);
     const [sql, params] = dsQuery.mock.calls[0];
     expect(sql).toContain('IN (?)');
     expect(params).toEqual([[1, 2, 3]]);

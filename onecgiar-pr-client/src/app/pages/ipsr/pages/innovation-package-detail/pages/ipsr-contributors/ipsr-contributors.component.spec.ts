@@ -51,6 +51,9 @@ describe('IpsrContributorsComponent', () => {
         GET_allChildlessInstitutionTypes: () => of({ response: [] }),
         PATCHContributorsByIpsrResultId: () => of({ response: [] }),
         GET_AllWithoutResults: () => of({ response: [] }),
+        GET_TypeByResultLevel: () => of({ response: [] }),
+        GET_ClarisaProjects: () => of({ response: [] }),
+        GET_innovationUseResults: () => of({ response: [] }),
         ipsrDataControlSE: {
           inContributos: false
         },
@@ -60,10 +63,14 @@ describe('IpsrContributorsComponent', () => {
         findClassTenSeconds: () => {
           return Promise.resolve();
         },
-        detailSectionTitle: jest.fn()
+        detailSectionTitle: jest.fn(),
+        currentResult: {
+          portfolio: 'test'
+        }
       },
       rolesSE: {
-        platformIsClosed: false
+        platformIsClosed: false,
+        readOnly: false
       }
     };
 

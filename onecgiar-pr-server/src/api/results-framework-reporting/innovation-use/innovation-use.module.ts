@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { InnovationUseService } from './innovation-use.service';
 import { InnovationUseController } from './innovation-use.controller';
 import { SummaryModule } from '../../results/summary/summary.module';
@@ -25,7 +25,7 @@ import { ClarisaInnovationUseLevelRepository } from '../../../clarisa/clarisa-in
 @Module({
   imports: [
     TypeOrmModule.forFeature([ResultScalingStudyUrl]),
-    ResultsModule,
+    forwardRef(() => ResultsModule),
     ResultActorsModule,
     LinkedResultsModule,
     ResultsByInstitutionTypesModule,

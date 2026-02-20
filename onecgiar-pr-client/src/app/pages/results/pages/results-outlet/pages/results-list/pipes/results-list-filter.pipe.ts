@@ -12,26 +12,48 @@ export class ResultsListFilterPipe implements PipeTransform {
     resultList: any[],
     word: string,
     combine: boolean,
-    selectedPhases: any[],
     selectedSubmitters: any[],
     selectedIndicatorCategories: any[],
     selectedStatus: any[],
-    selectedClarisaPortfolios: any[]
+    selectedClarisaPortfolios: any[],
+    selectedFundingSource: any[],
+    selectedLeadCenters: any[] = []
   ): any {
     return this.convertList(
-      this.filterByPhase(
-        this.filterBySubmitters(
-          this.filterByIndicatorCategories(
-            this.filterByClarisaPortfolios(this.filterByStatus(this.filterByText(resultList, word), selectedStatus), selectedClarisaPortfolios),
-            selectedIndicatorCategories
+      this.filterByLeadCenter(
+        this.filterByFundingSource(
+          this.filterBySubmitters(
+            this.filterByIndicatorCategories(
+              this.filterByClarisaPortfolios(this.filterByStatus(this.filterByText(resultList, word), selectedStatus), selectedClarisaPortfolios),
+              selectedIndicatorCategories
+            ),
+            selectedSubmitters
           ),
-          selectedSubmitters
+          selectedFundingSource
         ),
-        selectedPhases
+        selectedLeadCenters
       ),
-
       combine
     );
+  }
+
+  filterByLeadCenter(resultList: any[], selectedLeadCenters: any[]) {
+    if (!selectedLeadCenters?.length) return resultList;
+    const matchCenter = (result: any) => {
+      const leadCenter = result.lead_center ?? '';
+      return selectedLeadCenters.some((c: any) => c?.acronym === leadCenter || c?.code === leadCenter);
+    };
+    return resultList.filter(matchCenter);
+  }
+
+  filterByFundingSource(resultList: any[], selectedFundingSource: any[]) {
+    if (!selectedFundingSource.length) return resultList;
+
+    const resultsFilter = resultList.filter(result => selectedFundingSource.some(fundingSource => fundingSource.name == result.source_name));
+
+    if (!resultsFilter.length && selectedFundingSource.length === 0) return resultList;
+
+    return resultsFilter;
   }
 
   filterByClarisaPortfolios(resultList: any[], selectedClarisaPortfolios: any[]) {
@@ -74,16 +96,6 @@ export class ResultsListFilterPipe implements PipeTransform {
     const resultsFilter = resultList.filter(result => selectedSubmitters.some(submitter => submitter.official_code == result.submitter));
 
     if (!resultsFilter.length && selectedSubmitters.length === 0) return resultList;
-
-    return resultsFilter;
-  }
-
-  filterByPhase(resultList: any[], selectedPhases: any[]) {
-    if (!selectedPhases.length) return resultList;
-
-    const resultsFilter = resultList.filter(result => selectedPhases.some(phase => phase.attr == result.phase_name));
-
-    if (!resultsFilter.length && selectedPhases.length === 0) return resultList;
 
     return resultsFilter;
   }

@@ -6,6 +6,7 @@ import { ShareRequestModalService } from '../../../../../result-detail/component
 import { RetrieveModalService } from '../../../../../result-detail/components/retrieve-modal/retrieve-modal.service';
 import { of, throwError } from 'rxjs';
 import { FormatTimeAgoPipe } from '../../../../../../../../shared/pipes/format-time-ago/format-time-ago.pipe';
+import { signal } from '@angular/core';
 
 describe('NotificationItemComponent', () => {
   let component: NotificationItemComponent;
@@ -23,6 +24,12 @@ describe('NotificationItemComponent', () => {
           result_level_id: 1,
           result_type: ''
         },
+        currentResultSignal: signal({
+          title: '',
+          submitter: '',
+          result_level_id: 1,
+          result_type: ''
+        }),
         reportingCurrentPhase: {
           phaseId: '30'
         },
@@ -37,6 +44,7 @@ describe('NotificationItemComponent', () => {
       },
       resultsSE: {
         currentResultId: 1,
+        GET_TypeByResultLevel: () => of({}),
         PATCH_updateRequest: () => of({ response: {} })
       }
     };
@@ -204,21 +212,40 @@ describe('NotificationItemComponent', () => {
   });
 
   describe('resultUrl()', () => {
-    it('should generate the correct result URL', () => {
+    it('should generate the correct result URL for non-IPSR results', () => {
       const mockNotification = {
         obj_result: {
           result_code: 'resultCode',
           obj_version: {
             id: '1'
+          },
+          obj_result_type: {
+            id: 7
           }
         }
       };
 
       const result = component.resultUrl(mockNotification);
 
-      expect(result).toBe(
-        `/result/result-detail/${mockNotification.obj_result.result_code}/general-information?phase=${mockNotification.obj_result.obj_version.id}`
-      );
+      expect(result).toBe('/result/result-detail/resultCode/general-information?phase=1');
+    });
+
+    it('should generate the correct IPSR URL when obj_result_type.id is 10', () => {
+      const mockNotification = {
+        obj_result: {
+          result_code: '1234',
+          obj_version: {
+            id: '30'
+          },
+          obj_result_type: {
+            id: 10
+          }
+        }
+      };
+
+      const result = component.resultUrl(mockNotification);
+
+      expect(result).toBe('/ipsr/detail/1234/general-information?phase=30');
     });
   });
 
@@ -304,7 +331,7 @@ describe('NotificationItemComponent', () => {
       expect(spy).toHaveBeenCalledWith({
         id: 'noti',
         title: 'Request successfully rejected',
-        status: 'success'
+        status: 'information'
       });
       expect(component.requestingReject).toBeFalsy();
       expect(emitSpy).toHaveBeenCalled();

@@ -32,6 +32,7 @@ import { ClarisaPolicyTypesModule } from '../../clarisa/clarisa-policy-types/cla
 import { ClarisaPolicyStagesModule } from '../../clarisa/clarisa-policy-stages/clarisa-policy-stages.module';
 import { InnovationUseModule } from '../results-framework-reporting/innovation-use/innovation-use.module';
 import { ResultsByInititiativesModule } from '../results/results_by_inititiatives/results_by_inititiatives.module';
+import { ShareResultRequestModule } from '../results/share-result-request/share-result-request.module';
 import { KnowledgeProductBilateralHandler } from './handlers/knowledge-product.handler';
 import { CapacityChangeBilateralHandler } from './handlers/capacity-change.handler';
 import { InnovationDevelopmentBilateralHandler } from './handlers/innovation-development.handler';
@@ -41,6 +42,7 @@ import { ResultsInnovationsDevRepository } from '../results/summary/repositories
 import { ResultsInnovationsUseRepository } from '../results/summary/repositories/results-innovations-use.repository';
 import { ResultsPolicyChangesRepository } from '../results/summary/repositories/results-policy-changes.repository';
 import { NoopBilateralHandler } from './handlers/noop.handler';
+import { NonPooledProjectBudgetRepository } from '../results/result_budget/repositories/non_pooled_proyect_budget.repository';
 
 @Module({
   imports: [
@@ -75,6 +77,7 @@ import { NoopBilateralHandler } from './handlers/noop.handler';
     ClarisaPolicyStagesModule,
     InnovationUseModule,
     ResultsByInititiativesModule,
+    ShareResultRequestModule,
   ],
   controllers: [BilateralController],
   providers: [
@@ -88,6 +91,7 @@ import { NoopBilateralHandler } from './handlers/noop.handler';
     ResultsInnovationsDevRepository,
     ResultsInnovationsUseRepository,
     ResultsPolicyChangesRepository,
+    NonPooledProjectBudgetRepository,
   ],
 })
 export class BilateralModule {}
