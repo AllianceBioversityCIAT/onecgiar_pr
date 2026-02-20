@@ -814,7 +814,7 @@ export class BilateralService {
     const qb = this._resultRepository
       .createQueryBuilder('r')
       .where('r.is_active = :isActive', { isActive: true })
-      .orderBy('r.id', 'DESC');
+      .orderBy('r.result_code', 'DESC');
 
     this.applyListResultsFilters(qb, query);
 
