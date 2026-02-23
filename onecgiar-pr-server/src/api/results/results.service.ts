@@ -4025,12 +4025,7 @@ export class ResultsService {
           throw new BadRequestException('Bilateral result not found');
         }
 
-        const currentStatusId = Number(result.status_id);
-        if (currentStatusId !== ResultStatusData.PendingReview.value) {
-          throw new ConflictException(
-            `Cannot update result. Current status is not PENDING_REVIEW (status_id: ${result.status_id})`,
-          );
-        }
+        await this._validateBilateralResultForUpdate(manager, parsedResultId, user);
 
         if (!updateTocMetadataDto.updateExplanation?.trim()) {
           throw new BadRequestException(
