@@ -38,7 +38,7 @@
 
   <div>
     <div class="submit_button">
-      @if (this.api.dataControlSE?.currentResult?.result_type_id != 6 && this.dataControlSE?.currentResult?.status_id == 1) {
+      @if (this.dataControlSE?.currentResult?.status_id == 1) {
         <div
           style="width: 100%"
           [pTooltip]="
