@@ -14,6 +14,7 @@ import { User } from '../../../../auth/modules/user/entities/user.entity';
 import { ClarisaInnovationCharacteristic } from '../../../../clarisa/clarisa-innovation-characteristics/entities/clarisa-innovation-characteristic.entity';
 import { ClarisaInnovationType } from '../../../../clarisa/clarisa-innovation-type/entities/clarisa-innovation-type.entity';
 import { ClarisaInnovationReadinessLevel } from '../../../../clarisa/clarisa-innovation-readiness-levels/entities/clarisa-innovation-readiness-level.entity';
+import { ClarisaCenter } from '../../../../clarisa/clarisa-centers/entities/clarisa-center.entity';
 
 @Entity('results_innovations_dev')
 export class ResultsInnovationsDev {
@@ -172,4 +173,20 @@ export class ResultsInnovationsDev {
     nullable: true,
   })
   has_innovation_link: boolean;
+
+  @Column({
+    type: 'varchar',
+    length: 15,
+    name: 'ip_support_center_id',
+    nullable: true,
+  })
+  ip_support_center_id: string;
+
+  @ManyToOne(() => ClarisaCenter, (cc) => cc.innovation_dev_results, {
+    nullable: true,
+  })
+  @JoinColumn({
+    name: 'ip_support_center_id',
+  })
+  ip_support_center_object: ClarisaCenter;
 }

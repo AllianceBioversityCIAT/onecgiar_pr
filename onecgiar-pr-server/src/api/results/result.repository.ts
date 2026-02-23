@@ -1028,6 +1028,7 @@ WHERE
     r.poverty_tag_level_id,
     r.version_id,
     r.result_type_id,
+    IF(r.source = 'Result', 'W1/W2', 'W3/Bilaterals') as source_name,
     r.status,
     r.status_id,
     rs.status_name,
