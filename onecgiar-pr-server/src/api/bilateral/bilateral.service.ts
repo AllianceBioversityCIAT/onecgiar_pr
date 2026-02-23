@@ -2005,20 +2005,33 @@ export class BilateralService {
     }
   }
 
+  /** Target institution name for Alliance of Bioversity and CIAT (used when mapping known aliases). */
+  private static readonly ALLIANCE_BIOVERSITY_CIAT_NAME =
+    'Alliance of Bioversity and CIAT - Headquarter (Bioversity International)';
+
+  /** Aliases that map to ALLIANCE_BIOVERSITY_CIAT_NAME (compared case-insensitively, trimmed). */
+  private static readonly ALLIANCE_ALIASES = new Set([
+    'ABC',
+    'CIAT-BIOVERSITY',
+    'CIAT (ALLIANCE)',
+    'BIOVERSITY (ALLIANCE)',
+  ]);
+
   /**
    * Normalizes institution name/acronym values.
-   * Maps "ABC" to "CIAT (Alliance)" for exact matching with the institution name.
+   * Maps known aliases (ABC, CIAT-BIOVERSITY, CIAT (Alliance), Bioversity (Alliance))
+   * to the full institution name for matching in Clarisa.
    */
   private normalizeInstitutionValue(
     value: string | undefined,
   ): string | undefined {
     if (!value) return value;
     const normalized = value.trim().toUpperCase();
-    if (normalized === 'ABC') {
+    if (BilateralService.ALLIANCE_ALIASES.has(normalized)) {
       this.logger.debug(
-        'Normalizing ABC to CIAT (Alliance) for institution matching',
+        `Normalizing "${value.trim()}" to Alliance of Bioversity and CIAT for institution matching`,
       );
-      return 'CIAT (Alliance)';
+      return BilateralService.ALLIANCE_BIOVERSITY_CIAT_NAME;
     }
     return value;
   }
