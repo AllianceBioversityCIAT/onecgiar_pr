@@ -36,6 +36,7 @@ import { InstitutionsService } from '../../../../../../../../shared/services/glo
 import { Router } from '@angular/router';
 import { RdContributorsAndPartnersModule } from '../../../../../../../../pages/results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.module';
 import { TooltipModule } from 'primeng/tooltip';
+import { SkeletonModule } from 'primeng/skeleton';
 
 @Component({
   selector: 'app-result-review-drawer',
@@ -55,7 +56,8 @@ import { TooltipModule } from 'primeng/tooltip';
     SaveChangesJustificationDialogComponent,
     CustomFieldsModule,
     RdContributorsAndPartnersModule,
-    TooltipModule
+    TooltipModule,
+    SkeletonModule
   ],
   templateUrl: './result-review-drawer.component.html',
   styleUrl: './result-review-drawer.component.scss',
@@ -74,6 +76,8 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   contributingInitiativesList = signal<any[]>([]);
   disabledContributingInitiatives = signal<any[]>([]);
   leadProjectIds = signal<string[]>([]);
+
+  isLoadingInformation = signal<boolean>(true);
 
   disabledContributingProjectOptions = computed(() => {
     const ids = this.leadProjectIds();
@@ -339,7 +343,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
-    startEditingTitle(): void {
+  startEditingTitle(): void {
     this.editingTitleValue.set(this.resultDetail()?.commonFields?.result_title ?? '');
     this.isEditingTitle.set(true);
   }
@@ -362,7 +366,6 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
     this.api.resultsSE.PATCH_BilateralResultTitle(this.resultDetail()?.commonFields?.id, { title: this.editingTitleValue().trim() }).subscribe({
       next: response => {
-
         this.isEditingTitle.set(false);
         this.resultDetail.set({
           ...this.resultDetail(),
@@ -785,13 +788,15 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
               organizations: Array.isArray(resultType.organizations) ? resultType.organizations.map((o: any) => ({ ...o })) : [],
               measures: Array.isArray(resultType.measures) ? resultType.measures.map((m: any) => ({ ...m })) : [],
               investment_partners: Array.isArray(resultType.investment_partners) ? resultType.investment_partners.map((p: any) => ({ ...p })) : [],
-              investment_projects: Array.isArray(resultType.investment_projects) ? resultType.investment_projects.map((p: any) => ({
-                non_pooled_projetct_budget_id: p.non_pooled_projetct_budget_id ?? p.non_pooled_project_budget_id,
-                project_id: p.project_id,
-                kind_cash: p.kind_cash,
-                is_determined: p.is_determined,
-                name: p.name
-              })) : []
+              investment_projects: Array.isArray(resultType.investment_projects)
+                ? resultType.investment_projects.map((p: any) => ({
+                    non_pooled_projetct_budget_id: p.non_pooled_projetct_budget_id ?? p.non_pooled_project_budget_id,
+                    project_id: p.project_id,
+                    kind_cash: p.kind_cash,
+                    is_determined: p.is_determined,
+                    name: p.name
+                  }))
+                : []
             }
           ];
           break;
@@ -1008,6 +1013,8 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   }
 
   private fetchAndProcessResultDetail(resultId: string): void {
+    this.isLoadingInformation.set(true);
+
     this.api.resultsSE.GET_BilateralResultDetail(resultId).subscribe({
       next: res => {
         const detail = res.response;
@@ -1171,7 +1178,12 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
           detail.resultTypeResponse = detail.resultTypeResponse.map((resultType: any) => {
             const newResultType = { ...resultType };
 
-            if ('actors' in newResultType || 'measures' in newResultType || 'investment_partners' in newResultType || 'investment_projects' in newResultType) {
+            if (
+              'actors' in newResultType ||
+              'measures' in newResultType ||
+              'investment_partners' in newResultType ||
+              'investment_projects' in newResultType
+            ) {
               if (!newResultType.actors) newResultType.actors = [];
               if (!newResultType.organizations) newResultType.organizations = [];
               if (!newResultType.measures) newResultType.measures = [];
@@ -1429,10 +1441,12 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
             this.cdr.markForCheck();
           }
         }, 300);
+        this.isLoadingInformation.set(false);
       },
       error: err => {
         console.error('Error loading result detail:', err);
         this.isLoading.set(false);
+        this.isLoadingInformation.set(false);
       }
     });
   }
@@ -1472,9 +1486,9 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     const resultType = detail.resultTypeResponse[0];
     if (!resultType || !('investment_projects' in resultType)) return;
 
-    const projectIds = (selectedProjects ?? []).map((p: any) =>
-      typeof p === 'object' && p != null ? String(p.project_id ?? p.id ?? '') : String(p)
-    ).filter(Boolean);
+    const projectIds = (selectedProjects ?? [])
+      .map((p: any) => (typeof p === 'object' && p != null ? String(p.project_id ?? p.id ?? '') : String(p)))
+      .filter(Boolean);
     const projectsList = this.clarisaProjectsList();
     const existingByProjectId = new Map<string, any>();
     const currentInvestmentProjects = (resultType as any).investment_projects;
@@ -1498,9 +1512,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
     this.resultDetail.set({
       ...detail,
-      resultTypeResponse: [
-        { ...resultType, investment_projects } as any
-      ]
+      resultTypeResponse: [{ ...resultType, investment_projects } as any]
     });
     this.cdr.markForCheck();
   }
