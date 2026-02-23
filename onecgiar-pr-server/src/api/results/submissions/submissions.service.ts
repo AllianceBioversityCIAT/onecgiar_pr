@@ -103,23 +103,41 @@ export class SubmissionsService {
           },
         });
 
-        const contributingCentersList = await this._resultCenterRepository.find({
-          where: { 
-            result_id: result.id, 
-            is_active: true 
-          },
-          relations: {
-            clarisa_center_object: {
-              clarisa_institution: true,
+        const contactPerson = await this._submissionRepository
+          .createQueryBuilder('s')
+          .leftJoin('users', 'u', 'u.id = s.user_id')
+          .where('s.results_id = :resultId', { resultId })
+          .andWhere('s.is_active = true')
+          .select([
+            'u.first_name as first_name',
+            'u.last_name as last_name',
+            'u.email as email',
+          ])
+          .getRawMany();
+
+        const contributingCentersList = await this._resultCenterRepository.find(
+          {
+            where: {
+              result_id: result.id,
+              is_active: true,
+            },
+            relations: {
+              clarisa_center_object: {
+                clarisa_institution: true,
+              },
             },
           },
-        });
+        );
 
-        const contributingCenters = contributingCentersList
-          .filter((center) => !center.is_leading_result)
-          .map((center) => center.clarisa_center_object?.clarisa_institution?.acronym)
-          .filter(Boolean)
-          .join(', ') || 'N/A';
+        const contributingCenters =
+          contributingCentersList
+            .filter((center) => !center.is_leading_result)
+            .map(
+              (center) =>
+                center.clarisa_center_object?.clarisa_institution?.acronym,
+            )
+            .filter(Boolean)
+            .join(', ') || 'N/A';
 
         const bccEmails = await this._globalParametersRepository.findOne({
           where: { name: 'technical_team_email' },
@@ -145,21 +163,34 @@ export class SubmissionsService {
         } else {
           const scienceProgram =
             await this._resultRepository.getScienceProgramByResultId(resultId);
-
+          console.log('lead contact person', contactPerson);
           for (const email of emails) {
             const sp = scienceProgram[0];
 
+            const leadCenterName =
+              leadCenter?.clarisa_center_object?.clarisa_institution?.name;
+            const leadCenterAcronym =
+              leadCenter?.clarisa_center_object?.clarisa_institution?.acronym;
+            const contactPersonInfo =
+              contactPerson && contactPerson.length > 0 && contactPerson[0]
+                ? `${contactPerson[0].first_name} ${contactPerson[0].last_name} <${contactPerson[0].email}>`
+                : 'N/A';
             const emailData = {
               userName: `${email.first_name} ${email.last_name}`.trim(),
               spCode: sp.official_code,
               spName: sp.name,
               resultUrl: `${process.env.RESULTS_URL}${result.result_code}/general-information?phase=${result.version_id}`,
               resultTitle: result.title,
-              leadCenter: leadCenter?.clarisa_center_object?.clarisa_institution?.name || undefined,
-              contactPerson: result.lead_contact_person,
+              leadCenter: leadCenterName || undefined,
+              contactPerson: contactPersonInfo,
               contributingCenters: contributingCenters,
             };
             const compiledTemplate = handlebars.compile(template.template);
+
+            let subject = `PRMS – IP Support Request for Innovation Development Result | Result Code: ${result.result_code}`;
+            if (leadCenterName) {
+              subject += ` | Lead Center: ${leadCenterAcronym}`;
+            }
 
             this._emailNotificationManagementService.sendEmail({
               from: {
@@ -167,7 +198,7 @@ export class SubmissionsService {
                 name: 'PRMS Reporting Tool -',
               },
               emailBody: {
-                subject: `PRMS – IP Support Request for Innovation Development Result | Result Code: ${result.result_code}`,
+                subject: subject,
                 to: [email.email],
                 cc: [],
                 bcc: bccEmails.value,
