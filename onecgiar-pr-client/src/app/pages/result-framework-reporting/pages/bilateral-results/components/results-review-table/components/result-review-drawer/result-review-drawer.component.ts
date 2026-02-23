@@ -360,11 +360,8 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
       return;
     }
 
-    console.log('Title changed to:', this.editingTitleValue);
-
     this.api.resultsSE.PATCH_BilateralResultTitle(this.resultDetail()?.commonFields?.id, { title: this.editingTitleValue().trim() }).subscribe({
       next: response => {
-        console.log(response);
 
         this.isEditingTitle.set(false);
         this.resultDetail.set({
