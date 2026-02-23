@@ -19,7 +19,13 @@ import { HandlersError } from '../../shared/handlers/error.utils';
 import { Result, SourceEnum } from '../results/entities/result.entity';
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
 import { ClarisaRegionsRepository } from '../../clarisa/clarisa-regions/ClariasaRegions.repository';
-import { DataSource, In, IsNull, Like } from 'typeorm';
+import { DataSource, In, IsNull, Like, SelectQueryBuilder } from 'typeorm';
+import {
+  ListResultsQueryDto,
+  ListResultsResultTypeEnum,
+  ListResultsSourceEnum,
+  LIST_RESULTS_PAGINATION,
+} from './dto/list-results-query.dto';
 import { ClarisaGeographicScopeRepository } from '../../clarisa/clarisa-geographic-scopes/clarisa-geographic-scopes.repository';
 import { ResultRegionRepository } from '../results/result-regions/result-regions.repository';
 import { ClarisaCountriesRepository } from '../../clarisa/clarisa-countries/ClarisaCountries.repository';
@@ -64,6 +70,21 @@ import { ResultByInitiativesRepository } from '../results/results_by_inititiativ
 import { ResultsService } from '../results/results.service';
 import { ShareResultRequestRepository } from '../results/share-result-request/share-result-request.repository';
 import { NonPooledProjectBudgetRepository } from '../results/result_budget/repositories/non_pooled_proyect_budget.repository';
+
+/** Map result_type name (ListResultsResultTypeEnum) to result_type.id */
+const RESULT_TYPE_NAME_TO_ID: Partial<
+  Record<ListResultsResultTypeEnum, number>
+> = {
+  [ListResultsResultTypeEnum.PolicyChange]: 1,
+  [ListResultsResultTypeEnum.InnovationUse]: 2,
+  [ListResultsResultTypeEnum.OtherOutcome]: 4,
+  [ListResultsResultTypeEnum.CapacitySharingForDevelopment]: 5,
+  [ListResultsResultTypeEnum.KnowledgeProduct]: 6,
+  [ListResultsResultTypeEnum.InnovationDevelopment]: 7,
+  [ListResultsResultTypeEnum.OtherOutput]: 8,
+  [ListResultsResultTypeEnum.ImpactContribution]: 9,
+  [ListResultsResultTypeEnum.InnovationPackage]: 10,
+};
 
 @Injectable()
 export class BilateralService {
@@ -629,6 +650,194 @@ export class BilateralService {
     return {
       response: resultsWithRelations,
       message: 'Bilateral results retrieved successfully.',
+      status: 200,
+    };
+  }
+
+  /**
+   * Escapes a string for safe use in LIKE patterns (avoids % and _ as wildcards).
+   * Parameterized queries prevent SQL injection; this avoids accidental wildcard behavior.
+   */
+  private escapeForLike(value: string): string {
+    const backslash = '\x5c';
+    return value
+      .split(backslash)
+      .join(String.raw`\\`)
+      .split('%')
+      .join(String.raw`\%`)
+      .split('_')
+      .join(String.raw`\_`);
+  }
+
+  private applyListResultsFilters(
+    qb: SelectQueryBuilder<Result>,
+    query: ListResultsQueryDto,
+  ): void {
+    this.applyListResultsFiltersSourceVersionAndType(qb, query);
+    this.applyListResultsFiltersStatus(qb, query);
+    this.applyListResultsFiltersDateRange(qb, query);
+    this.applyListResultsFiltersCenterAndInitiative(qb, query);
+    this.applyListResultsFiltersSearch(qb, query);
+  }
+
+  private applyListResultsFiltersSourceVersionAndType(
+    qb: SelectQueryBuilder<Result>,
+    query: ListResultsQueryDto,
+  ): void {
+    if (query.source !== undefined) {
+      const sourceValue =
+        query.source === ListResultsSourceEnum.API
+          ? SourceEnum.Bilateral
+          : SourceEnum.Result;
+      qb.andWhere('r.source = :source', { source: sourceValue });
+    }
+    if (query.portfolio !== undefined || query.phase_year !== undefined) {
+      qb.leftJoin('r.obj_version', 'v');
+      if (query.portfolio !== undefined) {
+        qb.leftJoin('v.obj_portfolio', 'portfolio').andWhere(
+          'portfolio.acronym = :portfolioAcronym',
+          { portfolioAcronym: query.portfolio },
+        );
+      }
+      if (query.phase_year !== undefined) {
+        qb.andWhere('v.phase_year = :phaseYear', {
+          phaseYear: query.phase_year,
+        });
+      }
+    }
+    if (query.result_type !== undefined) {
+      const resultTypeId = RESULT_TYPE_NAME_TO_ID[query.result_type];
+      if (resultTypeId !== undefined) {
+        qb.andWhere('r.result_type_id = :resultTypeId', { resultTypeId });
+      }
+    }
+  }
+
+  private applyListResultsFiltersStatus(
+    qb: SelectQueryBuilder<Result>,
+    query: ListResultsQueryDto,
+  ): void {
+    if (query.status_id !== undefined) {
+      qb.andWhere('r.status_id = :statusId', { statusId: query.status_id });
+    }
+    if (query.status !== undefined) {
+      qb.leftJoin('r.obj_status', 'rs').andWhere(
+        'rs.status_name = :statusName',
+        { statusName: query.status },
+      );
+    }
+  }
+
+  private applyListResultsFiltersDateRange(
+    qb: SelectQueryBuilder<Result>,
+    query: ListResultsQueryDto,
+  ): void {
+    if (query.last_updated_from) {
+      qb.andWhere('r.last_updated_date >= :lastUpdatedFrom', {
+        lastUpdatedFrom: query.last_updated_from,
+      });
+    }
+    if (query.last_updated_to) {
+      qb.andWhere('r.last_updated_date <= :lastUpdatedTo', {
+        lastUpdatedTo: query.last_updated_to,
+      });
+    }
+    if (query.created_from) {
+      qb.andWhere('r.created_date >= :createdFrom', {
+        createdFrom: query.created_from,
+      });
+    }
+    if (query.created_to) {
+      qb.andWhere('r.created_date <= :createdTo', {
+        createdTo: query.created_to,
+      });
+    }
+  }
+
+  private applyListResultsFiltersCenterAndInitiative(
+    qb: SelectQueryBuilder<Result>,
+    query: ListResultsQueryDto,
+  ): void {
+    if (query.center) {
+      qb.andWhere(
+        `r.id IN (
+          SELECT rc.result_id FROM results_center rc
+          LEFT JOIN clarisa_center cc ON cc.code = rc.center_id
+          LEFT JOIN clarisa_institutions ci ON ci.id = cc.institutionId
+          WHERE rc.is_leading_result = 1 AND rc.is_active = 1
+          AND (rc.center_id = :centerFilter OR ci.acronym = :centerFilter)
+        )`,
+        { centerFilter: query.center },
+      );
+    }
+    if (query.initiative_lead_code) {
+      qb.andWhere(
+        `r.id IN (
+          SELECT rbi.result_id FROM results_by_inititiative rbi
+          INNER JOIN clarisa_initiatives ci ON ci.id = rbi.inititiative_id AND ci.active = 1
+          WHERE rbi.is_active = 1 AND rbi.initiative_role_id = 1
+          AND ci.official_code = :initiativeCode
+        )`,
+        { initiativeCode: query.initiative_lead_code },
+      );
+    }
+  }
+
+  private applyListResultsFiltersSearch(
+    qb: SelectQueryBuilder<Result>,
+    query: ListResultsQueryDto,
+  ): void {
+    if (query.search) {
+      const escaped = this.escapeForLike(query.search);
+      qb.andWhere('r.title LIKE :titleSearch', { titleSearch: `%${escaped}%` });
+    }
+  }
+
+  async listAllResults(query: ListResultsQueryDto) {
+    const pageNum = Number(query.page);
+    const limitNum = Number(query.limit);
+    const page =
+      Number.isFinite(pageNum) && pageNum > 0
+        ? pageNum
+        : LIST_RESULTS_PAGINATION.defaultPage;
+    const limit = Math.min(
+      Math.max(
+        1,
+        Number.isFinite(limitNum)
+          ? limitNum
+          : LIST_RESULTS_PAGINATION.defaultLimit,
+      ),
+      LIST_RESULTS_PAGINATION.maxLimit,
+    );
+    const skip = (page - 1) * limit;
+
+    const qb = this._resultRepository
+      .createQueryBuilder('r')
+      .where('r.is_active = :isActive', { isActive: true })
+      .orderBy('r.result_code', 'DESC');
+
+    this.applyListResultsFilters(qb, query);
+
+    const [results, total] = await qb.skip(skip).take(limit).getManyAndCount();
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+
+    const items = await Promise.all(
+      results.map(async (result) => {
+        const resultTypeId = result.result_type_id;
+        const resultWithRelations = await this._resultRepository.findOne({
+          where: { id: result.id },
+          relations: this.buildResultRelations(resultTypeId),
+        });
+        return this.filterActiveRelations(resultWithRelations);
+      }),
+    );
+
+    return {
+      response: {
+        items,
+        meta: { total, page, limit, totalPages },
+      },
+      message: 'Results list retrieved successfully.',
       status: 200,
     };
   }
