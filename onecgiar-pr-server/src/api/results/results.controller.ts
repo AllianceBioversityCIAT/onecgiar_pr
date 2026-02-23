@@ -20,6 +20,7 @@ import { UserToken } from 'src/shared/decorators/user-token.decorator';
 import { ReviewDecisionDto } from './dto/review-decision.dto';
 import { ReviewUpdateDto } from './dto/review-update.dto';
 import { UpdateTocMetadataDto } from './dto/update-toc-metadata.dto';
+import { UpdateResultTitleDto } from './dto/update-result-title.dto';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 import {
   ApiBody,
@@ -713,6 +714,35 @@ export class ResultsController {
     return this.resultsService.reviewBilateralResult(
       resultId,
       reviewDecisionDto,
+      user,
+    );
+  }
+
+  @Patch('bilateral/:resultId/title')
+  @ApiOperation({
+    summary: 'Update bilateral result title',
+    description:
+      'Updates the title of a W3/bilateral result. The result must be in EDITING status (unless user is Admin). The new title must be unique among active results.',
+  })
+  @ApiParam({
+    name: 'resultId',
+    type: Number,
+    required: true,
+    description: 'Result identifier',
+    example: 123,
+  })
+  @ApiBody({ type: UpdateResultTitleDto })
+  @ApiOkResponse({
+    description: 'Result title updated successfully.',
+  })
+  async updateBilateralResultTitle(
+    @Param('resultId') resultId: number,
+    @Body() updateResultTitleDto: UpdateResultTitleDto,
+    @UserToken() user: TokenDto,
+  ) {
+    return this.resultsService.updateBilateralResultTitle(
+      resultId,
+      updateResultTitleDto.title,
       user,
     );
   }
