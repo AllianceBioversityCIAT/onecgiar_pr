@@ -174,9 +174,10 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   isToCCompleted = signal<boolean>(false);
 
   canEditInDrawer = computed(() => {
+    if (this.api.rolesSE?.isAdmin) return true;
+    
     const statusId = this.resultToReview()?.status_id ?? this.resultDetail()?.commonFields?.status_id;
     if (statusId != 5) return false;
-    if (this.api.rolesSE?.isAdmin) return true;
     const myInitiativesList = this.api.dataControlSE.myInitiativesList || [];
     const found = myInitiativesList.find(item => item.official_code === this.bilateralResultsService.entityId());
     return !!found;
