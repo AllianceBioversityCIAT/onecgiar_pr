@@ -3276,7 +3276,11 @@ export class ResultsService {
       this._validateUpdateExplanation(hasChanges, reviewUpdateDto);
 
       await this._dataSource.transaction(async (manager) => {
-        await this._validateBilateralResultForUpdate(manager, parsedResultId, user);
+        await this._validateBilateralResultForUpdate(
+          manager,
+          parsedResultId,
+          user,
+        );
 
         //Update description
         await this._updateMinDataStandardFields(
@@ -3364,11 +3368,12 @@ export class ResultsService {
     }
 
     if (user && this._roleByUserRepository) {
-      const isAdmin = await this._roleByUserRepository.validationRolePermissions(
-        user.id,
-        resultId,
-        [RoleEnum.ADMIN],
-      );
+      const isAdmin =
+        await this._roleByUserRepository.validationRolePermissions(
+          user.id,
+          resultId,
+          [RoleEnum.ADMIN],
+        );
       if (isAdmin) {
         return;
       }
@@ -4025,7 +4030,11 @@ export class ResultsService {
           throw new BadRequestException('Bilateral result not found');
         }
 
-        await this._validateBilateralResultForUpdate(manager, parsedResultId, user);
+        await this._validateBilateralResultForUpdate(
+          manager,
+          parsedResultId,
+          user,
+        );
 
         if (!updateTocMetadataDto.updateExplanation?.trim()) {
           throw new BadRequestException(
@@ -4068,6 +4077,80 @@ export class ResultsService {
           status: HttpStatus.OK,
         };
       });
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ConflictException
+      ) {
+        return {
+          response: {},
+          message: error.message,
+          status: error.getStatus(),
+        };
+      }
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async updateBilateralResultTitle(
+    resultId: number,
+    title: string,
+    user: TokenDto,
+  ): Promise<ReturnResponseDto<any> | returnErrorDto> {
+    try {
+      const parsedResultId = Number(resultId);
+      if (
+        !parsedResultId ||
+        !Number.isFinite(parsedResultId) ||
+        parsedResultId <= 0
+      ) {
+        return {
+          response: {},
+          message: 'The resultId parameter must be a valid positive number.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      if (!title?.trim()) {
+        return {
+          response: {},
+          message: 'The title cannot be empty.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const existingResult = await this._resultRepository.findOne({
+        where: {
+          title: title.trim(),
+          is_active: true,
+        },
+      });
+
+      if (existingResult?.id && existingResult.id !== parsedResultId) {
+        return {
+          response: {},
+          message: 'A result with this title already exists.',
+          status: HttpStatus.CONFLICT,
+        };
+      }
+
+      await this._dataSource.transaction(async (manager) => {
+        await this._validateBilateralResultForUpdate(
+          manager,
+          parsedResultId,
+          user,
+        );
+
+        await manager.update(Result, parsedResultId, {
+          title: title.trim(),
+        });
+      });
+
+      return {
+        response: { id: parsedResultId, title: title.trim() },
+        message: 'Result title updated successfully.',
+        status: HttpStatus.OK,
+      };
     } catch (error) {
       if (
         error instanceof BadRequestException ||
