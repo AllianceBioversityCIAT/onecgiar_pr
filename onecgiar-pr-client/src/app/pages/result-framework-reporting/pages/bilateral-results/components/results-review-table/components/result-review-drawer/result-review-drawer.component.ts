@@ -163,6 +163,9 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   /** Dirty flag: true when user has modified TOC data since last load/save. */
   isTocDirty = signal<boolean>(false);
 
+  editingTitleValue = signal<string>('');
+  isEditingTitle = signal<boolean>(false);
+
   rejectJustification: string = '';
   saveChangesJustification: string = '';
   saveChangesType: 'toc' | 'dataStandard' | null = null;
@@ -334,6 +337,60 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
     this.tocInitiative.planned_result = value;
     this.cdr.markForCheck();
+  }
+
+    startEditingTitle(): void {
+    this.editingTitleValue.set(this.resultDetail()?.commonFields?.result_title ?? '');
+    this.isEditingTitle.set(true);
+  }
+
+  cancelEditingTitle(): void {
+    this.isEditingTitle.set(false);
+    this.editingTitleValue.set('');
+  }
+
+  confirmEditingTitle(): void {
+    if (this.editingTitleValue().trim() === '') {
+      this.isEditingTitle.set(false);
+      return;
+    }
+
+    if (this.editingTitleValue().trim() === this.resultDetail()?.commonFields?.result_title.trim()) {
+      this.isEditingTitle.set(false);
+      return;
+    }
+
+    console.log('Title changed to:', this.editingTitleValue);
+
+    this.api.resultsSE.PATCH_BilateralResultTitle(this.resultDetail()?.commonFields?.id, { title: this.editingTitleValue().trim() }).subscribe({
+      next: response => {
+        console.log(response);
+
+        this.isEditingTitle.set(false);
+        this.resultDetail.set({
+          ...this.resultDetail(),
+          commonFields: {
+            ...this.resultDetail()?.commonFields,
+            result_title: this.editingTitleValue()
+          }
+        });
+        this.updateTableResultTitle(this.resultDetail()?.commonFields?.id ?? '', this.editingTitleValue());
+      },
+      error: err => {
+        console.error('Error saving result title:', err);
+        this.isEditingTitle.set(false);
+      }
+    });
+  }
+  private updateTableResultTitle(resultId: string, newTitle: string): void {
+    this.bilateralResultsService.tableData.update(data => {
+      return data.map(group => {
+        return {
+          ...group,
+          results: group.results.map(result => (result.id === resultId ? { ...result, result_title: newTitle } : result))
+        };
+      });
+    });
   }
 
   onTocProgressiveNarrativeChange(value: string): void {

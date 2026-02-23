@@ -1386,11 +1386,19 @@ export class ResultsApiService {
   }
 
   PATCH_BilateralTocMetadata(resultId: number | string, body: any) {
-    return this.http.patch<any>(`${this.baseApiBaseUrl}results/bilateral/review-update/toc-metadata/${resultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+    return this.http
+      .patch<any>(`${this.baseApiBaseUrl}results/bilateral/review-update/toc-metadata/${resultId}`, body)
+      .pipe(this.saveButtonSE.isSavingPipe());
   }
 
   PATCH_BilateralDataStandard(resultId: number | string, body: any) {
-    return this.http.patch<any>(`${this.baseApiBaseUrl}results/bilateral/review-update/data-standard/${resultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+    return this.http
+      .patch<any>(`${this.baseApiBaseUrl}results/bilateral/review-update/data-standard/${resultId}`, body)
+      .pipe(this.saveButtonSE.isSavingPipe());
+  }
+
+  PATCH_BilateralResultTitle(resultId: number | string, body: any) {
+    return this.http.patch<any>(`${this.baseApiBaseUrl}results/bilateral/${resultId}/title`, body);
   }
 
   GET_ClarisaProjects() {

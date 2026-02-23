@@ -32,9 +32,24 @@
     @let fields = this.resultDetail();
     <!-- Result Header Info -->
     <div class="result-review-drawer-content_header">
-      <p class="result-review-drawer-content_title">
-        {{ fields?.commonFields?.result_title }}
-      </p>
+      @if (isEditingTitle()) {
+        <div class="result-review-drawer-content_title-edit">
+          <input type="text" class="result-review-drawer-content_title-edit_input" [(ngModel)]="editingTitleValue" autofocus />
+          <i
+            class="pi pi-check"
+            style="font-size: 16px; cursor: pointer; color: var(--pr-color-green-500)"
+            (click)="confirmEditingTitle()"
+            [ngClass]="{ globalDisabled: editingTitleValue().trim() === '' }"></i>
+          <i class="pi pi-times" style="font-size: 16px; cursor: pointer; color: var(--pr-color-red-400)" (click)="cancelEditingTitle()"></i>
+        </div>
+      } @else {
+        <div class="result-review-drawer-content_title-wrapper">
+          <p class="result-review-drawer-content_title">
+            {{ fields?.commonFields?.result_title }}
+            <i class="pi pi-pencil" style="cursor: pointer; font-size: 13px; color: var(--pr-color-primary-400)" (click)="startEditingTitle()"></i>
+          </p>
+        </div>
+      }
 
       <div class="result-review-drawer-content_meta">
     
