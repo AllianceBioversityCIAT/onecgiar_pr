@@ -175,7 +175,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
   canEditInDrawer = computed(() => {
     if (this.api.rolesSE?.isAdmin) return true;
-    
+
     const statusId = this.resultToReview()?.status_id ?? this.resultDetail()?.commonFields?.status_id;
     if (statusId != 5) return false;
     const myInitiativesList = this.api.dataControlSE.myInitiativesList || [];
