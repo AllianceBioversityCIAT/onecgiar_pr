@@ -360,6 +360,7 @@ describe('ResultsService (unit, pure mocks)', () => {
 
   const mockRoleByUserRepository = {
     find: jest.fn().mockResolvedValue([]),
+    validationRolePermissions: jest.fn().mockResolvedValue(0),
   } as any;
 
   const mockResultInitiativeBudgetRepository = {
