@@ -1512,7 +1512,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
     this.resultDetail.set({
       ...detail,
-      resultTypeResponse: [{ ...resultType, investment_projects } as any]
+      resultTypeResponse: [{ ...resultType, investment_projects }]
     });
     this.cdr.markForCheck();
   }
