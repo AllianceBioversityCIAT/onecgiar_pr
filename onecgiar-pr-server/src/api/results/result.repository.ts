@@ -796,9 +796,7 @@ WHERE
 
     if (filters.searchText) {
       whereParts.push('(r.title LIKE ? OR r.result_code LIKE ?)');
-      const escPercent = String.raw`\%`;
-      const escUnderscore = String.raw`\_`;
-      const term = `%${filters.searchText.replaceAll('%', escPercent).replaceAll('_', escUnderscore)}%`;
+      const term = `%${filters.searchText.replace(/%/g, '\\%').replace(/_/g, '\\_')}%`;
       params.push(term, term);
     }
 
