@@ -3710,4 +3710,1422 @@ describe('ResultsApiService', () => {
       req.flush(mockResponse);
     });
   });
+
+  // ========== NEW BRANCH COVERAGE TESTS ==========
+
+  describe('GET_AllResultsWithUseRole - searchParams branches', () => {
+    it('should include all searchParams when all fields are provided', done => {
+      const userId = 'userId';
+      const searchParams = {
+        limit: 10,
+        page: 2,
+        status_id: 3,
+        portfolio_id: 'p1',
+        result_type_id: 5,
+        submitter_id: 'sub1',
+        version_id: 'v1'
+      };
+
+      mockResponse = {
+        response: {
+          items: [
+            {
+              id: '1',
+              result_code: '1001',
+              create_last_name: 'Doe',
+              create_first_name: 'John'
+            }
+          ]
+        }
+      };
+
+      service.GET_AllResultsWithUseRole(userId, searchParams).subscribe(result => {
+        expect(result.response.items[0].full_name).toBe('Doe John');
+        done();
+      });
+
+      const req = httpMock.expectOne(
+        r => r.url.includes(`get/all/roles/filter/${userId}`) && r.url.includes('limit=10') && r.url.includes('page=2') && r.url.includes('status_id=3') && r.url.includes('portfolio_id=p1') && r.url.includes('result_type_id=5') && r.url.includes('submitter_id=sub1') && r.url.includes('version_id=v1')
+      );
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    it('should not add params when searchParams fields are falsy', done => {
+      const userId = 'userId';
+      const searchParams = {
+        limit: 0,
+        page: 0,
+        status_id: 0,
+        portfolio_id: '',
+        result_type_id: 0,
+        submitter_id: '',
+        version_id: ''
+      } as any;
+
+      mockResponse = {
+        response: {
+          items: []
+        }
+      };
+
+      service.GET_AllResultsWithUseRole(userId, searchParams).subscribe(() => {
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service.apiBaseUrl}get/all/roles/filter/${userId}?`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_meliaStudiesByToc', () => {
+    it('should call GET_meliaStudiesByToc and return expected data', done => {
+      const programId = 'prog1';
+      service.GET_meliaStudiesByToc(programId).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['baseApiBaseUrlV2']}results/melia-studies/get/all/toc/${programId}`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('PATCH_geographicSectionp25', () => {
+    it('should call PATCH_geographicSectionp25 and return expected data', done => {
+      const mockBody = { scope_id: 1 } as any;
+      const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
+      service.PATCH_geographicSectionp25(mockBody).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['baseApiBaseUrlV2']}geographic-location/update/geographic/${service.currentResultId}`);
+      expect(req.request.method).toBe('PATCH');
+      expect(spy).toHaveBeenCalled();
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_geographicSectionp25', () => {
+    it('should call GET_geographicSectionp25 and return expected data', done => {
+      service.GET_geographicSectionp25().subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['baseApiBaseUrlV2']}geographic-location/get/geographic/${service.currentResultId}`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('POST_resultsLinked - showSpinner false branch', () => {
+    it('should call POST_resultsLinked without isSavingPipe when showSpinner is false', done => {
+      const mockBody = {
+        links: [],
+        legacy_link: [],
+        linkedInnovation: {
+          linked_innovation_dev: false,
+          linked_innovation_use: false
+        }
+      };
+
+      service.POST_resultsLinked(mockBody, false, false).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service.apiBaseUrl}linked/create/${service.currentResultId}`);
+      expect(req.request.method).toBe('POST');
+      req.flush(mockResponse);
+    });
+
+    it('should call POST_resultsLinked without isSavingPipe when showSpinner is false and isIpsr is true', done => {
+      const mockBody = {
+        links: [],
+        legacy_link: [],
+        linkedInnovation: {
+          linked_innovation_dev: false,
+          linked_innovation_use: false
+        }
+      };
+
+      service.POST_resultsLinked(mockBody, true, false).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service.apiBaseUrl}linked/create/${service.ipsrDataControlSE.resultInnovationId}`);
+      expect(req.request.method).toBe('POST');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('POST_evidences - evidence file forEach branch', () => {
+    it('should append files from evidences array in POST_evidences', done => {
+      const mockFile = new File(['content'], 'test.pdf', { type: 'application/pdf' });
+      const mockBody = {
+        result_id: 1,
+        evidences: [{ file: mockFile }],
+        gender_tag_level: 'Gender',
+        climate_change_tag_level: 'Climate',
+        nutrition_tag_level: 'Nutrition',
+        environmental_biodiversity_tag_level: 'Tag',
+        poverty_tag_level: 'Poverty'
+      } as any;
+
+      const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
+
+      service.POST_evidences(mockBody).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service.apiBaseUrl}evidences/create/${service.currentResultId}`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body instanceof FormData).toBe(true);
+      expect(spy).toHaveBeenCalled();
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('POST_resultCreateHeader - v2 branch', () => {
+    it('should use apiBaseUrlV2 when v2 is true', done => {
+      const mockBody = {
+        initiative_id: 0,
+        result_type_id: 0,
+        result_name: '',
+        result_level_id: '',
+        handler: ''
+      };
+      const spy = jest.spyOn(mockSaveButtonService, 'isCreatingPipe');
+
+      service.POST_resultCreateHeader(mockBody, true).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['apiBaseUrlV2']}create/header`);
+      expect(req.request.method).toBe('POST');
+      expect(spy).toHaveBeenCalled();
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_generalInformationByResultId - isV2 branch', () => {
+    it('should use apiBaseUrlV2 when isV2 is true', done => {
+      const spy = jest.spyOn(mockSaveButtonService, 'isGettingSectionPipe');
+      service.GET_generalInformationByResultId(true).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['apiBaseUrlV2']}get/general-information/result/${service.currentResultId}`);
+      expect(req.request.method).toBe('GET');
+      expect(spy).toHaveBeenCalled();
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('PATCH_generalInformation - isV2 branch', () => {
+    it('should use apiBaseUrlV2 when isV2 is true', done => {
+      const mockBody = {} as any;
+      const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
+      const spyShowSave = jest.spyOn(mockSaveButtonService, 'showSaveSpinner');
+
+      service.PATCH_generalInformation(mockBody, true).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['apiBaseUrlV2']}create/general-information`);
+      expect(req.request.method).toBe('PATCH');
+      expect(spy).toHaveBeenCalled();
+      expect(spyShowSave).toHaveBeenCalled();
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('PATCH_innovationUseP25', () => {
+    it('should call PATCH_innovationUseP25 and return expected data', done => {
+      const mockBody = {};
+      const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
+      service.PATCH_innovationUseP25(mockBody).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['baseApiBaseUrlV2']}innovation-use/create/result/${service.currentResultId}`);
+      expect(req.request.method).toBe('PATCH');
+      expect(spy).toHaveBeenCalled();
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_innovationUseResults', () => {
+    it('should call GET_innovationUseResults and return expected data', done => {
+      service.GET_innovationUseResults().subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['apiBaseUrlV2']}get/innov-use-linked-results`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_innovationUseP25', () => {
+    it('should call GET_innovationUseP25 and return expected data', done => {
+      const spy = jest.spyOn(mockSaveButtonService, 'isGettingSectionPipe');
+      service.GET_innovationUseP25().subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['baseApiBaseUrlV2']}innovation-use/get/result/${service.currentResultId}`);
+      expect(req.request.method).toBe('GET');
+      expect(spy).toHaveBeenCalled();
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_clarisaInnovationUseLevels', () => {
+    it('should call GET_clarisaInnovationUseLevels and return expected data', done => {
+      service.GET_clarisaInnovationUseLevels().subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}v2/clarisa/innovation-use-levels`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('PATCH_innovationDevP25', () => {
+    it('should call PATCH_innovationDevP25 and return expected data', done => {
+      const mockBody = {};
+      const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
+      service.PATCH_innovationDevP25(mockBody).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['baseApiBaseUrlV2']}innovation-development/innovation-dev/create/result/${service.currentResultId}`);
+      expect(req.request.method).toBe('PATCH');
+      expect(spy).toHaveBeenCalled();
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_innovationDevP25', () => {
+    it('should call GET_innovationDevP25 and return expected data', done => {
+      const spy = jest.spyOn(mockSaveButtonService, 'isGettingSectionPipe');
+      service.GET_innovationDevP25().subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['baseApiBaseUrlV2']}innovation-development/innovation-dev/get/result/${service.currentResultId}`);
+      expect(req.request.method).toBe('GET');
+      expect(spy).toHaveBeenCalled();
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_evidenceDemandP25', () => {
+    it('should call GET_evidenceDemandP25 and return expected data', done => {
+      const spy = jest.spyOn(mockSaveButtonService, 'isGettingSectionPipe');
+      service.GET_evidenceDemandP25().subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['baseApiBaseUrlV2']}innovation-development/evidence_demand/${service.currentResultId}`);
+      expect(req.request.method).toBe('GET');
+      expect(spy).toHaveBeenCalled();
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('POST_createUploadSessionP25', () => {
+    it('should call POST_createUploadSessionP25 and return expected data', done => {
+      const mockBody = { fileName: 'test' };
+      service.POST_createUploadSessionP25(mockBody).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['baseApiBaseUrlV2']}innovation-development/evidence_demand/createUploadSession`);
+      expect(req.request.method).toBe('POST');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('POST_createEvidenceDemandP25', () => {
+    it('should call POST_createEvidenceDemandP25 with evidences containing files', done => {
+      const mockFile = new File(['content'], 'test.pdf', { type: 'application/pdf' });
+      const mockBody = {
+        evidences: [{ file: mockFile }, { file: null }]
+      };
+
+      service.POST_createEvidenceDemandP25(mockBody).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['baseApiBaseUrlV2']}innovation-development/evidence_demand/create/${service.currentResultId}`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body instanceof FormData).toBe(true);
+      req.flush(mockResponse);
+    });
+
+    it('should call POST_createEvidenceDemandP25 when evidences is not an array', done => {
+      const mockBody = { evidences: null };
+
+      service.POST_createEvidenceDemandP25(mockBody).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['baseApiBaseUrlV2']}innovation-development/evidence_demand/create/${service.currentResultId}`);
+      expect(req.request.method).toBe('POST');
+      req.flush(mockResponse);
+    });
+
+    it('should call POST_createEvidenceDemandP25 when body has no evidences property', done => {
+      const mockBody = {};
+
+      service.POST_createEvidenceDemandP25(mockBody).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['baseApiBaseUrlV2']}innovation-development/evidence_demand/create/${service.currentResultId}`);
+      expect(req.request.method).toBe('POST');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_requestIPSR', () => {
+    it('should call GET_requestIPSR and return expected data', done => {
+      service.GET_requestIPSR().subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service.apiBaseUrl}request/get/all`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_allRequest - versionId branch', () => {
+    it('should include versionId param when provided', done => {
+      service.GET_allRequest('v2').subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service.apiBaseUrl}request/get/received?version_id=v2`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_sentRequest', () => {
+    it('should call GET_sentRequest without versionId', done => {
+      service.GET_sentRequest().subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service.apiBaseUrl}request/get/sent`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    it('should call GET_sentRequest with versionId', done => {
+      service.GET_sentRequest('v3').subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service.apiBaseUrl}request/get/sent?version_id=v3`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_requestUpdates', () => {
+    it('should call GET_requestUpdates without versionId', done => {
+      service.GET_requestUpdates().subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['baseApiBaseUrl']}notification/updates`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    it('should call GET_requestUpdates with versionId', done => {
+      service.GET_requestUpdates('v4').subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['baseApiBaseUrl']}notification/updates?version_id=v4`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_notificationsPopUp', () => {
+    it('should call GET_notificationsPopUp and return expected data', done => {
+      service.GET_notificationsPopUp().subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['baseApiBaseUrl']}notification/updates-pop-up`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('PATCH_readNotification', () => {
+    it('should call PATCH_readNotification and return expected data', done => {
+      const notificationId = 42;
+      service.PATCH_readNotification(notificationId).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['baseApiBaseUrl']}notification/read/${notificationId}`);
+      expect(req.request.method).toBe('PATCH');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('PATCH_readAllNotifications', () => {
+    it('should call PATCH_readAllNotifications and return expected data', done => {
+      service.PATCH_readAllNotifications().subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['baseApiBaseUrl']}notification/read-all`);
+      expect(req.request.method).toBe('PATCH');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('PATCH_handlePopUpViewed', () => {
+    it('should call PATCH_handlePopUpViewed and return expected data', done => {
+      const userId = 99;
+      service.PATCH_handlePopUpViewed(userId).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}auth/user/last-pop-up-viewed/${userId}`);
+      expect(req.request.method).toBe('PATCH');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_userAllNotificationSettings', () => {
+    it('should call GET_userAllNotificationSettings and return expected data', done => {
+      service.GET_userAllNotificationSettings().subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['baseApiBaseUrl']}user-notification-settings/all`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('PATCH_userNotificationSettingsByInitiativeId', () => {
+    it('should call PATCH_userNotificationSettingsByInitiativeId and return expected data', done => {
+      const mockBody = { initiativeId: 1, enabled: true };
+      service.PATCH_userNotificationSettingsByInitiativeId(mockBody).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['baseApiBaseUrl']}user-notification-settings/update`);
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual(mockBody);
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('POST_AdminKPExcelReport', () => {
+    it('should call POST_AdminKPExcelReport and return expected data', done => {
+      const mockBody = { filters: [] };
+      service.POST_AdminKPExcelReport(mockBody).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service.apiBaseUrl}results-knowledge-products/get/excel-report`);
+      expect(req.request.method).toBe('POST');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('PUT_updateAdminKPConfidenceLevel', () => {
+    it('should call PUT_updateAdminKPConfidenceLevel and return expected data', done => {
+      const mockBody = { variable: 'test', value: 0.5 };
+      service.PUT_updateAdminKPConfidenceLevel(mockBody).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/global-parameters/update/variable`);
+      expect(req.request.method).toBe('PUT');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('PATCH_updateRequest - isP25 branch', () => {
+    it('should use apiBaseUrlV2 when isP25 is true', done => {
+      const mockBody = {};
+      service.PATCH_updateRequest(mockBody, true).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['apiBaseUrlV2']}request/update`);
+      expect(req.request.method).toBe('PATCH');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_p25GreenChecksByResultId', () => {
+    it('should call GET_p25GreenChecksByResultId and return expected data', done => {
+      service.GET_p25GreenChecksByResultId().subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['baseApiBaseUrlV2']}results/results-validation/get/green-checks/${service.currentResultId}`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_globalNarratives', () => {
+    it('should call GET_globalNarratives and return expected data', done => {
+      const name = 'test-narrative';
+      service.GET_globalNarratives(name).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/global-narratives/name/${name}`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GETInnovationByResultId - isP25 branch', () => {
+    it('should use p25Url when isP25 is true', done => {
+      const resultId = 1;
+      const spy = jest.spyOn(mockSaveButtonService, 'isGettingSectionPipe');
+      service.GETInnovationByResultId(resultId, true).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['baseApiBaseUrlV2']}ipsr-framework/ipsr-general-information/innovation/${resultId}`);
+      expect(req.request.method).toBe('GET');
+      expect(spy).toHaveBeenCalled();
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GETAllClarisaInnovationUseLevelsV2', () => {
+    it('should call GETAllClarisaInnovationUseLevelsV2 and return expected data', done => {
+      service.GETAllClarisaInnovationUseLevelsV2().subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}v2/clarisa/innovation-use-levels`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('PATCHInnovationPathwayStepFourBilaterals (v2)', () => {
+    it('should call PATCHInnovationPathwayStepFourBilaterals and return expected data', done => {
+      const mockBody = {};
+      service.PATCHInnovationPathwayStepFourBilaterals(mockBody).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(
+        `${service['baseApiBaseUrlV2']}ipsr-framework/ipsr-pathway/save/step-four/bilaterals/${service.ipsrDataControlSE.resultInnovationId}`
+      );
+      expect(req.request.method).toBe('PATCH');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GETInnovationPathwayStepFourByRiId - isP25 branch', () => {
+    it('should use p25Url when isP25 is true', done => {
+      const spy = jest.spyOn(mockSaveButtonService, 'isGettingSectionPipe');
+      service.GETInnovationPathwayStepFourByRiId(true).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(
+        `${service['baseApiBaseUrlV2']}ipsr-framework/ipsr-pathway/get/step-four/${service.ipsrDataControlSE.resultInnovationId}`
+      );
+      expect(req.request.method).toBe('GET');
+      expect(spy).toHaveBeenCalled();
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('PATCHInnovationPathwayStepFourByRiId - isP25 branch', () => {
+    it('should use p25Url when isP25 is true', done => {
+      const mockBody = {};
+      const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
+      service.PATCHInnovationPathwayStepFourByRiId(mockBody, true).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(
+        `${service['baseApiBaseUrlV2']}ipsr-framework/ipsr-pathway/save/step-four/${service.ipsrDataControlSE.resultInnovationId}`
+      );
+      expect(req.request.method).toBe('PATCH');
+      expect(spy).toHaveBeenCalled();
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('getCompletenessStatus - isP25 branch', () => {
+    it('should use baseApiBaseUrlV2 when isP25 is true', done => {
+      service.getCompletenessStatus(true).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(
+        `${service['baseApiBaseUrlV2']}ipsr/results-innovation-packages-validation-module/get/green-checks/${service.ipsrDataControlSE.resultInnovationId}`
+      );
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_questionsInnovationDevelopmentP25', () => {
+    it('should call GET_questionsInnovationDevelopmentP25 and return expected data', done => {
+      service.GET_questionsInnovationDevelopmentP25().subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['baseApiBaseUrlV2']}results/questions/innovation-development/${service.currentResultId}`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_investmentDiscontinuedOptions', () => {
+    it('should call GET_investmentDiscontinuedOptions and return expected data', done => {
+      const resultTypeId = 5;
+      service.GET_investmentDiscontinuedOptions(resultTypeId).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results/investment-discontinued-options/${resultTypeId}`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_cgiarEntityTypes', () => {
+    it('should call GET_cgiarEntityTypes and return expected data', done => {
+      service.GET_cgiarEntityTypes().subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}clarisa/cgiar-entity-types`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_fullReport', () => {
+    it('should call GET_fullReport and return expected data', done => {
+      service.GET_fullReport().subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}contribution-to-indicators/get/full-report`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_contributionsDetailsResults', () => {
+    it('should call GET_contributionsDetailsResults and return expected data', done => {
+      const userId = 42;
+      service.GET_contributionsDetailsResults(userId).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results/get/all/roles/${userId}`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('getNotionData', () => {
+    it('should call getNotionData and return expected data', done => {
+      service.getNotionData().subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(
+        `${environment.releasesNotesApiUrl}/databases/035e13d090ff4251acb12f8e5e2171f4/query?projects=PRMS%20Reporting%20tool,QA%20Platform,CGIAR%20Results%20Dashboard,CLARISA`
+      );
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('getNotionPage', () => {
+    it('should call getNotionPage and return expected data', done => {
+      const pageId = 'page123';
+      service.getNotionPage(pageId).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.releasesNotesApiUrl}/pages/${pageId}`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('getNotionBlockChildren', () => {
+    it('should call getNotionBlockChildren and return expected data', done => {
+      const blockId = 'block123';
+      service.getNotionBlockChildren(blockId).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.releasesNotesApiUrl}/blocks/${blockId}/children`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('PATCH_updateUserStatus', () => {
+    it('should call PATCH_updateUserStatus and return expected data', done => {
+      const mockBody = { user_id: 1, status: 'Active' } as any;
+      service.PATCH_updateUserStatus(mockBody).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}auth/user/change/status`);
+      expect(req.request.method).toBe('PATCH');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_searchUser', () => {
+    it('should build query with all params provided and entityIds as numbers', done => {
+      service.GET_searchUser('john', 'Yes', 'Active', [1, 2, 3] as any).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(r => r.url.includes('auth/user/search') && r.url.includes('user=john') && r.url.includes('cgIAR=Yes') && r.url.includes('status=Active') && r.url.includes('entityIds=1,2,3'));
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    it('should build query with entityIds as objects with id property', done => {
+      service.GET_searchUser('', '', '', [{ id: 10 }, { id: 20 }] as any).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(r => r.url.includes('auth/user/search') && r.url.includes('entityIds=10,20'));
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    it('should not add entityIds when array is empty', done => {
+      service.GET_searchUser('john', '', '', []).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(r => r.url.includes('auth/user/search') && r.url.includes('user=john') && !r.url.includes('entityIds'));
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('POST_createUser', () => {
+    it('should call POST_createUser and return expected data', done => {
+      const mockBody = { email: 'test@test.com' };
+      service.POST_createUser(mockBody).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}auth/user/create`);
+      expect(req.request.method).toBe('POST');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_portfolioList', () => {
+    it('should call GET_portfolioList and return expected data', done => {
+      service.GET_portfolioList().subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}clarisa/portfolios`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_roles', () => {
+    it('should call GET_roles and return expected data', done => {
+      service.GET_roles().subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}auth/role`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('PATCH_changeUserStatus', () => {
+    it('should call PATCH_changeUserStatus and return expected data', done => {
+      const mockBody = { userId: 1, status: 'Inactive' };
+      service.PATCH_changeUserStatus(mockBody).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}auth/user/change/status`);
+      expect(req.request.method).toBe('PATCH');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_findRoleByEntity', () => {
+    it('should call GET_findRoleByEntity and return expected data', done => {
+      const email = 'test@test.com';
+      service.GET_findRoleByEntity(email).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}auth/user/find/role_by_entity?email=${email}`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('PATCH_updateUserRoles', () => {
+    it('should call PATCH_updateUserRoles and return expected data', done => {
+      const mockBody = {
+        email: 'test@test.com',
+        role_assignments: [{ role_id: 1, entity_id: 2 }],
+        role_platform: 1,
+        first_name: 'John',
+        last_name: 'Doe'
+      };
+      service.PATCH_updateUserRoles(mockBody).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}auth/user/update/roles`);
+      expect(req.request.method).toBe('PATCH');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('POST_uploadFile', () => {
+    it('should call POST_uploadFile and return expected data', done => {
+      const formData = new FormData();
+      const headers = new HttpHeaders({ 'Content-Type': 'multipart/form-data' });
+      service.POST_uploadFile(formData, headers).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.fileManagerUrl}api/file-management/prms/upload-file`);
+      expect(req.request.method).toBe('POST');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('POST_fileMining', () => {
+    it('should call POST_fileMining and return expected data', done => {
+      const formData = new FormData();
+      const headers = new HttpHeaders({ 'Content-Type': 'multipart/form-data' });
+      service.POST_fileMining(formData, headers).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.textMiningUrl}prms/text-mining`);
+      expect(req.request.method).toBe('POST');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_impactAreasScoresComponentsAll', () => {
+    it('should call GET_impactAreasScoresComponentsAll and return expected data', done => {
+      service.GET_impactAreasScoresComponentsAll().subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results/impact-areas-scores-components/all`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_TocResultsByAowId', () => {
+    it('should call GET_TocResultsByAowId without year', done => {
+      service.GET_TocResultsByAowId('entity1', 'aow1').subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/toc-results?program=entity1&areaOfWork=aow1`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    it('should call GET_TocResultsByAowId with year', done => {
+      service.GET_TocResultsByAowId('entity1', 'aow1', '2024').subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/toc-results?program=entity1&areaOfWork=aow1&year=2024`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_IndicatorContributionSummary', () => {
+    it('should call GET_IndicatorContributionSummary and return expected data', done => {
+      service.GET_IndicatorContributionSummary('entity1').subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/programs/indicator-contribution-summary?program=entity1`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_2030Outcomes', () => {
+    it('should call GET_2030Outcomes and return expected data', done => {
+      service.GET_2030Outcomes('entity1').subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/toc-results/2030-outcomes?programId=entity1`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_W3BilateralProjects', () => {
+    it('should call GET_W3BilateralProjects and return expected data', done => {
+      service.GET_W3BilateralProjects('toc123').subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/bilateral-projects?tocResultId=toc123`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('POST_createResult', () => {
+    it('should call POST_createResult and return expected data', done => {
+      const mockBody = { name: 'test' };
+      service.POST_createResult(mockBody).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/create`);
+      expect(req.request.method).toBe('POST');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_ExistingResultsContributors', () => {
+    it('should call GET_ExistingResultsContributors and return expected data', done => {
+      service.GET_ExistingResultsContributors('rtr1', 'tri1').subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(
+        `${environment.apiBaseUrl}api/results-framework-reporting/existing-result-contributors?resultTocResultId=rtr1&tocResultIndicatorId=tri1`
+      );
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_DashboardData', () => {
+    it('should call GET_DashboardData and return expected data', done => {
+      service.GET_DashboardData('entity1').subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/dashboard?programId=entity1`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_adUsersSearch', () => {
+    it('should call GET_adUsersSearch and return expected data', done => {
+      service.GET_adUsersSearch('john').subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/ad-users/search?query=john`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_ContributorsPartners', () => {
+    it('should call GET_ContributorsPartners and return expected data', done => {
+      const spy = jest.spyOn(mockSaveButtonService, 'isGettingSectionPipe');
+      service.GET_ContributorsPartners().subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['baseApiBaseUrlV2']}contributors-partners/${service.currentResultId}`);
+      expect(req.request.method).toBe('GET');
+      expect(spy).toHaveBeenCalled();
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('PATCH_ContributorsPartners', () => {
+    it('should call PATCH_ContributorsPartners and return expected data', done => {
+      const mockBody = {};
+      const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
+      service.PATCH_ContributorsPartners(mockBody).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['baseApiBaseUrlV2']}contributors-partners/${service.currentResultId}`);
+      expect(req.request.method).toBe('PATCH');
+      expect(spy).toHaveBeenCalled();
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('PATCH_updateUnplannedResult', () => {
+    it('should call PATCH_updateUnplannedResult and return expected data', done => {
+      const mockBody = {};
+      service.PATCH_updateUnplannedResult(mockBody).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['baseApiBaseUrl']}contributors-partners/update/unplanned/result/${service.currentResultId}`);
+      expect(req.request.method).toBe('PATCH');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('PATCH_BilateralTocMetadata', () => {
+    it('should call PATCH_BilateralTocMetadata and return expected data', done => {
+      const mockBody = {};
+      const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
+      service.PATCH_BilateralTocMetadata(123, mockBody).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['baseApiBaseUrl']}results/bilateral/review-update/toc-metadata/123`);
+      expect(req.request.method).toBe('PATCH');
+      expect(spy).toHaveBeenCalled();
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('PATCH_BilateralDataStandard', () => {
+    it('should call PATCH_BilateralDataStandard and return expected data', done => {
+      const mockBody = {};
+      const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
+      service.PATCH_BilateralDataStandard(123, mockBody).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['baseApiBaseUrl']}results/bilateral/review-update/data-standard/123`);
+      expect(req.request.method).toBe('PATCH');
+      expect(spy).toHaveBeenCalled();
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('PATCH_BilateralResultTitle', () => {
+    it('should call PATCH_BilateralResultTitle and return expected data', done => {
+      const mockBody = { title: 'New Title' };
+      service.PATCH_BilateralResultTitle(123, mockBody).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['baseApiBaseUrl']}results/bilateral/123/title`);
+      expect(req.request.method).toBe('PATCH');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_ClarisaProjects', () => {
+    it('should call GET_ClarisaProjects and return expected data', done => {
+      service.GET_ClarisaProjects().subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}clarisa/projects/get/all`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_ClarisaPortfolios', () => {
+    it('should call GET_ClarisaPortfolios and return expected data', done => {
+      service.GET_ClarisaPortfolios().subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}clarisa/portfolios`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_ResultToReview', () => {
+    it('should call GET_ResultToReview without centerIds', done => {
+      service.GET_ResultToReview('prog1').subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results/by-program-and-centers?programId=prog1`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    it('should call GET_ResultToReview with centerIds of length 1', done => {
+      service.GET_ResultToReview('prog1', ['center1']).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results/by-program-and-centers?programId=prog1&centerIds=center1`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    it('should call GET_ResultToReview with centerIds of length > 1 (should not add param)', done => {
+      service.GET_ResultToReview('prog1', ['center1', 'center2']).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results/by-program-and-centers?programId=prog1`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_PendingReviewCount', () => {
+    it('should call GET_PendingReviewCount and return expected data', done => {
+      service.GET_PendingReviewCount('prog1').subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results/pending-review?programId=prog1`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_BilateralResultDetail', () => {
+    it('should call GET_BilateralResultDetail and return expected data', done => {
+      service.GET_BilateralResultDetail(123).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results/bilateral/123`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('PATCH_BilateralReviewDecision', () => {
+    it('should call PATCH_BilateralReviewDecision and return expected data', done => {
+      const mockBody = { decision: 'APPROVE' as const, justification: 'looks good' };
+      service.PATCH_BilateralReviewDecision(123, mockBody).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results/bilateral/123/review-decision`);
+      expect(req.request.method).toBe('PATCH');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('get_vesrsionDashboard - isP25 branch', () => {
+    it('should use apiBaseUrlV2 when isP25 is true and inIpsr is falsy', done => {
+      const init = 'init';
+      service.ipsrDataControlSE.inIpsr = false;
+      service.currentResultId = 5;
+      service.get_vesrsionDashboard(init, true).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['apiBaseUrlV2']}toc/get/version/${service.currentResultId}/initiative/${init}/resultToc`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('PATCHIpsrGeneralInfo - isP25 branch', () => {
+    it('should use p25Url when isP25 is true', done => {
+      const resultId = 10;
+      const mockBody = {};
+      const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
+
+      service.PATCHIpsrGeneralInfo(mockBody, resultId, true).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service['baseApiBaseUrlV2']}ipsr-framework/ipsr-general-information/general-information/${resultId}`);
+      expect(req.request.method).toBe('PATCH');
+      expect(spy).toHaveBeenCalled();
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GETContributorsByIpsrResultId - isP25 branch', () => {
+    it('should use p25Url when isP25 is true and map response', done => {
+      mockResponse = {
+        response: {
+          contributing_initiatives: {
+            accepted_contributing_initiatives: [
+              {
+                official_code: '123',
+                short_name: 'SN',
+                initiative_name: 'Initiative Name'
+              }
+            ],
+            pending_contributing_initiatives: []
+          }
+        }
+      };
+
+      service.GETContributorsByIpsrResultId(true).subscribe(response => {
+        expect(response.response.contributing_initiatives.accepted_contributing_initiatives[0].full_name).toBe(
+          '123 - <strong>SN</strong> - Initiative Name'
+        );
+        done();
+      });
+
+      const req = httpMock.expectOne(
+        `${service['baseApiBaseUrlV2']}ipsr-framework/ipsr-contributors-partners/${service.ipsrDataControlSE.resultInnovationId}`
+      );
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('PATCHContributorsByIpsrResultId - isP25 branch', () => {
+    it('should use p25Url when isP25 is true', done => {
+      const mockBody = {};
+      const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
+
+      service.PATCHContributorsByIpsrResultId(mockBody, true).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(
+        `${service['baseApiBaseUrlV2']}ipsr-framework/ipsr-contributors-partners/${service.ipsrDataControlSE.resultInnovationId}`
+      );
+      expect(req.request.method).toBe('PATCH');
+      expect(spy).toHaveBeenCalled();
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('PATCH_versioningAnnually - replicateIPSR branch', () => {
+    it('should use innovation-package path when replicateIPSR is true', done => {
+      service.PATCH_versioningAnnually(true).subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/versioning/execute/annual/replicate/innovation-package`);
+      expect(req.request.method).toBe('PATCH');
+      req.flush(mockResponse);
+    });
+  });
 });

@@ -1210,4 +1210,425 @@ describe('ExportTablesService', () => {
       );
     });
   });
+
+  describe('exportExcelMultipleSheets with cellsToLink', () => {
+    it('should apply hyperlinks when cellsToLink is provided', async () => {
+      const sheetsData = {
+        'Sheet1': [{ name: 'Test', url: 'http://example.com' }],
+        'Sheet2': [{ name: 'Test2', url: 'http://example2.com' }]
+      };
+      const wscols = [{ header: 'Name', key: 'name' }, { header: 'URL', key: 'url' }];
+      const cellsToLink = [{ cellNumber: 2, cellKey: 'url' }];
+
+      const saveAsExcelFileMock = jest.spyOn(service, 'saveAsExcelFile' as keyof ExportTablesService).mockImplementation();
+
+      await service.exportExcelMultipleSheets(sheetsData, 'multi_test', wscols, cellsToLink);
+
+      expect(saveAsExcelFileMock).toHaveBeenCalled();
+      saveAsExcelFileMock.mockRestore();
+    });
+
+    it('should handle sanitizeSheetName with invalid characters', async () => {
+      const sheetsData = {
+        'Sheet:with/invalid?chars*[test]': [{ name: 'Test' }]
+      };
+
+      const saveAsExcelFileMock = jest.spyOn(service, 'saveAsExcelFile' as keyof ExportTablesService).mockImplementation();
+
+      await service.exportExcelMultipleSheets(sheetsData, 'sanitize_test');
+
+      expect(saveAsExcelFileMock).toHaveBeenCalled();
+      saveAsExcelFileMock.mockRestore();
+    });
+
+    it('should handle sanitizeSheetName with empty string after sanitization', async () => {
+      const sheetsData = {
+        '://?*[]#': [{ name: 'Test' }]
+      };
+
+      const saveAsExcelFileMock = jest.spyOn(service, 'saveAsExcelFile' as keyof ExportTablesService).mockImplementation();
+
+      await service.exportExcelMultipleSheets(sheetsData, 'empty_sheet_name_test');
+
+      expect(saveAsExcelFileMock).toHaveBeenCalled();
+      saveAsExcelFileMock.mockRestore();
+    });
+
+    it('should handle sheets without wscols', async () => {
+      const sheetsData = {
+        'Sheet1': [{ name: 'Test' }]
+      };
+
+      const saveAsExcelFileMock = jest.spyOn(service, 'saveAsExcelFile' as keyof ExportTablesService).mockImplementation();
+
+      await service.exportExcelMultipleSheets(sheetsData, 'no_wscols_test');
+
+      expect(saveAsExcelFileMock).toHaveBeenCalled();
+      saveAsExcelFileMock.mockRestore();
+    });
+
+    it('should handle sheets without cellsToLink', async () => {
+      const sheetsData = {
+        'Sheet1': [{ name: 'Test' }]
+      };
+      const wscols = [{ header: 'Name', key: 'name' }];
+
+      const saveAsExcelFileMock = jest.spyOn(service, 'saveAsExcelFile' as keyof ExportTablesService).mockImplementation();
+
+      await service.exportExcelMultipleSheets(sheetsData, 'no_links_test', wscols);
+
+      expect(saveAsExcelFileMock).toHaveBeenCalled();
+      saveAsExcelFileMock.mockRestore();
+    });
+
+    it('should handle error in exportExcelMultipleSheets and show alert', async () => {
+      const showAlertSpy = jest.spyOn(customAlertService, 'show');
+
+      // Force error by making writeBuffer reject
+      const ExcelJSMock = require('exceljs');
+      const origImpl = ExcelJSMock.Workbook;
+      ExcelJSMock.Workbook = jest.fn().mockImplementation(() => ({
+        addWorksheet: jest.fn().mockImplementation(() => { throw new Error('test'); }),
+        xlsx: { writeBuffer: jest.fn().mockResolvedValue(Buffer.from([])) }
+      }));
+
+      await service.exportExcelMultipleSheets({ 'Sheet1': [{ name: 'Test' }] }, 'error_test');
+
+      expect(showAlertSpy).toHaveBeenCalled();
+
+      ExcelJSMock.Workbook = origImpl;
+    });
+  });
+
+  describe('exportExcelIpsr with data rows', () => {
+    it('should create hyperlinks for cells 7 and 23', async () => {
+      const list = [
+        {
+          title: 'IPSR Test',
+          link_core_innovation: 'http://innovation.example.com',
+          link_to_pdf: 'http://pdf.example.com'
+        }
+      ];
+      const fileName = 'ipsr_data';
+      const wscols = [{ header: 'Title', key: 'title' }];
+      const callback = jest.fn();
+
+      const saveAsExcelFileMock = jest.spyOn(service, 'saveAsExcelFile' as keyof ExportTablesService).mockImplementation();
+
+      service.exportExcelIpsr(list, fileName, wscols, callback, true);
+
+      await new Promise(process.nextTick);
+
+      expect(saveAsExcelFileMock).toHaveBeenCalledWith(expect.anything(), fileName, true);
+      expect(callback).toHaveBeenCalled();
+
+      saveAsExcelFileMock.mockRestore();
+    });
+
+    it('should handle exportExcelIpsr without wscols', async () => {
+      const list = [{ title: 'Test', link_core_innovation: 'http://test.com', link_to_pdf: 'http://pdf.com' }];
+      const callback = jest.fn();
+
+      const saveAsExcelFileMock = jest.spyOn(service, 'saveAsExcelFile' as keyof ExportTablesService).mockImplementation();
+
+      service.exportExcelIpsr(list, 'test', undefined, callback);
+
+      await new Promise(process.nextTick);
+
+      expect(callback).toHaveBeenCalled();
+      saveAsExcelFileMock.mockRestore();
+    });
+  });
+
+  describe('exportExcelAdminKP with data rows and formatting', () => {
+    it('should format admin KP without wscols', async () => {
+      const list = [
+        { kp_title: 'Test KP', kp_handle: 'http://example.com/kp' }
+      ];
+      const callback = jest.fn();
+
+      const saveAsExcelFileMock = jest.spyOn(service, 'saveAsExcelFile' as keyof ExportTablesService).mockImplementation();
+
+      service.exportExcelAdminKP(list, 'admin_test', undefined, callback);
+
+      await new Promise(process.nextTick);
+
+      expect(callback).toHaveBeenCalled();
+      saveAsExcelFileMock.mockRestore();
+    });
+  });
+
+  describe('addWPSRow with T1R and showInitiativeCode combinations', () => {
+    it('should add WPS row without indicators for T1R with showInitiativeCode', () => {
+      const worksheet = { addRow: jest.fn() };
+      const data = {
+        workpackage_name: 'WP Name',
+        workpackage_short_name: 'WP1',
+        initiative_official_code: 'INIT-001',
+        toc_results: [
+          {
+            toc_result_title: 'Result Title',
+            indicators: []
+          }
+        ]
+      };
+
+      (service as any).addWPSRow({
+        worksheet,
+        data,
+        isT1R: true,
+        showInitiativeCode: true
+      });
+
+      expect(worksheet.addRow).toHaveBeenCalledWith(
+        expect.objectContaining({
+          index: 'OUTCOME 1',
+          initiative_official_code: 'INIT-001',
+          workpackage_name: 'WP1: WP Name'
+        })
+      );
+
+      // When isT1R=true, indicator_achieved_narrative and indicator_supporting_results should NOT be present
+      const calledArg = worksheet.addRow.mock.calls[0][0];
+      expect(calledArg).not.toHaveProperty('indicator_achieved_narrative');
+      expect(calledArg).not.toHaveProperty('indicator_supporting_results');
+    });
+
+    it('should add WPS row with indicators and null supporting results', () => {
+      const worksheet = { addRow: jest.fn() };
+      const data = {
+        workpackage_name: 'WP Name',
+        workpackage_short_name: 'WP1',
+        toc_results: [
+          {
+            toc_result_title: 'Result Title',
+            indicators: [
+              {
+                indicator_name: null,
+                indicator_description: 'Desc',
+                indicator_supporting_results: null,
+                indicator_target_value: null,
+                indicator_achieved_value: null,
+                indicator_submission_status: null,
+                indicator_achieved_narrative: null
+              }
+            ]
+          }
+        ]
+      };
+
+      (service as any).addWPSRow({
+        worksheet,
+        data,
+        isT1R: false,
+        showInitiativeCode: false
+      });
+
+      expect(worksheet.addRow).toHaveBeenCalledWith(
+        expect.objectContaining({
+          indicator_type: 'Not defined',
+          indicator_supporting_results: 'Not provided'
+        })
+      );
+    });
+
+    it('should add WPS row with indicators for showInitiativeCode=true and isT1R=false', () => {
+      const worksheet = { addRow: jest.fn() };
+      const data = {
+        workpackage_name: 'WP Name',
+        workpackage_short_name: 'WP1',
+        initiative_official_code: 'INIT-001',
+        toc_results: [
+          {
+            toc_result_title: 'Result Title',
+            indicators: [
+              {
+                indicator_name: 'Test Indicator',
+                is_indicator_custom: true,
+                indicator_description: 'Description',
+                indicator_target_value: 50,
+                indicator_achieved_value: 60,
+                indicator_submission_status: true,
+                indicator_achieved_narrative: 'Narrative',
+                indicator_supporting_results: [
+                  { result_type: 'T1', result_code: 'C1', title: 'Title', result_submitter: 'Sub', phase_name: 'P1' }
+                ]
+              }
+            ]
+          }
+        ]
+      };
+
+      (service as any).addWPSRow({
+        worksheet,
+        data,
+        isT1R: false,
+        showInitiativeCode: true
+      });
+
+      expect(worksheet.addRow).toHaveBeenCalledWith(
+        expect.objectContaining({
+          initiative_official_code: 'INIT-001',
+          indicator_type: 'Custom -  Test Indicator',
+          reporting_status: 'Submitted'
+        })
+      );
+    });
+  });
+
+  describe('addEOISRow with additional branch combinations', () => {
+    it('should add EOIS row with isT1R=true and showInitiativeCode=false', () => {
+      const worksheet = { addRow: jest.fn() };
+      const data = {
+        toc_result_id: 1,
+        toc_result_title: 'Result',
+        indicators: [
+          {
+            indicator_name: 'Ind',
+            is_indicator_custom: false,
+            indicator_description: 'Desc',
+            indicator_target_value: 10,
+            indicator_achieved_value: 5,
+            indicator_submission_status: false,
+            indicator_achieved_narrative: null,
+            indicator_supporting_results: []
+          }
+        ]
+      };
+
+      (service as any).addEOISRow({
+        worksheet,
+        data,
+        isT1R: true,
+        index: 2,
+        showInitiativeCode: false
+      });
+
+      const calledArg = worksheet.addRow.mock.calls[0][0];
+      expect(calledArg.index).toBe('EOIO 3');
+      expect(calledArg).not.toHaveProperty('initiative_official_code');
+      expect(calledArg.reporting_status).toBe('Editing');
+      expect(calledArg.indicator_achieved_narrative).toBe('Not provided');
+    });
+
+    it('should add EOIS row without indicators with isT1R=true and showInitiativeCode=true', () => {
+      const worksheet = { addRow: jest.fn() };
+      const data = {
+        toc_result_id: 1,
+        toc_result_title: null,
+        initiative_official_code: null,
+        indicators: []
+      };
+
+      (service as any).addEOISRow({
+        worksheet,
+        data,
+        isT1R: true,
+        index: 0,
+        showInitiativeCode: true
+      });
+
+      const calledArg = worksheet.addRow.mock.calls[0][0];
+      expect(calledArg.index).toBe('EOIO 1');
+      expect(calledArg.initiative_official_code).toBe('Not defined');
+      expect(calledArg.toc_result_title).toBe('Not defined');
+    });
+
+    it('should handle indicator with empty supporting results array', () => {
+      const worksheet = { addRow: jest.fn() };
+      const data = {
+        toc_result_id: 1,
+        toc_result_title: 'Title',
+        indicators: [
+          {
+            indicator_name: 'Ind',
+            is_indicator_custom: true,
+            indicator_description: null,
+            indicator_target_value: null,
+            indicator_achieved_value: null,
+            indicator_submission_status: null,
+            indicator_achieved_narrative: null,
+            indicator_supporting_results: []
+          }
+        ]
+      };
+
+      (service as any).addEOISRow({
+        worksheet,
+        data,
+        isT1R: false,
+        index: 0,
+        showInitiativeCode: false
+      });
+
+      const calledArg = worksheet.addRow.mock.calls[0][0];
+      expect(calledArg.indicator_name).toBe('Not defined');
+      expect(calledArg.expected_target).toBe('Not defined');
+      expect(calledArg.actual_target_achieved).toBe('Not provided');
+      expect(calledArg.indicator_supporting_results).toBe('');
+    });
+  });
+
+  describe('addWPSRow without indicators for non-T1R with showInitiativeCode', () => {
+    it('should include initiative_official_code and narrative fields', () => {
+      const worksheet = { addRow: jest.fn() };
+      const data = {
+        workpackage_name: 'WP Name',
+        workpackage_short_name: 'WP1',
+        initiative_official_code: 'INIT-002',
+        toc_results: [
+          {
+            toc_result_title: null,
+            indicators: []
+          }
+        ]
+      };
+
+      (service as any).addWPSRow({
+        worksheet,
+        data,
+        isT1R: false,
+        showInitiativeCode: true
+      });
+
+      const calledArg = worksheet.addRow.mock.calls[0][0];
+      expect(calledArg.initiative_official_code).toBe('INIT-002');
+      expect(calledArg.toc_result_title).toBe('Not defined');
+      expect(calledArg.indicator_achieved_narrative).toBe('Not provided');
+      expect(calledArg.indicator_supporting_results).toBe('Not provided');
+      expect(calledArg).not.toHaveProperty('index');
+    });
+  });
+
+  describe('exportExcel null/undefined data handling', () => {
+    it('should replace null values with Not provided in rows', async () => {
+      const list = [
+        { name: 'Test', description: null, url: undefined }
+      ];
+
+      const saveAsExcelFileMock = jest.spyOn(service, 'saveAsExcelFile' as keyof ExportTablesService).mockImplementation();
+
+      service.exportExcel(list, 'null_test', [{ header: 'Name', key: 'name' }]);
+
+      await new Promise(process.nextTick);
+
+      saveAsExcelFileMock.mockRestore();
+    });
+  });
+
+  describe('exportExcelMultipleSheets with null data values', () => {
+    it('should replace null values with Not provided', async () => {
+      const sheetsData = {
+        'Sheet1': [{ name: 'Test', value: null }]
+      };
+      const wscols = [{ header: 'Name', key: 'name' }, { header: 'Value', key: 'value' }];
+
+      const saveAsExcelFileMock = jest.spyOn(service, 'saveAsExcelFile' as keyof ExportTablesService).mockImplementation();
+
+      await service.exportExcelMultipleSheets(sheetsData, 'null_vals_test', wscols);
+
+      expect(saveAsExcelFileMock).toHaveBeenCalled();
+      saveAsExcelFileMock.mockRestore();
+    });
+  });
 });

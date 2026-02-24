@@ -346,4 +346,171 @@ describe('ResultsListFilterPipe', () => {
       });
     });
   });
+
+  describe('filterByLeadCenter', () => {
+    it('should return original list when selectedLeadCenters is empty', () => {
+      const result = pipe.filterByLeadCenter(mockResultList, []);
+      expect(result).toEqual(mockResultList);
+    });
+
+    it('should return original list when selectedLeadCenters is null', () => {
+      const result = pipe.filterByLeadCenter(mockResultList, null);
+      expect(result).toEqual(mockResultList);
+    });
+
+    it('should return original list when selectedLeadCenters is undefined', () => {
+      const result = pipe.filterByLeadCenter(mockResultList, undefined);
+      expect(result).toEqual(mockResultList);
+    });
+
+    it('should filter by lead_center matching acronym', () => {
+      const listWithCenter = [
+        { ...mockResultList[0], lead_center: 'CIAT' },
+        { ...mockResultList[1], lead_center: 'IFPRI' },
+        { ...mockResultList[2], lead_center: 'CIAT' }
+      ];
+      const selectedCenters = [{ acronym: 'CIAT', code: 'C001' }];
+
+      const result = pipe.filterByLeadCenter(listWithCenter, selectedCenters);
+      expect(result).toHaveLength(2);
+      expect(result.every(r => r.lead_center === 'CIAT')).toBe(true);
+    });
+
+    it('should filter by lead_center matching code', () => {
+      const listWithCenter = [
+        { ...mockResultList[0], lead_center: 'C001' },
+        { ...mockResultList[1], lead_center: 'C002' }
+      ];
+      const selectedCenters = [{ acronym: 'CIAT', code: 'C001' }];
+
+      const result = pipe.filterByLeadCenter(listWithCenter, selectedCenters);
+      expect(result).toHaveLength(1);
+      expect(result[0].lead_center).toBe('C001');
+    });
+
+    it('should handle null lead_center on result', () => {
+      const listWithCenter = [
+        { ...mockResultList[0], lead_center: null },
+        { ...mockResultList[1], lead_center: 'CIAT' }
+      ];
+      const selectedCenters = [{ acronym: 'CIAT', code: 'C001' }];
+
+      const result = pipe.filterByLeadCenter(listWithCenter, selectedCenters);
+      expect(result).toHaveLength(1);
+    });
+
+    it('should handle null center in selectedLeadCenters', () => {
+      const listWithCenter = [
+        { ...mockResultList[0], lead_center: 'CIAT' }
+      ];
+      const selectedCenters = [null, { acronym: 'CIAT', code: 'C001' }];
+
+      const result = pipe.filterByLeadCenter(listWithCenter, selectedCenters);
+      expect(result).toHaveLength(1);
+    });
+
+    it('should return empty when no matches found', () => {
+      const listWithCenter = [
+        { ...mockResultList[0], lead_center: 'UNKNOWN' }
+      ];
+      const selectedCenters = [{ acronym: 'CIAT', code: 'C001' }];
+
+      const result = pipe.filterByLeadCenter(listWithCenter, selectedCenters);
+      expect(result).toHaveLength(0);
+    });
+  });
+
+  describe('filterByFundingSource', () => {
+    it('should return original list when no funding sources selected', () => {
+      const result = pipe.filterByFundingSource(mockResultList, []);
+      expect(result).toEqual(mockResultList);
+    });
+
+    it('should filter by funding source name', () => {
+      const listWithSource = [
+        { ...mockResultList[0], source_name: 'W1/W2' },
+        { ...mockResultList[1], source_name: 'Bilateral' },
+        { ...mockResultList[2], source_name: 'W1/W2' }
+      ];
+      const selectedFunding = [{ name: 'W1/W2' }];
+
+      const result = pipe.filterByFundingSource(listWithSource, selectedFunding);
+      expect(result).toHaveLength(2);
+      expect(result.every(r => r.source_name === 'W1/W2')).toBe(true);
+    });
+
+    it('should return empty array when no matches found with selected sources', () => {
+      const listWithSource = [
+        { ...mockResultList[0], source_name: 'W1/W2' }
+      ];
+      const selectedFunding = [{ name: 'Bilateral' }];
+
+      const result = pipe.filterByFundingSource(listWithSource, selectedFunding);
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('filterByClarisaPortfolios', () => {
+    it('should return original list when no portfolios selected', () => {
+      const result = pipe.filterByClarisaPortfolios(mockResultList, []);
+      expect(result).toEqual(mockResultList);
+    });
+
+    it('should filter by portfolio id', () => {
+      const listWithPortfolio = [
+        { ...mockResultList[0], portfolio_id: 10 },
+        { ...mockResultList[1], portfolio_id: 20 },
+        { ...mockResultList[2], portfolio_id: 10 }
+      ];
+      const selectedPortfolios = [{ id: 10 }];
+
+      const result = pipe.filterByClarisaPortfolios(listWithPortfolio, selectedPortfolios);
+      expect(result).toHaveLength(2);
+      expect(result.every(r => r.portfolio_id === 10)).toBe(true);
+    });
+
+    it('should return empty array when no matches found with selected portfolios', () => {
+      const listWithPortfolio = [
+        { ...mockResultList[0], portfolio_id: 10 }
+      ];
+      const selectedPortfolios = [{ id: 99 }];
+
+      const result = pipe.filterByClarisaPortfolios(listWithPortfolio, selectedPortfolios);
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('filterByText edge cases', () => {
+    it('should return empty array when resultList is empty', () => {
+      const result = pipe.filterByText([], 'test');
+      expect(result).toEqual([]);
+    });
+
+    it('should handle whitespace-only search word', () => {
+      const result = pipe.filterByText(mockResultList, '   ');
+      expect(result).toEqual(mockResultList);
+    });
+
+    it('should handle null values in item attributes', () => {
+      const listWithNulls = [
+        { title: null, description: null, result_code: null }
+      ];
+      const result = pipe.filterByText(listWithNulls, 'anything');
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('transform with lead center filter applied', () => {
+    it('should apply lead center filter along with other filters', () => {
+      const listWithCenter = [
+        { ...mockResultList[0], lead_center: 'CIAT', source_name: 'W1', portfolio_id: 1 },
+        { ...mockResultList[1], lead_center: 'IFPRI', source_name: 'W2', portfolio_id: 2 }
+      ];
+      const selectedLeadCenters = [{ acronym: 'CIAT', code: 'C001' }];
+
+      const result = pipe.transform(listWithCenter, '', false, [], [], [], [], [], selectedLeadCenters);
+      expect(result).toHaveLength(1);
+      expect(result[0].lead_center).toBe('CIAT');
+    });
+  });
 });
