@@ -685,7 +685,6 @@ export class ResultsApiService {
   }
 
   GET_reportingList(
-    initDate: string = '2022-12-01',
     filtersParams: {
       inits?: any[];
       phases?: any[];
@@ -697,10 +696,6 @@ export class ResultsApiService {
       leadCenters?: any[];
     } = {}
   ) {
-    const init = new Date(initDate);
-    const today = new Date();
-    today.setMilliseconds(0);
-
     const dynamicBaseUrl = this.ipsrDataControlSE.inIpsr
       ? `${environment.apiBaseUrl}api/ipsr/get`
       : `${environment.apiBaseUrl}api/results/get/reporting`;
@@ -709,7 +704,7 @@ export class ResultsApiService {
       return this.http.post<any>(`${dynamicBaseUrl}/excel-report`, filtersParams);
     }
 
-    return this.http.post<any>(`${dynamicBaseUrl}/list/date/${init.toISOString()}/${today.toISOString()}`, filtersParams);
+    return this.http.post<any>(`${dynamicBaseUrl}/list`, filtersParams);
   }
 
   POST_AdminKPExcelReport(body) {

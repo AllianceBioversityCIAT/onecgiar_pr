@@ -460,7 +460,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   onDownLoadTableAsExcel() {
     this.gettingReport.set(true);
     this.api.resultsSE
-      .GET_reportingList('2022-12-01', {
+      .GET_reportingList({
         phases: this.resultsListFilterSE.selectedPhases(),
         searchText: this.resultsListFilterSE.text_to_search(),
         inits: this.resultsListFilterSE.selectedSubmittersAdmin(),
@@ -490,17 +490,19 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
       { header: 'Description', key: 'description', width: 125 },
       { header: 'Result type', key: 'result_type', width: 45 },
       { header: 'Gender tag level', key: 'gender_tag_level', width: 20 },
+      { header: 'Gender impact areas', key: 'gender_impact_areas', width: 20 },
       { header: 'Climate tag level', key: 'climate_tag_level', width: 20 },
+      { header: 'Climate impact areas', key: 'climate_impact_areas', width: 20 },
       { header: 'Nutrition tag level', key: 'nutrition_tag_level', width: 20 },
-      { header: 'Environment/biodiversity tag level', key: 'environment_tag_level', width: 38 },
+      { header: 'Nutrition impact areas', key: 'nutrition_impact_areas', width: 20 },
+      { header: 'Environment/biodiversity tag level', key: 'environment_tag_level', width: 20 },
+      { header: 'Environment/biodiversity impact areas', key: 'environment_impact_areas', width: 20 },
       { header: 'Poverty tag level', key: 'poverty_tag_level', width: 20 },
+      { header: 'Poverty impact areas', key: 'poverty_impact_areas', width: 20 },
       { header: 'Submitter', key: 'official_code', width: 14 },
       { header: 'Status', key: 'status_name', width: 17 },
       { header: 'Creation date', key: 'creation_date', width: 15 },
-      { header: 'Area of work id', key: 'work_package_id', width: 18 },
-      { header: 'Area of work title', key: 'work_package_title', width: 125 },
-      { header: 'ToC result id', key: 'toc_result_id', width: 15 },
-      { header: 'ToC result title', key: 'toc_result_title', width: 125 },
+      { header: 'ToC', key: 'toc', width: 125 },
       { header: 'Center(s)', key: 'centers', width: 80 },
       { header: 'Contributing Science program', key: 'contributing_initiative', width: 26 },
       { header: 'PDF Link', key: 'pdf_link', width: 65 }
