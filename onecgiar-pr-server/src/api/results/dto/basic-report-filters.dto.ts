@@ -140,7 +140,8 @@ export class BasicReportFiltersDto {
   fundingSource?: BasicReportFundingSourceDto[];
 
   @ApiPropertyOptional({
-    description: 'Filter by lead centers (results_center.is_leading_result = 1).',
+    description:
+      'Filter by lead centers (results_center.is_leading_result = 1).',
     type: [BasicReportLeadCenterDto],
   })
   @IsOptional()

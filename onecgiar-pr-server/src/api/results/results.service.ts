@@ -208,7 +208,7 @@ export class ResultsService {
     private readonly _shareResultRequestService?: ShareResultRequestService,
     @Optional()
     private readonly _shareResultRequestRepository?: ShareResultRequestRepository,
-  ) { }
+  ) {}
 
   async createOwnerResult(
     createResultDto: CreateResultDto,
@@ -1137,11 +1137,11 @@ export class ResultsService {
           ...item,
           initiative_entity_map: entityMaps.length
             ? entityMaps.map((entityMap) => ({
-              id: entityMap.id,
-              entityId: entityMap.entityId,
-              initiativeId: entityMap.initiativeId,
-              entityName: entityMap.entity_obj?.name ?? null,
-            }))
+                id: entityMap.id,
+                entityId: entityMap.entityId,
+                initiativeId: entityMap.initiativeId,
+                entityName: entityMap.entity_obj?.name ?? null,
+              }))
             : [],
           initiative_entity_user: initiativesPortfolio3,
         };
@@ -1261,11 +1261,11 @@ export class ResultsService {
           ...item,
           initiative_entity_map: entityMaps.length
             ? entityMaps.map((entityMap) => ({
-              id: entityMap.id,
-              entityId: entityMap.entityId,
-              initiativeId: entityMap.initiativeId,
-              entityName: entityMap.entity_obj?.name ?? null,
-            }))
+                id: entityMap.id,
+                entityId: entityMap.entityId,
+                initiativeId: entityMap.initiativeId,
+                entityName: entityMap.entity_obj?.name ?? null,
+              }))
             : [],
           initiative_entity_user: initiativesPortfolio3,
         };
@@ -1283,14 +1283,14 @@ export class ResultsService {
         response:
           limit !== undefined
             ? {
-              items: result,
-              meta: {
-                total,
-                page: page ?? 1,
-                limit,
-                totalPages: Math.max(1, Math.ceil(total / limit)),
-              },
-            }
+                items: result,
+                meta: {
+                  total,
+                  page: page ?? 1,
+                  limit,
+                  totalPages: Math.max(1, Math.ceil(total / limit)),
+                },
+              }
             : { items: result },
         message: 'Successful response',
         status: HttpStatus.OK,
@@ -2223,15 +2223,25 @@ export class ResultsService {
   ): BasicReportFiltersNormalized {
     const { initDate, endDate } = this._parseBasicReportDateRange(body);
     const phaseIds = this._extractPhaseIds(body.phases);
-    const initiativeIds = body.inits?.filter((i) => i.id != null).map((i) => i.id);
+    const initiativeIds = body.inits
+      ?.filter((i) => i.id != null)
+      .map((i) => i.id);
     const initiativeCodes = body.inits
       ?.filter((i) => i.official_code != null && i.official_code !== '')
       .map((i) => i.official_code);
-    const resultTypeIds = body.indicatorCategories?.filter((c) => c.id != null).map((c) => c.id);
+    const resultTypeIds = body.indicatorCategories
+      ?.filter((c) => c.id != null)
+      .map((c) => c.id);
     const statusIds = body.status
-      ?.map((s) => (typeof s.status_id === 'string' ? Number.parseInt(s.status_id, 10) : s.status_id))
+      ?.map((s) =>
+        typeof s.status_id === 'string'
+          ? Number.parseInt(s.status_id, 10)
+          : s.status_id,
+      )
       .filter((id) => id != null && !Number.isNaN(id));
-    const portfolioIds = body.clarisaPortfolios?.filter((p) => p.id != null).map((p) => p.id);
+    const portfolioIds = body.clarisaPortfolios
+      ?.filter((p) => p.id != null)
+      .map((p) => p.id);
     const sourceValues = body.fundingSource
       ?.map((f) => this._mapFundingSourceToSourceValue(f.name))
       .filter((s): s is 'Result' | 'API' => s != null);
@@ -2249,14 +2259,17 @@ export class ResultsService {
       resultTypeIds: this._emptyToUndefined(resultTypeIds),
       statusIds: this._emptyToUndefined(statusIds),
       portfolioIds: this._emptyToUndefined(portfolioIds),
-      sourceValues: sourceValues?.length ? [...new Set(sourceValues)] : undefined,
+      sourceValues: sourceValues?.length
+        ? [...new Set(sourceValues)]
+        : undefined,
       leadCenterCodes: this._emptyToUndefined(leadCenterCodes),
     };
   }
 
-  private _parseBasicReportDateRange(
-    body: BasicReportFiltersDto,
-  ): { initDate?: string; endDate?: string } {
+  private _parseBasicReportDateRange(body: BasicReportFiltersDto): {
+    initDate?: string;
+    endDate?: string;
+  } {
     const initDate =
       body.initDate != null && body.initDate !== ''
         ? this._parseAndValidateReportDate(body.initDate, 'initDate')
@@ -2293,7 +2306,9 @@ export class ResultsService {
     return arr?.length ? arr : undefined;
   }
 
-  private _trimmedOrUndefined(value: string | null | undefined): string | undefined {
+  private _trimmedOrUndefined(
+    value: string | null | undefined,
+  ): string | undefined {
     const s = value == null ? '' : String(value).trim();
     return s === '' ? undefined : s;
   }
@@ -3502,7 +3517,7 @@ export class ResultsService {
     return (
       reviewUpdateDto.commonFields?.result_description !== undefined &&
       reviewUpdateDto.commonFields.result_description !==
-      currentCommonFields?.result_description
+        currentCommonFields?.result_description
     );
   }
 
