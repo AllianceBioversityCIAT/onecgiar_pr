@@ -1,3 +1,4 @@
+import { fakeAsync, tick } from '@angular/core/testing';
 import { ExportTablesService } from './export-tables.service';
 import { CustomizedAlertsFeService } from './customized-alerts-fe.service';
 import * as FileSaver from 'file-saver';
@@ -446,10 +447,10 @@ describe('ExportTablesService', () => {
 
       const saveAsExcelFileMock = jest.spyOn(service, 'saveAsExcelFile' as keyof ExportTablesService).mockImplementation();
 
-      await service.exportExcelAdminKP(list, fileName, wscols, callback);
+      service.exportExcelAdminKP(list, fileName, wscols, callback);
 
-      // Wait for promise resolution
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Flush microtasks to resolve the dynamic import('exceljs').then(...) chain
+      await new Promise(process.nextTick);
 
       expect(callback).toHaveBeenCalled();
 
@@ -480,7 +481,7 @@ describe('ExportTablesService', () => {
   });
 
   describe('exportExcel with cellsToLink', () => {
-    it('should export excel with hyperlinks in specified cells', async () => {
+    it('should export excel with hyperlinks in specified cells', fakeAsync(() => {
       const list = [
         {
           name: 'Test 1',
@@ -504,13 +505,12 @@ describe('ExportTablesService', () => {
 
       service.exportExcel(list, fileName, wscols, cellsToLink);
 
-      // Wait for async operations
-      await new Promise(resolve => setTimeout(resolve, 100));
+      tick(100);
 
       saveAsExcelFileMock.mockRestore();
-    });
+    }));
 
-    it('should handle exportExcel without wscols', async () => {
+    it('should handle exportExcel without wscols', fakeAsync(() => {
       const list = [{ name: 'Test' }];
       const fileName = 'no_cols';
 
@@ -518,12 +518,12 @@ describe('ExportTablesService', () => {
 
       service.exportExcel(list, fileName);
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      tick(100);
 
       saveAsExcelFileMock.mockRestore();
-    });
+    }));
 
-    it('should handle exportExcel errors and show alert', async () => {
+    it('should handle exportExcel errors and show alert', fakeAsync(() => {
       const list = [];
       const fileName = 'error_test';
 
@@ -533,12 +533,12 @@ describe('ExportTablesService', () => {
       const originalImport = (global as any).import;
       (global as any).import = jest.fn().mockRejectedValue(new Error('Import failed'));
 
-      await service.exportExcel(list, fileName);
+      service.exportExcel(list, fileName);
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      tick(100);
 
       (global as any).import = originalImport;
-    });
+    }));
   });
 
   describe('exportMultipleSheetsExcel error handling', () => {
@@ -553,8 +553,6 @@ describe('ExportTablesService', () => {
       (global as any).import = jest.fn().mockRejectedValue(new Error('Import failed'));
 
       await service.exportMultipleSheetsExcel(list, fileName, undefined, [], undefined, callback);
-
-      await new Promise(resolve => setTimeout(resolve, 100));
 
       expect(callback).toHaveBeenCalled();
 
@@ -578,8 +576,6 @@ describe('ExportTablesService', () => {
         EOIsConfig: { data: [], wscols: [], worksheetName: 'Test' },
         callback
       });
-
-      await new Promise(resolve => setTimeout(resolve, 100));
 
       expect(callback).toHaveBeenCalled();
 
@@ -1062,8 +1058,6 @@ describe('ExportTablesService', () => {
         EOIsConfig: { data: [], wscols: [], worksheetName: 'Test' },
         callback
       });
-
-      await new Promise(resolve => setTimeout(resolve, 100));
 
       expect(callback).toHaveBeenCalled();
 

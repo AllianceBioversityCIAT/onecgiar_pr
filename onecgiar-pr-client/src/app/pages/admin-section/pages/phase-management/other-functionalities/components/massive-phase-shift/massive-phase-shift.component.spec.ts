@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { MassivePhaseShiftComponent } from './massive-phase-shift.component';
-import { HttpClientModule } from '@angular/common/http';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 
 describe('MassivePhaseShiftComponent', () => {
   let component: MassivePhaseShiftComponent;
@@ -10,7 +10,7 @@ describe('MassivePhaseShiftComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [MassivePhaseShiftComponent],
-      imports: [HttpClientModule]
+      imports: [HttpClientTestingModule]
     }).compileComponents();
 
     fixture = TestBed.createComponent(MassivePhaseShiftComponent);

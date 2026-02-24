@@ -7,9 +7,10 @@
     "build": "ng build",
     "build:dev": "ng build --configuration development",
     "watch": "ng build --watch --configuration development",
-    "test": "jest",
-    "test:watch": "jest --watch",
+    "test": "jest --no-coverage",
+    "test:watch": "jest --watch --no-coverage",
     "test:coverage": "jest --coverage",
+    "test:coverage:html": "jest --coverage --coverageReporters=text-summary --coverageReporters=cobertura --coverageReporters=lcov",
     "lint": "ng lint",
     "lint:fix": "ng lint --fix",
     "tunnel": "ng serve -c production --port 19971",
@@ -77,16 +78,25 @@
     "setupFilesAfterEnv": [
       "<rootDir>/src/setup-jest.ts"
     ],
+    "transform": {
+      "^.+\\.(ts|js|mjs|html|svg)$": [
+        "jest-preset-angular",
+        {
+          "tsconfig": "<rootDir>/tsconfig.spec.json",
+          "stringifyContentPathRegex": "\\.(html|svg)$",
+          "diagnostics": false
+        }
+      ]
+    },
+    "cacheDirectory": "<rootDir>/.jest-cache",
+    "maxWorkers": "50%",
     "coverageReporters": [
-      "text",
-      "cobertura",
-      "lcov"
+      "text-summary",
+      "cobertura"
     ],
-    "globalSetup": "jest-preset-angular/global-setup",
-    "collectCoverage": true,
+    "collectCoverage": false,
     "collectCoverageFrom": [
       "./src/app/**/*.ts",
-      "./src/app/**/*.html",
       "!./src/app/**/*routing.ts",
       "!./src/app/**/*module.ts",
       "!./src/app/**/model/*.ts",

@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
-import { HttpClientModule } from '@angular/common/http';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { RdGeneralInformationComponent } from './rd-general-information.component';
 import { of, throwError } from 'rxjs';
 import { ApiService } from './../../../../../../shared/services/api/api.service';
@@ -259,7 +259,7 @@ describe('RdGeneralInformationComponent', () => {
           useValue: mockPusherService
         }
       ],
-      imports: [HttpClientModule, FormsModule, DialogModule]
+      imports: [HttpClientTestingModule, FormsModule, DialogModule]
     }).compileComponents();
 
     fixture = TestBed.createComponent(RdGeneralInformationComponent);

@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { RouterModule } from '@angular/router';
 import { ResultsComponent } from './results.component';
-import { HttpClientModule } from '@angular/common/http';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { ApiService } from '../../../app/shared/services/api/api.service';
 import { IpsrDataControlService } from '../ipsr/services/ipsr-data-control.service';
 
@@ -41,7 +41,7 @@ describe('ResultsComponent', () => {
         }
       ],
       imports: [
-        HttpClientModule,
+        HttpClientTestingModule,
         RouterModule
       ],
     }).compileComponents();

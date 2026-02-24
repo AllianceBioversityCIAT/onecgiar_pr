@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { HttpClientModule } from '@angular/common/http';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { StepN1EoiOutcomesComponent } from './step-n1-eoi-outcomes.component';
 import { of, throwError } from 'rxjs';
 import { PrMultiSelectComponent } from '../../../../../../../../../../custom-fields/pr-multi-select/pr-multi-select.component';
@@ -14,7 +14,7 @@ describe('StepN1EoiOutcomesComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [StepN1EoiOutcomesComponent, PrMultiSelectComponent, FeedbackValidationDirective, PrFieldHeaderComponent],
-      imports: [HttpClientModule, FormsModule]
+      imports: [HttpClientTestingModule, FormsModule]
     }).compileComponents();
   });
 

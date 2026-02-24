@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { UserReportComponent } from './user-report.component';
-import { HttpClientModule } from '@angular/common/http';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { FilterByTextModule } from '../../../../shared/pipes/filter-by-text.module';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { of } from 'rxjs';
@@ -27,7 +27,7 @@ describe('UserReportComponent', () => {
 
     await TestBed.configureTestingModule({
       declarations: [UserReportComponent],
-      imports: [HttpClientModule, FilterByTextModule, CustomFieldsModule],
+      imports: [HttpClientTestingModule, FilterByTextModule, CustomFieldsModule],
       providers: [
         { provide: ApiService, useValue: apiService },
         { provide: ExportTablesService, useValue: exportTablesService }

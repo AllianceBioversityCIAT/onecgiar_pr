@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { HeaderPanelComponent } from './header-panel.component';
-import { HttpClientModule } from '@angular/common/http';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { SatPopoverModule } from '@ncstate/sat-popover';
 import { PrButtonComponent } from '../../../custom-fields/pr-button/pr-button.component';
 import { TooltipModule } from 'primeng/tooltip';
@@ -15,7 +15,7 @@ describe('HeaderPanelComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [PrButtonComponent],
-      imports: [HttpClientModule, SatPopoverModule, TooltipModule, HeaderPanelComponent, RouterTestingModule]
+      imports: [HttpClientTestingModule, SatPopoverModule, TooltipModule, HeaderPanelComponent, RouterTestingModule]
     }).compileComponents();
 
     fixture = TestBed.createComponent(HeaderPanelComponent);

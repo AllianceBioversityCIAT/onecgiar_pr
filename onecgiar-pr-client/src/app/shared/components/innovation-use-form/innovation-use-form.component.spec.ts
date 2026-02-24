@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { InnovationUseFormComponent } from './innovation-use-form.component';
 import { ApiService } from '../../services/api/api.service';
@@ -173,15 +173,14 @@ describe('InnovationUseFormComponent', () => {
     expect(actorItem.how_many).toBe(20);
   });
 
-  it('should reload the select correctly', () => {
+  it('should reload the select correctly', fakeAsync(() => {
     const organizationItem = { hide: false, institution_sub_type_id: 1 } as any;
     component.reloadSelect(organizationItem);
     expect(organizationItem.hide).toBe(true);
     expect(organizationItem.institution_sub_type_id).toBeNull();
-    setTimeout(() => {
-      expect(organizationItem.hide).toBe(false);
-    }, 300);
-  });
+    tick(300);
+    expect(organizationItem.hide).toBe(false);
+  }));
 
   it('should get all sub types correctly', () => {
     component.body.innovatonUse.organization = [{ institution_sub_type_id: 1 }, { institution_sub_type_id: 2 }] as Organization[];
@@ -224,53 +223,44 @@ describe('InnovationUseFormComponent', () => {
     expect(organizationItem.is_active).toBe(false);
   });
 
-  it('should set genderYouth to null when genderYouth is less than 0', done => {
+  it('should set genderYouth to null when genderYouth is less than 0', fakeAsync(() => {
     component.body.innovatonUse.actors = [{ women: 10, women_youth: -1, men: 10, men_youth: 5, sex_and_age_disaggregation: false } as Actor];
     const actorItem = component.body.innovatonUse.actors[0];
     component.validateYouth(0, true, actorItem);
-    setTimeout(() => {
-      expect(actorItem.women_youth).toBeNull();
-      done();
-    }, 150);
-  });
+    tick(150);
+    expect(actorItem.women_youth).toBeNull();
+  }));
 
-  it('should set gender to 0 when gender is less than 0', done => {
+  it('should set gender to 0 when gender is less than 0', fakeAsync(() => {
     component.body.innovatonUse.actors = [{ women: -1, women_youth: 5, men: 10, men_youth: 5, sex_and_age_disaggregation: false } as Actor];
     const actorItem = component.body.innovatonUse.actors[0];
     component.validateYouth(0, true, actorItem);
-    setTimeout(() => {
-      expect(actorItem.women).toBe(0);
-      done();
-    }, 150);
-  });
+    tick(150);
+    expect(actorItem.women).toBe(0);
+  }));
 
-  it('should handle when gender is less than genderYouth', done => {
+  it('should handle when gender is less than genderYouth', fakeAsync(() => {
     component.body.innovatonUse.actors = [
       { women: 5, women_youth: 10, men: 10, men_youth: 5, sex_and_age_disaggregation: false, previousWomen: 5, previousWomen_youth: 10 } as Actor
     ];
     const actorItem = component.body.innovatonUse.actors[0];
     component.validateYouth(0, true, actorItem);
-    setTimeout(() => {
-      expect(actorItem.women_youth).toBe(10);
-      expect(actorItem.women).toBe(5);
-      done();
-    }, 600);
-  });
+    tick(600);
+    expect(actorItem.women_youth).toBe(10);
+    expect(actorItem.women).toBe(5);
+  }));
 
-  it('should set showWomenExplanation to true and false accordingly', done => {
+  it('should set showWomenExplanation to true and false accordingly', fakeAsync(() => {
     component.body.innovatonUse.actors = [
       { women: 5, women_youth: 10, men: 10, men_youth: 5, sex_and_age_disaggregation: false, previousWomen: 5, previousWomen_youth: 10 } as Actor
     ];
     const actorItem = component.body.innovatonUse.actors[0];
     component.validateYouth(0, true, actorItem);
-    setTimeout(() => {
-      expect(component.body.innovatonUse.actors[0]['showWomenExplanationwomen']).toBe(true);
-      setTimeout(() => {
-        expect(component.body.innovatonUse.actors[0]['showWomenExplanationwomen']).toBe(false);
-        done();
-      }, 3100);
-    }, 500);
-  });
+    tick(500);
+    expect(component.body.innovatonUse.actors[0]['showWomenExplanationwomen']).toBe(true);
+    tick(3100);
+    expect(component.body.innovatonUse.actors[0]['showWomenExplanationwomen']).toBe(false);
+  }));
   // Test for calculateTotalField when sex_and_age_disaggregation is true
   it('should not calculate total field when sex_and_age_disaggregation is true', () => {
     const actorItem = { women: 10, men: 5, sex_and_age_disaggregation: true, how_many: 0 } as Actor;
@@ -325,54 +315,45 @@ describe('InnovationUseFormComponent', () => {
   });
 
   // Test for validateYouth when genderYouth is less than 0
-  it('should set genderYouth to null when genderYouth is less than 0', done => {
+  it('should set genderYouth to null when genderYouth is less than 0', fakeAsync(() => {
     component.body.innovatonUse.actors = [{ women: 10, women_youth: -1, men: 10, men_youth: 5, sex_and_age_disaggregation: false } as Actor];
     const actorItem = component.body.innovatonUse.actors[0];
     component.validateYouth(0, true, actorItem);
-    setTimeout(() => {
-      expect(actorItem.women_youth).toBeNull();
-      done();
-    }, 100);
-  });
+    tick(100);
+    expect(actorItem.women_youth).toBeNull();
+  }));
 
   // Test for validateYouth when gender is less than 0
-  it('should set gender to 0 when gender is less than 0', done => {
+  it('should set gender to 0 when gender is less than 0', fakeAsync(() => {
     component.body.innovatonUse.actors = [{ women: -1, women_youth: 5, men: 10, men_youth: 5, sex_and_age_disaggregation: false } as Actor];
     const actorItem = component.body.innovatonUse.actors[0];
     component.validateYouth(0, true, actorItem);
-    setTimeout(() => {
-      expect(actorItem.women).toBe(0);
-      done();
-    }, 100);
-  });
+    tick(100);
+    expect(actorItem.women).toBe(0);
+  }));
 
   // Test for validateYouth when gender is less than genderYouth
-  it('should handle when gender is less than genderYouth', done => {
+  it('should handle when gender is less than genderYouth', fakeAsync(() => {
     component.body.innovatonUse.actors = [
       { women: 5, women_youth: 10, men: 10, men_youth: 5, sex_and_age_disaggregation: false, previousWomen: 5, previousWomen_youth: 10 } as Actor
     ];
     const actorItem = component.body.innovatonUse.actors[0];
     component.validateYouth(0, true, actorItem);
-    setTimeout(() => {
-      expect(actorItem.women_youth).toBe(10);
-      expect(actorItem.women).toBe(5);
-      done();
-    }, 600);
-  });
+    tick(600);
+    expect(actorItem.women_youth).toBe(10);
+    expect(actorItem.women).toBe(5);
+  }));
 
   // Test for showWomenExplanation values
-  it('should set showWomenExplanation to true and false accordingly', done => {
+  it('should set showWomenExplanation to true and false accordingly', fakeAsync(() => {
     component.body.innovatonUse.actors = [
       { women: 5, women_youth: 10, men: 10, men_youth: 5, sex_and_age_disaggregation: false, previousWomen: 5, previousWomen_youth: 10 } as Actor
     ];
     const actorItem = component.body.innovatonUse.actors[0];
     component.validateYouth(0, true, actorItem);
-    setTimeout(() => {
-      expect(component.body.innovatonUse.actors[0]['showWomenExplanationwomen']).toBe(true);
-      setTimeout(() => {
-        expect(component.body.innovatonUse.actors[0]['showWomenExplanationwomen']).toBe(false);
-        done();
-      }, 3100);
-    }, 500);
-  });
+    tick(500);
+    expect(component.body.innovatonUse.actors[0]['showWomenExplanationwomen']).toBe(true);
+    tick(3100);
+    expect(component.body.innovatonUse.actors[0]['showWomenExplanationwomen']).toBe(false);
+  }));
 });
