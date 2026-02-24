@@ -474,5 +474,202 @@ describe('ReportResultFormComponent', () => {
       (component as any).tryApplySelectedInitiative();
       expect(mockResultLevelService.resultBody.initiative_id).toBe(originalInitiativeId);
     });
+
+    it('should not apply when no match found in list', () => {
+      component.availableInitiativesSig.set([{ id: 99, initiative_id: 99 }]);
+      (component as any)._selectedInitiativeId = 1;
+      jest.spyOn(component, 'onSelectInit');
+      (component as any).tryApplySelectedInitiative();
+      expect(component.onSelectInit).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('ngOnInit non-admin with single initiative auto-select', () => {
+    it('should auto-select initiative when non-admin has exactly one initiative and no pre-selected', () => {
+      mockApiService.rolesSE.isAdmin = false;
+      const singleInit = [{ id: 42, initiative_id: 42, full_name: 'Single Init' }];
+      mockApiService.dataControlSE.myInitiativesListReportingByPortfolio = singleInit;
+      (component as any)._selectedInitiativeId = null;
+      mockResultLevelService.resultBody = new ResultBody();
+
+      fixture.detectChanges();
+
+      // After updateUserData callback:
+      // _selectedInitiativeId should be set to 42 (auto-selected from single initiative)
+      expect((component as any)._selectedInitiativeId).toBe(42);
+    });
+
+    it('should set initiative_id from _selectedInitiativeId when it is not null after updateUserData', () => {
+      mockApiService.rolesSE.isAdmin = false;
+      const inits = [{ id: 10, initiative_id: 10 }, { id: 20, initiative_id: 20 }];
+      mockApiService.dataControlSE.myInitiativesListReportingByPortfolio = inits;
+      (component as any)._selectedInitiativeId = 10;
+      mockResultLevelService.resultBody = new ResultBody();
+
+      fixture.detectChanges();
+
+      expect(mockResultLevelService.resultBody.initiative_id).toBe(10);
+    });
+
+    it('should set initiative_id from single initiative when _selectedInitiativeId is null and only one initiative', () => {
+      mockApiService.rolesSE.isAdmin = true;
+      const singleInit = [{ id: 55, initiative_id: 55 }];
+      mockApiService.dataControlSE.myInitiativesListReportingByPortfolio = singleInit;
+      (component as any)._selectedInitiativeId = null;
+      mockResultLevelService.resultBody = new ResultBody();
+
+      // Force updateUserData callback to NOT set _selectedInitiativeId
+      mockApiService.updateUserData = jest.fn(cb => {
+        // isAdmin is true, so the non-admin block is skipped
+        // _selectedInitiativeId remains null
+        cb();
+      });
+
+      fixture.detectChanges();
+
+      // Falls into the else if (length == 1) branch
+      expect(mockResultLevelService.resultBody.initiative_id).toBe(55);
+    });
+  });
+
+  describe('onTitleChange edge cases', () => {
+    it('should clear depthSearchList and stop loading for empty title', () => {
+      component.depthSearchList = [{ id: 1 }] as any;
+      component.onTitleChange('');
+      expect(component.depthSearchList).toEqual([]);
+      expect(component.loadingDepthSearch()).toBe(false);
+    });
+
+    it('should clear depthSearchList for whitespace-only title', () => {
+      component.onTitleChange('   ');
+      expect(component.depthSearchList).toEqual([]);
+      expect(component.loadingDepthSearch()).toBe(false);
+    });
+
+    it('should clear depthSearchList for null title', () => {
+      component.onTitleChange(null as any);
+      expect(component.depthSearchList).toEqual([]);
+      expect(component.loadingDepthSearch()).toBe(false);
+    });
+
+    it('should set debounceTimer for non-empty title', (done) => {
+      jest.spyOn(component, 'depthSearch').mockImplementation(() => {});
+      component.onTitleChange('test title');
+      expect(component.loadingDepthSearch()).toBe(true);
+      setTimeout(() => {
+        expect(component.depthSearch).toHaveBeenCalledWith('test title');
+        done();
+      }, 600);
+    });
+  });
+
+  describe('applyPendingResultTypeSelection', () => {
+    it('should apply pending selection when level list is available', (done) => {
+      mockResultLevelService.consumePendingResultType = jest.fn(() => ({ id: 1, name: 'Innovation' }));
+      mockResultLevelService.resultLevelListSig = signal([{ id: 1, name: 'Output' }]);
+
+      (component as any).applyPendingResultTypeSelection();
+
+      setTimeout(() => {
+        expect(mockResultLevelService.preselectResultType).toHaveBeenCalledWith(1, 'Innovation');
+        done();
+      }, 100);
+    });
+
+    it('should retry when level list is empty', (done) => {
+      jest.useFakeTimers();
+      mockResultLevelService.consumePendingResultType = jest.fn(() => ({ id: 2, name: 'Policy' }));
+      mockResultLevelService.resultLevelListSig = signal([]);
+
+      (component as any).applyPendingResultTypeSelection();
+
+      // Initial setTimeout(checkAndApply, 0)
+      jest.advanceTimersByTime(0);
+      // Now checkAndApply runs, finds empty list, sets setTimeout(checkAndApply, 50)
+      jest.advanceTimersByTime(50);
+
+      // Still empty, should retry
+      // Now provide data
+      mockResultLevelService.resultLevelListSig = signal([{ id: 1 }]);
+      jest.advanceTimersByTime(50);
+
+      expect(mockResultLevelService.preselectResultType).toHaveBeenCalledWith(2, 'Policy');
+      jest.useRealTimers();
+      done();
+    });
+
+    it('should do nothing when no pending selection', () => {
+      mockResultLevelService.consumePendingResultType = jest.fn(() => null);
+      mockResultLevelService.preselectResultType.mockClear();
+      (component as any).applyPendingResultTypeSelection();
+      expect(mockResultLevelService.preselectResultType).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('onSelectInit for non-admin', () => {
+    it('should use myInitiativesListReportingByPortfolio when not admin', () => {
+      mockApiService.rolesSE.isAdmin = false;
+      mockApiService.dataControlSE.myInitiativesListReportingByPortfolio = [
+        { id: 5, typeCode: 'SP' }
+      ];
+      component.cgiarEntityTypes = mockEntityTypes;
+      mockResultLevelService.resultBody.initiative_id = 5;
+
+      component.onSelectInit();
+
+      expect(component.currentResultType).toBe('Science Program');
+    });
+  });
+
+  describe('GET_AllInitiatives edge cases', () => {
+    it('should handle null entityTypesResponse in groupList iteration', (done) => {
+      mockApiService.rolesSE.isAdmin = true;
+      mockApiService.resultsSE.GET_cgiarEntityTypes = jest.fn(() => of({ response: null }));
+      mockApiService.resultsSE.GET_AllInitiatives = jest.fn(() => of({ response: [] }));
+
+      component.GET_AllInitiatives(() => {
+        // groupList is null, forEach should be skipped
+        expect(component.allInitiatives).toEqual([]);
+        done();
+      });
+    });
+
+    it('should handle error in GET_AllInitiatives', () => {
+      mockApiService.rolesSE.isAdmin = true;
+      mockApiService.resultsSE.GET_AllInitiatives = jest.fn(() => throwError(() => new Error('Error')));
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      component.GET_AllInitiatives();
+
+      expect(consoleSpy).toHaveBeenCalled();
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe('getAllPhases edge cases', () => {
+    it('should handle null phases gracefully', () => {
+      mockPhasesService.phases = null;
+      component.getAllPhases();
+      expect(component.allPhases).toEqual([]);
+    });
+
+    it('should handle missing reporting or ipsr phases', () => {
+      mockPhasesService.phases = { reporting: null, ipsr: null };
+      component.getAllPhases();
+      expect(component.allPhases).toEqual([]);
+    });
+  });
+
+  describe('getLegacyType Other outcome', () => {
+    it('should return "OICR" for Other outcome type', () => {
+      expect(component.getLegacyType('Other outcome', '')).toBe('OICR');
+    });
+  });
+
+  describe('selectedInitiativeId setter with undefined', () => {
+    it('should convert undefined to null', () => {
+      component.selectedInitiativeId = undefined;
+      expect((component as any)._selectedInitiativeId).toBe(null);
+    });
   });
 });

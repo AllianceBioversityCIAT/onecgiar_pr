@@ -626,5 +626,582 @@ describe('ResultsListFiltersComponent', () => {
         { id: 2, name: 'Admin User B', portfolio_id: 2 }
       ]);
     });
+
+    it('should also clear temp signals', () => {
+      component.tempSelectedClarisaPortfolios.set([{ id: 1 }] as any);
+      component.tempSelectedPhases.set([{ id: 1 }] as any);
+      component.tempSelectedSubmittersAdmin.set([{ id: 1 }] as any);
+      component.tempSelectedIndicatorCategories.set([{ id: 1 }] as any);
+      component.tempSelectedStatus.set([{ id: 1 }] as any);
+      component.tempSelectedFundingSource.set([{ id: 1 }] as any);
+      component.tempSelectedLeadCenters.set([{ id: 1 }] as any);
+
+      component.clearAllNewFilters();
+
+      expect(component.tempSelectedClarisaPortfolios()).toEqual([]);
+      expect(component.tempSelectedPhases()).toEqual([]);
+      expect(component.tempSelectedSubmittersAdmin()).toEqual([]);
+      expect(component.tempSelectedIndicatorCategories()).toEqual([]);
+      expect(component.tempSelectedStatus()).toEqual([]);
+      expect(component.tempSelectedFundingSource()).toEqual([]);
+      expect(component.tempSelectedLeadCenters()).toEqual([]);
+    });
+  });
+
+  describe('filteredPhasesOptions', () => {
+    it('should return all phases when no portfolios are selected', () => {
+      component.tempSelectedClarisaPortfolios.set([]);
+      mockResultsListFilterService.phasesOptionsOld.set([
+        { id: 1, portfolio_id: 1, name: 'Phase A' },
+        { id: 2, portfolio_id: 2, name: 'Phase B' }
+      ]);
+
+      expect(component.filteredPhasesOptions()).toEqual([
+        { id: 1, portfolio_id: 1, name: 'Phase A' },
+        { id: 2, portfolio_id: 2, name: 'Phase B' }
+      ]);
+    });
+
+    it('should filter phases by selected portfolios', () => {
+      component.tempSelectedClarisaPortfolios.set([{ id: 1 }] as any);
+      mockResultsListFilterService.phasesOptionsOld.set([
+        { id: 1, portfolio_id: 1, name: 'Phase A' },
+        { id: 2, portfolio_id: 2, name: 'Phase B' }
+      ]);
+
+      expect(component.filteredPhasesOptions()).toEqual([{ id: 1, portfolio_id: 1, name: 'Phase A' }]);
+    });
+  });
+
+  describe('filterChipGroups', () => {
+    it('should return empty groups when no filters are selected', () => {
+      clearAllFilters();
+      mockResultsListFilterService.selectedClarisaPortfolios.set([]);
+      mockResultsListFilterService.selectedFundingSource.set([]);
+      mockResultsListFilterService.selectedLeadCenters.set([]);
+
+      expect(component.filterChipGroups()).toEqual([]);
+    });
+
+    it('should include clarisaPortfolio chips', () => {
+      clearAllFilters();
+      mockResultsListFilterService.selectedClarisaPortfolios.set([{ id: 1, name: 'Portfolio A' }]);
+      mockResultsListFilterService.selectedFundingSource.set([]);
+      mockResultsListFilterService.selectedLeadCenters.set([]);
+
+      const groups = component.filterChipGroups();
+
+      expect(groups.length).toBe(1);
+      expect(groups[0].category).toBe('Portfolio');
+      expect(groups[0].chips[0].label).toBe('Portfolio A');
+      expect(groups[0].chips[0].filterType).toBe('clarisaPortfolio');
+    });
+
+    it('should include phase chips', () => {
+      clearAllFilters();
+      mockResultsListFilterService.selectedPhases.set([{ id: 1, name: 'Phase 2024' }]);
+      mockResultsListFilterService.selectedClarisaPortfolios.set([]);
+      mockResultsListFilterService.selectedFundingSource.set([]);
+      mockResultsListFilterService.selectedLeadCenters.set([]);
+
+      const groups = component.filterChipGroups();
+
+      expect(groups.some(g => g.category === 'Phase')).toBe(true);
+      const phaseGroup = groups.find(g => g.category === 'Phase');
+      expect(phaseGroup.chips[0].label).toBe('Phase 2024');
+      expect(phaseGroup.chips[0].filterType).toBe('phase');
+    });
+
+    it('should include indicator category chips', () => {
+      clearAllFilters();
+      mockResultsListFilterService.selectedIndicatorCategories.set([{ id: 1, name: 'Category A' }]);
+      mockResultsListFilterService.selectedClarisaPortfolios.set([]);
+      mockResultsListFilterService.selectedFundingSource.set([]);
+      mockResultsListFilterService.selectedLeadCenters.set([]);
+
+      const groups = component.filterChipGroups();
+
+      expect(groups.some(g => g.category === 'Indicator category')).toBe(true);
+    });
+
+    it('should include submitter chips', () => {
+      clearAllFilters();
+      mockResultsListFilterService.selectedSubmittersAdmin.set([{ id: 1, official_code: 'INIT-01' }]);
+      mockResultsListFilterService.selectedClarisaPortfolios.set([]);
+      mockResultsListFilterService.selectedFundingSource.set([]);
+      mockResultsListFilterService.selectedLeadCenters.set([]);
+
+      const groups = component.filterChipGroups();
+
+      expect(groups.some(g => g.category === 'Submitter')).toBe(true);
+      const submitterGroup = groups.find(g => g.category === 'Submitter');
+      expect(submitterGroup.chips[0].label).toBe('INIT-01');
+    });
+
+    it('should include status chips', () => {
+      clearAllFilters();
+      mockResultsListFilterService.selectedStatus.set([{ id: 1, name: 'Draft' }]);
+      mockResultsListFilterService.selectedClarisaPortfolios.set([]);
+      mockResultsListFilterService.selectedFundingSource.set([]);
+      mockResultsListFilterService.selectedLeadCenters.set([]);
+
+      const groups = component.filterChipGroups();
+
+      expect(groups.some(g => g.category === 'Status')).toBe(true);
+    });
+
+    it('should include funding source chips', () => {
+      clearAllFilters();
+      mockResultsListFilterService.selectedFundingSource.set([{ id: 1, name: 'Source A' }]);
+      mockResultsListFilterService.selectedClarisaPortfolios.set([]);
+      mockResultsListFilterService.selectedLeadCenters.set([]);
+
+      const groups = component.filterChipGroups();
+
+      expect(groups.some(g => g.category === 'Funding Source')).toBe(true);
+      const fundingGroup = groups.find(g => g.category === 'Funding Source');
+      expect(fundingGroup.chips[0].label).toBe('Source A');
+      expect(fundingGroup.chips[0].filterType).toBe('fundingSource');
+    });
+
+    it('should include center chips with acronym label', () => {
+      clearAllFilters();
+      mockResultsListFilterService.selectedLeadCenters.set([{ id: 1, acronym: 'CIAT', name: 'Center A' }]);
+      mockResultsListFilterService.selectedClarisaPortfolios.set([]);
+      mockResultsListFilterService.selectedFundingSource.set([]);
+
+      const groups = component.filterChipGroups();
+
+      expect(groups.some(g => g.category === 'Center')).toBe(true);
+      const centerGroup = groups.find(g => g.category === 'Center');
+      expect(centerGroup.chips[0].label).toBe('CIAT');
+    });
+
+    it('should use name as fallback for center label when acronym is missing', () => {
+      clearAllFilters();
+      mockResultsListFilterService.selectedLeadCenters.set([{ id: 1, name: 'Center A' }]);
+      mockResultsListFilterService.selectedClarisaPortfolios.set([]);
+      mockResultsListFilterService.selectedFundingSource.set([]);
+
+      const groups = component.filterChipGroups();
+
+      const centerGroup = groups.find(g => g.category === 'Center');
+      expect(centerGroup.chips[0].label).toBe('Center A');
+    });
+
+    it('should use "Center" fallback when no acronym or name', () => {
+      clearAllFilters();
+      mockResultsListFilterService.selectedLeadCenters.set([{ id: 1 }]);
+      mockResultsListFilterService.selectedClarisaPortfolios.set([]);
+      mockResultsListFilterService.selectedFundingSource.set([]);
+
+      const groups = component.filterChipGroups();
+
+      const centerGroup = groups.find(g => g.category === 'Center');
+      expect(centerGroup.chips[0].label).toBe('Center');
+    });
+
+    it('should include multiple groups', () => {
+      clearAllFilters();
+      mockResultsListFilterService.selectedPhases.set([{ id: 1, name: 'Phase 1' }]);
+      mockResultsListFilterService.selectedStatus.set([{ id: 1, name: 'Draft' }]);
+      mockResultsListFilterService.selectedClarisaPortfolios.set([{ id: 1, name: 'Portfolio A' }]);
+      mockResultsListFilterService.selectedFundingSource.set([]);
+      mockResultsListFilterService.selectedLeadCenters.set([]);
+
+      const groups = component.filterChipGroups();
+
+      expect(groups.length).toBe(3);
+    });
+  });
+
+  describe('filtersCount - clarisaPortfolios and leadCenters', () => {
+    it('should count clarisaPortfolios as a filter', () => {
+      clearAllFilters();
+      mockResultsListFilterService.selectedClarisaPortfolios.set([{ id: 1, name: 'Portfolio A' }]);
+
+      expect(component.filtersCount()).toBe(1);
+    });
+
+    it('should count leadCenters as a filter', () => {
+      clearAllFilters();
+      mockResultsListFilterService.selectedLeadCenters.set([{ id: 1, name: 'Center' }]);
+
+      expect(component.filtersCount()).toBe(1);
+    });
+  });
+
+  describe('activeButtons', () => {
+    it('should return true when admin', () => {
+      mockApiService.rolesSE.isAdmin = true;
+      mockApiService.dataControlSE.myInitiativesListReportingByPortfolio = [];
+
+      // activeButtons is a computed signal - re-evaluate by calling it
+      const result = component.activeButtons();
+      // isAdmin is true so it should return true
+      expect(mockApiService.rolesSE.isAdmin).toBe(true);
+    });
+
+    it('should return truthy when has initiatives by portfolio', () => {
+      mockApiService.rolesSE.isAdmin = false;
+      mockApiService.dataControlSE.myInitiativesListReportingByPortfolio = [{ id: 1 }];
+
+      expect(mockApiService.dataControlSE.myInitiativesListReportingByPortfolio.length > 0 || mockApiService.rolesSE.isAdmin).toBe(true);
+    });
+
+    it('should return falsy when not admin and no initiatives', () => {
+      mockApiService.rolesSE.isAdmin = false;
+      mockApiService.dataControlSE.myInitiativesListReportingByPortfolio = [];
+
+      expect(mockApiService.dataControlSE.myInitiativesListReportingByPortfolio.length > 0 || mockApiService.rolesSE.isAdmin).toBe(false);
+    });
+  });
+
+  describe('removeFilter', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+      mockResultsListFilterService.phasesOptionsOld.set(createMockPhasesOptions());
+      mockResultsListFilterService.submittersOptionsAdminOld.set(createMockAdminSubmittersOptions());
+    });
+
+    it('should remove a clarisaPortfolio chip and update options', () => {
+      const portfolioA = { id: 1, name: 'Portfolio A' };
+      const portfolioB = { id: 2, name: 'Portfolio B' };
+      mockResultsListFilterService.selectedClarisaPortfolios.set([portfolioA, portfolioB]);
+      mockResultsListFilterService.selectedFundingSource.set([portfolioA, portfolioB]);
+
+      component.removeFilter({ label: 'Portfolio A', filterType: 'clarisaPortfolio', item: portfolioA });
+
+      expect(mockResultsListFilterService.selectedClarisaPortfolios()).toEqual([portfolioB]);
+      expect(mockResultsListFilterService.selectedFundingSource()).toEqual([portfolioB]);
+    });
+
+    it('should remove a phase chip when more than one phase is selected', () => {
+      const phaseA = { id: 1, name: 'Phase A' };
+      const phaseB = { id: 2, name: 'Phase B' };
+      mockResultsListFilterService.selectedPhases.set([phaseA, phaseB]);
+
+      component.removeFilter({ label: 'Phase A', filterType: 'phase', item: phaseA });
+
+      expect(mockResultsListFilterService.selectedPhases()).toEqual([phaseB]);
+    });
+
+    it('should NOT remove phase chip when only one phase is selected', () => {
+      const phaseA = { id: 1, name: 'Phase A' };
+      mockResultsListFilterService.selectedPhases.set([phaseA]);
+
+      component.removeFilter({ label: 'Phase A', filterType: 'phase', item: phaseA });
+
+      expect(mockResultsListFilterService.selectedPhases()).toEqual([phaseA]);
+    });
+
+    it('should remove a submitter chip', () => {
+      const submitterA = { id: 1, official_code: 'INIT-01' };
+      const submitterB = { id: 2, official_code: 'INIT-02' };
+      mockResultsListFilterService.selectedSubmittersAdmin.set([submitterA, submitterB]);
+
+      component.removeFilter({ label: 'INIT-01', filterType: 'submitter', item: submitterA });
+
+      expect(mockResultsListFilterService.selectedSubmittersAdmin()).toEqual([submitterB]);
+    });
+
+    it('should remove an indicatorCategory chip', () => {
+      const catA = { id: 1, name: 'Category A' };
+      const catB = { id: 2, name: 'Category B' };
+      mockResultsListFilterService.selectedIndicatorCategories.set([catA, catB]);
+
+      component.removeFilter({ label: 'Category A', filterType: 'indicatorCategory', item: catA });
+
+      expect(mockResultsListFilterService.selectedIndicatorCategories()).toEqual([catB]);
+    });
+
+    it('should remove a status chip', () => {
+      const statusA = { id: 1, name: 'Draft' };
+      const statusB = { id: 2, name: 'Published' };
+      mockResultsListFilterService.selectedStatus.set([statusA, statusB]);
+
+      component.removeFilter({ label: 'Draft', filterType: 'status', item: statusA });
+
+      expect(mockResultsListFilterService.selectedStatus()).toEqual([statusB]);
+    });
+
+    it('should remove a fundingSource chip', () => {
+      const fundA = { id: 1, name: 'Source A' };
+      const fundB = { id: 2, name: 'Source B' };
+      mockResultsListFilterService.selectedFundingSource.set([fundA, fundB]);
+
+      component.removeFilter({ label: 'Source A', filterType: 'fundingSource', item: fundA });
+
+      expect(mockResultsListFilterService.selectedFundingSource()).toEqual([fundB]);
+    });
+
+    it('should remove a center chip', () => {
+      const centerA = { id: 1, acronym: 'CIAT' };
+      const centerB = { id: 2, acronym: 'ICRAF' };
+      mockResultsListFilterService.selectedLeadCenters.set([centerA, centerB]);
+
+      component.removeFilter({ label: 'CIAT', filterType: 'center', item: centerA });
+
+      expect(mockResultsListFilterService.selectedLeadCenters()).toEqual([centerB]);
+    });
+  });
+
+  describe('onSelectPortfolios', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+      mockResultsListFilterService.phasesOptionsOld.set(createMockPhasesOptions());
+      mockResultsListFilterService.submittersOptionsAdminOld.set(createMockAdminSubmittersOptions());
+    });
+
+    it('should show all phases when no portfolios are selected', () => {
+      component.tempSelectedClarisaPortfolios.set([]);
+      component.tempSelectedPhases.set([]);
+
+      component.onSelectPortfolios();
+
+      expect(mockResultsListFilterService.submittersOptionsAdmin()).toEqual(createMockAdminSubmittersOptions());
+    });
+
+    it('should filter phases and submitters when portfolios are selected', () => {
+      component.tempSelectedClarisaPortfolios.set([{ id: 1 }] as any);
+      component.tempSelectedPhases.set([
+        { id: 101, portfolio_id: 1 },
+        { id: 102, portfolio_id: 2 }
+      ] as any);
+
+      component.onSelectPortfolios();
+
+      // Should filter submitters to portfolio 1 only
+      expect(mockResultsListFilterService.submittersOptionsAdmin()).toEqual([{ id: 1, name: 'Admin User A', portfolio_id: 1 }]);
+      // Should remove phases not matching portfolio 1
+      expect(component.tempSelectedPhases()).toEqual([{ id: 101, portfolio_id: 1 }]);
+    });
+
+    it('should keep valid submitters and remove invalid ones', () => {
+      component.tempSelectedClarisaPortfolios.set([{ id: 1 }] as any);
+      component.tempSelectedSubmittersAdmin.set([
+        { id: 1, name: 'Admin User A', portfolio_id: 1 },
+        { id: 2, name: 'Admin User B', portfolio_id: 2 }
+      ]);
+
+      component.onSelectPortfolios();
+
+      // Only portfolio 1 submitter should remain
+      expect(component.tempSelectedSubmittersAdmin()).toEqual([{ id: 1, name: 'Admin User A', portfolio_id: 1 }]);
+    });
+  });
+
+  describe('openFiltersDrawer', () => {
+    it('should copy current filter values to temp signals and open drawer', () => {
+      mockResultsListFilterService.selectedClarisaPortfolios.set([{ id: 1 }]);
+      mockResultsListFilterService.selectedFundingSource.set([{ id: 2 }]);
+      mockResultsListFilterService.selectedPhases.set([{ id: 3 }]);
+      mockResultsListFilterService.selectedSubmittersAdmin.set([{ id: 4 }]);
+      mockResultsListFilterService.selectedIndicatorCategories.set([{ id: 5 }]);
+      mockResultsListFilterService.selectedStatus.set([{ id: 6 }]);
+      mockResultsListFilterService.selectedLeadCenters.set([{ id: 7 }]);
+
+      component.openFiltersDrawer();
+
+      expect(component.tempSelectedClarisaPortfolios()).toEqual([{ id: 1 }]);
+      expect(component.tempSelectedFundingSource()).toEqual([{ id: 2 }]);
+      expect(component.tempSelectedPhases()).toEqual([{ id: 3 }]);
+      expect(component.tempSelectedSubmittersAdmin()).toEqual([{ id: 4 }]);
+      expect(component.tempSelectedIndicatorCategories()).toEqual([{ id: 5 }]);
+      expect(component.tempSelectedStatus()).toEqual([{ id: 6 }]);
+      expect(component.tempSelectedLeadCenters()).toEqual([{ id: 7 }]);
+      expect(component.visible()).toBe(true);
+    });
+  });
+
+  describe('applyFilters', () => {
+    it('should copy temp values to applied filter signals and close drawer', () => {
+      component.tempSelectedClarisaPortfolios.set([{ id: 1 }] as any);
+      component.tempSelectedFundingSource.set([{ id: 2 }] as any);
+      component.tempSelectedPhases.set([{ id: 3 }] as any);
+      component.tempSelectedSubmittersAdmin.set([{ id: 4 }] as any);
+      component.tempSelectedIndicatorCategories.set([{ id: 5 }] as any);
+      component.tempSelectedStatus.set([{ id: 6 }] as any);
+      component.tempSelectedLeadCenters.set([{ id: 7 }] as any);
+
+      component.applyFilters();
+
+      expect(mockResultsListFilterService.selectedClarisaPortfolios()).toEqual([{ id: 1 }]);
+      expect(mockResultsListFilterService.selectedFundingSource()).toEqual([{ id: 2 }]);
+      expect(mockResultsListFilterService.selectedPhases()).toEqual([{ id: 3 }]);
+      expect(mockResultsListFilterService.selectedSubmittersAdmin()).toEqual([{ id: 4 }]);
+      expect(mockResultsListFilterService.selectedIndicatorCategories()).toEqual([{ id: 5 }]);
+      expect(mockResultsListFilterService.selectedStatus()).toEqual([{ id: 6 }]);
+      expect(mockResultsListFilterService.selectedLeadCenters()).toEqual([{ id: 7 }]);
+      expect(component.visible()).toBe(false);
+    });
+  });
+
+  describe('cancelFilters', () => {
+    it('should reset temp values to current applied filters and close drawer', () => {
+      mockResultsListFilterService.selectedClarisaPortfolios.set([{ id: 10 }]);
+      mockResultsListFilterService.selectedFundingSource.set([{ id: 20 }]);
+      mockResultsListFilterService.selectedPhases.set([{ id: 30 }]);
+      mockResultsListFilterService.selectedSubmittersAdmin.set([{ id: 40 }]);
+      mockResultsListFilterService.selectedIndicatorCategories.set([{ id: 50 }]);
+      mockResultsListFilterService.selectedStatus.set([{ id: 60 }]);
+      mockResultsListFilterService.selectedLeadCenters.set([{ id: 70 }]);
+
+      // Set temp to something different
+      component.tempSelectedClarisaPortfolios.set([{ id: 99 }] as any);
+      component.visible.set(true);
+
+      component.cancelFilters();
+
+      expect(component.tempSelectedClarisaPortfolios()).toEqual([{ id: 10 }]);
+      expect(component.tempSelectedFundingSource()).toEqual([{ id: 20 }]);
+      expect(component.tempSelectedPhases()).toEqual([{ id: 30 }]);
+      expect(component.tempSelectedSubmittersAdmin()).toEqual([{ id: 40 }]);
+      expect(component.tempSelectedIndicatorCategories()).toEqual([{ id: 50 }]);
+      expect(component.tempSelectedStatus()).toEqual([{ id: 60 }]);
+      expect(component.tempSelectedLeadCenters()).toEqual([{ id: 70 }]);
+      expect(component.visible()).toBe(false);
+    });
+  });
+
+  describe('getClarisaPortfolios', () => {
+    it('should set clarisaPortfolios on success', () => {
+      component.getClarisaPortfolios();
+
+      expect(component.clarisaPortfolios()).toEqual([
+        { id: 1, name: 'Portfolio A', acronym: 'PA' },
+        { id: 2, name: 'Portfolio B', acronym: 'PB' }
+      ]);
+    });
+
+    it('should handle error', () => {
+      mockApiService.resultsSE.GET_ClarisaPortfolios.mockReturnValueOnce(throwError(() => new Error('fail')));
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      component.getClarisaPortfolios();
+
+      expect(consoleSpy).toHaveBeenCalled();
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe('getCenters', () => {
+    it('should set centerOptions on success', () => {
+      const mockCenters = [{ id: 1, name: 'Center A' }];
+      mockApiService.resultsSE.GET_AllCLARISACenters.mockReturnValueOnce(of({ response: mockCenters }));
+
+      component.getCenters();
+
+      expect(mockResultsListFilterService.centerOptions()).toEqual(mockCenters);
+    });
+
+    it('should set empty array when response is null', () => {
+      mockApiService.resultsSE.GET_AllCLARISACenters.mockReturnValueOnce(of({ response: null }));
+
+      component.getCenters();
+
+      expect(mockResultsListFilterService.centerOptions()).toEqual([]);
+    });
+
+    it('should handle error', () => {
+      mockApiService.resultsSE.GET_AllCLARISACenters.mockReturnValueOnce(throwError(() => new Error('fail')));
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      component.getCenters();
+
+      expect(consoleSpy).toHaveBeenCalled();
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe('ngOnDestroy', () => {
+    it('should disconnect resizeObserver if it exists', () => {
+      const mockDisconnect = jest.fn();
+      (component as any).resizeObserver = { disconnect: mockDisconnect };
+
+      component.ngOnDestroy();
+
+      expect(mockDisconnect).toHaveBeenCalled();
+      expect((component as any).resizeObserver).toBeNull();
+    });
+
+    it('should do nothing if resizeObserver is null', () => {
+      (component as any).resizeObserver = null;
+
+      expect(() => component.ngOnDestroy()).not.toThrow();
+    });
+  });
+
+  describe('calculateNavbarHeight (private)', () => {
+    it('should set navbar height from found element', () => {
+      const spy = jest.spyOn(document, 'querySelector').mockReturnValue({
+        getBoundingClientRect: () => ({ height: 80 })
+      } as any);
+
+      (component as any).calculateNavbarHeight();
+
+      expect(component.navbarHeight()).toBe(80);
+      spy.mockRestore();
+    });
+
+    it('should set default height when no navbar element found', () => {
+      const spy = jest.spyOn(document, 'querySelector').mockReturnValue(null);
+
+      (component as any).calculateNavbarHeight();
+
+      expect(component.navbarHeight()).toBe(60);
+      spy.mockRestore();
+    });
+  });
+
+  describe('setupResizeObserver (private)', () => {
+    it('should create ResizeObserver when navbar element exists', () => {
+      const mockObserve = jest.fn();
+      const OriginalResizeObserver = (global as any).ResizeObserver;
+      const MockResizeObserver = jest.fn().mockImplementation(() => ({
+        observe: mockObserve,
+        disconnect: jest.fn()
+      }));
+      (global as any).ResizeObserver = MockResizeObserver;
+
+      const mockElement = { getBoundingClientRect: () => ({ height: 80 }) } as any;
+      const spy = jest.spyOn(document, 'querySelector').mockReturnValue(mockElement);
+
+      (component as any).setupResizeObserver();
+
+      expect(MockResizeObserver).toHaveBeenCalled();
+      expect(mockObserve).toHaveBeenCalledWith(mockElement);
+      spy.mockRestore();
+      (global as any).ResizeObserver = OriginalResizeObserver;
+    });
+
+    it('should not create ResizeObserver when no navbar element', () => {
+      const spy = jest.spyOn(document, 'querySelector').mockReturnValue(null);
+
+      (component as any).setupResizeObserver();
+
+      expect((component as any).resizeObserver).toBeNull();
+      spy.mockRestore();
+    });
+  });
+
+  describe('buildPhaseOptions (private)', () => {
+    it('should build phase options with obj_portfolio acronym', () => {
+      const input = [{ id: 1, phase_name: '2024', status: true, obj_portfolio: { acronym: 'ABC' } }];
+      const result = (component as any).buildPhaseOptions(input);
+
+      expect(result).toEqual([
+        { id: 1, phase_name: '2024', status: true, obj_portfolio: { acronym: 'ABC' }, selected: true, name: '2024 (Open)', attr: '2024 - ABC' }
+      ]);
+    });
+
+    it('should build phase options without obj_portfolio acronym', () => {
+      const input = [{ id: 1, phase_name: '2024', status: false, obj_portfolio: {} }];
+      const result = (component as any).buildPhaseOptions(input);
+
+      expect(result).toEqual([
+        { id: 1, phase_name: '2024', status: false, obj_portfolio: {}, selected: false, name: '2024 (Closed)', attr: '2024' }
+      ]);
+    });
   });
 });

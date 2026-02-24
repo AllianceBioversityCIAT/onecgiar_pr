@@ -66,7 +66,8 @@ describe('ShareRequestModalComponent', () => {
     };
 
     mockResultsNotificationsService = {
-      get_section_information: jest.fn()
+      get_section_information: jest.fn(),
+      get_section_innovation_packages: jest.fn()
     };
 
     await TestBed.configureTestingModule({
@@ -361,6 +362,372 @@ describe('ShareRequestModalComponent', () => {
 
       expect(spy).toHaveBeenCalled();
       expect(component.allInitiatives).toEqual(allInitiatives);
+    });
+  });
+
+  describe('validateAcceptOrReject - missing indicator branch', () => {
+    it('should return true when planned_result is true, activeIndicatorsLength > 0, and no selected indicator', () => {
+      component.requesting = false;
+      mockShareRequestModalService.shareRequestBody.initiative_id = 1;
+      mockShareRequestModalService.shareRequestBody.planned_result = true;
+      mockShareRequestModalService.shareRequestBody.result_toc_results = [
+        {
+          toc_result_id: 1,
+          toc_level_id: 1,
+          results_id: 1,
+          planned_result: true,
+          short_name: '',
+          official_code: '1',
+          initiative_id: 1
+        }
+      ];
+      component.fieldsManagerSE.activeIndicatorsLength = jest.fn(() => 2) as any;
+      component.fieldsManagerSE.hasSelectedIndicator = jest.fn(() => false) as any;
+
+      const result = component.validateAcceptOrReject();
+
+      expect(result).toBe(true);
+    });
+
+    it('should return false when planned_result is true but indicator is selected', () => {
+      component.requesting = false;
+      mockShareRequestModalService.shareRequestBody.initiative_id = 1;
+      mockShareRequestModalService.shareRequestBody.planned_result = true;
+      mockShareRequestModalService.shareRequestBody.result_toc_results = [
+        {
+          toc_result_id: 1,
+          toc_level_id: 1,
+          results_id: 1,
+          planned_result: true,
+          short_name: '',
+          official_code: '1',
+          initiative_id: 1
+        }
+      ];
+      component.fieldsManagerSE.activeIndicatorsLength = jest.fn(() => 2) as any;
+      component.fieldsManagerSE.hasSelectedIndicator = jest.fn(() => true) as any;
+
+      const result = component.validateAcceptOrReject();
+
+      expect(result).toBe(false);
+    });
+
+    it('should return false when planned_result is true but activeIndicatorsLength is 0', () => {
+      component.requesting = false;
+      mockShareRequestModalService.shareRequestBody.initiative_id = 1;
+      mockShareRequestModalService.shareRequestBody.planned_result = true;
+      mockShareRequestModalService.shareRequestBody.result_toc_results = [
+        {
+          toc_result_id: 1,
+          toc_level_id: 1,
+          results_id: 1,
+          planned_result: true,
+          short_name: '',
+          official_code: '1',
+          initiative_id: 1
+        }
+      ];
+      component.fieldsManagerSE.activeIndicatorsLength = jest.fn(() => 0) as any;
+      component.fieldsManagerSE.hasSelectedIndicator = jest.fn(() => false) as any;
+
+      const result = component.validateAcceptOrReject();
+
+      expect(result).toBe(false);
+    });
+
+    it('should return true when initiative_id is missing', () => {
+      component.requesting = false;
+      mockShareRequestModalService.shareRequestBody.initiative_id = null;
+      mockShareRequestModalService.shareRequestBody.result_toc_results = [];
+
+      const result = component.validateAcceptOrReject();
+
+      expect(result).toBe(true);
+    });
+
+    it('should return true when toc_level_id is missing', () => {
+      component.requesting = false;
+      mockShareRequestModalService.shareRequestBody.initiative_id = 1;
+      mockShareRequestModalService.shareRequestBody.result_toc_results = [
+        {
+          toc_result_id: 1,
+          toc_level_id: null,
+          results_id: 1,
+          planned_result: false,
+          short_name: '',
+          official_code: '1',
+          initiative_id: 1
+        }
+      ];
+
+      const result = component.validateAcceptOrReject();
+
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('isBilateralResult', () => {
+    it('should return true when source_name is W3/Bilaterals', () => {
+      mockApiService.dataControlSE.currentResult = { source_name: 'W3/Bilaterals' };
+
+      expect(component.isBilateralResult).toBe(true);
+    });
+
+    it('should return false when source_name is not W3/Bilaterals', () => {
+      mockApiService.dataControlSE.currentResult = { source_name: 'Initiative' };
+
+      expect(component.isBilateralResult).toBe(false);
+    });
+
+    it('should return false when currentResult is undefined', () => {
+      mockApiService.dataControlSE.currentResult = undefined;
+
+      expect(component.isBilateralResult).toBe(false);
+    });
+  });
+
+  describe('shouldShowTocInitiativeOut', () => {
+    it('should return false when initiative_id is missing', () => {
+      mockShareRequestModalService.shareRequestBody.initiative_id = null;
+
+      expect(component.shouldShowTocInitiativeOut).toBe(false);
+    });
+
+    it('should return false when showTocOut is false', () => {
+      mockShareRequestModalService.shareRequestBody.initiative_id = 1;
+      component.showTocOut = false;
+
+      expect(component.shouldShowTocInitiativeOut).toBe(false);
+    });
+
+    it('should return true when not in notifications and has initiative_id', () => {
+      mockShareRequestModalService.shareRequestBody.initiative_id = 1;
+      component.showTocOut = true;
+      mockApiService.dataControlSE.inNotifications = false;
+
+      expect(component.shouldShowTocInitiativeOut).toBe(true);
+    });
+
+    it('should return true when in notifications with allowed result level 3', () => {
+      mockShareRequestModalService.shareRequestBody.initiative_id = 1;
+      component.showTocOut = true;
+      mockApiService.dataControlSE.inNotifications = true;
+      mockApiService.dataControlSE.currentResult = { result_level_id: 3 };
+
+      expect(component.shouldShowTocInitiativeOut).toBe(true);
+    });
+
+    it('should return true when in notifications with allowed result level 4', () => {
+      mockShareRequestModalService.shareRequestBody.initiative_id = 1;
+      component.showTocOut = true;
+      mockApiService.dataControlSE.inNotifications = true;
+      mockApiService.dataControlSE.currentResult = { result_level_id: 4 };
+
+      expect(component.shouldShowTocInitiativeOut).toBe(true);
+    });
+
+    it('should return false when in notifications with non-allowed result level', () => {
+      mockShareRequestModalService.shareRequestBody.initiative_id = 1;
+      component.showTocOut = true;
+      mockApiService.dataControlSE.inNotifications = true;
+      mockApiService.dataControlSE.currentResult = { result_level_id: 1 };
+
+      expect(component.shouldShowTocInitiativeOut).toBe(false);
+    });
+  });
+
+  describe('entitiesList', () => {
+    it('should filter by portfolio when admin', () => {
+      mockApiService.rolesSE.isAdmin = true;
+      component.allInitiatives = [
+        { initiative_id: 1, portfolio_id: 1, official_code: 'INIT-01' },
+        { initiative_id: 2, portfolio_id: 2, official_code: 'INIT-02' }
+      ];
+      mockApiService.dataControlSE.reportingCurrentPhase = { portfolioId: 1 };
+
+      const result = component.entitiesList;
+
+      expect(result).toEqual([{ initiative_id: 1, portfolio_id: 1, official_code: 'INIT-01' }]);
+    });
+
+    it('should filter out current submitter for non-admin', () => {
+      mockApiService.rolesSE.isAdmin = false;
+      mockApiService.dataControlSE.myInitiativesList = [
+        { initiative_id: 1, official_code: 'INIT-01' },
+        { initiative_id: 2, official_code: 'INIT-02' }
+      ];
+      mockApiService.dataControlSE.currentResult = { submitter: 'INIT-01' };
+
+      const result = component.entitiesList;
+
+      expect(result).toEqual([{ initiative_id: 2, official_code: 'INIT-02' }]);
+    });
+
+    it('should return all initiatives for non-admin when no current submitter', () => {
+      mockApiService.rolesSE.isAdmin = false;
+      mockApiService.dataControlSE.myInitiativesList = [
+        { initiative_id: 1, official_code: 'INIT-01' },
+        { initiative_id: 2, official_code: 'INIT-02' }
+      ];
+      mockApiService.dataControlSE.currentResult = { submitter: null };
+
+      const result = component.entitiesList;
+
+      expect(result).toEqual([
+        { initiative_id: 1, official_code: 'INIT-01' },
+        { initiative_id: 2, official_code: 'INIT-02' }
+      ]);
+    });
+  });
+
+  describe('onRequest - error with statusCode 400', () => {
+    it('should show information alert when error has statusCode 400', () => {
+      const errorMessage = {
+        error: {
+          statusCode: 400,
+          message: 'Duplicate request'
+        }
+      };
+      jest.spyOn(mockApiService.resultsSE, 'POST_createRequest').mockReturnValue(throwError(errorMessage));
+
+      component.onRequest();
+
+      expect(mockApiService.alertsFe.show).toHaveBeenCalledWith({
+        id: 'requesqsharederror',
+        title: 'The request could not be sent',
+        description: 'Duplicate request',
+        status: 'information'
+      });
+      expect(component.requesting).toBe(false);
+    });
+  });
+
+  describe('modelChange - no matching initiative', () => {
+    it('should still set showTocOut back to true when no initiative matches', () => {
+      mockShareRequestModalService.shareRequestBody.initiative_id = 999;
+      component.allInitiatives = allInitiatives;
+
+      component.modelChange();
+      expect(component.showTocOut).toBe(false);
+
+      jest.runAllTimers();
+
+      expect(component.showTocOut).toBe(true);
+    });
+  });
+
+  describe('onPlannedResultChange', () => {
+    it('should reset toc fields and indicator data when indicators exist', () => {
+      const item = {
+        result_toc_results: [
+          {
+            toc_result_id: 1,
+            toc_level_id: 2,
+            toc_progressive_narrative: 'text',
+            indicators: [
+              {
+                related_node_id: 5,
+                toc_results_indicator_id: 10,
+                targets: [{ contributing_indicator: 'yes' }]
+              }
+            ]
+          }
+        ]
+      };
+
+      component.onPlannedResultChange(item);
+
+      expect(item.result_toc_results[0].indicators[0].related_node_id).toBeNull();
+      expect(item.result_toc_results[0].indicators[0].toc_results_indicator_id).toBeNull();
+      expect(item.result_toc_results[0].indicators[0].targets[0].contributing_indicator).toBeNull();
+      expect(item.result_toc_results[0].toc_progressive_narrative).toBeNull();
+      expect(item.result_toc_results[0].toc_result_id).toBeNull();
+      expect(item.result_toc_results[0].toc_level_id).toBeNull();
+      expect(component.tocConsumed).toBe(false);
+
+      jest.runAllTimers();
+
+      expect(component.tocConsumed).toBe(true);
+    });
+
+    it('should create default indicators when none exist', () => {
+      const item = {
+        result_toc_results: [
+          {
+            toc_result_id: 1,
+            toc_level_id: 2,
+            toc_progressive_narrative: 'text',
+            indicators: []
+          }
+        ]
+      };
+
+      component.onPlannedResultChange(item);
+
+      expect(item.result_toc_results[0].indicators).toEqual([
+        {
+          related_node_id: null,
+          toc_results_indicator_id: null,
+          targets: [{ contributing_indicator: null }]
+        }
+      ]);
+    });
+
+    it('should handle indicators without targets array', () => {
+      const item = {
+        result_toc_results: [
+          {
+            toc_result_id: 1,
+            toc_level_id: 2,
+            toc_progressive_narrative: 'text',
+            indicators: [
+              {
+                related_node_id: 5,
+                toc_results_indicator_id: 10
+              }
+            ]
+          }
+        ]
+      };
+
+      component.onPlannedResultChange(item);
+
+      expect(item.result_toc_results[0].indicators[0].related_node_id).toBeNull();
+      expect(item.result_toc_results[0].indicators[0].toc_results_indicator_id).toBeNull();
+    });
+
+    it('should handle null/undefined item gracefully', () => {
+      expect(() => component.onPlannedResultChange(null)).not.toThrow();
+      expect(() => component.onPlannedResultChange(undefined)).not.toThrow();
+      expect(() => component.onPlannedResultChange({})).not.toThrow();
+    });
+
+    it('should handle multiple result_toc_results tabs', () => {
+      const item = {
+        result_toc_results: [
+          {
+            toc_result_id: 1,
+            toc_level_id: 2,
+            toc_progressive_narrative: 'text1',
+            indicators: [{ related_node_id: 5, toc_results_indicator_id: 10, targets: [{ contributing_indicator: 'val' }] }]
+          },
+          {
+            toc_result_id: 3,
+            toc_level_id: 4,
+            toc_progressive_narrative: 'text2',
+            indicators: []
+          }
+        ]
+      };
+
+      component.onPlannedResultChange(item);
+
+      // First tab: reset existing indicators
+      expect(item.result_toc_results[0].indicators[0].related_node_id).toBeNull();
+      expect(item.result_toc_results[0].toc_result_id).toBeNull();
+      // Second tab: created default indicators
+      expect(item.result_toc_results[1].indicators.length).toBe(1);
+      expect(item.result_toc_results[1].toc_result_id).toBeNull();
     });
   });
 });

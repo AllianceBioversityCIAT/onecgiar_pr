@@ -463,5 +463,464 @@ describe('ResultsListComponent', () => {
 
       expect(mockApiService.dataControlSE.chagePhaseModal).toBeTruthy();
     });
+
+    it('should call navigateToResult on items[2] command', () => {
+      const spy = jest.spyOn(component, 'navigateToResult');
+      mockApiService.dataControlSE.currentResult = { id: '1', title: 'Test' };
+
+      component.items[2].command();
+
+      expect(spy).toHaveBeenCalledWith(mockApiService.dataControlSE.currentResult);
+    });
+
+    it('should call navigateToResult on itemsWithDelete[2] command', () => {
+      const spy = jest.spyOn(component, 'navigateToResult');
+      mockApiService.dataControlSE.currentResult = { id: '1', title: 'Test' };
+
+      component.itemsWithDelete[2].command();
+
+      expect(spy).toHaveBeenCalledWith(mockApiService.dataControlSE.currentResult);
+    });
+  });
+
+  describe('applyDefaultSort()', () => {
+    it('should call sortSingle when available', () => {
+      const mockTableWithSort = {
+        reset: jest.fn(),
+        sortField: '',
+        sortOrder: 1,
+        sortSingle: jest.fn(),
+        sort: jest.fn()
+      };
+      component.table = mockTableWithSort as any;
+
+      (component as any).applyDefaultSort();
+
+      expect(mockTableWithSort.sortField).toBe('result_code');
+      expect(mockTableWithSort.sortOrder).toBe(-1);
+      expect(mockTableWithSort.sortSingle).toHaveBeenCalled();
+      expect(mockTableWithSort.sort).not.toHaveBeenCalled();
+    });
+
+    it('should call sort when sortSingle is not a function', () => {
+      const mockTableWithSort = {
+        reset: jest.fn(),
+        sortField: '',
+        sortOrder: 1,
+        sortSingle: 'not-a-function',
+        sort: jest.fn()
+      };
+      component.table = mockTableWithSort as any;
+
+      (component as any).applyDefaultSort();
+
+      expect(mockTableWithSort.sort).toHaveBeenCalledWith({ field: 'result_code', order: -1 });
+    });
+
+    it('should do nothing when table is undefined', () => {
+      component.table = undefined;
+
+      expect(() => (component as any).applyDefaultSort()).not.toThrow();
+    });
+
+    it('should handle table with neither sortSingle nor sort as functions', () => {
+      const mockTableNoSort = {
+        reset: jest.fn(),
+        sortField: '',
+        sortOrder: 1,
+        sortSingle: null,
+        sort: null
+      };
+      component.table = mockTableNoSort as any;
+
+      expect(() => (component as any).applyDefaultSort()).not.toThrow();
+      expect(mockTableNoSort.sortField).toBe('result_code');
+      expect(mockTableNoSort.sortOrder).toBe(-1);
+    });
+  });
+
+  describe('isW3BilateralsAvisa() (private)', () => {
+    it('should return false when source_name is not W3/Bilaterals', () => {
+      const result = { source_name: 'Other', submitter: 'SGP-02' } as any;
+
+      const ret = (component as any).isW3BilateralsAvisa(result);
+
+      expect(ret).toBe(false);
+    });
+
+    it('should return true when source_name is W3/Bilaterals and submitter is SGP-02', () => {
+      const result = { source_name: 'W3/Bilaterals', submitter: 'SGP-02' } as any;
+
+      const ret = (component as any).isW3BilateralsAvisa(result);
+
+      expect(ret).toBe(true);
+    });
+
+    it('should return true when source_name is W3/Bilaterals and submitter is SGP02', () => {
+      const result = { source_name: 'W3/Bilaterals', submitter: 'SGP02' } as any;
+
+      const ret = (component as any).isW3BilateralsAvisa(result);
+
+      expect(ret).toBe(true);
+    });
+
+    it('should fallback to initiative_official_code when submitter is null and code is SGP-02', () => {
+      const result = { source_name: 'W3/Bilaterals', submitter: null, initiative_official_code: 'SGP-02' } as any;
+
+      const ret = (component as any).isW3BilateralsAvisa(result);
+
+      expect(ret).toBe(true);
+    });
+
+    it('should return false when source_name is W3/Bilaterals but code is not SGP-02 or SGP02', () => {
+      const result = { source_name: 'W3/Bilaterals', submitter: 'OTHER' } as any;
+
+      const ret = (component as any).isW3BilateralsAvisa(result);
+
+      expect(ret).toBe(false);
+    });
+
+    it('should return false for null result', () => {
+      const ret = (component as any).isW3BilateralsAvisa(null);
+
+      expect(ret).toBe(false);
+    });
+  });
+
+  describe('onPressAction() - W3/Bilaterals flow', () => {
+    it('should hide map/update and show review with Pending Review status for W3/Bilaterals', () => {
+      const result = {
+        id: '1',
+        title: 'Test',
+        source_name: 'W3/Bilaterals',
+        submitter: 'OTHER',
+        status_name: 'Pending Review',
+        acronym: 'P25',
+        phase_year: 2023,
+        result_level_id: 1
+      } as any;
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseYear: 2024, portfolioAcronym: 'P25' };
+
+      component.onPressAction(result);
+
+      expect(component.items[0].visible).toBe(false);
+      expect(component.items[1].visible).toBe(false);
+      expect(component.items[2].visible).toBe(true);
+      expect(component.items[2].label).toBe('Review result');
+      expect(component.items[2].icon).toBe('pi pi-pencil');
+      expect(component.itemsWithDelete[0].visible).toBe(false);
+      expect(component.itemsWithDelete[1].visible).toBe(false);
+      expect(component.itemsWithDelete[2].visible).toBe(true);
+      expect(component.itemsWithDelete[2].label).toBe('Review result');
+      expect(component.itemsWithDelete[2].icon).toBe('pi pi-pencil');
+    });
+
+    it('should show "See result" for W3/Bilaterals with non-Pending status', () => {
+      const result = {
+        id: '1',
+        title: 'Test',
+        source_name: 'W3/Bilaterals',
+        submitter: 'OTHER',
+        status_name: 'Approved',
+        acronym: 'P25',
+        phase_year: 2023,
+        result_level_id: 1
+      } as any;
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseYear: 2024, portfolioAcronym: 'P25' };
+
+      component.onPressAction(result);
+
+      expect(component.items[2].label).toBe('See result');
+      expect(component.items[2].icon).toBe('pi pi-eye');
+      expect(component.itemsWithDelete[2].label).toBe('See result');
+      expect(component.itemsWithDelete[2].icon).toBe('pi pi-eye');
+    });
+  });
+
+  describe('onPressAction() - admin delete tooltip', () => {
+    it('should disable delete for admin when status is QAed', () => {
+      mockApiService.rolesSE.isAdmin = true;
+      const result = {
+        id: '1',
+        title: 'Test',
+        status_id: '2',
+        status_name: 'QAed',
+        acronym: 'P25',
+        phase_year: 2023,
+        result_level_id: 1
+      } as any;
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseYear: 2024, portfolioAcronym: 'P25' };
+
+      component.onPressAction(result);
+
+      expect(component.itemsWithDelete[3].disabled).toBe(true);
+      expect(component.itemsWithDelete[3].tooltipShow).toBe(true);
+      expect(component.itemsWithDelete[3].tooltipText).toContain('QAed');
+    });
+
+    it('should not disable delete for admin when status is not QAed', () => {
+      mockApiService.rolesSE.isAdmin = true;
+      const result = {
+        id: '1',
+        title: 'Test',
+        status_id: '1',
+        status_name: 'Draft',
+        acronym: 'P25',
+        phase_year: 2023,
+        result_level_id: 1
+      } as any;
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseYear: 2024, portfolioAcronym: 'P25' };
+
+      component.onPressAction(result);
+
+      expect(component.itemsWithDelete[3].disabled).toBe(false);
+      expect(component.itemsWithDelete[3].tooltipShow).toBe(false);
+    });
+  });
+
+  describe('onPressAction() - non-admin delete tooltip', () => {
+    it('should disable delete for non-admin with role_id not 3, 4, or 5', () => {
+      mockApiService.rolesSE.isAdmin = false;
+      const result = {
+        id: '1',
+        title: 'Test',
+        status_id: '1',
+        role_id: 1,
+        acronym: 'P25',
+        phase_year: 2023,
+        result_level_id: 1
+      } as any;
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseYear: 2024, portfolioAcronym: 'P25' };
+
+      component.onPressAction(result);
+
+      expect(component.itemsWithDelete[3].disabled).toBe(true);
+      expect(component.itemsWithDelete[3].tooltipShow).toBe(true);
+      expect(component.itemsWithDelete[3].tooltipText).toContain('leader or co-leader');
+    });
+
+    it('should not disable delete for non-admin with role_id 3', () => {
+      mockApiService.rolesSE.isAdmin = false;
+      const result = {
+        id: '1',
+        title: 'Test',
+        status_id: '1',
+        role_id: 3,
+        acronym: 'P25',
+        phase_year: 2023,
+        result_level_id: 1
+      } as any;
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseYear: 2024, portfolioAcronym: 'P25' };
+
+      component.onPressAction(result);
+
+      expect(component.itemsWithDelete[3].disabled).toBe(false);
+      expect(component.itemsWithDelete[3].tooltipShow).toBe(false);
+    });
+
+    it('should not disable delete for non-admin with role_id 4', () => {
+      mockApiService.rolesSE.isAdmin = false;
+      const result = {
+        id: '1',
+        title: 'Test',
+        status_id: '1',
+        role_id: 4,
+        acronym: 'P25',
+        phase_year: 2023,
+        result_level_id: 1
+      } as any;
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseYear: 2024, portfolioAcronym: 'P25' };
+
+      component.onPressAction(result);
+
+      expect(component.itemsWithDelete[3].disabled).toBe(false);
+    });
+
+    it('should not disable delete for non-admin with role_id 5', () => {
+      mockApiService.rolesSE.isAdmin = false;
+      const result = {
+        id: '1',
+        title: 'Test',
+        status_id: '1',
+        role_id: 5,
+        acronym: 'P25',
+        phase_year: 2023,
+        result_level_id: 1
+      } as any;
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseYear: 2024, portfolioAcronym: 'P25' };
+
+      component.onPressAction(result);
+
+      expect(component.itemsWithDelete[3].disabled).toBe(false);
+    });
+
+    it('should disable delete for non-admin with QAed status even with allowed role', () => {
+      mockApiService.rolesSE.isAdmin = false;
+      const result = {
+        id: '1',
+        title: 'Test',
+        status_id: '2',
+        role_id: 3,
+        acronym: 'P25',
+        phase_year: 2023,
+        result_level_id: 1
+      } as any;
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseYear: 2024, portfolioAcronym: 'P25' };
+
+      component.onPressAction(result);
+
+      expect(component.itemsWithDelete[3].disabled).toBe(true);
+      expect(component.itemsWithDelete[3].tooltipText).toContain('QAed');
+    });
+  });
+
+  describe('onPressAction() - portfolioAcronym visibility', () => {
+    it('should show delete button when portfolioAcronym matches result acronym', () => {
+      const result = {
+        id: '1',
+        title: 'Test',
+        status_id: '1',
+        role_id: 3,
+        acronym: 'P25',
+        phase_year: 2023,
+        result_level_id: 1
+      } as any;
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseYear: 2024, portfolioAcronym: 'P25' };
+
+      component.onPressAction(result);
+
+      expect(component.itemsWithDelete[3].visible).toBe(true);
+    });
+
+    it('should hide delete button when portfolioAcronym does not match result acronym', () => {
+      const result = {
+        id: '1',
+        title: 'Test',
+        status_id: '1',
+        role_id: 3,
+        acronym: 'P24',
+        phase_year: 2023,
+        result_level_id: 1
+      } as any;
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseYear: 2024, portfolioAcronym: 'P25' };
+
+      component.onPressAction(result);
+
+      expect(component.itemsWithDelete[3].visible).toBe(false);
+    });
+  });
+
+  describe('onPressAction() - P25 update visibility', () => {
+    it('should set itemsWithDelete[1].visible based on canUpdate when portfolioAcronym is P25', () => {
+      mockApiService.shouldShowUpdate.mockReturnValue(true);
+      const result = {
+        id: '1',
+        title: 'Test',
+        status_id: '1',
+        role_id: 3,
+        acronym: 'P25',
+        phase_year: 2023,
+        result_level_id: 1
+      } as any;
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseYear: 2024, portfolioAcronym: 'P25' };
+
+      component.onPressAction(result);
+
+      expect(component.itemsWithDelete[1].visible).toBe(true);
+    });
+
+    it('should set itemsWithDelete[1].visible false when portfolioAcronym is P25 and canUpdate is false', () => {
+      mockApiService.shouldShowUpdate.mockReturnValue(false);
+      const result = {
+        id: '1',
+        title: 'Test',
+        status_id: '1',
+        role_id: 3,
+        acronym: 'P25',
+        phase_year: 2023,
+        result_level_id: 1
+      } as any;
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseYear: 2024, portfolioAcronym: 'P25' };
+
+      component.onPressAction(result);
+
+      expect(component.itemsWithDelete[1].visible).toBe(false);
+    });
+  });
+
+  describe('navigateToResult()', () => {
+    it('should navigate to result detail for W3/Bilaterals AVISA result', () => {
+      const navigateSpy = jest.spyOn(component.router, 'navigateByUrl').mockResolvedValue(true);
+      const result = {
+        source_name: 'W3/Bilaterals',
+        submitter: 'SGP-02',
+        result_code: 'R-1',
+        version_id: 10
+      } as any;
+
+      component.navigateToResult(result);
+
+      expect(navigateSpy).toHaveBeenCalledWith('/result/result-detail/R-1/general-information?phase=10');
+    });
+
+    it('should navigate to entity-details for W3/Bilaterals non-AVISA result', () => {
+      const navigateSpy = jest.spyOn(component.router, 'navigateByUrl').mockResolvedValue(true);
+      const result = {
+        source_name: 'W3/Bilaterals',
+        submitter: 'OTHER',
+        result_code: 'R-2',
+        version_id: 10
+      } as any;
+
+      component.navigateToResult(result);
+
+      expect(navigateSpy).toHaveBeenCalledWith('/result-framework-reporting/entity-details/OTHER/results-review');
+    });
+
+    it('should navigate to result detail for non-W3/Bilaterals result', () => {
+      const navigateSpy = jest.spyOn(component.router, 'navigateByUrl').mockResolvedValue(true);
+      const result = {
+        source_name: 'Initiative',
+        result_code: 'R-3',
+        version_id: 10
+      } as any;
+
+      component.navigateToResult(result);
+
+      expect(navigateSpy).toHaveBeenCalledWith('/result/result-detail/R-3/general-information?phase=10');
+    });
+
+    it('should set currentResultToReview and show review drawer for W3/Bilaterals non-AVISA', async () => {
+      jest.spyOn(component.router, 'navigateByUrl').mockResolvedValue(true);
+      const result = {
+        source_name: 'W3/Bilaterals',
+        submitter: 'OTHER',
+        result_code: 'R-2',
+        version_id: 10
+      } as any;
+
+      component.navigateToResult(result);
+
+      expect(component.bilateralResultsService.currentResultToReview()).toBe(result);
+    });
+  });
+
+  describe('onDeleteREsult() - with selected phases', () => {
+    it('should include version_id when selectedPhaseIds returns a non-empty string', () => {
+      mockResultsListFilterService.selectedPhases = jest.fn(() => [{ id: 1 }, { id: 2 }]);
+      const spyUpdateResultsList = jest.spyOn(mockApiService, 'updateResultsList');
+
+      mockApiService.alertsFe.show = jest.fn().mockImplementation((config, callback) => {
+        if (callback) callback();
+      });
+
+      document.getElementById = jest.fn().mockReturnValue({
+        scrollIntoView: jest.fn()
+      });
+      component.onDeleteREsult();
+      jest.runAllTimers();
+
+      expect(spyUpdateResultsList).toHaveBeenCalledWith({ version_id: '1,2' });
+    });
   });
 });

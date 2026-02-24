@@ -356,4 +356,475 @@ describe('InnovationUseFormComponent', () => {
     tick(3100);
     expect(component.body.innovatonUse.actors[0]['showWomenExplanationwomen']).toBe(false);
   }));
+
+  describe('ngOnChanges', () => {
+    it('should call initializeComponentProperties', () => {
+      const spy = jest.spyOn(component, 'initializeComponentProperties');
+      component.ngOnChanges();
+      expect(spy).toHaveBeenCalled();
+    });
+  });
+
+  describe('initializeComponentProperties - falsy body properties', () => {
+    it('should initialize missing body properties with defaults', () => {
+      const body = component.body as any;
+      body.initiative_expected_investment = null;
+      body.bilateral_expected_investment = null;
+      body.institutions_expected_investment = null;
+      body.reference_materials = null;
+      body.pictures = null;
+      body.studies_links = null;
+      body.scaling_studies_urls = null;
+      body.innovation_use_2030 = null;
+      body.innov_use_to_be_determined = undefined;
+      body.innov_use_2030_to_be_determined = undefined;
+      body.result = null;
+
+      component.initializeComponentProperties();
+
+      expect(body.initiative_expected_investment).toEqual([]);
+      expect(body.bilateral_expected_investment).toEqual([]);
+      expect(body.institutions_expected_investment).toEqual([]);
+      expect(body.reference_materials).toEqual([{ link: '' }]);
+      expect(body.pictures).toEqual([{ link: '' }]);
+      expect(body.studies_links).toEqual([{ link: '' }]);
+      expect(body.scaling_studies_urls).toEqual([{ link: '' }]);
+      expect(body.innovation_use_2030).toEqual({ actors: [], measures: [], organization: [] });
+      expect(body.innov_use_to_be_determined).toBe(false);
+      expect(body.innov_use_2030_to_be_determined).toBe(false);
+      expect(body.result).toEqual({ title: '' });
+    });
+
+    it('should not overwrite existing truthy properties', () => {
+      const body = component.body as any;
+      body.initiative_expected_investment = [{ test: 1 }];
+      body.reference_materials = [{ link: 'http://example.com' }];
+      body.innov_use_to_be_determined = true;
+      body.result = { title: 'Existing Title' };
+
+      component.initializeComponentProperties();
+
+      expect(body.initiative_expected_investment).toEqual([{ test: 1 }]);
+      expect(body.reference_materials).toEqual([{ link: 'http://example.com' }]);
+      expect(body.innov_use_to_be_determined).toBe(true);
+      expect(body.result).toEqual({ title: 'Existing Title' });
+    });
+  });
+
+  describe('bodyAsAny', () => {
+    it('should return body cast as any', () => {
+      expect(component.bodyAsAny).toBe(component.body);
+    });
+  });
+
+  describe('readiness_of_this_innovation_description', () => {
+    it('should return a string with readiness description', () => {
+      const result = component.readiness_of_this_innovation_description();
+      expect(result).toContain('Be realistic in assessing the use level');
+      expect(result).toContain('INNOVATION USE CALCULATOR');
+    });
+  });
+
+  describe('hasReadinessLevelDiminished', () => {
+    it('should return true when current level is less than old level', () => {
+      innovationControlListServiceMock.readinessLevelsList = [
+        { id: 1, level: 2 },
+        { id: 2, level: 5 }
+      ];
+      component.body.innovation_readiness_level_id = 1;
+      component.body.previous_irl = 2;
+
+      expect(component.hasReadinessLevelDiminished()).toBe(true);
+    });
+
+    it('should return false when current level is greater or equal to old level', () => {
+      innovationControlListServiceMock.readinessLevelsList = [
+        { id: 1, level: 5 },
+        { id: 2, level: 2 }
+      ];
+      component.body.innovation_readiness_level_id = 1;
+      component.body.previous_irl = 2;
+
+      expect(component.hasReadinessLevelDiminished()).toBe(false);
+    });
+
+    it('should handle when levels are not found', () => {
+      innovationControlListServiceMock.readinessLevelsList = [];
+      component.body.innovation_readiness_level_id = 99;
+      component.body.previous_irl = 100;
+
+      const result = component.hasReadinessLevelDiminished();
+      expect(typeof result).toBe('boolean');
+    });
+  });
+
+  describe('alertInfoText2', () => {
+    it('should return a string with alert info text', () => {
+      apiServiceMock.resultsSE.currentResultCode = 'RC001';
+      apiServiceMock.resultsSE.currentResultPhase = 'P1';
+
+      const result = component.alertInfoText2();
+      expect(result).toContain('Please make sure you provide evidence');
+      expect(result).toContain('Evidence');
+    });
+  });
+
+  describe('alertDiminishedReadinessLevel', () => {
+    it('should return a string with diminished readiness alert', () => {
+      const result = component.alertDiminishedReadinessLevel();
+      expect(result).toContain('readiness level has decreased');
+    });
+  });
+
+  describe('getInstitutionsTypeTreeChildrens - cache hit', () => {
+    it('should return cached value on second call', () => {
+      component.institutionsTypeTreeList = [{ code: 10, childrens: [{ id: 1, name: 'Child' }] }];
+
+      const result1 = component.getInstitutionsTypeTreeChildrens(10);
+      expect(result1).toEqual([{ id: 1, name: 'Child' }]);
+
+      // Second call should hit cache
+      const result2 = component.getInstitutionsTypeTreeChildrens(10);
+      expect(result2).toEqual([{ id: 1, name: 'Child' }]);
+      expect(result1).toBe(result2);
+    });
+  });
+
+  describe('addActor2030', () => {
+    it('should add actor to innovation_use_2030.actors when array exists', () => {
+      const body = component.body as any;
+      body.innovation_use_2030 = { actors: [], organization: [], measures: [] };
+
+      component.addActor2030();
+
+      expect(body.innovation_use_2030.actors.length).toBe(1);
+    });
+
+    it('should initialize actors array if it does not exist', () => {
+      const body = component.body as any;
+      body.innovation_use_2030 = { organization: [], measures: [] };
+
+      component.addActor2030();
+
+      expect(body.innovation_use_2030.actors.length).toBe(1);
+    });
+  });
+
+  describe('addOrganization2030', () => {
+    it('should add organization to innovation_use_2030.organization when array exists', () => {
+      const body = component.body as any;
+      body.innovation_use_2030 = { actors: [], organization: [], measures: [] };
+
+      component.addOrganization2030();
+
+      expect(body.innovation_use_2030.organization.length).toBe(1);
+    });
+
+    it('should initialize organization array if it does not exist', () => {
+      const body = component.body as any;
+      body.innovation_use_2030 = { actors: [], measures: [] };
+
+      component.addOrganization2030();
+
+      expect(body.innovation_use_2030.organization.length).toBe(1);
+    });
+  });
+
+  describe('addOther2030', () => {
+    it('should add measure to innovation_use_2030.measures when array exists', () => {
+      const body = component.body as any;
+      body.innovation_use_2030 = { actors: [], organization: [], measures: [] };
+
+      component.addOther2030();
+
+      expect(body.innovation_use_2030.measures.length).toBe(1);
+    });
+
+    it('should initialize measures array if it does not exist', () => {
+      const body = component.body as any;
+      body.innovation_use_2030 = { actors: [], organization: [] };
+
+      component.addOther2030();
+
+      expect(body.innovation_use_2030.measures.length).toBe(1);
+    });
+  });
+
+  describe('getAllSubTypes2030', () => {
+    it('should return sub types from innovation_use_2030.organization', () => {
+      const body = component.body as any;
+      body.innovation_use_2030 = {
+        organization: [{ institution_sub_type_id: 1 }, { institution_sub_type_id: 2 }]
+      };
+
+      const result = component.getAllSubTypes2030;
+      expect(result).toEqual([{ code: 1 }, { code: 2 }]);
+    });
+
+    it('should return empty array when innovation_use_2030.organization is null', () => {
+      const body = component.body as any;
+      body.innovation_use_2030 = { organization: null };
+
+      const result = component.getAllSubTypes2030;
+      expect(result).toEqual([]);
+    });
+
+    it('should return empty array when innovation_use_2030 is null', () => {
+      const body = component.body as any;
+      body.innovation_use_2030 = null;
+
+      const result = component.getAllSubTypes2030;
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('disableOrganizations2030', () => {
+    it('should return organizations without sub type from innovation_use_2030', () => {
+      const body = component.body as any;
+      body.innovation_use_2030 = {
+        organization: [
+          { institution_sub_type_id: null, institution_types_id: 10 },
+          { institution_sub_type_id: 5, institution_types_id: 20 }
+        ]
+      };
+
+      const result = component.disableOrganizations2030;
+      expect(result).toEqual([{ code: 10 }]);
+    });
+
+    it('should return empty array when innovation_use_2030.organization is null', () => {
+      const body = component.body as any;
+      body.innovation_use_2030 = { organization: null };
+
+      const result = component.disableOrganizations2030;
+      expect(result).toEqual([]);
+    });
+
+    it('should return empty array when innovation_use_2030 is null', () => {
+      const body = component.body as any;
+      body.innovation_use_2030 = null;
+
+      const result = component.disableOrganizations2030;
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('hasElementsWithId - non-array input', () => {
+    it('should return 0 when list is not an array', () => {
+      expect(component.hasElementsWithId(null, 'id')).toBe(0);
+      expect(component.hasElementsWithId(undefined, 'id')).toBe(0);
+      expect(component.hasElementsWithId('string' as any, 'id')).toBe(0);
+    });
+  });
+
+  describe('validateYouth with men (isWomen=false)', () => {
+    it('should validate youth for men branch', fakeAsync(() => {
+      component.body.innovatonUse.actors = [
+        {
+          actor_type_id: 1,
+          women: 10,
+          women_youth: 5,
+          women_non_youth: 5,
+          men: 10,
+          men_youth: 5,
+          men_non_youth: 5,
+          is_active: true,
+          previousWomen: 10,
+          previousWomen_youth: 5,
+          other_actor_type: '',
+          sex_and_age_disaggregation: true,
+          how_many: 20,
+          result_actors_id: 1
+        } as Actor
+      ];
+      const actorItem = component.body.innovatonUse.actors[0];
+      component.validateYouth(0, false, actorItem);
+      tick(1200);
+      expect(actorItem.men_non_youth).toBe(5);
+    }));
+
+    it('should handle men_youth less than 0', fakeAsync(() => {
+      component.body.innovatonUse.actors = [
+        { women: 10, women_youth: 5, men: 10, men_youth: -1, men_non_youth: 0, sex_and_age_disaggregation: false } as Actor
+      ];
+      const actorItem = component.body.innovatonUse.actors[0];
+      component.validateYouth(0, false, actorItem);
+      tick(150);
+      expect(actorItem.men_youth).toBeNull();
+    }));
+
+    it('should handle men less than 0', fakeAsync(() => {
+      component.body.innovatonUse.actors = [
+        { women: 10, women_youth: 5, men: -1, men_youth: 5, men_non_youth: 0, sex_and_age_disaggregation: false } as Actor
+      ];
+      const actorItem = component.body.innovatonUse.actors[0];
+      component.validateYouth(0, false, actorItem);
+      tick(150);
+      expect(actorItem.men).toBe(0);
+    }));
+
+    it('should handle men < men_youth', fakeAsync(() => {
+      component.body.innovatonUse.actors = [
+        { women: 10, women_youth: 5, men: 3, men_youth: 10, men_non_youth: 0, sex_and_age_disaggregation: false, previousWomen: 3, previousWomen_youth: 10 } as Actor
+      ];
+      const actorItem = component.body.innovatonUse.actors[0];
+      component.validateYouth(0, false, actorItem);
+      tick(600);
+      expect(actorItem.men_youth).toBe(10);
+      expect(actorItem.men).toBe(3);
+    }));
+  });
+
+  describe('currentUseHeaderLabel', () => {
+    it('should return P25 label when isP25 is true', () => {
+      fieldsManagerServiceMock.isP25.mockReturnValue(true);
+      const result = component.currentUseHeaderLabel();
+      expect(result).toContain('within the reporting year');
+    });
+
+    it('should return non-P25 label when isP25 is false', () => {
+      fieldsManagerServiceMock.isP25.mockReturnValue(false);
+      const result = component.currentUseHeaderLabel();
+      expect(result).toContain('Specify the current use');
+    });
+  });
+
+  describe('narrativeActors', () => {
+    it('should return non-P25 variant when isP25 is false (default)', () => {
+      const result = component.narrativeActors();
+      expect(result).toContain('Individuals, organizations or networks');
+    });
+  });
+
+  describe('getUseLevelIndex', () => {
+    it('should return the level number when selectedId and list are valid', () => {
+      innovationControlListServiceMock.useLevelsList = [
+        { id: 1, level: 3 },
+        { id: 2, level: 5 }
+      ];
+      component.body.innovation_use_level_id = 1;
+
+      expect(component.getUseLevelIndex()).toBe(3);
+    });
+
+    it('should return -1 when selectedId is null', () => {
+      innovationControlListServiceMock.useLevelsList = [{ id: 1, level: 3 }];
+      component.body.innovation_use_level_id = null;
+
+      expect(component.getUseLevelIndex()).toBe(-1);
+    });
+
+    it('should return -1 when list is empty', () => {
+      innovationControlListServiceMock.useLevelsList = [];
+      component.body.innovation_use_level_id = 1;
+
+      expect(component.getUseLevelIndex()).toBe(-1);
+    });
+
+    it('should return -1 when selected level is not found', () => {
+      innovationControlListServiceMock.useLevelsList = [{ id: 1, level: 3 }];
+      component.body.innovation_use_level_id = 99;
+
+      expect(component.getUseLevelIndex()).toBe(-1);
+    });
+
+    it('should return -1 when level is not a finite number', () => {
+      innovationControlListServiceMock.useLevelsList = [{ id: 1, level: 'abc' }];
+      component.body.innovation_use_level_id = 1;
+
+      expect(component.getUseLevelIndex()).toBe(-1);
+    });
+  });
+
+  describe('formatResultLabel', () => {
+    it('should format with result_code, name, acronym, phase_year, result_type_name, and title', () => {
+      const option = {
+        result_code: 'RC001',
+        name: 'Test Result',
+        acronym: 'TR',
+        phase_year: '2023',
+        result_type_name: 'Innovation',
+        title: 'Full Title'
+      };
+      const result = component.formatResultLabel(option);
+      expect(result).toBe('(TR - 2023) RC001 - Test Result (Innovation) - Full Title');
+    });
+
+    it('should format with only acronym (no phase_year)', () => {
+      const option = {
+        result_code: 'RC002',
+        name: 'Test',
+        acronym: 'T',
+        phase_year: null
+      };
+      const result = component.formatResultLabel(option);
+      expect(result).toBe('(T) RC002 - Test');
+    });
+
+    it('should format with only phase_year (no acronym)', () => {
+      const option = {
+        result_code: 'RC003',
+        name: 'Test',
+        acronym: null,
+        phase_year: '2024'
+      };
+      const result = component.formatResultLabel(option);
+      expect(result).toBe('(2024) RC003 - Test');
+    });
+
+    it('should format without acronym, phase_year, result_type_name, or title', () => {
+      const option = {
+        result_code: 'RC004',
+        name: 'Minimal'
+      };
+      const result = component.formatResultLabel(option);
+      expect(result).toBe('RC004 - Minimal');
+    });
+
+    it('should use resultTypeName fallback', () => {
+      const option = {
+        result_code: 'RC005',
+        name: 'Test',
+        resultTypeName: 'FallbackType'
+      };
+      const result = component.formatResultLabel(option);
+      expect(result).toBe('RC005 - Test (FallbackType)');
+    });
+
+    it('should use type_name fallback', () => {
+      const option = {
+        result_code: 'RC006',
+        name: 'Test',
+        type_name: 'TypeFallback'
+      };
+      const result = component.formatResultLabel(option);
+      expect(result).toBe('RC006 - Test (TypeFallback)');
+    });
+
+    it('should return title when no result_code', () => {
+      const option = {
+        title: 'Just a title'
+      };
+      const result = component.formatResultLabel(option);
+      expect(result).toBe('Just a title');
+    });
+
+    it('should return name when no result_code and no title', () => {
+      const option = {
+        name: 'Just a name'
+      };
+      const result = component.formatResultLabel(option);
+      expect(result).toBe('Just a name');
+    });
+
+    it('should return empty string for null option', () => {
+      const result = component.formatResultLabel(null);
+      expect(result).toBe('');
+    });
+
+    it('should return empty string for option without result_code, title, or name', () => {
+      const result = component.formatResultLabel({});
+      expect(result).toBe('');
+    });
+  });
 });
