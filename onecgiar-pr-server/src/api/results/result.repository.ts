@@ -902,6 +902,7 @@ WHERE
       ANY_VALUE(rs.status_name) AS status_name,
       IF(ANY_VALUE(r.source) = 'Result', 'W1/W2', IF(ANY_VALUE(r.source) = 'API', 'W3/Bilateral', '')) AS "funding_source",
       DATE_FORMAT(r.created_date, "%Y-%m-%d") AS "creation_date",
+      IF(ANY_VALUE(rtr.planned_result) = 1, 'Yes', IF(ANY_VALUE(rtr.planned_result) = 0, 'No', '')) AS "planned_result",
       REPLACE(REPLACE(
         IFNULL(
           GROUP_CONCAT(
