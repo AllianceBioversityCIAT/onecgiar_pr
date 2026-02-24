@@ -1858,10 +1858,6 @@ describe('ResultsApiService', () => {
 
   describe('GET_reportingList', () => {
     it('should call GET_reportingList, set correct dynamicBaseUrl and return expected data if is NOT inIPSR', done => {
-      const init = new Date('2022-12-01');
-      const today = new Date();
-      today.setMilliseconds(0);
-
       service.ipsrDataControlSE.inIpsr = false;
 
       service.GET_reportingList().subscribe(response => {
@@ -1869,7 +1865,7 @@ describe('ResultsApiService', () => {
         done();
       });
 
-      const req = httpMock.expectOne(`${service.apiBaseUrl}get/reporting/list/date/${init.toISOString()}/${today.toISOString()}`);
+      const req = httpMock.expectOne(`${service.apiBaseUrl}get/reporting/list`);
       expect(req.request.method).toBe('POST');
 
       req.flush(mockResponse);

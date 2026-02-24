@@ -34,7 +34,7 @@ export class IpsrListFiltersComponent {
   onDownLoadTableAsExcel(inits: any[], phases: any[], searchText: string | null) {
     this.isLoadingReport = true;
 
-    this.api.resultsSE.GET_reportingList('2022-12-01', { inits, phases, searchText }).subscribe({
+    this.api.resultsSE.GET_reportingList({ inits: inits, phases: phases, searchText: searchText }).subscribe({
       next: ({ response }) => {
         const wscols = [
           { header: 'Result code', key: 'result_code', width: 13 },
