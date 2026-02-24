@@ -295,7 +295,7 @@ describe('ResultsListFiltersComponent', () => {
     expect(mockResultsListFilterService.submittersOptions()).toEqual([]);
   });
 
-  it('onDownLoadTableAsExcel should export and toggle gettingReport', (done) => {
+  it('onDownLoadTableAsExcel should export and toggle gettingReport', done => {
     expect(component.gettingReport()).toBe(false);
 
     component.onDownLoadTableAsExcel();
@@ -306,7 +306,7 @@ describe('ResultsListFiltersComponent', () => {
     const [sheetsData, fileName, wscols, hyperlinkCols] = mockExportTablesService.exportExcelMultipleSheets.mock.calls[0];
     expect(fileName).toBe('results_list');
     expect(Array.isArray(wscols)).toBe(true);
-    expect(hyperlinkCols).toEqual([{ cellNumber: 20, cellKey: 'pdf_link' }]);
+    expect(hyperlinkCols).toEqual([{ cellNumber: wscols.findIndex(col => col.key === 'pdf_link') + 1, cellKey: 'pdf_link' }]);
     expect(sheetsData).toBeDefined();
     expect(typeof sheetsData).toBe('object');
 
