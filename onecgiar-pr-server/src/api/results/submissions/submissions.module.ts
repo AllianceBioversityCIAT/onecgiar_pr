@@ -14,6 +14,7 @@ import { IntellectualPropertyExpertRepository } from '../intellectual_property_e
 import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
 import { TemplateRepository } from '../../platform-report/repositories/template.repository';
 import { EmailNotificationManagementModule } from '../../../shared/microservices/email-notification-management/email-notification-management.module';
+import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
 
 @Module({
   controllers: [SubmissionsController],
@@ -27,6 +28,7 @@ import { EmailNotificationManagementModule } from '../../../shared/microservices
     IntellectualPropertyExpertRepository,
     GlobalParameterRepository,
     TemplateRepository,
+    ResultsCenterRepository,
   ],
   exports: [submissionRepository],
   imports: [

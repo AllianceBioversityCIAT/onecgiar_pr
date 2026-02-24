@@ -20,6 +20,7 @@ import { InnovationUseService } from '../innovation-use/innovation-use.service';
 import { ResultScalingStudyUrl } from '../result_scaling_study_urls/entities/result_scaling_study_url.entity';
 import { ResultAnswerRepository } from '../../results/result-questions/repository/result-answers.repository';
 import { ResultsByProjectsRepository } from '../../results/results_by_projects/results_by_projects.repository';
+import { ResultsCenterRepository } from '../../results/results-centers/results-centers.repository';
 import { getRepositoryToken } from '@nestjs/typeorm';
 
 describe('InnovationDevService', () => {
@@ -132,6 +133,10 @@ describe('InnovationDevService', () => {
         },
         {
           provide: ResultsByProjectsRepository,
+          useValue: {},
+        },
+        {
+          provide: ResultsCenterRepository,
           useValue: {},
         },
       ],
