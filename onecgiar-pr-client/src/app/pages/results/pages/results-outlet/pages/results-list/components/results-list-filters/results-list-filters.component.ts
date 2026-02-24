@@ -503,6 +503,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
       { header: 'Submitter', key: 'official_code', width: 14 },
       { header: 'Status', key: 'status_name', width: 17 },
       { header: 'Creation date', key: 'creation_date', width: 15 },
+      { header: 'Planned result', key: 'planned_result', width: 20 },
       { header: 'ToC', key: 'toc', width: 125 },
       { header: 'Center(s)', key: 'centers', width: 80 },
       { header: 'Contributing Science program', key: 'contributing_initiative', width: 26 },
@@ -518,7 +519,9 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
       groupedByResultType[resultType].push(result);
     });
 
-    await this.exportTablesSE.exportExcelMultipleSheets(groupedByResultType, 'results_list', wscols, [{ cellNumber: 20, cellKey: 'pdf_link' }]);
+    await this.exportTablesSE.exportExcelMultipleSheets(groupedByResultType, 'results_list', wscols, [
+      { cellNumber: wscols.findIndex(col => col.key === 'pdf_link') + 1, cellKey: 'pdf_link' }
+    ]);
     this.gettingReport.set(false);
   }
 
