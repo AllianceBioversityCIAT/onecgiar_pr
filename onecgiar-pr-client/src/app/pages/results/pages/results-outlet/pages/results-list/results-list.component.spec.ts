@@ -7,7 +7,6 @@ import { MenuModule } from 'primeng/menu';
 import { TableModule } from 'primeng/table';
 import { DialogModule } from 'primeng/dialog';
 import { ResultsToUpdateFilterPipe } from './components/results-to-update-modal/results-to-update-filter.pipe';
-import { PrButtonComponent } from '../../../../../../custom-fields/pr-button/pr-button.component';
 import { ResultsListFiltersComponent } from './components/results-list-filters/results-list-filters.component';
 import { ReportNewResultButtonComponent } from './components/report-new-result-button/report-new-result-button.component';
 import { of, throwError } from 'rxjs';
@@ -19,11 +18,10 @@ import { ExportTablesService } from '../../../../../../shared/services/export-ta
 import { ResultsListService } from './services/results-list.service';
 import { ChangePhaseModalComponent } from '../../../../../../shared/components/change-phase-modal/change-phase-modal.component';
 import { PopoverModule } from 'primeng/popover';
-import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { ResultsListFilterService } from './services/results-list-filter.service';
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
 import { ResultsNotificationsService } from '../results-notifications/results-notifications.service';
-import { signal } from '@angular/core';
+import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
 
 jest.useFakeTimers();
 
@@ -123,11 +121,11 @@ describe('ResultsListComponent', () => {
         ResultsListFilterPipe,
         ResultsToUpdateModalComponent,
         ResultsToUpdateFilterPipe,
-        PrButtonComponent,
         ReportNewResultButtonComponent,
         ChangePhaseModalComponent
       ],
-      imports: [HttpClientTestingModule, MenuModule, TableModule, DialogModule, PopoverModule, ResultsListFiltersComponent, CustomFieldsModule],
+      imports: [HttpClientTestingModule, MenuModule, TableModule, DialogModule, PopoverModule, ResultsListFiltersComponent],
+      schemas: [NO_ERRORS_SCHEMA],
       providers: [
         { provide: ApiService, useValue: mockApiService },
         { provide: ShareRequestModalService, useValue: mockShareRequestModalService },
