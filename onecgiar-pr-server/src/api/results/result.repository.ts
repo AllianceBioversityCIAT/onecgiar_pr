@@ -900,11 +900,15 @@ WHERE
       ), '') AS "poverty_impact_areas",
       ANY_VALUE(ci_main.official_code) AS official_code,
       ANY_VALUE(rs.status_name) AS status_name,
+      IF(ANY_VALUE(r.source) = 'Result', 'W1/W2', IF(ANY_VALUE(r.source) = 'API', 'W3/Bilateral', '')) AS "funding_source",
       DATE_FORMAT(r.created_date, "%Y-%m-%d") AS "creation_date",
       REPLACE(REPLACE(
         IFNULL(
           GROUP_CONCAT(
             CONCAT(
+              'Does this result align with the Program planned TOC indicators: ',
+              IF(rtr.planned_result = 1, 'Yes', IF(rtr.planned_result = 0, 'No', '')),
+              '\n',
               IF(version.portfolio_id = 3, CONCAT(REPLACE(REPLACE(IFNULL(twp_p25.acronym, ''), '<', '&lt;'), '>', '&gt;'), '\n'), ''),
               'ToC result: ',
               REPLACE(REPLACE(IFNULL(COALESCE(tr_p25.result_title, tr_p22.result_title), ''), '<', '&lt;'), '>', '&gt;'),
@@ -914,7 +918,10 @@ WHERE
               REPLACE(REPLACE(IFNULL(COALESCE(tri_p25.indicator_description, tri_p22.indicator_description), 'Not Applicable'), '<', '&lt;'), '>', '&gt;'),
               '\n',
               'Target contribution: ',
-              IFNULL(CAST(ROUND(rit.contributing_indicator, 0) AS SIGNED), '')
+              IFNULL(CAST(ROUND(rit.contributing_indicator, 0) AS SIGNED), ''),
+              '\n',
+              IF(rtr.planned_result = 1, 'Explanation of how the result aligns with/contributes to the Program TOC pathway: ', IF(rtr.planned_result = 0, 'Why is the result being reported: ', '')),
+              REPLACE(REPLACE(IFNULL(rtr.toc_progressive_narrative, ''), '<', '&lt;'), '>', '&gt;')
             )
             SEPARATOR '\n\n'
           ),
