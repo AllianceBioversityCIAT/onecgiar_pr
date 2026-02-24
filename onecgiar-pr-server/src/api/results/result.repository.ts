@@ -867,11 +867,27 @@ WHERE
       ANY_VALUE(ci_main.official_code) AS official_code,
       ANY_VALUE(rs.status_name) AS status_name,
       DATE_FORMAT(r.created_date, "%Y-%m-%d") AS "creation_date",
-      ANY_VALUE(wp.id) AS "work_package_id",
-      REPLACE(REPLACE(IFNULL(ANY_VALUE(wp.name), ''), '<', '&lt;'), '>', '&gt;') AS "work_package_title",
-      ANY_VALUE(rtr.toc_result_id) AS toc_result_id,
-      REPLACE(REPLACE(IFNULL(ANY_VALUE(tr.result_title), ''), '<', '&lt;'), '>', '&gt;') AS "toc_result_title",
-      REPLACE(REPLACE(IFNULL(ANY_VALUE(action_areas_sub.action_areas), ''), '<', '&lt;'), '>', '&gt;') AS action_areas,
+      REPLACE(REPLACE(
+        IFNULL(
+          GROUP_CONCAT(
+            CONCAT(
+              IF(version.portfolio_id = 3, CONCAT(REPLACE(REPLACE(IFNULL(twp_p25.acronym, ''), '<', '&lt;'), '>', '&gt;'), '\n'), ''),
+              'ToC result: ',
+              REPLACE(REPLACE(IFNULL(COALESCE(tr_p25.result_title, tr_p22.result_title), ''), '<', '&lt;'), '>', '&gt;'),
+              '\n',
+              IF(version.portfolio_id = 3, '', CONCAT('Action areas: ', REPLACE(REPLACE(IFNULL(action_areas_p22.action_areas, ''), '<', '&lt;'), '>', '&gt;'), '\n')),
+              'Indicator: ',
+              REPLACE(REPLACE(IFNULL(COALESCE(tri_p25.indicator_description, tri_p22.indicator_description), 'Not Applicable'), '<', '&lt;'), '>', '&gt;'),
+              '\n',
+              'Target contribution: ',
+              IFNULL(CAST(ROUND(rit.contributing_indicator, 0) AS SIGNED), '')
+            )
+            SEPARATOR '\n\n'
+          ),
+          ''
+        ),
+        '<', '&lt;'
+      ), '>', '&gt;') AS "toc",
       GROUP_CONCAT(
         DISTINCT CONCAT(
           '[',
@@ -910,10 +926,34 @@ WHERE
       LEFT JOIN results_toc_result rtr ON rtr.results_id = r.id
       AND rtr.initiative_id = rbi_main.inititiative_id
       AND rtr.is_active
-      LEFT JOIN ${env.DB_TOC}.toc_results tr ON rtr.toc_result_id = tr.id
-      AND tr.is_active
-      LEFT JOIN ${env.DB_TOC}.work_packages wp ON wp.id = tr.work_packages_id
-      AND wp.active
+      LEFT JOIN ${env.DB_TOC}.toc_results tr_p25 ON rtr.toc_result_id = tr_p25.id
+      AND tr_p25.is_active = 1
+      AND version.portfolio_id = 3
+      LEFT JOIN ${env.DB_TOC}.toc_work_packages twp_p25 ON tr_p25.wp_id = twp_p25.toc_id
+      LEFT JOIN Integration_information.toc_results tr_p22 ON rtr.toc_result_id = tr_p22.id
+      AND tr_p22.is_active = 1
+      AND (version.portfolio_id IS NULL OR version.portfolio_id != 3)
+      LEFT JOIN Integration_information.work_packages wp_p22 ON wp_p22.id = tr_p22.work_packages_id
+      AND wp_p22.active = 1
+      LEFT JOIN results_toc_result_indicators rtri ON rtri.results_toc_results_id = rtr.result_toc_result_id
+      AND rtri.is_active = 1
+      AND (rtri.is_not_aplicable = 0 OR rtri.is_not_aplicable IS NULL)
+      LEFT JOIN ${env.DB_TOC}.toc_results_indicators tri_p25 ON tri_p25.toc_results_id = tr_p25.id
+      AND tri_p25.is_active = 1
+      AND version.portfolio_id = 3
+      AND (
+        CONVERT(tri_p25.related_node_id USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(rtri.toc_results_indicator_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+        OR CONVERT(CAST(tri_p25.id AS CHAR) USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(rtri.toc_results_indicator_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+      )
+      LEFT JOIN Integration_information.toc_results_indicators tri_p22 ON tri_p22.toc_results_id = tr_p22.id
+      AND tri_p22.is_active = 1
+      AND (version.portfolio_id IS NULL OR version.portfolio_id != 3)
+      AND (
+        CONVERT(tri_p22.related_node_id USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(rtri.toc_results_indicator_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+        OR CONVERT(CAST(tri_p22.id AS CHAR) USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(rtri.toc_results_indicator_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+      )
+      LEFT JOIN result_indicators_targets rit ON rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
+      AND rit.is_active = 1
       LEFT JOIN results_center rc ON rc.result_id = r.id
       AND rc.is_active
       LEFT JOIN clarisa_center cc ON cc.code = rc.center_id
@@ -931,15 +971,15 @@ WHERE
             DISTINCT CONCAT(caa.id, ' - ', caa.name) SEPARATOR '\n'
           ) AS action_areas
         FROM
-          ${env.DB_TOC}.toc_results_action_area_results traar
-          INNER JOIN ${env.DB_TOC}.toc_action_area_results taar ON taar.toc_result_id = traar.toc_action_area_results_id_toc
-          AND taar.is_active
+          Integration_information.toc_results_action_area_results traar
+          INNER JOIN Integration_information.toc_action_area_results taar ON taar.toc_result_id = traar.toc_action_area_results_id_toc
+          AND taar.is_active = 1
           RIGHT JOIN clarisa_action_area caa ON taar.action_areas_id = caa.id
         WHERE
-          traar.is_active
+          traar.is_active = 1
         GROUP BY
           traar.toc_results_id
-      ) AS action_areas_sub ON action_areas_sub.toc_results_id = tr.toc_result_id
+      ) AS action_areas_p22 ON action_areas_p22.toc_results_id = tr_p22.id
     WHERE
       ${whereClause}
     GROUP BY
