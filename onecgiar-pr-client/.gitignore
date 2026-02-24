@@ -54,6 +54,9 @@ cypress/videos/*
 cypress/screenshots/*
 cypress.env.json
 
+# Jest cache
+.jest-cache
+
 # Cursor rules
 /.cursorrules
 

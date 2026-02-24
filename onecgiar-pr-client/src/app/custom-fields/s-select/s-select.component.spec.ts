@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 
 import { SSelectComponent } from './s-select.component';
-import { HttpClientModule } from '@angular/common/http';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { PrFieldHeaderComponent } from '../pr-field-header/pr-field-header.component';
 import { LabelNamePipe } from '../pr-select/label-name.pipe';
 import { FormsModule } from '@angular/forms';
@@ -14,7 +14,7 @@ describe('SSelectComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [SSelectComponent, PrFieldHeaderComponent, LabelNamePipe],
-      imports: [HttpClientModule, FormsModule]
+      imports: [HttpClientTestingModule, FormsModule]
     }).compileComponents();
 
     fixture = TestBed.createComponent(SSelectComponent);
