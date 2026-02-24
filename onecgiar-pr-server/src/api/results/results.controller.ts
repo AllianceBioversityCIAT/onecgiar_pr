@@ -38,7 +38,7 @@ import {
 @ApiTags('Results Module')
 @UseInterceptors(ResponseInterceptor)
 export class ResultsController {
-  constructor(private readonly resultsService: ResultsService) { }
+  constructor(private readonly resultsService: ResultsService) {}
 
   @Post('create/header')
   @ApiOperation({
@@ -478,7 +478,8 @@ export class ResultsController {
   })
   @ApiBody({
     type: BasicReportFiltersDto,
-    description: 'Filter set for the report. Send an empty object {} to retrieve all results (subject to active and result_type_id exclusions).',
+    description:
+      'Filter set for the report. Send an empty object {} to retrieve all results (subject to active and result_type_id exclusions).',
     examples: {
       dateRangeOnly: {
         summary: 'Date range only',
@@ -502,10 +503,12 @@ export class ResultsController {
     },
   })
   @ApiOkResponse({
-    description: 'Reporting data retrieved. Response body contains `response` (array of report rows), `message`, and `status`.',
+    description:
+      'Reporting data retrieved. Response body contains `response` (array of report rows), `message`, and `status`.',
   })
   @ApiBadRequestResponse({
-    description: 'Validation error (e.g. invalid date format or initDate > endDate).',
+    description:
+      'Validation error (e.g. invalid date format or initDate > endDate).',
   })
   getResultDataForBasicReport(@Body() body: BasicReportFiltersDto) {
     return this.resultsService.getResultDataForBasicReport(body);
