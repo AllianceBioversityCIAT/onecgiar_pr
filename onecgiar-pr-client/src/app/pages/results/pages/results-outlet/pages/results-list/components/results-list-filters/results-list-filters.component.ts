@@ -459,15 +459,26 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
 
   onDownLoadTableAsExcel() {
     this.gettingReport.set(true);
-    this.api.resultsSE.GET_reportingList().subscribe({
-      next: ({ response }) => {
-        void this.buildAndDownloadExcelReport(response);
-      },
-      error: err => {
-        console.error(err);
-        this.gettingReport.set(false);
-      }
-    });
+    this.api.resultsSE
+      .GET_reportingList('2022-12-01', {
+        phases: this.resultsListFilterSE.selectedPhases(),
+        searchText: this.resultsListFilterSE.text_to_search(),
+        inits: this.resultsListFilterSE.selectedSubmittersAdmin(),
+        indicatorCategories: this.resultsListFilterSE.selectedIndicatorCategories(),
+        status: this.resultsListFilterSE.selectedStatus(),
+        clarisaPortfolios: this.resultsListFilterSE.selectedClarisaPortfolios(),
+        fundingSource: this.resultsListFilterSE.selectedFundingSource(),
+        leadCenters: this.resultsListFilterSE.selectedLeadCenters()
+      })
+      .subscribe({
+        next: ({ response }) => {
+          void this.buildAndDownloadExcelReport(response);
+        },
+        error: err => {
+          console.error(err);
+          this.gettingReport.set(false);
+        }
+      });
   }
 
   private async buildAndDownloadExcelReport(response: any[]): Promise<void> {
@@ -504,9 +515,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
       groupedByResultType[resultType].push(result);
     });
 
-    await this.exportTablesSE.exportExcelMultipleSheets(groupedByResultType, 'results_list', wscols, [
-      { cellNumber: 20, cellKey: 'pdf_link' }
-    ]);
+    await this.exportTablesSE.exportExcelMultipleSheets(groupedByResultType, 'results_list', wscols, [{ cellNumber: 20, cellKey: 'pdf_link' }]);
     this.gettingReport.set(false);
   }
 
