@@ -485,6 +485,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     const wscols = [
       { header: 'Result code', key: 'result_code', width: 13 },
       { header: 'Reporting phase', key: 'phase_name', width: 17.5 },
+      { header: 'Funding source', key: 'funding_source', width: 17.5 },
       { header: 'Reporting year', key: 'reported_year_id', width: 13 },
       { header: 'Result title', key: 'title', width: 125 },
       { header: 'Description', key: 'description', width: 125 },
