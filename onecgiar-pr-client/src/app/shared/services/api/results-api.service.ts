@@ -684,7 +684,19 @@ export class ResultsApiService {
     return this.http.patch<any>(`${this.baseApiBaseUrl}user-notification-settings/update`, body);
   }
 
-  GET_reportingList(initDate: string = '2022-12-01', inits?, phases?, searchText?) {
+  GET_reportingList(
+    initDate: string = '2022-12-01',
+    filtersParams: {
+      inits?: any[];
+      phases?: any[];
+      searchText?: string;
+      indicatorCategories?: any[];
+      status?: any[];
+      clarisaPortfolios?: any[];
+      fundingSource?: any[];
+      leadCenters?: any[];
+    } = {}
+  ) {
     const init = new Date(initDate);
     const today = new Date();
     today.setMilliseconds(0);
@@ -694,14 +706,10 @@ export class ResultsApiService {
       : `${environment.apiBaseUrl}api/results/get/reporting`;
 
     if (this.ipsrDataControlSE.inIpsr) {
-      return this.http.post<any>(`${dynamicBaseUrl}/excel-report`, {
-        inits,
-        phases,
-        searchText
-      });
+      return this.http.post<any>(`${dynamicBaseUrl}/excel-report`, filtersParams);
     }
 
-    return this.http.get<any>(`${dynamicBaseUrl}/list/date/${init.toISOString()}/${today.toISOString()}`);
+    return this.http.post<any>(`${dynamicBaseUrl}/list/date/${init.toISOString()}/${today.toISOString()}`, filtersParams);
   }
 
   POST_AdminKPExcelReport(body) {

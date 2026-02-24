@@ -1869,7 +1869,7 @@ describe('ResultsApiService', () => {
       });
 
       const req = httpMock.expectOne(`${service.apiBaseUrl}get/reporting/list/date/${init.toISOString()}/${today.toISOString()}`);
-      expect(req.request.method).toBe('GET');
+      expect(req.request.method).toBe('POST');
 
       req.flush(mockResponse);
     });
