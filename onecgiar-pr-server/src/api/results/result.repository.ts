@@ -860,10 +860,40 @@ WHERE
         )
       ) AS "is_key_result",
       IFNULL(ANY_VALUE(gtl_gender.description), '') AS "gender_tag_level",
+      IF(ANY_VALUE(version.portfolio_id) = 3, (
+        SELECT GROUP_CONCAT(iasc.name ORDER BY iasc.name SEPARATOR ', ')
+        FROM result_impact_area_score rias
+        INNER JOIN impact_areas_scores_components iasc ON iasc.id = rias.impact_area_score_id AND iasc.is_active = 1
+        WHERE rias.result_id = r.id AND rias.is_active = 1 AND iasc.impact_area = 'Gender'
+      ), '') AS "gender_impact_areas",
       IFNULL(ANY_VALUE(gtl_climate.description), '') AS "climate_tag_level",
+      IF(ANY_VALUE(version.portfolio_id) = 3, (
+        SELECT GROUP_CONCAT(iasc.name ORDER BY iasc.name SEPARATOR ', ')
+        FROM result_impact_area_score rias
+        INNER JOIN impact_areas_scores_components iasc ON iasc.id = rias.impact_area_score_id AND iasc.is_active = 1
+        WHERE rias.result_id = r.id AND rias.is_active = 1 AND iasc.impact_area = 'Climate'
+      ), '') AS "climate_impact_areas",
       IFNULL(ANY_VALUE(gtl_nutrition.description), '') AS "nutrition_tag_level",
+      IF(ANY_VALUE(version.portfolio_id) = 3, (
+        SELECT GROUP_CONCAT(iasc.name ORDER BY iasc.name SEPARATOR ', ')
+        FROM result_impact_area_score rias
+        INNER JOIN impact_areas_scores_components iasc ON iasc.id = rias.impact_area_score_id AND iasc.is_active = 1
+        WHERE rias.result_id = r.id AND rias.is_active = 1 AND iasc.impact_area = 'Nutrition'
+      ), '') AS "nutrition_impact_areas",
       IFNULL(ANY_VALUE(gtl_environment.description), '') AS "environment_tag_level",
+      IF(ANY_VALUE(version.portfolio_id) = 3, (
+        SELECT GROUP_CONCAT(iasc.name ORDER BY iasc.name SEPARATOR ', ')
+        FROM result_impact_area_score rias
+        INNER JOIN impact_areas_scores_components iasc ON iasc.id = rias.impact_area_score_id AND iasc.is_active = 1
+        WHERE rias.result_id = r.id AND rias.is_active = 1 AND iasc.impact_area = 'Environmental'
+      ), '') AS "environment_impact_areas",
       IFNULL(ANY_VALUE(gtl_poverty.description), '') AS "poverty_tag_level",
+      IF(ANY_VALUE(version.portfolio_id) = 3, (
+        SELECT GROUP_CONCAT(iasc.name ORDER BY iasc.name SEPARATOR ', ')
+        FROM result_impact_area_score rias
+        INNER JOIN impact_areas_scores_components iasc ON iasc.id = rias.impact_area_score_id AND iasc.is_active = 1
+        WHERE rias.result_id = r.id AND rias.is_active = 1 AND iasc.impact_area = 'Poverty'
+      ), '') AS "poverty_impact_areas",
       ANY_VALUE(ci_main.official_code) AS official_code,
       ANY_VALUE(rs.status_name) AS status_name,
       DATE_FORMAT(r.created_date, "%Y-%m-%d") AS "creation_date",
