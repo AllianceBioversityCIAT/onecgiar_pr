@@ -4055,7 +4055,7 @@ export class ResultsService {
     const repo = this._dataSource.getRepository(ResultsCapacityDevelopments);
 
     const existing = await repo.findOne({
-      where: { result_id: resultId },
+      where: { result_object: { id: resultId } },
     });
 
     if (existing) {
@@ -4071,7 +4071,6 @@ export class ResultsService {
     }
 
     const newRecord = repo.create({
-      result_id: resultId,
       result_object: { id: resultId } as Result,
       created_by: userId,
       last_updated_by: userId,
