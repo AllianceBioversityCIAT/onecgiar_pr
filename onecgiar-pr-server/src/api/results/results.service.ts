@@ -3778,12 +3778,11 @@ export class ResultsService {
       return 4;
     }
 
-    const isAdmin =
-      await this._roleByUserRepository.validationRolePermissions(
-        user.id,
-        resultId,
-        [RoleEnum.ADMIN],
-      );
+    const isAdmin = await this._roleByUserRepository.validationRolePermissions(
+      user.id,
+      resultId,
+      [RoleEnum.ADMIN],
+    );
 
     if (!isAdmin) {
       return 4;
@@ -3794,7 +3793,10 @@ export class ResultsService {
       select: ['id', 'status_id'],
     });
 
-    if (result && Number(result.status_id) === ResultStatusData.Approved.value) {
+    if (
+      result &&
+      Number(result.status_id) === ResultStatusData.Approved.value
+    ) {
       return 1;
     }
 
@@ -3923,7 +3925,6 @@ export class ResultsService {
     }
   }
 
-
   private async _ensureCapacityDevRecord(
     resultId: number,
     userId: number,
@@ -4023,9 +4024,7 @@ export class ResultsService {
       is_active: true,
     });
     await repo.save(newRecord);
-    this._logger.log(
-      `Created policy change record for result ${resultId}`,
-    );
+    this._logger.log(`Created policy change record for result ${resultId}`);
   }
 
   private async _ensureInnovationUseRecord(
@@ -4058,9 +4057,7 @@ export class ResultsService {
       is_active: true,
     });
     await repo.save(newRecord);
-    this._logger.log(
-      `Created innovation use record for result ${resultId}`,
-    );
+    this._logger.log(`Created innovation use record for result ${resultId}`);
   }
 
   private async _updateInnovationUsePartial(
