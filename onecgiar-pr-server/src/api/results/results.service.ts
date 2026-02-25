@@ -3967,7 +3967,7 @@ export class ResultsService {
     const repo = this._dataSource.getRepository(ResultsInnovationsDev);
 
     const existing = await repo.findOne({
-      where: { results_id: resultId },
+      where: { result_object: { id: resultId } },
     });
 
     if (existing) {
