@@ -978,7 +978,7 @@ export class BilateralService {
         const createdUserWrapper = await this._userService.createFull(
           createUserDto,
           adminUser?.id,
-          { skipCgiarAdLookup: true },
+          { skipCgiarAdLookup: true, skipAllEmails: true },
         );
 
         let createdUser: any = createdUserWrapper;

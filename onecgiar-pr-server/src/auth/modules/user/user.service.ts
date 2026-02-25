@@ -68,11 +68,12 @@ export class UserService {
    * @param createUserDto User information
    * @param token User token
    * @param options.skipCgiarAdLookup When true, CGIAR users are created without validating against Active Directory (e.g. for bilateral API)
+   * @param options.skipAllEmails When true, no confirmation/welcome/validation emails are sent (e.g. for bilateral API)
    */
   async createFull(
     createUserDto: CreateUserDto,
     token: number,
-    options?: { skipCgiarAdLookup?: boolean },
+    options?: { skipCgiarAdLookup?: boolean; skipAllEmails?: boolean },
   ): Promise<returnFormatUser | returnErrorDto> {
     try {
       await this.validateUserInput(createUserDto);
@@ -86,7 +87,7 @@ export class UserService {
         };
       }
 
-      let shouldSendConfirmationEmail = true;
+      let shouldSendConfirmationEmail = !options?.skipAllEmails;
 
       if (createUserDto.is_cgiar) {
         if (options?.skipCgiarAdLookup) {
@@ -105,8 +106,13 @@ export class UserService {
         }
       } else {
         await this.handleNonCgiarUser(createUserDto);
-        shouldSendConfirmationEmail =
-          await this.registerInCognitoIfNeeded(createUserDto);
+        const cognitoSendsEmail = await this.registerInCognitoIfNeeded(
+          createUserDto,
+          options?.skipAllEmails,
+        );
+        if (!options?.skipAllEmails && cognitoSendsEmail === false) {
+          shouldSendConfirmationEmail = false;
+        }
       }
 
       const savedUser = await this.saveUserToDB(createUserDto, token);
@@ -197,46 +203,52 @@ export class UserService {
 
   private async registerInCognitoIfNeeded(
     createUserDto: CreateUserDto,
+    skipWelcomeEmail?: boolean,
   ): Promise<boolean> {
-    const templateDB = await this._templateRepository.findOne({
-      where: { name: EmailTemplate.ACCOUNT_CONFIRMATION },
-    });
-
-    if (!templateDB) {
-      throw new Error('Email template ACCOUNT_CONFIRMATION not found');
-    }
-
-    const template = handlebars.compile(templateDB.template);
-    const assignedRolesMessage = await this.buildAssignedRolesMessage(
-      createUserDto.role_assignments,
-    );
-
-    const templateData: Record<string, any> = {
-      logoUrl: '{{logoUrl}}',
-      appName: '{{appName}}',
-      firstName: '{{firstName}}',
-      lastName: '{{lastName}}',
-      tempPassword: '{{tempPassword}}',
-      email: '{{email}}',
-      appUrl: '{{appUrl}}',
-      supportEmail: '{{supportEmail}}',
-      senderName: '{{senderName}}',
-    };
-    if (
-      createUserDto.role_assignments &&
-      createUserDto.role_assignments.length > 0
-    ) {
-      templateData.assignedRolesSummary = assignedRolesMessage;
-    }
-
-    const htmlString = template(templateData);
-
-    const cognitoPayload = {
+    const cognitoPayload: Record<string, unknown> = {
       username: createUserDto.email,
       email: createUserDto.email,
       firstName: createUserDto.first_name,
       lastName: createUserDto.last_name,
-      emailConfig: {
+    };
+
+    if (skipWelcomeEmail) {
+      cognitoPayload.skipWelcomeEmail = true;
+    } else {
+      const templateDB = await this._templateRepository.findOne({
+        where: { name: EmailTemplate.ACCOUNT_CONFIRMATION },
+      });
+
+      if (!templateDB) {
+        throw new Error('Email template ACCOUNT_CONFIRMATION not found');
+      }
+
+      const template = handlebars.compile(templateDB.template);
+      const assignedRolesMessage = await this.buildAssignedRolesMessage(
+        createUserDto.role_assignments,
+      );
+
+      const templateData: Record<string, any> = {
+        logoUrl: '{{logoUrl}}',
+        appName: '{{appName}}',
+        firstName: '{{firstName}}',
+        lastName: '{{lastName}}',
+        tempPassword: '{{tempPassword}}',
+        email: '{{email}}',
+        appUrl: '{{appUrl}}',
+        supportEmail: '{{supportEmail}}',
+        senderName: '{{senderName}}',
+      };
+      if (
+        createUserDto.role_assignments &&
+        createUserDto.role_assignments.length > 0
+      ) {
+        templateData.assignedRolesSummary = assignedRolesMessage;
+      }
+
+      const htmlString = template(templateData);
+
+      cognitoPayload.emailConfig = {
         sender_email: process.env.EMAIL_SENDER,
         sender_name: 'PRMS Team',
         welcome_subject:
@@ -247,11 +259,13 @@ export class UserService {
         logo_url:
           'https://prms-file-storage.s3.amazonaws.com/email-images/Email_PRMS_Header.svg',
         welcome_html_template: htmlString,
-      },
-    };
+      };
+    }
 
     try {
-      await this._awsCognitoService.createUser(cognitoPayload);
+      await this._awsCognitoService.createUser(
+        cognitoPayload as Parameters<AuthMicroserviceService['createUser']>[0],
+      );
       return false;
     } catch (error) {
       const isUserExistsError =
