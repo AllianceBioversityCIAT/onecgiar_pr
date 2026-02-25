@@ -3629,6 +3629,12 @@ export class ResultsService {
       pending_contributing_initiatives,
     } = contributingInitiatives;
 
+    // Determine if Admin + Approved → create with request_status_id = 1
+    const targetRequestStatusId = await this._resolveRequestStatusId(
+      resultId,
+      user,
+    );
+
     // Get owner_initiative_id
     const ownerInitiative = await this._resultByInitiativesRepository.findOne({
       where: { result_id: resultId, initiative_role_id: 1, is_active: true },
@@ -3665,11 +3671,11 @@ export class ResultsService {
 
     // Handle pending_contributing_initiatives
     if (!pending_contributing_initiatives?.length) {
-      // If there are no pending in the payload, delete all with request_status_id = 4
+      // If there are no pending in the payload, delete all with the target request_status_id
       await this._shareResultRequestRepository.update(
         {
           result_id: resultId,
-          request_status_id: 4,
+          request_status_id: targetRequestStatusId,
           is_active: true,
         },
         {
@@ -3679,11 +3685,11 @@ export class ResultsService {
       return;
     }
 
-    // Get existing share result requests with request_status_id = 4
+    // Get existing share result requests with the target request_status_id
     const existingRequests = await this._shareResultRequestRepository.find({
       where: {
         result_id: resultId,
-        request_status_id: 4,
+        request_status_id: targetRequestStatusId,
         is_active: true,
       },
     });
@@ -3709,7 +3715,7 @@ export class ResultsService {
           newRequest.shared_inititiative_id = initiativeId;
           newRequest.approving_inititiative_id = ownerInitiativeId;
           newRequest.requester_initiative_id = ownerInitiativeId;
-          newRequest.request_status_id = 4; // Draft
+          newRequest.request_status_id = targetRequestStatusId;
           newRequest.requested_by = user.id;
           newRequest.is_map_to_toc = false;
           newRequest.is_active = true;
@@ -3730,7 +3736,7 @@ export class ResultsService {
         {
           result_id: resultId,
           shared_inititiative_id: In(toDeleteInitiativeIds),
-          request_status_id: 4,
+          request_status_id: targetRequestStatusId,
           is_active: true,
         },
         {
@@ -3750,13 +3756,49 @@ export class ResultsService {
         {
           result_id: resultId,
           shared_inititiative_id: In(toUpdateInitiativeIds),
-          request_status_id: 4,
+          request_status_id: targetRequestStatusId,
         },
         {
           is_active: true,
         },
       );
     }
+  }
+
+  /**
+   * Determines the request_status_id to use when creating contributing initiatives.
+   * If user is Admin and the result status is Approved (6), returns 1 (accepted).
+   * Otherwise, returns 4 (draft).
+   */
+  private async _resolveRequestStatusId(
+    resultId: number,
+    user: TokenDto,
+  ): Promise<number> {
+    if (!this._roleByUserRepository) {
+      return 4;
+    }
+
+    const isAdmin =
+      await this._roleByUserRepository.validationRolePermissions(
+        user.id,
+        resultId,
+        [RoleEnum.ADMIN],
+      );
+
+    if (!isAdmin) {
+      return 4;
+    }
+
+    const result = await this._resultRepository.findOne({
+      where: { id: resultId, is_active: true },
+      select: ['id', 'status_id'],
+    });
+
+    if (result && Number(result.status_id) === ResultStatusData.Approved.value) {
+      return 1;
+    }
+
+    return 4;
   }
 
   private async _updateEvidence(
