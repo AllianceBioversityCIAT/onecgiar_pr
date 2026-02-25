@@ -179,6 +179,10 @@ export class IpsrContributorsComponent implements OnInit {
   }
 
   onPlannedResultChange(item: any) {
+    if (item?.result_toc_results?.length > 1) {
+      item.result_toc_results = [item.result_toc_results[0]];
+    }
+
     item?.result_toc_results?.forEach((tab: any) => {
       if (tab.indicators?.[0]) {
         tab.indicators[0].related_node_id = null;
@@ -271,9 +275,6 @@ export class IpsrContributorsComponent implements OnInit {
       sendedData.is_lead_by_partner = this.rdPartnersSE.partnersBody.is_lead_by_partner;
       sendedData.institutions = this.rdPartnersSE.partnersBody.institutions;
       sendedData.mqap_institutions = this.rdPartnersSE.partnersBody.mqap_institutions;
-      if (!this.rdPartnersSE.partnersBody.result_toc_result.planned_result) {
-        sendedData.result_toc_result.result_toc_results = null;
-      }
     }
 
     this.api.resultsSE.PATCHContributorsByIpsrResultId(sendedData, this.fieldsManagerSE.isP25()).subscribe(({ response }) => {
