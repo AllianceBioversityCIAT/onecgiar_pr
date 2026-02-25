@@ -1610,10 +1610,60 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         r.description AS "Result Description",
         r.lead_contact_person AS "Lead Contact Person",
         IFNULL(gtl.description, 'Not provided') AS "Gender Tag Level",
+        IF(
+            (SELECT v.portfolio_id FROM version v WHERE v.id = r.version_id) = 3,
+            (
+                SELECT GROUP_CONCAT(iasc.name ORDER BY iasc.name SEPARATOR ', ')
+                FROM result_impact_area_score rias
+                INNER JOIN impact_areas_scores_components iasc ON iasc.id = rias.impact_area_score_id AND iasc.is_active = 1
+                WHERE rias.result_id = r.id AND rias.is_active = 1 AND iasc.impact_area = 'Gender'
+            ),
+            ''
+        ) AS "Gender Impact Areas",
         IFNULL(gtl2.description, 'Not provided') AS "Climate Tag Level",
+        IF(
+            (SELECT v.portfolio_id FROM version v WHERE v.id = r.version_id) = 3,
+            (
+                SELECT GROUP_CONCAT(iasc.name ORDER BY iasc.name SEPARATOR ', ')
+                FROM result_impact_area_score rias
+                INNER JOIN impact_areas_scores_components iasc ON iasc.id = rias.impact_area_score_id AND iasc.is_active = 1
+                WHERE rias.result_id = r.id AND rias.is_active = 1 AND iasc.impact_area = 'Climate'
+            ),
+            ''
+        ) AS "Climate Impact Areas",
         IFNULL(gtl3.description, 'Not provided') AS "Nutrition Tag Level",
+        IF(
+            (SELECT v.portfolio_id FROM version v WHERE v.id = r.version_id) = 3,
+            (
+                SELECT GROUP_CONCAT(iasc.name ORDER BY iasc.name SEPARATOR ', ')
+                FROM result_impact_area_score rias
+                INNER JOIN impact_areas_scores_components iasc ON iasc.id = rias.impact_area_score_id AND iasc.is_active = 1
+                WHERE rias.result_id = r.id AND rias.is_active = 1 AND iasc.impact_area = 'Nutrition'
+            ),
+            ''
+        ) AS "Nutrition Impact Areas",
         IFNULL(gtl4.description, 'Not provided') AS "Environment AND/or biodiversity Tag Level",
+        IF(
+            (SELECT v.portfolio_id FROM version v WHERE v.id = r.version_id) = 3,
+            (
+                SELECT GROUP_CONCAT(iasc.name ORDER BY iasc.name SEPARATOR ', ')
+                FROM result_impact_area_score rias
+                INNER JOIN impact_areas_scores_components iasc ON iasc.id = rias.impact_area_score_id AND iasc.is_active = 1
+                WHERE rias.result_id = r.id AND rias.is_active = 1 AND iasc.impact_area = 'Environmental'
+            ),
+            ''
+        ) AS "Environment Impact Areas",
         IFNULL(gtl5.description, 'Not provided') AS "Poverty Tag Level",
+        IF(
+            (SELECT v.portfolio_id FROM version v WHERE v.id = r.version_id) = 3,
+            (
+                SELECT GROUP_CONCAT(iasc.name ORDER BY iasc.name SEPARATOR ', ')
+                FROM result_impact_area_score rias
+                INNER JOIN impact_areas_scores_components iasc ON iasc.id = rias.impact_area_score_id AND iasc.is_active = 1
+                WHERE rias.result_id = r.id AND rias.is_active = 1 AND iasc.impact_area = 'Poverty'
+            ),
+            ''
+        ) AS "Poverty Impact Areas",
         IF(
             r.is_krs IS NULL,
             'Not provided',
@@ -1655,30 +1705,23 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
                 SELECT
                     GROUP_CONCAT(
                         DISTINCT CONCAT(
-                            '(Funder name: ',
-                            ci4.acronym,
+                            '(',
+                            IFNULL(cp.short_name, ''),
                             ' - ',
-                            ci4.name,
-                            ', Grant title: ',
-                            npp.grant_title,
-                            ', Center Grant ID: ',
-                            IFNULL(npp.center_grant_id, 'Not applicable'),
-                            ', Lead/Contract Center: ',
-                            ci3.name,
+                            IFNULL(cp.full_name, ''),
+                            IF(rbp.is_lead = 1, ', Lead project: Yes', ', Lead project: No'),
                             ')'
                         ) SEPARATOR ', '
                     )
                 FROM
-                    non_pooled_project npp
-                    LEFT JOIN clarisa_center cc ON cc.code = npp.lead_center_id
-                    LEFT JOIN clarisa_institutions ci3 ON ci3.id = cc.institutionId
-                    LEFT JOIN clarisa_institutions ci4 ON ci4.id = npp.funder_institution_id
+                    results_by_projects rbp
+                    INNER JOIN clarisa_projects cp ON cp.id = rbp.project_id
                 WHERE
-                    npp.results_id = r.id
-                    AND npp.is_active > 0
+                    rbp.result_id = r.id
+                    AND rbp.is_active = 1
             ),
             'Not provided'
-        ) AS "Non-pooled Project(s)",
+        ) AS "Bilateral Projects",
         (
             SELECT
                 GROUP_CONCAT(
