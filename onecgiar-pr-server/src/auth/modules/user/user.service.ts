@@ -93,11 +93,8 @@ export class UserService {
         if (options?.skipCgiarAdLookup) {
           createUserDto.first_name = createUserDto.first_name || '(no name)';
           createUserDto.last_name = createUserDto.last_name || '(external)';
-          if (
-            !createUserDto.role_platform ||
-            !createUserDto.role_assignments ||
-            createUserDto.role_assignments.length === 0
-          ) {
+          // Only default to guest (2) when role_platform was not explicitly sent
+          if (!createUserDto.role_platform) {
             createUserDto.role_platform = 2;
           }
         } else {
@@ -169,11 +166,8 @@ export class UserService {
       createUserDto.first_name = userFromAD.givenName || 'CGIAR';
       createUserDto.last_name = userFromAD.sn || 'User';
 
-      if (
-        !createUserDto.role_platform ||
-        !createUserDto.role_assignments ||
-        createUserDto.role_assignments.length === 0
-      ) {
+      // Only default to guest (2) when role_platform was not explicitly sent
+      if (!createUserDto.role_platform) {
         createUserDto.role_platform = 2;
       }
 
