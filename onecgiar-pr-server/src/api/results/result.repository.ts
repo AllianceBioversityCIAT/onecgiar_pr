@@ -2914,7 +2914,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         if (!policyChangeMap.has(policyChangeId)) {
           const implementingOrg = [];
           if (
-            row.institution_roles_id === 4 &&
+            Number(row.institution_roles_id) === 4 &&
             row.institution_id &&
             row.acronym
           ) {
@@ -2938,7 +2938,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         const policyChange = policyChangeMap.get(policyChangeId);
 
         if (
-          row.institution_roles_id === 4 &&
+          Number(row.institution_roles_id) === 4 &&
           row.institution_id &&
           row.acronym
         ) {
