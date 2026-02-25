@@ -78,7 +78,7 @@
           [(ngModel)]="activeTab.indicators[0].related_node_id"
           (ngModelChange)="mapTocResultsIndicatorId()">
         </app-pr-select>
-        @if (activeTab.indicators[0].related_node_id && !hidden) {
+        @if (activeTab.indicators[0].related_node_id) {
           <div>
             <app-pr-field-header label="Contribution to indicator target" [required]="false"></app-pr-field-header>
             <app-alert-status
