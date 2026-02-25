@@ -90,6 +90,9 @@ import {
 } from '../notification/enum/notification.enum';
 import { ImpactAreasScoresComponentRepository } from './impact_areas_scores_components/repositories/impact_areas_scores_components.repository';
 import { ResultsInnovationsDev } from './summary/entities/results-innovations-dev.entity';
+import { ResultsCapacityDevelopments } from './summary/entities/results-capacity-developments.entity';
+import { ResultsPolicyChanges } from './summary/entities/results-policy-changes.entity';
+import { ResultsInnovationsUse } from './summary/entities/results-innovations-use.entity';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 import { ResultsTocResultRepository } from './results-toc-results/repositories/results-toc-results.repository';
 import { ResultsInnovationsDevRepository } from './summary/repositories/results-innovations-dev.repository';
@@ -3940,6 +3943,7 @@ export class ResultsService {
     switch (resultTypeId) {
       case ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT: // 5
         if (this._summaryService) {
+          await this._ensureCapacityDevRecord(resultId, user.id);
           const capdevDto: CapdevDto = {
             ...(reviewUpdateDto.resultTypeResponse as any),
             institutions: [],
@@ -3959,6 +3963,7 @@ export class ResultsService {
 
       case ResultTypeEnum.INNOVATION_DEVELOPMENT: // 7
         if (this._innovationDevService) {
+          await this._ensureInnovationDevRecord(resultId, user.id);
           await this._innovationDevService.updateInnovationDevPartial(
             resultId,
             reviewUpdateDto.resultTypeResponse as any,
@@ -3973,6 +3978,7 @@ export class ResultsService {
 
       case ResultTypeEnum.POLICY_CHANGE: // 1
         if (this._summaryService) {
+          await this._ensurePolicyChangeRecord(resultId, user.id);
           await this._summaryService.updatePolicyChangesPartial(
             resultId,
             reviewUpdateDto.resultTypeResponse as any,
@@ -3986,6 +3992,7 @@ export class ResultsService {
         break;
 
       case ResultTypeEnum.INNOVATION_USE: // 2
+        await this._ensureInnovationUseRecord(resultId, user.id);
         await this._updateInnovationUsePartial(resultId, reviewUpdateDto, user);
         break;
 
@@ -3995,6 +4002,146 @@ export class ResultsService {
         );
         break;
     }
+  }
+
+
+  private async _ensureCapacityDevRecord(
+    resultId: number,
+    userId: number,
+  ): Promise<void> {
+    const repo = this._dataSource.getRepository(ResultsCapacityDevelopments);
+
+    const existing = await repo.findOne({
+      where: { result_id: resultId },
+    });
+
+    if (existing) {
+      if (!existing.is_active) {
+        existing.is_active = true;
+        existing.last_updated_by = userId;
+        await repo.save(existing);
+        this._logger.log(
+          `Reactivated capacity development record for result ${resultId}`,
+        );
+      }
+      return;
+    }
+
+    const newRecord = repo.create({
+      result_id: resultId,
+      result_object: { id: resultId } as Result,
+      created_by: userId,
+      last_updated_by: userId,
+      is_active: true,
+    });
+    await repo.save(newRecord);
+    this._logger.log(
+      `Created capacity development record for result ${resultId}`,
+    );
+  }
+
+  private async _ensureInnovationDevRecord(
+    resultId: number,
+    userId: number,
+  ): Promise<void> {
+    const repo = this._dataSource.getRepository(ResultsInnovationsDev);
+
+    const existing = await repo.findOne({
+      where: { results_id: resultId },
+    });
+
+    if (existing) {
+      if (!existing.is_active) {
+        existing.is_active = true;
+        existing.last_updated_by = userId;
+        await repo.save(existing);
+        this._logger.log(
+          `Reactivated innovation development record for result ${resultId}`,
+        );
+      }
+      return;
+    }
+
+    const newRecord = repo.create({
+      result_object: { id: resultId } as Result,
+      created_by: userId,
+      last_updated_by: userId,
+      is_active: true,
+    });
+    await repo.save(newRecord);
+    this._logger.log(
+      `Created innovation development record for result ${resultId}`,
+    );
+  }
+
+  private async _ensurePolicyChangeRecord(
+    resultId: number,
+    userId: number,
+  ): Promise<void> {
+    const repo = this._dataSource.getRepository(ResultsPolicyChanges);
+
+    const existing = await repo.findOne({
+      where: { result_id: resultId },
+    });
+
+    if (existing) {
+      if (!existing.is_active) {
+        existing.is_active = true;
+        existing.last_updated_by = userId;
+        await repo.save(existing);
+        this._logger.log(
+          `Reactivated policy change record for result ${resultId}`,
+        );
+      }
+      return;
+    }
+
+    const newRecord = repo.create({
+      result_id: resultId,
+      obj_result: { id: resultId } as Result,
+      created_by: userId,
+      last_updated_by: userId,
+      is_active: true,
+    });
+    await repo.save(newRecord);
+    this._logger.log(
+      `Created policy change record for result ${resultId}`,
+    );
+  }
+
+  private async _ensureInnovationUseRecord(
+    resultId: number,
+    userId: number,
+  ): Promise<void> {
+    const repo = this._dataSource.getRepository(ResultsInnovationsUse);
+
+    const existing = await repo.findOne({
+      where: { results_id: resultId },
+    });
+
+    if (existing) {
+      if (!existing.is_active) {
+        existing.is_active = true;
+        existing.last_updated_by = userId;
+        await repo.save(existing);
+        this._logger.log(
+          `Reactivated innovation use record for result ${resultId}`,
+        );
+      }
+      return;
+    }
+
+    const newRecord = repo.create({
+      results_id: resultId,
+      obj_result: { id: resultId } as Result,
+      created_by: userId,
+      last_updated_by: userId,
+      is_active: true,
+    });
+    await repo.save(newRecord);
+    this._logger.log(
+      `Created innovation use record for result ${resultId}`,
+    );
   }
 
   private async _updateInnovationUsePartial(
