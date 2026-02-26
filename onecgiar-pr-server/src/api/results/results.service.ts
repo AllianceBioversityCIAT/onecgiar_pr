@@ -3808,11 +3808,7 @@ export class ResultsService {
     reviewUpdateDto: ReviewUpdateDto,
     user: TokenDto,
   ): Promise<void> {
-    if (
-      reviewUpdateDto.evidence === undefined ||
-      reviewUpdateDto.evidence.length === 0 ||
-      !this._evidencesService
-    ) {
+    if (reviewUpdateDto.evidence === undefined || !this._evidencesService) {
       return;
     }
 
