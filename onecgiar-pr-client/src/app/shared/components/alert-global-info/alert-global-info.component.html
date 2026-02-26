@@ -1,7 +1,3 @@
-<div class="alert-global-info {{className}}" [style]="inlineStyles">
-  <app-alert-status description="Reporting on <strong>capacity sharing for development,</strong> <strong>innovation development,</strong> <strong>innovation use</strong> and <strong>knowledge product</strong> are currently accessible. 
-    We recommend waiting to report on <strong>policy change</strong> until new data fields for 2023 are released on <u>12 October 2023</u>. 
-    Reporting on <strong>engagement,</strong> a new category for 2023, is currently in production – the release date will be shared soon. 
-    Reporting on <strong>capacity change</strong> has been removed."
-    inlineStyles="background-color: var(--pr-color-white); margin: 0;"></app-alert-status>
+<div class="alert-global-info {{ className }}" [style]="inlineStyles">
+  <app-alert-status [description]="getAlertStatus()" inlineStyles="background-color: var(--pr-color-white); margin: 0;"></app-alert-status>
 </div>

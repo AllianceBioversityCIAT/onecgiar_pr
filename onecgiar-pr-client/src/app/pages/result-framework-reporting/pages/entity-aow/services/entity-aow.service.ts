@@ -52,9 +52,10 @@ export class EntityAowService {
     if (this.api.rolesSE.isAdmin) {
       return true;
     }
+
     const myInitiativesList = this.api.dataControlSE.myInitiativesList || [];
     const found = myInitiativesList.find(item => item.official_code === this.entityId());
-    return !!found;
+    return !!found && this.isSgp02(this.entityId());
   });
 
   private isSgp02(entityId: string): boolean {
