@@ -3119,6 +3119,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       FROM result r
       JOIN evidence e 
         ON r.id = e.result_id
+        AND e.is_active = 1
       WHERE
         r.id = ?
         AND r.is_active = 1;
