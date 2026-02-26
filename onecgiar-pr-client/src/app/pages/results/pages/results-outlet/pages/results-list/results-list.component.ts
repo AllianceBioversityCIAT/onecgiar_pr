@@ -353,11 +353,12 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   navigateToResult(result: CurrentResult) {
-    if (this.isW3BilateralsAvisa(result)) {
+    if (this.isW3BilateralsAvisa(result) || result?.status_name === 'Approved') {
       const url = '/result/result-detail/' + result.result_code + '/general-information?phase=' + result.version_id;
       this.router.navigateByUrl(url);
       return;
     }
+
     if (result?.source_name == 'W3/Bilaterals') {
       const url = '/result-framework-reporting/entity-details/' + result.submitter + '/results-review';
       this.bilateralResultsService.currentResultToReview.set(result);
