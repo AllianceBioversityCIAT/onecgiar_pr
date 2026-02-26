@@ -903,33 +903,87 @@ WHERE
       IF(ANY_VALUE(r.source) = 'Result', 'W1/W2', IF(ANY_VALUE(r.source) = 'API', 'W3/Bilateral', '')) AS "funding_source",
       DATE_FORMAT(r.created_date, "%Y-%m-%d") AS "creation_date",
       IF(ANY_VALUE(rtr.planned_result) = 1, 'Yes', IF(ANY_VALUE(rtr.planned_result) = 0, 'No', '')) AS "planned_result",
-      REPLACE(REPLACE(
-        IFNULL(
-          GROUP_CONCAT(
-            CONCAT(
-              'Does this result align with the Program planned TOC indicators: ',
-              IF(rtr.planned_result = 1, 'Yes', IF(rtr.planned_result = 0, 'No', '')),
-              '\n',
-              IF(version.portfolio_id = 3, CONCAT(REPLACE(REPLACE(IFNULL(twp_p25.acronym, ''), '<', '&lt;'), '>', '&gt;'), '\n'), ''),
-              'ToC result: ',
-              REPLACE(REPLACE(IFNULL(COALESCE(tr_p25.result_title, tr_p22.result_title), ''), '<', '&lt;'), '>', '&gt;'),
-              '\n',
-              IF(version.portfolio_id = 3, '', CONCAT('Action areas: ', REPLACE(REPLACE(IFNULL(action_areas_p22.action_areas, ''), '<', '&lt;'), '>', '&gt;'), '\n')),
-              'Indicator: ',
-              REPLACE(REPLACE(IFNULL(COALESCE(tri_p25.indicator_description, tri_p22.indicator_description), 'Not Applicable'), '<', '&lt;'), '>', '&gt;'),
-              '\n',
-              'Target contribution: ',
-              IFNULL(CAST(ROUND(rit.contributing_indicator, 0) AS SIGNED), ''),
-              '\n',
-              IF(rtr.planned_result = 1, 'Explanation of how the result aligns with/contributes to the Program TOC pathway: ', IF(rtr.planned_result = 0, 'Why is the result being reported: ', '')),
-              REPLACE(REPLACE(IFNULL(rtr.toc_progressive_narrative, ''), '<', '&lt;'), '>', '&gt;')
-            )
-            SEPARATOR '\n\n'
+      (
+        SELECT REPLACE(REPLACE(
+          IFNULL(
+            GROUP_CONCAT(
+              CONCAT(
+                'Does this result align with the Program planned TOC indicators: ',
+                IF(toc_rtr.planned_result = 1, 'Yes', IF(toc_rtr.planned_result = 0, 'No', '')),
+                '\n',
+                IF(toc_v.portfolio_id = 3, CONCAT(REPLACE(REPLACE(IFNULL(toc_twp.acronym, ''), '<', '&lt;'), '>', '&gt;'), '\n'), ''),
+                'ToC result: ',
+                REPLACE(REPLACE(IFNULL(COALESCE(toc_tr_p25.result_title, toc_tr_p22.result_title), ''), '<', '&lt;'), '>', '&gt;'),
+                '\n',
+                IF(toc_v.portfolio_id = 3, '', CONCAT('Action areas: ', REPLACE(REPLACE(IFNULL(toc_aa.action_areas, ''), '<', '&lt;'), '>', '&gt;'), '\n')),
+                'Indicator: ',
+                REPLACE(REPLACE(IFNULL(COALESCE(toc_tri_p25.indicator_description, toc_tri_p22.indicator_description), 'Not Applicable'), '<', '&lt;'), '>', '&gt;'),
+                '\n',
+                'Target contribution: ',
+                IFNULL(CAST(ROUND(toc_rit.contributing_indicator, 0) AS SIGNED), ''),
+                '\n',
+                IF(toc_rtr.planned_result = 1, 'Explanation of how the result aligns with/contributes to the Program TOC pathway: ', IF(toc_rtr.planned_result = 0, 'Why is the result being reported: ', '')),
+                REPLACE(REPLACE(IFNULL(toc_rtr.toc_progressive_narrative, ''), '<', '&lt;'), '>', '&gt;')
+              )
+              SEPARATOR '\n\n'
+            ),
+            ''
           ),
-          ''
-        ),
-        '<', '&lt;'
-      ), '>', '&gt;') AS "toc",
+          '<', '&lt;'
+        ), '>', '&gt;')
+        FROM results_toc_result toc_rtr
+        INNER JOIN version toc_v ON toc_v.id = r.version_id
+        LEFT JOIN ${env.DB_TOC}.toc_results toc_tr_p25 ON toc_tr_p25.id = toc_rtr.toc_result_id
+          AND toc_tr_p25.is_active = 1
+          AND toc_v.portfolio_id = 3
+        LEFT JOIN ${env.DB_TOC}.toc_work_packages toc_twp ON toc_tr_p25.wp_id = toc_twp.toc_id
+        LEFT JOIN Integration_information.toc_results toc_tr_p22 ON toc_tr_p22.id = toc_rtr.toc_result_id
+          AND toc_tr_p22.is_active = 1
+          AND (toc_v.portfolio_id IS NULL OR toc_v.portfolio_id != 3)
+        LEFT JOIN Integration_information.work_packages toc_wp_p22 ON toc_wp_p22.id = toc_tr_p22.work_packages_id
+          AND toc_wp_p22.active = 1
+        LEFT JOIN results_toc_result_indicators toc_rtri ON toc_rtri.results_toc_results_id = toc_rtr.result_toc_result_id
+          AND toc_rtri.is_active = 1
+          AND (toc_rtri.is_not_aplicable = 0 OR toc_rtri.is_not_aplicable IS NULL)
+        LEFT JOIN ${env.DB_TOC}.toc_results_indicators toc_tri_p25 ON toc_tri_p25.toc_results_id = toc_tr_p25.id
+          AND toc_tri_p25.is_active = 1
+          AND toc_v.portfolio_id = 3
+          AND (
+            CONVERT(toc_tri_p25.related_node_id USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(toc_rtri.toc_results_indicator_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+            OR CONVERT(CAST(toc_tri_p25.id AS CHAR) USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(toc_rtri.toc_results_indicator_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+          )
+        LEFT JOIN Integration_information.toc_results_indicators toc_tri_p22 ON toc_tri_p22.toc_results_id = toc_tr_p22.id
+          AND toc_tri_p22.is_active = 1
+          AND (toc_v.portfolio_id IS NULL OR toc_v.portfolio_id != 3)
+          AND (
+            CONVERT(toc_tri_p22.related_node_id USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(toc_rtri.toc_results_indicator_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+            OR CONVERT(CAST(toc_tri_p22.id AS CHAR) USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(toc_rtri.toc_results_indicator_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+          )
+        LEFT JOIN result_indicators_targets toc_rit ON toc_rit.result_toc_result_indicator_id = toc_rtri.result_toc_result_indicator_id
+          AND toc_rit.is_active = 1
+        LEFT JOIN (
+          SELECT
+            traar.toc_results_id,
+            GROUP_CONCAT(DISTINCT CONCAT(caa.id, ' - ', caa.name) SEPARATOR '\n') AS action_areas
+          FROM
+            Integration_information.toc_results_action_area_results traar
+            INNER JOIN Integration_information.toc_action_area_results taar ON taar.toc_result_id = traar.toc_action_area_results_id_toc
+              AND taar.is_active = 1
+            RIGHT JOIN clarisa_action_area caa ON taar.action_areas_id = caa.id
+          WHERE traar.is_active = 1
+          GROUP BY traar.toc_results_id
+        ) toc_aa ON toc_aa.toc_results_id = toc_tr_p22.id
+        WHERE toc_rtr.results_id = r.id
+          AND toc_rtr.initiative_id = (
+            SELECT inititiative_id
+            FROM results_by_inititiative
+            WHERE result_id = r.id
+              AND initiative_role_id = 1
+              AND is_active = 1
+            LIMIT 1
+          )
+          AND toc_rtr.is_active = 1
+      ) AS "toc",
       GROUP_CONCAT(
         DISTINCT CONCAT(
           '[',
