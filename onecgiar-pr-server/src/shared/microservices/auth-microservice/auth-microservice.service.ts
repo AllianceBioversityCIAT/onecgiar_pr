@@ -234,7 +234,7 @@ export class AuthMicroserviceService {
 
   /**
    * Create a new custom user in the Auth Microservice
-   * @param userData User information including email config
+   * @param userData User information; when skipWelcomeEmail is true, no welcome/confirmation email is sent
    * @returns Created user response
    */
   async createUser(userData: {
@@ -242,7 +242,7 @@ export class AuthMicroserviceService {
     email: string;
     firstName: string;
     lastName: string;
-    emailConfig: {
+    emailConfig?: {
       sender_email: string;
       sender_name: string;
       welcome_subject: string;
@@ -252,6 +252,7 @@ export class AuthMicroserviceService {
       logo_url: string;
       welcome_html_template: string;
     };
+    skipWelcomeEmail?: boolean;
   }): Promise<any> {
     try {
       this.logger.log(`Creating user: ${userData.username}`);

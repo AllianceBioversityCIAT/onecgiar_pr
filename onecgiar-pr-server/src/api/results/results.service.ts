@@ -90,6 +90,9 @@ import {
 } from '../notification/enum/notification.enum';
 import { ImpactAreasScoresComponentRepository } from './impact_areas_scores_components/repositories/impact_areas_scores_components.repository';
 import { ResultsInnovationsDev } from './summary/entities/results-innovations-dev.entity';
+import { ResultsCapacityDevelopments } from './summary/entities/results-capacity-developments.entity';
+import { ResultsPolicyChanges } from './summary/entities/results-policy-changes.entity';
+import { ResultsInnovationsUse } from './summary/entities/results-innovations-use.entity';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 import { ResultsTocResultRepository } from './results-toc-results/repositories/results-toc-results.repository';
 import { ResultsInnovationsDevRepository } from './summary/repositories/results-innovations-dev.repository';
@@ -3749,6 +3752,12 @@ export class ResultsService {
       pending_contributing_initiatives,
     } = contributingInitiatives;
 
+    // Determine if Admin + Approved → create with request_status_id = 1
+    const targetRequestStatusId = await this._resolveRequestStatusId(
+      resultId,
+      user,
+    );
+
     // Get owner_initiative_id
     const ownerInitiative = await this._resultByInitiativesRepository.findOne({
       where: { result_id: resultId, initiative_role_id: 1, is_active: true },
@@ -3785,11 +3794,11 @@ export class ResultsService {
 
     // Handle pending_contributing_initiatives
     if (!pending_contributing_initiatives?.length) {
-      // If there are no pending in the payload, delete all with request_status_id = 4
+      // If there are no pending in the payload, delete all with the target request_status_id
       await this._shareResultRequestRepository.update(
         {
           result_id: resultId,
-          request_status_id: 4,
+          request_status_id: targetRequestStatusId,
           is_active: true,
         },
         {
@@ -3799,11 +3808,11 @@ export class ResultsService {
       return;
     }
 
-    // Get existing share result requests with request_status_id = 4
+    // Get existing share result requests with the target request_status_id
     const existingRequests = await this._shareResultRequestRepository.find({
       where: {
         result_id: resultId,
-        request_status_id: 4,
+        request_status_id: targetRequestStatusId,
         is_active: true,
       },
     });
@@ -3829,7 +3838,7 @@ export class ResultsService {
           newRequest.shared_inititiative_id = initiativeId;
           newRequest.approving_inititiative_id = ownerInitiativeId;
           newRequest.requester_initiative_id = ownerInitiativeId;
-          newRequest.request_status_id = 4; // Draft
+          newRequest.request_status_id = targetRequestStatusId;
           newRequest.requested_by = user.id;
           newRequest.is_map_to_toc = false;
           newRequest.is_active = true;
@@ -3850,7 +3859,7 @@ export class ResultsService {
         {
           result_id: resultId,
           shared_inititiative_id: In(toDeleteInitiativeIds),
-          request_status_id: 4,
+          request_status_id: targetRequestStatusId,
           is_active: true,
         },
         {
@@ -3870,13 +3879,51 @@ export class ResultsService {
         {
           result_id: resultId,
           shared_inititiative_id: In(toUpdateInitiativeIds),
-          request_status_id: 4,
+          request_status_id: targetRequestStatusId,
         },
         {
           is_active: true,
         },
       );
     }
+  }
+
+  /**
+   * Determines the request_status_id to use when creating contributing initiatives.
+   * If user is Admin and the result status is Approved (6), returns 1 (accepted).
+   * Otherwise, returns 4 (draft).
+   */
+  private async _resolveRequestStatusId(
+    resultId: number,
+    user: TokenDto,
+  ): Promise<number> {
+    if (!this._roleByUserRepository) {
+      return 4;
+    }
+
+    const isAdmin = await this._roleByUserRepository.validationRolePermissions(
+      user.id,
+      resultId,
+      [RoleEnum.ADMIN],
+    );
+
+    if (!isAdmin) {
+      return 4;
+    }
+
+    const result = await this._resultRepository.findOne({
+      where: { id: resultId, is_active: true },
+      select: ['id', 'status_id'],
+    });
+
+    if (
+      result &&
+      Number(result.status_id) === ResultStatusData.Approved.value
+    ) {
+      return 1;
+    }
+
+    return 4;
   }
 
   private async _updateEvidence(
@@ -3940,6 +3987,7 @@ export class ResultsService {
     switch (resultTypeId) {
       case ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT: // 5
         if (this._summaryService) {
+          await this._ensureCapacityDevRecord(resultId, user.id);
           const capdevDto: CapdevDto = {
             ...(reviewUpdateDto.resultTypeResponse as any),
             institutions: [],
@@ -3959,6 +4007,7 @@ export class ResultsService {
 
       case ResultTypeEnum.INNOVATION_DEVELOPMENT: // 7
         if (this._innovationDevService) {
+          await this._ensureInnovationDevRecord(resultId, user.id);
           await this._innovationDevService.updateInnovationDevPartial(
             resultId,
             reviewUpdateDto.resultTypeResponse as any,
@@ -3973,6 +4022,7 @@ export class ResultsService {
 
       case ResultTypeEnum.POLICY_CHANGE: // 1
         if (this._summaryService) {
+          await this._ensurePolicyChangeRecord(resultId, user.id);
           await this._summaryService.updatePolicyChangesPartial(
             resultId,
             reviewUpdateDto.resultTypeResponse as any,
@@ -3986,6 +4036,7 @@ export class ResultsService {
         break;
 
       case ResultTypeEnum.INNOVATION_USE: // 2
+        await this._ensureInnovationUseRecord(resultId, user.id);
         await this._updateInnovationUsePartial(resultId, reviewUpdateDto, user);
         break;
 
@@ -3995,6 +4046,140 @@ export class ResultsService {
         );
         break;
     }
+  }
+
+  private async _ensureCapacityDevRecord(
+    resultId: number,
+    userId: number,
+  ): Promise<void> {
+    const repo = this._dataSource.getRepository(ResultsCapacityDevelopments);
+
+    const existing = await repo.findOne({
+      where: { result_object: { id: resultId } },
+    });
+
+    if (existing) {
+      if (!existing.is_active) {
+        existing.is_active = true;
+        existing.last_updated_by = userId;
+        await repo.save(existing);
+        this._logger.log(
+          `Reactivated capacity development record for result ${resultId}`,
+        );
+      }
+      return;
+    }
+
+    const newRecord = repo.create({
+      result_object: { id: resultId } as Result,
+      created_by: userId,
+      last_updated_by: userId,
+      is_active: true,
+    });
+    await repo.save(newRecord);
+    this._logger.log(
+      `Created capacity development record for result ${resultId}`,
+    );
+  }
+
+  private async _ensureInnovationDevRecord(
+    resultId: number,
+    userId: number,
+  ): Promise<void> {
+    const repo = this._dataSource.getRepository(ResultsInnovationsDev);
+
+    const existing = await repo.findOne({
+      where: { result_object: { id: resultId } },
+    });
+
+    if (existing) {
+      if (!existing.is_active) {
+        existing.is_active = true;
+        existing.last_updated_by = userId;
+        await repo.save(existing);
+        this._logger.log(
+          `Reactivated innovation development record for result ${resultId}`,
+        );
+      }
+      return;
+    }
+
+    const newRecord = repo.create({
+      result_object: { id: resultId } as Result,
+      created_by: userId,
+      last_updated_by: userId,
+      is_active: true,
+    });
+    await repo.save(newRecord);
+    this._logger.log(
+      `Created innovation development record for result ${resultId}`,
+    );
+  }
+
+  private async _ensurePolicyChangeRecord(
+    resultId: number,
+    userId: number,
+  ): Promise<void> {
+    const repo = this._dataSource.getRepository(ResultsPolicyChanges);
+
+    const existing = await repo.findOne({
+      where: { result_id: resultId },
+    });
+
+    if (existing) {
+      if (!existing.is_active) {
+        existing.is_active = true;
+        existing.last_updated_by = userId;
+        await repo.save(existing);
+        this._logger.log(
+          `Reactivated policy change record for result ${resultId}`,
+        );
+      }
+      return;
+    }
+
+    const newRecord = repo.create({
+      result_id: resultId,
+      obj_result: { id: resultId } as Result,
+      created_by: userId,
+      last_updated_by: userId,
+      is_active: true,
+    });
+    await repo.save(newRecord);
+    this._logger.log(`Created policy change record for result ${resultId}`);
+  }
+
+  private async _ensureInnovationUseRecord(
+    resultId: number,
+    userId: number,
+  ): Promise<void> {
+    const repo = this._dataSource.getRepository(ResultsInnovationsUse);
+
+    const existing = await repo.findOne({
+      where: { results_id: resultId },
+    });
+
+    if (existing) {
+      if (!existing.is_active) {
+        existing.is_active = true;
+        existing.last_updated_by = userId;
+        await repo.save(existing);
+        this._logger.log(
+          `Reactivated innovation use record for result ${resultId}`,
+        );
+      }
+      return;
+    }
+
+    const newRecord = repo.create({
+      results_id: resultId,
+      obj_result: { id: resultId } as Result,
+      created_by: userId,
+      last_updated_by: userId,
+      is_active: true,
+    });
+    await repo.save(newRecord);
+    this._logger.log(`Created innovation use record for result ${resultId}`);
   }
 
   private async _updateInnovationUsePartial(
