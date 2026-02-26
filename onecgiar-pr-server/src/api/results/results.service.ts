@@ -10,6 +10,10 @@ import {
 } from '@nestjs/common';
 import { DataSource, In, IsNull } from 'typeorm';
 import { CreateResultDto } from './dto/create-result.dto';
+import {
+  BasicReportFiltersDto,
+  BasicReportFiltersNormalized,
+} from './dto/basic-report-filters.dto';
 import { ResultRepository } from './result.repository';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
@@ -2196,12 +2200,11 @@ export class ResultsService {
     }
   }
 
-  async getResultDataForBasicReport(initDate: Date, endDate: Date) {
+  async getResultDataForBasicReport(body: BasicReportFiltersDto) {
     try {
-      const result = await this._resultRepository.getResultDataForBasicReport(
-        initDate,
-        endDate,
-      );
+      const filters = this._normalizeBasicReportFilters(body);
+      const result =
+        await this._resultRepository.getResultDataForBasicReport(filters);
 
       return {
         response: result,
@@ -2209,8 +2212,128 @@ export class ResultsService {
         status: HttpStatus.OK,
       };
     } catch (error) {
+      if (error instanceof BadRequestException) throw error;
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  /**
+   * Normalizes and validates basic report filters from the request body.
+   * When both initDate and endDate are present, validates the range.
+   */
+  private _normalizeBasicReportFilters(
+    body: BasicReportFiltersDto,
+  ): BasicReportFiltersNormalized {
+    const { initDate, endDate } = this._parseBasicReportDateRange(body);
+    const phaseIds = this._extractPhaseIds(body.phases);
+    const initiativeIds = body.inits
+      ?.filter((i) => i.id != null)
+      .map((i) => i.id);
+    const initiativeCodes = body.inits
+      ?.filter((i) => i.official_code != null && i.official_code !== '')
+      .map((i) => i.official_code);
+    const resultTypeIds = body.indicatorCategories
+      ?.filter((c) => c.id != null)
+      .map((c) => c.id);
+    const statusIds = body.status
+      ?.map((s) =>
+        typeof s.status_id === 'string'
+          ? Number.parseInt(s.status_id, 10)
+          : s.status_id,
+      )
+      .filter((id) => id != null && !Number.isNaN(id));
+    const portfolioIds = body.clarisaPortfolios
+      ?.filter((p) => p.id != null)
+      .map((p) => p.id);
+    const sourceValues = body.fundingSource
+      ?.map((f) => this._mapFundingSourceToSourceValue(f.name))
+      .filter((s): s is 'Result' | 'API' => s != null);
+    const leadCenterCodes = body.leadCenters
+      ?.filter((c) => c.code != null && c.code !== '')
+      .map((c) => c.code);
+
+    return {
+      initDate,
+      endDate,
+      phaseIds: this._emptyToUndefined(phaseIds),
+      searchText: this._trimmedOrUndefined(body.searchText),
+      initiativeIds: this._emptyToUndefined(initiativeIds),
+      initiativeCodes: this._emptyToUndefined(initiativeCodes),
+      resultTypeIds: this._emptyToUndefined(resultTypeIds),
+      statusIds: this._emptyToUndefined(statusIds),
+      portfolioIds: this._emptyToUndefined(portfolioIds),
+      sourceValues: sourceValues?.length
+        ? [...new Set(sourceValues)]
+        : undefined,
+      leadCenterCodes: this._emptyToUndefined(leadCenterCodes),
+    };
+  }
+
+  private _parseBasicReportDateRange(body: BasicReportFiltersDto): {
+    initDate?: string;
+    endDate?: string;
+  } {
+    const initDate =
+      body.initDate != null && body.initDate !== ''
+        ? this._parseAndValidateReportDate(body.initDate, 'initDate')
+        : undefined;
+    const endDate =
+      body.endDate != null && body.endDate !== ''
+        ? this._parseAndValidateReportDate(body.endDate, 'endDate')
+        : undefined;
+    if (initDate != null && endDate != null && initDate > endDate) {
+      throw new BadRequestException(
+        'initDate must be before or equal to endDate',
+      );
+    }
+    return { initDate, endDate };
+  }
+
+  private _extractPhaseIds(phases?: BasicReportFiltersDto['phases']): number[] {
+    if (!phases?.length) return [];
+    return phases
+      .map((p) => (typeof p.id === 'string' ? Number.parseInt(p.id, 10) : p.id))
+      .filter((id): id is number => id != null && !Number.isNaN(id));
+  }
+
+  private _mapFundingSourceToSourceValue(
+    name?: string,
+  ): 'Result' | 'API' | null {
+    const n = (name ?? '').toLowerCase();
+    if (n.includes('w1') || n.includes('w2')) return 'Result';
+    if (n.includes('w3') || n.includes('bilateral')) return 'API';
+    return null;
+  }
+
+  private _emptyToUndefined<T>(arr: T[] | undefined): T[] | undefined {
+    return arr?.length ? arr : undefined;
+  }
+
+  private _trimmedOrUndefined(
+    value: string | null | undefined,
+  ): string | undefined {
+    const s = value == null ? '' : String(value).trim();
+    return s === '' ? undefined : s;
+  }
+
+  /**
+   * Parsea y valida una fecha para el reporte básico (rango por created_date).
+   * Devuelve string YYYY-MM-DD para uso en la query MySQL.
+   */
+  private _parseAndValidateReportDate(
+    value: string | Date,
+    paramName: string,
+  ): string {
+    const date = typeof value === 'string' ? new Date(value) : value;
+    if (Number.isNaN(date.getTime())) {
+      throw new BadRequestException(
+        `Invalid date for ${paramName}. Use format YYYY-MM-DD.`,
+      );
+    }
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
   }
 
   async transformResultCode(resultCode: number, phase_id: number = null) {
