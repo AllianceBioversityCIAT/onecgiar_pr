@@ -75,6 +75,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     if (this.resultsListFilterSE.text_to_search().length > 0) count++;
     if (this.resultsListFilterSE.selectedClarisaPortfolios().length > 0) count++;
     if (this.resultsListFilterSE.selectedLeadCenters().length > 0) count++;
+    if (this.resultsListFilterSE.selectedFundingSource().length > 0) count++;
 
     return count;
   });
