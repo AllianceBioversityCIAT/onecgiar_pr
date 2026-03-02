@@ -35,7 +35,7 @@
       (ngModelChange)="modelChange()"
       [style]="{ width: '100%' }"
       [filter]="true"
-      [disabled]="!this.api.rolesSE.isAdmin && this.api.dataControlSE.inNotifications"
+      [disabled]="this.api.dataControlSE.inNotifications"
       [optionDisabled]="">
       <ng-template #selectedItem let-selectedOption>
         <div [innerHtml]="selectedOption.full_name"></div>
