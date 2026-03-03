@@ -138,7 +138,15 @@ export class NotificationItemComponent {
   }
 
   resultUrl(notification) {
-    return `/result/result-detail/${notification?.obj_result?.result_code}/general-information?phase=${notification?.obj_result?.obj_version?.id}`;
+    const resultCode = notification?.obj_result?.result_code;
+    const phase = notification?.obj_result?.obj_version?.id;
+    const isIpsr = notification?.obj_result?.obj_result_type?.id === 10;
+
+    if (isIpsr) {
+      return `/ipsr/detail/${resultCode}/general-information?phase=${phase}`;
+    }
+
+    return `/result/result-detail/${resultCode}/general-information?phase=${phase}`;
   }
 
   acceptOrReject(isAccept: boolean) {

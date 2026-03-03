@@ -6,9 +6,10 @@ import { ResultsNotificationsComponent } from './results-notifications.component
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { SelectModule } from 'primeng/select';
 import { InputTextModule } from 'primeng/inputtext';
+import { TooltipModule } from 'primeng/tooltip';
 
 @NgModule({
   declarations: [ResultsNotificationsComponent],
-  imports: [CommonModule, ResultsNotificationsRoutingModule, CustomFieldsModule, SelectModule, InputTextModule]
+  imports: [CommonModule, ResultsNotificationsRoutingModule, CustomFieldsModule, SelectModule, InputTextModule, TooltipModule]
 })
 export class ResultsNotificationsModule {}

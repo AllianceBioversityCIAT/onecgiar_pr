@@ -5,10 +5,10 @@ import { ExportTablesService } from '../../../../../../../../shared/services/exp
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { IpsrDataControlService } from '../../../../../../services/ipsr-data-control.service';
 @Component({
-    selector: 'app-ipsr-list-filters',
-    templateUrl: './ipsr-list-filters.component.html',
-    styleUrls: ['./ipsr-list-filters.component.scss'],
-    standalone: false
+  selector: 'app-ipsr-list-filters',
+  templateUrl: './ipsr-list-filters.component.html',
+  styleUrls: ['./ipsr-list-filters.component.scss'],
+  standalone: false
 })
 export class IpsrListFiltersComponent {
   isLoadingReport = false;
@@ -34,7 +34,7 @@ export class IpsrListFiltersComponent {
   onDownLoadTableAsExcel(inits: any[], phases: any[], searchText: string | null) {
     this.isLoadingReport = true;
 
-    this.api.resultsSE.GET_reportingList('2022-12-01', inits, phases, searchText).subscribe({
+    this.api.resultsSE.GET_reportingList({ inits: inits, phases: phases, searchText: searchText }).subscribe({
       next: ({ response }) => {
         const wscols = [
           { header: 'Result code', key: 'result_code', width: 13 },

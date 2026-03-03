@@ -645,16 +645,19 @@ export class ResultsApiService {
     return this.http.get<any>(`${this.apiBaseUrl}request/get/all`);
   }
 
-  GET_allRequest() {
-    return this.http.get<any>(`${this.apiBaseUrl}request/get/received`);
+  GET_allRequest(versionId?) {
+    const params = versionId ? `?version_id=${versionId}` : '';
+    return this.http.get<any>(`${this.apiBaseUrl}request/get/received${params}`);
   }
 
-  GET_sentRequest() {
-    return this.http.get<any>(`${this.apiBaseUrl}request/get/sent`);
+  GET_sentRequest(versionId?) {
+    const params = versionId ? `?version_id=${versionId}` : '';
+    return this.http.get<any>(`${this.apiBaseUrl}request/get/sent${params}`);
   }
 
-  GET_requestUpdates() {
-    return this.http.get<any>(`${this.baseApiBaseUrl}notification/updates`);
+  GET_requestUpdates(versionId?) {
+    const params = versionId ? `?version_id=${versionId}` : '';
+    return this.http.get<any>(`${this.baseApiBaseUrl}notification/updates${params}`);
   }
 
   GET_notificationsPopUp() {
@@ -681,24 +684,27 @@ export class ResultsApiService {
     return this.http.patch<any>(`${this.baseApiBaseUrl}user-notification-settings/update`, body);
   }
 
-  GET_reportingList(initDate: string = '2022-12-01', inits?, phases?, searchText?) {
-    const init = new Date(initDate);
-    const today = new Date();
-    today.setMilliseconds(0);
-
+  GET_reportingList(
+    filtersParams: {
+      inits?: any[];
+      phases?: any[];
+      searchText?: string;
+      indicatorCategories?: any[];
+      status?: any[];
+      clarisaPortfolios?: any[];
+      fundingSource?: any[];
+      leadCenters?: any[];
+    } = {}
+  ) {
     const dynamicBaseUrl = this.ipsrDataControlSE.inIpsr
       ? `${environment.apiBaseUrl}api/ipsr/get`
       : `${environment.apiBaseUrl}api/results/get/reporting`;
 
     if (this.ipsrDataControlSE.inIpsr) {
-      return this.http.post<any>(`${dynamicBaseUrl}/excel-report`, {
-        inits,
-        phases,
-        searchText
-      });
+      return this.http.post<any>(`${dynamicBaseUrl}/excel-report`, filtersParams);
     }
 
-    return this.http.get<any>(`${dynamicBaseUrl}/list/date/${init.toISOString()}/${today.toISOString()}`);
+    return this.http.post<any>(`${dynamicBaseUrl}/list`, filtersParams);
   }
 
   POST_AdminKPExcelReport(body) {
@@ -1383,11 +1389,19 @@ export class ResultsApiService {
   }
 
   PATCH_BilateralTocMetadata(resultId: number | string, body: any) {
-    return this.http.patch<any>(`${this.baseApiBaseUrl}results/bilateral/review-update/toc-metadata/${resultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+    return this.http
+      .patch<any>(`${this.baseApiBaseUrl}results/bilateral/review-update/toc-metadata/${resultId}`, body)
+      .pipe(this.saveButtonSE.isSavingPipe());
   }
 
   PATCH_BilateralDataStandard(resultId: number | string, body: any) {
-    return this.http.patch<any>(`${this.baseApiBaseUrl}results/bilateral/review-update/data-standard/${resultId}`, body).pipe(this.saveButtonSE.isSavingPipe());
+    return this.http
+      .patch<any>(`${this.baseApiBaseUrl}results/bilateral/review-update/data-standard/${resultId}`, body)
+      .pipe(this.saveButtonSE.isSavingPipe());
+  }
+
+  PATCH_BilateralResultTitle(resultId: number | string, body: any) {
+    return this.http.patch<any>(`${this.baseApiBaseUrl}results/bilateral/${resultId}/title`, body);
   }
 
   GET_ClarisaProjects() {

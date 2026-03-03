@@ -459,47 +459,73 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
 
   onDownLoadTableAsExcel() {
     this.gettingReport.set(true);
-    this.api.resultsSE.GET_reportingList().subscribe({
-      next: ({ response }) => {
-        const wscols = [
-          { header: 'Result code', key: 'result_code', width: 13 },
-          { header: 'Reporting phase', key: 'phase_name', width: 17.5 },
-          { header: 'Reporting year', key: 'reported_year_id', width: 13 },
-          { header: 'Result title', key: 'title', width: 125 },
-          { header: 'Description', key: 'description', width: 125 },
-          { header: 'Result type', key: 'result_type', width: 45 },
-          { header: 'Is Key Result Story', key: 'is_key_result', width: 45 },
-          { header: 'Gender tag level', key: 'gender_tag_level', width: 20 },
-          { header: 'Climate tag level', key: 'climate_tag_level', width: 20 },
-          { header: 'Nutrition tag level', key: 'nutrition_tag_level', width: 20 },
-          { header: 'Environment/biodiversity tag level', key: 'environment_tag_level', width: 38 },
-          { header: 'Poverty tag level', key: 'poverty_tag_level', width: 20 },
-          { header: 'Submitter', key: 'official_code', width: 14 },
-          { header: 'Status', key: 'status_name', width: 17 },
-          { header: 'Creation date', key: 'creation_date', width: 15 },
-          { header: 'Work package id', key: 'work_package_id', width: 18 },
-          { header: 'Work package title', key: 'work_package_title', width: 125 },
-          { header: 'ToC result id', key: 'toc_result_id', width: 15 },
-          { header: 'ToC result title', key: 'toc_result_title', width: 125 },
-          { header: 'Action Area(s)', key: 'action_areas', width: 53 },
-          { header: 'Center(s)', key: 'centers', width: 80 },
-          { header: 'Contributing Initiative(s)', key: 'contributing_initiative', width: 26 },
-          { header: 'PDF Link', key: 'pdf_link', width: 65 }
-        ];
+    this.api.resultsSE
+      .GET_reportingList({
+        phases: this.resultsListFilterSE.selectedPhases(),
+        searchText: this.resultsListFilterSE.text_to_search(),
+        inits: this.resultsListFilterSE.selectedSubmittersAdmin(),
+        indicatorCategories: this.resultsListFilterSE.selectedIndicatorCategories(),
+        status: this.resultsListFilterSE.selectedStatus(),
+        clarisaPortfolios: this.resultsListFilterSE.selectedClarisaPortfolios(),
+        fundingSource: this.resultsListFilterSE.selectedFundingSource(),
+        leadCenters: this.resultsListFilterSE.selectedLeadCenters()
+      })
+      .subscribe({
+        next: ({ response }) => {
+          void this.buildAndDownloadExcelReport(response);
+        },
+        error: err => {
+          console.error(err);
+          this.gettingReport.set(false);
+        }
+      });
+  }
 
-        this.exportTablesSE.exportExcel(response, 'results_list', wscols, [
-          {
-            cellNumber: 23,
-            cellKey: 'pdf_link'
-          }
-        ]);
-        this.gettingReport.set(false);
-      },
-      error: err => {
-        console.error(err);
-        this.gettingReport.set(false);
+  private async buildAndDownloadExcelReport(response: any[]): Promise<void> {
+    const wscols = [
+      { header: 'Result code', key: 'result_code', width: 13 },
+      { header: 'Reporting phase', key: 'phase_name', width: 17.5 },
+      { header: 'Funding source', key: 'funding_source', width: 17.5 },
+      { header: 'Reporting year', key: 'reported_year_id', width: 13 },
+      { header: 'Result title', key: 'title', width: 125 },
+      { header: 'Description', key: 'description', width: 125 },
+      { header: 'Result type', key: 'result_type', width: 45 },
+      { header: 'Gender equality tag', key: 'gender_tag_level', width: 20 },
+      { header: 'Gender impact areas', key: 'gender_impact_areas', width: 20 },
+      { header: 'Climate tag', key: 'climate_tag_level', width: 20 },
+      { header: 'Climate impact areas', key: 'climate_impact_areas', width: 20 },
+      { header: 'Nutrition tag', key: 'nutrition_tag_level', width: 20 },
+      { header: 'Nutrition impact areas', key: 'nutrition_impact_areas', width: 20 },
+      { header: 'Environmental tag', key: 'environment_tag_level', width: 20 },
+      { header: 'Environmental impact areas', key: 'environment_impact_areas', width: 20 },
+      { header: 'Poverty tag', key: 'poverty_tag_level', width: 20 },
+      { header: 'Poverty impact areas', key: 'poverty_impact_areas', width: 20 },
+      { header: 'Submitter', key: 'official_code', width: 14 },
+      { header: 'Status', key: 'status_name', width: 17 },
+      { header: 'Creation date', key: 'creation_date', width: 15 },
+      { header: 'Planned result', key: 'planned_result', width: 20 },
+      { header: 'ToC', key: 'toc', width: 125 },
+      { header: 'Center(s)', key: 'centers', width: 80 },
+      { header: 'Contributing Science program', key: 'contributing_initiative', width: 26 },
+      { header: 'Partners (with delivery type) for non-KP results', key: 'partners_with_delivery_type_for_non_kp_results', width: 60 },
+      { header: 'Partners (with delivery type) for KP results', key: 'partners_with_delivery_type_for_kp_results', width: 60 },
+      { header: 'Bilateral projects', key: 'bilateral_projects', width: 60 },
+      { header: 'PDF Link', key: 'pdf_link', width: 65 }
+    ];
+
+    const groupedByResultType: Record<string, any[]> = {};
+    (response || []).forEach((result: any) => {
+      const resultType = result.result_type || 'Unknown';
+      if (!groupedByResultType[resultType]) {
+        groupedByResultType[resultType] = [];
       }
+      groupedByResultType[resultType].push(result);
     });
+
+    await this.exportTablesSE.exportExcelMultipleSheets(groupedByResultType, 'results_list', wscols, [
+      { cellNumber: wscols.findIndex(col => col.key === 'pdf_link') + 1, cellKey: 'pdf_link' }
+    ]);
+    this.gettingReport.set(false);
   }
 
   private calculateNavbarHeight() {

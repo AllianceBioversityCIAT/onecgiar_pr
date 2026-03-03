@@ -273,6 +273,8 @@ export class IpsrRepository
         FROM
             result r
             LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
+            AND rbi.initiative_role_id = 1
+            AND rbi.is_active = 1
             LEFT JOIN clarisa_initiatives ci ON ci.id = rbi.inititiative_id
             INNER JOIN result_status rs ON rs.result_status_id = r.status_id
             inner join \`version\` v on v.id = r.version_id

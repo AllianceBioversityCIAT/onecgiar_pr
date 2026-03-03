@@ -63,11 +63,44 @@ p {
   margin-bottom: 24px;
 }
 
+.result-review-drawer-content_title-wrapper {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
 .result-review-drawer-content_title {
   @include fonts.pr-typography('h4');
   font-weight: 600;
   color: var(--pr-color-primary-400);
   line-height: 1.4;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.result-review-drawer-content_title-edit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.result-review-drawer-content_title-edit_input {
+  @include fonts.pr-typography('h4');
+  font-weight: 600;
+  color: var(--pr-color-primary-400);
+  line-height: 1.4;
+  flex: 1;
+  border: 1px solid var(--pr-color-accents-3);
+  border-radius: 4px;
+  padding: 4px 8px;
+  outline: none;
+  transition: border-color 0.2s;
+
+  &:focus {
+    border-color: var(--pr-color-primary-400);
+  }
 }
 
 .result-review-drawer-content_meta {

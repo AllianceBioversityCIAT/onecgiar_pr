@@ -4,7 +4,8 @@ import {
   NestModule,
   RequestMethod,
 } from '@nestjs/common';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerExcludeBilateralGuard } from './shared/guards/throttler-exclude-bilateral.guard';
 import { TocModule } from './toc/toc.module';
 import { ClarisaModule } from './clarisa/clarisa.module';
 import { APP_FILTER, APP_GUARD, RouterModule } from '@nestjs/core';
@@ -118,7 +119,7 @@ import { GlobalUtilsModule } from './shared/utils/global-utils.module';
     Repository,
     {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard,
+      useClass: ThrottlerExcludeBilateralGuard,
     },
     {
       provide: APP_FILTER,

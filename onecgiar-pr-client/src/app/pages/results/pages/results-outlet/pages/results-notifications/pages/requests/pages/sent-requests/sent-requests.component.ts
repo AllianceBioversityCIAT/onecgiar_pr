@@ -12,6 +12,6 @@ export class SentRequestsComponent implements OnInit {
   constructor(public api: ApiService, public resultsNotificationsSE: ResultsNotificationsService) {}
 
   ngOnInit(): void {
-    this.resultsNotificationsSE.get_sent_notifications();
+    this.resultsNotificationsSE.get_sent_notifications(this.resultsNotificationsSE.phaseFilter);
   }
 }

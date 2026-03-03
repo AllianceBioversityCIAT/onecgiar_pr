@@ -23,6 +23,10 @@ export class ResultsNotificationsService {
 
   updatesPopUpData = [];
 
+  loadingReceived = false;
+  loadingSent = false;
+  loadingUpdates = false;
+
   dataIPSR = [];
   notificationLength = null;
   phaseFilter = null;
@@ -36,8 +40,10 @@ export class ResultsNotificationsService {
     private readonly router: Router
   ) {}
 
-  get_sent_notifications(callback?) {
-    this.api.resultsSE.GET_sentRequest().subscribe({
+  get_sent_notifications(versionId?, callback?) {
+    this.loadingSent = true;
+    this.sentData = { sentContributionsPending: [], sentContributionsDone: [] };
+    this.api.resultsSE.GET_sentRequest(versionId).subscribe({
       next: ({ response }) => {
         if (!response) {
           return;
@@ -55,12 +61,17 @@ export class ResultsNotificationsService {
         };
       },
       error: err => console.error(err),
-      complete: () => callback?.()
+      complete: () => {
+        this.loadingSent = false;
+        callback?.();
+      }
     });
   }
 
-  get_section_information(callback?) {
-    this.api.resultsSE.GET_allRequest().subscribe({
+  get_section_information(versionId?, callback?) {
+    this.loadingReceived = true;
+    this.receivedData = { receivedContributionsPending: [], receivedContributionsDone: [] };
+    this.api.resultsSE.GET_allRequest(versionId).subscribe({
       next: ({ response }) => {
         if (!response) {
           return;
@@ -82,12 +93,17 @@ export class ResultsNotificationsService {
         };
       },
       error: err => console.error(err),
-      complete: () => callback?.()
+      complete: () => {
+        this.loadingReceived = false;
+        callback?.();
+      }
     });
   }
 
-  get_updates_notifications() {
-    this.api.resultsSE.GET_requestUpdates().subscribe({
+  get_updates_notifications(versionId?) {
+    this.loadingUpdates = true;
+    this.updatesData = { notificationAnnouncements: [], notificationsPending: [], notificationsViewed: [] };
+    this.api.resultsSE.GET_requestUpdates(versionId).subscribe({
       next: ({ response }) => {
         const { notificationsPending, notificationsViewed, notificationAnnouncement } = response;
 
@@ -101,7 +117,10 @@ export class ResultsNotificationsService {
           notificationsViewed: orderedNotificationsViewed
         };
       },
-      error: err => console.error(err)
+      error: err => console.error(err),
+      complete: () => {
+        this.loadingUpdates = false;
+      }
     });
   }
 

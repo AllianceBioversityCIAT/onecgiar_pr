@@ -33,8 +33,10 @@ import { BilateralResultsService } from '../../../../bilateral-results.service';
 import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
 import { CentersService } from '../../../../../../../../shared/services/global/centers.service';
 import { InstitutionsService } from '../../../../../../../../shared/services/global/institutions.service';
+import { Router } from '@angular/router';
 import { RdContributorsAndPartnersModule } from '../../../../../../../../pages/results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.module';
 import { TooltipModule } from 'primeng/tooltip';
+import { SkeletonModule } from 'primeng/skeleton';
 
 @Component({
   selector: 'app-result-review-drawer',
@@ -54,7 +56,8 @@ import { TooltipModule } from 'primeng/tooltip';
     SaveChangesJustificationDialogComponent,
     CustomFieldsModule,
     RdContributorsAndPartnersModule,
-    TooltipModule
+    TooltipModule,
+    SkeletonModule
   ],
   templateUrl: './result-review-drawer.component.html',
   styleUrl: './result-review-drawer.component.scss',
@@ -63,6 +66,7 @@ import { TooltipModule } from 'primeng/tooltip';
 export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   private readonly api = inject(ApiService);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly router = inject(Router);
   bilateralResultsService = inject(BilateralResultsService);
   rolesSE = inject(RolesService);
   centersSE = inject(CentersService);
@@ -72,6 +76,8 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   contributingInitiativesList = signal<any[]>([]);
   disabledContributingInitiatives = signal<any[]>([]);
   leadProjectIds = signal<string[]>([]);
+
+  isLoadingInformation = signal<boolean>(true);
 
   disabledContributingProjectOptions = computed(() => {
     const ids = this.leadProjectIds();
@@ -161,6 +167,9 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   /** Dirty flag: true when user has modified TOC data since last load/save. */
   isTocDirty = signal<boolean>(false);
 
+  editingTitleValue = signal<string>('');
+  isEditingTitle = signal<boolean>(false);
+
   rejectJustification: string = '';
   saveChangesJustification: string = '';
   saveChangesType: 'toc' | 'dataStandard' | null = null;
@@ -172,9 +181,10 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   isToCCompleted = signal<boolean>(false);
 
   canEditInDrawer = computed(() => {
+    if (this.api.rolesSE?.isAdmin) return true;
+
     const statusId = this.resultToReview()?.status_id ?? this.resultDetail()?.commonFields?.status_id;
     if (statusId != 5) return false;
-    if (this.api.rolesSE?.isAdmin) return true;
     const myInitiativesList = this.api.dataControlSE.myInitiativesList || [];
     const found = myInitiativesList.find(item => item.official_code === this.bilateralResultsService.entityId());
     return !!found;
@@ -331,6 +341,56 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
     this.tocInitiative.planned_result = value;
     this.cdr.markForCheck();
+  }
+
+  startEditingTitle(): void {
+    this.editingTitleValue.set(this.resultDetail()?.commonFields?.result_title ?? '');
+    this.isEditingTitle.set(true);
+  }
+
+  cancelEditingTitle(): void {
+    this.isEditingTitle.set(false);
+    this.editingTitleValue.set('');
+  }
+
+  confirmEditingTitle(): void {
+    if (this.editingTitleValue().trim() === '') {
+      this.isEditingTitle.set(false);
+      return;
+    }
+
+    if (this.editingTitleValue().trim() === this.resultDetail()?.commonFields?.result_title.trim()) {
+      this.isEditingTitle.set(false);
+      return;
+    }
+
+    this.api.resultsSE.PATCH_BilateralResultTitle(this.resultDetail()?.commonFields?.id, { title: this.editingTitleValue().trim() }).subscribe({
+      next: response => {
+        this.isEditingTitle.set(false);
+        this.resultDetail.set({
+          ...this.resultDetail(),
+          commonFields: {
+            ...this.resultDetail()?.commonFields,
+            result_title: this.editingTitleValue()
+          }
+        });
+        this.updateTableResultTitle(this.resultDetail()?.commonFields?.id ?? '', this.editingTitleValue());
+      },
+      error: err => {
+        console.error('Error saving result title:', err);
+        this.isEditingTitle.set(false);
+      }
+    });
+  }
+  private updateTableResultTitle(resultId: string, newTitle: string): void {
+    this.bilateralResultsService.tableData.update(data => {
+      return data.map(group => {
+        return {
+          ...group,
+          results: group.results.map(result => (result.id === resultId ? { ...result, result_title: newTitle } : result))
+        };
+      });
+    });
   }
 
   onTocProgressiveNarrativeChange(value: string): void {
@@ -728,13 +788,15 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
               organizations: Array.isArray(resultType.organizations) ? resultType.organizations.map((o: any) => ({ ...o })) : [],
               measures: Array.isArray(resultType.measures) ? resultType.measures.map((m: any) => ({ ...m })) : [],
               investment_partners: Array.isArray(resultType.investment_partners) ? resultType.investment_partners.map((p: any) => ({ ...p })) : [],
-              investment_projects: Array.isArray(resultType.investment_projects) ? resultType.investment_projects.map((p: any) => ({
-                non_pooled_projetct_budget_id: p.non_pooled_projetct_budget_id ?? p.non_pooled_project_budget_id,
-                project_id: p.project_id,
-                kind_cash: p.kind_cash,
-                is_determined: p.is_determined,
-                name: p.name
-              })) : []
+              investment_projects: Array.isArray(resultType.investment_projects)
+                ? resultType.investment_projects.map((p: any) => ({
+                    non_pooled_projetct_budget_id: p.non_pooled_projetct_budget_id ?? p.non_pooled_project_budget_id,
+                    project_id: p.project_id,
+                    kind_cash: p.kind_cash,
+                    is_determined: p.is_determined,
+                    name: p.name
+                  }))
+                : []
             }
           ];
           break;
@@ -951,6 +1013,8 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
   }
 
   private fetchAndProcessResultDetail(resultId: string): void {
+    this.isLoadingInformation.set(true);
+
     this.api.resultsSE.GET_BilateralResultDetail(resultId).subscribe({
       next: res => {
         const detail = res.response;
@@ -1114,7 +1178,12 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
           detail.resultTypeResponse = detail.resultTypeResponse.map((resultType: any) => {
             const newResultType = { ...resultType };
 
-            if ('actors' in newResultType || 'measures' in newResultType || 'investment_partners' in newResultType || 'investment_projects' in newResultType) {
+            if (
+              'actors' in newResultType ||
+              'measures' in newResultType ||
+              'investment_partners' in newResultType ||
+              'investment_projects' in newResultType
+            ) {
               if (!newResultType.actors) newResultType.actors = [];
               if (!newResultType.organizations) newResultType.organizations = [];
               if (!newResultType.measures) newResultType.measures = [];
@@ -1372,10 +1441,12 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
             this.cdr.markForCheck();
           }
         }, 300);
+        this.isLoadingInformation.set(false);
       },
       error: err => {
         console.error('Error loading result detail:', err);
         this.isLoading.set(false);
+        this.isLoadingInformation.set(false);
       }
     });
   }
@@ -1403,6 +1474,11 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     this.resetForm();
   }
 
+  navigateToResultCenter(): void {
+    this.closeDrawer();
+    this.router.navigate(['/result/results-outlet/results-list']);
+  }
+
   /** Sync Contributing Bilateral Projects selection to Innovation Use investment_projects table. */
   onContributingProjectsChange(selectedProjects: any[]): void {
     const detail = this.resultDetail();
@@ -1410,9 +1486,9 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
     const resultType = detail.resultTypeResponse[0];
     if (!resultType || !('investment_projects' in resultType)) return;
 
-    const projectIds = (selectedProjects ?? []).map((p: any) =>
-      typeof p === 'object' && p != null ? String(p.project_id ?? p.id ?? '') : String(p)
-    ).filter(Boolean);
+    const projectIds = (selectedProjects ?? [])
+      .map((p: any) => (typeof p === 'object' && p != null ? String(p.project_id ?? p.id ?? '') : String(p)))
+      .filter(Boolean);
     const projectsList = this.clarisaProjectsList();
     const existingByProjectId = new Map<string, any>();
     const currentInvestmentProjects = (resultType as any).investment_projects;
@@ -1436,9 +1512,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
 
     this.resultDetail.set({
       ...detail,
-      resultTypeResponse: [
-        { ...resultType, investment_projects } as any
-      ]
+      resultTypeResponse: [{ ...resultType, investment_projects }]
     });
     this.cdr.markForCheck();
   }
