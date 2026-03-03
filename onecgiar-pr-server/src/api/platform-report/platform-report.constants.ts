@@ -20,4 +20,10 @@ export const PLATFORM_REPORT_CONSTANTS = {
     PAPER_WIDTH: '600px',
     PAPER_HEIGHT: '1000px',
   } as const,
+
+  P25_BILATERAL: {
+    TEMPLATE_NAME: 'results_bilaterals_p25',
+    PAPER_WIDTH: '600px',
+    PAPER_HEIGHT: '1000px',
+  } as const,
 } as const;

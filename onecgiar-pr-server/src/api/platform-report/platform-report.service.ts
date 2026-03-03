@@ -102,17 +102,6 @@ export class PlatformReportService implements OnModuleInit {
         },
         select: ['source'],
       });
-      if (resultToCheck?.source === SourceEnum.Bilateral) {
-        this._logger.warn(
-          `PDF for W3/Bilateral is not available (result_code=${cleanResultCodeInput}, phase=${cleanPhaseInput})`,
-        );
-        const error: returnErrorDto = {
-          status: 404,
-          message: 'PDF for W3/Bilateral is not available',
-          response: null,
-        };
-        throw error;
-      }
 
       const report = await this._platformReportRepository.findOne({
         where: { id: report_type.id },
@@ -301,7 +290,12 @@ export class PlatformReportService implements OnModuleInit {
       const bucketName = env.AWS_BUCKET_NAME;
 
       if (this.isP25Portfolio(portfolioAcronym)) {
-        const p25Payload = this.buildP25Payload(data, fileName, bucketName);
+        const p25Payload = this.buildP25Payload(
+          data,
+          resultToCheck.source,
+          fileName,
+          bucketName,
+        );
         const response = await firstValueFrom(
           this.client.send<PdfGenerateUrlResponse>(
             PLATFORM_REPORT_CONSTANTS.REPORT_EVENT_PATTERNS.PDF_GENERATE_URL,
@@ -422,15 +416,20 @@ export class PlatformReportService implements OnModuleInit {
   /** Builds the payload expected by the pdf.generateUrl pattern (P25). */
   buildP25Payload(
     data: Record<string, unknown>,
+    source: string,
     fileName: string,
     bucketName: string,
   ): PdfGenerateUrlPayload {
-    const { P25 } = PLATFORM_REPORT_CONSTANTS;
+    const { P25, P25_BILATERAL } = PLATFORM_REPORT_CONSTANTS;
+
+    const platformReportConstants =
+      source === SourceEnum.Bilateral ? P25_BILATERAL : P25;
+
     return {
       data,
-      paperWidth: P25.PAPER_WIDTH,
-      paperHeight: P25.PAPER_HEIGHT,
-      templateName: P25.TEMPLATE_NAME,
+      paperWidth: platformReportConstants.PAPER_WIDTH,
+      paperHeight: platformReportConstants.PAPER_HEIGHT,
+      templateName: platformReportConstants.TEMPLATE_NAME,
       bucketName,
       fileName,
       credentials: this.authHeaderMs2,
