@@ -368,6 +368,12 @@ export class BilateralService {
               where: { id: newResultHeader.id },
               relations: this.buildResultRelations(bilateralDto.result_type_id),
             });
+            if (resultInfo) {
+              resultInfo.obj_results_toc_result =
+                await this._resultRepository.getTocMappingsByResultId(
+                  resultInfo.id,
+                );
+            }
 
             this.logger.log(
               `Successfully created bilateral result ${resultId} (code: ${newResultHeader.result_code})`,
@@ -555,6 +561,10 @@ export class BilateralService {
       });
 
       resultInfo = this.filterActiveRelations(resultInfo);
+      if (resultInfo) {
+        resultInfo.obj_results_toc_result =
+          await this._resultRepository.getTocMappingsByResultId(resultInfo.id);
+      }
 
       this.logger.log(
         `Successfully updated bilateral result ${resultId} (code: ${existingResult.result_code})`,
@@ -619,6 +629,8 @@ export class BilateralService {
     }
 
     const filteredResult = this.filterActiveRelations(resultInfo);
+    filteredResult.obj_results_toc_result =
+      await this._resultRepository.getTocMappingsByResultId(id);
 
     return {
       response: filteredResult,
@@ -643,7 +655,10 @@ export class BilateralService {
           where: { id: result.id },
           relations: this.buildResultRelations(resultTypeId),
         });
-        return this.filterActiveRelations(resultWithRelations);
+        const filtered = this.filterActiveRelations(resultWithRelations);
+        filtered.obj_results_toc_result =
+          await this._resultRepository.getTocMappingsByResultId(result.id);
+        return filtered;
       }),
     );
 
@@ -828,7 +843,10 @@ export class BilateralService {
           where: { id: result.id },
           relations: this.buildResultRelations(resultTypeId),
         });
-        return this.filterActiveRelations(resultWithRelations);
+        const filtered = this.filterActiveRelations(resultWithRelations);
+        filtered.obj_results_toc_result =
+          await this._resultRepository.getTocMappingsByResultId(result.id);
+        return filtered;
       }),
     );
 
@@ -903,6 +921,8 @@ export class BilateralService {
           relations: this.buildResultRelations(resultTypeId),
         });
         const filteredResult = this.filterActiveRelations(resultWithRelations);
+        filteredResult.obj_results_toc_result =
+          await this._resultRepository.getTocMappingsByResultId(result.id);
 
         // Map result type ID to string type name
         const typeMap: Record<number, string> = {
@@ -964,6 +984,9 @@ export class BilateralService {
       obj_results_toc_result: true,
       obj_result_by_project: {
         obj_clarisa_project: true,
+      },
+      evidence_array: {
+        evidenceSharepointArray: true,
       },
       ...(isKpType && {
         result_knowledge_product_array: {
@@ -1691,6 +1714,7 @@ export class BilateralService {
     result.result_center_array = onlyActive(result.result_center_array);
     result.obj_results_toc_result = onlyActive(result.obj_results_toc_result);
     result.obj_result_by_project = onlyActive(result.obj_result_by_project);
+    result.evidence_array = onlyActive(result.evidence_array);
     result.result_knowledge_product_array = onlyActive(
       result.result_knowledge_product_array,
     );
