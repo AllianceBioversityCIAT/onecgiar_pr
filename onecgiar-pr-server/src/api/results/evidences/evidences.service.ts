@@ -694,7 +694,7 @@ export class EvidencesService {
     user: TokenDto,
   ): Promise<void> {
     for (const existingEvidence of existingEvidences) {
-      if (!payloadEvidenceIds.includes(existingEvidence.id)) {
+      if (!payloadEvidenceIds.includes(Number(existingEvidence.id))) {
         existingEvidence.is_active = 0;
         existingEvidence.last_updated_by = user.id;
         await this._evidencesRepository.save(existingEvidence);

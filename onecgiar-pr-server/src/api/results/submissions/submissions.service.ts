@@ -22,6 +22,7 @@ import { GlobalParameterRepository } from '../../global-parameter/repositories/g
 import { EmailTemplate } from '../../../shared/microservices/email-notification-management/enum/email-notification.enum';
 import { TemplateRepository } from '../../platform-report/repositories/template.repository';
 import { EmailNotificationManagementService } from '../../../shared/microservices/email-notification-management/email-notification-management.service';
+import { ResultsCenterRepository } from '../results-centers/results-centers.repository';
 
 @Injectable()
 export class SubmissionsService {
@@ -40,6 +41,7 @@ export class SubmissionsService {
     private readonly _globalParametersRepository: GlobalParameterRepository,
     private readonly _templateRepository: TemplateRepository,
     private readonly _emailNotificationManagementService: EmailNotificationManagementService,
+    private readonly _resultCenterRepository: ResultsCenterRepository,
   ) {}
 
   async submitFunction(
@@ -48,20 +50,16 @@ export class SubmissionsService {
     createSubmissionDto: CreateSubmissionDto,
   ) {
     try {
-      const result = await this._resultRepository.getResultById(resultId);
-      const role = await this._roleByUserRepository.validationRolePermissions(
-        user.id,
-        result.id,
+      const validationError = await this._validateSubmissionPermissions(
+        resultId,
+        user,
         [RoleEnum.ADMIN, RoleEnum.LEAD, RoleEnum.CO_LEAD, RoleEnum.COORDINATOR],
       );
-      if (!role) {
-        return {
-          response: {},
-          message: 'The user does not have the necessary role for this action.',
-          status: HttpStatus.UNAUTHORIZED,
-        };
+      if (validationError) {
+        return validationError;
       }
 
+      const result = await this._resultRepository.getResultById(resultId);
       if (!result) {
         return {
           response: {},
@@ -74,75 +72,14 @@ export class SubmissionsService {
         status: 1,
         status_id: 3,
       });
-      const newSubmissions = new Submission();
-      newSubmissions.user_id = user.id;
-      newSubmissions.status = true;
-      newSubmissions.status_id = 3;
-      newSubmissions.comment = createSubmissionDto.comment;
-      newSubmissions.results_id = result.id;
-      await this._submissionRepository.save(newSubmissions);
 
-      const hasContactRequest =
-        await this._resultRepository.getResultInnovationDevelopmentByResultId(
-          result.id,
-        );
-      if (result.result_type_id === 7 && hasContactRequest) {
-        const emails =
-          await this._intellectualPropertyExpertRepository.getIpExpertsEmailsByResultId(
-            result.id,
-          );
+      await this._createSubmission(
+        result.id,
+        user.id,
+        createSubmissionDto.comment,
+      );
 
-        const bccEmails = await this._globalParametersRepository.findOne({
-          where: { name: 'technical_team_email' },
-          select: { value: true },
-        });
-
-        const template = await this._templateRepository.findOne({
-          where: { name: EmailTemplate.IP_EXPERTS_SUPPORT },
-        });
-        if (!template) {
-          this._logger.warn(
-            'Email template technical_team_email not found. Skipping notification.',
-          );
-          return;
-        }
-
-        if (!emails || emails.length === 0) {
-          this._logger.warn('No lead center found');
-        } else {
-          const scienceProgram =
-            await this._resultRepository.getScienceProgramByResultId(resultId);
-
-          for (const email of emails) {
-            const sp = scienceProgram[0];
-
-            const emailData = {
-              userName: `${email.first_name} ${email.last_name}`.trim(),
-              spCode: sp.official_code,
-              spName: sp.name,
-              resultUrl: `${process.env.RESULTS_URL}${result.result_code}/general-information?phase=${result.version_id}`,
-            };
-            const compiledTemplate = handlebars.compile(template.template);
-
-            this._emailNotificationManagementService.sendEmail({
-              from: {
-                email: process.env.EMAIL_SENDER,
-                name: 'PRMS Reporting Tool -',
-              },
-              emailBody: {
-                subject: `PRMS – IP Support Request for Innovation Development Result | Result Code: ${result.result_code}`,
-                to: [email.email],
-                cc: [],
-                bcc: bccEmails.value,
-                message: {
-                  text: 'Account roles updated',
-                  socketFile: compiledTemplate(emailData),
-                },
-              },
-            });
-          }
-        }
-      }
+      await this._sendIpExpertNotificationsIfNeeded(result, resultId);
 
       return {
         response: data,
@@ -369,5 +306,207 @@ export class SubmissionsService {
       );
 
     return saveNotification;
+  }
+
+  private async _validateSubmissionPermissions(
+    resultId: number,
+    user: TokenDto,
+    allowedRoles: RoleEnum[],
+  ) {
+    const result = await this._resultRepository.getResultById(resultId);
+    const role = await this._roleByUserRepository.validationRolePermissions(
+      user.id,
+      result?.id || resultId,
+      allowedRoles,
+    );
+    if (!role) {
+      return {
+        response: {},
+        message: 'The user does not have the necessary role for this action.',
+        status: HttpStatus.UNAUTHORIZED,
+      };
+    }
+    return null;
+  }
+
+  private async _createSubmission(
+    resultId: number,
+    userId: number,
+    comment: string,
+  ): Promise<void> {
+    const newSubmissions = new Submission();
+    newSubmissions.user_id = userId;
+    newSubmissions.status = true;
+    newSubmissions.status_id = 3;
+    newSubmissions.comment = comment;
+    newSubmissions.results_id = resultId;
+    await this._submissionRepository.save(newSubmissions);
+  }
+
+  private async _sendIpExpertNotificationsIfNeeded(
+    result: any,
+    resultId: number,
+  ): Promise<void> {
+    const hasContactRequest =
+      await this._resultRepository.getResultInnovationDevelopmentByResultId(
+        result.id,
+      );
+    if (result.result_type_id !== 7 || !hasContactRequest) {
+      return;
+    }
+
+    await this._sendIpExpertEmails(result, resultId);
+  }
+
+  private async _sendIpExpertEmails(
+    result: any,
+    resultId: number,
+  ): Promise<void> {
+    const emails =
+      await this._intellectualPropertyExpertRepository.getIpExpertsEmailsByResultId(
+        result.id,
+      );
+
+    const emailData = await this._prepareEmailData(result, resultId);
+    if (!emailData) {
+      return;
+    }
+
+    if (!emails || emails.length === 0) {
+      this._logger.warn('No IP experts emails found');
+      return;
+    }
+
+    const scienceProgram =
+      await this._resultRepository.getScienceProgramByResultId(resultId);
+    const sp = scienceProgram[0];
+
+    for (const email of emails) {
+      await this._sendEmailToIpExpert(email, sp, emailData);
+    }
+  }
+
+  private async _prepareEmailData(result: any, resultId: number) {
+    const leadCenter = await this._resultCenterRepository.findOne({
+      where: { result_id: result.id, is_leading_result: true },
+      relations: {
+        clarisa_center_object: {
+          clarisa_institution: true,
+        },
+      },
+    });
+
+    const contactPerson = await this._submissionRepository
+      .createQueryBuilder('s')
+      .leftJoin('users', 'u', 'u.id = s.user_id')
+      .where('s.results_id = :resultId', { resultId })
+      .andWhere('s.is_active = true')
+      .select([
+        'u.first_name as first_name',
+        'u.last_name as last_name',
+        'u.email as email',
+      ])
+      .getRawMany();
+
+    const contributingCentersList = await this._resultCenterRepository.find({
+      where: {
+        result_id: result.id,
+        is_active: true,
+      },
+      relations: {
+        clarisa_center_object: {
+          clarisa_institution: true,
+        },
+      },
+    });
+
+    const contributingCenters =
+      contributingCentersList
+        .filter((center) => !center.is_leading_result)
+        .map(
+          (center) =>
+            center.clarisa_center_object?.clarisa_institution?.acronym,
+        )
+        .filter(Boolean)
+        .join(', ') || 'N/A';
+
+    const bccEmails = await this._globalParametersRepository.findOne({
+      where: { name: 'technical_team_email' },
+      select: { value: true },
+    });
+
+    const template = await this._templateRepository.findOne({
+      where: { name: EmailTemplate.IP_EXPERTS_SUPPORT },
+    });
+    if (!template) {
+      this._logger.warn(
+        'Email template technical_team_email not found. Skipping notification.',
+      );
+      return null;
+    }
+
+    if (!leadCenter) {
+      this._logger.warn('No lead center found for result');
+    }
+
+    return {
+      result,
+      leadCenter,
+      contactPerson,
+      contributingCenters,
+      bccEmails,
+      template,
+    };
+  }
+
+  private async _sendEmailToIpExpert(
+    email: any,
+    sp: any,
+    emailData: any,
+  ): Promise<void> {
+    const leadCenterName =
+      emailData.leadCenter?.clarisa_center_object?.clarisa_institution?.name;
+    const leadCenterAcronym =
+      emailData.leadCenter?.clarisa_center_object?.clarisa_institution?.acronym;
+    const contactPersonInfo =
+      emailData.contactPerson &&
+      emailData.contactPerson.length > 0 &&
+      emailData.contactPerson[0]
+        ? `${emailData.contactPerson[0].first_name} ${emailData.contactPerson[0].last_name} <${emailData.contactPerson[0].email}>`
+        : 'N/A';
+
+    const emailPayload = {
+      userName: `${email.first_name} ${email.last_name}`.trim(),
+      spCode: sp.official_code,
+      spName: sp.name,
+      resultUrl: `${process.env.RESULTS_URL}${emailData.result.result_code}/general-information?phase=${emailData.result.version_id}`,
+      resultTitle: emailData.result.title,
+      leadCenter: leadCenterName || undefined,
+      contactPerson: contactPersonInfo,
+      contributingCenters: emailData.contributingCenters,
+    };
+
+    const compiledTemplate = handlebars.compile(emailData.template.template);
+    let subject = `PRMS – IP Support Request for Innovation Development Result | Result Code: ${emailData.result.result_code}`;
+    if (leadCenterName) {
+      subject += ` | Lead Center: ${leadCenterAcronym}`;
+    }
+
+    this._emailNotificationManagementService.sendEmail({
+      from: {
+        email: process.env.EMAIL_SENDER,
+        name: 'PRMS Reporting Tool -',
+      },
+      emailBody: {
+        subject: subject,
+        to: [email.email],
+        cc: [],
+        bcc: emailData.bccEmails.value,
+        message: {
+          text: 'Account roles updated',
+          socketFile: compiledTemplate(emailPayload),
+        },
+      },
+    });
   }
 }

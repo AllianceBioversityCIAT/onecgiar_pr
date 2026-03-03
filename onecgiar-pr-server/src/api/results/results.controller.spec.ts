@@ -201,13 +201,9 @@ describe('ResultsController', () => {
   });
 
   it('getResultDataForBasicReport delegates', async () => {
-    const d1 = new Date('2020-01-01');
-    const d2 = new Date('2020-12-31');
-    await controller.getResultDataForBasicReport(d1, d2);
-    expect(mockService.getResultDataForBasicReport).toHaveBeenCalledWith(
-      d1,
-      d2,
-    );
+    const body = { initDate: '2020-01-01', endDate: '2020-12-31' };
+    await controller.getResultDataForBasicReport(body);
+    expect(mockService.getResultDataForBasicReport).toHaveBeenCalledWith(body);
   });
 
   it('createVersion calls service and returns ok', async () => {

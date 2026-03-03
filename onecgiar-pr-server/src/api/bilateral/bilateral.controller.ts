@@ -10,6 +10,7 @@ import {
   UseInterceptors,
   ValidationPipe,
 } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { BilateralService } from './bilateral.service';
 import {
   ApiBody,
@@ -24,6 +25,7 @@ import { ListResultsQueryDto } from './dto/list-results-query.dto';
 
 @Controller()
 @ApiTags('Bilaterals')
+@SkipThrottle()
 @UseInterceptors(ResponseInterceptor)
 export class BilateralController {
   constructor(private readonly bilateralService: BilateralService) {}
