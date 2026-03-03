@@ -369,6 +369,7 @@ export class BilateralService {
               relations: this.buildResultRelations(bilateralDto.result_type_id),
             });
             if (resultInfo) {
+              resultInfo = this.filterActiveRelations(resultInfo);
               resultInfo.obj_results_toc_result =
                 await this._resultRepository.getTocMappingsByResultId(
                   resultInfo.id,
