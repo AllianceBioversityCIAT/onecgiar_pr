@@ -985,6 +985,9 @@ export class BilateralService {
       obj_result_by_project: {
         obj_clarisa_project: true,
       },
+      evidence_array: {
+        evidenceSharepointArray: true,
+      },
       ...(isKpType && {
         result_knowledge_product_array: {
           result_knowledge_product_keyword_array: true,
@@ -1711,6 +1714,7 @@ export class BilateralService {
     result.result_center_array = onlyActive(result.result_center_array);
     result.obj_results_toc_result = onlyActive(result.obj_results_toc_result);
     result.obj_result_by_project = onlyActive(result.obj_result_by_project);
+    result.evidence_array = onlyActive(result.evidence_array);
     result.result_knowledge_product_array = onlyActive(
       result.result_knowledge_product_array,
     );
