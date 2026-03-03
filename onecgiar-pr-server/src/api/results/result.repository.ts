@@ -3304,6 +3304,67 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     }
   }
 
+  /**
+   * TOC mapping per initiative for a result (for bilateral list/get).
+   * Uses Integration_information.toc_results / toc_work_packages.
+   * Returns one row per initiative with toc_mappings (array of { toc_result_id, official_code, aow, planned_result, level, title }).
+   */
+  async getTocMappingsByResultId(resultId: number): Promise<
+    {
+      official_code: string | null;
+      name: string | null;
+      initiative_role: string | null;
+      toc_mappings: any[];
+    }[]
+  > {
+    const query = `
+      SELECT
+        ci.official_code,
+        ci.name,
+        ir.name AS initiative_role,
+        JSON_ARRAYAGG(
+          JSON_OBJECT(
+            'toc_result_id', rtr.toc_result_id,
+            'official_code', tr.official_code,
+            'aow', twp.acronym,
+            'planned_result', IF(rtr.planned_result = 1, 'Yes', 'No'),
+            'level', CASE
+              WHEN tr.category = 'Output' THEN 'High Level Output'
+              WHEN tr.category = 'Outcome' THEN 'Intermediate Outcome'
+              WHEN tr.category = 'EOI' THEN '2030 Outcome'
+              ELSE tr.category
+            END,
+            'title', tr.result_title
+          )
+        ) AS toc_mappings
+      FROM results_by_inititiative rbi
+      INNER JOIN clarisa_initiatives ci ON rbi.inititiative_id = ci.id
+      INNER JOIN initiative_roles ir ON rbi.initiative_role_id = ir.id
+      LEFT JOIN results_toc_result rtr ON rtr.results_id = rbi.result_id
+        AND rtr.initiative_id = rbi.inititiative_id
+        AND rtr.is_active = 1
+      LEFT JOIN Integration_information.toc_results tr ON tr.id = rtr.toc_result_id
+      LEFT JOIN Integration_information.toc_work_packages twp ON twp.toc_id = tr.wp_id
+      WHERE rbi.result_id = ?
+      GROUP BY ci.official_code, ci.name, ir.name;
+    `;
+    try {
+      const rows = await this.query(query, [resultId]);
+      return (rows ?? []).map((row: any) => ({
+        official_code: row.official_code ?? null,
+        name: row.name ?? null,
+        initiative_role: row.initiative_role ?? null,
+        toc_mappings: typeof row.toc_mappings === 'string' ? JSON.parse(row.toc_mappings) : (row.toc_mappings ?? []),
+      }));
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
   async getPendingReviewCountByProgram(programId: string): Promise<any[]> {
     const query = `
       WITH lead_centers AS (
