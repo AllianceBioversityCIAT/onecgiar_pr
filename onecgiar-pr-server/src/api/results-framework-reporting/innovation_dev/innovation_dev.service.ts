@@ -274,6 +274,11 @@ export class InnovationDevService {
         innovation_user_to_be_determined,
       );
 
+      await this._resultRepository.update(resultId, {
+        last_updated_by: user.id,
+        last_updated_date: new Date(),
+      });
+
       return {
         response: InnDevRes,
         message: 'Results Innovations Dev has been created successfully',
