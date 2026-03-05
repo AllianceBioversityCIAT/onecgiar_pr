@@ -207,6 +207,7 @@ describe('VersioningService', () => {
             createEntityManager: jest.fn().mockReturnThis(),
             transaction: jest.fn().mockImplementation((cb) =>
               cb({
+                update: jest.fn().mockResolvedValue({}),
                 getRepository: jest.fn().mockReturnValue({
                   findOne: jest.fn().mockResolvedValue({}),
                   find: jest
