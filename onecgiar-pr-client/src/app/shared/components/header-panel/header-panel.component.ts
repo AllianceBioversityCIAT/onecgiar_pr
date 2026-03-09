@@ -76,7 +76,7 @@ export class HeaderPanelComponent implements OnInit {
   }
 
   goToNotifications() {
-    this.router.navigate(['result/results-outlet/results-notifications/updates']);
+    this.router.navigate(['result/results-outlet/results-notifications/requests']);
   }
 
   handleClosePopUp() {
