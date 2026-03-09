@@ -55,7 +55,7 @@ export class EntityAowService {
 
     const myInitiativesList = this.api.dataControlSE.myInitiativesList || [];
     const found = myInitiativesList.find(item => item.official_code === this.entityId());
-    return !!found && this.isSgp02(this.entityId());
+    return !!found;
   });
 
   private isSgp02(entityId: string): boolean {
