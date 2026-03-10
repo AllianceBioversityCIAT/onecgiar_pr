@@ -374,6 +374,7 @@ export class BilateralService {
                 await this._resultRepository.getTocMappingsByResultId(
                   resultInfo.id,
                 );
+              resultInfo.leading_result = this.buildLeadingResult(resultInfo);
             }
 
             this.logger.log(
@@ -565,6 +566,7 @@ export class BilateralService {
       if (resultInfo) {
         resultInfo.obj_results_toc_result =
           await this._resultRepository.getTocMappingsByResultId(resultInfo.id);
+        resultInfo.leading_result = this.buildLeadingResult(resultInfo);
       }
 
       this.logger.log(
@@ -632,6 +634,7 @@ export class BilateralService {
     const filteredResult = this.filterActiveRelations(resultInfo);
     filteredResult.obj_results_toc_result =
       await this._resultRepository.getTocMappingsByResultId(id);
+    filteredResult.leading_result = this.buildLeadingResult(filteredResult);
 
     return {
       response: filteredResult,
@@ -659,6 +662,7 @@ export class BilateralService {
         const filtered = this.filterActiveRelations(resultWithRelations);
         filtered.obj_results_toc_result =
           await this._resultRepository.getTocMappingsByResultId(result.id);
+        filtered.leading_result = this.buildLeadingResult(filtered);
         return filtered;
       }),
     );
@@ -847,6 +851,7 @@ export class BilateralService {
         const filtered = this.filterActiveRelations(resultWithRelations);
         filtered.obj_results_toc_result =
           await this._resultRepository.getTocMappingsByResultId(result.id);
+        filtered.leading_result = this.buildLeadingResult(filtered);
         return filtered;
       }),
     );
@@ -924,6 +929,7 @@ export class BilateralService {
         const filteredResult = this.filterActiveRelations(resultWithRelations);
         filteredResult.obj_results_toc_result =
           await this._resultRepository.getTocMappingsByResultId(result.id);
+        filteredResult.leading_result = this.buildLeadingResult(filteredResult);
 
         // Map result type ID to string type name
         const typeMap: Record<number, string> = {
@@ -960,6 +966,7 @@ export class BilateralService {
       obj_result_by_initiatives: {
         obj_initiative: true,
       },
+      obj_version: true,
       obj_geographic_scope: true,
       obj_result_type: true,
       obj_result_level: true,
@@ -1720,7 +1727,39 @@ export class BilateralService {
       result.result_knowledge_product_array,
     );
 
+    if (result.obj_version && typeof result.obj_version === 'object') {
+      result.obj_version = {
+        id: result.obj_version.id,
+        phase_year: result.obj_version.phase_year,
+        phase_name: result.obj_version.phase_name,
+      };
+    }
+
     return result;
+  }
+
+  /**
+   * Builds leading_result from the result's result_center_array (center with is_leading_result = 1, active).
+   * Uses ClarisaCenter (code) and ClarisaInstitution (name, acronym).
+   */
+  private buildLeadingResult(result: any): {
+    code: string;
+    name: string;
+    acronym: string;
+  } | null {
+    const centers = result?.result_center_array;
+    if (!Array.isArray(centers)) return null;
+    const leading = centers.find(
+      (c: any) => c?.is_leading_result === true || c?.is_leading_result === 1,
+    );
+    if (!leading?.clarisa_center_object) return null;
+    const cc = leading.clarisa_center_object;
+    const inst = cc?.clarisa_institution;
+    return {
+      code: cc.code ?? '',
+      name: inst?.name ?? '',
+      acronym: inst?.acronym ?? '',
+    };
   }
 
   private async handleNonPooledProject(
