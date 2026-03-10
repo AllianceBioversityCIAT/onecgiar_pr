@@ -3339,6 +3339,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
           JSON_OBJECT(
             'toc_result_id', rtr.toc_result_id,
             'official_code', tr.official_code,
+            'name', ci.name,
             'aow', twp.acronym,
             'planned_result', IF(rtr.planned_result = 1, 'Yes', 'No'),
             'level', CASE
