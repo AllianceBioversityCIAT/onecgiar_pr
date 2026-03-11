@@ -423,7 +423,10 @@ export class PlatformReportService implements OnModuleInit {
     const { P25, P25_BILATERAL } = PLATFORM_REPORT_CONSTANTS;
 
     const platformReportConstants =
-      source === SourceEnum.Bilateral ? P25_BILATERAL : P25;
+      source === SourceEnum.Bilateral &&
+      data.primary_submitter_acronym !== 'SGP-02'
+        ? P25_BILATERAL
+        : P25;
 
     return {
       data,
