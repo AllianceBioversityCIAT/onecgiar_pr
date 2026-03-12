@@ -1,8 +1,8 @@
 .evidence_item {
   display: grid;
-  grid-template-columns: 50px 1fr;
-  gap: 35px;
-  padding: 0px 40px 10px 40px;
+  grid-template-columns: 35px 1fr;
+  gap: 20px;
+  padding: 0px 30px 10px 30px;
   position: relative;
   overflow: hidden;
 
@@ -98,8 +98,8 @@
   .index {
     background-color: var(--pr-color-accents-2);
     color: var(--pr-color-accents-5);
-    width: 50px;
-    height: 50px;
+    width: 35px;
+    height: 35px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -116,6 +116,7 @@
 
   .checkboxes {
     display: flex;
+    flex-wrap: wrap;
     gap: 12px;
   }
 }
