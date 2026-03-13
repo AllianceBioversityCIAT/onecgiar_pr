@@ -15,6 +15,7 @@ import { VersioningService } from '../versioning/versioning.service';
 import { AppModuleIdEnum } from '../../shared/constants/role-type.enum';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 import { ResultStatusData } from '../../shared/constants/result-status.enum';
+import { EvidenceTypeEnum } from '../../shared/constants/evidence-type.enum';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { Result, SourceEnum } from '../results/entities/result.entity';
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
@@ -2373,6 +2374,13 @@ export class BilateralService {
     });
   }
 
+  private validEvidenceTypeId(value: unknown): number | undefined {
+    const id = Number(value);
+    if (!Number.isFinite(id) || id < 1) return undefined;
+    const validIds = Object.values(EvidenceTypeEnum) as number[];
+    return validIds.includes(id) ? id : undefined;
+  }
+
   private async handleEvidence(resultId, evidence, userId) {
     if (!Array.isArray(evidence) || !evidence.length) return;
 
@@ -2399,6 +2407,9 @@ export class BilateralService {
       newEvidence.description = evidence?.description ?? null;
       newEvidence.link = evidence.link;
       newEvidence.result_id = resultId;
+      newEvidence.evidence_type_id =
+        this.validEvidenceTypeId(evidence?.evidence_type_id) ??
+        EvidenceTypeEnum.MAIN;
 
       const hasQuery = (evidence.link ?? '').indexOf('?');
       const linkSplit = (evidence.link ?? '')
