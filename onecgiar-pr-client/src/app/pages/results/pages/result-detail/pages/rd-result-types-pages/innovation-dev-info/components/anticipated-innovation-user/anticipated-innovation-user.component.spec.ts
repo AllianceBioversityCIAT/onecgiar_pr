@@ -319,16 +319,15 @@ describe('AnticipatedInnovationUserComponent', () => {
   });
 
   describe('reloadSelect()', () => {
-    it('should hide and reset institution_sub_type_id with a delay', () => {
-      jest.useFakeTimers();
+    it('should reset institution_sub_type_id and synchronously toggle hide', () => {
       const organizationItem = { hide: false, institution_sub_type_id: 123 };
+      const detectChangesSpy = jest.spyOn(component['cdr'], 'detectChanges');
 
       component.reloadSelect(organizationItem);
-      expect(organizationItem.hide).toBeTruthy();
-      jest.runAllTimers();
 
       expect(organizationItem.institution_sub_type_id).toBeNull();
       expect(organizationItem.hide).toBeFalsy();
+      expect(detectChangesSpy).toHaveBeenCalledTimes(1);
     });
   });
 

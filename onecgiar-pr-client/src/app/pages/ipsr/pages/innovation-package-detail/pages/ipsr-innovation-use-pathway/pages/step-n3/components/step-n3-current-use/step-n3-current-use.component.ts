@@ -1,12 +1,12 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, Input, OnInit } from '@angular/core';
 import { ActorN3, IpsrStep3Body, MeasureN3, OrganizationN3 } from '../../model/Ipsr-step-3-body.model';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 
 @Component({
-    selector: 'app-step-n3-current-use',
-    templateUrl: './step-n3-current-use.component.html',
-    styleUrls: ['./step-n3-current-use.component.scss'],
-    standalone: false
+  selector: 'app-step-n3-current-use',
+  templateUrl: './step-n3-current-use.component.html',
+  styleUrls: ['./step-n3-current-use.component.scss'],
+  standalone: false
 })
 export class StepN3CurrentUseComponent implements OnInit {
   @Input() body = new IpsrStep3Body();
@@ -14,7 +14,10 @@ export class StepN3CurrentUseComponent implements OnInit {
   executeTimer = null;
   institutionsTypeTreeList = [];
 
-  constructor(public api: ApiService) {}
+  constructor(
+    public api: ApiService,
+    private readonly cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit() {
     this.GETAllActorsTypes();
@@ -58,11 +61,10 @@ export class StepN3CurrentUseComponent implements OnInit {
   }
 
   reloadSelect(organizationItem) {
-    organizationItem.hide = true;
     organizationItem.institution_sub_type_id = null;
-    setTimeout(() => {
-      organizationItem.hide = false;
-    }, 300);
+    organizationItem.hide = true;
+    this.cdr.detectChanges();
+    organizationItem.hide = false;
   }
 
   addActor() {

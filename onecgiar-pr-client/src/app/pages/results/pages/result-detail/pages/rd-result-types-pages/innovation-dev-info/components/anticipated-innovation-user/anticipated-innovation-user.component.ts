@@ -1,12 +1,12 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, Input, OnInit } from '@angular/core';
 import { Actor, InnovationDevInfoBody, Measure, Organization } from '../../model/innovationDevInfoBody';
 import { ApiService } from '../../../../../../../../../shared/services/api/api.service';
 
 @Component({
-    selector: 'app-anticipated-innovation-user',
-    templateUrl: './anticipated-innovation-user.component.html',
-    styleUrls: ['./anticipated-innovation-user.component.scss'],
-    standalone: false
+  selector: 'app-anticipated-innovation-user',
+  templateUrl: './anticipated-innovation-user.component.html',
+  styleUrls: ['./anticipated-innovation-user.component.scss'],
+  standalone: false
 })
 export class AnticipatedInnovationUserComponent implements OnInit {
   @Input() body = new InnovationDevInfoBody();
@@ -14,7 +14,10 @@ export class AnticipatedInnovationUserComponent implements OnInit {
   actorsTypeList = [];
   institutionsTypeTreeList = [];
 
-  constructor(public api: ApiService) {}
+  constructor(
+    public api: ApiService,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit() {
     this.GETAllActorsTypes();
@@ -82,11 +85,10 @@ export class AnticipatedInnovationUserComponent implements OnInit {
   }
 
   reloadSelect(organizationItem) {
-    organizationItem.hide = true;
     organizationItem.institution_sub_type_id = null;
-    setTimeout(() => {
-      organizationItem.hide = false;
-    }, 300);
+    organizationItem.hide = true;
+    this.cdr.detectChanges();
+    organizationItem.hide = false;
   }
 
   removeOtherInOrg(disableOrganizations) {
