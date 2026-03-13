@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, OnChanges, computed } from '@angular/core';
+import { Component, Input, OnInit, OnChanges, computed, ChangeDetectorRef } from '@angular/core';
 import { ApiService } from '../../services/api/api.service';
 import { TerminologyService } from '../../../internationalization/terminology.service';
 import { FieldsManagerService } from '../../services/fields-manager.service';
@@ -31,7 +31,8 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     private readonly terminologyService: TerminologyService,
     public fieldsManagerSE: FieldsManagerService,
     public innovationControlListSE: InnovationControlListService,
-    public innovationUseResultsSE: InnovationUseResultsService
+    public innovationUseResultsSE: InnovationUseResultsService,
+    private readonly cdr: ChangeDetectorRef
   ) {
     this.GETAllActorsTypes();
     this.GETInstitutionsTypeTree();
@@ -160,11 +161,10 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
   }
 
   reloadSelect(organizationItem) {
-    organizationItem.hide = true;
     organizationItem.institution_sub_type_id = null;
-    setTimeout(() => {
-      organizationItem.hide = false;
-    }, 300);
+    organizationItem.hide = true;
+    this.cdr.detectChanges();
+    organizationItem.hide = false;
   }
   addActor() {
     this.body.innovatonUse.actors.push(new Actor());
