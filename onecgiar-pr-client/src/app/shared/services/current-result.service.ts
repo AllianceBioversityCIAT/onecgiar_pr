@@ -43,7 +43,8 @@ export class CurrentResultService {
             break;
 
           case 1:
-            if (this.dataControlSE.currentResult.status_id != 1 && !this.api.rolesSE.isAdmin) this.api.rolesSE.readOnly = true;
+            if (this.dataControlSE.currentResult.status_id != 1 && this.dataControlSE.currentResult.status_id != 6 && !this.api.rolesSE.isAdmin)
+              this.api.rolesSE.readOnly = true;
             if (response.is_discontinued) this.api.rolesSE.readOnly = response.is_discontinued;
             break;
         }
