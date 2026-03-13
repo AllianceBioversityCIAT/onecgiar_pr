@@ -2410,6 +2410,7 @@ export class BilateralService {
       newEvidence.evidence_type_id =
         this.validEvidenceTypeId(evidence?.evidence_type_id) ??
         EvidenceTypeEnum.MAIN;
+      newEvidence.is_supplementary = false;
 
       const hasQuery = (evidence.link ?? '').indexOf('?');
       const linkSplit = (evidence.link ?? '')
