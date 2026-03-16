@@ -1145,6 +1145,19 @@ export class ResultsApiService {
     return this.http.post<any>(`${environment.apiBaseUrl}api/versioning`, phase);
   }
 
+  // Phase Science Programs Access Control (P2-2821)
+  GET_phaseSciencePrograms(phaseId: number) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/versioning/${phaseId}/science-programs`);
+  }
+
+  PATCH_phaseScienceProgramToggle(phaseId: number, scienceProgramId: number, body: { reporting_enabled: boolean }) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/versioning/${phaseId}/science-programs/${scienceProgramId}`, body);
+  }
+
+  PATCH_phaseScienceProgramsBulk(phaseId: number, body: { reporting_enabled: boolean }) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/versioning/${phaseId}/science-programs/bulk`, body);
+  }
+
   GET_tocPhases() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/toc-phases`);
   }
