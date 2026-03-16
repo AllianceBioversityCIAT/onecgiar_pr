@@ -1,4 +1,5 @@
 import { Component, Input } from '@angular/core';
+import { GlobalVariablesService } from '../../services/global-variables.service';
 
 @Component({
   selector: 'app-alert-global-info',
@@ -10,11 +11,5 @@ export class AlertGlobalInfoComponent {
   @Input() className?: string;
   @Input() inlineStyles?: string;
 
-  constructor() {}
-
-  getAlertStatus(): string {
-    return `
-    The <strong>2025 reporting cycle</strong> is now closed for all <strong>Science Programs</strong>. <strong>SGP-02</strong> remains active in the system, as it has been granted additional time to finalize its reporting until <b>May, 2026</b>.
-    `;
-  }
+  constructor(public globalVariablesSE: GlobalVariablesService) {}
 }
