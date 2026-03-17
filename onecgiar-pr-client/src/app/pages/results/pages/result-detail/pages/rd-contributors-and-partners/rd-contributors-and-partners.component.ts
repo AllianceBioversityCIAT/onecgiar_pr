@@ -180,6 +180,8 @@ export class RdContributorsAndPartnersComponent implements OnInit {
 
     const linkedResultsIds = (this.rdPartnersSE.partnersBody.linked_results || []).map((r: any) => Number(r?.id ?? r));
 
+    this.applyDefaultContributingIndicator();
+
     const sendedData = {
       ...this.rdPartnersSE.partnersBody,
       linked_results: linkedResultsIds,
@@ -195,6 +197,25 @@ export class RdContributorsAndPartnersComponent implements OnInit {
 
     this.api.resultsSE.PATCH_ContributorsPartners(sendedData).subscribe(_resp => {
       this.rdPartnersSE.getSectionInformation(null, true);
+    });
+  }
+
+  private applyDefaultContributingIndicator() {
+    const defaultIndicator = (tabs: any[]) => {
+      tabs?.forEach(tab => {
+        tab?.indicators?.forEach(indicator => {
+          indicator?.targets?.forEach(target => {
+            if (target.contributing_indicator == null || target.contributing_indicator === '') {
+              target.contributing_indicator = 1;
+            }
+          });
+        });
+      });
+    };
+
+    defaultIndicator(this.rdPartnersSE.partnersBody?.result_toc_result?.result_toc_results);
+    this.rdPartnersSE.partnersBody?.contributors_result_toc_result?.forEach((contributor: any) => {
+      defaultIndicator(contributor?.result_toc_results);
     });
   }
 
