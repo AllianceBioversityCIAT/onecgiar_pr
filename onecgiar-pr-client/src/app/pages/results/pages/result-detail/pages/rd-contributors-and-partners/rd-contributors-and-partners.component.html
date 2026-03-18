@@ -59,7 +59,7 @@
           [isUnplanned]="!this.rdPartnersSE.partnersBody.result_toc_result.planned_result"
           [showMultipleWPsContent]="this.rdPartnersSE.getConsumed()"
           [isAvisa]="isAvisaInitiative()"
-          (tocResultChanged)="this.rdPartnersSE.loadFilteredBilateralProjects()"></app-cp-multiple-wps>
+          (tocResultChanged)="this.rdPartnersSE.loadFilteredBilateralProjects(true)"></app-cp-multiple-wps>
       </div>
     }
     @if (!this.rdPartnersSE.partnersBody.result_toc_result.planned_result && !this.hideWhyReportedField()) {

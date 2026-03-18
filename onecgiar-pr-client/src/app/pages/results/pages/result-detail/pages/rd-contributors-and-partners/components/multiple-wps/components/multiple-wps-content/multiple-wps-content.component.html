@@ -11,7 +11,7 @@
         optionValue="toc_level_id"
         placeholder="Select outcome level"
         [(ngModel)]="activeTab.toc_level_id"
-        (ngModelChange)="indicatorView = false; setActiveTabSignal()">
+        (ngModelChange)="indicatorView = false; setActiveTabSignal(); tocResultChanged.emit()">
       </app-pr-select>
     </div>
 

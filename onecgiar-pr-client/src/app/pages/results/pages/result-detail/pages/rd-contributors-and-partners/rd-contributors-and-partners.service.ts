@@ -77,13 +77,16 @@ export class RdContributorsAndPartnersService implements OnDestroy {
     });
   }
 
-  loadFilteredBilateralProjects() {
+  loadFilteredBilateralProjects(clearSelection: boolean = false) {
     const tocResults = this.partnersBody?.result_toc_result?.result_toc_results || [];
     const tocResultIds = tocResults.map(r => r.toc_result_id).filter(id => id != null);
 
     this.hasTocResultMapped.set(tocResultIds.length > 0);
-    this.partnersBody.bilateral_projects = [];
     this.clarisaProjectsList = [];
+
+    if (clearSelection) {
+      this.partnersBody.bilateral_projects = [];
+    }
 
     if (tocResultIds.length === 0) {
       this.loadingBilateralProjects.set(false);
