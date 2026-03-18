@@ -171,9 +171,9 @@ export class AdminPanelController {
 
   @Get('phases/:phaseId/reporting-initiatives')
   @ApiOperation({
-    summary: 'Reporting phase detail + Science Programs / Accelerators access',
+    summary: 'Phase detail + Science Programs / Accelerators access (Results or IPSR)',
     description:
-      'Returns phase metadata and each eligible initiative with reporting_enabled. Absence of a row means default enabled (true).',
+      'Returns phase metadata and each eligible initiative with reporting_enabled. Works for any version row (app_module_id 1 or 2). Absence of a row means default enabled (true).',
   })
   @ApiParam({ name: 'phaseId', type: Number })
   @ApiOkResponse({ description: 'Phase and science_programs list.' })
@@ -186,7 +186,7 @@ export class AdminPanelController {
   @Patch('phases/:phaseId/reporting-initiatives/bulk')
   @ApiOperation({
     summary:
-      'Open or close reporting for all eligible initiatives in the phase',
+      'Open or close reporting for all eligible initiatives (Results or IPSR phase)',
   })
   @ApiParam({ name: 'phaseId', type: Number })
   @ApiBody({ type: BulkPhaseInitiativeReportingDto })
@@ -203,7 +203,7 @@ export class AdminPanelController {
 
   @Get('phases/:phaseId/reporting-initiatives/:initiativeId/status')
   @ApiOperation({
-    summary: 'Check if an initiative may report in this phase',
+    summary: 'Check if an initiative may report in this phase (any module)',
     description:
       'Used by clients to gate reporting UI. reporting_enabled considers overrides and defaults to true.',
   })

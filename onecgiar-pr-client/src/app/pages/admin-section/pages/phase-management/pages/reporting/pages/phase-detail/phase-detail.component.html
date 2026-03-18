@@ -32,12 +32,12 @@
 
             <div class="phase-header-card__field">
               <span class="phase-header-card__field-label">Start Date</span>
-              <span class="phase-header-card__field-value">{{ phaseDetail().start_date }}</span>
+              <span class="phase-header-card__field-value">{{ phaseDetail().start_date | date:'yyyy-MM-dd' }}</span>
             </div>
 
             <div class="phase-header-card__field">
               <span class="phase-header-card__field-label">End Date</span>
-              <span class="phase-header-card__field-value">{{ phaseDetail().end_date }}</span>
+              <span class="phase-header-card__field-value">{{ phaseDetail().end_date | date:'yyyy-MM-dd' }}</span>
             </div>
           </div>
 
@@ -61,13 +61,13 @@
         <div class="access-control-card__actions">
           <button
             class="btn btn--open"
-            [disabled]="isBulkUpdating() || openCount() === totalCount()"
+            [disabled]="!phaseDetail().status || isBulkUpdating() || openCount() === totalCount()"
             (click)="openAll()">
             Open for All Science Programs
           </button>
           <button
             class="btn btn--close"
-            [disabled]="isBulkUpdating() || openCount() === 0"
+            [disabled]="!phaseDetail().status || isBulkUpdating() || openCount() === 0"
             (click)="closeAll()">
             Close for All Science Programs
           </button>
@@ -120,7 +120,8 @@
                 <p-inputSwitch
                   [(ngModel)]="program.reporting_enabled"
                   (ngModelChange)="onToggleProgram(program)"
-                  [pTooltip]="program.reporting_enabled ? 'Click to close reporting' : 'Click to open reporting'"
+                  [disabled]="!phaseDetail().status"
+                  [pTooltip]="!phaseDetail().status ? 'Phase is closed' : program.reporting_enabled ? 'Click to close reporting' : 'Click to open reporting'"
                   tooltipPosition="top">
                 </p-inputSwitch>
                 <span

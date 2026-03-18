@@ -112,11 +112,11 @@ describe('AdminPanelService — phase initiative reporting (P2-2821)', () => {
   });
 
   describe('getPhaseReportingInitiativesDetail', () => {
-    it('returns 404 when phase does not exist or is not reporting module', async () => {
+    it('returns 404 when phase does not exist', async () => {
       versionRepo.findOne.mockResolvedValue(null);
       const res = await service.getPhaseReportingInitiativesDetail(999);
       expect(res.status).toBe(HttpStatus.NOT_FOUND);
-      expect(res.message).toBe('Reporting phase not found');
+      expect(res.message).toBe('Phase not found');
     });
 
     it('returns phase and science_programs with default reporting_enabled true', async () => {

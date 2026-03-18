@@ -68,53 +68,35 @@ export class PhaseDetailComponent implements OnInit {
 
   loadPhaseDetail(): void {
     this.isLoading.set(true);
-
-    // TODO: Replace with real API call
-    // this.api.resultsSE.GET_phaseSciencePrograms(this.phaseId).subscribe({...})
-    setTimeout(() => {
-      this.phaseDetail.set({
-        id: this.phaseId,
-        phase_name: 'Reporting 2025',
-        phase_year: 2025,
-        status: true,
-        start_date: '2025-01-01',
-        end_date: '2025-12-31',
-        portfolio: {
-          id: 1,
-          name: 'CGIAR portfolio 2022-2025',
-          acronym: 'P25'
-        }
-      });
-
-      this.sciencePrograms.set([
-        { id: 1, official_code: 'SGP-02', name: 'AVISA', category: 'Science programs', reporting_enabled: true, color: '#f59e0b' },
-        { id: 2, official_code: 'SP01', name: 'Breeding for Tomorrow', category: 'Science programs', reporting_enabled: true, color: '#ef4444' },
-        { id: 3, official_code: 'SP02', name: 'Sustainable Farming', category: 'Science programs', reporting_enabled: true, color: '#84cc16' },
-        { id: 4, official_code: 'SP03', name: 'Sustainable Animal and Aquatic Foods', category: 'Science programs', reporting_enabled: false, color: '#fb923c' },
-        { id: 5, official_code: 'SP04', name: 'Multifunctional Landscapes', category: 'Science programs', reporting_enabled: true, color: '#10b981' },
-        { id: 6, official_code: 'SP05', name: 'Better Diets and Nutrition', category: 'Science programs', reporting_enabled: true, color: '#92400e' },
-        { id: 7, official_code: 'SP06', name: 'Climate Action', category: 'Science programs', reporting_enabled: true, color: '#3b82f6' },
-        { id: 8, official_code: 'SP07', name: 'Policy Innovations', category: 'Science programs', reporting_enabled: true, color: '#f59e0b' },
-        { id: 9, official_code: 'SP08', name: 'Food Frontiers and Security', category: 'Science programs', reporting_enabled: false, color: '#06b6d4' },
-        { id: 10, official_code: 'SP09', name: 'Scaling for Impact', category: 'Scaling programs', reporting_enabled: true, color: '#a855f7' },
-        { id: 11, official_code: 'SP10', name: 'Gender Equality and Inclusion', category: 'Accelerators', reporting_enabled: true, color: '#ec4899' },
-        { id: 12, official_code: 'SP11', name: 'Capacity Sharing', category: 'Accelerators', reporting_enabled: true, color: '#8b5cf6' },
-        { id: 13, official_code: 'SP12', name: 'Digital Transformation', category: 'Accelerators', reporting_enabled: true, color: '#d946ef' },
-        { id: 14, official_code: 'SP13', name: 'Genebank', category: 'Accelerators', reporting_enabled: true, color: '#65a30d' }
-      ]);
-
-      this.isLoading.set(false);
-    }, 500);
+    this.api.resultsSE.GET_phaseReportingInitiatives(this.phaseId).subscribe({
+      next: (res) => {
+        this.phaseDetail.set(res.response.phase);
+        this.sciencePrograms.set(res.response.science_programs);
+        this.isLoading.set(false);
+      },
+      error: () => {
+        this.isLoading.set(false);
+        this.customizedAlertsFeSE.show({ id: 'sp-load-error', title: 'Error loading phase details', status: 'error', closeIn: 3000 });
+      }
+    });
   }
 
   onToggleProgram(program: ScienceProgramAccess): void {
-    // TODO: Replace with real API call
-    // this.api.resultsSE.PATCH_phaseScienceProgramToggle(this.phaseId, program.id, { reporting_enabled: program.reporting_enabled }).subscribe({...})
-    this.customizedAlertsFeSE.show({
-      id: 'sp-toggle',
-      title: `${program.official_code} ${program.reporting_enabled ? 'opened' : 'closed'}`,
-      status: 'success',
-      closeIn: 500
+    this.sciencePrograms.update(p => [...p]);
+    this.api.resultsSE.PATCH_phaseReportingInitiativeToggle(this.phaseId, program.id, { reporting_enabled: program.reporting_enabled }).subscribe({
+      next: () => {
+        this.customizedAlertsFeSE.show({
+          id: 'sp-toggle',
+          title: `${program.official_code} ${program.reporting_enabled ? 'opened' : 'closed'}`,
+          status: 'success',
+          closeIn: 500
+        });
+      },
+      error: () => {
+        program.reporting_enabled = !program.reporting_enabled;
+        this.sciencePrograms.update(p => [...p]);
+        this.customizedAlertsFeSE.show({ id: 'sp-toggle-error', title: 'Error updating reporting status', status: 'error', closeIn: 3000 });
+      }
     });
   }
 
@@ -129,15 +111,16 @@ export class PhaseDetailComponent implements OnInit {
       },
       () => {
         this.isBulkUpdating.set(true);
-        // TODO: Replace with real API call
-        // this.api.resultsSE.PATCH_phaseScienceProgramsBulk(this.phaseId, { reporting_enabled: true }).subscribe({...})
-        this.sciencePrograms.update(programs => programs.map(p => ({ ...p, reporting_enabled: true })));
-        this.isBulkUpdating.set(false);
-        this.customizedAlertsFeSE.show({
-          id: 'sp-bulk',
-          title: 'All programs opened',
-          status: 'success',
-          closeIn: 500
+        this.api.resultsSE.PATCH_phaseReportingInitiativesBulk(this.phaseId, { reporting_enabled: true }).subscribe({
+          next: (res) => {
+            this.sciencePrograms.set(res.response);
+            this.isBulkUpdating.set(false);
+            this.customizedAlertsFeSE.show({ id: 'sp-bulk', title: 'All programs opened', status: 'success', closeIn: 500 });
+          },
+          error: () => {
+            this.isBulkUpdating.set(false);
+            this.customizedAlertsFeSE.show({ id: 'sp-bulk-error', title: 'Error opening all programs', status: 'error', closeIn: 3000 });
+          }
         });
       }
     );
@@ -154,15 +137,16 @@ export class PhaseDetailComponent implements OnInit {
       },
       () => {
         this.isBulkUpdating.set(true);
-        // TODO: Replace with real API call
-        // this.api.resultsSE.PATCH_phaseScienceProgramsBulk(this.phaseId, { reporting_enabled: false }).subscribe({...})
-        this.sciencePrograms.update(programs => programs.map(p => ({ ...p, reporting_enabled: false })));
-        this.isBulkUpdating.set(false);
-        this.customizedAlertsFeSE.show({
-          id: 'sp-bulk',
-          title: 'All programs closed',
-          status: 'success',
-          closeIn: 500
+        this.api.resultsSE.PATCH_phaseReportingInitiativesBulk(this.phaseId, { reporting_enabled: false }).subscribe({
+          next: (res) => {
+            this.sciencePrograms.set(res.response);
+            this.isBulkUpdating.set(false);
+            this.customizedAlertsFeSE.show({ id: 'sp-bulk', title: 'All programs closed', status: 'success', closeIn: 500 });
+          },
+          error: () => {
+            this.isBulkUpdating.set(false);
+            this.customizedAlertsFeSE.show({ id: 'sp-bulk-error', title: 'Error closing all programs', status: 'error', closeIn: 3000 });
+          }
         });
       }
     );

@@ -23,9 +23,6 @@ import { ClarisaInitiative } from '../../../clarisa/clarisa-initiatives/entities
 import { PatchPhaseInitiativeReportingDto } from './dto/patch-phase-initiative-reporting.dto';
 import { BulkPhaseInitiativeReportingDto } from './dto/bulk-phase-initiative-reporting.dto';
 
-/** `application_modules.app_module_id` for Results / reporting phase management */
-const REPORTING_APP_MODULE_ID = 1;
-
 const REPORTING_CATEGORY_COLORS = [
   '#f59e0b',
   '#ef4444',
@@ -596,7 +593,7 @@ export class AdminPanelService implements OnModuleInit {
       if (!phase) {
         return {
           response: null,
-          message: 'Reporting phase not found',
+          message: 'Phase not found',
           status: HttpStatus.NOT_FOUND,
         };
       }
@@ -672,7 +669,7 @@ export class AdminPanelService implements OnModuleInit {
       if (!phase) {
         return {
           response: null,
-          message: 'Reporting phase not found',
+          message: 'Phase not found',
           status: HttpStatus.NOT_FOUND,
         };
       }
@@ -811,7 +808,7 @@ export class AdminPanelService implements OnModuleInit {
 
   private async _loadReportingPhase(phaseId: number): Promise<Version | null> {
     return this._versionRepo.findOne({
-      where: { id: phaseId, app_module_id: REPORTING_APP_MODULE_ID },
+      where: { id: phaseId },
       relations: ['obj_portfolio'],
     });
   }
@@ -821,7 +818,7 @@ export class AdminPanelService implements OnModuleInit {
     if (!phase) {
       return {
         response: null,
-        message: 'Reporting phase not found',
+        message: 'Phase not found',
         status: HttpStatus.NOT_FOUND,
       };
     }
