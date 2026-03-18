@@ -50,6 +50,7 @@
       [allTabsCreated]="this.initiative?.result_toc_results"
       [selectedOptionsOutput]="selectedOptionsOutput"
       [selectedOptionsOutcome]="selectedOptionsOutcome"
-      [selectedOptionsEOI]="selectedOptionsEOI"></app-multiple-wps-content>
+      [selectedOptionsEOI]="selectedOptionsEOI"
+      (tocResultChanged)="tocResultChanged.emit()"></app-multiple-wps-content>
   </div>
 </div>

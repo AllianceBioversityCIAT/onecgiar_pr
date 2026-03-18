@@ -25,6 +25,8 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   disabledOptions = [];
   nppCenters: CenterDto[] = [];
   clarisaProjectsList: any[] = [];
+  hasTocResultMapped = signal<boolean>(false);
+  loadingBilateralProjects = signal<boolean>(false);
   contributingInitiativeNew = [];
   result_toc_result = null;
   contributors_result_toc_result = null;
@@ -79,11 +81,16 @@ export class RdContributorsAndPartnersService implements OnDestroy {
     const tocResults = this.partnersBody?.result_toc_result?.result_toc_results || [];
     const tocResultIds = tocResults.map(r => r.toc_result_id).filter(id => id != null);
 
+    this.hasTocResultMapped.set(tocResultIds.length > 0);
+    this.partnersBody.bilateral_projects = [];
+    this.clarisaProjectsList = [];
+
     if (tocResultIds.length === 0) {
-      this.clarisaProjectsList = [];
+      this.loadingBilateralProjects.set(false);
       return;
     }
 
+    this.loadingBilateralProjects.set(true);
     const requests = tocResultIds.map(id => this.api.resultsSE.GET_W3BilateralProjects(String(id)));
 
     forkJoin(requests).subscribe({
@@ -99,10 +106,12 @@ export class RdContributorsAndPartnersService implements OnDestroy {
         });
 
         this.clarisaProjectsList = Array.from(uniqueMap.values());
+        this.loadingBilateralProjects.set(false);
       },
       error: err => {
         console.error('Error loading filtered bilateral projects:', err);
         this.clarisaProjectsList = [];
+        this.loadingBilateralProjects.set(false);
       }
     });
   }
