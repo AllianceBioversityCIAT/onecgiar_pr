@@ -7,6 +7,7 @@ import { InstitutionsService } from '../../../../../../shared/services/global/in
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
 import { ContributorsAndPartnersBody } from './models/contributorsAndPartnersBody';
 import { ResultTocResultsInterface } from '../rd-theory-of-change/model/theoryOfChangeBody';
+import { forkJoin } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -24,6 +25,8 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   disabledOptions = [];
   nppCenters: CenterDto[] = [];
   clarisaProjectsList: any[] = [];
+  hasTocResultMapped = signal<boolean>(false);
+  loadingBilateralProjects = signal<boolean>(false);
   contributingInitiativeNew = [];
   result_toc_result = null;
   contributors_result_toc_result = null;
@@ -70,6 +73,48 @@ export class RdContributorsAndPartnersService implements OnDestroy {
       },
       error: err => {
         console.error('Error loading Clarisa projects:', err);
+      }
+    });
+  }
+
+  loadFilteredBilateralProjects(clearSelection: boolean = false) {
+    const tocResults = this.partnersBody?.result_toc_result?.result_toc_results || [];
+    const tocResultIds = tocResults.map(r => r.toc_result_id).filter(id => id != null);
+
+    this.hasTocResultMapped.set(tocResultIds.length > 0);
+    this.clarisaProjectsList = [];
+
+    if (clearSelection) {
+      this.partnersBody.bilateral_projects = [];
+    }
+
+    if (tocResultIds.length === 0) {
+      this.loadingBilateralProjects.set(false);
+      return;
+    }
+
+    this.loadingBilateralProjects.set(true);
+    const requests = tocResultIds.map(id => this.api.resultsSE.GET_W3BilateralProjects(String(id)));
+
+    forkJoin(requests).subscribe({
+      next: responses => {
+        const allProjects = responses.flatMap(res => res?.response ?? []);
+        const uniqueMap = new Map();
+
+        allProjects.forEach(project => {
+          if (!uniqueMap.has(project.project_id)) {
+            project.fullName = project.project_name;
+            uniqueMap.set(project.project_id, project);
+          }
+        });
+
+        this.clarisaProjectsList = Array.from(uniqueMap.values());
+        this.loadingBilateralProjects.set(false);
+      },
+      error: err => {
+        console.error('Error loading filtered bilateral projects:', err);
+        this.clarisaProjectsList = [];
+        this.loadingBilateralProjects.set(false);
       }
     });
   }
@@ -205,6 +250,8 @@ export class RdContributorsAndPartnersService implements OnDestroy {
         this.partnersBody.bilateral_projects.forEach(project => {
           project.fullName = project.obj_clarisa_project.fullName;
         });
+
+        this.loadFilteredBilateralProjects();
       },
       error: _err => {
         this.getConsumed.set(true);
