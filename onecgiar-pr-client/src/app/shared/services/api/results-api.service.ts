@@ -1146,16 +1146,20 @@ export class ResultsApiService {
   }
 
   // Phase Science Programs Access Control (P2-2821)
-  GET_phaseSciencePrograms(phaseId: number) {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/versioning/${phaseId}/science-programs`);
+  GET_phaseReportingInitiatives(phaseId: number) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results/admin-panel/phases/${phaseId}/reporting-initiatives`);
   }
 
-  PATCH_phaseScienceProgramToggle(phaseId: number, scienceProgramId: number, body: { reporting_enabled: boolean }) {
-    return this.http.patch<any>(`${environment.apiBaseUrl}api/versioning/${phaseId}/science-programs/${scienceProgramId}`, body);
+  GET_phaseInitiativeStatus(phaseId: number, initiativeId: number) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results/admin-panel/phases/${phaseId}/reporting-initiatives/${initiativeId}/status`);
   }
 
-  PATCH_phaseScienceProgramsBulk(phaseId: number, body: { reporting_enabled: boolean }) {
-    return this.http.patch<any>(`${environment.apiBaseUrl}api/versioning/${phaseId}/science-programs/bulk`, body);
+  PATCH_phaseReportingInitiativeToggle(phaseId: number, initiativeId: number, body: { reporting_enabled: boolean }) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/results/admin-panel/phases/${phaseId}/reporting-initiatives/${initiativeId}`, body);
+  }
+
+  PATCH_phaseReportingInitiativesBulk(phaseId: number, body: { reporting_enabled: boolean }) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/results/admin-panel/phases/${phaseId}/reporting-initiatives/bulk`, body);
   }
 
   GET_tocPhases() {

@@ -2,7 +2,7 @@ export interface ScienceProgramAccess {
   id: number;
   official_code: string;
   name: string;
-  category: 'Science programs' | 'Accelerators' | 'Scaling programs';
+  category: 'Science programs' | 'Accelerators' | 'Scaling programs' | 'Other';
   reporting_enabled: boolean;
   color: string;
 }
