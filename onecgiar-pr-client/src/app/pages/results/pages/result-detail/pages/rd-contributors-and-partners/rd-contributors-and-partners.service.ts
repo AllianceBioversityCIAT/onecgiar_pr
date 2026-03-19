@@ -63,6 +63,25 @@ export class RdContributorsAndPartnersService implements OnDestroy {
     this.centersSE.loadedCenters.unsubscribe();
   }
 
+  resetState() {
+    this.partnersBody = new ContributorsAndPartnersBody();
+    this.getConsumed.set(false);
+    this.cgspaceDisabledList = [];
+    this.possibleLeadPartners = [];
+    this.possibleLeadCenters = [];
+    this.submitter = '';
+    this.disabledOptions = [];
+    this.clarisaProjectsList = [];
+    this.hasTocResultMapped.set(false);
+    this.loadingBilateralProjects.set(false);
+    this.contributingInitiativeNew = [];
+    this.result_toc_result = null;
+    this.contributors_result_toc_result = null;
+    this.leadPartnerId = null;
+    this.leadCenterCode = null;
+    this.initiativeIdSignal.set(null);
+  }
+
   loadClarisaProjects() {
     this.api.resultsSE.GET_ClarisaProjects().subscribe({
       next: ({ response }) => {
