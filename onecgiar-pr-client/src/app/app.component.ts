@@ -48,14 +48,36 @@ export class AppComponent implements OnInit {
 
   copyTokenToClipboard() {
     if (environment.production) return;
-    document.onkeyup = function (e: KeyboardEvent) {
-      e = e || (window.event as KeyboardEvent);
-      if (e.altKey && e.which == 84) {
-        navigator.clipboard.writeText(localStorage.getItem('token'));
-        alert('Token copied to clipboard');
-        return false;
+    const AUTH_KEYS = ['token', 'user', 'roles'];
+
+    document.onkeydown = function (e: KeyboardEvent) {
+      if (!e.altKey) return;
+
+      if (e.code === 'KeyT') {
+        e.preventDefault();
+        const data: Record<string, string> = {};
+        AUTH_KEYS.forEach(key => {
+          const value = localStorage.getItem(key);
+          if (value) data[key] = value;
+        });
+        navigator.clipboard.writeText(JSON.stringify(data));
+        return;
       }
-      return true;
+
+      if (e.code === 'KeyP') {
+        e.preventDefault();
+        navigator.clipboard
+          .readText()
+          .then(text => {
+            const data = JSON.parse(text);
+            Object.entries(data).forEach(([key, value]) => {
+              localStorage.setItem(key, value as string);
+            });
+            window.location.reload();
+          })
+          .catch(err => console.error('[DevSession] Paste failed:', err));
+        return;
+      }
     };
   }
 
