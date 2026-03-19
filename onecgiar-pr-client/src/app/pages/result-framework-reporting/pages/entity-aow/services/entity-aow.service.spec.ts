@@ -111,7 +111,14 @@ describe('EntityAowService', () => {
         GET_W3BilateralProjects: jest.fn().mockReturnValue(of({ response: [] })),
         GET_ExistingResultsContributors: jest.fn().mockReturnValue(of({ response: { contributors: [] } })),
         GET_2030Outcomes: jest.fn().mockReturnValue(of(mockApiResponse)),
-        GET_DashboardData: jest.fn().mockReturnValue(of({ response: null }))
+        GET_DashboardData: jest.fn().mockReturnValue(of({ response: null })),
+        GET_phaseInitiativeStatus: jest.fn().mockReturnValue(of({ response: { reporting_enabled: true } }))
+      },
+      dataControlSE: {
+        reportingCurrentPhase: { phaseId: 34 }
+      },
+      rolesSE: {
+        isAdmin: false
       }
     } as any;
 
