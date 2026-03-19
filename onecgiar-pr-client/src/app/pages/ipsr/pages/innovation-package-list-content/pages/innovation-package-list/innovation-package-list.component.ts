@@ -13,6 +13,7 @@ import { IpsrDataControlService } from '../../../../services/ipsr-data-control.s
 })
 export class InnovationPackageListComponent implements OnInit, OnDestroy {
   totalResults: number = 0;
+  ipsrReportingEnabled = true;
 
   constructor(
     public api: ApiService,
@@ -26,12 +27,42 @@ export class InnovationPackageListComponent implements OnInit, OnDestroy {
     if (this.api.rolesSE.isAdmin) {
       this.deselectInits();
     } else {
-      this.api.updateUserData(() => {});
+      this.api.updateUserData(() => {
+        this.checkIpsrReportingAccess();
+      });
     }
 
     this.GETAllInnovationPackages();
     this.api.dataControlSE.getCurrentIPSRPhase().subscribe();
+
+    if (this.api.dataControlSE.reportingCurrentPhase.phaseId) {
+      this.checkIpsrReportingAccess();
+    } else {
+      this.api.dataControlSE.getCurrentPhases().subscribe(() => {
+        this.checkIpsrReportingAccess();
+      });
+    }
+
     this.phaseServices.phases.ipsr.forEach(item => ({ ...item, selected: item.status }));
+  }
+
+  private checkIpsrReportingAccess(): void {
+    const phaseId = this.api.dataControlSE.reportingCurrentPhase.phaseId;
+    const myInitiatives = this.api.dataControlSE.myInitiativesListIPSRByPortfolio || [];
+    if (!phaseId || !myInitiatives.length || this.api.rolesSE.isAdmin) return;
+
+    this.api.resultsSE.GET_phaseReportingInitiatives(phaseId).subscribe({
+      next: (res) => {
+        const programs: any[] = res.response?.science_programs || [];
+        this.ipsrReportingEnabled = myInitiatives.some((init: any) => {
+          const program = programs.find((p: any) => p.official_code === init.official_code);
+          return !program || program.reporting_enabled;
+        });
+      },
+      error: () => {
+        this.ipsrReportingEnabled = true;
+      }
+    });
   }
 
   GETAllInnovationPackages() {

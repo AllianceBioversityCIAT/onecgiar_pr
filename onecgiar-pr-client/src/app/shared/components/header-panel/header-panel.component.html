@@ -95,7 +95,12 @@
           <p class="overlay_panel_userInfo_content_item_title">My Science Programs/Accelerators</p>
 
           @for (item of this.getInitiativeSeparatedByPortfolio(); track $index) {
-            <p class="overlay_panel_userInfo_content_item_desc">{{ item.official_code }} - {{ item.role }}</p>
+            <p class="overlay_panel_userInfo_content_item_desc" [style.opacity]="isInitiativeClosed(item.official_code) ? '0.5' : '1'">
+              {{ item.official_code }} - {{ item.role }}
+              @if (isInitiativeClosed(item.official_code)) {
+                <span style="color: var(--pr-color-error); font-size: 11px; font-weight: 600"> (Closed)</span>
+              }
+            </p>
           }
         </div>
       }
