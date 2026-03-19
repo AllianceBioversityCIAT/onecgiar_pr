@@ -25,8 +25,8 @@ export class InnovationPackageCreatorComponent implements DoCheck, OnInit {
 
   filteredDropdownOptions = computed(() => {
     const source = this.sourceInitiatives();
+    if (this.api.rolesSE.isAdmin || !this.reportingAccessLoaded()) return source;
     const codes = this.enabledCodes();
-    if (!this.reportingAccessLoaded()) return source;
     return source.filter((item: any) => item.isLabel || codes.has(item.official_code));
   });
 
