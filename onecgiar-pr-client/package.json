@@ -12,7 +12,7 @@
     "test:coverage": "jest --coverage",
     "lint": "ng lint",
     "lint:fix": "ng lint --fix",
-    "tunnel": "ng serve -c production --port 19971",
+    "tunnel": "ng serve --allowed-hosts true --host 0.0.0.0",
     "cypress:open": "cypress open",
     "cypress:run": "cypress run",
     "cypress:run:record": "cypress run --record --key $CYPRESS_RECORD_KEY"
