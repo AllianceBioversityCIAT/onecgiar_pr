@@ -48,7 +48,7 @@ export class EntityAowService {
 
   dashboardData = signal<any>(null);
 
-  reportingEnabled = signal<boolean>(true);
+  reportingEnabled = signal<boolean>(false);
 
   canReportResults = computed(() => {
     if (this.api.rolesSE.isAdmin) {
