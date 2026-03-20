@@ -14,6 +14,7 @@ export class ChangePhaseModalComponent implements OnInit {
   public globalDisabled = 'globalDisabled';
   selectedInitiative: any = null;
   closedOptions: any[] = [];
+  private codeMap = new Map<number, string>();
 
   constructor(
     public api: ApiService,
@@ -38,8 +39,25 @@ export class ChangePhaseModalComponent implements OnInit {
         this.closedOptions = programs
           .filter(p => !p.reporting_enabled)
           .map(p => ({ entityId: p.id }));
+
+        programs.forEach(p => this.codeMap.set(p.id, p.official_code));
+        this.enrichResultEntityNames();
       }
     });
+  }
+
+  private enrichResultEntityNames(): void {
+    for (const result of this.api.dataControlSE.resultsList || []) {
+      const map = (result as any).initiative_entity_map;
+      if (!Array.isArray(map)) continue;
+      for (const item of map) {
+        if (item.isLabel || !item.entityId) continue;
+        const code = this.codeMap.get(item.entityId);
+        if (code && item.entityName && !item.entityName.startsWith(`${code} - `)) {
+          item.entityName = `${code} - ${item.entityName}`;
+        }
+      }
+    }
   }
 
   accept() {
