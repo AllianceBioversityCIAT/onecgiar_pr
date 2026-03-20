@@ -46,7 +46,7 @@
         [placeholder]="'Select ' + ('term.entity.singular' | term: this.api.dataControlSE?.IPSRCurrentPhase?.portfolioAcronym)"
         [description]="'Select ' + ('term.entity.singular' | term: this.api.dataControlSE?.IPSRCurrentPhase?.portfolioAcronym)"
         [disableOptions]="closedOptions"
-        disableOptionsText="<span style='background:#e53e3e;color:white;padding:1px 6px;border-radius:10px;font-size:10px;font-style:normal;margin-right:4px;vertical-align:middle;'>Closed</span>"
+        disableOptionsText="(Closed) "
         (selectOptionEvent)="
           this.manageInnovationsListSE.GETallInnovations(this.innovationPackageCreatorBody.initiative_id);
           status = false;
