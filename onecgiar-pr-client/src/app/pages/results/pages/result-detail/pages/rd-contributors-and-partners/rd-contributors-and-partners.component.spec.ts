@@ -66,6 +66,7 @@ describe('RdContributorsAndPartnersComponent', () => {
       partnersBody: new ContributorsAndPartnersBody(),
       getSectionInformation: jest.fn(),
       loadClarisaProjects: jest.fn(),
+      resetState: jest.fn(),
       contributingInitiativeNew: [],
       leadPartnerId: null,
       leadCenterCode: null,
