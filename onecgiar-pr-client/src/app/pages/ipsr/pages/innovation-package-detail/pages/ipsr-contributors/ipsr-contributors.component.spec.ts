@@ -777,7 +777,7 @@ describe('IpsrContributorsComponent', () => {
       component.onSaveSection();
 
       const sentData = patchSpy.mock.calls[0][0];
-      expect(sentData.result_toc_result.result_toc_results).toBeNull();
+      expect(sentData.result_toc_result.result_toc_results).toEqual([{ planned_result: true }]);
     });
 
     it('should call updateGreenChecks after save', () => {
