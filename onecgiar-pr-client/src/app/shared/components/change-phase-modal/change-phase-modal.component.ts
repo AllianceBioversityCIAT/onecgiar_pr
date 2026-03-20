@@ -13,6 +13,7 @@ export class ChangePhaseModalComponent implements OnInit {
   public requesting: boolean = false;
   public globalDisabled = 'globalDisabled';
   selectedInitiative: any = null;
+  closedOptions: any[] = [];
 
   constructor(
     public api: ApiService,
@@ -21,8 +22,24 @@ export class ChangePhaseModalComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.api.dataControlSE.getCurrentPhases().subscribe();
+    this.api.dataControlSE.getCurrentPhases().subscribe(() => {
+      this.loadClosedOptions();
+    });
     this.api.dataControlSE.getCurrentIPSRPhase().subscribe();
+  }
+
+  private loadClosedOptions(): void {
+    const phaseId = this.api.dataControlSE.reportingCurrentPhase?.phaseId;
+    if (!phaseId) return;
+
+    this.api.resultsSE.GET_phaseReportingInitiatives(phaseId).subscribe({
+      next: (res) => {
+        const programs: any[] = res.response?.science_programs || [];
+        this.closedOptions = programs
+          .filter(p => !p.reporting_enabled)
+          .map(p => ({ entityId: p.id }));
+      }
+    });
   }
 
   accept() {

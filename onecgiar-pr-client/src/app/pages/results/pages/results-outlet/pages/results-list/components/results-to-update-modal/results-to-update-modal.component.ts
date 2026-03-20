@@ -10,7 +10,6 @@ import { RetrieveModalService } from '../../../../../result-detail/components/re
 })
 export class ResultsToUpdateModalComponent {
   text_to_search = null;
-  closedCodes = new Set<string>();
 
   columnOrder = [
     // { title: 'Result code', attr: 'result_code' },
@@ -24,31 +23,7 @@ export class ResultsToUpdateModalComponent {
     { title: 'Created by	', attr: 'full_name' }
   ];
 
-  constructor(public api: ApiService, private retrieveModalSE: RetrieveModalService) {
-    this.loadClosedCodes();
-  }
-
-  private loadClosedCodes(): void {
-    const phaseId = this.api.dataControlSE.reportingCurrentPhase.phaseId;
-    if (!phaseId || this.api.rolesSE.isAdmin) return;
-
-    this.api.resultsSE.GET_phaseReportingInitiatives(phaseId).subscribe({
-      next: (res) => {
-        const programs: any[] = res.response?.science_programs || [];
-        programs.filter(p => !p.reporting_enabled).forEach(p => this.closedCodes.add(p.official_code));
-      }
-    });
-  }
-
-  isUpdateDisabled(result: any): boolean {
-    return result.result_type_id === 3 || this.closedCodes.has(result.submitter);
-  }
-
-  getUpdateTooltip(result: any): string | null {
-    if (result.result_type_id === 3) return 'This functionality is not available for capacity change result types.';
-    if (this.closedCodes.has(result.submitter)) return 'Reporting is closed for this Science Program.';
-    return null;
-  }
+  constructor(public api: ApiService, private retrieveModalSE: RetrieveModalService) {}
 
   onPressAction(result) {
     this.retrieveModalSE.title = result?.title;
