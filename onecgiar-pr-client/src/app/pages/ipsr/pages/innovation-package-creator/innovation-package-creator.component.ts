@@ -1,4 +1,4 @@
-import { Component, computed, DoCheck, OnInit, signal } from '@angular/core';
+import { Component, DoCheck, OnInit, signal } from '@angular/core';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { InnovationPackageCreatorBody } from './model/innovation-package-creator.model';
 import { Router } from '@angular/router';
@@ -19,16 +19,9 @@ export class InnovationPackageCreatorComponent implements DoCheck, OnInit {
   status: boolean = true;
   statusPdialog: boolean = false;
 
-  private enabledCodes = signal<Set<string>>(new Set());
   reportingAccessLoaded = signal<boolean>(false);
-  private sourceInitiatives = signal<any[]>([]);
-
-  filteredDropdownOptions = computed(() => {
-    const source = this.sourceInitiatives();
-    if (this.api.rolesSE.isAdmin || !this.reportingAccessLoaded()) return source;
-    const codes = this.enabledCodes();
-    return source.filter((item: any) => item.isLabel || codes.has(item.official_code));
-  });
+  sourceInitiatives = signal<any[]>([]);
+  closedOptions: any[] = [];
 
   constructor(
     public api: ApiService,
@@ -64,9 +57,9 @@ export class InnovationPackageCreatorComponent implements DoCheck, OnInit {
     this.api.resultsSE.GET_phaseReportingInitiatives(phaseId).subscribe({
       next: (res) => {
         const programs: any[] = res.response?.science_programs || [];
-        const codes = new Set<string>();
-        programs.filter(p => p.reporting_enabled).forEach(p => codes.add(p.official_code));
-        this.enabledCodes.set(codes);
+        this.closedOptions = programs
+          .filter(p => !p.reporting_enabled)
+          .map(p => ({ initiative_id: p.id }));
         this.reportingAccessLoaded.set(true);
       },
       error: () => {
