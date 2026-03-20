@@ -1,4 +1,4 @@
-import { Component, DoCheck, OnInit } from '@angular/core';
+import { Component, DoCheck, OnInit, signal } from '@angular/core';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { InnovationPackageCreatorBody } from './model/innovation-package-creator.model';
 import { Router } from '@angular/router';
@@ -19,6 +19,10 @@ export class InnovationPackageCreatorComponent implements DoCheck, OnInit {
   status: boolean = true;
   statusPdialog: boolean = false;
 
+  reportingAccessLoaded = signal<boolean>(false);
+  sourceInitiatives = signal<any[]>([]);
+  closedOptions: any[] = [];
+
   constructor(
     public api: ApiService,
     private router: Router,
@@ -26,14 +30,42 @@ export class InnovationPackageCreatorComponent implements DoCheck, OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.sourceInitiatives.set(this.api.dataControlSE.myInitiativesListIPSRByPortfolio || []);
+
     this.api.dataControlSE.getCurrentIPSRPhase().subscribe(() => {
       this.GET_AllInitiatives();
     });
+
+    if (this.api.dataControlSE.reportingCurrentPhase.phaseId) {
+      this.loadReportingAccess();
+    } else {
+      this.api.dataControlSE.getCurrentPhases().subscribe(() => {
+        this.loadReportingAccess();
+      });
+    }
 
     if (this.api.dataControlSE?.myInitiativesListIPSRByPortfolio.length) {
       this.api.rolesSE.readOnly = false;
       if (this.api?.dataControlSE?.currentResult?.status) this.api.dataControlSE.currentResult.status = null;
     }
+  }
+
+  private loadReportingAccess(): void {
+    const phaseId = this.api.dataControlSE.reportingCurrentPhase.phaseId;
+    if (!phaseId) return;
+
+    this.api.resultsSE.GET_phaseReportingInitiatives(phaseId).subscribe({
+      next: (res) => {
+        const programs: any[] = res.response?.science_programs || [];
+        this.closedOptions = programs
+          .filter(p => !p.reporting_enabled)
+          .map(p => ({ initiative_id: p.id }));
+        this.reportingAccessLoaded.set(true);
+      },
+      error: () => {
+        this.reportingAccessLoaded.set(true);
+      }
+    });
   }
 
   selectInnovationEvent(e) {
@@ -103,6 +135,7 @@ export class InnovationPackageCreatorComponent implements DoCheck, OnInit {
             if (initsGroup?.length) resultList.push(groupItem, ...initsGroup);
           });
           this.allInitiatives = resultList;
+          this.sourceInitiatives.set(resultList);
         });
       },
       error: err => {

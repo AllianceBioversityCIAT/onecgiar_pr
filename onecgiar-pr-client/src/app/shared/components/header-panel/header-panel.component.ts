@@ -34,6 +34,7 @@ export class HeaderPanelComponent implements OnInit {
   internationalizationData = internationalizationData;
   inLocal = (environment as any)?.inLocal;
   myInitiativesListP22 = computed(() => this.api.dataControlSE.myInitiativesList);
+  closedInitiativeCodes = new Set<string>();
 
   constructor(
     public api: ApiService,
@@ -47,8 +48,28 @@ export class HeaderPanelComponent implements OnInit {
     this.api.updateUserData(() => {
       this.resultsNotificationsSE.get_updates_notifications();
       this.resultsNotificationsSE.get_updates_pop_up_notifications();
+      this.loadReportingAccessStatus();
     });
-    this.api.dataControlSE.getCurrentPhases().subscribe();
+    this.api.dataControlSE.getCurrentPhases().subscribe(() => {
+      this.loadReportingAccessStatus();
+    });
+  }
+
+  private loadReportingAccessStatus(): void {
+    const phaseId = this.api.dataControlSE.reportingCurrentPhase.phaseId;
+    if (!phaseId) return;
+
+    this.api.resultsSE.GET_phaseReportingInitiatives(phaseId).subscribe({
+      next: (res) => {
+        const programs: any[] = res.response?.science_programs || [];
+        this.closedInitiativeCodes.clear();
+        programs.filter(p => !p.reporting_enabled).forEach(p => this.closedInitiativeCodes.add(p.official_code));
+      }
+    });
+  }
+
+  isInitiativeClosed(officialCode: string): boolean {
+    return this.closedInitiativeCodes.has(officialCode);
   }
 
   getInitiativeSeparatedByPortfolio() {

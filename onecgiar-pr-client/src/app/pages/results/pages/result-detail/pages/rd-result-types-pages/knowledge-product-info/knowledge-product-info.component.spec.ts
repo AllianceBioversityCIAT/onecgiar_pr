@@ -331,4 +331,286 @@ describe('KnowledgeProductInfoComponent', () => {
       expect(spyGetSectionInformation).toHaveBeenCalled();
     });
   });
+
+  describe('fairGuideline getter', () => {
+    it('should use source from knowledgeProductBody when available', () => {
+      component.knowledgeProductBody = { source: 'CGSpace' } as any;
+      expect(component.fairGuideline).toContain('CGSpace');
+    });
+
+    it('should default to "the repository" when source is not set', () => {
+      component.knowledgeProductBody = {} as any;
+      expect(component.fairGuideline).toContain('the repository');
+    });
+
+    it('should default to "the repository" when knowledgeProductBody is null', () => {
+      component.knowledgeProductBody = null as any;
+      expect(component.fairGuideline).toContain('the repository');
+    });
+  });
+
+  describe('getSectionInformation P25 path', () => {
+    it('should fetch toc melia studies when isP25 and programId exists', () => {
+      mockApiService.fieldsManagerSE.isP25 = () => true;
+      mockApiService.dataControlSE.currentResultSignal = () => ({ initiative_id: 42 });
+      const spyMelia = jest.spyOn(mockApiService.resultsSE, 'GET_meliaStudiesByToc');
+
+      // Reset response to a valid state for this test
+      const kpResponse = {
+        melia_type_id: 1,
+        is_melia: false,
+        ost_melia_study_id: 1,
+        melia_previous_submitted: '',
+        toc_melia_study_id: 5,
+        authors: [{ name: 'Author' }],
+        type: 'Report',
+        licence: '',
+        keywords: [],
+        agrovoc_keywords: [],
+        commodity: '',
+        sponsor: '',
+        altmetric_detail_url: '',
+        altmetric_image_url: '',
+        references_other_knowledge_products: '',
+        fair_data: { total_score: 0, F: { score: 0 }, A: { score: 0 }, I: { score: 0 }, R: { score: 0 } },
+        metadataCG: { source: 'CGSpace' },
+        handle: '10568/12345'
+      };
+      mockApiService.resultsSE.GET_resultknowledgeProducts = () => of({ response: kpResponse });
+
+      component.getSectionInformation();
+
+      expect(spyMelia).toHaveBeenCalledWith(42);
+      expect(component.sectionData.tocMeliaStudyId).toBe(5);
+    });
+
+    it('should use currentResult when currentResultSignal returns null', () => {
+      mockApiService.fieldsManagerSE.isP25 = () => true;
+      mockApiService.dataControlSE.currentResultSignal = () => null;
+      mockApiService.dataControlSE.currentResult = { initiative_id: 99 };
+      const spyMelia = jest.spyOn(mockApiService.resultsSE, 'GET_meliaStudiesByToc');
+
+      const kpResponse = {
+        melia_type_id: 1,
+        is_melia: false,
+        ost_melia_study_id: 1,
+        melia_previous_submitted: '',
+        toc_melia_study_id: null,
+        authors: [],
+        type: 'Report',
+        licence: '',
+        keywords: [],
+        agrovoc_keywords: [],
+        commodity: '',
+        sponsor: '',
+        altmetric_detail_url: '',
+        altmetric_image_url: '',
+        references_other_knowledge_products: '',
+        fair_data: { total_score: 0, F: { score: 0 }, A: { score: 0 }, I: { score: 0 }, R: { score: 0 } },
+        metadataCG: { source: 'CGSpace' },
+        handle: '10568/12345'
+      };
+      mockApiService.resultsSE.GET_resultknowledgeProducts = () => of({ response: kpResponse });
+
+      component.getSectionInformation();
+
+      expect(spyMelia).toHaveBeenCalledWith(99);
+    });
+
+    it('should not fetch toc melia when programId is null', () => {
+      mockApiService.fieldsManagerSE.isP25 = () => true;
+      mockApiService.dataControlSE.currentResultSignal = () => ({ initiative_id: null });
+      mockApiService.dataControlSE.currentResult = null;
+      const spyMelia = jest.spyOn(mockApiService.resultsSE, 'GET_meliaStudiesByToc');
+
+      const kpResponse = {
+        melia_type_id: 1,
+        is_melia: false,
+        ost_melia_study_id: 1,
+        melia_previous_submitted: '',
+        authors: [],
+        type: 'Report',
+        licence: '',
+        keywords: [],
+        agrovoc_keywords: [],
+        commodity: '',
+        sponsor: '',
+        altmetric_detail_url: '',
+        altmetric_image_url: '',
+        references_other_knowledge_products: '',
+        fair_data: { total_score: 0, F: { score: 0 }, A: { score: 0 }, I: { score: 0 }, R: { score: 0 } },
+        metadataCG: { source: 'Unknown' },
+        handle: '10568/12345'
+      };
+      mockApiService.resultsSE.GET_resultknowledgeProducts = () => of({ response: kpResponse });
+
+      component.getSectionInformation();
+
+      expect(spyMelia).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('_mapFields source branches', () => {
+    it('should set CGSpace handle when source is CGSpace', () => {
+      const kpResponse = {
+        authors: [{ name: 'Author' }],
+        type: 'Report',
+        licence: '',
+        keywords: [],
+        agrovoc_keywords: [],
+        commodity: '',
+        sponsor: '',
+        altmetric_detail_url: '',
+        altmetric_image_url: '',
+        references_other_knowledge_products: '',
+        fair_data: { total_score: 0, F: { score: 0 }, A: { score: 0 }, I: { score: 0 }, R: { score: 0 } },
+        metadataCG: { source: 'CGSpace' },
+        handle: '10568/12345',
+        melia_type_id: 1,
+        is_melia: false,
+        ost_melia_study_id: 1,
+        melia_previous_submitted: ''
+      };
+      mockApiService.resultsSE.GET_resultknowledgeProducts = () => of({ response: kpResponse });
+      component.getSectionInformation();
+      expect(component.knowledgeProductBody.handle).toBe('https://cgspace.cgiar.org/handle/10568/12345');
+    });
+
+    it('should set MELSpace handle when source is MELSpace', () => {
+      const kpResponse = {
+        authors: [{ name: 'Author' }],
+        type: 'Report',
+        licence: '',
+        keywords: [],
+        agrovoc_keywords: [],
+        commodity: '',
+        sponsor: '',
+        altmetric_detail_url: '',
+        altmetric_image_url: '',
+        references_other_knowledge_products: '',
+        fair_data: { total_score: 0, F: { score: 0 }, A: { score: 0 }, I: { score: 0 }, R: { score: 0 } },
+        metadataCG: { source: 'MELSpace' },
+        handle: '20.500.11766/12345',
+        melia_type_id: 1,
+        is_melia: false,
+        ost_melia_study_id: 1,
+        melia_previous_submitted: ''
+      };
+      mockApiService.resultsSE.GET_resultknowledgeProducts = () => of({ response: kpResponse });
+      component.getSectionInformation();
+      expect(component.knowledgeProductBody.handle).toBe('https://repo.mel.cgiar.org/handle/20.500.11766/12345');
+    });
+
+    it('should set WorldFish DSpace handle when source is WorldFish DSpace', () => {
+      const kpResponse = {
+        authors: [{ name: 'Author' }],
+        type: 'Report',
+        licence: '',
+        keywords: [],
+        agrovoc_keywords: [],
+        commodity: '',
+        sponsor: '',
+        altmetric_detail_url: '',
+        altmetric_image_url: '',
+        references_other_knowledge_products: '',
+        fair_data: { total_score: 0, F: { score: 0 }, A: { score: 0 }, I: { score: 0 }, R: { score: 0 } },
+        metadataCG: { source: 'WorldFish DSpace' },
+        handle: '20.500.12348/12345',
+        melia_type_id: 1,
+        is_melia: false,
+        ost_melia_study_id: 1,
+        melia_previous_submitted: ''
+      };
+      mockApiService.resultsSE.GET_resultknowledgeProducts = () => of({ response: kpResponse });
+      component.getSectionInformation();
+      expect(component.knowledgeProductBody.handle).toBe('https://hdl.handle.net/20.500.12348/12345');
+    });
+  });
+
+  describe('getMetadataFromCGSpace open_access branch', () => {
+    it('should use open_access value when available', () => {
+      const kpResponse = {
+        authors: [{ name: 'Author' }],
+        type: 'type journal article',
+        licence: '',
+        keywords: [],
+        agrovoc_keywords: [],
+        commodity: '',
+        sponsor: '',
+        altmetric_detail_url: '',
+        altmetric_image_url: '',
+        references_other_knowledge_products: '',
+        fair_data: { total_score: 0, F: { score: 0 }, A: { score: 0 }, I: { score: 0 }, R: { score: 0 } },
+        metadataCG: { doi: true, open_access: 'Gold', is_peer_reviewed: true },
+        metadataWOS: { is_peer_reviewed: true, is_isi: true, accessibility: true, issue_year: 2023 },
+        handle: '10568/12345',
+        melia_type_id: 1,
+        is_melia: false,
+        ost_melia_study_id: 1,
+        melia_previous_submitted: ''
+      };
+      mockApiService.resultsSE.GET_resultknowledgeProducts = () => of({ response: kpResponse });
+      component.getSectionInformation();
+      expect(component.knowledgeProductBody.accessibility_CG).toBe('Gold');
+    });
+  });
+
+  describe('_mapFields non-journal-article cgspace_phase_year match', () => {
+    it('should call getMetadataFromCGSpace when issue_year matches cgspace_phase_year for non-journal articles', () => {
+      const kpResponse = {
+        authors: [],
+        type: 'Book',
+        licence: '',
+        keywords: [],
+        agrovoc_keywords: [],
+        commodity: '',
+        sponsor: '',
+        altmetric_detail_url: '',
+        altmetric_image_url: '',
+        references_other_knowledge_products: '',
+        fair_data: { total_score: 0, F: { score: 0 }, A: { score: 0 }, I: { score: 0 }, R: { score: 0 } },
+        metadataCG: { issue_year: 2023, source: 'CGSpace', is_peer_reviewed: false },
+        cgspace_phase_year: 2023,
+        handle: '10568/12345',
+        melia_type_id: 1,
+        is_melia: false,
+        ost_melia_study_id: 1,
+        melia_previous_submitted: ''
+      };
+      mockApiService.resultsSE.GET_resultknowledgeProducts = () => of({ response: kpResponse });
+      component.getSectionInformation();
+      // getMetadataFromCGSpace was called so is_peer_reviewed_CG should be set
+      expect(component.knowledgeProductBody.is_peer_reviewed_CG).toBeDefined();
+    });
+  });
+
+  describe('transformBoolean via getMetadataFromCGSpace', () => {
+    it('should return "Not provided" for null value when isJA is true', () => {
+      const kpResponse = {
+        authors: [],
+        type: 'type journal article',
+        licence: '',
+        keywords: [],
+        agrovoc_keywords: [],
+        commodity: '',
+        sponsor: '',
+        altmetric_detail_url: '',
+        altmetric_image_url: '',
+        references_other_knowledge_products: '',
+        fair_data: { total_score: 0, F: { score: 0 }, A: { score: 0 }, I: { score: 0 }, R: { score: 0 } },
+        metadataCG: { doi: false, is_peer_reviewed: null, is_isi: null, accessibility: null },
+        handle: '10568/12345',
+        melia_type_id: 1,
+        is_melia: false,
+        ost_melia_study_id: 1,
+        melia_previous_submitted: ''
+      };
+      mockApiService.resultsSE.GET_resultknowledgeProducts = () => of({ response: kpResponse });
+      component.getSectionInformation();
+      // is_peer_reviewed is called without isJA, so null => 'Not available'
+      expect(component.knowledgeProductBody.is_peer_reviewed_CG).toBe('Not available');
+      // accessibility is null and isJA=true so => 'Not provided'
+      expect(component.knowledgeProductBody.accessibility_CG).toBe('Not provided');
+    });
+  });
 });
