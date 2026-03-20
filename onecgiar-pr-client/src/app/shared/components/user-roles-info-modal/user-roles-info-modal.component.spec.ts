@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { UserRolesInfoModalComponent } from './user-roles-info-modal.component';
-import { HttpClientModule } from '@angular/common/http';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { TooltipModule } from 'primeng/tooltip';
 
 describe('UserRolesInfoModalComponent', () => {
@@ -10,7 +10,7 @@ describe('UserRolesInfoModalComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [],
-      imports: [HttpClientModule, UserRolesInfoModalComponent, TooltipModule]
+      imports: [HttpClientTestingModule, UserRolesInfoModalComponent, TooltipModule]
     }).compileComponents();
 
     fixture = TestBed.createComponent(UserRolesInfoModalComponent);
