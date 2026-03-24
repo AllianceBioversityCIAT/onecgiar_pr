@@ -8,9 +8,9 @@ import {
   ReplicableInterface,
 } from '../../../../shared/globalInterfaces/replicable.interface';
 import { ResultsTocResultIndicatorsRepository } from './results-toc-results-indicators.repository';
-import { ResultsTocImpactAreaTargetRepository } from './result-toc-impact-area-repository';
-import { ResultsTocSdgTargetRepository } from './result-toc-sdg-target-repository';
-import { ResultsSdgTargetRepository } from './results-sdg-targets.respository';
+import { ResultsTocImpactAreaTargetRepository } from './result-toc-impact-area.repository';
+import { ResultsTocSdgTargetRepository } from './result-toc-sdg-target.repository';
+import { ResultsSdgTargetRepository } from './results-sdg-targets.repository';
 import { ResultsActionAreaOutcomeRepository } from './result-toc-action-area.repository';
 import { ResultsTocTargetIndicatorRepository } from './result-toc-result-target-indicator.repository';
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
@@ -31,7 +31,7 @@ export class ResultsTocResultRepository
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
-    private readonly _resultsTocResultIndicator: ResultsTocResultIndicatorsRepository,
+    private readonly _resultsTocResultIndicatorRepository: ResultsTocResultIndicatorsRepository,
     private readonly _resultsTocImpactAreaTargetRepository: ResultsTocImpactAreaTargetRepository,
     private readonly _resultsTocSdgTargetRepository: ResultsTocSdgTargetRepository,
     private readonly _resultsSdgTargetRepository: ResultsSdgTargetRepository,
@@ -332,11 +332,17 @@ export class ResultsTocResultRepository
       ci.official_code,
       ci.name,
       ci.short_name,
-      tr.result_type as toc_level_id
+      tr.result_type as toc_level_id,
+      rtri.toc_results_indicator_id,
+      ritt.indicators_targets,
+      ritt.contributing_indicator,
+      ritt.target_date
     FROM
       results_toc_result rtr	
       left JOIN ${env.DB_TOC}.toc_results tr on tr.id = rtr.toc_result_id
       left join clarisa_initiatives ci on ci.id = rtr.initiative_id
+      left join results_toc_result_indicators rtri on rtri.results_toc_results_id = rtr.result_toc_result_id
+      left join result_indicators_targets ritt on ritt.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
     where rtr.results_id = ?
       and rtr.initiative_id ${isPrimary ? '' : 'not'} in (${
         initiativeId ? initiativeId.toString() : null
@@ -355,6 +361,77 @@ export class ResultsTocResultRepository
         resultId,
       ]);
       return resultTocResult;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsTocResultRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async getRTRPrimaryV2(
+    resultId: number,
+    initiativeIds?: Array<number | string>,
+  ) {
+    const normalizedIds = (initiativeIds ?? [])
+      .map((id) => Number(id))
+      .filter((id) => Number.isFinite(id));
+
+    const params: Array<number> = [resultId];
+    let initiativeFilter = '';
+
+    if (normalizedIds.length > 0) {
+      const placeholders = normalizedIds.map(() => '?').join(', ');
+      initiativeFilter = `AND rtr.initiative_id IN (${placeholders})`;
+      params.push(...normalizedIds);
+    }
+
+    const queryData = `
+      SELECT
+        rtr.result_toc_result_id,
+        rtr.toc_result_id,
+        rtr.planned_result,
+        rtr.results_id,
+        rtr.initiative_id,
+        rtr.toc_progressive_narrative,
+        rtr.toc_level_id,
+        ci.official_code,
+        ci.short_name,
+        ci.name,
+        rtri.result_toc_result_indicator_id,
+        rtri.toc_results_indicator_id,
+        rtri.indicator_contributing,
+        rtri.status AS indicator_status,
+        rit.indicators_targets,
+        rit.number_target,
+        rit.contributing_indicator,
+        rit.target_date,
+        rit.target_progress_narrative,
+        rit.indicator_question
+      FROM results_toc_result rtr
+      LEFT JOIN clarisa_initiatives ci
+        ON ci.id = rtr.initiative_id
+      LEFT JOIN results_toc_result_indicators rtri
+        ON rtri.results_toc_results_id = rtr.result_toc_result_id
+        AND rtri.is_active = 1
+        AND rtri.is_not_aplicable = 0
+      LEFT JOIN result_indicators_targets rit
+        ON rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
+        AND rit.is_active = 1
+      WHERE
+        rtr.results_id = ?
+        AND rtr.is_active = 1
+        ${initiativeFilter}
+      ORDER BY
+        rtr.initiative_id,
+        rtr.result_toc_result_id,
+        rtri.result_toc_result_indicator_id,
+        rit.indicators_targets;
+    `;
+
+    try {
+      return await this.query(queryData, params);
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,
@@ -1520,111 +1597,197 @@ export class ResultsTocResultRepository
   async saveInditicatorsContributing(
     targetsIndicator: any[],
     id_result_toc_result?: number,
+    result_id?: number,
+    userId?: number,
   ) {
     try {
+      const phaseYear = await this.getPhaseYearByResult(result_id);
+
       if (id_result_toc_result) {
-        await this._resultsTocResultIndicator.update(
+        await this._resultsTocResultIndicatorRepository.update(
           { results_toc_results_id: id_result_toc_result },
-          { is_active: false },
+          {
+            is_active: false,
+            last_updated_by: userId ?? undefined,
+          },
         );
       }
 
+      const indicatorMetaCache = new Map<
+        string,
+        { number_target: number | null; target_date: number | null }
+      >();
+
+      const getCanonicalTarget = async (
+        relatedNodeId: string | null | undefined,
+      ) => {
+        if (!relatedNodeId) return null;
+        if (!indicatorMetaCache.has(relatedNodeId)) {
+          const meta = await this.getCanonicalIndicatorTarget(
+            relatedNodeId,
+            phaseYear,
+          );
+          indicatorMetaCache.set(relatedNodeId, meta);
+        }
+        return indicatorMetaCache.get(relatedNodeId) ?? null;
+      };
+
       for (const itemIndicator of targetsIndicator) {
-        const targetIndicators = await this._resultsTocResultIndicator.findOne({
-          where: {
-            results_toc_results_id: id_result_toc_result,
-            toc_results_indicator_id: itemIndicator.toc_results_indicator_id,
-          },
-        });
+        const indicatorId =
+          itemIndicator.toc_results_indicator_id ||
+          itemIndicator.related_node_id;
+        if (!indicatorId) continue;
+
+        const targetIndicators =
+          await this._resultsTocResultIndicatorRepository.findOne({
+            where: {
+              results_toc_results_id: id_result_toc_result,
+              toc_results_indicator_id:
+                itemIndicator.toc_results_indicator_id ?? indicatorId,
+            },
+          });
 
         if (targetIndicators) {
           targetIndicators.is_active = true;
-          await this._resultsTocResultIndicator.update(
+          await this._resultsTocResultIndicatorRepository.update(
             {
               results_toc_results_id: id_result_toc_result,
-              toc_results_indicator_id: itemIndicator.toc_results_indicator_id,
+              toc_results_indicator_id:
+                itemIndicator.toc_results_indicator_id ?? indicatorId,
             },
-            targetIndicators,
+            {
+              is_active: true,
+              last_updated_by: userId ?? undefined,
+            },
           );
           await this._resultTocIndicatorTargetRepository.update(
             {
               result_toc_result_indicator_id:
                 targetIndicators.result_toc_result_indicator_id,
             },
-            { is_active: false },
+            {
+              is_active: false,
+              last_updated_by: userId ?? undefined,
+            },
           );
 
-          if (itemIndicator.targets) {
+          if (Array.isArray(itemIndicator.targets)) {
             for (const target of itemIndicator.targets) {
-              const targetInfo =
-                await this._resultTocIndicatorTargetRepository.findOne({
-                  where: {
-                    result_toc_result_indicator_id:
-                      targetIndicators.result_toc_result_indicator_id,
-                    number_target: target.number_target,
-                  },
-                });
+              const canonical = await getCanonicalTarget(indicatorId);
+              const resolvedNumberTarget =
+                canonical?.number_target ??
+                this.toNumberOrNull(target.number_target) ??
+                0;
+
+              const resolvedTargetDate =
+                phaseYear ??
+                canonical?.target_date ??
+                this.toNumberOrNull(target.target_date) ??
+                null;
+
+              let targetInfo = null;
+              if (target.indicators_targets) {
+                targetInfo =
+                  await this._resultTocIndicatorTargetRepository.findOne({
+                    where: {
+                      indicators_targets: this.toNumberOrNull(
+                        target.indicators_targets,
+                      ),
+                    },
+                  });
+              }
+              if (!targetInfo) {
+                targetInfo =
+                  await this._resultTocIndicatorTargetRepository.findOne({
+                    where: {
+                      result_toc_result_indicator_id:
+                        targetIndicators.result_toc_result_indicator_id,
+                      number_target: this.toNumberOrNull(target.number_target),
+                    },
+                  });
+              }
+
+              const payload = {
+                is_active: true,
+                contributing_indicator: this.toNumberOrNull(
+                  target.contributing_indicator ?? target.contributing,
+                ),
+                indicator_question:
+                  target.indicator_question === null ||
+                  target.indicator_question === undefined
+                    ? null
+                    : Boolean(target.indicator_question),
+                target_progress_narrative:
+                  target.target_progress_narrative ?? null,
+                number_target: resolvedNumberTarget,
+                target_date: resolvedTargetDate,
+              };
+
               if (targetInfo != null) {
-                targetInfo.is_active = true;
-                targetInfo.contributing_indicator =
-                  target.indicator_question == 1
-                    ? parseFloat(target.contributing)
-                    : null;
-                targetInfo.indicator_question = target.indicator_question;
-                targetInfo.target_progress_narrative =
-                  target.indicator_question == 1
-                    ? target.target_progress_narrative
-                    : null;
                 await this._resultTocIndicatorTargetRepository.update(
                   {
                     result_toc_result_indicator_id:
                       targetIndicators.result_toc_result_indicator_id,
-                    number_target: target.number_target,
+                    indicators_targets: targetInfo.indicators_targets,
                   },
-                  targetInfo,
+                  {
+                    ...payload,
+                    last_updated_by: userId ?? undefined,
+                  },
                 );
               } else {
                 await this._resultTocIndicatorTargetRepository.save({
                   result_toc_result_indicator_id:
                     targetIndicators.result_toc_result_indicator_id,
-                  contributing_indicator:
-                    target.indicator_question == 1
-                      ? parseFloat(target.contributing)
-                      : null,
-                  indicator_question: target.indicator_question,
-                  number_target: target.number_target,
-                  is_active: true,
-                  target_progress_narrative:
-                    target.indicator_question == 1
-                      ? target.target_progress_narrative
-                      : null,
+                  created_by: userId ?? undefined,
+                  last_updated_by: userId ?? undefined,
+                  ...payload,
                 });
               }
             }
           }
         } else {
           const resultTocResultIndicator =
-            await this._resultsTocResultIndicator.save({
+            await this._resultsTocResultIndicatorRepository.save({
               results_toc_results_id: id_result_toc_result,
-              toc_results_indicator_id: itemIndicator.toc_results_indicator_id,
+              toc_results_indicator_id:
+                itemIndicator.toc_results_indicator_id ?? indicatorId,
               is_active: true,
+              created_by: userId ?? undefined,
+              last_updated_by: userId ?? undefined,
             });
-          if (itemIndicator.targets) {
+          if (Array.isArray(itemIndicator.targets)) {
             for (const target of itemIndicator.targets) {
+              const canonical = await getCanonicalTarget(indicatorId);
+              const resolvedNumberTarget =
+                canonical?.number_target ??
+                this.toNumberOrNull(target.number_target) ??
+                0;
+
+              const resolvedTargetDate =
+                phaseYear ??
+                canonical?.target_date ??
+                this.toNumberOrNull(target.target_date) ??
+                null;
+
               await this._resultTocIndicatorTargetRepository.save({
                 result_toc_result_indicator_id:
                   resultTocResultIndicator.result_toc_result_indicator_id,
-                contributing_indicator:
-                  target.indicator_question == 1
-                    ? parseFloat(target.contributing)
-                    : null,
-                indicator_question: target.indicator_question,
+                contributing_indicator: this.toNumberOrNull(
+                  target.contributing_indicator ?? target.contributing,
+                ),
+                indicator_question:
+                  target.indicator_question === null ||
+                  target.indicator_question === undefined
+                    ? null
+                    : Boolean(target.indicator_question),
                 is_active: true,
-                number_target: target.number_target,
+                number_target: resolvedNumberTarget,
+                target_date: resolvedTargetDate,
                 target_progress_narrative:
-                  target.indicator_question == 1
-                    ? target.target_progress_narrative
-                    : null,
+                  target.target_progress_narrative ?? null,
+                created_by: userId ?? undefined,
+                last_updated_by: userId ?? undefined,
               });
             }
           }
@@ -1866,8 +2029,8 @@ export class ResultsTocResultRepository
   async saveImpact(
     id_result_toc_result: number,
     impactAreaTargets: any[],
-    result_id: number,
-    init: number,
+    result_id?: number,
+    init?: number,
   ) {
     try {
       if (!id_result_toc_result) return;
@@ -1914,8 +2077,20 @@ export class ResultsTocResultRepository
         ]);
 
         if (returnInfo.length == 0) {
-          const queryTocIndicators = `select * from results_toc_result where results_id = ${result_id} and is_active = true and initiative_id = ${init};`;
-          const innovatonUseInterface = await this.query(queryTocIndicators);
+          const validResultId =
+            result_id != null &&
+            Number.isFinite(Number(result_id)) &&
+            Number(result_id) > 0;
+          const validInit =
+            init != null && Number.isFinite(Number(init)) && Number(init) > 0;
+          if (!validResultId || !validInit) {
+            return;
+          }
+          const queryTocIndicators = `select * from results_toc_result where results_id = ? and is_active = true and initiative_id = ?`;
+          const innovatonUseInterface = await this.query(queryTocIndicators, [
+            result_id,
+            init,
+          ]);
 
           if (
             innovatonUseInterface != null &&
@@ -1966,7 +2141,7 @@ export class ResultsTocResultRepository
   async saveSdg(
     id_result_toc_result: number,
     sdgTargets: any[],
-    result_id: number,
+    result_id?: number,
   ) {
     try {
       if (!id_result_toc_result) return;
@@ -2014,8 +2189,17 @@ export class ResultsTocResultRepository
         ]);
 
         if (returnInfo.length == 0) {
-          const queryTocIndicators = `select * from results_toc_result where result_toc_result_id = ${id_result_toc_result};`;
-          const innovatonUseInterface = await this.query(queryTocIndicators);
+          const validResultId =
+            result_id != null &&
+            Number.isFinite(Number(result_id)) &&
+            Number(result_id) > 0;
+          if (!validResultId) {
+            return;
+          }
+          const queryTocIndicators = `select * from results_toc_result where result_toc_result_id = ?`;
+          const innovatonUseInterface = await this.query(queryTocIndicators, [
+            id_result_toc_result,
+          ]);
 
           if (
             innovatonUseInterface != null &&
@@ -2062,6 +2246,115 @@ select *
         debug: true,
       });
     }
+  }
+
+  private async getPhaseYearByResult(
+    resultId?: number,
+  ): Promise<number | null> {
+    if (!resultId) return null;
+    const result = await this.query(
+      `SELECT v.phase_year
+       FROM result r
+       JOIN version v ON v.id = r.version_id
+       WHERE r.id = ?`,
+      [resultId],
+    );
+
+    if (
+      result?.length &&
+      result[0]?.phase_year !== undefined &&
+      result[0]?.phase_year !== null
+    ) {
+      const phaseYear = Number(result[0].phase_year);
+      return Number.isFinite(phaseYear) ? phaseYear : null;
+    }
+    return null;
+  }
+
+  private async getCanonicalIndicatorTarget(
+    relatedNodeId: string,
+    phaseYear?: number | null,
+  ): Promise<{
+    number_target: number | null;
+    target_date: number | null;
+  } | null> {
+    const params: any[] = [relatedNodeId];
+    let query = `
+      SELECT
+        trit.number_target,
+        trit.target_date
+      FROM ${env.DB_TOC}.toc_results_indicators tri
+      JOIN ${env.DB_TOC}.toc_result_indicator_target trit
+        ON tri.id = trit.id_indicator
+      WHERE tri.related_node_id = ?
+    `;
+
+    if (phaseYear != null) {
+      query += ` AND (
+        CASE
+          WHEN trit.target_date REGEXP '^[0-9]{4}-' THEN YEAR(trit.target_date)
+          WHEN trit.target_date REGEXP '^[0-9]{4}$' THEN CAST(trit.target_date AS SIGNED)
+          ELSE NULL
+        END
+      ) = ?`;
+      params.push(phaseYear);
+    }
+
+    query += ' ORDER BY trit.target_date DESC LIMIT 1';
+
+    let rows = await this.query(query, params);
+
+    if ((!rows || !rows.length) && phaseYear != null) {
+      rows = await this.query(
+        `
+        SELECT
+          trit.number_target,
+          trit.target_date
+        FROM ${env.DB_TOC}.toc_results_indicators tri
+        JOIN ${env.DB_TOC}.toc_result_indicator_target trit
+          ON tri.id = trit.id_indicator
+        WHERE tri.related_node_id = ?
+        ORDER BY trit.target_date DESC
+        LIMIT 1
+      `,
+        [relatedNodeId],
+      );
+    }
+
+    if (!rows || !rows.length) {
+      return null;
+    }
+
+    const row = rows[0];
+    const numberTarget = this.toNumberOrNull(row?.number_target);
+    const targetYear = phaseYear ?? this.extractYear(row?.target_date);
+
+    return {
+      number_target: numberTarget,
+      target_date: targetYear,
+    };
+  }
+
+  private toNumberOrNull(value: any): number | null {
+    if (value === null || value === undefined) return null;
+    const num = Number(value);
+    return Number.isFinite(num) ? num : null;
+  }
+
+  private extractYear(value: any): number | null {
+    if (value === null || value === undefined) return null;
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : null;
+    }
+    const numeric = Number(value);
+    if (Number.isFinite(numeric)) {
+      return numeric;
+    }
+    const date = new Date(value);
+    if (!Number.isNaN(date.getTime())) {
+      return date.getUTCFullYear();
+    }
+    return null;
   }
 
   async saveActionAreaToc(
@@ -2165,6 +2458,7 @@ select *
   async saveIndicatorsPrimarySubmitter(
     ResultTocResultIndicators: CreateResultsTocResultDto,
     result_id?: number,
+    userId?: number,
   ) {
     if (!ResultTocResultIndicators) return;
     const { result_toc_result } = ResultTocResultIndicators;
@@ -2182,7 +2476,7 @@ select *
           });
           if (rtrExist) {
             await this.update(
-              { result_toc_result_id: rtrExist[0]?.result_toc_result_id },
+              { result_toc_result_id: rtrExist?.result_toc_result_id },
               {
                 is_sdg_action_impact: toc?.is_sdg_action_impact,
               },
@@ -2206,6 +2500,12 @@ select *
               toc?.actionAreaOutcome,
               toc?.result_toc_result_id,
             );
+            await this.saveInditicatorsContributing(
+              Array.isArray(toc?.indicators) ? toc.indicators : [],
+              rtrExist?.result_toc_result_id,
+              toc?.results_id || result_id,
+              userId,
+            );
           } else {
             return this._handlersError.returnErrorRepository({
               className: ResultsTocResultRepository.name,
@@ -2227,13 +2527,14 @@ select *
   async saveIndicatorsContributors(
     ResultTocResultIndicators: CreateResultsTocResultDto,
     result_id?: number,
+    userId?: number,
   ) {
     const { contributors_result_toc_result } = ResultTocResultIndicators;
     if (!contributors_result_toc_result) return;
 
     try {
       for (const contributor of contributors_result_toc_result) {
-        await this.processContributor(contributor, result_id);
+        await this.processContributor(contributor, result_id, userId);
       }
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -2244,54 +2545,129 @@ select *
     }
   }
 
-  async processContributor(contributor: any, result_id: any) {
-    for (const toc of contributor.result_toc_results) {
+  async processContributor(contributor: any, result_id: any, userId?: number) {
+    // Ensure result_toc_results is an array before iterating
+    let resultTocResults: any[] = [];
+    if (Array.isArray(contributor.result_toc_results)) {
+      resultTocResults = contributor.result_toc_results;
+    } else if (
+      contributor.result_toc_results === null ||
+      contributor.result_toc_results === undefined
+    ) {
+      resultTocResults = [];
+    }
+
+    const contributorInitiativeId =
+      contributor?.initiative_id != null &&
+      Number.isFinite(Number(contributor.initiative_id))
+        ? Number(contributor.initiative_id)
+        : undefined;
+
+    for (const toc of resultTocResults) {
       if (toc?.toc_result_id && Array.isArray(toc?.indicators)) {
-        await this.processToc(toc, result_id);
+        await this.processToc(toc, result_id, userId, contributorInitiativeId);
       }
     }
   }
 
-  async processToc(toc: any, result_id: number) {
-    for (const indicators of toc.indicators) {
-      const rtrExist = await this.findOne({
+  async processToc(
+    toc: any,
+    result_id: number,
+    userId?: number,
+    contributorInitiativeId?: number,
+  ) {
+    // Build search criteria - handle both initiative_id and initiative_ids field names
+    const searchResultId = toc?.results_id ?? result_id;
+    const searchInitiativeId =
+      toc?.initiative_id != null && Number.isFinite(Number(toc.initiative_id))
+        ? Number(toc.initiative_id)
+        : contributorInitiativeId;
+    const searchTocResultId = toc?.toc_result_id;
+
+    // If we have a result_toc_result_id, try to find by that first
+    if (toc?.result_toc_result_id) {
+      const rtrById = await this.findOne({
         where: {
-          result_id: toc?.results_id || result_id,
-          initiative_id: toc?.initiative_id,
-          toc_result_id: toc?.toc_result_id,
+          result_toc_result_id: toc.result_toc_result_id,
           is_active: true,
         },
       });
 
-      if (rtrExist) {
-        await this.updateAndSave(rtrExist, toc);
-      } else {
-        return this._handlersError.returnErrorRepository({
-          className: ResultsTocResultRepository.name,
-          error: `The result indicators result id ${indicators?.result_toc_result_id} does not exist`,
-          debug: true,
-        });
+      if (rtrById) {
+        await this.updateAndSave(
+          rtrById,
+          toc,
+          searchResultId,
+          searchInitiativeId,
+        );
+        await this.saveInditicatorsContributing(
+          Array.isArray(toc?.indicators) ? toc.indicators : [],
+          rtrById?.result_toc_result_id,
+          searchResultId,
+          userId,
+        );
+        return;
       }
     }
+
+    // Fallback: search by result_id, initiative_id, and toc_result_id
+    if (!searchTocResultId || !searchInitiativeId) {
+      // Skip if required fields are missing
+      return;
+    }
+
+    const rtrExist = await this.findOne({
+      where: {
+        result_id: searchResultId,
+        initiative_ids: searchInitiativeId, // Use initiative_ids (property name in entity)
+        toc_result_id: searchTocResultId,
+        is_active: true,
+      },
+    });
+
+    if (!rtrExist) {
+      // Log warning but don't throw error - this might be expected for some cases
+      this._logger.warn({
+        className: ResultsTocResultRepository.name,
+        error: `Result ToC mapping not found for result_id: ${searchResultId}, initiative_id: ${searchInitiativeId}, toc_result_id: ${searchTocResultId}`,
+        debug: true,
+      });
+      return;
+    }
+
+    await this.updateAndSave(rtrExist, toc, searchResultId, searchInitiativeId);
+    await this.saveInditicatorsContributing(
+      Array.isArray(toc?.indicators) ? toc.indicators : [],
+      rtrExist?.result_toc_result_id,
+      searchResultId,
+      userId,
+    );
   }
 
-  async updateAndSave(rtrExist, toc) {
+  async updateAndSave(
+    rtrExist: any,
+    toc: any,
+    resultId?: number,
+    initiativeId?: number,
+  ) {
     await this.update(
       { result_toc_result_id: rtrExist?.result_toc_result_id },
       {
         is_sdg_action_impact: toc?.is_sdg_action_impact,
       },
     );
+    const effectiveResultId = resultId ?? toc?.results_id;
+    const effectiveInitiativeId = initiativeId ?? toc?.initiative_id;
     await this.saveImpact(
       rtrExist?.result_toc_result_id,
       toc?.impactAreasTargets,
-      toc?.results_id,
-      toc?.initiative_id,
+      effectiveResultId,
+      effectiveInitiativeId,
     );
     await this.saveSdg(
       rtrExist?.result_toc_result_id,
       toc?.sdgTargest,
-      toc?.results_id,
+      effectiveResultId,
     );
     await this.saveActionAreaToc(
       rtrExist.result_toc_result_id,
@@ -2442,6 +2818,201 @@ select *
       throw this._handlersError.returnErrorRepository({
         className: ResultsTocResultRepository.name,
         error: `Error saving Action Area Result ${error}`,
+        debug: true,
+      });
+    }
+  }
+
+  async findTocResultsForBilateral(tocResult) {
+    try {
+      const {
+        science_program_id,
+        aow_compose_code,
+        result_title,
+        result_indicator_description,
+        result_indicator_type_name,
+        initiative_id,
+      } = tocResult;
+
+      const hasOnlyScienceProgramId =
+        science_program_id &&
+        !aow_compose_code &&
+        !result_title &&
+        !result_indicator_description &&
+        !result_indicator_type_name;
+
+      if (hasOnlyScienceProgramId) {
+        return [
+          {
+            toc_result_id: null,
+            toc_results_indicator_id: null,
+            science_program_id: science_program_id,
+          },
+        ];
+      }
+
+      const hasTitle = !!result_title?.trim();
+      const hasAow = !!aow_compose_code?.trim();
+      const hasIndicatorFilter =
+        !!result_indicator_description?.trim() ||
+        !!result_indicator_type_name?.trim();
+
+      const conditions: string[] = [];
+      const params: any[] = [];
+
+      if (hasAow) {
+        conditions.push('wp_official_code = ?');
+        params.push(aow_compose_code.trim());
+      }
+      conditions.push('initiativeId = ?');
+      const initiativeParam =
+        initiative_id !== undefined &&
+        initiative_id !== null &&
+        initiative_id !== ''
+          ? initiative_id
+          : science_program_id;
+      params.push(initiativeParam);
+      if (hasTitle) {
+        conditions.push('tr.result_title LIKE ?');
+        params.push(`%${result_title.trim()}%`);
+      }
+      if (hasIndicatorFilter) {
+        conditions.push(
+          '(tri.indicator_description LIKE ? OR tri.type_value = ?)',
+        );
+        params.push(
+          `%${(result_indicator_description || '').trim()}%`,
+          result_indicator_type_name || '',
+        );
+      }
+      conditions.push('y.active = 1');
+      conditions.push(`
+            (
+            CASE
+              WHEN trit.target_date REGEXP '^[0-9]{4}-' THEN YEAR(trit.target_date)
+              WHEN trit.target_date REGEXP '^[0-9]{4}$' THEN CAST(trit.target_date AS SIGNED)
+              ELSE NULL
+            END
+          ) = y.year
+      `);
+
+      const tocResultQuery = `
+        SELECT
+          tr.id AS toc_result_id,
+          tri.related_node_id AS toc_results_indicator_id,
+          tr.category AS category,
+          trit.number_target AS number_target,
+          trit.target_date AS target_date
+        FROM
+          ${env.DB_TOC}.toc_work_packages twp
+        JOIN ${env.DB_TOC}.toc_results tr ON tr.wp_id = twp.toc_id
+        JOIN ${env.DB_TOC}.toc_results_indicators tri ON tri.toc_results_id = tr.id
+        JOIN ${env.DB_TOC}.toc_result_indicator_target trit ON tri.id = trit.id_indicator
+          AND CONVERT(trit.toc_result_indicator_id USING utf8mb4) = CONVERT(tri.related_node_id USING utf8mb4)
+        CROSS JOIN ${env.DB_NAME}.year y
+        WHERE
+          ${conditions.join(' AND ')}
+      `;
+      let tocResultData = await this.query(tocResultQuery, params);
+
+      // Fallback 1: by initiative + title via toc_work_packages (when wp_id is set)
+      if (
+        (!tocResultData || tocResultData.length === 0) &&
+        hasTitle &&
+        science_program_id
+      ) {
+        const titleOnlyConditions: string[] = [];
+        const titleOnlyParams: any[] = [];
+        titleOnlyConditions.push('twp.initiativeId = ?');
+        titleOnlyParams.push(initiativeParam);
+        titleOnlyConditions.push('tr.result_title LIKE ?');
+        titleOnlyParams.push(`%${result_title.trim()}%`);
+        const titleOnlyQuery = `
+          SELECT
+            tr.id AS toc_result_id,
+            NULL AS toc_results_indicator_id,
+            tr.category AS category,
+            NULL AS number_target,
+            NULL AS target_date
+          FROM
+            ${env.DB_TOC}.toc_work_packages twp
+          JOIN ${env.DB_TOC}.toc_results tr ON tr.wp_id = twp.toc_id
+          WHERE
+            ${titleOnlyConditions.join(' AND ')}
+          LIMIT 1
+        `;
+        const titleOnlyData = await this.query(titleOnlyQuery, titleOnlyParams);
+        if (titleOnlyData && titleOnlyData.length > 0) {
+          tocResultData = titleOnlyData;
+        }
+      }
+
+      // Fallback 2: toc_results directly by official_code + result_title (EOI etc. with wp_id null don't use toc_work_packages)
+      if (
+        (!tocResultData || tocResultData.length === 0) &&
+        hasTitle &&
+        science_program_id
+      ) {
+        const byOfficialCodeQuery = `
+          SELECT
+            tr.id AS toc_result_id,
+            NULL AS toc_results_indicator_id,
+            tr.category AS category,
+            NULL AS number_target,
+            NULL AS target_date
+          FROM
+            ${env.DB_TOC}.toc_results tr
+          WHERE
+            tr.official_code = ?
+            AND tr.result_title LIKE ?
+            AND tr.is_active = 1
+          LIMIT 1
+        `;
+        const byOfficialCodeData = await this.query(byOfficialCodeQuery, [
+          science_program_id,
+          `%${result_title.trim()}%`,
+        ]);
+        if (byOfficialCodeData && byOfficialCodeData.length > 0) {
+          tocResultData = byOfficialCodeData;
+        }
+      }
+
+      // Retornar array vacío en lugar de null para consistencia
+      return tocResultData || [];
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsTocResultRepository.name,
+        error: `Error finding TOC Results for Bilateral ${error}`,
+      });
+    }
+  }
+
+  async getWpExtraInfoV2(
+    resultId: number,
+    toc_result_id: number,
+    initiativeId: number,
+  ) {
+    const queryData = `
+    SELECT
+      tr.result_title,
+      IFNULL(twp.acronym, NULL) AS wp_acronym
+    FROM
+      results_toc_result rtr	
+      left JOIN ${env.DB_TOC}.toc_results tr on tr.id = rtr.toc_result_id
+      left join clarisa_initiatives ci on ci.id = rtr.initiative_id
+      left join ${env.DB_TOC}.toc_work_packages twp on twp.toc_id = tr.wp_id
+    where rtr.results_id = ${resultId}
+      and rtr.initiative_id = ${initiativeId}
+      and ${toc_result_id ? `rtr.toc_result_id = ${toc_result_id}` : ``}
+      and rtr.is_active > 0;
+    `;
+    try {
+      const resultTocResult: ResultsTocResult[] = await this.query(queryData);
+      return resultTocResult;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsTocResultRepository.name,
+        error: error,
         debug: true,
       });
     }

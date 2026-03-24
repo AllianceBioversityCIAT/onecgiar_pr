@@ -20,7 +20,7 @@ describe('StepN3Component', () => {
     };
 
     await TestBed.configureTestingModule({
-      declarations: [StepN3Component, StepN4ReferenceMaterialLinksComponent, ],
+      declarations: [StepN3Component, StepN4ReferenceMaterialLinksComponent],
       imports: [HttpClientTestingModule, CheckboxModule, CustomFieldsModule],
       providers: [
         {
@@ -205,7 +205,9 @@ describe('StepN3Component', () => {
   it('it should call convertOrganizationsTosave, PATCHInnovationPathwayByRiIdNextPrevius, getSectionInformation, and navigate on onSaveSectionWithStep if readOnly is false', () => {
     component.api.rolesSE.readOnly = false;
     const convertOrganizationsTosaveSpy = jest.spyOn(component, 'convertOrganizationsTosave');
-    const PATCHInnovationPathwayByRiIdNextPreviusSpy = jest.spyOn(component.api.resultsSE, 'PATCHInnovationPathwayByRiIdNextPrevius').mockReturnValue(of({}));
+    const PATCHInnovationPathwayByRiIdNextPreviusSpy = jest
+      .spyOn(component.api.resultsSE, 'PATCHInnovationPathwayByRiIdNextPrevius')
+      .mockReturnValue(of({}));
     const getSectionInformationSpy = jest.spyOn(component, 'getSectionInformation');
     const navigateSpy = jest.spyOn(mockRouter, 'navigate').mockResolvedValue(true);
 
@@ -218,7 +220,9 @@ describe('StepN3Component', () => {
   });
 
   it('should call GETAllClarisaInnovationReadinessLevels on GETAllClarisaInnovationReadinessLevels', () => {
-    const GETAllClarisaInnovationReadinessLevelsSpy = jest.spyOn(component.api.resultsSE, 'GETAllClarisaInnovationReadinessLevels').mockReturnValue(of({ response: {} }));
+    const GETAllClarisaInnovationReadinessLevelsSpy = jest
+      .spyOn(component.api.resultsSE, 'GETAllClarisaInnovationReadinessLevels')
+      .mockReturnValue(of({ response: {} }));
 
     component.GETAllClarisaInnovationReadinessLevels();
 
@@ -226,7 +230,7 @@ describe('StepN3Component', () => {
   });
 
   it('should call GETAllClarisaInnovationUseLevels on GETAllClarisaInnovationUseLevels', () => {
-    const GETAllClarisaInnovationUseLevelsSpy = jest.spyOn(component.api.resultsSE, 'GETAllClarisaInnovationUseLevels').mockReturnValue(of({ response: {} }));
+    const GETAllClarisaInnovationUseLevelsSpy = jest.spyOn(component.api.resultsSE, 'GETAllClarisaInnovationUseLevelsV2').mockReturnValue(of({ response: {} }));
 
     component.GETAllClarisaInnovationUseLevels();
 
@@ -248,16 +252,16 @@ describe('StepN3Component', () => {
 
   it('should return the expected string on readinessLevelSelfAssessmentText', () => {
     const result = component.readinessLevelSelfAssessmentText();
-    expect(result).toBe(`
-    <li><a href="https://drive.google.com/file/d/1muDLtqpeaSCIX60g6qQG_GGOPR61Rq7E/view" class="open_route" target="_blank">Click here</a>  to see all innovation readiness levels</li>
-    <li><strong>YOUR READINESS SCORE IN JUST 3 CLICKS: TRY THE NEW <a href="https://www.scalingreadiness.org/calculator-readiness-headless/" class="open_route" target="_blank">READINESS CALCULATOR</a>.</strong></li>
-    `);
+    expect(result).toBe(
+      `Please use the Innovation Readiness level calculator to determine your readiness score in 3 simple clicks: <a href="https://www.scalingreadiness.org/calculator-readiness-headless/" class="open_route" target="_blank">READINESS CALCULATOR</a>`
+    );
   });
 
   it('should return the expected string on useLevelDelfAssessment', () => {
     const result = component.useLevelDelfAssessment();
-    expect(result).toBe(`<li><a href="https://drive.google.com/file/d/1RFDAx3m5ziisZPcFgYdyBYH9oTzOYLvC/view" class="open_route" target="_blank">Click here</a> to see all innovation use levels</li>
-    <li><strong>YOUR USE SCORE IN JUST 3 CLICKS: TRY THE NEW <a href="https://www.scalingreadiness.org/calculator-use-headless/" class="open_route" target="_blank">USE CALCULATOR</a>.</strong></li>`);
+    expect(result).toBe(
+      `Please use the Innovation Use level calculator to determine your use score in 3 simple clicks: <a href="https://www.scalingreadiness.org/calculator-use-headless/" class="open_route" target="_blank">USE CALCULATOR</a>`
+    );
   });
 
   it('should call map on convertOrganizations', () => {

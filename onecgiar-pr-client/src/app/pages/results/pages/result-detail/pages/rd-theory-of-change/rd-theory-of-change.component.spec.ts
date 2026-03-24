@@ -12,6 +12,7 @@ import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { of, throwError } from 'rxjs';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { TermPipe } from '../../../../../../internationalization/term.pipe';
+import { signal } from '@angular/core';
 
 jest.useFakeTimers();
 
@@ -107,6 +108,7 @@ describe('RdTheoryOfChangeComponent', () => {
         })
       },
       dataControlSE: {
+        currentResultSectionName: signal<string>('Theory of change'),
         findClassTenSeconds: () => {
           return Promise.resolve(document.querySelector('alert-event'));
         }
@@ -432,19 +434,21 @@ describe('RdTheoryOfChangeComponent', () => {
     });
   });
 
-  describe('onRemoveContribuiting()', () => {
+  describe('onRemoveNewContributing()', () => {
     it('should remove the contributing initiative by index', () => {
       component.contributingInitiativeNew = ['initiative1', 'initiative2', 'initiative3'];
 
-      component.onRemoveContribuiting(1, false);
+      component.onRemoveNewContributing(1);
 
       expect(component.contributingInitiativeNew).toEqual(['initiative1', 'initiative3']);
     });
+  });
 
+  describe('onRemoveAcceptedContributing()', () => {
     it('should remove the contributing initiative by index from accepted_contributing_initiatives', () => {
       component.theoryOfChangeBody.contributing_initiatives.accepted_contributing_initiatives = ['initiative1', 'initiative2', 'initiative3'];
 
-      component.onRemoveContribuiting(1, true);
+      component.onRemoveAcceptedContributing(1);
 
       expect(component.theoryOfChangeBody.contributing_initiatives.accepted_contributing_initiatives).toEqual(['initiative1', 'initiative3']);
     });

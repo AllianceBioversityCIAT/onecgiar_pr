@@ -10,11 +10,13 @@ import {
   ReturnResponse,
 } from '../../shared/handlers/error.utils';
 import { BiSubpagesRepository } from './repository/bi-subpages.repository';
+import { DisabledEndpointGuard } from '../../shared/guards/disabled-endpoint.guard';
 
 @Module({
   imports: [HttpModule],
   controllers: [BiReportsController],
   providers: [
+    DisabledEndpointGuard,
     BiReportsService,
     ClarisaCredentialsBiService,
     BiReportRepository,

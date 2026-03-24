@@ -3,6 +3,7 @@ import { JwtMiddleware } from './jwt.middleware';
 import { JwtService } from '@nestjs/jwt';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
+import { UserRepository } from '../modules/user/repositories/user.repository';
 
 describe('JwtMiddleware', () => {
   let middleware: JwtMiddleware;
@@ -32,6 +33,13 @@ describe('JwtMiddleware', () => {
           useValue: {
             verifyAsync: jest.fn(),
             signAsync: jest.fn().mockResolvedValue(mockNewToken),
+          },
+        },
+        {
+          provide: UserRepository,
+          useValue: {
+            findOne: jest.fn().mockResolvedValue(mockJwtPayload),
+            updateLastLogin: jest.fn().mockResolvedValue(undefined),
           },
         },
       ],

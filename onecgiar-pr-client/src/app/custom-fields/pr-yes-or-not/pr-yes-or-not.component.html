@@ -1,25 +1,28 @@
-<div class="field_container">
+@if (this.dynamicData()) {
+  <div class="field_container">
     <div class="title">
-        <app-pr-field-header [label]="this.label" [required]="this.required" [useColon]="false"
-        [labelDescInlineStyles]="this.labelDescInlineStyles">
-        </app-pr-field-header>
-        <div class="choices" *ngIf="!hideOptions">
-            <div class="choice" [ngClass]="{'yes': this.value == true}"
-                *ngIf="editable ? true : !(readOnly || this.rolesSE.readOnly  ) || this.value == true"
-                (click)="editable?onclickYes() :((readOnly || this.rolesSE.readOnly  )?null:onclickYes())">
-                Yes
-            </div>
-            <div class="choice" [ngClass]="{'no': this.value == false}"
-                *ngIf="editable ?true : !(readOnly || this.rolesSE.readOnly  ) || this.value == false"
-                (click)="editable?onClickNo() :((readOnly || this.rolesSE.readOnly  )?null:onClickNo())">
-                No
-            </div>
+      <app-pr-field-header [label]="this.label" [required]="this.required" [useColon]="false" [labelDescInlineStyles]="this.labelDescInlineStyles">
+      </app-pr-field-header>
+      <div class="choices" *ngIf="!hideOptions">
+        <div
+          class="choice"
+          [ngClass]="{ yes: this.value == true }"
+          *ngIf="editable ? true : !(readOnly || this.rolesSE.readOnly) || this.value == true"
+          (click)="editable ? onclickYes() : readOnly || this.rolesSE.readOnly ? null : onclickYes()">
+          Yes
         </div>
+        <div
+          class="choice"
+          [ngClass]="{ no: this.value == false }"
+          *ngIf="editable ? true : !(readOnly || this.rolesSE.readOnly) || this.value == false"
+          (click)="editable ? onClickNo() : readOnly || this.rolesSE.readOnly ? null : onClickNo()">
+          No
+        </div>
+      </div>
     </div>
     <div class="description" *ngIf="!hideDescription">
-        <app-pr-field-header [description]="this.description" [showDescriptionLabel]="showDescriptionLabel"
-            [descInlineStyles]="descInlineStyles">
-        </app-pr-field-header>
+      <app-pr-field-header [description]="this.description" [showDescriptionLabel]="showDescriptionLabel" [descInlineStyles]="descInlineStyles">
+      </app-pr-field-header>
     </div>
-
-</div>
+  </div>
+}

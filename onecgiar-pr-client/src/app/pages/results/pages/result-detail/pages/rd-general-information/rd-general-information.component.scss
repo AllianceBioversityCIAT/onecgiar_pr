@@ -1,6 +1,22 @@
 .radio_grid {
   display: grid;
   grid-template-columns: 450px 1fr;
+
+  @media screen and (max-width: 1200px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.radioButtonList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 30px;
+
+  .radioButton {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
 }
 
 .general_header {

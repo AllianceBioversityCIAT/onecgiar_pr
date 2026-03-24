@@ -1,58 +1,83 @@
-<app-detail-section-title sectionName="Capacity Sharing for Development information"></app-detail-section-title>
-
 <div class="detail_container">
-    <app-alert-status description="Please fill in the following required fields for this indicator category.">
-    </app-alert-status>
-    <app-pr-field-header label="Number of people trained" [description]="peopleTrainedDesc">
-    </app-pr-field-header>
-    <!-- In the case where the gender balance of trainees is not known (e.g. online training), assume 50-50 split. -->
-    <div class="peopleFields">
-        <app-pr-input placeholder=" Type quantity" label="Female" type="number" [required]="false"
-            [(ngModel)]="this.capDevInfoRoutingBody.female_using">
-        </app-pr-input>
-        <app-pr-input placeholder="Type quantity" label="Male" type="number" [required]="false"
-            [(ngModel)]="this.capDevInfoRoutingBody.male_using">
-        </app-pr-input>
-        <app-pr-input placeholder="Type quantity" label="Non-binary" type="number" [required]="false"
-            [(ngModel)]="this.capDevInfoRoutingBody.non_binary_using">
-        </app-pr-input>
-        <app-pr-input placeholder="Type quantity" label="Unknown" type="number" [required]="false"
-            [(ngModel)]="this.capDevInfoRoutingBody.has_unkown_using">
-        </app-pr-input>
-    </div>
+  <app-alert-status description="Please fill in the following required fields for this indicator category."> </app-alert-status>
+  <app-pr-field-header label="Number of people trained" [description]="peopleTrainedDesc"> </app-pr-field-header>
+  <!-- In the case where the gender balance of trainees is not known (e.g. online training), assume 50-50 split. -->
+  <div class="peopleFields">
+    <app-pr-input placeholder=" Type quantity" label="Women" type="number" [required]="false" [(ngModel)]="this.capDevInfoRoutingBody.female_using">
+    </app-pr-input>
+    <app-pr-input placeholder="Type quantity" label="Men" type="number" [required]="false" [(ngModel)]="this.capDevInfoRoutingBody.male_using">
+    </app-pr-input>
+    <app-pr-input
+      placeholder="Type quantity"
+      label="Non-binary"
+      type="number"
+      [required]="false"
+      [(ngModel)]="this.capDevInfoRoutingBody.non_binary_using">
+    </app-pr-input>
+    <app-pr-input
+      placeholder="Type quantity"
+      label="Unknown"
+      type="number"
+      [required]="false"
+      [(ngModel)]="this.capDevInfoRoutingBody.has_unkown_using">
+    </app-pr-input>
+  </div>
 
-    <app-pr-radio-button label="Length of training" (selectOptionEvent)="clean_capdev_term_2()"
-        [description]="this.length_of_training()" [(ngModel)]="this.capdev_term_id_1" [options]="this.capdevsTerms"
-        optionLabel="name" optionValue='capdev_term_id' [required]="true">
-    </app-pr-radio-button>
+  <app-pr-radio-button
+    label="Length of training"
+    (selectOptionEvent)="clean_capdev_term_2()"
+    [description]="this.length_of_training()"
+    [(ngModel)]="this.capdev_term_id_1"
+    [options]="this.capdevsTerms"
+    optionLabel="name"
+    optionValue="capdev_term_id"
+    [required]="true">
+  </app-pr-radio-button>
 
-    <br>
+  <br />
 
-    <app-pr-radio-button *ngIf="this.capdev_term_id_1 == 4 ||this.capdev_term_id_1 == 1||this.capdev_term_id_1 == 2"
-        [options]="this.capdevsSubTerms" optionLabel="name" optionValue='capdev_term_id' [required]="false"
-        [(ngModel)]="this.capdev_term_id_2">
-    </app-pr-radio-button>
+  <app-pr-radio-button
+    *ngIf="this.capdev_term_id_1 == 4 || this.capdev_term_id_1 == 1 || this.capdev_term_id_1 == 2"
+    [options]="this.capdevsSubTerms"
+    optionLabel="name"
+    optionValue="capdev_term_id"
+    [required]="false"
+    [(ngModel)]="this.capdev_term_id_2">
+  </app-pr-radio-button>
 
-    <app-pr-radio-button label="Delivery Method" [description]="deliveryMethodDescription()"
-        [(ngModel)]="this.capDevInfoRoutingBody.capdev_delivery_method_id" [options]="this.deliveryMethodOptions"
-        optionLabel="name" optionValue='capdev_delivery_method_id' [required]="false">
-    </app-pr-radio-button>
-    <br>
-    <app-alert-status
-        description="If you don't find the organization you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list.">
-    </app-alert-status>
+  <app-pr-radio-button
+    label="Delivery Method"
+    [description]="deliveryMethodDescription()"
+    [(ngModel)]="this.capDevInfoRoutingBody.capdev_delivery_method_id"
+    [options]="this.deliveryMethodOptions"
+    optionLabel="name"
+    optionValue="capdev_delivery_method_id"
+    [required]="false">
+  </app-pr-radio-button>
+  <br />
+  <app-alert-status
+    description="If you don't find the organization you are looking for, <a class='open_route alert-event'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list.">
+  </app-alert-status>
 
-    <app-pr-radio-button label="Were the trainees attending on behalf of an organization?" optionLabel="name"
-        optionValue="id" [options]="this.radioOptions"
-        [(ngModel)]="this.capDevInfoRoutingBody.is_attending_for_organization">
-    </app-pr-radio-button>
-    <br>
-    <app-pr-multi-select *ngIf="this.capDevInfoRoutingBody.is_attending_for_organization"
-        [options]="this.institutionsSE.institutionsList" [required]="false" selectedLabel="organization(s) selected"
-        selectedOptionLabel="full_name" optionLabel="full_name" optionValue="institutions_id"
-        placeholder="Select organizations" [(ngModel)]="this.capDevInfoRoutingBody.institutions">
-    </app-pr-multi-select>
-
+  <app-pr-radio-button
+    label="Were the trainees attending on behalf of an organization?"
+    optionLabel="name"
+    optionValue="id"
+    [options]="this.radioOptions"
+    [(ngModel)]="this.capDevInfoRoutingBody.is_attending_for_organization">
+  </app-pr-radio-button>
+  <br />
+  <app-pr-multi-select
+    *ngIf="this.capDevInfoRoutingBody.is_attending_for_organization"
+    [options]="this.institutionsSE.institutionsList"
+    [required]="false"
+    selectedLabel="organization(s) selected"
+    selectedOptionLabel="full_name"
+    optionLabel="full_name"
+    optionValue="institutions_id"
+    placeholder="Select organizations"
+    [(ngModel)]="this.capDevInfoRoutingBody.institutions">
+  </app-pr-multi-select>
 </div>
 
 <app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>

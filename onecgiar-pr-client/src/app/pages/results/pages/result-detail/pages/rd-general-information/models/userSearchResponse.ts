@@ -6,7 +6,7 @@ export interface UserSearchResponse {
 
 export interface User {
   cn: string;
-  displayName: string;
+  display_name: string;
   mail: string;
   sAMAccountName: string;
   givenName: string;

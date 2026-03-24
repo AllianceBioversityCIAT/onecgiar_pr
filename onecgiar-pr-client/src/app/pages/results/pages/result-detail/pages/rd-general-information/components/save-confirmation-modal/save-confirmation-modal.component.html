@@ -1,0 +1,31 @@
+<p-dialog
+  appendTo="body"
+  header="Title"
+  [(visible)]="visible"
+  [draggable]="false"
+  [modal]="true"
+  [closeOnEscape]="true"
+  [showHeader]="false"
+  [dismissableMask]="true"
+  [style]="{ padding: '0px' }"
+  [styleClass]="'save-confirmation-modal'">
+  <div class="modal-header">
+    <div class="header-left">
+      <div class="warning-icon">
+        <i class="pi pi-exclamation-triangle"></i>
+      </div>
+      <h2 class="modal-title">Confirmation Required</h2>
+    </div>
+    <i class="pi pi-times close-icon" (click)="onCancel()"></i>
+  </div>
+  <div class="modal-content">
+    <p class="modal-message">
+      Please note that this action is not a submission; it only saves the missing justification. Would you like to continue?
+    </p>
+  </div>
+  <div class="modal-footer">
+    <button class="btn-cancel" (click)="onCancel()">Cancel</button>
+    <app-pr-button  padding="medium" class="btn-continue" (click)="onConfirm()" text="Yes, Continue"></app-pr-button>
+  </div>
+</p-dialog>
+

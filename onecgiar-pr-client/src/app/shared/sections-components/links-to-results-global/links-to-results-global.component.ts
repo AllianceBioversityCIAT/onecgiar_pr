@@ -6,10 +6,10 @@ import { RolesService } from '../../services/global/roles.service';
 import { GreenChecksService } from '../../services/global/green-checks.service';
 
 @Component({
-    selector: 'app-links-to-results-global',
-    templateUrl: './links-to-results-global.component.html',
-    styleUrls: ['./links-to-results-global.component.scss'],
-    standalone: false
+  selector: 'app-links-to-results-global',
+  templateUrl: './links-to-results-global.component.html',
+  styleUrls: ['./links-to-results-global.component.scss'],
+  standalone: false
 })
 export class LinksToResultsGlobalComponent implements OnInit {
   @Input() isIpsr: boolean = false;
@@ -33,7 +33,14 @@ export class LinksToResultsGlobalComponent implements OnInit {
   innoDevLinks = [];
   innoUseLinks = [];
 
-  constructor(public api: ApiService, public resultsListService: ResultsListService, public rolesSE: RolesService, public greenChecksSE: GreenChecksService) {}
+  constructor(
+    public api: ApiService,
+    public resultsListService: ResultsListService,
+    public rolesSE: RolesService,
+    public greenChecksSE: GreenChecksService
+  ) {
+    this.api.dataControlSE.currentResultSectionName.set('Links to results');
+  }
 
   ngOnInit(): void {
     this.api.updateResultsList();
@@ -47,7 +54,8 @@ export class LinksToResultsGlobalComponent implements OnInit {
       const currentResultTypeId = this.api?.dataControlSE?.currentResult?.result_type_id;
 
       if (currentResultTypeId === 1) {
-        const filterByResultTypeId = (resultTypeId: number) => this.linksToResultsBody.links.filter((evidence: any) => evidence.result_type_id === resultTypeId);
+        const filterByResultTypeId = (resultTypeId: number) =>
+          this.linksToResultsBody.links.filter((evidence: any) => evidence.result_type_id === resultTypeId);
 
         this.innoDevLinks = filterByResultTypeId(7);
         this.innoUseLinks = filterByResultTypeId(2);
@@ -65,7 +73,9 @@ export class LinksToResultsGlobalComponent implements OnInit {
     setTimeout(() => {
       if (columnAttr == 'result_code') return (this.combine = true);
       const resultListTableHTML = document.getElementById('resultListTable');
-      this.combine = !resultListTableHTML.querySelectorAll('th[aria-sort="descending"]').length && !resultListTableHTML.querySelectorAll('th[aria-sort="ascending"]').length;
+      this.combine =
+        !resultListTableHTML.querySelectorAll('th[aria-sort="descending"]').length &&
+        !resultListTableHTML.querySelectorAll('th[aria-sort="ascending"]').length;
 
       return null;
     }, 100);
@@ -167,7 +177,8 @@ export class LinksToResultsGlobalComponent implements OnInit {
   }
 
   results_portfolio_description() {
-    const cgiar_innovation_dashboard_url = 'https://results.cgiar.org/innovations?embed=true&hostOrigin=https%3A%2F%2Fwww.cgiar.org&displayNav=true&year=2020';
+    const cgiar_innovation_dashboard_url =
+      'https://results.cgiar.org/innovations?embed=true&hostOrigin=https%3A%2F%2Fwww.cgiar.org&displayNav=true&year=2020';
     const here_url = 'https://cgiar.sharepoint.com/:b:/s/ScalingReadiness/ESnzThAALolIrSwH95WSHAoBYiqsOM7DLXLSlyw4szpwWg?e=QFVg9L';
     return `If an innovation use result can be linked to a result that has been previously reported under CGIAR Research Programs (CRPs) and/or projects, and has been documented in the <a href='${cgiar_innovation_dashboard_url}' target="_blank" class='open_route'>CGIAR Innovation Dashboard</a> ,  a link to this result should be provided in the section ‘Results from previous portfolio’.
     <ul><li>Step-by-step guidance on how to browse the CGIAR Innovation Dashboard can be found  <a href='${here_url}' target="_blank" class='open_route'>here</a>.</li></ul>`;

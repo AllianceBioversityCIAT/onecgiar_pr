@@ -1,12 +1,13 @@
 import { Component, Input } from '@angular/core';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { ChangeResultTypeServiceService } from '../../services/change-result-type-service.service';
+import { environment } from '../../../../../../../../../environments/environment';
 
 @Component({
-    selector: 'app-confirmation-kp',
-    templateUrl: './confirmation-kp.component.html',
-    styleUrls: ['./confirmation-kp.component.scss'],
-    standalone: false
+  selector: 'app-confirmation-kp',
+  templateUrl: './confirmation-kp.component.html',
+  styleUrls: ['./confirmation-kp.component.scss'],
+  standalone: false
 })
 export class ConfirmationKPComponent {
   @Input() body: any;
@@ -15,9 +16,21 @@ export class ConfirmationKPComponent {
 
   isDownloading = false;
 
-  selectOptions = [{ value: 'Quality Assurance Feedback' }, { value: 'Change to more appropriate result type based on guidelines' }, { value: 'Error Correction' }, { value: 'Other' }];
+  selectOptions = [
+    { value: 'Quality Assurance Feedback' },
+    { value: 'Change to more appropriate result type based on guidelines' },
+    { value: 'Error Correction' },
+    { value: 'Other' }
+  ];
 
-  constructor(public api: ApiService, public changeType: ChangeResultTypeServiceService) {}
+  constructor(
+    public api: ApiService,
+    public changeType: ChangeResultTypeServiceService
+  ) {}
+
+  redirectToPDF() {
+    window.open(`${environment.frontBaseUrl}reports/result-details/${this.body.result_code}?phase=${this.body.version_id}`, '_blank');
+  }
 
   downloadPDF() {
     this.isDownloading = true;

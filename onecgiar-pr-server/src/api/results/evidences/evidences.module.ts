@@ -35,7 +35,7 @@ import { MQAPService } from '../../m-qap/m-qap.service';
     ResultsInnovationsDevRepository,
     MQAPService,
   ],
-  exports: [EvidencesRepository, MQAPService],
+  exports: [EvidencesRepository, MQAPService, EvidencesService],
 })
 export class EvidencesModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

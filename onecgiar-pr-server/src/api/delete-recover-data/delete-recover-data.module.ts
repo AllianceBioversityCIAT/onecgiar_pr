@@ -39,10 +39,10 @@ import { ResultsKnowledgeProductKeywordRepository } from '../results/results-kno
 import { ResultsKnowledgeProductMetadataRepository } from '../results/results-knowledge-products/repositories/results-knowledge-product-metadata.repository';
 import { ResultsKnowledgeProductsRepository } from '../results/results-knowledge-products/repositories/results-knowledge-products.repository';
 import { ResultsActionAreaOutcomeRepository } from '../results/results-toc-results/repositories/result-toc-action-area.repository';
-import { ResultsTocImpactAreaTargetRepository } from '../results/results-toc-results/repositories/result-toc-impact-area-repository';
+import { ResultsTocImpactAreaTargetRepository } from '../results/results-toc-results/repositories/result-toc-impact-area.repository';
 import { ResultsTocTargetIndicatorRepository } from '../results/results-toc-results/repositories/result-toc-result-target-indicator.repository';
-import { ResultsTocSdgTargetRepository } from '../results/results-toc-results/repositories/result-toc-sdg-target-repository';
-import { ResultsSdgTargetRepository } from '../results/results-toc-results/repositories/results-sdg-targets.respository';
+import { ResultsTocSdgTargetRepository } from '../results/results-toc-results/repositories/result-toc-sdg-target.repository';
+import { ResultsSdgTargetRepository } from '../results/results-toc-results/repositories/results-sdg-targets.repository';
 import { ResultsTocResultIndicatorsRepository } from '../results/results-toc-results/repositories/results-toc-results-indicators.repository';
 import { ResultsTocResultRepository } from '../results/results-toc-results/repositories/results-toc-results.repository';
 import { resultValidationRepository } from '../results/results-validation-module/results-validation-module.repository';
@@ -94,6 +94,12 @@ import { ResultCountrySubnationalRepository } from '../results/result-countries-
 import { MQAPService } from '../m-qap/m-qap.service';
 import { InitiativeEntityMapRepository } from '../initiative_entity_map/initiative_entity_map.repository';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
+import { ImpactAreasScoresComponentsModule } from '../results/impact_areas_scores_components/impact_areas_scores_components.module';
+import { AoWBilateralRepository } from '../results/results-toc-results/repositories/aow-bilateral.repository';
+import { ResultReviewHistoryRepository } from '../results/result-review-history/result-review-history.repository';
+import { ResultImpactAreaScoresModule } from '../result-impact-area-scores/result-impact-area-scores.module';
+import { ResultsTocResultsModule } from '../results/results-toc-results/results-toc-results.module';
+import { ResultsByInstitutionsModule } from '../results/results_by_institutions/results_by_institutions.module';
 
 @Module({
   controllers: [DeleteRecoverDataController],
@@ -187,8 +193,18 @@ import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser
     MQAPService,
     InitiativeEntityMapRepository,
     RoleByUserRepository,
+    AoWBilateralRepository,
+    ResultReviewHistoryRepository,
   ],
-  imports: [HttpModule, PrmsTablesTypesModule, SharePointModule],
+  imports: [
+    HttpModule,
+    PrmsTablesTypesModule,
+    SharePointModule,
+    ImpactAreasScoresComponentsModule,
+    ResultImpactAreaScoresModule,
+    ResultsTocResultsModule,
+    ResultsByInstitutionsModule,
+  ],
   exports: [
     EvidencesService,
     ResultInstitutionsBudgetRepository,

@@ -234,6 +234,14 @@ export class VersioningService {
         });
       }
 
+      // Preserve original result_code so the new phase keeps the same reference (trigger may have assigned a new one).
+      await manager.update(
+        Result,
+        { id: dataResult.id },
+        { result_code: result.result_code },
+      );
+      dataResult.result_code = result.result_code;
+
       const config = {
         old_result_id: result.id,
         new_result_id: dataResult.id,
@@ -245,10 +253,6 @@ export class VersioningService {
 
       if (!entity_id) {
         await this._shareResultRequestRepository.replicate(manager, config);
-        await this._resultInstitutionsBudgetRepository.replicate(
-          manager,
-          config,
-        );
         await this._resultInitiativeBudgetRepository.replicate(manager, config);
         await this._resultNonPooledProjectBudgetRepository.replicate(
           manager,
@@ -320,6 +324,14 @@ export class VersioningService {
         config,
       );
       await this._resultByIntitutionsTypeRepository.replicate(manager, config);
+
+      if (!entity_id) {
+        await this._resultInstitutionsBudgetRepository.replicate(
+          manager,
+          config,
+        );
+      }
+
       await this._resultCountryRepository.replicate(manager, config);
       await this._resultRegionRepository.replicate(manager, config);
       await this._linkedResultRepository.replicate(manager, config);
@@ -374,6 +386,14 @@ export class VersioningService {
         });
       }
 
+      // Preserve original result_code so the new phase keeps the same reference (trigger may have assigned a new one).
+      await manager.update(
+        Result,
+        { id: dataResult.id },
+        { result_code: result.result_code },
+      );
+      dataResult.result_code = result.result_code;
+
       const config = {
         old_result_id: result.id,
         new_result_id: dataResult.id,
@@ -384,9 +404,27 @@ export class VersioningService {
         entity_id: entity_id,
       };
 
+      const portfolioP25 = await this._versionRepository.findOne({
+        select: {
+          id: true,
+          portfolio_id: true,
+          obj_portfolio: {
+            id: true,
+            acronym: true,
+          },
+        },
+        where: {
+          id: Number(phase.id),
+          status: true,
+          app_module_id: AppModuleIdEnum.IPSR,
+        },
+      });
+
       // RESULT
       await this._resultByInitiativesRepository.replicate(manager, config);
-      await this._shareResultRequestRepository.replicate(manager, config);
+      if (!portfolioP25) {
+        await this._shareResultRequestRepository.replicate(manager, config);
+      }
       await this._nonPooledProjectRepository.replicate(manager, config);
       await this._resultsCenterRepository.replicate(manager, config);
       await this._resultByIntitutionsRepository.replicate(manager, config);

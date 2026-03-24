@@ -20,6 +20,7 @@ describe('NotificationController', () => {
             updateAllReadStatus: jest.fn(),
             getAllNotifications: jest.fn(),
             getPopUpNotifications: jest.fn(),
+            getRecentResultActivity: jest.fn(),
           },
         },
       ],
@@ -128,6 +129,43 @@ describe('NotificationController', () => {
       const response = await controller.getPopUpNotifications(user);
 
       expect(service.getPopUpNotifications).toHaveBeenCalledWith(user);
+      expect(response).toBe(result);
+    });
+  });
+
+  describe('getRecentActivity', () => {
+    const user: TokenDto = {
+      id: 1,
+      email: 'test@example.com',
+      first_name: 'test',
+      last_name: 'user',
+    };
+
+    it('should default limit to 10 when query param missing', async () => {
+      const result = {
+        response: [],
+        status: 200,
+        message: 'ok',
+      };
+      jest.spyOn(service, 'getRecentResultActivity').mockResolvedValue(result);
+
+      const response = await controller.getRecentActivity(user);
+
+      expect(service.getRecentResultActivity).toHaveBeenCalledWith(user, 10);
+      expect(response).toBe(result);
+    });
+
+    it('should pass parsed limit when valid number provided', async () => {
+      const result = {
+        response: [],
+        status: 200,
+        message: 'ok',
+      };
+      jest.spyOn(service, 'getRecentResultActivity').mockResolvedValue(result);
+
+      const response = await controller.getRecentActivity(user, '5');
+
+      expect(service.getRecentResultActivity).toHaveBeenCalledWith(user, 5);
       expect(response).toBe(result);
     });
   });

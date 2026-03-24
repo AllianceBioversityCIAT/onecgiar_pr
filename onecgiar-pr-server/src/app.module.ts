@@ -4,7 +4,8 @@ import {
   NestModule,
   RequestMethod,
 } from '@nestjs/common';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerExcludeBilateralGuard } from './shared/guards/throttler-exclude-bilateral.guard';
 import { TocModule } from './toc/toc.module';
 import { ClarisaModule } from './clarisa/clarisa.module';
 import { APP_FILTER, APP_GUARD, RouterModule } from '@nestjs/core';
@@ -49,6 +50,12 @@ import { AuthMicroserviceModule } from './shared/microservices/auth-microservice
 import { AdUsersModule } from './api/ad_users/ad_users.module';
 import { InitiativeEntityMapModule } from './api/initiative_entity_map/initiative_entity_map.module';
 import { apiVersionMiddleware } from './shared/middleware/api-versioning.middleware';
+import { BilateralModule } from './api/bilateral/bilateral.module';
+import { ResultsFrameworkReportingModule } from './api/results-framework-reporting/results-framework-reporting.module';
+import { AiModule } from './api/ai/ai.module';
+import { IpsrFrameworkModule } from './api/ipsr-framework/ipsr-framework.module';
+import { ResultImpactAreaScoresModule } from './api/result-impact-area-scores/result-impact-area-scores.module';
+import { GlobalUtilsModule } from './shared/utils/global-utils.module';
 
 @Module({
   imports: [
@@ -97,6 +104,12 @@ import { apiVersionMiddleware } from './shared/middleware/api-versioning.middlew
     AuthMicroserviceModule,
     AdUsersModule,
     InitiativeEntityMapModule,
+    BilateralModule,
+    ResultsFrameworkReportingModule,
+    AiModule,
+    IpsrFrameworkModule,
+    ResultImpactAreaScoresModule,
+    GlobalUtilsModule,
   ],
   controllers: [AppController],
   providers: [
@@ -106,7 +119,7 @@ import { apiVersionMiddleware } from './shared/middleware/api-versioning.middlew
     Repository,
     {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard,
+      useClass: ThrottlerExcludeBilateralGuard,
     },
     {
       provide: APP_FILTER,
@@ -119,8 +132,16 @@ export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
       .apply(JwtMiddleware, apiVersionMiddleware)
-      .exclude({ path: 'api/platform-report/(.*)', method: RequestMethod.ALL })
-      .forRoutes({ path: 'api/*', method: RequestMethod.ALL });
+      .exclude(
+        { path: 'api/platform-report/(.*)', method: RequestMethod.ALL },
+        { path: 'api/bilateral/(.*)', method: RequestMethod.ALL },
+      )
+      .forRoutes(
+        { path: 'api/(.*)', method: RequestMethod.ALL },
+        { path: 'v2/(.*)', method: RequestMethod.ALL },
+        { path: 'clarisa/(.*)', method: RequestMethod.ALL },
+        { path: 'toc/(.*)', method: RequestMethod.ALL },
+      );
 
     consumer
       .apply(JwtMiddleware)

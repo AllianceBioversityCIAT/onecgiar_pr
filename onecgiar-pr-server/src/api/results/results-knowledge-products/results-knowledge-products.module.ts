@@ -52,6 +52,12 @@ import { DeleteRecoverDataModule } from '../../delete-recover-data/delete-recove
 import { DeleteRecoverDataService } from '../../delete-recover-data/delete-recover-data.service';
 import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
 import { InitiativeEntityMapRepository } from '../../initiative_entity_map/initiative_entity_map.repository';
+import { ImpactAreasScoresComponentsModule } from '../impact_areas_scores_components/impact_areas_scores_components.module';
+import { NotificationModule } from '../../notification/notification.module';
+import { AoWBilateralRepository } from '../results-toc-results/repositories/aow-bilateral.repository';
+import { ResultImpactAreaScoresModule } from '../../result-impact-area-scores/result-impact-area-scores.module';
+import { ResultsTocResultsModule } from '../results-toc-results/results-toc-results.module';
+import { ResultsByInstitutionsModule } from '../results_by_institutions/results_by_institutions.module';
 
 @Module({
   imports: [
@@ -71,6 +77,11 @@ import { InitiativeEntityMapRepository } from '../../initiative_entity_map/initi
     ResultsValidationModuleModule,
     DynamodbLogsModule,
     ResultsInvestmentDiscontinuedOptionsModule,
+    ImpactAreasScoresComponentsModule,
+    NotificationModule,
+    ResultImpactAreaScoresModule,
+    ResultsTocResultsModule,
+    ResultsByInstitutionsModule,
   ],
   controllers: [ResultsKnowledgeProductsController],
   providers: [
@@ -110,8 +121,10 @@ import { InitiativeEntityMapRepository } from '../../initiative_entity_map/initi
     DeleteRecoverDataService,
     GlobalParameterRepository,
     InitiativeEntityMapRepository,
+    AoWBilateralRepository,
   ],
   exports: [
+    ResultsKnowledgeProductsService,
     ResultsKnowledgeProductsRepository,
     ResultRepository,
     ResultsService,
@@ -143,6 +156,7 @@ import { InitiativeEntityMapRepository } from '../../initiative_entity_map/initi
     ClarisaInstitutionsRepository,
     DeleteRecoverDataService,
     GlobalParameterRepository,
+    ResultsKnowledgeProductsService,
   ],
 })
 export class ResultsKnowledgeProductsModule {}

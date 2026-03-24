@@ -4,4 +4,6 @@ export interface CenterDto {
   institutionId: number;
   name: string;
   acronym: string;
+  lead_center: string;
+  full_name: string;
 }

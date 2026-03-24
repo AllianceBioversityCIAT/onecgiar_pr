@@ -19,6 +19,12 @@ export class ResponseInterceptor implements NestInterceptor {
     const ip = request.socket.remoteAddress;
     return next.handle().pipe(
       map((data: any) => {
+        // If data is an array, return it directly (for external API endpoints)
+        if (Array.isArray(data)) {
+          response.status(200);
+          return data;
+        }
+
         const modifiedData = {
           response: data?.response || {},
           statusCode: (data?.status ? data?.status : data?.statusCode) || 200,

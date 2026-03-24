@@ -1,12 +1,13 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit, inject } from '@angular/core';
 import { ApiService } from '../../../../../../../../../shared/services/api/api.service';
 import { RdTheoryOfChangesServicesService } from '../../../rd-theory-of-changes-services.service';
+import { FieldsManagerService } from '../../../../../../../../../shared/services/fields-manager.service';
 
 @Component({
-    selector: 'app-toc-initiative-out',
-    templateUrl: './toc-initiative-out.component.html',
-    styleUrls: ['./toc-initiative-out.component.scss'],
-    standalone: false
+  selector: 'app-toc-initiative-out',
+  templateUrl: './toc-initiative-out.component.html',
+  styleUrls: ['./toc-initiative-out.component.scss'],
+  standalone: false
 })
 export class TocInitiativeOutComponent implements OnInit {
   @Input() editable: boolean;
@@ -17,7 +18,11 @@ export class TocInitiativeOutComponent implements OnInit {
   @Input() isIpsr: boolean = false;
   fullInitiativeToc = null;
 
-  constructor(public api: ApiService, public theoryOfChangesServices: RdTheoryOfChangesServicesService) {}
+  fieldsManagerSE = inject(FieldsManagerService);
+  constructor(
+    public api: ApiService,
+    public theoryOfChangesServices: RdTheoryOfChangesServicesService
+  ) {}
 
   ngOnInit(): void {
     this.get_versionDashboard();
@@ -37,7 +42,7 @@ export class TocInitiativeOutComponent implements OnInit {
   headerDescription(init) {
     const text = `<ul>
       <li>At least 1 TOC result of ${init} should be provided.</li>
-      <li>In most cases a result should be mapped to a single WP for simplicity. In some cases, however, it may be necessary to map a result to two WPs.</li> 
+      <li>In most cases a result should be mapped to a single WP for simplicity. In some cases, however, it may be necessary to map a result to two WPs.</li>
     </ul>`;
 
     return text;
@@ -67,9 +72,11 @@ export class TocInitiativeOutComponent implements OnInit {
   }
 
   get_versionDashboard() {
+    if (!this.initiative?.result_toc_results[0]?.initiative_id) return;
+
     if (this.isNotifications) return;
 
-    this.api.resultsSE.get_vesrsionDashboard(this.initiative?.result_toc_results[0]?.initiative_id).subscribe({
+    this.api.resultsSE.get_vesrsionDashboard(this.initiative?.result_toc_results[0]?.initiative_id, this.fieldsManagerSE.isP25()).subscribe({
       next: ({ response }) => {
         this.fullInitiativeToc = response?.version_id;
       },

@@ -6,13 +6,14 @@
 
     <div class="phase-info-result">
       <p class="phase-info-result-desc pr-body-2">
-        Before continuing, please review the metadata PDF to confirm the current status information. Make sure to save a copy of this information, as
-        any changes to the result type are irreversible and will alter this data.
+        Before continuing, please review the metadata PDF to confirm the current status information.
+        <b> Make sure to save a copy of this information, as any changes to the result type are irreversible and will alter this data. </b>
       </p>
-      <div class="link_button update pr-body-2" (click)="downloadPDF()" [ngClass]="{ globalDisabled: this.isDownloading }">
+
+      <div class="link_button update pr-body-2" (click)="redirectToPDF()" [ngClass]="{ globalDisabled: this.isDownloading }">
         <app-pdf-icon hexadecimalColor="var(--pr-color-white)" *ngIf="!this.isDownloading"></app-pdf-icon>
         <i class="material-icons-round" [ngClass]="{ rotating: true }" *ngIf="this.isDownloading">loop</i>
-        Download PDF
+        View PDF
       </div>
     </div>
 

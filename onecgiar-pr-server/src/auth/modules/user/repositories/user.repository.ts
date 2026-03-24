@@ -93,6 +93,24 @@ export class UserRepository extends Repository<User> {
     }
   }
 
+  async updateLastLogin(userId: number) {
+    const queryData = `
+    UPDATE users 
+    	set last_login = NOW()
+    WHERE id = ?
+    	and active > 0;
+    `;
+    try {
+      await this.query(queryData, [userId]);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: UserRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
   async AllUsers() {
     const queryData = `
     SELECT  u.id,

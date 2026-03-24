@@ -19,13 +19,20 @@ export class CurrentResultService {
   ) {}
 
   GET_resultById() {
+    this.api.fieldsManagerSE.inIpsr.set(false);
+    // Clear previous result data to avoid showing wrong portfolio menu during loading
+    this.resultLevelSE.currentResultTypeId = null;
+    this.dataControlSE.currentResultSignal.set({});
+
     this.api.resultsSE.GET_resultById().subscribe({
       next: ({ response }) => {
         this.rolesSE.validateReadOnly(response);
         this.resultLevelSE.currentResultLevelName = response.result_level_name;
         this.resultLevelSE.currentResultLevelId = response.result_level_id;
+        this.resultLevelSE.currentResultLevelIdSignal.set(response.result_level_id);
         this.resultLevelSE.currentResultTypeId = response.result_type_id;
         this.dataControlSE.currentResult = response;
+        this.dataControlSE.currentResultSignal.set(response);
         const is_phase_open = response.is_phase_open;
         switch (is_phase_open) {
           case 0:
@@ -33,7 +40,8 @@ export class CurrentResultService {
             break;
 
           case 1:
-            if (this.dataControlSE.currentResult.status_id != 1 && !this.api.rolesSE.isAdmin) this.api.rolesSE.readOnly = true;
+            if (this.dataControlSE.currentResult.status_id != 1 && this.dataControlSE.currentResult.status_id != 6 && !this.api.rolesSE.isAdmin)
+              this.api.rolesSE.readOnly = true;
             if (response.is_discontinued) this.api.rolesSE.readOnly = response.is_discontinued;
             break;
         }

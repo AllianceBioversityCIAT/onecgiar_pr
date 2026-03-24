@@ -7,4 +7,7 @@ export interface AddUser {
   userStatus: string;
   userCreationDate: string;
   isActive: boolean;
+  createdByFirstName?: string;
+  createdByLastName?: string;
+  createdByEmail?: string;
 }

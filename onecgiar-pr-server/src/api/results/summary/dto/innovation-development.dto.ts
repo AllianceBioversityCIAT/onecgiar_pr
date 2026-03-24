@@ -20,4 +20,6 @@ export class InnovationDevelopmentDto {
   innovation_pdf: boolean;
   innovation_user_to_be_determined: boolean;
   previous_irl: number;
+  has_scaling_studies: boolean;
+  ip_support_center_id: string;
 }

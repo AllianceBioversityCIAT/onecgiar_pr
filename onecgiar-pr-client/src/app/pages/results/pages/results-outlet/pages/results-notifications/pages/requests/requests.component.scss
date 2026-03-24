@@ -24,7 +24,7 @@ p {
     transition: all ease-in-out 0.2s;
 
     &:hover {
-      background-color: rgba(var(--pr-color-black-rgb), 0.2) !important;
+      opacity: 0.75;
     }
   }
 }

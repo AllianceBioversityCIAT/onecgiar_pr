@@ -9,7 +9,6 @@ import { NoEditContainerComponent } from './components/no-edit-container/no-edit
 import { PartnersRequestComponent } from './components/partners-request/partners-request.component';
 import { UnsubmitModalComponent } from './components/unsubmit-modal/unsubmit-modal.component';
 import { SubmissionModalComponent } from './components/submission-modal/submission-modal.component';
-import { ResultTitleComponent } from './components/result-title/result-title.component';
 import { PhaseSwitcherComponent } from '../../../../shared/components/phase-switcher/phase-switcher.component';
 import { PanelMenuComponent } from './panel-menu/panel-menu.component';
 import { PrButtonComponent } from '../../../../custom-fields/pr-button/pr-button.component';
@@ -28,6 +27,10 @@ import { ShareRequestModalService } from './components/share-request-modal/share
 import { DataControlService } from '../../../../shared/services/data-control.service';
 import { jest } from '@jest/globals';
 import { ResultLevelService } from '../result-creator/services/result-level.service';
+import { signal } from '@angular/core';
+import { PageHeaderComponent } from '../../../../shared/components/page-header/page-header.component';
+import { ClipboardModule } from '@angular/cdk/clipboard';
+import { environment } from '../../../../../environments/environment';
 
 jest.useFakeTimers();
 
@@ -58,16 +61,24 @@ describe('ResultDetailComponent', () => {
         GET_allChildlessInstitutionTypes:() => of({response: [] }),
         currentResultCode: 'currentResultCode',
         currentResultPhase: 'currentResultPhase',
-        currentResultId: 'currentResultId'
+        currentResultId: null
+      },
+      rolesSE: {
+        isAdmin: false
       },
       dataControlSE: {
         resultPhaseList: [],
-        someMandatoryFieldIncompleteResultDetail: jest.fn()
+        someMandatoryFieldIncompleteResultDetail: jest.fn(),
+        someMandatoryFieldIncomplete: jest.fn().mockReturnValue(false),
+        currentResultSectionName: signal(''),
+        myInitiativesList: []
       }
     }
 
     mockDataControlService = {
-      currentResult: 'currentResult'
+      currentResult: 'currentResult',
+      currentResultSignal: signal({}),
+      currentResultSectionName: signal('')
     }
 
     mockCurrentResultService = {
@@ -75,7 +86,6 @@ describe('ResultDetailComponent', () => {
     }
 
     mockGreenChecksService = {
-      updateGreenChecks: jest.fn(),
       getGreenChecks: jest.fn(),
     }
 
@@ -94,7 +104,6 @@ describe('ResultDetailComponent', () => {
         PartnersRequestComponent,
         UnsubmitModalComponent,
         SubmissionModalComponent,
-        ResultTitleComponent,
         PhaseSwitcherComponent,
         PanelMenuComponent,
         PrButtonComponent,
@@ -109,7 +118,9 @@ describe('ResultDetailComponent', () => {
         HttpClientTestingModule,
         RouterTestingModule,
         ToastModule,
-        DialogModule
+        DialogModule,
+        PageHeaderComponent,
+        ClipboardModule
       ],
       providers: [
         MessageService,
@@ -146,17 +157,103 @@ describe('ResultDetailComponent', () => {
 
   describe('ngOnInit()', () => {
     it('should call getData() on initialization', () => {
-      const spy = jest.spyOn(component, 'getData');
+      const spyGetData = jest.spyOn(component, 'getData');
       component.ngOnInit();
-      expect(spy).toHaveBeenCalled();
+      expect(spyGetData).toHaveBeenCalled();
     });
   });
 
-  describe('onCopy()', () => {
-    it('should add a success message to the message service', () => {
-      const spy = jest.spyOn(component, 'onCopy');
-      component.onCopy();
-      expect(spy).toHaveBeenCalled();
+  describe('togglePdfMenu()', () => {
+    it('should toggle showPdfMenu from false to true', () => {
+      component.showPdfMenu = false;
+      component.togglePdfMenu();
+      expect(component.showPdfMenu).toBe(true);
+    });
+
+    it('should toggle showPdfMenu from true to false', () => {
+      component.showPdfMenu = true;
+      component.togglePdfMenu();
+      expect(component.showPdfMenu).toBe(false);
+    });
+  });
+
+  describe('onDocumentClick()', () => {
+    it('should close menu when clicking outside', () => {
+      component.showPdfMenu = true;
+      const mockEvent = {
+        target: document.createElement('div')
+      } as Partial<MouseEvent>;
+
+      component.onDocumentClick(mockEvent as MouseEvent);
+
+      expect(component.showPdfMenu).toBe(false);
+    });
+
+    it('should not close menu when clicking inside', () => {
+      component.showPdfMenu = true;
+      const container = fixture.nativeElement.querySelector('.pdf-menu-container');
+      const mockEvent = {
+        target: container || fixture.nativeElement
+      } as Partial<MouseEvent>;
+
+      component.onDocumentClick(mockEvent as MouseEvent);
+
+      expect(component.showPdfMenu).toBe(true);
+    });
+
+    it('should do nothing if menu is already closed', () => {
+      component.showPdfMenu = false;
+      const mockEvent = {
+        target: document.createElement('div')
+      } as Partial<MouseEvent>;
+
+      component.onDocumentClick(mockEvent as MouseEvent);
+
+      expect(component.showPdfMenu).toBe(false);
+    });
+  });
+
+  describe('viewPdf()', () => {
+    it('should open PDF in new window and close menu', () => {
+      const windowOpenSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
+      const testLink = 'https://test-link.com';
+      jest.spyOn(component, 'getPdfLink').mockReturnValue(testLink);
+      component.showPdfMenu = true;
+
+      component.viewPdf();
+
+      expect(windowOpenSpy).toHaveBeenCalledWith(testLink, '_blank');
+      expect(component.showPdfMenu).toBe(false);
+    });
+  });
+
+  describe('getPdfLink()', () => {
+    it('should return the correct PDF link', () => {
+      mockApiService.resultsSE.currentResultCode = 'TEST-123';
+      mockApiService.resultsSE.currentResultPhase = '2024';
+      const expectedLink = `${environment.frontBaseUrl}reports/result-details/TEST-123?phase=2024`;
+      expect(component.getPdfLink()).toBe(expectedLink);
+    });
+  });
+
+  describe('copyPdfLink()', () => {
+    it('should copy PDF link to clipboard, show success message and close menu', () => {
+      const mockClipboard = { copy: jest.fn() };
+      (component as any).clipboard = mockClipboard;
+      const spyMessageAdd = jest.spyOn(component['messageSE'], 'add');
+      const testLink = 'https://test-link.com';
+      jest.spyOn(component, 'getPdfLink').mockReturnValue(testLink);
+      component.showPdfMenu = true;
+
+      component.copyPdfLink();
+
+      expect(mockClipboard.copy).toHaveBeenCalledWith(testLink);
+      expect(spyMessageAdd).toHaveBeenCalledWith({
+        key: 'copyResultLinkPdf',
+        severity: 'success',
+        summary: 'PDF link copied'
+      });
+      expect(component.showPdfMenu).toBe(false);
     });
   });
 
@@ -165,7 +262,6 @@ describe('ResultDetailComponent', () => {
       const spyUpdateUserData = jest.spyOn(mockApiService, 'updateUserData');
       const spyGET_resultIdToCode = jest.spyOn(mockApiService.resultsSE, 'GET_resultIdToCode');
       const spyGET_resultById = jest.spyOn(mockCurrentResultService, 'GET_resultById');
-      const spyUpdateGreenChecks = jest.spyOn(mockGreenChecksService, 'updateGreenChecks');
       const spyGetGreenChecks = jest.spyOn(mockGreenChecksService,'getGreenChecks');
       const spyGET_versioningResult = jest.spyOn(mockApiService.resultsSE, 'GET_versioningResult');
 
@@ -177,7 +273,6 @@ describe('ResultDetailComponent', () => {
       expect(spyUpdateUserData).toHaveBeenCalled();
       expect(spyGET_resultIdToCode).toHaveBeenCalled();
       expect(spyGET_resultById).toHaveBeenCalled();
-      expect(spyUpdateGreenChecks).toHaveBeenCalled();
       expect(spyGetGreenChecks).toHaveBeenCalled();
       expect(spyGET_versioningResult).toHaveBeenCalled();
       expect(mockShareRequestModalService.inNotifications).toBe(false);
@@ -226,4 +321,40 @@ describe('ResultDetailComponent', () => {
     });
   });
 
+  describe('constructor effect', () => {
+    it('should call getGreenChecks when portfolio is defined and currentResultId exists', async () => {
+      jest.clearAllMocks();
+      mockApiService.resultsSE.currentResultId = 123;
+      mockDataControlService.currentResultSignal.set({ portfolio: 'P25' });
+
+      // Mock getData to prevent it from being called during component creation
+      const spyGetData = jest.spyOn(ResultDetailComponent.prototype, 'getData').mockImplementation(async () => {});
+
+      const newFixture = TestBed.createComponent(ResultDetailComponent);
+      const newComponent = newFixture.componentInstance;
+      newFixture.detectChanges();
+      await Promise.resolve();
+
+      spyGetData.mockRestore();
+      expect(mockGreenChecksService.getGreenChecks).toHaveBeenCalled();
+    });
+
+    it('should not call getGreenChecks from effect when portfolio is undefined', async () => {
+      jest.clearAllMocks();
+      mockApiService.resultsSE.currentResultId = 123;
+      mockDataControlService.currentResultSignal.set({});
+
+      // Mock getData to prevent it from calling getGreenChecks
+      const spyGetData = jest.spyOn(ResultDetailComponent.prototype, 'getData').mockImplementation(async () => {});
+
+      const newFixture = TestBed.createComponent(ResultDetailComponent);
+      const newComponent = newFixture.componentInstance;
+      newFixture.detectChanges();
+      await Promise.resolve();
+
+      spyGetData.mockRestore();
+      // getGreenChecks should not be called by the effect since portfolio is undefined
+      expect(mockGreenChecksService.getGreenChecks).not.toHaveBeenCalled();
+    });
+  });
 });

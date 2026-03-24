@@ -31,7 +31,9 @@ export class RdTheoryOfChangeComponent implements OnInit {
     public theoryOfChangesServices: RdTheoryOfChangesServicesService,
     public dataControlSE: DataControlService,
     private readonly changeDetectorRef: ChangeDetectorRef
-  ) {}
+  ) {
+    this.api.dataControlSE.currentResultSectionName.set('Theory of Change');
+  }
 
   ngOnInit() {
     this.getSectionInformation();
@@ -193,11 +195,11 @@ export class RdTheoryOfChangeComponent implements OnInit {
     );
   }
 
-  onRemoveContribuiting(index, isAcceptedArray: boolean) {
-    if (isAcceptedArray) {
-      this.theoryOfChangeBody?.contributing_initiatives.accepted_contributing_initiatives.splice(index, 1);
-    } else {
-      this.contributingInitiativeNew.splice(index, 1);
-    }
+  onRemoveAcceptedContributing(index: number) {
+    this.theoryOfChangeBody?.contributing_initiatives.accepted_contributing_initiatives.splice(index, 1);
+  }
+
+  onRemoveNewContributing(index: number) {
+    this.contributingInitiativeNew.splice(index, 1);
   }
 }

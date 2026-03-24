@@ -1,7 +1,8 @@
-import { Component, forwardRef, Input, Output, EventEmitter } from '@angular/core';
+import { Component, forwardRef, Input, Output, EventEmitter, inject, computed } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { DataControlService } from '../../shared/services/data-control.service';
+import { FieldsManagerService } from '../../shared/services/fields-manager.service';
 @Component({
   selector: 'app-pr-radio-button',
   templateUrl: './pr-radio-button.component.html',
@@ -25,8 +26,16 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
   @Input() required: boolean = true;
   @Input() hideOptions: boolean;
   @Input() readOnly: boolean;
+  @Input() disabled: boolean = false;
   @Input() isStatic: boolean = false;
   @Input() verticalAlignment: boolean = false;
+  @Input() fieldRef: string | number;
+  @Input() textInputWhenSelectedLabels: string[] = [];
+  @Input() textInputPlaceholder: string = 'Why?';
+  @Input() textInputPlaceholderOverrides: { [label: string]: string } | null = null;
+  @Input() textInputRequiredWhenSelectedLabels: string[] = [];
+  @Input() textInputLabel: string | null = null;
+  @Input() textInputLabelOverrides: { [label: string]: string } | null = null;
   @Input() checkboxConfig: {
     listAttr: string;
     optionLabel: string;
@@ -36,6 +45,7 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
   } = { listAttr: '', optionLabel: '', optionValue: '', optionTextValue: '', showInputIfAttr: '' };
   @Output() selectOptionEvent = new EventEmitter<any>();
   private _value: string;
+  fieldsManager = inject(FieldsManagerService);
   constructor(
     public rolesSE: RolesService,
     public dataControlSE: DataControlService
@@ -70,11 +80,32 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
     return this.label?.split(' ')?.join('');
   }
 
-  currentVal = null;
-  onSelect() {
-    this.selectOptionEvent.emit();
-    if (this.currentVal === this.value) this.value = null;
+  preventFieldRender = computed<boolean>(() => {
+    if (!this.fieldRef) return true;
+    const { hide, label, description, required } = this.fieldsManager.fields()[this.fieldRef] || {};
+    this.label = label;
+    this.description = description;
+    this.required = required;
+    return !hide;
+  });
 
+  currentVal = null;
+
+  onSelect(clickedValue: any) {
+    this.selectOptionEvent.emit();
+
+    // If clicking the already-selected option, deselect it
+    if (this.value === clickedValue && clickedValue !== null) {
+      this.value = null;
+      this.currentVal = null;
+    }
+  }
+
+  onValueChange(newValue: any) {
+    // Update current value for next comparison
+    this.currentVal = newValue;
+
+    // Clear sub-options when value changes
     if (this.checkboxConfig.listAttr) {
       this.options.forEach((option: any) => {
         if (option.subOptions) {
@@ -85,8 +116,6 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
         }
       });
     }
-
-    this.currentVal = this.value;
   }
 
   get valueName() {

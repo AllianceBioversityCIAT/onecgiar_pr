@@ -27,8 +27,20 @@ export class ResultsListFilterService {
   submittersOptions = signal([]);
   submittersOptionsAdmin = signal([]);
   submittersOptionsAdminOld = signal([]);
+  selectedClarisaPortfolios = signal([]);
+  selectedFundingSource = signal([]);
 
   statusOptions = signal([]);
+  fundingSourceOptions = signal([
+    {
+      id: 1,
+      name: 'W1/W2'
+    },
+    {
+      id: 2,
+      name: 'W3/Bilaterals'
+    }
+  ]);
 
   selectedPhases = signal([]);
   selectedSubmitters = signal([]);
@@ -36,6 +48,8 @@ export class ResultsListFilterService {
 
   selectedIndicatorCategories = signal([]);
   selectedStatus = signal([]);
+  selectedLeadCenters = signal<any[]>([]);
+  centerOptions = signal<any[]>([]);
   text_to_search = signal('');
 
   updateMyInitiatives(initiatives) {

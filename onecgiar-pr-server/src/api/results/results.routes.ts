@@ -34,6 +34,7 @@ import { InvestmentDiscontinuedOptionsModule } from './investment-discontinued-o
 import { ResultStatusModule } from './result-status/result-status.module';
 import { ResultCountriesSubNationalModule } from './result-countries-sub-national/result-countries-sub-national.module';
 import { ResultFoldersModule } from './result-folders/result-folders.module';
+import { ImpactAreasScoresComponentsModule } from './impact_areas_scores_components/impact_areas_scores_components.module';
 
 export const ResultsRoutes: Routes = [
   {
@@ -175,5 +176,9 @@ export const ResultsRoutes: Routes = [
   {
     path: 'result-folders',
     module: ResultFoldersModule,
+  },
+  {
+    path: 'impact-areas-scores-components',
+    module: ImpactAreasScoresComponentsModule,
   },
 ];

@@ -12,14 +12,10 @@ import { CustomFieldsModule } from '../../../../../../../../../../custom-fields/
 import { NewComplementaryInnovationComponent } from './components/new-complementary-innovation/new-complementary-innovation.component';
 import { DialogModule } from 'primeng/dialog';
 import { CheckboxModule } from 'primeng/checkbox';
-
+import { FeedbackValidationDirectiveModule } from '../../../../../../../../../../shared/directives/feedback-validation-directive.module';
 
 @NgModule({
-  declarations: [
-    ComplementaryInnovationComponent,
-    TableInnovationComponent,
-    NewComplementaryInnovationComponent
-  ],
+  declarations: [ComplementaryInnovationComponent, TableInnovationComponent, NewComplementaryInnovationComponent],
   imports: [
     CommonModule,
     ComplementaryInnovationRoutingModule,
@@ -29,10 +25,9 @@ import { CheckboxModule } from 'primeng/checkbox';
     FormsModule,
     CustomFieldsModule,
     DialogModule,
-    CheckboxModule
+    CheckboxModule,
+    FeedbackValidationDirectiveModule
   ],
-  exports:[
-    ComplementaryInnovationComponent
-  ]
+  exports: [ComplementaryInnovationComponent]
 })
-export class ComplementaryInnovationModule { }
+export class ComplementaryInnovationModule {}

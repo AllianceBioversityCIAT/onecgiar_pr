@@ -1,0 +1,85 @@
+<h4 class="pr-h4 font-weight-600 text-black">Knowledge product type:</h4>
+<div class="readonly-chips-container">
+  <span class="readonly-chip">{{ resultDetail?.resultTypeResponse?.[0]?.knowledge_product_type }}</span>
+</div>
+
+<hr class="form-section_separator" />
+
+<h4 class="pr-h4 font-weight-600 text-black">Licence:</h4>
+<div class="readonly-chips-container">
+  <span class="readonly-chip">{{ resultDetail?.resultTypeResponse?.[0]?.licence }}</span>
+</div>
+
+<hr class="form-section_separator" />
+
+@let metadata = resultDetail?.resultTypeResponse?.[0]?.metadata ?? [];
+@if (metadata.length) {
+  @for (meta of metadata; track $index) {
+    <div class="form-section_metadata">
+      <div>
+        <h4 class="pr-h4 font-weight-600 text-black">Date online ({{ meta.source }}):</h4>
+        <div class="readonly-chips-container">
+          <span class="readonly-chip">{{ meta.year }}</span>
+        </div>
+      </div>
+
+      <div>
+        <h4 class="pr-h4 font-weight-600 text-black">Accessibility ({{ meta.source }}):</h4>
+        <div class="readonly-chips-container">
+          <span class="readonly-chip">{{ meta.accesibility }}</span>
+        </div>
+      </div>
+
+      <div>
+        <h4 class="pr-h4 font-weight-600 text-black">Peer reviewed ({{ meta.source }}):</h4>
+        <div class="readonly-chips-container">
+          <span class="readonly-chip">{{ meta.is_peer_reviewed ? 'Yes' : 'No' }}</span>
+        </div>
+      </div>
+
+      <div>
+        <h4 class="pr-h4 font-weight-600 text-black">Web of Science Core Collection (former ISI) ({{ meta.source }}):</h4>
+        <div class="readonly-chips-container" style="margin-bottom: 0px">
+          <span class="readonly-chip">{{ meta.is_isi ? 'Yes' : 'No' }}</span>
+        </div>
+      </div>
+    </div>
+
+    @if ($index !== metadata.length - 1) {
+      <hr class="form-section_separator" />
+    }
+  }
+}
+
+<!-- keywords -->
+@if (resultDetail?.resultTypeResponse?.[0]?.keywords?.length) {
+  <hr class="form-section_separator" />
+
+  <!-- Regular Keywords Section -->
+  <div class="keywords-section">
+    <h4 class="pr-h4 font-weight-600 text-black mb-12">Keywords</h4>
+    @if (getRegularKeywords().length) {
+      <div class="readonly-chips-container">
+        @for (keyword of getRegularKeywords(); track $index) {
+          <span class="readonly-chip">{{ keyword.keyword }}</span>
+        }
+      </div>
+    } @else {
+      <p class="not_provided_text">Not provided</p>
+    }
+  </div>
+
+  <!-- AGROVOC Keywords Section -->
+  <div class="keywords-section">
+    <h4 class="pr-h4 font-weight-600 text-black mb-12">AGROVOC Keywords</h4>
+    @if (getAgrovocKeywords().length) {
+      <div class="readonly-chips-container">
+        @for (keyword of getAgrovocKeywords(); track $index) {
+          <span class="readonly-chip">{{ keyword.keyword }}</span>
+        }
+      </div>
+    } @else {
+      <p class="not_provided_text">Not provided</p>
+    }
+  </div>
+}

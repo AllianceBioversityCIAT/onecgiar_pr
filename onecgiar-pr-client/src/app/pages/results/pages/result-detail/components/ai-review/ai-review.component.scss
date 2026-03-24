@@ -1,0 +1,155 @@
+.ai-review-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 16px 20px;
+
+  .ai-review-header {
+    margin-left: 10px;
+    margin-top: 5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+    font-weight: 300;
+    color: #6b7b90;
+
+    img {
+      width: 15px;
+
+      filter: brightness(0);
+      opacity: 0.5;
+    }
+  }
+
+  .field-section {
+    border-radius: 8px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    border: 1px solid #dadada;
+    background-color: #fcfcfc;
+
+    .field-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+      gap: 15px;
+
+      .field-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--pr-color-primary-400);
+        margin: 0;
+      }
+
+      .needs-improvement-badge {
+        background: #fffded;
+        color: #deb336;
+        border: 1px solid #deb336;
+      }
+
+      .updated-badge {
+        background: #fbedff;
+        color: #7a30a8;
+        border: 1px solid #7a30a838;
+      }
+
+      .improvement-badge {
+        padding: 4px 12px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 500;
+      }
+    }
+
+    .line-divider {
+      height: 1px;
+      background-color: #e2e2e2;
+      margin: 10px 0;
+    }
+
+    .applied-badge {
+      margin-top: 10px;
+      color: #47b556;
+      font-size: 13px;
+      font-weight: 400;
+    }
+
+    .apply-proposal-button {
+      color: var(--pr-color-neutral-500);
+      border: 1px solid #7a30a874;
+      width: fit-content;
+      padding: 5px 15px;
+      margin-top: 10px;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+
+    .proposal-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+      color: var(--pr-color-secondary-400);
+      font-size: 14px;
+      i {
+        color: var(--pr-color-neutral-500);
+      }
+    }
+
+    .proposal-content {
+      margin-top: 10px;
+      color: #333;
+      line-height: 1.6;
+      font-size: 14px;
+      background-color: #e8ebff85;
+      padding: 10px;
+      border-radius: 6px;
+    }
+
+    .apply-button-custom {
+      // align-self: flex-start;
+    }
+
+    .current-version {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+
+      .version-label {
+        font-weight: 500;
+        color: var(--pr-color-secondary-400);
+        font-size: 14px;
+      }
+    }
+
+    .save-button-custom {
+      align-self: flex-start;
+    }
+  }
+}
+
+// Override dialog styles
+:host ::ng-deep {
+  .p-dialog {
+    .p-dialog-header {
+      background: white;
+      border-bottom: 1px solid #e0e0e0;
+      padding: 20px 24px;
+
+      .p-dialog-title {
+        font-size: 20px;
+        font-weight: 600;
+        color: #333;
+      }
+    }
+
+    .p-dialog-content {
+      padding: 24px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+  }
+}

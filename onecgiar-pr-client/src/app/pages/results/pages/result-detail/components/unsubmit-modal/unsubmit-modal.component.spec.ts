@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 
 import { UnsubmitModalComponent } from './unsubmit-modal.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
@@ -28,6 +28,15 @@ describe('UnsubmitModalComponent', () => {
       },
       alertsFe: {
         show: jest.fn()
+      },
+      fieldsManagerSE: {
+        inIpsr: {
+          set: jest.fn()
+        }
+      },
+      rolesSE: {
+        readOnly: false,
+        isAdmin: false
       }
     }
     await TestBed.configureTestingModule({
@@ -71,11 +80,12 @@ describe('UnsubmitModalComponent', () => {
   });
 
   describe('onSubmit', () => {
-    it('should call PATCH_unsubmit, set requesting to true and handle successful submission',() => {
+    it('should call PATCH_unsubmit, set requesting to true and handle successful submission', fakeAsync(() => {
       const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_unsubmit');
       const spyShow = jest.spyOn(mockApiService.alertsFe, 'show');
 
       component.onSubmit();
+      tick();
 
       expect(spy).toHaveBeenCalledWith(component.comment);
       expect(component.requesting).toBeFalsy();
@@ -86,8 +96,8 @@ describe('UnsubmitModalComponent', () => {
         description: `The result has been unsubmitted.`,
         status: 'success',
       });
-    });
-    it('should handle error on PATCH_unsubmit call',() => {
+    }));
+    it('should handle error on PATCH_unsubmit call', fakeAsync(() => {
       const errorMessage = {
         error:{
           message: 'error message'
@@ -98,6 +108,7 @@ describe('UnsubmitModalComponent', () => {
       const spyShow = jest.spyOn(mockApiService.alertsFe, 'show');
 
       component.onSubmit();
+      tick();
 
       expect(spy).toHaveBeenCalledWith(component.comment);
       expect(component.requesting).toBeFalsy();
@@ -107,7 +118,7 @@ describe('UnsubmitModalComponent', () => {
         description: '',
         status: 'error',
       });
-    });
+    }));
   });
 });
 

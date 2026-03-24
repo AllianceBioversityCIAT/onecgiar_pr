@@ -1,4 +1,4 @@
-import { Controller, Get, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, UseInterceptors, Version } from '@nestjs/common';
 import { ClarisaInnovationUseLevelsService } from './clarisa-innovation-use-levels.service';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 
@@ -12,5 +12,11 @@ export class ClarisaInnovationUseLevelsController {
   @Get()
   findAll() {
     return this.clarisaInnovationUseLevelsService.findAll();
+  }
+
+  @Version('2')
+  @Get()
+  findAllV2() {
+    return this.clarisaInnovationUseLevelsService.findAllV2();
   }
 }

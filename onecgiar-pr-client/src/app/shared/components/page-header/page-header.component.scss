@@ -1,0 +1,21 @@
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: white;
+  color: var(--pr-color-primary-300);
+  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.04);
+  padding: 10px 70px 10px 70px;
+  font-weight: 600;
+  font-size: 14px;
+
+  .page-header-content {
+    flex: 1;
+  }
+
+  .page-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+}

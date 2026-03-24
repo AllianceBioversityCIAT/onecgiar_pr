@@ -11,6 +11,7 @@ import { LabelNamePipe } from '../../../../../../../custom-fields/pr-select/labe
 import { FormsModule } from '@angular/forms';
 import { of } from 'rxjs';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
+import { signal } from '@angular/core';
 
 describe('PolicyChangeInfoComponent', () => {
   let component: PolicyChangeInfoComponent;
@@ -21,12 +22,11 @@ describe('PolicyChangeInfoComponent', () => {
       {
         answer_boolean: true,
         result_question_id: 'id'
-      },
+      }
     ]
   };
 
   beforeEach(async () => {
-
     mockApiService = {
       resultsSE: {
         GET_policyChanges: () => of({ response: [] }),
@@ -36,9 +36,10 @@ describe('PolicyChangeInfoComponent', () => {
         GET_clarisaPolicyStages: () => of({ response: [] }),
         GET_allInstitutions: () => of({ response: [] }),
         GET_allInstitutionTypes: () => of({ response: [] }),
-        GET_allChildlessInstitutionTypes: () => of({ response: [] }),
+        GET_allChildlessInstitutionTypes: () => of({ response: [] })
       },
       dataControlSE: {
+        currentResultSectionName: signal<string>('Policy change information'),
         findClassTenSeconds: () => {
           return Promise.resolve();
         },
@@ -57,18 +58,14 @@ describe('PolicyChangeInfoComponent', () => {
         DetailSectionTitleComponent,
         LabelNamePipe
       ],
-      imports: [
-        HttpClientTestingModule,
-        FormsModule
-      ],
+      imports: [HttpClientTestingModule, FormsModule],
       providers: [
         {
           provide: ApiService,
           useValue: mockApiService
         }
       ]
-    })
-      .compileComponents();
+    }).compileComponents();
 
     fixture = TestBed.createComponent(PolicyChangeInfoComponent);
     component = fixture.componentInstance;
@@ -78,20 +75,20 @@ describe('PolicyChangeInfoComponent', () => {
     it('should set answer_boolean to true for the selected value', () => {
       const valueToSelect = 'someValue';
       component.policyChangeQuestions.optionsWithAnswers = [
-          {
-            result_question_id: 'someValue',
-            answer_boolean: undefined,
-            answer_text: '',
-            disabled: false,
-            parent_question_id: '',
-            question_description: null,
-            question_level: '',
-            question_text: '',
-            question_type_id: '',
-            result_type_id: 1,
-            selected: false
-          },
-        ];
+        {
+          result_question_id: 'someValue',
+          answer_boolean: undefined,
+          answer_text: '',
+          disabled: false,
+          parent_question_id: '',
+          question_description: null,
+          question_level: '',
+          question_text: '',
+          question_type_id: '',
+          result_type_id: 1,
+          selected: false
+        }
+      ];
 
       component.changeAnswerBoolean(valueToSelect);
 
@@ -101,20 +98,20 @@ describe('PolicyChangeInfoComponent', () => {
     it('should set answer_boolean to null for non-selected values', () => {
       const valueToSelect = 'someValue';
       component.policyChangeQuestions.optionsWithAnswers = [
-          {
-            result_question_id: '',
-            answer_boolean: undefined,
-            answer_text: '',
-            disabled: false,
-            parent_question_id: '',
-            question_description: null,
-            question_level: '',
-            question_text: '',
-            question_type_id: '',
-            result_type_id: 1,
-            selected: false
-          },
-        ];
+        {
+          result_question_id: '',
+          answer_boolean: undefined,
+          answer_text: '',
+          disabled: false,
+          parent_question_id: '',
+          question_description: null,
+          question_level: '',
+          question_text: '',
+          question_type_id: '',
+          result_type_id: 1,
+          selected: false
+        }
+      ];
 
       component.changeAnswerBoolean(valueToSelect);
 
@@ -164,7 +161,7 @@ describe('PolicyChangeInfoComponent', () => {
   describe('onSaveSection()', () => {
     it('should save section successfully', () => {
       const spyPATCH_policyChanges = jest.spyOn(mockApiService.resultsSE, 'PATCH_policyChanges');
-      const spyGetSectionInformation = jest.spyOn(component, 'getSectionInformation')
+      const spyGetSectionInformation = jest.spyOn(component, 'getSectionInformation');
 
       component.onSaveSection();
 
@@ -179,12 +176,12 @@ describe('PolicyChangeInfoComponent', () => {
       const spyGetPolicyChangesQuestions = jest.spyOn(component, 'getPolicyChangesQuestions');
       const spyFindClassTenSeconds = jest.spyOn(mockApiService.dataControlSE, 'findClassTenSeconds');
       const parser = new DOMParser();
-      const dom = parser.parseFromString(`
+      const dom = parser.parseFromString(
+        `
         <div class="alert-event"></div>`,
-        'text/html');
-      jest.spyOn(document, 'querySelector')
-        .mockImplementation((selector) => dom.querySelector(selector));
-
+        'text/html'
+      );
+      jest.spyOn(document, 'querySelector').mockImplementation(selector => dom.querySelector(selector));
 
       await component.ngOnInit();
 

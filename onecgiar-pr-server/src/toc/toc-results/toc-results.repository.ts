@@ -1,12 +1,39 @@
-import { Injectable, HttpStatus } from '@nestjs/common';
+import { Injectable, HttpStatus, Logger } from '@nestjs/common';
 import { env } from 'process';
 import { DataSource, Repository } from 'typeorm';
 import { TocResult } from './entities/toc-result.entity';
+import { Result } from '../../api/results/entities/result.entity';
+import { Year } from '../../api/results/years/entities/year.entity';
+import {
+  getOtherTypesIndicatorPatterns,
+  RESULT_TYPE_TO_INDICATOR_PATTERN,
+} from '../../shared/constants/indicator-type-mapping.constant';
+import { ClarisaInitiative } from '../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
+import { GlobalParameter } from '../../api/global-parameter/entities/global-parameter.entity';
 
 @Injectable()
 export class TocResultsRepository extends Repository<TocResult> {
+  private readonly logger = new Logger(TocResultsRepository.name);
+
   constructor(private dataSource: DataSource) {
     super(TocResult, dataSource.createEntityManager());
+  }
+
+  private async getCurrentTocPhaseId(): Promise<string | null> {
+    const query = `
+      SELECT toc_pahse_id
+      FROM ${env.DB_NAME}.version
+      WHERE is_active = 1 AND status = 1 AND app_module_id = 1
+      LIMIT 1
+    `;
+    try {
+      const rows = await this.dataSource.query(query);
+      return rows?.[0]?.toc_pahse_id ?? null;
+    } catch (error) {
+      throw new Error(
+        `[${TocResultsRepository.name}] => getCurrentTocPhaseId error: ${error}`,
+      );
+    }
   }
 
   async deleteAllData() {
@@ -385,6 +412,457 @@ export class TocResultsRepository extends Repository<TocResult> {
     } catch (error) {
       throw {
         message: `[${TocResultsRepository.name}] => getAllTocResults error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
+  async $_initiativeValidation(init_id: number) {
+    const initiative = await this.dataSource
+      .getRepository(ClarisaInitiative)
+      .findOne({
+        where: {
+          id: init_id,
+        },
+      });
+
+    if (!initiative) {
+      return false;
+    }
+
+    if (initiative?.official_code === 'SGP-02') {
+      return true;
+    }
+
+    return false;
+  }
+
+  async $_getResultTocByConfigV2(
+    init_id: number,
+    toc_level: number,
+    resultTypeId?: number,
+    resultId?: number,
+    planned?: boolean | string,
+  ) {
+    const isPlanned = planned === true || planned === 'true';
+
+    const categoryMap = {
+      1: 'OUTPUT',
+      2: 'OUTCOME',
+      3: 'EOI',
+    };
+
+    const category = categoryMap[toc_level];
+    if (!category) {
+      throw {
+        message: `Invalid toc level: ${toc_level}. Valid levels are 1 (OUTPUT), 2 (OUTCOME), 3 (EOI)`,
+        response: {},
+        status: HttpStatus.BAD_REQUEST,
+      };
+    }
+
+    const isInitiativeValidation = await this.$_initiativeValidation(init_id);
+    let tocPhaseId: string = null;
+
+    if (isInitiativeValidation) {
+      tocPhaseId = await this.dataSource
+        .getRepository(GlobalParameter)
+        .findOne({
+          where: {
+            name: 'sgp_02_toc_version',
+          },
+        })
+        .then((el) => el.value);
+    } else {
+      tocPhaseId = await this.getCurrentTocPhaseId();
+    }
+
+    const params: (string | number)[] = [init_id, category];
+    let whereTocPhaseId = '';
+    if (tocPhaseId) {
+      params.push(tocPhaseId);
+      if (isInitiativeValidation) {
+        whereTocPhaseId = `AND tr.version_id = ?`;
+      } else {
+        whereTocPhaseId = `AND tr.phase = ?`;
+      }
+    }
+
+    let indicatorFilter = '';
+    if (
+      isPlanned &&
+      resultTypeId &&
+      RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId]?.length
+    ) {
+      const currentTypePatterns =
+        RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId];
+      const otherTypesPatterns = getOtherTypesIndicatorPatterns(resultTypeId);
+
+      const currentLikeConditions = currentTypePatterns
+        .map(() => 'tri.type_value LIKE ?')
+        .join(' OR ');
+
+      const currentTypeExists = `
+        EXISTS (
+          SELECT 1
+          FROM ${env.DB_TOC}.toc_results_indicators tri
+          WHERE tri.toc_results_id = tr.id
+            AND tri.is_active = 1
+            AND (${currentLikeConditions})
+        )
+      `;
+
+      let otherTypesCondition = '';
+      if (otherTypesPatterns.length > 0) {
+        const otherLikeConditions = otherTypesPatterns
+          .map(() => 'tri_other.type_value LIKE ?')
+          .join(' OR ');
+        otherTypesCondition = `
+          OR NOT EXISTS (
+            SELECT 1
+            FROM ${env.DB_TOC}.toc_results_indicators tri_other
+            WHERE tri_other.toc_results_id = tr.id
+              AND tri_other.is_active = 1
+              AND (${otherLikeConditions})
+          )
+        `;
+      }
+
+      if (resultId && Number.isFinite(resultId) && resultId > 0) {
+        indicatorFilter = `
+          AND (
+            (${currentTypeExists} ${otherTypesCondition})
+            OR EXISTS (
+              SELECT 1
+              FROM ${env.DB_NAME}.results_toc_result rtr
+              WHERE rtr.toc_result_id = tr.id
+                AND rtr.results_id = ?
+                AND rtr.is_active = 1
+            )
+          )
+        `;
+        params.push(...currentTypePatterns, ...otherTypesPatterns, resultId);
+      } else {
+        indicatorFilter = `
+          AND (${currentTypeExists} ${otherTypesCondition})
+        `;
+        params.push(...currentTypePatterns, ...otherTypesPatterns);
+      }
+    }
+
+    const queryData = `
+      SELECT DISTINCT
+        tr.id AS toc_result_id,
+        tr.toc_result_id AS toc_internal_id,
+        tr.result_title AS title,
+        tr.result_description AS description,
+        tr.result_type AS toc_type_id,
+        tr.result_type AS toc_level_id,
+        ci.id AS inititiative_id,
+        tr.wp_id AS work_package_id,
+        wp.acronym AS wp_short_name,
+        NULL AS action_area_outcome_id
+      FROM ${env.DB_TOC}.toc_results tr
+      LEFT JOIN ${env.DB_TOC}.toc_work_packages wp 
+        ON wp.toc_id = tr.wp_id
+      LEFT JOIN clarisa_initiatives ci 
+        ON ci.official_code = tr.official_code
+      WHERE tr.is_active > 0
+        AND ci.id = ?
+        AND tr.category = ?
+        ${whereTocPhaseId}
+        ${indicatorFilter}
+      ORDER BY wp.acronym, tr.result_title ASC;
+    `;
+
+    try {
+      const res = await this.query(queryData, params);
+      return res;
+    } catch (error) {
+      throw {
+        message: `[${TocResultsRepository.name}] => _getResultTocByConfigV2 error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
+  async getTocIndicatorsByResultIds(
+    result: Result,
+    year: Year,
+    tocResultIds: Array<number | string>,
+    resultTypeId?: number,
+    linkedIndicatorNodeIds?: string[],
+    resultId?: number,
+    initId?: number,
+  ): Promise<
+    Array<{
+      toc_result_id: number;
+      indicator_id: number;
+      toc_result_indicator_id: string | null;
+      related_node_id: string | null;
+      indicator_description: string | null;
+      unit_messurament: string | null;
+      type_value: string | null;
+      type_name: string | null;
+      location: string | null;
+      target_value: number | null;
+    }>
+  > {
+    const numericIds = (tocResultIds ?? [])
+      .map((id) => Number(id))
+      .filter((id) => Number.isFinite(id));
+
+    if (!numericIds.length) {
+      return [];
+    }
+
+    const placeholders = numericIds.map(() => '?').join(', ');
+    const targetYear = result.obj_version?.phase_year || year.year;
+
+    const queryParams: any[] = [targetYear, ...numericIds];
+
+    // Check if the result is unplanned (planned_result = 0 in the first record)
+    let isUnplanned = false;
+    if (resultId && initId && Number.isFinite(resultId) && resultId > 0) {
+      try {
+        const firstResultTocQuery = `
+          SELECT planned_result
+          FROM ${env.DB_NAME}.results_toc_result
+          WHERE results_id = ?
+            AND initiative_id = ?
+            AND is_active = 1
+          ORDER BY created_date ASC
+          LIMIT 1
+        `;
+        const firstResultToc = await this.query(firstResultTocQuery, [
+          resultId,
+          initId,
+        ]);
+        if (
+          firstResultToc?.length > 0 &&
+          firstResultToc[0]?.planned_result === 0
+        ) {
+          isUnplanned = true;
+        }
+      } catch (error) {
+        this.logger.warn(
+          `Error checking planned_result for result ${resultId} in getTocIndicatorsByResultIds: ${error}`,
+        );
+      }
+    }
+
+    const indicatorConditions: string[] = [];
+
+    if (
+      !isUnplanned &&
+      resultTypeId &&
+      RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId]?.length
+    ) {
+      const currentTypePatterns =
+        RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId];
+      const otherTypesPatterns = getOtherTypesIndicatorPatterns(resultTypeId);
+
+      // Indicators that match the type of result
+      const currentLikeConditions = currentTypePatterns
+        .map(() => 'tri.type_value LIKE ?')
+        .join(' OR ');
+      indicatorConditions.push(`(${currentLikeConditions})`);
+      queryParams.push(...currentTypePatterns);
+
+      // Indicators that do not match any "other" type (neutral/non-standard ToCs)
+      // Also include type_value NULL or empty (in SQL NULL NOT LIKE 'x' is not TRUE)
+      if (otherTypesPatterns.length > 0) {
+        const otherNotLikeConditions = otherTypesPatterns
+          .map(() => 'tri.type_value NOT LIKE ?')
+          .join(' AND ');
+        indicatorConditions.push(
+          `((${otherNotLikeConditions}) OR (tri.type_value IS NULL OR tri.type_value = ''))`,
+        );
+        queryParams.push(...otherTypesPatterns);
+      }
+    }
+
+    const normalizedLinkedIndicators = (linkedIndicatorNodeIds ?? [])
+      .map((value) => `${value}`.trim())
+      .filter((value) => value !== '');
+
+    if (normalizedLinkedIndicators.length) {
+      const placeholders = normalizedLinkedIndicators.map(() => '?').join(', ');
+      indicatorConditions.push(`tri.related_node_id IN (${placeholders})`);
+      queryParams.push(...normalizedLinkedIndicators);
+    }
+
+    const typeFilter = indicatorConditions.length
+      ? `AND (${indicatorConditions.join(' OR ')})`
+      : '';
+
+    const query = `
+      SELECT
+        tri.toc_results_id AS toc_result_id,
+        tri.id AS indicator_id,
+        tri.toc_result_indicator_id,
+        tri.related_node_id,
+        tri.indicator_description,
+        tri.unit_messurament,
+        tri.type_value,
+        tri.type_name,
+        tri.location,
+        trit.target_value
+      FROM ${env.DB_TOC}.toc_results_indicators tri
+      LEFT JOIN ${env.DB_TOC}.toc_result_indicator_target trit
+        ON trit.toc_result_indicator_id = tri.related_node_id
+        AND trit.target_date = ?
+      WHERE
+        tri.toc_results_id IN (${placeholders})
+        AND tri.is_active = 1
+        ${typeFilter};
+    `;
+
+    try {
+      return await this.query(query, queryParams);
+    } catch (error) {
+      throw {
+        message: `[${TocResultsRepository.name}] => getTocIndicatorsByResultIds error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
+  async getResultIndicatorMappings(
+    resultId: number,
+    initiativeId: number,
+    tocResultIds: Array<number | string>,
+  ): Promise<
+    Array<{
+      toc_result_id: number | null;
+      result_toc_result_id: number | null;
+      planned_result: boolean | null;
+      toc_progressive_narrative: string | null;
+      result_toc_result_indicator_id: number | null;
+      toc_results_indicator_id: string | null;
+      indicator_contributing: number | null;
+      indicator_status: number | null;
+    }>
+  > {
+    const numericIds = (tocResultIds ?? [])
+      .map((id) => Number(id))
+      .filter((id) => Number.isFinite(id));
+
+    if (!numericIds.length) {
+      return [];
+    }
+
+    const placeholders = numericIds.map(() => '?').join(', ');
+
+    const query = `
+      SELECT
+        rtr.toc_result_id,
+        rtr.result_toc_result_id,
+        rtr.planned_result,
+        rtr.toc_progressive_narrative,
+        rtri.result_toc_result_indicator_id,
+        rtri.toc_results_indicator_id,
+        rtri.indicator_contributing,
+        rtri.status AS indicator_status
+      FROM results_toc_result rtr
+      LEFT JOIN results_toc_result_indicators rtri
+        ON rtri.results_toc_results_id = rtr.result_toc_result_id
+        AND rtri.is_active = 1
+        AND rtri.is_not_aplicable = 0
+      WHERE
+        rtr.results_id = ?
+        AND rtr.initiative_id = ?
+        AND rtr.is_active = 1
+        AND rtr.toc_result_id IN (${placeholders});
+    `;
+
+    const params = [resultId, initiativeId, ...numericIds];
+
+    this.logger.debug(
+      `[getResultIndicatorMappings] Running query for result ${resultId} / initiative ${initiativeId} and tocResultIds=[${numericIds.join(', ')}]`,
+    );
+
+    try {
+      const rows = await this.query(query, params);
+      if (!rows.length) {
+        this.logger.debug(
+          `[getResultIndicatorMappings] Query returned 0 rows. Params => ${JSON.stringify(
+            params,
+          )}`,
+        );
+      }
+      return rows;
+    } catch (error) {
+      this.logger.error(
+        `[getResultIndicatorMappings] Failed query with params ${JSON.stringify(
+          params,
+        )}`,
+      );
+      throw {
+        message: `[${TocResultsRepository.name}] => getResultIndicatorMappings error: ${error}`,
+        response: {},
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      };
+    }
+  }
+
+  async getAllTocResultsByInitiativeV2(initiativeId: number, tocLevel: number) {
+    const categoryMap = {
+      1: 'OUTPUT',
+      2: 'OUTCOME',
+      3: 'EOI',
+    };
+
+    const category = categoryMap[tocLevel];
+    if (!category) {
+      throw {
+        message: `Invalid toc level: ${tocLevel}. Valid levels are 1 (OUTPUT), 2 (OUTCOME), 3 (EOI)`,
+        response: {},
+        status: HttpStatus.BAD_REQUEST,
+      };
+    }
+
+    const tocPhaseId = await this.getCurrentTocPhaseId();
+
+    const queryData = `
+      SELECT DISTINCT
+        tr.id AS toc_result_id,
+        tr.toc_result_id AS toc_internal_id,
+        tr.result_title AS title,
+        tr.result_description AS description,
+        tr.result_type AS toc_type_id,
+        tr.result_type AS toc_level_id,
+        ci.id AS inititiative_id,
+        tr.wp_id AS work_package_id,
+        wp.acronym AS wp_short_name,
+        NULL AS action_area_outcome_id
+      FROM ${env.DB_TOC}.toc_results tr
+      LEFT JOIN ${env.DB_TOC}.toc_work_packages wp 
+        ON wp.toc_id = tr.wp_id
+        AND wp.is_active > 0
+      LEFT JOIN clarisa_initiatives ci 
+        ON ci.toc_id = tr.id_toc_initiative
+      WHERE ci.id = ?
+        AND tr.category = ?
+        AND tr.is_active > 0
+        ${tocPhaseId ? 'AND tr.phase = ?' : ''}
+      ORDER BY wp.acronym, tr.result_title ASC;
+    `;
+
+    const params: (string | number)[] = [initiativeId, category];
+    if (tocPhaseId) {
+      params.push(tocPhaseId);
+    }
+
+    try {
+      const tocResult: TocResult[] = await this.query(queryData, params);
+      return tocResult;
+    } catch (error) {
+      throw {
+        message: `[${TocResultsRepository.name}] => getAllTocResultsByInitiativeV2 error: ${error}`,
         response: {},
         status: HttpStatus.INTERNAL_SERVER_ERROR,
       };

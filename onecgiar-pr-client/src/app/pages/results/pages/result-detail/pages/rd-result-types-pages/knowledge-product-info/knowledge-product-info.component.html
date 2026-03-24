@@ -1,11 +1,14 @@
-<app-detail-section-title sectionName="Knowledge product information"></app-detail-section-title>
 <div class="detail_container">
   <app-alert-status [description]="warning" *ngFor="let warning of this.knowledgeProductBody?.warnings"> </app-alert-status>
   <app-alert-status
-    description="If any of the metadata fields are incorrect, please contact your Center library staff or knowledge management team to update them in CGSpace. Before the end of the reporting period, metadata will be automatically refreshed on this page.">
+    description="If any of the metadata fields are incorrect, please contact your Center library staff or knowledge management team to update them in {{
+      knowledgeProductBody.source
+    }}. Before the end of the reporting period, metadata will be automatically refreshed on this page.">
   </app-alert-status>
   <app-alert-status
-    description="Some information in this section is automatically collected from external sources such as the Web of Science, Scopus, and Unpaywall using the DOI (Digital Object Identifier) linked to this knowledge product in CGSpace. In the case of any discrepancies, the CGIAR Quality Assurance team will manually validate the record. ">
+    description="Some information in this section is automatically collected from external sources such as the Web of Science, Scopus, and Unpaywall using the DOI (Digital Object Identifier) linked to this knowledge product in {{
+      knowledgeProductBody.source
+    }}. In the case of any discrepancies, the CGIAR Quality Assurance team will manually validate the record. ">
   </app-alert-status>
 
   <div appFeedbackValidation labelText="Is this knowledge product a MELIA Product?" [isComplete]="this.sectionData.isMeliaProduct !== null"></div>
@@ -13,9 +16,9 @@
   <app-pr-yes-or-not label="Is this knowledge product a MELIA Product?" [(ngModel)]="this.sectionData.isMeliaProduct"> </app-pr-yes-or-not>
 
   <div style="padding-left: 50px" *ngIf="this.sectionData.isMeliaProduct === true">
-    <div appFeedbackValidation labelText="Was it planned in your Initiative proposal?" [isComplete]="this.sectionData.ostSubmitted !== null"></div>
+    <div appFeedbackValidation [labelText]="api.fieldsManagerSE.fields()['[knowledge-product-info]-ost_submitted']?.label" [isComplete]="this.sectionData.ostSubmitted !== null"></div>
 
-    <app-pr-yes-or-not label="Was it planned in your Initiative proposal?" [required]="true" [(ngModel)]="this.sectionData.ostSubmitted">
+    <app-pr-yes-or-not fieldRef="[knowledge-product-info]-ost_submitted" [required]="true" [(ngModel)]="this.sectionData.ostSubmitted">
     </app-pr-yes-or-not>
     <app-pr-select
       [options]="this.meliaTypes"
@@ -27,22 +30,44 @@
       [(ngModel)]="this.sectionData.clarisaMeliaTypeId"
       *ngIf="this.sectionData.ostSubmitted === false">
     </app-pr-select>
+    <!-- Non-P25: OST MELIA studies by result, value ostMeliaId -->
     <app-pr-select
+      *ngIf="this.sectionData.ostSubmitted === true && !api.fieldsManagerSE.isP25()"
       [options]="this.ostMeliaStudies"
-      label="Select MELIA from those included in OST Section 6.3"
+      [label]="api.fieldsManagerSE.fields()['[knowledge-product-info]-ost_melia_select']?.label"
+      [placeholder]="api.fieldsManagerSE.fields()['[knowledge-product-info]-ost_melia_select']?.placeholder"
       optionLabel="melia_study_title"
       optionValue="melia_id"
-      placeholder="Select MELIA from those included in OST Section 6.3"
       [required]="true"
-      [(ngModel)]="this.sectionData.ostMeliaId"
-      *ngIf="this.sectionData.ostSubmitted === true">
+      [(ngModel)]="this.sectionData.ostMeliaId">
+    </app-pr-select>
+    <!-- P25: MELIA studies from TOC, value tocMeliaStudyId (PATCH: tocMeliaStudyId, GET: toc_melia_study_id) -->
+    <app-pr-select
+      *ngIf="this.sectionData.ostSubmitted === true && api.fieldsManagerSE.isP25()"
+      [options]="tocMeliaStudiesList"
+      label="Select the MELIA study from the drop-down (this drop-down is synced with your TOC)"
+      placeholder="Select the MELIA study from the drop-down (this drop-down is synced with your TOC)"
+      optionLabel="title"
+      optionValue="melia_id"
+      [required]="true"
+      [(ngModel)]="this.sectionData.tocMeliaStudyId">
     </app-pr-select>
   </div>
 
   <app-pr-input [(ngModel)]="knowledgeProductBody.handle" label="Handle" [required]="false" [disabled]="true"> </app-pr-input>
   <div class="auto_fit_container">
-    <app-pr-input [(ngModel)]="knowledgeProductBody.onlineYearCG" label="Date online (CGSpace)" [required]="false" [readOnly]="true"> </app-pr-input>
-    <app-pr-input [(ngModel)]="knowledgeProductBody.yearCG" label="Issue date (CGSpace)" [required]="false" [readOnly]="true"> </app-pr-input>
+    <app-pr-input
+      [(ngModel)]="knowledgeProductBody.onlineYearCG"
+      [label]="`Date online (${knowledgeProductBody.source})`"
+      [required]="false"
+      [readOnly]="true">
+    </app-pr-input>
+    <app-pr-input
+      [(ngModel)]="knowledgeProductBody.yearCG"
+      [label]="`Issue date (${knowledgeProductBody.source})`"
+      [required]="false"
+      [readOnly]="true">
+    </app-pr-input>
     <app-pr-input
       *ngIf="knowledgeProductBody.year_WOS"
       [(ngModel)]="knowledgeProductBody.year_WOS"
@@ -60,7 +85,11 @@
 
   <app-pr-input [(ngModel)]="knowledgeProductBody.type" label="Knowledge product type" [required]="false" [readOnly]="true"> </app-pr-input>
   <div class="auto_fit_container">
-    <app-pr-input [(ngModel)]="knowledgeProductBody.is_peer_reviewed_CG" label="Peer reviewed (CGSpace)" [required]="false" [readOnly]="true">
+    <app-pr-input
+      [(ngModel)]="knowledgeProductBody.is_peer_reviewed_CG"
+      [label]="`Peer reviewed (${knowledgeProductBody.source})`"
+      [required]="false"
+      [readOnly]="true">
     </app-pr-input>
     <app-pr-input
       *ngIf="knowledgeProductBody.is_peer_reviewed_WOS != undefined"
@@ -74,7 +103,7 @@
     <div>
       <app-pr-input
         [(ngModel)]="knowledgeProductBody.is_isi_CG"
-        label="Web of Science Core Collection (former ISI) (CGSpace)"
+        [label]="`Web of Science Core Collection (former ISI) (${knowledgeProductBody.source})`"
         [required]="false"
         [readOnly]="true"></app-pr-input>
       <p-message
@@ -97,7 +126,7 @@
     <div>
       <app-pr-input
         [(ngModel)]="knowledgeProductBody.accessibility_CG"
-        label="Accessibility (CGSpace)"
+        [label]="`Accessibility (${knowledgeProductBody.source})`"
         [required]="false"
         [readOnly]="true"></app-pr-input>
       <p-message

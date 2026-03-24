@@ -25,12 +25,16 @@ import { FeedbackValidationDirective } from '../../../../../../../shared/directi
 import { PrFieldValidationsComponent } from '../../../../../../../custom-fields/pr-field-validations/pr-field-validations.component';
 import { DetailSectionTitleComponent } from '../../../../../../../custom-fields/detail-section-title/detail-section-title.component';
 import { of, throwError } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { AddButtonComponent } from '../../../../../../../custom-fields/add-button/add-button.component';
 import { InnovationControlListService } from '../../../../../../../shared/services/global/innovation-control-list.service';
 import { InnovationDevInfoUtilsService } from './services/innovation-dev-info-utils.service';
 import { MegatrendsComponent } from './components/megatrends/megatrends.component';
 import { TermPipe } from '../../../../../../../internationalization/term.pipe';
+import { signal } from '@angular/core';
+import { FieldsManagerService } from '../../../../../../../shared/services/fields-manager.service';
+import { DataControlService } from '../../../../../../../shared/services/data-control.service';
 
 describe('InnovationDevInfoComponent', () => {
   let component: InnovationDevInfoComponent;
@@ -126,6 +130,27 @@ describe('InnovationDevInfoComponent', () => {
             subOptions: []
           }
         ]
+      },
+      q4: {
+        result_question_id: '',
+        question_text: '',
+        question_description: '',
+        result_type_id: 0,
+        parent_question_id: '',
+        question_type_id: '',
+        question_level: '',
+        options: [
+          {
+            answer_boolean: true,
+            result_question_id: '1',
+            question_text: '',
+            result_type_id: 1,
+            parent_question_id: '1',
+            question_type_id: '1',
+            question_level: '',
+            subOptions: []
+          }
+        ]
       }
     },
     responsible_innovation_and_scaling: {
@@ -151,6 +176,48 @@ describe('InnovationDevInfoComponent', () => {
         question_level: ''
       },
       q2: {
+        options: [
+          {
+            answer_boolean: true,
+            result_question_id: '1',
+            question_text: '',
+            result_type_id: 1,
+            parent_question_id: '1',
+            question_type_id: '1',
+            question_level: '',
+            subOptions: []
+          }
+        ],
+        result_question_id: '',
+        question_text: '',
+        question_description: '',
+        result_type_id: 0,
+        parent_question_id: '',
+        question_type_id: '',
+        question_level: ''
+      },
+      q3: {
+        options: [
+          {
+            answer_boolean: true,
+            result_question_id: '1',
+            question_text: '',
+            result_type_id: 1,
+            parent_question_id: '1',
+            question_type_id: '1',
+            question_level: '',
+            subOptions: []
+          }
+        ],
+        result_question_id: '',
+        question_text: '',
+        question_description: '',
+        result_type_id: 0,
+        parent_question_id: '',
+        question_type_id: '',
+        question_level: ''
+      },
+      q4: {
         options: [
           {
             answer_boolean: true,
@@ -205,6 +272,7 @@ describe('InnovationDevInfoComponent', () => {
       actors: [],
       measures: []
     },
+    has_scaling_studies: false,
     initiative_expected_investment: [],
     institutions_expected_investment: [],
     bilateral_expected_investment: [],
@@ -234,7 +302,15 @@ describe('InnovationDevInfoComponent', () => {
       resultsSE: {
         GET_innovationDev: () => of({ response: mockGET_innovationDevResponse }),
         GET_questionsInnovationDevelopment: () => of({ response: mockGET_questionsInnovationDevelopmentResponse }),
+        GET_innovationDevP25: () => of({ response: mockGET_innovationDevResponse }),
+        GET_questionsInnovationDevelopmentP25: () => of({ response: mockGET_questionsInnovationDevelopmentResponse }),
         PATCH_innovationDev: () => of({}),
+        PATCH_innovationDevP25: () => of({}),
+        POST_createEvidenceDemandP25: () => of({}),
+        GET_evidenceDemandP25: () => of({ response: { evidences: [] } }),
+        POST_createUploadSessionP25: () => of({ response: 'https://upload-url.com' }),
+        PUT_loadFileInUploadSession: jest.fn(() => Promise.resolve({ webUrl: 'https://file-url.com', id: 'file-id', name: 'file.pdf', parentReference: { path: 'root:/folder' } })),
+        GET_loadFileInUploadSession: jest.fn(() => Promise.resolve({ nextExpectedRanges: ['0-100'] })),
         GET_clarisaInnovationType: () => of({}),
         GET_clarisaInnovationCharacteristics: () => of({}),
         GET_clarisaInnovationReadinessLevels: () => of({}),
@@ -247,6 +323,7 @@ describe('InnovationDevInfoComponent', () => {
         readOnly: false
       },
       dataControlSE: {
+        currentResultSectionName: signal<string>('Innovation development information'),
         currentResult: {
           portfolio: 'P25'
         }
@@ -260,6 +337,15 @@ describe('InnovationDevInfoComponent', () => {
     mockInnovationDevInfoUtilsService = {
       mapRadioButtonBooleans: jest.fn()
     };
+
+    const mockFieldsManagerService = {
+      isP25: jest.fn(() => false)
+    } as any;
+
+    const mockDataControlService = {
+      currentResultSignal: signal({ portfolio: 'P22' })
+    } as any;
+
     await TestBed.configureTestingModule({
       declarations: [
         InnovationDevInfoComponent,
@@ -300,6 +386,14 @@ describe('InnovationDevInfoComponent', () => {
         {
           provide: InnovationDevInfoUtilsService,
           useValue: mockInnovationDevInfoUtilsService
+        },
+        {
+          provide: FieldsManagerService,
+          useValue: mockFieldsManagerService
+        },
+        {
+          provide: DataControlService,
+          useValue: mockDataControlService
         }
       ]
     }).compileComponents();
@@ -308,12 +402,13 @@ describe('InnovationDevInfoComponent', () => {
     component = fixture.componentInstance;
   });
 
-  describe('ngOnInit()', () => {
-    it('should get section information on initialization', () => {
+  describe('initialization behavior', () => {
+    it('should load section and questions when invoked', () => {
       const spyGetSectionInformation = jest.spyOn(component, 'getSectionInformation');
       const spyGET_questionsInnovationDevelopment = jest.spyOn(component, 'GET_questionsInnovationDevelopment');
 
-      component.ngOnInit();
+      component.getSectionInformation();
+      component.GET_questionsInnovationDevelopment();
 
       expect(spyGetSectionInformation).toHaveBeenCalled();
       expect(spyGET_questionsInnovationDevelopment).toHaveBeenCalled();
@@ -365,6 +460,17 @@ describe('InnovationDevInfoComponent', () => {
       expect(spy).toHaveBeenCalled();
       expect(convertOrganizationsSpy).not.toHaveBeenCalled();
       expect(component.savingSection).toBeFalsy();
+    });
+  });
+
+  describe('getSectionInformationp25()', () => {
+    it('should get p25 section information and questions', () => {
+      const apiGetDev = jest.spyOn(mockApiService.resultsSE, 'GET_innovationDevP25');
+      const apiGetQ = jest.spyOn(mockApiService.resultsSE, 'GET_questionsInnovationDevelopmentP25');
+      component.getSectionInformationp25();
+      expect(apiGetDev).toHaveBeenCalled();
+      expect(apiGetQ).toHaveBeenCalled();
+      expect(component.innovationDevInfoBody).toEqual(mockGET_innovationDevResponse);
     });
   });
   describe('convertOrganizations()', () => {
@@ -450,6 +556,39 @@ describe('InnovationDevInfoComponent', () => {
 
       expect(spy).toHaveBeenCalled();
       expect(component.savingSection).toBeFalsy();
+    });
+
+    it('should save P25 section including evidences body', async () => {
+      const spyConvert = jest.spyOn(component, 'convertOrganizationsTosave');
+      const spyPostEvidences = jest.spyOn(mockApiService.resultsSE, 'POST_createEvidenceDemandP25');
+      const spyPatchP25 = jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationDevP25');
+      const spyGetP25 = jest.spyOn(component, 'getSectionInformationp25');
+      jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(true as any);
+      (component as any).api.dataControlSE.currentResult = { id: 1 };
+      (component as any).evidencesBody = { evidences: [{ is_sharepoint: false, link: 'x' }] } as any;
+      await component.onSaveSection();
+      expect(spyConvert).toHaveBeenCalled();
+      expect(spyPostEvidences).toHaveBeenCalled();
+      expect(spyPatchP25).toHaveBeenCalled();
+      expect(spyGetP25).toHaveBeenCalled();
+      expect(component.savingSection).toBeFalsy();
+    });
+
+    it('should handle P25 evidences POST error gracefully', async () => {
+      jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(true as any);
+      (component as any).api.dataControlSE.currentResult = { id: 1 };
+      (component as any).evidencesBody = { evidences: [] } as any;
+      (component as any).api.resultsSE.POST_createEvidenceDemandP25 = () => throwError(() => new Error('err'));
+      await component.onSaveSection();
+      expect(component.savingSection).toBeFalsy();
+    });
+  });
+
+  describe('getReadinessLevelIndex()', () => {
+    it('should return -1 when no readiness level or list', () => {
+      component.innovationDevInfoBody.innovation_readiness_level_id = null as any;
+      (component as any).innovationControlListSE.readinessLevelsList = null as any;
+      expect(component.getReadinessLevelIndex()).toBe(-1);
     });
   });
 
@@ -579,6 +718,202 @@ describe('InnovationDevInfoComponent', () => {
       const actualText = component.alertDiminishedReadinessLevel();
 
       expect(actualText).toEqual(expectedText);
+    });
+  });
+
+  describe('uploadPendingFiles interval polling', () => {
+    it('should poll upload session and update percentage', async () => {
+      jest.useFakeTimers();
+      (component as any).api.dataControlSE.currentResult = { result_id: 1 };
+      const evidence = { file: { name: 'test.pdf' }, link: null } as any;
+      (component as any).evidencesBody = { evidences: [evidence] } as any;
+
+      // Mock GET_loadFileInUploadSession to return progress info
+      let pollCount = 0;
+      mockApiService.resultsSE.GET_loadFileInUploadSession = jest.fn(() => {
+        pollCount++;
+        if (pollCount === 1) {
+          return Promise.resolve({ nextExpectedRanges: ['50-100'] });
+        }
+        return Promise.reject(new Error('done'));
+      });
+      mockApiService.resultsSE.PUT_loadFileInUploadSession = jest.fn(() =>
+        Promise.resolve({ webUrl: 'https://file.com', id: 'id1', name: 'file.pdf', parentReference: { path: 'root:/folder' } })
+      );
+
+      const uploadPromise = (component as any).uploadPendingFiles();
+
+      // Advance timer to trigger interval
+      jest.advanceTimersByTime(2000);
+      await Promise.resolve();
+      jest.advanceTimersByTime(2000);
+      await Promise.resolve();
+
+      await uploadPromise;
+
+      expect(evidence.link).toBe('https://file.com');
+      jest.useRealTimers();
+    });
+  });
+
+  describe('addEvidence', () => {
+    it('should add an evidence with is_sharepoint false', () => {
+      component.evidencesBody.evidences = [];
+      component.addEvidence();
+      expect(component.evidencesBody.evidences.length).toBe(1);
+      expect((component.evidencesBody.evidences[0] as any).is_sharepoint).toBe(false);
+    });
+  });
+
+  describe('deleteEvidence', () => {
+    it('should remove evidence at given index', () => {
+      component.evidencesBody.evidences = [{ is_sharepoint: false } as any, { is_sharepoint: true } as any];
+      component.deleteEvidence(0);
+      expect(component.evidencesBody.evidences.length).toBe(1);
+      expect((component.evidencesBody.evidences[0] as any).is_sharepoint).toBe(true);
+    });
+  });
+
+  describe('getReadinessLevelIndex', () => {
+    it('should return correct index when readiness level id matches', () => {
+      component.innovationControlListSE.readinessLevelsList = [
+        { id: 1, level: '1' },
+        { id: 2, level: '2' },
+        { id: 3, level: '3' }
+      ];
+      component.innovationDevInfoBody.innovation_readiness_level_id = 2;
+      expect(component.getReadinessLevelIndex()).toBe(1);
+    });
+
+    it('should return -1 when readiness level id does not match any in list', () => {
+      component.innovationControlListSE.readinessLevelsList = [
+        { id: 1, level: '1' }
+      ];
+      component.innovationDevInfoBody.innovation_readiness_level_id = 99;
+      expect(component.getReadinessLevelIndex()).toBe(-1);
+    });
+  });
+
+  describe('onSaveSection P25 PATCH error', () => {
+    it('should handle PATCH_innovationDevP25 error gracefully', async () => {
+      jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(true as any);
+      (component as any).api.dataControlSE.currentResult = { result_id: 1 };
+      (component as any).evidencesBody = { evidences: [] } as any;
+      (component as any).api.resultsSE.POST_createEvidenceDemandP25 = () => of({});
+      (component as any).api.resultsSE.PATCH_innovationDevP25 = () => throwError(() => new Error('patch error'));
+
+      await component.onSaveSection();
+      expect(component.savingSection).toBeFalsy();
+    });
+  });
+
+  describe('onSaveSection with innovation_nature_id == 12', () => {
+    it('should keep number_of_varieties and is_new_variety when innovation_nature_id is 12', async () => {
+      component.innovationDevInfoBody.innovation_nature_id = 12;
+      component.innovationDevInfoBody.number_of_varieties = 5;
+      component.innovationDevInfoBody.is_new_variety = true;
+      component.innovationDevInfoBody.innovatonUse = { organization: [] } as any;
+
+      jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(false as any);
+      jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationDev').mockReturnValue(of({ response: {} }));
+      jest.spyOn(component, 'getSectionInformation').mockImplementation(() => {});
+
+      await component.onSaveSection();
+
+      expect(component.innovationDevInfoBody.number_of_varieties).toBe(5);
+      expect(component.innovationDevInfoBody.is_new_variety).toBe(true);
+    });
+  });
+
+  describe('convertOrganizations', () => {
+    it('should not modify item without parent_institution_type_id', () => {
+      const organizations = [
+        { institution_types_id: 5 }
+      ];
+      component.convertOrganizations(organizations);
+      expect(organizations[0].institution_types_id).toBe(5);
+      expect((organizations[0] as any).institution_sub_type_id).toBeUndefined();
+    });
+  });
+
+  describe('convertOrganizationsTosave', () => {
+    it('should not modify item without institution_sub_type_id', () => {
+      const organizations = [
+        {
+          institution_types_id: 5,
+          how_many: 1,
+          other_institution: '',
+          graduate_students: '',
+          hide: false,
+          is_active: false,
+          id: 1,
+          addressing_demands: 'yes'
+        }
+      ];
+      component.innovationDevInfoBody.innovatonUse.organization = organizations;
+      component.convertOrganizationsTosave();
+      expect(organizations[0].institution_types_id).toBe(5);
+    });
+  });
+
+  describe('uploadPendingFiles', () => {
+    it('should skip when evidences is not an array', async () => {
+      (component as any).evidencesBody = { evidences: null } as any;
+      await expect((component as any).uploadPendingFiles()).resolves.toBeUndefined();
+    });
+
+    it('should skip evidences that already have a link', async () => {
+      (component as any).api.dataControlSE.currentResult = { result_id: 1 };
+      (component as any).evidencesBody = {
+        evidences: [{ file: { name: 'test.pdf' }, link: 'existing-link' }]
+      } as any;
+      const spy = jest.spyOn(mockApiService.resultsSE, 'POST_createUploadSessionP25');
+      await (component as any).uploadPendingFiles();
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('should skip evidences without a file', async () => {
+      (component as any).api.dataControlSE.currentResult = { result_id: 1 };
+      (component as any).evidencesBody = {
+        evidences: [{ link: null, file: null }]
+      } as any;
+      const spy = jest.spyOn(mockApiService.resultsSE, 'POST_createUploadSessionP25');
+      await (component as any).uploadPendingFiles();
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('should upload file and set link when evidence has file but no link', async () => {
+      (component as any).api.dataControlSE.currentResult = { result_id: 1 };
+      const evidence = { file: { name: 'test.pdf' }, link: null };
+      (component as any).evidencesBody = { evidences: [evidence] } as any;
+
+      await (component as any).uploadPendingFiles();
+
+      expect(evidence.link).toBe('https://file-url.com');
+      expect((evidence as any).sp_document_id).toBe('file-id');
+      expect((evidence as any).sp_file_name).toBe('file.pdf');
+    });
+
+    it('should handle upload error and throw', async () => {
+      (component as any).api.dataControlSE.currentResult = { result_id: 1 };
+      const evidence = { file: { name: 'test.pdf' }, link: null };
+      (component as any).evidencesBody = { evidences: [evidence] } as any;
+      mockApiService.resultsSE.PUT_loadFileInUploadSession = jest.fn(() => Promise.reject(new Error('Upload failed')));
+
+      await expect((component as any).uploadPendingFiles()).rejects.toThrow('Upload failed');
+    });
+  });
+
+  describe('onSaveSection uploadPendingFiles error', () => {
+    it('should stop saving when uploadPendingFiles throws', async () => {
+      jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(true as any);
+      (component as any).api.dataControlSE.currentResult = { result_id: 1 };
+      const evidence = { file: { name: 'test.pdf' }, link: null };
+      (component as any).evidencesBody = { evidences: [evidence] } as any;
+      mockApiService.resultsSE.PUT_loadFileInUploadSession = jest.fn(() => Promise.reject(new Error('Upload error')));
+
+      await component.onSaveSection();
+      expect(component.savingSection).toBeFalsy();
     });
   });
 });

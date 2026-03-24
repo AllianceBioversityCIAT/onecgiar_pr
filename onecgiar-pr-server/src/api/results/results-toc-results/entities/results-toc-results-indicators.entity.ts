@@ -4,11 +4,13 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from '../../../../auth/modules/user/entities/user.entity';
 import { ResultsTocResult } from './results-toc-result.entity';
+import { ResultIndicatorTarget } from './result-toc-result-target-indicators.entity';
 
 @Entity('results_toc_result_indicators')
 export class ResultsTocResultIndicators {
@@ -30,13 +32,17 @@ export class ResultsTocResultIndicators {
   })
   results_toc_results_id!: number;
 
-  @ManyToOne(() => ResultsTocResult, (tr) => tr.result_toc_result_id, {
-    nullable: true,
-  })
+  @ManyToOne(
+    () => ResultsTocResult,
+    (tr) => tr.obj_results_toc_result_indicators,
+    {
+      nullable: true,
+    },
+  )
   @JoinColumn({
     name: 'results_toc_results_id',
   })
-  results_toc_results!: ResultsTocResult;
+  obj_results_toc_results!: ResultsTocResult;
 
   @Column({
     name: 'status',
@@ -93,4 +99,10 @@ export class ResultsTocResultIndicators {
     nullable: true,
   })
   last_updated_date!: Date;
+
+  @OneToMany(
+    () => ResultIndicatorTarget,
+    (ritt) => ritt.obj_result_toc_result_indicator_id,
+  )
+  obj_result_indicator_targets: ResultIndicatorTarget[];
 }

@@ -1,0 +1,114 @@
+@use '../../../../../styles/fonts.scss' as fonts;
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin: 0;
+}
+
+.entity-aow_breadcrumb {
+  @include fonts.pr-typography('body-1');
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0 30px;
+  gap: 6px;
+  border-bottom: 1px solid var(--pr-color-accents-2);
+  background-color: var(--pr-color-white);
+}
+
+.entity-aow_breadcrumb_homeLink {
+  font-weight: 400;
+  color: var(--pr-color-accents-5);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--pr-color-accents-6);
+  }
+}
+
+.entity-aow_breadcrumb_separator {
+  color: var(--pr-color-accents-5);
+}
+
+.entity-aow_breadcrumb_link {
+  color: var(--pr-color-accents-5);
+  font-weight: 400;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--pr-color-accents-6);
+  }
+}
+
+.breadcrumb_link {
+  color: var(--pr-color-primary-300);
+  font-weight: 600;
+  cursor: default;
+}
+
+// Layout
+.entity-aow_layout {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  min-height: calc(100vh - 120px);
+}
+
+.entity-aow_sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 24px;
+  width: 238px;
+  background-color: rgba(var(--pr-color-secondary-rgb), 0.1);
+  user-select: none;
+}
+
+.entity-aow_sidebar_title {
+  @include fonts.pr-typography('h4');
+  font-weight: 700;
+  color: var(--pr-color-secondary-400);
+}
+
+.entity-aow_sidebar_option_item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s ease-out;
+
+  &:hover {
+    background-color: rgba(var(--pr-color-secondary-rgb), 0.15);
+  }
+}
+
+.entity-aow_sidebar_option_item_title {
+  @include fonts.pr-typography('body-2');
+  color: var(--pr-color-secondary-400);
+}
+
+.entity-aow_sidebar_option_items_tree {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 6px 0;
+  gap: 8px;
+  @include fonts.pr-typography('body-2');
+  color: var(--pr-color-secondary-200);
+}
+
+.entity-aow_main {
+  width: calc(100vw - 253px);
+  padding: 30px;
+}
+
+.active {
+  background-color: rgba(var(--pr-color-secondary-rgb), 0.15);
+}

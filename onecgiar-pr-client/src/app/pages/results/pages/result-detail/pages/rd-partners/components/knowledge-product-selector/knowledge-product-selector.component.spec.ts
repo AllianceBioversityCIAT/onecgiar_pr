@@ -69,4 +69,26 @@ describe('KnowledgeProductSelectorComponent', () => {
       expect(partner.obj_institutions.obj_institution_type_code.name).toEqual('Type 1');
     });
   });
+
+  describe('generateDescription()', () => {
+    it('should return predicted message with confidence when is_predicted=true', () => {
+      const partner: any = {
+        is_predicted: true,
+        result_kp_mqap_institution_object: { confidant: 87 }
+      };
+      const msg = component.generateDescription(partner);
+      expect(msg).toContain('predicted match');
+      expect(msg).toContain('87%');
+    });
+
+    it("should return 'not found' message when is_predicted=false", () => {
+      const partner: any = {
+        is_predicted: false,
+        result_kp_mqap_institution_object: { confidant: 42 }
+      };
+      const msg = component.generateDescription(partner);
+      expect(msg).toContain("We couldn't find a matching partner");
+      expect(msg).toContain('alert-event');
+    });
+  });
 });

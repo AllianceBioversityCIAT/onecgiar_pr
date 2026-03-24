@@ -13,7 +13,7 @@ import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.inter
 import { ExcelReportDto } from './dto/excel-report-ipsr.dto';
 import { UserToken } from '../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
-import { ApiQuery } from '@nestjs/swagger';
+import { ApiBody, ApiQuery } from '@nestjs/swagger';
 
 @Controller()
 @UseInterceptors(ResponseInterceptor)
@@ -21,6 +21,14 @@ export class IpsrController {
   constructor(private readonly ipsrService: IpsrService) {}
 
   @Post('all-innovations')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        initiativeId: { type: 'array', items: { type: 'number' } },
+      },
+    },
+  })
   findAll(@Body('initiativeId') initiativeId: number[]) {
     return this.ipsrService.findAllInnovations(initiativeId);
   }

@@ -43,6 +43,13 @@ export class ResultsKnowledgeProductMetadata {
   accesibility: string;
 
   @Column({
+    name: 'open_access',
+    type: 'text',
+    nullable: true,
+  })
+  open_access: string;
+
+  @Column({
     name: 'year',
     type: 'bigint',
     nullable: true,

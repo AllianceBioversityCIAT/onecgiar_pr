@@ -37,6 +37,9 @@ import { ClarisaPhaseDto } from './dtos/clarisa-phase.dto';
 import { ClarisaSubnationalScope } from './clarisa-subnational-scope/entities/clarisa-subnational-scope.entity';
 import { ClarisaPortfolios } from './clarisa-portfolios/entities/clarisa-portfolios.entity';
 import { ClarisaPortfolioDto } from './dtos/clarisa-portfolio.dto';
+import { ClarisaGlobalUnit } from './clarisa-global-unit/entities/clarisa-global-unit.entity';
+import { ClarisaProject } from './clarisa-projects/entity/clarisa-projects.entity';
+import { ClarisaProjectDto } from './dtos/clarisa-project.dto';
 
 /**
  * Represents a mapping of CLARISA parameters to their corresponding values.
@@ -57,7 +60,7 @@ type Params = {
  * @property {'type'} type - Defines the type or category of the item.
  * @property {'status'} status - Represents the current status of the item.
  */
-type ClarisaParam = 'show' | 'from' | 'version' | 'type' | 'status';
+type ClarisaParam = 'show' | 'from' | 'version' | 'type' | 'status' | 'year';
 
 /**
  * Represents the HTTP methods that can be used in requests.
@@ -261,6 +264,17 @@ export class ClarisaEndpoints<Entity, Dto> {
   );
 
   /**
+   * Represents the endpoint configuration for fetching all global units (version 2).
+   */
+  public static readonly GLOBAL_UNITS = new ClarisaEndpoints(
+    'cgiar-entities',
+    'GET',
+    ClarisaGlobalUnit,
+    undefined,
+    { version: 2, year: 2025 },
+  );
+
+  /**
    * Represents the endpoint configuration for fetching all CGIAR entities.
    */
   public static readonly CGIAR_ENTITIES = new ClarisaEndpoints(
@@ -319,6 +333,13 @@ export class ClarisaEndpoints<Entity, Dto> {
     'GET',
     ClarisaPortfolios,
     ClarisaEndpoints.portfolioMapper,
+  );
+
+  public static readonly PROJECTS = new ClarisaEndpoints(
+    'projects',
+    'GET',
+    ClarisaProject,
+    ClarisaEndpoints.projectMapper,
   );
 
   /**
@@ -564,5 +585,33 @@ export class ClarisaEndpoints<Entity, Dto> {
         acronym: item.acronym,
       };
     });
+  }
+
+  static projectMapper(
+    data: ClarisaProjectDto[],
+  ): DeepPartial<ClarisaProject>[] {
+    return data.map((item) => ({
+      id: item.id,
+      shortName: item.short_name ?? null,
+      fullName: item.full_name ?? null,
+      summary: item.summary ?? null,
+      description: item.description ?? null,
+      startDate: item.start_date ?? null,
+      endDate: item.end_date ?? null,
+      totalBudget: item.total_budget ?? null,
+      remaining: item.remaining ?? null,
+      annual: item.annual ?? null,
+      sourceOfFunding: item.source_of_funding ?? null,
+      organizationCode: item.organization_code ?? null,
+      funderCode: item.funder_code ?? null,
+      interimDirectorReview: item.interim_director_review ?? null,
+      projectResults: item.project_results ?? null,
+      modificationJustification: item.modification_justification ?? null,
+      createdAt: item.created_at ? new Date(item.created_at) : null,
+      updatedAt: item.updated_at ? new Date(item.updated_at) : null,
+      isActive: item.is_active ?? null,
+      createdBy: item.created_by ?? null,
+      updatedBy: item.updated_by ?? null,
+    }));
   }
 }

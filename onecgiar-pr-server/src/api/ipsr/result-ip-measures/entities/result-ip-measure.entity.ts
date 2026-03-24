@@ -8,6 +8,7 @@ import {
 import { BaseEntity } from '../../../../shared/entities/base-entity';
 import { ResultInnovationPackage } from '../../result-innovation-package/entities/result-innovation-package.entity';
 import { Result } from '../../../results/entities/result.entity';
+import { ResultInnovSection } from '../../../results-framework-reporting/result_innov_section/entities/result_innov_section.entity';
 
 @Entity('result_ip_measure')
 export class ResultIpMeasure extends BaseEntity {
@@ -37,6 +38,17 @@ export class ResultIpMeasure extends BaseEntity {
     nullable: true,
   })
   addressing_demands!: string;
+
+  @ManyToOne(() => ResultInnovSection)
+  @JoinColumn({ name: 'section_id' })
+  obj_section: ResultInnovSection;
+
+  @Column({
+    name: 'section_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  section_id?: number;
 
   // relations
 

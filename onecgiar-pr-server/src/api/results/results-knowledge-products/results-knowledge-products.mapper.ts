@@ -41,15 +41,22 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProductDto.melia_previous_submitted = null; //null, as this info is mapped by the user
     knowledgeProductDto.melia_type_id = null; //null, as this info is mapped by the user
     knowledgeProductDto.ost_melia_study_id = null; //null, as this info is mapped by the user
+    knowledgeProductDto.toc_melia_study_id = null; //null, as this info is mapped by the user
     knowledgeProductDto.title = mqapResponseDto?.Title;
     knowledgeProductDto.sponsor = (mqapResponseDto?.['Funding source'] ?? [])
       .map((f) => f.name)
       .join('; ');
     knowledgeProductDto.type = mqapResponseDto?.Type;
 
-    knowledgeProductDto.cgspace_countries = this.getAsArray(
-      mqapResponseDto?.['Country ISO code'],
-    );
+    const countryCodes =
+      mqapResponseDto?.['Country ISO code'] &&
+      mqapResponseDto['Country ISO code'].length > 0
+        ? mqapResponseDto['Country ISO code']
+        : (mqapResponseDto?.Countries ?? []);
+
+    knowledgeProductDto.repo = mqapResponseDto?.repo;
+
+    knowledgeProductDto.cgspace_countries = this.getAsArray(countryCodes);
 
     knowledgeProductDto = this.fillRelatedMetadata(
       mqapResponseDto,
@@ -93,7 +100,7 @@ export class ResultsKnowledgeProductMapper {
     const metadataCGSpace: ResultsKnowledgeProductMetadataDto =
       new ResultsKnowledgeProductMetadataDto();
 
-    metadataCGSpace.source = 'CGSpace';
+    metadataCGSpace.source = knowledgeProductDto.repo;
 
     if (dto?.['Open Access']) {
       metadataCGSpace.accessibility =
@@ -101,6 +108,8 @@ export class ResultsKnowledgeProductMapper {
           'Open Access',
           dto?.['Open Access'],
         ) == 0;
+
+      metadataCGSpace.open_access = dto?.['Open Access'];
     }
 
     metadataCGSpace.doi = dto?.DOI;
@@ -378,6 +387,7 @@ export class ResultsKnowledgeProductMapper {
       entity.melia_previous_submitted;
     knowledgeProductDto.melia_type_id = entity.melia_type_id;
     knowledgeProductDto.ost_melia_study_id = entity.ost_melia_study_id;
+    knowledgeProductDto.toc_melia_study_id = entity.toc_melia_study_id;
     knowledgeProductDto.cgspace_phase_year =
       entity?.result_object?.obj_version?.cgspace_year;
 
@@ -413,17 +423,27 @@ export class ResultsKnowledgeProductMapper {
       metadataDto.doi = m.doi;
       metadataDto.is_isi = m.is_isi;
       metadataDto.is_peer_reviewed = m.is_peer_reviewed;
-      metadataDto.issue_year = m.year;
+      metadataDto.issue_year =
+        !m.year || +m.year === 0 ? m.online_year || null : m.year;
       metadataDto.online_year = m.online_year;
+      metadataDto.open_access = m.open_access;
 
       return metadataDto;
     });
-    knowledgeProductDto.metadataCG = knowledgeProductDto.metadata.find(
-      (m) => m.source === 'CGSpace',
-    );
-    knowledgeProductDto.metadataWOS = knowledgeProductDto.metadata.find(
-      (m) => m.source !== 'CGSpace',
-    );
+
+    knowledgeProductDto.metadataCG = knowledgeProductDto.metadata.length
+      ? {
+          ...knowledgeProductDto.metadata[0],
+          source: knowledgeProductDto.metadata[0]?.source,
+        }
+      : null;
+
+    knowledgeProductDto.metadataWOS = knowledgeProductDto.metadata.length
+      ? {
+          ...knowledgeProductDto.metadata[1],
+          source: knowledgeProductDto.metadata[1]?.source,
+        }
+      : null;
 
     const altmetric =
       entity.result_knowledge_product_altmetric_array[0] ?? undefined;
@@ -692,38 +712,45 @@ export class ResultsKnowledgeProductMapper {
     dto: ResultsKnowledgeProductDto,
     upsert = false,
   ) {
-    const regions = (dto.clarisa_regions ?? []).map((r) => {
-      let region: ResultRegion;
-      if (upsert) {
-        region = (
-          knowledgeProduct.result_object.result_region_array ?? []
-        ).find((orr) => orr.region_id == r);
-        if (region) {
-          region['matched'] = true;
-        }
+    if (dto.clarisa_regions === undefined) return;
+
+    const incoming = new Set(dto.clarisa_regions ?? []);
+    const existing = knowledgeProduct.result_object.result_region_array ?? [];
+
+    if (!upsert) {
+      knowledgeProduct.result_object.result_region_array = [...incoming].map(
+        (r) => {
+          const rr = new ResultRegion();
+          rr.region_id = r;
+          rr.result_id = knowledgeProduct.results_id;
+          rr.is_active = true;
+          return rr;
+        },
+      );
+      return;
+    }
+
+    const byRegionId = new Map<number, ResultRegion>();
+    for (const e of existing) byRegionId.set(e.region_id, e);
+
+    const final: ResultRegion[] = [];
+
+    for (const r of incoming) {
+      const rr = byRegionId.get(r) ?? new ResultRegion();
+      rr.region_id = r;
+      rr.result_id = knowledgeProduct.results_id;
+      rr.is_active = true;
+      final.push(rr);
+    }
+
+    for (const e of existing) {
+      if (!incoming.has(e.region_id)) {
+        if (e.result_region_id) e.is_active = false;
+        final.push(e);
       }
+    }
 
-      region ??= new ResultRegion();
-
-      region.region_id = r;
-      region.result_id = knowledgeProduct.results_id;
-
-      return region;
-    });
-
-    (knowledgeProduct.result_object.result_region_array ?? []).forEach((or) => {
-      if (!or['matched']) {
-        if (or.result_region_id) {
-          or.is_active = false;
-        }
-
-        regions.push(or);
-      } else {
-        delete or['matched'];
-      }
-    });
-
-    knowledgeProduct.result_object.result_region_array = regions;
+    knowledgeProduct.result_object.result_region_array = final;
   }
 
   public patchAltmetricData(
@@ -783,6 +810,7 @@ export class ResultsKnowledgeProductMapper {
       metadata.is_peer_reviewed = m.is_peer_reviewed;
       metadata.year = m.issue_year;
       metadata.online_year = m.online_year;
+      metadata.open_access = m.open_access;
 
       if (!knowledgeProduct.last_updated_by) {
         metadata.created_by = knowledgeProduct.created_by;

@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { ClarisaRegion } from '../../../../clarisa/clarisa-regions/entities/clarisa-region.entity';
 import { Result } from '../../entities/result.entity';
+import { GeoScopeRole } from '../../../results-framework-reporting/geo_scope_role/entities/geo_scope_role.entity';
 
 @Entity('result_region')
 export class ResultRegion {
@@ -29,6 +30,15 @@ export class ResultRegion {
     default: true,
   })
   is_active: boolean;
+
+  @Column({ type: 'int', nullable: true })
+  geo_scope_role_id: number;
+
+  @ManyToOne(() => GeoScopeRole, (v) => v.id, { nullable: false })
+  @JoinColumn({
+    name: 'geo_scope_role_id',
+  })
+  obj_geo_scope_role: GeoScopeRole;
 
   @CreateDateColumn({
     type: 'timestamp',

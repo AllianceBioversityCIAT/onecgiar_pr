@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { In, IsNull, Not } from 'typeorm';
+import { DataSource, In, IsNull, Not } from 'typeorm';
 import { CreateResultsByInstitutionDto } from './dto/create-results_by_institution.dto';
 import { ResultByIntitutionsRepository } from './result_by_intitutions.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
@@ -7,12 +7,10 @@ import { ResultsByInstitution } from './entities/results_by_institution.entity';
 import { SaveResultsByInstitutionDto } from './dto/save_results_by_institution.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResultRepository } from '../result.repository';
-import { VersionsService } from '../versions/versions.service';
 import { ResultByInstitutionsByDeliveriesTypeRepository } from '../result-by-institutions-by-deliveries-type/result-by-institutions-by-deliveries-type.repository';
 import { ResultByInstitutionsByDeliveriesType } from '../result-by-institutions-by-deliveries-type/entities/result-by-institutions-by-deliveries-type.entity';
 import { UserRepository } from '../../../auth/modules/user/repositories/user.repository';
 import { ResultsKnowledgeProductsRepository } from '../results-knowledge-products/repositories/results-knowledge-products.repository';
-import { ResultsKnowledgeProductInstitutionRepository } from '../results-knowledge-products/repositories/results-knowledge-product-institution.repository';
 import { InstitutionRoleEnum } from './entities/institution_role.enum';
 import { ResultInstitutionsBudgetRepository } from '../result_budget/repositories/result_institutions_budget.repository';
 import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
@@ -26,23 +24,27 @@ import { ResultsCenter } from '../results-centers/entities/results-center.entity
 import { NonPooledProjectDto } from '../non-pooled-projects/dto/non-pooled-project.dto';
 import { ResultsCenterDto } from '../results-centers/dto/results-center.dto';
 import { ResultTypeEnum } from '../../../shared/constants/result-type.enum';
+import { ResultsByProjectsService } from '../results_by_projects/results_by_projects.service';
+import { SavePartnersV2Dto } from './dto/save-partners-v2.dto';
+import { ResultsByProjectsRepository } from '../results_by_projects/results_by_projects.repository';
 
 @Injectable()
 export class ResultsByInstitutionsService {
   constructor(
+    private readonly _dataSource: DataSource,
     private readonly _resultByIntitutionsRepository: ResultByIntitutionsRepository,
     private readonly _resultRepository: ResultRepository,
-    private readonly _versionsService: VersionsService,
     private readonly _resultByInstitutionsByDeliveriesTypeRepository: ResultByInstitutionsByDeliveriesTypeRepository,
     private readonly _handlersError: HandlersError,
     private readonly _userRepository: UserRepository,
     private readonly _resultKnowledgeProductRepository: ResultsKnowledgeProductsRepository,
-    private readonly _resultsKnowledgeProductInstitutionRepository: ResultsKnowledgeProductInstitutionRepository,
     private readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
     private readonly _globalParameterRepository: GlobalParameterRepository,
     private readonly _nonPooledProjectRepository: NonPooledProjectRepository,
     private readonly _resultsCenterRepository: ResultsCenterRepository,
     private readonly _resultBilateralBudgetRepository: NonPooledProjectBudgetRepository,
+    private readonly _resultsByProjectsService: ResultsByProjectsService,
+    private readonly _resultsBilateralRepository: ResultsByProjectsRepository,
   ) {}
 
   create(createResultsByInstitutionDto: CreateResultsByInstitutionDto) {
@@ -354,9 +356,296 @@ export class ResultsByInstitutionsService {
     }
   }
 
-  private async handleContributingCenters(
+  /**
+   * P25: guarda instituciones/partners + centers + bilateral_projects (nuevo),
+   * reusa MQAP, budgets y deliveries del legacy; elimina NPP.
+   */
+  async savePartnersInstitutionsByResultV2(
+    data: SavePartnersV2Dto,
+    user: TokenDto,
+  ) {
+    try {
+      return await this._dataSource.transaction(async () => {
+        const incomingResult = await this._resultRepository.findOne({
+          where: { id: data.result_id },
+          relations: {
+            result_by_institution_array: {
+              delivery: true,
+              result_institution_budget_array: true,
+            },
+          },
+        });
+        if (!incomingResult) {
+          throw {
+            response: {},
+            message: 'Result Not Found',
+            status: HttpStatus.NOT_FOUND,
+          };
+        }
+
+        const incomingUser = await this._userRepository.getUserById(user.id);
+        if (!incomingUser) {
+          throw {
+            response: user,
+            message: 'User Not Found',
+            status: HttpStatus.NOT_FOUND,
+          };
+        }
+
+        const globalParameter = await this._globalParameterRepository.findOne({
+          where: { name: 'kp_mqap_institutions_confidence' },
+          select: ['value'],
+        });
+        if (!globalParameter) {
+          throw new Error(
+            "Global parameter 'kp_mqap_institutions_confidence' not found",
+          );
+        }
+        const confidenceThreshold = +globalParameter.value;
+
+        const knowledgeProduct =
+          await this._resultKnowledgeProductRepository.findOne({
+            where: { results_id: incomingResult.id },
+            relations: {
+              result_knowledge_product_institution_array: {
+                result_by_institution_object: {
+                  result_kp_mqap_institution_object: true,
+                  delivery: true,
+                },
+              },
+            },
+          });
+
+        if (knowledgeProduct) {
+          knowledgeProduct.result_knowledge_product_institution_array =
+            knowledgeProduct.result_knowledge_product_institution_array.filter(
+              (rki) => rki.is_active,
+            );
+        }
+
+        if (knowledgeProduct && data.mqap_institutions?.length) {
+          await this.handleMqapInstitutionsUpdate(
+            data.mqap_institutions as any,
+            knowledgeProduct,
+            user.id,
+            confidenceThreshold,
+          );
+        }
+
+        await this._resultRepository.update(incomingResult.id, {
+          no_applicable_partner: data.no_applicable_partner,
+          is_lead_by_partner: data.is_lead_by_partner,
+        });
+
+        const oldPartners = incomingResult.result_by_institution_array.filter(
+          (rbi) =>
+            rbi.is_active &&
+            rbi.institution_roles_id ==
+              (knowledgeProduct
+                ? InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS
+                : InstitutionRoleEnum.PARTNER),
+        );
+
+        if (data.no_applicable_partner === true) {
+          await this._resultByIntitutionsRepository.update(
+            { id: In(oldPartners.map((p) => p.id)) },
+            { is_active: false, last_updated_by: user.id },
+          );
+          await this._resultByInstitutionsByDeliveriesTypeRepository.update(
+            { result_by_institution_id: In(oldPartners.map((p) => p.id)) },
+            { is_active: false, last_updated_by: user.id },
+          );
+          await this._resultInstitutionsBudgetRepository.update(
+            { result_institution_id: In(oldPartners.map((p) => p.id)) },
+            { is_active: false, last_updated_by: user.id },
+          );
+        } else {
+          const isInnovation = [
+            ResultTypeEnum.INNOVATION_DEVELOPMENT,
+            ResultTypeEnum.INNOVATION_USE,
+            ResultTypeEnum.INNOVATION_USE_IPSR,
+          ].includes(incomingResult.result_type_id);
+          await this.handleInstitutions(
+            data.institutions ?? [],
+            oldPartners,
+            !!knowledgeProduct,
+            isInnovation,
+            data.result_id,
+            user.id,
+          );
+        }
+
+        await this.handleContributingCenters(
+          data.contributing_center ?? [],
+          data,
+          user,
+        );
+
+        if (Array.isArray(data.bilateral_project)) {
+          const syncResult =
+            await this._resultsByProjectsService.syncBilateralProjects(
+              data.result_id,
+              data.bilateral_project,
+              user.id,
+            );
+
+          if (syncResult?.status && syncResult.status >= 400) {
+            throw {
+              response: syncResult.response ?? {},
+              message:
+                syncResult.message ?? 'Failed to sync bilateral projects',
+              status: syncResult.status,
+            };
+          }
+
+          const activeProjects = await this._resultsBilateralRepository.find({
+            where: { result_id: data.result_id, is_active: true },
+          });
+
+          await Promise.all(
+            activeProjects.map((project) =>
+              this.updateOrSaveResultProjectBudget(project.id, user),
+            ),
+          );
+        }
+
+        const current = await this.getInstitutionsPartnersByResultIdV2(
+          data.result_id,
+        );
+
+        return {
+          response: current.response,
+          message: 'Successfully updated partners (P25)',
+          status: HttpStatus.OK,
+        };
+      });
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  /**
+   * GET V2 (formato P25): institutions + mqap + centers + bilateral_projects
+   * (sin contributing_np_projects)
+   */
+  async getInstitutionsPartnersByResultIdV2(resultId: number) {
+    try {
+      const result = await this._resultRepository.getResultById(resultId);
+      if (!result?.id) {
+        throw {
+          response: resultId,
+          message: 'Results Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const knowledgeProduct =
+        await this._resultKnowledgeProductRepository.findOne({
+          where: { results_id: resultId },
+          relations: { result_knowledge_product_institution_array: true },
+        });
+
+      let institutions: any[] = await this._resultByIntitutionsRepository.find({
+        where: {
+          result_id: resultId,
+          is_active: true,
+          institution_roles_id: knowledgeProduct
+            ? InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS
+            : InstitutionRoleEnum.PARTNER,
+        },
+        relations: {
+          delivery: true,
+          obj_institutions: { obj_institution_type_code: true },
+        },
+        order: { id: 'ASC' },
+      });
+
+      institutions = institutions.map((i) => ({
+        ...i,
+        delivery: i.delivery.filter((d) => d.is_active),
+        obj_institutions: i.obj_institutions
+          ? {
+              name: i.obj_institutions.name,
+              website_link: i.obj_institutions.website_link,
+              obj_institution_type_code: {
+                id: i.obj_institutions.obj_institution_type_code.code,
+                name: i.obj_institutions.obj_institution_type_code.name,
+              },
+            }
+          : null,
+      }));
+
+      let mqap_institutions: any[] = [];
+      if (knowledgeProduct) {
+        mqap_institutions = await this._resultByIntitutionsRepository.find({
+          where: {
+            result_id: result.id,
+            is_active: true,
+            institution_roles_id: InstitutionRoleEnum.PARTNER,
+            is_predicted: Not(IsNull()),
+            result_kp_mqap_institution_id: Not(IsNull()),
+          },
+          relations: {
+            result_kp_mqap_institution_object: true,
+            delivery: true,
+            obj_institutions: { obj_institution_type_code: true },
+          },
+          order: { is_predicted: 'ASC' },
+        });
+
+        mqap_institutions = mqap_institutions.map((institution) => {
+          const mappedInstitution = {
+            ...institution,
+            delivery: institution.delivery.filter(
+              (delivery) => delivery.is_active,
+            ),
+          };
+
+          if (institution.obj_institutions) {
+            mappedInstitution.obj_institutions = {
+              name: institution.obj_institutions.name,
+              website_link: institution.obj_institutions.website_link,
+              obj_institution_type_code: {
+                name: institution.obj_institutions.obj_institution_type_code
+                  ?.name,
+              },
+            };
+          }
+
+          return mappedInstitution;
+        });
+      }
+
+      const contributing_center =
+        await this._resultsCenterRepository.getAllResultsCenterByResultId(
+          resultId,
+        );
+
+      const bilateral_projects =
+        await this._resultsBilateralRepository.findResultsByProjectsByResultId(
+          resultId,
+        );
+
+      return {
+        response: {
+          no_applicable_partner: !!result.no_applicable_partner,
+          institutions,
+          mqap_institutions,
+          bilateral_projects,
+          contributing_center,
+          is_lead_by_partner: !!result.is_lead_by_partner,
+        },
+        message: 'Successful response (P25)',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async handleContributingCenters(
     contributing_center: ResultsCenterDto[],
-    data: SaveResultsByInstitutionDto,
+    data: { result_id: number },
     user: TokenDto,
   ) {
     if (contributing_center?.length) {
@@ -462,7 +751,7 @@ export class ResultsByInstitutionsService {
     }
   }
 
-  private async updateOrSaveBudget(projectId: number, user: TokenDto) {
+  private async updateOrSaveNonPooledBudget(projectId: number, user: TokenDto) {
     const existingBudget = await this._resultBilateralBudgetRepository.findOne({
       where: { non_pooled_projetct_id: projectId },
     });
@@ -480,6 +769,33 @@ export class ResultsByInstitutionsService {
       });
     } else {
       await this._resultBilateralBudgetRepository.update(projectId, budgetData);
+    }
+  }
+
+  private async updateOrSaveResultProjectBudget(
+    projectId: number,
+    user: TokenDto,
+  ) {
+    const existingBudget = await this._resultBilateralBudgetRepository.findOne({
+      where: { result_project_id: projectId },
+    });
+
+    const budgetData = {
+      result_project_id: projectId,
+      is_active: true,
+      last_updated_by: user.id,
+    };
+
+    if (!existingBudget) {
+      await this._resultBilateralBudgetRepository.save({
+        ...budgetData,
+        created_by: user.id,
+      });
+    } else {
+      await this._resultBilateralBudgetRepository.update(
+        { result_project_id: projectId },
+        budgetData,
+      );
     }
   }
 
@@ -507,7 +823,7 @@ export class ResultsByInstitutionsService {
       });
 
       for (const project of activeProjects) {
-        await this.updateOrSaveBudget(project.id, user);
+        await this.updateOrSaveNonPooledBudget(project.id, user);
       }
     } else {
       await this.updateNonPooledProjectsById(data.result_id, [], user.id);
@@ -598,14 +914,14 @@ export class ResultsByInstitutionsService {
     resultId: number,
     userId: number,
   ) {
-    // eslint-disable-next-line prefer-const
-    let { added, removed } = ChangeTracker.trackChangesForObjects(
-      oldInstitutions,
-      incomingInstitutions,
-      'id',
-    );
+    const { added: initialAdded, removed } =
+      ChangeTracker.trackChangesForObjects(
+        oldInstitutions,
+        incomingInstitutions,
+        'id',
+      );
+    let added = initialAdded;
 
-    //handling removed result_by_institutions
     if (removed.length) {
       await this._resultByIntitutionsRepository.update(
         { id: In(removed.map((i) => i.id)) },
@@ -623,26 +939,78 @@ export class ResultsByInstitutionsService {
       );
     }
 
-    //handling added result_by_institutions
     if (added.length) {
-      added = added.map((a) => {
-        const toAdd = new ResultsByInstitution();
+      const institutionRoleId = isKnowledgeProduct
+        ? InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS
+        : InstitutionRoleEnum.PARTNER;
 
-        toAdd.created_by = userId;
-        toAdd.last_updated_by = userId;
-        toAdd.is_active = true;
-        toAdd.result_id = resultId;
-        toAdd.institutions_id = a.institutions_id;
-        toAdd.institution_roles_id = isKnowledgeProduct
-          ? InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS
-          : InstitutionRoleEnum.PARTNER;
-        toAdd.delivery = a.delivery;
-        toAdd['isNew'] = true;
-        toAdd.is_leading_result = a.is_leading_result;
-        return toAdd;
-      });
+      // Check for existing institutions (active or inactive) to avoid duplicates
+      // OPTIMIZATION: Single query to fetch all potentially existing records
+      const incomingInstitutionIds = added
+        .map((a) => a.institutions_id)
+        .filter((id) => id != null);
 
-      added = await this._resultByIntitutionsRepository.save(added);
+      const existingInstitutions =
+        incomingInstitutionIds.length > 0
+          ? await this._resultByIntitutionsRepository.find({
+              where: {
+                result_id: resultId,
+                institutions_id: In(incomingInstitutionIds),
+                institution_roles_id: institutionRoleId,
+              },
+            })
+          : [];
+
+      // Build map for O(1) lookup: institutions_id -> existing ResultsByInstitution
+      const existingMap = new Map<number, ResultsByInstitution>();
+      for (const existing of existingInstitutions) {
+        existingMap.set(existing.institutions_id, existing);
+      }
+
+      const institutionsToReactivate: ResultsByInstitution[] = [];
+      const institutionsToCreate: ResultsByInstitution[] = [];
+
+      for (const a of added) {
+        const existing = existingMap.get(a.institutions_id);
+
+        if (existing) {
+          // Reactivate and update existing record instead of creating duplicate
+          existing.is_active = true;
+          existing.last_updated_by = userId;
+          existing.institutions_id = a.institutions_id;
+          existing.is_leading_result = a.is_leading_result;
+          existing.delivery = a.delivery ?? [];
+          institutionsToReactivate.push(existing);
+        } else {
+          // Create new only if no existing record found
+          const toAdd = new ResultsByInstitution();
+          toAdd.created_by = userId;
+          toAdd.last_updated_by = userId;
+          toAdd.is_active = true;
+          toAdd.result_id = resultId;
+          toAdd.institutions_id = a.institutions_id;
+          toAdd.institution_roles_id = institutionRoleId;
+          toAdd.delivery = a.delivery ?? [];
+          toAdd['isNew'] = true;
+          toAdd.is_leading_result = a.is_leading_result;
+          institutionsToCreate.push(toAdd);
+        }
+      }
+
+      // Save reactivated and new institutions separately
+      if (institutionsToReactivate.length) {
+        await this._resultByIntitutionsRepository.save(
+          institutionsToReactivate,
+        );
+      }
+
+      if (institutionsToCreate.length) {
+        const created =
+          await this._resultByIntitutionsRepository.save(institutionsToCreate);
+        added = [...institutionsToReactivate, ...created];
+      } else {
+        added = institutionsToReactivate;
+      }
 
       if (isInnoDev) {
         const resultInstitutionsBudgets = added.map((a) => {
@@ -661,7 +1029,6 @@ export class ResultsByInstitutionsService {
       }
     }
 
-    // handling modfiy result_by_institutions
     const toUpdate = oldInstitutions.filter(
       (i) => !removed.some((r) => r.id === i.id),
     );
@@ -718,17 +1085,26 @@ export class ResultsByInstitutionsService {
     await this._resultByIntitutionsRepository.save(toUpdate);
     await this._resultInstitutionsBudgetRepository.save(updatedNewBudgets);
 
-    //handling deliveries from added and updated result_by_institutions
-    for (const toUpdateDeliveries of toUpdate.concat(added)) {
-      await this.handleDeliveries(
-        toUpdateDeliveries['isNew']
-          ? toUpdateDeliveries.delivery
-          : (incomingInstitutions.find((i) => i.id === toUpdateDeliveries.id)
-              ?.delivery ?? []),
-        toUpdateDeliveries['isNew'] ? [] : toUpdateDeliveries.delivery,
-        toUpdateDeliveries.id,
-        userId,
-      );
+    const dtoHasDelivery = (dto: any): boolean =>
+      dto != null && Object.prototype.hasOwnProperty.call(dto, 'delivery');
+
+    for (const inst of toUpdate.concat(added)) {
+      if (inst['isNew']) {
+        const incoming = (inst.delivery ?? []) as any[];
+        if (incoming.length) {
+          await this.handleDeliveries(incoming, [], inst.id, userId);
+        }
+        continue;
+      }
+
+      const dto = incomingInstitutions.find((i) => i.id === inst.id);
+
+      if (!dtoHasDelivery(dto)) continue;
+
+      const incoming = (dto?.delivery ?? []) as any[];
+      const old = (inst.delivery ?? []) as any[];
+
+      await this.handleDeliveries(incoming, old, inst.id, userId);
     }
   }
 }

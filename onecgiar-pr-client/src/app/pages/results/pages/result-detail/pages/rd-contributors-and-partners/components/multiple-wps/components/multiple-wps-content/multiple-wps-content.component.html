@@ -1,0 +1,128 @@
+<div class="container" *ngIf="activeTab">
+  <div class="flex-no-wrap" *ngIf="(activeTab?.planned_result !== null || activeTab?.planned_result === null) && showMultipleWPsContent">
+    <div style="max-width: 250px" *ngIf="resultLevelId === 1 ? !activeTab?.planned_result : true">
+      <app-pr-select
+        [options]="this.tocResultListFiltered()"
+        label="Level"
+        [editable]="editable"
+        [disabled]="!editable"
+        [required]="!isUnplanned"
+        optionLabel="name"
+        optionValue="toc_level_id"
+        placeholder="Select outcome level"
+        [(ngModel)]="activeTab.toc_level_id"
+        (ngModelChange)="indicatorView = false; setActiveTabSignal()">
+      </app-pr-select>
+    </div>
+
+    @if (this.secondFieldLabel() && activeTab.toc_level_id) {
+      @switch (activeTab.toc_level_id) {
+        @case (3) {
+          <app-pr-select
+            [options]="eoiList()"
+            [label]="this.secondFieldLabel()"
+            [editable]="editable"
+            [required]="!isUnplanned"
+            [disabled]="(resultLevelId === 1 && false) || !editable"
+            optionLabel="title"
+            optionValue="toc_result_id"
+            placeholder="Select outcome"
+            [(ngModel)]="activeTab.toc_result_id"
+            (ngModelChange)="getIndicatorsList()">
+          </app-pr-select>
+        }
+        @case (2) {
+          <app-pr-select
+            [options]="outcomeList()"
+            [label]="this.secondFieldLabel()"
+            [editable]="editable"
+            [required]="!isUnplanned"
+            [disabled]="(resultLevelId === 1 && false) || !editable"
+            optionLabel="extraInformation"
+            [extraInformation]="true"
+            optionValue="toc_result_id"
+            placeholder="Select outcome"
+            [(ngModel)]="activeTab.toc_result_id"
+            (ngModelChange)="getIndicatorsList()">
+          </app-pr-select>
+        }
+        @case (1) {
+          <app-pr-select
+            [options]="outputList()"
+            [label]="this.secondFieldLabel()"
+            optionLabel="extraInformation"
+            optionValue="toc_result_id"
+            [required]="!isUnplanned"
+            [disabled]="!editable"
+            [editable]="editable"
+            placeholder="Select output"
+            [(ngModel)]="activeTab.toc_result_id"
+            [extraInformation]="true"
+            (ngModelChange)="getIndicatorsList()">
+          </app-pr-select>
+        }
+      }
+    }
+  </div>
+  @if (this.secondFieldLabel() && !isUnplanned) {
+    @if (showIndicators() && activeTab.toc_result_id) {
+      @if (this.indicatorsList().length) {
+        <app-pr-select
+          [options]="this.indicatorsList()"
+          label="Indicator"
+          [editable]="editable"
+          [disabled]="!editable"
+          optionLabel="indicator_description"
+          optionValue="related_node_id"
+          placeholder="Select outcome level"
+          [(ngModel)]="activeTab.indicators[0].related_node_id"
+          (ngModelChange)="mapTocResultsIndicatorId()">
+        </app-pr-select>
+        @if (activeTab.indicators[0].related_node_id) {
+          <div>
+            <app-pr-field-header label="Contribution to indicator target" [required]="false"></app-pr-field-header>
+            <app-alert-status
+              status="info"
+              description="Indicate in this box the numerical value that your result contributes toward the 2025 target of the indicator.<br>
+              <br><strong>Example:</strong> If the 2025 indicator target is 200 (people trained) and your result (e.g., a capacity-sharing activity) provides evidence of 90 people trained, enter <strong>90</strong> in this box.<br>
+              <br>The values entered here will be aggregated at the end of the reporting cycle to assess progress toward the planned 2025 target for the indicator."
+              inlineStyles="margin: 0; margin-bottom: 10px !important;"></app-alert-status>
+            <div style="margin: 8px 0" *ngIf="selectedIndicatorData()">
+              <p><strong>Unit of measurement:</strong> {{ selectedIndicatorData()?.unit_messurament || 'Not specified' }}</p>
+              <p><strong>Target:</strong> {{ selectedIndicatorData()?.targets?.[0]?.target_value || 'Not specified' }}</p>
+            </div>
+            <input
+              type="number"
+              placeholder="Enter target"
+              [readonly]="!editable"
+              [disabled]="!editable"
+              [(ngModel)]="activeTab.indicators[0].targets[0].contributing_indicator"
+              class="p-inputtext p-component"
+              style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem" />
+          </div>
+        }
+      }
+    }
+    @if (!hidden) {
+      <hr class="divider-20" />
+
+      <app-alert-status
+        status="info"
+        description="Where results are qualitative and do not contribute numerically to the indicator target, provide here a short explanation of how the result supports or aligns with the Program's TOC pathway."
+        inlineStyles="margin: 0; margin: 10px 0;"></app-alert-status>
+
+      <app-pr-textarea
+        label="Explanation of how the result aligns with/contributes to the Program's TOC pathway"
+        [required]="false"
+        placeholder="Enter text"
+        [rows]="3"
+        [isStatic]="editable"
+        [readOnly]="!editable"
+        [(ngModel)]="activeTab.toc_progressive_narrative"
+        [maxWords]="150">
+      </app-pr-textarea>
+    }
+  }
+</div>
+
+<app-mapped-results-modal [activeTab]="activeTab" [outputList]="outputList" [resultLevelId]="resultLevelId"></app-mapped-results-modal>

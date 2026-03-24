@@ -294,6 +294,7 @@ export class ResultsInnovationsDevRepository
       rid.innovation_acknowledgement,
       rid.innovation_pdf,
       rid.innovation_user_to_be_determined,
+      rid.has_scaling_studies,
       previous_rid.innovation_readiness_level_id as previous_irl
     FROM \`result\` r
     left join \`version\` v on r.version_id = v.id

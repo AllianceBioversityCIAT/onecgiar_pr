@@ -2,6 +2,11 @@
   label="Please select PRMS-reported Innovation Development that form a bundle with the core innovation"
   description="Please consider the inclusion of other innovations that CGIAR and partners are already working on and that have been reported in the PRMS."></app-pr-field-header>
 
+<div
+  appFeedbackValidation
+  labelText="Complementary innovation(s)/ enabler(s)/ solution(s) selected"
+  [isComplete]="this.innovationPackageCreatorBody?.length > 0"></div>
+
 <app-table-innovation
   (selectEvent)="selectInnovationEvent($event)"
   [dataTable]="informationInnovationDevelopments"

@@ -25,6 +25,11 @@ export class GeneralInfoBody {
   public discontinued_options: any[] = [];
   public is_replicated: boolean = false;
   public result_code: string | number = null;
+  gender_impact_area_id = null;
+  climate_impact_area_id = null;
+  nutrition_impact_area_id = null;
+  environmental_biodiversity_impact_area_id = null;
+  poverty_impact_area_id = null;
 }
 
 interface institutionsInterface {

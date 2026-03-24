@@ -1,6 +1,6 @@
 export enum InstitutionRoleEnum {
   ACTOR = 1,
-  PARTNER,
+  PARTNER = 2,
   CAPDEV_TRAINEES_ON_BEHALF,
   POLICY_OWNER,
   INNOVATION_PACKAGE_PARTNERS,

@@ -11,5 +11,6 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
     ResultIpMeasureRepository,
     HandlersError,
   ],
+  exports: [ResultIpMeasuresService, ResultIpMeasureRepository],
 })
 export class ResultIpMeasuresModule {}

@@ -4,6 +4,7 @@ import {
   EvidencesCreateInterface,
 } from './dto/create-evidence.dto';
 import { UpdateEvidenceDto } from './dto/update-evidence.dto';
+import { EvidenceDto } from '../dto/review-update.dto';
 import { EvidencesRepository } from './evidences.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
@@ -214,6 +215,12 @@ export class EvidencesService {
         }
         await this._evidencesRepository.save(newsEvidencesArray);
       }
+
+      await this._resultRepository.update(createEvidenceDto.result_id, {
+        last_updated_by: user.id,
+        last_updated_date: new Date(),
+      });
+
       return {
         response: createEvidenceDto,
         message: 'The data was updated correctly',
@@ -224,7 +231,139 @@ export class EvidencesService {
     }
   }
 
-  private async getHandleFromRegularLink(evidence: string): Promise<string> {
+  async createV2(createEvidenceDto: CreateEvidenceDto, user: TokenDto) {
+    try {
+      const result = await this._resultRepository.getResultById(
+        createEvidenceDto.result_id,
+      );
+      await this._versionRepository.getBaseVersion();
+      if (createEvidenceDto?.evidences?.length) {
+        const evidencesArray = createEvidenceDto?.evidences.filter(
+          (e) => !!e?.link || e?.is_sharepoint,
+        );
+        const testDuplicate = evidencesArray.map((e) => e.link);
+        if (new Set(testDuplicate).size !== testDuplicate.length) {
+          throw {
+            response: {},
+            message: 'Duplicate links found in the evidence',
+            status: HttpStatus.BAD_REQUEST,
+          };
+        }
+
+        await this._evidencesRepository.updateEvidences(
+          createEvidenceDto.result_id,
+          evidencesArray.map((e) => e?.id),
+          user.id,
+          false,
+          6,
+        );
+
+        const long: number =
+          evidencesArray.length > 6 ? 6 : evidencesArray.length;
+        for (let index = 0; index < long; index++) {
+          const evidence = evidencesArray[index];
+          const eExists =
+            await this._evidencesRepository.getEvidencesByResultIdAndLink(
+              result.id,
+              evidence.id,
+              false,
+              6,
+            );
+
+          evidence.link = await this.getHandleFromRegularLink(evidence.link);
+
+          const newEvidence = new Evidence();
+          if (!eExists) {
+            newEvidence.created_by = user.id;
+            newEvidence.last_updated_by = user.id;
+            newEvidence.description = evidence?.description ?? null;
+            newEvidence.gender_related = evidence.gender_related;
+            newEvidence.is_sharepoint = evidence.is_sharepoint;
+            newEvidence.youth_related = evidence.youth_related;
+            newEvidence.nutrition_related = evidence.nutrition_related;
+            newEvidence.environmental_biodiversity_related =
+              evidence.environmental_biodiversity_related;
+            newEvidence.poverty_related = evidence.poverty_related;
+            newEvidence.innovation_readiness_related =
+              evidence.innovation_readiness_related;
+            newEvidence.innovation_use_related =
+              evidence.innovation_use_related;
+            newEvidence.is_supplementary = false;
+            newEvidence.link = evidence.link;
+            newEvidence.result_id = result.id;
+            newEvidence.evidence_type_id = 6;
+
+            const hasQuery = (evidence.link ?? '').indexOf('?');
+            const linkSplit = (evidence.link ?? '')
+              .slice(0, hasQuery != -1 ? hasQuery : evidence.link?.length)
+              .split('/');
+            const handleId = linkSplit.slice(linkSplit.length - 2).join('/');
+
+            const knowledgeProduct =
+              await this._resultsKnowledgeProductsRepository.findOne({
+                where: { handle: Like(handleId) },
+                relations: { result_object: true },
+              });
+
+            if (knowledgeProduct) {
+              newEvidence.knowledge_product_related =
+                knowledgeProduct.result_object.id;
+            }
+          } else {
+            eExists.description = evidence?.description ?? null;
+            eExists.gender_related = evidence.gender_related;
+            eExists.is_sharepoint = evidence.is_sharepoint;
+            eExists.youth_related = evidence.youth_related;
+            eExists.nutrition_related = evidence.nutrition_related;
+            eExists.environmental_biodiversity_related =
+              evidence.environmental_biodiversity_related;
+            eExists.poverty_related = evidence.poverty_related;
+            eExists.innovation_readiness_related =
+              evidence.innovation_readiness_related;
+            eExists.innovation_use_related = evidence.innovation_use_related;
+            eExists.link = evidence.link;
+
+            if (!eExists.knowledge_product_related) {
+              const knowledgeProduct =
+                await this._resultsKnowledgeProductsRepository.findOne({
+                  where: { handle: Like(evidence.link) },
+                  relations: { result_object: true },
+                });
+
+              if (knowledgeProduct) {
+                eExists.knowledge_product_related =
+                  knowledgeProduct.result_object.id;
+              }
+            }
+          }
+          const currentEvidence = eExists ? eExists : newEvidence;
+
+          const evidenceSaved =
+            await this._evidencesRepository.save(currentEvidence);
+          if (evidenceSaved?.id)
+            await this.saveSPData(evidence, evidenceSaved?.id);
+        }
+      } else {
+        await this._evidencesRepository.updateEvidences(
+          createEvidenceDto.result_id,
+          [],
+          user.id,
+          false,
+          6,
+        );
+      }
+
+      return {
+        response: createEvidenceDto,
+        message: 'The data was updated correctly',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  public async getHandleFromRegularLink(evidence: string): Promise<string> {
     const isCGLink = this.kpUrlRegex.exec(evidence ?? '');
 
     if (isCGLink) {
@@ -417,12 +556,222 @@ export class EvidencesService {
     }
   }
 
+  async findAllV2(resultId: number) {
+    try {
+      const result: Result =
+        await this._resultRepository.getResultById(resultId);
+      if (!result) {
+        throw {
+          response: {},
+          message: 'Results Not Found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const innoDev =
+        await this._resultsInnovationsDevRepository.InnovationDevExists(
+          resultId,
+        );
+
+      const evidences = await this._evidencesRepository.getEvidencesByResultId(
+        resultId,
+        false,
+        6,
+      );
+
+      evidences.map((e) => {
+        e.gender_related = !!e.gender_related;
+        e.youth_related = !!e.youth_related;
+        e.nutrition_related = !!e.nutrition_related;
+        e.environmental_biodiversity_related =
+          !!e.environmental_biodiversity_related;
+        e.poverty_related = !!e.poverty_related;
+        e.innovation_readiness_related = !!e.innovation_readiness_related;
+        e.innovation_use_related = !!e.innovation_use_related;
+        e.is_sharepoint = Number(!!e?.is_sharepoint);
+        e.is_public_file = Boolean(e.is_public_file);
+      });
+
+      return {
+        response: {
+          innovation_readiness_level_id: innoDev
+            ? innoDev.innovation_readiness_level_id
+            : null,
+          result_id: result.id,
+          gender_tag_level: result.gender_tag_level_id,
+          climate_change_tag_level: result.climate_change_tag_level_id,
+          nutrition_tag_level: result.nutrition_tag_level_id,
+          environmental_biodiversity_tag_level:
+            result.environmental_biodiversity_tag_level_id,
+          poverty_tag_level: result.poverty_tag_level_id,
+          evidences,
+        },
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
   findOne(id: number) {
     return `This action returns a #${id} evidence`;
   }
 
   update(id: number, updateEvidenceDto: UpdateEvidenceDto) {
     return `This action updates a #${id} evidence ${updateEvidenceDto}`;
+  }
+
+  async updateEvidencesPartial(
+    evidences: EvidenceDto[],
+    resultId: number,
+    user: TokenDto,
+  ) {
+    try {
+      const result = await this._resultRepository.getResultById(resultId);
+
+      if (!result) {
+        return {
+          response: {},
+          message: 'Result not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const duplicateCheck = this._validateDuplicateLinks(evidences);
+      if (duplicateCheck) {
+        return duplicateCheck;
+      }
+
+      const existingEvidences = await this._evidencesRepository.find({
+        where: {
+          result_id: resultId,
+          is_active: 1,
+        },
+      });
+
+      const payloadEvidenceIds = evidences
+        .filter((e) => e.id)
+        .map((e) => Number(e.id));
+
+      await this._deactivateMissingEvidences(
+        existingEvidences,
+        payloadEvidenceIds,
+        user,
+      );
+
+      await this._createNewEvidences(evidences, resultId, user);
+
+      return {
+        response: evidences,
+        message: 'Evidences updated successfully',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  private _validateDuplicateLinks(evidences: EvidenceDto[]): {
+    response: Record<string, unknown>;
+    message: string;
+    status: HttpStatus;
+  } | null {
+    const testDuplicate = evidences.map((e) => e.link);
+    if (new Set(testDuplicate).size !== testDuplicate.length) {
+      return {
+        response: {},
+        message: 'Duplicate links found in the evidence',
+        status: HttpStatus.BAD_REQUEST,
+      };
+    }
+    return null;
+  }
+
+  private async _deactivateMissingEvidences(
+    existingEvidences: Evidence[],
+    payloadEvidenceIds: number[],
+    user: TokenDto,
+  ): Promise<void> {
+    for (const existingEvidence of existingEvidences) {
+      if (!payloadEvidenceIds.includes(Number(existingEvidence.id))) {
+        existingEvidence.is_active = 0;
+        existingEvidence.last_updated_by = user.id;
+        await this._evidencesRepository.save(existingEvidence);
+      }
+    }
+  }
+
+  private async _createNewEvidences(
+    evidences: EvidenceDto[],
+    resultId: number,
+    user: TokenDto,
+  ): Promise<void> {
+    for (const evidenceDto of evidences) {
+      if (!evidenceDto.id) {
+        await this._createNewEvidence(evidenceDto, resultId, user);
+      }
+    }
+  }
+
+  private async _createNewEvidence(
+    evidenceDto: EvidenceDto,
+    resultId: number,
+    user: TokenDto,
+  ): Promise<void> {
+    const hasLink = evidenceDto.link && evidenceDto.link.trim().length > 0;
+    const hasSharepoint =
+      evidenceDto.is_sharepoint !== undefined &&
+      evidenceDto.is_sharepoint !== 0;
+
+    if (!hasLink && !hasSharepoint) {
+      return;
+    }
+
+    const newEvidence = new Evidence();
+    newEvidence.created_by = user.id;
+    newEvidence.last_updated_by = user.id;
+    newEvidence.is_sharepoint = evidenceDto.is_sharepoint ?? 0;
+    newEvidence.is_supplementary = false;
+    newEvidence.result_id = resultId;
+    newEvidence.evidence_type_id = 1;
+
+    if (hasLink) {
+      newEvidence.link = await this.getHandleFromRegularLink(evidenceDto.link);
+    } else {
+      newEvidence.link = '';
+    }
+
+    if (hasLink && evidenceDto.link) {
+      const queryIndex = evidenceDto.link.indexOf('?');
+      const linkToProcess =
+        queryIndex >= 0
+          ? evidenceDto.link.slice(0, queryIndex)
+          : evidenceDto.link;
+      const linkSplit = linkToProcess.split('/');
+      const handleId = linkSplit.slice(-2).join('/');
+
+      const knowledgeProduct =
+        await this._resultsKnowledgeProductsRepository.findOne({
+          where: { handle: Like(handleId) },
+          relations: { result_object: true },
+        });
+
+      if (knowledgeProduct) {
+        newEvidence.knowledge_product_related =
+          knowledgeProduct.result_object.id;
+      }
+    }
+
+    const evidenceSaved = await this._evidencesRepository.save(newEvidence);
+    if (evidenceSaved?.id) {
+      const evidenceForSP: EvidencesCreateInterface = {
+        id: evidenceSaved.id.toString(),
+        link: evidenceDto.link || '',
+        is_sharepoint: evidenceDto.is_sharepoint ?? 0,
+      };
+      await this.saveSPData(evidenceForSP, evidenceSaved.id);
+    }
   }
 
   remove(id: number) {

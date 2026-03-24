@@ -1,5 +1,6 @@
 export interface CurrentResult {
   id?: string | number;
+  source_name?: string;
   result_code?: string;
   description?: string;
   is_active?: number;
@@ -50,4 +51,5 @@ export interface CurrentResult {
   portfolio?: string;
   portfolio_id?: number;
   acronym?: string;
+  result_id?: number;
 }

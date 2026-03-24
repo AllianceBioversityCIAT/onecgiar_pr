@@ -2,6 +2,7 @@ import { Component, OnInit, Input } from '@angular/core';
 import { IpsrStep1Body } from '../../model/Ipsr-step-1-body.model';
 import { IpsrDataControlService } from '../../../../../../../../services/ipsr-data-control.service';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
+import { FieldsManagerService } from '../../../../../../../../../../shared/services/fields-manager.service';
 
 @Component({
     selector: 'app-step-n1-action-area-outcomes',
@@ -12,7 +13,7 @@ import { ApiService } from '../../../../../../../../../../shared/services/api/ap
 export class StepN1ActionAreaOutcomesComponent implements OnInit {
   @Input() body = new IpsrStep1Body();
   actionAreasOutcomesList: any = null;
-  constructor(private readonly ipsrDataControlSE: IpsrDataControlService, public api: ApiService) {}
+  constructor(private readonly ipsrDataControlSE: IpsrDataControlService, public api: ApiService, private readonly fieldsManagerSE: FieldsManagerService) {}
   ngOnInit(): void {
     this.GET_tocLevelsByresultId();
 
@@ -29,7 +30,7 @@ export class StepN1ActionAreaOutcomesComponent implements OnInit {
     );
   }
   GET_tocLevelsByresultId() {
-    this.api.tocApiSE.GET_tocLevelsByconfig(this.ipsrDataControlSE?.detailData?.result_id, this.ipsrDataControlSE?.detailData?.inititiative_id, 4).subscribe({
+    this.api.tocApiSE.GET_tocLevelsByconfig(this.ipsrDataControlSE?.detailData?.result_id, this.ipsrDataControlSE?.detailData?.inititiative_id, 4, this.fieldsManagerSE.isP25()).subscribe({
       next: ({ response }) => {
         this.actionAreasOutcomesList = response;
       },

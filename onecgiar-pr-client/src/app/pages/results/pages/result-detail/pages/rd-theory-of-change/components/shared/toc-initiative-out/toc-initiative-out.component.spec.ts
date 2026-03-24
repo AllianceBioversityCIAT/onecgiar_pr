@@ -201,17 +201,40 @@ describe('TocInitiativeOutComponent', () => {
   describe('get_versionDashboard()', () => {
     it('should set fullInitiativeToc on successful get_vesrsionDashboard call', () => {
       component.isNotifications = false;
+      component.initiative = {
+        result_toc_results: [
+          {
+            initiative_id: 123
+          }
+        ]
+      };
       const spy = jest.spyOn(mockApiService.resultsSE, 'get_vesrsionDashboard');
 
       component.get_versionDashboard();
 
-      expect(spy).toHaveBeenCalledWith(
-        component.initiative?.result_toc_results[0]?.initiative_id
-      );
+      expect(spy).toHaveBeenCalledWith(123, false);
       expect(component.fullInitiativeToc).toBe(mockResponse.version_id);
     });
     it('should do nothing if isNotifications is true', () => {
       component.isNotifications = true;
+      component.initiative = {
+        result_toc_results: [
+          {
+            initiative_id: 123
+          }
+        ]
+      };
+      const spy = jest.spyOn(mockApiService.resultsSE, 'get_vesrsionDashboard');
+
+      component.get_versionDashboard();
+
+      expect(spy).not.toHaveBeenCalled();
+    });
+    it('should do nothing if initiative_id is not present', () => {
+      component.isNotifications = false;
+      component.initiative = {
+        result_toc_results: [{}]
+      };
       const spy = jest.spyOn(mockApiService.resultsSE, 'get_vesrsionDashboard');
 
       component.get_versionDashboard();
@@ -220,12 +243,20 @@ describe('TocInitiativeOutComponent', () => {
     });
     it('should handle error when get_vesrsionDashboard call fails', () => {
       const errorMessage = 'Your error message';
+      component.isNotifications = false;
+      component.initiative = {
+        result_toc_results: [
+          {
+            initiative_id: 123
+          }
+        ]
+      };
       const spy = jest.spyOn(mockApiService.resultsSE, 'get_vesrsionDashboard').mockReturnValue(throwError(errorMessage));
-      const spyConsoleError = jest.spyOn(console, 'error');
+      const spyConsoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
 
       component.get_versionDashboard();
 
-      expect(spy).toHaveBeenCalled();
+      expect(spy).toHaveBeenCalledWith(123, false);
       expect(spyConsoleError).toHaveBeenCalledWith(errorMessage);
     });
   });

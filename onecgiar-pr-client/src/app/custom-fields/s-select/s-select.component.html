@@ -1,0 +1,90 @@
+<div [style]="inlineStylesContainer">
+  <app-pr-field-header
+    [label]="this.label"
+    [description]="this.description"
+    [required]="this.required"
+    [showDescriptionLabel]="this.showDescriptionLabel"
+    [descInlineStyles]="this.descInlineStyles"
+    [labelDescInlineStyles]="this.labelDescInlineStyles"></app-pr-field-header>
+  <input type="text" [hidden]="true" [(ngModel)]="this.value" />
+  <div
+    [ngSwitch]="editable ? false : (readOnly || this.rolesSE.readOnly) && !isStatic"
+    class="pr-field"
+    [ngClass]="{ mandatory: this.required, complete: (this.optionsIntance() | labelName: this.value : this.optionValue : this.optionLabel) }">
+    <div
+      class="text-secondary-400"
+      *ngSwitchCase="true"
+      [innerHtml]="
+        (this.optionsIntance() | labelName: this.value : this.optionValue : this.optionLabel)
+          ? (this.optionsIntance() | labelName: this.value : this.optionValue : this.optionLabel)
+          : this.noDataText || (this.required ? 'Not provided' : 'Not applicable')
+      "></div>
+    <div class="custom_select" *ngSwitchCase="false">
+      <a
+        class="field"
+        tabindex="0"
+        [id]="this.optionValue + (indexReference || '')"
+        [ngClass]="{ 'select-disable': this.disabled }"
+        [ngClass]="{ globalDisabled: fieldDisabled }"
+        (focus)="onDropdownOpen()">
+        <div
+          class="text pr-body-2"
+          [ngClass]="{
+            select_placeholder: !(this.optionsIntance() | labelName: this.value : this.optionValue : this.optionLabel),
+            truncate: this.truncateSelectionText
+          }"
+          [innerHtml]="
+            (this.optionsIntance() | labelName: this.value : this.optionValue : this.optionLabel)
+              ? (this.optionsIntance() | labelName: this.value : this.optionValue : this.optionLabel)
+              : placeholder
+          "></div>
+
+        <div class="icon_container" [ngClass]="{ icon_container_active: disabled }"></div>
+        <i class="pi pi-chevron-down icon_dropdown"></i>
+
+        <div class="remove_focus" (click)="removeFocus()"></div>
+        <div class="options" style="min-width: 200px" [style]="optionsInlineStyles">
+          <div class="search_input_container">
+            <p-iconfield>
+              <p-inputicon styleClass="pi pi-search" />
+              <input type="text" pInputText placeholder="Search" [(ngModel)]="this.searchText" style="width: 100%" />
+            </p-iconfield>
+          </div>
+
+          <cdk-virtual-scroll-viewport [itemSize]="7" class="custom_scroll virtual_scroll">
+            <div
+              *cdkVirtualFor="let option of optionsIntance() | listFilterByTextAndAttr: this.optionLabel : this.searchText"
+              class="option pr-body-2"
+              [style]="extraInformation ? 'height: 50px;' : ''"
+              [ngClass]="{
+                disabled: (option?.disabled || option?.disabledd) === true,
+                selected: option?.selected === true,
+                labelGroup: option?.isLabel
+              }"
+              (click)="this.disabled || option?.disabled || option?.disabledd ? null : onSelectOption(option); removeFocus(option)">
+              <img *ngIf="flagsCode" [src]="'https://countryflagsapi.com/png/' + option[this.flagsCode]" alt="" srcset="" />
+
+              <div
+                class="label"
+                [innerHtml]="
+                  !option?.isLabel
+                    ? (option?.disabled || option?.disabledd ? disableOptionsText : '') + option[this.optionLabel]
+                    : option[this.groupName]
+                "></div>
+
+              <div class="event"></div>
+            </div>
+            <div class="no-options-text" *ngIf="!optionsIntance()?.length">There are no items available for this list.</div>
+          </cdk-virtual-scroll-viewport>
+        </div>
+      </a>
+    </div>
+    <app-alert-status
+      *ngIf="showPartnerAlert"
+      description="If you don't find the partner you are looking for, <a class='open_route pSelectP'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list.">
+    </app-alert-status>
+  </div>
+
+  <!-- Expandable space when dropdown is open -->
+  <div *ngIf="expandSpaceOnOpen" class="expandable-space" [ngClass]="{ expanded: isDropdownOpen }"></div>
+</div>

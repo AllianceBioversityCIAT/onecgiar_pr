@@ -4,17 +4,17 @@ import { RolesService } from '../../shared/services/global/roles.service';
 import { DataControlService } from '../../shared/services/data-control.service';
 
 @Component({
-    selector: 'app-pr-select',
-    templateUrl: './pr-select.component.html',
-    styleUrls: ['./pr-select.component.scss'],
-    providers: [
-        {
-            provide: NG_VALUE_ACCESSOR,
-            useExisting: forwardRef(() => PrSelectComponent),
-            multi: true
-        }
-    ],
-    standalone: false
+  selector: 'app-pr-select',
+  templateUrl: './pr-select.component.html',
+  styleUrls: ['./pr-select.component.scss'],
+  providers: [
+    {
+      provide: NG_VALUE_ACCESSOR,
+      useExisting: forwardRef(() => PrSelectComponent),
+      multi: true
+    }
+  ],
+  standalone: false
 })
 export class PrSelectComponent implements ControlValueAccessor {
   @Input() optionLabel: string;
@@ -42,6 +42,8 @@ export class PrSelectComponent implements ControlValueAccessor {
   @Input() descInlineStyles?: string = '';
   @Input() labelDescInlineStyles?: string = '';
   @Input() optionsInlineStyles?: string = '';
+  @Input() overlayToBody?: boolean = false; // When true, position dropdown as fixed overlay
+  @Input() idKey?: string = '';
   @Input() showDescriptionLabel?: boolean = false;
   @Input() truncateSelectionText?: boolean = false;
   @Input() inlineStylesContainer?: string = '';
@@ -97,10 +99,15 @@ export class PrSelectComponent implements ControlValueAccessor {
 
   removeFocus(option?) {
     if (option?.disabled) return;
-    const element: any = document.getElementById(this.optionValue + (this.indexReference || ''));
+    const triggerId = (this.idKey || this.optionValue) + '_' + (this.indexReference ?? '');
+    const element: any = document.getElementById(triggerId);
     element.blur();
     if (this.expandSpaceOnOpen) {
       this.isDropdownOpen = false; // Close dropdown only if expansion is enabled
+    }
+    if (this.overlayToBody) {
+      // Reset inline styles so next open recalculates position
+      this.optionsInlineStyles = '';
     }
   }
 
@@ -108,7 +115,19 @@ export class PrSelectComponent implements ControlValueAccessor {
     if (this.expandSpaceOnOpen) {
       this.isDropdownOpen = true; // Only track state if expansion is enabled
     }
+    if (this.overlayToBody) {
+      const triggerId = (this.idKey || this.optionValue) + '_' + (this.indexReference ?? '');
+      const triggerElement: any = document.getElementById(triggerId);
+      if (triggerElement) {
+        const rect = triggerElement.getBoundingClientRect();
+        const top = rect.bottom + 4;
+        const left = rect.left;
+        const width = rect.width;
+        this.optionsInlineStyles = `position: fixed; left: ${left}px; top: ${top}px; width: ${width}px; max-height: 300px; z-index: 10000; transform: none; bottom: auto;`;
+      }
+    }
   }
+
   get optionsIntance() {
     if (!this.options?.length) return [];
     if (!this._optionsIntance?.length) this._optionsIntance = [...this.options];

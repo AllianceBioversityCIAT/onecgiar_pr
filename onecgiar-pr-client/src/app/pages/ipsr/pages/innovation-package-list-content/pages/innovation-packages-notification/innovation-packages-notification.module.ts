@@ -11,7 +11,12 @@ import { FilterNotificationByInitiativePipe } from './pipes/filter-notification-
 import { ScrollingModule } from '@angular/cdk/scrolling';
 
 @NgModule({
-  declarations: [InnovationPackagesNotificationComponent, NotificationItemInnovationComponent, FilterNotificationByPhasePipe, FilterNotificationByInitiativePipe],
+  declarations: [
+    InnovationPackagesNotificationComponent,
+    NotificationItemInnovationComponent,
+    FilterNotificationByPhasePipe,
+    FilterNotificationByInitiativePipe
+  ],
   imports: [CommonModule, InnovationPackagesNotificationRoutingModule, ButtonModule, CustomFieldsModule, ScrollingModule]
 })
 export class InnovationPackagesNotificationModule {}

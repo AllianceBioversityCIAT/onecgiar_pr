@@ -11,6 +11,7 @@ import {
 import { InstitutionRole } from '../../institution_roles/entities/institution_role.entity';
 import { Result } from '../../entities/result.entity';
 import { ClarisaInstitutionsType } from '../../../../clarisa/clarisa-institutions-type/entities/clarisa-institutions-type.entity';
+import { ResultInnovSection } from '../../../results-framework-reporting/result_innov_section/entities/result_innov_section.entity';
 
 @Entity()
 export class ResultsByInstitutionType {
@@ -46,6 +47,17 @@ export class ResultsByInstitutionType {
     nullable: true,
   })
   addressing_demands!: string;
+
+  @ManyToOne(() => ResultInnovSection)
+  @JoinColumn({ name: 'section_id' })
+  obj_section: ResultInnovSection;
+
+  @Column({
+    name: 'section_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  section_id?: number;
 
   // relations
 

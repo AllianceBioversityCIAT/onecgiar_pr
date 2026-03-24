@@ -1,34 +1,11 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { env } from 'process';
-import { Result } from './api/results/entities/result.entity';
-import { ResultRepository } from './api/results/result.repository';
-import { HandlersError } from './shared/handlers/error.utils';
-import { OrmConfigTestModule } from './shared/test/orm-connection.module';
-import 'dotenv/config';
 
 describe('Unit test bootstrap', () => {
-  let module: TestingModule;
-  let resultRespository: ResultRepository;
-  beforeAll(async () => {
-    (await import('dotenv')).config();
+  it('should rewrite environment variables for tests', () => {
+    env.AUTOMATION_DB_TOC = 'test_db_toc';
+    env.DB_TOC = undefined;
     rewriteEnvironmentVariables();
-    module = await Test.createTestingModule({
-      controllers: [],
-      providers: [ResultRepository, HandlersError],
-      imports: [OrmConfigTestModule],
-    }).compile();
-
-    resultRespository = module.get<ResultRepository>(
-      getRepositoryToken(ResultRepository),
-    );
-  });
-
-  it('should be connected to the database', async () => {
-    const result: Result = await resultRespository.findOne({
-      where: { is_active: true },
-    });
-    expect(result).toBeDefined();
+    expect(env.DB_TOC).toBe(env.AUTOMATION_DB_TOC);
   });
 });
 

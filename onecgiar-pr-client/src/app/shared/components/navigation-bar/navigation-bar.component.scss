@@ -10,6 +10,12 @@
     font-weight: 600 !important;
     color: var(--pr-color-primary-100) !important;
     border-bottom: 4px solid var(--pr-color-primary-100) !important;
+
+    &.hide_active_in_notifications {
+      font-weight: 500 !important;
+      color: var(--pr-color-white) !important;
+      border-bottom: 4px solid transparent !important;
+    }
   }
 
   .navigation_bar_item {

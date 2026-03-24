@@ -9,6 +9,7 @@ import {
 } from '../../../../shared/globalInterfaces/replicable.interface';
 import { predeterminedDateValidation } from '../../../../shared/utils/versioning.utils';
 import { BaseRepository } from '../../../../shared/extendsGlobalDTO/base-repository';
+import { InitiativeByResultDTO } from '../../../results/results_by_inititiatives/dto/InitiativeByResult.dto';
 
 @Injectable()
 export class ResultInnovationPackageRepository
@@ -160,5 +161,22 @@ export class ResultInnovationPackageRepository
           debug: true,
         }),
       );
+  }
+
+  async validateSpLegacyInits(
+    initiativeId: number,
+    initiatives: InitiativeByResultDTO[],
+  ) {
+    const query = `select count(iem.id) > 0 existing_data  
+                  from initiative_entity_map iem 
+                  where iem.entity_id = ? 
+                    and iem.initiative_id in (?)
+                    and iem.is_active = true`;
+    const result = await this.dataSource
+      .query<
+        { existing_data: boolean }[]
+      >(query, [initiativeId, initiatives.map((item) => item.inititiative_id)])
+      .then((res) => (res?.length > 0 ? Boolean(res[0].existing_data) : false));
+    return result;
   }
 }

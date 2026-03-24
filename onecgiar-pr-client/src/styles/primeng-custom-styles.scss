@@ -1,7 +1,7 @@
 .p-datatable-thead {
   tr {
     th {
-      background-color: var(--pr-color-secondary-400) !important;
+      background-color: var(--pr-color-secondary-300) !important;
       color: var(--pr-color-white) !important;
     }
   }
@@ -35,4 +35,16 @@
 
 .p-checkbox .p-checkbox-box:not(.p-disabled):not(.p-highlight) {
   border-color: var(--pr-color-neutral-1000) !important;
+}
+
+.p-skeleton {
+  background-color: var(--pr-color-accents-2) !important;
+}
+
+.p-select-label {
+  white-space: normal !important;
+}
+
+.p-select-option {
+  white-space: normal !important;
 }

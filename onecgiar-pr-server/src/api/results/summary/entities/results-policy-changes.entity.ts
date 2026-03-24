@@ -20,18 +20,20 @@ export class ResultsPolicyChanges {
   })
   result_policy_change_id: number;
 
+  @OneToOne(() => Result, (r) => r.results_policy_changes_object, {
+    nullable: false,
+  })
+  @JoinColumn({
+    name: 'result_id',
+  })
+  obj_result: Result;
+
   @Column({
     name: 'result_id',
     type: 'bigint',
     nullable: false,
   })
   result_id: number;
-
-  @OneToOne(() => Result, (r) => r.id, { nullable: false })
-  @JoinColumn({
-    name: 'result_id',
-  })
-  obj_result: Result;
 
   @ManyToOne(() => ClarisaPolicyStage, (cps) => cps.id, { nullable: true })
   @JoinColumn({

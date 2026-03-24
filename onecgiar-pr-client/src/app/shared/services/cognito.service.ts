@@ -4,7 +4,7 @@ import { ClarityService } from './clarity.service';
 import { ApiService } from './api/api.service';
 import { AuthService } from './api/auth.service';
 import { CustomizedAlertsFeService } from './customized-alerts-fe.service';
-import { WebsocketService } from '../../sockets/websocket.service';
+// import { WebsocketService } from '../../sockets/websocket.service';
 import { RolesService } from './global/roles.service';
 import { UserAuth } from '../interfaces/user.interface';
 import { internationalizationData } from '../data/internationalization-data';
@@ -30,7 +30,7 @@ export class CognitoService {
   clarity = inject(ClarityService);
   authService = inject(AuthService);
   customAlertService = inject(CustomizedAlertsFeService);
-  webSocket = inject(WebsocketService);
+  // webSocket = inject(WebsocketService);
   rolesSE = inject(RolesService);
 
   loginWithAzureAd() {
@@ -173,7 +173,7 @@ export class CognitoService {
   updateCacheService(resp: any) {
     this.authService.localStorageToken = resp?.response?.token;
     this.authService.localStorageUser = resp?.response?.user;
-    this.webSocket.configUser(this.authService.localStorageUser?.user_name, this.authService.localStorageUser?.id);
+    // this.webSocket.configUser(this.authService.localStorageUser?.user_name, this.authService.localStorageUser?.id);
     this.clarity.updateUserInfo();
     this.rolesSE.validateReadOnly();
   }

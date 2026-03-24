@@ -11,6 +11,7 @@ import { InitiativesService } from '../../../../../../shared/services/global/ini
 import { GetRolesService } from '../../../../../../shared/services/global/get-roles.service';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { UserRolesInfoModalComponent } from '../../../../../../shared/components/user-roles-info-modal/user-roles-info-modal.component';
+import { SelectModule } from 'primeng/select';
 
 interface AddUserForm {
   activate: boolean;
@@ -24,6 +25,7 @@ interface AddUserForm {
     role_id: number;
     entity_id: number;
   }[];
+  created_by?: string;
 }
 
 @Component({
@@ -36,6 +38,7 @@ interface AddUserForm {
     CustomFieldsModule,
     SearchUserSelectComponent,
     ProgressSpinnerModule,
+    SelectModule,
     UserRolesInfoModalComponent
   ],
   templateUrl: './manage-user-modal.component.html',
@@ -70,6 +73,18 @@ export class ManageUserModalComponent {
   entities = computed(() => this.initiativesService.allInitiatives());
   loadingRoleAssignment = signal<boolean>(true);
   disabledRoleAssignmentOptions = signal([]);
+
+  // Computed signal for all selected entity IDs
+  selectedEntityIds = computed(() => {
+    const roleAssignments = this.addUserForm().role_assignments;
+    const entityIds = new Set<number>();
+    roleAssignments.forEach(item => {
+      if (item.entity_id !== null) {
+        entityIds.add(item.entity_id);
+      }
+    });
+    return entityIds;
+  });
 
   // Admin permissions options for radio button - computed based on CGIAR status
   adminPermissionsOptions = computed(() => {
@@ -108,11 +123,46 @@ export class ManageUserModalComponent {
     this.clearUserSearch();
   }
 
-  updateDisableOptions() {
+  getAvailableEntities(currentIndex: number) {
     const selectedRoleAssignments = this.addUserForm().role_assignments;
-    const selectedEntities = selectedRoleAssignments.map(item => item.entity_id);
-    const disableOptions = this.entities().filter(entity => selectedEntities.includes(entity.initiative_id));
-    this.disabledRoleAssignmentOptions.set(disableOptions);
+    const currentAssignment = selectedRoleAssignments[currentIndex];
+    const currentEntityId = currentAssignment?.entity_id;
+
+    // Get all selected entities from computed signal and exclude the current one
+    const allSelectedEntities = this.selectedEntityIds();
+    const selectedEntities = new Set<number>(allSelectedEntities);
+    if (currentEntityId !== null) {
+      selectedEntities.delete(currentEntityId);
+    }
+
+    const allEntities = this.entities();
+    const result: any[] = [];
+
+    // Always include P25 group with available entities
+    const p25Group = allEntities.find(group => group.name === 'P25');
+    if (p25Group) {
+      result.push({
+        ...p25Group,
+        entities: p25Group.entities.filter(entity => !selectedEntities.has(entity.initiative_id))
+      });
+    }
+
+    // If current assignment has a P22 entity, include P22 group but only with that specific entity
+    if (currentEntityId) {
+      const p22Group = allEntities.find(group => group.name === 'P22');
+      if (p22Group) {
+        const currentP22Entity = p22Group.entities.find(entity => entity.initiative_id === currentEntityId);
+        if (currentP22Entity) {
+          // Include P22 group but only with the currently assigned entity
+          result.push({
+            ...p22Group,
+            entities: [currentP22Entity]
+          });
+        }
+      }
+    }
+
+    return result;
   }
 
   onRoleEntityChange(event: number, index: number): void {
@@ -120,7 +170,6 @@ export class ManageUserModalComponent {
       ...form,
       role_assignments: form.role_assignments.map((item, i) => (i === index ? { ...item, entity_id: event } : item))
     }));
-    this.updateDisableOptions();
   }
 
   onRoleAssignmentChange(event: number, index: number): void {
@@ -159,7 +208,6 @@ export class ManageUserModalComponent {
     }));
 
     setTimeout(() => {
-      this.updateDisableOptions();
       this.loadingRoleAssignment.set(true);
     }, 0);
   }

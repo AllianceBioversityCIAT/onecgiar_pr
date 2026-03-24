@@ -114,18 +114,28 @@ export class ClarisaInitiativesService {
       });
 
       const result = [
-        { name: 'P22', isLabel: true },
-        ...p22.map((item) => ({
-          initiative_id: item.id,
-          full_name: item.name,
-          ...item,
-        })),
-        { name: 'P25', isLabel: true },
-        ...p25.map((item) => ({
-          initiative_id: item.id,
-          full_name: item.name,
-          ...item,
-        })),
+        {
+          name: 'P22',
+          isLabel: true,
+          entities: [
+            ...p22.map((item) => ({
+              initiative_id: item.id,
+              full_name: item.name,
+              ...item,
+            })),
+          ],
+        },
+        {
+          name: 'P25',
+          isLabel: true,
+          entities: [
+            ...p25.map((item) => ({
+              initiative_id: item.id,
+              full_name: item.name,
+              ...item,
+            })),
+          ],
+        },
       ];
 
       return {

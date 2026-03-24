@@ -127,10 +127,22 @@ describe('ClarisaInitiativesService', () => {
   describe('getInitiativesEntitiesGrouped', () => {
     it('returns grouped list for P22 and P25 with labels', async () => {
       const p22 = [
-        { id: 11, name: 'Init A', active: true, cgiar_entity_type_id: 6 },
+        {
+          id: 11,
+          name: 'Init A',
+          active: true,
+          cgiar_entity_type_id: 6,
+          entities: [],
+        },
       ];
       const p25 = [
-        { id: 21, name: 'Init B', active: true, cgiar_entity_type_id: 22 },
+        {
+          id: 21,
+          name: 'Init B',
+          active: true,
+          cgiar_entity_type_id: 22,
+          entities: [],
+        },
       ];
       (repo.find as any).mockResolvedValueOnce(p22).mockResolvedValueOnce(p25);
 
@@ -149,19 +161,28 @@ describe('ClarisaInitiativesService', () => {
       expect('cgiar_entity_type_id' in secondArgs.where).toBe(true);
 
       expect(res.status).toBe(HttpStatus.OK);
-      const list = res.response as any[];
-      expect(list[0]).toEqual({ name: 'P22', isLabel: true });
-      expect(list[1]).toMatchObject({
+      const grouped = res.response as any[];
+      expect(grouped).toHaveLength(2);
+
+      const [groupP22, groupP25] = grouped;
+      expect(groupP22).toMatchObject({
+        name: 'P22',
+        isLabel: true,
+      });
+      expect(Array.isArray(groupP22.entities)).toBe(true);
+      expect(groupP22.entities[0]).toMatchObject({
         initiative_id: 11,
         full_name: 'Init A',
         id: 11,
         name: 'Init A',
       });
-      const p25LabelIndex = list.findIndex(
-        (x: any) => x && x.name === 'P25' && x.isLabel,
-      );
-      expect(p25LabelIndex).toBeGreaterThan(1);
-      expect(list[p25LabelIndex + 1]).toMatchObject({
+
+      expect(groupP25).toMatchObject({
+        name: 'P25',
+        isLabel: true,
+      });
+      expect(Array.isArray(groupP25.entities)).toBe(true);
+      expect(groupP25.entities[0]).toMatchObject({
         initiative_id: 21,
         full_name: 'Init B',
         id: 21,

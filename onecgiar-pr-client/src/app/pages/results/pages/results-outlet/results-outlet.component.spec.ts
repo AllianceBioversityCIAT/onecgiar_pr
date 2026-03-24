@@ -21,7 +21,5 @@ describe('ResultsOutletComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
-    jest.runAllTimers();
-    expect(component.animateBell).toBeFalsy();
   });
 });

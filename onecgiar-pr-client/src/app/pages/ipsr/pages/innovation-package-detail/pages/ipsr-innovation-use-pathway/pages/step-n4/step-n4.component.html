@@ -6,7 +6,10 @@
 
 <div class="fragment_section_divider"></div>
 
-<app-step-n4-bilateral-investment-table [body]="this.ipsrStep4Body"></app-step-n4-bilateral-investment-table>
+<app-step-n4-bilateral-investment-table
+  [body]="this.ipsrStep4Body"
+  (projectAdded)="getSectionInformation()"
+  (bilateralDeleted)="onSaveSection()"></app-step-n4-bilateral-investment-table>
 
 <div class="fragment_section_divider"></div>
 
@@ -16,7 +19,21 @@
 
 <app-step-n4-reference-material-links [body]="this.ipsrStep4Body"></app-step-n4-reference-material-links>
 
-<div class="toggle_change_step">
+@if (this.api.fieldsManagerSE.isP25()) {
+  <app-pr-radio-button
+    fieldRef="[innovation-use-form]-has-studies-links"
+    [options]="[
+      { value: true, label: 'Yes' },
+      { value: false, label: 'No' }
+    ]"
+    optionLabel="label"
+    [(ngModel)]="ipsrStep4Body.has_scaling_studies"
+    optionValue="value">
+  </app-pr-radio-button>
+  <app-studies-link *ngIf="ipsrStep4Body.has_scaling_studies" [body]="ipsrStep4Body"></app-studies-link>
+}
+
+<div class="toggle_change_step" style="margin-top: 60px">
   <app-pr-button
     (click)="onSavePrevious('previous')"
     padding="big"

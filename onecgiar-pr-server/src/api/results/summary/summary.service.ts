@@ -15,6 +15,7 @@ import { ResultRepository } from '../result.repository';
 import { PolicyChangesDto } from './dto/create-policy-changes.dto';
 import { ResultsPolicyChanges } from './entities/results-policy-changes.entity';
 import { ResultsPolicyChangesRepository } from './repositories/results-policy-changes.repository';
+import { PolicyChangeDto } from '../dto/review-update.dto';
 import { EvidencesRepository } from '../evidences/evidences.repository';
 import { In } from 'typeorm';
 import { ResultActorRepository } from '../result-actors/repositories/result-actors.repository';
@@ -28,6 +29,7 @@ import { ResultInstitutionsBudgetRepository } from '../result_budget/repositorie
 import { InnoDevService } from './innovation_dev.service';
 import { ResultAnswerRepository } from '../result-questions/repository/result-answers.repository';
 import { ResultAnswer } from '../result-questions/entities/result-answers.entity';
+import { Result } from '../entities/result.entity';
 
 @Injectable()
 export class SummaryService {
@@ -74,6 +76,11 @@ export class SummaryService {
         user.id,
         innovationUseDto,
       );
+
+      await this._resultRepository.update(resultId, {
+        last_updated_by: user.id,
+        last_updated_date: new Date(),
+      });
 
       return {
         response: InnovationUse,
@@ -181,6 +188,7 @@ export class SummaryService {
         newCapDev.female_using = female_using || 0;
         newCapDev.male_using = male_using || 0;
         newCapDev.has_unkown_using = has_unkown_using || 0;
+        newCapDev.result_object = { id: resultId } as Result;
         newCapDev.non_binary_using = non_binary_using || 0;
         newCapDev.result_id = resultId;
         newCapDev.capdev_delivery_method_id = capdev_delivery_method_id;
@@ -226,6 +234,11 @@ export class SummaryService {
         );
       }
 
+      await this._resultRepository.update(resultId, {
+        last_updated_by: user.id,
+        last_updated_date: new Date(),
+      });
+
       return {
         response: CapDevData,
         message: 'Capacity Developents has been created successfully',
@@ -254,10 +267,21 @@ export class SummaryService {
         );
 
       if (!capDevExists) {
-        throw {
-          response: {},
-          message: 'Capacity Developents not found',
-          status: HttpStatus.NOT_FOUND,
+        return {
+          response: {
+            result_capacity_development_id: null,
+            result_id: resultId,
+            male_using: null,
+            female_using: null,
+            non_binary_using: null,
+            has_unkown_using: null,
+            capdev_delivery_method_id: null,
+            capdev_term_id: null,
+            is_attending_for_organization: null,
+            institutions: capDepInstitutions,
+          },
+          message: 'No capacity development data found for this result',
+          status: HttpStatus.OK,
         };
       }
 
@@ -267,7 +291,7 @@ export class SummaryService {
           institutions: capDepInstitutions,
         },
         message: 'Capacity Developents has been created successfully',
-        status: HttpStatus.CREATED,
+        status: HttpStatus.OK,
       };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
@@ -427,6 +451,11 @@ export class SummaryService {
           innovationUseDto,
         );
       }
+
+      await this._resultRepository.update(resultId, {
+        last_updated_by: user.id,
+        last_updated_date: new Date(),
+      });
 
       return {
         response: InnDevRes,
@@ -682,6 +711,11 @@ export class SummaryService {
         }
       }
 
+      await this._resultRepository.update(resultId, {
+        last_updated_by: user.id,
+        last_updated_date: new Date(),
+      });
+
       return {
         response: policyChangesData,
         message: 'Results Policy Changes has been created successfully',
@@ -726,5 +760,132 @@ export class SummaryService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
+  }
+
+  async updatePolicyChangesPartial(
+    resultId: number,
+    policyChangeDto: PolicyChangeDto,
+    user: TokenDto,
+  ) {
+    try {
+      const resultsPolicyChanges =
+        await this._resultsPolicyChangesRepository.ResultsPolicyChangesExists(
+          resultId,
+        );
+
+      if (!resultsPolicyChanges) {
+        return {
+          response: {},
+          message: 'Policy changes record not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      this._updatePolicyChangesFields(
+        resultsPolicyChanges,
+        policyChangeDto,
+        user.id,
+      );
+
+      const updatedPolicyChanges =
+        await this._resultsPolicyChangesRepository.save(resultsPolicyChanges);
+
+      if (policyChangeDto.implementing_organization !== undefined) {
+        await this._updateImplementingOrganizations(
+          resultId,
+          policyChangeDto.implementing_organization,
+          user.id,
+        );
+      }
+
+      return {
+        response: updatedPolicyChanges,
+        message: 'Policy changes updated successfully',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  private _updatePolicyChangesFields(
+    resultsPolicyChanges: ResultsPolicyChanges,
+    policyChangeDto: PolicyChangeDto,
+    userId: number,
+  ): void {
+    if (policyChangeDto.policy_type_id !== undefined) {
+      resultsPolicyChanges.policy_type_id = policyChangeDto.policy_type_id;
+    }
+
+    if (policyChangeDto.policy_stage_id !== undefined) {
+      resultsPolicyChanges.policy_stage_id = policyChangeDto.policy_stage_id;
+    }
+
+    resultsPolicyChanges.last_updated_by = userId;
+  }
+
+  private async _updateImplementingOrganizations(
+    resultId: number,
+    organizations: any[],
+    userId: number,
+  ): Promise<void> {
+    const institutions = organizations
+      .filter(
+        (org) =>
+          org.institution_id !== null && org.institution_id !== undefined,
+      )
+      .map((org) => ({
+        institutions_id: org.institution_id,
+      }));
+
+    await this._resultByIntitutionsRepository.updateGenericIstitutions(
+      resultId,
+      institutions,
+      4, // institution_roles_id = 4 for implementing organizations
+      userId,
+    );
+
+    const institutionsList = await this._createNewImplementingOrganizations(
+      resultId,
+      organizations,
+      userId,
+    );
+
+    if (institutionsList.length > 0) {
+      await this._resultByIntitutionsRepository.save(institutionsList);
+    }
+  }
+
+  private async _createNewImplementingOrganizations(
+    resultId: number,
+    organizations: any[],
+    userId: number,
+  ): Promise<ResultsByInstitution[]> {
+    const institutionsList: ResultsByInstitution[] = [];
+
+    for (const org of organizations) {
+      if (org.institution_id === null || org.institution_id === undefined) {
+        continue;
+      }
+
+      const instiExists =
+        await this._resultByIntitutionsRepository.getGenericResultByInstitutionExists(
+          resultId,
+          org.institution_id,
+          4,
+        );
+
+      if (!instiExists) {
+        const newInstitution = new ResultsByInstitution();
+        newInstitution.institution_roles_id = 4;
+        newInstitution.created_by = userId;
+        newInstitution.last_updated_by = userId;
+        newInstitution.institutions_id = org.institution_id;
+        newInstitution.result_id = resultId;
+        institutionsList.push(newInstitution);
+      }
+    }
+
+    return institutionsList;
   }
 }

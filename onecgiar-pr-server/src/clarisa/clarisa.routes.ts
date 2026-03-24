@@ -28,6 +28,8 @@ import { ClarisaSubnationalScopeModule } from './clarisa-subnational-scope/clari
 import { ClarisaCgiarEntityTypesModule } from './clarisa-cgiar-entity-types/clarisa-cgiar-entity-types.module';
 import { ClarisaInitiativeStageModule } from './clarisa-initiative-stage/clarisa-initiative-stage.module';
 import { ClarisaPortfoliosModule } from './clarisa-portfolios/clarisa-portfolios.module';
+import { ClarisaGlobalUnitModule } from './clarisa-global-unit/clarisa-global-unit.module';
+import { ClarisaProjectsModule } from './clarisa-projects/clarisa-projects.module';
 
 export const ClarisaRoutes: Routes = [
   {
@@ -145,5 +147,13 @@ export const ClarisaRoutes: Routes = [
   {
     path: 'portfolios',
     module: ClarisaPortfoliosModule,
+  },
+  {
+    path: 'global-unit',
+    module: ClarisaGlobalUnitModule,
+  },
+  {
+    path: 'projects',
+    module: ClarisaProjectsModule,
   },
 ];

@@ -1,0 +1,351 @@
+import { Component, OnInit, DoCheck, Output, EventEmitter, Input, signal } from '@angular/core';
+import { ApiService } from '../../../../../../shared/services/api/api.service';
+import { ResultLevelService } from '../../services/result-level.service';
+import { Router } from '@angular/router';
+import { ResultBody } from '../../../../../../shared/interfaces/result.interface';
+import { PhasesService } from '../../../../../../shared/services/global/phases.service';
+import { TerminologyService } from '../../../../../../internationalization/terminology.service';
+import { EntityAowService } from '../../../../../result-framework-reporting/pages/entity-aow/services/entity-aow.service';
+
+@Component({
+  selector: 'app-report-result-form',
+  templateUrl: './report-result-form.component.html',
+  styleUrls: ['./report-result-form.component.scss'],
+  standalone: false
+})
+export class ReportResultFormComponent implements OnInit, DoCheck {
+  depthSearchList: any[] = [];
+  exactTitleFound = signal(false);
+  loadingDepthSearch = signal(false);
+  private debounceTimer: any = null;
+  mqapJson: {};
+  validating = false;
+  kpAlertDescription = `Please add the handle generated in <strong>CGSpace</strong>, <strong>MELSpace</strong>, or <strong>WorldFish DSpace</strong> to report your knowledge product. Only knowledge products entered into <strong>one of these repositories</strong> are accepted in the PRMS Reporting Tool.<br><br>
+The PRMS Reporting Tool will automatically retrieve all metadata entered into <strong>one of these repositories</strong>. Partners and geographical scope metadata are editable, while the other metadata fields are not.<br><br>
+The handle will be verified, and only knowledge products from <strong>2025</strong> will be accepted. For journal articles, the PRMS Reporting Tool will check the online publication date added in CGSpace ("Date Online"). If the online publication date is missing, the issued date ("Date Issued") will be considered. Articles published online in <strong>2025</strong> but issued in <strong>2026</strong> will be accepted for the <strong>2025</strong> reporting phase.<br><br>
+Articles published online in <strong>2024</strong> but issued in <strong>2025</strong> will not be accepted and will need to be reported in the correct reporting period. Handles already reported will also not be accepted.<br><br>
+If you need support to modify any of the harvested metadata from <strong>CGSpace</strong>, <strong>MELSpace</strong>, or <strong>WorldFish DSpace</strong>, contact your Center's knowledge manager.`;
+  allInitiatives = [];
+  availableInitiativesSig = signal<any[]>([]);
+  allPhases = [];
+  cgiarEntityTypes = [];
+  currentResultType = '';
+  mqapUrlError = {
+    status: false,
+    message: ''
+  };
+
+  @Output() resultCreated = new EventEmitter<any>();
+  @Input() disableInitiativeSelect: boolean = false;
+  private _selectedInitiativeId: number | string | null = null;
+  @Input() set selectedInitiativeId(value: number | string | null | undefined) {
+    this._selectedInitiativeId = value ?? null;
+    this.tryApplySelectedInitiative();
+  }
+
+  constructor(
+    public api: ApiService,
+    public resultLevelSE: ResultLevelService,
+    public terminologyService: TerminologyService,
+    private router: Router,
+    private phasesService: PhasesService,
+    public entityAowService: EntityAowService
+  ) {}
+
+  ngOnInit(): void {
+    this.api.dataControlSE.getCurrentPhases().subscribe(() => {
+      this.api.rolesSE.validateReadOnly().then(() => {
+        this.GET_AllInitiatives();
+      });
+    });
+    this.resultLevelSE.resultBody = new ResultBody();
+    this.resultLevelSE.currentResultTypeList = [];
+    this.resultLevelSE.resetSelection();
+    this.resultLevelSE.cleanData();
+    this.applyPendingResultTypeSelection();
+    this.api.updateUserData(() => {
+      if (!this.api.rolesSE.isAdmin) {
+        this.availableInitiativesSig.set(
+          Array.isArray(this.api.dataControlSE.myInitiativesListReportingByPortfolio)
+            ? [...this.api.dataControlSE.myInitiativesListReportingByPortfolio]
+            : []
+        );
+        if (this._selectedInitiativeId == null && this.api.dataControlSE.myInitiativesListReportingByPortfolio?.length === 1) {
+          this._selectedInitiativeId =
+            this.api.dataControlSE.myInitiativesListReportingByPortfolio[0]?.initiative_id ||
+            this.api.dataControlSE.myInitiativesListReportingByPortfolio[0]?.id;
+        }
+        this.tryApplySelectedInitiative();
+      }
+      if (this._selectedInitiativeId != null) {
+        this.resultLevelSE.resultBody.initiative_id = this._selectedInitiativeId as any;
+        this.tryApplySelectedInitiative();
+      } else if (this.api.dataControlSE.myInitiativesListReportingByPortfolio.length == 1) {
+        this.resultLevelSE.resultBody.initiative_id = this.api.dataControlSE.myInitiativesListReportingByPortfolio[0].id;
+      }
+    });
+
+    setTimeout(() => {
+      this.getAllPhases();
+    }, 600);
+  }
+
+  onSelectInit() {
+    const init = ((this.api.rolesSE.isAdmin ? this.allInitiatives : this.api.dataControlSE.myInitiativesListReportingByPortfolio) || []).find(
+      init => init.id == this.resultLevelSE.resultBody.initiative_id
+    );
+    if (!init) return;
+    const resultType = this.cgiarEntityTypes.find(type => type.code == init.typeCode);
+    this.currentResultType = resultType?.name;
+  }
+
+  getAllPhases() {
+    const reportingPhases = this.phasesService?.phases?.reporting || [];
+    const ipsrPhases = this.phasesService?.phases?.ipsr || [];
+    this.allPhases = [...reportingPhases, ...ipsrPhases];
+  }
+
+  GET_cgiarEntityTypes(callback) {
+    this.api.resultsSE.GET_cgiarEntityTypes().subscribe({
+      next: ({ response }) => {
+        response.forEach(element => {
+          element.isLabel = true;
+        });
+        callback(response);
+      },
+      error: err => {
+        callback?.();
+      }
+    });
+  }
+
+  GET_AllInitiatives(callback?) {
+    if (!this.api.rolesSE.isAdmin) return;
+
+    const activePortfolio = this.api.dataControlSE?.reportingCurrentPhase?.portfolioAcronym;
+
+    this.api.resultsSE.GET_AllInitiatives(activePortfolio).subscribe({
+      next: ({ response }) => {
+        this.GET_cgiarEntityTypes(entityTypesResponse => {
+          this.cgiarEntityTypes = entityTypesResponse;
+          this.allInitiatives = response;
+
+          this.allInitiatives.forEach(initiative => {
+            const { code, name } = initiative?.obj_cgiar_entity_type || {};
+            initiative.typeCode = code;
+            initiative.typeName = name;
+          });
+
+          const groupList = entityTypesResponse;
+          const resultList = [];
+          groupList?.forEach(groupItem => {
+            const initsGroup = this.allInitiatives.filter(item => item.typeCode == groupItem.code);
+            if (initsGroup?.length) resultList.push(groupItem, ...initsGroup);
+          });
+          this.allInitiatives = resultList;
+          this.availableInitiativesSig.set(this.allInitiatives);
+          this.tryApplySelectedInitiative();
+        });
+      },
+      error: err => {
+        console.error(err);
+      },
+      complete: () => {
+        callback?.();
+      }
+    });
+  }
+
+  get isKnowledgeProduct() {
+    return this.resultLevelSE.resultBody.result_type_id == 6;
+  }
+
+  get resultTypeNamePlaceholder(): string {
+    const typeName = this.resultTypeName;
+    return typeName ? typeName + ' title...' : 'Title...';
+  }
+
+  get resultTypeName(): string {
+    if (!this.resultLevelSE.currentResultTypeList || !this.resultLevelSE.resultBody.result_type_id) return '';
+    return this.resultLevelSE.currentResultTypeList.find(resultType => resultType.id == this.resultLevelSE.resultBody.result_type_id)?.name;
+  }
+
+  get resultLevelName(): string {
+    return this.resultLevelSE.resultBody['result_level_name'] ?? '';
+  }
+
+  clean() {
+    if (this.resultLevelSE.resultBody.result_type_id == 6) this.resultLevelSE.resultBody.result_name = '';
+    else this.onTitleChange(this.resultLevelSE.resultBody.result_name);
+  }
+
+  private applyPendingResultTypeSelection() {
+    const pendingSelection = this.resultLevelSE.consumePendingResultType?.();
+    if (!pendingSelection) return;
+
+    const checkAndApply = () => {
+      const levelList = this.resultLevelSE.resultLevelListSig();
+      if (levelList?.length > 0) {
+        this.resultLevelSE.preselectResultType(pendingSelection.id, pendingSelection.name);
+      } else {
+        setTimeout(checkAndApply, 50);
+      }
+    };
+    setTimeout(checkAndApply, 0);
+  }
+
+  onTitleChange(title: string) {
+    clearTimeout(this.debounceTimer);
+    this.loadingDepthSearch.set(true);
+    this.exactTitleFound.set(false);
+
+    if (!title?.trim()) {
+      this.depthSearchList = [];
+      this.loadingDepthSearch.set(false);
+      return;
+    }
+
+    this.debounceTimer = setTimeout(() => {
+      this.depthSearch(title);
+    }, 500);
+  }
+
+  depthSearch(title: string) {
+    const cleanSpaces = (text: string) => text?.replace(/\s+/g, '')?.toLowerCase();
+    const legacyType = this.getLegacyType(this.resultTypeName, this.resultLevelName);
+
+    this.api.resultsSE.GET_FindResultsElastic(title, legacyType).subscribe({
+      next: (response: any[]) => {
+        this.depthSearchList = response.map(result => ({
+          ...result,
+          phase: this.allPhases.find(phase => phase.id === result?.version_id)
+        }));
+        this.exactTitleFound.set(!!this.depthSearchList.find(result => cleanSpaces(result.title) === cleanSpaces(title)));
+        this.loadingDepthSearch.set(false);
+      },
+      error: () => {
+        this.depthSearchList = [];
+        this.exactTitleFound.set(false);
+        this.loadingDepthSearch.set(false);
+      }
+    });
+  }
+
+  getLegacyType(type: string, level: string): string {
+    let legacyType = '';
+
+    if (type == 'Innovation development') {
+      legacyType = 'Innovation';
+    } else if (type == 'Policy change') {
+      legacyType = 'Policy';
+    } else if (type == 'Capacity change' || type == 'Other outcome') {
+      legacyType = 'OICR';
+    } else if (level == 'Impact') {
+      legacyType = 'OICR';
+    }
+
+    return legacyType;
+  }
+
+  onSaveSection() {
+    if (!this.resultLevelSE.resultBody.initiative_id) {
+      this.api.alertsFe.show({
+        id: 'reportResultError',
+        title: 'Error!',
+        description: `Please select ${this.terminologyService.t('term.entity.singular', this.api.dataControlSE?.reportingCurrentPhase?.portfolioAcronym)}`,
+        status: 'error'
+      });
+      return;
+    }
+
+    let request$;
+    if (this.resultLevelSE.resultBody.result_type_id != 6) {
+      this.api.dataControlSE.validateBody(this.resultLevelSE.resultBody);
+      request$ = this.api.resultsSE.POST_resultCreateHeader(this.resultLevelSE.resultBody, true);
+    } else {
+      request$ = this.api.resultsSE.POST_createWithHandle({ ...this.mqapJson, result_data: this.resultLevelSE.resultBody });
+    }
+
+    request$.subscribe({
+      next: (resp: any) => {
+        this.resultCreated.emit(resp?.response);
+        this.router.navigate([`/result/result-detail/${resp?.response?.result_code}/general-information`], {
+          queryParams: { phase: resp?.response?.version_id }
+        });
+        this.api.alertsFe.show({ id: 'reportResultSuccess', title: 'Result created', status: 'success', closeIn: 500 });
+      },
+      error: err => {
+        this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
+      }
+    });
+  }
+
+  ngDoCheck(): void {
+    this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.report_container');
+  }
+
+  GET_mqapValidation() {
+    this.validating = true;
+
+    if (!this.resultLevelSE.resultBody.handler) {
+      this.mqapUrlError = {
+        status: true,
+        message: 'Please enter a valid handle.'
+      };
+      this.validating = false;
+      return;
+    }
+
+    const regex =
+      /^https:\/\/(?:(?:cgspace\.cgiar\.org|repo\.mel\.cgiar\.org|digitalarchive\.worldfishcenter\.org)\/items\/[0-9a-fA-F-]{36}|hdl\.handle\.net\/(?:10568|20\.500\.11766|20\.500\.12348)\/\d+|cgspace\.cgiar\.org\/handle\/(?:10568|20\.500\.11766)\/\d+)$/;
+
+    const isValid = regex.test(this.resultLevelSE.resultBody.handler);
+
+    if (!isValid) {
+      this.mqapUrlError = {
+        status: true,
+        message: 'Please ensure that the handle is from the CGSpace, MELSpace or WorldFish repository and not other CGIAR repositories.'
+      };
+      this.validating = false;
+      return;
+    }
+
+    this.mqapUrlError = {
+      status: false,
+      message: ''
+    };
+
+    this.api.resultsSE.GET_mqapValidation(this.resultLevelSE.resultBody.handler).subscribe({
+      next: resp => {
+        this.mqapJson = resp.response;
+        this.resultLevelSE.resultBody.result_name = resp.response.title;
+        this.validating = false;
+        this.api.alertsFe.show({
+          id: 'reportResultSuccess',
+          title: 'Metadata successfully retrieved',
+          description: 'Title: ' + this.resultLevelSE.resultBody.result_name,
+          status: 'success'
+        });
+      },
+      error: err => {
+        this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
+        this.validating = false;
+        this.resultLevelSE.resultBody.result_name = '';
+      }
+    });
+  }
+
+  private tryApplySelectedInitiative() {
+    if (this._selectedInitiativeId == null) return;
+    const list = this.availableInitiativesSig();
+    if (!Array.isArray(list) || !list.length) return;
+
+    const match = list.find(item => (item?.id ?? item?.initiative_id) == this._selectedInitiativeId);
+    if (!match) return;
+
+    const value = match?.id ?? match?.initiative_id ?? this._selectedInitiativeId;
+    this.resultLevelSE.resultBody.initiative_id = value;
+    this.onSelectInit();
+  }
+
+}

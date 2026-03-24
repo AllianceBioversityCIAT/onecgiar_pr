@@ -8,7 +8,6 @@ import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { ClarisaInitiative } from '../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
-import { OrmConfigTestModule } from '../../shared/test/orm-connection.module';
 import { ResultRepository } from '../results/result.repository';
 import { Result } from '../results/entities/result.entity';
 import { RoleByUser } from '../../auth/modules/role-by-user/entities/role-by-user.entity';
@@ -67,7 +66,6 @@ describe('UserNotificationSettingsService', () => {
         },
         Logger,
       ],
-      imports: [OrmConfigTestModule],
     }).compile();
 
     jest.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
@@ -410,6 +408,11 @@ describe('UserNotificationSettingsService', () => {
             obj_qaed_user: [],
             contribution_to_indicator_submission_array: [],
             obj_role_by_user: [],
+            obj_ai_review_sessions_opened: [],
+            obj_ai_review_events: [],
+            obj_result_field_revisions: [],
+            obj_result_field_ai_states_updated: [],
+            obj_external_submitter_results: [],
           },
           obj_initiative: {} as any,
           action_area_id: 1,

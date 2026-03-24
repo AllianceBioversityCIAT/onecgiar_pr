@@ -138,7 +138,11 @@ export class ShareResultRequestService {
         ),
       ]);
 
-      if (!this.shouldCreateNewShareRequest(requestExist, initExist)) {
+      // If initiative is already an active contributor, or is a pending/accepted/rejected contribution, skip
+      if (
+        initExist?.is_active ||
+        (requestExist && requestExist.request_status_id !== 4)
+      ) {
         continue;
       }
 
@@ -150,14 +154,31 @@ export class ShareResultRequestService {
         };
       }
 
-      const newShare = this.buildShareResultRequest(
-        createTocShareResult,
-        resultId,
-        initiativeId,
-        shareInitId,
-        user,
-      );
-      shareInitRequests.push(newShare);
+      // If request exists with status_id = 4, update it; otherwise create new
+      if (requestExist?.request_status_id === 4) {
+        const existingShare = this.buildShareResultRequest(
+          createTocShareResult,
+          resultId,
+          initiativeId,
+          shareInitId,
+          user,
+        );
+        existingShare.share_result_request_id =
+          requestExist.share_result_request_id;
+        existingShare.is_active = true;
+
+        shareInitRequests.push(existingShare);
+      } else {
+        // Create new request only if it doesn't exist
+        const newShare = this.buildShareResultRequest(
+          createTocShareResult,
+          resultId,
+          initiativeId,
+          shareInitId,
+          user,
+        );
+        shareInitRequests.push(newShare);
+      }
 
       if (createTocShareResult.isToc === true) {
         await this._resultsTocResultService.saveMapToToc(
@@ -169,17 +190,6 @@ export class ShareResultRequestService {
     }
 
     return shareInitRequests;
-  }
-
-  private shouldCreateNewShareRequest(
-    requestExist: any,
-    initExist: any,
-  ): boolean {
-    return (
-      !requestExist &&
-      requestExist?.request_status_id !== 1 &&
-      !initExist?.is_active
-    );
   }
 
   private buildShareResultRequest(
@@ -211,17 +221,39 @@ export class ShareResultRequestService {
     resultId: number,
     user: TokenDto,
   ) {
-    await this._shareResultRequestRepository.save(shareInitRequests);
+    // Separate existing requests (with ID) from new ones (without ID)
+    const existingRequests = shareInitRequests.filter(
+      (req) => req.share_result_request_id,
+    );
+    const newRequests = shareInitRequests.filter(
+      (req) => !req.share_result_request_id,
+    );
+
+    // Update existing requests
+    if (existingRequests.length > 0) {
+      await Promise.all(
+        existingRequests.map((req) =>
+          this._shareResultRequestRepository.update(
+            req.share_result_request_id,
+            {
+              request_status_id: req.request_status_id,
+              is_active: req.is_active,
+              requested_by: req.requested_by,
+              requested_date: req.requested_date,
+            },
+          ),
+        ),
+      );
+    }
+
+    // Save only new requests
+    if (newRequests.length > 0) {
+      await this._shareResultRequestRepository.save(newRequests);
+    }
 
     await this.sendEmailsForShareRequests(
       shareInitRequests,
       user,
-      resultId,
-      emailTemplate,
-    );
-
-    await this.sendSocketNotification(
-      shareInitRequests,
       resultId,
       emailTemplate,
     );
@@ -608,10 +640,21 @@ export class ShareResultRequestService {
   }
 
   private async getRequest(whereCondition: any) {
-    return await this._shareResultRequestRepository.find({
+    const results = await this._shareResultRequestRepository.find({
       select: this.getRequestSelectFields(),
       relations: this.getRequestRelations(),
       where: whereCondition,
+    });
+
+    return results.map((result: any) => {
+      if (result.obj_result && !Array.isArray(result.obj_result)) {
+        result.obj_result = {
+          ...result.obj_result,
+          source_name:
+            result.obj_result.source === 'Result' ? 'W1/W2' : 'W3/Bilaterals',
+        };
+      }
+      return result;
     });
   }
 
@@ -628,6 +671,8 @@ export class ShareResultRequestService {
         name: true,
       },
       obj_result: {
+        id: true,
+        source: true,
         result_code: true,
         title: true,
         status_id: true,
@@ -648,6 +693,22 @@ export class ShareResultRequestService {
           result_toc_result_id: true,
           initiative_id: true,
           is_active: true,
+        },
+        result_center_array: {
+          center_id: true,
+          is_primary: true,
+          is_leading_result: true,
+          is_active: true,
+          clarisa_center_object: {
+            code: true,
+            institutionId: true,
+            financial_code: true,
+            clarisa_institution: {
+              id: true,
+              name: true,
+              acronym: true,
+            },
+          },
         },
       },
       obj_requested_by: {
@@ -677,9 +738,16 @@ export class ShareResultRequestService {
     return {
       obj_request_status: true,
       obj_result: {
-        obj_version: true,
+        obj_version: {
+          obj_portfolio: true,
+        },
         obj_result_type: true,
         obj_result_level: true,
+        result_center_array: {
+          clarisa_center_object: {
+            clarisa_institution: true,
+          },
+        },
       },
       obj_requested_by: true,
       obj_approved_by: true,
@@ -1096,5 +1164,216 @@ export class ShareResultRequestService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  // ============================================
+  // VERSION 2 METHODS
+  // ============================================
+
+  /**
+   * Version 2 of updateResultRequestByUser
+   * Maintains the same logic as V1 but allows for future modifications
+   * @param createShareResultsRequestDto - DTO with request data
+   * @param user - Authenticated user token
+   * @returns Response with updated request data
+   */
+  async updateResultRequestByUserV2(
+    createShareResultsRequestDto: CreateShareResultRequestDto,
+    user: TokenDto,
+  ) {
+    try {
+      const {
+        result_request: rr,
+        result_toc_result: rtr,
+        request_status_id,
+      } = createShareResultsRequestDto;
+
+      const res = await this._resultRepository.findOne({
+        where: { id: rr.result_id, is_active: true },
+        relations: { obj_version: true },
+      });
+
+      if (!res) {
+        return {
+          response: {},
+          message: 'The result was not found',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      if (!rr?.share_result_request_id) {
+        return this.createInvalidShareRequestResponse();
+      }
+
+      await this.updateShareResultRequestV2(rr, user, request_status_id);
+
+      const findShare = await this._shareResultRequestRepository.findOne({
+        where: { share_result_request_id: rr.share_result_request_id },
+      });
+
+      await this.handleRequestApprovalV2(
+        findShare,
+        rtr,
+        user,
+        createShareResultsRequestDto,
+      );
+
+      return {
+        response: 'requestData',
+        message: 'The requests have been updated successfully',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      this._logger.error('Error updating share result request V2', error);
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  /**
+   * Version 2 of updateShareResultRequest
+   * Can be modified independently from V1
+   */
+  private async updateShareResultRequestV2(
+    rr: any,
+    user: TokenDto,
+    request_status_id: number,
+  ) {
+    // Currently same as V1, but can be modified independently
+    await this.updateShareResultRequest(rr, user, request_status_id);
+  }
+
+  /**
+   * Version 2 of handleRequestApproval
+   * Can be modified independently from V1
+   */
+  private async handleRequestApprovalV2(
+    findShare: any,
+    rtr: any,
+    user: TokenDto,
+    dto: CreateShareResultRequestDto,
+  ) {
+    const { shared_inititiative_id, result_id, is_map_to_toc } = findShare;
+
+    if (dto.request_status_id == 2) {
+      await this.approveRequestV2(
+        shared_inititiative_id,
+        result_id,
+        rtr,
+        user,
+        is_map_to_toc,
+        dto,
+      );
+    } else {
+      // Reuse common method if logic is the same
+      await this.deactivateTocResults(result_id, shared_inititiative_id);
+    }
+  }
+
+  /**
+   * Version 2 of approveRequest
+   * Can be modified independently from V1
+   */
+  private async approveRequestV2(
+    shared_inititiative_id: number,
+    result_id: number,
+    rtr: any,
+    user: TokenDto,
+    is_map_to_toc: boolean,
+    dto: CreateShareResultRequestDto,
+  ) {
+    try {
+      const exists =
+        await this._resultByInitiativesRepository.getResultsByInitiativeByResultIdAndInitiativeIdAndRole(
+          result_id,
+          shared_inititiative_id,
+          false,
+        );
+
+      if (!exists) {
+        // Reuse common methods if logic is the same
+        const newReIni = await this.createNewInitiativeEntry(
+          shared_inititiative_id,
+          result_id,
+          user,
+        );
+        await this.createBudgetForInitiative(newReIni.id, user);
+
+        if (!is_map_to_toc) {
+          await this.mapWorkPackagesToInitiativeV2(
+            rtr.result_toc_results,
+            result_id,
+            shared_inititiative_id,
+            user,
+            rtr?.planned_result,
+          );
+          await this.saveIndicatorsForPrimarySubmitterV2(dto, result_id);
+        }
+      } else {
+        // Reuse common methods if logic is the same
+        await this.activateExistingInitiativeEntry(exists, user);
+        await this.createOrUpdateBudgetForInitiative(exists.id, user);
+        if (!is_map_to_toc) {
+          await this.mapWorkPackagesToInitiativeV2(
+            rtr.result_toc_results,
+            result_id,
+            shared_inititiative_id,
+            user,
+            rtr?.planned_result,
+          );
+        }
+        await this.saveIndicatorsForPrimarySubmitterV2(dto, result_id);
+      }
+    } catch (error) {
+      this._logger.error('Error approving share result request V2', error);
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  /**
+   * Version 2 of mapWorkPackagesToInitiative
+   * Can be modified independently from V1
+   */
+  private async mapWorkPackagesToInitiativeV2(
+    tocResults: any[],
+    result_id: number,
+    initiative_id: number,
+    user: TokenDto,
+    planned_result: any,
+  ) {
+    try {
+      for (const toc of tocResults) {
+        if (toc) {
+          await this._resultsTocResultRepository.save({
+            initiative_ids: initiative_id,
+            toc_result_id: toc?.toc_result_id,
+            created_by: user.id,
+            last_updated_by: user.id,
+            result_id,
+            planned_result,
+            action_area_outcome_id: toc?.action_area_outcome_id,
+            is_active: true,
+            toc_progressive_narrative: toc?.toc_progressive_narrative,
+            // V2: Add toc_level_id if needed
+            toc_level_id: toc?.toc_level_id ?? null,
+          });
+        }
+      }
+      this._logger.log('Work packages mapped successfully V2');
+    } catch (error) {
+      this._logger.error('Error mapping work packages V2', error);
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  /**
+   * Version 2 of saveIndicatorsForPrimarySubmitter
+   * Can be modified independently from V1
+   */
+  private async saveIndicatorsForPrimarySubmitterV2(
+    dto: CreateShareResultRequestDto,
+    result_id: number,
+  ) {
+    // Currently same as V1, but can be modified independently
+    await this.saveIndicatorsForPrimarySubmitter(dto, result_id);
   }
 }

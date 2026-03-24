@@ -5,7 +5,7 @@ import { environment } from '../environments/environment';
 import { RolesService } from './shared/services/global/roles.service';
 import { ApiService } from './shared/services/api/api.service';
 import { FooterService } from './shared/components/footer/footer.service';
-import { WebsocketService } from './sockets/websocket.service';
+// import { WebsocketService } from './sockets/websocket.service';
 
 @Component({
   selector: 'app-root',
@@ -21,8 +21,8 @@ export class AppComponent implements OnInit {
     public AuthService: AuthService,
     public rolesSE: RolesService,
     public api: ApiService,
-    public footerSE: FooterService,
-    public webSocket: WebsocketService
+    public footerSE: FooterService
+    // public webSocket: WebsocketService
   ) {}
 
   ngOnInit(): void {

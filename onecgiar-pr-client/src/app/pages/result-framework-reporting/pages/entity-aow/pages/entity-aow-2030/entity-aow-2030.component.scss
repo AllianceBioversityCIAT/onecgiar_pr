@@ -1,0 +1,44 @@
+@use '../../../../../../../styles/fonts.scss' as fonts;
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin: 0;
+}
+
+.entity-aow-2030_content {
+  border: 1px solid var(--pr-color-accents-2);
+  border-radius: 8px;
+  box-shadow: 0px 4.17px 31.31px 0px #2e2d740d;
+}
+
+.entity-aow-2030_content_header {
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--pr-color-accents-2);
+  @include fonts.pr-typography('h4');
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.entity-aow-2030_content_header_dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: var(--pr-color-accents-5);
+}
+
+.entity-aow-2030_content_header_phase {
+  @include fonts.pr-typography('body-2');
+  font-weight: 400;
+  color: var(--pr-color-accents-5);
+}
+
+.entity-aow-2030_content_table {
+  padding: 25px;
+}

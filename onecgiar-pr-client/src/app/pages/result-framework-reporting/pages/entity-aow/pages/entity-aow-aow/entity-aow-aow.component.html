@@ -1,0 +1,47 @@
+<div class="entity-aow-aow_tabs">
+  @for (tab of tabs(); track tab.id) {
+    <button
+      pButton
+      type="button"
+      class="entity-aow-aow_tabs_button"
+      [ngClass]="{ 'tab-button_active': isActiveTab(tab.id), 'tab-button_inactive': !isActiveTab(tab.id) }"
+      (click)="setActiveTab(tab.id)">
+      {{ tab.label }}
+      @if (tab.count) {
+        ({{ tab.count }})
+      }
+    </button>
+  }
+</div>
+
+<div class="entity-aow-aow_content">
+  @switch (activeTabId()) {
+    @case ('high-level-outputs') {
+      <div class="tab-content_header">
+        <h3>High-Level Outputs Indicators</h3>
+        <div class="tab-content_header_dot"></div>
+        <h3 class="tab-content_header_phase">Reporting Phase 2025</h3>
+      </div>
+
+      <div class="tab-content">
+        <app-aow-hlo-table tableType="outputs"></app-aow-hlo-table>
+      </div>
+    }
+    @case ('outcomes') {
+      <div class="tab-content_header">
+        <h3>Intermediate Outcomes Indicators</h3>
+        <div class="tab-content_header_dot"></div>
+        <h3 class="tab-content_header_phase">Reporting Phase 2025</h3>
+      </div>
+
+      <div class="tab-content">
+        <app-aow-hlo-table tableType="outcomes"></app-aow-hlo-table>
+      </div>
+    }
+    @default {
+      <div class="tab-content">
+        <p>Select a tab to view content.</p>
+      </div>
+    }
+  }
+</div>

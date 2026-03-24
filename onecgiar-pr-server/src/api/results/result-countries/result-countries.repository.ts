@@ -25,6 +25,7 @@ export class ResultCountryRepository
       rc.is_active,
       ${config.new_result_id} as result_id,
       rc.country_id,
+      rc.geo_scope_role_id,
       ${predeterminedDateValidation(
         config?.predetermined_date,
       )} as created_date,
@@ -37,6 +38,7 @@ export class ResultCountryRepository
         is_active,
         result_id,
         country_id,
+        geo_scope_role_id,
         created_date,
         last_updated_date
         )
@@ -44,6 +46,7 @@ export class ResultCountryRepository
         rc.is_active,
         ${config.new_result_id} as result_id,
         rc.country_id,
+        rc.geo_scope_role_id,
         ${predeterminedDateValidation(
           config?.predetermined_date,
         )} as created_date,
@@ -126,7 +129,8 @@ export class ResultCountryRepository
       rc.created_date,
       rc.last_updated_date,
       cc.name,
-      cc.iso_alpha_2
+      cc.iso_alpha_2,
+      rc.geo_scope_role_id
       from result_country rc 
       inner join clarisa_countries cc on cc.id = rc.country_id 
       where rc.is_active > 0
@@ -134,7 +138,7 @@ export class ResultCountryRepository
     `;
 
     const querySubnational = `
-      select rc.result_country_id, rcs.result_country_subnational_id, css.*
+      select rc.result_country_id, rcs.result_country_subnational_id, rcs.geo_scope_role_id, css.*
       from result r
       left join result_country rc on rc.result_id = r.id and rc.is_active > 0
       right join result_country_subnational rcs on rcs.result_country_id = rc.result_country_id and rcs.is_active > 0
@@ -165,25 +169,28 @@ export class ResultCountryRepository
   async getResultCountrieByIdResultAndCountryId(
     resultId: number,
     countryId: number,
+    geoScopeRoleId: number = 1,
   ) {
     const query = `
-    select 
-    rc.result_country_id,
-    rc.is_active,
-    rc.result_id,
-    rc.country_id,
-    rc.created_date,
-    rc.last_updated_date 
-    from result_country rc 
-    where rc.is_active > 0
-      and rc.result_id = ?
-      and rc.country_id = ?;
+      select 
+        rc.result_country_id,
+        rc.is_active,
+        rc.result_id,
+        rc.country_id,
+        rc.created_date,
+        rc.last_updated_date 
+      from result_country rc 
+      where rc.is_active > 0
+        and rc.result_id = ?
+        and rc.country_id = ?
+        and rc.geo_scope_role_id = ?;
     `;
 
     try {
       const result: ResultCountry[] = await this.query(query, [
         resultId,
         countryId,
+        geoScopeRoleId,
       ]);
       return result?.length ? result[0] : undefined;
     } catch (error) {
@@ -195,7 +202,11 @@ export class ResultCountryRepository
     }
   }
 
-  async updateCountries(resultId: number, countriesArray: number[]) {
+  async updateCountries(
+    resultId: number,
+    countriesArray: number[],
+    geoScopeRoleId: number = 1,
+  ) {
     const countries = countriesArray ?? [];
     const upDateInactive = `
     update result_country  
@@ -203,6 +214,7 @@ export class ResultCountryRepository
     	 last_updated_date = NOW()
     where is_active > 0 
     	and result_id  = ?
+      and geo_scope_role_id = ?
     	and country_id  not in (${countries.toString()});
     `;
 
@@ -211,6 +223,7 @@ export class ResultCountryRepository
     set is_active = 1, 
     	 last_updated_date = NOW()
     where result_id  = ?
+      and geo_scope_role_id = ?
     	and country_id in (${countries.toString()});
     `;
 
@@ -218,16 +231,17 @@ export class ResultCountryRepository
     update result_country  
     set is_active = 0, 
     	 last_updated_date = NOW()
-    where result_id = ?;
+    where result_id = ?
+      and geo_scope_role_id = ?;
     `;
 
     try {
       if (countries?.length) {
-        await this.query(upDateInactive, [resultId]);
+        await this.query(upDateInactive, [resultId, geoScopeRoleId]);
 
-        return await this.query(upDateActive, [resultId]);
+        return await this.query(upDateActive, [resultId, geoScopeRoleId]);
       } else {
-        return await this.query(upDateAllInactive, [resultId]);
+        return await this.query(upDateAllInactive, [resultId, geoScopeRoleId]);
       }
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

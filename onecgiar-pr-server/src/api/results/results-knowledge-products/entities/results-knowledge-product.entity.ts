@@ -34,6 +34,14 @@ export class ResultsKnowledgeProduct {
   ost_melia_study_id: number;
 
   @Column({
+    name: 'toc_melia_study_id',
+    type: 'varchar',
+    length: 36,
+    nullable: true,
+  })
+  toc_melia_study_id: string;
+
+  @Column({
     name: 'handle',
     type: 'text',
     nullable: true,

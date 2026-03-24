@@ -1,4 +1,11 @@
-import { Controller, Get, Patch, Param, UseInterceptors } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Patch,
+  Param,
+  UseInterceptors,
+  Version,
+} from '@nestjs/common';
 import { ResultsValidationModuleService } from './results-validation-module.service';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 
@@ -12,6 +19,14 @@ export class ResultsValidationModuleController {
   @Get('get/green-checks/:resultId')
   findAll(@Param('resultId') resultId: number) {
     return this.resultsValidationModuleService.getGreenchecksByResult(resultId);
+  }
+
+  @Version('2')
+  @Get('get/green-checks/:resultId')
+  findAllV2(@Param('resultId') resultId: number) {
+    return this.resultsValidationModuleService.calculateValidationSections(
+      resultId,
+    );
   }
 
   @Patch('save/green-checks/:resultId')

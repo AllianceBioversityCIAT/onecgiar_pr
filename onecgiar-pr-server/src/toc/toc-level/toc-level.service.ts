@@ -29,4 +29,34 @@ export class TocLevelService {
       return this._handlersError.returnErrorRes({ error });
     }
   }
+
+  async findAllV2() {
+    try {
+      const tocResults = [
+        {
+          toc_level_id: 1,
+          name: 'High Level Output',
+          description: '',
+        },
+        {
+          toc_level_id: 2,
+          name: 'Intermediate Outcome',
+          description: '',
+        },
+        {
+          toc_level_id: 3,
+          name: '2030 Outcome',
+          description: '',
+        },
+      ];
+
+      return {
+        response: tocResults,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
 }

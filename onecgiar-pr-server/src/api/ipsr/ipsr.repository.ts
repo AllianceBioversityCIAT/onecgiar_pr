@@ -147,6 +147,13 @@ export class IpsrRepository
   }
 
   async getResultsInnovation(initiativeId: number[]) {
+    const initativeQuery = `select iem.initiative_id  
+                            from initiative_entity_map iem 
+                            where iem.entity_id IN (?)`;
+    const initiativeIds = await this.dataSource
+      .query<{ initiative_id: number }[]>(initativeQuery, [initiativeId])
+      .then((res) => res.map((item) => item.initiative_id));
+    initiativeIds.push(...initiativeId);
     const resultInnovationQuery = `
         SELECT
             DISTINCT r.id AS result_id,
@@ -207,7 +214,7 @@ export class IpsrRepository
     try {
       const resultInnovation: any[] = await this.dataSource.query(
         resultInnovationQuery,
-        [initiativeId],
+        [initiativeIds],
       );
       return resultInnovation;
     } catch (error) {
@@ -266,6 +273,8 @@ export class IpsrRepository
         FROM
             result r
             LEFT JOIN results_by_inititiative rbi ON rbi.result_id = r.id
+            AND rbi.initiative_role_id = 1
+            AND rbi.is_active = 1
             LEFT JOIN clarisa_initiatives ci ON ci.id = rbi.inititiative_id
             INNER JOIN result_status rs ON rs.result_status_id = r.status_id
             inner join \`version\` v on v.id = r.version_id
@@ -327,6 +336,15 @@ export class IpsrRepository
                 WHERE
                     gtl.id = r.gender_tag_level_id
             ) AS gender_tag_level,
+            r.gender_impact_area_id,
+            (
+                SELECT
+                    iasc.name
+                FROM
+                    impact_areas_scores_components iasc
+                WHERE
+                    iasc.id = r.gender_impact_area_id
+            ) AS gender_impact_component,
             (
                 SELECT
                     e1.link
@@ -347,6 +365,15 @@ export class IpsrRepository
                 WHERE
                     gtl2.id = r.climate_change_tag_level_id
             ) AS climate_tag_level,
+            r.climate_impact_area_id,
+            (
+                SELECT
+                    iasc2.name
+                FROM
+                    impact_areas_scores_components iasc2
+                WHERE
+                    iasc2.id = r.climate_impact_area_id
+            ) AS climate_impact_component,
             (
                 SELECT
                     e2.link
@@ -367,6 +394,15 @@ export class IpsrRepository
                 WHERE
                     gtl3.id = r.nutrition_tag_level_id
             ) AS nutrition_tag_level,
+            r.nutrition_impact_area_id,
+            (
+                SELECT
+                    iasc3.name
+                FROM
+                    impact_areas_scores_components iasc3
+                WHERE
+                    iasc3.id = r.nutrition_impact_area_id
+            ) AS nutrition_impact_component,
             (
                 SELECT
                     e3.link
@@ -387,6 +423,15 @@ export class IpsrRepository
                 WHERE
                     gtl4.id = r.environmental_biodiversity_tag_level_id
             ) AS environmental_biodiversity_tag_level,
+            r.environmental_biodiversity_impact_area_id,
+            (
+                SELECT
+                    iasc4.name
+                FROM
+                    impact_areas_scores_components iasc4
+                WHERE
+                    iasc4.id = r.environmental_biodiversity_impact_area_id
+            ) AS environmental_biodiversity_impact_component,
             (
                 SELECT
                     e4.link
@@ -407,6 +452,15 @@ export class IpsrRepository
                 WHERE
                     gtl5.id = r.poverty_tag_level_id
             ) AS poverty_tag_level,
+            r.poverty_impact_area_id,
+            (
+                SELECT
+                    iasc5.name
+                FROM
+                    impact_areas_scores_components iasc5
+                WHERE
+                    iasc5.id = r.poverty_impact_area_id
+            ) AS poverty_impact_component,
             (
                 SELECT
                     e5.link

@@ -14,6 +14,7 @@ import { FormsModule } from '@angular/forms';
 import { of } from 'rxjs';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
 import { environment } from '../../../../../../../../environments/environment';
+import { signal } from '@angular/core';
 
 describe('CapDevInfoComponent', () => {
   let component: CapDevInfoComponent;
@@ -21,23 +22,23 @@ describe('CapDevInfoComponent', () => {
   let mockApiService: any;
 
   beforeEach(async () => {
-
     mockApiService = {
       resultsSE: {
-        GET_capdevsTerms: () => of({response: ['term1', 'term2', 'term3', 'term4'] }),
+        GET_capdevsTerms: () => of({ response: ['term1', 'term2', 'term3', 'term4'] }),
         GET_capdevsDeliveryMethod: () => of({ response: ['method1', 'method2'] }),
         GET_capacityDevelopent: () => of({ response: { capdev_term_id: 1 } }),
         PATCH_capacityDevelopent: () => of({}),
         GET_allInstitutions: () => of({ response: [] }),
         GET_allInstitutionTypes: () => of({ response: [] }),
-        GET_allChildlessInstitutionTypes:() => of({response: [] }),
+        GET_allChildlessInstitutionTypes: () => of({ response: [] }),
         currentResultCode: 1,
         currentResultPhase: 1
       },
       dataControlSE: {
-        findClassTenSeconds: jest.fn(() => Promise.resolve()),
+        currentResultSectionName: signal<string>('Capacity Sharing for Development information'),
+        findClassTenSeconds: jest.fn(() => Promise.resolve())
       }
-    }
+    };
 
     await TestBed.configureTestingModule({
       declarations: [
@@ -51,16 +52,9 @@ describe('CapDevInfoComponent', () => {
         PrFieldValidationsComponent,
         DetailSectionTitleComponent
       ],
-      imports: [
-        HttpClientTestingModule,
-        RadioButtonModule,
-        FormsModule
-      ],
-      providers: [
-        { provide: ApiService, useValue: mockApiService },
-      ],
-    })
-    .compileComponents();
+      imports: [HttpClientTestingModule, RadioButtonModule, FormsModule],
+      providers: [{ provide: ApiService, useValue: mockApiService }]
+    }).compileComponents();
 
     fixture = TestBed.createComponent(CapDevInfoComponent);
     component = fixture.componentInstance;
@@ -83,7 +77,7 @@ describe('CapDevInfoComponent', () => {
 
   describe('GET_capdevsTerms()', () => {
     it('should fetch and set capdevsTerms and capdevsSubTerms', () => {
-      const spy = jest.spyOn(mockApiService.resultsSE, 'GET_capdevsTerms')
+      const spy = jest.spyOn(mockApiService.resultsSE, 'GET_capdevsTerms');
 
       component.GET_capdevsTerms();
 
@@ -95,7 +89,7 @@ describe('CapDevInfoComponent', () => {
 
   describe('GET_capdevsDeliveryMethod()', () => {
     it('should fetch and set deliveryMethodOptions', () => {
-      const spy = jest.spyOn(mockApiService.resultsSE, 'GET_capdevsDeliveryMethod')
+      const spy = jest.spyOn(mockApiService.resultsSE, 'GET_capdevsDeliveryMethod');
 
       component.GET_capdevsDeliveryMethod();
 
@@ -106,7 +100,7 @@ describe('CapDevInfoComponent', () => {
 
   describe('getSectionInformation()', () => {
     it('should fetch and set capDevInfoRoutingBody', () => {
-      const spy = jest.spyOn(mockApiService.resultsSE, 'GET_capacityDevelopent')
+      const spy = jest.spyOn(mockApiService.resultsSE, 'GET_capacityDevelopent');
 
       component.getSectionInformation();
 
@@ -132,7 +126,9 @@ describe('CapDevInfoComponent', () => {
       expect(result).toContain('<ul>');
       expect(result).toContain('<li>Long-term training refers to training that goes for 3 or more months.</li>');
       expect(result).toContain('<li>Short-term training refers to training that goes for less than 3 months.</li>');
-      expect(result).toContain('<li>Both long-term and short-term training programs must be completed before reporting (to avoid reporting the same trainee multiple times across years).</li>');
+      expect(result).toContain(
+        '<li>Both long-term and short-term training programs must be completed before reporting (to avoid reporting the same trainee multiple times across years).</li>'
+      );
       expect(result).toContain('</ul>');
     });
   });
@@ -201,7 +197,6 @@ describe('CapDevInfoComponent', () => {
       const validateCapDevTermIdSpy = jest.spyOn(component, 'validate_capdev_term_id');
       const cleanOrganizationsListSpy = jest.spyOn(component, 'cleanOrganizationsList');
       const PATCH_capacityDevelopentSpy = jest.spyOn(mockApiService.resultsSE, 'PATCH_capacityDevelopent');
-
 
       component.onSaveSection();
 

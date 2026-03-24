@@ -3,12 +3,13 @@ export class InnovationDevInfoBody {
   public short_title: string;
   public innovation_characterization_id: number;
   public innovation_nature_id: number;
-  public innovation_readiness_level_id: number;
+  public innovation_readiness_level_id: number = null;
   public is_new_variety: boolean;
   public number_of_varieties: number;
   public innovation_developers: string;
   public innovation_collaborators: string;
   public evidences_justification: string;
+  public has_scaling_studies: boolean;
   public innovation_acknowledgement: string;
   public result = { title: '' };
   public pictures: LinkType[] = [{ link: '' }];
@@ -101,6 +102,8 @@ class BilateralExpectedInvestment {
   public kind_cash?: any;
   public is_determined?: any;
   public obj_non_pooled_projetct: ObjNonPooledProjetct = new ObjNonPooledProjetct();
+  // P25
+  public obj_result_project: any;
 }
 
 class ObjNonPooledProjetct {

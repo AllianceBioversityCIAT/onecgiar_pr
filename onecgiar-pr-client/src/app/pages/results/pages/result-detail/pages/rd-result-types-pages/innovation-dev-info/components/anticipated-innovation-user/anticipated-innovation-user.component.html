@@ -46,7 +46,6 @@
             (ngModelChange)="actorItem.other_actor_type = null"
             placeholder="Select type of actor"
             [disableOptions]="removeOther(body?.innovatonUse?.actors)"
-            [required]="!!actorItem?.result_actors_id"
             [(ngModel)]="actorItem.actor_type_id">
           </app-pr-select>
           <div style="margin-top: 13px"></div>
@@ -66,28 +65,20 @@
 
         <div style="margin: 25px 0">
           <div *ngIf="!actorItem.sex_and_age_disaggregation">
-            <app-pr-field-header label="Women" [useColon]="false" [required]="false"></app-pr-field-header>
+            <app-pr-field-header label="Women" [useColon]="false"></app-pr-field-header>
 
             <div style="display: flex; align-items: center; gap: 30px">
-              <app-pr-checkbox label="Youth" (selectOptionEvent)="cleanActor(actorItem)" [(ngModel)]="actorItem.has_women_youth">
-              </app-pr-checkbox>
+              <app-pr-checkbox label="Youth" (selectOptionEvent)="cleanActor(actorItem)" [(ngModel)]="actorItem.has_women_youth"> </app-pr-checkbox>
 
-              <app-pr-checkbox label="Non-youth" (selectOptionEvent)="cleanActor(actorItem)" [(ngModel)]="actorItem.has_women">
-              </app-pr-checkbox>
+              <app-pr-checkbox label="Non-youth" (selectOptionEvent)="cleanActor(actorItem)" [(ngModel)]="actorItem.has_women"> </app-pr-checkbox>
             </div>
 
-            <app-pr-field-header label="Men" [useColon]="false" [required]="false"></app-pr-field-header>
+            <app-pr-field-header label="Men" [useColon]="false"></app-pr-field-header>
 
             <div style="display: flex; align-items: center; gap: 30px">
-              <app-pr-checkbox
-                label="Youth"
-                (selectOptionEvent)="cleanActor(actorItem)"
-                [(ngModel)]="actorItem.has_men_youth"></app-pr-checkbox>
+              <app-pr-checkbox label="Youth" (selectOptionEvent)="cleanActor(actorItem)" [(ngModel)]="actorItem.has_men_youth"></app-pr-checkbox>
 
-              <app-pr-checkbox
-                label="Non-youth"
-                (selectOptionEvent)="cleanActor(actorItem)"
-                [(ngModel)]="actorItem.has_men"></app-pr-checkbox>
+              <app-pr-checkbox label="Non-youth" (selectOptionEvent)="cleanActor(actorItem)" [(ngModel)]="actorItem.has_men"></app-pr-checkbox>
             </div>
           </div>
 
@@ -112,7 +103,7 @@
 
     <app-no-data-text *ngIf="!hasElementsWithId(body?.innovatonUse?.actors, 'result_actors_id')" title="No actors provided"> </app-no-data-text>
     <br />
-    <app-add-button name=" Add actor" *ngIf="!this.api.rolesSE.readOnly" (clickEvent)="addActor()"></app-add-button>
+    <app-add-button name=" Add actor" *ngIf="!this.api.rolesSE.readOnly" [disabled]="saving" (clickEvent)="addActor()"></app-add-button>
 
     <div class="fragment_section_divider"></div>
 
@@ -198,7 +189,7 @@
 
     <app-no-data-text *ngIf="!hasElementsWithId(this.body.innovatonUse.organization, 'id')" title="No organizations provided"> </app-no-data-text>
     <br />
-    <app-add-button name="Add organization" *ngIf="!this.api.rolesSE.readOnly" (clickEvent)="addOrganization()"></app-add-button>
+    <app-add-button name="Add organization" *ngIf="!this.api.rolesSE.readOnly" [disabled]="saving" (clickEvent)="addOrganization()"></app-add-button>
 
     <div class="fragment_section_divider"></div>
 
@@ -235,6 +226,6 @@
       title="Other quantitative measures not added">
     </app-no-data-text>
     <br />
-    <app-add-button name="Add other" *ngIf="!this.api.rolesSE.readOnly" (clickEvent)="addOtherMesure()"></app-add-button>
+    <app-add-button name="Add other" *ngIf="!this.api.rolesSE.readOnly" [disabled]="saving" (clickEvent)="addOtherMesure()"></app-add-button>
   </div>
 </div>

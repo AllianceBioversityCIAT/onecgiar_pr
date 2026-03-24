@@ -5,20 +5,16 @@ import {
   Body,
   Param,
   UseInterceptors,
+  Version,
 } from '@nestjs/common';
 import { ResultsTocResultsService } from './results-toc-results.service';
 import { CreateResultsTocResultDto } from './dto/create-results-toc-result.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
-import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('Results Toc Results')
-@ApiHeader({
-  name: 'auth',
-  description: 'Basic token to access the API, you can get it by logging in',
-  required: true,
-})
 @Controller()
 @UseInterceptors(ResponseInterceptor)
 export class ResultsTocResultsController {
@@ -82,5 +78,32 @@ export class ResultsTocResultsController {
     @Param('initiativeId') initiativeId: number,
   ) {
     return this.resultsTocResultsService.getVersionId(resultId, initiativeId);
+  }
+
+  @Version('2')
+  @Get('get/version/:resultId/initiative/:initiativeId/resultToc')
+  @ApiOperation({ summary: 'Get Version ToC by Result and Initiative V2' })
+  findVersionDashBoardV2(
+    @Param('resultId') resultId: number,
+    @Param('initiativeId') initiativeId: number,
+  ) {
+    return this.resultsTocResultsService.getVersionIdV2(resultId, initiativeId);
+  }
+
+  @Version('2')
+  @Get('get/indicator/:id/result/:resultId/initiative/:initiativeId')
+  @ApiOperation({
+    summary: 'Get result ToC Indicators and Targets by Result and Initiative',
+  })
+  findIndicatorByTocV2(
+    @Param('id') id: number,
+    @Param('resultId') resultId: number,
+    @Param('initiativeId') initiativeId: number,
+  ) {
+    return this.resultsTocResultsService.getTocResultIndicatorByResultTocIdV2(
+      resultId,
+      id,
+      initiativeId,
+    );
   }
 }

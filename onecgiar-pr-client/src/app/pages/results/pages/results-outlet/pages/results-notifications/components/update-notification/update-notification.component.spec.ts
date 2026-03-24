@@ -19,4 +19,12 @@ describe('UpdateNotificationComponent', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
+
+  it('getNotificationAction should map types 1,2,3,5 and default', () => {
+    expect(component.getNotificationAction(1)).toBe('submitted');
+    expect(component.getNotificationAction(2)).toBe('unsubmitted');
+    expect(component.getNotificationAction(3)).toBe('Quality Assessed');
+    expect(component.getNotificationAction(5)).toBe('created');
+    expect(component.getNotificationAction(999)).toBe('');
+  });
 });

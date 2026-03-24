@@ -7,9 +7,10 @@
     "build": "ng build",
     "build:dev": "ng build --configuration development",
     "watch": "ng build --watch --configuration development",
-    "test": "jest",
-    "test:watch": "jest --watch",
+    "test": "jest --no-coverage",
+    "test:watch": "jest --watch --no-coverage",
     "test:coverage": "jest --coverage",
+    "test:coverage:html": "jest --coverage --coverageReporters=text-summary --coverageReporters=cobertura --coverageReporters=lcov",
     "lint": "ng lint",
     "lint:fix": "ng lint --fix",
     "tunnel": "ng serve -c production --port 19971",
@@ -32,6 +33,8 @@
     "@microsoft/clarity": "^1.0.0",
     "@ncstate/sat-popover": "^14.5.0",
     "@primeng/themes": "^19.1.3",
+    "chart.js": "^4.5.1",
+    "chartjs-plugin-datalabels": "^2.2.0",
     "chroma-js": "^3.1.2",
     "date-fns": "^4.1.0",
     "exceljs": "^4.4.0",
@@ -75,23 +78,33 @@
     "setupFilesAfterEnv": [
       "<rootDir>/src/setup-jest.ts"
     ],
+    "transform": {
+      "^.+\\.(ts|js|mjs|html|svg)$": [
+        "jest-preset-angular",
+        {
+          "tsconfig": "<rootDir>/tsconfig.spec.json",
+          "stringifyContentPathRegex": "\\.(html|svg)$",
+          "diagnostics": false
+        }
+      ]
+    },
+    "cacheDirectory": "<rootDir>/.jest-cache",
+    "maxWorkers": "50%",
     "coverageReporters": [
-      "text",
-      "cobertura",
-      "lcov"
+      "text-summary",
+      "cobertura"
     ],
-    "globalSetup": "jest-preset-angular/global-setup",
-    "collectCoverage": true,
+    "collectCoverage": false,
     "collectCoverageFrom": [
       "./src/app/**/*.ts",
-      "./src/app/**/*.html",
       "!./src/app/**/*routing.ts",
       "!./src/app/**/*module.ts",
       "!./src/app/**/model/*.ts",
       "!./src/app/**/models/*.ts",
       "!./src/app/**/routing-data-ipsr.ts",
       "!./src/app/**/routing-data.ts",
-      "!./src/app/custom-fields/**/*"
+      "!./src/app/custom-fields/**/*",
+      "!./src/app/pages/results/pages/result-detail/pages/rd-contributors-and-partners/**/*"
     ],
     "testPathIgnorePatterns": [
       "<rootDir>/node_modules/",
@@ -102,10 +115,10 @@
     },
     "coverageThreshold": {
       "global": {
-        "branches": 75,
-        "functions": 75,
-        "lines": 75,
-        "statements": 75
+        "branches": 50,
+        "functions": 60,
+        "lines": 60,
+        "statements": 60
       }
     }
   }

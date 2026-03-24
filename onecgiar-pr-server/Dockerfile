@@ -13,6 +13,7 @@ COPY src ./src
 COPY tsconfig*.json ./
 COPY nest-cli.json ./
 COPY eslint.config.mjs ./
+COPY scripts ./scripts
 
 RUN echo "{\"compilerOptions\": {\
     \"module\": \"commonjs\",\
@@ -52,6 +53,7 @@ COPY tsconfig*.json ./
 COPY nest-cli.json ./
 COPY package*.json ./
 COPY eslint.config.mjs ./
+COPY scripts ./scripts
 
 RUN npm run build
 

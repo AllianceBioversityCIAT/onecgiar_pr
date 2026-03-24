@@ -3,11 +3,11 @@ import { formatDistanceToNowStrict, parseISO, subHours, format } from 'date-fns'
 import { enUS } from 'date-fns/locale';
 
 @Pipe({
-    name: 'appFormatTimeAgo',
-    standalone: false
+  name: 'appFormatTimeAgo',
+  standalone: true
 })
 export class FormatTimeAgoPipe implements PipeTransform {
-  transform(value: string | number | Date, serverTimezone: number = 0): string {
+  transform(value: string | number | Date, serverTimezone: number = 0, showAgo: boolean = true): string {
     let date: Date;
 
     if (typeof value === 'string') {
@@ -33,6 +33,6 @@ export class FormatTimeAgoPipe implements PipeTransform {
       return format(localDate, 'yyyy MMM dd', { locale: enUS });
     }
 
-    return `${formatDistanceToNowStrict(localDate, { addSuffix: false, locale: enUS })} ago`;
+    return `${formatDistanceToNowStrict(localDate, { addSuffix: false, locale: enUS })} ${showAgo ? 'ago' : ''}`;
   }
 }

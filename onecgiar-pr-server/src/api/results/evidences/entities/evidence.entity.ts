@@ -113,6 +113,14 @@ export class Evidence {
   })
   innovation_use_related!: boolean;
 
+  @Column({
+    name: 'innov_dev_user_demand',
+    type: 'boolean',
+    nullable: true,
+    default: null,
+  })
+  innov_dev_user_demand!: boolean;
+
   // relations
 
   @Column({

@@ -5,10 +5,10 @@ import { InstitutionsService } from '../../../../../../../shared/services/global
 import { CapDevInfoRoutingBody } from './model/capDevInfoRoutingBody';
 
 @Component({
-    selector: 'app-cap-dev-info',
-    templateUrl: './cap-dev-info.component.html',
-    styleUrls: ['./cap-dev-info.component.scss'],
-    standalone: false
+  selector: 'app-cap-dev-info',
+  templateUrl: './cap-dev-info.component.html',
+  styleUrls: ['./cap-dev-info.component.scss'],
+  standalone: false
 })
 export class CapDevInfoComponent implements OnInit {
   capDevInfoRoutingBody = new CapDevInfoRoutingBody();
@@ -24,7 +24,12 @@ export class CapDevInfoComponent implements OnInit {
   ];
   peopleTrainedDesc = `If gender disaggregated data is not available, please indicate the number of people trained in the "Unknown" field.`;
 
-  constructor(public api: ApiService, public institutionsSE: InstitutionsService) {}
+  constructor(
+    public api: ApiService,
+    public institutionsSE: InstitutionsService
+  ) {
+    this.api.dataControlSE.currentResultSectionName.set('Capacity Sharing for Development information');
+  }
 
   ngOnInit(): void {
     this.getSectionInformation();

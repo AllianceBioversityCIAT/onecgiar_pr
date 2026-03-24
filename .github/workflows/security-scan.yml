@@ -1,0 +1,523 @@
+name: Security Scan (Snyk → S3)
+
+on:
+  push:
+    branches:
+      - master
+      - dev
+      - staging
+      - staging-security-scanning
+  pull_request:
+    branches:
+      - master
+      - dev
+      - staging
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  snyk-scan:
+    name: Snyk Security Scan
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Snyk CLI
+        run: npm install -g snyk
+
+      - name: Install server dependencies
+        working-directory: ./onecgiar-pr-server
+        run: |
+          # Install dependencies for server project
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Install client dependencies
+        working-directory: ./onecgiar-pr-client
+        run: |
+          # Install dependencies for client project
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Run Snyk test - Server (JSON report)
+        id: snyk-server-json
+        working-directory: ./onecgiar-pr-server
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: |
+          # Scan server project: run Snyk test inside onecgiar-pr-server directory
+          # This ensures we analyze the correct package.json and dependencies
+          # Use absolute path to repository root for reliable file output
+          OUTPUT_FILE="${GITHUB_WORKSPACE}/snyk-server.json"
+          
+          # Continue even if vulnerabilities are found (exit code 1)
+          snyk test --json-file-output="${OUTPUT_FILE}" --file=package.json || true
+          
+          # Check if report was generated in repository root
+          if [ -f "${OUTPUT_FILE}" ]; then
+            echo "report_exists=true" >> $GITHUB_OUTPUT
+            echo "✅ Snyk server JSON report generated"
+          else
+            echo "report_exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Snyk server JSON report not generated"
+          fi
+
+      - name: Run Snyk test - Server (SARIF report)
+        id: snyk-server-sarif
+        working-directory: ./onecgiar-pr-server
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: |
+          # Generate SARIF report for server project
+          # Use absolute path to repository root for reliable file output
+          OUTPUT_FILE="${GITHUB_WORKSPACE}/snyk-server.sarif"
+          
+          snyk test --sarif-file-output="${OUTPUT_FILE}" --file=package.json || true
+          
+          if [ -f "${OUTPUT_FILE}" ]; then
+            echo "sarif_exists=true" >> $GITHUB_OUTPUT
+            echo "✅ Snyk server SARIF report generated"
+          else
+            echo "sarif_exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Snyk server SARIF report not generated"
+          fi
+
+      - name: Run Snyk test - Client (JSON report)
+        id: snyk-client-json
+        working-directory: ./onecgiar-pr-client
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: |
+          # Scan client project: run Snyk test inside onecgiar-pr-client directory
+          # This ensures we analyze the correct package.json and dependencies
+          # Use absolute path to repository root for reliable file output
+          OUTPUT_FILE="${GITHUB_WORKSPACE}/snyk-client.json"
+          
+          # Continue even if vulnerabilities are found (exit code 1)
+          snyk test --json-file-output="${OUTPUT_FILE}" --file=package.json || true
+          
+          # Check if report was generated in repository root
+          if [ -f "${OUTPUT_FILE}" ]; then
+            echo "report_exists=true" >> $GITHUB_OUTPUT
+            echo "✅ Snyk client JSON report generated"
+          else
+            echo "report_exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Snyk client JSON report not generated"
+          fi
+
+      - name: Run Snyk test - Client (SARIF report)
+        id: snyk-client-sarif
+        working-directory: ./onecgiar-pr-client
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: |
+          # Generate SARIF report for client project
+          # Use absolute path to repository root for reliable file output
+          OUTPUT_FILE="${GITHUB_WORKSPACE}/snyk-client.sarif"
+          
+          snyk test --sarif-file-output="${OUTPUT_FILE}" --file=package.json || true
+          
+          if [ -f "${OUTPUT_FILE}" ]; then
+            echo "sarif_exists=true" >> $GITHUB_OUTPUT
+            echo "✅ Snyk client SARIF report generated"
+          else
+            echo "sarif_exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Snyk client SARIF report not generated"
+          fi
+
+      - name: Configure AWS credentials
+        if: always() && !cancelled()
+        env:
+          AWS_SECURITY_ACCESS_KEY_ID: ${{ secrets.AWS_SECURITY_ACCESS_KEY_ID }}
+          AWS_SECURITY_SECRET_ACCESS: ${{ secrets.AWS_SECURITY_SECRET_ACCESS }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+        run: |
+          # Configure AWS CLI with IAM User credentials
+          aws configure set aws_access_key_id "$AWS_SECURITY_ACCESS_KEY_ID"
+          aws configure set aws_secret_access_key "$AWS_SECURITY_SECRET_ACCESS"
+          aws configure set region "$AWS_REGION"
+          aws configure set output json
+          echo "✅ AWS credentials configured"
+
+      - name: S3 Upload Diagnostics
+        if: always() && !cancelled()
+        env:
+          AWS_SECURITY_ACCESS_KEY_ID: ${{ secrets.AWS_SECURITY_ACCESS_KEY_ID }}
+          AWS_SECURITY_SECRET_ACCESS: ${{ secrets.AWS_SECURITY_SECRET_ACCESS }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET || 'ibd-snyk-security-reports' }}
+          S3_PREFIX: ${{ secrets.S3_PREFIX || 'ibd-snyk-reports' }}
+        run: |
+          echo "=========================================="
+          echo "🔍 S3 UPLOAD DIAGNOSTICS"
+          echo "=========================================="
+          
+          # 1. Check repository root location and files
+          echo ""
+          echo "📂 Repository Root Location:"
+          echo "  pwd: $(pwd)"
+          echo "  GITHUB_WORKSPACE: ${GITHUB_WORKSPACE}"
+          echo ""
+          echo "📋 Files in repository root:"
+          ls -lah . | head -20
+          echo ""
+          
+          # 2. Check for expected report files with detailed info
+          echo "📄 Expected Report Files Status:"
+          echo "----------------------------------------"
+          
+          check_file() {
+            FILE="$1"
+            if test -f "$FILE"; then
+              SIZE=$(wc -c < "$FILE" 2>/dev/null || echo "0")
+              STAT_INFO=$(stat "$FILE" 2>/dev/null || echo "stat failed")
+              echo "  ✅ $FILE EXISTS"
+              echo "     Size: ${SIZE} bytes"
+              echo "     Stat: ${STAT_INFO}"
+              echo "     Will upload: YES"
+            else
+              echo "  ❌ $FILE NOT FOUND"
+              echo "     Will upload: NO"
+            fi
+          }
+          
+          check_file "snyk-server.json"
+          check_file "snyk-server.sarif"
+          check_file "snyk-client.json"
+          check_file "snyk-client.sarif"
+          echo ""
+          
+          # 3. Validate AWS CLI availability
+          echo "🔧 AWS CLI Validation:"
+          echo "----------------------------------------"
+          if command -v aws >/dev/null 2>&1; then
+            echo "  ✅ AWS CLI found"
+            aws --version || echo "  ⚠️ aws --version failed"
+            echo ""
+            echo "  AWS Configuration:"
+            aws configure list 2>&1 || echo "  ⚠️ aws configure list failed"
+            echo ""
+          else
+            echo "  ❌ AWS CLI NOT FOUND"
+            echo "  ⚠️ S3 upload will fail - AWS CLI is missing"
+            exit 0
+          fi
+          
+          # 4. Validate AWS credentials
+          echo "  Verifying AWS credentials..."
+          IDENTITY_OUTPUT=$(aws sts get-caller-identity 2>&1)
+          IDENTITY_EXIT=$?
+          if [ $IDENTITY_EXIT -eq 0 ]; then
+            echo "  ✅ AWS credentials valid"
+          else
+            echo "  ❌ AWS credentials validation FAILED"
+            echo "  ⚠️ S3 upload will fail - credentials are invalid"
+            exit 0
+          fi
+          echo ""       
+          
+          echo "=========================================="
+
+      - name: Upload reports to S3
+        id: upload-s3
+        if: always() && !cancelled()
+        env:
+          AWS_SECURITY_ACCESS_KEY_ID: ${{ secrets.AWS_SECURITY_ACCESS_KEY_ID }}
+          AWS_SECURITY_SECRET_ACCESS: ${{ secrets.AWS_SECURITY_SECRET_ACCESS }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET || 'ibd-snyk-security-reports' }}
+          S3_PREFIX: ${{ secrets.S3_PREFIX || 'ibd-snyk-reports' }}
+        run: |
+          # Enable command tracing to see exact commands executed
+          set -x
+          
+          # Build S3 object path with repository, branch, timestamp, run ID, and project name
+          REPO_NAME="${{ github.repository }}"
+          BRANCH_NAME="${{ github.head_ref || github.ref_name }}"
+          TIMESTAMP=$(date -u +"%Y%m%d-%H%M%S")
+          RUN_ID="${{ github.run_id }}"
+          
+          # Sanitize branch name (replace / with -)
+          BRANCH_NAME_SANITIZED=$(echo "$BRANCH_NAME" | tr '/' '-')
+          
+          # Base S3 key structure: prefix/repo-name/branch/timestamp-runid/
+          S3_BASE_PREFIX="${S3_PREFIX}/${REPO_NAME}/${BRANCH_NAME_SANITIZED}/${TIMESTAMP}-${RUN_ID}"
+          
+          echo "📦 Uploading reports to S3..."
+          echo "Current directory: $(pwd)"
+          echo "Bucket: ${S3_BUCKET}"
+          echo "Base prefix: ${S3_BASE_PREFIX}"
+          echo ""
+          
+          # Initialize outputs (always set, even if empty)
+          UPLOADED_FILES=""
+          echo "server_json_key=" >> $GITHUB_OUTPUT
+          echo "server_sarif_key=" >> $GITHUB_OUTPUT
+          echo "client_json_key=" >> $GITHUB_OUTPUT
+          echo "client_sarif_key=" >> $GITHUB_OUTPUT
+          
+          # Helper function to upload file with error capture
+          upload_file() {
+            LOCAL_FILE="$1"
+            S3_KEY="$2"
+            FILE_NAME="$3"
+            
+            if [ ! -f "$LOCAL_FILE" ]; then
+              echo "⚠️ File not found: ${LOCAL_FILE} - skipping upload"
+              return 1
+            fi
+            
+            echo "📤 Uploading ${FILE_NAME}..."
+            echo "  Source: ${LOCAL_FILE}"
+            echo "  Target: s3://${S3_BUCKET}/${S3_KEY}"
+            
+            # Capture both stdout and stderr
+            UPLOAD_OUTPUT=$(aws s3 cp "$LOCAL_FILE" "s3://${S3_BUCKET}/${S3_KEY}" --content-type "application/json" 2>&1)
+            UPLOAD_EXIT=$?
+            
+            if [ $UPLOAD_EXIT -eq 0 ]; then
+              echo "  ✅ Upload successful"
+              # Verify object exists in S3
+              VERIFY_OUTPUT=$(aws s3 ls "s3://${S3_BUCKET}/${S3_KEY}" 2>&1)
+              if [ $? -eq 0 ]; then
+                echo "  ✅ Verified: Object exists in S3"
+                echo "  ${VERIFY_OUTPUT}"
+              else
+                echo "  ⚠️ Warning: Upload reported success but verification failed"
+                echo "  Verification error: ${VERIFY_OUTPUT}"
+              fi
+              return 0
+            else
+              echo "  ❌ Upload FAILED (exit code: ${UPLOAD_EXIT})"
+              echo "  Error output: ${UPLOAD_OUTPUT}"
+              return 1
+            fi
+          }
+          
+          # Upload server JSON report if it exists
+          SERVER_JSON_FILE="${GITHUB_WORKSPACE}/snyk-server.json"
+          if [ -f "${SERVER_JSON_FILE}" ]; then
+            SERVER_JSON_KEY="${S3_BASE_PREFIX}/server/snyk-server.json"
+            if upload_file "${SERVER_JSON_FILE}" "${SERVER_JSON_KEY}" "Server JSON"; then
+              echo "server_json_key=${SERVER_JSON_KEY}" >> $GITHUB_OUTPUT
+              UPLOADED_FILES="${UPLOADED_FILES}Server JSON, "
+            fi
+          else
+            echo "⚠️ ${SERVER_JSON_FILE} not found - skipping"
+          fi
+          
+          # Upload server SARIF report if it exists
+          SERVER_SARIF_FILE="${GITHUB_WORKSPACE}/snyk-server.sarif"
+          if [ -f "${SERVER_SARIF_FILE}" ]; then
+            SERVER_SARIF_KEY="${S3_BASE_PREFIX}/server/snyk-server.sarif"
+            if upload_file "${SERVER_SARIF_FILE}" "${SERVER_SARIF_KEY}" "Server SARIF"; then
+              echo "server_sarif_key=${SERVER_SARIF_KEY}" >> $GITHUB_OUTPUT
+              UPLOADED_FILES="${UPLOADED_FILES}Server SARIF, "
+            fi
+          else
+            echo "⚠️ ${SERVER_SARIF_FILE} not found - skipping"
+          fi
+          
+          # Upload client JSON report if it exists
+          CLIENT_JSON_FILE="${GITHUB_WORKSPACE}/snyk-client.json"
+          if [ -f "${CLIENT_JSON_FILE}" ]; then
+            CLIENT_JSON_KEY="${S3_BASE_PREFIX}/client/snyk-client.json"
+            if upload_file "${CLIENT_JSON_FILE}" "${CLIENT_JSON_KEY}" "Client JSON"; then
+              echo "client_json_key=${CLIENT_JSON_KEY}" >> $GITHUB_OUTPUT
+              UPLOADED_FILES="${UPLOADED_FILES}Client JSON, "
+            fi
+          else
+            echo "⚠️ ${CLIENT_JSON_FILE} not found - skipping"
+          fi
+          
+          # Upload client SARIF report if it exists
+          CLIENT_SARIF_FILE="${GITHUB_WORKSPACE}/snyk-client.sarif"
+          if [ -f "${CLIENT_SARIF_FILE}" ]; then
+            CLIENT_SARIF_KEY="${S3_BASE_PREFIX}/client/snyk-client.sarif"
+            if upload_file "${CLIENT_SARIF_FILE}" "${CLIENT_SARIF_KEY}" "Client SARIF"; then
+              echo "client_sarif_key=${CLIENT_SARIF_KEY}" >> $GITHUB_OUTPUT
+              UPLOADED_FILES="${UPLOADED_FILES}Client SARIF, "
+            fi
+          else
+            echo "⚠️ ${CLIENT_SARIF_FILE} not found - skipping"
+          fi
+          
+          # Save metadata for Slack notification (always set)
+          echo "s3_bucket=${S3_BUCKET}" >> $GITHUB_OUTPUT
+          echo "s3_base_prefix=${S3_BASE_PREFIX}" >> $GITHUB_OUTPUT
+          echo "repo_name=${REPO_NAME}" >> $GITHUB_OUTPUT
+          echo "branch_name=${BRANCH_NAME}" >> $GITHUB_OUTPUT
+          echo "uploaded_files=${UPLOADED_FILES}" >> $GITHUB_OUTPUT
+          
+          echo ""
+          echo "📊 Upload Summary:"
+          echo "  Files uploaded: ${UPLOADED_FILES}"
+
+      - name: Generate pre-signed S3 URLs
+        id: presign-urls
+        if: always() && !cancelled() && (steps.upload-s3.outputs.server_json_key != '' || steps.upload-s3.outputs.client_json_key != '')
+        env:
+          AWS_SECURITY_ACCESS_KEY_ID: ${{ secrets.AWS_SECURITY_ACCESS_KEY_ID }}
+          AWS_SECURITY_SECRET_ACCESS: ${{ secrets.AWS_SECURITY_SECRET_ACCESS }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+        run: |
+          # Generate pre-signed URLs valid for 7 days (604800 seconds)
+          EXPIRY_SECONDS=604800
+          S3_BUCKET="${{ steps.upload-s3.outputs.s3_bucket }}"
+          
+          # Pre-signed URL for server JSON report
+          if [ -n "${{ steps.upload-s3.outputs.server_json_key }}" ]; then
+            SERVER_JSON_URL=$(aws s3 presign "s3://${S3_BUCKET}/${{ steps.upload-s3.outputs.server_json_key }}" --expires-in ${EXPIRY_SECONDS})
+            echo "server_json_url=${SERVER_JSON_URL}" >> $GITHUB_OUTPUT
+            echo "✅ Generated pre-signed URL for server JSON report (expires in 7 days)"
+          fi
+          
+          # Pre-signed URL for server SARIF report
+          if [ -n "${{ steps.upload-s3.outputs.server_sarif_key }}" ]; then
+            SERVER_SARIF_URL=$(aws s3 presign "s3://${S3_BUCKET}/${{ steps.upload-s3.outputs.server_sarif_key }}" --expires-in ${EXPIRY_SECONDS})
+            echo "server_sarif_url=${SERVER_SARIF_URL}" >> $GITHUB_OUTPUT
+            echo "✅ Generated pre-signed URL for server SARIF report (expires in 7 days)"
+          fi
+          
+          # Pre-signed URL for client JSON report
+          if [ -n "${{ steps.upload-s3.outputs.client_json_key }}" ]; then
+            CLIENT_JSON_URL=$(aws s3 presign "s3://${S3_BUCKET}/${{ steps.upload-s3.outputs.client_json_key }}" --expires-in ${EXPIRY_SECONDS})
+            echo "client_json_url=${CLIENT_JSON_URL}" >> $GITHUB_OUTPUT
+            echo "✅ Generated pre-signed URL for client JSON report (expires in 7 days)"
+          fi
+          
+          # Pre-signed URL for client SARIF report
+          if [ -n "${{ steps.upload-s3.outputs.client_sarif_key }}" ]; then
+            CLIENT_SARIF_URL=$(aws s3 presign "s3://${S3_BUCKET}/${{ steps.upload-s3.outputs.client_sarif_key }}" --expires-in ${EXPIRY_SECONDS})
+            echo "client_sarif_url=${CLIENT_SARIF_URL}" >> $GITHUB_OUTPUT
+            echo "✅ Generated pre-signed URL for client SARIF report (expires in 7 days)"
+          fi
+
+      - name: Send Slack notification
+        if: always() && !cancelled() && steps.upload-s3.outputs.repo_name != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_VULNERABILITY_WEBHOOK_URL }}
+          SERVER_JSON_URL: ${{ steps.presign-urls.outputs.server_json_url }}
+          CLIENT_JSON_URL: ${{ steps.presign-urls.outputs.client_json_url }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "⚠️ Slack webhook not configured, skipping notification."
+            exit 0
+          fi
+          
+          REPO_NAME="${{ steps.upload-s3.outputs.repo_name }}"
+          BRANCH_NAME="${{ steps.upload-s3.outputs.branch_name }}"
+          GITHUB_RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          GITHUB_RUN_NUMBER="${{ github.run_number }}"
+          UPLOADED_FILES="${{ steps.upload-s3.outputs.uploaded_files }}"
+          
+          # Clean up trailing comma and space from uploaded files
+          UPLOADED_FILES_CLEAN=$(echo "$UPLOADED_FILES" | sed 's/, $//')
+          
+          # Build download links for server and client reports
+          SERVER_LINK=""
+          CLIENT_LINK=""
+          
+          if [ -n "$SERVER_JSON_URL" ]; then
+            SERVER_LINK="<${SERVER_JSON_URL}|Server Report>"
+          fi
+          
+          if [ -n "$CLIENT_JSON_URL" ]; then
+            CLIENT_LINK="<${CLIENT_JSON_URL}|Client Report>"
+          fi
+          
+          # Determine scan status
+          if [ "${{ steps.snyk-server-json.outputs.report_exists }}" = "true" ] || [ "${{ steps.snyk-client-json.outputs.report_exists }}" = "true" ]; then
+            STATUS_EMOJI="✅"
+            STATUS_TEXT="completed"
+          else
+            STATUS_EMOJI="⚠️"
+            STATUS_TEXT="completed with warnings"
+          fi
+          
+          # Build Slack message payload
+          PAYLOAD=$(cat <<EOF
+          {
+            "text": "${STATUS_EMOJI} Security scan ${STATUS_TEXT} — ${REPO_NAME}",
+            "blocks": [
+              {
+                "type": "header",
+                "text": {
+                  "type": "plain_text",
+                  "text": "${STATUS_EMOJI} Snyk Security Scan ${STATUS_TEXT}"
+                }
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Repository:*\n\`${REPO_NAME}\`"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Branch:*\n\`${BRANCH_NAME}\`"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Reports Generated:*\n${UPLOADED_FILES_CLEAN}"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*GitHub Run:*\n<${GITHUB_RUN_URL}|View Run #${GITHUB_RUN_NUMBER}>"
+                  }
+                ]
+              }
+          EOF
+          )
+          
+          # Add download links section if reports were uploaded
+          if [ -n "$SERVER_LINK" ] || [ -n "$CLIENT_LINK" ]; then
+            DOWNLOAD_TEXT="*📥 Download Reports (valid for 7 days):*"
+            if [ -n "$SERVER_LINK" ]; then
+              DOWNLOAD_TEXT="${DOWNLOAD_TEXT}\n• Server: ${SERVER_LINK}"
+            fi
+            if [ -n "$CLIENT_LINK" ]; then
+              DOWNLOAD_TEXT="${DOWNLOAD_TEXT}\n• Client: ${CLIENT_LINK}"
+            fi
+            
+            DOWNLOAD_SECTION=$(cat <<EOF
+              ,
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "${DOWNLOAD_TEXT}"
+                }
+              }
+          EOF
+          )
+          PAYLOAD="${PAYLOAD}${DOWNLOAD_SECTION}"
+          fi
+          
+          # Close blocks array
+          PAYLOAD="${PAYLOAD}]}"
+          
+          # Send to Slack
+          curl -s -X POST \
+            -H 'Content-type: application/json' \
+            --data "$PAYLOAD" \
+            "$SLACK_WEBHOOK_URL" || echo "⚠️ Failed to send Slack notification"
+          
+          echo "✅ Slack notification sent"

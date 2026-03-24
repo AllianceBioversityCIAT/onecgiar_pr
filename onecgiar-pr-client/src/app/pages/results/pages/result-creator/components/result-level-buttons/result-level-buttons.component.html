@@ -1,13 +1,14 @@
 <div class="pr-h4 segment_title_margin">What do you want to report?</div>
 
+@if (!hideAlert) {
 <app-alert-status
   description="Impact/Action Area Outcome level reporting has been temporarily disabled. Please contact your Science Group
   MELIA FP (GI: Enrico Bonaiuti; RAFS: Jim Hammond; ST: Frank Place) if you have a result to report at this level."></app-alert-status>
-
+}
 <div class="segment">
   <div class="segmet_title">Level</div>
   <div class="all_results_level_Container">
-    @for (resultLevel of resultLevelSE?.resultLevelList?.slice(2, 4).reverse(); track $index) {
+    @for (resultLevel of resultLevelSE.resultLevelListSig()?.slice(2, 4).reverse(); track $index) {
       <a class="resultLevel shadow-1" [ngClass]="{ selected: resultLevel?.selected }" (click)="this.resultLevelSE.onSelectResultLevel(resultLevel)">
         <div class="name pr-h3" [style.background]="'var(--pr-color-result-level-' + resultLevel?.id + ')'">
           {{ resultLevel.name }}

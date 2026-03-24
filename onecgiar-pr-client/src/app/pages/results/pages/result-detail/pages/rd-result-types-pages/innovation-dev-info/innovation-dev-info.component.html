@@ -1,14 +1,9 @@
-<app-detail-section-title sectionName="Innovation Development information"></app-detail-section-title>
 <div class="detail_container">
   <app-alert-status [description]="alertInfoText()"> </app-alert-status>
-  <app-pr-input label="Long title" [required]="false" [readOnly]="true" [(ngModel)]="innovationDevInfoBody?.result.title"> </app-pr-input>
-  <app-pr-input
-    label="Provide a short title for the innovation"
-    [description]="shortTitleDescription()"
-    [maxWords]="10"
-    placeholder="Innovation short name goes here..."
-    [(ngModel)]="innovationDevInfoBody.short_title">
+  <app-pr-input fieldRef="[innovation-dev-info]-long_title" [required]="false" [readOnly]="true" [ngModel]="innovationDevInfoBody?.result?.title">
   </app-pr-input>
+  <app-pr-input fieldRef="[innovation-dev-info]-short_title" [maxWords]="10" [(ngModel)]="innovationDevInfoBody.short_title"> </app-pr-input>
+  <div appFeedbackValidation labelText="Short title" [isComplete]="!!innovationDevInfoBody.short_title"></div>
   <app-pr-select
     [options]="this.innovationControlListSE.characteristicsList"
     label="What would be the best way to characterize this innovation?"
@@ -31,7 +26,10 @@
   <div *ngIf="this.innovationDevInfoBody.innovation_nature_id == 12">
     <app-pr-yes-or-not label="Are you profiling a new or improved variety or breed?" [(ngModel)]="innovationDevInfoBody.is_new_variety">
     </app-pr-yes-or-not>
-    <div appFeedbackValidation labelText="Innovation package" [isComplete]="this.innovationDevInfoBody.is_new_variety !== null"></div>
+    <div
+      appFeedbackValidation
+      labelText="Are you profiling a new or improved variety or breed?"
+      [isComplete]="this.innovationDevInfoBody.is_new_variety !== null && this.innovationDevInfoBody.is_new_variety !== undefined"></div>
     <app-pr-input
       *ngIf="innovationDevInfoBody.is_new_variety"
       label="Indicate the number of individual new or improved lines/ varieties"
@@ -43,6 +41,22 @@
   </div>
 
   <app-anticipated-innovation-user [body]="innovationDevInfoBody" [saving]="this.savingSection"></app-anticipated-innovation-user>
+
+  @if (this.fieldsManagerSE.isP25()) {
+    <div class="evidences">
+      <app-pr-field-header label="Evidence of user need/user demand" [required]="false"></app-pr-field-header>
+
+      <div class="evidence evidenceItem" *ngFor="let evidence of this.evidencesBody.evidences; let i = index">
+        <app-user-evidence [evidence]="evidence" [index]="i + 1" (deleteEvent)="deleteEvidence(i)" [isOptional]="true"> </app-user-evidence>
+      </div>
+      @if (!this.evidencesBody.evidences.length) {
+        <app-no-data-text title="No evidence added"> </app-no-data-text>
+      }
+      <app-add-button name="Add evidence" (clickEvent)="addEvidence()" [disabled]="savingSection" *ngIf="this.evidencesBody.evidences.length < 6">
+      </app-add-button>
+    </div>
+  }
+
   <app-megatrends [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-megatrends>
 
   <app-pr-field-header label="Responsible innovation and scaling" [required]="false"></app-pr-field-header>
@@ -50,6 +64,10 @@
   <div class="paddingLeft20">
     <app-gesi-innovation-assessment [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-gesi-innovation-assessment>
     <app-scale-impact-analysis [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-scale-impact-analysis>
+    @if (this.fieldsManagerSE.isP25()) {
+      <app-assumptions-examination [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-assumptions-examination>
+      <app-partners-policies-safeguards [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-partners-policies-safeguards>
+    }
   </div>
 
   <app-intellectual-property-rights [body]="innovationDevInfoBody" [options]="innovationDevelopmentQuestions"></app-intellectual-property-rights>
@@ -59,7 +77,7 @@
     [required]="false"
     label="Innovation Developer"
     description="Provide the full name(s), email address and organizational affiliation(s) of the innovation developer/ contact person
-        Innovation developer will be first author of the Innovation Profile document and the prime contact for the innovation.<br> 
+        Innovation developer will be first author of the Innovation Profile document and the prime contact for the innovation.<br>
         Please provide information such as first name, family name, email address and organizational affiliations."
     [(ngModel)]="innovationDevInfoBody.innovation_developers">
   </app-pr-textarea>
@@ -68,8 +86,7 @@
     placeholder="Contact persons info goes here..."
     [required]="false"
     label="Innovation collaborators"
-    description="Provide the full name(s), email address and organizational affiliation(s)  of other CGIAR and/or partner colleagues that contribute to this innovation
-        Names of key contributors will feature as co-authors on the Innovation Profile document in the same order as provided below."
+    [description]="collaboratorsDescription()"
     [(ngModel)]="innovationDevInfoBody.innovation_collaborators">
   </app-pr-textarea>
 
@@ -87,6 +104,13 @@
     optionValue="id"
     [options]="this.innovationControlListSE.readinessLevelsList"
     [(ngModel)]="innovationDevInfoBody.innovation_readiness_level_id"></app-pr-range-level>
+
+  <div
+    appFeedbackValidation
+    labelText="How would you assess the current readiness of this innovation?"
+    [isComplete]="
+      innovationDevInfoBody.innovation_readiness_level_id !== null && innovationDevInfoBody.innovation_readiness_level_id !== undefined
+    "></div>
 
   <div class="pr_description" style="margin-top: 1rem">
     <a href="https://drive.google.com/file/d/1muDLtqpeaSCIX60g6qQG_GGOPR61Rq7E/view" class="open_route" target="_blank" rel="noopener noreferrer">
@@ -111,9 +135,26 @@
     description="<strong>Example:</strong> We chose readiness level 6 (semi-controlled testing) for the genetically improved farm tilapia (GIFT) because it is currently being tested under semi-controlled conditions in the multiplication center and hatchery in the selected countries as shown in the provided evidence. ">
   </app-pr-textarea>
 
+  @if (this.fieldsManagerSE.isP25()) {
+    <app-pr-radio-button
+      *ngIf="getReadinessLevelIndex() >= 6"
+      fieldRef="[innovation-use-form]-has-studies-links"
+      [options]="[
+        { value: true, label: 'Yes' },
+        { value: false, label: 'No' }
+      ]"
+      optionLabel="label"
+      [(ngModel)]="innovationDevInfoBody.has_scaling_studies"
+      optionValue="value">
+    </app-pr-radio-button>
+    <app-studies-link
+      *ngIf="innovationDevInfoBody.has_scaling_studies && getReadinessLevelIndex() >= 6"
+      [body]="innovationDevInfoBody"></app-studies-link>
+  }
+
   <app-estimates [body]="innovationDevInfoBody"></app-estimates>
 
-  <app-innovation-links [body]="innovationDevInfoBody" [options]="innovationDevelopmentLinks"></app-innovation-links>
+  <app-innovation-links [body]="innovationDevInfoBody" [options]="innovationDevelopmentLinks" [saving]="this.savingSection"></app-innovation-links>
 </div>
 
-<app-save-button class="position_sticky" (clickSave)="onSaveSection()"></app-save-button>
+<app-save-button class="position_sticky" [disabled]="savingSection" (clickSave)="onSaveSection()"></app-save-button>

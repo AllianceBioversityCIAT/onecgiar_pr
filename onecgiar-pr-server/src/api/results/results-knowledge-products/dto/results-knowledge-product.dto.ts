@@ -41,10 +41,12 @@ export class ResultsKnowledgeProductDto {
   melia_previous_submitted?: boolean;
   melia_type_id?: number;
   ost_melia_study_id?: number;
+  toc_melia_study_id?: string;
   result_data: CreateResultDto;
   warnings?: string[];
   cgspace_phase_year: number;
   result_code?: number;
   version_id?: number;
   modification_justification?: string;
+  repo?: string;
 }

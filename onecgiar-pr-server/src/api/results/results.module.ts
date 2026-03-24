@@ -51,6 +51,7 @@ import { CapdevsDeliveryMethodsModule } from './capdevs-delivery-methods/capdevs
 import { ResultsImpactAreaTargetModule } from './results-impact-area-target/results-impact-area-target.module';
 import { ResultsImpactAreaIndicatorsModule } from './results-impact-area-indicators/results-impact-area-indicators.module';
 import { ShareResultRequestModule } from './share-result-request/share-result-request.module';
+import { ShareResultRequestRepository } from './share-result-request/share-result-request.repository';
 import { LegacyIndicatorsLocationsModule } from './legacy_indicators_locations/legacy_indicators_locations.module';
 import { LegacyIndicatorsPartnersModule } from './legacy_indicators_partners/legacy_indicators_partners.module';
 import { ResultLegacyRepository } from './legacy-result/legacy-result.repository';
@@ -76,9 +77,33 @@ import { InvestmentDiscontinuedOptionsModule } from './investment-discontinued-o
 import { ResultsInvestmentDiscontinuedOptionsModule } from './results-investment-discontinued-options/results-investment-discontinued-options.module';
 import { ResultsInvestmentDiscontinuedOptionRepository } from './results-investment-discontinued-options/results-investment-discontinued-options.repository';
 import { ResultInitiativeBudgetRepository } from './result_budget/repositories/result_initiative_budget.repository';
+import { NonPooledProjectBudgetRepository } from './result_budget/repositories/non_pooled_proyect_budget.repository';
 import { ResultFoldersModule } from './result-folders/result-folders.module';
 import { AdUsersModule } from '../ad_users';
 import { InitiativeEntityMapRepository } from '../initiative_entity_map/initiative_entity_map.repository';
+import { NotificationModule } from '../notification/notification.module';
+import { NotificationService } from '../notification/notification.service';
+import { NotificationLevelRepository } from '../notification/repositories/notification-level.respository';
+import { NotificationTypeRepository } from '../notification/repositories/notification-type.respository';
+import { NotificationRepository } from '../notification/repositories/notification.respository';
+import { SocketManagementService } from '../../shared/microservices/socket-management/socket-management.service';
+import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
+import { ImpactAreasScoresComponentsModule } from './impact_areas_scores_components/impact_areas_scores_components.module';
+import { ResultsByProjectsModule } from './results_by_projects/results_by_projects.module';
+import { ResultsTocResultRepository } from './results-toc-results/repositories/results-toc-results.repository';
+import { ResultsTocImpactAreaTargetRepository } from './results-toc-results/repositories/result-toc-impact-area.repository';
+import { ResultsTocSdgTargetRepository } from './results-toc-results/repositories/result-toc-sdg-target.repository';
+import { ResultsSdgTargetRepository } from './results-toc-results/repositories/results-sdg-targets.repository';
+import { ResultsActionAreaOutcomeRepository } from './results-toc-results/repositories/result-toc-action-area.repository';
+import { ResultsTocTargetIndicatorRepository } from './results-toc-results/repositories/result-toc-result-target-indicator.repository';
+import { AoWBilateralRepository } from './results-toc-results/repositories/aow-bilateral.repository';
+import { IntellectualPropertyExpertsModule } from './intellectual_property_experts/intellectual_property_experts.module';
+import { ResultReviewHistoryRepository } from './result-review-history/result-review-history.repository';
+import { GeographicLocationModule } from '../results-framework-reporting/geographic-location/geographic-location.module';
+import { ResultImpactAreaScoresModule } from '../result-impact-area-scores/result-impact-area-scores.module';
+import { ContributorsPartnersModule } from '../results-framework-reporting/contributors-partners/contributors-partners.module';
+import { InnovationDevModule } from '../results-framework-reporting/innovation_dev/innovation_dev.module';
+import { InnovationUseModule } from '../results-framework-reporting/innovation-use/innovation-use.module';
 
 @Module({
   controllers: [ResultsController],
@@ -105,7 +130,7 @@ import { InitiativeEntityMapRepository } from '../initiative_entity_map/initiati
     ResultRegionsModule,
     ResultCountriesModule,
     LinkedResultsModule,
-    ResultsTocResultsModule,
+    forwardRef(() => ResultsTocResultsModule),
     NonPooledProjectsModule,
     ResultsCentersModule,
     ResultsKnowledgeProductsModule,
@@ -115,7 +140,7 @@ import { InitiativeEntityMapRepository } from '../initiative_entity_map/initiati
     CapdevsDeliveryMethodsModule,
     ResultsImpactAreaTargetModule,
     ResultsImpactAreaIndicatorsModule,
-    ShareResultRequestModule,
+    forwardRef(() => ShareResultRequestModule),
     LegacyIndicatorsLocationsModule,
     LegacyIndicatorsPartnersModule,
     ElasticModule,
@@ -134,6 +159,15 @@ import { InitiativeEntityMapRepository } from '../initiative_entity_map/initiati
     ResultsInvestmentDiscontinuedOptionsModule,
     ResultFoldersModule,
     AdUsersModule,
+    NotificationModule,
+    ImpactAreasScoresComponentsModule,
+    ResultsByProjectsModule,
+    IntellectualPropertyExpertsModule,
+    forwardRef(() => GeographicLocationModule),
+    ResultImpactAreaScoresModule,
+    forwardRef(() => ContributorsPartnersModule),
+    forwardRef(() => InnovationDevModule),
+    forwardRef(() => InnovationUseModule),
   ],
   providers: [
     ResultsService,
@@ -154,9 +188,25 @@ import { InitiativeEntityMapRepository } from '../initiative_entity_map/initiati
     ResultAnswerRepository,
     ResultsInvestmentDiscontinuedOptionRepository,
     ResultInitiativeBudgetRepository,
+    NonPooledProjectBudgetRepository,
     InitiativeEntityMapRepository,
+    NotificationService,
+    NotificationRepository,
+    NotificationLevelRepository,
+    NotificationTypeRepository,
+    SocketManagementService,
+    UserRepository,
+    ResultsTocResultRepository,
+    ResultsTocImpactAreaTargetRepository,
+    ResultsTocSdgTargetRepository,
+    ResultsSdgTargetRepository,
+    ResultsActionAreaOutcomeRepository,
+    ResultsTocTargetIndicatorRepository,
+    AoWBilateralRepository,
+    ResultReviewHistoryRepository,
+    ShareResultRequestRepository,
   ],
-  exports: [ResultRepository, JwtMiddleware],
+  exports: [ResultRepository, JwtMiddleware, ResultsService],
 })
 export class ResultsModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

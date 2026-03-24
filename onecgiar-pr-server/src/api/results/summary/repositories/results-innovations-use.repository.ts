@@ -167,4 +167,68 @@ export class ResultsInnovationsUseRepository
       });
     }
   }
+
+  async InnovUseExists(resultId: number) {
+    const queryData = `
+      SELECT
+        riu.result_innovation_use_id,
+        riu.male_using,
+        riu.female_using,
+        riu.results_id,
+        riu.has_innovation_link,
+        riu.innovation_use_level_id,
+        riu.has_scaling_studies,
+        riu.readiness_level_explanation,
+        riu.innov_use_to_be_determined,
+        riu.innov_use_2030_to_be_determined,
+        ciul.level AS level
+      FROM result r
+      JOIN results_innovations_use riu
+        ON riu.results_id = r.id
+      AND riu.is_active = 1
+      JOIN clarisa_innovation_use_levels ciul
+        ON ciul.id = riu.innovation_use_level_id
+      LEFT JOIN version v
+        ON v.id = r.version_id
+      AND v.is_active = 1
+      LEFT JOIN version previous_v
+        ON previous_v.id = v.previous_phase
+      AND previous_v.is_active = 1
+      LEFT JOIN result previous_r
+        ON previous_r.result_code = r.result_code
+      AND previous_r.version_id = previous_v.id
+      AND previous_r.is_active = 1
+      WHERE r.id = ?
+      AND r.is_active = 1;
+    `;
+    try {
+      const InnovUseResult: ResultsInnovationsUse[] = await this.query(
+        queryData,
+        [resultId],
+      );
+      return InnovUseResult.length ? InnovUseResult[0] : undefined;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultsInnovationsUseRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async getLinkedResultsByOrigin(originId: number): Promise<number[]> {
+    const query = `
+      SELECT linked_results_id
+      FROM linked_result
+      WHERE origin_result_id = ? AND is_active = TRUE;
+    `;
+
+    const results = await this.dataSource.query(query, [originId]);
+
+    const linked_results: number[] = results.map(
+      (r: any) => r.linked_results_id,
+    );
+
+    return linked_results;
+  }
 }

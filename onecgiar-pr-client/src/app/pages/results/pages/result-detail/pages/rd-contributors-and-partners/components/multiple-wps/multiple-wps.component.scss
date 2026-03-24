@@ -1,0 +1,86 @@
+.local_container {
+  margin-top: 30px;
+  margin-bottom: 30px;
+  border-radius: 5px;
+  width: 100%;
+
+  .section_container {
+    padding: 50px 50px 50px 50px;
+    margin-bottom: 120px;
+  }
+
+  .tabs-container {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    background-color: var(--pr-color-accents-2);
+
+    .active {
+      background-color: var(--pr-color-primary-300) !important;
+      color: var(--pr-color-white) !important;
+      font-weight: 600;
+    }
+
+    .tabs {
+      display: grid;
+      overflow-x: auto;
+    }
+
+    .tab {
+      background-color: var(--pr-color-accents-2);
+      color: var(--pr-color-accents-4);
+      text-decoration: none;
+      padding: 10px 8px;
+      display: grid;
+      grid-template-columns: 6fr 1fr;
+      align-items: center;
+      gap: 0.5rem;
+
+      .tab-content {
+        display: flex;
+        align-items: center;
+        overflow: hidden;
+        gap: 0.5rem;
+        cursor: pointer;
+      }
+
+      .tab-title {
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin: 0;
+      }
+    }
+
+    .tab-add-button {
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      cursor: pointer;
+      padding: 0.5rem;
+      width: 40px;
+
+      .tab-add-button-item {
+        padding: 0.5rem;
+        background-color: var(--pr-color-white);
+        border-radius: 5px;
+      }
+    }
+
+    .tab-delete-button-item {
+      cursor: pointer;
+      font-size: 16px;
+      text-align: end;
+    }
+  }
+}
+
+.valid {
+  color: var(--pr-color-green-500);
+}
+
+.invalid {
+  color: var(--pr-color-accents-3);
+}

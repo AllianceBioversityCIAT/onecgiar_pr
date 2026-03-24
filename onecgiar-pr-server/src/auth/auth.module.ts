@@ -25,6 +25,7 @@ import { RestrictionsModule } from './modules/restrictions/restrictions.module';
 import { AuthMicroserviceModule } from '../shared/microservices/auth-microservice/auth-microservice.module';
 import { ActiveDirectoryService } from './services/active-directory.service';
 import { SearchThrottleMiddleware } from './Middlewares/search-throttle.middleware';
+import { UserRepository } from './modules/user/repositories/user.repository';
 
 @Module({
   controllers: [AuthController],
@@ -53,6 +54,7 @@ import { SearchThrottleMiddleware } from './Middlewares/search-throttle.middlewa
     JwtMiddleware,
     Repository,
     HandlersError,
+    UserRepository,
   ],
   exports: [
     BcryptPasswordEncoder,

@@ -10,6 +10,8 @@ import { IpsrNonPooledProjectsComponent } from './components/ipsr-non-pooled-pro
 import { IpsrContributorsNonCgiarPartnersComponent } from './components/ipsr-contributors-non-cgiar-partners/ipsr-contributors-non-cgiar-partners.component';
 import { IpsrContributorsCentersComponent } from './components/ipsr-contributors-centers/ipsr-contributors-centers.component';
 import { TermPipe } from '../../../../../../internationalization/term.pipe';
+import { Tooltip } from 'primeng/tooltip';
+import { RdContributorsAndPartnersModule } from '../../../../../results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.module';
 
 @NgModule({
   declarations: [
@@ -19,6 +21,14 @@ import { TermPipe } from '../../../../../../internationalization/term.pipe';
     IpsrContributorsNonCgiarPartnersComponent,
     IpsrContributorsCentersComponent
   ],
-  imports: [CommonModule, IpsrContributorsRoutingModule, CustomFieldsModule, TocInitiativeOutModule, TermPipe]
+  imports: [
+    CommonModule,
+    IpsrContributorsRoutingModule,
+    CustomFieldsModule,
+    TocInitiativeOutModule,
+    TermPipe,
+    Tooltip,
+    RdContributorsAndPartnersModule
+  ]
 })
 export class IpsrContributorsModule {}

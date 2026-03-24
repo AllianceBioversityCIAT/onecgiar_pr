@@ -154,7 +154,7 @@ describe('MultipleWPsComponent', () => {
       component.api = apiMock as any;
       component.activeTab = { ...tabSchema, results_id: '3', initiative_id: 4, uniqueId: '5' };
       component.GET_outputList();
-      expect(apiMock.tocApiSE.GET_tocLevelsByconfig).toHaveBeenCalledWith(1, 4, 1);
+      expect(apiMock.tocApiSE.GET_tocLevelsByconfig).toHaveBeenCalledWith(1, 4, 1, false);
     });
 
     it('should call the API to get outcomeList on GET_outcomeList', () => {
@@ -170,7 +170,7 @@ describe('MultipleWPsComponent', () => {
       component.api = apiMock as any;
       component.activeTab = { ...tabSchema, results_id: '3', initiative_id: 4, uniqueId: '5' };
       component.GET_outcomeList();
-      expect(apiMock.tocApiSE.GET_tocLevelsByconfig).toHaveBeenCalledWith(1, 4, 2);
+      expect(apiMock.tocApiSE.GET_tocLevelsByconfig).toHaveBeenCalledWith(1, 4, 2, false);
     });
 
     it('should call the API to get eoiList on GET_EOIList', () => {
@@ -186,7 +186,7 @@ describe('MultipleWPsComponent', () => {
       component.api = apiMock as any;
       component.activeTab = { ...tabSchema, results_id: '3', initiative_id: 4, uniqueId: '5' };
       component.GET_EOIList();
-      expect(apiMock.tocApiSE.GET_tocLevelsByconfig).toHaveBeenCalledWith(1, 4, 3);
+      expect(apiMock.tocApiSE.GET_tocLevelsByconfig).toHaveBeenCalledWith(1, 4, 3, false);
     });
   });
 

@@ -1,6 +1,21 @@
 import { Resultipresultcomplementary } from '../../step-n3/model/Ipsr-step-3-body.model';
 
 export class IpsrStep1Body {
+  has_innovation_link: boolean = false;
+  has_scaling_studies: boolean = false;
+  has_studies_links: boolean = false;
+  innov_use_to_be_determined: boolean = false;
+  innov_use_2030_to_be_determined: boolean = false;
+  evidences_justification: string = '';
+  readiness_level_explanation: string = '';
+  innovation_readiness_level_id: number = null;
+  innovation_use_level_id: number = null;
+  linked_results: number[] = [];
+  scaling_studies_urls: string[] = [];
+  previous_irl: number = null;
+  investment_programs: Investment[] = [];
+  investment_bilateral: Investment[] = [];
+  investment_partners: Investment[] = [];
   initiative_id: number = null;
   geo_scope_id: number = null;
   countries: Country[] = [];
@@ -11,6 +26,7 @@ export class IpsrStep1Body {
   impactAreas: ImpactArea[] = [];
   sdgTargets: SdgTarget[] = [];
   innovatonUse: InnovatonUse = new InnovatonUse();
+  innovation_use_2030: InnovatonUse = new InnovatonUse();
   institutions: Institutions[] = [];
   experts: Expert[] = [];
   result_ip: Result_ip = new Result_ip();
@@ -18,6 +34,13 @@ export class IpsrStep1Body {
   result_ip_result_core: Resultipresultcomplementary = new Resultipresultcomplementary();
   result_ip_expert_workshop_organized = [];
   link_workshop_list: string = null;
+}
+
+class Investment {
+  official_code: string = null;
+  name: string = null;
+  kind_cash: number = null;
+  is_determined: boolean = null;
 }
 
 class Scalig_ambition {

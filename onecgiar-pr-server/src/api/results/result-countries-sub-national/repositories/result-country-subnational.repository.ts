@@ -39,7 +39,8 @@ export class ResultCountrySubnationalRepository
               rc2.result_id = ${config.new_result_id}
               AND rc2.country_id = rc.country_id
           ) AS result_country_id,
-          rcs.clarisa_subnational_scope_code
+          rcs.clarisa_subnational_scope_code,
+          rcs.geo_scope_role_id
       FROM
           result_country_subnational rcs
           LEFT JOIN result_country rc ON rc.result_country_id = rcs.result_country_id
@@ -57,7 +58,8 @@ export class ResultCountrySubnationalRepository
             created_by,
             last_updated_by,
             result_country_id,
-            clarisa_subnational_scope_code
+            clarisa_subnational_scope_code,
+            geo_scope_role_id
         )
       SELECT
           rcs.is_active,
@@ -78,7 +80,8 @@ export class ResultCountrySubnationalRepository
               rc2.result_id = ${config.new_result_id}
               AND rc2.country_id = rc.country_id
           ) AS result_country_id,
-          rcs.clarisa_subnational_scope_code
+          rcs.clarisa_subnational_scope_code,
+          rcs.geo_scope_role_id
       FROM
           result_country_subnational rcs
           LEFT JOIN result_country rc ON rc.result_country_id = rcs.result_country_id
@@ -111,6 +114,7 @@ export class ResultCountrySubnationalRepository
     rcId: number,
     subnationalCodes: string[],
     userId: number,
+    geoScopeRoleId: number = 1,
   ) {
     try {
       const resultSubnationalArray: ResultCountrySubnational[] = [];
@@ -120,12 +124,14 @@ export class ResultCountrySubnationalRepository
           is_active: true,
           result_country_id: rcId,
           clarisa_subnational_scope_code: subnationalCode,
+          geo_scope_role_id: geoScopeRoleId,
         });
 
         if (!existing) {
           const newSubnational = new ResultCountrySubnational();
           newSubnational.clarisa_subnational_scope_code = subnationalCode;
           newSubnational.result_country_id = rcId;
+          newSubnational.geo_scope_role_id = geoScopeRoleId;
           newSubnational.created_by = userId;
           newSubnational.last_updated_by = userId;
           resultSubnationalArray.push(newSubnational);
@@ -146,46 +152,55 @@ export class ResultCountrySubnationalRepository
     rcId: number,
     subnationalCodes: string[],
     userId: number,
+    geoScopeRoleId: number = 1,
   ) {
     const subnationals = subnationalCodes ?? [];
+
     const upDateInactive = `
-    update result_country_subnational  
-    set is_active = 0, 
-    	last_updated_date = NOW(),
-      last_updated_by = ?
-    where is_active > 0 
-    	and result_country_id  = ?
-    	and clarisa_subnational_scope_code not in (${subnationals
-        .map((c) => `"${c}"`)
-        .toString()});
+      update result_country_subnational  
+      set is_active = 0, 
+        last_updated_date = NOW(),
+        last_updated_by = ?
+      where is_active > 0 
+        and result_country_id  = ?
+        and geo_scope_role_id = ?
+        and clarisa_subnational_scope_code not in (${subnationals
+          .map((c) => `"${c}"`)
+          .toString()});
     `;
 
     const upDateActive = `
-    update result_country_subnational  
-    set is_active = 1, 
-    	last_updated_date = NOW(),
-      last_updated_by = ?
-    where result_country_id  = ?
-    	and clarisa_subnational_scope_code in (${subnationals
-        .map((c) => `"${c}"`)
-        .toString()});
+      update result_country_subnational  
+      set is_active = 1, 
+        last_updated_date = NOW(),
+        last_updated_by = ?
+      where result_country_id  = ?
+        and geo_scope_role_id = ?
+        and clarisa_subnational_scope_code in (${subnationals
+          .map((c) => `"${c}"`)
+          .toString()});
     `;
 
     const upDateAllInactive = `
-    update result_country_subnational  
-    set is_active = 0, 
-    	last_updated_date = NOW(),
-      last_updated_by = ?
-    where result_country_id = ?;
+      update result_country_subnational  
+      set is_active = 0, 
+        last_updated_date = NOW(),
+        last_updated_by = ?
+      where result_country_id = ?
+        and geo_scope_role_id = ?;
     `;
 
     try {
       if (subnationals?.length) {
-        await this.query(upDateInactive, [userId, rcId]);
+        await this.query(upDateInactive, [userId, rcId, geoScopeRoleId]);
 
-        return await this.query(upDateActive, [userId, rcId]);
+        return await this.query(upDateActive, [userId, rcId, geoScopeRoleId]);
       } else {
-        return await this.query(upDateAllInactive, [userId, rcId]);
+        return await this.query(upDateAllInactive, [
+          userId,
+          rcId,
+          geoScopeRoleId,
+        ]);
       }
     } catch (error) {
       throw this._handlersError.returnErrorRepository({

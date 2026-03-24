@@ -22,6 +22,7 @@ export class PrRangeLevelComponent {
   @Input() options: any = [];
   @Input() itemTitle: string = null;
   @Input() itemDescription: string = null;
+  @Input() disabled: boolean = false;
   @Output() selectOptionEvent = new EventEmitter<any>();
 
   hoverData = {
@@ -83,7 +84,7 @@ export class PrRangeLevelComponent {
   }
 
   onSelectLevel(option, circle: HTMLElement) {
-    if (this.rolesSE.readOnly) return;
+    if (this.disabled || this.rolesSE.readOnly) return;
     const htmlElement: HTMLElement = circle;
     htmlElement.parentElement.querySelectorAll('.circle').forEach(circle => {
       circle.classList.remove('active');

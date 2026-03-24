@@ -13,12 +13,17 @@ import { EstimatesComponent } from './components/estimates/estimates.component';
 import { InnovationLinksComponent } from './components/innovation-links/innovation-links.component';
 import { YmzListStructureItemModule } from '../../../../../../../shared/directives/ymz-list-structure-item/ymz-list-structure-item.module';
 import { NonPooledInfoComponent } from './components/estimates/components/non-pooled-info/non-pooled-info.component';
+import { NonPooledInfoP25Component } from './components/estimates/components/non-pooled-info-p25/non-pooled-info.component';
 import { DialogModule } from 'primeng/dialog';
 import { SkeletonModule } from 'primeng/skeleton';
 import { FeedbackValidationDirectiveModule } from '../../../../../../../shared/directives/feedback-validation-directive.module';
 import { MessageModule } from 'primeng/message';
 import { MegatrendsComponent } from './components/megatrends/megatrends.component';
 import { TermPipe } from '../../../../../../../internationalization/term.pipe';
+import { UserEvidenceComponent } from './components/user-evidence/user-evidence.component';
+import { InnovationUseFormModule } from '../../../../../../../shared/components/innovation-use-form/innovation-use-form.module';
+import { AssumptionsExaminationComponent } from './components/assumptions-examination/assumptions-examination.component';
+import { PartnersPoliciesSafeguardsComponent } from './components/partners-policies-safeguards/partners-policies-safeguards.component';
 
 @NgModule({
   declarations: [
@@ -29,9 +34,13 @@ import { TermPipe } from '../../../../../../../internationalization/term.pipe';
     InnovationTeamDiversityComponent,
     AnticipatedInnovationUserComponent,
     EstimatesComponent,
+    UserEvidenceComponent,
     InnovationLinksComponent,
     NonPooledInfoComponent,
-    MegatrendsComponent
+    MegatrendsComponent,
+    AssumptionsExaminationComponent,
+    PartnersPoliciesSafeguardsComponent,
+    NonPooledInfoP25Component
   ],
   imports: [
     CommonModule,
@@ -42,7 +51,8 @@ import { TermPipe } from '../../../../../../../internationalization/term.pipe';
     FeedbackValidationDirectiveModule,
     SkeletonModule,
     MessageModule,
-    TermPipe
+    TermPipe,
+    InnovationUseFormModule
   ]
 })
 export class InnovationDevInfoModule {}

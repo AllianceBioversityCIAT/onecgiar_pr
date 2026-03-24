@@ -16,6 +16,15 @@ import { NotificationModule } from './notification/notification.module';
 import { UserNotificationSettingsModule } from './user-notification-settings/user-notification-settings.module';
 import { AdUsersModule } from './ad_users/ad_users.module';
 import { InitiativeEntityMapModule } from './initiative_entity_map/initiative_entity_map.module';
+import { BilateralModule } from './bilateral/bilateral.module';
+import { ResultsFrameworkReportingModule } from './results-framework-reporting/results-framework-reporting.module';
+import { ContributorsPartnersModule } from './results-framework-reporting/contributors-partners/contributors-partners.module';
+import { InnovationDevModule } from './results-framework-reporting/innovation_dev/innovation_dev.module';
+import { InnovationUseModule } from './results-framework-reporting/innovation-use/innovation-use.module';
+import { AiModule } from './ai/ai.module';
+import { GeographicLocationModule } from './results-framework-reporting/geographic-location/geographic-location.module';
+import { IpsrFrameworkModule } from './ipsr-framework/ipsr-framework.module';
+import { IpsrFrameworkRoutes } from './ipsr-framework/ipsr-framework.routes';
 
 export const ModulesRoutes: Routes = [
   {
@@ -76,5 +85,38 @@ export const ModulesRoutes: Routes = [
   {
     path: 'initiatives-entity',
     module: InitiativeEntityMapModule,
+  },
+  {
+    path: 'bilateral',
+    module: BilateralModule,
+  },
+  {
+    path: 'results-framework-reporting',
+    module: ResultsFrameworkReportingModule,
+  },
+  {
+    path: 'contributors-partners',
+    module: ContributorsPartnersModule,
+  },
+  {
+    path: 'innovation-development',
+    module: InnovationDevModule,
+  },
+  {
+    path: 'innovation-use',
+    module: InnovationUseModule,
+  },
+  {
+    path: 'ai',
+    module: AiModule,
+  },
+  {
+    path: 'geographic-location',
+    module: GeographicLocationModule,
+  },
+  {
+    path: 'ipsr-framework',
+    module: IpsrFrameworkModule,
+    children: IpsrFrameworkRoutes,
   },
 ];

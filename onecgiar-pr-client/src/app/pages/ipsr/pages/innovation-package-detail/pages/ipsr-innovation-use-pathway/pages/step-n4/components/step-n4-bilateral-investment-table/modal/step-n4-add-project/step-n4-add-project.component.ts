@@ -1,0 +1,75 @@
+import { Component, Input, DoCheck, OnInit, Output, EventEmitter } from '@angular/core';
+import { BilateralexpectedinvestmentStep4, IpsrStep4Body } from '../../../../model/Ipsr-step-4-body.model';
+import { ApiService } from '../../../../../../../../../../../../shared/services/api/api.service';
+import { InstitutionsService } from '../../../../../../../../../../../../shared/services/global/institutions.service';
+import { CentersService } from '../../../../../../../../../../../../shared/services/global/centers.service';
+import { RdContributorsAndPartnersService } from '../../../../../../../../../../../results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.service';
+
+@Component({
+  selector: 'app-step-n4-add-project',
+  templateUrl: './step-n4-add-project.component.html',
+  styleUrls: ['./step-n4-add-project.component.scss'],
+  standalone: false
+})
+export class StepN4AddProjectComponent implements DoCheck, OnInit {
+  @Input() body: IpsrStep4Body = new IpsrStep4Body();
+  @Output() projectAdded = new EventEmitter<void>();
+  visible = false;
+  projectBody = new AddProjectBody();
+  showForm = true;
+  requesting = false;
+  formIsInvalid = false;
+
+  constructor(
+    public institutionsSE: InstitutionsService,
+    public centersSE: CentersService,
+    public api: ApiService,
+    public rdPartnersSE: RdContributorsAndPartnersService
+  ) {}
+
+  ngOnInit() {
+    this.rdPartnersSE.loadClarisaProjects();
+    this.filterProjects();
+  }
+
+  filterProjects() {
+    const projects = this.rdPartnersSE.clarisaProjectsList.filter(
+      project => !this.body.bilateral_expected_investment.some(bilateral => bilateral.obj_result_project.project_id === project.project_id)
+    );
+
+    return projects;
+  }
+
+  onAddProject() {
+    this.requesting = true;
+    this.api.resultsSE.PATCHInnovationPathwayStepFourBilaterals(this.projectBody).subscribe({
+      next: () => {
+        this.requesting = false;
+        this.visible = false;
+        this.projectAdded.emit();
+        this.api.alertsFe.show({ id: 'project', title: `Project has been added.`, status: 'success' });
+      },
+      error: err => {
+        this.api.alertsFe.show({ id: 'project-error', title: 'Error when requesting partner', description: '', status: 'error' });
+        this.requesting = false;
+        this.visible = false;
+      }
+    });
+  }
+
+  cleanObject() {
+    this.showForm = false;
+    this.projectBody = new AddProjectBody();
+    setTimeout(() => {
+      this.showForm = true;
+    }, 0);
+  }
+  ngDoCheck(): void {
+    this.formIsInvalid = this.api.dataControlSE.someMandatoryFieldIncomplete('.partners-request-container');
+  }
+}
+
+class AddProjectBody extends BilateralexpectedinvestmentStep4 {
+  id: number = null;
+  short_name: string = null;
+}

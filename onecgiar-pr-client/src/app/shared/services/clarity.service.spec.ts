@@ -4,11 +4,16 @@ import { RouterTestingModule } from '@angular/router/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import Clarity from '@microsoft/clarity';
 import { AuthService } from './api/auth.service';
+import { Router, NavigationEnd } from '@angular/router';
+import { Subject } from 'rxjs';
 
 describe('ClarityService', () => {
   let service: ClarityService;
 
   beforeEach(() => {
+    jest.restoreAllMocks();
+    jest.clearAllMocks();
+
     TestBed.configureTestingModule({
       imports: [RouterTestingModule, HttpClientTestingModule],
       providers: [AuthService]
@@ -16,11 +21,20 @@ describe('ClarityService', () => {
     service = TestBed.inject(ClarityService);
   });
 
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   it('should be created', () => {
     expect(service).toBeTruthy();
   });
 
   describe('init', () => {
+    beforeEach(() => {
+      // Reset initialized state before each init test
+      (service as any).initialized = false;
+    });
+
     it('should initialize Clarity only once', () => {
       const spy = jest.spyOn(service as any, 'initClarity');
 
@@ -38,6 +52,42 @@ describe('ClarityService', () => {
 
       service.init();
 
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to initialize Clarity:', expect.any(Error));
+    });
+
+    it('should call initClarity, setupRouteTracking, and setUserInfo on success', () => {
+      const initClaritySpy = jest.spyOn(service as any, 'initClarity').mockImplementation();
+      const setupRouteTrackingSpy = jest.spyOn(service as any, 'setupRouteTracking').mockImplementation();
+      const setUserInfoSpy = jest.spyOn(service as any, 'setUserInfo').mockImplementation();
+
+      service.init();
+
+      expect(initClaritySpy).toHaveBeenCalled();
+      expect(setupRouteTrackingSpy).toHaveBeenCalled();
+      expect(setUserInfoSpy).toHaveBeenCalled();
+      expect((service as any).initialized).toBe(true);
+    });
+
+    it('should not re-initialize if already initialized', () => {
+      const initClaritySpy = jest.spyOn(service as any, 'initClarity').mockImplementation();
+      jest.spyOn(service as any, 'setupRouteTracking').mockImplementation();
+      jest.spyOn(service as any, 'setUserInfo').mockImplementation();
+
+      service.init();
+      service.init();
+
+      expect(initClaritySpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should handle error when initClarity throws', () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      jest.spyOn(service as any, 'initClarity').mockImplementation(() => {
+        throw new Error('init failed');
+      });
+
+      service.init();
+
+      expect((service as any).initialized).toBe(false);
       expect(consoleSpy).toHaveBeenCalledWith('Failed to initialize Clarity:', expect.any(Error));
     });
   });
@@ -138,18 +188,132 @@ describe('ClarityService', () => {
       expect(spy).toHaveBeenCalled();
     });
 
-    it('should set user info', () => {
+    it('should set user info when localStorageUser is present', () => {
       service.authService.localStorageUser = {
         id: 1,
         user_name: 'test',
         email: 'test@test.com'
       };
-
-      const spy = jest.spyOn(service as any, 'setUserInfo');
+      const setTagMock = jest.fn();
+      Clarity.setTag = setTagMock;
 
       service.updateUserInfo();
 
-      expect(spy).toHaveBeenCalled();
+      expect(setTagMock).toHaveBeenCalledWith('user_id', 'test');
+      expect(setTagMock).toHaveBeenCalledWith('user_email', 'test@test.com');
+      expect(setTagMock).toHaveBeenCalledWith('id', '1');
+    });
+
+    it('should not call Clarity.setTag when localStorageUser is null', () => {
+      service.authService.localStorageUser = null;
+      const setTagMock = jest.fn();
+      Clarity.setTag = setTagMock;
+
+      service.updateUserInfo();
+
+      expect(setTagMock).not.toHaveBeenCalled();
+    });
+
+    it('should use empty string fallback when email is falsy', () => {
+      service.authService.localStorageUser = {
+        id: 1,
+        user_name: 'test',
+        email: ''
+      };
+      const setTagMock = jest.fn();
+      Clarity.setTag = setTagMock;
+
+      service.updateUserInfo();
+
+      expect(setTagMock).toHaveBeenCalledWith('user_email', '');
+    });
+
+    it('should use empty string fallback when email is null', () => {
+      service.authService.localStorageUser = {
+        id: 1,
+        user_name: 'test',
+        email: null
+      };
+      const setTagMock = jest.fn();
+      Clarity.setTag = setTagMock;
+
+      service.updateUserInfo();
+
+      expect(setTagMock).toHaveBeenCalledWith('user_email', '');
+    });
+
+    it('should handle error when setting user info throws', () => {
+      const consoleSpy = jest.spyOn(console, 'error');
+      service.authService.localStorageUser = {
+        id: 1,
+        user_name: 'test',
+        email: 'test@test.com'
+      };
+      jest.spyOn(Clarity, 'setTag').mockImplementation(() => {
+        throw new Error('setTag error');
+      });
+
+      service.updateUserInfo();
+
+      expect(consoleSpy).toHaveBeenCalledWith('Error setting user info:', expect.any(Error));
+    });
+  });
+
+  describe('setupRouteTracking', () => {
+    it('should set page tag on NavigationEnd', async () => {
+      const setTagMock = jest.fn();
+      Clarity.setTag = setTagMock;
+
+      (service as any).setupRouteTracking();
+
+      const router = TestBed.inject(Router);
+      await router.navigate(['/']);
+
+      expect(setTagMock).toHaveBeenCalledWith('page', expect.any(String));
+    });
+
+    it('should handle error when Clarity.setTag throws during page tracking', async () => {
+      const consoleSpy = jest.spyOn(console, 'error');
+      Clarity.setTag = jest.fn().mockImplementation(() => {
+        throw new Error('setTag error');
+      });
+
+      (service as any).setupRouteTracking();
+
+      const router = TestBed.inject(Router);
+      await router.navigate(['/']);
+
+      expect(consoleSpy).toHaveBeenCalledWith('Error tracking page view:', expect.any(Error));
+    });
+
+    it('should log error when router events observable errors', () => {
+      const consoleSpy = jest.spyOn(console, 'error');
+      const mockEventsSubject = new Subject<any>();
+
+      // Override router.events with our controllable subject
+      Object.defineProperty(service, 'router', {
+        value: { events: mockEventsSubject.asObservable() },
+        writable: true
+      });
+
+      (service as any).setupRouteTracking();
+
+      // Emit an error on the observable
+      mockEventsSubject.error(new Error('router error'));
+
+      expect(consoleSpy).toHaveBeenCalledWith('Error in route tracking subscription:', expect.any(Error));
+    });
+  });
+
+  describe('initClarity', () => {
+    it('should throw error when Clarity.init fails', () => {
+      const consoleSpy = jest.spyOn(console, 'error');
+      jest.spyOn(Clarity, 'init').mockImplementation(() => {
+        throw new Error('init failed');
+      });
+
+      expect(() => (service as any).initClarity()).toThrow('init failed');
+      expect(consoleSpy).toHaveBeenCalledWith('Error initializing Clarity:', expect.any(Error));
     });
   });
 });

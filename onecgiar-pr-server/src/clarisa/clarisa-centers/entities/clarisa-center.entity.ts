@@ -8,6 +8,8 @@ import {
 } from 'typeorm';
 import { ClarisaInstitution } from '../../clarisa-institutions/entities/clarisa-institution.entity';
 import { ResultsCenter } from '../../../api/results/results-centers/entities/results-center.entity';
+import { IntellectualPropertyExpert } from '../../../api/results/intellectual_property_experts/entities/intellectual_property_expert.entity';
+import { ResultsInnovationsDev } from '../../../api/results/summary/entities/results-innovations-dev.entity';
 
 @Entity('clarisa_center')
 export class ClarisaCenter {
@@ -43,4 +45,10 @@ export class ClarisaCenter {
   result_center_array: ResultsCenter[];
 
   //-------
+
+  @OneToMany(() => IntellectualPropertyExpert, (ipe) => ipe.obj_center)
+  intellectual_property_experts: IntellectualPropertyExpert[];
+
+  @OneToMany(() => ResultsInnovationsDev, (rid) => rid.ip_support_center_object)
+  innovation_dev_results: ResultsInnovationsDev[];
 }

@@ -1,0 +1,40 @@
+<div class="bilateral-results-layout">
+  <!-- Header - Breadcrumb -->
+  <div class="bilateral-results_breadcrumb">
+    <span class="bilateral-results_breadcrumb_homeLink" routerLink="/result-framework-reporting/home"> Science programs </span>
+
+    <i class="pi pi-chevron-right bilateral-results_breadcrumb_separator"></i>
+
+    <span class="bilateral-results_breadcrumb_link" routerLink="/result-framework-reporting/entity-details/{{ bilateralResultsService.entityId() }}">
+      {{ bilateralResultsService.entityId() }} - {{ bilateralResultsService.entityDetails().name }}
+    </span>
+
+    <i class="pi pi-chevron-right bilateral-results_breadcrumb_separator"></i>
+
+    @if (!hasCenter) {
+      <span class="bilateral-results_breadcrumb_link breadcrumb_link"> Bilateral Results Review </span>
+    } @else {
+      <span
+        class="bilateral-results_breadcrumb_link"
+        (click)="navigateToResultsReview()"
+        (keydown.enter)="navigateToResultsReview()"
+        (keydown.space)="navigateToResultsReview()">
+        Bilateral Results Review
+      </span>
+
+      <i class="pi pi-chevron-right bilateral-results_breadcrumb_separator"></i>
+      <span class="bilateral-results_breadcrumb_link breadcrumb_link"> {{ center }} </span>
+    }
+  </div>
+
+  <div class="layout-content">
+    <app-indicators-sidebar class="sidebar"></app-indicators-sidebar>
+
+    <app-results-review-container class="main-container">
+      <app-results-review-filters class="filters"></app-results-review-filters>
+      <div class="results-content">
+        <app-results-review-table></app-results-review-table>
+      </div>
+    </app-results-review-container>
+  </div>
+</div>

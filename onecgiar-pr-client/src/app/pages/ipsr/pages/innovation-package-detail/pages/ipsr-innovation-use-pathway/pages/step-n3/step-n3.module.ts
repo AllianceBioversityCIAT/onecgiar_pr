@@ -11,9 +11,19 @@ import { CheckboxModule } from 'primeng/checkbox';
 import { StepN3AssessedExpertWorkshopComponent } from './components/step-n3-assessed-expert-workshop/step-n3-assessed-expert-workshop.component';
 import { YmzListStructureItemModule } from '../../../../../../../../shared/directives/ymz-list-structure-item/ymz-list-structure-item.module';
 import { SkeletonModule } from 'primeng/skeleton';
+import { FeedbackValidationDirectiveModule } from '../../../../../../../../shared/directives/feedback-validation-directive.module';
 
 @NgModule({
   declarations: [StepN3Component, StepN3CurrentUseComponent, StepN3ComplementaryInnovationsComponent, StepN3AssessedExpertWorkshopComponent],
-  imports: [CommonModule, StepN3RoutingModule, CustomFieldsModule, CollapsibleContainerModule, CheckboxModule, YmzListStructureItemModule, SkeletonModule]
+  imports: [
+    CommonModule,
+    StepN3RoutingModule,
+    CustomFieldsModule,
+    CollapsibleContainerModule,
+    CheckboxModule,
+    YmzListStructureItemModule,
+    SkeletonModule,
+    FeedbackValidationDirectiveModule
+  ]
 })
 export class StepN3Module {}

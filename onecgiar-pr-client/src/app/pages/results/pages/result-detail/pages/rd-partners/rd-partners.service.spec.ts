@@ -314,14 +314,18 @@ describe('RdPartnersService', () => {
           financial_code: '1',
           institutionId: 1,
           name: 'IWMI',
-          acronym: 'IWMI'
+          acronym: 'IWMI',
+          lead_center: '',
+          full_name: 'International Water Management Institute'
         },
         {
           code: 'ICARDA',
           financial_code: '2',
           institutionId: 2,
           name: 'ICARDA',
-          acronym: 'ICARDA'
+          acronym: 'ICARDA',
+          lead_center: '',
+          full_name: 'International Center for Agricultural Research in the Dry Areas'
         }
       ];
 
@@ -334,6 +338,8 @@ describe('RdPartnersService', () => {
           institutionId: 1,
           name: 'IWMI',
           acronym: 'IWMI',
+          lead_center: '',
+          full_name: 'International Water Management Institute',
           selected: false,
           disabled: false
         }
@@ -424,14 +430,18 @@ describe('RdPartnersService', () => {
           financial_code: '1',
           institutionId: 1,
           name: 'IWMI',
-          acronym: 'IWMI'
+          acronym: 'IWMI',
+          lead_center: '',
+          full_name: 'International Water Management Institute'
         },
         {
           code: 'ICARDA',
           financial_code: '2',
           institutionId: 2,
           name: 'ICARDA',
-          acronym: 'ICARDA'
+          acronym: 'ICARDA',
+          lead_center: '',
+          full_name: 'International Center for Agricultural Research in the Dry Areas'
         }
       ];
 

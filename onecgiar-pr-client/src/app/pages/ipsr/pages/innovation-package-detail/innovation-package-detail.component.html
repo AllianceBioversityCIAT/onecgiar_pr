@@ -1,10 +1,4 @@
 <div class="innovation_packages_title">
-  <div class="back_button" style="margin-left: -25px; max-width: 250px">
-    <a routerLink="/ipsr/list/innovation-list" class="open_link_in_new_page">
-      <app-pr-button text="Back to Innovation Packages list" icon="arrow_back" [reverse]="true" [showBackground]="false"> </app-pr-button>
-    </a>
-  </div>
-
   <div style="margin-bottom: 0.5rem">
     <app-phase-switcher></app-phase-switcher>
   </div>
@@ -39,28 +33,37 @@
 <div class="section_container">
   <app-ipsr-detail-top-menu></app-ipsr-detail-top-menu>
   <div class="ipsr-detail-line"></div>
-  <div class="section_container_chips">
+  <div class="fixed_data_container">
+    <div class="back_button">
+      <a routerLink="/ipsr/list/innovation-list" class="open_link_in_new_page">
+        <app-pr-button text="Back to Innovation Packages list" icon="arrow_back" [reverse]="true" [showBackground]="false"> </app-pr-button>
+      </a>
+    </div>
+    <div class="section_name">{{ this.dataControlSE.currentResultSectionName() }}</div>
     <div class="metadata">
       <div class="item">
-        Status: <strong>{{ this.api.dataControlSE?.currentResult?.status ? 'Submitted' : 'Editing' }}</strong>
+        Result code: <span>{{ this.ipsrDataControlSE.detailData?.result_code }}</span>
       </div>
       <div class="item">
-        Result level: <strong>{{ this.ipsrDataControlSE.detailData?.result_level }}</strong>
+        Status: <span>{{ this.api.dataControlSE?.currentResult?.status_name }}</span>
       </div>
       <div class="item">
-        Indicator category: <strong>{{ this.ipsrDataControlSE.detailData?.result_type }}</strong>
+        Result level: <span>{{ this.ipsrDataControlSE.detailData?.result_level }}</span>
       </div>
       <div class="item">
-        Result code: <strong>{{ this.ipsrDataControlSE.detailData?.result_code }}</strong>
+        Indicator category: <span>{{ this.ipsrDataControlSE.detailData?.result_type }}</span>
       </div>
       <div class="item">
-        {{ this.ipsrDataControlSE.detailData?.official_code }}
+        Submitter:
+        <span>{{ this.ipsrDataControlSE.detailData?.official_code }}</span>
       </div>
     </div>
   </div>
 
   <div class="content">
-    <router-outlet *ngIf="this.ipsrDataControlSE.resultInnovationId"></router-outlet>
+    @if (this.ipsrDataControlSE.resultInnovationId && this.fieldsManagerSE.porfolioExists()) {
+      <router-outlet></router-outlet>
+    }
     <div class="spinner" *ngIf="this.saveButtonSE.isGettingSection">
       <div class="info">
         <img src="assets/icons/spinner.png" class="rotating" alt="" srcset="" />

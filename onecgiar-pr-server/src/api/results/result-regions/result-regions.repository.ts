@@ -28,6 +28,7 @@ export class ResultRegionRepository
       )} as created_date,
       null as last_updated_date,
       rr.region_id,
+      rr.geo_scope_role_id,
       ${config.new_result_id} as result_id
       from result_region rr WHERE  rr.result_id = ${
         config.old_result_id
@@ -39,6 +40,7 @@ export class ResultRegionRepository
         created_date,
         last_updated_date,
         region_id,
+        geo_scope_role_id,
         result_id
         )
         select
@@ -48,6 +50,7 @@ export class ResultRegionRepository
         )} as created_date,
         null as last_updated_date,
         rr.region_id,
+        rr.geo_scope_role_id,
         ${config.new_result_id} as result_id
         from result_region rr WHERE  rr.result_id = ${
           config.old_result_id
@@ -128,6 +131,7 @@ export class ResultRegionRepository
     rr.is_active,
     rr.created_date,
     rr.last_updated_date,
+    rr.geo_scope_role_id,
     cr.name
     from result_region rr 
     inner join clarisa_regions cr on cr.um49Code = rr.region_id 
@@ -150,25 +154,28 @@ export class ResultRegionRepository
   async getResultRegionByResultIdAndRegionId(
     resultId: number,
     regionId: number,
+    geo_scope_role_id: number = 1,
   ) {
     const query = `
-    select 
-    rr.result_region_id,
-    rr.region_id,
-    rr.result_id,
-    rr.is_active,
-    rr.created_date,
-    rr.last_updated_date 
-    from result_region rr 
-    where rr.is_active > 0
-      and rr.result_id = ?
-      and rr.region_id = ?;
+      select 
+        rr.result_region_id,
+        rr.region_id,
+        rr.result_id,
+        rr.is_active,
+        rr.created_date,
+        rr.last_updated_date 
+      from result_region rr 
+      where rr.is_active > 0
+        and rr.result_id = ?
+        and rr.region_id = ?
+        and rr.geo_scope_role_id = ?;
     `;
 
     try {
       const result: ResultRegion[] = await this.query(query, [
         resultId,
         regionId,
+        geo_scope_role_id,
       ]);
       return result?.length ? result[0] : undefined;
     } catch (error) {
@@ -245,6 +252,59 @@ export class ResultRegionRepository
       throw this._handlersError.returnErrorRepository({
         className: ResultRegionRepository.name,
         error: `updateRegions ${error}`,
+        debug: true,
+      });
+    }
+  }
+
+  async updateRegionsV2(
+    resultId: number,
+    regionArray: number[] = [],
+    roleId: number,
+  ): Promise<void> {
+    try {
+      if (regionArray.length > 0) {
+        await this.query(
+          `
+          UPDATE result_region
+          SET is_active = 0,
+              last_updated_date = NOW()
+          WHERE is_active > 0
+            AND geo_scope_role_id = ?
+            AND result_id = ?
+            AND region_id NOT IN (${regionArray.map(() => '?').join(', ')});
+          `,
+          [roleId, resultId, ...regionArray],
+        );
+
+        await this.query(
+          `
+          UPDATE result_region
+          SET is_active = 1,
+              last_updated_date = NOW()
+          WHERE geo_scope_role_id = ?
+            AND result_id = ?
+            AND region_id IN (${regionArray.map(() => '?').join(', ')});
+          `,
+          [roleId, resultId, ...regionArray],
+        );
+      } else {
+        await this.query(
+          `
+          UPDATE result_region
+          SET is_active = 0,
+              last_updated_date = NOW()
+          WHERE is_active > 0
+            AND geo_scope_role_id = ?
+            AND result_id = ?;
+          `,
+          [roleId, resultId],
+        );
+      }
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRegionRepository.name,
+        error: `updateRegionsV2 ${error}`,
         debug: true,
       });
     }

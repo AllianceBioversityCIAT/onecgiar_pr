@@ -1,0 +1,262 @@
+@if (resultDetail && body) {
+  <!-- Actors -->
+  <app-pr-field-header [required]="false" label="Actors" description="Actors using or adopting the innovation."></app-pr-field-header>
+  <div class="fields_list" *ngIf="body.actors?.length">
+    @for (actorItem of body.actors; track $index; let i = $index) {
+      <div
+        class="fields"
+        appYmzListStructureItem
+        (deleteEvent)="actorItem.is_active = false; actorItem.actor_type_id = null"
+        [ngClass]="{ hideElement: actorItem.is_active === false || (!actorItem?.result_actors_id && disabled) }">
+        <div>
+          <app-pr-select
+            [disabled]="disabled"
+            [options]="actorsTypeList"
+            [indexReference]="i"
+            label="Actor type"
+            optionLabel="name"
+            optionValue="actor_type_id"
+            [(ngModel)]="actorItem.actor_type_id"
+            (ngModelChange)="actorItem.other_actor_type = null"
+            placeholder="Select actor type"
+            [disableOptions]="removeOther(body.actors)"
+            [required]="!!actorItem?.result_actors_id">
+          </app-pr-select>
+          <div style="margin-top: 13px"></div>
+          <app-pr-input
+            [disabled]="disabled"
+            *ngIf="actorItem.actor_type_id == 5"
+            label="Other actor type"
+            description="Specify the other actor type in the text box below"
+            placeholder="Specify other.."
+            type="text"
+            [(ngModel)]="actorItem.other_actor_type">
+          </app-pr-input>
+        </div>
+        <div class="">
+          <div style="margin-top: 20px; margin-bottom: -20px" *ngIf="!actorItem.sex_and_age_disaggregation">
+            <app-pr-field-header [description]="actorTypeDescription()"></app-pr-field-header>
+          </div>
+          <br />
+          <app-pr-checkbox
+            [readOnly]="disabled"
+            label="Sex and age disaggregation does not apply"
+            (selectOptionEvent)="cleanActor(actorItem)"
+            [(ngModel)]="actorItem.sex_and_age_disaggregation">
+          </app-pr-checkbox>
+          <div class="right_content" *ngIf="!actorItem.sex_and_age_disaggregation">
+            <app-pr-input
+              [disabled]="disabled"
+              placeholder="Write some..."
+              label="Women"
+              type="number"
+              [required]="!!actorItem?.result_actors_id"
+              [(ngModel)]="actorItem.women">
+            </app-pr-input>
+            <app-pr-input
+              [disabled]="disabled"
+              placeholder="Write some..."
+              label="Youth"
+              type="number"
+              [required]="!!actorItem?.result_actors_id"
+              [(ngModel)]="actorItem.women_youth">
+            </app-pr-input>
+            <app-pr-input
+              noDataText="Save to calculate"
+              placeholder="Write some..."
+              label="Non-youth"
+              type="number"
+              [required]="false"
+              [disabled]="disabled"
+              [readOnly]="true"
+              [(ngModel)]="actorItem.women_non_youth">
+            </app-pr-input>
+          </div>
+          <div class="right_content" *ngIf="!actorItem.sex_and_age_disaggregation">
+            <app-pr-input
+              [disabled]="disabled"
+              placeholder="Write some..."
+              label="Men"
+              type="number"
+              [required]="!!actorItem?.result_actors_id"
+              [(ngModel)]="actorItem.men">
+            </app-pr-input>
+            <app-pr-input
+              [disabled]="disabled"
+              placeholder="Write some..."
+              label="Youth"
+              type="number"
+              [required]="!!actorItem?.result_actors_id"
+              [(ngModel)]="actorItem.men_youth">
+            </app-pr-input>
+            <app-pr-input
+              noDataText="Save to calculate"
+              placeholder="Write some..."
+              label="Non-youth"
+              type="number"
+              [required]="false"
+              [disabled]="disabled"
+              [readOnly]="true"
+              [(ngModel)]="actorItem.men_non_youth">
+            </app-pr-input>
+          </div>
+          <div class="right_content one_field" *ngIf="!actorItem.sex_and_age_disaggregation">
+            <app-pr-input
+              placeholder="Write some..."
+              label="Total"
+              type="number"
+              [required]="false"
+              noDataText="0"
+              [disabled]="disabled"
+              [readOnly]="true"
+              [(ngModel)]="actorItem.how_many">
+            </app-pr-input>
+          </div>
+          <div class="right_content" *ngIf="actorItem.sex_and_age_disaggregation">
+            <app-pr-input
+              placeholder="Write some..."
+              label="How many"
+              type="number"
+              [required]="!!actorItem?.result_actors_id"
+              [disabled]="disabled"
+              [(ngModel)]="actorItem.how_many">
+            </app-pr-input>
+          </div>
+          <br />
+        </div>
+      </div>
+    }
+  </div>
+  <app-no-data-text *ngIf="!hasElementsWithId(body.actors, 'result_actors_id')" title="No actors provided"></app-no-data-text>
+  <br />
+  <app-add-button name="Add actor" *ngIf="!disabled" [disabled]="disabled" (clickEvent)="addActor()"></app-add-button>
+
+  <div class="fragment_section_divider"></div>
+
+  <!-- Other quantitative measures -->
+  <div class="title_list">
+    <app-pr-field-header label="Other quantitative measures of innovation use (e.g. # of hectares)" [required]="false"></app-pr-field-header>
+  </div>
+  <div class="fields_list" *ngIf="body.measures?.length">
+    @for (measuresItem of body.measures; track $index; let i = $index) {
+      <div
+        class="fields"
+        appYmzListStructureItem
+        (deleteEvent)="measuresItem.is_active = false"
+        [ngClass]="{ hideElement: measuresItem.is_active === false || (!measuresItem?.result_ip_measure_id && disabled) }">
+        <div class="right_content">
+          <app-pr-input
+            [disabled]="disabled"
+            placeholder="e.g. # of projects"
+            label="Unit of measure"
+            type="text"
+            [style]="{ width: '200px !important' }"
+            [required]="!!measuresItem?.result_ip_measure_id"
+            [(ngModel)]="measuresItem.unit_of_measure">
+          </app-pr-input>
+          <app-pr-input
+            [disabled]="disabled"
+            placeholder="Write some..."
+            label="Quantity"
+            type="number"
+            [style]="{ width: '200px !important' }"
+            [required]="!!measuresItem?.result_ip_measure_id"
+            [(ngModel)]="measuresItem.quantity">
+          </app-pr-input>
+        </div>
+      </div>
+    }
+  </div>
+  <app-no-data-text *ngIf="!hasElementsWithId(body.measures, 'result_ip_measure_id')" title="Other quantitative measures not added"></app-no-data-text>
+  <app-add-button name="Add other" *ngIf="!disabled" [disabled]="disabled" (clickEvent)="addOther()"></app-add-button>
+
+  <div class="fragment_section_divider"></div>
+
+  <!-- Estimated total USD-value of (co-)investment by partners -->
+  <!-- <div class="segment">
+    <app-pr-field-header
+      label="Estimated total USD-value of (co-)investment by partners during the reporting period"
+      [description]="headerDescriptionsN3()"
+      [useColon]="false"></app-pr-field-header>
+
+    <table style="margin-bottom: 5px;" aria-label="Table showing Estimated total USD-value of (co-)investment by partners during the reporting period">
+      <tr>
+        <th>Entity</th>
+        <th>Total USD Value <br> <span>(in-cash + in-kind)</span></th>
+        <th></th>
+      </tr>
+      <tr *ngFor="let item of body.investment_partners">
+        <td>
+          <div class="name">{{ item.name }}</div>
+        </td>
+        <td>
+          <app-pr-input
+            placeholder="Write some..."
+            type="currency"
+            [(ngModel)]="item.kind_cash"
+            [disabled]="disabled"
+            [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
+            [required]="false"
+            (ngModelChange)="onInputChange(item)">
+          </app-pr-input>
+        </td>
+        <td>
+          <app-pr-radio-button
+            optionLabel="name"
+            optionValue="id"
+            [(ngModel)]="item.is_determined"
+            [readOnly]="disabled"
+            [options]="[{ name: 'This is yet to be determined', id: true }]"
+            (ngModelChange)="onRadioChange(item)">
+          </app-pr-radio-button>
+        </td>
+      </tr>
+    </table>
+
+    <app-no-data-text *ngIf="!body.investment_partners?.length" title="There are no items available for this table."></app-no-data-text>
+  </div> -->
+
+  <!-- Estimated total USD-value of investment by CGIAR W3 or bilateral projects -->
+  <div class="segment">
+    <app-pr-field-header
+      label="Estimated total USD-value of investment by CGIAR W3 or bilateral projects during the reporting period"
+      [description]="headerDescriptionsN2()"
+      [useColon]="false"></app-pr-field-header>
+
+    <table style="margin-bottom: 5px;" aria-label="Table showing estimated total USD-value of investment by CGIAR W3 or bilateral projects during the reporting period">
+      <tr>
+        <th>Entity</th>
+        <th>Total USD Value <br> <span>(in-cash + in-kind)</span></th>
+        <th></th>
+      </tr>
+      <tr *ngFor="let item of body.investment_projects">
+        <td>
+          <div class="name">{{ item.name }}</div>
+        </td>
+        <td>
+          <app-pr-input
+            placeholder="Write some..."
+            type="currency"
+            [(ngModel)]="item.kind_cash"
+            [disabled]="disabled"
+            [noDataText]="item.is_determined ? 'Not applicable' : 'Not provided'"
+            [required]="false"
+            (ngModelChange)="onInputChange(item)">
+          </app-pr-input>
+        </td>
+        <td>
+          <app-pr-radio-button
+            optionLabel="name"
+            optionValue="id"
+            [(ngModel)]="item.is_determined"
+            [readOnly]="disabled"
+            [options]="[{ name: 'This is yet to be determined', id: true }]"
+            (ngModelChange)="onRadioChange(item)">
+          </app-pr-radio-button>
+        </td>
+      </tr>
+    </table>
+
+    <app-no-data-text *ngIf="!body.investment_projects?.length" title="There are no items available for this table."></app-no-data-text>
+  </div>
+}

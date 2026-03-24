@@ -6,6 +6,7 @@ import {
   JoinColumn,
   ManyToOne,
   OneToMany,
+  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -32,6 +33,23 @@ import { Notification } from '../../notification/entities/notification.entity';
 import { ContributionToIndicatorResult } from '../../contribution-to-indicators/entities/contribution-to-indicator-result.entity';
 import { ResultQaedLog } from '../../result-qaed/entities/result-qaed-log.entity';
 import { AdUser } from '../../ad_users/entity/ad-user.entity';
+import { ImpactAreasScoresComponent } from '../impact_areas_scores_components/entities/impact_areas_scores_component.entity';
+import { ResultsByProjects } from '../results_by_projects/entities/results_by_projects.entity';
+import { AiReviewSession } from '../../ai/entities/ai-review-session.entity';
+import { AiReviewEvent } from '../../ai/entities/ai-review-event.entity';
+import { Evidence } from '../evidences/entities/evidence.entity';
+import { ResultFieldRevision } from '../../ai/entities/result-field-revision.entity';
+import { ResultFieldAiState } from '../../ai/entities/result-field-ai-state.entity';
+import { ResultsCapacityDevelopments } from '../summary/entities/results-capacity-developments.entity';
+import { ResultsInnovationsDev } from '../summary/entities/results-innovations-dev.entity';
+import { ResultsInnovationsUse } from '../summary/entities/results-innovations-use.entity';
+import { ResultsPolicyChanges } from '../summary/entities/results-policy-changes.entity';
+import { ResultImpactAreaScore } from '../../result-impact-area-scores/entities/result-impact-area-score.entity';
+
+export enum SourceEnum {
+  Result = 'Result',
+  Bilateral = 'API',
+}
 
 @Entity()
 export class Result {
@@ -101,6 +119,21 @@ export class Result {
   obj_gender_tag_level!: GenderTagLevel;
 
   @Column({
+    name: 'gender_impact_area_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  gender_impact_area_id!: number;
+
+  @ManyToOne(() => ImpactAreasScoresComponent, (gtl) => gtl.id, {
+    nullable: true,
+  })
+  @JoinColumn({
+    name: 'gender_impact_area_id',
+  })
+  obj_gender_impact_area!: ImpactAreasScoresComponent;
+
+  @Column({
     name: 'climate_change_tag_level_id',
     type: 'bigint',
     nullable: true,
@@ -112,6 +145,21 @@ export class Result {
     name: 'climate_change_tag_level_id',
   })
   obj_climate_change_tag_level!: GenderTagLevel;
+
+  @Column({
+    name: 'climate_impact_area_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  climate_impact_area_id!: number;
+
+  @ManyToOne(() => ImpactAreasScoresComponent, (gtl) => gtl.id, {
+    nullable: true,
+  })
+  @JoinColumn({
+    name: 'climate_impact_area_id',
+  })
+  obj_climate_impact_area!: ImpactAreasScoresComponent;
 
   @Column({
     name: 'nutrition_tag_level_id',
@@ -127,6 +175,21 @@ export class Result {
   obj_nutrition_tag_level!: GenderTagLevel;
 
   @Column({
+    name: 'nutrition_impact_area_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  nutrition_impact_area_id!: number;
+
+  @ManyToOne(() => ImpactAreasScoresComponent, (gtl) => gtl.id, {
+    nullable: true,
+  })
+  @JoinColumn({
+    name: 'nutrition_impact_area_id',
+  })
+  obj_nutrition_impact_area!: ImpactAreasScoresComponent;
+
+  @Column({
     name: 'environmental_biodiversity_tag_level_id',
     type: 'bigint',
     nullable: true,
@@ -140,6 +203,21 @@ export class Result {
   obj_environmental_biodiversity_tag_level!: GenderTagLevel;
 
   @Column({
+    name: 'environmental_biodiversity_impact_area_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  environmental_biodiversity_impact_area_id!: number;
+
+  @ManyToOne(() => ImpactAreasScoresComponent, (gtl) => gtl.id, {
+    nullable: true,
+  })
+  @JoinColumn({
+    name: 'environmental_biodiversity_impact_area_id',
+  })
+  obj_environmental_biodiversity_impact_area!: ImpactAreasScoresComponent;
+
+  @Column({
     name: 'poverty_tag_level_id',
     type: 'bigint',
     nullable: true,
@@ -151,6 +229,21 @@ export class Result {
     name: 'poverty_tag_level_id',
   })
   obj_poverty_tag_level_id!: GenderTagLevel;
+
+  @Column({
+    name: 'poverty_impact_area_id',
+    type: 'bigint',
+    nullable: true,
+  })
+  poverty_impact_area_id!: number;
+
+  @ManyToOne(() => ImpactAreasScoresComponent, (gtl) => gtl.id, {
+    nullable: true,
+  })
+  @JoinColumn({
+    name: 'poverty_impact_area_id',
+  })
+  obj_poverty_impact_area!: ImpactAreasScoresComponent;
 
   @Column({
     name: 'is_active',
@@ -299,6 +392,40 @@ export class Result {
   obj_geographic_scope!: ClarisaGeographicScope;
 
   @Column({
+    name: 'has_extra_geo_scope',
+    nullable: true,
+    type: 'boolean',
+  })
+  has_extra_geo_scope: boolean;
+
+  @Column({
+    name: 'extra_geo_scope_id',
+    type: 'int',
+    nullable: true,
+  })
+  extra_geo_scope_id: number;
+
+  @ManyToOne(() => ClarisaGeographicScope, (cgo) => cgo.id, { nullable: true })
+  @JoinColumn({
+    name: 'extra_geo_scope_id',
+  })
+  obj_extra_geographic_scope!: ClarisaGeographicScope;
+
+  @Column({
+    name: 'has_extra_regions',
+    nullable: true,
+    type: 'boolean',
+  })
+  has_extra_regions: boolean;
+
+  @Column({
+    name: 'has_extra_countries',
+    nullable: true,
+    type: 'boolean',
+  })
+  has_extra_countries: boolean;
+
+  @Column({
     name: 'has_regions',
     nullable: true,
     type: 'boolean',
@@ -364,6 +491,63 @@ export class Result {
   @Column({ name: 'is_lead_by_partner', type: 'boolean', nullable: true })
   is_lead_by_partner: boolean;
 
+  @Column({
+    name: 'source',
+    nullable: true,
+    default: 'Result',
+    enum: SourceEnum,
+    type: 'enum',
+    enumName: 'source_enum',
+  })
+  source: SourceEnum = SourceEnum.Result;
+
+  @Column({
+    name: 'external_submitter',
+    nullable: true,
+    type: 'int',
+  })
+  external_submitter: number;
+
+  @ManyToOne(() => User, (u) => u.id, { nullable: true })
+  @JoinColumn({
+    name: 'external_submitter',
+  })
+  obj_external_submitter: User;
+
+  @Column({
+    name: 'external_submitted_date',
+    nullable: true,
+    type: 'text',
+  })
+  external_submitted_date: string;
+
+  @Column({
+    name: 'external_submitted_comment',
+    nullable: true,
+    type: 'text',
+  })
+  external_submitted_comment: string;
+
+  @Column({
+    name: 'reviewed_by',
+    nullable: true,
+    type: 'int',
+  })
+  reviewed_by: number;
+
+  @ManyToOne(() => User, (u) => u.id, { nullable: true })
+  @JoinColumn({
+    name: 'reviewed_by',
+  })
+  obj_reviewed_by: User;
+
+  @Column({
+    name: 'reviewed_at',
+    nullable: true,
+    type: 'timestamp',
+  })
+  reviewed_at: Date;
+
   // helpers??
   initiative_id!: number;
 
@@ -403,7 +587,7 @@ export class Result {
   @OneToMany(() => ShareResultRequest, (ra) => ra.obj_result)
   obj_share_result: ShareResultRequest[];
 
-  @OneToMany(() => ResultsTocResult, (ra) => ra.results_id)
+  @OneToMany(() => ResultsTocResult, (ra) => ra.obj_results)
   obj_results_toc_result: ResultsTocResult[];
 
   @OneToMany(() => Notification, (ra) => ra.obj_result)
@@ -414,4 +598,45 @@ export class Result {
 
   @OneToMany(() => ResultQaedLog, (ra) => ra.obj_result_id_qaed)
   obj_result_qaed: ResultQaedLog[];
+
+  @OneToMany(() => ResultsByProjects, (rbp) => rbp.obj_result_project)
+  obj_result_by_project: ResultsByProjects[];
+
+  @OneToMany(() => AiReviewSession, (session) => session.obj_result)
+  obj_ai_review_sessions: AiReviewSession[];
+
+  @OneToMany(() => AiReviewEvent, (event) => event.obj_result)
+  obj_ai_review_events: AiReviewEvent[];
+
+  @OneToMany(() => ResultFieldRevision, (revision) => revision.obj_result)
+  obj_result_field_revisions: ResultFieldRevision[];
+
+  @OneToMany(() => ResultFieldAiState, (state) => state.obj_result)
+  obj_result_field_ai_states: ResultFieldAiState[];
+
+  @OneToMany(() => Evidence, (e) => e.obj_result)
+  evidence_array: Evidence[];
+
+  @OneToOne(() => ResultsCapacityDevelopments, (rcd) => rcd.result_object, {
+    nullable: true,
+  })
+  results_capacity_development_object?: ResultsCapacityDevelopments;
+
+  @OneToOne(() => ResultsInnovationsDev, (rid) => rid.result_object, {
+    nullable: true,
+  })
+  results_innovations_dev_object: ResultsInnovationsDev;
+
+  @OneToOne(() => ResultsInnovationsUse, (riu) => riu.obj_result, {
+    nullable: true,
+  })
+  results_innovations_use_object: ResultsInnovationsUse;
+
+  @OneToOne(() => ResultsPolicyChanges, (rpc) => rpc.obj_result, {
+    nullable: true,
+  })
+  results_policy_changes_object: ResultsPolicyChanges;
+
+  @OneToMany(() => ResultImpactAreaScore, (ria) => ria.result)
+  result_impact_area_scores: ResultImpactAreaScore[];
 }

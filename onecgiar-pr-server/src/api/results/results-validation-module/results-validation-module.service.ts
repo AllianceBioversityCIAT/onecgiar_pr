@@ -1,10 +1,16 @@
-import { Injectable, HttpStatus, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  HttpStatus,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { resultValidationRepository } from './results-validation-module.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultRepository } from '../result.repository';
 import { Validation } from './entities/validation.entity';
 import { GetValidationSectionDto } from './dto/getValidationSection.dto';
 import { env } from 'process';
+import { ReturnResponseUtil } from '../../../shared/utils/response.util';
 
 @Injectable()
 export class ResultsValidationModuleService {
@@ -16,6 +22,36 @@ export class ResultsValidationModuleService {
     private readonly _resultRepository: ResultRepository,
     private readonly _handlersError: HandlersError,
   ) {}
+
+  async calculateValidationSections(resultId: number) {
+    try {
+      const response =
+        await this._resultValidationRepository.validateResultById(resultId);
+      if (!response)
+        return this._handlersError.returnErrorRes({
+          error: new NotFoundException('Result not found'),
+        });
+      const submit = response.reduce(
+        (previousValue, currentValue: any) =>
+          previousValue * parseInt(currentValue.validation),
+        1,
+      );
+
+      return ReturnResponseUtil.format({
+        response: {
+          green_checks: response.map((item) => ({
+            section_name: item.section_name,
+            validation: Boolean(item.validation),
+          })),
+          submit: Boolean(submit),
+        },
+        message: 'Validation sections calculated successfully',
+        statusCode: HttpStatus.OK,
+      });
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error });
+    }
+  }
 
   async getGreenchecksByResult1(resultId: number) {
     try {

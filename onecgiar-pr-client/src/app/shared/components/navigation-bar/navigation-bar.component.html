@@ -6,7 +6,10 @@
         [routerLink]="navOption.path"
         routerLinkActive="section_active"
         class="pr-body-1 navigation_bar_item"
-        [ngClass]="{ 'padding-right-40': navOption?.underConstruction }"
+        [ngClass]="{
+          'padding-right-40': navOption?.underConstruction,
+          hide_active_in_notifications: navOption.path === 'result' && router.url.includes('results-notifications')
+        }"
         (keydown.space)="$event.preventDefault(); navLink.click()"
         (keydown.enter)="navLink.click()">
         {{ navOption.prName }}

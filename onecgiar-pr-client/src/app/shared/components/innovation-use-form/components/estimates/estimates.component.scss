@@ -1,0 +1,23 @@
+.segment {
+  margin-top: 20px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 50px;
+}
+
+td,
+th {
+  border: 2px solid rgba(var(--pr-color-primary-rgb), 0.431);
+  padding: 10px;
+
+  span {
+    font-weight: 400;
+  }
+}
+
+app-pr-field-header {
+  margin-top: 50px;
+}

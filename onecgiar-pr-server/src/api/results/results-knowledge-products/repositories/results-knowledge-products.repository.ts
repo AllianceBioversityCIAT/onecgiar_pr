@@ -48,7 +48,8 @@ export class ResultsKnowledgeProductsRepository
         rkp.doi,
         rkp.cgspace_regions,
         rkp.cgspace_countries,
-        rkp.ost_melia_study_id
+        rkp.ost_melia_study_id,
+        rkp.toc_melia_study_id
         from results_knowledge_product rkp WHERE rkp.results_id = ${
           config.old_result_id
         } and rkp.is_active > 0
@@ -78,7 +79,8 @@ export class ResultsKnowledgeProductsRepository
         doi,
         cgspace_regions,
         cgspace_countries,
-        ost_melia_study_id
+        ost_melia_study_id,
+        toc_melia_study_id
         )
         select 
         rkp.handle,
@@ -106,7 +108,8 @@ export class ResultsKnowledgeProductsRepository
         rkp.doi,
         rkp.cgspace_regions,
         rkp.cgspace_countries,
-        rkp.ost_melia_study_id
+        rkp.ost_melia_study_id,
+        rkp.toc_melia_study_id
         from results_knowledge_product rkp WHERE rkp.results_id = ${
           config.old_result_id
         } and rkp.is_active > 0`,

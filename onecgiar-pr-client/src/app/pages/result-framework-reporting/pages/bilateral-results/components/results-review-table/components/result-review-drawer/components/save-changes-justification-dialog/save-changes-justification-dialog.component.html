@@ -1,0 +1,40 @@
+<p-dialog
+  appendTo="body"
+  [(visible)]="visible"
+  (visibleChange)="visibleChange.emit($event)"
+  [modal]="true"
+  [closeOnEscape]="!isSaving"
+  [showHeader]="false"
+  [dismissableMask]="!isSaving"
+  [draggable]="false"
+  [style]="{ padding: '0px' }"
+  styleClass="confirmation-modal">
+  <i class="pi pi-times modal-close-icon" [class.disabled]="isSaving" [style.cursor]="isSaving ? 'not-allowed' : 'pointer'" (click)="onCancel()"></i>
+  <div class="modal-body">
+    <div class="modal-icon">
+      <i class="pi pi-save"></i>
+    </div>
+    <h2 class="modal-title">SAVE CHANGES – {{ resultCode }}</h2>
+    <p class="modal-message">Please provide a reason or justification before saving changes.</p>
+    <div class="modal-field">
+      <label class="modal-label required" for="saveChangesJustification">Reason</label>
+      <textarea
+        pInputTextarea
+        [ngModel]="justification"
+        (ngModelChange)="justificationChange.emit($event)"
+        id="saveChangesJustification"
+        [rows]="4"
+        [disabled]="isSaving"
+        placeholder="Please explain the reason for saving these changes..."></textarea>
+    </div>
+  </div>
+  <div class="modal-actions">
+    <p-button label="Cancel" size="large" (click)="onCancel()" [disabled]="isSaving" variant="outlined"></p-button>
+    <p-button
+      label="Confirm"
+      size="large"
+      (click)="onConfirm()"
+      [disabled]="!justification.trim() || isSaving"
+      [loading]="isSaving"></p-button>
+  </div>
+</p-dialog>

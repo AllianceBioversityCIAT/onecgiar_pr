@@ -1,7 +1,3 @@
-/*
-https://docs.nestjs.com/modules
-*/
-
 import { Module } from '@nestjs/common';
 import { ClarisaActionAreasOutcomesIndicatorsModule } from './clarisa-action-areas-outcomes-indicators/clarisa-action-areas-outcomes-indicators.module';
 import { ClarisaActionAreasModule } from './clarisa-action-areas/clarisa-action-areas.module';
@@ -42,6 +38,8 @@ import { ClarisaSubnationalScopeModule } from './clarisa-subnational-scope/clari
 import { ClarisaCgiarEntityTypesModule } from './clarisa-cgiar-entity-types/clarisa-cgiar-entity-types.module';
 import { ClarisaInitiativeStageModule } from './clarisa-initiative-stage/clarisa-initiative-stage.module';
 import { ClarisaPortfoliosModule } from './clarisa-portfolios/clarisa-portfolios.module';
+import { ClarisaGlobalUnitModule } from './clarisa-global-unit/clarisa-global-unit.module';
+import { ClarisaProjectsModule } from './clarisa-projects/clarisa-projects.module';
 
 @Module({
   imports: [
@@ -81,6 +79,8 @@ import { ClarisaPortfoliosModule } from './clarisa-portfolios/clarisa-portfolios
     ClarisaCgiarEntityTypesModule,
     ClarisaInitiativeStageModule,
     ClarisaPortfoliosModule,
+    ClarisaGlobalUnitModule,
+    ClarisaProjectsModule,
   ],
   controllers: [],
   providers: [ClarisaCronsService, ClarisaTaskService, TocResultsRepository],
