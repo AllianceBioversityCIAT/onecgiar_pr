@@ -931,7 +931,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
           if (typeof initiative === 'number') return initiative;
           if (typeof initiative === 'string') {
             const found = initiativesList.find((opt: any) => opt.official_code === initiative || opt.id === Number(initiative));
-            return found?.id ?? Number(initiative) ?? initiative;
+            return found?.id ?? Number(initiative);
           }
           if (typeof initiative === 'object' && initiative !== null) {
             if (initiative.id != null) {
@@ -1164,7 +1164,7 @@ export class ResultReviewDrawerComponent implements OnInit, OnDestroy {
             .map((institution: any) => {
               const institutionId = institution.institutions_id ?? institution.institution_id;
               if (institutionId == null) return null;
-              const id = typeof institutionId === 'string' ? Number(institutionId) : Number(institutionId);
+              const id = Number(institutionId);
               if (!Number.isFinite(id)) return null;
               return id;
             })
