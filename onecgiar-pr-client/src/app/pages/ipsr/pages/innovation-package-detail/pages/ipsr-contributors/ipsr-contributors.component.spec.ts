@@ -754,7 +754,7 @@ describe('IpsrContributorsComponent', () => {
       expect(sentData.is_lead_by_partner).toBe(false);
     });
 
-    it('should set result_toc_results to null when planned_result is falsy in P25 mode', () => {
+    it('should preserve result_toc_results when planned_result is falsy in P25 mode', () => {
       mockFieldsManagerService.isP25.mockReturnValue(true);
       mockRdPartnersSE.partnersBody.result_toc_result = {
         initiative_id: 1,
@@ -777,7 +777,7 @@ describe('IpsrContributorsComponent', () => {
       component.onSaveSection();
 
       const sentData = patchSpy.mock.calls[0][0];
-      expect(sentData.result_toc_result.result_toc_results).toBeNull();
+      expect(sentData.result_toc_result.result_toc_results).toEqual([{ planned_result: true }]);
     });
 
     it('should call updateGreenChecks after save', () => {
