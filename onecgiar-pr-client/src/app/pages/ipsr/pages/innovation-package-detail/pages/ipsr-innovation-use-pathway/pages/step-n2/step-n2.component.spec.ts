@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { StepN2Component } from './step-n2.component';
-import { HttpClientModule } from '@angular/common/http';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 import { IpsrGreenCheckComponent } from '../../../../../../components/ipsr-green-check/ipsr-green-check.component';
 
@@ -11,7 +11,7 @@ describe('StepN2Component', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [StepN2Component, IpsrGreenCheckComponent],
-      imports: [HttpClientModule, RouterTestingModule]
+      imports: [HttpClientTestingModule, RouterTestingModule]
     }).compileComponents();
 
     fixture = TestBed.createComponent(StepN2Component);

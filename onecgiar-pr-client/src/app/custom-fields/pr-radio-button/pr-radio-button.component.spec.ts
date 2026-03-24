@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { PrRadioButtonComponent } from './pr-radio-button.component';
-import { HttpClientModule } from '@angular/common/http';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 
 describe('RadioButtonComponent', () => {
   let component: PrRadioButtonComponent;
@@ -10,7 +10,7 @@ describe('RadioButtonComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [PrRadioButtonComponent],
-      imports: [HttpClientModule]
+      imports: [HttpClientTestingModule]
     }).compileComponents();
 
     fixture = TestBed.createComponent(PrRadioButtonComponent);

@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { DetailSectionTitleComponent } from './detail-section-title.component';
-import { HttpClientModule } from '@angular/common/http';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 
 describe('DetailSectionTitleComponent', () => {
   let component: DetailSectionTitleComponent;
@@ -10,7 +10,7 @@ describe('DetailSectionTitleComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [DetailSectionTitleComponent],
-      imports: [HttpClientModule]
+      imports: [HttpClientTestingModule]
     }).compileComponents();
 
     fixture = TestBed.createComponent(DetailSectionTitleComponent);

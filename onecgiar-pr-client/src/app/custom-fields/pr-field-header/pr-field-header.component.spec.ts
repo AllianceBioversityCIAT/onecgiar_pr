@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { PrFieldHeaderComponent } from './pr-field-header.component';
-import { HttpClientModule } from '@angular/common/http';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 
 describe('PrFieldHeaderComponent', () => {
   let component: PrFieldHeaderComponent;
@@ -9,7 +9,7 @@ describe('PrFieldHeaderComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [PrFieldHeaderComponent],
-      imports: [HttpClientModule]
+      imports: [HttpClientTestingModule]
     }).compileComponents();
   });
 
