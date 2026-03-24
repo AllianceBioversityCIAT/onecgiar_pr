@@ -720,4 +720,200 @@ describe('InnovationDevInfoComponent', () => {
       expect(actualText).toEqual(expectedText);
     });
   });
+
+  describe('uploadPendingFiles interval polling', () => {
+    it('should poll upload session and update percentage', async () => {
+      jest.useFakeTimers();
+      (component as any).api.dataControlSE.currentResult = { result_id: 1 };
+      const evidence = { file: { name: 'test.pdf' }, link: null } as any;
+      (component as any).evidencesBody = { evidences: [evidence] } as any;
+
+      // Mock GET_loadFileInUploadSession to return progress info
+      let pollCount = 0;
+      mockApiService.resultsSE.GET_loadFileInUploadSession = jest.fn(() => {
+        pollCount++;
+        if (pollCount === 1) {
+          return Promise.resolve({ nextExpectedRanges: ['50-100'] });
+        }
+        return Promise.reject(new Error('done'));
+      });
+      mockApiService.resultsSE.PUT_loadFileInUploadSession = jest.fn(() =>
+        Promise.resolve({ webUrl: 'https://file.com', id: 'id1', name: 'file.pdf', parentReference: { path: 'root:/folder' } })
+      );
+
+      const uploadPromise = (component as any).uploadPendingFiles();
+
+      // Advance timer to trigger interval
+      jest.advanceTimersByTime(2000);
+      await Promise.resolve();
+      jest.advanceTimersByTime(2000);
+      await Promise.resolve();
+
+      await uploadPromise;
+
+      expect(evidence.link).toBe('https://file.com');
+      jest.useRealTimers();
+    });
+  });
+
+  describe('addEvidence', () => {
+    it('should add an evidence with is_sharepoint false', () => {
+      component.evidencesBody.evidences = [];
+      component.addEvidence();
+      expect(component.evidencesBody.evidences.length).toBe(1);
+      expect((component.evidencesBody.evidences[0] as any).is_sharepoint).toBe(false);
+    });
+  });
+
+  describe('deleteEvidence', () => {
+    it('should remove evidence at given index', () => {
+      component.evidencesBody.evidences = [{ is_sharepoint: false } as any, { is_sharepoint: true } as any];
+      component.deleteEvidence(0);
+      expect(component.evidencesBody.evidences.length).toBe(1);
+      expect((component.evidencesBody.evidences[0] as any).is_sharepoint).toBe(true);
+    });
+  });
+
+  describe('getReadinessLevelIndex', () => {
+    it('should return correct index when readiness level id matches', () => {
+      component.innovationControlListSE.readinessLevelsList = [
+        { id: 1, level: '1' },
+        { id: 2, level: '2' },
+        { id: 3, level: '3' }
+      ];
+      component.innovationDevInfoBody.innovation_readiness_level_id = 2;
+      expect(component.getReadinessLevelIndex()).toBe(1);
+    });
+
+    it('should return -1 when readiness level id does not match any in list', () => {
+      component.innovationControlListSE.readinessLevelsList = [
+        { id: 1, level: '1' }
+      ];
+      component.innovationDevInfoBody.innovation_readiness_level_id = 99;
+      expect(component.getReadinessLevelIndex()).toBe(-1);
+    });
+  });
+
+  describe('onSaveSection P25 PATCH error', () => {
+    it('should handle PATCH_innovationDevP25 error gracefully', async () => {
+      jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(true as any);
+      (component as any).api.dataControlSE.currentResult = { result_id: 1 };
+      (component as any).evidencesBody = { evidences: [] } as any;
+      (component as any).api.resultsSE.POST_createEvidenceDemandP25 = () => of({});
+      (component as any).api.resultsSE.PATCH_innovationDevP25 = () => throwError(() => new Error('patch error'));
+
+      await component.onSaveSection();
+      expect(component.savingSection).toBeFalsy();
+    });
+  });
+
+  describe('onSaveSection with innovation_nature_id == 12', () => {
+    it('should keep number_of_varieties and is_new_variety when innovation_nature_id is 12', async () => {
+      component.innovationDevInfoBody.innovation_nature_id = 12;
+      component.innovationDevInfoBody.number_of_varieties = 5;
+      component.innovationDevInfoBody.is_new_variety = true;
+      component.innovationDevInfoBody.innovatonUse = { organization: [] } as any;
+
+      jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(false as any);
+      jest.spyOn(mockApiService.resultsSE, 'PATCH_innovationDev').mockReturnValue(of({ response: {} }));
+      jest.spyOn(component, 'getSectionInformation').mockImplementation(() => {});
+
+      await component.onSaveSection();
+
+      expect(component.innovationDevInfoBody.number_of_varieties).toBe(5);
+      expect(component.innovationDevInfoBody.is_new_variety).toBe(true);
+    });
+  });
+
+  describe('convertOrganizations', () => {
+    it('should not modify item without parent_institution_type_id', () => {
+      const organizations = [
+        { institution_types_id: 5 }
+      ];
+      component.convertOrganizations(organizations);
+      expect(organizations[0].institution_types_id).toBe(5);
+      expect((organizations[0] as any).institution_sub_type_id).toBeUndefined();
+    });
+  });
+
+  describe('convertOrganizationsTosave', () => {
+    it('should not modify item without institution_sub_type_id', () => {
+      const organizations = [
+        {
+          institution_types_id: 5,
+          how_many: 1,
+          other_institution: '',
+          graduate_students: '',
+          hide: false,
+          is_active: false,
+          id: 1,
+          addressing_demands: 'yes'
+        }
+      ];
+      component.innovationDevInfoBody.innovatonUse.organization = organizations;
+      component.convertOrganizationsTosave();
+      expect(organizations[0].institution_types_id).toBe(5);
+    });
+  });
+
+  describe('uploadPendingFiles', () => {
+    it('should skip when evidences is not an array', async () => {
+      (component as any).evidencesBody = { evidences: null } as any;
+      await expect((component as any).uploadPendingFiles()).resolves.toBeUndefined();
+    });
+
+    it('should skip evidences that already have a link', async () => {
+      (component as any).api.dataControlSE.currentResult = { result_id: 1 };
+      (component as any).evidencesBody = {
+        evidences: [{ file: { name: 'test.pdf' }, link: 'existing-link' }]
+      } as any;
+      const spy = jest.spyOn(mockApiService.resultsSE, 'POST_createUploadSessionP25');
+      await (component as any).uploadPendingFiles();
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('should skip evidences without a file', async () => {
+      (component as any).api.dataControlSE.currentResult = { result_id: 1 };
+      (component as any).evidencesBody = {
+        evidences: [{ link: null, file: null }]
+      } as any;
+      const spy = jest.spyOn(mockApiService.resultsSE, 'POST_createUploadSessionP25');
+      await (component as any).uploadPendingFiles();
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('should upload file and set link when evidence has file but no link', async () => {
+      (component as any).api.dataControlSE.currentResult = { result_id: 1 };
+      const evidence = { file: { name: 'test.pdf' }, link: null };
+      (component as any).evidencesBody = { evidences: [evidence] } as any;
+
+      await (component as any).uploadPendingFiles();
+
+      expect(evidence.link).toBe('https://file-url.com');
+      expect((evidence as any).sp_document_id).toBe('file-id');
+      expect((evidence as any).sp_file_name).toBe('file.pdf');
+    });
+
+    it('should handle upload error and throw', async () => {
+      (component as any).api.dataControlSE.currentResult = { result_id: 1 };
+      const evidence = { file: { name: 'test.pdf' }, link: null };
+      (component as any).evidencesBody = { evidences: [evidence] } as any;
+      mockApiService.resultsSE.PUT_loadFileInUploadSession = jest.fn(() => Promise.reject(new Error('Upload failed')));
+
+      await expect((component as any).uploadPendingFiles()).rejects.toThrow('Upload failed');
+    });
+  });
+
+  describe('onSaveSection uploadPendingFiles error', () => {
+    it('should stop saving when uploadPendingFiles throws', async () => {
+      jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(true as any);
+      (component as any).api.dataControlSE.currentResult = { result_id: 1 };
+      const evidence = { file: { name: 'test.pdf' }, link: null };
+      (component as any).evidencesBody = { evidences: [evidence] } as any;
+      mockApiService.resultsSE.PUT_loadFileInUploadSession = jest.fn(() => Promise.reject(new Error('Upload error')));
+
+      await component.onSaveSection();
+      expect(component.savingSection).toBeFalsy();
+    });
+  });
 });
