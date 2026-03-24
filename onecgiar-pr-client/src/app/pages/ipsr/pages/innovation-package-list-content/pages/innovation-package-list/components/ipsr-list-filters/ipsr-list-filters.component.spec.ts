@@ -99,7 +99,7 @@ describe('IpsrListFiltersComponent', () => {
       { header: 'Link to IPSR metadata PDF report', key: 'link_to_pdf', width: 59 }
     ];
 
-    const exportTablesServiceSpy = jest.spyOn(TestBed.inject(ExportTablesService), 'exportExcelIpsr');
+    const exportTablesServiceSpy = jest.spyOn(TestBed.inject(ExportTablesService), 'exportExcelIpsr').mockImplementation(async () => {});
     const apiServiceSpy = jest.spyOn(TestBed.inject(ApiService).resultsSE, 'GET_reportingList').mockReturnValue(of({ response: { response: [] } }));
 
     component.onDownLoadTableAsExcel(inits, phases, searchText);
