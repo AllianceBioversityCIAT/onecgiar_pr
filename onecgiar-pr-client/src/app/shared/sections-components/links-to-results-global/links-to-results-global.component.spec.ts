@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { LinksToResultsGlobalComponent } from './links-to-results-global.component';
 import { ApiService } from '../../services/api/api.service';
@@ -169,36 +169,30 @@ describe('LinksToResultsGlobalComponent', () => {
       }
     });
 
-    it('should set combine to true when columnAttr is "result_code"', done => {
+    it('should set combine to true when columnAttr is "result_code"', fakeAsync(() => {
       component.validateOrder('result_code');
 
-      setTimeout(() => {
-        expect(component.combine).toBe(true);
-        done();
-      }, 150);
-    });
+      tick(150);
+      expect(component.combine).toBe(true);
+    }));
 
-    it('should set combine to true when there are no sorted columns', done => {
+    it('should set combine to true when there are no sorted columns', fakeAsync(() => {
       component.validateOrder('other_attr');
 
-      setTimeout(() => {
-        expect(component.combine).toBe(true);
-        done();
-      }, 150);
-    });
+      tick(150);
+      expect(component.combine).toBe(true);
+    }));
 
-    it('should set combine to false when there are sorted columns', done => {
+    it('should set combine to false when there are sorted columns', fakeAsync(() => {
       const mockTh = document.createElement('th');
       mockTh.setAttribute('aria-sort', 'ascending');
       mockElement.appendChild(mockTh);
 
       component.validateOrder('title');
 
-      setTimeout(() => {
-        expect(component.combine).toBe(false);
-        done();
-      }, 150);
-    });
+      tick(150);
+      expect(component.combine).toBe(false);
+    }));
   });
 
   describe('contributeDescription', () => {
