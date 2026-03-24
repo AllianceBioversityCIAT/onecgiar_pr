@@ -7,9 +7,18 @@ import {
 } from '../../shared/handlers/error.utils';
 import { env } from 'process';
 import { ResultRepository } from '../results/result.repository';
-import { Result } from '../results/entities/result.entity';
+import { Result, SourceEnum } from '../results/entities/result.entity';
 import axios from 'axios';
 import { ClientProxy } from '@nestjs/microservices';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { firstValueFrom } from 'rxjs';
+import { Version } from '../versioning/entities/version.entity';
+import { PLATFORM_REPORT_CONSTANTS } from './platform-report.constants';
+import type {
+  PdfGenerateUrlPayload,
+  PdfGenerateUrlResponse,
+} from './platform-report-payloads';
 
 @Injectable()
 export class PlatformReportService implements OnModuleInit {
@@ -27,6 +36,8 @@ export class PlatformReportService implements OnModuleInit {
     private readonly _platformReportRepository: PlatformReportRepository,
     private readonly _handlerError: HandlersError,
     private readonly _resultRepository: ResultRepository,
+    @InjectRepository(Version)
+    private readonly _versionRepository: Repository<Version>,
     @Inject('REPORT_SERVICE') private client: ClientProxy,
   ) {}
 
@@ -82,6 +93,15 @@ export class PlatformReportService implements OnModuleInit {
         };
         throw error;
       }
+
+      const resultToCheck = await this._resultRepository.findOne({
+        where: {
+          result_code: cleanResultCodeInput,
+          version_id: cleanPhaseInput,
+          is_active: true,
+        },
+        select: ['source'],
+      });
 
       const report = await this._platformReportRepository.findOne({
         where: { id: report_type.id },
@@ -265,17 +285,52 @@ export class PlatformReportService implements OnModuleInit {
         data.generation_date_filename +
         '.pdf';
 
-      const info = {
+      const portfolioAcronym =
+        await this.getPortfolioAcronymForPhase(cleanPhaseInput);
+      const bucketName = env.AWS_BUCKET_NAME;
+
+      if (this.isP25Portfolio(portfolioAcronym)) {
+        const p25Payload = this.buildP25Payload(
+          data,
+          resultToCheck.source,
+          fileName,
+          bucketName,
+        );
+        const response = await firstValueFrom(
+          this.client.send<PdfGenerateUrlResponse>(
+            PLATFORM_REPORT_CONSTANTS.REPORT_EVENT_PATTERNS.PDF_GENERATE_URL,
+            p25Payload,
+          ),
+        );
+
+        console.log('P25 queue response:', response);
+        if (!response?.data?.url) {
+          const error: returnErrorDto = {
+            status: 500,
+            message:
+              response?.description ??
+              'No URL returned from PDF generation (P25)',
+            response: null,
+          };
+          throw error;
+        }
+        this._logger.log('P25 PDF generated and URL received successfully');
+        return { pdf: response.data.url, fileName };
+      }
+
+      const legacyInfo = {
         templateData: report.template_object.template,
         data: data,
         options: Number(report.id) === 1 ? optionsReporting : optionsIPSR,
         fileName,
-        bucketName: env.AWS_BUCKET_NAME,
+        bucketName,
         credentials: this.authHeaderMs2,
       };
-
-      this.client.emit('pdf.generate', info);
-      const url = await this.fetchPDF(env.AWS_BUCKET_NAME, fileName);
+      this.client.emit(
+        PLATFORM_REPORT_CONSTANTS.REPORT_EVENT_PATTERNS.PDF_GENERATE,
+        legacyInfo,
+      );
+      const url = await this.fetchPDF(bucketName, fileName);
       return url;
     } catch (error) {
       return this._handlerError.returnErrorRes({ error, debug: true });
@@ -334,6 +389,54 @@ export class PlatformReportService implements OnModuleInit {
     } catch (error) {
       this._logger.error('Error fetching PDF:', error);
     }
+  }
+
+  /**
+   * Resolves the portfolio acronym for the given phase (version id).
+   * Used to route PDF generation to the correct flow (legacy vs P25).
+   */
+  async getPortfolioAcronymForPhase(phaseId: number): Promise<string | null> {
+    const version = await this._versionRepository.findOne({
+      where: { id: phaseId },
+      relations: { obj_portfolio: true },
+    });
+    const acronym = version?.obj_portfolio?.acronym;
+    return acronym?.trim() ?? null;
+  }
+
+  /** Returns true if the portfolio should use the P25 (pdf.generateUrl) flow. */
+  isP25Portfolio(acronym: string | null): boolean {
+    if (!acronym) return false;
+    return (
+      acronym.trim().toUpperCase() ===
+      PLATFORM_REPORT_CONSTANTS.P25_ACRONYM.toUpperCase()
+    );
+  }
+
+  /** Builds the payload expected by the pdf.generateUrl pattern (P25). */
+  buildP25Payload(
+    data: Record<string, unknown>,
+    source: string,
+    fileName: string,
+    bucketName: string,
+  ): PdfGenerateUrlPayload {
+    const { P25, P25_BILATERAL } = PLATFORM_REPORT_CONSTANTS;
+
+    const platformReportConstants =
+      source === SourceEnum.Bilateral &&
+      data.primary_submitter_acronym !== 'SGP-02'
+        ? P25_BILATERAL
+        : P25;
+
+    return {
+      data,
+      paperWidth: platformReportConstants.PAPER_WIDTH,
+      paperHeight: platformReportConstants.PAPER_HEIGHT,
+      templateName: platformReportConstants.TEMPLATE_NAME,
+      bucketName,
+      fileName,
+      credentials: this.authHeaderMs2,
+    };
   }
 }
 

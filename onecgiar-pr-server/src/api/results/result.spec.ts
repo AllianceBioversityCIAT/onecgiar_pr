@@ -1200,10 +1200,10 @@ describe('ResultsService (unit, pure mocks)', () => {
     (mockResultRepository as any).getResultDataForBasicReport = jest
       .fn()
       .mockResolvedValue([{ id: 1 }]);
-    const res = await resultService.getResultDataForBasicReport(
-      new Date('2023-01-01'),
-      new Date('2023-12-31'),
-    );
+    const res = await resultService.getResultDataForBasicReport({
+      initDate: '2023-01-01',
+      endDate: '2023-12-31',
+    });
     expect(res.status).toBe(HttpStatus.OK);
     expect(Array.isArray(res.response)).toBe(true);
   });
@@ -2271,8 +2271,10 @@ describe('ResultsService (unit, pure mocks)', () => {
 
   describe('getResultDataForBasicReport', () => {
     it('should return result data for basic report successfully', async () => {
-      const initDate = new Date('2024-01-01');
-      const endDate = new Date('2024-12-31');
+      const body = {
+        initDate: '2024-01-01',
+        endDate: '2024-12-31',
+      };
       const mockData = [
         { id: 1, title: 'Result 1', created_date: '2024-06-01' },
         { id: 2, title: 'Result 2', created_date: '2024-07-01' },
@@ -2281,10 +2283,7 @@ describe('ResultsService (unit, pure mocks)', () => {
         mockResultRepository.getResultDataForBasicReport as jest.Mock
       ).mockResolvedValueOnce(mockData);
 
-      const res = await resultService.getResultDataForBasicReport(
-        initDate,
-        endDate,
-      );
+      const res = await resultService.getResultDataForBasicReport(body);
       expect((res as returnFormatService).status).toBe(HttpStatus.OK);
       expect((res as returnFormatService).response).toEqual(mockData);
     });

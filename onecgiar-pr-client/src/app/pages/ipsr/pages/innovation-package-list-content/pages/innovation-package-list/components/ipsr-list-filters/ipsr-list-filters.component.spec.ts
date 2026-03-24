@@ -106,7 +106,7 @@ describe('IpsrListFiltersComponent', () => {
 
     expect(exportTablesServiceSpy).toHaveBeenCalledWith([], 'IPSR_results_list', wscols, undefined, true);
     expect(component.isLoadingReport).toBeFalsy();
-    expect(apiServiceSpy).toHaveBeenCalledWith('2022-12-01', inits, phases, searchText);
+    expect(apiServiceSpy).toHaveBeenCalledWith({ inits, phases, searchText });
   });
 
   it('should log error and set isLoadingReport to false when onDownLoadTableAsExcel encounters an error', () => {
@@ -125,6 +125,6 @@ describe('IpsrListFiltersComponent', () => {
 
     expect(consoleErrorSpy).toHaveBeenCalledWith('error');
     expect(component.isLoadingReport).toBeFalsy();
-    expect(apiServiceSpy).toHaveBeenCalledWith('2022-12-01', inits, phases, searchText);
+    expect(apiServiceSpy).toHaveBeenCalledWith({ inits, phases, searchText });
   });
 });

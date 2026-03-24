@@ -7,6 +7,7 @@ import { ResultFrameworkReportingRecentItemComponent } from './components/result
 import { ResultFrameworkReportingHomeService } from './services/result-framework-reporting-home.service';
 import { SkeletonModule } from 'primeng/skeleton';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
+import { AlertGlobalInfoModule } from '../../../../shared/components/alert-global-info/alert-global-info.module';
 
 @Component({
   selector: 'app-result-framework-reporting-home',
@@ -16,7 +17,8 @@ import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.modu
     ResultFrameworkReportingCardItemComponent,
     ResultFrameworkReportingRecentItemComponent,
     SkeletonModule,
-    CustomFieldsModule
+    CustomFieldsModule,
+    AlertGlobalInfoModule
   ],
   templateUrl: './result-framework-reporting-home.component.html',
   styleUrl: './result-framework-reporting-home.component.scss',

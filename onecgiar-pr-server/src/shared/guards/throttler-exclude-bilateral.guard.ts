@@ -10,7 +10,9 @@ const BILATERAL_PATH_PREFIX = '/api/bilateral';
  */
 export class ThrottlerExcludeBilateralGuard extends ThrottlerGuard {
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest<{ path?: string; url?: string }>();
+    const request = context
+      .switchToHttp()
+      .getRequest<{ path?: string; url?: string }>();
     const path = request.path ?? request.url?.split('?')[0] ?? '';
     if (path.startsWith(BILATERAL_PATH_PREFIX)) {
       return true;

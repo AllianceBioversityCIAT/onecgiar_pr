@@ -21,9 +21,11 @@ import { ReviewDecisionDto } from './dto/review-decision.dto';
 import { ReviewUpdateDto } from './dto/review-update.dto';
 import { UpdateTocMetadataDto } from './dto/update-toc-metadata.dto';
 import { UpdateResultTitleDto } from './dto/update-result-title.dto';
+import { BasicReportFiltersDto } from './dto/basic-report-filters.dto';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 import {
   ApiBody,
+  ApiBadRequestResponse,
   ApiCreatedResponse,
   ApiOkResponse,
   ApiOperation,
@@ -457,20 +459,59 @@ export class ResultsController {
     return this.resultsService.transformResultCode(resultCode, +phase);
   }
 
-  @Get('get/reporting/list/date/:initDate/:lastDate')
+  @Post('get/reporting/list')
   @ApiOperation({
-    summary: 'Get basic reporting data by date range',
-    description:
-      'Returns the dataset used by the basic report within the provided date range.',
+    summary: 'Get basic reporting data for Excel report',
+    description: `Returns the dataset used to generate the basic Excel report. All filters are optional; when omitted, results are not restricted by that criterion.
+    **Filters:**
+    - **initDate / endDate**: Filter by result creation date (YYYY-MM-DD). If both are sent, initDate must be ≤ endDate.
+    - **phases**: Filter by reporting phase (version.id).
+    - **searchText**: Full-text search in result title and result_code.
+    - **inits**: Filter by initiatives (id and/or official_code).
+    - **indicatorCategories**: Filter by result type / indicator category (result_type.id).
+    - **status**: Filter by result status (result_status_id).
+    - **clarisaPortfolios**: Filter by portfolio (version.portfolio_id).
+    - **fundingSource**: W1/W2 → \`Result\`, W3/Bilateral → \`API\` (result.source).
+    - **leadCenters**: Filter by lead center (results_center with is_leading_result = 1).
+
+    Response: \`{ response: <array of report rows>, message, status }\`.`,
   })
-  @ApiParam({ name: 'initDate', type: String, required: true })
-  @ApiParam({ name: 'lastDate', type: String, required: true })
-  @ApiOkResponse({ description: 'Reporting data retrieved.' })
-  getResultDataForBasicReport(
-    @Param('initDate') initDate: Date,
-    @Param('lastDate') lastDate: Date,
-  ) {
-    return this.resultsService.getResultDataForBasicReport(initDate, lastDate);
+  @ApiBody({
+    type: BasicReportFiltersDto,
+    description:
+      'Filter set for the report. Send an empty object {} to retrieve all results (subject to active and result_type_id exclusions).',
+    examples: {
+      dateRangeOnly: {
+        summary: 'Date range only',
+        value: { initDate: '2024-01-01', endDate: '2024-12-31' },
+      },
+      fullFilters: {
+        summary: 'With multiple filters',
+        value: {
+          initDate: '2024-01-01',
+          endDate: '2024-12-31',
+          phases: [{ id: 34 }],
+          searchText: 'breeding',
+          inits: [{ id: 50 }, { official_code: 'SP03' }],
+          indicatorCategories: [{ id: 7 }],
+          status: [{ status_id: 1 }],
+          clarisaPortfolios: [{ id: 3 }],
+          fundingSource: [{ name: 'W1/W2' }],
+          leadCenters: [{ code: 'CENTER-02' }],
+        },
+      },
+    },
+  })
+  @ApiOkResponse({
+    description:
+      'Reporting data retrieved. Response body contains `response` (array of report rows), `message`, and `status`.',
+  })
+  @ApiBadRequestResponse({
+    description:
+      'Validation error (e.g. invalid date format or initDate > endDate).',
+  })
+  getResultDataForBasicReport(@Body() body: BasicReportFiltersDto) {
+    return this.resultsService.getResultDataForBasicReport(body);
   }
 
   @Post('create/version/:resultId')

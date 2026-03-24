@@ -198,7 +198,7 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   });
 
   pushSelectedOptions() {
-    this.allTabsCreated.forEach(tab => {
+    this.allTabsCreated?.forEach(tab => {
       if (tab?.toc_level_id === 1) {
         this.validateSelectedOptionOutPut(tab);
       }

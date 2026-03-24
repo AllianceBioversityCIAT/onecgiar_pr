@@ -1,10 +1,9 @@
-import { Component, computed, forwardRef, inject, Input, signal } from '@angular/core';
+import { Component, computed, forwardRef, inject, Input } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { WordCounterService } from '../../shared/services/word-counter.service';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { DataControlService } from '../../shared/services/data-control.service';
 import { FieldsManagerService } from '../../shared/services/fields-manager.service';
-import { CustomField } from '../../shared/interfaces/customField.interface';
 @Component({
   selector: 'app-pr-textarea',
   templateUrl: './pr-textarea.component.html',

@@ -325,6 +325,11 @@ export class ContributorsPartnersService {
         messages.push('Innovation linkage updated.');
       }
 
+      await this._resultRepository.update(resultId, {
+        last_updated_by: user.id,
+        last_updated_date: new Date(),
+      });
+
       const status = statuses.length
         ? statuses.reduce((max, curr) => (curr > max ? curr : max), statuses[0])
         : HttpStatus.OK;

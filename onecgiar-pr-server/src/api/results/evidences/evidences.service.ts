@@ -215,6 +215,12 @@ export class EvidencesService {
         }
         await this._evidencesRepository.save(newsEvidencesArray);
       }
+
+      await this._resultRepository.update(createEvidenceDto.result_id, {
+        last_updated_by: user.id,
+        last_updated_date: new Date(),
+      });
+
       return {
         response: createEvidenceDto,
         message: 'The data was updated correctly',
@@ -688,7 +694,7 @@ export class EvidencesService {
     user: TokenDto,
   ): Promise<void> {
     for (const existingEvidence of existingEvidences) {
-      if (!payloadEvidenceIds.includes(existingEvidence.id)) {
+      if (!payloadEvidenceIds.includes(Number(existingEvidence.id))) {
         existingEvidence.is_active = 0;
         existingEvidence.last_updated_by = user.id;
         await this._evidencesRepository.save(existingEvidence);

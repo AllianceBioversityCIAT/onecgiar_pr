@@ -234,6 +234,14 @@ export class VersioningService {
         });
       }
 
+      // Preserve original result_code so the new phase keeps the same reference (trigger may have assigned a new one).
+      await manager.update(
+        Result,
+        { id: dataResult.id },
+        { result_code: result.result_code },
+      );
+      dataResult.result_code = result.result_code;
+
       const config = {
         old_result_id: result.id,
         new_result_id: dataResult.id,
@@ -377,6 +385,14 @@ export class VersioningService {
           response: null,
         });
       }
+
+      // Preserve original result_code so the new phase keeps the same reference (trigger may have assigned a new one).
+      await manager.update(
+        Result,
+        { id: dataResult.id },
+        { result_code: result.result_code },
+      );
+      dataResult.result_code = result.result_code;
 
       const config = {
         old_result_id: result.id,

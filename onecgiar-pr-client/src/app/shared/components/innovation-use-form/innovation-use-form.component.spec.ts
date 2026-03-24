@@ -173,14 +173,16 @@ describe('InnovationUseFormComponent', () => {
     expect(actorItem.how_many).toBe(20);
   });
 
-  it('should reload the select correctly', fakeAsync(() => {
-    const organizationItem = { hide: false, institution_sub_type_id: 1 } as any;
+  it('should reload the select correctly', () => {
+    const organizationItem = { hide: false, institution_sub_type_id: 123 };
+    const detectChangesSpy = jest.spyOn(component['cdr'], 'detectChanges');
+
     component.reloadSelect(organizationItem);
-    expect(organizationItem.hide).toBe(true);
+
     expect(organizationItem.institution_sub_type_id).toBeNull();
-    tick(300);
-    expect(organizationItem.hide).toBe(false);
-  }));
+    expect(organizationItem.hide).toBeFalsy();
+    expect(detectChangesSpy).toHaveBeenCalledTimes(1);
+  });
 
   it('should get all sub types correctly', () => {
     component.body.innovatonUse.organization = [{ institution_sub_type_id: 1 }, { institution_sub_type_id: 2 }] as Organization[];

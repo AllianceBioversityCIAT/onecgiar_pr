@@ -86,8 +86,7 @@
     placeholder="Contact persons info goes here..."
     [required]="false"
     label="Innovation collaborators"
-    description="Provide the full name(s), email address and organizational affiliation(s)  of other CGIAR and/or partner colleagues that contribute to this innovation
-        Names of key contributors will feature as co-authors on the Innovation Profile document in the same order as provided below."
+    [description]="collaboratorsDescription()"
     [(ngModel)]="innovationDevInfoBody.innovation_collaborators">
   </app-pr-textarea>
 

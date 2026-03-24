@@ -1,4 +1,4 @@
-import { Component, effect } from '@angular/core';
+import { Component, computed, effect } from '@angular/core';
 import { InnovationDevInfoBody } from './model/innovationDevInfoBody';
 import { InnovationControlListService } from '../../../../../../../shared/services/global/innovation-control-list.service';
 import { ApiService } from '../../../../../../../shared/services/api/api.service';
@@ -39,6 +39,16 @@ export class InnovationDevInfoComponent {
     if (this.dataControlSE.currentResultSignal()?.portfolio !== undefined) {
       this.fieldsManagerSE.isP25() ? this.getSectionInformationp25() : this.getSectionInformation();
     }
+  });
+
+  collaboratorsDescription = computed(() => {
+    return `Provide the full name(s), email address and organizational affiliation(s)  of other CGIAR and/or partner colleagues that contribute to this innovation
+        Names of key contributors will feature as co-authors on the Innovation Profile document in the same order as provided below. <br>
+        <br>
+        <b>Standard format for entering collaborators:</b> <br>
+        Please enter each collaborator using the following format: Collaborator Name (email address).
+        If you register more than one collaborator, separate them using a semicolon (;).<br><br>
+        <b>Example:</b> Michael Thompson (m.thompson@innovationlab.org); Aisha Rahman (a.rahman@globalresearch.net)`;
   });
 
   getSectionInformationp25(): void {

@@ -280,6 +280,12 @@ export class InnovationUseService {
           user,
         );
       }
+
+      await this._resultRepository.update(resultId, {
+        last_updated_by: user.id,
+        last_updated_date: new Date(),
+      });
+
       return {
         response: InnUseRes,
         message: 'Results Innovations Use has been saved successfully',

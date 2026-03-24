@@ -154,15 +154,14 @@ describe('StepN1InnovatonUseComponent', () => {
   });
 
   it('should hide and show organizationItem after a delay', () => {
-    const organizationItem = { hide: false };
+    const organizationItem = { hide: false, institution_sub_type_id: 123 };
+    const detectChangesSpy = jest.spyOn(component['cdr'], 'detectChanges');
 
     component.reloadSelect(organizationItem);
 
-    expect(organizationItem.hide).toBe(true);
-
-    setTimeout(() => {
-      expect(organizationItem.hide).toBe(false);
-    }, 300);
+    expect(organizationItem.institution_sub_type_id).toBeNull();
+    expect(organizationItem.hide).toBeFalsy();
+    expect(detectChangesSpy).toHaveBeenCalledTimes(1);
   });
 
   it('should add a new actor to body.innovatonUse.actors', () => {
