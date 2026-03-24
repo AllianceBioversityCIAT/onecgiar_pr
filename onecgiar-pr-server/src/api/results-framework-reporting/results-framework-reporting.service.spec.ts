@@ -1375,6 +1375,15 @@ describe('ResultsFrameworkReportingService', () => {
             status_id: 2,
             obj_status: { status_name: 'Submitted' },
           },
+          obj_results_toc_result_indicators: [
+            {
+              toc_results_indicator_id: 'IND-55',
+              obj_result_indicator_targets: [
+                { contributing_indicator: 2.5, is_active: true },
+                { contributing_indicator: 1, is_active: true },
+              ],
+            },
+          ],
         },
         {
           result_toc_result_id: 12,
@@ -1447,6 +1456,7 @@ describe('ResultsFrameworkReportingService', () => {
           version_id: 30,
           status_id: 2,
           role_id: 4,
+          contributing_indicator: 3.5,
         },
       ]);
       expect(mockHandlersError.returnErrorRes).not.toHaveBeenCalled();
@@ -1504,6 +1514,7 @@ describe('ResultsFrameworkReportingService', () => {
           title: 'Result Delta',
           result_code: 'RES-501',
           version_id: 10,
+          contributing_indicator: null,
         }),
       ]);
       expect(mockHandlersError.returnErrorRes).not.toHaveBeenCalled();

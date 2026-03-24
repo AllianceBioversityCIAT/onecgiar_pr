@@ -1327,6 +1327,10 @@ export class ResultsFrameworkReportingService {
           version_id: contrib.obj_results?.version_id,
           status_id: +contrib.obj_results?.status_id,
           role_id: finalRoleId,
+          contributing_indicator: this.sumContributingIndicatorForTocIndicator(
+            contrib,
+            tocResultIndicatorId,
+          ),
         };
       });
 
@@ -1342,6 +1346,47 @@ export class ResultsFrameworkReportingService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  /**
+   * Sums `contributing_indicator` from active `result_indicators_targets` for the
+   * selected toc indicator on this results_toc_result row.
+   */
+  private sumContributingIndicatorForTocIndicator(
+    contrib: {
+      obj_results_toc_result_indicators?: Array<{
+        toc_results_indicator_id?: string;
+        obj_result_indicator_targets?: Array<{
+          contributing_indicator?: string | number | null;
+          is_active?: boolean;
+        }>;
+      }>;
+    },
+    tocResultIndicatorId: string,
+  ): number | null {
+    const wanted = `${tocResultIndicatorId}`.trim();
+    const indicators = contrib.obj_results_toc_result_indicators ?? [];
+    const indicator = indicators.find(
+      (i) => String(i?.toc_results_indicator_id ?? '').trim() === wanted,
+    );
+    const targets = indicator?.obj_result_indicator_targets ?? [];
+    let sum = 0;
+    let hasFinite = false;
+    for (const t of targets) {
+      if (t?.is_active === false) {
+        continue;
+      }
+      const raw = t?.contributing_indicator;
+      if (raw === null || raw === undefined) {
+        continue;
+      }
+      const n = Number(raw);
+      if (Number.isFinite(n)) {
+        sum += n;
+        hasFinite = true;
+      }
+    }
+    return hasFinite ? sum : null;
   }
 
   private async getResultsCountByUnitAndStatus(
