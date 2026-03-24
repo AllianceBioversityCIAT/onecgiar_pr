@@ -85,6 +85,7 @@ export class PhaseDetailComponent implements OnInit {
     this.sciencePrograms.update(p => [...p]);
     this.api.resultsSE.PATCH_phaseReportingInitiativeToggle(this.phaseId, program.id, { reporting_enabled: program.reporting_enabled }).subscribe({
       next: () => {
+        this.api.dataControlSE.notifyReportingStatusChanged();
         this.customizedAlertsFeSE.show({
           id: 'sp-toggle',
           title: `${program.official_code} ${program.reporting_enabled ? 'opened' : 'closed'}`,
@@ -115,6 +116,7 @@ export class PhaseDetailComponent implements OnInit {
           next: (res) => {
             this.sciencePrograms.set(res.response);
             this.isBulkUpdating.set(false);
+            this.api.dataControlSE.notifyReportingStatusChanged();
             this.customizedAlertsFeSE.show({ id: 'sp-bulk', title: 'All programs opened', status: 'success', closeIn: 500 });
           },
           error: () => {
@@ -141,6 +143,7 @@ export class PhaseDetailComponent implements OnInit {
           next: (res) => {
             this.sciencePrograms.set(res.response);
             this.isBulkUpdating.set(false);
+            this.api.dataControlSE.notifyReportingStatusChanged();
             this.customizedAlertsFeSE.show({ id: 'sp-bulk', title: 'All programs closed', status: 'success', closeIn: 500 });
           },
           error: () => {

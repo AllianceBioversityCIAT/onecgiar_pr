@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, effect, OnDestroy, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
 import { IpsrListService } from './services/ipsr-list.service';
@@ -21,7 +21,14 @@ export class InnovationPackageListComponent implements OnInit, OnDestroy {
     public ipsrDataControlSE: IpsrDataControlService,
     public ipsrListService: IpsrListService,
     public ipsrListFilterSE: IpsrListFilterService
-  ) {}
+  ) {
+    effect(() => {
+      const version = this.api.dataControlSE.reportingStatusVersion();
+      if (version > 0) {
+        this.checkIpsrReportingAccess();
+      }
+    });
+  }
 
   ngOnInit(): void {
     if (this.api.rolesSE.isAdmin) {
