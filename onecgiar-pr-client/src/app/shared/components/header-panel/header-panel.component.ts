@@ -1,4 +1,4 @@
-import { Component, computed, OnInit } from '@angular/core';
+import { Component, computed, effect, OnInit } from '@angular/core';
 import { internationalizationData } from '../../data/internationalization-data';
 import { ApiService } from '../../services/api/api.service';
 import { DataControlService } from '../../services/data-control.service';
@@ -42,7 +42,14 @@ export class HeaderPanelComponent implements OnInit {
     public globalLinksSE: GlobalLinksService,
     public router: Router,
     public resultsNotificationsSE: ResultsNotificationsService
-  ) {}
+  ) {
+    effect(() => {
+      const version = this.dataControlSE.reportingStatusVersion();
+      if (version > 0) {
+        this.loadReportingAccessStatus();
+      }
+    });
+  }
 
   ngOnInit(): void {
     this.api.updateUserData(() => {

@@ -41,6 +41,11 @@ export class DataControlService {
   massivePhaseShiftIsRunning = false;
   tocUrl = environment?.tocUrl;
   reportingCurrentPhase = { phaseName: null, phaseYear: null, phaseId: null, portfolioAcronym: null, portfolioId: null };
+  reportingStatusVersion = signal(0);
+
+  notifyReportingStatusChanged(): void {
+    this.reportingStatusVersion.update(v => v + 1);
+  }
   previousReportingPhase = { phaseName: null, phaseYear: null, phaseId: null };
   IPSRCurrentPhase = { phaseName: null, phaseYear: null, phaseId: null, portfolioAcronym: null };
   previousIPSRPhase = { phaseName: null, phaseYear: null };
