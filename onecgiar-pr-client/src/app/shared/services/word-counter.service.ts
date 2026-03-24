@@ -13,7 +13,7 @@ export class WordCounterService {
       const splitWords = textReplaced.split(' ');
       if (splitWords.length) {
         wordCount = 0;
-        splitWords.map(item => {
+        splitWords.forEach(item => {
           if (item === '' || item === '\n' || item === '\t') return;
           wordCount++;
         });
