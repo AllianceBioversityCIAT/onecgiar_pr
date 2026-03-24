@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { PrInputComponent } from './pr-input.component';
-import { HttpClientModule } from '@angular/common/http';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { PrFieldHeaderComponent } from '../pr-field-header/pr-field-header.component';
 import { PrFieldValidationsComponent } from '../pr-field-validations/pr-field-validations.component';
 import { YesOrNotByBooleanPipe } from '../pipes/yes-or-not-by-boolean.pipe';
@@ -13,7 +13,7 @@ describe('PrInputComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [PrInputComponent, PrFieldHeaderComponent, PrFieldValidationsComponent, YesOrNotByBooleanPipe],
-      imports: [HttpClientModule]
+      imports: [HttpClientTestingModule]
     }).compileComponents();
 
     fixture = TestBed.createComponent(PrInputComponent);
