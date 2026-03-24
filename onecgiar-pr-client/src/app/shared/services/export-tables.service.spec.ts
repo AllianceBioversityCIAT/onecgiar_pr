@@ -432,12 +432,12 @@ describe('ExportTablesService', () => {
       const list = [
         {
           kp_title: 'Test KP 1',
-          kp_handle: 'http://example.com/kp1',
+          kp_handle: 'https://example.com/kp1',
           kp_type: 'Type A'
         },
         {
           kp_title: 'Test KP 2',
-          kp_handle: 'http://example.com/kp2',
+          kp_handle: 'https://example.com/kp2',
           kp_type: 'Type B'
         }
       ];
@@ -485,12 +485,12 @@ describe('ExportTablesService', () => {
       const list = [
         {
           name: 'Test 1',
-          url: 'http://example.com/1',
+          url: 'https://example.com/1',
           description: 'Description 1'
         },
         {
           name: 'Test 2',
-          url: 'http://example.com/2',
+          url: 'https://example.com/2',
           description: null
         }
       ];
@@ -1214,8 +1214,8 @@ describe('ExportTablesService', () => {
   describe('exportExcelMultipleSheets with cellsToLink', () => {
     it('should apply hyperlinks when cellsToLink is provided', async () => {
       const sheetsData = {
-        'Sheet1': [{ name: 'Test', url: 'http://example.com' }],
-        'Sheet2': [{ name: 'Test2', url: 'http://example2.com' }]
+        'Sheet1': [{ name: 'Test', url: 'https://example.com' }],
+        'Sheet2': [{ name: 'Test2', url: 'https://example2.com' }]
       };
       const wscols = [{ header: 'Name', key: 'name' }, { header: 'URL', key: 'url' }];
       const cellsToLink = [{ cellNumber: 2, cellKey: 'url' }];
@@ -1305,8 +1305,8 @@ describe('ExportTablesService', () => {
       const list = [
         {
           title: 'IPSR Test',
-          link_core_innovation: 'http://innovation.example.com',
-          link_to_pdf: 'http://pdf.example.com'
+          link_core_innovation: 'https://innovation.example.com',
+          link_to_pdf: 'https://pdf.example.com'
         }
       ];
       const fileName = 'ipsr_data';
@@ -1326,7 +1326,7 @@ describe('ExportTablesService', () => {
     });
 
     it('should handle exportExcelIpsr without wscols', async () => {
-      const list = [{ title: 'Test', link_core_innovation: 'http://test.com', link_to_pdf: 'http://pdf.com' }];
+      const list = [{ title: 'Test', link_core_innovation: 'https://test.com', link_to_pdf: 'https://pdf.com' }];
       const callback = jest.fn();
 
       const saveAsExcelFileMock = jest.spyOn(service, 'saveAsExcelFile' as keyof ExportTablesService).mockImplementation();
@@ -1343,7 +1343,7 @@ describe('ExportTablesService', () => {
   describe('exportExcelAdminKP with data rows and formatting', () => {
     it('should format admin KP without wscols', async () => {
       const list = [
-        { kp_title: 'Test KP', kp_handle: 'http://example.com/kp' }
+        { kp_title: 'Test KP', kp_handle: 'https://example.com/kp' }
       ];
       const callback = jest.fn();
 
