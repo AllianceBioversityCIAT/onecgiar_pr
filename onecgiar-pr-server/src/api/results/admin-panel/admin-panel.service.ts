@@ -606,7 +606,7 @@ export class AdminPanelService implements OnModuleInit {
       );
       const science_programs = initiatives.map((ci, idx) => {
         const override = accessMap.get(ci.id);
-        const reporting_enabled = override !== undefined ? override : true;
+        const reporting_enabled = override ?? true;
         return {
           id: ci.id,
           official_code: ci.official_code,
@@ -769,17 +769,15 @@ export class AdminPanelService implements OnModuleInit {
         await this._phaseInitiativeReportingRepo.delete({
           version_id: phaseId,
         });
-      } else {
-        if (ids.length) {
-          await this._phaseInitiativeReportingRepo.upsert(
-            ids.map((initiative_id) => ({
-              version_id: phaseId,
-              initiative_id,
-              reporting_enabled: false,
-            })),
-            { conflictPaths: ['version_id', 'initiative_id'] },
-          );
-        }
+      } else if (ids.length) {
+        await this._phaseInitiativeReportingRepo.upsert(
+          ids.map((initiative_id) => ({
+            version_id: phaseId,
+            initiative_id,
+            reporting_enabled: false,
+          })),
+          { conflictPaths: ['version_id', 'initiative_id'] },
+        );
       }
       const accessRows = await this._phaseInitiativeReportingRepo.find({
         where: { version_id: phaseId },
