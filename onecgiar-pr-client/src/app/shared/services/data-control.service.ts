@@ -41,8 +41,13 @@ export class DataControlService {
   massivePhaseShiftIsRunning = false;
   tocUrl = environment?.tocUrl;
   reportingCurrentPhase = { phaseName: null, phaseYear: null, phaseId: null, portfolioAcronym: null, portfolioId: null };
+  reportingStatusVersion = signal(0);
+
+  notifyReportingStatusChanged(): void {
+    this.reportingStatusVersion.update(v => v + 1);
+  }
   previousReportingPhase = { phaseName: null, phaseYear: null, phaseId: null };
-  IPSRCurrentPhase = { phaseName: null, phaseYear: null, portfolioAcronym: null };
+  IPSRCurrentPhase = { phaseName: null, phaseYear: null, phaseId: null, portfolioAcronym: null };
   previousIPSRPhase = { phaseName: null, phaseYear: null };
 
   constructor(
@@ -77,6 +82,7 @@ export class DataControlService {
       tap(({ response }) => {
         this.IPSRCurrentPhase.phaseYear = response[0]?.phase_year;
         this.IPSRCurrentPhase.phaseName = response[0]?.phase_name;
+        this.IPSRCurrentPhase.phaseId = response[0]?.id;
         this.IPSRCurrentPhase.portfolioAcronym = response[0]?.obj_portfolio?.acronym;
 
         if (response[0]?.obj_previous_phase) {

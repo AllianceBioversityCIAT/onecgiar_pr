@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, OnInit, WritableSignal, computed, effect, inject, signal } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, OnInit, Output, WritableSignal, computed, effect, inject, signal } from '@angular/core';
 import { MappedResultsModalServiceService } from '../mapped-results-modal/mapped-results-modal-service.service';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 import { TocInitiativeOutcomeListsService } from '../../../../../rd-theory-of-change/components/toc-initiative-outcome-section/services/toc-initiative-outcome-lists.service';
@@ -45,6 +45,7 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   @Input() selectedOptionsOutput = [];
   @Input() selectedOptionsOutcome = [];
   @Input() selectedOptionsEOI = [];
+  @Output() tocResultChanged = new EventEmitter<void>();
   reusltlevelSE = inject(ResultLevelService);
   fieldsManagerSE = inject(FieldsManagerService);
   resultLevelIdSignal = signal<number | string | undefined>(undefined);

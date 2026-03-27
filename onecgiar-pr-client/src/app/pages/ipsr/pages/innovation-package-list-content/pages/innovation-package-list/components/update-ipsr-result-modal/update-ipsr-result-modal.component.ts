@@ -11,6 +11,7 @@ import { ApiService } from '../../../../../../../../shared/services/api/api.serv
 })
 export class UpdateIpsrResultModalComponent {
   text_to_search = '';
+  closedCodes = new Set<string>();
 
   columnOrder = [
     { title: 'Result code', attr: 'result_code' },
@@ -22,7 +23,31 @@ export class UpdateIpsrResultModalComponent {
     { title: 'Created by', attr: 'created_by' }
   ];
 
-  constructor(public api: ApiService, public ipsrDataControlSE: IpsrDataControlService, private retrieveModalSE: RetrieveModalService) {}
+  constructor(public api: ApiService, public ipsrDataControlSE: IpsrDataControlService, private retrieveModalSE: RetrieveModalService) {
+    this.loadClosedCodes();
+  }
+
+  private loadClosedCodes(): void {
+    const phaseId = this.api.dataControlSE.reportingCurrentPhase.phaseId;
+    if (!phaseId || this.api.rolesSE.isAdmin) return;
+
+    this.api.resultsSE.GET_phaseReportingInitiatives(phaseId).subscribe({
+      next: (res) => {
+        const programs: any[] = res.response?.science_programs || [];
+        programs.filter(p => !p.reporting_enabled).forEach(p => this.closedCodes.add(p.official_code));
+      }
+    });
+  }
+
+  isUpdateDisabled(result: any): boolean {
+    return result.result_type_id === 3 || this.closedCodes.has(result.official_code);
+  }
+
+  getUpdateTooltip(result: any): string | null {
+    if (result.result_type_id === 3) return 'This functionality is not available for capacity change result types.';
+    if (this.closedCodes.has(result.official_code)) return 'Reporting is closed for this Science Program.';
+    return null;
+  }
 
   onPressAction(result) {
     this.retrieveModalSE.title = result?.title;
