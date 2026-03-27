@@ -213,6 +213,34 @@ export class ResultsService {
     private readonly _shareResultRequestRepository?: ShareResultRequestRepository,
   ) {}
 
+  /**
+   * Blocks duplicate titles among active results. When updating general information,
+   * pass excludeResultId so the same result can keep its title.
+   */
+  private async assertUniqueActiveResultTitle(
+    rawTitle: string | undefined,
+    excludeResultId?: number,
+  ): Promise<string> {
+    const trimmed = (rawTitle ?? '').trim();
+    if (!trimmed) {
+      return '';
+    }
+    const existing = await this._resultRepository.findOne({
+      where: { title: trimmed, is_active: true },
+    });
+    if (
+      existing?.id &&
+      (excludeResultId === undefined || existing.id !== excludeResultId)
+    ) {
+      throw {
+        response: {},
+        message: 'A result with this title already exists.',
+        status: HttpStatus.CONFLICT,
+      };
+    }
+    return trimmed;
+  }
+
   async createOwnerResult(
     createResultDto: CreateResultDto,
     user: TokenDto,
@@ -311,6 +339,10 @@ export class ResultsService {
         };
       }
 
+      const trimmedCreateTitle = await this.assertUniqueActiveResultTitle(
+        createResultDto.result_name,
+      );
+
       const last_code = await this._resultRepository.getLastResultCode();
       const saveResult: Partial<Result> = {
         created_by: user.id,
@@ -320,7 +352,10 @@ export class ResultsService {
           isAdmin != undefined && Boolean(isAdmin) && versionId
             ? versionId
             : version.id,
-        title: createResultDto.result_name,
+        title:
+          trimmedCreateTitle.length > 0
+            ? trimmedCreateTitle
+            : createResultDto.result_name,
         reported_year_id: year.year,
         result_level_id: rl.id,
         result_code: last_code + 1,
@@ -745,10 +780,18 @@ export class ResultsService {
         );
       }
 
+      const trimmedGeneralTitle = await this.assertUniqueActiveResultTitle(
+        resultGeneralInformation.result_name,
+        result.id,
+      );
+
       const updateResult = await this._resultRepository.save({
         id: result.id,
         is_discontinued: resultGeneralInformation?.is_discontinued,
-        title: resultGeneralInformation.result_name,
+        title:
+          trimmedGeneralTitle.length > 0
+            ? trimmedGeneralTitle
+            : resultGeneralInformation.result_name,
         result_type_id: resultByLevel.result_type_id,
         result_level_id: resultByLevel.result_level_id,
         description: resultGeneralInformation.result_description,
