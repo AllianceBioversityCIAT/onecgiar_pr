@@ -1,0 +1,144 @@
+<div class="phase-detail">
+  <!-- Back link -->
+  <a class="back-link" (click)="goBack()">
+    <i class="material-icons-round">arrow_back</i>
+    Back to Phases
+  </a>
+
+  @if (isLoading()) {
+    <div class="loading-container">
+      <i class="material-icons-round spin">autorenew</i>
+      Loading phase details...
+    </div>
+  } @else if (phaseDetail()) {
+    <!-- Phase Header Card -->
+    <div class="phase-header-card">
+      <div class="phase-header-card__top">
+        <div class="phase-header-card__info">
+          <h1 class="phase-header-card__title">{{ phaseDetail().phase_name }}</h1>
+
+          <div class="phase-header-card__fields">
+            <div class="phase-header-card__field">
+              <span class="phase-header-card__field-label">Reporting Year</span>
+              <span class="phase-header-card__field-value">{{ phaseDetail().phase_year }}</span>
+            </div>
+
+            <div class="phase-header-card__field">
+              <span class="phase-header-card__field-label">Current Phase Status</span>
+              <div class="tag_container" [ngClass]="phaseDetail().status ? 'open' : 'closed'">
+                {{ phaseDetail().status ? 'Open' : 'Closed' }}
+              </div>
+            </div>
+
+            <div class="phase-header-card__field">
+              <span class="phase-header-card__field-label">Start Date</span>
+              <span class="phase-header-card__field-value">{{ phaseDetail().start_date | date:'yyyy-MM-dd' }}</span>
+            </div>
+
+            <div class="phase-header-card__field">
+              <span class="phase-header-card__field-label">End Date</span>
+              <span class="phase-header-card__field-value">{{ phaseDetail().end_date | date:'yyyy-MM-dd' }}</span>
+            </div>
+          </div>
+
+          <div class="phase-header-card__field" style="margin-top: 12px;">
+            <span class="phase-header-card__field-label">Portfolio</span>
+            <span class="phase-header-card__field-value">{{ phaseDetail().portfolio.name }}</span>
+          </div>
+        </div>
+
+        <div class="phase-header-card__badge">
+          {{ openCount() }} of {{ totalCount() }} Science Programs Open
+        </div>
+      </div>
+    </div>
+
+    <!-- Science Program Access Control -->
+    <div class="access-control-card">
+      <h2 class="access-control-card__title">Science Program Access Control</h2>
+
+      <div class="access-control-card__toolbar">
+        <div class="access-control-card__actions">
+          <button
+            class="btn btn--open"
+            [disabled]="!phaseDetail().status || isBulkUpdating() || openCount() === totalCount()"
+            (click)="openAll()">
+            Open for All Science Programs
+          </button>
+          <button
+            class="btn btn--close"
+            [disabled]="!phaseDetail().status || isBulkUpdating() || openCount() === 0"
+            (click)="closeAll()">
+            Close for All Science Programs
+          </button>
+        </div>
+
+        <div class="access-control-card__filters">
+          <div class="search-input">
+            <i class="material-icons-round">search</i>
+            <input
+              type="text"
+              placeholder="Search programs..."
+              [ngModel]="searchText()"
+              (ngModelChange)="searchText.set($event)" />
+          </div>
+
+          <select
+            class="category-select"
+            [ngModel]="selectedCategory()"
+            (ngModelChange)="selectedCategory.set($event)">
+            @for (cat of categories; track cat.value) {
+              <option [value]="cat.value">{{ cat.label }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <!-- Cards Grid -->
+      <div class="sp-grid">
+        @for (program of filteredPrograms(); track program.id) {
+          <div class="sp-card" [ngClass]="{ 'sp-card--disabled': !program.reporting_enabled }">
+            <div class="sp-card__top">
+              <div
+                class="sp-card__avatar"
+                [style.background-color]="program.color">
+                {{ getInitials(program.official_code) }}
+              </div>
+
+              <div class="sp-card__info">
+                <div class="sp-card__meta">
+                  <span class="sp-card__code">{{ program.official_code }}</span>
+                  <span class="sp-card__separator">-</span>
+                  <span class="sp-card__category">{{ program.category }}</span>
+                </div>
+                <h3 class="sp-card__name">{{ program.name }}</h3>
+              </div>
+            </div>
+
+            <div class="sp-card__bottom">
+              <div class="sp-card__toggle">
+                <p-inputSwitch
+                  [(ngModel)]="program.reporting_enabled"
+                  (ngModelChange)="onToggleProgram(program)"
+                  [disabled]="!phaseDetail().status"
+                  [pTooltip]="!phaseDetail().status ? 'Phase is closed' : program.reporting_enabled ? 'Click to close reporting' : 'Click to open reporting'"
+                  tooltipPosition="top">
+                </p-inputSwitch>
+                <span
+                  class="sp-card__status"
+                  [ngClass]="program.reporting_enabled ? 'sp-card__status--open' : 'sp-card__status--closed'">
+                  {{ program.reporting_enabled ? 'Open' : 'Closed' }}
+                </span>
+              </div>
+            </div>
+          </div>
+        } @empty {
+          <div class="sp-grid__empty">
+            <i class="material-icons-round">search_off</i>
+            <p>No programs match your search criteria.</p>
+          </div>
+        }
+      </div>
+    </div>
+  }
+</div>

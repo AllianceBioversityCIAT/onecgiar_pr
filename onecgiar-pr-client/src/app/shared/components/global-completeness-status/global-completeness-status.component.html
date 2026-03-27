@@ -1,110 +1,128 @@
-<div class="table_container" [ngClass]="{'expand_table': show_full_screen}">
-    <div class="first_options">
-
-        <div class="phases_selector">
-            <app-pr-multi-select (selectOptionEvent)="onSelectInit()" [options]="this.reportingPhases" [isStatic]="true"
-                [required]="false" optionLabel="phase_name_status" optionValue="id" placeholder="Select phase"
-                [(ngModel)]="phasesSelected">
-            </app-pr-multi-select>
-        </div>
-
-        <div class="initiatives_selector">
-
-            <app-pr-multi-select [isStatic]="true"
-                [options]="this.initMode ?(this.api.dataControlSE.myInitiativesList | filterInitWithRoleCoordAndLead):this.allInitiatives"
-                optionLabel="full_name" optionValue="id" (selectOptionEvent)="onSelectInit()" [required]="false"
-                (removeOptionEvent)="onRemoveinit($event)" selectedOptionLabel="full_name"
-                [(ngModel)]="this.initiativesSelected" [confirmDeletion]="true" placeholder="Select Initiative(s)">
-            </app-pr-multi-select>
-
-        </div>
-
-        <div class="search_input">
-            <i class="material-icons-round">search</i>
-            <input type="text" placeholder="Find result..." [(ngModel)]="this.textToFind">
-        </div>
-
-
+<div class="table_container" [ngClass]="{ expand_table: show_full_screen }">
+  <div class="first_options">
+    <div class="phases_selector">
+      <app-pr-multi-select
+        (selectOptionEvent)="onSelectInit()"
+        [options]="this.reportingPhases"
+        [isStatic]="true"
+        [required]="false"
+        optionLabel="phase_name_status"
+        optionValue="id"
+        placeholder="Select phase"
+        [(ngModel)]="phasesSelected">
+      </app-pr-multi-select>
     </div>
 
-    <div class="second_options">
-
-        <app-pr-button [text]="this.requesting?'Downloading .xlsx':'Download .xlsx'"
-            [ngClass]="{'globalDisabled': this.requesting}" [icon]="this.requesting?'loop':'file_download'"
-            [rotating]="this.requesting" (click)="exportExcel(resultsList)"></app-pr-button>
-        <app-pr-button [text]="show_full_screen?'Minimize':'Open in full screen'"
-            (click)="show_full_screen = !show_full_screen"
-            [icon]="show_full_screen?'close_fullscreen':'open_in_full'"></app-pr-button>
+    <div class="initiatives_selector">
+      <app-pr-multi-select
+        [isStatic]="true"
+        [options]="this.initMode ? (this.api.dataControlSE.myInitiativesList | filterInitWithRoleCoordAndLead) : this.allInitiatives"
+        optionLabel="full_name"
+        optionValue="id"
+        (selectOptionEvent)="onSelectInit()"
+        [required]="false"
+        (removeOptionEvent)="onRemoveinit($event)"
+        selectedOptionLabel="full_name"
+        [(ngModel)]="this.initiativesSelected"
+        [confirmDeletion]="true"
+        placeholder="Select entity(ies)">
+      </app-pr-multi-select>
     </div>
 
-    <p-table sortField="result_code" [sortOrder]="-1" [value]="this.resultsList | filterByText:this.textToFind"
-        [scrollable]="true" [paginator]="true" [rowsPerPageOptions]="[10,50,100]" [rows]="10"
-        scrollHeight="calc(100vh - 303px)" [style]="{'min-width': '200px', 'max-width': show_full_screen ? '100vw' : 'calc(100vw - 287px)'}" >
-        <ng-template pTemplate="header">
-            <tr>
-                <th [style.minWidth.px]="column.minWidth" *ngFor="let column of columnOrder"
-                    pSortableColumn="{{column.attr}}" id="{{column.attr}}">
-                    {{column.title}}<p-sortIcon *ngIf="!column.noSort" field="{{column.attr}}"></p-sortIcon>
-                </th>
-            </tr>
-        </ng-template>
-
-        <ng-template pTemplate="body" let-result>
-            <tr>
-                <td style="min-width:200px">{{result.result_code}}</td>
-                <td style="min-width:500px">{{result.result_title}}</td>
-                <td style="min-width:150px">{{result.phase_name}}</td>
-                <td style="min-width:150px">{{result.official_code}}</td>
-                <td style="min-width:180px">{{result.result_type_name}}</td>
-                <td style="min-width:150px">{{result.completeness}}%</td>
-                <td style="min-width:150px">{{result.is_submitted ?'Yes':'No'}}</td>
-                <td style="min-width:180px">
-                    <div style="z-index: 0" *ngIf="result?.have_a_history">
-                        <app-pr-button [ngClass]="{'globalDisabled': !result?.have_a_history}" text="See more"
-                            (click)="openInformationModal(result?.results_id)"></app-pr-button>
-                    </div>
-                    <div *ngIf="!result?.have_a_history" class="not_provided_text">
-                        There are no submissions yet
-                    </div>
-                </td>
-                <td>
-                    <div [class]="parseCheck(result?.general_information?.value)">
-                        {{parseCheck(result?.general_information?.value)}}</div>
-                </td>
-                <td>
-                    <div [class]="parseCheck(result?.theory_of_change?.value)">
-                        {{parseCheck(result?.theory_of_change?.value)}}</div>
-                </td>
-                <td>
-                    <div [class]="parseCheck(result?.partners?.value)">{{parseCheck(result?.partners?.value)}}</div>
-                </td>
-                <td>
-                    <div [class]="parseCheck(result?.geographic_location?.value)">
-                        {{parseCheck(result?.geographic_location?.value)}}</div>
-                </td>
-                <td>
-                    <div [class]="parseCheck(result?.links_to_results?.value)">
-                        {{parseCheck(result?.links_to_results?.value)}}</div>
-                </td>
-                <td>
-                    <div [class]="parseCheck(result?.evidence?.value)">{{parseCheck(result?.evidence?.value)}}</div>
-                </td>
-                <td>
-                    <div [class]="parseCheck(result?.section_seven?.value)"
-                        *ngIf="result?.section_seven?.value == 1 || result?.section_seven?.value == 0">
-                        {{parseCheck(result?.section_seven?.value)}}</div>
-                    <div class="not_provided_text"
-                        *ngIf="result?.section_seven?.value != 1 && result?.section_seven?.value != 0">Not
-                        applicable
-                    </div>
-                </td>
-            </tr>
-        </ng-template>
-    </p-table>
-    <div class="counter">
-        <div class="name">Results: </div> {{(this.resultsList |
-        filterByText:this.textToFind)?.length}}/{{this.resultsList?.length}}
+    <div class="search_input">
+      <i class="material-icons-round">search</i>
+      <input type="text" placeholder="Find result..." [(ngModel)]="this.textToFind" />
     </div>
+  </div>
+
+  <div class="second_options">
+    <app-pr-button
+      [text]="this.requesting ? 'Downloading .xlsx' : 'Download .xlsx'"
+      [ngClass]="{ globalDisabled: this.requesting }"
+      [icon]="this.requesting ? 'loop' : 'file_download'"
+      [rotating]="this.requesting"
+      (click)="exportExcel(resultsList)"></app-pr-button>
+    <app-pr-button
+      [text]="show_full_screen ? 'Minimize' : 'Open in full screen'"
+      (click)="show_full_screen = !show_full_screen"
+      [icon]="show_full_screen ? 'close_fullscreen' : 'open_in_full'"></app-pr-button>
+  </div>
+
+  <p-table
+    sortField="result_code"
+    [sortOrder]="-1"
+    [value]="this.resultsList | filterByText: this.textToFind"
+    [scrollable]="true"
+    [paginator]="true"
+    [rowsPerPageOptions]="[10, 50, 100]"
+    [rows]="10"
+    scrollHeight="calc(100vh - 303px)"
+    [style]="{ 'min-width': '200px', 'max-width': show_full_screen ? '100vw' : 'calc(100vw - 287px)' }">
+    <ng-template pTemplate="header">
+      <tr>
+        <th [style.minWidth.px]="column.minWidth" *ngFor="let column of columnOrder" pSortableColumn="{{ column.attr }}" id="{{ column.attr }}">
+          {{ column.title }}<p-sortIcon *ngIf="!column.noSort" field="{{ column.attr }}"></p-sortIcon>
+        </th>
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="body" let-result>
+      <tr>
+        <td style="min-width: 200px">{{ result.result_code }}</td>
+        <td style="min-width: 500px">{{ result.result_title }}</td>
+        <td style="min-width: 150px">{{ result.phase_name }}</td>
+        <td style="min-width: 150px">{{ result.official_code }}</td>
+        <td style="min-width: 180px">{{ result.result_type_name }}</td>
+        <td style="min-width: 150px">{{ result.completeness }}%</td>
+        <td style="min-width: 150px">{{ result.is_submitted ? 'Yes' : 'No' }}</td>
+        <td style="min-width: 180px">
+          <div style="z-index: 0" *ngIf="result?.have_a_history">
+            <app-pr-button
+              [ngClass]="{ globalDisabled: !result?.have_a_history }"
+              text="See more"
+              (click)="openInformationModal(result?.results_id)"></app-pr-button>
+          </div>
+          <div *ngIf="!result?.have_a_history" class="not_provided_text">There are no submissions yet</div>
+        </td>
+        <td>
+          <div [class]="parseCheck(result?.general_information?.value)">
+            {{ parseCheck(result?.general_information?.value) }}
+          </div>
+        </td>
+        <td>
+          <div [class]="parseCheck(result?.theory_of_change?.value)">
+            {{ parseCheck(result?.theory_of_change?.value) }}
+          </div>
+        </td>
+        <td>
+          <div [class]="parseCheck(result?.partners?.value)">{{ parseCheck(result?.partners?.value) }}</div>
+        </td>
+        <td>
+          <div [class]="parseCheck(result?.geographic_location?.value)">
+            {{ parseCheck(result?.geographic_location?.value) }}
+          </div>
+        </td>
+        <td>
+          <div [class]="parseCheck(result?.links_to_results?.value)">
+            {{ parseCheck(result?.links_to_results?.value) }}
+          </div>
+        </td>
+        <td>
+          <div [class]="parseCheck(result?.evidence?.value)">{{ parseCheck(result?.evidence?.value) }}</div>
+        </td>
+        <td>
+          <div [class]="parseCheck(result?.section_seven?.value)" *ngIf="result?.section_seven?.value == 1 || result?.section_seven?.value == 0">
+            {{ parseCheck(result?.section_seven?.value) }}
+          </div>
+          <div class="not_provided_text" *ngIf="result?.section_seven?.value != 1 && result?.section_seven?.value != 0">Not applicable</div>
+        </td>
+      </tr>
+    </ng-template>
+  </p-table>
+  <div class="counter">
+    <div class="name">Results:</div>
+    {{ (this.resultsList | filterByText: this.textToFind)?.length }}/{{ this.resultsList?.length }}
+  </div>
 </div>
 
 <app-result-history-of-changes-modal></app-result-history-of-changes-modal>

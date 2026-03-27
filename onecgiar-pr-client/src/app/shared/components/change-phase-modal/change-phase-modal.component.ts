@@ -13,6 +13,8 @@ export class ChangePhaseModalComponent implements OnInit {
   public requesting: boolean = false;
   public globalDisabled = 'globalDisabled';
   selectedInitiative: any = null;
+  closedOptions: any[] = [];
+  private codeMap = new Map<number, string>();
 
   constructor(
     public api: ApiService,
@@ -21,8 +23,41 @@ export class ChangePhaseModalComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.api.dataControlSE.getCurrentPhases().subscribe();
+    this.api.dataControlSE.getCurrentPhases().subscribe(() => {
+      this.loadClosedOptions();
+    });
     this.api.dataControlSE.getCurrentIPSRPhase().subscribe();
+  }
+
+  private loadClosedOptions(): void {
+    const phaseId = this.api.dataControlSE.reportingCurrentPhase?.phaseId;
+    if (!phaseId) return;
+
+    this.api.resultsSE.GET_phaseReportingInitiatives(phaseId).subscribe({
+      next: (res) => {
+        const programs: any[] = res.response?.science_programs || [];
+        this.closedOptions = programs
+          .filter(p => !p.reporting_enabled)
+          .map(p => ({ entityId: p.id }));
+
+        programs.forEach(p => this.codeMap.set(p.id, p.official_code));
+        this.enrichResultEntityNames();
+      }
+    });
+  }
+
+  private enrichResultEntityNames(): void {
+    for (const result of this.api.dataControlSE.resultsList || []) {
+      const map = (result as any).initiative_entity_map;
+      if (!Array.isArray(map)) continue;
+      for (const item of map) {
+        if (item.isLabel || !item.entityId) continue;
+        const code = this.codeMap.get(item.entityId);
+        if (code && item.entityName && !item.entityName.startsWith(`${code} - `)) {
+          item.entityName = `${code} - ${item.entityName}`;
+        }
+      }
+    }
   }
 
   accept() {

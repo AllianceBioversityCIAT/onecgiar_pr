@@ -964,7 +964,7 @@ export class ResultsApiService {
         `${environment.apiBaseUrl}api/ipsr/innovation-pathway/save/complementary-innovation/${this.ipsrDataControlSE.resultInnovationId}`,
         body
       )
-      .pipe(this.saveButtonSE.isSavingPipe(true));
+      .pipe(this.saveButtonSE.isSavingPipe());
   }
 
   GETInnovationPathwayByRiId() {
@@ -1143,6 +1143,23 @@ export class ResultsApiService {
 
   POST_createPhase(phase) {
     return this.http.post<any>(`${environment.apiBaseUrl}api/versioning`, phase);
+  }
+
+  // Phase Science Programs Access Control (P2-2821)
+  GET_phaseReportingInitiatives(phaseId: number) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results/admin-panel/phases/${phaseId}/reporting-initiatives`);
+  }
+
+  GET_phaseInitiativeStatus(phaseId: number, initiativeId: number) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results/admin-panel/phases/${phaseId}/reporting-initiatives/${initiativeId}/status`);
+  }
+
+  PATCH_phaseReportingInitiativeToggle(phaseId: number, initiativeId: number, body: { reporting_enabled: boolean }) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/results/admin-panel/phases/${phaseId}/reporting-initiatives/${initiativeId}`, body);
+  }
+
+  PATCH_phaseReportingInitiativesBulk(phaseId: number, body: { reporting_enabled: boolean }) {
+    return this.http.patch<any>(`${environment.apiBaseUrl}api/results/admin-panel/phases/${phaseId}/reporting-initiatives/bulk`, body);
   }
 
   GET_tocPhases() {
