@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, SimpleChanges, computed, inject, signal } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, computed, inject, signal } from '@angular/core';
 import { CustomizedAlertsFeService } from '../../../../../../../../shared/services/customized-alerts-fe.service';
 import { FieldsManagerService } from '../../../../../../../../shared/services/fields-manager.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
@@ -24,6 +24,7 @@ export class CPMultipleWPsComponent implements OnChanges {
   @Input() hidden: boolean = false;
   @Input() forceP25: boolean = false;
   @Input() isAvisa: boolean = false;
+  @Output() tocResultChanged = new EventEmitter<void>();
   activeTab: TocTab;
   activeTabSignal = signal<TocTab | null>(null);
   activeTabIndex: number = 0;

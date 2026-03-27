@@ -75,9 +75,7 @@
                 [verticalMargin]="0"
                 (clickEvent)="onPressAction(result)"
                 [disabled]="result.result_type_id === 3"
-                [tooltipText]="
-                  result.result_type_id === 3 ? 'This functionality is not available for capacity change result types.' : null
-                "></app-pr-button>
+                [tooltipText]="result.result_type_id === 3 ? 'This functionality is not available for capacity change result types.' : null"></app-pr-button>
             </div>
           </td>
         </tr>
