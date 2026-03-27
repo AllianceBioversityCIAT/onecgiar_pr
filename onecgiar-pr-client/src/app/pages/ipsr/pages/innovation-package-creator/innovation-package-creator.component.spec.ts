@@ -55,13 +55,17 @@ describe('InnovationPackageCreatorComponent', () => {
         myInitiativesList: myInitiativesList,
         myInitiativesListIPSRByPortfolio: myInitiativesList,
         someMandatoryFieldIncompleteResultDetail: jest.fn(),
-        getCurrentIPSRPhase: () => of({})
+        getCurrentIPSRPhase: () => of({}),
+        reportingCurrentPhase: { phaseId: 34 },
+        getCurrentPhases: () => of({}),
+        IPSRCurrentPhase: { phaseId: 31, portfolioAcronym: 'P25' }
       },
       resultsSE: {
         GET_cgiarEntityTypes: () => of({ response: mockResponse }),
         GETInnovationByResultId: () => of({ response: mockResponse }),
         GET_AllInitiatives: () => of({ response: [{}] }),
-        POSTResultInnovationPackage: () => of({ response: mockPOSTResultInnovationPackageResponse })
+        POSTResultInnovationPackage: () => of({ response: mockPOSTResultInnovationPackageResponse }),
+        GET_phaseReportingInitiatives: () => of({ response: { science_programs: [{ official_code: 'SP01', reporting_enabled: true }] } })
       },
       alertsFe: {
         show: jest.fn()
