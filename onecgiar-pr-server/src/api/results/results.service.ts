@@ -214,11 +214,13 @@ export class ResultsService {
   ) {}
 
   /**
-   * Blocks duplicate titles among active results. When updating general information,
-   * pass excludeResultId so the same result can keep its title.
+   * Blocks duplicate titles among active results within the same reporting version.
+   * The same title may exist on another version (same result_code lineage, different id).
+   * When updating general information, pass excludeResultId so the row can keep its title.
    */
   private async assertUniqueActiveResultTitle(
     rawTitle: string | undefined,
+    versionId: number,
     excludeResultId?: number,
   ): Promise<string> {
     const trimmed = (rawTitle ?? '').trim();
@@ -226,7 +228,11 @@ export class ResultsService {
       return '';
     }
     const existing = await this._resultRepository.findOne({
-      where: { title: trimmed, is_active: true },
+      where: {
+        title: trimmed,
+        is_active: true,
+        version_id: versionId,
+      },
     });
     if (
       existing?.id &&
@@ -339,8 +345,14 @@ export class ResultsService {
         };
       }
 
+      const targetVersionId =
+        isAdmin != undefined && Boolean(isAdmin) && versionId
+          ? versionId
+          : version.id;
+
       const trimmedCreateTitle = await this.assertUniqueActiveResultTitle(
         createResultDto.result_name,
+        targetVersionId,
       );
 
       const last_code = await this._resultRepository.getLastResultCode();
@@ -348,10 +360,7 @@ export class ResultsService {
         created_by: user.id,
         last_updated_by: user.id,
         result_type_id: rt.id,
-        version_id:
-          isAdmin != undefined && Boolean(isAdmin) && versionId
-            ? versionId
-            : version.id,
+        version_id: targetVersionId,
         title:
           trimmedCreateTitle.length > 0
             ? trimmedCreateTitle
@@ -782,6 +791,7 @@ export class ResultsService {
 
       const trimmedGeneralTitle = await this.assertUniqueActiveResultTitle(
         resultGeneralInformation.result_name,
+        result.version_id,
         result.id,
       );
 
@@ -4466,10 +4476,23 @@ export class ResultsService {
         };
       }
 
+      const bilateralResult = await this._resultRepository.findOne({
+        where: { id: parsedResultId, is_active: true },
+        select: ['id', 'version_id'],
+      });
+      if (!bilateralResult) {
+        return {
+          response: {},
+          message: 'The result does not exist',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
       const existingResult = await this._resultRepository.findOne({
         where: {
           title: title.trim(),
           is_active: true,
+          version_id: bilateralResult.version_id,
         },
       });
 
