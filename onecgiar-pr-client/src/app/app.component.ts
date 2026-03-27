@@ -76,7 +76,6 @@ export class AppComponent implements OnInit {
             window.location.reload();
           })
           .catch(err => console.error('[DevSession] Paste failed:', err));
-        return;
       }
     };
   }
