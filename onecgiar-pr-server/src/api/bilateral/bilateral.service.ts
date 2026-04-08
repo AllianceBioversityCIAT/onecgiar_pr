@@ -21,6 +21,8 @@ import { Result, SourceEnum } from '../results/entities/result.entity';
 import { UserRepository } from '../../auth/modules/user/repositories/user.repository';
 import { ClarisaRegionsRepository } from '../../clarisa/clarisa-regions/ClariasaRegions.repository';
 import { DataSource, In, IsNull, Like, SelectQueryBuilder } from 'typeorm';
+import { GenderTagLevel } from '../results/gender_tag_levels/entities/gender_tag_level.entity';
+import { ResultImpactAreaScore } from '../result-impact-area-scores/entities/result-impact-area-score.entity';
 import {
   ListResultsQueryDto,
   ListResultsResultTypeEnum,
@@ -86,6 +88,40 @@ const RESULT_TYPE_NAME_TO_ID: Partial<
   [ListResultsResultTypeEnum.ImpactContribution]: 9,
   [ListResultsResultTypeEnum.InnovationPackage]: 10,
 };
+
+/**
+ * When *_tag_level_id equals this, include impact_area_names from result_impact_area_score.
+ * (Some legacy migrations used level 3 for the same pattern; adjust if your data uses 3.)
+ */
+const DAC_IMPACT_AREA_TAG_LEVEL_ID = 3;
+
+const DAC_PILLAR_CONFIG = [
+  {
+    key: 'gender',
+    tagLevelIdField: 'gender_tag_level_id',
+    impactAreaCode: 'Gender',
+  },
+  {
+    key: 'climate_change',
+    tagLevelIdField: 'climate_change_tag_level_id',
+    impactAreaCode: 'Climate',
+  },
+  {
+    key: 'nutrition',
+    tagLevelIdField: 'nutrition_tag_level_id',
+    impactAreaCode: 'Nutrition',
+  },
+  {
+    key: 'environmental_biodiversity',
+    tagLevelIdField: 'environmental_biodiversity_tag_level_id',
+    impactAreaCode: 'Environmental',
+  },
+  {
+    key: 'poverty',
+    tagLevelIdField: 'poverty_tag_level_id',
+    impactAreaCode: 'Poverty',
+  },
+] as const;
 
 @Injectable()
 export class BilateralService {
@@ -371,11 +407,7 @@ export class BilateralService {
             });
             if (resultInfo) {
               resultInfo = this.filterActiveRelations(resultInfo);
-              resultInfo.obj_results_toc_result =
-                await this._resultRepository.getTocMappingsByResultId(
-                  resultInfo.id,
-                );
-              resultInfo.leading_result = this.buildLeadingResult(resultInfo);
+              await this.enrichBilateralResultResponse(resultInfo);
             }
 
             this.logger.log(
@@ -565,9 +597,7 @@ export class BilateralService {
 
       resultInfo = this.filterActiveRelations(resultInfo);
       if (resultInfo) {
-        resultInfo.obj_results_toc_result =
-          await this._resultRepository.getTocMappingsByResultId(resultInfo.id);
-        resultInfo.leading_result = this.buildLeadingResult(resultInfo);
+        await this.enrichBilateralResultResponse(resultInfo);
       }
 
       this.logger.log(
@@ -633,9 +663,7 @@ export class BilateralService {
     }
 
     const filteredResult = this.filterActiveRelations(resultInfo);
-    filteredResult.obj_results_toc_result =
-      await this._resultRepository.getTocMappingsByResultId(id);
-    filteredResult.leading_result = this.buildLeadingResult(filteredResult);
+    await this.enrichBilateralResultResponse(filteredResult);
 
     return {
       response: filteredResult,
@@ -661,9 +689,7 @@ export class BilateralService {
           relations: this.buildResultRelations(resultTypeId),
         });
         const filtered = this.filterActiveRelations(resultWithRelations);
-        filtered.obj_results_toc_result =
-          await this._resultRepository.getTocMappingsByResultId(result.id);
-        filtered.leading_result = this.buildLeadingResult(filtered);
+        await this.enrichBilateralResultResponse(filtered);
         return filtered;
       }),
     );
@@ -850,9 +876,7 @@ export class BilateralService {
           relations: this.buildResultRelations(resultTypeId),
         });
         const filtered = this.filterActiveRelations(resultWithRelations);
-        filtered.obj_results_toc_result =
-          await this._resultRepository.getTocMappingsByResultId(result.id);
-        filtered.leading_result = this.buildLeadingResult(filtered);
+        await this.enrichBilateralResultResponse(filtered);
         return filtered;
       }),
     );
@@ -928,9 +952,7 @@ export class BilateralService {
           relations: this.buildResultRelations(resultTypeId),
         });
         const filteredResult = this.filterActiveRelations(resultWithRelations);
-        filteredResult.obj_results_toc_result =
-          await this._resultRepository.getTocMappingsByResultId(result.id);
-        filteredResult.leading_result = this.buildLeadingResult(filteredResult);
+        await this.enrichBilateralResultResponse(filteredResult);
 
         // Map result type ID to string type name
         const typeMap: Record<number, string> = {
@@ -971,6 +993,7 @@ export class BilateralService {
       obj_geographic_scope: true,
       obj_result_type: true,
       obj_result_level: true,
+      obj_status: true,
       obj_created: true,
       obj_external_submitter: true,
       result_region_array: {
@@ -1761,6 +1784,74 @@ export class BilateralService {
       name: inst?.name ?? '',
       acronym: inst?.acronym ?? '',
     };
+  }
+
+  /**
+   * Slim DAC payload: tag title only from GenderTagLevel; when tag level id is
+   * {@link DAC_IMPACT_AREA_TAG_LEVEL_ID}, impact_area_names from result_impact_area_score
+   * (ImpactAreasScoresComponent.name), filtered by impact_area pillar.
+   */
+  private async buildDacScoresSummary(
+    resultId: number,
+    row: Record<string, unknown>,
+  ): Promise<Record<string, { tag_title: string | null; impact_area_names: string[] }>> {
+    const tagLevelIds = DAC_PILLAR_CONFIG.map((p) => row[p.tagLevelIdField])
+      .filter((id) => id != null && Number.isFinite(Number(id)))
+      .map(Number);
+    const uniqueTagIds = [...new Set(tagLevelIds)];
+
+    const titleById = new Map<number, string>();
+    if (uniqueTagIds.length > 0) {
+      const levels = await this.dataSource.getRepository(GenderTagLevel).find({
+        where: { id: In(uniqueTagIds) },
+        select: ['id', 'description'],
+      });
+      for (const l of levels) {
+        titleById.set(Number(l.id), l.description ?? '');
+      }
+    }
+
+    const riasRows = await this.dataSource.getRepository(ResultImpactAreaScore).find({
+      where: { result_id: resultId, is_active: true },
+      relations: { impact_area_score: true },
+    });
+
+    const out: Record<string, { tag_title: string | null; impact_area_names: string[] }> =
+      {};
+    for (const pillar of DAC_PILLAR_CONFIG) {
+      const tid = row[pillar.tagLevelIdField];
+      const tagTitle =
+        tid != null && Number.isFinite(Number(tid)) ?
+          (titleById.get(Number(tid)) ?? null)
+        : null;
+
+      let impact_area_names: string[] = [];
+      if (Number(tid) === DAC_IMPACT_AREA_TAG_LEVEL_ID) {
+        impact_area_names = riasRows
+          .filter((r) => {
+            const comp = r.impact_area_score;
+            return (
+              comp &&
+              comp.is_active !== false &&
+              comp.impact_area === pillar.impactAreaCode
+            );
+          })
+          .map((r) => r.impact_area_score.name)
+          .filter((n): n is string => typeof n === 'string' && n.length > 0);
+      }
+
+      out[pillar.key] = { tag_title: tagTitle, impact_area_names };
+    }
+
+    return out;
+  }
+
+  private async enrichBilateralResultResponse(filtered: any): Promise<void> {
+    if (!filtered?.id) return;
+    filtered.obj_results_toc_result =
+      await this._resultRepository.getTocMappingsByResultId(filtered.id);
+    filtered.leading_result = this.buildLeadingResult(filtered);
+    filtered.dac_scores = await this.buildDacScoresSummary(filtered.id, filtered);
   }
 
   private async handleNonPooledProject(
