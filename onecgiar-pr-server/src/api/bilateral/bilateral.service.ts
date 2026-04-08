@@ -1851,11 +1851,11 @@ export class BilateralService {
         return false;
       })
       .map((row) => {
-        const inst = row.obj_institutions!;
+        const inst = row.obj_institutions;
         const typeObj = inst.obj_institution_type_code;
         return {
-          name: inst?.name ?? null,
-          acronym: inst?.acronym ?? null,
+          name: inst.name ?? null,
+          acronym: inst.acronym ?? null,
           is_predicted: !!row.is_predicted,
           is_leading_result: Boolean(row.is_leading_result),
           institution_type_name: typeObj?.name ?? null,
@@ -1864,7 +1864,7 @@ export class BilateralService {
   }
 
   /**
-   * Slim DAC payload: tag title only from GenderTagLevel; when tag level id is
+   * Slim DAC payload: tag description only from GenderTagLevel; when tag level id is
    * {@link DAC_IMPACT_AREA_TAG_LEVEL_ID}, impact_area_names from result_impact_area_score
    * (ImpactAreasScoresComponent.name), filtered by impact_area pillar.
    */
