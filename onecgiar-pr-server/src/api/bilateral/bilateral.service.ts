@@ -1871,7 +1871,9 @@ export class BilateralService {
   private async buildDacScoresSummary(
     resultId: number,
     row: Record<string, unknown>,
-  ): Promise<Record<string, { tag_title: string | null; impact_area_names: string[] }>> {
+  ): Promise<
+    Record<string, { tag_title: string | null; impact_area_names: string[] }>
+  > {
     const tagLevelIds = DAC_PILLAR_CONFIG.map((p) => row[p.tagLevelIdField])
       .filter((id) => id != null && Number.isFinite(Number(id)))
       .map(Number);
@@ -1888,19 +1890,23 @@ export class BilateralService {
       }
     }
 
-    const riasRows = await this.dataSource.getRepository(ResultImpactAreaScore).find({
-      where: { result_id: resultId, is_active: true },
-      relations: { impact_area_score: true },
-    });
+    const riasRows = await this.dataSource
+      .getRepository(ResultImpactAreaScore)
+      .find({
+        where: { result_id: resultId, is_active: true },
+        relations: { impact_area_score: true },
+      });
 
-    const out: Record<string, { tag_title: string | null; impact_area_names: string[] }> =
-      {};
+    const out: Record<
+      string,
+      { tag_title: string | null; impact_area_names: string[] }
+    > = {};
     for (const pillar of DAC_PILLAR_CONFIG) {
       const tid = row[pillar.tagLevelIdField];
       const tagTitle =
-        tid != null && Number.isFinite(Number(tid)) ?
-          (titleById.get(Number(tid)) ?? null)
-        : null;
+        tid != null && Number.isFinite(Number(tid))
+          ? (titleById.get(Number(tid)) ?? null)
+          : null;
 
       let impact_area_names: string[] = [];
       if (Number(tid) === DAC_IMPACT_AREA_TAG_LEVEL_ID) {
@@ -1928,7 +1934,10 @@ export class BilateralService {
     filtered.obj_results_toc_result =
       await this._resultRepository.getTocMappingsByResultId(filtered.id);
     filtered.leading_result = this.buildLeadingResult(filtered);
-    filtered.dac_scores = await this.buildDacScoresSummary(filtered.id, filtered);
+    filtered.dac_scores = await this.buildDacScoresSummary(
+      filtered.id,
+      filtered,
+    );
     filtered.bilateral_projects = await this.buildBilateralProjectsSummary(
       filtered.id,
     );

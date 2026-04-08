@@ -171,7 +171,8 @@ export class AdminPanelController {
 
   @Get('phases/:phaseId/reporting-initiatives')
   @ApiOperation({
-    summary: 'Phase detail + Science Programs / Accelerators access (Results or IPSR)',
+    summary:
+      'Phase detail + Science Programs / Accelerators access (Results or IPSR)',
     description:
       'Returns phase metadata and each eligible initiative with reporting_enabled. Works for any version row (app_module_id 1 or 2). Absence of a row means default enabled (true).',
   })
