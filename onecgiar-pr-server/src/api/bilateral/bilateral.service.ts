@@ -1819,6 +1819,7 @@ export class BilateralService {
     resultId: number,
   ): Promise<
     Array<{
+      institutions_id: number;
       name: string | null;
       acronym: string | null;
       is_predicted: boolean;
@@ -1854,6 +1855,7 @@ export class BilateralService {
         const inst = row.obj_institutions;
         const typeObj = inst.obj_institution_type_code;
         return {
+          institutions_id: row.institutions_id ?? inst.id,
           name: inst.name ?? null,
           acronym: inst.acronym ?? null,
           is_predicted: !!row.is_predicted,
