@@ -1003,20 +1003,12 @@ export class BilateralService {
         country_object: true,
         result_countries_subnational_array: true,
       },
-      result_by_institution_array: {
-        obj_institutions: {
-          obj_institution_type_code: true,
-        },
-      },
       result_center_array: {
         clarisa_center_object: {
           clarisa_institution: true,
         },
       },
       obj_results_toc_result: true,
-      obj_result_by_project: {
-        obj_clarisa_project: true,
-      },
       evidence_array: {
         evidenceSharepointArray: true,
       },
@@ -1787,6 +1779,91 @@ export class BilateralService {
   }
 
   /**
+   * Bilateral-only slim project list: Clarisa project short name and institution acronym
+   * (exposed as organization_code in the API payload).
+   */
+  private async buildBilateralProjectsSummary(
+    resultId: number,
+  ): Promise<
+    Array<{ short_name: string | null; organization_code: string | null }>
+  > {
+    const rows = await this._resultsByProjectsRepository.find({
+      where: {
+        result_id: resultId,
+        is_active: true,
+        obj_result_project: { is_active: true },
+      },
+      relations: {
+        obj_clarisa_project: {
+          obj_organization: true,
+        },
+      },
+    });
+
+    return rows
+      .filter((r) => r.obj_clarisa_project)
+      .map((r) => {
+        const p = r.obj_clarisa_project;
+        const org = p.obj_organization;
+        return {
+          short_name: p.shortName ?? null,
+          organization_code: org?.acronym ?? null,
+        };
+      });
+  }
+
+  /**
+   * Bilateral / OpenSearch: only partner institutions (role 2), minimal fields.
+   */
+  private async buildBilateralPartnerInstitutionsSummary(
+    resultId: number,
+  ): Promise<
+    Array<{
+      name: string | null;
+      acronym: string | null;
+      is_predicted: boolean;
+      is_leading_result: boolean;
+      institution_type_name: string | null;
+    }>
+  > {
+    const rows = await this._resultByIntitutionsRepository.find({
+      where: {
+        result_id: resultId,
+        is_active: true,
+        institution_roles_id: InstitutionRoleEnum.PARTNER,
+        obj_result: { is_active: true },
+      },
+      relations: {
+        obj_institutions: {
+          obj_institution_type_code: true,
+        },
+      },
+    });
+
+    return rows
+      .filter((row) => {
+        if (row.obj_institutions) return true;
+        if (row.institutions_id != null) {
+          this.logger.warn(
+            `Bilateral partner row for result ${resultId} (results_by_institution id=${row.id}): institutions_id set but institution not found`,
+          );
+        }
+        return false;
+      })
+      .map((row) => {
+        const inst = row.obj_institutions!;
+        const typeObj = inst.obj_institution_type_code;
+        return {
+          name: inst?.name ?? null,
+          acronym: inst?.acronym ?? null,
+          is_predicted: !!row.is_predicted,
+          is_leading_result: Boolean(row.is_leading_result),
+          institution_type_name: typeObj?.name ?? null,
+        };
+      });
+  }
+
+  /**
    * Slim DAC payload: tag title only from GenderTagLevel; when tag level id is
    * {@link DAC_IMPACT_AREA_TAG_LEVEL_ID}, impact_area_names from result_impact_area_score
    * (ImpactAreasScoresComponent.name), filtered by impact_area pillar.
@@ -1852,6 +1929,12 @@ export class BilateralService {
       await this._resultRepository.getTocMappingsByResultId(filtered.id);
     filtered.leading_result = this.buildLeadingResult(filtered);
     filtered.dac_scores = await this.buildDacScoresSummary(filtered.id, filtered);
+    filtered.bilateral_projects = await this.buildBilateralProjectsSummary(
+      filtered.id,
+    );
+    filtered.result_by_institution_array =
+      await this.buildBilateralPartnerInstitutionsSummary(filtered.id);
+    delete filtered.obj_result_by_project;
   }
 
   private async handleNonPooledProject(
