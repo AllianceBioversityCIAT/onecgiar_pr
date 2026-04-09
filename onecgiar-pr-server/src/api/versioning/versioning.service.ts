@@ -201,8 +201,17 @@ export class VersioningService {
           is_active: true,
         },
       });
-      return res ? false : true;
-    } catch (_error) {
+      return !res;
+    } catch (error: unknown) {
+      let detail = 'Unexpected error';
+      if (error instanceof Error) {
+        detail = error.message;
+      } else if (typeof error === 'string') {
+        detail = error;
+      }
+      this._logger.warn(
+        `$_genericValidation failed (result_code=${result_code}, phase_id=${phase_id}): ${detail}`,
+      );
       return false;
     }
   }
@@ -270,7 +279,7 @@ export class VersioningService {
         );
       }
 
-      switch (parseInt(`${result.result_type_id}`)) {
+      switch (Number.parseInt(`${result.result_type_id}`, 10)) {
         case 1:
           await this._resultsPolicyChangesRepository.replicate(manager, config);
           break;
@@ -539,7 +548,6 @@ export class VersioningService {
           entity_id,
           same_portfolio_phase_change,
         );
-        break;
       case 2:
         return await this.$_phaseChangeIPSR(
           result,
@@ -548,7 +556,6 @@ export class VersioningService {
           entity_id,
           same_portfolio_phase_change,
         );
-        break;
       default:
         break;
     }
@@ -657,7 +664,7 @@ export class VersioningService {
       where: { id: entity_id, active: true },
     });
 
-    if (!entity || entity.portfolio_id !== PORTFOLIO_CGIAR_PROGRAMS_P25_ID) {
+    if (entity?.portfolio_id !== PORTFOLIO_CGIAR_PROGRAMS_P25_ID) {
       throw ReturnResponseUtil.format({
         message: `Replication is only allowed for entities with portfolio_id = ${PORTFOLIO_CGIAR_PROGRAMS_P25_ID}`,
         response: entity_id,
@@ -848,11 +855,7 @@ export class VersioningService {
       await this._versionRepository.$_getAllInovationDevToReplicate(phase);
 
     for (const r of results) {
-      const validation: boolean = await this.$_genericValidation(
-        r.result_code,
-        phase.id,
-      );
-      if (validation) {
+      if (await this.$_genericValidation(r.result_code, phase.id)) {
         await this.$_phaseChangeReporting(r, phase, user);
       }
     }
