@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, EntityManager } from 'typeorm';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
 import { ResultInitiativeBudget } from '../entities/result_initiative_budget.entity';
 import {
@@ -9,6 +9,7 @@ import {
 import { predeterminedDateValidation } from '../../../../shared/utils/versioning.utils';
 import { LogicalDelete } from '../../../../shared/globalInterfaces/delete.interface';
 import { BaseRepository } from '../../../../shared/extendsGlobalDTO/base-repository';
+import { TokenDto } from '../../../../shared/globalInterfaces/token.dto';
 
 @Injectable()
 export class ResultInitiativeBudgetRepository
@@ -96,6 +97,44 @@ export class ResultInitiativeBudgetRepository
            `,
     };
   }
+  /**
+   * Ensures each active primary initiative row on the result has at least one active budget row.
+   * Used after cross-portfolio V2 (P22→P25) and as a safety net when replicate inserts none.
+   */
+  async ensureMissingBudgetsForPrimaryInitiatives(
+    manager: EntityManager,
+    newResultId: number,
+    user: TokenDto,
+    predeterminedDate?: Date,
+  ): Promise<void> {
+    const createdDate = predeterminedDateValidation(predeterminedDate);
+    const sql = `
+      INSERT INTO result_initiative_budget (
+        created_date
+        ,created_by
+        ,is_active
+        ,last_updated_by
+        ,result_initiative_id
+      )
+      SELECT
+        ${createdDate}
+        ,${user.id}
+        ,1
+        ,${user.id}
+        ,rbi.id
+      FROM results_by_inititiative rbi
+      WHERE rbi.result_id = ${newResultId}
+        AND rbi.is_active > 0
+        AND rbi.initiative_role_id = 1
+        AND NOT EXISTS (
+          SELECT 1 FROM result_initiative_budget rib
+          WHERE rib.result_initiative_id = rbi.id
+            AND rib.is_active > 0
+        )
+    `;
+    await manager.query(sql);
+  }
+
   constructor(
     private dataSource: DataSource,
     private readonly _handlersError: HandlersError,
