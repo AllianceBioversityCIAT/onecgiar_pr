@@ -85,6 +85,7 @@ import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/
 
 describe('VersioningService', () => {
   let service: VersioningService;
+  let testingModule: TestingModule;
   let resultRepository;
   let versionRepository;
 
@@ -95,7 +96,7 @@ describe('VersioningService', () => {
   muckResult.version_id = 2;
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
+    testingModule = await Test.createTestingModule({
       providers: [
         VersioningService,
         VersionRepository,
@@ -107,7 +108,15 @@ describe('VersioningService', () => {
         NonPooledProjectRepository,
         ResultsCenterRepository,
         ResultsTocResultRepository,
-        ResultByInitiativesRepository,
+        {
+          provide: ResultByInitiativesRepository,
+          useValue: {
+            getOwnerInitiativeByResult: jest.fn().mockResolvedValue({
+              inititiative_id: 100,
+            }),
+            replicate: jest.fn().mockResolvedValue([]),
+          },
+        },
         ResultByIntitutionsRepository,
         ResultByInstitutionsByDeliveriesTypeRepository,
         ResultByIntitutionsTypeRepository,
@@ -134,7 +143,15 @@ describe('VersioningService', () => {
         ResultStatusRepository,
         ResultsActionAreaOutcomeRepository,
         ResultsTocTargetIndicatorRepository,
-        ResultInitiativeBudgetRepository,
+        {
+          provide: ResultInitiativeBudgetRepository,
+          useValue: {
+            replicate: jest.fn().mockResolvedValue([]),
+            ensureMissingBudgetsForPrimaryInitiatives: jest
+              .fn()
+              .mockResolvedValue(undefined),
+          },
+        },
         EvidenceSharepointRepository,
         EvidencesService,
         ShareResultRequestRepository,
@@ -159,7 +176,12 @@ describe('VersioningService', () => {
         ResultTypeRepository,
         ResultsTocResultIndicatorsService,
         MQAPService,
-        ClarisaInitiativesRepository,
+        {
+          provide: ClarisaInitiativesRepository,
+          useValue: {
+            findOne: jest.fn().mockResolvedValue({ portfolio_id: 1 }),
+          },
+        },
         {
           provide: GlobalParameterCacheService,
           useValue: {
@@ -217,6 +239,7 @@ describe('VersioningService', () => {
             createEntityManager: jest.fn().mockReturnThis(),
             transaction: jest.fn().mockImplementation((cb) =>
               cb({
+                query: jest.fn().mockResolvedValue([]),
                 update: jest.fn().mockResolvedValue({}),
                 getRepository: jest.fn().mockReturnValue({
                   findOne: jest.fn().mockResolvedValue({}),
@@ -251,10 +274,10 @@ describe('VersioningService', () => {
       imports: [HttpModule, MQAPModule],
     }).compile();
 
-    service = module.get<VersioningService>(VersioningService);
+    service = testingModule.get<VersioningService>(VersioningService);
 
-    resultRepository = module.get<ResultRepository>(ResultRepository);
-    versionRepository = module.get<VersionRepository>(VersionRepository);
+    resultRepository = testingModule.get<ResultRepository>(ResultRepository);
+    versionRepository = testingModule.get<VersionRepository>(VersionRepository);
   });
 
   it('should throw an error if the result is not found', async () => {
@@ -277,6 +300,34 @@ describe('VersioningService', () => {
       ReturnResponseUtil.format({
         message: `Result ID: 2 is a Knowledge Product, this type of result is not possible to phase shift it contact support`,
         response: 2,
+        statusCode: HttpStatus.CONFLICT,
+      }),
+    );
+  });
+
+  it('should require V2 when primary submitter is already P25 (portfolio 3)', async () => {
+    const rbi = testingModule.get<ResultByInitiativesRepository>(
+      ResultByInitiativesRepository,
+    );
+    const clarisa = testingModule.get<ClarisaInitiativesRepository>(
+      ClarisaInitiativesRepository,
+    );
+    (rbi.getOwnerInitiativeByResult as jest.Mock).mockResolvedValueOnce({
+      inititiative_id: 200,
+    });
+    (clarisa.findOne as jest.Mock).mockResolvedValueOnce({
+      portfolio_id: 3,
+    });
+    resultRepository.findOne.mockResolvedValueOnce({
+      id: 3,
+      result_code: 3,
+      result_type_id: 5,
+      version_id: 2,
+    } as any);
+    await expect(service.versionProcess(3, {} as any)).rejects.toEqual(
+      ReturnResponseUtil.format({
+        message: `Results whose primary submitter is already a P25 CGIAR Program must use phase change with entityId (V2).`,
+        response: 3,
         statusCode: HttpStatus.CONFLICT,
       }),
     );
