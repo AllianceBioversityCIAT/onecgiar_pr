@@ -19,6 +19,17 @@ export class ResultByInitiativesRepository
   createQueries(
     config: ReplicableConfigInterface<ResultsByInititiative>,
   ): ConfigCustomQueryInterface {
+    const v2CrossPortfolio =
+      config?.entity_id != null && config?.same_portfolio_phase_change !== true;
+    const v2SamePortfolio =
+      config?.entity_id != null && config?.same_portfolio_phase_change === true;
+    const initiativeIdSql = v2CrossPortfolio
+      ? `${config.entity_id}`
+      : 'rbi.inititiative_id';
+    const initiativeRoleFilter = v2SamePortfolio
+      ? ''
+      : 'and rbi.initiative_role_id = 1';
+
     return {
       findQuery: `
       select 
@@ -26,7 +37,7 @@ export class ResultByInitiativesRepository
         rbi.is_active,
         null as last_updated_date,
         ${config.new_result_id} as result_id,
-        ${config?.entity_id ?? 'rbi.inititiative_id'},
+        ${initiativeIdSql},
         rbi.initiative_role_id,
         ${config.user.id} as created_by,
         null as last_updated_by,
@@ -34,6 +45,7 @@ export class ResultByInitiativesRepository
       from results_by_inititiative rbi
       where rbi.result_id = ${config.old_result_id}
         and rbi.is_active > 0
+        ${initiativeRoleFilter}
     `,
       insertQuery: `
       insert into results_by_inititiative (
@@ -50,7 +62,7 @@ export class ResultByInitiativesRepository
         rbi.is_active,
         null as last_updated_date,
         ${config.new_result_id} as result_id,
-        ${config?.entity_id ?? 'rbi.inititiative_id'},
+        ${initiativeIdSql},
         rbi.initiative_role_id,
         ${config.user.id} as created_by,
         null as last_updated_by,
@@ -58,7 +70,7 @@ export class ResultByInitiativesRepository
       from results_by_inititiative rbi
       where rbi.result_id = ${config.old_result_id}
         and rbi.is_active > 0
-        and rbi.initiative_role_id = 1
+        ${initiativeRoleFilter}
     `,
       returnQuery: `select * from results_by_inititiative rbi where rbi.result_id = ${config.new_result_id} `,
     };

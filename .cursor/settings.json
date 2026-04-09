@@ -1,7 +1,1 @@
-{
-  "plugins": {
-    "atlassian": {
-      "enabled": true
-    }
-  }
-}
+{}
