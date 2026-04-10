@@ -1419,7 +1419,9 @@ describe('ResultsFrameworkReportingService', () => {
           where: expect.objectContaining({
             toc_result_id: 5,
             is_active: true,
-            obj_results: { is_active: true },
+            obj_results: expect.objectContaining({
+              is_active: true,
+            }),
             obj_results_toc_result_indicators: expect.objectContaining({
               toc_results_indicator_id: 'IND-55',
               is_active: true,
@@ -1431,6 +1433,11 @@ describe('ResultsFrameworkReportingService', () => {
           }),
         }),
       );
+      const statusWhere =
+        mockResultsTocResultRepository.find.mock.calls[0][0].where.obj_results
+          .status_id;
+      expect(statusWhere._type).toBe('in');
+      expect([...statusWhere._value].sort((a, b) => a - b)).toEqual([2, 6]);
       expect(
         mockResultsTocResultIndicatorsRepository.find,
       ).toHaveBeenCalledWith(
@@ -1473,8 +1480,8 @@ describe('ResultsFrameworkReportingService', () => {
             result_code: 'RES-501',
             result_type_id: 1,
             version_id: 10,
-            status_id: 3,
-            obj_status: { status_name: 'Quality assessed' },
+            status_id: 6,
+            obj_status: { status_name: 'Approved' },
           },
         },
       ]);
@@ -1509,8 +1516,8 @@ describe('ResultsFrameworkReportingService', () => {
         expect.objectContaining({
           result_id: 501,
           role_id: 1,
-          status_id: 3,
-          status_name: 'Quality assessed',
+          status_id: 6,
+          status_name: 'Approved',
           title: 'Result Delta',
           result_code: 'RES-501',
           version_id: 10,
@@ -1529,6 +1536,7 @@ describe('ResultsFrameworkReportingService', () => {
           obj_results: {
             title: 'Result Gamma',
             result_code: 'RES-303',
+            status_id: 2,
           },
         },
       ]);
