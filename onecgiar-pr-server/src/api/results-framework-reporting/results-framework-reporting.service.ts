@@ -24,6 +24,7 @@ import { CreateTocShareResult } from '../results/share-result-request/dto/create
 import { ResultsByProjectsService } from '../results/results_by_projects/results_by_projects.service';
 import { ResultsTocTargetIndicatorRepository } from '../results/results-toc-results/repositories/result-toc-result-target-indicator.repository';
 import { ResultLevelEnum } from '../../shared/constants/result-level.enum';
+import { ResultStatusData } from '../../shared/constants/result-status.enum';
 import { ResultsByInstitutionsService } from '../results/results_by_institutions/results_by_institutions.service';
 
 @Injectable()
@@ -1170,7 +1171,13 @@ export class ResultsFrameworkReportingService {
           where: {
             toc_result_id: parsedResultTocResultId,
             is_active: true,
-            obj_results: { is_active: true },
+            obj_results: {
+              is_active: true,
+              status_id: In([
+                ResultStatusData.QualityAssessed.value,
+                ResultStatusData.Approved.value,
+              ]),
+            },
             obj_results_toc_result_indicators: {
               toc_results_indicator_id: tocResultIndicatorId,
               is_active: true,
