@@ -6,6 +6,7 @@ import { EntityDetailsComponent } from './entity-details.component';
 import { EntityAowService } from '../entity-aow/services/entity-aow.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultLevelService } from '../../../results/pages/result-creator/services/result-level.service';
+import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 
 // Shared mock data to avoid duplication
 const createMockDashboardData = () => ({
@@ -73,6 +74,7 @@ describe('EntityDetailsComponent', () => {
   let entityAowServiceMock: any;
   let changeDetectorRefMock: any;
   let resultLevelServiceMock: any;
+  let resultFrameworkReportingHomeServiceMock: any;
 
   beforeEach(async () => {
     params$ = new BehaviorSubject({ entityId: '123' });
@@ -80,7 +82,16 @@ describe('EntityDetailsComponent', () => {
     apiServiceMock = {
       resultsSE: {
         GET_ClarisaGlobalUnits: jest.fn().mockReturnValue(of({ response: [] }))
+      },
+      dataControlSE: {
+        myInitiativesListReportingByPortfolio: null,
+        myInitiativesList: null
       }
+    };
+
+    resultFrameworkReportingHomeServiceMock = {
+      mySPsList: signal<any[]>([]),
+      otherSPsList: signal<any[]>([])
     };
 
     changeDetectorRefMock = {
@@ -114,6 +125,7 @@ describe('EntityDetailsComponent', () => {
         { provide: ApiService, useValue: apiServiceMock },
         { provide: EntityAowService, useValue: entityAowServiceMock },
         { provide: ResultLevelService, useValue: resultLevelServiceMock },
+        { provide: ResultFrameworkReportingHomeService, useValue: resultFrameworkReportingHomeServiceMock },
         { provide: ChangeDetectorRef, useValue: changeDetectorRefMock },
         { provide: PLATFORM_ID, useValue: 'browser' }
       ],
@@ -460,6 +472,333 @@ describe('EntityDetailsComponent', () => {
 
       entityAowServiceMock.isLoadingDetails = signal(false);
       expect(component.entityAowService.isLoadingDetails()).toBe(false);
+    });
+  });
+
+  describe('ngOnInit - entityId falsy branch', () => {
+    it('should NOT call getAllDetailsData or getDashboardData when entityId is falsy', () => {
+      params$.next({ entityId: '' });
+      component.ngOnInit();
+
+      // resetDashboardData is always called, but getAllDetailsData and getDashboardData should NOT be called
+      // since entityId is falsy ('')
+      expect(entityAowServiceMock.resetDashboardData).toHaveBeenCalled();
+      // getAllDetailsData should be called once for the initial '123' subscription AND once for ''
+      // But with '' it should not call getAllDetailsData
+      entityAowServiceMock.getAllDetailsData.mockClear();
+      entityAowServiceMock.getDashboardData.mockClear();
+      params$.next({ entityId: null });
+      expect(entityAowServiceMock.getAllDetailsData).not.toHaveBeenCalled();
+      expect(entityAowServiceMock.getDashboardData).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('initChart', () => {
+    it('should call markForCheck when platform is browser', () => {
+      const cdSpy = jest.spyOn(component.cd, 'markForCheck');
+      component.initChart();
+      expect(cdSpy).toHaveBeenCalled();
+    });
+
+    it('should NOT call markForCheck when platform is server', () => {
+      (component as any).platformId = 'server';
+      const cdSpy = jest.spyOn(component.cd, 'markForCheck');
+
+      component.initChart();
+      expect(cdSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('calculateDatasetMax (via buildChartOptions)', () => {
+    it('should handle null/undefined values in dataset data', () => {
+      entityAowServiceMock.dashboardData = signal({
+        editing: { data: { outputs: { knowledgeProduct: null, innovationDevelopment: undefined, capacitySharingForDevelopment: 0, otherOutput: 3 } } },
+        submitted: { data: { outputs: { knowledgeProduct: null, innovationDevelopment: null, capacitySharingForDevelopment: null, otherOutput: null } } },
+        qualityAssessed: { data: { outputs: { knowledgeProduct: undefined, innovationDevelopment: undefined, capacitySharingForDevelopment: undefined, otherOutput: undefined } } }
+      });
+
+      const options = component.chartOptionsOutputs();
+      // Max value is 3 (from editing.otherOutput), so axis max should be 3 + 10 = 13
+      expect(options.scales?.['x']?.max).toBe(13);
+    });
+
+    it('should handle all-zero data resulting in axisMax = paddingValue', () => {
+      entityAowServiceMock.dashboardData = signal({
+        editing: { data: { outputs: { knowledgeProduct: 0, innovationDevelopment: 0, capacitySharingForDevelopment: 0, otherOutput: 0 } } },
+        submitted: { data: { outputs: { knowledgeProduct: 0, innovationDevelopment: 0, capacitySharingForDevelopment: 0, otherOutput: 0 } } },
+        qualityAssessed: { data: { outputs: { knowledgeProduct: 0, innovationDevelopment: 0, capacitySharingForDevelopment: 0, otherOutput: 0 } } }
+      });
+
+      const options = component.chartOptionsOutputs();
+      // dataMax = 0, so axisMax = 10 (padding only)
+      expect(options.scales?.['x']?.max).toBe(10);
+    });
+  });
+
+  describe('showBilateralResultsReview', () => {
+    it('should return true when entityId is not SGP-02', () => {
+      entityAowServiceMock.entityId = signal('INIT-01');
+      expect(component.showBilateralResultsReview()).toBe(true);
+    });
+
+    it('should return false when entityId is SGP-02', () => {
+      entityAowServiceMock.entityId = signal('SGP-02');
+      expect(component.showBilateralResultsReview()).toBe(false);
+    });
+  });
+
+  describe('groupedIndicatorSummaries', () => {
+    it('should filter out Innovation Use(IPSR) items', () => {
+      entityAowServiceMock.indicatorSummaries = signal([
+        { resultTypeName: 'Innovation Use(IPSR)' },
+        { resultTypeName: 'Knowledge product' },
+        { resultTypeName: 'Policy change' }
+      ]);
+
+      const result = component.groupedIndicatorSummaries();
+      expect(result.outputs).toHaveLength(1);
+      expect(result.outcomes).toHaveLength(1);
+    });
+
+    it('should group outputs correctly', () => {
+      entityAowServiceMock.indicatorSummaries = signal([
+        { resultTypeName: 'Innovation development' },
+        { resultTypeName: 'Knowledge product' },
+        { resultTypeName: 'Capacity sharing for development' },
+        { resultTypeName: 'Other output' }
+      ]);
+
+      const result = component.groupedIndicatorSummaries();
+      expect(result.outputs).toHaveLength(4);
+      expect(result.outcomes).toHaveLength(0);
+    });
+
+    it('should group outcomes correctly', () => {
+      entityAowServiceMock.indicatorSummaries = signal([
+        { resultTypeName: 'Innovation use' },
+        { resultTypeName: 'Policy change' },
+        { resultTypeName: 'Other outcome' }
+      ]);
+
+      const result = component.groupedIndicatorSummaries();
+      expect(result.outputs).toHaveLength(0);
+      expect(result.outcomes).toHaveLength(3);
+    });
+
+    it('should handle items with null/undefined resultTypeName via fallback to empty string', () => {
+      entityAowServiceMock.indicatorSummaries = signal([
+        { resultTypeName: null },
+        { resultTypeName: undefined },
+        { resultTypeName: '' }
+      ]);
+
+      const result = component.groupedIndicatorSummaries();
+      expect(result.outputs).toHaveLength(0);
+      expect(result.outcomes).toHaveLength(0);
+    });
+  });
+
+  describe('entityDisplayShortName', () => {
+    it('should return shortName from entityDetails when available', () => {
+      entityAowServiceMock.entityDetails = signal({ shortName: 'Test Short Name' });
+      expect(component.entityDisplayShortName).toBe('Test Short Name');
+    });
+
+    it('should return "No information loaded" when entityId is not SGP-02 and no shortName', () => {
+      entityAowServiceMock.entityDetails = signal({});
+      entityAowServiceMock.entityId = signal('OTHER-01');
+      expect(component.entityDisplayShortName).toBe('No information loaded');
+    });
+
+    it('should find initiative from myInitiativesListReportingByPortfolio for SGP-02', () => {
+      entityAowServiceMock.entityDetails = signal({});
+      entityAowServiceMock.entityId = signal('SGP-02');
+      apiServiceMock.dataControlSE.myInitiativesListReportingByPortfolio = [
+        { official_code: 'SGP-02', short_name: 'SGP Short Name' }
+      ];
+      expect(component.entityDisplayShortName).toBe('SGP Short Name');
+    });
+
+    it('should fall back to myInitiativesList when myInitiativesListReportingByPortfolio is null', () => {
+      entityAowServiceMock.entityDetails = signal({});
+      entityAowServiceMock.entityId = signal('SGP-02');
+      apiServiceMock.dataControlSE.myInitiativesListReportingByPortfolio = null;
+      apiServiceMock.dataControlSE.myInitiativesList = [
+        { official_code: 'SGP-02', shortName: 'SGP Via Initiatives List' }
+      ];
+      expect(component.entityDisplayShortName).toBe('SGP Via Initiatives List');
+    });
+
+    it('should fall back to name when short_name and shortName are not available', () => {
+      entityAowServiceMock.entityDetails = signal({});
+      entityAowServiceMock.entityId = signal('SGP-02');
+      apiServiceMock.dataControlSE.myInitiativesListReportingByPortfolio = [
+        { official_code: 'SGP-02', name: 'SGP Full Name' }
+      ];
+      expect(component.entityDisplayShortName).toBe('SGP Full Name');
+    });
+
+    it('should return "No information loaded" if found initiative has no name fields', () => {
+      entityAowServiceMock.entityDetails = signal({});
+      entityAowServiceMock.entityId = signal('SGP-02');
+      apiServiceMock.dataControlSE.myInitiativesListReportingByPortfolio = [
+        { official_code: 'SGP-02' }
+      ];
+      expect(component.entityDisplayShortName).toBe('No information loaded');
+    });
+
+    it('should search mySPsList and otherSPsList when initiative not found in initiatives lists', () => {
+      entityAowServiceMock.entityDetails = signal({});
+      entityAowServiceMock.entityId = signal('SGP-02');
+      apiServiceMock.dataControlSE.myInitiativesListReportingByPortfolio = [];
+      apiServiceMock.dataControlSE.myInitiativesList = [];
+      resultFrameworkReportingHomeServiceMock.mySPsList = signal([
+        { initiativeCode: 'SGP-02', initiativeShortName: 'SP Short Name' }
+      ]);
+      expect(component.entityDisplayShortName).toBe('SP Short Name');
+    });
+
+    it('should fall back to initiativeName when initiativeShortName is not available in SPs list', () => {
+      entityAowServiceMock.entityDetails = signal({});
+      entityAowServiceMock.entityId = signal('SGP-02');
+      apiServiceMock.dataControlSE.myInitiativesListReportingByPortfolio = [];
+      apiServiceMock.dataControlSE.myInitiativesList = [];
+      resultFrameworkReportingHomeServiceMock.mySPsList = signal([]);
+      resultFrameworkReportingHomeServiceMock.otherSPsList = signal([
+        { initiativeCode: 'SGP-02', initiativeName: 'SP Full Name' }
+      ]);
+      expect(component.entityDisplayShortName).toBe('SP Full Name');
+    });
+
+    it('should return "No information loaded" when SP found but has no name fields', () => {
+      entityAowServiceMock.entityDetails = signal({});
+      entityAowServiceMock.entityId = signal('SGP-02');
+      apiServiceMock.dataControlSE.myInitiativesListReportingByPortfolio = [];
+      apiServiceMock.dataControlSE.myInitiativesList = [];
+      resultFrameworkReportingHomeServiceMock.mySPsList = signal([
+        { initiativeCode: 'SGP-02' }
+      ]);
+      expect(component.entityDisplayShortName).toBe('No information loaded');
+    });
+
+    it('should return "No information loaded" for SGP-02 when no list contains it', () => {
+      entityAowServiceMock.entityDetails = signal({});
+      entityAowServiceMock.entityId = signal('SGP-02');
+      apiServiceMock.dataControlSE.myInitiativesListReportingByPortfolio = [];
+      apiServiceMock.dataControlSE.myInitiativesList = [];
+      resultFrameworkReportingHomeServiceMock.mySPsList = signal([]);
+      resultFrameworkReportingHomeServiceMock.otherSPsList = signal([]);
+      expect(component.entityDisplayShortName).toBe('No information loaded');
+    });
+
+    it('should handle SGP02 (without hyphen) entityId', () => {
+      entityAowServiceMock.entityDetails = signal({});
+      entityAowServiceMock.entityId = signal('SGP02');
+      apiServiceMock.dataControlSE.myInitiativesListReportingByPortfolio = [
+        { official_code: 'SGP02', short_name: 'SGP02 Name' }
+      ];
+      expect(component.entityDisplayShortName).toBe('SGP02 Name');
+    });
+
+    it('should handle null mySPsList and otherSPsList signals', () => {
+      entityAowServiceMock.entityDetails = signal({});
+      entityAowServiceMock.entityId = signal('SGP-02');
+      apiServiceMock.dataControlSE.myInitiativesListReportingByPortfolio = [];
+      apiServiceMock.dataControlSE.myInitiativesList = [];
+      resultFrameworkReportingHomeServiceMock.mySPsList = signal(null);
+      resultFrameworkReportingHomeServiceMock.otherSPsList = signal(null);
+      expect(component.entityDisplayShortName).toBe('No information loaded');
+    });
+  });
+
+  describe('reportFormSelectedInitiativeId', () => {
+    it('should return id from entityDetails when available', () => {
+      entityAowServiceMock.entityDetails = signal({ id: 42 });
+      expect(component.reportFormSelectedInitiativeId).toBe(42);
+    });
+
+    it('should return undefined when entityId is not SGP-02 and no details id', () => {
+      entityAowServiceMock.entityDetails = signal({});
+      entityAowServiceMock.entityId = signal('OTHER-01');
+      expect(component.reportFormSelectedInitiativeId).toBeUndefined();
+    });
+
+    it('should find initiative id from list for SGP-02', () => {
+      entityAowServiceMock.entityDetails = signal({});
+      entityAowServiceMock.entityId = signal('SGP-02');
+      apiServiceMock.dataControlSE.myInitiativesListReportingByPortfolio = [
+        { official_code: 'SGP-02', id: 99 }
+      ];
+      expect(component.reportFormSelectedInitiativeId).toBe(99);
+    });
+
+    it('should fall back to initiative_id when id is not available', () => {
+      entityAowServiceMock.entityDetails = signal({});
+      entityAowServiceMock.entityId = signal('SGP-02');
+      apiServiceMock.dataControlSE.myInitiativesListReportingByPortfolio = [
+        { official_code: 'SGP-02', initiative_id: 77 }
+      ];
+      expect(component.reportFormSelectedInitiativeId).toBe(77);
+    });
+
+    it('should return undefined when SGP-02 not found in any list', () => {
+      entityAowServiceMock.entityDetails = signal({});
+      entityAowServiceMock.entityId = signal('SGP-02');
+      apiServiceMock.dataControlSE.myInitiativesListReportingByPortfolio = [];
+      apiServiceMock.dataControlSE.myInitiativesList = [];
+      expect(component.reportFormSelectedInitiativeId).toBeUndefined();
+    });
+
+    it('should handle SGP02 (without hyphen) for id lookup', () => {
+      entityAowServiceMock.entityDetails = signal({});
+      entityAowServiceMock.entityId = signal('SGP02');
+      apiServiceMock.dataControlSE.myInitiativesListReportingByPortfolio = null;
+      apiServiceMock.dataControlSE.myInitiativesList = [
+        { official_code: 'SGP02', id: 55 }
+      ];
+      expect(component.reportFormSelectedInitiativeId).toBe(55);
+    });
+
+    it('should return details.id when it is 0 (id != null check)', () => {
+      entityAowServiceMock.entityDetails = signal({ id: 0 });
+      expect(component.reportFormSelectedInitiativeId).toBe(0);
+    });
+  });
+
+  describe('onReportRequested', () => {
+    it('should call setPendingResultType and open modal', () => {
+      const item = { resultTypeId: 5, resultTypeName: 'Innovation development' };
+      component.onReportRequested(item);
+      expect(resultLevelServiceMock.setPendingResultType).toHaveBeenCalledWith(5, 'Innovation development');
+      expect(component.showReportModal()).toBe(true);
+    });
+
+    it('should handle undefined item properties', () => {
+      component.onReportRequested({});
+      expect(resultLevelServiceMock.setPendingResultType).toHaveBeenCalledWith(undefined, undefined);
+      expect(component.showReportModal()).toBe(true);
+    });
+
+    it('should handle null item', () => {
+      component.onReportRequested(null);
+      expect(resultLevelServiceMock.setPendingResultType).toHaveBeenCalledWith(undefined, undefined);
+      expect(component.showReportModal()).toBe(true);
+    });
+  });
+
+  describe('onModalClose', () => {
+    it('should set showReportModal to false and call cleanData', () => {
+      component.showReportModal.set(true);
+      component.onModalClose();
+      expect(component.showReportModal()).toBe(false);
+      expect(resultLevelServiceMock.cleanData).toHaveBeenCalled();
+    });
+
+    it('should handle cleanData being undefined', () => {
+      resultLevelServiceMock.cleanData = undefined;
+      component.showReportModal.set(true);
+      expect(() => component.onModalClose()).not.toThrow();
+      expect(component.showReportModal()).toBe(false);
     });
   });
 });

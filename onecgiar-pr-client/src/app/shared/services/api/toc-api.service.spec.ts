@@ -140,4 +140,91 @@ describe('TocApiService', () => {
       req.flush(mockResponse);
     });
   });
+
+  describe('GET_tocLevelsByconfig - branch coverage', () => {
+    it('should handle innovation with empty wp_short_name (falsy wpLabel branch)', done => {
+      const responseWithEmptyWp = {
+        response: [
+          {
+            wp_short_name: null,
+            title: 'Some Title'
+          }
+        ]
+      };
+
+      service.GET_tocLevelsByconfig('r1', 'i1', 'l1').subscribe(result => {
+        expect(result.response[0].extraInformation).toBe(
+          '<div class="select_item_description">Some Title</div>'
+        );
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service.apiBaseUrl}result/r1/initiative/i1/level/l1?planned=false`);
+      req.flush(responseWithEmptyWp);
+    });
+
+    it('should handle innovation with empty string wp_short_name (falsy wpLabel)', done => {
+      const responseWithEmptyString = {
+        response: [
+          {
+            wp_short_name: '',
+            title: 'Title Only'
+          }
+        ]
+      };
+
+      service.GET_tocLevelsByconfig('r1', 'i1', 'l1').subscribe(result => {
+        expect(result.response[0].extraInformation).toBe(
+          '<div class="select_item_description">Title Only</div>'
+        );
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service.apiBaseUrl}result/r1/initiative/i1/level/l1?planned=false`);
+      req.flush(responseWithEmptyString);
+    });
+
+    it('should handle innovation with null title (title ?? empty string)', done => {
+      const responseWithNullTitle = {
+        response: [
+          {
+            wp_short_name: 'WP2',
+            title: null
+          }
+        ]
+      };
+
+      service.GET_tocLevelsByconfig('r1', 'i1', 'l1').subscribe(result => {
+        expect(result.response[0].extraInformation).toBe(
+          '<strong>WP2</strong> <br> <div class="select_item_description"></div>'
+        );
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service.apiBaseUrl}result/r1/initiative/i1/level/l1?planned=false`);
+      req.flush(responseWithNullTitle);
+    });
+
+    it('should pass isPlanned=true as query param when isPlanned is true', done => {
+      service.GET_tocLevelsByconfig('r1', 'i1', 'l1', false, true).subscribe(result => {
+        expect(result).toBeTruthy();
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service.apiBaseUrl}result/r1/initiative/i1/level/l1?planned=true`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+
+    it('should pass isPlanned=false as query param when isPlanned is undefined', done => {
+      service.GET_tocLevelsByconfig('r1', 'i1', 'l1', false, undefined).subscribe(result => {
+        expect(result).toBeTruthy();
+        done();
+      });
+
+      const req = httpMock.expectOne(`${service.apiBaseUrl}result/r1/initiative/i1/level/l1?planned=false`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
 });

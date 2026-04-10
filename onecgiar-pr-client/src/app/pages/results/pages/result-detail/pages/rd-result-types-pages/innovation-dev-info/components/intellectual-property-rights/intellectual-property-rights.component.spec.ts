@@ -1,28 +1,22 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { IntellectualPropertyRightsComponent } from './intellectual-property-rights.component';
-import { PrRadioButtonComponent } from '../../../../../../../../../custom-fields/pr-radio-button/pr-radio-button.component';
-import { FormsModule } from '@angular/forms';
-import { PrFieldHeaderComponent } from '../../../../../../../../../custom-fields/pr-field-header/pr-field-header.component';
-import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { InnovationDevInfoUtilsService } from '../../services/innovation-dev-info-utils.service';
 
 
 describe('IntellectualPropertyRightsComponent', () => {
   let component: IntellectualPropertyRightsComponent;
   let fixture: ComponentFixture<IntellectualPropertyRightsComponent>;
+  let mockUtils: any;
 
   beforeEach(async () => {
+    mockUtils = { mapBoolean: jest.fn() } as any;
+
     await TestBed.configureTestingModule({
-      declarations: [
-        IntellectualPropertyRightsComponent,
-        PrRadioButtonComponent,
-        PrFieldHeaderComponent
-      ],
-      imports: [
-        FormsModule,
-        HttpClientTestingModule
-      ],
-    })
-    .compileComponents();
+      declarations: [IntellectualPropertyRightsComponent],
+      providers: [{ provide: InnovationDevInfoUtilsService, useValue: mockUtils }],
+      schemas: [CUSTOM_ELEMENTS_SCHEMA]
+    }).compileComponents();
 
     fixture = TestBed.createComponent(IntellectualPropertyRightsComponent);
     component = fixture.componentInstance;
@@ -151,6 +145,74 @@ describe('IntellectualPropertyRightsComponent', () => {
       component.clearIntellectualPropertyRights();
 
       expect(component.options.intellectual_property_rights.q3['radioButtonValue']).toBeNull();
+    });
+
+    it('should not clear anything when q1 is not "32" and q2 is not "35"', () => {
+      component.options.intellectual_property_rights.q1['radioButtonValue'] = '99';
+      component.options.intellectual_property_rights.q2['radioButtonValue'] = '99';
+      component.options.intellectual_property_rights.q3['radioButtonValue'] = 'someValue';
+
+      component.clearIntellectualPropertyRights();
+
+      expect(component.options.intellectual_property_rights.q3['radioButtonValue']).toBe('someValue');
+    });
+  });
+
+  describe('handleSelectionChangeQ4()', () => {
+    it('should call mapBoolean on q4', () => {
+      component.options.intellectual_property_rights.q4.options = [
+        { result_question_id: '10', question_text: 'Yes', answer_text: 'text' } as any
+      ];
+      component.options.intellectual_property_rights.q4['radioButtonValue'] = '10';
+      component.handleSelectionChangeQ4();
+      expect(mockUtils.mapBoolean).toHaveBeenCalled();
+    });
+
+    it('should clear answer_text when selected option is NOT "No"', () => {
+      component.options.intellectual_property_rights.q4.options = [
+        { result_question_id: '10', question_text: 'Yes', answer_text: 'should be cleared' } as any
+      ];
+      component.options.intellectual_property_rights.q4['radioButtonValue'] = '10';
+      component.handleSelectionChangeQ4();
+      expect(component.options.intellectual_property_rights.q4.options[0].answer_text).toBeNull();
+    });
+
+    it('should keep answer_text when selected option IS "No"', () => {
+      component.options.intellectual_property_rights.q4.options = [
+        { result_question_id: '10', question_text: 'No', answer_text: 'keep this' } as any
+      ];
+      component.options.intellectual_property_rights.q4['radioButtonValue'] = '10';
+      component.handleSelectionChangeQ4();
+      expect(component.options.intellectual_property_rights.q4.options[0].answer_text).toBe('keep this');
+    });
+
+    it('should clear answer_text on non-selected options', () => {
+      component.options.intellectual_property_rights.q4.options = [
+        { result_question_id: '10', question_text: 'No', answer_text: 'keep' } as any,
+        { result_question_id: '20', question_text: 'Other', answer_text: 'should be cleared' } as any
+      ];
+      component.options.intellectual_property_rights.q4['radioButtonValue'] = '10';
+      component.handleSelectionChangeQ4();
+      expect(component.options.intellectual_property_rights.q4.options[1].answer_text).toBeNull();
+    });
+
+    it('should clear all options answer_text when no option is selected (no match)', () => {
+      component.options.intellectual_property_rights.q4.options = [
+        { result_question_id: '10', question_text: 'Option A', answer_text: 'text' } as any
+      ];
+      component.options.intellectual_property_rights.q4['radioButtonValue'] = '999';
+      component.handleSelectionChangeQ4();
+      expect(component.options.intellectual_property_rights.q4.options[0].answer_text).toBeNull();
+    });
+
+    it('should handle when q4 has no radioButtonValue set', () => {
+      component.options.intellectual_property_rights.q4.options = [
+        { result_question_id: '10', question_text: 'Yes', answer_text: 'text' } as any
+      ];
+      // No radioButtonValue set => selectedOptionQ4 is undefined
+      component.handleSelectionChangeQ4();
+      // !selected => all options get answer_text = null
+      expect(component.options.intellectual_property_rights.q4.options[0].answer_text).toBeNull();
     });
   });
 });

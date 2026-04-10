@@ -249,6 +249,113 @@ describe('NotificationItemComponent', () => {
     });
   });
 
+  describe('invalidateRequest()', () => {
+    it('should return true when requestingAccept is true', () => {
+      component.requestingAccept = true;
+      component.notification = { obj_result: { status_id: 1, obj_version: { id: '30' } }, request_status_id: 2 };
+      expect(component.invalidateRequest()).toBe(true);
+    });
+
+    it('should return true when requestingReject is true', () => {
+      component.requestingReject = true;
+      component.notification = { obj_result: { status_id: 1, obj_version: { id: '30' } }, request_status_id: 2 };
+      expect(component.invalidateRequest()).toBe(true);
+    });
+
+    it('should return true when platformIsClosed is true', () => {
+      mockApiService.rolesSE.platformIsClosed = true;
+      component.notification = { obj_result: { status_id: 1, obj_version: { id: '30' } }, request_status_id: 2 };
+      expect(component.invalidateRequest()).toBe(true);
+    });
+
+    it('should return true when isQAed', () => {
+      component.notification = { obj_result: { status_id: 2 }, request_status_id: 1 };
+      expect(component.invalidateRequest()).toBe(true);
+    });
+
+    it('should return true for non-admin when version id != phase id and status_id != 3', () => {
+      mockApiService.rolesSE.isAdmin = false;
+      mockApiService.rolesSE.platformIsClosed = false;
+      component.notification = {
+        obj_result: { status_id: 1, obj_version: { id: '99' } },
+        request_status_id: 2
+      };
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseId: '30' };
+      expect(component.invalidateRequest()).toBe(true);
+    });
+
+    it('should return false when all conditions pass', () => {
+      mockApiService.rolesSE.isAdmin = false;
+      mockApiService.rolesSE.platformIsClosed = false;
+      component.notification = {
+        obj_result: { status_id: 1, obj_version: { id: '30' } },
+        request_status_id: 2
+      };
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseId: '30' };
+      expect(component.invalidateRequest()).toBe(false);
+    });
+
+    it('should return false for admin even if version_id != phaseId', () => {
+      mockApiService.rolesSE.isAdmin = true;
+      mockApiService.rolesSE.platformIsClosed = false;
+      component.notification = {
+        obj_result: { status_id: 1, obj_version: { id: '99' } },
+        request_status_id: 2
+      };
+      expect(component.invalidateRequest()).toBe(false);
+    });
+  });
+
+  describe('isBilateralResult', () => {
+    it('should return true when source_name is W3/Bilaterals', () => {
+      component.notification = { obj_result: { source_name: 'W3/Bilaterals' } };
+      expect(component.isBilateralResult).toBe(true);
+    });
+
+    it('should return false when source_name is not W3/Bilaterals', () => {
+      component.notification = { obj_result: { source_name: 'Initiative' } };
+      expect(component.isBilateralResult).toBe(false);
+    });
+  });
+
+  describe('requesterCode and responderCode', () => {
+    it('should return shared initiative code when is_map_to_toc is true for requesterCode', () => {
+      component.notification = {
+        is_map_to_toc: true,
+        obj_shared_inititiative: { official_code: 'SHARED' },
+        obj_owner_initiative: { official_code: 'OWNER' }
+      };
+      expect(component.requesterCode).toBe('SHARED');
+    });
+
+    it('should return owner initiative code when is_map_to_toc is false for requesterCode', () => {
+      component.notification = {
+        is_map_to_toc: false,
+        obj_shared_inititiative: { official_code: 'SHARED' },
+        obj_owner_initiative: { official_code: 'OWNER' }
+      };
+      expect(component.requesterCode).toBe('OWNER');
+    });
+
+    it('should return owner code when is_map_to_toc is true for responderCode', () => {
+      component.notification = {
+        is_map_to_toc: true,
+        obj_shared_inititiative: { official_code: 'SHARED' },
+        obj_owner_initiative: { official_code: 'OWNER' }
+      };
+      expect(component.responderCode).toBe('OWNER');
+    });
+
+    it('should return shared code when is_map_to_toc is false for responderCode', () => {
+      component.notification = {
+        is_map_to_toc: false,
+        obj_shared_inititiative: { official_code: 'SHARED' },
+        obj_owner_initiative: { official_code: 'OWNER' }
+      };
+      expect(component.responderCode).toBe('SHARED');
+    });
+  });
+
   describe('acceptOrReject()', () => {
     it('should handle success PATCH_updateRequest when response is true', () => {
       component.requestingAccept = false;

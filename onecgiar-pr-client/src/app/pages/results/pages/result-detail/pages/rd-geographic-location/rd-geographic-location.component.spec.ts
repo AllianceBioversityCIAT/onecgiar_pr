@@ -146,4 +146,119 @@ describe('RdGeographicLocationComponent', () => {
       expect(result).toBe(expectedText);
     });
   });
+
+  describe('geographic_focus_description()', () => {
+    it('should return empty string for id = 1 (default case)', () => {
+      const result = component.geographic_focus_description(1);
+      expect(result).toBe('');
+    });
+
+    it('should return empty string for id = 4 (default case)', () => {
+      const result = component.geographic_focus_description(4);
+      expect(result).toBe('');
+    });
+
+    it('should return empty string for null/undefined id', () => {
+      expect(component.geographic_focus_description(null)).toBe('');
+      expect(component.geographic_focus_description(undefined)).toBe('');
+    });
+  });
+
+  describe('fillGeographicLocationBody()', () => {
+    it('should keep geo_scope_id as-is when it is NOT legacyCountries (4)', () => {
+      const response = { geo_scope_id: 2, has_countries: true, has_regions: true, countries: [], regions: [] };
+      component.fillGeographicLocationBody(response);
+      expect(component.geographicLocationBody.geo_scope_id).toBe(2);
+    });
+  });
+
+  describe('fillExtraGeographicLocationBody()', () => {
+    it('should fill extra geographic location body from response', () => {
+      const response = {
+        extra_geo_scope_id: 2,
+        has_extra_regions: true,
+        has_extra_countries: false,
+        extra_countries: [{ id: 1, name: 'Colombia' }],
+        extra_regions: [{ id: 10, name: 'Latin America' }],
+        has_extra_geo_scope: 1
+      };
+
+      component.fillExtraGeographicLocationBody(response);
+
+      expect(component.extraGeographicLocationBody.geo_scope_id).toBe(2);
+      expect(component.extraGeographicLocationBody.has_regions).toBe(true);
+      expect(component.extraGeographicLocationBody.has_countries).toBe(false);
+      expect(component.extraGeographicLocationBody.countries).toEqual([{ id: 1, name: 'Colombia' }]);
+      expect(component.extraGeographicLocationBody.regions).toEqual([{ id: 10, name: 'Latin America' }]);
+      expect(component.extraGeographicLocationBody.has_extra_geo_scope).toBe(true);
+    });
+
+    it('should convert legacy geo_scope_id (4) to GeoScopeEnum.COUNTRY', () => {
+      const response = {
+        extra_geo_scope_id: 4,
+        has_extra_regions: false,
+        has_extra_countries: true,
+        extra_countries: [],
+        extra_regions: [],
+        has_extra_geo_scope: false
+      };
+
+      component.fillExtraGeographicLocationBody(response);
+
+      expect(component.extraGeographicLocationBody.geo_scope_id).toBe(GeoScopeEnum.COUNTRY);
+    });
+
+    it('should keep extra geo_scope_id when not legacy', () => {
+      const response = {
+        extra_geo_scope_id: 3,
+        has_extra_regions: false,
+        has_extra_countries: true,
+        extra_countries: [],
+        extra_regions: [],
+        has_extra_geo_scope: false
+      };
+
+      component.fillExtraGeographicLocationBody(response);
+
+      expect(component.extraGeographicLocationBody.geo_scope_id).toBe(3);
+    });
+  });
+
+  describe('onSaveSection() - P25 branch', () => {
+    it('should call PATCH_geographicSectionp25 when isP25() returns true', () => {
+      jest.spyOn(component.fieldsManagerSE, 'isP25').mockReturnValue(true);
+      const patchP25Spy = jest.fn().mockReturnValue(of({}));
+      mockApiService.resultsSE.PATCH_geographicSectionp25 = patchP25Spy;
+      const getSectionP25Spy = jest.spyOn(component, 'getSectionInformationp25').mockImplementation();
+
+      component.onSaveSection();
+
+      expect(patchP25Spy).toHaveBeenCalled();
+      expect(getSectionP25Spy).toHaveBeenCalled();
+    });
+  });
+
+  describe('getSectionInformationp25()', () => {
+    it('should call both fillGeographicLocationBody and fillExtraGeographicLocationBody', () => {
+      const mockResponse = {
+        response: {
+          geo_scope_id: 2,
+          extra_geo_scope_id: 3,
+          has_extra_regions: true,
+          has_extra_countries: false,
+          extra_countries: [],
+          extra_regions: [],
+          has_extra_geo_scope: true
+        }
+      };
+      mockApiService.resultsSE.GET_geographicSectionp25 = jest.fn().mockReturnValue(of(mockResponse));
+      const fillGeoSpy = jest.spyOn(component, 'fillGeographicLocationBody');
+      const fillExtraGeoSpy = jest.spyOn(component, 'fillExtraGeographicLocationBody');
+
+      component.getSectionInformationp25();
+
+      expect(fillGeoSpy).toHaveBeenCalledWith(mockResponse.response);
+      expect(fillExtraGeoSpy).toHaveBeenCalledWith(mockResponse.response);
+    });
+  });
 });

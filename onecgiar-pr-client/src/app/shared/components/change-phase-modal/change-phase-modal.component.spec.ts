@@ -229,4 +229,203 @@ describe('ChangePhaseModalComponent', () => {
       expect(() => component.accept()).not.toThrow();
     });
   });
+
+  describe('loadClosedOptions', () => {
+    it('should return early when phaseId is falsy', () => {
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseId: null };
+      mockApiService.resultsSE.GET_phaseReportingInitiatives = jest.fn();
+
+      // Trigger loadClosedOptions via ngOnInit -> getCurrentPhases callback
+      component.ngOnInit();
+
+      expect(mockApiService.resultsSE.GET_phaseReportingInitiatives).not.toHaveBeenCalled();
+    });
+
+    it('should load closed options and enrich entity names when phaseId is present', () => {
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseId: 10 };
+      mockApiService.resultsSE.GET_phaseReportingInitiatives = jest.fn().mockReturnValue(of({
+        response: {
+          science_programs: [
+            { id: 1, official_code: 'SP-01', reporting_enabled: false },
+            { id: 2, official_code: 'SP-02', reporting_enabled: true }
+          ]
+        }
+      }));
+      mockApiService.dataControlSE.resultsList = [];
+
+      component.ngOnInit();
+
+      expect(mockApiService.resultsSE.GET_phaseReportingInitiatives).toHaveBeenCalledWith(10);
+      // Only non-reporting_enabled should be in closedOptions
+      expect(component.closedOptions).toEqual([{ entityId: 1 }]);
+    });
+
+    it('should handle empty science_programs array', () => {
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseId: 10 };
+      mockApiService.resultsSE.GET_phaseReportingInitiatives = jest.fn().mockReturnValue(of({
+        response: { science_programs: [] }
+      }));
+      mockApiService.dataControlSE.resultsList = [];
+
+      component.ngOnInit();
+
+      expect(component.closedOptions).toEqual([]);
+    });
+
+    it('should handle missing science_programs in response', () => {
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseId: 10 };
+      mockApiService.resultsSE.GET_phaseReportingInitiatives = jest.fn().mockReturnValue(of({
+        response: {}
+      }));
+      mockApiService.dataControlSE.resultsList = [];
+
+      component.ngOnInit();
+
+      expect(component.closedOptions).toEqual([]);
+    });
+  });
+
+  describe('enrichResultEntityNames', () => {
+    it('should prepend official_code to entityName when code is found and not already prefixed', () => {
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseId: 10 };
+      mockApiService.dataControlSE.resultsList = [
+        {
+          initiative_entity_map: [
+            { entityId: 1, entityName: 'My Entity', isLabel: false }
+          ]
+        }
+      ];
+      mockApiService.resultsSE.GET_phaseReportingInitiatives = jest.fn().mockReturnValue(of({
+        response: {
+          science_programs: [
+            { id: 1, official_code: 'SP-01', reporting_enabled: false }
+          ]
+        }
+      }));
+
+      component.ngOnInit();
+
+      expect(mockApiService.dataControlSE.resultsList[0].initiative_entity_map[0].entityName).toBe('SP-01 - My Entity');
+    });
+
+    it('should skip items where isLabel is true', () => {
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseId: 10 };
+      mockApiService.dataControlSE.resultsList = [
+        {
+          initiative_entity_map: [
+            { entityId: 1, entityName: 'Label Entity', isLabel: true }
+          ]
+        }
+      ];
+      mockApiService.resultsSE.GET_phaseReportingInitiatives = jest.fn().mockReturnValue(of({
+        response: {
+          science_programs: [
+            { id: 1, official_code: 'SP-01', reporting_enabled: false }
+          ]
+        }
+      }));
+
+      component.ngOnInit();
+
+      expect(mockApiService.dataControlSE.resultsList[0].initiative_entity_map[0].entityName).toBe('Label Entity');
+    });
+
+    it('should skip items without entityId', () => {
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseId: 10 };
+      mockApiService.dataControlSE.resultsList = [
+        {
+          initiative_entity_map: [
+            { entityName: 'No Id Entity', isLabel: false }
+          ]
+        }
+      ];
+      mockApiService.resultsSE.GET_phaseReportingInitiatives = jest.fn().mockReturnValue(of({
+        response: {
+          science_programs: [
+            { id: 1, official_code: 'SP-01', reporting_enabled: false }
+          ]
+        }
+      }));
+
+      component.ngOnInit();
+
+      expect(mockApiService.dataControlSE.resultsList[0].initiative_entity_map[0].entityName).toBe('No Id Entity');
+    });
+
+    it('should not double-prefix entityName if already starts with code', () => {
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseId: 10 };
+      mockApiService.dataControlSE.resultsList = [
+        {
+          initiative_entity_map: [
+            { entityId: 1, entityName: 'SP-01 - Already Prefixed', isLabel: false }
+          ]
+        }
+      ];
+      mockApiService.resultsSE.GET_phaseReportingInitiatives = jest.fn().mockReturnValue(of({
+        response: {
+          science_programs: [
+            { id: 1, official_code: 'SP-01', reporting_enabled: false }
+          ]
+        }
+      }));
+
+      component.ngOnInit();
+
+      expect(mockApiService.dataControlSE.resultsList[0].initiative_entity_map[0].entityName).toBe('SP-01 - Already Prefixed');
+    });
+
+    it('should skip results where initiative_entity_map is not an array', () => {
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseId: 10 };
+      mockApiService.dataControlSE.resultsList = [
+        { initiative_entity_map: null },
+        { initiative_entity_map: 'not-an-array' },
+        { }
+      ];
+      mockApiService.resultsSE.GET_phaseReportingInitiatives = jest.fn().mockReturnValue(of({
+        response: {
+          science_programs: [
+            { id: 1, official_code: 'SP-01', reporting_enabled: false }
+          ]
+        }
+      }));
+
+      // Should not throw
+      expect(() => component.ngOnInit()).not.toThrow();
+    });
+
+    it('should handle null resultsList', () => {
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseId: 10 };
+      mockApiService.dataControlSE.resultsList = null;
+      mockApiService.resultsSE.GET_phaseReportingInitiatives = jest.fn().mockReturnValue(of({
+        response: {
+          science_programs: [
+            { id: 1, official_code: 'SP-01', reporting_enabled: false }
+          ]
+        }
+      }));
+
+      expect(() => component.ngOnInit()).not.toThrow();
+    });
+
+    it('should skip items where entityName is falsy', () => {
+      mockApiService.dataControlSE.reportingCurrentPhase = { phaseId: 10 };
+      mockApiService.dataControlSE.resultsList = [
+        {
+          initiative_entity_map: [
+            { entityId: 1, entityName: '', isLabel: false },
+            { entityId: 1, entityName: null, isLabel: false }
+          ]
+        }
+      ];
+      mockApiService.resultsSE.GET_phaseReportingInitiatives = jest.fn().mockReturnValue(of({
+        response: {
+          science_programs: [
+            { id: 1, official_code: 'SP-01', reporting_enabled: false }
+          ]
+        }
+      }));
+
+      expect(() => component.ngOnInit()).not.toThrow();
+    });
+  });
 });

@@ -3,7 +3,7 @@ import { TableModule } from 'primeng/table';
 import { MenuModule } from 'primeng/menu';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { ActivatedRoute } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
@@ -203,5 +203,122 @@ describe('InnovationPackageListComponent', () => {
     component.ngOnDestroy();
 
     expect(component.api.dataControlSE.myInitiativesList).toEqual([{ selected: true }, { selected: true }]);
+  });
+
+  describe('checkIpsrReportingAccess', () => {
+    it('should return early when phaseId is falsy', () => {
+      component.api.dataControlSE.reportingCurrentPhase = { phaseId: null };
+      component.api.dataControlSE.myInitiativesListIPSRByPortfolio = [{ official_code: 'SP01' }];
+      component.api.rolesSE.isAdmin = false;
+      const spy = jest.spyOn(component.api.resultsSE, 'GET_phaseReportingInitiatives').mockReturnValue(of({}));
+
+      (component as any).checkIpsrReportingAccess();
+
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('should return early when myInitiatives is empty', () => {
+      component.api.dataControlSE.reportingCurrentPhase = { phaseId: 30 };
+      component.api.dataControlSE.myInitiativesListIPSRByPortfolio = [];
+      component.api.rolesSE.isAdmin = false;
+      const spy = jest.spyOn(component.api.resultsSE, 'GET_phaseReportingInitiatives').mockReturnValue(of({}));
+
+      (component as any).checkIpsrReportingAccess();
+
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('should return early when user is admin', () => {
+      component.api.dataControlSE.reportingCurrentPhase = { phaseId: 30 };
+      component.api.dataControlSE.myInitiativesListIPSRByPortfolio = [{ official_code: 'SP01' }];
+      component.api.rolesSE.isAdmin = true;
+      const spy = jest.spyOn(component.api.resultsSE, 'GET_phaseReportingInitiatives').mockReturnValue(of({}));
+
+      (component as any).checkIpsrReportingAccess();
+
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('should set ipsrReportingEnabled to true when initiative has reporting_enabled', () => {
+      component.api.dataControlSE.reportingCurrentPhase = { phaseId: 30 };
+      component.api.dataControlSE.myInitiativesListIPSRByPortfolio = [{ official_code: 'SP01' }];
+      component.api.rolesSE.isAdmin = false;
+      jest.spyOn(component.api.resultsSE, 'GET_phaseReportingInitiatives').mockReturnValue(
+        of({ response: { science_programs: [{ official_code: 'SP01', reporting_enabled: true }] } })
+      );
+
+      (component as any).checkIpsrReportingAccess();
+
+      expect(component.ipsrReportingEnabled).toBe(true);
+    });
+
+    it('should set ipsrReportingEnabled to false when all initiatives have reporting disabled', () => {
+      component.api.dataControlSE.reportingCurrentPhase = { phaseId: 30 };
+      component.api.dataControlSE.myInitiativesListIPSRByPortfolio = [{ official_code: 'SP02' }];
+      component.api.rolesSE.isAdmin = false;
+      jest.spyOn(component.api.resultsSE, 'GET_phaseReportingInitiatives').mockReturnValue(
+        of({ response: { science_programs: [{ official_code: 'SP02', reporting_enabled: false }] } })
+      );
+
+      (component as any).checkIpsrReportingAccess();
+
+      expect(component.ipsrReportingEnabled).toBe(false);
+    });
+
+    it('should set ipsrReportingEnabled to true when initiative is not found in programs', () => {
+      component.api.dataControlSE.reportingCurrentPhase = { phaseId: 30 };
+      component.api.dataControlSE.myInitiativesListIPSRByPortfolio = [{ official_code: 'UNKNOWN' }];
+      component.api.rolesSE.isAdmin = false;
+      jest.spyOn(component.api.resultsSE, 'GET_phaseReportingInitiatives').mockReturnValue(
+        of({ response: { science_programs: [{ official_code: 'SP01', reporting_enabled: false }] } })
+      );
+
+      (component as any).checkIpsrReportingAccess();
+
+      expect(component.ipsrReportingEnabled).toBe(true);
+    });
+
+    it('should set ipsrReportingEnabled to true on error', () => {
+      component.api.dataControlSE.reportingCurrentPhase = { phaseId: 30 };
+      component.api.dataControlSE.myInitiativesListIPSRByPortfolio = [{ official_code: 'SP01' }];
+      component.api.rolesSE.isAdmin = false;
+      component.ipsrReportingEnabled = false;
+      jest.spyOn(component.api.resultsSE, 'GET_phaseReportingInitiatives').mockReturnValue(
+        throwError(() => new Error('API error'))
+      );
+
+      (component as any).checkIpsrReportingAccess();
+
+      expect(component.ipsrReportingEnabled).toBe(true);
+    });
+  });
+
+  describe('ngOnInit branches', () => {
+    it('should call getCurrentPhases when reportingCurrentPhase.phaseId is falsy', () => {
+      component.api.dataControlSE.reportingCurrentPhase = { phaseId: null };
+      const getCurrentPhasesSpy = jest.spyOn(component.api.dataControlSE, 'getCurrentPhases').mockReturnValue(of({}));
+
+      component.ngOnInit();
+
+      expect(getCurrentPhasesSpy).toHaveBeenCalled();
+    });
+
+    it('should call checkIpsrReportingAccess directly when reportingCurrentPhase.phaseId is truthy', () => {
+      component.api.dataControlSE.reportingCurrentPhase = { phaseId: 30 };
+      const checkSpy = jest.spyOn(component as any, 'checkIpsrReportingAccess');
+
+      component.ngOnInit();
+
+      expect(checkSpy).toHaveBeenCalled();
+    });
+
+    it('should call updateUserData when not admin', () => {
+      component.api.rolesSE.isAdmin = false;
+      const updateSpy = jest.spyOn(component.api, 'updateUserData').mockImplementation((cb) => cb());
+
+      component.ngOnInit();
+
+      expect(updateSpy).toHaveBeenCalled();
+    });
   });
 });

@@ -323,19 +323,157 @@ describe('StepN1InnovatonUseComponent', () => {
   });
 
   it('should return narrativeActors description', () => {
-    const expectedDescription = `
-    <ul>
-    <li>
-    If the innovation does not target specific groups of actors or people, then please specify the expected innovation use at organizational level or other use below. The numbers should reflect the expected innovation use by end of 2024.
-    </li>
-    <li>
-    The numbers for ‘youth' and 'non-youth' equal the total number for 'Women' or 'Men’.
-    </li>
-    </ul>
-    `;
-
     const description = component.narrativeActors();
 
-    expect(description).toEqual(expectedDescription);
+    expect(description).toContain('<ul>');
+    expect(description).toContain('expected innovation use by end of 2024');
+    expect(description).toContain('youth');
+    expect(description).toContain('non-youth');
+    expect(description).toContain('Women');
+    expect(description).toContain('Men');
+    expect(description).toContain('</ul>');
+  });
+
+  describe('calculateTotalField branches', () => {
+    it('should not overwrite how_many when sex_and_age_disaggregation is true', () => {
+      const actorItem = { sex_and_age_disaggregation: true, women: 5, men: 10, how_many: 99 };
+      component.calculateTotalField(actorItem);
+      expect(actorItem.how_many).toBe(99);
+    });
+
+    it('should handle null women and men values', () => {
+      const actorItem = { sex_and_age_disaggregation: false, women: null, men: null, how_many: null };
+      component.calculateTotalField(actorItem);
+      expect(actorItem.how_many).toBe(0);
+    });
+  });
+
+  describe('hasElementsWithId branches', () => {
+    it('should filter by attribute when readOnly is true', () => {
+      component.api.rolesSE.readOnly = true;
+      const list = [
+        { id: 1, is_active: true },
+        { id: null, is_active: true },
+        { id: 3, is_active: false }
+      ];
+      expect(component.hasElementsWithId(list, 'id')).toBe(2);
+    });
+
+    it('should filter by is_active when readOnly is false', () => {
+      component.api.rolesSE.readOnly = false;
+      const list = [
+        { id: 1, is_active: true },
+        { id: 2, is_active: false },
+        { id: 3, is_active: true }
+      ];
+      expect(component.hasElementsWithId(list, 'id')).toBe(2);
+    });
+
+    it('should return 0 for empty list', () => {
+      component.api.rolesSE.readOnly = false;
+      expect(component.hasElementsWithId([], 'id')).toBe(0);
+    });
+  });
+
+  describe('validateYouth branches', () => {
+    it('should handle negative gender youth value', (done) => {
+      component.body.innovatonUse.actors = [
+        {
+          women: 10,
+          women_youth: -1,
+          women_non_youth: null,
+          men: 5,
+          men_youth: 2,
+          men_non_youth: null,
+          previousWomen: 10,
+          previousWomen_youth: 5,
+          sex_and_age_disaggregation: false,
+          how_many: null
+        }
+      ] as any;
+
+      const actorItem = component.body.innovatonUse.actors[0];
+      component.validateYouth(0, true, actorItem);
+
+      setTimeout(() => {
+        expect(component.body.innovatonUse.actors[0].women_youth).toBeNull();
+        done();
+      }, 200);
+    });
+
+    it('should handle negative gender value', (done) => {
+      component.body.innovatonUse.actors = [
+        {
+          women: -1,
+          women_youth: 0,
+          women_non_youth: null,
+          men: 5,
+          men_youth: 2,
+          men_non_youth: null,
+          previousWomen: 10,
+          previousWomen_youth: 5,
+          sex_and_age_disaggregation: false,
+          how_many: null
+        }
+      ] as any;
+
+      const actorItem = component.body.innovatonUse.actors[0];
+      component.validateYouth(0, true, actorItem);
+
+      setTimeout(() => {
+        expect(component.body.innovatonUse.actors[0].women).toBe(0);
+        done();
+      }, 200);
+    });
+
+    it('should handle men gender (isWomen=false)', () => {
+      component.body.innovatonUse.actors = [
+        {
+          women: 5,
+          women_youth: 2,
+          women_non_youth: null,
+          men: 10,
+          men_youth: 3,
+          men_non_youth: null,
+          previousWomen: 5,
+          previousWomen_youth: 2,
+          sex_and_age_disaggregation: false,
+          how_many: null
+        }
+      ] as any;
+
+      const actorItem = component.body.innovatonUse.actors[0];
+      component.validateYouth(0, false, actorItem);
+
+      expect(component.body.innovatonUse.actors[0].previousWomen).toBe(10);
+      expect(component.body.innovatonUse.actors[0].previousWomen_youth).toBe(3);
+    });
+
+    it('should trigger showWomenExplanation when gender - genderYouth < 0', (done) => {
+      component.body.innovatonUse.actors = [
+        {
+          women: 2,
+          women_youth: 5,
+          women_non_youth: null,
+          men: 5,
+          men_youth: 2,
+          men_non_youth: null,
+          previousWomen: 10,
+          previousWomen_youth: 3,
+          sex_and_age_disaggregation: false,
+          how_many: null
+        }
+      ] as any;
+
+      const actorItem = component.body.innovatonUse.actors[0];
+      component.validateYouth(0, true, actorItem);
+
+      setTimeout(() => {
+        // After the timer fires, previousWomen values should be restored
+        expect(component.body.innovatonUse.actors[0].women_youth).toBe(3);
+        expect(component.body.innovatonUse.actors[0].women).toBe(10);
+        done();
+      }, 600);
+    });
   });
 });

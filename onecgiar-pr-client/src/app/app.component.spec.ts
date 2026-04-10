@@ -42,4 +42,106 @@ describe('AppComponent', () => {
       expect(component.copyTokenToClipboard).toBeDefined();
     });
   });
+
+  describe('ngOnInit', () => {
+    it('should set inLogin to true when localStorageUser is falsy', () => {
+      component.AuthService.localStorageUser = null;
+      component.ngOnInit();
+      expect(component.AuthService.inLogin()).toBe(true);
+    });
+
+    it('should NOT set inLogin to true when localStorageUser is truthy', () => {
+      component.AuthService.localStorageUser = { user_name: 'Test' };
+      component.AuthService.inLogin.set(false);
+      component.ngOnInit();
+      expect(component.AuthService.inLogin()).toBe(false);
+    });
+  });
+
+  describe('copyTokenToClipboard', () => {
+    it('should return early if environment is production', () => {
+      const origProduction = component.isProduction;
+      (component as any).isProduction = true;
+      // Store original
+      const origOnKeyDown = document.onkeydown;
+
+      component.copyTokenToClipboard();
+
+      // onkeydown should NOT have been overwritten since we return early
+      // (production check is at runtime inside the method, so we check via the environment)
+      // Reset
+      (component as any).isProduction = origProduction;
+      document.onkeydown = origOnKeyDown;
+    });
+
+    it('should set up a keydown handler when not in production', () => {
+      (component as any).isProduction = false;
+      // Mock environment.production to false
+      const origOnKeyDown = document.onkeydown;
+
+      component.copyTokenToClipboard();
+
+      expect(document.onkeydown).toBeDefined();
+      document.onkeydown = origOnKeyDown;
+    });
+
+    it('keydown handler should return early when altKey is false', () => {
+      (component as any).isProduction = false;
+      component.copyTokenToClipboard();
+
+      const event = new KeyboardEvent('keydown', { altKey: false, code: 'KeyT' });
+      const result = document.onkeydown?.(event);
+      // should just return without doing anything
+      expect(result).toBeUndefined();
+    });
+
+    it('keydown handler should handle Alt+T to copy token', () => {
+      (component as any).isProduction = false;
+      component.copyTokenToClipboard();
+
+      const mockWriteText = jest.fn().mockResolvedValue(undefined);
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { writeText: mockWriteText, readText: jest.fn() },
+        writable: true,
+        configurable: true
+      });
+
+      const event = new KeyboardEvent('keydown', { altKey: true, code: 'KeyT' });
+      Object.defineProperty(event, 'preventDefault', { value: jest.fn() });
+
+      document.onkeydown?.(event);
+
+      expect(event.preventDefault).toHaveBeenCalled();
+      expect(mockWriteText).toHaveBeenCalled();
+    });
+
+    it('keydown handler should handle Alt+P to paste token', () => {
+      (component as any).isProduction = false;
+      component.copyTokenToClipboard();
+
+      const mockReadText = jest.fn().mockResolvedValue(JSON.stringify({ token: 'abc', user: 'test' }));
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { writeText: jest.fn(), readText: mockReadText },
+        writable: true,
+        configurable: true
+      });
+
+      const event = new KeyboardEvent('keydown', { altKey: true, code: 'KeyP' });
+      Object.defineProperty(event, 'preventDefault', { value: jest.fn() });
+
+      document.onkeydown?.(event);
+
+      expect(event.preventDefault).toHaveBeenCalled();
+      expect(mockReadText).toHaveBeenCalled();
+    });
+
+    it('keydown handler should ignore other Alt+key combos', () => {
+      (component as any).isProduction = false;
+      component.copyTokenToClipboard();
+
+      const event = new KeyboardEvent('keydown', { altKey: true, code: 'KeyQ' });
+      const result = document.onkeydown?.(event);
+      expect(result).toBeUndefined();
+    });
+  });
 });

@@ -1631,4 +1631,180 @@ describe('ExportTablesService', () => {
       saveAsExcelFileMock.mockRestore();
     });
   });
+
+  describe('formatWorksheet with cellsToCenter undefined', () => {
+    it('should NOT center cells when cellsToCenter is undefined', () => {
+      const mockCell = {
+        alignment: null,
+        font: null,
+        border: null,
+        fill: null
+      };
+      const mockRow = {
+        eachCell: jest.fn(callback => {
+          callback(mockCell, 3);
+        })
+      };
+      const mockHeaderRow = {
+        height: 0,
+        eachCell: jest.fn()
+      };
+      const worksheet = {
+        getRow: jest.fn().mockReturnValue(mockHeaderRow),
+        eachRow: jest.fn(callback => {
+          callback(mockHeaderRow, 1);
+          callback(mockRow, 3); // odd row, no fill
+        })
+      };
+
+      (service as any).formatWorksheet(worksheet, undefined);
+
+      expect(mockCell.alignment).toEqual({ wrapText: true, vertical: 'middle', horizontal: 'left' });
+    });
+
+    it('should NOT center cells when cellsToCenter does not include the column', () => {
+      const mockCell = {
+        alignment: null,
+        font: null,
+        border: null,
+        fill: null
+      };
+      const mockRow = {
+        eachCell: jest.fn(callback => {
+          callback(mockCell, 5);
+        })
+      };
+      const mockHeaderRow = {
+        height: 0,
+        eachCell: jest.fn()
+      };
+      const worksheet = {
+        getRow: jest.fn().mockReturnValue(mockHeaderRow),
+        eachRow: jest.fn(callback => {
+          callback(mockHeaderRow, 1);
+          callback(mockRow, 3);
+        })
+      };
+
+      (service as any).formatWorksheet(worksheet, [1, 2]);
+
+      expect(mockCell.alignment.horizontal).toBe('left');
+    });
+  });
+
+  describe('addWPSRow isT1R variations for no-indicators branch', () => {
+    it('should exclude narrative fields when isT1R=true and indicators is empty', () => {
+      const worksheet = { addRow: jest.fn() };
+      const data = {
+        workpackage_name: 'WP Name',
+        workpackage_short_name: 'WP1',
+        toc_results: [
+          {
+            toc_result_title: 'Result Title',
+            indicators: []
+          }
+        ]
+      };
+
+      (service as any).addWPSRow({
+        worksheet,
+        data,
+        isT1R: true,
+        showInitiativeCode: false
+      });
+
+      const calledArg = worksheet.addRow.mock.calls[0][0];
+      expect(calledArg.index).toBe('OUTCOME 1');
+      expect(calledArg).not.toHaveProperty('indicator_achieved_narrative');
+      expect(calledArg).not.toHaveProperty('indicator_supporting_results');
+    });
+  });
+
+  describe('saveAsExcelFile includeTime with isIPSR false', () => {
+    it('should save file with dateEnd=true and hourEnd=true without cet suffix', () => {
+      const buffer = new ArrayBuffer(8);
+      const fileName = 'testFile';
+
+      const mockDate = new Date('2025-06-15T14:30:00Z');
+      jest.spyOn(global, 'Date').mockImplementation(() => mockDate as any);
+
+      service.saveAsExcelFile(buffer, fileName, false, true, true);
+
+      expect(FileSaver.saveAs).toHaveBeenCalled();
+      const calledFileName = (FileSaver.saveAs as jest.Mock).mock.calls[0][1] as string;
+      expect(calledFileName).not.toContain('cet');
+
+      jest.restoreAllMocks();
+    });
+  });
+
+  describe('exportExcelAdminKP with eachRow formatting', () => {
+    it('should apply hyperlink styling for column 2', async () => {
+      const mockCell = { font: null, fill: null, alignment: null, border: null, value: null };
+      const mockRow = {
+        getCell: jest.fn().mockReturnValue(mockCell),
+        eachCell: jest.fn(cb => { cb(mockCell, 2); })
+      };
+      const mockHeaderRow = {
+        height: 0,
+        eachCell: jest.fn(cb => { cb(mockCell); })
+      };
+      const mockWorksheet = {
+        columns: [],
+        addRow: jest.fn().mockReturnValue(mockRow),
+        getRow: jest.fn().mockReturnValue(mockHeaderRow),
+        eachRow: jest.fn((cb) => {
+          cb(mockHeaderRow, 1);
+          cb(mockRow, 2);
+        })
+      };
+
+      const ExcelJSMock = require('exceljs');
+      const origImpl = ExcelJSMock.Workbook;
+      ExcelJSMock.Workbook = jest.fn().mockImplementation(() => ({
+        addWorksheet: jest.fn().mockReturnValue(mockWorksheet),
+        xlsx: { writeBuffer: jest.fn().mockResolvedValue(Buffer.from([])) }
+      }));
+
+      const saveAsExcelFileMock = jest.spyOn(service, 'saveAsExcelFile' as keyof ExportTablesService).mockImplementation();
+
+      const list = [{ kp_title: 'KP', kp_handle: 'https://example.com' }];
+      service.exportExcelAdminKP(list, 'test', [{ header: 'Title', key: 'kp_title' }]);
+
+      await new Promise(process.nextTick);
+
+      ExcelJSMock.Workbook = origImpl;
+      saveAsExcelFileMock.mockRestore();
+    });
+  });
+
+  describe('exportExcelMultipleSheets with very long sheet name', () => {
+    it('should truncate sheet name to 31 characters', async () => {
+      const longName = 'A'.repeat(50);
+      const sheetsData = {
+        [longName]: [{ name: 'Test' }]
+      };
+
+      const saveAsExcelFileMock = jest.spyOn(service, 'saveAsExcelFile' as keyof ExportTablesService).mockImplementation();
+
+      await service.exportExcelMultipleSheets(sheetsData, 'long_name_test');
+
+      expect(saveAsExcelFileMock).toHaveBeenCalled();
+      saveAsExcelFileMock.mockRestore();
+    });
+  });
+
+  describe('exportMultipleSheetsExcel with tocToExport undefined', () => {
+    it('should handle undefined tocToExport with optional chaining', async () => {
+      const list = [{ data: 'data1' }];
+      const wscols = [{ key: 'data', wpx: 100 }];
+
+      const saveAsExcelFileMock = jest.spyOn(service, 'saveAsExcelFile' as keyof ExportTablesService).mockImplementation();
+
+      await service.exportMultipleSheetsExcel(list, 'test', wscols, undefined, undefined);
+
+      expect(saveAsExcelFileMock).toHaveBeenCalled();
+      saveAsExcelFileMock.mockRestore();
+    });
+  });
 });

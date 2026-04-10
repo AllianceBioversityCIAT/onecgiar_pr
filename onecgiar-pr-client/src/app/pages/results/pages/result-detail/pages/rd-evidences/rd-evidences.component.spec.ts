@@ -395,4 +395,174 @@ describe('RdEvidencesComponent', () => {
       expect(result).toBe(false);
     });
   });
+
+  describe('alertStatus branches', () => {
+    it('should include innovation readiness text when result_type_id is 7', () => {
+      mockApiService.dataControlSE.isKnowledgeProduct = false;
+      mockApiService.dataControlSE.currentResult.result_type_id = 7;
+      const result = component.alertStatus();
+      expect(result).toContain('innovation readiness level');
+    });
+
+    it('should include capacity sharing text when result_type_id is 5', () => {
+      mockApiService.dataControlSE.isKnowledgeProduct = false;
+      mockApiService.dataControlSE.currentResult.result_type_id = 5;
+      const result = component.alertStatus();
+      expect(result).toContain('Capacity sharing for development');
+    });
+
+    it('should not include special text when result_type_id is neither 5 nor 7', () => {
+      mockApiService.dataControlSE.isKnowledgeProduct = false;
+      mockApiService.dataControlSE.currentResult.result_type_id = 1;
+      const result = component.alertStatus();
+      expect(result).not.toContain('innovation readiness level');
+      expect(result).not.toContain('Capacity sharing for development');
+    });
+  });
+
+  describe('validateCheckBoxes branches', () => {
+    it('should return empty string when no tags have level 3', () => {
+      component.evidencesBody = {
+        result_id: 1,
+        gender_tag_level: '1',
+        climate_change_tag_level: '2',
+        nutrition_tag_level: '1',
+        environmental_biodiversity_tag_level: '2',
+        poverty_tag_level: '1',
+        evidences: []
+      };
+
+      const result = component.validateCheckBoxes();
+      expect(result).toBe('');
+    });
+
+    it('should not set isOptional to false when all tags with level 3 have related evidences', () => {
+      component.evidencesBody = {
+        result_id: 1,
+        gender_tag_level: '3',
+        climate_change_tag_level: '1',
+        nutrition_tag_level: '1',
+        environmental_biodiversity_tag_level: '1',
+        poverty_tag_level: '1',
+        evidences: [{ gender_related: true }]
+      };
+      component.isOptional = true;
+
+      const result = component.validateCheckBoxes();
+      expect(result).toBe('');
+    });
+
+    it('should set isOptional to false when not all tags have related evidences', () => {
+      component.evidencesBody = {
+        result_id: 1,
+        gender_tag_level: '3',
+        climate_change_tag_level: '3',
+        nutrition_tag_level: '1',
+        environmental_biodiversity_tag_level: '1',
+        poverty_tag_level: '1',
+        evidences: [{ gender_related: true, youth_related: false }]
+      };
+      component.isOptional = true;
+
+      const result = component.validateCheckBoxes();
+      expect(component.isOptional).toBe(false);
+      expect(result).toContain('<ul>');
+    });
+  });
+
+  describe('validateButtonDisabled - invalid link regex', () => {
+    it('should return true when evidence has a drive.google.com link', () => {
+      component.evidencesBody = {
+        result_id: 1,
+        gender_tag_level: '1',
+        climate_change_tag_level: '1',
+        nutrition_tag_level: '1',
+        environmental_biodiversity_tag_level: '1',
+        poverty_tag_level: '1',
+        evidences: [{ link: 'https://drive.google.com/file/abc', is_sharepoint: false }]
+      };
+
+      expect(component.validateButtonDisabled).toBe(true);
+    });
+
+    it('should return true when evidence has a sharepoint.com link', () => {
+      component.evidencesBody = {
+        result_id: 1,
+        gender_tag_level: '1',
+        climate_change_tag_level: '1',
+        nutrition_tag_level: '1',
+        environmental_biodiversity_tag_level: '1',
+        poverty_tag_level: '1',
+        evidences: [{ link: 'https://myorg.sharepoint.com/sites/doc', is_sharepoint: false }]
+      };
+
+      expect(component.validateButtonDisabled).toBe(true);
+    });
+
+    it('should return false for valid external links with unique values', () => {
+      component.evidencesBody = {
+        result_id: 1,
+        gender_tag_level: '1',
+        climate_change_tag_level: '1',
+        nutrition_tag_level: '1',
+        environmental_biodiversity_tag_level: '1',
+        poverty_tag_level: '1',
+        evidences: [
+          { link: 'https://example.com/paper1', is_sharepoint: false },
+          { link: 'https://example.com/paper2', is_sharepoint: false }
+        ]
+      };
+
+      expect(component.validateButtonDisabled).toBe(false);
+    });
+
+    it('should return true for duplicate non-sharepoint links', () => {
+      component.evidencesBody = {
+        result_id: 1,
+        gender_tag_level: '1',
+        climate_change_tag_level: '1',
+        nutrition_tag_level: '1',
+        environmental_biodiversity_tag_level: '1',
+        poverty_tag_level: '1',
+        evidences: [
+          { link: 'https://example.com/paper1', is_sharepoint: false },
+          { link: 'https://example.com/paper1', is_sharepoint: false }
+        ]
+      };
+
+      expect(component.validateButtonDisabled).toBe(true);
+    });
+
+    it('should return false for sharepoint evidence with file', () => {
+      component.evidencesBody = {
+        result_id: 1,
+        gender_tag_level: '1',
+        climate_change_tag_level: '1',
+        nutrition_tag_level: '1',
+        environmental_biodiversity_tag_level: '1',
+        poverty_tag_level: '1',
+        evidences: [
+          { is_sharepoint: true, file: new File([], 'test.pdf'), link: null }
+        ]
+      };
+
+      expect(component.validateButtonDisabled).toBe(false);
+    });
+
+    it('should return false for sharepoint evidence with link', () => {
+      component.evidencesBody = {
+        result_id: 1,
+        gender_tag_level: '1',
+        climate_change_tag_level: '1',
+        nutrition_tag_level: '1',
+        environmental_biodiversity_tag_level: '1',
+        poverty_tag_level: '1',
+        evidences: [
+          { is_sharepoint: true, file: null, link: 'https://example.com/doc' }
+        ]
+      };
+
+      expect(component.validateButtonDisabled).toBe(false);
+    });
+  });
 });
