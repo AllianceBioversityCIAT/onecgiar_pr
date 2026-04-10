@@ -10,6 +10,7 @@ import { RetrieveModalService } from '../../../../../result-detail/components/re
 })
 export class ResultsToUpdateModalComponent {
   text_to_search = null;
+
   columnOrder = [
     // { title: 'Result code', attr: 'result_code' },
     { title: 'Title', attr: 'title', class: 'notCenter' },

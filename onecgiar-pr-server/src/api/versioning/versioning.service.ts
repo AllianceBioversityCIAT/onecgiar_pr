@@ -64,6 +64,9 @@ import { ResultCountrySubnationalRepository } from '../results/result-countries-
 import { ResultAnswerRepository } from '../results/result-questions/repository/result-answers.repository';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 
+/** Clarisa `clarisa_initiatives.portfolio_id` for CGIAR Programs (P25). */
+const PORTFOLIO_CGIAR_PROGRAMS_P25_ID = 3;
+
 @Injectable()
 export class VersioningService {
   private readonly _logger: Logger = new Logger(VersioningService.name);
@@ -145,7 +148,7 @@ export class VersioningService {
   }
 
   async setQaStatus(data: UpdateQaResults) {
-    if (!data?.results_id || !data?.results_id?.length) {
+    if (!data?.results_id?.length) {
       throw ReturnResponseUtil.format({
         message: `The results_id field is required`,
         response: null,
@@ -196,8 +199,17 @@ export class VersioningService {
           is_active: true,
         },
       });
-      return res ? false : true;
-    } catch (_error) {
+      return !res;
+    } catch (error: unknown) {
+      let detail = 'Unexpected error';
+      if (error instanceof Error) {
+        detail = error.message;
+      } else if (typeof error === 'string') {
+        detail = error;
+      }
+      this._logger.warn(
+        `$_genericValidation failed (result_code=${result_code}, phase_id=${phase_id}): ${detail}`,
+      );
       return false;
     }
   }
@@ -207,6 +219,7 @@ export class VersioningService {
     phase: Version,
     user: TokenDto,
     entity_id?: number,
+    same_portfolio_phase_change?: boolean,
   ) {
     this._logger.log(
       `REPORTING: Phase change in the ${result.id} result to the phase [${phase.id}]:${phase.phase_name} .`,
@@ -242,16 +255,20 @@ export class VersioningService {
       );
       dataResult.result_code = result.result_code;
 
+      const isV2CrossPortfolio =
+        entity_id != null && same_portfolio_phase_change !== true;
+
       const config = {
         old_result_id: result.id,
         new_result_id: dataResult.id,
         phase: phase.id,
         user: user,
         entity_id: entity_id,
+        same_portfolio_phase_change: same_portfolio_phase_change,
       };
       await this._resultByInitiativesRepository.replicate(manager, config);
 
-      if (!entity_id) {
+      if (!isV2CrossPortfolio) {
         await this._shareResultRequestRepository.replicate(manager, config);
         await this._resultInitiativeBudgetRepository.replicate(manager, config);
         await this._resultNonPooledProjectBudgetRepository.replicate(
@@ -260,7 +277,7 @@ export class VersioningService {
         );
       }
 
-      switch (parseInt(`${result.result_type_id}`)) {
+      switch (Number.parseInt(`${result.result_type_id}`, 10)) {
         case 1:
           await this._resultsPolicyChangesRepository.replicate(manager, config);
           break;
@@ -325,7 +342,7 @@ export class VersioningService {
       );
       await this._resultByIntitutionsTypeRepository.replicate(manager, config);
 
-      if (!entity_id) {
+      if (!isV2CrossPortfolio) {
         await this._resultInstitutionsBudgetRepository.replicate(
           manager,
           config,
@@ -339,10 +356,14 @@ export class VersioningService {
       await this._evidenceSharepointRepository.replicate(manager, config);
       await this._evidencesService.replicateSPFiles(config);
 
+      await this._resultInitiativeBudgetRepository.ensureMissingBudgetsForPrimaryInitiatives(
+        manager,
+        dataResult.id,
+        user,
+      );
+
       return dataResult;
     });
-
-    //await this._resultsImpactAreaIndicatorRepository.replicable(config);
 
     this._logger.log(
       `REPORTING: The change of phase of result ${result.id} is completed correctly.`,
@@ -358,6 +379,7 @@ export class VersioningService {
     phase: Version,
     user: TokenDto,
     entity_id?: number,
+    same_portfolio_phase_change?: boolean,
   ) {
     this._logger.log(
       `IPSR: Phase change in the ${result.id} result to the phase [${phase.id}]:${phase.phase_name} .`,
@@ -402,6 +424,7 @@ export class VersioningService {
         new_ipsr_id: null,
         old_ipsr_id: null,
         entity_id: entity_id,
+        same_portfolio_phase_change: same_portfolio_phase_change,
       };
 
       const portfolioP25 = await this._versionRepository.findOne({
@@ -422,7 +445,10 @@ export class VersioningService {
 
       // RESULT
       await this._resultByInitiativesRepository.replicate(manager, config);
-      if (!portfolioP25) {
+      const shouldReplicateShareRequests =
+        (!config.entity_id && !portfolioP25) ||
+        (!!config.entity_id && config.same_portfolio_phase_change === true);
+      if (shouldReplicateShareRequests) {
         await this._shareResultRequestRepository.replicate(manager, config);
       }
       await this._nonPooledProjectRepository.replicate(manager, config);
@@ -439,7 +465,9 @@ export class VersioningService {
       await this._linkedResultRepository.replicate(manager, config);
       await this._evidencesRepository.replicate(manager, config);
       await this._resultActorRepository.replicate(manager, config);
-      if (!config?.entity_id) {
+      const shouldReplicateFullBudgets =
+        !config.entity_id || config.same_portfolio_phase_change === true;
+      if (shouldReplicateFullBudgets) {
         await this._resultInitiativeBudgetRepository.replicate(manager, config);
         await this._resultNonPooledProjectBudgetRepository.replicate(
           manager,
@@ -483,6 +511,12 @@ export class VersioningService {
       await this._resultsIpResultMeasuresRespository.replicate(manager, config);
       await this._resultsIpInstitutionTypeRepository.replicate(manager, config);
 
+      await this._resultInitiativeBudgetRepository.ensureMissingBudgetsForPrimaryInitiatives(
+        manager,
+        dataResult.id,
+        user,
+      );
+
       return dataResult;
     });
 
@@ -501,6 +535,7 @@ export class VersioningService {
     user: TokenDto,
     module_id: number,
     entity_id?: number,
+    same_portfolio_phase_change?: boolean,
   ) {
     switch (module_id) {
       case 1:
@@ -509,11 +544,16 @@ export class VersioningService {
           phase,
           user,
           entity_id,
+          same_portfolio_phase_change,
         );
-        break;
       case 2:
-        return await this.$_phaseChangeIPSR(result, phase, user, entity_id);
-        break;
+        return await this.$_phaseChangeIPSR(
+          result,
+          phase,
+          user,
+          entity_id,
+          same_portfolio_phase_change,
+        );
       default:
         break;
     }
@@ -550,6 +590,26 @@ export class VersioningService {
     }
 
     const module_id = this.$_validationModule(legacy_result.result_type_id);
+
+    const ownerInitiative =
+      await this._resultByInitiativesRepository.getOwnerInitiativeByResult(
+        legacy_result.id,
+      );
+    if (ownerInitiative?.inititiative_id) {
+      const primaryPortfolio = await this._clarisaInitiativesRepository.findOne(
+        {
+          where: { id: ownerInitiative.inititiative_id },
+          select: { portfolio_id: true },
+        },
+      );
+      if (primaryPortfolio?.portfolio_id === PORTFOLIO_CGIAR_PROGRAMS_P25_ID) {
+        throw ReturnResponseUtil.format({
+          message: `Results whose primary submitter is already a P25 CGIAR Program must use phase change with entityId (V2).`,
+          response: legacy_result.id,
+          statusCode: HttpStatus.CONFLICT,
+        });
+      }
+    }
 
     const phase = await this._versionRepository.findOne({
       where: {
@@ -602,9 +662,9 @@ export class VersioningService {
       where: { id: entity_id, active: true },
     });
 
-    if (!entity || entity.portfolio_id !== 3) {
+    if (entity?.portfolio_id !== PORTFOLIO_CGIAR_PROGRAMS_P25_ID) {
       throw ReturnResponseUtil.format({
-        message: `Replication is only allowed for entities with portfolio_id = 3`,
+        message: `Replication is only allowed for entities with portfolio_id = ${PORTFOLIO_CGIAR_PROGRAMS_P25_ID}`,
         response: entity_id,
         statusCode: HttpStatus.FORBIDDEN,
       });
@@ -657,6 +717,14 @@ export class VersioningService {
       });
     }
 
+    const primarySourceInitiative =
+      await this._clarisaInitiativesRepository.findOne({
+        where: { id: mainInitiative.initiative_id, active: true },
+        select: { id: true, portfolio_id: true },
+      });
+    const same_portfolio_phase_change =
+      primarySourceInitiative?.portfolio_id === PORTFOLIO_CGIAR_PROGRAMS_P25_ID;
+
     if (legacy_result.result_type_id == 6) {
       throw ReturnResponseUtil.format({
         message: `Result ID: ${result_id} is a Knowledge Product, this type of result is not possible to phase shift it contact support`,
@@ -691,6 +759,7 @@ export class VersioningService {
         user,
         module_id,
         entity_id,
+        same_portfolio_phase_change,
       );
       if (res?.error) {
         throw ReturnResponseUtil.format({
@@ -784,7 +853,7 @@ export class VersioningService {
       await this._versionRepository.$_getAllInovationDevToReplicate(phase);
 
     for (const r of results) {
-      if (this.$_genericValidation(r.result_code, phase.id)) {
+      if (await this.$_genericValidation(r.result_code, phase.id)) {
         await this.$_phaseChangeReporting(r, phase, user);
       }
     }

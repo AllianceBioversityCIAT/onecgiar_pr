@@ -1,4 +1,4 @@
-@let activeButtons = this.api.dataControlSE?.myInitiativesListIPSRByPortfolio?.length > 0 || this.api.rolesSE?.isAdmin;
+@let activeButtons = (this.api.dataControlSE?.myInitiativesListIPSRByPortfolio?.length > 0 && this.ipsrReportingEnabled) || this.api.rolesSE?.isAdmin;
 
 <div class="ipsr_container">
   <app-section-header

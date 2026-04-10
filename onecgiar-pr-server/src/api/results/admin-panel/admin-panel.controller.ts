@@ -7,6 +7,7 @@ import {
   Query,
   UseInterceptors,
   Patch,
+  ParseIntPipe,
 } from '@nestjs/common';
 import {
   ApiBody,
@@ -26,6 +27,8 @@ import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.in
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
 import { BulkKpDto } from './dto/bulk-kp.dto';
 import { SkipThrottle } from '@nestjs/throttler';
+import { PatchPhaseInitiativeReportingDto } from './dto/patch-phase-initiative-reporting.dto';
+import { BulkPhaseInitiativeReportingDto } from './dto/bulk-phase-initiative-reporting.dto';
 
 @Controller()
 @UseInterceptors(ResponseInterceptor)
@@ -163,6 +166,78 @@ export class AdminPanelController {
       status,
       phases,
       bulkKpDto,
+    );
+  }
+
+  @Get('phases/:phaseId/reporting-initiatives')
+  @ApiOperation({
+    summary:
+      'Phase detail + Science Programs / Accelerators access (Results or IPSR)',
+    description:
+      'Returns phase metadata and each eligible initiative with reporting_enabled. Works for any version row (app_module_id 1 or 2). Absence of a row means default enabled (true).',
+  })
+  @ApiParam({ name: 'phaseId', type: Number })
+  @ApiOkResponse({ description: 'Phase and science_programs list.' })
+  getPhaseReportingInitiativesDetail(
+    @Param('phaseId', ParseIntPipe) phaseId: number,
+  ) {
+    return this.adminPanelService.getPhaseReportingInitiativesDetail(phaseId);
+  }
+
+  @Patch('phases/:phaseId/reporting-initiatives/bulk')
+  @ApiOperation({
+    summary:
+      'Open or close reporting for all eligible initiatives (Results or IPSR phase)',
+  })
+  @ApiParam({ name: 'phaseId', type: Number })
+  @ApiBody({ type: BulkPhaseInitiativeReportingDto })
+  @ApiOkResponse({ description: 'Full list after bulk update.' })
+  patchPhaseInitiativeReportingBulk(
+    @Param('phaseId', ParseIntPipe) phaseId: number,
+    @Body() dto: BulkPhaseInitiativeReportingDto,
+  ) {
+    return this.adminPanelService.patchPhaseInitiativeReportingBulk(
+      phaseId,
+      dto,
+    );
+  }
+
+  @Get('phases/:phaseId/reporting-initiatives/:initiativeId/status')
+  @ApiOperation({
+    summary: 'Check if an initiative may report in this phase (any module)',
+    description:
+      'Used by clients to gate reporting UI. reporting_enabled considers overrides and defaults to true.',
+  })
+  @ApiParam({ name: 'phaseId', type: Number })
+  @ApiParam({ name: 'initiativeId', type: Number })
+  @ApiOkResponse({ description: 'Status payload.' })
+  getInitiativeReportingStatus(
+    @Param('phaseId', ParseIntPipe) phaseId: number,
+    @Param('initiativeId', ParseIntPipe) initiativeId: number,
+  ) {
+    return this.adminPanelService.getInitiativeReportingStatus(
+      phaseId,
+      initiativeId,
+    );
+  }
+
+  @Patch('phases/:phaseId/reporting-initiatives/:initiativeId')
+  @ApiOperation({
+    summary: 'Enable or disable reporting for one initiative in a phase',
+  })
+  @ApiParam({ name: 'phaseId', type: Number })
+  @ApiParam({ name: 'initiativeId', type: Number })
+  @ApiBody({ type: PatchPhaseInitiativeReportingDto })
+  @ApiOkResponse({ description: 'Updated initiative access row.' })
+  patchPhaseInitiativeReporting(
+    @Param('phaseId', ParseIntPipe) phaseId: number,
+    @Param('initiativeId', ParseIntPipe) initiativeId: number,
+    @Body() dto: PatchPhaseInitiativeReportingDto,
+  ) {
+    return this.adminPanelService.patchPhaseInitiativeReporting(
+      phaseId,
+      initiativeId,
+      dto,
     );
   }
 }

@@ -111,7 +111,14 @@ describe('EntityAowService', () => {
         GET_W3BilateralProjects: jest.fn().mockReturnValue(of({ response: [] })),
         GET_ExistingResultsContributors: jest.fn().mockReturnValue(of({ response: { contributors: [] } })),
         GET_2030Outcomes: jest.fn().mockReturnValue(of(mockApiResponse)),
-        GET_DashboardData: jest.fn().mockReturnValue(of({ response: null }))
+        GET_DashboardData: jest.fn().mockReturnValue(of({ response: null })),
+        GET_phaseInitiativeStatus: jest.fn().mockReturnValue(of({ response: { reporting_enabled: true } }))
+      },
+      dataControlSE: {
+        reportingCurrentPhase: { phaseId: 34 }
+      },
+      rolesSE: {
+        isAdmin: false
       }
     } as any;
 
@@ -1223,24 +1230,25 @@ describe('EntityAowService', () => {
   describe('canReportResults', () => {
     it('should return true when user is admin', () => {
       (mockApiService as any).rolesSE = { isAdmin: true };
-      (mockApiService as any).dataControlSE = { myInitiativesList: [] };
+      (mockApiService as any).dataControlSE = { reportingCurrentPhase: { phaseId: 34 }, myInitiativesList: [] };
 
       expect(service.canReportResults()).toBe(true);
     });
 
     it('should return true when user initiative matches entityId', () => {
       (mockApiService as any).rolesSE = { isAdmin: false };
-      (mockApiService as any).dataControlSE = {
+      (mockApiService as any).dataControlSE = { reportingCurrentPhase: { phaseId: 34 },
         myInitiativesList: [{ official_code: 'INIT-001' }]
       };
       service.entityId.set('INIT-001');
+      service.reportingEnabled.set(true);
 
       expect(service.canReportResults()).toBe(true);
     });
 
     it('should return false when user initiative does not match entityId', () => {
       (mockApiService as any).rolesSE = { isAdmin: false };
-      (mockApiService as any).dataControlSE = {
+      (mockApiService as any).dataControlSE = { reportingCurrentPhase: { phaseId: 34 },
         myInitiativesList: [{ official_code: 'INIT-002' }]
       };
       service.entityId.set('INIT-001');
@@ -1250,7 +1258,7 @@ describe('EntityAowService', () => {
 
     it('should return false when myInitiativesList is null', () => {
       (mockApiService as any).rolesSE = { isAdmin: false };
-      (mockApiService as any).dataControlSE = {
+      (mockApiService as any).dataControlSE = { reportingCurrentPhase: { phaseId: 34 },
         myInitiativesList: null
       };
       service.entityId.set('INIT-001');
@@ -1260,7 +1268,7 @@ describe('EntityAowService', () => {
 
     it('should return false when myInitiativesList is undefined', () => {
       (mockApiService as any).rolesSE = { isAdmin: false };
-      (mockApiService as any).dataControlSE = {
+      (mockApiService as any).dataControlSE = { reportingCurrentPhase: { phaseId: 34 },
         myInitiativesList: undefined
       };
       service.entityId.set('INIT-001');
@@ -1272,7 +1280,7 @@ describe('EntityAowService', () => {
   describe('getAllDetailsData - SGP-02 path', () => {
     beforeEach(() => {
       (mockApiService as any).rolesSE = { isAdmin: false };
-      (mockApiService as any).dataControlSE = {
+      (mockApiService as any).dataControlSE = { reportingCurrentPhase: { phaseId: 34 },
         myInitiativesList: [],
         myInitiativesListReportingByPortfolio: null
       };
@@ -1316,7 +1324,7 @@ describe('EntityAowService', () => {
     });
 
     it('should take SGP-02 path and set details from list when initiative found (SGP-02)', async () => {
-      (mockApiService as any).dataControlSE = {
+      (mockApiService as any).dataControlSE = { reportingCurrentPhase: { phaseId: 34 },
         myInitiativesListReportingByPortfolio: [
           { id: 10, official_code: 'SGP-02', name: 'Science Group Program', short_name: 'SGP' }
         ],
@@ -1343,7 +1351,7 @@ describe('EntityAowService', () => {
     });
 
     it('should take SGP-02 path with SGP02 variant', async () => {
-      (mockApiService as any).dataControlSE = {
+      (mockApiService as any).dataControlSE = { reportingCurrentPhase: { phaseId: 34 },
         myInitiativesListReportingByPortfolio: [
           { id: 20, official_code: 'SGP02', name: 'SGP Variant', short_name: 'SGP-V' }
         ],
@@ -1369,7 +1377,7 @@ describe('EntityAowService', () => {
     });
 
     it('should fetch from science programs when initiative not found in list', async () => {
-      (mockApiService as any).dataControlSE = {
+      (mockApiService as any).dataControlSE = { reportingCurrentPhase: { phaseId: 34 },
         myInitiativesListReportingByPortfolio: null,
         myInitiativesList: []
       };
@@ -1417,7 +1425,7 @@ describe('EntityAowService', () => {
     });
 
     it('should handle null response.totalsByType in SGP-02 path', async () => {
-      (mockApiService as any).dataControlSE = {
+      (mockApiService as any).dataControlSE = { reportingCurrentPhase: { phaseId: 34 },
         myInitiativesListReportingByPortfolio: [
           { id: 10, official_code: 'SGP-02', name: 'Test', short_name: 'T' }
         ],
@@ -1436,7 +1444,7 @@ describe('EntityAowService', () => {
     });
 
     it('should handle undefined response in SGP-02 path', async () => {
-      (mockApiService as any).dataControlSE = {
+      (mockApiService as any).dataControlSE = { reportingCurrentPhase: { phaseId: 34 },
         myInitiativesListReportingByPortfolio: [
           { id: 10, official_code: 'SGP-02', name: 'Test', short_name: 'T' }
         ],
@@ -1458,7 +1466,7 @@ describe('EntityAowService', () => {
   describe('getSgp02InitiativeFromList - field fallback branches', () => {
     beforeEach(() => {
       (mockApiService as any).rolesSE = { isAdmin: false };
-      (mockApiService as any).dataControlSE = {
+      (mockApiService as any).dataControlSE = { reportingCurrentPhase: { phaseId: 34 },
         myInitiativesListReportingByPortfolio: null,
         myInitiativesList: []
       };
@@ -1468,7 +1476,7 @@ describe('EntityAowService', () => {
     });
 
     it('should use initiative_id when id is not available', async () => {
-      (mockApiService as any).dataControlSE = {
+      (mockApiService as any).dataControlSE = { reportingCurrentPhase: { phaseId: 34 },
         myInitiativesListReportingByPortfolio: [
           { initiative_id: 42, official_code: 'SGP-02', initiative_name: 'Init Name', shortName: 'SN' }
         ],
@@ -1492,7 +1500,7 @@ describe('EntityAowService', () => {
     });
 
     it('should use 0 when neither id nor initiative_id is available', async () => {
-      (mockApiService as any).dataControlSE = {
+      (mockApiService as any).dataControlSE = { reportingCurrentPhase: { phaseId: 34 },
         myInitiativesListReportingByPortfolio: [
           { official_code: 'SGP-02', name: 'Just Name' }
         ],
@@ -1516,7 +1524,7 @@ describe('EntityAowService', () => {
     });
 
     it('should use entityId as officialCode fallback when official_code is missing', async () => {
-      (mockApiService as any).dataControlSE = {
+      (mockApiService as any).dataControlSE = { reportingCurrentPhase: { phaseId: 34 },
         myInitiativesListReportingByPortfolio: null,
         myInitiativesList: [
           { id: 5, official_code: 'SGP-02', name: 'Name', short_name: 'SN' }
@@ -1535,7 +1543,7 @@ describe('EntityAowService', () => {
     });
 
     it('should use myInitiativesList when myInitiativesListReportingByPortfolio is null', async () => {
-      (mockApiService as any).dataControlSE = {
+      (mockApiService as any).dataControlSE = { reportingCurrentPhase: { phaseId: 34 },
         myInitiativesListReportingByPortfolio: null,
         myInitiativesList: [
           { id: 7, official_code: 'SGP-02', name: 'From Main List', short_name: 'FML' }
@@ -1559,7 +1567,7 @@ describe('EntityAowService', () => {
     });
 
     it('should use initiative_name as name fallback', async () => {
-      (mockApiService as any).dataControlSE = {
+      (mockApiService as any).dataControlSE = { reportingCurrentPhase: { phaseId: 34 },
         myInitiativesListReportingByPortfolio: [
           { id: 8, official_code: 'SGP-02', initiative_name: 'Initiative Name', short_name: 'IN' }
         ],
@@ -1578,7 +1586,7 @@ describe('EntityAowService', () => {
     });
 
     it('should use short_name as name fallback when name and initiative_name are missing', async () => {
-      (mockApiService as any).dataControlSE = {
+      (mockApiService as any).dataControlSE = { reportingCurrentPhase: { phaseId: 34 },
         myInitiativesListReportingByPortfolio: [
           { id: 9, official_code: 'SGP-02', short_name: 'ShortN' }
         ],
@@ -1598,7 +1606,7 @@ describe('EntityAowService', () => {
     });
 
     it('should use shortName as name fallback when name, initiative_name, and short_name are missing', async () => {
-      (mockApiService as any).dataControlSE = {
+      (mockApiService as any).dataControlSE = { reportingCurrentPhase: { phaseId: 34 },
         myInitiativesListReportingByPortfolio: [
           { id: 11, official_code: 'SGP-02', shortName: 'ShortNameOnly' }
         ],
@@ -1618,7 +1626,7 @@ describe('EntityAowService', () => {
     });
 
     it('should return empty string for name when all name fields are missing', async () => {
-      (mockApiService as any).dataControlSE = {
+      (mockApiService as any).dataControlSE = { reportingCurrentPhase: { phaseId: 34 },
         myInitiativesListReportingByPortfolio: [
           { id: 12, official_code: 'SGP-02' }
         ],
@@ -1638,7 +1646,7 @@ describe('EntityAowService', () => {
     });
 
     it('should use shortName as shortName fallback when short_name is missing', async () => {
-      (mockApiService as any).dataControlSE = {
+      (mockApiService as any).dataControlSE = { reportingCurrentPhase: { phaseId: 34 },
         myInitiativesListReportingByPortfolio: [
           { id: 13, official_code: 'SGP-02', name: 'Full Name', shortName: 'SN-Fallback' }
         ],
@@ -1657,7 +1665,7 @@ describe('EntityAowService', () => {
     });
 
     it('should handle null name field by falling back to initiative_name', async () => {
-      (mockApiService as any).dataControlSE = {
+      (mockApiService as any).dataControlSE = { reportingCurrentPhase: { phaseId: 34 },
         myInitiativesListReportingByPortfolio: [
           { id: 51, official_code: 'SGP-02', name: null, initiative_name: 'Fallback Init Name', short_name: null, shortName: null }
         ],
@@ -1677,7 +1685,7 @@ describe('EntityAowService', () => {
     });
 
     it('should handle null name and initiative_name by falling back to short_name', async () => {
-      (mockApiService as any).dataControlSE = {
+      (mockApiService as any).dataControlSE = { reportingCurrentPhase: { phaseId: 34 },
         myInitiativesListReportingByPortfolio: [
           { id: 52, official_code: 'SGP-02', name: null, initiative_name: null, short_name: 'SN Fallback', shortName: null }
         ],
@@ -1697,7 +1705,7 @@ describe('EntityAowService', () => {
     });
 
     it('should handle all null name fields falling back to shortName', async () => {
-      (mockApiService as any).dataControlSE = {
+      (mockApiService as any).dataControlSE = { reportingCurrentPhase: { phaseId: 34 },
         myInitiativesListReportingByPortfolio: [
           { id: 53, official_code: 'SGP-02', name: null, initiative_name: null, short_name: null, shortName: 'Last Resort' }
         ],
@@ -1717,7 +1725,7 @@ describe('EntityAowService', () => {
     });
 
     it('should handle all null name fields falling back to empty string', async () => {
-      (mockApiService as any).dataControlSE = {
+      (mockApiService as any).dataControlSE = { reportingCurrentPhase: { phaseId: 34 },
         myInitiativesListReportingByPortfolio: [
           { id: 54, official_code: 'SGP-02', name: null, initiative_name: null, short_name: null, shortName: null }
         ],
@@ -1737,7 +1745,7 @@ describe('EntityAowService', () => {
     });
 
     it('should use initiative_name for both name and shortName when name and short_name and shortName are missing', async () => {
-      (mockApiService as any).dataControlSE = {
+      (mockApiService as any).dataControlSE = { reportingCurrentPhase: { phaseId: 34 },
         myInitiativesListReportingByPortfolio: [
           { id: 50, official_code: 'SGP-02', initiative_name: 'Init Name Only' }
         ],
@@ -1761,7 +1769,7 @@ describe('EntityAowService', () => {
     });
 
     it('should use name as shortName fallback when short_name and shortName are missing', async () => {
-      (mockApiService as any).dataControlSE = {
+      (mockApiService as any).dataControlSE = { reportingCurrentPhase: { phaseId: 34 },
         myInitiativesListReportingByPortfolio: [
           { id: 14, official_code: 'SGP-02', name: 'Name Only' }
         ],
@@ -1786,7 +1794,7 @@ describe('EntityAowService', () => {
       // is the right side of ?? (entityId fallback) which can never be reached because
       // the find predicate requires official_code to be 'SGP-02' or 'SGP02'.
       // This is a dead code branch. Let's verify we already cover what we can.
-      (mockApiService as any).dataControlSE = {
+      (mockApiService as any).dataControlSE = { reportingCurrentPhase: { phaseId: 34 },
         myInitiativesListReportingByPortfolio: [
           { id: 60, official_code: 'SGP-02', name: 'Test' }
         ],
@@ -1805,7 +1813,7 @@ describe('EntityAowService', () => {
     });
 
     it('should fall back to empty array when both lists are null/undefined', async () => {
-      (mockApiService as any).dataControlSE = {
+      (mockApiService as any).dataControlSE = { reportingCurrentPhase: { phaseId: 34 },
         myInitiativesListReportingByPortfolio: null,
         myInitiativesList: null
       };
@@ -1827,7 +1835,7 @@ describe('EntityAowService', () => {
     });
 
     it('should match SGP02 variant in list (without dash)', async () => {
-      (mockApiService as any).dataControlSE = {
+      (mockApiService as any).dataControlSE = { reportingCurrentPhase: { phaseId: 34 },
         myInitiativesListReportingByPortfolio: [
           { id: 15, official_code: 'SGP02', name: 'No Dash', short_name: 'ND' }
         ],
@@ -1854,7 +1862,7 @@ describe('EntityAowService', () => {
   describe('fetchSgp02InitiativeFromSciencePrograms - branch coverage', () => {
     beforeEach(() => {
       (mockApiService as any).rolesSE = { isAdmin: false };
-      (mockApiService as any).dataControlSE = {
+      (mockApiService as any).dataControlSE = { reportingCurrentPhase: { phaseId: 34 },
         myInitiativesListReportingByPortfolio: null,
         myInitiativesList: []
       };

@@ -213,6 +213,40 @@ export class ResultsService {
     private readonly _shareResultRequestRepository?: ShareResultRequestRepository,
   ) {}
 
+  /**
+   * Blocks duplicate titles among active results within the same reporting version.
+   * The same title may exist on another version (same result_code lineage, different id).
+   * When updating general information, pass excludeResultId so the row can keep its title.
+   */
+  private async assertUniqueActiveResultTitle(
+    rawTitle: string | undefined,
+    versionId: number,
+    excludeResultId?: number,
+  ): Promise<string> {
+    const trimmed = (rawTitle ?? '').trim();
+    if (!trimmed) {
+      return '';
+    }
+    const existing = await this._resultRepository.findOne({
+      where: {
+        title: trimmed,
+        is_active: true,
+        version_id: versionId,
+      },
+    });
+    if (
+      existing?.id &&
+      (excludeResultId === undefined || existing.id !== excludeResultId)
+    ) {
+      throw {
+        response: {},
+        message: 'A result with this title already exists.',
+        status: HttpStatus.CONFLICT,
+      };
+    }
+    return trimmed;
+  }
+
   async createOwnerResult(
     createResultDto: CreateResultDto,
     user: TokenDto,
@@ -311,16 +345,26 @@ export class ResultsService {
         };
       }
 
+      const targetVersionId =
+        isAdmin != undefined && Boolean(isAdmin) && versionId
+          ? versionId
+          : version.id;
+
+      const trimmedCreateTitle = await this.assertUniqueActiveResultTitle(
+        createResultDto.result_name,
+        targetVersionId,
+      );
+
       const last_code = await this._resultRepository.getLastResultCode();
       const saveResult: Partial<Result> = {
         created_by: user.id,
         last_updated_by: user.id,
         result_type_id: rt.id,
-        version_id:
-          isAdmin != undefined && Boolean(isAdmin) && versionId
-            ? versionId
-            : version.id,
-        title: createResultDto.result_name,
+        version_id: targetVersionId,
+        title:
+          trimmedCreateTitle.length > 0
+            ? trimmedCreateTitle
+            : createResultDto.result_name,
         reported_year_id: year.year,
         result_level_id: rl.id,
         result_code: last_code + 1,
@@ -745,10 +789,19 @@ export class ResultsService {
         );
       }
 
+      const trimmedGeneralTitle = await this.assertUniqueActiveResultTitle(
+        resultGeneralInformation.result_name,
+        result.version_id,
+        result.id,
+      );
+
       const updateResult = await this._resultRepository.save({
         id: result.id,
         is_discontinued: resultGeneralInformation?.is_discontinued,
-        title: resultGeneralInformation.result_name,
+        title:
+          trimmedGeneralTitle.length > 0
+            ? trimmedGeneralTitle
+            : resultGeneralInformation.result_name,
         result_type_id: resultByLevel.result_type_id,
         result_level_id: resultByLevel.result_level_id,
         description: resultGeneralInformation.result_description,
@@ -4423,10 +4476,23 @@ export class ResultsService {
         };
       }
 
+      const bilateralResult = await this._resultRepository.findOne({
+        where: { id: parsedResultId, is_active: true },
+        select: ['id', 'version_id'],
+      });
+      if (!bilateralResult) {
+        return {
+          response: {},
+          message: 'The result does not exist',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
       const existingResult = await this._resultRepository.findOne({
         where: {
           title: title.trim(),
           is_active: true,
+          version_id: bilateralResult.version_id,
         },
       });
 

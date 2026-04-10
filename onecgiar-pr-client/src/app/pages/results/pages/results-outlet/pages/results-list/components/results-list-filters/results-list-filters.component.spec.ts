@@ -836,8 +836,8 @@ describe('ResultsListFiltersComponent', () => {
       mockApiService.rolesSE.isAdmin = true;
       mockApiService.dataControlSE.myInitiativesListReportingByPortfolio = [];
 
-      // activeButtons is a computed signal - re-evaluate by calling it
-      const result = component.activeButtons();
+      // activeButtons is a getter
+      const result = component.activeButtons;
       // isAdmin is true so it should return true
       expect(mockApiService.rolesSE.isAdmin).toBe(true);
     });
