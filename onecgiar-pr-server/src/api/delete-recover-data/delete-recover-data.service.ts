@@ -80,6 +80,8 @@ import { ResultInstitutionsBudget } from '../results/result_budget/entities/resu
 import { VersionRepository } from '../versioning/versioning.repository';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
 import { RoleEnum } from '../../shared/constants/role-type.enum';
+import { ResultDeletionAuditService } from '../results/result-deletion-audit/result-deletion-audit.service';
+import { ResultDeletionAuditSource } from '../results/result-deletion-audit/result-deletion-audit-source.enum';
 
 const P25_PORTFOLIO_ACRONYM = 'P25';
 
@@ -153,9 +155,14 @@ export class DeleteRecoverDataService {
     private readonly _logRepository: LogRepository,
     private readonly _roleByUserRepository: RoleByUserRepository,
     private readonly _versionRepository: VersionRepository,
+    private readonly _resultDeletionAuditService: ResultDeletionAuditService,
   ) {}
 
-  async deleteResult(result_id: number, user: TokenDto) {
+  async deleteResult(
+    result_id: number,
+    user: TokenDto,
+    justification?: string,
+  ) {
     try {
       const resultData = await this._resultRepository.findOne({
         where: {
@@ -206,6 +213,13 @@ export class DeleteRecoverDataService {
           statusCode: HttpStatus.CONFLICT,
         });
       }
+
+      await this._resultDeletionAuditService.recordDeletion({
+        resultId: resultData.id,
+        userId: user.id,
+        deletionSource: ResultDeletionAuditSource.ManageData,
+        justification,
+      });
 
       await this._ipsrRepository.logicalDelete(resultData.id);
       await this._innovationPackagingExpertRepository.logicalDelete(

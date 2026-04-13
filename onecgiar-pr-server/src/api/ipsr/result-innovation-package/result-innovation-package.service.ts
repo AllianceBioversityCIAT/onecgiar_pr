@@ -58,6 +58,8 @@ import { ResultsInvestmentDiscontinuedOptionRepository } from '../../results/res
 import { AdUserService, AdUserRepository } from '../../ad_users';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 import { VersionRepository } from '../../versioning/versioning.repository';
+import { ResultDeletionAuditService } from '../../results/result-deletion-audit/result-deletion-audit.service';
+import { ResultDeletionAuditSource } from '../../results/result-deletion-audit/result-deletion-audit-source.enum';
 
 @Injectable()
 export class ResultInnovationPackageService {
@@ -98,6 +100,7 @@ export class ResultInnovationPackageService {
     private readonly _versioningService: VersioningService,
     private readonly _resultCountrySubnationalRepository: ResultCountrySubnationalRepository,
     private readonly _resultsInvestmentDiscontinuedOptionRepository: ResultsInvestmentDiscontinuedOptionRepository,
+    private readonly _resultDeletionAuditService: ResultDeletionAuditService,
     @Optional()
     @Inject(AdUserService)
     private readonly _adUserService?: AdUserService,
@@ -1016,7 +1019,7 @@ export class ResultInnovationPackageService {
     }
   }
 
-  async delete(resultId: number, user: TokenDto) {
+  async delete(resultId: number, user: TokenDto, justification?: string) {
     const resultToUpdate = await this._resultRepository.find({
       where: { id: resultId },
     });
@@ -1063,6 +1066,13 @@ export class ResultInnovationPackageService {
         };
       }
     }
+
+    await this._resultDeletionAuditService.recordDeletion({
+      resultId: currentResult.id,
+      userId: user.id,
+      deletionSource: ResultDeletionAuditSource.IpsrInnovationPackage,
+      justification,
+    });
 
     const resultByInnovationPackageToUpdate =
       await this._innovationByResultRepository.find({

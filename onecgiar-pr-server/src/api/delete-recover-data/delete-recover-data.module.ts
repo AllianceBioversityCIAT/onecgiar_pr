@@ -101,6 +101,7 @@ import { ResultReviewHistoryRepository } from '../results/result-review-history/
 import { ResultImpactAreaScoresModule } from '../result-impact-area-scores/result-impact-area-scores.module';
 import { ResultsTocResultsModule } from '../results/results-toc-results/results-toc-results.module';
 import { ResultsByInstitutionsModule } from '../results/results_by_institutions/results_by_institutions.module';
+import { ResultDeletionAuditModule } from '../results/result-deletion-audit/result-deletion-audit.module';
 
 @Module({
   controllers: [DeleteRecoverDataController],
@@ -206,6 +207,7 @@ import { ResultsByInstitutionsModule } from '../results/results_by_institutions/
     ResultImpactAreaScoresModule,
     ResultsTocResultsModule,
     ResultsByInstitutionsModule,
+    ResultDeletionAuditModule,
   ],
   exports: [
     EvidencesService,

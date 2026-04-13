@@ -42,6 +42,7 @@ import { ResultsInvestmentDiscontinuedOptionRepository } from '../../results/res
 import { AdUsersModule } from '../../ad_users';
 import { InitiativeEntityMapRepository } from '../../initiative_entity_map/initiative_entity_map.repository';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
+import { ResultDeletionAuditModule } from '../../results/result-deletion-audit/result-deletion-audit.module';
 
 @Module({
   controllers: [ResultInnovationPackageController],
@@ -84,7 +85,12 @@ import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByU
     InitiativeEntityMapRepository,
     RoleByUserRepository,
   ],
-  imports: [VersionsModule, forwardRef(() => VersioningModule), AdUsersModule],
+  imports: [
+    VersionsModule,
+    forwardRef(() => VersioningModule),
+    AdUsersModule,
+    ResultDeletionAuditModule,
+  ],
   exports: [ResultInnovationPackageRepository],
 })
 export class ResultInnovationPackageModule {}
