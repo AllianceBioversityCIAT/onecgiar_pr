@@ -72,6 +72,20 @@ import { NoopBilateralHandler } from './handlers/noop.handler';
 import { ResultByInitiativesRepository } from '../results/results_by_inititiatives/resultByInitiatives.repository';
 import { ShareResultRequestRepository } from '../results/share-result-request/share-result-request.repository';
 import { NonPooledProjectBudgetRepository } from '../results/result_budget/repositories/non_pooled_proyect_budget.repository';
+import { InnovationReadinessLevelByLevel } from '../results-framework-reporting/innovation_dev/enum/innov-readiness-level.enum';
+import { ResultActor } from '../results/result-actors/entities/result-actor.entity';
+import { ResultIpMeasure } from '../ipsr/result-ip-measures/entities/result-ip-measure.entity';
+import { ResultsByInstitutionType } from '../results/results_by_institution_types/entities/results_by_institution_type.entity';
+import { ResultInitiativeBudget } from '../results/result_budget/entities/result_initiative_budget.entity';
+import { ResultScalingStudyUrl } from '../results-framework-reporting/result_scaling_study_urls/entities/result_scaling_study_url.entity';
+import { ClarisaInnovationCharacteristic } from '../../clarisa/clarisa-innovation-characteristics/entities/clarisa-innovation-characteristic.entity';
+import { ClarisaInnovationType } from '../../clarisa/clarisa-innovation-type/entities/clarisa-innovation-type.entity';
+import { ClarisaInnovationReadinessLevel } from '../../clarisa/clarisa-innovation-readiness-levels/entities/clarisa-innovation-readiness-level.entity';
+
+/** Anticipated innovation user — organization-type rows (same role as PRMS Innovation Dev). */
+const INNOVATION_DEV_ANTICIPATED_USER_ORG_ROLE_ID = 5;
+/** `clarisa_institution_types.code` for "Other" (anticipated user organizations). */
+const INNOVATION_DEV_INSTITUTION_TYPE_OTHER_CODE = 78;
 
 /** Map result_type name (ListResultsResultTypeEnum) to result_type.id */
 const RESULT_TYPE_NAME_TO_ID: Partial<
@@ -811,7 +825,11 @@ export class BilateralService {
         results_capacity_development_object: true,
       }),
       ...(isInnovationDev && {
-        results_innovations_dev_object: true,
+        results_innovations_dev_object: {
+          innovation_characterization: true,
+          innovation_nature: true,
+          innovation_readiness_level: true,
+        },
       }),
       ...(isInnovationUse && {
         results_innovations_use_object: true,
@@ -1527,7 +1545,12 @@ export class BilateralService {
     result.result_center_array = onlyActive(result.result_center_array);
     result.obj_results_toc_result = onlyActive(result.obj_results_toc_result);
     result.obj_result_by_project = onlyActive(result.obj_result_by_project);
-    result.evidence_array = onlyActive(result.evidence_array);
+    const activeEvidence = onlyActive(result.evidence_array);
+    result.evidence_array = Array.isArray(activeEvidence)
+      ? activeEvidence.filter(
+          (e) => Number(e?.evidence_type_id) === EvidenceTypeEnum.MAIN,
+        )
+      : activeEvidence;
     result.result_knowledge_product_array = onlyActive(
       result.result_knowledge_product_array,
     );
@@ -1842,6 +1865,325 @@ export class BilateralService {
     return out;
   }
 
+  private async buildInnovationDevelopmentBilateralExtra(
+    resultId: number,
+    dev: any,
+  ) {
+    const anticipated_user_demand = {
+      actors: [] as Array<{
+        actor_type_name: string | null;
+        other_actor_type?: string | null;
+        sex_and_age_disaggregation: boolean | null;
+        addressing_demands: string | null;
+        has_women?: boolean | null;
+        has_women_youth?: boolean | null;
+        has_men?: boolean | null;
+        has_men_youth?: boolean | null;
+      }>,
+      organizations: [] as Array<{
+        institution_type_name: string | null;
+        addressing_demands: string | null;
+        other_institution?: string | null;
+      }>,
+      measures: [] as Array<{
+        unit_of_measure: string | null;
+        quantity: number | null;
+        addressing_demands: string | null;
+      }>,
+    };
+
+    const [
+      actors,
+      measures,
+      orgTypes,
+      initiatives,
+      rbpRows,
+      institutions,
+      refs,
+      userNeedDemandEvidence,
+    ] = await Promise.all([
+      this.dataSource.getRepository(ResultActor).find({
+        where: { result_id: resultId, is_active: true },
+        relations: { obj_actor_type: true },
+      }),
+      this.dataSource.getRepository(ResultIpMeasure).find({
+        where: { result_id: resultId, is_active: true },
+      }),
+      this.dataSource.getRepository(ResultsByInstitutionType).find({
+        where: {
+          results_id: resultId,
+          institution_roles_id: INNOVATION_DEV_ANTICIPATED_USER_ORG_ROLE_ID,
+          is_active: true,
+        },
+        relations: { obj_institution_types: true },
+      }),
+      this._resultByInitiativesRepository.find({
+        where: { result_id: resultId, is_active: true },
+      }),
+      this._resultsByProjectsRepository.find({
+        where: { result_id: resultId, is_active: true },
+      }),
+      this._resultByIntitutionsRepository.find({
+        where: { result_id: resultId, is_active: true },
+      }),
+      this._evidencesRepository.find({
+        where: {
+          result_id: resultId,
+          evidence_type_id: EvidenceTypeEnum.MATERIALS,
+          is_active: 1,
+        },
+      }),
+      this._evidencesRepository.find({
+        where: {
+          result_id: resultId,
+          evidence_type_id: EvidenceTypeEnum.USER_NEED_USER_DEMAND,
+          is_active: 1,
+        },
+      }),
+    ]);
+
+    anticipated_user_demand.actors = actors.map((a) => {
+      const disagg = a.sex_and_age_disaggregation === true;
+      let sexAndAgeDisaggregation: boolean | null = null;
+      if (a.sex_and_age_disaggregation === true) {
+        sexAndAgeDisaggregation = true;
+      } else if (a.sex_and_age_disaggregation === false) {
+        sexAndAgeDisaggregation = false;
+      }
+      const actorTypeId = Number(
+        a.actor_type_id ?? a.obj_actor_type?.actor_type_id,
+      );
+      const isOtherActorType =
+        Number.isFinite(actorTypeId) && actorTypeId === 5;
+      const base = {
+        actor_type_name: a.obj_actor_type?.name ?? null,
+        ...(isOtherActorType
+          ? { other_actor_type: a.other_actor_type ?? null }
+          : {}),
+        sex_and_age_disaggregation: sexAndAgeDisaggregation,
+        addressing_demands: a.addressing_demands ?? null,
+      };
+      if (disagg) {
+        return base;
+      }
+      return {
+        ...base,
+        has_women: a.has_women ?? null,
+        has_women_youth: a.has_women_youth ?? null,
+        has_men: a.has_men ?? null,
+        has_men_youth: a.has_men_youth ?? null,
+      };
+    });
+
+    anticipated_user_demand.measures = measures.map((m) => ({
+      unit_of_measure: m.unit_of_measure ?? null,
+      quantity: m.quantity == null ? null : Number(m.quantity),
+      addressing_demands: m.addressing_demands ?? null,
+    }));
+
+    anticipated_user_demand.organizations = orgTypes.map((o) => {
+      const institutionTypeId = Number(
+        o.institution_types_id ?? o.obj_institution_types?.code,
+      );
+      const isOtherInstitutionType =
+        Number.isFinite(institutionTypeId) &&
+        institutionTypeId === INNOVATION_DEV_INSTITUTION_TYPE_OTHER_CODE;
+      const base = {
+        institution_type_name: o.obj_institution_types?.name ?? null,
+        addressing_demands: o.addressing_demands ?? null,
+      };
+      return isOtherInstitutionType
+        ? { ...base, other_institution: o.other_institution ?? null }
+        : base;
+    });
+
+    let initiativeBudgetRows: ResultInitiativeBudget[] = [];
+    if (initiatives.length) {
+      initiativeBudgetRows = await this.dataSource
+        .getRepository(ResultInitiativeBudget)
+        .find({
+          where: {
+            result_initiative_id: In(initiatives.map((i) => i.id)),
+            is_active: true,
+          },
+          relations: {
+            obj_result_initiative: { obj_initiative: true },
+          },
+        });
+    }
+
+    let bilateralBudgetRows: any[] = [];
+    if (rbpRows.length) {
+      bilateralBudgetRows = await this._nonPooledProjectBudgetRepository.find({
+        where: {
+          result_project_id: In(rbpRows.map((r) => r.id)),
+          is_active: true,
+        },
+        relations: {
+          obj_result_project: { obj_clarisa_project: true },
+        },
+      });
+    }
+
+    let partnerBudgetRows: ResultInstitutionsBudget[] = [];
+    if (institutions.length) {
+      partnerBudgetRows = await this._resultInstitutionsBudgetRepository.find({
+        where: {
+          result_institution_id: In(institutions.map((i) => i.id)),
+          is_active: true,
+        },
+        relations: {
+          obj_result_institution: { obj_institutions: true },
+        },
+      });
+    }
+
+    let scaling_study_urls: string[] = [];
+    const readinessId = Number(dev?.innovation_readiness_level_id);
+    if (
+      Number.isFinite(readinessId) &&
+      readinessId >= InnovationReadinessLevelByLevel.Level_6 &&
+      dev?.result_innovation_dev_id
+    ) {
+      const urls = await this.dataSource
+        .getRepository(ResultScalingStudyUrl)
+        .find({
+          where: {
+            result_innov_dev_id: dev.result_innovation_dev_id,
+            is_active: true,
+          },
+        });
+      scaling_study_urls = urls
+        .map((u) => u.study_url)
+        .filter((s): s is string => typeof s === 'string' && s.length > 0);
+    }
+
+    return {
+      anticipated_user_demand,
+      initiative_budget: initiativeBudgetRows.map((b) => ({
+        initiative_official_code:
+          b.obj_result_initiative?.obj_initiative?.official_code ?? null,
+        initiative_name: b.obj_result_initiative?.obj_initiative?.name ?? null,
+        current_year: b.current_year == null ? null : Number(b.current_year),
+        next_year: b.next_year == null ? null : Number(b.next_year),
+        kind_cash: b.kind_cash == null ? null : Number(b.kind_cash),
+        is_determined: b.is_determined ?? null,
+      })),
+      bilateral_project_budget: bilateralBudgetRows.map((b) => ({
+        project_short_name:
+          b.obj_result_project?.obj_clarisa_project?.shortName ?? null,
+        in_cash: b.in_cash == null ? null : Number(b.in_cash),
+        in_kind: b.in_kind == null ? null : Number(b.in_kind),
+        kind_cash: b.kind_cash == null ? null : Number(b.kind_cash),
+        is_determined: b.is_determined ?? null,
+      })),
+      partner_budget: partnerBudgetRows.map((b) => ({
+        institution_name:
+          b.obj_result_institution?.obj_institutions?.name ?? null,
+        institution_acronym:
+          b.obj_result_institution?.obj_institutions?.acronym ?? null,
+        in_cash: b.in_cash == null ? null : Number(b.in_cash),
+        in_kind: b.in_kind == null ? null : Number(b.in_kind),
+        kind_cash: b.kind_cash == null ? null : Number(b.kind_cash),
+        is_determined: b.is_determined ?? null,
+      })),
+      reference_materials: refs.map((e) => ({ link: e.link })),
+      evidence_of_user_need_user_demand: userNeedDemandEvidence.map((e) => ({
+        link: e.link,
+      })),
+      scaling_study_urls,
+    };
+  }
+
+  private async buildInnovationDevelopmentBilateralSummary(filtered: any) {
+    const dev = filtered?.results_innovations_dev_object;
+    if (!dev || dev.is_active === false) return null;
+
+    const natureCode = Number(dev.innovation_nature_id);
+    let typologyPromise: Promise<ClarisaInnovationType | null>;
+    if (dev.innovation_nature) {
+      typologyPromise = Promise.resolve(dev.innovation_nature);
+    } else if (Number.isFinite(natureCode)) {
+      typologyPromise = this.dataSource
+        .getRepository(ClarisaInnovationType)
+        .findOne({ where: { code: natureCode } });
+    } else {
+      typologyPromise = Promise.resolve(null);
+    }
+
+    const readinessFk = Number(dev.innovation_readiness_level_id);
+    let readinessPromise: Promise<ClarisaInnovationReadinessLevel | null>;
+    if (dev.innovation_readiness_level) {
+      readinessPromise = Promise.resolve(dev.innovation_readiness_level);
+    } else if (Number.isFinite(readinessFk)) {
+      readinessPromise = this.dataSource
+        .getRepository(ClarisaInnovationReadinessLevel)
+        .findOne({ where: { id: readinessFk } });
+    } else {
+      readinessPromise = Promise.resolve(null);
+    }
+
+    const charFk = Number(dev.innovation_characterization_id);
+    let characterizationPromise: Promise<ClarisaInnovationCharacteristic | null>;
+    if (dev.innovation_characterization) {
+      characterizationPromise = Promise.resolve(
+        dev.innovation_characterization,
+      );
+    } else if (Number.isFinite(charFk)) {
+      characterizationPromise = this.dataSource
+        .getRepository(ClarisaInnovationCharacteristic)
+        .findOne({ where: { id: charFk } });
+    } else {
+      characterizationPromise = Promise.resolve(null);
+    }
+
+    const [characterization, typology, readinessEntity] = await Promise.all([
+      characterizationPromise,
+      typologyPromise,
+      readinessPromise,
+    ]);
+
+    const core = {
+      short_name: dev.short_title ?? null,
+      characterization: characterization
+        ? {
+            id: characterization.id,
+            name: characterization.name ?? null,
+            definition: characterization.definition ?? null,
+          }
+        : null,
+      typology: typology
+        ? {
+            code: typology.code ?? null,
+            name: typology.name ?? null,
+            definition: typology.definition ?? null,
+          }
+        : null,
+      innovation_user_to_be_determined: !!dev.innovation_user_to_be_determined,
+      innovation_developers: dev.innovation_developers ?? null,
+      innovation_collaborators: dev.innovation_collaborators ?? null,
+      innovation_readiness_level: readinessEntity
+        ? {
+            id: readinessEntity.id,
+            level:
+              readinessEntity.level == null
+                ? null
+                : Number(readinessEntity.level),
+            name: readinessEntity.name ?? null,
+            definition: readinessEntity.definition ?? null,
+          }
+        : null,
+      evidences_justification: dev.evidences_justification ?? null,
+      has_scaling_studies: !!dev.has_scaling_studies,
+    };
+
+    const extra = await this.buildInnovationDevelopmentBilateralExtra(
+      filtered.id,
+      dev,
+    );
+    return { ...core, ...extra };
+  }
+
   private async enrichBilateralResultResponse(filtered: any): Promise<void> {
     if (!filtered?.id) return;
     filtered.obj_results_toc_result =
@@ -1860,6 +2202,11 @@ export class BilateralService {
       filtered.knowledge_product_summary =
         this.buildKnowledgeProductBilateralSummary(filtered);
       delete filtered.result_knowledge_product_array;
+    }
+    if (filtered.result_type_id === ResultTypeEnum.INNOVATION_DEVELOPMENT) {
+      filtered.innovation_development_summary =
+        await this.buildInnovationDevelopmentBilateralSummary(filtered);
+      delete filtered.results_innovations_dev_object;
     }
     delete filtered.obj_result_by_project;
   }
