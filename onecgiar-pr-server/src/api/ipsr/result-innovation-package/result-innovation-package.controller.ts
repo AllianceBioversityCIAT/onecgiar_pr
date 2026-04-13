@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   UseInterceptors,
+  Query,
 } from '@nestjs/common';
 import { ResultInnovationPackageService } from './result-innovation-package.service';
 import {
@@ -74,8 +75,16 @@ export class ResultInnovationPackageController {
   }
 
   @Delete(':resultId')
-  delete(@Param('resultId') resultId: number, @UserToken() user: TokenDto) {
-    return this.resultInnovationPackageService.delete(resultId, user);
+  delete(
+    @Param('resultId') resultId: number,
+    @UserToken() user: TokenDto,
+    @Query('justification') justification?: string,
+  ) {
+    return this.resultInnovationPackageService.delete(
+      resultId,
+      user,
+      justification,
+    );
   }
 
   @Get('unit-time')

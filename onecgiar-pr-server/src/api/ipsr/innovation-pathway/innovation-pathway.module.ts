@@ -60,10 +60,15 @@ import { IpsrService } from '../ipsr.service';
 import { ResultsInvestmentDiscontinuedOptionRepository } from '../../results/results-investment-discontinued-options/results-investment-discontinued-options.repository';
 import { AdUsersModule } from '../../ad_users';
 import { InitiativeEntityMapRepository } from '../../initiative_entity_map/initiative_entity_map.repository';
+import { ResultDeletionAuditModule } from '../../results/result-deletion-audit/result-deletion-audit.module';
 
 @Module({
   controllers: [InnovationPathwayController],
-  imports: [forwardRef(() => VersioningModule), AdUsersModule],
+  imports: [
+    forwardRef(() => VersioningModule),
+    AdUsersModule,
+    ResultDeletionAuditModule,
+  ],
   providers: [
     InnovationPathwayStepOneService,
     InnovationPathwayStepTwoService,

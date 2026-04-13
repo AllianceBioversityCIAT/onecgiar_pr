@@ -76,7 +76,7 @@ describe('ResultInnovationPackageController', () => {
 
   it('delete delegates with parsed id and user', async () => {
     await controller.delete(9 as any, user);
-    expect(mockService.delete).toHaveBeenCalledWith(9, user);
+    expect(mockService.delete).toHaveBeenCalledWith(9, user, undefined);
   });
 
   it('findUnitTime delegates', async () => {

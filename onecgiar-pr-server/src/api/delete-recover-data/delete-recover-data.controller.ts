@@ -5,6 +5,7 @@ import {
   Patch,
   UseInterceptors,
   Body,
+  Query,
 } from '@nestjs/common';
 import { DeleteRecoverDataService } from './delete-recover-data.service';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
@@ -20,8 +21,12 @@ export class DeleteRecoverDataController {
   ) {}
 
   @Delete('result/:id/delete')
-  deleteResult(@Param('id') id: string, @UserToken() user: TokenDto) {
-    return this.deleteRecoverDataService.deleteResult(+id, user);
+  deleteResult(
+    @Param('id') id: string,
+    @UserToken() user: TokenDto,
+    @Query('justification') justification?: string,
+  ) {
+    return this.deleteRecoverDataService.deleteResult(+id, user, justification);
   }
 
   @Patch('change/result/:id')
