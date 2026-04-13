@@ -8,7 +8,7 @@ import { ResultLevelType } from './dto/result-level-type.dto';
 import { ResultSimpleDto } from './dto/result-simple.dto';
 import { ResultDataToMapDto } from './dto/result-data-to-map.dto';
 import { LegacyIndicatorsPartner } from './legacy_indicators_partners/entities/legacy_indicators_partner.entity';
-import { env } from 'process';
+import { env } from 'node:process';
 import { ResultTypeDto } from './dto/result-types.dto';
 import {
   ConfigCustomQueryInterface,
@@ -141,7 +141,7 @@ export class ResultRepository
   }
   private readonly _logger: Logger = new Logger(ResultRepository.name);
   constructor(
-    private dataSource: DataSource,
+    private readonly dataSource: DataSource,
     private readonly _handlersError: HandlersError,
   ) {
     super(Result, dataSource.createEntityManager());
@@ -1455,18 +1455,6 @@ WHERE
         status: HttpStatus.INTERNAL_SERVER_ERROR,
       };
     }
-    /*return this.query(queryData, [id])
-      .then((res) => {
-        setTimeout(() => {}, 500);
-        return res.length ? res[0] : undefined;
-      })
-      .catch((error) => {
-        throw {
-          message: `[${ResultRepository.name}] => completeAllData error: ${error}`,
-          response: {},
-          status: HttpStatus.INTERNAL_SERVER_ERROR,
-        };
-      });*/
   }
 
   async getResultByTypes(typesId: number[]): Promise<Result[]> {
@@ -2550,9 +2538,9 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         LEFT JOIN Integration_information.toc_results tr ON tr.id = rtr.toc_result_id
         LEFT JOIN Integration_information.work_packages wp ON wp.id = tr.work_packages_id
         LEFT JOIN Integration_information.toc_results_indicators tri ON tr.id = tri.toc_results_id AND tri.toc_result_indicator_id = rtri.toc_results_indicator_id ${
-          !EnvironmentExtractor.isProduction()
-            ? `COLLATE utf8mb3_general_ci`
-            : ``
+          EnvironmentExtractor.isProduction()
+            ? ``
+            : `COLLATE utf8mb3_general_ci`
         }
     WHERE
         r.id ${resultIds.length ? `in (${resultIds})` : '= 0'}
