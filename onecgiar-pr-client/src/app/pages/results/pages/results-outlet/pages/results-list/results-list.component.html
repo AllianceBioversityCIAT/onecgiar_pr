@@ -26,6 +26,12 @@
 </div>
 
 <div class="section_content">
+  @if (this.api.dataControlSE.resultsListNoDataMessage(); as noResultsMsg) {
+    <app-alert-status
+      status="warning"
+      [description]="noResultsMsg"
+      inlineStyles="margin: 0 0 16px 0 !important;"></app-alert-status>
+  }
   <div class="table">
     <p-table
       id="resultListTable"

@@ -247,11 +247,26 @@ export class ResultsController {
     required: false,
     description: 'Search term to filter results by title.',
   })
+  @ApiQuery({
+    name: 'filter_created_by_me',
+    type: Boolean,
+    required: false,
+    description:
+      'When true, restrict to results where result.created_by matches the authenticated user (combined with filter_submitted_by_me as OR when both are true).',
+  })
+  @ApiQuery({
+    name: 'filter_submitted_by_me',
+    type: Boolean,
+    required: false,
+    description:
+      'When true, restrict to results with an active submission row for the authenticated user.',
+  })
   findAllResultRolesFiltered(
     @Param('userId') userId: number,
     @Query() query: Record<string, any>,
+    @UserToken() authUser: TokenDto,
   ) {
-    return this.resultsService.findAllByRoleFiltered(userId, query);
+    return this.resultsService.findAllByRoleFiltered(userId, query, authUser);
   }
 
   @Get('get/science-programs/progress')
@@ -473,6 +488,8 @@ export class ResultsController {
     - **clarisaPortfolios**: Filter by portfolio (version.portfolio_id).
     - **fundingSource**: W1/W2 → \`Result\`, W3/Bilateral → \`API\` (result.source).
     - **leadCenters**: Filter by lead center (results_center with is_leading_result = 1).
+    - **filterCreatedByMe**: When true, only results created by the authenticated user.
+    - **filterSubmittedByMe**: When true, only results submitted by the authenticated user (submission table). If both flags are true, rows matching either condition are included (OR).
 
     Response: \`{ response: <array of report rows>, message, status }\`.`,
   })
@@ -498,6 +515,8 @@ export class ResultsController {
           clarisaPortfolios: [{ id: 3 }],
           fundingSource: [{ name: 'W1/W2' }],
           leadCenters: [{ code: 'CENTER-02' }],
+          filterCreatedByMe: true,
+          filterSubmittedByMe: true,
         },
       },
     },
@@ -510,8 +529,11 @@ export class ResultsController {
     description:
       'Validation error (e.g. invalid date format or initDate > endDate).',
   })
-  getResultDataForBasicReport(@Body() body: BasicReportFiltersDto) {
-    return this.resultsService.getResultDataForBasicReport(body);
+  getResultDataForBasicReport(
+    @Body() body: BasicReportFiltersDto,
+    @UserToken() authUser: TokenDto,
+  ) {
+    return this.resultsService.getResultDataForBasicReport(body, authUser);
   }
 
   @Post('create/version/:resultId')

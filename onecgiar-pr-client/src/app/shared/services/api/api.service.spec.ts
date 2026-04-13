@@ -52,7 +52,8 @@ describe('ApiService', () => {
       myInitiativesListIPSRByPortfolio: [],
       myInitiativesLoaded: false,
       resultsList: [],
-      resultsListSignal: { set: jest.fn() }
+      resultsListSignal: { set: jest.fn() },
+      resultsListNoDataMessage: { set: jest.fn() }
     };
 
     rolesServiceSpy = {
@@ -71,7 +72,12 @@ describe('ApiService', () => {
 
     resultsListServiceSpy = { showLoadingResultSpinner: false };
 
-    resultsListFilterServiceSpy = { updateMyInitiatives: jest.fn() };
+    resultsListFilterServiceSpy = {
+      updateMyInitiatives: jest.fn(),
+      selectedPhases: jest.fn().mockReturnValue([]),
+      filterCreatedByMe: jest.fn().mockReturnValue(false),
+      filterSubmittedByMe: jest.fn().mockReturnValue(false)
+    };
 
     ipsrListFilterServiceSpy = { updateMyInitiatives: jest.fn() };
 
@@ -430,7 +436,9 @@ describe('ApiService', () => {
 
       service.updateResultsList();
 
+      expect(resultsApiServiceSpy.GET_AllResultsWithUseRole).toHaveBeenCalledWith(1, undefined);
       expect(resultsListServiceSpy.showLoadingResultSpinner).toBe(false);
+      expect(dataControlServiceSpy.resultsListNoDataMessage.set).toHaveBeenCalledWith(null);
     });
 
     it('should set full_status_name_html with in-qa-tag when inQA is truthy', () => {
@@ -472,6 +480,21 @@ describe('ApiService', () => {
       expect(consoleSpy).toHaveBeenCalled();
 
       consoleSpy.mockRestore();
+    });
+
+    it('should clear list and set no-data message on 404', () => {
+      resultsApiServiceSpy.GET_AllResultsWithUseRole.mockReturnValue(
+        throwError(() => ({ status: 404 }))
+      );
+
+      service.updateResultsList();
+
+      expect(resultsListServiceSpy.showLoadingResultSpinner).toBe(false);
+      expect(service.dataControlSE.resultsList).toEqual([]);
+      expect(dataControlServiceSpy.resultsListSignal.set).toHaveBeenCalledWith([]);
+      expect(dataControlServiceSpy.resultsListNoDataMessage.set).toHaveBeenCalledWith(
+        expect.stringContaining('No results match')
+      );
     });
 
     it('should pass searchParams to GET_AllResultsWithUseRole', () => {

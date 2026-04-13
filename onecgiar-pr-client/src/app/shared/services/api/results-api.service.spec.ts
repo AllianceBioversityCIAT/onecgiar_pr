@@ -115,7 +115,7 @@ describe('ResultsApiService', () => {
         done();
       });
 
-      const req = httpMock.expectOne(`${service.apiBaseUrl}get/all/roles/filter/${userId}?`);
+      const req = httpMock.expectOne(`${service.apiBaseUrl}get/all/roles/filter/${userId}`);
       expect(req.request.method).toBe('GET');
 
       req.flush(mockResponse);
@@ -3768,7 +3768,7 @@ describe('ResultsApiService', () => {
         done();
       });
 
-      const req = httpMock.expectOne(`${service.apiBaseUrl}get/all/roles/filter/${userId}?`);
+      const req = httpMock.expectOne(`${service.apiBaseUrl}get/all/roles/filter/${userId}`);
       expect(req.request.method).toBe('GET');
       req.flush(mockResponse);
     });
