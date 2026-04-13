@@ -9,7 +9,6 @@ describe('BilateralService (unit)', () => {
       findOne: jest.fn(),
       save: jest.fn(async (x) => x),
     };
-    const resultsService = {} as any;
     const handlersError = {} as any;
     const versioningService = {} as any;
     const userRepository = { findOne: jest.fn() };
@@ -82,7 +81,6 @@ describe('BilateralService (unit)', () => {
     const service = new BilateralService(
       dataSource,
       resultRepository as any,
-      resultsService,
       handlersError,
       versioningService,
       userRepository as any,

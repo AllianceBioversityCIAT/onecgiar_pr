@@ -70,7 +70,6 @@ import { PolicyChangeBilateralHandler } from './handlers/policy-change.handler';
 import { BilateralResultTypeHandler } from './handlers/bilateral-result-type-handler.interface';
 import { NoopBilateralHandler } from './handlers/noop.handler';
 import { ResultByInitiativesRepository } from '../results/results_by_inititiatives/resultByInitiatives.repository';
-import { ResultsService } from '../results/results.service';
 import { ShareResultRequestRepository } from '../results/share-result-request/share-result-request.repository';
 import { NonPooledProjectBudgetRepository } from '../results/result_budget/repositories/non_pooled_proyect_budget.repository';
 
@@ -128,7 +127,6 @@ export class BilateralService {
   constructor(
     private readonly dataSource: DataSource,
     private readonly _resultRepository: ResultRepository,
-    private readonly _resultsService: ResultsService,
     private readonly _handlersError: HandlersError,
     private readonly _versioningService: VersioningService,
     private readonly _userRepository: UserRepository,
@@ -427,216 +425,6 @@ export class BilateralService {
       message: 'Results Bilateral created successfully.',
       status: 201,
     };
-  }
-
-  async update(resultId: number, rootResultsDto: RootResultsDto) {
-    if (!resultId) {
-      throw new BadRequestException('Result id is required.');
-    }
-
-    const existingResult = await this._resultRepository.findOne({
-      where: { id: resultId },
-    });
-
-    if (!existingResult) {
-      throw new NotFoundException('Result not found.');
-    }
-
-    if (existingResult.source !== SourceEnum.Bilateral) {
-      throw new BadRequestException(
-        'The provided result does not belong to the bilateral API.',
-      );
-    }
-
-    const incomingResults = this.unwrapIncomingResults(rootResultsDto);
-    if (!incomingResults.length) {
-      throw new BadRequestException(
-        'At least one result payload is required in either "results" or "result".',
-      );
-    }
-
-    const firstResult = incomingResults[0];
-    if (!firstResult?.data || typeof firstResult.data !== 'object') {
-      throw new BadRequestException(
-        'Each result entry must include a "data" object with the bilateral payload.',
-      );
-    }
-
-    const bilateralDto = firstResult.data;
-
-    // Validate science_program_id before starting to save
-    await this.validateTocMappingInitiatives(
-      bilateralDto.toc_mapping,
-      bilateralDto.contributing_programs,
-    );
-
-    let resultInfo: any = null;
-
-    await this.dataSource.transaction(async () => {
-      const adminUser = await this._userRepository.findOne({
-        where: { email: 'admin@prms.pr' },
-      });
-
-      const createdByUser = await this.findOrCreateUser(
-        bilateralDto.created_by,
-        adminUser,
-      );
-      const userId = createdByUser.id;
-
-      const submittedPayload = this.resolveSubmitterPayload(bilateralDto);
-      const submittedUser = await this.findOrCreateUser(
-        submittedPayload,
-        createdByUser,
-      );
-      const submittedUserId = submittedUser.id;
-
-      const version = await this._versioningService.$_findActivePhase(
-        AppModuleIdEnum.REPORTING,
-      );
-      if (!version)
-        throw this._handlersError.returnErrorRes({
-          error: version,
-          debug: true,
-        });
-
-      const year = await this._yearRepository.findOne({
-        where: { active: true },
-      });
-      if (!year) throw new NotFoundException('Active year not found');
-
-      const updatedHeader = await this._resultRepository.save({
-        ...existingResult,
-        title: bilateralDto.title,
-        description: bilateralDto.description,
-        version_id: version.id,
-        reported_year_id: year.year,
-        result_type_id: bilateralDto.result_type_id,
-        result_level_id: bilateralDto.result_level_id,
-        external_submitter: submittedUserId,
-        external_submitted_date:
-          bilateralDto.submitted_by?.submitted_date ?? null,
-        external_submitted_comment: bilateralDto.submitted_by?.comment ?? null,
-        last_updated_by: userId,
-        ...(bilateralDto.created_date && {
-          created_date: bilateralDto.created_date,
-        }),
-      });
-
-      await this._resultsCenterRepository.fisicalDelete(resultId);
-      await this.handleLeadCenter(resultId, bilateralDto.lead_center, userId);
-
-      const { scope_code, scope_label, regions, countries, subnational_areas } =
-        bilateralDto.geo_focus;
-      const scope = await this.findScope(scope_code, scope_label);
-      this.validateGeoFocus(scope, regions, countries, subnational_areas);
-
-      await this.handleRegions(updatedHeader, scope, regions);
-      await this.handleCountries(
-        updatedHeader,
-        countries,
-        subnational_areas,
-        scope.id,
-        userId,
-      );
-
-      await this._resultRepository.update(resultId, {
-        geographic_scope_id: this.resolveScopeId(scope.id, countries),
-        has_countries: Array.isArray(countries) && countries.length > 0,
-      });
-
-      await this.resetTocData(resultId);
-      await this.handleTocMapping(
-        bilateralDto.toc_mapping,
-        bilateralDto.contributing_programs,
-        userId,
-        resultId,
-      );
-
-      await this.handleInstitutions(
-        resultId,
-        bilateralDto.contributing_partners || [],
-        userId,
-        bilateralDto.result_type_id,
-      );
-
-      await this._evidencesRepository.logicalDelete(resultId);
-      if (bilateralDto.result_type_id !== ResultTypeEnum.KNOWLEDGE_PRODUCT) {
-        await this.handleEvidence(
-          resultId,
-          bilateralDto.evidence || [],
-          userId,
-        );
-      }
-
-      await this._resultsByProjectsRepository.delete({ result_id: resultId });
-      await this.handleNonPooledProject(
-        resultId,
-        userId,
-        bilateralDto.contributing_bilateral_projects,
-        bilateralDto.result_type_id,
-      );
-
-      await this.handleContributingCenters(
-        resultId,
-        bilateralDto.contributing_center || [],
-        userId,
-        bilateralDto.lead_center,
-      );
-
-      await this.runResultTypeHandlers({
-        resultId,
-        userId,
-        bilateralDto,
-        isDuplicateResult: false,
-      });
-
-      resultInfo = await this._resultRepository.findOne({
-        where: { id: resultId },
-        relations: this.buildResultRelations(bilateralDto.result_type_id),
-      });
-
-      resultInfo = this.filterActiveRelations(resultInfo);
-      if (resultInfo) {
-        await this.enrichBilateralResultResponse(resultInfo);
-      }
-
-      this.logger.log(
-        `Successfully updated bilateral result ${resultId} (code: ${existingResult.result_code})`,
-      );
-    });
-
-    return {
-      response: resultInfo,
-      message: 'Results Bilateral updated successfully.',
-      status: 200,
-    };
-  }
-
-  async delete(resultId: number) {
-    try {
-      if (!resultId) {
-        throw new BadRequestException('Result id is required.');
-      }
-
-      const result = await this._resultRepository.findOne({
-        where: { id: resultId },
-      });
-
-      if (!result) {
-        throw new NotFoundException('Result not found.');
-      }
-
-      if (result.source !== SourceEnum.Bilateral) {
-        throw new BadRequestException(
-          'The provided result does not belong to the bilateral API.',
-        );
-      }
-
-      const systemUser = await this.getSystemUserToken();
-      return await this._resultsService.deleteResult(resultId, systemUser);
-    } catch (error) {
-      return this._handlersError.returnErrorRes({ error, debug: true });
-    }
   }
 
   async findOne(id: number) {
@@ -1016,6 +804,7 @@ export class BilateralService {
         result_knowledge_product_array: {
           result_knowledge_product_keyword_array: true,
           result_knowledge_product_metadata_array: true,
+          result_knowledge_product_author_array: true,
         },
       }),
       ...(isCapacitySharing && {
@@ -1865,6 +1654,128 @@ export class BilateralService {
       });
   }
 
+  private static triStateBool(value: unknown): boolean | null {
+    if (value === true || value === 1) return true;
+    if (value === false || value === 0) return false;
+    return null;
+  }
+
+  private collectKnowledgeProductRelatedResultIds(
+    evidenceArray: unknown,
+  ): number[] {
+    if (!Array.isArray(evidenceArray)) return [];
+    const ids = new Set<number>();
+    for (const ev of evidenceArray as Record<string, unknown>[]) {
+      if (ev?.is_active === false || ev?.is_active === 0) continue;
+      const ref = ev?.knowledge_product_related;
+      let id: number | null = null;
+      if (typeof ref === 'number' && Number.isFinite(ref)) id = ref;
+      else if (ref && typeof ref === 'object' && 'id' in ref) {
+        const rid = Number((ref as { id: unknown }).id);
+        if (Number.isFinite(rid)) id = rid;
+      }
+      if (id != null) ids.add(id);
+    }
+    return [...ids];
+  }
+
+  /**
+   * Human-facing accessibility per metadata row (e.g. CGSpace "Limited Access"):
+   * prefer `open_access`; fallback to legacy `accesibility` column.
+   */
+  /** FAIR values stored 0–1 → whole-number percent (e.g. 0.667 → 67). */
+  private static fairScorePercent(value: unknown): number | null {
+    if (value == null) return null;
+    const n = Number(value);
+    if (!Number.isFinite(n)) return null;
+    return Math.round(n * 100);
+  }
+
+  private static metadataAccessibilityLabel(m: {
+    open_access?: string | null;
+    accesibility?: string | boolean | null;
+  }): string | null {
+    const oa = m.open_access;
+    if (oa != null && String(oa).trim() !== '') return String(oa);
+    const acc = m.accesibility;
+    if (acc == null) return null;
+    return String(acc);
+  }
+
+  /**
+   * Knowledge products: slim payload for bilateral / OpenSearch (handle, metadata
+   * per source, authors, type, peer review / WoS flags, DOI, accessibility, keywords,
+   * agrovoc_keywords, commodity, sponsors, links to other results via evidence,
+   * FAIR pillar percents only: findable, accessible, interoperable, reusable.
+   */
+  private buildKnowledgeProductBilateralSummary(result: any) {
+    const onlyActive = (arr: any[] | undefined) =>
+      Array.isArray(arr)
+        ? arr.filter(
+            (item) =>
+              item?.is_active === undefined ||
+              item?.is_active === null ||
+              item.is_active === true ||
+              item.is_active === 1,
+          )
+        : [];
+
+    const kps = onlyActive(result?.result_knowledge_product_array);
+    const kp = kps[0];
+    if (!kp) return null;
+
+    const metadata_by_source = onlyActive(
+      kp.result_knowledge_product_metadata_array,
+    ).map((m: any) => ({
+      source: m.source ?? null,
+      issue_year: m.year == null ? null : Number(m.year),
+      online_year: m.online_year == null ? null : Number(m.online_year),
+      is_peer_reviewed: BilateralService.triStateBool(m.is_peer_reviewed),
+      web_of_science_core_collection: BilateralService.triStateBool(m.is_isi),
+      accessibility: BilateralService.metadataAccessibilityLabel(m),
+      doi: m.doi ?? null,
+    }));
+
+    const authors = onlyActive(kp.result_knowledge_product_author_array).map(
+      (a: any) => ({
+        name: a.author_name ?? null,
+        orcid: a.orcid ?? null,
+      }),
+    );
+
+    const keywordRows = onlyActive(kp.result_knowledge_product_keyword_array);
+    const keywords: string[] = [];
+    const agrovoc_keywords: string[] = [];
+    for (const k of keywordRows) {
+      const text = (k.keyword ?? '').trim();
+      if (!text) continue;
+      const isAg = k.is_agrovoc === true || k.is_agrovoc === 1;
+      if (isAg) agrovoc_keywords.push(text);
+      else keywords.push(text);
+    }
+
+    return {
+      handle: kp.handle ?? null,
+      doi: kp.doi ?? null,
+      knowledge_product_type: kp.knowledge_product_type ?? null,
+      commodity: kp.comodity ?? null,
+      sponsors: kp.sponsors ?? null,
+      authors,
+      keywords,
+      agrovoc_keywords,
+      metadata_by_source,
+      fair: {
+        findable: BilateralService.fairScorePercent(kp.findable),
+        accessible: BilateralService.fairScorePercent(kp.accesible),
+        interoperable: BilateralService.fairScorePercent(kp.interoperable),
+        reusable: BilateralService.fairScorePercent(kp.reusable),
+      },
+      referenced_result_ids: this.collectKnowledgeProductRelatedResultIds(
+        result.evidence_array,
+      ),
+    };
+  }
+
   /**
    * Slim DAC payload: tag description only from GenderTagLevel; when tag level id is
    * {@link DAC_IMPACT_AREA_TAG_LEVEL_ID}, impact_area_names from result_impact_area_score
@@ -1945,6 +1856,11 @@ export class BilateralService {
     );
     filtered.result_by_institution_array =
       await this.buildBilateralPartnerInstitutionsSummary(filtered.id);
+    if (filtered.result_type_id === ResultTypeEnum.KNOWLEDGE_PRODUCT) {
+      filtered.knowledge_product_summary =
+        this.buildKnowledgeProductBilateralSummary(filtered);
+      delete filtered.result_knowledge_product_array;
+    }
     delete filtered.obj_result_by_project;
   }
 
