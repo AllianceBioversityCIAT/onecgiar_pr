@@ -59,6 +59,9 @@ describe('BilateralService (unit)', () => {
       logicalDelete: jest.fn().mockResolvedValue(undefined),
     } as any;
     const nonPooledProjectBudgetRepository = { save: jest.fn() };
+    const resultsInnovationsUseRepository = {
+      getLinkedResultsByOrigin: jest.fn().mockResolvedValue([]),
+    };
 
     const makeHandler = (resultType: number) => ({
       resultType,
@@ -111,6 +114,7 @@ describe('BilateralService (unit)', () => {
       resultByInitiativesRepository as any,
       shareResultRequestRepository,
       nonPooledProjectBudgetRepository as any,
+      resultsInnovationsUseRepository as any,
       knowledgeProductHandler as any,
       capacityChangeHandler as any,
       innovationDevelopmentHandler as any,
