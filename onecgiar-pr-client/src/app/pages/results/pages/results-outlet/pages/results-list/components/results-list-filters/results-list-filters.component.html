@@ -203,6 +203,31 @@
             [style]="{ width: '100%' }" />
         </div>
 
+        <div>
+          <app-pr-field-header
+            label="My activity"
+            labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
+            [required]="false"></app-pr-field-header>
+          <div style="display: flex; flex-direction: column; gap: 10px; padding-left: 2px">
+            <div style="display: flex; align-items: center; gap: 8px">
+              <p-checkbox
+                inputId="fltCreatedByMe"
+                [binary]="true"
+                [ngModel]="tempFilterCreatedByMe()"
+                (ngModelChange)="tempFilterCreatedByMe.set($event)" />
+              <label for="fltCreatedByMe" style="cursor: pointer; margin: 0">Created by me</label>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px">
+              <p-checkbox
+                inputId="fltSubmittedByMe"
+                [binary]="true"
+                [ngModel]="tempFilterSubmittedByMe()"
+                (ngModelChange)="tempFilterSubmittedByMe.set($event)" />
+              <label for="fltSubmittedByMe" style="cursor: pointer; margin: 0">Submitted by me</label>
+            </div>
+          </div>
+        </div>
+
         <div style="padding-bottom: 70px">
           <app-pr-field-header
             label="Funding Source"

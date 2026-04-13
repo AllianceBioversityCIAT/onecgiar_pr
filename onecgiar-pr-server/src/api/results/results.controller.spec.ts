@@ -121,8 +121,12 @@ describe('ResultsController', () => {
 
   it('findAllResultRolesFiltered delegates to service with query', async () => {
     const query = { page: '1', initiative: 'SP01' } as any;
-    await controller.findAllResultRolesFiltered(8, query);
-    expect(mockService.findAllByRoleFiltered).toHaveBeenCalledWith(8, query);
+    await controller.findAllResultRolesFiltered(8, query, user);
+    expect(mockService.findAllByRoleFiltered).toHaveBeenCalledWith(
+      8,
+      query,
+      user,
+    );
   });
 
   it('depthSearch delegates to service', async () => {
@@ -202,8 +206,11 @@ describe('ResultsController', () => {
 
   it('getResultDataForBasicReport delegates', async () => {
     const body = { initDate: '2020-01-01', endDate: '2020-12-31' };
-    await controller.getResultDataForBasicReport(body);
-    expect(mockService.getResultDataForBasicReport).toHaveBeenCalledWith(body);
+    await controller.getResultDataForBasicReport(body, user);
+    expect(mockService.getResultDataForBasicReport).toHaveBeenCalledWith(
+      body,
+      user,
+    );
   });
 
   it('createVersion calls service and returns ok', async () => {
