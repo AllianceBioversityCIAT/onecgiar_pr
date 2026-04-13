@@ -40,6 +40,7 @@ import { InnovationUseBilateralHandler } from './handlers/innovation-use.handler
 import { PolicyChangeBilateralHandler } from './handlers/policy-change.handler';
 import { ResultsInnovationsDevRepository } from '../results/summary/repositories/results-innovations-dev.repository';
 import { ResultsInnovationsUseRepository } from '../results/summary/repositories/results-innovations-use.repository';
+import { ResultsCapacityDevelopmentsRepository } from '../results/summary/repositories/results-capacity-developments.repository';
 import { ResultsPolicyChangesRepository } from '../results/summary/repositories/results-policy-changes.repository';
 import { NoopBilateralHandler } from './handlers/noop.handler';
 import { NonPooledProjectBudgetRepository } from '../results/result_budget/repositories/non_pooled_proyect_budget.repository';
@@ -90,6 +91,7 @@ import { NonPooledProjectBudgetRepository } from '../results/result_budget/repos
     NoopBilateralHandler,
     ResultsInnovationsDevRepository,
     ResultsInnovationsUseRepository,
+    ResultsCapacityDevelopmentsRepository,
     ResultsPolicyChangesRepository,
     NonPooledProjectBudgetRepository,
   ],

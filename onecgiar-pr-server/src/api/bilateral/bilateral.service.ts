@@ -84,6 +84,8 @@ import { ClarisaInnovationReadinessLevel } from '../../clarisa/clarisa-innovatio
 import { ClarisaInnovationUseLevel } from '../../clarisa/clarisa-innovation-use-levels/entities/clarisa-innovation-use-level.entity';
 import { InnovationUseLevel } from '../results-framework-reporting/innovation-use/enum/innov-use-levels.enum';
 import { ResultsInnovationsUseRepository } from '../results/summary/repositories/results-innovations-use.repository';
+import { ResultsCapacityDevelopmentsRepository } from '../results/summary/repositories/results-capacity-developments.repository';
+import { CapdevsDeliveryMethod } from '../results/capdevs-delivery-methods/entities/capdevs-delivery-method.entity';
 
 /** Anticipated innovation user — organization-type rows (same role as PRMS Innovation Dev). */
 const INNOVATION_DEV_ANTICIPATED_USER_ORG_ROLE_ID = 5;
@@ -93,6 +95,9 @@ const INNOVATION_DEV_INSTITUTION_TYPE_OTHER_CODE = 78;
 /** PRMS Innovation Use — current (reporting year) vs 2030 sections on actors / orgs / measures. */
 const INNOVATION_USE_SECTION_CURRENT = 1;
 const INNOVATION_USE_SECTION_2030 = 2;
+
+/** Capacity sharing — implementing organizations (`summary.service` / PRMS role 3). */
+const CAPACITY_SHARING_IMPLEMENTING_ORG_ROLE_ID = 3;
 
 /** Map result_type name (ListResultsResultTypeEnum) to result_type.id */
 const RESULT_TYPE_NAME_TO_ID: Partial<
@@ -179,6 +184,7 @@ export class BilateralService {
     private readonly _shareResultRequestRepository: ShareResultRequestRepository,
     private readonly _nonPooledProjectBudgetRepository: NonPooledProjectBudgetRepository,
     private readonly _resultsInnovationsUseRepository: ResultsInnovationsUseRepository,
+    private readonly _resultsCapacityDevelopmentsRepository: ResultsCapacityDevelopmentsRepository,
     private readonly _knowledgeProductHandler: KnowledgeProductBilateralHandler,
     private readonly _capacityChangeHandler: CapacityChangeBilateralHandler,
     private readonly _innovationDevelopmentHandler: InnovationDevelopmentBilateralHandler,
@@ -788,8 +794,6 @@ export class BilateralService {
 
   private buildResultRelations(resultTypeId?: number) {
     const isKpType = resultTypeId === ResultTypeEnum.KNOWLEDGE_PRODUCT;
-    const isCapacitySharing =
-      resultTypeId === ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT;
     const isInnovationDev =
       resultTypeId === ResultTypeEnum.INNOVATION_DEVELOPMENT;
     const isInnovationUse = resultTypeId === ResultTypeEnum.INNOVATION_USE;
@@ -828,9 +832,6 @@ export class BilateralService {
           result_knowledge_product_metadata_array: true,
           result_knowledge_product_author_array: true,
         },
-      }),
-      ...(isCapacitySharing && {
-        results_capacity_development_object: true,
       }),
       ...(isInnovationDev && {
         results_innovations_dev_object: {
@@ -2472,6 +2473,124 @@ export class BilateralService {
     };
   }
 
+  private mapCapacitySharingImplementingInstitution(row: any) {
+    return {
+      name: row.institutions_name ?? null,
+      acronym: row.institutions_acronym ?? null,
+      institution_type_name: row.institutions_type_name ?? null,
+    };
+  }
+
+  private toCapdevCount(value: unknown): number | null {
+    if (value === null || value === undefined) return null;
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  private shapeCapacityDevelopmentBilateralPayload(
+    capDev: any,
+    institutionsMapped: Array<{
+      name: string | null;
+      acronym: string | null;
+      institution_type_name: string | null;
+    }>,
+    deliveryMethod: CapdevsDeliveryMethod | null,
+  ) {
+    const training_length =
+      capDev.capdev_term_name != null ||
+      capDev.capdev_term_term != null ||
+      capDev.capdev_term_description != null
+        ? {
+            name:
+              capDev.capdev_term_name != null
+                ? String(capDev.capdev_term_name)
+                : null,
+            term:
+              capDev.capdev_term_term != null
+                ? String(capDev.capdev_term_term)
+                : null,
+            description:
+              capDev.capdev_term_description != null
+                ? String(capDev.capdev_term_description)
+                : null,
+          }
+        : null;
+
+    const delivery_method = deliveryMethod
+      ? {
+          name: deliveryMethod.name ?? null,
+          description: deliveryMethod.description ?? null,
+        }
+      : null;
+
+    const orgFlag = capDev.is_attending_for_organization;
+    const is_attending_for_organization =
+      orgFlag === true || orgFlag === 1 || orgFlag === '1'
+        ? true
+        : orgFlag === false || orgFlag === 0 || orgFlag === '0'
+          ? false
+          : null;
+
+    return {
+      created_date: capDev.created_date ?? null,
+      last_updated_date: capDev.last_updated_date ?? null,
+      male_using: this.toCapdevCount(capDev.male_using),
+      female_using: this.toCapdevCount(capDev.female_using),
+      non_binary_using: this.toCapdevCount(capDev.non_binary_using),
+      has_unkown_using: this.toCapdevCount(capDev.has_unkown_using),
+      is_attending_for_organization,
+      delivery_method,
+      training_length,
+      institutions: institutionsMapped,
+    };
+  }
+
+  /** Bilateral CapDev: human-readable delivery method & training length (no lookup FKs). */
+  private async buildCapacityDevelopmentBilateralSummary(resultId: number) {
+    const [capDev, institutions] = await Promise.all([
+      this._resultsCapacityDevelopmentsRepository.capDevExists(resultId),
+      this._resultByIntitutionsRepository.getGenericAllResultByInstitutionByRole(
+        resultId,
+        CAPACITY_SHARING_IMPLEMENTING_ORG_ROLE_ID,
+      ),
+    ]);
+
+    const institutionsMapped = (institutions ?? []).map((r: any) =>
+      this.mapCapacitySharingImplementingInstitution(r),
+    );
+
+    if (!capDev) {
+      return {
+        created_date: null,
+        last_updated_date: null,
+        male_using: null,
+        female_using: null,
+        non_binary_using: null,
+        has_unkown_using: null,
+        is_attending_for_organization: null,
+        delivery_method: null,
+        training_length: null,
+        institutions: institutionsMapped,
+      };
+    }
+
+    const dmId = Number(capDev.capdev_delivery_method_id);
+    let deliveryMethod: CapdevsDeliveryMethod | null = null;
+    if (Number.isFinite(dmId) && dmId > 0) {
+      deliveryMethod = await this.dataSource
+        .getRepository(CapdevsDeliveryMethod)
+        .findOne({
+          where: { capdev_delivery_method_id: dmId },
+        });
+    }
+
+    return this.shapeCapacityDevelopmentBilateralPayload(
+      capDev,
+      institutionsMapped,
+      deliveryMethod,
+    );
+  }
+
   private async enrichBilateralResultResponse(filtered: any): Promise<void> {
     if (!filtered?.id) return;
     filtered.obj_results_toc_result =
@@ -2500,6 +2619,14 @@ export class BilateralService {
       filtered.innovation_use_summary =
         await this.buildInnovationUseBilateralSummary(filtered);
       delete filtered.results_innovations_use_object;
+    }
+    if (
+      filtered.result_type_id ===
+      ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT
+    ) {
+      filtered.capacity_development_summary =
+        await this.buildCapacityDevelopmentBilateralSummary(filtered.id);
+      delete filtered.results_capacity_development_object;
     }
     delete filtered.obj_result_by_project;
   }

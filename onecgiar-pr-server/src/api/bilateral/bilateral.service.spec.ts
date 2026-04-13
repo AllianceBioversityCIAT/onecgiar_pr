@@ -62,6 +62,9 @@ describe('BilateralService (unit)', () => {
     const resultsInnovationsUseRepository = {
       getLinkedResultsByOrigin: jest.fn().mockResolvedValue([]),
     };
+    const resultsCapacityDevelopmentsRepository = {
+      capDevExists: jest.fn().mockResolvedValue(undefined),
+    };
 
     const makeHandler = (resultType: number) => ({
       resultType,
@@ -115,6 +118,7 @@ describe('BilateralService (unit)', () => {
       shareResultRequestRepository,
       nonPooledProjectBudgetRepository as any,
       resultsInnovationsUseRepository as any,
+      resultsCapacityDevelopmentsRepository as any,
       knowledgeProductHandler as any,
       capacityChangeHandler as any,
       innovationDevelopmentHandler as any,
@@ -185,9 +189,7 @@ describe('BilateralService (unit)', () => {
     const cap = service.buildResultRelations(
       ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
     );
-    expect(cap).toEqual(
-      expect.objectContaining({ results_capacity_development_object: true }),
-    );
+    expect(cap).not.toHaveProperty('results_capacity_development_object');
   });
 
   it('filterActiveRelations should filter arrays by is_active (includes null/undefined/1/true)', () => {
