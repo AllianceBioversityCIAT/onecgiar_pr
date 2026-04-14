@@ -1582,14 +1582,42 @@ export class BilateralService {
   }
 
   /**
-   * Builds leading_result from the result's result_center_array (center with is_leading_result = 1, active).
-   * Uses ClarisaCenter (code) and ClarisaInstitution (name, acronym).
+   * Leading org for the result: when `is_lead_by_partner` is true, the **partner** row
+   * with `is_leading_result` (Clarisa institution); otherwise the **lead centre** from
+   * `result_center_array` (Clarisa center code + institution).
    */
-  private buildLeadingResult(result: any): {
-    code: string;
+  private async buildLeadingResult(result: any): Promise<{
+    lead_kind: 'center' | 'partner';
+    id: number | null;
+    code: string | null;
     name: string;
     acronym: string;
-  } | null {
+  } | null> {
+    const isLeadByPartner =
+      result?.is_lead_by_partner === true || result?.is_lead_by_partner === 1;
+
+    if (isLeadByPartner && result?.id != null) {
+      const rows = await this._resultByIntitutionsRepository.find({
+        where: {
+          result_id: result.id,
+          is_active: true,
+          institution_roles_id: InstitutionRoleEnum.PARTNER,
+          is_leading_result: true,
+        },
+        relations: { obj_institutions: true },
+      });
+      const row = rows[0];
+      const inst = row?.obj_institutions;
+      if (!inst) return null;
+      return {
+        lead_kind: 'partner',
+        id: inst.id ?? null,
+        code: null,
+        name: inst.name ?? '',
+        acronym: inst.acronym ?? '',
+      };
+    }
+
     const centers = result?.result_center_array;
     if (!Array.isArray(centers)) return null;
     const leading = centers.find(
@@ -1598,10 +1626,75 @@ export class BilateralService {
     if (!leading?.clarisa_center_object) return null;
     const cc = leading.clarisa_center_object;
     const inst = cc?.clarisa_institution;
+    let institutionId: number | null = null;
+    if (cc.institutionId != null) {
+      const n = Number(cc.institutionId);
+      if (Number.isFinite(n)) institutionId = n;
+    } else if (inst?.id != null) {
+      const n = Number(inst.id);
+      if (Number.isFinite(n)) institutionId = n;
+    }
     return {
-      code: cc.code ?? '',
+      lead_kind: 'center',
+      id: institutionId,
+      code: cc.code ?? null,
       name: inst?.name ?? '',
       acronym: inst?.acronym ?? '',
+    };
+  }
+
+  /**
+   * Latest active submission row for QA / Submitted results (who submitted and when).
+   */
+  private async buildLastSubmissionMetadata(
+    resultId: number,
+  ): Promise<{
+    id: number;
+    created_date: Date;
+    comment: string | null;
+    status: boolean;
+    status_id: number | null;
+    submitted_by: {
+      user_id: number;
+      first_name: string | null;
+      last_name: string | null;
+    };
+  } | null> {
+    const rows = (await this.dataSource.query(
+      `SELECT s.id, s.created_date, s.comment, s.status, s.status_id, s.user_id,
+              u.first_name, u.last_name
+       FROM submission s
+       LEFT JOIN users u ON u.id = s.user_id
+       WHERE s.results_id = ? AND s.is_active = 1
+       ORDER BY s.created_date DESC
+       LIMIT 1`,
+      [resultId],
+    )) as Array<{
+      id: number;
+      created_date: Date;
+      comment: string | null;
+      status: boolean | number;
+      status_id: number | null;
+      user_id: number;
+      first_name: string | null;
+      last_name: string | null;
+    }>;
+
+    const row = rows[0];
+    if (!row) return null;
+
+    return {
+      id: Number(row.id),
+      created_date: row.created_date,
+      comment: row.comment ?? null,
+      status: row.status === true || row.status === 1,
+      status_id:
+        row.status_id == null ? null : Number(row.status_id),
+      submitted_by: {
+        user_id: Number(row.user_id),
+        first_name: row.first_name ?? null,
+        last_name: row.last_name ?? null,
+      },
     };
   }
 
@@ -1692,59 +1785,8 @@ export class BilateralService {
       });
   }
 
-  private static triStateBool(value: unknown): boolean | null {
-    if (value === true || value === 1) return true;
-    if (value === false || value === 0) return false;
-    return null;
-  }
-
-  private collectKnowledgeProductRelatedResultIds(
-    evidenceArray: unknown,
-  ): number[] {
-    if (!Array.isArray(evidenceArray)) return [];
-    const ids = new Set<number>();
-    for (const ev of evidenceArray as Record<string, unknown>[]) {
-      if (ev?.is_active === false || ev?.is_active === 0) continue;
-      const ref = ev?.knowledge_product_related;
-      let id: number | null = null;
-      if (typeof ref === 'number' && Number.isFinite(ref)) id = ref;
-      else if (ref && typeof ref === 'object' && 'id' in ref) {
-        const rid = Number((ref as { id: unknown }).id);
-        if (Number.isFinite(rid)) id = rid;
-      }
-      if (id != null) ids.add(id);
-    }
-    return [...ids];
-  }
-
   /**
-   * Human-facing accessibility per metadata row (e.g. CGSpace "Limited Access"):
-   * prefer `open_access`; fallback to legacy `accesibility` column.
-   */
-  /** FAIR values stored 0–1 → whole-number percent (e.g. 0.667 → 67). */
-  private static fairScorePercent(value: unknown): number | null {
-    if (value == null) return null;
-    const n = Number(value);
-    if (!Number.isFinite(n)) return null;
-    return Math.round(n * 100);
-  }
-
-  private static metadataAccessibilityLabel(m: {
-    open_access?: string | null;
-    accesibility?: string | boolean | null;
-  }): string | null {
-    const oa = m.open_access;
-    if (oa != null && String(oa).trim() !== '') return String(oa);
-    const acc = m.accesibility;
-    if (acc == null) return null;
-    return String(acc);
-  }
-
-  /**
-   * Knowledge products: slim payload for bilateral / OpenSearch (handle, metadata
-   * per source, authors, type, peer review / WoS flags, DOI, accessibility, keywords,
-   * agrovoc_keywords, commodity, sponsors, links to other results via evidence,
-   * FAIR pillar percents only: findable, accessible, interoperable, reusable.
+   * Knowledge products: bilateral payload exposes only the public **handle**.
    */
   private buildKnowledgeProductBilateralSummary(result: any) {
     const onlyActive = (arr: any[] | undefined) =>
@@ -1762,55 +1804,8 @@ export class BilateralService {
     const kp = kps[0];
     if (!kp) return null;
 
-    const metadata_by_source = onlyActive(
-      kp.result_knowledge_product_metadata_array,
-    ).map((m: any) => ({
-      source: m.source ?? null,
-      issue_year: m.year == null ? null : Number(m.year),
-      online_year: m.online_year == null ? null : Number(m.online_year),
-      is_peer_reviewed: BilateralService.triStateBool(m.is_peer_reviewed),
-      web_of_science_core_collection: BilateralService.triStateBool(m.is_isi),
-      accessibility: BilateralService.metadataAccessibilityLabel(m),
-      doi: m.doi ?? null,
-    }));
-
-    const authors = onlyActive(kp.result_knowledge_product_author_array).map(
-      (a: any) => ({
-        name: a.author_name ?? null,
-        orcid: a.orcid ?? null,
-      }),
-    );
-
-    const keywordRows = onlyActive(kp.result_knowledge_product_keyword_array);
-    const keywords: string[] = [];
-    const agrovoc_keywords: string[] = [];
-    for (const k of keywordRows) {
-      const text = (k.keyword ?? '').trim();
-      if (!text) continue;
-      const isAg = k.is_agrovoc === true || k.is_agrovoc === 1;
-      if (isAg) agrovoc_keywords.push(text);
-      else keywords.push(text);
-    }
-
     return {
       handle: kp.handle ?? null,
-      doi: kp.doi ?? null,
-      knowledge_product_type: kp.knowledge_product_type ?? null,
-      commodity: kp.comodity ?? null,
-      sponsors: kp.sponsors ?? null,
-      authors,
-      keywords,
-      agrovoc_keywords,
-      metadata_by_source,
-      fair: {
-        findable: BilateralService.fairScorePercent(kp.findable),
-        accessible: BilateralService.fairScorePercent(kp.accesible),
-        interoperable: BilateralService.fairScorePercent(kp.interoperable),
-        reusable: BilateralService.fairScorePercent(kp.reusable),
-      },
-      referenced_result_ids: this.collectKnowledgeProductRelatedResultIds(
-        result.evidence_array,
-      ),
     };
   }
 
@@ -2193,6 +2188,7 @@ export class BilateralService {
         : null,
       typology: typology
         ? {
+            id: typology.code == null ? null : Number(typology.code),
             code: typology.code ?? null,
             name: typology.name ?? null,
             definition: typology.definition ?? null,
@@ -2478,7 +2474,11 @@ export class BilateralService {
   }
 
   private mapCapacitySharingImplementingInstitution(row: any) {
+    const rawId = row.institutions_id;
+    const id =
+      rawId != null && Number.isFinite(Number(rawId)) ? Number(rawId) : null;
     return {
+      id,
       name: row.institutions_name ?? null,
       acronym: row.institutions_acronym ?? null,
       institution_type_name: row.institutions_type_name ?? null,
@@ -2493,7 +2493,8 @@ export class BilateralService {
 
   private shapeCapacityDevelopmentBilateralPayload(
     capDev: any,
-    institutionsMapped: Array<{
+    onBehalfOrganizationsMapped: Array<{
+      id: number | null;
       name: string | null;
       acronym: string | null;
       institution_type_name: string | null;
@@ -2536,8 +2537,6 @@ export class BilateralService {
           : null;
 
     return {
-      created_date: capDev.created_date ?? null,
-      last_updated_date: capDev.last_updated_date ?? null,
       male_using: this.toCapdevCount(capDev.male_using),
       female_using: this.toCapdevCount(capDev.female_using),
       non_binary_using: this.toCapdevCount(capDev.non_binary_using),
@@ -2545,7 +2544,7 @@ export class BilateralService {
       is_attending_for_organization,
       delivery_method,
       training_length,
-      institutions: institutionsMapped,
+      on_behalf_organizations: onBehalfOrganizationsMapped,
     };
   }
 
@@ -2559,14 +2558,12 @@ export class BilateralService {
       ),
     ]);
 
-    const institutionsMapped = (institutions ?? []).map((r: any) =>
+    const onBehalfOrganizationsMapped = (institutions ?? []).map((r: any) =>
       this.mapCapacitySharingImplementingInstitution(r),
     );
 
     if (!capDev) {
       return {
-        created_date: null,
-        last_updated_date: null,
         male_using: null,
         female_using: null,
         non_binary_using: null,
@@ -2574,7 +2571,7 @@ export class BilateralService {
         is_attending_for_organization: null,
         delivery_method: null,
         training_length: null,
-        institutions: institutionsMapped,
+        on_behalf_organizations: onBehalfOrganizationsMapped,
       };
     }
 
@@ -2590,7 +2587,7 @@ export class BilateralService {
 
     return this.shapeCapacityDevelopmentBilateralPayload(
       capDev,
-      institutionsMapped,
+      onBehalfOrganizationsMapped,
       deliveryMethod,
     );
   }
@@ -2671,8 +2668,6 @@ export class BilateralService {
         rawRow.is_active === '0');
     if (!row || inactive) {
       return {
-        created_date: null,
-        last_updated_date: null,
         amount: null,
         amount_status_label: null,
         policy_type: null,
@@ -2700,20 +2695,20 @@ export class BilateralService {
     ]);
 
     return {
-      created_date: row.created_date ?? null,
-      last_updated_date: row.last_updated_date ?? null,
       amount: row.amount == null ? null : Number(row.amount),
       amount_status_label: this.mapPolicyChangeAmountStatusLabel(
         row.status_amount,
       ),
       policy_type: policyType
         ? {
+            id: policyType.id,
             name: policyType.name ?? null,
             definition: policyType.definition ?? null,
           }
         : null,
       policy_stage: policyStage
         ? {
+            id: policyStage.id,
             name: policyStage.name ?? null,
             definition: policyStage.definition ?? null,
           }
@@ -2729,7 +2724,16 @@ export class BilateralService {
     if (!filtered?.id) return;
     filtered.obj_results_toc_result =
       await this._resultRepository.getTocMappingsByResultId(filtered.id);
-    filtered.leading_result = this.buildLeadingResult(filtered);
+    filtered.leading_result = await this.buildLeadingResult(filtered);
+    const statusId = Number(filtered.status_id);
+    if (
+      statusId === ResultStatusData.QualityAssessed.value ||
+      statusId === ResultStatusData.Submitted.value
+    ) {
+      filtered.last_submission = await this.buildLastSubmissionMetadata(
+        filtered.id,
+      );
+    }
     filtered.dac_scores = await this.buildDacScoresSummary(
       filtered.id,
       filtered,
