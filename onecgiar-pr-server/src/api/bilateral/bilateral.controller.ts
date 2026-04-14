@@ -4,7 +4,6 @@ import {
   Get,
   Param,
   ParseIntPipe,
-  Patch,
   Post,
   Query,
   UseInterceptors,
@@ -43,38 +42,6 @@ export class BilateralController {
     body: RootResultsDto,
   ) {
     return this.bilateralService.create(body);
-  }
-
-  @Patch('update/:id')
-  @ApiOperation({
-    summary: 'Update bilateral result',
-    description:
-      'Updates an existing bilateral-created result. Body is identical to the create payload.',
-  })
-  @ApiParam({ name: 'id', type: Number, required: true })
-  @ApiBody({ type: RootResultsDto })
-  async update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body(
-      new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: false,
-        transform: true,
-      }),
-    )
-    body: RootResultsDto,
-  ) {
-    return this.bilateralService.update(id, body);
-  }
-
-  @Patch('delete/:id')
-  @ApiOperation({
-    summary: 'Soft delete bilateral result',
-    description: 'Marks a bilateral-created result as inactive.',
-  })
-  @ApiParam({ name: 'id', type: Number, required: true })
-  async delete(@Param('id', ParseIntPipe) id: number) {
-    return this.bilateralService.delete(id);
   }
 
   @Get()
@@ -222,7 +189,7 @@ export class BilateralController {
   @ApiOperation({
     summary: 'Get all bilateral results for synchronization',
     description:
-      'Retrieves all active bilateral results for external synchronization. Returns results in the same structure as create/update endpoints. Supports optional filtering by bilateral flag and result type.',
+      'Retrieves all active bilateral results for external synchronization. Returns results in the same structure as the create endpoint. Supports optional filtering by bilateral flag and result type.',
   })
   @ApiQuery({
     name: 'bilateral',
