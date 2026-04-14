@@ -712,8 +712,8 @@ export class ResultQuestionsService {
   private stripHtmlForBilateralLabel(s: string): string {
     if (!s) return '';
     return s
-      .replaceAll(/<[^>]+>/g, '')
-      .replaceAll(/\s+/g, ' ')
+      .replace(/<[^>]+>/g, '')
+      .replace(/\s+/g, ' ')
       .trim();
   }
 
