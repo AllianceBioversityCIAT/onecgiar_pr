@@ -130,6 +130,8 @@ import { ShareResultRequestRepository } from './share-result-request/share-resul
 import { ShareResultRequest } from './share-result-request/entities/share-result-request.entity';
 import { EvidencesService } from '../results/evidences/evidences.service';
 import { SavePartnersV2Dto } from './results_by_institutions/dto/save-partners-v2.dto';
+import { ResultDeletionAuditService } from './result-deletion-audit/result-deletion-audit.service';
+import { ResultDeletionAuditSource } from './result-deletion-audit/result-deletion-audit-source.enum';
 
 @Injectable()
 export class ResultsService {
@@ -176,6 +178,7 @@ export class ResultsService {
     private readonly _resultsCenterRepository: ResultsCenterRepository,
     private readonly _resultsTocResultRepository: ResultsTocResultRepository,
     private readonly _tocResultsRepository: AoWBilateralRepository,
+    private readonly _resultDeletionAuditService: ResultDeletionAuditService,
     private readonly _dataSource: DataSource,
     private readonly _resultImpactAreaScoresService: ResultImpactAreaScoresService,
     private readonly _initiativeEntityMapRepository?: InitiativeEntityMapRepository,
@@ -974,7 +977,7 @@ export class ResultsService {
    * @returns
    */
 
-  async deleteResult(resultId: number, user: TokenDto) {
+  async deleteResult(resultId: number, user: TokenDto, justification?: string) {
     try {
       const result: Result = await this._resultRepository.findOne({
         where: { id: resultId },
@@ -993,6 +996,13 @@ export class ResultsService {
           statusCode: HttpStatus.BAD_REQUEST,
           response: result,
         });
+
+      await this._resultDeletionAuditService.recordDeletion({
+        resultId: result.id,
+        userId: user.id,
+        deletionSource: ResultDeletionAuditSource.ResultsModule,
+        justification,
+      });
 
       result.is_active = false;
 
