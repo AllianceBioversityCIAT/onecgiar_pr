@@ -1548,11 +1548,15 @@ export class BilateralService {
     return {
       clarisa_subnational_scope_code: sn.clarisa_subnational_scope_code ?? null,
       geo_scope_role_id: sn.geo_scope_role_id ?? null,
-      clarisa_subnational_scope_object: sn.clarisa_subnational_scope_object ?? null,
+      clarisa_subnational_scope_object:
+        sn.clarisa_subnational_scope_object ?? null,
     };
   }
 
-  private slimBilateralResultCountryRow(rc: any, onlyActive: (arr: any[]) => any[]) {
+  private slimBilateralResultCountryRow(
+    rc: any,
+    onlyActive: (arr: any[]) => any[],
+  ) {
     const subs = onlyActive(rc?.result_countries_subnational_array).map((sn) =>
       this.slimBilateralResultCountrySubnationalRow(sn),
     );
@@ -1675,9 +1679,7 @@ export class BilateralService {
   /**
    * Latest active submission row for QA / Submitted results (who submitted and when).
    */
-  private async buildLastSubmissionMetadata(
-    resultId: number,
-  ): Promise<{
+  private async buildLastSubmissionMetadata(resultId: number): Promise<{
     id: number;
     created_date: Date;
     comment: string | null;
@@ -1717,8 +1719,7 @@ export class BilateralService {
       created_date: row.created_date,
       comment: row.comment ?? null,
       status: row.status === true || row.status === 1,
-      status_id:
-        row.status_id == null ? null : Number(row.status_id),
+      status_id: row.status_id == null ? null : Number(row.status_id),
       submitted_by: {
         user_id: Number(row.user_id),
         first_name: row.first_name ?? null,
@@ -2647,13 +2648,10 @@ export class BilateralService {
       return [];
     }
     return opts
-      .filter(
-        (o) => o?.answer_boolean === true || o?.answer_boolean === 1,
-      )
+      .filter((o) => o?.answer_boolean === true || o?.answer_boolean === 1)
       .map((o) => ({
         parent_question: parent,
-        option_text:
-          o?.question_text != null ? String(o.question_text) : null,
+        option_text: o?.question_text != null ? String(o.question_text) : null,
       }));
   }
 

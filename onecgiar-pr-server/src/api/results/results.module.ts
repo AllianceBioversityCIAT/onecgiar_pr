@@ -210,7 +210,12 @@ import { ResultDeletionAuditModule } from './result-deletion-audit/result-deleti
     ResultReviewHistoryRepository,
     ShareResultRequestRepository,
   ],
-  exports: [ResultRepository, JwtMiddleware, ResultsService, ResultQuestionsService],
+  exports: [
+    ResultRepository,
+    JwtMiddleware,
+    ResultsService,
+    ResultQuestionsService,
+  ],
 })
 export class ResultsModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

@@ -681,7 +681,9 @@ export class ResultQuestionsService {
     return Object.keys(out).length ? out : null;
   }
 
-  private simplifyInnovationDevOptionBranch(o: unknown): InnovationDevCleanQuestion | null {
+  private simplifyInnovationDevOptionBranch(
+    o: unknown,
+  ): InnovationDevCleanQuestion | null {
     if (!o || typeof o !== 'object') return null;
     const row = o as Record<string, unknown>;
     const subRaw = Array.isArray(row.subOptions) ? row.subOptions : [];
@@ -709,7 +711,10 @@ export class ResultQuestionsService {
   /** Strip simple HTML from catalog labels (e.g. `<b>Other</b>`) for bilateral text answers. */
   private stripHtmlForBilateralLabel(s: string): string {
     if (!s) return '';
-    return s.replaceAll(/<[^>]+>/g, '').replaceAll(/\s+/g, ' ').trim();
+    return s
+      .replaceAll(/<[^>]+>/g, '')
+      .replaceAll(/\s+/g, ' ')
+      .trim();
   }
 
   /** Label for a selected catalog row (`question_text` + optional free-text answer). */
@@ -897,17 +902,19 @@ export class ResultQuestionsService {
         .toUpperCase() === 'P25';
 
     if (isP25) {
-      const [scaling, intellectual, innovation, megatrends] =
-        await Promise.all([
+      const [scaling, intellectual, innovation, megatrends] = await Promise.all(
+        [
           this.responsibleInnovationAndScalingV2(resultId),
           this.intellectualPropertyRightsV2(resultId),
           this.innovationTeamDiversityV2(resultId),
           this.getMegatrendsV2(resultId),
-        ]);
+        ],
+      );
       return {
-        responsible_innovation_and_scaling: this.flattenMacroSubquestionsSection(
-          Array.isArray(scaling) ? scaling[0] : null,
-        ),
+        responsible_innovation_and_scaling:
+          this.flattenMacroSubquestionsSection(
+            Array.isArray(scaling) ? scaling[0] : null,
+          ),
         intellectual_property_rights: this.flattenMacroSubquestionsSection(
           Array.isArray(intellectual) ? intellectual[0] : null,
         ),
