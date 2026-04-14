@@ -2159,55 +2159,58 @@ export class BilateralService {
     };
   }
 
-  private async buildInnovationDevelopmentBilateralSummary(filtered: any) {
-    const dev = filtered?.results_innovations_dev_object;
-    if (!dev || dev.is_active === false) return null;
-
-    const natureCode = Number(dev.innovation_nature_id);
-    let typologyPromise: Promise<ClarisaInnovationType | null>;
+  private resolveInnovationDevTypologyPromise(
+    dev: any,
+    natureCode: number,
+  ): Promise<ClarisaInnovationType | null> {
     if (dev.innovation_nature) {
-      typologyPromise = Promise.resolve(dev.innovation_nature);
-    } else if (Number.isFinite(natureCode)) {
-      typologyPromise = this.dataSource
+      return Promise.resolve(dev.innovation_nature);
+    }
+    if (Number.isFinite(natureCode)) {
+      return this.dataSource
         .getRepository(ClarisaInnovationType)
         .findOne({ where: { code: natureCode } });
-    } else {
-      typologyPromise = Promise.resolve(null);
     }
+    return Promise.resolve(null);
+  }
 
-    const readinessFk = Number(dev.innovation_readiness_level_id);
-    let readinessPromise: Promise<ClarisaInnovationReadinessLevel | null>;
+  private resolveInnovationDevReadinessPromise(
+    dev: any,
+    readinessFk: number,
+  ): Promise<ClarisaInnovationReadinessLevel | null> {
     if (dev.innovation_readiness_level) {
-      readinessPromise = Promise.resolve(dev.innovation_readiness_level);
-    } else if (Number.isFinite(readinessFk)) {
-      readinessPromise = this.dataSource
+      return Promise.resolve(dev.innovation_readiness_level);
+    }
+    if (Number.isFinite(readinessFk)) {
+      return this.dataSource
         .getRepository(ClarisaInnovationReadinessLevel)
         .findOne({ where: { id: readinessFk } });
-    } else {
-      readinessPromise = Promise.resolve(null);
     }
+    return Promise.resolve(null);
+  }
 
-    const charFk = Number(dev.innovation_characterization_id);
-    let characterizationPromise: Promise<ClarisaInnovationCharacteristic | null>;
+  private resolveInnovationDevCharacterizationPromise(
+    dev: any,
+    charFk: number,
+  ): Promise<ClarisaInnovationCharacteristic | null> {
     if (dev.innovation_characterization) {
-      characterizationPromise = Promise.resolve(
-        dev.innovation_characterization,
-      );
-    } else if (Number.isFinite(charFk)) {
-      characterizationPromise = this.dataSource
+      return Promise.resolve(dev.innovation_characterization);
+    }
+    if (Number.isFinite(charFk)) {
+      return this.dataSource
         .getRepository(ClarisaInnovationCharacteristic)
         .findOne({ where: { id: charFk } });
-    } else {
-      characterizationPromise = Promise.resolve(null);
     }
+    return Promise.resolve(null);
+  }
 
-    const [characterization, typology, readinessEntity] = await Promise.all([
-      characterizationPromise,
-      typologyPromise,
-      readinessPromise,
-    ]);
-
-    const core = {
+  private mapInnovationDevBilateralCoreSummary(
+    dev: any,
+    characterization: ClarisaInnovationCharacteristic | null,
+    typology: ClarisaInnovationType | null,
+    readinessEntity: ClarisaInnovationReadinessLevel | null,
+  ) {
+    return {
       short_name: dev.short_title ?? null,
       characterization: characterization
         ? {
@@ -2241,6 +2244,28 @@ export class BilateralService {
       evidences_justification: dev.evidences_justification ?? null,
       has_scaling_studies: !!dev.has_scaling_studies,
     };
+  }
+
+  private async buildInnovationDevelopmentBilateralSummary(filtered: any) {
+    const dev = filtered?.results_innovations_dev_object;
+    if (!dev || dev.is_active === false) return null;
+
+    const natureCode = Number(dev.innovation_nature_id);
+    const readinessFk = Number(dev.innovation_readiness_level_id);
+    const charFk = Number(dev.innovation_characterization_id);
+
+    const [characterization, typology, readinessEntity] = await Promise.all([
+      this.resolveInnovationDevCharacterizationPromise(dev, charFk),
+      this.resolveInnovationDevTypologyPromise(dev, natureCode),
+      this.resolveInnovationDevReadinessPromise(dev, readinessFk),
+    ]);
+
+    const core = this.mapInnovationDevBilateralCoreSummary(
+      dev,
+      characterization,
+      typology,
+      readinessEntity,
+    );
 
     const extra = await this.buildInnovationDevelopmentBilateralExtra(
       filtered.id,
@@ -2559,12 +2584,12 @@ export class BilateralService {
       : null;
 
     const orgFlag = capDev.is_attending_for_organization;
-    const is_attending_for_organization =
-      orgFlag === true || orgFlag === 1 || orgFlag === '1'
-        ? true
-        : orgFlag === false || orgFlag === 0 || orgFlag === '0'
-          ? false
-          : null;
+    let is_attending_for_organization: boolean | null = null;
+    if (orgFlag === true || orgFlag === 1 || orgFlag === '1') {
+      is_attending_for_organization = true;
+    } else if (orgFlag === false || orgFlag === 0 || orgFlag === '0') {
+      is_attending_for_organization = false;
+    }
 
     return {
       male_using: this.toCapdevCount(capDev.male_using),

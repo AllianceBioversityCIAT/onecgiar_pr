@@ -28,6 +28,9 @@ export type InnovationDevCleanQuestionnaire = {
 
 @Injectable()
 export class ResultQuestionsService {
+  /** Upper bound on label length before stripping; avoids unbounded work on hostile input. */
+  private static readonly BILATERAL_LABEL_MAX_CHARS = 16_384;
+
   constructor(
     private readonly _handlerError: HandlersError,
     private readonly _resultQuestionRepository: ResultQuestionsRepository,
@@ -708,13 +711,35 @@ export class ResultQuestionsService {
     };
   }
 
-  /** Strip simple HTML from catalog labels (e.g. `<b>Other</b>`) for bilateral text answers. */
+  /**
+   * Strip simple HTML from catalog labels (e.g. `<b>Other</b>`) for bilateral text answers.
+   * Uses a single linear pass (no tag regex) so runtime stays O(n) with n capped.
+   */
   private stripHtmlForBilateralLabel(s: string): string {
     if (!s) return '';
-    return s
-      .replace(/<[^>]+>/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
+    const max = ResultQuestionsService.BILATERAL_LABEL_MAX_CHARS;
+    const input = s.length > max ? s.slice(0, max) : s;
+
+    let out = '';
+    for (let i = 0; i < input.length; ) {
+      if (input[i] === '<') {
+        let j = i + 1;
+        while (j < input.length && input[j] !== '>') {
+          j++;
+        }
+        if (j < input.length) {
+          i = j + 1;
+        } else {
+          out += '<';
+          i++;
+        }
+      } else {
+        out += input[i];
+        i++;
+      }
+    }
+
+    return out.replaceAll(/\s+/g, ' ').trim();
   }
 
   /** Label for a selected catalog row (`question_text` + optional free-text answer). */
