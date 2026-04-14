@@ -206,7 +206,12 @@ import { InnovationUseModule } from '../results-framework-reporting/innovation-u
     ResultReviewHistoryRepository,
     ShareResultRequestRepository,
   ],
-  exports: [ResultRepository, JwtMiddleware, ResultsService],
+  exports: [
+    ResultRepository,
+    JwtMiddleware,
+    ResultsService,
+    ResultQuestionsService,
+  ],
 })
 export class ResultsModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
