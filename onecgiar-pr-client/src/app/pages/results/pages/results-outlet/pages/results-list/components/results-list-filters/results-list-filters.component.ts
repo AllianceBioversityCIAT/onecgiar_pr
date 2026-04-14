@@ -273,11 +273,14 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
       this.resultsListFilterSE.phasesOptions().filter(item => this.api.dataControlSE?.reportingCurrentPhase?.portfolioId == item.portfolio_id)
     );
 
-    // Show all submitters initially (not filtered by phases)
-    this.resultsListFilterSE.submittersOptionsAdmin.set(this.resultsListFilterSE.submittersOptionsAdminOld());
-
-    // No submitters selected initially
-    this.resultsListFilterSE.selectedSubmittersAdmin.set([]);
+    const initialSubmitterOptions = this.getFilteredSubmitterOptions(
+      this.resultsListFilterSE.selectedPhases(),
+      this.resultsListFilterSE.selectedClarisaPortfolios()
+    );
+    this.resultsListFilterSE.submittersOptionsAdmin.set(initialSubmitterOptions);
+    this.resultsListFilterSE.selectedSubmittersAdmin.set(
+      this.resultsListFilterSE.selectedSubmittersAdmin().filter(submitter => initialSubmitterOptions.some(option => option.id === submitter.id))
+    );
   }
 
   private buildPhaseOptions(response: any[]) {
@@ -302,6 +305,25 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     }
     // Filter by selected portfolios
     return options.filter(item => selectedPortfolios.some(portfolio => portfolio.id == item.portfolio_id));
+  }
+
+  private getFilteredSubmitterOptions(selectedPhases: any[] = [], selectedPortfolios: any[] = []) {
+    const sourceOptions = this.resultsListFilterSE.submittersOptionsAdminOld();
+    if (selectedPhases.length > 0) {
+      return sourceOptions.filter(item => selectedPhases.some(phase => phase.portfolio_id == item.portfolio_id));
+    }
+    if (selectedPortfolios.length > 0) {
+      return sourceOptions.filter(item => selectedPortfolios.some(portfolio => portfolio.id == item.portfolio_id));
+    }
+    return sourceOptions;
+  }
+
+  private refreshTempSubmitterOptions() {
+    const filteredOptions = this.getFilteredSubmitterOptions(this.tempSelectedPhases(), this.tempSelectedClarisaPortfolios());
+    this.resultsListFilterSE.submittersOptionsAdmin.set(filteredOptions);
+    this.tempSelectedSubmittersAdmin.set(
+      this.tempSelectedSubmittersAdmin().filter(submitter => filteredOptions.some(option => option.id === submitter.id))
+    );
   }
 
   clearAllNewFilters() {
@@ -399,26 +421,11 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     // Reset phases if they don't match selected portfolios
     this.tempSelectedPhases.set(this.tempSelectedPhases().filter(phase => filteredPhases.some(p => p.id === phase.id)));
 
-    // Update submitter options based on selected portfolios (not phases)
-    this.resultsListFilterSE.submittersOptionsAdmin.set(
-      this.tempSelectedClarisaPortfolios().length === 0
-        ? this.resultsListFilterSE.submittersOptionsAdminOld()
-        : this.resultsListFilterSE
-            .submittersOptionsAdminOld()
-            .filter(item => this.tempSelectedClarisaPortfolios().some(portfolio => portfolio.id == item.portfolio_id))
-    );
-
-    // Don't reset selected submitters - they should remain if valid for the selected portfolios
-    this.tempSelectedSubmittersAdmin.set(
-      this.tempSelectedSubmittersAdmin().filter(submitter =>
-        this.resultsListFilterSE.submittersOptionsAdmin().some(option => option.id === submitter.id)
-      )
-    );
+    this.refreshTempSubmitterOptions();
   }
 
   onSelectPhases() {
-    // Phases selection no longer affects submitters
-    // Submitters are now filtered by portfolios only
+    this.refreshTempSubmitterOptions();
   }
 
   // Initialize temp values when opening the drawer
@@ -430,6 +437,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     this.tempSelectedIndicatorCategories.set([...this.resultsListFilterSE.selectedIndicatorCategories()]);
     this.tempSelectedStatus.set([...this.resultsListFilterSE.selectedStatus()]);
     this.tempSelectedLeadCenters.set([...this.resultsListFilterSE.selectedLeadCenters()]);
+    this.refreshTempSubmitterOptions();
     this.visible.set(true);
   }
 
