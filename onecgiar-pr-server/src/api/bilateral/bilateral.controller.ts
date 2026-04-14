@@ -67,7 +67,7 @@ export class BilateralController {
   @ApiOperation({
     summary: 'List all results with pagination and filters',
     description:
-      'Returns all registered results with pagination (page, limit), filter by source (Result/W1/W2 or API/W3/Bilateral), portfolio acronym (e.g. P22, P25), phase year, status (id or name), dates (created/last_updated), leading center (id or acronym), initiative official_code (results where that initiative is the lead), and search by title. Limit is capped for robustness.',
+      'Returns all registered results with pagination (page, limit), filter by source (Result/W1/W2 or API/W3/Bilateral), portfolio acronym (e.g. P22, P25), phase year, status (id or name), dates (created/last_updated), leading center (id or acronym), initiative official_code (results where that initiative is the lead), and search by title. Limit is capped for robustness. Each item includes type-specific summaries on `data`; Innovation Development rows include `innovation_development_summary.innovation_development_questionnaire` (four arrays of `{ question, question_id, answer, selected_sub_options? }`; megatrends multi-select uses `answer.selections[]` one per checked option; P25 uses V2 catalog).',
   })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })

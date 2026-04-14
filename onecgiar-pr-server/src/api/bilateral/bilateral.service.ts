@@ -2778,8 +2778,38 @@ export class BilateralService {
       delete filtered.result_knowledge_product_array;
     }
     if (filtered.result_type_id === ResultTypeEnum.INNOVATION_DEVELOPMENT) {
-      filtered.innovation_development_summary =
+      const innovationDevelopmentCoreSummary =
         await this.buildInnovationDevelopmentBilateralSummary(filtered);
+      let innovation_development_questionnaire: {
+        responsible_innovation_and_scaling: unknown[];
+        intellectual_property_rights: unknown[];
+        innovation_team_diversity: unknown[];
+        megatrends: unknown[];
+      } = {
+        responsible_innovation_and_scaling: [],
+        intellectual_property_rights: [],
+        innovation_team_diversity: [],
+        megatrends: [],
+      };
+      try {
+        const header = await this._resultRepository.getResultById(filtered.id);
+        innovation_development_questionnaire =
+          await this._resultQuestionsService.buildInnovationDevelopmentQuestionnaireForBilateral(
+            filtered.id,
+            header?.portfolio,
+          );
+      } catch {
+        this.logger.warn(
+          `Bilateral enrich: could not load innovation dev questions/answers for result ${filtered.id}`,
+        );
+      }
+      filtered.innovation_development_summary =
+        innovationDevelopmentCoreSummary == null
+          ? { innovation_development_questionnaire }
+          : {
+              ...innovationDevelopmentCoreSummary,
+              innovation_development_questionnaire,
+            };
       delete filtered.results_innovations_dev_object;
     }
     if (filtered.result_type_id === ResultTypeEnum.INNOVATION_USE) {

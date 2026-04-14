@@ -256,6 +256,23 @@ Structured demand **without** internal ids:
 | `evidence_of_user_need_user_demand[]` | `{ link }` from evidence type user need / demand. |
 | `scaling_study_urls[]` | URLs when readiness is high enough to require scaling studies. |
 
+### `innovation_development_summary.innovation_development_questionnaire`
+
+**When:** same as above (`type === "innovation_development"`). Nested **inside** `innovation_development_summary` (not a sibling on `data`). If the core summary is `null` (e.g. inactive dev object), the API still returns an object that contains **only** `innovation_development_questionnaire` so the key remains discoverable.
+
+**Shape:** four arrays (one per thematic block). Each element is **`{ question, question_id, answer, selected_sub_options? }`**. Catalogue **option lines** (radio / checkbox labels) are **not** `question`; the PRMS **sub-question** or **section** prompt is `question`. **`answer`** may use `{ text }`, `{ boolean }`, and/or **`{ selections: string[] }`** (megatrends multi-select: one array element per ticked option). Macro blocks may join several labels in `answer.text` when applicable.
+
+| Field | Meaning |
+|-------|---------|
+| `responsible_innovation_and_scaling[]` | One row per answered **`q1`–`q4`** block: `question` / `question_id` = level-2 prompt; `answer.text` = label(s) of **selected** options only (`answer_boolean` true / `1`, or free text); optional `selected_sub_options` under those branches. |
+| `intellectual_property_rights[]` | Same pattern as responsible innovation (macro `q1`–`q4`). |
+| `innovation_team_diversity[]` | One row: parent section prompt + `answer.text` = **selected** row label(s); `selected_sub_options` only under selected rows. |
+| `megatrends[]` | At most **one** row: parent megatrends prompt + **`answer.selections`**: string array with **one entry per checked** megatrend (multi-select), not a single joined `text` field. |
+
+**`selected_sub_options`:** nested catalogue rows **selected** for this result (`answer_boolean` true / `1`, or non-empty `answer_text` on sub-rows). Omitted when empty. **Unselected** options (e.g. `false` only) are omitted from the payload.
+
+Portfolio **P25** uses the **V2** question set; otherwise legacy P22. On load failure, all four arrays are **empty** `[]`.
+
 ---
 
 ## 3. Innovation use — `innovation_use_summary`

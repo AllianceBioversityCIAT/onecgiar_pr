@@ -3,6 +3,29 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultQuestionsRepository } from './repository/result-questions.repository';
 import { ResultAnswerRepository } from './repository/result-answers.repository';
 
+/** Bilateral innovation-dev questionnaire: PRMS prompt as `question`; answers via `text` / `boolean` and/or `selections`. */
+export type InnovationDevCleanAnswer = {
+  boolean?: boolean;
+  text?: string;
+  /** Multi-select (e.g. megatrends): one string per ticked option, same order as in the form. */
+  selections?: string[];
+};
+
+export type InnovationDevCleanQuestion = {
+  question: string;
+  question_id: number;
+  answer: InnovationDevCleanAnswer | null;
+  /** Sub-rows only if the result positively selected them (`true` or non-empty text). */
+  selected_sub_options?: InnovationDevCleanQuestion[];
+};
+
+export type InnovationDevCleanQuestionnaire = {
+  responsible_innovation_and_scaling: InnovationDevCleanQuestion[];
+  intellectual_property_rights: InnovationDevCleanQuestion[];
+  innovation_team_diversity: InnovationDevCleanQuestion[];
+  megatrends: InnovationDevCleanQuestion[];
+};
+
 @Injectable()
 export class ResultQuestionsService {
   constructor(
@@ -604,5 +627,314 @@ export class ResultQuestionsService {
     } catch (error) {
       return this._handlerError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  private isInnovationDevHandlerErrorPayload(x: unknown): boolean {
+    if (!x || typeof x !== 'object') return false;
+    const o = x as Record<string, unknown>;
+    return (
+      typeof o.status === 'number' &&
+      typeof o.message === 'string' &&
+      'response' in o &&
+      !('question_text' in o)
+    );
+  }
+
+  private innovationDevTrimmedAnswerText(v: unknown): string {
+    if (v == null) return '';
+    if (typeof v === 'string') return v.trim();
+    if (typeof v === 'number' || typeof v === 'boolean') {
+      return String(v).trim();
+    }
+    return '';
+  }
+
+  private innovationDevQuestionLabel(v: unknown): string {
+    if (typeof v === 'string') return v.trim();
+    if (typeof v === 'number' || typeof v === 'boolean') {
+      return String(v).trim();
+    }
+    return '';
+  }
+
+  /** Positive selection or “other” text — used for `subOptions` only. */
+  private hasStrictInnovationSelection(o: Record<string, unknown>): boolean {
+    if (this.innovationDevTrimmedAnswerText(o.answer_text) !== '') {
+      return true;
+    }
+    const b = o.answer_boolean;
+    return b === true || b === 1;
+  }
+
+  private compactInnovationDevAnswer(
+    o: Record<string, unknown>,
+  ): InnovationDevCleanAnswer | null {
+    const out: InnovationDevCleanAnswer = {};
+    const t = this.innovationDevTrimmedAnswerText(o.answer_text);
+    if (t !== '') {
+      out.text = t;
+    }
+    const b = o.answer_boolean;
+    if (b === true || b === false || b === 0 || b === 1) {
+      out.boolean = Boolean(b);
+    }
+    return Object.keys(out).length ? out : null;
+  }
+
+  private simplifyInnovationDevOptionBranch(o: unknown): InnovationDevCleanQuestion | null {
+    if (!o || typeof o !== 'object') return null;
+    const row = o as Record<string, unknown>;
+    const subRaw = Array.isArray(row.subOptions) ? row.subOptions : [];
+    const selectedChildren = subRaw
+      .map((s) => this.simplifyInnovationDevOptionBranch(s))
+      .filter((n): n is InnovationDevCleanQuestion => n != null);
+
+    const answered = this.hasStrictInnovationSelection(row);
+
+    if (!answered && selectedChildren.length === 0) return null;
+
+    const id = Number(row.result_question_id);
+    if (!Number.isFinite(id)) return null;
+
+    return {
+      question: this.innovationDevQuestionLabel(row.question_text),
+      question_id: id,
+      answer: answered ? this.compactInnovationDevAnswer(row) : null,
+      ...(selectedChildren.length
+        ? { selected_sub_options: selectedChildren }
+        : {}),
+    };
+  }
+
+  /** Strip simple HTML from catalog labels (e.g. `<b>Other</b>`) for bilateral text answers. */
+  private stripHtmlForBilateralLabel(s: string): string {
+    if (!s) return '';
+    return s.replaceAll(/<[^>]+>/g, '').replaceAll(/\s+/g, ' ').trim();
+  }
+
+  /** Label for a selected catalog row (`question_text` + optional free-text answer). */
+  private formatBilateralSelectedOptionLabel(
+    row: Record<string, unknown>,
+  ): string | null {
+    const labelRaw = this.innovationDevQuestionLabel(row.question_text);
+    const label = this.stripHtmlForBilateralLabel(labelRaw);
+    const extra = this.innovationDevTrimmedAnswerText(row.answer_text);
+    if (label && extra && extra !== label) {
+      return `${label} (${extra})`;
+    }
+    if (label) return label;
+    if (extra) return extra;
+    return null;
+  }
+
+  private collectSelectedSubOptionsUnderMacroRows(
+    selectedTopRows: Record<string, unknown>[],
+  ): InnovationDevCleanQuestion[] {
+    const acc: InnovationDevCleanQuestion[] = [];
+    for (const row of selectedTopRows) {
+      const subs = Array.isArray(row.subOptions) ? row.subOptions : [];
+      for (const s of subs) {
+        const n = this.simplifyInnovationDevOptionBranch(s);
+        if (n) acc.push(n);
+      }
+    }
+    return acc;
+  }
+
+  /**
+   * Responsible innovation / IP rights: each `q1`…`q4` is the **question**; mutually exclusive
+   * (or multi) **options** are only reflected in `answer.text`, not as separate `question` rows.
+   */
+  private flattenMacroSubquestionsSection(
+    sectionRoot: unknown,
+  ): InnovationDevCleanQuestion[] {
+    if (!sectionRoot || typeof sectionRoot !== 'object') return [];
+    if (this.isInnovationDevHandlerErrorPayload(sectionRoot)) return [];
+
+    const root = sectionRoot as Record<string, unknown>;
+    const out: InnovationDevCleanQuestion[] = [];
+
+    for (const k of ['q1', 'q2', 'q3', 'q4'] as const) {
+      const q = root[k];
+      if (!q || typeof q !== 'object') continue;
+      const qRec = q as Record<string, unknown>;
+      if (!Array.isArray(qRec.options)) continue;
+
+      const qText = this.innovationDevQuestionLabel(qRec.question_text);
+      const qId = Number(qRec.result_question_id);
+      if (!qText || !Number.isFinite(qId)) continue;
+
+      const selected = (qRec.options as unknown[]).filter(
+        (o): o is Record<string, unknown> =>
+          !!o &&
+          typeof o === 'object' &&
+          this.hasStrictInnovationSelection(o as Record<string, unknown>),
+      );
+
+      if (!selected.length) continue;
+
+      const parts = selected
+        .map((r) => this.formatBilateralSelectedOptionLabel(r))
+        .filter((p): p is string => p != null && p !== '');
+
+      if (!parts.length) continue;
+
+      const subOpts = this.collectSelectedSubOptionsUnderMacroRows(selected);
+
+      out.push({
+        question: qText,
+        question_id: qId,
+        answer: { text: parts.join(' | ') },
+        ...(subOpts.length ? { selected_sub_options: subOpts } : {}),
+      });
+    }
+
+    return out;
+  }
+
+  /**
+   * Innovation team diversity: one parent prompt + rows; selected rows only in `answer.text`,
+   * nested `subOptions` only under selected rows.
+   */
+  private flattenInnovationTeamDiversitySection(
+    sectionRoot: unknown,
+  ): InnovationDevCleanQuestion[] {
+    if (!sectionRoot || typeof sectionRoot !== 'object') return [];
+    if (this.isInnovationDevHandlerErrorPayload(sectionRoot)) return [];
+
+    const root = sectionRoot as Record<string, unknown>;
+    const opts = root.options;
+    if (!Array.isArray(opts)) return [];
+
+    const parentQuestion =
+      this.innovationDevQuestionLabel(root.question_text) ||
+      'Innovation team diversity';
+    const parentId = Number(root.result_question_id);
+    if (!Number.isFinite(parentId)) return [];
+
+    const selected = opts.filter(
+      (o): o is Record<string, unknown> =>
+        !!o &&
+        typeof o === 'object' &&
+        this.hasStrictInnovationSelection(o as Record<string, unknown>),
+    );
+
+    if (!selected.length) return [];
+
+    const parts = selected
+      .map((r) => this.formatBilateralSelectedOptionLabel(r))
+      .filter((p): p is string => p != null && p !== '');
+
+    if (!parts.length) return [];
+
+    const subOpts = this.collectSelectedSubOptionsUnderMacroRows(selected);
+
+    return [
+      {
+        question: parentQuestion,
+        question_id: parentId,
+        answer: { text: parts.join(' | ') },
+        ...(subOpts.length ? { selected_sub_options: subOpts } : {}),
+      },
+    ];
+  }
+
+  /**
+   * Megatrends UI: one parent prompt + checkbox list. Bilateral exposes **parent** as `question`
+   * and each ticked option as one entry in **`answer.selections`** (not a single pipe-delimited string).
+   */
+  private flattenMegatrendsInnovationDevSection(
+    megatrendsRoot: unknown,
+  ): InnovationDevCleanQuestion[] {
+    if (!megatrendsRoot || typeof megatrendsRoot !== 'object') return [];
+    if (this.isInnovationDevHandlerErrorPayload(megatrendsRoot)) return [];
+
+    const root = megatrendsRoot as Record<string, unknown>;
+    const opts = root.options;
+    if (!Array.isArray(opts)) return [];
+
+    const parentId = Number(root.result_question_id);
+    if (!Number.isFinite(parentId)) return [];
+
+    const parentQuestion =
+      this.innovationDevQuestionLabel(root.question_text) || 'Megatrends';
+
+    const selectedLabels: string[] = [];
+    for (const raw of opts) {
+      if (!raw || typeof raw !== 'object') continue;
+      const row = raw as Record<string, unknown>;
+      if (!this.hasStrictInnovationSelection(row)) continue;
+      const line = this.formatBilateralSelectedOptionLabel(row);
+      if (line) selectedLabels.push(line);
+    }
+
+    if (!selectedLabels.length) return [];
+
+    return [
+      {
+        question: parentQuestion,
+        question_id: parentId,
+        answer: { selections: selectedLabels },
+      },
+    ];
+  }
+
+  /**
+   * Innovation Development for bilateral: **question → answer** per section.
+   * Reuses the same loaders as PRMS (`findQuestionInnovationDevelopment` / `V2`).
+   * Macro `q1`–`q4` and team diversity use **selected** option label(s) in `answer.text`.
+   * Megatrends (multi-select) uses **`answer.selections`** (one string per checked option).
+   * `selected_sub_options`: only
+   * positively selected sub-rows (`answer_boolean` true / 1, or non-empty `answer_text`).
+   */
+  async buildInnovationDevelopmentQuestionnaireForBilateral(
+    resultId: number,
+    portfolioAcronym: string | null | undefined,
+  ): Promise<InnovationDevCleanQuestionnaire> {
+    const isP25 =
+      String(portfolioAcronym ?? '')
+        .trim()
+        .toUpperCase() === 'P25';
+
+    if (isP25) {
+      const [scaling, intellectual, innovation, megatrends] =
+        await Promise.all([
+          this.responsibleInnovationAndScalingV2(resultId),
+          this.intellectualPropertyRightsV2(resultId),
+          this.innovationTeamDiversityV2(resultId),
+          this.getMegatrendsV2(resultId),
+        ]);
+      return {
+        responsible_innovation_and_scaling: this.flattenMacroSubquestionsSection(
+          Array.isArray(scaling) ? scaling[0] : null,
+        ),
+        intellectual_property_rights: this.flattenMacroSubquestionsSection(
+          Array.isArray(intellectual) ? intellectual[0] : null,
+        ),
+        innovation_team_diversity: this.flattenInnovationTeamDiversitySection(
+          Array.isArray(innovation) ? innovation[0] : null,
+        ),
+        megatrends: this.flattenMegatrendsInnovationDevSection(megatrends),
+      };
+    }
+
+    const [scaling, intellectual, innovation, megatrends] = await Promise.all([
+      this.responsibleInnovationAndScaling(resultId),
+      this.intellectualPropertyRights(resultId),
+      this.innovationTeamDiversity(resultId),
+      this.getMegatrends(resultId),
+    ]);
+    return {
+      responsible_innovation_and_scaling: this.flattenMacroSubquestionsSection(
+        Array.isArray(scaling) ? scaling[0] : null,
+      ),
+      intellectual_property_rights: this.flattenMacroSubquestionsSection(
+        Array.isArray(intellectual) ? intellectual[0] : null,
+      ),
+      innovation_team_diversity: this.flattenInnovationTeamDiversitySection(
+        Array.isArray(innovation) ? innovation[0] : null,
+      ),
+      megatrends: this.flattenMegatrendsInnovationDevSection(megatrends),
+    };
   }
 }
