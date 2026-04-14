@@ -188,6 +188,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   });
 
   @Input() isAdmin = false;
+  @Input() hasFilteredResults = true;
 
   constructor(
     public resultsListFilterSE: ResultsListFilterService,
