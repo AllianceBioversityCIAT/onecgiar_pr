@@ -70,9 +70,41 @@ import { PolicyChangeBilateralHandler } from './handlers/policy-change.handler';
 import { BilateralResultTypeHandler } from './handlers/bilateral-result-type-handler.interface';
 import { NoopBilateralHandler } from './handlers/noop.handler';
 import { ResultByInitiativesRepository } from '../results/results_by_inititiatives/resultByInitiatives.repository';
-import { ResultsService } from '../results/results.service';
 import { ShareResultRequestRepository } from '../results/share-result-request/share-result-request.repository';
 import { NonPooledProjectBudgetRepository } from '../results/result_budget/repositories/non_pooled_proyect_budget.repository';
+import { InnovationReadinessLevelByLevel } from '../results-framework-reporting/innovation_dev/enum/innov-readiness-level.enum';
+import { ResultActor } from '../results/result-actors/entities/result-actor.entity';
+import { ResultIpMeasure } from '../ipsr/result-ip-measures/entities/result-ip-measure.entity';
+import { ResultsByInstitutionType } from '../results/results_by_institution_types/entities/results_by_institution_type.entity';
+import { ResultInitiativeBudget } from '../results/result_budget/entities/result_initiative_budget.entity';
+import { ResultScalingStudyUrl } from '../results-framework-reporting/result_scaling_study_urls/entities/result_scaling_study_url.entity';
+import { ClarisaInnovationCharacteristic } from '../../clarisa/clarisa-innovation-characteristics/entities/clarisa-innovation-characteristic.entity';
+import { ClarisaInnovationType } from '../../clarisa/clarisa-innovation-type/entities/clarisa-innovation-type.entity';
+import { ClarisaInnovationReadinessLevel } from '../../clarisa/clarisa-innovation-readiness-levels/entities/clarisa-innovation-readiness-level.entity';
+import { ClarisaInnovationUseLevel } from '../../clarisa/clarisa-innovation-use-levels/entities/clarisa-innovation-use-level.entity';
+import { InnovationUseLevel } from '../results-framework-reporting/innovation-use/enum/innov-use-levels.enum';
+import { ResultsInnovationsUseRepository } from '../results/summary/repositories/results-innovations-use.repository';
+import { ResultsCapacityDevelopmentsRepository } from '../results/summary/repositories/results-capacity-developments.repository';
+import { CapdevsDeliveryMethod } from '../results/capdevs-delivery-methods/entities/capdevs-delivery-method.entity';
+import { ClarisaPolicyType } from '../../clarisa/clarisa-policy-types/entities/clarisa-policy-type.entity';
+import { ClarisaPolicyStage } from '../../clarisa/clarisa-policy-stages/entities/clarisa-policy-stage.entity';
+import { ResultsPolicyChangesRepository } from '../results/summary/repositories/results-policy-changes.repository';
+import { ResultQuestionsService } from '../results/result-questions/result-questions.service';
+
+/** Anticipated innovation user — organization-type rows (same role as PRMS Innovation Dev). */
+const INNOVATION_DEV_ANTICIPATED_USER_ORG_ROLE_ID = 5;
+/** `clarisa_institution_types.code` for "Other" (anticipated user organizations). */
+const INNOVATION_DEV_INSTITUTION_TYPE_OTHER_CODE = 78;
+
+/** PRMS Innovation Use — current (reporting year) vs 2030 sections on actors / orgs / measures. */
+const INNOVATION_USE_SECTION_CURRENT = 1;
+const INNOVATION_USE_SECTION_2030 = 2;
+
+/** Capacity sharing — implementing organizations (`summary.service` / PRMS role 3). */
+const CAPACITY_SHARING_IMPLEMENTING_ORG_ROLE_ID = 3;
+
+/** Policy change — implementing organizations (`summary.service` / PRMS role 4). */
+const POLICY_CHANGE_IMPLEMENTING_ORG_ROLE_ID = 4;
 
 /** Map result_type name (ListResultsResultTypeEnum) to result_type.id */
 const RESULT_TYPE_NAME_TO_ID: Partial<
@@ -128,7 +160,6 @@ export class BilateralService {
   constructor(
     private readonly dataSource: DataSource,
     private readonly _resultRepository: ResultRepository,
-    private readonly _resultsService: ResultsService,
     private readonly _handlersError: HandlersError,
     private readonly _versioningService: VersioningService,
     private readonly _userRepository: UserRepository,
@@ -159,6 +190,10 @@ export class BilateralService {
     private readonly _resultByInitiativesRepository: ResultByInitiativesRepository,
     private readonly _shareResultRequestRepository: ShareResultRequestRepository,
     private readonly _nonPooledProjectBudgetRepository: NonPooledProjectBudgetRepository,
+    private readonly _resultsInnovationsUseRepository: ResultsInnovationsUseRepository,
+    private readonly _resultsCapacityDevelopmentsRepository: ResultsCapacityDevelopmentsRepository,
+    private readonly _resultsPolicyChangesRepository: ResultsPolicyChangesRepository,
+    private readonly _resultQuestionsService: ResultQuestionsService,
     private readonly _knowledgeProductHandler: KnowledgeProductBilateralHandler,
     private readonly _capacityChangeHandler: CapacityChangeBilateralHandler,
     private readonly _innovationDevelopmentHandler: InnovationDevelopmentBilateralHandler,
@@ -427,216 +462,6 @@ export class BilateralService {
       message: 'Results Bilateral created successfully.',
       status: 201,
     };
-  }
-
-  async update(resultId: number, rootResultsDto: RootResultsDto) {
-    if (!resultId) {
-      throw new BadRequestException('Result id is required.');
-    }
-
-    const existingResult = await this._resultRepository.findOne({
-      where: { id: resultId },
-    });
-
-    if (!existingResult) {
-      throw new NotFoundException('Result not found.');
-    }
-
-    if (existingResult.source !== SourceEnum.Bilateral) {
-      throw new BadRequestException(
-        'The provided result does not belong to the bilateral API.',
-      );
-    }
-
-    const incomingResults = this.unwrapIncomingResults(rootResultsDto);
-    if (!incomingResults.length) {
-      throw new BadRequestException(
-        'At least one result payload is required in either "results" or "result".',
-      );
-    }
-
-    const firstResult = incomingResults[0];
-    if (!firstResult?.data || typeof firstResult.data !== 'object') {
-      throw new BadRequestException(
-        'Each result entry must include a "data" object with the bilateral payload.',
-      );
-    }
-
-    const bilateralDto = firstResult.data;
-
-    // Validate science_program_id before starting to save
-    await this.validateTocMappingInitiatives(
-      bilateralDto.toc_mapping,
-      bilateralDto.contributing_programs,
-    );
-
-    let resultInfo: any = null;
-
-    await this.dataSource.transaction(async () => {
-      const adminUser = await this._userRepository.findOne({
-        where: { email: 'admin@prms.pr' },
-      });
-
-      const createdByUser = await this.findOrCreateUser(
-        bilateralDto.created_by,
-        adminUser,
-      );
-      const userId = createdByUser.id;
-
-      const submittedPayload = this.resolveSubmitterPayload(bilateralDto);
-      const submittedUser = await this.findOrCreateUser(
-        submittedPayload,
-        createdByUser,
-      );
-      const submittedUserId = submittedUser.id;
-
-      const version = await this._versioningService.$_findActivePhase(
-        AppModuleIdEnum.REPORTING,
-      );
-      if (!version)
-        throw this._handlersError.returnErrorRes({
-          error: version,
-          debug: true,
-        });
-
-      const year = await this._yearRepository.findOne({
-        where: { active: true },
-      });
-      if (!year) throw new NotFoundException('Active year not found');
-
-      const updatedHeader = await this._resultRepository.save({
-        ...existingResult,
-        title: bilateralDto.title,
-        description: bilateralDto.description,
-        version_id: version.id,
-        reported_year_id: year.year,
-        result_type_id: bilateralDto.result_type_id,
-        result_level_id: bilateralDto.result_level_id,
-        external_submitter: submittedUserId,
-        external_submitted_date:
-          bilateralDto.submitted_by?.submitted_date ?? null,
-        external_submitted_comment: bilateralDto.submitted_by?.comment ?? null,
-        last_updated_by: userId,
-        ...(bilateralDto.created_date && {
-          created_date: bilateralDto.created_date,
-        }),
-      });
-
-      await this._resultsCenterRepository.fisicalDelete(resultId);
-      await this.handleLeadCenter(resultId, bilateralDto.lead_center, userId);
-
-      const { scope_code, scope_label, regions, countries, subnational_areas } =
-        bilateralDto.geo_focus;
-      const scope = await this.findScope(scope_code, scope_label);
-      this.validateGeoFocus(scope, regions, countries, subnational_areas);
-
-      await this.handleRegions(updatedHeader, scope, regions);
-      await this.handleCountries(
-        updatedHeader,
-        countries,
-        subnational_areas,
-        scope.id,
-        userId,
-      );
-
-      await this._resultRepository.update(resultId, {
-        geographic_scope_id: this.resolveScopeId(scope.id, countries),
-        has_countries: Array.isArray(countries) && countries.length > 0,
-      });
-
-      await this.resetTocData(resultId);
-      await this.handleTocMapping(
-        bilateralDto.toc_mapping,
-        bilateralDto.contributing_programs,
-        userId,
-        resultId,
-      );
-
-      await this.handleInstitutions(
-        resultId,
-        bilateralDto.contributing_partners || [],
-        userId,
-        bilateralDto.result_type_id,
-      );
-
-      await this._evidencesRepository.logicalDelete(resultId);
-      if (bilateralDto.result_type_id !== ResultTypeEnum.KNOWLEDGE_PRODUCT) {
-        await this.handleEvidence(
-          resultId,
-          bilateralDto.evidence || [],
-          userId,
-        );
-      }
-
-      await this._resultsByProjectsRepository.delete({ result_id: resultId });
-      await this.handleNonPooledProject(
-        resultId,
-        userId,
-        bilateralDto.contributing_bilateral_projects,
-        bilateralDto.result_type_id,
-      );
-
-      await this.handleContributingCenters(
-        resultId,
-        bilateralDto.contributing_center || [],
-        userId,
-        bilateralDto.lead_center,
-      );
-
-      await this.runResultTypeHandlers({
-        resultId,
-        userId,
-        bilateralDto,
-        isDuplicateResult: false,
-      });
-
-      resultInfo = await this._resultRepository.findOne({
-        where: { id: resultId },
-        relations: this.buildResultRelations(bilateralDto.result_type_id),
-      });
-
-      resultInfo = this.filterActiveRelations(resultInfo);
-      if (resultInfo) {
-        await this.enrichBilateralResultResponse(resultInfo);
-      }
-
-      this.logger.log(
-        `Successfully updated bilateral result ${resultId} (code: ${existingResult.result_code})`,
-      );
-    });
-
-    return {
-      response: resultInfo,
-      message: 'Results Bilateral updated successfully.',
-      status: 200,
-    };
-  }
-
-  async delete(resultId: number) {
-    try {
-      if (!resultId) {
-        throw new BadRequestException('Result id is required.');
-      }
-
-      const result = await this._resultRepository.findOne({
-        where: { id: resultId },
-      });
-
-      if (!result) {
-        throw new NotFoundException('Result not found.');
-      }
-
-      if (result.source !== SourceEnum.Bilateral) {
-        throw new BadRequestException(
-          'The provided result does not belong to the bilateral API.',
-        );
-      }
-
-      const systemUser = await this.getSystemUserToken();
-      return await this._resultsService.deleteResult(resultId, systemUser);
-    } catch (error) {
-      return this._handlersError.returnErrorRes({ error, debug: true });
-    }
   }
 
   async findOne(id: number) {
@@ -978,13 +803,9 @@ export class BilateralService {
 
   private buildResultRelations(resultTypeId?: number) {
     const isKpType = resultTypeId === ResultTypeEnum.KNOWLEDGE_PRODUCT;
-    const isCapacitySharing =
-      resultTypeId === ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT;
     const isInnovationDev =
       resultTypeId === ResultTypeEnum.INNOVATION_DEVELOPMENT;
     const isInnovationUse = resultTypeId === ResultTypeEnum.INNOVATION_USE;
-    const isPolicyChange = resultTypeId === ResultTypeEnum.POLICY_CHANGE;
-
     return {
       obj_result_by_initiatives: {
         obj_initiative: true,
@@ -1001,7 +822,9 @@ export class BilateralService {
       },
       result_country_array: {
         country_object: true,
-        result_countries_subnational_array: true,
+        result_countries_subnational_array: {
+          clarisa_subnational_scope_object: true,
+        },
       },
       result_center_array: {
         clarisa_center_object: {
@@ -1016,19 +839,20 @@ export class BilateralService {
         result_knowledge_product_array: {
           result_knowledge_product_keyword_array: true,
           result_knowledge_product_metadata_array: true,
+          result_knowledge_product_author_array: true,
         },
       }),
-      ...(isCapacitySharing && {
-        results_capacity_development_object: true,
-      }),
       ...(isInnovationDev && {
-        results_innovations_dev_object: true,
+        results_innovations_dev_object: {
+          innovation_characterization: true,
+          innovation_nature: true,
+          innovation_readiness_level: true,
+        },
       }),
       ...(isInnovationUse && {
-        results_innovations_use_object: true,
-      }),
-      ...(isPolicyChange && {
-        results_policy_changes_object: true,
+        results_innovations_use_object: {
+          obj_innovation_use_level: true,
+        },
       }),
     };
   }
@@ -1710,6 +1534,40 @@ export class BilateralService {
     await this._shareResultRequestRepository.logicalDelete(resultId);
   }
 
+  /** Bilateral JSON: region rows without internal ids / audit columns. */
+  private slimBilateralResultRegionRow(rr: any) {
+    return {
+      region_id: rr.region_id ?? null,
+      geo_scope_role_id: rr.geo_scope_role_id ?? null,
+      region_object: rr.region_object ?? null,
+    };
+  }
+
+  /** Bilateral JSON: country rows without internal ids / audit columns. */
+  private slimBilateralResultCountrySubnationalRow(sn: any) {
+    return {
+      clarisa_subnational_scope_code: sn.clarisa_subnational_scope_code ?? null,
+      geo_scope_role_id: sn.geo_scope_role_id ?? null,
+      clarisa_subnational_scope_object:
+        sn.clarisa_subnational_scope_object ?? null,
+    };
+  }
+
+  private slimBilateralResultCountryRow(
+    rc: any,
+    onlyActive: (arr: any[]) => any[],
+  ) {
+    const subs = onlyActive(rc?.result_countries_subnational_array).map((sn) =>
+      this.slimBilateralResultCountrySubnationalRow(sn),
+    );
+    return {
+      country_id: rc.country_id ?? null,
+      geo_scope_role_id: rc.geo_scope_role_id ?? null,
+      country_object: rc.country_object ?? null,
+      result_countries_subnational_array: subs,
+    };
+  }
+
   private filterActiveRelations(result: any) {
     if (!result) return result;
     const onlyActive = (arr: any[]) =>
@@ -1723,14 +1581,11 @@ export class BilateralService {
           )
         : arr;
 
-    result.result_region_array = onlyActive(result.result_region_array);
+    result.result_region_array = onlyActive(result.result_region_array)?.map(
+      (rr) => this.slimBilateralResultRegionRow(rr),
+    );
     result.result_country_array = onlyActive(result.result_country_array)?.map(
-      (rc) => ({
-        ...rc,
-        result_countries_subnational_array: onlyActive(
-          rc?.result_countries_subnational_array,
-        ),
-      }),
+      (rc) => this.slimBilateralResultCountryRow(rc, onlyActive),
     );
     result.result_by_institution_array = onlyActive(
       result.result_by_institution_array,
@@ -1738,7 +1593,12 @@ export class BilateralService {
     result.result_center_array = onlyActive(result.result_center_array);
     result.obj_results_toc_result = onlyActive(result.obj_results_toc_result);
     result.obj_result_by_project = onlyActive(result.obj_result_by_project);
-    result.evidence_array = onlyActive(result.evidence_array);
+    const activeEvidence = onlyActive(result.evidence_array);
+    result.evidence_array = Array.isArray(activeEvidence)
+      ? activeEvidence.filter(
+          (e) => Number(e?.evidence_type_id) === EvidenceTypeEnum.MAIN,
+        )
+      : activeEvidence;
     result.result_knowledge_product_array = onlyActive(
       result.result_knowledge_product_array,
     );
@@ -1755,14 +1615,42 @@ export class BilateralService {
   }
 
   /**
-   * Builds leading_result from the result's result_center_array (center with is_leading_result = 1, active).
-   * Uses ClarisaCenter (code) and ClarisaInstitution (name, acronym).
+   * Leading org for the result: when `is_lead_by_partner` is true, the **partner** row
+   * with `is_leading_result` (Clarisa institution); otherwise the **lead centre** from
+   * `result_center_array` (Clarisa center code + institution).
    */
-  private buildLeadingResult(result: any): {
-    code: string;
+  private async buildLeadingResult(result: any): Promise<{
+    lead_kind: 'center' | 'partner';
+    id: number | null;
+    code: string | null;
     name: string;
     acronym: string;
-  } | null {
+  } | null> {
+    const isLeadByPartner =
+      result?.is_lead_by_partner === true || result?.is_lead_by_partner === 1;
+
+    if (isLeadByPartner && result?.id != null) {
+      const rows = await this._resultByIntitutionsRepository.find({
+        where: {
+          result_id: result.id,
+          is_active: true,
+          institution_roles_id: InstitutionRoleEnum.PARTNER,
+          is_leading_result: true,
+        },
+        relations: { obj_institutions: true },
+      });
+      const row = rows[0];
+      const inst = row?.obj_institutions;
+      if (!inst) return null;
+      return {
+        lead_kind: 'partner',
+        id: inst.id ?? null,
+        code: null,
+        name: inst.name ?? '',
+        acronym: inst.acronym ?? '',
+      };
+    }
+
     const centers = result?.result_center_array;
     if (!Array.isArray(centers)) return null;
     const leading = centers.find(
@@ -1771,10 +1659,72 @@ export class BilateralService {
     if (!leading?.clarisa_center_object) return null;
     const cc = leading.clarisa_center_object;
     const inst = cc?.clarisa_institution;
+    let institutionId: number | null = null;
+    if (cc.institutionId != null) {
+      const n = Number(cc.institutionId);
+      if (Number.isFinite(n)) institutionId = n;
+    } else if (inst?.id != null) {
+      const n = Number(inst.id);
+      if (Number.isFinite(n)) institutionId = n;
+    }
     return {
-      code: cc.code ?? '',
+      lead_kind: 'center',
+      id: institutionId,
+      code: cc.code ?? null,
       name: inst?.name ?? '',
       acronym: inst?.acronym ?? '',
+    };
+  }
+
+  /**
+   * Latest active submission row for QA / Submitted results (who submitted and when).
+   */
+  private async buildLastSubmissionMetadata(resultId: number): Promise<{
+    id: number;
+    created_date: Date;
+    comment: string | null;
+    status: boolean;
+    status_id: number | null;
+    submitted_by: {
+      user_id: number;
+      first_name: string | null;
+      last_name: string | null;
+    };
+  } | null> {
+    const rows = (await this.dataSource.query(
+      `SELECT s.id, s.created_date, s.comment, s.status, s.status_id, s.user_id,
+              u.first_name, u.last_name
+       FROM submission s
+       LEFT JOIN users u ON u.id = s.user_id
+       WHERE s.results_id = ? AND s.is_active = 1
+       ORDER BY s.created_date DESC
+       LIMIT 1`,
+      [resultId],
+    )) as Array<{
+      id: number;
+      created_date: Date;
+      comment: string | null;
+      status: boolean | number;
+      status_id: number | null;
+      user_id: number;
+      first_name: string | null;
+      last_name: string | null;
+    }>;
+
+    const row = rows[0];
+    if (!row) return null;
+
+    return {
+      id: Number(row.id),
+      created_date: row.created_date,
+      comment: row.comment ?? null,
+      status: row.status === true || row.status === 1,
+      status_id: row.status_id == null ? null : Number(row.status_id),
+      submitted_by: {
+        user_id: Number(row.user_id),
+        first_name: row.first_name ?? null,
+        last_name: row.last_name ?? null,
+      },
     };
   }
 
@@ -1866,6 +1816,30 @@ export class BilateralService {
   }
 
   /**
+   * Knowledge products: bilateral payload exposes only the public **handle**.
+   */
+  private buildKnowledgeProductBilateralSummary(result: any) {
+    const onlyActive = (arr: any[] | undefined) =>
+      Array.isArray(arr)
+        ? arr.filter(
+            (item) =>
+              item?.is_active === undefined ||
+              item?.is_active === null ||
+              item.is_active === true ||
+              item.is_active === 1,
+          )
+        : [];
+
+    const kps = onlyActive(result?.result_knowledge_product_array);
+    const kp = kps[0];
+    if (!kp) return null;
+
+    return {
+      handle: kp.handle ?? null,
+    };
+  }
+
+  /**
    * Slim DAC payload: tag description only from GenderTagLevel; when tag level id is
    * {@link DAC_IMPACT_AREA_TAG_LEVEL_ID}, impact_area_names from result_impact_area_score
    * (ImpactAreasScoresComponent.name), filtered by impact_area pillar.
@@ -1931,11 +1905,887 @@ export class BilateralService {
     return out;
   }
 
+  /**
+   * Initiative / bilateral / partner budgets; optionally reference materials &
+   * user-need evidence (Inno Dev only — Inno Use bilateral omits the latter two).
+   */
+  private async buildInnovationSharedBudgetAndEvidenceExtras(
+    resultId: number,
+    options?: { includeReferenceAndUserNeedEvidence?: boolean },
+  ) {
+    const includeEvidence =
+      options?.includeReferenceAndUserNeedEvidence !== false;
+
+    const [initiatives, rbpRows, institutions] = await Promise.all([
+      this._resultByInitiativesRepository.find({
+        where: { result_id: resultId, is_active: true },
+      }),
+      this._resultsByProjectsRepository.find({
+        where: { result_id: resultId, is_active: true },
+      }),
+      this._resultByIntitutionsRepository.find({
+        where: { result_id: resultId, is_active: true },
+      }),
+    ]);
+
+    let refs: Evidence[] = [];
+    let userNeedDemandEvidence: Evidence[] = [];
+    if (includeEvidence) {
+      [refs, userNeedDemandEvidence] = await Promise.all([
+        this._evidencesRepository.find({
+          where: {
+            result_id: resultId,
+            evidence_type_id: EvidenceTypeEnum.MATERIALS,
+            is_active: 1,
+          },
+        }),
+        this._evidencesRepository.find({
+          where: {
+            result_id: resultId,
+            evidence_type_id: EvidenceTypeEnum.USER_NEED_USER_DEMAND,
+            is_active: 1,
+          },
+        }),
+      ]);
+    }
+
+    let initiativeBudgetRows: ResultInitiativeBudget[] = [];
+    if (initiatives.length) {
+      initiativeBudgetRows = await this.dataSource
+        .getRepository(ResultInitiativeBudget)
+        .find({
+          where: {
+            result_initiative_id: In(initiatives.map((i) => i.id)),
+            is_active: true,
+          },
+          relations: {
+            obj_result_initiative: { obj_initiative: true },
+          },
+        });
+    }
+
+    let bilateralBudgetRows: any[] = [];
+    if (rbpRows.length) {
+      bilateralBudgetRows = await this._nonPooledProjectBudgetRepository.find({
+        where: {
+          result_project_id: In(rbpRows.map((r) => r.id)),
+          is_active: true,
+        },
+        relations: {
+          obj_result_project: { obj_clarisa_project: true },
+        },
+      });
+    }
+
+    let partnerBudgetRows: ResultInstitutionsBudget[] = [];
+    if (institutions.length) {
+      partnerBudgetRows = await this._resultInstitutionsBudgetRepository.find({
+        where: {
+          result_institution_id: In(institutions.map((i) => i.id)),
+          is_active: true,
+        },
+        relations: {
+          obj_result_institution: { obj_institutions: true },
+        },
+      });
+    }
+
+    return {
+      initiative_budget: initiativeBudgetRows.map((b) => ({
+        initiative_official_code:
+          b.obj_result_initiative?.obj_initiative?.official_code ?? null,
+        initiative_name: b.obj_result_initiative?.obj_initiative?.name ?? null,
+        current_year: b.current_year == null ? null : Number(b.current_year),
+        next_year: b.next_year == null ? null : Number(b.next_year),
+        kind_cash: b.kind_cash == null ? null : Number(b.kind_cash),
+        is_determined: b.is_determined ?? null,
+      })),
+      bilateral_project_budget: bilateralBudgetRows.map((b) => ({
+        project_short_name:
+          b.obj_result_project?.obj_clarisa_project?.shortName ?? null,
+        in_cash: b.in_cash == null ? null : Number(b.in_cash),
+        in_kind: b.in_kind == null ? null : Number(b.in_kind),
+        kind_cash: b.kind_cash == null ? null : Number(b.kind_cash),
+        is_determined: b.is_determined ?? null,
+      })),
+      partner_budget: partnerBudgetRows.map((b) => ({
+        institution_name:
+          b.obj_result_institution?.obj_institutions?.name ?? null,
+        institution_acronym:
+          b.obj_result_institution?.obj_institutions?.acronym ?? null,
+        in_cash: b.in_cash == null ? null : Number(b.in_cash),
+        in_kind: b.in_kind == null ? null : Number(b.in_kind),
+        kind_cash: b.kind_cash == null ? null : Number(b.kind_cash),
+        is_determined: b.is_determined ?? null,
+      })),
+      ...(includeEvidence
+        ? {
+            reference_materials: refs.map((e) => ({ link: e.link })),
+            evidence_of_user_need_user_demand: userNeedDemandEvidence.map(
+              (e) => ({
+                link: e.link,
+              }),
+            ),
+          }
+        : {}),
+    };
+  }
+
+  private async buildInnovationDevelopmentBilateralExtra(
+    resultId: number,
+    dev: any,
+  ) {
+    const anticipated_user_demand = {
+      actors: [] as Array<{
+        actor_type_name: string | null;
+        other_actor_type?: string | null;
+        sex_and_age_disaggregation: boolean | null;
+        addressing_demands: string | null;
+        has_women?: boolean | null;
+        has_women_youth?: boolean | null;
+        has_men?: boolean | null;
+        has_men_youth?: boolean | null;
+      }>,
+      organizations: [] as Array<{
+        institution_type_name: string | null;
+        addressing_demands: string | null;
+        other_institution?: string | null;
+      }>,
+      measures: [] as Array<{
+        unit_of_measure: string | null;
+        quantity: number | null;
+        addressing_demands: string | null;
+      }>,
+    };
+
+    const [actors, measures, orgTypes, sharedBudget] = await Promise.all([
+      this.dataSource.getRepository(ResultActor).find({
+        where: { result_id: resultId, is_active: true },
+        relations: { obj_actor_type: true },
+      }),
+      this.dataSource.getRepository(ResultIpMeasure).find({
+        where: { result_id: resultId, is_active: true },
+      }),
+      this.dataSource.getRepository(ResultsByInstitutionType).find({
+        where: {
+          results_id: resultId,
+          institution_roles_id: INNOVATION_DEV_ANTICIPATED_USER_ORG_ROLE_ID,
+          is_active: true,
+        },
+        relations: { obj_institution_types: true },
+      }),
+      this.buildInnovationSharedBudgetAndEvidenceExtras(resultId),
+    ]);
+
+    anticipated_user_demand.actors = actors.map((a) => {
+      const disagg = a.sex_and_age_disaggregation === true;
+      let sexAndAgeDisaggregation: boolean | null = null;
+      if (a.sex_and_age_disaggregation === true) {
+        sexAndAgeDisaggregation = true;
+      } else if (a.sex_and_age_disaggregation === false) {
+        sexAndAgeDisaggregation = false;
+      }
+      const actorTypeId = Number(
+        a.actor_type_id ?? a.obj_actor_type?.actor_type_id,
+      );
+      const isOtherActorType =
+        Number.isFinite(actorTypeId) && actorTypeId === 5;
+      const base = {
+        actor_type_name: a.obj_actor_type?.name ?? null,
+        ...(isOtherActorType
+          ? { other_actor_type: a.other_actor_type ?? null }
+          : {}),
+        sex_and_age_disaggregation: sexAndAgeDisaggregation,
+        addressing_demands: a.addressing_demands ?? null,
+      };
+      if (disagg) {
+        return base;
+      }
+      return {
+        ...base,
+        has_women: a.has_women ?? null,
+        has_women_youth: a.has_women_youth ?? null,
+        has_men: a.has_men ?? null,
+        has_men_youth: a.has_men_youth ?? null,
+      };
+    });
+
+    anticipated_user_demand.measures = measures.map((m) => ({
+      unit_of_measure: m.unit_of_measure ?? null,
+      quantity: m.quantity == null ? null : Number(m.quantity),
+      addressing_demands: m.addressing_demands ?? null,
+    }));
+
+    anticipated_user_demand.organizations = orgTypes.map((o) => {
+      const institutionTypeId = Number(
+        o.institution_types_id ?? o.obj_institution_types?.code,
+      );
+      const isOtherInstitutionType =
+        Number.isFinite(institutionTypeId) &&
+        institutionTypeId === INNOVATION_DEV_INSTITUTION_TYPE_OTHER_CODE;
+      const base = {
+        institution_type_name: o.obj_institution_types?.name ?? null,
+        addressing_demands: o.addressing_demands ?? null,
+      };
+      return isOtherInstitutionType
+        ? { ...base, other_institution: o.other_institution ?? null }
+        : base;
+    });
+
+    let scaling_study_urls: string[] = [];
+    const readinessId = Number(dev?.innovation_readiness_level_id);
+    if (
+      Number.isFinite(readinessId) &&
+      readinessId >= InnovationReadinessLevelByLevel.Level_6 &&
+      dev?.result_innovation_dev_id
+    ) {
+      const urls = await this.dataSource
+        .getRepository(ResultScalingStudyUrl)
+        .find({
+          where: {
+            result_innov_dev_id: dev.result_innovation_dev_id,
+            is_active: true,
+          },
+        });
+      scaling_study_urls = urls
+        .map((u) => u.study_url)
+        .filter((s): s is string => typeof s === 'string' && s.length > 0);
+    }
+
+    return {
+      anticipated_user_demand,
+      ...sharedBudget,
+      scaling_study_urls,
+    };
+  }
+
+  private resolveInnovationDevTypologyPromise(
+    dev: any,
+    natureCode: number,
+  ): Promise<ClarisaInnovationType | null> {
+    if (dev.innovation_nature) {
+      return Promise.resolve(dev.innovation_nature);
+    }
+    if (Number.isFinite(natureCode)) {
+      return this.dataSource
+        .getRepository(ClarisaInnovationType)
+        .findOne({ where: { code: natureCode } });
+    }
+    return Promise.resolve(null);
+  }
+
+  private resolveInnovationDevReadinessPromise(
+    dev: any,
+    readinessFk: number,
+  ): Promise<ClarisaInnovationReadinessLevel | null> {
+    if (dev.innovation_readiness_level) {
+      return Promise.resolve(dev.innovation_readiness_level);
+    }
+    if (Number.isFinite(readinessFk)) {
+      return this.dataSource
+        .getRepository(ClarisaInnovationReadinessLevel)
+        .findOne({ where: { id: readinessFk } });
+    }
+    return Promise.resolve(null);
+  }
+
+  private resolveInnovationDevCharacterizationPromise(
+    dev: any,
+    charFk: number,
+  ): Promise<ClarisaInnovationCharacteristic | null> {
+    if (dev.innovation_characterization) {
+      return Promise.resolve(dev.innovation_characterization);
+    }
+    if (Number.isFinite(charFk)) {
+      return this.dataSource
+        .getRepository(ClarisaInnovationCharacteristic)
+        .findOne({ where: { id: charFk } });
+    }
+    return Promise.resolve(null);
+  }
+
+  private mapInnovationDevBilateralCoreSummary(
+    dev: any,
+    characterization: ClarisaInnovationCharacteristic | null,
+    typology: ClarisaInnovationType | null,
+    readinessEntity: ClarisaInnovationReadinessLevel | null,
+  ) {
+    return {
+      short_name: dev.short_title ?? null,
+      characterization: characterization
+        ? {
+            id: characterization.id,
+            name: characterization.name ?? null,
+            definition: characterization.definition ?? null,
+          }
+        : null,
+      typology: typology
+        ? {
+            id: typology.code == null ? null : Number(typology.code),
+            code: typology.code ?? null,
+            name: typology.name ?? null,
+            definition: typology.definition ?? null,
+          }
+        : null,
+      innovation_user_to_be_determined: !!dev.innovation_user_to_be_determined,
+      innovation_developers: dev.innovation_developers ?? null,
+      innovation_collaborators: dev.innovation_collaborators ?? null,
+      innovation_readiness_level: readinessEntity
+        ? {
+            id: readinessEntity.id,
+            level:
+              readinessEntity.level == null
+                ? null
+                : Number(readinessEntity.level),
+            name: readinessEntity.name ?? null,
+            definition: readinessEntity.definition ?? null,
+          }
+        : null,
+      evidences_justification: dev.evidences_justification ?? null,
+      has_scaling_studies: !!dev.has_scaling_studies,
+    };
+  }
+
+  private async buildInnovationDevelopmentBilateralSummary(filtered: any) {
+    const dev = filtered?.results_innovations_dev_object;
+    if (!dev || dev.is_active === false) return null;
+
+    const natureCode = Number(dev.innovation_nature_id);
+    const readinessFk = Number(dev.innovation_readiness_level_id);
+    const charFk = Number(dev.innovation_characterization_id);
+
+    const [characterization, typology, readinessEntity] = await Promise.all([
+      this.resolveInnovationDevCharacterizationPromise(dev, charFk),
+      this.resolveInnovationDevTypologyPromise(dev, natureCode),
+      this.resolveInnovationDevReadinessPromise(dev, readinessFk),
+    ]);
+
+    const core = this.mapInnovationDevBilateralCoreSummary(
+      dev,
+      characterization,
+      typology,
+      readinessEntity,
+    );
+
+    const extra = await this.buildInnovationDevelopmentBilateralExtra(
+      filtered.id,
+      dev,
+    );
+    return { ...core, ...extra };
+  }
+
+  private mapInnovationUseBilateralActor(a: ResultActor) {
+    const disagg = a.sex_and_age_disaggregation === true;
+    let sexAndAgeDisaggregation: boolean | null = null;
+    if (a.sex_and_age_disaggregation === true) {
+      sexAndAgeDisaggregation = true;
+    } else if (a.sex_and_age_disaggregation === false) {
+      sexAndAgeDisaggregation = false;
+    }
+    const actorTypeId = Number(
+      a.actor_type_id ?? a.obj_actor_type?.actor_type_id,
+    );
+    const isOtherActorType = Number.isFinite(actorTypeId) && actorTypeId === 5;
+    const base = {
+      actor_type_name: a.obj_actor_type?.name ?? null,
+      ...(isOtherActorType
+        ? { other_actor_type: a.other_actor_type ?? null }
+        : {}),
+      sex_and_age_disaggregation: sexAndAgeDisaggregation,
+      addressing_demands: a.addressing_demands ?? null,
+    };
+    if (disagg) {
+      return {
+        ...base,
+        how_many: a.how_many == null ? null : Number(a.how_many),
+      };
+    }
+    return {
+      ...base,
+      women: a.women == null ? null : Number(a.women),
+      women_youth: a.women_youth == null ? null : Number(a.women_youth),
+      men: a.men == null ? null : Number(a.men),
+      men_youth: a.men_youth == null ? null : Number(a.men_youth),
+    };
+  }
+
+  private mapInnovationUseBilateralOrganization(o: ResultsByInstitutionType) {
+    const institutionTypeId = Number(
+      o.institution_types_id ?? o.obj_institution_types?.code,
+    );
+    const isOtherInstitutionType =
+      Number.isFinite(institutionTypeId) &&
+      institutionTypeId === INNOVATION_DEV_INSTITUTION_TYPE_OTHER_CODE;
+    const base = {
+      institution_type_name: o.obj_institution_types?.name ?? null,
+      addressing_demands: o.addressing_demands ?? null,
+      how_many: o.how_many == null ? null : Number(o.how_many),
+      graduate_students:
+        o.graduate_students == null ? null : Number(o.graduate_students),
+    };
+    return isOtherInstitutionType
+      ? { ...base, other_institution: o.other_institution ?? null }
+      : base;
+  }
+
+  private mapInnovationUseBilateralMeasure(m: ResultIpMeasure) {
+    return {
+      unit_of_measure: m.unit_of_measure ?? null,
+      quantity: m.quantity == null ? null : Number(m.quantity),
+      addressing_demands: m.addressing_demands ?? null,
+    };
+  }
+
+  private async resolveInnovationUseLevelForSummary(
+    use: any,
+  ): Promise<ClarisaInnovationUseLevel | null> {
+    if (use?.obj_innovation_use_level) {
+      return use.obj_innovation_use_level;
+    }
+    const fk = Number(use?.innovation_use_level_id);
+    if (!Number.isFinite(fk)) {
+      return null;
+    }
+    return this.dataSource.getRepository(ClarisaInnovationUseLevel).findOne({
+      where: { id: fk },
+    });
+  }
+
+  private async buildInnovationUseLinkedResultsList(originResultId: number) {
+    const ids =
+      await this._resultsInnovationsUseRepository.getLinkedResultsByOrigin(
+        originResultId,
+      );
+    if (!ids.length) {
+      return [];
+    }
+    const rows = await this.dataSource.getRepository(Result).find({
+      where: { id: In(ids), is_active: true },
+      relations: { obj_result_type: true },
+    });
+    const byId = new Map(rows.map((r) => [r.id, r]));
+    return ids.map((id) => {
+      const r = byId.get(id);
+      return {
+        result_id: id,
+        title: r?.title ?? null,
+        result_type_id: r?.result_type_id ?? null,
+        result_type_name: r?.obj_result_type?.name ?? null,
+      };
+    });
+  }
+
+  private async buildInnovationUseBilateralSummary(filtered: any) {
+    const use = filtered?.results_innovations_use_object;
+    if (!use || use.is_active === false) {
+      return null;
+    }
+
+    const resultId = filtered.id;
+    const innov_use_to_be_determined = !!use.innov_use_to_be_determined;
+    const innov_use_2030_to_be_determined =
+      !!use.innov_use_2030_to_be_determined;
+
+    const [
+      sharedBudget,
+      linked_results,
+      actorsS1,
+      orgsS1,
+      measuresS1,
+      actorsS2,
+      orgsS2,
+      measuresS2,
+      useLevelEntity,
+    ] = await Promise.all([
+      this.buildInnovationSharedBudgetAndEvidenceExtras(resultId, {
+        includeReferenceAndUserNeedEvidence: false,
+      }),
+      this.buildInnovationUseLinkedResultsList(resultId),
+      this.dataSource.getRepository(ResultActor).find({
+        where: {
+          result_id: resultId,
+          is_active: true,
+          section_id: INNOVATION_USE_SECTION_CURRENT,
+        },
+        relations: { obj_actor_type: true },
+      }),
+      this.dataSource.getRepository(ResultsByInstitutionType).find({
+        where: {
+          results_id: resultId,
+          institution_roles_id: INNOVATION_DEV_ANTICIPATED_USER_ORG_ROLE_ID,
+          is_active: true,
+          section_id: INNOVATION_USE_SECTION_CURRENT,
+        },
+        relations: { obj_institution_types: true },
+      }),
+      this.dataSource.getRepository(ResultIpMeasure).find({
+        where: {
+          result_id: resultId,
+          is_active: true,
+          section_id: INNOVATION_USE_SECTION_CURRENT,
+        },
+      }),
+      this.dataSource.getRepository(ResultActor).find({
+        where: {
+          result_id: resultId,
+          is_active: true,
+          section_id: INNOVATION_USE_SECTION_2030,
+        },
+        relations: { obj_actor_type: true },
+      }),
+      this.dataSource.getRepository(ResultsByInstitutionType).find({
+        where: {
+          results_id: resultId,
+          institution_roles_id: INNOVATION_DEV_ANTICIPATED_USER_ORG_ROLE_ID,
+          is_active: true,
+          section_id: INNOVATION_USE_SECTION_2030,
+        },
+        relations: { obj_institution_types: true },
+      }),
+      this.dataSource.getRepository(ResultIpMeasure).find({
+        where: {
+          result_id: resultId,
+          is_active: true,
+          section_id: INNOVATION_USE_SECTION_2030,
+        },
+      }),
+      this.resolveInnovationUseLevelForSummary(use),
+    ]);
+
+    const innovation_use_level = useLevelEntity
+      ? {
+          id: useLevelEntity.id,
+          level:
+            useLevelEntity.level == null ? null : Number(useLevelEntity.level),
+          name: useLevelEntity.name ?? null,
+          definition: useLevelEntity.definition ?? null,
+        }
+      : null;
+
+    let scaling_study_urls: string[] = [];
+    const levelNum = innovation_use_level?.level;
+    if (
+      levelNum != null &&
+      Number.isFinite(Number(levelNum)) &&
+      Number(levelNum) >= InnovationUseLevel.Level_6 &&
+      use?.result_innovation_use_id
+    ) {
+      const urls = await this.dataSource
+        .getRepository(ResultScalingStudyUrl)
+        .find({
+          where: {
+            result_innov_use_id: use.result_innovation_use_id,
+            is_active: true,
+          },
+        });
+      scaling_study_urls = urls
+        .map((u) => u.study_url)
+        .filter((s): s is string => typeof s === 'string' && s.length > 0);
+    }
+
+    const male_using = use.male_using == null ? null : Number(use.male_using);
+    const female_using =
+      use.female_using == null ? null : Number(use.female_using);
+
+    const current_section = innov_use_to_be_determined
+      ? null
+      : {
+          actors: actorsS1.map((a) => this.mapInnovationUseBilateralActor(a)),
+          organizations: orgsS1.map((o) =>
+            this.mapInnovationUseBilateralOrganization(o),
+          ),
+          other_quantitative: measuresS1.map((m) =>
+            this.mapInnovationUseBilateralMeasure(m),
+          ),
+        };
+
+    const innovation_use_2030_section = innov_use_2030_to_be_determined
+      ? null
+      : {
+          actors: actorsS2.map((a) => this.mapInnovationUseBilateralActor(a)),
+          organizations: orgsS2.map((o) =>
+            this.mapInnovationUseBilateralOrganization(o),
+          ),
+          other_quantitative: measuresS2.map((m) =>
+            this.mapInnovationUseBilateralMeasure(m),
+          ),
+        };
+
+    return {
+      has_innovation_link: !!use.has_innovation_link,
+      linked_results,
+      innov_use_to_be_determined,
+      current_core_innovation_use_supported_by_evidence:
+        innov_use_to_be_determined ? { male_using, female_using } : null,
+      current_section,
+      innovation_use_level,
+      readiness_level_explanation: use.readiness_level_explanation ?? null,
+      has_scaling_studies: !!use.has_scaling_studies,
+      scaling_study_urls,
+      innov_use_2030_to_be_determined,
+      innovation_use_2030_section,
+      ...sharedBudget,
+    };
+  }
+
+  private mapCapacitySharingImplementingInstitution(row: any) {
+    const rawId = row.institutions_id;
+    const id =
+      rawId != null && Number.isFinite(Number(rawId)) ? Number(rawId) : null;
+    return {
+      id,
+      name: row.institutions_name ?? null,
+      acronym: row.institutions_acronym ?? null,
+      institution_type_name: row.institutions_type_name ?? null,
+    };
+  }
+
+  private toCapdevCount(value: unknown): number | null {
+    if (value === null || value === undefined) return null;
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  private shapeCapacityDevelopmentBilateralPayload(
+    capDev: any,
+    onBehalfOrganizationsMapped: Array<{
+      id: number | null;
+      name: string | null;
+      acronym: string | null;
+      institution_type_name: string | null;
+    }>,
+    deliveryMethod: CapdevsDeliveryMethod | null,
+  ) {
+    const training_length =
+      capDev.capdev_term_name != null ||
+      capDev.capdev_term_term != null ||
+      capDev.capdev_term_description != null
+        ? {
+            name:
+              capDev.capdev_term_name != null
+                ? String(capDev.capdev_term_name)
+                : null,
+            term:
+              capDev.capdev_term_term != null
+                ? String(capDev.capdev_term_term)
+                : null,
+            description:
+              capDev.capdev_term_description != null
+                ? String(capDev.capdev_term_description)
+                : null,
+          }
+        : null;
+
+    const delivery_method = deliveryMethod
+      ? {
+          name: deliveryMethod.name ?? null,
+          description: deliveryMethod.description ?? null,
+        }
+      : null;
+
+    const orgFlag = capDev.is_attending_for_organization;
+    let is_attending_for_organization: boolean | null = null;
+    if (orgFlag === true || orgFlag === 1 || orgFlag === '1') {
+      is_attending_for_organization = true;
+    } else if (orgFlag === false || orgFlag === 0 || orgFlag === '0') {
+      is_attending_for_organization = false;
+    }
+
+    return {
+      male_using: this.toCapdevCount(capDev.male_using),
+      female_using: this.toCapdevCount(capDev.female_using),
+      non_binary_using: this.toCapdevCount(capDev.non_binary_using),
+      has_unkown_using: this.toCapdevCount(capDev.has_unkown_using),
+      is_attending_for_organization,
+      delivery_method,
+      training_length,
+      on_behalf_organizations: onBehalfOrganizationsMapped,
+    };
+  }
+
+  /** Bilateral CapDev: human-readable delivery method & training length (no lookup FKs). */
+  private async buildCapacityDevelopmentBilateralSummary(resultId: number) {
+    const [capDev, institutions] = await Promise.all([
+      this._resultsCapacityDevelopmentsRepository.capDevExists(resultId),
+      this._resultByIntitutionsRepository.getGenericAllResultByInstitutionByRole(
+        resultId,
+        CAPACITY_SHARING_IMPLEMENTING_ORG_ROLE_ID,
+      ),
+    ]);
+
+    const onBehalfOrganizationsMapped = (institutions ?? []).map((r: any) =>
+      this.mapCapacitySharingImplementingInstitution(r),
+    );
+
+    if (!capDev) {
+      return {
+        male_using: null,
+        female_using: null,
+        non_binary_using: null,
+        has_unkown_using: null,
+        is_attending_for_organization: null,
+        delivery_method: null,
+        training_length: null,
+        on_behalf_organizations: onBehalfOrganizationsMapped,
+      };
+    }
+
+    const dmId = Number(capDev.capdev_delivery_method_id);
+    let deliveryMethod: CapdevsDeliveryMethod | null = null;
+    if (Number.isFinite(dmId) && dmId > 0) {
+      deliveryMethod = await this.dataSource
+        .getRepository(CapdevsDeliveryMethod)
+        .findOne({
+          where: { capdev_delivery_method_id: dmId },
+        });
+    }
+
+    return this.shapeCapacityDevelopmentBilateralPayload(
+      capDev,
+      onBehalfOrganizationsMapped,
+      deliveryMethod,
+    );
+  }
+
+  private mapPolicyChangeAmountStatusLabel(status: unknown): string | null {
+    const n = Number(status);
+    if (n === 1) return 'Confirmed';
+    if (n === 2) return 'Estimated';
+    if (n === 3) return 'Unknown';
+    return null;
+  }
+
+  /**
+   * "Is this result related to" — same source as `ResultQuestionsService.findQuestionPolicyChange`
+   * (`result_questions` + `result_answers`, options with `answer_boolean` true).
+   */
+  private formatPolicyChangeRelatedToSelections(block: any): Array<{
+    parent_question: string | null;
+    option_text: string | null;
+  }> {
+    if (!block || typeof block !== 'object') {
+      return [];
+    }
+    const parent =
+      block.question_text != null ? String(block.question_text) : null;
+    const opts = block.optionsWithAnswers;
+    if (!Array.isArray(opts)) {
+      return [];
+    }
+    return opts
+      .filter((o) => o?.answer_boolean === true || o?.answer_boolean === 1)
+      .map((o) => ({
+        parent_question: parent,
+        option_text: o?.question_text != null ? String(o.question_text) : null,
+      }));
+  }
+
+  private async loadPolicyChangeRelatedToSelections(
+    resultId: number,
+  ): Promise<
+    Array<{ parent_question: string | null; option_text: string | null }>
+  > {
+    try {
+      const res =
+        await this._resultQuestionsService.findQuestionPolicyChange(resultId);
+      if (!res || res.status !== HttpStatus.OK || !res.response) {
+        return [];
+      }
+      return this.formatPolicyChangeRelatedToSelections(res.response);
+    } catch {
+      return [];
+    }
+  }
+
+  /** Bilateral policy change: same data as `SummaryService.getPolicyChanges`, Clarisa labels instead of FK ids. */
+  private async buildPolicyChangeBilateralSummary(resultId: number) {
+    const [row, institutions, result_related_to] = await Promise.all([
+      this._resultsPolicyChangesRepository.ResultsPolicyChangesExists(resultId),
+      this._resultByIntitutionsRepository.getGenericAllResultByInstitutionByRole(
+        resultId,
+        POLICY_CHANGE_IMPLEMENTING_ORG_ROLE_ID,
+      ),
+      this.loadPolicyChangeRelatedToSelections(resultId),
+    ]);
+
+    const institutionsMapped = (institutions ?? []).map((r: any) =>
+      this.mapCapacitySharingImplementingInstitution(r),
+    );
+
+    const rawRow = row as any;
+    const inactive =
+      rawRow &&
+      (rawRow.is_active === false ||
+        rawRow.is_active === 0 ||
+        rawRow.is_active === '0');
+    if (!row || inactive) {
+      return {
+        amount: null,
+        amount_status_label: null,
+        policy_type: null,
+        policy_stage: null,
+        linked_innovation_dev: null,
+        linked_innovation_use: null,
+        result_related_to,
+        policy_implementing_organizations: institutionsMapped,
+      };
+    }
+
+    const ptId = Number(row.policy_type_id);
+    const psId = Number(row.policy_stage_id);
+    const [policyType, policyStage] = await Promise.all([
+      Number.isFinite(ptId) && ptId > 0
+        ? this.dataSource.getRepository(ClarisaPolicyType).findOne({
+            where: { id: ptId },
+          })
+        : Promise.resolve(null),
+      Number.isFinite(psId) && psId > 0
+        ? this.dataSource.getRepository(ClarisaPolicyStage).findOne({
+            where: { id: psId },
+          })
+        : Promise.resolve(null),
+    ]);
+
+    return {
+      amount: row.amount == null ? null : Number(row.amount),
+      amount_status_label: this.mapPolicyChangeAmountStatusLabel(
+        row.status_amount,
+      ),
+      policy_type: policyType
+        ? {
+            id: policyType.id,
+            name: policyType.name ?? null,
+            definition: policyType.definition ?? null,
+          }
+        : null,
+      policy_stage: policyStage
+        ? {
+            id: policyStage.id,
+            name: policyStage.name ?? null,
+            definition: policyStage.definition ?? null,
+          }
+        : null,
+      linked_innovation_dev: !!row.linked_innovation_dev,
+      linked_innovation_use: !!row.linked_innovation_use,
+      result_related_to,
+      policy_implementing_organizations: institutionsMapped,
+    };
+  }
+
   private async enrichBilateralResultResponse(filtered: any): Promise<void> {
     if (!filtered?.id) return;
     filtered.obj_results_toc_result =
       await this._resultRepository.getTocMappingsByResultId(filtered.id);
-    filtered.leading_result = this.buildLeadingResult(filtered);
+    filtered.leading_result = await this.buildLeadingResult(filtered);
+    const statusId = Number(filtered.status_id);
+    if (
+      statusId === ResultStatusData.QualityAssessed.value ||
+      statusId === ResultStatusData.Submitted.value
+    ) {
+      filtered.last_submission = await this.buildLastSubmissionMetadata(
+        filtered.id,
+      );
+    }
     filtered.dac_scores = await this.buildDacScoresSummary(
       filtered.id,
       filtered,
@@ -1945,6 +2795,64 @@ export class BilateralService {
     );
     filtered.result_by_institution_array =
       await this.buildBilateralPartnerInstitutionsSummary(filtered.id);
+    if (filtered.result_type_id === ResultTypeEnum.KNOWLEDGE_PRODUCT) {
+      filtered.knowledge_product_summary =
+        this.buildKnowledgeProductBilateralSummary(filtered);
+      delete filtered.result_knowledge_product_array;
+    }
+    if (filtered.result_type_id === ResultTypeEnum.INNOVATION_DEVELOPMENT) {
+      const innovationDevelopmentCoreSummary =
+        await this.buildInnovationDevelopmentBilateralSummary(filtered);
+      let innovation_development_questionnaire: {
+        responsible_innovation_and_scaling: unknown[];
+        intellectual_property_rights: unknown[];
+        innovation_team_diversity: unknown[];
+        megatrends: unknown[];
+      } = {
+        responsible_innovation_and_scaling: [],
+        intellectual_property_rights: [],
+        innovation_team_diversity: [],
+        megatrends: [],
+      };
+      try {
+        const header = await this._resultRepository.getResultById(filtered.id);
+        innovation_development_questionnaire =
+          await this._resultQuestionsService.buildInnovationDevelopmentQuestionnaireForBilateral(
+            filtered.id,
+            header?.portfolio,
+          );
+      } catch {
+        this.logger.warn(
+          `Bilateral enrich: could not load innovation dev questions/answers for result ${filtered.id}`,
+        );
+      }
+      filtered.innovation_development_summary =
+        innovationDevelopmentCoreSummary == null
+          ? { innovation_development_questionnaire }
+          : {
+              ...innovationDevelopmentCoreSummary,
+              innovation_development_questionnaire,
+            };
+      delete filtered.results_innovations_dev_object;
+    }
+    if (filtered.result_type_id === ResultTypeEnum.INNOVATION_USE) {
+      filtered.innovation_use_summary =
+        await this.buildInnovationUseBilateralSummary(filtered);
+      delete filtered.results_innovations_use_object;
+    }
+    if (
+      filtered.result_type_id ===
+      ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT
+    ) {
+      filtered.capacity_development_summary =
+        await this.buildCapacityDevelopmentBilateralSummary(filtered.id);
+      delete filtered.results_capacity_development_object;
+    }
+    if (filtered.result_type_id === ResultTypeEnum.POLICY_CHANGE) {
+      filtered.policy_change_summary =
+        await this.buildPolicyChangeBilateralSummary(filtered.id);
+      delete filtered.results_policy_changes_object;
+    }
     delete filtered.obj_result_by_project;
   }
 

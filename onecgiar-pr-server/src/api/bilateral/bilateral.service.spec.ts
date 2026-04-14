@@ -1,4 +1,8 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpStatus,
+  NotFoundException,
+} from '@nestjs/common';
 import { BilateralService } from './bilateral.service';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 
@@ -9,7 +13,6 @@ describe('BilateralService (unit)', () => {
       findOne: jest.fn(),
       save: jest.fn(async (x) => x),
     };
-    const resultsService = {} as any;
     const handlersError = {} as any;
     const versioningService = {} as any;
     const userRepository = { findOne: jest.fn() };
@@ -60,6 +63,24 @@ describe('BilateralService (unit)', () => {
       logicalDelete: jest.fn().mockResolvedValue(undefined),
     } as any;
     const nonPooledProjectBudgetRepository = { save: jest.fn() };
+    const resultsInnovationsUseRepository = {
+      getLinkedResultsByOrigin: jest.fn().mockResolvedValue([]),
+    };
+    const resultsCapacityDevelopmentsRepository = {
+      capDevExists: jest.fn().mockResolvedValue(undefined),
+    };
+    const resultsPolicyChangesRepository = {
+      ResultsPolicyChangesExists: jest.fn().mockResolvedValue(undefined),
+    };
+    const resultQuestionsService = {
+      findQuestionPolicyChange: jest.fn().mockResolvedValue({
+        status: HttpStatus.OK,
+        response: {
+          question_text: 'Is this result related to:',
+          optionsWithAnswers: [],
+        },
+      }),
+    };
 
     const makeHandler = (resultType: number) => ({
       resultType,
@@ -82,7 +103,6 @@ describe('BilateralService (unit)', () => {
     const service = new BilateralService(
       dataSource,
       resultRepository as any,
-      resultsService,
       handlersError,
       versioningService,
       userRepository as any,
@@ -113,6 +133,10 @@ describe('BilateralService (unit)', () => {
       resultByInitiativesRepository as any,
       shareResultRequestRepository,
       nonPooledProjectBudgetRepository as any,
+      resultsInnovationsUseRepository as any,
+      resultsCapacityDevelopmentsRepository as any,
+      resultsPolicyChangesRepository as any,
+      resultQuestionsService as any,
       knowledgeProductHandler as any,
       capacityChangeHandler as any,
       innovationDevelopmentHandler as any,
@@ -183,9 +207,7 @@ describe('BilateralService (unit)', () => {
     const cap = service.buildResultRelations(
       ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT,
     );
-    expect(cap).toEqual(
-      expect.objectContaining({ results_capacity_development_object: true }),
-    );
+    expect(cap).not.toHaveProperty('results_capacity_development_object');
   });
 
   it('filterActiveRelations should filter arrays by is_active (includes null/undefined/1/true)', () => {

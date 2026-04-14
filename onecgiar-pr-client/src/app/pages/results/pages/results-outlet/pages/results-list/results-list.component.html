@@ -15,7 +15,7 @@
   <div class="title_section_header">Results table</div>
 
   <div>
-    <app-results-list-filters [isAdmin]="this.api.rolesSE.isAdmin"></app-results-list-filters>
+    <app-results-list-filters [isAdmin]="this.api.rolesSE.isAdmin" [hasFilteredResults]="(filteredResults?.length ?? 0) > 0"></app-results-list-filters>
   </div>
 
   <div class="action_buttons">

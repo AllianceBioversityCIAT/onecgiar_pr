@@ -47,13 +47,19 @@ export class ResultsInnovationsDev {
   @JoinColumn({
     name: 'innovation_characterization_id',
   })
-  innovation_characterization_id!: number;
+  innovation_characterization?: ClarisaInnovationCharacteristic;
+
+  @RelationId((rid: ResultsInnovationsDev) => rid.innovation_characterization)
+  innovation_characterization_id!: number | null;
 
   @ManyToOne(() => ClarisaInnovationType, (cit) => cit.code, { nullable: true })
   @JoinColumn({
     name: 'innovation_nature_id',
   })
-  innovation_nature_id!: number;
+  innovation_nature?: ClarisaInnovationType;
+
+  @RelationId((rid: ResultsInnovationsDev) => rid.innovation_nature)
+  innovation_nature_id!: number | null;
 
   @ManyToOne(() => ClarisaInnovationReadinessLevel, (cir) => cir.id, {
     nullable: true,
@@ -61,7 +67,10 @@ export class ResultsInnovationsDev {
   @JoinColumn({
     name: 'innovation_readiness_level_id',
   })
-  innovation_readiness_level_id!: number;
+  innovation_readiness_level?: ClarisaInnovationReadinessLevel;
+
+  @RelationId((rid: ResultsInnovationsDev) => rid.innovation_readiness_level)
+  innovation_readiness_level_id!: number | null;
 
   @Column({
     name: 'is_new_variety',
