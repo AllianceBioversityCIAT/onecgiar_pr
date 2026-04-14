@@ -86,6 +86,10 @@ import { InnovationUseLevel } from '../results-framework-reporting/innovation-us
 import { ResultsInnovationsUseRepository } from '../results/summary/repositories/results-innovations-use.repository';
 import { ResultsCapacityDevelopmentsRepository } from '../results/summary/repositories/results-capacity-developments.repository';
 import { CapdevsDeliveryMethod } from '../results/capdevs-delivery-methods/entities/capdevs-delivery-method.entity';
+import { ClarisaPolicyType } from '../../clarisa/clarisa-policy-types/entities/clarisa-policy-type.entity';
+import { ClarisaPolicyStage } from '../../clarisa/clarisa-policy-stages/entities/clarisa-policy-stage.entity';
+import { ResultsPolicyChangesRepository } from '../results/summary/repositories/results-policy-changes.repository';
+import { ResultQuestionsService } from '../results/result-questions/result-questions.service';
 
 /** Anticipated innovation user — organization-type rows (same role as PRMS Innovation Dev). */
 const INNOVATION_DEV_ANTICIPATED_USER_ORG_ROLE_ID = 5;
@@ -98,6 +102,9 @@ const INNOVATION_USE_SECTION_2030 = 2;
 
 /** Capacity sharing — implementing organizations (`summary.service` / PRMS role 3). */
 const CAPACITY_SHARING_IMPLEMENTING_ORG_ROLE_ID = 3;
+
+/** Policy change — implementing organizations (`summary.service` / PRMS role 4). */
+const POLICY_CHANGE_IMPLEMENTING_ORG_ROLE_ID = 4;
 
 /** Map result_type name (ListResultsResultTypeEnum) to result_type.id */
 const RESULT_TYPE_NAME_TO_ID: Partial<
@@ -185,6 +192,8 @@ export class BilateralService {
     private readonly _nonPooledProjectBudgetRepository: NonPooledProjectBudgetRepository,
     private readonly _resultsInnovationsUseRepository: ResultsInnovationsUseRepository,
     private readonly _resultsCapacityDevelopmentsRepository: ResultsCapacityDevelopmentsRepository,
+    private readonly _resultsPolicyChangesRepository: ResultsPolicyChangesRepository,
+    private readonly _resultQuestionsService: ResultQuestionsService,
     private readonly _knowledgeProductHandler: KnowledgeProductBilateralHandler,
     private readonly _capacityChangeHandler: CapacityChangeBilateralHandler,
     private readonly _innovationDevelopmentHandler: InnovationDevelopmentBilateralHandler,
@@ -797,8 +806,6 @@ export class BilateralService {
     const isInnovationDev =
       resultTypeId === ResultTypeEnum.INNOVATION_DEVELOPMENT;
     const isInnovationUse = resultTypeId === ResultTypeEnum.INNOVATION_USE;
-    const isPolicyChange = resultTypeId === ResultTypeEnum.POLICY_CHANGE;
-
     return {
       obj_result_by_initiatives: {
         obj_initiative: true,
@@ -844,9 +851,6 @@ export class BilateralService {
         results_innovations_use_object: {
           obj_innovation_use_level: true,
         },
-      }),
-      ...(isPolicyChange && {
-        results_policy_changes_object: true,
       }),
     };
   }
@@ -2591,6 +2595,136 @@ export class BilateralService {
     );
   }
 
+  private mapPolicyChangeAmountStatusLabel(status: unknown): string | null {
+    const n = Number(status);
+    if (n === 1) return 'Confirmed';
+    if (n === 2) return 'Estimated';
+    if (n === 3) return 'Unknown';
+    return null;
+  }
+
+  /**
+   * "Is this result related to" — same source as `ResultQuestionsService.findQuestionPolicyChange`
+   * (`result_questions` + `result_answers`, options with `answer_boolean` true).
+   */
+  private formatPolicyChangeRelatedToSelections(block: any): Array<{
+    parent_question: string | null;
+    option_text: string | null;
+  }> {
+    if (!block || typeof block !== 'object') {
+      return [];
+    }
+    const parent =
+      block.question_text != null ? String(block.question_text) : null;
+    const opts = block.optionsWithAnswers;
+    if (!Array.isArray(opts)) {
+      return [];
+    }
+    return opts
+      .filter(
+        (o) => o?.answer_boolean === true || o?.answer_boolean === 1,
+      )
+      .map((o) => ({
+        parent_question: parent,
+        option_text:
+          o?.question_text != null ? String(o.question_text) : null,
+      }));
+  }
+
+  private async loadPolicyChangeRelatedToSelections(
+    resultId: number,
+  ): Promise<
+    Array<{ parent_question: string | null; option_text: string | null }>
+  > {
+    try {
+      const res =
+        await this._resultQuestionsService.findQuestionPolicyChange(resultId);
+      if (!res || res.status !== HttpStatus.OK || !res.response) {
+        return [];
+      }
+      return this.formatPolicyChangeRelatedToSelections(res.response);
+    } catch {
+      return [];
+    }
+  }
+
+  /** Bilateral policy change: same data as `SummaryService.getPolicyChanges`, Clarisa labels instead of FK ids. */
+  private async buildPolicyChangeBilateralSummary(resultId: number) {
+    const [row, institutions, result_related_to] = await Promise.all([
+      this._resultsPolicyChangesRepository.ResultsPolicyChangesExists(resultId),
+      this._resultByIntitutionsRepository.getGenericAllResultByInstitutionByRole(
+        resultId,
+        POLICY_CHANGE_IMPLEMENTING_ORG_ROLE_ID,
+      ),
+      this.loadPolicyChangeRelatedToSelections(resultId),
+    ]);
+
+    const institutionsMapped = (institutions ?? []).map((r: any) =>
+      this.mapCapacitySharingImplementingInstitution(r),
+    );
+
+    const rawRow = row as any;
+    const inactive =
+      rawRow &&
+      (rawRow.is_active === false ||
+        rawRow.is_active === 0 ||
+        rawRow.is_active === '0');
+    if (!row || inactive) {
+      return {
+        created_date: null,
+        last_updated_date: null,
+        amount: null,
+        amount_status_label: null,
+        policy_type: null,
+        policy_stage: null,
+        linked_innovation_dev: null,
+        linked_innovation_use: null,
+        result_related_to,
+        institutions: institutionsMapped,
+      };
+    }
+
+    const ptId = Number(row.policy_type_id);
+    const psId = Number(row.policy_stage_id);
+    const [policyType, policyStage] = await Promise.all([
+      Number.isFinite(ptId) && ptId > 0
+        ? this.dataSource.getRepository(ClarisaPolicyType).findOne({
+            where: { id: ptId },
+          })
+        : Promise.resolve(null),
+      Number.isFinite(psId) && psId > 0
+        ? this.dataSource.getRepository(ClarisaPolicyStage).findOne({
+            where: { id: psId },
+          })
+        : Promise.resolve(null),
+    ]);
+
+    return {
+      created_date: row.created_date ?? null,
+      last_updated_date: row.last_updated_date ?? null,
+      amount: row.amount == null ? null : Number(row.amount),
+      amount_status_label: this.mapPolicyChangeAmountStatusLabel(
+        row.status_amount,
+      ),
+      policy_type: policyType
+        ? {
+            name: policyType.name ?? null,
+            definition: policyType.definition ?? null,
+          }
+        : null,
+      policy_stage: policyStage
+        ? {
+            name: policyStage.name ?? null,
+            definition: policyStage.definition ?? null,
+          }
+        : null,
+      linked_innovation_dev: !!row.linked_innovation_dev,
+      linked_innovation_use: !!row.linked_innovation_use,
+      result_related_to,
+      institutions: institutionsMapped,
+    };
+  }
+
   private async enrichBilateralResultResponse(filtered: any): Promise<void> {
     if (!filtered?.id) return;
     filtered.obj_results_toc_result =
@@ -2627,6 +2761,11 @@ export class BilateralService {
       filtered.capacity_development_summary =
         await this.buildCapacityDevelopmentBilateralSummary(filtered.id);
       delete filtered.results_capacity_development_object;
+    }
+    if (filtered.result_type_id === ResultTypeEnum.POLICY_CHANGE) {
+      filtered.policy_change_summary =
+        await this.buildPolicyChangeBilateralSummary(filtered.id);
+      delete filtered.results_policy_changes_object;
     }
     delete filtered.obj_result_by_project;
   }

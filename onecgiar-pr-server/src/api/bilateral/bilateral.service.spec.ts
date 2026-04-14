@@ -1,4 +1,8 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpStatus,
+  NotFoundException,
+} from '@nestjs/common';
 import { BilateralService } from './bilateral.service';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 
@@ -65,6 +69,18 @@ describe('BilateralService (unit)', () => {
     const resultsCapacityDevelopmentsRepository = {
       capDevExists: jest.fn().mockResolvedValue(undefined),
     };
+    const resultsPolicyChangesRepository = {
+      ResultsPolicyChangesExists: jest.fn().mockResolvedValue(undefined),
+    };
+    const resultQuestionsService = {
+      findQuestionPolicyChange: jest.fn().mockResolvedValue({
+        status: HttpStatus.OK,
+        response: {
+          question_text: 'Is this result related to:',
+          optionsWithAnswers: [],
+        },
+      }),
+    };
 
     const makeHandler = (resultType: number) => ({
       resultType,
@@ -119,6 +135,8 @@ describe('BilateralService (unit)', () => {
       nonPooledProjectBudgetRepository as any,
       resultsInnovationsUseRepository as any,
       resultsCapacityDevelopmentsRepository as any,
+      resultsPolicyChangesRepository as any,
+      resultQuestionsService as any,
       knowledgeProductHandler as any,
       capacityChangeHandler as any,
       innovationDevelopmentHandler as any,
