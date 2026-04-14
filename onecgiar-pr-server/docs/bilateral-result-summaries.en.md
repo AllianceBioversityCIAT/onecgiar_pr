@@ -320,7 +320,7 @@ Structured demand **without** internal ids:
 | `policy_stage` | `{ id, name, definition }` from Clarisa policy stage. |
 | `linked_innovation_dev` / `linked_innovation_use` | Booleans: user indicated linkage to those result families. |
 | `result_related_to[]` | Each `{ parent_question, option_text }` for options ticked under **“Is this result related to”** (backed by `result_questions` + `result_answers`). Empty array if none. |
-| `institutions[]` | `{ id, name, acronym, institution_type_name }` for **implementing** org rows (PRMS role 4); `id` is the Clarisa institution id. |
+| `policy_implementing_organizations[]` | `{ id, name, acronym, institution_type_name }` for **implementing** org rows (PRMS role 4); `id` is the Clarisa institution id. |
 
 **Note:** Internal audit timestamps are **not** included on this summary; use core result fields elsewhere if needed.
 
@@ -339,7 +339,7 @@ Other bilateral-supported types (e.g. other output / other outcome) may **not** 
 | 2026 | Expanded **Common fields on `data`** with tables + reference JSON fragment (identity, TOC, geography, centres, DAC, status, evidences, links, etc.). |
 | 2026 | Policy change: `result_related_to` from `ResultQuestionsService`; removed duplicate engagement-only field from bilateral JSON. |
 | 2026 | Policy change & capacity sharing summaries: omit `created_date` / `last_updated_date` on the **type summary** object only (core `data` still carries result-level dates). |
-| 2026 | `leading_result` reflects `is_lead_by_partner` (partner vs centre); `last_submission` for status QA/Submitted; Clarisa `id` on policy type/stage, implementing orgs, innovation typology; KP summary = `handle` only; cap sharing `institutions` renamed to `on_behalf_organizations`. |
+| 2026 | `leading_result` reflects `is_lead_by_partner` (partner vs centre); `last_submission` for status QA/Submitted; Clarisa `id` on policy type/stage, implementing orgs, innovation typology; KP summary = `handle` only; cap sharing `institutions` renamed to `on_behalf_organizations`; policy change implementing orgs as `policy_implementing_organizations`. |
 
 ---
 

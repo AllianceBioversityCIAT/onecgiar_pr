@@ -822,7 +822,9 @@ export class BilateralService {
       },
       result_country_array: {
         country_object: true,
-        result_countries_subnational_array: true,
+        result_countries_subnational_array: {
+          clarisa_subnational_scope_object: true,
+        },
       },
       result_center_array: {
         clarisa_center_object: {
@@ -1532,6 +1534,36 @@ export class BilateralService {
     await this._shareResultRequestRepository.logicalDelete(resultId);
   }
 
+  /** Bilateral JSON: region rows without internal ids / audit columns. */
+  private slimBilateralResultRegionRow(rr: any) {
+    return {
+      region_id: rr.region_id ?? null,
+      geo_scope_role_id: rr.geo_scope_role_id ?? null,
+      region_object: rr.region_object ?? null,
+    };
+  }
+
+  /** Bilateral JSON: country rows without internal ids / audit columns. */
+  private slimBilateralResultCountrySubnationalRow(sn: any) {
+    return {
+      clarisa_subnational_scope_code: sn.clarisa_subnational_scope_code ?? null,
+      geo_scope_role_id: sn.geo_scope_role_id ?? null,
+      clarisa_subnational_scope_object: sn.clarisa_subnational_scope_object ?? null,
+    };
+  }
+
+  private slimBilateralResultCountryRow(rc: any, onlyActive: (arr: any[]) => any[]) {
+    const subs = onlyActive(rc?.result_countries_subnational_array).map((sn) =>
+      this.slimBilateralResultCountrySubnationalRow(sn),
+    );
+    return {
+      country_id: rc.country_id ?? null,
+      geo_scope_role_id: rc.geo_scope_role_id ?? null,
+      country_object: rc.country_object ?? null,
+      result_countries_subnational_array: subs,
+    };
+  }
+
   private filterActiveRelations(result: any) {
     if (!result) return result;
     const onlyActive = (arr: any[]) =>
@@ -1545,14 +1577,11 @@ export class BilateralService {
           )
         : arr;
 
-    result.result_region_array = onlyActive(result.result_region_array);
+    result.result_region_array = onlyActive(result.result_region_array)?.map(
+      (rr) => this.slimBilateralResultRegionRow(rr),
+    );
     result.result_country_array = onlyActive(result.result_country_array)?.map(
-      (rc) => ({
-        ...rc,
-        result_countries_subnational_array: onlyActive(
-          rc?.result_countries_subnational_array,
-        ),
-      }),
+      (rc) => this.slimBilateralResultCountryRow(rc, onlyActive),
     );
     result.result_by_institution_array = onlyActive(
       result.result_by_institution_array,
@@ -2675,7 +2704,7 @@ export class BilateralService {
         linked_innovation_dev: null,
         linked_innovation_use: null,
         result_related_to,
-        institutions: institutionsMapped,
+        policy_implementing_organizations: institutionsMapped,
       };
     }
 
@@ -2716,7 +2745,7 @@ export class BilateralService {
       linked_innovation_dev: !!row.linked_innovation_dev,
       linked_innovation_use: !!row.linked_innovation_use,
       result_related_to,
-      institutions: institutionsMapped,
+      policy_implementing_organizations: institutionsMapped,
     };
   }
 
