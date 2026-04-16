@@ -1945,7 +1945,9 @@ export class BilateralService {
   ): Record<string, unknown> | null {
     if (!row || typeof row !== 'object' || Array.isArray(row)) return null;
     const b = row as Record<string, unknown>;
-    const ri = b['obj_result_initiative'] as Record<string, unknown> | undefined;
+    const ri = b['obj_result_initiative'] as
+      | Record<string, unknown>
+      | undefined;
     const ini = ri?.['obj_initiative'] as Record<string, unknown> | undefined;
     const idRaw = ini?.['id'];
     const initiative =
@@ -2006,7 +2008,9 @@ export class BilateralService {
     const rbi = b['obj_result_institution'] as
       | Record<string, unknown>
       | undefined;
-    const inst = rbi?.['obj_institutions'] as Record<string, unknown> | undefined;
+    const inst = rbi?.['obj_institutions'] as
+      | Record<string, unknown>
+      | undefined;
     const typeObj = inst?.['obj_institution_type_code'] as
       | Record<string, unknown>
       | undefined;
@@ -2028,8 +2032,7 @@ export class BilateralService {
                 : Number(instIdRaw),
             name: (inst['name'] as string | null) ?? null,
             acronym: (inst['acronym'] as string | null) ?? null,
-            institution_type_name:
-              (typeObj?.['name'] as string | null) ?? null,
+            institution_type_name: (typeObj?.['name'] as string | null) ?? null,
           };
     return {
       kind_cash: this.bilateralBudgetAmountOrNull(b['kind_cash']),
@@ -2471,7 +2474,9 @@ export class BilateralService {
   }
 
   /** IPSR `innovatonUse` → same shape as innovation use bilateral `current_section` inner payload. */
-  private mapIpsrInnovatonUseToTargetInnovationUseShape(innovatonUse: unknown): {
+  private mapIpsrInnovatonUseToTargetInnovationUseShape(
+    innovatonUse: unknown,
+  ): {
     actors: unknown[];
     organizations: unknown[];
     other_quantitative: unknown[];
@@ -2643,11 +2648,12 @@ export class BilateralService {
     };
     if (mode === 'current_and_potential') {
       base.potential = {
-        innovation_readiness_level: this.resolveClarisaReadinessSlimForIpsrStep3(
-          row?.potential_innovation_readiness_level,
-          undefined,
-          readinessById,
-        ),
+        innovation_readiness_level:
+          this.resolveClarisaReadinessSlimForIpsrStep3(
+            row?.potential_innovation_readiness_level,
+            undefined,
+            readinessById,
+          ),
         innovation_use_level: this.resolveClarisaUseSlimForIpsrStep3(
           row?.potential_innovation_use_level,
           undefined,
@@ -2718,14 +2724,17 @@ export class BilateralService {
       const noneOfAbove = assessedId === 3;
       const modeCurrentAndPotential = assessedId === 2;
       const modeCurrentOnly = assessedId === 1;
-      const mode: 'none_of_above' | 'current_only' | 'current_and_potential' | null =
-        noneOfAbove
-          ? 'none_of_above'
-          : modeCurrentAndPotential
-            ? 'current_and_potential'
-            : modeCurrentOnly
-              ? 'current_only'
-              : null;
+      const mode:
+        | 'none_of_above'
+        | 'current_only'
+        | 'current_and_potential'
+        | null = noneOfAbove
+        ? 'none_of_above'
+        : modeCurrentAndPotential
+          ? 'current_and_potential'
+          : modeCurrentOnly
+            ? 'current_only'
+            : null;
 
       let workshop_level_assignments: unknown = null;
       if (mode === 'current_only' || mode === 'current_and_potential') {
@@ -2767,7 +2776,8 @@ export class BilateralService {
     // `result_innovation_package` columns (often null). See `evidence_based_assessment`.
     const result_innovation_package = rip
       ? {
-          is_expert_workshop_organized: rip.is_expert_workshop_organized ?? null,
+          is_expert_workshop_organized:
+            rip.is_expert_workshop_organized ?? null,
         }
       : null;
 
@@ -2793,9 +2803,7 @@ export class BilateralService {
     };
   }
 
-  private slimIpsrStepFourMaterialRow(
-    row: unknown,
-  ): Record<string, unknown> {
+  private slimIpsrStepFourMaterialRow(row: unknown): Record<string, unknown> {
     if (!row || typeof row !== 'object' || Array.isArray(row)) {
       return {};
     }
@@ -3541,9 +3549,10 @@ export class BilateralService {
             );
         }
         if (ipsrPathwaySummary?.step_four != null) {
-          ipsrPathwaySummary.step_four = this.mapIpsrPathwayStepFourForBilateral(
-            ipsrPathwaySummary.step_four,
-          );
+          ipsrPathwaySummary.step_four =
+            this.mapIpsrPathwayStepFourForBilateral(
+              ipsrPathwaySummary.step_four,
+            );
         }
         filtered.ipsr_pathway_summary = ipsrPathwaySummary;
       } catch {
