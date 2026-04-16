@@ -44,6 +44,7 @@ import { ResultsCapacityDevelopmentsRepository } from '../results/summary/reposi
 import { ResultsPolicyChangesRepository } from '../results/summary/repositories/results-policy-changes.repository';
 import { NoopBilateralHandler } from './handlers/noop.handler';
 import { NonPooledProjectBudgetRepository } from '../results/result_budget/repositories/non_pooled_proyect_budget.repository';
+import { PathwayModule } from '../ipsr-framework/pathway/pathway.module';
 
 @Module({
   imports: [
@@ -79,6 +80,7 @@ import { NonPooledProjectBudgetRepository } from '../results/result_budget/repos
     InnovationUseModule,
     ResultsByInititiativesModule,
     ShareResultRequestModule,
+    PathwayModule,
   ],
   controllers: [BilateralController],
   providers: [
