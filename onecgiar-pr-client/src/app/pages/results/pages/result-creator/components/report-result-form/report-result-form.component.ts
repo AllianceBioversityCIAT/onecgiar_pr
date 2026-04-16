@@ -1,4 +1,4 @@
-import { Component, OnInit, DoCheck, Output, EventEmitter, Input, signal } from '@angular/core';
+import { Component, OnInit, DoCheck, Output, EventEmitter, Input, signal, OnDestroy } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ResultLevelService } from '../../services/result-level.service';
 import { Router } from '@angular/router';
@@ -6,6 +6,7 @@ import { ResultBody } from '../../../../../../shared/interfaces/result.interface
 import { PhasesService } from '../../../../../../shared/services/global/phases.service';
 import { TerminologyService } from '../../../../../../internationalization/terminology.service';
 import { EntityAowService } from '../../../../../result-framework-reporting/pages/entity-aow/services/entity-aow.service';
+import { Subject, catchError, debounceTime, distinctUntilChanged, filter, map, of, switchMap, takeUntil, timer } from 'rxjs';
 
 @Component({
   selector: 'app-report-result-form',
@@ -13,11 +14,15 @@ import { EntityAowService } from '../../../../../result-framework-reporting/page
   styleUrls: ['./report-result-form.component.scss'],
   standalone: false
 })
-export class ReportResultFormComponent implements OnInit, DoCheck {
+export class ReportResultFormComponent implements OnInit, DoCheck, OnDestroy {
   depthSearchList: any[] = [];
   exactTitleFound = signal(false);
+  blockingExactTitleFound = signal(false);
   loadingDepthSearch = signal(false);
-  private debounceTimer: any = null;
+  private readonly titleSearch$ = new Subject<string>();
+  private readonly destroy$ = new Subject<void>();
+  private readonly titleSearchDebounceMs = 500;
+  private readonly titleRecheckDelayMs = 700;
   mqapJson: {};
   validating = false;
   kpAlertDescription = `Please add the handle generated in <strong>CGSpace</strong>, <strong>MELSpace</strong>, or <strong>WorldFish DSpace</strong> to report your knowledge product. Only knowledge products entered into <strong>one of these repositories</strong> are accepted in the PRMS Reporting Tool.<br><br>
@@ -53,6 +58,7 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
   ) {}
 
   ngOnInit(): void {
+    this.setupTitleSearch();
     this.api.dataControlSE.getCurrentPhases().subscribe(() => {
       this.api.rolesSE.validateReadOnly().then(() => {
         this.GET_AllInitiatives();
@@ -195,39 +201,27 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
   }
 
   onTitleChange(title: string) {
-    clearTimeout(this.debounceTimer);
-    this.loadingDepthSearch.set(true);
-    this.exactTitleFound.set(false);
-
     if (!title?.trim()) {
       this.depthSearchList = [];
+      this.exactTitleFound.set(false);
+      this.blockingExactTitleFound.set(false);
       this.loadingDepthSearch.set(false);
       return;
     }
 
-    this.debounceTimer = setTimeout(() => {
-      this.depthSearch(title);
-    }, 500);
+    this.loadingDepthSearch.set(true);
+    this.exactTitleFound.set(false);
+    this.blockingExactTitleFound.set(false);
+    this.titleSearch$.next(title);
   }
 
   depthSearch(title: string) {
-    const cleanSpaces = (text: string) => text?.replace(/\s+/g, '')?.toLowerCase();
-    const legacyType = this.getLegacyType(this.resultTypeName, this.resultLevelName);
-
-    this.api.resultsSE.GET_FindResultsElastic(title, legacyType).subscribe({
-      next: (response: any[]) => {
-        this.depthSearchList = response.map(result => ({
-          ...result,
-          phase: this.allPhases.find(phase => phase.id === result?.version_id)
-        }));
-        this.exactTitleFound.set(!!this.depthSearchList.find(result => cleanSpaces(result.title) === cleanSpaces(title)));
-        this.loadingDepthSearch.set(false);
-      },
-      error: () => {
-        this.depthSearchList = [];
-        this.exactTitleFound.set(false);
-        this.loadingDepthSearch.set(false);
-      }
+    this.loadingDepthSearch.set(true);
+    this.searchResultsWithRecheck(title).subscribe(state => {
+      this.depthSearchList = state.depthSearchList;
+      this.exactTitleFound.set(state.exactTitleFound);
+      this.blockingExactTitleFound.set(state.blockingExactTitleFound);
+      this.loadingDepthSearch.set(false);
     });
   }
 
@@ -346,6 +340,85 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
     const value = match?.id ?? match?.initiative_id ?? this._selectedInitiativeId;
     this.resultLevelSE.resultBody.initiative_id = value;
     this.onSelectInit();
+  }
+
+  private setupTitleSearch() {
+    this.titleSearch$
+      .pipe(
+        filter(title => !!title?.trim()),
+        debounceTime(this.titleSearchDebounceMs),
+        distinctUntilChanged(),
+        switchMap(title => this.searchResultsWithRecheck(title)),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(state => {
+        this.depthSearchList = state.depthSearchList;
+        this.exactTitleFound.set(state.exactTitleFound);
+        this.blockingExactTitleFound.set(state.blockingExactTitleFound);
+        this.loadingDepthSearch.set(false);
+      });
+  }
+
+  private searchResultsWithRecheck(title: string) {
+    const legacyType = this.getLegacyType(this.resultTypeName, this.resultLevelName);
+    return this.api.resultsSE.GET_FindResultsElastic(title, legacyType).pipe(
+      map(response => this.mapDepthSearchResults(response)),
+      switchMap(initialResults => {
+        const hasExactMatch = this.hasExactTitleMatch(initialResults, title);
+        if (!hasExactMatch) {
+          return of({
+            depthSearchList: initialResults,
+            exactTitleFound: false,
+            blockingExactTitleFound: false
+          });
+        }
+
+        // Re-check shortly after an exact match to reduce false positives from stale ES index state.
+        return timer(this.titleRecheckDelayMs).pipe(
+          switchMap(() => this.api.resultsSE.GET_FindResultsElastic(title, legacyType)),
+          map(recheckResponse => {
+            const recheckResults = this.mapDepthSearchResults(recheckResponse);
+            const confirmedExactMatch = this.hasExactTitleMatch(recheckResults, title);
+            return {
+              depthSearchList: recheckResults,
+              exactTitleFound: confirmedExactMatch,
+              blockingExactTitleFound: confirmedExactMatch
+            };
+          }),
+          catchError(() =>
+            of({
+              depthSearchList: initialResults,
+              exactTitleFound: false,
+              blockingExactTitleFound: false
+            })
+          )
+        );
+      }),
+      catchError(() =>
+        of({
+          depthSearchList: [],
+          exactTitleFound: false,
+          blockingExactTitleFound: false
+        })
+      )
+    );
+  }
+
+  private mapDepthSearchResults(response: any[]) {
+    return (response ?? []).map(result => ({
+      ...result,
+      phase: this.allPhases.find(phase => phase.id === result?.version_id)
+    }));
+  }
+
+  private hasExactTitleMatch(results: any[], title: string) {
+    const normalizeTitle = (text: string) => text?.replace(/\s+/g, '')?.toLowerCase();
+    return results.some(result => normalizeTitle(result.title) === normalizeTitle(title));
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
 }
