@@ -90,6 +90,10 @@ import { ClarisaPolicyType } from '../../clarisa/clarisa-policy-types/entities/c
 import { ClarisaPolicyStage } from '../../clarisa/clarisa-policy-stages/entities/clarisa-policy-stage.entity';
 import { ResultsPolicyChangesRepository } from '../results/summary/repositories/results-policy-changes.repository';
 import { ResultQuestionsService } from '../results/result-questions/result-questions.service';
+import { PathwayService } from '../ipsr-framework/pathway/pathway.service';
+import { ResultType } from '../results/result_types/entities/result_type.entity';
+import { ClarisaInitiative } from '../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
+import { AssessedDuringExpertWorkshop } from '../ipsr/assessed-during-expert-workshop/entities/assessed-during-expert-workshop.entity';
 
 /** Anticipated innovation user — organization-type rows (same role as PRMS Innovation Dev). */
 const INNOVATION_DEV_ANTICIPATED_USER_ORG_ROLE_ID = 5;
@@ -105,6 +109,24 @@ const CAPACITY_SHARING_IMPLEMENTING_ORG_ROLE_ID = 3;
 
 /** Policy change — implementing organizations (`summary.service` / PRMS role 4). */
 const POLICY_CHANGE_IMPLEMENTING_ORG_ROLE_ID = 4;
+
+/** Fields stripped from each `ipsr_materials` evidence row in bilateral step 4. */
+const IPSR_BILATERAL_STEP_FOUR_MATERIAL_OMIT_KEYS = new Set([
+  'creation_date',
+  'last_updated_date',
+  'description',
+  'gender_related',
+  'youth_related',
+  'nutrition_related',
+  'environmental_biodiversity_related',
+  'poverty_related',
+  'is_supplementary',
+  'is_sharepoint',
+  'innovation_readiness_related',
+  'innovation_use_related',
+  'innov_dev_user_demand',
+  'evidence_type_id',
+]);
 
 /** Map result_type name (ListResultsResultTypeEnum) to result_type.id */
 const RESULT_TYPE_NAME_TO_ID: Partial<
@@ -194,6 +216,7 @@ export class BilateralService {
     private readonly _resultsCapacityDevelopmentsRepository: ResultsCapacityDevelopmentsRepository,
     private readonly _resultsPolicyChangesRepository: ResultsPolicyChangesRepository,
     private readonly _resultQuestionsService: ResultQuestionsService,
+    private readonly _pathwayService: PathwayService,
     private readonly _knowledgeProductHandler: KnowledgeProductBilateralHandler,
     private readonly _capacityChangeHandler: CapacityChangeBilateralHandler,
     private readonly _innovationDevelopmentHandler: InnovationDevelopmentBilateralHandler,
@@ -785,6 +808,7 @@ export class BilateralService {
           [ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT]: 'capacity_sharing',
           [ResultTypeEnum.INNOVATION_DEVELOPMENT]: 'innovation_development',
           [ResultTypeEnum.INNOVATION_USE]: 'innovation_use',
+          [ResultTypeEnum.INNOVATION_USE_IPSR]: 'innovation_package',
           [ResultTypeEnum.OTHER_OUTPUT]: 'other_output',
           [ResultTypeEnum.OTHER_OUTCOME]: 'other_outcome',
           [ResultTypeEnum.POLICY_CHANGE]: 'policy_change',
@@ -1905,6 +1929,135 @@ export class BilateralService {
     return out;
   }
 
+  /** Numeric budget field for bilateral summaries (null when missing / non-finite). */
+  private bilateralBudgetAmountOrNull(value: unknown): number | null {
+    if (value === null || value === undefined) return null;
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  /**
+   * Slim initiative budget row — shared by Innovation Dev / Innovation Use summaries
+   * and IPSR bilateral `step_four` (same inner shape; no PRMS join PKs or audit fields).
+   */
+  private slimBilateralInitiativeBudgetRow(
+    row: unknown,
+  ): Record<string, unknown> | null {
+    if (!row || typeof row !== 'object' || Array.isArray(row)) return null;
+    const b = row as Record<string, unknown>;
+    const ri = b['obj_result_initiative'] as
+      | Record<string, unknown>
+      | undefined;
+    const ini = ri?.['obj_initiative'] as Record<string, unknown> | undefined;
+    const idRaw = ini?.['id'];
+    const initiative =
+      ini == null
+        ? null
+        : {
+            id:
+              idRaw == null || !Number.isFinite(Number(idRaw))
+                ? null
+                : Number(idRaw),
+            official_code: (ini['official_code'] as string | null) ?? null,
+            name: (ini['name'] as string | null) ?? null,
+          };
+    return {
+      current_year: this.bilateralBudgetAmountOrNull(b['current_year']),
+      next_year: this.bilateralBudgetAmountOrNull(b['next_year']),
+      kind_cash: this.bilateralBudgetAmountOrNull(b['kind_cash']),
+      is_determined: b['is_determined'] ?? null,
+      initiative,
+    };
+  }
+
+  private slimBilateralProjectBudgetRow(
+    row: unknown,
+  ): Record<string, unknown> | null {
+    if (!row || typeof row !== 'object' || Array.isArray(row)) return null;
+    const b = row as Record<string, unknown>;
+    const rp = b['obj_result_project'] as Record<string, unknown> | undefined;
+    const proj = rp?.['obj_clarisa_project'] as
+      | Record<string, unknown>
+      | undefined;
+    const idRaw = proj?.['id'];
+    const project =
+      proj == null
+        ? null
+        : {
+            id:
+              idRaw == null || !Number.isFinite(Number(idRaw))
+                ? null
+                : Number(idRaw),
+            short_name: (proj['shortName'] as string | null) ?? null,
+            full_name: (proj['fullName'] as string | null) ?? null,
+          };
+    return {
+      in_cash: this.bilateralBudgetAmountOrNull(b['in_cash']),
+      in_kind: this.bilateralBudgetAmountOrNull(b['in_kind']),
+      kind_cash: this.bilateralBudgetAmountOrNull(b['kind_cash']),
+      is_determined: b['is_determined'] ?? null,
+      project,
+    };
+  }
+
+  private slimBilateralPartnerBudgetRow(
+    row: unknown,
+  ): Record<string, unknown> | null {
+    if (!row || typeof row !== 'object' || Array.isArray(row)) return null;
+    const b = row as Record<string, unknown>;
+    const rbi = b['obj_result_institution'] as
+      | Record<string, unknown>
+      | undefined;
+    const inst = rbi?.['obj_institutions'] as
+      | Record<string, unknown>
+      | undefined;
+    const typeObj = inst?.['obj_institution_type_code'] as
+      | Record<string, unknown>
+      | undefined;
+    const linkId = rbi?.['institutions_id'];
+    const instIdRaw = inst?.['id'];
+    let clarisaInstId: number | null = null;
+    if (linkId != null && Number.isFinite(Number(linkId))) {
+      clarisaInstId = Number(linkId);
+    } else if (instIdRaw != null && Number.isFinite(Number(instIdRaw))) {
+      clarisaInstId = Number(instIdRaw);
+    }
+    const institution =
+      inst == null
+        ? null
+        : {
+            id:
+              instIdRaw == null || !Number.isFinite(Number(instIdRaw))
+                ? null
+                : Number(instIdRaw),
+            name: (inst['name'] as string | null) ?? null,
+            acronym: (inst['acronym'] as string | null) ?? null,
+            institution_type_name: (typeObj?.['name'] as string | null) ?? null,
+          };
+    return {
+      kind_cash: this.bilateralBudgetAmountOrNull(b['kind_cash']),
+      in_cash: this.bilateralBudgetAmountOrNull(b['in_cash']),
+      in_kind: this.bilateralBudgetAmountOrNull(b['in_kind']),
+      is_determined: b['is_determined'] ?? null,
+      institutions_id: clarisaInstId,
+      institution,
+    };
+  }
+
+  private mapBilateralBudgetArray(
+    raw: unknown,
+    mapper: (row: unknown) => Record<string, unknown> | null,
+  ): Record<string, unknown>[] {
+    if (raw == null) return [];
+    if (!Array.isArray(raw)) return [];
+    const out: Record<string, unknown>[] = [];
+    for (const row of raw) {
+      const mapped = mapper(row);
+      if (mapped) out.push(mapped);
+    }
+    return out;
+  }
+
   /**
    * Initiative / bilateral / partner budgets; optionally reference materials &
    * user-need evidence (Inno Dev only — Inno Use bilateral omits the latter two).
@@ -1985,39 +2138,23 @@ export class BilateralService {
           is_active: true,
         },
         relations: {
-          obj_result_institution: { obj_institutions: true },
+          obj_result_institution: {
+            obj_institutions: { obj_institution_type_code: true },
+          },
         },
       });
     }
 
     return {
-      initiative_budget: initiativeBudgetRows.map((b) => ({
-        initiative_official_code:
-          b.obj_result_initiative?.obj_initiative?.official_code ?? null,
-        initiative_name: b.obj_result_initiative?.obj_initiative?.name ?? null,
-        current_year: b.current_year == null ? null : Number(b.current_year),
-        next_year: b.next_year == null ? null : Number(b.next_year),
-        kind_cash: b.kind_cash == null ? null : Number(b.kind_cash),
-        is_determined: b.is_determined ?? null,
-      })),
-      bilateral_project_budget: bilateralBudgetRows.map((b) => ({
-        project_short_name:
-          b.obj_result_project?.obj_clarisa_project?.shortName ?? null,
-        in_cash: b.in_cash == null ? null : Number(b.in_cash),
-        in_kind: b.in_kind == null ? null : Number(b.in_kind),
-        kind_cash: b.kind_cash == null ? null : Number(b.kind_cash),
-        is_determined: b.is_determined ?? null,
-      })),
-      partner_budget: partnerBudgetRows.map((b) => ({
-        institution_name:
-          b.obj_result_institution?.obj_institutions?.name ?? null,
-        institution_acronym:
-          b.obj_result_institution?.obj_institutions?.acronym ?? null,
-        in_cash: b.in_cash == null ? null : Number(b.in_cash),
-        in_kind: b.in_kind == null ? null : Number(b.in_kind),
-        kind_cash: b.kind_cash == null ? null : Number(b.kind_cash),
-        is_determined: b.is_determined ?? null,
-      })),
+      initiative_budget: initiativeBudgetRows
+        .map((b) => this.slimBilateralInitiativeBudgetRow(b))
+        .filter((x): x is Record<string, unknown> => x != null),
+      bilateral_project_budget: bilateralBudgetRows
+        .map((b) => this.slimBilateralProjectBudgetRow(b))
+        .filter((x): x is Record<string, unknown> => x != null),
+      partner_budget: partnerBudgetRows
+        .map((b) => this.slimBilateralPartnerBudgetRow(b))
+        .filter((x): x is Record<string, unknown> => x != null),
       ...(includeEvidence
         ? {
             reference_materials: refs.map((e) => ({ link: e.link })),
@@ -2334,6 +2471,540 @@ export class BilateralService {
       quantity: m.quantity == null ? null : Number(m.quantity),
       addressing_demands: m.addressing_demands ?? null,
     };
+  }
+
+  /** IPSR `innovatonUse` → same shape as innovation use bilateral `current_section` inner payload. */
+  private mapIpsrInnovatonUseToTargetInnovationUseShape(
+    innovatonUse: unknown,
+  ): {
+    actors: unknown[];
+    organizations: unknown[];
+    other_quantitative: unknown[];
+  } {
+    const raw = innovatonUse as
+      | {
+          actors?: ResultActor[];
+          organization?: ResultsByInstitutionType[];
+          measures?: ResultIpMeasure[];
+        }
+      | undefined;
+    const actors = Array.isArray(raw?.actors)
+      ? raw!.actors!.map((a) => this.mapInnovationUseBilateralActor(a))
+      : [];
+    const organizations = Array.isArray(raw?.organization)
+      ? raw!.organization!.map((o) =>
+          this.mapInnovationUseBilateralOrganization(o),
+        )
+      : [];
+    const other_quantitative = Array.isArray(raw?.measures)
+      ? raw!.measures!.map((m) => this.mapInnovationUseBilateralMeasure(m))
+      : [];
+    return { actors, organizations, other_quantitative };
+  }
+
+  private clarisaInnovationReadinessLevelBilateralSlim(
+    e: ClarisaInnovationReadinessLevel | null | undefined,
+  ): {
+    id: number;
+    level: number | null;
+    name: string | null;
+    definition: string | null;
+  } | null {
+    if (!e) return null;
+    return {
+      id: Number(e.id),
+      level: e.level == null ? null : Number(e.level),
+      name: e.name ?? null,
+      definition: e.definition ?? null,
+    };
+  }
+
+  private clarisaInnovationUseLevelBilateralSlim(
+    e: ClarisaInnovationUseLevel | null | undefined,
+  ): {
+    id: number;
+    level: number | null;
+    name: string | null;
+    definition: string | null;
+  } | null {
+    if (!e) return null;
+    return {
+      id: Number(e.id),
+      level: e.level == null ? null : Number(e.level),
+      name: e.name ?? null,
+      definition: e.definition ?? null,
+    };
+  }
+
+  private resolveClarisaReadinessSlimForIpsrStep3(
+    fk: unknown,
+    obj: ClarisaInnovationReadinessLevel | undefined | null,
+    byId: Map<number, ClarisaInnovationReadinessLevel>,
+  ) {
+    if (obj) return this.clarisaInnovationReadinessLevelBilateralSlim(obj);
+    const n = Number(fk);
+    if (!Number.isFinite(n) || n <= 0) return null;
+    return this.clarisaInnovationReadinessLevelBilateralSlim(byId.get(n));
+  }
+
+  private resolveClarisaUseSlimForIpsrStep3(
+    fk: unknown,
+    obj: ClarisaInnovationUseLevel | undefined | null,
+    byId: Map<number, ClarisaInnovationUseLevel>,
+  ) {
+    if (obj) return this.clarisaInnovationUseLevelBilateralSlim(obj);
+    const n = Number(fk);
+    if (!Number.isFinite(n) || n <= 0) return null;
+    return this.clarisaInnovationUseLevelBilateralSlim(byId.get(n));
+  }
+
+  private collectIpsrStep3ClarisaLevelIds(
+    rows: any[],
+    packageRow?: any,
+  ): { readiness: Set<number>; use: Set<number> } {
+    const readiness = new Set<number>();
+    const use = new Set<number>();
+    const addRead = (v: unknown) => {
+      const n = Number(v);
+      if (Number.isFinite(n) && n > 0) readiness.add(n);
+    };
+    const addUse = (v: unknown) => {
+      const n = Number(v);
+      if (Number.isFinite(n) && n > 0) use.add(n);
+    };
+    const scan = (row: any) => {
+      if (!row || typeof row !== 'object') return;
+      addRead(row.readiness_level_evidence_based);
+      addUse(row.use_level_evidence_based);
+      addRead(row.current_innovation_readiness_level);
+      addUse(row.current_innovation_use_level);
+      addRead(row.potential_innovation_readiness_level);
+      addUse(row.potential_innovation_use_level);
+    };
+    for (const row of rows) scan(row);
+    if (packageRow) scan(packageRow);
+    return { readiness, use };
+  }
+
+  private mapIpsrStepThreeEvidenceBasedRow(
+    row: any,
+    readinessById: Map<number, ClarisaInnovationReadinessLevel>,
+    useById: Map<number, ClarisaInnovationUseLevel>,
+  ): Record<string, unknown> {
+    return {
+      result_title: row?.obj_result?.title ?? null,
+      result_code:
+        row?.obj_result?.result_code == null
+          ? null
+          : Number(row.obj_result.result_code),
+      innovation_readiness_level_evidence_based:
+        this.resolveClarisaReadinessSlimForIpsrStep3(
+          row?.readiness_level_evidence_based,
+          row?.obj_readiness_level_evidence_based,
+          readinessById,
+        ),
+      readinees_evidence_link: row?.readinees_evidence_link ?? null,
+      readiness_details_of_evidence: row?.readiness_details_of_evidence ?? null,
+      innovation_use_level_evidence_based:
+        this.resolveClarisaUseSlimForIpsrStep3(
+          row?.use_level_evidence_based,
+          row?.obj_use_level_evidence_based,
+          useById,
+        ),
+      use_evidence_link: row?.use_evidence_link ?? null,
+      use_details_of_evidence: row?.use_details_of_evidence ?? null,
+    };
+  }
+
+  private mapIpsrPathwayStepThreeWorkshopLevelRow(
+    row: any,
+    packageElement: string,
+    complementaryIndex: number | null,
+    mode: 'current_only' | 'current_and_potential',
+    readinessById: Map<number, ClarisaInnovationReadinessLevel>,
+    useById: Map<number, ClarisaInnovationUseLevel>,
+  ): Record<string, unknown> {
+    const current = {
+      innovation_readiness_level: this.resolveClarisaReadinessSlimForIpsrStep3(
+        row?.current_innovation_readiness_level,
+        undefined,
+        readinessById,
+      ),
+      innovation_use_level: this.resolveClarisaUseSlimForIpsrStep3(
+        row?.current_innovation_use_level,
+        undefined,
+        useById,
+      ),
+    };
+    const base: Record<string, unknown> = {
+      package_element: packageElement,
+      complementary_index: complementaryIndex,
+      result_title: row?.obj_result?.title ?? null,
+      result_code:
+        row?.obj_result?.result_code == null
+          ? null
+          : Number(row.obj_result.result_code),
+      current,
+    };
+    if (mode === 'current_and_potential') {
+      base.potential = {
+        innovation_readiness_level:
+          this.resolveClarisaReadinessSlimForIpsrStep3(
+            row?.potential_innovation_readiness_level,
+            undefined,
+            readinessById,
+          ),
+        innovation_use_level: this.resolveClarisaUseSlimForIpsrStep3(
+          row?.potential_innovation_use_level,
+          undefined,
+          useById,
+        ),
+      };
+    }
+    return base;
+  }
+
+  /**
+   * IPSR pathway step 3 for bilateral: mirror PRMS step 3 (expert workshop selection + conditional
+   * readiness/use self-assessment table, evidence-based levels + links + details, current use).
+   */
+  private async mapIpsrPathwayStepThreeForBilateral(
+    stepThreeRaw: unknown,
+  ): Promise<unknown> {
+    if (!stepThreeRaw || typeof stepThreeRaw !== 'object') {
+      return stepThreeRaw;
+    }
+    const body = stepThreeRaw as Record<string, unknown>;
+    const rip = body['result_innovation_package'] as any;
+    const rawCore = body['result_ip_result_core'] as any;
+    const rawComp = Array.isArray(body['result_ip_result_complementary'])
+      ? (body['result_ip_result_complementary'] as any[])
+      : [];
+
+    const assessedRows = await this.dataSource
+      .getRepository(AssessedDuringExpertWorkshop)
+      .find({ select: ['id', 'name'] });
+    const assessedNameById = new Map(
+      assessedRows.map((a) => [Number(a.id), a.name ?? null]),
+    );
+
+    const rowsForIds = [rawCore, ...rawComp].filter(Boolean);
+    const { readiness: readinessIds, use: useIds } =
+      this.collectIpsrStep3ClarisaLevelIds(rowsForIds, rip);
+
+    const [readinessEntities, useEntities] = await Promise.all([
+      readinessIds.size > 0
+        ? this.dataSource.getRepository(ClarisaInnovationReadinessLevel).find({
+            where: { id: In([...readinessIds]) },
+          })
+        : Promise.resolve([] as ClarisaInnovationReadinessLevel[]),
+      useIds.size > 0
+        ? this.dataSource.getRepository(ClarisaInnovationUseLevel).find({
+            where: { id: In([...useIds]) },
+          })
+        : Promise.resolve([] as ClarisaInnovationUseLevel[]),
+    ]);
+    const readinessById = new Map(
+      readinessEntities.map((e) => [Number(e.id), e]),
+    );
+    const useById = new Map(useEntities.map((e) => [Number(e.id), e]));
+
+    const assessedId = Number(rip?.assessed_during_expert_workshop_id);
+    const assessedSelection =
+      Number.isFinite(assessedId) && assessedId > 0
+        ? {
+            id: assessedId,
+            name: assessedNameById.get(assessedId) ?? null,
+          }
+        : null;
+
+    const organized = !!rip?.is_expert_workshop_organized;
+    let expert_workshop: Record<string, unknown> | null = null;
+    if (organized) {
+      const noneOfAbove = assessedId === 3;
+      const modeCurrentAndPotential = assessedId === 2;
+      const modeCurrentOnly = assessedId === 1;
+      const mode:
+        | 'none_of_above'
+        | 'current_only'
+        | 'current_and_potential'
+        | null = noneOfAbove
+        ? 'none_of_above'
+        : modeCurrentAndPotential
+          ? 'current_and_potential'
+          : modeCurrentOnly
+            ? 'current_only'
+            : null;
+
+      let workshop_level_assignments: unknown = null;
+      if (mode === 'current_only' || mode === 'current_and_potential') {
+        const innerMode =
+          mode === 'current_and_potential'
+            ? 'current_and_potential'
+            : 'current_only';
+        workshop_level_assignments = {
+          core_innovation: this.mapIpsrPathwayStepThreeWorkshopLevelRow(
+            rawCore,
+            'core_innovation',
+            null,
+            innerMode,
+            readinessById,
+            useById,
+          ),
+          complementary_innovations: rawComp.map((row, i) =>
+            this.mapIpsrPathwayStepThreeWorkshopLevelRow(
+              row,
+              'complementary_innovation',
+              i + 1,
+              innerMode,
+              readinessById,
+              useById,
+            ),
+          ),
+        };
+      }
+
+      expert_workshop = {
+        is_expert_workshop_organized: true,
+        what_was_assessed_during_expert_workshop: assessedSelection,
+        assessment_mode: mode,
+        workshop_level_assignments,
+      };
+    }
+
+    // PRMS step 3 binds evidence-based readiness/use to core/complementary IPSR rows — not to
+    // `result_innovation_package` columns (often null). See `evidence_based_assessment`.
+    const result_innovation_package = rip
+      ? {
+          is_expert_workshop_organized:
+            rip.is_expert_workshop_organized ?? null,
+        }
+      : null;
+
+    return {
+      result_core_innovation: body['result_core_innovation'] ?? null,
+      result_innovation_package,
+      expert_workshop,
+      evidence_based_assessment: {
+        core_innovation: rawCore
+          ? this.mapIpsrStepThreeEvidenceBasedRow(
+              rawCore,
+              readinessById,
+              useById,
+            )
+          : null,
+        complementary_innovations: rawComp.map((row) =>
+          this.mapIpsrStepThreeEvidenceBasedRow(row, readinessById, useById),
+        ),
+      },
+      target_innovation_use: this.mapIpsrInnovatonUseToTargetInnovationUseShape(
+        body['innovatonUse'],
+      ),
+    };
+  }
+
+  private slimIpsrStepFourMaterialRow(row: unknown): Record<string, unknown> {
+    if (!row || typeof row !== 'object' || Array.isArray(row)) {
+      return {};
+    }
+    const o = row as Record<string, unknown>;
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(o)) {
+      if (IPSR_BILATERAL_STEP_FOUR_MATERIAL_OMIT_KEYS.has(k)) continue;
+      out[k] = v;
+    }
+    return out;
+  }
+
+  /** IPSR pathway step 4 for bilateral: investments, materials, scaling flags only. */
+  private mapIpsrPathwayStepFourForBilateral(
+    stepFourRaw: unknown,
+  ): Record<string, unknown> | null {
+    if (!stepFourRaw || typeof stepFourRaw !== 'object') return null;
+    const r = stepFourRaw as Record<string, unknown>;
+    const urls = r['scaling_studies_urls'];
+    const hasScaling = r['has_scaling_studies'];
+    const materialsRaw = r['ipsr_materials'];
+    const ipsr_materials =
+      materialsRaw == null
+        ? null
+        : Array.isArray(materialsRaw)
+          ? (materialsRaw as unknown[]).map((m) =>
+              this.slimIpsrStepFourMaterialRow(m),
+            )
+          : materialsRaw;
+    return {
+      initiative_budget: this.mapBilateralBudgetArray(
+        r['initiative_expected_investment'],
+        (row) => this.slimBilateralInitiativeBudgetRow(row),
+      ),
+      bilateral_project_budget: this.mapBilateralBudgetArray(
+        r['bilateral_expected_investment'],
+        (row) => this.slimBilateralProjectBudgetRow(row),
+      ),
+      partner_budget: this.mapBilateralBudgetArray(
+        r['institutions_expected_investment'],
+        (row) => this.slimBilateralPartnerBudgetRow(row),
+      ),
+      ipsr_materials,
+      has_scaling_studies:
+        hasScaling === true ||
+        hasScaling === 1 ||
+        hasScaling === '1' ||
+        hasScaling === 'true',
+      scaling_studies_urls: Array.isArray(urls) ? urls : [],
+    };
+  }
+
+  /**
+   * IPSR pathway step 1 for bilateral list: drop geo / partners (on common `data`),
+   * rename EOI block, align target innovation use with innovation-use summary actors/orgs/measures.
+   */
+  private mapIpsrPathwayStepOneForBilateral(
+    stepOneRaw: Record<string, unknown> | null,
+    filtered: { id?: number; reported_year_id?: number | null },
+  ): Record<string, unknown> | null {
+    if (!stepOneRaw || typeof stepOneRaw !== 'object') return null;
+
+    const resultIdRaw = filtered?.id ?? stepOneRaw['result_id'];
+    const result_id =
+      resultIdRaw == null || !Number.isFinite(Number(resultIdRaw))
+        ? null
+        : Number(resultIdRaw);
+
+    const reportedYear = filtered?.reported_year_id;
+    const year =
+      reportedYear == null || !Number.isFinite(Number(reportedYear))
+        ? null
+        : Number(reportedYear);
+
+    const coreRaw = stepOneRaw['coreResult'];
+    const coreResult =
+      coreRaw && typeof coreRaw === 'object' && !Array.isArray(coreRaw)
+        ? { ...(coreRaw as Record<string, unknown>), year }
+        : { year };
+
+    const workshopRaw = stepOneRaw['result_ip_expert_workshop_organized'];
+    const result_ip_expert_workshop_organized = Array.isArray(workshopRaw)
+      ? (workshopRaw as Array<Record<string, unknown>>).map((w) => ({
+          result_id:
+            w['result_id'] == null ? null : String(w['result_id']).trim(),
+          first_name:
+            w['first_name'] == null ? null : String(w['first_name']).trim(),
+          last_name:
+            w['last_name'] == null ? null : String(w['last_name']).trim(),
+          email: w['email'] == null ? null : String(w['email']).trim(),
+          workshop_role:
+            w['workshop_role'] == null
+              ? null
+              : String(w['workshop_role']).trim(),
+        }))
+      : [];
+
+    return {
+      result_id,
+      coreResult,
+      specify_aspired_outcomes_impact: stepOneRaw['eoiOutcomes'] ?? null,
+      target_innovation_use: this.mapIpsrInnovatonUseToTargetInnovationUseShape(
+        stepOneRaw['innovatonUse'],
+      ),
+      scalig_ambition: stepOneRaw['scalig_ambition'] ?? null,
+      result_ip_expert_workshop_organized,
+    };
+  }
+
+  /**
+   * IPSR pathway step 2 (complementary innovations) for bilateral: expose initiative
+   * `official_code`, drop linkage ids, expose result type `name` instead of id.
+   */
+  private async mapIpsrPathwayStepTwoForBilateral(
+    stepTwoRaw: unknown,
+  ): Promise<unknown> {
+    if (!Array.isArray(stepTwoRaw)) {
+      return stepTwoRaw;
+    }
+    if (stepTwoRaw.length === 0) {
+      return [];
+    }
+
+    const typeIds = new Set<number>();
+    const initiativeIdsMissingCode = new Set<number>();
+
+    for (const raw of stepTwoRaw) {
+      const r = raw as Record<string, unknown>;
+      const rt = Number(r['result_type_id']);
+      if (Number.isFinite(rt) && rt > 0) {
+        typeIds.add(rt);
+      }
+      const codeRaw = r['initiative_official_code'];
+      const codeStr =
+        codeRaw == null || String(codeRaw).trim() === ''
+          ? ''
+          : String(codeRaw).trim();
+      const iid = Number(r['initiative_id']);
+      if (codeStr === '' && Number.isFinite(iid) && iid > 0) {
+        initiativeIdsMissingCode.add(iid);
+      }
+    }
+
+    const [types, clarisaInits] = await Promise.all([
+      typeIds.size > 0
+        ? this.dataSource.getRepository(ResultType).find({
+            where: { id: In([...typeIds]) },
+            select: ['id', 'name'],
+          })
+        : Promise.resolve([] as ResultType[]),
+      initiativeIdsMissingCode.size > 0
+        ? this.dataSource.getRepository(ClarisaInitiative).find({
+            where: { id: In([...initiativeIdsMissingCode]) },
+            select: ['id', 'official_code'],
+          })
+        : Promise.resolve([] as ClarisaInitiative[]),
+    ]);
+
+    const resultTypeNameById = new Map(
+      types.map((t) => [Number(t.id), t.name ?? null]),
+    );
+    const officialCodeByInitiativeId = new Map(
+      clarisaInits.map((i) => [Number(i.id), i.official_code ?? null]),
+    );
+
+    const omitKeys = new Set([
+      'result_by_innovation_package_id',
+      'initiative_id',
+      'result_type_id',
+      'initiative_official_code',
+    ]);
+
+    return stepTwoRaw.map((raw) => {
+      const r = raw as Record<string, unknown>;
+      const rtid = Number(r['result_type_id']);
+      const result_type_name =
+        Number.isFinite(rtid) && rtid > 0
+          ? (resultTypeNameById.get(rtid) ?? null)
+          : null;
+
+      const fromJoin = r['initiative_official_code'];
+      const officialFromJoin =
+        fromJoin == null || String(fromJoin).trim() === ''
+          ? null
+          : String(fromJoin).trim();
+      const iid = Number(r['initiative_id']);
+      const official_code =
+        officialFromJoin ??
+        (Number.isFinite(iid) && iid > 0
+          ? (officialCodeByInitiativeId.get(iid) ?? null)
+          : null);
+
+      const out: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(r)) {
+        if (omitKeys.has(k)) continue;
+        out[k] = v;
+      }
+      out.official_code = official_code;
+      out.result_type_name = result_type_name;
+      return out;
+    });
   }
 
   private async resolveInnovationUseLevelForSummary(
@@ -2852,6 +3523,44 @@ export class BilateralService {
       filtered.policy_change_summary =
         await this.buildPolicyChangeBilateralSummary(filtered.id);
       delete filtered.results_policy_changes_object;
+    }
+    if (filtered.result_type_id === ResultTypeEnum.INNOVATION_USE_IPSR) {
+      try {
+        const ipsrPathwaySummary =
+          await this._pathwayService.getPathwayMetadataForBilateral(
+            filtered.id,
+          );
+        if (ipsrPathwaySummary?.step_one != null) {
+          ipsrPathwaySummary.step_one = this.mapIpsrPathwayStepOneForBilateral(
+            ipsrPathwaySummary.step_one as Record<string, unknown>,
+            filtered,
+          );
+        }
+        if (ipsrPathwaySummary?.step_two != null) {
+          ipsrPathwaySummary.step_two =
+            await this.mapIpsrPathwayStepTwoForBilateral(
+              ipsrPathwaySummary.step_two,
+            );
+        }
+        if (ipsrPathwaySummary?.step_three != null) {
+          ipsrPathwaySummary.step_three =
+            await this.mapIpsrPathwayStepThreeForBilateral(
+              ipsrPathwaySummary.step_three,
+            );
+        }
+        if (ipsrPathwaySummary?.step_four != null) {
+          ipsrPathwaySummary.step_four =
+            this.mapIpsrPathwayStepFourForBilateral(
+              ipsrPathwaySummary.step_four,
+            );
+        }
+        filtered.ipsr_pathway_summary = ipsrPathwaySummary;
+      } catch {
+        this.logger.warn(
+          `Bilateral enrich: could not load IPSR pathway summary for result ${filtered.id}`,
+        );
+        filtered.ipsr_pathway_summary = null;
+      }
     }
     delete filtered.obj_result_by_project;
   }
