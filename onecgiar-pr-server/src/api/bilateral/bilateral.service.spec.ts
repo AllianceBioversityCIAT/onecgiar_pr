@@ -82,6 +82,15 @@ describe('BilateralService (unit)', () => {
       }),
     };
 
+    const pathwayService = {
+      getPathwayMetadataForBilateral: jest.fn().mockResolvedValue({
+        step_one: null,
+        step_two: null,
+        step_three: null,
+        step_four: null,
+      }),
+    };
+
     const makeHandler = (resultType: number) => ({
       resultType,
       afterCreate: jest.fn(),
@@ -137,6 +146,7 @@ describe('BilateralService (unit)', () => {
       resultsCapacityDevelopmentsRepository as any,
       resultsPolicyChangesRepository as any,
       resultQuestionsService as any,
+      pathwayService as any,
       knowledgeProductHandler as any,
       capacityChangeHandler as any,
       innovationDevelopmentHandler as any,

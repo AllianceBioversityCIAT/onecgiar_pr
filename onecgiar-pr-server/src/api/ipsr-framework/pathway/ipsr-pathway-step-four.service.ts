@@ -564,11 +564,6 @@ export class IpsrPathwayStepFourService {
           },
         });
 
-      console.log(
-        'bilateral_expected_investment',
-        bilateral_expected_investment,
-      );
-
       const institutions = await this._resultByInstitutionsRepository.find({
         where: [
           {
