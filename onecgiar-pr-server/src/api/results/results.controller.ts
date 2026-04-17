@@ -402,9 +402,19 @@ export class ResultsController {
       'Marks a result as deleted while keeping the historical record.',
   })
   @ApiParam({ name: 'id', type: Number, required: true })
+  @ApiQuery({
+    name: 'justification',
+    required: false,
+    description:
+      'Optional justification for the deletion (e.g. operational note).',
+  })
   @ApiOkResponse({ description: 'Result flagged as deleted.' })
-  update(@Param('id') id: number, @UserToken() user: TokenDto) {
-    return this.resultsService.deleteResult(id, user);
+  update(
+    @Param('id') id: number,
+    @UserToken() user: TokenDto,
+    @Query('justification') justification?: string,
+  ) {
+    return this.resultsService.deleteResult(id, user, justification);
   }
 
   @Patch('update/geographic/:resiltId')

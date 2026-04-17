@@ -58,12 +58,14 @@ import { AoWBilateralRepository } from '../results-toc-results/repositories/aow-
 import { ResultImpactAreaScoresModule } from '../../result-impact-area-scores/result-impact-area-scores.module';
 import { ResultsTocResultsModule } from '../results-toc-results/results-toc-results.module';
 import { ResultsByInstitutionsModule } from '../results_by_institutions/results_by_institutions.module';
+import { ResultDeletionAuditModule } from '../result-deletion-audit/result-deletion-audit.module';
 
 @Module({
   imports: [
     HttpModule,
     VersioningModule,
     DeleteRecoverDataModule,
+    ResultDeletionAuditModule,
     //resultsservice imports :(
     ResultTypesModule,
     ResultsByInititiativesModule,
