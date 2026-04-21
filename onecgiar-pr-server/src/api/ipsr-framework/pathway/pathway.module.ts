@@ -31,6 +31,7 @@ import { ResultIpMeasureRepository } from '../../ipsr/result-ip-measures/result-
 import { ResultIpImpactAreaRepository } from '../../ipsr/innovation-pathway/repository/result-ip-impact-area-targets.repository';
 import { ResultCountrySubnationalRepository } from '../../results/result-countries-sub-national/repositories/result-country-subnational.repository';
 import { ResultIpExpertWorkshopOrganizedRepostory } from '../../ipsr/innovation-pathway/repository/result-ip-expert-workshop-organized.repository';
+import { InnovationPathwayServicesModule } from '../../ipsr/innovation-pathway/innovation-pathway-services.module';
 
 @Module({
   controllers: [PathwayController],
@@ -66,7 +67,9 @@ import { ResultIpExpertWorkshopOrganizedRepostory } from '../../ipsr/innovation-
   ],
   imports: [
     forwardRef(() => VersioningModule),
+    InnovationPathwayServicesModule,
     TypeOrmModule.forFeature([ResultScalingStudyUrl]),
   ],
+  exports: [PathwayService],
 })
 export class PathwayModule {}

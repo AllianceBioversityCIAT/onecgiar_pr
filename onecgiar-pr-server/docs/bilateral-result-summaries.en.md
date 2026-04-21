@@ -18,7 +18,7 @@ Each item in a list response typically looks like:
 
 | Property       | Meaning |
 |----------------|---------|
-| `type`         | String discriminator, e.g. `knowledge_product`, `capacity_sharing`, `innovation_development`, `innovation_use`, `policy_change`. |
+| `type`         | String discriminator, e.g. `knowledge_product`, `capacity_sharing`, `innovation_development`, `innovation_use`, `innovation_package`, `policy_change`. |
 | `result_id`    | Numeric id of the result row. |
 | `data`         | Full enriched result document: common PRMS fields **plus** the summary for that type (when applicable). |
 
@@ -247,11 +247,13 @@ Structured demand **without** internal ids:
 
 ### Budgets and evidence (shared pattern with Innovation use budgets)
 
+The three budget arrays use the **same row shape** everywhere in bilateral summaries (Innovation development, Innovation use, and IPSR `step_four`): Clarisa-facing ids and amounts only — no PRMS join PKs, audit columns, or role flags on the row.
+
 | Field | Meaning |
 |-------|---------|
-| `initiative_budget[]` | Per contributing initiative: codes, names, year amounts, `kind_cash`, `is_determined`. |
-| `bilateral_project_budget[]` | Per bilateral project: short name, cash/in-kind splits, `is_determined`. |
-| `partner_budget[]` | Per partner institution budget line. |
+| `initiative_budget[]` | Each row: `current_year`, `next_year`, `kind_cash`, `is_determined`, **`initiative`** `{ id, official_code, name }` — `id` is the Clarisa initiative id. |
+| `bilateral_project_budget[]` | Each row: `in_cash`, `in_kind`, `kind_cash`, `is_determined`, **`project`** `{ id, short_name, full_name }` — `id` is the Clarisa project id. |
+| `partner_budget[]` | Each row: `kind_cash`, `in_cash`, `in_kind`, `is_determined`, **`institutions_id`** (Clarisa institution id), **`institution`** `{ id, name, acronym, institution_type_name }` (`id` matches Clarisa). |
 | `reference_materials[]` | `{ link }` from evidence type “materials”. |
 | `evidence_of_user_need_user_demand[]` | `{ link }` from evidence type user need / demand. |
 | `scaling_study_urls[]` | URLs when readiness is high enough to require scaling studies. |
@@ -343,6 +345,72 @@ Portfolio **P25** uses the **V2** question set; otherwise legacy P22. On load fa
 
 ---
 
+## 6. Innovation package (IPSR) — `ipsr_pathway_summary`
+
+**When:** `type === "innovation_package"` (PRMS result type id 10 — Innovation Package / IPSR).
+
+**Purpose:** Exposes the **four IPSR pathway steps** in one object for bilateral list consumers. **Steps one–four** use **bilateral-specific** shapes below (steps one–three aligned with PRMS IPSR UI; step four is a slim investments/materials/scaling slice).
+
+| Field | Meaning |
+|-------|---------|
+| `step_one` | See **Step one shape** below, or `null` if step one could not be loaded. |
+| `step_two` | Array of complementary innovations — see **Step two shape**; or `null` if not loaded. |
+| `step_three` | See **Step three shape**; or `null` if not loaded. |
+| `step_four` | See **Step four shape**; or `null` if not loaded. |
+
+### Step one shape (`ipsr_pathway_summary.step_one`)
+
+| Field | Meaning |
+|-------|---------|
+| `result_id` | Package result id. |
+| `coreResult` | Core innovation row from step-one SQL **plus** `year`: reporting year from the result’s `reported_year_id`. |
+| `specify_aspired_outcomes_impact` | Former `eoiOutcomes` list from pathway step one. |
+| `target_innovation_use` | Same structure as innovation use bilateral **`current_section`**: `actors[]`, `organizations[]`, `other_quantitative[]` (mapped with the same rules as innovation use). |
+| `scalig_ambition` | Scaling ambition object from pathway step one (unchanged key spelling). |
+| `result_ip_expert_workshop_organized` | Workshop participants; each item only `result_id`, `first_name`, `last_name`, `email`, `workshop_role`. |
+
+### Step two shape (`ipsr_pathway_summary.step_two`)
+
+Array of complementary innovation rows (same base data as `getStepTwoOne`), with these bilateral adjustments on **each** item:
+
+| Change | Meaning |
+|--------|---------|
+| `official_code` | Clarisa initiative **official_code** (from the step-two query join, or resolved from `initiative_id` when the join code is missing). **`initiative_id` is not returned.** |
+| (removed) | **`result_by_innovation_package_id`** is omitted. |
+| `result_type_name` | Human-readable **`result_type.name`** from PRMS. **`result_type_id` is not returned.** |
+| Other fields | Unchanged from the pathway response when present (e.g. `result_id`, `result_code`, `title`, `description`, `version_id`, `is_active`, …). |
+
+### Step three shape (`ipsr_pathway_summary.step_three`)
+
+Structured like PRMS **Step 3: Scaling readiness assessment** (not the raw `getStepThree` ORM dump).
+
+| Field | Meaning |
+|-------|---------|
+| `result_core_innovation` | `{ core_result_code, core_title, core_result_current_phase }` (unchanged from pathway). |
+| `result_innovation_package` | `is_expert_workshop_organized` only. Evidence-based readiness/use levels are on **`evidence_based_assessment`** (core + complementary rows), matching how PRMS step 3 saves data — not on the package row. |
+| `expert_workshop` | `null` if no expert workshop was organized. Otherwise: `is_expert_workshop_organized`, `what_was_assessed_during_expert_workshop` `{ id, name }` from catalog `assessed_during_expert_workshop`, `assessment_mode` (`none_of_above` \| `current_only` \| `current_and_potential` \| `null`), and `workshop_level_assignments` — see below. |
+| `evidence_based_assessment` | `core_innovation` and `complementary_innovations[]`: each row has **Innovation Readiness level evidence-based** and **Innovation use level evidence-based** as Clarisa slim objects, plus **`readinees_evidence_link`**, **`readiness_details_of_evidence`**, **`use_evidence_link`**, **`use_details_of_evidence`** (same concepts as step 3 in PRMS and as innovation use bilateral level blocks). |
+| `target_innovation_use` | Current use block: `actors[]`, `organizations[]`, `other_quantitative[]` (same mappers as innovation use bilateral / step one `target_innovation_use`). |
+
+**Expert workshop `workshop_level_assignments`:** `null` when `assessment_mode` is `none_of_above`, unknown, or not organized (equivalent to hiding the readiness/use table in PRMS for “None of the above”). When `current_only` (id **1** in catalog): `core_innovation` and `complementary_innovations[]` each include **`current`** only — `innovation_readiness_level` and `innovation_use_level` as Clarisa slim objects (workshop self-assessed **current** levels). When `current_and_potential` (id **2**): each row also includes **`potential`** with the same two Clarisa slim fields (12‑month potential levels).
+
+### Step four shape (`ipsr_pathway_summary.step_four`)
+
+Only these keys appear, in this order (same data sources as `getStepFour`, without pictures, PDF, unit times, publish flags, etc.):
+
+| Field | Meaning |
+|-------|---------|
+| `initiative_budget` | Initiative budget lines from step 4, **same row shape** as Innovation development / Innovation use `initiative_budget[]` (see §2 budgets table). |
+| `bilateral_project_budget` | Bilateral / Clarisa project budget lines — same shape as Inno Dev / Inno Use `bilateral_project_budget[]`. |
+| `partner_budget` | Partner institution budget lines — same shape as Inno Dev / Inno Use `partner_budget[]`. |
+| `ipsr_materials` | Evidence rows with type **materials** (source `evidence_type_id` 4 in PRMS); each item omits audit/typing flags (`creation_date`, `last_updated_date`, `description`, cross-cutting booleans, `is_supplementary`, `is_sharepoint`, `evidence_type_id`, etc.). |
+| `has_scaling_studies` | Boolean from the innovation package record. |
+| `scaling_studies_urls` | URLs linked to scaling studies for the package. |
+
+**Note:** Steps one–four are tailored for bilateral consumers.
+
+---
+
 ## Types without a dedicated summary in this flow
 
 Other bilateral-supported types (e.g. other output / other outcome) may **not** add a `*_summary` object; they still receive the **shared** enrichment on `data`.
@@ -357,6 +425,12 @@ Other bilateral-supported types (e.g. other output / other outcome) may **not** 
 | 2026 | Policy change: `result_related_to` from `ResultQuestionsService`; removed duplicate engagement-only field from bilateral JSON. |
 | 2026 | Policy change & capacity sharing summaries: omit `created_date` / `last_updated_date` on the **type summary** object only (core `data` still carries result-level dates). |
 | 2026 | `leading_result` reflects `is_lead_by_partner` (partner vs centre); `last_submission` for status QA/Submitted; Clarisa `id` on policy type/stage, implementing orgs, innovation typology; KP summary = `handle` only; cap sharing `institutions` renamed to `on_behalf_organizations`; policy change implementing orgs as `policy_implementing_organizations`. |
+| 2026 | Innovation package (IPSR): list `type` `innovation_package`; `ipsr_pathway_summary` with `step_one`–`step_four` from pathway services. |
+| 2026 | IPSR bilateral `step_two`: `official_code`, `result_type_name`; drop `result_by_innovation_package_id`, `initiative_id`, `result_type_id`, `initiative_official_code`. |
+| 2026 | IPSR bilateral `step_three`: expert workshop selection + conditional workshop levels; evidence-based readiness/use + links + details; `target_innovation_use`. |
+| 2026 | IPSR bilateral `step_three`: `result_innovation_package` flags only (evidence-based levels under `evidence_based_assessment`); no `result_ip_expert_workshop_organized` on step 3. |
+| 2026 | IPSR bilateral `step_four`: only initiative/bilateral/institution investments, `ipsr_materials`, `has_scaling_studies`, `scaling_studies_urls`. |
+| 2026 | Bilateral budget rows unified: `initiative_budget` / `bilateral_project_budget` / `partner_budget` share one slim shape (Clarisa `initiative` / `project` / `institution` objects + amounts); IPSR `step_four` uses these **same keys and row shape** (replacing raw `initiative_expected_investment` / `bilateral_expected_investment` / `institutions_expected_investment` on the bilateral payload only). |
 
 ---
 
