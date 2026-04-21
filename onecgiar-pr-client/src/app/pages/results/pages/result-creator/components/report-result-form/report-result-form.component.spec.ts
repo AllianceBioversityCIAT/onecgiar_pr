@@ -7,7 +7,7 @@ import { PhasesService } from '../../../../../../shared/services/global/phases.s
 import { TerminologyService } from '../../../../../../internationalization/terminology.service';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { RouterTestingModule } from '@angular/router/testing';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { ResultBody } from '../../../../../../shared/interfaces/result.interface';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { TermPipe } from '../../../../../../internationalization/term.pipe';
@@ -288,14 +288,18 @@ describe('ReportResultFormComponent', () => {
       expect(component.depthSearchList[0].phase).toBeDefined();
     });
 
-    it('should set exactTitleFound when exact match is found', () => {
+    it('should set exactTitleFound when exact match is confirmed after recheck', () => {
+      jest.useFakeTimers();
       const mockResults = [{ id: 1, title: 'Test Result', version_id: 1 }];
       mockApiService.resultsSE.GET_FindResultsElastic = jest.fn(() => of(mockResults));
       component.allPhases = mockPhases.reporting;
 
       component.depthSearch('Test Result');
+      jest.advanceTimersByTime(700);
 
       expect(component.exactTitleFound()).toBe(true);
+      expect(component.blockingExactTitleFound()).toBe(true);
+      jest.useRealTimers();
     });
 
     it('should handle errors gracefully', () => {
@@ -552,14 +556,71 @@ describe('ReportResultFormComponent', () => {
       expect(component.loadingDepthSearch()).toBe(false);
     });
 
-    it('should set debounceTimer for non-empty title', (done) => {
-      jest.spyOn(component, 'depthSearch').mockImplementation(() => {});
+    it('should debounce title search requests', () => {
+      jest.useFakeTimers();
+      fixture.detectChanges();
+      mockApiService.resultsSE.GET_FindResultsElastic.mockClear();
+
       component.onTitleChange('test title');
       expect(component.loadingDepthSearch()).toBe(true);
-      setTimeout(() => {
-        expect(component.depthSearch).toHaveBeenCalledWith('test title');
-        done();
-      }, 600);
+      expect(mockApiService.resultsSE.GET_FindResultsElastic).not.toHaveBeenCalled();
+
+      jest.advanceTimersByTime(500);
+      expect(mockApiService.resultsSE.GET_FindResultsElastic).toHaveBeenCalledWith('test title', '');
+      jest.useRealTimers();
+    });
+
+    it('should only apply latest request when previous request resolves later', () => {
+      jest.useFakeTimers();
+      fixture.detectChanges();
+      component.allPhases = mockPhases.reporting;
+      const firstRequest$ = new Subject<any[]>();
+      const secondRequest$ = new Subject<any[]>();
+
+      mockApiService.resultsSE.GET_FindResultsElastic = jest
+        .fn()
+        .mockReturnValueOnce(firstRequest$.asObservable())
+        .mockReturnValueOnce(secondRequest$.asObservable());
+
+      component.onTitleChange('first title');
+      jest.advanceTimersByTime(500);
+      component.onTitleChange('second title');
+      jest.advanceTimersByTime(500);
+
+      secondRequest$.next([{ id: 2, title: 'second title', version_id: 1 }]);
+      secondRequest$.complete();
+      jest.advanceTimersByTime(700);
+
+      expect(component.exactTitleFound()).toBe(false);
+      expect(component.depthSearchList[0]?.title).toBe('second title');
+
+      firstRequest$.next([{ id: 1, title: 'first title', version_id: 1 }]);
+      firstRequest$.complete();
+      jest.advanceTimersByTime(700);
+
+      expect(component.depthSearchList[0]?.title).toBe('second title');
+      expect(component.blockingExactTitleFound()).toBe(false);
+      jest.useRealTimers();
+    });
+
+    it('should clear exact blocking when recheck does not confirm the match', () => {
+      jest.useFakeTimers();
+      fixture.detectChanges();
+      component.allPhases = mockPhases.reporting;
+
+      mockApiService.resultsSE.GET_FindResultsElastic = jest
+        .fn()
+        .mockReturnValueOnce(of([{ id: 1, title: 'Exact title', version_id: 1 }]))
+        .mockReturnValueOnce(of([]));
+
+      component.onTitleChange('Exact title');
+      jest.advanceTimersByTime(500);
+      jest.advanceTimersByTime(700);
+
+      expect(component.exactTitleFound()).toBe(false);
+      expect(component.blockingExactTitleFound()).toBe(false);
+      expect(component.loadingDepthSearch()).toBe(false);
+      jest.useRealTimers();
     });
   });
 
