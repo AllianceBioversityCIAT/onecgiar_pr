@@ -14,7 +14,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { firstValueFrom } from 'rxjs';
 import { Version } from '../versioning/entities/version.entity';
-import { PLATFORM_REPORT_CONSTANTS } from './platform-report.constants';
+import {
+  PLATFORM_REPORT_CONSTANTS,
+  isIpsrP25ResultType,
+  type P25PdfGenerateUrlLayout,
+} from './platform-report.constants';
 import type {
   PdfGenerateUrlPayload,
   PdfGenerateUrlResponse,
@@ -100,7 +104,7 @@ export class PlatformReportService implements OnModuleInit {
           version_id: cleanPhaseInput,
           is_active: true,
         },
-        select: ['source'],
+        select: ['source', 'result_type_id'],
       });
 
       const report = await this._platformReportRepository.findOne({
@@ -295,6 +299,7 @@ export class PlatformReportService implements OnModuleInit {
           resultToCheck.source,
           fileName,
           bucketName,
+          resultToCheck?.result_type_id,
         );
         const response = await firstValueFrom(
           this.client.send<PdfGenerateUrlResponse>(
@@ -419,14 +424,20 @@ export class PlatformReportService implements OnModuleInit {
     source: string,
     fileName: string,
     bucketName: string,
+    resultTypeId?: number | null,
   ): PdfGenerateUrlPayload {
-    const { P25, P25_BILATERAL } = PLATFORM_REPORT_CONSTANTS;
+    const { RESULT_P25, RESULT_P25_BILATERAL, IPSR_2025 } =
+      PLATFORM_REPORT_CONSTANTS;
 
-    const platformReportConstants =
+    let platformReportConstants: P25PdfGenerateUrlLayout = RESULT_P25;
+    if (isIpsrP25ResultType(resultTypeId)) {
+      platformReportConstants = IPSR_2025;
+    } else if (
       source === SourceEnum.Bilateral &&
       data.primary_submitter_acronym !== 'SGP-02'
-        ? P25_BILATERAL
-        : P25;
+    ) {
+      platformReportConstants = RESULT_P25_BILATERAL;
+    }
 
     return {
       data,
