@@ -51,7 +51,7 @@ export class ResultsKnowledgeProductMapper {
 
     const countryCodes =
       mqapResponseDto?.['Country ISO code'] &&
-        mqapResponseDto['Country ISO code'].length > 0
+      mqapResponseDto['Country ISO code'].length > 0
         ? mqapResponseDto['Country ISO code']
         : (mqapResponseDto?.Countries ?? []);
 
@@ -439,16 +439,16 @@ export class ResultsKnowledgeProductMapper {
 
     knowledgeProductDto.metadataCG = knowledgeProductDto.metadata.length
       ? {
-        ...knowledgeProductDto.metadata[0],
-        source: knowledgeProductDto.metadata[0]?.source,
-      }
+          ...knowledgeProductDto.metadata[0],
+          source: knowledgeProductDto.metadata[0]?.source,
+        }
       : null;
 
     knowledgeProductDto.metadataWOS = knowledgeProductDto.metadata.length
       ? {
-        ...knowledgeProductDto.metadata[1],
-        source: knowledgeProductDto.metadata[1]?.source,
-      }
+          ...knowledgeProductDto.metadata[1],
+          source: knowledgeProductDto.metadata[1]?.source,
+        }
       : null;
 
     const altmetric =
