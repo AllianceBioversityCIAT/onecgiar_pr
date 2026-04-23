@@ -252,17 +252,19 @@ export class ResultsKnowledgeProductMapper {
   private getAsArray<T>(arg: T | T[]): T[] {
     if (arg == null) {
       return [];
-    } else if (!Array.isArray(arg)) {
-      return [arg];
-    } else {
+    }
+    if (Array.isArray(arg)) {
       return arg;
     }
+    return [arg];
   }
 
   private getAltmetricInfoFromMQAPResponse(
     dto: MQAPResultDto,
   ): ResultsKnowledgeProductAltmetricDto {
-    const altmetricDto = dto?.DOI_Info?.altmetric;
+    // MQAP may send Altmetric on DOI_Info (WOS/DOI path) or on handle_altmetric (CGSpace handle path).
+    const altmetricDto =
+      dto?.DOI_Info?.altmetric ?? dto?.handle_altmetric ?? undefined;
     if (!altmetricDto) {
       return undefined;
     }
@@ -270,7 +272,11 @@ export class ResultsKnowledgeProductMapper {
     const altmetric: ResultsKnowledgeProductAltmetricDto =
       new ResultsKnowledgeProductAltmetricDto();
 
-    altmetric.altmetric_id = altmetricDto?.altmetric_id;
+    const rawId = altmetricDto?.altmetric_id;
+    altmetric.altmetric_id =
+      rawId !== undefined && rawId !== null && rawId !== ''
+        ? String(rawId)
+        : undefined;
 
     altmetric.cited_by_blogs = altmetricDto?.cited_by_feeds_count;
     altmetric.cited_by_delicious = altmetricDto?.cited_by_delicious_count;
