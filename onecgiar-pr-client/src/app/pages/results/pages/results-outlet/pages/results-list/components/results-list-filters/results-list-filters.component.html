@@ -141,12 +141,15 @@
               <app-pr-field-header [label]="group.section" [required]="false"></app-pr-field-header>
               <div class="p25-columns-list">
                 @for (col of group.columns; track col) {
-                  <label style="display:flex; align-items:center; gap:0.5rem">
+                  <label
+                    class="p25-optional-col-label"
+                    [class.p25-optional-col-label--coming-soon]="isP25OptionalColumnComingSoon(col)">
                     <input
                       type="checkbox"
+                      [disabled]="isP25OptionalColumnComingSoon(col)"
                       [checked]="isP25OptionalColumnSelected(col)"
                       (change)="toggleP25OptionalColumn(col, $any($event.target).checked)" />
-                    <span>{{ getP25ColumnLabel(col) }}</span>
+                    <span>{{ getP25OptionalColumnLabel(col) }}</span>
                   </label>
                 }
               </div>

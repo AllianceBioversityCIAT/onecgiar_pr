@@ -62,17 +62,36 @@ const P25_OPTIONAL_EXPORT_SECTIONS: Array<{ section: string; columns: string[] }
   },
   {
     section: 'Contributors and partners',
-    columns: ['bilateral_projects', 'contributing_centers', 'partners', 'authors_affiliations_kp', 'result_lead']
+    columns: [
+      'primary_submitter_toc_mapping',
+      'contributor_toc_mapping',
+      'bilateral_projects',
+      'contributing_centers',
+      'partners',
+      'authors_affiliations_kp',
+      'result_lead',
+    ],
   },
   {
     section: 'Geographic location',
-    columns: ['geo_focus', 'regions', 'countries', 'subnational']
+    columns: ['geo_focus', 'regions', 'countries', 'subnational'],
   },
   {
     section: 'Evidence',
-    columns: ['evidences']
-  }
+    columns: ['evidences'],
+  },
+  {
+    section: 'Section 5',
+    columns: ['section_5_metadata'],
+  },
 ];
+
+/** Optional columns shown in the drawer but not yet available in the export (disabled + “Coming soon”). */
+const P25_OPTIONAL_COMING_SOON_COLUMNS = new Set<string>([
+  'primary_submitter_toc_mapping',
+  'contributor_toc_mapping',
+  'section_5_metadata',
+]);
 
 const P25_COLUMN_LABEL_OVERRIDES: Record<string, string> = {
   result_code: 'Result Code',
@@ -100,6 +119,9 @@ const P25_COLUMN_LABEL_OVERRIDES: Record<string, string> = {
   partners: 'Partners',
   authors_affiliations_kp: 'Authors Affiliations (KP)',
   result_lead: 'Result Lead',
+  primary_submitter_toc_mapping: 'Primary submitter ToC Mapping',
+  contributor_toc_mapping: 'Contributor ToC Mapping',
+  section_5_metadata: 'Include metadata',
   geo_focus: 'Geographic Focus',
   regions: 'Regions',
   countries: 'Countries',
@@ -626,9 +648,9 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
       clearTimeout(this.p25CloseTimer);
       this.p25CloseTimer = null;
     }
-    this.p25OptionalSelectedColumns.set(
-      Array.from(new Set(this.p25OptionalSections.flatMap(s => s.columns))),
-    );
+    const optionalAll = this.p25OptionalSections.flatMap(s => s.columns);
+    const selectable = optionalAll.filter(c => !P25_OPTIONAL_COMING_SOON_COLUMNS.has(c));
+    this.p25OptionalSelectedColumns.set(Array.from(new Set(selectable)));
     const ae = document.activeElement;
     this.p25FocusBeforeOpen = ae instanceof HTMLElement ? ae : null;
     this.p25ColumnDrawerMotionOpen.set(false);
@@ -673,6 +695,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   }
 
   toggleP25OptionalColumn(column: string, checked: boolean) {
+    if (P25_OPTIONAL_COMING_SOON_COLUMNS.has(column)) return;
     const current = this.p25OptionalSelectedColumns();
     if (checked) {
       this.p25OptionalSelectedColumns.set(Array.from(new Set([...current, column])));
@@ -682,7 +705,17 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   }
 
   isP25OptionalColumnSelected(column: string): boolean {
+    if (P25_OPTIONAL_COMING_SOON_COLUMNS.has(column)) return false;
     return this.p25OptionalSelectedColumns().includes(column);
+  }
+
+  isP25OptionalColumnComingSoon(column: string): boolean {
+    return P25_OPTIONAL_COMING_SOON_COLUMNS.has(column);
+  }
+
+  getP25OptionalColumnLabel(column: string): string {
+    const base = this.getP25ColumnLabel(column);
+    return this.isP25OptionalColumnComingSoon(column) ? `${base} (Coming soon)` : base;
   }
 
   confirmP25ColumnsAndExport() {
