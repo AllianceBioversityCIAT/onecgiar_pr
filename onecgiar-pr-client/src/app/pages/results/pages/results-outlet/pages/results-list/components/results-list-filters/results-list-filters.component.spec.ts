@@ -71,7 +71,9 @@ describe('ResultsListFiltersComponent', () => {
       selectedSubmittersAdmin: createSignal<any[]>([]),
       selectedLeadCenters: createSignal<any[]>([]),
       centerOptions: createSignal<any[]>([]),
-      fundingSourceOptions: createSignal<any[]>([])
+      fundingSourceOptions: createSignal<any[]>([]),
+      filterCreatedByMe: createSignal(false),
+      filterSubmittedByMe: createSignal(false)
     };
 
     // Create spy for the set method
