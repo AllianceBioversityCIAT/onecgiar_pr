@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { randomUUID } from 'crypto';
-import { env } from 'process';
+import { randomUUID } from 'node:crypto';
+import { env } from 'node:process';
 import * as AWS from 'aws-sdk';
 import ExcelJS from 'exceljs';
 import { EmailNotificationManagementService } from '../../../shared/microservices/email-notification-management/email-notification-management.service';
@@ -45,6 +45,9 @@ function p25PhaseYears(): number[] {
 }
 
 function getThrownMessage(err: unknown): string {
+  if (err instanceof Error) {
+    return err.message;
+  }
   if (
     typeof err === 'object' &&
     err !== null &&
@@ -53,14 +56,39 @@ function getThrownMessage(err: unknown): string {
   ) {
     return (err as { message: string }).message;
   }
-  if (err instanceof Error) {
-    return err.message;
+  if (typeof err === 'string') {
+    return err;
   }
-  return String(err);
+  if (typeof err === 'object' && err !== null) {
+    try {
+      return JSON.stringify(err);
+    } catch {
+      return 'Unserializable object';
+    }
+  }
+  if (err === undefined) {
+    return 'undefined';
+  }
+  if (err === null) {
+    return 'null';
+  }
+  if (
+    typeof err === 'number' ||
+    typeof err === 'boolean' ||
+    typeof err === 'bigint' ||
+    typeof err === 'symbol'
+  ) {
+    return String(err);
+  }
+  if (typeof err === 'function') {
+    const fn = err as { name?: string };
+    return `[function ${fn.name?.trim() ? fn.name : 'anonymous'}]`;
+  }
+  return 'Unknown error value';
 }
 
 function sanitizeSheetName(name: string): string {
-  const cleaned = name.replace(/[:\\/*?[\]]/g, '_').trim() || 'Sheet';
+  const cleaned = name.replaceAll(/[:\\/*?[\]]/g, '_').trim() || 'Sheet';
   return cleaned.length > 31 ? cleaned.slice(0, 31) : cleaned;
 }
 
@@ -108,6 +136,34 @@ function pickColumns(
   return out;
 }
 
+/** Sheet grouping key: avoids String(object) → '[object Object]' for unknown cell values. */
+function tabularResultTypeKey(value: unknown, fallback: string): string {
+  if (value === null || value === undefined) {
+    return fallback;
+  }
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (
+    typeof value === 'number' ||
+    typeof value === 'boolean' ||
+    typeof value === 'bigint'
+  ) {
+    return String(value);
+  }
+  if (typeof value === 'symbol') {
+    return value.toString();
+  }
+  if (typeof value === 'object') {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return fallback;
+    }
+  }
+  return fallback;
+}
+
 @Injectable()
 export class ReportingFullMetadataExportService {
   private readonly _logger = new Logger(
@@ -123,7 +179,7 @@ export class ReportingFullMetadataExportService {
 
   getJob(jobId: string, userId: number): ReportingExportJob | null {
     const job = this._jobs.get(jobId);
-    if (!job || job.userId !== userId) return null;
+    if (job?.userId !== userId) return null;
     return { ...job };
   }
 
@@ -227,7 +283,7 @@ export class ReportingFullMetadataExportService {
 
     const validRows = basicRows.filter(
       (r) => r.result_code != null && r.version_id != null,
-    ) as Record<string, unknown>[];
+    );
     if (validRows.length < basicRows.length) {
       this._logger.warn(
         `${basicRows.length - validRows.length} list row(s) lacked result_code or version_id and were ignored.`,
@@ -272,17 +328,25 @@ export class ReportingFullMetadataExportService {
 
       for (const row of p25Rows) {
         const flat = pickColumns(normalizeTabularRow(row), selectedP25Columns);
-        const typeKey = String(flat['result_type'] ?? 'P25');
-        if (!byType.has(typeKey)) byType.set(typeKey, []);
-        byType.get(typeKey)!.push(flat);
+        const typeKey = tabularResultTypeKey(flat['result_type'], 'P25');
+        let bucket = byType.get(typeKey);
+        if (!bucket) {
+          bucket = [];
+          byType.set(typeKey, bucket);
+        }
+        bucket.push(flat);
       }
     } else {
       // Non-P25 path: reuse legacy reporting list rows directly (no per-result DB function/procedure).
       for (const basicRow of basicRows) {
         const flat = normalizeTabularRow(basicRow);
-        const typeKey = String(basicRow['result_type'] ?? 'Legacy');
-        if (!byType.has(typeKey)) byType.set(typeKey, []);
-        byType.get(typeKey)!.push(flat);
+        const typeKey = tabularResultTypeKey(basicRow['result_type'], 'Legacy');
+        let bucket = byType.get(typeKey);
+        if (!bucket) {
+          bucket = [];
+          byType.set(typeKey, bucket);
+        }
+        bucket.push(flat);
       }
     }
 
@@ -410,8 +474,7 @@ export class ReportingFullMetadataExportService {
         : {}),
       emailBody: {
         subject: '[PRMS] Your results export is ready',
-        // TODO: restore to: [user.email] after testing
-        to: ['j.delgado@cgiar.org'],
+        to: ['j.delgado@cgiar.org', user?.email],
         message: { text: textBody },
       },
     };
