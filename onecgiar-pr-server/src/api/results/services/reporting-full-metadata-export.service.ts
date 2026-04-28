@@ -36,7 +36,9 @@ function defaultMaxRows(): number | null {
 }
 
 function dbFunctionName(): string {
-  return env.RESULT_FULL_METADATA_DB_FUNCTION?.trim() || 'resultFullDataByResultCode';
+  return (
+    env.RESULT_FULL_METADATA_DB_FUNCTION?.trim() || 'resultFullDataByResultCode'
+  );
 }
 
 /** P25 phases that should use the tabular view path (comma-separated years, default: 2025). */
@@ -75,7 +77,9 @@ function sanitizeSheetName(name: string): string {
   return cleaned.length > 31 ? cleaned.slice(0, 31) : cleaned;
 }
 
-function parseProcedureResult(row: { result?: unknown } | undefined): Record<string, unknown> | null {
+function parseProcedureResult(
+  row: { result?: unknown } | undefined,
+): Record<string, unknown> | null {
   if (!row) return null;
   let payload: unknown = row.result;
   if (typeof payload === 'string') {
@@ -107,10 +111,7 @@ function isScalarSubqueryTooManyRowsError(err: unknown): boolean {
   const errno = getMysqlErrno(err);
   if (errno === MYSQL_ERR_SUBQUERY_TOO_MANY_ROWS) return true;
   const msg = getThrownMessage(err);
-  return (
-    msg.includes('more than one row') ||
-    msg.includes('ER_TOO_MANY_ROWS')
-  );
+  return msg.includes('more than one row') || msg.includes('ER_TOO_MANY_ROWS');
 }
 
 type BatchFullMetaItem = {
@@ -162,7 +163,9 @@ function flattenFullRow(
   return out;
 }
 
-function normalizeTabularRow(row: Record<string, unknown>): Record<string, unknown> {
+function normalizeTabularRow(
+  row: Record<string, unknown>,
+): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(row)) {
     if (v !== null && typeof v === 'object') {
@@ -206,7 +209,9 @@ function pickColumns(
 
 @Injectable()
 export class ReportingFullMetadataExportService {
-  private readonly _logger = new Logger(ReportingFullMetadataExportService.name);
+  private readonly _logger = new Logger(
+    ReportingFullMetadataExportService.name,
+  );
   private readonly _jobs = new Map<string, ReportingExportJob>();
 
   constructor(
@@ -228,7 +233,10 @@ export class ReportingFullMetadataExportService {
    * and processed by ReportingMetadataExportConsumer; otherwise setImmediate (same Node process).
    * Email → EmailNotificationManagementService → RMQ email MS.
    */
-  enqueueExport(filters: BasicReportFiltersDto, user: TokenDto): {
+  enqueueExport(
+    filters: BasicReportFiltersDto,
+    user: TokenDto,
+  ): {
     jobId: string;
   } {
     const jobId = randomUUID();
@@ -297,7 +305,8 @@ export class ReportingFullMetadataExportService {
     job.status = 'processing';
 
     const maxRows = defaultMaxRows();
-    const listRes = await this._resultsService.getResultDataForBasicReport(filters);
+    const listRes =
+      await this._resultsService.getResultDataForBasicReport(filters);
     const basicRows = (listRes?.response ?? []) as Record<string, unknown>[];
 
     if (maxRows != null && basicRows.length > maxRows) {

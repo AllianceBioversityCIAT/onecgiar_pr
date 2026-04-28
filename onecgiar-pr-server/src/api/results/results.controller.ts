@@ -539,13 +539,17 @@ export class ResultsController {
       'Builds one workbook with sheets grouped by result type. Each row is produced from the DB function configured via RESULT_FULL_METADATA_DB_FUNCTION (default resultFullDataByResultCode). When REPORTING_METADATA_EXPORT_QUEUE and RABBITMQ_URL are set, work is published to that queue and consumed by this API (hybrid RMQ); otherwise processing runs inline with setImmediate on this instance. Email is sent via the notifications microservice (EMAIL_QUEUE). When done, the user receives a time-limited S3 download link. Job status remains in-memory on the instance that registered the job (see GET jobs/:jobId).',
   })
   @ApiBody({ type: BasicReportFiltersDto })
-  @ApiOkResponse({ description: 'Job queued; use GET .../jobs/:jobId for status.' })
+  @ApiOkResponse({
+    description: 'Job queued; use GET .../jobs/:jobId for status.',
+  })
   queueReportingFullMetadataExport(
     @Body() body: BasicReportFiltersDto,
     @UserToken() user: TokenDto,
   ) {
-    const { jobId } =
-      this.reportingFullMetadataExportService.enqueueExport(body, user);
+    const { jobId } = this.reportingFullMetadataExportService.enqueueExport(
+      body,
+      user,
+    );
     return {
       response: { jobId },
       message: 'Export queued',
@@ -554,7 +558,9 @@ export class ResultsController {
   }
 
   @Get('get/reporting/full-metadata-export/jobs/:jobId')
-  @ApiOperation({ summary: 'Get status of a reporting full-metadata export job' })
+  @ApiOperation({
+    summary: 'Get status of a reporting full-metadata export job',
+  })
   @ApiParam({ name: 'jobId', type: String })
   getReportingFullMetadataExportJob(
     @Param('jobId') jobId: string,

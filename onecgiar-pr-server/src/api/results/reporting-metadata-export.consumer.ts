@@ -17,7 +17,9 @@ export class ReportingMetadataExportConsumer {
   ) {}
 
   @EventPattern(REPORTING_METADATA_EXPORT_RMQ_PATTERN)
-  async handle(@Payload() payload: ReportingMetadataExportJobPayload): Promise<void> {
+  async handle(
+    @Payload() payload: ReportingMetadataExportJobPayload,
+  ): Promise<void> {
     await this._exportService.executeQueuedExportJob(payload);
   }
 }

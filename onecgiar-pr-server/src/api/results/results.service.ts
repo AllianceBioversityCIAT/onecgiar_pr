@@ -265,7 +265,9 @@ export class ResultsService {
         !createResultDto?.result_level_id
       ) {
         throw this._handlersError.returnErrorRes({
-          error: new Error('Missing data: Result name, Initiative or Result type'),
+          error: new Error(
+            'Missing data: Result name, Initiative or Result type',
+          ),
           debug: true,
         });
       }

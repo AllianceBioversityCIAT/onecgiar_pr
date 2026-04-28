@@ -5,7 +5,8 @@ export const REPORTING_METADATA_EXPORT_QUEUE_CLIENT =
   'REPORTING_METADATA_EXPORT_QUEUE_CLIENT';
 
 /** Event pattern: must match @EventPattern and publisher emit. */
-export const REPORTING_METADATA_EXPORT_RMQ_PATTERN = 'reporting_full_metadata_export';
+export const REPORTING_METADATA_EXPORT_RMQ_PATTERN =
+  'reporting_full_metadata_export';
 
 export function isReportingMetadataExportQueueConfigured(): boolean {
   return (

@@ -655,6 +655,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     this.p25FocusBeforeOpen = ae instanceof HTMLElement ? ae : null;
     this.p25ColumnDrawerMotionOpen.set(false);
     this.p25ColumnDrawerVisible.set(true);
+    this.setP25DrawerPageScrollLock(true);
     queueMicrotask(() => {
       requestAnimationFrame(() => {
         this.p25ColumnDrawerMotionOpen.set(true);
@@ -669,9 +670,26 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     this.p25ColumnDrawerMotionOpen.set(false);
     this.p25CloseTimer = setTimeout(() => {
       this.p25CloseTimer = null;
-      this.p25ColumnDrawerVisible.set(false);
-      this.restoreP25Focus();
+      this.finalizeP25DrawerClosed();
     }, ResultsListFiltersComponent.P25_DRAWER_TRANSITION_MS);
+  }
+
+  private setP25DrawerPageScrollLock(locked: boolean): void {
+    if (typeof document === 'undefined') return;
+    const cls = 'pr-p25-drawer-scroll-lock';
+    if (locked) {
+      document.documentElement.classList.add(cls);
+      document.body.classList.add(cls);
+    } else {
+      document.documentElement.classList.remove(cls);
+      document.body.classList.remove(cls);
+    }
+  }
+
+  private finalizeP25DrawerClosed(): void {
+    this.p25ColumnDrawerVisible.set(false);
+    this.setP25DrawerPageScrollLock(false);
+    this.restoreP25Focus();
   }
 
   private focusP25Drawer(): void {
@@ -730,8 +748,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     this.p25ColumnDrawerMotionOpen.set(false);
     this.p25CloseTimer = setTimeout(() => {
       this.p25CloseTimer = null;
-      this.p25ColumnDrawerVisible.set(false);
-      this.restoreP25Focus();
+      this.finalizeP25DrawerClosed();
       this.onRequestFullMetadataEmailExportWithColumns(selectedColumns);
     }, ResultsListFiltersComponent.P25_DRAWER_TRANSITION_MS);
   }
@@ -819,7 +836,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     const explicitYear = Number(phase?.phase_year);
     if (Number.isFinite(explicitYear)) return explicitYear;
     const text = String(phase?.phase_name ?? phase?.name ?? '');
-    const match = text.match(/\b(20\d{2})\b/);
+    const match = /\b(20\d{2})\b/.exec(text);
     if (!match) return null;
     const parsed = Number(match[1]);
     return Number.isFinite(parsed) ? parsed : null;
@@ -939,6 +956,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   }
 
   ngOnDestroy() {
+    this.setP25DrawerPageScrollLock(false);
     if (this.p25CloseTimer) {
       clearTimeout(this.p25CloseTimer);
       this.p25CloseTimer = null;

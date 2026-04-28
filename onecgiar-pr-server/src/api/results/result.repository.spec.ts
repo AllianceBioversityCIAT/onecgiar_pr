@@ -11,7 +11,15 @@ describe('ResultRepository (unit)', () => {
   } as unknown as DataSource;
 
   const mockHandlersError = {
-    returnErrorRepository: jest.fn((e) => e),
+    returnErrorRepository: jest.fn(
+      ({ error, className }: { error: Error; className: string }) => ({
+        response: (error as any)?.response
+          ? (error as any).response
+          : { error: true },
+        message: `[${className}] => error: ${error}`,
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      }),
+    ),
   } as any;
 
   beforeEach(() => {
