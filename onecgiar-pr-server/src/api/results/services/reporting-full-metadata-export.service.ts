@@ -457,6 +457,14 @@ export class ReportingFullMetadataExportService {
       : `Your full metadata export was generated (${exportedCount} of ${sourceRowCount} result(s) included) but the download link could not be created (storage configuration). File name: ${fileName}. Please contact support.${requesterNote}\n`;
 
     const payload: ConfigMessageDto = {
+      ...(env.EMAIL_SENDER
+        ? {
+            from: {
+              email: env.EMAIL_SENDER,
+              name: 'PRMS Reporting Tool -',
+            },
+          }
+        : {}),
       emailBody: {
         subject: '[PRMS] Your results export is ready',
         // TODO: restore to: [user.email] after testing

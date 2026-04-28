@@ -264,11 +264,10 @@ export class ResultsService {
         !createResultDto?.result_type_id ||
         !createResultDto?.result_level_id
       ) {
-        throw {
-          response: {},
-          message: 'Missing data: Result name, Initiative or Result type',
-          status: HttpStatus.BAD_REQUEST,
-        };
+        throw this._handlersError.returnErrorRes({
+          error: new Error('Missing data: Result name, Initiative or Result type'),
+          debug: true,
+        });
       }
 
       if (createResultDto?.result_type_id == 3) {
