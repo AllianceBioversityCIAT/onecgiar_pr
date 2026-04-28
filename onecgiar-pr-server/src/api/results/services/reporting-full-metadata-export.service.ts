@@ -261,8 +261,10 @@ export class ReportingFullMetadataExportService {
     job.status = 'processing';
 
     const maxRows = defaultMaxRows();
-    const listRes =
-      await this._resultsService.getResultDataForBasicReport(filters);
+    const listRes = await this._resultsService.getResultDataForBasicReport(
+      filters,
+      user,
+    );
     const basicRows = (listRes?.response ?? []) as Record<string, unknown>[];
 
     if (maxRows != null && basicRows.length > maxRows) {

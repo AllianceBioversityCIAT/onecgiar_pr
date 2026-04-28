@@ -883,6 +883,10 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   }
 
   private getFullMetadataExportBlockedReason(): string | null {
+    if (this.resultsListFilterSE.selectedPhases().length === 0) {
+      return 'Select at least one phase to export.';
+    }
+
     const selectedPhasePortfolioIds = Array.from(
       new Set(
         this.resultsListFilterSE
