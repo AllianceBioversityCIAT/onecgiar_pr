@@ -172,9 +172,9 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   tempSelectedStatus = signal([]);
   tempSelectedFundingSource = signal([]);
   tempSelectedLeadCenters = signal<any[]>([]);
+  p25ColumnDrawerVisible = signal(false);
   tempFilterCreatedByMe = signal(false);
   tempFilterSubmittedByMe = signal(false);
-  p25ColumnDrawerVisible = signal(false);
   /** Drives backdrop fade + panel slide; kept false one frame on open so CSS transitions run. */
   p25ColumnDrawerMotionOpen = signal(false);
   p25OptionalSelectedColumns = signal<string[]>([]);
@@ -883,6 +883,10 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   }
 
   private getFullMetadataExportBlockedReason(): string | null {
+    if (this.resultsListFilterSE.selectedPhases().length === 0) {
+      return 'Select at least one phase to export.';
+    }
+
     const selectedPhasePortfolioIds = Array.from(
       new Set(
         this.resultsListFilterSE
