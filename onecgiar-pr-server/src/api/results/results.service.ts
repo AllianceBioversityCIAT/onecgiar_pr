@@ -62,7 +62,7 @@ import { ResultCountry } from './result-countries/entities/result-country.entity
 import { ResultRegion } from './result-regions/entities/result-region.entity';
 import { ElasticService } from '../../elastic/elastic.service';
 import { ElasticOperationDto } from '../../elastic/dto/elastic-operation.dto';
-import process from 'process';
+import process from 'node:process';
 import { resultValidationRepository } from './results-validation-module/results-validation-module.repository';
 import { ResultsKnowledgeProductAuthorRepository } from './results-knowledge-products/repositories/results-knowledge-product-authors.repository';
 import { ResultsKnowledgeProductInstitutionRepository } from './results-knowledge-products/repositories/results-knowledge-product-institution.repository';
@@ -2221,7 +2221,7 @@ export class ResultsService {
         await this._resultCountryRepository.getResultCountriesByResultId(
           resultId,
         );
-        
+
       let scope = 0;
       if (
         result.geographic_scope_id == 1 ||
@@ -2266,6 +2266,23 @@ export class ResultsService {
       };
     } catch (error) {
       if (error instanceof BadRequestException) throw error;
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async getP25ExcelRowsByResultCodes(resultCodes: number[]) {
+    try {
+      const uniqueCodes = [...new Set(resultCodes)].filter(
+        (c) => Number.isFinite(c) && c > 0,
+      );
+      const result =
+        await this._resultRepository.getP25ExcelRowsByResultCodes(uniqueCodes);
+      return {
+        response: result,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }

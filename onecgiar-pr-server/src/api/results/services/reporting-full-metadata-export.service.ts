@@ -38,6 +38,16 @@ function dbFunctionName(): string {
   return env.RESULT_FULL_METADATA_DB_FUNCTION?.trim() || 'resultFullDataByResultCode';
 }
 
+/** P25 phases that should use the tabular view path (comma-separated years, default: 2025). */
+function p25PhaseYears(): number[] {
+  const raw = env.RESULT_FULL_METADATA_P25_PHASE_YEARS?.trim() || '2025';
+  const years = raw
+    .split(',')
+    .map((y) => Number.parseInt(y.trim(), 10))
+    .filter((y) => Number.isFinite(y));
+  return years.length ? years : [2025];
+}
+
 /** Default on: single CALL with full pair list. Set RESULT_FULL_METADATA_USE_BATCH=0 to force per-row function calls. */
 function useBatchProcedure(): boolean {
   const v = env.RESULT_FULL_METADATA_USE_BATCH?.trim().toLowerCase();
@@ -142,6 +152,18 @@ function flattenFullRow(
     result_type: basicRow['result_type'],
   };
   for (const [k, v] of Object.entries(full)) {
+    if (v !== null && typeof v === 'object') {
+      out[k] = JSON.stringify(v);
+    } else {
+      out[k] = v;
+    }
+  }
+  return out;
+}
+
+function normalizeTabularRow(row: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(row)) {
     if (v !== null && typeof v === 'object') {
       out[k] = JSON.stringify(v);
     } else {
@@ -256,9 +278,6 @@ export class ReportingFullMetadataExportService {
       throw new Error('No results match the current filters.');
     }
 
-    const fnName = dbFunctionName();
-    const pdfBase = env.FRONT_END_PDF_ENDPOINT ?? '';
-
     const byType = new Map<string, Record<string, unknown>[]>();
     const skippedRows: {
       result_code: unknown;
@@ -274,107 +293,51 @@ export class ReportingFullMetadataExportService {
         `${basicRows.length - validRows.length} list row(s) lacked result_code or version_id and were ignored.`,
       );
     }
+    const rowPhaseYears = Array.from(
+      new Set(
+        basicRows
+          .map((r) => Number(r.phase_year))
+          .filter((y) => Number.isFinite(y)),
+      ),
+    );
+    const p25Years = new Set(p25PhaseYears());
+    const hasP25Rows = rowPhaseYears.some((y) => p25Years.has(y));
+    const hasNonP25Rows = rowPhaseYears.some((y) => !p25Years.has(y));
 
-    let batchHandled = false;
-    if (useBatchProcedure() && validRows.length > 0) {
-      try {
-        const raw = await this._platformReportRepository.runFullMetadataBatchProcedure(
-          JSON.stringify(
-            validRows.map((r) => ({
-              result_code: Number(r.result_code),
-              version_id: Number(r.version_id),
-            })),
-          ),
-          pdfBase,
-        );
-        const items = parseBatchProcedureJson(raw);
-        if (items && items.length === validRows.length) {
-          batchHandled = true;
-          for (let i = 0; i < validRows.length; i++) {
-            const basicRow = validRows[i];
-            const item = items[i];
-            if (item.error) {
-              skippedRows.push({
-                result_code: item.result_code ?? basicRow.result_code,
-                version_id: item.version_id ?? basicRow.version_id,
-                reason:
-                  item.error === 'ER_TOO_MANY_ROWS'
-                    ? 'MySQL 1172: subquery returned more than one row (see DB function)'
-                    : item.error,
-              });
-              continue;
-            }
-            const full = parsePayloadFromBatchItem(item);
-            if (!full) {
-              this._logger.warn(
-                `No full metadata for result_code=${basicRow.result_code} version_id=${basicRow.version_id}`,
-              );
-              skippedRows.push({
-                result_code: basicRow.result_code,
-                version_id: basicRow.version_id,
-                reason: 'Empty or error payload from DB function',
-              });
-              continue;
-            }
-            const flat = flattenFullRow(basicRow, full);
-            const typeKey = String(basicRow['result_type'] ?? 'Unknown');
-            if (!byType.has(typeKey)) byType.set(typeKey, []);
-            byType.get(typeKey)!.push(flat);
-          }
-        } else if (items) {
-          this._logger.warn(
-            `Batch full metadata length mismatch (expected ${validRows.length}, got ${items.length}); using per-result calls.`,
-          );
-        }
-      } catch (e: unknown) {
-        this._logger.warn(
-          `Full metadata batch procedure failed; using per-result calls. ${getThrownMessage(e)}`,
-        );
-      }
+    if (hasP25Rows && hasNonP25Rows) {
+      throw new Error(
+        'Full metadata export cannot mix P25 and previous phases. Please filter one phase model at a time.',
+      );
     }
 
-    if (!batchHandled) {
-      for (const basicRow of validRows) {
-        const resultCode = basicRow.result_code;
-        const versionId = basicRow.version_id;
+    if (hasP25Rows) {
+      const resultCodes = Array.from(
+        new Set(
+          validRows
+            .map((r) => Number(r.result_code))
+            .filter((n) => Number.isFinite(n) && n > 0),
+        ),
+      );
+      const p25Res =
+        await this._resultsService.getP25ExcelRowsByResultCodes(resultCodes);
+      const p25Rows = (p25Res?.response ?? []) as Record<string, unknown>[];
+      if (!p25Rows.length) {
+        throw new Error(
+          'No rows were returned from the P25 Excel view for the selected filters.',
+        );
+      }
 
-        let rawRows: { result?: unknown }[];
-        try {
-          rawRows = (await this._platformReportRepository.getDataFromProcedure(
-            fnName,
-            [Number(resultCode), Number(versionId), pdfBase],
-          )) as { result?: unknown }[];
-        } catch (err: unknown) {
-          if (isScalarSubqueryTooManyRowsError(err)) {
-            this._logger.warn(
-              `Skipping result_code=${resultCode} version_id=${versionId}: DB function scalar subquery returned more than one row (fix SQL in ${fnName} or nested functions).`,
-            );
-            skippedRows.push({
-              result_code: resultCode,
-              version_id: versionId,
-              reason:
-                'MySQL 1172: subquery returned more than one row (see DB function)',
-            });
-            continue;
-          }
-          throw err;
-        }
-
-        const full = parseProcedureResult(rawRows?.[0]);
-        if (!full) {
-          this._logger.warn(
-            `No full metadata for result_code=${resultCode} version_id=${versionId}`,
-          );
-          skippedRows.push({
-            result_code: resultCode,
-            version_id: versionId,
-            reason: 'Empty or error payload from DB function',
-          });
-          continue;
-        }
-
-        const flat = flattenFullRow(basicRow, full);
-        const typeKey = String(basicRow['result_type'] ?? 'Unknown');
+      for (const row of p25Rows) {
+        const flat = normalizeTabularRow(row);
+        const typeKey = String(row['result_type'] ?? 'P25');
+        if (!byType.has(typeKey)) byType.set(typeKey, []);
+        byType.get(typeKey)!.push(flat);
+      }
+    } else {
+      // Non-P25 path: reuse legacy reporting list rows directly (no per-result DB function/procedure).
+      for (const basicRow of basicRows) {
+        const flat = normalizeTabularRow(basicRow);
+        const typeKey = String(basicRow['result_type'] ?? 'Legacy');
         if (!byType.has(typeKey)) byType.set(typeKey, []);
         byType.get(typeKey)!.push(flat);
       }
