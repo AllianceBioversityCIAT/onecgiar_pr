@@ -139,14 +139,10 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   p25OptionalSections = P25_OPTIONAL_EXPORT_SECTIONS;
   p25RequiredColumns = P25_REQUIRED_EXPORT_COLUMNS;
 
-  /** Accessible names and tooltips for the P25 column drawer footer (buttons use aria-label; pTooltip for hover). */
+  /** Accessible names for the P25 column drawer footer buttons (see visible copy in the template). */
   readonly p25DrawerCancelAriaLabel = 'Close column selection without exporting';
-  readonly p25DrawerCancelTooltip =
-    'Closes this panel without starting an export. Checkbox choices only apply if you click Generate export.';
   readonly p25DrawerGenerateAriaLabel =
     'Generate P25 full metadata export with the selected optional columns';
-  readonly p25DrawerGenerateTooltip =
-    'Queues the Excel file with your current filters and selected columns. If you include tag, score, or other indicator fields, the export includes the full detail for each type. You will receive an email with a download link when the file is ready.';
 
   // Computed signal for filtered phases based on selected portfolios
   filteredPhasesOptions = computed(() => {

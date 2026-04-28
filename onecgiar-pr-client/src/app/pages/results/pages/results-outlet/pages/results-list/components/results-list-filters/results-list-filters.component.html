@@ -94,6 +94,17 @@
         </div>
         <p class="drawer-description">Select optional columns. Required columns are always included.</p>
 
+        <div class="p25-export-info-note" role="note" aria-label="Export information">
+          <p>
+            When you include <strong>Section 5</strong> in the export, the file will include the metadata for
+            <strong>each indicator category</strong> per result—not a rolled-up summary.
+          </p>
+          <p>
+            After you click <strong>Generate export</strong>, you will receive an <strong>email</strong> with a
+            download link when the file is ready; the same filters as the results list apply.
+          </p>
+        </div>
+
         <div class="p25-columns-grid">
           <div class="p25-section-card">
             <app-pr-field-header label="Required (always included)" [required]="false"></app-pr-field-header>
@@ -132,16 +143,12 @@
           variant="outlined"
           styleClass="p25-drawer-btn p25-drawer-btn-cancel"
           [ariaLabel]="p25DrawerCancelAriaLabel"
-          [pTooltip]="p25DrawerCancelTooltip"
-          tooltipPosition="top"
           (click)="closeP25ColumnsDrawer()"
           (keydown.enter)="closeP25ColumnsDrawer()"></p-button>
         <p-button
           label="Generate export"
           styleClass="p25-drawer-btn p25-drawer-btn-primary"
           [ariaLabel]="p25DrawerGenerateAriaLabel"
-          [pTooltip]="p25DrawerGenerateTooltip"
-          tooltipPosition="top"
           (click)="confirmP25ColumnsAndExport()"
           (keydown.enter)="confirmP25ColumnsAndExport()"></p-button>
       </div>

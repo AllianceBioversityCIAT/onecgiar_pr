@@ -149,6 +149,25 @@
   font-size: 14px;
 }
 
+.p25-export-info-note {
+  margin: 0 0 20px 0;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #444;
+  background: rgba(0, 0, 0, 0.04);
+  border-left: 3px solid var(--pr-color-primary-300, #1e5a8a);
+  border-radius: 0 4px 4px 0;
+
+  p {
+    margin: 0 0 0.6rem 0;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
 .drawer-footer {
   display: grid;
   grid-template-columns: 2fr 3fr;
