@@ -69,16 +69,6 @@
       (keydown.enter)="activeButtons ? (this.api.dataControlSE.updateResultModal = true) : null"></app-pr-button>
     <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap">
       <p-button
-        label="Download"
-        variant="outlined"
-        icon="pi pi-download"
-        (click)="onDownLoadTableAsExcel()"
-        (keydown.enter)="onDownLoadTableAsExcel()"
-        [disabled]="!hasFilteredResults"
-        [loading]="this.gettingReport()"
-        pTooltip="Download a summary Excel for the current filters."
-        tooltipPosition="bottom" />
-      <p-button
         label="Full metadata"
         variant="outlined"
         icon="pi pi-envelope"
