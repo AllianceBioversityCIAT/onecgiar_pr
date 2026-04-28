@@ -4,7 +4,6 @@ import { env } from 'process';
 import * as AWS from 'aws-sdk';
 import ExcelJS from 'exceljs';
 import { EmailNotificationManagementService } from '../../../shared/microservices/email-notification-management/email-notification-management.service';
-import { PlatformReportRepository } from '../../platform-report/repositories/platform-report.repository';
 import { ResultsService } from '../results.service';
 import { BasicReportFiltersDto } from '../dto/basic-report-filters.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
@@ -35,12 +34,6 @@ function defaultMaxRows(): number | null {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
-function dbFunctionName(): string {
-  return (
-    env.RESULT_FULL_METADATA_DB_FUNCTION?.trim() || 'resultFullDataByResultCode'
-  );
-}
-
 /** P25 phases that should use the tabular view path (comma-separated years, default: 2025). */
 function p25PhaseYears(): number[] {
   const raw = env.RESULT_FULL_METADATA_P25_PHASE_YEARS?.trim() || '2025';
@@ -49,12 +42,6 @@ function p25PhaseYears(): number[] {
     .map((y) => Number.parseInt(y.trim(), 10))
     .filter((y) => Number.isFinite(y));
   return years.length ? years : [2025];
-}
-
-/** Default on: single CALL with full pair list. Set RESULT_FULL_METADATA_USE_BATCH=0 to force per-row function calls. */
-function useBatchProcedure(): boolean {
-  const v = env.RESULT_FULL_METADATA_USE_BATCH?.trim().toLowerCase();
-  return v !== '0' && v !== 'false' && v !== 'no';
 }
 
 function getThrownMessage(err: unknown): string {
@@ -75,92 +62,6 @@ function getThrownMessage(err: unknown): string {
 function sanitizeSheetName(name: string): string {
   const cleaned = name.replace(/[:\\/*?[\]]/g, '_').trim() || 'Sheet';
   return cleaned.length > 31 ? cleaned.slice(0, 31) : cleaned;
-}
-
-function parseProcedureResult(
-  row: { result?: unknown } | undefined,
-): Record<string, unknown> | null {
-  if (!row) return null;
-  let payload: unknown = row.result;
-  if (typeof payload === 'string') {
-    try {
-      payload = JSON.parse(payload) as Record<string, unknown>;
-    } catch {
-      return null;
-    }
-  }
-  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
-    return null;
-  }
-  const obj = payload as Record<string, unknown>;
-  if (obj['error'] || obj['internal_error']) {
-    return null;
-  }
-  return obj;
-}
-
-/** MySQL ER_TOO_MANY_ROWS (1172): scalar subquery returned > 1 row (usually inside the DB function). */
-const MYSQL_ERR_SUBQUERY_TOO_MANY_ROWS = 1172;
-
-function getMysqlErrno(err: unknown): number | undefined {
-  const e = err as { driverError?: { errno?: number }; errno?: number };
-  return e?.driverError?.errno ?? e?.errno;
-}
-
-function isScalarSubqueryTooManyRowsError(err: unknown): boolean {
-  const errno = getMysqlErrno(err);
-  if (errno === MYSQL_ERR_SUBQUERY_TOO_MANY_ROWS) return true;
-  const msg = getThrownMessage(err);
-  return msg.includes('more than one row') || msg.includes('ER_TOO_MANY_ROWS');
-}
-
-type BatchFullMetaItem = {
-  result_code?: unknown;
-  version_id?: unknown;
-  payload?: unknown;
-  error?: string;
-};
-
-function parseBatchProcedureJson(raw: unknown): BatchFullMetaItem[] | null {
-  if (raw == null) return null;
-  let parsed: unknown = raw;
-  if (typeof parsed === 'string') {
-    try {
-      parsed = JSON.parse(parsed) as unknown;
-    } catch {
-      return null;
-    }
-  }
-  if (!Array.isArray(parsed)) return null;
-  return parsed as BatchFullMetaItem[];
-}
-
-function parsePayloadFromBatchItem(
-  item: BatchFullMetaItem,
-): Record<string, unknown> | null {
-  return parseProcedureResult({
-    result: item.payload,
-  });
-}
-
-function flattenFullRow(
-  basicRow: Record<string, unknown>,
-  full: Record<string, unknown>,
-): Record<string, unknown> {
-  const out: Record<string, unknown> = {
-    results_id: basicRow.results_id,
-    result_code: basicRow.result_code,
-    version_id: basicRow.version_id,
-    result_type: basicRow['result_type'],
-  };
-  for (const [k, v] of Object.entries(full)) {
-    if (v !== null && typeof v === 'object') {
-      out[k] = JSON.stringify(v);
-    } else {
-      out[k] = v;
-    }
-  }
-  return out;
 }
 
 function normalizeTabularRow(
@@ -216,7 +117,6 @@ export class ReportingFullMetadataExportService {
 
   constructor(
     private readonly _resultsService: ResultsService,
-    private readonly _platformReportRepository: PlatformReportRepository,
     private readonly _emailNotificationService: EmailNotificationManagementService,
     private readonly _metadataExportQueue: ReportingMetadataExportQueuePublisherService,
   ) {}
