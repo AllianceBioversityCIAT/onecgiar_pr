@@ -1232,8 +1232,15 @@ export class ResultsService {
     }
   }
 
-  async findAllByRoleFiltered(userId: number, query: Record<string, any> = {}) {
+  async findAllByRoleFiltered(
+    userId: number,
+    query: Record<string, any> = {},
+    authUser?: TokenDto,
+  ) {
     try {
+      const parseQueryBool = (v: unknown): boolean =>
+        v === true || v === 'true' || v === 1 || v === '1';
+
       const pageNum = Number(query.page);
       const limitNum = Number(query.limit);
       const page =
@@ -1279,6 +1286,11 @@ export class ResultsService {
 
       const title = query.title ? String(query.title).trim() : undefined;
 
+      const filterMyCreated = parseQueryBool(query.filter_created_by_me);
+      const filterMySubmitted = parseQueryBool(query.filter_submitted_by_me);
+      const useMyActivity =
+        authUser?.id != null && (filterMyCreated || filterMySubmitted);
+
       const filters = {
         initiativeCode,
         versionId: toNumberArray(
@@ -1294,6 +1306,13 @@ export class ResultsService {
         statusId: toNumberArray(query.status_id ?? query.status),
         fundingSource,
         title: title && title.length > 0 ? title : undefined,
+        ...(useMyActivity
+          ? {
+              myActivityUserId: authUser.id,
+              filterMyCreated,
+              filterMySubmitted,
+            }
+          : {}),
       };
 
       const repoRes =
@@ -2254,9 +2273,12 @@ export class ResultsService {
     }
   }
 
-  async getResultDataForBasicReport(body: BasicReportFiltersDto) {
+  async getResultDataForBasicReport(
+    body: BasicReportFiltersDto,
+    authUser: TokenDto,
+  ) {
     try {
-      const filters = this._normalizeBasicReportFilters(body);
+      const filters = this._normalizeBasicReportFilters(body, authUser);
       const result =
         await this._resultRepository.getResultDataForBasicReport(filters);
 
@@ -2294,6 +2316,7 @@ export class ResultsService {
    */
   private _normalizeBasicReportFilters(
     body: BasicReportFiltersDto,
+    authUser: TokenDto,
   ): BasicReportFiltersNormalized {
     const { initDate, endDate } = this._parseBasicReportDateRange(body);
     const phaseIds = this._extractPhaseIds(body.phases);
@@ -2323,6 +2346,11 @@ export class ResultsService {
       ?.filter((c) => c.code != null && c.code !== '')
       .map((c) => c.code);
 
+    const filterMyCreated = body.filterCreatedByMe === true;
+    const filterMySubmitted = body.filterSubmittedByMe === true;
+    const useMyActivity =
+      authUser?.id != null && (filterMyCreated || filterMySubmitted);
+
     return {
       initDate,
       endDate,
@@ -2337,6 +2365,13 @@ export class ResultsService {
         ? [...new Set(sourceValues)]
         : undefined,
       leadCenterCodes: this._emptyToUndefined(leadCenterCodes),
+      ...(useMyActivity
+        ? {
+            myActivityUserId: authUser.id,
+            filterMyCreated,
+            filterMySubmitted,
+          }
+        : {}),
     };
   }
 

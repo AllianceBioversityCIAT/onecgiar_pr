@@ -146,13 +146,12 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
     });
 
     effect(() => {
-      const versionIds = this.selectedPhaseIds();
+      this.selectedPhaseIds();
+      this.resultsListFilterSE.filterCreatedByMe();
+      this.resultsListFilterSE.filterSubmittedByMe();
 
       untracked(() => {
-        if (versionIds) {
-          this.api.updateResultsList({ version_id: versionIds });
-        }
-
+        this.api.updateResultsList(this.api.buildResultsListSearchParams());
         if (this.table) {
           this.resetTable();
           this.applyDefaultSort();
@@ -336,10 +335,7 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
               description: ``,
               status: 'success'
             });
-            const deleteSearchParams: any = {};
-            const versionIds = this.selectedPhaseIds();
-            if (versionIds) deleteSearchParams.version_id = versionIds;
-            this.api.updateResultsList(Object.keys(deleteSearchParams).length ? deleteSearchParams : undefined);
+            this.api.updateResultsList();
             this.resultsListService.showDeletingResultSpinner = false;
           },
           error: err => {

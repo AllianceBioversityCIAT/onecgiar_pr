@@ -27,6 +27,8 @@ export interface SearchParams {
   result_type_id?: string;
   submitter_id?: string;
   version_id?: string;
+  filter_created_by_me?: boolean;
+  filter_submitted_by_me?: boolean;
 }
 
 @Injectable({
@@ -120,10 +122,32 @@ export class ApiService {
     this.dataControlSE.myInitiativesList = [];
   }
 
+  /**
+   * Query params for GET get/all/roles/filter aligned with the results list filters drawer.
+   */
+  buildResultsListSearchParams(): SearchParams | undefined {
+    const p: SearchParams = {};
+    const phases = this.resultsListFilterSE.selectedPhases();
+    const versionIds = phases?.map(phase => phase.id).join(',');
+    if (versionIds) {
+      p.version_id = versionIds;
+    }
+    if (this.resultsListFilterSE.filterCreatedByMe()) {
+      p.filter_created_by_me = true;
+    }
+    if (this.resultsListFilterSE.filterSubmittedByMe()) {
+      p.filter_submitted_by_me = true;
+    }
+    return Object.keys(p).length ? p : undefined;
+  }
+
   updateResultsList(searchParams?: SearchParams) {
+    const params = searchParams ?? this.buildResultsListSearchParams();
     this.resultsListSE.showLoadingResultSpinner = true;
-    this.resultsSE.GET_AllResultsWithUseRole(this.authSE.localStorageUser.id, searchParams).subscribe({
+    this.resultsSE.GET_AllResultsWithUseRole(this.authSE.localStorageUser.id, params).subscribe({
       next: resp => {
+        this.dataControlSE.resultsListNoDataMessage.set(null);
+
         resp.response.items.forEach((result: any) => {
           result.full_status_name_html = `<div>${result.status_name} ${result.inQA ? '<div class="in-qa-tag">In QA</div>' : ''}</div>`;
         });
@@ -134,8 +158,18 @@ export class ApiService {
         this.resultsListSE.showLoadingResultSpinner = false;
       },
       error: err => {
-        console.error(err);
         this.resultsListSE.showLoadingResultSpinner = false;
+
+        if (err?.status === 404) {
+          this.dataControlSE.resultsList = [];
+          this.dataControlSE.resultsListSignal.set([]);
+          this.dataControlSE.resultsListNoDataMessage.set(
+            'No results match the filters you applied. Try changing phases or other filters, or clear the My activity options.'
+          );
+          return;
+        }
+
+        console.error(err);
       }
     });
   }

@@ -20,6 +20,8 @@ export class DataControlService {
   myInitiativesLoaded = false;
   resultsList: ResultItem[] = [];
   resultsListSignal: WritableSignal<ResultItem[]> = signal([]);
+  /** Set when the results list API returns 404 (e.g. no rows for current filters); cleared on successful load */
+  resultsListNoDataMessage = signal<string | null>(null);
   currentResult: CurrentResult = {};
   currentResultSignal: WritableSignal<CurrentResult> = signal({});
   showSectionSpinner = false;

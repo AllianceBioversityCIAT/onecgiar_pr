@@ -56,9 +56,12 @@ export class ResultsApiService {
       if (searchParams.result_type_id) queryParams.push(`result_type_id=${searchParams.result_type_id}`);
       if (searchParams.submitter_id) queryParams.push(`submitter_id=${searchParams.submitter_id}`);
       if (searchParams.version_id) queryParams.push(`version_id=${searchParams.version_id}`);
+      if (searchParams.filter_created_by_me) queryParams.push('filter_created_by_me=true');
+      if (searchParams.filter_submitted_by_me) queryParams.push('filter_submitted_by_me=true');
     }
 
-    return this.http.get<any>(`${this.apiBaseUrl}get/all/roles/filter/${userId}?${queryParams.join('&')}`).pipe(
+    const qs = queryParams.length ? `?${queryParams.join('&')}` : '';
+    return this.http.get<any>(`${this.apiBaseUrl}get/all/roles/filter/${userId}${qs}`).pipe(
       map(resp => {
         resp.response.items.map(result => {
           result.id = Number(result.id);
@@ -694,6 +697,8 @@ export class ResultsApiService {
       clarisaPortfolios?: any[];
       fundingSource?: any[];
       leadCenters?: any[];
+      filterCreatedByMe?: boolean;
+      filterSubmittedByMe?: boolean;
     } = {}
   ) {
     const dynamicBaseUrl = this.ipsrDataControlSE.inIpsr

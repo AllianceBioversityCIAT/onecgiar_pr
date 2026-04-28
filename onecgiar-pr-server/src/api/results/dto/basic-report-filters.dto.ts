@@ -1,5 +1,11 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsArray, IsString, ValidateNested } from 'class-validator';
+import {
+  IsOptional,
+  IsArray,
+  IsString,
+  ValidateNested,
+  IsBoolean,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 /** Minimal shape for phase filter (version.id) */
@@ -152,6 +158,22 @@ export class BasicReportFiltersDto {
 
   @ApiPropertyOptional({
     description:
+      'When true, only results created by the authenticated user (result.created_by).',
+  })
+  @IsOptional()
+  @IsBoolean()
+  filterCreatedByMe?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'When true, only results with an active submission row for the authenticated user (submission.user_id).',
+  })
+  @IsOptional()
+  @IsBoolean()
+  filterSubmittedByMe?: boolean;
+
+  @ApiPropertyOptional({
+    description:
       'Optional selected columns for P25 full metadata export. Required columns are enforced server-side.',
     type: [String],
   })
@@ -174,4 +196,8 @@ export interface BasicReportFiltersNormalized {
   portfolioIds?: number[];
   sourceValues?: string[];
   leadCenterCodes?: string[];
+  /** Set from JWT when filterCreatedByMe / filterSubmittedByMe are used */
+  myActivityUserId?: number;
+  filterMyCreated?: boolean;
+  filterMySubmitted?: boolean;
 }
