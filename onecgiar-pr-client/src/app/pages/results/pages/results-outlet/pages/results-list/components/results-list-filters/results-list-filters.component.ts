@@ -17,6 +17,7 @@ import { ButtonModule } from 'primeng/button';
 import { ChipModule } from 'primeng/chip';
 import { ReversePipe } from '../../../../../../../../shared/pipes/reverse.pipe';
 import { TooltipModule } from 'primeng/tooltip';
+import { CustomizedAlertsFeService } from '../../../../../../../../shared/services/customized-alerts-fe.service';
 
 @Component({
   selector: 'app-results-list-filters',
@@ -41,6 +42,8 @@ import { TooltipModule } from 'primeng/tooltip';
 })
 export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy {
   gettingReport = signal(false);
+  /** Full-metadata async export (email + S3 link) */
+  requestingFullExport = signal(false);
   visible = signal(false);
   clarisaPortfolios = signal([]);
   navbarHeight = signal(0);
@@ -64,6 +67,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     }
     return this.resultsListFilterSE.phasesOptionsOld().filter(phase => selectedPortfolios.some(portfolio => portfolio.id == phase.portfolio_id));
   });
+  fullMetadataExportBlockedReason = computed(() => this.getFullMetadataExportBlockedReason());
 
   filtersCount = computed(() => {
     let count = 0;
@@ -193,7 +197,8 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   constructor(
     public resultsListFilterSE: ResultsListFilterService,
     public api: ApiService,
-    private exportTablesSE: ExportTablesService
+    private readonly exportTablesSE: ExportTablesService,
+    private readonly customAlertsSE: CustomizedAlertsFeService
   ) {
     // Calculate navbar height after render
     afterNextRender(() => {
@@ -467,19 +472,24 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     this.visible.set(false);
   }
 
+  /** Same filter payload as GET_reportingList / server BasicReportFiltersDto */
+  private buildReportingListFiltersPayload() {
+    return {
+      phases: this.resultsListFilterSE.selectedPhases(),
+      searchText: this.resultsListFilterSE.text_to_search(),
+      inits: this.resultsListFilterSE.selectedSubmittersAdmin(),
+      indicatorCategories: this.resultsListFilterSE.selectedIndicatorCategories(),
+      status: this.resultsListFilterSE.selectedStatus(),
+      clarisaPortfolios: this.resultsListFilterSE.selectedClarisaPortfolios(),
+      fundingSource: this.resultsListFilterSE.selectedFundingSource(),
+      leadCenters: this.resultsListFilterSE.selectedLeadCenters()
+    };
+  }
+
   onDownLoadTableAsExcel() {
     this.gettingReport.set(true);
     this.api.resultsSE
-      .GET_reportingList({
-        phases: this.resultsListFilterSE.selectedPhases(),
-        searchText: this.resultsListFilterSE.text_to_search(),
-        inits: this.resultsListFilterSE.selectedSubmittersAdmin(),
-        indicatorCategories: this.resultsListFilterSE.selectedIndicatorCategories(),
-        status: this.resultsListFilterSE.selectedStatus(),
-        clarisaPortfolios: this.resultsListFilterSE.selectedClarisaPortfolios(),
-        fundingSource: this.resultsListFilterSE.selectedFundingSource(),
-        leadCenters: this.resultsListFilterSE.selectedLeadCenters()
-      })
+      .GET_reportingList(this.buildReportingListFiltersPayload())
       .subscribe({
         next: ({ response }) => {
           void this.buildAndDownloadExcelReport(response);
@@ -489,6 +499,96 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
           this.gettingReport.set(false);
         }
       });
+  }
+
+  /**
+   * Queues server-side full metadata export (DB function per result + Excel to S3 + email).
+   * Uses the same filters as the summary Excel download.
+   */
+  onRequestFullMetadataEmailExport() {
+    const blockedReason = this.fullMetadataExportBlockedReason();
+    if (blockedReason) {
+      this.customAlertsSE.show({
+        id: 'results-full-export-portfolio-mismatch',
+        title: 'Export blocked',
+        description: blockedReason,
+        status: 'warning'
+      });
+      return;
+    }
+
+    if (this.api.resultsSE.ipsrDataControlSE.inIpsr) {
+      this.customAlertsSE.show({
+        id: 'results-full-export-ipsr',
+        title: 'Not available here',
+        description: 'Full metadata export is only available from the Results module (not IPSR list).',
+        status: 'warning'
+      });
+      return;
+    }
+
+    this.requestingFullExport.set(true);
+    this.api.resultsSE.POST_reportingFullMetadataExportJob(this.buildReportingListFiltersPayload()).subscribe({
+      next: (body: { response?: { jobId?: string }; message?: string }) => {
+        this.requestingFullExport.set(false);
+        const jobId = body?.response?.jobId;
+        this.customAlertsSE.show({
+          id: 'results-full-export-queued',
+          title: 'Export queued',
+          description: jobId
+            ? `You will receive an email with a download link when the file is ready. Reference: ${jobId}.`
+            : 'You will receive an email with a download link when the file is ready.',
+          status: 'success',
+          closeIn: 6000
+        });
+      },
+      error: err => {
+        this.requestingFullExport.set(false);
+        const msg =
+          err?.error?.message ??
+          err?.error?.response?.message ??
+          err?.message ??
+          'Could not start the export. Please try again or contact support.';
+        this.customAlertsSE.show({
+          id: 'results-full-export-error',
+          title: 'Export could not be queued',
+          description: typeof msg === 'string' ? msg : 'Could not start the export.',
+          status: 'error'
+        });
+      }
+    });
+  }
+
+  private getFullMetadataExportBlockedReason(): string | null {
+    const selectedPhasePortfolioIds = Array.from(
+      new Set(
+        this.resultsListFilterSE
+          .selectedPhases()
+          .map((phase: { portfolio_id?: string | number }) => String(phase?.portfolio_id ?? ''))
+          .filter(Boolean)
+      )
+    );
+    const selectedPortfolioIds = Array.from(
+      new Set(
+        this.resultsListFilterSE
+          .selectedClarisaPortfolios()
+          .map((portfolio: { id?: string | number }) => String(portfolio?.id ?? ''))
+          .filter(Boolean)
+      )
+    );
+
+    if (selectedPhasePortfolioIds.length > 1) {
+      return 'Full metadata export only supports one portfolio at a time. Please select phases from a single portfolio.';
+    }
+    if (selectedPortfolioIds.length > 1) {
+      return 'Full metadata export only supports one portfolio at a time. Please keep only one portfolio selected.';
+    }
+
+    if (selectedPhasePortfolioIds.length === 1 && selectedPortfolioIds.length === 1 && selectedPhasePortfolioIds[0] !== selectedPortfolioIds[0]) {
+      return 'Selected phases and selected portfolio must belong to the same portfolio.';
+    }
+
+    return null;
   }
 
   private async buildAndDownloadExcelReport(response: any[]): Promise<void> {

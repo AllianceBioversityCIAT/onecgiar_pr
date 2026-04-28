@@ -8,6 +8,8 @@ import {
   Query,
   UseInterceptors,
   Version,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { ResultsService } from './results.service';
 import { CreateResultDto } from './dto/create-result.dto';
@@ -22,6 +24,7 @@ import { ReviewUpdateDto } from './dto/review-update.dto';
 import { UpdateTocMetadataDto } from './dto/update-toc-metadata.dto';
 import { UpdateResultTitleDto } from './dto/update-result-title.dto';
 import { BasicReportFiltersDto } from './dto/basic-report-filters.dto';
+import { ReportingFullMetadataExportService } from './services/reporting-full-metadata-export.service';
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 import {
   ApiBody,
@@ -38,7 +41,10 @@ import {
 @ApiTags('Results Module')
 @UseInterceptors(ResponseInterceptor)
 export class ResultsController {
-  constructor(private readonly resultsService: ResultsService) {}
+  constructor(
+    private readonly resultsService: ResultsService,
+    private readonly reportingFullMetadataExportService: ReportingFullMetadataExportService,
+  ) {}
 
   @Post('create/header')
   @ApiOperation({
@@ -522,6 +528,51 @@ export class ResultsController {
   })
   getResultDataForBasicReport(@Body() body: BasicReportFiltersDto) {
     return this.resultsService.getResultDataForBasicReport(body);
+  }
+
+  @Post('get/reporting/full-metadata-export/jobs')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ApiOperation({
+    summary:
+      'Queue asynchronous full-metadata Excel export (uses same filters as get/reporting/list)',
+    description:
+      'Builds one workbook with sheets grouped by result type. Each row is produced from the DB function configured via RESULT_FULL_METADATA_DB_FUNCTION (default resultFullDataByResultCode). When REPORTING_METADATA_EXPORT_QUEUE and RABBITMQ_URL are set, work is published to that queue and consumed by this API (hybrid RMQ); otherwise processing runs inline with setImmediate on this instance. Email is sent via the notifications microservice (EMAIL_QUEUE). When done, the user receives a time-limited S3 download link. Job status remains in-memory on the instance that registered the job (see GET jobs/:jobId).',
+  })
+  @ApiBody({ type: BasicReportFiltersDto })
+  @ApiOkResponse({ description: 'Job queued; use GET .../jobs/:jobId for status.' })
+  queueReportingFullMetadataExport(
+    @Body() body: BasicReportFiltersDto,
+    @UserToken() user: TokenDto,
+  ) {
+    const { jobId } =
+      this.reportingFullMetadataExportService.enqueueExport(body, user);
+    return {
+      response: { jobId },
+      message: 'Export queued',
+      status: HttpStatus.ACCEPTED,
+    };
+  }
+
+  @Get('get/reporting/full-metadata-export/jobs/:jobId')
+  @ApiOperation({ summary: 'Get status of a reporting full-metadata export job' })
+  @ApiParam({ name: 'jobId', type: String })
+  getReportingFullMetadataExportJob(
+    @Param('jobId') jobId: string,
+    @UserToken() user: TokenDto,
+  ) {
+    const job = this.reportingFullMetadataExportService.getJob(jobId, user.id);
+    if (!job) {
+      return {
+        response: null,
+        message: 'Job not found',
+        status: HttpStatus.NOT_FOUND,
+      };
+    }
+    return {
+      response: job,
+      message: 'Successful response',
+      status: HttpStatus.OK,
+    };
   }
 
   @Post('create/version/:resultId')

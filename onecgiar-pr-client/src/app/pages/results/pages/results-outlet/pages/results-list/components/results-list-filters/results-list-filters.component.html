@@ -67,14 +67,28 @@
       [tooltipText]="!activeButtons ? 'To update a result, please ensure that you have a role assigned in the active portfolio.' : null"
       (click)="activeButtons ? (this.api.dataControlSE.updateResultModal = true) : null"
       (keydown.enter)="activeButtons ? (this.api.dataControlSE.updateResultModal = true) : null"></app-pr-button>
-    <p-button
-      label="Download"
-      variant="outlined"
-      icon="pi pi-download"
-      (click)="onDownLoadTableAsExcel()"
-      (keydown.enter)="onDownLoadTableAsExcel()"
-      [disabled]="!hasFilteredResults"
-      [loading]="this.gettingReport()" />
+    <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap">
+      <p-button
+        label="Download"
+        variant="outlined"
+        icon="pi pi-download"
+        (click)="onDownLoadTableAsExcel()"
+        (keydown.enter)="onDownLoadTableAsExcel()"
+        [disabled]="!hasFilteredResults"
+        [loading]="this.gettingReport()"
+        pTooltip="Download a summary Excel for the current filters."
+        tooltipPosition="bottom" />
+      <p-button
+        label="Full metadata"
+        variant="outlined"
+        icon="pi pi-envelope"
+        (click)="onRequestFullMetadataEmailExport()"
+        (keydown.enter)="onRequestFullMetadataEmailExport()"
+        [disabled]="!hasFilteredResults || !!fullMetadataExportBlockedReason()"
+        [loading]="this.requestingFullExport()"
+        [pTooltip]="fullMetadataExportBlockedReason() || 'Queue a full metadata export (same filters). You will receive an email with a download link when the file is ready.'"
+        tooltipPosition="bottom" />
+    </div>
   </div>
 </div>
 

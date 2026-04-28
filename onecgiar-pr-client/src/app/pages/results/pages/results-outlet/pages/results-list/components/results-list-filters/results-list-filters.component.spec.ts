@@ -7,6 +7,7 @@ import { ResultsListFilterService } from '../../services/results-list-filter.ser
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { ExportTablesService } from '../../../../../../../../shared/services/export-tables.service';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { CustomizedAlertsFeService } from '../../../../../../../../shared/services/customized-alerts-fe.service';
 
 // Shared mock data to avoid duplication
 const createMockPhasesOptions = () => [
@@ -33,6 +34,7 @@ describe('ResultsListFiltersComponent', () => {
   let mockResultsListFilterService: any;
   let mockApiService: any;
   let mockExportTablesService: any;
+  let mockCustomAlertsFeService: { show: jest.Mock };
 
   const createSignal = <T>(initial: T) => signal<T>(initial);
 
@@ -110,12 +112,18 @@ describe('ResultsListFiltersComponent', () => {
       exportExcelMultipleSheets: jest.fn()
     };
 
+    mockCustomAlertsFeService = { show: jest.fn() };
+
     mockApiService = {
       dataControlSE: {
         getCurrentPhases: jest.fn(() => of(undefined)),
         reportingCurrentPhase: { portfolioId: 1 }
       },
       resultsSE: {
+        ipsrDataControlSE: { inIpsr: false },
+        POST_reportingFullMetadataExportJob: jest.fn(() =>
+          of({ response: { jobId: 'test-job-id' }, statusCode: 202, message: 'Export queued' })
+        ),
         GET_versioning: jest.fn(() => of(mockVersioningResponse)),
         GET_allResultStatuses: jest.fn(() => of({ response: [{ id: 1, name: 'Draft' }] })),
         GET_reportingList: jest.fn(() => of({ response: [{ result_code: 'R-1', pdf_link: 'https://localhost:4200/reports/result-details/1' }] })),
@@ -139,7 +147,8 @@ describe('ResultsListFiltersComponent', () => {
       providers: [
         { provide: ResultsListFilterService, useValue: mockResultsListFilterService },
         { provide: ApiService, useValue: mockApiService },
-        { provide: ExportTablesService, useValue: mockExportTablesService }
+        { provide: ExportTablesService, useValue: mockExportTablesService },
+        { provide: CustomizedAlertsFeService, useValue: mockCustomAlertsFeService }
       ]
     }).compileComponents();
 
@@ -333,6 +342,70 @@ describe('ResultsListFiltersComponent', () => {
     component.onDownLoadTableAsExcel();
 
     expect(component.gettingReport()).toBe(false);
+  });
+
+  describe('onRequestFullMetadataEmailExport portfolio validations', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+      mockApiService.resultsSE.ipsrDataControlSE.inIpsr = false;
+      mockResultsListFilterService.selectedPhases.set([]);
+      mockResultsListFilterService.selectedClarisaPortfolios.set([]);
+    });
+
+    it('should block when selected phases belong to different portfolios', () => {
+      mockResultsListFilterService.selectedPhases.set([
+        { id: 101, portfolio_id: 1 },
+        { id: 102, portfolio_id: 2 }
+      ]);
+
+      component.onRequestFullMetadataEmailExport();
+
+      expect(mockApiService.resultsSE.POST_reportingFullMetadataExportJob).not.toHaveBeenCalled();
+      expect(mockCustomAlertsFeService.show).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'results-full-export-portfolio-mismatch',
+          status: 'warning'
+        })
+      );
+    });
+
+    it('should block when more than one portfolio is explicitly selected', () => {
+      mockResultsListFilterService.selectedClarisaPortfolios.set([{ id: 1 }, { id: 2 }]);
+
+      component.onRequestFullMetadataEmailExport();
+
+      expect(mockApiService.resultsSE.POST_reportingFullMetadataExportJob).not.toHaveBeenCalled();
+      expect(mockCustomAlertsFeService.show).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'results-full-export-portfolio-mismatch',
+          status: 'warning'
+        })
+      );
+    });
+
+    it('should block when selected phases and portfolios do not match', () => {
+      mockResultsListFilterService.selectedPhases.set([{ id: 101, portfolio_id: 1 }]);
+      mockResultsListFilterService.selectedClarisaPortfolios.set([{ id: 2 }]);
+
+      component.onRequestFullMetadataEmailExport();
+
+      expect(mockApiService.resultsSE.POST_reportingFullMetadataExportJob).not.toHaveBeenCalled();
+      expect(mockCustomAlertsFeService.show).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'results-full-export-portfolio-mismatch',
+          status: 'warning'
+        })
+      );
+    });
+
+    it('should queue export when portfolio selection is valid', () => {
+      mockResultsListFilterService.selectedPhases.set([{ id: 101, portfolio_id: 1 }]);
+      mockResultsListFilterService.selectedClarisaPortfolios.set([{ id: 1 }]);
+
+      component.onRequestFullMetadataEmailExport();
+
+      expect(mockApiService.resultsSE.POST_reportingFullMetadataExportJob).toHaveBeenCalled();
+    });
   });
 
   describe('ngOnChanges', () => {

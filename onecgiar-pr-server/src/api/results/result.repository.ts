@@ -850,6 +850,8 @@ WHERE
     const whereClause = whereParts.join(' AND ');
     const queryData = `
     SELECT
+      r.id AS results_id,
+      r.version_id AS version_id,
       r.result_code,
       ANY_VALUE(version.phase_name) AS phase_name,
       ANY_VALUE(r.reported_year_id) AS reported_year_id,
@@ -2504,9 +2506,9 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         LEFT JOIN Integration_information.toc_results tr ON tr.id = rtr.toc_result_id
         LEFT JOIN Integration_information.work_packages wp ON wp.id = tr.work_packages_id
         LEFT JOIN Integration_information.toc_results_indicators tri ON tr.id = tri.toc_results_id AND tri.toc_result_indicator_id = rtri.toc_results_indicator_id ${
-          !EnvironmentExtractor.isProduction()
-            ? `COLLATE utf8mb3_general_ci`
-            : ``
+          EnvironmentExtractor.isProduction()
+            ? ``
+            : `COLLATE utf8mb3_general_ci`
         }
     WHERE
         r.id ${resultIds.length ? `in (${resultIds})` : '= 0'}

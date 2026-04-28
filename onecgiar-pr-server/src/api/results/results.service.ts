@@ -2221,17 +2221,7 @@ export class ResultsService {
         await this._resultCountryRepository.getResultCountriesByResultId(
           resultId,
         );
-
-      const knowledgeProduct =
-        await this._resultKnowledgeProductRepository.findOneBy({
-          results_id: resultId,
-        });
-
-      if (knowledgeProduct) {
-        //contries = knowledgeProduct.cgspace_countries?.split('; ') ?? [];
-        //regions = knowledgeProduct.cgspace_regions?.split('; ') ?? [];
-      }
-
+        
       let scope = 0;
       if (
         result.geographic_scope_id == 1 ||
