@@ -28,10 +28,11 @@ export interface ReportingExportJob {
   rowCount?: number;
 }
 
-function defaultMaxRows(): number {
+function defaultMaxRows(): number | null {
   const raw = env.RESULT_METADATA_EXPORT_MAX_ROWS;
-  const n = raw ? Number.parseInt(raw, 10) : 500;
-  return Number.isFinite(n) && n > 0 ? n : 500;
+  if (!raw?.trim()) return null;
+  const n = Number.parseInt(raw, 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
 }
 
 function dbFunctionName(): string {
@@ -173,6 +174,36 @@ function normalizeTabularRow(row: Record<string, unknown>): Record<string, unkno
   return out;
 }
 
+const P25_REQUIRED_COLUMNS = [
+  'result_code',
+  'phase_name',
+  'portfolio_acronym',
+  'result_level',
+  'result_type',
+  'submission_status',
+  'title',
+  'result_description',
+  'primary_submitter_acronym',
+] as const;
+
+function normalizeRequestedP25Columns(selectedColumns?: string[]): string[] {
+  const requested = (selectedColumns ?? [])
+    .map((c) => c?.trim())
+    .filter((c): c is string => !!c);
+  return Array.from(new Set([...P25_REQUIRED_COLUMNS, ...requested]));
+}
+
+function pickColumns(
+  row: Record<string, unknown>,
+  orderedColumns: string[],
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const c of orderedColumns) {
+    out[c] = row[c] ?? '';
+  }
+  return out;
+}
+
 @Injectable()
 export class ReportingFullMetadataExportService {
   private readonly _logger = new Logger(ReportingFullMetadataExportService.name);
@@ -269,7 +300,7 @@ export class ReportingFullMetadataExportService {
     const listRes = await this._resultsService.getResultDataForBasicReport(filters);
     const basicRows = (listRes?.response ?? []) as Record<string, unknown>[];
 
-    if (basicRows.length > maxRows) {
+    if (maxRows != null && basicRows.length > maxRows) {
       throw new Error(
         `Too many results (${basicRows.length}). Maximum allowed is ${maxRows}. Narrow your filters.`,
       );
@@ -311,6 +342,9 @@ export class ReportingFullMetadataExportService {
     }
 
     if (hasP25Rows) {
+      const selectedP25Columns = normalizeRequestedP25Columns(
+        filters.selectedColumns,
+      );
       const resultCodes = Array.from(
         new Set(
           validRows
@@ -328,8 +362,8 @@ export class ReportingFullMetadataExportService {
       }
 
       for (const row of p25Rows) {
-        const flat = normalizeTabularRow(row);
-        const typeKey = String(row['result_type'] ?? 'P25');
+        const flat = pickColumns(normalizeTabularRow(row), selectedP25Columns);
+        const typeKey = String(flat['result_type'] ?? 'P25');
         if (!byType.has(typeKey)) byType.set(typeKey, []);
         byType.get(typeKey)!.push(flat);
       }

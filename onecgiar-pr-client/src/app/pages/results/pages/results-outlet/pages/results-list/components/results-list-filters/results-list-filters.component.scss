@@ -67,6 +67,41 @@
   }
 }
 
+.p25-columns-drawer-container {
+  width: min(980px, 90vw);
+}
+
+.p25-columns-drawer {
+  width: 100%;
+}
+
+.p25-columns-drawer .drawer-content {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.p25-columns-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 18px;
+  padding-bottom: 10px;
+}
+
+.p25-section-card {
+  border: none;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 0;
+  padding: 10px 0 0 0;
+  background: transparent;
+}
+
+.p25-columns-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
 .drawer-content {
   flex: 1;
   overflow-y: auto;
@@ -121,6 +156,14 @@
   padding: 20px 24px;
   border-top: 1px solid rgba(0, 0, 0, 0.08);
   background-color: var(--pr-color-accents-1);
+}
+
+// P25 column picker: global .drawer-footer uses a 2-column grid for the filters drawer; keep actions grouped on the right here.
+.p25-columns-drawer .drawer-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
 }
 
 // Filter Chips Bar Styles
@@ -189,6 +232,18 @@
     font-size: 12px !important;
   }
 
+  .p25-drawer-btn {
+    .p-button {
+      min-width: 140px;
+      width: auto;
+      padding: 0.55rem 1rem;
+    }
+  }
+
+  .p25-drawer-btn-cancel .p-button {
+    min-width: 110px;
+  }
+
   .filters_items_container_left {
     p-iconfield {
       .p-icon-field {
@@ -211,4 +266,25 @@
 
 .disabledButtons {
   opacity: 0.5;
+}
+
+@media (max-width: 900px) {
+  .p25-columns-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .p25-columns-drawer .drawer-content {
+    overflow-y: auto;
+  }
+
+  .p25-columns-drawer .drawer-footer {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    justify-content: stretch;
+  }
+
+  ::ng-deep .p25-drawer-btn .p-button {
+    width: 100%;
+    min-width: 0;
+  }
 }

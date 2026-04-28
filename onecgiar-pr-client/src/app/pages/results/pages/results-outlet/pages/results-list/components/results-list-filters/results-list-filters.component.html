@@ -72,8 +72,8 @@
         label="Full metadata"
         variant="outlined"
         icon="pi pi-envelope"
-        (click)="onRequestFullMetadataEmailExport()"
-        (keydown.enter)="onRequestFullMetadataEmailExport()"
+        (click)="onClickFullMetadataExport()"
+        (keydown.enter)="onClickFullMetadataExport()"
         [disabled]="!hasFilteredResults || !!fullMetadataExportBlockedReason()"
         [loading]="this.requestingFullExport()"
         [pTooltip]="fullMetadataExportBlockedReason() || 'Queue a full metadata export (same filters). You will receive an email with a download link when the file is ready.'"
@@ -81,6 +81,73 @@
     </div>
   </div>
 </div>
+
+@if (p25ColumnDrawerVisible()) {
+  <div class="custom-drawer-container visible p25-columns-drawer-container" [style.top.px]="navbarHeight()">
+    <div class="custom-drawer open p25-columns-drawer">
+      <div class="drawer-content">
+        <div class="drawer-header">
+          <h3 class="drawer-title">P25 export columns</h3>
+          <button class="close-button" (click)="closeP25ColumnsDrawer()" aria-label="Close">
+            <i class="pi pi-times"></i>
+          </button>
+        </div>
+        <p class="drawer-description">Select optional columns. Required columns are always included.</p>
+
+        <div class="p25-columns-grid">
+          <div class="p25-section-card">
+            <app-pr-field-header label="Required (always included)" [required]="false"></app-pr-field-header>
+            <div class="p25-columns-list">
+              @for (col of p25RequiredColumns; track col) {
+                <label style="display:flex; align-items:center; gap:0.5rem; opacity:0.85">
+                  <input type="checkbox" [checked]="true" disabled />
+                  <span>{{ getP25ColumnLabel(col) }}</span>
+                </label>
+              }
+            </div>
+          </div>
+
+          @for (group of p25OptionalSections; track group.section) {
+            <div class="p25-section-card">
+              <app-pr-field-header [label]="group.section" [required]="false"></app-pr-field-header>
+              <div class="p25-columns-list">
+                @for (col of group.columns; track col) {
+                  <label style="display:flex; align-items:center; gap:0.5rem">
+                    <input
+                      type="checkbox"
+                      [checked]="isP25OptionalColumnSelected(col)"
+                      (change)="toggleP25OptionalColumn(col, $any($event.target).checked)" />
+                    <span>{{ getP25ColumnLabel(col) }}</span>
+                  </label>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="drawer-footer">
+        <p-button
+          label="Cancel"
+          variant="outlined"
+          styleClass="p25-drawer-btn p25-drawer-btn-cancel"
+          [ariaLabel]="p25DrawerCancelAriaLabel"
+          [pTooltip]="p25DrawerCancelTooltip"
+          tooltipPosition="top"
+          (click)="closeP25ColumnsDrawer()"
+          (keydown.enter)="closeP25ColumnsDrawer()"></p-button>
+        <p-button
+          label="Generate export"
+          styleClass="p25-drawer-btn p25-drawer-btn-primary"
+          [ariaLabel]="p25DrawerGenerateAriaLabel"
+          [pTooltip]="p25DrawerGenerateTooltip"
+          tooltipPosition="top"
+          (click)="confirmP25ColumnsAndExport()"
+          (keydown.enter)="confirmP25ColumnsAndExport()"></p-button>
+      </div>
+    </div>
+  </div>
+}
 
 <!-- Custom Drawer -->
 <div class="custom-drawer-container" [class.visible]="visible()" [style.top.px]="navbarHeight()">

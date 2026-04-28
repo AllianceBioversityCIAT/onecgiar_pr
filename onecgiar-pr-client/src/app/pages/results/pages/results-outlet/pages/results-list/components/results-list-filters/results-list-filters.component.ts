@@ -19,6 +19,82 @@ import { ReversePipe } from '../../../../../../../../shared/pipes/reverse.pipe';
 import { TooltipModule } from 'primeng/tooltip';
 import { CustomizedAlertsFeService } from '../../../../../../../../shared/services/customized-alerts-fe.service';
 
+const P25_REQUIRED_EXPORT_COLUMNS: string[] = [
+  'result_code',
+  'phase_name',
+  'portfolio_acronym',
+  'result_level',
+  'result_type',
+  'submission_status',
+  'title',
+  'result_description',
+  'primary_submitter_acronym'
+];
+
+const P25_OPTIONAL_EXPORT_SECTIONS: Array<{ section: string; columns: string[] }> = [
+  {
+    section: 'General information',
+    columns: [
+      'lead_contact_email',
+      'gender_tag_score',
+      'gender_tag_components',
+      'climate_tag_score',
+      'climate_tag_components',
+      'nutrition_tag_score',
+      'nutrition_tag_components',
+      'environmental_tag_score',
+      'environmental_tag_components',
+      'poverty_tag_score',
+      'poverty_tag_components'
+    ]
+  },
+  {
+    section: 'Contributors and partners',
+    columns: ['bilateral_projects', 'contributing_centers', 'partners', 'authors_affiliations_kp', 'result_lead']
+  },
+  {
+    section: 'Geographic location',
+    columns: ['geo_focus', 'regions', 'countries', 'subnational']
+  },
+  {
+    section: 'Evidence',
+    columns: ['evidences']
+  }
+];
+
+const P25_COLUMN_LABEL_OVERRIDES: Record<string, string> = {
+  result_code: 'Result Code',
+  phase_name: 'Phase Name',
+  portfolio_acronym: 'Portfolio Acronym',
+  result_level: 'Result Level',
+  result_type: 'Result Type',
+  submission_status: 'Submission Status',
+  title: 'Title',
+  result_description: 'Result Description',
+  primary_submitter_acronym: 'Primary Submitter Acronym',
+  lead_contact_email: 'Lead Contact Person',
+  gender_tag_score: 'Gender Tag Score',
+  gender_tag_components: 'Gender Tag Impact Areas',
+  climate_tag_score: 'Climate Tag Score',
+  climate_tag_components: 'Climate Tag Impact Areas',
+  nutrition_tag_score: 'Nutrition Tag Score',
+  nutrition_tag_components: 'Nutrition Tag Impact Areas',
+  environmental_tag_score: 'Environmental Tag Score',
+  environmental_tag_components: 'Environmental Tag Impact Areas',
+  poverty_tag_score: 'Poverty Tag Score',
+  poverty_tag_components: 'Poverty Tag Impact Areas',
+  bilateral_projects: 'Bilateral Projects',
+  contributing_centers: 'Contributing Centers',
+  partners: 'Partners',
+  authors_affiliations_kp: 'Authors Affiliations (KP)',
+  result_lead: 'Result Lead',
+  geo_focus: 'Geographic Focus',
+  regions: 'Regions',
+  countries: 'Countries',
+  subnational: 'Subnational',
+  evidences: 'Evidences'
+};
+
 @Component({
   selector: 'app-results-list-filters',
   templateUrl: './results-list-filters.component.html',
@@ -58,6 +134,19 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   tempSelectedStatus = signal([]);
   tempSelectedFundingSource = signal([]);
   tempSelectedLeadCenters = signal<any[]>([]);
+  p25ColumnDrawerVisible = signal(false);
+  p25OptionalSelectedColumns = signal<string[]>([]);
+  p25OptionalSections = P25_OPTIONAL_EXPORT_SECTIONS;
+  p25RequiredColumns = P25_REQUIRED_EXPORT_COLUMNS;
+
+  /** Accessible names and tooltips for the P25 column drawer footer (buttons use aria-label; pTooltip for hover). */
+  readonly p25DrawerCancelAriaLabel = 'Close column selection without exporting';
+  readonly p25DrawerCancelTooltip =
+    'Closes this panel without starting an export. Checkbox choices only apply if you click Generate export.';
+  readonly p25DrawerGenerateAriaLabel =
+    'Generate P25 full metadata export with the selected optional columns';
+  readonly p25DrawerGenerateTooltip =
+    'Queues the Excel file with your current filters and selected columns. If you include tag, score, or other indicator fields, the export includes the full detail for each type. You will receive an email with a download link when the file is ready.';
 
   // Computed signal for filtered phases based on selected portfolios
   filteredPhasesOptions = computed(() => {
@@ -506,6 +595,58 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
    * Uses the same filters as the summary Excel download.
    */
   onRequestFullMetadataEmailExport() {
+    this.onRequestFullMetadataEmailExportWithColumns();
+  }
+
+  onClickFullMetadataExport() {
+    if (this.shouldOpenP25ColumnsDrawer()) {
+      this.openP25ColumnsDrawer();
+      return;
+    }
+    this.onRequestFullMetadataEmailExportWithColumns();
+  }
+
+  openP25ColumnsDrawer() {
+    this.p25OptionalSelectedColumns.set(
+      Array.from(new Set(this.p25OptionalSections.flatMap(s => s.columns)))
+    );
+    this.p25ColumnDrawerVisible.set(true);
+  }
+
+  closeP25ColumnsDrawer() {
+    this.p25ColumnDrawerVisible.set(false);
+  }
+
+  toggleP25OptionalColumn(column: string, checked: boolean) {
+    const current = this.p25OptionalSelectedColumns();
+    if (checked) {
+      this.p25OptionalSelectedColumns.set(Array.from(new Set([...current, column])));
+      return;
+    }
+    this.p25OptionalSelectedColumns.set(current.filter(c => c !== column));
+  }
+
+  isP25OptionalColumnSelected(column: string): boolean {
+    return this.p25OptionalSelectedColumns().includes(column);
+  }
+
+  confirmP25ColumnsAndExport() {
+    const selectedColumns = Array.from(new Set([...this.p25RequiredColumns, ...this.p25OptionalSelectedColumns()]));
+    this.p25ColumnDrawerVisible.set(false);
+    this.onRequestFullMetadataEmailExportWithColumns(selectedColumns);
+  }
+
+  getP25ColumnLabel(column: string): string {
+    const override = P25_COLUMN_LABEL_OVERRIDES[column];
+    if (override) return override;
+    return column
+      .split('_')
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+  }
+
+  private onRequestFullMetadataEmailExportWithColumns(selectedColumns?: string[]) {
     const blockedReason = this.fullMetadataExportBlockedReason();
     if (blockedReason) {
       this.customAlertsSE.show({
@@ -528,7 +669,12 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     }
 
     this.requestingFullExport.set(true);
-    this.api.resultsSE.POST_reportingFullMetadataExportJob(this.buildReportingListFiltersPayload()).subscribe({
+    this.api.resultsSE
+      .POST_reportingFullMetadataExportJob({
+        ...this.buildReportingListFiltersPayload(),
+        ...(selectedColumns?.length ? { selectedColumns } : {})
+      })
+      .subscribe({
       next: (body: { response?: { jobId?: string }; message?: string }) => {
         this.requestingFullExport.set(false);
         const jobId = body?.response?.jobId;
@@ -557,6 +703,26 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
         });
       }
     });
+  }
+
+  private shouldOpenP25ColumnsDrawer(): boolean {
+    if (this.api.resultsSE.ipsrDataControlSE.inIpsr) return false;
+    const years = this.resultsListFilterSE
+      .selectedPhases()
+      .map((phase: any) => this.extractPhaseYear(phase))
+      .filter((year: number | null): year is number => year != null);
+    if (!years.length) return false;
+    return years.every(y => y >= 2025 && y <= 2030);
+  }
+
+  private extractPhaseYear(phase: any): number | null {
+    const explicitYear = Number(phase?.phase_year);
+    if (Number.isFinite(explicitYear)) return explicitYear;
+    const text = String(phase?.phase_name ?? phase?.name ?? '');
+    const match = text.match(/\b(20\d{2})\b/);
+    if (!match) return null;
+    const parsed = Number(match[1]);
+    return Number.isFinite(parsed) ? parsed : null;
   }
 
   private getFullMetadataExportBlockedReason(): string | null {
