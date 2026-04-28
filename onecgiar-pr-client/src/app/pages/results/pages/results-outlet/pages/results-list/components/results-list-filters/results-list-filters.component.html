@@ -73,6 +73,7 @@
       icon="pi pi-download"
       (click)="onDownLoadTableAsExcel()"
       (keydown.enter)="onDownLoadTableAsExcel()"
+      [disabled]="!hasFilteredResults"
       [loading]="this.gettingReport()" />
   </div>
 </div>

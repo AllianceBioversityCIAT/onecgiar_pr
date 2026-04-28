@@ -182,7 +182,7 @@ describe('ResultsController', () => {
 
   it('update calls deleteResult with id and user', async () => {
     await controller.update(10, user);
-    expect(mockService.deleteResult).toHaveBeenCalledWith(10, user);
+    expect(mockService.deleteResult).toHaveBeenCalledWith(10, user, undefined);
   });
 
   it('saveGeographic sets result_id and delegates', async () => {

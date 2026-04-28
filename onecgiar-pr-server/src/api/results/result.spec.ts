@@ -75,6 +75,7 @@ import { ReviewUpdateDto } from './dto/review-update.dto';
 import { ResultsTocResultsService } from './results-toc-results/results-toc-results.service';
 import { ShareResultRequestService } from './share-result-request/share-result-request.service';
 import { ShareResultRequestRepository } from './share-result-request/share-result-request.repository';
+import { ResultDeletionAuditService } from './result-deletion-audit/result-deletion-audit.service';
 
 describe('ResultsService (unit, pure mocks)', () => {
   let module: TestingModule;
@@ -521,6 +522,10 @@ describe('ResultsService (unit, pure mocks)', () => {
     }),
   } as any;
 
+  const mockResultDeletionAuditService = {
+    recordDeletion: jest.fn().mockResolvedValue(undefined),
+  };
+
   const mockResultImpactAreaScoresService = {
     validateImpactAreaScores: jest
       .fn()
@@ -672,6 +677,10 @@ describe('ResultsService (unit, pure mocks)', () => {
         {
           provide: AoWBilateralRepository,
           useValue: mockAoWBilateralRepository,
+        },
+        {
+          provide: ResultDeletionAuditService,
+          useValue: mockResultDeletionAuditService,
         },
         {
           provide: ResultReviewHistoryRepository,

@@ -104,6 +104,7 @@ import { ResultImpactAreaScoresModule } from '../result-impact-area-scores/resul
 import { ContributorsPartnersModule } from '../results-framework-reporting/contributors-partners/contributors-partners.module';
 import { InnovationDevModule } from '../results-framework-reporting/innovation_dev/innovation_dev.module';
 import { InnovationUseModule } from '../results-framework-reporting/innovation-use/innovation-use.module';
+import { ResultDeletionAuditModule } from './result-deletion-audit/result-deletion-audit.module';
 
 @Module({
   controllers: [ResultsController],
@@ -168,6 +169,7 @@ import { InnovationUseModule } from '../results-framework-reporting/innovation-u
     forwardRef(() => ContributorsPartnersModule),
     forwardRef(() => InnovationDevModule),
     forwardRef(() => InnovationUseModule),
+    ResultDeletionAuditModule,
   ],
   providers: [
     ResultsService,
@@ -206,7 +208,12 @@ import { InnovationUseModule } from '../results-framework-reporting/innovation-u
     ResultReviewHistoryRepository,
     ShareResultRequestRepository,
   ],
-  exports: [ResultRepository, JwtMiddleware, ResultsService],
+  exports: [
+    ResultRepository,
+    JwtMiddleware,
+    ResultsService,
+    ResultQuestionsService,
+  ],
 })
 export class ResultsModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
