@@ -40,7 +40,7 @@ import { Version } from '../versioning/entities/version.entity';
     ResultRepository,
     TemplateRepository,
   ],
-  exports: [TemplateRepository],
+  exports: [TemplateRepository, PlatformReportRepository],
 })
 export class PlatformReportModule {
   public constructor() {

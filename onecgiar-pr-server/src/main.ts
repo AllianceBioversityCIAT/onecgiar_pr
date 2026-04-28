@@ -2,7 +2,9 @@ import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import helmet from 'helmet';
-import { env } from 'process';
+import { env } from 'node:process';
+import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { isReportingMetadataExportQueueConfigured } from './shared/microservices/reporting-metadata-export-queue/reporting-metadata-export-queue.constants';
 
 import { json, urlencoded } from 'express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -56,6 +58,21 @@ async function bootstrap() {
       filter: true,
     },
   });
+
+  if (isReportingMetadataExportQueueConfigured()) {
+    app.connectMicroservice<MicroserviceOptions>({
+      transport: Transport.RMQ,
+      options: {
+        urls: [env.RABBITMQ_URL],
+        queue: env.REPORTING_METADATA_EXPORT_QUEUE,
+        queueOptions: {
+          durable: true,
+        },
+        prefetchCount: 1,
+      },
+    });
+    await app.startAllMicroservices();
+  }
 
   await app
     .listen(port)

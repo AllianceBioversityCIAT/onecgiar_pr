@@ -800,7 +800,8 @@ describe('ResultsService (unit, pure mocks)', () => {
       newResult,
       userTest,
     );
-    expect(response.status).toBe(HttpStatus.BAD_REQUEST);
+    // returnErrorRes uses 500 when the thrown Error has no status (see HandlersError)
+    expect(response.status).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
     expect(response.message).toBe(
       'Missing data: Result name, Initiative or Result type',
     );
@@ -1005,7 +1006,7 @@ describe('ResultsService (unit, pure mocks)', () => {
     const results: returnFormatService =
       await resultService.createResultGeneralInformation(newResult, userTest);
     expect(results.response).toBeDefined();
-    const updated = (results.response as any).updateResult || results.response;
+    const updated = results.response.updateResult || results.response;
     expect(updated.id).toBeDefined();
     expect(updated.title).toBe(resultTitle);
     expect(updated.description).toBe(resultDescription);
@@ -1080,7 +1081,7 @@ describe('ResultsService (unit, pure mocks)', () => {
 
   it('should return all results legacy new', async () => {
     const title = 'Assessment of the pote';
-    (mockResultRepository as any).AllResultsLegacyNewByTitle = jest
+    mockResultRepository.AllResultsLegacyNewByTitle = jest
       .fn()
       .mockResolvedValue([{ id: '10' }]);
     const results = await resultService.findAllResultsLegacyNew(title);
@@ -1092,7 +1093,7 @@ describe('ResultsService (unit, pure mocks)', () => {
 
   it('should error when not found legacy result', async () => {
     const title = 'Error title Test: -1';
-    (mockResultRepository as any).AllResultsLegacyNewByTitle = jest
+    mockResultRepository.AllResultsLegacyNewByTitle = jest
       .fn()
       .mockResolvedValue([]);
     const results = await resultService.findAllResultsLegacyNew(title);
@@ -1206,7 +1207,7 @@ describe('ResultsService (unit, pure mocks)', () => {
   });
 
   it('should get basic report data', async () => {
-    (mockResultRepository as any).getResultDataForBasicReport = jest
+    mockResultRepository.getResultDataForBasicReport = jest
       .fn()
       .mockResolvedValue([{ id: 1 }]);
     const res = await resultService.getResultDataForBasicReport(

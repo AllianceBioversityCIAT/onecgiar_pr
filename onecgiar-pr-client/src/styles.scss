@@ -415,3 +415,19 @@ a {
 }
 
 @include generate-margin-right-classes(100);
+
+/* P25 full-metadata column drawer: only the drawer should scroll, not the results list / page behind it */
+html.pr-p25-drawer-scroll-lock,
+body.pr-p25-drawer-scroll-lock {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+
+body.pr-p25-drawer-scroll-lock {
+  .p-datatable-scrollable .p-datatable-wrapper,
+  .p-datatable-scrollable .p-datatable-scrollable-body,
+  .p-datatable-scrollable .p-datatable-table-container,
+  .p-datatable .p-datatable-table-container {
+    overflow: hidden !important;
+  }
+}

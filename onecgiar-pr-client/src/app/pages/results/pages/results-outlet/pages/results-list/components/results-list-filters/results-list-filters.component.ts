@@ -1,4 +1,16 @@
-import { Component, OnInit, computed, signal, Input, SimpleChanges, OnChanges, afterNextRender, OnDestroy } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  computed,
+  signal,
+  Input,
+  SimpleChanges,
+  OnChanges,
+  afterNextRender,
+  OnDestroy,
+  viewChild,
+  ElementRef,
+} from '@angular/core';
 import { ResultsListFilterService } from '../../services/results-list-filter.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { ExportTablesService } from '../../../../../../../../shared/services/export-tables.service';
@@ -18,6 +30,105 @@ import { ChipModule } from 'primeng/chip';
 import { CheckboxModule } from 'primeng/checkbox';
 import { ReversePipe } from '../../../../../../../../shared/pipes/reverse.pipe';
 import { TooltipModule } from 'primeng/tooltip';
+import { CustomizedAlertsFeService } from '../../../../../../../../shared/services/customized-alerts-fe.service';
+
+const P25_REQUIRED_EXPORT_COLUMNS: string[] = [
+  'result_code',
+  'phase_name',
+  'portfolio_acronym',
+  'result_level',
+  'result_type',
+  'submission_status',
+  'title',
+  'result_description',
+  'primary_submitter_acronym'
+];
+
+const P25_OPTIONAL_EXPORT_SECTIONS: Array<{ section: string; columns: string[] }> = [
+  {
+    section: 'General information',
+    columns: [
+      'lead_contact_email',
+      'gender_tag_score',
+      'gender_tag_components',
+      'climate_tag_score',
+      'climate_tag_components',
+      'nutrition_tag_score',
+      'nutrition_tag_components',
+      'environmental_tag_score',
+      'environmental_tag_components',
+      'poverty_tag_score',
+      'poverty_tag_components'
+    ]
+  },
+  {
+    section: 'Contributors and partners',
+    columns: [
+      'primary_submitter_toc_mapping',
+      'contributor_toc_mapping',
+      'bilateral_projects',
+      'contributing_centers',
+      'partners',
+      'authors_affiliations_kp',
+      'result_lead',
+    ],
+  },
+  {
+    section: 'Geographic location',
+    columns: ['geo_focus', 'regions', 'countries', 'subnational'],
+  },
+  {
+    section: 'Evidence',
+    columns: ['evidences'],
+  },
+  {
+    section: 'Section 5',
+    columns: ['section_5_metadata'],
+  },
+];
+
+/** Optional columns shown in the drawer but not yet available in the export (disabled + “Coming soon”). */
+const P25_OPTIONAL_COMING_SOON_COLUMNS = new Set<string>([
+  'primary_submitter_toc_mapping',
+  'contributor_toc_mapping',
+  'section_5_metadata',
+]);
+
+const P25_COLUMN_LABEL_OVERRIDES: Record<string, string> = {
+  result_code: 'Result Code',
+  phase_name: 'Phase Name',
+  portfolio_acronym: 'Portfolio Acronym',
+  result_level: 'Result Level',
+  result_type: 'Result Type',
+  submission_status: 'Submission Status',
+  title: 'Title',
+  result_description: 'Result Description',
+  primary_submitter_acronym: 'Primary Submitter Acronym',
+  lead_contact_email: 'Lead Contact Person',
+  gender_tag_score: 'Gender Tag Score',
+  gender_tag_components: 'Gender Tag Impact Areas',
+  climate_tag_score: 'Climate Tag Score',
+  climate_tag_components: 'Climate Tag Impact Areas',
+  nutrition_tag_score: 'Nutrition Tag Score',
+  nutrition_tag_components: 'Nutrition Tag Impact Areas',
+  environmental_tag_score: 'Environmental Tag Score',
+  environmental_tag_components: 'Environmental Tag Impact Areas',
+  poverty_tag_score: 'Poverty Tag Score',
+  poverty_tag_components: 'Poverty Tag Impact Areas',
+  bilateral_projects: 'Bilateral Projects',
+  contributing_centers: 'Contributing Centers',
+  partners: 'Partners',
+  authors_affiliations_kp: 'Authors Affiliations (KP)',
+  result_lead: 'Result Lead',
+  primary_submitter_toc_mapping: 'Primary submitter ToC Mapping',
+  contributor_toc_mapping: 'Contributor ToC Mapping',
+  section_5_metadata: 'Include metadata',
+  geo_focus: 'Geographic Focus',
+  regions: 'Regions',
+  countries: 'Countries',
+  subnational: 'Subnational',
+  evidences: 'Evidences'
+};
 
 @Component({
   selector: 'app-results-list-filters',
@@ -42,7 +153,11 @@ import { TooltipModule } from 'primeng/tooltip';
   ]
 })
 export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy {
+  private static readonly P25_DRAWER_TRANSITION_MS = 340;
+
   gettingReport = signal(false);
+  /** Full-metadata async export (email + S3 link) */
+  requestingFullExport = signal(false);
   visible = signal(false);
   clarisaPortfolios = signal([]);
   navbarHeight = signal(0);
@@ -59,6 +174,20 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   tempSelectedLeadCenters = signal<any[]>([]);
   tempFilterCreatedByMe = signal(false);
   tempFilterSubmittedByMe = signal(false);
+  p25ColumnDrawerVisible = signal(false);
+  /** Drives backdrop fade + panel slide; kept false one frame on open so CSS transitions run. */
+  p25ColumnDrawerMotionOpen = signal(false);
+  p25OptionalSelectedColumns = signal<string[]>([]);
+  readonly p25DrawerPanel = viewChild<ElementRef<HTMLElement>>('p25DrawerPanel');
+  private p25FocusBeforeOpen: HTMLElement | null = null;
+  private p25CloseTimer: ReturnType<typeof setTimeout> | null = null;
+  p25OptionalSections = P25_OPTIONAL_EXPORT_SECTIONS;
+  p25RequiredColumns = P25_REQUIRED_EXPORT_COLUMNS;
+
+  /** Accessible names for the P25 column drawer footer buttons (see visible copy in the template). */
+  readonly p25DrawerCancelAriaLabel = 'Close column selection without exporting';
+  readonly p25DrawerGenerateAriaLabel =
+    'Generate P25 full metadata export with the selected optional columns';
 
   // Computed signal for filtered phases based on selected portfolios
   filteredPhasesOptions = computed(() => {
@@ -68,6 +197,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     }
     return this.resultsListFilterSE.phasesOptionsOld().filter(phase => selectedPortfolios.some(portfolio => portfolio.id == phase.portfolio_id));
   });
+  fullMetadataExportBlockedReason = computed(() => this.getFullMetadataExportBlockedReason());
 
   filtersCount = computed(() => {
     let count = 0;
@@ -213,7 +343,8 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   constructor(
     public resultsListFilterSE: ResultsListFilterService,
     public api: ApiService,
-    private exportTablesSE: ExportTablesService
+    private readonly exportTablesSE: ExportTablesService,
+    private readonly customAlertsSE: CustomizedAlertsFeService
   ) {
     // Calculate navbar height after render
     afterNextRender(() => {
@@ -505,21 +636,26 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     this.visible.set(false);
   }
 
+  /** Same filter payload as GET_reportingList / server BasicReportFiltersDto */
+  private buildReportingListFiltersPayload() {
+    return {
+      phases: this.resultsListFilterSE.selectedPhases(),
+      searchText: this.resultsListFilterSE.text_to_search(),
+      inits: this.resultsListFilterSE.selectedSubmittersAdmin(),
+      indicatorCategories: this.resultsListFilterSE.selectedIndicatorCategories(),
+      status: this.resultsListFilterSE.selectedStatus(),
+      clarisaPortfolios: this.resultsListFilterSE.selectedClarisaPortfolios(),
+      fundingSource: this.resultsListFilterSE.selectedFundingSource(),
+      leadCenters: this.resultsListFilterSE.selectedLeadCenters(),
+      ...(this.resultsListFilterSE.filterCreatedByMe() ? { filterCreatedByMe: true } : {}),
+      ...(this.resultsListFilterSE.filterSubmittedByMe() ? { filterSubmittedByMe: true } : {}),
+    };
+  }
+
   onDownLoadTableAsExcel() {
     this.gettingReport.set(true);
     this.api.resultsSE
-      .GET_reportingList({
-        phases: this.resultsListFilterSE.selectedPhases(),
-        searchText: this.resultsListFilterSE.text_to_search(),
-        inits: this.resultsListFilterSE.selectedSubmittersAdmin(),
-        indicatorCategories: this.resultsListFilterSE.selectedIndicatorCategories(),
-        status: this.resultsListFilterSE.selectedStatus(),
-        clarisaPortfolios: this.resultsListFilterSE.selectedClarisaPortfolios(),
-        fundingSource: this.resultsListFilterSE.selectedFundingSource(),
-        leadCenters: this.resultsListFilterSE.selectedLeadCenters(),
-        ...(this.resultsListFilterSE.filterCreatedByMe() ? { filterCreatedByMe: true } : {}),
-        ...(this.resultsListFilterSE.filterSubmittedByMe() ? { filterSubmittedByMe: true } : {})
-      })
+      .GET_reportingList(this.buildReportingListFiltersPayload())
       .subscribe({
         next: ({ response }) => {
           void this.buildAndDownloadExcelReport(response);
@@ -529,6 +665,253 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
           this.gettingReport.set(false);
         }
       });
+  }
+
+  /**
+   * Queues server-side full metadata export (DB function per result + Excel to S3 + email).
+   * Uses the same filters as the summary Excel download.
+   */
+  onRequestFullMetadataEmailExport() {
+    this.onRequestFullMetadataEmailExportWithColumns();
+  }
+
+  onClickFullMetadataExport() {
+    if (this.shouldOpenP25ColumnsDrawer()) {
+      this.openP25ColumnsDrawer();
+      return;
+    }
+    this.onRequestFullMetadataEmailExportWithColumns();
+  }
+
+  openP25ColumnsDrawer() {
+    if (this.p25CloseTimer) {
+      clearTimeout(this.p25CloseTimer);
+      this.p25CloseTimer = null;
+    }
+    const optionalAll = this.p25OptionalSections.flatMap(s => s.columns);
+    const selectable = optionalAll.filter(c => !P25_OPTIONAL_COMING_SOON_COLUMNS.has(c));
+    this.p25OptionalSelectedColumns.set(Array.from(new Set(selectable)));
+    const ae = document.activeElement;
+    this.p25FocusBeforeOpen = ae instanceof HTMLElement ? ae : null;
+    this.p25ColumnDrawerMotionOpen.set(false);
+    this.p25ColumnDrawerVisible.set(true);
+    this.setP25DrawerPageScrollLock(true);
+    queueMicrotask(() => {
+      requestAnimationFrame(() => {
+        this.p25ColumnDrawerMotionOpen.set(true);
+        requestAnimationFrame(() => this.focusP25Drawer());
+      });
+    });
+  }
+
+  closeP25ColumnsDrawer() {
+    if (!this.p25ColumnDrawerVisible()) return;
+    if (this.p25CloseTimer) return;
+    this.p25ColumnDrawerMotionOpen.set(false);
+    this.p25CloseTimer = setTimeout(() => {
+      this.p25CloseTimer = null;
+      this.finalizeP25DrawerClosed();
+    }, ResultsListFiltersComponent.P25_DRAWER_TRANSITION_MS);
+  }
+
+  private setP25DrawerPageScrollLock(locked: boolean): void {
+    if (typeof document === 'undefined') return;
+    const cls = 'pr-p25-drawer-scroll-lock';
+    if (locked) {
+      document.documentElement.classList.add(cls);
+      document.body.classList.add(cls);
+    } else {
+      document.documentElement.classList.remove(cls);
+      document.body.classList.remove(cls);
+    }
+  }
+
+  private finalizeP25DrawerClosed(): void {
+    this.p25ColumnDrawerVisible.set(false);
+    this.setP25DrawerPageScrollLock(false);
+    this.restoreP25Focus();
+  }
+
+  private focusP25Drawer(): void {
+    this.p25DrawerPanel()?.nativeElement?.focus();
+  }
+
+  private restoreP25Focus(): void {
+    const el = this.p25FocusBeforeOpen;
+    this.p25FocusBeforeOpen = null;
+    if (el && document.contains(el) && typeof el.focus === 'function') {
+      el.focus();
+    }
+  }
+
+  onP25DrawerKeydown(event: KeyboardEvent) {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      this.closeP25ColumnsDrawer();
+    }
+  }
+
+  toggleP25OptionalColumn(column: string, checked: boolean) {
+    if (P25_OPTIONAL_COMING_SOON_COLUMNS.has(column)) return;
+    const current = this.p25OptionalSelectedColumns();
+    if (checked) {
+      this.p25OptionalSelectedColumns.set(Array.from(new Set([...current, column])));
+      return;
+    }
+    this.p25OptionalSelectedColumns.set(current.filter(c => c !== column));
+  }
+
+  isP25OptionalColumnSelected(column: string): boolean {
+    if (P25_OPTIONAL_COMING_SOON_COLUMNS.has(column)) return false;
+    return this.p25OptionalSelectedColumns().includes(column);
+  }
+
+  isP25OptionalColumnComingSoon(column: string): boolean {
+    return P25_OPTIONAL_COMING_SOON_COLUMNS.has(column);
+  }
+
+  getP25OptionalColumnLabel(column: string): string {
+    const base = this.getP25ColumnLabel(column);
+    return this.isP25OptionalColumnComingSoon(column) ? `${base} (Coming soon)` : base;
+  }
+
+  confirmP25ColumnsAndExport() {
+    if (!this.p25ColumnDrawerVisible()) return;
+    const selectedColumns = Array.from(
+      new Set([...this.p25RequiredColumns, ...this.p25OptionalSelectedColumns()]),
+    );
+    if (this.p25CloseTimer) {
+      clearTimeout(this.p25CloseTimer);
+      this.p25CloseTimer = null;
+    }
+    this.p25ColumnDrawerMotionOpen.set(false);
+    this.p25CloseTimer = setTimeout(() => {
+      this.p25CloseTimer = null;
+      this.finalizeP25DrawerClosed();
+      this.onRequestFullMetadataEmailExportWithColumns(selectedColumns);
+    }, ResultsListFiltersComponent.P25_DRAWER_TRANSITION_MS);
+  }
+
+  getP25ColumnLabel(column: string): string {
+    const override = P25_COLUMN_LABEL_OVERRIDES[column];
+    if (override) return override;
+    return column
+      .split('_')
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+  }
+
+  private onRequestFullMetadataEmailExportWithColumns(selectedColumns?: string[]) {
+    const blockedReason = this.fullMetadataExportBlockedReason();
+    if (blockedReason) {
+      this.customAlertsSE.show({
+        id: 'results-full-export-portfolio-mismatch',
+        title: 'Export blocked',
+        description: blockedReason,
+        status: 'warning'
+      });
+      return;
+    }
+
+    if (this.api.resultsSE.ipsrDataControlSE.inIpsr) {
+      this.customAlertsSE.show({
+        id: 'results-full-export-ipsr',
+        title: 'Not available here',
+        description: 'Full metadata export is only available from the Results module (not IPSR list).',
+        status: 'warning'
+      });
+      return;
+    }
+
+    this.requestingFullExport.set(true);
+    this.api.resultsSE
+      .POST_reportingFullMetadataExportJob({
+        ...this.buildReportingListFiltersPayload(),
+        ...(selectedColumns?.length ? { selectedColumns } : {})
+      })
+      .subscribe({
+      next: (body: { response?: { jobId?: string }; message?: string }) => {
+        this.requestingFullExport.set(false);
+        const jobId = body?.response?.jobId;
+        this.customAlertsSE.show({
+          id: 'results-full-export-queued',
+          title: 'Export queued',
+          description: jobId
+            ? `You will receive an email with a download link when the file is ready. Reference: ${jobId}.`
+            : 'You will receive an email with a download link when the file is ready.',
+          status: 'success',
+          closeIn: 6000
+        });
+      },
+      error: err => {
+        this.requestingFullExport.set(false);
+        const msg =
+          err?.error?.message ??
+          err?.error?.response?.message ??
+          err?.message ??
+          'Could not start the export. Please try again or contact support.';
+        this.customAlertsSE.show({
+          id: 'results-full-export-error',
+          title: 'Export could not be queued',
+          description: typeof msg === 'string' ? msg : 'Could not start the export.',
+          status: 'error'
+        });
+      }
+    });
+  }
+
+  private shouldOpenP25ColumnsDrawer(): boolean {
+    if (this.api.resultsSE.ipsrDataControlSE.inIpsr) return false;
+    const years = this.resultsListFilterSE
+      .selectedPhases()
+      .map((phase: any) => this.extractPhaseYear(phase))
+      .filter((year: number | null): year is number => year != null);
+    if (!years.length) return false;
+    return years.every(y => y >= 2025 && y <= 2030);
+  }
+
+  private extractPhaseYear(phase: any): number | null {
+    const explicitYear = Number(phase?.phase_year);
+    if (Number.isFinite(explicitYear)) return explicitYear;
+    const text = String(phase?.phase_name ?? phase?.name ?? '');
+    const match = /\b(20\d{2})\b/.exec(text);
+    if (!match) return null;
+    const parsed = Number(match[1]);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  private getFullMetadataExportBlockedReason(): string | null {
+    const selectedPhasePortfolioIds = Array.from(
+      new Set(
+        this.resultsListFilterSE
+          .selectedPhases()
+          .map((phase: { portfolio_id?: string | number }) => String(phase?.portfolio_id ?? ''))
+          .filter(Boolean)
+      )
+    );
+    const selectedPortfolioIds = Array.from(
+      new Set(
+        this.resultsListFilterSE
+          .selectedClarisaPortfolios()
+          .map((portfolio: { id?: string | number }) => String(portfolio?.id ?? ''))
+          .filter(Boolean)
+      )
+    );
+
+    if (selectedPhasePortfolioIds.length > 1) {
+      return 'Full metadata export only supports one portfolio at a time. Please select phases from a single portfolio.';
+    }
+    if (selectedPortfolioIds.length > 1) {
+      return 'Full metadata export only supports one portfolio at a time. Please keep only one portfolio selected.';
+    }
+
+    if (selectedPhasePortfolioIds.length === 1 && selectedPortfolioIds.length === 1 && selectedPhasePortfolioIds[0] !== selectedPortfolioIds[0]) {
+      return 'Selected phases and selected portfolio must belong to the same portfolio.';
+    }
+
+    return null;
   }
 
   private async buildAndDownloadExcelReport(response: any[]): Promise<void> {
@@ -613,6 +996,11 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   }
 
   ngOnDestroy() {
+    this.setP25DrawerPageScrollLock(false);
+    if (this.p25CloseTimer) {
+      clearTimeout(this.p25CloseTimer);
+      this.p25CloseTimer = null;
+    }
     if (this.resizeObserver) {
       this.resizeObserver.disconnect();
       this.resizeObserver = null;

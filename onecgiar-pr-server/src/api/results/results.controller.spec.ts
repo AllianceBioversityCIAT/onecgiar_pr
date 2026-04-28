@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ResultsController } from './results.controller';
 import { ResultsService } from './results.service';
+import { ReportingFullMetadataExportService } from './services/reporting-full-metadata-export.service';
 
 describe('ResultsController', () => {
   let controller: ResultsController;
@@ -55,12 +56,23 @@ describe('ResultsController', () => {
       .mockResolvedValue({ status: 200, response: {} }),
   } as unknown as jest.Mocked<ResultsService>;
 
+  const mockReportingFullMetadataExportService = {
+    enqueueExport: jest.fn(),
+    getJob: jest.fn(),
+  };
+
   const user = { id: 1 } as any;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ResultsController],
-      providers: [{ provide: ResultsService, useValue: mockService }],
+      providers: [
+        { provide: ResultsService, useValue: mockService },
+        {
+          provide: ReportingFullMetadataExportService,
+          useValue: mockReportingFullMetadataExportService,
+        },
+      ],
     }).compile();
 
     controller = module.get<ResultsController>(ResultsController);
@@ -85,7 +97,7 @@ describe('ResultsController', () => {
   });
 
   it('findAll concatenates result of service + name', async () => {
-    const res = await controller.findAll('name');
+    const res = controller.findAll('name');
     expect(mockService.findAll).toHaveBeenCalled();
     // Controller returns Promise + string without awaiting; coerces to string
     expect(res).toBe('[object Promise]' + 'name');
@@ -214,7 +226,7 @@ describe('ResultsController', () => {
   });
 
   it('createVersion calls service and returns ok', async () => {
-    const res = await controller.createVersion(13, user);
+    const res = controller.createVersion(13, user);
     expect(mockService.versioningResultsById).toHaveBeenCalledWith(13, user);
     expect(res).toBe('ok');
   });
