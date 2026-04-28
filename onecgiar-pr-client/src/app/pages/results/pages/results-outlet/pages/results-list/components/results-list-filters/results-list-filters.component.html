@@ -83,11 +83,29 @@
 </div>
 
 @if (p25ColumnDrawerVisible()) {
-  <div class="custom-drawer-container visible p25-columns-drawer-container" [style.top.px]="navbarHeight()">
-    <div class="custom-drawer open p25-columns-drawer">
-      <div class="drawer-content">
+  <div
+    class="p25-drawer-overlay-root"
+    [style.top.px]="navbarHeight()"
+    (keydown)="onP25DrawerKeydown($event)">
+    <button
+      type="button"
+      class="p25-drawer-backdrop"
+      [class.p25-drawer-backdrop--open]="p25ColumnDrawerMotionOpen()"
+      (click)="closeP25ColumnsDrawer()"
+      aria-label="Close and return to the results list"
+      tabindex="-1"></button>
+    <div
+      #p25DrawerPanel
+      class="p25-columns-drawer-shell"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="p25-export-drawer-title"
+      tabindex="-1"
+      [class.p25-columns-drawer-shell--open]="p25ColumnDrawerMotionOpen()">
+      <div class="custom-drawer p25-columns-drawer">
+        <div class="drawer-content">
         <div class="drawer-header">
-          <h3 class="drawer-title">P25 export columns</h3>
+          <h3 class="drawer-title" id="p25-export-drawer-title">P25 export columns</h3>
           <button class="close-button" (click)="closeP25ColumnsDrawer()" aria-label="Close">
             <i class="pi pi-times"></i>
           </button>
@@ -135,22 +153,23 @@
             </div>
           }
         </div>
-      </div>
+        </div>
 
-      <div class="drawer-footer">
-        <p-button
-          label="Cancel"
-          variant="outlined"
-          styleClass="p25-drawer-btn p25-drawer-btn-cancel"
-          [ariaLabel]="p25DrawerCancelAriaLabel"
-          (click)="closeP25ColumnsDrawer()"
-          (keydown.enter)="closeP25ColumnsDrawer()"></p-button>
-        <p-button
-          label="Generate export"
-          styleClass="p25-drawer-btn p25-drawer-btn-primary"
-          [ariaLabel]="p25DrawerGenerateAriaLabel"
-          (click)="confirmP25ColumnsAndExport()"
-          (keydown.enter)="confirmP25ColumnsAndExport()"></p-button>
+        <div class="drawer-footer">
+          <p-button
+            label="Cancel"
+            variant="outlined"
+            styleClass="p25-drawer-btn p25-drawer-btn-cancel"
+            [ariaLabel]="p25DrawerCancelAriaLabel"
+            (click)="closeP25ColumnsDrawer()"
+            (keydown.enter)="closeP25ColumnsDrawer()"></p-button>
+          <p-button
+            label="Generate export"
+            styleClass="p25-drawer-btn p25-drawer-btn-primary"
+            [ariaLabel]="p25DrawerGenerateAriaLabel"
+            (click)="confirmP25ColumnsAndExport()"
+            (keydown.enter)="confirmP25ColumnsAndExport()"></p-button>
+        </div>
       </div>
     </div>
   </div>

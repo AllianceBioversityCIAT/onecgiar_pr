@@ -1,4 +1,16 @@
-import { Component, OnInit, computed, signal, Input, SimpleChanges, OnChanges, afterNextRender, OnDestroy } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  computed,
+  signal,
+  Input,
+  SimpleChanges,
+  OnChanges,
+  afterNextRender,
+  OnDestroy,
+  viewChild,
+  ElementRef,
+} from '@angular/core';
 import { ResultsListFilterService } from '../../services/results-list-filter.service';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { ExportTablesService } from '../../../../../../../../shared/services/export-tables.service';
@@ -117,6 +129,8 @@ const P25_COLUMN_LABEL_OVERRIDES: Record<string, string> = {
   ]
 })
 export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy {
+  private static readonly P25_DRAWER_TRANSITION_MS = 340;
+
   gettingReport = signal(false);
   /** Full-metadata async export (email + S3 link) */
   requestingFullExport = signal(false);
@@ -135,7 +149,12 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   tempSelectedFundingSource = signal([]);
   tempSelectedLeadCenters = signal<any[]>([]);
   p25ColumnDrawerVisible = signal(false);
+  /** Drives backdrop fade + panel slide; kept false one frame on open so CSS transitions run. */
+  p25ColumnDrawerMotionOpen = signal(false);
   p25OptionalSelectedColumns = signal<string[]>([]);
+  readonly p25DrawerPanel = viewChild<ElementRef<HTMLElement>>('p25DrawerPanel');
+  private p25FocusBeforeOpen: HTMLElement | null = null;
+  private p25CloseTimer: ReturnType<typeof setTimeout> | null = null;
   p25OptionalSections = P25_OPTIONAL_EXPORT_SECTIONS;
   p25RequiredColumns = P25_REQUIRED_EXPORT_COLUMNS;
 
@@ -603,14 +622,54 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   }
 
   openP25ColumnsDrawer() {
+    if (this.p25CloseTimer) {
+      clearTimeout(this.p25CloseTimer);
+      this.p25CloseTimer = null;
+    }
     this.p25OptionalSelectedColumns.set(
-      Array.from(new Set(this.p25OptionalSections.flatMap(s => s.columns)))
+      Array.from(new Set(this.p25OptionalSections.flatMap(s => s.columns))),
     );
+    const ae = document.activeElement;
+    this.p25FocusBeforeOpen = ae instanceof HTMLElement ? ae : null;
+    this.p25ColumnDrawerMotionOpen.set(false);
     this.p25ColumnDrawerVisible.set(true);
+    queueMicrotask(() => {
+      requestAnimationFrame(() => {
+        this.p25ColumnDrawerMotionOpen.set(true);
+        requestAnimationFrame(() => this.focusP25Drawer());
+      });
+    });
   }
 
   closeP25ColumnsDrawer() {
-    this.p25ColumnDrawerVisible.set(false);
+    if (!this.p25ColumnDrawerVisible()) return;
+    if (this.p25CloseTimer) return;
+    this.p25ColumnDrawerMotionOpen.set(false);
+    this.p25CloseTimer = setTimeout(() => {
+      this.p25CloseTimer = null;
+      this.p25ColumnDrawerVisible.set(false);
+      this.restoreP25Focus();
+    }, ResultsListFiltersComponent.P25_DRAWER_TRANSITION_MS);
+  }
+
+  private focusP25Drawer(): void {
+    this.p25DrawerPanel()?.nativeElement?.focus();
+  }
+
+  private restoreP25Focus(): void {
+    const el = this.p25FocusBeforeOpen;
+    this.p25FocusBeforeOpen = null;
+    if (el && document.contains(el) && typeof el.focus === 'function') {
+      el.focus();
+    }
+  }
+
+  onP25DrawerKeydown(event: KeyboardEvent) {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      this.closeP25ColumnsDrawer();
+    }
   }
 
   toggleP25OptionalColumn(column: string, checked: boolean) {
@@ -627,9 +686,21 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   }
 
   confirmP25ColumnsAndExport() {
-    const selectedColumns = Array.from(new Set([...this.p25RequiredColumns, ...this.p25OptionalSelectedColumns()]));
-    this.p25ColumnDrawerVisible.set(false);
-    this.onRequestFullMetadataEmailExportWithColumns(selectedColumns);
+    if (!this.p25ColumnDrawerVisible()) return;
+    const selectedColumns = Array.from(
+      new Set([...this.p25RequiredColumns, ...this.p25OptionalSelectedColumns()]),
+    );
+    if (this.p25CloseTimer) {
+      clearTimeout(this.p25CloseTimer);
+      this.p25CloseTimer = null;
+    }
+    this.p25ColumnDrawerMotionOpen.set(false);
+    this.p25CloseTimer = setTimeout(() => {
+      this.p25CloseTimer = null;
+      this.p25ColumnDrawerVisible.set(false);
+      this.restoreP25Focus();
+      this.onRequestFullMetadataEmailExportWithColumns(selectedColumns);
+    }, ResultsListFiltersComponent.P25_DRAWER_TRANSITION_MS);
   }
 
   getP25ColumnLabel(column: string): string {
@@ -835,6 +906,10 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   }
 
   ngOnDestroy() {
+    if (this.p25CloseTimer) {
+      clearTimeout(this.p25CloseTimer);
+      this.p25CloseTimer = null;
+    }
     if (this.resizeObserver) {
       this.resizeObserver.disconnect();
       this.resizeObserver = null;
