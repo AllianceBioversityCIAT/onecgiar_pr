@@ -6,4 +6,5 @@ export enum EmailTemplate {
   ROLES_UPDATE = 'email_template_roles_update',
   STATUS_UPDATE = 'email_template_user_status_update',
   IP_EXPERTS_SUPPORT = 'email_template_ip_experts_support',
+  FULL_METADATA_EXPORT = 'email_template_full_metadata_export',
 }

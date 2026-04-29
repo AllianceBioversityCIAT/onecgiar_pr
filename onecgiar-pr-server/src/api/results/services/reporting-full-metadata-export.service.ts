@@ -3,13 +3,16 @@ import { randomUUID } from 'node:crypto';
 import { env } from 'node:process';
 import * as AWS from 'aws-sdk';
 import ExcelJS from 'exceljs';
+import * as handlebars from 'handlebars';
 import { EmailNotificationManagementService } from '../../../shared/microservices/email-notification-management/email-notification-management.service';
+import { EmailTemplate } from '../../../shared/microservices/email-notification-management/enum/email-notification.enum';
 import { ResultsService } from '../results.service';
 import { BasicReportFiltersDto } from '../dto/basic-report-filters.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { ConfigMessageDto } from '../../../shared/microservices/email-notification-management/dto/send-email.dto';
 import { ReportingMetadataExportQueuePublisherService } from '../../../shared/microservices/reporting-metadata-export-queue/reporting-metadata-export-queue-publisher.service';
 import type { ReportingMetadataExportJobPayload } from '../dto/reporting-metadata-export-job.payload';
+import { TemplateRepository } from '../../platform-report/repositories/template.repository';
 
 export type ReportingExportJobStatus =
   | 'queued'
@@ -175,6 +178,7 @@ export class ReportingFullMetadataExportService {
     private readonly _resultsService: ResultsService,
     private readonly _emailNotificationService: EmailNotificationManagementService,
     private readonly _metadataExportQueue: ReportingMetadataExportQueuePublisherService,
+    private readonly _templateRepository: TemplateRepository,
   ) {}
 
   getJob(jobId: string, userId: number): ReportingExportJob | null {
@@ -396,7 +400,7 @@ export class ReportingFullMetadataExportService {
     job.downloadUrl = downloadUrl;
 
     const exportedCount = basicRows.length - skippedRows.length;
-    this._sendReadyEmail(
+    await this._sendReadyEmail(
       user,
       downloadUrl,
       fileName,
@@ -446,14 +450,14 @@ export class ReportingFullMetadataExportService {
     }
   }
 
-  private _sendReadyEmail(
+  private async _sendReadyEmail(
     user: TokenDto,
     downloadUrl: string | undefined,
     fileName: string,
     sourceRowCount: number,
     exportedCount: number,
     skippedCount: number,
-  ): void {
+  ): Promise<void> {
     const skippedNote =
       skippedCount > 0
         ? `\n${skippedCount} result(s) could not be included (see "Skipped — review" sheet in the Excel). Fix: correct scalar subqueries in the DB function for those result_code / version_id pairs.\n`
@@ -464,6 +468,49 @@ export class ReportingFullMetadataExportService {
     const textBody = downloadUrl
       ? `Your full metadata export is ready.\n\nIncluded: ${exportedCount} of ${sourceRowCount} filtered result(s).${skippedNote}${requesterNote}\nFile: ${fileName}\nDownload (link expires in 7 days):\n${downloadUrl}\n`
       : `Your full metadata export was generated (${exportedCount} of ${sourceRowCount} result(s) included) but the download link could not be created (storage configuration). File name: ${fileName}. Please contact support.${requesterNote}\n`;
+
+    const userName =
+      [user.first_name, user.last_name]
+        .map((s) => (typeof s === 'string' ? s.trim() : ''))
+        .filter(Boolean)
+        .join(' ')
+        .trim() || user.email;
+
+    const templateRow = await this._templateRepository.findOne({
+      where: { name: EmailTemplate.FULL_METADATA_EXPORT, is_active: true },
+    });
+
+    let message: ConfigMessageDto['emailBody']['message'] = { text: textBody };
+
+    if (templateRow?.template?.trim()) {
+      try {
+        const compiled = handlebars.compile(templateRow.template);
+        const html = compiled({
+          userName,
+          exportedCount,
+          sourceRowCount,
+          fileName,
+          skippedCount,
+          hasSkippedRows: skippedCount > 0,
+          hasDownloadLink: !!downloadUrl,
+          downloadUrl: downloadUrl ?? '',
+          linkExpiresDays: 7,
+          requesterEmail: user.email,
+        });
+        message = {
+          text: textBody,
+          socketFile: html,
+        };
+      } catch (err: unknown) {
+        this._logger.error(
+          `Full metadata export email template compile failed: ${getThrownMessage(err)}`,
+        );
+      }
+    } else {
+      this._logger.warn(
+        `Email template "${EmailTemplate.FULL_METADATA_EXPORT}" not found or empty; sending plain text only.`,
+      );
+    }
 
     const payload: ConfigMessageDto = {
       ...(env.EMAIL_SENDER
@@ -477,7 +524,7 @@ export class ReportingFullMetadataExportService {
       emailBody: {
         subject: '[PRMS] Your results export is ready',
         to: ['j.delgado@cgiar.org', user?.email],
-        message: { text: textBody },
+        message,
       },
     };
 
