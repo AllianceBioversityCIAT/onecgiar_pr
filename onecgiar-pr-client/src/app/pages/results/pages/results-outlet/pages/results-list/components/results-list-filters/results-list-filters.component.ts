@@ -41,7 +41,7 @@ const P25_REQUIRED_EXPORT_COLUMNS: string[] = [
   'submission_status',
   'title',
   'result_description',
-  'primary_submitter_acronym'
+  'primary_submitter_acronym',
 ];
 
 const P25_OPTIONAL_EXPORT_SECTIONS: Array<{ section: string; columns: string[] }> = [
@@ -64,8 +64,8 @@ const P25_OPTIONAL_EXPORT_SECTIONS: Array<{ section: string; columns: string[] }
   {
     section: 'Contributors and partners',
     columns: [
-      'primary_submitter_toc_mapping',
-      'contributor_toc_mapping',
+      'toc_planned_result',
+      'toc_primary_mapping',
       'bilateral_projects',
       'contributing_centers',
       'partners',
@@ -88,11 +88,7 @@ const P25_OPTIONAL_EXPORT_SECTIONS: Array<{ section: string; columns: string[] }
 ];
 
 /** Optional columns shown in the drawer but not yet available in the export (disabled + “Coming soon”). */
-const P25_OPTIONAL_COMING_SOON_COLUMNS = new Set<string>([
-  'primary_submitter_toc_mapping',
-  'contributor_toc_mapping',
-  'section_5_metadata',
-]);
+const P25_OPTIONAL_COMING_SOON_COLUMNS = new Set<string>(['section_5_metadata']);
 
 const P25_COLUMN_LABEL_OVERRIDES: Record<string, string> = {
   result_code: 'Result Code',
@@ -104,6 +100,8 @@ const P25_COLUMN_LABEL_OVERRIDES: Record<string, string> = {
   title: 'Title',
   result_description: 'Result Description',
   primary_submitter_acronym: 'Primary Submitter Acronym',
+  toc_planned_result: 'ToC planned result',
+  toc_primary_mapping: 'ToC Primary',
   lead_contact_email: 'Lead Contact Person',
   gender_tag_score: 'Gender Tag Score',
   gender_tag_components: 'Gender Tag Impact Areas',
@@ -120,8 +118,6 @@ const P25_COLUMN_LABEL_OVERRIDES: Record<string, string> = {
   partners: 'Partners',
   authors_affiliations_kp: 'Authors Affiliations (KP)',
   result_lead: 'Result Lead',
-  primary_submitter_toc_mapping: 'Primary submitter ToC Mapping',
-  contributor_toc_mapping: 'Contributor ToC Mapping',
   section_5_metadata: 'Include metadata',
   geo_focus: 'Geographic Focus',
   regions: 'Regions',

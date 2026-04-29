@@ -119,6 +119,7 @@ const P25_REQUIRED_COLUMNS = [
   'title',
   'result_description',
   'primary_submitter_acronym',
+  'toc_planned_result',
 ] as const;
 
 function normalizeRequestedP25Columns(selectedColumns?: string[]): string[] {
