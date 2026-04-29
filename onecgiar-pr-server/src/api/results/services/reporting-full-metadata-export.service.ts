@@ -119,7 +119,11 @@ const P25_REQUIRED_COLUMNS = [
   'title',
   'result_description',
   'primary_submitter_acronym',
+  'toc_planned_result',
 ] as const;
+
+/** Always projected when building P25 tabular rows (not necessarily exported) so per-sheet Section 7 filtering works. */
+const P25_INTERNAL_TYPE_ID_COLUMN = 'result_type_id' as const;
 
 function normalizeRequestedP25Columns(selectedColumns?: string[]): string[] {
   const requested = (selectedColumns ?? [])
@@ -137,6 +141,115 @@ function pickColumns(
     out[c] = row[c] ?? '';
   }
   return out;
+}
+
+/** Display labels for P25 tabular export headers (keys stay as DB column slugs in data). */
+const P25_EXCEL_COLUMN_HEADER_LABELS: Record<string, string> = {
+  s7_pc_policy_type_id: 'Policy change — type ID',
+  s7_pc_policy_type_name: 'Policy change — type',
+  s7_pc_policy_amount: 'Policy change — amount',
+  s7_pc_status_policy_change: 'Policy change — amount status',
+  s7_pc_stage_policy_change: 'Policy change — stage',
+  s7_pc_implementing_organizations: 'Policy change — implementing organizations',
+  s7_pc_result_related: 'Policy change — related result (questions)',
+  s7_pc_result_related_engagement: 'Policy change — related result engagement',
+  s7_iu_actors: 'Innovation use — actors',
+  s7_iu_organization_lines: 'Innovation use — organizations',
+  s7_iu_measures: 'Innovation use — measures',
+  s7_iu_readiness_level: 'Innovation use — readiness level',
+  s7_cd_female_using: 'Capacity sharing — female participants',
+  s7_cd_male_using: 'Capacity sharing — male participants',
+  s7_cd_non_binary_using: 'Capacity sharing — non-binary participants',
+  s7_cd_unknown_using: 'Capacity sharing — unknown gender participants',
+  s7_cd_capdev_term: 'Capacity sharing — term',
+  s7_cd_delivery_method: 'Capacity sharing — delivery method',
+  s7_cd_is_attending_for_organization: 'Capacity sharing — attending for organization',
+  s7_cd_organizations: 'Capacity sharing — organizations',
+  s7_kp_handle: 'Knowledge Product — CGSpace handle URL',
+  s7_kp_knowledge_product_type: 'Knowledge Product — type',
+  s7_kp_authors: 'Knowledge Product — authors',
+  s7_kp_licence: 'Knowledge Product — licence',
+  s7_kp_agrovocs: 'Knowledge Product — Agrovoc keywords',
+  s7_kp_keywords: 'Knowledge Product — keywords',
+  s7_kp_comodity: 'Knowledge Product — commodity',
+  s7_kp_sponsors: 'Knowledge Product — sponsors',
+  s7_kp_cgspace_isi: 'Knowledge Product — CGSpace ISI',
+  s7_kp_cgspace_open_access: 'Knowledge Product — CGSpace open access',
+  s7_kp_cgspace_issue_year: 'Knowledge Product — CGSpace issue year',
+  s7_kp_cgspace_online_year: 'Knowledge Product — CGSpace online year',
+  s7_kp_cgspace_doi: 'Knowledge Product — CGSpace DOI',
+  s7_kp_cgspace_peer_reviewed: 'Knowledge Product — CGSpace peer reviewed',
+  s7_kp_wos_isi: 'Knowledge Product — other source ISI',
+  s7_kp_wos_open_access: 'Knowledge Product — other source open access',
+  s7_kp_wos_issue_year: 'Knowledge Product — other source issue year',
+  s7_kp_wos_doi: 'Knowledge Product — other source DOI',
+  s7_kp_wos_peer_reviewed: 'Knowledge Product — other source peer reviewed',
+  s7_kp_altmetric_url: 'Knowledge Product — Altmetric URL',
+  s7_kp_altmetric_score: 'Knowledge Product — Altmetric score',
+  s7_kp_fair_findable: 'Knowledge Product — FAIR findable',
+  s7_kp_fair_accessible: 'Knowledge Product — FAIR accessible',
+  s7_kp_fair_interoperable: 'Knowledge Product — FAIR interoperable',
+  s7_kp_fair_reusable: 'Knowledge Product — FAIR reusable',
+  s7_id_innovation_nature: 'Innovation development — nature',
+  s7_id_innovation_type: 'Innovation development — type',
+  s7_id_innovation_developers: 'Innovation development — developers',
+  s7_id_innovation_collaborators: 'Innovation development — collaborators',
+  s7_id_readiness_level: 'Innovation development — readiness level',
+  s7_id_readiness_level_justification: 'Innovation development — readiness justification',
+  s7_id_published_ipsr: 'Innovation development — published in IPSR',
+  s7_id_actors: 'Innovation development — actors',
+  s7_id_organization_lines: 'Innovation development — organizations',
+  s7_id_measures: 'Innovation development — measures',
+  s7_id_innovation_investments: 'Innovation development — investments',
+  s7_id_pictures_evidence: 'Innovation development — pictures evidence',
+  s7_id_materials_evidence: 'Innovation development — materials evidence',
+  s7_id_url_readiness: 'Innovation development — readiness image URL',
+};
+
+function titleCaseSnakeColumn(key: string): string {
+  return key
+    .split('_')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function p25ExcelColumnHeader(key: string): string {
+  return P25_EXCEL_COLUMN_HEADER_LABELS[key] ?? titleCaseSnakeColumn(key);
+}
+
+/** Section 7 column slug prefixes on the P25 Excel view, keyed by `result_type_id`. */
+const P25_S7_PREFIX_BY_RESULT_TYPE_ID: Partial<Record<number, string>> = {
+  1: 's7_pc_',
+  2: 's7_iu_',
+  5: 's7_cd_',
+  6: 's7_kp_',
+  7: 's7_id_',
+};
+
+/**
+ * Each worksheet is one indicator type; drop Section 7 columns that belong to other types
+ * (otherwise KP sheets would still show empty IU/PC/… columns when “full metadata” was requested).
+ */
+function filterP25SheetColumnsByResultType(
+  orderedColumns: string[],
+  resultTypeId: unknown,
+): string[] {
+  let idNum = Number.NaN;
+  if (typeof resultTypeId === 'number') {
+    idNum = resultTypeId;
+  } else if (resultTypeId != null && resultTypeId !== '') {
+    idNum = Number(resultTypeId);
+  }
+  const prefix = Number.isFinite(idNum)
+    ? P25_S7_PREFIX_BY_RESULT_TYPE_ID[idNum]
+    : undefined;
+  if (prefix === undefined) {
+    return orderedColumns.filter((c) => !c.startsWith('s7_'));
+  }
+  return orderedColumns.filter(
+    (c) => !c.startsWith('s7_') || c.startsWith(prefix),
+  );
 }
 
 /** Sheet grouping key: avoids String(object) → '[object Object]' for unknown cell values. */
@@ -312,10 +425,14 @@ export class ReportingFullMetadataExportService {
       );
     }
 
+    /** Ordered column list for P25 (used again when writing sheets so Section 7 cols can be trimmed per type). */
+    let p25SheetColumnOrder: string[] | null = null;
+
     if (hasP25Rows) {
       const selectedP25Columns = normalizeRequestedP25Columns(
         filters.selectedColumns,
       );
+      p25SheetColumnOrder = selectedP25Columns;
       const resultCodes = Array.from(
         new Set(
           validRows
@@ -332,8 +449,14 @@ export class ReportingFullMetadataExportService {
         );
       }
 
+      const columnsForP25Pick = Array.from(
+        new Set<string>([
+          ...selectedP25Columns,
+          P25_INTERNAL_TYPE_ID_COLUMN,
+        ]),
+      );
       for (const row of p25Rows) {
-        const flat = pickColumns(normalizeTabularRow(row), selectedP25Columns);
+        const flat = pickColumns(normalizeTabularRow(row), columnsForP25Pick);
         const typeKey = tabularResultTypeKey(flat['result_type'], 'P25');
         let bucket = byType.get(typeKey);
         if (!bucket) {
@@ -375,11 +498,19 @@ export class ReportingFullMetadataExportService {
     }
 
     for (const [typeName, rows] of byType.entries()) {
-      const allKeys = new Set<string>();
-      rows.forEach((r) => Object.keys(r).forEach((k) => allKeys.add(k)));
-      const columns = Array.from(allKeys);
+      let columns: string[];
+      if (p25SheetColumnOrder?.length && rows.length > 0) {
+        columns = filterP25SheetColumnsByResultType(
+          p25SheetColumnOrder,
+          rows[0]['result_type_id'],
+        );
+      } else {
+        const allKeys = new Set<string>();
+        rows.forEach((r) => Object.keys(r).forEach((k) => allKeys.add(k)));
+        columns = Array.from(allKeys);
+      }
       const sheet = workbook.addWorksheet(sanitizeSheetName(typeName));
-      sheet.addRow(columns);
+      sheet.addRow(columns.map((c) => p25ExcelColumnHeader(c)));
       for (const row of rows) {
         sheet.addRow(columns.map((c) => row[c] ?? ''));
       }

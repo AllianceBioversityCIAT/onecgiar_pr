@@ -41,7 +41,80 @@ const P25_REQUIRED_EXPORT_COLUMNS: string[] = [
   'submission_status',
   'title',
   'result_description',
-  'primary_submitter_acronym'
+  'primary_submitter_acronym',
+  'toc_planned_result',
+];
+
+/** Column slug prefix on the view for each result type id (Policy, Innovation use, CapDev, KP, Innovation dev). */
+const P25_SECTION_7_PREFIX_BY_RESULT_TYPE_ID: Record<number, string> = {
+  1: 's7_pc_',
+  2: 's7_iu_',
+  5: 's7_cd_',
+  6: 's7_kp_',
+  7: 's7_id_',
+};
+
+/** Flat columns added to `result_phase_2025_excel` for Section 7 indicator metadata (same semantics as reportSectionSevenByResultCode_P25). */
+const P25_SECTION_7_EXPORT_COLUMNS: string[] = [
+  's7_cd_capdev_term',
+  's7_cd_delivery_method',
+  's7_cd_female_using',
+  's7_cd_is_attending_for_organization',
+  's7_cd_male_using',
+  's7_cd_non_binary_using',
+  's7_cd_organizations',
+  's7_cd_unknown_using',
+  's7_id_actors',
+  's7_id_innovation_collaborators',
+  's7_id_innovation_developers',
+  's7_id_innovation_investments',
+  's7_id_innovation_nature',
+  's7_id_innovation_type',
+  's7_id_materials_evidence',
+  's7_id_measures',
+  's7_id_organization_lines',
+  's7_id_pictures_evidence',
+  's7_id_published_ipsr',
+  's7_id_readiness_level',
+  's7_id_readiness_level_justification',
+  's7_id_url_readiness',
+  's7_iu_actors',
+  's7_iu_measures',
+  's7_iu_organization_lines',
+  's7_iu_readiness_level',
+  's7_kp_agrovocs',
+  's7_kp_altmetric_score',
+  's7_kp_altmetric_url',
+  's7_kp_authors',
+  's7_kp_cgspace_doi',
+  's7_kp_cgspace_isi',
+  's7_kp_cgspace_issue_year',
+  's7_kp_cgspace_online_year',
+  's7_kp_cgspace_open_access',
+  's7_kp_cgspace_peer_reviewed',
+  's7_kp_comodity',
+  's7_kp_fair_accessible',
+  's7_kp_fair_findable',
+  's7_kp_fair_interoperable',
+  's7_kp_fair_reusable',
+  's7_kp_handle',
+  's7_kp_keywords',
+  's7_kp_knowledge_product_type',
+  's7_kp_licence',
+  's7_kp_sponsors',
+  's7_kp_wos_doi',
+  's7_kp_wos_isi',
+  's7_kp_wos_issue_year',
+  's7_kp_wos_open_access',
+  's7_kp_wos_peer_reviewed',
+  's7_pc_implementing_organizations',
+  's7_pc_policy_amount',
+  's7_pc_policy_type_id',
+  's7_pc_policy_type_name',
+  's7_pc_result_related',
+  's7_pc_result_related_engagement',
+  's7_pc_stage_policy_change',
+  's7_pc_status_policy_change',
 ];
 
 const P25_OPTIONAL_EXPORT_SECTIONS: Array<{ section: string; columns: string[] }> = [
@@ -64,8 +137,7 @@ const P25_OPTIONAL_EXPORT_SECTIONS: Array<{ section: string; columns: string[] }
   {
     section: 'Contributors and partners',
     columns: [
-      'primary_submitter_toc_mapping',
-      'contributor_toc_mapping',
+      'toc_primary_mapping',
       'bilateral_projects',
       'contributing_centers',
       'partners',
@@ -88,11 +160,7 @@ const P25_OPTIONAL_EXPORT_SECTIONS: Array<{ section: string; columns: string[] }
 ];
 
 /** Optional columns shown in the drawer but not yet available in the export (disabled + “Coming soon”). */
-const P25_OPTIONAL_COMING_SOON_COLUMNS = new Set<string>([
-  'primary_submitter_toc_mapping',
-  'contributor_toc_mapping',
-  'section_5_metadata',
-]);
+const P25_OPTIONAL_COMING_SOON_COLUMNS = new Set<string>();
 
 const P25_COLUMN_LABEL_OVERRIDES: Record<string, string> = {
   result_code: 'Result Code',
@@ -104,6 +172,8 @@ const P25_COLUMN_LABEL_OVERRIDES: Record<string, string> = {
   title: 'Title',
   result_description: 'Result Description',
   primary_submitter_acronym: 'Primary Submitter Acronym',
+  toc_planned_result: 'ToC planned result',
+  toc_primary_mapping: 'ToC Primary',
   lead_contact_email: 'Lead Contact Person',
   gender_tag_score: 'Gender Tag Score',
   gender_tag_components: 'Gender Tag Impact Areas',
@@ -120,14 +190,76 @@ const P25_COLUMN_LABEL_OVERRIDES: Record<string, string> = {
   partners: 'Partners',
   authors_affiliations_kp: 'Authors Affiliations (KP)',
   result_lead: 'Result Lead',
-  primary_submitter_toc_mapping: 'Primary submitter ToC Mapping',
-  contributor_toc_mapping: 'Contributor ToC Mapping',
-  section_5_metadata: 'Include metadata',
+  section_5_metadata: 'Indicator metadata (Section 5 fields)',
   geo_focus: 'Geographic Focus',
   regions: 'Regions',
   countries: 'Countries',
   subnational: 'Subnational',
-  evidences: 'Evidences'
+  evidences: 'Evidences',
+
+  s7_pc_policy_type_id: 'Policy change — type ID',
+  s7_pc_policy_type_name: 'Policy change — type',
+  s7_pc_policy_amount: 'Policy change — amount',
+  s7_pc_status_policy_change: 'Policy change — amount status',
+  s7_pc_stage_policy_change: 'Policy change — stage',
+  s7_pc_implementing_organizations: 'Policy change — implementing organizations',
+  s7_pc_result_related: 'Policy change — related result (questions)',
+  s7_pc_result_related_engagement: 'Policy change — related result engagement',
+
+  s7_iu_actors: 'Innovation use — actors',
+  s7_iu_organization_lines: 'Innovation use — organizations',
+  s7_iu_measures: 'Innovation use — measures',
+  s7_iu_readiness_level: 'Innovation use — readiness level',
+
+  s7_cd_female_using: 'Capacity sharing — female participants',
+  s7_cd_male_using: 'Capacity sharing — male participants',
+  s7_cd_non_binary_using: 'Capacity sharing — non-binary participants',
+  s7_cd_unknown_using: 'Capacity sharing — unknown gender participants',
+  s7_cd_capdev_term: 'Capacity sharing — term',
+  s7_cd_delivery_method: 'Capacity sharing — delivery method',
+  s7_cd_is_attending_for_organization: 'Capacity sharing — attending for organization',
+  s7_cd_organizations: 'Capacity sharing — organizations',
+
+  s7_kp_handle: 'Knowledge Product — CGSpace handle URL',
+  s7_kp_knowledge_product_type: 'Knowledge Product — type',
+  s7_kp_authors: 'Knowledge Product — authors',
+  s7_kp_licence: 'Knowledge Product — licence',
+  s7_kp_agrovocs: 'Knowledge Product — Agrovoc keywords',
+  s7_kp_keywords: 'Knowledge Product — keywords',
+  s7_kp_comodity: 'Knowledge Product — commodity',
+  s7_kp_sponsors: 'Knowledge Product — sponsors',
+  s7_kp_cgspace_isi: 'Knowledge Product — CGSpace ISI',
+  s7_kp_cgspace_open_access: 'Knowledge Product — CGSpace open access',
+  s7_kp_cgspace_issue_year: 'Knowledge Product — CGSpace issue year',
+  s7_kp_cgspace_online_year: 'Knowledge Product — CGSpace online year',
+  s7_kp_cgspace_doi: 'Knowledge Product — CGSpace DOI',
+  s7_kp_cgspace_peer_reviewed: 'Knowledge Product — CGSpace peer reviewed',
+  s7_kp_wos_isi: 'Knowledge Product — other source ISI',
+  s7_kp_wos_open_access: 'Knowledge Product — other source open access',
+  s7_kp_wos_issue_year: 'Knowledge Product — other source issue year',
+  s7_kp_wos_doi: 'Knowledge Product — other source DOI',
+  s7_kp_wos_peer_reviewed: 'Knowledge Product — other source peer reviewed',
+  s7_kp_altmetric_url: 'Knowledge Product — Altmetric URL',
+  s7_kp_altmetric_score: 'Knowledge Product — Altmetric score',
+  s7_kp_fair_findable: 'Knowledge Product — FAIR findable',
+  s7_kp_fair_accessible: 'Knowledge Product — FAIR accessible',
+  s7_kp_fair_interoperable: 'Knowledge Product — FAIR interoperable',
+  s7_kp_fair_reusable: 'Knowledge Product — FAIR reusable',
+
+  s7_id_innovation_nature: 'Innovation development — nature',
+  s7_id_innovation_type: 'Innovation development — type',
+  s7_id_innovation_developers: 'Innovation development — developers',
+  s7_id_innovation_collaborators: 'Innovation development — collaborators',
+  s7_id_readiness_level: 'Innovation development — readiness level',
+  s7_id_readiness_level_justification: 'Innovation development — readiness justification',
+  s7_id_published_ipsr: 'Innovation development — published in IPSR',
+  s7_id_actors: 'Innovation development — actors',
+  s7_id_organization_lines: 'Innovation development — organizations',
+  s7_id_measures: 'Innovation development — measures',
+  s7_id_innovation_investments: 'Innovation development — investments',
+  s7_id_pictures_evidence: 'Innovation development — pictures evidence',
+  s7_id_materials_evidence: 'Innovation development — materials evidence',
+  s7_id_url_readiness: 'Innovation development — readiness image URL',
 };
 
 @Component({
@@ -579,8 +711,8 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
       this.tempSelectedClarisaPortfolios().length === 0
         ? this.resultsListFilterSE.phasesOptionsOld()
         : this.resultsListFilterSE
-            .phasesOptionsOld()
-            .filter(phase => this.tempSelectedClarisaPortfolios().some(portfolio => portfolio.id == phase.portfolio_id));
+          .phasesOptionsOld()
+          .filter(phase => this.tempSelectedClarisaPortfolios().some(portfolio => portfolio.id == phase.portfolio_id));
 
     // Reset phases if they don't match selected portfolios
     this.tempSelectedPhases.set(this.tempSelectedPhases().filter(phase => filteredPhases.some(p => p.id === phase.id)));
@@ -778,8 +910,10 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
 
   confirmP25ColumnsAndExport() {
     if (!this.p25ColumnDrawerVisible()) return;
-    const selectedColumns = Array.from(
-      new Set([...this.p25RequiredColumns, ...this.p25OptionalSelectedColumns()]),
+    const selectedColumns = this.expandP25SelectedColumnsForExport(
+      Array.from(
+        new Set([...this.p25RequiredColumns, ...this.p25OptionalSelectedColumns()]),
+      ),
     );
     if (this.p25CloseTimer) {
       clearTimeout(this.p25CloseTimer);
@@ -791,6 +925,43 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
       this.finalizeP25DrawerClosed();
       this.onRequestFullMetadataEmailExportWithColumns(selectedColumns);
     }, ResultsListFiltersComponent.P25_DRAWER_TRANSITION_MS);
+  }
+
+  /**
+   * One drawer checkbox (`section_5_metadata`) expands to Section 7 view columns.
+   * If the list is filtered by indicator category, only metadata columns for those result types are included;
+   * with no indicator filter, all Section 7 families are included.
+   */
+  private expandP25SelectedColumnsForExport(selected: string[]): string[] {
+    const withoutFlag = selected.filter((c) => c !== 'section_5_metadata');
+    if (!selected.includes('section_5_metadata')) {
+      return withoutFlag;
+    }
+    const section7 = this.resolveSection7ColumnsForAppliedIndicatorFilters();
+    return Array.from(new Set([...withoutFlag, ...section7]));
+  }
+
+  /**
+   * Uses applied indicator-category filters (`id` = result_type_id). Multiple categories union their `s7_*` groups.
+   */
+  private resolveSection7ColumnsForAppliedIndicatorFilters(): string[] {
+    const categories = this.resultsListFilterSE.selectedIndicatorCategories() as Array<{ id?: number }>;
+    const typeIds = new Set<number>();
+    for (const c of categories) {
+      if (typeof c?.id === 'number') typeIds.add(c.id);
+    }
+    if (typeIds.size === 0) {
+      return [...P25_SECTION_7_EXPORT_COLUMNS];
+    }
+    const out = new Set<string>();
+    for (const rtId of typeIds) {
+      const prefix = P25_SECTION_7_PREFIX_BY_RESULT_TYPE_ID[rtId];
+      if (!prefix) continue;
+      for (const col of P25_SECTION_7_EXPORT_COLUMNS) {
+        if (col.startsWith(prefix)) out.add(col);
+      }
+    }
+    return Array.from(out);
   }
 
   getP25ColumnLabel(column: string): string {
@@ -832,34 +1003,34 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
         ...(selectedColumns?.length ? { selectedColumns } : {})
       })
       .subscribe({
-      next: (body: { response?: { jobId?: string }; message?: string }) => {
-        this.requestingFullExport.set(false);
-        const jobId = body?.response?.jobId;
-        this.customAlertsSE.show({
-          id: 'results-full-export-queued',
-          title: 'Export queued',
-          description: jobId
-            ? `You will receive an email with a download link when the file is ready. Reference: ${jobId}.`
-            : 'You will receive an email with a download link when the file is ready.',
-          status: 'success',
-          closeIn: 6000
-        });
-      },
-      error: err => {
-        this.requestingFullExport.set(false);
-        const msg =
-          err?.error?.message ??
-          err?.error?.response?.message ??
-          err?.message ??
-          'Could not start the export. Please try again or contact support.';
-        this.customAlertsSE.show({
-          id: 'results-full-export-error',
-          title: 'Export could not be queued',
-          description: typeof msg === 'string' ? msg : 'Could not start the export.',
-          status: 'error'
-        });
-      }
-    });
+        next: (body: { response?: { jobId?: string }; message?: string }) => {
+          this.requestingFullExport.set(false);
+          const jobId = body?.response?.jobId;
+          this.customAlertsSE.show({
+            id: 'results-full-export-queued',
+            title: 'Export queued',
+            description: jobId
+              ? `You will receive an email with a download link when the file is ready. Reference: ${jobId}.`
+              : 'You will receive an email with a download link when the file is ready.',
+            status: 'success',
+            closeIn: 6000
+          });
+        },
+        error: err => {
+          this.requestingFullExport.set(false);
+          const msg =
+            err?.error?.message ??
+            err?.error?.response?.message ??
+            err?.message ??
+            'Could not start the export. Please try again or contact support.';
+          this.customAlertsSE.show({
+            id: 'results-full-export-error',
+            title: 'Export could not be queued',
+            description: typeof msg === 'string' ? msg : 'Could not start the export.',
+            status: 'error'
+          });
+        }
+      });
   }
 
   private shouldOpenP25ColumnsDrawer(): boolean {
