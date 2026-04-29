@@ -29,6 +29,7 @@ import { InnovationUseService } from '../innovation-use/innovation-use.service';
 import { LinkedResultsModule } from '../../results/linked-results/linked-results.module';
 import { ClarisaInnovationUseLevelRepository } from '../../../clarisa/clarisa-innovation-use-levels/clarisa-innovation-use-levels.repository';
 import { ResultsCenterRepository } from '../../results/results-centers/results-centers.repository';
+import { ResultsInvestmentDiscontinuedOptionsModule } from '../../results/results-investment-discontinued-options/results-investment-discontinued-options.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { ResultsCenterRepository } from '../../results/results-centers/results-c
     SharePointModule,
     VersioningModule,
     LinkedResultsModule,
+    ResultsInvestmentDiscontinuedOptionsModule,
   ],
   controllers: [InnovationDevController],
   exports: [InnovationDevService],

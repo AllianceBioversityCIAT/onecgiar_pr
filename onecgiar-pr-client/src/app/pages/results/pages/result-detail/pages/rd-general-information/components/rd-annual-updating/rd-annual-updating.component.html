@@ -1,7 +1,7 @@
-<div class="local_container" *ngIf="this.api.dataControlSE.currentResult?.result_type_id == 7">
+<div class="local_container" *ngIf="this.api.dataControlSE.currentResult?.result_type_id == 7 || this.api.dataControlSE.currentResult?.result_type_id == 2">
   <div class="annual_updating">
     <div class="title">
-      <strong>Annual updating</strong>
+      <strong>Annual updating — {{ this.api.dataControlSE.currentResult?.result_type_id == 7 ? 'Innovation development' : 'Innovation use' }}</strong>
       <div class="header">
         <app-pr-field-header label="Please indicate if the investment for this innovation was continued or discontinued"> </app-pr-field-header>
       </div>
