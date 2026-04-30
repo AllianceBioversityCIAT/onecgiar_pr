@@ -703,7 +703,7 @@ export class ResultsService {
       }
       if (
         resultGeneralInformation?.is_discontinued &&
-        result.result_type_id == 7
+        (result.result_type_id == 7 || result.result_type_id == 2)
       ) {
         await this._resultsInvestmentDiscontinuedOptionRepository.inactiveData(
           resultGeneralInformation.discontinued_options.map(
@@ -716,7 +716,7 @@ export class ResultsService {
           const res =
             await this._resultsInvestmentDiscontinuedOptionRepository.findOne({
               where: {
-                result_id: resultGeneralInformation.result_id,
+                result_id: result.id,
                 investment_discontinued_option_id:
                   i.investment_discontinued_option_id,
               },
@@ -742,7 +742,7 @@ export class ResultsService {
             });
           }
         }
-      } else if (result.result_type_id == 7) {
+      } else if (result.result_type_id == 7 || result.result_type_id == 2) {
         await this._resultsInvestmentDiscontinuedOptionRepository.inactiveData(
           [],
           result.id,
@@ -835,7 +835,7 @@ export class ResultsService {
         lead_contact_person: resultGeneralInformation.lead_contact_person,
         lead_contact_person_id: leadContactPersonId,
         status_id:
-          result.result_type_id == 7
+          result.result_type_id == 7 || result.result_type_id == 2
             ? resultGeneralInformation?.is_discontinued
               ? 4
               : result.status_id == 4
