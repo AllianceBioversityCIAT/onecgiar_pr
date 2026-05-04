@@ -15,6 +15,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { switchMap } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { ChipModule } from 'primeng/chip';
+import { CheckboxModule } from 'primeng/checkbox';
 import { ReversePipe } from '../../../../../../../../shared/pipes/reverse.pipe';
 import { TooltipModule } from 'primeng/tooltip';
 
@@ -35,6 +36,7 @@ import { TooltipModule } from 'primeng/tooltip';
     InputTextModule,
     ButtonModule,
     ChipModule,
+    CheckboxModule,
     ReversePipe,
     TooltipModule
   ]
@@ -55,6 +57,8 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   tempSelectedStatus = signal([]);
   tempSelectedFundingSource = signal([]);
   tempSelectedLeadCenters = signal<any[]>([]);
+  tempFilterCreatedByMe = signal(false);
+  tempFilterSubmittedByMe = signal(false);
 
   // Computed signal for filtered phases based on selected portfolios
   filteredPhasesOptions = computed(() => {
@@ -76,6 +80,8 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     if (this.resultsListFilterSE.selectedClarisaPortfolios().length > 0) count++;
     if (this.resultsListFilterSE.selectedLeadCenters().length > 0) count++;
     if (this.resultsListFilterSE.selectedFundingSource().length > 0) count++;
+    if (this.resultsListFilterSE.filterCreatedByMe()) count++;
+    if (this.resultsListFilterSE.filterSubmittedByMe()) count++;
 
     return count;
   });
@@ -84,9 +90,9 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     return `Apply filters (${this.filtersCount()})`;
   });
 
-  activeButtons = computed(() => {
+  get activeButtons() {
     return this.api.dataControlSE?.myInitiativesListReportingByPortfolio?.length > 0 || this.api.rolesSE?.isAdmin;
-  });
+  }
 
   // Computed property to generate grouped chips from applied filters
   filterChipGroups = computed(() => {
@@ -184,10 +190,25 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
       });
     }
 
+    const myActivityChips: Array<{ label: string; filterType: string }> = [];
+    if (this.resultsListFilterSE.filterCreatedByMe()) {
+      myActivityChips.push({ label: 'Created by me', filterType: 'filterCreatedByMe' });
+    }
+    if (this.resultsListFilterSE.filterSubmittedByMe()) {
+      myActivityChips.push({ label: 'Submitted by me', filterType: 'filterSubmittedByMe' });
+    }
+    if (myActivityChips.length > 0) {
+      groups.push({
+        category: 'My activity',
+        chips: myActivityChips
+      });
+    }
+
     return groups;
   });
 
   @Input() isAdmin = false;
+  @Input() hasFilteredResults = true;
 
   constructor(
     public resultsListFilterSE: ResultsListFilterService,
@@ -273,11 +294,14 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
       this.resultsListFilterSE.phasesOptions().filter(item => this.api.dataControlSE?.reportingCurrentPhase?.portfolioId == item.portfolio_id)
     );
 
-    // Show all submitters initially (not filtered by phases)
-    this.resultsListFilterSE.submittersOptionsAdmin.set(this.resultsListFilterSE.submittersOptionsAdminOld());
-
-    // No submitters selected initially
-    this.resultsListFilterSE.selectedSubmittersAdmin.set([]);
+    const initialSubmitterOptions = this.getFilteredSubmitterOptions(
+      this.resultsListFilterSE.selectedPhases(),
+      this.resultsListFilterSE.selectedClarisaPortfolios()
+    );
+    this.resultsListFilterSE.submittersOptionsAdmin.set(initialSubmitterOptions);
+    this.resultsListFilterSE.selectedSubmittersAdmin.set(
+      this.resultsListFilterSE.selectedSubmittersAdmin().filter(submitter => initialSubmitterOptions.some(option => option.id === submitter.id))
+    );
   }
 
   private buildPhaseOptions(response: any[]) {
@@ -304,6 +328,25 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     return options.filter(item => selectedPortfolios.some(portfolio => portfolio.id == item.portfolio_id));
   }
 
+  private getFilteredSubmitterOptions(selectedPhases: any[] = [], selectedPortfolios: any[] = []) {
+    const sourceOptions = this.resultsListFilterSE.submittersOptionsAdminOld();
+    if (selectedPhases.length > 0) {
+      return sourceOptions.filter(item => selectedPhases.some(phase => phase.portfolio_id == item.portfolio_id));
+    }
+    if (selectedPortfolios.length > 0) {
+      return sourceOptions.filter(item => selectedPortfolios.some(portfolio => portfolio.id == item.portfolio_id));
+    }
+    return sourceOptions;
+  }
+
+  private refreshTempSubmitterOptions() {
+    const filteredOptions = this.getFilteredSubmitterOptions(this.tempSelectedPhases(), this.tempSelectedClarisaPortfolios());
+    this.resultsListFilterSE.submittersOptionsAdmin.set(filteredOptions);
+    this.tempSelectedSubmittersAdmin.set(
+      this.tempSelectedSubmittersAdmin().filter(submitter => filteredOptions.some(option => option.id === submitter.id))
+    );
+  }
+
   clearAllNewFilters() {
     this.resultsListFilterSE.selectedClarisaPortfolios.set([]);
     this.resultsListFilterSE.selectedFundingSource.set([]);
@@ -319,6 +362,8 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     this.resultsListFilterSE.selectedStatus.set([]);
     this.resultsListFilterSE.selectedLeadCenters.set([]);
     this.resultsListFilterSE.text_to_search.set('');
+    this.resultsListFilterSE.filterCreatedByMe.set(false);
+    this.resultsListFilterSE.filterSubmittedByMe.set(false);
 
     // Also clear temp values
     this.tempSelectedClarisaPortfolios.set([]);
@@ -328,6 +373,8 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     this.tempSelectedStatus.set([]);
     this.tempSelectedFundingSource.set([]);
     this.tempSelectedLeadCenters.set([]);
+    this.tempFilterCreatedByMe.set(false);
+    this.tempFilterSubmittedByMe.set(false);
   }
 
   removeFilter(chip: { label: string; filterType: string; item?: any }) {
@@ -362,6 +409,14 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
 
       case 'center':
         this.resultsListFilterSE.selectedLeadCenters.set(this.resultsListFilterSE.selectedLeadCenters().filter(c => c !== chip.item));
+        break;
+
+      case 'filterCreatedByMe':
+        this.resultsListFilterSE.filterCreatedByMe.set(false);
+        break;
+
+      case 'filterSubmittedByMe':
+        this.resultsListFilterSE.filterSubmittedByMe.set(false);
         break;
     }
   }
@@ -399,26 +454,11 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     // Reset phases if they don't match selected portfolios
     this.tempSelectedPhases.set(this.tempSelectedPhases().filter(phase => filteredPhases.some(p => p.id === phase.id)));
 
-    // Update submitter options based on selected portfolios (not phases)
-    this.resultsListFilterSE.submittersOptionsAdmin.set(
-      this.tempSelectedClarisaPortfolios().length === 0
-        ? this.resultsListFilterSE.submittersOptionsAdminOld()
-        : this.resultsListFilterSE
-            .submittersOptionsAdminOld()
-            .filter(item => this.tempSelectedClarisaPortfolios().some(portfolio => portfolio.id == item.portfolio_id))
-    );
-
-    // Don't reset selected submitters - they should remain if valid for the selected portfolios
-    this.tempSelectedSubmittersAdmin.set(
-      this.tempSelectedSubmittersAdmin().filter(submitter =>
-        this.resultsListFilterSE.submittersOptionsAdmin().some(option => option.id === submitter.id)
-      )
-    );
+    this.refreshTempSubmitterOptions();
   }
 
   onSelectPhases() {
-    // Phases selection no longer affects submitters
-    // Submitters are now filtered by portfolios only
+    this.refreshTempSubmitterOptions();
   }
 
   // Initialize temp values when opening the drawer
@@ -430,6 +470,9 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     this.tempSelectedIndicatorCategories.set([...this.resultsListFilterSE.selectedIndicatorCategories()]);
     this.tempSelectedStatus.set([...this.resultsListFilterSE.selectedStatus()]);
     this.tempSelectedLeadCenters.set([...this.resultsListFilterSE.selectedLeadCenters()]);
+    this.tempFilterCreatedByMe.set(this.resultsListFilterSE.filterCreatedByMe());
+    this.tempFilterSubmittedByMe.set(this.resultsListFilterSE.filterSubmittedByMe());
+    this.refreshTempSubmitterOptions();
     this.visible.set(true);
   }
 
@@ -442,6 +485,8 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     this.resultsListFilterSE.selectedIndicatorCategories.set([...this.tempSelectedIndicatorCategories()]);
     this.resultsListFilterSE.selectedStatus.set([...this.tempSelectedStatus()]);
     this.resultsListFilterSE.selectedLeadCenters.set([...this.tempSelectedLeadCenters()]);
+    this.resultsListFilterSE.filterCreatedByMe.set(this.tempFilterCreatedByMe());
+    this.resultsListFilterSE.filterSubmittedByMe.set(this.tempFilterSubmittedByMe());
     this.visible.set(false);
   }
 
@@ -455,6 +500,8 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
     this.tempSelectedIndicatorCategories.set([...this.resultsListFilterSE.selectedIndicatorCategories()]);
     this.tempSelectedStatus.set([...this.resultsListFilterSE.selectedStatus()]);
     this.tempSelectedLeadCenters.set([...this.resultsListFilterSE.selectedLeadCenters()]);
+    this.tempFilterCreatedByMe.set(this.resultsListFilterSE.filterCreatedByMe());
+    this.tempFilterSubmittedByMe.set(this.resultsListFilterSE.filterSubmittedByMe());
     this.visible.set(false);
   }
 
@@ -469,7 +516,9 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
         status: this.resultsListFilterSE.selectedStatus(),
         clarisaPortfolios: this.resultsListFilterSE.selectedClarisaPortfolios(),
         fundingSource: this.resultsListFilterSE.selectedFundingSource(),
-        leadCenters: this.resultsListFilterSE.selectedLeadCenters()
+        leadCenters: this.resultsListFilterSE.selectedLeadCenters(),
+        ...(this.resultsListFilterSE.filterCreatedByMe() ? { filterCreatedByMe: true } : {}),
+        ...(this.resultsListFilterSE.filterSubmittedByMe() ? { filterSubmittedByMe: true } : {})
       })
       .subscribe({
         next: ({ response }) => {

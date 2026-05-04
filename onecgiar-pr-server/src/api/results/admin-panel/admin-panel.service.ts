@@ -1,4 +1,6 @@
 import { HttpStatus, Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { AdminPanelRepository } from './admin-panel.repository';
 import { FilterInitiativesDto } from './dto/filter-initiatives.dto';
@@ -15,6 +17,27 @@ import { ResultsCapacityDevelopmentsRepository } from '../summary/repositories/r
 import { ResultsInnovationsDevRepository } from '../summary/repositories/results-innovations-dev.repository';
 import { BulkKpDto } from './dto/bulk-kp.dto';
 import { ResultStatusData } from '../../../shared/constants/result-status.enum';
+import { PhaseInitiativeReportingAccess } from './entities/phase-initiative-reporting-access.entity';
+import { Version } from '../../versioning/entities/version.entity';
+import { ClarisaInitiative } from '../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
+import { PatchPhaseInitiativeReportingDto } from './dto/patch-phase-initiative-reporting.dto';
+import { BulkPhaseInitiativeReportingDto } from './dto/bulk-phase-initiative-reporting.dto';
+
+const REPORTING_CATEGORY_COLORS = [
+  '#f59e0b',
+  '#ef4444',
+  '#84cc16',
+  '#fb923c',
+  '#10b981',
+  '#92400e',
+  '#3b82f6',
+  '#06b6d4',
+  '#a855f7',
+  '#ec4899',
+  '#8b5cf6',
+  '#d946ef',
+  '#65a30d',
+];
 
 @Injectable()
 export class AdminPanelService implements OnModuleInit {
@@ -30,6 +53,12 @@ export class AdminPanelService implements OnModuleInit {
     private _resultsInnovationsUseRepository: ResultsInnovationsUseRepository,
     private _resultsCapacityDevelopmentsRepository: ResultsCapacityDevelopmentsRepository,
     private _resultsInnovationsDevRepository: ResultsInnovationsDevRepository,
+    @InjectRepository(PhaseInitiativeReportingAccess)
+    private readonly _phaseInitiativeReportingRepo: Repository<PhaseInitiativeReportingAccess>,
+    @InjectRepository(Version)
+    private readonly _versionRepo: Repository<Version>,
+    @InjectRepository(ClarisaInitiative)
+    private readonly _clarisaInitiativeRepo: Repository<ClarisaInitiative>,
   ) {}
 
   async onModuleInit() {
@@ -554,5 +583,280 @@ export class AdminPanelService implements OnModuleInit {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  // --- Phase × initiative reporting access (P2-2821) ---
+
+  async getPhaseReportingInitiativesDetail(phaseId: number) {
+    try {
+      const phase = await this._loadReportingPhase(phaseId);
+      if (!phase) {
+        return {
+          response: null,
+          message: 'Phase not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+      const initiatives = await this._getEligibleInitiatives(phase);
+      const accessRows = await this._phaseInitiativeReportingRepo.find({
+        where: { version_id: phaseId },
+      });
+      const accessMap = new Map(
+        accessRows.map((r) => [r.initiative_id, r.reporting_enabled]),
+      );
+      const science_programs = initiatives.map((ci, idx) => {
+        const override = accessMap.get(ci.id);
+        const reporting_enabled = override ?? true;
+        return {
+          id: ci.id,
+          official_code: ci.official_code,
+          name: ci.name,
+          category: this._mapInitiativeCategory(ci),
+          reporting_enabled,
+          color:
+            REPORTING_CATEGORY_COLORS[idx % REPORTING_CATEGORY_COLORS.length],
+        };
+      });
+      return {
+        response: {
+          phase: {
+            id: phase.id,
+            phase_name: phase.phase_name,
+            phase_year: phase.phase_year,
+            status: phase.status,
+            start_date: phase.start_date,
+            end_date: phase.end_date,
+            portfolio: phase.obj_portfolio
+              ? {
+                  id: phase.obj_portfolio.id,
+                  name: phase.obj_portfolio.name,
+                  acronym: phase.obj_portfolio.acronym ?? '',
+                }
+              : null,
+          },
+          science_programs,
+        },
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  /**
+   * Effective reporting flag for an initiative in a reporting phase (for guards / UI).
+   * Returns false if phase is invalid, closed, or initiative not in scope.
+   */
+  async isInitiativeReportingEnabled(
+    phaseId: number,
+    initiativeId: number,
+  ): Promise<boolean> {
+    const phase = await this._loadReportingPhase(phaseId);
+    if (!phase?.status) return false;
+    const eligible = await this._getEligibleInitiatives(phase);
+    if (!eligible.some((i) => i.id === initiativeId)) return false;
+    const row = await this._phaseInitiativeReportingRepo.findOne({
+      where: { version_id: phaseId, initiative_id: initiativeId },
+    });
+    if (!row) return true;
+    return row.reporting_enabled;
+  }
+
+  async getInitiativeReportingStatus(phaseId: number, initiativeId: number) {
+    try {
+      const phase = await this._loadReportingPhase(phaseId);
+      if (!phase) {
+        return {
+          response: null,
+          message: 'Phase not found',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+      const eligible = await this._getEligibleInitiatives(phase);
+      const ok = eligible.some((i) => i.id === initiativeId);
+      if (!ok) {
+        return {
+          response: null,
+          message: 'Initiative is not in scope for this reporting phase',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+      const row = await this._phaseInitiativeReportingRepo.findOne({
+        where: { version_id: phaseId, initiative_id: initiativeId },
+      });
+      const reporting_enabled = row?.reporting_enabled ?? true;
+      return {
+        response: {
+          phase_id: phaseId,
+          initiative_id: initiativeId,
+          reporting_enabled,
+          phase_open: phase.status,
+        },
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async patchPhaseInitiativeReporting(
+    phaseId: number,
+    initiativeId: number,
+    dto: PatchPhaseInitiativeReportingDto,
+  ) {
+    try {
+      const err = await this._ensurePhaseOpenForMutation(phaseId);
+      if (err) return err;
+      const phase = await this._loadReportingPhase(phaseId);
+      const eligible = await this._getEligibleInitiatives(phase);
+      const ci = eligible.find((i) => i.id === initiativeId);
+      if (!ci) {
+        return {
+          response: null,
+          message: 'Initiative is not in scope for this reporting phase',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+      if (dto.reporting_enabled) {
+        await this._phaseInitiativeReportingRepo.delete({
+          version_id: phaseId,
+          initiative_id: initiativeId,
+        });
+      } else {
+        await this._phaseInitiativeReportingRepo.upsert(
+          {
+            version_id: phaseId,
+            initiative_id: initiativeId,
+            reporting_enabled: false,
+          },
+          { conflictPaths: ['version_id', 'initiative_id'] },
+        );
+      }
+      const idx = eligible.findIndex((i) => i.id === initiativeId);
+      return {
+        response: {
+          id: ci.id,
+          official_code: ci.official_code,
+          name: ci.name,
+          category: this._mapInitiativeCategory(ci),
+          reporting_enabled: dto.reporting_enabled,
+          color:
+            REPORTING_CATEGORY_COLORS[
+              Math.max(0, idx) % REPORTING_CATEGORY_COLORS.length
+            ],
+        },
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async patchPhaseInitiativeReportingBulk(
+    phaseId: number,
+    dto: BulkPhaseInitiativeReportingDto,
+  ) {
+    try {
+      const err = await this._ensurePhaseOpenForMutation(phaseId);
+      if (err) return err;
+      const phase = await this._loadReportingPhase(phaseId);
+      const eligible = await this._getEligibleInitiatives(phase);
+      const ids = eligible.map((i) => i.id);
+      if (dto.reporting_enabled) {
+        await this._phaseInitiativeReportingRepo.delete({
+          version_id: phaseId,
+        });
+      } else if (ids.length) {
+        await this._phaseInitiativeReportingRepo.upsert(
+          ids.map((initiative_id) => ({
+            version_id: phaseId,
+            initiative_id,
+            reporting_enabled: false,
+          })),
+          { conflictPaths: ['version_id', 'initiative_id'] },
+        );
+      }
+      const accessRows = await this._phaseInitiativeReportingRepo.find({
+        where: { version_id: phaseId },
+      });
+      const accessMap = new Map(
+        accessRows.map((r) => [r.initiative_id, r.reporting_enabled]),
+      );
+      const science_programs = eligible.map((ci, idx) => ({
+        id: ci.id,
+        official_code: ci.official_code,
+        name: ci.name,
+        category: this._mapInitiativeCategory(ci),
+        reporting_enabled: accessMap.get(ci.id) ?? true,
+        color:
+          REPORTING_CATEGORY_COLORS[idx % REPORTING_CATEGORY_COLORS.length],
+      }));
+      return {
+        response: science_programs,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  private async _loadReportingPhase(phaseId: number): Promise<Version | null> {
+    return this._versionRepo.findOne({
+      where: { id: phaseId },
+      relations: ['obj_portfolio'],
+    });
+  }
+
+  private async _ensurePhaseOpenForMutation(phaseId: number) {
+    const phase = await this._loadReportingPhase(phaseId);
+    if (!phase) {
+      return {
+        response: null,
+        message: 'Phase not found',
+        status: HttpStatus.NOT_FOUND,
+      };
+    }
+    if (!phase.status) {
+      return {
+        response: null,
+        message: 'Phase must be open to change reporting access',
+        status: HttpStatus.BAD_REQUEST,
+      };
+    }
+    return null;
+  }
+
+  private async _getEligibleInitiatives(
+    phase: Version,
+  ): Promise<ClarisaInitiative[]> {
+    if (!phase.portfolio_id) return [];
+    const list = await this._clarisaInitiativeRepo.find({
+      where: { active: true, portfolio_id: phase.portfolio_id },
+      relations: ['obj_cgiar_entity_type'],
+    });
+    return list.filter((ci) => this._isReportingEligibleType(ci));
+  }
+
+  private _isReportingEligibleType(ci: ClarisaInitiative): boolean {
+    const n = (ci.obj_cgiar_entity_type?.name || '').toLowerCase();
+    return (
+      n.includes('science') ||
+      n.includes('accelerator') ||
+      n.includes('scaling') ||
+      n.includes('genebank')
+    );
+  }
+
+  private _mapInitiativeCategory(ci: ClarisaInitiative): string {
+    const n = (ci.obj_cgiar_entity_type?.name || '').toLowerCase();
+    if (n.includes('accelerator') || n.includes('genebank'))
+      return 'Accelerators';
+    if (n.includes('scaling')) return 'Scaling programs';
+    if (n.includes('science')) return 'Science programs';
+    return ci.obj_cgiar_entity_type?.name || 'Other';
   }
 }

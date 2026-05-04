@@ -75,6 +75,7 @@ import { ReviewUpdateDto } from './dto/review-update.dto';
 import { ResultsTocResultsService } from './results-toc-results/results-toc-results.service';
 import { ShareResultRequestService } from './share-result-request/share-result-request.service';
 import { ShareResultRequestRepository } from './share-result-request/share-result-request.repository';
+import { ResultDeletionAuditService } from './result-deletion-audit/result-deletion-audit.service';
 
 describe('ResultsService (unit, pure mocks)', () => {
   let module: TestingModule;
@@ -521,6 +522,10 @@ describe('ResultsService (unit, pure mocks)', () => {
     }),
   } as any;
 
+  const mockResultDeletionAuditService = {
+    recordDeletion: jest.fn().mockResolvedValue(undefined),
+  };
+
   const mockResultImpactAreaScoresService = {
     validateImpactAreaScores: jest
       .fn()
@@ -672,6 +677,10 @@ describe('ResultsService (unit, pure mocks)', () => {
         {
           provide: AoWBilateralRepository,
           useValue: mockAoWBilateralRepository,
+        },
+        {
+          provide: ResultDeletionAuditService,
+          useValue: mockResultDeletionAuditService,
         },
         {
           provide: ResultReviewHistoryRepository,
@@ -1200,10 +1209,13 @@ describe('ResultsService (unit, pure mocks)', () => {
     (mockResultRepository as any).getResultDataForBasicReport = jest
       .fn()
       .mockResolvedValue([{ id: 1 }]);
-    const res = await resultService.getResultDataForBasicReport({
-      initDate: '2023-01-01',
-      endDate: '2023-12-31',
-    });
+    const res = await resultService.getResultDataForBasicReport(
+      {
+        initDate: '2023-01-01',
+        endDate: '2023-12-31',
+      },
+      userTest,
+    );
     expect(res.status).toBe(HttpStatus.OK);
     expect(Array.isArray(res.response)).toBe(true);
   });
@@ -2283,7 +2295,10 @@ describe('ResultsService (unit, pure mocks)', () => {
         mockResultRepository.getResultDataForBasicReport as jest.Mock
       ).mockResolvedValueOnce(mockData);
 
-      const res = await resultService.getResultDataForBasicReport(body);
+      const res = await resultService.getResultDataForBasicReport(
+        body,
+        userTest,
+      );
       expect((res as returnFormatService).status).toBe(HttpStatus.OK);
       expect((res as returnFormatService).response).toEqual(mockData);
     });

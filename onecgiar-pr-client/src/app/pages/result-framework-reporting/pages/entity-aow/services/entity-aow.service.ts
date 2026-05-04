@@ -48,15 +48,38 @@ export class EntityAowService {
 
   dashboardData = signal<any>(null);
 
+  reportingEnabled = signal<boolean>(false);
+
   canReportResults = computed(() => {
     if (this.api.rolesSE.isAdmin) {
       return true;
+    }
+
+    if (!this.reportingEnabled()) {
+      return false;
     }
 
     const myInitiativesList = this.api.dataControlSE.myInitiativesList || [];
     const found = myInitiativesList.find(item => item.official_code === this.entityId());
     return !!found;
   });
+
+  private checkReportingAccess(initiativeId: number): void {
+    const phaseId = this.api.dataControlSE.reportingCurrentPhase.phaseId;
+    if (!phaseId || !initiativeId) {
+      this.reportingEnabled.set(true);
+      return;
+    }
+
+    this.api.resultsSE.GET_phaseInitiativeStatus(phaseId, initiativeId).subscribe({
+      next: (res) => {
+        this.reportingEnabled.set(res.response?.reporting_enabled !== false);
+      },
+      error: () => {
+        this.reportingEnabled.set(true);
+      }
+    });
+  }
 
   private isSgp02(entityId: string): boolean {
     return entityId === 'SGP-02' || entityId === 'SGP02';
@@ -90,12 +113,16 @@ export class EntityAowService {
         );
         if (!item) return;
         const raw = item as { initiativeId?: number; initiativeCode?: string; initiativeName?: string; initiativeShortName?: string };
+        const initiativeId = raw.initiativeId ?? 0;
         this.entityDetails.set({
-          id: raw.initiativeId ?? 0,
+          id: initiativeId,
           officialCode: raw.initiativeCode ?? entityId,
           name: raw.initiativeName ?? '',
           shortName: raw.initiativeShortName ?? raw.initiativeName ?? ''
         });
+        if (initiativeId) {
+          this.checkReportingAccess(initiativeId);
+        }
       }
     });
   }
@@ -108,12 +135,15 @@ export class EntityAowService {
     }
     this.isLoadingDetails.set(true);
 
+    this.reportingEnabled.set(true);
+
     if (this.isSgp02(id)) {
       this.api.resultsSE.GET_IndicatorContributionSummary(id).subscribe({
         next: ({ response }) => {
           const initiative = this.getSgp02InitiativeFromList(id);
           if (initiative) {
             this.entityDetails.set(initiative);
+            this.checkReportingAccess(initiative.id);
           } else {
             this.entityDetails.set({} as Initiative);
             this.fetchSgp02InitiativeFromSciencePrograms(id);
@@ -135,9 +165,14 @@ export class EntityAowService {
       indicatorSummaries: this.api.resultsSE.GET_IndicatorContributionSummary(id)
     }).subscribe({
       next: ({ clarisaGlobalUnits, indicatorSummaries }) => {
-        this.entityDetails.set(clarisaGlobalUnits?.response?.initiative);
+        const initiative = clarisaGlobalUnits?.response?.initiative;
+        this.entityDetails.set(initiative);
         this.entityAows.set(clarisaGlobalUnits?.response?.units ?? []);
         this.indicatorSummaries.set(indicatorSummaries?.response?.totalsByType ?? []);
+
+        if (initiative?.id) {
+          this.checkReportingAccess(initiative.id);
+        }
 
         if (this.entityAows().length) {
           this.setSideBarItems();
@@ -247,5 +282,6 @@ export class EntityAowService {
     this.entityDetails.set({} as Initiative);
     this.entityAows.set([]);
     this.indicatorSummaries.set([]);
+    this.reportingEnabled.set(true);
   }
 }

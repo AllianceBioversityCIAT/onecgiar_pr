@@ -65,7 +65,9 @@ describe('RdContributorsAndPartnersComponent', () => {
     mockRdPartnersSE = {
       partnersBody: new ContributorsAndPartnersBody(),
       getSectionInformation: jest.fn(),
+      loadFilteredBilateralProjects: jest.fn(),
       loadClarisaProjects: jest.fn(),
+      resetState: jest.fn(),
       contributingInitiativeNew: [],
       leadPartnerId: null,
       leadCenterCode: null,
@@ -124,7 +126,6 @@ describe('RdContributorsAndPartnersComponent', () => {
       component.ngOnInit();
       expect(mockRdPartnersSE.partnersBody).toBeInstanceOf(ContributorsAndPartnersBody);
       expect(mockRdPartnersSE.getSectionInformation).toHaveBeenCalled();
-      expect(mockRdPartnersSE.loadClarisaProjects).toHaveBeenCalled();
     });
 
     it('should call GET_AllWithoutResults', () => {

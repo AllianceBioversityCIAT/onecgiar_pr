@@ -71,7 +71,9 @@ describe('ResultsListFiltersComponent', () => {
       selectedSubmittersAdmin: createSignal<any[]>([]),
       selectedLeadCenters: createSignal<any[]>([]),
       centerOptions: createSignal<any[]>([]),
-      fundingSourceOptions: createSignal<any[]>([])
+      fundingSourceOptions: createSignal<any[]>([]),
+      filterCreatedByMe: createSignal(false),
+      filterSubmittedByMe: createSignal(false)
     };
 
     // Create spy for the set method
@@ -281,18 +283,28 @@ describe('ResultsListFiltersComponent', () => {
     });
   });
 
-  it('onSelectPhases should NOT filter submittersOptions (portfolios control filtering now)', () => {
-    // Set up initial submittersOptions from beforeEach initialization
-    const initialSubmittersOptions = mockResultsListFilterService.submittersOptions();
-
-    component.tempSelectedPhases.set([{ portfolio_id: 2 } as any]);
+  it('onSelectPhases should filter admin submitters by selected phase portfolio', () => {
+    mockResultsListFilterService.submittersOptionsAdminOld.set(createMockAdminSubmittersOptions());
+    component.tempSelectedPhases.set([{ id: 102, portfolio_id: 2 } as any]);
+    component.tempSelectedSubmittersAdmin.set([
+      { id: 1, name: 'Admin User A', portfolio_id: 1 },
+      { id: 2, name: 'Admin User B', portfolio_id: 2 }
+    ] as any);
 
     component.onSelectPhases();
 
-    // submittersOptions should remain completely unchanged (phases don't affect submitters anymore)
-    expect(mockResultsListFilterService.submittersOptions()).toEqual(initialSubmittersOptions);
-    // submittersOptions is not initialized anymore (empty array)
-    expect(mockResultsListFilterService.submittersOptions()).toEqual([]);
+    expect(mockResultsListFilterService.submittersOptionsAdmin()).toEqual([{ id: 2, name: 'Admin User B', portfolio_id: 2 }]);
+    expect(component.tempSelectedSubmittersAdmin()).toEqual([{ id: 2, name: 'Admin User B', portfolio_id: 2 }]);
+  });
+
+  it('onSelectPhases should show all submitters when no phase and no portfolio are selected', () => {
+    mockResultsListFilterService.submittersOptionsAdminOld.set(createMockAdminSubmittersOptions());
+    component.tempSelectedPhases.set([]);
+    component.tempSelectedClarisaPortfolios.set([]);
+
+    component.onSelectPhases();
+
+    expect(mockResultsListFilterService.submittersOptionsAdmin()).toEqual(createMockAdminSubmittersOptions());
   });
 
   it('onDownLoadTableAsExcel should export and toggle gettingReport', done => {
@@ -836,8 +848,8 @@ describe('ResultsListFiltersComponent', () => {
       mockApiService.rolesSE.isAdmin = true;
       mockApiService.dataControlSE.myInitiativesListReportingByPortfolio = [];
 
-      // activeButtons is a computed signal - re-evaluate by calling it
-      const result = component.activeButtons();
+      // activeButtons is a getter
+      const result = component.activeButtons;
       // isAdmin is true so it should return true
       expect(mockApiService.rolesSE.isAdmin).toBe(true);
     });
@@ -989,13 +1001,15 @@ describe('ResultsListFiltersComponent', () => {
       // Only portfolio 1 submitter should remain
       expect(component.tempSelectedSubmittersAdmin()).toEqual([{ id: 1, name: 'Admin User A', portfolio_id: 1 }]);
     });
+
   });
 
   describe('openFiltersDrawer', () => {
     it('should copy current filter values to temp signals and open drawer', () => {
+      mockResultsListFilterService.submittersOptionsAdminOld.set([{ id: 4, name: 'Admin User', portfolio_id: 1 }]);
       mockResultsListFilterService.selectedClarisaPortfolios.set([{ id: 1 }]);
       mockResultsListFilterService.selectedFundingSource.set([{ id: 2 }]);
-      mockResultsListFilterService.selectedPhases.set([{ id: 3 }]);
+      mockResultsListFilterService.selectedPhases.set([{ id: 3, portfolio_id: 1 }]);
       mockResultsListFilterService.selectedSubmittersAdmin.set([{ id: 4 }]);
       mockResultsListFilterService.selectedIndicatorCategories.set([{ id: 5 }]);
       mockResultsListFilterService.selectedStatus.set([{ id: 6 }]);
@@ -1005,7 +1019,7 @@ describe('ResultsListFiltersComponent', () => {
 
       expect(component.tempSelectedClarisaPortfolios()).toEqual([{ id: 1 }]);
       expect(component.tempSelectedFundingSource()).toEqual([{ id: 2 }]);
-      expect(component.tempSelectedPhases()).toEqual([{ id: 3 }]);
+      expect(component.tempSelectedPhases()).toEqual([{ id: 3, portfolio_id: 1 }]);
       expect(component.tempSelectedSubmittersAdmin()).toEqual([{ id: 4 }]);
       expect(component.tempSelectedIndicatorCategories()).toEqual([{ id: 5 }]);
       expect(component.tempSelectedStatus()).toEqual([{ id: 6 }]);

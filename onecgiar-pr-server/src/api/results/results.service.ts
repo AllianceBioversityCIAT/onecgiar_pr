@@ -130,6 +130,8 @@ import { ShareResultRequestRepository } from './share-result-request/share-resul
 import { ShareResultRequest } from './share-result-request/entities/share-result-request.entity';
 import { EvidencesService } from '../results/evidences/evidences.service';
 import { SavePartnersV2Dto } from './results_by_institutions/dto/save-partners-v2.dto';
+import { ResultDeletionAuditService } from './result-deletion-audit/result-deletion-audit.service';
+import { ResultDeletionAuditSource } from './result-deletion-audit/result-deletion-audit-source.enum';
 
 @Injectable()
 export class ResultsService {
@@ -176,6 +178,7 @@ export class ResultsService {
     private readonly _resultsCenterRepository: ResultsCenterRepository,
     private readonly _resultsTocResultRepository: ResultsTocResultRepository,
     private readonly _tocResultsRepository: AoWBilateralRepository,
+    private readonly _resultDeletionAuditService: ResultDeletionAuditService,
     private readonly _dataSource: DataSource,
     private readonly _resultImpactAreaScoresService: ResultImpactAreaScoresService,
     private readonly _initiativeEntityMapRepository?: InitiativeEntityMapRepository,
@@ -212,6 +215,40 @@ export class ResultsService {
     @Optional()
     private readonly _shareResultRequestRepository?: ShareResultRequestRepository,
   ) {}
+
+  /**
+   * Blocks duplicate titles among active results within the same reporting version.
+   * The same title may exist on another version (same result_code lineage, different id).
+   * When updating general information, pass excludeResultId so the row can keep its title.
+   */
+  private async assertUniqueActiveResultTitle(
+    rawTitle: string | undefined,
+    versionId: number,
+    excludeResultId?: number,
+  ): Promise<string> {
+    const trimmed = (rawTitle ?? '').trim();
+    if (!trimmed) {
+      return '';
+    }
+    const existing = await this._resultRepository.findOne({
+      where: {
+        title: trimmed,
+        is_active: true,
+        version_id: versionId,
+      },
+    });
+    if (
+      existing?.id &&
+      (excludeResultId === undefined || existing.id !== excludeResultId)
+    ) {
+      throw {
+        response: {},
+        message: 'A result with this title already exists.',
+        status: HttpStatus.CONFLICT,
+      };
+    }
+    return trimmed;
+  }
 
   async createOwnerResult(
     createResultDto: CreateResultDto,
@@ -311,16 +348,26 @@ export class ResultsService {
         };
       }
 
+      const targetVersionId =
+        isAdmin != undefined && Boolean(isAdmin) && versionId
+          ? versionId
+          : version.id;
+
+      const trimmedCreateTitle = await this.assertUniqueActiveResultTitle(
+        createResultDto.result_name,
+        targetVersionId,
+      );
+
       const last_code = await this._resultRepository.getLastResultCode();
       const saveResult: Partial<Result> = {
         created_by: user.id,
         last_updated_by: user.id,
         result_type_id: rt.id,
-        version_id:
-          isAdmin != undefined && Boolean(isAdmin) && versionId
-            ? versionId
-            : version.id,
-        title: createResultDto.result_name,
+        version_id: targetVersionId,
+        title:
+          trimmedCreateTitle.length > 0
+            ? trimmedCreateTitle
+            : createResultDto.result_name,
         reported_year_id: year.year,
         result_level_id: rl.id,
         result_code: last_code + 1,
@@ -745,10 +792,19 @@ export class ResultsService {
         );
       }
 
+      const trimmedGeneralTitle = await this.assertUniqueActiveResultTitle(
+        resultGeneralInformation.result_name,
+        result.version_id,
+        result.id,
+      );
+
       const updateResult = await this._resultRepository.save({
         id: result.id,
         is_discontinued: resultGeneralInformation?.is_discontinued,
-        title: resultGeneralInformation.result_name,
+        title:
+          trimmedGeneralTitle.length > 0
+            ? trimmedGeneralTitle
+            : resultGeneralInformation.result_name,
         result_type_id: resultByLevel.result_type_id,
         result_level_id: resultByLevel.result_level_id,
         description: resultGeneralInformation.result_description,
@@ -921,7 +977,7 @@ export class ResultsService {
    * @returns
    */
 
-  async deleteResult(resultId: number, user: TokenDto) {
+  async deleteResult(resultId: number, user: TokenDto, justification?: string) {
     try {
       const result: Result = await this._resultRepository.findOne({
         where: { id: resultId },
@@ -940,6 +996,13 @@ export class ResultsService {
           statusCode: HttpStatus.BAD_REQUEST,
           response: result,
         });
+
+      await this._resultDeletionAuditService.recordDeletion({
+        resultId: result.id,
+        userId: user.id,
+        deletionSource: ResultDeletionAuditSource.ResultsModule,
+        justification,
+      });
 
       result.is_active = false;
 
@@ -1168,8 +1231,15 @@ export class ResultsService {
     }
   }
 
-  async findAllByRoleFiltered(userId: number, query: Record<string, any> = {}) {
+  async findAllByRoleFiltered(
+    userId: number,
+    query: Record<string, any> = {},
+    authUser?: TokenDto,
+  ) {
     try {
+      const parseQueryBool = (v: unknown): boolean =>
+        v === true || v === 'true' || v === 1 || v === '1';
+
       const pageNum = Number(query.page);
       const limitNum = Number(query.limit);
       const page =
@@ -1215,6 +1285,11 @@ export class ResultsService {
 
       const title = query.title ? String(query.title).trim() : undefined;
 
+      const filterMyCreated = parseQueryBool(query.filter_created_by_me);
+      const filterMySubmitted = parseQueryBool(query.filter_submitted_by_me);
+      const useMyActivity =
+        authUser?.id != null && (filterMyCreated || filterMySubmitted);
+
       const filters = {
         initiativeCode,
         versionId: toNumberArray(
@@ -1230,6 +1305,13 @@ export class ResultsService {
         statusId: toNumberArray(query.status_id ?? query.status),
         fundingSource,
         title: title && title.length > 0 ? title : undefined,
+        ...(useMyActivity
+          ? {
+              myActivityUserId: authUser.id,
+              filterMyCreated,
+              filterMySubmitted,
+            }
+          : {}),
       };
 
       const repoRes =
@@ -2200,9 +2282,12 @@ export class ResultsService {
     }
   }
 
-  async getResultDataForBasicReport(body: BasicReportFiltersDto) {
+  async getResultDataForBasicReport(
+    body: BasicReportFiltersDto,
+    authUser: TokenDto,
+  ) {
     try {
-      const filters = this._normalizeBasicReportFilters(body);
+      const filters = this._normalizeBasicReportFilters(body, authUser);
       const result =
         await this._resultRepository.getResultDataForBasicReport(filters);
 
@@ -2223,6 +2308,7 @@ export class ResultsService {
    */
   private _normalizeBasicReportFilters(
     body: BasicReportFiltersDto,
+    authUser: TokenDto,
   ): BasicReportFiltersNormalized {
     const { initDate, endDate } = this._parseBasicReportDateRange(body);
     const phaseIds = this._extractPhaseIds(body.phases);
@@ -2252,6 +2338,11 @@ export class ResultsService {
       ?.filter((c) => c.code != null && c.code !== '')
       .map((c) => c.code);
 
+    const filterMyCreated = body.filterCreatedByMe === true;
+    const filterMySubmitted = body.filterSubmittedByMe === true;
+    const useMyActivity =
+      authUser?.id != null && (filterMyCreated || filterMySubmitted);
+
     return {
       initDate,
       endDate,
@@ -2266,6 +2357,13 @@ export class ResultsService {
         ? [...new Set(sourceValues)]
         : undefined,
       leadCenterCodes: this._emptyToUndefined(leadCenterCodes),
+      ...(useMyActivity
+        ? {
+            myActivityUserId: authUser.id,
+            filterMyCreated,
+            filterMySubmitted,
+          }
+        : {}),
     };
   }
 
@@ -4423,10 +4521,23 @@ export class ResultsService {
         };
       }
 
+      const bilateralResult = await this._resultRepository.findOne({
+        where: { id: parsedResultId, is_active: true },
+        select: ['id', 'version_id'],
+      });
+      if (!bilateralResult) {
+        return {
+          response: {},
+          message: 'The result does not exist',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
       const existingResult = await this._resultRepository.findOne({
         where: {
           title: title.trim(),
           is_active: true,
+          version_id: bilateralResult.version_id,
         },
       });
 

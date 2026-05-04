@@ -43,6 +43,7 @@ describe('ResultsListComponent', () => {
     mockApiService = {
       shouldShowUpdate: jest.fn(),
       updateResultsList: jest.fn(),
+      buildResultsListSearchParams: jest.fn(() => undefined),
       resultsSE: {
         GET_reportingList: () => of({ response: [] }),
         PATCH_DeleteResult: () => of({}),
@@ -104,7 +105,9 @@ describe('ResultsListComponent', () => {
       selectedSubmitters: jest.fn(() => []),
       selectedSubmittersAdmin: jest.fn(() => []),
       selectedIndicatorCategories: jest.fn(() => []),
-      selectedStatus: jest.fn(() => [])
+      selectedStatus: jest.fn(() => []),
+      filterCreatedByMe: jest.fn(() => false),
+      filterSubmittedByMe: jest.fn(() => false)
     };
 
     mockPhasesService = {};
@@ -906,8 +909,9 @@ describe('ResultsListComponent', () => {
   });
 
   describe('onDeleteREsult() - with selected phases', () => {
-    it('should include version_id when selectedPhaseIds returns a non-empty string', () => {
+    it('should refresh the list after delete using current filter params', () => {
       mockResultsListFilterService.selectedPhases = jest.fn(() => [{ id: 1 }, { id: 2 }]);
+      mockApiService.buildResultsListSearchParams = jest.fn(() => ({ version_id: '1,2' }));
       const spyUpdateResultsList = jest.spyOn(mockApiService, 'updateResultsList');
 
       mockApiService.alertsFe.show = jest.fn().mockImplementation((config, callback) => {
@@ -920,7 +924,7 @@ describe('ResultsListComponent', () => {
       component.onDeleteREsult();
       jest.runAllTimers();
 
-      expect(spyUpdateResultsList).toHaveBeenCalledWith({ version_id: '1,2' });
+      expect(spyUpdateResultsList).toHaveBeenCalledWith();
     });
   });
 });

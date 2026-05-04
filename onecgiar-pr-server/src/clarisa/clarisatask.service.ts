@@ -97,25 +97,30 @@ export class ClarisaTaskService {
   }
 
   public async clarisaBootstrapImportantData() {
-    this._logger.debug(`Cloning of CLARISA important control lists`);
-    const lastUpdated = (
-      await this._clarisaInstitutionsRepository.getMostRecentLastUpdated()
-    )[0]?.most_recent;
-    const institutionsPartial = ClarisaEndpoints.INSTITUTIONS_FULL;
-    if (lastUpdated) {
-      institutionsPartial.params = {
-        ...institutionsPartial.params,
-        from: lastUpdated,
-      };
-    }
-
-    return this.syncControlList(institutionsPartial, 1).then((data) => {
-      this._logger.debug(
-        `All CLARISA Institutions control list data has been created. Updated/created ${
-          data.length ?? 0
-        } institutions`,
-      );
-    });
+    // CRON OFF: INSTITUTIONS_FULL → ClarisaInstitution / clarisa_institutions (manual sync only).
+    this._logger.debug(
+      'clarisaBootstrapImportantData skipped (institutions cron disabled)',
+    );
+    return;
+    // this._logger.debug(`Cloning of CLARISA important control lists`);
+    // const lastUpdated = (
+    //   await this._clarisaInstitutionsRepository.getMostRecentLastUpdated()
+    // )[0]?.most_recent;
+    // const institutionsPartial = ClarisaEndpoints.INSTITUTIONS_FULL;
+    // if (lastUpdated) {
+    //   institutionsPartial.params = {
+    //     ...institutionsPartial.params,
+    //     from: lastUpdated,
+    //   };
+    // }
+    //
+    // return this.syncControlList(institutionsPartial, 1).then((data) => {
+    //   this._logger.debug(
+    //     `All CLARISA Institutions control list data has been created. Updated/created ${
+    //       data.length ?? 0
+    //     } institutions`,
+    //   );
+    // });
   }
 
   /**
@@ -210,7 +215,12 @@ export class ClarisaTaskService {
         return this.syncControlList(ClarisaEndpoints.GEOSCOPES, index);
       },
       async (index: number) => {
-        return this.syncControlList(ClarisaEndpoints.CGIAR_ENTITIES, index);
+        // CRON OFF: CGIAR_ENTITIES → ClarisaCenter / clarisa_center (manual sync only).
+        this._logger.debug(
+          `[${index}] clarisaBootstrap: CGIAR_ENTITIES (centers) skipped`,
+        );
+        return [];
+        // return this.syncControlList(ClarisaEndpoints.CGIAR_ENTITIES, index);
       },
       async (index: number) => {
         return this.syncControlList(ClarisaEndpoints.POLICY_TYPES, index);
