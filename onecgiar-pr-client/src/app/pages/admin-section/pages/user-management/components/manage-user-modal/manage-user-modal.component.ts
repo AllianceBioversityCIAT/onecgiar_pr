@@ -461,10 +461,9 @@ export class ManageUserModalComponent {
     }
 
     if (form.role_assignments.length > 0) {
-      const hasEntitySelected = form.role_assignments.some(assignment => assignment.entity_id !== null);
-      const hasRoleSelected = form.role_assignments.some(assignment => assignment.role_id == null || assignment.role_id === undefined);
+      const hasIncompleteAssignment = form.role_assignments.some(assignment => assignment.entity_id === null || assignment.role_id === null);
 
-      if (hasEntitySelected && hasRoleSelected) {
+      if (hasIncompleteAssignment) {
         return false;
       }
     }
