@@ -28,23 +28,33 @@ describe('ReportingMetadataExportQueuePublisherService', () => {
 
   describe('isEnabled', () => {
     it('returns false when client is undefined', () => {
-      jest.spyOn(constants, 'isReportingMetadataExportQueueConfigured').mockReturnValue(true);
+      jest
+        .spyOn(constants, 'isReportingMetadataExportQueueConfigured')
+        .mockReturnValue(true);
       service = new ReportingMetadataExportQueuePublisherService(undefined);
 
       expect(service.isEnabled()).toBe(false);
     });
 
     it('returns false when queue env not configured even if client exists', () => {
-      jest.spyOn(constants, 'isReportingMetadataExportQueueConfigured').mockReturnValue(false);
-      service = new ReportingMetadataExportQueuePublisherService(mockClient as any);
+      jest
+        .spyOn(constants, 'isReportingMetadataExportQueueConfigured')
+        .mockReturnValue(false);
+      service = new ReportingMetadataExportQueuePublisherService(
+        mockClient as any,
+      );
 
       expect(service.isEnabled()).toBe(false);
       expect(mockClient.connect).not.toHaveBeenCalled();
     });
 
     it('returns true when env configured and client is injected', () => {
-      jest.spyOn(constants, 'isReportingMetadataExportQueueConfigured').mockReturnValue(true);
-      service = new ReportingMetadataExportQueuePublisherService(mockClient as any);
+      jest
+        .spyOn(constants, 'isReportingMetadataExportQueueConfigured')
+        .mockReturnValue(true);
+      service = new ReportingMetadataExportQueuePublisherService(
+        mockClient as any,
+      );
 
       expect(service.isEnabled()).toBe(true);
     });
@@ -52,8 +62,12 @@ describe('ReportingMetadataExportQueuePublisherService', () => {
 
   describe('onModuleInit', () => {
     it('skips connect when disabled', async () => {
-      jest.spyOn(constants, 'isReportingMetadataExportQueueConfigured').mockReturnValue(false);
-      service = new ReportingMetadataExportQueuePublisherService(mockClient as any);
+      jest
+        .spyOn(constants, 'isReportingMetadataExportQueueConfigured')
+        .mockReturnValue(false);
+      service = new ReportingMetadataExportQueuePublisherService(
+        mockClient as any,
+      );
 
       await service.onModuleInit();
 
@@ -61,8 +75,12 @@ describe('ReportingMetadataExportQueuePublisherService', () => {
     });
 
     it('connects when enabled', async () => {
-      jest.spyOn(constants, 'isReportingMetadataExportQueueConfigured').mockReturnValue(true);
-      service = new ReportingMetadataExportQueuePublisherService(mockClient as any);
+      jest
+        .spyOn(constants, 'isReportingMetadataExportQueueConfigured')
+        .mockReturnValue(true);
+      service = new ReportingMetadataExportQueuePublisherService(
+        mockClient as any,
+      );
 
       await service.onModuleInit();
 
@@ -70,9 +88,13 @@ describe('ReportingMetadataExportQueuePublisherService', () => {
     });
 
     it('logs error when connect rejects', async () => {
-      jest.spyOn(constants, 'isReportingMetadataExportQueueConfigured').mockReturnValue(true);
+      jest
+        .spyOn(constants, 'isReportingMetadataExportQueueConfigured')
+        .mockReturnValue(true);
       mockClient.connect.mockRejectedValueOnce(new Error('broker down'));
-      service = new ReportingMetadataExportQueuePublisherService(mockClient as any);
+      service = new ReportingMetadataExportQueuePublisherService(
+        mockClient as any,
+      );
 
       await expect(service.onModuleInit()).resolves.toBeUndefined();
       expect(mockClient.connect).toHaveBeenCalled();
@@ -81,8 +103,12 @@ describe('ReportingMetadataExportQueuePublisherService', () => {
 
   describe('publishExportJob', () => {
     beforeEach(() => {
-      jest.spyOn(constants, 'isReportingMetadataExportQueueConfigured').mockReturnValue(true);
-      service = new ReportingMetadataExportQueuePublisherService(mockClient as any);
+      jest
+        .spyOn(constants, 'isReportingMetadataExportQueueConfigured')
+        .mockReturnValue(true);
+      service = new ReportingMetadataExportQueuePublisherService(
+        mockClient as any,
+      );
     });
 
     it('throws when client is missing', () => {
@@ -106,7 +132,9 @@ describe('ReportingMetadataExportQueuePublisherService', () => {
 
   describe('Nest module wiring', () => {
     it('resolves publisher with mocked ClientProxy', async () => {
-      jest.spyOn(constants, 'isReportingMetadataExportQueueConfigured').mockReturnValue(true);
+      jest
+        .spyOn(constants, 'isReportingMetadataExportQueueConfigured')
+        .mockReturnValue(true);
 
       const module: TestingModule = await Test.createTestingModule({
         providers: [

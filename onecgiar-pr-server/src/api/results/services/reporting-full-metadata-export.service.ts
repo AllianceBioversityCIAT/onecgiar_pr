@@ -30,6 +30,13 @@ export interface ReportingExportJob {
   rowCount?: number;
 }
 
+type ExportRowsByType = Map<string, Record<string, unknown>[]>;
+type ExportSkippedRow = {
+  result_code: unknown;
+  version_id: unknown;
+  reason: string;
+};
+
 function defaultMaxRows(): number | null {
   const raw = env.RESULT_METADATA_EXPORT_MAX_ROWS;
   if (!raw?.trim()) return null;
@@ -150,7 +157,8 @@ const P25_EXCEL_COLUMN_HEADER_LABELS: Record<string, string> = {
   s7_pc_policy_amount: 'Policy change — amount',
   s7_pc_status_policy_change: 'Policy change — amount status',
   s7_pc_stage_policy_change: 'Policy change — stage',
-  s7_pc_implementing_organizations: 'Policy change — implementing organizations',
+  s7_pc_implementing_organizations:
+    'Policy change — implementing organizations',
   s7_pc_result_related: 'Policy change — related result (questions)',
   s7_pc_result_related_engagement: 'Policy change — related result engagement',
   s7_iu_actors: 'Innovation use — actors',
@@ -163,7 +171,8 @@ const P25_EXCEL_COLUMN_HEADER_LABELS: Record<string, string> = {
   s7_cd_unknown_using: 'Capacity sharing — unknown gender participants',
   s7_cd_capdev_term: 'Capacity sharing — term',
   s7_cd_delivery_method: 'Capacity sharing — delivery method',
-  s7_cd_is_attending_for_organization: 'Capacity sharing — attending for organization',
+  s7_cd_is_attending_for_organization:
+    'Capacity sharing — attending for organization',
   s7_cd_organizations: 'Capacity sharing — organizations',
   s7_kp_handle: 'Knowledge Product — CGSpace handle URL',
   s7_kp_knowledge_product_type: 'Knowledge Product — type',
@@ -195,7 +204,8 @@ const P25_EXCEL_COLUMN_HEADER_LABELS: Record<string, string> = {
   s7_id_innovation_developers: 'Innovation development — developers',
   s7_id_innovation_collaborators: 'Innovation development — collaborators',
   s7_id_readiness_level: 'Innovation development — readiness level',
-  s7_id_readiness_level_justification: 'Innovation development — readiness justification',
+  s7_id_readiness_level_justification:
+    'Innovation development — readiness justification',
   s7_id_published_ipsr: 'Innovation development — published in IPSR',
   s7_id_actors: 'Innovation development — actors',
   s7_id_organization_lines: 'Innovation development — organizations',
@@ -377,144 +387,18 @@ export class ReportingFullMetadataExportService {
 
     job.status = 'processing';
 
-    const maxRows = defaultMaxRows();
-    const listRes = await this._resultsService.getResultDataForBasicReport(
-      filters,
-      user,
+    const basicRows = await this._getBasicRows(filters, user);
+    this._validateBasicRowsCount(basicRows);
+
+    const { byType, skippedRows, p25SheetColumnOrder } =
+      await this._buildRowsByTypeAndColumnOrder(basicRows, filters);
+    this._ensureRowsWereBuilt(byType);
+
+    const workbook = this._buildWorkbook(
+      byType,
+      skippedRows,
+      p25SheetColumnOrder,
     );
-    const basicRows = (listRes?.response ?? []) as Record<string, unknown>[];
-
-    if (maxRows != null && basicRows.length > maxRows) {
-      throw new Error(
-        `Too many results (${basicRows.length}). Maximum allowed is ${maxRows}. Narrow your filters.`,
-      );
-    }
-    if (basicRows.length === 0) {
-      throw new Error('No results match the current filters.');
-    }
-
-    const byType = new Map<string, Record<string, unknown>[]>();
-    const skippedRows: {
-      result_code: unknown;
-      version_id: unknown;
-      reason: string;
-    }[] = [];
-
-    const validRows = basicRows.filter(
-      (r) => r.result_code != null && r.version_id != null,
-    );
-    if (validRows.length < basicRows.length) {
-      this._logger.warn(
-        `${basicRows.length - validRows.length} list row(s) lacked result_code or version_id and were ignored.`,
-      );
-    }
-    const rowPhaseYears = Array.from(
-      new Set(
-        basicRows
-          .map((r) => Number(r.phase_year))
-          .filter((y) => Number.isFinite(y)),
-      ),
-    );
-    const p25Years = new Set(p25PhaseYears());
-    const hasP25Rows = rowPhaseYears.some((y) => p25Years.has(y));
-    const hasNonP25Rows = rowPhaseYears.some((y) => !p25Years.has(y));
-
-    if (hasP25Rows && hasNonP25Rows) {
-      throw new Error(
-        'Full metadata export cannot mix P25 and previous phases. Please filter one phase model at a time.',
-      );
-    }
-
-    /** Ordered column list for P25 (used again when writing sheets so Section 7 cols can be trimmed per type). */
-    let p25SheetColumnOrder: string[] | null = null;
-
-    if (hasP25Rows) {
-      const selectedP25Columns = normalizeRequestedP25Columns(
-        filters.selectedColumns,
-      );
-      p25SheetColumnOrder = selectedP25Columns;
-      const resultCodes = Array.from(
-        new Set(
-          validRows
-            .map((r) => Number(r.result_code))
-            .filter((n) => Number.isFinite(n) && n > 0),
-        ),
-      );
-      const p25Res =
-        await this._resultsService.getP25ExcelRowsByResultCodes(resultCodes);
-      const p25Rows = (p25Res?.response ?? []) as Record<string, unknown>[];
-      if (!p25Rows.length) {
-        throw new Error(
-          'No rows were returned from the P25 Excel view for the selected filters.',
-        );
-      }
-
-      const columnsForP25Pick = Array.from(
-        new Set<string>([
-          ...selectedP25Columns,
-          P25_INTERNAL_TYPE_ID_COLUMN,
-        ]),
-      );
-      for (const row of p25Rows) {
-        const flat = pickColumns(normalizeTabularRow(row), columnsForP25Pick);
-        const typeKey = tabularResultTypeKey(flat['result_type'], 'P25');
-        let bucket = byType.get(typeKey);
-        if (!bucket) {
-          bucket = [];
-          byType.set(typeKey, bucket);
-        }
-        bucket.push(flat);
-      }
-    } else {
-      // Non-P25 path: reuse legacy reporting list rows directly (no per-result DB function/procedure).
-      for (const basicRow of basicRows) {
-        const flat = normalizeTabularRow(basicRow);
-        const typeKey = tabularResultTypeKey(basicRow['result_type'], 'Legacy');
-        let bucket = byType.get(typeKey);
-        if (!bucket) {
-          bucket = [];
-          byType.set(typeKey, bucket);
-        }
-        bucket.push(flat);
-      }
-    }
-
-    if (byType.size === 0) {
-      throw new Error(
-        'Could not build export: no full metadata rows were produced.',
-      );
-    }
-
-    const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'PRMS';
-    workbook.created = new Date();
-
-    if (skippedRows.length > 0) {
-      const sh = workbook.addWorksheet(sanitizeSheetName('Skipped — review'));
-      sh.addRow(['result_code', 'version_id', 'reason']);
-      for (const s of skippedRows) {
-        sh.addRow([s.result_code, s.version_id, s.reason]);
-      }
-    }
-
-    for (const [typeName, rows] of byType.entries()) {
-      let columns: string[];
-      if (p25SheetColumnOrder?.length && rows.length > 0) {
-        columns = filterP25SheetColumnsByResultType(
-          p25SheetColumnOrder,
-          rows[0]['result_type_id'],
-        );
-      } else {
-        const allKeys = new Set<string>();
-        rows.forEach((r) => Object.keys(r).forEach((k) => allKeys.add(k)));
-        columns = Array.from(allKeys);
-      }
-      const sheet = workbook.addWorksheet(sanitizeSheetName(typeName));
-      sheet.addRow(columns.map((c) => p25ExcelColumnHeader(c)));
-      for (const row of rows) {
-        sheet.addRow(columns.map((c) => row[c] ?? ''));
-      }
-    }
 
     const workbookBinary = await workbook.xlsx.writeBuffer();
     const buffer = Buffer.from(workbookBinary);
@@ -545,13 +429,224 @@ export class ReportingFullMetadataExportService {
     );
   }
 
+  private async _getBasicRows(
+    filters: BasicReportFiltersDto,
+    user: TokenDto,
+  ): Promise<Record<string, unknown>[]> {
+    const listRes = await this._resultsService.getResultDataForBasicReport(
+      filters,
+      user,
+    );
+    return (listRes?.response ?? []) as Record<string, unknown>[];
+  }
+
+  private _validateBasicRowsCount(basicRows: Record<string, unknown>[]): void {
+    const maxRows = defaultMaxRows();
+    if (maxRows != null && basicRows.length > maxRows) {
+      throw new Error(
+        `Too many results (${basicRows.length}). Maximum allowed is ${maxRows}. Narrow your filters.`,
+      );
+    }
+    if (basicRows.length === 0) {
+      throw new Error('No results match the current filters.');
+    }
+  }
+
+  private async _buildRowsByTypeAndColumnOrder(
+    basicRows: Record<string, unknown>[],
+    filters: BasicReportFiltersDto,
+  ): Promise<{
+    byType: ExportRowsByType;
+    skippedRows: ExportSkippedRow[];
+    p25SheetColumnOrder: string[] | null;
+  }> {
+    const byType: ExportRowsByType = new Map();
+    const skippedRows: ExportSkippedRow[] = [];
+    const validRows = this._extractValidRows(basicRows);
+    const hasP25Rows = this._hasP25Rows(basicRows);
+
+    if (hasP25Rows) {
+      const p25SheetColumnOrder = await this._fillRowsForP25(
+        byType,
+        validRows,
+        filters.selectedColumns,
+      );
+      return { byType, skippedRows, p25SheetColumnOrder };
+    }
+
+    this._fillRowsForLegacy(byType, basicRows);
+    return { byType, skippedRows, p25SheetColumnOrder: null };
+  }
+
+  private _extractValidRows(
+    basicRows: Record<string, unknown>[],
+  ): Record<string, unknown>[] {
+    const validRows = basicRows.filter(
+      (r) => r.result_code != null && r.version_id != null,
+    );
+    const ignoredCount = basicRows.length - validRows.length;
+    if (ignoredCount > 0) {
+      this._logger.warn(
+        `${ignoredCount} list row(s) lacked result_code or version_id and were ignored.`,
+      );
+    }
+    return validRows;
+  }
+
+  private _hasP25Rows(basicRows: Record<string, unknown>[]): boolean {
+    const rowPhaseYears = Array.from(
+      new Set(
+        basicRows
+          .map((r) => Number(r.phase_year))
+          .filter((y) => Number.isFinite(y)),
+      ),
+    );
+    const p25Years = new Set(p25PhaseYears());
+    const hasP25Rows = rowPhaseYears.some((y) => p25Years.has(y));
+    const hasNonP25Rows = rowPhaseYears.some((y) => !p25Years.has(y));
+    if (hasP25Rows && hasNonP25Rows) {
+      throw new Error(
+        'Full metadata export cannot mix P25 and previous phases. Please filter one phase model at a time.',
+      );
+    }
+    return hasP25Rows;
+  }
+
+  private async _fillRowsForP25(
+    byType: ExportRowsByType,
+    validRows: Record<string, unknown>[],
+    selectedColumns?: string[],
+  ): Promise<string[]> {
+    const p25SheetColumnOrder = normalizeRequestedP25Columns(selectedColumns);
+    const resultCodes = Array.from(
+      new Set(
+        validRows
+          .map((r) => Number(r.result_code))
+          .filter((n) => Number.isFinite(n) && n > 0),
+      ),
+    );
+    const p25Res =
+      await this._resultsService.getP25ExcelRowsByResultCodes(resultCodes);
+    const p25Rows = (p25Res?.response ?? []) as Record<string, unknown>[];
+    if (!p25Rows.length) {
+      throw new Error(
+        'No rows were returned from the P25 Excel view for the selected filters.',
+      );
+    }
+
+    const columnsForP25Pick = Array.from(
+      new Set<string>([...p25SheetColumnOrder, P25_INTERNAL_TYPE_ID_COLUMN]),
+    );
+    for (const row of p25Rows) {
+      const flat = pickColumns(normalizeTabularRow(row), columnsForP25Pick);
+      this._appendRowToTypeBucket(
+        byType,
+        tabularResultTypeKey(flat['result_type'], 'P25'),
+        flat,
+      );
+    }
+    return p25SheetColumnOrder;
+  }
+
+  private _fillRowsForLegacy(
+    byType: ExportRowsByType,
+    basicRows: Record<string, unknown>[],
+  ): void {
+    for (const basicRow of basicRows) {
+      const flat = normalizeTabularRow(basicRow);
+      this._appendRowToTypeBucket(
+        byType,
+        tabularResultTypeKey(basicRow['result_type'], 'Legacy'),
+        flat,
+      );
+    }
+  }
+
+  private _appendRowToTypeBucket(
+    byType: ExportRowsByType,
+    typeKey: string,
+    row: Record<string, unknown>,
+  ): void {
+    let bucket = byType.get(typeKey);
+    if (!bucket) {
+      bucket = [];
+      byType.set(typeKey, bucket);
+    }
+    bucket.push(row);
+  }
+
+  private _ensureRowsWereBuilt(byType: ExportRowsByType): void {
+    if (byType.size === 0) {
+      throw new Error(
+        'Could not build export: no full metadata rows were produced.',
+      );
+    }
+  }
+
+  private _buildWorkbook(
+    byType: ExportRowsByType,
+    skippedRows: ExportSkippedRow[],
+    p25SheetColumnOrder: string[] | null,
+  ): ExcelJS.Workbook {
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'PRMS';
+    workbook.created = new Date();
+
+    this._addSkippedRowsSheet(workbook, skippedRows);
+    this._addTypeSheets(workbook, byType, p25SheetColumnOrder);
+
+    return workbook;
+  }
+
+  private _addSkippedRowsSheet(
+    workbook: ExcelJS.Workbook,
+    skippedRows: ExportSkippedRow[],
+  ): void {
+    if (skippedRows.length === 0) return;
+    const sheet = workbook.addWorksheet(sanitizeSheetName('Skipped — review'));
+    sheet.addRow(['result_code', 'version_id', 'reason']);
+    for (const row of skippedRows) {
+      sheet.addRow([row.result_code, row.version_id, row.reason]);
+    }
+  }
+
+  private _addTypeSheets(
+    workbook: ExcelJS.Workbook,
+    byType: ExportRowsByType,
+    p25SheetColumnOrder: string[] | null,
+  ): void {
+    for (const [typeName, rows] of byType.entries()) {
+      const columns = this._resolveSheetColumns(rows, p25SheetColumnOrder);
+      const sheet = workbook.addWorksheet(sanitizeSheetName(typeName));
+      sheet.addRow(columns.map((c) => p25ExcelColumnHeader(c)));
+      for (const row of rows) {
+        sheet.addRow(columns.map((c) => row[c] ?? ''));
+      }
+    }
+  }
+
+  private _resolveSheetColumns(
+    rows: Record<string, unknown>[],
+    p25SheetColumnOrder: string[] | null,
+  ): string[] {
+    if (p25SheetColumnOrder?.length && rows.length > 0) {
+      return filterP25SheetColumnsByResultType(
+        p25SheetColumnOrder,
+        rows[0]['result_type_id'],
+      );
+    }
+    const allKeys = new Set<string>();
+    rows.forEach((row) => Object.keys(row).forEach((key) => allKeys.add(key)));
+    return Array.from(allKeys);
+  }
+
   private async _uploadToS3AndSign(
     key: string,
     body: Buffer,
   ): Promise<string | undefined> {
-    const bucket = env.AWS_BUCKET_NAME;
+    const bucket = env.AWS_BUCKET_NAME_EXPORT;
     if (!bucket) {
-      this._logger.error('AWS_BUCKET_NAME is not set; skip S3 upload.');
+      this._logger.error('AWS_BUCKET_NAME_EXPORT is not set; skip S3 upload.');
       return undefined;
     }
 
