@@ -11,7 +11,9 @@ jest.mock('aws-sdk', () => {
   const putObject = jest.fn().mockReturnValue({
     promise: jest.fn().mockResolvedValue({}),
   });
-  const getSignedUrl = jest.fn(() => 'https://example-bucket.s3.amazonaws.com/signed');
+  const getSignedUrl = jest.fn(
+    () => 'https://example-bucket.s3.amazonaws.com/signed',
+  );
   const S3 = jest.fn().mockImplementation(() => ({
     putObject,
     getSignedUrl,
@@ -26,9 +28,7 @@ async function flushBackgroundJobs(): Promise<void> {
 }
 
 async function waitForTerminalJob(
-  getJob: () => ReturnType<
-    ReportingFullMetadataExportService['getJob']
-  > | null,
+  getJob: () => ReturnType<ReportingFullMetadataExportService['getJob']> | null,
   timeoutMs = 10000,
 ): Promise<ReturnType<ReportingFullMetadataExportService['getJob']>> {
   const deadline = Date.now() + timeoutMs;
@@ -53,7 +53,12 @@ function okReport<T>(response: T) {
 
 describe('ReportingFullMetadataExportService', () => {
   let service: ReportingFullMetadataExportService;
-  let resultsService: jest.Mocked<Pick<ResultsService, 'getResultDataForBasicReport' | 'getP25ExcelRowsByResultCodes'>>;
+  let resultsService: jest.Mocked<
+    Pick<
+      ResultsService,
+      'getResultDataForBasicReport' | 'getP25ExcelRowsByResultCodes'
+    >
+  >;
   let emailService: jest.Mocked<
     Pick<EmailNotificationManagementService, 'sendEmail'>
   >;
@@ -130,7 +135,8 @@ describe('ReportingFullMetadataExportService', () => {
     jest.restoreAllMocks();
     if (savedBucket === undefined) delete process.env.AWS_BUCKET_NAME_EXPORT;
     else process.env.AWS_BUCKET_NAME_EXPORT = savedBucket;
-    if (savedMaxRows === undefined) delete process.env.RESULT_METADATA_EXPORT_MAX_ROWS;
+    if (savedMaxRows === undefined)
+      delete process.env.RESULT_METADATA_EXPORT_MAX_ROWS;
     else process.env.RESULT_METADATA_EXPORT_MAX_ROWS = savedMaxRows;
     if (savedP25Years === undefined)
       delete process.env.RESULT_FULL_METADATA_P25_PHASE_YEARS;
@@ -141,7 +147,9 @@ describe('ReportingFullMetadataExportService', () => {
 
   describe('getJob', () => {
     it('returns null when job belongs to another user', async () => {
-      resultsService.getResultDataForBasicReport.mockResolvedValue(okReport([]));
+      resultsService.getResultDataForBasicReport.mockResolvedValue(
+        okReport([]),
+      );
 
       const { jobId } = service.enqueueExport({}, user);
       await flushBackgroundJobs();
@@ -187,7 +195,9 @@ describe('ReportingFullMetadataExportService', () => {
     });
 
     it('runs inline via setImmediate when queue disabled', async () => {
-      resultsService.getResultDataForBasicReport.mockResolvedValue(okReport([]));
+      resultsService.getResultDataForBasicReport.mockResolvedValue(
+        okReport([]),
+      );
 
       service.enqueueExport({}, user);
       await flushBackgroundJobs();
@@ -200,7 +210,9 @@ describe('ReportingFullMetadataExportService', () => {
   describe('executeQueuedExportJob', () => {
     it('runs export for an existing job id (consumer path)', async () => {
       queuePublisher.isEnabled.mockReturnValue(true);
-      resultsService.getResultDataForBasicReport.mockResolvedValue(okReport([]));
+      resultsService.getResultDataForBasicReport.mockResolvedValue(
+        okReport([]),
+      );
 
       const { jobId } = service.enqueueExport({}, user);
 
@@ -224,7 +236,9 @@ describe('ReportingFullMetadataExportService', () => {
 
   describe('export pipeline (non-P25)', () => {
     it('marks job failed when no rows returned', async () => {
-      resultsService.getResultDataForBasicReport.mockResolvedValue(okReport([]));
+      resultsService.getResultDataForBasicReport.mockResolvedValue(
+        okReport([]),
+      );
 
       const { jobId } = service.enqueueExport({}, user);
       await flushBackgroundJobs();
@@ -250,7 +264,9 @@ describe('ReportingFullMetadataExportService', () => {
       const { jobId } = service.enqueueExport({}, user);
       await flushBackgroundJobs();
 
-      const job = await waitForTerminalJob(() => service.getJob(jobId, user.id));
+      const job = await waitForTerminalJob(() =>
+        service.getJob(jobId, user.id),
+      );
       expect(job?.status).toBe('completed');
       expect(job?.rowCount).toBe(1);
       expect(job?.fileName).toMatch(/\.xlsx$/);
@@ -296,7 +312,9 @@ describe('ReportingFullMetadataExportService', () => {
       expect(resultsService.getP25ExcelRowsByResultCodes).toHaveBeenCalledWith([
         200,
       ]);
-      const job = await waitForTerminalJob(() => service.getJob(jobId, user.id));
+      const job = await waitForTerminalJob(() =>
+        service.getJob(jobId, user.id),
+      );
       expect(job?.status).toBe('completed');
     });
   });

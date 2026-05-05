@@ -9,7 +9,9 @@ describe('ReportingMetadataExportQueueModule', () => {
     }).compile();
 
     const publisher = module.get(ReportingMetadataExportQueuePublisherService);
-    expect(publisher).toBeInstanceOf(ReportingMetadataExportQueuePublisherService);
+    expect(publisher).toBeInstanceOf(
+      ReportingMetadataExportQueuePublisherService,
+    );
     expect(typeof publisher.isEnabled).toBe('function');
     await module.close();
   });

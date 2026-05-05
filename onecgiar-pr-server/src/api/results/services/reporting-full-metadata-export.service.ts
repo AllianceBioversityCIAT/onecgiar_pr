@@ -157,7 +157,8 @@ const P25_EXCEL_COLUMN_HEADER_LABELS: Record<string, string> = {
   s7_pc_policy_amount: 'Policy change — amount',
   s7_pc_status_policy_change: 'Policy change — amount status',
   s7_pc_stage_policy_change: 'Policy change — stage',
-  s7_pc_implementing_organizations: 'Policy change — implementing organizations',
+  s7_pc_implementing_organizations:
+    'Policy change — implementing organizations',
   s7_pc_result_related: 'Policy change — related result (questions)',
   s7_pc_result_related_engagement: 'Policy change — related result engagement',
   s7_iu_actors: 'Innovation use — actors',
@@ -170,7 +171,8 @@ const P25_EXCEL_COLUMN_HEADER_LABELS: Record<string, string> = {
   s7_cd_unknown_using: 'Capacity sharing — unknown gender participants',
   s7_cd_capdev_term: 'Capacity sharing — term',
   s7_cd_delivery_method: 'Capacity sharing — delivery method',
-  s7_cd_is_attending_for_organization: 'Capacity sharing — attending for organization',
+  s7_cd_is_attending_for_organization:
+    'Capacity sharing — attending for organization',
   s7_cd_organizations: 'Capacity sharing — organizations',
   s7_kp_handle: 'Knowledge Product — CGSpace handle URL',
   s7_kp_knowledge_product_type: 'Knowledge Product — type',
@@ -202,7 +204,8 @@ const P25_EXCEL_COLUMN_HEADER_LABELS: Record<string, string> = {
   s7_id_innovation_developers: 'Innovation development — developers',
   s7_id_innovation_collaborators: 'Innovation development — collaborators',
   s7_id_readiness_level: 'Innovation development — readiness level',
-  s7_id_readiness_level_justification: 'Innovation development — readiness justification',
+  s7_id_readiness_level_justification:
+    'Innovation development — readiness justification',
   s7_id_published_ipsr: 'Innovation development — published in IPSR',
   s7_id_actors: 'Innovation development — actors',
   s7_id_organization_lines: 'Innovation development — organizations',
@@ -299,7 +302,7 @@ export class ReportingFullMetadataExportService {
     private readonly _emailNotificationService: EmailNotificationManagementService,
     private readonly _metadataExportQueue: ReportingMetadataExportQueuePublisherService,
     private readonly _templateRepository: TemplateRepository,
-  ) { }
+  ) {}
 
   getJob(jobId: string, userId: number): ReportingExportJob | null {
     const job = this._jobs.get(jobId);
@@ -391,7 +394,11 @@ export class ReportingFullMetadataExportService {
       await this._buildRowsByTypeAndColumnOrder(basicRows, filters);
     this._ensureRowsWereBuilt(byType);
 
-    const workbook = this._buildWorkbook(byType, skippedRows, p25SheetColumnOrder);
+    const workbook = this._buildWorkbook(
+      byType,
+      skippedRows,
+      p25SheetColumnOrder,
+    );
 
     const workbookBinary = await workbook.xlsx.writeBuffer();
     const buffer = Buffer.from(workbookBinary);
@@ -528,10 +535,7 @@ export class ReportingFullMetadataExportService {
     }
 
     const columnsForP25Pick = Array.from(
-      new Set<string>([
-        ...p25SheetColumnOrder,
-        P25_INTERNAL_TYPE_ID_COLUMN,
-      ]),
+      new Set<string>([...p25SheetColumnOrder, P25_INTERNAL_TYPE_ID_COLUMN]),
     );
     for (const row of p25Rows) {
       const flat = pickColumns(normalizeTabularRow(row), columnsForP25Pick);
@@ -737,11 +741,11 @@ export class ReportingFullMetadataExportService {
     const payload: ConfigMessageDto = {
       ...(env.EMAIL_SENDER
         ? {
-          from: {
-            email: env.EMAIL_SENDER,
-            name: 'PRMS Reporting Tool -',
-          },
-        }
+            from: {
+              email: env.EMAIL_SENDER,
+              name: 'PRMS Reporting Tool -',
+            },
+          }
         : {}),
       emailBody: {
         subject: '[PRMS] Your results export is ready',
