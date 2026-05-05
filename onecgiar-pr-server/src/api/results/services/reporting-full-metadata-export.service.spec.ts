@@ -72,7 +72,7 @@ describe('ReportingFullMetadataExportService', () => {
     last_name: 'User',
   };
 
-  const savedBucket = process.env.AWS_BUCKET_NAME;
+  const savedBucket = process.env.AWS_BUCKET_NAME_EXPORT;
   const savedMaxRows = process.env.RESULT_METADATA_EXPORT_MAX_ROWS;
   const savedP25Years = process.env.RESULT_FULL_METADATA_P25_PHASE_YEARS;
   const savedSender = process.env.EMAIL_SENDER;
@@ -80,7 +80,7 @@ describe('ReportingFullMetadataExportService', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
 
-    process.env.AWS_BUCKET_NAME = 'test-bucket';
+    process.env.AWS_BUCKET_NAME_EXPORT = 'test-bucket';
     delete process.env.RESULT_METADATA_EXPORT_MAX_ROWS;
     delete process.env.RESULT_FULL_METADATA_P25_PHASE_YEARS;
     delete process.env.EMAIL_SENDER;
@@ -128,8 +128,8 @@ describe('ReportingFullMetadataExportService', () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
-    if (savedBucket === undefined) delete process.env.AWS_BUCKET_NAME;
-    else process.env.AWS_BUCKET_NAME = savedBucket;
+    if (savedBucket === undefined) delete process.env.AWS_BUCKET_NAME_EXPORT;
+    else process.env.AWS_BUCKET_NAME_EXPORT = savedBucket;
     if (savedMaxRows === undefined) delete process.env.RESULT_METADATA_EXPORT_MAX_ROWS;
     else process.env.RESULT_METADATA_EXPORT_MAX_ROWS = savedMaxRows;
     if (savedP25Years === undefined)

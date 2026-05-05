@@ -549,9 +549,9 @@ export class ReportingFullMetadataExportService {
     key: string,
     body: Buffer,
   ): Promise<string | undefined> {
-    const bucket = env.AWS_BUCKET_NAME;
+    const bucket = env.AWS_BUCKET_NAME_EXPORT;
     if (!bucket) {
-      this._logger.error('AWS_BUCKET_NAME is not set; skip S3 upload.');
+      this._logger.error('AWS_BUCKET_NAME_EXPORT is not set; skip S3 upload.');
       return undefined;
     }
 
