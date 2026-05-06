@@ -17,10 +17,11 @@ import { FeedbackValidationDirectiveModule } from '../../../../../../shared/dire
 import { MessageModule } from 'primeng/message';
 
 @NgModule({
-  declarations: [RdGeneralInformationComponent, RdAnnualUpdatingComponent, ChangeResultTypeModalComponent, ConfirmationKPComponent, SaveConfirmationModalComponent],
+  declarations: [RdGeneralInformationComponent, ChangeResultTypeModalComponent, ConfirmationKPComponent, SaveConfirmationModalComponent],
   imports: [
     CommonModule,
     RdGeneralInformationRoutingModule,
+    RdAnnualUpdatingComponent,
     CustomFieldsModule,
     InstitutionsPipesModule,
     FeedbackValidationDirectiveModule,

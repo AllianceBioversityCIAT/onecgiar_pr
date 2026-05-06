@@ -42,11 +42,17 @@ export class CurrentResultService {
             this.api.rolesSE.readOnly = !this.api.rolesSE.isAdmin;
             break;
 
-          case 1:
+          case 1: {
             if (this.dataControlSE.currentResult.status_id != 1 && this.dataControlSE.currentResult.status_id != 6 && !this.api.rolesSE.isAdmin)
               this.api.rolesSE.readOnly = true;
-            if (response.is_discontinued) this.api.rolesSE.readOnly = response.is_discontinued;
+            // Allow editing again when phase is open for Innovation development (7) / Innovation use (2)
+            // so users can switch discontinued → continued (P2-2923).
+            const rt = Number(response.result_type_id);
+            if (response.is_discontinued && rt !== 7 && rt !== 2) {
+              this.api.rolesSE.readOnly = response.is_discontinued;
+            }
             break;
+          }
         }
       },
       error: err => {
