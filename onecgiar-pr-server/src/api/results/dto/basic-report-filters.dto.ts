@@ -171,6 +171,16 @@ export class BasicReportFiltersDto {
   @IsOptional()
   @IsBoolean()
   filterSubmittedByMe?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Optional selected columns for P25 full metadata export. Required columns are enforced server-side.',
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  selectedColumns?: string[];
 }
 
 /** Normalized filters for the repository (IDs and values only). */

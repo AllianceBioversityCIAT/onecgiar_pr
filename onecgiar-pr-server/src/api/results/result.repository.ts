@@ -1,4 +1,4 @@
-import { Injectable, HttpStatus, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { Result } from './entities/result.entity';
 import { HandlersError } from '../../shared/handlers/error.utils';
@@ -223,7 +223,7 @@ export class ResultRepository
     	inner join result_type rt ON rt.id = r.result_type_id 
     	inner join result_level rl on rl.id = rt.result_level_id 
     where r.is_active > 0
-    	and r.title like '%\?%'
+    	and r.title like '%?%'
     	and rt.id = ?;
     `;
     try {
@@ -290,7 +290,7 @@ export class ResultRepository
       left join clarisa_countries cc on
         cc.id = rc.country_id
       where r.result_type_id not in (10,11) 
-        ${!allowDeleted ? 'and r.is_active > 0' : ''}
+        ${allowDeleted ? '' : 'and r.is_active > 0'}
       group by
         r.id,
         r.title,
@@ -348,11 +348,11 @@ export class ResultRepository
       const results: any[] = await this.query(queryData, id ? [id] : []);
       return results;
     } catch (error) {
-      throw {
-        message: `[${ResultRepository.name}] => allResultsForElasticSearch error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
     }
   }
 
@@ -380,11 +380,11 @@ export class ResultRepository
       const result = await this.query(query, [resultId]);
       return result?.[0] as ResultDataToMapDto;
     } catch (error) {
-      throw {
-        message: `[${ResultRepository.name}] => getResultInfoToMap error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
     }
   }
 
@@ -440,50 +440,13 @@ WHERE
       const results: any[] = await this.query(queryData);
       return results;
     } catch (error) {
-      throw {
-        message: `[${ResultRepository.name}] => completeAllData error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
     }
   }
-
-  /*async getResultsById(id: number) {
-    const queryData = `
-    SELECT
-    r.id,
-    r.title,
-    r.reported_year_id AS reported_year,
-    rt.name AS result_type,
-    r.created_date,
-    ci.official_code AS submitter,
-    ci.id AS submitter_id,
-    r.status,
-    IF(r.status = 0, 'Editing', 'Submitted') AS status_name,
-    r.no_applicable_partner
-FROM
-    result r
-    INNER JOIN result_type rt ON rt.id = r.result_type_id
-    INNER JOIN results_by_inititiative rbi ON rbi.result_id = r.id
-    INNER JOIN clarisa_initiatives ci ON ci.id = rbi.inititiative_id
-WHERE
-    r.is_active > 0
-    AND rbi.is_active > 0
-    AND ci.active > 0
-    AND r.id = ?;
-    `;
-
-    try {
-      const results: any[] = await this.query(queryData, [id]);
-      return results;
-    } catch (error) {
-      throw {
-        message: `[${ResultRepository.name}] => getResultsById error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
-    }
-  }*/
 
   async AllResultsByRoleUserAndInitiative(
     userid: number,
@@ -558,11 +521,11 @@ WHERE
       );
       return results;
     } catch (error) {
-      throw {
-        message: `[${ResultRepository.name}] => completeAllData error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
     }
   }
 
@@ -581,7 +544,7 @@ WHERE
     }
 
     const normalizedIds = resultIds
-      .map((id) => Number(id))
+      .map(Number)
       .filter((id) => Number.isFinite(id));
 
     if (!normalizedIds.length) {
@@ -617,11 +580,11 @@ WHERE
     try {
       return await this.query(query, [userId, ...normalizedIds]);
     } catch (error) {
-      throw {
-        message: `[${ResultRepository.name}] => getUserRolesForResults error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
     }
   }
 
@@ -727,7 +690,7 @@ WHERE
       if (!arr.length) return;
       const placeholders = arr.map(() => '?').join(',');
       where.push(`AND ${field} IN (${placeholders})`);
-      params.push(...(arr as (number | string)[]));
+      params.push(...arr);
     };
 
     try {
@@ -776,10 +739,11 @@ WHERE
           ? pagination.offset
           : undefined;
 
-      const paginatedClause =
-        limit !== undefined
-          ? ` LIMIT ${limit}${offset !== undefined ? ` OFFSET ${offset}` : ''}`
-          : '';
+      let paginatedClause = '';
+      if (limit !== undefined) {
+        const offsetClause = offset === undefined ? '' : ` OFFSET ${offset}`;
+        paginatedClause = ` LIMIT ${limit}${offsetClause}`;
+      }
 
       const queryData = `${baseQuery} ${where.join(' ')}${paginatedClause};`;
       const results = await this.query(queryData, params);
@@ -793,11 +757,11 @@ WHERE
 
       return { results, total: results.length };
     } catch (error) {
-      throw {
-        message: `[${ResultRepository.name}] => AllResultsByRoleUserAndInitiativeFiltered error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
     }
   }
 
@@ -821,7 +785,10 @@ WHERE
 
     if (filters.searchText) {
       whereParts.push('(r.title LIKE ? OR r.result_code LIKE ?)');
-      const term = `%${filters.searchText.replace(/%/g, '\\%').replace(/_/g, '\\_')}%`;
+      const escapedSearchText = filters.searchText
+        .replaceAll('%', String.raw`\%`)
+        .replaceAll('_', String.raw`\_`);
+      const term = `%` + escapedSearchText + `%`;
       params.push(term, term);
     }
 
@@ -896,7 +863,10 @@ WHERE
     const whereClause = whereParts.join(' AND ');
     const queryData = `
     SELECT
+      r.id AS results_id,
+      r.version_id AS version_id,
       r.result_code,
+      ANY_VALUE(version.phase_year) AS phase_year,
       ANY_VALUE(version.phase_name) AS phase_name,
       ANY_VALUE(r.reported_year_id) AS reported_year_id,
       ANY_VALUE(r.title) AS title,
@@ -1244,11 +1214,45 @@ WHERE
       const results = await this.query(queryData, params);
       return results;
     } catch (error) {
-      throw {
-        message: `[${ResultRepository.name}] => getResultDataForBasicReport error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  async getP25ExcelRowsByResultCodes(
+    resultCodes: number[],
+    viewNameRaw?: string,
+  ) {
+    if (!resultCodes?.length) return [];
+    const viewName =
+      viewNameRaw?.trim() ||
+      env.RESULT_P25_EXCEL_VIEW?.trim() ||
+      'result_phase_2025_excel';
+    if (!/^\w+$/.test(viewName)) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error: new Error('Invalid view name for P25 excel export'),
+        debug: true,
+      });
+    }
+
+    const placeholders = resultCodes.map(() => '?').join(', ');
+    const queryData = `
+      SELECT *
+      FROM \`${viewName}\`
+      WHERE result_code IN (${placeholders})
+    `;
+    try {
+      return await this.query(queryData, resultCodes);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
     }
   }
 
@@ -1296,11 +1300,11 @@ WHERE
       ]);
       return results;
     } catch (error) {
-      throw {
-        message: `[${ResultRepository.name}] => completeAllData error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
     }
   }
 
@@ -1342,11 +1346,11 @@ WHERE
       const results: DepthSearchOne[] = await this.query(queryData, [id, id]);
       return results.length ? results[0] : new DepthSearchOne();
     } catch (error) {
-      throw {
-        message: `[${ResultRepository.name}] => completeAllData error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
     }
   }
 
@@ -1362,11 +1366,11 @@ WHERE
       ]);
       return partners;
     } catch (error) {
-      throw {
-        message: `[${LegacyIndicatorsPartner.name}] => completeAllData error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throw this._handlersError.returnErrorRepository({
+        className: LegacyIndicatorsPartner.name,
+        error,
+        debug: true,
+      });
     }
   }
 
@@ -1449,11 +1453,11 @@ WHERE
       const results: Result[] = await this.query(queryData);
       return results.length ? results[0] : undefined;
     } catch (error) {
-      throw {
-        message: `[${ResultRepository.name}] => completeAllData error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
     }
   }
 
@@ -1526,11 +1530,11 @@ WHERE
       const results: Result[] = await this.query(queryData, [typesId]);
       return results;
     } catch (error) {
-      throw {
-        message: `[${ResultRepository.name}] => getResultByTypes error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
     }
   }
 
@@ -1594,11 +1598,11 @@ WHERE
       const results: ResultLevelType[] = await this.query(queryData, [id]);
       return results.length ? results[0] : new ResultLevelType();
     } catch (error) {
-      throw {
-        message: `[${ResultRepository.name}] => completeAllData error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
     }
   }
 
@@ -1609,13 +1613,13 @@ WHERE
 
     try {
       const results: Array<{ last_code }> = await this.query(queryData);
-      return results.length ? parseInt(results[0].last_code) : null;
+      return results.length ? Number.parseInt(results[0].last_code) : null;
     } catch (error) {
-      throw {
-        message: `[${ResultRepository.name}] => getLastResultCode error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
     }
   }
 
