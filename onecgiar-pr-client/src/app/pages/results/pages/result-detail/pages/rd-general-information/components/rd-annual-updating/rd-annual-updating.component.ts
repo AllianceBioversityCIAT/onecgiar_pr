@@ -1,15 +1,22 @@
 import { Component, Input, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { GeneralInfoBody } from '../../models/generalInfoBody';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
+import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
+import { FeedbackValidationDirectiveModule } from '../../../../../../../../shared/directives/feedback-validation-directive.module';
 
 @Component({
-    selector: 'app-rd-annual-updating',
-    templateUrl: './rd-annual-updating.component.html',
-    styleUrls: ['./rd-annual-updating.component.scss'],
-    standalone: false
+  selector: 'app-rd-annual-updating',
+  templateUrl: './rd-annual-updating.component.html',
+  styleUrls: ['./rd-annual-updating.component.scss'],
+  standalone: true,
+  imports: [CommonModule, FormsModule, CustomFieldsModule, FeedbackValidationDirectiveModule],
 })
 export class RdAnnualUpdatingComponent implements OnInit {
   @Input() generalInfoBody: GeneralInfoBody = new GeneralInfoBody();
+  /** Mirrors parent general-information phase gate so controls stay editable when discontinuation can be corrected (types 7 & 2). */
+  @Input() isPhaseOpen = false;
   discontinuedOptions = [];
   options = [
     {
@@ -28,6 +35,11 @@ export class RdAnnualUpdatingComponent implements OnInit {
 
   ngOnInit(): void {
     this.getAlertNarrative();
+  }
+
+  /** When true, pr-radio / pr-checkbox treat the field as editable despite global read-only (see P2-2923). */
+  get annualUpdatingEditable(): boolean {
+    return this.isPhaseOpen && !!this.api.rolesSE.access?.canDdit;
   }
 
   getAlertNarrative(): void {

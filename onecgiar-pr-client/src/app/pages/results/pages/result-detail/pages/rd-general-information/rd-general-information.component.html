@@ -1,4 +1,7 @@
-<app-rd-annual-updating *ngIf="this.generalInfoBody.is_replicated" [generalInfoBody]="this.generalInfoBody"></app-rd-annual-updating>
+<app-rd-annual-updating
+  *ngIf="this.generalInfoBody.is_replicated"
+  [generalInfoBody]="this.generalInfoBody"
+  [isPhaseOpen]="this.isPhaseOpen"></app-rd-annual-updating>
 
 <div class="detail_container">
   @if (!this.api.rolesSE.readOnly && this.isPhaseOpen) {
@@ -7,7 +10,10 @@
         text="Change result type"
         icon="move_up"
         [reverse]="true"
+        tabindex="0"
         (click)="this.api.dataControlSE.changeResultTypeModal = true"
+        (keydown.enter)="this.api.dataControlSE.changeResultTypeModal = true"
+        (keydown.space)="$event.preventDefault(); this.api.dataControlSE.changeResultTypeModal = true"
         [rotateRight]="true"
         [verticalMargin]="0">
       </app-pr-button>
