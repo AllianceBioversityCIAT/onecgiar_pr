@@ -6,7 +6,6 @@ import {
   IsArray,
   ValidateNested,
   IsEmail,
-  ValidateIf,
 } from 'class-validator';
 
 export class ChangeUserStatusDto {
@@ -48,11 +47,9 @@ export class EntityRoleDto {
   @IsBoolean()
   force_swap?: boolean;
 
-  @ValidateIf((o) => o !== undefined)
   @IsNumber({ allowNaN: false }, { message: 'role_id must be a number' })
   role_id: number;
 
-  @ValidateIf((o) => o !== undefined)
   @IsNumber({ allowNaN: false }, { message: 'entity_id must be a number' })
   entity_id: number;
 }

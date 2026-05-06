@@ -419,6 +419,12 @@ export class UserService {
     currentUser: User,
   ) {
     for (const { role_id, entity_id, rbu_id, force_swap } of assignments) {
+      if (!entity_id) {
+        throw new BadRequestException(
+          'An entity must be selected for the assigned role.',
+        );
+      }
+
       const existingAssignment = await queryRunner.manager.findOne(RoleByUser, {
         where: { user: user.id, initiative_id: entity_id, active: true },
       });
