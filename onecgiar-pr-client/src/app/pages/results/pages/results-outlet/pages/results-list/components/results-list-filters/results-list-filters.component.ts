@@ -159,9 +159,6 @@ const P25_OPTIONAL_EXPORT_SECTIONS: Array<{ section: string; columns: string[] }
   },
 ];
 
-/** Optional columns shown in the drawer but not yet available in the export (disabled + “Coming soon”). */
-const P25_OPTIONAL_COMING_SOON_COLUMNS = new Set<string>();
-
 const P25_COLUMN_LABEL_OVERRIDES: Record<string, string> = {
   result_code: 'Result Code',
   phase_name: 'Phase Name',
@@ -821,8 +818,7 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
       this.p25CloseTimer = null;
     }
     const optionalAll = this.p25OptionalSections.flatMap(s => s.columns);
-    const selectable = optionalAll.filter(c => !P25_OPTIONAL_COMING_SOON_COLUMNS.has(c));
-    this.p25OptionalSelectedColumns.set(Array.from(new Set(selectable)));
+    this.p25OptionalSelectedColumns.set(Array.from(new Set(optionalAll)));
     const ae = document.activeElement;
     this.p25FocusBeforeOpen = ae instanceof HTMLElement ? ae : null;
     this.p25ColumnDrawerMotionOpen.set(false);
@@ -885,7 +881,6 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   }
 
   toggleP25OptionalColumn(column: string, checked: boolean) {
-    if (P25_OPTIONAL_COMING_SOON_COLUMNS.has(column)) return;
     const current = this.p25OptionalSelectedColumns();
     if (checked) {
       this.p25OptionalSelectedColumns.set(Array.from(new Set([...current, column])));
@@ -895,12 +890,15 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   }
 
   isP25OptionalColumnSelected(column: string): boolean {
-    if (P25_OPTIONAL_COMING_SOON_COLUMNS.has(column)) return false;
     return this.p25OptionalSelectedColumns().includes(column);
   }
 
-  isP25OptionalColumnComingSoon(column: string): boolean {
-    return P25_OPTIONAL_COMING_SOON_COLUMNS.has(column);
+  /**
+   * Optional columns that are preview-only (disabled + “Coming soon”) until export supports them.
+   * Return true for specific keys when those columns are listed in the drawer but not yet exportable.
+   */
+  isP25OptionalColumnComingSoon(_column: string): boolean {
+    return false;
   }
 
   getP25OptionalColumnLabel(column: string): string {
