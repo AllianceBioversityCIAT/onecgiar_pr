@@ -416,10 +416,12 @@ a {
 
 @include generate-margin-right-classes(100);
 
-/* P25 full-metadata column drawer: only the drawer should scroll, not the results list / page behind it */
+/*
+ * P25 column drawer: background scroll is locked in TS via `body { position: fixed; top: -scrollY }`
+ * so the sticky app header is not broken by `overflow: hidden` on html/body after the user has scrolled.
+ */
 html.pr-p25-drawer-scroll-lock,
 body.pr-p25-drawer-scroll-lock {
-  overflow: hidden !important;
   overscroll-behavior: none;
 }
 

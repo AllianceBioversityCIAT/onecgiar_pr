@@ -310,6 +310,8 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   readonly p25DrawerPanel = viewChild<ElementRef<HTMLElement>>('p25DrawerPanel');
   private p25FocusBeforeOpen: HTMLElement | null = null;
   private p25CloseTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Saved window scroll when P25 drawer locks the page (restore on close). */
+  private p25BodyScrollY = 0;
   p25OptionalSections = P25_OPTIONAL_EXPORT_SECTIONS;
   p25RequiredColumns = P25_REQUIRED_EXPORT_COLUMNS;
 
@@ -845,12 +847,33 @@ export class ResultsListFiltersComponent implements OnInit, OnChanges, OnDestroy
   private setP25DrawerPageScrollLock(locked: boolean): void {
     if (typeof document === 'undefined') return;
     const cls = 'pr-p25-drawer-scroll-lock';
+    const body = document.body;
+    const docEl = document.documentElement;
     if (locked) {
-      document.documentElement.classList.add(cls);
-      document.body.classList.add(cls);
+      this.p25BodyScrollY = window.scrollY || docEl.scrollTop || body.scrollTop || 0;
+      docEl.classList.add(cls);
+      body.classList.add(cls);
+      /**
+       * Avoid `overflow: hidden` on html/body alone: with a `position: sticky` header it unpaints
+       * or leaves a blank band after scroll. Fix body in place at the current scroll offset instead.
+       */
+      body.style.setProperty('position', 'fixed');
+      body.style.setProperty('top', `-${this.p25BodyScrollY}px`);
+      body.style.setProperty('left', '0');
+      body.style.setProperty('right', '0');
+      body.style.setProperty('width', '100%');
     } else {
-      document.documentElement.classList.remove(cls);
-      document.body.classList.remove(cls);
+      docEl.classList.remove(cls);
+      body.classList.remove(cls);
+      body.style.removeProperty('position');
+      body.style.removeProperty('top');
+      body.style.removeProperty('left');
+      body.style.removeProperty('right');
+      body.style.removeProperty('width');
+      const y = this.p25BodyScrollY;
+      requestAnimationFrame(() => {
+        window.scrollTo(0, y);
+      });
     }
   }
 
