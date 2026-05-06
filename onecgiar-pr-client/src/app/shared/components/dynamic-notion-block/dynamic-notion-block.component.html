@@ -37,21 +37,21 @@
   @case ('heading_1') {
     @let text = joinText(block?.heading_1?.rich_text);
     @if (text) {
-      <h1 class="whats-new-page-details_heading_1 mb-10" [innerHTML]="text"></h1>
+      <h1 class="whats-new-page-details_heading_1 mb-10" [innerHTML]="text" [attr.aria-label]="text"></h1>
     }
   }
 
   @case ('heading_2') {
     @let text = joinText(block?.heading_2?.rich_text);
     @if (text) {
-      <h2 class="whats-new-page-details_heading_2 mb-10" [innerHTML]="text"></h2>
+      <h2 class="whats-new-page-details_heading_2 mb-10" [innerHTML]="text" [attr.aria-label]="text"></h2>
     }
   }
 
   @case ('heading_3') {
     @let text = joinText(block?.heading_3?.rich_text);
     @if (text) {
-      <h3 class="whats-new-page-details_heading_3 mb-10" [innerHTML]="text"></h3>
+      <h3 class="whats-new-page-details_heading_3 mb-10" [innerHTML]="text" [attr.aria-label]="text"></h3>
     }
   }
 
@@ -127,6 +127,7 @@
     @let children = block?.children;
 
     @if (text) {
+      <ol>
       <li class="whats-new-page-details_default_text">
         <p class="whats-new-page-details_default_text mb-10" [innerHTML]="text"></p>
 
@@ -138,6 +139,7 @@
           </div>
         }
       </li>
+      </ol>
     }
   }
 
@@ -180,10 +182,14 @@
 
     @if (tableRows) {
       <table class="whats-new-page-details_table mb-10">
-        @for (row of tableRows; track row.id) {
+        @for (row of tableRows; track row.id; let isFirst = $first) {
           <tr>
             @for (cell of row.table_row.cells; track cell) {
-              <td [innerHTML]="joinText(cell)"></td>
+              @if (isFirst) {
+                <th scope="col" [innerHTML]="joinText(cell)"></th>
+              } @else {
+                <td [innerHTML]="joinText(cell)"></td>
+              }
             }
           </tr>
         }

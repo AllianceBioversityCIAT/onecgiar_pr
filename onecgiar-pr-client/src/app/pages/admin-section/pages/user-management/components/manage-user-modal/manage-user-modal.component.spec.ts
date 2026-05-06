@@ -704,6 +704,36 @@ describe('ManageUserModalComponent', () => {
       }));
       expect(component.isFormValid()).toBe(false);
     });
+
+    it('should return false when a role assignment is missing an entity', () => {
+      component.addUserForm.set({
+        is_cgiar: true,
+        email: 'test@cgiar.org',
+        role_platform: 2,
+        role_assignments: [{ role_id: 3, entity_id: null as any }]
+      });
+      expect(component.isFormValid()).toBe(false);
+    });
+
+    it('should return false when a role assignment is missing a role', () => {
+      component.addUserForm.set({
+        is_cgiar: true,
+        email: 'test@cgiar.org',
+        role_platform: 2,
+        role_assignments: [{ role_id: null as any, entity_id: 1 }]
+      });
+      expect(component.isFormValid()).toBe(false);
+    });
+
+    it('should return true when role assignments are complete', () => {
+      component.addUserForm.set({
+        is_cgiar: true,
+        email: 'test@cgiar.org',
+        role_platform: 2,
+        role_assignments: [{ role_id: 3, entity_id: 1 }]
+      });
+      expect(component.isFormValid()).toBe(true);
+    });
   });
 
   describe('removeRoleAssignment', () => {

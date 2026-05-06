@@ -105,9 +105,14 @@ import { ContributorsPartnersModule } from '../results-framework-reporting/contr
 import { InnovationDevModule } from '../results-framework-reporting/innovation_dev/innovation_dev.module';
 import { InnovationUseModule } from '../results-framework-reporting/innovation-use/innovation-use.module';
 import { ResultDeletionAuditModule } from './result-deletion-audit/result-deletion-audit.module';
+import { PlatformReportModule } from '../platform-report/platform-report.module';
+import { EmailNotificationManagementModule } from '../../shared/microservices/email-notification-management/email-notification-management.module';
+import { ReportingFullMetadataExportService } from './services/reporting-full-metadata-export.service';
+import { ReportingMetadataExportQueueModule } from '../../shared/microservices/reporting-metadata-export-queue/reporting-metadata-export-queue.module';
+import { ReportingMetadataExportConsumer } from './reporting-metadata-export.consumer';
 
 @Module({
-  controllers: [ResultsController],
+  controllers: [ResultsController, ReportingMetadataExportConsumer],
   imports: [
     RouterModule.register(ResultsRoutes),
     ResultLevelsModule,
@@ -170,9 +175,13 @@ import { ResultDeletionAuditModule } from './result-deletion-audit/result-deleti
     forwardRef(() => InnovationDevModule),
     forwardRef(() => InnovationUseModule),
     ResultDeletionAuditModule,
+    PlatformReportModule,
+    EmailNotificationManagementModule,
+    ReportingMetadataExportQueueModule,
   ],
   providers: [
     ResultsService,
+    ReportingFullMetadataExportService,
     JwtMiddleware,
     HandlersError,
     ResultRepository,

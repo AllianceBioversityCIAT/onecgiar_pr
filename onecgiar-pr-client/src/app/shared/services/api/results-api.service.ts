@@ -712,6 +712,23 @@ export class ResultsApiService {
     return this.http.post<any>(`${dynamicBaseUrl}/list`, filtersParams);
   }
 
+  /** Queues async full-metadata export (same filters as GET_reportingList / reporting list). IPSR not supported. */
+  POST_reportingFullMetadataExportJob(filtersParams: Record<string, unknown> = {}) {
+    if (this.ipsrDataControlSE.inIpsr) {
+      throw new Error('Full metadata export is only available from the Results module.');
+    }
+    return this.http.post<any>(
+      `${this.apiBaseUrl}get/reporting/full-metadata-export/jobs`,
+      filtersParams
+    );
+  }
+
+  GET_reportingFullMetadataExportJob(jobId: string) {
+    return this.http.get<any>(
+      `${this.apiBaseUrl}get/reporting/full-metadata-export/jobs/${jobId}`
+    );
+  }
+
   POST_AdminKPExcelReport(body) {
     return this.http.post<any>(`${this.apiBaseUrl}results-knowledge-products/get/excel-report`, body);
   }

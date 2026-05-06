@@ -62,7 +62,7 @@ import { ResultCountry } from './result-countries/entities/result-country.entity
 import { ResultRegion } from './result-regions/entities/result-region.entity';
 import { ElasticService } from '../../elastic/elastic.service';
 import { ElasticOperationDto } from '../../elastic/dto/elastic-operation.dto';
-import process from 'process';
+import process from 'node:process';
 import { resultValidationRepository } from './results-validation-module/results-validation-module.repository';
 import { ResultsKnowledgeProductAuthorRepository } from './results-knowledge-products/repositories/results-knowledge-product-authors.repository';
 import { ResultsKnowledgeProductInstitutionRepository } from './results-knowledge-products/repositories/results-knowledge-product-institution.repository';
@@ -264,11 +264,12 @@ export class ResultsService {
         !createResultDto?.result_type_id ||
         !createResultDto?.result_level_id
       ) {
-        throw {
-          response: {},
-          message: 'Missing data: Result name, Initiative or Result type',
-          status: HttpStatus.BAD_REQUEST,
-        };
+        throw this._handlersError.returnErrorRes({
+          error: new Error(
+            'Missing data: Result name, Initiative or Result type',
+          ),
+          debug: true,
+        });
       }
 
       if (createResultDto?.result_type_id == 3) {
@@ -2241,16 +2242,6 @@ export class ResultsService {
           resultId,
         );
 
-      const knowledgeProduct =
-        await this._resultKnowledgeProductRepository.findOneBy({
-          results_id: resultId,
-        });
-
-      if (knowledgeProduct) {
-        //contries = knowledgeProduct.cgspace_countries?.split('; ') ?? [];
-        //regions = knowledgeProduct.cgspace_regions?.split('; ') ?? [];
-      }
-
       let scope = 0;
       if (
         result.geographic_scope_id == 1 ||
@@ -2298,6 +2289,23 @@ export class ResultsService {
       };
     } catch (error) {
       if (error instanceof BadRequestException) throw error;
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async getP25ExcelRowsByResultCodes(resultCodes: number[]) {
+    try {
+      const uniqueCodes = [...new Set(resultCodes)].filter(
+        (c) => Number.isFinite(c) && c > 0,
+      );
+      const result =
+        await this._resultRepository.getP25ExcelRowsByResultCodes(uniqueCodes);
+      return {
+        response: result,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
   }

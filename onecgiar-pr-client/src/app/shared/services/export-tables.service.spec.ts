@@ -9,8 +9,8 @@ jest.mock('file-saver', () => ({
   saveAs: jest.fn()
 }));
 
-jest.mock('exceljs', () => ({
-  Workbook: jest.fn().mockImplementation(() => ({
+jest.mock('exceljs', () => {
+  const WorkbookImpl = jest.fn().mockImplementation(() => ({
     addWorksheet: jest.fn().mockReturnValue({
       columns: [],
       addRow: jest.fn().mockReturnValue({
@@ -25,8 +25,13 @@ jest.mock('exceljs', () => ({
     xlsx: {
       writeBuffer: jest.fn().mockResolvedValue(Buffer.from([]))
     }
-  }))
-}));
+  }));
+  return {
+    __esModule: true,
+    default: { Workbook: WorkbookImpl },
+    Workbook: WorkbookImpl
+  };
+});
 
 describe('ExportTablesService', () => {
   let service: ExportTablesService;
@@ -74,17 +79,11 @@ describe('ExportTablesService', () => {
       const saveAsExcelFileMock = jest.spyOn(service, 'saveAsExcelFile' as keyof ExportTablesService).mockImplementation();
       const customAlertServiceMock = jest.spyOn(service['customAlertService'], 'show').mockImplementation();
 
-      service.exportExcelIpsr(
-        list,
-        fileName,
-        wscols,
-        () => {
-          expect(ExcelJS.Workbook).toHaveBeenCalled();
-          expect(saveAsExcelFileMock).toHaveBeenCalledWith(expect.any(Buffer), 'test.xlsx', false);
-          expect(callback).toHaveBeenCalled();
-        },
-        false
-      );
+      await service.exportExcelIpsr(list, fileName, wscols, callback, false);
+
+      expect(ExcelJS.Workbook).toHaveBeenCalled();
+      expect(saveAsExcelFileMock).toHaveBeenCalledWith(expect.any(Buffer), 'test.xlsx', false);
+      expect(callback).toHaveBeenCalled();
 
       saveAsExcelFileMock.mockRestore();
       customAlertServiceMock.mockRestore();
@@ -101,16 +100,10 @@ describe('ExportTablesService', () => {
       });
       const customAlertServiceMock = jest.spyOn(service['customAlertService'], 'show').mockImplementation();
 
-      service.exportExcelIpsr(
-        list,
-        fileName,
-        wscols,
-        () => {
-          expect(customAlertServiceMock).toHaveBeenCalled();
-          expect(callback).toHaveBeenCalled();
-        },
-        false
-      );
+      await service.exportExcelIpsr(list, fileName, wscols, callback, false);
+
+      expect(customAlertServiceMock).toHaveBeenCalled();
+      expect(callback).toHaveBeenCalled();
 
       saveAsExcelFileMock.mockRestore();
       customAlertServiceMock.mockRestore();
@@ -1286,8 +1279,8 @@ describe('ExportTablesService', () => {
 
       // Force error by making writeBuffer reject
       const ExcelJSMock = require('exceljs');
-      const origImpl = ExcelJSMock.Workbook;
-      ExcelJSMock.Workbook = jest.fn().mockImplementation(() => ({
+      const origImpl = ExcelJSMock.default.Workbook;
+      ExcelJSMock.default.Workbook = jest.fn().mockImplementation(() => ({
         addWorksheet: jest.fn().mockImplementation(() => { throw new Error('test'); }),
         xlsx: { writeBuffer: jest.fn().mockResolvedValue(Buffer.from([])) }
       }));
@@ -1296,7 +1289,7 @@ describe('ExportTablesService', () => {
 
       expect(showAlertSpy).toHaveBeenCalled();
 
-      ExcelJSMock.Workbook = origImpl;
+      ExcelJSMock.default.Workbook = origImpl;
     });
   });
 
