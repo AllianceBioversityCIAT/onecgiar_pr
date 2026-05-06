@@ -40,7 +40,7 @@
       }
     </div>
 
-    <div appFeedbackValidation labelText="Annual Update" [isComplete]="generalInfoBody.is_discontinued !== null"></div>
+    <div appFeedbackValidation labelText="Annual Update" [isComplete]="generalInfoBody.is_discontinued != null"></div>
 
     <div appFeedbackValidation labelText="Reason for inactivity/discontinuation" [isComplete]="isDiscontinuedOptionsTrue()"></div>
   </div>
