@@ -64,7 +64,7 @@ describe('CurrentResultService', () => {
 
     mockApiService.resultsSE.GET_resultById.mockReturnValue(of({ response }));
 
-    await service.GET_resultById();
+    service.GET_resultById();
 
     expect(mockRolesService.validateReadOnly).toHaveBeenCalledWith(response);
     expect(mockResultLevelService.currentResultLevelName).toBe(response.result_level_name);
@@ -80,9 +80,9 @@ describe('CurrentResultService', () => {
       }
     };
 
-    mockApiService.resultsSE.GET_resultById.mockReturnValue(throwError(error));
+    mockApiService.resultsSE.GET_resultById.mockReturnValue(throwError(() => error));
 
-    await service.GET_resultById();
+    service.GET_resultById();
 
     expect(mockRouter.navigate).toHaveBeenCalledWith(['/']);
     expect(mockApiService.alertsFe.show).toHaveBeenCalledWith({
@@ -119,6 +119,25 @@ describe('CurrentResultService', () => {
       is_phase_open: 1,
       status_id: 1,
       is_discontinued: false
+    };
+
+    mockApiService.resultsSE.GET_resultById.mockReturnValue(of({ response }));
+
+    service.GET_resultById();
+    tick();
+
+    expect(mockApiService.rolesSE.readOnly).toBe(false);
+  }));
+
+  it('should not set readOnly from is_discontinued when result is innovation use (type 2) and phase is open', fakeAsync(() => {
+    mockApiService.rolesSE.readOnly = false;
+    const response = {
+      result_level_name: 'level1',
+      result_level_id: 'id1',
+      result_type_id: 2,
+      is_phase_open: 1,
+      status_id: 1,
+      is_discontinued: true
     };
 
     mockApiService.resultsSE.GET_resultById.mockReturnValue(of({ response }));

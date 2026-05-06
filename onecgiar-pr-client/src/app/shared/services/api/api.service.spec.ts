@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { of, throwError } from 'rxjs';
 import { ApiService } from './api.service';
 import { AuthService } from './auth.service';
@@ -14,6 +15,23 @@ import { IpsrListFilterService } from '../../../pages/ipsr/pages/innovation-pack
 import { QualityAssuranceService } from '../../../pages/quality-assurance/quality-assurance.service';
 import { IpsrDataControlService } from '../../../pages/ipsr/services/ipsr-data-control.service';
 import { CurrentResult } from '../../interfaces/current-result.interface';
+
+/** ApiService.updateUserData assigns these on each initiative row. */
+type MockMyInitiativeRow = {
+  initiative_id: number;
+  official_code: string;
+  short_name: string;
+  role?: string;
+  name?: string;
+  official_code_short_name?: string;
+};
+
+/** ApiService.updateResultsList assigns full_status_name_html on each item. */
+type MockResultsListItem = {
+  status_name: string;
+  inQA: boolean;
+  full_status_name_html?: string;
+};
 
 describe('ApiService', () => {
   let service: ApiService;
@@ -86,8 +104,9 @@ describe('ApiService', () => {
     ipsrDataControlServiceSpy = { initiative_id: null, resultInnovationPhase: null, detailData: null };
 
     TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule],
       providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
         ApiService,
         { provide: AuthService, useValue: authServiceSpy },
         { provide: ResultsApiService, useValue: resultsApiServiceSpy },
@@ -139,7 +158,7 @@ describe('ApiService', () => {
 
     it('should process initiatives on success and call callback', () => {
       const callback = jest.fn();
-      const mockInitiatives = [
+      const mockInitiatives: MockMyInitiativeRow[] = [
         { initiative_id: 10, official_code: 'INIT-10', short_name: 'Init Ten' },
         { initiative_id: 20, official_code: 'INIT-20', short_name: 'Init Twenty' }
       ];
@@ -172,7 +191,7 @@ describe('ApiService', () => {
       expect(dataControlServiceSpy.myInitiativesLoaded).toBe(true);
       expect(mockInitiatives[0].role).toBe('Lead');
       expect(mockInitiatives[0].name).toBe('INIT-10');
-      expect((mockInitiatives[0] as any).official_code_short_name).toBe('INIT-10 Init Ten');
+      expect(mockInitiatives[0].official_code_short_name).toBe('INIT-10 Init Ten');
       expect(mockInitiatives[1].role).toBe('Member');
       expect(resultsListFilterServiceSpy.updateMyInitiatives).toHaveBeenCalledWith(mockInitiatives);
       expect(ipsrListFilterServiceSpy.updateMyInitiatives).toHaveBeenCalledWith(mockInitiatives);
@@ -181,7 +200,7 @@ describe('ApiService', () => {
 
     it('should handle initiatives with no matching role', () => {
       const callback = jest.fn();
-      const mockInitiatives = [
+      const mockInitiatives: MockMyInitiativeRow[] = [
         { initiative_id: 99, official_code: 'INIT-99', short_name: 'No Match' }
       ];
 
@@ -314,13 +333,14 @@ describe('ApiService', () => {
       expect(rolesServiceSpy.readOnly).toBe(false);
     });
 
-    it('should set readOnly to is_discontinued when is_phase_open is 1 and is_discontinued is truthy', () => {
+    it('should set readOnly to is_discontinued when is_phase_open is 1 and is_discontinued is truthy (non innovation dev/use)', () => {
       rolesServiceSpy.isAdmin = false;
       resultsApiServiceSpy.GETInnovationPackageDetail.mockReturnValue(
         of({
           response: {
             is_phase_open: 1,
             status_id: '1',
+            result_type_id: 5,
             is_discontinued: true,
             inititiative_id: 1,
             initiative_official_code: 'INIT-01'
@@ -331,6 +351,27 @@ describe('ApiService', () => {
       service.GETInnovationPackageDetail();
 
       expect(rolesServiceSpy.readOnly).toBe(true);
+    });
+
+    it('should not force readOnly from is_discontinued for innovation development or innovation use (types 7 and 2)', () => {
+      rolesServiceSpy.isAdmin = false;
+      rolesServiceSpy.readOnly = false;
+      resultsApiServiceSpy.GETInnovationPackageDetail.mockReturnValue(
+        of({
+          response: {
+            is_phase_open: 1,
+            status_id: '1',
+            result_type_id: 2,
+            is_discontinued: true,
+            inititiative_id: 1,
+            initiative_official_code: 'INIT-01'
+          }
+        })
+      );
+
+      service.GETInnovationPackageDetail();
+
+      expect(rolesServiceSpy.readOnly).toBe(false);
     });
 
     it('should not change readOnly when is_phase_open is 1 and is_discontinued is falsy', () => {
@@ -442,7 +483,7 @@ describe('ApiService', () => {
     });
 
     it('should set full_status_name_html with in-qa-tag when inQA is truthy', () => {
-      const items = [
+      const items: MockResultsListItem[] = [
         { status_name: 'Submitted', inQA: true }
       ];
       resultsApiServiceSpy.GET_AllResultsWithUseRole.mockReturnValue(
@@ -456,7 +497,7 @@ describe('ApiService', () => {
     });
 
     it('should set full_status_name_html without in-qa-tag when inQA is falsy', () => {
-      const items = [
+      const items: MockResultsListItem[] = [
         { status_name: 'Draft', inQA: false }
       ];
       resultsApiServiceSpy.GET_AllResultsWithUseRole.mockReturnValue(
@@ -513,19 +554,19 @@ describe('ApiService', () => {
     it('should set Tawk_API attributes and handlers', () => {
       service.setTWKAttributes();
 
-      expect(window['Tawk_API']).toBeDefined();
-      expect(window['Tawk_LoadStart']).toBeDefined();
-      expect(typeof window['Tawk_API'].onLoad).toBe('function');
-      expect(typeof window['Tawk_API'].onChatEnded).toBe('function');
+      expect(globalThis['Tawk_API']).toBeDefined();
+      expect(globalThis['Tawk_LoadStart']).toBeDefined();
+      expect(typeof globalThis['Tawk_API'].onLoad).toBe('function');
+      expect(typeof globalThis['Tawk_API'].onChatEnded).toBe('function');
     });
 
     it('should call setAttributes with user data when onLoad fires', () => {
       service.setTWKAttributes();
 
       const mockSetAttributes = jest.fn();
-      window['Tawk_API'].setAttributes = mockSetAttributes;
+      globalThis['Tawk_API'].setAttributes = mockSetAttributes;
 
-      window['Tawk_API'].onLoad();
+      globalThis['Tawk_API'].onLoad();
 
       expect(mockSetAttributes).toHaveBeenCalledWith(
         { name: 'Test User', email: 'test@example.com' },
@@ -536,19 +577,19 @@ describe('ApiService', () => {
     it('should call hideWidget and minimize when onChatEnded fires', () => {
       service.setTWKAttributes();
 
-      window['Tawk_API'].hideWidget = jest.fn();
-      window['Tawk_API'].minimize = jest.fn();
+      globalThis['Tawk_API'].hideWidget = jest.fn();
+      globalThis['Tawk_API'].minimize = jest.fn();
 
-      window['Tawk_API'].onChatEnded();
+      globalThis['Tawk_API'].onChatEnded();
 
-      expect(window['Tawk_API'].hideWidget).toHaveBeenCalled();
-      expect(window['Tawk_API'].minimize).toHaveBeenCalled();
+      expect(globalThis['Tawk_API'].hideWidget).toHaveBeenCalled();
+      expect(globalThis['Tawk_API'].minimize).toHaveBeenCalled();
     });
 
     it('should catch and log errors in setTWKAttributes', () => {
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
 
-      Object.defineProperty(window, 'Tawk_API', {
+      Object.defineProperty(globalThis, 'Tawk_API', {
         get() {
           throw new Error('Tawk not available');
         },
@@ -559,7 +600,7 @@ describe('ApiService', () => {
 
       expect(consoleSpy).toHaveBeenCalled();
 
-      Object.defineProperty(window, 'Tawk_API', {
+      Object.defineProperty(globalThis, 'Tawk_API', {
         value: undefined,
         writable: true,
         configurable: true
@@ -576,9 +617,9 @@ describe('ApiService', () => {
       const setAttributesMock = jest.fn((attrs, errorCallback) => {
         errorCallback('attribute error');
       });
-      window['Tawk_API'].setAttributes = setAttributesMock;
+      globalThis['Tawk_API'].setAttributes = setAttributesMock;
 
-      window['Tawk_API'].onLoad();
+      globalThis['Tawk_API'].onLoad();
 
       expect(consoleSpy).toHaveBeenCalledWith('attribute error');
 

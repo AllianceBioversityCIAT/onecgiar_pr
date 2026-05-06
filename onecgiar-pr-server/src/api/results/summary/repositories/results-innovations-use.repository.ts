@@ -181,7 +181,8 @@ export class ResultsInnovationsUseRepository
         riu.readiness_level_explanation,
         riu.innov_use_to_be_determined,
         riu.innov_use_2030_to_be_determined,
-        ciul.level AS level
+        ciul.level AS level,
+        r.is_discontinued
       FROM result r
       JOIN results_innovations_use riu
         ON riu.results_id = r.id

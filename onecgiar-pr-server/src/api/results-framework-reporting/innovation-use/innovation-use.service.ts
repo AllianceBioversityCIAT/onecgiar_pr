@@ -31,6 +31,7 @@ import { ResultRepository } from '../../results/result.repository';
 import { ResultsByProjectsRepository } from '../../results/results_by_projects/results_by_projects.repository';
 import { InnovationUseLevel } from './enum/innov-use-levels.enum';
 import { ClarisaInnovationUseLevelRepository } from '../../../clarisa/clarisa-innovation-use-levels/clarisa-innovation-use-levels.repository';
+import { ResultsInvestmentDiscontinuedOptionRepository } from '../../results/results-investment-discontinued-options/results-investment-discontinued-options.repository';
 
 @Injectable()
 export class InnovationUseService {
@@ -53,6 +54,7 @@ export class InnovationUseService {
     private readonly _resultRepository: ResultRepository,
     private readonly _resultByProjectRepository: ResultsByProjectsRepository,
     private readonly _clarisaInnovationUseLevelRepository: ClarisaInnovationUseLevelRepository,
+    private readonly _resultsInvestmentDiscontinuedOptionRepository: ResultsInvestmentDiscontinuedOptionRepository,
   ) {}
 
   async saveInnovationUse(
@@ -88,6 +90,8 @@ export class InnovationUseService {
         scaling_studies_urls,
         innov_use_2030_to_be_determined,
         innov_use_to_be_determined,
+        is_discontinued,
+        discontinued_options,
       } = innovationUseDto;
 
       const use_levels =
@@ -96,6 +100,60 @@ export class InnovationUseService {
           select: ['id'],
         });
       const innovation_use_level = use_levels.id;
+
+      if (is_discontinued !== undefined) {
+        await this._resultRepository.update(resultId, {
+          is_discontinued: is_discontinued,
+        });
+
+        if (is_discontinued) {
+          await this._resultsInvestmentDiscontinuedOptionRepository.inactiveData(
+            (discontinued_options ?? []).map(
+              (el) => el.investment_discontinued_option_id,
+            ),
+            resultId,
+            user.id,
+          );
+          for (const i of discontinued_options ?? []) {
+            const res =
+              await this._resultsInvestmentDiscontinuedOptionRepository.findOne(
+                {
+                  where: {
+                    result_id: resultId,
+                    investment_discontinued_option_id:
+                      i.investment_discontinued_option_id,
+                  },
+                },
+              );
+
+            if (res) {
+              await this._resultsInvestmentDiscontinuedOptionRepository.update(
+                res.results_investment_discontinued_option_id,
+                {
+                  is_active: i.is_active,
+                  description: i?.description,
+                  last_updated_by: user.id,
+                },
+              );
+            } else {
+              await this._resultsInvestmentDiscontinuedOptionRepository.save({
+                result_id: resultId,
+                investment_discontinued_option_id:
+                  i.investment_discontinued_option_id,
+                description: i?.description,
+                created_by: user.id,
+                last_updated_by: user.id,
+              });
+            }
+          }
+        } else {
+          await this._resultsInvestmentDiscontinuedOptionRepository.inactiveData(
+            [],
+            resultId,
+            user.id,
+          );
+        }
+      }
 
       let InnUseRes: ResultsInnovationsUse;
       if (resultExist) {
@@ -634,6 +692,11 @@ export class InnovationUseService {
         measures: measures.filter((m) => Number(m.section_id) === 2),
       };
 
+      const discontinued_options =
+        await this._resultsInvestmentDiscontinuedOptionRepository.find({
+          where: { result_id: resultId, is_active: true },
+        });
+
       const scaling_studies_urls =
         await this.getScalingStudiesUrls(innDevExists);
       const investment_programs = await this.getInvestmentPrograms(resultId);
@@ -642,6 +705,8 @@ export class InnovationUseService {
 
       const innovationUse = {
         ...innDevExists,
+        is_discontinued: (innDevExists as any).is_discontinued,
+        discontinued_options,
         linked_results,
         actors: actors_current,
         organization: organizations_current,
