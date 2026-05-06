@@ -21,6 +21,7 @@ import { ResultsByInstitutionsModule } from '../../results/results_by_institutio
 import { ResultRepository } from '../../results/result.repository';
 import { ResultsByProjectsRepository } from '../../results/results_by_projects/results_by_projects.repository';
 import { ClarisaInnovationUseLevelRepository } from '../../../clarisa/clarisa-innovation-use-levels/clarisa-innovation-use-levels.repository';
+import { ResultsInvestmentDiscontinuedOptionsModule } from '../../results/results-investment-discontinued-options/results-investment-discontinued-options.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { ClarisaInnovationUseLevelRepository } from '../../../clarisa/clarisa-in
     ResultBudgetModule,
     NonPooledProjectsModule,
     ResultsByInstitutionsModule,
+    ResultsInvestmentDiscontinuedOptionsModule,
   ],
   controllers: [InnovationUseController],
   providers: [

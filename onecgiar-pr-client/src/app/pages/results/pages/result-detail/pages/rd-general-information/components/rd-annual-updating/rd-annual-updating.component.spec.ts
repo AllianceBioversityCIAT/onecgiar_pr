@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { RdAnnualUpdatingComponent } from './rd-annual-updating.component';
-import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { of } from 'rxjs';
 
 describe('RdAnnualUpdatingComponent', () => {
@@ -9,8 +10,8 @@ describe('RdAnnualUpdatingComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [RdAnnualUpdatingComponent],
-      imports: [HttpClientTestingModule]
+      imports: [RdAnnualUpdatingComponent],
+      providers: [provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
 
     fixture = TestBed.createComponent(RdAnnualUpdatingComponent);

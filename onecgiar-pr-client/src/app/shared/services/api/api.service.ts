@@ -37,12 +37,12 @@ export interface SearchParams {
 export class ApiService {
   fieldsManagerSE = inject(FieldsManagerService);
   constructor(
-    private titleService: Title,
+    private readonly titleService: Title,
     public endpointsSE: EndpointsService,
     public resultsListSE: ResultsListService,
     public resultsSE: ResultsApiService,
     public alertsFs: CustomizedAlertsFsService,
-    private qaSE: QualityAssuranceService,
+    private readonly qaSE: QualityAssuranceService,
     public authSE: AuthService,
     public alertsFe: CustomizedAlertsFeService,
     public dataControlSE: DataControlService,
@@ -105,10 +105,14 @@ export class ApiService {
           this.rolesSE.readOnly = !this.rolesSE.isAdmin;
           break;
 
-        case 1:
+        case 1: {
           if (this.dataControlSE.currentResult.status_id !== '1' && !this.rolesSE.isAdmin) this.rolesSE.readOnly = true;
-          if (response?.is_discontinued) this.rolesSE.readOnly = response?.is_discontinued;
+          const rt = Number(response?.result_type_id);
+          if (response?.is_discontinued && rt !== 7 && rt !== 2) {
+            this.rolesSE.readOnly = response?.is_discontinued;
+          }
           break;
+        }
       }
 
       this.ipsrDataControlSE.initiative_id = response?.inititiative_id;
