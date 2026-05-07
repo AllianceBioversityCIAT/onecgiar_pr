@@ -1046,7 +1046,7 @@ export class InnovationPathwayStepOneService {
   ) {
     if (crtr?.actors?.length) {
       const { actors } = crtr;
-      actors.map(async (el: ResultActor) => {
+      actors.forEach(async (el: ResultActor) => {
         let actorExists: ResultActor = null;
 
         if (el.sex_and_age_disaggregation === true && !el.how_many) {
@@ -1145,7 +1145,7 @@ export class InnovationPathwayStepOneService {
 
     if (crtr?.organization?.length) {
       const { organization } = crtr;
-      organization.map(async (el) => {
+      organization.forEach(async (el) => {
         let ite: ResultsByInstitutionType = null;
 
         if (el?.institution_types_id && el?.institution_types_id != 78) {
@@ -1207,7 +1207,7 @@ export class InnovationPathwayStepOneService {
 
     if (crtr?.measures?.length) {
       const { measures } = crtr;
-      measures.map(async (el) => {
+      measures.forEach(async (el) => {
         let ripm: ResultIpMeasure = null;
         if (el?.result_ip_measure_id) {
           ripm = await this._resultIpMeasureRepository.findOne({
