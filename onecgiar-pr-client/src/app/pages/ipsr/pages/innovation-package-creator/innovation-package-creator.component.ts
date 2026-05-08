@@ -1,4 +1,4 @@
-import { Component, DoCheck, OnInit, signal } from '@angular/core';
+import { afterRenderEffect, Component, OnInit, signal } from '@angular/core';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { InnovationPackageCreatorBody } from './model/innovation-package-creator.model';
 import { Router } from '@angular/router';
@@ -11,7 +11,7 @@ import { GeoScopeEnum } from '../../../../shared/enum/geo-scope.enum';
   styleUrls: ['./innovation-package-creator.component.scss'],
   standalone: false
 })
-export class InnovationPackageCreatorComponent implements DoCheck, OnInit {
+export class InnovationPackageCreatorComponent implements OnInit {
   innovationPackageCreatorBody = new InnovationPackageCreatorBody();
   searchText = '';
   allInitiatives = [];
@@ -27,7 +27,12 @@ export class InnovationPackageCreatorComponent implements DoCheck, OnInit {
     public api: ApiService,
     private router: Router,
     public manageInnovationsListSE: ManageInnovationsListService
-  ) {}
+  ) {
+    afterRenderEffect(() => {
+      this.api.dataControlSE.mandatoryFieldsCheckTrigger();
+      this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.section_container');
+    });
+  }
 
   ngOnInit(): void {
     this.sourceInitiatives.set(this.api.dataControlSE.myInitiativesListIPSRByPortfolio || []);
@@ -171,7 +176,4 @@ export class InnovationPackageCreatorComponent implements DoCheck, OnInit {
     });
   }
 
-  ngDoCheck(): void {
-    this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.section_container');
-  }
 }

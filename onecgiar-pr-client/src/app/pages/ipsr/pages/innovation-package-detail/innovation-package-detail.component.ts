@@ -1,5 +1,5 @@
 /* eslint-disable camelcase */
-import { Component, DoCheck, OnInit, inject } from '@angular/core';
+import { afterRenderEffect, Component, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { IpsrDataControlService } from '../../services/ipsr-data-control.service';
 import { ApiService } from '../../../../shared/services/api/api.service';
@@ -16,7 +16,7 @@ import { FieldsManagerService } from '../../../../shared/services/fields-manager
   providers: [MessageService],
   standalone: false
 })
-export class InnovationPackageDetailComponent implements OnInit, DoCheck {
+export class InnovationPackageDetailComponent implements OnInit {
   fieldsManagerSE = inject(FieldsManagerService);
 
   constructor(
@@ -28,7 +28,12 @@ export class InnovationPackageDetailComponent implements OnInit, DoCheck {
     private readonly ipsrCompletenessStatusSE: IpsrCompletenessStatusService,
     public dataControlSE: DataControlService,
     private readonly router: Router
-  ) {}
+  ) {
+    afterRenderEffect(() => {
+      this.dataControlSE.mandatoryFieldsCheckTrigger();
+      this.dataControlSE.someMandatoryFieldIncompleteResultDetail('.section_container');
+    });
+  }
   ngOnInit(): void {
     this.ipsrDataControlSE.resultInnovationId = null;
     this.ipsrDataControlSE.resultInnovationCode = this.activatedRoute.snapshot.paramMap.get('id');
@@ -62,9 +67,4 @@ export class InnovationPackageDetailComponent implements OnInit, DoCheck {
     });
   }
 
-  ngDoCheck(): void {
-    setTimeout(() => {
-      this.dataControlSE.someMandatoryFieldIncompleteResultDetail('.section_container');
-    }, 0);
-  }
 }

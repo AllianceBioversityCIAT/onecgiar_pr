@@ -1,4 +1,4 @@
-import { Component, DoCheck, Input, OnInit } from '@angular/core';
+import { afterRenderEffect, Component, Input, OnInit } from '@angular/core';
 import { BilateralexpectedinvestmentStep4 } from '../../../../model/Ipsr-step-4-body.model';
 import { InstitutionsService } from '../../../../../../../../../../../../shared/services/global/institutions.service';
 import { CentersService } from '../../../../../../../../../../../../shared/services/global/centers.service';
@@ -10,7 +10,7 @@ import { ApiService } from '../../../../../../../../../../../../shared/services/
     styleUrls: ['./step-n4-edit-bilateral.component.scss'],
     standalone: false
 })
-export class StepN4EditBilateralComponent implements OnInit, DoCheck {
+export class StepN4EditBilateralComponent implements OnInit {
   @Input() body: any = {};
   @Input() isonlyread: boolean;
   visible = false;
@@ -19,17 +19,18 @@ export class StepN4EditBilateralComponent implements OnInit, DoCheck {
   requesting = false;
   formIsInvalid = false;
 
-  constructor(public institutionsSE: InstitutionsService, public centersSE: CentersService, public api: ApiService) {}
+  constructor(public institutionsSE: InstitutionsService, public centersSE: CentersService, public api: ApiService) {
+    afterRenderEffect(() => {
+      this.api.dataControlSE.mandatoryFieldsCheckTrigger();
+      this.formIsInvalid = this.api.dataControlSE.someMandatoryFieldIncomplete('.partners-request-container');
+    });
+  }
 
   ngOnInit(): void {
     this.biltarealBody.center_grant_id = this.body.obj_non_pooled_projetct?.center_grant_id;
     this.biltarealBody.funder_institution_id = this.body.obj_non_pooled_projetct?.funder_institution_id;
     this.biltarealBody.grant_title = this.body.obj_non_pooled_projetct?.grant_title;
     this.biltarealBody.lead_center_id = this.body.obj_non_pooled_projetct?.lead_center_id;
-  }
-
-  ngDoCheck(): void {
-    this.formIsInvalid = this.api.dataControlSE.someMandatoryFieldIncomplete('.partners-request-container');
   }
 
   onAddBilateral() {

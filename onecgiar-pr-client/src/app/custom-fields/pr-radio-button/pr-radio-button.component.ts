@@ -1,4 +1,4 @@
-import { Component, forwardRef, Input, Output, EventEmitter, inject, computed } from '@angular/core';
+import { Component, forwardRef, Input, Output, EventEmitter, inject, computed, OnChanges, SimpleChanges } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { DataControlService } from '../../shared/services/data-control.service';
@@ -16,7 +16,7 @@ import { FieldsManagerService } from '../../shared/services/fields-manager.servi
   ],
   standalone: false
 })
-export class PrRadioButtonComponent implements ControlValueAccessor {
+export class PrRadioButtonComponent implements ControlValueAccessor, OnChanges {
   @Input() options: any;
   @Input() optionLabel: string;
   @Input() optionValue: string;
@@ -59,6 +59,7 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
     if (v !== this._value) {
       this._value = v;
       this.onChange(v);
+      this.dataControlSE.bumpMandatoryCheck();
     }
   }
 
@@ -68,12 +69,17 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
 
   writeValue(value: any): void {
     this._value = value;
+    this.dataControlSE.bumpMandatoryCheck();
   }
   registerOnChange(fn: any): void {
     this.onChange = fn;
   }
   registerOnTouched(fn: any): void {
     this.onTouch = fn;
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['required']) this.dataControlSE.bumpMandatoryCheck();
   }
 
   joinName() {

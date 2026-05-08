@@ -1,4 +1,4 @@
-import { Component, OnInit, DoCheck, Output, EventEmitter, Input, signal, OnDestroy } from '@angular/core';
+import { afterRenderEffect, Component, OnInit, Output, EventEmitter, Input, signal, OnDestroy } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ResultLevelService } from '../../services/result-level.service';
 import { Router } from '@angular/router';
@@ -14,7 +14,7 @@ import { Subject, catchError, debounceTime, distinctUntilChanged, filter, map, o
   styleUrls: ['./report-result-form.component.scss'],
   standalone: false
 })
-export class ReportResultFormComponent implements OnInit, DoCheck, OnDestroy {
+export class ReportResultFormComponent implements OnInit, OnDestroy {
   depthSearchList: any[] = [];
   exactTitleFound = signal(false);
   blockingExactTitleFound = signal(false);
@@ -55,7 +55,12 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
     private router: Router,
     private phasesService: PhasesService,
     public entityAowService: EntityAowService
-  ) {}
+  ) {
+    afterRenderEffect(() => {
+      this.api.dataControlSE.mandatoryFieldsCheckTrigger();
+      this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.report_container');
+    });
+  }
 
   ngOnInit(): void {
     this.setupTitleSearch();
@@ -272,10 +277,6 @@ If you need support to modify any of the harvested metadata from <strong>CGSpace
         this.api.alertsFe.show({ id: 'reportResultError', title: 'Error!', description: err?.error?.message, status: 'error' });
       }
     });
-  }
-
-  ngDoCheck(): void {
-    this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.report_container');
   }
 
   GET_mqapValidation() {

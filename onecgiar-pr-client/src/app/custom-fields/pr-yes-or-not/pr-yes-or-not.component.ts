@@ -1,4 +1,4 @@
-import { Component, forwardRef, Input, EventEmitter, Output, computed, inject } from '@angular/core';
+import { Component, forwardRef, Input, EventEmitter, Output, computed, inject, OnChanges, SimpleChanges } from '@angular/core';
 import { NG_VALUE_ACCESSOR } from '@angular/forms';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { DataControlService } from '../../shared/services/data-control.service';
@@ -17,7 +17,7 @@ import { FieldsManagerService } from '../../shared/services/fields-manager.servi
   ],
   standalone: false
 })
-export class PrYesOrNotComponent {
+export class PrYesOrNotComponent implements OnChanges {
   @Input() label: string;
   @Input() description: string;
   @Input() readOnly: boolean;
@@ -56,6 +56,7 @@ export class PrYesOrNotComponent {
     if (v !== this._value) {
       this._value = v;
       this.onChange(v);
+      this.dataControlSE.bumpMandatoryCheck();
     }
   }
 
@@ -65,12 +66,17 @@ export class PrYesOrNotComponent {
 
   writeValue(value: any): void {
     this._value = value;
+    this.dataControlSE.bumpMandatoryCheck();
   }
   registerOnChange(fn: any): void {
     this.onChange = fn;
   }
   registerOnTouched(fn: any): void {
     this.onTouch = fn;
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['required']) this.dataControlSE.bumpMandatoryCheck();
   }
 
   onclickYes() {

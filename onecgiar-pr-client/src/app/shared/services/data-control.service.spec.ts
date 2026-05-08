@@ -371,7 +371,7 @@ describe('DataControlService', () => {
 
       const result = service.someMandatoryFieldIncompleteResultDetail('.container');
       expect(result).toBe(true);
-      expect(service.fieldFeedbackList).toContain('tag');
+      expect(service.fieldFeedbackList()).toContain('tag');
     });
     it('should return true if selects are incomplete and populate fieldFeedbackList', () => {
       dom = parser.parseFromString(
@@ -390,7 +390,7 @@ describe('DataControlService', () => {
 
       const result = service.someMandatoryFieldIncompleteResultDetail('.container');
       expect(result).toBe(true);
-      expect(service.fieldFeedbackList).toContain('tag');
+      expect(service.fieldFeedbackList()).toContain('tag');
     });
 
     it('should set the title and currentSectionName', () => {

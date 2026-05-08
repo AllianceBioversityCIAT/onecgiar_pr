@@ -382,13 +382,6 @@ describe('ReportResultFormComponent', () => {
     });
   });
 
-  describe('ngDoCheck', () => {
-    it('should call someMandatoryFieldIncompleteResultDetail', () => {
-      component.ngDoCheck();
-      expect(mockApiService.dataControlSE.someMandatoryFieldIncompleteResultDetail).toHaveBeenCalledWith('.report_container');
-    });
-  });
-
   describe('GET_mqapValidation', () => {
     it('should show error when handler is empty', () => {
       mockResultLevelService.resultBody.handler = '';

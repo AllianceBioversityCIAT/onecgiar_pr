@@ -1,4 +1,4 @@
-import { Component, Input, DoCheck, OnInit, Output, EventEmitter } from '@angular/core';
+import { afterRenderEffect, Component, Input, OnInit, Output, EventEmitter } from '@angular/core';
 import { BilateralexpectedinvestmentStep4, IpsrStep4Body } from '../../../../model/Ipsr-step-4-body.model';
 import { ApiService } from '../../../../../../../../../../../../shared/services/api/api.service';
 import { InstitutionsService } from '../../../../../../../../../../../../shared/services/global/institutions.service';
@@ -11,7 +11,7 @@ import { RdContributorsAndPartnersService } from '../../../../../../../../../../
   styleUrls: ['./step-n4-add-project.component.scss'],
   standalone: false
 })
-export class StepN4AddProjectComponent implements DoCheck, OnInit {
+export class StepN4AddProjectComponent implements OnInit {
   @Input() body: IpsrStep4Body = new IpsrStep4Body();
   @Output() projectAdded = new EventEmitter<void>();
   visible = false;
@@ -25,7 +25,12 @@ export class StepN4AddProjectComponent implements DoCheck, OnInit {
     public centersSE: CentersService,
     public api: ApiService,
     public rdPartnersSE: RdContributorsAndPartnersService
-  ) {}
+  ) {
+    afterRenderEffect(() => {
+      this.api.dataControlSE.mandatoryFieldsCheckTrigger();
+      this.formIsInvalid = this.api.dataControlSE.someMandatoryFieldIncomplete('.partners-request-container');
+    });
+  }
 
   ngOnInit() {
     this.rdPartnersSE.loadClarisaProjects();
@@ -63,9 +68,6 @@ export class StepN4AddProjectComponent implements DoCheck, OnInit {
     setTimeout(() => {
       this.showForm = true;
     }, 0);
-  }
-  ngDoCheck(): void {
-    this.formIsInvalid = this.api.dataControlSE.someMandatoryFieldIncomplete('.partners-request-container');
   }
 }
 

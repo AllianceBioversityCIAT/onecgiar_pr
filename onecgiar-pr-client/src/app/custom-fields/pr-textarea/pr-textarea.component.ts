@@ -1,4 +1,4 @@
-import { Component, computed, forwardRef, inject, Input } from '@angular/core';
+import { Component, computed, forwardRef, inject, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { WordCounterService } from '../../shared/services/word-counter.service';
 import { RolesService } from '../../shared/services/global/roles.service';
@@ -17,7 +17,7 @@ import { FieldsManagerService } from '../../shared/services/fields-manager.servi
   ],
   standalone: false
 })
-export class PrTextareaComponent implements ControlValueAccessor {
+export class PrTextareaComponent implements ControlValueAccessor, OnChanges {
   @Input() placeholder: string;
   @Input() label: string;
   @Input() description: string;
@@ -65,6 +65,7 @@ export class PrTextareaComponent implements ControlValueAccessor {
     if (v !== this._value) {
       this._value = v;
       this.onChange(v);
+      this.dataControlSE.bumpMandatoryCheck();
     }
   }
 
@@ -74,11 +75,16 @@ export class PrTextareaComponent implements ControlValueAccessor {
 
   writeValue(value: any): void {
     this._value = value;
+    this.dataControlSE.bumpMandatoryCheck();
   }
   registerOnChange(fn: any): void {
     this.onChange = fn;
   }
   registerOnTouched(fn: any): void {
     this.onTouch = fn;
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['required']) this.dataControlSE.bumpMandatoryCheck();
   }
 }

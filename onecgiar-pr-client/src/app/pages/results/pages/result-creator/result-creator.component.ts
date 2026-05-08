@@ -1,4 +1,4 @@
-import { Component, DoCheck, OnInit } from '@angular/core';
+import { afterRenderEffect, Component, OnInit } from '@angular/core';
 import { internationalizationData } from '../../../../shared/data/internationalization-data';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { ResultLevelService } from './services/result-level.service';
@@ -14,7 +14,7 @@ import { TerminologyService } from '../../../../internationalization/terminology
   styleUrls: ['./result-creator.component.scss'],
   standalone: false
 })
-export class ResultCreatorComponent implements OnInit, DoCheck {
+export class ResultCreatorComponent implements OnInit {
   naratives = internationalizationData.reportNewResult;
   depthSearchList: any[] = [];
   exactTitleFound = false;
@@ -41,7 +41,12 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
     public terminologyService: TerminologyService,
     private router: Router,
     private phasesService: PhasesService
-  ) {}
+  ) {
+    afterRenderEffect(() => {
+      this.api.dataControlSE.mandatoryFieldsCheckTrigger();
+      this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.local_container');
+    });
+  }
 
   ngOnInit(): void {
     this.api.dataControlSE.getCurrentPhases().subscribe(() => {
@@ -234,9 +239,6 @@ export class ResultCreatorComponent implements OnInit, DoCheck {
     }
   }
 
-  ngDoCheck(): void {
-    this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.local_container');
-  }
 
   GET_mqapValidation() {
     this.validating = true;

@@ -78,7 +78,9 @@ describe('ResultDetailComponent', () => {
     mockDataControlService = {
       currentResult: 'currentResult',
       currentResultSignal: signal({}),
-      currentResultSectionName: signal('')
+      currentResultSectionName: signal(''),
+      mandatoryFieldsCheckTrigger: signal(0),
+      bumpMandatoryCheck: jest.fn(function (this: any) { this.mandatoryFieldsCheckTrigger.update((v: number) => v + 1); })
     }
 
     mockCurrentResultService = {
@@ -312,10 +314,11 @@ describe('ResultDetailComponent', () => {
     });
   });
 
-  describe('ngDoCheck', () => {
-    it('should call someMandatoryFieldIncompleteResultDetail after a delay', async () => {
-      component.ngDoCheck();
-      jest.runAllTimers();
+  describe('mandatory fields check', () => {
+    it('should re-evaluate mandatory fields when bumpMandatoryCheck triggers', () => {
+      mockApiService.dataControlSE.someMandatoryFieldIncompleteResultDetail.mockClear();
+      mockDataControlService.bumpMandatoryCheck();
+      fixture.detectChanges();
 
       expect(mockApiService.dataControlSE.someMandatoryFieldIncompleteResultDetail).toHaveBeenCalledWith('.section_container');
     });

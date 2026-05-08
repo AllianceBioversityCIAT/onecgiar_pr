@@ -1,4 +1,4 @@
-import { Component, Input, DoCheck } from '@angular/core';
+import { afterRenderEffect, Component, Input } from '@angular/core';
 import { BilateralexpectedinvestmentStep4, IpsrStep4Body } from '../../../../model/Ipsr-step-4-body.model';
 import { ApiService } from '../../../../../../../../../../../../shared/services/api/api.service';
 import { InstitutionsService } from '../../../../../../../../../../../../shared/services/global/institutions.service';
@@ -10,7 +10,7 @@ import { CentersService } from '../../../../../../../../../../../../shared/servi
     styleUrls: ['./step-n4-add-bilateral.component.scss'],
     standalone: false
 })
-export class StepN4AddBilateralComponent implements DoCheck {
+export class StepN4AddBilateralComponent {
   @Input() body: IpsrStep4Body = new IpsrStep4Body();
   visible = false;
   biltarealBody = new AddBilateralBody();
@@ -18,7 +18,12 @@ export class StepN4AddBilateralComponent implements DoCheck {
   requesting = false;
   formIsInvalid = false;
 
-  constructor(public institutionsSE: InstitutionsService, public centersSE: CentersService, public api: ApiService) {}
+  constructor(public institutionsSE: InstitutionsService, public centersSE: CentersService, public api: ApiService) {
+    afterRenderEffect(() => {
+      this.api.dataControlSE.mandatoryFieldsCheckTrigger();
+      this.formIsInvalid = this.api.dataControlSE.someMandatoryFieldIncomplete('.partners-request-container');
+    });
+  }
 
   onAddBilateral() {
     this.requesting = true;
@@ -44,9 +49,6 @@ export class StepN4AddBilateralComponent implements DoCheck {
     setTimeout(() => {
       this.showForm = true;
     }, 0);
-  }
-  ngDoCheck(): void {
-    this.formIsInvalid = this.api.dataControlSE.someMandatoryFieldIncomplete('.partners-request-container');
   }
 }
 

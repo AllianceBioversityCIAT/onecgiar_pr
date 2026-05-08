@@ -277,13 +277,4 @@ describe('InnovationPackageCreatorComponent', () => {
     });
   });
 
-  describe('ngDoCheck', () => {
-    it('should call checkMandatoryFields in ngDoCheck', () => {
-      const spy = jest.spyOn(mockApiService.dataControlSE, 'someMandatoryFieldIncompleteResultDetail');
-
-      component.ngDoCheck();
-
-      expect(spy).toHaveBeenCalledWith('.section_container');
-    });
-  });
 });

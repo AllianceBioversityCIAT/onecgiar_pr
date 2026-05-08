@@ -1,4 +1,4 @@
-import { Component, DoCheck, OnInit, effect, HostListener, ElementRef } from '@angular/core';
+import { afterRenderEffect, Component, OnInit, effect, HostListener, ElementRef } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
@@ -17,7 +17,7 @@ import { Clipboard } from '@angular/cdk/clipboard';
   providers: [MessageService],
   standalone: false
 })
-export class ResultDetailComponent implements OnInit, DoCheck {
+export class ResultDetailComponent implements OnInit {
   showPdfMenu = false;
 
   constructor(
@@ -37,6 +37,11 @@ export class ResultDetailComponent implements OnInit, DoCheck {
       if (portfolio !== undefined && this.api.resultsSE.currentResultId) {
         this.greenChecksSE.getGreenChecks();
       }
+    });
+
+    afterRenderEffect(() => {
+      this.dataControlSE.mandatoryFieldsCheckTrigger();
+      this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.section_container');
     });
   }
   closeInfo = false;
@@ -111,9 +116,4 @@ export class ResultDetailComponent implements OnInit, DoCheck {
     });
   }
 
-  ngDoCheck(): void {
-    setTimeout(() => {
-      this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.section_container');
-    }, 10);
-  }
 }

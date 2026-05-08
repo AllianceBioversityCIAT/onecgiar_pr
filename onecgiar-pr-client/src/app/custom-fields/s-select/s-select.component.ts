@@ -1,4 +1,4 @@
-import { Component, forwardRef, Input, Output, EventEmitter, ElementRef, HostListener, computed, signal } from '@angular/core';
+import { Component, forwardRef, Input, Output, EventEmitter, ElementRef, HostListener, computed, signal, OnChanges, SimpleChanges } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { DataControlService } from '../../shared/services/data-control.service';
@@ -16,7 +16,7 @@ import { DataControlService } from '../../shared/services/data-control.service';
   ],
   standalone: false
 })
-export class SSelectComponent implements ControlValueAccessor {
+export class SSelectComponent implements ControlValueAccessor, OnChanges {
   @Input() optionLabel: string;
   @Input() optionValue: string;
   @Input() options: any;
@@ -75,6 +75,7 @@ export class SSelectComponent implements ControlValueAccessor {
     if (v !== this._value) {
       this._value = v;
       this.onChange(v);
+      this.dataControlSE.bumpMandatoryCheck();
     }
   }
 
@@ -84,6 +85,7 @@ export class SSelectComponent implements ControlValueAccessor {
 
   writeValue(value: any): void {
     this._value = value;
+    this.dataControlSE.bumpMandatoryCheck();
   }
 
   registerOnChange(fn: any): void {
@@ -92,6 +94,10 @@ export class SSelectComponent implements ControlValueAccessor {
 
   registerOnTouched(fn: any): void {
     this.onTouch = fn;
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['required']) this.dataControlSE.bumpMandatoryCheck();
   }
 
   removeFocus(option?) {

@@ -1,13 +1,13 @@
 <div class="fixed_button" *ngIf="!this.rolesSE.readOnly || editable">
     <div class="fields-feedback-list" [ngClass]="{'show-fields-feedback-list-opacity': disabled,'expand':expand}"
-        *ngIf="this.dataControlSE.fieldFeedbackList?.length">
+        *ngIf="this.dataControlSE.fieldFeedbackList()?.length">
         <div class="back_icon" (click)="expand = !expand;">
             <i class="material-icons-round">
                 arrow_back_ios
             </i>
         </div>
         <div class="items custom_scroll" *ngIf="expand">
-            <div class="item" *ngFor="let item of this.dataControlSE.fieldFeedbackList">
+            <div class="item" *ngFor="let item of this.dataControlSE.fieldFeedbackList()">
                 <i class="material-icons-round">
                     warning
                 </i>
@@ -18,7 +18,7 @@
             <i class="material-icons-round">
                 warning
             </i>
-            {{this.dataControlSE?.fieldFeedbackList?.length}} <div class="text">alerts</div>
+            {{this.dataControlSE?.fieldFeedbackList()?.length}} <div class="text">alerts</div>
         </div>
     </div>
     <div (click)="this.saveButtonSE.isSaving || disabled ? null:onClickSave()">

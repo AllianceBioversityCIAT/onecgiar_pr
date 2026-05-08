@@ -26,7 +26,7 @@ export class DataControlService {
   currentResultSignal: WritableSignal<CurrentResult> = signal({});
   showSectionSpinner = false;
   currentSectionName = '';
-  fieldFeedbackList = [];
+  fieldFeedbackList = signal<string[]>([]);
   showShareRequest = false;
   chagePhaseModal = false;
   updateResultModal = false;
@@ -44,6 +44,17 @@ export class DataControlService {
   tocUrl = environment?.tocUrl;
   reportingCurrentPhase = { phaseName: null, phaseYear: null, phaseId: null, portfolioAcronym: null, portfolioId: null };
   reportingStatusVersion = signal(0);
+
+  /**
+   * Bump this signal whenever a mandatory field's value or `required` flag changes
+   * so consumers can re-evaluate the "X alerts" badge after the next paint.
+   * Replaces the previous `ngDoCheck + setTimeout` per-CD scan.
+   */
+  mandatoryFieldsCheckTrigger = signal(0);
+
+  bumpMandatoryCheck(): void {
+    this.mandatoryFieldsCheckTrigger.update(v => v + 1);
+  }
 
   notifyReportingStatusChanged(): void {
     this.reportingStatusVersion.update(v => v + 1);
@@ -164,9 +175,12 @@ export class DataControlService {
   }
 
   someMandatoryFieldIncompleteResultDetail(container) {
-    this.fieldFeedbackList = [];
+    const localList: string[] = [];
     const htmlContainer = document.querySelector(container);
-    if (!htmlContainer) return true;
+    if (!htmlContainer) {
+      this.fieldFeedbackList.set(localList);
+      return true;
+    }
     let inputs;
     let selects;
     try {
@@ -174,7 +188,7 @@ export class DataControlService {
         const tagValue = field?.parentElement?.parentElement?.parentElement?.querySelector('.pr_label')?.innerText;
         const isEmpty = !field?.innerText;
 
-        if (tagValue && isEmpty) this.fieldFeedbackList.push(tagValue);
+        if (tagValue && isEmpty) localList.push(tagValue);
 
         return isEmpty;
       });
@@ -183,12 +197,13 @@ export class DataControlService {
         tagValue = tagValue?.innerText;
         const isIncomplete = !field.classList.contains('complete');
 
-        if (tagValue && isIncomplete) this.fieldFeedbackList.push(tagValue);
+        if (tagValue && isIncomplete) localList.push(tagValue);
         return isIncomplete;
       });
     } catch (error) {
       console.error(error);
     }
+    this.fieldFeedbackList.set(localList);
     return Boolean(inputs) || Boolean(selects);
   }
 

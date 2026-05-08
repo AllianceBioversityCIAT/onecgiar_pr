@@ -1,4 +1,4 @@
-import { Component, DoCheck, OnInit } from '@angular/core';
+import { afterRenderEffect, Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { PartnersRequestBody } from './models/partnersRequestBody.model';
 import { RegionsCountriesService } from '../../../../../../shared/services/global/regions-countries.service';
@@ -14,7 +14,7 @@ import { environment } from '../../../../../../../environments/environment';
     styleUrls: ['./partners-request.component.scss'],
     standalone: false
 })
-export class PartnersRequestComponent implements OnInit, DoCheck {
+export class PartnersRequestComponent implements OnInit {
   partnersRequestBody = new PartnersRequestBody();
   requesting = false;
   form: FormGroup;
@@ -25,7 +25,12 @@ export class PartnersRequestComponent implements OnInit, DoCheck {
     public institutionsService: InstitutionsService,
     private readonly ipsrDataControlSE: IpsrDataControlService,
     public router: Router
-  ) {}
+  ) {
+    afterRenderEffect(() => {
+      this.api.dataControlSE.mandatoryFieldsCheckTrigger();
+      this.formIsInvalid = this.api.dataControlSE.someMandatoryFieldIncomplete('.partners-request-container');
+    });
+  }
 
   showForm = true;
 
@@ -84,7 +89,4 @@ export class PartnersRequestComponent implements OnInit, DoCheck {
     });
   }
 
-  ngDoCheck(): void {
-    this.formIsInvalid = this.api.dataControlSE.someMandatoryFieldIncomplete('.partners-request-container');
-  }
 }

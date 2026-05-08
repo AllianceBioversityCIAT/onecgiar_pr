@@ -214,14 +214,4 @@ describe('PartnersRequestComponent', () => {
       });
     });
   });
-  describe('ngDoCheck', () => {
-    it('should set formIsInvalid based on someMandatoryFieldIncomplete', () => {
-      const spy = jest.spyOn(mockApiService.dataControlSE, 'someMandatoryFieldIncomplete');
-      spy.mockReturnValue(true);
-
-      component.ngDoCheck();
-      expect(spy).toHaveBeenCalled();
-      expect(component.formIsInvalid).toBeTruthy();
-    });
-  });
 });

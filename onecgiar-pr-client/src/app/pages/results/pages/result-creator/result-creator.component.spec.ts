@@ -397,16 +397,6 @@ describe('ResultCreatorComponent', () => {
     });
   });
 
-  describe('ngDoCheck()', () => {
-    it('should call someMandatoryFieldIncompleteResultDetail when ngDoCheck is triggered', () => {
-      const spy = jest.spyOn(mockApiService.dataControlSE, 'someMandatoryFieldIncompleteResultDetail');
-
-      component.ngDoCheck();
-
-      expect(spy).toHaveBeenCalledWith('.local_container');
-    });
-  });
-
   describe('GET_mqapValidation()', () => {
     it('should call GET_mqapValidation', () => {
       component.resultLevelSE.resultBody.handler = 'https://cgspace.cgiar.org/handle/10568/139504';
