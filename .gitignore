@@ -19,6 +19,9 @@ lerna-debug.log*
 /coverage
 /.nyc_output
 
+# Playwright MCP temp output
+.playwright-mcp/
+
 # IDEs and editors
 /.idea
 .project

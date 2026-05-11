@@ -149,8 +149,10 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
       this.selectedPhaseIds();
       this.resultsListFilterSE.filterCreatedByMe();
       this.resultsListFilterSE.filterSubmittedByMe();
+      const phasesLoaded = this.resultsListFilterSE.phasesOptions().length > 0;
 
       untracked(() => {
+        if (!phasesLoaded) return;
         this.api.updateResultsList(this.api.buildResultsListSearchParams());
         if (this.table) {
           this.resetTable();
