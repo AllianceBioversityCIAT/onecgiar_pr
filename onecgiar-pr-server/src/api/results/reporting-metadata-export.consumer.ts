@@ -28,9 +28,18 @@ export class ReportingMetadataExportConsumer {
       await this._exportService.executeQueuedExportJob(payload);
       channel.ack(originalMsg);
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+      let message: string;
+      if (err instanceof Error) {
+        message = err.message;
+      } else if (typeof err === 'string') {
+        message = err;
+      } else {
+        message = JSON.stringify(err);
+      }
+
       this._logger.error(
         `Error processing export job ${payload.jobId}: ${message}`,
+        err instanceof Error ? err.stack : undefined,
       );
 
       // If it's a validation error (like mixing phases), we should ACK to remove it from queue
