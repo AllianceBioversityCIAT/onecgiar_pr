@@ -44,14 +44,17 @@ function defaultMaxRows(): number | null {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
-/** P25 phases that should use the tabular view path (comma-separated years, default: 2025). */
+/** P25 phases that should use the tabular view path (comma-separated years, default: 2025-2030). */
 function p25PhaseYears(): number[] {
-  const raw = env.RESULT_FULL_METADATA_P25_PHASE_YEARS?.trim() || '2025';
-  const years = raw
-    .split(',')
-    .map((y) => Number.parseInt(y.trim(), 10))
-    .filter((y) => Number.isFinite(y));
-  return years.length ? years : [2025];
+  const raw = env.RESULT_FULL_METADATA_P25_PHASE_YEARS?.trim();
+  if (raw) {
+    const years = raw
+      .split(',')
+      .map((y) => Number.parseInt(y.trim(), 10))
+      .filter((y) => Number.isFinite(y));
+    if (years.length) return years;
+  }
+  return [2025, 2026, 2027, 2028, 2029, 2030];
 }
 
 function getThrownMessage(err: unknown): string {
@@ -365,6 +368,7 @@ export class ReportingFullMetadataExportService {
       await this._runExportJob(payload.jobId, payload.filters, user);
     } catch (err: unknown) {
       this._failJob(payload.jobId, err);
+      throw err;
     }
   }
 

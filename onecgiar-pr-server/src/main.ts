@@ -65,6 +65,7 @@ async function bootstrap() {
       options: {
         urls: [env.RABBITMQ_URL],
         queue: env.REPORTING_METADATA_EXPORT_QUEUE,
+        noAck: false,
         queueOptions: {
           durable: true,
         },
