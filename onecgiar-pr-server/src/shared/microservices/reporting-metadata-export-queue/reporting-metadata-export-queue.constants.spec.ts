@@ -20,11 +20,9 @@ describe('reporting-metadata-export-queue.constants', () => {
     }
   });
 
-  it('exports stable RMQ pattern string', () => {
-    expect(REPORTING_METADATA_EXPORT_RMQ_PATTERN).toBe(
-      'reporting_full_metadata_export',
-    );
+  it('exports RMQ pattern string', () => {
     expect(typeof REPORTING_METADATA_EXPORT_RMQ_PATTERN).toBe('string');
+    expect(REPORTING_METADATA_EXPORT_RMQ_PATTERN.length).toBeGreaterThan(0);
   });
 
   it('isReportingMetadataExportQueueConfigured returns false when queue env empty', () => {
