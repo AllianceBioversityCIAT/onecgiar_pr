@@ -55,7 +55,7 @@ export class ClarisaGeographicScopeRepository extends Repository<ClarisaGeograph
     `;
     try {
       const scopes: ClarisaGeographicScope[] = await this.query(queryData);
-      scopes.map((el) => {
+      scopes.forEach((el) => {
         if (el.id == 3) {
           el.name = 'Country';
         }

@@ -388,7 +388,7 @@ export class ResultsTocResultsService {
           await this._resultsImpactAreaTargetRepository.resultsImpactAreaTargetByResultId(
             resultId,
           );
-        impactAreaArray.map((el) => {
+        impactAreaArray.forEach((el) => {
           el['target'] = resultsImpactAreaTarget.filter(
             (t) => t.impact_area_id == el.id,
           );

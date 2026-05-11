@@ -511,7 +511,7 @@ export class EvidencesService {
           1,
         );
 
-      evidences.map((e) => {
+      evidences.forEach((e) => {
         e.gender_related = !!e.gender_related;
         e.youth_related = !!e.youth_related;
         e.nutrition_related = !!e.nutrition_related;
@@ -524,7 +524,7 @@ export class EvidencesService {
         e.is_public_file = Boolean(e.is_public_file);
       });
 
-      supplementary.map((e) => {
+      supplementary.forEach((e) => {
         e.gender_related = !!e.gender_related;
         e.youth_related = !!e.youth_related;
         e.nutrition_related = !!e.nutrition_related;
@@ -579,7 +579,7 @@ export class EvidencesService {
         6,
       );
 
-      evidences.map((e) => {
+      evidences.forEach((e) => {
         e.gender_related = !!e.gender_related;
         e.youth_related = !!e.youth_related;
         e.nutrition_related = !!e.nutrition_related;
