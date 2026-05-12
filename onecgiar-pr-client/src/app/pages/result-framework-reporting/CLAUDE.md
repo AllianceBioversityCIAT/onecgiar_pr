@@ -38,7 +38,7 @@ Things the replicator must have working before any module code runs:
 |---|---|---|
 | **JWT acquisition** | The user logs in (custom + Cognito flows); a JWT is stored in `localStorage.token`. The HTTP interceptor reads it on every request. | Same: any flow that produces a JWT in storage works. On 401, the interceptor redirects to `/login` (out of scope for this doc). |
 | **API base URL** | Set in `src/environments/environment.ts` as `apiBaseUrl` (composed into `baseApiBaseUrl = apiBaseUrl + 'api/'`). Prod: `https://prtest-back.ciat.cgiar.org/`. | Configure your own env var (`API_BASE_URL` in Next/Vite, `VITE_API_URL`, etc.) and compose the same base + `api/` layouts. |
-| **Auth header name** | Custom `auth: <JWT>` (NOT `Authorization: Bearer`). | Same — the backend reads only the `auth` header. Replicate this in your interceptor / fetch wrapper. |
+| **Auth header name** | Custom `auth: <JWT>` (NOT `Authorization: Bearer`). | Same — the backend reads only the `auth` header. Replicate this in your interceptor / fetch wrapper. **The name is case-sensitive lowercase `auth`** — using `Auth` or `Authorization` will silently fail authentication. |
 | **CORS** | The backend has CORS configured for the PRMS hosts. | Verify your new host is allowed; otherwise add to backend CORS list. |
 | **Response envelope unwrap** | The interceptor does NOT unwrap; the component-side destructures `({ response }) => …` per call. | Decide once: unwrap in the interceptor (cleaner) or per-call (current). Mixing both is the trap. |
 | **Build commands** (Angular today) | `npm start` (dev `localhost:4200`), `npm run build` (prod), `npm run watch` (dev build watch). | Whatever your framework offers — keep one dev, one prod, one watch. |
@@ -569,7 +569,7 @@ The table groups by `project_name` (PrimeNG `rowGroupMode="subheader"`).
 
 ### 7.15 `BilateralResultsComponent` (page)
 
-- NOT standalone-marked at the class level (`@Component` without `standalone: true`, but uses `imports:` → effectively standalone in Angular 19). Imports `IndicatorsSidebarComponent, ResultsReviewContainerComponent, ResultsReviewFiltersComponent, ResultsReviewTableComponent, RouterModule`.
+- Standalone via Angular 19 defaults (no `standalone:` key set in `@Component`; the default is `true` since Angular 17). Imports `IndicatorsSidebarComponent, ResultsReviewContainerComponent, ResultsReviewFiltersComponent, ResultsReviewTableComponent, RouterModule`.
 - Page layout:
   ```
   ┌─────────────────────────────────────────────────────┐
@@ -745,11 +745,12 @@ The drawer also keeps an explicit `canEditInDrawer` computed that combines `isAd
 ```
 
 Quirks:
-- `is_leading_result: index === 0 ? 1 : null` — the first center in the array becomes lead.
+- `is_leading_result: index === 0 ? 1 : null` — the first center in the array becomes lead. **This is positional**: if the user reorders centers in the UI (or the multi-select returns them in a different order on re-render), the lead can silently change. There is no explicit "mark as lead" control. Replicators on a higher-stakes deployment should add an explicit lead toggle.
 - Centers without a CLARISA match are dropped silently.
 - `contributingProjects` is **set twice** (once at construction time, once unconditionally near the end). The duplication is intentional in the current code; if you refactor, ensure the final write wins.
 - Empty inputs do not delete; you must pass an explicit empty array.
 - `institution_roles_id` defaults to `2` if unset on the incoming row.
+- **`centerObj` shape** (what gets spread by `...centerObj`): each row in `centersSE.centersList` is `{ id, code, acronym, name, full_name, lead_center, institution_id, … }`. The required keys for the PATCH are `id`, `code`, `acronym`, `name`, `institution_id`. The drawer spreads everything to avoid losing fields the backend later adds.
 
 ### 8.4 Type-specific `resultTypeResponse` shapes
 
@@ -808,6 +809,31 @@ Notes:
 
 > ⚠️ **Anti-pattern warning — see §14.5.** Snapshot-via-stringify is fragile (key order, `undefined`-vs-`null`, `Map`/`Set` containers). On replication, prefer a structural deep-diff utility or per-field dirty flags.
 
+**Pseudocode of `normalizeDataStandardForComparison(detail)`** (replicators MUST match this exactly to keep dirty tracking consistent):
+```text
+return {
+  result_description: detail.commonFields?.result_description ?? null,
+  result_type_id:     detail.commonFields?.result_type_id ?? null,
+  contributingCenters:      sortAsc(detail.contributingCenters.map(c => stringIfObject(c) ?? c.code)),
+  contributingProjects:     sortAsc(detail.contributingProjects.map(p => str(p) ?? p.project_id ?? p.id)),
+  contributingInitiatives:  sortNumericAsc(detail.contributingInitiatives.map(coerceToInitiativeId)),
+  contributingInstitutions: sortNumericAsc(detail.contributingInstitutions.map(coerceToInstitutionId)),
+  evidence: detail.evidence.map(ev => ({
+    id: ev?.id ?? null,
+    link: String(ev?.link ?? ev?.evidence_link ?? ''),
+    is_sharepoint: ev?.is_sharepoint ?? 0
+  })),   // NOT sorted — order preserved
+  geographicScope: structuredClone(detail.geographicScope),
+  resultTypeResponse: structuredClone(detail.resultTypeResponse?.[0])
+};
+```
+Sorting rules:
+- `contributingCenters` / `contributingProjects`: string-ascending (`localeCompare`).
+- `contributingInitiatives` / `contributingInstitutions`: numeric-ascending after coercion to integer.
+- `evidence`: NOT sorted (order matters to the user and is preserved in the UI).
+- Geo + resultTypeResponse: `structuredClone`d to capture nested shape verbatim.
+The serialized JSON of this object is the dirty-check snapshot. Any deviation from this normalization will produce false positives.
+
 ### 8.7 Approve / Reject
 
 ```ts
@@ -831,7 +857,7 @@ Save TOC / Save Data Standards: each opens `SaveChangesJustificationDialogCompon
 ### 8.9 Evidence chips
 
 - A `pr-input` of type `link` (validated by `pr-input` internally).
-- "Enter" or button click → `addEvidenceLink()` pushes `{ link }` into `detail.evidence`.
+- "Enter" or button click → `addEvidenceLink()` pushes `{ link }` into `detail.evidence`. **The `is_sharepoint` field is NOT set here** — it is defaulted to `0` at the moment of the PATCH save (see the `evidence` mapping in §8.3 and `executeSaveDataStandardChanges`). A replicator inspecting only `addEvidenceLink()` will incorrectly assume the field is missing; check the save path too.
 - Each chip has a remove icon (only when editable). Chip is an `<a target="_blank" rel="noopener noreferrer">` to the URL.
 
 ### 8.10 Innovation Use ↔ Contributing Projects sync
@@ -915,6 +941,19 @@ All headings use the `pr-typography(...)` SCSS mixin from `styles/fonts.scss`. B
 
 `Drawer, Dialog, Table, Button, Multiselect, Select, InputNumber, InputText, IconField, InputIcon, Skeleton, Chart, SplitButton, Tooltip, Chip, OverlayBadge, ProgressBar, Popover, ProgressSpinner, Textarea, Ripple, RowToggler`.
 
+### 9.6 RTL / accessibility not in scope today
+
+The module assumes left-to-right (LTR) writing direction throughout. Margins, paddings, and `text-align` use physical properties (`margin-left`, `margin-right`, `text-align: left`) rather than logical (`margin-inline-start`, `text-align: start`). A replicator targeting Arabic, Hebrew, or any RTL locale must:
+- Replace all physical CSS spacing with logical equivalents.
+- Audit icons that imply direction (chevron-right in breadcrumbs, arrow-right in card CTAs).
+- Verify PrimeNG primitives in your version have RTL theming support (Aura does — enable via `<html dir="rtl">`).
+
+Other accessibility gaps not yet addressed:
+- The pencil icon on inline title edit (§8.8) lacks an `aria-label` ("Edit result title").
+- The "All Centers" item in the sidebar lacks `aria-label` differentiating it from per-center entries.
+- The custom right-side filters drawer (§7.17) lacks focus trap and `aria-modal`.
+- No screen-reader announcement when filters apply / chips remove. Consider an `aria-live` region.
+
 ---
 
 ## 10. External dependencies (the long list)
@@ -977,9 +1016,40 @@ This is the single most important external widget to understand. It is rendered 
 
 **Internal contract** (what the tree expects to read AND write):
 - Reads `dataControlSE.currentResult` (set by the drawer in `fetchAndProcessResultDetail`).
-- Reads `RolesService.readOnly` for fine-grained disable states (why the drawer flips this).
+- Reads `RolesService.readOnly` for fine-grained disable states (why the drawer flips this). Specifically, the tree's child selectors (`knowledge-product-selector`, `normal-selector`) read `rolesSE.readOnly` directly to gate their own UI — that is the propagation path that forces the drawer's global toggle. See §10.3.
 - Mutates `tocInitiative.result_toc_results[i].toc_level_id / toc_result_id / indicators[0].related_node_id / indicators[0].targets[0].contributing_indicator` in place.
-- Uses an internal HTTP fetch for the TOC tree of `[initiativeId]` — that fetch happens on every `[initiativeId]` change, so toggling between contributors triggers network traffic.
+- **Issues 3 internal HTTP GETs on every `[initiativeId]` change** (the doc previously hand-waved this — DeepSeek v3 audit caught it). Endpoints (verified against `pages/results/.../multiple-wps.component.ts` and `shared/services/api/toc-api.service.ts`):
+  - `GET ${apiBaseUrl}v2/toc/result/<resultId>/initiative/<initiativeId>/level/1?planned=<bool>` — Outputs list.
+  - `GET ${apiBaseUrl}v2/toc/result/<resultId>/initiative/<initiativeId>/level/2?planned=<bool>` — Outcomes list.
+  - `GET ${apiBaseUrl}v2/toc/result/<resultId>/initiative/<initiativeId>/level/3?planned=<bool>` — EOIs (End-of-Initiative outcomes) list.
+  - The path prefix is `v2/toc/` (or `toc/` for the legacy P22 portfolio). The `?planned=` boolean comes from `tocInitiative.planned_result`.
+  - Each response is the standard envelope; the tree mutates the items adding an `extraInformation` HTML field.
+- Toggling between contributors **fires all 3 GETs per contributor**, so the drawer's network footprint scales with the number of contributors. Replicators on a slow backend should add per-initiative caching to the equivalent service.
+
+### 10.2 TOC endpoints (canonical list — missing from §6 and §16)
+
+These were not in the original endpoint table because they are called indirectly by `app-cp-multiple-wps`, not by the bilateral module's own services:
+
+| Verb | Path | Caller | Notes |
+|---|---|---|---|
+| GET | `toc/level/get/all` (P22) OR `v2/toc/level/get/all` (P25) | `tocApiSE.GET_AllTocLevels(isP25)` | All TOC level definitions. |
+| GET | `toc/result/<resultId>/initiative/<initiativeId>/level/<levelId>?planned=<bool>` (P22) OR `v2/...` (P25) | `tocApiSE.GET_tocLevelsByconfig(...)` | Tree levels for a given result + initiative + level. The drawer fires this 3 times per initiative (levels 1, 2, 3). |
+| GET | `toc/result/get/full-initiative-toc/result/<resultId>` | `tocApiSE.GET_fullInitiativeToc(resultId)` | Used by deeper TOC modals; may or may not fire in the bilateral drawer flow. |
+| GET | `toc/result/get/full-initiative-toc/initiative/<initiativeId>` | `tocApiSE.GET_fullInitiativeTocByinitId(initiativeId)` | Same as above keyed by initiative. |
+
+Replicators MUST honor these as part of the contract if they reuse `app-cp-multiple-wps`. They live under `toc/` and `v2/toc/`, NOT under `api/results/` — the URL builder is `environment.apiBaseUrl + 'toc/'`.
+
+### 10.3 Components that read `RolesService.readOnly` directly
+
+If a replicator refactors to remove the drawer's global-toggle hack (§14.2), they must also patch every component that currently reads from `RolesService.readOnly`. Verified callsites (incomplete list, but covers the drawer-reachable ones):
+
+- `pages/results/.../rd-contributors-and-partners/components/multiple-wps/components/knowledge-product-selector/` — both `.ts` and `.html`.
+- `pages/results/.../rd-contributors-and-partners/components/multiple-wps/components/normal-selector/` — both `.ts` and `.html`.
+- The TOC tree (`app-cp-multiple-wps`) reaches these via its own internal child components.
+- `shared/components/geoscope-management/` — embedded in the drawer's Data Standards section.
+- Several `custom-fields/pr-*` controls also read it; check each before assuming a clean refactor is local.
+
+The work to remove the global toggle is therefore **not local to the bilateral module** — it requires touching the shared widgets too. Budget accordingly.
 
 **Replication strategy** (per Kimi + Gemini + DeepSeek): **port the source files as a "core shared component" before touching the drawer.** Do not try to rebuild this widget from scratch as part of the bilateral module replication — it is its own multi-week project. For an MVR (§13), substitute a **read-only display** of the TOC tree, with full editing deferred to Phase 2.
 
@@ -995,7 +1065,11 @@ This is the single most important external widget to understand. It is rendered 
 
 A condensed catalog of behaviors a replicator must NOT lose:
 
-1. **SGP-02 is a snowflake initiative.** No AOWs, no bilateral review. The code checks both `'SGP-02'` and `'SGP02'` because the upstream catalog has both. Entity-details has 3 fallback paths to resolve its short name. If your new app doesn't have SGP-02 yet, leave the branch as dead code rather than removing it.
+1. **SGP-02 is a snowflake initiative.** No AOWs, no bilateral review. The upstream catalog sometimes returns the code as `'SGP-02'` and sometimes as `'SGP02'` (hyphen-stripped). The current code is **inconsistent**: most callsites guard against both variants (`entity-aow.service.ts:85,94,112`; `entity-details.component.ts:304,306`; `card-item.component.html:22`), but **`entity-details.component.ts:182` only checks `'SGP-02'`**:
+   ```ts
+   showBilateralResultsReview = computed(() => this.entityAowService.entityId() !== 'SGP-02');
+   ```
+   This means if the URL arrives with `entityId === 'SGP02'`, the bilateral banner will incorrectly render and then break trying to fetch a pending count. **Replicators should standardize on a helper `isSgp02(id)` from the start** to avoid recreating the same bug. The entity-aow service already has this helper at `EntityAowService.isSgp02()` — extend the pattern.
 
 2. **Body scroll lock per drawer.** Three drawers each set `document.body.style.overflow = 'hidden'` on init and `'auto'` on destroy. They do NOT coordinate. If two open at once (it shouldn't, but defensively) and one closes first, the body becomes scrollable while the other is still open.
 
@@ -1005,7 +1079,7 @@ A condensed catalog of behaviors a replicator must NOT lose:
 
 5. **Pending counts vs filtered table.** `pendingCountByAcronym` derives from `allResultsForCounts` (which is filled only when "All Centers" is selected, or after `refreshAllResultsForCounts()`). When a single center is selected, the counts can become stale unless the user re-selects "All Centers" or commits a decision (which triggers a refresh).
 
-6. **Fail-open reporting access.** If `GET_phaseInitiativeStatus` errors, `reportingEnabled` is set to `true`. This is intentional but means a 401/500 hides a real lockout.
+6. **Fail-open reporting access.** If `GET_phaseInitiativeStatus` errors, `reportingEnabled` is set to `true`. This is intentional in the current implementation. **However**, DeepSeek and Kimi both flagged this as a security concern (see §17.2): a transient 401/500 silently unlocks reporting. Replicators on a stricter deployment should default to `false` and surface a "phase status unavailable" message. Pick a policy and stick to it — the doc currently describes both stances in different sections.
 
 7. **CLARISA initiatives polymorphism.** The `contributingInitiatives` field can arrive as an array OR an object (§6.1). The drawer also handles primitives (numbers, strings) and objects in the same array — re-mapping via `effect()` once `contributingInitiativesList` is loaded.
 
@@ -1267,3 +1341,4 @@ A stack-agnostic replicator from outside the agricultural-research world will en
 |---|---|---|---|
 | 1.0 | 2026-05-12 | Yecksin Guerrero, in coordination with Claude | Initial extraction & replication guide. Reviewed by DeepSeek R1, Gemini, Kimi. |
 | 1.1 | 2026-05-12 | Yecksin Guerrero, in coordination with Claude | Second validation pass by the same three reviewers. Corrected: `app-cp-multiple-wps` output name (`tocResultChanged`, not `selectOptionEvent`); HLO status-chip JS pseudocode; URL of `GETAllActorsTypes` (`api/results/actors/type/all`); URL of `GET_mqapValidation`. Added: §0.2 environment/auth/build/test bootstrap; §8.12 error handling & loading states; §11.13–11.19 (stale sidebar counts, no concurrency control, partial filter URL persistence, search field scope, phase param, contributors_result_toc_result rendering, tocConsumed semantics); SGP-02 caveat in §13 MVR; §18 glossary; cross-references between §8 mechanics and §14 anti-patterns. |
+| 1.2 | 2026-05-12 | Yecksin Guerrero, in coordination with Claude | Third pass: deep audit by DeepSeek R1. Each finding manually verified against source — 2 of DeepSeek's CRITICAL findings (`is_sharepoint` missing, `innovation_developers` missing) were **false positives** (fields are set on the save path, not the add path / are already in the table). Real findings integrated: §11.1 documents the real `showBilateralResultsReview` SGP-02 inconsistency bug (only checks `'SGP-02'`, not `'SGP02'`); §10.1 + §10.2 add the 3 internal TOC tree GETs (`v2/toc/result/.../initiative/.../level/{1,2,3}?planned=...`); §10.3 lists components that read `RolesService.readOnly`; §8.3 expands `centerObj` shape; §8.6 adds `normalizeDataStandardForComparison` pseudocode with sort criteria; §8.9 clarifies `is_sharepoint` defaults at save time, not add time; §9.6 adds RTL + a11y gaps; §11.6 reconciles fail-open stance; auth header case-sensitivity note in §0.2; standalone status clarified for `BilateralResultsComponent`. |
