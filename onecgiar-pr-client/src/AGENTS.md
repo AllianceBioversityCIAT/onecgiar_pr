@@ -94,7 +94,7 @@ Known top-level surfaces:
 
 - `login/`: `/login`, standalone custom login.
 - `auth-cognito/`: `/auth`, Cognito redirect/callback handler.
-- `result-framework-reporting/`: reporting landing and entity flows.
+- `result-framework-reporting/`: reporting landing and entity flows. Has a module-level replication guide at [`pages/result-framework-reporting/CLAUDE.md`](./app/pages/result-framework-reporting/CLAUDE.md) covering the bilateral results review module end-to-end (architecture, routes, services, API contracts, drawer deep-dive, anti-patterns, MVR roadmap). **Required reading before editing anything under that folder, and the canonical source for replicating the module in other applications (e.g., STAR).**
 - `results/`: result creator, result detail, results outlet. Largest feature.
 - `quality-assurance/`: QA queue and review drawer.
 - `ipsr/`: innovation packages.
