@@ -43,7 +43,7 @@ export class RoleLevelsService {
         };
       }
 
-      rolesLevels.map((rl) => {
+      rolesLevels.forEach((rl) => {
         rl['roles'] = roles.filter((r) => r.role_level_id == rl.id);
       });
 
