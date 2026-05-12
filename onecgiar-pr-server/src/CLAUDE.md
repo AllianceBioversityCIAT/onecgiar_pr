@@ -149,7 +149,7 @@ api/<feature>/
 |---|---|---|---|
 | `ad_users/` | `/api/ad-users/*` | Yes | AD lookup via `ldapts`. |
 | `ai/` | `/api/ai/*` | Yes | Uses `@UserToken()` and DTOs in `dto/responses/`. Auth-gated. |
-| `bilateral/` | `/api/bilateral/*` | Yes (+ `handlers/`) | **JWT-off, throttler-off** via `@SkipThrottle()`. Returns raw arrays/objects per [`../docs/bilateral-result-summaries.en.md`](../docs/bilateral-result-summaries.en.md). |
+| `bilateral/` | `/api/bilateral/*` | Yes (+ `handlers/`) | **JWT-off, throttler-off** via `@SkipThrottle()`. Returns raw arrays/objects per [`../docs/bilateral-result-summaries.en.md`](../docs/bilateral-result-summaries.en.md). **Has its own module guide:** [`api/bilateral/CLAUDE.md`](./api/bilateral/CLAUDE.md) + workflow notes in [`api/bilateral/AGENTS.md`](./api/bilateral/AGENTS.md). |
 | `contribution-to-indicators/` | `/contribution-to-indicators/*` (top-level) | Yes | Mounted in `main.routes.ts`, not under `/api/`. |
 | `delete-recover-data/` | `/api/manage-data/*` | Yes | Admin surface for soft-delete recovery. |
 | `global-narratives/` | `/api/global-narratives/*` | Yes | PMU narrative blocks. |
@@ -163,7 +163,7 @@ api/<feature>/
 | `platform-report/` | `/api/platform-report/*` | Yes (+ `repositories/`, `platform-report-payloads.ts`, `platform-report.constants.ts`) | **JWT-off**. Headless. |
 | `result-impact-area-scores/` | `/api/result-impact-area-scores/*` | Yes | DAC / impact-area scoring. |
 | `result-qaed/` | `/api/result-qaed/*` | Yes | QA decisions & transitions (status_id 1↔2↔3). |
-| `results/` | `/api/results/*` | **Mega module** (see §2.3) | 60+ sub-folders. |
+| `results/` | `/api/results/*` | **Mega module** (see §2.3) | 60+ sub-folders. **Has its own module guide:** [`api/results/CLAUDE.md`](./api/results/CLAUDE.md) + workflow notes in [`api/results/AGENTS.md`](./api/results/AGENTS.md). |
 | `results-framework-reporting/` | `/api/results-framework-reporting/*` + nested mounts | Yes | Hosts `contributors-partners/`, `innovation_dev/`, `innovation-use/`, `geographic-location/`. |
 | `type-one-report/` | `/type-one-report` (separate JWT bind) | Yes | PMU consolidated report. |
 | `user-notification-settings/` | `/api/user-notification-settings/*` | Yes | Channel preferences per user. |
@@ -172,7 +172,7 @@ api/<feature>/
 
 ### 2.3 `api/results/` — the largest module
 
-Read this section before touching anything under `api/results/`.
+Read this section before touching anything under `api/results/`. For a deeper map (sub-folder taxonomy by purpose, RMQ consumer rules, summary builder discipline, anti-patterns), open the in-module guide: [`api/results/CLAUDE.md`](./api/results/CLAUDE.md) (and [`api/results/AGENTS.md`](./api/results/AGENTS.md) for the lifecycle / review workflows).
 
 - **Entry trio:** `results.controller.ts`, `results.service.ts`, `result.repository.ts` (note singular `result.repository.ts`, plural everywhere else), `results.module.ts`, `results.routes.ts`.
 - **Sub-modules** (~60 folders) follow the standard layout and are wired in `results.routes.ts`. They cover:
@@ -643,6 +643,9 @@ If you change response shape, update [`../docs/bilateral-result-summaries.en.md`
 
 ## 14. Quick reference paths
 
+- **In-module guides:**
+  - [`api/bilateral/CLAUDE.md`](./api/bilateral/CLAUDE.md) — bilateral ingestion + read surface (sibling [`api/bilateral/AGENTS.md`](./api/bilateral/AGENTS.md) covers the ingestion workflow).
+  - [`api/results/CLAUDE.md`](./api/results/CLAUDE.md) — domain mega-module (sibling [`api/results/AGENTS.md`](./api/results/AGENTS.md) covers the lifecycle / review workflows).
 - Bootstrap: [`main.ts`](./main.ts)
 - Root module: [`app.module.ts`](./app.module.ts)
 - Top-level routes: [`main.routes.ts`](./main.routes.ts)
