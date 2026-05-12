@@ -30,6 +30,22 @@ The key **non-negotiables** to preserve across any stack:
 - The dirty-tracking + justification rules in §8.6–8.7 (compliance requirement).
 - The status mapping (`status_id == 5` is "Pending review"; Approve/Reject only when pending).
 
+### 0.2 Environment, auth, build & test (bootstrap checklist)
+
+Things the replicator must have working before any module code runs:
+
+| Concern | Current state in PRMS | What the replicator must arrange |
+|---|---|---|
+| **JWT acquisition** | The user logs in (custom + Cognito flows); a JWT is stored in `localStorage.token`. The HTTP interceptor reads it on every request. | Same: any flow that produces a JWT in storage works. On 401, the interceptor redirects to `/login` (out of scope for this doc). |
+| **API base URL** | Set in `src/environments/environment.ts` as `apiBaseUrl` (composed into `baseApiBaseUrl = apiBaseUrl + 'api/'`). Prod: `https://prtest-back.ciat.cgiar.org/`. | Configure your own env var (`API_BASE_URL` in Next/Vite, `VITE_API_URL`, etc.) and compose the same base + `api/` layouts. |
+| **Auth header name** | Custom `auth: <JWT>` (NOT `Authorization: Bearer`). | Same — the backend reads only the `auth` header. Replicate this in your interceptor / fetch wrapper. |
+| **CORS** | The backend has CORS configured for the PRMS hosts. | Verify your new host is allowed; otherwise add to backend CORS list. |
+| **Response envelope unwrap** | The interceptor does NOT unwrap; the component-side destructures `({ response }) => …` per call. | Decide once: unwrap in the interceptor (cleaner) or per-call (current). Mixing both is the trap. |
+| **Build commands** (Angular today) | `npm start` (dev `localhost:4200`), `npm run build` (prod), `npm run watch` (dev build watch). | Whatever your framework offers — keep one dev, one prod, one watch. |
+| **Test commands** | `npm run test` (Jest), `npm run test:coverage`, `npm run cypress:open` / `cypress:run` (E2E). | Replicate at least unit-test coverage for the bilateral service + drawer normalizers (see §12). |
+| **i18n** | All user-facing copy *should* use `TerminologyService`, but a large fraction of the module still hardcodes English in templates (drawer headers, button labels, chip labels, breadcrumb text). | If your target product is multilingual or portfolio-aware, treat string extraction as a Phase-1 task. The checklist (§15) now flags this. |
+| **Real-time** | The module does NOT use Pusher or sockets for live updates; it relies on `refreshAllResultsForCounts()` after each decision. | Same model is fine; no need to wire WebSockets for the bilateral review flow. |
+
 ---
 
 ## 1. Module mission (what does this module do)
@@ -331,7 +347,8 @@ All URLs relative to `${apiBaseUrl}`, all use the `auth` header, all responses w
 | GET | `clarisa/projects/get/all` | ReviewDrawer + AowHloCreateModal | All bilateral projects. |
 | GET | `capdevs-terms/get/all` | CapSharingContent | `slice(2, 4)` is used to pick the relevant subset. |
 | GET | `capdevs-delivery-methods/get/all` | CapSharingContent | |
-| `GETAllActorsTypes()` | actors-types catalog | InnovationUseContent | |
+| GET | `api/results/actors/type/all` | InnovationUseContent | Method name in code is `GETAllActorsTypes()`. Returns `[{ actor_type_id, name }]`. |
+| GET | `results-knowledge-products/mqap?handle=<handle>` | AowHloCreateModal (Sync button) | MQAP metadata harvester for CGSpace/MELSpace/WorldFish KP handles. Method `GET_mqapValidation`. Returns `{ title, metadata: [{ source, year, accesibility, is_peer_reviewed, is_isi }, …] }`. |
 
 ### 6.1 Polymorphism: `contributingInitiatives`
 
@@ -503,11 +520,11 @@ The table groups by `project_name` (PrimeNG `rowGroupMode="subheader"`).
   - "Report result" (only if `canReportResults()` is true and `status_id` allows it).
   - "View results" (always available).
   - "Target details" (only if `hasTargets(item, indicatorId)` — checks `targets_by_center.centers.length > 0`).
-- Status chip mapping:
-  - `progress === 0 || null` → `not-started`.
-  - `1..99` → `in-progress`.
-  - `100` → `achieved`.
-  - `> 100` → `overachieved`.
+- Status chip mapping (the implementation uses `getProgress()` to parse the leading number from `progress_percentage`):
+  - `progress === 0` (or `null`/missing) → `not-started`.
+  - `1` ≤ `progress` ≤ `99` → `in-progress`.
+  - `progress === 100` → `achieved`.
+  - `progress > 100` → `overachieved`.
 - Empty state for HLOs with no indicators: shows a "Report result directly" button when `canReportResults()`.
 
 ### 7.12 `AowHloCreateModalComponent` (Report result dialog)
@@ -694,11 +711,11 @@ ngOnDestroy() {
 
 The shared components inside the drawer (e.g., the TOC tree, geoscope, partner multiselects) read from `RolesService.readOnly` directly. To enable editing for the drawer while keeping the rest of the app's read-only state, the drawer **temporarily writes `false` to that global** for the duration of the drawer's open state.
 
-**Replication note**: this is a fragile global side-effect. On replication, either:
-- Refactor the shared components to accept an explicit `readOnly` prop (recommended).
-- Or replicate the exact `savedReadOnly ??= ...` save/restore pattern via `effect()`.
+In plain language: when the drawer opens, it captures the current `readOnly` flag once, flips it to `false` (unlocking editing for the embedded shared widgets), and restores the captured value when the drawer closes — including the destroy path on unmount. The `?? =` guard prevents the captured value from being overwritten if the effect re-runs while the drawer is still open.
 
-The drawer also keeps an explicit `canEditInDrawer` computed that combines `isAdmin`, `status_id == 5`, and "user owns the initiative".
+> ⚠️ **Anti-pattern warning — see §14.2.** This global side-effect is fragile (crash before destroy poisons the global). A faithful 1:1 replication can copy the pattern, but a clean replication should refactor to explicit `[readOnly]` inputs on each child. Three independent reviewers (DeepSeek, Gemini, Kimi) flagged this as the #1 fragility of the module.
+
+The drawer also keeps an explicit `canEditInDrawer` computed that combines `isAdmin`, `status_id == 5`, and "user owns the initiative". Note that **if the drawer opens while `readOnly` was already `false`**, the captured value is `null` and the restore branch never runs — this is benign but worth knowing if you instrument for diagnostics.
 
 ### 8.3 Data Standards save body
 
@@ -736,17 +753,23 @@ Quirks:
 
 ### 8.4 Type-specific `resultTypeResponse` shapes
 
-The drawer sends different `resultTypeResponse` shapes by `result_type_id`. The replicator MUST replicate these exactly:
+The drawer sends different `resultTypeResponse` shapes by `result_type_id`. The replicator MUST replicate these exactly.
 
-| `result_type_id` | Type | Shape |
+> **Array vs object semantics**: in the GET response, `resultTypeResponse` is **always an array of one element** (`resultTypeResponse[0]` is the actual payload). In the PATCH save, the drawer sends either an **array** (Innovation Use, type 2 — to match the GET shape) or a **bare object** (Policy 1, Capacity 5, KP 6, InnoDev 7 — because the backend's PATCH validator for those types unwraps single objects). The table below uses the **PATCH-side** shape for each type; for GET, wrap each one in a single-element array.
+
+| `result_type_id` | Type | PATCH shape sent by drawer |
 |---|---|---|
-| 1 | Policy change | `{ result_policy_change_id, policy_type_id, policy_stage_id, policy_stage_name, policy_type_name, implementing_organization: [{ institution_id, acronym, institution_name }] }` |
-| 2 | Innovation use | `[{ ...rt, actors, organizations, measures, investment_partners, investment_projects }]` (note: array, not object). `investment_projects` mapped from contributing bilateral projects via `onContributingProjectsChange`. |
-| 5 | Capacity sharing | `{ result_capacity_development_id, male_using, female_using, non_binary_using, has_unkown_using, capdev_delivery_method_id, capdev_term_id }` |
-| 6 | Knowledge product | `{ result_knowledge_product_id, knowledge_product_type, licence, metadata, keywords }` |
-| 7 | Innovation development | `{ result_innovation_dev_id, innovation_nature_id, innovation_type_id, innovation_type_name, innovation_developers, innovation_readiness_level_id, readinness_level_id, level, name }` |
+| 1 | Policy change | object: `{ result_policy_change_id, policy_type_id, policy_stage_id, policy_stage_name, policy_type_name, implementing_organization: [{ institution_id, acronym, institution_name }] }` |
+| 2 | Innovation use | **array** of one: `[{ ...rt, actors, organizations, measures, investment_partners, investment_projects }]`. `investment_projects` is auto-mapped from contributing bilateral projects via `onContributingProjectsChange` (see §8.10). |
+| 5 | Capacity sharing | object: `{ result_capacity_development_id, male_using, female_using, non_binary_using, has_unkown_using, capdev_delivery_method_id, capdev_term_id }` |
+| 6 | Knowledge product | object: `{ result_knowledge_product_id, knowledge_product_type, licence, metadata, keywords }` |
+| 7 | Innovation development | object: `{ result_innovation_dev_id, innovation_nature_id, innovation_type_id, innovation_type_name, innovation_developers, innovation_readiness_level_id, readinness_level_id, level, name }` |
 
-Note `readinness_level_id` (typo intentional, kept for backend compatibility — do NOT rename).
+Notes:
+- `readinness_level_id` (typo intentional, kept for backend compatibility — do NOT rename).
+- `has_unkown_using` (typo intentional in backend — do NOT rename).
+- All `result_*_id` fields are `null` for fresh records and become populated after the first save.
+- Per §14.9: production data always has `resultTypeResponse.length === 1`, but the code does not assert this. **Always normalize to a single object on ingress** (drawer's `fetchAndProcessResultDetail`) to avoid the "single-item array" trap (Gemini's term).
 
 ### 8.5 TOC save body
 
@@ -780,8 +803,10 @@ Note `readinness_level_id` (typo intentional, kept for backend compatibility —
 
 ### 8.6 Dirty tracking
 
-- **TOC dirty**: simple boolean signal `isTocDirty`, flipped by `markTocAsDirty()` on `selectOptionEvent` (yes/no), `(change)` of the TOC tree container.
-- **Data Standards dirty**: snapshot-based. `normalizeDataStandardForComparison(detail)` produces a stable JSON projection (sorted arrays of IDs, normalized geo, normalized resultType). `originalDataStandardSnapshot` is set at load (after a 300ms `setTimeout` to allow async normalization to settle) and after each successful save. `hasDataStandardUnsavedChanges()` re-normalizes and string-compares.
+- **TOC dirty**: simple boolean signal `isTocDirty`, flipped by `markTocAsDirty()` on `selectOptionEvent` (Yes/No toggle) and on `(change)` events of the TOC tree's wrapper `<div>` (relies on **standard DOM event bubbling** from the nested `pr-select`/`input` elements inside `app-cp-multiple-wps`). **Replication note**: in frameworks that do not bubble custom-component events natively (some Vue setups, React without proper synthetic event delegation), you must bind `tocResultChanged` explicitly on the tree to call `markTocAsDirty()`.
+- **Data Standards dirty**: snapshot-based. `normalizeDataStandardForComparison(detail)` produces a stable JSON projection — definitionally, a `JSON.stringify` of a normalized deep clone where arrays of IDs are sorted, geo objects are deep-cloned via `structuredClone`, and `resultTypeResponse` is reduced to its first element. `originalDataStandardSnapshot` is captured at load (after a 300ms `setTimeout` so async normalization settles) and re-captured after each successful save. `hasDataStandardUnsavedChanges()` re-normalizes the current state and string-compares.
+
+> ⚠️ **Anti-pattern warning — see §14.5.** Snapshot-via-stringify is fragile (key order, `undefined`-vs-`null`, `Map`/`Set` containers). On replication, prefer a structural deep-diff utility or per-field dirty flags.
 
 ### 8.7 Approve / Reject
 
@@ -822,6 +847,24 @@ Preserves existing per-project fields (`kind_cash`, `is_determined`, `non_pooled
 All 6 sub-content components (`kp-content`, `inno-dev-content`, `cap-sharing-content`, `policy-change-content`, `innovation-use-content`, `save-changes-justification-dialog`) declare `styleUrl: '../../result-review-drawer.component.scss'`. Innovation use additionally has its own `styleUrls: ['../../result-review-drawer.component.scss', './innovation-use-content.component.scss']`.
 
 **Replication note**: this pattern is unusual — Angular components rarely share SCSS files via `styleUrl` paths. On replication, prefer a shared partial (`@use '../../_drawer-shared.scss'`) over deep path references. The current approach works but is brittle when reorganizing folders.
+
+### 8.12 Error handling, loading states, and feedback
+
+The drawer's UX feedback model is **terse by design** — the project relies on a single global error handler rather than per-call try/catch toasts. Specifically:
+
+- **Approve / Reject / Save TOC / Save Data Standards / Title edit failures**: the `error` callback inside each `subscribe` does only two things: `console.error(...)` and `isSaving.set(false)` (or its sibling flag). The dialog stays open, the user sees the spinner go away, but **no toast is shown**. The error has already been intercepted by `manageError` inside `GeneralInterceptorService` (which is the project's global handler — it may surface a banner via `api.alertsFe`, or stay silent, depending on the status code).
+- **`loadResultDetail` failure**: `isLoading.set(false)`, `isLoadingInformation.set(false)`, and the drawer remains open showing whatever was last rendered (possibly a blank panel). A replicator may want to add a visible empty-error state.
+- **Catalog load failures** (CLARISA projects, institutions, contributing initiatives, capdev terms, delivery methods, actor types) — each falls back to `set([])` quietly. Down-stream multi-selects show empty options.
+
+**Loading states**:
+- `isLoading` (signal) — gates the post-fetch normalization phase.
+- `isLoadingInformation` (signal) — gates the four skeleton blocks at the top of the drawer (header, meta, TOC section, Data Standards section). Toggled to `true` at the very start of `fetchAndProcessResultDetail` and `false` in both success and error branches.
+- `isSaving` (signal) — gates the spinner inside the confirmation dialogs; also disables Approve/Reject buttons.
+- No global spinner; loading is local per call.
+
+**Replication notes**:
+- A faithful replication should keep the silent-on-error model only if the target stack has an equivalent global handler. Otherwise, surface a toast (`api.alertsFe.show({ status: 'error', ... })`) inside each `error` branch.
+- If you cannot inspect `manageError`'s exact behavior, treat the silent error as a UX bug to fix during replication.
 
 ---
 
@@ -910,13 +953,13 @@ The entire `custom-fields/` module: `pr-input, pr-textarea, pr-select, pr-multi-
 
 This is the single most important external widget to understand. It is rendered twice inside the review drawer (own initiative + each contributor initiative) and is the editing surface for TOC alignment.
 
-**Public input/output contract** (as consumed by `result-review-drawer.component.html`):
+**Public input/output contract** (verified against `pages/results/pages/result-detail/pages/rd-contributors-and-partners/components/multiple-wps/multiple-wps.component.ts`):
 
 ```
 @Inputs
   [initiative]            → the tocInitiative object (planned_result, initiative_id, result_toc_results[], ...)
   [initiativeId]          → number (the initiative_id under which to edit)
-  [resultLevelId]         → number (from commonFields.result_level_id, drives which work packages are eligible)
+  [resultLevelId]         → number | string (from commonFields.result_level_id, drives which work packages are eligible)
   [isIpsr]                → boolean (false for bilateral)
   [isContributor]         → boolean (false for own initiative, true for contributors)
   [isNotifications]       → boolean (false in this module)
@@ -924,10 +967,13 @@ This is the single most important external widget to understand. It is rendered 
   [showMultipleWPsContent]→ boolean (= tocConsumed(), gates rendering until parent data is settled)
   [hidden]                → boolean (= true, hides an internal "details" panel)
   [forceP25]              → boolean (= true, forces the new portfolio code path)
+  [isAvisa]               → boolean (= false in this module; flips to true only inside the AVISA initiative)
   [editable]              → boolean (= canEditInDrawer(); falls back to RolesService.readOnly when false)
 @Outputs
-  (selectOptionEvent)     → fires when the user picks HLO / Indicator / Contribution; the drawer responds by flipping `markTocAsDirty()` and re-running `validateIsToCCompleted()`.
+  (tocResultChanged)      → EventEmitter<void>. Fires when any user interaction inside the tree completes (HLO selection, indicator selection, contribution narrative edit, etc.). The drawer does NOT bind this output today — it relies on standard DOM `(change)` bubbling on its wrapper `<div>` to call `markTocAsDirty()`. A replicator on a non-Angular stack should bind `tocResultChanged` explicitly because custom-event bubbling is not portable.
 ```
+
+> ⚠️ **Earlier drafts of this doc incorrectly named the output `selectOptionEvent`**. That is the output of the sibling `app-pr-yes-or-not` (the Yes/No toggle for "Is this result planned?"), NOT of `app-cp-multiple-wps`. Verified May 2026 against the actual source.
 
 **Internal contract** (what the tree expects to read AND write):
 - Reads `dataControlSE.currentResult` (set by the drawer in `fetchAndProcessResultDetail`).
@@ -980,6 +1026,20 @@ A condensed catalog of behaviors a replicator must NOT lose:
     - `has_unkown_using` — typo from the backend (`unkown`, missing `n`). Do NOT rename.
     - `readinness_level_id` — typo from the backend. Do NOT rename.
 
+13. **Stale sidebar counts on deep-link arrival.** If the user lands on `/results-review?center=AfricaRice` directly (e.g. a bookmark or shared URL), `allResultsForCounts` is never hydrated — the table fetches only that center's rows, and `pendingCountByAcronym` reports zero for every other center. The user must click "All Centers" (or commit a decision via `refreshAllResultsForCounts()`) to populate the counts. **Replicators should consider hydrating `allResultsForCounts` on initial mount regardless of the URL filter** — the trade-off is one extra "all centers" fetch on every entry.
+
+14. **No concurrency control on bilateral review.** Two admins reviewing the same result simultaneously will both load the same `BilateralResultDetail`; whoever PATCHes second wins. There is no `version` field, no `If-Match` header, no optimistic-lock retry. The backend currently accepts the last write. Replicators on a higher-stakes deployment should add optimistic locking server-side and surface a 409 conflict UI in the drawer.
+
+15. **Filter URL persistence is partial.** Only `?search=<text>` and `?center=<code>` round-trip with the URL. The three multi-select filters in the filter drawer (indicator category, status, lead center) are **memory-only** — page reload loses them, and they are not shareable via link. If your target product needs shareable filtered views, extend the URL sync to all three filters.
+
+16. **Client-side search scope.** The search box matches across **five fields** of every flat row: `result_code`, `result_title`, `indicator_category`, `toc_title`, `indicator`. Case-insensitive, substring match. **Does NOT match** the project name (the row's parent group) or the submission date. Lead center is not searched either — use the lead-center filter for that.
+
+17. **`phase` query param required for result-detail deep-links.** Navigations out of the module (recent activity item, AOW view-results drawer, review drawer "Go to result center") always append `?phase=<version_id>`. The target `result-detail` page reads this param and routes data; omitting it currently shows the latest phase silently, which can confuse users who expected a specific reporting cycle.
+
+18. **`contributors_result_toc_result` field.** The GET bilateral detail response includes this array of TOC metadata objects for *other* initiatives contributing to the result. The drawer renders one `app-cp-multiple-wps` block per contributor inside the same Data Standards card, always in **read-only mode** (`[editable]="false"`, `[isContributor]="true"`). Replicators must support this list — it is how cross-initiative alignment is displayed.
+
+19. **`tocConsumed` is a forced remount gate, not business state.** It toggles `false → true` after a 100 ms `setTimeout` so the TOC tree widget detects the input change. Without this gate, `app-cp-multiple-wps` (which reads `@Input` by reference) would not re-render after a Yes/No flip on planned-result. Document it as plumbing, not domain logic.
+
 ---
 
 ## 12. Testing footprint
@@ -1024,6 +1084,8 @@ If a team must rebuild the module in 2 weeks (1 dev), this is the order of busin
 13. Day 14: Polish, accessibility (keyboard handlers + ARIA labels), responsive, body-scroll-lock cleanup, type-specific quirks.
 
 **Deferred** (post-2-weeks): the SGP-02 branching, fail-open reporting gates, and the CLARISA-projects-investment-projects sync. These can be ignored on day 1 if their data shapes are absent in the new application's backend.
+
+> ⚠️ **SGP-02 caveat for the MVR**: deferring SGP-02 is fine only if SGP-02 itself is not loaded in the new app. **If your backend serves an initiative whose `official_code` is SGP-02 (or any other initiative without AOWs), the MVR will render broken pages** — the AOW list fetch will resolve to an empty array, and the bilateral banner will still try to load a pending count. Either guard those calls (per the §11 SGP-02 behavior) or ensure your test data excludes such initiatives until Phase 2.
 
 ---
 
@@ -1110,7 +1172,8 @@ GET    /clarisa/initiatives/get/all/without/result/<resultId>/<portfolio>
 GET    /clarisa/projects/get/all
 GET    /capdevs-terms/get/all
 GET    /capdevs-delivery-methods/get/all
-GET    /actors-types/...   (GETAllActorsTypes())
+GET    /api/results/actors/type/all
+GET    /api/results/results-knowledge-products/mqap?handle=<handle>
 ```
 
 All responses: `{ response, statusCode, message, timestamp, path }`. Auth header: `auth: <JWT>`.
@@ -1159,12 +1222,8 @@ Specific additions:
 
 Specific additions:
 
-- **`app-cp-multiple-wps` contract** (the most useful single addition to the doc):
-  - Input: `tocResult` (object matching `BilateralTocMetadata` plus `result_toc_results` array).
-  - Input: `tocResultId` (number).
-  - Input: `nodeId` (string).
-  - Input: `isReadOnly` (boolean — falls back to `RolesService.readOnly`).
-  - Output: `selectOptionEvent` (fired when the user picks a HLO / Indicator / Contribution).
+- **`app-cp-multiple-wps` contract** (corrected against the source after Gemini + Kimi flagged the original draft):
+  - The real public surface is documented authoritatively in §10.1. Inputs are `[initiative]`, `[initiativeId]`, `[resultLevelId]`, `[isIpsr]`, `[isContributor]`, `[isNotifications]`, `[isUnplanned]`, `[showMultipleWPsContent]`, `[hidden]`, `[forceP25]`, `[isAvisa]`, `[editable]`. Output is `(tocResultChanged)` — a `void` event.
   - Internal: recursive tree component that reads from `dataControlSE.currentResult` to gate which work packages are selectable for the current portfolio.
 - **`refreshAllResultsForCounts()` post-decision cascade**: Kimi emphasized this is non-obvious. After Approve/Reject, the drawer emits `decisionMade`; the table component listens and ALSO triggers a full refresh of `allResultsForCounts`. Without this cascade, the sidebar pending badges and the table go out of sync.
 - **Theme dependency = invisible UI risk**: missing `--pr-color-*` tokens cause silent white-on-white rendering. Suggest a "token verification" boot check that warns in dev.
@@ -1178,8 +1237,33 @@ Every actionable item from §17.2–17.4 has been merged into the appropriate se
 
 ---
 
-## 18. Document changelog
+## 18. Glossary (CGIAR / PRMS jargon)
+
+A stack-agnostic replicator from outside the agricultural-research world will encounter these terms:
+
+| Term | Meaning |
+|---|---|
+| **CGIAR** | A global research partnership for a food-secure future; the institution that owns PRMS. |
+| **CLARISA** | The "Centralised CGIAR Catalogue and Repositories" — the master data system that supplies institutions, countries, regions, initiatives, centers, and projects to PRMS. Many endpoints under `/clarisa/*` are reads against this. |
+| **Initiative / Science Program / Accelerator (SP)** | A multi-year research program. PRMS calls them "Science Programs" in newer copy (P25 portfolio) and "Initiatives" in older copy (P22 portfolio). The drawer's `initiative_id` is the primary key. |
+| **AOW (Area of Work)** | A sub-unit within a Science Program — the second navigation level. Identified by `code` (e.g., `WP1`, `OUTPUT3`). |
+| **HLO (High-Level Output)** | Top-tier output indicators inside an AOW. |
+| **TOC (Theory of Change)** | The hierarchical graph that connects initiatives → outputs → outcomes → impacts. Each result must be aligned to a TOC node and optionally to an indicator. |
+| **Result** | The atomic reportable unit — a knowledge product, capacity-sharing event, innovation, policy change, etc. Lives in `pages/results/`. |
+| **W3 / Bilateral project** | "Window 3" = pooled donor funding; "Bilateral" = a single donor's project. Both are external funding sources tied to results. |
+| **CGSpace / MELSpace / WorldFish** | Open-access repositories where Knowledge Products live; their handles (`hdl.handle.net/10568/...`) are validated by the CGSpace regex (§7.12). |
+| **MQAP** | The Metadata Quality Assessment Pipeline — backend service that fetches metadata for a CGSpace handle. The "Sync" button in the Report Result modal calls this. |
+| **P22 / P25** | "Portfolio 22" (legacy CGIAR initiatives) and "Portfolio 25" (the 2025 reform). The bilateral module exclusively targets P25 (`forceP25: true` on the TOC tree). |
+| **SGP-02** | One specific Science Program with no AOWs and no bilateral review. Treated as a special case across the module — see §11.1. |
+| **PMU** | Programme Management Unit — the centralised PRMS administrators. |
+| **Reporting cycle / Phase** | The annual cycle when results are reported, reviewed, and submitted. The `phase` query param on result-detail deep links pins navigation to a specific cycle. |
+| **status_id** | Numeric (sometimes string!) state of a result. `5` = Pending review. Other values used by the broader app (e.g., Editing, Submitted, Approved, Rejected, QA-assessed). |
+
+---
+
+## 19. Document changelog
 
 | Version | Date | Author | Notes |
 |---|---|---|---|
-| 1.0 | 2026-05-12 | Yecksin Guerrero, in coordination with Claude | Initial extraction & replication guide. Reviewed by DeepSeek R1, Gemini, Kimi (pending integration). |
+| 1.0 | 2026-05-12 | Yecksin Guerrero, in coordination with Claude | Initial extraction & replication guide. Reviewed by DeepSeek R1, Gemini, Kimi. |
+| 1.1 | 2026-05-12 | Yecksin Guerrero, in coordination with Claude | Second validation pass by the same three reviewers. Corrected: `app-cp-multiple-wps` output name (`tocResultChanged`, not `selectOptionEvent`); HLO status-chip JS pseudocode; URL of `GETAllActorsTypes` (`api/results/actors/type/all`); URL of `GET_mqapValidation`. Added: §0.2 environment/auth/build/test bootstrap; §8.12 error handling & loading states; §11.13–11.19 (stale sidebar counts, no concurrency control, partial filter URL persistence, search field scope, phase param, contributors_result_toc_result rendering, tocConsumed semantics); SGP-02 caveat in §13 MVR; §18 glossary; cross-references between §8 mechanics and §14 anti-patterns. |
