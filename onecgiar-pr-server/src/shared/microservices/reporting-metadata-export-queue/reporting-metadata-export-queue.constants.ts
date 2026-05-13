@@ -4,8 +4,9 @@ import { env } from 'node:process';
 export const REPORTING_METADATA_EXPORT_QUEUE_CLIENT =
   'REPORTING_METADATA_EXPORT_QUEUE_CLIENT';
 
-/** Event pattern: must match @EventPattern and publisher emit. */
+/** Event pattern: must match @EventPattern and publisher emit. Defaults to queue name if provided. */
 export const REPORTING_METADATA_EXPORT_RMQ_PATTERN =
+  env.REPORTING_METADATA_EXPORT_QUEUE?.trim() ||
   'reporting_full_metadata_export';
 
 export function isReportingMetadataExportQueueConfigured(): boolean {

@@ -148,7 +148,14 @@ describe('ReportingFullMetadataExportService', () => {
   describe('getJob', () => {
     it('returns null when job belongs to another user', async () => {
       resultsService.getResultDataForBasicReport.mockResolvedValue(
-        okReport([]),
+        okReport([
+          {
+            result_code: 1,
+            version_id: 1,
+            phase_year: 2024,
+            result_type: 'X',
+          },
+        ]),
       );
 
       const { jobId } = service.enqueueExport({}, user);
@@ -196,7 +203,14 @@ describe('ReportingFullMetadataExportService', () => {
 
     it('runs inline via setImmediate when queue disabled', async () => {
       resultsService.getResultDataForBasicReport.mockResolvedValue(
-        okReport([]),
+        okReport([
+          {
+            result_code: 1,
+            version_id: 1,
+            phase_year: 2024,
+            result_type: 'X',
+          },
+        ]),
       );
 
       service.enqueueExport({}, user);
@@ -211,7 +225,14 @@ describe('ReportingFullMetadataExportService', () => {
     it('runs export for an existing job id (consumer path)', async () => {
       queuePublisher.isEnabled.mockReturnValue(true);
       resultsService.getResultDataForBasicReport.mockResolvedValue(
-        okReport([]),
+        okReport([
+          {
+            result_code: 100,
+            version_id: 1,
+            phase_year: 2024,
+            result_type: 'Legacy',
+          },
+        ]),
       );
 
       const { jobId } = service.enqueueExport({}, user);
@@ -231,6 +252,27 @@ describe('ReportingFullMetadataExportService', () => {
         {},
         expect.objectContaining({ id: user.id, email: user.email }),
       );
+    });
+
+    it('re-throws error when export fails', async () => {
+      resultsService.getResultDataForBasicReport.mockResolvedValue(
+        okReport([]),
+      );
+
+      const { jobId } = service.enqueueExport({}, user);
+
+      await expect(
+        service.executeQueuedExportJob({
+          jobId,
+          filters: {},
+          user: {
+            id: user.id,
+            email: user.email,
+            first_name: user.first_name,
+            last_name: user.last_name,
+          },
+        }),
+      ).rejects.toThrow('No results match the current filters.');
     });
   });
 
