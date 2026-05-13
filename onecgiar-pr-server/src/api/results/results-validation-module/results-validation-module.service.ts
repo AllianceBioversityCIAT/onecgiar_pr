@@ -558,12 +558,6 @@ export class ResultsValidationModuleService {
         this._logger.verbose(
           `The validations of the result with id ${resultId} have been saved correctly.`,
         );
-
-        response.reduce(
-          (previousValue, currentValue: any) =>
-            previousValue * parseInt(currentValue.validation),
-          1,
-        );
       }
 
       return {
