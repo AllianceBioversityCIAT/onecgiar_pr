@@ -7,6 +7,8 @@ This monorepo contains both halves of the system:
 - **Backend** — `onecgiar-pr-server/` — NestJS 11 + TypeORM + MySQL, deployed to AWS Lambda (Serverless) or Docker.
 - **Frontend** — `onecgiar-pr-client/` — Angular 19 + PrimeNG 19, served as a static SPA behind Nginx.
 
+> **Hosted documentation:** [PRMS Wiki on Mintlify](https://mintlify.wiki/AllianceBioversityCIAT/onecgiar_pr/introduction) — browse the project documentation online, including module references and onboarding material.
+
 ---
 
 ## Table of contents
@@ -241,6 +243,8 @@ CI runs lint, tests, build, `migration:check:ci`, and SonarCloud (`sonar-project
 
 ## Documentation map
 
+**Hosted reference:** the full PRMS documentation is also published as a navigable wiki on Mintlify — [PRMS Wiki](https://mintlify.wiki/AllianceBioversityCIAT/onecgiar_pr/introduction). Use it as the entry point when you don't want to clone the repo.
+
 PRMS uses **Spec-Driven Development** (SDD). The hierarchy is:
 
 ```
@@ -261,6 +265,7 @@ README.md                                ← you are here
 
 | I want to… | Read |
 |---|---|
+| Browse the docs online without cloning | [PRMS Wiki on Mintlify](https://mintlify.wiki/AllianceBioversityCIAT/onecgiar_pr/introduction) |
 | Understand the product, scope, goals, metrics, personas | [`docs/prd.md`](./docs/prd.md) |
 | Understand UI/UX rules, tokens, components, screens | [`docs/system-design/design.md`](./docs/system-design/design.md) |
 | Understand the technical architecture | [`docs/detailed-design/detailed-design.md`](./docs/detailed-design/detailed-design.md) |
