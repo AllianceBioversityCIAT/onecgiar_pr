@@ -11,6 +11,8 @@ Legacy note: `CLAUDE.md` is the Claude-specific mirror. This file is standalone 
 3. This file
 4. Relevant SDD spec under `../../docs/specs/<module>/`
 5. `../docs/bilateral-result-summaries.en.md` for bilateral/platform-report payload changes
+6. `api/bilateral/AGENTS.md` (Bilateral Ingestion & Sync)
+7. `api/results/AGENTS.md` (Bilateral Management & Review)
 
 ## 60-Second Mental Model
 

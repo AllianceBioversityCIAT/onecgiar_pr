@@ -37,21 +37,30 @@
   @case ('heading_1') {
     @let text = joinText(block?.heading_1?.rich_text);
     @if (text) {
-      <h1 class="whats-new-page-details_heading_1 mb-10" [innerHTML]="text" [attr.aria-label]="text"></h1>
+      <h1 class="whats-new-page-details_heading_1 mb-10">
+        <span class="dynamic-notion-block_sr-only">{{ joinPlainText(block?.heading_1?.rich_text) }}</span>
+        <span [innerHTML]="text"></span>
+      </h1>
     }
   }
 
   @case ('heading_2') {
     @let text = joinText(block?.heading_2?.rich_text);
     @if (text) {
-      <h2 class="whats-new-page-details_heading_2 mb-10" [innerHTML]="text" [attr.aria-label]="text"></h2>
+      <h2 class="whats-new-page-details_heading_2 mb-10">
+        <span class="dynamic-notion-block_sr-only">{{ joinPlainText(block?.heading_2?.rich_text) }}</span>
+        <span [innerHTML]="text"></span>
+      </h2>
     }
   }
 
   @case ('heading_3') {
     @let text = joinText(block?.heading_3?.rich_text);
     @if (text) {
-      <h3 class="whats-new-page-details_heading_3 mb-10" [innerHTML]="text" [attr.aria-label]="text"></h3>
+      <h3 class="whats-new-page-details_heading_3 mb-10">
+        <span class="dynamic-notion-block_sr-only">{{ joinPlainText(block?.heading_3?.rich_text) }}</span>
+        <span [innerHTML]="text"></span>
+      </h3>
     }
   }
 
@@ -128,17 +137,17 @@
 
     @if (text) {
       <ol>
-      <li class="whats-new-page-details_default_text">
-        <p class="whats-new-page-details_default_text mb-10" [innerHTML]="text"></p>
+        <li class="whats-new-page-details_default_text">
+          <p class="whats-new-page-details_default_text mb-10" [innerHTML]="text"></p>
 
-        @if (children) {
-          <div class="whats-new-page-details_children_container">
-            @for (child of children; track child.id; let i = $index) {
-              <app-dynamic-notion-block [block]="child"></app-dynamic-notion-block>
-            }
-          </div>
-        }
-      </li>
+          @if (children) {
+            <div class="whats-new-page-details_children_container">
+              @for (child of children; track child.id; let i = $index) {
+                <app-dynamic-notion-block [block]="child"></app-dynamic-notion-block>
+              }
+            </div>
+          }
+        </li>
       </ol>
     }
   }
