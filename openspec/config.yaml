@@ -1,20 +1,91 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+# Project context (shown to AI when creating artifacts)
+context: |
+  # PRMS — OneCGIAR Planning, Reporting & Management System
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+  Monorepo with two deployable apps plus an SDD documentation baseline.
+
+  ## Apps
+  - onecgiar-pr-server/ — NestJS 11 backend. TypeORM 0.3 + MySQL (mysql2),
+    DynamoDB via Dynamoose, RabbitMQ (amqplib), AWS Lambda + aws-serverless-express,
+    Cognito + ActiveDirectory/LDAP auth, Pusher + socket.io, Swagger, Handlebars,
+    ExcelJS. Node 22, Jest. Runs both as a server and as a Lambda (serverless).
+  - onecgiar-pr-client/ — Angular 19 SPA. PrimeNG 19 (+ @primeng/themes),
+    Chart.js, ngx-socket-io, pusher-js, pdfjs-dist, ExcelJS, Hotjar + MS Clarity.
+    Standalone components, Angular signals, OnPush, new control flow (@if/@for/@defer).
+    Jest for unit tests, Cypress for e2e.
+
+  ## Domain
+  PRMS lets OneCGIAR initiatives plan and report research results. Core concepts:
+  results (the central reportable entity, with multiple result types), IPSR /
+  innovation packages, bilateral project result summaries, contribution to
+  indicators, TOC (Theory of Change), CLARISA master data (institutions,
+  countries, regions, impact areas), platform reports, quality assurance (QAED),
+  versioning of reporting phases, notifications, and admin/AD user management.
+
+  ## Server modules (src/api/)
+  results, ipsr, ipsr-framework, bilateral, contribution-to-indicators,
+  platform-report, results-framework-reporting, result-qaed,
+  result-impact-area-scores, type-one-report, global-narratives,
+  global-parameter, notification, user-notification-settings, versioning,
+  delete-recover-data, ad_users, initiative_entity_map, m-qap, ai, home.
+  Cross-cutting: src/auth, src/clarisa, src/shared, src/toc, src/elastic,
+  src/result-dashboard-bi, src/migrations.
+
+  ## Hard rules (project-specific)
+  - Frontend-only work is the default. Server code is READ-ONLY: read it to
+    understand API contracts, entities and DTOs, but never modify it, never run
+    migrations (migration:generate/run), never start the server or install its
+    deps. If a bug's root cause is in the backend, report it with evidence
+    (endpoint + curl + expected vs actual), do not fix it.
+  - Git is read-only for the AI (status/diff/log/show/branch + checkout to
+    compare branches). The user runs add/commit/push/merge/rebase/reset.
+  - Auth uses a custom `auth` request header — NOT `Authorization: Bearer`.
+    Client interceptor: src/app/shared/interceptors/general-interceptor.service.ts.
+  - API base URL for inspection (GET only, never localhost):
+    https://prtest-back.ciat.cgiar.org  (Swagger at /api#/).
+  - NEVER log, echo or print tokens, API keys, webhook URLs, passwords or
+    sensitive env vars — anywhere (code, scripts, CI, docs). See .cursorrules.
+
+  ## Conventions
+  - Commits: `<emoji> <type>(<scope>) <P2-ticket>: <description>`. Always include
+    the Jira ticket id (project P2, instance cgiarmel.atlassian.net), usually
+    derived from the branch name. Emojis: ✨ feat, ♻️ refactor, 🔧/🐛 fix,
+    🎨 style, 📝 docs, 🧪 test.
+  - Client API methods follow `HTTP_METHOD_descriptiveName` (e.g. GET_allRequest),
+    centralized in src/app/shared/services/api/results-api.service.ts.
+  - Client icons: always material-icons-round.
+  - Branches: master (production), staging (integration). PRs target staging/master.
+
+  ## SDD baseline (consult before specs)
+  docs/prd.md (product), docs/system-design/design.md (UI/UX),
+  docs/detailed-design/detailed-design.md (technical), docs/specs/general-setup/
+  (spec templates). Module specs live under docs/specs/<module>/ and must cite
+  these. Authoritative bilateral payload contract:
+  onecgiar-pr-server/docs/bilateral-result-summaries.en.md.
+
+  ## Test gates
+  - Server (Jest): branches 5% / functions 20% / lines 35% / statements 40% (minimums).
+  - Client (Jest + Cypress): branches 50% / functions 60% / lines 60% / statements 60%.
+  - migration:check:ci blocks merges on pending migrations. SonarCloud for security.
+
+# Per-artifact rules
+rules:
+  proposal:
+    - State whether the change is frontend-only, backend-only, or full-stack up front.
+    - If any backend change is required, flag it explicitly — the AI cannot
+      implement server changes; the proposal must hand those to the user.
+    - Reference the relevant SDD baseline docs (prd / system-design / detailed-design)
+      and any affected module spec under docs/specs/.
+    - Cite the Jira ticket (P2-XXXX) the change belongs to.
+  tasks:
+    - Keep frontend and backend tasks in separate, clearly labeled groups.
+    - For each task touching the client, name the concrete component/service file path.
+    - Include a verification step (curl GET against prtest, or UI steps in the app).
+    - Do not include tasks that modify server code, run migrations, or alter git state.
+  design:
+    - Describe the data flow from API contract → service → component → template.
+    - List existing components/services that consume the same data or property,
+      so changes preserve current behavior (e.g. grouped admin dropdowns).
+    - Prefer minimal, incremental changes over rewriting working logic.
