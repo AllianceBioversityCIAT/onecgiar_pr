@@ -1,8 +1,18 @@
+<app-pr-field-header
+  [label]="leadContactField.label"
+  [description]="leadContactField.description"
+  [required]="required"
+  [useColon]="leadContactField.useColon ?? true">
+</app-pr-field-header>
+
 <div class="lead-contact-container">
   <div class="contact-select-wrapper">
     <app-pr-input
       fieldRef="[general-info]-lead_contact_person"
       type="text"
+      [showFieldHeader]="false"
+      [lockRequiredFromFieldManager]="true"
+      [required]="false"
       [disabled]="isContactLocked"
       [(ngModel)]="userSearchService.searchQuery"
       (input)="onSearchInput($event)"

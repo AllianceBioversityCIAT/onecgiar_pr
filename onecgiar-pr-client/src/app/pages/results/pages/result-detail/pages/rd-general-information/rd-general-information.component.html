@@ -40,9 +40,12 @@
     [(ngModel)]="this.generalInfoBody.result_description"
     [maxWords]="300"></app-pr-textarea>
 
-  <app-lead-contact-person-field [body]="this.generalInfoBody"></app-lead-contact-person-field>
+  <app-lead-contact-person-field [body]="this.generalInfoBody" [required]="this.isP25()"></app-lead-contact-person-field>
   @if (this.isP25()) {
-    <div appFeedbackValidation labelText="Lead contact person" [isComplete]="!!this.generalInfoBody.lead_contact_person"></div>
+    <div
+      appFeedbackValidation
+      labelText="Lead contact person"
+      [isComplete]="!!this.generalInfoBody.lead_contact_person && !!this.generalInfoBody.lead_contact_person_data"></div>
   }
 
   <h1 class="pr_label">Impact Area scores:</h1>

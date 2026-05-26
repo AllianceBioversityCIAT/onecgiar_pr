@@ -218,6 +218,11 @@ describe('FieldsManagerService', () => {
         expect(fields['[general-info]-poverty_tag_level_id'].label).toContain('score');
       });
 
+      it('should not require lead_contact_person for P22', () => {
+        const fields = service.fields();
+        expect(fields['[general-info]-lead_contact_person'].required).toBe(false);
+      });
+
       it('should hide impactAreaField for P22', () => {
         const fields = service.fields();
         expect(fields['[general-info]-gender_impact_area_id'].hide).toBe(true);
@@ -490,7 +495,7 @@ describe('FieldsManagerService', () => {
     it('should have correct label and placeholder for lead_contact_person', () => {
       const fields = service.fields();
       expect(fields['[general-info]-lead_contact_person'].label).toBe('Lead contact person');
-      expect(fields['[general-info]-lead_contact_person'].required).toBe(false);
+      expect(fields['[general-info]-lead_contact_person'].required).toBe(true);
     });
 
     it('should have impactAreaField label set to scoresImpactAreaLabel', () => {
