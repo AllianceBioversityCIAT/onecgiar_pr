@@ -282,7 +282,7 @@
   </div>
   <ng-template #selectLeadCenter>
     @if (!this.rdPartnersSE.updatingLeadData) {
-      <app-pr-field-header label="Lead center" [required]="false"></app-pr-field-header>
+      <app-pr-field-header label="Lead center" [required]="!this.rdPartnersSE.partnersBody.is_lead_by_partner"></app-pr-field-header>
       <p-select
         [options]="this.rdPartnersSE.possibleLeadCenters"
         [(ngModel)]="this.rdPartnersSE.leadCenterCode"
@@ -305,6 +305,10 @@
           </div>
         </ng-template>
       </p-select>
+      <div
+        appFeedbackValidation
+        labelText="Lead center"
+        [isComplete]="this.rdPartnersSE.partnersBody.is_lead_by_partner || !!this.rdPartnersSE.leadCenterCode"></div>
     }
   </ng-template>
 
