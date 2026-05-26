@@ -22,6 +22,9 @@ lerna-debug.log*
 # Playwright MCP temp output
 .playwright-mcp/
 
+# Local verification screenshots (never commit — see CLAUDE.md / openspec tasks)
+.local-screenshots/
+
 # IDEs and editors
 /.idea
 .project
