@@ -40,4 +40,12 @@ describe('ResultsFrameworkReportingModule', () => {
       Reflect.getMetadata('imports', ResultsFrameworkReportingModule) ?? [];
     expect(importsMetadata).toEqual(expect.arrayContaining([ResultsModule]));
   });
+
+  it('should export the service so other modules (e.g. the public surface) can reuse it', () => {
+    const exportsMetadata =
+      Reflect.getMetadata('exports', ResultsFrameworkReportingModule) ?? [];
+    expect(exportsMetadata).toEqual(
+      expect.arrayContaining([ResultsFrameworkReportingService]),
+    );
+  });
 });

@@ -51,5 +51,6 @@ import { GeoScopeRoleModule } from './geo_scope_role/geo_scope_role.module';
     ContributionToIndicatorResultsRepository,
     ResultsTocTargetIndicatorRepository,
   ],
+  exports: [ResultsFrameworkReportingService],
 })
 export class ResultsFrameworkReportingModule {}
