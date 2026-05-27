@@ -48,6 +48,10 @@ describe('AppModule metadata', () => {
         path: 'api/bilateral/(.*)',
         method: RequestMethod.ALL,
       },
+      {
+        path: 'api/public-results-framework/(.*)',
+        method: RequestMethod.ALL,
+      },
     );
     expect(firstChain.forRoutes).toHaveBeenCalledWith(
       {

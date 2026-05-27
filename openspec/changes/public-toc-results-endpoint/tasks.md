@@ -40,4 +40,5 @@
 
 - **Code complete, lint-clean, tests green.** New module + controller + wiring + JWT exclusion implemented; `eslint` zero errors.
 - **Tests verified after `npm ci`:** `public-results-framework.controller.spec.ts` (4) + `public-results-framework.module.spec.ts` (3) + origin `results-framework-reporting.module.spec.ts` (4) all pass; origin service+controller specs (43) still green → the new `exports` broke nothing. **Total 54 passing.**
+- **Regression caught & fixed during validation:** adding the JWT `.exclude(...)` entry broke `app.module.spec.ts`, which asserts the exact exclude list via `toHaveBeenCalledWith`. Updated that assertion to include `api/public-results-framework/(.*)` — `app.module.spec.ts` + `main.spec.ts` now green.
 - **e2e/manual items (4.3, 4.6, 5.2):** require a running app / prtest deploy; verify after deploy with `curl` (no `auth` header → 200; private endpoint still 401).
