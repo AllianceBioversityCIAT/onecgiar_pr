@@ -51,5 +51,6 @@ import { ResultsByInstitutionsModule } from '../results/results_by_institutions/
     ContributionToIndicatorResultsRepository,
     ResultsTocTargetIndicatorRepository,
   ],
+  exports: [ResultsFrameworkReportingService],
 })
 export class ResultsFrameworkReportingModule {}
