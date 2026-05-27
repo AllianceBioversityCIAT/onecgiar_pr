@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, Input, OnChanges, SimpleChanges } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, Input, OnChanges, SimpleChanges } from '@angular/core';
+import { FieldsManagerService } from '../../shared/services/fields-manager.service';
 import { debounceTime, distinctUntilChanged, Subject, switchMap, EMPTY } from 'rxjs';
 
 import { User, UserSearchResponse } from '../../pages/results/pages/result-detail/pages/rd-general-information/models/userSearchResponse';
@@ -14,7 +15,15 @@ import { ResultsApiService } from '../../shared/services/api/results-api.service
 })
 export class LeadContactPersonFieldComponent implements OnChanges {
   @Input() body: { lead_contact_person?: string | null; lead_contact_person_data?: User | null };
+  /** P25: show required asterisk without using `.pr-input.mandatory` scan on free-text search. */
+  @Input() required = false;
   isContactLocked: boolean = false;
+
+  private readonly fieldsManager = inject(FieldsManagerService);
+
+  get leadContactField() {
+    return this.fieldsManager.fields()['[general-info]-lead_contact_person'] ?? {};
+  }
   searchResults: User[] = [];
   showResults: boolean = false;
   isSearching: boolean = false;
@@ -127,6 +136,10 @@ export class LeadContactPersonFieldComponent implements OnChanges {
     this.userSearchService.searchQuery = query;
     this.userSearchService.selectedUser = null;
     this.userSearchService.showContactError = false;
+    if (this.body) {
+      this.body.lead_contact_person = null;
+      this.body.lead_contact_person_data = null;
+    }
 
     this.lastQueryWasValidEmail = this.isEmail(query);
 
