@@ -216,10 +216,11 @@ export class RdContributorsAndPartnersService implements OnDestroy {
       next: ({ response }) => {
         this.partnersBody = response;
         this.getDisabledCentersForKP();
-        this.setPossibleLeadPartners(onSave);
+        this.setPossibleLeadPartners(onSave, false);
         this.setLeadPartnerOnLoad(onSave);
-        this.setPossibleLeadCenters(onSave);
+        this.setPossibleLeadCenters(onSave, false);
         this.setLeadCenterOnLoad(onSave);
+        this.runAutoAssignLeads();
 
         this.partnersBody.linked_results = response.linked_results || [];
 
@@ -283,7 +284,7 @@ export class RdContributorsAndPartnersService implements OnDestroy {
     this.cgspaceDisabledList = this.partnersBody.contributing_center?.filter(center => center.from_cgspace);
   }
 
-  setPossibleLeadPartners(updateComponent: boolean = false) {
+  setPossibleLeadPartners(updateComponent: boolean = false, autoAssign: boolean = true) {
     if (updateComponent) {
       this.updatingLeadData = true;
     }
@@ -304,6 +305,10 @@ export class RdContributorsAndPartnersService implements OnDestroy {
       //('possibleLeadPartners', this.possibleLeadPartners);
     }
 
+    if (autoAssign) {
+      this.tryAutoAssignLeadPartner();
+    }
+
     if (updateComponent) {
       setTimeout(() => {
         this.updatingLeadData = false;
@@ -311,7 +316,7 @@ export class RdContributorsAndPartnersService implements OnDestroy {
     }
   }
 
-  setPossibleLeadCenters(updateComponent: boolean = false) {
+  setPossibleLeadCenters(updateComponent: boolean = false, autoAssign: boolean = true) {
     if (updateComponent) {
       this.updatingLeadData = true;
     }
@@ -329,10 +334,59 @@ export class RdContributorsAndPartnersService implements OnDestroy {
       //('possibleLeadCenters', this.possibleLeadCenters);
     }
 
+    if (autoAssign) {
+      this.tryAutoAssignLeadCenter();
+    }
+
     if (updateComponent) {
       setTimeout(() => {
         this.updatingLeadData = false;
       }, 25);
+    }
+  }
+
+  onLeadByPartnerChange(isPartnerLed: boolean) {
+    this.partnersBody.is_lead_by_partner = isPartnerLed;
+    if (isPartnerLed) {
+      this.leadCenterCode = null;
+    } else {
+      this.leadPartnerId = null;
+    }
+    this.setPossibleLeadCenters(true, false);
+    this.setPossibleLeadPartners(true, false);
+    this.runAutoAssignLeads();
+  }
+
+  runAutoAssignLeads() {
+    this.tryAutoAssignLeadCenter();
+    this.tryAutoAssignLeadPartner();
+  }
+
+  tryAutoAssignLeadCenter() {
+    if (this.partnersBody.is_lead_by_partner) {
+      return;
+    }
+    if (this.possibleLeadCenters.length !== 1) {
+      return;
+    }
+    const onlyCenter = this.possibleLeadCenters[0];
+    const leadIsValid = this.leadCenterCode && this.possibleLeadCenters.some(c => c.code === this.leadCenterCode);
+    if (!leadIsValid) {
+      this.leadCenterCode = onlyCenter.code;
+    }
+  }
+
+  tryAutoAssignLeadPartner() {
+    if (!this.partnersBody.is_lead_by_partner) {
+      return;
+    }
+    if (this.possibleLeadPartners.length !== 1) {
+      return;
+    }
+    const onlyPartner = this.possibleLeadPartners[0];
+    const leadIsValid = this.leadPartnerId && this.possibleLeadPartners.some(p => p.institutions_id === this.leadPartnerId);
+    if (!leadIsValid) {
+      this.leadPartnerId = onlyPartner.institutions_id;
     }
   }
 

@@ -11,6 +11,8 @@ This file is intentionally dense. It documents:
 - The patterns to **stop and ask before changing** (load-bearing infrastructure).
 - Naming conventions and anti-patterns observed in the current tree.
 
+> **Document-as-you-go (keep this file current).** Whenever you investigate a feature/flow to do a ticket, append the non-obvious wiring you discovered here — where a field/section lives, which service/DOM mechanism drives it, the gotchas. Keep entries **short** (a couple of lines, not essays) and token-cheap: a pointer + one sentence beats a wall of text. This file is the shared map; growing it once saves re-investigation on every future ticket.
+
 ---
 
 ## 0. The 60-second mental model
@@ -718,9 +720,22 @@ GET_resultById(id: number) {
 
 ### 21.5 Forms & validation
 
-- Use `feedback-validation.directive.ts` for server-side feedback fields.
+There are **two independent layers** — don't conflate them:
+
+1. **Field-level mandatory feedback (frontend, client-side).** Result Detail's parent (`result-detail.component.ts`) calls `DataControlService.someMandatoryFieldIncompleteResultDetail('.section_container')`, which **scans the section DOM** for `.pr-field.mandatory` elements without a `.complete` class (and `.pr-input.mandatory .input-validation`), and builds `fieldFeedbackList` for the validation alert. Two things emit a scannable `.pr-field.mandatory`:
+   - the **`appFeedbackValidation` directive** (`shared/directives/feedback-validation.directive.ts`) — a hidden `<div appFeedbackValidation labelText="…" [isComplete]="…">` that toggles `.complete`; use this when the control is a raw PrimeNG widget (e.g. a bare `<p-select>`).
+   - **`app-pr-select [required]`** (`custom-fields/pr-select`) — its root is `<div class="pr-field" [ngClass]="{ mandatory: required, complete: <has value> }">`, so a required `app-pr-select` is scanned automatically. A bare `<p-select>` is **not** — flipping `app-pr-field-header [required]` only adds the asterisk.
+2. **Section green check (BACKEND).** The gray/green section indicator comes from `green_checks` fetched by `green-checks.service.ts` (`GET_greenChecksByResultId` / `GET_p25GreenChecksByResultId`), refreshed by the interceptor on PATCH/POST. The frontend only renders it — to make a field affect the green check, the **server** completeness query must include it.
 - Programmatic labels: every form control has a `for=` label or an `aria-label`.
-- Required-section indicators surface through `green_checks` in `DataControlService`.
+
+#### Lead fields (P2-2960)
+
+| Field | Where it lives | Validity proxy |
+|---|---|---|
+| Lead Contact Person | `rd-general-information.component.html` → `<app-lead-contact-person-field>` (P22+P25) | `generalInfoBody.lead_contact_person` (set only on valid select/load) |
+| Lead Center / Lead Partner | P22 `rd-partners`, P25 `rd-contributors-and-partners` — toggle `is_lead_by_partner` switches Lead partner (`leadPartnerId`) vs Lead center (`leadCenterCode`) | `rdPartnersSE.leadCenterCode` / `leadPartnerId` |
+
+P22 already enforces Lead Center/Partner via `app-pr-select [required]`. P25 used a bare `<p-select>` for Lead Center, so its mandatory check is wired via `appFeedbackValidation` (see P2-2960).
 
 ### 21.6 i18n
 

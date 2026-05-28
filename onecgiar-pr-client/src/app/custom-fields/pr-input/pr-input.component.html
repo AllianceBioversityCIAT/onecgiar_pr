@@ -1,16 +1,18 @@
 @if (this.preventFieldRender()) {
   <div class="position-relative">
     <app-under-construction-point *ngIf="this.underConstruction"></app-under-construction-point>
-    <app-pr-field-header
-      [label]="customLabel || this.label"
-      [description]="this.description"
-      [required]="this.required"
-      [readOnly]="(readOnly || this.rolesSE.readOnly) && !isStatic"
-      [showDescriptionLabel]="this.showDescription"
-      [descInlineStyles]="descInlineStyles"
-      [labelDescInlineStyles]="labelDescInlineStyles"
-      [useColon]="useColon">
-    </app-pr-field-header>
+    @if (showFieldHeader) {
+      <app-pr-field-header
+        [label]="customLabel || this.label"
+        [description]="this.description"
+        [required]="this.required"
+        [readOnly]="(readOnly || this.rolesSE.readOnly) && !isStatic"
+        [showDescriptionLabel]="this.showDescription"
+        [descInlineStyles]="descInlineStyles"
+        [labelDescInlineStyles]="labelDescInlineStyles"
+        [useColon]="useColon">
+      </app-pr-field-header>
+    }
     <div
       [ngSwitch]="(readOnly || this.rolesSE.readOnly) && !isStatic"
       [ngClass]="{ mandatory: this.required, readOnly: (readOnly || this.rolesSE.readOnly) && !isStatic }"

@@ -774,6 +774,39 @@ describe('LeadContactPersonFieldComponent', () => {
     });
   });
 
+  describe('P25 required field header', () => {
+    it('should show required marker on label when required input is true', () => {
+      component.required = true;
+      component.body = { lead_contact_person: null, lead_contact_person_data: null };
+      fixture.detectChanges();
+
+      const label = fixture.nativeElement.querySelector('.pr_label.required');
+      expect(label).toBeTruthy();
+      expect(label.textContent).toContain('Lead contact person');
+    });
+
+    it('should not show required marker when required input is false', () => {
+      component.required = false;
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.pr_label.required')).toBeFalsy();
+    });
+  });
+
+  describe('lead_contact_person sync on search input', () => {
+    it('should clear lead_contact_person and data when user types new search text', () => {
+      component.body = {
+        lead_contact_person: 'John Doe',
+        lead_contact_person_data: mockJohnDoe
+      };
+
+      component.onSearchInput({ target: { value: 'jane' } } as unknown as Event);
+
+      expect(component.body.lead_contact_person).toBeNull();
+      expect(component.body.lead_contact_person_data).toBeNull();
+    });
+  });
+
   describe('selectUser - updated', () => {
     it('should select user and update generalInfoBody with complete metadata and lock', () => {
       const mockUser = mockUserSearchResponse.response[0];

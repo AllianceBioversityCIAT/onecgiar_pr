@@ -264,7 +264,7 @@
     label="Is this result being led by an external partner?"
     [required]="true"
     [(ngModel)]="this.rdPartnersSE.partnersBody.is_lead_by_partner"
-    (selectOptionEvent)="$event ? (this.rdPartnersSE.leadCenterCode = null) : (this.rdPartnersSE.leadPartnerId = null)"
+    (selectOptionEvent)="this.rdPartnersSE.onLeadByPartnerChange($event)"
     [readOnly]="!this.api.dataControlSE.isKnowledgeProduct && this.rdPartnersSE.partnersBody.no_applicable_partner">
   </app-pr-yes-or-not>
   <app-alert-status [description]="getMessageLead()"></app-alert-status>
@@ -282,7 +282,7 @@
   </div>
   <ng-template #selectLeadCenter>
     @if (!this.rdPartnersSE.updatingLeadData) {
-      <app-pr-field-header label="Lead center" [required]="false"></app-pr-field-header>
+      <app-pr-field-header label="Lead center" [required]="!this.rdPartnersSE.partnersBody.is_lead_by_partner"></app-pr-field-header>
       <p-select
         [options]="this.rdPartnersSE.possibleLeadCenters"
         [(ngModel)]="this.rdPartnersSE.leadCenterCode"
@@ -305,6 +305,10 @@
           </div>
         </ng-template>
       </p-select>
+      <div
+        appFeedbackValidation
+        labelText="Lead center"
+        [isComplete]="this.rdPartnersSE.partnersBody.is_lead_by_partner || !!this.rdPartnersSE.leadCenterCode"></div>
     }
   </ng-template>
 
