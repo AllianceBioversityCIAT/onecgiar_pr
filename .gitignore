@@ -22,6 +22,12 @@ lerna-debug.log*
 # Playwright MCP temp output
 .playwright-mcp/
 
+# Local verification screenshots (never commit — see CLAUDE.md / openspec tasks)
+.local-screenshots/
+
+# Local Claude/Cursor permission overrides (machine-specific)
+**/.claude/settings.local.json
+
 # IDEs and editors
 /.idea
 .project
