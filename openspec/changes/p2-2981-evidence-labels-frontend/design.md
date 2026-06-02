@@ -1,39 +1,47 @@
 ## Context
 
-The Evidence section copy lives in three Angular files: `evidence-item.component` (used by `rd-evidences`), `user-evidence.component` (used by `innovation-dev-info`), and `rd-evidences.component.ts` (the `alertStatus()` intro notes). The public-file label and the "NOT public" info note are duplicated across the two evidence components. The checkbox-group title is produced by `getEvidenceRelatedTitle()` (duplicated in both `.ts` files). Backend persistence of per-typology checkboxes is owned by a separate ticket (Juanda) and is out of scope here.
+Evidence-section copy lives in three Angular files: `evidence-item.component` (used by `rd-evidences`), `user-evidence.component` (used by `innovation-dev-info`), and `rd-evidences.component.ts` (`alertStatus()` intro notes). The public-file label, the visibility info note, and `getEvidenceRelatedTitle()` are duplicated in both evidence components. Key facts confirmed by reading the code (and second opinions from Gemini/DeepSeek/Codex):
+
+- `user-evidence.component.html` does NOT currently render the checkbox-group title nor any checkboxes; its `getEvidenceRelatedTitle()` is unused. To reach parity we must ADD that markup.
+- The public branch of `dynamicAlertStatusBasedOnVisibility()` has a third bullet in `evidence-item` ("You agree to the link...") but only two bullets in `user-evidence`.
+- `rd-evidences.component.ts` `alertStatus()` has a separate `isKnowledgeProduct` branch that must be preserved.
+- The frontend model `EvidencesCreateInterface` only declares `innovation_use_related` and `innovation_readiness_related` among typology fields.
+
+Backend persistence of new typology columns is a separate ticket (Juanda).
 
 ## Goals / Non-Goals
 
 **Goals:**
-- Update all Evidence-section copy as specified (public-file label, info note, dynamic title, intro notes).
-- Make the checkbox-group title resolve the typology label from `result_type_id`.
-- Keep both evidence components (`evidence-item` and `user-evidence`) in sync.
-- Preserve all existing behavior (validations, green checks, KP special-casing).
+- Update all Evidence copy (public-file label, public info note third bullet, dynamic title, intro notes).
+- Show a per-typology informational checkbox for every typology; send it in the payload so it persists once the backend columns exist.
+- Bring `user-evidence` to parity (title + checkboxes).
+- Preserve all existing behavior (validations, green checks, KP intro branch, KP special-casing).
 
 **Non-Goals:**
-- No backend changes, no migrations, no new DB columns (Juanda's ticket).
-- No persistence of new type checkboxes for typologies that lack a column.
-- No new validation rules (new checkboxes are informational).
+- No backend changes, migrations, or new DB columns (Juanda's ticket).
+- No new validation rules (checkboxes are informational).
 - No work on P2-2935 (accordion / upload date / padlock / reorder).
 
 ## Decisions
 
-- **Typology→label mapping in the frontend.** Map `result_type_id` to its display label inside the component (or a small helper) and interpolate it into the title string. Rationale: the correct label is known from `ResultTypeEnum`; the title is pure text and needs no backend. Alternative considered: server-provided label — rejected, unnecessary round-trip for static copy.
-- **Edit copy in place, duplicated across both components.** Update the same strings in `evidence-item` and `user-evidence`. Rationale: matches the current structure; extracting a shared component is a larger refactor out of scope for a copy change. Trade-off: two edit sites — mitigated by updating both in the same change and covering with specs.
-- **Type checkbox stays bound to existing fields only.** Render the type checkbox using existing fields (`innovation_use_related`, `innovation_readiness_related`). For typologies without a column, defer rendering a persisting checkbox to Juanda's backend ticket. Rationale: no column = nowhere to save; avoids a broken control.
-- **No validation changes.** New checkboxes are informational. Rationale: client asked only for the title text; second opinions (Gemini/DeepSeek/Codex) agreed on shipping frontend first; Innovation Use already exists as a checkbox with no validation (precedent).
+- **Show new checkboxes now, persist later.** Add the new `*_related` fields to `EvidencesCreateInterface`, render the typology checkbox bound to them, and include them in the POST payload. Rationale: when Juanda adds the columns + save mapping, persistence activates with zero frontend changes; the extra fields are ignored harmlessly by the server until then. Trade-off: until the backend lands, a checked box for the new typologies is not saved — accepted by the team (Yeck, 2026-06-02).
+- **Typology→label mapping in the frontend.** Resolve the label from `result_type_id` (via `dataControlSE`/result object, same source the components already use). Interpolate into the title and use as the checkbox label. Alternative (server label) rejected — static copy, no round-trip needed.
+- **`user-evidence` reaches parity by adding markup.** Add `<app-pr-field-header [label]="getEvidenceRelatedTitle()">` and the checkbox block to `user-evidence.component.html` (mirroring `evidence-item`). Rationale: team wants the same UI in Innovation Dev info.
+- **Public info-note third bullet replacement (per Ángel 2026-06-02).** In `evidence-item` replace the third public-branch bullet; in `user-evidence` (no third bullet) append the new bullet. The "NOT public" branch is untouched. Rationale: matches the updated User Story and removes the earlier awkward "Yes under No" wording.
+- **Preserve the KP intro branch.** Edit only the non-KP path of `alertStatus()`.
 
 ## Risks / Trade-offs
 
-- **Copy drift between the two components** → Mitigation: edit both in the same change; spec scenarios assert the wording.
-- **Title label mismatch with backend typology names** → Mitigation: derive labels from the same `ResultTypeEnum` values used elsewhere; verify against the Figma mockup wording.
-- **Reviewer confusion about the deferred checkbox** → Mitigation: documented explicitly here and in `proposal.md` as Juanda's separate backend ticket.
+- **Unsaved checkbox before backend lands** → Mitigation: fields are already sent; coordinate so Juanda's column work follows soon; informational only (no validation impact).
+- **Copy drift across the two components** → Mitigation: edit both in the same change; spec scenarios assert wording.
+- **Breaking the KP intro branch** → Mitigation: change only the non-KP branch; covered by `rd-evidences.component.spec.ts`.
+- **Label casing inconsistency** → Mitigation: single typology→label map; follow client wording (KP, Other Output, etc.).
 
 ## Migration Plan
 
-Not applicable — frontend copy only. No DB migration, no data backfill. Rollback = revert the component edits.
+Frontend only — no DB migration, no backfill. Rollback = revert the component edits.
 
 ## Open Questions
 
-- Final display label for each typology in the title (e.g. "KP" vs "Knowledge Product") — follow the client email / Figma mockup wording; confirm with Ángel if any label is ambiguous.
-- Whether the type checkbox should be shown (disabled/hidden) for typologies pending the backend column — default: keep current behavior (only show where a field exists) until Juanda delivers.
+- Exact display casing per typology in the title/checkbox (e.g. "KP" vs "Knowledge Product") — follow the client email / Figma wording; confirm any ambiguous label with Ángel.
+- Field names for the new typologies must match the columns Juanda will create (`policy_change_related`, `capacity_sharing_related`, `other_output_related`, `other_outcome_related`, `knowledge_product_metadata_related`) — align names with the backend ticket before merge.
