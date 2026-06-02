@@ -99,7 +99,8 @@ describe('RdEvidencesComponent', () => {
     it('should return main text when isKnowledgeProduct is false', () => {
       mockApiService.dataControlSE.isKnowledgeProduct = false;
       const result = component.alertStatus();
-      expect(result).toContain('Submit a maximum of 6 pieces of evidence.');
+      expect(result).toContain('Submit a maximum of 6 pieces of evidence per result.');
+      expect(result).not.toContain('Please list evidence from most to least important.');
     });
   });
 

@@ -19,6 +19,11 @@ export interface EvidencesCreateInterface {
   environmental_biodiversity_related?: boolean;
   innovation_use_related?: boolean;
   innovation_readiness_related?: boolean;
+  policy_change_related?: boolean;
+  capacity_sharing_related?: boolean;
+  other_output_related?: boolean;
+  other_outcome_related?: boolean;
+  knowledge_product_metadata_related?: boolean;
   poverty_related?: boolean;
   is_sharepoint?: boolean;
   file?: File;

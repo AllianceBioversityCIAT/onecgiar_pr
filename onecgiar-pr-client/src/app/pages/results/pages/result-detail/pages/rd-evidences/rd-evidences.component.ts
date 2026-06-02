@@ -20,18 +20,13 @@ export class RdEvidencesComponent implements OnInit {
     if (this.api.dataControlSE.isKnowledgeProduct)
       return 'As this knowledge product is stored in the repository, this section only requires an indication of whether the knowledge product is associated with any of the Impact Area tags provided below.';
     let mainText = `<ul>
-    <li>Submit a maximum of 6 pieces of evidence.</li>
-    <li>Please list evidence from most to least important.</li>
+    <li>Submit a maximum of 6 pieces of evidence per result. If you are updating a legacy result (e.g. an innovation) that already has 6 pieces of evidence, remove any that are no longer relevant for the current reporting year and replace them with up-to-date evidence supporting the claim. Evidence will be ordered by the system from most to least recent.</li>
     <li>All links provided should be publicly accessible. All CGIAR publications should be shared using a CGSpace link.</li>
     <li>Links to SharePoint, One Drive, Google Drive, DropBox and other file storage platforms are not allowed.</li>
     <li>Files can be also uploaded to the PRMS repository.</li>
     <li>For confidential evidence, select “Upload file” and then “No” to indicate that it should not be public.</li>
     <li>If you need additional information or guidance on how to create an evidence entry, you can find a video tutorial at the following a <a class="open_route" href="https://cgiar.sharepoint.com/:v:/s/OneCGIARPRMSRepository/ETb3eWyBPm9FumJV75XyUDABeVD57nTvz9zz1kNzL_Ob9w?e=kvLk2t" target="_blank">link</a>.</li>
     `;
-
-    if (this.api.dataControlSE?.currentResult?.result_type_id === 7)
-      mainText +=
-        '<li>Provide evidence/documentation in support of the current innovation readiness level (for level 0 no evidence needs to be provided).</li>';
 
     if (this.api.dataControlSE?.currentResult?.result_type_id === 5)
       mainText +=

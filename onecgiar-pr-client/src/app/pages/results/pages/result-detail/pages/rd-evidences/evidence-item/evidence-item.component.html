@@ -39,7 +39,7 @@
         [options]="this.isPubilcFileOptions"
         optionLabel="name"
         optionValue="id"
-        label="Is this a public file?"
+        label="Can this evidence be shared publicly?"
         [(ngModel)]="this.evidence.is_public_file">
       </app-pr-radio-button>
 
@@ -112,6 +112,16 @@
       <app-pr-checkbox label="Innovation Readiness" [(ngModel)]="this.evidence.innovation_readiness_related" *ngIf="this.dataControlSE.isInnoDev">
       </app-pr-checkbox>
       <app-pr-checkbox label="Innovation Use" [(ngModel)]="this.evidence.innovation_use_related" *ngIf="this.dataControlSE.isInnoUse">
+      </app-pr-checkbox>
+      <app-pr-checkbox label="Policy Change" [(ngModel)]="this.evidence.policy_change_related" *ngIf="this.resultTypeId === 1">
+      </app-pr-checkbox>
+      <app-pr-checkbox label="Capacity Sharing for Development" [(ngModel)]="this.evidence.capacity_sharing_related" *ngIf="this.resultTypeId === 5">
+      </app-pr-checkbox>
+      <app-pr-checkbox label="KP" [(ngModel)]="this.evidence.knowledge_product_metadata_related" *ngIf="this.resultTypeId === 6">
+      </app-pr-checkbox>
+      <app-pr-checkbox label="Other Output" [(ngModel)]="this.evidence.other_output_related" *ngIf="this.resultTypeId === 8">
+      </app-pr-checkbox>
+      <app-pr-checkbox label="Other Outcome" [(ngModel)]="this.evidence.other_outcome_related" *ngIf="this.resultTypeId === 4">
       </app-pr-checkbox>
     </div>
     <app-pr-textarea
