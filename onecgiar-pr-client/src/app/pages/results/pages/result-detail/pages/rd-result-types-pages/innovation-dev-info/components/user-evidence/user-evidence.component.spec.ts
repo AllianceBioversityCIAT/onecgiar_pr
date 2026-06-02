@@ -151,6 +151,6 @@ describe('UserEvidenceComponent', () => {
     api.dataControlSE.currentResult.result_type_id = 2;
     expect(component.getEvidenceRelatedTitle()).toContain('Innovation Use metadata');
     api.dataControlSE.currentResult.result_type_id = 6;
-    expect(component.getEvidenceRelatedTitle()).toContain('KP metadata');
+    expect(component.getEvidenceRelatedTitle()).toContain('Knowledge Product metadata');
   });
 });

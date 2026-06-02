@@ -373,7 +373,7 @@ describe('EvidenceItemComponent', () => {
 
       const result = component.getEvidenceRelatedTitle();
 
-      expect(result).toBe('Indicate whether this evidence is related to an Impact Area score of 2 and/or to the KP metadata');
+      expect(result).toBe('Indicate whether this evidence is related to an Impact Area score of 2 and/or to the Knowledge Product metadata');
     });
   });
 });

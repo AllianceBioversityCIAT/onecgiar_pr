@@ -64,7 +64,7 @@ export class EvidenceItemComponent {
     2: 'Innovation Use',
     4: 'Other Outcome',
     5: 'Capacity Sharing for Development',
-    6: 'KP',
+    6: 'Knowledge Product',
     7: 'Innovation Development',
     8: 'Other Output'
   };
