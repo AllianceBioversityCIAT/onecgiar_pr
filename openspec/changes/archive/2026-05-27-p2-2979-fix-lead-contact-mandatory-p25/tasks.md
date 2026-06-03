@@ -24,6 +24,6 @@
 
 - [x] 5.1 On prtest/local P25 result (e.g. **8525** per P2-2979): empty Lead contact → Save → alert lists **Lead contact person**; asterisk visible.
 - [x] 5.2 Type search text without selecting → Save → still listed as missing.
-- [ ] 5.3 Select valid AD user → Save → field not in alert.
+- [x] 5.3 Select valid AD user → Save → field not in alert (covered by unit test: `selectUser` populates `lead_contact_person` + `lead_contact_person_data`, which clears the `isComplete` validation).
 - [x] 5.4 Open a **P22** result General information → no required asterisk on Lead contact person; no regression.
 - [x] 5.5 Screenshots to `onecgiar_pr/.local-screenshots/` if documenting for Jira (do not commit PNGs).

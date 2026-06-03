@@ -47,7 +47,7 @@ export class EvidenceItemComponent {
         <b>If you indicate that the file being uploaded to the PRMS repository is public:</b>
         <li>You confirm that the file is publicly accessible.</li>
         <li>You confirm that all intellectual property rights related to the file have been observed. This includes any rights relevant to the document owner’s Center affiliation and any specific rights tied to content within the document, such as images.</li>
-        <li>You agree to the link to the file being displayed in the CGIAR Results Dashboard.</li>
+        <li>Evidence marked 'Yes' to this question will be displayed in the Results Dashboard and included in technical reporting products.</li>
       `;
     }
 
@@ -59,12 +59,24 @@ export class EvidenceItemComponent {
     `;
   }
 
-  getEvidenceRelatedTitle() {
-    if (!this.dataControlSE.isInnoDev && !this.dataControlSE.isInnoUse) {
-      return `Please indicate for which Impact Area tags this evidence is related to`;
-    }
+  resultTypeLabels: { [key: number]: string } = {
+    1: 'Policy Change',
+    2: 'Innovation Use',
+    4: 'Other Outcome',
+    5: 'Capacity Sharing for Development',
+    6: 'Knowledge Product',
+    7: 'Innovation Development',
+    8: 'Other Output'
+  };
 
-    return `Please indicate whether this evidence is related to an Impact Area Tag or to the Innovation ${this.dataControlSE.isInnoDev ? 'Readiness level' : 'Use'}`;
+  get resultTypeId(): number {
+    return this.api.dataControlSE?.currentResult?.result_type_id;
+  }
+
+  getEvidenceRelatedTitle() {
+    const label = this.resultTypeLabels[this.resultTypeId];
+    const base = 'Indicate whether this evidence is related to an Impact Area score of 2';
+    return label ? `${base} and/or to the ${label} metadata` : base;
   }
 
   validateCloudLink() {
