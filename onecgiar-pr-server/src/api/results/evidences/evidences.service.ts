@@ -80,50 +80,7 @@ export class EvidencesService {
           evidence.link = await this.getHandleFromRegularLink(evidence.link);
 
           const newEvidence = new Evidence();
-          if (!eExists) {
-            newEvidence.created_by = user.id;
-            newEvidence.last_updated_by = user.id;
-            newEvidence.description = evidence?.description ?? null;
-            newEvidence.gender_related = evidence.gender_related;
-            newEvidence.is_sharepoint = evidence.is_sharepoint;
-            newEvidence.youth_related = evidence.youth_related;
-            newEvidence.nutrition_related = evidence.nutrition_related;
-            newEvidence.environmental_biodiversity_related =
-              evidence.environmental_biodiversity_related;
-            newEvidence.poverty_related = evidence.poverty_related;
-            newEvidence.innovation_readiness_related =
-              evidence.innovation_readiness_related;
-            newEvidence.innovation_use_related =
-              evidence.innovation_use_related;
-            newEvidence.policy_change_related = evidence.policy_change_related;
-            newEvidence.capacity_sharing_related =
-              evidence.capacity_sharing_related;
-            newEvidence.other_output_related = evidence.other_output_related;
-            newEvidence.other_outcome_related = evidence.other_outcome_related;
-            newEvidence.knowledge_product_metadata_related =
-              evidence.knowledge_product_metadata_related;
-            newEvidence.is_supplementary = false;
-            newEvidence.link = evidence.link;
-            newEvidence.result_id = result.id;
-            newEvidence.evidence_type_id = 1;
-
-            const hasQuery = (evidence.link ?? '').indexOf('?');
-            const linkSplit = (evidence.link ?? '')
-              .slice(0, hasQuery != -1 ? hasQuery : evidence.link?.length)
-              .split('/');
-            const handleId = linkSplit.slice(linkSplit.length - 2).join('/');
-
-            const knowledgeProduct =
-              await this._resultsKnowledgeProductsRepository.findOne({
-                where: { handle: Like(handleId) },
-                relations: { result_object: true },
-              });
-
-            if (knowledgeProduct) {
-              newEvidence.knowledge_product_related =
-                knowledgeProduct.result_object.id;
-            }
-          } else {
+          if (eExists) {
             eExists.description = evidence?.description ?? null;
             eExists.gender_related = evidence.gender_related;
             eExists.is_sharepoint = evidence.is_sharepoint;
@@ -156,8 +113,51 @@ export class EvidencesService {
                   knowledgeProduct.result_object.id;
               }
             }
+          } else {
+            newEvidence.created_by = user.id;
+            newEvidence.last_updated_by = user.id;
+            newEvidence.description = evidence?.description ?? null;
+            newEvidence.gender_related = evidence.gender_related;
+            newEvidence.is_sharepoint = evidence.is_sharepoint;
+            newEvidence.youth_related = evidence.youth_related;
+            newEvidence.nutrition_related = evidence.nutrition_related;
+            newEvidence.environmental_biodiversity_related =
+              evidence.environmental_biodiversity_related;
+            newEvidence.poverty_related = evidence.poverty_related;
+            newEvidence.innovation_readiness_related =
+              evidence.innovation_readiness_related;
+            newEvidence.innovation_use_related =
+              evidence.innovation_use_related;
+            newEvidence.policy_change_related = evidence.policy_change_related;
+            newEvidence.capacity_sharing_related =
+              evidence.capacity_sharing_related;
+            newEvidence.other_output_related = evidence.other_output_related;
+            newEvidence.other_outcome_related = evidence.other_outcome_related;
+            newEvidence.knowledge_product_metadata_related =
+              evidence.knowledge_product_metadata_related;
+            newEvidence.is_supplementary = false;
+            newEvidence.link = evidence.link;
+            newEvidence.result_id = result.id;
+            newEvidence.evidence_type_id = 1;
+
+            const hasQuery = (evidence.link ?? '').indexOf('?');
+            const linkSplit = (evidence.link ?? '')
+              .slice(0, hasQuery > -1 ? hasQuery : evidence.link?.length)
+              .split('/');
+            const handleId = linkSplit.slice(linkSplit.length - 2).join('/');
+
+            const knowledgeProduct =
+              await this._resultsKnowledgeProductsRepository.findOne({
+                where: { handle: Like(handleId) },
+                relations: { result_object: true },
+              });
+
+            if (knowledgeProduct) {
+              newEvidence.knowledge_product_related =
+                knowledgeProduct.result_object.id;
+            }
           }
-          const currentEvidence = eExists ? eExists : newEvidence;
+          const currentEvidence = eExists || newEvidence;
 
           const evidenceSaved =
             await this._evidencesRepository.save(currentEvidence);
@@ -180,11 +180,12 @@ export class EvidencesService {
         );
         const testDuplicate = supplementaryArray.map((e) => e.link);
         if (new Set(testDuplicate).size !== testDuplicate.length) {
-          throw {
-            response: {},
-            message: 'Duplicate links found in supplementary information',
-            status: HttpStatus.BAD_REQUEST,
-          };
+          const error = new Error(
+            'Duplicate links found in supplementary information',
+          );
+          (error as any).response = {};
+          (error as any).status = HttpStatus.BAD_REQUEST;
+          throw error;
         }
         await this._evidencesRepository.updateEvidences(
           createEvidenceDto.result_id,
@@ -193,8 +194,10 @@ export class EvidencesService {
           true,
           1,
         );
-        const supplementaryLenght: number =
-          supplementaryArray.length > 3 ? 3 : supplementaryArray.length;
+        const supplementaryLenght: number = Math.min(
+          supplementaryArray.length,
+          3,
+        );
         const newsEvidencesArray: Evidence[] = [];
         for (let index = 0; index < supplementaryLenght; index++) {
           const supplementary = supplementaryArray[index];
@@ -210,7 +213,10 @@ export class EvidencesService {
             supplementary.link,
           );
 
-          if (!eExists) {
+          if (eExists) {
+            eExists.description = supplementary?.description ?? null;
+            newsEvidencesArray.push(eExists);
+          } else {
             const newEvidnece = new Evidence();
             newEvidnece.created_by = user.id;
             newEvidnece.last_updated_by = user.id;
@@ -220,9 +226,6 @@ export class EvidencesService {
             newEvidnece.result_id = result.id;
             newEvidnece.evidence_type_id = 1;
             newsEvidencesArray.push(newEvidnece);
-          } else {
-            eExists.description = supplementary?.description ?? null;
-            newsEvidencesArray.push(eExists);
           }
         }
         await this._evidencesRepository.save(newsEvidencesArray);
@@ -255,11 +258,10 @@ export class EvidencesService {
         );
         const testDuplicate = evidencesArray.map((e) => e.link);
         if (new Set(testDuplicate).size !== testDuplicate.length) {
-          throw {
-            response: {},
-            message: 'Duplicate links found in the evidence',
-            status: HttpStatus.BAD_REQUEST,
-          };
+          const error = new Error('Duplicate links found in the evidence');
+          (error as any).response = {};
+          (error as any).status = HttpStatus.BAD_REQUEST;
+          throw error;
         }
 
         await this._evidencesRepository.updateEvidences(
@@ -270,8 +272,7 @@ export class EvidencesService {
           6,
         );
 
-        const long: number =
-          evidencesArray.length > 6 ? 6 : evidencesArray.length;
+        const long: number = Math.min(evidencesArray.length, 6);
         for (let index = 0; index < long; index++) {
           const evidence = evidencesArray[index];
           const eExists =
@@ -285,50 +286,7 @@ export class EvidencesService {
           evidence.link = await this.getHandleFromRegularLink(evidence.link);
 
           const newEvidence = new Evidence();
-          if (!eExists) {
-            newEvidence.created_by = user.id;
-            newEvidence.last_updated_by = user.id;
-            newEvidence.description = evidence?.description ?? null;
-            newEvidence.gender_related = evidence.gender_related;
-            newEvidence.is_sharepoint = evidence.is_sharepoint;
-            newEvidence.youth_related = evidence.youth_related;
-            newEvidence.nutrition_related = evidence.nutrition_related;
-            newEvidence.environmental_biodiversity_related =
-              evidence.environmental_biodiversity_related;
-            newEvidence.poverty_related = evidence.poverty_related;
-            newEvidence.innovation_readiness_related =
-              evidence.innovation_readiness_related;
-            newEvidence.innovation_use_related =
-              evidence.innovation_use_related;
-            newEvidence.policy_change_related = evidence.policy_change_related;
-            newEvidence.capacity_sharing_related =
-              evidence.capacity_sharing_related;
-            newEvidence.other_output_related = evidence.other_output_related;
-            newEvidence.other_outcome_related = evidence.other_outcome_related;
-            newEvidence.knowledge_product_metadata_related =
-              evidence.knowledge_product_metadata_related;
-            newEvidence.is_supplementary = false;
-            newEvidence.link = evidence.link;
-            newEvidence.result_id = result.id;
-            newEvidence.evidence_type_id = 6;
-
-            const hasQuery = (evidence.link ?? '').indexOf('?');
-            const linkSplit = (evidence.link ?? '')
-              .slice(0, hasQuery != -1 ? hasQuery : evidence.link?.length)
-              .split('/');
-            const handleId = linkSplit.slice(linkSplit.length - 2).join('/');
-
-            const knowledgeProduct =
-              await this._resultsKnowledgeProductsRepository.findOne({
-                where: { handle: Like(handleId) },
-                relations: { result_object: true },
-              });
-
-            if (knowledgeProduct) {
-              newEvidence.knowledge_product_related =
-                knowledgeProduct.result_object.id;
-            }
-          } else {
+          if (eExists) {
             eExists.description = evidence?.description ?? null;
             eExists.gender_related = evidence.gender_related;
             eExists.is_sharepoint = evidence.is_sharepoint;
@@ -361,8 +319,51 @@ export class EvidencesService {
                   knowledgeProduct.result_object.id;
               }
             }
+          } else {
+            newEvidence.created_by = user.id;
+            newEvidence.last_updated_by = user.id;
+            newEvidence.description = evidence?.description ?? null;
+            newEvidence.gender_related = evidence.gender_related;
+            newEvidence.is_sharepoint = evidence.is_sharepoint;
+            newEvidence.youth_related = evidence.youth_related;
+            newEvidence.nutrition_related = evidence.nutrition_related;
+            newEvidence.environmental_biodiversity_related =
+              evidence.environmental_biodiversity_related;
+            newEvidence.poverty_related = evidence.poverty_related;
+            newEvidence.innovation_readiness_related =
+              evidence.innovation_readiness_related;
+            newEvidence.innovation_use_related =
+              evidence.innovation_use_related;
+            newEvidence.policy_change_related = evidence.policy_change_related;
+            newEvidence.capacity_sharing_related =
+              evidence.capacity_sharing_related;
+            newEvidence.other_output_related = evidence.other_output_related;
+            newEvidence.other_outcome_related = evidence.other_outcome_related;
+            newEvidence.knowledge_product_metadata_related =
+              evidence.knowledge_product_metadata_related;
+            newEvidence.is_supplementary = false;
+            newEvidence.link = evidence.link;
+            newEvidence.result_id = result.id;
+            newEvidence.evidence_type_id = 6;
+
+            const hasQuery = (evidence.link ?? '').indexOf('?');
+            const linkSplit = (evidence.link ?? '')
+              .slice(0, hasQuery > -1 ? hasQuery : evidence.link?.length)
+              .split('/');
+            const handleId = linkSplit.slice(linkSplit.length - 2).join('/');
+
+            const knowledgeProduct =
+              await this._resultsKnowledgeProductsRepository.findOne({
+                where: { handle: Like(handleId) },
+                relations: { result_object: true },
+              });
+
+            if (knowledgeProduct) {
+              newEvidence.knowledge_product_related =
+                knowledgeProduct.result_object.id;
+            }
           }
-          const currentEvidence = eExists ? eExists : newEvidence;
+          const currentEvidence = eExists || newEvidence;
 
           const evidenceSaved =
             await this._evidencesRepository.save(currentEvidence);
@@ -512,11 +513,10 @@ export class EvidencesService {
       const result: Result =
         await this._resultRepository.getResultById(resultId);
       if (!result) {
-        throw {
-          response: {},
-          message: 'Results Not Found',
-          status: HttpStatus.NOT_FOUND,
-        };
+        const error = new Error('Results Not Found');
+        (error as any).response = {};
+        (error as any).status = HttpStatus.NOT_FOUND;
+        throw error;
       }
 
       const innoDev =
@@ -593,11 +593,10 @@ export class EvidencesService {
       const result: Result =
         await this._resultRepository.getResultById(resultId);
       if (!result) {
-        throw {
-          response: {},
-          message: 'Results Not Found',
-          status: HttpStatus.NOT_FOUND,
-        };
+        const error = new Error('Results Not Found');
+        (error as any).response = {};
+        (error as any).status = HttpStatus.NOT_FOUND;
+        throw error;
       }
 
       const innoDev =
@@ -656,8 +655,8 @@ export class EvidencesService {
     return `This action returns a #${id} evidence`;
   }
 
-  update(id: number, updateEvidenceDto: UpdateEvidenceDto) {
-    return `This action updates a #${id} evidence ${updateEvidenceDto}`;
+  update(id: number, _updateEvidenceDto: UpdateEvidenceDto) {
+    return `This action updates a #${id} evidence`;
   }
 
   async updateEvidencesPartial(
