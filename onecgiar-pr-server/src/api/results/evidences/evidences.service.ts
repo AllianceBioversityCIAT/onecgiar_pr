@@ -3,7 +3,6 @@ import {
   CreateEvidenceDto,
   EvidencesCreateInterface,
 } from './dto/create-evidence.dto';
-import { UpdateEvidenceDto } from './dto/update-evidence.dto';
 import { EvidenceDto } from '../dto/review-update.dto';
 import { EvidencesRepository } from './evidences.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
@@ -46,189 +45,19 @@ export class EvidencesService {
         createEvidenceDto.result_id,
       );
       await this._versionRepository.getBaseVersion();
-      if (createEvidenceDto?.evidences?.length) {
-        const evidencesArray = createEvidenceDto?.evidences.filter(
-          (e) => !!e?.link || e?.is_sharepoint,
-        );
-        const testDuplicate = evidencesArray.map((e) => e.link);
-        if (new Set(testDuplicate).size !== testDuplicate.length) {
-          const error = new Error('Duplicate links found in the evidence');
-          (error as any).response = {};
-          (error as any).status = HttpStatus.BAD_REQUEST;
-          throw error;
-        }
-
-        await this._evidencesRepository.updateEvidences(
-          createEvidenceDto.result_id,
-          evidencesArray.map((e) => e?.id),
-          user.id,
-          false,
-          1,
-        );
-
-        const long: number = Math.min(evidencesArray.length, 6);
-        for (let index = 0; index < long; index++) {
-          const evidence = evidencesArray[index];
-          const eExists =
-            await this._evidencesRepository.getEvidencesByResultIdAndLink(
-              result.id,
-              evidence.id,
-              false,
-              1,
-            );
-
-          evidence.link = await this.getHandleFromRegularLink(evidence.link);
-
-          const newEvidence = new Evidence();
-          if (eExists) {
-            eExists.description = evidence?.description ?? null;
-            eExists.gender_related = evidence.gender_related;
-            eExists.is_sharepoint = evidence.is_sharepoint;
-            eExists.youth_related = evidence.youth_related;
-            eExists.nutrition_related = evidence.nutrition_related;
-            eExists.environmental_biodiversity_related =
-              evidence.environmental_biodiversity_related;
-            eExists.poverty_related = evidence.poverty_related;
-            eExists.innovation_readiness_related =
-              evidence.innovation_readiness_related;
-            eExists.innovation_use_related = evidence.innovation_use_related;
-            eExists.policy_change_related = evidence.policy_change_related;
-            eExists.capacity_sharing_related =
-              evidence.capacity_sharing_related;
-            eExists.other_output_related = evidence.other_output_related;
-            eExists.other_outcome_related = evidence.other_outcome_related;
-            eExists.knowledge_product_metadata_related =
-              evidence.knowledge_product_metadata_related;
-            eExists.link = evidence.link;
-
-            if (!eExists.knowledge_product_related) {
-              const knowledgeProduct =
-                await this._resultsKnowledgeProductsRepository.findOne({
-                  where: { handle: Like(evidence.link) },
-                  relations: { result_object: true },
-                });
-
-              if (knowledgeProduct) {
-                eExists.knowledge_product_related =
-                  knowledgeProduct.result_object.id;
-              }
-            }
-          } else {
-            newEvidence.created_by = user.id;
-            newEvidence.last_updated_by = user.id;
-            newEvidence.description = evidence?.description ?? null;
-            newEvidence.gender_related = evidence.gender_related;
-            newEvidence.is_sharepoint = evidence.is_sharepoint;
-            newEvidence.youth_related = evidence.youth_related;
-            newEvidence.nutrition_related = evidence.nutrition_related;
-            newEvidence.environmental_biodiversity_related =
-              evidence.environmental_biodiversity_related;
-            newEvidence.poverty_related = evidence.poverty_related;
-            newEvidence.innovation_readiness_related =
-              evidence.innovation_readiness_related;
-            newEvidence.innovation_use_related =
-              evidence.innovation_use_related;
-            newEvidence.policy_change_related = evidence.policy_change_related;
-            newEvidence.capacity_sharing_related =
-              evidence.capacity_sharing_related;
-            newEvidence.other_output_related = evidence.other_output_related;
-            newEvidence.other_outcome_related = evidence.other_outcome_related;
-            newEvidence.knowledge_product_metadata_related =
-              evidence.knowledge_product_metadata_related;
-            newEvidence.is_supplementary = false;
-            newEvidence.link = evidence.link;
-            newEvidence.result_id = result.id;
-            newEvidence.evidence_type_id = 1;
-
-            const hasQuery = (evidence.link ?? '').indexOf('?');
-            const linkSplit = (evidence.link ?? '')
-              .slice(0, hasQuery > -1 ? hasQuery : evidence.link?.length)
-              .split('/');
-            const handleId = linkSplit.slice(linkSplit.length - 2).join('/');
-
-            const knowledgeProduct =
-              await this._resultsKnowledgeProductsRepository.findOne({
-                where: { handle: Like(handleId) },
-                relations: { result_object: true },
-              });
-
-            if (knowledgeProduct) {
-              newEvidence.knowledge_product_related =
-                knowledgeProduct.result_object.id;
-            }
-          }
-          const currentEvidence = eExists || newEvidence;
-
-          const evidenceSaved =
-            await this._evidencesRepository.save(currentEvidence);
-          if (evidenceSaved?.id)
-            await this.saveSPData(evidence, evidenceSaved?.id);
-        }
-      } else {
-        await this._evidencesRepository.updateEvidences(
-          createEvidenceDto.result_id,
-          [],
-          user.id,
-          false,
-          1,
-        );
-      }
+      await this._processMainEvidencesOnCreate(
+        createEvidenceDto,
+        result,
+        user,
+        1,
+      );
 
       if (createEvidenceDto?.supplementary) {
-        const supplementaryArray = createEvidenceDto?.supplementary.filter(
-          (e) => !!e?.link,
+        await this._processSupplementaryOnCreate(
+          createEvidenceDto,
+          result,
+          user,
         );
-        const testDuplicate = supplementaryArray.map((e) => e.link);
-        if (new Set(testDuplicate).size !== testDuplicate.length) {
-          const error = new Error(
-            'Duplicate links found in supplementary information',
-          );
-          (error as any).response = {};
-          (error as any).status = HttpStatus.BAD_REQUEST;
-          throw error;
-        }
-        await this._evidencesRepository.updateEvidences(
-          createEvidenceDto.result_id,
-          supplementaryArray.map((e) => e.link.trim()),
-          user.id,
-          true,
-          1,
-        );
-        const supplementaryLenght: number = Math.min(
-          supplementaryArray.length,
-          3,
-        );
-        const newsEvidencesArray: Evidence[] = [];
-        for (let index = 0; index < supplementaryLenght; index++) {
-          const supplementary = supplementaryArray[index];
-          const eExists =
-            await this._evidencesRepository.getEvidencesByResultIdAndLink(
-              result.id,
-              supplementary.link,
-              true,
-              1,
-            );
-
-          supplementary.link = await this.getHandleFromRegularLink(
-            supplementary.link,
-          );
-
-          if (eExists) {
-            eExists.description = supplementary?.description ?? null;
-            newsEvidencesArray.push(eExists);
-          } else {
-            const newEvidnece = new Evidence();
-            newEvidnece.created_by = user.id;
-            newEvidnece.last_updated_by = user.id;
-            newEvidnece.description = supplementary?.description ?? null;
-            newEvidnece.is_supplementary = true;
-            newEvidnece.link = supplementary.link;
-            newEvidnece.result_id = result.id;
-            newEvidnece.evidence_type_id = 1;
-            newsEvidencesArray.push(newEvidnece);
-          }
-        }
-        await this._evidencesRepository.save(newsEvidencesArray);
       }
 
       await this._resultRepository.update(createEvidenceDto.result_id, {
@@ -246,139 +75,255 @@ export class EvidencesService {
     }
   }
 
+  private _throwServiceError(
+    message: string,
+    status: HttpStatus = HttpStatus.BAD_REQUEST,
+  ): never {
+    const error = new Error(message);
+    (error as any).response = {};
+    (error as any).status = status;
+    throw error;
+  }
+
+  private _assertUniqueLinks(links: string[], message: string): void {
+    if (new Set(links).size !== links.length) {
+      this._throwServiceError(message);
+    }
+  }
+
+  private _applyEvidenceInputFields(
+    target: Evidence,
+    evidence: EvidencesCreateInterface,
+  ): void {
+    target.description = evidence?.description ?? null;
+    target.gender_related = evidence.gender_related;
+    target.is_sharepoint = evidence.is_sharepoint;
+    target.youth_related = evidence.youth_related;
+    target.nutrition_related = evidence.nutrition_related;
+    target.environmental_biodiversity_related =
+      evidence.environmental_biodiversity_related;
+    target.poverty_related = evidence.poverty_related;
+    target.innovation_readiness_related = evidence.innovation_readiness_related;
+    target.innovation_use_related = evidence.innovation_use_related;
+    target.policy_change_related = evidence.policy_change_related;
+    target.capacity_sharing_related = evidence.capacity_sharing_related;
+    target.other_output_related = evidence.other_output_related;
+    target.other_outcome_related = evidence.other_outcome_related;
+    target.knowledge_product_metadata_related =
+      evidence.knowledge_product_metadata_related;
+    target.link = evidence.link;
+  }
+
+  private _handleIdFromEvidenceLink(link: string): string {
+    const hasQuery = (link ?? '').indexOf('?');
+    const linkSplit = (link ?? '')
+      .slice(0, hasQuery > -1 ? hasQuery : link?.length)
+      .split('/');
+    return linkSplit.slice(linkSplit.length - 2).join('/');
+  }
+
+  private async _findKnowledgeProductResultIdByHandle(
+    handleId: string,
+  ): Promise<number | undefined> {
+    const knowledgeProduct =
+      await this._resultsKnowledgeProductsRepository.findOne({
+        where: { handle: Like(handleId) },
+        relations: { result_object: true },
+      });
+    return knowledgeProduct?.result_object?.id;
+  }
+
+  private async _enrichExistingEvidenceKnowledgeProduct(
+    eExists: Evidence,
+    link: string,
+  ): Promise<void> {
+    if (eExists.knowledge_product_related) {
+      return;
+    }
+    const knowledgeProduct =
+      await this._resultsKnowledgeProductsRepository.findOne({
+        where: { handle: Like(link) },
+        relations: { result_object: true },
+      });
+    if (knowledgeProduct) {
+      eExists.knowledge_product_related = knowledgeProduct.result_object.id;
+    }
+  }
+
+  private async _buildNewEvidenceV1(
+    evidence: EvidencesCreateInterface,
+    result: Result,
+    user: TokenDto,
+    evidenceTypeId: number,
+  ): Promise<Evidence> {
+    const newEvidence = new Evidence();
+    newEvidence.created_by = user.id;
+    newEvidence.last_updated_by = user.id;
+    this._applyEvidenceInputFields(newEvidence, evidence);
+    newEvidence.is_supplementary = false;
+    newEvidence.result_id = result.id;
+    newEvidence.evidence_type_id = evidenceTypeId;
+
+    const knowledgeProductResultId =
+      await this._findKnowledgeProductResultIdByHandle(
+        this._handleIdFromEvidenceLink(evidence.link),
+      );
+    if (knowledgeProductResultId) {
+      newEvidence.knowledge_product_related = knowledgeProductResultId;
+    }
+    return newEvidence;
+  }
+
+  private async _upsertEvidenceItemV1(
+    result: Result,
+    evidence: EvidencesCreateInterface,
+    user: TokenDto,
+    evidenceTypeId: number,
+  ): Promise<void> {
+    const eExists =
+      await this._evidencesRepository.getEvidencesByResultIdAndLink(
+        result.id,
+        evidence.id,
+        false,
+        evidenceTypeId,
+      );
+
+    evidence.link = await this.getHandleFromRegularLink(evidence.link);
+
+    let currentEvidence: Evidence;
+    if (eExists) {
+      this._applyEvidenceInputFields(eExists, evidence);
+      await this._enrichExistingEvidenceKnowledgeProduct(
+        eExists,
+        evidence.link,
+      );
+      currentEvidence = eExists;
+    } else {
+      currentEvidence = await this._buildNewEvidenceV1(
+        evidence,
+        result,
+        user,
+        evidenceTypeId,
+      );
+    }
+
+    const evidenceSaved = await this._evidencesRepository.save(currentEvidence);
+    if (evidenceSaved?.id) {
+      await this.saveSPData(evidence, evidenceSaved.id);
+    }
+  }
+
+  private async _processMainEvidencesOnCreate(
+    createEvidenceDto: CreateEvidenceDto,
+    result: Result,
+    user: TokenDto,
+    evidenceTypeId: number,
+  ): Promise<void> {
+    if (!createEvidenceDto?.evidences?.length) {
+      await this._evidencesRepository.updateEvidences(
+        createEvidenceDto.result_id,
+        [],
+        user.id,
+        false,
+        evidenceTypeId,
+      );
+      return;
+    }
+
+    const evidencesArray = createEvidenceDto.evidences.filter(
+      (e) => !!e?.link || e?.is_sharepoint,
+    );
+    this._assertUniqueLinks(
+      evidencesArray.map((e) => e.link),
+      'Duplicate links found in the evidence',
+    );
+
+    await this._evidencesRepository.updateEvidences(
+      createEvidenceDto.result_id,
+      evidencesArray.map((e) => e?.id),
+      user.id,
+      false,
+      evidenceTypeId,
+    );
+
+    const limit = Math.min(evidencesArray.length, 6);
+    for (let index = 0; index < limit; index++) {
+      await this._upsertEvidenceItemV1(
+        result,
+        evidencesArray[index],
+        user,
+        evidenceTypeId,
+      );
+    }
+  }
+
+  private async _processSupplementaryOnCreate(
+    createEvidenceDto: CreateEvidenceDto,
+    result: Result,
+    user: TokenDto,
+  ): Promise<void> {
+    const supplementaryArray = createEvidenceDto.supplementary.filter(
+      (e) => !!e?.link,
+    );
+    this._assertUniqueLinks(
+      supplementaryArray.map((e) => e.link),
+      'Duplicate links found in supplementary information',
+    );
+
+    await this._evidencesRepository.updateEvidences(
+      createEvidenceDto.result_id,
+      supplementaryArray.map((e) => e.link.trim()),
+      user.id,
+      true,
+      1,
+    );
+
+    const limit = Math.min(supplementaryArray.length, 3);
+    const newsEvidencesArray: Evidence[] = [];
+    for (let index = 0; index < limit; index++) {
+      const supplementary = supplementaryArray[index];
+      const eExists =
+        await this._evidencesRepository.getEvidencesByResultIdAndLink(
+          result.id,
+          supplementary.link,
+          true,
+          1,
+        );
+
+      supplementary.link = await this.getHandleFromRegularLink(
+        supplementary.link,
+      );
+
+      if (eExists) {
+        eExists.description = supplementary?.description ?? null;
+        newsEvidencesArray.push(eExists);
+      } else {
+        const newEvidnece = new Evidence();
+        newEvidnece.created_by = user.id;
+        newEvidnece.last_updated_by = user.id;
+        newEvidnece.description = supplementary?.description ?? null;
+        newEvidnece.is_supplementary = true;
+        newEvidnece.link = supplementary.link;
+        newEvidnece.result_id = result.id;
+        newEvidnece.evidence_type_id = 1;
+        newsEvidencesArray.push(newEvidnece);
+      }
+    }
+    await this._evidencesRepository.save(newsEvidencesArray);
+  }
+
   async createV2(createEvidenceDto: CreateEvidenceDto, user: TokenDto) {
     try {
       const result = await this._resultRepository.getResultById(
         createEvidenceDto.result_id,
       );
       await this._versionRepository.getBaseVersion();
-      if (createEvidenceDto?.evidences?.length) {
-        const evidencesArray = createEvidenceDto?.evidences.filter(
-          (e) => !!e?.link || e?.is_sharepoint,
-        );
-        const testDuplicate = evidencesArray.map((e) => e.link);
-        if (new Set(testDuplicate).size !== testDuplicate.length) {
-          const error = new Error('Duplicate links found in the evidence');
-          (error as any).response = {};
-          (error as any).status = HttpStatus.BAD_REQUEST;
-          throw error;
-        }
-
-        await this._evidencesRepository.updateEvidences(
-          createEvidenceDto.result_id,
-          evidencesArray.map((e) => e?.id),
-          user.id,
-          false,
-          6,
-        );
-
-        const long: number = Math.min(evidencesArray.length, 6);
-        for (let index = 0; index < long; index++) {
-          const evidence = evidencesArray[index];
-          const eExists =
-            await this._evidencesRepository.getEvidencesByResultIdAndLink(
-              result.id,
-              evidence.id,
-              false,
-              6,
-            );
-
-          evidence.link = await this.getHandleFromRegularLink(evidence.link);
-
-          const newEvidence = new Evidence();
-          if (eExists) {
-            eExists.description = evidence?.description ?? null;
-            eExists.gender_related = evidence.gender_related;
-            eExists.is_sharepoint = evidence.is_sharepoint;
-            eExists.youth_related = evidence.youth_related;
-            eExists.nutrition_related = evidence.nutrition_related;
-            eExists.environmental_biodiversity_related =
-              evidence.environmental_biodiversity_related;
-            eExists.poverty_related = evidence.poverty_related;
-            eExists.innovation_readiness_related =
-              evidence.innovation_readiness_related;
-            eExists.innovation_use_related = evidence.innovation_use_related;
-            eExists.policy_change_related = evidence.policy_change_related;
-            eExists.capacity_sharing_related =
-              evidence.capacity_sharing_related;
-            eExists.other_output_related = evidence.other_output_related;
-            eExists.other_outcome_related = evidence.other_outcome_related;
-            eExists.knowledge_product_metadata_related =
-              evidence.knowledge_product_metadata_related;
-            eExists.link = evidence.link;
-
-            if (!eExists.knowledge_product_related) {
-              const knowledgeProduct =
-                await this._resultsKnowledgeProductsRepository.findOne({
-                  where: { handle: Like(evidence.link) },
-                  relations: { result_object: true },
-                });
-
-              if (knowledgeProduct) {
-                eExists.knowledge_product_related =
-                  knowledgeProduct.result_object.id;
-              }
-            }
-          } else {
-            newEvidence.created_by = user.id;
-            newEvidence.last_updated_by = user.id;
-            newEvidence.description = evidence?.description ?? null;
-            newEvidence.gender_related = evidence.gender_related;
-            newEvidence.is_sharepoint = evidence.is_sharepoint;
-            newEvidence.youth_related = evidence.youth_related;
-            newEvidence.nutrition_related = evidence.nutrition_related;
-            newEvidence.environmental_biodiversity_related =
-              evidence.environmental_biodiversity_related;
-            newEvidence.poverty_related = evidence.poverty_related;
-            newEvidence.innovation_readiness_related =
-              evidence.innovation_readiness_related;
-            newEvidence.innovation_use_related =
-              evidence.innovation_use_related;
-            newEvidence.policy_change_related = evidence.policy_change_related;
-            newEvidence.capacity_sharing_related =
-              evidence.capacity_sharing_related;
-            newEvidence.other_output_related = evidence.other_output_related;
-            newEvidence.other_outcome_related = evidence.other_outcome_related;
-            newEvidence.knowledge_product_metadata_related =
-              evidence.knowledge_product_metadata_related;
-            newEvidence.is_supplementary = false;
-            newEvidence.link = evidence.link;
-            newEvidence.result_id = result.id;
-            newEvidence.evidence_type_id = 6;
-
-            const hasQuery = (evidence.link ?? '').indexOf('?');
-            const linkSplit = (evidence.link ?? '')
-              .slice(0, hasQuery > -1 ? hasQuery : evidence.link?.length)
-              .split('/');
-            const handleId = linkSplit.slice(linkSplit.length - 2).join('/');
-
-            const knowledgeProduct =
-              await this._resultsKnowledgeProductsRepository.findOne({
-                where: { handle: Like(handleId) },
-                relations: { result_object: true },
-              });
-
-            if (knowledgeProduct) {
-              newEvidence.knowledge_product_related =
-                knowledgeProduct.result_object.id;
-            }
-          }
-          const currentEvidence = eExists || newEvidence;
-
-          const evidenceSaved =
-            await this._evidencesRepository.save(currentEvidence);
-          if (evidenceSaved?.id)
-            await this.saveSPData(evidence, evidenceSaved?.id);
-        }
-      } else {
-        await this._evidencesRepository.updateEvidences(
-          createEvidenceDto.result_id,
-          [],
-          user.id,
-          false,
-          6,
-        );
-      }
+      await this._processMainEvidencesOnCreate(
+        createEvidenceDto,
+        result,
+        user,
+        6,
+      );
 
       return {
         response: createEvidenceDto,
@@ -651,14 +596,6 @@ export class EvidencesService {
     }
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} evidence`;
-  }
-
-  update(id: number, _updateEvidenceDto: UpdateEvidenceDto) {
-    return `This action updates a #${id} evidence`;
-  }
-
   async updateEvidencesPartial(
     evidences: EvidenceDto[],
     resultId: number,
@@ -809,9 +746,5 @@ export class EvidencesService {
       };
       await this.saveSPData(evidenceForSP, evidenceSaved.id);
     }
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} evidence`;
   }
 }
