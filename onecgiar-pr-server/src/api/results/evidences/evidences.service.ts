@@ -52,11 +52,10 @@ export class EvidencesService {
         );
         const testDuplicate = evidencesArray.map((e) => e.link);
         if (new Set(testDuplicate).size !== testDuplicate.length) {
-          throw {
-            response: {},
-            message: 'Duplicate links found in the evidence',
-            status: HttpStatus.BAD_REQUEST,
-          };
+          const error = new Error('Duplicate links found in the evidence');
+          (error as any).response = {};
+          (error as any).status = HttpStatus.BAD_REQUEST;
+          throw error;
         }
 
         await this._evidencesRepository.updateEvidences(
@@ -67,8 +66,7 @@ export class EvidencesService {
           1,
         );
 
-        const long: number =
-          evidencesArray.length > 6 ? 6 : evidencesArray.length;
+        const long: number = Math.min(evidencesArray.length, 6);
         for (let index = 0; index < long; index++) {
           const evidence = evidencesArray[index];
           const eExists =
@@ -97,6 +95,13 @@ export class EvidencesService {
               evidence.innovation_readiness_related;
             newEvidence.innovation_use_related =
               evidence.innovation_use_related;
+            newEvidence.policy_change_related = evidence.policy_change_related;
+            newEvidence.capacity_sharing_related =
+              evidence.capacity_sharing_related;
+            newEvidence.other_output_related = evidence.other_output_related;
+            newEvidence.other_outcome_related = evidence.other_outcome_related;
+            newEvidence.knowledge_product_metadata_related =
+              evidence.knowledge_product_metadata_related;
             newEvidence.is_supplementary = false;
             newEvidence.link = evidence.link;
             newEvidence.result_id = result.id;
@@ -130,6 +135,13 @@ export class EvidencesService {
             eExists.innovation_readiness_related =
               evidence.innovation_readiness_related;
             eExists.innovation_use_related = evidence.innovation_use_related;
+            eExists.policy_change_related = evidence.policy_change_related;
+            eExists.capacity_sharing_related =
+              evidence.capacity_sharing_related;
+            eExists.other_output_related = evidence.other_output_related;
+            eExists.other_outcome_related = evidence.other_outcome_related;
+            eExists.knowledge_product_metadata_related =
+              evidence.knowledge_product_metadata_related;
             eExists.link = evidence.link;
 
             if (!eExists.knowledge_product_related) {
@@ -288,6 +300,13 @@ export class EvidencesService {
               evidence.innovation_readiness_related;
             newEvidence.innovation_use_related =
               evidence.innovation_use_related;
+            newEvidence.policy_change_related = evidence.policy_change_related;
+            newEvidence.capacity_sharing_related =
+              evidence.capacity_sharing_related;
+            newEvidence.other_output_related = evidence.other_output_related;
+            newEvidence.other_outcome_related = evidence.other_outcome_related;
+            newEvidence.knowledge_product_metadata_related =
+              evidence.knowledge_product_metadata_related;
             newEvidence.is_supplementary = false;
             newEvidence.link = evidence.link;
             newEvidence.result_id = result.id;
@@ -321,6 +340,13 @@ export class EvidencesService {
             eExists.innovation_readiness_related =
               evidence.innovation_readiness_related;
             eExists.innovation_use_related = evidence.innovation_use_related;
+            eExists.policy_change_related = evidence.policy_change_related;
+            eExists.capacity_sharing_related =
+              evidence.capacity_sharing_related;
+            eExists.other_output_related = evidence.other_output_related;
+            eExists.other_outcome_related = evidence.other_outcome_related;
+            eExists.knowledge_product_metadata_related =
+              evidence.knowledge_product_metadata_related;
             eExists.link = evidence.link;
 
             if (!eExists.knowledge_product_related) {
@@ -520,6 +546,12 @@ export class EvidencesService {
         e.poverty_related = !!e.poverty_related;
         e.innovation_readiness_related = !!e.innovation_readiness_related;
         e.innovation_use_related = !!e.innovation_use_related;
+        e.policy_change_related = !!e.policy_change_related;
+        e.capacity_sharing_related = !!e.capacity_sharing_related;
+        e.other_output_related = !!e.other_output_related;
+        e.other_outcome_related = !!e.other_outcome_related;
+        e.knowledge_product_metadata_related =
+          !!e.knowledge_product_metadata_related;
         e.is_sharepoint = Number(!!e?.is_sharepoint);
         e.is_public_file = Boolean(e.is_public_file);
       });
@@ -588,6 +620,12 @@ export class EvidencesService {
         e.poverty_related = !!e.poverty_related;
         e.innovation_readiness_related = !!e.innovation_readiness_related;
         e.innovation_use_related = !!e.innovation_use_related;
+        e.policy_change_related = !!e.policy_change_related;
+        e.capacity_sharing_related = !!e.capacity_sharing_related;
+        e.other_output_related = !!e.other_output_related;
+        e.other_outcome_related = !!e.other_outcome_related;
+        e.knowledge_product_metadata_related =
+          !!e.knowledge_product_metadata_related;
         e.is_sharepoint = Number(!!e?.is_sharepoint);
         e.is_public_file = Boolean(e.is_public_file);
       });

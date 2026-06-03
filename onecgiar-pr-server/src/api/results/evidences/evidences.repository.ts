@@ -106,7 +106,7 @@ export class EvidencesRepository
   private readonly _logger: Logger = new Logger(EvidencesRepository.name);
 
   constructor(
-    private dataSource: DataSource,
+    private readonly dataSource: DataSource,
     private readonly _handlersError: HandlersError,
   ) {
     super(Evidence, dataSource.createEntityManager());
@@ -416,7 +416,12 @@ export class EvidencesRepository
     e.result_id,
     e.knowledge_product_related,
     e.innovation_readiness_related,
-    e.innovation_use_related
+    e.innovation_use_related,
+    e.policy_change_related,
+    e.capacity_sharing_related,
+    e.other_output_related,
+    e.other_outcome_related,
+    e.knowledge_product_metadata_related
     FROM evidence e 
     LEFT JOIN (
         SELECT es1.*
