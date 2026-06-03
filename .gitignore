@@ -6,6 +6,9 @@
 # Antigravity (agy) local cache
 /cache
 
+# Session context notes (local only, for iterating later)
+/context
+
 # Logs
 logs
 *.log

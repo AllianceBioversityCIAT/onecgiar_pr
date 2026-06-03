@@ -5,7 +5,7 @@ import { In } from 'typeorm';
 
 @Injectable()
 export class ClarisaInnovationUseLevelsService {
-  private logger: Logger = new Logger(ClarisaInnovationUseLevelsService.name);
+  private readonly logger: Logger = new Logger(ClarisaInnovationUseLevelsService.name);
   constructor(
     private readonly _clarisaInnovationUseLevelRepository: ClarisaInnovationUseLevelRepository,
     private readonly _handlersError: HandlersError,
@@ -14,14 +14,11 @@ export class ClarisaInnovationUseLevelsService {
   async findAll() {
     try {
       const response = await this._clarisaInnovationUseLevelRepository.find();
-      this.logger.debug(response);
       if (!response?.length) {
-        this.logger.debug('No innovation use levels were found in findAll');
-        throw {
-          response: {},
-          message: 'No innovation use levels were found',
-          status: HttpStatus.NOT_FOUND,
-        };
+        const error = new Error('No innovation use levels were found in findAll');
+        (error as any).response = {};
+        (error as any).status = HttpStatus.NOT_FOUND;
+        throw error;
       }
 
       return {
@@ -42,14 +39,11 @@ export class ClarisaInnovationUseLevelsService {
       const response = await this._clarisaInnovationUseLevelRepository.find({
         where: { id: In([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) },
       });
-      this.logger.debug(response);
       if (!response.length) {
-        this.logger.debug('No innovation use levels were found in findAllV2');
-        throw {
-          response: {},
-          message: 'No innovation use levels were found',
-          status: HttpStatus.NOT_FOUND,
-        };
+        const error = new Error('No innovation use levels were found in findAllV2');
+        (error as any).response = {};
+        (error as any).status = HttpStatus.NOT_FOUND;
+        throw error;
       }
 
       return {
