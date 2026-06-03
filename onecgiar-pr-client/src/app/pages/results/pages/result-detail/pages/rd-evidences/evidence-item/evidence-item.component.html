@@ -1,5 +1,5 @@
-<div class="evidence_item">
-  <div class="index">{{ this.index }}</div>
+<div class="evidence_item" [class.embedded]="this.embedded">
+  <div class="index" *ngIf="!this.embedded">{{ this.index }}</div>
   <div class="evidence_fields">
     <app-pr-radio-button
       *ngIf="!this.dataControlSE.isKnowledgeProduct"
@@ -109,7 +109,7 @@
       <app-pr-checkbox label="Nutrition" [(ngModel)]="this.evidence.nutrition_related"> </app-pr-checkbox>
       <app-pr-checkbox label="Environment" [(ngModel)]="this.evidence.environmental_biodiversity_related"> </app-pr-checkbox>
       <app-pr-checkbox label="Poverty" [(ngModel)]="this.evidence.poverty_related"> </app-pr-checkbox>
-      <app-pr-checkbox label="Innovation Readiness" [(ngModel)]="this.evidence.innovation_readiness_related" *ngIf="this.dataControlSE.isInnoDev">
+      <app-pr-checkbox label="Innovation Development" [(ngModel)]="this.evidence.innovation_readiness_related" *ngIf="this.dataControlSE.isInnoDev">
       </app-pr-checkbox>
       <app-pr-checkbox label="Innovation Use" [(ngModel)]="this.evidence.innovation_use_related" *ngIf="this.dataControlSE.isInnoUse">
       </app-pr-checkbox>
@@ -138,6 +138,6 @@
   </div>
   <app-edit-or-delete-item-button
     (click)="this.deleteItem()"
-    *ngIf="!this.dataControlSE.isKnowledgeProduct && !this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status">
+    *ngIf="!this.embedded && !this.dataControlSE.isKnowledgeProduct && !this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status">
   </app-edit-or-delete-item-button>
 </div>

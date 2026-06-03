@@ -234,12 +234,71 @@ describe('RdEvidencesComponent', () => {
   });
 
   describe('addEvidence', () => {
-    it('should add a new evidence to the evidencesBody array', () => {
+    it('should open the creation modal with a clean draft (not push directly)', () => {
       component.addEvidence();
 
-      expect(component.evidencesBody.evidences).toHaveLength(1);
-      const newEvidence = component.evidencesBody.evidences[0];
-      expect(newEvidence).toEqual({ is_sharepoint: false });
+      expect(component.showCreateModal).toBe(true);
+      expect(component.draftEvidence).toEqual({ is_sharepoint: false });
+      expect(component.evidencesBody.evidences).toHaveLength(0);
+    });
+  });
+
+  describe('confirmCreateEvidence', () => {
+    it('should prepend the draft to the top of the list and close the modal', () => {
+      component.evidencesBody.evidences = [{ is_sharepoint: true, link: 'existing' }];
+      component.draftEvidence = { is_sharepoint: false, link: 'new-link' };
+      component.showCreateModal = true;
+
+      component.confirmCreateEvidence();
+
+      expect(component.evidencesBody.evidences[0]).toEqual({ is_sharepoint: false, link: 'new-link' });
+      expect(component.evidencesBody.evidences).toHaveLength(2);
+      expect(component.showCreateModal).toBe(false);
+    });
+  });
+
+  describe('cancelCreateEvidence', () => {
+    it('should close the modal and discard the draft', () => {
+      component.draftEvidence = { is_sharepoint: false, link: 'discard-me' };
+      component.showCreateModal = true;
+
+      component.cancelCreateEvidence();
+
+      expect(component.showCreateModal).toBe(false);
+      expect(component.draftEvidence).toEqual({ is_sharepoint: false });
+      expect(component.evidencesBody.evidences).toHaveLength(0);
+    });
+  });
+
+  describe('sortEvidences', () => {
+    it('should order evidences newest-first by date then id', () => {
+      component.evidencesBody.evidences = [
+        { id: 1, creation_date: '2026-01-01T10:00:00Z' },
+        { id: 2, creation_date: '2026-03-01T10:00:00Z' },
+        { id: 3, last_updated_date: '2026-06-01T10:00:00Z', creation_date: '2026-02-01T10:00:00Z' }
+      ];
+
+      component.sortEvidences();
+
+      expect(component.evidencesBody.evidences.map(e => e.id)).toEqual([3, 2, 1]);
+    });
+  });
+
+  describe('accordion header helpers', () => {
+    it('isFileEvidence / evidenceTypeLabel reflect is_sharepoint', () => {
+      expect(component.isFileEvidence({ is_sharepoint: true })).toBe(true);
+      expect(component.evidenceTypeLabel({ is_sharepoint: true })).toBe('File Evidence');
+      expect(component.evidenceTypeLabel({ is_sharepoint: false })).toBe('Link Evidence');
+    });
+
+    it('getSelectedImpactTags returns labels of marked fields', () => {
+      const tags = component.getSelectedImpactTags({ gender_related: true, youth_related: true });
+      expect(tags).toEqual(['Gender', 'Climate change']);
+    });
+
+    it('evidenceDisplayName prefers file name then link', () => {
+      expect(component.evidenceDisplayName({ sp_file_name: 'doc.pdf', link: 'x' })).toBe('doc.pdf');
+      expect(component.evidenceDisplayName({ link: 'http://x' })).toBe('http://x');
     });
   });
 

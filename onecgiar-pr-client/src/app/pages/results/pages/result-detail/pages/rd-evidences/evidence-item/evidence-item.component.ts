@@ -23,6 +23,9 @@ export class EvidenceItemComponent {
   @Input() index: number;
   @Input() isSuppInfo: boolean;
   @Input() isOptional: boolean = false;
+  // When true the item is embedded inside the create modal or an accordion body:
+  // hide its own index badge and delete button (those live in the accordion header / modal footer).
+  @Input() embedded: boolean = false;
   @Output() deleteEvent = new EventEmitter();
   incorrectFile = false;
 

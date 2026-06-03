@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { EvidencesBody } from './model/evidencesBody.model';
+import { EvidencesBody, EvidencesCreateInterface } from './model/evidencesBody.model';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InnovationControlListService } from '../../../../../../shared/services/global/innovation-control-list.service';
 import { SaveButtonService } from '../../../../../../custom-fields/save-button/save-button.service';
@@ -15,6 +15,27 @@ export class RdEvidencesComponent implements OnInit {
   readinessLevel: number = 0;
   isOptional: boolean = false;
   isOptionalReadinessLevel: boolean;
+
+  // P2-2935: creation modal + accordion list
+  showCreateModal = false;
+  draftEvidence: EvidencesCreateInterface = { is_sharepoint: false };
+
+  // Impact-area + typology fields surfaced as tags in the collapsed accordion header.
+  // (Note: the "Climate change" checkbox is bound to youth_related, matching the existing form.)
+  private readonly tagFields: { field: keyof EvidencesCreateInterface; label: string }[] = [
+    { field: 'gender_related', label: 'Gender' },
+    { field: 'youth_related', label: 'Climate change' },
+    { field: 'nutrition_related', label: 'Nutrition' },
+    { field: 'environmental_biodiversity_related', label: 'Environment' },
+    { field: 'poverty_related', label: 'Poverty' },
+    { field: 'innovation_readiness_related', label: 'Innovation Development' },
+    { field: 'innovation_use_related', label: 'Innovation Use' },
+    { field: 'policy_change_related', label: 'Policy Change' },
+    { field: 'capacity_sharing_related', label: 'Capacity Sharing for Development' },
+    { field: 'knowledge_product_metadata_related', label: 'Knowledge Product' },
+    { field: 'other_output_related', label: 'Other Output' },
+    { field: 'other_outcome_related', label: 'Other Outcome' }
+  ];
 
   alertStatus() {
     if (this.api.dataControlSE.isKnowledgeProduct)
@@ -52,9 +73,27 @@ export class RdEvidencesComponent implements OnInit {
   getSectionInformation() {
     this.api.resultsSE.GET_evidences().subscribe(({ response }) => {
       this.evidencesBody = response;
+      this.sortEvidences();
       this.readinessLevel = this.innovationControlListSE.readinessLevelsList.findIndex(item => item.id == response?.innovation_readiness_level_id);
       this.isOptional = Boolean(this.readinessLevel === 0);
       this.isOptionalReadinessLevel = Boolean(this.readinessLevel === 0);
+    });
+  }
+
+  // Newest-first. Stable: only called on load and after save, never while editing.
+  sortEvidences() {
+    const ts = (e: EvidencesCreateInterface) => {
+      const d = e?.last_updated_date || e?.creation_date;
+      const t = d ? new Date(d).getTime() : NaN;
+      return Number.isNaN(t) ? null : t;
+    };
+    this.evidencesBody?.evidences?.sort((a, b) => {
+      const ta = ts(a);
+      const tb = ts(b);
+      if (ta !== null && tb !== null && ta !== tb) return tb - ta;
+      if (ta !== null && tb === null) return -1;
+      if (ta === null && tb !== null) return 1;
+      return (b?.id ?? 0) - (a?.id ?? 0);
     });
   }
 
@@ -113,12 +152,63 @@ export class RdEvidencesComponent implements OnInit {
     });
   }
 
+  // P2-2935: "Add evidence" now opens the creation modal with a clean draft.
   addEvidence() {
-    this.evidencesBody.evidences.push({ is_sharepoint: false });
+    this.draftEvidence = { is_sharepoint: false };
+    this.showCreateModal = true;
+  }
+
+  // Confirm from the modal: prepend (newest on top) and re-run validation. No persistence here.
+  confirmCreateEvidence() {
+    this.evidencesBody.evidences.unshift(this.draftEvidence);
+    this.showCreateModal = false;
+    this.draftEvidence = { is_sharepoint: false };
+    this.validateCheckBoxes();
+  }
+
+  cancelCreateEvidence() {
+    this.showCreateModal = false;
+    this.draftEvidence = { is_sharepoint: false };
   }
 
   deleteEvidence(index) {
     this.evidencesBody.evidences.splice(index, 1);
+    this.validateCheckBoxes();
+  }
+
+  // Delete from the accordion header with a confirmation popup (reuses the existing alert).
+  deleteEvidenceWithConfirm(index: number) {
+    this.api.alertsFe.show(
+      { id: 'confirm-delete-evidence', title: 'Are you sure you want to delete this evidence?', status: 'warning', confirmText: 'Yes, delete' },
+      () => this.deleteEvidence(index)
+    );
+  }
+
+  // ---- Accordion header helpers (P2-2935) ----
+
+  isFileEvidence(evidence: EvidencesCreateInterface): boolean {
+    return Boolean(evidence?.is_sharepoint);
+  }
+
+  evidenceTypeLabel(evidence: EvidencesCreateInterface): string {
+    return this.isFileEvidence(evidence) ? 'File Evidence' : 'Link Evidence';
+  }
+
+  evidenceDisplayName(evidence: EvidencesCreateInterface): string {
+    return evidence?.sp_file_name || evidence?.link || '';
+  }
+
+  getSelectedImpactTags(evidence: EvidencesCreateInterface): string[] {
+    if (!evidence) return [];
+    return this.tagFields.filter(({ field }) => evidence[field]).map(({ label }) => label);
+  }
+
+  // True when the modal draft can be added (mirrors the per-item save rules).
+  get draftValid(): boolean {
+    const e = this.draftEvidence;
+    if (!e) return false;
+    if (e.is_sharepoint) return Boolean(e.file || e.link);
+    return Boolean(e.link);
   }
 
   validateCheckBoxes() {

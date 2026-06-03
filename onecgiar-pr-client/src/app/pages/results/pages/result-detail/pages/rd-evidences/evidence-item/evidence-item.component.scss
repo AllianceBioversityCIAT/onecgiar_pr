@@ -6,6 +6,16 @@
   position: relative;
   overflow: hidden;
 
+  // P2-2935 — inside the create modal / accordion body: no index column
+  &.embedded {
+    grid-template-columns: 1fr;
+    padding: 0px 4px 6px 4px;
+
+    .evidence_fields {
+      margin-top: 6px;
+    }
+  }
+
   .cgspace-link-message {
     width: 100%;
     text-align: start;
