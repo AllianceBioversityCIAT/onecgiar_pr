@@ -45,11 +45,9 @@
 
       <app-alert-status [description]="dynamicAlertStatusBasedOnVisibility()" *ngIf="this.evidence.is_public_file !== null"> </app-alert-status>
 
-      <div class="upload_warning_box">
-        <app-pr-field-header class="upload_warning_title" label="File to be uploaded to the repository" [required]="true"></app-pr-field-header>
-        <app-alert-status status="warning" description="Documents in the PRMS repository will be <b>view-only and cannot be edited.</b>">
-        </app-alert-status>
-      </div>
+      <app-pr-field-header label="File to be uploaded to the repository" [required]="true" [useColon]="true"></app-pr-field-header>
+      <app-alert-status status="warning" description="Documents in the PRMS repository will be <b>view-only and cannot be edited.</b>">
+      </app-alert-status>
 
       <div class="file-link-view" *ngIf="this.evidence?.sp_file_name; else uploadfilefield">
         <div class="file-name">

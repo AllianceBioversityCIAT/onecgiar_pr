@@ -15,76 +15,7 @@
       margin-top: 6px;
     }
 
-    // P2-2935 — Figma-faithful filled alert boxes (scoped to the modal/accordion only;
-    // the shared app-alert-status keeps its minimal look everywhere else in the app).
-
-    // Blue "public / not public" info box
-    ::ng-deep app-alert-status .pr_alert:has(.icon.info) {
-      position: relative;
-      background: var(--pr-color-blue-50);
-      border: 1px solid var(--pr-color-blue-200);
-      border-radius: 4px;
-      padding: 16px 44px 16px 16px;
-
-      .line {
-        display: none;
-      }
-
-      .icon.info {
-        position: absolute;
-        top: 14px;
-        right: 14px;
-        font-size: 18px;
-        color: var(--pr-color-blue-500);
-      }
-
-      .text {
-        b {
-          display: block;
-          margin-bottom: 6px;
-        }
-
-        li {
-          margin-left: 18px;
-          line-height: 1.5;
-        }
-      }
-    }
-
-    // Yellow "file to be uploaded to the repository" warning box — title + note together (Figma-literal)
-    .upload_warning_box {
-      position: relative;
-      background: var(--pr-color-yellow-50);
-      border-left: 4px solid var(--pr-color-yellow-100);
-      padding: 16px 44px 16px 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-
-      .upload_warning_title ::ng-deep .pr_label {
-        font-weight: 600;
-      }
-
-      ::ng-deep app-alert-status .pr_alert {
-        position: static;
-        padding: 0;
-
-        .line,
-        .black_point {
-          display: none;
-        }
-
-        .icon.warning {
-          position: absolute;
-          top: 14px;
-          right: 14px;
-          font-size: 18px;
-          color: var(--pr-color-yellow-300);
-        }
-      }
-    }
-
-    // Dropzone — keep the PRMS indigo dashed border (brand), add Figma rounding/padding/soft bg
+    // Dropzone — keep the PRMS indigo dashed border (brand), add the mockup rounding/padding/soft bg
     .drag-and-drop-field {
       border-radius: 10px;
       padding: 40px 0px;
