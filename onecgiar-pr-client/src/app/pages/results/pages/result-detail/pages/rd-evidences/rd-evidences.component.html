@@ -14,62 +14,65 @@
   <app-alert-status *ngIf="validateCheckBoxes()" [description]="validateCheckBoxes()" status="warning"> </app-alert-status>
 
   <div class="evidences">
-    <app-collapsible-container
-      class="evidence_accordion"
-      *ngFor="let evidence of this.evidencesBody.evidences; let i = index">
-      <div header class="evidence_acc_header">
+    <!-- P2-2935: flat (non-collapsible) evidence card — all info fits, no accordion -->
+    <div class="evidence_card" *ngFor="let evidence of this.evidencesBody.evidences; let i = index">
+      <div class="ev_card_top">
         <div class="ev_index">{{ i + 1 }}</div>
-        <div class="ev_main">
-          <div class="ev_type_row">
-            <span class="ev_type">{{ evidenceTypeLabel(evidence) }}</span>
-            <i
-              *ngIf="isFileEvidence(evidence)"
-              class="material-icons-round ev_lock"
-              [class.public]="evidence.is_public_file"
-              [class.private]="!evidence.is_public_file"
-              [pTooltip]="evidence.is_public_file ? 'Public' : 'Private'"
-              tooltipPosition="top">
-              {{ evidence.is_public_file ? 'lock_open' : 'lock' }}
-            </i>
-            <span class="ev_date" *ngIf="evidence.creation_date || evidence.last_updated_date">
-              <ng-container *ngIf="evidence.creation_date"
-                >Added: {{ evidence.creation_date | date: 'MMM d, y' }} at {{ evidence.creation_date | date: 'h:mm a' }}</ng-container
-              >
-              <ng-container *ngIf="evidence.last_updated_date">
-                | Updated: {{ evidence.last_updated_date | date: 'MMM d, y' }} at {{ evidence.last_updated_date | date: 'h:mm a' }}</ng-container
-              >
-            </span>
-          </div>
-          <div class="ev_evidence_row">
-            <span class="ev_label">Evidence:</span>
-            <a
-              *ngIf="evidence.link; else plainName"
-              [href]="evidence.link"
-              target="_blank"
-              rel="noopener noreferrer"
-              (click)="$event.stopPropagation()"
-              >{{ evidenceDisplayName(evidence) }}</a
-            >
-            <ng-template #plainName>
-              <span class="ev_name">{{ evidenceDisplayName(evidence) }}</span>
-            </ng-template>
-            <span class="ev_tag" *ngFor="let tag of getSelectedImpactTags(evidence)">{{ tag }}</span>
-          </div>
+        <div class="ev_type_row">
+          <span class="ev_type">{{ evidenceTypeLabel(evidence) }}</span>
+          <i
+            *ngIf="isFileEvidence(evidence)"
+            class="material-icons-round ev_lock"
+            [class.public]="evidence.is_public_file"
+            [class.private]="!evidence.is_public_file"
+            [pTooltip]="evidence.is_public_file ? 'Public' : 'Private'"
+            tooltipPosition="top">
+            {{ evidence.is_public_file ? 'lock_open' : 'lock' }}
+          </i>
+          <span class="ev_date" *ngIf="evidence.creation_date || evidence.last_updated_date">
+            <ng-container *ngIf="evidence.creation_date">Added: {{ evidence.creation_date | date: 'MMM d, y' }}</ng-container>
+            <ng-container *ngIf="evidence.last_updated_date"> | Updated: {{ evidence.last_updated_date | date: 'MMM d, y' }}</ng-container>
+          </span>
         </div>
-        <button
-          type="button"
-          class="ev_delete"
-          pTooltip="Delete evidence"
-          tooltipPosition="top"
-          *ngIf="!dataControlSE.isKnowledgeProduct && !api.rolesSE.readOnly && !api.dataControlSE?.currentResult?.status"
-          (click)="$event.stopPropagation(); deleteEvidenceWithConfirm(i)">
-          <i class="material-icons-round">delete</i>
-        </button>
+        <div class="ev_actions" *ngIf="!dataControlSE.isKnowledgeProduct && !api.rolesSE.readOnly && !api.dataControlSE?.currentResult?.status">
+          <button type="button" class="ev_edit" pTooltip="Edit evidence" tooltipPosition="top" (click)="editEvidence(i)">
+            <i class="material-icons-round">edit</i>
+          </button>
+          <button type="button" class="ev_delete" pTooltip="Delete evidence" tooltipPosition="top" (click)="deleteEvidenceWithConfirm(i)">
+            <i class="material-icons-round">delete</i>
+          </button>
+        </div>
       </div>
-      <div content>
-        <app-evidence-item [evidence]="evidence" [embedded]="true" [isOptional]="isOptional"></app-evidence-item>
+
+      <div class="ev_card_body">
+        <span class="ev_ro_item ev_ro_main">
+          <i class="material-icons-round">{{ isFileEvidence(evidence) ? 'description' : 'link' }}</i>
+          <a
+            *ngIf="evidence.link; else roPlainName"
+            [href]="evidence.link"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="ev_ro_link"
+            >{{ evidenceDisplayName(evidence) }}</a
+          >
+          <ng-template #roPlainName>
+            <span class="ev_ro_name">{{ evidenceDisplayName(evidence) || '—' }}</span>
+          </ng-template>
+        </span>
+
+        <span class="ev_ro_item" *ngIf="getSelectedImpactTags(evidence).length">
+          <i class="material-icons-round">sell</i>
+          <span class="ev_ro_tags">
+            <span class="ev_tag" *ngFor="let tag of getSelectedImpactTags(evidence)">{{ tag }}</span>
+          </span>
+        </span>
+
+        <span class="ev_ro_item ev_ro_details" *ngIf="evidence.description">
+          <i class="material-icons-round">notes</i>
+          <span>{{ evidence.description }}</span>
+        </span>
       </div>
-    </app-collapsible-container>
+    </div>
   </div>
 
   <app-no-data-text
@@ -107,7 +110,7 @@
   [style]="{ width: '720px', maxWidth: '95vw' }">
   <div class="evidence_modal">
     <div class="modal_header">
-      <div class="modal_title">Add New Evidence</div>
+      <div class="modal_title">{{ isEditingEvidence ? 'Edit Evidence' : 'Add New Evidence' }}</div>
       <button type="button" class="modal_close" pTooltip="Close" (click)="cancelCreateEvidence()">
         <i class="material-icons-round">close</i>
       </button>
@@ -115,7 +118,12 @@
     <app-evidence-item *ngIf="showCreateModal" [evidence]="draftEvidence" [embedded]="true" [isOptional]="isOptional"></app-evidence-item>
     <div class="buttons">
       <app-pr-button padding="medium" text="Cancel" colorType="secondary" (click)="cancelCreateEvidence()"></app-pr-button>
-      <app-pr-button padding="medium" text="Add evidence" icon="add" [ngClass]="{ globalDisabled: !draftValid }" (click)="confirmCreateEvidence()"></app-pr-button>
+      <app-pr-button
+        padding="medium"
+        [text]="isEditingEvidence ? 'Save changes' : 'Add evidence'"
+        [icon]="isEditingEvidence ? 'save' : 'add'"
+        [ngClass]="{ globalDisabled: !draftValid }"
+        (click)="confirmCreateEvidence()"></app-pr-button>
     </div>
   </div>
 </p-dialog>

@@ -16,9 +16,11 @@ export class RdEvidencesComponent implements OnInit {
   isOptional: boolean = false;
   isOptionalReadinessLevel: boolean;
 
-  // P2-2935: creation modal + accordion list
+  // P2-2935: creation/edit modal + accordion list
   showCreateModal = false;
   draftEvidence: EvidencesCreateInterface = { is_sharepoint: false };
+  // null → the modal is creating; a number → the modal is editing that evidence index.
+  editingIndex: number | null = null;
 
   // Impact-area + typology fields surfaced as tags in the collapsed accordion header.
   // (Note: the "Climate change" checkbox is bound to youth_related, matching the existing form.)
@@ -152,23 +154,43 @@ export class RdEvidencesComponent implements OnInit {
     });
   }
 
-  // P2-2935: "Add evidence" now opens the creation modal with a clean draft.
+  // P2-2935: "Add evidence" opens the modal in create mode with a clean draft.
   addEvidence() {
+    this.editingIndex = null;
     this.draftEvidence = { is_sharepoint: false };
     this.showCreateModal = true;
   }
 
-  // Confirm from the modal: prepend (newest on top) and re-run validation. No persistence here.
+  // P2-2935: the pencil opens the modal in edit mode on a clone, so "Cancel" discards changes.
+  editEvidence(index: number) {
+    this.editingIndex = index;
+    this.draftEvidence = { ...this.evidencesBody.evidences[index] };
+    this.showCreateModal = true;
+  }
+
+  get isEditingEvidence(): boolean {
+    return this.editingIndex !== null;
+  }
+
+  // Confirm from the modal: replace in place when editing, otherwise prepend (newest on top),
+  // then persist immediately by running the section-level Save (same POST as the "Save" button).
   confirmCreateEvidence() {
-    this.evidencesBody.evidences.unshift(this.draftEvidence);
+    if (this.editingIndex !== null) {
+      this.evidencesBody.evidences[this.editingIndex] = this.draftEvidence;
+    } else {
+      this.evidencesBody.evidences.unshift(this.draftEvidence);
+    }
     this.showCreateModal = false;
     this.draftEvidence = { is_sharepoint: false };
+    this.editingIndex = null;
     this.validateCheckBoxes();
+    this.onSaveSection();
   }
 
   cancelCreateEvidence() {
     this.showCreateModal = false;
     this.draftEvidence = { is_sharepoint: false };
+    this.editingIndex = null;
   }
 
   deleteEvidence(index) {
@@ -201,6 +223,14 @@ export class RdEvidencesComponent implements OnInit {
   getSelectedImpactTags(evidence: EvidencesCreateInterface): string[] {
     if (!evidence) return [];
     return this.tagFields.filter(({ field }) => evidence[field]).map(({ label }) => label);
+  }
+
+  // Read-only visibility label (only meaningful for file evidence).
+  evidenceVisibilityLabel(evidence: EvidencesCreateInterface): string {
+    if (!this.isFileEvidence(evidence)) return '';
+    if (evidence?.is_public_file === true) return 'Public';
+    if (evidence?.is_public_file === false) return 'Not public';
+    return '';
   }
 
   // True when the modal draft can be added (mirrors the per-item save rules).

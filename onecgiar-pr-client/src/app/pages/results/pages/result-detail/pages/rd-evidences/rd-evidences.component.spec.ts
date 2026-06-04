@@ -243,8 +243,25 @@ describe('RdEvidencesComponent', () => {
     });
   });
 
+  describe('editEvidence', () => {
+    it('should open the modal in edit mode with a clone of the selected evidence', () => {
+      const original = { is_sharepoint: false, link: 'original-link' };
+      component.evidencesBody.evidences = [original];
+
+      component.editEvidence(0);
+
+      expect(component.showCreateModal).toBe(true);
+      expect(component.editingIndex).toBe(0);
+      expect(component.isEditingEvidence).toBe(true);
+      expect(component.draftEvidence).toEqual(original);
+      // It must be a clone, not the same reference (so Cancel can discard changes).
+      expect(component.draftEvidence).not.toBe(original);
+    });
+  });
+
   describe('confirmCreateEvidence', () => {
-    it('should prepend the draft to the top of the list and close the modal', () => {
+    it('should prepend the draft to the top of the list, close the modal and persist via onSaveSection', () => {
+      const saveSpy = jest.spyOn(component, 'onSaveSection').mockResolvedValue(undefined);
       component.evidencesBody.evidences = [{ is_sharepoint: true, link: 'existing' }];
       component.draftEvidence = { is_sharepoint: false, link: 'new-link' };
       component.showCreateModal = true;
@@ -254,6 +271,26 @@ describe('RdEvidencesComponent', () => {
       expect(component.evidencesBody.evidences[0]).toEqual({ is_sharepoint: false, link: 'new-link' });
       expect(component.evidencesBody.evidences).toHaveLength(2);
       expect(component.showCreateModal).toBe(false);
+      expect(saveSpy).toHaveBeenCalled();
+    });
+
+    it('should replace the edited evidence in place when editing and persist via onSaveSection', () => {
+      const saveSpy = jest.spyOn(component, 'onSaveSection').mockResolvedValue(undefined);
+      component.evidencesBody.evidences = [
+        { is_sharepoint: false, link: 'first' },
+        { is_sharepoint: false, link: 'second' }
+      ];
+      component.editEvidence(1);
+      component.draftEvidence = { is_sharepoint: false, link: 'second-edited' };
+
+      component.confirmCreateEvidence();
+
+      expect(component.evidencesBody.evidences).toHaveLength(2);
+      expect(component.evidencesBody.evidences[1]).toEqual({ is_sharepoint: false, link: 'second-edited' });
+      expect(component.editingIndex).toBeNull();
+      expect(component.isEditingEvidence).toBe(false);
+      expect(component.showCreateModal).toBe(false);
+      expect(saveSpy).toHaveBeenCalled();
     });
   });
 

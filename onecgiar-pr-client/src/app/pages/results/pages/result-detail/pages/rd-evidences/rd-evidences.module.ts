@@ -9,19 +9,9 @@ import { FeedbackValidationDirectiveModule } from '../../../../../../shared/dire
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageModule } from 'primeng/message';
 import { DialogModule } from 'primeng/dialog';
-import { CollapsibleContainerModule } from '../../../../../../shared/components/collapsible-container/collapsible-container.module';
 
 @NgModule({
   declarations: [RdEvidencesComponent, EvidenceItemComponent],
-  imports: [
-    CommonModule,
-    RdEvidencesRoutingModule,
-    CustomFieldsModule,
-    FeedbackValidationDirectiveModule,
-    TooltipModule,
-    MessageModule,
-    DialogModule,
-    CollapsibleContainerModule
-  ]
+  imports: [CommonModule, RdEvidencesRoutingModule, CustomFieldsModule, FeedbackValidationDirectiveModule, TooltipModule, MessageModule, DialogModule]
 })
 export class RdEvidencesModule {}
