@@ -1,4 +1,6 @@
-# Design — Evidence accordion redesign (P2-2935)
+# Design — Evidence redesign (P2-2935)
+
+> **⚠️ Design pivot (delivered).** This document was written for a **collapsible accordion** whose expanded body was the editable form. The delivered design **dropped the accordion**: each evidence is a **flat card** (all info visible, no expand/collapse) and **editing is modal-only** (a pencil opens the same create modal in edit mode, pre-filled with a clone; confirming persists immediately via `onSaveSection()`). Where this doc says "accordion header" read "card top", and where it says "expand to edit" read "click the pencil → modal". The authoritative behaviour is in `proposal.md` and `specs/result-evidence/spec.md`; the accordion sections below are kept for historical rationale (ordering, padlock, dates, save model still apply).
 
 ## Context
 
