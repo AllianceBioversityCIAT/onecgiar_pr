@@ -14,6 +14,82 @@
     .evidence_fields {
       margin-top: 6px;
     }
+
+    // P2-2935 — Figma-faithful filled alert boxes (scoped to the modal/accordion only;
+    // the shared app-alert-status keeps its minimal look everywhere else in the app).
+
+    // Blue "public / not public" info box
+    ::ng-deep app-alert-status .pr_alert:has(.icon.info) {
+      position: relative;
+      background: var(--pr-color-blue-50);
+      border: 1px solid var(--pr-color-blue-200);
+      border-radius: 4px;
+      padding: 16px 44px 16px 16px;
+
+      .line {
+        display: none;
+      }
+
+      .icon.info {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        font-size: 18px;
+        color: var(--pr-color-blue-500);
+      }
+
+      .text {
+        b {
+          display: block;
+          margin-bottom: 6px;
+        }
+
+        li {
+          margin-left: 18px;
+          line-height: 1.5;
+        }
+      }
+    }
+
+    // Yellow "file to be uploaded to the repository" warning box — title + note together (Figma-literal)
+    .upload_warning_box {
+      position: relative;
+      background: var(--pr-color-yellow-50);
+      border-left: 4px solid var(--pr-color-yellow-100);
+      padding: 16px 44px 16px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+
+      .upload_warning_title ::ng-deep .pr_label {
+        font-weight: 600;
+      }
+
+      ::ng-deep app-alert-status .pr_alert {
+        position: static;
+        padding: 0;
+
+        .line,
+        .black_point {
+          display: none;
+        }
+
+        .icon.warning {
+          position: absolute;
+          top: 14px;
+          right: 14px;
+          font-size: 18px;
+          color: var(--pr-color-yellow-300);
+        }
+      }
+    }
+
+    // Dropzone — keep the PRMS indigo dashed border (brand), add Figma rounding/padding/soft bg
+    .drag-and-drop-field {
+      border-radius: 10px;
+      padding: 40px 0px;
+      background: var(--pr-color-accents-1);
+    }
   }
 
   .cgspace-link-message {
@@ -23,6 +99,9 @@
 
   .evidence_fields {
     margin-top: 26px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
 
     .inputfieldHidden {
       display: none;
@@ -30,7 +109,7 @@
 
     .file-link-view {
       position: relative;
-      margin-bottom: 20px;
+      margin-bottom: 0px;
       display: flex;
       align-items: center;
       gap: 10px;
@@ -100,8 +179,8 @@
     .incorrect-file {
       color: var(--pr-color-red-300);
       font-weight: 500;
-      margin-top: -10px;
-      margin-bottom: 20px;
+      margin-top: -16px;
+      margin-bottom: 0px;
     }
   }
 
@@ -121,13 +200,19 @@
     display: grid;
     grid-template-columns: 1fr auto;
     gap: 10px;
-    margin-bottom: 12px;
+    margin-bottom: 0px;
+  }
+
+  .checkboxes_container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
   }
 
   .checkboxes {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 12px 24px;
   }
 }
 
@@ -146,7 +231,7 @@
   justify-content: center;
   flex-direction: column;
   padding: 30px 0px;
-  margin-bottom: 20px;
+  margin-bottom: 0px;
   transition: all 0.3s ease-in-out;
 
   .content {

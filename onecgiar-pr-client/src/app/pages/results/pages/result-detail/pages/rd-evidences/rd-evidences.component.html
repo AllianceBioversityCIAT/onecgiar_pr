@@ -114,7 +114,7 @@
     </div>
     <app-evidence-item *ngIf="showCreateModal" [evidence]="draftEvidence" [embedded]="true" [isOptional]="isOptional"></app-evidence-item>
     <div class="buttons">
-      <app-pr-button padding="medium" text="Cancel" icon="cancel" colorType="secondary" (click)="cancelCreateEvidence()"></app-pr-button>
+      <app-pr-button padding="medium" text="Cancel" colorType="secondary" (click)="cancelCreateEvidence()"></app-pr-button>
       <app-pr-button padding="medium" text="Add evidence" icon="add" [ngClass]="{ globalDisabled: !draftValid }" (click)="confirmCreateEvidence()"></app-pr-button>
     </div>
   </div>

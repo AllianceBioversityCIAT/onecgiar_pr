@@ -148,21 +148,26 @@
 }
 
 // P2-2935 — creation modal
+// P2-2935 — creation modal
 .evidence_modal {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 24px;
+  padding: 32px 40px;
+  max-height: 85vh;
+  overflow-y: auto;
 
   .modal_header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 6px;
   }
 
   .modal_title {
     font-weight: 700;
-    font-size: 16px;
+    font-size: 20px;
+    color: var(--pr-color-primary-300);
+    font-family: 'Poppins', sans-serif;
   }
 
   .modal_close {
@@ -172,16 +177,47 @@
     display: flex;
     align-items: center;
     color: var(--pr-color-accents-5);
+    transition: color 0.2s ease;
 
     i {
-      font-size: 22px;
+      font-size: 24px;
+    }
+
+    &:hover {
+      color: var(--pr-color-primary-300);
     }
   }
 
   .buttons {
     display: flex;
     justify-content: flex-end;
-    gap: 12px;
-    margin-top: 10px;
+    gap: 16px;
+    margin-top: 8px;
+
+    app-pr-button:first-child ::ng-deep {
+      .pr_button {
+        background-color: var(--pr-color-white) !important;
+        border: 1px solid var(--pr-color-accents-3) !important;
+
+        .text, i {
+          color: var(--pr-color-secondary-400) !important;
+          font-weight: 500 !important;
+        }
+
+        .filter {
+          display: none !important;
+        }
+
+        &:hover {
+          background-color: var(--pr-color-primary-50) !important;
+          border-color: var(--pr-color-primary-300) !important;
+        }
+      }
+    }
+
+    app-pr-button.globalDisabled ::ng-deep {
+      opacity: 0.35 !important;
+      pointer-events: none;
+    }
   }
 }
