@@ -24,6 +24,7 @@
 - [x] 3.4 Card body: link/filename (clickable), Impact-Area badge tags, details — flowing horizontally and wrapping to use the card width
 - [x] 3.5 Format dates with Angular `DatePipe`
 - [x] 3.6 Visual polish (modern-web-guidance): subtle border (`accents-2`), single white surface (no hard divider / no second background), soft hover shadow
+- [x] 3.7 Upload loading state: while saving, a file evidence without a resolved link shows its file name + a `p-skeleton` bar (`isSaving` flag, `isEvidenceUploading`/`evidenceUploadingName`), switching to the link once it resolves; import `SkeletonModule`
 
 ## 4. Per-item actions
 

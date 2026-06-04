@@ -9,9 +9,19 @@ import { FeedbackValidationDirectiveModule } from '../../../../../../shared/dire
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageModule } from 'primeng/message';
 import { DialogModule } from 'primeng/dialog';
+import { SkeletonModule } from 'primeng/skeleton';
 
 @NgModule({
   declarations: [RdEvidencesComponent, EvidenceItemComponent],
-  imports: [CommonModule, RdEvidencesRoutingModule, CustomFieldsModule, FeedbackValidationDirectiveModule, TooltipModule, MessageModule, DialogModule]
+  imports: [
+    CommonModule,
+    RdEvidencesRoutingModule,
+    CustomFieldsModule,
+    FeedbackValidationDirectiveModule,
+    TooltipModule,
+    MessageModule,
+    DialogModule,
+    SkeletonModule
+  ]
 })
 export class RdEvidencesModule {}

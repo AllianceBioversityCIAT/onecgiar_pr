@@ -150,6 +150,18 @@
           color: var(--pr-color-primary-300);
           text-decoration: underline;
         }
+
+        // Uploading state: file name on top, animated skeleton bar below
+        .ev_ro_uploading {
+          display: flex;
+          flex-direction: column;
+          gap: 5px;
+          min-width: 0;
+
+          .ev_ro_name {
+            color: var(--pr-color-accents-5);
+          }
+        }
       }
 
       // Details can be long — let it take the remaining row width and wrap cleanly.

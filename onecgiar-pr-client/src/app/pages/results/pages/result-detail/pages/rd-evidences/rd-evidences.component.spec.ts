@@ -307,6 +307,37 @@ describe('RdEvidencesComponent', () => {
     });
   });
 
+  describe('upload skeleton state', () => {
+    const fileEvidence = () => ({ is_sharepoint: true, file: new File([''], 'doc.pdf') } as any);
+
+    it('isEvidenceUploading is true for a file without link while saving', () => {
+      component.isSaving = true;
+      expect(component.isEvidenceUploading(fileEvidence())).toBe(true);
+    });
+
+    it('isEvidenceUploading is false once the link is resolved', () => {
+      component.isSaving = true;
+      expect(component.isEvidenceUploading({ ...fileEvidence(), link: 'https://x' })).toBe(false);
+    });
+
+    it('isEvidenceUploading is false when not saving', () => {
+      component.isSaving = false;
+      expect(component.isEvidenceUploading(fileEvidence())).toBe(false);
+    });
+
+    it('evidenceUploadingName prefers file name, then sp_file_name, then a fallback', () => {
+      expect(component.evidenceUploadingName({ file: { name: 'doc.pdf' } } as any)).toBe('doc.pdf');
+      expect(component.evidenceUploadingName({ sp_file_name: 'server.pdf' } as any)).toBe('server.pdf');
+      expect(component.evidenceUploadingName({} as any)).toBe('Uploading file…');
+    });
+
+    it('getSectionInformation clears isSaving after reload', () => {
+      component.isSaving = true;
+      component.getSectionInformation();
+      expect(component.isSaving).toBe(false);
+    });
+  });
+
   describe('sortEvidences', () => {
     it('should order evidences newest-first by date then id', () => {
       component.evidencesBody.evidences = [

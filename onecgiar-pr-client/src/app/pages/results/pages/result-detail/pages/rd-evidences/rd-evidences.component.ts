@@ -21,6 +21,8 @@ export class RdEvidencesComponent implements OnInit {
   draftEvidence: EvidencesCreateInterface = { is_sharepoint: false };
   // null → the modal is creating; a number → the modal is editing that evidence index.
   editingIndex: number | null = null;
+  // P2-2935: true while the section is persisting (upload + POST + reload) → drives the skeleton.
+  isSaving = false;
 
   // Impact-area + typology fields surfaced as tags in the collapsed accordion header.
   // (Note: the "Climate change" checkbox is bound to youth_related, matching the existing form.)
@@ -79,6 +81,7 @@ export class RdEvidencesComponent implements OnInit {
       this.readinessLevel = this.innovationControlListSE.readinessLevelsList.findIndex(item => item.id == response?.innovation_readiness_level_id);
       this.isOptional = Boolean(this.readinessLevel === 0);
       this.isOptionalReadinessLevel = Boolean(this.readinessLevel === 0);
+      this.isSaving = false;
     });
   }
 
@@ -145,6 +148,7 @@ export class RdEvidencesComponent implements OnInit {
   }
 
   async onSaveSection() {
+    this.isSaving = true;
     this.saveButtonSE.showSaveSpinner();
     await this.loadAllFiles();
     this.saveButtonSE.hideSaveSpinner();
@@ -152,6 +156,17 @@ export class RdEvidencesComponent implements OnInit {
     this.api.resultsSE.POST_evidences(this.evidencesBody).subscribe(resp => {
       this.getSectionInformation();
     });
+  }
+
+  // P2-2935: a file evidence is "uploading" while the section is saving and its link
+  // has not yet been resolved → the card shows the file name + a skeleton until the link lands.
+  isEvidenceUploading(evidence: EvidencesCreateInterface): boolean {
+    return Boolean(this.isSaving && evidence?.is_sharepoint && evidence?.file && !evidence?.link);
+  }
+
+  // File name to show while uploading (before the server link/sp_file_name is available).
+  evidenceUploadingName(evidence: EvidencesCreateInterface): string {
+    return evidence?.file?.name || evidence?.sp_file_name || 'Uploading file…';
   }
 
   // P2-2935: "Add evidence" opens the modal in create mode with a clean draft.

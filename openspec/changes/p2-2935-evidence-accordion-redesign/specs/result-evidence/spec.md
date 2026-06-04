@@ -30,6 +30,17 @@ Each saved evidence SHALL render as a flat card with all of its information visi
 - **WHEN** an evidence has a link, tags and/or details
 - **THEN** those items SHALL flow horizontally across the card body and wrap only when they do not fit, rather than always stacking vertically
 
+### Requirement: Upload loading state (skeleton)
+While the section is saving and a file evidence has not yet resolved its link, the card SHALL show a loading state: the file name plus an animated skeleton bar in place of the link. Once the link resolves (after upload), the card SHALL switch to showing the clickable link. Link evidence (no file upload) SHALL not show this state.
+
+#### Scenario: File uploading
+- **WHEN** the user confirms the modal for a file evidence and the section is saving (upload in progress, link not yet available)
+- **THEN** the card SHALL display the file name and an animated skeleton bar to communicate the loading state
+
+#### Scenario: Upload finished
+- **WHEN** the upload completes and the evidence link is resolved
+- **THEN** the card SHALL replace the skeleton with the clickable link
+
 ### Requirement: Public/private padlock for file evidence
 For file evidence, the card top SHALL display a padlock icon reflecting `is_public_file` — open/green for public, closed/grey for private — with a hover tooltip reading "Public" or "Private". Link evidence SHALL NOT display a padlock.
 

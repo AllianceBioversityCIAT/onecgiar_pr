@@ -47,16 +47,23 @@
       <div class="ev_card_body">
         <span class="ev_ro_item ev_ro_main">
           <i class="material-icons-round">{{ isFileEvidence(evidence) ? 'description' : 'link' }}</i>
-          <a
-            *ngIf="evidence.link; else roPlainName"
-            [href]="evidence.link"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="ev_ro_link"
-            >{{ evidenceDisplayName(evidence) }}</a
-          >
-          <ng-template #roPlainName>
-            <span class="ev_ro_name">{{ evidenceDisplayName(evidence) || '—' }}</span>
+          <!-- While the file is being uploaded: show its name + a skeleton, then switch to the link -->
+          <span class="ev_ro_uploading" *ngIf="isEvidenceUploading(evidence); else evidenceReady">
+            <span class="ev_ro_name">{{ evidenceUploadingName(evidence) }}</span>
+            <p-skeleton width="160px" height="9px" borderRadius="6px" styleClass="ev_ro_skeleton"></p-skeleton>
+          </span>
+          <ng-template #evidenceReady>
+            <a
+              *ngIf="evidence.link; else roPlainName"
+              [href]="evidence.link"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="ev_ro_link"
+              >{{ evidenceDisplayName(evidence) }}</a
+            >
+            <ng-template #roPlainName>
+              <span class="ev_ro_name">{{ evidenceDisplayName(evidence) || '—' }}</span>
+            </ng-template>
           </ng-template>
         </span>
 
