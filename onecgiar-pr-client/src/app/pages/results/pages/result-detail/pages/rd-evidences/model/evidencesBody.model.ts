@@ -33,4 +33,7 @@ export interface EvidencesCreateInterface {
   sp_file_name?: string;
   sp_folder_path?: string;
   percentage?: string | number;
+  id?: number;
+  creation_date?: Date | string;
+  last_updated_date?: Date | string;
 }
