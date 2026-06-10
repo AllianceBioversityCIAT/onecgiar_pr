@@ -258,11 +258,11 @@ export class RdEvidencesComponent implements OnInit {
 
   validateCheckBoxes() {
     const tags = [
-      { tag: 'gender', level: this.evidencesBody?.gender_tag_level, related: 'gender_related' },
-      { tag: 'climate change', level: this.evidencesBody?.climate_change_tag_level, related: 'youth_related' },
-      { tag: 'nutrition', level: this.evidencesBody?.nutrition_tag_level, related: 'nutrition_related' },
-      { tag: 'environment', level: this.evidencesBody?.environmental_biodiversity_tag_level, related: 'environmental_biodiversity_related' },
-      { tag: 'poverty', level: this.evidencesBody?.poverty_tag_level, related: 'poverty_related' }
+      { tag: 'Gender equality, youth and social inclusion', level: this.evidencesBody?.gender_tag_level, related: 'gender_related' },
+      { tag: 'Climate adaptation and mitigation', level: this.evidencesBody?.climate_change_tag_level, related: 'youth_related' },
+      { tag: 'Nutrition, health and food security', level: this.evidencesBody?.nutrition_tag_level, related: 'nutrition_related' },
+      { tag: 'Environmental health and biodiversity', level: this.evidencesBody?.environmental_biodiversity_tag_level, related: 'environmental_biodiversity_related' },
+      { tag: 'Poverty reduction, livelihoods and jobs', level: this.evidencesBody?.poverty_tag_level, related: 'poverty_related' }
     ];
 
     const evidences = this.evidencesBody.evidences;
@@ -270,7 +270,7 @@ export class RdEvidencesComponent implements OnInit {
 
     const text = tags
       .filter(({ level, related }) => level === '3' && !hasTagRelated(related))
-      .map(({ tag }) => `<li>At least one of the evidence sources must have the ${tag} checkbox marked if the ${tag} tag has a score of 2.</li>`)
+      .map(({ tag }) => `<li>A principal contribution score (2) has been recorded for ${tag}. Please provide evidence to support this claim.</li>`)
       .join('');
 
     if (!text) {
