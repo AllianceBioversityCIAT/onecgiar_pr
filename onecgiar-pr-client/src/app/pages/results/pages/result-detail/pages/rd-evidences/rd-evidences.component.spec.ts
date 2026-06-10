@@ -414,6 +414,8 @@ describe('RdEvidencesComponent', () => {
 
       expect(component.isOptional).toBe(false);
       expect(result).toContain('<ul>');
+      expect(result).toContain('A principal contribution score (2) has been recorded for Poverty reduction, livelihoods and jobs. Please provide evidence to support this claim.');
+      expect(result).not.toContain(' if ');
     });
   });
 
