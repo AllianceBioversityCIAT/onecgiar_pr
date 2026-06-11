@@ -99,7 +99,8 @@ describe('RdEvidencesComponent', () => {
     it('should return main text when isKnowledgeProduct is false', () => {
       mockApiService.dataControlSE.isKnowledgeProduct = false;
       const result = component.alertStatus();
-      expect(result).toContain('Submit a maximum of 6 pieces of evidence.');
+      expect(result).toContain('Submit a maximum of 6 pieces of evidence per result.');
+      expect(result).not.toContain('Please list evidence from most to least important.');
     });
   });
 
@@ -233,12 +234,139 @@ describe('RdEvidencesComponent', () => {
   });
 
   describe('addEvidence', () => {
-    it('should add a new evidence to the evidencesBody array', () => {
+    it('should open the creation modal with a clean draft (not push directly)', () => {
       component.addEvidence();
 
-      expect(component.evidencesBody.evidences).toHaveLength(1);
-      const newEvidence = component.evidencesBody.evidences[0];
-      expect(newEvidence).toEqual({ is_sharepoint: false });
+      expect(component.showCreateModal).toBe(true);
+      expect(component.draftEvidence).toEqual({ is_sharepoint: false });
+      expect(component.evidencesBody.evidences).toHaveLength(0);
+    });
+  });
+
+  describe('editEvidence', () => {
+    it('should open the modal in edit mode with a clone of the selected evidence', () => {
+      const original = { is_sharepoint: false, link: 'original-link' };
+      component.evidencesBody.evidences = [original];
+
+      component.editEvidence(0);
+
+      expect(component.showCreateModal).toBe(true);
+      expect(component.editingIndex).toBe(0);
+      expect(component.isEditingEvidence).toBe(true);
+      expect(component.draftEvidence).toEqual(original);
+      // It must be a clone, not the same reference (so Cancel can discard changes).
+      expect(component.draftEvidence).not.toBe(original);
+    });
+  });
+
+  describe('confirmCreateEvidence', () => {
+    it('should prepend the draft to the top of the list, close the modal and persist via onSaveSection', () => {
+      const saveSpy = jest.spyOn(component, 'onSaveSection').mockResolvedValue(undefined);
+      component.evidencesBody.evidences = [{ is_sharepoint: true, link: 'existing' }];
+      component.draftEvidence = { is_sharepoint: false, link: 'new-link' };
+      component.showCreateModal = true;
+
+      component.confirmCreateEvidence();
+
+      expect(component.evidencesBody.evidences[0]).toEqual({ is_sharepoint: false, link: 'new-link' });
+      expect(component.evidencesBody.evidences).toHaveLength(2);
+      expect(component.showCreateModal).toBe(false);
+      expect(saveSpy).toHaveBeenCalled();
+    });
+
+    it('should replace the edited evidence in place when editing and persist via onSaveSection', () => {
+      const saveSpy = jest.spyOn(component, 'onSaveSection').mockResolvedValue(undefined);
+      component.evidencesBody.evidences = [
+        { is_sharepoint: false, link: 'first' },
+        { is_sharepoint: false, link: 'second' }
+      ];
+      component.editEvidence(1);
+      component.draftEvidence = { is_sharepoint: false, link: 'second-edited' };
+
+      component.confirmCreateEvidence();
+
+      expect(component.evidencesBody.evidences).toHaveLength(2);
+      expect(component.evidencesBody.evidences[1]).toEqual({ is_sharepoint: false, link: 'second-edited' });
+      expect(component.editingIndex).toBeNull();
+      expect(component.isEditingEvidence).toBe(false);
+      expect(component.showCreateModal).toBe(false);
+      expect(saveSpy).toHaveBeenCalled();
+    });
+  });
+
+  describe('cancelCreateEvidence', () => {
+    it('should close the modal and discard the draft', () => {
+      component.draftEvidence = { is_sharepoint: false, link: 'discard-me' };
+      component.showCreateModal = true;
+
+      component.cancelCreateEvidence();
+
+      expect(component.showCreateModal).toBe(false);
+      expect(component.draftEvidence).toEqual({ is_sharepoint: false });
+      expect(component.evidencesBody.evidences).toHaveLength(0);
+    });
+  });
+
+  describe('upload skeleton state', () => {
+    const fileEvidence = () => ({ is_sharepoint: true, file: new File([''], 'doc.pdf') } as any);
+
+    it('isEvidenceUploading is true for a file without link while saving', () => {
+      component.isSaving = true;
+      expect(component.isEvidenceUploading(fileEvidence())).toBe(true);
+    });
+
+    it('isEvidenceUploading is false once the link is resolved', () => {
+      component.isSaving = true;
+      expect(component.isEvidenceUploading({ ...fileEvidence(), link: 'https://x' })).toBe(false);
+    });
+
+    it('isEvidenceUploading is false when not saving', () => {
+      component.isSaving = false;
+      expect(component.isEvidenceUploading(fileEvidence())).toBe(false);
+    });
+
+    it('evidenceUploadingName prefers file name, then sp_file_name, then a fallback', () => {
+      expect(component.evidenceUploadingName({ file: { name: 'doc.pdf' } } as any)).toBe('doc.pdf');
+      expect(component.evidenceUploadingName({ sp_file_name: 'server.pdf' } as any)).toBe('server.pdf');
+      expect(component.evidenceUploadingName({} as any)).toBe('Uploading file…');
+    });
+
+    it('getSectionInformation clears isSaving after reload', () => {
+      component.isSaving = true;
+      component.getSectionInformation();
+      expect(component.isSaving).toBe(false);
+    });
+  });
+
+  describe('sortEvidences', () => {
+    it('should order evidences newest-first by date then id', () => {
+      component.evidencesBody.evidences = [
+        { id: 1, creation_date: '2026-01-01T10:00:00Z' },
+        { id: 2, creation_date: '2026-03-01T10:00:00Z' },
+        { id: 3, last_updated_date: '2026-06-01T10:00:00Z', creation_date: '2026-02-01T10:00:00Z' }
+      ];
+
+      component.sortEvidences();
+
+      expect(component.evidencesBody.evidences.map(e => e.id)).toEqual([3, 2, 1]);
+    });
+  });
+
+  describe('accordion header helpers', () => {
+    it('isFileEvidence / evidenceTypeLabel reflect is_sharepoint', () => {
+      expect(component.isFileEvidence({ is_sharepoint: true })).toBe(true);
+      expect(component.evidenceTypeLabel({ is_sharepoint: true })).toBe('File Evidence');
+      expect(component.evidenceTypeLabel({ is_sharepoint: false })).toBe('Link Evidence');
+    });
+
+    it('getSelectedImpactTags returns labels of marked fields', () => {
+      const tags = component.getSelectedImpactTags({ gender_related: true, youth_related: true });
+      expect(tags).toEqual(['Gender', 'Climate change']);
+    });
+
+    it('evidenceDisplayName prefers file name then link', () => {
+      expect(component.evidenceDisplayName({ sp_file_name: 'doc.pdf', link: 'x' })).toBe('doc.pdf');
+      expect(component.evidenceDisplayName({ link: 'https://x' })).toBe('https://x');
     });
   });
 
@@ -286,6 +414,8 @@ describe('RdEvidencesComponent', () => {
 
       expect(component.isOptional).toBe(false);
       expect(result).toContain('<ul>');
+      expect(result).toContain('A principal contribution score (2) has been recorded for Poverty reduction, livelihoods and jobs tag. Please provide evidence to support this claim.');
+      expect(result).not.toContain(' if ');
     });
   });
 

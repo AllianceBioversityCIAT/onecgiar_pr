@@ -65,7 +65,7 @@ describe('UserEvidenceComponent', () => {
   it('should clean source switching to sharepoint (cleanLink on true)', () => {
     component.evidence = {
       is_sharepoint: false,
-      link: 'http://example.com',
+      link: 'https://example.com',
       is_public_file: 1
     } as any;
     component.cleanSource(true);
@@ -144,14 +144,13 @@ describe('UserEvidenceComponent', () => {
     expect(component.dynamicAlertStatusBasedOnVisibility()).toContain('NOT public');
   });
 
-  it('getEvidenceRelatedTitle should change per context flags', () => {
-    (TestBed.inject(DataControlService) as any).isInnoDev = false;
-    (TestBed.inject(DataControlService) as any).isInnoUse = false;
-    expect(component.getEvidenceRelatedTitle()).toContain('Impact Area tags');
-    (TestBed.inject(DataControlService) as any).isInnoDev = true;
-    expect(component.getEvidenceRelatedTitle()).toContain('Readiness level');
-    (TestBed.inject(DataControlService) as any).isInnoDev = false;
-    (TestBed.inject(DataControlService) as any).isInnoUse = true;
-    expect(component.getEvidenceRelatedTitle()).toContain('Use');
+  it('getEvidenceRelatedTitle should change per result typology', () => {
+    const api = TestBed.inject(ApiService) as any;
+    api.dataControlSE.currentResult.result_type_id = 7;
+    expect(component.getEvidenceRelatedTitle()).toContain('Innovation Development metadata');
+    api.dataControlSE.currentResult.result_type_id = 2;
+    expect(component.getEvidenceRelatedTitle()).toContain('Innovation Use metadata');
+    api.dataControlSE.currentResult.result_type_id = 6;
+    expect(component.getEvidenceRelatedTitle()).toContain('Knowledge Product metadata');
   });
 });

@@ -40,7 +40,7 @@
         [options]="this.isPubilcFileOptions"
         optionLabel="name"
         optionValue="id"
-        label="Is this a public file?"
+        label="Can this evidence be shared publicly?"
         [(ngModel)]="this.evidence.is_public_file">
       </app-pr-radio-button>
 
@@ -102,7 +102,30 @@
         <div class="incorrect-file" *ngIf="this.incorrectFile">Incorrect format only files supported: .jpg, .png, .pdf, .doc, .pptx, .xlsx</div>
       </ng-template>
     </ng-template>
-    
+
+    <app-pr-field-header [label]="getEvidenceRelatedTitle()" [required]="false" *ngIf="!isSuppInfo"></app-pr-field-header>
+    <div class="checkboxes" *ngIf="!isSuppInfo">
+      <app-pr-checkbox label="Gender" [(ngModel)]="this.evidence.gender_related"> </app-pr-checkbox>
+      <app-pr-checkbox label="Climate change" [(ngModel)]="this.evidence.youth_related"> </app-pr-checkbox>
+      <app-pr-checkbox label="Nutrition" [(ngModel)]="this.evidence.nutrition_related"> </app-pr-checkbox>
+      <app-pr-checkbox label="Environment" [(ngModel)]="this.evidence.environmental_biodiversity_related"> </app-pr-checkbox>
+      <app-pr-checkbox label="Poverty" [(ngModel)]="this.evidence.poverty_related"> </app-pr-checkbox>
+      <app-pr-checkbox label="Innovation Development" [(ngModel)]="this.evidence.innovation_readiness_related" *ngIf="this.dataControlSE.isInnoDev">
+      </app-pr-checkbox>
+      <app-pr-checkbox label="Innovation Use" [(ngModel)]="this.evidence.innovation_use_related" *ngIf="this.dataControlSE.isInnoUse">
+      </app-pr-checkbox>
+      <app-pr-checkbox label="Policy Change" [(ngModel)]="this.evidence.policy_change_related" *ngIf="this.resultTypeId === 1">
+      </app-pr-checkbox>
+      <app-pr-checkbox label="Capacity Sharing for Development" [(ngModel)]="this.evidence.capacity_sharing_related" *ngIf="this.resultTypeId === 5">
+      </app-pr-checkbox>
+      <app-pr-checkbox label="Knowledge Product" [(ngModel)]="this.evidence.knowledge_product_metadata_related" *ngIf="this.resultTypeId === 6">
+      </app-pr-checkbox>
+      <app-pr-checkbox label="Other Output" [(ngModel)]="this.evidence.other_output_related" *ngIf="this.resultTypeId === 8">
+      </app-pr-checkbox>
+      <app-pr-checkbox label="Other Outcome" [(ngModel)]="this.evidence.other_outcome_related" *ngIf="this.resultTypeId === 4">
+      </app-pr-checkbox>
+    </div>
+
     <app-pr-textarea
       [label]="
         'Please provide details of where' +
