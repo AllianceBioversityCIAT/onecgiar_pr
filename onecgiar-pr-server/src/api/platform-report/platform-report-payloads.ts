@@ -9,8 +9,8 @@ export interface PdfGenerateUrlPayload {
   templateName: string;
   bucketName: string;
   fileName: string;
-  /** Auth header for the Reports microservice (e.g. JSON string with username/password). */
-  credentials: string;
+  /** API key for the Reports microservice (`MICROSERVICE_API_KEY`). */
+  apiKey: string;
 }
 
 /**

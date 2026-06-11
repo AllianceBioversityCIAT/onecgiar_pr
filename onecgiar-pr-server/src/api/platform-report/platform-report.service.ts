@@ -5,7 +5,7 @@ import {
   HandlersError,
   returnErrorDto,
 } from '../../shared/handlers/error.utils';
-import { env } from 'process';
+import { env } from 'node:process';
 import { ResultRepository } from '../results/result.repository';
 import { Result, SourceEnum } from '../results/entities/result.entity';
 import axios from 'axios';
@@ -27,11 +27,8 @@ import type {
 @Injectable()
 export class PlatformReportService implements OnModuleInit {
   private readonly _logger: Logger = new Logger(PlatformReportService.name);
-  private authHeaderMs2 = JSON.stringify({
-    username: env.MS_REPORTS_USER,
-    password: env.MS_REPORTS_PASSWORD,
-  });
-  private authHeaderMs4 = JSON.stringify({
+  private readonly microserviceApiKey = env.MICROSERVICE_API_KEY;
+  private readonly authHeaderMs4 = JSON.stringify({
     username: env.MS_FILE_MANAGEMENT_USER,
     password: env.MS_FILE_MANAGEMENT_PASSWORD,
   });
@@ -42,7 +39,7 @@ export class PlatformReportService implements OnModuleInit {
     private readonly _resultRepository: ResultRepository,
     @InjectRepository(Version)
     private readonly _versionRepository: Repository<Version>,
-    @Inject('REPORT_SERVICE') private client: ClientProxy,
+    @Inject('REPORT_SERVICE') private readonly client: ClientProxy,
   ) {}
 
   async onModuleInit() {
@@ -294,13 +291,16 @@ export class PlatformReportService implements OnModuleInit {
       const bucketName = env.AWS_BUCKET_NAME;
 
       if (this.isP25Portfolio(portfolioAcronym)) {
-        const p25Payload = this.buildP25Payload(
-          data,
-          resultToCheck.source,
-          fileName,
-          bucketName,
-          resultToCheck?.result_type_id,
-        );
+        const p25Payload: PdfGenerateUrlPayload = {
+          ...this.buildP25Payload(
+            data,
+            resultToCheck.source,
+            fileName,
+            bucketName,
+            resultToCheck?.result_type_id,
+          ),
+          apiKey: this.microserviceApiKey,
+        };
         const response = await firstValueFrom(
           this.client.send<PdfGenerateUrlResponse>(
             PLATFORM_REPORT_CONSTANTS.REPORT_EVENT_PATTERNS.PDF_GENERATE_URL,
@@ -329,7 +329,7 @@ export class PlatformReportService implements OnModuleInit {
         options: Number(report.id) === 1 ? optionsReporting : optionsIPSR,
         fileName,
         bucketName,
-        credentials: this.authHeaderMs2,
+        apiKey: this.microserviceApiKey,
       };
       this.client.emit(
         PLATFORM_REPORT_CONSTANTS.REPORT_EVENT_PATTERNS.PDF_GENERATE,
@@ -425,7 +425,7 @@ export class PlatformReportService implements OnModuleInit {
     fileName: string,
     bucketName: string,
     resultTypeId?: number | null,
-  ): PdfGenerateUrlPayload {
+  ): Omit<PdfGenerateUrlPayload, 'apiKey'> {
     const { RESULT_P25, RESULT_P25_BILATERAL, IPSR_2025 } =
       PLATFORM_REPORT_CONSTANTS;
 
@@ -446,7 +446,6 @@ export class PlatformReportService implements OnModuleInit {
       templateName: platformReportConstants.TEMPLATE_NAME,
       bucketName,
       fileName,
-      credentials: this.authHeaderMs2,
     };
   }
 }

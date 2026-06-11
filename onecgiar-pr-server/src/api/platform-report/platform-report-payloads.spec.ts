@@ -13,7 +13,7 @@ describe('platform-report-payloads (shape validation)', () => {
         templateName: 'results_p25',
         bucketName: 'my-bucket',
         fileName: 'report.pdf',
-        credentials: '{}',
+        apiKey: 'test-api-key',
       };
       expect(payload.data).toBeDefined();
       expect(payload.paperWidth).toBe('600px');
@@ -21,7 +21,7 @@ describe('platform-report-payloads (shape validation)', () => {
       expect(payload.templateName).toBe('results_p25');
       expect(payload.bucketName).toBe('my-bucket');
       expect(payload.fileName).toBe('report.pdf');
-      expect(payload.credentials).toBeDefined();
+      expect(payload.apiKey).toBeDefined();
     });
 
     it('should require all payload fields', () => {
@@ -32,7 +32,7 @@ describe('platform-report-payloads (shape validation)', () => {
         'templateName',
         'bucketName',
         'fileName',
-        'credentials',
+        'apiKey',
       ];
       const payload: PdfGenerateUrlPayload = {
         data: {},
@@ -41,7 +41,7 @@ describe('platform-report-payloads (shape validation)', () => {
         templateName: '',
         bucketName: '',
         fileName: '',
-        credentials: '',
+        apiKey: '',
       };
       requiredKeys.forEach((key) => {
         expect(payload).toHaveProperty(key);
