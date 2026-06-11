@@ -65,7 +65,7 @@ describe('UserEvidenceComponent', () => {
   it('should clean source switching to sharepoint (cleanLink on true)', () => {
     component.evidence = {
       is_sharepoint: false,
-      link: 'http://example.com',
+      link: 'https://example.com',
       is_public_file: 1
     } as any;
     component.cleanSource(true);
