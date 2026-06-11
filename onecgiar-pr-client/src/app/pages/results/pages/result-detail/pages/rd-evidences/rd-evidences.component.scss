@@ -110,13 +110,14 @@
       }
     }
 
-    // Body: single white surface (no divider, no second background), items flow
-    // horizontally and wrap, so the full card width is used before stacking.
+    // Body: single white surface (no divider, no second background). Items stack
+    // vertically — link on its own line, then tags, then the description full-width
+    // so long descriptions wrap across the whole card instead of a narrow column.
     .ev_card_body {
       display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 8px 24px;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
       padding: 4px 16px 14px 54px;
 
       .ev_ro_item {
@@ -164,9 +165,10 @@
         }
       }
 
-      // Details can be long — let it take the remaining row width and wrap cleanly.
+      // Description is the priority field — give it the full card width and let it
+      // wrap cleanly on its own line below the link and tags.
       .ev_ro_details {
-        flex: 1 1 240px;
+        align-self: stretch;
         align-items: flex-start;
 
         > i {

@@ -270,7 +270,7 @@ export class RdEvidencesComponent implements OnInit {
 
     const text = tags
       .filter(({ level, related }) => level === '3' && !hasTagRelated(related))
-      .map(({ tag }) => `<li>A principal contribution score (2) has been recorded for ${tag}. Please provide evidence to support this claim.</li>`)
+      .map(({ tag }) => `<li>A principal contribution score (2) has been recorded for ${tag} tag. Please provide evidence to support this claim.</li>`)
       .join('');
 
     if (!text) {
