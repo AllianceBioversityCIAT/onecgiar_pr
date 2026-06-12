@@ -8,7 +8,7 @@ import { BuildEmailDataDto } from './dto/email-template.dto';
 import { TokenDto } from '../../globalInterfaces/token.dto';
 import * as dotenv from 'dotenv';
 dotenv.config();
-import { env } from 'process';
+import { env } from 'node:process';
 
 describe('EmailNotificationManagementService', () => {
   let service: EmailNotificationManagementService;
@@ -86,10 +86,7 @@ describe('EmailNotificationManagementService', () => {
         },
       };
       const expectedPayload = {
-        auth: {
-          username: env.MS_NOTIFICATION_USER,
-          password: env.MS_NOTIFICATION_PASSWORD,
-        },
+        apiKey: env.MICROSERVICE_API_KEY,
         data: email,
       };
       service.sendEmail(email);

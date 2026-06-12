@@ -366,7 +366,7 @@ describe('RdEvidencesComponent', () => {
 
     it('evidenceDisplayName prefers file name then link', () => {
       expect(component.evidenceDisplayName({ sp_file_name: 'doc.pdf', link: 'x' })).toBe('doc.pdf');
-      expect(component.evidenceDisplayName({ link: 'http://x' })).toBe('http://x');
+      expect(component.evidenceDisplayName({ link: 'https://x' })).toBe('https://x');
     });
   });
 
