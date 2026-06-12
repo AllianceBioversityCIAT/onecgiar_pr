@@ -52,6 +52,11 @@ export class ResultsListFilterService {
   centerOptions = signal<any[]>([]);
   text_to_search = signal('');
 
+  /** Restrict list/API to results created by the logged-in user */
+  filterCreatedByMe = signal(false);
+  /** Restrict list/API to results with a submission by the logged-in user */
+  filterSubmittedByMe = signal(false);
+
   updateMyInitiatives(initiatives) {
     initiatives?.forEach(init => {
       init.selected = true;

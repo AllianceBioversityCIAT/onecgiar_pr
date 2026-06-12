@@ -27,8 +27,13 @@ export class DynamicNotionBlockComponent {
     this.isExpanded.update(current => !current);
   }
 
+  joinPlainText(richText: any[] | undefined): string {
+    if (!richText?.length) return '';
+    return richText.map(item => item?.plain_text ?? '').join('');
+  }
+
   joinText(text: any[]) {
-    if (!text || !text.length) return '';
+    if (!text?.length) return '';
 
     // Process text items
     const processedText = text.map(item => {

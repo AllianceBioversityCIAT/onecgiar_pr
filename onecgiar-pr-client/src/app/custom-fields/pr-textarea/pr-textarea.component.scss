@@ -13,3 +13,9 @@
   border-color: var(--pr-color-yellow-100) !important;
   box-shadow: 0px 0px 0px 1px var(--pr-color-yellow-100) !important;
 }
+
+::ng-deep textarea {
+  resize: vertical;
+  max-height: 250px;
+  min-height: 105px;
+}

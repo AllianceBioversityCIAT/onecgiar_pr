@@ -58,7 +58,8 @@
           [isNotifications]="false"
           [isUnplanned]="!this.rdPartnersSE.partnersBody.result_toc_result.planned_result"
           [showMultipleWPsContent]="this.rdPartnersSE.getConsumed()"
-          [isAvisa]="isAvisaInitiative()"></app-cp-multiple-wps>
+          [isAvisa]="isAvisaInitiative()"
+          (tocResultChanged)="this.rdPartnersSE.loadFilteredBilateralProjects(true)"></app-cp-multiple-wps>
       </div>
     }
     @if (!this.rdPartnersSE.partnersBody.result_toc_result.planned_result && !this.hideWhyReportedField()) {
@@ -105,18 +106,35 @@
     </div>
   </div>
 
-  <app-pr-multi-select
-    [options]="this.rdPartnersSE.clarisaProjectsList"
-    [(ngModel)]="this.rdPartnersSE.partnersBody.bilateral_projects"
-    [required]="false"
-    optionLabel="fullName"
-    optionValue="project_id"
-    label="Contributing W3 and/or bilateral projects"
-    selectedLabel="Projects selected"
-    selectedOptionLabel="fullName"
-    placeholder="Select project"
-    [displayLabelFormatter]="formatBilateralProjectLabel.bind(this)">
-  </app-pr-multi-select>
+  <div style="position: relative">
+    <app-pr-multi-select
+      [options]="this.rdPartnersSE.clarisaProjectsList"
+      [(ngModel)]="this.rdPartnersSE.partnersBody.bilateral_projects"
+      [required]="false"
+      optionLabel="fullName"
+      optionValue="project_id"
+      label="Contributing W3 and/or bilateral projects"
+      selectedLabel="Projects selected"
+      selectedOptionLabel="fullName"
+      placeholder="Select project"
+      [displayLabelFormatter]="formatBilateralProjectLabel.bind(this)">
+    </app-pr-multi-select>
+
+    @if (!this.rdPartnersSE.hasTocResultMapped() || this.rdPartnersSE.loadingBilateralProjects()) {
+      <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.7); border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: not-allowed; z-index: 2">
+        @if (this.rdPartnersSE.loadingBilateralProjects()) {
+          <i class="pi pi-spinner pi-spin" style="font-size: 1.2rem; color: var(--pr-color-primary-300)"></i>
+        }
+      </div>
+    }
+  </div>
+
+  @if (!this.rdPartnersSE.hasTocResultMapped()) {
+    <div class="pr-message">
+      <i class="material-icons-round" style="font-size: 20px; color: var(--pr-color-orange-400)">info</i>
+      <p>Please select a TOC result (Output/Outcome) above to load the available W3 and/or bilateral projects.</p>
+    </div>
+  }
 
   <app-pr-multi-select
     [options]="this.contributingInitiativesList"
@@ -246,7 +264,7 @@
     label="Is this result being led by an external partner?"
     [required]="true"
     [(ngModel)]="this.rdPartnersSE.partnersBody.is_lead_by_partner"
-    (selectOptionEvent)="$event ? (this.rdPartnersSE.leadCenterCode = null) : (this.rdPartnersSE.leadPartnerId = null)"
+    (selectOptionEvent)="this.rdPartnersSE.onLeadByPartnerChange($event)"
     [readOnly]="!this.api.dataControlSE.isKnowledgeProduct && this.rdPartnersSE.partnersBody.no_applicable_partner">
   </app-pr-yes-or-not>
   <app-alert-status [description]="getMessageLead()"></app-alert-status>
@@ -264,7 +282,7 @@
   </div>
   <ng-template #selectLeadCenter>
     @if (!this.rdPartnersSE.updatingLeadData) {
-      <app-pr-field-header label="Lead center" [required]="false"></app-pr-field-header>
+      <app-pr-field-header label="Lead center" [required]="!this.rdPartnersSE.partnersBody.is_lead_by_partner"></app-pr-field-header>
       <p-select
         [options]="this.rdPartnersSE.possibleLeadCenters"
         [(ngModel)]="this.rdPartnersSE.leadCenterCode"
@@ -287,6 +305,10 @@
           </div>
         </ng-template>
       </p-select>
+      <div
+        appFeedbackValidation
+        labelText="Lead center"
+        [isComplete]="this.rdPartnersSE.partnersBody.is_lead_by_partner || !!this.rdPartnersSE.leadCenterCode"></div>
     }
   </ng-template>
 

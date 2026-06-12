@@ -565,7 +565,7 @@ export class IpsrRepository
         }
       }
 
-      resultInnovation.map((ri) => {
+      resultInnovation.forEach((ri) => {
         ri['hasRegions'] = regions.filter((r) => {
           return r.result_id === ri.result_id;
         });

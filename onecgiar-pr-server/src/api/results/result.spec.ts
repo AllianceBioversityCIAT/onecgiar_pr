@@ -75,6 +75,7 @@ import { ReviewUpdateDto } from './dto/review-update.dto';
 import { ResultsTocResultsService } from './results-toc-results/results-toc-results.service';
 import { ShareResultRequestService } from './share-result-request/share-result-request.service';
 import { ShareResultRequestRepository } from './share-result-request/share-result-request.repository';
+import { ResultDeletionAuditService } from './result-deletion-audit/result-deletion-audit.service';
 
 describe('ResultsService (unit, pure mocks)', () => {
   let module: TestingModule;
@@ -521,6 +522,10 @@ describe('ResultsService (unit, pure mocks)', () => {
     }),
   } as any;
 
+  const mockResultDeletionAuditService = {
+    recordDeletion: jest.fn().mockResolvedValue(undefined),
+  };
+
   const mockResultImpactAreaScoresService = {
     validateImpactAreaScores: jest
       .fn()
@@ -674,6 +679,10 @@ describe('ResultsService (unit, pure mocks)', () => {
           useValue: mockAoWBilateralRepository,
         },
         {
+          provide: ResultDeletionAuditService,
+          useValue: mockResultDeletionAuditService,
+        },
+        {
           provide: ResultReviewHistoryRepository,
           useValue: mockResultReviewHistoryRepository,
         },
@@ -791,7 +800,8 @@ describe('ResultsService (unit, pure mocks)', () => {
       newResult,
       userTest,
     );
-    expect(response.status).toBe(HttpStatus.BAD_REQUEST);
+    // returnErrorRes uses 500 when the thrown Error has no status (see HandlersError)
+    expect(response.status).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
     expect(response.message).toBe(
       'Missing data: Result name, Initiative or Result type',
     );
@@ -996,7 +1006,7 @@ describe('ResultsService (unit, pure mocks)', () => {
     const results: returnFormatService =
       await resultService.createResultGeneralInformation(newResult, userTest);
     expect(results.response).toBeDefined();
-    const updated = (results.response as any).updateResult || results.response;
+    const updated = results.response.updateResult || results.response;
     expect(updated.id).toBeDefined();
     expect(updated.title).toBe(resultTitle);
     expect(updated.description).toBe(resultDescription);
@@ -1071,7 +1081,7 @@ describe('ResultsService (unit, pure mocks)', () => {
 
   it('should return all results legacy new', async () => {
     const title = 'Assessment of the pote';
-    (mockResultRepository as any).AllResultsLegacyNewByTitle = jest
+    mockResultRepository.AllResultsLegacyNewByTitle = jest
       .fn()
       .mockResolvedValue([{ id: '10' }]);
     const results = await resultService.findAllResultsLegacyNew(title);
@@ -1083,7 +1093,7 @@ describe('ResultsService (unit, pure mocks)', () => {
 
   it('should error when not found legacy result', async () => {
     const title = 'Error title Test: -1';
-    (mockResultRepository as any).AllResultsLegacyNewByTitle = jest
+    mockResultRepository.AllResultsLegacyNewByTitle = jest
       .fn()
       .mockResolvedValue([]);
     const results = await resultService.findAllResultsLegacyNew(title);
@@ -1197,12 +1207,15 @@ describe('ResultsService (unit, pure mocks)', () => {
   });
 
   it('should get basic report data', async () => {
-    (mockResultRepository as any).getResultDataForBasicReport = jest
+    mockResultRepository.getResultDataForBasicReport = jest
       .fn()
       .mockResolvedValue([{ id: 1 }]);
     const res = await resultService.getResultDataForBasicReport(
-      new Date('2023-01-01'),
-      new Date('2023-12-31'),
+      {
+        initDate: '2023-01-01',
+        endDate: '2023-12-31',
+      },
+      userTest,
     );
     expect(res.status).toBe(HttpStatus.OK);
     expect(Array.isArray(res.response)).toBe(true);
@@ -2271,8 +2284,10 @@ describe('ResultsService (unit, pure mocks)', () => {
 
   describe('getResultDataForBasicReport', () => {
     it('should return result data for basic report successfully', async () => {
-      const initDate = new Date('2024-01-01');
-      const endDate = new Date('2024-12-31');
+      const body = {
+        initDate: '2024-01-01',
+        endDate: '2024-12-31',
+      };
       const mockData = [
         { id: 1, title: 'Result 1', created_date: '2024-06-01' },
         { id: 2, title: 'Result 2', created_date: '2024-07-01' },
@@ -2282,8 +2297,8 @@ describe('ResultsService (unit, pure mocks)', () => {
       ).mockResolvedValueOnce(mockData);
 
       const res = await resultService.getResultDataForBasicReport(
-        initDate,
-        endDate,
+        body,
+        userTest,
       );
       expect((res as returnFormatService).status).toBe(HttpStatus.OK);
       expect((res as returnFormatService).response).toEqual(mockData);

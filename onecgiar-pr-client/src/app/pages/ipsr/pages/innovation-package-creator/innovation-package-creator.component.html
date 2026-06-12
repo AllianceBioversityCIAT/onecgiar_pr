@@ -14,24 +14,47 @@
     description="Here you can create an innovation package by filling out a variety of fields."></app-section-header>
 
   <div class="dropdown-50p">
-    <app-pr-select
-      class="segment_title_margin"
-      [options]="this.api.rolesSE.isAdmin ? this.allInitiatives : this.api.dataControlSE.myInitiativesListIPSRByPortfolio"
-      label="Primary submitter of the innovation package"
-      [isStatic]="true"
-      [group]="true"
-      groupName="name"
-      optionLabel="full_name"
-      optionValue="initiative_id"
-      [placeholder]="'Select ' + ('term.entity.singular' | term: this.api.dataControlSE?.IPSRCurrentPhase?.portfolioAcronym)"
-      [description]="'Select ' + ('term.entity.singular' | term: this.api.dataControlSE?.IPSRCurrentPhase?.portfolioAcronym)"
-      (selectOptionEvent)="
-        this.manageInnovationsListSE.GETallInnovations(this.innovationPackageCreatorBody.initiative_id);
-        status = false;
-        this.api.rolesSE.readOnly = false
-      "
-      [(ngModel)]="this.innovationPackageCreatorBody.initiative_id">
-    </app-pr-select>
+    @if (this.api.rolesSE.isAdmin) {
+      <app-pr-select
+        class="segment_title_margin"
+        [options]="this.allInitiatives"
+        label="Primary submitter of the innovation package"
+        [isStatic]="true"
+        [group]="true"
+        groupName="name"
+        optionLabel="full_name"
+        optionValue="initiative_id"
+        [placeholder]="'Select ' + ('term.entity.singular' | term: this.api.dataControlSE?.IPSRCurrentPhase?.portfolioAcronym)"
+        [description]="'Select ' + ('term.entity.singular' | term: this.api.dataControlSE?.IPSRCurrentPhase?.portfolioAcronym)"
+        (selectOptionEvent)="
+          this.manageInnovationsListSE.GETallInnovations(this.innovationPackageCreatorBody.initiative_id);
+          status = false;
+          this.api.rolesSE.readOnly = false
+        "
+        [(ngModel)]="this.innovationPackageCreatorBody.initiative_id">
+      </app-pr-select>
+    } @else if (this.reportingAccessLoaded()) {
+      <app-pr-select
+        class="segment_title_margin"
+        [options]="this.sourceInitiatives()"
+        label="Primary submitter of the innovation package"
+        [isStatic]="true"
+        [group]="true"
+        groupName="name"
+        optionLabel="full_name"
+        optionValue="initiative_id"
+        [placeholder]="'Select ' + ('term.entity.singular' | term: this.api.dataControlSE?.IPSRCurrentPhase?.portfolioAcronym)"
+        [description]="'Select ' + ('term.entity.singular' | term: this.api.dataControlSE?.IPSRCurrentPhase?.portfolioAcronym)"
+        [disableOptions]="closedOptions"
+        disableOptionsText="(Closed) "
+        (selectOptionEvent)="
+          this.manageInnovationsListSE.GETallInnovations(this.innovationPackageCreatorBody.initiative_id);
+          status = false;
+          this.api.rolesSE.readOnly = false
+        "
+        [(ngModel)]="this.innovationPackageCreatorBody.initiative_id">
+      </app-pr-select>
+    }
   </div>
 
   <app-pr-field-header

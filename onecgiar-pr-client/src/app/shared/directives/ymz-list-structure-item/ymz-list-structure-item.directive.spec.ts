@@ -3,7 +3,7 @@ import { RolesService } from '../../services/global/roles.service';
 import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { Component, DebugElement } from '@angular/core';
 import { By } from '@angular/platform-browser';
-import { HttpClientModule } from '@angular/common/http';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 
 @Component({
   standalone: false,
@@ -35,7 +35,7 @@ describe('YmzListStructureItemDirective', () => {
         }
       ],
       imports: [
-        HttpClientModule,
+        HttpClientTestingModule,
       ],
     });
 

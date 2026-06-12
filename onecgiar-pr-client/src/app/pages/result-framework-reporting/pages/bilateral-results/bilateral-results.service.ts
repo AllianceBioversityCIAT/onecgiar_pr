@@ -1,10 +1,7 @@
 import { inject, Injectable, signal, computed } from '@angular/core';
 import { CenterDto } from '../../../../shared/interfaces/center.dto';
 import { ApiService } from '../../../../shared/services/api/api.service';
-import {
-  ResultToReview,
-  GroupedResult
-} from './components/results-review-table/components/result-review-drawer/result-review-drawer.interfaces';
+import { ResultToReview, GroupedResult } from './components/results-review-table/components/result-review-drawer/result-review-drawer.interfaces';
 
 @Injectable({
   providedIn: 'root'
@@ -23,6 +20,28 @@ export class BilateralResultsService {
   selectedIndicatorCategories = signal<string[]>([]);
   selectedStatus = signal<string[]>([]);
   selectedLeadCenters = signal<string[]>([]);
+
+  tableData = signal<GroupedResult[]>([
+    {
+      project_id: '',
+      project_name: '',
+      results: [
+        {
+          id: '',
+          project_id: '',
+          project_name: '',
+          result_code: '',
+          result_title: '',
+          indicator_category: '',
+          status_name: '',
+          acronym: '',
+          toc_title: '',
+          indicator: '',
+          submission_date: ''
+        }
+      ]
+    }
+  ]);
 
   /** Filter options derived from current table data */
   indicatorCategoryOptions = computed(() => {

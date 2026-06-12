@@ -11,7 +11,15 @@ describe('ResultRepository (unit)', () => {
   } as unknown as DataSource;
 
   const mockHandlersError = {
-    returnErrorRepository: jest.fn((e) => e),
+    returnErrorRepository: jest.fn(
+      ({ error, className }: { error: Error; className: string }) => ({
+        response: (error as any)?.response
+          ? (error as any).response
+          : { error: true },
+        message: `[${className}] => error: ${error}`,
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      }),
+    ),
   } as any;
 
   beforeEach(() => {
@@ -80,6 +88,30 @@ describe('ResultRepository (unit)', () => {
     const [sql, params] = queryMock.mock.calls[0];
     expect(sql).toContain('ci.official_code IN (?)');
     expect(params).toEqual([9, 'ABC', 1, 22, 4, 6, 1]);
+  });
+
+  it('adds OR clause for my activity (created and submitted)', async () => {
+    const items = [{ id: 3 }];
+    queryMock
+      .mockResolvedValueOnce(items)
+      .mockResolvedValueOnce([{ total: 1 }]);
+
+    await repo.AllResultsByRoleUserAndInitiativeFiltered(
+      7,
+      {
+        myActivityUserId: 42,
+        filterMyCreated: true,
+        filterMySubmitted: true,
+      },
+      [10, 11],
+      { limit: 5, offset: 0 },
+    );
+
+    const [sql, params] = queryMock.mock.calls[0];
+    expect(sql).toContain('r.created_by = ?');
+    expect(sql).toContain('FROM submission s');
+    expect(sql).toContain('OR');
+    expect(params).toEqual([7, 42, 42]);
   });
 
   it('throws INTERNAL_SERVER_ERROR on query failure', async () => {

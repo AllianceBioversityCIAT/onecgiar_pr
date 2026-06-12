@@ -415,3 +415,21 @@ a {
 }
 
 @include generate-margin-right-classes(100);
+
+/*
+ * P25 column drawer: background scroll is locked in TS via `body { position: fixed; top: -scrollY }`
+ * so the sticky app header is not broken by `overflow: hidden` on html/body after the user has scrolled.
+ */
+html.pr-p25-drawer-scroll-lock,
+body.pr-p25-drawer-scroll-lock {
+  overscroll-behavior: none;
+}
+
+body.pr-p25-drawer-scroll-lock {
+  .p-datatable-scrollable .p-datatable-wrapper,
+  .p-datatable-scrollable .p-datatable-scrollable-body,
+  .p-datatable-scrollable .p-datatable-table-container,
+  .p-datatable .p-datatable-table-container {
+    overflow: hidden !important;
+  }
+}

@@ -26,7 +26,7 @@ export class ExportTablesService {
     private readonly outcomeIService: OutcomeIndicatorService
   ) {}
 
-  exportExcel(
+  async exportExcel(
     list: any[],
     fileName: string,
     wscols?: any[],
@@ -36,7 +36,7 @@ export class ExportTablesService {
     }[]
   ) {
     try {
-      import('exceljs').then(async ExcelJSModule => {
+      await import('exceljs').then(async ExcelJSModule => {
         const ExcelJS = ExcelJSModule.default;
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('data');
@@ -203,9 +203,9 @@ export class ExportTablesService {
     }
   }
 
-  exportExcelIpsr(list: any[], fileName: string, wscols?: any[], callback?: () => void, isIPSR = false) {
+  async exportExcelIpsr(list: any[], fileName: string, wscols?: any[], callback?: () => void, isIPSR = false) {
     try {
-      import('exceljs').then(async ExcelJSModule => {
+      await import('exceljs').then(async ExcelJSModule => {
         const ExcelJS = ExcelJSModule.default;
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('data');

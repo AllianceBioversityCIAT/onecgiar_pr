@@ -26,7 +26,15 @@
           {{ phase?.id }}
         </td>
         <td [style.width.px]="130">
-          <div class="text" *ngIf="!phase.editing">{{ phase?.phase_name }}</div>
+          <div class="text" *ngIf="!phase.editing">
+            <a
+              *ngIf="enablePhaseLink && phase?.status && !phase?.isNew"
+              class="phase-link"
+              [routerLink]="['./', phase.id]">
+              {{ phase?.phase_name }}
+            </a>
+            <span *ngIf="!enablePhaseLink || !phase?.status || phase?.isNew">{{ phase?.phase_name }}</span>
+          </div>
           <app-pr-input *ngIf="phase.editing" [placeholder]="placeholderText" type="text" [(ngModel)]="phase.phase_name_ts"> </app-pr-input>
         </td>
         <td [style.width.px]="110">

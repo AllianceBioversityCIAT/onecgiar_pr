@@ -32,7 +32,7 @@ export class PusherService {
 
     const membersList: any = [];
 
-    Object.keys(members).map(item => {
+    Object.keys(members).forEach(item => {
       const date = new Date(members[item]?.today);
 
       membersList.push({

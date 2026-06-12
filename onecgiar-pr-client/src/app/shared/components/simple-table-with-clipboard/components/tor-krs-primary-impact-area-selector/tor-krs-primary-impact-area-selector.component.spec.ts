@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { TorKrsPrimaryImpactAreaSelectorComponent } from './tor-krs-primary-impact-area-selector.component';
-import { HttpClientModule } from '@angular/common/http';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { TypeOneReportService } from '../../../../../pages/type-one-report/type-one-report.service';
 
 describe('TorKrsPrimaryImpactAreaSelectorComponent', () => {
@@ -15,7 +15,7 @@ describe('TorKrsPrimaryImpactAreaSelectorComponent', () => {
 
     await TestBed.configureTestingModule({
       declarations: [TorKrsPrimaryImpactAreaSelectorComponent],
-      imports: [HttpClientModule],
+      imports: [HttpClientTestingModule],
       providers: [{ provide: TypeOneReportService, useValue: mockTypeOneReportService }]
     }).compileComponents();
 

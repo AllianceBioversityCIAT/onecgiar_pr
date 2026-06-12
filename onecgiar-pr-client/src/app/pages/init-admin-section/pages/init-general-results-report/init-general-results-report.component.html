@@ -1,73 +1,100 @@
 <div class="local_container">
-    <app-alert-status [description]="openFolderText()">
-    </app-alert-status>
+  <app-alert-status [description]="openFolderText()"> </app-alert-status>
 
-    <div class="alert_status_container">
-        <div [ngClass]="{'animate__pulse_infinite': this.requesting}">
-            <app-alert-status status="warning"
-                [description]="this.requesting ?'The report may take some time to be generated, please do not close the window.':'This report consumes a considerable amount of system resources, therefore, we appreciate it if you do not generate reports too often.'">
-            </app-alert-status>
-        </div>
+  <div class="alert_status_container">
+    <div [ngClass]="{ animate__pulse_infinite: this.requesting }">
+      <app-alert-status
+        status="warning"
+        [description]="
+          this.requesting
+            ? 'The report may take some time to be generated, please do not close the window.'
+            : 'This report consumes a considerable amount of system resources, therefore, we appreciate it if you do not generate reports too often.'
+        ">
+      </app-alert-status>
     </div>
+  </div>
 
-    <div class="dropdown-filters">
-        <app-pr-multi-select label="Reporting phase" (selectOptionEvent)="onSelectDropdown()"
-            [options]="this.reportingPhases" [isStatic]="true" [required]="false" optionLabel="phase_name_status"
-            selectedLabel="Phases selected" optionValue="id" placeholder="Select phase" [(ngModel)]="phasesSelected"
-            selectedOptionLabel="phase_name_status">
-        </app-pr-multi-select>
-
-        <app-pr-multi-select label="Initiatives" selectedLabel="Initiatives selected"
-            [options]="this.api.rolesSE.isAdmin ? this.allInitiatives : this.api.dataControlSE.myInitiativesList | filterInitWithRoleCoordAndLead"
-            optionLabel="full_name" [isStatic]="true" optionValue="id" (selectOptionEvent)="onSelectDropdown()"
-            [required]="false" (removeOptionEvent)="onRemoveinit($event)" selectedOptionLabel="full_name"
-            [showSelectAll]="true" [(ngModel)]="this.initiativesSelected" placeholder="Select Initiative(s)">
-        </app-pr-multi-select>
-
-
-    </div>
-
-
-
-
-    <br>
-
-
-
-    <app-pr-multi-select [options]="this.resultsList | filterByAttrWithValue:'status_id':valueToFilter" label="Results"
-        [isStatic]="true" *ngIf="this.resultsList?.length" optionLabel="full_name_html" optionValue="results_id"
-        [showSelectAll]="true" [required]="false" selectedOptionLabel="full_name" [(ngModel)]="this.resultsSelected"
-        itemSize="15" placeholder="Select result(s)">
-        <div class="filter_submission_buttons" util>
-            <div class="option all" [ngClass]="{'active': this.valueToFilter == null}"
-                (click)="this.valueToFilter = null">All</div>
-            <div *ngFor="let status of this.resultStatusList " class="option {{status?.className}}"
-                [ngClass]="{'active': this.valueToFilter == status?.status_id}"
-                (click)="this.valueToFilter = status?.status_id">
-                {{status?.name}}
-            </div>
-        </div>
+  <div class="dropdown-filters">
+    <app-pr-multi-select
+      label="Reporting phase"
+      (selectOptionEvent)="onSelectDropdown()"
+      [options]="this.reportingPhases"
+      [isStatic]="true"
+      [required]="false"
+      optionLabel="phase_name_status"
+      selectedLabel="Phases selected"
+      optionValue="id"
+      placeholder="Select phase"
+      [(ngModel)]="phasesSelected"
+      selectedOptionLabel="phase_name_status">
     </app-pr-multi-select>
 
-    <div class="results_selected">
-        <div class="title">
-            <div>Results selected ({{resultsSelected?.length}}):</div>
+    <app-pr-multi-select
+      label="Entities"
+      selectedLabel="Entities selected"
+      [options]="this.api.rolesSE.isAdmin ? this.allInitiatives : (this.api.dataControlSE.myInitiativesList | filterInitWithRoleCoordAndLead)"
+      optionLabel="full_name"
+      [isStatic]="true"
+      optionValue="id"
+      (selectOptionEvent)="onSelectDropdown()"
+      [required]="false"
+      (removeOptionEvent)="onRemoveinit($event)"
+      selectedOptionLabel="full_name"
+      [showSelectAll]="true"
+      [(ngModel)]="this.initiativesSelected"
+      placeholder="Select entity(ies)">
+    </app-pr-multi-select>
+  </div>
 
-            <div class="download_button_container">
-                <app-pr-button icon="file_download" *ngIf="resultsSelected?.length"
-                    [ngClass]="{'globalDisabled': this.requesting}"
-                    [text]="this.requesting?'Downloading .xlsx - results '+requestCounter+'/'+(resultsSelected.length):'Download .xlsx'"
-                    [rotating]="this.requesting" [icon]="this.requesting?'loop':'file_download'"
-                    (click)="exportExcel(this.resultsSelected)"></app-pr-button>
-            </div>
-        </div>
+  <br />
 
-        <div class="results">
-            <div class="result" *ngFor="let result of resultsSelected; let i=index">
-                <div class="index">{{i+1}}</div>
-                <div [innerHTML]="result.full_name_html"></div>
-            </div>
-        </div>
+  <app-pr-multi-select
+    [options]="this.resultsList | filterByAttrWithValue: 'status_id' : valueToFilter"
+    label="Results"
+    [isStatic]="true"
+    *ngIf="this.resultsList?.length"
+    optionLabel="full_name_html"
+    optionValue="results_id"
+    [showSelectAll]="true"
+    [required]="false"
+    selectedOptionLabel="full_name"
+    [(ngModel)]="this.resultsSelected"
+    itemSize="15"
+    placeholder="Select result(s)">
+    <div class="filter_submission_buttons" util>
+      <div class="option all" [ngClass]="{ active: this.valueToFilter == null }" (click)="this.valueToFilter = null">All</div>
+      <div
+        *ngFor="let status of this.resultStatusList"
+        class="option {{ status?.className }}"
+        [ngClass]="{ active: this.valueToFilter == status?.status_id }"
+        (click)="this.valueToFilter = status?.status_id">
+        {{ status?.name }}
+      </div>
     </div>
-    <br>
+  </app-pr-multi-select>
+
+  <div class="results_selected">
+    <div class="title">
+      <div>Results selected ({{ resultsSelected?.length }}):</div>
+
+      <div class="download_button_container">
+        <app-pr-button
+          icon="file_download"
+          *ngIf="resultsSelected?.length"
+          [ngClass]="{ globalDisabled: this.requesting }"
+          [text]="this.requesting ? 'Downloading .xlsx - results ' + requestCounter + '/' + resultsSelected.length : 'Download .xlsx'"
+          [rotating]="this.requesting"
+          [icon]="this.requesting ? 'loop' : 'file_download'"
+          (click)="exportExcel(this.resultsSelected)"></app-pr-button>
+      </div>
+    </div>
+
+    <div class="results">
+      <div class="result" *ngFor="let result of resultsSelected; let i = index">
+        <div class="index">{{ i + 1 }}</div>
+        <div [innerHTML]="result.full_name_html"></div>
+      </div>
+    </div>
+  </div>
+  <br />
 </div>

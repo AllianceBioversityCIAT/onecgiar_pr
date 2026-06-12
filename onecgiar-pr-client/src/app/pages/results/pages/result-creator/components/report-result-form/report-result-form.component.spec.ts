@@ -7,7 +7,7 @@ import { PhasesService } from '../../../../../../shared/services/global/phases.s
 import { TerminologyService } from '../../../../../../internationalization/terminology.service';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { RouterTestingModule } from '@angular/router/testing';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { ResultBody } from '../../../../../../shared/interfaces/result.interface';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { TermPipe } from '../../../../../../internationalization/term.pipe';
@@ -288,14 +288,18 @@ describe('ReportResultFormComponent', () => {
       expect(component.depthSearchList[0].phase).toBeDefined();
     });
 
-    it('should set exactTitleFound when exact match is found', () => {
+    it('should set exactTitleFound when exact match is confirmed after recheck', () => {
+      jest.useFakeTimers();
       const mockResults = [{ id: 1, title: 'Test Result', version_id: 1 }];
       mockApiService.resultsSE.GET_FindResultsElastic = jest.fn(() => of(mockResults));
       component.allPhases = mockPhases.reporting;
 
       component.depthSearch('Test Result');
+      jest.advanceTimersByTime(700);
 
       expect(component.exactTitleFound()).toBe(true);
+      expect(component.blockingExactTitleFound()).toBe(true);
+      jest.useRealTimers();
     });
 
     it('should handle errors gracefully', () => {
@@ -473,6 +477,260 @@ describe('ReportResultFormComponent', () => {
       (component as any)._selectedInitiativeId = 1;
       (component as any).tryApplySelectedInitiative();
       expect(mockResultLevelService.resultBody.initiative_id).toBe(originalInitiativeId);
+    });
+
+    it('should not apply when no match found in list', () => {
+      component.availableInitiativesSig.set([{ id: 99, initiative_id: 99 }]);
+      (component as any)._selectedInitiativeId = 1;
+      jest.spyOn(component, 'onSelectInit');
+      (component as any).tryApplySelectedInitiative();
+      expect(component.onSelectInit).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('ngOnInit non-admin with single initiative auto-select', () => {
+    it('should auto-select initiative when non-admin has exactly one initiative and no pre-selected', () => {
+      mockApiService.rolesSE.isAdmin = false;
+      const singleInit = [{ id: 42, initiative_id: 42, full_name: 'Single Init' }];
+      mockApiService.dataControlSE.myInitiativesListReportingByPortfolio = singleInit;
+      (component as any)._selectedInitiativeId = null;
+      mockResultLevelService.resultBody = new ResultBody();
+
+      fixture.detectChanges();
+
+      // After updateUserData callback:
+      // _selectedInitiativeId should be set to 42 (auto-selected from single initiative)
+      expect((component as any)._selectedInitiativeId).toBe(42);
+    });
+
+    it('should set initiative_id from _selectedInitiativeId when it is not null after updateUserData', () => {
+      mockApiService.rolesSE.isAdmin = false;
+      const inits = [{ id: 10, initiative_id: 10 }, { id: 20, initiative_id: 20 }];
+      mockApiService.dataControlSE.myInitiativesListReportingByPortfolio = inits;
+      (component as any)._selectedInitiativeId = 10;
+      mockResultLevelService.resultBody = new ResultBody();
+
+      fixture.detectChanges();
+
+      expect(mockResultLevelService.resultBody.initiative_id).toBe(10);
+    });
+
+    it('should set initiative_id from single initiative when _selectedInitiativeId is null and only one initiative', () => {
+      mockApiService.rolesSE.isAdmin = true;
+      const singleInit = [{ id: 55, initiative_id: 55 }];
+      mockApiService.dataControlSE.myInitiativesListReportingByPortfolio = singleInit;
+      (component as any)._selectedInitiativeId = null;
+      mockResultLevelService.resultBody = new ResultBody();
+
+      // Force updateUserData callback to NOT set _selectedInitiativeId
+      mockApiService.updateUserData = jest.fn(cb => {
+        // isAdmin is true, so the non-admin block is skipped
+        // _selectedInitiativeId remains null
+        cb();
+      });
+
+      fixture.detectChanges();
+
+      // Falls into the else if (length == 1) branch
+      expect(mockResultLevelService.resultBody.initiative_id).toBe(55);
+    });
+  });
+
+  describe('onTitleChange edge cases', () => {
+    it('should clear depthSearchList and stop loading for empty title', () => {
+      component.depthSearchList = [{ id: 1 }] as any;
+      component.onTitleChange('');
+      expect(component.depthSearchList).toEqual([]);
+      expect(component.loadingDepthSearch()).toBe(false);
+    });
+
+    it('should clear depthSearchList for whitespace-only title', () => {
+      component.onTitleChange('   ');
+      expect(component.depthSearchList).toEqual([]);
+      expect(component.loadingDepthSearch()).toBe(false);
+    });
+
+    it('should clear depthSearchList for null title', () => {
+      component.onTitleChange(null as any);
+      expect(component.depthSearchList).toEqual([]);
+      expect(component.loadingDepthSearch()).toBe(false);
+    });
+
+    it('should debounce title search requests', () => {
+      jest.useFakeTimers();
+      fixture.detectChanges();
+      mockApiService.resultsSE.GET_FindResultsElastic.mockClear();
+
+      component.onTitleChange('test title');
+      expect(component.loadingDepthSearch()).toBe(true);
+      expect(mockApiService.resultsSE.GET_FindResultsElastic).not.toHaveBeenCalled();
+
+      jest.advanceTimersByTime(500);
+      expect(mockApiService.resultsSE.GET_FindResultsElastic).toHaveBeenCalledWith('test title', '');
+      jest.useRealTimers();
+    });
+
+    it('should only apply latest request when previous request resolves later', () => {
+      jest.useFakeTimers();
+      fixture.detectChanges();
+      component.allPhases = mockPhases.reporting;
+      const firstRequest$ = new Subject<any[]>();
+      const secondRequest$ = new Subject<any[]>();
+
+      mockApiService.resultsSE.GET_FindResultsElastic = jest
+        .fn()
+        .mockReturnValueOnce(firstRequest$.asObservable())
+        .mockReturnValueOnce(secondRequest$.asObservable());
+
+      component.onTitleChange('first title');
+      jest.advanceTimersByTime(500);
+      component.onTitleChange('second title');
+      jest.advanceTimersByTime(500);
+
+      secondRequest$.next([{ id: 2, title: 'second title', version_id: 1 }]);
+      secondRequest$.complete();
+      jest.advanceTimersByTime(700);
+
+      expect(component.exactTitleFound()).toBe(false);
+      expect(component.depthSearchList[0]?.title).toBe('second title');
+
+      firstRequest$.next([{ id: 1, title: 'first title', version_id: 1 }]);
+      firstRequest$.complete();
+      jest.advanceTimersByTime(700);
+
+      expect(component.depthSearchList[0]?.title).toBe('second title');
+      expect(component.blockingExactTitleFound()).toBe(false);
+      jest.useRealTimers();
+    });
+
+    it('should clear exact blocking when recheck does not confirm the match', () => {
+      jest.useFakeTimers();
+      fixture.detectChanges();
+      component.allPhases = mockPhases.reporting;
+
+      mockApiService.resultsSE.GET_FindResultsElastic = jest
+        .fn()
+        .mockReturnValueOnce(of([{ id: 1, title: 'Exact title', version_id: 1 }]))
+        .mockReturnValueOnce(of([]));
+
+      component.onTitleChange('Exact title');
+      jest.advanceTimersByTime(500);
+      jest.advanceTimersByTime(700);
+
+      expect(component.exactTitleFound()).toBe(false);
+      expect(component.blockingExactTitleFound()).toBe(false);
+      expect(component.loadingDepthSearch()).toBe(false);
+      jest.useRealTimers();
+    });
+  });
+
+  describe('applyPendingResultTypeSelection', () => {
+    it('should apply pending selection when level list is available', (done) => {
+      mockResultLevelService.consumePendingResultType = jest.fn(() => ({ id: 1, name: 'Innovation' }));
+      mockResultLevelService.resultLevelListSig = signal([{ id: 1, name: 'Output' }]);
+
+      (component as any).applyPendingResultTypeSelection();
+
+      setTimeout(() => {
+        expect(mockResultLevelService.preselectResultType).toHaveBeenCalledWith(1, 'Innovation');
+        done();
+      }, 100);
+    });
+
+    it('should retry when level list is empty', (done) => {
+      jest.useFakeTimers();
+      mockResultLevelService.consumePendingResultType = jest.fn(() => ({ id: 2, name: 'Policy' }));
+      mockResultLevelService.resultLevelListSig = signal([]);
+
+      (component as any).applyPendingResultTypeSelection();
+
+      // Initial setTimeout(checkAndApply, 0)
+      jest.advanceTimersByTime(0);
+      // Now checkAndApply runs, finds empty list, sets setTimeout(checkAndApply, 50)
+      jest.advanceTimersByTime(50);
+
+      // Still empty, should retry
+      // Now provide data
+      mockResultLevelService.resultLevelListSig = signal([{ id: 1 }]);
+      jest.advanceTimersByTime(50);
+
+      expect(mockResultLevelService.preselectResultType).toHaveBeenCalledWith(2, 'Policy');
+      jest.useRealTimers();
+      done();
+    });
+
+    it('should do nothing when no pending selection', () => {
+      mockResultLevelService.consumePendingResultType = jest.fn(() => null);
+      mockResultLevelService.preselectResultType.mockClear();
+      (component as any).applyPendingResultTypeSelection();
+      expect(mockResultLevelService.preselectResultType).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('onSelectInit for non-admin', () => {
+    it('should use myInitiativesListReportingByPortfolio when not admin', () => {
+      mockApiService.rolesSE.isAdmin = false;
+      mockApiService.dataControlSE.myInitiativesListReportingByPortfolio = [
+        { id: 5, typeCode: 'SP' }
+      ];
+      component.cgiarEntityTypes = mockEntityTypes;
+      mockResultLevelService.resultBody.initiative_id = 5;
+
+      component.onSelectInit();
+
+      expect(component.currentResultType).toBe('Science Program');
+    });
+  });
+
+  describe('GET_AllInitiatives edge cases', () => {
+    it('should handle null entityTypesResponse in groupList iteration', (done) => {
+      mockApiService.rolesSE.isAdmin = true;
+      mockApiService.resultsSE.GET_cgiarEntityTypes = jest.fn(() => of({ response: null }));
+      mockApiService.resultsSE.GET_AllInitiatives = jest.fn(() => of({ response: [] }));
+
+      component.GET_AllInitiatives(() => {
+        // groupList is null, forEach should be skipped
+        expect(component.allInitiatives).toEqual([]);
+        done();
+      });
+    });
+
+    it('should handle error in GET_AllInitiatives', () => {
+      mockApiService.rolesSE.isAdmin = true;
+      mockApiService.resultsSE.GET_AllInitiatives = jest.fn(() => throwError(() => new Error('Error')));
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      component.GET_AllInitiatives();
+
+      expect(consoleSpy).toHaveBeenCalled();
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe('getAllPhases edge cases', () => {
+    it('should handle null phases gracefully', () => {
+      mockPhasesService.phases = null;
+      component.getAllPhases();
+      expect(component.allPhases).toEqual([]);
+    });
+
+    it('should handle missing reporting or ipsr phases', () => {
+      mockPhasesService.phases = { reporting: null, ipsr: null };
+      component.getAllPhases();
+      expect(component.allPhases).toEqual([]);
+    });
+  });
+
+  describe('getLegacyType Other outcome', () => {
+    it('should return "OICR" for Other outcome type', () => {
+      expect(component.getLegacyType('Other outcome', '')).toBe('OICR');
+    });
+  });
+
+  describe('selectedInitiativeId setter with undefined', () => {
+    it('should convert undefined to null', () => {
+      component.selectedInitiativeId = undefined;
+      expect((component as any)._selectedInitiativeId).toBe(null);
     });
   });
 });

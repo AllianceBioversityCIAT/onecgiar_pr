@@ -18,7 +18,7 @@ export class FeedbackValidationDirective implements OnInit, DoCheck {
     this.renderer.addClass(this.fieldDiv, 'pr-field');
     this.renderer.addClass(this.fieldDiv, 'mandatory');
 
-    this.isComplete ? this.renderer.addClass(this.fieldDiv, 'complete') : null;
+    if (this.isComplete) this.renderer.addClass(this.fieldDiv, 'complete');
 
     this.renderer.appendChild(this.el.nativeElement, labelDiv);
     this.renderer.appendChild(this.el.nativeElement, this.fieldDiv);

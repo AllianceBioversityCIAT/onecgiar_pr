@@ -42,6 +42,9 @@ export class PrInputComponent implements ControlValueAccessor {
   @Input() descInlineStyles?: string = '';
   @Input() fieldRef: string | number;
   @Input() customLabel?: string;
+  /** When true, `required` comes from the parent `@Input()` instead of FieldsManager (lead contact scan workaround). */
+  @Input() lockRequiredFromFieldManager = false;
+  @Input() showFieldHeader = true;
 
   fieldsManager = inject(FieldsManagerService);
   @Input() labelDescInlineStyles?: string = '';
@@ -59,7 +62,9 @@ export class PrInputComponent implements ControlValueAccessor {
     this.label = label;
     this.placeholder = placeholder;
     this.description = description;
-    this.required = required;
+    if (!this.lockRequiredFromFieldManager) {
+      this.required = required;
+    }
     this.useColon = useColon ?? true;
     return !hide;
   });

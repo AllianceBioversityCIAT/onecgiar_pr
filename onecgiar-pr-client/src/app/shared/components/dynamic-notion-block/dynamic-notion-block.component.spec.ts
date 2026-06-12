@@ -138,4 +138,16 @@ describe('DynamicNotionBlockComponent', () => {
       expect(component.joinText(text)).toBe('First <span class="text-semibold">Second</span> Third');
     });
   });
+
+  describe('joinPlainText', () => {
+    it('should return empty string when input is missing or empty', () => {
+      expect(component.joinPlainText(undefined)).toBe('');
+      expect(component.joinPlainText([])).toBe('');
+    });
+
+    it('should concatenate plain_text from rich text runs', () => {
+      const rich = [{ plain_text: 'A' }, { plain_text: 'B' }];
+      expect(component.joinPlainText(rich)).toBe('AB');
+    });
+  });
 });

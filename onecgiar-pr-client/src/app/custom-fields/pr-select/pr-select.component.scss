@@ -28,6 +28,13 @@
   color: var(--pr-color-primary-300) !important;
 }
 
+.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+  font-style: italic;
+}
+
 .labelGroup {
   font-weight: 600;
   cursor: none;

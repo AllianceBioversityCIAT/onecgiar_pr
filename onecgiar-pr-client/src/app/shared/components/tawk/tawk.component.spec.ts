@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { DOCUMENT } from '@angular/common';
 import { Renderer2 } from '@angular/core';
 import { TawkComponent } from './tawk.component';
-import { HttpClientModule } from '@angular/common/http';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { ApiService } from '../../services/api/api.service';
 
 describe('TawkComponent', () => {
@@ -46,7 +46,7 @@ describe('TawkComponent', () => {
     };
 
     await TestBed.configureTestingModule({
-      imports: [HttpClientModule, TawkComponent],
+      imports: [HttpClientTestingModule, TawkComponent],
       providers: [
         { provide: ApiService, useValue: mockApiService },
         { provide: Renderer2, useValue: mockRenderer },

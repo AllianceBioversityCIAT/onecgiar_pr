@@ -14,6 +14,7 @@ import { User } from '../../../../auth/modules/user/entities/user.entity';
 import { ClarisaInnovationCharacteristic } from '../../../../clarisa/clarisa-innovation-characteristics/entities/clarisa-innovation-characteristic.entity';
 import { ClarisaInnovationType } from '../../../../clarisa/clarisa-innovation-type/entities/clarisa-innovation-type.entity';
 import { ClarisaInnovationReadinessLevel } from '../../../../clarisa/clarisa-innovation-readiness-levels/entities/clarisa-innovation-readiness-level.entity';
+import { ClarisaCenter } from '../../../../clarisa/clarisa-centers/entities/clarisa-center.entity';
 
 @Entity('results_innovations_dev')
 export class ResultsInnovationsDev {
@@ -46,13 +47,19 @@ export class ResultsInnovationsDev {
   @JoinColumn({
     name: 'innovation_characterization_id',
   })
-  innovation_characterization_id!: number;
+  innovation_characterization?: ClarisaInnovationCharacteristic;
+
+  @RelationId((rid: ResultsInnovationsDev) => rid.innovation_characterization)
+  innovation_characterization_id!: number | null;
 
   @ManyToOne(() => ClarisaInnovationType, (cit) => cit.code, { nullable: true })
   @JoinColumn({
     name: 'innovation_nature_id',
   })
-  innovation_nature_id!: number;
+  innovation_nature?: ClarisaInnovationType;
+
+  @RelationId((rid: ResultsInnovationsDev) => rid.innovation_nature)
+  innovation_nature_id!: number | null;
 
   @ManyToOne(() => ClarisaInnovationReadinessLevel, (cir) => cir.id, {
     nullable: true,
@@ -60,7 +67,10 @@ export class ResultsInnovationsDev {
   @JoinColumn({
     name: 'innovation_readiness_level_id',
   })
-  innovation_readiness_level_id!: number;
+  innovation_readiness_level?: ClarisaInnovationReadinessLevel;
+
+  @RelationId((rid: ResultsInnovationsDev) => rid.innovation_readiness_level)
+  innovation_readiness_level_id!: number | null;
 
   @Column({
     name: 'is_new_variety',
@@ -172,4 +182,20 @@ export class ResultsInnovationsDev {
     nullable: true,
   })
   has_innovation_link: boolean;
+
+  @Column({
+    type: 'varchar',
+    length: 15,
+    name: 'ip_support_center_id',
+    nullable: true,
+  })
+  ip_support_center_id: string;
+
+  @ManyToOne(() => ClarisaCenter, (cc) => cc.innovation_dev_results, {
+    nullable: true,
+  })
+  @JoinColumn({
+    name: 'ip_support_center_id',
+  })
+  ip_support_center_object: ClarisaCenter;
 }

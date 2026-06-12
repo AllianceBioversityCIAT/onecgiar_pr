@@ -18,27 +18,6 @@ export class ResultsReviewTableComponent implements OnDestroy {
   api = inject(ApiService);
   bilateralResultsService = inject(BilateralResultsService);
 
-  tableData = signal<GroupedResult[]>([
-    {
-      project_id: '',
-      project_name: '',
-      results: [
-        {
-          id: '',
-          project_id: '',
-          project_name: '',
-          result_code: '',
-          result_title: '',
-          indicator_category: '',
-          status_name: '',
-          acronym: '',
-          toc_title: '',
-          indicator: '',
-          submission_date: ''
-        }
-      ]
-    }
-  ]);
   canReviewResults = computed(() => {
     if (this.api.rolesSE.isAdmin) {
       return true;
@@ -54,7 +33,7 @@ export class ResultsReviewTableComponent implements OnDestroy {
     const selectedIndicatorCategories = this.bilateralResultsService.selectedIndicatorCategories();
     const selectedStatus = this.bilateralResultsService.selectedStatus();
     const selectedLeadCenters = this.bilateralResultsService.selectedLeadCenters();
-    const data = this.tableData();
+    const data = this.bilateralResultsService.tableData();
 
     return data
       .map(group => ({
@@ -89,7 +68,7 @@ export class ResultsReviewTableComponent implements OnDestroy {
     if (centers.length > 0) {
       this.getResultsToReview(centers);
     }
-    this.tableData.set([]);
+    this.bilateralResultsService.tableData.set([]);
     this.bilateralResultsService.tableResults.set([]);
     this.bilateralResultsService.clearBilateralTableFilters();
   });
@@ -102,7 +81,7 @@ export class ResultsReviewTableComponent implements OnDestroy {
 
     this.api.resultsSE.GET_ResultToReview(entityId, centers).subscribe(res => {
       const grouped = res.response ?? [];
-      this.tableData.set(grouped);
+      this.bilateralResultsService.tableData.set(grouped);
       const flat = grouped.flatMap((g: GroupedResult) => g.results ?? []);
       this.bilateralResultsService.tableResults.set(flat);
       const allCenters = this.bilateralResultsService.centers();

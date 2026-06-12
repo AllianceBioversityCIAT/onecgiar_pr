@@ -1,4 +1,4 @@
-import { Injectable, HttpStatus, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { Result } from './entities/result.entity';
 import { HandlersError } from '../../shared/handlers/error.utils';
@@ -8,7 +8,7 @@ import { ResultLevelType } from './dto/result-level-type.dto';
 import { ResultSimpleDto } from './dto/result-simple.dto';
 import { ResultDataToMapDto } from './dto/result-data-to-map.dto';
 import { LegacyIndicatorsPartner } from './legacy_indicators_partners/entities/legacy_indicators_partner.entity';
-import { env } from 'process';
+import { env } from 'node:process';
 import { ResultTypeDto } from './dto/result-types.dto';
 import {
   ConfigCustomQueryInterface,
@@ -19,6 +19,7 @@ import { LogicalDelete } from '../../shared/globalInterfaces/delete.interface';
 import { predeterminedDateValidation } from '../../shared/utils/versioning.utils';
 import { BaseRepository } from '../../shared/extendsGlobalDTO/base-repository';
 import { ReportParametersDto } from './dto/report-parameters.dto';
+import { BasicReportFiltersNormalized } from './dto/basic-report-filters.dto';
 import { EnvironmentExtractor } from '../../shared/utils/environment-extractor';
 
 @Injectable()
@@ -140,7 +141,7 @@ export class ResultRepository
   }
   private readonly _logger: Logger = new Logger(ResultRepository.name);
   constructor(
-    private dataSource: DataSource,
+    private readonly dataSource: DataSource,
     private readonly _handlersError: HandlersError,
   ) {
     super(Result, dataSource.createEntityManager());
@@ -222,7 +223,7 @@ export class ResultRepository
     	inner join result_type rt ON rt.id = r.result_type_id 
     	inner join result_level rl on rl.id = rt.result_level_id 
     where r.is_active > 0
-    	and r.title like '%\?%'
+    	and r.title like '%?%'
     	and rt.id = ?;
     `;
     try {
@@ -289,7 +290,7 @@ export class ResultRepository
       left join clarisa_countries cc on
         cc.id = rc.country_id
       where r.result_type_id not in (10,11) 
-        ${!allowDeleted ? 'and r.is_active > 0' : ''}
+        ${allowDeleted ? '' : 'and r.is_active > 0'}
       group by
         r.id,
         r.title,
@@ -347,11 +348,11 @@ export class ResultRepository
       const results: any[] = await this.query(queryData, id ? [id] : []);
       return results;
     } catch (error) {
-      throw {
-        message: `[${ResultRepository.name}] => allResultsForElasticSearch error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
     }
   }
 
@@ -379,11 +380,11 @@ export class ResultRepository
       const result = await this.query(query, [resultId]);
       return result?.[0] as ResultDataToMapDto;
     } catch (error) {
-      throw {
-        message: `[${ResultRepository.name}] => getResultInfoToMap error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
     }
   }
 
@@ -439,50 +440,13 @@ WHERE
       const results: any[] = await this.query(queryData);
       return results;
     } catch (error) {
-      throw {
-        message: `[${ResultRepository.name}] => completeAllData error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
     }
   }
-
-  /*async getResultsById(id: number) {
-    const queryData = `
-    SELECT
-    r.id,
-    r.title,
-    r.reported_year_id AS reported_year,
-    rt.name AS result_type,
-    r.created_date,
-    ci.official_code AS submitter,
-    ci.id AS submitter_id,
-    r.status,
-    IF(r.status = 0, 'Editing', 'Submitted') AS status_name,
-    r.no_applicable_partner
-FROM
-    result r
-    INNER JOIN result_type rt ON rt.id = r.result_type_id
-    INNER JOIN results_by_inititiative rbi ON rbi.result_id = r.id
-    INNER JOIN clarisa_initiatives ci ON ci.id = rbi.inititiative_id
-WHERE
-    r.is_active > 0
-    AND rbi.is_active > 0
-    AND ci.active > 0
-    AND r.id = ?;
-    `;
-
-    try {
-      const results: any[] = await this.query(queryData, [id]);
-      return results;
-    } catch (error) {
-      throw {
-        message: `[${ResultRepository.name}] => getResultsById error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
-    }
-  }*/
 
   async AllResultsByRoleUserAndInitiative(
     userid: number,
@@ -557,11 +521,11 @@ WHERE
       );
       return results;
     } catch (error) {
-      throw {
-        message: `[${ResultRepository.name}] => completeAllData error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
     }
   }
 
@@ -580,7 +544,7 @@ WHERE
     }
 
     const normalizedIds = resultIds
-      .map((id) => Number(id))
+      .map(Number)
       .filter((id) => Number.isFinite(id));
 
     if (!normalizedIds.length) {
@@ -616,11 +580,11 @@ WHERE
     try {
       return await this.query(query, [userId, ...normalizedIds]);
     } catch (error) {
-      throw {
-        message: `[${ResultRepository.name}] => getUserRolesForResults error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
     }
   }
 
@@ -635,6 +599,10 @@ WHERE
       statusId?: number | number[];
       fundingSource?: string | string[];
       title?: string;
+      /** When set with filter flags, restricts to the authenticated user's activity */
+      myActivityUserId?: number;
+      filterMyCreated?: boolean;
+      filterMySubmitted?: boolean;
     },
     excludeType = [10, 11],
     pagination?: { limit?: number; offset?: number },
@@ -722,7 +690,7 @@ WHERE
       if (!arr.length) return;
       const placeholders = arr.map(() => '?').join(',');
       where.push(`AND ${field} IN (${placeholders})`);
-      params.push(...(arr as (number | string)[]));
+      params.push(...arr);
     };
 
     try {
@@ -739,6 +707,27 @@ WHERE
         params.push(`%${filters.title}%`);
       }
 
+      if (
+        filters?.myActivityUserId != null &&
+        (filters.filterMyCreated || filters.filterMySubmitted)
+      ) {
+        const uid = filters.myActivityUserId;
+        const parts: string[] = [];
+        if (filters.filterMyCreated) {
+          parts.push('r.created_by = ?');
+          params.push(uid);
+        }
+        if (filters.filterMySubmitted) {
+          parts.push(
+            'EXISTS (SELECT 1 FROM submission s WHERE s.results_id = r.id AND s.user_id = ? AND s.is_active = 1)',
+          );
+          params.push(uid);
+        }
+        if (parts.length) {
+          where.push(`AND (${parts.join(' OR ')})`);
+        }
+      }
+
       const limit =
         pagination?.limit && pagination.limit > 0
           ? pagination.limit
@@ -750,10 +739,11 @@ WHERE
           ? pagination.offset
           : undefined;
 
-      const paginatedClause =
-        limit !== undefined
-          ? ` LIMIT ${limit}${offset !== undefined ? ` OFFSET ${offset}` : ''}`
-          : '';
+      let paginatedClause = '';
+      if (limit !== undefined) {
+        const offsetClause = offset === undefined ? '' : ` OFFSET ${offset}`;
+        paginatedClause = ` LIMIT ${limit}${offsetClause}`;
+      }
 
       const queryData = `${baseQuery} ${where.join(' ')}${paginatedClause};`;
       const results = await this.query(queryData, params);
@@ -767,18 +757,116 @@ WHERE
 
       return { results, total: results.length };
     } catch (error) {
-      throw {
-        message: `[${ResultRepository.name}] => AllResultsByRoleUserAndInitiativeFiltered error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
     }
   }
 
-  async getResultDataForBasicReport(initDate: Date, endDate: Date) {
+  async getResultDataForBasicReport(filters: BasicReportFiltersNormalized) {
+    const params: any[] = ['?'];
+    const whereParts: string[] = [
+      'r.is_active',
+      'r.result_type_id NOT IN (10, 11)',
+    ];
+
+    if (filters.initDate != null && filters.endDate != null) {
+      whereParts.push('DATE(r.created_date) BETWEEN ? AND ?');
+      params.push(filters.initDate, filters.endDate);
+    }
+
+    if (filters.phaseIds?.length) {
+      const placeholders = filters.phaseIds.map(() => '?').join(', ');
+      whereParts.push(`r.version_id IN (${placeholders})`);
+      params.push(...filters.phaseIds);
+    }
+
+    if (filters.searchText) {
+      whereParts.push('(r.title LIKE ? OR r.result_code LIKE ?)');
+      const escapedSearchText = filters.searchText
+        .replaceAll('%', String.raw`\%`)
+        .replaceAll('_', String.raw`\_`);
+      const term = `%` + escapedSearchText + `%`;
+      params.push(term, term);
+    }
+
+    if (filters.initiativeIds?.length || filters.initiativeCodes?.length) {
+      const conditions: string[] = [];
+      if (filters.initiativeIds?.length) {
+        const placeholders = filters.initiativeIds.map(() => '?').join(', ');
+        conditions.push(`ci_main.id IN (${placeholders})`);
+        params.push(...filters.initiativeIds);
+      }
+      if (filters.initiativeCodes?.length) {
+        const placeholders = filters.initiativeCodes.map(() => '?').join(', ');
+        conditions.push(`ci_main.official_code IN (${placeholders})`);
+        params.push(...filters.initiativeCodes);
+      }
+      whereParts.push(`(${conditions.join(' OR ')})`);
+    }
+
+    if (filters.resultTypeIds?.length) {
+      const placeholders = filters.resultTypeIds.map(() => '?').join(', ');
+      whereParts.push(`r.result_type_id IN (${placeholders})`);
+      params.push(...filters.resultTypeIds);
+    }
+
+    if (filters.statusIds?.length) {
+      const placeholders = filters.statusIds.map(() => '?').join(', ');
+      whereParts.push(`r.status_id IN (${placeholders})`);
+      params.push(...filters.statusIds);
+    }
+
+    if (filters.portfolioIds?.length) {
+      const placeholders = filters.portfolioIds.map(() => '?').join(', ');
+      whereParts.push(`version.portfolio_id IN (${placeholders})`);
+      params.push(...filters.portfolioIds);
+    }
+
+    if (filters.sourceValues?.length) {
+      const placeholders = filters.sourceValues.map(() => '?').join(', ');
+      whereParts.push(`r.source IN (${placeholders})`);
+      params.push(...filters.sourceValues);
+    }
+
+    if (filters.leadCenterCodes?.length) {
+      const placeholders = filters.leadCenterCodes.map(() => '?').join(', ');
+      whereParts.push(
+        `EXISTS (SELECT 1 FROM results_center rcl WHERE rcl.result_id = r.id AND rcl.is_active = 1 AND rcl.is_leading_result = 1 AND rcl.center_id IN (${placeholders}))`,
+      );
+      params.push(...filters.leadCenterCodes);
+    }
+
+    if (
+      filters.myActivityUserId != null &&
+      (filters.filterMyCreated || filters.filterMySubmitted)
+    ) {
+      const uid = filters.myActivityUserId;
+      const parts: string[] = [];
+      if (filters.filterMyCreated) {
+        parts.push('r.created_by = ?');
+        params.push(uid);
+      }
+      if (filters.filterMySubmitted) {
+        parts.push(
+          'EXISTS (SELECT 1 FROM submission s WHERE s.results_id = r.id AND s.user_id = ? AND s.is_active = 1)',
+        );
+        params.push(uid);
+      }
+      if (parts.length) {
+        whereParts.push(`(${parts.join(' OR ')})`);
+      }
+    }
+
+    const whereClause = whereParts.join(' AND ');
     const queryData = `
     SELECT
+      r.id AS results_id,
+      r.version_id AS version_id,
       r.result_code,
+      ANY_VALUE(version.phase_year) AS phase_year,
       ANY_VALUE(version.phase_name) AS phase_name,
       ANY_VALUE(r.reported_year_id) AS reported_year_id,
       ANY_VALUE(r.title) AS title,
@@ -792,18 +880,126 @@ WHERE
         )
       ) AS "is_key_result",
       IFNULL(ANY_VALUE(gtl_gender.description), '') AS "gender_tag_level",
+      IF(ANY_VALUE(version.portfolio_id) = 3, (
+        SELECT GROUP_CONCAT(iasc.name ORDER BY iasc.name SEPARATOR ', ')
+        FROM result_impact_area_score rias
+        INNER JOIN impact_areas_scores_components iasc ON iasc.id = rias.impact_area_score_id AND iasc.is_active = 1
+        WHERE rias.result_id = r.id AND rias.is_active = 1 AND iasc.impact_area = 'Gender'
+      ), '') AS "gender_impact_areas",
       IFNULL(ANY_VALUE(gtl_climate.description), '') AS "climate_tag_level",
+      IF(ANY_VALUE(version.portfolio_id) = 3, (
+        SELECT GROUP_CONCAT(iasc.name ORDER BY iasc.name SEPARATOR ', ')
+        FROM result_impact_area_score rias
+        INNER JOIN impact_areas_scores_components iasc ON iasc.id = rias.impact_area_score_id AND iasc.is_active = 1
+        WHERE rias.result_id = r.id AND rias.is_active = 1 AND iasc.impact_area = 'Climate'
+      ), '') AS "climate_impact_areas",
       IFNULL(ANY_VALUE(gtl_nutrition.description), '') AS "nutrition_tag_level",
+      IF(ANY_VALUE(version.portfolio_id) = 3, (
+        SELECT GROUP_CONCAT(iasc.name ORDER BY iasc.name SEPARATOR ', ')
+        FROM result_impact_area_score rias
+        INNER JOIN impact_areas_scores_components iasc ON iasc.id = rias.impact_area_score_id AND iasc.is_active = 1
+        WHERE rias.result_id = r.id AND rias.is_active = 1 AND iasc.impact_area = 'Nutrition'
+      ), '') AS "nutrition_impact_areas",
       IFNULL(ANY_VALUE(gtl_environment.description), '') AS "environment_tag_level",
+      IF(ANY_VALUE(version.portfolio_id) = 3, (
+        SELECT GROUP_CONCAT(iasc.name ORDER BY iasc.name SEPARATOR ', ')
+        FROM result_impact_area_score rias
+        INNER JOIN impact_areas_scores_components iasc ON iasc.id = rias.impact_area_score_id AND iasc.is_active = 1
+        WHERE rias.result_id = r.id AND rias.is_active = 1 AND iasc.impact_area = 'Environmental'
+      ), '') AS "environment_impact_areas",
       IFNULL(ANY_VALUE(gtl_poverty.description), '') AS "poverty_tag_level",
+      IF(ANY_VALUE(version.portfolio_id) = 3, (
+        SELECT GROUP_CONCAT(iasc.name ORDER BY iasc.name SEPARATOR ', ')
+        FROM result_impact_area_score rias
+        INNER JOIN impact_areas_scores_components iasc ON iasc.id = rias.impact_area_score_id AND iasc.is_active = 1
+        WHERE rias.result_id = r.id AND rias.is_active = 1 AND iasc.impact_area = 'Poverty'
+      ), '') AS "poverty_impact_areas",
       ANY_VALUE(ci_main.official_code) AS official_code,
       ANY_VALUE(rs.status_name) AS status_name,
+      IF(ANY_VALUE(r.source) = 'Result', 'W1/W2', IF(ANY_VALUE(r.source) = 'API', 'W3/Bilateral', '')) AS "funding_source",
       DATE_FORMAT(r.created_date, "%Y-%m-%d") AS "creation_date",
-      ANY_VALUE(wp.id) AS "work_package_id",
-      REPLACE(REPLACE(IFNULL(ANY_VALUE(wp.name), ''), '<', '&lt;'), '>', '&gt;') AS "work_package_title",
-      ANY_VALUE(rtr.toc_result_id) AS toc_result_id,
-      REPLACE(REPLACE(IFNULL(ANY_VALUE(tr.result_title), ''), '<', '&lt;'), '>', '&gt;') AS "toc_result_title",
-      REPLACE(REPLACE(IFNULL(ANY_VALUE(action_areas_sub.action_areas), ''), '<', '&lt;'), '>', '&gt;') AS action_areas,
+      IF(ANY_VALUE(rtr.planned_result) = 1, 'Yes', IF(ANY_VALUE(rtr.planned_result) = 0, 'No', '')) AS "planned_result",
+      (
+        SELECT REPLACE(REPLACE(
+          IFNULL(
+            GROUP_CONCAT(
+              CONCAT(
+                'Does this result align with the Program planned TOC indicators: ',
+                IF(toc_rtr.planned_result = 1, 'Yes', IF(toc_rtr.planned_result = 0, 'No', '')),
+                '\n',
+                IF(toc_v.portfolio_id = 3, CONCAT(REPLACE(REPLACE(IFNULL(toc_twp.acronym, ''), '<', '&lt;'), '>', '&gt;'), '\n'), ''),
+                'ToC result: ',
+                REPLACE(REPLACE(IFNULL(COALESCE(toc_tr_p25.result_title, toc_tr_p22.result_title), ''), '<', '&lt;'), '>', '&gt;'),
+                '\n',
+                IF(toc_v.portfolio_id = 3, '', CONCAT('Action areas: ', REPLACE(REPLACE(IFNULL(toc_aa.action_areas, ''), '<', '&lt;'), '>', '&gt;'), '\n')),
+                'Indicator: ',
+                REPLACE(REPLACE(IFNULL(COALESCE(toc_tri_p25.indicator_description, toc_tri_p22.indicator_description), 'Not Applicable'), '<', '&lt;'), '>', '&gt;'),
+                '\n',
+                'Target contribution: ',
+                IFNULL(CAST(ROUND(toc_rit.contributing_indicator, 0) AS SIGNED), ''),
+                '\n',
+                IF(toc_rtr.planned_result = 1, 'Explanation of how the result aligns with/contributes to the Program TOC pathway: ', IF(toc_rtr.planned_result = 0, 'Why is the result being reported: ', '')),
+                REPLACE(REPLACE(IFNULL(toc_rtr.toc_progressive_narrative, ''), '<', '&lt;'), '>', '&gt;')
+              )
+              SEPARATOR '\n\n'
+            ),
+            ''
+          ),
+          '<', '&lt;'
+        ), '>', '&gt;')
+        FROM results_toc_result toc_rtr
+        INNER JOIN version toc_v ON toc_v.id = r.version_id
+        LEFT JOIN ${env.DB_TOC}.toc_results toc_tr_p25 ON toc_tr_p25.id = toc_rtr.toc_result_id
+          AND toc_tr_p25.is_active = 1
+          AND toc_v.portfolio_id = 3
+        LEFT JOIN ${env.DB_TOC}.toc_work_packages toc_twp ON toc_tr_p25.wp_id = toc_twp.toc_id
+        LEFT JOIN Integration_information.toc_results toc_tr_p22 ON toc_tr_p22.id = toc_rtr.toc_result_id
+          AND toc_tr_p22.is_active = 1
+          AND (toc_v.portfolio_id IS NULL OR toc_v.portfolio_id != 3)
+        LEFT JOIN Integration_information.work_packages toc_wp_p22 ON toc_wp_p22.id = toc_tr_p22.work_packages_id
+          AND toc_wp_p22.active = 1
+        LEFT JOIN results_toc_result_indicators toc_rtri ON toc_rtri.results_toc_results_id = toc_rtr.result_toc_result_id
+          AND toc_rtri.is_active = 1
+          AND (toc_rtri.is_not_aplicable = 0 OR toc_rtri.is_not_aplicable IS NULL)
+        LEFT JOIN ${env.DB_TOC}.toc_results_indicators toc_tri_p25 ON toc_tri_p25.toc_results_id = toc_tr_p25.id
+          AND toc_tri_p25.is_active = 1
+          AND toc_v.portfolio_id = 3
+          AND (
+            CONVERT(toc_tri_p25.related_node_id USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(toc_rtri.toc_results_indicator_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+            OR CONVERT(CAST(toc_tri_p25.id AS CHAR) USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(toc_rtri.toc_results_indicator_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+          )
+        LEFT JOIN Integration_information.toc_results_indicators toc_tri_p22 ON toc_tri_p22.toc_results_id = toc_tr_p22.id
+          AND toc_tri_p22.is_active = 1
+          AND (toc_v.portfolio_id IS NULL OR toc_v.portfolio_id != 3)
+          AND (
+            CONVERT(toc_tri_p22.related_node_id USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(toc_rtri.toc_results_indicator_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+            OR CONVERT(CAST(toc_tri_p22.id AS CHAR) USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(toc_rtri.toc_results_indicator_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+          )
+        LEFT JOIN result_indicators_targets toc_rit ON toc_rit.result_toc_result_indicator_id = toc_rtri.result_toc_result_indicator_id
+          AND toc_rit.is_active = 1
+        LEFT JOIN (
+          SELECT
+            traar.toc_results_id,
+            GROUP_CONCAT(DISTINCT CONCAT(caa.id, ' - ', caa.name) SEPARATOR '\n') AS action_areas
+          FROM
+            Integration_information.toc_results_action_area_results traar
+            INNER JOIN Integration_information.toc_action_area_results taar ON taar.toc_result_id = traar.toc_action_area_results_id_toc
+              AND taar.is_active = 1
+            RIGHT JOIN clarisa_action_area caa ON taar.action_areas_id = caa.id
+          WHERE traar.is_active = 1
+          GROUP BY traar.toc_results_id
+        ) toc_aa ON toc_aa.toc_results_id = toc_tr_p22.id
+        WHERE toc_rtr.results_id = r.id
+          AND toc_rtr.initiative_id = (
+            SELECT inititiative_id
+            FROM results_by_inititiative
+            WHERE result_id = r.id
+              AND initiative_role_id = 1
+              AND is_active = 1
+            LIMIT 1
+          )
+          AND toc_rtr.is_active = 1
+      ) AS "toc",
       GROUP_CONCAT(
         DISTINCT CONCAT(
           '[',
@@ -818,6 +1014,117 @@ WHERE
       GROUP_CONCAT(
         DISTINCT ci_contributor.official_code SEPARATOR ', '
       ) AS "contributing_initiative",
+      IF(
+          r.result_type_id <> 6,
+          (
+              SELECT
+                  GROUP_CONCAT(DISTINCT CONCAT('• ', q1.partner) SEPARATOR ' ')
+              FROM
+                  (
+                      SELECT
+                          CONCAT(
+                              CONCAT(
+                                  IF(
+                                      COALESCE(ci7.acronym, '') = '',
+                                      '',
+                                      CONCAT(ci7.acronym, ' - ')
+                                  ),
+                                  ci7.name
+                              ),
+                              '; Delivery type(s): ',
+                              GROUP_CONCAT(DISTINCT pdt.name separator ', ')
+                          ) AS partner
+                      FROM
+                          results_by_institution rbi
+                          LEFT JOIN result_by_institutions_by_deliveries_type rbibdt ON rbibdt.result_by_institution_id = rbi.id
+                          AND rbibdt.is_active > 0
+                          LEFT JOIN clarisa_institutions ci7 ON ci7.id = rbi.institutions_id
+                          LEFT JOIN partner_delivery_type pdt ON pdt.id = rbibdt.partner_delivery_type_id
+                      WHERE
+                          rbi.result_id = r.id
+                          AND rbi.institution_roles_id = 2
+                          AND rbi.is_active > 0
+                      GROUP by
+                          rbi.result_id,
+                          ci7.id
+                  ) AS q1
+          ),
+          'Not Applicable'
+      ) AS partners_with_delivery_type_for_non_kp_results,
+      IF(
+          r.result_type_id = 6,
+          (
+              SELECT
+                  group_concat(DISTINCT CONCAT('• ', q1.partner) separator ' ')
+              FROM
+                  (
+                      SELECT
+                          CONCAT(
+                              'CGSpace Institution: ',
+                              rkmi.intitution_name,
+                              '; Mapped institution: ',
+                              IF(
+                                  rbi.id IS NULL,
+                                  'None',
+                                  CONCAT(
+                                      CONCAT(
+                                          IF(
+                                              COALESCE(ci8.acronym, '') = '',
+                                              '',
+                                              CONCAT(ci8.acronym, ' - ')
+                                          ),
+                                          ci8.name
+                                      ),
+                                      '; Delivery type(s): ',
+                                      GROUP_CONCAT(DISTINCT pdt.name separator ', ')
+                                  )
+                              )
+                          ) AS partner
+                      FROM
+                          results_kp_mqap_institutions rkmi
+                          LEFT JOIN results_knowledge_product rkp ON rkmi.result_knowledge_product_id = rkp.result_knowledge_product_id
+                          AND rkp.is_active > 0
+                          LEFT JOIN results_by_institution rbi ON rkmi.results_by_institutions_id = rbi.id
+                          AND rbi.is_active > 0
+                          AND rbi.institution_roles_id = 2
+                          LEFT JOIN result_by_institutions_by_deliveries_type rbibdt ON rbibdt.result_by_institution_id = rbi.id
+                          AND rbibdt.is_active > 0
+                          LEFT JOIN clarisa_institutions ci8 ON ci8.id = rbi.institutions_id
+                          LEFT JOIN partner_delivery_type pdt ON pdt.id = rbibdt.partner_delivery_type_id
+                      WHERE
+                          rkmi.is_active > 0
+                          AND rkp.results_id = r.id
+                      GROUP by
+                          rkp.results_id,
+                          rbi.institutions_id,
+                          rkmi.intitution_name,
+                          rkmi.results_by_institutions_id
+                  ) AS q1
+          ),
+          'Not Applicable'
+      ) AS partners_with_delivery_type_for_kp_results,
+      IFNULL(
+          (
+              SELECT
+                  GROUP_CONCAT(
+                      DISTINCT CONCAT(
+                          '(',
+                          IFNULL(cp.short_name, ''),
+                          ' - ',
+                          IFNULL(cp.full_name, ''),
+                          IF(rbp.is_lead = 1, ', Lead project: Yes', ', Lead project: No'),
+                          ')'
+                      ) SEPARATOR ', '
+                  )
+              FROM
+                  results_by_projects rbp
+                  INNER JOIN clarisa_projects cp ON cp.id = rbp.project_id
+              WHERE
+                  rbp.result_id = r.id
+                  AND rbp.is_active = 1
+          ),
+          'Not provided'
+      ) AS bilateral_projects,
       CONCAT(
         '${env.FRONT_END_PDF_ENDPOINT}',
         r.result_code,
@@ -842,10 +1149,34 @@ WHERE
       LEFT JOIN results_toc_result rtr ON rtr.results_id = r.id
       AND rtr.initiative_id = rbi_main.inititiative_id
       AND rtr.is_active
-      LEFT JOIN ${env.DB_TOC}.toc_results tr ON rtr.toc_result_id = tr.id
-      AND tr.is_active
-      LEFT JOIN ${env.DB_TOC}.work_packages wp ON wp.id = tr.work_packages_id
-      AND wp.active
+      LEFT JOIN ${env.DB_TOC}.toc_results tr_p25 ON rtr.toc_result_id = tr_p25.id
+      AND tr_p25.is_active = 1
+      AND version.portfolio_id = 3
+      LEFT JOIN ${env.DB_TOC}.toc_work_packages twp_p25 ON tr_p25.wp_id = twp_p25.toc_id
+      LEFT JOIN Integration_information.toc_results tr_p22 ON rtr.toc_result_id = tr_p22.id
+      AND tr_p22.is_active = 1
+      AND (version.portfolio_id IS NULL OR version.portfolio_id != 3)
+      LEFT JOIN Integration_information.work_packages wp_p22 ON wp_p22.id = tr_p22.work_packages_id
+      AND wp_p22.active = 1
+      LEFT JOIN results_toc_result_indicators rtri ON rtri.results_toc_results_id = rtr.result_toc_result_id
+      AND rtri.is_active = 1
+      AND (rtri.is_not_aplicable = 0 OR rtri.is_not_aplicable IS NULL)
+      LEFT JOIN ${env.DB_TOC}.toc_results_indicators tri_p25 ON tri_p25.toc_results_id = tr_p25.id
+      AND tri_p25.is_active = 1
+      AND version.portfolio_id = 3
+      AND (
+        CONVERT(tri_p25.related_node_id USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(rtri.toc_results_indicator_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+        OR CONVERT(CAST(tri_p25.id AS CHAR) USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(rtri.toc_results_indicator_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+      )
+      LEFT JOIN Integration_information.toc_results_indicators tri_p22 ON tri_p22.toc_results_id = tr_p22.id
+      AND tri_p22.is_active = 1
+      AND (version.portfolio_id IS NULL OR version.portfolio_id != 3)
+      AND (
+        CONVERT(tri_p22.related_node_id USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(rtri.toc_results_indicator_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+        OR CONVERT(CAST(tri_p22.id AS CHAR) USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(rtri.toc_results_indicator_id USING utf8mb4) COLLATE utf8mb4_unicode_ci
+      )
+      LEFT JOIN result_indicators_targets rit ON rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
+      AND rit.is_active = 1
       LEFT JOIN results_center rc ON rc.result_id = r.id
       AND rc.is_active
       LEFT JOIN clarisa_center cc ON cc.code = rc.center_id
@@ -863,35 +1194,65 @@ WHERE
             DISTINCT CONCAT(caa.id, ' - ', caa.name) SEPARATOR '\n'
           ) AS action_areas
         FROM
-          ${env.DB_TOC}.toc_results_action_area_results traar
-          INNER JOIN ${env.DB_TOC}.toc_action_area_results taar ON taar.toc_result_id = traar.toc_action_area_results_id_toc
-          AND taar.is_active
+          Integration_information.toc_results_action_area_results traar
+          INNER JOIN Integration_information.toc_action_area_results taar ON taar.toc_result_id = traar.toc_action_area_results_id_toc
+          AND taar.is_active = 1
           RIGHT JOIN clarisa_action_area caa ON taar.action_areas_id = caa.id
         WHERE
-          traar.is_active
+          traar.is_active = 1
         GROUP BY
           traar.toc_results_id
-      ) AS action_areas_sub ON action_areas_sub.toc_results_id = tr.toc_result_id
+      ) AS action_areas_p22 ON action_areas_p22.toc_results_id = tr_p22.id
     WHERE
-      r.created_date BETWEEN ?
-      AND ?
-      AND r.is_active
-      AND r.result_type_id NOT IN (10, 11)
+      ${whereClause}
     GROUP BY
       r.id
     ORDER BY
       creation_date DESC;
       `;
     try {
-      const results = await this.query(queryData, ['?', initDate, endDate]);
-
+      const results = await this.query(queryData, params);
       return results;
     } catch (error) {
-      throw {
-        message: `[${ResultRepository.name}] => completeAllData error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  async getP25ExcelRowsByResultCodes(
+    resultCodes: number[],
+    viewNameRaw?: string,
+  ) {
+    if (!resultCodes?.length) return [];
+    const viewName =
+      viewNameRaw?.trim() ||
+      env.RESULT_P25_EXCEL_VIEW?.trim() ||
+      'result_phase_2025_excel';
+    if (!/^\w+$/.test(viewName)) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error: new Error('Invalid view name for P25 excel export'),
+        debug: true,
+      });
+    }
+
+    const placeholders = resultCodes.map(() => '?').join(', ');
+    const queryData = `
+      SELECT *
+      FROM \`${viewName}\`
+      WHERE result_code IN (${placeholders})
+    `;
+    try {
+      return await this.query(queryData, resultCodes);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
     }
   }
 
@@ -939,11 +1300,11 @@ WHERE
       ]);
       return results;
     } catch (error) {
-      throw {
-        message: `[${ResultRepository.name}] => completeAllData error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
     }
   }
 
@@ -985,11 +1346,11 @@ WHERE
       const results: DepthSearchOne[] = await this.query(queryData, [id, id]);
       return results.length ? results[0] : new DepthSearchOne();
     } catch (error) {
-      throw {
-        message: `[${ResultRepository.name}] => completeAllData error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
     }
   }
 
@@ -1005,11 +1366,11 @@ WHERE
       ]);
       return partners;
     } catch (error) {
-      throw {
-        message: `[${LegacyIndicatorsPartner.name}] => completeAllData error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throw this._handlersError.returnErrorRepository({
+        className: LegacyIndicatorsPartner.name,
+        error,
+        debug: true,
+      });
     }
   }
 
@@ -1028,6 +1389,7 @@ WHERE
     r.poverty_tag_level_id,
     r.version_id,
     r.result_type_id,
+    IF(r.source = 'Result', 'W1/W2', 'W3/Bilaterals') as source_name,
     r.status,
     r.status_id,
     rs.status_name,
@@ -1091,24 +1453,12 @@ WHERE
       const results: Result[] = await this.query(queryData);
       return results.length ? results[0] : undefined;
     } catch (error) {
-      throw {
-        message: `[${ResultRepository.name}] => completeAllData error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
     }
-    /*return this.query(queryData, [id])
-      .then((res) => {
-        setTimeout(() => {}, 500);
-        return res.length ? res[0] : undefined;
-      })
-      .catch((error) => {
-        throw {
-          message: `[${ResultRepository.name}] => completeAllData error: ${error}`,
-          response: {},
-          status: HttpStatus.INTERNAL_SERVER_ERROR,
-        };
-      });*/
   }
 
   async getResultByTypes(typesId: number[]): Promise<Result[]> {
@@ -1180,11 +1530,11 @@ WHERE
       const results: Result[] = await this.query(queryData, [typesId]);
       return results;
     } catch (error) {
-      throw {
-        message: `[${ResultRepository.name}] => getResultByTypes error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
     }
   }
 
@@ -1248,11 +1598,11 @@ WHERE
       const results: ResultLevelType[] = await this.query(queryData, [id]);
       return results.length ? results[0] : new ResultLevelType();
     } catch (error) {
-      throw {
-        message: `[${ResultRepository.name}] => completeAllData error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
     }
   }
 
@@ -1263,13 +1613,13 @@ WHERE
 
     try {
       const results: Array<{ last_code }> = await this.query(queryData);
-      return results.length ? parseInt(results[0].last_code) : null;
+      return results.length ? Number.parseInt(results[0].last_code) : null;
     } catch (error) {
-      throw {
-        message: `[${ResultRepository.name}] => getLastResultCode error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
     }
   }
 
@@ -1463,10 +1813,60 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         r.description AS "Result Description",
         r.lead_contact_person AS "Lead Contact Person",
         IFNULL(gtl.description, 'Not provided') AS "Gender Tag Level",
+        IF(
+            (SELECT v.portfolio_id FROM version v WHERE v.id = r.version_id) = 3,
+            (
+                SELECT GROUP_CONCAT(iasc.name ORDER BY iasc.name SEPARATOR ', ')
+                FROM result_impact_area_score rias
+                INNER JOIN impact_areas_scores_components iasc ON iasc.id = rias.impact_area_score_id AND iasc.is_active = 1
+                WHERE rias.result_id = r.id AND rias.is_active = 1 AND iasc.impact_area = 'Gender'
+            ),
+            ''
+        ) AS "Gender Impact Areas",
         IFNULL(gtl2.description, 'Not provided') AS "Climate Tag Level",
+        IF(
+            (SELECT v.portfolio_id FROM version v WHERE v.id = r.version_id) = 3,
+            (
+                SELECT GROUP_CONCAT(iasc.name ORDER BY iasc.name SEPARATOR ', ')
+                FROM result_impact_area_score rias
+                INNER JOIN impact_areas_scores_components iasc ON iasc.id = rias.impact_area_score_id AND iasc.is_active = 1
+                WHERE rias.result_id = r.id AND rias.is_active = 1 AND iasc.impact_area = 'Climate'
+            ),
+            ''
+        ) AS "Climate Impact Areas",
         IFNULL(gtl3.description, 'Not provided') AS "Nutrition Tag Level",
+        IF(
+            (SELECT v.portfolio_id FROM version v WHERE v.id = r.version_id) = 3,
+            (
+                SELECT GROUP_CONCAT(iasc.name ORDER BY iasc.name SEPARATOR ', ')
+                FROM result_impact_area_score rias
+                INNER JOIN impact_areas_scores_components iasc ON iasc.id = rias.impact_area_score_id AND iasc.is_active = 1
+                WHERE rias.result_id = r.id AND rias.is_active = 1 AND iasc.impact_area = 'Nutrition'
+            ),
+            ''
+        ) AS "Nutrition Impact Areas",
         IFNULL(gtl4.description, 'Not provided') AS "Environment AND/or biodiversity Tag Level",
+        IF(
+            (SELECT v.portfolio_id FROM version v WHERE v.id = r.version_id) = 3,
+            (
+                SELECT GROUP_CONCAT(iasc.name ORDER BY iasc.name SEPARATOR ', ')
+                FROM result_impact_area_score rias
+                INNER JOIN impact_areas_scores_components iasc ON iasc.id = rias.impact_area_score_id AND iasc.is_active = 1
+                WHERE rias.result_id = r.id AND rias.is_active = 1 AND iasc.impact_area = 'Environmental'
+            ),
+            ''
+        ) AS "Environment Impact Areas",
         IFNULL(gtl5.description, 'Not provided') AS "Poverty Tag Level",
+        IF(
+            (SELECT v.portfolio_id FROM version v WHERE v.id = r.version_id) = 3,
+            (
+                SELECT GROUP_CONCAT(iasc.name ORDER BY iasc.name SEPARATOR ', ')
+                FROM result_impact_area_score rias
+                INNER JOIN impact_areas_scores_components iasc ON iasc.id = rias.impact_area_score_id AND iasc.is_active = 1
+                WHERE rias.result_id = r.id AND rias.is_active = 1 AND iasc.impact_area = 'Poverty'
+            ),
+            ''
+        ) AS "Poverty Impact Areas",
         IF(
             r.is_krs IS NULL,
             'Not provided',
@@ -1508,30 +1908,23 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
                 SELECT
                     GROUP_CONCAT(
                         DISTINCT CONCAT(
-                            '(Funder name: ',
-                            ci4.acronym,
+                            '(',
+                            IFNULL(cp.short_name, ''),
                             ' - ',
-                            ci4.name,
-                            ', Grant title: ',
-                            npp.grant_title,
-                            ', Center Grant ID: ',
-                            IFNULL(npp.center_grant_id, 'Not applicable'),
-                            ', Lead/Contract Center: ',
-                            ci3.name,
+                            IFNULL(cp.full_name, ''),
+                            IF(rbp.is_lead = 1, ', Lead project: Yes', ', Lead project: No'),
                             ')'
                         ) SEPARATOR ', '
                     )
                 FROM
-                    non_pooled_project npp
-                    LEFT JOIN clarisa_center cc ON cc.code = npp.lead_center_id
-                    LEFT JOIN clarisa_institutions ci3 ON ci3.id = cc.institutionId
-                    LEFT JOIN clarisa_institutions ci4 ON ci4.id = npp.funder_institution_id
+                    results_by_projects rbp
+                    INNER JOIN clarisa_projects cp ON cp.id = rbp.project_id
                 WHERE
-                    npp.results_id = r.id
-                    AND npp.is_active > 0
+                    rbp.result_id = r.id
+                    AND rbp.is_active = 1
             ),
             'Not provided'
-        ) AS "Non-pooled Project(s)",
+        ) AS "Bilateral Projects",
         (
             SELECT
                 GROUP_CONCAT(
@@ -2149,9 +2542,9 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         LEFT JOIN Integration_information.toc_results tr ON tr.id = rtr.toc_result_id
         LEFT JOIN Integration_information.work_packages wp ON wp.id = tr.work_packages_id
         LEFT JOIN Integration_information.toc_results_indicators tri ON tr.id = tri.toc_results_id AND tri.toc_result_indicator_id = rtri.toc_results_indicator_id ${
-          !EnvironmentExtractor.isProduction()
-            ? `COLLATE utf8mb3_general_ci`
-            : ``
+          EnvironmentExtractor.isProduction()
+            ? ``
+            : `COLLATE utf8mb3_general_ci`
         }
     WHERE
         r.id ${resultIds.length ? `in (${resultIds})` : '= 0'}
@@ -2767,7 +3160,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         if (!policyChangeMap.has(policyChangeId)) {
           const implementingOrg = [];
           if (
-            row.institution_roles_id === 4 &&
+            Number(row.institution_roles_id) === 4 &&
             row.institution_id &&
             row.acronym
           ) {
@@ -2791,7 +3184,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         const policyChange = policyChangeMap.get(policyChangeId);
 
         if (
-          row.institution_roles_id === 4 &&
+          Number(row.institution_roles_id) === 4 &&
           row.institution_id &&
           row.acronym
         ) {
@@ -2875,6 +3268,7 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
       FROM result r
       JOIN evidence e 
         ON r.id = e.result_id
+        AND e.is_active = 1
       WHERE
         r.id = ?
         AND r.is_active = 1;
@@ -2952,6 +3346,71 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
     try {
       const results = await this.query(query, [resultId]);
       return results;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRepository.name,
+        error,
+        debug: true,
+      });
+    }
+  }
+
+  /**
+   * TOC mapping per initiative for a result (for bilateral list/get).
+   * Uses Integration_information.toc_results / toc_work_packages.
+   * Returns one row per initiative with toc_mappings (array of { toc_result_id, official_code, aow, planned_result, level, title }).
+   */
+  async getTocMappingsByResultId(resultId: number): Promise<
+    {
+      official_code: string | null;
+      name: string | null;
+      initiative_role: string | null;
+      toc_mappings: any[];
+    }[]
+  > {
+    const query = `
+      SELECT
+        ci.official_code,
+        ci.name,
+        ir.name AS initiative_role,
+        JSON_ARRAYAGG(
+          JSON_OBJECT(
+            'toc_result_id', rtr.toc_result_id,
+            'official_code', tr.official_code,
+            'name', ci.name,
+            'aow', twp.acronym,
+            'planned_result', IF(rtr.planned_result = 1, 'Yes', 'No'),
+            'level', CASE
+              WHEN tr.category = 'Output' THEN 'High Level Output'
+              WHEN tr.category = 'Outcome' THEN 'Intermediate Outcome'
+              WHEN tr.category = 'EOI' THEN '2030 Outcome'
+              ELSE tr.category
+            END,
+            'title', tr.result_title
+          )
+        ) AS toc_mappings
+      FROM results_by_inititiative rbi
+      INNER JOIN clarisa_initiatives ci ON rbi.inititiative_id = ci.id
+      INNER JOIN initiative_roles ir ON rbi.initiative_role_id = ir.id
+      LEFT JOIN results_toc_result rtr ON rtr.results_id = rbi.result_id
+        AND rtr.initiative_id = rbi.inititiative_id
+        AND rtr.is_active = 1
+      LEFT JOIN Integration_information.toc_results tr ON tr.id = rtr.toc_result_id
+      LEFT JOIN Integration_information.toc_work_packages twp ON twp.toc_id = tr.wp_id
+      WHERE rbi.result_id = ?
+      GROUP BY ci.official_code, ci.name, ir.name;
+    `;
+    try {
+      const rows = await this.query(query, [resultId]);
+      return (rows ?? []).map((row: any) => ({
+        official_code: row.official_code ?? null,
+        name: row.name ?? null,
+        initiative_role: row.initiative_role ?? null,
+        toc_mappings:
+          typeof row.toc_mappings === 'string'
+            ? JSON.parse(row.toc_mappings)
+            : (row.toc_mappings ?? []),
+      }));
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultRepository.name,

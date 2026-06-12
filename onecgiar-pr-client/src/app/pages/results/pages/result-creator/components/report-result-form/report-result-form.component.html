@@ -116,7 +116,7 @@
             [disabled]="
               !this.resultLevelSE.resultBody.initiative_id ||
               !this.resultLevelSE.resultBody.result_name?.trim() ||
-              exactTitleFound() ||
+              blockingExactTitleFound() ||
               loadingDepthSearch()
             "
             text="Save and continue">

@@ -19,6 +19,17 @@
 
               .text {
                 @include fonts.pr-typography('body-2');
+
+                .phase-link {
+                  color: var(--pr-color-primary-300);
+                  text-decoration: none;
+                  cursor: pointer;
+                  font-weight: 500;
+
+                  &:hover {
+                    text-decoration: underline;
+                  }
+                }
               }
 
               .tag_container {

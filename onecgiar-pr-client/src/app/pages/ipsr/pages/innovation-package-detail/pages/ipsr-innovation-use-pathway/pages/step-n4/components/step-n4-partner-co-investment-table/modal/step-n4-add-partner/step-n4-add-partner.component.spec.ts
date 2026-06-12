@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { StepN4AddPartnerComponent } from './step-n4-add-partner.component';
-import { HttpClientModule } from '@angular/common/http';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { DialogModule } from 'primeng/dialog';
 import { PrButtonComponent } from '../../../../../../../../../../../../custom-fields/pr-button/pr-button.component';
 import { PrSelectComponent } from '../../../../../../../../../../../../custom-fields/pr-select/pr-select.component';
@@ -17,7 +17,7 @@ describe('StepN4AddPartnerComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [StepN4AddPartnerComponent, PrButtonComponent, PrSelectComponent, PrFieldHeaderComponent, LabelNamePipe],
-      imports: [HttpClientModule, DialogModule, FormsModule, TooltipModule]
+      imports: [HttpClientTestingModule, DialogModule, FormsModule, TooltipModule]
     }).compileComponents();
 
     fixture = TestBed.createComponent(StepN4AddPartnerComponent);

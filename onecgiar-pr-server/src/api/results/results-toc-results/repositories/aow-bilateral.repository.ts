@@ -468,7 +468,8 @@ export class AoWBilateralRepository {
         WHERE
           tr.official_code = ?
           AND r.is_active = 1
-          AND r.status_id IN (1, 2, 3)
+          /* P2-2841: Quality Assessed (2) + Approved (6) only — aligns with View results */
+          AND r.status_id IN (2, 6)
           AND r.result_level_id IN (3, 4)
           AND r.result_type_id IN (1, 2, 4, 5, 6, 7, 8, 10)
           ${tocPhaseId ? 'AND tr.phase = ?' : ''}

@@ -77,6 +77,11 @@ export class SummaryService {
         innovationUseDto,
       );
 
+      await this._resultRepository.update(resultId, {
+        last_updated_by: user.id,
+        last_updated_date: new Date(),
+      });
+
       return {
         response: InnovationUse,
         message: 'Results Innovations Use has been created successfully',
@@ -228,6 +233,11 @@ export class SummaryService {
           user.id,
         );
       }
+
+      await this._resultRepository.update(resultId, {
+        last_updated_by: user.id,
+        last_updated_date: new Date(),
+      });
 
       return {
         response: CapDevData,
@@ -441,6 +451,11 @@ export class SummaryService {
           innovationUseDto,
         );
       }
+
+      await this._resultRepository.update(resultId, {
+        last_updated_by: user.id,
+        last_updated_date: new Date(),
+      });
 
       return {
         response: InnDevRes,
@@ -695,6 +710,11 @@ export class SummaryService {
           await this._resultAnswerRepository.save(optionAnswer);
         }
       }
+
+      await this._resultRepository.update(resultId, {
+        last_updated_by: user.id,
+        last_updated_date: new Date(),
+      });
 
       return {
         response: policyChangesData,

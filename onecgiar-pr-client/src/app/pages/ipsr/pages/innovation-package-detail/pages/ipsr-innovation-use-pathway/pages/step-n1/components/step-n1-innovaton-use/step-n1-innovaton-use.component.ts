@@ -1,13 +1,12 @@
-/* eslint-disable arrow-parens */
-import { Component, Input, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, Input, OnInit } from '@angular/core';
 import { Actor, IpsrStep1Body, Measure, Organization } from '../../model/Ipsr-step-1-body.model';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 
 @Component({
-    selector: 'app-step-n1-innovaton-use',
-    templateUrl: './step-n1-innovaton-use.component.html',
-    styleUrls: ['./step-n1-innovaton-use.component.scss'],
-    standalone: false
+  selector: 'app-step-n1-innovaton-use',
+  templateUrl: './step-n1-innovaton-use.component.html',
+  styleUrls: ['./step-n1-innovaton-use.component.scss'],
+  standalone: false
 })
 export class StepN1InnovatonUseComponent implements OnInit {
   actorsTypeList = [];
@@ -15,7 +14,10 @@ export class StepN1InnovatonUseComponent implements OnInit {
   executeTimer = null;
   @Input() body = new IpsrStep1Body();
 
-  constructor(public api: ApiService) {
+  constructor(
+    public api: ApiService,
+    private readonly cdr: ChangeDetectorRef
+  ) {
     this.GETAllActorsTypes();
     this.GETInstitutionsTypeTree();
   }
@@ -57,11 +59,10 @@ export class StepN1InnovatonUseComponent implements OnInit {
   }
 
   reloadSelect(organizationItem) {
-    organizationItem.hide = true;
     organizationItem.institution_sub_type_id = null;
-    setTimeout(() => {
-      organizationItem.hide = false;
-    }, 300);
+    organizationItem.hide = true;
+    this.cdr.detectChanges();
+    organizationItem.hide = false;
   }
 
   addActor() {

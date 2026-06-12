@@ -61,10 +61,11 @@ describe('AowViewResultsDrawer', () => {
   describe('columns signal', () => {
     it('should initialize with correct column configuration', () => {
       const columns = component.columns();
-      expect(columns).toHaveLength(3);
+      expect(columns).toHaveLength(4);
       expect(columns[0]).toEqual({ title: 'Code', attr: 'result_code', width: '10%' });
       expect(columns[1]).toEqual({ title: 'Title', attr: 'title' });
       expect(columns[2]).toEqual({ title: 'Status', attr: 'status_name', width: '130px' });
+      expect(columns[3]).toEqual({ title: 'Target achieved', attr: 'contributing_indicator', width: '130px' });
     });
   });
 

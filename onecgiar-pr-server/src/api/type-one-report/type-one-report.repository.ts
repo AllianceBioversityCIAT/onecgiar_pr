@@ -299,7 +299,7 @@ export class TypeOneReportRepository {
         climateGenderScoreQuery,
         [initId],
       );
-      generalInformation.map((gi) => {
+      generalInformation.forEach((gi) => {
         gi['countriesProposal'] = countriesProposal.filter((cp) => {
           return cp.initvStgId === gi.initiative_stage_id;
         });

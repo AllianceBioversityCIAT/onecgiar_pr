@@ -9,6 +9,26 @@ export class SaveButtonService {
   isSaving = false;
   isGettingSection = false;
   constructor(private customizedAlertsFeSE: CustomizedAlertsFeService) {}
+
+  /** Parses Nest/Angular HTTP error bodies for a user-facing message. */
+  private extractHttpErrorMessage(err: unknown): string {
+    const body = (err as { error?: { message?: unknown } })?.error;
+    if (body == null || typeof body !== 'object') {
+      return '';
+    }
+    const msg = (body as { message?: unknown }).message;
+    if (typeof msg === 'string' && msg.trim()) {
+      return msg.trim();
+    }
+    if (Array.isArray(msg)) {
+      return msg
+        .filter((m): m is string => typeof m === 'string')
+        .map(m => m.trim())
+        .filter(Boolean)
+        .join('. ');
+    }
+    return '';
+  }
   showSaveSpinner() {
     this.isSaving = true;
   }
@@ -35,7 +55,7 @@ export class SaveButtonService {
     );
   }
 
-  isSavingPipe(validateErrorMessage : boolean = false): any {
+  isSavingPipe(): any {
     this.showSaveSpinner();
     return pipe(
       tap(resp => {
@@ -44,13 +64,14 @@ export class SaveButtonService {
       }),
       catchError(err => {
         this.hideSaveSpinner();
-
-        if(err.error.message && validateErrorMessage){
-          this.customizedAlertsFeSE.show({ id: 'save-button', title: 'There was an error saving the section', description: err.error.message, status: 'error', closeIn: 500 });
-          return throwError(() => err);
-        }
-
-        this.customizedAlertsFeSE.show({ id: 'save-button', title: 'There was an error saving the section', description: '', status: 'error', closeIn: 500 });
+        const detail = this.extractHttpErrorMessage(err);
+        this.customizedAlertsFeSE.show({
+          id: 'save-button',
+          title: 'There was an error saving the section',
+          description: detail,
+          status: 'error',
+          ...(detail ? {} : { closeIn: 500 })
+        });
         return throwError(() => err);
       })
     );
@@ -72,12 +93,13 @@ export class SaveButtonService {
       }),
       catchError(err => {
         this.hideSaveSpinner();
+        const detail = this.extractHttpErrorMessage(err);
         this.customizedAlertsFeSE.show({
           id: 'save-button',
           title: 'There was an error saving the section',
-          description: '',
+          description: detail,
           status: 'error',
-          closeIn: 500
+          ...(detail ? {} : { closeIn: 500 })
         });
         return throwError(() => err);
       })

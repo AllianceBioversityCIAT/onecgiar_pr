@@ -6,7 +6,6 @@ import { CentersService } from '../../../../../../shared/services/global/centers
 import { CustomizedAlertsFeService } from '../../../../../../shared/services/customized-alerts-fe.service';
 import { NonPooledProjectDto } from '../rd-partners/models/partnersBody';
 import { RdContributorsAndPartnersService } from './rd-contributors-and-partners.service';
-import { ContributorsAndPartnersBody } from './models/contributorsAndPartnersBody';
 import { ResultLevelService } from '../../../result-creator/services/result-level.service';
 import { InnovationUseResultsService } from '../../../../../../shared/services/global/innovation-use-results.service';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
@@ -41,9 +40,8 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.rdPartnersSE.partnersBody = new ContributorsAndPartnersBody();
+    this.rdPartnersSE.resetState();
     this.rdPartnersSE.getSectionInformation();
-    this.rdPartnersSE.loadClarisaProjects();
     this.GET_AllWithoutResults();
     this.api.dataControlSE.findClassTenSeconds('alert-event').then(_resp => {
       try {
@@ -270,7 +268,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
 
   formatBilateralProjectLabel(project: any): string {
     const fullName = project?.fullName || project?.obj_clarisa_project?.fullName || '';
-    const organizationName = project?.obj_organization?.name || project?.obj_clarisa_project?.obj_organization?.name;
+    const organizationName = project?.organization_name || project?.obj_organization?.name || project?.obj_clarisa_project?.obj_organization?.name;
 
     if (organizationName) {
       return `${fullName} (Center: ${organizationName})`;

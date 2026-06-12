@@ -8,10 +8,15 @@ describe('main bootstrap', () => {
     const listenMock = jest.fn().mockResolvedValue(undefined);
     const enableVersioningMock = jest.fn();
 
+    const connectMicroserviceMock = jest.fn();
+    const startAllMicroservicesMock = jest.fn().mockResolvedValue(undefined);
+
     const nestAppMock: Partial<INestApplication> = {
       use: useMock,
       listen: listenMock as any,
       enableVersioning: enableVersioningMock as any,
+      connectMicroservice: connectMicroserviceMock as any,
+      startAllMicroservices: startAllMicroservicesMock as any,
     };
 
     const createMock = jest.fn().mockResolvedValue(nestAppMock);
@@ -67,6 +72,8 @@ describe('main bootstrap', () => {
       useMock,
       listenMock,
       enableVersioningMock,
+      connectMicroserviceMock,
+      startAllMicroservicesMock,
       documentBuilderChain,
       createDocumentMock,
       setupMock,
@@ -80,6 +87,8 @@ describe('main bootstrap', () => {
       useMock,
       listenMock,
       enableVersioningMock,
+      connectMicroserviceMock,
+      startAllMicroservicesMock,
       documentBuilderChain,
       createDocumentMock,
       setupMock,
@@ -110,5 +119,16 @@ describe('main bootstrap', () => {
       },
     );
     expect(listenMock).toHaveBeenCalledWith('4500');
+
+    const queueConfigured =
+      !!process.env.REPORTING_METADATA_EXPORT_QUEUE?.trim() &&
+      !!process.env.RABBITMQ_URL?.trim();
+    if (queueConfigured) {
+      expect(connectMicroserviceMock).toHaveBeenCalled();
+      expect(startAllMicroservicesMock).toHaveBeenCalled();
+    } else {
+      expect(connectMicroserviceMock).not.toHaveBeenCalled();
+      expect(startAllMicroservicesMock).not.toHaveBeenCalled();
+    }
   });
 });

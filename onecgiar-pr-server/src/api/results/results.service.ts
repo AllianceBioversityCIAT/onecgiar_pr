@@ -10,6 +10,10 @@ import {
 } from '@nestjs/common';
 import { DataSource, In, IsNull } from 'typeorm';
 import { CreateResultDto } from './dto/create-result.dto';
+import {
+  BasicReportFiltersDto,
+  BasicReportFiltersNormalized,
+} from './dto/basic-report-filters.dto';
 import { ResultRepository } from './result.repository';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
@@ -58,7 +62,7 @@ import { ResultCountry } from './result-countries/entities/result-country.entity
 import { ResultRegion } from './result-regions/entities/result-region.entity';
 import { ElasticService } from '../../elastic/elastic.service';
 import { ElasticOperationDto } from '../../elastic/dto/elastic-operation.dto';
-import process from 'process';
+import process from 'node:process';
 import { resultValidationRepository } from './results-validation-module/results-validation-module.repository';
 import { ResultsKnowledgeProductAuthorRepository } from './results-knowledge-products/repositories/results-knowledge-product-authors.repository';
 import { ResultsKnowledgeProductInstitutionRepository } from './results-knowledge-products/repositories/results-knowledge-product-institution.repository';
@@ -86,6 +90,9 @@ import {
 } from '../notification/enum/notification.enum';
 import { ImpactAreasScoresComponentRepository } from './impact_areas_scores_components/repositories/impact_areas_scores_components.repository';
 import { ResultsInnovationsDev } from './summary/entities/results-innovations-dev.entity';
+import { ResultsCapacityDevelopments } from './summary/entities/results-capacity-developments.entity';
+import { ResultsPolicyChanges } from './summary/entities/results-policy-changes.entity';
+import { ResultsInnovationsUse } from './summary/entities/results-innovations-use.entity';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 import { ResultsTocResultRepository } from './results-toc-results/repositories/results-toc-results.repository';
 import { ResultsInnovationsDevRepository } from './summary/repositories/results-innovations-dev.repository';
@@ -123,6 +130,8 @@ import { ShareResultRequestRepository } from './share-result-request/share-resul
 import { ShareResultRequest } from './share-result-request/entities/share-result-request.entity';
 import { EvidencesService } from '../results/evidences/evidences.service';
 import { SavePartnersV2Dto } from './results_by_institutions/dto/save-partners-v2.dto';
+import { ResultDeletionAuditService } from './result-deletion-audit/result-deletion-audit.service';
+import { ResultDeletionAuditSource } from './result-deletion-audit/result-deletion-audit-source.enum';
 
 @Injectable()
 export class ResultsService {
@@ -169,6 +178,7 @@ export class ResultsService {
     private readonly _resultsCenterRepository: ResultsCenterRepository,
     private readonly _resultsTocResultRepository: ResultsTocResultRepository,
     private readonly _tocResultsRepository: AoWBilateralRepository,
+    private readonly _resultDeletionAuditService: ResultDeletionAuditService,
     private readonly _dataSource: DataSource,
     private readonly _resultImpactAreaScoresService: ResultImpactAreaScoresService,
     private readonly _initiativeEntityMapRepository?: InitiativeEntityMapRepository,
@@ -206,6 +216,40 @@ export class ResultsService {
     private readonly _shareResultRequestRepository?: ShareResultRequestRepository,
   ) {}
 
+  /**
+   * Blocks duplicate titles among active results within the same reporting version.
+   * The same title may exist on another version (same result_code lineage, different id).
+   * When updating general information, pass excludeResultId so the row can keep its title.
+   */
+  private async assertUniqueActiveResultTitle(
+    rawTitle: string | undefined,
+    versionId: number,
+    excludeResultId?: number,
+  ): Promise<string> {
+    const trimmed = (rawTitle ?? '').trim();
+    if (!trimmed) {
+      return '';
+    }
+    const existing = await this._resultRepository.findOne({
+      where: {
+        title: trimmed,
+        is_active: true,
+        version_id: versionId,
+      },
+    });
+    if (
+      existing?.id &&
+      (excludeResultId === undefined || existing.id !== excludeResultId)
+    ) {
+      throw {
+        response: {},
+        message: 'A result with this title already exists.',
+        status: HttpStatus.CONFLICT,
+      };
+    }
+    return trimmed;
+  }
+
   async createOwnerResult(
     createResultDto: CreateResultDto,
     user: TokenDto,
@@ -220,11 +264,12 @@ export class ResultsService {
         !createResultDto?.result_type_id ||
         !createResultDto?.result_level_id
       ) {
-        throw {
-          response: {},
-          message: 'Missing data: Result name, Initiative or Result type',
-          status: HttpStatus.BAD_REQUEST,
-        };
+        throw this._handlersError.returnErrorRes({
+          error: new Error(
+            'Missing data: Result name, Initiative or Result type',
+          ),
+          debug: true,
+        });
       }
 
       if (createResultDto?.result_type_id == 3) {
@@ -304,16 +349,26 @@ export class ResultsService {
         };
       }
 
+      const targetVersionId =
+        isAdmin != undefined && Boolean(isAdmin) && versionId
+          ? versionId
+          : version.id;
+
+      const trimmedCreateTitle = await this.assertUniqueActiveResultTitle(
+        createResultDto.result_name,
+        targetVersionId,
+      );
+
       const last_code = await this._resultRepository.getLastResultCode();
       const saveResult: Partial<Result> = {
         created_by: user.id,
         last_updated_by: user.id,
         result_type_id: rt.id,
-        version_id:
-          isAdmin != undefined && Boolean(isAdmin) && versionId
-            ? versionId
-            : version.id,
-        title: createResultDto.result_name,
+        version_id: targetVersionId,
+        title:
+          trimmedCreateTitle.length > 0
+            ? trimmedCreateTitle
+            : createResultDto.result_name,
         reported_year_id: year.year,
         result_level_id: rl.id,
         result_code: last_code + 1,
@@ -648,7 +703,7 @@ export class ResultsService {
       }
       if (
         resultGeneralInformation?.is_discontinued &&
-        result.result_type_id == 7
+        (result.result_type_id == 7 || result.result_type_id == 2)
       ) {
         await this._resultsInvestmentDiscontinuedOptionRepository.inactiveData(
           resultGeneralInformation.discontinued_options.map(
@@ -661,7 +716,7 @@ export class ResultsService {
           const res =
             await this._resultsInvestmentDiscontinuedOptionRepository.findOne({
               where: {
-                result_id: resultGeneralInformation.result_id,
+                result_id: result.id,
                 investment_discontinued_option_id:
                   i.investment_discontinued_option_id,
               },
@@ -687,7 +742,7 @@ export class ResultsService {
             });
           }
         }
-      } else if (result.result_type_id == 7) {
+      } else if (result.result_type_id == 7 || result.result_type_id == 2) {
         await this._resultsInvestmentDiscontinuedOptionRepository.inactiveData(
           [],
           result.id,
@@ -738,10 +793,19 @@ export class ResultsService {
         );
       }
 
+      const trimmedGeneralTitle = await this.assertUniqueActiveResultTitle(
+        resultGeneralInformation.result_name,
+        result.version_id,
+        result.id,
+      );
+
       const updateResult = await this._resultRepository.save({
         id: result.id,
         is_discontinued: resultGeneralInformation?.is_discontinued,
-        title: resultGeneralInformation.result_name,
+        title:
+          trimmedGeneralTitle.length > 0
+            ? trimmedGeneralTitle
+            : resultGeneralInformation.result_name,
         result_type_id: resultByLevel.result_type_id,
         result_level_id: resultByLevel.result_level_id,
         description: resultGeneralInformation.result_description,
@@ -771,7 +835,7 @@ export class ResultsService {
         lead_contact_person: resultGeneralInformation.lead_contact_person,
         lead_contact_person_id: leadContactPersonId,
         status_id:
-          result.result_type_id == 7
+          result.result_type_id == 7 || result.result_type_id == 2
             ? resultGeneralInformation?.is_discontinued
               ? 4
               : result.status_id == 4
@@ -914,7 +978,7 @@ export class ResultsService {
    * @returns
    */
 
-  async deleteResult(resultId: number, user: TokenDto) {
+  async deleteResult(resultId: number, user: TokenDto, justification?: string) {
     try {
       const result: Result = await this._resultRepository.findOne({
         where: { id: resultId },
@@ -933,6 +997,13 @@ export class ResultsService {
           statusCode: HttpStatus.BAD_REQUEST,
           response: result,
         });
+
+      await this._resultDeletionAuditService.recordDeletion({
+        resultId: result.id,
+        userId: user.id,
+        deletionSource: ResultDeletionAuditSource.ResultsModule,
+        justification,
+      });
 
       result.is_active = false;
 
@@ -1161,8 +1232,15 @@ export class ResultsService {
     }
   }
 
-  async findAllByRoleFiltered(userId: number, query: Record<string, any> = {}) {
+  async findAllByRoleFiltered(
+    userId: number,
+    query: Record<string, any> = {},
+    authUser?: TokenDto,
+  ) {
     try {
+      const parseQueryBool = (v: unknown): boolean =>
+        v === true || v === 'true' || v === 1 || v === '1';
+
       const pageNum = Number(query.page);
       const limitNum = Number(query.limit);
       const page =
@@ -1208,6 +1286,11 @@ export class ResultsService {
 
       const title = query.title ? String(query.title).trim() : undefined;
 
+      const filterMyCreated = parseQueryBool(query.filter_created_by_me);
+      const filterMySubmitted = parseQueryBool(query.filter_submitted_by_me);
+      const useMyActivity =
+        authUser?.id != null && (filterMyCreated || filterMySubmitted);
+
       const filters = {
         initiativeCode,
         versionId: toNumberArray(
@@ -1223,6 +1306,13 @@ export class ResultsService {
         statusId: toNumberArray(query.status_id ?? query.status),
         fundingSource,
         title: title && title.length > 0 ? title : undefined,
+        ...(useMyActivity
+          ? {
+              myActivityUserId: authUser.id,
+              filterMyCreated,
+              filterMySubmitted,
+            }
+          : {}),
       };
 
       const repoRes =
@@ -2152,16 +2242,6 @@ export class ResultsService {
           resultId,
         );
 
-      const knowledgeProduct =
-        await this._resultKnowledgeProductRepository.findOneBy({
-          results_id: resultId,
-        });
-
-      if (knowledgeProduct) {
-        //contries = knowledgeProduct.cgspace_countries?.split('; ') ?? [];
-        //regions = knowledgeProduct.cgspace_regions?.split('; ') ?? [];
-      }
-
       let scope = 0;
       if (
         result.geographic_scope_id == 1 ||
@@ -2193,13 +2273,33 @@ export class ResultsService {
     }
   }
 
-  async getResultDataForBasicReport(initDate: Date, endDate: Date) {
+  async getResultDataForBasicReport(
+    body: BasicReportFiltersDto,
+    authUser: TokenDto,
+  ) {
     try {
-      const result = await this._resultRepository.getResultDataForBasicReport(
-        initDate,
-        endDate,
-      );
+      const filters = this._normalizeBasicReportFilters(body, authUser);
+      const result =
+        await this._resultRepository.getResultDataForBasicReport(filters);
 
+      return {
+        response: result,
+        message: 'Successful response',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      if (error instanceof BadRequestException) throw error;
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async getP25ExcelRowsByResultCodes(resultCodes: number[]) {
+    try {
+      const uniqueCodes = [...new Set(resultCodes)].filter(
+        (c) => Number.isFinite(c) && c > 0,
+      );
+      const result =
+        await this._resultRepository.getP25ExcelRowsByResultCodes(uniqueCodes);
       return {
         response: result,
         message: 'Successful response',
@@ -2208,6 +2308,138 @@ export class ResultsService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  /**
+   * Normalizes and validates basic report filters from the request body.
+   * When both initDate and endDate are present, validates the range.
+   */
+  private _normalizeBasicReportFilters(
+    body: BasicReportFiltersDto,
+    authUser: TokenDto,
+  ): BasicReportFiltersNormalized {
+    const { initDate, endDate } = this._parseBasicReportDateRange(body);
+    const phaseIds = this._extractPhaseIds(body.phases);
+    const initiativeIds = body.inits
+      ?.filter((i) => i.id != null)
+      .map((i) => i.id);
+    const initiativeCodes = body.inits
+      ?.filter((i) => i.official_code != null && i.official_code !== '')
+      .map((i) => i.official_code);
+    const resultTypeIds = body.indicatorCategories
+      ?.filter((c) => c.id != null)
+      .map((c) => c.id);
+    const statusIds = body.status
+      ?.map((s) =>
+        typeof s.status_id === 'string'
+          ? Number.parseInt(s.status_id, 10)
+          : s.status_id,
+      )
+      .filter((id) => id != null && !Number.isNaN(id));
+    const portfolioIds = body.clarisaPortfolios
+      ?.filter((p) => p.id != null)
+      .map((p) => p.id);
+    const sourceValues = body.fundingSource
+      ?.map((f) => this._mapFundingSourceToSourceValue(f.name))
+      .filter((s): s is 'Result' | 'API' => s != null);
+    const leadCenterCodes = body.leadCenters
+      ?.filter((c) => c.code != null && c.code !== '')
+      .map((c) => c.code);
+
+    const filterMyCreated = body.filterCreatedByMe === true;
+    const filterMySubmitted = body.filterSubmittedByMe === true;
+    const useMyActivity =
+      authUser?.id != null && (filterMyCreated || filterMySubmitted);
+
+    return {
+      initDate,
+      endDate,
+      phaseIds: this._emptyToUndefined(phaseIds),
+      searchText: this._trimmedOrUndefined(body.searchText),
+      initiativeIds: this._emptyToUndefined(initiativeIds),
+      initiativeCodes: this._emptyToUndefined(initiativeCodes),
+      resultTypeIds: this._emptyToUndefined(resultTypeIds),
+      statusIds: this._emptyToUndefined(statusIds),
+      portfolioIds: this._emptyToUndefined(portfolioIds),
+      sourceValues: sourceValues?.length
+        ? [...new Set(sourceValues)]
+        : undefined,
+      leadCenterCodes: this._emptyToUndefined(leadCenterCodes),
+      ...(useMyActivity
+        ? {
+            myActivityUserId: authUser.id,
+            filterMyCreated,
+            filterMySubmitted,
+          }
+        : {}),
+    };
+  }
+
+  private _parseBasicReportDateRange(body: BasicReportFiltersDto): {
+    initDate?: string;
+    endDate?: string;
+  } {
+    const initDate =
+      body.initDate != null && body.initDate !== ''
+        ? this._parseAndValidateReportDate(body.initDate, 'initDate')
+        : undefined;
+    const endDate =
+      body.endDate != null && body.endDate !== ''
+        ? this._parseAndValidateReportDate(body.endDate, 'endDate')
+        : undefined;
+    if (initDate != null && endDate != null && initDate > endDate) {
+      throw new BadRequestException(
+        'initDate must be before or equal to endDate',
+      );
+    }
+    return { initDate, endDate };
+  }
+
+  private _extractPhaseIds(phases?: BasicReportFiltersDto['phases']): number[] {
+    if (!phases?.length) return [];
+    return phases
+      .map((p) => (typeof p.id === 'string' ? Number.parseInt(p.id, 10) : p.id))
+      .filter((id): id is number => id != null && !Number.isNaN(id));
+  }
+
+  private _mapFundingSourceToSourceValue(
+    name?: string,
+  ): 'Result' | 'API' | null {
+    const n = (name ?? '').toLowerCase();
+    if (n.includes('w1') || n.includes('w2')) return 'Result';
+    if (n.includes('w3') || n.includes('bilateral')) return 'API';
+    return null;
+  }
+
+  private _emptyToUndefined<T>(arr: T[] | undefined): T[] | undefined {
+    return arr?.length ? arr : undefined;
+  }
+
+  private _trimmedOrUndefined(
+    value: string | null | undefined,
+  ): string | undefined {
+    const s = value == null ? '' : String(value).trim();
+    return s === '' ? undefined : s;
+  }
+
+  /**
+   * Parsea y valida una fecha para el reporte básico (rango por created_date).
+   * Devuelve string YYYY-MM-DD para uso en la query MySQL.
+   */
+  private _parseAndValidateReportDate(
+    value: string | Date,
+    paramName: string,
+  ): string {
+    const date = typeof value === 'string' ? new Date(value) : value;
+    if (Number.isNaN(date.getTime())) {
+      throw new BadRequestException(
+        `Invalid date for ${paramName}. Use format YYYY-MM-DD.`,
+      );
+    }
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
   }
 
   async transformResultCode(resultCode: number, phase_id: number = null) {
@@ -3276,7 +3508,11 @@ export class ResultsService {
       this._validateUpdateExplanation(hasChanges, reviewUpdateDto);
 
       await this._dataSource.transaction(async (manager) => {
-        await this._validateBilateralResultForUpdate(manager, parsedResultId, user);
+        await this._validateBilateralResultForUpdate(
+          manager,
+          parsedResultId,
+          user,
+        );
 
         //Update description
         await this._updateMinDataStandardFields(
@@ -3364,11 +3600,12 @@ export class ResultsService {
     }
 
     if (user && this._roleByUserRepository) {
-      const isAdmin = await this._roleByUserRepository.validationRolePermissions(
-        user.id,
-        resultId,
-        [RoleEnum.ADMIN],
-      );
+      const isAdmin =
+        await this._roleByUserRepository.validationRolePermissions(
+          user.id,
+          resultId,
+          [RoleEnum.ADMIN],
+        );
       if (isAdmin) {
         return;
       }
@@ -3621,6 +3858,12 @@ export class ResultsService {
       pending_contributing_initiatives,
     } = contributingInitiatives;
 
+    // Determine if Admin + Approved → create with request_status_id = 1
+    const targetRequestStatusId = await this._resolveRequestStatusId(
+      resultId,
+      user,
+    );
+
     // Get owner_initiative_id
     const ownerInitiative = await this._resultByInitiativesRepository.findOne({
       where: { result_id: resultId, initiative_role_id: 1, is_active: true },
@@ -3657,11 +3900,11 @@ export class ResultsService {
 
     // Handle pending_contributing_initiatives
     if (!pending_contributing_initiatives?.length) {
-      // If there are no pending in the payload, delete all with request_status_id = 4
+      // If there are no pending in the payload, delete all with the target request_status_id
       await this._shareResultRequestRepository.update(
         {
           result_id: resultId,
-          request_status_id: 4,
+          request_status_id: targetRequestStatusId,
           is_active: true,
         },
         {
@@ -3671,11 +3914,11 @@ export class ResultsService {
       return;
     }
 
-    // Get existing share result requests with request_status_id = 4
+    // Get existing share result requests with the target request_status_id
     const existingRequests = await this._shareResultRequestRepository.find({
       where: {
         result_id: resultId,
-        request_status_id: 4,
+        request_status_id: targetRequestStatusId,
         is_active: true,
       },
     });
@@ -3701,7 +3944,7 @@ export class ResultsService {
           newRequest.shared_inititiative_id = initiativeId;
           newRequest.approving_inititiative_id = ownerInitiativeId;
           newRequest.requester_initiative_id = ownerInitiativeId;
-          newRequest.request_status_id = 4; // Draft
+          newRequest.request_status_id = targetRequestStatusId;
           newRequest.requested_by = user.id;
           newRequest.is_map_to_toc = false;
           newRequest.is_active = true;
@@ -3722,7 +3965,7 @@ export class ResultsService {
         {
           result_id: resultId,
           shared_inititiative_id: In(toDeleteInitiativeIds),
-          request_status_id: 4,
+          request_status_id: targetRequestStatusId,
           is_active: true,
         },
         {
@@ -3742,7 +3985,7 @@ export class ResultsService {
         {
           result_id: resultId,
           shared_inititiative_id: In(toUpdateInitiativeIds),
-          request_status_id: 4,
+          request_status_id: targetRequestStatusId,
         },
         {
           is_active: true,
@@ -3751,16 +3994,50 @@ export class ResultsService {
     }
   }
 
+  /**
+   * Determines the request_status_id to use when creating contributing initiatives.
+   * If user is Admin and the result status is Approved (6), returns 1 (accepted).
+   * Otherwise, returns 4 (draft).
+   */
+  private async _resolveRequestStatusId(
+    resultId: number,
+    user: TokenDto,
+  ): Promise<number> {
+    if (!this._roleByUserRepository) {
+      return 4;
+    }
+
+    const isAdmin = await this._roleByUserRepository.validationRolePermissions(
+      user.id,
+      resultId,
+      [RoleEnum.ADMIN],
+    );
+
+    if (!isAdmin) {
+      return 4;
+    }
+
+    const result = await this._resultRepository.findOne({
+      where: { id: resultId, is_active: true },
+      select: ['id', 'status_id'],
+    });
+
+    if (
+      result &&
+      Number(result.status_id) === ResultStatusData.Approved.value
+    ) {
+      return 1;
+    }
+
+    return 4;
+  }
+
   private async _updateEvidence(
     resultId: number,
     reviewUpdateDto: ReviewUpdateDto,
     user: TokenDto,
   ): Promise<void> {
-    if (
-      reviewUpdateDto.evidence === undefined ||
-      reviewUpdateDto.evidence.length === 0 ||
-      !this._evidencesService
-    ) {
+    if (reviewUpdateDto.evidence === undefined || !this._evidencesService) {
       return;
     }
 
@@ -3812,6 +4089,7 @@ export class ResultsService {
     switch (resultTypeId) {
       case ResultTypeEnum.CAPACITY_SHARING_FOR_DEVELOPMENT: // 5
         if (this._summaryService) {
+          await this._ensureCapacityDevRecord(resultId, user.id);
           const capdevDto: CapdevDto = {
             ...(reviewUpdateDto.resultTypeResponse as any),
             institutions: [],
@@ -3831,6 +4109,7 @@ export class ResultsService {
 
       case ResultTypeEnum.INNOVATION_DEVELOPMENT: // 7
         if (this._innovationDevService) {
+          await this._ensureInnovationDevRecord(resultId, user.id);
           await this._innovationDevService.updateInnovationDevPartial(
             resultId,
             reviewUpdateDto.resultTypeResponse as any,
@@ -3845,6 +4124,7 @@ export class ResultsService {
 
       case ResultTypeEnum.POLICY_CHANGE: // 1
         if (this._summaryService) {
+          await this._ensurePolicyChangeRecord(resultId, user.id);
           await this._summaryService.updatePolicyChangesPartial(
             resultId,
             reviewUpdateDto.resultTypeResponse as any,
@@ -3858,6 +4138,7 @@ export class ResultsService {
         break;
 
       case ResultTypeEnum.INNOVATION_USE: // 2
+        await this._ensureInnovationUseRecord(resultId, user.id);
         await this._updateInnovationUsePartial(resultId, reviewUpdateDto, user);
         break;
 
@@ -3867,6 +4148,140 @@ export class ResultsService {
         );
         break;
     }
+  }
+
+  private async _ensureCapacityDevRecord(
+    resultId: number,
+    userId: number,
+  ): Promise<void> {
+    const repo = this._dataSource.getRepository(ResultsCapacityDevelopments);
+
+    const existing = await repo.findOne({
+      where: { result_object: { id: resultId } },
+    });
+
+    if (existing) {
+      if (!existing.is_active) {
+        existing.is_active = true;
+        existing.last_updated_by = userId;
+        await repo.save(existing);
+        this._logger.log(
+          `Reactivated capacity development record for result ${resultId}`,
+        );
+      }
+      return;
+    }
+
+    const newRecord = repo.create({
+      result_object: { id: resultId } as Result,
+      created_by: userId,
+      last_updated_by: userId,
+      is_active: true,
+    });
+    await repo.save(newRecord);
+    this._logger.log(
+      `Created capacity development record for result ${resultId}`,
+    );
+  }
+
+  private async _ensureInnovationDevRecord(
+    resultId: number,
+    userId: number,
+  ): Promise<void> {
+    const repo = this._dataSource.getRepository(ResultsInnovationsDev);
+
+    const existing = await repo.findOne({
+      where: { result_object: { id: resultId } },
+    });
+
+    if (existing) {
+      if (!existing.is_active) {
+        existing.is_active = true;
+        existing.last_updated_by = userId;
+        await repo.save(existing);
+        this._logger.log(
+          `Reactivated innovation development record for result ${resultId}`,
+        );
+      }
+      return;
+    }
+
+    const newRecord = repo.create({
+      result_object: { id: resultId } as Result,
+      created_by: userId,
+      last_updated_by: userId,
+      is_active: true,
+    });
+    await repo.save(newRecord);
+    this._logger.log(
+      `Created innovation development record for result ${resultId}`,
+    );
+  }
+
+  private async _ensurePolicyChangeRecord(
+    resultId: number,
+    userId: number,
+  ): Promise<void> {
+    const repo = this._dataSource.getRepository(ResultsPolicyChanges);
+
+    const existing = await repo.findOne({
+      where: { result_id: resultId },
+    });
+
+    if (existing) {
+      if (!existing.is_active) {
+        existing.is_active = true;
+        existing.last_updated_by = userId;
+        await repo.save(existing);
+        this._logger.log(
+          `Reactivated policy change record for result ${resultId}`,
+        );
+      }
+      return;
+    }
+
+    const newRecord = repo.create({
+      result_id: resultId,
+      obj_result: { id: resultId } as Result,
+      created_by: userId,
+      last_updated_by: userId,
+      is_active: true,
+    });
+    await repo.save(newRecord);
+    this._logger.log(`Created policy change record for result ${resultId}`);
+  }
+
+  private async _ensureInnovationUseRecord(
+    resultId: number,
+    userId: number,
+  ): Promise<void> {
+    const repo = this._dataSource.getRepository(ResultsInnovationsUse);
+
+    const existing = await repo.findOne({
+      where: { results_id: resultId },
+    });
+
+    if (existing) {
+      if (!existing.is_active) {
+        existing.is_active = true;
+        existing.last_updated_by = userId;
+        await repo.save(existing);
+        this._logger.log(
+          `Reactivated innovation use record for result ${resultId}`,
+        );
+      }
+      return;
+    }
+
+    const newRecord = repo.create({
+      results_id: resultId,
+      obj_result: { id: resultId } as Result,
+      created_by: userId,
+      last_updated_by: userId,
+      is_active: true,
+    });
+    await repo.save(newRecord);
+    this._logger.log(`Created innovation use record for result ${resultId}`);
   }
 
   private async _updateInnovationUsePartial(
@@ -4025,7 +4440,11 @@ export class ResultsService {
           throw new BadRequestException('Bilateral result not found');
         }
 
-        await this._validateBilateralResultForUpdate(manager, parsedResultId, user);
+        await this._validateBilateralResultForUpdate(
+          manager,
+          parsedResultId,
+          user,
+        );
 
         if (!updateTocMetadataDto.updateExplanation?.trim()) {
           throw new BadRequestException(
@@ -4068,6 +4487,93 @@ export class ResultsService {
           status: HttpStatus.OK,
         };
       });
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ConflictException
+      ) {
+        return {
+          response: {},
+          message: error.message,
+          status: error.getStatus(),
+        };
+      }
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async updateBilateralResultTitle(
+    resultId: number,
+    title: string,
+    user: TokenDto,
+  ): Promise<ReturnResponseDto<any> | returnErrorDto> {
+    try {
+      const parsedResultId = Number(resultId);
+      if (
+        !parsedResultId ||
+        !Number.isFinite(parsedResultId) ||
+        parsedResultId <= 0
+      ) {
+        return {
+          response: {},
+          message: 'The resultId parameter must be a valid positive number.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      if (!title?.trim()) {
+        return {
+          response: {},
+          message: 'The title cannot be empty.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const bilateralResult = await this._resultRepository.findOne({
+        where: { id: parsedResultId, is_active: true },
+        select: ['id', 'version_id'],
+      });
+      if (!bilateralResult) {
+        return {
+          response: {},
+          message: 'The result does not exist',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const existingResult = await this._resultRepository.findOne({
+        where: {
+          title: title.trim(),
+          is_active: true,
+          version_id: bilateralResult.version_id,
+        },
+      });
+
+      if (existingResult?.id && existingResult.id !== parsedResultId) {
+        return {
+          response: {},
+          message: 'A result with this title already exists.',
+          status: HttpStatus.CONFLICT,
+        };
+      }
+
+      await this._dataSource.transaction(async (manager) => {
+        await this._validateBilateralResultForUpdate(
+          manager,
+          parsedResultId,
+          user,
+        );
+
+        await manager.update(Result, parsedResultId, {
+          title: title.trim(),
+        });
+      });
+
+      return {
+        response: { id: parsedResultId, title: title.trim() },
+        message: 'Result title updated successfully.',
+        status: HttpStatus.OK,
+      };
     } catch (error) {
       if (
         error instanceof BadRequestException ||

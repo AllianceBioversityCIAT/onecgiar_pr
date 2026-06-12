@@ -30,9 +30,10 @@ export class ResultsKnowledgeProductMapper {
     );
     knowledgeProductDto.description = mqapResponseDto?.Description;
     knowledgeProductDto.doi = mqapResponseDto?.DOI;
-    const hasQuery = (mqapResponseDto?.Handle ?? '').indexOf('?');
-    const linkSplit = (mqapResponseDto?.Handle ?? '')
-      .slice(0, hasQuery != -1 ? hasQuery : mqapResponseDto?.Handle.length)
+    const handle = mqapResponseDto?.Handle ?? '';
+    const hasQuery = handle.indexOf('?');
+    const linkSplit = handle
+      .slice(0, hasQuery === -1 ? handle.length : hasQuery)
       .split('/');
     const handleId = linkSplit.slice(linkSplit.length - 2).join('/');
     knowledgeProductDto.handle = handleId;
@@ -181,7 +182,7 @@ export class ResultsKnowledgeProductMapper {
 
     const regions = this.getAsArray(dto?.['Region of the research']);
     knowledgeProductDto.clarisa_regions = regions
-      .filter((r) => r)
+      .filter(Boolean)
       .map((r) => r.clarisa_id);
 
     const geoLocation = this.getAsArray(dto?.['Geographic location']);
@@ -252,17 +253,19 @@ export class ResultsKnowledgeProductMapper {
   private getAsArray<T>(arg: T | T[]): T[] {
     if (arg == null) {
       return [];
-    } else if (!Array.isArray(arg)) {
-      return [arg];
-    } else {
+    }
+    if (Array.isArray(arg)) {
       return arg;
     }
+    return [arg];
   }
 
   private getAltmetricInfoFromMQAPResponse(
     dto: MQAPResultDto,
   ): ResultsKnowledgeProductAltmetricDto {
-    const altmetricDto = dto?.DOI_Info?.altmetric;
+    // MQAP may send Altmetric on DOI_Info (WOS/DOI path) or on handle_altmetric (CGSpace handle path).
+    const altmetricDto =
+      dto?.DOI_Info?.altmetric ?? dto?.handle_altmetric ?? undefined;
     if (!altmetricDto) {
       return undefined;
     }
@@ -270,7 +273,11 @@ export class ResultsKnowledgeProductMapper {
     const altmetric: ResultsKnowledgeProductAltmetricDto =
       new ResultsKnowledgeProductAltmetricDto();
 
-    altmetric.altmetric_id = altmetricDto?.altmetric_id;
+    const rawId = altmetricDto?.altmetric_id;
+    altmetric.altmetric_id =
+      rawId !== undefined && rawId !== null && rawId !== ''
+        ? String(rawId)
+        : undefined;
 
     altmetric.cited_by_blogs = altmetricDto?.cited_by_feeds_count;
     altmetric.cited_by_delicious = altmetricDto?.cited_by_delicious_count;
@@ -359,7 +366,6 @@ export class ResultsKnowledgeProductMapper {
       const author = new MQAPAuthor();
 
       author.name = a;
-      //TODO extract ORCID from the ORCID field
       author.orcid = null;
 
       return author;
@@ -379,7 +385,7 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProductDto.handle = entity.handle;
     knowledgeProductDto.licence = entity.licence;
     knowledgeProductDto.title = entity.name;
-    knowledgeProductDto.references_other_knowledge_products = null; //TODO TBD
+    knowledgeProductDto.references_other_knowledge_products = null;
     knowledgeProductDto.sponsor = entity.sponsors;
     knowledgeProductDto.type = entity.knowledge_product_type;
     knowledgeProductDto.is_melia = entity.is_melia;
@@ -581,10 +587,10 @@ export class ResultsKnowledgeProductMapper {
     knowledgeProduct.name = dto.title;
     knowledgeProduct.sponsors = dto.sponsor;
 
-    if (!knowledgeProduct.result_knowledge_product_id) {
-      knowledgeProduct.created_by = userId;
-    } else {
+    if (knowledgeProduct.result_knowledge_product_id) {
       knowledgeProduct.last_updated_by = userId;
+    } else {
+      knowledgeProduct.created_by = userId;
     }
 
     knowledgeProduct.results_id = resultId;
@@ -685,7 +691,14 @@ export class ResultsKnowledgeProductMapper {
 
     (knowledgeProduct.result_knowledge_product_institution_array ?? []).forEach(
       (oi) => {
-        if (!oi['matched']) {
+        if (oi['matched']) {
+          oi.is_active = true;
+          if (oi.result_by_institution_object) {
+            oi.result_by_institution_object.is_active = true;
+          }
+
+          delete oi['matched'];
+        } else {
           if (oi.result_by_institution_object) {
             oi.result_by_institution_object.is_active = false;
           }
@@ -693,13 +706,6 @@ export class ResultsKnowledgeProductMapper {
           oi.is_active = false;
 
           institutions.push(oi);
-        } else {
-          oi.is_active = true;
-          if (oi.result_by_institution_object) {
-            oi.result_by_institution_object.is_active = true;
-          }
-
-          delete oi['matched'];
         }
       },
     );
@@ -769,14 +775,14 @@ export class ResultsKnowledgeProductMapper {
 
     altmetric = Object.assign(altmetric, dto.altmetric_full_data);
 
-    if (!knowledgeProduct.last_updated_by) {
-      altmetric.created_by = knowledgeProduct.created_by;
-    } else {
-      if (!altmetric.result_kp_altmetrics_id) {
-        altmetric.created_by = knowledgeProduct.created_by;
-      } else {
+    if (knowledgeProduct.last_updated_by) {
+      if (altmetric.result_kp_altmetrics_id) {
         altmetric.last_updated_by = knowledgeProduct.last_updated_by;
+      } else {
+        altmetric.created_by = knowledgeProduct.created_by;
       }
+    } else {
+      altmetric.created_by = knowledgeProduct.created_by;
     }
 
     altmetric.result_knowledge_product_id =
@@ -812,14 +818,14 @@ export class ResultsKnowledgeProductMapper {
       metadata.online_year = m.online_year;
       metadata.open_access = m.open_access;
 
-      if (!knowledgeProduct.last_updated_by) {
-        metadata.created_by = knowledgeProduct.created_by;
-      } else {
-        if (!metadata.result_kp_metadata_id) {
-          metadata.created_by = knowledgeProduct.created_by;
-        } else {
+      if (knowledgeProduct.last_updated_by) {
+        if (metadata.result_kp_metadata_id) {
           metadata.last_updated_by = knowledgeProduct.last_updated_by;
+        } else {
+          metadata.created_by = knowledgeProduct.created_by;
         }
+      } else {
+        metadata.created_by = knowledgeProduct.created_by;
       }
 
       metadata.result_knowledge_product_id =
@@ -830,11 +836,11 @@ export class ResultsKnowledgeProductMapper {
 
     (knowledgeProduct.result_knowledge_product_metadata_array ?? []).forEach(
       (om) => {
-        if (!om['matched']) {
+        if (om['matched']) {
+          delete om['matched'];
+        } else {
           om.is_active = false;
           metadataArray.push(om);
-        } else {
-          delete om['matched'];
         }
       },
     );
@@ -872,14 +878,14 @@ export class ResultsKnowledgeProductMapper {
       keyword.keyword = k.keyword;
       keyword.is_agrovoc = k.agrovoc;
 
-      if (!knowledgeProduct.last_updated_by) {
-        keyword.created_by = knowledgeProduct.created_by;
-      } else {
-        if (!keyword.result_kp_keyword_id) {
-          keyword.created_by = knowledgeProduct.created_by;
-        } else {
+      if (knowledgeProduct.last_updated_by) {
+        if (keyword.result_kp_keyword_id) {
           keyword.last_updated_by = knowledgeProduct.last_updated_by;
+        } else {
+          keyword.created_by = knowledgeProduct.created_by;
         }
+      } else {
+        keyword.created_by = knowledgeProduct.created_by;
       }
 
       keyword.result_knowledge_product_id =
@@ -890,11 +896,11 @@ export class ResultsKnowledgeProductMapper {
 
     (knowledgeProduct.result_knowledge_product_keyword_array ?? []).forEach(
       (ok) => {
-        if (!ok['matched']) {
+        if (ok['matched']) {
+          delete ok['matched'];
+        } else {
           ok.is_active = false;
           keywordArray.push(ok);
-        } else {
-          delete ok['matched'];
         }
       },
     );
@@ -922,14 +928,14 @@ export class ResultsKnowledgeProductMapper {
       author.author_name = a.name;
       author.orcid = a.orcid;
 
-      if (!knowledgeProduct.last_updated_by) {
-        author.created_by = knowledgeProduct.created_by;
-      } else {
-        if (!author.result_kp_author_id) {
-          author.created_by = knowledgeProduct.created_by;
-        } else {
+      if (knowledgeProduct.last_updated_by) {
+        if (author.result_kp_author_id) {
           author.last_updated_by = knowledgeProduct.last_updated_by;
+        } else {
+          author.created_by = knowledgeProduct.created_by;
         }
+      } else {
+        author.created_by = knowledgeProduct.created_by;
       }
 
       author.result_knowledge_product_id =
@@ -940,11 +946,11 @@ export class ResultsKnowledgeProductMapper {
 
     (knowledgeProduct.result_knowledge_product_author_array ?? []).forEach(
       (oa) => {
-        if (!oa['matched']) {
+        if (oa['matched']) {
+          delete oa['matched'];
+        } else {
           oa.is_active = false;
           authors.push(oa);
-        } else {
-          delete oa['matched'];
         }
       },
     );

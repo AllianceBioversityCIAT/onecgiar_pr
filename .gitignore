@@ -3,6 +3,12 @@
 /node_modules
 /build
 
+# Antigravity (agy) local cache
+/cache
+
+# Session context notes (local only, for iterating later)
+/context
+
 # Logs
 logs
 *.log
@@ -18,6 +24,15 @@ lerna-debug.log*
 # Tests
 /coverage
 /.nyc_output
+
+# Playwright MCP temp output
+.playwright-mcp/
+
+# Local verification screenshots (never commit — see CLAUDE.md / openspec tasks)
+.local-screenshots/
+
+# Local Claude/Cursor permission overrides (machine-specific)
+**/.claude/settings.local.json
 
 # IDEs and editors
 /.idea

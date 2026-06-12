@@ -101,7 +101,9 @@ describe('StepN3CurrentUseComponent', () => {
   it('should return the actorTypeDescription', () => {
     const result = component.actorTypeDescription();
 
-    expect(result).toBe(`<li>CGIAR follows the United Nations definition of 'youth' as those persons between the ages of 15 and 24 years</li><li>If age disaggregation does not apply, then please apply a 50/50% rule in dividing women or men across the youth/non-youth category</li>`);
+    expect(result).toBe(
+      `<li>CGIAR follows the United Nations definition of 'youth' as those persons between the ages of 15 and 24 years</li><li>If age disaggregation does not apply, then please apply a 50/50% rule in dividing women or men across the youth/non-youth category</li>`
+    );
   });
 
   it('should clean the actorItem', () => {
@@ -129,11 +131,14 @@ describe('StepN3CurrentUseComponent', () => {
   });
 
   it('should reload the select', () => {
-    const organizationItem = { hide: false, institution_sub_type_id: 1 };
+    const organizationItem = { hide: false, institution_sub_type_id: 123 };
+    const detectChangesSpy = jest.spyOn(component['cdr'], 'detectChanges');
+
     component.reloadSelect(organizationItem);
 
-    expect(organizationItem.hide).toBeTruthy();
     expect(organizationItem.institution_sub_type_id).toBeNull();
+    expect(organizationItem.hide).toBeFalsy();
+    expect(detectChangesSpy).toHaveBeenCalledTimes(1);
   });
 
   it('should add an actor', () => {

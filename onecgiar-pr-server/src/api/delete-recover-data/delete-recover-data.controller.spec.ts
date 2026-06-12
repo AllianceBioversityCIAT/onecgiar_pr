@@ -32,7 +32,7 @@ describe('DeleteRecoverDataController', () => {
 
   it('deleteResult delegates to service with parsed id and user', async () => {
     const res = await controller.deleteResult('12', user);
-    expect(mockService.deleteResult).toHaveBeenCalledWith(12, user);
+    expect(mockService.deleteResult).toHaveBeenCalledWith(12, user, undefined);
     expect(res.statusCode).toBe(200);
   });
 

@@ -255,6 +255,7 @@ export interface BilateralInnovationUseInvestmentPartner {
 }
 
 export interface BilateralResultTypeResponse {
+  investment_projects?: any[];
   metadata: BilateralResultTypeMetadata[];
   source: string;
   year: string;

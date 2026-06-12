@@ -259,6 +259,17 @@ describe('UserService', () => {
       (versionRepository.find as jest.Mock).mockReset();
     });
 
+    it('throws BadRequestException if entity_id is missing', async () => {
+      await expect(
+        (service as any).validateAndAssignRoles(
+          mockQueryRunner as any,
+          [{ role_id: 3, entity_id: null }],
+          baseUser,
+          currentUser,
+        ),
+      ).rejects.toThrow('An entity must be selected for the assigned role.');
+    });
+
     it('allows non-member role when entity portfolio has an open phase', async () => {
       // Active versions contain portfolio_id 5
       (versionRepository.find as jest.Mock).mockResolvedValue([

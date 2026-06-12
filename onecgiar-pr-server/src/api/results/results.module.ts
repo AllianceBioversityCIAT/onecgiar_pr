@@ -104,9 +104,15 @@ import { ResultImpactAreaScoresModule } from '../result-impact-area-scores/resul
 import { ContributorsPartnersModule } from '../results-framework-reporting/contributors-partners/contributors-partners.module';
 import { InnovationDevModule } from '../results-framework-reporting/innovation_dev/innovation_dev.module';
 import { InnovationUseModule } from '../results-framework-reporting/innovation-use/innovation-use.module';
+import { ResultDeletionAuditModule } from './result-deletion-audit/result-deletion-audit.module';
+import { PlatformReportModule } from '../platform-report/platform-report.module';
+import { EmailNotificationManagementModule } from '../../shared/microservices/email-notification-management/email-notification-management.module';
+import { ReportingFullMetadataExportService } from './services/reporting-full-metadata-export.service';
+import { ReportingMetadataExportQueueModule } from '../../shared/microservices/reporting-metadata-export-queue/reporting-metadata-export-queue.module';
+import { ReportingMetadataExportConsumer } from './reporting-metadata-export.consumer';
 
 @Module({
-  controllers: [ResultsController],
+  controllers: [ResultsController, ReportingMetadataExportConsumer],
   imports: [
     RouterModule.register(ResultsRoutes),
     ResultLevelsModule,
@@ -168,9 +174,14 @@ import { InnovationUseModule } from '../results-framework-reporting/innovation-u
     forwardRef(() => ContributorsPartnersModule),
     forwardRef(() => InnovationDevModule),
     forwardRef(() => InnovationUseModule),
+    ResultDeletionAuditModule,
+    PlatformReportModule,
+    EmailNotificationManagementModule,
+    ReportingMetadataExportQueueModule,
   ],
   providers: [
     ResultsService,
+    ReportingFullMetadataExportService,
     JwtMiddleware,
     HandlersError,
     ResultRepository,
@@ -206,7 +217,12 @@ import { InnovationUseModule } from '../results-framework-reporting/innovation-u
     ResultReviewHistoryRepository,
     ShareResultRequestRepository,
   ],
-  exports: [ResultRepository, JwtMiddleware, ResultsService],
+  exports: [
+    ResultRepository,
+    JwtMiddleware,
+    ResultsService,
+    ResultQuestionsService,
+  ],
 })
 export class ResultsModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

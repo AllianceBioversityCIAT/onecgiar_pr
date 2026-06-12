@@ -7,6 +7,7 @@ import { InstitutionsService } from '../../../../../../shared/services/global/in
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
 import { ContributorsAndPartnersBody } from './models/contributorsAndPartnersBody';
 import { ResultTocResultsInterface } from '../rd-theory-of-change/model/theoryOfChangeBody';
+import { forkJoin } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -24,6 +25,8 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   disabledOptions = [];
   nppCenters: CenterDto[] = [];
   clarisaProjectsList: any[] = [];
+  hasTocResultMapped = signal<boolean>(false);
+  loadingBilateralProjects = signal<boolean>(false);
   contributingInitiativeNew = [];
   result_toc_result = null;
   contributors_result_toc_result = null;
@@ -60,6 +63,25 @@ export class RdContributorsAndPartnersService implements OnDestroy {
     this.centersSE.loadedCenters.unsubscribe();
   }
 
+  resetState() {
+    this.partnersBody = new ContributorsAndPartnersBody();
+    this.getConsumed.set(false);
+    this.cgspaceDisabledList = [];
+    this.possibleLeadPartners = [];
+    this.possibleLeadCenters = [];
+    this.submitter = '';
+    this.disabledOptions = [];
+    this.clarisaProjectsList = [];
+    this.hasTocResultMapped.set(false);
+    this.loadingBilateralProjects.set(false);
+    this.contributingInitiativeNew = [];
+    this.result_toc_result = null;
+    this.contributors_result_toc_result = null;
+    this.leadPartnerId = null;
+    this.leadCenterCode = null;
+    this.initiativeIdSignal.set(null);
+  }
+
   loadClarisaProjects() {
     this.api.resultsSE.GET_ClarisaProjects().subscribe({
       next: ({ response }) => {
@@ -70,6 +92,48 @@ export class RdContributorsAndPartnersService implements OnDestroy {
       },
       error: err => {
         console.error('Error loading Clarisa projects:', err);
+      }
+    });
+  }
+
+  loadFilteredBilateralProjects(clearSelection: boolean = false) {
+    const tocResults = this.partnersBody?.result_toc_result?.result_toc_results || [];
+    const tocResultIds = tocResults.map(r => r.toc_result_id).filter(id => id != null);
+
+    this.hasTocResultMapped.set(tocResultIds.length > 0);
+    this.clarisaProjectsList = [];
+
+    if (clearSelection) {
+      this.partnersBody.bilateral_projects = [];
+    }
+
+    if (tocResultIds.length === 0) {
+      this.loadingBilateralProjects.set(false);
+      return;
+    }
+
+    this.loadingBilateralProjects.set(true);
+    const requests = tocResultIds.map(id => this.api.resultsSE.GET_W3BilateralProjects(String(id)));
+
+    forkJoin(requests).subscribe({
+      next: responses => {
+        const allProjects = responses.flatMap(res => res?.response ?? []);
+        const uniqueMap = new Map();
+
+        allProjects.forEach(project => {
+          if (!uniqueMap.has(project.project_id)) {
+            project.fullName = project.project_name;
+            uniqueMap.set(project.project_id, project);
+          }
+        });
+
+        this.clarisaProjectsList = Array.from(uniqueMap.values());
+        this.loadingBilateralProjects.set(false);
+      },
+      error: err => {
+        console.error('Error loading filtered bilateral projects:', err);
+        this.clarisaProjectsList = [];
+        this.loadingBilateralProjects.set(false);
       }
     });
   }
@@ -152,10 +216,11 @@ export class RdContributorsAndPartnersService implements OnDestroy {
       next: ({ response }) => {
         this.partnersBody = response;
         this.getDisabledCentersForKP();
-        this.setPossibleLeadPartners(onSave);
+        this.setPossibleLeadPartners(onSave, false);
         this.setLeadPartnerOnLoad(onSave);
-        this.setPossibleLeadCenters(onSave);
+        this.setPossibleLeadCenters(onSave, false);
         this.setLeadCenterOnLoad(onSave);
+        this.runAutoAssignLeads();
 
         this.partnersBody.linked_results = response.linked_results || [];
 
@@ -205,6 +270,8 @@ export class RdContributorsAndPartnersService implements OnDestroy {
         this.partnersBody.bilateral_projects.forEach(project => {
           project.fullName = project.obj_clarisa_project.fullName;
         });
+
+        this.loadFilteredBilateralProjects();
       },
       error: _err => {
         this.getConsumed.set(true);
@@ -217,7 +284,7 @@ export class RdContributorsAndPartnersService implements OnDestroy {
     this.cgspaceDisabledList = this.partnersBody.contributing_center?.filter(center => center.from_cgspace);
   }
 
-  setPossibleLeadPartners(updateComponent: boolean = false) {
+  setPossibleLeadPartners(updateComponent: boolean = false, autoAssign: boolean = true) {
     if (updateComponent) {
       this.updatingLeadData = true;
     }
@@ -238,6 +305,10 @@ export class RdContributorsAndPartnersService implements OnDestroy {
       //('possibleLeadPartners', this.possibleLeadPartners);
     }
 
+    if (autoAssign) {
+      this.tryAutoAssignLeadPartner();
+    }
+
     if (updateComponent) {
       setTimeout(() => {
         this.updatingLeadData = false;
@@ -245,7 +316,7 @@ export class RdContributorsAndPartnersService implements OnDestroy {
     }
   }
 
-  setPossibleLeadCenters(updateComponent: boolean = false) {
+  setPossibleLeadCenters(updateComponent: boolean = false, autoAssign: boolean = true) {
     if (updateComponent) {
       this.updatingLeadData = true;
     }
@@ -263,10 +334,59 @@ export class RdContributorsAndPartnersService implements OnDestroy {
       //('possibleLeadCenters', this.possibleLeadCenters);
     }
 
+    if (autoAssign) {
+      this.tryAutoAssignLeadCenter();
+    }
+
     if (updateComponent) {
       setTimeout(() => {
         this.updatingLeadData = false;
       }, 25);
+    }
+  }
+
+  onLeadByPartnerChange(isPartnerLed: boolean) {
+    this.partnersBody.is_lead_by_partner = isPartnerLed;
+    if (isPartnerLed) {
+      this.leadCenterCode = null;
+    } else {
+      this.leadPartnerId = null;
+    }
+    this.setPossibleLeadCenters(true, false);
+    this.setPossibleLeadPartners(true, false);
+    this.runAutoAssignLeads();
+  }
+
+  runAutoAssignLeads() {
+    this.tryAutoAssignLeadCenter();
+    this.tryAutoAssignLeadPartner();
+  }
+
+  tryAutoAssignLeadCenter() {
+    if (this.partnersBody.is_lead_by_partner) {
+      return;
+    }
+    if (this.possibleLeadCenters.length !== 1) {
+      return;
+    }
+    const onlyCenter = this.possibleLeadCenters[0];
+    const leadIsValid = this.leadCenterCode && this.possibleLeadCenters.some(c => c.code === this.leadCenterCode);
+    if (!leadIsValid) {
+      this.leadCenterCode = onlyCenter.code;
+    }
+  }
+
+  tryAutoAssignLeadPartner() {
+    if (!this.partnersBody.is_lead_by_partner) {
+      return;
+    }
+    if (this.possibleLeadPartners.length !== 1) {
+      return;
+    }
+    const onlyPartner = this.possibleLeadPartners[0];
+    const leadIsValid = this.leadPartnerId && this.possibleLeadPartners.some(p => p.institutions_id === this.leadPartnerId);
+    if (!leadIsValid) {
+      this.leadPartnerId = onlyPartner.institutions_id;
     }
   }
 

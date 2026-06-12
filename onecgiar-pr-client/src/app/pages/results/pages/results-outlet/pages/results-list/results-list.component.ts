@@ -146,13 +146,14 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
     });
 
     effect(() => {
-      const versionIds = this.selectedPhaseIds();
+      this.selectedPhaseIds();
+      this.resultsListFilterSE.filterCreatedByMe();
+      this.resultsListFilterSE.filterSubmittedByMe();
+      const phasesLoaded = this.resultsListFilterSE.phasesOptions().length > 0;
 
       untracked(() => {
-        if (versionIds) {
-          this.api.updateResultsList({ version_id: versionIds });
-        }
-
+        if (!phasesLoaded) return;
+        this.api.updateResultsList(this.api.buildResultsListSearchParams());
         if (this.table) {
           this.resetTable();
           this.applyDefaultSort();
@@ -336,10 +337,7 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
               description: ``,
               status: 'success'
             });
-            const deleteSearchParams: any = {};
-            const versionIds = this.selectedPhaseIds();
-            if (versionIds) deleteSearchParams.version_id = versionIds;
-            this.api.updateResultsList(Object.keys(deleteSearchParams).length ? deleteSearchParams : undefined);
+            this.api.updateResultsList();
             this.resultsListService.showDeletingResultSpinner = false;
           },
           error: err => {
@@ -353,11 +351,12 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   navigateToResult(result: CurrentResult) {
-    if (this.isW3BilateralsAvisa(result)) {
+    if (this.isW3BilateralsAvisa(result) || result?.status_name === 'Approved') {
       const url = '/result/result-detail/' + result.result_code + '/general-information?phase=' + result.version_id;
       this.router.navigateByUrl(url);
       return;
     }
+
     if (result?.source_name == 'W3/Bilaterals') {
       const url = '/result-framework-reporting/entity-details/' + result.submitter + '/results-review';
       this.bilateralResultsService.currentResultToReview.set(result);

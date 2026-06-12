@@ -8,6 +8,8 @@ export class IpsrStep1Body {
   innov_use_2030_to_be_determined: boolean = false;
   evidences_justification: string = '';
   readiness_level_explanation: string = '';
+  is_discontinued: boolean = null;
+  discontinued_options: any[] = [];
   innovation_readiness_level_id: number = null;
   innovation_use_level_id: number = null;
   linked_results: number[] = [];

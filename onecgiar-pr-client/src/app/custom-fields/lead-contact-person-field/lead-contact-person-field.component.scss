@@ -7,6 +7,9 @@
 .contact-select-wrapper {
   position: relative;
   width: 100%;
+  // Confine the clear button's z-index to a local stacking context so it
+  // never paints over the global fixed feedback widget (z-index: 5).
+  isolation: isolate;
 }
 
 .clear-contact-btn {

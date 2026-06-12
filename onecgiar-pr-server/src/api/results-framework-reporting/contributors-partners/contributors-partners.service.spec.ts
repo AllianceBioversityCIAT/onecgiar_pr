@@ -42,6 +42,7 @@ describe('ContributorsPartnersService', () => {
           useValue: {
             getResultById: jest.fn(),
             find: jest.fn(),
+            update: jest.fn().mockResolvedValue(undefined),
           },
         },
         {

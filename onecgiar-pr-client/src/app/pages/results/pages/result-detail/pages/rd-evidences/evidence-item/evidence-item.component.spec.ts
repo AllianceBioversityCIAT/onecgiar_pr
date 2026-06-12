@@ -81,7 +81,7 @@ describe('EvidenceItemComponent', () => {
       expect(result).toContain('If you indicate that the file being uploaded to the PRMS repository is public:');
       expect(result).toContain('You confirm that the file is publicly accessible.');
       expect(result).toContain('You confirm that all intellectual property rights related to the file have been observed.');
-      expect(result).toContain('You agree to the link to the file being displayed in the CGIAR Results Dashboard.');
+      expect(result).toContain("Evidence marked 'Yes' to this question will be displayed in the Results Dashboard and included in technical reporting products.");
     });
 
     it('should return non-public file alert message when is_public_file is false', () => {
@@ -352,29 +352,28 @@ describe('EvidenceItemComponent', () => {
   });
 
   describe('getEvidenceRelatedTitle', () => {
-    it('should return the correct title when both isInnoUse and isInnoDev are false', () => {
-      mockDataControlService.isInnoDev = false;
-      mockDataControlService.isInnoUse = false;
+    it('should return the dynamic title for Innovation development (type 7)', () => {
+      mockApiService.dataControlSE = { currentResult: { result_type_id: 7 } };
 
       const result = component.getEvidenceRelatedTitle();
 
-      expect(result).toBe('Please indicate for which Impact Area tags this evidence is related to');
+      expect(result).toBe('Indicate whether this evidence is related to an Impact Area score of 2 and/or to the Innovation Development metadata');
     });
 
-    it('should return the correct title when isInnoDev is true', () => {
-      mockDataControlService.isInnoDev = true;
+    it('should return the dynamic title for Innovation use (type 2)', () => {
+      mockApiService.dataControlSE = { currentResult: { result_type_id: 2 } };
 
       const result = component.getEvidenceRelatedTitle();
 
-      expect(result).toBe('Please indicate whether this evidence is related to an Impact Area Tag or to the Innovation Readiness level');
+      expect(result).toBe('Indicate whether this evidence is related to an Impact Area score of 2 and/or to the Innovation Use metadata');
     });
 
-    it('should return the correct title when isInnoUse is true', () => {
-      mockDataControlService.isInnoUse = true;
+    it('should return the dynamic title for Knowledge product (type 6)', () => {
+      mockApiService.dataControlSE = { currentResult: { result_type_id: 6 } };
 
       const result = component.getEvidenceRelatedTitle();
 
-      expect(result).toBe('Please indicate whether this evidence is related to an Impact Area Tag or to the Innovation Use');
+      expect(result).toBe('Indicate whether this evidence is related to an Impact Area score of 2 and/or to the Knowledge Product metadata');
     });
   });
 });

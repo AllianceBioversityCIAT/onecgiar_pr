@@ -47,6 +47,8 @@
               optionLabel="entityName"
               optionValue="entityId"
               placeholder="Select new submitter"
+              [disableOptions]="closedOptions"
+              disableOptionsText="(Closed) "
               [(ngModel)]="this.selectedInitiative">
             </app-pr-select>
           </div>

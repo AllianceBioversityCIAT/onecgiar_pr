@@ -1,5 +1,4 @@
 import { ClarisaTaskService } from './clarisatask.service';
-import { ClarisaEndpoints } from './clarisa-endpoints.enum';
 import { ClarisaGlobalUnit } from './clarisa-global-unit/entities/clarisa-global-unit.entity';
 
 describe('ClarisaTaskService', () => {
@@ -91,17 +90,7 @@ describe('ClarisaTaskService', () => {
   });
 
   describe('clarisaBootstrapImportantData', () => {
-    const originalParams = { ...ClarisaEndpoints.INSTITUTIONS_FULL.params };
-
-    beforeEach(() => {
-      ClarisaEndpoints.INSTITUTIONS_FULL.params = { ...originalParams };
-    });
-
-    afterAll(() => {
-      ClarisaEndpoints.INSTITUTIONS_FULL.params = originalParams;
-    });
-
-    it('should add from parameter when there is a last updated date', async () => {
+    it('does not sync institutions when hourly cron path is disabled', async () => {
       const { service, clarisaInstitutionsRepositoryMock } = makeService();
       clarisaInstitutionsRepositoryMock.getMostRecentLastUpdated.mockResolvedValue(
         [{ most_recent: '2025-01-01' }],
@@ -112,31 +101,7 @@ describe('ClarisaTaskService', () => {
 
       await service.clarisaBootstrapImportantData();
 
-      expect(syncSpy).toHaveBeenCalledWith(
-        ClarisaEndpoints.INSTITUTIONS_FULL,
-        expect.any(Number),
-      );
-      expect(ClarisaEndpoints.INSTITUTIONS_FULL.params).toMatchObject({
-        show: 'all',
-        from: '2025-01-01',
-      });
-    });
-
-    it('should not mutate params when there is no last updated date', async () => {
-      const { service } = makeService();
-      const syncSpy = jest
-        .spyOn(service as any, 'syncControlList')
-        .mockResolvedValue([]);
-
-      await service.clarisaBootstrapImportantData();
-
-      expect(syncSpy).toHaveBeenCalledWith(
-        ClarisaEndpoints.INSTITUTIONS_FULL,
-        expect.any(Number),
-      );
-      expect(ClarisaEndpoints.INSTITUTIONS_FULL.params).toEqual({
-        show: 'all',
-      });
+      expect(syncSpy).not.toHaveBeenCalled();
     });
   });
 

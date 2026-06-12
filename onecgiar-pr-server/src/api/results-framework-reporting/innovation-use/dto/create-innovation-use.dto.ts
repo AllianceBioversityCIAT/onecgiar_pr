@@ -143,4 +143,17 @@ export class CreateInnovationUseDto {
     type: [InvesmentDto],
   })
   investment_bilateral: InvesmentDto[];
+
+  @ApiProperty({
+    description: 'Indicates whether the result is discontinued',
+    example: false,
+  })
+  is_discontinued: boolean;
+
+  @ApiProperty({
+    description: 'List of discontinued options for the innovation',
+    example: [1, 2],
+    type: [Object],
+  })
+  discontinued_options: any[];
 }

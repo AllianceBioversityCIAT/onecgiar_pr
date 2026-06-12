@@ -13,6 +13,8 @@ export interface ReplicableConfigInterface<T> {
   new_ipsr_id?: number;
   old_ipsr_id?: number;
   entity_id?: number;
+  /** When using V2 (entity_id): true if the source result primary initiative is already P25 (portfolio_id = 3). */
+  same_portfolio_phase_change?: boolean;
   f?: {
     custonFunction?: (res: T | T[]) => T | T[];
     errorFunction?: (error: any) => void;

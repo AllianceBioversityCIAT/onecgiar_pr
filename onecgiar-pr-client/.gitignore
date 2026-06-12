@@ -54,8 +54,13 @@ cypress/videos/*
 cypress/screenshots/*
 cypress.env.json
 
+# Jest cache
+.jest-cache
+
 # Cursor rules
 /.cursorrules
 
 # Cypress environment
 cypress.env.js
+# Local verification screenshots
+.local-screenshots/

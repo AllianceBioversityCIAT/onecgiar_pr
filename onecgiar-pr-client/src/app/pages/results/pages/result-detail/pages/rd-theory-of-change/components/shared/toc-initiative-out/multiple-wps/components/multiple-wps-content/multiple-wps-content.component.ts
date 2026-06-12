@@ -5,10 +5,10 @@ import { RdTheoryOfChangesServicesService } from '../../../../../../rd-theory-of
 import { MappedResultsModalServiceService } from '../mapped-results-modal/mapped-results-modal-service.service';
 
 @Component({
-    selector: 'app-multiple-wps-content',
-    templateUrl: './multiple-wps-content.component.html',
-    styleUrls: ['./multiple-wps-content.component.scss'],
-    standalone: false
+  selector: 'app-multiple-wps-content',
+  templateUrl: './multiple-wps-content.component.html',
+  styleUrls: ['./multiple-wps-content.component.scss'],
+  standalone: false
 })
 export class MultipleWPsContentComponent implements OnChanges {
   @Input() editable: boolean;
@@ -104,7 +104,7 @@ export class MultipleWPsContentComponent implements OnChanges {
   }
 
   pushSelectedOptions() {
-    this.allTabsCreated.forEach(tab => {
+    this.allTabsCreated?.forEach(tab => {
       if (tab?.toc_level_id === 1) {
         this.validateSelectedOptionOutPut(tab);
       }

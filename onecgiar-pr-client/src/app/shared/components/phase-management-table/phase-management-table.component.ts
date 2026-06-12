@@ -18,6 +18,7 @@ export class PhaseManagementTableComponent implements OnInit {
   @Input() appModuleId: number;
   @Input() showReportingPhaseColumn: boolean = false;
   @Input() placeholderText: string = 'Provide input here...';
+  @Input() enablePhaseLink: boolean = false;
   @Output() phaseUpdate = new EventEmitter<void>();
 
   columnOrder = [];

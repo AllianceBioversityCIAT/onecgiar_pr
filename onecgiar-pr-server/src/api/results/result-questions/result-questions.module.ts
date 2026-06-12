@@ -13,6 +13,6 @@ import { HandlersError } from '../../../shared/handlers/error.utils';
     ResultQuestionsRepository,
     ResultAnswerRepository,
   ],
-  exports: [ResultAnswerRepository],
+  exports: [ResultAnswerRepository, ResultQuestionsService],
 })
 export class ResultQuestionsModule {}

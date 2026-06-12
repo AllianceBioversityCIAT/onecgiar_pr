@@ -116,6 +116,98 @@ describe('PhasesService', () => {
     expect(active?.id).toBe(101);
     expect(active?.status).toBe(true);
   });
+
+  it('should return undefined when no active reporting phase exists', () => {
+    // Override reporting phases to all have status false
+    service.phases.reporting = [
+      { id: 1, status: false, phase_name: 'Closed Phase' } as any
+    ];
+
+    const active = service.currentlyActivePhaseOnReporting;
+    expect(active).toBeUndefined();
+  });
+
+  it('should handle phases without obj_portfolio (no acronym in label)', () => {
+    const responseNoPortfolio = [
+      {
+        id: 301,
+        app_module_id: 1,
+        status: true,
+        phase_name: '2026 Reporting',
+        obj_portfolio: null
+      },
+      {
+        id: 302,
+        app_module_id: 2,
+        status: false,
+        phase_name: '2026 IPSR',
+        obj_portfolio: null
+      }
+    ];
+
+    mockApi.GET_versioning = jest.fn(() => of({ response: responseNoPortfolio }));
+    service.getNewPhases();
+
+    // Reporting filter options should NOT have acronym suffix
+    const reportingOptions = mockResultsFilterService.filters.general[1].options;
+    expect(reportingOptions[0].attr).toBe('2026 Reporting');
+    expect(reportingOptions[0].name).toBe('2026 Reporting (Open)');
+
+    // IPSR filter options should NOT have acronym suffix
+    const ipsrOptions = mockIpsrFilterService.filters.general[1].options;
+    expect(ipsrOptions[0].attr).toBe('2026 IPSR');
+    expect(ipsrOptions[0].name).toBe('2026 IPSR (Closed)');
+  });
+
+  it('should handle phases with obj_portfolio but empty acronym', () => {
+    const responseEmptyAcronym = [
+      {
+        id: 401,
+        app_module_id: 1,
+        status: true,
+        phase_name: '2027 Reporting',
+        obj_portfolio: { acronym: '' }
+      },
+      {
+        id: 402,
+        app_module_id: 2,
+        status: true,
+        phase_name: '2027 IPSR',
+        obj_portfolio: { acronym: '' }
+      }
+    ];
+
+    mockApi.GET_versioning = jest.fn(() => of({ response: responseEmptyAcronym }));
+    service.getNewPhases();
+
+    // Empty acronym should produce no suffix (falsy check)
+    const reportingOptions = mockResultsFilterService.filters.general[1].options;
+    expect(reportingOptions[0].attr).toBe('2027 Reporting');
+    expect(reportingOptions[0].name).toBe('2027 Reporting (Open)');
+
+    const ipsrOptions = mockIpsrFilterService.filters.general[1].options;
+    expect(ipsrOptions[0].attr).toBe('2027 IPSR');
+    expect(ipsrOptions[0].name).toBe('2027 IPSR (Open)');
+  });
+
+  it('should handle phases with obj_portfolio but undefined acronym', () => {
+    const responseUndefinedAcronym = [
+      {
+        id: 501,
+        app_module_id: 1,
+        status: false,
+        phase_name: '2028 Reporting',
+        obj_portfolio: {}
+      }
+    ];
+
+    mockApi.GET_versioning = jest.fn(() => of({ response: responseUndefinedAcronym }));
+    service.getNewPhases();
+
+    const reportingOptions = mockResultsFilterService.filters.general[1].options;
+    expect(reportingOptions[0].attr).toBe('2028 Reporting');
+    expect(reportingOptions[0].name).toBe('2028 Reporting (Closed)');
+  });
 });
 
 // removed duplicate TestBed-based suite

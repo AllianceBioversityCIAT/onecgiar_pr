@@ -6,15 +6,15 @@ import { Injectable } from '@nestjs/common';
 @Injectable()
 export class PlatformReportRepository extends Repository<PlatformReport> {
   constructor(
-    private _dataSource: DataSource,
-    private _handlersError: HandlersError,
+    private readonly _dataSource: DataSource,
+    private readonly _handlersError: HandlersError,
   ) {
     super(PlatformReport, _dataSource.createEntityManager());
   }
 
   async getDataFromProcedure(procedureName: string, parameters: any[]) {
     /*
-        the number of parameters of the function to be called depends on the 
+        the number of parameters of the function to be called depends on the
         parameters array, and as named queries are not supported (yet) on our
         project, we need to create a positional argument string that accomodates
         the lenght of the parameters array
