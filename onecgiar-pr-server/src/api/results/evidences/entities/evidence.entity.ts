@@ -114,6 +114,46 @@ export class Evidence {
   innovation_use_related!: boolean;
 
   @Column({
+    name: 'policy_change_related',
+    type: 'boolean',
+    nullable: true,
+    default: null,
+  })
+  policy_change_related!: boolean;
+
+  @Column({
+    name: 'capacity_sharing_related',
+    type: 'boolean',
+    nullable: true,
+    default: null,
+  })
+  capacity_sharing_related!: boolean;
+
+  @Column({
+    name: 'other_output_related',
+    type: 'boolean',
+    nullable: true,
+    default: null,
+  })
+  other_output_related!: boolean;
+
+  @Column({
+    name: 'other_outcome_related',
+    type: 'boolean',
+    nullable: true,
+    default: null,
+  })
+  other_outcome_related!: boolean;
+
+  @Column({
+    name: 'knowledge_product_metadata_related',
+    type: 'boolean',
+    nullable: true,
+    default: null,
+  })
+  knowledge_product_metadata_related!: boolean;
+
+  @Column({
     name: 'innov_dev_user_demand',
     type: 'boolean',
     nullable: true,
