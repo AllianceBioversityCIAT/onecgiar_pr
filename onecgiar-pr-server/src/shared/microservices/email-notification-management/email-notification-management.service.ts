@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { env } from 'process';
+import { env } from 'node:process';
 import { ConfigMessageDto } from './dto/send-email.dto';
 import { EmailTemplate } from './enum/email-notification.enum';
 import { BuildEmailDataDto } from './dto/email-template.dto';
@@ -10,10 +10,7 @@ export class EmailNotificationManagementService implements OnModuleInit {
   private readonly _logger = new Logger(
     EmailNotificationManagementService.name,
   );
-  private authHeaderMs1 = {
-    username: env.MS_NOTIFICATION_USER,
-    password: env.MS_NOTIFICATION_PASSWORD,
-  };
+  private readonly microserviceApiKey = env.MICROSERVICE_API_KEY;
 
   constructor(@Inject('EMAIL_SERVICE') private readonly _client: ClientProxy) {}
 
@@ -31,7 +28,7 @@ export class EmailNotificationManagementService implements OnModuleInit {
 
   sendEmail(configMessageDto: ConfigMessageDto) {
     const payload = {
-      auth: this.authHeaderMs1,
+      apiKey: this.microserviceApiKey,
       data: configMessageDto,
     };
     this._client.emit('send', payload);

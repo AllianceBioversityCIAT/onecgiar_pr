@@ -28,10 +28,6 @@ import type {
 export class PlatformReportService implements OnModuleInit {
   private readonly _logger: Logger = new Logger(PlatformReportService.name);
   private readonly microserviceApiKey = env.MICROSERVICE_API_KEY;
-  private readonly authHeaderMs4 = JSON.stringify({
-    username: env.MS_FILE_MANAGEMENT_USER,
-    password: env.MS_FILE_MANAGEMENT_PASSWORD,
-  });
 
   public constructor(
     private readonly _platformReportRepository: PlatformReportRepository,
@@ -346,7 +342,7 @@ export class PlatformReportService implements OnModuleInit {
     try {
       const url = env.MS_FM_URL + 'pdf/generate';
       const response = await axios.post<ValidationResponse>(url, info, {
-        headers: { auth: this.authHeaderMs4 },
+        headers: { 'X-API-Key': this.microserviceApiKey },
         responseType: 'json',
       });
 
@@ -378,7 +374,7 @@ export class PlatformReportService implements OnModuleInit {
         url,
         { bucketName, key: fileName },
         {
-          headers: { auth: this.authHeaderMs4 },
+          headers: { 'X-API-Key': this.microserviceApiKey },
           responseType: 'json',
         },
       );
