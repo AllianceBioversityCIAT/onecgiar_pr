@@ -1,5 +1,5 @@
 import { DataSource } from 'typeorm';
-import { env } from 'process';
+import { env } from 'node:process';
 import { AoWBilateralRepository } from './aow-bilateral.repository';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
 import type { ReportingTocContext } from '../../../results-framework-reporting/reporting-toc-context/reporting-toc-context.interface';
@@ -50,8 +50,9 @@ describe('AoWBilateralRepository', () => {
     const [query, params] = dataSourceQueryMock.mock.calls[0];
 
     expect(params).toEqual([
-      'SP01-AOW01',
       2025,
+      'AOW01',
+      'SP01',
       2025,
       'SP01',
       'OUTPUT',
@@ -67,6 +68,9 @@ describe('AoWBilateralRepository', () => {
     expect(query).toContain(
       'JOIN toc_test.toc_work_packages wp ON tr.wp_id = wp.toc_id',
     );
+    expect(query).toContain("AND wp.wp_official_code LIKE CONCAT(?, '-%')");
+    expect(query).toContain('AND UPPER(TRIM(wp.acronym)) = ?');
+    expect(query).not.toContain("LOWER(TRIM(wp.source)) = 'clarisa'");
     expect(query).toContain('JOIN toc_test.toc_result_indicator_target');
     expect(query).toContain('AND trit.target_date = ?');
     expect(query).toContain('WHERE');
@@ -196,8 +200,8 @@ describe('AoWBilateralRepository', () => {
     );
 
     expect(dataSourceQueryMock).toHaveBeenCalledWith(
-      expect.stringContaining('FROM toc_test.toc_work_packages'),
-      ['SP01', 'PHASE-1', 2025],
+      expect.stringContaining("LOWER(TRIM(cw.source)) = 'clarisa'"),
+      ['SP01', 'PHASE-1', 2025, 'SP01'],
     );
     expect(result).toEqual(new Set(['AOW01', 'AOW02']));
   });

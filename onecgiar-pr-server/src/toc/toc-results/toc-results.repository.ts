@@ -201,7 +201,7 @@ export class TocResultsRepository extends Repository<TocResult> {
     left join ${env.DB_OST}.initiatives_by_stages ibs on ibs.id = wp.initvStgId
 	  where tr.inititiative_id = ?
     	and tr.toc_level_id = ?
-      ${tocLevel != 3 ? `and ibs.stageId = 4` : ``}
+      ${tocLevel === 3 ? `` : `and ibs.stageId = 4`}
       and tr.is_active > 0
     order by wp.acronym, tr.title ASC;
     `,
@@ -644,7 +644,7 @@ export class TocResultsRepository extends Repository<TocResult> {
     }>
   > {
     const numericIds = (tocResultIds ?? [])
-      .map((id) => Number(id))
+      .map(Number)
       .filter((id) => Number.isFinite(id));
 
     if (!numericIds.length) {
@@ -780,7 +780,7 @@ export class TocResultsRepository extends Repository<TocResult> {
     }>
   > {
     const numericIds = (tocResultIds ?? [])
-      .map((id) => Number(id))
+      .map(Number)
       .filter((id) => Number.isFinite(id));
 
     if (!numericIds.length) {
