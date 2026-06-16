@@ -2,6 +2,7 @@ import { DataSource } from 'typeorm';
 import { env } from 'process';
 import { AoWBilateralRepository } from './aow-bilateral.repository';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
+import type { ReportingTocContext } from '../../../results-framework-reporting/reporting-toc-context/reporting-toc-context.interface';
 
 describe('AoWBilateralRepository', () => {
   let dataSourceQueryMock: jest.Mock;
@@ -12,6 +13,11 @@ describe('AoWBilateralRepository', () => {
   } as unknown as HandlersError;
 
   let repository: AoWBilateralRepository;
+
+  const defaultContext: ReportingTocContext = {
+    phaseUuid: 'PHASE-1',
+    reportingYear: 2025,
+  };
 
   beforeAll(() => {
     env.DB_TOC = 'toc_test';
@@ -31,22 +37,27 @@ describe('AoWBilateralRepository', () => {
     jest.restoreAllMocks();
   });
 
-  const mockPhaseId = (value: string | null = 'PHASE-1') =>
+  const mockResolveContext = (context: ReportingTocContext = defaultContext) =>
     jest
-      .spyOn(repository as any, 'getCurrentTocPhaseId')
-      .mockResolvedValue(value);
+      .spyOn(repository as any, 'resolveContext')
+      .mockResolvedValue(context);
 
   it('should execute the aggregate query for composite code with expected clauses', async () => {
-    mockPhaseId();
+    mockResolveContext();
     dataSourceQueryMock.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
 
-    await repository.findByCompositeCode('SP01', 'SP01-AOW01', 2025);
+    await repository.findByCompositeCode(
+      'SP01',
+      'SP01-AOW01',
+      defaultContext,
+    );
 
     expect(dataSourceQueryMock).toHaveBeenCalledTimes(2);
     const [query, params] = dataSourceQueryMock.mock.calls[0];
 
     expect(params).toEqual([
       'SP01-AOW01',
+      2025,
       2025,
       'SP01',
       'OUTPUT',
@@ -69,10 +80,10 @@ describe('AoWBilateralRepository', () => {
   });
 
   it('should omit work package join when composite code is not provided', async () => {
-    mockPhaseId();
+    mockResolveContext();
     dataSourceQueryMock.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
 
-    await repository.find2030Outcomes('SP01', 2025);
+    await repository.find2030Outcomes('SP01', defaultContext);
 
     expect(dataSourceQueryMock).toHaveBeenCalledTimes(2);
     const [query, params] = dataSourceQueryMock.mock.calls[0];
@@ -88,26 +99,26 @@ describe('AoWBilateralRepository', () => {
     expect(query).toContain('AND tr.phase = ?');
   });
 
-  it('excludes toc phase filter when no active phase exists', async () => {
-    mockPhaseId(null);
-    dataSourceQueryMock.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+  it('should reject queries when TOC phase context cannot be resolved', async () => {
+    (
+      mockHandlersError.returnErrorRepository as jest.Mock
+    ).mockImplementationOnce(({ error }) => error);
 
-    await repository.findByCompositeCode('SP01', 'SP01-AOW01', 2025);
+    dataSourceQueryMock.mockResolvedValueOnce([]);
 
-    const [, paramsFirstQuery] = dataSourceQueryMock.mock.calls[0];
-    const [, paramsSecondQuery] = dataSourceQueryMock.mock.calls[1];
-    expect(paramsFirstQuery).toEqual([
-      'SP01-AOW01',
-      2025,
-      'SP01',
-      'OUTPUT',
-      'OUTCOME',
-    ]);
-    expect(paramsSecondQuery).toEqual([2025, 'SP01', 2025, 'SP01']);
+    await expect(
+      repository.findByCompositeCode('SP01', 'SP01-AOW01', 2025),
+    ).rejects.toBe('Missing TOC phase context for reporting queries');
+
+    expect(mockHandlersError.returnErrorRepository).toHaveBeenCalledWith({
+      error: 'Missing TOC phase context for reporting queries',
+      className: AoWBilateralRepository.name,
+      debug: true,
+    });
   });
 
   it('should delegate query failures to the handlers error utility', async () => {
-    mockPhaseId();
+    mockResolveContext();
     const dbError = new Error('db failure');
     dataSourceQueryMock.mockRejectedValueOnce(dbError);
     (
@@ -115,7 +126,7 @@ describe('AoWBilateralRepository', () => {
     ).mockImplementationOnce(({ error }) => error);
 
     await expect(
-      repository.findByCompositeCode('SP02', 'SP02-AOW02', 2026),
+      repository.findByCompositeCode('SP02', 'SP02-AOW02', defaultContext),
     ).rejects.toBe(dbError);
 
     expect(mockHandlersError.returnErrorRepository).toHaveBeenCalledWith({
@@ -126,7 +137,6 @@ describe('AoWBilateralRepository', () => {
   });
 
   it('should fetch a single ToC result by id', async () => {
-    mockPhaseId();
     dataSourceQueryMock.mockResolvedValueOnce([
       { id: 10, result_title: 'Sample', category: 'OUTPUT' },
     ]);
@@ -146,7 +156,12 @@ describe('AoWBilateralRepository', () => {
 
   it('should fetch a single ToC indicator by id', async () => {
     dataSourceQueryMock.mockResolvedValueOnce([
-      { id: 50, toc_results_id: 10, toc_result_indicator_id: 'KP-01' },
+      {
+        id: 50,
+        toc_results_id: 10,
+        toc_result_indicator_id: 'KP-01',
+        related_node_id: 'REL-01',
+      },
     ]);
 
     const indicator = await repository.findIndicatorById(50);
@@ -159,39 +174,42 @@ describe('AoWBilateralRepository', () => {
       id: 50,
       toc_results_id: 10,
       toc_result_indicator_id: 'KP-01',
+      related_node_id: 'REL-01',
     });
   });
 
-  it('should find unit acronyms by program', async () => {
-    mockPhaseId();
+  it('should find unit acronyms by program from work packages', async () => {
     dataSourceQueryMock.mockResolvedValueOnce([
-      { acronym: 'AOW01' },
-      { acronym: 'AOW02' },
+      {
+        id: 1,
+        code: 'AOW01',
+        name: 'Area of Work 01',
+        composeCode: 'SP01-AOW01',
+        year: 2025,
+      },
+      {
+        id: 2,
+        code: 'AOW02',
+        name: 'Area of Work 02',
+        composeCode: 'SP01-AOW02',
+        year: 2025,
+      },
     ]);
 
-    const result = await repository.findUnitAcronymsByProgram('SP01');
+    const result = await repository.findUnitAcronymsByProgram(
+      'SP01',
+      defaultContext,
+    );
 
     expect(dataSourceQueryMock).toHaveBeenCalledWith(
       expect.stringContaining('FROM toc_test.toc_work_packages'),
-      ['SP01', 'PHASE-1'],
+      ['SP01', 'PHASE-1', 2025],
     );
     expect(result).toEqual(new Set(['AOW01', 'AOW02']));
   });
 
-  it('finds unit acronyms without phase constraint when inactive', async () => {
-    mockPhaseId(null);
-    dataSourceQueryMock.mockResolvedValueOnce([]);
-
-    await repository.findUnitAcronymsByProgram('SP02');
-
-    expect(dataSourceQueryMock).toHaveBeenCalledWith(
-      expect.stringContaining('FROM toc_test.toc_work_packages'),
-      ['SP02'],
-    );
-  });
-
   it('should get indicator contributions with calculations', async () => {
-    mockPhaseId();
+    mockResolveContext();
     dataSourceQueryMock.mockResolvedValueOnce([
       {
         indicator_id: 1,
@@ -205,11 +223,14 @@ describe('AoWBilateralRepository', () => {
       },
     ]);
 
-    const result = await repository.getIndicatorContributions('SP01', 2025);
+    const result = await repository.getIndicatorContributions(
+      'SP01',
+      defaultContext,
+    );
 
     expect(dataSourceQueryMock).toHaveBeenCalledWith(
       expect.stringContaining('SELECT'),
-      [2025, 'SP01', 'PHASE-1', 2025, 'SP01', 'PHASE-1'],
+      [2025, 2025, 'SP01', 'PHASE-1', 2025, 2025, 'SP01', 'PHASE-1'],
     );
     expect(result.get(1)).toEqual({
       actual_achieved_value_sum: 15,
@@ -226,7 +247,7 @@ describe('AoWBilateralRepository', () => {
   });
 
   it('should handle zero target value in progress calculation', async () => {
-    mockPhaseId();
+    mockResolveContext();
     dataSourceQueryMock.mockResolvedValueOnce([
       {
         indicator_id: 1,
@@ -235,7 +256,10 @@ describe('AoWBilateralRepository', () => {
       },
     ]);
 
-    const result = await repository.getIndicatorContributions('SP01');
+    const result = await repository.getIndicatorContributions(
+      'SP01',
+      defaultContext,
+    );
 
     expect(result.get(1)).toEqual({
       actual_achieved_value_sum: 15,
@@ -246,7 +270,6 @@ describe('AoWBilateralRepository', () => {
   });
 
   it('should find bilateral projects by toc result id', async () => {
-    mockPhaseId();
     const mockProjects = [
       {
         toc_result_id: 1,
@@ -268,7 +291,7 @@ describe('AoWBilateralRepository', () => {
   });
 
   it('should group toc rows correctly', async () => {
-    mockPhaseId();
+    mockResolveContext();
     const mockRows = [
       {
         toc_result_id: 1,
@@ -300,7 +323,7 @@ describe('AoWBilateralRepository', () => {
     const result = await repository.findByCompositeCode(
       'SP01',
       'SP01-AOW01',
-      2025,
+      defaultContext,
     );
 
     expect(result).toHaveLength(1);
@@ -310,49 +333,88 @@ describe('AoWBilateralRepository', () => {
   });
 
   it('should handle parallel execution in findByCompositeCode', async () => {
-    mockPhaseId();
+    mockResolveContext();
     dataSourceQueryMock.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
 
-    await repository.findByCompositeCode('SP01', 'SP01-AOW01', 2025);
+    await repository.findByCompositeCode(
+      'SP01',
+      'SP01-AOW01',
+      defaultContext,
+    );
 
     expect(dataSourceQueryMock).toHaveBeenCalledTimes(2);
   });
 
   it('should handle parallel execution in find2030Outcomes', async () => {
-    mockPhaseId();
+    mockResolveContext();
     dataSourceQueryMock.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
 
-    await repository.find2030Outcomes('SP01', 2025);
+    await repository.find2030Outcomes('SP01', defaultContext);
 
     expect(dataSourceQueryMock).toHaveBeenCalledTimes(2);
   });
 
+  describe('resolveContext', () => {
+    it('returns the provided ReportingTocContext without querying', async () => {
+      const context = await (repository as any).resolveContext(defaultContext);
+
+      expect(dataSourceQueryMock).not.toHaveBeenCalled();
+      expect(context).toEqual(defaultContext);
+    });
+
+    it('resolves context from active version when a reporting year is provided', async () => {
+      dataSourceQueryMock.mockResolvedValueOnce([
+        { phase_year: 2031, toc_pahse_id: 'phase-99' },
+      ]);
+
+      const context = await (repository as any).resolveContext(2031);
+
+      expect(dataSourceQueryMock).toHaveBeenCalledWith(
+        expect.stringContaining('FROM main_test.version v'),
+        [2031],
+      );
+      expect(context).toEqual({
+        reportingYear: 2031,
+        phaseUuid: 'phase-99',
+      });
+    });
+
+    it('throws via handlers error when version row is missing', async () => {
+      dataSourceQueryMock.mockResolvedValueOnce([]);
+      (
+        mockHandlersError.returnErrorRepository as jest.Mock
+      ).mockImplementationOnce(({ error }) => error);
+
+      await expect((repository as any).resolveContext()).rejects.toBe(
+        'Missing TOC phase context for reporting queries',
+      );
+    });
+  });
+
   describe('getCurrentTocPhaseId', () => {
     it('returns the active phase id when available', async () => {
-      dataSourceQueryMock.mockResolvedValueOnce([{ toc_pahse_id: 'phase-99' }]);
+      dataSourceQueryMock.mockResolvedValueOnce([
+        { phase_year: 2025, toc_pahse_id: 'phase-99' },
+      ]);
 
       const phaseId = await (repository as any).getCurrentTocPhaseId();
 
       expect(dataSourceQueryMock).toHaveBeenCalledWith(
-        expect.stringContaining('SELECT toc_pahse_id'),
+        expect.stringContaining('toc_pahse_id'),
+        [],
       );
       expect(phaseId).toBe('phase-99');
     });
 
-    it('logs via handlers error and returns null on failure', async () => {
-      const dbError = new Error('version fail');
-      dataSourceQueryMock.mockRejectedValueOnce(dbError);
+    it('returns null when phase resolution fails', async () => {
+      dataSourceQueryMock.mockResolvedValueOnce([]);
       (
         mockHandlersError.returnErrorRepository as jest.Mock
-      ).mockReturnValueOnce(null);
+      ).mockImplementationOnce(({ error }) => error);
 
       const phaseId = await (repository as any).getCurrentTocPhaseId();
 
-      expect(mockHandlersError.returnErrorRepository).toHaveBeenCalledWith({
-        error: dbError,
-        className: AoWBilateralRepository.name,
-        debug: true,
-      });
+      expect(mockHandlersError.returnErrorRepository).toHaveBeenCalled();
       expect(phaseId).toBeNull();
     });
   });
