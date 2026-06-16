@@ -68,7 +68,7 @@ describe('AoWBilateralRepository', () => {
     expect(query).toContain(
       'JOIN toc_test.toc_work_packages wp ON tr.wp_id = wp.toc_id',
     );
-    expect(query).toContain('AND wp.wp_official_code LIKE CONCAT(?, \'-%\')');
+    expect(query).toContain("AND wp.wp_official_code LIKE CONCAT(?, '-%')");
     expect(query).toContain('AND UPPER(TRIM(wp.acronym)) = ?');
     expect(query).not.toContain("LOWER(TRIM(wp.source)) = 'clarisa'");
     expect(query).toContain('JOIN toc_test.toc_result_indicator_target');
