@@ -131,7 +131,7 @@ describe('AoWBilateralRepository', () => {
       { id: 10, result_title: 'Sample', category: 'OUTPUT' },
     ]);
 
-    const result = await repository.findResultById(10);
+    const result = await repository.findResultById(10, 'PHASE-1');
 
     expect(dataSourceQueryMock).toHaveBeenCalledWith(
       expect.stringContaining('FROM toc_test.toc_results'),
@@ -258,7 +258,7 @@ describe('AoWBilateralRepository', () => {
     ];
     dataSourceQueryMock.mockResolvedValueOnce(mockProjects);
 
-    const result = await repository.findBilateralProjectById(1);
+    const result = await repository.findBilateralProjectById(1, 'PHASE-1');
 
     expect(dataSourceQueryMock).toHaveBeenCalledWith(
       expect.stringContaining('FROM toc_test.toc_results'),
@@ -297,7 +297,11 @@ describe('AoWBilateralRepository', () => {
       .mockResolvedValueOnce(mockRows)
       .mockResolvedValueOnce([]);
 
-    const result = await repository.findByCompositeCode('SP01', 'SP01-AOW01');
+    const result = await repository.findByCompositeCode(
+      'SP01',
+      'SP01-AOW01',
+      2025,
+    );
 
     expect(result).toHaveLength(1);
     expect(result[0].toc_result_id).toBe(1);

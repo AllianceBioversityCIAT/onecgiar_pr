@@ -219,9 +219,11 @@ describe('EvidencesService', () => {
         environmental_biodiversity_tag_level_id: null,
         poverty_tag_level_id: null,
       });
-      mockResultsInnovationsDevRepository.InnovationDevExists.mockResolvedValue({
-        innovation_readiness_level_id: 4,
-      });
+      mockResultsInnovationsDevRepository.InnovationDevExists.mockResolvedValue(
+        {
+          innovation_readiness_level_id: 4,
+        },
+      );
       mockEvidencesRepository.getEvidencesByResultId
         .mockResolvedValueOnce([
           { id: 1, gender_related: 1, is_sharepoint: 1, is_public_file: 1 },
@@ -253,20 +255,25 @@ describe('EvidencesService', () => {
         null,
       );
       mockEvidencesRepository.getEvidencesByResultId.mockResolvedValue([
-        { id: 1, innovation_use_related: 1, is_sharepoint: 0, is_public_file: 0 },
+        {
+          id: 1,
+          innovation_use_related: 1,
+          is_sharepoint: 0,
+          is_public_file: 0,
+        },
       ]);
 
       const res = await service.findAllV2(1);
 
       expect(res.status).toBe(HttpStatus.OK);
       expect((res.response as any).innovation_readiness_level_id).toBeNull();
-      expect((res.response as any).evidences[0].innovation_use_related).toBe(true);
-      expect((res.response as any).evidences[0].is_sharepoint).toBe(0);
-      expect(mockEvidencesRepository.getEvidencesByResultId).toHaveBeenCalledWith(
-        1,
-        false,
-        6,
+      expect((res.response as any).evidences[0].innovation_use_related).toBe(
+        true,
       );
+      expect((res.response as any).evidences[0].is_sharepoint).toBe(0);
+      expect(
+        mockEvidencesRepository.getEvidencesByResultId,
+      ).toHaveBeenCalledWith(1, false, 6);
     });
   });
 
@@ -316,10 +323,7 @@ describe('EvidencesService', () => {
 
   describe('saveSPData', () => {
     it('should not create a sharepoint row when the evidence is not a sharepoint file', async () => {
-      await service.saveSPData(
-        { id: '1', link: 'x', is_sharepoint: 0 },
-        1,
-      );
+      await service.saveSPData({ id: '1', link: 'x', is_sharepoint: 0 }, 1);
 
       expect(mockEvidenceSharepointRepository.save).not.toHaveBeenCalled();
     });

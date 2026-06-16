@@ -1,9 +1,8 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { DataSource, In, IsNull } from 'typeorm';
-import { env } from 'process';
+import { env } from 'node:process';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
-import { ClarisaGlobalUnitRepository } from '../../clarisa/clarisa-global-unit/clarisa-global-unit.repository';
 import { YearRepository } from '../results/years/year.repository';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
@@ -26,6 +25,8 @@ import { ResultsTocTargetIndicatorRepository } from '../results/results-toc-resu
 import { ResultLevelEnum } from '../../shared/constants/result-level.enum';
 import { ResultStatusData } from '../../shared/constants/result-status.enum';
 import { ResultsByInstitutionsService } from '../results/results_by_institutions/results_by_institutions.service';
+import { ReportingTocContextService } from './reporting-toc-context/reporting-toc-context.service';
+import type { ReportingTocContext } from './reporting-toc-context/reporting-toc-context.interface';
 
 @Injectable()
 export class ResultsFrameworkReportingService {
@@ -37,9 +38,9 @@ export class ResultsFrameworkReportingService {
     private readonly dataSource: DataSource,
     private readonly _clarisaInitiativesRepository: ClarisaInitiativesRepository,
     private readonly _roleByUserRepository: RoleByUserRepository,
-    private readonly _clarisaGlobalUnitRepository: ClarisaGlobalUnitRepository,
     private readonly _yearRepository: YearRepository,
     private readonly _handlersError: HandlersError,
+    private readonly _reportingTocContextService: ReportingTocContextService,
     private readonly _tocResultsRepository: AoWBilateralRepository,
     private readonly _resultRepository: ResultRepository,
     private readonly _resultsService: ResultsService,
@@ -52,16 +53,24 @@ export class ResultsFrameworkReportingService {
     private readonly _resultsByInstitutionsService: ResultsByInstitutionsService,
   ) {}
 
+  private _throwServiceError(
+    message: string,
+    status: HttpStatus = HttpStatus.BAD_REQUEST,
+  ): never {
+    const error = new Error(message);
+    (error as any).response = {};
+    (error as any).status = status;
+    throw error;
+  }
+
   async getGlobalUnitsByProgram(user: TokenDto, programId?: string) {
     try {
       const normalizedProgramId = programId?.trim();
 
       if (!normalizedProgramId) {
-        throw {
-          response: {},
-          message: 'The program identifier is required in the query params.',
-          status: HttpStatus.BAD_REQUEST,
-        };
+        this._throwServiceError(
+          'The program identifier is required in the query params.',
+        );
       }
 
       const initiative = await this._clarisaInitiativesRepository.findOne({
@@ -70,72 +79,36 @@ export class ResultsFrameworkReportingService {
       });
 
       if (!initiative) {
-        throw {
-          response: {},
-          message:
-            'No initiative was found with the provided program identifier.',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
-
-      const activeYear = await this._yearRepository.findOne({
-        where: { active: true },
-        select: ['year'],
-      });
-
-      if (!activeYear) {
-        throw {
-          response: {},
-          message: 'No active reporting year was found.',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
-
-      const activeYearValue = Number(activeYear.year);
-
-      const parentUnit = await this._clarisaGlobalUnitRepository.findOne({
-        where: {
-          code: normalizedProgramId,
-          portfolioId: 3,
-          year: activeYearValue,
-          isActive: true,
-        },
-      });
-
-      if (!parentUnit) {
-        throw {
-          response: {},
-          message:
-            'No global unit catalogue entry matches the provided program.',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
-
-      const childUnits = await this._clarisaGlobalUnitRepository.find({
-        where: {
-          parentId: parentUnit.id,
-          level: 2,
-          portfolioId: 3,
-          year: activeYearValue,
-          isActive: true,
-        },
-        order: { code: 'ASC' },
-      });
-
-      const tocAcronyms =
-        await this._tocResultsRepository.findUnitAcronymsByProgram(
-          initiative.official_code.toUpperCase(),
+        this._throwServiceError(
+          'No initiative was found with the provided program identifier.',
+          HttpStatus.NOT_FOUND,
         );
+      }
+
+      const tocContext = await this._reportingTocContextService.resolve();
+      const workPackages =
+        await this._tocResultsRepository.findWorkPackagesByProgram(
+          initiative.official_code.toUpperCase(),
+          tocContext,
+        );
+
+      if (!workPackages.length) {
+        this._throwServiceError(
+          'No work packages were found for the provided program in the active reporting phase.',
+          HttpStatus.NOT_FOUND,
+        );
+      }
 
       const indicatorContributions =
         await this._tocResultsRepository.getIndicatorContributions(
           initiative.official_code.toUpperCase(),
-          activeYearValue,
+          tocContext,
         );
 
       const resultCountsByUnit = await this.getResultsCountByUnitAndStatus(
         initiative.id,
-        childUnits.map((u) => u.code),
+        workPackages.map((u) => u.code),
+        tocContext,
       );
 
       let totalTargetValue = 0;
@@ -209,46 +182,44 @@ export class ResultsFrameworkReportingService {
         globalProgressPercentage = Math.round(averageProgress * 10) / 10;
       }
 
-      const filteredUnits = childUnits
-        .filter((unit) => tocAcronyms.has(unit.code?.toUpperCase() ?? ''))
-        .map((unit) => {
-          const unitKey = unit.code?.toUpperCase() ?? '';
-          const totals = progressByUnit.get(unitKey) ?? {
-            targetValue: 0,
-            actualValue: 0,
-            progressSum: 0,
-            indicatorCount: 0,
-          };
+      const filteredUnits = workPackages.map((unit) => {
+        const unitKey = unit.code?.toUpperCase() ?? '';
+        const totals = progressByUnit.get(unitKey) ?? {
+          targetValue: 0,
+          actualValue: 0,
+          progressSum: 0,
+          indicatorCount: 0,
+        };
 
-          let unitProgress = computeProgressValue(
-            totals.targetValue,
-            totals.actualValue,
-          );
+        let unitProgress = computeProgressValue(
+          totals.targetValue,
+          totals.actualValue,
+        );
 
-          if (totals.indicatorCount > 0) {
-            const unitAverage = totals.progressSum / totals.indicatorCount;
-            unitProgress = Math.round(unitAverage * 10) / 10;
-          }
+        if (totals.indicatorCount > 0) {
+          const unitAverage = totals.progressSum / totals.indicatorCount;
+          unitProgress = Math.round(unitAverage * 10) / 10;
+        }
 
-          return {
-            id: unit.id,
-            code: unit.code,
-            name: unit.name,
-            composeCode: unit.composeCode,
-            year: unit.year,
-            level: unit.level,
-            parentId: unit.parentId,
-            progress: unitProgress ?? 0,
-            progressDetails: {
-              targetValueSum: totals.targetValue,
-              actualAchievedValueSum: totals.actualValue,
-            },
-            resultsCount: {
-              editing: resultCountsByUnit.get(`${unitKey}_1`) ?? 0,
-              submitted: resultCountsByUnit.get(`${unitKey}_3`) ?? 0,
-            },
-          };
-        });
+        return {
+          id: unit.id,
+          code: unit.code,
+          name: unit.name,
+          composeCode: unit.composeCode,
+          year: unit.year,
+          level: 2,
+          parentId: initiative.id,
+          progress: unitProgress ?? 0,
+          progressDetails: {
+            targetValueSum: totals.targetValue,
+            actualAchievedValueSum: totals.actualValue,
+          },
+          resultsCount: {
+            editing: resultCountsByUnit.get(`${unitKey}_1`) ?? 0,
+            submitted: resultCountsByUnit.get(`${unitKey}_3`) ?? 0,
+          },
+        };
+      });
 
       return {
         response: {
@@ -259,17 +230,18 @@ export class ResultsFrameworkReportingService {
             shortName: initiative.short_name,
           },
           parentUnit: {
-            id: parentUnit.id,
-            code: parentUnit.code,
-            name: parentUnit.name,
-            composeCode: parentUnit.composeCode,
-            level: parentUnit.level,
-            year: parentUnit.year,
+            id: initiative.id,
+            code: initiative.official_code,
+            name: initiative.short_name || initiative.name,
+            composeCode: initiative.official_code,
+            level: 1,
+            year: tocContext.reportingYear,
           },
           units: filteredUnits,
           metadata: {
-            activeYear: activeYearValue,
-            portfolio: parentUnit.portfolioId,
+            activeYear: tocContext.reportingYear,
+            phaseUuid: tocContext.phaseUuid,
+            portfolio: initiative.portfolio_id,
           },
           globalProgress: {
             targetValueSum: totalTargetValue,
@@ -295,20 +267,17 @@ export class ResultsFrameworkReportingService {
       const normalizedArea = areaOfWork?.trim();
 
       if (!normalizedProgram) {
-        throw {
-          response: {},
-          message: 'The program identifier is required in the query params.',
-          status: HttpStatus.BAD_REQUEST,
-        };
+        this._throwServiceError(
+          'The program identifier is required in the query params.',
+          HttpStatus.BAD_REQUEST,
+        );
       }
 
       if (!normalizedArea) {
-        throw {
-          response: {},
-          message:
-            'The area of work identifier is required in the query params.',
-          status: HttpStatus.BAD_REQUEST,
-        };
+        this._throwServiceError(
+          'The area of work identifier is required in the query params.',
+          HttpStatus.BAD_REQUEST,
+        );
       }
 
       const normalizedYear =
@@ -320,47 +289,22 @@ export class ResultsFrameworkReportingService {
         normalizedYear !== undefined &&
         (!Number.isFinite(normalizedYear) || normalizedYear < 0)
       ) {
-        throw {
-          response: {},
-          message:
-            'The year filter must be a valid positive integer when provided.',
-          status: HttpStatus.BAD_REQUEST,
-        };
+        this._throwServiceError(
+          'The year filter must be a valid positive integer when provided.',
+          HttpStatus.BAD_REQUEST,
+        );
       }
 
-      let resolvedYear = normalizedYear;
-
-      if (resolvedYear === undefined) {
-        const activeYear = await this._yearRepository.findOne({
-          where: { active: true },
-          select: ['year'],
-        });
-
-        if (!activeYear) {
-          throw {
-            response: {},
-            message: 'No active reporting year was found.',
-            status: HttpStatus.NOT_FOUND,
-          };
-        }
-
-        resolvedYear = Number(activeYear.year);
-
-        if (!Number.isFinite(resolvedYear) || resolvedYear < 0) {
-          throw {
-            response: {},
-            message: 'The active reporting year configured is invalid.',
-            status: HttpStatus.INTERNAL_SERVER_ERROR,
-          };
-        }
-      }
+      const tocContext =
+        await this._reportingTocContextService.resolve(normalizedYear);
+      const resolvedYear = tocContext.reportingYear;
 
       const compositeCode = `${normalizedProgram.toUpperCase()}-${normalizedArea.toUpperCase()}`;
 
       const tocResults = await this._tocResultsRepository.findByCompositeCode(
         normalizedProgram.toUpperCase(),
         compositeCode,
-        resolvedYear,
+        tocContext,
       );
 
       const tocResultsOutcomes = (tocResults || []).filter(
@@ -371,12 +315,10 @@ export class ResultsFrameworkReportingService {
       );
 
       if (!tocResultsOutcomes.length && !tocResultsOutputs.length) {
-        throw {
-          response: {},
-          message:
-            'No work packages were found for the provided filters in the ToC catalogue.',
-          status: HttpStatus.NOT_FOUND,
-        };
+        this._throwServiceError(
+          'No work packages were found for the provided filters in the ToC catalogue.',
+          HttpStatus.NOT_FOUND,
+        );
       }
 
       const enrichIndicatorTargets = async (indicator: any) => {
@@ -451,6 +393,7 @@ export class ResultsFrameworkReportingService {
             total: tocResults.length,
             outcomes: tocResultsOutcomes.length,
             outputs: tocResultsOutputs.length,
+            phaseUuid: tocContext.phaseUuid,
           },
         },
         message: 'Work packages retrieved successfully.',
@@ -466,48 +409,25 @@ export class ResultsFrameworkReportingService {
       const normalizedProgram = programId?.trim();
 
       if (!normalizedProgram) {
-        throw {
-          response: {},
-          message: 'The program identifier is required in the query params.',
-          status: HttpStatus.BAD_REQUEST,
-        };
+        this._throwServiceError(
+          'The program identifier is required in the query params.',
+          HttpStatus.BAD_REQUEST,
+        );
       }
 
-      const activeYear = await this._yearRepository.findOne({
-        where: { active: true },
-        select: ['year'],
-      });
-
-      if (!activeYear) {
-        throw {
-          response: {},
-          message: 'No active reporting year was found.',
-          status: HttpStatus.NOT_FOUND,
-        };
-      }
-
-      const resolvedYear = Number(activeYear.year);
-
-      if (!Number.isFinite(resolvedYear) || resolvedYear < 0) {
-        throw {
-          response: {},
-          message: 'The active reporting year configured is invalid.',
-          status: HttpStatus.INTERNAL_SERVER_ERROR,
-        };
-      }
+      const tocContext = await this._reportingTocContextService.resolve();
+      const resolvedYear = tocContext.reportingYear;
 
       const toc2030Outcomes = await this._tocResultsRepository.find2030Outcomes(
         normalizedProgram.toUpperCase(),
-        resolvedYear,
+        tocContext,
       );
 
       if (!toc2030Outcomes?.length) {
-        throw {
-          response: {},
-          message:
-            'No ToC 2030 outcomes were found for the provided program identifier.',
-          status: HttpStatus.NOT_FOUND,
-        };
+        this._throwServiceError(
+          'No ToC 2030 outcomes were found for the provided program identifier.',
+          HttpStatus.NOT_FOUND,
+        );
       }
 
       return {
@@ -517,6 +437,7 @@ export class ResultsFrameworkReportingService {
           tocResults: toc2030Outcomes,
           metadata: {
             total: toc2030Outcomes.length,
+            phaseUuid: tocContext.phaseUuid,
           },
         },
         message: 'ToC 2030 outcomes retrieved successfully.',
@@ -533,23 +454,20 @@ export class ResultsFrameworkReportingService {
   ) {
     try {
       if (!payload?.result) {
-        throw {
-          response: {},
-          message: 'The result header information is required.',
-          status: HttpStatus.BAD_REQUEST,
-        };
+        this._throwServiceError(
+          'The result header information is required.',
+          HttpStatus.BAD_REQUEST,
+        );
       }
 
       const baseResultDto = { ...payload.result };
       const initiativeId = Number(baseResultDto.initiative_id);
 
       if (!Number.isFinite(initiativeId) || initiativeId <= 0) {
-        throw {
-          response: {},
-          message:
-            'A valid initiative identifier is required to create the result.',
-          status: HttpStatus.BAD_REQUEST,
-        };
+        this._throwServiceError(
+          'A valid initiative identifier is required to create the result.',
+          HttpStatus.BAD_REQUEST,
+        );
       }
 
       let createdResultId: number;
@@ -560,12 +478,10 @@ export class ResultsFrameworkReportingService {
         ResultTypeEnum.KNOWLEDGE_PRODUCT
       ) {
         if (!payload.knowledge_product) {
-          throw {
-            response: {},
-            message:
-              'Knowledge product payload is required for knowledge product results.',
-            status: HttpStatus.BAD_REQUEST,
-          };
+          this._throwServiceError(
+            'Knowledge product payload is required for knowledge product results.',
+            HttpStatus.BAD_REQUEST,
+          );
         }
 
         if (
@@ -612,22 +528,20 @@ export class ResultsFrameworkReportingService {
       }
 
       if (!Number.isFinite(createdResultId) || createdResultId <= 0) {
-        throw {
-          response: {},
-          message: 'Result creation failed to return a valid identifier.',
-          status: HttpStatus.INTERNAL_SERVER_ERROR,
-        };
+        this._throwServiceError(
+          'Result creation failed to return a valid identifier.',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
       }
 
       const resultSummary =
         await this._resultRepository.getResultById(createdResultId);
 
       if (!resultSummary) {
-        throw {
-          response: {},
-          message: 'The result could not be retrieved after creation.',
-          status: HttpStatus.INTERNAL_SERVER_ERROR,
-        };
+        this._throwServiceError(
+          'The result could not be retrieved after creation.',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
       }
 
       let primaryTocRecordId: number | null = null;
@@ -636,23 +550,23 @@ export class ResultsFrameworkReportingService {
         const resolvedTocResultId = Number(payload.toc_result_id);
 
         if (!Number.isFinite(resolvedTocResultId) || resolvedTocResultId <= 0) {
-          throw {
-            response: {},
-            message: 'The provided ToC result identifier is invalid.',
-            status: HttpStatus.BAD_REQUEST,
-          };
+          this._throwServiceError(
+            'The provided ToC result identifier is invalid.',
+            HttpStatus.BAD_REQUEST,
+          );
         }
 
-        const tocResult =
-          await this._tocResultsRepository.findResultById(resolvedTocResultId);
+        const tocContext = await this._reportingTocContextService.resolve();
+        const tocResult = await this._tocResultsRepository.findResultById(
+          resolvedTocResultId,
+          tocContext.phaseUuid,
+        );
 
         if (!tocResult) {
-          throw {
-            response: {},
-            message:
-              'No ToC result was found with the provided identifier in the Integration catalogue.',
-            status: HttpStatus.NOT_FOUND,
-          };
+          this._throwServiceError(
+            'No ToC result was found with the provided identifier in the Integration catalogue.',
+            HttpStatus.NOT_FOUND,
+          );
         }
 
         const categoryLevelMap: Record<string, number> = {
@@ -667,12 +581,10 @@ export class ResultsFrameworkReportingService {
         const resolvedTocLevelId = categoryLevelMap[normalizedCategory];
 
         if (!resolvedTocLevelId) {
-          throw {
-            response: {},
-            message:
-              'The ToC result category is not supported for automatic level mapping.',
-            status: HttpStatus.BAD_REQUEST,
-          };
+          this._throwServiceError(
+            'The ToC result category is not supported for automatic level mapping.',
+            HttpStatus.BAD_REQUEST,
+          );
         }
 
         let primaryTocRecord = await this._resultsTocResultRepository.findOne({
@@ -822,30 +734,27 @@ export class ResultsFrameworkReportingService {
         (indicator as any)?.indicator_id ?? (indicator as any)?.id;
       const indicatorId = Number(indicatorIdRaw);
       if (!Number.isFinite(indicatorId) || indicatorId <= 0) {
-        throw {
-          response: {},
-          message: 'One of the provided ToC indicator identifiers is invalid.',
-          status: HttpStatus.BAD_REQUEST,
-        };
+        this._throwServiceError(
+          'One of the provided ToC indicator identifiers is invalid.',
+          HttpStatus.BAD_REQUEST,
+        );
       }
 
       const indicatorRow =
         await this._tocResultsRepository.findIndicatorById(indicatorId);
 
       if (!indicatorRow) {
-        throw {
-          response: {},
-          message: `No ToC indicator was found with id '${indicatorId}'.`,
-          status: HttpStatus.NOT_FOUND,
-        };
+        this._throwServiceError(
+          `No ToC indicator was found with id '${indicatorId}'.`,
+          HttpStatus.NOT_FOUND,
+        );
       }
 
       if (Number(indicatorRow.toc_results_id) !== Number(tocResultId)) {
-        throw {
-          response: {},
-          message: `The indicator '${indicatorId}' does not belong to the provided ToC result '${tocResultId}'.`,
-          status: HttpStatus.BAD_REQUEST,
-        };
+        this._throwServiceError(
+          `The indicator '${indicatorId}' does not belong to the provided ToC result '${tocResultId}'.`,
+          HttpStatus.BAD_REQUEST,
+        );
       }
 
       const existingIndicator =
@@ -923,12 +832,10 @@ export class ResultsFrameworkReportingService {
     const parsedNumberTarget = Number(numberTarget);
 
     if (!Number.isFinite(parsedNumberTarget)) {
-      throw {
-        response: {},
-        message:
-          'The provided number_target value for the indicator contribution is invalid.',
-        status: HttpStatus.BAD_REQUEST,
-      };
+      this._throwServiceError(
+        'The provided number_target value for the indicator contribution is invalid.',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const parsedContributingIndicator =
@@ -1110,16 +1017,18 @@ export class ResultsFrameworkReportingService {
       const resolvedTocResultId = Number(tocResultId);
 
       if (!Number.isFinite(resolvedTocResultId) || resolvedTocResultId <= 0) {
-        throw {
-          response: {},
-          message:
-            'A valid tocResultId query parameter is required (must be a positive integer).',
-          status: HttpStatus.BAD_REQUEST,
-        };
+        this._throwServiceError(
+          'A valid tocResultId query parameter is required (must be a positive integer).',
+          HttpStatus.BAD_REQUEST,
+        );
       }
 
+      const tocContext = await this._reportingTocContextService.resolve();
       const bilateralProjects =
-        await this._tocResultsRepository.findBilateralProjectById(tocResultId);
+        await this._tocResultsRepository.findBilateralProjectById(
+          resolvedTocResultId,
+          tocContext.phaseUuid,
+        );
 
       return {
         response: bilateralProjects,
@@ -1143,19 +1052,17 @@ export class ResultsFrameworkReportingService {
         !Number.isFinite(parsedResultTocResultId) ||
         parsedResultTocResultId <= 0
       ) {
-        throw {
-          response: {},
-          message: 'Invalid resultTocResultId provided.',
-          status: HttpStatus.BAD_REQUEST,
-        };
+        this._throwServiceError(
+          'Invalid resultTocResultId provided.',
+          HttpStatus.BAD_REQUEST,
+        );
       }
 
       if (!tocResultIndicatorId || `${tocResultIndicatorId}`.trim() === '') {
-        throw {
-          response: {},
-          message: 'Invalid tocResultIndicatorId provided.',
-          status: HttpStatus.BAD_REQUEST,
-        };
+        this._throwServiceError(
+          'Invalid tocResultIndicatorId provided.',
+          HttpStatus.BAD_REQUEST,
+        );
       }
 
       const resultContributionExists =
@@ -1216,12 +1123,10 @@ export class ResultsFrameworkReportingService {
         });
 
       if (!resultContributionExists || resultContributionExists.length === 0) {
-        throw {
-          response: {},
-          message:
-            'No result contribution record was found with the provided resultTocResultId.',
-          status: HttpStatus.NOT_FOUND,
-        };
+        this._throwServiceError(
+          'No result contribution record was found with the provided resultTocResultId.',
+          HttpStatus.NOT_FOUND,
+        );
       }
 
       const tocResultIdsWithIndicator = resultContributionExists.map(
@@ -1399,12 +1304,12 @@ export class ResultsFrameworkReportingService {
   private async getResultsCountByUnitAndStatus(
     initiativeId: number,
     unitCodes: string[],
+    tocContext: ReportingTocContext,
   ): Promise<Map<string, number>> {
     if (!unitCodes || unitCodes.length === 0) {
       return new Map();
     }
 
-    const tocPhaseId = await this.getCurrentTocPhaseId();
     const placeholders = unitCodes.map(() => '?').join(',');
 
     let query = `
@@ -1429,22 +1334,21 @@ export class ResultsFrameworkReportingService {
         ${env.DB_TOC}.toc_results tr ON tr.id = rtr.toc_result_id
       INNER JOIN 
         ${env.DB_TOC}.toc_work_packages wp ON wp.toc_id = tr.wp_id
+          AND wp.year = ?
       WHERE 
         r.is_active = 1
         AND r.status_id IN (1, 3)
         AND rtr.initiative_id = ?
         AND UPPER(wp.acronym) IN (${placeholders})
+        AND tr.phase = ?
     `;
 
     const params: (string | number)[] = [
+      tocContext.reportingYear,
       initiativeId,
       ...unitCodes.map((c) => c.toUpperCase()),
+      tocContext.phaseUuid,
     ];
-
-    if (tocPhaseId) {
-      query += ` AND tr.phase = ?`;
-      params.push(tocPhaseId);
-    }
 
     query += `
       GROUP BY 
@@ -1463,21 +1367,6 @@ export class ResultsFrameworkReportingService {
     return countsMap;
   }
 
-  private async getCurrentTocPhaseId(): Promise<string | null> {
-    const query = `
-      SELECT toc_pahse_id
-      FROM version
-      WHERE is_active = 1 AND status = 1 AND app_module_id = 1
-      LIMIT 1
-    `;
-    try {
-      const rows = await this.dataSource.query(query);
-      return rows?.[0]?.toc_pahse_id ?? null;
-    } catch (error) {
-      this._logger.error('Error fetching current TOC phase ID', error);
-      return null;
-    }
-  }
   private buildHttpError(status: number, message: string) {
     const error: any = new Error(message);
     error.response = {};

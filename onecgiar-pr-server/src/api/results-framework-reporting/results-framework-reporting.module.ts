@@ -22,6 +22,7 @@ import { ResultInnovSectionModule } from './result_innov_section/result_innov_se
 import { ResultsByInstitutionsModule } from '../results/results_by_institutions/results_by_institutions.module';
 import { GeographicLocationModule } from './geographic-location/geographic-location.module';
 import { GeoScopeRoleModule } from './geo_scope_role/geo_scope_role.module';
+import { ReportingTocContextService } from './reporting-toc-context/reporting-toc-context.service';
 
 @Module({
   imports: [
@@ -50,6 +51,8 @@ import { GeoScopeRoleModule } from './geo_scope_role/geo_scope_role.module';
     AoWBilateralRepository,
     ContributionToIndicatorResultsRepository,
     ResultsTocTargetIndicatorRepository,
+    ReportingTocContextService,
   ],
+  exports: [ReportingTocContextService],
 })
 export class ResultsFrameworkReportingModule {}
