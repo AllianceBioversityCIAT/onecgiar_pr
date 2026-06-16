@@ -26,12 +26,25 @@ export function formatUnknownError(error: unknown): string {
   if (typeof error === 'string') {
     return error;
   }
-  if (error === null || error === undefined) {
-    return String(error);
+  if (error === null) {
+    return 'null';
+  }
+  if (error === undefined) {
+    return 'undefined';
+  }
+  if (
+    typeof error === 'number' ||
+    typeof error === 'boolean' ||
+    typeof error === 'bigint'
+  ) {
+    return `${error}`;
+  }
+  if (typeof error === 'symbol') {
+    return error.description ?? error.toString();
   }
   try {
     return JSON.stringify(error);
   } catch {
-    return String(error);
+    return '[Unserializable error]';
   }
 }

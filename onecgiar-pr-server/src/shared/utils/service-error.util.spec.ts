@@ -1,19 +1,30 @@
 import { HttpStatus } from '@nestjs/common';
-import { formatUnknownError, throwServiceError } from './service-error.util';
+import {
+  formatUnknownError,
+  throwServiceError,
+  type ServiceError,
+} from './service-error.util';
+
+function expectServiceError(error: unknown): asserts error is ServiceError {
+  expect(error).toBeInstanceOf(Error);
+  if (!(error instanceof Error)) {
+    throw new Error('Expected a ServiceError instance');
+  }
+}
 
 describe('throwServiceError', () => {
   it('throws an Error with response and status fields', () => {
-    expect(() =>
-      throwServiceError('Not found', HttpStatus.NOT_FOUND),
-    ).toThrow('Not found');
+    expect(() => throwServiceError('Not found', HttpStatus.NOT_FOUND)).toThrow(
+      'Not found',
+    );
 
     try {
       throwServiceError('Bad input', HttpStatus.BAD_REQUEST);
     } catch (error) {
-      expect(error).toBeInstanceOf(Error);
-      expect((error as any).message).toBe('Bad input');
-      expect((error as any).status).toBe(HttpStatus.BAD_REQUEST);
-      expect((error as any).response).toEqual({});
+      expectServiceError(error);
+      expect(error.message).toBe('Bad input');
+      expect(error.status).toBe(HttpStatus.BAD_REQUEST);
+      expect(error.response).toEqual({});
     }
   });
 
@@ -21,7 +32,8 @@ describe('throwServiceError', () => {
     try {
       throwServiceError('Validation failed');
     } catch (error) {
-      expect((error as any).status).toBe(HttpStatus.BAD_REQUEST);
+      expectServiceError(error);
+      expect(error.status).toBe(HttpStatus.BAD_REQUEST);
     }
   });
 });
@@ -35,5 +47,17 @@ describe('formatUnknownError', () => {
     expect(formatUnknownError({ code: 'ECONNREFUSED' })).toBe(
       '{"code":"ECONNREFUSED"}',
     );
+  });
+
+  it('returns explicit literals for null and undefined', () => {
+    expect(formatUnknownError(null)).toBe('null');
+    expect(formatUnknownError(undefined)).toBe('undefined');
+  });
+
+  it('returns a safe fallback when JSON serialization fails', () => {
+    const circular: { self?: unknown } = {};
+    circular.self = circular;
+
+    expect(formatUnknownError(circular)).toBe('[Unserializable error]');
   });
 });
