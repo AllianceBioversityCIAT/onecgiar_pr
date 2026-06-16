@@ -5,7 +5,8 @@ import { AoWBilateralRepository } from '../../../../results/results-toc-results/
 import { ResultsTocResultRepository } from '../../../../results/results-toc-results/repositories/results-toc-results.repository';
 import { ReportingTocContextService } from '../../../reporting-toc-context/reporting-toc-context.service';
 import { FrameworkResultTocIndicatorsService } from './framework-result-toc-indicators.service';
-import { throwReportingFrameworkError } from '../../utils/reporting-framework-error.util';
+import { throwServiceError } from '../../../../../shared/utils/service-error.util';
+
 
 const TOC_CATEGORY_LEVEL_MAP: Record<string, number> = {
   OUTPUT: 1,
@@ -35,7 +36,7 @@ export class LinkFrameworkResultTocService {
     const resolvedTocResultId = Number(payload.toc_result_id);
 
     if (!Number.isFinite(resolvedTocResultId) || resolvedTocResultId <= 0) {
-      throwReportingFrameworkError(
+      throwServiceError(
         'The provided ToC result identifier is invalid.',
       );
     }
@@ -47,7 +48,7 @@ export class LinkFrameworkResultTocService {
     );
 
     if (!tocResult) {
-      throwReportingFrameworkError(
+      throwServiceError(
         'No ToC result was found with the provided identifier in the Integration catalogue.',
         HttpStatus.NOT_FOUND,
       );
@@ -59,7 +60,7 @@ export class LinkFrameworkResultTocService {
     const resolvedTocLevelId = TOC_CATEGORY_LEVEL_MAP[normalizedCategory];
 
     if (!resolvedTocLevelId) {
-      throwReportingFrameworkError(
+      throwServiceError(
         'The ToC result category is not supported for automatic level mapping.',
       );
     }

@@ -5,7 +5,8 @@ import { ResultTypeEnum } from '../../../../../shared/constants/result-type.enum
 import { ResultsService } from '../../../../results/results.service';
 import { ResultsKnowledgeProductsService } from '../../../../results/results-knowledge-products/results-knowledge-products.service';
 import { ResultsKnowledgeProductDto } from '../../../../results/results-knowledge-products/dto/results-knowledge-product.dto';
-import { throwReportingFrameworkError } from '../../utils/reporting-framework-error.util';
+import { throwServiceError } from '../../../../../shared/utils/service-error.util';
+
 
 export type CreateFrameworkResultEntityResult = {
   createdResultId: number;
@@ -25,7 +26,7 @@ export class CreateFrameworkResultEntityService {
     user: TokenDto,
   ): Promise<CreateFrameworkResultEntityResult> {
     if (!payload?.result) {
-      throwReportingFrameworkError(
+      throwServiceError(
         'The result header information is required.',
       );
     }
@@ -34,7 +35,7 @@ export class CreateFrameworkResultEntityService {
     const initiativeId = Number(baseResultDto.initiative_id);
 
     if (!Number.isFinite(initiativeId) || initiativeId <= 0) {
-      throwReportingFrameworkError(
+      throwServiceError(
         'A valid initiative identifier is required to create the result.',
       );
     }
@@ -52,7 +53,7 @@ export class CreateFrameworkResultEntityService {
     }
 
     if (!Number.isFinite(createdResultId) || createdResultId <= 0) {
-      throwReportingFrameworkError(
+      throwServiceError(
         'Result creation failed to return a valid identifier.',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
@@ -70,7 +71,7 @@ export class CreateFrameworkResultEntityService {
     knowledgeProductResponse: ResultsKnowledgeProductDto;
   }> {
     if (!payload.knowledge_product) {
-      throwReportingFrameworkError(
+      throwServiceError(
         'Knowledge product payload is required for knowledge product results.',
       );
     }

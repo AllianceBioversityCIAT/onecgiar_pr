@@ -3,8 +3,9 @@ import { In } from 'typeorm';
 import { ResultsTocResultRepository } from '../../../../results/results-toc-results/repositories/results-toc-results.repository';
 import { ResultsTocResultIndicatorsRepository } from '../../../../results/results-toc-results/repositories/results-toc-results-indicators.repository';
 import { ResultStatusData } from '../../../../../shared/constants/result-status.enum';
-import { throwReportingFrameworkError } from '../../utils/reporting-framework-error.util';
 import type { ExistingResultContributorRecord } from './existing-result-contributors.types';
+import { throwServiceError } from '../../../../../shared/utils/service-error.util';
+
 
 @Injectable()
 export class ExistingResultContributorsLoaderService {
@@ -19,14 +20,14 @@ export class ExistingResultContributorsLoaderService {
       !Number.isFinite(parsedResultTocResultId) ||
       parsedResultTocResultId <= 0
     ) {
-      throwReportingFrameworkError('Invalid resultTocResultId provided.');
+      throwServiceError('Invalid resultTocResultId provided.');
     }
     return parsedResultTocResultId;
   }
 
   validateTocResultIndicatorId(tocResultIndicatorId: string): string {
     if (!tocResultIndicatorId || `${tocResultIndicatorId}`.trim() === '') {
-      throwReportingFrameworkError('Invalid tocResultIndicatorId provided.');
+      throwServiceError('Invalid tocResultIndicatorId provided.');
     }
     return tocResultIndicatorId;
   }
@@ -93,7 +94,7 @@ export class ExistingResultContributorsLoaderService {
       });
 
     if (!resultContributionExists?.length) {
-      throwReportingFrameworkError(
+      throwServiceError(
         'No result contribution record was found with the provided resultTocResultId.',
         HttpStatus.NOT_FOUND,
       );

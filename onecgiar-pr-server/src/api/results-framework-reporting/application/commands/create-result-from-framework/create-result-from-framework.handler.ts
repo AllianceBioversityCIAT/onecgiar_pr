@@ -4,7 +4,8 @@ import { CreateResultFromFrameworkCommand } from './create-result-from-framework
 import { CreateFrameworkResultEntityService } from './create-framework-result-entity.service';
 import { LinkFrameworkResultTocService } from './link-framework-result-toc.service';
 import { ApplyFrameworkResultAssociationsService } from './apply-framework-result-associations.service';
-import { throwReportingFrameworkError } from '../../utils/reporting-framework-error.util';
+import { throwServiceError } from '../../../../../shared/utils/service-error.util';
+
 
 @Injectable()
 export class CreateResultFromFrameworkHandler {
@@ -25,7 +26,7 @@ export class CreateResultFromFrameworkHandler {
       await this._resultRepository.getResultById(createdResultId);
 
     if (!resultSummary) {
-      throwReportingFrameworkError(
+      throwServiceError(
         'The result could not be retrieved after creation.',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );

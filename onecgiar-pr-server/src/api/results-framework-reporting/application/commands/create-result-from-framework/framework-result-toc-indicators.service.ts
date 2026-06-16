@@ -3,7 +3,8 @@ import { ResultsFrameworkTocIndicatorDto } from '../../../dto/create-results-fra
 import { AoWBilateralRepository } from '../../../../results/results-toc-results/repositories/aow-bilateral.repository';
 import { ResultsTocResultIndicatorsRepository } from '../../../../results/results-toc-results/repositories/results-toc-results-indicators.repository';
 import { ResultsTocTargetIndicatorRepository } from '../../../../results/results-toc-results/repositories/result-toc-result-target-indicator.repository';
-import { throwReportingFrameworkError } from '../../utils/reporting-framework-error.util';
+import { throwServiceError } from '../../../../../shared/utils/service-error.util';
+
 
 type IndicatorNumberTargetValue = string | number | null;
 
@@ -44,7 +45,7 @@ export class FrameworkResultTocIndicatorsService {
         (indicator as any)?.indicator_id ?? (indicator as any)?.id;
       const indicatorId = Number(indicatorIdRaw);
       if (!Number.isFinite(indicatorId) || indicatorId <= 0) {
-        throwReportingFrameworkError(
+        throwServiceError(
           'One of the provided ToC indicator identifiers is invalid.',
         );
       }
@@ -53,14 +54,14 @@ export class FrameworkResultTocIndicatorsService {
         await this._tocResultsRepository.findIndicatorById(indicatorId);
 
       if (!indicatorRow) {
-        throwReportingFrameworkError(
+        throwServiceError(
           `No ToC indicator was found with id '${indicatorId}'.`,
           HttpStatus.NOT_FOUND,
         );
       }
 
       if (Number(indicatorRow.toc_results_id) !== Number(tocResultId)) {
-        throwReportingFrameworkError(
+        throwServiceError(
           `The indicator '${indicatorId}' does not belong to the provided ToC result '${tocResultId}'.`,
         );
       }
@@ -140,7 +141,7 @@ export class FrameworkResultTocIndicatorsService {
     const parsedNumberTarget = Number(numberTarget);
 
     if (!Number.isFinite(parsedNumberTarget)) {
-      throwReportingFrameworkError(
+      throwServiceError(
         'The provided number_target value for the indicator contribution is invalid.',
       );
     }

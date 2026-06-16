@@ -12,11 +12,11 @@ import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 import { ResultLevelEnum } from '../../shared/constants/result-level.enum';
 import { ReportingTocContextService } from './reporting-toc-context/reporting-toc-context.service';
 import type { ReportingTocContext } from './reporting-toc-context/reporting-toc-context.interface';
-import { throwReportingFrameworkError } from './application/utils/reporting-framework-error.util';
 import { CreateResultFromFrameworkCommand } from './application/commands/create-result-from-framework/create-result-from-framework.command';
 import { CreateResultFromFrameworkHandler } from './application/commands/create-result-from-framework/create-result-from-framework.handler';
 import { GetExistingResultContributorsToIndicatorsQuery } from './application/queries/get-existing-result-contributors/get-existing-result-contributors.query';
 import { GetExistingResultContributorsToIndicatorsHandler } from './application/queries/get-existing-result-contributors/get-existing-result-contributors.handler';
+import { throwServiceError } from '../../shared/utils/service-error.util';
 
 @Injectable()
 export class ResultsFrameworkReportingService {
@@ -36,19 +36,12 @@ export class ResultsFrameworkReportingService {
     private readonly _getExistingResultContributorsToIndicatorsHandler: GetExistingResultContributorsToIndicatorsHandler,
   ) {}
 
-  private _throwServiceError(
-    message: string,
-    status: HttpStatus = HttpStatus.BAD_REQUEST,
-  ): never {
-    throwReportingFrameworkError(message, status);
-  }
-
   async getGlobalUnitsByProgram(user: TokenDto, programId?: string) {
     try {
       const normalizedProgramId = programId?.trim();
 
       if (!normalizedProgramId) {
-        this._throwServiceError(
+        throwServiceError(
           'The program identifier is required in the query params.',
         );
       }
@@ -59,7 +52,7 @@ export class ResultsFrameworkReportingService {
       });
 
       if (!initiative) {
-        this._throwServiceError(
+        throwServiceError(
           'No initiative was found with the provided program identifier.',
           HttpStatus.NOT_FOUND,
         );
@@ -73,7 +66,7 @@ export class ResultsFrameworkReportingService {
         );
 
       if (!workPackages.length) {
-        this._throwServiceError(
+        throwServiceError(
           'No work packages were found for the provided program in the active reporting phase.',
           HttpStatus.NOT_FOUND,
         );
@@ -247,14 +240,14 @@ export class ResultsFrameworkReportingService {
       const normalizedArea = areaOfWork?.trim();
 
       if (!normalizedProgram) {
-        this._throwServiceError(
+        throwServiceError(
           'The program identifier is required in the query params.',
           HttpStatus.BAD_REQUEST,
         );
       }
 
       if (!normalizedArea) {
-        this._throwServiceError(
+        throwServiceError(
           'The area of work identifier is required in the query params.',
           HttpStatus.BAD_REQUEST,
         );
@@ -269,7 +262,7 @@ export class ResultsFrameworkReportingService {
         normalizedYear !== undefined &&
         (!Number.isFinite(normalizedYear) || normalizedYear < 0)
       ) {
-        this._throwServiceError(
+        throwServiceError(
           'The year filter must be a valid positive integer when provided.',
           HttpStatus.BAD_REQUEST,
         );
@@ -295,7 +288,7 @@ export class ResultsFrameworkReportingService {
       );
 
       if (!tocResultsOutcomes.length && !tocResultsOutputs.length) {
-        this._throwServiceError(
+        throwServiceError(
           'No work packages were found for the provided filters in the ToC catalogue.',
           HttpStatus.NOT_FOUND,
         );
@@ -389,7 +382,7 @@ export class ResultsFrameworkReportingService {
       const normalizedProgram = programId?.trim();
 
       if (!normalizedProgram) {
-        this._throwServiceError(
+        throwServiceError(
           'The program identifier is required in the query params.',
           HttpStatus.BAD_REQUEST,
         );
@@ -404,7 +397,7 @@ export class ResultsFrameworkReportingService {
       );
 
       if (!toc2030Outcomes?.length) {
-        this._throwServiceError(
+        throwServiceError(
           'No ToC 2030 outcomes were found for the provided program identifier.',
           HttpStatus.NOT_FOUND,
         );
@@ -568,7 +561,7 @@ export class ResultsFrameworkReportingService {
       const resolvedTocResultId = Number(tocResultId);
 
       if (!Number.isFinite(resolvedTocResultId) || resolvedTocResultId <= 0) {
-        this._throwServiceError(
+        throwServiceError(
           'A valid tocResultId query parameter is required (must be a positive integer).',
           HttpStatus.BAD_REQUEST,
         );

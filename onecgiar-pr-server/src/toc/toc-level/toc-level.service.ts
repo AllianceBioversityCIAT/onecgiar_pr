@@ -1,6 +1,9 @@
 import { Injectable, HttpStatus } from '@nestjs/common';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { TocLevelRepository } from './toc-level.repository';
+import { throwServiceError } from '../../shared/utils/service-error.util';
+
+
 
 @Injectable()
 export class TocLevelService {
@@ -13,11 +16,7 @@ export class TocLevelService {
     try {
       const tocResults = await this._tocLevelRepository.getAllTocLevel();
       if (!tocResults.length) {
-        throw {
-          response: {},
-          message: 'ToC Results Not Found',
-          status: HttpStatus.NOT_FOUND,
-        };
+        throwServiceError('ToC Results Not Found', HttpStatus.NOT_FOUND);
       }
 
       return {

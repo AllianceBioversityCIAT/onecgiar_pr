@@ -5,7 +5,8 @@ import { ShareResultRequestService } from '../../../../results/share-result-requ
 import { CreateTocShareResult } from '../../../../results/share-result-request/dto/create-toc-share-result.dto';
 import { ResultsByProjectsService } from '../../../../results/results_by_projects/results_by_projects.service';
 import { ResultsByInstitutionsService } from '../../../../results/results_by_institutions/results_by_institutions.service';
-import { objectHasOwn } from '../../utils/reporting-framework-object.util';
+import { objectHasOwn } from '../../../../../shared/utils/object.utils';
+
 
 @Injectable()
 export class ApplyFrameworkResultAssociationsService {
