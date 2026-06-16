@@ -1,9 +1,9 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { CreateResultsFrameworkResultDto } from '../../dto/create-results-framework.dto';
-import { TokenDto } from '../../../../shared/globalInterfaces/token.dto';
-import { AoWBilateralRepository } from '../../../results/results-toc-results/repositories/aow-bilateral.repository';
-import { ResultsTocResultRepository } from '../../../results/results-toc-results/repositories/results-toc-results.repository';
-import { ReportingTocContextService } from '../../reporting-toc-context/reporting-toc-context.service';
+import { CreateResultsFrameworkResultDto } from '../../../dto/create-results-framework.dto';
+import { TokenDto } from '../../../../../shared/globalInterfaces/token.dto';
+import { AoWBilateralRepository } from '../../../../results/results-toc-results/repositories/aow-bilateral.repository';
+import { ResultsTocResultRepository } from '../../../../results/results-toc-results/repositories/results-toc-results.repository';
+import { ReportingTocContextService } from '../../../reporting-toc-context/reporting-toc-context.service';
 import { FrameworkResultTocIndicatorsService } from './framework-result-toc-indicators.service';
 import { throwReportingFrameworkError } from '../../utils/reporting-framework-error.util';
 

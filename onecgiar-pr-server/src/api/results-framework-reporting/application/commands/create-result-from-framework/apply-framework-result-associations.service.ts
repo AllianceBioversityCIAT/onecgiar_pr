@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { CreateResultsFrameworkResultDto } from '../../dto/create-results-framework.dto';
-import { TokenDto } from '../../../../shared/globalInterfaces/token.dto';
-import { ShareResultRequestService } from '../../../results/share-result-request/share-result-request.service';
-import { CreateTocShareResult } from '../../../results/share-result-request/dto/create-toc-share-result.dto';
-import { ResultsByProjectsService } from '../../../results/results_by_projects/results_by_projects.service';
-import { ResultsByInstitutionsService } from '../../../results/results_by_institutions/results_by_institutions.service';
+import { CreateResultsFrameworkResultDto } from '../../../dto/create-results-framework.dto';
+import { TokenDto } from '../../../../../shared/globalInterfaces/token.dto';
+import { ShareResultRequestService } from '../../../../results/share-result-request/share-result-request.service';
+import { CreateTocShareResult } from '../../../../results/share-result-request/dto/create-toc-share-result.dto';
+import { ResultsByProjectsService } from '../../../../results/results_by_projects/results_by_projects.service';
+import { ResultsByInstitutionsService } from '../../../../results/results_by_institutions/results_by_institutions.service';
 import { objectHasOwn } from '../../utils/reporting-framework-object.util';
 
 @Injectable()

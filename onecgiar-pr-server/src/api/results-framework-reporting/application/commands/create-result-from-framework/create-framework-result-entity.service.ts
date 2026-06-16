@@ -1,10 +1,10 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { CreateResultsFrameworkResultDto } from '../../dto/create-results-framework.dto';
-import { TokenDto } from '../../../../shared/globalInterfaces/token.dto';
-import { ResultTypeEnum } from '../../../../shared/constants/result-type.enum';
-import { ResultsService } from '../../../results/results.service';
-import { ResultsKnowledgeProductsService } from '../../../results/results-knowledge-products/results-knowledge-products.service';
-import { ResultsKnowledgeProductDto } from '../../../results/results-knowledge-products/dto/results-knowledge-product.dto';
+import { CreateResultsFrameworkResultDto } from '../../../dto/create-results-framework.dto';
+import { TokenDto } from '../../../../../shared/globalInterfaces/token.dto';
+import { ResultTypeEnum } from '../../../../../shared/constants/result-type.enum';
+import { ResultsService } from '../../../../results/results.service';
+import { ResultsKnowledgeProductsService } from '../../../../results/results-knowledge-products/results-knowledge-products.service';
+import { ResultsKnowledgeProductDto } from '../../../../results/results-knowledge-products/dto/results-knowledge-product.dto';
 import { throwReportingFrameworkError } from '../../utils/reporting-framework-error.util';
 
 export type CreateFrameworkResultEntityResult = {

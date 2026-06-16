@@ -1,8 +1,7 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
-import { DataSource, In, IsNull } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { env } from 'node:process';
 import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
-import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
 import { YearRepository } from '../results/years/year.repository';
 import { HandlersError } from '../../shared/handlers/error.utils';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
@@ -10,17 +9,14 @@ import { AoWBilateralRepository } from '../results/results-toc-results/repositor
 import { ResultRepository } from '../results/result.repository';
 import { CreateResultsFrameworkResultDto } from './dto/create-results-framework.dto';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
-import { ResultsTocResultRepository } from '../results/results-toc-results/repositories/results-toc-results.repository';
-import { ResultsTocResultIndicatorsRepository } from '../results/results-toc-results/repositories/results-toc-results-indicators.repository';
 import { ResultLevelEnum } from '../../shared/constants/result-level.enum';
-import { ResultStatusData } from '../../shared/constants/result-status.enum';
 import { ReportingTocContextService } from './reporting-toc-context/reporting-toc-context.service';
 import type { ReportingTocContext } from './reporting-toc-context/reporting-toc-context.interface';
-import { throwReportingFrameworkError } from './utils/reporting-framework-error.util';
-import { CreateResultFromFrameworkCommand } from './commands/create-result-from-framework/create-result-from-framework.command';
-import { CreateResultFromFrameworkHandler } from './commands/create-result-from-framework/create-result-from-framework.handler';
-
-type IndicatorNumberTargetValue = string | number | null;
+import { throwReportingFrameworkError } from './application/utils/reporting-framework-error.util';
+import { CreateResultFromFrameworkCommand } from './application/commands/create-result-from-framework/create-result-from-framework.command';
+import { CreateResultFromFrameworkHandler } from './application/commands/create-result-from-framework/create-result-from-framework.handler';
+import { GetExistingResultContributorsToIndicatorsQuery } from './application/queries/get-existing-result-contributors/get-existing-result-contributors.query';
+import { GetExistingResultContributorsToIndicatorsHandler } from './application/queries/get-existing-result-contributors/get-existing-result-contributors.handler';
 
 @Injectable()
 export class ResultsFrameworkReportingService {
@@ -31,15 +27,13 @@ export class ResultsFrameworkReportingService {
   constructor(
     private readonly dataSource: DataSource,
     private readonly _clarisaInitiativesRepository: ClarisaInitiativesRepository,
-    private readonly _roleByUserRepository: RoleByUserRepository,
     private readonly _yearRepository: YearRepository,
     private readonly _handlersError: HandlersError,
     private readonly _reportingTocContextService: ReportingTocContextService,
     private readonly _tocResultsRepository: AoWBilateralRepository,
     private readonly _resultRepository: ResultRepository,
-    private readonly _resultsTocResultRepository: ResultsTocResultRepository,
-    private readonly _resultsTocResultIndicatorsRepository: ResultsTocResultIndicatorsRepository,
     private readonly _createResultFromFrameworkHandler: CreateResultFromFrameworkHandler,
+    private readonly _getExistingResultContributorsToIndicatorsHandler: GetExistingResultContributorsToIndicatorsHandler,
   ) {}
 
   private _throwServiceError(
@@ -603,259 +597,16 @@ export class ResultsFrameworkReportingService {
     tocResultIndicatorId: string,
   ) {
     try {
-      const parsedResultTocResultId = Number(resultTocResultId);
-
-      if (
-        !Number.isFinite(parsedResultTocResultId) ||
-        parsedResultTocResultId <= 0
-      ) {
-        this._throwServiceError(
-          'Invalid resultTocResultId provided.',
-          HttpStatus.BAD_REQUEST,
-        );
-      }
-
-      if (!tocResultIndicatorId || `${tocResultIndicatorId}`.trim() === '') {
-        this._throwServiceError(
-          'Invalid tocResultIndicatorId provided.',
-          HttpStatus.BAD_REQUEST,
-        );
-      }
-
-      const resultContributionExists =
-        await this._resultsTocResultRepository.find({
-          relations: {
-            obj_results: {
-              obj_status: true,
-            },
-            obj_results_toc_result_indicators: {
-              obj_result_indicator_targets: true,
-            },
-          },
-          where: {
-            toc_result_id: parsedResultTocResultId,
-            is_active: true,
-            obj_results: {
-              is_active: true,
-              status_id: In([
-                ResultStatusData.QualityAssessed.value,
-                ResultStatusData.Approved.value,
-              ]),
-            },
-            obj_results_toc_result_indicators: {
-              toc_results_indicator_id: tocResultIndicatorId,
-              is_active: true,
-              is_not_aplicable: false,
-              obj_result_indicator_targets: {
-                is_active: true,
-              },
-            },
-          },
-          select: {
-            result_toc_result_id: true,
-            result_id: true,
-            toc_result_id: true,
-            obj_results: {
-              title: true,
-              result_code: true,
-              result_type_id: true,
-              version_id: true,
-              status_id: true,
-              obj_status: {
-                result_status_id: true,
-                status_name: true,
-                status_description: true,
-              },
-            },
-            obj_results_toc_result_indicators: {
-              toc_results_indicator_id: true,
-              obj_result_indicator_targets: {
-                number_target: true,
-                target_date: true,
-                contributing_indicator: true,
-                is_active: true,
-              },
-            },
-          },
-        });
-
-      if (!resultContributionExists || resultContributionExists.length === 0) {
-        this._throwServiceError(
-          'No result contribution record was found with the provided resultTocResultId.',
-          HttpStatus.NOT_FOUND,
-        );
-      }
-
-      const tocResultIdsWithIndicator = resultContributionExists.map(
-        (contrib) => contrib.result_toc_result_id,
-      );
-
-      const indicatorsForResults =
-        await this._resultsTocResultIndicatorsRepository.find({
-          where: {
-            results_toc_results_id: In(tocResultIdsWithIndicator),
-            toc_results_indicator_id: tocResultIndicatorId,
-            is_active: true,
-            is_not_aplicable: false,
-          },
-          select: ['results_toc_results_id'],
-        });
-
-      if (!indicatorsForResults || indicatorsForResults.length === 0) {
-        return {
-          response: {
-            contributors: [],
-            resultTocResultId: parsedResultTocResultId,
-            tocResultIndicatorId,
-          },
-          message: 'No contributions found for the specified indicator.',
-          status: HttpStatus.OK,
-        };
-      }
-
-      const contributingTocResultIds = new Set(
-        indicatorsForResults.map((ind) => ind.results_toc_results_id),
-      );
-
-      const filteredContributors = resultContributionExists.filter((contrib) =>
-        contributingTocResultIds.has(contrib.result_toc_result_id),
-      );
-
-      const uniqueResultIds = Array.from(
-        new Set(
-          filteredContributors
-            .map((contrib) => Number(contrib.result_id))
-            .filter((id) => Number.isFinite(id)),
+      return await this._getExistingResultContributorsToIndicatorsHandler.execute(
+        new GetExistingResultContributorsToIndicatorsQuery(
+          user,
+          resultTocResultId,
+          tocResultIndicatorId,
         ),
       );
-
-      const userId = Number(user?.id);
-      const rolesByResult = new Map<
-        number,
-        { role_id: number | null; role_name: string | null }
-      >();
-
-      let userGeneralRole: number | null = null;
-      if (Number.isFinite(userId)) {
-        const generalRoles = await this._roleByUserRepository.find({
-          where: {
-            user: userId,
-            active: true,
-            initiative_id: IsNull(),
-            action_area_id: IsNull(),
-          },
-          select: ['role'],
-        });
-
-        const appRole = generalRoles.find((r) => r.role === 1 || r.role === 2);
-        if (appRole) {
-          userGeneralRole = appRole.role;
-        }
-      }
-
-      if (Number.isFinite(userId) && uniqueResultIds.length > 0) {
-        const roleResults = await this._resultRepository.getUserRolesForResults(
-          userId,
-          uniqueResultIds,
-        );
-        for (const row of roleResults ?? []) {
-          const resultId = Number(row?.result_id);
-
-          if (!Number.isFinite(resultId)) {
-            continue;
-          }
-
-          rolesByResult.set(resultId, {
-            role_id:
-              row?.role_id !== null && row?.role_id !== undefined
-                ? Number(row.role_id)
-                : null,
-            role_name:
-              row?.role_name !== null && row?.role_name !== undefined
-                ? String(row.role_name)
-                : null,
-          });
-        }
-      }
-
-      const contributors = filteredContributors.map((contrib) => {
-        const numericResultId = Number(contrib.result_id);
-        const roleInfo = Number.isFinite(numericResultId)
-          ? rolesByResult.get(numericResultId)
-          : undefined;
-
-        const finalRoleId = roleInfo?.role_id ?? userGeneralRole;
-
-        return {
-          result_id: Number.isFinite(numericResultId)
-            ? numericResultId
-            : contrib.result_id,
-          title: contrib.obj_results?.title,
-          result_code: contrib.obj_results?.result_code,
-          status_name: contrib.obj_results?.obj_status?.status_name,
-          version_id: contrib.obj_results?.version_id,
-          status_id: +contrib.obj_results?.status_id,
-          role_id: finalRoleId,
-          contributing_indicator: this.sumContributingIndicatorForTocIndicator(
-            contrib,
-            tocResultIndicatorId,
-          ),
-        };
-      });
-
-      return {
-        response: {
-          contributors,
-          resultTocResultId: parsedResultTocResultId,
-          tocResultIndicatorId,
-        },
-        message: 'Existing result contributors retrieved successfully.',
-        status: HttpStatus.OK,
-      };
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
-  }
-
-  /**
-   * Sums `contributing_indicator` from active `result_indicators_targets` for the
-   * selected toc indicator on this results_toc_result row.
-   */
-  private sumContributingIndicatorForTocIndicator(
-    contrib: {
-      obj_results_toc_result_indicators?: Array<{
-        toc_results_indicator_id?: string;
-        obj_result_indicator_targets?: Array<{
-          contributing_indicator?: IndicatorNumberTargetValue;
-          is_active?: boolean;
-        }>;
-      }>;
-    },
-    tocResultIndicatorId: string,
-  ): number | null {
-    const wanted = `${tocResultIndicatorId}`.trim();
-    const indicators = contrib.obj_results_toc_result_indicators ?? [];
-    const indicator = indicators.find(
-      (i) => String(i?.toc_results_indicator_id ?? '').trim() === wanted,
-    );
-    const targets = indicator?.obj_result_indicator_targets ?? [];
-    let sum = 0;
-    let hasFinite = false;
-    for (const t of targets) {
-      if (t?.is_active === false) {
-        continue;
-      }
-      const raw = t?.contributing_indicator;
-      if (raw === null || raw === undefined) {
-        continue;
-      }
-      const n = Number(raw);
-      if (Number.isFinite(n)) {
-        sum += n;
-        hasFinite = true;
-      }
-    }
-    return hasFinite ? sum : null;
   }
 
   private async getResultsCountByUnitAndStatus(

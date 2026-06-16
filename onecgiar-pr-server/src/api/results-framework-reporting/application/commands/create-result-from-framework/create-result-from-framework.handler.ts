@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { ResultRepository } from '../../../results/result.repository';
+import { ResultRepository } from '../../../../results/result.repository';
 import { CreateResultFromFrameworkCommand } from './create-result-from-framework.command';
 import { CreateFrameworkResultEntityService } from './create-framework-result-entity.service';
 import { LinkFrameworkResultTocService } from './link-framework-result-toc.service';
