@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { env } from 'process';
+import { env } from 'node:process';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
 import type { ReportingTocContext } from '../../../results-framework-reporting/reporting-toc-context/reporting-toc-context.interface';
 
-interface toc_result_row {
+interface TocResultRow {
   toc_result_id: number;
   category: string;
   result_title: string;
@@ -28,7 +28,7 @@ interface toc_result_row {
   result_level_id?: number | null;
 }
 
-export interface toc_result_response {
+export interface TocResultResponse {
   toc_result_id: number;
   category: string;
   result_title: string;
@@ -56,7 +56,7 @@ export interface toc_result_response {
 }
 
 interface TocQueryOptions {
-  compositeCode?: string;
+  areaAcronym?: string;
   categories?: string[];
   context: ReportingTocContext;
 }
@@ -122,6 +122,16 @@ export class AoWBilateralRepository {
     return { reportingYear, phaseUuid };
   }
 
+  private resolveAreaAcronym(program: string, compositeCode: string): string {
+    const normalizedProgram = program.trim().toUpperCase();
+    const normalizedComposite = compositeCode.trim().toUpperCase();
+    const prefix = `${normalizedProgram}-`;
+
+    return normalizedComposite.startsWith(prefix)
+      ? normalizedComposite.slice(prefix.length)
+      : normalizedComposite;
+  }
+
   // Backward-compatible helper used by legacy tests and call sites.
   private async getCurrentTocPhaseId(): Promise<string | null> {
     try {
@@ -135,6 +145,9 @@ export class AoWBilateralRepository {
   /**
    * Returns active work packages linked to OUTPUT/OUTCOME ToC nodes
    * for the requested program, constrained by reporting phase and year.
+   *
+   * Listing uses clarisa wp metadata even when toc-integration temporarily
+   * attached active-phase results to a local wp with the same acronym.
    */
   async findWorkPackagesByProgram(
     programOfficialCode: string,
@@ -142,18 +155,23 @@ export class AoWBilateralRepository {
   ): Promise<TocWorkPackageRow[]> {
     const query = `
       SELECT DISTINCT
-        wp.toc_id AS id,
-        UPPER(TRIM(wp.acronym)) AS code,
-        wp.name AS name,
-        wp.wp_official_code AS composeCode,
-        wp.year AS year
-      FROM ${env.DB_TOC}.toc_work_packages wp
-      INNER JOIN ${env.DB_TOC}.toc_results tr ON tr.wp_id = wp.toc_id
+        cw.toc_id AS id,
+        UPPER(TRIM(cw.acronym)) AS code,
+        cw.name AS name,
+        cw.wp_official_code AS composeCode,
+        cw.year AS year
+      FROM ${env.DB_TOC}.toc_work_packages cw
+      INNER JOIN ${env.DB_TOC}.toc_work_packages linked_wp
+        ON UPPER(TRIM(linked_wp.acronym)) = UPPER(TRIM(cw.acronym))
+        AND linked_wp.year = cw.year
+      INNER JOIN ${env.DB_TOC}.toc_results tr ON tr.wp_id = linked_wp.toc_id
       WHERE tr.official_code = ?
         AND tr.phase = ?
         AND tr.is_active = 1
         AND tr.category IN ('OUTPUT', 'OUTCOME')
-        AND wp.year = ?
+        AND cw.year = ?
+        AND LOWER(TRIM(cw.source)) = 'clarisa'
+        AND cw.wp_official_code LIKE CONCAT(?, '-%')
       ORDER BY code ASC
     `;
 
@@ -162,6 +180,7 @@ export class AoWBilateralRepository {
         programOfficialCode,
         context.phaseUuid,
         context.reportingYear,
+        programOfficialCode,
       ]);
       return (rows ?? []).map((row: any) => ({
         id: Number(row.id),
@@ -210,15 +229,16 @@ export class AoWBilateralRepository {
     contextOrYear: ReportingTocContext | number,
   ) {
     const context = await this.resolveContext(contextOrYear);
+    const areaAcronym = this.resolveAreaAcronym(program, composite_code);
     const { query, params } = this.buildTocQuery(program, {
-      compositeCode: composite_code,
+      areaAcronym,
       categories: ['OUTPUT', 'OUTCOME'],
       context,
     });
 
     try {
       const [rows, contributions] = await Promise.all([
-        this.dataSource.query(query, params) as Promise<toc_result_row[]>,
+        this.dataSource.query(query, params) as Promise<TocResultRow[]>,
         this.getIndicatorContributions(program, context),
       ]);
 
@@ -252,7 +272,7 @@ export class AoWBilateralRepository {
 
     try {
       const [rows, contributions] = await Promise.all([
-        this.dataSource.query(query, params) as Promise<toc_result_row[]>,
+        this.dataSource.query(query, params) as Promise<TocResultRow[]>,
         this.getIndicatorContributions(program, context),
       ]);
 
@@ -331,14 +351,16 @@ export class AoWBilateralRepository {
       FROM ${env.DB_TOC}.toc_results tr
     `;
 
-    if (options.compositeCode) {
+    if (options.areaAcronym) {
       query += `
         JOIN ${env.DB_TOC}.toc_work_packages wp ON tr.wp_id = wp.toc_id
-          AND wp.wp_official_code = ?
           AND wp.year = ?
+          AND UPPER(TRIM(wp.acronym)) = ?
+          AND wp.wp_official_code LIKE CONCAT(?, '-%')
       `;
-      params.push(options.compositeCode);
       params.push(options.context.reportingYear);
+      params.push(options.areaAcronym.trim().toUpperCase());
+      params.push(program.trim().toUpperCase());
     }
 
     query += `
@@ -384,8 +406,8 @@ export class AoWBilateralRepository {
     return { query, params };
   }
 
-  private groupTocRows(rows: toc_result_row[]): toc_result_response[] {
-    const grouped = new Map<number, toc_result_response>();
+  private groupTocRows(rows: TocResultRow[]): TocResultResponse[] {
+    const grouped = new Map<number, TocResultResponse>();
 
     for (const row of rows) {
       if (!grouped.has(row.toc_result_id)) {
@@ -400,7 +422,7 @@ export class AoWBilateralRepository {
       }
 
       if (row.indicator_id !== null) {
-        const indicator: toc_result_response['indicators'][number] = {
+        const indicator: TocResultResponse['indicators'][number] = {
           indicator_id: row.indicator_id,
           indicator_description: row.indicator_description,
           toc_result_indicator_id: row.toc_result_indicator_id,
