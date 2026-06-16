@@ -23,6 +23,11 @@ import { ResultsByInstitutionsModule } from '../results/results_by_institutions/
 import { GeographicLocationModule } from './geographic-location/geographic-location.module';
 import { GeoScopeRoleModule } from './geo_scope_role/geo_scope_role.module';
 import { ReportingTocContextService } from './reporting-toc-context/reporting-toc-context.service';
+import { CreateResultFromFrameworkHandler } from './commands/create-result-from-framework/create-result-from-framework.handler';
+import { CreateFrameworkResultEntityService } from './commands/create-result-from-framework/create-framework-result-entity.service';
+import { LinkFrameworkResultTocService } from './commands/create-result-from-framework/link-framework-result-toc.service';
+import { FrameworkResultTocIndicatorsService } from './commands/create-result-from-framework/framework-result-toc-indicators.service';
+import { ApplyFrameworkResultAssociationsService } from './commands/create-result-from-framework/apply-framework-result-associations.service';
 
 @Module({
   imports: [
@@ -52,6 +57,11 @@ import { ReportingTocContextService } from './reporting-toc-context/reporting-to
     ContributionToIndicatorResultsRepository,
     ResultsTocTargetIndicatorRepository,
     ReportingTocContextService,
+    CreateResultFromFrameworkHandler,
+    CreateFrameworkResultEntityService,
+    LinkFrameworkResultTocService,
+    FrameworkResultTocIndicatorsService,
+    ApplyFrameworkResultAssociationsService,
   ],
   exports: [ReportingTocContextService],
 })

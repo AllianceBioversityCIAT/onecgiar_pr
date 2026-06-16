@@ -19,6 +19,11 @@ import { ContributionToIndicatorResultsRepository } from '../contribution-to-ind
 import { ResultsTocTargetIndicatorRepository } from '../results/results-toc-results/repositories/result-toc-result-target-indicator.repository';
 import { ResultsByInstitutionsService } from '../results/results_by_institutions/results_by_institutions.service';
 import { ReportingTocContextService } from './reporting-toc-context/reporting-toc-context.service';
+import { CreateResultFromFrameworkHandler } from './commands/create-result-from-framework/create-result-from-framework.handler';
+import { CreateFrameworkResultEntityService } from './commands/create-result-from-framework/create-framework-result-entity.service';
+import { LinkFrameworkResultTocService } from './commands/create-result-from-framework/link-framework-result-toc.service';
+import { FrameworkResultTocIndicatorsService } from './commands/create-result-from-framework/framework-result-toc-indicators.service';
+import { ApplyFrameworkResultAssociationsService } from './commands/create-result-from-framework/apply-framework-result-associations.service';
 
 const mockClarisaInitiativesRepository = {
   findOne: jest.fn(),
@@ -195,6 +200,11 @@ describe('ResultsFrameworkReportingService', () => {
           provide: ResultsByInstitutionsService,
           useValue: mockResultsByInstitutionsService,
         },
+        CreateResultFromFrameworkHandler,
+        CreateFrameworkResultEntityService,
+        LinkFrameworkResultTocService,
+        FrameworkResultTocIndicatorsService,
+        ApplyFrameworkResultAssociationsService,
       ],
     }).compile();
 

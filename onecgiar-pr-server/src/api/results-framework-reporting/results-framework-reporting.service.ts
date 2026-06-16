@@ -8,25 +8,19 @@ import { HandlersError } from '../../shared/handlers/error.utils';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { AoWBilateralRepository } from '../results/results-toc-results/repositories/aow-bilateral.repository';
 import { ResultRepository } from '../results/result.repository';
-import { ResultsService } from '../results/results.service';
-import {
-  CreateResultsFrameworkResultDto,
-  ResultsFrameworkTocIndicatorDto,
-} from './dto/create-results-framework.dto';
+import { CreateResultsFrameworkResultDto } from './dto/create-results-framework.dto';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
-import { ResultsKnowledgeProductsService } from '../results/results-knowledge-products/results-knowledge-products.service';
 import { ResultsTocResultRepository } from '../results/results-toc-results/repositories/results-toc-results.repository';
 import { ResultsTocResultIndicatorsRepository } from '../results/results-toc-results/repositories/results-toc-results-indicators.repository';
-import { ResultsKnowledgeProductDto } from '../results/results-knowledge-products/dto/results-knowledge-product.dto';
-import { ShareResultRequestService } from '../results/share-result-request/share-result-request.service';
-import { CreateTocShareResult } from '../results/share-result-request/dto/create-toc-share-result.dto';
-import { ResultsByProjectsService } from '../results/results_by_projects/results_by_projects.service';
-import { ResultsTocTargetIndicatorRepository } from '../results/results-toc-results/repositories/result-toc-result-target-indicator.repository';
 import { ResultLevelEnum } from '../../shared/constants/result-level.enum';
 import { ResultStatusData } from '../../shared/constants/result-status.enum';
-import { ResultsByInstitutionsService } from '../results/results_by_institutions/results_by_institutions.service';
 import { ReportingTocContextService } from './reporting-toc-context/reporting-toc-context.service';
 import type { ReportingTocContext } from './reporting-toc-context/reporting-toc-context.interface';
+import { throwReportingFrameworkError } from './utils/reporting-framework-error.util';
+import { CreateResultFromFrameworkCommand } from './commands/create-result-from-framework/create-result-from-framework.command';
+import { CreateResultFromFrameworkHandler } from './commands/create-result-from-framework/create-result-from-framework.handler';
+
+type IndicatorNumberTargetValue = string | number | null;
 
 @Injectable()
 export class ResultsFrameworkReportingService {
@@ -43,24 +37,16 @@ export class ResultsFrameworkReportingService {
     private readonly _reportingTocContextService: ReportingTocContextService,
     private readonly _tocResultsRepository: AoWBilateralRepository,
     private readonly _resultRepository: ResultRepository,
-    private readonly _resultsService: ResultsService,
-    private readonly _resultsKnowledgeProductsService: ResultsKnowledgeProductsService,
     private readonly _resultsTocResultRepository: ResultsTocResultRepository,
     private readonly _resultsTocResultIndicatorsRepository: ResultsTocResultIndicatorsRepository,
-    private readonly _resultsIndicatorsTargetsRepository: ResultsTocTargetIndicatorRepository,
-    private readonly _shareResultRequestService: ShareResultRequestService,
-    private readonly _resultsByProjectsService: ResultsByProjectsService,
-    private readonly _resultsByInstitutionsService: ResultsByInstitutionsService,
+    private readonly _createResultFromFrameworkHandler: CreateResultFromFrameworkHandler,
   ) {}
 
   private _throwServiceError(
     message: string,
     status: HttpStatus = HttpStatus.BAD_REQUEST,
   ): never {
-    const error = new Error(message);
-    (error as any).response = {};
-    (error as any).status = status;
-    throw error;
+    throwReportingFrameworkError(message, status);
   }
 
   async getGlobalUnitsByProgram(user: TokenDto, programId?: string) {
@@ -453,442 +439,12 @@ export class ResultsFrameworkReportingService {
     user: TokenDto,
   ) {
     try {
-      if (!payload?.result) {
-        this._throwServiceError(
-          'The result header information is required.',
-          HttpStatus.BAD_REQUEST,
-        );
-      }
-
-      const baseResultDto = { ...payload.result };
-      const initiativeId = Number(baseResultDto.initiative_id);
-
-      if (!Number.isFinite(initiativeId) || initiativeId <= 0) {
-        this._throwServiceError(
-          'A valid initiative identifier is required to create the result.',
-          HttpStatus.BAD_REQUEST,
-        );
-      }
-
-      let createdResultId: number;
-      let knowledgeProductResponse: ResultsKnowledgeProductDto | undefined;
-
-      if (
-        Number(baseResultDto.result_type_id) ===
-        ResultTypeEnum.KNOWLEDGE_PRODUCT
-      ) {
-        if (!payload.knowledge_product) {
-          this._throwServiceError(
-            'Knowledge product payload is required for knowledge product results.',
-            HttpStatus.BAD_REQUEST,
-          );
-        }
-
-        if (
-          (!baseResultDto.result_name ||
-            `${baseResultDto.result_name}`.trim() === '') &&
-          payload.knowledge_product?.title
-        ) {
-          baseResultDto.result_name = payload.knowledge_product.title;
-        }
-
-        if (!payload.knowledge_product.result_data) {
-          payload.knowledge_product.result_data = baseResultDto;
-        } else {
-          payload.knowledge_product.result_data = {
-            ...payload.knowledge_product.result_data,
-            ...baseResultDto,
-          };
-        }
-
-        const knowledgeCreation =
-          await this._resultsKnowledgeProductsService.create(
-            payload.knowledge_product,
-            user,
-          );
-
-        if (knowledgeCreation.status >= HttpStatus.BAD_REQUEST) {
-          throw knowledgeCreation;
-        }
-
-        knowledgeProductResponse =
-          knowledgeCreation.response as ResultsKnowledgeProductDto;
-        createdResultId = Number(knowledgeProductResponse.id);
-      } else {
-        const creationResponse = await this._resultsService.createOwnerResultV2(
-          baseResultDto,
-          user,
-        );
-
-        if (creationResponse.status >= HttpStatus.BAD_REQUEST) {
-          throw creationResponse;
-        }
-
-        createdResultId = Number((creationResponse.response as any).id);
-      }
-
-      if (!Number.isFinite(createdResultId) || createdResultId <= 0) {
-        this._throwServiceError(
-          'Result creation failed to return a valid identifier.',
-          HttpStatus.INTERNAL_SERVER_ERROR,
-        );
-      }
-
-      const resultSummary =
-        await this._resultRepository.getResultById(createdResultId);
-
-      if (!resultSummary) {
-        this._throwServiceError(
-          'The result could not be retrieved after creation.',
-          HttpStatus.INTERNAL_SERVER_ERROR,
-        );
-      }
-
-      let primaryTocRecordId: number | null = null;
-
-      if (payload.toc_result_id !== undefined) {
-        const resolvedTocResultId = Number(payload.toc_result_id);
-
-        if (!Number.isFinite(resolvedTocResultId) || resolvedTocResultId <= 0) {
-          this._throwServiceError(
-            'The provided ToC result identifier is invalid.',
-            HttpStatus.BAD_REQUEST,
-          );
-        }
-
-        const tocContext = await this._reportingTocContextService.resolve();
-        const tocResult = await this._tocResultsRepository.findResultById(
-          resolvedTocResultId,
-          tocContext.phaseUuid,
-        );
-
-        if (!tocResult) {
-          this._throwServiceError(
-            'No ToC result was found with the provided identifier in the Integration catalogue.',
-            HttpStatus.NOT_FOUND,
-          );
-        }
-
-        const categoryLevelMap: Record<string, number> = {
-          OUTPUT: 1,
-          OUTCOME: 2,
-          EOI: 3,
-        };
-
-        const normalizedCategory = `${tocResult?.category ?? ''}`
-          .trim()
-          .toUpperCase();
-        const resolvedTocLevelId = categoryLevelMap[normalizedCategory];
-
-        if (!resolvedTocLevelId) {
-          this._throwServiceError(
-            'The ToC result category is not supported for automatic level mapping.',
-            HttpStatus.BAD_REQUEST,
-          );
-        }
-
-        let primaryTocRecord = await this._resultsTocResultRepository.findOne({
-          where: {
-            result_id: createdResultId,
-            initiative_ids: initiativeId,
-            is_active: true,
-          },
-        });
-
-        if (primaryTocRecord) {
-          await this._resultsTocResultRepository.update(
-            primaryTocRecord.result_toc_result_id,
-            {
-              toc_result_id: resolvedTocResultId,
-              toc_level_id: resolvedTocLevelId,
-              toc_progressive_narrative:
-                payload.toc_progressive_narrative ?? null,
-              last_updated_by: user.id,
-              is_active: true,
-              planned_result: true,
-              initiative_ids: initiativeId,
-            },
-          );
-        } else {
-          primaryTocRecord = await this._resultsTocResultRepository.save({
-            initiative_ids: initiativeId,
-            toc_result_id: resolvedTocResultId,
-            toc_level_id: resolvedTocLevelId,
-            result_id: createdResultId,
-            planned_result: true,
-            toc_progressive_narrative:
-              payload.toc_progressive_narrative ?? null,
-            created_by: user.id,
-            last_updated_by: user.id,
-            is_active: true,
-          });
-        }
-
-        primaryTocRecordId = primaryTocRecord.result_toc_result_id;
-
-        if (payload.indicators) {
-          await this.upsertTocIndicators(
-            primaryTocRecord.result_toc_result_id,
-            resolvedTocResultId,
-            payload.indicators,
-            payload.contributing_indicator ?? null,
-            user.id,
-            payload.number_target ?? null,
-            payload.target_date ?? null,
-          );
-        }
-      }
-
-      if (payload.contributors_result_toc_result?.length) {
-        const initiativeShareId = payload.contributors_result_toc_result
-          .map((contributor) => Number(contributor.initiative_id))
-          .filter((id) => Number.isFinite(id) && id > 0);
-
-        if (initiativeShareId.length) {
-          const shareRequest: CreateTocShareResult = {
-            initiativeShareId,
-            isToc: false,
-            contributors_result_toc_result:
-              payload.contributors_result_toc_result,
-          };
-
-          await this._shareResultRequestService.resultRequest(
-            shareRequest,
-            createdResultId,
-            user,
-          );
-        }
-      }
-
-      if (
-        Array.isArray(payload.bilateral_project) &&
-        payload.bilateral_project.length
-      ) {
-        for (const project of payload.bilateral_project) {
-          const projectIdNum = Number(project?.project_id);
-          if (Number.isFinite(projectIdNum) && projectIdNum > 0) {
-            await this._resultsByProjectsService.linkBilateralProjectToResult(
-              createdResultId,
-              projectIdNum,
-              user.id,
-            );
-          }
-        }
-      }
-
-      const hasContributingCentersPayload =
-        Object.prototype.hasOwnProperty.call(
-          payload ?? {},
-          'contributing_center',
-        );
-
-      if (hasContributingCentersPayload) {
-        await this._resultsByInstitutionsService.handleContributingCenters(
-          Array.isArray(payload.contributing_center)
-            ? payload.contributing_center
-            : [],
-          { result_id: createdResultId },
-          user,
-        );
-      }
-
-      return {
-        response: {
-          result: resultSummary,
-          knowledgeProduct: knowledgeProductResponse ?? null,
-          tocResultLinkId: primaryTocRecordId,
-        },
-        message: 'Result created successfully through the reporting workflow.',
-        status: HttpStatus.CREATED,
-      };
+      return await this._createResultFromFrameworkHandler.execute(
+        new CreateResultFromFrameworkCommand(payload, user),
+      );
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
-  }
-
-  private async upsertTocIndicators(
-    resultTocResultId: number,
-    tocResultId: number,
-    indicatorsInput:
-      | ResultsFrameworkTocIndicatorDto
-      | ResultsFrameworkTocIndicatorDto[]
-      | null
-      | undefined,
-    defaultContributingIndicator: number | null,
-    userId: number,
-    fallbackNumberTarget?: string | number | null,
-    fallbackTargetDate?: string | null,
-  ) {
-    const indicatorsArray = Array.isArray(indicatorsInput)
-      ? indicatorsInput
-      : indicatorsInput
-        ? [indicatorsInput]
-        : [];
-
-    if (!indicatorsArray.length) {
-      return;
-    }
-
-    for (const indicator of indicatorsArray) {
-      const indicatorIdRaw =
-        (indicator as any)?.indicator_id ?? (indicator as any)?.id;
-      const indicatorId = Number(indicatorIdRaw);
-      if (!Number.isFinite(indicatorId) || indicatorId <= 0) {
-        this._throwServiceError(
-          'One of the provided ToC indicator identifiers is invalid.',
-          HttpStatus.BAD_REQUEST,
-        );
-      }
-
-      const indicatorRow =
-        await this._tocResultsRepository.findIndicatorById(indicatorId);
-
-      if (!indicatorRow) {
-        this._throwServiceError(
-          `No ToC indicator was found with id '${indicatorId}'.`,
-          HttpStatus.NOT_FOUND,
-        );
-      }
-
-      if (Number(indicatorRow.toc_results_id) !== Number(tocResultId)) {
-        this._throwServiceError(
-          `The indicator '${indicatorId}' does not belong to the provided ToC result '${tocResultId}'.`,
-          HttpStatus.BAD_REQUEST,
-        );
-      }
-
-      const existingIndicator =
-        await this._resultsTocResultIndicatorsRepository.findOne({
-          where: {
-            results_toc_results_id: resultTocResultId,
-            toc_results_indicator_id: indicatorRow.related_node_id,
-            is_active: true,
-          },
-        });
-
-      let indicatorRecord =
-        existingIndicator ??
-        (await this._resultsTocResultIndicatorsRepository.save({
-          results_toc_results_id: resultTocResultId,
-          toc_results_indicator_id: indicatorRow.related_node_id,
-          created_by: userId,
-          last_updated_by: userId,
-          is_active: true,
-        }));
-
-      if (!indicatorRecord?.result_toc_result_indicator_id) {
-        indicatorRecord =
-          await this._resultsTocResultIndicatorsRepository.findOne({
-            where: {
-              results_toc_results_id: resultTocResultId,
-              toc_results_indicator_id: indicatorRow.related_node_id,
-              is_active: true,
-            },
-          });
-      }
-
-      if (!indicatorRecord?.result_toc_result_indicator_id) {
-        continue;
-      }
-
-      const numberTargetValue = ((indicator as any)?.number_target ??
-        fallbackNumberTarget ??
-        null) as string | number | null;
-
-      const targetDateValue = ((indicator as any)?.target_date ??
-        fallbackTargetDate ??
-        null) as string | null;
-
-      const contributingValue = ((indicator as any)?.contributing_indicator ??
-        defaultContributingIndicator ??
-        null) as number | null;
-
-      await this.upsertIndicatorTargetRecord(
-        indicatorRecord.result_toc_result_indicator_id,
-        numberTargetValue,
-        targetDateValue,
-        contributingValue,
-        userId,
-      );
-    }
-  }
-
-  private async upsertIndicatorTargetRecord(
-    indicatorResultId: number,
-    numberTarget: string | number | null,
-    targetDate: string | null,
-    contributingIndicator: number | null,
-    userId: number,
-  ) {
-    const hasNumberTarget =
-      numberTarget !== undefined &&
-      numberTarget !== null &&
-      `${numberTarget}`.trim() !== '';
-
-    if (!hasNumberTarget) {
-      return;
-    }
-
-    const parsedNumberTarget = Number(numberTarget);
-
-    if (!Number.isFinite(parsedNumberTarget)) {
-      this._throwServiceError(
-        'The provided number_target value for the indicator contribution is invalid.',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    const parsedContributingIndicator =
-      contributingIndicator !== null && contributingIndicator !== undefined
-        ? Number(contributingIndicator)
-        : null;
-    const normalizedContributing =
-      parsedContributingIndicator !== null &&
-      Number.isFinite(parsedContributingIndicator) &&
-      parsedContributingIndicator >= 0
-        ? parsedContributingIndicator
-        : null;
-
-    const normalizedTargetDate =
-      targetDate && targetDate.trim() !== '' ? targetDate.trim() : null;
-    const parsedTargetDate =
-      normalizedTargetDate !== null ? Number(normalizedTargetDate) : null;
-    const numericTargetDate =
-      parsedTargetDate !== null && Number.isFinite(parsedTargetDate)
-        ? parsedTargetDate
-        : null;
-
-    const existingTarget =
-      await this._resultsIndicatorsTargetsRepository.findOne({
-        where: {
-          result_toc_result_indicator_id: indicatorResultId,
-          number_target: parsedNumberTarget,
-          is_active: true,
-        },
-      });
-
-    if (existingTarget) {
-      await this._resultsIndicatorsTargetsRepository.update(
-        existingTarget.indicators_targets,
-        {
-          contributing_indicator: normalizedContributing,
-          target_date: numericTargetDate,
-          last_updated_by: userId,
-          is_active: true,
-        },
-      );
-      return;
-    }
-
-    await this._resultsIndicatorsTargetsRepository.save({
-      result_toc_result_indicator_id: indicatorResultId,
-      number_target: parsedNumberTarget,
-      contributing_indicator: normalizedContributing,
-      target_date: numericTargetDate,
-      created_by: userId,
-      last_updated_by: userId,
-      is_active: true,
-    });
   }
 
   async getProgramIndicatorContributionSummary(program?: string) {
@@ -953,8 +509,9 @@ export class ResultsFrameworkReportingService {
         const statusId = Number(row.status_id);
         const total = Number(row.total_results) || 0;
 
-        if (!typeMap.has(resultTypeId)) {
-          typeMap.set(resultTypeId, {
+        let typeEntry = typeMap.get(resultTypeId);
+        if (!typeEntry) {
+          typeEntry = {
             resultTypeId,
             resultTypeName,
             totalResults: 0,
@@ -962,10 +519,10 @@ export class ResultsFrameworkReportingService {
             qualityAssessed: 0,
             submitted: 0,
             others: 0,
-          });
+          };
+          typeMap.set(resultTypeId, typeEntry);
         }
 
-        const typeEntry = typeMap.get(resultTypeId)!;
         typeEntry.totalResults += total;
         statusTotals.total += total;
 
@@ -1156,12 +713,12 @@ export class ResultsFrameworkReportingService {
         };
       }
 
-      const contributingTocResultIds = indicatorsForResults.map(
-        (ind) => ind.results_toc_results_id,
+      const contributingTocResultIds = new Set(
+        indicatorsForResults.map((ind) => ind.results_toc_results_id),
       );
 
       const filteredContributors = resultContributionExists.filter((contrib) =>
-        contributingTocResultIds.includes(contrib.result_toc_result_id),
+        contributingTocResultIds.has(contrib.result_toc_result_id),
       );
 
       const uniqueResultIds = Array.from(
@@ -1269,7 +826,7 @@ export class ResultsFrameworkReportingService {
       obj_results_toc_result_indicators?: Array<{
         toc_results_indicator_id?: string;
         obj_result_indicator_targets?: Array<{
-          contributing_indicator?: string | number | null;
+          contributing_indicator?: IndicatorNumberTargetValue;
           is_active?: boolean;
         }>;
       }>;
@@ -1531,11 +1088,16 @@ export class ResultsFrameworkReportingService {
         const typeId = Number(row.result_type_id);
         const total = Number(row.total_results) || 0;
 
-        if (!statusConfig.has(statusId) || total <= 0) {
+        if (total <= 0) {
           continue;
         }
 
-        const { key } = statusConfig.get(statusId)!;
+        const statusEntry = statusConfig.get(statusId);
+        if (!statusEntry) {
+          continue;
+        }
+
+        const { key } = statusEntry;
         const statusBlock = dashboardStats[key];
 
         if (levelId === ResultLevelEnum.INITIATIVE_OUTPUT) {
