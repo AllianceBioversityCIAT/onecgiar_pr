@@ -1,5 +1,5 @@
 import { Injectable, HttpStatus, Logger } from '@nestjs/common';
-import { env } from 'process';
+import { env } from 'node:process';
 import { DataSource, Repository } from 'typeorm';
 import { TocResult } from './entities/toc-result.entity';
 import { Result } from '../../api/results/entities/result.entity';
@@ -15,8 +15,39 @@ import { GlobalParameter } from '../../api/global-parameter/entities/global-para
 export class TocResultsRepository extends Repository<TocResult> {
   private readonly logger = new Logger(TocResultsRepository.name);
 
-  constructor(private dataSource: DataSource) {
+  constructor(private readonly dataSource: DataSource) {
     super(TocResult, dataSource.createEntityManager());
+  }
+
+  private async getTocPhaseIdForReportingYear(
+    reportingYear: number,
+  ): Promise<string> {
+    const query = `
+      SELECT toc_pahse_id
+      FROM ${env.DB_NAME}.version
+      WHERE is_active = 1 AND status = 1 AND app_module_id = 1
+        AND phase_year = ?
+      LIMIT 1
+    `;
+    try {
+      const rows = await this.dataSource.query(query, [reportingYear]);
+      const phaseId = rows?.[0]?.toc_pahse_id;
+      if (typeof phaseId !== 'string' || !phaseId.trim()) {
+        throw {
+          message: `No TOC phase is configured for reporting year ${reportingYear}.`,
+          response: {},
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+      return phaseId.trim();
+    } catch (error) {
+      if (error?.status) {
+        throw error;
+      }
+      throw new Error(
+        `[${TocResultsRepository.name}] => getTocPhaseIdForReportingYear error: ${error}`,
+      );
+    }
   }
 
   private async getCurrentTocPhaseId(): Promise<string | null> {
@@ -441,6 +472,7 @@ export class TocResultsRepository extends Repository<TocResult> {
   async $_getResultTocByConfigV2(
     init_id: number,
     toc_level: number,
+    reportingYear: number,
     resultTypeId?: number,
     resultId?: number,
     planned?: boolean | string,
@@ -475,17 +507,29 @@ export class TocResultsRepository extends Repository<TocResult> {
         })
         .then((el) => el.value);
     } else {
-      tocPhaseId = await this.getCurrentTocPhaseId();
+      tocPhaseId = await this.getTocPhaseIdForReportingYear(reportingYear);
     }
 
-    const params: (string | number)[] = [init_id, category];
+    const params: (string | number)[] = isInitiativeValidation
+      ? [init_id, category]
+      : [reportingYear, init_id, category];
     let whereTocPhaseId = '';
+    let workPackageJoin = `
+      LEFT JOIN ${env.DB_TOC}.toc_work_packages wp 
+        ON wp.toc_id = tr.wp_id
+    `;
+
     if (tocPhaseId) {
       params.push(tocPhaseId);
       if (isInitiativeValidation) {
         whereTocPhaseId = `AND tr.version_id = ?`;
       } else {
         whereTocPhaseId = `AND tr.phase = ?`;
+        workPackageJoin = `
+      LEFT JOIN ${env.DB_TOC}.toc_work_packages wp 
+        ON wp.toc_id = tr.wp_id
+          AND wp.year = ?
+    `;
       }
     }
 
@@ -564,8 +608,7 @@ export class TocResultsRepository extends Repository<TocResult> {
         wp.acronym AS wp_short_name,
         NULL AS action_area_outcome_id
       FROM ${env.DB_TOC}.toc_results tr
-      LEFT JOIN ${env.DB_TOC}.toc_work_packages wp 
-        ON wp.toc_id = tr.wp_id
+      ${workPackageJoin}
       LEFT JOIN clarisa_initiatives ci 
         ON ci.official_code = tr.official_code
       WHERE tr.is_active > 0
@@ -619,7 +662,7 @@ export class TocResultsRepository extends Repository<TocResult> {
     }
 
     const placeholders = numericIds.map(() => '?').join(', ');
-    const targetYear = result.obj_version?.phase_year || year.year;
+    const targetYear = Number(year.year);
 
     const queryParams: any[] = [targetYear, ...numericIds];
 

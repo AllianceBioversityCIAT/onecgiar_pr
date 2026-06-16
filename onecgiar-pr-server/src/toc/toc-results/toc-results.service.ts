@@ -150,9 +150,27 @@ export class TocResultsService {
         },
       });
 
+      if (!year) {
+        throw {
+          response: {},
+          message: 'No active reporting year was found.',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const reportingYear = Number(year.year);
+      if (!Number.isFinite(reportingYear) || reportingYear < 0) {
+        throw {
+          response: {},
+          message: 'The active reporting year configured is invalid.',
+          status: HttpStatus.INTERNAL_SERVER_ERROR,
+        };
+      }
+
       const res = await this._tocResultsRepository.$_getResultTocByConfigV2(
         init_id,
         toc_level,
+        reportingYear,
         result?.result_type_id,
         result_id,
         planned ?? true,
