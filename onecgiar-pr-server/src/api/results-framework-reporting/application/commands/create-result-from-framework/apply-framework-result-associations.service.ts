@@ -7,7 +7,6 @@ import { ResultsByProjectsService } from '../../../../results/results_by_project
 import { ResultsByInstitutionsService } from '../../../../results/results_by_institutions/results_by_institutions.service';
 import { objectHasOwn } from '../../../../../shared/utils/object.utils';
 
-
 @Injectable()
 export class ApplyFrameworkResultAssociationsService {
   constructor(

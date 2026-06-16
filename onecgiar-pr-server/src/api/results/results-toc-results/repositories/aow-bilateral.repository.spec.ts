@@ -38,19 +38,13 @@ describe('AoWBilateralRepository', () => {
   });
 
   const mockResolveContext = (context: ReportingTocContext = defaultContext) =>
-    jest
-      .spyOn(repository as any, 'resolveContext')
-      .mockResolvedValue(context);
+    jest.spyOn(repository as any, 'resolveContext').mockResolvedValue(context);
 
   it('should execute the aggregate query for composite code with expected clauses', async () => {
     mockResolveContext();
     dataSourceQueryMock.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
 
-    await repository.findByCompositeCode(
-      'SP01',
-      'SP01-AOW01',
-      defaultContext,
-    );
+    await repository.findByCompositeCode('SP01', 'SP01-AOW01', defaultContext);
 
     expect(dataSourceQueryMock).toHaveBeenCalledTimes(2);
     const [query, params] = dataSourceQueryMock.mock.calls[0];
@@ -336,11 +330,7 @@ describe('AoWBilateralRepository', () => {
     mockResolveContext();
     dataSourceQueryMock.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
 
-    await repository.findByCompositeCode(
-      'SP01',
-      'SP01-AOW01',
-      defaultContext,
-    );
+    await repository.findByCompositeCode('SP01', 'SP01-AOW01', defaultContext);
 
     expect(dataSourceQueryMock).toHaveBeenCalledTimes(2);
   });

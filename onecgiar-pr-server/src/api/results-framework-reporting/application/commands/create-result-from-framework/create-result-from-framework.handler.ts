@@ -6,7 +6,6 @@ import { LinkFrameworkResultTocService } from './link-framework-result-toc.servi
 import { ApplyFrameworkResultAssociationsService } from './apply-framework-result-associations.service';
 import { throwServiceError } from '../../../../../shared/utils/service-error.util';
 
-
 @Injectable()
 export class CreateResultFromFrameworkHandler {
   constructor(

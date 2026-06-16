@@ -7,7 +7,6 @@ import { ResultsKnowledgeProductsService } from '../../../../results/results-kno
 import { ResultsKnowledgeProductDto } from '../../../../results/results-knowledge-products/dto/results-knowledge-product.dto';
 import { throwServiceError } from '../../../../../shared/utils/service-error.util';
 
-
 export type CreateFrameworkResultEntityResult = {
   createdResultId: number;
   knowledgeProductResponse?: ResultsKnowledgeProductDto;
@@ -26,9 +25,7 @@ export class CreateFrameworkResultEntityService {
     user: TokenDto,
   ): Promise<CreateFrameworkResultEntityResult> {
     if (!payload?.result) {
-      throwServiceError(
-        'The result header information is required.',
-      );
+      throwServiceError('The result header information is required.');
     }
 
     const baseResultDto = { ...payload.result };

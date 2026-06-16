@@ -7,7 +7,6 @@ import { ReportingTocContextService } from '../../../reporting-toc-context/repor
 import { FrameworkResultTocIndicatorsService } from './framework-result-toc-indicators.service';
 import { throwServiceError } from '../../../../../shared/utils/service-error.util';
 
-
 const TOC_CATEGORY_LEVEL_MAP: Record<string, number> = {
   OUTPUT: 1,
   OUTCOME: 2,
@@ -36,9 +35,7 @@ export class LinkFrameworkResultTocService {
     const resolvedTocResultId = Number(payload.toc_result_id);
 
     if (!Number.isFinite(resolvedTocResultId) || resolvedTocResultId <= 0) {
-      throwServiceError(
-        'The provided ToC result identifier is invalid.',
-      );
+      throwServiceError('The provided ToC result identifier is invalid.');
     }
 
     const tocContext = await this._reportingTocContextService.resolve();

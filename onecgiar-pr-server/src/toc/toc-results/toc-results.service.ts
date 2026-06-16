@@ -9,7 +9,6 @@ import { ResultRepository } from '../../api/results/result.repository';
 import { YearRepository } from '../../api/results/years/year.repository';
 import { throwServiceError } from '../../shared/utils/service-error.util';
 
-
 @Injectable()
 export class TocResultsService {
   constructor(
@@ -141,12 +140,18 @@ export class TocResultsService {
       });
 
       if (!year) {
-        throwServiceError('No active reporting year was found.', HttpStatus.NOT_FOUND);
+        throwServiceError(
+          'No active reporting year was found.',
+          HttpStatus.NOT_FOUND,
+        );
       }
 
       const reportingYear = Number(year.year);
       if (!Number.isFinite(reportingYear) || reportingYear < 0) {
-        throwServiceError('The active reporting year configured is invalid.', HttpStatus.INTERNAL_SERVER_ERROR);
+        throwServiceError(
+          'The active reporting year configured is invalid.',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
       }
 
       const res = await this._tocResultsRepository.$_getResultTocByConfigV2(

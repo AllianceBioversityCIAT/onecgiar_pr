@@ -3,8 +3,6 @@ import { HandlersError } from '../../shared/handlers/error.utils';
 import { TocLevelRepository } from './toc-level.repository';
 import { throwServiceError } from '../../shared/utils/service-error.util';
 
-
-
 @Injectable()
 export class TocLevelService {
   constructor(

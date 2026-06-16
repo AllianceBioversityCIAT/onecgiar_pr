@@ -6,7 +6,6 @@ import { ResultStatusData } from '../../../../../shared/constants/result-status.
 import type { ExistingResultContributorRecord } from './existing-result-contributors.types';
 import { throwServiceError } from '../../../../../shared/utils/service-error.util';
 
-
 @Injectable()
 export class ExistingResultContributorsLoaderService {
   constructor(

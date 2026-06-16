@@ -5,7 +5,6 @@ import { ResultsTocResultIndicatorsRepository } from '../../../../results/result
 import { ResultsTocTargetIndicatorRepository } from '../../../../results/results-toc-results/repositories/result-toc-result-target-indicator.repository';
 import { throwServiceError } from '../../../../../shared/utils/service-error.util';
 
-
 type IndicatorNumberTargetValue = string | number | null;
 
 @Injectable()
