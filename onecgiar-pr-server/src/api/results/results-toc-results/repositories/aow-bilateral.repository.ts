@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { env } from 'process';
 import { HandlersError } from '../../../../shared/handlers/error.utils';
+import type { ReportingTocContext } from '../../../results-framework-reporting/reporting-toc-context/reporting-toc-context.interface';
 
 interface toc_result_row {
   toc_result_id: number;
@@ -57,8 +58,15 @@ export interface toc_result_response {
 interface TocQueryOptions {
   compositeCode?: string;
   categories?: string[];
-  year?: number;
-  tocPhaseId?: string;
+  context: ReportingTocContext;
+}
+
+export interface TocWorkPackageRow {
+  id: number;
+  code: string;
+  name: string;
+  composeCode: string;
+  year: number;
 }
 
 @Injectable()
@@ -68,55 +76,122 @@ export class AoWBilateralRepository {
     private readonly _handlersError: HandlersError,
   ) {}
 
-  private async getCurrentTocPhaseId(): Promise<string | null> {
+  private async resolveContext(
+    contextOrYear?: ReportingTocContext | number,
+  ): Promise<ReportingTocContext> {
+    if (
+      typeof contextOrYear === 'object' &&
+      contextOrYear !== null &&
+      typeof contextOrYear.phaseUuid === 'string'
+    ) {
+      return contextOrYear;
+    }
+
+    const hasYearOverride = typeof contextOrYear === 'number';
     const query = `
-      SELECT toc_pahse_id
-      FROM ${env.DB_NAME}.version
-      WHERE is_active = 1 AND status = 1 AND app_module_id = 1
+      SELECT
+        v.phase_year,
+        v.toc_pahse_id
+      FROM ${env.DB_NAME}.version v
+      WHERE
+        v.is_active = 1
+        AND v.status = 1
+        AND v.app_module_id = 1
+        ${hasYearOverride ? 'AND v.phase_year = ?' : ''}
       LIMIT 1
     `;
-    try {
-      const rows = await this.dataSource.query(query);
-      return rows?.[0]?.toc_pahse_id ?? null;
-    } catch (error) {
-      this._handlersError.returnErrorRepository({
-        error,
+    const rows = await this.dataSource.query(
+      query,
+      hasYearOverride ? [contextOrYear] : [],
+    );
+    const row = rows?.[0];
+    const phaseUuid =
+      typeof row?.toc_pahse_id === 'string' ? row.toc_pahse_id : '';
+    const reportingYear = Number(
+      hasYearOverride ? contextOrYear : row?.phase_year,
+    );
+
+    if (!phaseUuid || !Number.isFinite(reportingYear)) {
+      throw this._handlersError.returnErrorRepository({
+        error: 'Missing TOC phase context for reporting queries',
         className: AoWBilateralRepository.name,
         debug: true,
       });
+    }
+
+    return { reportingYear, phaseUuid };
+  }
+
+  // Backward-compatible helper used by legacy tests and call sites.
+  private async getCurrentTocPhaseId(): Promise<string | null> {
+    try {
+      const context = await this.resolveContext();
+      return context.phaseUuid;
+    } catch (_error) {
       return null;
     }
   }
 
   /**
-   * Returns the distinct list of work package acronyms (unit codes) registered in the
-   * ToC catalogue for the provided program (initiative official code).
-   *
-   * Mapping context requested:
-   *  code (unit code) = acronym (toc_work_packages.acronym)
-   *  programId = initiativeId / program official code (toc_results.official_code)
+   * Returns active work packages linked to OUTPUT/OUTCOME ToC nodes
+   * for the requested program, constrained by reporting phase and year.
    */
-  async findUnitAcronymsByProgram(
+  async findWorkPackagesByProgram(
     programOfficialCode: string,
-  ): Promise<Set<string>> {
-    const tocPhaseId = await this.getCurrentTocPhaseId();
-    let query = `
-      SELECT DISTINCT wp.acronym
+    context: ReportingTocContext,
+  ): Promise<TocWorkPackageRow[]> {
+    const query = `
+      SELECT DISTINCT
+        wp.toc_id AS id,
+        UPPER(TRIM(wp.acronym)) AS code,
+        wp.name AS name,
+        wp.wp_official_code AS composeCode,
+        wp.year AS year
       FROM ${env.DB_TOC}.toc_work_packages wp
       INNER JOIN ${env.DB_TOC}.toc_results tr ON tr.wp_id = wp.toc_id
-        AND tr.official_code = ?
+      WHERE tr.official_code = ?
+        AND tr.phase = ?
+        AND tr.is_active = 1
+        AND tr.category IN ('OUTPUT', 'OUTCOME')
+        AND wp.year = ?
+      ORDER BY code ASC
     `;
-    const params: (string | number)[] = [programOfficialCode];
-    if (tocPhaseId) {
-      query += ` AND tr.phase = ?`;
-      params.push(tocPhaseId);
-    }
 
     try {
-      const rows = await this.dataSource.query(query, params);
+      const rows = await this.dataSource.query(query, [
+        programOfficialCode,
+        context.phaseUuid,
+        context.reportingYear,
+      ]);
+      return (rows ?? []).map((row: any) => ({
+        id: Number(row.id),
+        code: row.code,
+        name: row.name,
+        composeCode: row.composeCode,
+        year: Number(row.year),
+      }));
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        error,
+        className: AoWBilateralRepository.name,
+        debug: true,
+      });
+    }
+  }
+
+  async findUnitAcronymsByProgram(
+    programOfficialCode: string,
+    contextOrYear?: ReportingTocContext | number,
+  ): Promise<Set<string>> {
+    try {
+      const context = await this.resolveContext(contextOrYear);
+      const workPackages = await this.findWorkPackagesByProgram(
+        programOfficialCode,
+        context,
+      );
       const acronyms = new Set<string>();
-      for (const row of rows || []) {
-        const value = row?.acronym?.trim();
+      for (const row of workPackages) {
+        const value = row?.code?.trim();
         if (value) acronyms.add(value.toUpperCase());
       }
       return acronyms;
@@ -132,20 +207,19 @@ export class AoWBilateralRepository {
   async findByCompositeCode(
     program: string,
     composite_code: string,
-    year?: number,
+    contextOrYear: ReportingTocContext | number,
   ) {
-    const tocPhaseId = await this.getCurrentTocPhaseId();
+    const context = await this.resolveContext(contextOrYear);
     const { query, params } = this.buildTocQuery(program, {
       compositeCode: composite_code,
-      year,
       categories: ['OUTPUT', 'OUTCOME'],
-      tocPhaseId,
+      context,
     });
 
     try {
       const [rows, contributions] = await Promise.all([
         this.dataSource.query(query, params) as Promise<toc_result_row[]>,
-        this.getIndicatorContributions(program, year),
+        this.getIndicatorContributions(program, context),
       ]);
 
       const enhancedRows = rows.map((row) => ({
@@ -166,18 +240,20 @@ export class AoWBilateralRepository {
     }
   }
 
-  async find2030Outcomes(program: string, year?: number) {
-    const tocPhaseId = await this.getCurrentTocPhaseId();
+  async find2030Outcomes(
+    program: string,
+    contextOrYear: ReportingTocContext | number,
+  ) {
+    const context = await this.resolveContext(contextOrYear);
     const { query, params } = this.buildTocQuery(program, {
-      year,
       categories: ['EOI'],
-      tocPhaseId,
+      context,
     });
 
     try {
       const [rows, contributions] = await Promise.all([
         this.dataSource.query(query, params) as Promise<toc_result_row[]>,
-        this.getIndicatorContributions(program, year),
+        this.getIndicatorContributions(program, context),
       ]);
 
       const enhancedRows = rows.map((row) => ({
@@ -259,8 +335,10 @@ export class AoWBilateralRepository {
       query += `
         JOIN ${env.DB_TOC}.toc_work_packages wp ON tr.wp_id = wp.toc_id
           AND wp.wp_official_code = ?
+          AND wp.year = ?
       `;
       params.push(options.compositeCode);
+      params.push(options.context.reportingYear);
     }
 
     query += `
@@ -268,12 +346,9 @@ export class AoWBilateralRepository {
         AND tri.is_active = 1
       LEFT JOIN ${env.DB_TOC}.toc_result_indicator_target trit ON tri.id = trit.id_indicator
         AND CONVERT(trit.toc_result_indicator_id USING utf8mb4) = CONVERT(tri.related_node_id USING utf8mb4)
+        AND trit.target_date = ?
     `;
-
-    if (options.year !== undefined) {
-      query += ` AND trit.target_date = ?`;
-      params.push(options.year);
-    }
+    params.push(options.context.reportingYear);
 
     query += `
       WHERE
@@ -283,11 +358,8 @@ export class AoWBilateralRepository {
     `;
     params.push(program);
     params.push(...categories);
-
-    if (options.tocPhaseId) {
-      query += ` AND tr.phase = ?`;
-      params.push(options.tocPhaseId);
-    }
+    query += ` AND tr.phase = ?`;
+    params.push(options.context.phaseUuid);
 
     query += `
       GROUP BY
@@ -355,25 +427,20 @@ export class AoWBilateralRepository {
     return Array.from(grouped.values());
   }
 
-  async findResultById(tocResultId: number) {
-    const tocPhaseId = await this.getCurrentTocPhaseId();
-    let query = `
+  async findResultById(tocResultId: number, phaseUuid: string) {
+    const query = `
       SELECT
         tr.id,
         tr.result_title,
         tr.category
       FROM ${env.DB_TOC}.toc_results tr
       WHERE tr.id = ?
+      AND tr.phase = ?
+      LIMIT 1;
     `;
-    const params: (string | number)[] = [tocResultId];
-    if (tocPhaseId) {
-      query += ` AND tr.phase = ?`;
-      params.push(tocPhaseId);
-    }
-    query += ` LIMIT 1;`;
 
     try {
-      const rows = await this.dataSource.query(query, params);
+      const rows = await this.dataSource.query(query, [tocResultId, phaseUuid]);
       return rows?.[0] ?? null;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -409,14 +476,12 @@ export class AoWBilateralRepository {
     }
   }
 
-  async getIndicatorContributions(program: string, year?: number) {
-    const tocPhaseId = await this.getCurrentTocPhaseId();
+  async getIndicatorContributions(
+    program: string,
+    contextOrYear?: ReportingTocContext | number,
+  ) {
+    const context = await this.resolveContext(contextOrYear);
     const params: (string | number)[] = [];
-
-    const targetYearCondition =
-      year !== undefined ? ' AND trit.target_date = ?' : '';
-    const actualYearCondition =
-      year !== undefined ? ' AND rit.target_date = ?' : '';
 
     const query = `
       SELECT
@@ -435,12 +500,13 @@ export class AoWBilateralRepository {
         JOIN ${env.DB_TOC}.toc_results_indicators tri ON tri.toc_results_id = tr.id
         JOIN ${env.DB_TOC}.toc_result_indicator_target trit ON tri.id = trit.id_indicator
           AND CONVERT(trit.toc_result_indicator_id USING utf8mb4) = CONVERT(tri.related_node_id USING utf8mb4)
-          ${targetYearCondition}
+          AND trit.target_date = ?
         LEFT JOIN ${env.DB_TOC}.toc_work_packages wp ON wp.toc_id = tr.wp_id
+          AND wp.year = ?
         WHERE
           tr.official_code = ?
           AND tri.is_active = 1
-          ${tocPhaseId ? 'AND tr.phase = ?' : ''}
+          AND tr.phase = ?
         GROUP BY
           tri.id,
           tri.toc_result_indicator_id,
@@ -459,12 +525,13 @@ export class AoWBilateralRepository {
         LEFT JOIN ${env.DB_NAME}.result_indicators_targets rit ON rit.result_toc_result_indicator_id = rtri.result_toc_result_indicator_id
           AND rit.is_active = 1
           AND rit.contributing_indicator IS NOT NULL
-          ${actualYearCondition}
+          AND rit.target_date = ?
         JOIN ${env.DB_TOC}.toc_results tr ON tr.id = rtr.toc_result_id
         JOIN ${env.DB_TOC}.toc_results_indicators tri ON tri.toc_results_id = tr.id
           AND tri.is_active = 1
           AND CONVERT(rtri.toc_results_indicator_id USING utf8mb4) = CONVERT(tri.related_node_id USING utf8mb4)
         LEFT JOIN ${env.DB_TOC}.toc_work_packages wp ON wp.toc_id = tr.wp_id
+          AND wp.year = ?
         WHERE
           tr.official_code = ?
           AND r.is_active = 1
@@ -472,25 +539,19 @@ export class AoWBilateralRepository {
           AND r.status_id IN (2, 6)
           AND r.result_level_id IN (3, 4)
           AND r.result_type_id IN (1, 2, 4, 5, 6, 7, 8, 10)
-          ${tocPhaseId ? 'AND tr.phase = ?' : ''}
+          AND tr.phase = ?
         GROUP BY
           tri.id
       ) AS act ON act.indicator_id = tgt.indicator_id
     `;
-    if (year !== undefined) {
-      params.push(year);
-    }
+    params.push(context.reportingYear);
+    params.push(context.reportingYear);
     params.push(program);
-    if (tocPhaseId) {
-      params.push(tocPhaseId);
-    }
-    if (year !== undefined) {
-      params.push(year);
-    }
+    params.push(context.phaseUuid);
+    params.push(context.reportingYear);
+    params.push(context.reportingYear);
     params.push(program);
-    if (tocPhaseId) {
-      params.push(tocPhaseId);
-    }
+    params.push(context.phaseUuid);
 
     try {
       const rows = await this.dataSource.query(query, params);
@@ -542,9 +603,8 @@ export class AoWBilateralRepository {
     }
   }
 
-  async findBilateralProjectById(tocResultId: number) {
-    const tocPhaseId = await this.getCurrentTocPhaseId();
-    let query = `
+  async findBilateralProjectById(tocResultId: number, phaseUuid: string) {
+    const query = `
       SELECT
         tr.id AS toc_result_id,
         tr.official_code AS official_code,
@@ -561,15 +621,11 @@ export class AoWBilateralRepository {
       LEFT JOIN clarisa_projects cp ON cp.id = trp.project_id
       LEFT JOIN clarisa_institutions ci ON ci.id = cp.organization_code
       WHERE tr.id = ?
+        AND tr.phase = ?
     `;
-    const params: (string | number)[] = [tocResultId];
-    if (tocPhaseId) {
-      query += ` AND tr.phase = ?`;
-      params.push(tocPhaseId);
-    }
 
     try {
-      return this.dataSource.query(query, params);
+      return this.dataSource.query(query, [tocResultId, phaseUuid]);
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         error,

@@ -6,7 +6,7 @@ export const cleanObject = <T>(obj: T): Partial<T> => {
     if (
       obj[key] !== null &&
       obj[key] !== '' &&
-      (typeof obj[key] == 'number' ? !isNaN(obj[key]) : true)
+      (typeof obj[key] == 'number' ? !Number.isNaN(obj[key]) : true)
     ) {
       cleanedObj[key] = obj[key];
     }
@@ -43,7 +43,7 @@ export const isEmpty = <T>(attr: T) => {
   return (
     attr === null ||
     attr === '' ||
-    (typeof attr === 'number' && isNaN(attr)) ||
+    (typeof attr === 'number' && Number.isNaN(attr)) ||
     attr === undefined ||
     (Array.isArray(attr) && attr.length === 0)
   );
@@ -86,4 +86,12 @@ export const defaultValue = <T>(
 export interface ValidationResult {
   isValid: boolean;
   invalidFields: string[];
+}
+
+type ObjectWithHasOwn = typeof Object & {
+  hasOwn(object: object, property: PropertyKey): boolean;
+};
+
+export function objectHasOwn(object: object, property: PropertyKey): boolean {
+  return (Object as ObjectWithHasOwn).hasOwn(object, property);
 }

@@ -18,6 +18,15 @@ import { ResultsByProjectsService } from '../results/results_by_projects/results
 import { ContributionToIndicatorResultsRepository } from '../contribution-to-indicators/repositories/contribution-to-indicator-result.repository';
 import { ResultsTocTargetIndicatorRepository } from '../results/results-toc-results/repositories/result-toc-result-target-indicator.repository';
 import { ResultsByInstitutionsService } from '../results/results_by_institutions/results_by_institutions.service';
+import { ReportingTocContextService } from './reporting-toc-context/reporting-toc-context.service';
+import { CreateResultFromFrameworkHandler } from './application/commands/create-result-from-framework/create-result-from-framework.handler';
+import { CreateFrameworkResultEntityService } from './application/commands/create-result-from-framework/create-framework-result-entity.service';
+import { LinkFrameworkResultTocService } from './application/commands/create-result-from-framework/link-framework-result-toc.service';
+import { FrameworkResultTocIndicatorsService } from './application/commands/create-result-from-framework/framework-result-toc-indicators.service';
+import { ApplyFrameworkResultAssociationsService } from './application/commands/create-result-from-framework/apply-framework-result-associations.service';
+import { GetExistingResultContributorsToIndicatorsHandler } from './application/queries/get-existing-result-contributors/get-existing-result-contributors.handler';
+import { ExistingResultContributorsLoaderService } from './application/queries/get-existing-result-contributors/existing-result-contributors-loader.service';
+import { ContributorsRoleResolverService } from './application/queries/get-existing-result-contributors/contributors-role-resolver.service';
 
 const mockClarisaInitiativesRepository = {
   findOne: jest.fn(),
@@ -47,12 +56,17 @@ const mockHandlersError = {
 };
 
 const mockTocResultsRepository = {
+  findWorkPackagesByProgram: jest.fn(),
   findByCompositeCode: jest.fn(),
   find2030Outcomes: jest.fn(),
   findResultById: jest.fn(),
   findIndicatorById: jest.fn(),
   findUnitAcronymsByProgram: jest.fn(),
   getIndicatorContributions: jest.fn(),
+};
+
+const mockReportingTocContextService = {
+  resolve: jest.fn(),
 };
 
 const mockResultsService = {
@@ -121,6 +135,10 @@ describe('ResultsFrameworkReportingService', () => {
     mockTocResultsRepository.getIndicatorContributions.mockResolvedValue(
       new Map(),
     );
+    mockReportingTocContextService.resolve.mockResolvedValue({
+      reportingYear: 2025,
+      phaseUuid: 'PHASE-1',
+    });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -140,6 +158,10 @@ describe('ResultsFrameworkReportingService', () => {
         },
         { provide: YearRepository, useValue: mockYearRepository },
         { provide: HandlersError, useValue: mockHandlersError },
+        {
+          provide: ReportingTocContextService,
+          useValue: mockReportingTocContextService,
+        },
         {
           provide: AoWBilateralRepository,
           useValue: mockTocResultsRepository,
@@ -181,6 +203,14 @@ describe('ResultsFrameworkReportingService', () => {
           provide: ResultsByInstitutionsService,
           useValue: mockResultsByInstitutionsService,
         },
+        CreateResultFromFrameworkHandler,
+        CreateFrameworkResultEntityService,
+        LinkFrameworkResultTocService,
+        FrameworkResultTocIndicatorsService,
+        ApplyFrameworkResultAssociationsService,
+        GetExistingResultContributorsToIndicatorsHandler,
+        ExistingResultContributorsLoaderService,
+        ContributorsRoleResolverService,
       ],
     }).compile();
 

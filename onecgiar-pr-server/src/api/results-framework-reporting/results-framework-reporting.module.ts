@@ -22,6 +22,15 @@ import { InnovationUseModule } from './innovation-use/innovation-use.module';
 import { ResultScalingStudyUrlsModule } from './result_scaling_study_urls/result_scaling_study_urls.module';
 import { ResultInnovSectionModule } from './result_innov_section/result_innov_section.module';
 import { ResultsByInstitutionsModule } from '../results/results_by_institutions/results_by_institutions.module';
+import { ReportingTocContextService } from './reporting-toc-context/reporting-toc-context.service';
+import { CreateResultFromFrameworkHandler } from './application/commands/create-result-from-framework/create-result-from-framework.handler';
+import { CreateFrameworkResultEntityService } from './application/commands/create-result-from-framework/create-framework-result-entity.service';
+import { LinkFrameworkResultTocService } from './application/commands/create-result-from-framework/link-framework-result-toc.service';
+import { FrameworkResultTocIndicatorsService } from './application/commands/create-result-from-framework/framework-result-toc-indicators.service';
+import { ApplyFrameworkResultAssociationsService } from './application/commands/create-result-from-framework/apply-framework-result-associations.service';
+import { GetExistingResultContributorsToIndicatorsHandler } from './application/queries/get-existing-result-contributors/get-existing-result-contributors.handler';
+import { ExistingResultContributorsLoaderService } from './application/queries/get-existing-result-contributors/existing-result-contributors-loader.service';
+import { ContributorsRoleResolverService } from './application/queries/get-existing-result-contributors/contributors-role-resolver.service';
 
 @Module({
   imports: [
@@ -50,7 +59,16 @@ import { ResultsByInstitutionsModule } from '../results/results_by_institutions/
     AoWBilateralRepository,
     ContributionToIndicatorResultsRepository,
     ResultsTocTargetIndicatorRepository,
+    ReportingTocContextService,
+    CreateResultFromFrameworkHandler,
+    CreateFrameworkResultEntityService,
+    LinkFrameworkResultTocService,
+    FrameworkResultTocIndicatorsService,
+    ApplyFrameworkResultAssociationsService,
+    GetExistingResultContributorsToIndicatorsHandler,
+    ExistingResultContributorsLoaderService,
+    ContributorsRoleResolverService,
   ],
-  exports: [ResultsFrameworkReportingService],
+  exports: [ResultsFrameworkReportingService, ReportingTocContextService],
 })
 export class ResultsFrameworkReportingModule {}

@@ -7,6 +7,7 @@ import { TocResultsRepository } from './toc-results.repository';
 import { EnvironmentExtractor } from '../../shared/utils/environment-extractor';
 import { ResultRepository } from '../../api/results/result.repository';
 import { YearRepository } from '../../api/results/years/year.repository';
+import { throwServiceError } from '../../shared/utils/service-error.util';
 
 @Injectable()
 export class TocResultsService {
@@ -55,11 +56,7 @@ export class TocResultsService {
         );
 
       if (!tocResults.length) {
-        throw {
-          response: {},
-          message: 'ToC Results Not Found',
-          status: HttpStatus.NOT_FOUND,
-        };
+        throwServiceError('ToC Results Not Found', HttpStatus.NOT_FOUND);
       }
 
       return {
@@ -77,11 +74,7 @@ export class TocResultsService {
       const tocResults =
         await this._tocResultsRepository.getFullInitiativeTocByResult(resultId);
       if (!tocResults.length) {
-        throw {
-          response: {},
-          message: 'ToC Results Not Found',
-          status: HttpStatus.NOT_FOUND,
-        };
+        throwServiceError('ToC Results Not Found', HttpStatus.NOT_FOUND);
       }
 
       return {
@@ -101,11 +94,7 @@ export class TocResultsService {
           initiativeId,
         );
       if (!tocResults.length) {
-        throw {
-          response: {},
-          message: 'ToC by Initiative Not Found',
-          status: HttpStatus.NOT_FOUND,
-        };
+        throwServiceError('ToC by Initiative Not Found', HttpStatus.NOT_FOUND);
       }
 
       return {
@@ -150,15 +139,31 @@ export class TocResultsService {
         },
       });
 
+      if (!year) {
+        throwServiceError(
+          'No active reporting year was found.',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+
+      const reportingYear = Number(year.year);
+      if (!Number.isFinite(reportingYear) || reportingYear < 0) {
+        throwServiceError(
+          'The active reporting year configured is invalid.',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
+
       const res = await this._tocResultsRepository.$_getResultTocByConfigV2(
         init_id,
         toc_level,
+        reportingYear,
         result?.result_type_id,
         result_id,
         planned ?? true,
       );
 
-      let enrichedResults = res ?? [];
+      let enrichedResults;
 
       if (res?.length) {
         const tocResultIds = Array.from(
@@ -247,8 +252,9 @@ export class TocResultsService {
               ? String(mapping.toc_results_indicator_id)
               : null;
 
-            if (!resultMappingInfo.has(tocId)) {
-              resultMappingInfo.set(tocId, {
+            let info = resultMappingInfo.get(tocId);
+            if (!info) {
+              info = {
                 result_toc_result_id:
                   mapping?.result_toc_result_id !== null &&
                   mapping?.result_toc_result_id !== undefined
@@ -264,11 +270,11 @@ export class TocResultsService {
                     ? mapping.toc_progressive_narrative
                     : null,
                 indicatorMappings: new Map(),
-              });
+              };
+              resultMappingInfo.set(tocId, info);
             }
 
             if (indicatorKey) {
-              const info = resultMappingInfo.get(tocId)!;
               info.indicatorMappings.set(indicatorKey, {
                 result_toc_result_indicator_id:
                   mapping?.result_toc_result_indicator_id !== null &&
@@ -299,11 +305,12 @@ export class TocResultsService {
               indicatorMap.set(tocId, []);
             }
 
-            const indicatorKey = indicator.related_node_id
-              ? String(indicator.related_node_id)
-              : indicator.toc_result_indicator_id
-                ? String(indicator.toc_result_indicator_id)
-                : null;
+            let indicatorKey: string | null = null;
+            if (indicator.related_node_id) {
+              indicatorKey = String(indicator.related_node_id);
+            } else if (indicator.toc_result_indicator_id) {
+              indicatorKey = String(indicator.toc_result_indicator_id);
+            }
 
             const mappingInfo = indicatorKey
               ? (resultMappingInfo
@@ -451,11 +458,7 @@ export class TocResultsService {
         );
 
       if (!tocResults.length) {
-        throw {
-          response: {},
-          message: 'ToC Results Not Found',
-          status: HttpStatus.NOT_FOUND,
-        };
+        throwServiceError('ToC Results Not Found', HttpStatus.NOT_FOUND);
       }
 
       return {
