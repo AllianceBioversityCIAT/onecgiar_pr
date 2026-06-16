@@ -1,4 +1,5 @@
 import { ClarisaTaskService } from './clarisatask.service';
+import { ClarisaEndpoints } from './clarisa-endpoints.enum';
 import { ClarisaGlobalUnit } from './clarisa-global-unit/entities/clarisa-global-unit.entity';
 
 describe('ClarisaTaskService', () => {
@@ -90,7 +91,7 @@ describe('ClarisaTaskService', () => {
   });
 
   describe('clarisaBootstrapImportantData', () => {
-    it('does not sync institutions when hourly cron path is disabled', async () => {
+    it('syncs institutions via INSTITUTIONS_FULL with incremental from param', async () => {
       const { service, clarisaInstitutionsRepositoryMock } = makeService();
       clarisaInstitutionsRepositoryMock.getMostRecentLastUpdated.mockResolvedValue(
         [{ most_recent: '2025-01-01' }],
@@ -101,7 +102,13 @@ describe('ClarisaTaskService', () => {
 
       await service.clarisaBootstrapImportantData();
 
-      expect(syncSpy).not.toHaveBeenCalled();
+      expect(syncSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ path: 'institutions' }),
+        1,
+      );
+      expect(ClarisaEndpoints.INSTITUTIONS_FULL.params).toEqual(
+        expect.objectContaining({ show: 'all', from: '2025-01-01' }),
+      );
     });
   });
 
