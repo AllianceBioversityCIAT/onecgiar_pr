@@ -137,7 +137,12 @@ export class AoWBilateralRepository {
     try {
       const context = await this.resolveContext();
       return context.phaseUuid;
-    } catch (_error) {
+    } catch (error) {
+      this._handlersError.returnErrorRepository({
+        error,
+        className: AoWBilateralRepository.name,
+        debug: true,
+      });
       return null;
     }
   }
@@ -320,10 +325,10 @@ export class AoWBilateralRepository {
         tri.type_value,
         NULLIF(TRIM(tri.type_name), '') AS type_name,
         tri.location,
-        COALESCE(SUM(CAST(trit.target_value AS SIGNED)), 0) AS target_value_sum,
-        trit.number_target,
-        trit.target_date,
-        trit.target_value,
+        COALESCE(MAX(CAST(trit.target_value AS SIGNED)), 0) AS target_value_sum,
+        MAX(trit.number_target) AS number_target,
+        MAX(trit.target_date) AS target_date,
+        COALESCE(MAX(CAST(trit.target_value AS SIGNED)), 0) AS target_value,
         CASE
           WHEN tri.type_value LIKE '%Number of Policy%' THEN 1
           WHEN tri.type_value LIKE '%Innovation Use%' THEN 2
@@ -358,9 +363,11 @@ export class AoWBilateralRepository {
           AND UPPER(TRIM(wp.acronym)) = ?
           AND wp.wp_official_code LIKE CONCAT(?, '-%')
       `;
-      params.push(options.context.reportingYear);
-      params.push(options.areaAcronym.trim().toUpperCase());
-      params.push(program.trim().toUpperCase());
+      params.push(
+        options.context.reportingYear,
+        options.areaAcronym.trim().toUpperCase(),
+        program.trim().toUpperCase(),
+      );
     }
 
     query += `
@@ -378,8 +385,7 @@ export class AoWBilateralRepository {
         AND tr.category IN (${categoryPlaceholders})
         AND tr.is_active = 1
     `;
-    params.push(program);
-    params.push(...categories);
+    params.push(program, ...categories);
     query += ` AND tr.phase = ?`;
     params.push(options.context.phaseUuid);
 
@@ -396,10 +402,7 @@ export class AoWBilateralRepository {
         tri.unit_messurament,
         tri.type_value,
         tri.type_name,
-        tri.location,
-        trit.number_target,
-        trit.target_date,
-        trit.target_value
+        tri.location
       ORDER BY tr.id ASC, tri.id ASC
     `;
 
@@ -422,6 +425,15 @@ export class AoWBilateralRepository {
       }
 
       if (row.indicator_id !== null) {
+        const tocResult = grouped.get(row.toc_result_id);
+        const indicatorId = Number(row.indicator_id);
+        const alreadyListed = tocResult?.indicators.some(
+          (existing) => Number(existing.indicator_id) === indicatorId,
+        );
+        if (alreadyListed) {
+          continue;
+        }
+
         const indicator: TocResultResponse['indicators'][number] = {
           indicator_id: row.indicator_id,
           indicator_description: row.indicator_description,
@@ -566,14 +578,16 @@ export class AoWBilateralRepository {
           tri.id
       ) AS act ON act.indicator_id = tgt.indicator_id
     `;
-    params.push(context.reportingYear);
-    params.push(context.reportingYear);
-    params.push(program);
-    params.push(context.phaseUuid);
-    params.push(context.reportingYear);
-    params.push(context.reportingYear);
-    params.push(program);
-    params.push(context.phaseUuid);
+    params.push(
+      context.reportingYear,
+      context.reportingYear,
+      program,
+      context.phaseUuid,
+      context.reportingYear,
+      context.reportingYear,
+      program,
+      context.phaseUuid,
+    );
 
     try {
       const rows = await this.dataSource.query(query, params);
@@ -600,9 +614,14 @@ export class AoWBilateralRepository {
         const isWholeNumber = Number.isFinite(progressRounded)
           ? Number.isInteger(progressRounded)
           : false;
-        const formattedProgress = Number.isFinite(progressRounded)
-          ? `${isWholeNumber ? progressRounded.toFixed(0) : progressRounded.toFixed(1)}%`
-          : '0%';
+        let formattedProgress = '0%';
+        if (Number.isFinite(progressRounded)) {
+          if (isWholeNumber) {
+            formattedProgress = `${progressRounded.toFixed(0)}%`;
+          } else {
+            formattedProgress = `${progressRounded.toFixed(1)}%`;
+          }
+        }
 
         contributionsMap.set(row.indicator_id, {
           target_value_sum: targetValue,
@@ -647,7 +666,7 @@ export class AoWBilateralRepository {
     `;
 
     try {
-      return this.dataSource.query(query, [tocResultId, phaseUuid]);
+      return await this.dataSource.query(query, [tocResultId, phaseUuid]);
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         error,
