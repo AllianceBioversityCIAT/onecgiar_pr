@@ -151,37 +151,40 @@ export class AoWBilateralRepository {
    * Returns active work packages linked to OUTPUT/OUTCOME ToC nodes
    * for the requested program, constrained by reporting phase and year.
    *
-   * Listing uses clarisa wp metadata even when toc-integration temporarily
-   * attached active-phase results to a local wp with the same acronym.
+   * Prefers clarisa wp metadata when a clarisa row exists for the acronym;
+   * otherwise falls back to local wp rows (e.g. SP02 boards synced as local only).
    */
   async findWorkPackagesByProgram(
     programOfficialCode: string,
     context: ReportingTocContext,
   ): Promise<TocWorkPackageRow[]> {
     const query = `
-      SELECT DISTINCT
-        cw.toc_id AS id,
-        UPPER(TRIM(cw.acronym)) AS code,
-        cw.name AS name,
-        cw.wp_official_code AS composeCode,
-        cw.year AS year
-      FROM ${env.DB_TOC}.toc_work_packages cw
-      INNER JOIN ${env.DB_TOC}.toc_work_packages linked_wp
-        ON UPPER(TRIM(linked_wp.acronym)) = UPPER(TRIM(cw.acronym))
-        AND linked_wp.year = cw.year
-      INNER JOIN ${env.DB_TOC}.toc_results tr ON tr.wp_id = linked_wp.toc_id
+      SELECT
+        UPPER(TRIM(wp.acronym)) AS code,
+        COALESCE(MAX(cw.toc_id), MAX(wp.toc_id)) AS id,
+        COALESCE(MAX(cw.name), MAX(wp.name)) AS name,
+        COALESCE(MAX(cw.wp_official_code), MAX(wp.wp_official_code)) AS composeCode,
+        MAX(wp.year) AS year
+      FROM ${env.DB_TOC}.toc_work_packages wp
+      INNER JOIN ${env.DB_TOC}.toc_results tr ON tr.wp_id = wp.toc_id
+      LEFT JOIN ${env.DB_TOC}.toc_work_packages cw
+        ON UPPER(TRIM(cw.acronym)) = UPPER(TRIM(wp.acronym))
+        AND cw.year = wp.year
+        AND LOWER(TRIM(cw.source)) = 'clarisa'
+        AND cw.wp_official_code LIKE CONCAT(?, '-%')
       WHERE tr.official_code = ?
         AND tr.phase = ?
         AND tr.is_active = 1
         AND tr.category IN ('OUTPUT', 'OUTCOME')
-        AND cw.year = ?
-        AND LOWER(TRIM(cw.source)) = 'clarisa'
-        AND cw.wp_official_code LIKE CONCAT(?, '-%')
+        AND wp.year = ?
+        AND wp.wp_official_code LIKE CONCAT(?, '-%')
+      GROUP BY UPPER(TRIM(wp.acronym))
       ORDER BY code ASC
     `;
 
     try {
       const rows = await this.dataSource.query(query, [
+        programOfficialCode,
         programOfficialCode,
         context.phaseUuid,
         context.reportingYear,

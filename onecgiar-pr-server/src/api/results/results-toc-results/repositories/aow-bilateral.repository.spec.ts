@@ -201,10 +201,51 @@ describe('AoWBilateralRepository', () => {
     );
 
     expect(dataSourceQueryMock).toHaveBeenCalledWith(
-      expect.stringContaining("LOWER(TRIM(cw.source)) = 'clarisa'"),
-      ['SP01', 'PHASE-1', 2025, 'SP01'],
+      expect.stringContaining('COALESCE(MAX(cw.toc_id), MAX(wp.toc_id))'),
+      ['SP01', 'SP01', 'PHASE-1', 2025, 'SP01'],
     );
     expect(result).toEqual(new Set(['AOW01', 'AOW02']));
+  });
+
+  it('should list local work packages when no clarisa row exists for the program', async () => {
+    dataSourceQueryMock.mockResolvedValueOnce([
+      {
+        id: '5fb995f8-006a-44fc-a42f-650195fef0ed',
+        code: 'AOW01',
+        name: 'Accelerating AI-Enabled Farm Advisory at Scale.',
+        composeCode: 'SP02-AOW01-2026',
+        year: 2026,
+      },
+      {
+        id: '92853ac5-2a2d-4dc0-8e3a-e00c3e568524',
+        code: 'AOW02',
+        name: 'Enabling Preparedness and Rapid Response to Emerging Shocks',
+        composeCode: 'SP02-AOW02-2026',
+        year: 2026,
+      },
+    ]);
+
+    const result = await repository.findWorkPackagesByProgram('SP02', {
+      phaseUuid: 'PHASE-2026',
+      reportingYear: 2026,
+    });
+
+    expect(dataSourceQueryMock).toHaveBeenCalledWith(
+      expect.stringContaining('LEFT JOIN'),
+      ['SP02', 'SP02', 'PHASE-2026', 2026, 'SP02'],
+    );
+    expect(result).toHaveLength(2);
+    expect(result[0]).toMatchObject({
+      code: 'AOW01',
+      name: 'Accelerating AI-Enabled Farm Advisory at Scale.',
+      composeCode: 'SP02-AOW01-2026',
+      year: 2026,
+    });
+    expect(result[1]).toMatchObject({
+      code: 'AOW02',
+      composeCode: 'SP02-AOW02-2026',
+      year: 2026,
+    });
   });
 
   it('should get indicator contributions with calculations', async () => {
