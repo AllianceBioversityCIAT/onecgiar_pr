@@ -46,7 +46,8 @@ describe('ReportResultFormComponent', () => {
         myInitiativesListReportingByPortfolio: mockInitiatives,
         myInitiativesList: [],
         validateBody: jest.fn(),
-        someMandatoryFieldIncompleteResultDetail: jest.fn()
+        someMandatoryFieldIncompleteResultDetail: jest.fn(),
+        fieldFeedbackList: jest.fn(() => [])
       },
       rolesSE: {
         validateReadOnly: jest.fn(() => Promise.resolve()),
@@ -383,9 +384,19 @@ describe('ReportResultFormComponent', () => {
   });
 
   describe('ngDoCheck', () => {
-    it('should call someMandatoryFieldIncompleteResultDetail', () => {
+    it('should call someMandatoryFieldIncompleteResultDetail in a coalesced rAF', () => {
+      // Scan is now throttled + coalesced into a requestAnimationFrame run outside Angular's zone (P2-2971).
+      const rafSpy = jest.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb: any) => {
+        cb(0);
+        return 0;
+      });
+      (component as any).lastScanAt = 0;
+      (component as any).scanScheduled = false;
+
       component.ngDoCheck();
+
       expect(mockApiService.dataControlSE.someMandatoryFieldIncompleteResultDetail).toHaveBeenCalledWith('.report_container');
+      rafSpy.mockRestore();
     });
   });
 

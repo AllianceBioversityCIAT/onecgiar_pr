@@ -12,7 +12,7 @@
             </div>
           }
         } @else {
-          @for (navOption of navigationOptions | panelMenu: this.resultLevelSE.currentResultTypeId : green_checks_string; track navOption.path) {
+          @for (navOption of navigationOptions | panelMenu: this.resultLevelSE.currentResultTypeId : this.dataControlSE.greenChecksString(); track navOption.path) {
             <a
               [hidden]="hideKP(navOption)"
               [routerLink]="'/result/result-detail/' + this.dataControlSE?.currentResult?.result_code + '/' + navOption.path"

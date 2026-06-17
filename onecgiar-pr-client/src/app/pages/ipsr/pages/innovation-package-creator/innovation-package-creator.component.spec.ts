@@ -55,6 +55,7 @@ describe('InnovationPackageCreatorComponent', () => {
         myInitiativesList: myInitiativesList,
         myInitiativesListIPSRByPortfolio: myInitiativesList,
         someMandatoryFieldIncompleteResultDetail: jest.fn(),
+        fieldFeedbackList: jest.fn(() => []),
         getCurrentIPSRPhase: () => of({}),
         reportingCurrentPhase: { phaseId: 34 },
         getCurrentPhases: () => of({}),
@@ -278,12 +279,20 @@ describe('InnovationPackageCreatorComponent', () => {
   });
 
   describe('ngDoCheck', () => {
-    it('should call checkMandatoryFields in ngDoCheck', () => {
+    it('should call checkMandatoryFields in a coalesced rAF', () => {
       const spy = jest.spyOn(mockApiService.dataControlSE, 'someMandatoryFieldIncompleteResultDetail');
+      // Scan is now throttled + coalesced into a requestAnimationFrame run outside Angular's zone (P2-2972).
+      const rafSpy = jest.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb: any) => {
+        cb(0);
+        return 0;
+      });
+      (component as any).lastScanAt = 0;
+      (component as any).scanScheduled = false;
 
       component.ngDoCheck();
 
       expect(spy).toHaveBeenCalledWith('.section_container');
+      rafSpy.mockRestore();
     });
   });
 });

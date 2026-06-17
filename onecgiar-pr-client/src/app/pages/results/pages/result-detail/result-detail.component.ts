@@ -1,4 +1,4 @@
-import { Component, DoCheck, OnInit, effect, HostListener, ElementRef } from '@angular/core';
+import { Component, DoCheck, OnInit, effect, HostListener, ElementRef, NgZone } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
@@ -30,7 +30,8 @@ export class ResultDetailComponent implements OnInit, DoCheck {
     public dataControlSE: DataControlService,
     private readonly greenChecksSE: GreenChecksService,
     private readonly clipboard: Clipboard,
-    private readonly elementRef: ElementRef
+    private readonly elementRef: ElementRef,
+    private readonly ngZone: NgZone
   ) {
     effect(() => {
       const portfolio = this.dataControlSE.currentResultSignal()?.portfolio;
@@ -111,9 +112,50 @@ export class ResultDetailComponent implements OnInit, DoCheck {
     });
   }
 
+  /** Throttle for the mandatory-field DOM scan (was running ~2000×/s via a self-sustaining setTimeout). */
+  private static readonly SCAN_THROTTLE_MS = 150;
+  private lastScanAt = 0;
+  private scanScheduled = false;
+  private trailingScanId: any = null;
+
   ngDoCheck(): void {
-    setTimeout(() => {
-      this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.section_container');
-    }, 10);
+    // The mandatory-field feedback scan reads the DOM (forces reflow). Running it on every
+    // change-detection cycle — and via setTimeout, which itself re-triggered CD — produced a
+    // self-sustaining loop scanning the DOM thousands of times per second. (P2-2967/P2-2969)
+    // Now: throttled (leading + trailing edge), coalesced into a single rAF, run OUTSIDE Angular's
+    // zone so it never re-triggers CD. A single CD tick is requested only when the result changed.
+    if (this.scanScheduled) return;
+    const elapsed = Date.now() - this.lastScanAt;
+    if (elapsed >= ResultDetailComponent.SCAN_THROTTLE_MS) {
+      this.runFeedbackScan();
+    } else if (this.trailingScanId === null) {
+      // Trailing edge: guarantees the final state is scanned even if no further CD fires.
+      this.ngZone.runOutsideAngular(() => {
+        this.trailingScanId = setTimeout(() => {
+          this.trailingScanId = null;
+          this.runFeedbackScan();
+        }, ResultDetailComponent.SCAN_THROTTLE_MS - elapsed);
+      });
+    }
+  }
+
+  private runFeedbackScan(): void {
+    if (this.trailingScanId !== null) {
+      clearTimeout(this.trailingScanId);
+      this.trailingScanId = null;
+    }
+    this.lastScanAt = Date.now();
+    this.scanScheduled = true;
+    this.ngZone.runOutsideAngular(() => {
+      requestAnimationFrame(() => {
+        this.scanScheduled = false;
+        const before = this.api.dataControlSE.fieldFeedbackList();
+        this.api.dataControlSE.someMandatoryFieldIncompleteResultDetail('.section_container');
+        if (this.api.dataControlSE.fieldFeedbackList() !== before) {
+          // Feedback list changed → re-enter the zone for one tick so the "X alerts" box repaints.
+          this.ngZone.run(() => {});
+        }
+      });
+    });
   }
 }

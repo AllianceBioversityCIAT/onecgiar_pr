@@ -70,6 +70,8 @@ describe('ResultDetailComponent', () => {
         resultPhaseList: [],
         someMandatoryFieldIncompleteResultDetail: jest.fn(),
         someMandatoryFieldIncomplete: jest.fn().mockReturnValue(false),
+        fieldFeedbackList: signal([]),
+        greenChecksString: () => '{}',
         currentResultSectionName: signal(''),
         myInitiativesList: []
       }
@@ -78,7 +80,8 @@ describe('ResultDetailComponent', () => {
     mockDataControlService = {
       currentResult: 'currentResult',
       currentResultSignal: signal({}),
-      currentResultSectionName: signal('')
+      currentResultSectionName: signal(''),
+      greenChecksString: () => '{}'
     }
 
     mockCurrentResultService = {
@@ -313,11 +316,20 @@ describe('ResultDetailComponent', () => {
   });
 
   describe('ngDoCheck', () => {
-    it('should call someMandatoryFieldIncompleteResultDetail after a delay', async () => {
+    it('should call someMandatoryFieldIncompleteResultDetail in a coalesced rAF', () => {
+      // Scan is now throttled + coalesced into a requestAnimationFrame run outside Angular's zone (P2-2969).
+      const rafSpy = jest.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb: any) => {
+        cb(0);
+        return 0;
+      });
+      // reset throttle: the fixture may have already run a scan
+      (component as any).lastScanAt = 0;
+      (component as any).scanScheduled = false;
+
       component.ngDoCheck();
-      jest.runAllTimers();
 
       expect(mockApiService.dataControlSE.someMandatoryFieldIncompleteResultDetail).toHaveBeenCalledWith('.section_container');
+      rafSpy.mockRestore();
     });
   });
 

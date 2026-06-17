@@ -57,6 +57,7 @@ describe('ResultCreatorComponent', () => {
       },
       dataControlSE: {
         someMandatoryFieldIncompleteResultDetail: jest.fn(),
+        fieldFeedbackList: jest.fn(() => []),
         myInitiativesList: myInitiativesList,
         validateBody: jest.fn(),
         getCurrentPhases: jest.fn(() => of({}))
@@ -398,12 +399,20 @@ describe('ResultCreatorComponent', () => {
   });
 
   describe('ngDoCheck()', () => {
-    it('should call someMandatoryFieldIncompleteResultDetail when ngDoCheck is triggered', () => {
+    it('should call someMandatoryFieldIncompleteResultDetail in a coalesced rAF', () => {
       const spy = jest.spyOn(mockApiService.dataControlSE, 'someMandatoryFieldIncompleteResultDetail');
+      // Scan is now throttled + coalesced into a requestAnimationFrame run outside Angular's zone (P2-2971).
+      const rafSpy = jest.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb: any) => {
+        cb(0);
+        return 0;
+      });
+      (component as any).lastScanAt = 0;
+      (component as any).scanScheduled = false;
 
       component.ngDoCheck();
 
       expect(spy).toHaveBeenCalledWith('.local_container');
+      rafSpy.mockRestore();
     });
   });
 

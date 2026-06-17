@@ -34,6 +34,9 @@ describe('PanelMenuComponent', () => {
       dataControlSE: {
         isKnowledgeProduct: false,
         green_checks: { section1: true, section2: false },
+        greenChecksString(this: any) {
+          return JSON.stringify(this.green_checks);
+        },
         currentResult: { initiative_id: 1, result_code: 'TEST001', version_id: 1, status_id: 1, inQA: false },
         myInitiativesList: [{ initiative_id: 1, role: 'Contributor' }]
       },

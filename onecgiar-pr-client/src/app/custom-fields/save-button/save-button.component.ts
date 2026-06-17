@@ -20,4 +20,7 @@ export class SaveButtonComponent {
     if (this.saveButtonSE.isSaving) return;
     this.clickSave.emit();
   }
+  trackByFeedback(_index: number, item: string): string {
+    return item;
+  }
 }
