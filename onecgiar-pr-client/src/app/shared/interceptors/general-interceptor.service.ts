@@ -27,6 +27,12 @@ export class GeneralInterceptorService implements HttpInterceptor {
       return next.handle(req.clone());
     }
 
+    // Static assets (e.g. the public QA status board JSON) are same-origin and need no auth header.
+    // Without this, a token-less request would set `auth: null` and break public pages. (P2-2967)
+    if (req.url.includes('assets/')) {
+      return next.handle(req.clone());
+    }
+
     const reqClone = req.clone({
       setHeaders: {
         auth: this.authService?.localStorageToken
