@@ -42,6 +42,9 @@ describe('RdEvidencesComponent', () => {
         PUT_loadFileInUploadSession: () => of(mockPUT_loadFileInUploadSessionResponse),
         POST_evidences: () => of({ response: [] })
       },
+      alertsFe: {
+        show: jest.fn()
+      },
       dataControlSE: {
         isKnowledgeProduct: true,
         currentResult: {
@@ -387,6 +390,40 @@ describe('RdEvidencesComponent', () => {
       component.deleteEvidence(1);
 
       expect(component.evidencesBody.evidences).toEqual([{ is_sharepoint: false }, { is_sharepoint: false }]);
+    });
+  });
+
+  describe('deleteEvidenceWithConfirm', () => {
+    it('should show the confirmation alert with the "Yes, delete" action', () => {
+      component.deleteEvidenceWithConfirm(0);
+
+      expect(mockApiService.alertsFe.show).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'confirm-delete-evidence', confirmText: 'Yes, delete' }),
+        expect.any(Function)
+      );
+    });
+
+    it('should delete the evidence AND auto-save when the user confirms (P2-3030)', () => {
+      component.evidencesBody = {
+        result_id: 1,
+        evidences: [{ is_sharepoint: false }, { is_sharepoint: true }, { is_sharepoint: false }],
+        gender_tag_level: '',
+        climate_change_tag_level: '',
+        nutrition_tag_level: '',
+        environmental_biodiversity_tag_level: '',
+        poverty_tag_level: ''
+      };
+      const deleteSpy = jest.spyOn(component, 'deleteEvidence');
+      const saveSpy = jest.spyOn(component, 'onSaveSection').mockResolvedValue(undefined);
+
+      component.deleteEvidenceWithConfirm(1);
+      // Invoke the confirmation callback the way the alert service would on "Yes, delete".
+      const confirmCallback = mockApiService.alertsFe.show.mock.calls[0][1];
+      confirmCallback();
+
+      expect(deleteSpy).toHaveBeenCalledWith(1);
+      expect(component.evidencesBody.evidences).toEqual([{ is_sharepoint: false }, { is_sharepoint: false }]);
+      expect(saveSpy).toHaveBeenCalledTimes(1);
     });
   });
 
