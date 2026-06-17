@@ -513,6 +513,52 @@ export class AoWBilateralRepository {
     }
   }
 
+  private calculateProgressPercentage(
+    targetValue: number,
+    actualValue: number,
+  ): number {
+    if (targetValue > 0) {
+      return (actualValue / targetValue) * 100;
+    }
+    if (targetValue === 0 && actualValue > 0) {
+      return actualValue * 100;
+    }
+    return 0;
+  }
+
+  private formatProgressPercentage(progressPercentage: number): string {
+    const progressRounded = Math.round(progressPercentage * 10) / 10;
+    if (!Number.isFinite(progressRounded)) {
+      return '0%';
+    }
+    if (Number.isInteger(progressRounded)) {
+      return `${progressRounded.toFixed(0)}%`;
+    }
+    return `${progressRounded.toFixed(1)}%`;
+  }
+
+  private mapIndicatorContributionRow(row: {
+    indicator_id: number;
+    target_value_sum: unknown;
+    actual_achieved_value_sum: unknown;
+    work_package_acronym: unknown;
+  }) {
+    const targetValue = Number(row.target_value_sum) || 0;
+    const actualValue = Number(row.actual_achieved_value_sum) || 0;
+
+    return {
+      target_value_sum: targetValue,
+      actual_achieved_value_sum: actualValue,
+      work_package_acronym:
+        typeof row.work_package_acronym === 'string'
+          ? row.work_package_acronym
+          : null,
+      progress_percentage: this.formatProgressPercentage(
+        this.calculateProgressPercentage(targetValue, actualValue),
+      ),
+    };
+  }
+
   async getIndicatorContributions(
     program: string,
     contextOrYear?: ReportingTocContext | number,
@@ -605,36 +651,10 @@ export class AoWBilateralRepository {
       >();
 
       for (const row of rows) {
-        const targetValue = Number(row.target_value_sum) || 0;
-        const actualValue = Number(row.actual_achieved_value_sum) || 0;
-        let progressPercentage = 0;
-        if (targetValue > 0) {
-          progressPercentage = (actualValue / targetValue) * 100;
-        } else if (targetValue === 0 && actualValue > 0) {
-          progressPercentage = actualValue * 100;
-        }
-        const progressRounded = Math.round(progressPercentage * 10) / 10;
-        const isWholeNumber = Number.isFinite(progressRounded)
-          ? Number.isInteger(progressRounded)
-          : false;
-        let formattedProgress = '0%';
-        if (Number.isFinite(progressRounded)) {
-          if (isWholeNumber) {
-            formattedProgress = `${progressRounded.toFixed(0)}%`;
-          } else {
-            formattedProgress = `${progressRounded.toFixed(1)}%`;
-          }
-        }
-
-        contributionsMap.set(row.indicator_id, {
-          target_value_sum: targetValue,
-          actual_achieved_value_sum: actualValue,
-          work_package_acronym:
-            typeof row.work_package_acronym === 'string'
-              ? row.work_package_acronym
-              : null,
-          progress_percentage: formattedProgress,
-        });
+        contributionsMap.set(
+          row.indicator_id,
+          this.mapIndicatorContributionRow(row),
+        );
       }
 
       return contributionsMap;
