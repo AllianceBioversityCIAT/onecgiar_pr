@@ -143,6 +143,36 @@
       "metricsBefore": "JSON.stringify(green_checks) was called on every CD cycle (hundreds of times/sec in active tabs)",
       "metricsAfter": "greenChecksString() computed is called only when green_checks signal changes (1-2 times per section load/update, not per CD)",
       "screenshots": []
+    },
+    {
+      "id": "p2-2973-lists-trackby",
+      "ticket": "P2-2973",
+      "title": "Lists: trackBy/track + dataKey (no row destroy/recreate)",
+      "area": "Results list · IPSR Innovation Packages list",
+      "status": "listo-para-pruebas",
+      "whatChanged": "Added dataKey to the Results list and IPSR list p-tables (PrimeNG reuses rows by key instead of rebuilding them on filter/sort/search) and stable trackBy/track on the sub-result loops. Both lists already paginate (10/50/100) and use a pure filter pipe, so no virtualization was needed; the OnPush-style 'virtualize long lists' part was scoped down to the safe trackBy/dataKey win. Note: the IPSR list filter pipe is pure:false (runs per CD) — left untouched (behaviour-risky) and flagged as a follow-up.",
+      "howToTest": [
+        "Open the Results list (/result/results-outlet/results-list).",
+        "Type in the search box: the list should filter correctly and instantly (e.g. a result code narrows to 1 row), and clearing it restores the full list.",
+        "Sort by a column (click a header) — order changes, no rows disappear or duplicate.",
+        "Change page size (10/50/100) and paginate — rows render correctly.",
+        "Click a result — it must navigate to its Result Detail (no broken selection).",
+        "Repeat the render/filter checks on the Innovation Packages list (/ipsr/list/innovation-list).",
+        "No console errors; no visual flicker when the list updates."
+      ],
+      "affects": [
+        "Results list table (filter, sort, pagination, row selection/navigation)",
+        "IPSR Innovation Packages list table",
+        "Sub-result rows rendered inside each list row"
+      ],
+      "risks": [
+        "dataKey='result_code' must be unique per row — selection/navigation must still work (verified: filter+sort+click navigates correctly)",
+        "track by subResult.id — confirm sub-results still render in the right row after filtering",
+        "Pure-pipe filtering unchanged; IPSR list pipe is still pure:false (per-CD) — separate follow-up, not in this change"
+      ],
+      "metricsBefore": "Lists re-created DOM rows on every filter/sort change (no row reuse).",
+      "metricsAfter": "Rows reused by key on filter/sort; filter 8560->1 row and back verified; click navigates to detail. 108 list unit tests pass.",
+      "screenshots": []
     }
   ],
   "extraImprovements": [

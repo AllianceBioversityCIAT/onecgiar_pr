@@ -39,6 +39,11 @@ export class InnovationPackageCustomTableComponent {
     public ipsrListService: IpsrListService
   ) {}
 
+  /** trackBy for the sub-results loops so rows are reused instead of destroyed/recreated. (P2-2973) */
+  trackBySubResult(_index: number, subResult: any): any {
+    return subResult?.id ?? _index;
+  }
+
   items: ItemMenu[] = [
     {
       label: 'Map to TOC',

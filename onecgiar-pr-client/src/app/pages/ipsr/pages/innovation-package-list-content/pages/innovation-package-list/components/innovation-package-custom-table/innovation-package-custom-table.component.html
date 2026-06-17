@@ -3,6 +3,7 @@
     sortField="result_code"
     [sortOrder]="-1"
     [value]="this.tableData"
+    dataKey="result_code"
     responsiveLayout="scroll"
     [paginator]="this.tableData?.length"
     [rows]="10"
@@ -31,7 +32,7 @@
         </td>
 
         <td *ngFor="let column of columnOrder; let i = index" class="{{ column.attr }}">
-          <ng-container *ngFor="let subResult of result['results']">
+          <ng-container *ngFor="let subResult of result['results']; trackBy: trackBySubResult">
             <a class="{{ column.class }}" [routerLink]="'/ipsr/detail/' + subResult?.result_code" [queryParams]="{ phase: subResult?.version_id }">
               <div class="new_tag" *ngIf="i == 1 && subResult.is_new && !subResult.legacy_id">New</div>
 
@@ -51,7 +52,7 @@
             class="subResults"
             pTooltip="Click to view the pdf"
             tooltipPosition="bottom"
-            *ngFor="let subResult of result['results']"
+            *ngFor="let subResult of result['results']; trackBy: trackBySubResult"
             [href]="'/reports/ipsr-details/' + subResult?.result_code + '?phase=' + subResult?.version_id"
             target="_blank"
             rel="noopener noreferrer">
@@ -60,7 +61,7 @@
         </td>
 
         <td *ngIf="!this.api.rolesSE.platformIsClosed">
-          <div class="subResults" *ngFor="let subResult of result['results']">
+          <div class="subResults" *ngFor="let subResult of result['results']; trackBy: trackBySubResult">
             <div class="icon_container">
               <i class="pi pi-ellipsis-v" (click)="menu.toggle($event); onPressAction(subResult)"></i>
             </div>
