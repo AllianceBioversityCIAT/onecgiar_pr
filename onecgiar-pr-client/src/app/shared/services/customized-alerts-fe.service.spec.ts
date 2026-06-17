@@ -220,6 +220,32 @@ describe('CustomizedAlertsFeService', () => {
     });
   });
 
+  describe('show - single alert on screen (P2-3030)', () => {
+    beforeEach(() => {
+      // Previous "show" describe replaced these with jest.fn() (own properties);
+      // remove the overrides so the real jsdom DOM is used here.
+      delete (document as any).getElementById;
+      delete (document as any).getElementsByTagName;
+      document.body.innerHTML = '';
+      document.body.appendChild(document.createElement('app-root'));
+    });
+
+    afterEach(() => {
+      document.body.innerHTML = '';
+    });
+
+    it('removes the previous alert when a new one is shown (no overlap)', () => {
+      service.show({ id: 'first-alert', title: 'First', status: 'warning', confirmText: 'Yes' });
+      expect(document.querySelectorAll('.custom_modal_container').length).toBe(1);
+
+      service.show({ id: 'second-alert', title: 'Section saved successfully', status: 'success' });
+
+      const containers = document.querySelectorAll('.custom_modal_container');
+      expect(containers.length).toBe(1);
+      expect(containers[0].id).toBe('second-alert');
+    });
+  });
+
   describe('closeAction', () => {
     it('should add animation classes when elements exist', () => {
       const alertModal = document.createElement('div');

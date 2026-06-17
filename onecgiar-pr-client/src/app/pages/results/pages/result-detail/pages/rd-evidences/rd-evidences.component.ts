@@ -214,10 +214,15 @@ export class RdEvidencesComponent implements OnInit {
   }
 
   // Delete from the accordion header with a confirmation popup (reuses the existing alert).
+  // P2-3030: confirming the delete persists immediately via the section save flow (same as
+  // create/edit confirm), so the deletion is not lost when navigating away and back.
   deleteEvidenceWithConfirm(index: number) {
     this.api.alertsFe.show(
       { id: 'confirm-delete-evidence', title: 'Are you sure you want to delete this evidence?', status: 'warning', confirmText: 'Yes, delete' },
-      () => this.deleteEvidence(index)
+      () => {
+        this.deleteEvidence(index);
+        this.onSaveSection();
+      }
     );
   }
 
