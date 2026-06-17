@@ -137,7 +137,12 @@ export class AoWBilateralRepository {
     try {
       const context = await this.resolveContext();
       return context.phaseUuid;
-    } catch (_error) {
+    } catch (error) {
+      this._handlersError.returnErrorRepository({
+        error,
+        className: AoWBilateralRepository.name,
+        debug: true,
+      });
       return null;
     }
   }
@@ -146,37 +151,40 @@ export class AoWBilateralRepository {
    * Returns active work packages linked to OUTPUT/OUTCOME ToC nodes
    * for the requested program, constrained by reporting phase and year.
    *
-   * Listing uses clarisa wp metadata even when toc-integration temporarily
-   * attached active-phase results to a local wp with the same acronym.
+   * Prefers clarisa wp metadata when a clarisa row exists for the acronym;
+   * otherwise falls back to local wp rows (e.g. SP02 boards synced as local only).
    */
   async findWorkPackagesByProgram(
     programOfficialCode: string,
     context: ReportingTocContext,
   ): Promise<TocWorkPackageRow[]> {
     const query = `
-      SELECT DISTINCT
-        cw.toc_id AS id,
-        UPPER(TRIM(cw.acronym)) AS code,
-        cw.name AS name,
-        cw.wp_official_code AS composeCode,
-        cw.year AS year
-      FROM ${env.DB_TOC}.toc_work_packages cw
-      INNER JOIN ${env.DB_TOC}.toc_work_packages linked_wp
-        ON UPPER(TRIM(linked_wp.acronym)) = UPPER(TRIM(cw.acronym))
-        AND linked_wp.year = cw.year
-      INNER JOIN ${env.DB_TOC}.toc_results tr ON tr.wp_id = linked_wp.toc_id
+      SELECT
+        UPPER(TRIM(wp.acronym)) AS code,
+        COALESCE(MAX(cw.toc_id), MAX(wp.toc_id)) AS id,
+        COALESCE(MAX(cw.name), MAX(wp.name)) AS name,
+        COALESCE(MAX(cw.wp_official_code), MAX(wp.wp_official_code)) AS composeCode,
+        MAX(wp.year) AS year
+      FROM ${env.DB_TOC}.toc_work_packages wp
+      INNER JOIN ${env.DB_TOC}.toc_results tr ON tr.wp_id = wp.toc_id
+      LEFT JOIN ${env.DB_TOC}.toc_work_packages cw
+        ON UPPER(TRIM(cw.acronym)) = UPPER(TRIM(wp.acronym))
+        AND cw.year = wp.year
+        AND LOWER(TRIM(cw.source)) = 'clarisa'
+        AND cw.wp_official_code LIKE CONCAT(?, '-%')
       WHERE tr.official_code = ?
         AND tr.phase = ?
         AND tr.is_active = 1
         AND tr.category IN ('OUTPUT', 'OUTCOME')
-        AND cw.year = ?
-        AND LOWER(TRIM(cw.source)) = 'clarisa'
-        AND cw.wp_official_code LIKE CONCAT(?, '-%')
+        AND wp.year = ?
+        AND wp.wp_official_code LIKE CONCAT(?, '-%')
+      GROUP BY UPPER(TRIM(wp.acronym))
       ORDER BY code ASC
     `;
 
     try {
       const rows = await this.dataSource.query(query, [
+        programOfficialCode,
         programOfficialCode,
         context.phaseUuid,
         context.reportingYear,
@@ -320,10 +328,10 @@ export class AoWBilateralRepository {
         tri.type_value,
         NULLIF(TRIM(tri.type_name), '') AS type_name,
         tri.location,
-        COALESCE(SUM(CAST(trit.target_value AS SIGNED)), 0) AS target_value_sum,
-        trit.number_target,
-        trit.target_date,
-        trit.target_value,
+        COALESCE(MAX(CAST(trit.target_value AS SIGNED)), 0) AS target_value_sum,
+        MAX(trit.number_target) AS number_target,
+        MAX(trit.target_date) AS target_date,
+        COALESCE(MAX(CAST(trit.target_value AS SIGNED)), 0) AS target_value,
         CASE
           WHEN tri.type_value LIKE '%Number of Policy%' THEN 1
           WHEN tri.type_value LIKE '%Innovation Use%' THEN 2
@@ -358,9 +366,11 @@ export class AoWBilateralRepository {
           AND UPPER(TRIM(wp.acronym)) = ?
           AND wp.wp_official_code LIKE CONCAT(?, '-%')
       `;
-      params.push(options.context.reportingYear);
-      params.push(options.areaAcronym.trim().toUpperCase());
-      params.push(program.trim().toUpperCase());
+      params.push(
+        options.context.reportingYear,
+        options.areaAcronym.trim().toUpperCase(),
+        program.trim().toUpperCase(),
+      );
     }
 
     query += `
@@ -378,8 +388,7 @@ export class AoWBilateralRepository {
         AND tr.category IN (${categoryPlaceholders})
         AND tr.is_active = 1
     `;
-    params.push(program);
-    params.push(...categories);
+    params.push(program, ...categories);
     query += ` AND tr.phase = ?`;
     params.push(options.context.phaseUuid);
 
@@ -396,10 +405,7 @@ export class AoWBilateralRepository {
         tri.unit_messurament,
         tri.type_value,
         tri.type_name,
-        tri.location,
-        trit.number_target,
-        trit.target_date,
-        trit.target_value
+        tri.location
       ORDER BY tr.id ASC, tri.id ASC
     `;
 
@@ -422,6 +428,15 @@ export class AoWBilateralRepository {
       }
 
       if (row.indicator_id !== null) {
+        const tocResult = grouped.get(row.toc_result_id);
+        const indicatorId = Number(row.indicator_id);
+        const alreadyListed = tocResult?.indicators.some(
+          (existing) => Number(existing.indicator_id) === indicatorId,
+        );
+        if (alreadyListed) {
+          continue;
+        }
+
         const indicator: TocResultResponse['indicators'][number] = {
           indicator_id: row.indicator_id,
           indicator_description: row.indicator_description,
@@ -498,6 +513,52 @@ export class AoWBilateralRepository {
     }
   }
 
+  private calculateProgressPercentage(
+    targetValue: number,
+    actualValue: number,
+  ): number {
+    if (targetValue > 0) {
+      return (actualValue / targetValue) * 100;
+    }
+    if (targetValue === 0 && actualValue > 0) {
+      return actualValue * 100;
+    }
+    return 0;
+  }
+
+  private formatProgressPercentage(progressPercentage: number): string {
+    const progressRounded = Math.round(progressPercentage * 10) / 10;
+    if (!Number.isFinite(progressRounded)) {
+      return '0%';
+    }
+    if (Number.isInteger(progressRounded)) {
+      return `${progressRounded.toFixed(0)}%`;
+    }
+    return `${progressRounded.toFixed(1)}%`;
+  }
+
+  private mapIndicatorContributionRow(row: {
+    indicator_id: number;
+    target_value_sum: unknown;
+    actual_achieved_value_sum: unknown;
+    work_package_acronym: unknown;
+  }) {
+    const targetValue = Number(row.target_value_sum) || 0;
+    const actualValue = Number(row.actual_achieved_value_sum) || 0;
+
+    return {
+      target_value_sum: targetValue,
+      actual_achieved_value_sum: actualValue,
+      work_package_acronym:
+        typeof row.work_package_acronym === 'string'
+          ? row.work_package_acronym
+          : null,
+      progress_percentage: this.formatProgressPercentage(
+        this.calculateProgressPercentage(targetValue, actualValue),
+      ),
+    };
+  }
+
   async getIndicatorContributions(
     program: string,
     contextOrYear?: ReportingTocContext | number,
@@ -566,14 +627,16 @@ export class AoWBilateralRepository {
           tri.id
       ) AS act ON act.indicator_id = tgt.indicator_id
     `;
-    params.push(context.reportingYear);
-    params.push(context.reportingYear);
-    params.push(program);
-    params.push(context.phaseUuid);
-    params.push(context.reportingYear);
-    params.push(context.reportingYear);
-    params.push(program);
-    params.push(context.phaseUuid);
+    params.push(
+      context.reportingYear,
+      context.reportingYear,
+      program,
+      context.phaseUuid,
+      context.reportingYear,
+      context.reportingYear,
+      program,
+      context.phaseUuid,
+    );
 
     try {
       const rows = await this.dataSource.query(query, params);
@@ -588,31 +651,10 @@ export class AoWBilateralRepository {
       >();
 
       for (const row of rows) {
-        const targetValue = Number(row.target_value_sum) || 0;
-        const actualValue = Number(row.actual_achieved_value_sum) || 0;
-        let progressPercentage = 0;
-        if (targetValue > 0) {
-          progressPercentage = (actualValue / targetValue) * 100;
-        } else if (targetValue === 0 && actualValue > 0) {
-          progressPercentage = actualValue * 100;
-        }
-        const progressRounded = Math.round(progressPercentage * 10) / 10;
-        const isWholeNumber = Number.isFinite(progressRounded)
-          ? Number.isInteger(progressRounded)
-          : false;
-        const formattedProgress = Number.isFinite(progressRounded)
-          ? `${isWholeNumber ? progressRounded.toFixed(0) : progressRounded.toFixed(1)}%`
-          : '0%';
-
-        contributionsMap.set(row.indicator_id, {
-          target_value_sum: targetValue,
-          actual_achieved_value_sum: actualValue,
-          work_package_acronym:
-            typeof row.work_package_acronym === 'string'
-              ? row.work_package_acronym
-              : null,
-          progress_percentage: formattedProgress,
-        });
+        contributionsMap.set(
+          row.indicator_id,
+          this.mapIndicatorContributionRow(row),
+        );
       }
 
       return contributionsMap;
@@ -647,7 +689,7 @@ export class AoWBilateralRepository {
     `;
 
     try {
-      return this.dataSource.query(query, [tocResultId, phaseUuid]);
+      return await this.dataSource.query(query, [tocResultId, phaseUuid]);
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         error,
