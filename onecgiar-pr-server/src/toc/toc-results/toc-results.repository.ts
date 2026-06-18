@@ -1,5 +1,5 @@
 import { Injectable, HttpStatus, Logger } from '@nestjs/common';
-import { env } from 'process';
+import { env } from 'node:process';
 import { DataSource, Repository } from 'typeorm';
 import { TocResult } from './entities/toc-result.entity';
 import { Result } from '../../api/results/entities/result.entity';
@@ -10,13 +10,47 @@ import {
 } from '../../shared/constants/indicator-type-mapping.constant';
 import { ClarisaInitiative } from '../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 import { GlobalParameter } from '../../api/global-parameter/entities/global-parameter.entity';
+import {
+  throwServiceError,
+  formatUnknownError,
+} from '../../shared/utils/service-error.util';
 
 @Injectable()
 export class TocResultsRepository extends Repository<TocResult> {
   private readonly logger = new Logger(TocResultsRepository.name);
 
-  constructor(private dataSource: DataSource) {
+  constructor(private readonly dataSource: DataSource) {
     super(TocResult, dataSource.createEntityManager());
+  }
+
+  private async getTocPhaseIdForReportingYear(
+    reportingYear: number,
+  ): Promise<string> {
+    const query = `
+      SELECT toc_pahse_id
+      FROM ${env.DB_NAME}.version
+      WHERE is_active = 1 AND status = 1 AND app_module_id = 1
+        AND phase_year = ?
+      LIMIT 1
+    `;
+    try {
+      const rows = await this.dataSource.query(query, [reportingYear]);
+      const phaseId = rows?.[0]?.toc_pahse_id;
+      if (typeof phaseId !== 'string' || !phaseId.trim()) {
+        throwServiceError(
+          `No TOC phase is configured for reporting year ${reportingYear}.`,
+          HttpStatus.NOT_FOUND,
+        );
+      }
+      return phaseId.trim();
+    } catch (error) {
+      if (error?.status) {
+        throw error;
+      }
+      throw new Error(
+        `[${TocResultsRepository.name}] => getTocPhaseIdForReportingYear error: ${formatUnknownError(error)}`,
+      );
+    }
   }
 
   private async getCurrentTocPhaseId(): Promise<string | null> {
@@ -31,7 +65,7 @@ export class TocResultsRepository extends Repository<TocResult> {
       return rows?.[0]?.toc_pahse_id ?? null;
     } catch (error) {
       throw new Error(
-        `[${TocResultsRepository.name}] => getCurrentTocPhaseId error: ${error}`,
+        `[${TocResultsRepository.name}] => getCurrentTocPhaseId error: ${formatUnknownError(error)}`,
       );
     }
   }
@@ -44,11 +78,10 @@ export class TocResultsRepository extends Repository<TocResult> {
       const deleteData = await this.query(queryData);
       return deleteData;
     } catch (error) {
-      throw {
-        message: `[${TocResultsRepository.name}] => deleteAllData error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throwServiceError(
+        `[${TocResultsRepository.name}] => deleteAllData error: ${formatUnknownError(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -69,11 +102,10 @@ export class TocResultsRepository extends Repository<TocResult> {
       const tocResult: TocResult[] = await this.query(queryData);
       return tocResult;
     } catch (error) {
-      throw {
-        message: `[${TocResultsRepository.name}] => getAllTocResults error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throwServiceError(
+        `[${TocResultsRepository.name}] => getAllTocResults error: ${formatUnknownError(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -169,7 +201,7 @@ export class TocResultsRepository extends Repository<TocResult> {
     left join ${env.DB_OST}.initiatives_by_stages ibs on ibs.id = wp.initvStgId
 	  where tr.inititiative_id = ?
     	and tr.toc_level_id = ?
-      ${tocLevel != 3 ? `and ibs.stageId = 4` : ``}
+      ${tocLevel === 3 ? `` : `and ibs.stageId = 4`}
       and tr.is_active > 0
     order by wp.acronym, tr.title ASC;
     `,
@@ -210,11 +242,10 @@ export class TocResultsRepository extends Repository<TocResult> {
       );
       return tocResult;
     } catch (error) {
-      throw {
-        message: `[${TocResultsRepository.name}] => getTocIdFromOst error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throwServiceError(
+        `[${TocResultsRepository.name}] => getTocIdFromOst error: ${formatUnknownError(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -243,11 +274,10 @@ export class TocResultsRepository extends Repository<TocResult> {
       const tocResult: TocResult[] = await this.query(queryData);
       return tocResult;
     } catch (error) {
-      throw {
-        message: `[${TocResultsRepository.name}] => getTocIdFromOst error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throwServiceError(
+        `[${TocResultsRepository.name}] => getTocIdFromOst error: ${formatUnknownError(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -257,11 +287,10 @@ export class TocResultsRepository extends Repository<TocResult> {
       const tocResult: TocResult[] = await this.query(queryData);
       return tocResult;
     } catch (error) {
-      throw {
-        message: `[${TocResultsRepository.name}] => inactiveTocResult error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throwServiceError(
+        `[${TocResultsRepository.name}] => inactiveTocResult error: ${formatUnknownError(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -284,11 +313,10 @@ export class TocResultsRepository extends Repository<TocResult> {
       const tocResult: TocResult[] = await this.query(queryData);
       return tocResult;
     } catch (error) {
-      throw {
-        message: `[${TocResultsRepository.name}] => inactiveTocResult error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throwServiceError(
+        `[${TocResultsRepository.name}] => inactiveTocResult error: ${formatUnknownError(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -317,11 +345,10 @@ export class TocResultsRepository extends Repository<TocResult> {
       ]);
       return tocResult;
     } catch (error) {
-      throw {
-        message: `[${TocResultsRepository.name}] => getTocIdFromOst error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throwServiceError(
+        `[${TocResultsRepository.name}] => getTocIdFromOst error: ${formatUnknownError(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -340,11 +367,10 @@ export class TocResultsRepository extends Repository<TocResult> {
       const tocid = await this.query(queryData, [resultId]);
       return tocid;
     } catch (error) {
-      throw {
-        message: `[${TocResultsRepository.name}] => getTocIdFromOst error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throwServiceError(
+        `[${TocResultsRepository.name}] => getTocIdFromOst error: ${formatUnknownError(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -359,11 +385,10 @@ export class TocResultsRepository extends Repository<TocResult> {
       const tocid = await this.query(queryData, [initiativeId]);
       return tocid;
     } catch (error) {
-      throw {
-        message: `[${TocResultsRepository.name}] => getTocIdFromOst by initiative error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throwServiceError(
+        `[${TocResultsRepository.name}] => getTocIdFromOst by initiative error: ${formatUnknownError(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -388,11 +413,10 @@ export class TocResultsRepository extends Repository<TocResult> {
       const tocResult: TocResult[] = await this.query(queryData);
       return tocResult.length ? tocResult[0] : undefined;
     } catch (error) {
-      throw {
-        message: `[${TocResultsRepository.name}] => getAllTocResults error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throwServiceError(
+        `[${TocResultsRepository.name}] => getAllTocResults error: ${formatUnknownError(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -410,11 +434,10 @@ export class TocResultsRepository extends Repository<TocResult> {
       const eoiOutcome: any[] = await this.query(query, [initId]);
       return eoiOutcome;
     } catch (error) {
-      throw {
-        message: `[${TocResultsRepository.name}] => getAllTocResults error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throwServiceError(
+        `[${TocResultsRepository.name}] => getAllTocResults error: ${formatUnknownError(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -441,6 +464,7 @@ export class TocResultsRepository extends Repository<TocResult> {
   async $_getResultTocByConfigV2(
     init_id: number,
     toc_level: number,
+    reportingYear: number,
     resultTypeId?: number,
     resultId?: number,
     planned?: boolean | string,
@@ -455,11 +479,10 @@ export class TocResultsRepository extends Repository<TocResult> {
 
     const category = categoryMap[toc_level];
     if (!category) {
-      throw {
-        message: `Invalid toc level: ${toc_level}. Valid levels are 1 (OUTPUT), 2 (OUTCOME), 3 (EOI)`,
-        response: {},
-        status: HttpStatus.BAD_REQUEST,
-      };
+      throwServiceError(
+        `Invalid toc level: ${toc_level}. Valid levels are 1 (OUTPUT), 2 (OUTCOME), 3 (EOI)`,
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const isInitiativeValidation = await this.$_initiativeValidation(init_id);
@@ -475,17 +498,29 @@ export class TocResultsRepository extends Repository<TocResult> {
         })
         .then((el) => el.value);
     } else {
-      tocPhaseId = await this.getCurrentTocPhaseId();
+      tocPhaseId = await this.getTocPhaseIdForReportingYear(reportingYear);
     }
 
-    const params: (string | number)[] = [init_id, category];
+    const params: (string | number)[] = isInitiativeValidation
+      ? [init_id, category]
+      : [reportingYear, init_id, category];
     let whereTocPhaseId = '';
+    let workPackageJoin = `
+      LEFT JOIN ${env.DB_TOC}.toc_work_packages wp 
+        ON wp.toc_id = tr.wp_id
+    `;
+
     if (tocPhaseId) {
       params.push(tocPhaseId);
       if (isInitiativeValidation) {
         whereTocPhaseId = `AND tr.version_id = ?`;
       } else {
         whereTocPhaseId = `AND tr.phase = ?`;
+        workPackageJoin = `
+      LEFT JOIN ${env.DB_TOC}.toc_work_packages wp 
+        ON wp.toc_id = tr.wp_id
+          AND wp.year = ?
+    `;
       }
     }
 
@@ -564,8 +599,7 @@ export class TocResultsRepository extends Repository<TocResult> {
         wp.acronym AS wp_short_name,
         NULL AS action_area_outcome_id
       FROM ${env.DB_TOC}.toc_results tr
-      LEFT JOIN ${env.DB_TOC}.toc_work_packages wp 
-        ON wp.toc_id = tr.wp_id
+      ${workPackageJoin}
       LEFT JOIN clarisa_initiatives ci 
         ON ci.official_code = tr.official_code
       WHERE tr.is_active > 0
@@ -580,11 +614,10 @@ export class TocResultsRepository extends Repository<TocResult> {
       const res = await this.query(queryData, params);
       return res;
     } catch (error) {
-      throw {
-        message: `[${TocResultsRepository.name}] => _getResultTocByConfigV2 error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throwServiceError(
+        `[${TocResultsRepository.name}] => _getResultTocByConfigV2 error: ${formatUnknownError(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -611,7 +644,7 @@ export class TocResultsRepository extends Repository<TocResult> {
     }>
   > {
     const numericIds = (tocResultIds ?? [])
-      .map((id) => Number(id))
+      .map(Number)
       .filter((id) => Number.isFinite(id));
 
     if (!numericIds.length) {
@@ -619,7 +652,7 @@ export class TocResultsRepository extends Repository<TocResult> {
     }
 
     const placeholders = numericIds.map(() => '?').join(', ');
-    const targetYear = result.obj_version?.phase_year || year.year;
+    const targetYear = Number(year.year);
 
     const queryParams: any[] = [targetYear, ...numericIds];
 
@@ -648,7 +681,7 @@ export class TocResultsRepository extends Repository<TocResult> {
         }
       } catch (error) {
         this.logger.warn(
-          `Error checking planned_result for result ${resultId} in getTocIndicatorsByResultIds: ${error}`,
+          `Error checking planned_result for result ${resultId} in getTocIndicatorsByResultIds: ${formatUnknownError(error)}`,
         );
       }
     }
@@ -723,11 +756,10 @@ export class TocResultsRepository extends Repository<TocResult> {
     try {
       return await this.query(query, queryParams);
     } catch (error) {
-      throw {
-        message: `[${TocResultsRepository.name}] => getTocIndicatorsByResultIds error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throwServiceError(
+        `[${TocResultsRepository.name}] => getTocIndicatorsByResultIds error: ${formatUnknownError(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -748,7 +780,7 @@ export class TocResultsRepository extends Repository<TocResult> {
     }>
   > {
     const numericIds = (tocResultIds ?? [])
-      .map((id) => Number(id))
+      .map(Number)
       .filter((id) => Number.isFinite(id));
 
     if (!numericIds.length) {
@@ -801,11 +833,10 @@ export class TocResultsRepository extends Repository<TocResult> {
           params,
         )}`,
       );
-      throw {
-        message: `[${TocResultsRepository.name}] => getResultIndicatorMappings error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throwServiceError(
+        `[${TocResultsRepository.name}] => getResultIndicatorMappings error: ${formatUnknownError(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -818,11 +849,10 @@ export class TocResultsRepository extends Repository<TocResult> {
 
     const category = categoryMap[tocLevel];
     if (!category) {
-      throw {
-        message: `Invalid toc level: ${tocLevel}. Valid levels are 1 (OUTPUT), 2 (OUTCOME), 3 (EOI)`,
-        response: {},
-        status: HttpStatus.BAD_REQUEST,
-      };
+      throwServiceError(
+        `Invalid toc level: ${tocLevel}. Valid levels are 1 (OUTPUT), 2 (OUTCOME), 3 (EOI)`,
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const tocPhaseId = await this.getCurrentTocPhaseId();
@@ -861,11 +891,10 @@ export class TocResultsRepository extends Repository<TocResult> {
       const tocResult: TocResult[] = await this.query(queryData, params);
       return tocResult;
     } catch (error) {
-      throw {
-        message: `[${TocResultsRepository.name}] => getAllTocResultsByInitiativeV2 error: ${error}`,
-        response: {},
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-      };
+      throwServiceError(
+        `[${TocResultsRepository.name}] => getAllTocResultsByInitiativeV2 error: ${formatUnknownError(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 }

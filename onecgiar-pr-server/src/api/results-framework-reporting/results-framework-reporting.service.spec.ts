@@ -18,6 +18,15 @@ import { ResultsByProjectsService } from '../results/results_by_projects/results
 import { ContributionToIndicatorResultsRepository } from '../contribution-to-indicators/repositories/contribution-to-indicator-result.repository';
 import { ResultsTocTargetIndicatorRepository } from '../results/results-toc-results/repositories/result-toc-result-target-indicator.repository';
 import { ResultsByInstitutionsService } from '../results/results_by_institutions/results_by_institutions.service';
+import { ReportingTocContextService } from './reporting-toc-context/reporting-toc-context.service';
+import { CreateResultFromFrameworkHandler } from './application/commands/create-result-from-framework/create-result-from-framework.handler';
+import { CreateFrameworkResultEntityService } from './application/commands/create-result-from-framework/create-framework-result-entity.service';
+import { LinkFrameworkResultTocService } from './application/commands/create-result-from-framework/link-framework-result-toc.service';
+import { FrameworkResultTocIndicatorsService } from './application/commands/create-result-from-framework/framework-result-toc-indicators.service';
+import { ApplyFrameworkResultAssociationsService } from './application/commands/create-result-from-framework/apply-framework-result-associations.service';
+import { GetExistingResultContributorsToIndicatorsHandler } from './application/queries/get-existing-result-contributors/get-existing-result-contributors.handler';
+import { ExistingResultContributorsLoaderService } from './application/queries/get-existing-result-contributors/existing-result-contributors-loader.service';
+import { ContributorsRoleResolverService } from './application/queries/get-existing-result-contributors/contributors-role-resolver.service';
 
 const mockClarisaInitiativesRepository = {
   findOne: jest.fn(),
@@ -47,12 +56,32 @@ const mockHandlersError = {
 };
 
 const mockTocResultsRepository = {
+  findWorkPackagesByProgram: jest.fn(),
   findByCompositeCode: jest.fn(),
   find2030Outcomes: jest.fn(),
   findResultById: jest.fn(),
   findIndicatorById: jest.fn(),
   findUnitAcronymsByProgram: jest.fn(),
   getIndicatorContributions: jest.fn(),
+};
+
+const defaultTocContext = {
+  reportingYear: 2025,
+  phaseUuid: 'PHASE-1',
+};
+
+const mockReportingTocContextService = {
+  resolve: jest.fn(),
+};
+
+const buildTocContextError = (message: string, status: number) => {
+  const error = new Error(message) as Error & {
+    status: number;
+    response: Record<string, unknown>;
+  };
+  error.status = status;
+  error.response = {};
+  return error;
 };
 
 const mockResultsService = {
@@ -121,6 +150,13 @@ describe('ResultsFrameworkReportingService', () => {
     mockTocResultsRepository.getIndicatorContributions.mockResolvedValue(
       new Map(),
     );
+    mockReportingTocContextService.resolve.mockImplementation(
+      (yearOverride?: number) =>
+        Promise.resolve({
+          ...defaultTocContext,
+          reportingYear: yearOverride ?? defaultTocContext.reportingYear,
+        }),
+    );
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -140,6 +176,10 @@ describe('ResultsFrameworkReportingService', () => {
         },
         { provide: YearRepository, useValue: mockYearRepository },
         { provide: HandlersError, useValue: mockHandlersError },
+        {
+          provide: ReportingTocContextService,
+          useValue: mockReportingTocContextService,
+        },
         {
           provide: AoWBilateralRepository,
           useValue: mockTocResultsRepository,
@@ -181,6 +221,14 @@ describe('ResultsFrameworkReportingService', () => {
           provide: ResultsByInstitutionsService,
           useValue: mockResultsByInstitutionsService,
         },
+        CreateResultFromFrameworkHandler,
+        CreateFrameworkResultEntityService,
+        LinkFrameworkResultTocService,
+        FrameworkResultTocIndicatorsService,
+        ApplyFrameworkResultAssociationsService,
+        GetExistingResultContributorsToIndicatorsHandler,
+        ExistingResultContributorsLoaderService,
+        ContributorsRoleResolverService,
       ],
     }).compile();
 
@@ -207,32 +255,17 @@ describe('ResultsFrameworkReportingService', () => {
         official_code: 'PR-001',
         name: 'Program 1',
         short_name: 'P1',
+        portfolio_id: 3,
       });
-      mockRoleByUserRepository.findOne.mockResolvedValue({ id: 1 });
-      mockYearRepository.findOne.mockResolvedValue({ year: 2025 });
-      mockClarisaGlobalUnitRepository.findOne.mockResolvedValue({
-        id: 100,
-        code: 'PR-001',
-        name: 'Program Node',
-        composeCode: 'PR-001-ROOT',
-        year: 2025,
-        level: 1,
-        portfolioId: 3,
-      });
-      mockClarisaGlobalUnitRepository.find.mockResolvedValue([
+      mockTocResultsRepository.findWorkPackagesByProgram.mockResolvedValue([
         {
           id: 101,
           code: 'PR-001-A',
           name: 'Child A',
-          composeCode: 'PR-001-ROOT-A',
+          composeCode: 'PR-001-A',
           year: 2025,
-          level: 2,
-          parentId: 100,
         },
       ]);
-      mockTocResultsRepository.findUnitAcronymsByProgram.mockResolvedValue(
-        new Set(['PR-001-A']),
-      );
       mockTocResultsRepository.getIndicatorContributions.mockResolvedValue(
         new Map([
           [
@@ -262,16 +295,12 @@ describe('ResultsFrameworkReportingService', () => {
         where: { official_code: 'PR-001', active: true },
         select: ['id', 'official_code', 'name', 'short_name', 'portfolio_id'],
       });
-      expect(mockClarisaGlobalUnitRepository.find).toHaveBeenCalledWith({
-        where: {
-          parentId: 100,
-          level: 2,
-          portfolioId: 3,
-          year: 2025,
-          isActive: true,
-        },
-        order: { code: 'ASC' },
-      });
+      expect(
+        mockTocResultsRepository.findWorkPackagesByProgram,
+      ).toHaveBeenCalledWith('PR-001', defaultTocContext);
+      expect(
+        mockTocResultsRepository.getIndicatorContributions,
+      ).toHaveBeenCalledWith('PR-001', defaultTocContext);
 
       expect(result).toMatchObject({
         status: 200,
@@ -283,9 +312,10 @@ describe('ResultsFrameworkReportingService', () => {
             shortName: 'P1',
           },
           parentUnit: {
-            id: 100,
+            id: 5,
             code: 'PR-001',
             level: 1,
+            year: 2025,
           },
           units: [
             expect.objectContaining({
@@ -299,7 +329,11 @@ describe('ResultsFrameworkReportingService', () => {
               },
             }),
           ],
-          metadata: { activeYear: 2025, portfolio: 3 },
+          metadata: {
+            activeYear: 2025,
+            phaseUuid: 'PHASE-1',
+            portfolio: 3,
+          },
           globalProgress: {
             targetValueSum: 10,
             actualAchievedValueSum: 7,
@@ -313,21 +347,20 @@ describe('ResultsFrameworkReportingService', () => {
       mockClarisaInitiativesRepository.findOne.mockResolvedValue({
         id: 5,
         official_code: 'PR-002',
+        short_name: 'P2',
+        portfolio_id: 3,
       });
-      mockRoleByUserRepository.findOne.mockResolvedValue(null);
-      mockRoleByUserRepository.isUserAdmin.mockResolvedValue(true);
-      mockYearRepository.findOne.mockResolvedValue({ year: 2025 });
-      mockClarisaGlobalUnitRepository.findOne.mockResolvedValue({
-        id: 200,
-        code: 'PR-002',
-        composeCode: 'PR-002-ROOT',
-        level: 1,
-        year: 2025,
-        portfolioId: 3,
-      });
-      mockClarisaGlobalUnitRepository.find.mockResolvedValue([]);
-      mockTocResultsRepository.findUnitAcronymsByProgram.mockResolvedValue(
-        new Set([]),
+      mockTocResultsRepository.findWorkPackagesByProgram.mockResolvedValue([
+        {
+          id: 201,
+          code: 'PR-002-A',
+          name: 'Child A',
+          composeCode: 'PR-002-A',
+          year: 2025,
+        },
+      ]);
+      mockTocResultsRepository.getIndicatorContributions.mockResolvedValue(
+        new Map(),
       );
 
       const result = await service.getGlobalUnitsByProgram(user, 'PR-002');
@@ -335,47 +368,25 @@ describe('ResultsFrameworkReportingService', () => {
       expect(result.status).toBe(200);
     });
 
-    it('should filter out units whose code does not exist in ToC work packages', async () => {
+    it('should return only work packages available in the ToC catalogue', async () => {
       mockClarisaInitiativesRepository.findOne.mockResolvedValue({
         id: 7,
         official_code: 'PR-010',
         name: 'Program 10',
         short_name: 'P10',
+        portfolio_id: 3,
       });
-      mockRoleByUserRepository.findOne.mockResolvedValue({ id: 1 });
-      mockYearRepository.findOne.mockResolvedValue({ year: 2025 });
-      mockClarisaGlobalUnitRepository.findOne.mockResolvedValue({
-        id: 300,
-        code: 'PR-010',
-        name: 'Program Node 10',
-        composeCode: 'PR-010-ROOT',
-        year: 2025,
-        level: 1,
-        portfolioId: 3,
-      });
-      mockClarisaGlobalUnitRepository.find.mockResolvedValue([
+      mockTocResultsRepository.findWorkPackagesByProgram.mockResolvedValue([
         {
           id: 301,
           code: 'PR-010-A',
           name: 'Child A',
-          composeCode: 'PR-010-ROOT-A',
+          composeCode: 'PR-010-A',
           year: 2025,
-          level: 2,
-          parentId: 300,
-        },
-        {
-          id: 302,
-          code: 'PR-010-B',
-          name: 'Child B',
-          composeCode: 'PR-010-ROOT-B',
-          year: 2025,
-          level: 2,
-          parentId: 300,
         },
       ]);
-      // Only A exists in ToC
-      mockTocResultsRepository.findUnitAcronymsByProgram.mockResolvedValue(
-        new Set(['PR-010-A']),
+      mockTocResultsRepository.getIndicatorContributions.mockResolvedValue(
+        new Map(),
       );
 
       const result = await service.getGlobalUnitsByProgram(user, 'PR-010');
@@ -395,9 +406,6 @@ describe('ResultsFrameworkReportingService', () => {
     it('should map repository errors through handlers error', async () => {
       const thrown = { status: 500, message: 'unexpected' };
       mockClarisaInitiativesRepository.findOne.mockRejectedValueOnce(thrown);
-      mockTocResultsRepository.findUnitAcronymsByProgram.mockResolvedValue(
-        new Set([]),
-      );
 
       const result = await service.getGlobalUnitsByProgram(user, 'PR-003');
       expect(result.status).toBe(500);
@@ -560,10 +568,11 @@ describe('ResultsFrameworkReportingService', () => {
   describe('getWorkPackagesByProgramAndArea', () => {
     beforeEach(() => {
       mockTocResultsRepository.findByCompositeCode.mockReset();
-      mockYearRepository.findOne.mockReset();
     });
 
     it('should return work packages when repository returns data', async () => {
+      const tocContext = { reportingYear: 2024, phaseUuid: 'PHASE-1' };
+      mockReportingTocContextService.resolve.mockResolvedValueOnce(tocContext);
       mockTocResultsRepository.findByCompositeCode.mockResolvedValueOnce([
         {
           id: 1,
@@ -592,12 +601,12 @@ describe('ResultsFrameworkReportingService', () => {
         '2024',
       );
 
+      expect(mockReportingTocContextService.resolve).toHaveBeenCalledWith(2024);
       expect(mockTocResultsRepository.findByCompositeCode).toHaveBeenCalledWith(
         'SP01',
         'SP01-AOW01',
-        2024,
+        tocContext,
       );
-      expect(mockYearRepository.findOne).not.toHaveBeenCalled();
       expect(result).toMatchObject({
         status: 200,
         response: {
@@ -631,35 +640,32 @@ describe('ResultsFrameworkReportingService', () => {
           indicators: [],
         },
       ]);
-      mockYearRepository.findOne.mockResolvedValueOnce({ year: '2026' });
 
       const result: any = await service.getWorkPackagesByProgramAndArea(
         'sp02',
         'aow03',
       );
 
+      expect(mockReportingTocContextService.resolve).toHaveBeenCalledWith(
+        undefined,
+      );
       expect(mockTocResultsRepository.findByCompositeCode).toHaveBeenCalledWith(
         'SP02',
         'SP02-AOW03',
-        2026,
+        defaultTocContext,
       );
-      expect(mockYearRepository.findOne).toHaveBeenCalledWith({
-        where: { active: true },
-        select: ['year'],
-      });
-      expect(result.response.year).toBe(2026);
+      expect(result.response.year).toBe(2025);
     });
 
     it('should return handler error when parameters are missing', async () => {
       const result: any = await service.getWorkPackagesByProgramAndArea('', '');
       expect(result.status).toBe(400);
       expect(mockHandlersError.returnErrorRes).toHaveBeenCalled();
-      expect(mockYearRepository.findOne).not.toHaveBeenCalled();
+      expect(mockReportingTocContextService.resolve).not.toHaveBeenCalled();
     });
 
     it('should return handler error when repository yields empty result', async () => {
       mockTocResultsRepository.findByCompositeCode.mockResolvedValueOnce([]);
-      mockYearRepository.findOne.mockResolvedValueOnce({ year: 2025 });
 
       const result: any = await service.getWorkPackagesByProgramAndArea(
         'SP03',
@@ -671,7 +677,9 @@ describe('ResultsFrameworkReportingService', () => {
     });
 
     it('should return handler error when active year is not configured', async () => {
-      mockYearRepository.findOne.mockResolvedValueOnce(null);
+      mockReportingTocContextService.resolve.mockRejectedValueOnce(
+        buildTocContextError('No active reporting year was found.', 404),
+      );
 
       const result: any = await service.getWorkPackagesByProgramAndArea(
         'SP03',
@@ -692,7 +700,12 @@ describe('ResultsFrameworkReportingService', () => {
     });
 
     it('should return handler error when active year is invalid', async () => {
-      mockYearRepository.findOne.mockResolvedValueOnce({ year: 'NaN' });
+      mockReportingTocContextService.resolve.mockRejectedValueOnce(
+        buildTocContextError(
+          'The active reporting year configured is invalid.',
+          500,
+        ),
+      );
 
       const result: any = await service.getWorkPackagesByProgramAndArea(
         'SP03',
@@ -716,11 +729,11 @@ describe('ResultsFrameworkReportingService', () => {
   describe('getToc2030Outcomes', () => {
     beforeEach(() => {
       mockTocResultsRepository.find2030Outcomes.mockReset();
-      mockYearRepository.findOne.mockReset();
     });
 
     it('should return ToC 2030 outcomes when repository returns data', async () => {
-      mockYearRepository.findOne.mockResolvedValueOnce({ year: 2030 });
+      const tocContext = { reportingYear: 2030, phaseUuid: 'PHASE-1' };
+      mockReportingTocContextService.resolve.mockResolvedValueOnce(tocContext);
       mockTocResultsRepository.find2030Outcomes.mockResolvedValueOnce([
         {
           toc_result_id: 1,
@@ -733,19 +746,16 @@ describe('ResultsFrameworkReportingService', () => {
 
       const result: any = await service.getToc2030Outcomes('sp01');
 
-      expect(mockYearRepository.findOne).toHaveBeenCalledWith({
-        where: { active: true },
-        select: ['year'],
-      });
+      expect(mockReportingTocContextService.resolve).toHaveBeenCalled();
       expect(mockTocResultsRepository.find2030Outcomes).toHaveBeenCalledWith(
         'SP01',
-        2030,
+        tocContext,
       );
       expect(result.status).toBe(200);
       expect(result.response).toMatchObject({
         program: 'SP01',
         year: 2030,
-        metadata: { total: 1 },
+        metadata: { total: 1, phaseUuid: 'PHASE-1' },
       });
     });
 
@@ -758,7 +768,9 @@ describe('ResultsFrameworkReportingService', () => {
     });
 
     it('should return handler error when active year is not configured', async () => {
-      mockYearRepository.findOne.mockResolvedValueOnce(null);
+      mockReportingTocContextService.resolve.mockRejectedValueOnce(
+        buildTocContextError('No active reporting year was found.', 404),
+      );
 
       const result: any = await service.getToc2030Outcomes('SP02');
 
@@ -774,7 +786,12 @@ describe('ResultsFrameworkReportingService', () => {
     });
 
     it('should return handler error when active year value is invalid', async () => {
-      mockYearRepository.findOne.mockResolvedValueOnce({ year: 'invalid' });
+      mockReportingTocContextService.resolve.mockRejectedValueOnce(
+        buildTocContextError(
+          'The active reporting year configured is invalid.',
+          500,
+        ),
+      );
 
       const result: any = await service.getToc2030Outcomes('sp03');
 
@@ -790,7 +807,8 @@ describe('ResultsFrameworkReportingService', () => {
     });
 
     it('should return handler error when no outcomes are found', async () => {
-      mockYearRepository.findOne.mockResolvedValueOnce({ year: 2031 });
+      const tocContext = { reportingYear: 2031, phaseUuid: 'PHASE-1' };
+      mockReportingTocContextService.resolve.mockResolvedValueOnce(tocContext);
       mockTocResultsRepository.find2030Outcomes.mockResolvedValueOnce([]);
 
       const result: any = await service.getToc2030Outcomes('sp04');
@@ -799,7 +817,7 @@ describe('ResultsFrameworkReportingService', () => {
       expect(mockHandlersError.returnErrorRes).toHaveBeenCalled();
       expect(mockTocResultsRepository.find2030Outcomes).toHaveBeenCalledWith(
         'SP04',
-        2031,
+        tocContext,
       );
     });
   });

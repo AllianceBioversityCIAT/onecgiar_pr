@@ -53,6 +53,33 @@ describe('TocResultsRepository', () => {
     jest.restoreAllMocks();
   });
 
+  describe('getTocPhaseIdForReportingYear', () => {
+    it('returns phase id for the reporting year', async () => {
+      mockDataSource.query.mockResolvedValue([{ toc_pahse_id: 'phase-99' }]);
+
+      const phaseId = await (repository as any).getTocPhaseIdForReportingYear(
+        2026,
+      );
+
+      expect(mockDataSource.query).toHaveBeenCalledWith(
+        expect.stringContaining('phase_year = ?'),
+        [2026],
+      );
+      expect(phaseId).toBe('phase-99');
+    });
+
+    it('throws when no phase is configured for the reporting year', async () => {
+      mockDataSource.query.mockResolvedValue([{ toc_pahse_id: null }]);
+
+      await expect(
+        (repository as any).getTocPhaseIdForReportingYear(2026),
+      ).rejects.toMatchObject({
+        message: 'No TOC phase is configured for reporting year 2026.',
+        status: 404,
+      });
+    });
+  });
+
   describe('getCurrentTocPhaseId', () => {
     it('returns phase id when row exists', async () => {
       mockDataSource.query.mockResolvedValue([{ toc_pahse_id: 'phase-1' }]);
@@ -358,7 +385,7 @@ describe('TocResultsRepository', () => {
   describe('$_getResultTocByConfigV2', () => {
     it('throws when toc level is invalid', async () => {
       await expect(
-        repository.$_getResultTocByConfigV2(1, 99),
+        repository.$_getResultTocByConfigV2(1, 99, 2026),
       ).rejects.toMatchObject({
         message: expect.stringContaining('Invalid toc level'),
         status: 400,
@@ -366,43 +393,35 @@ describe('TocResultsRepository', () => {
     });
 
     it('throws formatted error on failure', async () => {
+      jest
+        .spyOn(repository as any, 'getTocPhaseIdForReportingYear')
+        .mockResolvedValue('phase-123');
       mockQuery.mockRejectedValue(new Error('fail'));
 
       await expect(
-        repository.$_getResultTocByConfigV2(1, 1),
+        repository.$_getResultTocByConfigV2(1, 1, 2026),
       ).rejects.toMatchObject({
         message: expect.stringContaining('_getResultTocByConfigV2 error'),
       });
     });
 
-    it('appends toc phase filter when available', async () => {
+    it('appends toc phase and work package year filters when available', async () => {
       jest
-        .spyOn(repository as any, 'getCurrentTocPhaseId')
+        .spyOn(repository as any, 'getTocPhaseIdForReportingYear')
         .mockResolvedValue('phase-123');
       mockQuery.mockResolvedValue([{ id: 1 }]);
 
-      const result = await repository.$_getResultTocByConfigV2(5, 1);
+      const result = await repository.$_getResultTocByConfigV2(5, 1, 2026);
 
       expect(mockQuery).toHaveBeenCalledWith(expect.any(String), [
+        2026,
         5,
         'OUTPUT',
         'phase-123',
       ]);
+      expect(mockQuery.mock.calls[0][0]).toContain('wp.year = ?');
+      expect(mockQuery.mock.calls[0][0]).toContain('AND tr.phase = ?');
       expect(result).toEqual([{ id: 1 }]);
-    });
-
-    it('omits toc phase filter when not found', async () => {
-      jest
-        .spyOn(repository as any, 'getCurrentTocPhaseId')
-        .mockResolvedValue(null);
-      mockQuery.mockResolvedValue([{ id: 2 }]);
-
-      await repository.$_getResultTocByConfigV2(7, 2);
-
-      expect(mockQuery).toHaveBeenCalledWith(expect.any(String), [
-        7,
-        'OUTCOME',
-      ]);
     });
   });
 
@@ -433,7 +452,7 @@ describe('TocResultsRepository', () => {
 
       expect(mockQuery).toHaveBeenCalledWith(
         expect.stringContaining('toc_results_indicators tri'),
-        [2035, 10, 11],
+        [2028, 10, 11],
       );
       expect(mockQuery.mock.calls[0][0]).toContain('target_date = ?');
       expect(result).toBe(expected);
