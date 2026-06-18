@@ -328,10 +328,10 @@ export class AoWBilateralRepository {
         tri.type_value,
         NULLIF(TRIM(tri.type_name), '') AS type_name,
         tri.location,
-        COALESCE(MAX(CAST(trit.target_value AS SIGNED)), 0) AS target_value_sum,
-        MAX(trit.number_target) AS number_target,
-        MAX(trit.target_date) AS target_date,
-        COALESCE(MAX(CAST(trit.target_value AS SIGNED)), 0) AS target_value,
+        COALESCE(SUM(CAST(trit.target_value AS SIGNED)), 0) AS target_value_sum,
+        trit.number_target,
+        trit.target_date,
+        trit.target_value,
         CASE
           WHEN tri.type_value LIKE '%Number of Policy%' THEN 1
           WHEN tri.type_value LIKE '%Innovation Use%' THEN 2
@@ -405,7 +405,10 @@ export class AoWBilateralRepository {
         tri.unit_messurament,
         tri.type_value,
         tri.type_name,
-        tri.location
+        tri.location,
+        trit.number_target,
+        trit.target_date,
+        trit.target_value
       ORDER BY tr.id ASC, tri.id ASC
     `;
 
@@ -428,15 +431,6 @@ export class AoWBilateralRepository {
       }
 
       if (row.indicator_id !== null) {
-        const tocResult = grouped.get(row.toc_result_id);
-        const indicatorId = Number(row.indicator_id);
-        const alreadyListed = tocResult?.indicators.some(
-          (existing) => Number(existing.indicator_id) === indicatorId,
-        );
-        if (alreadyListed) {
-          continue;
-        }
-
         const indicator: TocResultResponse['indicators'][number] = {
           indicator_id: row.indicator_id,
           indicator_description: row.indicator_description,

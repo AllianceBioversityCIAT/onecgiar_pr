@@ -60,10 +60,9 @@ describe('AoWBilateralRepository', () => {
       'PHASE-1',
     ]);
     expect(query).toContain(
-      'COALESCE(MAX(CAST(trit.target_value AS SIGNED)), 0) AS target_value_sum',
+      'COALESCE(SUM(CAST(trit.target_value AS SIGNED)), 0) AS target_value_sum',
     );
     expect(query).toContain('GROUP BY');
-    expect(query).toContain('MAX(trit.number_target)');
     expect(query).toContain('ORDER BY tr.id ASC, tri.id ASC');
     expect(query).toContain('FROM toc_test.toc_results tr');
     expect(query).toContain(
@@ -370,70 +369,6 @@ describe('AoWBilateralRepository', () => {
     expect(result[0].toc_result_id).toBe(1);
     expect(result[0].indicators).toHaveLength(1);
     expect(result[0].indicators[0].indicator_id).toBe(10);
-  });
-
-  it('should dedupe indicators when multiple reporting-year targets exist', async () => {
-    mockResolveContext();
-    const mockRows = [
-      {
-        toc_result_id: 7021,
-        category: 'OUTPUT',
-        result_title: 'HLO6.AOW2.IO1 Refocus to markets',
-        related_node_id: 'node1',
-        indicator_id: 7212,
-        indicator_description: 'CIMMYT indicator',
-        toc_result_indicator_id: 'uuid-7212',
-        indicator_related_node_id: 'ind_node1',
-        unit_messurament: 'Number',
-        type_value: 'Number of innovations (innovation development)',
-        type_name: 'Number of innovations (innovation development)',
-        location: 'country',
-        target_value_sum: 75,
-        actual_achieved_value_sum: 0,
-        progress_percentage: '0%',
-        number_target: '6',
-        target_date: 2026,
-        target_value: 75,
-        result_type_id: 7,
-        result_level_id: 4,
-      },
-      {
-        toc_result_id: 7021,
-        category: 'OUTPUT',
-        result_title: 'HLO6.AOW2.IO1 Refocus to markets',
-        related_node_id: 'node1',
-        indicator_id: 7212,
-        indicator_description: 'CIMMYT indicator',
-        toc_result_indicator_id: 'uuid-7212',
-        indicator_related_node_id: 'ind_node1',
-        unit_messurament: 'Number',
-        type_value: 'Number of innovations (innovation development)',
-        type_name: 'Number of innovations (innovation development)',
-        location: 'country',
-        target_value_sum: 75,
-        actual_achieved_value_sum: 0,
-        progress_percentage: '0%',
-        number_target: '17',
-        target_date: 2026,
-        target_value: 75,
-        result_type_id: 7,
-        result_level_id: 4,
-      },
-    ];
-
-    dataSourceQueryMock
-      .mockResolvedValueOnce(mockRows)
-      .mockResolvedValueOnce([]);
-
-    const result = await repository.findByCompositeCode(
-      'SP01',
-      'SP01-AOW02',
-      defaultContext,
-    );
-
-    expect(result).toHaveLength(1);
-    expect(result[0].indicators).toHaveLength(1);
-    expect(result[0].indicators[0].indicator_id).toBe(7212);
   });
 
   it('should handle parallel execution in findByCompositeCode', async () => {
