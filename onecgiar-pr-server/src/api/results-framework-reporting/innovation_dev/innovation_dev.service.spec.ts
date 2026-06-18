@@ -50,9 +50,25 @@ describe('InnovationDevService', () => {
   // Helper function to create fresh mock copies
   const createMockCopy = () => JSON.parse(JSON.stringify(mockInnovationDev));
 
+  const setupPersistMocks = (
+    mockCopy: typeof mockInnovationDev,
+    updatedMock: typeof mockInnovationDev,
+  ) => {
+    (
+      mockResultsInnovationsDevRepository.InnovationDevExists as jest.Mock
+    ).mockResolvedValueOnce(mockCopy);
+    (
+      mockResultsInnovationsDevRepository.findOne as jest.Mock
+    ).mockResolvedValueOnce({ ...mockCopy });
+    (
+      mockResultsInnovationsDevRepository.save as jest.Mock
+    ).mockResolvedValueOnce(updatedMock);
+  };
+
   beforeEach(async () => {
     const mockResultsInnovationsDevRepo = {
       InnovationDevExists: jest.fn(),
+      findOne: jest.fn(),
       save: jest.fn(),
     };
 
@@ -182,12 +198,7 @@ describe('InnovationDevService', () => {
         last_updated_by: userTest.id,
       };
 
-      (
-        mockResultsInnovationsDevRepository.InnovationDevExists as jest.Mock
-      ).mockResolvedValueOnce(mockCopy);
-      (
-        mockResultsInnovationsDevRepository.save as jest.Mock
-      ).mockResolvedValueOnce(updatedMock);
+      setupPersistMocks(mockCopy, updatedMock);
 
       const result = await service.updateInnovationDevPartial(
         resultId,
@@ -203,13 +214,19 @@ describe('InnovationDevService', () => {
       expect(
         mockResultsInnovationsDevRepository.InnovationDevExists,
       ).toHaveBeenCalledWith(resultId);
+      expect(mockResultsInnovationsDevRepository.findOne).toHaveBeenCalledWith({
+        where: {
+          result_innovation_dev_id: mockCopy.result_innovation_dev_id,
+          is_active: true,
+        },
+      });
       expect(mockResultsInnovationsDevRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
-          innovation_nature_id: 15,
           innovation_developers: 'Ms. Yodalieva Markhabo',
-          innovation_readiness_level_id: 12,
           readiness_level: '1',
           last_updated_by: userTest.id,
+          innovation_nature: { code: 15 },
+          innovation_readiness_level: { id: 12 },
         }),
       );
     });
@@ -232,12 +249,7 @@ describe('InnovationDevService', () => {
         last_updated_by: userTest.id,
       };
 
-      (
-        mockResultsInnovationsDevRepository.InnovationDevExists as jest.Mock
-      ).mockResolvedValueOnce(mockCopy);
-      (
-        mockResultsInnovationsDevRepository.save as jest.Mock
-      ).mockResolvedValueOnce(updatedMock);
+      setupPersistMocks(mockCopy, updatedMock);
 
       const result = await service.updateInnovationDevPartial(
         resultId,
@@ -248,11 +260,10 @@ describe('InnovationDevService', () => {
       expect(result.status).toBe(HttpStatus.OK);
       expect(mockResultsInnovationsDevRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
-          innovation_nature_id: 20,
           innovation_developers: 'Original Developer',
-          innovation_readiness_level_id: 11,
           readiness_level: '0',
           last_updated_by: userTest.id,
+          innovation_nature: { code: 20 },
         }),
       );
     });
@@ -272,12 +283,7 @@ describe('InnovationDevService', () => {
         last_updated_by: userTest.id,
       };
 
-      (
-        mockResultsInnovationsDevRepository.InnovationDevExists as jest.Mock
-      ).mockResolvedValueOnce(mockCopy);
-      (
-        mockResultsInnovationsDevRepository.save as jest.Mock
-      ).mockResolvedValueOnce(updatedMock);
+      setupPersistMocks(mockCopy, updatedMock);
 
       const result = await service.updateInnovationDevPartial(
         resultId,
@@ -289,7 +295,7 @@ describe('InnovationDevService', () => {
       expect(mockResultsInnovationsDevRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
           innovation_developers: 'New Developer Name',
-          innovation_nature_id: 13, // No cambió
+          innovation_nature_id: 13,
           last_updated_by: userTest.id,
         }),
       );
@@ -312,12 +318,7 @@ describe('InnovationDevService', () => {
         last_updated_by: userTest.id,
       };
 
-      (
-        mockResultsInnovationsDevRepository.InnovationDevExists as jest.Mock
-      ).mockResolvedValueOnce(mockCopy);
-      (
-        mockResultsInnovationsDevRepository.save as jest.Mock
-      ).mockResolvedValueOnce(updatedMock);
+      setupPersistMocks(mockCopy, updatedMock);
 
       const result = await service.updateInnovationDevPartial(
         resultId,
@@ -328,9 +329,9 @@ describe('InnovationDevService', () => {
       expect(result.status).toBe(HttpStatus.OK);
       expect(mockResultsInnovationsDevRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
-          innovation_readiness_level_id: 15,
           readiness_level: '2',
           last_updated_by: userTest.id,
+          innovation_readiness_level: { id: 15 },
         }),
       );
     });
@@ -387,12 +388,7 @@ describe('InnovationDevService', () => {
         last_updated_by: userTest.id,
       };
 
-      (
-        mockResultsInnovationsDevRepository.InnovationDevExists as jest.Mock
-      ).mockResolvedValueOnce(mockCopy);
-      (
-        mockResultsInnovationsDevRepository.save as jest.Mock
-      ).mockResolvedValueOnce(updatedMock);
+      setupPersistMocks(mockCopy, updatedMock);
 
       const result = await service.updateInnovationDevPartial(
         resultId,
@@ -403,11 +399,11 @@ describe('InnovationDevService', () => {
       expect(result.status).toBe(HttpStatus.OK);
       expect(mockResultsInnovationsDevRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
-          innovation_nature_id: 15,
-          innovation_readiness_level_id: 12,
           innovation_developers: 'Original Developer',
           readiness_level: '0',
           last_updated_by: userTest.id,
+          innovation_nature: { code: 15 },
+          innovation_readiness_level: { id: 12 },
         }),
       );
     });
@@ -454,13 +450,7 @@ describe('InnovationDevService', () => {
       };
 
       const mockCopy = createMockCopy();
-
-      (
-        mockResultsInnovationsDevRepository.InnovationDevExists as jest.Mock
-      ).mockResolvedValueOnce(mockCopy);
-      (
-        mockResultsInnovationsDevRepository.save as jest.Mock
-      ).mockResolvedValueOnce({
+      setupPersistMocks(mockCopy, {
         ...mockCopy,
         last_updated_by: userTest.id,
       });
