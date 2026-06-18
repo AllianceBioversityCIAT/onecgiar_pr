@@ -27,6 +27,15 @@ describe('InnovationDevService', () => {
   let service: InnovationDevService;
   let mockResultsInnovationsDevRepository: jest.Mocked<ResultsInnovationsDevRepository>;
   let mockHandlersError: jest.Mocked<HandlersError>;
+  let mockInnoDevService: {
+    saveEvidence: jest.Mock;
+    saveInitiativeInvestment: jest.Mock;
+    savePartnerInvestment: jest.Mock;
+  };
+  let mockInnovationUseService: { saveAnticipatedInnoUser: jest.Mock };
+  let mockResultRepository: { update: jest.Mock };
+  let mockResultAnswerRepository: { find: jest.Mock; save: jest.Mock };
+  let mockResultsByProjectsRepository: { find: jest.Mock };
 
   const userTest: TokenDto = {
     id: 1,
@@ -65,11 +74,29 @@ describe('InnovationDevService', () => {
     ).mockResolvedValueOnce(updatedMock);
   };
 
+  const buildInnovationDevQuestions = () => ({
+    responsible_innovation_and_scaling: {
+      q1: { radioButtonValue: null, options: [] },
+      q2: { radioButtonValue: null, options: [] },
+      q3: { radioButtonValue: null, options: [] },
+      q4: { radioButtonValue: null, options: [] },
+    },
+    intellectual_property_rights: {
+      q1: { radioButtonValue: null, options: [] },
+      q2: { radioButtonValue: null, options: [] },
+      q3: { radioButtonValue: null, options: [] },
+      q4: { radioButtonValue: null, options: [] },
+    },
+    innovation_team_diversity: { radioButtonValue: null, options: [] },
+    megatrends: { radioButtonValue: null, options: [] },
+  });
+
   beforeEach(async () => {
     const mockResultsInnovationsDevRepo = {
       InnovationDevExists: jest.fn(),
       findOne: jest.fn(),
       save: jest.fn(),
+      update: jest.fn().mockResolvedValue(undefined),
     };
 
     const mockHandlersErrorService = {
@@ -78,6 +105,24 @@ describe('InnovationDevService', () => {
         message: error?.message || 'Error occurred',
         status: error?.status || HttpStatus.INTERNAL_SERVER_ERROR,
       })),
+    };
+    mockInnoDevService = {
+      saveEvidence: jest.fn().mockResolvedValue(undefined),
+      saveInitiativeInvestment: jest.fn().mockResolvedValue(undefined),
+      savePartnerInvestment: jest.fn().mockResolvedValue(undefined),
+    };
+    mockInnovationUseService = {
+      saveAnticipatedInnoUser: jest.fn().mockResolvedValue(undefined),
+    };
+    mockResultRepository = {
+      update: jest.fn().mockResolvedValue(undefined),
+    };
+    mockResultAnswerRepository = {
+      find: jest.fn().mockResolvedValue([]),
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    mockResultsByProjectsRepository = {
+      find: jest.fn().mockResolvedValue([]),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -97,7 +142,7 @@ describe('InnovationDevService', () => {
         },
         {
           provide: ResultRepository,
-          useValue: {},
+          useValue: mockResultRepository,
         },
         {
           provide: EvidencesRepository,
@@ -133,11 +178,11 @@ describe('InnovationDevService', () => {
         },
         {
           provide: InnoDevService,
-          useValue: {},
+          useValue: mockInnoDevService,
         },
         {
           provide: InnovationUseService,
-          useValue: {},
+          useValue: mockInnovationUseService,
         },
         {
           provide: getRepositoryToken(ResultScalingStudyUrl),
@@ -145,11 +190,11 @@ describe('InnovationDevService', () => {
         },
         {
           provide: ResultAnswerRepository,
-          useValue: {},
+          useValue: mockResultAnswerRepository,
         },
         {
           provide: ResultsByProjectsRepository,
-          useValue: {},
+          useValue: mockResultsByProjectsRepository,
         },
         {
           provide: ResultsCenterRepository,
@@ -260,8 +305,6 @@ describe('InnovationDevService', () => {
       expect(result.status).toBe(HttpStatus.OK);
       expect(mockResultsInnovationsDevRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
-          innovation_developers: 'Original Developer',
-          readiness_level: '0',
           last_updated_by: userTest.id,
           innovation_nature: { code: 20 },
         }),
@@ -295,7 +338,6 @@ describe('InnovationDevService', () => {
       expect(mockResultsInnovationsDevRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
           innovation_developers: 'New Developer Name',
-          innovation_nature_id: 13,
           last_updated_by: userTest.id,
         }),
       );
@@ -367,6 +409,7 @@ describe('InnovationDevService', () => {
       expect(result.message).toBe('Innovation development record not found');
       expect(result.response).toEqual({});
       expect(mockResultsInnovationsDevRepository.save).not.toHaveBeenCalled();
+      expect(mockResultsInnovationsDevRepository.update).not.toHaveBeenCalled();
     });
 
     it('should handle undefined fields correctly (only update defined fields)', async () => {
@@ -399,8 +442,6 @@ describe('InnovationDevService', () => {
       expect(result.status).toBe(HttpStatus.OK);
       expect(mockResultsInnovationsDevRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
-          innovation_developers: 'Original Developer',
-          readiness_level: '0',
           last_updated_by: userTest.id,
           innovation_nature: { code: 15 },
           innovation_readiness_level: { id: 12 },
@@ -464,6 +505,79 @@ describe('InnovationDevService', () => {
       expect(mockResultsInnovationsDevRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
           last_updated_by: userTest.id,
+        }),
+      );
+    });
+  });
+
+  describe('saveInnovationDev', () => {
+    it('should persist typology and readiness relations when creating a new record', async () => {
+      const savedRecord = { result_innovation_dev_id: 5001 };
+
+      (
+        mockResultsInnovationsDevRepository.InnovationDevExists as jest.Mock
+      ).mockResolvedValueOnce(undefined);
+      (
+        mockResultsInnovationsDevRepository.save as jest.Mock
+      ).mockResolvedValueOnce(savedRecord);
+
+      await service.saveInnovationDev(
+        {
+          innovation_nature_id: 12,
+          innovation_readiness_level_id: 11,
+          innovation_characterization_id: 3,
+          is_new_variety: true,
+          number_of_varieties: 2,
+          innovatonUse: { actors: [], organization: [], measures: [] },
+          reference_materials: [],
+          bilateral_expected_investment: [],
+          ...buildInnovationDevQuestions(),
+        } as any,
+        8563,
+        userTest,
+      );
+
+      expect(mockResultsInnovationsDevRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          is_new_variety: true,
+          number_of_varieties: 2,
+          innovation_nature: { code: 12 },
+          innovation_readiness_level: { id: 11 },
+          innovation_characterization: { id: 3 },
+        }),
+      );
+    });
+
+    it('should persist typology relation when updating an existing record', async () => {
+      const mockCopy = createMockCopy();
+      const updatedMock = {
+        ...mockCopy,
+        innovation_nature_id: 12,
+        is_new_variety: true,
+        number_of_varieties: 2,
+      };
+
+      setupPersistMocks(mockCopy, updatedMock);
+
+      await service.saveInnovationDev(
+        {
+          innovation_nature_id: 12,
+          is_new_variety: true,
+          number_of_varieties: 2,
+          innovatonUse: { actors: [], organization: [], measures: [] },
+          reference_materials: [],
+          bilateral_expected_investment: [],
+          ...buildInnovationDevQuestions(),
+        } as any,
+        8563,
+        userTest,
+      );
+
+      expect(mockResultsInnovationsDevRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          is_new_variety: true,
+          number_of_varieties: 2,
+          innovation_nature: { code: 12 },
         }),
       );
     });

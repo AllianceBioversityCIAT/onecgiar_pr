@@ -92,26 +92,14 @@ export class InnovationDevService {
       } = createInnovationDevDto;
 
       let InnDevRes: ResultsInnovationsDev = undefined;
+      const innovationDevFields = this._buildInnovationDevFieldsFromDto(
+        createInnovationDevDto,
+      );
+
       if (innDevExists) {
         InnDevRes = await this._persistInnovationDevEntity(
           innDevExists.result_innovation_dev_id,
-          {
-            short_title,
-            is_new_variety,
-            readiness_level,
-            number_of_varieties,
-            innovation_nature_id,
-            innovation_developers,
-            evidences_justification,
-            innovation_collaborators,
-            innovation_readiness_level_id,
-            innovation_characterization_id,
-            innovation_acknowledgement,
-            innovation_pdf,
-            innovation_user_to_be_determined,
-            has_scaling_studies,
-            ip_support_center_id,
-          },
+          innovationDevFields,
           user.id,
         );
       } else {
@@ -124,17 +112,21 @@ export class InnovationDevService {
         newInnDev.is_new_variety = is_new_variety;
         newInnDev.readiness_level = readiness_level;
         newInnDev.number_of_varieties = number_of_varieties;
-        newInnDev.innovation_nature_id = innovation_nature_id;
         newInnDev.innovation_developers = innovation_developers;
         newInnDev.evidences_justification = evidences_justification;
         newInnDev.innovation_collaborators = innovation_collaborators;
         newInnDev.result_innovation_dev_id = result_innovation_dev_id;
-        newInnDev.innovation_readiness_level_id = innovation_readiness_level_id;
-        newInnDev.innovation_characterization_id =
-          innovation_characterization_id;
+        newInnDev.innovation_acknowledgement = innovation_acknowledgement;
+        newInnDev.innovation_pdf = innovation_pdf;
         newInnDev.innovation_user_to_be_determined =
           innovation_user_to_be_determined;
         newInnDev.has_scaling_studies = has_scaling_studies;
+        newInnDev.ip_support_center_id = ip_support_center_id;
+        this._applyInnovationDevRelations(newInnDev, {
+          innovation_readiness_level_id,
+          innovation_nature_id,
+          innovation_characterization_id,
+        });
         InnDevRes = await this._resultsInnovationsDevRepository.save(newInnDev);
       }
       // * SAVING INNOVATION AND SCALING
@@ -430,7 +422,7 @@ export class InnovationDevService {
 
       return {
         response: {
-          ...innDevExists,
+          ...this._normalizeInnovationDevRecord(innDevExists),
           pictures,
           innovatonUse,
           initiative_expected_investment,
@@ -788,7 +780,11 @@ export class InnovationDevService {
 
   private async _persistInnovationDevEntity(
     resultInnovationDevId: number,
-    fields: Partial<ResultsInnovationsDev>,
+    fields: Partial<ResultsInnovationsDev> & {
+      innovation_readiness_level_id?: number | null;
+      innovation_nature_id?: number | null;
+      innovation_characterization_id?: number | null;
+    },
     userId: number,
   ): Promise<ResultsInnovationsDev> {
     const entity = await this._resultsInnovationsDevRepository.findOne({
@@ -811,7 +807,95 @@ export class InnovationDevService {
       ...scalarFields
     } = fields;
 
-    Object.assign(entity, scalarFields, { last_updated_by: userId });
+    const scalarUpdate = this._pickDefinedFields({
+      ...scalarFields,
+      last_updated_by: userId,
+    });
+
+    Object.assign(entity, scalarUpdate);
+
+    this._applyInnovationDevRelations(entity, {
+      innovation_readiness_level_id,
+      innovation_nature_id,
+      innovation_characterization_id,
+    });
+
+    return this._resultsInnovationsDevRepository.save(entity);
+  }
+
+  private _buildInnovationDevFieldsFromDto(
+    dto: CreateInnovationDevDtoV2,
+  ): Partial<ResultsInnovationsDev> & {
+    innovation_readiness_level_id?: number | null;
+    innovation_nature_id?: number | null;
+    innovation_characterization_id?: number | null;
+  } {
+    const fieldNames = [
+      'short_title',
+      'is_new_variety',
+      'readiness_level',
+      'number_of_varieties',
+      'innovation_nature_id',
+      'innovation_developers',
+      'evidences_justification',
+      'innovation_collaborators',
+      'innovation_readiness_level_id',
+      'innovation_characterization_id',
+      'innovation_acknowledgement',
+      'innovation_pdf',
+      'innovation_user_to_be_determined',
+      'has_scaling_studies',
+      'ip_support_center_id',
+    ] as const;
+
+    const fields: Partial<ResultsInnovationsDev> & {
+      innovation_readiness_level_id?: number | null;
+      innovation_nature_id?: number | null;
+      innovation_characterization_id?: number | null;
+    } = {};
+
+    for (const fieldName of fieldNames) {
+      if (dto[fieldName] !== undefined) {
+        fields[fieldName] = dto[fieldName] as never;
+      }
+    }
+
+    return fields;
+  }
+
+  private _pickDefinedFields<T extends Record<string, unknown>>(
+    fields: T,
+  ): Partial<T> {
+    return Object.fromEntries(
+      Object.entries(fields).filter(([, value]) => value !== undefined),
+    ) as Partial<T>;
+  }
+
+  private _normalizeInnovationDevRecord<T extends { is_new_variety?: unknown }>(
+    record: T,
+  ): T {
+    return {
+      ...record,
+      is_new_variety:
+        record?.is_new_variety == null
+          ? null
+          : Boolean(Number(record.is_new_variety)),
+    };
+  }
+
+  private _applyInnovationDevRelations(
+    entity: ResultsInnovationsDev,
+    relations: {
+      innovation_readiness_level_id?: number | null;
+      innovation_nature_id?: number | null;
+      innovation_characterization_id?: number | null;
+    },
+  ): void {
+    const {
+      innovation_readiness_level_id,
+      innovation_nature_id,
+      innovation_characterization_id,
+    } = relations;
 
     if (innovation_readiness_level_id !== undefined) {
       entity.innovation_readiness_level =
@@ -833,8 +917,6 @@ export class InnovationDevService {
           ? null
           : ({ id: innovation_characterization_id } as any);
     }
-
-    return this._resultsInnovationsDevRepository.save(entity);
   }
 
   private _hasBudgetFields(
