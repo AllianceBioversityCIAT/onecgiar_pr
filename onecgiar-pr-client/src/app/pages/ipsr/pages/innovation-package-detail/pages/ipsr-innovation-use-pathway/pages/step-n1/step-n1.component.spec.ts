@@ -1,4 +1,5 @@
-import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { StepN1Component } from './step-n1.component';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { PrButtonComponent } from '../../../../../../../../custom-fields/pr-button/pr-button.component';
@@ -76,7 +77,7 @@ describe('StepN1Component', () => {
         findClassTenSeconds: () => {
           return Promise.resolve();
         },
-        showPartnersRequest: false
+        showPartnersRequest: signal(false)
       },
       resultsSE: {
         GETInnovationPathwayByStepOneResultId: () => of({ response: mockGETInnovationPathwayByStepOneResultIdResponse }),
@@ -293,41 +294,16 @@ describe('StepN1Component', () => {
   });
 
   describe('requestEvent', () => {
-    it('should show partners request on click of alert-event and alert-event-2', async () => {
+    it('should be a no-op: opening the partners-request modal is now handled globally by AppComponent', () => {
+      // Modal opening was moved to a global click-delegation listener in AppComponent.
+      // requestEvent() is kept only so existing ngOnInit calls stay valid; it must not
+      // scan the DOM (findClassTenSeconds) nor set the showPartnersRequest flag.
       const spyFindClassTenSeconds = jest.spyOn(mockApiService.dataControlSE, 'findClassTenSeconds');
-      const parser = new DOMParser();
-      const dom = parser.parseFromString(
-        `
-        <div class="alert-event"></div>
-        <div class="alert-event-2"></div>
-        `,
-        'text/html'
-      );
-      jest.spyOn(document, 'querySelector').mockImplementation(selector => dom.querySelector(selector));
 
-      component.requestEvent();
+      expect(() => component.requestEvent()).not.toThrow();
 
-      const alertDiv = dom.querySelector('.alert-event');
-      const alertDiv2 = dom.querySelector('.alert-event-2');
-
-      fakeAsync(() => {
-        if (alertDiv) {
-          const clickEvent = new MouseEvent('click');
-          alertDiv.dispatchEvent(clickEvent);
-
-          tick();
-          expect(component.api.dataControlSE.showPartnersRequest).toBeTruthy();
-        }
-
-        if (alertDiv2) {
-          const clickEvent = new MouseEvent('click');
-          alertDiv2.dispatchEvent(clickEvent);
-          tick();
-          expect(component.api.dataControlSE.showPartnersRequest).toBeTruthy();
-        }
-      });
-
-      expect(spyFindClassTenSeconds).toHaveBeenCalledTimes(2);
+      expect(spyFindClassTenSeconds).not.toHaveBeenCalled();
+      expect(component.api.dataControlSE.showPartnersRequest()).toBe(false);
     });
   });
 

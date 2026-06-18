@@ -139,10 +139,7 @@ describe('RdGeneralInformationComponent', () => {
       alertsFs: new CustomizedAlertsFsService(),
       dataControlSE: {
         currentResultSignal: signal<any>({}),
-        findClassTenSeconds: () => {
-          return Promise.resolve(document.querySelector('alert-event'));
-        },
-        showPartnersRequest: false,
+        showPartnersRequest: signal(false),
         isKnowledgeProduct: false,
         currentResult: {
           result_type_id: 1,
@@ -598,19 +595,28 @@ describe('RdGeneralInformationComponent', () => {
   });
 
   describe('showAlerts', () => {
-    it('should handle partnerRequest click event', () => {
+    it('should call requestEvent (now a no-op handled by the shell)', () => {
       const spyShowAlerts = jest.spyOn(component, 'showAlerts');
-      component.showAlerts();
-      const partnerRequestElement = document.getElementById('partnerRequest');
+      const spyRequestEvent = jest.spyOn(component, 'requestEvent');
 
-      if (partnerRequestElement) {
-        const clickEvent = new MouseEvent('click');
-        partnerRequestElement.dispatchEvent(clickEvent);
-        fixture.detectChanges();
-        expect(component.api.dataControlSE.showPartnersRequest).toBeTruthy();
-      }
+      component.showAlerts();
 
       expect(spyShowAlerts).toHaveBeenCalled();
+      expect(spyRequestEvent).toHaveBeenCalled();
+    });
+
+    it('should NOT add a local listener for #partnerRequest (moved to AppComponent shell)', () => {
+      const partnerRequestEl = document.createElement('div');
+      partnerRequestEl.id = 'partnerRequest';
+      document.body.appendChild(partnerRequestEl);
+
+      component.showAlerts();
+      partnerRequestEl.click();
+
+      // The component no longer opens the partners modal locally.
+      expect(component.api.dataControlSE.showPartnersRequest()).toBe(false);
+
+      document.body.removeChild(partnerRequestEl);
     });
   });
 
@@ -1041,8 +1047,8 @@ describe('RdGeneralInformationComponent', () => {
     });
   });
 
-  describe('showAlerts - with partnerRequest element', () => {
-    it('should set showPartnersRequest on partnerRequest click', () => {
+  describe('showAlerts - partnerRequest handling moved to shell', () => {
+    it('should not toggle showPartnersRequest when a #partnerRequest element is clicked', () => {
       const partnerRequestEl = document.createElement('div');
       partnerRequestEl.id = 'partnerRequest';
       document.body.appendChild(partnerRequestEl);
@@ -1050,26 +1056,24 @@ describe('RdGeneralInformationComponent', () => {
       component.showAlerts();
 
       partnerRequestEl.click();
-      expect(mockApiService.dataControlSE.showPartnersRequest).toBe(true);
+      // Opening the partners modal is now delegated to AppComponent's global listener.
+      expect(mockApiService.dataControlSE.showPartnersRequest()).toBe(false);
 
       document.body.removeChild(partnerRequestEl);
     });
   });
 
-  describe('requestEvent - with alert-event element', () => {
-    it('should set showPartnersRequest on alert-event click', async () => {
+  describe('requestEvent - no-op', () => {
+    it('should be invocable without side effects (alert-event handling moved to shell)', () => {
       const alertEventEl = document.createElement('div');
       alertEventEl.classList.add('alert-event');
       document.body.appendChild(alertEventEl);
 
-      mockApiService.dataControlSE.findClassTenSeconds = () => Promise.resolve(alertEventEl);
-
-      component.requestEvent();
-
-      await new Promise(resolve => setTimeout(resolve, 50));
+      expect(() => component.requestEvent()).not.toThrow();
 
       alertEventEl.click();
-      expect(mockApiService.dataControlSE.showPartnersRequest).toBe(true);
+      // The component no longer registers an alert-event listener.
+      expect(mockApiService.dataControlSE.showPartnersRequest()).toBe(false);
 
       document.body.removeChild(alertEventEl);
     });

@@ -36,17 +36,8 @@ export class RdPartnersComponent implements OnInit {
   ngOnInit() {
     this.rdPartnersSE.partnersBody = new PartnersBody();
     this.rdPartnersSE.getSectionInformation();
-    this.api.dataControlSE.findClassTenSeconds('alert-event').then(_resp => {
-      try {
-        document.querySelectorAll('.alert-event').forEach(element => {
-          element.addEventListener('click', _e => {
-            this.api.dataControlSE.showPartnersRequest = true;
-          });
-        });
-      } catch (error) {
-        console.error(error);
-      }
-    });
+    // The partners-request modal trigger (.alert-event) is handled globally by a
+    // click-delegation listener in AppComponent.
   }
 
   onSyncSection() {

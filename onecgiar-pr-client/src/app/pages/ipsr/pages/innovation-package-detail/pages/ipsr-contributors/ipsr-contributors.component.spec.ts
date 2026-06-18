@@ -18,7 +18,7 @@ import { TermPipe } from '../../../../../../internationalization/term.pipe';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 import { RdContributorsAndPartnersService } from '../../../../../results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.service';
 import { IpsrCompletenessStatusService } from '../../../../services/ipsr-completeness-status.service';
-import { ChangeDetectorRef } from '@angular/core';
+import { ChangeDetectorRef, signal } from '@angular/core';
 
 describe('IpsrContributorsComponent', () => {
   let component: IpsrContributorsComponent;
@@ -67,9 +67,7 @@ describe('IpsrContributorsComponent', () => {
         get_vesrsionDashboard: () => of({ response: [] })
       },
       dataControlSE: {
-        findClassTenSeconds: () => {
-          return Promise.resolve();
-        },
+        showPartnersRequest: signal(false),
         detailSectionTitle: jest.fn(),
         currentResult: {
           portfolio: 'test'
@@ -794,70 +792,32 @@ describe('IpsrContributorsComponent', () => {
   });
 
   describe('requestEvent', () => {
-    it('should show partners request on click of alert-event', async () => {
-      const spyFindClassTenSeconds = jest.spyOn(mockApiService.dataControlSE, 'findClassTenSeconds');
-      const parser = new DOMParser();
-      const dom = parser.parseFromString(
-        `
-        <div class="alert-event"></div>
-        `,
-        'text/html'
-      );
-      jest.spyOn(document, 'querySelector').mockImplementation(selector => dom.querySelector(selector));
+    // Opening the partners-request modal is now handled by a single global
+    // click-delegation listener in AppComponent. requestEvent() is kept as a
+    // no-op so existing ngOnInit calls stay valid; it must have no side effects.
+    it('should be a no-op that does not touch showPartnersRequest', () => {
+      component.api.dataControlSE.showPartnersRequest.set(false);
 
-      await component.requestEvent();
+      expect(() => component.requestEvent()).not.toThrow();
 
-      const alertDiv = dom.querySelector('.alert-event');
-
-      if (alertDiv) {
-        const clickEvent = new MouseEvent('click');
-        alertDiv.dispatchEvent(clickEvent);
-        expect(component.api.dataControlSE.showPartnersRequest).toBeTruthy();
-      }
-      expect(spyFindClassTenSeconds).toHaveBeenCalledTimes(2);
+      expect(component.api.dataControlSE.showPartnersRequest()).toBe(false);
     });
 
-    it('should show partners request on click of alert-event and alert-event-2', async () => {
-      const spyFindClassTenSeconds = jest.spyOn(mockApiService.dataControlSE, 'findClassTenSeconds');
-      const parser = new DOMParser();
-      const dom = parser.parseFromString(
-        `
-        <div class="alert-event"></div>
-        <div class="alert-event-2"></div>
-        `,
-        'text/html'
-      );
-      jest.spyOn(document, 'querySelector').mockImplementation(selector => dom.querySelector(selector));
+    it('should not register a click listener that opens the partners request', () => {
+      component.api.dataControlSE.showPartnersRequest.set(false);
+      const addEventListenerSpy = jest.spyOn(document, 'addEventListener');
 
-      await component.requestEvent();
+      component.requestEvent();
 
-      const alertDiv = dom.querySelector('.alert-event');
-      const alertDiv2 = dom.querySelector('.alert-event-2');
+      const alertDiv = document.createElement('div');
+      alertDiv.className = 'alert-event';
+      document.body.appendChild(alertDiv);
+      alertDiv.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
-      if (alertDiv) {
-        const clickEvent = new MouseEvent('click');
-        alertDiv.dispatchEvent(clickEvent);
-        expect(component.api.dataControlSE.showPartnersRequest).toBeTruthy();
-      }
+      expect(addEventListenerSpy).not.toHaveBeenCalled();
+      expect(component.api.dataControlSE.showPartnersRequest()).toBe(false);
 
-      if (alertDiv2) {
-        const clickEvent = new MouseEvent('click');
-        alertDiv2.dispatchEvent(clickEvent);
-        expect(component.api.dataControlSE.showPartnersRequest).toBeTruthy();
-      }
-
-      expect(spyFindClassTenSeconds).toHaveBeenCalledTimes(2);
-    });
-
-    it('should handle error when querySelector fails', async () => {
-      jest.spyOn(document, 'querySelector').mockImplementation(() => {
-        throw new Error('Element not found');
-      });
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-
-      await component.requestEvent();
-
-      expect(consoleSpy).toHaveBeenCalled();
+      document.body.removeChild(alertDiv);
     });
   });
 

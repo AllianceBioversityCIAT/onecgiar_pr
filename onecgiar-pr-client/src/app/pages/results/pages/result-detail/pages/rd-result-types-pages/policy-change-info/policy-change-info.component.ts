@@ -31,15 +31,8 @@ export class PolicyChangeInfoComponent implements OnInit {
   ngOnInit(): void {
     this.getSectionInformation();
     this.getPolicyChangesQuestions();
-    this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {
-      try {
-        document.querySelector('.alert-event').addEventListener('click', e => {
-          this.api.dataControlSE.showPartnersRequest = true;
-        });
-      } catch (error) {
-        console.error(error);
-      }
-    });
+    // The partners-request modal trigger (.alert-event) is handled globally by a
+    // click-delegation listener in AppComponent.
   }
 
   changeAnswerBoolean(value) {

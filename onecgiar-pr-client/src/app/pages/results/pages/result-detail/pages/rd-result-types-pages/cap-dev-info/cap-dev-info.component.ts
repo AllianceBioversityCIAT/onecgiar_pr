@@ -106,14 +106,8 @@ export class CapDevInfoComponent implements OnInit {
   }
 
   requestEvent() {
-    this.api.dataControlSE.findClassTenSeconds('alert-event').then((resp: any) => {
-      try {
-        document.querySelector('.alert-event').addEventListener('click', (e: any) => {
-          this.api.dataControlSE.showPartnersRequest = true;
-        });
-      } catch (error) {
-        console.error(error);
-      }
-    });
+    // Opening the partners-request modal is now handled globally by a single
+    // click-delegation listener in AppComponent (it matches .alert-event* and
+    // .pSelectP). Kept as a no-op so existing ngOnInit calls stay valid.
   }
 }

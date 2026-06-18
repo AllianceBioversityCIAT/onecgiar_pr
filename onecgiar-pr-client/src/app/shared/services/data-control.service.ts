@@ -12,7 +12,7 @@ import { tap } from 'rxjs/operators';
   providedIn: 'root'
 })
 export class DataControlService {
-  showPartnersRequest: boolean = false;
+  showPartnersRequest: WritableSignal<boolean> = signal(false);
   showRetrieveRequest: boolean = false;
   myInitiativesList = [];
   myInitiativesListReportingByPortfolio = [];

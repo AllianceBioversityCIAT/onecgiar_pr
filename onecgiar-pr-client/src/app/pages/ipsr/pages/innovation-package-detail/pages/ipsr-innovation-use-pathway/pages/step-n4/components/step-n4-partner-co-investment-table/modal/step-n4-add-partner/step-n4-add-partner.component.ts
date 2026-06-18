@@ -26,7 +26,7 @@ export class StepN4AddPartnerComponent {
   ) {}
 
   openPartner() {
-    this.api.dataControlSE.showPartnersRequest = true;
+    this.api.dataControlSE.showPartnersRequest.set(true);
   }
 
   onAddPartner() {

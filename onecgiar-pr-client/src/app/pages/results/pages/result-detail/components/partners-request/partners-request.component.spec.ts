@@ -16,6 +16,7 @@ import { DialogModule } from 'primeng/dialog';
 import { FormsModule } from '@angular/forms';
 import { TooltipModule } from 'primeng/tooltip';
 import { jest } from '@jest/globals';
+import { signal } from '@angular/core';
 
 jest.useFakeTimers();
 
@@ -39,6 +40,7 @@ describe('PartnersRequestComponent', () => {
         POST_partnerRequest: () => of({ response: {} }),
       },
       dataControlSE: {
+        showPartnersRequest: signal(false),
         someMandatoryFieldIncomplete: jest.fn(),
         myInitiativesList: [
           {
@@ -155,7 +157,7 @@ describe('PartnersRequestComponent', () => {
       expect(component.partnersRequestBody.externalUserName).toBe(mockApiService.authSE.localStorageUser.user_name);
       expect(component.partnersRequestBody.externalUserMail).toBe(mockApiService.authSE.localStorageUser.email);
       expect(component.requesting).toBeFalsy();
-      expect(mockApiService.dataControlSE.showPartnersRequest).toBeFalsy();
+      expect(mockApiService.dataControlSE.showPartnersRequest()).toBe(false);
 
       expect(spyShow).toHaveBeenCalledWith({
         id: 'partners',
@@ -205,7 +207,7 @@ describe('PartnersRequestComponent', () => {
 
       expect(spy).toHaveBeenCalled();
       expect(component.requesting).toBeFalsy();
-      expect(mockApiService.dataControlSE.showPartnersRequest).toBeFalsy();
+      expect(mockApiService.dataControlSE.showPartnersRequest()).toBe(false);
       expect(spyShow).toHaveBeenCalledWith({
         id: 'partners-error',
         title: 'Error when requesting partner',

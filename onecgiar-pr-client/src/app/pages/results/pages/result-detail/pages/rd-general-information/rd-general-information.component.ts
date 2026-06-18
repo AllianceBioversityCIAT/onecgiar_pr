@@ -544,30 +544,13 @@ export class RdGeneralInformationComponent implements OnInit {
       position: 'beforeend'
     });
     this.requestEvent();
-    const partnerRequestElement = document.getElementById('partnerRequest');
-    if (partnerRequestElement) {
-      try {
-        partnerRequestElement.addEventListener('click', e => {
-          this.api.dataControlSE.showPartnersRequest = true;
-        });
-      } catch (error) {
-        console.error(error);
-      }
-    }
+    // The #partnerRequest and .alert-event modal triggers are handled globally by
+    // a click-delegation listener in AppComponent.
   }
 
   requestEvent() {
-    this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {
-      const alertEventElement = document.querySelector('.alert-event');
-      if (alertEventElement) {
-        try {
-          alertEventElement.addEventListener('click', e => {
-            this.api.dataControlSE.showPartnersRequest = true;
-          });
-        } catch (error) {
-          console.error(error);
-        }
-      }
-    });
+    // Opening the partners-request modal is now handled globally by a single
+    // click-delegation listener in AppComponent (it matches .alert-event*,
+    // .pSelectP and #partnerRequest). Kept as a no-op so existing calls stay valid.
   }
 }

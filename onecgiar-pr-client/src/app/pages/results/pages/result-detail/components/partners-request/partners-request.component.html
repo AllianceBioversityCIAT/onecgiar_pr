@@ -1,4 +1,5 @@
-<p-dialog appendTo="body" header="Title" [(visible)]="this.api.dataControlSE.showPartnersRequest"
+<p-dialog appendTo="body" header="Title" [visible]="this.api.dataControlSE.showPartnersRequest()"
+    (visibleChange)="this.api.dataControlSE.showPartnersRequest.set($event)"
     (onHide)="cleanObject()" [draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="false"
     [dismissableMask]="true" [style]="{padding: '0px'}">
     <div class="modal_title">Partners Request</div>
@@ -27,7 +28,7 @@
     </div>
     <div class="buttons">
         <app-pr-button padding="medium" text="Cancel" icon="cancel_schedule_send" colorType="secondary"
-            (click)="this.api.dataControlSE.showPartnersRequest = false">
+            (click)="this.api.dataControlSE.showPartnersRequest.set(false)">
         </app-pr-button>
         <app-pr-button [ngClass]="{'globalDisabled': this.requesting || formIsInvalid}"
             [text]="this.requesting?'Saving':'Requesting'" [rotating]="this.requesting"

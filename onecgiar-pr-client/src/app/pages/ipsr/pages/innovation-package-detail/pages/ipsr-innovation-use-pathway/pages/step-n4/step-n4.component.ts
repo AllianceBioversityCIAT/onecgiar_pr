@@ -25,15 +25,8 @@ export class StepN4Component implements OnInit {
   ngOnInit(): void {
     this.api.dataControlSE.detailSectionTitle('Step 4');
     this.getSectionInformation();
-    this.api.dataControlSE.findClassTenSeconds('alert-event-3').then(resp => {
-      try {
-        document.querySelector('.alert-event-3').addEventListener('click', e => {
-          this.api.dataControlSE.showPartnersRequest = true;
-        });
-      } catch (error) {
-        console.error(error);
-      }
-    });
+    // The partners-request modal trigger (.alert-event-3) is handled globally by
+    // a click-delegation listener in AppComponent.
   }
 
   getSectionInformation() {

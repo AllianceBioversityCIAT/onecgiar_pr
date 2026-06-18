@@ -24,6 +24,11 @@ describe('AppComponent', () => {
     component = fixture.componentInstance;
   });
 
+  afterEach(() => {
+    // Tear down the global click-delegation listener so it doesn't leak across tests.
+    component.ngOnDestroy();
+  });
+
   it('should create the app', () => {
     expect(component).toBeTruthy();
   });
@@ -40,6 +45,52 @@ describe('AppComponent', () => {
     });
     it('shoud have a method copyTokenToClipboard', () => {
       expect(component.copyTokenToClipboard).toBeDefined();
+    });
+  });
+
+  describe('partners-request global click delegation', () => {
+    it('opens the partners-request modal when a trigger link is clicked', () => {
+      component.api.dataControlSE.showPartnersRequest.set(false);
+      component.ngOnInit();
+
+      const link = document.createElement('a');
+      link.className = 'pSelectP';
+      document.body.appendChild(link);
+
+      expect(component.api.dataControlSE.showPartnersRequest()).toBe(false);
+      link.click();
+      expect(component.api.dataControlSE.showPartnersRequest()).toBe(true);
+
+      document.body.removeChild(link);
+    });
+
+    it('opens the modal when the click target is a child of the trigger anchor', () => {
+      component.api.dataControlSE.showPartnersRequest.set(false);
+      component.ngOnInit();
+
+      const link = document.createElement('a');
+      link.className = 'alert-event';
+      const child = document.createElement('span');
+      link.appendChild(child);
+      document.body.appendChild(link);
+
+      child.click();
+      expect(component.api.dataControlSE.showPartnersRequest()).toBe(true);
+
+      document.body.removeChild(link);
+    });
+
+    it('ignores clicks that are not trigger links', () => {
+      component.api.dataControlSE.showPartnersRequest.set(false);
+      component.ngOnInit();
+
+      const div = document.createElement('div');
+      document.body.appendChild(div);
+
+      div.click();
+      expect(component.api.dataControlSE.showPartnersRequest()).toBe(false);
+
+      document.body.removeChild(div);
     });
   });
 });

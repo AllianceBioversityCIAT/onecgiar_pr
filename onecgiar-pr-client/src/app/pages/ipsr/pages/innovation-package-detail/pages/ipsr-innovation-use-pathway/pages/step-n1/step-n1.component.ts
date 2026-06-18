@@ -155,23 +155,8 @@ export class StepN1Component implements OnInit {
   }
 
   requestEvent() {
-    this.api.dataControlSE.findClassTenSeconds('alert-event').then(resp => {
-      try {
-        document.querySelector('.alert-event').addEventListener('click', e => {
-          this.api.dataControlSE.showPartnersRequest = true;
-        });
-      } catch (error) {
-        console.error(error);
-      }
-    });
-    this.api.dataControlSE.findClassTenSeconds('alert-event-2').then(resp => {
-      try {
-        document.querySelector('.alert-event-2').addEventListener('click', e => {
-          this.api.dataControlSE.showPartnersRequest = true;
-        });
-      } catch (error) {
-        console.error(error);
-      }
-    });
+    // Opening the partners-request modal is now handled globally by a single
+    // click-delegation listener in AppComponent (it matches .alert-event* and
+    // .pSelectP). Kept as a no-op so existing ngOnInit calls stay valid.
   }
 }

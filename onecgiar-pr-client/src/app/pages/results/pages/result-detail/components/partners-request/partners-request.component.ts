@@ -72,14 +72,14 @@ export class PartnersRequestComponent implements OnInit, DoCheck {
     this.api.resultsSE.POST_partnerRequest({...this.partnersRequestBody, platformUrl}).subscribe({
       next: resp => {
         this.requesting = false;
-        this.api.dataControlSE.showPartnersRequest = false;
+        this.api.dataControlSE.showPartnersRequest.set(false);
         if (resp.status == 500) return this.api.alertsFe.show({ id: 'partners-error', title: 'Error when requesting partner', description: 'Server problems', status: 'error' });
         this.api.alertsFe.show({ id: 'partners', title: `Partner has been requested.`, description: `The partner request was sent successfully. You will receive a confirmation message as soon as it has been processed <strong>(Please note that the partner review process may take up to 2 business days)</strong>. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list. In case of any questions, please contact the technical support`, status: 'success' });
       },
       error: err => {
         this.api.alertsFe.show({ id: 'partners-error', title: 'Error when requesting partner', description: '', status: 'error' });
         this.requesting = false;
-        this.api.dataControlSE.showPartnersRequest = false;
+        this.api.dataControlSE.showPartnersRequest.set(false);
       }
     });
   }

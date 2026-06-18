@@ -36,8 +36,7 @@ describe('RdContributorsAndPartnersComponent', () => {
           portfolio: 'P25'
         },
         currentResultSectionName: signal(''),
-        findClassTenSeconds: jest.fn().mockResolvedValue(true),
-        showPartnersRequest: false
+        showPartnersRequest: signal(false)
       },
       resultsSE: {
         GET_resultById: jest.fn().mockReturnValue(

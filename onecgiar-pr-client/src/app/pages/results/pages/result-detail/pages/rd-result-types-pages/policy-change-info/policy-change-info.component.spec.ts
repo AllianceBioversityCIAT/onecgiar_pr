@@ -43,7 +43,7 @@ describe('PolicyChangeInfoComponent', () => {
         findClassTenSeconds: () => {
           return Promise.resolve();
         },
-        showPartnersRequest: false
+        showPartnersRequest: signal(false)
       }
     };
 
@@ -171,29 +171,23 @@ describe('PolicyChangeInfoComponent', () => {
   });
 
   describe('ngOnInit()', () => {
-    it('should get section information on initialization', async () => {
+    it('should get section information on initialization', () => {
       const spyGetSectionInformation = jest.spyOn(component, 'getSectionInformation');
       const spyGetPolicyChangesQuestions = jest.spyOn(component, 'getPolicyChangesQuestions');
-      const spyFindClassTenSeconds = jest.spyOn(mockApiService.dataControlSE, 'findClassTenSeconds');
-      const parser = new DOMParser();
-      const dom = parser.parseFromString(
-        `
-        <div class="alert-event"></div>`,
-        'text/html'
-      );
-      jest.spyOn(document, 'querySelector').mockImplementation(selector => dom.querySelector(selector));
 
-      await component.ngOnInit();
+      component.ngOnInit();
 
-      const alertDiv = dom.querySelector('.alert-event');
-      if (alertDiv) {
-        const clickEvent = new MouseEvent('click');
-        alertDiv.dispatchEvent(clickEvent);
-        expect(component.api.dataControlSE.showPartnersRequest).toBeTruthy();
-      }
       expect(spyGetSectionInformation).toHaveBeenCalled();
       expect(spyGetPolicyChangesQuestions).toHaveBeenCalled();
-      expect(spyFindClassTenSeconds).toHaveBeenCalled();
+    });
+
+    it('should not register the local .alert-event listener (handled globally in AppComponent)', () => {
+      const spyFindClassTenSeconds = jest.spyOn(mockApiService.dataControlSE, 'findClassTenSeconds');
+
+      component.ngOnInit();
+
+      expect(spyFindClassTenSeconds).not.toHaveBeenCalled();
+      expect(component.api.dataControlSE.showPartnersRequest()).toBe(false);
     });
   });
 });

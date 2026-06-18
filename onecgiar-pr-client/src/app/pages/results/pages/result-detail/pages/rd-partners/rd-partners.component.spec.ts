@@ -27,7 +27,7 @@ describe('RdPartnersComponent', () => {
     mockApiService = {
       dataControlSE: {
         currentResultSectionName: signal<string>('Partners'),
-        findClassTenSeconds: jest.fn(() => Promise.resolve())
+        showPartnersRequest: signal<boolean>(false)
       },
       resultsSE: {
         GET_allInstitutions: () => of({ response: [] }),
@@ -93,45 +93,11 @@ describe('RdPartnersComponent', () => {
 
   describe('ngOnInit()', () => {
     it('should initialize partnersBody and call getSectionInformation on ngOnInit', () => {
-      const parser = new DOMParser();
-      const dom = parser.parseFromString(
-        `
-        <div class="alert-event"></div>`,
-        'text/html'
-      );
-      jest.spyOn(document, 'querySelectorAll').mockImplementation(selector => dom.querySelectorAll(selector));
       const spy = jest.spyOn(component.rdPartnersSE, 'getSectionInformation');
 
       component.ngOnInit();
 
       expect(spy).toHaveBeenCalled();
-    });
-
-    it('should set showPartnersRequest to true when alert-event is clicked', async () => {
-      const parser = new DOMParser();
-      const dom = parser.parseFromString(`<div class="alert-event"></div>`, 'text/html');
-      const querySelector = jest.spyOn(document, 'querySelectorAll').mockImplementation(selector => dom.querySelectorAll(selector));
-      await component.ngOnInit();
-
-      const alertEventElement = dom.querySelector('.alert-event');
-      alertEventElement.dispatchEvent(new Event('click'));
-
-      expect(component.api.dataControlSE.showPartnersRequest).toBe(true);
-
-      querySelector.mockRestore();
-    });
-
-    it('should log an error if an exception occurs', async () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-      const querySelector = jest.spyOn(document, 'querySelectorAll').mockImplementation(() => {
-        throw new Error('Test error');
-      });
-
-      await component.ngOnInit();
-
-      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.any(Error));
-
-      querySelector.mockRestore();
     });
   });
 
