@@ -42,6 +42,33 @@ p {
   }
 }
 
+.aow-repeated-note {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 12px 15px;
+  border-radius: 9px;
+  background-color: var(--pr-color-yellow-50);
+  border: 1px solid rgba(var(--pr-color-yellow-rgb), 0.4);
+}
+
+.aow-repeated-note_icon {
+  flex: 0 0 auto;
+  font-size: 20px;
+  color: var(--pr-color-yellow-300);
+}
+
+.aow-repeated-note_text {
+  @include fonts.pr-typography('body-2');
+  color: var(--pr-color-yellow-700);
+  line-height: 1.5;
+
+  strong {
+    font-weight: 600;
+    color: var(--pr-color-yellow-800);
+  }
+}
+
 .entity-aow-aow_content {
   margin-top: 20px;
   border: 1px solid var(--pr-color-accents-2);
