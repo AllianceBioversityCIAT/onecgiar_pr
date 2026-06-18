@@ -33,6 +33,7 @@ In the Evidence section the green check turns valid as soon as **any** single pi
   - `pages/results/pages/result-detail/pages/rd-evidences/rd-evidences.component.html` — line 101 `[isComplete]` of the Evidence `appFeedbackValidation` block: extend the condition with the existing validation helpers.
   - `pages/results/pages/result-detail/pages/rd-evidences/rd-evidences.component.ts` — `tagFields` array labels (5 Impact-Area entries); possibly expose a small getter to keep the template condition readable.
   - `pages/results/pages/result-detail/pages/rd-evidences/evidence-item/evidence-item.component.html` — the five `app-pr-checkbox` labels.
+  - `pages/results/pages/result-detail/pages/rd-result-types-pages/innovation-dev-info/components/user-evidence/user-evidence.component.html` — the same five `app-pr-checkbox` labels (separate copy used by Innovation Development results).
   - Specs: `rd-evidences.component.spec.ts` (green-check gate), `evidence-item.component.spec.ts` (labels).
 - **No backend changes**: server green-check (`onecgiar-pr-server/.../results-validation-module.repository.ts`, `evidenceValidation()`) already enforces these rules in SQL (markers `tag_level_id = 3`; readiness for result_type 7, level ≠ 0). Server is read-only for this change.
 - No API contract changes, no migrations.

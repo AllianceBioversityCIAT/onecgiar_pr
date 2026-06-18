@@ -3,6 +3,7 @@
 - [x] 1.1 Update the five Impact-Area `label` strings in the `tagFields` array in `rd-evidences.component.ts` (Gender equality, youth and social inclusion / Climate adaptation and mitigation / Nutrition, health and food security / Environmental health and biodiversity / Poverty reduction, livelihoods and jobs) — keep `field` keys unchanged
 - [x] 1.2 Update the five `app-pr-checkbox` labels in `evidence-item.component.html` to the same canonical names — keep the `[(ngModel)]` bindings (incl. Climate → `youth_related`) unchanged
 - [x] 1.3 Confirm the read-only impact-tag chips (`getSelectedImpactTags()`) now render the canonical names automatically
+- [x] 1.4 Rename the same five labels in the Innovation Development evidence component `user-evidence.component.html` (separate checkbox copy used by Innovation Development results) — bindings unchanged
 
 ## 2. Block the Evidence green check
 
