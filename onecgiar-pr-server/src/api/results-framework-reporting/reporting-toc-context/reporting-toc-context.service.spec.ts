@@ -1,12 +1,13 @@
 import { HttpStatus } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { env } from 'process';
+import { env } from 'node:process';
 import { YearRepository } from '../../results/years/year.repository';
 import { ReportingTocContextService } from './reporting-toc-context.service';
 
 describe('ReportingTocContextService', () => {
   let service: ReportingTocContextService;
-  let yearRepository: jest.Mocked<Pick<YearRepository, 'findOne'>>;
+  let findOneMock: jest.Mock;
+  let yearRepository: YearRepository;
   let dataSourceQueryMock: jest.Mock;
 
   beforeAll(() => {
@@ -14,22 +15,18 @@ describe('ReportingTocContextService', () => {
   });
 
   beforeEach(() => {
-    yearRepository = {
-      findOne: jest.fn(),
-    };
+    findOneMock = jest.fn();
+    yearRepository = { findOne: findOneMock } as unknown as YearRepository;
     dataSourceQueryMock = jest.fn();
     const dataSource = {
       query: dataSourceQueryMock,
     } as unknown as DataSource;
 
-    service = new ReportingTocContextService(
-      yearRepository as unknown as YearRepository,
-      dataSource,
-    );
+    service = new ReportingTocContextService(yearRepository, dataSource);
   });
 
   it('should resolve context from active year and matching version phase', async () => {
-    yearRepository.findOne.mockResolvedValue({ year: 2026 } as any);
+    findOneMock.mockResolvedValue({ year: 2026 });
     dataSourceQueryMock.mockResolvedValue([
       {
         id: 42,
@@ -67,11 +64,11 @@ describe('ReportingTocContextService', () => {
 
     expect(context.reportingYear).toBe(2025);
     expect(context.phaseUuid).toBe('99134294-d7a1-4966-a63e-227c9e29b9fb');
-    expect(yearRepository.findOne).not.toHaveBeenCalled();
+    expect(findOneMock).not.toHaveBeenCalled();
   });
 
   it('should fail when no active reporting year exists', async () => {
-    yearRepository.findOne.mockResolvedValue(null);
+    findOneMock.mockResolvedValue(null);
 
     await expect(service.resolve()).rejects.toMatchObject({
       message: 'No active reporting year was found.',
@@ -80,7 +77,7 @@ describe('ReportingTocContextService', () => {
   });
 
   it('should fail when version has no toc_pahse_id for the reporting year', async () => {
-    yearRepository.findOne.mockResolvedValue({ year: 2026 } as any);
+    findOneMock.mockResolvedValue({ year: 2026 });
     dataSourceQueryMock.mockResolvedValue([
       {
         id: 99,
@@ -97,7 +94,7 @@ describe('ReportingTocContextService', () => {
   });
 
   it('should fail when version row is missing for the reporting year', async () => {
-    yearRepository.findOne.mockResolvedValue({ year: 2026 } as any);
+    findOneMock.mockResolvedValue({ year: 2026 });
     dataSourceQueryMock.mockResolvedValue([]);
 
     await expect(service.resolve()).rejects.toMatchObject({
