@@ -9,13 +9,21 @@ import {
   ClarisaApiKeyValidationResponse,
 } from '../interfaces/clarisa-api-key-validation.interface';
 
+function trimTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value[end - 1] === '/') {
+    end -= 1;
+  }
+  return value.slice(0, end);
+}
+
 @Injectable()
 export class ClarisaApiKeyValidationService {
   private readonly logger = new Logger(ClarisaApiKeyValidationService.name);
   private readonly validateUrl: string;
 
   constructor(private readonly httpService: HttpService) {
-    const baseUrl = (env.CLA_URL ?? '').replace(/\/+$/, '');
+    const baseUrl = trimTrailingSlashes(env.CLA_URL ?? '');
     this.validateUrl = `${baseUrl}/api/auth/validate-api-key`;
   }
 
