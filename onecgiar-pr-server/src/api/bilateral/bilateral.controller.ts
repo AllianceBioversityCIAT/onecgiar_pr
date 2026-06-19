@@ -6,6 +6,7 @@ import {
   ParseIntPipe,
   Post,
   Query,
+  UseGuards,
   UseInterceptors,
   ValidationPipe,
 } from '@nestjs/common';
@@ -13,6 +14,7 @@ import { SkipThrottle } from '@nestjs/throttler';
 import { BilateralService } from './bilateral.service';
 import {
   ApiBody,
+  ApiHeader,
   ApiOperation,
   ApiParam,
   ApiQuery,
@@ -21,15 +23,24 @@ import {
 import { ResponseInterceptor } from '../../shared/Interceptors/Return-data.interceptor';
 import { RootResultsDto } from './dto/create-bilateral.dto';
 import { ListResultsQueryDto } from './dto/list-results-query.dto';
+import { ClarisaApiKeyGuard } from './guards/clarisa-api-key.guard';
+import { BilateralClarisaEndpoint } from './decorators/bilateral-clarisa-endpoint.decorator';
 
 @Controller()
 @ApiTags('Bilaterals')
+@ApiHeader({
+  name: 'X-API-Key',
+  required: true,
+  description: 'CLARISA API key for bilateral access',
+})
+@UseGuards(ClarisaApiKeyGuard)
 @SkipThrottle()
 @UseInterceptors(ResponseInterceptor)
 export class BilateralController {
   constructor(private readonly bilateralService: BilateralService) {}
 
   @Post('create')
+  @BilateralClarisaEndpoint('/api/bilateral/create')
   @ApiBody({ type: RootResultsDto })
   async create(
     @Body(
@@ -45,6 +56,7 @@ export class BilateralController {
   }
 
   @Get()
+  @BilateralClarisaEndpoint('/api/bilateral')
   @ApiOperation({
     summary: 'Get all bilateral results',
     description:
@@ -64,6 +76,7 @@ export class BilateralController {
   }
 
   @Get('list')
+  @BilateralClarisaEndpoint('/api/bilateral/list')
   @ApiOperation({
     summary: 'List all results with pagination and filters',
     description:
@@ -186,6 +199,7 @@ export class BilateralController {
   }
 
   @Get('results')
+  @BilateralClarisaEndpoint('/api/bilateral/results')
   @ApiOperation({
     summary: 'Get all bilateral results for synchronization',
     description:
@@ -214,6 +228,7 @@ export class BilateralController {
   }
 
   @Get(':id')
+  @BilateralClarisaEndpoint('/api/bilateral/:id')
   @ApiOperation({
     summary: 'Get bilateral result by ID',
     description:
