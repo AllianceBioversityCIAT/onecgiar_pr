@@ -364,7 +364,7 @@ describe('RdEvidencesComponent', () => {
 
     it('getSelectedImpactTags returns labels of marked fields', () => {
       const tags = component.getSelectedImpactTags({ gender_related: true, youth_related: true });
-      expect(tags).toEqual(['Gender', 'Climate change']);
+      expect(tags).toEqual(['Gender equality, youth and social inclusion', 'Climate adaptation and mitigation']);
     });
 
     it('evidenceDisplayName prefers file name then link', () => {
@@ -560,6 +560,77 @@ describe('RdEvidencesComponent', () => {
       component.evidencesBody.evidences = [];
       const result = component.validateHasInnoReadinessLevelEvidence();
       expect(result).toBe(false);
+    });
+  });
+
+  describe('evidenceSectionComplete (P2-3056 green check)', () => {
+    // No Principal markers, no readiness requirement, no evidence → builds a baseline body.
+    const cleanBody = (evidences: any[] = []) => ({
+      result_id: 1,
+      gender_tag_level: null,
+      climate_change_tag_level: null,
+      nutrition_tag_level: null,
+      environmental_biodiversity_tag_level: null,
+      poverty_tag_level: null,
+      evidences
+    });
+    const setType = (id: number) => (mockApiService.dataControlSE.currentResult = { result_type_id: id });
+
+    it('is NOT complete for a non-exempt result with no evidence', () => {
+      setType(7);
+      component.isOptionalReadinessLevel = true;
+      component.evidencesBody = cleanBody([]);
+      expect(component.evidenceSectionComplete).toBe(false);
+    });
+
+    it('is complete for Capacity Sharing (type 5) with no evidence', () => {
+      setType(5);
+      component.evidencesBody = cleanBody([]);
+      expect(component.evidenceSectionComplete).toBe(true);
+    });
+
+    it('is NOT complete when a Principal marker (level 3) has no tagged evidence', () => {
+      setType(1);
+      const body = cleanBody([{ link: 'x', poverty_related: false }]);
+      body.poverty_tag_level = '3';
+      component.evidencesBody = body;
+      expect(component.evidenceSectionComplete).toBe(false);
+    });
+
+    it('is complete when every Principal marker has tagged evidence (non-Innovation-Development)', () => {
+      setType(1);
+      const body = cleanBody([{ link: 'x', poverty_related: true }]);
+      body.poverty_tag_level = '3';
+      component.evidencesBody = body;
+      expect(component.evidenceSectionComplete).toBe(true);
+    });
+
+    it('is NOT complete for Innovation Development (type 7) with readiness 1-9 and no readiness evidence', () => {
+      setType(7);
+      component.isOptionalReadinessLevel = false;
+      component.evidencesBody = cleanBody([{ link: 'x', innovation_readiness_related: false }]);
+      expect(component.evidenceSectionComplete).toBe(false);
+    });
+
+    it('is complete for Innovation Development with readiness 0 (exempt) and base evidence', () => {
+      setType(7);
+      component.isOptionalReadinessLevel = true;
+      component.evidencesBody = cleanBody([{ link: 'x' }]);
+      expect(component.evidenceSectionComplete).toBe(true);
+    });
+
+    it('is complete for Innovation Development when all rules are satisfied', () => {
+      setType(7);
+      component.isOptionalReadinessLevel = false;
+      component.evidencesBody = cleanBody([{ link: 'x', innovation_readiness_related: true }]);
+      expect(component.evidenceSectionComplete).toBe(true);
+    });
+
+    it('does not apply the readiness rule to non-Innovation-Development results', () => {
+      setType(1);
+      component.isOptionalReadinessLevel = false; // would block if it applied
+      component.evidencesBody = cleanBody([{ link: 'x' }]);
+      expect(component.evidenceSectionComplete).toBe(true);
     });
   });
 });
