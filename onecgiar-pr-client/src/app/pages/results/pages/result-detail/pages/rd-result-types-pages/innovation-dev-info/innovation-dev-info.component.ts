@@ -55,7 +55,7 @@ export class InnovationDevInfoComponent {
     this.api.resultsSE.GET_innovationDevP25().subscribe(({ response }) => {
       this.innovationDevInfoBody = response;
       this.convertOrganizations(response?.innovatonUse?.organization);
-      this.innovationDevInfoBody.innovation_user_to_be_determined = Boolean(this.innovationDevInfoBody.innovation_user_to_be_determined);
+      this.normalizeInnovationDevBooleans();
       this.savingSection = false;
     });
     this.api.resultsSE.GET_questionsInnovationDevelopmentP25().subscribe(({ response }) => {
@@ -95,7 +95,7 @@ export class InnovationDevInfoComponent {
       next: ({ response }) => {
         this.convertOrganizations(response?.innovatonUse?.organization);
         this.innovationDevInfoBody = response;
-        this.innovationDevInfoBody.innovation_user_to_be_determined = Boolean(this.innovationDevInfoBody.innovation_user_to_be_determined);
+        this.normalizeInnovationDevBooleans();
         this.savingSection = false;
       },
       error: err => {
@@ -118,6 +118,21 @@ export class InnovationDevInfoComponent {
         item.institution_types_id = item?.parent_institution_type_id;
       }
     });
+  }
+
+  private normalizeInnovationDevBooleans(): void {
+    this.innovationDevInfoBody.innovation_user_to_be_determined = Boolean(
+      this.innovationDevInfoBody.innovation_user_to_be_determined,
+    );
+    this.innovationDevInfoBody.is_new_variety =
+      this.innovationDevInfoBody.is_new_variety == null
+        ? null
+        : Boolean(this.innovationDevInfoBody.is_new_variety);
+    if (this.innovationDevInfoBody.innovation_nature_id != null) {
+      this.innovationDevInfoBody.innovation_nature_id = Number(
+        this.innovationDevInfoBody.innovation_nature_id,
+      );
+    }
   }
 
   convertOrganizationsTosave() {
