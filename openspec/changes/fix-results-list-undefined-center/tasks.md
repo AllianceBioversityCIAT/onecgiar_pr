@@ -5,5 +5,5 @@
 
 ## 2. Verify
 
-- [ ] 2.1 Verify a result with a lead center still shows the center name.
-- [ ] 2.2 Verify a result led by an external partner (no lead center) shows a blank cell, not `"Undefined"`.
+- [x] 2.1 Verify a result with a lead center still shows the center name. (Confirmed locally: e.g. "ICARDA" renders.)
+- [x] 2.2 Verify a result led by an external partner (no lead center) shows a blank cell, not `"Undefined"`. (Confirmed locally: empty cells, no "Undefined" anywhere on the page.)
