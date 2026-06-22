@@ -156,6 +156,7 @@ describe('AowHloTableComponent', () => {
     const mockExistingResultsContributors = signal<any[]>([]);
 
     mockEntityAowService = {
+      reportingPhaseYear: 2026,
       aowId: signal<string>(''),
       entityId: signal<string>(''),
       entityDetails: signal<any>({}),
@@ -227,7 +228,7 @@ describe('AowHloTableComponent', () => {
       expect(component.columnOrder()).toEqual([
         { title: 'Indicator name', attr: 'indicator_description', width: '30%' },
         { title: 'Type', attr: 'type_name', width: '10%' },
-        { title: 'Expected target 2025', attr: 'target_value_sum', width: '10%' },
+        { title: 'Expected target 2026', attr: 'target_value_sum', width: '10%' },
         { title: 'Actual achieved', attr: 'actual_achieved_value_sum', width: '10%' },
         { title: 'Status', attr: 'status', hideSortIcon: true, width: '11%' }
       ]);
@@ -255,7 +256,7 @@ describe('AowHloTableComponent', () => {
         width: '10%'
       });
       expect(columns[2]).toEqual({
-        title: 'Expected target 2025',
+        title: 'Expected target 2026',
         attr: 'target_value_sum',
         width: '10%'
       });
