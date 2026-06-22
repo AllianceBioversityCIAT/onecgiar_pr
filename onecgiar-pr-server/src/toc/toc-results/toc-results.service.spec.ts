@@ -47,9 +47,10 @@ describe('TocResultsService', () => {
       id: 1,
       version_id: 2,
       result_type_id: 7,
-      obj_version: { id: 3, phase_year: 2030 },
+      obj_version: { id: 3, phase_year: 2030, toc_pahse_id: 'phase-2030' },
     };
-    yearRecord = { year: 2030 };
+
+    yearRecord = { year: 2026 };
 
     resultRepository = {
       findOne: jest.fn().mockResolvedValue(resultRecord),
@@ -242,9 +243,18 @@ describe('TocResultsService', () => {
         ],
         statusCode: HttpStatus.OK,
       });
+      expect(repository.$_getResultTocByConfigV2).toHaveBeenCalledWith(
+        2,
+        3,
+        2030,
+        7,
+        1,
+        true,
+        'phase-2030',
+      );
       expect(repository.getTocIndicatorsByResultIds).toHaveBeenCalledWith(
         resultRecord,
-        yearRecord,
+        2030,
         [10],
         7,
         ['NODE-1'],
@@ -311,7 +321,7 @@ describe('TocResultsService', () => {
       });
       expect(repository.getTocIndicatorsByResultIds).toHaveBeenCalledWith(
         resultRecord,
-        yearRecord,
+        2030,
         [20],
         7,
         [],
@@ -395,6 +405,34 @@ describe('TocResultsService', () => {
         ],
         statusCode: HttpStatus.OK,
       });
+    });
+
+    it('uses the result reporting phase year instead of the active platform year', async () => {
+      resultRepository.findOne.mockResolvedValueOnce({
+        id: 4,
+        version_id: 8,
+        result_type_id: 7,
+        obj_version: {
+          id: 8,
+          phase_year: 2025,
+          toc_pahse_id: 'phase-2025',
+        },
+      } as any);
+      repository.$_getResultTocByConfigV2.mockResolvedValue([]);
+      returnResponse.format.mockReturnValue({} as any);
+
+      await service.findTocResultByConfigV2(4, 5, 1);
+
+      expect(yearRepository.findOne).not.toHaveBeenCalled();
+      expect(repository.$_getResultTocByConfigV2).toHaveBeenCalledWith(
+        5,
+        1,
+        2025,
+        7,
+        4,
+        true,
+        'phase-2025',
+      );
     });
   });
 

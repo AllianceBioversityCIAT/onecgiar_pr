@@ -122,6 +122,7 @@ export class TocResultsService {
           obj_version: {
             id: true,
             phase_year: true,
+            toc_pahse_id: true,
           },
         },
         where: { id: result_id, is_active: true },
@@ -130,27 +131,36 @@ export class TocResultsService {
         },
       });
 
-      const year = await this._yearRepository.findOne({
-        select: {
-          year: true,
-        },
-        where: {
-          active: true,
-        },
-      });
+      if (!result) {
+        throwServiceError('The result was not found.', HttpStatus.NOT_FOUND);
+      }
 
-      if (!year) {
+      const reportingYear = Number(result.obj_version?.phase_year);
+      if (!Number.isFinite(reportingYear) || reportingYear < 0) {
         throwServiceError(
-          'No active reporting year was found.',
-          HttpStatus.NOT_FOUND,
+          'The result does not have a valid reporting phase year.',
+          HttpStatus.BAD_REQUEST,
         );
       }
 
-      const reportingYear = Number(year.year);
-      if (!Number.isFinite(reportingYear) || reportingYear < 0) {
+      let tocPhaseId =
+        result.obj_version?.toc_pahse_id !== null &&
+        result.obj_version?.toc_pahse_id !== undefined
+          ? String(result.obj_version.toc_pahse_id).trim()
+          : '';
+
+      if (!tocPhaseId && result.version_id) {
+        const resolvedPhaseId =
+          await this._tocResultsRepository.getTocPhaseIdByVersionId(
+            Number(result.version_id),
+          );
+        tocPhaseId = resolvedPhaseId ?? '';
+      }
+
+      if (!tocPhaseId) {
         throwServiceError(
-          'The active reporting year configured is invalid.',
-          HttpStatus.INTERNAL_SERVER_ERROR,
+          `No TOC phase is configured for the result reporting year ${reportingYear}.`,
+          HttpStatus.NOT_FOUND,
         );
       }
 
@@ -158,9 +168,10 @@ export class TocResultsService {
         init_id,
         toc_level,
         reportingYear,
-        result?.result_type_id,
+        result.result_type_id,
         result_id,
         planned ?? true,
+        tocPhaseId,
       );
 
       let enrichedResults;
@@ -196,9 +207,9 @@ export class TocResultsService {
           const indicatorRows =
             await this._tocResultsRepository.getTocIndicatorsByResultIds(
               result,
-              year,
+              reportingYear,
               tocResultIds,
-              result?.result_type_id,
+              result.result_type_id,
               linkedIndicatorNodeIds,
               result_id,
               init_id,

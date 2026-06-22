@@ -112,9 +112,9 @@ describe('ClarisaApiKeyValidationService', () => {
     } as unknown as HttpService;
 
     const service = createService(httpService);
-    await expect(
-      service.validate('some-key', '/api/bilateral'),
-    ).resolves.toBe(false);
+    await expect(service.validate('some-key', '/api/bilateral')).resolves.toBe(
+      false,
+    );
     expect(warnSpy).toHaveBeenCalled();
   });
 });
