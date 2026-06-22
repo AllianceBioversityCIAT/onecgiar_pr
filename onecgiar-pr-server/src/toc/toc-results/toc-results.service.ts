@@ -164,6 +164,15 @@ export class TocResultsService {
         );
       }
 
+      const activeYearRow = await this._yearRepository.findOne({
+        where: { active: true },
+        select: ['year'],
+      });
+      const activeReportingYear = Number(activeYearRow?.year);
+      const includeInactiveIndicators =
+        Number.isFinite(activeReportingYear) &&
+        reportingYear < activeReportingYear;
+
       const res = await this._tocResultsRepository.$_getResultTocByConfigV2(
         init_id,
         toc_level,
@@ -213,6 +222,7 @@ export class TocResultsService {
               linkedIndicatorNodeIds,
               result_id,
               init_id,
+              includeInactiveIndicators,
             );
 
           const indicatorMap = new Map<
@@ -316,18 +326,10 @@ export class TocResultsService {
               indicatorMap.set(tocId, []);
             }
 
-            let indicatorKey: string | null = null;
-            if (indicator.related_node_id) {
-              indicatorKey = String(indicator.related_node_id);
-            } else if (indicator.toc_result_indicator_id) {
-              indicatorKey = String(indicator.toc_result_indicator_id);
-            }
-
-            const mappingInfo = indicatorKey
-              ? (resultMappingInfo
-                  .get(tocId)
-                  ?.indicatorMappings.get(indicatorKey) ?? null)
-              : null;
+            const mappingInfo = this.resolveIndicatorMappingInfo(
+              resultMappingInfo.get(tocId),
+              indicator,
+            );
 
             const arr = indicatorMap.get(tocId);
             let idx = -1;
@@ -480,5 +482,49 @@ export class TocResultsService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
+  }
+
+  private resolveIndicatorMappingInfo(
+    mappingInfo:
+      | {
+          indicatorMappings: Map<
+            string,
+            {
+              result_toc_result_indicator_id: number | null;
+              indicator_contributing: number | null;
+              status_id: number | null;
+            }
+          >;
+        }
+      | undefined,
+    indicator: {
+      related_node_id?: string | null;
+      toc_result_indicator_id?: string | null;
+      indicator_id?: number | null;
+    },
+  ) {
+    if (!mappingInfo) {
+      return null;
+    }
+
+    const candidateKeys = [
+      indicator.related_node_id,
+      indicator.toc_result_indicator_id,
+      indicator.indicator_id != null ? String(indicator.indicator_id) : null,
+    ]
+      .filter(
+        (value): value is string =>
+          typeof value === 'string' && value.trim() !== '',
+      )
+      .map((value) => value.trim());
+
+    for (const key of candidateKeys) {
+      const match = mappingInfo.indicatorMappings.get(key);
+      if (match) {
+        return match;
+      }
+    }
+
+    return null;
   }
 }

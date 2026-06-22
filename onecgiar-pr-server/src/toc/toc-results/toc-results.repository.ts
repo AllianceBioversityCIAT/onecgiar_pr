@@ -663,6 +663,7 @@ export class TocResultsRepository extends Repository<TocResult> {
     linkedIndicatorNodeIds?: string[],
     resultId?: number,
     initId?: number,
+    includeInactiveIndicators = false,
   ): Promise<
     Array<{
       toc_result_id: number;
@@ -756,14 +757,47 @@ export class TocResultsRepository extends Repository<TocResult> {
       .filter((value) => value !== '');
 
     if (normalizedLinkedIndicators.length) {
-      const placeholders = normalizedLinkedIndicators.map(() => '?').join(', ');
-      indicatorConditions.push(`tri.related_node_id IN (${placeholders})`);
-      queryParams.push(...normalizedLinkedIndicators);
+      const linkedPlaceholders = normalizedLinkedIndicators
+        .map(() => '?')
+        .join(', ');
+      // Saved toc_results_indicator_id may match related_node_id, toc_result_indicator_id, or numeric id.
+      indicatorConditions.push(`(
+        tri.related_node_id IN (${linkedPlaceholders})
+        OR tri.toc_result_indicator_id IN (${linkedPlaceholders})
+        OR CAST(tri.id AS CHAR) IN (${linkedPlaceholders})
+      )`);
+      queryParams.push(
+        ...normalizedLinkedIndicators,
+        ...normalizedLinkedIndicators,
+        ...normalizedLinkedIndicators,
+      );
     }
 
     const typeFilter = indicatorConditions.length
       ? `AND (${indicatorConditions.join(' OR ')})`
       : '';
+
+    const visibilityParams: Array<string | number> = [];
+    let visibilityFilter = 'AND tri.is_active = 1';
+
+    if (includeInactiveIndicators) {
+      visibilityFilter = '';
+    } else if (normalizedLinkedIndicators.length) {
+      const linkedPlaceholders = normalizedLinkedIndicators
+        .map(() => '?')
+        .join(', ');
+      visibilityFilter = `AND (
+        tri.is_active = 1
+        OR tri.related_node_id IN (${linkedPlaceholders})
+        OR tri.toc_result_indicator_id IN (${linkedPlaceholders})
+        OR CAST(tri.id AS CHAR) IN (${linkedPlaceholders})
+      )`;
+      visibilityParams.push(
+        ...normalizedLinkedIndicators,
+        ...normalizedLinkedIndicators,
+        ...normalizedLinkedIndicators,
+      );
+    }
 
     const query = `
       SELECT
@@ -780,15 +814,15 @@ export class TocResultsRepository extends Repository<TocResult> {
       FROM ${env.DB_TOC}.toc_results_indicators tri
       LEFT JOIN ${env.DB_TOC}.toc_result_indicator_target trit
         ON trit.toc_result_indicator_id = tri.related_node_id
-        AND trit.target_date = ?
+        AND YEAR(DATE(trit.target_date)) = ?
       WHERE
         tri.toc_results_id IN (${placeholders})
-        AND tri.is_active = 1
+        ${visibilityFilter}
         ${typeFilter};
     `;
 
     try {
-      return await this.query(query, queryParams);
+      return await this.query(query, [...queryParams, ...visibilityParams]);
     } catch (error) {
       throwServiceError(
         `[${TocResultsRepository.name}] => getTocIndicatorsByResultIds error: ${formatUnknownError(error)}`,
