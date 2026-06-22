@@ -82,6 +82,7 @@ import { GeneralInformationDto } from './dto/general-information.dto';
 import { EnvironmentExtractor } from '../../shared/utils/environment-extractor';
 import { AdUserRepository, AdUserService } from '../ad_users';
 import { InitiativeEntityMapRepository } from '../initiative_entity_map/initiative_entity_map.repository';
+import { buildInitiativeEntityMapPayload } from '../initiative_entity_map/initiative-entity-map.util';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
 import { NotificationService } from '../notification/notification.service';
 import {
@@ -1197,19 +1198,20 @@ export class ResultsService {
       );
 
       result = result.map((item) => {
+        const submitterId = Number(item.submitter_id);
         const entityMaps = entity_init_map.filter(
           (map) => map.initiativeId === item.submitter_id,
         );
         return {
           ...item,
-          initiative_entity_map: entityMaps.length
-            ? entityMaps.map((entityMap) => ({
-                id: entityMap.id,
-                entityId: entityMap.entityId,
-                initiativeId: entityMap.initiativeId,
-                entityName: entityMap.entity_obj?.name ?? null,
-              }))
-            : [],
+          initiative_entity_map: buildInitiativeEntityMapPayload(
+            submitterId,
+            {
+              acronym: item.acronym,
+              entityName: item.submitter_name ?? null,
+            },
+            entityMaps,
+          ),
           initiative_entity_user: initiativesPortfolio3,
         };
       });
@@ -1340,19 +1342,20 @@ export class ResultsService {
       );
 
       result = result.map((item) => {
+        const submitterId = Number(item.submitter_id);
         const entityMaps = entity_init_map.filter(
           (map) => map.initiativeId === item.submitter_id,
         );
         return {
           ...item,
-          initiative_entity_map: entityMaps.length
-            ? entityMaps.map((entityMap) => ({
-                id: entityMap.id,
-                entityId: entityMap.entityId,
-                initiativeId: entityMap.initiativeId,
-                entityName: entityMap.entity_obj?.name ?? null,
-              }))
-            : [],
+          initiative_entity_map: buildInitiativeEntityMapPayload(
+            submitterId,
+            {
+              acronym: item.acronym,
+              entityName: item.submitter_name ?? null,
+            },
+            entityMaps,
+          ),
           initiative_entity_user: initiativesPortfolio3,
         };
       });

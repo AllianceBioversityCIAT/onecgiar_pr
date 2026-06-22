@@ -702,28 +702,36 @@ export class VersioningService {
       });
     }
 
-    const initiativeEntityMap = await this.dataSource
-      .getRepository('initiative_entity_map')
-      .findOne({
-        where: {
-          initiativeId: mainInitiative.initiative_id,
-          entityId: entity_id,
-        },
-      });
-
-    if (!initiativeEntityMap) {
-      throw ReturnResponseUtil.format({
-        message: `The entity ${entity_id} is not related to initiative ${mainInitiative.initiative_id}`,
-        response: { entity_id, initiative_id: mainInitiative.initiative_id },
-        statusCode: HttpStatus.FORBIDDEN,
-      });
-    }
-
     const primarySourceInitiative =
       await this._clarisaInitiativesRepository.findOne({
         where: { id: mainInitiative.initiative_id, active: true },
         select: { id: true, portfolio_id: true },
       });
+
+    const isP25SelfEntity =
+      primarySourceInitiative?.portfolio_id ===
+        PORTFOLIO_CGIAR_PROGRAMS_P25_ID &&
+      Number(mainInitiative.initiative_id) === Number(entity_id);
+
+    if (!isP25SelfEntity) {
+      const initiativeEntityMap = await this.dataSource
+        .getRepository('initiative_entity_map')
+        .findOne({
+          where: {
+            initiativeId: mainInitiative.initiative_id,
+            entityId: entity_id,
+          },
+        });
+
+      if (!initiativeEntityMap) {
+        throw ReturnResponseUtil.format({
+          message: `The entity ${entity_id} is not related to initiative ${mainInitiative.initiative_id}`,
+          response: { entity_id, initiative_id: mainInitiative.initiative_id },
+          statusCode: HttpStatus.FORBIDDEN,
+        });
+      }
+    }
+
     const same_portfolio_phase_change =
       primarySourceInitiative?.portfolio_id === PORTFOLIO_CGIAR_PROGRAMS_P25_ID;
 

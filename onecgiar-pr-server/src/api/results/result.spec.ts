@@ -1313,6 +1313,36 @@ describe('ResultsService (unit, pure mocks)', () => {
     expect(call[3]).toEqual({ limit: 10, offset: 10 });
   });
 
+  it('findAllByRoleFiltered synthesizes initiative_entity_map for P25 when table is empty', async () => {
+    const items = [
+      {
+        id: 1,
+        title: 'P25 result',
+        submitter_id: 55,
+        submitter_name: 'Science Program X',
+        acronym: 'P25',
+      },
+    ];
+    (
+      mockResultRepository.AllResultsByRoleUserAndInitiativeFiltered as jest.Mock
+    ).mockResolvedValueOnce({ results: items, total: 1 });
+    (mockInitiativeEntityMapRepository.find as jest.Mock).mockResolvedValueOnce(
+      [],
+    );
+
+    const res = await resultService.findAllByRoleFiltered(7, {});
+    expect(res.status).toBe(HttpStatus.OK);
+    const payload: any = res.response as any;
+    expect(payload.items[0].initiative_entity_map).toEqual([
+      {
+        id: null,
+        entityId: 55,
+        initiativeId: 55,
+        entityName: 'Science Program X',
+      },
+    ]);
+  });
+
   it('findAllByRoleFiltered returns NOT_FOUND when no items', async () => {
     (
       mockResultRepository.AllResultsByRoleUserAndInitiativeFiltered as jest.Mock
