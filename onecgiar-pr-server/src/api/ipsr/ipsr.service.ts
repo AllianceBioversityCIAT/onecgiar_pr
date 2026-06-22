@@ -7,6 +7,7 @@ import { ExcelReportDto } from './dto/excel-report-ipsr.dto';
 import { EnvironmentExtractor } from '../../shared/utils/environment-extractor';
 import { AdUserRepository } from '../ad_users';
 import { InitiativeEntityMapRepository } from '../initiative_entity_map/initiative_entity_map.repository';
+import { buildInitiativeEntityMapPayload } from '../initiative_entity_map/initiative-entity-map.util';
 import { In } from 'typeorm';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
@@ -117,19 +118,20 @@ export class IpsrService {
       );
 
       result = result.map((item) => {
+        const initiativeId = Number(item.initiative_id);
         const entityMaps = entity_init_map.filter(
           (map) => map.initiativeId === item.initiative_id,
         );
         return {
           ...item,
-          initiative_entity_map: entityMaps.length
-            ? entityMaps.map((entityMap) => ({
-                id: entityMap.id,
-                entityId: entityMap.entityId,
-                initiativeId: entityMap.initiativeId,
-                entityName: entityMap.entity_obj?.name ?? null,
-              }))
-            : [],
+          initiative_entity_map: buildInitiativeEntityMapPayload(
+            initiativeId,
+            {
+              acronym: item.acronym,
+              entityName: item.official_code ?? null,
+            },
+            entityMaps,
+          ),
           initiative_entity_user: initiativesPortfolio3,
         };
       });
@@ -208,19 +210,20 @@ export class IpsrService {
       );
 
       result = result.map((item) => {
+        const initiativeId = Number(item.initiative_id);
         const entityMaps = entity_init_map.filter(
           (map) => map.initiativeId === item.initiative_id,
         );
         return {
           ...item,
-          initiative_entity_map: entityMaps.length
-            ? entityMaps.map((entityMap) => ({
-                id: entityMap.id,
-                entityId: entityMap.entityId,
-                initiativeId: entityMap.initiativeId,
-                entityName: entityMap.entity_obj?.name ?? null,
-              }))
-            : [],
+          initiative_entity_map: buildInitiativeEntityMapPayload(
+            initiativeId,
+            {
+              acronym: item.acronym,
+              entityName: item.official_code ?? null,
+            },
+            entityMaps,
+          ),
           initiative_entity_user: initiativesPortfolio3,
         };
       });
