@@ -9,6 +9,12 @@ import { forkJoin } from 'rxjs';
 export class EntityAowService {
   private readonly api = inject(ApiService);
 
+  // P2-3053: active reporting-phase year for the ToC views (replaces hardcoded "2025").
+  // Returns '' until the current phase is loaded so the UI never shows "null".
+  get reportingPhaseYear(): number | string {
+    return this.api.dataControlSE.reportingCurrentPhase.phaseYear ?? '';
+  }
+
   entityId = signal<string>('');
   aowId = signal<string>('');
 

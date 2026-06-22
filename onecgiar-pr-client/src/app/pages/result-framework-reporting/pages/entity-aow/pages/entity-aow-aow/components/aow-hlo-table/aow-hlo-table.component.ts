@@ -61,10 +61,11 @@ export class AowHloTableComponent {
     return expanded;
   });
 
-  columnOrder = signal<ColumnOrder[]>([
+  // P2-3053: "Expected target <year>" uses the active reporting phase year, not a hardcoded "2025".
+  columnOrder = computed<ColumnOrder[]>(() => [
     { title: 'Indicator name', attr: 'indicator_description', width: '30%' },
     { title: 'Type', attr: 'type_name', width: '10%' },
-    { title: 'Expected target 2025', attr: 'target_value_sum', width: '10%' },
+    { title: `Expected target ${this.entityAowService.reportingPhaseYear}`.trim(), attr: 'target_value_sum', width: '10%' },
     { title: 'Actual achieved', attr: 'actual_achieved_value_sum', width: '10%' },
     { title: 'Status', attr: 'status', hideSortIcon: true, width: '11%' }
   ]);
