@@ -3,7 +3,6 @@ import { env } from 'node:process';
 import { DataSource, Repository } from 'typeorm';
 import { TocResult } from './entities/toc-result.entity';
 import { Result } from '../../api/results/entities/result.entity';
-import { Year } from '../../api/results/years/entities/year.entity';
 import {
   getOtherTypesIndicatorPatterns,
   RESULT_TYPE_TO_INDICATOR_PATTERN,
@@ -21,6 +20,34 @@ export class TocResultsRepository extends Repository<TocResult> {
 
   constructor(private readonly dataSource: DataSource) {
     super(TocResult, dataSource.createEntityManager());
+  }
+
+  async getTocPhaseIdByVersionId(versionId: number): Promise<string | null> {
+    if (!Number.isFinite(versionId) || versionId <= 0) {
+      return null;
+    }
+
+    const query = `
+      SELECT toc_pahse_id
+      FROM ${env.DB_NAME}.version
+      WHERE id = ?
+      LIMIT 1
+    `;
+
+    try {
+      const rows = await this.dataSource.query(query, [versionId]);
+      const phaseId = rows?.[0]?.toc_pahse_id;
+      if (phaseId === null || phaseId === undefined) {
+        return null;
+      }
+
+      const normalized = String(phaseId).trim();
+      return normalized || null;
+    } catch (error) {
+      throw new Error(
+        `[${TocResultsRepository.name}] => getTocPhaseIdByVersionId error: ${formatUnknownError(error)}`,
+      );
+    }
   }
 
   private async getTocPhaseIdForReportingYear(
@@ -468,6 +495,7 @@ export class TocResultsRepository extends Repository<TocResult> {
     resultTypeId?: number,
     resultId?: number,
     planned?: boolean | string,
+    explicitTocPhaseId?: string | number,
   ) {
     const isPlanned = planned === true || planned === 'true';
 
@@ -497,6 +525,12 @@ export class TocResultsRepository extends Repository<TocResult> {
           },
         })
         .then((el) => el.value);
+    } else if (
+      explicitTocPhaseId !== null &&
+      explicitTocPhaseId !== undefined &&
+      String(explicitTocPhaseId).trim() !== ''
+    ) {
+      tocPhaseId = String(explicitTocPhaseId).trim();
     } else {
       tocPhaseId = await this.getTocPhaseIdForReportingYear(reportingYear);
     }
@@ -623,7 +657,7 @@ export class TocResultsRepository extends Repository<TocResult> {
 
   async getTocIndicatorsByResultIds(
     result: Result,
-    year: Year,
+    targetYear: number,
     tocResultIds: Array<number | string>,
     resultTypeId?: number,
     linkedIndicatorNodeIds?: string[],
@@ -652,9 +686,9 @@ export class TocResultsRepository extends Repository<TocResult> {
     }
 
     const placeholders = numericIds.map(() => '?').join(', ');
-    const targetYear = Number(year.year);
+    const indicatorTargetYear = Number(targetYear);
 
-    const queryParams: any[] = [targetYear, ...numericIds];
+    const queryParams: any[] = [indicatorTargetYear, ...numericIds];
 
     // Check if the result is unplanned (planned_result = 0 in the first record)
     let isUnplanned = false;

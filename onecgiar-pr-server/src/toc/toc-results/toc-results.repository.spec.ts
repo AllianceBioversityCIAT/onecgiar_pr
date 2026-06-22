@@ -423,13 +423,40 @@ describe('TocResultsRepository', () => {
       expect(mockQuery.mock.calls[0][0]).toContain('AND tr.phase = ?');
       expect(result).toEqual([{ id: 1 }]);
     });
+
+    it('uses explicit toc phase id without resolving active reporting year', async () => {
+      const getTocPhaseSpy = jest.spyOn(
+        repository as any,
+        'getTocPhaseIdForReportingYear',
+      );
+      mockQuery.mockResolvedValue([{ id: 2 }]);
+
+      const result = await repository.$_getResultTocByConfigV2(
+        5,
+        1,
+        2025,
+        undefined,
+        undefined,
+        false,
+        'phase-from-result',
+      );
+
+      expect(getTocPhaseSpy).not.toHaveBeenCalled();
+      expect(mockQuery.mock.calls[0][1].slice(0, 4)).toEqual([
+        2025,
+        5,
+        'OUTPUT',
+        'phase-from-result',
+      ]);
+      expect(result).toEqual([{ id: 2 }]);
+    });
   });
 
   describe('getTocIndicatorsByResultIds', () => {
     it('returns empty array when no ids provided', async () => {
       const result = await repository.getTocIndicatorsByResultIds(
         { obj_version: { phase_year: 2035 } } as any,
-        { year: 2030 } as any,
+        2030,
         [],
       );
 
@@ -442,11 +469,10 @@ describe('TocResultsRepository', () => {
       mockQuery.mockResolvedValue(expected);
 
       const resultObj = { obj_version: { phase_year: 2035 } } as any;
-      const yearObj = { year: 2028 } as any;
 
       const result = await repository.getTocIndicatorsByResultIds(
         resultObj,
-        yearObj,
+        2028,
         [10, '11'],
       );
 
@@ -464,7 +490,7 @@ describe('TocResultsRepository', () => {
       await expect(
         repository.getTocIndicatorsByResultIds(
           { obj_version: { phase_year: 2035 } } as any,
-          { year: 2030 } as any,
+          2030,
           [3],
         ),
       ).rejects.toMatchObject({
