@@ -122,6 +122,7 @@ export class TocResultsService {
           obj_version: {
             id: true,
             phase_year: true,
+            toc_pahse_id: true,
           },
         },
         where: { id: result_id, is_active: true },
@@ -130,37 +131,56 @@ export class TocResultsService {
         },
       });
 
-      const year = await this._yearRepository.findOne({
-        select: {
-          year: true,
-        },
-        where: {
-          active: true,
-        },
-      });
+      if (!result) {
+        throwServiceError('The result was not found.', HttpStatus.NOT_FOUND);
+      }
 
-      if (!year) {
+      const reportingYear = Number(result.obj_version?.phase_year);
+      if (!Number.isFinite(reportingYear) || reportingYear < 0) {
         throwServiceError(
-          'No active reporting year was found.',
+          'The result does not have a valid reporting phase year.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      let tocPhaseId =
+        result.obj_version?.toc_pahse_id !== null &&
+        result.obj_version?.toc_pahse_id !== undefined
+          ? String(result.obj_version.toc_pahse_id).trim()
+          : '';
+
+      if (!tocPhaseId && result.version_id) {
+        const resolvedPhaseId =
+          await this._tocResultsRepository.getTocPhaseIdByVersionId(
+            Number(result.version_id),
+          );
+        tocPhaseId = resolvedPhaseId ?? '';
+      }
+
+      if (!tocPhaseId) {
+        throwServiceError(
+          `No TOC phase is configured for the result reporting year ${reportingYear}.`,
           HttpStatus.NOT_FOUND,
         );
       }
 
-      const reportingYear = Number(year.year);
-      if (!Number.isFinite(reportingYear) || reportingYear < 0) {
-        throwServiceError(
-          'The active reporting year configured is invalid.',
-          HttpStatus.INTERNAL_SERVER_ERROR,
-        );
-      }
+      const activeYearRow = await this._yearRepository.findOne({
+        where: { active: true },
+        select: ['year'],
+      });
+      const activeReportingYear = Number(activeYearRow?.year);
+      const includeInactiveIndicators =
+        Number.isFinite(activeReportingYear) &&
+        reportingYear < activeReportingYear;
 
       const res = await this._tocResultsRepository.$_getResultTocByConfigV2(
         init_id,
         toc_level,
         reportingYear,
-        result?.result_type_id,
+        result.result_type_id,
         result_id,
         planned ?? true,
+        tocPhaseId,
       );
 
       let enrichedResults;
@@ -196,12 +216,13 @@ export class TocResultsService {
           const indicatorRows =
             await this._tocResultsRepository.getTocIndicatorsByResultIds(
               result,
-              year,
+              reportingYear,
               tocResultIds,
-              result?.result_type_id,
+              result.result_type_id,
               linkedIndicatorNodeIds,
               result_id,
               init_id,
+              includeInactiveIndicators,
             );
 
           const indicatorMap = new Map<
@@ -305,18 +326,10 @@ export class TocResultsService {
               indicatorMap.set(tocId, []);
             }
 
-            let indicatorKey: string | null = null;
-            if (indicator.related_node_id) {
-              indicatorKey = String(indicator.related_node_id);
-            } else if (indicator.toc_result_indicator_id) {
-              indicatorKey = String(indicator.toc_result_indicator_id);
-            }
-
-            const mappingInfo = indicatorKey
-              ? (resultMappingInfo
-                  .get(tocId)
-                  ?.indicatorMappings.get(indicatorKey) ?? null)
-              : null;
+            const mappingInfo = this.resolveIndicatorMappingInfo(
+              resultMappingInfo.get(tocId),
+              indicator,
+            );
 
             const arr = indicatorMap.get(tocId);
             let idx = -1;
@@ -469,5 +482,49 @@ export class TocResultsService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
+  }
+
+  private resolveIndicatorMappingInfo(
+    mappingInfo:
+      | {
+          indicatorMappings: Map<
+            string,
+            {
+              result_toc_result_indicator_id: number | null;
+              indicator_contributing: number | null;
+              status_id: number | null;
+            }
+          >;
+        }
+      | undefined,
+    indicator: {
+      related_node_id?: string | null;
+      toc_result_indicator_id?: string | null;
+      indicator_id?: number | null;
+    },
+  ) {
+    if (!mappingInfo) {
+      return null;
+    }
+
+    const candidateKeys = [
+      indicator.related_node_id,
+      indicator.toc_result_indicator_id,
+      indicator.indicator_id != null ? String(indicator.indicator_id) : null,
+    ]
+      .filter(
+        (value): value is string =>
+          typeof value === 'string' && value.trim() !== '',
+      )
+      .map((value) => value.trim());
+
+    for (const key of candidateKeys) {
+      const match = mappingInfo.indicatorMappings.get(key);
+      if (match) {
+        return match;
+      }
+    }
+
+    return null;
   }
 }

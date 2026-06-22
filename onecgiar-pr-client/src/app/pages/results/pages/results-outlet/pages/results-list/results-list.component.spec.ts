@@ -317,10 +317,9 @@ describe('ResultsListComponent', () => {
       expect(component.resultsListService.showDeletingResultSpinner).toBeFalsy();
     });
     it('should handle errors from PATCH_DeleteResult correctly', () => {
-      const errorMessage = 'error message';
-      const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_DeleteResult').mockReturnValue(throwError(errorMessage));
+      const errorResponse = { status: 500, error: { message: 'error message' } };
+      const spy = jest.spyOn(mockApiService.resultsSE, 'PATCH_DeleteResult').mockReturnValue(throwError(() => errorResponse));
       const spyShow = jest.spyOn(mockApiService.alertsFe, 'show');
-      const consoleErrorSpy = jest.spyOn(console, 'error');
 
       document.getElementById = jest.fn().mockReturnValue({
         scrollIntoView: jest.fn()
@@ -328,13 +327,35 @@ describe('ResultsListComponent', () => {
       component.onDeleteREsult();
       jest.runAllTimers();
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith(errorMessage);
       expect(spy).toHaveBeenCalled();
       expect(spyShow).toHaveBeenCalledWith({
         id: 'delete-error',
         title: 'Error when delete result',
-        description: '',
+        description: 'error message',
         status: 'error'
+      });
+      expect(component.resultsListService.showDeletingResultSpinner).toBeFalsy();
+    });
+
+    it('should show a warning with backend message when delete returns 409', () => {
+      const errorResponse = {
+        status: 409,
+        error: { message: 'The result belongs to an inactive or closed phase' }
+      };
+      jest.spyOn(mockApiService.resultsSE, 'PATCH_DeleteResult').mockReturnValue(throwError(() => errorResponse));
+      const spyShow = jest.spyOn(mockApiService.alertsFe, 'show');
+
+      document.getElementById = jest.fn().mockReturnValue({
+        scrollIntoView: jest.fn()
+      });
+      component.onDeleteREsult();
+      jest.runAllTimers();
+
+      expect(spyShow).toHaveBeenCalledWith({
+        id: 'delete-error',
+        title: 'Unable to delete result',
+        description: 'The result belongs to an inactive or closed phase',
+        status: 'warning'
       });
       expect(component.resultsListService.showDeletingResultSpinner).toBeFalsy();
     });
