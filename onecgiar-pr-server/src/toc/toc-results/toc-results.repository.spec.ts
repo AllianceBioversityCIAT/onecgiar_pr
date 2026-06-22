@@ -481,7 +481,11 @@ describe('TocResultsRepository', () => {
         [2028, 10, 11],
       );
       expect(mockQuery.mock.calls[0][0]).toContain(
-        'YEAR(DATE(trit.target_date)) = ?',
+        'tri.id = trit.id_indicator',
+      );
+      expect(mockQuery.mock.calls[0][0]).toContain('trit.target_date = ?');
+      expect(mockQuery.mock.calls[0][0]).not.toContain(
+        'YEAR(DATE(trit.target_date))',
       );
       expect(result).toBe(expected);
     });
@@ -539,6 +543,43 @@ describe('TocResultsRepository', () => {
       ).rejects.toMatchObject({
         message: expect.stringContaining('getTocIndicatorsByResultIds error'),
       });
+    });
+  });
+
+  describe('getCatalogTargetsByIndicatorNodeIds', () => {
+    it('returns empty array when no ids provided', async () => {
+      const result = await repository.getCatalogTargetsByIndicatorNodeIds(
+        [],
+        2025,
+      );
+
+      expect(result).toEqual([]);
+      expect(mockQuery).not.toHaveBeenCalled();
+    });
+
+    it('queries catalog targets by node id and reporting year', async () => {
+      const expected = [
+        {
+          toc_result_indicator_id: 'node-1',
+          toc_indicator_target_id: 99,
+          target_date: 2025,
+          target_value: 10,
+          number_target: '1',
+        },
+      ];
+      mockQuery.mockResolvedValue(expected);
+
+      const result = await repository.getCatalogTargetsByIndicatorNodeIds(
+        ['node-1'],
+        2025,
+      );
+
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('toc_result_indicator_target trit'),
+        ['node-1', 2025],
+      );
+      expect(mockQuery.mock.calls[0][0]).toContain('trit.target_date = ?');
+      expect(result).toBe(expected);
     });
   });
 

@@ -813,8 +813,9 @@ export class TocResultsRepository extends Repository<TocResult> {
         trit.target_value
       FROM ${env.DB_TOC}.toc_results_indicators tri
       LEFT JOIN ${env.DB_TOC}.toc_result_indicator_target trit
-        ON trit.toc_result_indicator_id = tri.related_node_id
-        AND YEAR(DATE(trit.target_date)) = ?
+        ON tri.id = trit.id_indicator
+        AND CONVERT(trit.toc_result_indicator_id USING utf8mb4) = CONVERT(tri.related_node_id USING utf8mb4)
+        AND trit.target_date = ?
       WHERE
         tri.toc_results_id IN (${placeholders})
         ${visibilityFilter}
@@ -961,6 +962,54 @@ export class TocResultsRepository extends Repository<TocResult> {
     } catch (error) {
       throwServiceError(
         `[${TocResultsRepository.name}] => getAllTocResultsByInitiativeV2 error: ${formatUnknownError(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Returns catalog targets from DB_TOC for the given indicator node ids and reporting year.
+   * Aligns with AoWBilateralRepository.buildTocQuery target resolution.
+   */
+  async getCatalogTargetsByIndicatorNodeIds(
+    indicatorNodeIds: string[],
+    reportingYear: number,
+  ): Promise<
+    Array<{
+      toc_result_indicator_id: string;
+      toc_indicator_target_id: number;
+      target_date: number;
+      target_value: number | null;
+      number_target: string | null;
+    }>
+  > {
+    const normalizedIds = (indicatorNodeIds ?? [])
+      .map((id) => `${id}`.trim())
+      .filter((id) => id !== '');
+
+    if (!normalizedIds.length || !Number.isFinite(reportingYear)) {
+      return [];
+    }
+
+    const placeholders = normalizedIds.map(() => '?').join(', ');
+    const query = `
+      SELECT
+        trit.toc_result_indicator_id,
+        trit.toc_indicator_target_id,
+        trit.target_date,
+        trit.target_value,
+        trit.number_target
+      FROM ${env.DB_TOC}.toc_result_indicator_target trit
+      WHERE trit.toc_result_indicator_id IN (${placeholders})
+        AND trit.target_date = ?
+      ORDER BY trit.number_target ASC
+    `;
+
+    try {
+      return await this.query(query, [...normalizedIds, reportingYear]);
+    } catch (error) {
+      throwServiceError(
+        `[${TocResultsRepository.name}] => getCatalogTargetsByIndicatorNodeIds error: ${formatUnknownError(error)}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

@@ -28,6 +28,7 @@ import { ConfigMessageDto } from '../../../shared/microservices/email-notificati
 import { EmailNotificationManagementService } from '../../../shared/microservices/email-notification-management/email-notification-management.service';
 import { EmailTemplate } from '../../../shared/microservices/email-notification-management/enum/email-notification.enum';
 import { UserNotificationSettingRepository } from '../../user-notification-settings/user-notification-settings.repository';
+import { TocResultsRepository } from '../../../toc/toc-results/toc-results.repository';
 
 type ResultTocResultWithInitiativeInfo = Partial<ResultsTocResult> & {
   initiative_id?: number | null;
@@ -54,6 +55,7 @@ export class ResultsTocResultsService {
     private readonly _roleByUserRepository: RoleByUserRepository,
     private readonly _userNotificationSettingsRepository: UserNotificationSettingRepository,
     private readonly _globalParametersRepository: GlobalParameterRepository,
+    private readonly _tocResultsRepository: TocResultsRepository,
   ) {}
 
   async create(
@@ -505,6 +507,7 @@ export class ResultsTocResultsService {
           target_date: number | null;
           target_progress_narrative: string | null;
           indicator_question: boolean | null;
+          target_value: number | null;
         }>;
       }
 
@@ -642,9 +645,45 @@ export class ResultsTocResultsService {
                   row?.indicator_question !== undefined
                     ? Boolean(row.indicator_question)
                     : null,
+                target_value: null,
               });
             }
           }
+        }
+      }
+
+      const resultWithVersion = await this._resultRepository.findOne({
+        where: { id: resultId, is_active: true },
+        select: { id: true, obj_version: { phase_year: true } },
+        relations: { obj_version: true },
+      });
+      const reportingYear = Number(resultWithVersion?.obj_version?.phase_year);
+
+      if (Number.isFinite(reportingYear) && reportingYear >= 0) {
+        const indicatorNodeIds: string[] = Array.from(
+          new Set(
+            (mappingRows ?? [])
+              .map((row) =>
+                typeof row?.toc_results_indicator_id === 'string'
+                  ? row.toc_results_indicator_id.trim()
+                  : '',
+              )
+              .filter((id) => id !== ''),
+          ),
+        );
+
+        if (indicatorNodeIds.length) {
+          const catalogTargets =
+            await this._tocResultsRepository.getCatalogTargetsByIndicatorNodeIds(
+              indicatorNodeIds,
+              reportingYear,
+            );
+          const catalogByIndicator =
+            this.groupCatalogTargetsByIndicatorNodeId(catalogTargets);
+          this.applyCatalogTargetsToInitiativesMap(
+            initiativesMap,
+            catalogByIndicator,
+          );
         }
       }
 
@@ -2479,6 +2518,147 @@ export class ResultsTocResultsService {
         error,
         debug: true,
       });
+    }
+  }
+
+  private groupCatalogTargetsByIndicatorNodeId(
+    catalogTargets: Array<{
+      toc_result_indicator_id: string;
+      toc_indicator_target_id: number;
+      target_date: number;
+      target_value: number | null;
+      number_target: string | null;
+    }>,
+  ): Map<
+    string,
+    Array<{
+      toc_indicator_target_id: number;
+      target_date: number;
+      target_value: number | null;
+      number_target: string | null;
+    }>
+  > {
+    const grouped = new Map<
+      string,
+      Array<{
+        toc_indicator_target_id: number;
+        target_date: number;
+        target_value: number | null;
+        number_target: string | null;
+      }>
+    >();
+
+    for (const row of catalogTargets ?? []) {
+      const key = `${row?.toc_result_indicator_id ?? ''}`.trim();
+      if (!key) {
+        continue;
+      }
+
+      if (!grouped.has(key)) {
+        grouped.set(key, []);
+      }
+
+      grouped.get(key).push({
+        toc_indicator_target_id: row.toc_indicator_target_id,
+        target_date: row.target_date,
+        target_value: row.target_value,
+        number_target: row.number_target,
+      });
+    }
+
+    return grouped;
+  }
+
+  private applyCatalogTargetsToInitiativesMap(
+    initiativesMap: Map<
+      number,
+      {
+        resultsMap: Map<
+          number,
+          {
+            indicatorsMap: Map<
+              number,
+              {
+                toc_results_indicator_id: string | null;
+                targets: Array<{
+                  indicators_targets: number | null;
+                  number_target: number | null;
+                  contributing_indicator: number | null;
+                  target_date: number | null;
+                  target_progress_narrative: string | null;
+                  indicator_question: boolean | null;
+                  target_value: number | null;
+                }>;
+              }
+            >;
+          }
+        >;
+      }
+    >,
+    catalogByIndicator: Map<
+      string,
+      Array<{
+        toc_indicator_target_id: number;
+        target_date: number;
+        target_value: number | null;
+        number_target: string | null;
+      }>
+    >,
+  ): void {
+    for (const initiative of initiativesMap.values()) {
+      for (const resultEntry of initiative.resultsMap.values()) {
+        for (const indicator of resultEntry.indicatorsMap.values()) {
+          const nodeId = indicator.toc_results_indicator_id?.trim();
+          if (!nodeId) {
+            continue;
+          }
+
+          const catalogRows = catalogByIndicator.get(nodeId) ?? [];
+          for (const catalog of catalogRows) {
+            const numberTarget =
+              catalog.number_target !== null &&
+              catalog.number_target !== undefined
+                ? Number(catalog.number_target)
+                : null;
+            const targetDate = Number(catalog.target_date);
+            const targetValue =
+              catalog.target_value !== null &&
+              catalog.target_value !== undefined
+                ? Number(catalog.target_value)
+                : null;
+
+            const existing = indicator.targets.find((target) => {
+              const sameNumber =
+                numberTarget === null ||
+                target.number_target === numberTarget ||
+                `${target.number_target}` === `${catalog.number_target}`;
+              const sameYear =
+                !Number.isFinite(targetDate) ||
+                target.target_date === targetDate;
+              return sameNumber && sameYear;
+            });
+
+            if (existing) {
+              if (existing.target_value == null && targetValue != null) {
+                existing.target_value = targetValue;
+              }
+              continue;
+            }
+
+            indicator.targets.push({
+              indicators_targets: catalog.toc_indicator_target_id ?? null,
+              number_target: Number.isFinite(numberTarget)
+                ? numberTarget
+                : null,
+              contributing_indicator: null,
+              target_date: Number.isFinite(targetDate) ? targetDate : null,
+              target_progress_narrative: null,
+              indicator_question: null,
+              target_value: targetValue,
+            });
+          }
+        }
+      }
     }
   }
 }
