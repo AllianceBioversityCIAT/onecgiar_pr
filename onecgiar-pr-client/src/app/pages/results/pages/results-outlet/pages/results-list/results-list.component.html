@@ -118,10 +118,12 @@
                       }
                     </div>
                   } @else {
+                    <!-- TODO (P2-3049): empty cell is intentional when a result has no lead center (led by an external partner).
+                         Future change: fall back to showing the lead partner here instead of leaving it blank. -->
                     <div
                       [pTooltip]="subResult.inQA ? 'This result is being QAed' : ''"
                       [ngClass]="{ center_flex_100: column.center, 'text-center': column.center, 'truncate-multiline': column.attr === 'full_name' }"
-                      [innerHTML]="column.attr === 'lead_center' ? (subResult.lead_center || 'Undefined') : (column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date: 'YYYY-MM-dd'))"></div>
+                      [innerHTML]="column.attr === 'lead_center' ? (subResult.lead_center || '') : (column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date: 'YYYY-MM-dd'))"></div>
                   }
                 </a>
               }
