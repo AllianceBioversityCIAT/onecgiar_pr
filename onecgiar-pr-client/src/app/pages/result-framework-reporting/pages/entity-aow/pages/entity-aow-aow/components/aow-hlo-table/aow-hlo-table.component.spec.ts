@@ -226,10 +226,10 @@ describe('AowHloTableComponent', () => {
   describe('Component Initialization', () => {
     it('should initialize with default values', () => {
       expect(component.columnOrder()).toEqual([
-        { title: 'Indicator name', attr: 'indicator_description', width: '30%' },
-        { title: 'Type', attr: 'type_name', width: '10%' },
-        { title: 'Expected target 2026', attr: 'target_value_sum', width: '10%' },
-        { title: 'Actual achieved', attr: 'actual_achieved_value_sum', width: '10%' },
+        { title: 'KPI statement', attr: 'indicator_description', width: '30%' },
+        { title: 'Indicator typology', attr: 'type_name', width: '10%' },
+        { title: '2026 target', attr: 'target_value_sum', width: '10%' },
+        { title: 'Achieved target', attr: 'actual_achieved_value_sum', width: '10%' },
         { title: 'Status', attr: 'status', hideSortIcon: true, width: '11%' }
       ]);
     });
@@ -246,22 +246,22 @@ describe('AowHloTableComponent', () => {
 
       expect(columns).toHaveLength(5);
       expect(columns[0]).toEqual({
-        title: 'Indicator name',
+        title: 'KPI statement',
         attr: 'indicator_description',
         width: '30%'
       });
       expect(columns[1]).toEqual({
-        title: 'Type',
+        title: 'Indicator typology',
         attr: 'type_name',
         width: '10%'
       });
       expect(columns[2]).toEqual({
-        title: 'Expected target 2026',
+        title: '2026 target',
         attr: 'target_value_sum',
         width: '10%'
       });
       expect(columns[3]).toEqual({
-        title: 'Actual achieved',
+        title: 'Achieved target',
         attr: 'actual_achieved_value_sum',
         width: '10%'
       });

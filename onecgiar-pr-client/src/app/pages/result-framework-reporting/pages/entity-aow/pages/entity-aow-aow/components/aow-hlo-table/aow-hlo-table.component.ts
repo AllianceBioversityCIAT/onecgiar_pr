@@ -61,12 +61,12 @@ export class AowHloTableComponent {
     return expanded;
   });
 
-  // P2-3053: "Expected target <year>" uses the active reporting phase year, not a hardcoded "2025".
+  // P2-3053: agreed nomenclature + dynamic phase year ("<year> target") instead of hardcoded "2025".
   columnOrder = computed<ColumnOrder[]>(() => [
-    { title: 'Indicator name', attr: 'indicator_description', width: '30%' },
-    { title: 'Type', attr: 'type_name', width: '10%' },
-    { title: `Expected target ${this.entityAowService.reportingPhaseYear}`.trim(), attr: 'target_value_sum', width: '10%' },
-    { title: 'Actual achieved', attr: 'actual_achieved_value_sum', width: '10%' },
+    { title: 'KPI statement', attr: 'indicator_description', width: '30%' },
+    { title: 'Indicator typology', attr: 'type_name', width: '10%' },
+    { title: `${this.entityAowService.reportingPhaseYear} target`.trim(), attr: 'target_value_sum', width: '10%' },
+    { title: 'Achieved target', attr: 'actual_achieved_value_sum', width: '10%' },
     { title: 'Status', attr: 'status', hideSortIcon: true, width: '11%' }
   ]);
 
