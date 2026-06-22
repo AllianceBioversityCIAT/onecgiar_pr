@@ -341,8 +341,22 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
             this.resultsListService.showDeletingResultSpinner = false;
           },
           error: err => {
-            console.error(err);
-            this.api.alertsFe.show({ id: 'delete-error', title: 'Error when delete result', description: '', status: 'error' });
+            const backendMessage = err?.error?.message ?? '';
+            if (err?.status === 409) {
+              this.api.alertsFe.show({
+                id: 'delete-error',
+                title: 'Unable to delete result',
+                description: backendMessage,
+                status: 'warning'
+              });
+            } else {
+              this.api.alertsFe.show({
+                id: 'delete-error',
+                title: 'Error when delete result',
+                description: backendMessage,
+                status: 'error'
+              });
+            }
             this.resultsListService.showDeletingResultSpinner = false;
           }
         });
