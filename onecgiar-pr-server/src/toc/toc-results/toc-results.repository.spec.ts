@@ -480,8 +480,51 @@ describe('TocResultsRepository', () => {
         expect.stringContaining('toc_results_indicators tri'),
         [2028, 10, 11],
       );
-      expect(mockQuery.mock.calls[0][0]).toContain('target_date = ?');
+      expect(mockQuery.mock.calls[0][0]).toContain(
+        'YEAR(DATE(trit.target_date)) = ?',
+      );
       expect(result).toBe(expected);
+    });
+
+    it('omits is_active filter for historical reporting catalogs', async () => {
+      mockQuery.mockResolvedValue([]);
+
+      await repository.getTocIndicatorsByResultIds(
+        { obj_version: { phase_year: 2025 } } as any,
+        2025,
+        [6768],
+        7,
+        [],
+        11021,
+        62,
+        true,
+      );
+
+      const [sql] = mockQuery.mock.calls.find(([query]) =>
+        String(query).includes('toc_results_indicators tri'),
+      );
+      expect(sql).not.toContain('tri.is_active = 1');
+    });
+
+    it('keeps inactive linked indicators visible for the current reporting year', async () => {
+      mockQuery.mockResolvedValue([]);
+
+      await repository.getTocIndicatorsByResultIds(
+        { obj_version: { phase_year: 2026 } } as any,
+        2026,
+        [6768],
+        7,
+        ['aec22cfa-50c7-4efd-a470-e1d764d28c5d'],
+        11021,
+        62,
+        false,
+      );
+
+      const [sql] = mockQuery.mock.calls.find(([query]) =>
+        String(query).includes('toc_results_indicators tri'),
+      );
+      expect(sql).toContain('tri.is_active = 1');
+      expect(sql).toContain('tri.related_node_id IN (?)');
     });
 
     it('throws formatted error on failure', async () => {
