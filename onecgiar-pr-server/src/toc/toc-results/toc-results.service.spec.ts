@@ -35,9 +35,15 @@ describe('TocResultsService', () => {
       getTocIndicatorsByResultIds: jest.fn(),
       getResultIndicatorMappings: jest.fn(),
       getAllTocResultsByInitiativeV2: jest.fn(),
+      getTocPartnersByResultIds: jest.fn(),
+      getTocSynergyProgramsByResultIds: jest.fn(),
+      getTocTargetCentersByResultIds: jest.fn(),
     } as any;
     repository.getTocIndicatorsByResultIds.mockResolvedValue([]);
     repository.getResultIndicatorMappings.mockResolvedValue([]);
+    repository.getTocPartnersByResultIds.mockResolvedValue([]);
+    repository.getTocSynergyProgramsByResultIds.mockResolvedValue([]);
+    repository.getTocTargetCentersByResultIds.mockResolvedValue([]);
 
     returnResponse = {
       format: jest.fn(),
@@ -175,7 +181,13 @@ describe('TocResultsService', () => {
 
   describe('findTocResultByConfigV2', () => {
     it('returns formatted response', async () => {
-      const data = [{ toc_result_id: 10, title: 'Result' }];
+      const data = [
+        {
+          toc_result_id: 10,
+          title: 'Result',
+          description: 'Outcome statement text',
+        },
+      ];
       const indicatorRows = [
         {
           toc_result_id: 10,
@@ -219,6 +231,9 @@ describe('TocResultsService', () => {
         response: [
           {
             ...data[0],
+            outcome_statement: 'Outcome statement text',
+            toc_partners: [],
+            contributing_synergy_program_initiative_ids: [],
             result_toc_result_id: 500,
             planned_result: true,
             toc_progressive_narrative: 'Narrative',
@@ -237,12 +252,27 @@ describe('TocResultsService', () => {
                 status_id: 2,
                 target_value: 15,
                 targets: [{ target_value: 15 }],
+                indicator_typology: 'Number',
+                toc_target_center_ids: [],
               },
             ],
           },
         ],
         statusCode: HttpStatus.OK,
       });
+      expect(repository.getTocPartnersByResultIds).toHaveBeenCalledWith(
+        [10],
+        'phase-2030',
+      );
+      expect(repository.getTocSynergyProgramsByResultIds).toHaveBeenCalledWith(
+        [10],
+        'phase-2030',
+      );
+      expect(repository.getTocTargetCentersByResultIds).toHaveBeenCalledWith(
+        [10],
+        'phase-2030',
+        2030,
+      );
       expect(repository.$_getResultTocByConfigV2).toHaveBeenCalledWith(
         2,
         3,
@@ -296,6 +326,9 @@ describe('TocResultsService', () => {
         response: [
           {
             ...data[0],
+            outcome_statement: null,
+            toc_partners: [],
+            contributing_synergy_program_initiative_ids: [],
             result_toc_result_id: null,
             planned_result: null,
             toc_progressive_narrative: null,
@@ -314,6 +347,8 @@ describe('TocResultsService', () => {
                 status_id: null,
                 target_value: null,
                 targets: [{ target_value: null }],
+                indicator_typology: 'Qualitative',
+                toc_target_center_ids: [],
               },
             ],
           },
@@ -386,6 +421,9 @@ describe('TocResultsService', () => {
         response: [
           expect.objectContaining({
             toc_result_id: 30,
+            outcome_statement: null,
+            toc_partners: [],
+            contributing_synergy_program_initiative_ids: [],
             indicators: [
               {
                 indicator_id: 1001,
@@ -401,7 +439,71 @@ describe('TocResultsService', () => {
                 status_id: 1,
                 target_value: 5,
                 targets: [{ target_value: 5 }, { target_value: 10 }],
+                indicator_typology: 'Number',
+                toc_target_center_ids: [],
               },
+            ],
+          }),
+        ],
+        statusCode: HttpStatus.OK,
+      });
+    });
+
+    it('enriches toc catalog metadata from DB_TOC satellite tables', async () => {
+      const data = [
+        {
+          toc_result_id: 4521,
+          title: 'Output node',
+          description: 'Outcome statement from TOC',
+          related_node_id: 'node-uuid',
+        },
+      ];
+      repository.$_getResultTocByConfigV2.mockResolvedValue(data);
+      repository.getTocIndicatorsByResultIds.mockResolvedValue([
+        {
+          toc_result_id: 4521,
+          indicator_id: 900,
+          toc_result_indicator_id: 'IND-1',
+          related_node_id: 'NODE-1',
+          indicator_description: 'KPI description',
+          unit_messurament: 'Units',
+          type_value: 'Number of knowledge products',
+          type_name: 'Quantitative',
+          location: 'Global',
+          target_value: 1,
+        },
+      ]);
+      repository.getResultIndicatorMappings.mockResolvedValue([]);
+      repository.getTocPartnersByResultIds.mockResolvedValue([
+        { toc_result_id: 4521, code: 1083 },
+        { toc_result_id: 4521, code: 8064 },
+      ]);
+      repository.getTocSynergyProgramsByResultIds.mockResolvedValue([
+        { toc_result_id: 4521, initiative_id: 101 },
+        { toc_result_id: 4521, initiative_id: 102 },
+      ]);
+      repository.getTocTargetCentersByResultIds.mockResolvedValue([
+        { toc_result_id: 4521, indicator_id: 900, center_id: 21 },
+        { toc_result_id: 4521, indicator_id: 900, center_id: 15 },
+        { toc_result_id: 4521, indicator_id: 900, center_id: 21 },
+      ]);
+      returnResponse.format.mockReturnValue({} as any);
+
+      await service.findTocResultByConfigV2(1, 2, 1);
+
+      expect(returnResponse.format).toHaveBeenCalledWith({
+        message: 'Successful response',
+        response: [
+          expect.objectContaining({
+            toc_result_id: 4521,
+            outcome_statement: 'Outcome statement from TOC',
+            toc_partners: [{ code: 1083 }, { code: 8064 }],
+            contributing_synergy_program_initiative_ids: [101, 102],
+            indicators: [
+              expect.objectContaining({
+                indicator_typology: 'Number of knowledge products',
+                toc_target_center_ids: [21, 15],
+              }),
             ],
           }),
         ],

@@ -664,4 +664,66 @@ describe('TocResultsRepository', () => {
       expect(mockQuery).toHaveBeenCalledWith(expect.any(String), [2, 'OUTPUT']);
     });
   });
+
+  describe('getTocPartnersByResultIds', () => {
+    it('returns empty array when ids are missing', async () => {
+      const result = await repository.getTocPartnersByResultIds([], 'phase-1');
+      expect(result).toEqual([]);
+      expect(mockQuery).not.toHaveBeenCalled();
+    });
+
+    it('queries partners by toc result id and phase', async () => {
+      mockQuery.mockResolvedValue([{ toc_result_id: 10, code: 1083 }]);
+
+      const result = await repository.getTocPartnersByResultIds(
+        [10],
+        'phase-2026',
+      );
+
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('toc_result_partners'),
+        [10, 'phase-2026'],
+      );
+      expect(result).toEqual([{ toc_result_id: 10, code: 1083 }]);
+    });
+  });
+
+  describe('getTocSynergyProgramsByResultIds', () => {
+    it('queries synergy programs by toc result id and phase', async () => {
+      mockQuery.mockResolvedValue([{ toc_result_id: 10, initiative_id: 101 }]);
+
+      const result = await repository.getTocSynergyProgramsByResultIds(
+        [10],
+        'phase-2026',
+      );
+
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('toc_result_synergy_programs'),
+        [10, 'phase-2026'],
+      );
+      expect(result).toEqual([{ toc_result_id: 10, initiative_id: 101 }]);
+    });
+  });
+
+  describe('getTocTargetCentersByResultIds', () => {
+    it('queries target centers filtered by reporting year and phase', async () => {
+      mockQuery.mockResolvedValue([
+        { toc_result_id: 10, indicator_id: 900, center_id: 21 },
+      ]);
+
+      const result = await repository.getTocTargetCentersByResultIds(
+        [10],
+        'phase-2026',
+        2026,
+      );
+
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('toc_result_indicator_target_center'),
+        [2026, 10, 'phase-2026'],
+      );
+      expect(result).toEqual([
+        { toc_result_id: 10, indicator_id: 900, center_id: 21 },
+      ]);
+    });
+  });
 });
