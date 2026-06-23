@@ -1,6 +1,6 @@
 <div class="container" *ngIf="activeTab">
   <div class="flex-no-wrap" *ngIf="(activeTab?.planned_result !== null || activeTab?.planned_result === null) && showMultipleWPsContent">
-    <div style="max-width: 250px" *ngIf="(resultLevelId === 1 ? !activeTab?.planned_result : true) && !isUnplanned">
+    <div style="max-width: 250px" *ngIf="(resultLevelId === 1 ? !activeTab?.planned_result : true) && (isCP2026() ? !isUnplanned : true)">
       <app-pr-select
         [options]="this.tocResultListFiltered()"
         label="Level"
@@ -15,7 +15,7 @@
       </app-pr-select>
     </div>
 
-    @if (this.secondFieldLabel() && activeTab.toc_level_id && !isUnplanned) {
+    @if (this.secondFieldLabel() && activeTab.toc_level_id && (isCP2026() ? !isUnplanned : true)) {
       @switch (activeTab.toc_level_id) {
         @case (3) {
           <app-pr-select
@@ -69,8 +69,8 @@
       @if (this.indicatorsList().length) {
         <app-pr-select
           [options]="this.indicatorsList()"
-          label="KPI Statement/description"
-          description="Maps to TOC: [KPI Statement – deliverable short name and indicator description]"
+          [label]="indicatorLabel()"
+          [description]="indicatorHelp()"
           [editable]="editable"
           [disabled]="!editable"
           optionLabel="indicator_description"
@@ -82,13 +82,7 @@
         @if (activeTab.indicators[0].related_node_id) {
           <div>
             <app-pr-field-header label="Contribution to indicator target" [required]="false"></app-pr-field-header>
-            <app-alert-status
-              status="info"
-              description="Indicate the numerical value that this result contributes toward the 2026 indicator target, using the same unit of measurement as the indicator itself.<br>
-              <br><strong>Examples:</strong> If the indicator measures number of farmers, enter the number of farmers reached or benefiting from this result. If the indicator measures USD invested or leveraged, enter the corresponding monetary value. If the indicator measures number of workshops, trainings, or events, enter the number delivered. Apply the same logic for any other unit of measurement specified by the indicator.<br>
-              <br>If you are reporting a Knowledge Product and have mapped it to a TOC KPI/indicator, enter <strong>1</strong> as the contribution to target. If the KP does not count independently toward the yearly target — for example, because it serves as a complementary result supporting the achievement of another result that carries the count — enter <strong>0</strong>.<br>
-              <br>Values entered here will be aggregated across results at the end of the reporting cycle to assess progress toward the planned 2026 KPIs and indicator targets."
-              inlineStyles="margin: 0; margin-bottom: 10px !important;"></app-alert-status>
+            <app-alert-status status="info" [description]="contributionTargetNote()" inlineStyles="margin: 0; margin-bottom: 10px !important;"></app-alert-status>
             <div style="margin: 8px 0" *ngIf="selectedIndicatorData()">
               <p><strong>Unit of measurement:</strong> {{ selectedIndicatorData()?.unit_messurament || 'Not specified' }}</p>
               <p><strong>Target:</strong> {{ selectedIndicatorData()?.targets?.[0]?.target_value || 'Not specified' }}</p>

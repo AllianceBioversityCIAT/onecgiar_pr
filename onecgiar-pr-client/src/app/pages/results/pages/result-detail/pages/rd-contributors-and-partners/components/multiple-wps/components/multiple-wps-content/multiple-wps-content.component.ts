@@ -58,6 +58,19 @@ export class CPMultipleWPsContentComponent implements OnChanges {
     return this.tocResultListFiltered().find(item => item.toc_level_id === this.activeTabSignal()?.toc_level_id)?.name;
   });
 
+  // P2-3036: the 2026 redesign (labels/help/wording) applies only to phase 2026+. 2025 keeps the legacy copy.
+  isCP2026 = computed(() => this.fieldsManagerSE.isContributorsPartners2026());
+
+  indicatorLabel = computed(() => (this.isCP2026() ? 'KPI Statement/description' : 'Indicator'));
+
+  indicatorHelp = computed(() => (this.isCP2026() ? 'Maps to TOC: [KPI Statement – deliverable short name and indicator description]' : ''));
+
+  contributionTargetNote = computed(() =>
+    this.isCP2026()
+      ? 'Indicate the numerical value that this result contributes toward the 2026 indicator target, using the same unit of measurement as the indicator itself.<br><br><strong>Examples:</strong> If the indicator measures number of farmers, enter the number of farmers reached or benefiting from this result. If the indicator measures USD invested or leveraged, enter the corresponding monetary value. If the indicator measures number of workshops, trainings, or events, enter the number delivered. Apply the same logic for any other unit of measurement specified by the indicator.<br><br>If you are reporting a Knowledge Product and have mapped it to a TOC KPI/indicator, enter <strong>1</strong> as the contribution to target. If the KP does not count independently toward the yearly target — for example, because it serves as a complementary result supporting the achievement of another result that carries the count — enter <strong>0</strong>.<br><br>Values entered here will be aggregated across results at the end of the reporting cycle to assess progress toward the planned 2026 KPIs and indicator targets.'
+      : 'Indicate in this box the numerical value that your result contributes toward the 2025 target of the indicator.<br><br><strong>Example:</strong> If the 2025 indicator target is 200 (people trained) and your result (e.g., a capacity-sharing activity) provides evidence of 90 people trained, enter <strong>90</strong> in this box.<br><br>The values entered here will be aggregated at the end of the reporting cycle to assess progress toward the planned 2025 target for the indicator.'
+  );
+
   onChangesActiveTab = effect(() => {
     this.getIndicatorsList();
   });

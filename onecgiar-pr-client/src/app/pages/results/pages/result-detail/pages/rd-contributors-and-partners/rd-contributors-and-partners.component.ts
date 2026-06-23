@@ -79,6 +79,21 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     return initiativeId === 41 && this.fieldsManagerSE.isP25();
   });
 
+  // P2-3036: the 2026 redesign of this section applies only to phase 2026+. 2025 keeps the legacy copy/fields.
+  isCP2026 = computed(() => this.fieldsManagerSE.isContributorsPartners2026());
+
+  tocQuestionLabel = computed(() =>
+    this.isCP2026()
+      ? 'Can this result be mapped to a planned TOC KPI or indicator?'
+      : "Does this result align with the Program's planned TOC indicators?"
+  );
+
+  tocQuestionInfoNote = computed(() =>
+    this.isCP2026()
+      ? 'If <strong>Yes</strong>, please select the relevant level, KPI and indicator, and indicate the result contribution to the indicator target. If <strong>No</strong>, please provide a short justification explaining why this result is being reported outside the 2026 TOC KPI/indicators. No-mapped results will be shared with the Program team for consideration as part of the adaptive management process, and may feed into updates to the Program’s 2027 TOC.'
+      : 'If your answer is <strong>Yes</strong>, please select the relevant <strong>HLO, indicator</strong>, and <strong>contribution to target</strong> below. If the result is not planned for in the 2025 ToC (planned indicators), please select <strong>No</strong> and, where applicable, choose the <strong>HLO</strong> under which it is most appropriate to report the result. Please also provide a short justification explaining why you are reporting it even though it is not reflected in a 2025 ToC indicator. These “No”-flagged results could be reviewed by the Program team as part of the adaptive management process and may inform updates or adjustments to the Program’s 2026 ToC and planned indicators.'
+  );
+
   GET_AllWithoutResults() {
     this.api.resultsSE.GET_resultById().subscribe({
       next: ({ response }) => {
@@ -236,7 +251,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   }
 
   getContributorDescription(contributor: any) {
-    const contributorsText = `<strong>${contributor?.official_code} ${contributor?.short_name}</strong> - Can this result be mapped to a planned TOC KPI or indicator?`;
+    const contributorsText = `<strong>${contributor?.official_code} ${contributor?.short_name}</strong> - ${this.tocQuestionLabel()}`;
 
     if (!contributor?.result_toc_results?.length) {
       return `<strong>${contributor?.official_code} ${contributor?.short_name}</strong> - Pending confirmation`;

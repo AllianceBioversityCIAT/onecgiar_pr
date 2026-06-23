@@ -1,6 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { CustomField } from '../interfaces/customField.interface';
 import { DataControlService } from './data-control.service';
+import { ReportingDesignYear } from '../enum/reporting-design-year.enum';
 enum Portfolios {
   'P22' = 0,
   'P25' = 1
@@ -17,6 +18,15 @@ export class FieldsManagerService {
   portfolioAcronym = computed(() => this.dataControlSE.currentResultSignal()?.portfolio);
   isP25 = computed(() => Portfolios[this.portfolioAcronym()] == Portfolios.P25);
   isP22 = computed(() => Portfolios[this.portfolioAcronym()] == Portfolios.P22);
+  /**
+   * True when the open result's reporting phase is 2026+ → new Contributors & Partners
+   * layout, labels and validations (P2-3036). 2025 and earlier keep the legacy UI.
+   * Threshold is centralized in {@link ReportingDesignYear}.
+   */
+  isContributorsPartners2026 = computed(() => {
+    const year = this.dataControlSE.currentResultSignal()?.phase_year ?? this.dataControlSE.reportingCurrentPhase?.phaseYear;
+    return typeof year === 'number' && year >= ReportingDesignYear.ContributorsPartnersRedesign;
+  });
   isAnInnovation = computed(
     () => this.dataControlSE.currentResultSignal()?.result_type_id == 2 || this.dataControlSE.currentResultSignal()?.result_type_id == 7
   );
