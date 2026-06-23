@@ -1,6 +1,6 @@
 <div class="container" *ngIf="activeTab">
   <div class="flex-no-wrap" *ngIf="(activeTab?.planned_result !== null || activeTab?.planned_result === null) && showMultipleWPsContent">
-    <div style="max-width: 250px" *ngIf="resultLevelId === 1 ? !activeTab?.planned_result : true">
+    <div style="max-width: 250px" *ngIf="(resultLevelId === 1 ? !activeTab?.planned_result : true) && !isUnplanned">
       <app-pr-select
         [options]="this.tocResultListFiltered()"
         label="Level"
@@ -15,7 +15,7 @@
       </app-pr-select>
     </div>
 
-    @if (this.secondFieldLabel() && activeTab.toc_level_id) {
+    @if (this.secondFieldLabel() && activeTab.toc_level_id && !isUnplanned) {
       @switch (activeTab.toc_level_id) {
         @case (3) {
           <app-pr-select
