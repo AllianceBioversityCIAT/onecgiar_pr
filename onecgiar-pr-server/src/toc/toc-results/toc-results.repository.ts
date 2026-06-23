@@ -624,6 +624,7 @@ export class TocResultsRepository extends Repository<TocResult> {
       SELECT DISTINCT
         tr.id AS toc_result_id,
         tr.toc_result_id AS toc_internal_id,
+        tr.related_node_id,
         tr.result_title AS title,
         tr.result_description AS description,
         tr.result_type AS toc_type_id,
@@ -1010,6 +1011,132 @@ export class TocResultsRepository extends Repository<TocResult> {
     } catch (error) {
       throwServiceError(
         `[${TocResultsRepository.name}] => getCatalogTargetsByIndicatorNodeIds error: ${formatUnknownError(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async getTocPartnersByResultIds(
+    tocResultIds: Array<number | string>,
+    tocPhaseId: string,
+  ): Promise<Array<{ toc_result_id: number; code: number | string }>> {
+    const numericIds = (tocResultIds ?? [])
+      .map(Number)
+      .filter((id) => Number.isFinite(id) && id > 0);
+
+    const normalizedPhaseId = `${tocPhaseId ?? ''}`.trim();
+    if (!numericIds.length || !normalizedPhaseId) {
+      return [];
+    }
+
+    const placeholders = numericIds.map(() => '?').join(', ');
+    const query = `
+      SELECT DISTINCT
+        tr.id AS toc_result_id,
+        trp.code
+      FROM ${env.DB_TOC}.toc_results tr
+      INNER JOIN ${env.DB_TOC}.toc_result_partners trp
+        ON trp.toc_result_id_toc = tr.related_node_id
+      WHERE tr.id IN (${placeholders})
+        AND tr.phase = ?
+    `;
+
+    try {
+      return await this.query(query, [...numericIds, normalizedPhaseId]);
+    } catch (error) {
+      throwServiceError(
+        `[${TocResultsRepository.name}] => getTocPartnersByResultIds error: ${formatUnknownError(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async getTocSynergyProgramsByResultIds(
+    tocResultIds: Array<number | string>,
+    tocPhaseId: string,
+  ): Promise<Array<{ toc_result_id: number; initiative_id: number }>> {
+    const numericIds = (tocResultIds ?? [])
+      .map(Number)
+      .filter((id) => Number.isFinite(id) && id > 0);
+
+    const normalizedPhaseId = `${tocPhaseId ?? ''}`.trim();
+    if (!numericIds.length || !normalizedPhaseId) {
+      return [];
+    }
+
+    const placeholders = numericIds.map(() => '?').join(', ');
+    const query = `
+      SELECT DISTINCT
+        tr.id AS toc_result_id,
+        trsp.initiative_id
+      FROM ${env.DB_TOC}.toc_results tr
+      INNER JOIN ${env.DB_TOC}.toc_result_synergy_programs trsp
+        ON trsp.toc_result_id_toc = tr.related_node_id
+      WHERE tr.id IN (${placeholders})
+        AND tr.phase = ?
+    `;
+
+    try {
+      return await this.query(query, [...numericIds, normalizedPhaseId]);
+    } catch (error) {
+      throwServiceError(
+        `[${TocResultsRepository.name}] => getTocSynergyProgramsByResultIds error: ${formatUnknownError(error)}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async getTocTargetCentersByResultIds(
+    tocResultIds: Array<number | string>,
+    tocPhaseId: string,
+    reportingYear: number,
+  ): Promise<
+    Array<{
+      toc_result_id: number;
+      indicator_id: number;
+      center_id: number;
+    }>
+  > {
+    const numericIds = (tocResultIds ?? [])
+      .map(Number)
+      .filter((id) => Number.isFinite(id) && id > 0);
+
+    const normalizedPhaseId = `${tocPhaseId ?? ''}`.trim();
+    const targetYear = Number(reportingYear);
+
+    if (
+      !numericIds.length ||
+      !normalizedPhaseId ||
+      !Number.isFinite(targetYear)
+    ) {
+      return [];
+    }
+
+    const placeholders = numericIds.map(() => '?').join(', ');
+    const query = `
+      SELECT DISTINCT
+        tr.id AS toc_result_id,
+        tri.id AS indicator_id,
+        tritc.center_id
+      FROM ${env.DB_TOC}.toc_results tr
+      INNER JOIN ${env.DB_TOC}.toc_results_indicators tri
+        ON tri.toc_results_id = tr.id
+        AND tri.is_active = 1
+      INNER JOIN ${env.DB_TOC}.toc_result_indicator_target trit
+        ON trit.id_indicator = tri.id
+        AND trit.target_date = ?
+      INNER JOIN ${env.DB_TOC}.toc_result_indicator_target_center tritc
+        ON tritc.toc_indicator_target_id = trit.toc_indicator_target_id
+      WHERE tr.id IN (${placeholders})
+        AND tr.phase = ?
+        AND tritc.center_id IS NOT NULL
+    `;
+
+    try {
+      return await this.query(query, [targetYear, ...numericIds, normalizedPhaseId]);
+    } catch (error) {
+      throwServiceError(
+        `[${TocResultsRepository.name}] => getTocTargetCentersByResultIds error: ${formatUnknownError(error)}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
