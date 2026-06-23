@@ -236,7 +236,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   }
 
   getContributorDescription(contributor: any) {
-    const contributorsText = `<strong>${contributor?.official_code} ${contributor?.short_name}</strong> - Does this result align with the Program's planned TOC indicators?`;
+    const contributorsText = `<strong>${contributor?.official_code} ${contributor?.short_name}</strong> - Can this result be mapped to a planned TOC KPI or indicator?`;
 
     if (!contributor?.result_toc_results?.length) {
       return `<strong>${contributor?.official_code} ${contributor?.short_name}</strong> - Pending confirmation`;
