@@ -30,6 +30,22 @@ The "High Level Output/Intermediate Outcome/2030 Outcome" dropdown SHALL be hidd
 - **WHEN** the ToC question is answered "Yes" and a Level is selected
 - **THEN** the HLO/Outcome dropdown is rendered as before
 
+### Requirement: HLO tab header hidden in the No scenario
+The HLO tab header — the contribution tabs/chips (e.g. "HLO N~1") and the "+" add-tab button — SHALL be hidden when the ToC alignment answer is "No". This complements the dropdown removals so the whole HLO selection UI disappears, leaving only the "Why is the result being reported?" justification.
+
+#### Scenario: No answer hides the HLO tab header
+- **WHEN** the ToC question is answered "No" (`isUnplanned`) on a 2026 P25 Contributors & Partners section
+- **THEN** no HLO contribution chip and no "+" add-tab button are rendered
+- **AND** only the "Why is the result being reported?" justification remains
+
+#### Scenario: Yes answer still shows the HLO tab header
+- **WHEN** the ToC question is answered "Yes"
+- **THEN** the HLO contribution chips and the "+" add-tab button render as before
+
+#### Scenario: Phase 2025 and other reuse contexts unaffected
+- **WHEN** the section is phase 2025, or the component is reused in IPSR / bilateral / share-request (`isCP2026()` is false)
+- **THEN** the HLO tab header renders exactly as before regardless of the No/Yes answer
+
 ### Requirement: Justification word limit raised to 50
 The "Why is the result being reported?" field SHALL allow up to 50 words.
 

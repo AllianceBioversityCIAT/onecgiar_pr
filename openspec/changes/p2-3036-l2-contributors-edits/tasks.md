@@ -18,6 +18,13 @@
 
 - [x] 4.1 Changed `[maxWords]="30"` → `[maxWords]="50"` on the "Why is the result being reported?" textarea.
 
+## 4b. No-scenario removal — HLO tab header (QA follow-up, P2-3062)
+
+QA (Santiago) flagged the HLO tab header ("HLO N~1" chip + "+" add button) still showing in the No scenario — Level 2 only hid the inner dropdowns, not the outer tab header in `multiple-wps.component.html`.
+
+- [x] 4b.1 `multiple-wps.component.ts`: add `isCP2026 = computed(() => this.fieldsManagerSE.isContributorsPartners2026())` (mirrors the child's gate; `fieldsManagerSE` already injected).
+- [x] 4b.2 `multiple-wps.component.html`: gate the tab-header block `@if (!hidden)` → `@if (!hidden && (isCP2026() ? !isUnplanned : true))` so chips + "+" hide in No, only on 2026 (2025 / IPSR / bilateral / share-request unchanged).
+
 ## 5. Verify
 
 - [ ] 5.1 Build/compile the client — no template errors.

@@ -41,6 +41,9 @@ export class CPMultipleWPsComponent implements OnChanges {
 
   fieldsManagerSE = inject(FieldsManagerService);
   rdPartnersSE = inject(RdContributorsAndPartnersService);
+  // P2-3036 L2 (P2-3062): in the 2026 redesign the HLO tab header (chips + add button) is hidden in the No scenario.
+  // Gated by isCP2026 so phase 2025 and the other reuse contexts (IPSR, bilateral, share-request) are unaffected.
+  isCP2026 = computed(() => this.fieldsManagerSE.isContributorsPartners2026());
   constructor(
     public api: ApiService,
     private readonly customizedAlertsFeSE: CustomizedAlertsFeService

@@ -1,5 +1,5 @@
 <div class="local_container section_container">
-  @if (!hidden) {
+  @if (!hidden && (isCP2026() ? !isUnplanned : true)) {
     <div class="tabs-container">
       <div class="tabs" [style.grid-template-columns]="getGridTemplateColumns()">
         @for (tab of initiative?.result_toc_results; track $index) {
