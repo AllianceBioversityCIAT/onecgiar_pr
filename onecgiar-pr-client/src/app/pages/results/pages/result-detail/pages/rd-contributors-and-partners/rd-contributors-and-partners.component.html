@@ -1,21 +1,47 @@
 <div class="detail_container">
   <app-alert-status *ngIf="!this.api.dataControlSE.isKnowledgeProduct" [description]="alertStatusMessage"> </app-alert-status>
 
-  <!-- ! Submitter field removed (P2-3036 Level 2) — changePrimaryInit is still set in the service, so the save payload is unchanged. -->
+  <!-- ! Submitter: legacy field shown ONLY for phase 2025 and earlier; removed in the 2026 redesign (P2-3036 Level 2). changePrimaryInit is still set in the service, so save is unaffected. -->
+  @if (!isCP2026()) {
+    @if (this.rdPartnersSE.getConsumed()) {
+      <app-pr-select
+        class="segment_title_margin"
+        [options]="this.rdPartnersSE.partnersBody.contributing_and_primary_initiative"
+        label="Submitter"
+        optionLabel="full_name"
+        optionValue="id"
+        [placeholder]="'Select ' + ('term.entity.orPlatforms' | term: this.api.dataControlSE.currentResult?.portfolio)"
+        [description]="'Select ' + ('term.entity.orPlatforms' | term: this.api.dataControlSE.currentResult?.portfolio)"
+        [(ngModel)]="this.rdPartnersSE.partnersBody.changePrimaryInit"
+        [fieldDisabled]="
+          !!(
+            this.rdPartnersSE.partnersBody.contributing_and_primary_initiative?.length === 1 &&
+            this.rdPartnersSE.partnersBody?.result_toc_result?.initiative_id
+          )
+        ">
+      </app-pr-select>
+
+      @if (
+        this.rdPartnersSE.partnersBody.contributing_and_primary_initiative?.length == 1 &&
+        this.rdPartnersSE.partnersBody?.result_toc_result?.initiative_id
+      ) {
+        <div class="no-primary-list">
+          Since this result has not been shared and accepted by other
+          {{ 'term.entity.plural' | term: this.api.dataControlSE.currentResult?.portfolio }}, it is not possible to change the submitter.
+        </div>
+      }
+    }
+  }
 
   <app-pr-yes-or-not
-    label="Can this result be mapped to a planned TOC KPI or indicator?"
+    [label]="tocQuestionLabel()"
     [required]="!isAvisaInitiative()"
     [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.planned_result"
     (selectOptionEvent)="onPlannedResultChange(this.rdPartnersSE.partnersBody?.result_toc_result)"
     [readOnly]="isAvisaInitiative()">
   </app-pr-yes-or-not>
 
-  <app-alert-status
-    [description]="
-      'If <strong>Yes</strong>, please select the relevant level, KPI and indicator, and indicate the result contribution to the indicator target. If <strong>No</strong>, please provide a short justification explaining why this result is being reported outside the 2026 TOC KPI/indicators. No-mapped results will be shared with the Program team for consideration as part of the adaptive management process, and may feed into updates to the Program’s 2027 TOC.'
-    ">
-  </app-alert-status>
+  <app-alert-status [description]="tocQuestionInfoNote()"> </app-alert-status>
 
   @if (this.rdPartnersSE.partnersBody.result_toc_result.planned_result !== null) {
     @if (this.tocConsumed) {
@@ -40,7 +66,7 @@
         label="Why is the result being reported?"
         type="text"
         [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.toc_progressive_narrative"
-        [maxWords]="50"
+        [maxWords]="isCP2026() ? 50 : 30"
         [rows]="2"
         [autogenerate]="true">
       </app-pr-textarea>
