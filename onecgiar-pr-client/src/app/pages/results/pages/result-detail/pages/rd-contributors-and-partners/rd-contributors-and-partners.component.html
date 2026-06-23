@@ -1,35 +1,7 @@
 <div class="detail_container">
   <app-alert-status *ngIf="!this.api.dataControlSE.isKnowledgeProduct" [description]="alertStatusMessage"> </app-alert-status>
 
-  <!-- ! from toc section -->
-  @if (this.rdPartnersSE.getConsumed()) {
-    <app-pr-select
-      class="segment_title_margin"
-      [options]="this.rdPartnersSE.partnersBody.contributing_and_primary_initiative"
-      label="Submitter"
-      optionLabel="full_name"
-      optionValue="id"
-      [placeholder]="'Select ' + ('term.entity.orPlatforms' | term: this.api.dataControlSE.currentResult?.portfolio)"
-      [description]="'Select ' + ('term.entity.orPlatforms' | term: this.api.dataControlSE.currentResult?.portfolio)"
-      [(ngModel)]="this.rdPartnersSE.partnersBody.changePrimaryInit"
-      [fieldDisabled]="
-        !!(
-          this.rdPartnersSE.partnersBody.contributing_and_primary_initiative?.length === 1 &&
-          this.rdPartnersSE.partnersBody?.result_toc_result?.initiative_id
-        )
-      ">
-    </app-pr-select>
-
-    @if (
-      this.rdPartnersSE.partnersBody.contributing_and_primary_initiative?.length == 1 &&
-      this.rdPartnersSE.partnersBody?.result_toc_result?.initiative_id
-    ) {
-      <div class="no-primary-list">
-        Since this result has not been shared and accepted by other
-        {{ 'term.entity.plural' | term: this.api.dataControlSE.currentResult?.portfolio }}, it is not possible to change the submitter.
-      </div>
-    }
-  }
+  <!-- ! Submitter field removed (P2-3036 Level 2) — changePrimaryInit is still set in the service, so the save payload is unchanged. -->
 
   <app-pr-yes-or-not
     label="Can this result be mapped to a planned TOC KPI or indicator?"
@@ -68,7 +40,7 @@
         label="Why is the result being reported?"
         type="text"
         [(ngModel)]="this.rdPartnersSE.partnersBody.result_toc_result.toc_progressive_narrative"
-        [maxWords]="30"
+        [maxWords]="50"
         [rows]="2"
         [autogenerate]="true">
       </app-pr-textarea>
