@@ -15,6 +15,7 @@ import { Chart, ChartData, ChartDataset, ChartOptions } from 'chart.js';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { SplitButtonModule } from 'primeng/splitbutton';
+import { TooltipModule } from 'primeng/tooltip';
 import { ResultCreatorModule } from '../../../results/pages/result-creator/result-creator.module';
 import { MenuItem } from 'primeng/api';
 import { BilateralResultsReviewComponent } from './components/bilateral-results-review/bilateral-results-review.component';
@@ -36,6 +37,7 @@ import { ResultFrameworkReportingHomeService } from '../result-framework-reporti
     ButtonModule,
     DialogModule,
     SplitButtonModule,
+    TooltipModule,
     ResultCreatorModule,
     BilateralResultsReviewComponent
   ],
