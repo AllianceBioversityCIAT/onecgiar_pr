@@ -36,6 +36,14 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   updatingLeadData: boolean = false;
   disableLeadPartner: boolean = false;
 
+  // P2-2998 / P2-3036 (2026): Contributing CGIAR Centers split in two dropdowns.
+  // `tocReferenceCenterInstitutionIds` = institutionIds derived from the selected TOC node
+  // (toc_partners ∪ toc_target_center_ids), fed by multiple-wps-content. The first dropdown shows
+  // only the matching CLARISA centers; "Other(s)" shows the rest. Visual layer only — SAVE NOT ADDRESSED YET.
+  tocReferenceCenterInstitutionIds = signal<number[]>([]);
+  otherCentersSelected: CenterDto[] = [];
+  showOtherCenters = false;
+
   constructor(
     public api: ApiService,
     public institutionsSE: InstitutionsService,

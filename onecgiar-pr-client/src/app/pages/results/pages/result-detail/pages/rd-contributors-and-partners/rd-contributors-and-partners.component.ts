@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, ChangeDetectorRef, computed } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef, computed, effect } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
@@ -94,6 +94,59 @@ export class RdContributorsAndPartnersComponent implements OnInit {
       : 'If your answer is <strong>Yes</strong>, please select the relevant <strong>HLO, indicator</strong>, and <strong>contribution to target</strong> below. If the result is not planned for in the 2025 ToC (planned indicators), please select <strong>No</strong> and, where applicable, choose the <strong>HLO</strong> under which it is most appropriate to report the result. Please also provide a short justification explaining why you are reporting it even though it is not reflected in a 2025 ToC indicator. These “No”-flagged results could be reviewed by the Program team as part of the adaptive management process and may inform updates or adjustments to the Program’s 2026 ToC and planned indicators.'
   );
 
+  // P2-2998 / P2-3036 (2026): split the Contributing CGIAR Centers dropdown into "from ToC" + "Other(s)".
+  // The first shows only CLARISA centers whose institutionId matches the selected TOC node (toc_partners ∪
+  // toc_target_center_ids, fed via the shared service). "Other(s)" shows the rest. SAVE NOT ADDRESSED YET.
+  contributingCentersInfoNote =
+    "The CGIAR Centers listed below were identified in your 2026 ToC. To select a different Center, choose 'Other' from the drop-down menu and then make your selection from the options that appear.";
+
+  referenceCenters = computed(() => {
+    const ids = this.rdPartnersSE.tocReferenceCenterInstitutionIds();
+    return (this.centersSE.centersList ?? []).filter(c => ids.includes(c.institutionId));
+  });
+
+  otherCentersList = computed(() => {
+    const ids = this.rdPartnersSE.tocReferenceCenterInstitutionIds();
+    return (this.centersSE.centersList ?? []).filter(c => !ids.includes(c.institutionId));
+  });
+
+  // "Other(s) CGIAR Centers" is a special item at the END of the first dropdown's list (per Excel), not an outside
+  // checkbox. Selecting it toggles the second dropdown; it is never persisted as a real center.
+  readonly OTHER_CENTERS_CODE = '__OTHER_CENTERS__';
+  dropdown1Options = computed(() => [
+    ...this.referenceCenters(),
+    { code: this.OTHER_CENTERS_CODE, name: 'Other(s) CGIAR Centers', acronym: 'Other(s)', full_name: '<strong>Other(s) CGIAR Centers</strong>', institutionId: -1 }
+  ]);
+
+  // Preselect all TOC reference centers on load, only when the result has no centers selected yet.
+  private userTouchedCenters = false;
+  preselectCentersEffect = effect(() => {
+    if (!this.isCP2026() || this.userTouchedCenters) return;
+    const refs = this.referenceCenters();
+    const cc = this.rdPartnersSE.partnersBody?.contributing_center;
+    if (refs.length && (!cc || cc.length === 0)) {
+      this.rdPartnersSE.partnersBody.contributing_center = refs.map(c => ({ ...c, new: true, is_active: true })) as any[];
+      this.rdPartnersSE.setPossibleLeadCenters(true);
+    }
+  });
+
+  // "Other(s)" stays selected like any other center (shows as a chip); its presence reveals the second dropdown.
+  get showOtherCenters(): boolean {
+    return (this.rdPartnersSE.partnersBody?.contributing_center || []).some(c => c.code === this.OTHER_CENTERS_CODE);
+  }
+
+  onContributingCenterSelect(_event: any) {
+    this.userTouchedCenters = true;
+    // when "Other(s)" is deselected, clear whatever was picked in the Other(s) dropdown
+    if (!this.showOtherCenters) this.rdPartnersSE.otherCentersSelected = [];
+    // OTHER_CENTERS_CODE isn't in the CLARISA list, so it doesn't affect lead-center options.
+    this.rdPartnersSE.setPossibleLeadCenters(true);
+  }
+
+  deleteOtherCenter(index: number) {
+    this.rdPartnersSE.otherCentersSelected?.splice(index, 1);
+  }
+
   GET_AllWithoutResults() {
     this.api.resultsSE.GET_resultById().subscribe({
       next: ({ response }) => {
@@ -146,6 +199,8 @@ export class RdContributorsAndPartnersComponent implements OnInit {
       //always should happen
       this.rdPartnersSE.leadCenterCode = null;
     }
+    // P2-2998: removing the "Other(s)" chip hides the second dropdown and clears its selection.
+    if (!this.showOtherCenters) this.rdPartnersSE.otherCentersSelected = [];
     if (updateComponent) {
       setTimeout(() => {
         this.rdPartnersSE.updatingLeadData = false;

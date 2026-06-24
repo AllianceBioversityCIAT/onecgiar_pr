@@ -5,6 +5,7 @@ import { TocInitiativeOutcomeListsService } from '../../../../../rd-theory-of-ch
 import { RdTheoryOfChangesServicesService } from '../../../../../rd-theory-of-change/rd-theory-of-changes-services.service';
 import { ResultLevelService } from '../../../../../../../../../../pages/results/pages/result-creator/services/result-level.service';
 import { FieldsManagerService } from '../../../../../../../../../../shared/services/fields-manager.service';
+import { RdContributorsAndPartnersService } from '../../../../rd-contributors-and-partners.service';
 
 interface TocResultItem {
   toc_result_id: string;
@@ -48,6 +49,7 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   @Output() tocResultChanged = new EventEmitter<void>();
   reusltlevelSE = inject(ResultLevelService);
   fieldsManagerSE = inject(FieldsManagerService);
+  rdPartnersSE = inject(RdContributorsAndPartnersService);
   resultLevelIdSignal = signal<number | string | undefined>(undefined);
   indicatorsList = signal<any[]>([]);
   indicatorView = false;
@@ -114,6 +116,18 @@ export class CPMultipleWPsContentComponent implements OnChanges {
 
   onChangesActiveTab = effect(() => {
     this.getIndicatorsList();
+  });
+
+  // P2-2998 / P2-3036 (2026): feed the parent the institutionIds of the centers referenced by the selected TOC node.
+  // Union of toc_partners (node) and toc_target_center_ids (selected indicator); both cross to CLARISA by institutionId.
+  // Visual layer only — the parent uses these to split the Contributing CGIAR Centers dropdown. SAVE NOT ADDRESSED YET.
+  syncTocReferenceCenters = effect(() => {
+    if (!this.isCP2026()) return;
+    const node: any = this.selectedTocNode();
+    const ind: any = this.selectedIndicatorData();
+    const fromPartners = (node?.toc_partners ?? []).map((p: any) => Number(p?.code)).filter((n: number) => !Number.isNaN(n));
+    const fromTargets = (ind?.toc_target_center_ids ?? []).map((x: any) => Number(x)).filter((n: number) => !Number.isNaN(n));
+    this.rdPartnersSE.tocReferenceCenterInstitutionIds.set(Array.from(new Set([...fromPartners, ...fromTargets])));
   });
 
   ngOnChanges(): void {
