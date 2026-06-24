@@ -27,12 +27,18 @@ The indicator selector in the ToC detail SHALL be labeled `"KPI Statement/descri
 - **WHEN** the ToC detail (multiple-wps content) renders the indicator selector
 - **THEN** its label reads `"KPI Statement/description"` instead of `"Indicator"`
 
-### Requirement: KPI Statement/description help text
-The `KPI Statement/description` field SHALL show the ToC-mapping help text from the Excel (row 12).
+### Requirement: KPI Statement/description help text as tooltip
+The `KPI Statement/description` field SHALL expose the ToC-mapping help text from the Excel (row 12) as a **tooltip on an info icon (ⓘ) next to the label**, following the project design line (`material-icons-round` + PrimeNG `pTooltip`), not as visible text below the field. (QA follow-up P2-3061 / updated 2026-06-24 mockup.)
 
-#### Scenario: Help text present
-- **WHEN** the indicator/KPI selector is rendered
-- **THEN** inline help text reads `"Maps to TOC: [KPI Statement – deliverable short name and indicator description]"`
+#### Scenario: Help text shown as info-icon tooltip
+- **WHEN** the indicator/KPI selector is rendered on a 2026 P25 result (`isCP2026()`)
+- **THEN** an info icon (ⓘ) appears next to the `"KPI Statement/description"` label
+- **AND** hovering it shows the tooltip `"Maps to TOC: [KPI Statement – deliverable short name and indicator description]"`
+- **AND** that text does NOT appear as visible inline text below the field
+
+#### Scenario: Phase 2025 and non-tooltip fields unaffected
+- **WHEN** the field is rendered on phase 2025 (`isCP2026()` false), or any other field that passes no `tooltip` input
+- **THEN** no info icon is rendered and the label markup is unchanged from before
 
 ### Requirement: Contribution to indicator target info note text
 The info note for the Contribution-to-indicator-target field SHALL display the 2026 guidance from the Excel (row 18).
