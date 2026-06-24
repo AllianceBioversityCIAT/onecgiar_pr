@@ -118,16 +118,35 @@ export class CPMultipleWPsContentComponent implements OnChanges {
     this.getIndicatorsList();
   });
 
-  // P2-2998 / P2-3036 (2026): feed the parent the institutionIds of the centers referenced by the selected TOC node.
-  // Union of toc_partners (node) and toc_target_center_ids (selected indicator); both cross to CLARISA by institutionId.
-  // Visual layer only — the parent uses these to split the Contributing CGIAR Centers dropdown. SAVE NOT ADDRESSED YET.
-  syncTocReferenceCenters = effect(() => {
+  // P2-2998 / P2-2929 (2026): feed the parent the institutionIds / initiative-ids referenced by the TOC.
+  // Per Juan David: the front applies NO precedence logic (the backend resolves the 4 KPI/HLO scenarios); it just
+  // UNIONS + dedupes across ALL selected nodes/tabs:
+  //   - Centers  = toc_partners (per node) ∪ toc_target_center_ids (per selected indicator)  → cross CLARISA by institutionId
+  //   - Science Programs = contributing_synergy_program_initiative_ids (per node)            → cross /clarisa/initiatives by id
+  // Visual layer only. SAVE NOT ADDRESSED YET.
+  syncTocReferenceIds = effect(() => {
     if (!this.isCP2026()) return;
-    const node: any = this.selectedTocNode();
-    const ind: any = this.selectedIndicatorData();
-    const fromPartners = (node?.toc_partners ?? []).map((p: any) => Number(p?.code)).filter((n: number) => !Number.isNaN(n));
-    const fromTargets = (ind?.toc_target_center_ids ?? []).map((x: any) => Number(x)).filter((n: number) => !Number.isNaN(n));
-    this.rdPartnersSE.tocReferenceCenterInstitutionIds.set(Array.from(new Set([...fromPartners, ...fromTargets])));
+    // dependencies: lists + active tab signal (re-run on load and on selection changes)
+    const out = this.outputList();
+    const oc = this.outcomeList();
+    const eoi = this.eoiList();
+    this.activeTabSignal();
+    const tabs: any[] = this.allTabsCreated ?? [];
+    const listForLevel = (lvl: any): any[] => (lvl === 3 ? eoi : lvl === 2 ? oc : lvl === 1 ? out : []);
+    const num = (v: any) => Number(v);
+    const centerIds = new Set<number>();
+    const synergyIds = new Set<number>();
+    for (const tab of tabs) {
+      const node: any = listForLevel(tab?.toc_level_id)?.find((n: any) => n.toc_result_id === tab?.toc_result_id);
+      if (!node) continue;
+      (node.toc_partners ?? []).forEach((p: any) => { const n = num(p?.code); if (!Number.isNaN(n)) centerIds.add(n); });
+      (node.contributing_synergy_program_initiative_ids ?? []).forEach((id: any) => { const n = num(id); if (!Number.isNaN(n)) synergyIds.add(n); });
+      const indId = tab?.indicators?.[0]?.related_node_id;
+      const ind: any = (node.indicators ?? []).find((i: any) => i.related_node_id === indId);
+      (ind?.toc_target_center_ids ?? []).forEach((id: any) => { const n = num(id); if (!Number.isNaN(n)) centerIds.add(n); });
+    }
+    this.rdPartnersSE.tocReferenceCenterInstitutionIds.set(Array.from(centerIds));
+    this.rdPartnersSE.tocReferenceSynergyInitiativeIds.set(Array.from(synergyIds));
   });
 
   ngOnChanges(): void {

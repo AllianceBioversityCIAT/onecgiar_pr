@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, ChangeDetectorRef, computed, effect } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef, computed, effect, signal } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { RolesService } from '../../../../../../shared/services/global/roles.service';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
@@ -21,6 +21,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   resultCode = this?.api?.dataControlSE?.currentResult?.result_code;
   versionId = this?.api?.dataControlSE?.currentResult?.version_id;
   contributingInitiativesList = [];
+  allScienceProgramsList = signal<any[]>([]);
   alertStatusMessage: string = `Partner organization or CG Center that you collaborated with or are currently collaborating with to generate this result.`;
   cgCentersMessage: string = `This section displays CGIAR Center partners as they appear in <a class="open_route" href="/result/result-detail/${this.resultCode}/theory-of-change?phase=${this.versionId}" target="_blank">Section 2, Theory of Change</a>.</li> Should you identify any inconsistencies, please update Section 2`;
   tocConsumed = true;
@@ -147,6 +148,58 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     this.rdPartnersSE.otherCentersSelected?.splice(index, 1);
   }
 
+  // ----- P2-2929 (2026): Contributing Science Program/Accelerator split (VISUAL ONLY; pending/save deferred per Juan David) -----
+  readonly OTHER_SP_CODE = '__OTHER_SCIENCE__';
+  contributingScienceInfoNote =
+    "The Programs/Accelerators listed below were identified in your 2026 ToC. To select a different contributing Program/Accelerator, choose 'Other' from the drop-down menu and then make your selection from the options that appear.";
+  noScienceProgramsNote = 'No Science Programs related to the established HLO/Outcomes were found';
+
+  referenceScience = computed(() => {
+    const ids = this.rdPartnersSE.tocReferenceSynergyInitiativeIds();
+    return (this.allScienceProgramsList() ?? []).filter(sp => ids.includes(sp.id));
+  });
+
+  otherScienceList = computed(() => {
+    const ids = this.rdPartnersSE.tocReferenceSynergyInitiativeIds();
+    return (this.allScienceProgramsList() ?? []).filter(sp => !ids.includes(sp.id));
+  });
+
+  // true when the ToC brought no synergy programs → show the note and NO "Other(s)" option.
+  hasReferenceScience = computed(() => this.rdPartnersSE.tocReferenceSynergyInitiativeIds().length > 0);
+
+  dropdown1OptionsSP = computed(() => [
+    ...this.referenceScience(),
+    { id: this.OTHER_SP_CODE, official_code: 'Other(s)', short_name: 'Science Program(s)', full_name: '<strong>Other(s) Science Program(s)</strong>' }
+  ]);
+
+  get showOtherScience(): boolean {
+    return (this.rdPartnersSE.scienceSelected || []).some(sp => sp.id === this.OTHER_SP_CODE);
+  }
+
+  private userTouchedScience = false;
+  preselectScienceEffect = effect(() => {
+    if (!this.isCP2026() || this.userTouchedScience) return;
+    const refs = this.referenceScience();
+    const sel = this.rdPartnersSE.scienceSelected;
+    if (refs.length && (!sel || sel.length === 0)) {
+      this.rdPartnersSE.scienceSelected = refs.map(sp => ({ ...sp, new: true, is_active: true }));
+    }
+  });
+
+  onScienceSelect(_event: any) {
+    this.userTouchedScience = true;
+    if (!this.showOtherScience) this.rdPartnersSE.otherScienceSelected = [];
+  }
+
+  deleteScience(index: number) {
+    this.rdPartnersSE.scienceSelected?.splice(index, 1);
+    if (!this.showOtherScience) this.rdPartnersSE.otherScienceSelected = [];
+  }
+
+  deleteOtherScience(index: number) {
+    this.rdPartnersSE.otherScienceSelected?.splice(index, 1);
+  }
+
   GET_AllWithoutResults() {
     this.api.resultsSE.GET_resultById().subscribe({
       next: ({ response }) => {
@@ -154,6 +207,10 @@ export class RdContributorsAndPartnersComponent implements OnInit {
         const activePortfolio = this.api.dataControlSE.currentResult?.portfolio;
         this.api.resultsSE.GET_AllWithoutResults(activePortfolio).subscribe(({ response }) => {
           this.contributingInitiativesList = response;
+        });
+        // P2-2929 (2026): full Science Programs/initiatives list to split "from ToC" vs "Other(s)".
+        this.api.resultsSE.GET_AllInitiatives(activePortfolio).subscribe(({ response }) => {
+          this.allScienceProgramsList.set(response || []);
         });
       },
       error: err => {

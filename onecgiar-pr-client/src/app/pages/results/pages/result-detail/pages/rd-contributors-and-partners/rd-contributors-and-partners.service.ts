@@ -43,6 +43,11 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   tocReferenceCenterInstitutionIds = signal<number[]>([]);
   otherCentersSelected: CenterDto[] = [];
   showOtherCenters = false;
+  // P2-2929: Science Programs from ToC — union of contributing_synergy_program_initiative_ids across selected nodes.
+  // Visual layer only (the real pending/contribution-request happens on Save — deferred per Juan David).
+  tocReferenceSynergyInitiativeIds = signal<number[]>([]);
+  scienceSelected: any[] = [];
+  otherScienceSelected: any[] = [];
 
   constructor(
     public api: ApiService,
