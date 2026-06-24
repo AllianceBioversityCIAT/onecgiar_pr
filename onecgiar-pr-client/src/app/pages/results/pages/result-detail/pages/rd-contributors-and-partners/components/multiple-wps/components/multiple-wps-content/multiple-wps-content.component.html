@@ -64,6 +64,18 @@
       }
     }
   </div>
+
+  <!-- P2-3063 (L3): read-only HLO/Intermediate Outcome/2030 Outcome Statement of the selected node (from TOC `outcome_statement`).
+       2026 only (isCP2026), Yes scenario, once a node is selected. Label is dynamic per level. -->
+  @if (isCP2026() && !isUnplanned && activeTab?.toc_result_id && hloStatementValue()) {
+    <app-pr-field-header
+      [label]="hloStatementLabel()"
+      [description]="hloStatementValue()"
+      [tooltip]="hloStatementTooltip()"
+      [showDescriptionLabel]="false"
+      [required]="false"></app-pr-field-header>
+  }
+
   @if (this.secondFieldLabel() && !isUnplanned) {
     @if (showIndicators() && activeTab.toc_result_id) {
       @if (this.indicatorsList().length) {

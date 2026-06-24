@@ -71,6 +71,37 @@ export class CPMultipleWPsContentComponent implements OnChanges {
       : 'Indicate in this box the numerical value that your result contributes toward the 2025 target of the indicator.<br><br><strong>Example:</strong> If the 2025 indicator target is 200 (people trained) and your result (e.g., a capacity-sharing activity) provides evidence of 90 people trained, enter <strong>90</strong> in this box.<br><br>The values entered here will be aggregated at the end of the reporting cycle to assess progress toward the planned 2025 target for the indicator.'
   );
 
+  // P2-3063 (L3): read-only statement of the selected HLO/Intermediate Outcome/2030 Outcome node.
+  // The data already comes from the TOC control list (Juan David's enrichment, df27cc55a): each node carries
+  // `outcome_statement` (mapped from the TOC board `description`). We find the selected node by toc_result_id
+  // in the list that matches the chosen level (1=output, 2=outcome, 3=eoi), mirroring updateSelectedIndicatorData().
+  private selectedTocNode = computed(() => {
+    const id = this.activeTabSignal()?.toc_result_id ?? this.activeTab?.toc_result_id;
+    if (id === null || id === undefined) return null;
+    switch (this.activeTabSignal()?.toc_level_id) {
+      case 3:
+        return this.eoiList().find((item: any) => item.toc_result_id === id) ?? null;
+      case 2:
+        return this.outcomeList().find((item: any) => item.toc_result_id === id) ?? null;
+      case 1:
+        return this.outputList().find((item: any) => item.toc_result_id === id) ?? null;
+    }
+    return null;
+  });
+
+  // Label mirrors the chosen level name ("High Level Output" / "Intermediate Outcome" / "2030 Outcome") + " Statement".
+  hloStatementLabel = computed(() => {
+    const levelName = this.secondFieldLabel();
+    return levelName ? `${levelName} Statement` : '';
+  });
+
+  hloStatementValue = computed(() => {
+    const node: any = this.selectedTocNode();
+    return node?.outcome_statement ?? node?.description ?? '';
+  });
+
+  hloStatementTooltip = computed(() => (this.isCP2026() ? 'Maps to TOC: Output or Outcome statement' : ''));
+
   onChangesActiveTab = effect(() => {
     this.getIndicatorsList();
   });
