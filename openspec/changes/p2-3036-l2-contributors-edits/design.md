@@ -31,4 +31,4 @@ Single attribute change on the existing `app-pr-textarea`. The word-counter logi
 
 ## Open Questions
 
-- **OQ1:** In the NO scenario, should the whole `multiple-wps` tab UI still appear (now empty of Level/HLO) or collapse entirely? Excel only lists field removals; default is to keep the container and just hide Level/HLO. Confirm visually against the mockup when implementing.
+- **OQ1 (RESOLVED, P2-3062 QA):** In the NO scenario, should the whole `multiple-wps` tab UI still appear (now empty of Level/HLO) or collapse entirely? **Decision: collapse entirely.** QA (Santiago) confirmed that in the No scenario nothing of the ToC block should remain — no chips, no "+", no empty padded container — only the parent "Why is the result being reported?" justification. Implemented in two steps: tab header gated (task 4b) and the whole root container gated (task 4c) via `@if (isCP2026() ? !isUnplanned : true)`. Phase 2025 and other reuse contexts keep the original "container stays" behavior.
