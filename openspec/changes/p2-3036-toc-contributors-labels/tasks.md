@@ -17,6 +17,17 @@
 - [x] 3.2 Add `description="Maps to TOC: [KPI Statement – deliverable short name and indicator description]"` to that `app-pr-select` (inline help text).
 - [x] 3.3 Replace the Contribution-to-indicator-target `app-alert-status [description]` text with the 2026 wording (Excel row 18), including the farmers/USD/workshops examples, the Knowledge Product 1/0 guidance, and the 2026 aggregation sentence.
 
+## 3b. KPI help text → tooltip (QA follow-up, P2-3061)
+
+QA (Santiago) + Ángel's updated mockup (2026-06-24): the "Maps to TOC: …" KPI help text must render as a **tooltip on an info icon (ⓘ) next to the label**, not as visible text below the field. Mockups are reference — implemented following the project's existing design line (`material-icons-round` + PrimeNG `pTooltip`), not a bespoke pixel copy.
+
+- [x] 3b.1 `pr-field-header.component.ts`: add optional `@Input() tooltip?: string`.
+- [x] 3b.2 `pr-field-header.component.html`: when `tooltip` is set, render the label inside a `.pr_label_row` with `<i class="material-icons-round" [pTooltip]="tooltip" tooltipPosition="top">info</i>`. When absent, the markup stays identical (no impact on the rest of the app; `TooltipModule` already imported in `custom-fields.module`).
+- [x] 3b.3 `pr-field-header.component.scss`: add `.pr_label_row` (flex) + `.pr_label_tooltip` (16px, primary-300, pointer).
+- [x] 3b.4 `pr-select.component.ts` + `.html`: add `@Input() tooltip` and forward it to `app-pr-field-header`.
+- [x] 3b.5 `multiple-wps-content.component.html`: KPI field `[description]="indicatorHelp()"` → `[tooltip]="indicatorHelp()"`. Still gated by `isCP2026()` (indicatorHelp returns '' in 2025 → no icon).
+- [x] 3b.6 Verified: `build:dev` passes; on a served prod build the ⓘ renders next to "KPI Statement/description" and the tooltip shows the exact Excel text; "Maps to TOC" no longer appears as visible text.
+
 ## 4. Verify
 
 - [ ] 4.1 Build/compile the client (`npm run build:dev` or equivalent) — no template/compile errors.

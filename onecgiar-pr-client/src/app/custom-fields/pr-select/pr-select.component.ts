@@ -23,6 +23,8 @@ export class PrSelectComponent implements ControlValueAccessor {
   @Input() placeholder: string;
   @Input() label: string;
   @Input() description: string;
+  // P2-3061: optional info tooltip rendered next to the label (forwarded to app-pr-field-header).
+  @Input() tooltip?: string = '';
   @Input() readOnly: boolean;
   @Input() isStatic: boolean;
   @Input() required: boolean = true;
