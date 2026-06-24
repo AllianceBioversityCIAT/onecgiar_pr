@@ -91,6 +91,17 @@
           [(ngModel)]="activeTab.indicators[0].related_node_id"
           (ngModelChange)="mapTocResultsIndicatorId()">
         </app-pr-select>
+
+        <!-- P2-3063 (L3): read-only Indicator Typology = the "Type" of the selected KPI in TOC (`indicator_typology`). Excel rows 13-14. 2026 only. -->
+        @if (isCP2026() && indicatorTypologyValue()) {
+          <app-pr-field-header
+            label="Indicator Tipology"
+            [description]="indicatorTypologyValue()"
+            [tooltip]="indicatorTypologyTooltip()"
+            [showDescriptionLabel]="false"
+            [required]="false"></app-pr-field-header>
+        }
+
         @if (activeTab.indicators[0].related_node_id) {
           <div>
             <app-pr-field-header label="Contribution to indicator target" [required]="false"></app-pr-field-header>

@@ -102,6 +102,16 @@ export class CPMultipleWPsContentComponent implements OnChanges {
 
   hloStatementTooltip = computed(() => (this.isCP2026() ? 'Maps to TOC: Output or Outcome statement' : ''));
 
+  // P2-3063 (L3): read-only Indicator Typology = the "Type" of the selected KPI in TOC.
+  // Comes as `indicator_typology` (alias of `type_value`) on the selected indicator (Juan David's enrichment df27cc55a).
+  // `selectedIndicatorData()` already holds the selected indicator (set by updateSelectedIndicatorData()).
+  indicatorTypologyValue = computed(() => {
+    const ind: any = this.selectedIndicatorData();
+    return ind?.indicator_typology ?? ind?.type_value ?? '';
+  });
+
+  indicatorTypologyTooltip = computed(() => (this.isCP2026() ? 'Maps to TOC: [Type]' : ''));
+
   onChangesActiveTab = effect(() => {
     this.getIndicatorsList();
   });
