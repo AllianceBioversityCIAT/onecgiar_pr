@@ -61,13 +61,11 @@ function getThrownMessage(err: unknown): string {
   if (err instanceof Error) {
     return err.message;
   }
-  if (
-    typeof err === 'object' &&
-    err !== null &&
-    'message' in err &&
-    typeof (err as { message: unknown }).message === 'string'
-  ) {
-    return (err as { message: string }).message;
+  if (typeof err === 'object' && err !== null && 'message' in err) {
+    const { message } = err;
+    if (typeof message === 'string') {
+      return message;
+    }
   }
   if (typeof err === 'string') {
     return err;
@@ -333,6 +331,9 @@ export class ReportingFullMetadataExportService {
     });
 
     if (this._metadataExportQueue.isEnabled()) {
+      this._logger.log(
+        `Export job ${jobId} queued for RabbitMQ (userId=${user.id}).`,
+      );
       this._metadataExportQueue.publishExportJob({
         jobId,
         filters,
@@ -344,6 +345,9 @@ export class ReportingFullMetadataExportService {
         },
       });
     } else {
+      this._logger.log(
+        `Export job ${jobId} queued for inline processing (userId=${user.id}; RabbitMQ not configured).`,
+      );
       setImmediate(() => {
         void this._runExportJob(jobId, filters, user).catch((err: unknown) => {
           this._failJob(jobId, err);
@@ -358,6 +362,9 @@ export class ReportingFullMetadataExportService {
   async executeQueuedExportJob(
     payload: ReportingMetadataExportJobPayload,
   ): Promise<void> {
+    this._logger.log(
+      `Export job ${payload.jobId} dequeued; starting execution (userId=${payload.user.id}).`,
+    );
     const user: TokenDto = {
       id: payload.user.id,
       email: payload.user.email,
@@ -387,17 +394,32 @@ export class ReportingFullMetadataExportService {
     user: TokenDto,
   ): Promise<void> {
     const job = this._jobs.get(jobId);
-    if (!job) return;
+    if (!job) {
+      this._logger.warn(
+        `Export job ${jobId} skipped: job not found in memory (userId=${user.id}).`,
+      );
+      return;
+    }
 
     job.status = 'processing';
+    this._logger.log(
+      `Export job ${jobId}: status=processing; fetching basic rows.`,
+    );
 
     const basicRows = await this._getBasicRows(filters, user);
+    this._logger.log(
+      `Export job ${jobId}: fetched ${basicRows.length} basic row(s).`,
+    );
     this._validateBasicRowsCount(basicRows);
 
     const { byType, skippedRows, p25SheetColumnOrder } =
-      await this._buildRowsByTypeAndColumnOrder(basicRows, filters);
+      await this._buildRowsByTypeAndColumnOrder(basicRows, filters, jobId);
     this._ensureRowsWereBuilt(byType);
+    this._logger.log(
+      `Export job ${jobId}: built ${byType.size} type sheet(s), ${skippedRows.length} skipped row(s).`,
+    );
 
+    this._logger.log(`Export job ${jobId}: building Excel workbook.`);
     const workbook = this._buildWorkbook(
       byType,
       skippedRows,
@@ -406,12 +428,16 @@ export class ReportingFullMetadataExportService {
 
     const workbookBinary = await workbook.xlsx.writeBuffer();
     const buffer = Buffer.from(workbookBinary);
+    this._logger.log(
+      `Export job ${jobId}: workbook ready (${buffer.byteLength} byte(s)).`,
+    );
 
     const fileBase = `results_full_metadata_${jobId.slice(0, 8)}`;
     const key = `exports/reporting/${fileBase}.xlsx`;
     const fileName = `${fileBase}.xlsx`;
 
-    const downloadUrl = await this._uploadToS3AndSign(key, buffer);
+    this._logger.log(`Export job ${jobId}: uploading to S3 (key=${key}).`);
+    const downloadUrl = await this._uploadToS3AndSign(key, buffer, jobId);
 
     job.status = 'completed';
     job.rowCount = basicRows.length;
@@ -419,6 +445,9 @@ export class ReportingFullMetadataExportService {
     job.downloadUrl = downloadUrl;
 
     const exportedCount = basicRows.length - skippedRows.length;
+    this._logger.log(
+      `Export job ${jobId}: sending ready notification (userId=${user.id}).`,
+    );
     await this._sendReadyEmail(
       user,
       downloadUrl,
@@ -426,6 +455,7 @@ export class ReportingFullMetadataExportService {
       basicRows.length,
       exportedCount,
       skippedRows.length,
+      jobId,
     );
 
     this._logger.log(
@@ -459,6 +489,7 @@ export class ReportingFullMetadataExportService {
   private async _buildRowsByTypeAndColumnOrder(
     basicRows: Record<string, unknown>[],
     filters: BasicReportFiltersDto,
+    jobId: string,
   ): Promise<{
     byType: ExportRowsByType;
     skippedRows: ExportSkippedRow[];
@@ -470,14 +501,21 @@ export class ReportingFullMetadataExportService {
     const hasP25Rows = this._hasP25Rows(basicRows);
 
     if (hasP25Rows) {
+      this._logger.log(
+        `Export job ${jobId}: using P25 tabular export path (${validRows.length} valid row(s)).`,
+      );
       const p25SheetColumnOrder = await this._fillRowsForP25(
         byType,
         validRows,
         filters.selectedColumns,
+        jobId,
       );
       return { byType, skippedRows, p25SheetColumnOrder };
     }
 
+    this._logger.log(
+      `Export job ${jobId}: using legacy export path (${basicRows.length} row(s)).`,
+    );
     this._fillRowsForLegacy(byType, basicRows);
     return { byType, skippedRows, p25SheetColumnOrder: null };
   }
@@ -519,7 +557,8 @@ export class ReportingFullMetadataExportService {
   private async _fillRowsForP25(
     byType: ExportRowsByType,
     validRows: Record<string, unknown>[],
-    selectedColumns?: string[],
+    selectedColumns: string[] | undefined,
+    jobId: string,
   ): Promise<string[]> {
     const p25SheetColumnOrder = normalizeRequestedP25Columns(selectedColumns);
     const resultCodes = Array.from(
@@ -532,6 +571,9 @@ export class ReportingFullMetadataExportService {
     const p25Res =
       await this._resultsService.getP25ExcelRowsByResultCodes(resultCodes);
     const p25Rows = (p25Res?.response ?? []) as Record<string, unknown>[];
+    this._logger.log(
+      `Export job ${jobId}: P25 Excel view returned ${p25Rows.length} row(s) for ${resultCodes.length} result code(s).`,
+    );
     if (!p25Rows.length) {
       throw new Error(
         'No rows were returned from the P25 Excel view for the selected filters.',
@@ -647,10 +689,13 @@ export class ReportingFullMetadataExportService {
   private async _uploadToS3AndSign(
     key: string,
     body: Buffer,
+    jobId: string,
   ): Promise<string | undefined> {
     const bucket = env.AWS_BUCKET_NAME_EXPORT;
     if (!bucket) {
-      this._logger.error('AWS_BUCKET_NAME_EXPORT is not set; skip S3 upload.');
+      this._logger.error(
+        `Export job ${jobId}: AWS_BUCKET_NAME_EXPORT is not set; skip S3 upload.`,
+      );
       return undefined;
     }
 
@@ -669,13 +714,19 @@ export class ReportingFullMetadataExportService {
         })
         .promise();
 
-      return s3.getSignedUrl('getObject', {
+      const downloadUrl = s3.getSignedUrl('getObject', {
         Bucket: bucket,
         Key: key,
         Expires: 60 * 60 * 24 * 7,
       });
+      this._logger.log(
+        `Export job ${jobId}: S3 upload completed (key=${key}).`,
+      );
+      return downloadUrl;
     } catch (e) {
-      this._logger.error(`S3 upload failed: ${(e as Error)?.message}`);
+      this._logger.error(
+        `Export job ${jobId}: S3 upload failed: ${(e as Error)?.message}`,
+      );
       return undefined;
     }
   }
@@ -687,6 +738,7 @@ export class ReportingFullMetadataExportService {
     sourceRowCount: number,
     exportedCount: number,
     skippedCount: number,
+    jobId: string,
   ): Promise<void> {
     const skippedNote =
       skippedCount > 0
@@ -733,12 +785,12 @@ export class ReportingFullMetadataExportService {
         };
       } catch (err: unknown) {
         this._logger.error(
-          `Full metadata export email template compile failed: ${getThrownMessage(err)}`,
+          `Export job ${jobId}: full metadata export email template compile failed: ${getThrownMessage(err)}`,
         );
       }
     } else {
       this._logger.warn(
-        `Email template "${EmailTemplate.FULL_METADATA_EXPORT}" not found or empty; sending plain text only.`,
+        `Export job ${jobId}: email template "${EmailTemplate.FULL_METADATA_EXPORT}" not found or empty; sending plain text only.`,
       );
     }
 
@@ -759,5 +811,8 @@ export class ReportingFullMetadataExportService {
     };
 
     this._emailNotificationService.sendEmail(payload);
+    this._logger.log(
+      `Export job ${jobId}: ready notification dispatched to email queue (userId=${user.id}).`,
+    );
   }
 }

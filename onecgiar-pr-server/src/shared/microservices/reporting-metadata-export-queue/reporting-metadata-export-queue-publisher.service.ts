@@ -58,6 +58,9 @@ export class ReportingMetadataExportQueuePublisherService
     if (!this._client) {
       throw new Error('Reporting metadata export queue is not configured');
     }
+    this._logger.log(
+      `Publishing export job ${payload.jobId} to RabbitMQ (userId=${payload.user.id}).`,
+    );
     this._client.emit(REPORTING_METADATA_EXPORT_RMQ_PATTERN, payload);
   }
 }
