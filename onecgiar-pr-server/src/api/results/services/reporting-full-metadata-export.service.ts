@@ -350,7 +350,7 @@ export class ReportingFullMetadataExportService {
       );
       setImmediate(() => {
         void this._runExportJob(jobId, filters, user).catch((err: unknown) => {
-          this._failJob(jobId, err);
+          this._failJob(jobId, err, user.id);
         });
       });
     }
@@ -374,14 +374,38 @@ export class ReportingFullMetadataExportService {
     try {
       await this._runExportJob(payload.jobId, payload.filters, user);
     } catch (err: unknown) {
-      this._failJob(payload.jobId, err);
+      this._failJob(payload.jobId, err, payload.user.id);
       throw err;
     }
   }
 
-  private _failJob(jobId: string, err: unknown): void {
+  /**
+   * Job state is in-memory per Node process. enqueueExport registers on the API instance;
+   * RabbitMQ may deliver the message to another instance — register here before processing.
+   */
+  private _getOrCreateJob(jobId: string, userId: number): ReportingExportJob {
+    const existing = this._jobs.get(jobId);
+    if (existing) {
+      return existing;
+    }
+
+    const job: ReportingExportJob = {
+      status: 'queued',
+      userId,
+      createdAt: new Date(),
+    };
+    this._jobs.set(jobId, job);
+    this._logger.log(
+      `Export job ${jobId}: registered on consumer instance (userId=${userId}; not present in local memory).`,
+    );
+    return job;
+  }
+
+  private _failJob(jobId: string, err: unknown, userId?: number): void {
     this._logger.error(`Export job ${jobId} failed: ${getThrownMessage(err)}`);
-    const job = this._jobs.get(jobId);
+    const job =
+      this._jobs.get(jobId) ??
+      (userId == null ? undefined : this._getOrCreateJob(jobId, userId));
     if (job) {
       job.status = 'failed';
       job.errorMessage = getThrownMessage(err) || 'Unknown error';
@@ -393,13 +417,7 @@ export class ReportingFullMetadataExportService {
     filters: BasicReportFiltersDto,
     user: TokenDto,
   ): Promise<void> {
-    const job = this._jobs.get(jobId);
-    if (!job) {
-      this._logger.warn(
-        `Export job ${jobId} skipped: job not found in memory (userId=${user.id}).`,
-      );
-      return;
-    }
+    const job = this._getOrCreateJob(jobId, user.id);
 
     job.status = 'processing';
     this._logger.log(
