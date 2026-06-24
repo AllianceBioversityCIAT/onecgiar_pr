@@ -46,6 +46,22 @@ The HLO tab header — the contribution tabs/chips (e.g. "HLO N~1") and the "+" 
 - **WHEN** the section is phase 2025, or the component is reused in IPSR / bilateral / share-request (`isCP2026()` is false)
 - **THEN** the HLO tab header renders exactly as before regardless of the No/Yes answer
 
+### Requirement: Empty ToC container hidden in the No scenario
+The whole ToC contribution block (tab header + the `multiple-wps-container` content area) SHALL be hidden when the ToC alignment answer is "No" on a 2026 P25 Contributors & Partners section, so no empty padded container remains above the justification.
+
+#### Scenario: No answer leaves no empty container
+- **WHEN** the ToC question is answered "No" (`isUnplanned`) on a 2026 P25 Contributors & Partners section
+- **THEN** neither the HLO tab header nor the inner ToC content container is rendered
+- **AND** only the "Why is the result being reported?" justification remains, with no empty box above it
+
+#### Scenario: Yes answer still shows the ToC block
+- **WHEN** the ToC question is answered "Yes"
+- **THEN** the full ToC block (tab header + content) renders as before
+
+#### Scenario: Phase 2025 and other reuse contexts unaffected
+- **WHEN** the section is phase 2025, or the component is reused in IPSR / bilateral / share-request (`isCP2026()` is false)
+- **THEN** the ToC block renders exactly as before regardless of the No/Yes answer
+
 ### Requirement: Justification word limit raised to 50
 The "Why is the result being reported?" field SHALL allow up to 50 words.
 
