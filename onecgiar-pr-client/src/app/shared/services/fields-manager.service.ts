@@ -27,6 +27,15 @@ export class FieldsManagerService {
     const year = this.dataControlSE.currentResultSignal()?.phase_year ?? this.dataControlSE.reportingCurrentPhase?.phaseYear;
     return typeof year === 'number' && year >= ReportingDesignYear.ContributorsPartnersRedesign;
   });
+  /**
+   * True when the open result's reporting phase is 2026+ → new Geographic location
+   * "location of benefit" wording (P2-3036 AC9) for P25 Innovation results. 2025 keeps the legacy wording.
+   * Threshold is centralized in {@link ReportingDesignYear}.
+   */
+  isGeographicLocation2026 = computed(() => {
+    const year = this.dataControlSE.currentResultSignal()?.phase_year ?? this.dataControlSE.reportingCurrentPhase?.phaseYear;
+    return typeof year === 'number' && year >= ReportingDesignYear.GeographicLocationRedesign;
+  });
   isAnInnovation = computed(
     () => this.dataControlSE.currentResultSignal()?.result_type_id == 2 || this.dataControlSE.currentResultSignal()?.result_type_id == 7
   );
