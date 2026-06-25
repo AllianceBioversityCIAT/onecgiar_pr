@@ -78,7 +78,8 @@
 
         <div class="notification_content_actions">
           @if (!isSent) {
-            @let buttonTextConfirm = isBilateralResult ? 'Accept contribution' : notification?.is_map_to_toc ? 'Accept' : 'Map and accept';
+            <!-- P2-3106: unify accept/reject labels to "Accept contribution" / "Decline contribution". Click handlers unchanged. -->
+            @let buttonTextConfirm = 'Accept contribution';
 
             <div class="notification_content_actions_buttons">
               <app-pr-button
@@ -94,7 +95,7 @@
                 tooltipStyleClass="tooltip-w-300"></app-pr-button>
 
               <app-pr-button
-                [text]="isBilateralResult ? 'Decline' : 'Reject'"
+                [text]="'Decline contribution'"
                 colorType="danger"
                 (click)="showConfirmRejectDialog.set(true)"
                 [verticalMargin]="0"
