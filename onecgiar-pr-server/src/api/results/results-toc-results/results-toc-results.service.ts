@@ -6,7 +6,7 @@ import {
   ContributorResultTocResult,
   CreateResultsTocResultDto,
 } from './dto/create-results-toc-result.dto';
-import { CreateResultsTocResultV2Dto } from './dto/create-results-toc-result-v2.dto';
+import { CreateResultsTocResultV2Dto, ContributingInitiativeTocFlagDto } from './dto/create-results-toc-result-v2.dto';
 import { ResultsTocResultRepository } from './repositories/results-toc-results.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultsTocResult } from './entities/results-toc-result.entity';
@@ -1339,27 +1339,41 @@ export class ResultsTocResultsService {
         initSubmitter = newInit;
       }
 
-      let acceptedIds: number[] = accepted_contributing_initiatives?.length
-        ? accepted_contributing_initiatives
-        : [];
-      let pendingIds: number[] = pending_contributing_initiatives?.length
-        ? pending_contributing_initiatives
-        : [];
+      let acceptedIds: number[] = [];
+      let pendingIds: number[] = [];
+      let acceptedFromTocById = new Map<number, boolean>();
+      let pendingFromTocById = new Map<number, boolean>();
 
       if (contributing_initiatives?.accepted_contributing_initiatives?.length) {
-        acceptedIds = contributing_initiatives.accepted_contributing_initiatives
-          .map((i) => i.id)
-          .filter((id) => id !== initSubmitter.initiative_id);
-      } else {
-        acceptedIds = acceptedIds.filter(
-          (id) => id !== initSubmitter.initiative_id,
+        const acceptedEntries = this.extractInitiativeTocEntries(
+          contributing_initiatives.accepted_contributing_initiatives,
         );
+        acceptedIds = acceptedEntries.ids;
+        acceptedFromTocById = acceptedEntries.fromTocById;
+      } else {
+        const acceptedEntries = this.extractInitiativeTocEntries(
+          accepted_contributing_initiatives,
+        );
+        acceptedIds = acceptedEntries.ids;
+        acceptedFromTocById = acceptedEntries.fromTocById;
       }
+
+      acceptedIds = acceptedIds.filter(
+        (id) => id !== initSubmitter.initiative_id,
+      );
+
       if (contributing_initiatives?.pending_contributing_initiatives?.length) {
-        pendingIds =
-          contributing_initiatives.pending_contributing_initiatives.map(
-            (i) => i.id,
-          );
+        const pendingEntries = this.extractInitiativeTocEntries(
+          contributing_initiatives.pending_contributing_initiatives,
+        );
+        pendingIds = pendingEntries.ids;
+        pendingFromTocById = pendingEntries.fromTocById;
+      } else {
+        const pendingEntries = this.extractInitiativeTocEntries(
+          pending_contributing_initiatives,
+        );
+        pendingIds = pendingEntries.ids;
+        pendingFromTocById = pendingEntries.fromTocById;
       }
 
       const contributingInit =
@@ -1370,6 +1384,14 @@ export class ResultsTocResultsService {
           false,
           pendingIds,
         );
+
+      if (acceptedFromTocById.size) {
+        await this._resultByInitiativesRepository.updateInitiativeFromTocFlags(
+          result_id,
+          acceptedFromTocById,
+          user.id,
+        );
+      }
 
       if (contributingInit.length > 0) {
         await this.sendEmailNotification(
@@ -1384,6 +1406,7 @@ export class ResultsTocResultsService {
         const dataRequest: CreateTocShareResult = {
           isToc: false,
           initiativeShareId: pendingIds,
+          initiativeFromToc: Object.fromEntries(pendingFromTocById),
           email_template,
         };
         await this._shareResultRequestService.resultRequest(
@@ -2647,5 +2670,50 @@ export class ResultsTocResultsService {
         }
       }
     }
+  }
+
+  private extractInitiativeTocEntries(
+    items?: Array<
+      | number
+      | ContributingInitiativeTocFlagDto
+      | {
+          id?: number;
+          from_toc?: boolean;
+        }
+    >,
+  ): { ids: number[]; fromTocById: Map<number, boolean> } {
+    const fromTocById = new Map<number, boolean>();
+    const ids: number[] = [];
+
+    for (const item of items ?? []) {
+      if (item === null || item === undefined) {
+        continue;
+      }
+
+      if (typeof item === 'number' || typeof item === 'string') {
+        const id = Number(item);
+        if (!Number.isFinite(id) || id <= 0) {
+          continue;
+        }
+        ids.push(id);
+        if (!fromTocById.has(id)) {
+          fromTocById.set(id, false);
+        }
+        continue;
+      }
+
+      const id = Number(item.id);
+      if (!Number.isFinite(id) || id <= 0) {
+        continue;
+      }
+
+      ids.push(id);
+      fromTocById.set(id, !!item.from_toc);
+    }
+
+    return {
+      ids: Array.from(new Set(ids)),
+      fromTocById,
+    };
   }
 }

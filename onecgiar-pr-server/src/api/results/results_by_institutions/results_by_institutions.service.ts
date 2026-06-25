@@ -671,6 +671,7 @@ export class ResultsByInstitutionsService {
           created_by: user.id,
           last_updated_by: user.id,
           is_leading_result: center.is_leading_result,
+          from_toc: !!center.from_toc,
         };
 
         if (!exists) {
@@ -679,6 +680,7 @@ export class ResultsByInstitutionsService {
           resultCenterArray.push(newResultCenter);
         } else {
           exists.is_leading_result = center.is_leading_result;
+          exists.from_toc = !!center.from_toc;
           exists.last_updated_by = user.id;
           resultCenterArray.push(exists);
         }
