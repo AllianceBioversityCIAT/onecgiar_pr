@@ -64,6 +64,18 @@
       }
     }
   </div>
+
+  <!-- P2-3063 (L3): read-only HLO/Intermediate Outcome/2030 Outcome Statement of the selected node (from TOC `outcome_statement`).
+       2026 only (isCP2026), Yes scenario, once a node is selected. Label is dynamic per level. -->
+  @if (isCP2026() && !isUnplanned && activeTab?.toc_result_id && hloStatementValue()) {
+    <app-pr-field-header
+      [label]="hloStatementLabel()"
+      [description]="hloStatementValue()"
+      [tooltip]="hloStatementTooltip()"
+      [showDescriptionLabel]="false"
+      [required]="false"></app-pr-field-header>
+  }
+
   @if (this.secondFieldLabel() && !isUnplanned) {
     @if (showIndicators() && activeTab.toc_result_id) {
       @if (this.indicatorsList().length) {
@@ -79,6 +91,17 @@
           [(ngModel)]="activeTab.indicators[0].related_node_id"
           (ngModelChange)="mapTocResultsIndicatorId()">
         </app-pr-select>
+
+        <!-- P2-3063 (L3): read-only Indicator Typology = the "Type" of the selected KPI in TOC (`indicator_typology`). Excel rows 13-14. 2026 only. -->
+        @if (isCP2026() && indicatorTypologyValue()) {
+          <app-pr-field-header
+            label="Indicator Tipology"
+            [description]="indicatorTypologyValue()"
+            [tooltip]="indicatorTypologyTooltip()"
+            [showDescriptionLabel]="false"
+            [required]="false"></app-pr-field-header>
+        }
+
         @if (activeTab.indicators[0].related_node_id) {
           <div>
             <app-pr-field-header label="Contribution to indicator target" [required]="false"></app-pr-field-header>

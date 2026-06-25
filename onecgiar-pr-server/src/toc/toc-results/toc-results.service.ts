@@ -432,28 +432,31 @@ export class TocResultsService {
             ),
           ]);
 
-          const partnersMap =
-            this.groupTocPartnersByResultId(partnerRows ?? []);
-          const synergyMap =
-            this.groupSynergyProgramsByResultId(synergyRows ?? []);
-          const centersMap =
-            this.groupTargetCentersByResultAndIndicator(centerRows ?? []);
+          const partnersMap = this.groupTocPartnersByResultId(
+            partnerRows ?? [],
+          );
+          const synergyMap = this.groupSynergyProgramsByResultId(
+            synergyRows ?? [],
+          );
+          const centersMap = this.groupTargetCentersByResultAndIndicator(
+            centerRows ?? [],
+          );
 
           enrichedResults = res.map((row) => {
             const tocId = Number(row?.toc_result_id);
             const mappingInfo = resultMappingInfo.get(tocId);
-            const indicators = (indicatorMap.get(tocId) ?? []).map((indicator) =>
-              this.enrichIndicatorCatalogItem(
-                indicator,
-                centersMap.get(`${tocId}:${indicator.indicator_id}`) ?? [],
-              ),
+            const indicators = (indicatorMap.get(tocId) ?? []).map(
+              (indicator) =>
+                this.enrichIndicatorCatalogItem(
+                  indicator,
+                  centersMap.get(`${tocId}:${indicator.indicator_id}`) ?? [],
+                ),
             );
 
             return this.enrichTocCatalogRow(
               row,
               {
-                result_toc_result_id:
-                  mappingInfo?.result_toc_result_id ?? null,
+                result_toc_result_id: mappingInfo?.result_toc_result_id ?? null,
                 planned_result: mappingInfo?.planned_result ?? null,
                 toc_progressive_narrative:
                   mappingInfo?.toc_progressive_narrative ?? null,
@@ -621,7 +624,11 @@ export class TocResultsService {
 
     for (const row of rows ?? []) {
       const tocId = Number(row?.toc_result_id);
-      if (!Number.isFinite(tocId) || row?.code === null || row?.code === undefined) {
+      if (
+        !Number.isFinite(tocId) ||
+        row?.code === null ||
+        row?.code === undefined
+      ) {
         continue;
       }
 

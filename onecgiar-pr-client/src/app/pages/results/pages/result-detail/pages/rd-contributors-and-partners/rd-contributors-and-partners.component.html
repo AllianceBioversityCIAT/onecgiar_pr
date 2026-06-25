@@ -73,18 +73,36 @@
     }
   }
 
-  <app-pr-multi-select
-    [options]="this.centersSE.centersList"
-    label="Contributing CGIAR Centers"
-    selectedLabel="Center(s) selected"
-    optionLabel="full_name"
-    optionValue="code"
-    [required]="false"
-    [(ngModel)]="this.rdPartnersSE.partnersBody.contributing_center"
-    placeholder="Select center(s)"
-    [disableOptions]="this.rdPartnersSE.cgspaceDisabledList"
-    (selectOptionEvent)="this.rdPartnersSE.setPossibleLeadCenters(true)">
-  </app-pr-multi-select>
+  <!-- P2-2998 / P2-3036 (2026): Contributing CGIAR Centers split into "from ToC" + "Other(s)". SAVE NOT ADDRESSED YET. -->
+  @if (isCP2026()) {
+    <app-alert-status [description]="contributingCentersInfoNote"></app-alert-status>
+
+    <app-pr-multi-select
+      [options]="dropdown1Options()"
+      label="Contributing CGIAR Centers"
+      selectedLabel="Center(s) selected"
+      optionLabel="full_name"
+      optionValue="code"
+      [required]="false"
+      [(ngModel)]="this.rdPartnersSE.partnersBody.contributing_center"
+      placeholder="Select center(s)"
+      [disableOptions]="this.rdPartnersSE.cgspaceDisabledList"
+      (selectOptionEvent)="onContributingCenterSelect($event)">
+    </app-pr-multi-select>
+  } @else {
+    <app-pr-multi-select
+      [options]="this.centersSE.centersList"
+      label="Contributing CGIAR Centers"
+      selectedLabel="Center(s) selected"
+      optionLabel="full_name"
+      optionValue="code"
+      [required]="false"
+      [(ngModel)]="this.rdPartnersSE.partnersBody.contributing_center"
+      placeholder="Select center(s)"
+      [disableOptions]="this.rdPartnersSE.cgspaceDisabledList"
+      (selectOptionEvent)="this.rdPartnersSE.setPossibleLeadCenters(true)">
+    </app-pr-multi-select>
+  }
 
   <div class="medal_selector selected_container">
     <div class="centers chips_container">
@@ -93,7 +111,7 @@
         [pTooltip]="this.disabledText"
         [tooltipDisabled]="!center.from_cgspace"
         *ngFor="let center of this.rdPartnersSE.partnersBody.contributing_center; let i = index">
-        <div class="name" [innerHtml]="center?.name"></div>
+        <div class="name" [innerHtml]="isCP2026() ? (center?.acronym || center?.name) : center?.name"></div>
         <i
           *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status && !center.from_cgspace"
           class="material-icons-round"
@@ -103,6 +121,34 @@
       </div>
     </div>
   </div>
+
+  <!-- P2-2998 (2026): the "Other(s)" dropdown appears AFTER the selected-centers chips (chips stay pinned under dropdown 1). -->
+  @if (isCP2026() && showOtherCenters) {
+    <app-pr-multi-select
+      [options]="otherCentersList()"
+      label="Other(s) CGIAR Centers"
+      selectedLabel="Center(s) selected"
+      optionLabel="full_name"
+      optionValue="code"
+      [required]="false"
+      [(ngModel)]="this.rdPartnersSE.otherCentersSelected"
+      placeholder="Select other center(s)">
+    </app-pr-multi-select>
+
+    <div class="medal_selector selected_container">
+      <div class="centers chips_container">
+        <div class="center pr_chip_selected" *ngFor="let center of this.rdPartnersSE.otherCentersSelected; let i = index">
+          <div class="name" [innerHtml]="center?.acronym || center?.name"></div>
+          <i
+            *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status"
+            class="material-icons-round"
+            (click)="deleteOtherCenter(i)"
+            >cancel</i
+          >
+        </div>
+      </div>
+    </div>
+  }
 
   <div style="position: relative">
     <app-pr-multi-select
@@ -134,6 +180,8 @@
     </div>
   }
 
+  <!-- P2-2929 (2026): Contributing Science Program/Accelerator split from ToC + Other(s). VISUAL ONLY (pending/save deferred). -->
+  @if (!isCP2026()) {
   <app-pr-multi-select
     [options]="this.contributingInitiativesList"
     label="Contributing {{ 'term.entity.orPlatformsPlural' | term: this.api.dataControlSE.currentResult?.portfolio }}"
@@ -209,6 +257,62 @@
       }
     </div>
   </div>
+  }
+
+  @if (isCP2026()) {
+    @if (hasReferenceScience()) {
+      <app-alert-status [description]="contributingScienceInfoNote"></app-alert-status>
+
+      <app-pr-multi-select
+        [options]="dropdown1OptionsSP()"
+        label="Contributing Science Program/Accelerator"
+        selectedLabel="Science Program/Accelerator selected"
+        optionLabel="full_name"
+        optionValue="id"
+        [required]="false"
+        [(ngModel)]="this.rdPartnersSE.scienceSelected"
+        placeholder="Select Science Program/Accelerator"
+        (selectOptionEvent)="onScienceSelect($event)">
+      </app-pr-multi-select>
+
+      <div class="medal_selector selected_container">
+        <div class="centers chips_container">
+          <div class="center pr_chip_selected" *ngFor="let sp of this.rdPartnersSE.scienceSelected; let i = index">
+            <div class="name" [innerHtml]="sp?.official_code || sp?.short_name"></div>
+            <i *ngIf="!this.api.rolesSE.readOnly" class="material-icons-round" (click)="deleteScience(i)">cancel</i>
+          </div>
+        </div>
+      </div>
+
+      @if (showOtherScience) {
+        <app-pr-multi-select
+          [options]="otherScienceList()"
+          label="Other(s) Science Program(s)"
+          selectedLabel="Science Program(s) selected"
+          optionLabel="full_name"
+          optionValue="id"
+          [required]="false"
+          [(ngModel)]="this.rdPartnersSE.otherScienceSelected"
+          placeholder="Select other Science Program(s)">
+        </app-pr-multi-select>
+
+        <div class="medal_selector selected_container">
+          <div class="centers chips_container">
+            <div class="center pr_chip_selected" *ngFor="let sp of this.rdPartnersSE.otherScienceSelected; let i = index">
+              <div class="name" [innerHtml]="sp?.official_code || sp?.short_name"></div>
+              <i *ngIf="!this.api.rolesSE.readOnly" class="material-icons-round" (click)="deleteOtherScience(i)">cancel</i>
+            </div>
+          </div>
+        </div>
+      }
+    } @else {
+      <app-pr-field-header label="Contributing Science Program/Accelerator" [required]="false"></app-pr-field-header>
+      <div class="pr-message">
+        <i class="material-icons-round" style="font-size: 20px; color: var(--pr-color-orange-400)">info</i>
+        <p>{{ noScienceProgramsNote }}</p>
+      </div>
+    }
+  }
 
   <div *ngIf="this.rdPartnersSE.partnersBody?.contributors_result_toc_result?.length">
     <app-pr-field-header label="Other contributors" [required]="false" [simpleStyle]="true"> </app-pr-field-header>

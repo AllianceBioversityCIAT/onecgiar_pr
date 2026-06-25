@@ -701,6 +701,18 @@ describe('TocResultsRepository', () => {
         expect.stringContaining('toc_result_synergy_programs'),
         [10, 'phase-2026'],
       );
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('trsp.toc_results_id = tr.id'),
+        [10, 'phase-2026'],
+      );
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('ci.official_code = trsp.initiative_id'),
+        [10, 'phase-2026'],
+      );
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('trsp.phase = ?'),
+        [10, 'phase-2026'],
+      );
       expect(result).toEqual([{ toc_result_id: 10, initiative_id: 101 }]);
     });
   });
