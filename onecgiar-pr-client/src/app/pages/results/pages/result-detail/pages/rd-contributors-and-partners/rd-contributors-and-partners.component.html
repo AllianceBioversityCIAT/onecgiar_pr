@@ -1,35 +1,33 @@
 <div class="detail_container">
   <app-alert-status *ngIf="!this.api.dataControlSE.isKnowledgeProduct" [description]="alertStatusMessage"> </app-alert-status>
 
-  <!-- ! Submitter: legacy field shown ONLY for phase 2025 and earlier; removed in the 2026 redesign (P2-3036 Level 2). changePrimaryInit is still set in the service, so save is unaffected. -->
-  @if (!isCP2026()) {
-    @if (this.rdPartnersSE.getConsumed()) {
-      <app-pr-select
-        class="segment_title_margin"
-        [options]="this.rdPartnersSE.partnersBody.contributing_and_primary_initiative"
-        label="Submitter"
-        optionLabel="full_name"
-        optionValue="id"
-        [placeholder]="'Select ' + ('term.entity.orPlatforms' | term: this.api.dataControlSE.currentResult?.portfolio)"
-        [description]="'Select ' + ('term.entity.orPlatforms' | term: this.api.dataControlSE.currentResult?.portfolio)"
-        [(ngModel)]="this.rdPartnersSE.partnersBody.changePrimaryInit"
-        [fieldDisabled]="
-          !!(
-            this.rdPartnersSE.partnersBody.contributing_and_primary_initiative?.length === 1 &&
-            this.rdPartnersSE.partnersBody?.result_toc_result?.initiative_id
-          )
-        ">
-      </app-pr-select>
+  <!-- ! Submitter: shown in ALL reporting phases. Removed in the 2026 redesign (P2-3036 Level 2) but restored by business decision (Nicoleta / Santi) — it must not be phase-gated. changePrimaryInit is still set in the service, so save is unaffected. -->
+  @if (this.rdPartnersSE.getConsumed()) {
+    <app-pr-select
+      class="segment_title_margin"
+      [options]="this.rdPartnersSE.partnersBody.contributing_and_primary_initiative"
+      label="Submitter"
+      optionLabel="full_name"
+      optionValue="id"
+      [placeholder]="'Select ' + ('term.entity.orPlatforms' | term: this.api.dataControlSE.currentResult?.portfolio)"
+      [description]="'Select ' + ('term.entity.orPlatforms' | term: this.api.dataControlSE.currentResult?.portfolio)"
+      [(ngModel)]="this.rdPartnersSE.partnersBody.changePrimaryInit"
+      [fieldDisabled]="
+        !!(
+          this.rdPartnersSE.partnersBody.contributing_and_primary_initiative?.length === 1 &&
+          this.rdPartnersSE.partnersBody?.result_toc_result?.initiative_id
+        )
+      ">
+    </app-pr-select>
 
-      @if (
-        this.rdPartnersSE.partnersBody.contributing_and_primary_initiative?.length == 1 &&
-        this.rdPartnersSE.partnersBody?.result_toc_result?.initiative_id
-      ) {
-        <div class="no-primary-list">
-          Since this result has not been shared and accepted by other
-          {{ 'term.entity.plural' | term: this.api.dataControlSE.currentResult?.portfolio }}, it is not possible to change the submitter.
-        </div>
-      }
+    @if (
+      this.rdPartnersSE.partnersBody.contributing_and_primary_initiative?.length == 1 &&
+      this.rdPartnersSE.partnersBody?.result_toc_result?.initiative_id
+    ) {
+      <div class="no-primary-list">
+        Since this result has not been shared and accepted by other
+        {{ 'term.entity.plural' | term: this.api.dataControlSE.currentResult?.portfolio }}, it is not possible to change the submitter.
+      </div>
     }
   }
 
