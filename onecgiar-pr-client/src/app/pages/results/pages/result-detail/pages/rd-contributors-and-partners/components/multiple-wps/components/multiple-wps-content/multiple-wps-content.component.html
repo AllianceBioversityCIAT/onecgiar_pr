@@ -102,17 +102,40 @@
             [required]="false"></app-pr-field-header>
         }
 
+        <!-- P2-3036 (AC7): in 2026 group the read-only TOC "Unit of measurement" + "Target" directly below "Indicator Tipology". In 2025 they stay in their original position inside the contribution block below. -->
+        @if (isCP2026() && selectedIndicatorData()) {
+          <div style="margin: 8px 0">
+            <p><strong>Unit of measurement:</strong> {{ selectedIndicatorData()?.unit_messurament || 'Not specified' }}</p>
+            <p><strong>Target:</strong> {{ selectedIndicatorData()?.targets?.[0]?.target_value || 'Not specified' }}</p>
+          </div>
+        }
+
         @if (activeTab.indicators[0].related_node_id) {
           <div>
-            <app-pr-field-header label="Contribution to indicator target" [required]="false"></app-pr-field-header>
+            <!-- P2-3036 (AC7): contribution-to-target is mandatory in 2026 (red asterisk). -->
+            <app-pr-field-header label="Contribution to indicator target" [required]="isCP2026()"></app-pr-field-header>
             <app-alert-status status="info" [description]="contributionTargetNote()" inlineStyles="margin: 0; margin-bottom: 10px !important;"></app-alert-status>
-            <div style="margin: 8px 0" *ngIf="selectedIndicatorData()">
-              <p><strong>Unit of measurement:</strong> {{ selectedIndicatorData()?.unit_messurament || 'Not specified' }}</p>
-              <p><strong>Target:</strong> {{ selectedIndicatorData()?.targets?.[0]?.target_value || 'Not specified' }}</p>
-            </div>
+            <!-- P2-3036 (AC7): 2025 keeps Unit/Target here; 2026 renders them grouped under Indicator Tipology above. -->
+            @if (!isCP2026()) {
+              <div style="margin: 8px 0" *ngIf="selectedIndicatorData()">
+                <p><strong>Unit of measurement:</strong> {{ selectedIndicatorData()?.unit_messurament || 'Not specified' }}</p>
+                <p><strong>Target:</strong> {{ selectedIndicatorData()?.targets?.[0]?.target_value || 'Not specified' }}</p>
+              </div>
+            }
+            <!-- P2-3036 (AC7): feed the section mandatory scan in 2026 (bare input, so use appFeedbackValidation as in P2-2960). -->
+            @if (isCP2026()) {
+              <div
+                appFeedbackValidation
+                labelText="Contribution to indicator target"
+                [isComplete]="
+                  activeTab.indicators[0].targets[0].contributing_indicator !== null &&
+                  activeTab.indicators[0].targets[0].contributing_indicator !== undefined &&
+                  activeTab.indicators[0].targets[0].contributing_indicator !== ''
+                "></div>
+            }
             <input
               type="number"
-              placeholder="Enter target"
+              [placeholder]="isCP2026() ? 'Add here contribution to target' : 'Enter target'"
               [readonly]="!editable"
               [disabled]="!editable"
               [(ngModel)]="activeTab.indicators[0].targets[0].contributing_indicator"
@@ -122,7 +145,8 @@
         }
       }
     }
-    @if (!hidden) {
+    <!-- P2-3036 (AC8): hide the TOC-pathway explanation in the 2026 Yes scenario. 2025 keeps it. -->
+    @if (!hidden && !isCP2026()) {
       <hr class="divider-20" />
 
       <app-alert-status
