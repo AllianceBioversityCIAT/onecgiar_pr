@@ -1068,12 +1068,14 @@ export class TocResultsRepository extends Repository<TocResult> {
     const query = `
       SELECT DISTINCT
         tr.id AS toc_result_id,
-        trsp.initiative_id
+        ci.id AS initiative_id
       FROM ${env.DB_TOC}.toc_results tr
       INNER JOIN ${env.DB_TOC}.toc_result_synergy_programs trsp
-        ON trsp.toc_result_id_toc = tr.related_node_id
+        ON trsp.toc_results_id = tr.id
+      INNER JOIN clarisa_initiatives ci
+        ON ci.official_code = trsp.initiative_id
       WHERE tr.id IN (${placeholders})
-        AND tr.phase = ?
+        AND trsp.phase = ?
     `;
 
     try {
@@ -1133,7 +1135,11 @@ export class TocResultsRepository extends Repository<TocResult> {
     `;
 
     try {
-      return await this.query(query, [targetYear, ...numericIds, normalizedPhaseId]);
+      return await this.query(query, [
+        targetYear,
+        ...numericIds,
+        normalizedPhaseId,
+      ]);
     } catch (error) {
       throwServiceError(
         `[${TocResultsRepository.name}] => getTocTargetCentersByResultIds error: ${formatUnknownError(error)}`,
