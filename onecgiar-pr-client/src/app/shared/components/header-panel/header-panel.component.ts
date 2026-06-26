@@ -1,4 +1,5 @@
-import { Component, computed, effect, HostListener, OnInit, signal } from '@angular/core';
+import { Component, computed, effect, HostListener, inject, OnInit, signal } from '@angular/core';
+import { LayoutService } from '../../services/layout.service';
 import { internationalizationData } from '../../data/internationalization-data';
 import { ApiService } from '../../services/api/api.service';
 import { DataControlService } from '../../services/data-control.service';
@@ -35,6 +36,14 @@ export class HeaderPanelComponent implements OnInit {
   inLocal = (environment as any)?.inLocal;
   myInitiativesListP22 = computed(() => this.api.dataControlSE.myInitiativesList);
   closedInitiativeCodes = new Set<string>();
+
+  // Dashboard layout: shift the navbar to the right of a full-height sidebar
+  private readonly layoutSE = inject(LayoutService);
+  private readonly EDGE_GAP = 10; // matches the floating bar's inset
+  readonly navbarLeft = computed(() => {
+    const offset = this.layoutSE.leftOffset();
+    return offset > 0 ? offset + this.EDGE_GAP : this.EDGE_GAP;
+  });
 
   // Hide-on-scroll-down / show-on-scroll-up for the floating header
   readonly isHidden = signal(false);

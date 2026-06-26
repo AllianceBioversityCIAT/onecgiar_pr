@@ -110,6 +110,7 @@ export const resultRouting: PrRoute[] = [
   {
     prName: 'Result detail',
     path: 'result-detail/:id',
+    data: { sidebar: { width: 300 } },
     loadChildren: () => import('../../pages/results/pages/result-detail/result-detail.module').then(m => m.ResultDetailModule)
   },
   {

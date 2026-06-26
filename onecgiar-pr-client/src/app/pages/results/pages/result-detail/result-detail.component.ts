@@ -1,4 +1,4 @@
-import { Component, DoCheck, OnInit, effect, HostListener, ElementRef } from '@angular/core';
+import { Component, DoCheck, OnInit, OnDestroy, effect, inject } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { DataControlService } from '../../../../shared/services/data-control.service';
@@ -6,31 +6,26 @@ import { SaveButtonService } from '../../../../custom-fields/save-button/save-bu
 import { GreenChecksService } from '../../../../shared/services/global/green-checks.service';
 import { ShareRequestModalService } from './components/share-request-modal/share-request-modal.service';
 import { CurrentResultService } from '../../../../shared/services/current-result.service';
-import { MessageService } from 'primeng/api';
 import { environment } from '../../../../../environments/environment';
-import { Clipboard } from '@angular/cdk/clipboard';
+import { PdfExportService } from '../../../../shared/services/pdf-export.service';
 
 @Component({
   selector: 'app-result-detail',
   templateUrl: './result-detail.component.html',
   styleUrls: ['./result-detail.component.scss'],
-  providers: [MessageService],
   standalone: false
 })
-export class ResultDetailComponent implements OnInit, DoCheck {
-  showPdfMenu = false;
+export class ResultDetailComponent implements OnInit, DoCheck, OnDestroy {
+  private readonly pdfSE = inject(PdfExportService);
 
   constructor(
-    private readonly messageSE: MessageService,
     public currentResultSE: CurrentResultService,
     private readonly shareRequestModalSE: ShareRequestModalService,
     private readonly activatedRoute: ActivatedRoute,
     public api: ApiService,
     public saveButtonSE: SaveButtonService,
     public dataControlSE: DataControlService,
-    private readonly greenChecksSE: GreenChecksService,
-    private readonly clipboard: Clipboard,
-    private readonly elementRef: ElementRef
+    private readonly greenChecksSE: GreenChecksService
   ) {
     effect(() => {
       const portfolio = this.dataControlSE.currentResultSignal()?.portfolio;
@@ -45,31 +40,12 @@ export class ResultDetailComponent implements OnInit, DoCheck {
     this.getData();
   }
 
-  @HostListener('document:click', ['$event'])
-  onDocumentClick(event: MouseEvent): void {
-    const clickedInside = this.elementRef.nativeElement.querySelector('.pdf-menu-container')?.contains(event.target);
-    if (!clickedInside && this.showPdfMenu) {
-      this.showPdfMenu = false;
-    }
+  ngOnDestroy(): void {
+    this.pdfSE.disable();
   }
 
-  togglePdfMenu(): void {
-    this.showPdfMenu = !this.showPdfMenu;
-  }
-
-  viewPdf(): void {
-    window.open(this.getPdfLink(), '_blank');
-    this.showPdfMenu = false;
-  }
-
-  getPdfLink(): string {
+  private getPdfLink(): string {
     return `${environment.frontBaseUrl}reports/result-details/${this.api.resultsSE.currentResultCode}?phase=${this.api.resultsSE.currentResultPhase}`;
-  }
-
-  copyPdfLink(): void {
-    this.clipboard.copy(this.getPdfLink());
-    this.messageSE.add({ key: 'copyResultLinkPdf', severity: 'success', summary: 'PDF link copied' });
-    this.showPdfMenu = false;
   }
 
   async getData() {
@@ -81,6 +57,8 @@ export class ResultDetailComponent implements OnInit, DoCheck {
     this.api.updateUserData(() => {});
     this.api.resultsSE.currentResultCode = this.activatedRoute.snapshot.paramMap.get('id');
     this.api.resultsSE.currentResultPhase = this.activatedRoute.snapshot.queryParamMap.get('phase');
+    this.pdfSE.link.set(this.getPdfLink());
+    this.pdfSE.enabled.set(true);
     await this.GET_resultIdToCode();
 
     this.currentResultSE.GET_resultById();

@@ -2,7 +2,7 @@
 
 @if (!this.dataControlSE.show_qa_full_screen) {
   <div class="header_spacer" aria-hidden="true"></div>
-  <div class="header_panel_container" [class.header_hidden]="isHidden()">
+  <div class="header_panel_container" [class.header_hidden]="isHidden()" [style.left.px]="navbarLeft()">
     <a
       class="logo_container"
       routerLink="/"

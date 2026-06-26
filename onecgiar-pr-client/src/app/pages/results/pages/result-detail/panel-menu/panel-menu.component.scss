@@ -3,10 +3,10 @@
   flex-direction: column;
   gap: 50px;
   border-radius: 10px;
-  padding: 10px 25px;
+  padding: 10px 0;
   height: 100%;
   box-sizing: border-box;
-  background-color: var(--pr-color-white);
+  background-color: transparent; // sits on the dark sidebar
   // justify-content: space-between;
   overflow-y: auto;
 
@@ -117,7 +117,7 @@
 
   .segment {
     .name {
-      color: var(--pr-color-secondary-100);
+      color: rgba(var(--pr-color-white-rgb), 0.55);
       margin-bottom: 10px;
       margin-top: 10px;
     }
@@ -140,7 +140,7 @@
 
       a {
         text-decoration: none;
-        color: var(--pr-color-secondary-400);
+        color: rgba(var(--pr-color-white-rgb), 0.85);
         font-weight: 500;
         padding: 5px 10px 5px 20px;
         border-radius: 10px;
@@ -164,7 +164,7 @@
           }
 
           .invalid {
-            color: var(--pr-color-accents-3);
+            color: rgba(var(--pr-color-white-rgb), 0.45);
           }
         }
 
@@ -176,7 +176,7 @@
         }
 
         &:hover {
-          background-color: var(--pr-color-accents-1);
+          background-color: rgba(var(--pr-color-white-rgb), 0.1);
         }
       }
 

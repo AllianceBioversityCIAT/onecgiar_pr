@@ -1,60 +1,40 @@
-<app-page-header>
-  {{ this.dataControlSE.currentResultSectionName() }}
-  <div actions class="pdf-menu-container">
-    <button type="button" class="pdf-button" (click)="togglePdfMenu()" (keydown.enter)="togglePdfMenu()" aria-label="PDF options menu">
-      <i class="pi pi-file-pdf"></i>
-      <span>PDF</span>
-      <i class="pi pi-angle-down"></i>
-    </button>
-    <div class="pdf-dropdown" *ngIf="showPdfMenu">
-      <div class="pdf-dropdown-header">Options</div>
-      <div class="pdf-dropdown-item" (click)="viewPdf()" (keydown.enter)="viewPdf()" tabindex="0" role="menuitem">
-        <i class="pi pi-file-pdf"></i>
-        <span>View PDF</span>
+<div class="rd_layout">
+  <aside class="rd_sidebar">
+    <div class="rd_sidebar_header">
+      <span class="eyebrow">Section</span>
+      <h2 class="title">{{ this.dataControlSE.currentResultSectionName() }}</h2>
+    </div>
+    <app-panel-menu></app-panel-menu>
+
+    <!-- Result metadata at the bottom of the sidebar — wraps, never pushes the list -->
+    <div class="rd_metadata">
+      <div class="item">
+        Result code: <span>{{ this.api.resultsSE.currentResultCode }}</span>
       </div>
-      <div class="pdf-dropdown-separator"></div>
-      <div class="pdf-dropdown-item" (click)="copyPdfLink()" (keydown.enter)="copyPdfLink()" tabindex="0" role="menuitem">
-        <i class="pi pi-copy"></i>
-        <span>Copy link</span>
+      <div class="item">
+        Status: <span>{{ this.dataControlSE?.currentResult?.status_name }}</span>
+      </div>
+      <div class="item">
+        Result level: <span>{{ this.dataControlSE.currentResult?.result_level_name }}</span>
+      </div>
+      <div class="item">
+        Indicator category: <span>{{ this.dataControlSE.currentResult?.result_type_name }}</span>
+      </div>
+      <div class="item">
+        Submitter:
+        <span>{{ this.dataControlSE.currentResult?.initiative_official_code }} - {{ this.dataControlSE.currentResult?.initiative_name }}</span>
+      </div>
+      <div class="item">
+        Funding source: <span>{{ this.dataControlSE.currentResult?.source_name }}</span>
       </div>
     </div>
-  </div>
-</app-page-header>
-<div class="local_grid">
-  <div>
-    <div class="panel_menu">
-      <app-panel-menu></app-panel-menu>
-    </div>
-  </div>
-  <div>
+  </aside>
+  <div class="rd_content">
     <div class="phase_switcher_container">
       <app-phase-switcher></app-phase-switcher>
     </div>
 
     <div class="section_container">
-      <div class="fixed_data_container">
-        <div class="metadata">
-          <div class="item">
-            Result code: <span>{{ this.api.resultsSE.currentResultCode }}</span>
-          </div>
-          <div class="item">
-            Status: <span>{{ this.dataControlSE?.currentResult?.status_name }}</span>
-          </div>
-          <div class="item">
-            Result level: <span>{{ this.dataControlSE.currentResult?.result_level_name }}</span>
-          </div>
-          <div class="item">
-            Indicator category: <span>{{ this.dataControlSE.currentResult?.result_type_name }}</span>
-          </div>
-          <div class="item">
-            Submitter:
-            <span>{{ this.dataControlSE.currentResult?.initiative_official_code }} - {{ this.dataControlSE.currentResult?.initiative_name }}</span>
-          </div>
-          <div class="item">
-            Funding source: <span>{{ this.dataControlSE.currentResult?.source_name }}</span>
-          </div>
-        </div>
-      </div>
       <router-outlet *ngIf="this.currentResultSE.resultIdIsconverted"></router-outlet>
       <div class="spinner" *ngIf="this.saveButtonSE.isGettingSection">
         <div class="info">
@@ -65,6 +45,7 @@
     </div>
   </div>
 </div>
+
 <app-submission-modal></app-submission-modal>
 <app-unsubmit-modal></app-unsubmit-modal>
 <app-partners-request></app-partners-request>

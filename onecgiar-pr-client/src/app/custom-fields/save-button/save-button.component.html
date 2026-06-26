@@ -1,29 +1,56 @@
-<div class="fixed_button" *ngIf="!this.rolesSE.readOnly || editable">
-    <div class="fields-feedback-list" [ngClass]="{'show-fields-feedback-list-opacity': disabled,'expand':expand}"
-        *ngIf="this.dataControlSE.fieldFeedbackList?.length">
-        <div class="back_icon" (click)="expand = !expand;">
-            <i class="material-icons-round">
-                arrow_back_ios
-            </i>
+<div class="fixed_button" *ngIf="this.pdfSE.enabled() || !this.rolesSE.readOnly || editable">
+    <!-- PDF export — grouped with Save (available even in read-only) -->
+    <div class="pdf-menu-container" *ngIf="this.pdfSE.enabled()">
+        <button type="button" class="pdf-button" (click)="this.pdfSE.toggle()" (keydown.enter)="this.pdfSE.toggle()"
+            aria-label="PDF options menu">
+            <i class="pi pi-file-pdf"></i>
+            <span>PDF</span>
+            <i class="pi pi-angle-down"></i>
+        </button>
+        <div class="pdf-dropdown" *ngIf="this.pdfSE.menuOpen()">
+            <div class="pdf-dropdown-header">Options</div>
+            <div class="pdf-dropdown-item" (click)="this.pdfSE.view()" (keydown.enter)="this.pdfSE.view()" tabindex="0"
+                role="menuitem">
+                <i class="pi pi-file-pdf"></i>
+                <span>View PDF</span>
+            </div>
+            <div class="pdf-dropdown-separator"></div>
+            <div class="pdf-dropdown-item" (click)="this.pdfSE.copy()" (keydown.enter)="this.pdfSE.copy()" tabindex="0"
+                role="menuitem">
+                <i class="pi pi-copy"></i>
+                <span>Copy link</span>
+            </div>
         </div>
-        <div class="items custom_scroll" *ngIf="expand">
-            <div class="item" *ngFor="let item of this.dataControlSE.fieldFeedbackList">
+    </div>
+
+    <!-- Save -->
+    <ng-container *ngIf="!this.rolesSE.readOnly || editable">
+        <div class="fields-feedback-list" [ngClass]="{'show-fields-feedback-list-opacity': disabled,'expand':expand}"
+            *ngIf="this.dataControlSE.fieldFeedbackList?.length">
+            <div class="back_icon" (click)="expand = !expand;">
+                <i class="material-icons-round">
+                    arrow_back_ios
+                </i>
+            </div>
+            <div class="items custom_scroll" *ngIf="expand">
+                <div class="item" *ngFor="let item of this.dataControlSE.fieldFeedbackList">
+                    <i class="material-icons-round">
+                        warning
+                    </i>
+                    <div class="text"><strong>{{item}}</strong> is missing</div>
+                </div>
+            </div>
+            <div class="counter" *ngIf="!expand">
                 <i class="material-icons-round">
                     warning
                 </i>
-                <div class="text"><strong>{{item}}</strong> is missing</div>
+                {{this.dataControlSE?.fieldFeedbackList?.length}} <div class="text">alerts</div>
             </div>
         </div>
-        <div class="counter" *ngIf="!expand">
-            <i class="material-icons-round">
-                warning
-            </i>
-            {{this.dataControlSE?.fieldFeedbackList?.length}} <div class="text">alerts</div>
+        <div (click)="this.saveButtonSE.isSaving || disabled ? null:onClickSave()">
+            <app-pr-button padding="medium" [text]="this.saveButtonSE.isSaving?'Saving':text"
+                [rotating]="this.saveButtonSE.isSaving" [icon]="this.saveButtonSE.isSaving?'loop':'save'"
+                [ngClass]="{'globalDisabled': this.saveButtonSE.isSaving || disabled}"></app-pr-button>
         </div>
-    </div>
-    <div (click)="this.saveButtonSE.isSaving || disabled ? null:onClickSave()">
-        <app-pr-button padding="medium" [text]="this.saveButtonSE.isSaving?'Saving':text"
-            [rotating]="this.saveButtonSE.isSaving" [icon]="this.saveButtonSE.isSaving?'loop':'save'"
-            [ngClass]="{'globalDisabled': this.saveButtonSE.isSaving || disabled}"></app-pr-button>
-    </div>
+    </ng-container>
 </div>
