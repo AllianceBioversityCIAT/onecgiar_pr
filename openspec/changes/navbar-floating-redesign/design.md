@@ -19,6 +19,7 @@ An impact exploration (read-only) validated the sticky→fixed switch across the
 ## Decisions
 
 - **Fixed + spacer over sticky.** A `.header_spacer` (78px = 10 inset + 56 bar + 12 breathing) inside the `@if (!show_qa_full_screen)` block reserves flow space; QA full-screen renders neither bar nor spacer. Validated correct by the exploration.
+- **Color iteration (final state).** Background started as glass (`rgba(secondary,.94)` + blur), tried dark-purple tokens, and landed on a **dark primary gradient** `primary-700 → primary-950` (opaque, on-brand). The active-section indicator went underline → recessed dark box (`secondary-500`) → **primary gradient box** `primary-400 → primary-300` + soft glow. The temporary `--pr-color-purple-dark-*` tokens were removed once the purple variant was dropped.
 - **Hide-on-scroll on `window:scroll`.** Toggles an `isHidden` signal → `.header_hidden` transform. Reveal zone 80px, 8px jitter guard.
 - **Test-environment ribbon moved below the bar.** `test-environment-label` was `fixed; top:0; z-index:1000` and now overlaps the floating bar's white logo chip. Fixed by moving it to `top: 60px` (below the bar). Chosen over raising the header z-index, which risks covering modals/drawers.
 - **Sticky offsets left as-is (verify).** `result-detail.component.scss` `app-page-header { top: 79px }` and `.panel_menu { top: 144px }` were tuned to the old 80px sticky header; the new spacer is 78px (≈ same), so drift is ~1–2px — keep unless visual check shows misalignment.

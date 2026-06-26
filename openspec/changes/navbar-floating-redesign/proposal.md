@@ -7,11 +7,11 @@ The top navigation bar looked dated: a full-width 80px sticky strip. As part of 
 ## What Changes
 
 - **Floating compact bar:** `header-panel` goes from `position: sticky; height: 80px; full-width` to `position: fixed` with a 10px inset on all sides, `border-radius: 18px`, height **56px**, subtle border + shadow. A new in-flow `.header_spacer` (78px) reserves the vertical space the fixed bar no longer occupies — it lives inside the same `@if (!show_qa_full_screen)` block so QA full-screen reserves none.
-- **Glass / dark look:** translucent dark background `rgba(secondary, 0.94)` + `backdrop-filter: blur` (glassmorphism), tunable.
+- **Dark gradient look:** background is a dark **primary** gradient `linear-gradient(135deg, primary-700 → primary-950)` (indigo, on-brand, opaque). (Iterated from an earlier glass/translucent and a dark-purple variant; final = dark primary gradient.)
 - **Hide-on-scroll:** scrolling down past an 80px reveal zone slides the bar up (hidden); scrolling up reveals it. Implemented via `@HostListener('window:scroll')` toggling an `isHidden` signal bound to `.header_hidden` (CSS transform transition). 8px delta guard against jitter.
 - **Circular logo:** the PR logo is shown inside a white circular chip.
 - **User as white pill:** the user trigger (avatar + name + email + chevron) is a white rounded pill with dark text; avatar gets a dark fill for contrast. Popover anchor switched to `horizontalAlign="end"` so it doesn't overflow the right edge.
-- **Nav items modernized:** smaller type (13px / 500 / +letter-spacing), full-bar-height items; the **active section** shows a darker recessed box behind the text (same bar color, darker `secondary-500` + inset shadow). Hover brightens the text.
+- **Nav items modernized:** smaller type (13px / 500 / +letter-spacing), full-bar-height items; the **active section** shows a **primary gradient box** behind the text (`linear-gradient(135deg, primary-400 → primary-300)` + soft primary glow), contrasting against the dark bar. Hover brightens the text. (Iterated from underline → recessed dark box → primary gradient.)
 
 ## Capabilities
 

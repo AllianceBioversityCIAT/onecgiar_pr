@@ -33,14 +33,23 @@ The bar SHALL slide out of view when the user scrolls the window down past a sma
 - **WHEN** the active route scrolls inside its own `overflow-y:auto` container instead of the window
 - **THEN** the bar remains visible (it does not auto-hide), which is the safe default
 
-### Requirement: Active section is indicated by a recessed box
+### Requirement: Active section is indicated by a primary gradient box
 
-The currently active nav section SHALL be marked by a darker recessed box behind its label (same bar color family, darker, with shadow), not by an underline.
+The currently active nav section SHALL be marked by a rounded box behind its label using a primary-color gradient (with a soft glow), not by an underline.
 
 #### Scenario: Active section styling
 
 - **WHEN** a nav route is active
-- **THEN** its item shows white bold text over a darker rounded box with an inset shadow; other items are lighter and brighten on hover
+- **THEN** its item shows white bold text over a rounded box filled with a primary gradient (`primary-400 → primary-300`) and a soft primary glow; other items are lighter and brighten on hover
+
+### Requirement: Bar uses a dark primary gradient background
+
+The bar background SHALL be a dark, opaque primary-color gradient (on-brand), giving enough contrast for the active gradient box and white text.
+
+#### Scenario: Dark gradient background
+
+- **WHEN** the bar renders
+- **THEN** its background is `linear-gradient(135deg, primary-700 → primary-950)` and the active section box and white labels remain clearly legible against it
 
 ### Requirement: User and logo are presented as chips
 
