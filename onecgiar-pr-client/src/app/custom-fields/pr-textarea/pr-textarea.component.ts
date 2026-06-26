@@ -68,6 +68,18 @@ export class PrTextareaComponent implements ControlValueAccessor {
     }
   }
 
+  /** Whether the field currently holds a non-empty value. */
+  get hasValue(): boolean {
+    return this._value !== null && this._value !== undefined && String(this._value).trim() !== '';
+  }
+
+  /** Field status → colored card header (see src/styles/field-card.scss). */
+  get fieldState(): 'optional' | 'pending' | 'done' | 'error' {
+    if (this.maxWords && this.wordCount > this.maxWords && !this.autogenerate) return 'error';
+    if (this.hasValue) return 'done'; // green = filled/valid (optional or required)
+    return this.required ? 'pending' : 'optional'; // yellow vs blue when empty
+  }
+
   onChange(_) {}
 
   onTouch() {}

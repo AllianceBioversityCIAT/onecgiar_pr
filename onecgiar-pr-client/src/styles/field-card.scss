@@ -1,0 +1,165 @@
+// Shared "field card" design — colored status header + bone-grey border + small description.
+// Used by pr-input, pr-textarea (and future field components). State classes: fc-optional|pending|done|error.
+.field_card {
+  border: 1px solid var(--pr-color-accents-2);
+  border-radius: 12px;
+  background-color: var(--pr-color-white);
+  margin: 18px 0; // vertical separation from siblings
+
+  .field_card_header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--pr-color-white);
+    background-color: var(--pr-color-blue-500); // overridden per state
+    border-radius: 11px 11px 0 0; // round top corners (card no longer clips with overflow)
+    transition: background-color 0.2s ease;
+
+    .fch_title {
+      min-width: 0;
+    }
+
+    // Mandatory / Optional tag next to the title (replaces the asterisk)
+    .fch_tag {
+      flex-shrink: 0;
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      padding: 1px 7px;
+      border-radius: 6px;
+      background-color: rgba(var(--pr-color-white-rgb), 0.22);
+      color: inherit;
+    }
+
+    // Info button + custom color-legend popover (pushed to the right)
+    .fch_info_wrap {
+      margin-left: auto;
+      flex-shrink: 0;
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+
+      .fch_info {
+        font-size: 16px;
+        cursor: help;
+        opacity: 0.85;
+
+        &:hover {
+          opacity: 1;
+        }
+      }
+
+      .fch_legend {
+        position: absolute;
+        top: calc(100% + 8px);
+        right: 0;
+        z-index: 1000;
+        width: max-content;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background-color: var(--pr-color-secondary-500);
+        box-shadow: 0 6px 20px rgba(var(--pr-color-black-rgb), 0.3);
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-4px);
+        transition: opacity 0.15s ease, transform 0.15s ease;
+
+        .legend_row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 11px;
+          font-weight: 500;
+          line-height: 1.9;
+          color: var(--pr-color-white);
+          white-space: nowrap;
+
+          .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+          }
+
+          .dot-blue {
+            background-color: var(--pr-color-blue-500);
+          }
+          .dot-orange {
+            background-color: var(--pr-color-orange-600);
+          }
+          .dot-green {
+            background-color: var(--pr-color-green-500);
+          }
+          .dot-red {
+            background-color: var(--pr-color-red-300);
+          }
+        }
+      }
+
+      &:hover .fch_legend {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+      }
+    }
+  }
+
+  .field_card_desc {
+    padding: 16px 14px 0;
+    font-size: 11px;
+    line-height: 1.35;
+    color: var(--pr-color-accents-5);
+
+    .desc_chip {
+      display: inline-block;
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: var(--pr-color-accents-4);
+      border: 1px solid var(--pr-color-accents-2);
+      border-radius: 6px;
+      padding: 1px 8px;
+      margin-bottom: 5px;
+    }
+
+    .desc_text {
+      :is(p, ul, ol) {
+        margin: 0;
+        padding-left: 16px;
+      }
+    }
+  }
+
+  // Field body padding (works for both pr-input and pr-field/textarea)
+  .pr-input,
+  .pr-field {
+    padding: 8px 14px 8px;
+  }
+
+  // Status → header color
+  &.fc-optional .field_card_header {
+    background-color: var(--pr-color-blue-500); // blue (distinct from brand indigo): not required
+    color: var(--pr-color-white);
+  }
+
+  &.fc-pending .field_card_header {
+    background-color: var(--pr-color-orange-600); // dark orange so white reads well: required, empty
+    color: var(--pr-color-white);
+  }
+
+  &.fc-done .field_card_header {
+    background-color: var(--pr-color-green-500); // green: required, filled
+    color: var(--pr-color-white);
+  }
+
+  &.fc-error .field_card_header {
+    background-color: var(--pr-color-red-300); // red: over limit / invalid
+    color: var(--pr-color-white);
+  }
+}

@@ -1,7 +1,26 @@
 @if (this.preventFieldRender()) {
-  <app-pr-field-header [label]="this.label" [description]="this.description" [required]="this.required" [useColon]="false"> </app-pr-field-header>
+  <div class="field_card" [ngClass]="'fc-' + fieldState">
+    <div class="field_card_header">
+      <span class="fch_title" [innerHTML]="this.label"></span>
+      <span class="fch_tag">{{ this.required ? 'Mandatory' : 'Optional' }}</span>
+      <span class="fch_info_wrap">
+        <i class="material-icons-round fch_info" aria-label="Field color legend">info</i>
+        <div class="fch_legend">
+          <div class="legend_row"><span class="dot dot-blue"></span> Optional (empty)</div>
+          <div class="legend_row"><span class="dot dot-orange"></span> Mandatory (empty)</div>
+          <div class="legend_row"><span class="dot dot-green"></span> Filled / valid</div>
+          <div class="legend_row"><span class="dot dot-red"></span> Over limit / invalid</div>
+        </div>
+      </span>
+    </div>
+    @if (this.description) {
+      <div class="field_card_desc">
+        <span class="desc_chip">Description</span>
+        <div class="desc_text" [innerHTML]="this.description"></div>
+      </div>
+    }
 
-  <div class="pr-field" [ngClass]="{ mandatory: this.required, complete: value !== null && value !== undefined }">
+    <div class="pr-field" [ngClass]="{ mandatory: this.required, complete: value !== null && value !== undefined }">
     <div
       class="radioButtonList"
       [ngClass]="{ verticalAlignment: this.verticalAlignment, 'block-field': (readOnly || disabled || this.rolesSE.readOnly) && !isStatic }"
@@ -51,6 +70,7 @@
           </div>
         </ng-container>
       </div>
+    </div>
     </div>
   </div>
 }

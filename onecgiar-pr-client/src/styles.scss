@@ -1,5 +1,6 @@
 /* You can add global styles to this file, and also import other style files */
 @use './styles/fonts.scss' as fonts;
+@use './styles/field-card.scss';
 @import 'primeicons/primeicons.css';
 
 .globalDisabled {

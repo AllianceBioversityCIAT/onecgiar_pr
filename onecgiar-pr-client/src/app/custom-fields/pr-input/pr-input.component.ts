@@ -91,6 +91,24 @@ export class PrInputComponent implements ControlValueAccessor {
     }
   }
 
+  /** Whether the field currently holds a non-empty value. */
+  get hasValue(): boolean {
+    return this._value !== null && this._value !== undefined && String(this._value).trim() !== '';
+  }
+
+  /**
+   * Field status drives the colored card header:
+   * - error   (red)    → exceeds the word limit / invalid
+   * - optional(blue)   → not required
+   * - done    (green)  → required and filled
+   * - pending (yellow) → required and empty
+   */
+  get fieldState(): 'optional' | 'pending' | 'done' | 'error' {
+    if (this.maxWords && this.wordCount > this.maxWords && !this.autogenerate) return 'error';
+    if (this.hasValue) return 'done'; // green = filled/valid (optional or required)
+    return this.required ? 'pending' : 'optional'; // yellow vs blue when empty
+  }
+
   get badLink() {
     const regex = new RegExp(/^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([-.][a-z0-9]+)*\.[a-z]{2,6}(:\d{1,5})?(\/\S*)?$/i);
 

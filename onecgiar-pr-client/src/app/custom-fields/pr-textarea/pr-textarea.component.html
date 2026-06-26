@@ -1,15 +1,28 @@
 @if (this.preventFieldRender()) {
-  <app-pr-field-header
-    [label]="this.label"
-    [description]="this.description"
-    [required]="this.required"
-    [showDescriptionLabel]="this.showDescriptionLabel"
-    [labelDescInlineStyles]="labelDescInlineStyles">
-  </app-pr-field-header>
-  <div
-    [ngSwitch]="(readOnly || this.rolesSE.readOnly) && !isStatic"
-    class="pr-field"
-    [ngClass]="{ mandatory: this.required, complete: value, readOnly: (readOnly || this.rolesSE.readOnly) && !isStatic }">
+  <div class="field_card" [ngClass]="'fc-' + fieldState">
+    <div class="field_card_header">
+      <span class="fch_title" [innerHTML]="this.label"></span>
+      <span class="fch_tag">{{ this.required ? 'Mandatory' : 'Optional' }}</span>
+      <span class="fch_info_wrap">
+        <i class="material-icons-round fch_info" aria-label="Field color legend">info</i>
+        <div class="fch_legend">
+          <div class="legend_row"><span class="dot dot-blue"></span> Optional (empty)</div>
+          <div class="legend_row"><span class="dot dot-orange"></span> Mandatory (empty)</div>
+          <div class="legend_row"><span class="dot dot-green"></span> Filled / valid</div>
+          <div class="legend_row"><span class="dot dot-red"></span> Over limit / invalid</div>
+        </div>
+      </span>
+    </div>
+    @if (this.showDescriptionLabel && this.description) {
+      <div class="field_card_desc" [style]="labelDescInlineStyles">
+        <span class="desc_chip">Description</span>
+        <div class="desc_text" [innerHTML]="this.description"></div>
+      </div>
+    }
+    <div
+      [ngSwitch]="(readOnly || this.rolesSE.readOnly) && !isStatic"
+      class="pr-field"
+      [ngClass]="{ mandatory: this.required, complete: value, readOnly: (readOnly || this.rolesSE.readOnly) && !isStatic }">
     <div
       class="text-secondary-400 pr-body-2"
       *ngSwitchCase="true"
@@ -30,6 +43,7 @@
         <app-pr-word-counter *ngIf="maxWords" [wordCount]="wordCount" [maxWords]="maxWords" [autogenerate]="autogenerate"></app-pr-word-counter>
       </div>
     </div>
-    <app-pr-field-validations></app-pr-field-validations>
+      <app-pr-field-validations></app-pr-field-validations>
+    </div>
   </div>
 }
