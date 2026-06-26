@@ -99,7 +99,7 @@ describe('RdContributorsAndPartnersComponent', () => {
         { provide: RolesService, useValue: {} },
         { provide: CentersService, useValue: {} },
         { provide: ResultLevelService, useValue: {} },
-        { provide: FieldsManagerService, useValue: {} }
+        { provide: FieldsManagerService, useValue: { isContributorsPartners2026: () => false, isP25: () => false } }
       ],
       schemas: [NO_ERRORS_SCHEMA]
     }).compileComponents();

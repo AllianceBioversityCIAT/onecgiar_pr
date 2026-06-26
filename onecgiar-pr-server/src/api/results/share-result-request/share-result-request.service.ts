@@ -215,6 +215,7 @@ export class ShareResultRequestService {
       ? shareInitId
       : initiativeId;
     newShare.is_map_to_toc = !!createTocShareResult?.isToc;
+    newShare.from_toc = !!createTocShareResult?.initiativeFromToc?.[shareInitId];
     newShare.requested_by = user.id;
     return newShare;
   }
@@ -244,6 +245,7 @@ export class ShareResultRequestService {
               is_active: req.is_active,
               requested_by: req.requested_by,
               requested_date: req.requested_date,
+              from_toc: req.from_toc,
             },
           ),
         ),
@@ -1040,6 +1042,7 @@ export class ShareResultRequestService {
         user,
         is_map_to_toc,
         dto,
+        !!findShare?.from_toc,
       );
     } else {
       await this.deactivateTocResults(result_id, shared_inititiative_id);
@@ -1053,6 +1056,7 @@ export class ShareResultRequestService {
     user: TokenDto,
     is_map_to_toc: boolean,
     dto: CreateShareResultRequestDto,
+    from_toc = false,
   ) {
     try {
       const exists =
@@ -1067,6 +1071,7 @@ export class ShareResultRequestService {
           shared_inititiative_id,
           result_id,
           user,
+          from_toc,
         );
         await this.createBudgetForInitiative(newReIni.id, user);
 
@@ -1081,7 +1086,7 @@ export class ShareResultRequestService {
           await this.saveIndicatorsForPrimarySubmitter(dto, result_id);
         }
       } else {
-        await this.activateExistingInitiativeEntry(exists, user);
+        await this.activateExistingInitiativeEntry(exists, user, from_toc);
         await this.createOrUpdateBudgetForInitiative(exists.id, user);
         if (!is_map_to_toc) {
           await this.mapWorkPackagesToInitiative(
@@ -1104,6 +1109,7 @@ export class ShareResultRequestService {
     shared_initiative_id: number,
     result_id: number,
     user: TokenDto,
+    from_toc = false,
   ) {
     const newResultByInitiative = new ResultsByInititiative();
     newResultByInitiative.initiative_id = shared_initiative_id;
@@ -1111,6 +1117,7 @@ export class ShareResultRequestService {
     newResultByInitiative.result_id = result_id;
     newResultByInitiative.last_updated_by = user.id;
     newResultByInitiative.created_by = user.id;
+    newResultByInitiative.from_toc = from_toc;
 
     return await this._resultByInitiativesRepository.save(
       newResultByInitiative,
@@ -1128,9 +1135,14 @@ export class ShareResultRequestService {
     });
   }
 
-  private async activateExistingInitiativeEntry(exists: any, user: TokenDto) {
+  private async activateExistingInitiativeEntry(
+    exists: any,
+    user: TokenDto,
+    from_toc = false,
+  ) {
     await this._resultByInitiativesRepository.update(exists.id, {
       is_active: true,
+      from_toc,
       last_updated_by: user.id,
     });
   }
@@ -1326,6 +1338,7 @@ export class ShareResultRequestService {
         user,
         is_map_to_toc,
         dto,
+        !!findShare?.from_toc,
       );
     } else {
       // Reuse common method if logic is the same
@@ -1344,6 +1357,7 @@ export class ShareResultRequestService {
     user: TokenDto,
     is_map_to_toc: boolean,
     dto: CreateShareResultRequestDto,
+    from_toc = false,
   ) {
     try {
       const exists =
@@ -1359,6 +1373,7 @@ export class ShareResultRequestService {
           shared_inititiative_id,
           result_id,
           user,
+          from_toc,
         );
         await this.createBudgetForInitiative(newReIni.id, user);
 
@@ -1374,7 +1389,7 @@ export class ShareResultRequestService {
         }
       } else {
         // Reuse common methods if logic is the same
-        await this.activateExistingInitiativeEntry(exists, user);
+        await this.activateExistingInitiativeEntry(exists, user, from_toc);
         await this.createOrUpdateBudgetForInitiative(exists.id, user);
         if (!is_map_to_toc) {
           await this.mapWorkPackagesToInitiativeV2(

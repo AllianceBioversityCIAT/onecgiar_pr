@@ -7,6 +7,7 @@ import { InstitutionsService } from '../../../../../../shared/services/global/in
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
 import { ContributorsAndPartnersBody } from './models/contributorsAndPartnersBody';
 import { ResultTocResultsInterface } from '../rd-theory-of-change/model/theoryOfChangeBody';
+import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 import { forkJoin } from 'rxjs';
 
 @Injectable({
@@ -48,6 +49,18 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   tocReferenceSynergyInitiativeIds = signal<number[]>([]);
   scienceSelected: any[] = [];
   otherScienceSelected: any[] = [];
+  // P2-2929 (2026): snapshot of the pending SP requests loaded from the back (each with share_result_request_id).
+  // On Save we diff this against the current selection to cancel the requests the user deselected.
+  loadedPendingScience: any[] = [];
+  // Ids of the SP that were already accepted on load → on Save they go to accepted (not re-requested as pending),
+  // even if a deselect+reselect dropped the per-object _was_accepted tag.
+  loadedAcceptedScienceIds = new Set<number>();
+
+  // P2-2998 / P2-2929 (2026): sentinels for the "Other(s)" item that toggles the second dropdown.
+  // Mirror the component definitions — kept here so the load re-bucketing can detect/strip them.
+  readonly OTHER_CENTERS_CODE = '__OTHER_CENTERS__';
+  readonly OTHER_SP_CODE = '__OTHER_SCIENCE__';
+  private readonly fieldsManagerSE = inject(FieldsManagerService);
 
   constructor(
     public api: ApiService,
@@ -93,6 +106,15 @@ export class RdContributorsAndPartnersService implements OnDestroy {
     this.leadPartnerId = null;
     this.leadCenterCode = null;
     this.initiativeIdSignal.set(null);
+    // P2-2998 / P2-2929 (2026): clear the split selections (root singleton would otherwise leak across results).
+    this.otherCentersSelected = [];
+    this.scienceSelected = [];
+    this.otherScienceSelected = [];
+    this.loadedPendingScience = [];
+    this.loadedAcceptedScienceIds = new Set<number>();
+    this.showOtherCenters = false;
+    this.tocReferenceCenterInstitutionIds.set([]);
+    this.tocReferenceSynergyInitiativeIds.set([]);
   }
 
   loadClarisaProjects() {
@@ -279,6 +301,7 @@ export class RdContributorsAndPartnersService implements OnDestroy {
         ];
 
         this.initiativeIdSignal.set(this.partnersBody?.result_toc_result?.initiative_id);
+        this.applyTocMappingOnLoad();
         this.getConsumed.set(true);
         this.partnersBody.bilateral_projects.forEach(project => {
           project.fullName = project.obj_clarisa_project.fullName;
@@ -291,6 +314,59 @@ export class RdContributorsAndPartnersService implements OnDestroy {
         if (no_applicable_partner === true || no_applicable_partner === false) this.partnersBody.no_applicable_partner = no_applicable_partner;
       }
     });
+  }
+
+  // P2-2998 / P2-2929 (2026): on load, re-bucket persisted data into dropdown 1 (ToC) vs dropdown 2 (Other)
+  // by the persisted `from_toc` flag (NOT by the live ToC), so a saved ToC mapping keeps showing as ToC.
+  // Centers come flat in contributing_center; Science Programs come as accepted + pending initiatives.
+  applyTocMappingOnLoad() {
+    if (!this.fieldsManagerSE.isContributorsPartners2026()) return;
+
+    // Centers: split contributing_center by from_toc. Other(s) move to the second dropdown + re-add the sentinel.
+    // A CGSpace-locked center always stays in dropdown 1 (it carries a delete-lock the Other dropdown lacks).
+    // When from_toc is null/undefined (legacy/migrated rows), fall back to live ToC membership so genuine ToC centers aren't misfiled.
+    const centers: any[] = (this.partnersBody?.contributing_center || []).filter((c: any) => c?.code !== this.OTHER_CENTERS_CODE);
+    const isCenterFromToc = (c: any): boolean =>
+      !!c?.from_cgspace || (c?.from_toc == null ? this.tocReferenceCenterInstitutionIds().includes(c?.institutionId) : !!c?.from_toc);
+    const tocCenters = centers.filter((c: any) => isCenterFromToc(c));
+    const otherCenters = centers.filter((c: any) => !isCenterFromToc(c));
+    if (otherCenters.length) {
+      this.otherCentersSelected = otherCenters;
+      this.partnersBody.contributing_center = [...tocCenters, this.buildOtherCentersSentinel()];
+    } else {
+      this.otherCentersSelected = [];
+      this.partnersBody.contributing_center = tocCenters;
+    }
+
+    // Science Programs: combine accepted + pending, tag origin (_was_accepted), split by from_toc.
+    const ci: any = this.partnersBody?.contributing_initiatives || {};
+    const accepted = (ci.accepted_contributing_initiatives || []).map((x: any) => ({ ...x, _was_accepted: true }));
+    const pending = (ci.pending_contributing_initiatives || []).map((x: any) => ({ ...x, _was_accepted: false }));
+    // Snapshot the ACTIVE pending requests (with share_result_request_id) to cancel the ones deselected on Save.
+    this.loadedPendingScience = pending.filter((p: any) => p?.share_result_request_id != null && p?.is_active !== false);
+    // Snapshot the accepted ids so the Save classifies accepted vs pending by identity (a deselect+reselect loses _was_accepted).
+    this.loadedAcceptedScienceIds = new Set<number>(accepted.map((x: any) => x?.id));
+    const allSP = [...accepted, ...pending].filter((sp: any) => sp?.id !== this.OTHER_SP_CODE);
+    // from_toc null/undefined (legacy rows) → fall back to live ToC synergy membership instead of defaulting to Other.
+    const isSpFromToc = (sp: any): boolean =>
+      sp?.from_toc == null ? this.tocReferenceSynergyInitiativeIds().includes(sp?.id) : !!sp?.from_toc;
+    const tocSP = allSP.filter((sp: any) => isSpFromToc(sp));
+    const otherSP = allSP.filter((sp: any) => !isSpFromToc(sp));
+    if (otherSP.length) {
+      this.otherScienceSelected = otherSP;
+      this.scienceSelected = [...tocSP, this.buildOtherScienceSentinel()];
+    } else {
+      this.otherScienceSelected = [];
+      this.scienceSelected = tocSP;
+    }
+  }
+
+  private buildOtherCentersSentinel() {
+    return { code: this.OTHER_CENTERS_CODE, name: 'Other(s) CGIAR Centers', acronym: 'Other(s)', full_name: '<strong>Other(s) CGIAR Centers</strong>', institutionId: -1 };
+  }
+
+  private buildOtherScienceSentinel() {
+    return { id: this.OTHER_SP_CODE, official_code: 'Other(s)', short_name: 'Science Program(s)', full_name: '<strong>Other(s) Science Program(s)</strong>' };
   }
 
   getDisabledCentersForKP() {
@@ -337,7 +413,8 @@ export class RdContributorsAndPartnersService implements OnDestroy {
     if (this.partnersBody.contributing_center?.length > -1) {
       //('center has changes');
       this.possibleLeadCenters = this.centersSE.centersList.filter(center => {
-        return this.partnersBody.contributing_center.some(c => c?.code === center.code);
+        // P2-2998 (2026): an "Other(s)" center (in otherCentersSelected) is also lead-eligible.
+        return this.partnersBody.contributing_center.some(c => c?.code === center.code) || this.otherCentersSelected?.some(c => c?.code === center.code);
       });
 
       this.possibleLeadCenters = this.possibleLeadCenters.map(center => {
@@ -430,7 +507,11 @@ export class RdContributorsAndPartnersService implements OnDestroy {
     }
 
     this.leadCenterCode = this.centersSE.centersList.find(center => {
-      return this.partnersBody.contributing_center?.some(c => c.code === center.code && c.is_leading_result);
+      // P2-2998 (2026): the persisted lead may be an "Other(s)" center (after re-bucketing it lives in otherCentersSelected).
+      return (
+        this.partnersBody.contributing_center?.some(c => c.code === center.code && c.is_leading_result) ||
+        this.otherCentersSelected?.some((c: any) => c.code === center.code && c.is_leading_result)
+      );
     })?.code;
 
     if (updateComponent) {

@@ -67,6 +67,14 @@ export class ResultsByInititiative {
   is_active: boolean;
 
   @Column({
+    name: 'from_toc',
+    type: 'boolean',
+    nullable: false,
+    default: false,
+  })
+  from_toc: boolean;
+
+  @Column({
     name: 'created_by',
     type: 'int',
     nullable: false,

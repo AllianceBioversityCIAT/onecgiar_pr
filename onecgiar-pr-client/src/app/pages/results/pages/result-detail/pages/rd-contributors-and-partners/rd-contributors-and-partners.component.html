@@ -258,7 +258,7 @@
   }
 
   @if (isCP2026()) {
-    @if (hasReferenceScience()) {
+    @if (hasReferenceScience() || this.rdPartnersSE.scienceSelected?.length || this.rdPartnersSE.otherScienceSelected?.length) {
       <app-alert-status [description]="contributingScienceInfoNote"></app-alert-status>
 
       <app-pr-multi-select

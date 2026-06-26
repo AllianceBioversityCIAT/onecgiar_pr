@@ -1,4 +1,20 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsBoolean, IsNumber, IsOptional } from 'class-validator';
+
+export class ContributingInitiativeTocFlagDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  id?: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Indicates the science program was prefilled from Theory of Change mapping.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  from_toc?: boolean;
+}
 
 export class ResultTocResultItemDto {
   @ApiPropertyOptional()
@@ -47,10 +63,14 @@ export class CreateResultsTocResultV2Dto {
   email_template?: string;
 
   @ApiPropertyOptional({ type: () => [Number] })
-  accepted_contributing_initiatives?: number[];
+  accepted_contributing_initiatives?: Array<
+    number | ContributingInitiativeTocFlagDto
+  >;
 
-  @ApiPropertyOptional({ type: () => [Number] })
-  pending_contributing_initiatives?: number[];
+  @ApiPropertyOptional({ type: () => [ContributingInitiativeTocFlagDto] })
+  pending_contributing_initiatives?: Array<
+    number | ContributingInitiativeTocFlagDto
+  >;
 
   @ApiPropertyOptional({ type: () => ResultTocResultBlockDto })
   result_toc_result?: ResultTocResultBlockDto;

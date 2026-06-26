@@ -12,10 +12,11 @@
 - [x] 2.4 HTML: split (dropdown1 + Other item + dropdown2 + chips) and the no-SP note, gated by isCP2026(); legacy contributing-initiatives dropdown kept for non-2026.
 - [x] 2.5 build:dev passes. Verified on result 8562 (no SP in ToC → shows the "No Science Programs…" note; legacy dropdown hidden in 2026). Screenshot in .local-screenshots/verify-sp-nosp.png.
 
-## 3. BLOCKED — backend mapping (Juan David)
+## 3. Backend mapping (Juan David) — DONE
 
-- [ ] 3.1 Backend: fix the mapping so contributing_synergy_program_initiative_ids is populated (currently arrives empty for the test data).
-- [ ] 3.2 Then verify the populated split (dropdown 1 = SP from ToC preselected, Other(s) = the rest) on a result that has synergy programs.
+- [x] 3.1 Backend: fix the mapping so contributing_synergy_program_initiative_ids is populated. Fixed in `8db12d3ac` (2026-06-25, on P2-2928 + merged to dev): corrected join (`trsp.toc_results_id = tr.id`), phase filter on `trsp.phase`, and resolve to `ci.id` via `clarisa_initiatives.official_code`.
+- [x] 3.2 Data contract verified on prtest: initiative 62 → node 7472 returns synergy ids [50, 61], node 7482 returns [50]; ids resolve to SP01, SP12 via /clarisa/initiatives by `id`.
+- [ ] 3.3 Visual verification of the populated split still pending — needs a result under an initiative with synergy in its selected ToC nodes (e.g. init 62). Test result 8562/init 50 has no synergy.
 
 ## 4. DEFERRED — SAVE / pending
 

@@ -192,12 +192,13 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   }
 
   deleteScience(index: number) {
-    this.rdPartnersSE.scienceSelected?.splice(index, 1);
+    // Reassign a NEW array reference (not splice in place) so the multi-select ngModel refreshes and the chip stays removed.
+    this.rdPartnersSE.scienceSelected = (this.rdPartnersSE.scienceSelected || []).filter((_: any, i: number) => i !== index);
     if (!this.showOtherScience) this.rdPartnersSE.otherScienceSelected = [];
   }
 
   deleteOtherScience(index: number) {
-    this.rdPartnersSE.otherScienceSelected?.splice(index, 1);
+    this.rdPartnersSE.otherScienceSelected = (this.rdPartnersSE.otherScienceSelected || []).filter((_: any, i: number) => i !== index);
   }
 
   GET_AllWithoutResults() {
@@ -305,16 +306,58 @@ export class RdContributorsAndPartnersComponent implements OnInit {
 
     const linkedResultsIds = (this.rdPartnersSE.partnersBody.linked_results || []).map((r: any) => Number(r?.id ?? r));
 
+    // P2-2998 / P2-2929 (2026): tag each center/SP with from_toc and strip the UI-only sentinels.
+    // Centers = ToC-selected (contributing_center, minus sentinel) ∪ Other(s). SP = scienceSelected ∪ otherScienceSelected,
+    // split into accepted (kept) vs pending (new contribution request) by the _was_accepted tag set on load.
+    const isCP2026 = this.isCP2026();
+    let contributingCenterPayload: any[] = this.rdPartnersSE.partnersBody.contributing_center;
+    let contributingInitiativesPayload: any = {
+      ...this.rdPartnersSE.partnersBody.contributing_initiatives,
+      pending_contributing_initiatives: [
+        ...this.rdPartnersSE.partnersBody.contributing_initiatives.pending_contributing_initiatives,
+        ...this.rdPartnersSE.contributingInitiativeNew
+      ]
+    };
+    let cancelPendingRequests: number[] = [];
+
+    if (isCP2026) {
+      const tocCenters = (this.rdPartnersSE.partnersBody.contributing_center || [])
+        .filter((c: any) => c?.code !== this.OTHER_CENTERS_CODE)
+        .map((c: any) => ({ ...c, from_toc: true }));
+      const otherCenters = (this.rdPartnersSE.otherCentersSelected || []).map((c: any) => ({
+        ...c,
+        from_toc: false,
+        is_leading_result: this.rdPartnersSE.leadCenterCode === c.code
+      }));
+      contributingCenterPayload = [...tocCenters, ...otherCenters];
+
+      const allSP = [
+        ...(this.rdPartnersSE.scienceSelected || []).filter((sp: any) => sp?.id !== this.OTHER_SP_CODE).map((sp: any) => ({ ...sp, from_toc: true })),
+        ...(this.rdPartnersSE.otherScienceSelected || []).map((sp: any) => ({ ...sp, from_toc: false }))
+      ];
+      // Classify by the loaded accepted-ids set (identity), not the per-object _was_accepted (lost on deselect+reselect).
+      const wasAccepted = (sp: any) => this.rdPartnersSE.loadedAcceptedScienceIds.has(sp.id);
+      contributingInitiativesPayload = {
+        ...this.rdPartnersSE.partnersBody.contributing_initiatives,
+        accepted_contributing_initiatives: allSP.filter((sp: any) => wasAccepted(sp)).map((sp: any) => ({ id: sp.id, from_toc: !!sp.from_toc })),
+        pending_contributing_initiatives: allSP.filter((sp: any) => !wasAccepted(sp)).map((sp: any) => ({ id: sp.id, from_toc: !!sp.from_toc }))
+      };
+
+      // Cancel the pending contribution requests the user deselected: pending SP loaded on entry that are
+      // no longer in the current selection → send their share_result_request_id in cancel_pending_requests.
+      const selectedSpIds = new Set(allSP.map((sp: any) => sp.id));
+      cancelPendingRequests = (this.rdPartnersSE.loadedPendingScience || [])
+        .filter((p: any) => !selectedSpIds.has(p.id))
+        .map((p: any) => p.share_result_request_id)
+        .filter((id: any) => id != null);
+    }
+
     const sendedData = {
       ...this.rdPartnersSE.partnersBody,
+      contributing_center: contributingCenterPayload,
       linked_results: linkedResultsIds,
-      contributing_initiatives: {
-        ...this.rdPartnersSE.partnersBody.contributing_initiatives,
-        pending_contributing_initiatives: [
-          ...this.rdPartnersSE.partnersBody.contributing_initiatives.pending_contributing_initiatives,
-          ...this.rdPartnersSE.contributingInitiativeNew
-        ]
-      },
+      contributing_initiatives: contributingInitiativesPayload,
+      ...(isCP2026 ? { cancel_pending_requests: cancelPendingRequests } : {}),
       email_template: 'email_template_contribution'
     };
 

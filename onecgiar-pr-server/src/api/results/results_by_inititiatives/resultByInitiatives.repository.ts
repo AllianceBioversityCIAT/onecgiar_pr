@@ -189,8 +189,9 @@ export class ResultByInitiativesRepository
     	ci.id,
       ci.official_code,
       ci.name as initiative_name,
-      ci.short_name,
+    	ci.short_name,
       rbi.initiative_role_id,
+      rbi.from_toc,
       rbi.is_active
     from results_by_inititiative rbi 
     	inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
@@ -224,6 +225,7 @@ export class ResultByInitiativesRepository
     	null as initiative_role_id,
 	    srr.request_status_id,
       srr.share_result_request_id,
+      srr.from_toc,
     	srr.is_active
     FROM
     	share_result_request srr
@@ -279,6 +281,7 @@ export class ResultByInitiativesRepository
           null as initiative_role_id,
           srr.request_status_id,
           srr.share_result_request_id,
+          srr.from_toc,
           srr.is_active
         FROM
           share_result_request srr
@@ -314,8 +317,9 @@ export class ResultByInitiativesRepository
     	ci.id,
       ci.official_code,
       ci.name as initiative_name,
-      ci.short_name,
+    	ci.short_name,
       rbi.initiative_role_id,
+      rbi.from_toc,
       rbi.is_active
     from results_by_inititiative rbi 
     	inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
@@ -345,8 +349,9 @@ export class ResultByInitiativesRepository
     	ci.id,
       ci.official_code,
       ci.name as initiative_name,
-      ci.short_name,
+    	ci.short_name,
       rbi.initiative_role_id,
+      rbi.from_toc,
       rbi.is_active
     from results_by_inititiative rbi 
     	inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
@@ -378,8 +383,9 @@ export class ResultByInitiativesRepository
     	ci.id,
       ci.official_code,
       ci.name as initiative_name,
-      ci.short_name,
+    	ci.short_name,
       rbi.initiative_role_id,
+      rbi.from_toc,
       rbi.is_active
     from results_by_inititiative rbi 
     	inner join clarisa_initiatives ci on ci.id = rbi.inititiative_id 
@@ -605,6 +611,45 @@ export class ResultByInitiativesRepository
         error: `updateResultByInitiative ${error}`,
         debug: true,
       });
+    }
+  }
+
+  async updateInitiativeFromTocFlags(
+    resultId: number,
+    fromTocByInitiativeId: Map<number, boolean> | Record<number, boolean>,
+    userId: number,
+  ): Promise<void> {
+    if (!resultId || !userId) {
+      return;
+    }
+
+    const entries =
+      fromTocByInitiativeId instanceof Map
+        ? Array.from(fromTocByInitiativeId.entries())
+        : Object.entries(fromTocByInitiativeId ?? {}).map(([id, fromToc]) => [
+            Number(id),
+            !!fromToc,
+          ]);
+
+    for (const [initiativeId, fromToc] of entries) {
+      const parsedInitiativeId = Number(initiativeId);
+      if (!Number.isFinite(parsedInitiativeId) || parsedInitiativeId <= 0) {
+        continue;
+      }
+
+      await this.query(
+        `
+          UPDATE results_by_inititiative
+          SET from_toc = ?,
+              last_updated_by = ?,
+              last_updated_date = NOW()
+          WHERE result_id = ?
+            AND inititiative_id = ?
+            AND initiative_role_id = 2
+            AND is_active > 0
+        `,
+        [fromToc ? 1 : 0, userId, resultId, parsedInitiativeId],
+      );
     }
   }
 

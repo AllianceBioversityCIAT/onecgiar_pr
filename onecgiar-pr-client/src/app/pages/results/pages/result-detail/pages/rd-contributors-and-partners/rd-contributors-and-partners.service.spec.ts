@@ -4,6 +4,7 @@ import { RdContributorsAndPartnersService } from './rd-contributors-and-partners
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { InstitutionsService } from '../../../../../../shared/services/global/institutions.service';
 import { CentersService } from '../../../../../../shared/services/global/centers.service';
+import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
 import { ContributorsAndPartnersBody } from './models/contributorsAndPartnersBody';
 
 describe('RdContributorsAndPartnersService', () => {
@@ -46,7 +47,8 @@ describe('RdContributorsAndPartnersService', () => {
         RdContributorsAndPartnersService,
         { provide: ApiService, useValue: mockApi },
         { provide: InstitutionsService, useValue: mockInstitutionsSE },
-        { provide: CentersService, useValue: mockCentersSE }
+        { provide: CentersService, useValue: mockCentersSE },
+        { provide: FieldsManagerService, useValue: { isContributorsPartners2026: () => false } }
       ]
     });
 
