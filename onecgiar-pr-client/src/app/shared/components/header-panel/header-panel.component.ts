@@ -1,4 +1,4 @@
-import { Component, computed, effect, OnInit } from '@angular/core';
+import { Component, computed, effect, HostListener, OnInit, signal } from '@angular/core';
 import { internationalizationData } from '../../data/internationalization-data';
 import { ApiService } from '../../services/api/api.service';
 import { DataControlService } from '../../services/data-control.service';
@@ -35,6 +35,31 @@ export class HeaderPanelComponent implements OnInit {
   inLocal = (environment as any)?.inLocal;
   myInitiativesListP22 = computed(() => this.api.dataControlSE.myInitiativesList);
   closedInitiativeCodes = new Set<string>();
+
+  // Hide-on-scroll-down / show-on-scroll-up for the floating header
+  readonly isHidden = signal(false);
+  private lastScrollY = 0;
+  private readonly REVEAL_ZONE = 80; // px from top where the bar is always shown
+  private readonly SCROLL_DELTA = 8; // min movement to react (avoids jitter)
+
+  @HostListener('window:scroll')
+  onWindowScroll(): void {
+    const currentY = window.scrollY || document.documentElement.scrollTop || 0;
+
+    // Near the top: always reveal
+    if (currentY <= this.REVEAL_ZONE) {
+      this.isHidden.set(false);
+      this.lastScrollY = currentY;
+      return;
+    }
+
+    const delta = currentY - this.lastScrollY;
+    if (Math.abs(delta) < this.SCROLL_DELTA) return;
+
+    // delta > 0 → scrolling down (hide); delta < 0 → scrolling up (show)
+    this.isHidden.set(delta > 0);
+    this.lastScrollY = currentY;
+  }
 
   constructor(
     public api: ApiService,

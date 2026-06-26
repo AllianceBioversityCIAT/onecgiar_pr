@@ -1,7 +1,8 @@
 @let unreadNotifications = this.resultsNotificationsSE.updatesPopUpData;
 
 @if (!this.dataControlSE.show_qa_full_screen) {
-  <div class="header_panel_container">
+  <div class="header_spacer" aria-hidden="true"></div>
+  <div class="header_panel_container" [class.header_hidden]="isHidden()">
     <a
       class="logo_container"
       routerLink="/"
@@ -58,12 +59,25 @@
       </button>
 
       <button
+        #userMenuTrigger
         type="button"
-        style="border-bottom: 4px solid transparent; border-top: 4px solid transparent"
+        class="user_identity"
         aria-label="User menu"
+        aria-haspopup="true"
+        aria-controls="user-info-popover"
+        [attr.aria-expanded]="userInfoPopover.isOpen()"
         [satPopoverAnchor]="userInfoPopover"
-        (click)="userInfoPopover.toggle()">
+        (click)="userInfoPopover.toggle()"
+        (keydown.space)="$event.preventDefault(); userMenuTrigger.click()"
+        (keydown.enter)="$event.preventDefault(); userMenuTrigger.click()">
         <p-avatar [label]="getUserInitials()" shape="circle" [style]="{ width: '32px', height: '32px', cursor: 'pointer' }" />
+
+        <span class="user_identity_text">
+          <span class="user_identity_name">{{ this.api.authSE.localStorageUser?.user_name }}</span>
+          <span class="user_identity_email">{{ this.api.authSE.localStorageUser?.email }}</span>
+        </span>
+
+        <i class="material-icons-round user_identity_chevron" [ngClass]="{ chevron_open: userInfoPopover.isOpen() }" aria-hidden="true">expand_more</i>
       </button>
     </div>
   </div>
@@ -73,7 +87,7 @@
   #userInfoPopover
   id="user-info-popover"
   hasBackdrop
-  horizontalAlign="center"
+  horizontalAlign="end"
   verticalAlign="below"
   scrollStrategy="close"
   [autoFocus]="false">

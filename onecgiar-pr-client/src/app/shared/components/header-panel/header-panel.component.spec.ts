@@ -27,6 +27,22 @@ describe('HeaderPanelComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('should render the user name and email inline in the header bar', () => {
+    // inLocal=true prevents the <app-tawk> *ngIf from rendering once name+email are set
+    component.inLocal = true;
+    component.api.authSE.localStorageUser = { user_name: 'Yeckzin Zuñiga', email: 'y.zuniga@cgiar.org' } as any;
+    fixture.detectChanges();
+
+    const trigger: HTMLElement = fixture.nativeElement.querySelector('.user_identity');
+    expect(trigger).toBeTruthy();
+    expect(trigger.getAttribute('aria-haspopup')).toBe('true');
+    expect(trigger.querySelector('.user_identity_name')?.textContent).toContain('Yeckzin Zuñiga');
+    expect(trigger.querySelector('.user_identity_email')?.textContent).toContain('y.zuniga@cgiar.org');
+
+    // avoid leaking the user into the shared singleton (would render <app-tawk> in other specs)
+    component.api.authSE.localStorageUser = null as any;
+  });
+
   it('should call get_updates_notifications and get_updates_pop_up_notifications on ngOnInit', () => {
     const getUpdatesNotificationsSpy = jest.spyOn(component.resultsNotificationsSE, 'get_updates_notifications').mockImplementation(() => {});
     const getUpdatesPopUpNotificationsSpy = jest
