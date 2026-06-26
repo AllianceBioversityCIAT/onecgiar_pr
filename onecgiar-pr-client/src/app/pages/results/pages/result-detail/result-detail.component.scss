@@ -3,9 +3,9 @@
 // Dashboard layout: full-height fixed sidebar on the left, content shifted right.
 .rd_sidebar {
   position: fixed;
-  top: 0;
-  left: 0;
-  height: 100vh;
+  top: 10px;
+  left: 10px;
+  bottom: 10px;
   width: 300px;
   box-sizing: border-box;
   z-index: 5;
@@ -13,10 +13,17 @@
   flex-direction: column;
   gap: 18px;
   padding: 16px 14px;
+  overflow-x: hidden;
   overflow-y: auto;
-  // Dark indigo, matching the navbar — sidebar + navbar form one dark frame
-  background: linear-gradient(180deg, var(--pr-color-primary-700) 0%, var(--pr-color-primary-950) 100%);
-  border-right: 1px solid rgba(var(--pr-color-white-rgb), 0.08);
+  border-radius: 18px;
+  // Subtle dark teal texture behind a dark overlay (keeps text readable)
+  background-image:
+    linear-gradient(180deg, rgba(var(--pr-color-black-rgb), 0.55) 0%, rgba(var(--pr-color-black-rgb), 0.72) 100%),
+    url('/assets/backgrounds/sidebar-texture.jpg');
+  background-size: cover;
+  background-position: center;
+  border: 1px solid rgba(var(--pr-color-white-rgb), 0.08);
+  box-shadow: 0 8px 24px rgba(var(--pr-color-black-rgb), 0.22);
 
   // Section title lives on top of the sidebar (replaces the old top strip)
   .rd_sidebar_header {
@@ -75,7 +82,7 @@
 }
 
 .rd_content {
-  margin-left: 300px;
+  margin-left: 320px; // sidebar margin (10) + width (300) + gap (10)
   padding: 25px 0;
   box-sizing: border-box;
 

@@ -42,7 +42,8 @@ export class HeaderPanelComponent implements OnInit {
   private readonly EDGE_GAP = 10; // matches the floating bar's inset
   readonly navbarLeft = computed(() => {
     const offset = this.layoutSE.leftOffset();
-    return offset > 0 ? offset + this.EDGE_GAP : this.EDGE_GAP;
+    // Sidebar floats with a 10px margin: reserve margin + width + gap to its right
+    return offset > 0 ? offset + this.EDGE_GAP * 2 : this.EDGE_GAP;
   });
 
   // Hide-on-scroll-down / show-on-scroll-up for the floating header
