@@ -468,7 +468,7 @@ export class ResultsTocResultsService {
           this._resultByInitiativesRepository.getContributorInitiativeByResult(
             resultId,
           ),
-          this._resultByInitiativesRepository.getPendingInit(resultId),
+          this._resultByInitiativesRepository.getDraftInit(resultId),
           this._resultByInitiativesRepository.getContributorInitiativeAndPrimaryByResult(
             resultId,
           ),
@@ -1387,6 +1387,10 @@ export class ResultsTocResultsService {
         pendingFromTocById = pendingEntries.fromTocById;
       }
 
+      pendingIds = pendingIds.filter(
+        (id) => id !== initSubmitter.initiative_id,
+      );
+
       const contributingInit =
         await this._resultByInitiativesRepository.updateResultByInitiative(
           result_id,
@@ -1395,6 +1399,15 @@ export class ResultsTocResultsService {
           false,
           pendingIds,
         );
+
+      if (acceptedIds.length) {
+        await this._resultByInitiativesRepository.upsertContributorInitiatives(
+          result_id,
+          acceptedIds,
+          acceptedFromTocById,
+          user.id,
+        );
+      }
 
       if (acceptedFromTocById.size) {
         await this._resultByInitiativesRepository.updateInitiativeFromTocFlags(
@@ -1425,6 +1438,23 @@ export class ResultsTocResultsService {
           result_id,
           user,
         );
+
+        if (pendingFromTocById.size) {
+          await this._resultByInitiativesRepository.updateInitiativeFromTocFlags(
+            result_id,
+            pendingFromTocById,
+            user.id,
+          );
+
+          for (const [initiativeId, fromToc] of pendingFromTocById.entries()) {
+            await this._shareResultRequestRepository.updateFromTocByResultAndInitiative(
+              result_id,
+              initiativeId,
+              fromToc,
+              user.id,
+            );
+          }
+        }
       }
 
       const toCancelIds =

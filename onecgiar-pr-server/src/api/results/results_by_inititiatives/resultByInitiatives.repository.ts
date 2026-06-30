@@ -614,6 +614,67 @@ export class ResultByInitiativesRepository
     }
   }
 
+  async upsertContributorInitiatives(
+    resultId: number,
+    initiativeIds: number[],
+    fromTocByInitiativeId: Map<number, boolean>,
+    userId: number,
+  ): Promise<void> {
+    if (!resultId || !userId || !initiativeIds?.length) {
+      return;
+    }
+
+    for (const initiativeId of initiativeIds) {
+      const parsedInitiativeId = Number(initiativeId);
+      if (!Number.isFinite(parsedInitiativeId) || parsedInitiativeId <= 0) {
+        continue;
+      }
+
+      const fromToc = fromTocByInitiativeId.has(parsedInitiativeId)
+        ? !!fromTocByInitiativeId.get(parsedInitiativeId)
+        : false;
+
+      const existingRows: Array<{ id: number; is_active: number | boolean }> =
+        await this.query(
+          `
+            SELECT id, is_active
+            FROM results_by_inititiative
+            WHERE result_id = ?
+              AND inititiative_id = ?
+              AND initiative_role_id = 2
+            LIMIT 1
+          `,
+          [resultId, parsedInitiativeId],
+        );
+
+      const existing = existingRows?.[0];
+
+      if (existing?.id) {
+        await this.query(
+          `
+            UPDATE results_by_inititiative
+            SET is_active = 1,
+                from_toc = ?,
+                last_updated_by = ?,
+                last_updated_date = NOW()
+            WHERE id = ?
+          `,
+          [fromToc ? 1 : 0, userId, existing.id],
+        );
+        continue;
+      }
+
+      await this.query(
+        `
+          INSERT INTO results_by_inititiative
+            (result_id, inititiative_id, initiative_role_id, is_active, from_toc, created_by, last_updated_by, created_date, last_updated_date)
+          VALUES (?, ?, 2, 1, ?, ?, ?, NOW(), NOW())
+        `,
+        [resultId, parsedInitiativeId, fromToc ? 1 : 0, userId, userId],
+      );
+    }
+  }
+
   async updateInitiativeFromTocFlags(
     resultId: number,
     fromTocByInitiativeId: Map<number, boolean> | Record<number, boolean>,
