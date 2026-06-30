@@ -55,11 +55,16 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   // Ids of the SP that were already accepted on load → on Save they go to accepted (not re-requested as pending),
   // even if a deselect+reselect dropped the per-object _was_accepted tag.
   loadedAcceptedScienceIds = new Set<number>();
+  // P2-3066 (2026): External Partners from ToC — institutionIds derived from toc_partners (the non-center partners),
+  // fed by multiple-wps-content. First dropdown shows the matching ToC partners; "Other(s)" shows the rest.
+  tocReferencePartnerInstitutionIds = signal<number[]>([]);
+  otherPartnersSelected: any[] = [];
 
-  // P2-2998 / P2-2929 (2026): sentinels for the "Other(s)" item that toggles the second dropdown.
+  // P2-2998 / P2-2929 / P2-3066 (2026): sentinels for the "Other(s)" item that toggles the second dropdown.
   // Mirror the component definitions — kept here so the load re-bucketing can detect/strip them.
   readonly OTHER_CENTERS_CODE = '__OTHER_CENTERS__';
   readonly OTHER_SP_CODE = '__OTHER_SCIENCE__';
+  readonly OTHER_PARTNERS_CODE = -999999;
   private readonly fieldsManagerSE = inject(FieldsManagerService);
 
   constructor(
@@ -115,6 +120,9 @@ export class RdContributorsAndPartnersService implements OnDestroy {
     this.showOtherCenters = false;
     this.tocReferenceCenterInstitutionIds.set([]);
     this.tocReferenceSynergyInitiativeIds.set([]);
+    // P2-3066 (2026): clear External Partners split selections.
+    this.otherPartnersSelected = [];
+    this.tocReferencePartnerInstitutionIds.set([]);
   }
 
   loadClarisaProjects() {
@@ -359,6 +367,33 @@ export class RdContributorsAndPartnersService implements OnDestroy {
       this.otherScienceSelected = [];
       this.scienceSelected = tocSP;
     }
+
+    // P2-3066 (2026): External Partners — split partnersBody.institutions by from_toc. ToC partners stay in
+    // institutions (+ sentinel option when there are Other partners); Other move to otherPartnersSelected.
+    // from_toc null/undefined (legacy rows) → fall back to live ToC partner membership.
+    const allPartners: any[] = (this.partnersBody?.institutions || []).filter((p: any) => p?.institutions_id !== this.OTHER_PARTNERS_CODE);
+    const isPartnerFromToc = (p: any): boolean =>
+      p?.from_toc == null ? this.tocReferencePartnerInstitutionIds().includes(p?.institutions_id) : !!p?.from_toc;
+    const tocPartners = allPartners.filter((p: any) => isPartnerFromToc(p));
+    const otherPartners = allPartners.filter((p: any) => !isPartnerFromToc(p));
+    if (otherPartners.length) {
+      this.otherPartnersSelected = otherPartners;
+      this.partnersBody.institutions = [...tocPartners, this.buildOtherPartnersSentinel()];
+    } else {
+      this.otherPartnersSelected = [];
+      this.partnersBody.institutions = tocPartners;
+    }
+  }
+
+  // P2-3066 (2026): non-renderable sentinel for the "Other(s)" option inside the External Partners dropdown.
+  // Lives in partnersBody.institutions only to keep the dropdown's "Other" option selected; it is guarded out of
+  // every chip/count/validation/lead path and stripped on save.
+  buildOtherPartnersSentinel() {
+    return {
+      institutions_id: this.OTHER_PARTNERS_CODE,
+      full_name: '<strong>Other(s) External Partners</strong>',
+      obj_institutions: { name: 'Other(s) External Partners', obj_institution_type_code: { name: '' } }
+    };
   }
 
   private buildOtherCentersSentinel() {
@@ -387,7 +422,9 @@ export class RdContributorsAndPartnersService implements OnDestroy {
           }) ||
           this.partnersBody.institutions.some(inst => {
             return inst?.institutions_id === i.institutions_id;
-          })
+          }) ||
+          // P2-3066 (2026): an "Other(s)" external partner is also lead-eligible.
+          this.otherPartnersSelected?.some((p: any) => p?.institutions_id === i.institutions_id)
         );
       });
 
@@ -488,6 +525,10 @@ export class RdContributorsAndPartnersService implements OnDestroy {
     let foundPartner: UnmappedMQAPInstitutionDto | InstitutionsInterface = this.partnersBody.mqap_institutions?.find(mqap => mqap.is_leading_result);
     if (!foundPartner) {
       foundPartner = this.partnersBody.institutions?.find(inst => inst.is_leading_result);
+    }
+    // P2-3066 (2026): the persisted lead may be an "Other(s)" partner (after re-bucketing it lives in otherPartnersSelected).
+    if (!foundPartner) {
+      foundPartner = this.otherPartnersSelected?.find((p: any) => p.is_leading_result);
     }
 
     this.leadPartnerId = this.institutionsSE.institutionsWithoutCentersList.find(
