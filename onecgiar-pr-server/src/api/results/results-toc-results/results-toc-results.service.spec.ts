@@ -72,8 +72,11 @@ describe('ResultsTocResultsService', () => {
       findOne: jest.fn().mockResolvedValue({ initiative_id: 50 } as any),
       updateIniciativeSubmitter: jest.fn(),
       updateResultByInitiative: jest.fn().mockResolvedValue([]),
+      upsertContributorInitiatives: jest.fn().mockResolvedValue(undefined),
+      updateInitiativeFromTocFlags: jest.fn().mockResolvedValue(undefined),
       getContributorInitiativeByResult: jest.fn().mockResolvedValue([]),
       getPendingInit: jest.fn().mockResolvedValue([]),
+      getDraftInit: jest.fn().mockResolvedValue([]),
       getContributorInitiativeAndPrimaryByResult: jest
         .fn()
         .mockResolvedValue([]),
@@ -110,7 +113,12 @@ describe('ResultsTocResultsService', () => {
         },
         {
           provide: ShareResultRequestRepository,
-          useValue: { cancelRequest: jest.fn().mockResolvedValue(undefined) },
+          useValue: {
+            cancelRequest: jest.fn().mockResolvedValue(undefined),
+            updateFromTocByResultAndInitiative: jest
+              .fn()
+              .mockResolvedValue(undefined),
+          },
         },
         { provide: ClarisaInitiativesRepository, useValue: {} },
         { provide: EmailNotificationManagementService, useValue: {} },
@@ -252,5 +260,37 @@ describe('ResultsTocResultsService', () => {
         program_invested_financial_resources: true,
       }),
     );
+  });
+
+  it('persists pending science programs with from_toc on save', async () => {
+    const payload: any = {
+      result_id: 1,
+      changePrimaryInit: 50,
+      contributing_initiatives: {
+        accepted_contributing_initiatives: [],
+        pending_contributing_initiatives: [{ id: 61, from_toc: false }],
+      },
+    };
+
+    resultByInitiativesRepository.findOne.mockResolvedValueOnce({
+      initiative_id: 50,
+    } as any);
+
+    await service.createTocMappingV2(payload, { id: 1 } as TokenDto);
+
+    expect(shareResultRequestService.resultRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        initiativeShareId: [61],
+        initiativeFromToc: { 61: false },
+      }),
+      1,
+      { id: 1 },
+    );
+    expect(
+      shareResultRequestRepository.updateFromTocByResultAndInitiative,
+    ).toHaveBeenCalledWith(1, 61, false, 1);
+    expect(
+      resultByInitiativesRepository.updateInitiativeFromTocFlags,
+    ).toHaveBeenCalledWith(1, new Map([[61, false]]), 1);
   });
 });

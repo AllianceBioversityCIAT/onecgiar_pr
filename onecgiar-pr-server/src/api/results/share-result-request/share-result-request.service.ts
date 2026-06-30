@@ -142,11 +142,23 @@ export class ShareResultRequestService {
         ),
       ]);
 
-      // If initiative is already an active contributor, or is a pending/accepted/rejected contribution, skip
-      if (
-        initExist?.is_active ||
-        (requestExist && requestExist.request_status_id !== 4)
-      ) {
+      if (initExist?.is_active) {
+        continue;
+      }
+
+      if (requestExist && requestExist.request_status_id !== 4) {
+        const existingShare = this.buildShareResultRequest(
+          createTocShareResult,
+          resultId,
+          initiativeId,
+          shareInitId,
+          user,
+        );
+        existingShare.share_result_request_id =
+          requestExist.share_result_request_id;
+        existingShare.request_status_id = requestExist.request_status_id;
+        existingShare.is_active = true;
+        shareInitRequests.push(existingShare);
         continue;
       }
 
