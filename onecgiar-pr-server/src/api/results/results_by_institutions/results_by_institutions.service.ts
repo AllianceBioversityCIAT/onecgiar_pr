@@ -465,12 +465,21 @@ export class ResultsByInstitutionsService {
             ResultTypeEnum.INNOVATION_USE,
             ResultTypeEnum.INNOVATION_USE_IPSR,
           ].includes(incomingResult.result_type_id);
+          const institutionRoleId = knowledgeProduct
+            ? InstitutionRoleEnum.KNOWLEDGE_PRODUCT_ADDITIONAL_CONTRIBUTORS
+            : InstitutionRoleEnum.PARTNER;
           await this.handleInstitutions(
             data.institutions ?? [],
             oldPartners,
             !!knowledgeProduct,
             isInnovation,
             data.result_id,
+            user.id,
+          );
+          await this.syncInstitutionFromTocFlags(
+            data.institutions ?? [],
+            data.result_id,
+            institutionRoleId,
             user.id,
           );
         }
@@ -641,6 +650,36 @@ export class ResultsByInstitutionsService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  private async syncInstitutionFromTocFlags(
+    incomingInstitutions: ResultsByInstitution[],
+    resultId: number,
+    institutionRoleId: InstitutionRoleEnum,
+    userId: number,
+  ) {
+    if (!incomingInstitutions?.length) {
+      return;
+    }
+
+    await Promise.all(
+      incomingInstitutions
+        .filter((inst) => inst?.institutions_id != null)
+        .map((inst) =>
+          this._resultByIntitutionsRepository.update(
+            {
+              result_id: resultId,
+              institutions_id: inst.institutions_id,
+              institution_roles_id: institutionRoleId,
+              is_active: true,
+            },
+            {
+              from_toc: !!inst.from_toc,
+              last_updated_by: userId,
+            },
+          ),
+        ),
+    );
   }
 
   async handleContributingCenters(
@@ -981,6 +1020,7 @@ export class ResultsByInstitutionsService {
           existing.last_updated_by = userId;
           existing.institutions_id = a.institutions_id;
           existing.is_leading_result = a.is_leading_result;
+          existing.from_toc = !!a.from_toc;
           existing.delivery = a.delivery ?? [];
           institutionsToReactivate.push(existing);
         } else {
@@ -995,6 +1035,7 @@ export class ResultsByInstitutionsService {
           toAdd.delivery = a.delivery ?? [];
           toAdd['isNew'] = true;
           toAdd.is_leading_result = a.is_leading_result;
+          toAdd.from_toc = !!a.from_toc;
           institutionsToCreate.push(toAdd);
         }
       }
