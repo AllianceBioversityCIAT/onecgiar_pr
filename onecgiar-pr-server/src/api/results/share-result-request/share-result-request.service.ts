@@ -215,7 +215,8 @@ export class ShareResultRequestService {
       ? shareInitId
       : initiativeId;
     newShare.is_map_to_toc = !!createTocShareResult?.isToc;
-    newShare.from_toc = !!createTocShareResult?.initiativeFromToc?.[shareInitId];
+    newShare.from_toc =
+      !!createTocShareResult?.initiativeFromToc?.[shareInitId];
     newShare.requested_by = user.id;
     return newShare;
   }

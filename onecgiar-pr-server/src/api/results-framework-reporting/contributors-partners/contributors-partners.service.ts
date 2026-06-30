@@ -108,8 +108,8 @@ export class ContributorsPartnersService {
         sdgTargets: tocResponse.sdgTargets ?? null,
       };
 
-      let hasInnovationLink: boolean | null = null;
-      let linkedResultIds: number[] | null = null;
+      let hasInnovationLink = false;
+      let linkedResultIds: number[] = [];
 
       const noApplicablePartner =
         partnersResponse.no_applicable_partner ??
@@ -117,18 +117,13 @@ export class ContributorsPartnersService {
       const isLeadByPartner =
         partnersResponse.is_lead_by_partner ?? !!result.is_lead_by_partner;
 
-      if (
-        resultTypeId === ResultTypeEnum.INNOVATION_DEVELOPMENT ||
-        resultTypeId === ResultTypeEnum.INNOVATION_USE
-      ) {
-        const [linkFlag, linkedIds] = await Promise.all([
-          this.getInnovationLinkStatus(result.id, resultTypeId),
-          this._linkedResultRepository.getActiveLinkedResultIds(result.id),
-        ]);
+      const [linkFlag, linkedIds] = await Promise.all([
+        this.getInnovationLinkStatus(result.id, resultTypeId),
+        this._linkedResultRepository.getActiveLinkedResultIds(result.id),
+      ]);
 
-        hasInnovationLink = linkFlag;
-        linkedResultIds = linkedIds ?? [];
-      }
+      hasInnovationLink = linkFlag;
+      linkedResultIds = linkedIds ?? [];
 
       return {
         response: {
@@ -222,8 +217,7 @@ export class ContributorsPartnersService {
       ].some(hasProp);
 
       const hasInnovationLinkPayload =
-        isInnovationResult &&
-        (hasProp('has_innovation_link') || hasProp('linked_results'));
+        hasProp('has_innovation_link') || hasProp('linked_results');
 
       if (!hasUnifiedToc && !hasUnifiedPartners && !hasInnovationLinkPayload) {
         return {
@@ -319,10 +313,17 @@ export class ContributorsPartnersService {
           user.id,
         );
 
+        if (!isInnovationResult) {
+          await this._resultRepository.update(resultId, {
+            has_innovation_link: finalHasInnovationLink,
+            last_updated_by: user.id,
+          });
+        }
+
         response['has_innovation_link'] = finalHasInnovationLink;
         response['linked_results'] = persistedLinkedIds;
         statuses.push(HttpStatus.OK);
-        messages.push('Innovation linkage updated.');
+        messages.push('Linked result state updated.');
       }
 
       await this._resultRepository.update(resultId, {
@@ -381,7 +382,7 @@ export class ContributorsPartnersService {
         return value === null || value === undefined ? false : Boolean(value);
       }
 
-      return false;
+      return this.getResultLinkStatus(resultId);
     } catch (error) {
       this.logger.error(
         `Error fetching innovation link status for result ID ${resultId}: ${error.message}`,
@@ -390,12 +391,35 @@ export class ContributorsPartnersService {
     }
   }
 
+  private async getResultLinkStatus(resultId: number): Promise<boolean> {
+    const result = await this._resultRepository.findOne({
+      where: { id: resultId, is_active: true },
+      select: { has_innovation_link: true },
+    });
+
+    if (
+      result?.has_innovation_link === null ||
+      result?.has_innovation_link === undefined
+    ) {
+      return false;
+    }
+
+    return Boolean(result.has_innovation_link);
+  }
+
   private async updateInnovationSummaryLink(
     resultTypeId: number,
     resultId: number,
     hasInnovationLink: boolean,
     userId: number,
   ) {
+    if (
+      resultTypeId !== ResultTypeEnum.INNOVATION_DEVELOPMENT &&
+      resultTypeId !== ResultTypeEnum.INNOVATION_USE
+    ) {
+      return;
+    }
+
     try {
       if (resultTypeId === ResultTypeEnum.INNOVATION_DEVELOPMENT) {
         const [existing] = await this._resultsInnovationsDevRepository.query(
