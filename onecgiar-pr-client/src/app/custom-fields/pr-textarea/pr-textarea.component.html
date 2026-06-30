@@ -1,49 +1,37 @@
 @if (this.preventFieldRender()) {
-  <div class="field_card" [ngClass]="'fc-' + fieldState">
-    <div class="field_card_header">
-      <span class="fch_title" [innerHTML]="this.label"></span>
-      <span class="fch_tag">{{ this.required ? 'Mandatory' : 'Optional' }}</span>
-      <span class="fch_info_wrap">
-        <i class="material-icons-round fch_info" aria-label="Field color legend">info</i>
-        <div class="fch_legend">
-          <div class="legend_row"><span class="dot dot-blue"></span> Optional (empty)</div>
-          <div class="legend_row"><span class="dot dot-orange"></span> Mandatory (empty)</div>
-          <div class="legend_row"><span class="dot dot-green"></span> Filled / valid</div>
-          <div class="legend_row"><span class="dot dot-red"></span> Over limit / invalid</div>
-        </div>
-      </span>
-    </div>
-    @if (this.showDescriptionLabel && this.description) {
-      <div class="field_card_desc" [style]="labelDescInlineStyles">
-        <span class="desc_chip">Description</span>
-        <div class="desc_text" [innerHTML]="this.description"></div>
-      </div>
-    }
+  <app-field-card
+    [label]="this.label"
+    [description]="this.description"
+    [required]="this.required"
+    [hasValue]="hasValue"
+    [hasError]="!!maxWords && wordCount > maxWords && !autogenerate"
+    [showDescription]="this.showDescriptionLabel"
+    [descInlineStyles]="labelDescInlineStyles">
     <div
       [ngSwitch]="(readOnly || this.rolesSE.readOnly) && !isStatic"
       class="pr-field"
       [ngClass]="{ mandatory: this.required, complete: value, readOnly: (readOnly || this.rolesSE.readOnly) && !isStatic }">
-    <div
-      class="text-secondary-400 pr-body-2"
-      *ngSwitchCase="true"
-      [innerHtml]="value || (this.required ? this.notProvidedText : 'Not applicable')"></div>
-    <div class="p-fluid input_container" *ngSwitchCase="false">
-      <textarea
-        [rows]="rows"
-        [cols]="30"
-        [disabled]="disabled"
-        pTextarea
-        [style]="{ width: '100%' }"
-        [(ngModel)]="value"
-        [placeholder]="this.placeholder"
-        [ngClass]="{ 'pr-body-2': true, invalid: wordCount > maxWords && !autogenerate, warning: wordCount > maxWords && autogenerate }"></textarea>
+      <div
+        class="text-secondary-400 pr-body-2"
+        *ngSwitchCase="true"
+        [innerHtml]="value || (this.required ? this.notProvidedText : 'Not applicable')"></div>
+      <div class="p-fluid input_container" *ngSwitchCase="false">
+        <textarea
+          [rows]="rows"
+          [cols]="30"
+          [disabled]="disabled"
+          pTextarea
+          [style]="{ width: '100%' }"
+          [(ngModel)]="value"
+          [placeholder]="this.placeholder"
+          [ngClass]="{ 'pr-body-2': true, invalid: wordCount > maxWords && !autogenerate, warning: wordCount > maxWords && autogenerate }"></textarea>
 
-      <div class="hints_container">
-        <div class="hint">{{ this.hint }}</div>
-        <app-pr-word-counter *ngIf="maxWords" [wordCount]="wordCount" [maxWords]="maxWords" [autogenerate]="autogenerate"></app-pr-word-counter>
+        <div class="hints_container">
+          <div class="hint">{{ this.hint }}</div>
+          <app-pr-word-counter *ngIf="maxWords" [wordCount]="wordCount" [maxWords]="maxWords" [autogenerate]="autogenerate"></app-pr-word-counter>
+        </div>
       </div>
-    </div>
       <app-pr-field-validations></app-pr-field-validations>
     </div>
-  </div>
+  </app-field-card>
 }

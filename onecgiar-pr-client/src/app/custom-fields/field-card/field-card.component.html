@@ -1,0 +1,24 @@
+<div class="field_card" [ngClass]="'fc-' + computedState">
+  @if (showHeader) {
+    <div class="field_card_header">
+      <span class="fch_title" [innerHTML]="label"></span>
+      <span class="fch_tag">{{ required ? 'Mandatory' : 'Optional' }}</span>
+      <span class="fch_info_wrap">
+        <i class="material-icons-round fch_info" aria-label="Field color legend">info</i>
+        <div class="fch_legend">
+          <div class="legend_row"><span class="dot dot-blue"></span> Optional (empty)</div>
+          <div class="legend_row"><span class="dot dot-orange"></span> Mandatory (empty)</div>
+          <div class="legend_row"><span class="dot dot-green"></span> Filled / valid</div>
+          <div class="legend_row"><span class="dot dot-red"></span> Over limit / invalid</div>
+        </div>
+      </span>
+    </div>
+  }
+  @if (showHeader && showDescription && description) {
+    <div class="field_card_desc" [style]="descInlineStyles">
+      <span class="desc_chip">Description</span>
+      <div class="desc_text" [innerHTML]="description"></div>
+    </div>
+  }
+  <ng-content></ng-content>
+</div>

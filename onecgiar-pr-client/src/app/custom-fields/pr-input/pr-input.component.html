@@ -1,126 +1,122 @@
 @if (this.preventFieldRender()) {
-  <div class="position-relative field_card" [ngClass]="'fc-' + fieldState">
+  <div class="position-relative">
     <app-under-construction-point *ngIf="this.underConstruction"></app-under-construction-point>
     @if (showFieldHeader) {
-      <div class="field_card_header">
-        <span class="fch_title" [innerHTML]="customLabel || this.label"></span>
-        <span class="fch_tag">{{ this.required ? 'Mandatory' : 'Optional' }}</span>
-        <span class="fch_info_wrap">
-          <i class="material-icons-round fch_info" aria-label="Field color legend">info</i>
-          <div class="fch_legend">
-            <div class="legend_row"><span class="dot dot-blue"></span> Optional (empty)</div>
-            <div class="legend_row"><span class="dot dot-orange"></span> Mandatory (empty)</div>
-            <div class="legend_row"><span class="dot dot-green"></span> Filled / valid</div>
-            <div class="legend_row"><span class="dot dot-red"></span> Over limit / invalid</div>
-          </div>
-        </span>
-      </div>
+      <app-field-card
+        [label]="customLabel || this.label"
+        [description]="this.description"
+        [required]="this.required"
+        [hasValue]="hasValue"
+        [hasError]="!!maxWords && wordCount > maxWords && !autogenerate"
+        [showDescription]="this.showDescription"
+        [descInlineStyles]="descInlineStyles">
+        <ng-container *ngTemplateOutlet="bodyTpl"></ng-container>
+      </app-field-card>
+    } @else {
+      <ng-container *ngTemplateOutlet="bodyTpl"></ng-container>
     }
-    @if (showFieldHeader && this.showDescription && this.description) {
-      <div class="field_card_desc" [style]="descInlineStyles">
-        <span class="desc_chip">Description</span>
-        <div class="desc_text" [innerHTML]="this.description"></div>
-      </div>
-    }
+  </div>
+}
+
+<ng-template #bodyTpl>
+  <div
+    [ngSwitch]="(readOnly || this.rolesSE.readOnly) && !isStatic"
+    [ngClass]="{ mandatory: this.required, readOnly: (readOnly || this.rolesSE.readOnly) && !isStatic }"
+    class="pr-input position-relative"
+    [style]="InlineStyles">
     <div
-      [ngSwitch]="(readOnly || this.rolesSE.readOnly) && !isStatic"
-      [ngClass]="{ mandatory: this.required, readOnly: (readOnly || this.rolesSE.readOnly) && !isStatic }"
-      class="pr-input position-relative"
-      [style]="InlineStyles">
-      <div
-        class="text-secondary-400 pr-body-2"
-        *ngSwitchCase="true"
-        [innerHtml]="
-          this.type == 'link'
-            ? aTag(value)
-            : value == '0'
-              ? 0
-              : (value | yesOrNotByBoolean) || this.noDataText || (this.required ? this.notProvidedText : 'Not applicable')
-        "></div>
-      <div class="p-fluid input_container" *ngSwitchCase="false">
-        <div class="input-validation">{{ value }}</div>
+      class="text-secondary-400 pr-body-2"
+      *ngSwitchCase="true"
+      [innerHtml]="
+        this.type == 'link'
+          ? aTag(value)
+          : value == '0'
+            ? 0
+            : (value | yesOrNotByBoolean) || this.noDataText || (this.required ? this.notProvidedText : 'Not applicable')
+      "></div>
+    <div class="p-fluid input_container" *ngSwitchCase="false">
+      <div class="input-validation">{{ value }}</div>
+      <input
+        *ngIf="this.type != 'currency' && this.type != 'number' && this.type != 'email'"
+        [disabled]="this.disabled"
+        pInputText
+        [type]="this.type"
+        [placeholder]="this.placeholder"
+        [(ngModel)]="value"
+        [attr.prValid]="true"
+        [ngClass]="{
+          'pr-valid': true,
+          'pr-body-2': true,
+          invalid: wordCount > maxWords && !autogenerate,
+          warning: wordCount > maxWords && autogenerate
+        }"
+        [style]="{ 'max-height': this.variant === 'sm' ? '30px' : this.variant === 'xs' ? '25px' : 'auto', width: '100%' }" />
+
+      <div style="display: flex; flex-direction: column; gap: 2px" *ngIf="this.type == 'email'">
         <input
-          *ngIf="this.type != 'currency' && this.type != 'number' && this.type != 'email'"
           [disabled]="this.disabled"
           pInputText
-          [type]="this.type"
+          type="email"
           [placeholder]="this.placeholder"
           [(ngModel)]="value"
+          #emailInput="ngModel"
+          [required]="this.required"
+          email
           [attr.prValid]="true"
           [ngClass]="{
             'pr-valid': true,
             'pr-body-2': true,
-            invalid: wordCount > maxWords && !autogenerate,
+            invalid: emailInput.invalid || (wordCount > maxWords && !autogenerate),
             warning: wordCount > maxWords && autogenerate
           }"
           [style]="{ 'max-height': this.variant === 'sm' ? '30px' : this.variant === 'xs' ? '25px' : 'auto', width: '100%' }" />
-
-        <div style="display: flex; flex-direction: column; gap: 2px" *ngIf="this.type == 'email'">
-          <input
-            [disabled]="this.disabled"
-            pInputText
-            type="email"
-            [placeholder]="this.placeholder"
-            [(ngModel)]="value"
-            #emailInput="ngModel"
-            [required]="this.required"
-            email
-            [attr.prValid]="true"
-            [ngClass]="{
-              'pr-valid': true,
-              'pr-body-2': true,
-              invalid: emailInput.invalid || (wordCount > maxWords && !autogenerate),
-              warning: wordCount > maxWords && autogenerate
-            }"
-            [style]="{ 'max-height': this.variant === 'sm' ? '30px' : this.variant === 'xs' ? '25px' : 'auto', width: '100%' }" />
-          @if (emailInput.invalid) {
-            <p-message severity="error" size="small" variant="simple">
-              @if (emailInput.hasError('required')) {
-                Email is Required.
-              }
-              @if (emailInput.hasError('email')) {
-                Please enter a valid email.
-              }
-            </p-message>
-          }
-        </div>
-
-        <p-inputNumber
-          class=""
-          *ngIf="this.type == 'number'"
-          [(ngModel)]="value"
-          [disabled]="this.disabled"
-          [mode]="this.numberMode"
-          [minFractionDigits]="this.numberMode && 2"
-          [maxFractionDigits]="this.numberMode && this.maxDecimals"
-          [min]="0"
-          [ngClass]="{ 'pr-body-2': true }"
-          [style]="{ 'max-height': this.variant === 'sm' ? '30px' : this.variant === 'xs' ? '25px' : 'auto', width: '100%' }"
-          [placeholder]="this.placeholder">
-        </p-inputNumber>
-
-        <p-inputNumber
-          class=""
-          *ngIf="this.type == 'currency'"
-          [(ngModel)]="value"
-          mode="currency"
-          currency="USD"
-          [ngClass]="{ 'pr-body-2': true }"
-          locale="en-US"
-          [disabled]="this.disabled"
-          [placeholder]="this.placeholder"
-          [min]="0"
-          [style]="{ width: '100%' }">
-        </p-inputNumber>
-        <div class="hints_container">
-          <div class="hint">{{ this.hint }}</div>
-          <app-pr-word-counter *ngIf="maxWords" [wordCount]="wordCount" [maxWords]="maxWords" [autogenerate]="autogenerate"> </app-pr-word-counter>
-        </div>
-        <div class="custom_validation_tooltip_container" *ngIf="this.type == 'link' && badLink && !readOnly && !this.rolesSE.readOnly && this.value">
-          <app-custom-validation-tooltip></app-custom-validation-tooltip>
-        </div>
+        @if (emailInput.invalid) {
+          <p-message severity="error" size="small" variant="simple">
+            @if (emailInput.hasError('required')) {
+              Email is Required.
+            }
+            @if (emailInput.hasError('email')) {
+              Please enter a valid email.
+            }
+          </p-message>
+        }
       </div>
-      <app-pr-field-validations></app-pr-field-validations>
+
+      <p-inputNumber
+        class=""
+        *ngIf="this.type == 'number'"
+        [(ngModel)]="value"
+        [disabled]="this.disabled"
+        [mode]="this.numberMode"
+        [minFractionDigits]="this.numberMode && 2"
+        [maxFractionDigits]="this.numberMode && this.maxDecimals"
+        [min]="0"
+        [ngClass]="{ 'pr-body-2': true }"
+        [style]="{ 'max-height': this.variant === 'sm' ? '30px' : this.variant === 'xs' ? '25px' : 'auto', width: '100%' }"
+        [placeholder]="this.placeholder">
+      </p-inputNumber>
+
+      <p-inputNumber
+        class=""
+        *ngIf="this.type == 'currency'"
+        [(ngModel)]="value"
+        mode="currency"
+        currency="USD"
+        [ngClass]="{ 'pr-body-2': true }"
+        locale="en-US"
+        [disabled]="this.disabled"
+        [placeholder]="this.placeholder"
+        [min]="0"
+        [style]="{ width: '100%' }">
+      </p-inputNumber>
+      <div class="hints_container">
+        <div class="hint">{{ this.hint }}</div>
+        <app-pr-word-counter *ngIf="maxWords" [wordCount]="wordCount" [maxWords]="maxWords" [autogenerate]="autogenerate"> </app-pr-word-counter>
+      </div>
+      <div class="custom_validation_tooltip_container" *ngIf="this.type == 'link' && badLink && !readOnly && !this.rolesSE.readOnly && this.value">
+        <app-custom-validation-tooltip></app-custom-validation-tooltip>
+      </div>
     </div>
+    <app-pr-field-validations></app-pr-field-validations>
   </div>
-}
+</ng-template>

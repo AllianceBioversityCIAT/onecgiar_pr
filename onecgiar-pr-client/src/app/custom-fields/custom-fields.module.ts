@@ -39,8 +39,10 @@ import { InputIconModule } from 'primeng/inputicon';
 import { MessageModule } from 'primeng/message';
 import { LeadContactPersonFieldComponent } from './lead-contact-person-field/lead-contact-person-field.component';
 import { SSelectComponent } from './s-select/s-select.component';
+import { FieldCardComponent } from './field-card/field-card.component';
 
 const fieldComponents = [
+  FieldCardComponent,
   PrInputComponent,
   PrSelectComponent,
   PrRadioButtonComponent,

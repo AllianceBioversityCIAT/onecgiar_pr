@@ -1,10 +1,4 @@
-<app-pr-field-header
-  [label]="leadContactField.label"
-  [description]="leadContactField.description"
-  [required]="required"
-  [useColon]="leadContactField.useColon ?? true">
-</app-pr-field-header>
-
+<app-field-card [label]="leadContactField.label" [description]="leadContactField.description" [required]="required" [hasValue]="userSearchService.hasValidContact">
 <div class="lead-contact-container">
   <div class="contact-select-wrapper">
     <app-pr-input
@@ -65,3 +59,4 @@
     }
   </div>
 }
+</app-field-card>
