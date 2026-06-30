@@ -422,17 +422,33 @@
     }
   </ng-template>
 
-  @if (this.api.dataControlSE.currentResultSignal().result_type_id == 2 || this.api.dataControlSE.currentResultSignal().result_type_id == 7) {
-    <app-pr-radio-button
-      fieldRef="[innovation-use-form]-has-innovation-link"
-      [options]="[
-        { value: true, label: 'Yes' },
-        { value: false, label: 'No' }
-      ]"
-      optionLabel="label"
-      [(ngModel)]="this.rdPartnersSE.partnersBody.has_innovation_link"
-      optionValue="value">
-    </app-pr-radio-button>
+  <!-- P2-3112: the linked/bundled question shows for Innovation Use/Dev (all phases) AND, in 2026+, for every other result type. -->
+  @if (this.api.dataControlSE.currentResultSignal().result_type_id == 2 || this.api.dataControlSE.currentResultSignal().result_type_id == 7 || isCP2026()) {
+    @if (this.api.dataControlSE.currentResultSignal().result_type_id == 2 || this.api.dataControlSE.currentResultSignal().result_type_id == 7) {
+      <app-pr-radio-button
+        fieldRef="[innovation-use-form]-has-innovation-link"
+        [options]="[
+          { value: true, label: 'Yes' },
+          { value: false, label: 'No' }
+        ]"
+        optionLabel="label"
+        [(ngModel)]="this.rdPartnersSE.partnersBody.has_innovation_link"
+        optionValue="value">
+      </app-pr-radio-button>
+    } @else {
+      <!-- P2-3112: non-innovation types use the generic "result" wording (no fieldRef, so the explicit label is not overridden). -->
+      <app-pr-radio-button
+        [label]="linkedResultQuestionLabel"
+        [required]="true"
+        [options]="[
+          { value: true, label: 'Yes' },
+          { value: false, label: 'No' }
+        ]"
+        optionLabel="label"
+        [(ngModel)]="this.rdPartnersSE.partnersBody.has_innovation_link"
+        optionValue="value">
+      </app-pr-radio-button>
+    }
 
     @if (this.rdPartnersSE.partnersBody.has_innovation_link && this.fieldsManagerSE.isP25()) {
       <app-pr-multi-select

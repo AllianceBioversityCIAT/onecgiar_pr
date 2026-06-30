@@ -167,6 +167,11 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     "The Programs/Accelerators listed below were identified in your 2026 ToC. To select a different contributing Program/Accelerator, choose 'Other' from the drop-down menu and then make your selection from the options that appear.";
   noScienceProgramsNote = 'No Science Programs related to the established HLO/Outcomes were found';
 
+  // P2-3112: generic "result" wording of the linked/bundled question for non-innovation result types
+  // (Innovation Use/Dev keep their existing "innovation" wording).
+  linkedResultQuestionLabel =
+    'Is this result linked or bundled with another CGIAR-reported result (such as another innovation or a different type of result)?';
+
   referenceScience = computed(() => {
     const ids = this.rdPartnersSE.tocReferenceSynergyInitiativeIds();
     return (this.allScienceProgramsList() ?? []).filter(sp => ids.includes(sp.id));
