@@ -268,7 +268,7 @@
   }
 
   @if (isCP2026()) {
-    @if (hasReferenceScience() || this.rdPartnersSE.scienceSelected?.length || this.rdPartnersSE.otherScienceSelected?.length) {
+    @if (hasReferenceScience()) {
       <app-alert-status [description]="contributingScienceInfoNote"></app-alert-status>
 
       <app-pr-multi-select
@@ -282,42 +282,44 @@
         placeholder="Select Science Program/Accelerator"
         (selectOptionEvent)="onScienceSelect($event)">
       </app-pr-multi-select>
-
-      <div class="medal_selector selected_container">
-        <div class="centers chips_container">
-          <div class="center pr_chip_selected" *ngFor="let sp of this.rdPartnersSE.scienceSelected; let i = index">
-            <div class="name" [innerHtml]="sp?.official_code || sp?.short_name"></div>
-            <i *ngIf="!this.api.rolesSE.readOnly" class="material-icons-round" (click)="deleteScience(i)">cancel</i>
-          </div>
-        </div>
-      </div>
-
-      @if (showOtherScience) {
-        <app-pr-multi-select
-          [options]="otherScienceList()"
-          label="Other(s) Science Program(s)"
-          selectedLabel="Science Program(s) selected"
-          optionLabel="full_name"
-          optionValue="id"
-          [required]="false"
-          [(ngModel)]="this.rdPartnersSE.otherScienceSelected"
-          placeholder="Select other Science Program(s)">
-        </app-pr-multi-select>
-
-        <div class="medal_selector selected_container">
-          <div class="centers chips_container">
-            <div class="center pr_chip_selected" *ngFor="let sp of this.rdPartnersSE.otherScienceSelected; let i = index">
-              <div class="name" [innerHtml]="sp?.official_code || sp?.short_name"></div>
-              <i *ngIf="!this.api.rolesSE.readOnly" class="material-icons-round" (click)="deleteOtherScience(i)">cancel</i>
-            </div>
-          </div>
-        </div>
-      }
     } @else {
+      <!-- P2-2929 AC4 (fix per Ángel/Santi): ToC returned no Science Programs → note; the "Other(s)" dropdown below
+           auto-activates with ALL Science Programs so the user can always select one (mirrors the Centers empty state). -->
       <app-pr-field-header label="Contributing Science Program/Accelerator" [required]="false"></app-pr-field-header>
       <div class="pr-message">
         <i class="material-icons-round" style="font-size: 20px; color: var(--pr-color-orange-400)">info</i>
         <p>{{ noScienceProgramsNote }}</p>
+      </div>
+    }
+
+    <div class="medal_selector selected_container">
+      <div class="centers chips_container">
+        <div class="center pr_chip_selected" *ngFor="let sp of this.rdPartnersSE.scienceSelected; let i = index">
+          <div class="name" [innerHtml]="sp?.official_code || sp?.short_name"></div>
+          <i *ngIf="!this.api.rolesSE.readOnly" class="material-icons-round" (click)="deleteScience(i)">cancel</i>
+        </div>
+      </div>
+    </div>
+
+    @if (showOtherScience || !hasReferenceScience()) {
+      <app-pr-multi-select
+        [options]="otherScienceList()"
+        label="Other(s) Science Program(s)"
+        selectedLabel="Science Program(s) selected"
+        optionLabel="full_name"
+        optionValue="id"
+        [required]="false"
+        [(ngModel)]="this.rdPartnersSE.otherScienceSelected"
+        placeholder="Select other Science Program(s)">
+      </app-pr-multi-select>
+
+      <div class="medal_selector selected_container">
+        <div class="centers chips_container">
+          <div class="center pr_chip_selected" *ngFor="let sp of this.rdPartnersSE.otherScienceSelected; let i = index">
+            <div class="name" [innerHtml]="sp?.official_code || sp?.short_name"></div>
+            <i *ngIf="!this.api.rolesSE.readOnly" class="material-icons-round" (click)="deleteOtherScience(i)">cancel</i>
+          </div>
+        </div>
       </div>
     }
   }

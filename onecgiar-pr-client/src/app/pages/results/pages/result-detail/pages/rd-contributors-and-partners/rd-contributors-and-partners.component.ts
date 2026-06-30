@@ -182,8 +182,9 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     return (this.allScienceProgramsList() ?? []).filter(sp => !ids.includes(sp.id));
   });
 
-  // true when the ToC brought no synergy programs → show the note and NO "Other(s)" option.
-  hasReferenceScience = computed(() => this.rdPartnersSE.tocReferenceSynergyInitiativeIds().length > 0);
+  // True when the ToC brought at least one Science Program that actually resolves in the catalog. Based on the resolved
+  // referenceScience() (not the raw synergy ids) so a node whose ids don't map to a known SP still shows the empty state.
+  hasReferenceScience = computed(() => this.referenceScience().length > 0);
 
   dropdown1OptionsSP = computed(() => [
     ...this.referenceScience(),
