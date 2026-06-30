@@ -145,7 +145,15 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   }
 
   deleteOtherCenter(index: number) {
-    this.rdPartnersSE.otherCentersSelected?.splice(index, 1);
+    // Parity with deleteScience: reassign a NEW array (not splice) so the multi-select ngModel refreshes and the chip stays removed.
+    const removed = (this.rdPartnersSE.otherCentersSelected || [])[index];
+    this.rdPartnersSE.otherCentersSelected = (this.rdPartnersSE.otherCentersSelected || []).filter((_: any, i: number) => i !== index);
+    // Parity with deleteContributingCenter: if the removed "Other" center was the lead, clear the lead so we don't save an orphaned lead.
+    if (removed && this.rdPartnersSE.leadCenterCode === removed.code) {
+      this.rdPartnersSE.leadCenterCode = null;
+    }
+    // Recompute lead-center eligibility now that an "Other" center is gone.
+    this.rdPartnersSE.setPossibleLeadCenters(true);
   }
 
   // ----- P2-2929 (2026): Contributing Science Program/Accelerator split (VISUAL ONLY; pending/save deferred per Juan David) -----
