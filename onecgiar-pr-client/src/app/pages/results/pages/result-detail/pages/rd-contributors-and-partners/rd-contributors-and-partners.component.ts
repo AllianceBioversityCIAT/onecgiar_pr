@@ -295,6 +295,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   onSaveSection() {
     if (this.rdPartnersSE.partnersBody.no_applicable_partner) {
       this.rdPartnersSE.partnersBody.institutions = [];
+      this.rdPartnersSE.otherPartnersSelected = [];
     }
 
     if (this.rdPartnersSE.partnersBody.is_lead_by_partner) {
@@ -324,6 +325,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     // split into accepted (kept) vs pending (new contribution request) by the _was_accepted tag set on load.
     const isCP2026 = this.isCP2026();
     let contributingCenterPayload: any[] = this.rdPartnersSE.partnersBody.contributing_center;
+    let institutionsPayload: any[] = this.rdPartnersSE.partnersBody.institutions;
     let contributingInitiativesPayload: any = {
       ...this.rdPartnersSE.partnersBody.contributing_initiatives,
       pending_contributing_initiatives: [
@@ -343,6 +345,18 @@ export class RdContributorsAndPartnersComponent implements OnInit {
         is_leading_result: this.rdPartnersSE.leadCenterCode === c.code
       }));
       contributingCenterPayload = [...tocCenters, ...otherCenters];
+
+      // P2-3066: External Partners — ToC partners (institutions minus the sentinel, from_toc true) ∪ Other(s) (from_toc false).
+      const isLeadByPartner = this.rdPartnersSE.partnersBody.is_lead_by_partner;
+      const tocPartners = (this.rdPartnersSE.partnersBody.institutions || [])
+        .filter((p: any) => p?.institutions_id !== this.rdPartnersSE.OTHER_PARTNERS_CODE)
+        .map((p: any) => ({ ...p, from_toc: true, is_leading_result: isLeadByPartner && this.rdPartnersSE.leadPartnerId === p.institutions_id }));
+      const otherPartners = (this.rdPartnersSE.otherPartnersSelected || []).map((p: any) => ({
+        ...p,
+        from_toc: false,
+        is_leading_result: isLeadByPartner && this.rdPartnersSE.leadPartnerId === p.institutions_id
+      }));
+      institutionsPayload = [...tocPartners, ...otherPartners];
 
       const allSP = [
         ...(this.rdPartnersSE.scienceSelected || []).filter((sp: any) => sp?.id !== this.OTHER_SP_CODE).map((sp: any) => ({ ...sp, from_toc: true })),
@@ -368,6 +382,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     const sendedData = {
       ...this.rdPartnersSE.partnersBody,
       contributing_center: contributingCenterPayload,
+      institutions: institutionsPayload,
       linked_results: linkedResultsIds,
       contributing_initiatives: contributingInitiativesPayload,
       ...(isCP2026 ? { cancel_pending_requests: cancelPendingRequests } : {}),

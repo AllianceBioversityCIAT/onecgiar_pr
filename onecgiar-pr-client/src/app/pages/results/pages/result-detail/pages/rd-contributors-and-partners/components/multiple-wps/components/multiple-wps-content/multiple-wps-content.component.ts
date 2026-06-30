@@ -136,10 +136,19 @@ export class CPMultipleWPsContentComponent implements OnChanges {
     const num = (v: any) => Number(v);
     const centerIds = new Set<number>();
     const synergyIds = new Set<number>();
+    // P2-3066: toc_partners holds ALL partners (centers + external). We feed them to both center and partner sets;
+    // each consumer cross-references its own catalog (centers list vs institutions-without-centers list) to keep only its own.
+    const partnerIds = new Set<number>();
     for (const tab of tabs) {
       const node: any = listForLevel(tab?.toc_level_id)?.find((n: any) => n.toc_result_id === tab?.toc_result_id);
       if (!node) continue;
-      (node.toc_partners ?? []).forEach((p: any) => { const n = num(p?.code); if (!Number.isNaN(n)) centerIds.add(n); });
+      (node.toc_partners ?? []).forEach((p: any) => {
+        const n = num(p?.code);
+        if (!Number.isNaN(n)) {
+          centerIds.add(n);
+          partnerIds.add(n);
+        }
+      });
       (node.contributing_synergy_program_initiative_ids ?? []).forEach((id: any) => { const n = num(id); if (!Number.isNaN(n)) synergyIds.add(n); });
       const indId = tab?.indicators?.[0]?.related_node_id;
       const ind: any = (node.indicators ?? []).find((i: any) => i.related_node_id === indId);
@@ -147,6 +156,7 @@ export class CPMultipleWPsContentComponent implements OnChanges {
     }
     this.rdPartnersSE.tocReferenceCenterInstitutionIds.set(Array.from(centerIds));
     this.rdPartnersSE.tocReferenceSynergyInitiativeIds.set(Array.from(synergyIds));
+    this.rdPartnersSE.tocReferencePartnerInstitutionIds.set(Array.from(partnerIds));
   });
 
   ngOnChanges(): void {
