@@ -219,4 +219,38 @@ describe('ResultsTocResultsService', () => {
     expect(shareResultRequestRepository.cancelRequest).not.toHaveBeenCalled();
     expect(shareResultRequestService.resultRequest).not.toHaveBeenCalled();
   });
+
+  it('persists program_invested_financial_resources on planned toc mapping update', async () => {
+    const payload: any = {
+      result_id: 1,
+      changePrimaryInit: 50,
+      result_toc_result: {
+        planned_result: true,
+        initiative_id: 50,
+        result_toc_results: [
+          {
+            result_toc_result_id: 10350,
+            toc_result_id: 6286,
+            initiative_id: 50,
+            planned_result: true,
+            toc_level_id: 1,
+            program_invested_financial_resources: true,
+          },
+        ],
+      },
+    };
+
+    resultByInitiativesRepository.findOne.mockResolvedValueOnce({
+      initiative_id: 50,
+    } as any);
+
+    await service.createTocMappingV2(payload, { id: 1 } as TokenDto);
+
+    expect(resultsTocResultRepository.update).toHaveBeenCalledWith(
+      10350,
+      expect.objectContaining({
+        program_invested_financial_resources: true,
+      }),
+    );
+  });
 });

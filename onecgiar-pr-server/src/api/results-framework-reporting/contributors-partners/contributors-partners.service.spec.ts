@@ -42,7 +42,9 @@ describe('ContributorsPartnersService', () => {
           useValue: {
             getResultById: jest.fn(),
             find: jest.fn(),
+            findOne: jest.fn(),
             update: jest.fn().mockResolvedValue(undefined),
+            query: jest.fn(),
           },
         },
         {
@@ -543,7 +545,45 @@ describe('ContributorsPartnersService', () => {
           has_innovation_link: true,
           linked_results: [1001, 1002],
         },
-        message: 'Innovation linkage updated.',
+        message: 'Linked result state updated.',
+        status: HttpStatus.OK,
+      });
+    });
+
+    it('should manage linked results for non-innovation result types via result table', async () => {
+      resultRepository.getResultById.mockResolvedValue({
+        id: 77,
+        result_type_id: ResultTypeEnum.POLICY_CHANGE,
+      } as any);
+      resultRepository.findOne.mockResolvedValue({
+        has_innovation_link: true,
+      } as any);
+      linkedResultRepository.getActiveLinkedResultIds.mockResolvedValue([2001]);
+      const payload: UpdateContributorsPartnersDto = {
+        has_innovation_link: true,
+        linked_results: [2001],
+      };
+      const user = { id: 3 } as TokenDto;
+
+      (resultRepository.query as jest.Mock).mockResolvedValue([{ id: 2001 }]);
+
+      const result = await service.updateContributorsAndPartners(
+        77,
+        payload,
+        user,
+      );
+
+      expect(resultRepository.update).toHaveBeenCalledWith(77, {
+        has_innovation_link: true,
+        last_updated_by: user.id,
+      });
+      expect(resultsInnovationsDevRepository.query).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        response: {
+          has_innovation_link: true,
+          linked_results: [2001],
+        },
+        message: 'Linked result state updated.',
         status: HttpStatus.OK,
       });
     });
