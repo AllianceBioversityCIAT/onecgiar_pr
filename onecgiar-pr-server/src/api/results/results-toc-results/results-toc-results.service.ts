@@ -1,6 +1,6 @@
 import { forwardRef, Inject, Injectable, HttpStatus } from '@nestjs/common';
 import { In, Not } from 'typeorm';
-import { env } from 'process';
+import { env } from 'node:process';
 import Handlebars from 'handlebars';
 import {
   ContributorResultTocResult,
@@ -518,6 +518,7 @@ export class ResultsTocResultsService {
         initiative_id: number | null;
         toc_progressive_narrative: string | null;
         toc_level_id: number | null;
+        program_invested_financial_resources: boolean | null;
         indicatorsMap: Map<number, IndicatorAccumulator>;
       }
 
@@ -591,6 +592,11 @@ export class ResultsTocResultsService {
               row?.toc_level_id !== null && row?.toc_level_id !== undefined
                 ? Number(row.toc_level_id)
                 : null,
+            program_invested_financial_resources:
+              row?.program_invested_financial_resources === null ||
+              row?.program_invested_financial_resources === undefined
+                ? null
+                : Boolean(row.program_invested_financial_resources),
             indicatorsMap: new Map(),
           };
           initiativeEntry.resultsMap.set(resultTocResultId, resultEntry);
@@ -704,6 +710,8 @@ export class ResultsTocResultsService {
                 initiative_id: result.initiative_id,
                 toc_progressive_narrative: result.toc_progressive_narrative,
                 toc_level_id: result.toc_level_id,
+                program_invested_financial_resources:
+                  result.program_invested_financial_resources,
                 indicators: Array.from(result.indicatorsMap.values()).map(
                   (indicator) => ({
                     result_toc_result_indicator_id:
@@ -1489,6 +1497,8 @@ export class ResultsTocResultsService {
                 toc_result_id: t?.toc_result_id ?? null,
                 toc_progressive_narrative: t?.toc_progressive_narrative ?? null,
                 toc_level_id: t?.toc_level_id ?? null,
+                program_invested_financial_resources:
+                  this.resolveProgramInvestedFinancialResources(t),
                 planned_result: result_toc_result?.planned_result ?? null,
                 action_area_outcome_id: null,
                 is_active: true,
@@ -1513,6 +1523,8 @@ export class ResultsTocResultsService {
                 toc_result_id: t?.toc_result_id ?? null,
                 toc_progressive_narrative: t?.toc_progressive_narrative ?? null,
                 toc_level_id: t?.toc_level_id ?? null,
+                program_invested_financial_resources:
+                  this.resolveProgramInvestedFinancialResources(t),
                 planned_result: result_toc_result?.planned_result ?? null,
                 action_area_outcome_id: null,
                 result_id: result.id,
@@ -2053,6 +2065,8 @@ export class ResultsTocResultsService {
       toc_result_id: t?.toc_result_id ?? null,
       toc_progressive_narrative: t?.toc_progressive_narrative ?? null,
       toc_level_id: t?.toc_level_id ?? null,
+      program_invested_financial_resources:
+        this.resolveProgramInvestedFinancialResources(t),
       planned_result: resultTocResult?.planned_result ?? null,
       action_area_outcome_id: null,
       is_active: true,
@@ -2081,6 +2095,8 @@ export class ResultsTocResultsService {
       toc_result_id: t?.toc_result_id ?? null,
       toc_progressive_narrative: t?.toc_progressive_narrative ?? null,
       toc_level_id: t?.toc_level_id ?? null,
+      program_invested_financial_resources:
+        this.resolveProgramInvestedFinancialResources(t),
       planned_result: resultTocResult?.planned_result ?? null,
       action_area_outcome_id: null,
       result_id: result.id,
@@ -2532,6 +2548,31 @@ export class ResultsTocResultsService {
         debug: true,
       });
     }
+  }
+
+  private resolveProgramInvestedFinancialResources(
+    item:
+      | { program_invested_financial_resources?: boolean | null }
+      | null
+      | undefined,
+  ): boolean | null {
+    if (
+      item === null ||
+      item === undefined ||
+      !Object.prototype.hasOwnProperty.call(
+        item,
+        'program_invested_financial_resources',
+      )
+    ) {
+      return null;
+    }
+
+    const value = item.program_invested_financial_resources;
+    if (value === null || value === undefined) {
+      return null;
+    }
+
+    return Boolean(value);
   }
 
   private groupCatalogTargetsByIndicatorNodeId(

@@ -28,6 +28,14 @@ export class ResultTocResultItemDto {
 
   @ApiPropertyOptional()
   toc_level_id?: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Whether the Program invested financial resources in this result (2026 Contributors & Partners).',
+  })
+  @IsOptional()
+  @IsBoolean()
+  program_invested_financial_resources?: boolean | null;
 }
 
 export class ResultTocResultBlockDto {
