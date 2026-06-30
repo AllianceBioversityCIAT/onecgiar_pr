@@ -270,27 +270,28 @@
   @if (isCP2026()) {
     @if (hasReferenceScience()) {
       <app-alert-status [description]="contributingScienceInfoNote"></app-alert-status>
-
-      <app-pr-multi-select
-        [options]="dropdown1OptionsSP()"
-        label="Contributing Science Program/Accelerator"
-        selectedLabel="Science Program/Accelerator selected"
-        optionLabel="full_name"
-        optionValue="id"
-        [required]="false"
-        [(ngModel)]="this.rdPartnersSE.scienceSelected"
-        placeholder="Select Science Program/Accelerator"
-        (selectOptionEvent)="onScienceSelect($event)">
-      </app-pr-multi-select>
     } @else {
-      <!-- P2-2929 AC4 (fix per Ángel/Santi): ToC returned no Science Programs → note; the "Other(s)" dropdown below
-           auto-activates with ALL Science Programs so the user can always select one (mirrors the Centers empty state). -->
-      <app-pr-field-header label="Contributing Science Program/Accelerator" [required]="false"></app-pr-field-header>
+      <!-- P2-2929 (fix per Santi): ToC returned no Science Programs → show the orange note. The first dropdown below
+           still renders (it always carries the "Other(s)" option), so the user can choose "Other" and then pick a
+           Science Program. The "Other(s)" dropdown stays hidden until "Other" is explicitly selected. -->
       <div class="pr-message">
         <i class="material-icons-round" style="font-size: 20px; color: var(--pr-color-orange-400)">info</i>
         <p>{{ noScienceProgramsNote }}</p>
       </div>
     }
+
+    <!-- First dropdown always renders: Science Programs from the ToC (if any) + the "Other(s)" option. -->
+    <app-pr-multi-select
+      [options]="dropdown1OptionsSP()"
+      label="Contributing Science Program/Accelerator"
+      selectedLabel="Science Program/Accelerator selected"
+      optionLabel="full_name"
+      optionValue="id"
+      [required]="false"
+      [(ngModel)]="this.rdPartnersSE.scienceSelected"
+      placeholder="Select Science Program/Accelerator"
+      (selectOptionEvent)="onScienceSelect($event)">
+    </app-pr-multi-select>
 
     <div class="medal_selector selected_container">
       <div class="centers chips_container">
@@ -301,7 +302,8 @@
       </div>
     </div>
 
-    @if (showOtherScience || !hasReferenceScience()) {
+    <!-- P2-2929 (fix per Santi): the "Other(s)" dropdown only appears once the user selects "Other" — never on its own. -->
+    @if (showOtherScience) {
       <app-pr-multi-select
         [options]="otherScienceList()"
         label="Other(s) Science Program(s)"
