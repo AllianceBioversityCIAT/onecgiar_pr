@@ -73,20 +73,29 @@
 
   <!-- P2-2998 / P2-3036 (2026): Contributing CGIAR Centers split into "from ToC" + "Other(s)". SAVE NOT ADDRESSED YET. -->
   @if (isCP2026()) {
-    <app-alert-status [description]="contributingCentersInfoNote"></app-alert-status>
+    @if (hasReferenceCenters()) {
+      <app-alert-status [description]="contributingCentersInfoNote"></app-alert-status>
 
-    <app-pr-multi-select
-      [options]="dropdown1Options()"
-      label="Contributing CGIAR Centers"
-      selectedLabel="Center(s) selected"
-      optionLabel="full_name"
-      optionValue="code"
-      [required]="false"
-      [(ngModel)]="this.rdPartnersSE.partnersBody.contributing_center"
-      placeholder="Select center(s)"
-      [disableOptions]="this.rdPartnersSE.cgspaceDisabledList"
-      (selectOptionEvent)="onContributingCenterSelect($event)">
-    </app-pr-multi-select>
+      <app-pr-multi-select
+        [options]="dropdown1Options()"
+        label="Contributing CGIAR Centers"
+        selectedLabel="Center(s) selected"
+        optionLabel="full_name"
+        optionValue="code"
+        [required]="false"
+        [(ngModel)]="this.rdPartnersSE.partnersBody.contributing_center"
+        placeholder="Select center(s)"
+        [disableOptions]="this.rdPartnersSE.cgspaceDisabledList"
+        (selectOptionEvent)="onContributingCenterSelect($event)">
+      </app-pr-multi-select>
+    } @else {
+      <!-- P2-2998 AC4: ToC returned no centers → show note; the Other(s) dropdown below auto-activates with ALL centers. -->
+      <app-pr-field-header label="Contributing CGIAR Centers" [required]="false"></app-pr-field-header>
+      <div class="pr-message">
+        <i class="material-icons-round" style="font-size: 20px; color: var(--pr-color-orange-400)">info</i>
+        <p>{{ noCentersNote }}</p>
+      </div>
+    }
   } @else {
     <app-pr-multi-select
       [options]="this.centersSE.centersList"
@@ -120,11 +129,12 @@
     </div>
   </div>
 
-  <!-- P2-2998 (2026): the "Other(s)" dropdown appears AFTER the selected-centers chips (chips stay pinned under dropdown 1). -->
-  @if (isCP2026() && showOtherCenters) {
+  <!-- P2-2998 (2026): the "Other(s)" dropdown appears AFTER the selected-centers chips (chips stay pinned under dropdown 1).
+       AC4: it auto-activates when the ToC returned no reference centers, even without the user picking "Other". -->
+  @if (isCP2026() && (showOtherCenters || !hasReferenceCenters())) {
     <app-pr-multi-select
       [options]="otherCentersList()"
-      label="Other(s) CGIAR Centers"
+      label="Other(s) Contributing CGIAR Centers"
       selectedLabel="Center(s) selected"
       optionLabel="full_name"
       optionValue="code"
