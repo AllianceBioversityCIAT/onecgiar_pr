@@ -50,7 +50,9 @@ export class CPNormalSelectorComponent {
     return (this.institutionsSE.institutionsWithoutCentersListPartners ?? []).filter((i: any) => !ids.includes(i.institutions_id));
   });
 
-  hasReferencePartners = computed(() => this.rdPartnersSE.tocReferencePartnerInstitutionIds().length > 0);
+  // True when the ToC brought at least one EXTERNAL (non-center) partner. toc_partners also carries CENTERS, so we must
+  // check the resolved external list — not the raw id set — otherwise a center-only ToC node wrongly hides the AC4 empty state.
+  hasReferencePartners = computed(() => this.referenceExternalPartners().length > 0);
 
   // The "Other" item sits at the END of the first dropdown's list (per AC3). Selecting it reveals the second dropdown.
   dropdown1OptionsPartners = computed(() => [...this.referenceExternalPartners(), this.rdPartnersSE.buildOtherPartnersSentinel()]);
