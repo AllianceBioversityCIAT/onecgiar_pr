@@ -399,6 +399,7 @@ export class ResultsTocResultRepository
         rtr.initiative_id,
         rtr.toc_progressive_narrative,
         rtr.toc_level_id,
+        rtr.program_invested_financial_resources,
         ci.official_code,
         ci.short_name,
         ci.name,
