@@ -1315,8 +1315,6 @@ export class ResultsTocResultsService {
       const {
         result_id,
         contributing_initiatives,
-        accepted_contributing_initiatives,
-        pending_contributing_initiatives,
         cancel_pending_requests,
         changePrimaryInit,
         email_template,
@@ -1355,7 +1353,8 @@ export class ResultsTocResultsService {
       let acceptedFromTocById = new Map<number, boolean>();
       let pendingFromTocById = new Map<number, boolean>();
 
-      const tocDto = dto as CreateResultsTocResultV2Dto & CreateResultsTocResultDto;
+      const tocDto = dto as CreateResultsTocResultV2Dto &
+        CreateResultsTocResultDto;
       const acceptedPayload = this.resolveContributingInitiativesPayload(
         tocDto,
         contributing_initiatives,
@@ -2862,7 +2861,9 @@ export class ResultsTocResultsService {
           >;
         }
       | undefined,
-    key: 'accepted_contributing_initiatives' | 'pending_contributing_initiatives',
+    key:
+      | 'accepted_contributing_initiatives'
+      | 'pending_contributing_initiatives',
   ): {
     explicit: boolean;
     value?: Array<number | ContributingInitiativeTocFlagDto>;
@@ -2899,7 +2900,9 @@ export class ResultsTocResultsService {
 
     const orphanRequestIds = (activePending ?? [])
       .map((row) => ({
-        requestId: Number((row as { share_result_request_id?: number }).share_result_request_id),
+        requestId: Number(
+          (row as { share_result_request_id?: number }).share_result_request_id,
+        ),
         initiativeId: Number(row.id),
       }))
       .filter(
