@@ -282,16 +282,16 @@ describe('TocResultsService', () => {
         true,
         'phase-2030',
       );
-      expect(repository.getTocIndicatorsByResultIds).toHaveBeenCalledWith(
-        resultRecord,
-        2030,
-        [10],
-        7,
-        ['NODE-1'],
-        1,
-        2,
-        false,
-      );
+      expect(repository.getTocIndicatorsByResultIds).toHaveBeenCalledWith({
+        result: resultRecord,
+        targetYear: 2030,
+        tocResultIds: [10],
+        resultTypeId: 7,
+        linkedIndicatorNodeIds: ['NODE-1'],
+        resultId: 1,
+        initId: 2,
+        includeInactiveIndicators: false,
+      });
       expect(repository.getResultIndicatorMappings).toHaveBeenCalledWith(1, 2, [
         10,
       ]);
@@ -355,16 +355,16 @@ describe('TocResultsService', () => {
         ],
         statusCode: HttpStatus.OK,
       });
-      expect(repository.getTocIndicatorsByResultIds).toHaveBeenCalledWith(
-        resultRecord,
-        2030,
-        [20],
-        7,
-        [],
-        4,
-        5,
-        false,
-      );
+      expect(repository.getTocIndicatorsByResultIds).toHaveBeenCalledWith({
+        result: resultRecord,
+        targetYear: 2030,
+        tocResultIds: [20],
+        resultTypeId: 7,
+        linkedIndicatorNodeIds: [],
+        resultId: 4,
+        initId: 5,
+        includeInactiveIndicators: false,
+      });
       expect(repository.getResultIndicatorMappings).toHaveBeenCalledWith(4, 5, [
         20,
       ]);
@@ -586,18 +586,18 @@ describe('TocResultsService', () => {
 
       await service.findTocResultByConfigV2(11021, 62, 1, true);
 
-      expect(repository.getTocIndicatorsByResultIds).toHaveBeenCalledWith(
-        expect.objectContaining({
+      expect(repository.getTocIndicatorsByResultIds).toHaveBeenCalledWith({
+        result: expect.objectContaining({
           obj_version: expect.objectContaining({ phase_year: 2025 }),
         }),
-        2025,
-        [6768],
-        7,
-        [],
-        11021,
-        62,
-        true,
-      );
+        targetYear: 2025,
+        tocResultIds: [6768],
+        resultTypeId: 7,
+        linkedIndicatorNodeIds: [],
+        resultId: 11021,
+        initId: 62,
+        includeInactiveIndicators: true,
+      });
     });
 
     it('uses the result reporting phase year instead of the active platform year', async () => {

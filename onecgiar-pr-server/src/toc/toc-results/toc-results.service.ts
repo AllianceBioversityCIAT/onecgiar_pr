@@ -214,16 +214,16 @@ export class TocResultsService {
           );
 
           const indicatorRows =
-            await this._tocResultsRepository.getTocIndicatorsByResultIds(
+            await this._tocResultsRepository.getTocIndicatorsByResultIds({
               result,
-              reportingYear,
+              targetYear: reportingYear,
               tocResultIds,
-              result.result_type_id,
+              resultTypeId: result.result_type_id,
               linkedIndicatorNodeIds,
-              result_id,
-              init_id,
+              resultId: result_id,
+              initId: init_id,
               includeInactiveIndicators,
-            );
+            });
 
           const indicatorMap = new Map<
             number,
@@ -560,7 +560,7 @@ export class TocResultsService {
     const candidateKeys = [
       indicator.related_node_id,
       indicator.toc_result_indicator_id,
-      indicator.indicator_id != null ? String(indicator.indicator_id) : null,
+      indicator.indicator_id == null ? null : String(indicator.indicator_id),
     ]
       .filter(
         (value): value is string =>
