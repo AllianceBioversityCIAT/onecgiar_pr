@@ -83,6 +83,22 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   // P2-3036: the 2026 redesign of this section applies only to phase 2026+. 2025 keeps the legacy copy/fields.
   isCP2026 = computed(() => this.fieldsManagerSE.isContributorsPartners2026());
 
+  // P2-3063 / P2-3036 AC6 (2026, unplanned scenario): single mandatory Yes/No radio
+  // "Did the Program invest financial resources in the achievement of this result?".
+  // Backend persists per row in result_toc_results[] (matched by result_toc_result_id, no dedup), so the single
+  // on-screen radio reads the first row and writes the same value across every active row (per Juan David's contract).
+  financialResourcesInfoNote =
+    "Select 'Yes' if direct program funds were utilized to achieve this result. Select 'No' if the result was achieved organically (e.g., policy influence) without financial investment from the program.";
+
+  get programInvestedFinancialResources(): boolean | null {
+    return this.rdPartnersSE.partnersBody?.result_toc_result?.result_toc_results?.[0]?.program_invested_financial_resources ?? null;
+  }
+  set programInvestedFinancialResources(value: boolean) {
+    (this.rdPartnersSE.partnersBody?.result_toc_result?.result_toc_results || []).forEach((row: any) => {
+      row.program_invested_financial_resources = value;
+    });
+  }
+
   tocQuestionLabel = computed(() =>
     this.isCP2026()
       ? 'Can this result be mapped to a planned TOC KPI or indicator?'

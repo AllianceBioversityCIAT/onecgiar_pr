@@ -69,6 +69,24 @@
         [autogenerate]="true">
       </app-pr-textarea>
     }
+
+    <!-- P2-3063 / P2-3036 AC6 (2026, unplanned): mandatory Yes/No "financial resources" radio + info note. -->
+    @if (isCP2026() && !this.rdPartnersSE.partnersBody.result_toc_result.planned_result) {
+      <app-pr-yes-or-not
+        label="Did the Program invest financial resources in the achievement of this result?"
+        [required]="true"
+        [hideDescription]="true"
+        [(ngModel)]="programInvestedFinancialResources">
+      </app-pr-yes-or-not>
+
+      <app-alert-status [description]="financialResourcesInfoNote"></app-alert-status>
+
+      <!-- Hidden marker so the single radio counts in the section's mandatory-field validation. -->
+      <div
+        appFeedbackValidation
+        labelText="Did the Program invest financial resources in the achievement of this result?"
+        [isComplete]="programInvestedFinancialResources !== null"></div>
+    }
   }
 
   <!-- P2-2998 / P2-3036 (2026): Contributing CGIAR Centers split into "from ToC" + "Other(s)". SAVE NOT ADDRESSED YET. -->
