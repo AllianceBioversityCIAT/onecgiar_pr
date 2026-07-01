@@ -202,6 +202,17 @@ export class AowHloCreateModalComponent implements OnInit {
   }
 
   createResult() {
+    const contribution = this.createResultBody().contribution_to_indicator_target;
+    if (contribution === null || contribution === undefined) {
+      this.api.alertsFe.show({
+        id: 'contributionTargetRequired',
+        title: 'Contribution to indicator target is required',
+        description: 'Please enter the contribution to the indicator target before creating the result.',
+        status: 'error'
+      });
+      return;
+    }
+
     this.creatingResult.set(true);
 
     const body = {

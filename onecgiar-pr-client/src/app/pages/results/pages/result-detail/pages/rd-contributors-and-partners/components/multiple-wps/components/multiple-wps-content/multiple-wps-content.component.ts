@@ -294,6 +294,11 @@ export class CPMultipleWPsContentComponent implements OnChanges {
     ];
   }
 
+  get isContributionTargetComplete(): boolean {
+    const value = this.activeTab?.indicators?.[0]?.targets?.[0]?.contributing_indicator;
+    return value !== null && value !== undefined && (value as unknown as string) !== '';
+  }
+
   showNarrative(): boolean {
     if (this.resultLevelId === 2 || (this.resultLevelId === 1 && !this.activeTab?.planned_result)) return true;
 
