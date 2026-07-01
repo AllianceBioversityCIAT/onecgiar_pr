@@ -1328,8 +1328,6 @@ export class ResultsTocResultsService {
       const {
         result_id,
         contributing_initiatives,
-        accepted_contributing_initiatives,
-        pending_contributing_initiatives,
         cancel_pending_requests,
         changePrimaryInit,
         email_template,
@@ -1368,15 +1366,22 @@ export class ResultsTocResultsService {
       let acceptedFromTocById = new Map<number, boolean>();
       let pendingFromTocById = new Map<number, boolean>();
 
-      if (contributing_initiatives?.accepted_contributing_initiatives?.length) {
+      const tocDto = dto as CreateResultsTocResultV2Dto &
+        CreateResultsTocResultDto;
+      const acceptedPayload = this.resolveContributingInitiativesPayload(
+        tocDto,
+        contributing_initiatives,
+        'accepted_contributing_initiatives',
+      );
+      const pendingPayload = this.resolveContributingInitiativesPayload(
+        tocDto,
+        contributing_initiatives,
+        'pending_contributing_initiatives',
+      );
+
+      if (acceptedPayload.explicit) {
         const acceptedEntries = this.extractInitiativeTocEntries(
-          contributing_initiatives.accepted_contributing_initiatives,
-        );
-        acceptedIds = acceptedEntries.ids;
-        acceptedFromTocById = acceptedEntries.fromTocById;
-      } else {
-        const acceptedEntries = this.extractInitiativeTocEntries(
-          accepted_contributing_initiatives,
+          acceptedPayload.value,
         );
         acceptedIds = acceptedEntries.ids;
         acceptedFromTocById = acceptedEntries.fromTocById;
@@ -1386,15 +1391,9 @@ export class ResultsTocResultsService {
         (id) => id !== initSubmitter.initiative_id,
       );
 
-      if (contributing_initiatives?.pending_contributing_initiatives?.length) {
+      if (pendingPayload.explicit) {
         const pendingEntries = this.extractInitiativeTocEntries(
-          contributing_initiatives.pending_contributing_initiatives,
-        );
-        pendingIds = pendingEntries.ids;
-        pendingFromTocById = pendingEntries.fromTocById;
-      } else {
-        const pendingEntries = this.extractInitiativeTocEntries(
-          pending_contributing_initiatives,
+          pendingPayload.value,
         );
         pendingIds = pendingEntries.ids;
         pendingFromTocById = pendingEntries.fromTocById;
@@ -1403,6 +1402,14 @@ export class ResultsTocResultsService {
       pendingIds = pendingIds.filter(
         (id) => id !== initSubmitter.initiative_id,
       );
+
+      if (pendingPayload.explicit) {
+        await this.cancelOrphanedPendingShareRequests(
+          result_id,
+          pendingIds,
+          initSubmitter?.initiative_id ?? null,
+        );
+      }
 
       const contributingInit =
         await this._resultByInitiativesRepository.updateResultByInitiative(
@@ -2852,6 +2859,78 @@ export class ResultsTocResultsService {
           }
         }
       }
+    }
+  }
+
+  private resolveContributingInitiativesPayload(
+    dto: CreateResultsTocResultV2Dto & CreateResultsTocResultDto,
+    contributingInitiatives:
+      | {
+          accepted_contributing_initiatives?: Array<
+            number | ContributingInitiativeTocFlagDto
+          >;
+          pending_contributing_initiatives?: Array<
+            number | ContributingInitiativeTocFlagDto
+          >;
+        }
+      | undefined,
+    key:
+      | 'accepted_contributing_initiatives'
+      | 'pending_contributing_initiatives',
+  ): {
+    explicit: boolean;
+    value?: Array<number | ContributingInitiativeTocFlagDto>;
+  } {
+    if (
+      contributingInitiatives !== null &&
+      contributingInitiatives !== undefined &&
+      Object.prototype.hasOwnProperty.call(contributingInitiatives, key)
+    ) {
+      return {
+        explicit: true,
+        value: contributingInitiatives[key],
+      };
+    }
+
+    if (Object.prototype.hasOwnProperty.call(dto, key)) {
+      return {
+        explicit: true,
+        value: dto[key],
+      };
+    }
+
+    return { explicit: false };
+  }
+
+  private async cancelOrphanedPendingShareRequests(
+    resultId: number,
+    keepPendingInitiativeIds: number[],
+    submitterInitiativeId: number | null,
+  ): Promise<void> {
+    const activePending =
+      await this._resultByInitiativesRepository.getDraftInit(resultId);
+    const keepSet = new Set(keepPendingInitiativeIds ?? []);
+
+    const orphanRequestIds = (activePending ?? [])
+      .map((row) => ({
+        requestId: Number(
+          (row as { share_result_request_id?: number }).share_result_request_id,
+        ),
+        initiativeId: Number(row.id),
+      }))
+      .filter(
+        (row) =>
+          Number.isFinite(row.requestId) &&
+          row.requestId > 0 &&
+          Number.isFinite(row.initiativeId) &&
+          row.initiativeId > 0 &&
+          row.initiativeId !== submitterInitiativeId &&
+          !keepSet.has(row.initiativeId),
+      )
+      .map((row) => row.requestId);
+
+    if (orphanRequestIds.length) {
+      await this._shareResultRequestRepository.cancelRequest(orphanRequestIds);
     }
   }
 
