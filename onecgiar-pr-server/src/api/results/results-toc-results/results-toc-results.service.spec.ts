@@ -355,4 +355,69 @@ describe('ResultsTocResultsService', () => {
       resultByInitiativesRepository.updateInitiativeFromTocFlags,
     ).toHaveBeenCalledWith(1, new Map([[61, false]]), 1);
   });
+
+  it('auto-cancels pending share requests omitted from PATCH (P2-3115)', async () => {
+    resultByInitiativesRepository.findOne.mockResolvedValueOnce({
+      initiative_id: 50,
+    } as any);
+    resultByInitiativesRepository.getDraftInit.mockResolvedValueOnce([
+      {
+        id: 61,
+        share_result_request_id: 9001,
+        from_toc: true,
+        is_active: 1,
+      },
+      {
+        id: 62,
+        share_result_request_id: 9002,
+        from_toc: true,
+        is_active: 1,
+      },
+    ] as any);
+
+    const payload: any = {
+      result_id: 1,
+      changePrimaryInit: 50,
+      contributing_initiatives: {
+        accepted_contributing_initiatives: [],
+        pending_contributing_initiatives: [{ id: 61, from_toc: true }],
+      },
+    };
+
+    await service.createTocMappingV2(payload, { id: 1 } as TokenDto);
+
+    expect(shareResultRequestRepository.cancelRequest).toHaveBeenCalledWith([
+      9002,
+    ]);
+  });
+
+  it('auto-cancels all pending share requests when pending array is empty', async () => {
+    resultByInitiativesRepository.findOne.mockResolvedValueOnce({
+      initiative_id: 50,
+    } as any);
+    resultByInitiativesRepository.getDraftInit.mockResolvedValueOnce([
+      {
+        id: 61,
+        share_result_request_id: 9001,
+        from_toc: true,
+        is_active: 1,
+      },
+    ] as any);
+
+    const payload: any = {
+      result_id: 1,
+      changePrimaryInit: 50,
+      contributing_initiatives: {
+        accepted_contributing_initiatives: [],
+        pending_contributing_initiatives: [],
+      },
+    };
+
+    await service.createTocMappingV2(payload, { id: 1 } as TokenDto);
+
+    expect(shareResultRequestRepository.cancelRequest).toHaveBeenCalledWith([
+      9001,
+    ]);
+    expect(shareResultRequestService.resultRequest).not.toHaveBeenCalled();
+  });
 });
