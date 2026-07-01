@@ -56,6 +56,11 @@ export class CPMultipleWPsContentComponent implements OnChanges {
   showIndicators = signal<boolean>(false);
   selectedIndicatorData = signal<IndicatorItem | null>(null);
 
+  // P2-2998: reactive trigger for syncTocReferenceIds. `allTabsCreated` is a plain @Input() array whose
+  // in-place mutations (HLO/Outcome or KPI selection) don't notify the effect. Bumping this signal from the
+  // selection handlers forces the centers reference set to recompute on selection, not only on tab switch.
+  selectionVersion = signal<number>(0);
+
   secondFieldLabel = computed(() => {
     return this.tocResultListFiltered().find(item => item.toc_level_id === this.activeTabSignal()?.toc_level_id)?.name;
   });
@@ -131,6 +136,8 @@ export class CPMultipleWPsContentComponent implements OnChanges {
     const oc = this.outcomeList();
     const eoi = this.eoiList();
     this.activeTabSignal();
+    // P2-2998: subscribe to in-tab HLO/KPI selection changes (see selectionVersion + getIndicatorsList/mapTocResultsIndicatorId).
+    this.selectionVersion();
     const tabs: any[] = this.allTabsCreated ?? [];
     const listForLevel = (lvl: any): any[] => (lvl === 3 ? eoi : lvl === 2 ? oc : lvl === 1 ? out : []);
     const num = (v: any) => Number(v);
@@ -240,6 +247,8 @@ export class CPMultipleWPsContentComponent implements OnChanges {
     }
     this.hideIndicators();
     this.updateSelectedIndicatorData();
+    // P2-2998: HLO/Outcome node changed → recompute the centers reference set now (don't wait for a tab switch).
+    this.selectionVersion.update(v => v + 1);
   }
 
   hideIndicators() {
@@ -255,6 +264,8 @@ export class CPMultipleWPsContentComponent implements OnChanges {
     this.fieldsManagerSE.hasSelectedIndicator.set(true);
     this.activeTab.indicators[0].toc_results_indicator_id = this.activeTab.indicators[0].related_node_id;
     this.updateSelectedIndicatorData();
+    // P2-2998: KPI Statement changed → union the indicator's toc_target_center_ids into the centers reference set now.
+    this.selectionVersion.update(v => v + 1);
   }
 
   updateSelectedIndicatorData() {
