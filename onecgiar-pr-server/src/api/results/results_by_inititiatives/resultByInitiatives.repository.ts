@@ -10,6 +10,7 @@ import {
 import { LogicalDelete } from '../../../shared/globalInterfaces/delete.interface';
 import { predeterminedDateValidation } from '../../../shared/utils/versioning.utils';
 import { BaseRepository } from '../../../shared/extendsGlobalDTO/base-repository';
+import { formatUnknownError } from '../../../shared/utils/service-error.util';
 
 @Injectable()
 export class ResultByInitiativesRepository
@@ -80,7 +81,7 @@ export class ResultByInitiativesRepository
     ResultByInitiativesRepository.name,
   );
   constructor(
-    private dataSource: DataSource,
+    private readonly dataSource: DataSource,
     private readonly _handlersError: HandlersError,
   ) {
     super(ResultsByInititiative, dataSource.createEntityManager());
@@ -538,10 +539,10 @@ export class ResultByInitiativesRepository
       return [];
     }
 
-    const initiativeParameter = [
+    const initiativeParameter = new Set([
       ...(initiativeArray ?? []),
       ...(initiativeArrayPnd ?? []),
-    ];
+    ]);
 
     try {
       const inits = `
@@ -555,7 +556,7 @@ export class ResultByInitiativesRepository
       const initsResult = await this.query(inits, [resultId]);
       const currentInits = initsResult.map((e) => e.inititiative_id);
       const initsToInactive = currentInits.filter(
-        (e) => !initiativeParameter.includes(e),
+        (e) => !initiativeParameter.has(e),
       );
 
       if (!initsToInactive.length) {
@@ -608,7 +609,7 @@ export class ResultByInitiativesRepository
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultByInitiativesRepository.name,
-        error: `updateResultByInitiative ${error}`,
+        error: `updateResultByInitiative ${formatUnknownError(error)}`,
         debug: true,
       });
     }
@@ -762,7 +763,7 @@ export class ResultByInitiativesRepository
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: ResultByInitiativesRepository.name,
-        error: `updateResultByInitiativeSubmitter ${error}`,
+        error: `updateResultByInitiativeSubmitter ${formatUnknownError(error)}`,
         debug: true,
       });
     }
