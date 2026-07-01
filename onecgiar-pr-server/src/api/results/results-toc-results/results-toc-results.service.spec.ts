@@ -262,6 +262,68 @@ describe('ResultsTocResultsService', () => {
     );
   });
 
+  it('persists program_invested_financial_resources on unplanned toc mapping update', async () => {
+    const payload: any = {
+      result_id: 1,
+      changePrimaryInit: 50,
+      result_toc_result: {
+        planned_result: false,
+        initiative_id: 50,
+        toc_progressive_narrative: 'Reported outside 2026 TOC indicators',
+        result_toc_results: [
+          {
+            result_toc_result_id: 10351,
+            program_invested_financial_resources: false,
+          },
+        ],
+      },
+    };
+
+    resultByInitiativesRepository.findOne.mockResolvedValueOnce({
+      initiative_id: 50,
+    } as any);
+    resultsTocResultRepository.find.mockResolvedValueOnce([]);
+
+    await service.createTocMappingV2(payload, { id: 1 } as TokenDto);
+
+    expect(resultsTocResultRepository.update).toHaveBeenCalledWith(
+      10351,
+      expect.objectContaining({
+        planned_result: false,
+        program_invested_financial_resources: false,
+        toc_progressive_narrative: 'Reported outside 2026 TOC indicators',
+      }),
+    );
+  });
+
+  it('persists program_invested_financial_resources on unplanned special case insert', async () => {
+    const payload: any = {
+      result_id: 1,
+      changePrimaryInit: 50,
+      result_toc_result: {
+        planned_result: false,
+        initiative_id: 50,
+        toc_progressive_narrative: 'Justification text',
+        program_invested_financial_resources: true,
+      },
+    };
+
+    resultByInitiativesRepository.findOne.mockResolvedValueOnce({
+      initiative_id: 50,
+    } as any);
+    resultsTocResultRepository.find.mockResolvedValueOnce([]);
+
+    await service.createTocMappingV2(payload, { id: 1 } as TokenDto);
+
+    expect(resultsTocResultRepository.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        planned_result: false,
+        program_invested_financial_resources: true,
+        toc_progressive_narrative: 'Justification text',
+      }),
+    );
+  });
+
   it('persists pending science programs with from_toc on save', async () => {
     const payload: any = {
       result_id: 1,

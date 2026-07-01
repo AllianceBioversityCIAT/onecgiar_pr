@@ -45,6 +45,17 @@ export class ResultTocResultBlockDto {
   @ApiPropertyOptional()
   initiative_id?: number;
 
+  @ApiPropertyOptional()
+  toc_progressive_narrative?: string | null;
+
+  @ApiPropertyOptional({
+    description:
+      'Whether the Program invested financial resources (2026 AC6 — unplanned / TOC = No only).',
+  })
+  @IsOptional()
+  @IsBoolean()
+  program_invested_financial_resources?: boolean | null;
+
   @ApiPropertyOptional({ type: () => [ResultTocResultItemDto] })
   result_toc_results?: ResultTocResultItemDto[];
 }
