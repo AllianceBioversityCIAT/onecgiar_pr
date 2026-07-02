@@ -70,8 +70,8 @@ export class ShareResultRequestRepository
     ShareResultRequestRepository.name,
   );
   constructor(
-    private dataSource: DataSource,
-    private _handlersError: HandlersError,
+    private readonly dataSource: DataSource,
+    private readonly _handlersError: HandlersError,
   ) {
     super(ShareResultRequest, dataSource.createEntityManager());
   }
