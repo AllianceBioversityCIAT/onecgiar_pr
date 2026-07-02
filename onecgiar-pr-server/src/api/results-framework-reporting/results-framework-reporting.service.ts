@@ -584,6 +584,59 @@ export class ResultsFrameworkReportingService {
     }
   }
 
+  async getBilateralProjectsByScienceProgram(programId?: string) {
+    try {
+      const normalizedProgramId = programId?.trim().toUpperCase();
+
+      if (!normalizedProgramId) {
+        throwServiceError(
+          'A valid programId query parameter is required.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      const initiative = await this._clarisaInitiativesRepository.findOne({
+        where: { official_code: normalizedProgramId, active: true },
+        select: ['id', 'official_code'],
+      });
+
+      if (!initiative) {
+        throwServiceError(
+          'No initiative was found with the provided program identifier.',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+
+      const tocContext = await this._reportingTocContextService.resolve();
+      const rows =
+        await this._tocResultsRepository.findBilateralProjectsByProgramOfficialCode(
+          initiative.official_code.toUpperCase(),
+          tocContext.phaseUuid,
+        );
+
+      const seenProjectIds = new Set<number>();
+      const bilateralProjects = (rows ?? []).filter((row) => {
+        const projectId = Number(row?.project_id);
+        if (!Number.isFinite(projectId) || projectId <= 0) {
+          return false;
+        }
+        if (seenProjectIds.has(projectId)) {
+          return false;
+        }
+        seenProjectIds.add(projectId);
+        return true;
+      });
+
+      return {
+        response: bilateralProjects,
+        message: 'Bilateral projects retrieved successfully.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
   async getExistingResultContributorsToIndicators(
     user: TokenDto,
     resultTocResultId: string | number,

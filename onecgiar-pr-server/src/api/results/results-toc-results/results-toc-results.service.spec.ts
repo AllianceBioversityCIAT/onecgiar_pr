@@ -228,6 +228,66 @@ describe('ResultsTocResultsService', () => {
     expect(shareResultRequestService.resultRequest).not.toHaveBeenCalled();
   });
 
+  it('persists contributing_indicator including zero for qualitative targets (P2-3089)', async () => {
+    const payload: any = {
+      result_id: 1,
+      changePrimaryInit: 50,
+      result_toc_result: {
+        planned_result: true,
+        initiative_id: 50,
+        result_toc_results: [
+          {
+            result_toc_result_id: 10350,
+            toc_result_id: 6286,
+            initiative_id: 50,
+            planned_result: true,
+            toc_level_id: 1,
+            indicators: [
+              {
+                toc_results_indicator_id: 'indicator-1',
+                targets: [
+                  {
+                    indicators_targets: 1048,
+                    number_target: 5,
+                    contributing_indicator: 0,
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    };
+
+    resultByInitiativesRepository.findOne.mockResolvedValueOnce({
+      initiative_id: 50,
+    } as any);
+
+    await service.createTocMappingV2(payload, { id: 1 } as TokenDto);
+
+    expect(
+      resultsTocResultRepository.saveIndicatorsPrimarySubmitter,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        result_toc_result: expect.objectContaining({
+          result_toc_results: [
+            expect.objectContaining({
+              indicators: [
+                expect.objectContaining({
+                  targets: [
+                    expect.objectContaining({ contributing_indicator: 0 }),
+                  ],
+                }),
+              ],
+            }),
+          ],
+        }),
+      }),
+      1,
+      1,
+    );
+  });
+
   it('persists program_invested_financial_resources on planned toc mapping update', async () => {
     const payload: any = {
       result_id: 1,
@@ -320,6 +380,46 @@ describe('ResultsTocResultsService', () => {
         planned_result: false,
         program_invested_financial_resources: true,
         toc_progressive_narrative: 'Justification text',
+      }),
+    );
+  });
+
+  it('persists program_invested_financial_resources on contributor toc mapping update', async () => {
+    const payload: any = {
+      result_id: 1,
+      changePrimaryInit: 50,
+      result_toc_result: {
+        planned_result: true,
+        initiative_id: 50,
+        result_toc_results: [],
+      },
+      contributors_result_toc_result: [
+        {
+          initiative_id: 51,
+          planned_result: true,
+          result_toc_results: [
+            {
+              result_toc_result_id: 2010,
+              toc_result_id: 9999,
+              initiative_id: 51,
+              program_invested_financial_resources: false,
+            },
+          ],
+        },
+      ],
+    };
+
+    resultByInitiativesRepository.findOne.mockResolvedValueOnce({
+      initiative_id: 50,
+    } as any);
+    resultByInitiativesRepository.findBy.mockResolvedValueOnce([]);
+
+    await service.createTocMappingV2(payload, { id: 1 } as TokenDto);
+
+    expect(resultsTocResultRepository.update).toHaveBeenCalledWith(
+      2010,
+      expect.objectContaining({
+        program_invested_financial_resources: false,
       }),
     );
   });

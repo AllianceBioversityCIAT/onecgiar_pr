@@ -16,6 +16,7 @@ describe('ApplyFrameworkResultAssociationsService', () => {
   };
   const mockResultsByInstitutionsService = {
     handleContributingCenters: jest.fn(),
+    savePartnersInstitutionsByResultV2: jest.fn(),
   };
 
   const user = { id: 10 } as TokenDto;
@@ -52,7 +53,7 @@ describe('ApplyFrameworkResultAssociationsService', () => {
       mockResultsByProjectsService.linkBilateralProjectToResult,
     ).not.toHaveBeenCalled();
     expect(
-      mockResultsByInstitutionsService.handleContributingCenters,
+      mockResultsByInstitutionsService.savePartnersInstitutionsByResultV2,
     ).not.toHaveBeenCalled();
   });
 
@@ -115,15 +116,55 @@ describe('ApplyFrameworkResultAssociationsService', () => {
     await service.execute({ contributing_center: centers } as any, user, 404);
 
     expect(
-      mockResultsByInstitutionsService.handleContributingCenters,
-    ).toHaveBeenCalledWith(centers, { result_id: 404 }, user);
+      mockResultsByInstitutionsService.savePartnersInstitutionsByResultV2,
+    ).toHaveBeenCalledWith(
+      {
+        result_id: 404,
+        contributing_center: centers,
+        institutions: undefined,
+        mqap_institutions: [],
+        bilateral_project: [],
+      },
+      user,
+    );
+  });
+
+  it('should persist partner institutions with from_toc on create (P2-3114)', async () => {
+    const institutions = [
+      { institutions_id: 42, from_toc: true },
+      { institutions_id: 99, from_toc: false },
+    ];
+
+    await service.execute({ institutions } as any, user, 606);
+
+    expect(
+      mockResultsByInstitutionsService.savePartnersInstitutionsByResultV2,
+    ).toHaveBeenCalledWith(
+      {
+        result_id: 606,
+        contributing_center: [],
+        institutions,
+        mqap_institutions: [],
+        bilateral_project: [],
+      },
+      user,
+    );
   });
 
   it('should pass empty array when contributing_center key exists but is not an array', async () => {
     await service.execute({ contributing_center: null } as any, user, 505);
 
     expect(
-      mockResultsByInstitutionsService.handleContributingCenters,
-    ).toHaveBeenCalledWith([], { result_id: 505 }, user);
+      mockResultsByInstitutionsService.savePartnersInstitutionsByResultV2,
+    ).toHaveBeenCalledWith(
+      {
+        result_id: 505,
+        contributing_center: [],
+        institutions: undefined,
+        mqap_institutions: [],
+        bilateral_project: [],
+      },
+      user,
+    );
   });
 });

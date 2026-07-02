@@ -360,6 +360,62 @@ describe('ContributorsPartnersService', () => {
       ).toHaveBeenCalledWith(resultId);
     });
 
+    it('should return from_toc on partner institutions in GET response (P2-3066)', async () => {
+      const resultId = 8387;
+      const mockResult = {
+        id: resultId,
+        result_code: 'R-8387',
+        title: 'Test result',
+        result_level_id: 3,
+        no_applicable_partner: false,
+        is_lead_by_partner: false,
+        result_type_id: ResultTypeEnum.POLICY_CHANGE,
+      } as any;
+      resultRepository.getResultById.mockResolvedValue(mockResult);
+      resultByInitiativesRepository.getOwnerInitiativeByResult.mockResolvedValue(
+        { id: 50, official_code: 'SP01' } as any,
+      );
+      resultsTocResultsService.getTocByResultV2.mockResolvedValue({
+        response: {
+          contributing_initiatives: {
+            accepted_contributing_initiatives: [],
+            pending_contributing_initiatives: [],
+          },
+        },
+        status: HttpStatus.OK,
+        message: 'ok',
+      } as any);
+      resultsByInstitutionsService.getInstitutionsPartnersByResultIdV2.mockResolvedValue(
+        {
+          response: {
+            no_applicable_partner: false,
+            institutions: [
+              { institutions_id: 1, from_toc: true, delivery: [] },
+              { institutions_id: 2, from_toc: false, delivery: [] },
+            ],
+            mqap_institutions: [],
+            bilateral_projects: [],
+            contributing_center: [],
+            is_lead_by_partner: false,
+          },
+          status: HttpStatus.OK,
+          message: 'ok',
+        } as any,
+      );
+      resultRepository.findOne.mockResolvedValue({
+        has_innovation_link: false,
+      } as any);
+      linkedResultRepository.getActiveLinkedResultIds.mockResolvedValue([]);
+
+      const response =
+        await service.getContributorsPartnersByResultId(resultId);
+
+      expect((response.response as any).institutions).toEqual([
+        expect.objectContaining({ institutions_id: 1, from_toc: true }),
+        expect.objectContaining({ institutions_id: 2, from_toc: false }),
+      ]);
+    });
+
     it('should delegate errors to the handler when result is missing', async () => {
       const errorResponse = { message: 'handled error' };
       handlersError.returnErrorRes.mockReturnValue(errorResponse);
@@ -528,6 +584,10 @@ describe('ContributorsPartnersService', () => {
         expect.stringContaining('INSERT INTO results_innovations_dev'),
         [55, 1, user.id, user.id],
       );
+      expect(resultRepository.update).toHaveBeenCalledWith(55, {
+        has_innovation_link: true,
+        last_updated_by: user.id,
+      });
       expect(resultRepository.query).toHaveBeenCalledWith(
         expect.stringContaining('SELECT id FROM result'),
         [1001, 1002],
