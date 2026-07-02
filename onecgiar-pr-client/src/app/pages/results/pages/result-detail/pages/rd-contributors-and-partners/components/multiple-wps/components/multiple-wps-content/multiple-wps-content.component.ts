@@ -251,6 +251,13 @@ export class CPMultipleWPsContentComponent implements OnChanges {
     this.selectionVersion.update(v => v + 1);
   }
 
+  // P2-3115: called ONLY from the template (ngModelChange) on the HLO/KPI dropdowns, so it fires on genuine user
+  // selection (not on the load-time getIndicatorsList() driven by the onChangesActiveTab effect). This authorizes the
+  // parent's ToC prefill to (re)populate the chips — a deliberate user action, unlike a cold reload.
+  markUserTocSelection() {
+    if (this.isCP2026()) this.rdPartnersSE.tocSelectionTouched.set(true);
+  }
+
   hideIndicators() {
     this.showIndicators.set(false);
     this.fieldsManagerSE.hasSelectedIndicator.set(false);

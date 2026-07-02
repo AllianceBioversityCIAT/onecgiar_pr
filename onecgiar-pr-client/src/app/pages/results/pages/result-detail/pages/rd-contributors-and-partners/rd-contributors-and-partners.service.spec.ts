@@ -163,4 +163,36 @@ describe('RdContributorsAndPartnersService', () => {
       expect(service.leadCenterCode).toBe('C1');
     });
   });
+
+  // P2-3115: the ToC prefill must never resurrect a deliberately-emptied, saved selection.
+  // These cover the mechanism's foundation (the hydration flag lifecycle). The effect-level guard behavior
+  // (cold-load stays empty vs. user-driven selection prefills) is exercised end-to-end in the browser.
+  describe('P2-3115 — ToC prefill resurrection guards', () => {
+    const set2026 = (value: boolean) => jest.spyOn((service as any).fieldsManagerSE, 'isContributorsPartners2026').mockReturnValue(value);
+
+    it('starts with both prefill guards false', () => {
+      expect(service.sectionHydratedFromToc()).toBe(false);
+      expect(service.tocSelectionTouched()).toBe(false);
+    });
+
+    it('applyTocMappingOnLoad marks the section hydrated in 2026 (persisted state becomes authoritative)', () => {
+      set2026(true);
+      service.applyTocMappingOnLoad();
+      expect(service.sectionHydratedFromToc()).toBe(true);
+    });
+
+    it('applyTocMappingOnLoad leaves the guard untouched in the 2025 legacy path', () => {
+      set2026(false);
+      service.applyTocMappingOnLoad();
+      expect(service.sectionHydratedFromToc()).toBe(false);
+    });
+
+    it('resetState clears both guards so state does not leak across results', () => {
+      service.sectionHydratedFromToc.set(true);
+      service.tocSelectionTouched.set(true);
+      service.resetState();
+      expect(service.sectionHydratedFromToc()).toBe(false);
+      expect(service.tocSelectionTouched()).toBe(false);
+    });
+  });
 });
