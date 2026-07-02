@@ -147,6 +147,9 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     const refs = this.referenceCenters();
     const cc = this.rdPartnersSE.partnersBody?.contributing_center;
     if (refs.length && (!cc || cc.length === 0)) {
+      // P2-3115: same guard as Science Programs — don't resurrect a deliberately-emptied, saved Centers selection on
+      // reload; only a user-driven ToC HLO/KPI selection prefills after the section was hydrated from the persisted GET.
+      if (this.rdPartnersSE.sectionHydratedFromToc() && !this.rdPartnersSE.tocSelectionTouched()) return;
       this.rdPartnersSE.partnersBody.contributing_center = refs.map(c => ({ ...c, new: true, is_active: true })) as any[];
       this.rdPartnersSE.setPossibleLeadCenters(true);
     }
@@ -166,6 +169,8 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   }
 
   deleteOtherCenter(index: number) {
+    // P2-3115: a manual removal is a user edit → stop the ToC prefill from re-adding centers for the rest of the session.
+    this.userTouchedCenters = true;
     // Parity with deleteScience: reassign a NEW array (not splice) so the multi-select ngModel refreshes and the chip stays removed.
     const removed = (this.rdPartnersSE.otherCentersSelected || [])[index];
     this.rdPartnersSE.otherCentersSelected = (this.rdPartnersSE.otherCentersSelected || []).filter((_: any, i: number) => i !== index);
@@ -217,6 +222,9 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     const refs = this.referenceScience();
     const sel = this.rdPartnersSE.scienceSelected;
     if (refs.length && (!sel || sel.length === 0)) {
+      // P2-3115: don't resurrect a deliberately-emptied, saved selection. Once the section is hydrated from the
+      // persisted GET, that (possibly empty) state is authoritative — only a user-driven ToC HLO/KPI selection prefills.
+      if (this.rdPartnersSE.sectionHydratedFromToc() && !this.rdPartnersSE.tocSelectionTouched()) return;
       this.rdPartnersSE.scienceSelected = refs.map(sp => ({ ...sp, new: true, is_active: true }));
     }
   });
@@ -227,12 +235,15 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   }
 
   deleteScience(index: number) {
+    // P2-3115: a manual removal is a user edit → stop the ToC prefill from re-adding it for the rest of the session.
+    this.userTouchedScience = true;
     // Reassign a NEW array reference (not splice in place) so the multi-select ngModel refreshes and the chip stays removed.
     this.rdPartnersSE.scienceSelected = (this.rdPartnersSE.scienceSelected || []).filter((_: any, i: number) => i !== index);
     if (!this.showOtherScience) this.rdPartnersSE.otherScienceSelected = [];
   }
 
   deleteOtherScience(index: number) {
+    this.userTouchedScience = true;
     this.rdPartnersSE.otherScienceSelected = (this.rdPartnersSE.otherScienceSelected || []).filter((_: any, i: number) => i !== index);
   }
 
@@ -283,6 +294,8 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   }
 
   deleteContributingCenter(index: number, updateComponent: boolean = false) {
+    // P2-3115: a manual removal is a user edit → stop the ToC prefill from re-adding this center for the rest of the session.
+    this.userTouchedCenters = true;
     if (updateComponent) {
       this.rdPartnersSE.updatingLeadData = true;
     }

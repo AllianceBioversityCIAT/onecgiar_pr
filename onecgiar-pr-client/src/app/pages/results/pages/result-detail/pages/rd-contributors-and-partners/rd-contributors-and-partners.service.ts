@@ -60,6 +60,13 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   tocReferencePartnerInstitutionIds = signal<number[]>([]);
   otherPartnersSelected: any[] = [];
 
+  // P2-3115 (2026): guards so the ToC prefill never resurrects a deliberately-emptied, saved selection.
+  // `sectionHydratedFromToc` = the section has been hydrated from a persisted GET (that persisted state — even
+  // empty — is authoritative). `tocSelectionTouched` = the user changed an HLO/KPI selection in-session, so the
+  // reactive preload is a deliberate action and IS allowed to prefill. Set by multiple-wps-content.
+  sectionHydratedFromToc = signal<boolean>(false);
+  tocSelectionTouched = signal<boolean>(false);
+
   // P2-2998 / P2-2929 / P2-3066 (2026): sentinels for the "Other(s)" item that toggles the second dropdown.
   // Mirror the component definitions — kept here so the load re-bucketing can detect/strip them.
   readonly OTHER_CENTERS_CODE = '__OTHER_CENTERS__';
@@ -123,6 +130,9 @@ export class RdContributorsAndPartnersService implements OnDestroy {
     // P2-3066 (2026): clear External Partners split selections.
     this.otherPartnersSelected = [];
     this.tocReferencePartnerInstitutionIds.set([]);
+    // P2-3115 (2026): reset the prefill guards so state doesn't leak across results (root singleton).
+    this.sectionHydratedFromToc.set(false);
+    this.tocSelectionTouched.set(false);
   }
 
   loadClarisaProjects() {
@@ -383,6 +393,11 @@ export class RdContributorsAndPartnersService implements OnDestroy {
       this.otherPartnersSelected = [];
       this.partnersBody.institutions = tocPartners;
     }
+
+    // P2-3115 (2026): the section is now hydrated from the persisted GET. After this point the persisted selection
+    // (even empty) is authoritative — the on-empty ToC prefill must NOT resurrect it unless the user drives a new
+    // HLO/KPI selection (tocSelectionTouched). Set last so it reflects a completed hydration.
+    this.sectionHydratedFromToc.set(true);
   }
 
   // P2-3066 (2026): non-renderable sentinel for the "Other(s)" option inside the External Partners dropdown.

@@ -28,7 +28,7 @@
             optionValue="toc_result_id"
             placeholder="Select outcome"
             [(ngModel)]="activeTab.toc_result_id"
-            (ngModelChange)="getIndicatorsList(); tocResultChanged.emit()">
+            (ngModelChange)="markUserTocSelection(); getIndicatorsList(); tocResultChanged.emit()">
           </app-pr-select>
         }
         @case (2) {
@@ -43,7 +43,7 @@
             optionValue="toc_result_id"
             placeholder="Select outcome"
             [(ngModel)]="activeTab.toc_result_id"
-            (ngModelChange)="getIndicatorsList(); tocResultChanged.emit()">
+            (ngModelChange)="markUserTocSelection(); getIndicatorsList(); tocResultChanged.emit()">
           </app-pr-select>
         }
         @case (1) {
@@ -58,7 +58,7 @@
             placeholder="Select output"
             [(ngModel)]="activeTab.toc_result_id"
             [extraInformation]="true"
-            (ngModelChange)="getIndicatorsList(); tocResultChanged.emit()">
+            (ngModelChange)="markUserTocSelection(); getIndicatorsList(); tocResultChanged.emit()">
           </app-pr-select>
         }
       }
@@ -89,7 +89,7 @@
           optionValue="related_node_id"
           placeholder="Select outcome level"
           [(ngModel)]="activeTab.indicators[0].related_node_id"
-          (ngModelChange)="mapTocResultsIndicatorId()">
+          (ngModelChange)="markUserTocSelection(); mapTocResultsIndicatorId()">
         </app-pr-select>
 
         <!-- P2-3063 (L3): read-only Indicator Typology = the "Type" of the selected KPI in TOC (`indicator_typology`). Excel rows 13-14. 2026 only. -->
