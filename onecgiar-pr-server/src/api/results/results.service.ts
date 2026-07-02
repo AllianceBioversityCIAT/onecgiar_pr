@@ -3860,6 +3860,10 @@ export class ResultsService {
       accepted_contributing_initiatives,
       pending_contributing_initiatives,
     } = contributingInitiatives;
+    const hasPendingPayload = Object.prototype.hasOwnProperty.call(
+      contributingInitiatives,
+      'pending_contributing_initiatives',
+    );
 
     // Determine if Admin + Approved → create with request_status_id = 1
     const targetRequestStatusId = await this._resolveRequestStatusId(
@@ -3901,7 +3905,11 @@ export class ResultsService {
       }
     }
 
-    // Handle pending_contributing_initiatives
+    if (!hasPendingPayload) {
+      return;
+    }
+
+    // Handle pending_contributing_initiatives (explicit in payload)
     if (!pending_contributing_initiatives?.length) {
       // If there are no pending in the payload, delete all with the target request_status_id
       await this._shareResultRequestRepository.update(

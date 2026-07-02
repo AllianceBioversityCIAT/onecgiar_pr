@@ -435,16 +435,10 @@ export class ContributorsPartnersService {
       user.id,
     );
 
-    const isInnovationResult =
-      resultTypeId === ResultTypeEnum.INNOVATION_DEVELOPMENT ||
-      resultTypeId === ResultTypeEnum.INNOVATION_USE;
-
-    if (!isInnovationResult) {
-      await this._resultRepository.update(resultId, {
-        has_innovation_link: finalHasInnovationLink,
-        last_updated_by: user.id,
-      });
-    }
+    await this._resultRepository.update(resultId, {
+      has_innovation_link: finalHasInnovationLink,
+      last_updated_by: user.id,
+    });
 
     return {
       fields: {
@@ -461,6 +455,18 @@ export class ContributorsPartnersService {
     resultTypeId: number,
   ): Promise<boolean> {
     try {
+      const result = await this._resultRepository.findOne({
+        where: { id: resultId, is_active: true },
+        select: { has_innovation_link: true },
+      });
+
+      if (
+        result?.has_innovation_link !== null &&
+        result?.has_innovation_link !== undefined
+      ) {
+        return Boolean(result.has_innovation_link);
+      }
+
       if (resultTypeId === ResultTypeEnum.INNOVATION_DEVELOPMENT) {
         const rows = await this._resultsInnovationsDevRepository.query(
           `
@@ -493,29 +499,13 @@ export class ContributorsPartnersService {
         return value === null || value === undefined ? false : Boolean(value);
       }
 
-      return this.getResultLinkStatus(resultId);
+      return false;
     } catch (error) {
       this.logger.error(
         `Error fetching innovation link status for result ID ${resultId}: ${error.message}`,
       );
       return false;
     }
-  }
-
-  private async getResultLinkStatus(resultId: number): Promise<boolean> {
-    const result = await this._resultRepository.findOne({
-      where: { id: resultId, is_active: true },
-      select: { has_innovation_link: true },
-    });
-
-    if (
-      result?.has_innovation_link === null ||
-      result?.has_innovation_link === undefined
-    ) {
-      return false;
-    }
-
-    return Boolean(result.has_innovation_link);
   }
 
   private async updateInnovationSummaryLink(

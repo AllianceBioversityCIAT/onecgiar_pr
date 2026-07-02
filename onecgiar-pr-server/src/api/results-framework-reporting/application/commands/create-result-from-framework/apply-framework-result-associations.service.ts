@@ -22,7 +22,7 @@ export class ApplyFrameworkResultAssociationsService {
   ): Promise<void> {
     await this._shareContributors(payload, user, createdResultId);
     await this._linkBilateralProjects(payload, user, createdResultId);
-    await this._applyContributingCenters(payload, user, createdResultId);
+    await this._applyPartnersSection(payload, user, createdResultId);
   }
 
   private async _shareContributors(
@@ -79,7 +79,7 @@ export class ApplyFrameworkResultAssociationsService {
     }
   }
 
-  private async _applyContributingCenters(
+  private async _applyPartnersSection(
     payload: CreateResultsFrameworkResultDto,
     user: TokenDto,
     createdResultId: number,
@@ -88,16 +88,35 @@ export class ApplyFrameworkResultAssociationsService {
       payload ?? {},
       'contributing_center',
     );
+    const hasInstitutionsPayload = objectHasOwn(payload ?? {}, 'institutions');
 
-    if (!hasContributingCentersPayload) {
+    if (!hasContributingCentersPayload && !hasInstitutionsPayload) {
       return;
     }
 
-    await this._resultsByInstitutionsService.handleContributingCenters(
+    let contributingCenter = [];
+    if (
+      hasContributingCentersPayload &&
       Array.isArray(payload.contributing_center)
-        ? payload.contributing_center
-        : [],
-      { result_id: createdResultId },
+    ) {
+      contributingCenter = payload.contributing_center;
+    }
+
+    let institutions: CreateResultsFrameworkResultDto['institutions'];
+    if (hasInstitutionsPayload) {
+      institutions = Array.isArray(payload.institutions)
+        ? payload.institutions
+        : [];
+    }
+
+    await this._resultsByInstitutionsService.savePartnersInstitutionsByResultV2(
+      {
+        result_id: createdResultId,
+        contributing_center: contributingCenter,
+        institutions,
+        mqap_institutions: [],
+        bilateral_project: [],
+      },
       user,
     );
   }
