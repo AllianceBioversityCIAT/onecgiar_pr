@@ -63,6 +63,8 @@ const mockTocResultsRepository = {
   findIndicatorById: jest.fn(),
   findUnitAcronymsByProgram: jest.fn(),
   getIndicatorContributions: jest.fn(),
+  findBilateralProjectById: jest.fn(),
+  findBilateralProjectsByProgramOfficialCode: jest.fn(),
 };
 
 const defaultTocContext = {
@@ -135,6 +137,7 @@ const mockContributionToIndicatorResultsRepository = {
 
 const mockResultsByInstitutionsService = {
   handleContributingCenters: jest.fn(),
+  savePartnersInstitutionsByResultV2: jest.fn(),
 };
 
 const mockDataSource = {
@@ -1053,7 +1056,7 @@ describe('ResultsFrameworkReportingService', () => {
       mockResultsIndicatorsTargetsRepository.update.mockReset();
       mockShareResultRequestService.resultRequest.mockReset();
       mockResultsByProjectsService.linkBilateralProjectToResult.mockReset();
-      mockResultsByInstitutionsService.handleContributingCenters.mockReset();
+      mockResultsByInstitutionsService.savePartnersInstitutionsByResultV2.mockReset();
     });
 
     it('should create a non-knowledge product result and link ToC data', async () => {
@@ -1365,8 +1368,17 @@ describe('ResultsFrameworkReportingService', () => {
       );
 
       expect(
-        mockResultsByInstitutionsService.handleContributingCenters,
-      ).toHaveBeenCalledWith(centers, { result_id: 606 }, user);
+        mockResultsByInstitutionsService.savePartnersInstitutionsByResultV2,
+      ).toHaveBeenCalledWith(
+        {
+          result_id: 606,
+          contributing_center: centers,
+          institutions: undefined,
+          mqap_institutions: [],
+          bilateral_project: [],
+        },
+        user,
+      );
     });
   });
 
@@ -1618,6 +1630,67 @@ describe('ResultsFrameworkReportingService', () => {
         }),
         debug: true,
       });
+    });
+  });
+
+  describe('getBilateralProjectsByScienceProgram (P2-3001)', () => {
+    it('should return deduplicated bilateral projects for a science program', async () => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
+        id: 10,
+        official_code: 'SP01',
+      });
+      mockTocResultsRepository.findBilateralProjectsByProgramOfficialCode.mockResolvedValueOnce(
+        [
+          {
+            toc_result_id: 1,
+            official_code: 'SP01',
+            project_id: 100,
+            project_name: 'Project A',
+          },
+          {
+            toc_result_id: 2,
+            official_code: 'SP01',
+            project_id: 100,
+            project_name: 'Project A',
+          },
+          {
+            toc_result_id: 3,
+            official_code: 'SP01',
+            project_id: 200,
+            project_name: 'Project B',
+          },
+        ],
+      );
+
+      const result = await service.getBilateralProjectsByScienceProgram('sp01');
+
+      expect(
+        mockTocResultsRepository.findBilateralProjectsByProgramOfficialCode,
+      ).toHaveBeenCalledWith('SP01', 'PHASE-1');
+      expect(result.response).toHaveLength(2);
+      expect(result.response.map((row) => row.project_id)).toEqual([100, 200]);
+      expect(result.status).toBe(200);
+    });
+
+    it('should return empty array when program has no bilateral projects', async () => {
+      mockClarisaInitiativesRepository.findOne.mockResolvedValueOnce({
+        id: 10,
+        official_code: 'SP02',
+      });
+      mockTocResultsRepository.findBilateralProjectsByProgramOfficialCode.mockResolvedValueOnce(
+        [],
+      );
+
+      const result = await service.getBilateralProjectsByScienceProgram('SP02');
+
+      expect(result.response).toEqual([]);
+      expect(result.status).toBe(200);
+    });
+
+    it('should return bad request when programId is missing', async () => {
+      const result = await service.getBilateralProjectsByScienceProgram('  ');
+
+      expect(result.status).toBe(400);
     });
   });
 });

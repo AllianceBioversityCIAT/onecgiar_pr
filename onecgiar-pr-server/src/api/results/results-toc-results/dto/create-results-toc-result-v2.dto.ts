@@ -36,6 +36,49 @@ export class ResultTocResultItemDto {
   @IsOptional()
   @IsBoolean()
   program_invested_financial_resources?: boolean | null;
+
+  @ApiPropertyOptional({
+    description: 'ToC indicators and per-target contribution values (P2-3089).',
+    type: () => [ResultTocIndicatorDto],
+  })
+  indicators?: ResultTocIndicatorDto[];
+}
+
+export class ResultTocIndicatorTargetDto {
+  @ApiPropertyOptional()
+  indicators_targets?: number | null;
+
+  @ApiPropertyOptional()
+  number_target?: number | null;
+
+  @ApiPropertyOptional({
+    description:
+      'Contribution to target for this indicator (accepts 0 for qualitative indicators).',
+  })
+  contributing_indicator?: number | null;
+
+  @ApiPropertyOptional()
+  target_date?: number | null;
+
+  @ApiPropertyOptional()
+  target_progress_narrative?: string | null;
+
+  @ApiPropertyOptional()
+  indicator_question?: boolean | null;
+}
+
+export class ResultTocIndicatorDto {
+  @ApiPropertyOptional()
+  result_toc_result_indicator_id?: number;
+
+  @ApiPropertyOptional()
+  toc_results_indicator_id?: string;
+
+  @ApiPropertyOptional()
+  related_node_id?: string;
+
+  @ApiPropertyOptional({ type: () => [ResultTocIndicatorTargetDto] })
+  targets?: ResultTocIndicatorTargetDto[];
 }
 
 export class ResultTocResultBlockDto {
@@ -66,6 +109,14 @@ export class ContributorTocResultDto {
 
   @ApiPropertyOptional()
   initiative_id?: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Whether the Program invested financial resources (2026 AC6 — contributor science program).',
+  })
+  @IsOptional()
+  @IsBoolean()
+  program_invested_financial_resources?: boolean | null;
 
   @ApiPropertyOptional({ type: () => [ResultTocResultItemDto] })
   result_toc_results?: ResultTocResultItemDto[];

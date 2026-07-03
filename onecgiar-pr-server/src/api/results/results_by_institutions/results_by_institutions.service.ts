@@ -631,24 +631,27 @@ export class ResultsByInstitutionsService {
       return;
     }
 
-    await Promise.all(
-      incomingInstitutions
-        .filter((inst) => inst?.institutions_id != null)
-        .map((inst) =>
-          this._resultByIntitutionsRepository.update(
-            {
-              result_id: resultId,
-              institutions_id: inst.institutions_id,
-              institution_roles_id: institutionRoleId,
-              is_active: true,
-            },
-            {
-              from_toc: !!inst.from_toc,
-              last_updated_by: userId,
-            },
-          ),
-        ),
-    );
+    const institutionsToSync = incomingInstitutions
+      .filter((inst) => inst?.institutions_id != null)
+      .sort(
+        (left, right) =>
+          Number(left.institutions_id) - Number(right.institutions_id),
+      );
+
+    for (const inst of institutionsToSync) {
+      await this._resultByIntitutionsRepository.update(
+        {
+          result_id: resultId,
+          institutions_id: inst.institutions_id,
+          institution_roles_id: institutionRoleId,
+          is_active: true,
+        },
+        {
+          from_toc: !!inst.from_toc,
+          last_updated_by: userId,
+        },
+      );
+    }
   }
 
   async handleContributingCenters(

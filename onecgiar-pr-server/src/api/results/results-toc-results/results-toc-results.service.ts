@@ -1765,12 +1765,18 @@ export class ResultsTocResultsService {
                 updatePayload.initiative_ids = resolvedContribInit;
               }
 
+              this.applyProgramInvestedFinancialResourcesToPayload(
+                updatePayload,
+                t,
+                contrib,
+              );
+
               await this._resultsTocResultRepository.update(
                 Number(t.result_toc_result_id),
                 updatePayload,
               );
             } else {
-              await this._resultsTocResultRepository.insert({
+              const insertPayload: Record<string, any> = {
                 initiative_ids: normalizeInitiativeId(contrib?.initiative_id),
                 toc_result_id: t?.toc_result_id ?? null,
                 toc_progressive_narrative: t?.toc_progressive_narrative ?? null,
@@ -1781,7 +1787,15 @@ export class ResultsTocResultsService {
                 is_active: true,
                 created_by: user.id,
                 last_updated_by: user.id,
-              });
+              };
+
+              this.applyProgramInvestedFinancialResourcesToPayload(
+                insertPayload,
+                t,
+                contrib,
+              );
+
+              await this._resultsTocResultRepository.insert(insertPayload);
             }
           }
         }
