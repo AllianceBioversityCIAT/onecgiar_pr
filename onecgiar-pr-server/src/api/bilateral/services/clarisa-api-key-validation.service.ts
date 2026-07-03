@@ -1,7 +1,7 @@
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
 import { AxiosError } from 'axios';
-import { env } from 'process';
+import { env } from 'node:process';
 import { firstValueFrom } from 'rxjs';
 import { BILATERAL_CLARISA_MICROSERVICE_NAME } from '../constants/bilateral-auth.constants';
 import {
@@ -23,7 +23,7 @@ export class ClarisaApiKeyValidationService {
   private readonly validateUrl: string;
 
   constructor(private readonly httpService: HttpService) {
-    const baseUrl = trimTrailingSlashes(env.CLA_URL ?? '');
+    const baseUrl = trimTrailingSlashes(env.CLA_VALIDATE_URL ?? '');
     this.validateUrl = `${baseUrl}/api/auth/validate-api-key`;
   }
 
