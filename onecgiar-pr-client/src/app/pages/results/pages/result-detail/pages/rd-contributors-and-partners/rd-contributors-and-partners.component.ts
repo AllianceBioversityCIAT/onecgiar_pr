@@ -113,7 +113,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
 
   // P2-2998 / P2-3036 (2026): split the Contributing CGIAR Centers dropdown into "from ToC" + "Other(s)".
   // The first shows only CLARISA centers whose institutionId matches the selected TOC node (toc_partners ∪
-  // toc_target_center_ids, fed via the shared service). "Other(s)" shows the rest. SAVE NOT ADDRESSED YET.
+  // toc_target_center_ids, fed via the shared service). "Other(s)" shows the rest. Save wired in onSaveSection (from_toc tagging).
   contributingCentersInfoNote =
     "The CGIAR Centers listed below were identified in your 2026 ToC. To select a different Center, choose 'Other' from the drop-down menu and then make your selection from the options that appear.";
 
@@ -140,19 +140,41 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     { code: this.OTHER_CENTERS_CODE, name: 'Other(s) CGIAR Centers', acronym: 'Other(s)', full_name: '<strong>Other(s) CGIAR Centers</strong>', institutionId: -1 }
   ]);
 
-  // Preselect all TOC reference centers on load, only when the result has no centers selected yet.
-  private userTouchedCenters = false;
+  // QA P2-2929/P2-2998 (2026-07-03): reconcile the from-ToC Centers preselection whenever the resolved ToC
+  // reference set changes (node added/changed/removed) — remove session-preloaded (`new: true`) centers that left
+  // the refs and preselect the missing ones (union+dedup across nodes). "Other(s)" sentinel, manual Other picks and
+  // persisted/GET-hydrated centers are never removed here (removing persisted items stays a manual user action).
+  private lastCentersRefSignature: string | null = null;
   preselectCentersEffect = effect(() => {
-    if (!this.isCP2026() || this.userTouchedCenters) return;
+    if (!this.isCP2026()) return;
     const refs = this.referenceCenters();
-    const cc = this.rdPartnersSE.partnersBody?.contributing_center;
-    if (refs.length && (!cc || cc.length === 0)) {
-      // P2-3115: same guard as Science Programs — don't resurrect a deliberately-emptied, saved Centers selection on
-      // reload; only a user-driven ToC HLO/KPI selection prefills after the section was hydrated from the persisted GET.
-      if (this.rdPartnersSE.sectionHydratedFromToc() && !this.rdPartnersSE.tocSelectionTouched()) return;
-      this.rdPartnersSE.partnersBody.contributing_center = refs.map(c => ({ ...c, new: true, is_active: true })) as any[];
-      this.rdPartnersSE.setPossibleLeadCenters(true);
+    // Signature over the RESOLVED refs (ids ∩ catalog) so a late CLARISA catalog doesn't fake a node change,
+    // and unrelated signal re-runs never churn the user's selection.
+    const signature = refs
+      .map(c => c.institutionId)
+      .sort((a, b) => a - b)
+      .join(',');
+    if (signature === this.lastCentersRefSignature) return;
+    // P2-3115: don't resurrect a deliberately-emptied, saved Centers selection on reload; only a user-driven ToC
+    // HLO/KPI selection (markUserTocSelection) authorizes prefill after the section was hydrated from the persisted GET.
+    if (this.rdPartnersSE.sectionHydratedFromToc() && !this.rdPartnersSE.tocSelectionTouched()) return;
+    this.lastCentersRefSignature = signature;
+
+    const current = this.rdPartnersSE.partnersBody?.contributing_center || [];
+    const refIds = new Set(refs.map(c => c.institutionId));
+    // Keep everything except session-preloaded centers that no longer belong to the mapped node(s).
+    const kept = current.filter((c: any) => c.code === this.OTHER_CENTERS_CODE || !c.new || refIds.has(c.institutionId));
+    const keptIds = new Set(kept.map((c: any) => c.institutionId));
+    const added = refs.filter(c => !keptIds.has(c.institutionId)).map(c => ({ ...c, new: true, is_active: true }));
+    if (added.length === 0 && kept.length === current.length) return;
+
+    const removed = current.filter((c: any) => !kept.includes(c));
+    this.rdPartnersSE.partnersBody.contributing_center = [...kept, ...added] as any[];
+    // If the reconciliation dropped the current lead center, clear it so we don't save an orphaned lead.
+    if (removed.some((c: any) => c.code === this.rdPartnersSE.leadCenterCode)) {
+      this.rdPartnersSE.leadCenterCode = null;
     }
+    this.rdPartnersSE.setPossibleLeadCenters(true);
   });
 
   // "Other(s)" stays selected like any other center (shows as a chip); its presence reveals the second dropdown.
@@ -161,7 +183,6 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   }
 
   onContributingCenterSelect(_event: any) {
-    this.userTouchedCenters = true;
     // when "Other(s)" is deselected, clear whatever was picked in the Other(s) dropdown
     if (!this.showOtherCenters) this.rdPartnersSE.otherCentersSelected = [];
     // OTHER_CENTERS_CODE isn't in the CLARISA list, so it doesn't affect lead-center options.
@@ -169,8 +190,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   }
 
   deleteOtherCenter(index: number) {
-    // P2-3115: a manual removal is a user edit → stop the ToC prefill from re-adding centers for the rest of the session.
-    this.userTouchedCenters = true;
+    // A manual removal doesn't change the ToC ref signature, so the reconciliation won't re-add it (until the node changes).
     // Parity with deleteScience: reassign a NEW array (not splice) so the multi-select ngModel refreshes and the chip stays removed.
     const removed = (this.rdPartnersSE.otherCentersSelected || [])[index];
     this.rdPartnersSE.otherCentersSelected = (this.rdPartnersSE.otherCentersSelected || []).filter((_: any, i: number) => i !== index);
@@ -216,34 +236,48 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     return (this.rdPartnersSE.scienceSelected || []).some(sp => sp.id === this.OTHER_SP_CODE);
   }
 
-  private userTouchedScience = false;
+  // QA P2-2929 (2026-07-03): reconcile the from-ToC SP preselection whenever the resolved ToC reference set
+  // changes — remove session-preloaded (`new: true`) SP that left the refs, preselect the missing ones (union+dedup).
+  // "Other(s)" sentinel, manual Other picks and persisted/accepted/pending SP are never removed here.
+  private lastScienceRefSignature: string | null = null;
   preselectScienceEffect = effect(() => {
-    if (!this.isCP2026() || this.userTouchedScience) return;
+    if (!this.isCP2026()) return;
     const refs = this.referenceScience();
-    const sel = this.rdPartnersSE.scienceSelected;
-    if (refs.length && (!sel || sel.length === 0)) {
-      // P2-3115: don't resurrect a deliberately-emptied, saved selection. Once the section is hydrated from the
-      // persisted GET, that (possibly empty) state is authoritative — only a user-driven ToC HLO/KPI selection prefills.
-      if (this.rdPartnersSE.sectionHydratedFromToc() && !this.rdPartnersSE.tocSelectionTouched()) return;
-      this.rdPartnersSE.scienceSelected = refs.map(sp => ({ ...sp, new: true, is_active: true }));
-    }
+    // Signature over the RESOLVED refs so a late SP catalog doesn't fake a node change and unrelated
+    // signal re-runs never churn the user's selection.
+    const signature = refs
+      .map(sp => sp.id)
+      .sort((a, b) => a - b)
+      .join(',');
+    if (signature === this.lastScienceRefSignature) return;
+    // P2-3115: don't resurrect a deliberately-emptied, saved selection. Once the section is hydrated from the
+    // persisted GET, that (possibly empty) state is authoritative — only a user-driven ToC HLO/KPI selection prefills.
+    if (this.rdPartnersSE.sectionHydratedFromToc() && !this.rdPartnersSE.tocSelectionTouched()) return;
+    this.lastScienceRefSignature = signature;
+
+    const current = this.rdPartnersSE.scienceSelected || [];
+    const refIds = new Set(refs.map(sp => sp.id));
+    // Keep everything except session-preloaded SP that no longer belong to the mapped node(s).
+    const kept = current.filter((sp: any) => sp.id === this.OTHER_SP_CODE || !sp.new || refIds.has(sp.id));
+    const keptIds = new Set(kept.map((sp: any) => sp.id));
+    const added = refs.filter(sp => !keptIds.has(sp.id)).map(sp => ({ ...sp, new: true, is_active: true }));
+    if (added.length === 0 && kept.length === current.length) return;
+
+    this.rdPartnersSE.scienceSelected = [...kept, ...added];
   });
 
   onScienceSelect(_event: any) {
-    this.userTouchedScience = true;
     if (!this.showOtherScience) this.rdPartnersSE.otherScienceSelected = [];
   }
 
   deleteScience(index: number) {
-    // P2-3115: a manual removal is a user edit → stop the ToC prefill from re-adding it for the rest of the session.
-    this.userTouchedScience = true;
+    // A manual removal doesn't change the ToC ref signature, so the reconciliation won't re-add it (until the node changes).
     // Reassign a NEW array reference (not splice in place) so the multi-select ngModel refreshes and the chip stays removed.
     this.rdPartnersSE.scienceSelected = (this.rdPartnersSE.scienceSelected || []).filter((_: any, i: number) => i !== index);
     if (!this.showOtherScience) this.rdPartnersSE.otherScienceSelected = [];
   }
 
   deleteOtherScience(index: number) {
-    this.userTouchedScience = true;
     this.rdPartnersSE.otherScienceSelected = (this.rdPartnersSE.otherScienceSelected || []).filter((_: any, i: number) => i !== index);
   }
 
@@ -294,13 +328,16 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   }
 
   deleteContributingCenter(index: number, updateComponent: boolean = false) {
-    // P2-3115: a manual removal is a user edit → stop the ToC prefill from re-adding this center for the rest of the session.
-    this.userTouchedCenters = true;
+    // A manual removal doesn't change the ToC ref signature, so the reconciliation won't re-add it (until the node changes).
     if (updateComponent) {
       this.rdPartnersSE.updatingLeadData = true;
     }
 
-    const deletedCenter = this.rdPartnersSE.partnersBody?.contributing_center.splice(index, 1);
+    // Reassign a NEW array reference (not splice) so the multi-select ngModel refreshes and object identity stays predictable.
+    const deletedCenter = (this.rdPartnersSE.partnersBody?.contributing_center || []).slice(index, index + 1);
+    this.rdPartnersSE.partnersBody.contributing_center = (this.rdPartnersSE.partnersBody?.contributing_center || []).filter(
+      (_: any, i: number) => i !== index
+    );
     if (deletedCenter.length === 1 && this.rdPartnersSE.leadCenterCode === deletedCenter[0].code) {
       //always should happen
       this.rdPartnersSE.leadCenterCode = null;
