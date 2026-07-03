@@ -123,7 +123,6 @@ describe('ApplyFrameworkResultAssociationsService', () => {
         contributing_center: centers,
         institutions: undefined,
         mqap_institutions: [],
-        bilateral_project: [],
       },
       user,
     );
@@ -145,7 +144,6 @@ describe('ApplyFrameworkResultAssociationsService', () => {
         contributing_center: [],
         institutions,
         mqap_institutions: [],
-        bilateral_project: [],
       },
       user,
     );
@@ -162,8 +160,49 @@ describe('ApplyFrameworkResultAssociationsService', () => {
         contributing_center: [],
         institutions: undefined,
         mqap_institutions: [],
-        bilateral_project: [],
       },
+      user,
+    );
+  });
+
+  it('should link bilateral projects without wiping them when contributing_center is also provided (P2-3001)', async () => {
+    const centers = [{ code: 'CIM', is_leading_result: true }];
+    const bilateralProjects = [{ project_id: 9001 }, { project_id: 9002 }];
+
+    mockResultsByProjectsService.linkBilateralProjectToResult.mockResolvedValue(
+      {
+        status: 201,
+      },
+    );
+    mockResultsByInstitutionsService.savePartnersInstitutionsByResultV2.mockResolvedValue(
+      { status: 200 },
+    );
+
+    await service.execute(
+      {
+        contributing_center: centers,
+        bilateral_project: bilateralProjects,
+      } as any,
+      user,
+      707,
+    );
+
+    expect(
+      mockResultsByProjectsService.linkBilateralProjectToResult,
+    ).toHaveBeenCalledTimes(2);
+    expect(
+      mockResultsByInstitutionsService.savePartnersInstitutionsByResultV2,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        result_id: 707,
+        contributing_center: centers,
+      }),
+      user,
+    );
+    expect(
+      mockResultsByInstitutionsService.savePartnersInstitutionsByResultV2,
+    ).toHaveBeenCalledWith(
+      expect.not.objectContaining({ bilateral_project: expect.anything() }),
       user,
     );
   });

@@ -115,7 +115,6 @@ export class ApplyFrameworkResultAssociationsService {
         contributing_center: contributingCenter,
         institutions,
         mqap_institutions: [],
-        bilateral_project: [],
       },
       user,
     );
