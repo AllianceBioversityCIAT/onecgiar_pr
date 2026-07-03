@@ -1395,6 +1395,11 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/bilateral-projects?tocResultId=${tocResultId}`);
   }
 
+  // P2-3001: full W3/Bilateral list of a Science Program (official code, e.g. SP01), bypassing the indicator-level filter.
+  GET_W3BilateralProjectsByProgram(programId: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/bilateral-projects/by-program?programId=${programId}`);
+  }
+
   POST_createResult(body: any) {
     return this.http.post<any>(`${environment.apiBaseUrl}api/results-framework-reporting/create`, body);
   }
