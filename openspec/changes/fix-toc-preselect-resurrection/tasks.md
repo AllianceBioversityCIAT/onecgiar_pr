@@ -26,5 +26,5 @@
 
 ## 5. Wrap-up
 
-- [ ] 5.1 Commit on `P2-2928-TOC-Improvements` with the P2-3115 ticket id
-- [ ] 5.2 Document the round-trip result on the Jira ticket and notify Juan David / QA
+- [x] 5.1 Commit on `P2-2928-TOC-Improvements` with the P2-3115 ticket id (done: `5e8f1ba47`, deployed to dev)
+- [x] 5.2 Document the round-trip result on the Jira ticket and notify Juan David / QA (done 2026-07-03: Jira documented, Santi testing with result 8585)
