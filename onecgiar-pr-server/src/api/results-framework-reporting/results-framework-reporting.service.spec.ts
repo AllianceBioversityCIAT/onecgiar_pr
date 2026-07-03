@@ -1375,7 +1375,6 @@ describe('ResultsFrameworkReportingService', () => {
           contributing_center: centers,
           institutions: undefined,
           mqap_institutions: [],
-          bilateral_project: [],
         },
         user,
       );
