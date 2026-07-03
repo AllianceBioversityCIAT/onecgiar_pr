@@ -28,6 +28,8 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   clarisaProjectsList: any[] = [];
   hasTocResultMapped = signal<boolean>(false);
   loadingBilateralProjects = signal<boolean>(false);
+  // P2-3001 (2026): SP official code whose bilateral list is currently loaded — avoids refetch/clears on ToC changes.
+  private loadedBilateralProgramId: string | null = null;
   contributingInitiativeNew = [];
   result_toc_result = null;
   contributors_result_toc_result = null;
@@ -133,9 +135,13 @@ export class RdContributorsAndPartnersService implements OnDestroy {
     // P2-3115 (2026): reset the prefill guards so state doesn't leak across results (root singleton).
     this.sectionHydratedFromToc.set(false);
     this.tocSelectionTouched.set(false);
+    // P2-3001 (2026): reset the by-program cache marker so another result refetches its SP list.
+    this.loadedBilateralProgramId = null;
   }
 
   loadClarisaProjects() {
+    // P2-3001: the all-CLARISA list (IPSR surfaces) overwrites clarisaProjectsList → invalidate the by-program cache marker.
+    this.loadedBilateralProgramId = null;
     this.api.resultsSE.GET_ClarisaProjects().subscribe({
       next: ({ response }) => {
         this.clarisaProjectsList = response;
@@ -150,6 +156,12 @@ export class RdContributorsAndPartnersService implements OnDestroy {
   }
 
   loadFilteredBilateralProjects(clearSelection: boolean = false) {
+    // P2-3001 (2026): options come from the full SP list (by-program), decoupled from ToC node/indicator selection.
+    if (this.fieldsManagerSE.isContributorsPartners2026()) {
+      this.loadBilateralProjectsByProgram();
+      return;
+    }
+
     const tocResults = this.partnersBody?.result_toc_result?.result_toc_results || [];
     const tocResultIds = tocResults.map(r => r.toc_result_id).filter(id => id != null);
 
@@ -185,6 +197,51 @@ export class RdContributorsAndPartnersService implements OnDestroy {
       },
       error: err => {
         console.error('Error loading filtered bilateral projects:', err);
+        this.clarisaProjectsList = [];
+        this.loadingBilateralProjects.set(false);
+      }
+    });
+  }
+
+  // P2-3001 (2026): load the complete W3/Bilateral list of the submitter's Science Program.
+  // Decoupled from ToC selection — changing the HLO/Outcome must NOT clear the selection nor refetch (same SP → same list).
+  private loadBilateralProjectsByProgram() {
+    const primaryInit = this.partnersBody?.contributing_and_primary_initiative?.find(
+      (i: { id?: number }) => i?.id === this.partnersBody?.result_toc_result?.initiative_id
+    );
+    const programId =
+      primaryInit?.official_code ??
+      this.api.dataControlSE.currentResult?.initiative_official_code ??
+      this.api.dataControlSE.currentResultSignal?.()?.initiative_official_code;
+
+    if (!programId) {
+      console.error('P2-3001: could not resolve the Science Program official code for the bilateral projects dropdown');
+      this.clarisaProjectsList = [];
+      this.loadingBilateralProjects.set(false);
+      return;
+    }
+
+    // The dropdown no longer depends on a mapped ToC result (AC1) — never show the "select a TOC result" overlay.
+    this.hasTocResultMapped.set(true);
+
+    // Same program already loaded → keep options and the user's selection untouched.
+    if (this.loadedBilateralProgramId === programId && this.clarisaProjectsList.length > 0) {
+      this.loadingBilateralProjects.set(false);
+      return;
+    }
+
+    this.loadingBilateralProjects.set(true);
+    this.api.resultsSE.GET_W3BilateralProjectsByProgram(programId).subscribe({
+      next: ({ response }) => {
+        (response ?? []).forEach(project => {
+          project.fullName = project.project_name;
+        });
+        this.clarisaProjectsList = response ?? [];
+        this.loadedBilateralProgramId = programId;
+        this.loadingBilateralProjects.set(false);
+      },
+      error: err => {
+        console.error('Error loading bilateral projects by program:', err);
         this.clarisaProjectsList = [];
         this.loadingBilateralProjects.set(false);
       }
