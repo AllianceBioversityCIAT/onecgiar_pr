@@ -1,0 +1,16 @@
+<div class="framework-reporting-center-card-item">
+  <div class="framework-reporting-center-card-item_header">
+    <div>
+      <p class="framework-reporting-center-card-item_header_desc">CGIAR Center</p>
+      <h3 class="framework-reporting-center-card-item_header_title">
+        {{ item?.center_name }} ({{ item?.center_acronym || item?.center_id }})
+      </h3>
+    </div>
+  </div>
+
+  <a
+    class="framework-reporting-center-card-item_report-btn"
+    [routerLink]="['/result-framework-reporting/center', item?.center_id, 'report']">
+    Report
+  </a>
+</div>

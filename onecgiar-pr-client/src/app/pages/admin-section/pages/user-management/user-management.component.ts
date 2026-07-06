@@ -76,6 +76,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   @ViewChild('userSearchSelect') userSearchSelect!: PrSelectComponent;
   @ViewChild('manageUserModal') manageUserModal!: ManageUserModalComponent;
   @ViewChild('userTable') userTable!: Table;
+  @ViewChild('assignmentsPopover') assignmentsPopover!: Popover;
 
   // Signals for data and filters
   users = signal<AddUser[]>([]);
@@ -88,6 +89,9 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
   isActivatingUser = signal<boolean>(false);
   isEditingUser = signal<boolean>(false);
   loadingUserRole = signal<boolean>(false);
+  assignmentOverlayTitle = signal('');
+  assignmentOverlayItems = signal<string[]>([]);
+  assignmentOverlayIsCenter = signal(false);
 
   // Modal variables
   showAddUserModal: boolean = false;
@@ -205,14 +209,15 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
 
   // Column configuration
   columns: UserColumn[] = [
-    { label: 'User name', key: 'firstName', width: '200px' },
-    { label: 'Email', key: 'emailAddress', width: '300px' },
-    { label: 'Platform role', key: 'appRole', width: '200px' },
-    { label: 'Reporting roles', key: 'entities', width: '120px' },
-    { label: 'Is CGIAR', key: 'isCGIAR', width: '120px' },
-    { label: 'User creation date', key: 'userCreationDate', width: '180px' },
-    { label: 'Status', key: 'status', width: '120px' },
-    { label: 'Actions', key: 'actions', width: '100px' }
+    { label: 'User name', key: 'firstName', width: '180px' },
+    { label: 'Email', key: 'emailAddress', width: '240px' },
+    { label: 'Platform role', key: 'appRole', width: '120px' },
+    { label: 'Science Programs', key: 'entities', width: '160px' },
+    { label: 'Centers', key: 'centers', width: '140px' },
+    { label: 'Is CGIAR', key: 'isCGIAR', width: '100px' },
+    { label: 'Created', key: 'userCreationDate', width: '120px' },
+    { label: 'Status', key: 'status', width: '100px' },
+    { label: 'Actions', key: 'actions', width: '90px' }
   ];
 
   // Status filter options
@@ -246,8 +251,13 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
       next: res => {
         this.manageUserModal.addUserForm.update(form => ({
           ...form,
-          role_assignments: res.response.filter((item: any) => item.role_id !== 1 && item.role_id !== 2),
-          role_platform: res.response.find((item: any) => item.role_id === 1) ? 1 : 2
+          role_assignments: res.response.filter(
+            (item: any) => item.entity_id && item.role_id !== 1 && item.role_id !== 2
+          ),
+          center_assignments: res.response
+            .filter((item: any) => item.center_id)
+            .map((item: any) => ({ center_id: item.center_id })),
+          role_platform: res.response.some((item: any) => item.role_id === 1) ? 1 : 2
         }));
         this.loadingUserRole.set(false);
       },
@@ -269,6 +279,7 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
           email: emailAddress,
           role_platform: 2, // Marked as guest by default (2)
           role_assignments: [],
+          center_assignments: [],
           activate: true,
           created_by: `${createdByFirstName} ${createdByLastName} (${createdByEmail})`
         });
@@ -320,32 +331,67 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     return {};
   }
 
-  // Entity display methods
-  getDisplayEntities(entities: string[]): string[] {
-    if (!entities || entities.length === 0) return [];
-    return entities.slice(0, 2); // Always show only first 2
+  // Assignment display helpers
+  readonly inlineAssignmentLimit = 1;
+
+  getDisplayAssignments(items: string[] | undefined): string[] {
+    if (!items?.length) return [];
+    return items.slice(0, this.inlineAssignmentLimit);
   }
 
-  hasMoreEntities(entities: string[]): boolean {
-    return entities && entities.length > 2;
+  hasMoreAssignments(items: string[] | undefined): boolean {
+    return (items?.length ?? 0) > this.inlineAssignmentLimit;
   }
 
-  getRemainingEntities(entities: string[]): string[] {
-    if (!entities || entities.length <= 2) return [];
-    return entities.slice(2); // Return entities from index 2 onwards
+  getAssignmentCountLabel(items: string[] | undefined, singular: string, plural: string): string {
+    const count = items?.length ?? 0;
+    if (count === 0) return '';
+    return count === 1 ? `1 ${singular}` : `${count} ${plural}`;
   }
 
-  showEntityOverlay(event: any, overlay: any, entities: string[]): void {
-    if (this.hasMoreEntities(entities)) {
-      overlay.toggle(event);
-    }
+  openAssignmentOverlay(
+    event: Event,
+    title: string,
+    items: string[] | undefined,
+    isCenter: boolean
+  ): void {
+    if ((items?.length ?? 0) <= this.inlineAssignmentLimit) return;
+
+    this.assignmentOverlayTitle.set(title);
+    this.assignmentOverlayItems.set(items ?? []);
+    this.assignmentOverlayIsCenter.set(isCenter);
+
+    const target = event.currentTarget as HTMLElement;
+    this.assignmentsPopover.toggle(event, target);
+  }
+
+  /** Splits "{entity} - {role}" labels returned by user search API. */
+  parseAssignmentLabel(item: string): { entity: string; role: string } {
+    if (!item) return { entity: '', role: '' };
+    const separatorIndex = item.lastIndexOf(' - ');
+    if (separatorIndex === -1) return { entity: item, role: '' };
+    return {
+      entity: item.slice(0, separatorIndex).trim(),
+      role: item.slice(separatorIndex + 3).trim()
+    };
   }
 
   exportExcel(usersList) {
     const usersListMapped = [];
 
     usersList.map(result => {
-      const { firstName, lastName, emailAddress, appRole, userStatus, userCreationDate, entities, isActive, isCGIAR } = result;
+      const {
+        firstName,
+        lastName,
+        emailAddress,
+        appRole,
+        userStatus,
+        userCreationDate,
+        entities,
+        centers,
+        isActive,
+        isCGIAR
+      } = result;
       usersListMapped.push({
         firstName: firstName ?? 'Not applicable',
         lastName: lastName ?? 'Not applicable',
@@ -355,7 +401,8 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
         userCreationDate: userCreationDate
           ? new Date(userCreationDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
           : 'Not applicable',
-        entities: entities?.join(', ') ?? 'Not applicable',
+        sciencePrograms: entities?.join(', ') ?? 'Not applicable',
+        centers: centers?.join(', ') ?? 'Not applicable',
         isCGIAR: isCGIAR ? 'Yes' : 'No',
         isActive: isActive ? 'Active' : 'Inactive'
       });
@@ -368,7 +415,8 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
       { header: 'Is CGIAR', key: 'isCGIAR', width: 16 },
       { header: 'Application role', key: 'appRole', width: 18 },
       { header: 'User creation date', key: 'userCreationDate', width: 20 },
-      { header: 'Entities', key: 'entities', width: 50 },
+      { header: 'Science Programs', key: 'sciencePrograms', width: 40 },
+      { header: 'Centers', key: 'centers', width: 40 },
       { header: 'Status', key: 'isActive', width: 18 }
     ];
 

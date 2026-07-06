@@ -102,6 +102,22 @@ p {
   }
 }
 
+.framework-reporting_left_content_myCenters {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.framework-reporting_left_content_myCenters_items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(315px, 1fr));
+  gap: 20px;
+}
+
+.framework-reporting_left_content_myCenters_items_empty {
+  grid-column: span 2;
+}
+
 .framework-reporting_left_content_mySPs {
   display: flex;
   flex-direction: column;

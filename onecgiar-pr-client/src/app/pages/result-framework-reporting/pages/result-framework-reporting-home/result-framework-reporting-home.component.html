@@ -10,6 +10,24 @@
     </div>
 
     <div class="framework-reporting_left_content">
+      <div class="framework-reporting_left_content_myCenters">
+        <h2 class="framework-reporting_left_content_title">My CGIAR Centers</h2>
+
+        <div class="framework-reporting_left_content_myCenters_items" [ngClass]="{ empty: myCentersList().length === 0 }">
+          @if (myCentersList().length > 0) {
+            @for (item of myCentersList(); track item.center_id) {
+              <app-result-framework-reporting-center-card-item [item]="item" />
+            }
+          } @else {
+            <div class="framework-reporting_left_content_myCenters_items_empty">
+              <app-alert-status
+                inlineStyles="background-color: var(--pr-color-white); margin: 0;"
+                description="You currently do not have a Center User role in any CGIAR Center. If you require access, please contact your system administrator."></app-alert-status>
+            </div>
+          }
+        </div>
+      </div>
+
       <div class="framework-reporting_left_content_mySPs">
         <h2 class="framework-reporting_left_content_title">My Science Programs/Accelerators</h2>
 

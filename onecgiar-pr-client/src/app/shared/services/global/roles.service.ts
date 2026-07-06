@@ -34,13 +34,13 @@ export class RolesService {
   ];
 
   constructor(
-    private authSE: AuthService,
-    private dataControlSE: DataControlService
+    private readonly authSE: AuthService,
+    private readonly dataControlSE: DataControlService
   ) {}
 
   fieldValidation(restrictionId) {
     const restrictionFinded = this.restrictions.find(restriction => restriction.id == restrictionId);
-    return Boolean(restrictionFinded.roleIds.find(roleId => roleId == this.currentInitiativeRole));
+    return Boolean(restrictionFinded.roleIds.some(roleId => roleId == this.currentInitiativeRole));
   }
   validateApplication(application) {
     this.readOnly = application?.role_id != 1;
@@ -56,10 +56,10 @@ export class RolesService {
     }
     const updateMyRoles = async roles => {
       if (!this.roles) await roles;
-      if (!this.roles) return (this.readOnly = true);
+      if (!this.roles) return (this.readOnly === true);
       const { application, initiative } = this.roles;
       const { isAdmin } = this.validateApplication(application);
-      if (isAdmin) return (this.access.canDdit = true);
+      if (isAdmin) return (this.access.canDdit === true);
       if (!result) return null;
       const { initiative_id } = result;
 
@@ -105,6 +105,20 @@ export class RolesService {
 
   validateInitiative(initiative_id) {
     return !!this.roles?.initiative?.find(item => item.initiative_id == initiative_id);
+  }
+
+  /**
+   * Center User assignments from GET role-by-user/get/user/:id (center[]).
+   * Product note: submit/QA rules for bilateral center-owned results and external-user
+   * center assignment policy are pending product confirmation (P2-3100+).
+   */
+  getMyCenters() {
+    return this.roles?.center ?? [];
+  }
+
+  validateCenterAccess(centerId: string) {
+    if (this.isAdmin) return true;
+    return !!this.roles?.center?.find(item => item.center_id === centerId);
   }
 
   accessToIPSRSubmit(initiative_id) {

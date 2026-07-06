@@ -438,4 +438,32 @@ describe('RolesService', () => {
       expect(service.roles).toEqual(mockRoles);
     }));
   });
+
+  describe('center helpers', () => {
+    it('getMyCenters should return center array from roles', () => {
+      service.roles = {
+        center: [{ center_id: 'CIMMYT', center_name: 'CIMMYT', center_acronym: 'CIMMYT', role_id: 9, role_name: 'Center User' }]
+      };
+
+      expect(service.getMyCenters()).toHaveLength(1);
+      expect(service.getMyCenters()[0].center_id).toBe('CIMMYT');
+    });
+
+    it('validateCenterAccess should return true for assigned center', () => {
+      service.isAdmin = false;
+      service.roles = {
+        center: [{ center_id: 'IRRI' }]
+      };
+
+      expect(service.validateCenterAccess('IRRI')).toBe(true);
+      expect(service.validateCenterAccess('CIMMYT')).toBe(false);
+    });
+
+    it('validateCenterAccess should return true for admin regardless of centers', () => {
+      service.isAdmin = true;
+      service.roles = { center: [] };
+
+      expect(service.validateCenterAccess('CIMMYT')).toBe(true);
+    });
+  });
 });

@@ -37,7 +37,8 @@
         type="button"
         [satPopoverAnchor]="notificationsPopover"
         (click)="notificationsPopover.toggle()"
-        aria-label="Notifications"
+        pTooltip="Notifications"
+        tooltipPosition="bottom"
         aria-haspopup="true"
         [attr.aria-expanded]="notificationsPopover.isOpen()"
         aria-controls="notifications-popover"
@@ -45,12 +46,12 @@
         [ngClass]="{ section_active: isInNotificationsRoute() }"
         style="border-bottom: 4px solid transparent; border-top: 4px solid transparent">
         @if (unreadNotifications.length === 0) {
-          <i class="material-icons-round info_icon" [ngClass]="{ info_icon_active: notificationsPopover.isOpen() }" aria-hidden="true">
+          <i class="material-icons-round info_icon" [ngClass]="{ info_icon_active: notificationsPopover.isOpen() }">
             notifications
           </i>
         } @else {
           <p-overlayBadge [value]="notificationBadgeLength()" severity="danger" [style]="{ 'outline-style': 'none' }">
-            <i class="material-icons-round animate_bell info_icon" [ngClass]="{ info_icon_active: notificationsPopover.isOpen() }" aria-hidden="true">
+            <i class="material-icons-round animate_bell info_icon" [ngClass]="{ info_icon_active: notificationsPopover.isOpen() }">
               notifications
             </i>
           </p-overlayBadge>
@@ -100,6 +101,18 @@
               @if (isInitiativeClosed(item.official_code)) {
                 <span style="color: var(--pr-color-error); font-size: 11px; font-weight: 600"> (Closed)</span>
               }
+            </p>
+          }
+        </div>
+      }
+
+      @if (this.getMyCenters().length > 0) {
+        <div class="overlay_panel_userInfo_content_item">
+          <p class="overlay_panel_userInfo_content_item_title">My Centers</p>
+
+          @for (item of this.getMyCenters(); track item.center_id) {
+            <p class="overlay_panel_userInfo_content_item_desc">
+              {{ item.center_id }} - {{ item.center_name }} ({{ item.role_name }})
             </p>
           }
         </div>
