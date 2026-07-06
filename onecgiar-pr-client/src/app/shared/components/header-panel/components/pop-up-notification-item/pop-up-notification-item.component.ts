@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormatTimeAgoPipe } from '../../../../pipes/format-time-ago/format-time-ago.pipe';
 
 @Component({
@@ -10,6 +10,7 @@ import { FormatTimeAgoPipe } from '../../../../pipes/format-time-ago/format-time
 })
 export class PopUpNotificationItemComponent {
   @Input() notification: any;
+  @Output() itemSelected = new EventEmitter<void>();
 
   generateNotificationTextUpdates(notification) {
     if (notification?.notification_type === 1 || notification?.notification_type === 2 || notification?.notification_type === 5) {

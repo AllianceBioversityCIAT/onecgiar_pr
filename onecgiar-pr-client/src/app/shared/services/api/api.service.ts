@@ -4,7 +4,8 @@ import { CustomizedAlertsFsService } from '../customized-alerts-fs.service';
 import { AuthService } from './auth.service';
 import { CustomizedAlertsFeService } from '../customized-alerts-fe.service';
 import { DataControlService } from '../data-control.service';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { ResultsListFilterService } from '../../../pages/results/pages/results-outlet/pages/results-list/services/results-list-filter.service';
 import { WordCounterService } from '../word-counter.service';
 import { RolesService } from '../global/roles.service';
@@ -59,9 +60,23 @@ export class ApiService {
 
   updateUserData(callback) {
     if (!this.authSE?.localStorageUser?.id) return;
-    forkJoin([this.authSE.GET_allRolesByUser(), this.authSE.GET_initiativesByUser(), this.authSE.GET_initiativesByUserByPortfolio()]).subscribe({
+    forkJoin([
+      this.authSE.GET_allRolesByUser().pipe(catchError(err => {
+        console.error(err);
+        return of(null);
+      })),
+      this.authSE.GET_initiativesByUser().pipe(catchError(err => {
+        console.error(err);
+        return of({ response: [] });
+      })),
+      this.authSE.GET_initiativesByUserByPortfolio().pipe(catchError(err => {
+        console.error(err);
+        return of({ response: { reporting: [], ipsr: [] } });
+      }))
+    ]).subscribe({
       next: resp => {
         const [GET_allRolesByUser, GET_initiativesByUser, GET_initiativesByUserByPortfolio] = resp;
+        this.rolesSE.applyRolesResponse(GET_allRolesByUser?.response);
         this.dataControlSE.myInitiativesList = GET_initiativesByUser?.response;
         this.dataControlSE.myInitiativesListReportingByPortfolio = GET_initiativesByUserByPortfolio?.response?.reporting?.sort(
           (a, b) => a.initiative_id - b.initiative_id

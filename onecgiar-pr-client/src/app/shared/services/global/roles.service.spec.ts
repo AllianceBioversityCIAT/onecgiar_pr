@@ -1,4 +1,4 @@
-import { TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
 import { RolesService } from './roles.service';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { AuthService } from '../api/auth.service';
@@ -86,19 +86,21 @@ describe('RolesService', () => {
   });
 
   describe('validateApplication', () => {
-    it('should set readOnly to false and return isAdmin true when role_id is 1', () => {
+    it('should set readOnly to false, isAdmin to true and return isAdmin true when role_id is 1', () => {
       const application = { role_id: 1 };
       const result = service.validateApplication(application);
 
       expect(service.readOnly).toBe(false);
+      expect(service.isAdmin).toBe(true);
       expect(result.isAdmin).toBe(true);
     });
 
-    it('should set readOnly to true and return isAdmin false when role_id is not 1', () => {
+    it('should set readOnly to true, isAdmin to false and return isAdmin false when role_id is not 1', () => {
       const application = { role_id: 2 };
       const result = service.validateApplication(application);
 
       expect(service.readOnly).toBe(true);
+      expect(service.isAdmin).toBe(false);
       expect(result.isAdmin).toBe(false);
     });
 
@@ -106,6 +108,7 @@ describe('RolesService', () => {
       const result = service.validateApplication(null);
 
       expect(service.readOnly).toBe(true);
+      expect(service.isAdmin).toBe(false);
       expect(result.isAdmin).toBe(false);
     });
 
@@ -113,6 +116,7 @@ describe('RolesService', () => {
       const result = service.validateApplication(undefined);
 
       expect(service.readOnly).toBe(true);
+      expect(service.isAdmin).toBe(false);
       expect(result.isAdmin).toBe(false);
     });
   });
@@ -159,13 +163,45 @@ describe('RolesService', () => {
       expect(service.firstValidationOfReadOnly).toBe(true);
     });
 
-    it('should handle null localStorage value', async () => {
+    it('should not overwrite roles when localStorage is empty', async () => {
       localStorage.removeItem('roles');
+      service.roles = { application: { role_id: 1 }, initiative: [] };
 
       await service.updateRolesListFromLocalStorage();
 
-      expect(service.roles).toBeNull();
+      expect(service.roles).toEqual({ application: { role_id: 1 }, initiative: [] });
+    });
+
+    it('should set firstValidationOfReadOnly even when localStorage is empty and user is not logged in', async () => {
+      localStorage.removeItem('roles');
+      mockAuthService.localStorageUser = null;
+      service.firstValidationOfReadOnly = false;
+
+      await service.validateReadOnly();
+
       expect(service.firstValidationOfReadOnly).toBe(true);
+    });
+  });
+
+  describe('applyRolesResponse', () => {
+    it('should persist roles, set isAdmin and canDdit for admin users', () => {
+      const mockResponse = {
+        application: { role_id: 1 },
+        initiative: []
+      };
+
+      service.applyRolesResponse(mockResponse);
+
+      expect(service.roles).toEqual(mockResponse);
+      expect(service.isAdmin).toBe(true);
+      expect(service.access.canDdit).toBe(true);
+      expect(localStorage.getItem('roles')).toBe(JSON.stringify(mockResponse));
+    });
+
+    it('should ignore null response', () => {
+      service.roles = { application: { role_id: 1 } };
+      service.applyRolesResponse(null);
+      expect(service.roles).toEqual({ application: { role_id: 1 } });
     });
   });
 
@@ -187,17 +223,15 @@ describe('RolesService', () => {
       expect(result).toEqual(mockResponse);
     });
 
-    it('should handle API errors', fakeAsync(() => {
+    it('should handle API errors', async () => {
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
       const error = new Error('API Error');
       mockAuthService.GET_allRolesByUser.mockReturnValue(throwError(() => error));
 
-      service.updateRolesList();
-
-      tick(100);
+      await expect(service.updateRolesList()).rejects.toThrow('API Error');
       expect(consoleErrorSpy).toHaveBeenCalledWith(error);
       consoleErrorSpy.mockRestore();
-    }));
+    });
   });
 
   describe('validateInitiative', () => {
@@ -311,21 +345,19 @@ describe('RolesService', () => {
       expect(service.readOnly).toBe(true);
     });
 
-    it('should set readOnly to true when roles is null after update', async () => {
+    it('should set readOnly and isAdmin to false when roles is null after update', async () => {
       service.platformIsClosed = false;
       service.roles = null;
-      jest.spyOn(service, 'updateRolesListFromLocalStorage').mockImplementation(() => {
-        service.roles = null;
-        return Promise.resolve();
-      });
+      jest.spyOn(service, 'updateRolesListFromLocalStorage').mockResolvedValue();
+      jest.spyOn(service, 'updateRolesList').mockResolvedValue(null as any);
 
       await service.validateReadOnly();
 
-      // The function sets readOnly to true when roles is null
       expect(service.readOnly).toBe(true);
+      expect(service.isAdmin).toBe(false);
     });
 
-    it('should set canDdit to true when user is admin', fakeAsync(() => {
+    it('should set canDdit to true when user is admin', async () => {
       service.platformIsClosed = false;
       const mockRoles = {
         application: { role_id: 1 },
@@ -335,13 +367,15 @@ describe('RolesService', () => {
       jest.spyOn(service, 'updateRolesListFromLocalStorage').mockImplementation(async () => {
         service.roles = mockRoles;
       });
+      jest.spyOn(service, 'updateRolesList').mockResolvedValue(mockRoles as any);
 
-      service.validateReadOnly();
-      tick(100);
+      await service.validateReadOnly();
+
       expect(service.access.canDdit).toBe(true);
-    }));
+      expect(service.isAdmin).toBe(true);
+    });
 
-    it('should return undefined when result is not provided and user is not admin', async () => {
+    it('should return null when result is not provided and user is not admin', async () => {
       service.platformIsClosed = false;
       const mockRoles = {
         application: { role_id: 2 },
@@ -351,13 +385,14 @@ describe('RolesService', () => {
       jest.spyOn(service, 'updateRolesListFromLocalStorage').mockImplementation(async () => {
         service.roles = mockRoles;
       });
+      jest.spyOn(service, 'updateRolesList').mockResolvedValue(mockRoles as any);
 
       const result = await service.validateReadOnly();
 
-      expect(result).toBeUndefined();
+      expect(result).toBeNull();
     });
 
-    it('should set canDdit to true and readOnly to false when initiative is found', fakeAsync(() => {
+    it('should set canDdit to true and readOnly to false when initiative is found', async () => {
       service.platformIsClosed = false;
       const mockRoles = {
         application: { role_id: 2 },
@@ -367,16 +402,17 @@ describe('RolesService', () => {
       jest.spyOn(service, 'updateRolesListFromLocalStorage').mockImplementation(async () => {
         service.roles = mockRoles;
       });
+      jest.spyOn(service, 'updateRolesList').mockResolvedValue(mockRoles as any);
 
       const result = { initiative_id: 1 };
 
-      service.validateReadOnly(result);
-      tick(100);
+      await service.validateReadOnly(result);
+
       expect(service.access.canDdit).toBe(true);
       expect(service.readOnly).toBe(false);
-    }));
+    });
 
-    it('should set canDdit to false and readOnly to true when initiative is not found', fakeAsync(() => {
+    it('should set canDdit to false and readOnly to true when initiative is not found', async () => {
       service.platformIsClosed = false;
       const mockRoles = {
         application: { role_id: 2 },
@@ -386,16 +422,17 @@ describe('RolesService', () => {
       jest.spyOn(service, 'updateRolesListFromLocalStorage').mockImplementation(async () => {
         service.roles = mockRoles;
       });
+      jest.spyOn(service, 'updateRolesList').mockResolvedValue(mockRoles as any);
 
       const result = { initiative_id: 2 };
 
-      service.validateReadOnly(result);
-      tick(100);
+      await service.validateReadOnly(result);
+
       expect(service.access.canDdit).toBe(false);
       expect(service.readOnly).toBe(true);
-    }));
+    });
 
-    it('should call updateRolesList when localStorageUser exists', fakeAsync(() => {
+    it('should call updateRolesList when localStorageUser exists', async () => {
       service.platformIsClosed = false;
       mockAuthService.localStorageUser = { id: 1 };
       const mockRoles = {
@@ -409,34 +446,10 @@ describe('RolesService', () => {
 
       const updateListSpy = jest.spyOn(service, 'updateRolesList').mockResolvedValue(mockRoles as any);
 
-      service.validateReadOnly();
-      tick(100);
+      await service.validateReadOnly();
+
       expect(updateListSpy).toHaveBeenCalled();
-    }));
-
-    it('should handle roles being set after waiting for promise', fakeAsync(() => {
-      service.platformIsClosed = false;
-      service.roles = null;
-
-      const mockRoles = {
-        application: { role_id: 2 },
-        initiative: [{ initiative_id: 1, role_id: 5 }]
-      };
-
-      jest.spyOn(service, 'updateRolesListFromLocalStorage').mockImplementation(() => {
-        return new Promise(resolve => {
-          setTimeout(() => {
-            service.roles = mockRoles;
-            resolve();
-          }, 50);
-        });
-      });
-
-      service.validateReadOnly();
-      tick(50);
-      tick(100);
-      expect(service.roles).toEqual(mockRoles);
-    }));
+    });
   });
 
   describe('center helpers', () => {

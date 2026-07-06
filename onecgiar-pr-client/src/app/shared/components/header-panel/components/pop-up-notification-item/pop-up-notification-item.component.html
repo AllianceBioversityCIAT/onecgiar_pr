@@ -1,6 +1,6 @@
 @let resultUrl = generateUrlLink(notification);
 
-<a class="notification" [href]="resultUrl">
+<a class="notification" [href]="resultUrl" (click)="itemSelected.emit()">
   @if (!!notification?.notification_id) {
     @let officialCode = notification?.obj_result?.obj_result_by_initiatives[0]?.obj_initiative?.official_code;
     @let emitterName = notification?.obj_emitter_user?.first_name + ' ' + notification?.obj_emitter_user?.last_name;
