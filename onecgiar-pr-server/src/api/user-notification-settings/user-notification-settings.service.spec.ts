@@ -417,6 +417,8 @@ describe('UserNotificationSettingsService', () => {
           obj_initiative: {} as any,
           action_area_id: 1,
           obj_action_area: {} as any,
+          center_id: null as any,
+          obj_center: null as any,
           user: {} as any,
           created_by: 1,
           created_date: new Date(),

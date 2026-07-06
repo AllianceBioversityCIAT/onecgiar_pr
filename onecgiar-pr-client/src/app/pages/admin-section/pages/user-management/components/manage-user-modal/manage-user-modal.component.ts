@@ -494,6 +494,8 @@ export class ManageUserModalComponent {
   }
 
   private handleCreateUserError(error: any): void {
+    this.isLoading.set(false);
+
     if (error.status === 409) {
       this.api.alertsFe.show(
         {
@@ -516,8 +518,6 @@ export class ManageUserModalComponent {
         status: 'warning'
       });
     }
-
-    this.isLoading.set(false);
   }
 
   onCancelAddUser(): void {
