@@ -59,11 +59,14 @@ export class RolesService {
       if (!this.roles) return (this.readOnly === true);
       const { application, initiative } = this.roles;
       const { isAdmin } = this.validateApplication(application);
-      if (isAdmin) return (this.access.canDdit === true);
+      if (isAdmin) {
+        this.access.canDdit = true;
+        return null;
+      }
       if (!result) return null;
       const { initiative_id } = result;
 
-      const initiativeFinded = initiative.find(init => init.initiative_id == initiative_id);
+      const initiativeFinded = initiative.some(init => init.initiative_id == initiative_id);
       this.access.canDdit = Boolean(initiativeFinded);
       this.readOnly = Boolean(!initiativeFinded);
       return null;

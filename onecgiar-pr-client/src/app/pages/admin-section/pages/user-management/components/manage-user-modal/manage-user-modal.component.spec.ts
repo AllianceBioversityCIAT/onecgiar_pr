@@ -105,6 +105,7 @@ describe('ManageUserModalComponent', () => {
       email: 'john@example.com',
       role_platform: 1,
       role_assignments: [{ role_id: 1, entity_id: 1 }],
+      center_assignments: [],
       activate: false
     });
 
@@ -551,6 +552,13 @@ describe('ManageUserModalComponent', () => {
   });
 
   describe('onCreateUser', () => {
+    beforeEach(() => {
+      mockResultsApiService.POST_createUser = jest.fn(() =>
+        of({ message: 'User created', response: { first_name: 'John', last_name: 'Doe' } })
+      );
+      mockApiService.alertsFe.show.mockReset();
+    });
+
     it('should create user successfully and reset form', () => {
       component.addUserForm.set({
         ...component.addUserForm(),
@@ -733,30 +741,36 @@ describe('ManageUserModalComponent', () => {
 
     it('should return false when a role assignment is missing an entity', () => {
       component.addUserForm.set({
+        activate: true,
         is_cgiar: true,
         email: 'test@cgiar.org',
         role_platform: 2,
-        role_assignments: [{ role_id: 3, entity_id: null as any }]
+        role_assignments: [{ role_id: 3, entity_id: null as any }],
+        center_assignments: []
       });
       expect(component.isFormValid()).toBe(false);
     });
 
     it('should return false when a role assignment is missing a role', () => {
       component.addUserForm.set({
+        activate: true,
         is_cgiar: true,
         email: 'test@cgiar.org',
         role_platform: 2,
-        role_assignments: [{ role_id: null as any, entity_id: 1 }]
+        role_assignments: [{ role_id: null as any, entity_id: 1 }],
+        center_assignments: []
       });
       expect(component.isFormValid()).toBe(false);
     });
 
     it('should return true when role assignments are complete', () => {
       component.addUserForm.set({
+        activate: true,
         is_cgiar: true,
         email: 'test@cgiar.org',
         role_platform: 2,
-        role_assignments: [{ role_id: 3, entity_id: 1 }]
+        role_assignments: [{ role_id: 3, entity_id: 1 }],
+        center_assignments: []
       });
       expect(component.isFormValid()).toBe(true);
     });
