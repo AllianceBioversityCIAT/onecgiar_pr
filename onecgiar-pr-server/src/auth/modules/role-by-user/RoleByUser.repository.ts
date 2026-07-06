@@ -15,7 +15,7 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
   }
 
   async isUserAdmin(userId: number): Promise<boolean> {
-    const queryData = `
+    const queryWithCenter = `
     SELECT
       if(rbu.role = 1, 1, 0) as is_admin
     from
@@ -27,19 +27,38 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
       and rbu.center_id is null
       and rbu.active > 0;
     `;
+    const queryLegacy = `
+    SELECT
+      if(rbu.role = 1, 1, 0) as is_admin
+    from
+      role_by_user rbu
+    WHERE
+      rbu.user = ?
+      and rbu.initiative_id is null
+      and rbu.action_area_id is null
+      and rbu.active > 0;
+    `;
     try {
-      const isAdmin = await this.query(queryData, [userId]);
+      const isAdmin = await this.query(queryWithCenter, [userId]);
       if (isAdmin?.length > 0) {
         return !!Number.parseInt(isAdmin[0].is_admin);
       }
 
       return null;
-    } catch (error) {
-      throw this._handlersError.returnErrorRepository({
-        className: RoleByUserRepository.name,
-        error: error,
-        debug: true,
-      });
+    } catch (_error) {
+      try {
+        const isAdmin = await this.query(queryLegacy, [userId]);
+        if (isAdmin?.length > 0) {
+          return !!Number.parseInt(isAdmin[0].is_admin);
+        }
+        return null;
+      } catch (legacyError) {
+        throw this._handlersError.returnErrorRepository({
+          className: RoleByUserRepository.name,
+          error: legacyError,
+          debug: true,
+        });
+      }
     }
   }
 
@@ -84,7 +103,7 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
   }
 
   async getAllRolesByUser(userId: number) {
-    const queryData = `
+    const queryWithCenter = `
     select  
     	r.id as role_id,
     	rl.id as role_level_id,
@@ -104,15 +123,33 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
     where rbu.\`user\` = ?
       and rbu.active > 0;
     `;
+    const queryLegacy = `
+    select  
+    	r.id as role_id,
+    	rl.id as role_level_id,
+    	rl.name as role_level_name,
+    	r.description,
+    	rbu.initiative_id,
+    	rbu.action_area_id
+    from role_by_user rbu 
+    	inner join \`role\` r on r.id = rbu.\`role\` 
+    						and r.active > 0
+    	inner join role_levels rl on rl.id = r.role_level_id 
+    where rbu.\`user\` = ?
+      and rbu.active > 0;
+    `;
     try {
-      const deleteData = await this.query(queryData, [userId]);
-      return deleteData;
-    } catch (error) {
-      throw this._handlersError.returnErrorRepository({
-        className: RoleByUserRepository.name,
-        error: error,
-        debug: true,
-      });
+      return await this.query(queryWithCenter, [userId]);
+    } catch (_error) {
+      try {
+        return await this.query(queryLegacy, [userId]);
+      } catch (legacyError) {
+        throw this._handlersError.returnErrorRepository({
+          className: RoleByUserRepository.name,
+          error: legacyError,
+          debug: true,
+        });
+      }
     }
   }
 

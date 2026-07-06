@@ -60,11 +60,17 @@
 
       <button
         type="button"
+        class="profile_menu_button"
         style="border-bottom: 4px solid transparent; border-top: 4px solid transparent"
         aria-label="User menu"
         [satPopoverAnchor]="userInfoPopover"
         (click)="userInfoPopover.toggle()">
-        <p-avatar [label]="getUserInitials()" shape="circle" [style]="{ width: '32px', height: '32px', cursor: 'pointer' }" />
+        <div class="profile_avatar_wrapper">
+          <p-avatar [label]="getUserInitials()" shape="circle" [style]="{ width: '32px', height: '32px', cursor: 'pointer' }" />
+          @if (this.api.rolesSE.isAdmin) {
+            <span class="admin_tag">Admin</span>
+          }
+        </div>
       </button>
     </div>
   </div>
@@ -169,7 +175,9 @@
     } @else {
       <div class="notifications_list">
         @for (notification of unreadNotifications; track $index) {
-          <app-pop-up-notification-item [notification]="notification" (click)="notificationsPopover.toggle()"></app-pop-up-notification-item>
+          <app-pop-up-notification-item
+            [notification]="notification"
+            (itemSelected)="notificationsPopover.toggle()"></app-pop-up-notification-item>
         }
       </div>
     }

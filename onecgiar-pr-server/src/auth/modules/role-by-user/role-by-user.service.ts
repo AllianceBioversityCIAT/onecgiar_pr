@@ -102,13 +102,11 @@ export class RoleByUserService {
         );
       }
 
+      const applicationRole = this.resolveApplicationRole(userRoles);
+
       let resultRoles: ResultRolesDto = {
         user_id: userId,
-        application: userRoles.filter(
-          (ap) => ap.role_level_name == 'Application',
-        ).length
-          ? userRoles.find((ap) => ap.role_level_name == 'Application')[0]
-          : null,
+        application: applicationRole,
         initiative: userRoles.filter(
           (ap) => ap.role_level_name == 'Initiative',
         ),
@@ -137,6 +135,23 @@ export class RoleByUserService {
     }
   }
 
+  private resolveApplicationRole(userRoles: any[]) {
+    const byLevel = userRoles.find(
+      (row) => `${row.role_level_name}`.trim() === 'Application',
+    );
+    if (byLevel) return byLevel;
+
+    return (
+      userRoles.find(
+        (row) =>
+          row.role_id == 1 &&
+          (row.initiative_id == null || row.initiative_id === undefined) &&
+          (row.action_area_id == null || row.action_area_id === undefined) &&
+          (row.center_id == null || row.center_id === undefined),
+      ) ?? null
+    );
+  }
+
   private throwServiceError(
     message: string,
     status: HttpStatus,
@@ -152,14 +167,14 @@ export class RoleByUserService {
       delete role.application.center_id;
     }
 
-    role.initiative.map((el) => {
+    role.initiative?.map((el) => {
       delete el.action_area_id;
       delete el.center_id;
       delete el.center_name;
       delete el.center_acronym;
     });
 
-    role.action_area.map((el) => {
+    role.action_area?.map((el) => {
       delete el.initiative_id;
       delete el.center_id;
       delete el.center_name;

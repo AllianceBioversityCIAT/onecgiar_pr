@@ -53,6 +53,27 @@ describe('RoleByUserService', () => {
   });
 
   describe('allRolesByUser', () => {
+    it('should include application admin role in response', async () => {
+      (roleByUserRepository.getAllRolesByUser as jest.Mock).mockResolvedValue([
+        {
+          role_id: 1,
+          role_level_id: 1,
+          role_level_name: 'Application',
+          description: 'Admin',
+          initiative_id: null,
+          action_area_id: null,
+          center_id: null,
+        },
+      ]);
+
+      const result = await service.allRolesByUser(323);
+
+      expect(result.status).toBe(HttpStatus.OK);
+      expect((result as any).response.application).toEqual(
+        expect.objectContaining({ role_id: 1, description: 'Admin' }),
+      );
+    });
+
     it('should include center roles in response', async () => {
       (roleByUserRepository.getAllRolesByUser as jest.Mock).mockResolvedValue([
         {

@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { AuthService } from '../api/auth.service';
 import { DataControlService } from '../data-control.service';
 
@@ -10,7 +10,7 @@ export class RolesService {
   readOnly = true;
   currentInitiativeRole = null;
   roles: any;
-  isAdmin = false;
+  private readonly isAdminState = signal(false);
   firstValidationOfReadOnly = false;
   access = {
     canDdit: false
@@ -38,25 +38,65 @@ export class RolesService {
     private readonly dataControlSE: DataControlService
   ) {}
 
+  get isAdmin(): boolean {
+    return this.isAdminState();
+  }
+
+  set isAdmin(value: boolean) {
+    this.isAdminState.set(value);
+  }
+
   fieldValidation(restrictionId) {
     const restrictionFinded = this.restrictions.find(restriction => restriction.id == restrictionId);
     return Boolean(restrictionFinded.roleIds.some(roleId => roleId == this.currentInitiativeRole));
   }
+
   validateApplication(application) {
     this.readOnly = application?.role_id != 1;
+    this.isAdminState.set(application?.role_id == 1);
     return { isAdmin: !this.readOnly };
   }
 
-  async validateReadOnly(result?) {
-    if (this.platformIsClosed) {
-      this.readOnly = true;
-      this.updateRolesListFromLocalStorage();
-      this.updateRolesList();
-      return null;
+  applyRolesResponse(response: any) {
+    if (!response) return;
+    this.roles = response;
+    localStorage.setItem('roles', JSON.stringify(response));
+    const { isAdmin } = this.validateApplication(response.application);
+    if (isAdmin) {
+      this.access.canDdit = true;
     }
-    const updateMyRoles = async roles => {
-      if (!this.roles) await roles;
-      if (!this.roles) return (this.readOnly === true);
+  }
+
+  async validateReadOnly(result?) {
+    try {
+      if (this.platformIsClosed) {
+        this.readOnly = true;
+        await this.updateRolesListFromLocalStorage();
+        if (this.authSE.localStorageUser) {
+          try {
+            await this.updateRolesList();
+          } catch {
+            // Keep cached roles from localStorage when refresh fails.
+          }
+        }
+        return null;
+      }
+
+      await this.updateRolesListFromLocalStorage();
+      if (this.authSE.localStorageUser) {
+        try {
+          await this.updateRolesList();
+        } catch {
+          // Keep cached roles from localStorage when refresh fails.
+        }
+      }
+
+      if (!this.roles) {
+        this.readOnly = true;
+        this.isAdminState.set(false);
+        return null;
+      }
+
       const { application, initiative } = this.roles;
       const { isAdmin } = this.validateApplication(application);
       if (isAdmin) {
@@ -66,41 +106,44 @@ export class RolesService {
       if (!result) return null;
       const { initiative_id } = result;
 
-      const initiativeFinded = initiative.some(init => init.initiative_id == initiative_id);
+      const initiativeFinded = (initiative ?? []).some(init => init.initiative_id == initiative_id);
       this.access.canDdit = Boolean(initiativeFinded);
       this.readOnly = Boolean(!initiativeFinded);
       return null;
-    };
-    updateMyRoles(this.updateRolesListFromLocalStorage());
-
-    if (this.authSE.localStorageUser) {
-      updateMyRoles(this.updateRolesList());
+    } finally {
+      // Unblocks router-outlet on login and other unauthenticated routes.
+      this.firstValidationOfReadOnly = true;
     }
   }
 
   getIsAdminValue() {
-    this.isAdmin = this.roles?.application?.role_id == 1;
+    this.isAdminState.set(this.roles?.application?.role_id == 1);
   }
 
   async updateRolesListFromLocalStorage() {
-    this.roles = JSON.parse(localStorage.getItem('roles'));
-    this.getIsAdminValue();
-    this.firstValidationOfReadOnly = true;
+    const stored = localStorage.getItem('roles');
+    if (!stored) return;
+
+    try {
+      this.roles = JSON.parse(stored);
+      this.getIsAdminValue();
+      this.firstValidationOfReadOnly = true;
+    } catch {
+      // Ignore corrupt cached roles; API refresh will repopulate.
+    }
   }
 
   async updateRolesList() {
     return new Promise((resolve, reject) => {
       this.authSE.GET_allRolesByUser().subscribe({
         next: ({ response }) => {
-          this.roles = response;
-          localStorage.setItem('roles', JSON.stringify(response));
-          this.getIsAdminValue();
-
+          this.applyRolesResponse(response);
           this.firstValidationOfReadOnly = true;
           resolve(response);
         },
         error: err => {
           console.error(err);
+          reject(err);
         }
       });
     });
