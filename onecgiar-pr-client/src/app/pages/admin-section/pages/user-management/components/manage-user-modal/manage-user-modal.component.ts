@@ -1,6 +1,7 @@
 import { Component, ViewChild, inject, signal, computed, Input, Output, EventEmitter, WritableSignal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { finalize } from 'rxjs/operators';
 import { DialogModule } from 'primeng/dialog';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
@@ -8,6 +9,7 @@ import { ResultsApiService } from '../../../../../../shared/services/api/results
 import { SearchUserSelectComponent } from '../../../../../../shared/components/search-user-select/search-user-select.component';
 import { SearchUser } from '../../../../../../shared/interfaces/search-user.interface';
 import { InitiativesService } from '../../../../../../shared/services/global/initiatives.service';
+import { CentersService } from '../../../../../../shared/services/global/centers.service';
 import { GetRolesService } from '../../../../../../shared/services/global/get-roles.service';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { UserRolesInfoModalComponent } from '../../../../../../shared/components/user-roles-info-modal/user-roles-info-modal.component';
@@ -25,8 +27,13 @@ interface AddUserForm {
     role_id: number;
     entity_id: number;
   }[];
+  center_assignments: {
+    center_id: string | null;
+  }[];
   created_by?: string;
 }
+
+type AssignmentTab = 'science-program' | 'center';
 
 @Component({
   selector: 'app-manage-user-modal',
@@ -48,6 +55,7 @@ export class ManageUserModalComponent {
   resultsApiService = inject(ResultsApiService);
   api = inject(ApiService);
   initiativesService = inject(InitiativesService);
+  centersService = inject(CentersService);
   getRolesService = inject(GetRolesService);
 
   @Input() visible: boolean = false;
@@ -66,15 +74,29 @@ export class ManageUserModalComponent {
     is_cgiar: true,
     role_platform: 2, // Marked as guest by default (2)
     role_assignments: [],
+    center_assignments: [],
     activate: true
   });
+  activeAssignmentTab = signal<AssignmentTab>('science-program');
   isLoading = signal<boolean>(false);
 
   entities = computed(() => this.initiativesService.allInitiatives());
   loadingRoleAssignment = signal<boolean>(true);
   disabledRoleAssignmentOptions = signal([]);
 
-  // Computed signal for all selected entity IDs
+  selectedCenterIds = computed(() => {
+    const centerAssignments = this.addUserForm().center_assignments;
+    const centerIds = new Set<string>();
+    centerAssignments.forEach(item => {
+      if (item.center_id) {
+        centerIds.add(item.center_id);
+      }
+    });
+    return centerIds;
+  });
+
+  centers = computed(() => this.centersService.centersList ?? []);
+
   selectedEntityIds = computed(() => {
     const roleAssignments = this.addUserForm().role_assignments;
     const entityIds = new Set<number>();
@@ -88,18 +110,18 @@ export class ManageUserModalComponent {
 
   // Admin permissions options for radio button - computed based on CGIAR status
   adminPermissionsOptions = computed(() => {
-    if (!this.addUserForm().is_cgiar) {
-      // CGIAR users only have guest permissions
-      return [
-        { label: 'This user has guest permissions in the platform.', value: 2 } // Guest = 2
-      ];
-    } else {
+    if (this.addUserForm().is_cgiar) {
       // Non-CGIAR users can choose between admin and guest
       return [
         { label: 'This user has admin permissions in the system.', value: 1 }, // Admin = 1
         { label: 'This user has guest permissions in the platform.', value: 2 } // Guest = 2
       ];
     }
+
+    // CGIAR users only have guest permissions
+    return [
+      { label: 'This user has guest permissions in the platform.', value: 2 } // Guest = 2
+    ];
   });
 
   // Method to clear user search field by hiding and showing the component
@@ -118,9 +140,28 @@ export class ManageUserModalComponent {
       is_cgiar: true,
       role_platform: 2, // Marked as guest by default (2)
       role_assignments: [],
+      center_assignments: [],
       activate: true
     });
+    this.activeAssignmentTab.set('science-program');
     this.clearUserSearch();
+  }
+
+  getAvailableCenters(currentIndex: number) {
+    const selectedCenters = new Set(this.selectedCenterIds());
+    const currentCenterId = this.addUserForm().center_assignments[currentIndex]?.center_id;
+    if (currentCenterId) {
+      selectedCenters.delete(currentCenterId);
+    }
+    return this.centers().filter(center => !selectedCenters.has(center.code));
+  }
+
+  getCenterLabel(center: { acronym?: string; name?: string; code?: string }) {
+    return `${center.acronym || center.code} - ${center.name || center.code}`;
+  }
+
+  setAssignmentTab(tab: AssignmentTab): void {
+    this.activeAssignmentTab.set(tab);
   }
 
   getAvailableEntities(currentIndex: number) {
@@ -180,15 +221,7 @@ export class ManageUserModalComponent {
   }
 
   addRoleAssignment(): void {
-    if (!this.addUserForm().is_cgiar) {
-      const memberRole = this.getRolesService.roles().find(role => role.role_description === 'Member');
-      if (memberRole) {
-        this.addUserForm.update(form => ({
-          ...form,
-          role_assignments: [...form.role_assignments, { entity_id: null, role_id: memberRole.role_id }]
-        }));
-      }
-    } else {
+    if (this.addUserForm().is_cgiar) {
       const newAssignment = {
         entity_id: null,
         role_id: null
@@ -197,6 +230,14 @@ export class ManageUserModalComponent {
         ...form,
         role_assignments: [...form.role_assignments, newAssignment]
       }));
+    } else {
+      const memberRole = this.getRolesService.roles().find(role => role.role_description === 'Member');
+      if (memberRole) {
+        this.addUserForm.update(form => ({
+          ...form,
+          role_assignments: [...form.role_assignments, { entity_id: null, role_id: memberRole.role_id }]
+        }));
+      }
     }
   }
 
@@ -212,6 +253,29 @@ export class ManageUserModalComponent {
     }, 0);
   }
 
+  onCenterAssignmentChange(centerId: string, index: number): void {
+    this.addUserForm.update(form => ({
+      ...form,
+      center_assignments: form.center_assignments.map((item, i) =>
+        i === index ? { center_id: centerId } : item
+      )
+    }));
+  }
+
+  addCenterAssignment(): void {
+    this.addUserForm.update(form => ({
+      ...form,
+      center_assignments: [...form.center_assignments, { center_id: null }]
+    }));
+  }
+
+  removeCenterAssignment(index: number) {
+    this.addUserForm.update(form => ({
+      ...form,
+      center_assignments: form.center_assignments.filter((_, i) => i !== index)
+    }));
+  }
+
   onModalCgiarChange(isCgiar: boolean): void {
     this.addUserForm.update(form => ({
       ...form,
@@ -223,7 +287,8 @@ export class ManageUserModalComponent {
       email: '',
       // Set permissions based on CGIAR status
       role_platform: 2, // Always marked as guest (2)
-      role_assignments: []
+      role_assignments: [],
+      center_assignments: []
     }));
   }
 
@@ -278,24 +343,42 @@ export class ManageUserModalComponent {
   };
 
   onUpdateUserRoles(): void {
+    if (this.isLoading()) return;
+
     this.isLoading.set(true);
 
-    const { email, role_assignments, role_platform, first_name, last_name } = this.addUserForm();
+    const { email, role_assignments, center_assignments, role_platform, first_name, last_name } = this.addUserForm();
 
-    // Filter out role assignments that are missing entity_id or role_id
-    const validRoleAssignments = role_assignments.filter(assignment => assignment.entity_id != null && assignment.role_id != null);
+    const validRoleAssignments = role_assignments.filter(
+      assignment => assignment.entity_id != null && assignment.role_id != null
+    );
+    const validCenterAssignments = center_assignments.filter(
+      assignment => assignment.center_id != null && assignment.center_id !== ''
+    );
 
-    this.resultsApiService.PATCH_updateUserRoles({ email, role_assignments: validRoleAssignments, role_platform, first_name, last_name }).subscribe({
-      next: res => {
-        this.handleSuccessResponse('updateUserRolesSuccess', res.message, `${email} - ${first_name} ${last_name}`);
-      },
-      error: error => {
-        this.handleError(error, 'updateUserRolesError', () => this.onUpdateUserRoles());
-      }
-    });
+    this.resultsApiService
+      .PATCH_updateUserRoles({
+        email,
+        role_assignments: validRoleAssignments,
+        center_assignments: validCenterAssignments,
+        role_platform,
+        first_name,
+        last_name
+      })
+      .pipe(finalize(() => this.isLoading.set(false)))
+      .subscribe({
+        next: res => {
+          this.handleSuccessResponse('updateUserRolesSuccess', res.message, `${email} - ${first_name} ${last_name}`);
+        },
+        error: error => {
+          this.handleError(error, 'updateUserRolesError', () => this.onUpdateUserRoles());
+        }
+      });
   }
 
   onSaveUserActivator(): void {
+    if (this.isLoading()) return;
+
     this.isLoading.set(true);
 
     this.addUserForm.update(form => ({
@@ -303,18 +386,23 @@ export class ManageUserModalComponent {
       activate: true
     }));
 
-    this.resultsApiService.PATCH_changeUserStatus(this.addUserForm()).subscribe({
-      next: res => {
-        const form = this.addUserForm();
-        this.handleSuccessResponse('activateUserSuccess', res.message, `${form.email} - ${form.first_name} ${form.last_name}`);
-      },
-      error: error => {
-        this.handleError(error, 'activateUserError', () => this.onSaveUserActivator());
-      }
-    });
+    this.resultsApiService
+      .PATCH_changeUserStatus(this.addUserForm())
+      .pipe(finalize(() => this.isLoading.set(false)))
+      .subscribe({
+        next: res => {
+          const form = this.addUserForm();
+          this.handleSuccessResponse('activateUserSuccess', res.message, `${form.email} - ${form.first_name} ${form.last_name}`);
+        },
+        error: error => {
+          this.handleError(error, 'activateUserError', () => this.onSaveUserActivator());
+        }
+      });
   }
 
   onCreateUser(): void {
+    if (this.isLoading()) return;
+
     this.isLoading.set(true);
 
     // Remove displayName from form data before sending to backend
@@ -322,17 +410,20 @@ export class ManageUserModalComponent {
     delete formData.displayName;
     delete formData.activate;
 
-    this.resultsApiService.POST_createUser(formData).subscribe({
-      next: res => {
-        const successMessage = res?.message || 'The user has been successfully created';
-        const userName = res?.response ? `${res.response.first_name} ${res.response.last_name}` : 'User';
+    this.resultsApiService
+      .POST_createUser(formData)
+      .pipe(finalize(() => this.isLoading.set(false)))
+      .subscribe({
+        next: res => {
+          const successMessage = res?.message || 'The user has been successfully created';
+          const userName = res?.response ? `${res.response.first_name} ${res.response.last_name}` : 'User';
 
-        this.handleCreateUserSuccess('User created successfully', `${userName} - ${successMessage}`);
-      },
-      error: error => {
-        this.handleCreateUserError(error);
-      }
-    });
+          this.handleCreateUserSuccess('User created successfully', `${userName} - ${successMessage}`);
+        },
+        error: error => {
+          this.handleCreateUserError(error);
+        }
+      });
   }
 
   // Helper methods to reduce code duplication
@@ -461,9 +552,21 @@ export class ManageUserModalComponent {
     }
 
     if (form.role_assignments.length > 0) {
-      const hasIncompleteAssignment = form.role_assignments.some(assignment => assignment.entity_id === null || assignment.role_id === null);
+      const hasIncompleteAssignment = form.role_assignments.some(
+        assignment => assignment.entity_id === null || assignment.role_id === null
+      );
 
       if (hasIncompleteAssignment) {
+        return false;
+      }
+    }
+
+    if ((form.center_assignments?.length ?? 0) > 0) {
+      const hasIncompleteCenterAssignment = form.center_assignments.some(
+        assignment => !assignment.center_id
+      );
+
+      if (hasIncompleteCenterAssignment) {
         return false;
       }
     }

@@ -7,6 +7,7 @@ import { DialogModule } from 'primeng/dialog';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { SearchUserSelectComponent } from '../../../../../../shared/components/search-user-select/search-user-select.component';
 import { InitiativesService } from '../../../../../../shared/services/global/initiatives.service';
+import { CentersService } from '../../../../../../shared/services/global/centers.service';
 import { GetRolesService } from '../../../../../../shared/services/global/get-roles.service';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ResultsApiService } from '../../../../../../shared/services/api/results-api.service';
@@ -39,6 +40,10 @@ const mockInitiativesService = {
   ])
 };
 
+const mockCentersService = {
+  centersList: [{ code: 'CIMMYT', name: 'CIMMYT', acronym: 'CIMMYT' }]
+};
+
 const mockGetRolesService = {
   roles: signal([
     { role_id: 1, role_description: 'Admin' },
@@ -65,6 +70,7 @@ describe('ManageUserModalComponent', () => {
         { provide: ApiService, useValue: mockApiService },
         { provide: ResultsApiService, useValue: mockResultsApiService },
         { provide: InitiativesService, useValue: mockInitiativesService },
+        { provide: CentersService, useValue: mockCentersService },
         { provide: GetRolesService, useValue: mockGetRolesService }
       ]
     }).compileComponents();
@@ -418,6 +424,26 @@ describe('ManageUserModalComponent', () => {
       expect(component.visible).toBe(false);
       expect(component.visibleChange.emit).toHaveBeenCalledWith(false);
       expect(component.managedUser.emit).toHaveBeenCalled();
+    });
+
+    it('should send center_assignments in PATCH_updateUserRoles payload', () => {
+      component.addUserForm.set({
+        ...component.addUserForm(),
+        email: 'test@test.com',
+        first_name: 'John',
+        last_name: 'Doe',
+        role_platform: 2,
+        role_assignments: [],
+        center_assignments: [{ center_id: 'CIMMYT' }]
+      });
+
+      component.onUpdateUserRoles();
+
+      expect(mockResultsApiService.PATCH_updateUserRoles).toHaveBeenCalledWith(
+        expect.objectContaining({
+          center_assignments: [{ center_id: 'CIMMYT' }]
+        })
+      );
     });
 
     it('should handle 409 error and show confirm alert', () => {

@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
 import { map, Observable, firstValueFrom } from 'rxjs';
@@ -25,7 +25,7 @@ import { ExtraGeographicLocationBody } from '../../../pages/results/pages/result
 export class ResultsApiService {
   constructor(
     public http: HttpClient,
-    private saveButtonSE: SaveButtonService,
+    private readonly saveButtonSE: SaveButtonService,
     public ipsrDataControlSE: IpsrDataControlService
   ) {}
   apiBaseUrl = environment.apiBaseUrl + 'api/results/';
@@ -1340,6 +1340,7 @@ export class ResultsApiService {
   PATCH_updateUserRoles(body: {
     email: string;
     role_assignments: { role_id: number; entity_id: number; force_swap?: boolean }[];
+    center_assignments?: { center_id: string }[];
     role_platform: number;
     first_name: string;
     last_name: string;

@@ -5,4 +5,5 @@ export const ROLE_IDS = {
   LEAD: 3,
   ADMIN: 1,
   GUEST: 2,
+  CENTER_USER: 9,
 };

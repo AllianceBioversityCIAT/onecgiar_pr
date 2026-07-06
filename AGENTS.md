@@ -1,146 +1,178 @@
-# AGENTS.md - Repository Instructions (root)
+# AGENTS.md — PRMS Ecosystem Router
 
-This is the agent-neutral monorepo guide for PRMS (Planning, Reporting & Management System) at OneCGIAR. It is intended for any AI coding agent working in this repository, including Claude, OpenCode, Copilot coding agents, Cursor agents, Codex-style agents, and similar tools.
+> Agent role: **Orientation and routing layer**. Read this file first when you enter the `onecgiar_pr` monorepo. It maps the whole platform and points you to the right specialized guide.
+>
+> Note: This filesystem is case-insensitive, so `agents.md` and `AGENTS.md` resolve to the same file. The router lives here under the standard `AGENTS.md` name.
 
-## Read Order
+## 1. Purpose
 
-1. Read this root guide first.
-2. If working in `onecgiar-pr-client/`, read `onecgiar-pr-client/AGENTS.md`.
-3. If editing client source under `onecgiar-pr-client/src/`, read `onecgiar-pr-client/src/AGENTS.md`.
-4. If working in `onecgiar-pr-server/`, read `onecgiar-pr-server/AGENTS.md`.
-5. If editing server source under `onecgiar-pr-server/src/`, read `onecgiar-pr-server/src/AGENTS.md`.
-6. Always apply `.cursorrules` before logging, printing, scripting, or documenting anything that could contain secrets.
+PRMS (Planning, Reporting & Management System) is a monorepo for OneCGIAR. This file maps the whole platform so an AI coding agent can decide where to work next without scanning the tree from scratch.
 
-## Repository Layout
+## 2. Ecosystem map
 
 ```text
 onecgiar_pr/
-├── onecgiar-pr-server/   # NestJS 11 backend (TypeORM/MySQL, Lambda + Docker, RMQ, AWS)
-├── onecgiar-pr-client/   # Angular 19 frontend (PrimeNG 19, Jest, Cypress)
-├── docs/                 # SDD constitutional baseline
-├── .cursorrules          # Security rule: no secrets in logs/console
-├── .github/, .husky/     # CI + git hooks
-├── package.json          # Root husky setup
-└── README.md             # Install instructions
+├── onecgiar-pr-server/      # NestJS 11 backend (TypeORM/MySQL, Lambda + Docker)
+│   └── AGENTS.md            # Server-side agent guide (agents.md standard)
+├── onecgiar-pr-client/      # Angular 19 frontend (PrimeNG 19, Jest, Cypress)
+│   ├── AGENTS.md            # Package-level frontend guide
+│   └── src/AGENTS.md        # Source-tree frontend guide
+├── docs/                    # SDD baseline: prd, system-design, detailed-design
+├── .cursorrules             # Hard rule: no secrets in logs, code, or docs
+└── AGENTS.md                # This root router + project memory
 ```
 
-## SDD Constitutional Baseline
+## 3. Read order
 
-These documents are the project-level baseline. Module-level specs must cite them.
+1. This file (`AGENTS.md`).
+2. For server work: [`onecgiar-pr-server/AGENTS.md`](./onecgiar-pr-server/AGENTS.md).
+3. For frontend work: see [`onecgiar-pr-client/AGENTS.md`](./onecgiar-pr-client/AGENTS.md) and [`onecgiar-pr-client/src/AGENTS.md`](./onecgiar-pr-client/src/AGENTS.md).
+4. The relevant SDD spec under [`docs/specs/<module>/`](./docs/specs/).
 
-| Document | Purpose | Consult when |
-|---|---|---|
-| `docs/prd.md` | Product requirements: problem, personas, goals, scope, user stories, acceptance criteria, assumptions, open questions. | The task is product-shaped: scope, user story, success metrics, acceptance criteria. |
-| `docs/system-design/design.md` | UI/UX system blueprint: IA, flows, screens, navigation, layout, tokens, components, responsive behavior, accessibility, dark mode, design decisions. | The task touches client UI, UX, navigation, a11y, i18n, tokens, or design patterns. |
-| `docs/detailed-design/detailed-design.md` | Technical blueprint: modules, data model, APIs, workflows, frontend state, integrations, security, observability, testing, constraints. | The task touches code, modules, entities, endpoints, workflows, integrations, security, auth, testing, or rollout. |
-| `docs/specs/general-setup/` | Templates for module-level specs: `requirements.md`, `design.md`, `task.md`. | Running or simulating `/sdd-specify`; module specs must start from these templates. |
+## 4. Agent role on this repo
 
-## SDD Methodology
+You are a coding assistant for a regulated reporting platform. Your job is to:
 
-Module specs live under `docs/specs/<module>/` and under `docs/specs/<module>/<feature>/` for sub-features. Top-level folders mirror NestJS and Angular module boundaries: `results/`, `ipsr/`, `bilateral/`, `platform-report/`, `quality-assurance/`, `notifications/`, `auth/`, `clarisa/`, `versioning/`, `admin/`, and similar domains.
+- Preserve module boundaries and existing naming (including load-bearing typos).
+- Follow the SDD methodology and cite `G#`, `US-*`, `AC-*`, and `W1..W8` where applicable.
+- Make the smallest correct change.
+- Never log, print, commit, or document secrets, JWTs, API keys, credentials, or webhook URLs.
 
-Each module spec is a trio:
+## 5. Platform-wide skills
 
-- `requirements.md`
-- `design.md`
-- `task.md`
-
-Specs must cite project-level requirement IDs from `docs/prd.md` and `docs/detailed-design/detailed-design.md`. They must follow the templates in `docs/specs/general-setup/`.
-
-Supported SDD slash-command concepts:
-
-- `/sdd-constitution`: refreshes the baseline files.
-- `/sdd-specify`: generates a module-level spec triplet.
-- `/sdd-execute`: runs tasks in a `task.md`.
-- `/sdd-validate`: checks spec structure and baseline references.
-- `/sdd-test`: drives test coverage for a spec.
-
-If the current agent does not support these slash commands, follow the same intent manually: read the baseline, check or create the spec trio, implement from `task.md`, validate, test, and update docs.
-
-## Domain Reference Docs
-
-| Document | Covers |
+| Skill | Command / location |
 |---|---|
-| `onecgiar-pr-server/docs/bilateral-result-summaries.en.md` | Authoritative payload contract for `/api/bilateral/*` responses. Every bilateral payload change must update this doc change log. |
-| `onecgiar-pr-client/AGENTS.md` | Frontend operating instructions: custom `auth` header, API base URLs, API method naming, build/test, commit conventions. |
-| `onecgiar-pr-client/docs/development-context/notifications-module-unification.md` | Notifications module migration context. |
-| `.cursorrules` | Hard security rule: never log, echo, print, commit, or document secrets. |
+| Install & bootstrap | `npm ci && npm run prepare` (root) |
+| Server run | `cd onecgiar-pr-server && npm run start:dev` |
+| Server test | `npm run test` |
+| Migration check | `npm run migration:check` / `npm run migration:check:ci` |
+| Client run | `cd onecgiar-pr-client && npm start` |
+| Client test | `npm run test` / `npm run cypress:run` |
 
-## Security Rules
+## 6. Cross-cutting constraints
 
-Never print, log, echo, expose, commit, or partially reveal:
+- **Auth header**: custom `auth: <JWT>`, never `Authorization: Bearer`.
+- **Secrets**: follow [`.cursorrules`](./.cursorrules). Redact tokens and credentials in every output.
+- **Commits**: format `<emoji> <type>(<scope>) [ticket]: <description>`.
+- **Branches**: `master` (main), `staging` (integration). PRs target `staging` or `master`.
+- **Do not commit** unless the user explicitly asks.
 
-- JWTs or `auth` headers.
-- Webhook URLs.
-- API keys.
-- Passwords.
-- AD, Cognito, database, RabbitMQ, AWS, SharePoint, MQAP, Elasticsearch, or third-party credentials.
-- Sensitive environment variables.
+## 7. Where to go next
 
-Use `.cursorrules` as the authority. If debugging auth or integration failures, redact sensitive values completely and describe the presence or absence of values instead of showing them.
+| Task | Next file |
+|---|---|
+| Backend feature, API, migration, or bug fix | [`onecgiar-pr-server/AGENTS.md`](./onecgiar-pr-server/AGENTS.md) |
+| Frontend feature, component, route, or style | [`onecgiar-pr-client/src/AGENTS.md`](./onecgiar-pr-client/src/AGENTS.md) |
+| Product requirements / acceptance criteria | [`docs/prd.md`](./docs/prd.md) |
+| UI/UX system design | [`docs/system-design/design.md`](./docs/system-design/design.md) |
+| Technical architecture / data model | [`docs/detailed-design/detailed-design.md`](./docs/detailed-design/detailed-design.md) |
+| Bilateral payload contract | [`onecgiar-pr-server/docs/bilateral-result-summaries.en.md`](./onecgiar-pr-server/docs/bilateral-result-summaries.en.md) |
 
-## Working Conventions For Agents
+## 8. Domain context for agents
 
-- Build context before editing. Read the relevant `AGENTS.md`, SDD baseline, package guide, and source-tree guide.
-- Prefer the smallest correct change. Do not add compatibility layers unless there is persisted data, shipped behavior, external consumers, or an explicit requirement.
-- Do not rewrite unrelated files or revert changes you did not make.
-- Preserve current architecture, naming, typos that are load-bearing, and module boundaries.
-- Update documentation when changing behavior, API contracts, UX patterns, or module architecture.
-- Add or update tests for meaningful behavior changes.
-- Use existing services, utilities, components, guards, interceptors, and patterns before creating new ones.
-- Do not lower test coverage thresholds.
-- Do not commit unless the user explicitly asks.
+This section stores the product and institutional context an agent needs to reason about PRMS features without re-researching it every task.
 
-## Commit Messages
+### 8.1 What is CGIAR / OneCGIAR?
 
-Format: `<emoji> <type>(<scope>) [ticket]: <description>`.
+- **CGIAR** is the world's largest publicly funded global agricultural research-for-development partnership. It is a consortium of independent Research Centers (e.g., CIMMYT, IRRI, ILRI, CIAT/Alliance, CIFOR-ICRAF, WorldFish).
+- **OneCGIAR** is the unified reform of CGIAR (started 2021) that replaces the previous "CGIAR Research Programs" (CRPs) structure with a single portfolio organized around Science Programs, Accelerators, and Initiatives.
+- CGIAR's 2030 Strategy targets five Impact Areas: Nutrition/health/food security; Poverty reduction/livelihoods/jobs; Gender equality/youth/social inclusion; Climate adaptation/mitigation; Environmental health/biodiversity.
 
-| Emoji | Type | Use |
+### 8.2 Science Programs, Accelerators, and Initiatives
+
+- **Science Programs** are the major thematic funding and research units of the 2025-2030 portfolio (e.g., Climate Action, Breeding for Tomorrow, Sustainable Farming, Policy Innovations, Digital Transformation).
+- **Accelerators** are cross-cutting enablers (e.g., Scaling for Impact, Capacity Sharing, Gender Equality and Inclusion) designed to speed uptake and equity across Programs.
+- **Initiatives** are the concrete, time-bound projects that Centers and partners execute. They are the level at which most PRMS result data is owned and reported.
+- A **Center** is one of the CGIAR research institutes. A result is usually led by one Center and can be contributed to by others.
+
+### 8.3 Theory of Change (ToC)
+
+- A **Theory of Change** is a causal pathway model: "If we do X, then Y will happen, leading to impact Z." It links activities → outputs → outcomes → impact.
+- In CGIAR, each Program/Accelerator/Initiative has an approved ToC. PRMS does not author ToCs; it consumes them from an external ToC service and lets users align a result to specific ToC nodes (work packages, outcomes, outputs).
+- When a submitter reports a result, they map it to ToC elements so portfolio leads can show how individual results contribute to higher-level objectives.
+
+### 8.4 What is a "result" in PRMS?
+
+A result is a discrete, verifiable research-for-development output or outcome reported by an Initiative/Center. PRMS supports typed results:
+
+| `ResultTypeEnum` value | Type | Rough meaning |
 |---|---|---|
-| ✨ | `feat` | New feature. |
-| ♻️ | `refactor` | Refactor without behavior change. |
-| 🔧 | `fix` | Bug fix. |
-| 🎨 | `style` | UI, formatting, styling. |
+| 1 | Policy change | Policy/institutional change informed by CGIAR science |
+| 2 | Innovation use | Adoption/use of an innovation by partners/beneficiaries |
+| 3 | Capacity change | Individuals/organizations trained or capacitated |
+| 4 | Other outcome | Other outcome not captured above |
+| 5 | Capacity sharing for development | Training/capacity development for partners |
+| 6 | Knowledge product | Peer-reviewed paper, dataset, report, etc. (linked via repository handle) |
+| 7 | Innovation development | New technology, tool, variety, practice under development |
+| 8 | Other output | Other output |
+| 9 | Impact contribution | Contribution to long-term impact claims |
+| 10 | Innovation use (IPSR) | Use tracked inside an Innovation Package |
+| 11 | Complementary innovation | Supporting innovation within an IPSR pathway |
 
-Scope is a component or service name, for example `bilateral.service`, `result-review-drawer`, or `reporting-metadata-export`. Ticket is optional, for example `P2-2498`.
+Every result shares common fields: title, reporting phase/year, result level, ToC alignment, geography, contributing centers/partners, evidence, DAC cross-cutting scores, and review status.
 
-## Branches And PRs
+### 8.5 The result reporting flow
 
-- Main branch: `master`.
-- Staging integration branch: `staging`.
-- Open PRs against `staging` or `master` according to release cadence.
+The frontend flow is:
 
-## Test Gates
+1. **Create** — `pages/results/pages/result-creator/`. User picks an Initiative, result level, and result type, then creates the result shell.
+2. **Fill detail sections** — `pages/results/pages/result-detail/`. A multi-section editor covers:
+   - General information
+   - Theory of Change alignment (`rd-theory-of-change`)
+   - Contributors and partners (`rd-contributors-and-partners`)
+   - Geographic location (`rd-geographic-location`)
+   - Evidence (`rd-evidences`)
+   - Links to other results (`rd-links-to-results`)
+   - Type-specific page (`rd-result-types-pages/<type>-info`) depending on `ResultTypeEnum`
+3. **Green checks / completeness** — `GreenChecksService` tracks which required sections are complete per result type.
+4. **Share / request access** — Collaborators from other Initiatives can be invited via the share-request modal.
+5. **Submit for QA** — Submitter moves the result from `Editing` (1) to `Quality Assessed` (2) and then `Submitted` (3). Transitions are recorded in `result-review-history`.
+6. **QA review** — `pages/quality-assurance/`. QA reviewers open a result-review drawer, add structured comments, and approve or reject.
+7. **Portfolio consolidation** — PMU/portfolio leads use `pages/type-one-report/`, `pages/ipsr-framework/`, and `pages/global-narratives/` to compile the final portfolio narrative per phase.
 
-- Server (`onecgiar-pr-server/`): Jest. Thresholds: branches 5%, functions 20%, lines 35%, statements 40%.
-- Client (`onecgiar-pr-client/`): Jest + Cypress. Thresholds: branches 50%, functions 60%, lines 60%, statements 60%.
-- Migrations: `npm run migration:check:ci` blocks merges with pending migrations.
-- Security: SonarCloud via `sonar-project.properties`.
+Status values from `onecgiar-pr-server/src/shared/constants/result-status.enum.ts`:
 
-## Quick Install And Run
+| Status | ID | Meaning |
+|---|---|---|
+| Editing | 1 | Draft, being filled by submitter |
+| Quality Assessed | 2 | Passed internal QA check |
+| Submitted | 3 | Submitted to portfolio/PMU |
+| Discontinued | 4 | No longer reported |
+| Pending Review | 5 | Bilateral/external result awaiting review |
+| Approved | 6 | Bilateral/external result approved |
+| Rejected | 7 | Bilateral/external result rejected |
 
-```bash
-git clone https://github.com/AllianceBioversityCIAT/onecgiar_pr.git
-cd ./onecgiar_pr && npm ci && npm run prepare
+### 8.6 Who reports and why?
 
-# Backend
-cd onecgiar-pr-server && npm ci
-npm run start:dev
-npm run test
-npm run migration:check
+| Persona | Role | Why they report |
+|---|---|---|
+| **Result submitter** | Initiative/Center staff | To document what the Initiative produced, attach evidence, and meet the reporting deadline. |
+| **QA reviewer** | Internal quality reviewer | To validate completeness, evidence, and ToC alignment before the result is locked. |
+| **PMU / portfolio lead** | Program Management Unit | To aggregate results, run Type-One Reports, and report upwards to donors and the CGIAR System. |
+| **Platform admin** | System administrator | To manage phases, users, roles, CLARISA syncs, and recover deleted data. |
+| **Bilateral / platform consumers** | Downstream systems/funders | To read stable typed payloads (`/api/bilateral/*`, `/api/platform-report/*`) for dashboards and reports. |
 
-# Frontend
-cd ../onecgiar-pr-client && npm ci
-npm start
-npm run test
-npm run cypress:run
+### 8.7 How the pieces connect
+
+```text
+CGIAR 2030 Strategy
+       │
+       ▼
+Science Programs + Accelerators (thematic/cross-cutting)
+       │
+       ▼
+Initiatives (time-bound projects executed by Centers & partners)
+       │
+       ▼
+Results (typed outputs/outcomes reported in PRMS per phase)
+       │
+       ├──► ToC alignment ──► Shows contribution to Program outcomes
+       ├──► Evidence ───────► Links to publications, datasets, handles
+       ├──► Partners/Geo ───► Attribution and reach
+       └──► DAC scores ─────► Cross-cutting scoring (gender, youth, climate, etc.)
+       │
+       ▼
+QA review ──► Submission ──► Type-One Report / bilateral export / platform report
 ```
 
-## When In Doubt
-
-1. Product question: read `docs/prd.md` first.
-2. UI question: read `docs/system-design/design.md` first.
-3. Code or architecture question: read `docs/detailed-design/detailed-design.md` first.
-4. Bilateral payload question: read `onecgiar-pr-server/docs/bilateral-result-summaries.en.md`.
-5. Frontend API or auth header question: read `onecgiar-pr-client/AGENTS.md`.
-6. About to log a token or secret: stop and reread `.cursorrules`.
+PRMS sits in the middle: it structures the results, enforces quality gates, and emits stable payloads for downstream reporting and accountability to funders.
