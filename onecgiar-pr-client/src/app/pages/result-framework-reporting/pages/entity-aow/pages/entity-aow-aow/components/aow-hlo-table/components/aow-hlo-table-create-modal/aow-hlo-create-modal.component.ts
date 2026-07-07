@@ -54,7 +54,7 @@ export class AowHloCreateModalComponent implements OnInit {
     toc_progressive_narrative: '',
     result_type_id: null,
     contribution_to_indicator_target: null,
-    contributing_center: null
+    contributing_center: []
   });
   mqapJson = signal<any>(null);
   validatingHandler = signal<boolean>(false);
@@ -71,6 +71,26 @@ export class AowHloCreateModalComponent implements OnInit {
   });
 
   creatingResult = signal<boolean>(false);
+
+  // P2-3114: ToC/Other split for Contributing CGIAR Centers (mirrors the C&P surface).
+  readonly OTHER_CENTERS_CODE = '__OTHER_CENTERS__';
+  tocCenters = signal<any[]>([]);
+  otherCentersSelected = signal<any[]>([]);
+  showOtherCenters = signal<boolean>(false);
+
+  hasReferenceCenters = computed(() => this.tocCenters().length > 0);
+
+  // Dropdown 1: the ToC-derived centers + the "Other(s)" sentinel that opens dropdown 2.
+  dropdown1Options = computed(() => [
+    ...this.tocCenters(),
+    { code: this.OTHER_CENTERS_CODE, acronym: 'Other(s)', name: 'Other(s) CGIAR Centers', full_name: '<strong>Other(s) CGIAR Centers</strong>' }
+  ]);
+
+  // Dropdown 2: every center not derived from the ToC node.
+  otherCentersList = computed(() => {
+    const tocCodes = new Set(this.tocCenters().map((c: any) => c.code));
+    return this.centersSE.centersList.filter((c: any) => !tocCodes.has(c.code));
+  });
 
   ngOnInit() {
     this.entityAowService.getW3BilateralProjects();
@@ -92,6 +112,47 @@ export class AowHloCreateModalComponent implements OnInit {
         )?.options
       );
     }
+
+    this.preselectTocCenters();
+  }
+
+  // P2-3114: preselect the CGIAR Centers mapped in the selected indicator's ToC node.
+  // The AoW payload exposes them under indicators[0].targets_by_center.centers (by acronym).
+  // The ToC centers feed dropdown 1 (preselected, from_toc:true); the rest live in the "Other(s)" dropdown.
+  private preselectTocCenters(): void {
+    this.centersSE.getData().then(() => {
+      const tocAcronyms = (this.entityAowService.currentResultToReport()?.indicators?.[0]?.targets_by_center?.centers ?? [])
+        .map((center: any) => center?.center_acronym)
+        .filter(Boolean);
+
+      const preselected = this.centersSE.centersList
+        .filter((center: any) => tocAcronyms.includes(center.acronym))
+        .map((center: any) => ({ ...center, from_toc: true }));
+
+      this.tocCenters.set(preselected);
+      // AC4: when the ToC returns no reference centers, the Other(s) dropdown auto-activates.
+      this.showOtherCenters.set(preselected.length === 0);
+      this.createResultBody.set({ ...this.createResultBody(), contributing_center: [...preselected] });
+    });
+  }
+
+  // P2-3114: opening the "Other(s)" sentinel in dropdown 1 reveals dropdown 2 and keeps the sentinel out of the payload.
+  onContributingCenterSelect(event: any): void {
+    if (event?.option?.code === this.OTHER_CENTERS_CODE) {
+      this.showOtherCenters.set(true);
+      this.createResultBody.set({
+        ...this.createResultBody(),
+        contributing_center: (this.createResultBody().contributing_center ?? []).filter(
+          (center: any) => center?.code !== this.OTHER_CENTERS_CODE
+        )
+      });
+    }
+  }
+
+  deleteOtherCenter(index: number): void {
+    const next = [...this.otherCentersSelected()];
+    next.splice(index, 1);
+    this.otherCentersSelected.set(next);
   }
 
   onResultTypeChange(resultTypeId: number) {
@@ -217,7 +278,14 @@ export class AowHloCreateModalComponent implements OnInit {
       number_target: this.entityAowService.currentResultToReport()?.indicators?.[0]?.number_target,
       target_date: this.entityAowService.currentResultToReport()?.indicators?.[0]?.target_date,
       contributing_indicator: this.createResultBody().contribution_to_indicator_target,
-      contributing_center: this.createResultBody().contributing_center,
+      // P2-3114: merge dropdown 1 (ToC, from_toc:true) + dropdown 2 (Other, from_toc:false), dropping the sentinel,
+      // so the C&P form buckets them identically on redirect.
+      contributing_center: [
+        ...(this.createResultBody().contributing_center ?? [])
+          .filter((center: any) => center?.code !== this.OTHER_CENTERS_CODE)
+          .map((center: any) => ({ ...center, from_toc: true })),
+        ...this.otherCentersSelected().map((center: any) => ({ ...center, from_toc: false }))
+      ],
       knowledge_product: this.mqapJson(),
       toc_result_id: this.entityAowService.currentResultToReport().toc_result_id,
       toc_progressive_narrative: this.createResultBody().toc_progressive_narrative,
