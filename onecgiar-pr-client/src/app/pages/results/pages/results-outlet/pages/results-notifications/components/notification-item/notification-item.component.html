@@ -76,6 +76,23 @@
           }
         </div>
 
+        <!-- P2-3085: read-only ToC metadata the submitter configured (from backend toc_contribution_review[]). -->
+        @if (notification?.is_map_to_toc && tocReview.length) {
+          <div class="toc_review">
+            @for (review of tocReview; track $index) {
+              <div class="toc_review_card">
+                <div class="toc_review_row"><span class="toc_review_label">Level</span><span class="toc_review_value">{{ review.level || '—' }}</span></div>
+                <div class="toc_review_row"><span class="toc_review_label">High Level Output / Intermediate Outcome / 2030 Outcome</span><span class="toc_review_value">{{ review.outcome_label || '—' }}</span></div>
+                <div class="toc_review_row"><span class="toc_review_label">Outcome Statement</span><span class="toc_review_value">{{ review.outcome_statement || '—' }}</span></div>
+                <div class="toc_review_row"><span class="toc_review_label">Indicator Typology</span><span class="toc_review_value">{{ review.indicator_typology || '—' }}</span></div>
+                <div class="toc_review_row"><span class="toc_review_label">Unit of measurement</span><span class="toc_review_value">{{ review.unit_of_measurement || '—' }}</span></div>
+                <div class="toc_review_row"><span class="toc_review_label">Target</span><span class="toc_review_value">{{ review.target ?? '—' }}</span></div>
+                <div class="toc_review_row"><span class="toc_review_label">Contribution Target</span><span class="toc_review_value">{{ review.contribution_target ?? '—' }}</span></div>
+              </div>
+            }
+          </div>
+        }
+
         <div class="notification_content_actions">
           @if (!isSent) {
             <!-- P2-3106: unify accept/reject labels to "Accept contribution" / "Decline contribution". Click handlers unchanged. -->
