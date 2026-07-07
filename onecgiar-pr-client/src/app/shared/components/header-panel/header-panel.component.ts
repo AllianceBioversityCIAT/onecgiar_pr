@@ -134,6 +134,10 @@ export class HeaderPanelComponent implements OnInit {
     return initials.slice(0, 2);
   }
 
+  getPlatformRole() {
+    return this.api.rolesSE.roles?.application?.description ?? 'Guest';
+  }
+
   notificationBadgeLength() {
     return `${this.resultsNotificationsSE?.updatesPopUpData?.length}`;
   }

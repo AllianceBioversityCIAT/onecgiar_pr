@@ -73,7 +73,10 @@
         <p-avatar [label]="getUserInitials()" shape="circle" [style]="{ width: '32px', height: '32px', cursor: 'pointer' }" />
 
         <span class="user_identity_text">
-          <span class="user_identity_name">{{ this.api.authSE.localStorageUser?.user_name }}</span>
+          <span class="user_identity_name_row">
+            <span class="user_identity_name">{{ this.api.authSE.localStorageUser?.user_name }}</span>
+            <span class="user_identity_role">{{ getPlatformRole() }}</span>
+          </span>
           <span class="user_identity_email">{{ this.api.authSE.localStorageUser?.email }}</span>
         </span>
 

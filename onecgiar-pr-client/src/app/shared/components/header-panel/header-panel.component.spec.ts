@@ -27,10 +27,11 @@ describe('HeaderPanelComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should render the user name and email inline in the header bar', () => {
+  it('should render the user name, email and platform role inline in the header bar', () => {
     // inLocal=true prevents the <app-tawk> *ngIf from rendering once name+email are set
     component.inLocal = true;
     component.api.authSE.localStorageUser = { user_name: 'Yeckzin Zuñiga', email: 'y.zuniga@cgiar.org' } as any;
+    component.api.rolesSE.roles = { application: { description: 'Admin' } } as any;
     fixture.detectChanges();
 
     const trigger: HTMLElement = fixture.nativeElement.querySelector('.user_identity');
@@ -38,9 +39,21 @@ describe('HeaderPanelComponent', () => {
     expect(trigger.getAttribute('aria-haspopup')).toBe('true');
     expect(trigger.querySelector('.user_identity_name')?.textContent).toContain('Yeckzin Zuñiga');
     expect(trigger.querySelector('.user_identity_email')?.textContent).toContain('y.zuniga@cgiar.org');
+    expect(trigger.querySelector('.user_identity_role')?.textContent).toContain('Admin');
 
     // avoid leaking the user into the shared singleton (would render <app-tawk> in other specs)
     component.api.authSE.localStorageUser = null as any;
+    component.api.rolesSE.roles = null as any;
+  });
+
+  it('should default platform role to Guest when no application role is available', () => {
+    component.api.rolesSE.roles = null as any;
+    expect(component.getPlatformRole()).toBe('Guest');
+  });
+
+  it('should return the platform role description when available', () => {
+    component.api.rolesSE.roles = { application: { description: 'Administrator' } } as any;
+    expect(component.getPlatformRole()).toBe('Administrator');
   });
 
   it('should call get_updates_notifications and get_updates_pop_up_notifications on ngOnInit', () => {

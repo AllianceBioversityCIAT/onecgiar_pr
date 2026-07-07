@@ -92,7 +92,7 @@ button {
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  max-width: 260px;
+  max-width: 340px;
   background-color: var(--pr-color-white);
   border-radius: 999px;
   padding: 4px 14px 4px 4px;
@@ -102,23 +102,50 @@ button {
     flex-direction: column;
     align-items: flex-start;
     min-width: 0;
+    max-width: 240px;
     line-height: 1.2;
+    overflow: hidden;
+
+    .user_identity_name_row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      max-width: 100%;
+      overflow: hidden;
+    }
 
     .user_identity_name {
       @include fonts.pr-typography('body-2');
       font-weight: 600;
       color: var(--pr-color-secondary-400);
-      max-width: 170px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      flex-shrink: 1;
+      min-width: 0;
+    }
+
+    .user_identity_role {
+      @include fonts.pr-typography('body-3');
+      font-weight: 600;
+      color: var(--pr-color-primary-700);
+      background-color: var(--pr-color-primary-50);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      border-radius: 4px;
+      padding: 1px 6px;
+      flex-shrink: 0;
+      line-height: 1.4;
     }
 
     .user_identity_email {
       @include fonts.pr-typography('body-3');
       font-weight: 400;
       color: var(--pr-color-accents-5);
-      max-width: 170px;
+      max-width: 100%;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
