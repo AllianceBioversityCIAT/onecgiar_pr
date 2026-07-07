@@ -35,17 +35,22 @@ export class ApplyFrameworkResultAssociationsService {
     }
 
     const initiativeShareId = payload.contributors_result_toc_result
-      .map((contributor) => Number(contributor.initiative_id))
-      .filter((id) => Number.isFinite(id) && id > 0);
+      .map((contributor) => this.resolveContributorInitiativeId(contributor))
+      .filter((id): id is number => id !== null);
 
     if (!initiativeShareId.length) {
       return;
     }
 
+    const initiativeFromToc = this.buildInitiativeFromTocMap(
+      payload.contributors_result_toc_result,
+    );
+
     const shareRequest: CreateTocShareResult = {
       initiativeShareId,
       isToc: false,
       contributors_result_toc_result: payload.contributors_result_toc_result,
+      ...(Object.keys(initiativeFromToc).length ? { initiativeFromToc } : {}),
     };
 
     await this._shareResultRequestService.resultRequest(
@@ -118,5 +123,38 @@ export class ApplyFrameworkResultAssociationsService {
       },
       user,
     );
+  }
+
+  private resolveContributorInitiativeId(contributor: {
+    initiative_id?: number | string;
+    id?: number | string;
+  }): number | null {
+    const id = Number(contributor?.initiative_id ?? contributor?.id);
+    return Number.isFinite(id) && id > 0 ? id : null;
+  }
+
+  private buildInitiativeFromTocMap(
+    contributors: Array<{
+      initiative_id?: number | string;
+      id?: number | string;
+      from_toc?: boolean;
+    }>,
+  ): Record<number, boolean> {
+    const map: Record<number, boolean> = {};
+
+    for (const contributor of contributors ?? []) {
+      const id = this.resolveContributorInitiativeId(contributor);
+      if (id === null) {
+        continue;
+      }
+      if (
+        contributor?.from_toc !== undefined &&
+        contributor?.from_toc !== null
+      ) {
+        map[id] = Boolean(contributor.from_toc);
+      }
+    }
+
+    return map;
   }
 }

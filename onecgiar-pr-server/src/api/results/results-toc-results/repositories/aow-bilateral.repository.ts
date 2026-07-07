@@ -34,6 +34,8 @@ export interface TocResultResponse {
   result_title: string;
   related_node_id: string | null;
   result_level_id?: number | null;
+  /** P2-3114: Clarisa initiative ids from toc_result_synergy_programs (same contract as C&P toc v2). */
+  contributing_synergy_program_initiative_ids?: number[];
   indicators: Array<{
     indicator_id: number;
     indicator_description: string | null;

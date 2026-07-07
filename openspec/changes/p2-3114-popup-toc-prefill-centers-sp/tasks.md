@@ -2,7 +2,7 @@
 
 ## 1. Investigation / data sources
 - [x] 1.1 CONFIRMED: `targets_by_center.centers[] = { center_id, center_acronym, center_name }`. Join key is **`center_acronym` → `code`** (Centers dropdown uses `optionValue="code"`). (prtest GET `toc-results?program=SP01&areaOfWork=AOW01`)
-- [x] 1.2 CONFIRMED GAP: the AoW `toc-results` response (node = `{ toc_result_id, category, result_title, related_node_id, result_level_id, indicators[] }`) exposes **no Science Program / synergy field**. SP preselect in the popup is **blocked on a backend source** — hand to Juanda (P2-3114 owner). Centers path proceeds independently.
+- [x] 1.2 CONFIRMED GAP (resolved back): AoW `toc-results` + `2030-outcomes` now expose `contributing_synergy_program_initiative_ids` per node via `getTocSynergyProgramsByResultIds` (P2-3114 back, Juanda). Front SP preselect unblocked.
 
 ## 2. Centers — ToC preselect + Other split (not blocked)
 - [x] 2.1 DONE (in component, not service): `preselectTocCenters()` in `ngOnInit` derives the ToC centers from `currentResultToReport().indicators[0].targets_by_center.centers` (by `center_acronym` → `CenterDto.acronym`) via `centersSE.getData()`, tags `from_toc:true`, and sets `createResultBody().contributing_center`.
