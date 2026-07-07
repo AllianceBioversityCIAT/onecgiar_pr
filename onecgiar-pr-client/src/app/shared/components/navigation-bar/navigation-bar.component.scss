@@ -1,54 +1,45 @@
-:host {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  height: 100%;
-  overflow: hidden;
-}
-
-.nav_search_toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: none;
-  color: rgba(var(--pr-color-white-rgb), 0.7);
-  cursor: pointer;
-  height: 56px;
-  width: 44px;
-  padding: 0;
-  transition: color 0.2s ease, width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  flex-shrink: 0;
-
-  i {
-    font-size: 22px;
-  }
-
-  &:hover {
-    color: var(--pr-color-white);
-  }
-
-  &.nav_search_active {
-    color: var(--pr-color-white);
-    width: 44px;
-  }
-}
-
 .navigation_bar {
+  position: relative;
   display: flex;
   gap: 2px;
   height: 56px;
   align-items: stretch;
   justify-content: center;
   padding: 0px 8px;
-  overflow: hidden;
-  transition:
-    opacity 0.25s ease,
-    flex 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
   &.nav_searching {
-    flex: 1;
     justify-content: flex-start;
+  }
+
+  .nav_search_toggle {
+    position: absolute;
+    left: 8px;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: rgba(var(--pr-color-white-rgb), 0.7);
+    cursor: pointer;
+    height: 56px;
+    width: 36px;
+    padding: 0;
+    transition: color 0.2s ease;
+
+    i {
+      font-size: 20px;
+    }
+
+    &:hover {
+      color: var(--pr-color-white);
+    }
+  }
+
+  &.nav_searching .nav_search_toggle {
+    position: relative;
+    left: auto;
+    flex-shrink: 0;
   }
 
   .navigation_bar_item {
@@ -65,10 +56,7 @@
     color: rgba(var(--pr-color-white-rgb), 0.82);
     height: 56px;
     padding: 0 18px;
-    transition:
-      color 0.2s ease,
-      opacity 0.25s ease,
-      transform 0.25s ease;
+    transition: color 0.2s ease;
 
     &:hover {
       color: var(--pr-color-white);
@@ -111,9 +99,9 @@
     position: relative;
     display: flex;
     align-items: center;
-    width: 100%;
+    flex: 1;
     height: 100%;
-    padding: 0 8px;
+    padding: 0 8px 0 4px;
     animation: searchIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) both;
 
     .nav_search_input {
@@ -142,7 +130,7 @@
     .nav_search_dropdown {
       position: absolute;
       top: calc(100% - 4px);
-      left: 8px;
+      left: 4px;
       right: 8px;
       z-index: 200;
       background: var(--pr-color-white);
