@@ -29,7 +29,7 @@ import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiativ
 import { TemplateRepository } from '../../platform-report/repositories/template.repository';
 import Handlebars from 'handlebars';
 import { ResultsTocResultsService } from '../results-toc-results/results-toc-results.service';
-import { env } from 'process';
+import { env } from 'node:process';
 import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
 import { EmailNotificationManagementService } from '../../../shared/microservices/email-notification-management/email-notification-management.service';
 import { EmailTemplate } from '../../../shared/microservices/email-notification-management/enum/email-notification.enum';
@@ -661,7 +661,7 @@ export class ShareResultRequestService {
       where: whereCondition,
     });
 
-    return results.map((result: any) => {
+    const mapped = results.map((result: any) => {
       if (result.obj_result && !Array.isArray(result.obj_result)) {
         result.obj_result = {
           ...result.obj_result,
@@ -671,12 +671,91 @@ export class ShareResultRequestService {
       }
       return result;
     });
+
+    return this.enrichRequestsWithTocContributionReview(mapped);
+  }
+
+  /**
+   * P2-3086 / P2-3003: attach ToC review fields for contribution-request notifications.
+   */
+  private async enrichRequestsWithTocContributionReview(
+    requests: any[],
+  ): Promise<any[]> {
+    if (!requests?.length) {
+      return requests;
+    }
+
+    const pairMap = new Map<
+      string,
+      { resultId: number; initiativeId: number }
+    >();
+
+    for (const request of requests) {
+      if (!request?.is_map_to_toc) {
+        continue;
+      }
+
+      const resultId = Number(request.result_id);
+      const contributorInitiativeId = Number(
+        request.shared_inititiative_id ?? request.obj_shared_inititiative?.id,
+      );
+
+      if (
+        !Number.isFinite(resultId) ||
+        !Number.isFinite(contributorInitiativeId)
+      ) {
+        continue;
+      }
+
+      pairMap.set(`${resultId}:${contributorInitiativeId}`, {
+        resultId,
+        initiativeId: contributorInitiativeId,
+      });
+    }
+
+    const reviewCache = new Map<string, any[]>();
+    await Promise.all(
+      Array.from(pairMap.entries()).map(async ([cacheKey, pair]) => {
+        reviewCache.set(
+          cacheKey,
+          await this._resultsTocResultRepository.getContributionReviewTocByResultAndInitiative(
+            pair.resultId,
+            pair.initiativeId,
+          ),
+        );
+      }),
+    );
+
+    return requests.map((request) => {
+      if (!request?.is_map_to_toc) {
+        return request;
+      }
+
+      const resultId = Number(request.result_id);
+      const contributorInitiativeId = Number(
+        request.shared_inititiative_id ?? request.obj_shared_inititiative?.id,
+      );
+
+      if (
+        !Number.isFinite(resultId) ||
+        !Number.isFinite(contributorInitiativeId)
+      ) {
+        return { ...request, toc_contribution_review: [] };
+      }
+
+      const cacheKey = `${resultId}:${contributorInitiativeId}`;
+      return {
+        ...request,
+        toc_contribution_review: reviewCache.get(cacheKey) ?? [],
+      };
+    });
   }
 
   private getRequestSelectFields(): FindOptionsSelect<ShareResultRequest> {
     return {
       share_result_request_id: true,
       result_id: true,
+      shared_inititiative_id: true,
       requested_date: true,
       aprovaed_date: true,
       request_status_id: true,
