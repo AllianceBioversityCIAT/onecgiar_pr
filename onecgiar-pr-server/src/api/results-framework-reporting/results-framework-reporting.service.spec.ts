@@ -27,6 +27,7 @@ import { ApplyFrameworkResultAssociationsService } from './application/commands/
 import { GetExistingResultContributorsToIndicatorsHandler } from './application/queries/get-existing-result-contributors/get-existing-result-contributors.handler';
 import { ExistingResultContributorsLoaderService } from './application/queries/get-existing-result-contributors/existing-result-contributors-loader.service';
 import { ContributorsRoleResolverService } from './application/queries/get-existing-result-contributors/contributors-role-resolver.service';
+import { TocResultsRepository } from '../../toc/toc-results/toc-results.repository';
 
 const mockClarisaInitiativesRepository = {
   findOne: jest.fn(),
@@ -65,6 +66,11 @@ const mockTocResultsRepository = {
   getIndicatorContributions: jest.fn(),
   findBilateralProjectById: jest.fn(),
   findBilateralProjectsByProgramOfficialCode: jest.fn(),
+  findTargetsWithCentersByIndicatorId: jest.fn(),
+};
+
+const mockTocCatalogRepository = {
+  getTocSynergyProgramsByResultIds: jest.fn(),
 };
 
 const defaultTocContext = {
@@ -153,6 +159,9 @@ describe('ResultsFrameworkReportingService', () => {
     mockTocResultsRepository.getIndicatorContributions.mockResolvedValue(
       new Map(),
     );
+    mockTocCatalogRepository.getTocSynergyProgramsByResultIds.mockResolvedValue(
+      [],
+    );
     mockReportingTocContextService.resolve.mockImplementation(
       (yearOverride?: number) =>
         Promise.resolve({
@@ -186,6 +195,10 @@ describe('ResultsFrameworkReportingService', () => {
         {
           provide: AoWBilateralRepository,
           useValue: mockTocResultsRepository,
+        },
+        {
+          provide: TocResultsRepository,
+          useValue: mockTocCatalogRepository,
         },
         {
           provide: ResultRepository,
@@ -571,6 +584,44 @@ describe('ResultsFrameworkReportingService', () => {
   describe('getWorkPackagesByProgramAndArea', () => {
     beforeEach(() => {
       mockTocResultsRepository.findByCompositeCode.mockReset();
+      mockTocCatalogRepository.getTocSynergyProgramsByResultIds.mockReset();
+      mockTocCatalogRepository.getTocSynergyProgramsByResultIds.mockResolvedValue(
+        [],
+      );
+    });
+
+    it('should attach contributing_synergy_program_initiative_ids (P2-3114)', async () => {
+      const tocContext = { reportingYear: 2024, phaseUuid: 'PHASE-1' };
+      mockReportingTocContextService.resolve.mockResolvedValueOnce(tocContext);
+      mockTocResultsRepository.findByCompositeCode.mockResolvedValueOnce([
+        {
+          toc_result_id: 42,
+          category: 'OUTPUT',
+          result_title: 'Result with SP',
+          related_node_id: 'NODE-SP',
+          indicators: [],
+        },
+      ]);
+      mockTocCatalogRepository.getTocSynergyProgramsByResultIds.mockResolvedValueOnce(
+        [
+          { toc_result_id: 42, initiative_id: 101 },
+          { toc_result_id: 42, initiative_id: 102 },
+        ],
+      );
+
+      const result: any = await service.getWorkPackagesByProgramAndArea(
+        'SP01',
+        'AOW01',
+        '2024',
+      );
+
+      expect(
+        mockTocCatalogRepository.getTocSynergyProgramsByResultIds,
+      ).toHaveBeenCalledWith([42], 'PHASE-1');
+      expect(
+        result.response.tocResultsOutputs[0]
+          .contributing_synergy_program_initiative_ids,
+      ).toEqual([101, 102]);
     });
 
     it('should return work packages when repository returns data', async () => {
@@ -732,6 +783,37 @@ describe('ResultsFrameworkReportingService', () => {
   describe('getToc2030Outcomes', () => {
     beforeEach(() => {
       mockTocResultsRepository.find2030Outcomes.mockReset();
+      mockTocCatalogRepository.getTocSynergyProgramsByResultIds.mockReset();
+      mockTocCatalogRepository.getTocSynergyProgramsByResultIds.mockResolvedValue(
+        [],
+      );
+    });
+
+    it('should attach contributing_synergy_program_initiative_ids (P2-3114)', async () => {
+      const tocContext = { reportingYear: 2030, phaseUuid: 'PHASE-1' };
+      mockReportingTocContextService.resolve.mockResolvedValueOnce(tocContext);
+      mockTocResultsRepository.find2030Outcomes.mockResolvedValueOnce([
+        {
+          toc_result_id: 7,
+          category: 'EOI',
+          result_title: 'EOI with SP',
+          related_node_id: 'NODE-EOI-7',
+          indicators: [],
+        },
+      ]);
+      mockTocCatalogRepository.getTocSynergyProgramsByResultIds.mockResolvedValueOnce(
+        [{ toc_result_id: 7, initiative_id: 55 }],
+      );
+
+      const result: any = await service.getToc2030Outcomes('sp01');
+
+      expect(
+        mockTocCatalogRepository.getTocSynergyProgramsByResultIds,
+      ).toHaveBeenCalledWith([7], 'PHASE-1');
+      expect(
+        result.response.tocResults[0]
+          .contributing_synergy_program_initiative_ids,
+      ).toEqual([55]);
     });
 
     it('should return ToC 2030 outcomes when repository returns data', async () => {

@@ -83,6 +83,30 @@ describe('ApplyFrameworkResultAssociationsService', () => {
     );
   });
 
+  it('should pass initiativeFromToc when contributors carry from_toc (P2-3114)', async () => {
+    const contributors = [
+      { id: 20, from_toc: true, planned_result: true, result_toc_results: [] },
+      { id: 21, from_toc: false, planned_result: true, result_toc_results: [] },
+    ];
+
+    await service.execute(
+      { contributors_result_toc_result: contributors } as any,
+      user,
+      808,
+    );
+
+    expect(mockShareResultRequestService.resultRequest).toHaveBeenCalledWith(
+      {
+        initiativeShareId: [20, 21],
+        isToc: false,
+        contributors_result_toc_result: contributors,
+        initiativeFromToc: { 20: true, 21: false },
+      },
+      808,
+      user,
+    );
+  });
+
   it('should link valid bilateral projects and ignore invalid ids', async () => {
     await service.execute(
       {

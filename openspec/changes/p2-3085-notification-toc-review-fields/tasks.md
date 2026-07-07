@@ -19,4 +19,4 @@
 
 ## 5. Verification
 - [ ] 5.1 BLOCKED on data: e2e runtime needs a real `is_map_to_toc: true` request in the reviewer's inbox. Coordinate a test contribution with Juanda/QA, then verify the 7 fields render in order and Accept/Decline still work.
-- [ ] 5.2 Confirm field mapping Q1 (`outcome_statement` vs `statement`) against the first real payload.
+- [x] 5.2 RESOLVED (from Juanda's SQL, `results-toc-results.repository.ts:449`): AC "Statement" = `outcome_statement` (= `tr.description`, L462) — front binding correct. `statement` (= `tri.type_name`, L466) is the type name, unused. `target` = `targetValue ?? numberTarget` (L546) — front `review.target` correct. All 7 fields map; no front change needed.

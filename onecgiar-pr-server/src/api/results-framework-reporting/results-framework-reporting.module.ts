@@ -31,11 +31,13 @@ import { ApplyFrameworkResultAssociationsService } from './application/commands/
 import { GetExistingResultContributorsToIndicatorsHandler } from './application/queries/get-existing-result-contributors/get-existing-result-contributors.handler';
 import { ExistingResultContributorsLoaderService } from './application/queries/get-existing-result-contributors/existing-result-contributors-loader.service';
 import { ContributorsRoleResolverService } from './application/queries/get-existing-result-contributors/contributors-role-resolver.service';
+import { TocResultsModule } from '../../toc/toc-results/toc-results.module';
 
 @Module({
   imports: [
     ResultsModule,
     ResultsKnowledgeProductsModule,
+    TocResultsModule,
     ResultsTocResultsModule,
     ShareResultRequestModule,
     ResultsByProjectsModule,
