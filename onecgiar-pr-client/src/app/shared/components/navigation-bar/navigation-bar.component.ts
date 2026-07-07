@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, HostListener, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, ElementRef, HostListener, inject, input, output, signal, viewChild } from '@angular/core';
 import { PrRoute, extraRoutingApp, routingApp } from '../../routing/routing-data';
 import { RolesService } from '../../services/global/roles.service';
 import { DataControlService } from '../../services/data-control.service';
@@ -13,12 +13,18 @@ import { FormsModule } from '@angular/forms';
   styleUrls: ['./navigation-bar.component.scss'],
   standalone: true,
   imports: [CommonModule, RouterModule, FormsModule],
-  changeDetection: ChangeDetectionStrategy.Default
+  changeDetection: ChangeDetectionStrategy.Default,
+  host: {
+    '[class.search_active]': 'isSearchMode()'
+  }
 })
 export class NavigationBarComponent {
   readonly navigationOptions = signal<PrRoute[]>(routingApp);
-  readonly isSearchMode = signal(false);
+  readonly isSearchMode = input(false);
+  readonly searchClosed = output<void>();
   readonly searchQuery = signal('');
+
+  readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
   readonly allSections = computed<PrRoute[]>(() => {
     return [...routingApp, ...extraRoutingApp].filter(
@@ -36,20 +42,19 @@ export class NavigationBarComponent {
   public readonly dataControlSE = inject(DataControlService);
   public readonly router = inject(Router);
 
-  toggleSearch() {
-    this.isSearchMode.update(v => !v);
-    if (!this.isSearchMode()) {
-      this.searchQuery.set('');
-    }
-  }
-
-  openSearch() {
-    this.isSearchMode.set(true);
+  constructor() {
+    effect(() => {
+      if (this.isSearchMode()) {
+        setTimeout(() => this.searchInput()?.nativeElement.focus(), 0);
+      } else {
+        this.searchQuery.set('');
+      }
+    });
   }
 
   closeSearch() {
-    this.isSearchMode.set(false);
     this.searchQuery.set('');
+    this.searchClosed.emit();
   }
 
   selectSection(route: PrRoute) {

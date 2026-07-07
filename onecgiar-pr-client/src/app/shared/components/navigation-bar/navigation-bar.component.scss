@@ -1,3 +1,14 @@
+:host {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  min-width: 0;
+
+  &.search_active {
+    flex: 1;
+  }
+}
+
 .navigation_bar {
   position: relative;
   display: flex;
@@ -8,38 +19,8 @@
   padding: 0px 8px;
 
   &.nav_searching {
-    justify-content: flex-start;
-  }
-
-  .nav_search_toggle {
-    position: absolute;
-    left: 8px;
-    z-index: 2;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: none;
-    border: none;
-    color: rgba(var(--pr-color-white-rgb), 0.7);
-    cursor: pointer;
-    height: 56px;
-    width: 36px;
-    padding: 0;
-    transition: color 0.2s ease;
-
-    i {
-      font-size: 20px;
-    }
-
-    &:hover {
-      color: var(--pr-color-white);
-    }
-  }
-
-  &.nav_searching .nav_search_toggle {
-    position: relative;
-    left: auto;
-    flex-shrink: 0;
+    flex: 1;
+    justify-content: stretch;
   }
 
   .navigation_bar_item {
@@ -101,8 +82,16 @@
     align-items: center;
     flex: 1;
     height: 100%;
-    padding: 0 8px 0 4px;
     animation: searchIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) both;
+
+    .nav_search_icon {
+      position: absolute;
+      left: 14px;
+      color: rgba(var(--pr-color-white-rgb), 0.5);
+      font-size: 18px;
+      pointer-events: none;
+      z-index: 1;
+    }
 
     .nav_search_input {
       width: 100%;
@@ -114,7 +103,7 @@
       font-family: 'Poppins', sans-serif;
       font-size: 13px;
       font-weight: 400;
-      padding: 0 16px;
+      padding: 0 16px 0 42px;
       outline: none;
       transition: background 0.2s ease;
 
@@ -130,8 +119,8 @@
     .nav_search_dropdown {
       position: absolute;
       top: calc(100% - 4px);
-      left: 4px;
-      right: 8px;
+      left: 0;
+      right: 0;
       z-index: 200;
       background: var(--pr-color-white);
       border-radius: 12px;

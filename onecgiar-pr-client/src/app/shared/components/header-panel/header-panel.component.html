@@ -20,9 +20,21 @@
       </div>
     </a>
 
-    <app-navigation-bar></app-navigation-bar>
+    <app-navigation-bar [isSearchMode]="isSearchMode()" (searchClosed)="isSearchMode.set(false)"></app-navigation-bar>
 
     <div class="information">
+      <button
+        type="button"
+        (click)="toggleSearch()"
+        aria-label="Search sections"
+        title="Search sections"
+        [ngClass]="{ section_active: isSearchMode() }"
+        style="border-bottom: 4px solid transparent; border-top: 4px solid transparent">
+        <i class="material-icons-round info_icon" [ngClass]="{ info_icon_active: isSearchMode() }" aria-hidden="true">
+          {{ isSearchMode() ? 'close' : 'search' }}
+        </i>
+      </button>
+
       <a
         #whatsNewLink
         (keydown.space)="$event.preventDefault(); whatsNewLink.click()"

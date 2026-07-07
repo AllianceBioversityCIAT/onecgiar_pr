@@ -1,77 +1,59 @@
-  <nav class="navigation_bar" aria-label="Primary navigation" [class.nav_searching]="isSearchMode()">
-    @if (isSearchMode()) {
-      <button
-        type="button"
-        class="nav_search_toggle"
-        (click)="closeSearch()"
-        aria-label="Close search"
-        title="Close search">
-        <i class="material-icons-round">close</i>
-      </button>
+<nav class="navigation_bar" aria-label="Primary navigation" [class.nav_searching]="isSearchMode()">
+  @if (isSearchMode()) {
+    <div class="nav_search_container">
+      <i class="material-icons-round nav_search_icon" aria-hidden="true">search</i>
+      <input
+        #searchInput
+        class="nav_search_input"
+        type="text"
+        placeholder="Search sections…"
+        [(ngModel)]="searchQuery"
+        (keydown.escape)="closeSearch()"
+        (keydown.enter)="filteredSections().length === 1 && selectSection(filteredSections()[0])"
+        autocomplete="off" />
 
-      <div class="nav_search_container">
-        <input
-          #searchInput
-          class="nav_search_input"
-          type="text"
-          placeholder="Search sections…"
-          [(ngModel)]="searchQuery"
-          (keydown.escape)="closeSearch()"
-          (keydown.enter)="filteredSections().length === 1 && selectSection(filteredSections()[0])"
-          autocomplete="off"
-          autofocus />
+      @if (filteredSections().length > 0) {
+        <div class="nav_search_dropdown">
+          @for (section of filteredSections(); track section.path) {
+            <button
+              type="button"
+              class="nav_search_result"
+              (click)="selectSection(section)"
+              (keydown.enter)="selectSection(section)">
+              <i class="material-icons-round" aria-hidden="true">north_sharp</i>
+              <span>{{ section.prName }}</span>
+            </button>
+          }
+        </div>
+      }
 
-        @if (filteredSections().length > 0) {
-          <div class="nav_search_dropdown">
-            @for (section of filteredSections(); track section.path) {
-              <button
-                type="button"
-                class="nav_search_result"
-                (click)="selectSection(section)"
-                (keydown.enter)="selectSection(section)">
-                <i class="material-icons-round">north_sharp</i>
-                <span>{{ section.prName }}</span>
-              </button>
-            }
-          </div>
-        }
+      @if (searchQuery() && filteredSections().length === 0) {
+        <div class="nav_search_dropdown">
+          <div class="nav_search_no_results">No sections found</div>
+        </div>
+      }
+    </div>
+  } @else {
+    @for (navOption of navigationOptions(); track navOption.prName) {
+      @if (!(navOption.prHide || validateAdminModuleAndRole(navOption))) {
+        <a
+          #navLink
+          [routerLink]="navOption.path"
+          routerLinkActive="section_active"
+          class="pr-body-1 navigation_bar_item"
+          [ngClass]="{
+            'padding-right-40': navOption?.underConstruction,
+            hide_active_in_notifications: navOption.path === 'result' && router.url.includes('results-notifications')
+          }"
+          (keydown.space)="$event.preventDefault(); navLink.click()"
+          (keydown.enter)="navLink.click()">
+          {{ navOption.prName }}
 
-        @if (searchQuery() && filteredSections().length === 0) {
-          <div class="nav_search_dropdown">
-            <div class="nav_search_no_results">No sections found</div>
-          </div>
-        }
-      </div>
-    } @else {
-      <button
-        type="button"
-        class="nav_search_toggle"
-        (click)="openSearch()"
-        aria-label="Search sections"
-        title="Search sections">
-        <i class="material-icons-round">search</i>
-      </button>
-
-      @for (navOption of navigationOptions(); track navOption.prName) {
-        @if (!(navOption.prHide || validateAdminModuleAndRole(navOption))) {
-          <a
-            #navLink
-            [routerLink]="navOption.path"
-            routerLinkActive="section_active"
-            class="pr-body-1 navigation_bar_item"
-            [ngClass]="{
-              'padding-right-40': navOption?.underConstruction,
-              hide_active_in_notifications: navOption.path === 'result' && router.url.includes('results-notifications')
-            }"
-            (keydown.space)="$event.preventDefault(); navLink.click()"
-            (keydown.enter)="navLink.click()">
-            {{ navOption.prName }}
-
-            @if (navOption?.underConstruction) {
-              <img src="assets/work-in-progress.png" alt="Under construction" srcset="" />
-            }
-          </a>
-        }
+          @if (navOption?.underConstruction) {
+            <img src="assets/work-in-progress.png" alt="Under construction" srcset="" />
+          }
+        </a>
       }
     }
-  </nav>
+  }
+</nav>

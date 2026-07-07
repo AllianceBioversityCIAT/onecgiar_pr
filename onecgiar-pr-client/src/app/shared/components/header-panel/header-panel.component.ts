@@ -36,6 +36,7 @@ export class HeaderPanelComponent implements OnInit {
   inLocal = (environment as any)?.inLocal;
   myInitiativesListP22 = computed(() => this.api.dataControlSE.myInitiativesList);
   closedInitiativeCodes = new Set<string>();
+  isSearchMode = signal(false);
 
   // Dashboard layout: shift the navbar to the right of a full-height sidebar
   private readonly layoutSE = inject(LayoutService);
@@ -136,6 +137,10 @@ export class HeaderPanelComponent implements OnInit {
 
   getPlatformRole() {
     return this.api.rolesSE.roles?.application?.description ?? 'Guest';
+  }
+
+  toggleSearch() {
+    this.isSearchMode.update(v => !v);
   }
 
   notificationBadgeLength() {
