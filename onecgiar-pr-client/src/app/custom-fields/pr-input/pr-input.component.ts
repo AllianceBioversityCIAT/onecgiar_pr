@@ -1,4 +1,4 @@
-import { Component, computed, forwardRef, inject, Input } from '@angular/core';
+import { Component, computed, forwardRef, inject, input, signal } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { WordCounterService } from '../../shared/services/word-counter.service';
 import { RolesService } from '../../shared/services/global/roles.service';
@@ -19,81 +19,86 @@ import { FieldsManagerService } from '../../shared/services/fields-manager.servi
   standalone: false
 })
 export class PrInputComponent implements ControlValueAccessor {
-  @Input() placeholder: string;
-  @Input() type: string;
-  @Input() label: string;
-  @Input() description: string;
-  @Input() maxWords: number;
-  @Input() readOnly: boolean;
-  @Input() isStatic: boolean = false;
-  @Input() required: boolean = true;
-  @Input() underConstruction: boolean;
-  @Input() disabled: boolean;
-  @Input() hint: string = null;
-  @Input() editable: boolean = false;
-  @Input() noDataText: string = '';
-  @Input() autogenerate: boolean = false;
+  readonly placeholder = input<string>();
+  readonly type = input<string>();
+  readonly label = input<string>();
+  readonly description = input<string>();
+  readonly maxWords = input<number>();
+  readonly readOnly = input<boolean>();
+  readonly isStatic = input<boolean>(false);
+  readonly required = input<boolean>(true);
+  readonly underConstruction = input<boolean>();
+  readonly disabled = input<boolean>();
+  readonly hint = input<string>(null);
+  readonly editable = input<boolean>(false);
+  readonly noDataText = input<string>('');
+  readonly autogenerate = input<boolean>(false);
 
-  @Input() variant?: 'xs' | 'sm';
-  @Input() numberMode?: 'decimal';
-  @Input() maxDecimals?: number = 2;
-  @Input() showDescription?: boolean = true;
-  @Input() InlineStyles?: string = '';
-  @Input() descInlineStyles?: string = '';
-  @Input() fieldRef: string | number;
-  @Input() customLabel?: string;
-  /** When true, `required` comes from the parent `@Input()` instead of FieldsManager (lead contact scan workaround). */
-  @Input() lockRequiredFromFieldManager = false;
-  @Input() showFieldHeader = true;
+  readonly variant = input<'xs' | 'sm'>();
+  readonly numberMode = input<'decimal'>();
+  readonly maxDecimals = input<number>(2);
+  readonly showDescription = input<boolean>(true);
+  readonly InlineStyles = input<string>('');
+  readonly descInlineStyles = input<string>('');
+  readonly fieldRef = input<string | number>();
+  readonly customLabel = input<string>();
+  /** When true, `required` comes from the parent input instead of FieldsManager (lead contact scan workaround). */
+  readonly lockRequiredFromFieldManager = input<boolean>(false);
+  readonly showFieldHeader = input<boolean>(true);
+  readonly labelDescInlineStyles = input<string>('');
 
-  fieldsManager = inject(FieldsManagerService);
-  @Input() labelDescInlineStyles?: string = '';
+  private readonly wordCounterSE = inject(WordCounterService);
+  readonly rolesSE = inject(RolesService);
+  readonly dataControlSE = inject(DataControlService);
+  readonly fieldsManager = inject(FieldsManagerService);
 
-  private _value: any;
-  private beforeValue: string;
-  public wordCount: number = 0;
+  private readonly _value = signal<any>(null);
   public notProvidedText = "<div class='text-red-100 italic'>Not provided</div>";
 
-  useColon: boolean = true;
-
-  preventFieldRender = computed<boolean>(() => {
-    if (!this.fieldRef) return true;
-    const { hide, label, placeholder, description, required, useColon } = this.fieldsManager.fields()[this.fieldRef] || {};
-    this.label = label;
-    this.placeholder = placeholder;
-    this.description = description;
-    if (!this.lockRequiredFromFieldManager) {
-      this.required = required;
-    }
-    this.useColon = useColon ?? true;
-    return !hide;
+  /** FieldsManager entry for this field (when `fieldRef` is set). */
+  private readonly fieldConfig = computed(() => {
+    const ref = this.fieldRef();
+    return ref ? this.fieldsManager.fields()[ref] : undefined;
   });
 
-  constructor(
-    private readonly wordCounterSE: WordCounterService,
-    public rolesSE: RolesService,
-    public dataControlSE: DataControlService
-  ) {}
+  /** Presentation values: FieldsManager overrides the inputs, with input fallback. */
+  readonly effectiveLabel = computed(() => this.fieldConfig()?.label ?? this.label());
+  readonly effectivePlaceholder = computed(() => this.fieldConfig()?.placeholder ?? this.placeholder());
+  readonly effectiveDescription = computed(() => this.fieldConfig()?.description ?? this.description());
+  readonly effectiveRequired = computed(() => {
+    if (this.lockRequiredFromFieldManager()) return this.required();
+    return this.fieldConfig()?.required ?? this.required();
+  });
+  readonly effectiveUseColon = computed(() => this.fieldConfig()?.useColon ?? true);
+
+  /** Render gate — pure derivation (no state mutation). */
+  readonly shouldRender = computed<boolean>(() => {
+    const ref = this.fieldRef();
+    if (!ref) return true;
+    return !this.fieldConfig()?.hide;
+  });
+
+  /** Word count derived reactively from the current value. */
+  readonly wordCount = computed<number>(() => (this.maxWords() ? this.wordCounterSE.counter(this._value()) : 0));
 
   get value() {
-    if (this.beforeValue !== this._value && this.maxWords) this.wordCount = this.wordCounterSE.counter(this._value);
-    this.beforeValue = this._value;
-    return this._value;
+    return this._value();
   }
 
   set value(v: string) {
-    if (v !== this._value) {
-      if (this.type === 'link') v = v.trim();
+    if (v !== this._value()) {
+      if (this.type() === 'link') v = v.trim();
 
-      this._value = v;
-      if (Number(v) < 0) this._value = 0;
+      // Preserve legacy behavior: store clamped value but propagate the raw v.
+      this._value.set(Number(v) < 0 ? (0 as any) : v);
       this.onChange(v);
     }
   }
 
   /** Whether the field currently holds a non-empty value. */
   get hasValue(): boolean {
-    return this._value !== null && this._value !== undefined && String(this._value).trim() !== '';
+    const v = this._value();
+    return v !== null && v !== undefined && String(v).trim() !== '';
   }
 
   /**
@@ -104,9 +109,10 @@ export class PrInputComponent implements ControlValueAccessor {
    * - pending (yellow) → required and empty
    */
   get fieldState(): 'optional' | 'pending' | 'done' | 'error' {
-    if (this.maxWords && this.wordCount > this.maxWords && !this.autogenerate) return 'error';
+    const maxWords = this.maxWords();
+    if (maxWords && this.wordCount() > maxWords && !this.autogenerate()) return 'error';
     if (this.hasValue) return 'done'; // green = filled/valid (optional or required)
-    return this.required ? 'pending' : 'optional'; // yellow vs blue when empty
+    return this.effectiveRequired() ? 'pending' : 'optional'; // yellow vs blue when empty
   }
 
   get badLink() {
@@ -126,7 +132,7 @@ export class PrInputComponent implements ControlValueAccessor {
   onTouch() {}
 
   writeValue(value: any): void {
-    this._value = value;
+    this._value.set(value);
   }
   registerOnChange(fn: any): void {
     this.onChange = fn;
