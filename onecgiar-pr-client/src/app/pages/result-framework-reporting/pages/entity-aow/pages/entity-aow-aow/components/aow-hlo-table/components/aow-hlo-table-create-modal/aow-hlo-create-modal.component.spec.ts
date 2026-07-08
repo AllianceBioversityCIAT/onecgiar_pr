@@ -122,6 +122,52 @@ describe('AowHloCreateModalComponent - Unit Tests', () => {
     });
   });
 
+  describe('Science Programs ToC/Other split logic (P2-3114)', () => {
+    const OTHER_SP = -999;
+
+    it('should preselect ToC science programs by id, tagged from_toc:true', () => {
+      const tocSpIds = [51, 57];
+      const allInits = [
+        { id: 51, official_code: 'SP02', name: 'Sustainable Farming' },
+        { id: 52, official_code: 'SP03', name: 'Animal' },
+        { id: 57, official_code: 'SP08', name: 'Food Frontiers' }
+      ];
+
+      const preselected = allInits.filter(sp => tocSpIds.includes(sp.id)).map(sp => ({ ...sp, from_toc: true }));
+
+      expect(preselected.map(s => s.official_code)).toEqual(['SP02', 'SP08']);
+      expect(preselected.every(s => s.from_toc === true)).toBe(true);
+    });
+
+    it('should open dropdown 2 and drop the sentinel when "Other(s)" is picked', () => {
+      const showOtherScience = signal(false);
+      const selectedEntities = signal<any[]>([{ id: 51 }, { id: OTHER_SP }]);
+
+      if (selectedEntities().some(sp => sp?.id === OTHER_SP)) {
+        showOtherScience.set(true);
+        selectedEntities.set(selectedEntities().filter(sp => sp?.id !== OTHER_SP));
+      }
+
+      expect(showOtherScience()).toBe(true);
+      expect(selectedEntities().map(s => s.id)).toEqual([51]);
+    });
+
+    it('should merge dropdown1 (from_toc:true) + otherScience (from_toc:false), excluding the sentinel', () => {
+      const selectedEntities = [{ id: 51 }, { id: OTHER_SP }];
+      const otherScienceSelected = [{ id: 61 }];
+
+      const merged = [
+        ...selectedEntities.filter(sp => sp?.id !== OTHER_SP).map(sp => ({ ...sp, from_toc: true })),
+        ...otherScienceSelected.map(sp => ({ ...sp, from_toc: false }))
+      ];
+
+      expect(merged).toEqual([
+        { id: 51, from_toc: true },
+        { id: 61, from_toc: false }
+      ]);
+    });
+  });
+
   describe('onResultTypeChange logic', () => {
     it('should update result_type_id in createResultBody', () => {
       const createResultBody = signal({

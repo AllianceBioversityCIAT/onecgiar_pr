@@ -201,20 +201,24 @@
             [labelDescInlineStyles]="'margin-top: 0 !important'">
           </app-pr-field-header>
 
-          <p-multiselect
-            [options]="allInitiatives()"
-            optionLabel="official_code"
-            placeholder="Select entity"
-            appendTo="body"
-            [(ngModel)]="entityAowService.selectedEntities"
-            [style]="{ width: '100%', height: '32px' }"
-            [disabled]="creatingResult()">
-            <ng-template let-entity #item>
-              <div class="flex items-center gap-2">
-                <div>{{ entity.official_code }} - {{ entity.name }}</div>
-              </div>
-            </ng-template>
-          </p-multiselect>
+          <!-- P2-3114: Contributing Science Programs split into "from ToC" (dropdown 1) + "Other(s)" (dropdown 2). -->
+          @if (hasReferenceScience()) {
+            <p-multiselect
+              [options]="dropdown1ScienceOptions()"
+              optionLabel="official_code"
+              placeholder="Select entity"
+              appendTo="body"
+              [(ngModel)]="entityAowService.selectedEntities"
+              (onChange)="onScienceSelect()"
+              [style]="{ width: '100%', height: '32px' }"
+              [disabled]="creatingResult()">
+              <ng-template let-entity #item>
+                <div class="flex items-center gap-2">
+                  <div>{{ entity.official_code }} - {{ entity.name }}</div>
+                </div>
+              </ng-template>
+            </p-multiselect>
+          }
 
           @if (entityAowService.selectedEntities().length > 0) {
             <app-pr-field-header
@@ -233,6 +237,42 @@
                 </div>
               }
             </div>
+          }
+
+          @if (showOtherScience() || !hasReferenceScience()) {
+            <app-pr-field-header
+              label="Other(s) Science Program(s)/Accelerator(s)"
+              [required]="false"
+              [labelDescInlineStyles]="'margin-top: 10px !important'">
+            </app-pr-field-header>
+
+            <p-multiselect
+              [options]="otherScienceList()"
+              optionLabel="official_code"
+              placeholder="Select other entity"
+              appendTo="body"
+              [(ngModel)]="otherScienceSelected"
+              [style]="{ width: '100%', height: '32px' }"
+              [disabled]="creatingResult()">
+              <ng-template let-entity #item>
+                <div class="flex items-center gap-2">
+                  <div>{{ entity.official_code }} - {{ entity.name }}</div>
+                </div>
+              </ng-template>
+            </p-multiselect>
+
+            @if (otherScienceSelected().length > 0) {
+              <div class="selected_chips_container">
+                @for (entity of otherScienceSelected(); track $index) {
+                  <div class="selected_chip">
+                    <div class="name">
+                      <span class="font-weight-600">{{ entity.official_code }} -</span> {{ entity.name }}
+                    </div>
+                    <i class="material-icons-round" style="font-size: 18px; cursor: pointer" (click)="deleteOtherScience($index)"> cancel </i>
+                  </div>
+                }
+              </div>
+            }
           }
         </div>
 
