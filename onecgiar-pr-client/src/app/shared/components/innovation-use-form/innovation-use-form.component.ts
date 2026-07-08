@@ -92,6 +92,17 @@ export class InnovationUseFormComponent implements OnInit, OnChanges {
     return this.body as any;
   }
 
+  // P2-3060: completeness for the "Current core innovation use…" required field.
+  // Mirrors the twin Innovation Development component (anticipated-innovation-user.checkAlert()):
+  // complete when "to be determined" is set OR at least one actor / organization / measure exists.
+  checkCoreInnovationUseAlert(): boolean {
+    if (this.body.innov_use_to_be_determined) return true;
+    const actors = this.body.innovatonUse.actors.filter(item => item.actor_type_id !== null);
+    const organizations = this.body.innovatonUse.organization.filter(item => item.is_active !== false);
+    const measures = this.body.innovatonUse.measures.filter(item => item.is_active !== false);
+    return actors?.length > 0 || organizations?.length > 0 || measures?.length > 0;
+  }
+
   readiness_of_this_innovation_description() {
     return `<ul>
     <li>In case the innovation use level differs across countries or regions, we advise to assign the highest current innovation use level that can be supported by the evidence provided.</li>

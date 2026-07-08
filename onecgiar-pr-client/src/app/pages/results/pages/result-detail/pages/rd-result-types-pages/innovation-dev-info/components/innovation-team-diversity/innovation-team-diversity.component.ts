@@ -15,4 +15,11 @@ export class InnovationTeamDiversityComponent {
   example11 = null;
 
   constructor(public innovationDevInfoUtilsSE: InnovationDevInfoUtilsService) {}
+
+  // P2-3060: completeness for the required team-diversity question.
+  // Complete when an option has been selected (radioButtonValue is set).
+  isTeamDiversityComplete(): boolean {
+    const value = (this.options?.innovation_team_diversity as any)?.['radioButtonValue'];
+    return value !== null && value !== undefined && value !== '';
+  }
 }

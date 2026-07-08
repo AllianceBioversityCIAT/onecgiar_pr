@@ -2,6 +2,12 @@
     [description]="options?.innovation_team_diversity?.question_description" [useColon]="false"></app-pr-field-header>
 
 <div class="paddingLeft20">
+    <!-- P2-3060: missing required-field alert for the team-diversity question -->
+    <div
+        appFeedbackValidation
+        labelText="Innovation team diversity - Have concrete actions been taken to promote diversity in the composition of the CGIAR and partner innovation team?"
+        [isComplete]="isTeamDiversityComplete()"></div>
+
     <app-pr-radio-button
         (selectOptionEvent)="innovationDevInfoUtilsSE.mapBoolean( this.options?.innovation_team_diversity)"
         [verticalAlignment]="true" [options]="this.options?.innovation_team_diversity

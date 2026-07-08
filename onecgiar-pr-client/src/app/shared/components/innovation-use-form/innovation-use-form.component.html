@@ -39,6 +39,14 @@
     [(ngModel)]="body.innov_use_to_be_determined"
     optionValue="value">
   </app-pr-radio-button>
+
+  <!-- P2-3060: missing required-field alert for "Current core innovation use…" (P25 only) -->
+  @if (this.fieldsManagerSE.isP25()) {
+    <div
+      appFeedbackValidation
+      labelText="Current core innovation use in number of users that can be supported by evidence (within the reporting year)"
+      [isComplete]="checkCoreInnovationUseAlert()"></div>
+  }
 }
 @if (
   !body.innov_use_to_be_determined ||

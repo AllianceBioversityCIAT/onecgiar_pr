@@ -829,4 +829,48 @@ describe('InnovationUseFormComponent', () => {
       expect(result).toBe('');
     });
   });
+
+  describe('checkCoreInnovationUseAlert (P2-3060)', () => {
+    beforeEach(() => {
+      component.body.innov_use_to_be_determined = false;
+      component.body.innovatonUse.actors = [];
+      component.body.innovatonUse.organization = [];
+      component.body.innovatonUse.measures = [];
+    });
+
+    it('returns false when nothing is provided and not "to be determined"', () => {
+      expect(component.checkCoreInnovationUseAlert()).toBe(false);
+    });
+
+    it('returns true when "to be determined" is set', () => {
+      component.body.innov_use_to_be_determined = true;
+      expect(component.checkCoreInnovationUseAlert()).toBe(true);
+    });
+
+    it('returns true when at least one actor with a type is present', () => {
+      component.body.innovatonUse.actors = [{ actor_type_id: 1 } as Actor];
+      expect(component.checkCoreInnovationUseAlert()).toBe(true);
+    });
+
+    it('ignores actors with null actor_type_id', () => {
+      component.body.innovatonUse.actors = [{ actor_type_id: null } as Actor];
+      expect(component.checkCoreInnovationUseAlert()).toBe(false);
+    });
+
+    it('returns true when at least one active organization is present', () => {
+      component.body.innovatonUse.organization = [{ is_active: true } as Organization];
+      expect(component.checkCoreInnovationUseAlert()).toBe(true);
+    });
+
+    it('returns true when at least one active measure is present', () => {
+      component.body.innovatonUse.measures = [{ is_active: true } as Measure];
+      expect(component.checkCoreInnovationUseAlert()).toBe(true);
+    });
+
+    it('ignores inactive organizations and measures', () => {
+      component.body.innovatonUse.organization = [{ is_active: false } as Organization];
+      component.body.innovatonUse.measures = [{ is_active: false } as Measure];
+      expect(component.checkCoreInnovationUseAlert()).toBe(false);
+    });
+  });
 });
