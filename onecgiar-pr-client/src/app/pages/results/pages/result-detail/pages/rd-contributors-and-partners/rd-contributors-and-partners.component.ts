@@ -213,14 +213,22 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   linkedResultQuestionLabel =
     'Is this result linked or bundled with another CGIAR-reported result (such as another innovation or a different type of result)?';
 
+  // The result's own (owner/primary) Science Program: it can never be a contributor to its own result
+  // (backend rejects "The owner initiative cannot be shared with itself"), so it must not appear in either dropdown.
+  ownerInitiativeId = computed(
+    () => this.api.dataControlSE.currentResultSignal?.()?.initiative_id ?? this.api.dataControlSE.currentResult?.initiative_id
+  );
+
   referenceScience = computed(() => {
     const ids = this.rdPartnersSE.tocReferenceSynergyInitiativeIds();
-    return (this.allScienceProgramsList() ?? []).filter(sp => ids.includes(sp.id));
+    const ownerId = this.ownerInitiativeId();
+    return (this.allScienceProgramsList() ?? []).filter(sp => ids.includes(sp.id) && sp.id !== ownerId);
   });
 
   otherScienceList = computed(() => {
     const ids = this.rdPartnersSE.tocReferenceSynergyInitiativeIds();
-    return (this.allScienceProgramsList() ?? []).filter(sp => !ids.includes(sp.id));
+    const ownerId = this.ownerInitiativeId();
+    return (this.allScienceProgramsList() ?? []).filter(sp => !ids.includes(sp.id) && sp.id !== ownerId);
   });
 
   // True when the ToC brought at least one Science Program that actually resolves in the catalog. Based on the resolved
