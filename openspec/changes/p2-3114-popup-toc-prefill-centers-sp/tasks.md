@@ -10,11 +10,11 @@
 - [x] 2.3 DONE: `createResult()` maps `contributing_center` with `from_toc: c.from_toc ?? false` (ToC-preselected = true, manually-added = false).
 - [x] 2.4 DONE: fixed "Center(s) selected (undefined)" — root cause was `contributing_center: null` default (pr-multi-select renders `(${value?.length})`); changed default to `[]`. NOTE: reverted an initial wrong attempt to drop `optionValue="code"` — the custom pr-multi-select needs it for `writeValue`/`onSelectOption` matching.
 
-## 3. Science Programs — ToC preselect + Other split (gated on 1.2)
-- [ ] 3.1 If the SP ToC source is confirmed: derive the SP ToC bucket on popup open and expose/reset it in the service.
-- [ ] 3.2 Add the split UI (main SP dropdown preselected + "Other(s) Science Program(s)" dropdown) in the template.
-- [ ] 3.3 Carry `from_toc` on the SP contribution list into the create payload.
-- [ ] 3.4 If the source is NOT available, keep today's manual SP behavior and hand the backend dependency to Juanda; ship Centers (section 2) independently.
+## 3. Science Programs — ToC preselect + Other split (DONE — Juanda's back landed)
+- [x] 3.1 DONE: backend exposes `contributing_synergy_program_initiative_ids` per node (commit bad223a34); `preselectTocSciencePrograms()` derives the SP bucket (join by `id`) and sets `tocSciencePrograms` + `selectedEntities`.
+- [x] 3.2 DONE: dropdown 1 = ToC SP + "Other(s)" sentinel (`dropdown1ScienceOptions`, `onScienceSelect`); dropdown 2 = `otherScienceList`; both with chips; AC4 auto-open.
+- [x] 3.3 DONE: `createResult()` merges selectedEntities(from_toc:true, no sentinel) + otherScienceSelected(from_toc:false) → backend tags `initiativeFromToc`.
+- [x] 3.4 N/A — source landed. Runtime verified on SP06/AOW01: SP02/03/08/12 preselected + "Other(s)" sentinel in dropdown 1. Screenshot p2-3114-sp-preselect-SP06.png. 17/17 tests. (e2e create skipped to avoid firing real share-requests to those SPs.)
 
 ## 4. Tests
 - [x] 4.1 Jest: preselect derives ToC centers tagged `from_toc:true`; empty node preselects none. (11/11 passing)
