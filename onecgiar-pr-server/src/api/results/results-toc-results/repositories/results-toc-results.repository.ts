@@ -459,7 +459,7 @@ export class ResultsTocResultRepository
         rtr.toc_progressive_narrative,
         tl.name AS level_name,
         tr.result_title AS outcome_label,
-        tr.description AS outcome_statement,
+        tr.result_description AS outcome_statement,
         rtri.result_toc_result_indicator_id,
         rtri.toc_results_indicator_id,
         tri.indicator_description,
