@@ -76,7 +76,10 @@ export class AowHloCreateModalComponent implements OnInit {
   readonly OTHER_CENTERS_CODE = '__OTHER_CENTERS__';
   tocCenters = signal<any[]>([]);
   otherCentersSelected = signal<any[]>([]);
-  showOtherCenters = signal<boolean>(false);
+  // Parity with C&P (P2-2998): "Other(s)" stays selected in dropdown 1; its presence reveals dropdown 2.
+  showOtherCenters = computed(() =>
+    (this.createResultBody().contributing_center ?? []).some((c: any) => c?.code === this.OTHER_CENTERS_CODE)
+  );
 
   hasReferenceCenters = computed(() => this.tocCenters().length > 0);
 
@@ -97,7 +100,9 @@ export class AowHloCreateModalComponent implements OnInit {
   readonly OTHER_SP_ID = -999;
   tocSciencePrograms = signal<any[]>([]);
   otherScienceSelected = signal<any[]>([]);
-  showOtherScience = signal<boolean>(false);
+  showOtherScience = computed(() =>
+    (this.entityAowService.selectedEntities() ?? []).some((sp: any) => sp?.id === this.OTHER_SP_ID)
+  );
 
   hasReferenceScience = computed(() => this.tocSciencePrograms().length > 0);
 
@@ -153,22 +158,14 @@ export class AowHloCreateModalComponent implements OnInit {
         .map((center: any) => ({ ...center, from_toc: true }));
 
       this.tocCenters.set(preselected);
-      // AC4: when the ToC returns no reference centers, the Other(s) dropdown auto-activates.
-      this.showOtherCenters.set(preselected.length === 0);
       this.createResultBody.set({ ...this.createResultBody(), contributing_center: [...preselected] });
     });
   }
 
-  // P2-3114: opening the "Other(s)" sentinel in dropdown 1 reveals dropdown 2 and keeps the sentinel out of the payload.
-  onContributingCenterSelect(event: any): void {
-    if (event?.option?.code === this.OTHER_CENTERS_CODE) {
-      this.showOtherCenters.set(true);
-      this.createResultBody.set({
-        ...this.createResultBody(),
-        contributing_center: (this.createResultBody().contributing_center ?? []).filter(
-          (center: any) => center?.code !== this.OTHER_CENTERS_CODE
-        )
-      });
+  // P2-3114: when "Other(s)" is deselected, clear dropdown 2 (parity with rd-contributors-and-partners).
+  onContributingCenterSelect(_event: any): void {
+    if (!this.showOtherCenters()) {
+      this.otherCentersSelected.set([]);
     }
   }
 
@@ -188,17 +185,13 @@ export class AowHloCreateModalComponent implements OnInit {
       .map((sp: any) => ({ ...sp, from_toc: true }));
 
     this.tocSciencePrograms.set(preselected);
-    // AC4: when the ToC returns no synergy programs, the Other(s) dropdown auto-activates.
-    this.showOtherScience.set(preselected.length === 0);
     this.entityAowService.selectedEntities.set([...preselected]);
   }
 
-  // P2-3114: selecting the "Other(s)" sentinel in SP dropdown 1 reveals dropdown 2 and keeps the sentinel out of the payload.
+  // P2-3114: when "Other(s)" is deselected in SP dropdown 1, clear dropdown 2 (parity with C&P).
   onScienceSelect(): void {
-    const selected = this.entityAowService.selectedEntities();
-    if (selected.some((sp: any) => sp?.id === this.OTHER_SP_ID)) {
-      this.showOtherScience.set(true);
-      this.entityAowService.selectedEntities.set(selected.filter((sp: any) => sp?.id !== this.OTHER_SP_ID));
+    if (!this.showOtherScience()) {
+      this.otherScienceSelected.set([]);
     }
   }
 

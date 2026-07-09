@@ -86,20 +86,29 @@ describe('AowHloCreateModalComponent - Unit Tests', () => {
   describe('Centers ToC/Other split logic (P2-3114)', () => {
     const OTHER = '__OTHER_CENTERS__';
 
-    it('should open dropdown 2 and drop the sentinel when "Other(s)" is picked', () => {
-      const showOtherCenters = signal(false);
-      const contributing_center = signal<any[]>([{ code: 'IRRI', from_toc: true }, { code: OTHER }]);
+    it('should reveal dropdown 2 when "Other(s)" is in dropdown 1 selection (sentinel kept, C&P parity)', () => {
+      const OTHER = '__OTHER_CENTERS__';
+      const contributing_center = [{ code: 'IRRI', from_toc: true }, { code: OTHER }];
+      const showOtherCenters = contributing_center.some(c => c.code === OTHER);
 
-      // onContributingCenterSelect logic
-      const event = { option: { code: OTHER } };
-      if (event?.option?.code === OTHER) {
-        showOtherCenters.set(true);
-        contributing_center.set(contributing_center().filter((c: any) => c?.code !== OTHER));
+      expect(showOtherCenters).toBe(true);
+      expect(contributing_center.some(c => c.code === OTHER)).toBe(true);
+      expect(contributing_center.map(c => c.code)).toEqual(['IRRI', OTHER]);
+    });
+
+    it('should clear otherCenters when "Other(s)" is deselected from dropdown 1', () => {
+      const OTHER = '__OTHER_CENTERS__';
+      const contributing_center = signal<any[]>([{ code: 'IRRI', from_toc: true }]);
+      const otherCentersSelected = signal<any[]>([{ code: 'CIAT' }]);
+      const showOtherCenters = () => contributing_center().some(c => c.code === OTHER);
+
+      // onContributingCenterSelect logic after deselect
+      if (!showOtherCenters()) {
+        otherCentersSelected.set([]);
       }
 
-      expect(showOtherCenters()).toBe(true);
-      expect(contributing_center().some(c => c.code === OTHER)).toBe(false);
-      expect(contributing_center().map(c => c.code)).toEqual(['IRRI']);
+      expect(showOtherCenters()).toBe(false);
+      expect(otherCentersSelected()).toEqual([]);
     });
 
     it('should merge dropdown1 (from_toc:true) + otherCenters (from_toc:false), excluding the sentinel', () => {
@@ -117,10 +126,10 @@ describe('AowHloCreateModalComponent - Unit Tests', () => {
       ]);
     });
 
-    it('should auto-open dropdown 2 when the ToC returns no centers (AC4)', () => {
+    it('should auto-open dropdown 2 when the ToC returns no centers (AC4 via !hasReferenceCenters)', () => {
       const tocCenters: any[] = [];
-      const showOtherCenters = signal(tocCenters.length === 0);
-      expect(showOtherCenters()).toBe(true);
+      const hasReferenceCenters = tocCenters.length > 0;
+      expect(hasReferenceCenters).toBe(false);
     });
   });
 
@@ -141,17 +150,12 @@ describe('AowHloCreateModalComponent - Unit Tests', () => {
       expect(preselected.every(s => s.from_toc === true)).toBe(true);
     });
 
-    it('should open dropdown 2 and drop the sentinel when "Other(s)" is picked', () => {
-      const showOtherScience = signal(false);
-      const selectedEntities = signal<any[]>([{ id: 51 }, { id: OTHER_SP }]);
+    it('should reveal dropdown 2 when "Other(s)" is in SP dropdown 1 (sentinel kept, C&P parity)', () => {
+      const selectedEntities = [{ id: 51 }, { id: OTHER_SP }];
+      const showOtherScience = selectedEntities.some(sp => sp?.id === OTHER_SP);
 
-      if (selectedEntities().some(sp => sp?.id === OTHER_SP)) {
-        showOtherScience.set(true);
-        selectedEntities.set(selectedEntities().filter(sp => sp?.id !== OTHER_SP));
-      }
-
-      expect(showOtherScience()).toBe(true);
-      expect(selectedEntities().map(s => s.id)).toEqual([51]);
+      expect(showOtherScience).toBe(true);
+      expect(selectedEntities.map(s => s.id)).toEqual([51, OTHER_SP]);
     });
 
     it('should merge dropdown1 (from_toc:true) + otherScience (from_toc:false), excluding the sentinel', () => {
