@@ -1,6 +1,11 @@
-# Cypress E2E Testing
+# Cypress Testing (local-only)
 
-Este proyecto utiliza Cypress para pruebas end-to-end automatizadas.
+Este proyecto utiliza Cypress para pruebas **end-to-end** y de **componentes** (component testing).
+
+> ⚠️ **Solo local.** Cypress **NO** se ejecuta en GitHub Actions (el workflow `cypress.yml` fue
+> eliminado a propósito). Estas pruebas existen para correrse en local y para que un **agente de
+> IA pueda guiarse** con ellas al validar cambios (sobre todo en `custom-fields/`, que está
+> excluido del coverage de Jest). No hay ejecución automática en CI.
 
 ## 🔧 Configuración
 
@@ -35,12 +40,6 @@ El sistema ahora maneja diferentes roles de usuario:
    export CYPRESS_GUEST_PASSWORD=tu-contraseña
    ```
 
-### Configuración en Producción (GitHub Actions)
-
-Las credenciales se configuran como GitHub Secrets:
-- `CYPRESS_GUEST_EMAIL`: Email del usuario Guest
-- `CYPRESS_GUEST_PASSWORD`: Contraseña del usuario Guest
-
 ## 🚀 Uso
 
 ### Comandos disponibles
@@ -55,6 +54,24 @@ npm run cypress:run
 # Ejecutar pruebas específicas
 npm run cypress:run -- --spec "cypress/e2e/login-simplified.cy.ts"
 ```
+
+### Component testing (custom-fields)
+
+```bash
+# Abrir Cypress en modo componentes (GUI)
+npm run cypress:component
+
+# Ejecutar todos los component tests (headless) — src/**/*.cy.ts
+npm run test:ct
+```
+
+Los component specs viven junto a cada componente (ej.
+`src/app/custom-fields/pr-multi-select/pr-multi-select.cy.ts`) y NO requieren credenciales ni
+levantar `ng serve` (montan el componente aislado con el dev-server webpack de Cypress).
+
+> Agentes en el sandbox de Cursor: el shell integrado setea `ELECTRON_RUN_AS_NODE=1` (rompe el
+> binario de Cypress) y cambia `CYPRESS_CACHE_FOLDER`. Correr con:
+> `env -u ELECTRON_RUN_AS_NODE CYPRESS_CACHE_FOLDER="$HOME/Library/Caches/Cypress" npm run test:ct`
 
 ### Comandos personalizados
 
@@ -98,24 +115,23 @@ cypress/
 │   └── results-list.cy.ts # Pruebas de lista de resultados
 ├── fixtures/              # Datos de prueba
 ├── support/               # Comandos y configuración
-│   ├── commands.ts        # Comandos personalizados
-│   └── e2e.ts            # Configuración global
+│   ├── commands.ts        # Comandos personalizados (login, etc. — E2E)
+│   ├── e2e.ts            # Configuración global E2E
+│   ├── component.ts       # Runner de component testing (mount)
+│   └── component-index.html
 ├── screenshots/           # Capturas de errores
 ├── videos/               # Videos de las pruebas
 └── cypress.env.js        # Credenciales locales (no en Git)
+
+# Component specs colocados junto a cada componente:
+src/app/custom-fields/**/*.cy.ts
 ```
 
-## 🕐 Ejecución Automática
+## 🕐 Ejecución
 
-El sistema ejecuta pruebas automáticamente:
-- **Cada 4 horas** mediante GitHub Actions
-- **Al hacer push** a las ramas `master` o `dev`
-- **Al crear Pull Requests**
-
-Los resultados se notifican por Slack con:
-- ✅ Estado de éxito
-- ❌ Detalles de fallos
-- 📊 Resumen de pruebas ejecutadas
+- **Solo local.** No hay ejecución automática en GitHub Actions.
+- Correr E2E con `npm run cypress:run` y component tests con `npm run test:ct` antes de
+  commitear cambios en los componentes cubiertos.
 
 ## 🎯 Mejores Prácticas
 

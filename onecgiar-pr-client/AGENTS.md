@@ -82,8 +82,13 @@ npm run lint
 npm run lint:fix
 npm run cypress:open
 npm run cypress:run
-npm run cypress:run:record
+npm run cypress:component
+npm run test:ct
 ```
+
+Cypress is local-only (no GitHub Actions workflow). `npm run test:ct` runs **all 23** custom-fields
+component specs (`src/app/custom-fields/**/*.cy.ts`, **67 tests**) — expected to be green before
+committing any `custom-fields/` change (especially signals refactors).
 
 Coverage thresholds enforced in `package.json`:
 

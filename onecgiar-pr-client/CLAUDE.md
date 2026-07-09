@@ -108,10 +108,14 @@ npm run test:coverage       # Jest with coverage
 npm run test:coverage:html  # Coverage with text-summary, cobertura, lcov reporters
 npm run lint                # ng lint
 npm run lint:fix            # ng lint --fix
-npm run cypress:open        # Cypress GUI
-npm run cypress:run         # Cypress headless
-npm run cypress:run:record  # Cypress recorded run
+npm run cypress:open        # Cypress GUI (E2E)
+npm run cypress:run         # Cypress headless (E2E)
+npm run cypress:component   # Cypress GUI (component testing)
+npm run test:ct             # Cypress component tests, headless
 ```
+
+> Cypress is **local-only** — there is no Cypress GitHub Actions workflow. It exists for local
+> and AI-agent self-verification (see §9 Component tests).
 
 ### Coverage thresholds (enforced in `package.json`)
 
@@ -304,8 +308,51 @@ The interceptor triggers green-checks refresh for Result Detail routes and IPSR 
 ### E2E (Cypress)
 
 - Config: `cypress.config.js`; env example `cypress.env.js.example`.
-- Tests under `cypress/` and `tests/`.
+- Tests under `cypress/e2e/**/*.cy.ts` (spec pattern `cypress/e2e/**/*.{js,jsx,ts,tsx}`).
 - Cypress is the place to assert **full user flows** — submission, QA review, phase switching, share request.
+
+### Component tests (Cypress CT) — the way to validate `custom-fields/`
+
+`custom-fields/` is **excluded from Jest coverage** and its components render through a real
+browser layout (CSS `:focus-within` dropdowns, CDK virtual scroll, PrimeNG) that jsdom cannot
+lay out. So the **custom-fields are validated with Cypress Component Testing**, not Jest DOM.
+
+- **Spec location:** colocated next to each component as `*.cy.ts` (e.g.
+  `src/app/custom-fields/pr-multi-select/pr-multi-select.cy.ts`). Component spec pattern is
+  `src/**/*.cy.ts` (kept separate from the `cypress/e2e/**` E2E specs).
+- **Support/runner:** `cypress/support/component.ts` + `cypress/support/component-index.html`.
+  The dev server uses the webpack `@angular-devkit/build-angular` builder (dev-only dependency)
+  driven by a curated `component.devServer.options.projectConfig` in `cypress.config.js` — the
+  app itself still builds with the esbuild `@angular/build:application` builder.
+- **What is covered today:** **all 23** `custom-fields/` components — one colocated `*.cy.ts` each,
+  **67 tests total** (`npm run test:ct` must stay green). Highlights:
+  - **CVA / ngModel fields:** `pr-input`, `pr-textarea`, `pr-select`, `pr-multi-select` (incl. external
+    in-place `splice` deselection regression), `pr-checkbox`, `pr-radio-button`, `pr-yes-or-not`,
+    `pr-range-level`
+  - **Shell / feedback:** `field-card`, `pr-field-header`, `alert-status`, `pr-word-counter`,
+    `custom-validation-tooltip`, `pr-field-validations` (placeholder mount)
+  - **Actions:** `pr-button`, `add-button`, `save-button`, `sync-button`, `edit-or-delete-item-button`
+  - **Domain:** `lead-contact-person-field`, `detail-section-title`, `no-data-text`,
+    `under-construction-point`
+- **Mount helpers:** `cypress/support/ct-utils.ts` — `mountCF(template)` for exported components;
+  `mountComponent(Class)` for declared-but-not-exported ones (`pr-word-counter`,
+  `under-construction-point`, etc.).
+- **Mounting gotcha:** `RolesService.readOnly` defaults to `true`, which hides the interactive
+  field. Pass `editable: true` to `mountCF` / `mountComponent` (see existing specs).
+
+**RULE — run the component tests to validate any change to `custom-fields/`.** They are **local-only
+(NOT wired into CI — there is no Cypress GitHub Actions workflow)**; their purpose is to let a
+developer or an AI agent self-verify these components locally. Run them and expect green before
+committing any `custom-fields/` change:
+
+```bash
+npm run test:ct            # runs all src/**/*.cy.ts headless — expect "All specs passed!"
+```
+
+> Cursor-sandbox agents only: the integrated shell sets `ELECTRON_RUN_AS_NODE=1` (breaks the
+> Cypress binary) and overrides `CYPRESS_CACHE_FOLDER` to an empty temp dir. Run with
+> `env -u ELECTRON_RUN_AS_NODE CYPRESS_CACHE_FOLDER="$HOME/Library/Caches/Cypress" npm run test:ct`.
+> Normal local shells don't need this.
 
 ---
 

@@ -16,7 +16,8 @@
     "tunnel": "ng serve --allowed-hosts true --host 0.0.0.0",
     "cypress:open": "cypress open",
     "cypress:run": "cypress run",
-    "cypress:run:record": "cypress run --record --key $CYPRESS_RECORD_KEY"
+    "cypress:component": "cypress open --component",
+    "test:ct": "cypress run --component"
   },
   "private": true,
   "dependencies": {
@@ -52,6 +53,7 @@
     "zone.js": "^0.15.1"
   },
   "devDependencies": {
+    "@angular-devkit/build-angular": "^19.2.14",
     "@angular-eslint/builder": "^18.4.3",
     "@angular-eslint/eslint-plugin": "^18.4.3",
     "@angular-eslint/eslint-plugin-template": "^18.4.3",
