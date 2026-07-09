@@ -20,9 +20,7 @@
       </div>
     </a>
 
-    <app-navigation-bar [isSearchMode]="isSearchMode()" (searchClosed)="isSearchMode.set(false)"></app-navigation-bar>
-
-    <div class="information">
+    <div class="nav_group">
       <button
         type="button"
         (click)="toggleSearch()"
@@ -34,6 +32,11 @@
           {{ isSearchMode() ? 'close' : 'search' }}
         </i>
       </button>
+
+      <app-navigation-bar [isSearchMode]="isSearchMode()" (searchClosed)="isSearchMode.set(false)"></app-navigation-bar>
+    </div>
+
+    <div class="information">
 
       <a
         #whatsNewLink

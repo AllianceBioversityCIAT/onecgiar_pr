@@ -81,6 +81,12 @@ button {
   }
 }
 
+.nav_group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .information {
   display: flex;
   align-items: center;
