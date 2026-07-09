@@ -34,6 +34,8 @@ export interface TocResultResponse {
   result_title: string;
   related_node_id: string | null;
   result_level_id?: number | null;
+  /** P2-3114: Clarisa initiative ids from toc_result_synergy_programs (same contract as C&P toc v2). */
+  contributing_synergy_program_initiative_ids?: number[];
   indicators: Array<{
     indicator_id: number;
     indicator_description: string | null;
@@ -684,6 +686,45 @@ export class AoWBilateralRepository {
 
     try {
       return await this.dataSource.query(query, [tocResultId, phaseUuid]);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        error,
+        className: AoWBilateralRepository.name,
+        debug: true,
+      });
+    }
+  }
+
+  async findBilateralProjectsByProgramOfficialCode(
+    programOfficialCode: string,
+    phaseUuid: string,
+  ) {
+    const query = `
+      SELECT
+        tr.id AS toc_result_id,
+        tr.official_code AS official_code,
+        trp.project_id AS project_id,
+        trp.name AS project_name,
+        trp.project_summary AS project_summary,
+        cp.organization_code AS organization_code,
+        ci.id AS organization_id,
+        ci.name AS organization_name,
+        ci.acronym AS organization_acronym,
+        ci.website_link AS organization_website_link
+      FROM ${env.DB_TOC}.toc_results tr
+      JOIN ${env.DB_TOC}.toc_result_projects trp ON trp.toc_result_id_toc = tr.related_node_id
+      LEFT JOIN ${env.DB_NAME}.clarisa_projects cp ON cp.id = trp.project_id
+      LEFT JOIN ${env.DB_NAME}.clarisa_institutions ci ON ci.id = cp.organization_code
+      WHERE UPPER(TRIM(tr.official_code)) = UPPER(TRIM(?))
+        AND tr.phase = ?
+      ORDER BY trp.name ASC, tr.id ASC
+    `;
+
+    try {
+      return await this.dataSource.query(query, [
+        programOfficialCode,
+        phaseUuid,
+      ]);
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         error,

@@ -168,4 +168,12 @@ export class ShareResultRequest {
     default: false,
   })
   is_map_to_toc: boolean;
+
+  @Column({
+    name: 'from_toc',
+    type: 'boolean',
+    nullable: false,
+    default: false,
+  })
+  from_toc: boolean;
 }

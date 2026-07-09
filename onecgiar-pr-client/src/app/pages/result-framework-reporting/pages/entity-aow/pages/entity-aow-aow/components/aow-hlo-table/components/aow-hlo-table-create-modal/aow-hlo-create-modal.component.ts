@@ -54,7 +54,7 @@ export class AowHloCreateModalComponent implements OnInit {
     toc_progressive_narrative: '',
     result_type_id: null,
     contribution_to_indicator_target: null,
-    contributing_center: null
+    contributing_center: []
   });
   mqapJson = signal<any>(null);
   validatingHandler = signal<boolean>(false);
@@ -72,6 +72,47 @@ export class AowHloCreateModalComponent implements OnInit {
 
   creatingResult = signal<boolean>(false);
 
+  // P2-3114: ToC/Other split for Contributing CGIAR Centers (mirrors the C&P surface).
+  readonly OTHER_CENTERS_CODE = '__OTHER_CENTERS__';
+  tocCenters = signal<any[]>([]);
+  otherCentersSelected = signal<any[]>([]);
+  showOtherCenters = signal<boolean>(false);
+
+  hasReferenceCenters = computed(() => this.tocCenters().length > 0);
+
+  // Dropdown 1: the ToC-derived centers + the "Other(s)" sentinel that opens dropdown 2.
+  dropdown1Options = computed(() => [
+    ...this.tocCenters(),
+    { code: this.OTHER_CENTERS_CODE, acronym: 'Other(s)', name: 'Other(s) CGIAR Centers', full_name: '<strong>Other(s) CGIAR Centers</strong>' }
+  ]);
+
+  // Dropdown 2: every center not derived from the ToC node.
+  otherCentersList = computed(() => {
+    const tocCodes = new Set(this.tocCenters().map((c: any) => c.code));
+    return this.centersSE.centersList.filter((c: any) => !tocCodes.has(c.code));
+  });
+
+  // P2-3114: ToC/Other split for Contributing Science Programs.
+  // Backend exposes contributing_synergy_program_initiative_ids per node (clarisa_initiatives.id[]); join by id.
+  readonly OTHER_SP_ID = -999;
+  tocSciencePrograms = signal<any[]>([]);
+  otherScienceSelected = signal<any[]>([]);
+  showOtherScience = signal<boolean>(false);
+
+  hasReferenceScience = computed(() => this.tocSciencePrograms().length > 0);
+
+  // Dropdown 1: the ToC-derived Science Programs + the "Other(s)" sentinel that opens dropdown 2.
+  dropdown1ScienceOptions = computed(() => [
+    ...this.tocSciencePrograms(),
+    { id: this.OTHER_SP_ID, official_code: 'Other(s)', name: 'Science Program(s)/Accelerator(s)' }
+  ]);
+
+  // Dropdown 2: every Science Program not derived from the ToC node.
+  otherScienceList = computed(() => {
+    const tocIds = new Set(this.tocSciencePrograms().map((sp: any) => sp.id));
+    return this.allInitiatives().filter((sp: any) => !tocIds.has(sp.id));
+  });
+
   ngOnInit() {
     this.entityAowService.getW3BilateralProjects();
     this.entityAowService.getExistingResultsContributors(
@@ -79,7 +120,9 @@ export class AowHloCreateModalComponent implements OnInit {
       this.entityAowService.currentResultToReport()?.indicators?.[0]?.related_node_id
     );
     this.api.resultsSE.GET_AllInitiatives('p25').subscribe(({ response }) => {
-      this.allInitiatives.set(response.filter(item => item.initiative_id !== this.entityAowService.entityDetails().id));
+      const all = response.filter(item => item.initiative_id !== this.entityAowService.entityDetails().id);
+      this.allInitiatives.set(all);
+      this.preselectTocSciencePrograms(all);
     });
 
     if (!this.entityAowService.currentResultToReport()?.indicators?.[0]?.result_type_id) {
@@ -92,6 +135,77 @@ export class AowHloCreateModalComponent implements OnInit {
         )?.options
       );
     }
+
+    this.preselectTocCenters();
+  }
+
+  // P2-3114: preselect the CGIAR Centers mapped in the selected indicator's ToC node.
+  // The AoW payload exposes them under indicators[0].targets_by_center.centers (by acronym).
+  // The ToC centers feed dropdown 1 (preselected, from_toc:true); the rest live in the "Other(s)" dropdown.
+  private preselectTocCenters(): void {
+    this.centersSE.getData().then(() => {
+      const tocAcronyms = (this.entityAowService.currentResultToReport()?.indicators?.[0]?.targets_by_center?.centers ?? [])
+        .map((center: any) => center?.center_acronym)
+        .filter(Boolean);
+
+      const preselected = this.centersSE.centersList
+        .filter((center: any) => tocAcronyms.includes(center.acronym))
+        .map((center: any) => ({ ...center, from_toc: true }));
+
+      this.tocCenters.set(preselected);
+      // AC4: when the ToC returns no reference centers, the Other(s) dropdown auto-activates.
+      this.showOtherCenters.set(preselected.length === 0);
+      this.createResultBody.set({ ...this.createResultBody(), contributing_center: [...preselected] });
+    });
+  }
+
+  // P2-3114: opening the "Other(s)" sentinel in dropdown 1 reveals dropdown 2 and keeps the sentinel out of the payload.
+  onContributingCenterSelect(event: any): void {
+    if (event?.option?.code === this.OTHER_CENTERS_CODE) {
+      this.showOtherCenters.set(true);
+      this.createResultBody.set({
+        ...this.createResultBody(),
+        contributing_center: (this.createResultBody().contributing_center ?? []).filter(
+          (center: any) => center?.code !== this.OTHER_CENTERS_CODE
+        )
+      });
+    }
+  }
+
+  deleteOtherCenter(index: number): void {
+    const next = [...this.otherCentersSelected()];
+    next.splice(index, 1);
+    this.otherCentersSelected.set(next);
+  }
+
+  // P2-3114: preselect the Science Programs mapped in the selected indicator's ToC node.
+  // Backend exposes contributing_synergy_program_initiative_ids per node (clarisa_initiatives.id[]); join by id.
+  private preselectTocSciencePrograms(allInits: any[]): void {
+    const tocSpIds: number[] = this.entityAowService.currentResultToReport()?.contributing_synergy_program_initiative_ids ?? [];
+
+    const preselected = (allInits ?? [])
+      .filter((sp: any) => tocSpIds.includes(sp.id))
+      .map((sp: any) => ({ ...sp, from_toc: true }));
+
+    this.tocSciencePrograms.set(preselected);
+    // AC4: when the ToC returns no synergy programs, the Other(s) dropdown auto-activates.
+    this.showOtherScience.set(preselected.length === 0);
+    this.entityAowService.selectedEntities.set([...preselected]);
+  }
+
+  // P2-3114: selecting the "Other(s)" sentinel in SP dropdown 1 reveals dropdown 2 and keeps the sentinel out of the payload.
+  onScienceSelect(): void {
+    const selected = this.entityAowService.selectedEntities();
+    if (selected.some((sp: any) => sp?.id === this.OTHER_SP_ID)) {
+      this.showOtherScience.set(true);
+      this.entityAowService.selectedEntities.set(selected.filter((sp: any) => sp?.id !== this.OTHER_SP_ID));
+    }
+  }
+
+  deleteOtherScience(index: number): void {
+    const next = [...this.otherScienceSelected()];
+    next.splice(index, 1);
+    this.otherScienceSelected.set(next);
   }
 
   onResultTypeChange(resultTypeId: number) {
@@ -217,12 +331,27 @@ export class AowHloCreateModalComponent implements OnInit {
       number_target: this.entityAowService.currentResultToReport()?.indicators?.[0]?.number_target,
       target_date: this.entityAowService.currentResultToReport()?.indicators?.[0]?.target_date,
       contributing_indicator: this.createResultBody().contribution_to_indicator_target,
-      contributing_center: this.createResultBody().contributing_center,
+      // P2-3114: merge dropdown 1 (ToC, from_toc:true) + dropdown 2 (Other, from_toc:false), dropping the sentinel,
+      // so the C&P form buckets them identically on redirect.
+      contributing_center: [
+        ...(this.createResultBody().contributing_center ?? [])
+          .filter((center: any) => center?.code !== this.OTHER_CENTERS_CODE)
+          .map((center: any) => ({ ...center, from_toc: true })),
+        ...this.otherCentersSelected().map((center: any) => ({ ...center, from_toc: false }))
+      ],
       knowledge_product: this.mqapJson(),
       toc_result_id: this.entityAowService.currentResultToReport().toc_result_id,
       toc_progressive_narrative: this.createResultBody().toc_progressive_narrative,
       indicators: this.entityAowService.currentResultToReport()?.indicators?.[0] || [],
-      contributors_result_toc_result: this.entityAowService.selectedEntities(),
+      // P2-3114: merge dropdown 1 (ToC SP, from_toc:true) + dropdown 2 (Other SP, from_toc:false), dropping the sentinel,
+      // so the backend tags initiativeFromToc and the C&P form buckets them identically.
+      contributors_result_toc_result: [
+        ...this.entityAowService
+          .selectedEntities()
+          .filter((sp: any) => sp?.id !== this.OTHER_SP_ID)
+          .map((sp: any) => ({ ...sp, from_toc: true })),
+        ...this.otherScienceSelected().map((sp: any) => ({ ...sp, from_toc: false }))
+      ],
       bilateral_project: this.entityAowService.selectedW3BilateralProjects()
     };
 

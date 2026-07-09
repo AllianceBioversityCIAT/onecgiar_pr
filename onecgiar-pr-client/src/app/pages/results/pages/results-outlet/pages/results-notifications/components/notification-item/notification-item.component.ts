@@ -8,6 +8,20 @@ import { finalize } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { BilateralResultsService } from '../../../../../../../result-framework-reporting/pages/bilateral-results/bilateral-results.service';
 
+// P2-3085: shape of each ToC contribution review entry (backend contract, P2-3086).
+export interface TocContributionReview {
+  level?: string;
+  outcome_label?: string;
+  outcome_statement?: string;
+  indicator_typology?: string;
+  unit_of_measurement?: string;
+  target?: string | number;
+  contribution_target?: string | number;
+  toc_result_id?: number;
+  toc_results_indicator_id?: number;
+  planned_result?: boolean;
+}
+
 @Component({
   selector: 'app-notification-item',
   templateUrl: './notification-item.component.html',
@@ -46,6 +60,12 @@ export class NotificationItemComponent {
     return this.notification?.is_map_to_toc
       ? this.notification?.obj_owner_initiative?.official_code
       : this.notification?.obj_shared_inititiative?.official_code;
+  }
+
+  // P2-3085: ToC metadata the submitter configured, shown read-only in the Contribution Request review.
+  // Sourced from the backend `toc_contribution_review[]` (P2-3086); empty when absent / non-ToC requests.
+  get tocReview(): TocContributionReview[] {
+    return this.notification?.toc_contribution_review ?? [];
   }
 
   invalidateRequest() {

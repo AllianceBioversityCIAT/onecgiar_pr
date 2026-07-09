@@ -87,7 +87,6 @@ export class ResultsTocResult {
   })
   initiative_id!: number;
 
-  // TODO - Review
   @Column({
     name: 'mapping_sdg',
     type: 'boolean',
@@ -95,7 +94,6 @@ export class ResultsTocResult {
   })
   mapping_sdg: boolean;
 
-  // TODO - Review
   @Column({
     name: 'mapping_impact',
     type: 'boolean',
@@ -125,6 +123,14 @@ export class ResultsTocResult {
     nullable: true,
   })
   toc_progressive_narrative: string;
+
+  @Column({
+    name: 'program_invested_financial_resources',
+    type: 'boolean',
+    nullable: true,
+    default: null,
+  })
+  program_invested_financial_resources: boolean | null;
 
   @Column({
     name: 'toc_level_id',

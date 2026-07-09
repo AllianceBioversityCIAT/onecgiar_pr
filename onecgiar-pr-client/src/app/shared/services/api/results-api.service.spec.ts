@@ -4780,6 +4780,19 @@ describe('ResultsApiService', () => {
     });
   });
 
+  describe('GET_W3BilateralProjectsByProgram', () => {
+    it('should call GET_W3BilateralProjectsByProgram and return expected data', done => {
+      service.GET_W3BilateralProjectsByProgram('SP01').subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/bilateral-projects/by-program?programId=SP01`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
   describe('POST_createResult', () => {
     it('should call POST_createResult and return expected data', done => {
       const mockBody = { name: 'test' };
