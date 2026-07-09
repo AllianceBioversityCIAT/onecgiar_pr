@@ -55,9 +55,47 @@
 
 ---
 
-## 3. Phase B (pending, not done yet)
+## 3. `app-pr-multi-select` — DONE (this change)
 
-Once each component resets reactively, the legacy `*ngIf`-toggle reset hacks in the 13 consumer files above can be removed one at a time (each with its own QA). This section will be updated as those land.
+**What changed (internal only):**
+- `@Input()` → `input()` signals; `@Output()` → `output()` (`selectOptionEvent`, `removeOptionEvent` unchanged).
+- `value` backed by a signal; `get/set value` is a side-effect-free CVA bridge (`[(ngModel)]` unchanged).
+- **Flat mode**: options are now decorated (selected/disabled) over a **cloned copy** — the original list passed by the parent is **never mutated** (same shared-list bug fix as `pr-select`). Flat reset is now **reactive** (clearing the model clears the checkboxes/chips on its own).
+- The old `get optionsIntance()` **reassigned the model** (`this.value = []` / all-options) as a side effect of a getter on every change-detection. That model mutation moved into `selectAllF()` (explicit) — same end state, no getter side effects.
+- Removed dead `_beforeValueLength`; DI moved to `inject()`.
+- Preserved verbatim: `logicalDeletion` (soft-delete `is_active`), `confirmDeletion` dialog, `selectedPrimary` / `cannotRemoveOptionValues` chip guards, `displayLabelFormatter`, search, `cdk-virtual-scroll`, chip UI, `showSelectAll`.
+
+**Compatibility bridges (must keep working):**
+- **`_value` bridge** → **User Management "Clear filters"** resets the **Entity** multi-select via `@ViewChild` (`entitiesSelect._value = []`, `entitiesSelect.writeValue([])`). The refactor keeps `_value` public, so this works **without** any change to User Management.
+
+**Known caveat (deliberate):**
+- **Grouped mode** (`[group]="true"`, only in **User Management** and the **Create/Manage user** modal) keeps its previous in-place decoration (mutates the original grouped children). It was NOT rewritten to the pure-clone model to avoid risk on the admin entity picker. QA the grouped entity selector explicitly (points 1–2 below).
+
+**Fields / sections to test** (58 usages / 32 templates) — ranked by fragility. Many overlap the `pr-select` screens; the ToC/Contributors screens are **excluded from automated tests**, so manual QA here is essential:
+
+| # | Where | What to check |
+|---|---|---|
+| 1 | **Admin → User Management** | Set the **Entity** filter (grouped) → **Clear filters** → it clears and the table resets. Also open the entity picker, select across groups, apply. **Highest risk.** |
+| 2 | **Admin → Create/Manage user modal** | Grouped **Entity** multi-select: select entities across groups, save. |
+| 3 | **IPSR → Innovation Use → Step 1** | SDG targets, **experts** (`logicalDeletion` — removing a saved one greys the chip, keeps it), EOI outcomes, action-area outcomes, impact areas, institutions, geoscope: select/deselect → chips + checkboxes update. |
+| 4 | **IPSR → Contributors** | Centers, **non-CGIAR partners** (`confirmDeletion`), ToC: add/remove shows confirm dialog; planned-result change clears dependent selects. |
+| 5 | **Result Detail (P25) → Contributors & Partners** | Bilateral projects / results multi-selects (`displayLabelFormatter`, `confirmDeletion`), multiple-WPs normal-selector. **No coverage.** |
+| 6 | **Result Detail → Theory of Change** | SDG / impact-area / action-area targets (`confirmDeletion`); switching WP tabs keeps the correct selections. **No coverage.** |
+| 7 | **Result Detail → Partners (P22)** + normal-selector | Institution multi-select select/remove. |
+| 8 | **Result Detail → Cap-dev / Policy-change info** | Their multi-selects select/remove. |
+| 9 | **Bilateral → Result review drawer** (+ policy-change-content) | `cannotRemoveOptionValues` (lead projects show no delete button), `displayLabelFormatter`. |
+| 10 | **Init Admin → General results report** | `showSelectAll`: "Select all" selects every option; "Unselect all" clears; chip removal (`removeOptionEvent`). |
+| 11 | **Init Admin → Completeness status** + **Global completeness status** | Filter multi-selects (`confirmDeletion` on global). |
+| 12 | **Geoscope management** (+ sub-geoscope) & **IPSR geoscope creator** (+ sub-geoscope) | Region/country multi-selects reset on geo-scope/country change. |
+| 13 | **Result-framework AOW → HLO create modal** | Multi-select inside the modal resets on open/close. |
+
+**Key thing to confirm around the hacks:** everywhere a parent still destroys+recreates the field to reset it (the `*ngIf` false→true trick), the field must still end up **empty/repopulated correctly**. Any stale selection after a parent change / tab switch → report it.
+
+---
+
+## 4. Phase B (pending, not done yet)
+
+Once each component resets reactively, the legacy `*ngIf`-toggle reset hacks in the 13 consumer files above can be removed one at a time (each with its own QA). A later change should also port `pr-multi-select` **grouped mode** to the pure-clone model. This section will be updated as those land.
 
 ---
 
@@ -66,5 +104,5 @@ Once each component resets reactively, the legacy `*ngIf`-toggle reset hacks in 
 | Component | OpenSpec change | Status |
 |---|---|---|
 | `pr-input` | `refactor-pr-input-signals` | Done, committed `6661baa56` |
-| `pr-select` | `refactor-pr-select-signals` | Done (this commit) |
-| `pr-multi-select` | (next) | Pending |
+| `pr-select` | `refactor-pr-select-signals` | Done, committed `2cbc75908` |
+| `pr-multi-select` | `refactor-pr-multi-select-signals` | Done (this commit) |

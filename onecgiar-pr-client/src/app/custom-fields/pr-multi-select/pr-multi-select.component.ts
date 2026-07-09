@@ -1,4 +1,4 @@
-import { Component, forwardRef, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, computed, forwardRef, inject, input, output, signal, OnChanges, SimpleChanges } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { CustomizedAlertsFeService } from '../../shared/services/customized-alerts-fe.service';
@@ -18,48 +18,46 @@ import { DataControlService } from '../../shared/services/data-control.service';
   standalone: false
 })
 export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
-  @Input() optionLabel: string;
-  @Input() optionValue: string;
-  @Input() options: any;
-  @Input() disableOptions: any;
-  @Input() placeholder: string;
-  @Input() label: string;
-  @Input() selectedLabel: string;
-  @Input() nextSelectedLabel?: string; // This variable represents the extra concatenation to increase or have an additional counter, since by default it only shows one counter and the requirements make us generate an additional one.
-  @Input() selectedOptionLabel: string;
-  @Input() description: string;
-  @Input() readOnly: boolean;
-  @Input() hideSelect?: boolean = false;
-  @Input() isStatic: boolean = false;
-  @Input() showSelectAll: boolean = false;
-  @Input() group: boolean = false;
-  @Input() optionGroupLabel: string;
-  @Input() optionGroupChildren: string;
-  @Input() required: boolean = true;
-  @Input() showPartnerAlert: boolean = false;
-  @Input() flagsCode: string;
-  @Input() confirmDeletion: boolean = false;
-  @Input() logicalDeletion: boolean = false;
-  @Input() labelDescInlineStyles?: string = '';
-  @Input() selectedPrimary?: any;
-  @Input() cannotRemoveOptionValues: any[] = [];
-  @Input() displayLabelFormatter?: (option: any) => string;
-  @Input() showDescriptionLabel?: boolean = true;
-  @Output() selectOptionEvent = new EventEmitter<any>();
-  @Output() removeOptionEvent = new EventEmitter<any>();
+  readonly optionLabel = input<string>();
+  readonly optionValue = input<string>();
+  readonly options = input<any>();
+  readonly disableOptions = input<any>();
+  readonly placeholder = input<string>();
+  readonly label = input<string>();
+  readonly selectedLabel = input<string>();
+  // Extra concatenation to increase or have an additional counter (some requirements need a second one).
+  readonly nextSelectedLabel = input<string>();
+  readonly selectedOptionLabel = input<string>();
+  readonly description = input<string>();
+  readonly readOnly = input<boolean>();
+  readonly hideSelect = input<boolean>(false);
+  readonly isStatic = input<boolean>(false);
+  readonly showSelectAll = input<boolean>(false);
+  readonly group = input<boolean>(false);
+  readonly optionGroupLabel = input<string>();
+  readonly optionGroupChildren = input<string>();
+  readonly required = input<boolean>(true);
+  readonly showPartnerAlert = input<boolean>(false);
+  readonly flagsCode = input<string>();
+  readonly confirmDeletion = input<boolean>(false);
+  readonly logicalDeletion = input<boolean>(false);
+  readonly labelDescInlineStyles = input<string>('');
+  readonly selectedPrimary = input<any>();
+  readonly cannotRemoveOptionValues = input<any[]>([]);
+  readonly displayLabelFormatter = input<(option: any) => string>();
+  readonly showDescriptionLabel = input<boolean>(true);
+
+  readonly selectOptionEvent = output<any>();
+  readonly removeOptionEvent = output<any>();
+
   selectAll = null;
-
-  private _optionsIntance: any[];
-  private _value: any[] = [];
-  private _beforeValueLength: number = 0;
   public searchText: string;
-  private currentOptionsLength = 0;
 
-  constructor(
-    public rolesSE: RolesService,
-    private customizedAlertsFeSE: CustomizedAlertsFeService,
-    public dataControlSE: DataControlService
-  ) {}
+  private readonly _valueSig = signal<any[]>([]);
+
+  readonly rolesSE = inject(RolesService);
+  private readonly customizedAlertsFeSE = inject(CustomizedAlertsFeService);
+  readonly dataControlSE = inject(DataControlService);
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['options'] || changes['group']) {
@@ -67,126 +65,95 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
     }
   }
 
-  get optionsIntance() {
-    if (!this.options?.length) return [];
-    if (!this._optionsIntance?.length || this.currentOptionsLength != this.options?.length) this._optionsIntance = [...this.options];
+  /**
+   * Flat-mode options decorated with `selected`/`disabled` flags — derived purely from the current
+   * value and `disableOptions` over a CLONED copy, so the parent's original `options` array is never
+   * mutated (fixes the shared-reference corruption). Grouped mode keeps its in-place decoration.
+   */
+  readonly optionsIntance = computed<any[]>(() => {
+    const opts = this.options();
+    if (!opts?.length) return [];
 
-    this.currentOptionsLength = this.options?.length;
+    const optionValue = this.optionValue();
+    const logicalDeletion = this.logicalDeletion();
+    const clones = opts.map((o: any) => ({ ...o, disabled: false, selected: false }));
 
-    if (!this.group) {
-      this._optionsIntance.forEach((resp: any) => {
-        if (resp.disabled === true) resp.disabled = false;
-        if (resp.selected === true) resp.selected = false;
-      });
-
-      this.disableOptions?.map(disableOption => {
-        const itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == disableOption[this.optionValue]);
-        if (itemFinded) itemFinded.disabled = true;
-      });
-
-      this.value?.map(savedListItem => {
-        const savedId = typeof savedListItem === 'object' ? savedListItem?.[this.optionValue] : savedListItem;
-        const itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == savedId);
-
-        if (itemFinded) itemFinded.selected = true;
-
-        if (itemFinded && this.logicalDeletion) itemFinded.selected = savedListItem.is_active;
-      });
-
-      this._beforeValueLength = this._value?.length;
-
-      if (this.selectAll === false)
-        this._optionsIntance.forEach((resp: any) => {
-          if (resp.disabled === true) resp.selected = false;
-          this.value = [];
-        });
-
-      if (this.selectAll === true) {
-        const newSelection: any[] = [];
-        this._optionsIntance.forEach((resp: any) => {
-          if (resp.disabled === true) resp.selected = true;
-          newSelection.push(resp);
-        });
-        this.value = newSelection;
-      }
-
-      return this._optionsIntance;
-    }
-
-    // Grouped mode: reset flags on all children
-    const children = this.getAllChildrenFromGroups(this._optionsIntance);
-
-    for (const child of children) {
-      if (child.disabled === true) child.disabled = false;
-      if (child.selected === true) child.selected = false;
-    }
-
-    this.disableOptions?.map(disableOption => {
-      const itemFinded = children.find(listItem => listItem[this.optionValue] == disableOption[this.optionValue]);
+    this.disableOptions()?.forEach((disableOption: any) => {
+      const itemFinded = clones.find((listItem: any) => listItem[optionValue] == disableOption[optionValue]);
       if (itemFinded) itemFinded.disabled = true;
     });
 
-    this.value?.map(savedListItem => {
-      const savedId = typeof savedListItem === 'object' ? savedListItem?.[this.optionValue] : savedListItem;
-      const itemFinded = children.find(listItem => listItem[this.optionValue] == savedId);
-      if (itemFinded) itemFinded.selected = true;
-      if (itemFinded && this.logicalDeletion) itemFinded.selected = savedListItem.is_active;
+    this._valueSig()?.forEach((savedListItem: any) => {
+      const savedId = typeof savedListItem === 'object' ? savedListItem?.[optionValue] : savedListItem;
+      const itemFinded = clones.find((listItem: any) => listItem[optionValue] == savedId);
+      if (itemFinded) {
+        itemFinded.selected = true;
+        if (logicalDeletion) itemFinded.selected = savedListItem.is_active;
+      }
     });
 
-    if (this.selectAll === false) {
-      for (const child of children) {
-        if (child.disabled === true) child.selected = false;
-      }
-      this.value = [];
-    }
-
-    if (this.selectAll === true) {
-      const newSelection: any[] = [];
-      for (const child of children) {
-        if (child.disabled === true) child.selected = true;
-        newSelection.push(child);
-      }
-      this.value = newSelection;
-    }
-
-    return this._optionsIntance;
-  }
+    return clones;
+  });
 
   selectAllF() {
     this.selectAll = !this.selectAll;
+
+    if (this.group()) {
+      const children = this.getAllChildrenFromGroups(this.options() || []);
+      if (this.selectAll) {
+        children.forEach((child: any) => (child.selected = true));
+        this.value = [...children];
+      } else {
+        children.forEach((child: any) => (child.selected = false));
+        this.value = [];
+      }
+    } else if (this.selectAll) {
+      this.value = (this.options() || []).map((option: any) => ({ ...option }));
+    } else {
+      this.value = [];
+    }
+
     setTimeout(() => {
       this.selectOptionEvent.emit({});
     }, 500);
   }
 
   get value(): any[] {
-    return this._value;
+    return this._valueSig();
   }
 
   set value(v: any) {
-    if (v !== this._value) {
-      this._value = v;
+    if (v !== this._valueSig()) {
+      this._valueSig.set(v);
       this.onChange(v);
-      this.syncSelectionFlags();
+      if (this.group()) this.syncSelectionFlags();
     }
+  }
+
+  /** Backward-compat bridge: user-management pokes `_value` via @ViewChild to reset the entity filter. */
+  get _value(): any {
+    return this._valueSig();
+  }
+  set _value(v: any) {
+    this._valueSig.set(v);
   }
 
   validateShowDeleteButton(option) {
-    if (this.cannotRemoveOptionValues?.length) {
-      const id = typeof option === 'object' && option != null ? option[this.optionValue] : option;
-      if (id != null && this.cannotRemoveOptionValues.includes(id)) return false;
+    if (this.cannotRemoveOptionValues()?.length) {
+      const id = typeof option === 'object' && option != null ? option[this.optionValue()] : option;
+      if (id != null && this.cannotRemoveOptionValues().includes(id)) return false;
     }
-    if (this.selectedPrimary) {
-      return !this.readOnly && !this.rolesSE.readOnly && !this.isStatic && this.selectedPrimary !== option.id;
+    if (this.selectedPrimary()) {
+      return !this.readOnly() && !this.rolesSE.readOnly && !this.isStatic() && this.selectedPrimary() !== option.id;
     }
 
-    return !this.readOnly && !this.rolesSE.readOnly && !this.isStatic;
+    return !this.readOnly() && !this.rolesSE.readOnly && !this.isStatic();
   }
 
   selectedLabelDescription() {
-    if (this.nextSelectedLabel) return `${this.selectedLabel}(${this.value?.length}) ${this.nextSelectedLabel}(${this.value?.length})`;
+    if (this.nextSelectedLabel()) return `${this.selectedLabel()}(${this.value?.length}) ${this.nextSelectedLabel()}(${this.value?.length})`;
 
-    return `${this.selectedLabel} (${this.value?.length})`;
+    return `${this.selectedLabel()} (${this.value?.length})`;
   }
 
   onChange(_) {}
@@ -194,39 +161,27 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
   onTouch() {}
 
   writeValue(value: any): void {
+    const optionValue = this.optionValue();
     // Support receiving array of IDs by mapping them to option objects for chip rendering
     if (Array.isArray(value)) {
-      const source = this.group ? this.getAllChildrenFromGroups(this.options || []) : this.options || [];
-      const mapped = value.map((v: any) => (typeof v === 'object' ? v : source.find((s: any) => s?.[this.optionValue] == v))).filter(Boolean);
-      this._value = mapped;
-      this.syncSelectionFlags();
+      const source = this.group() ? this.getAllChildrenFromGroups(this.options() || []) : this.options() || [];
+      const mapped = value.map((v: any) => (typeof v === 'object' ? v : source.find((s: any) => s?.[optionValue] == v))).filter(Boolean);
+      this._valueSig.set(mapped);
+      if (this.group()) this.syncSelectionFlags();
       return;
     }
-    this._value = value;
-    this.syncSelectionFlags();
+    this._valueSig.set(value);
+    if (this.group()) this.syncSelectionFlags();
   }
 
+  /** Grouped mode only: decorate the (original) grouped children in place, since the group template iterates them directly. */
   private syncSelectionFlags() {
-    const ids = new Set((this._value || []).map((v: any) => (typeof v === 'object' ? v?.[this.optionValue] : v)));
-    if (!ids.size) {
-      // clear all flags
-      if (this.group) {
-        const children = this.getAllChildrenFromGroups(this.options || []);
-        for (const child of children) child.selected = false;
-      } else {
-        for (const opt of this.options || []) opt.selected = false;
-      }
-      return;
-    }
-    if (this.group) {
-      const children = this.getAllChildrenFromGroups(this.options || []);
-      for (const child of children) {
-        child.selected = ids.has(child?.[this.optionValue]);
-      }
-    } else {
-      for (const opt of this.options || []) {
-        opt.selected = ids.has(opt?.[this.optionValue]);
-      }
+    if (!this.group()) return;
+    const optionValue = this.optionValue();
+    const ids = new Set((this._valueSig() || []).map((v: any) => (typeof v === 'object' ? v?.[optionValue] : v)));
+    const children = this.getAllChildrenFromGroups(this.options() || []);
+    for (const child of children) {
+      child.selected = ids.has(child?.[optionValue]);
     }
   }
 
@@ -239,12 +194,12 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
   }
 
   removeFocus() {
-    const element: any = document.getElementById(this.optionValue);
+    const element: any = document.getElementById(this.optionValue());
     element.blur();
   }
 
   getUniqueId() {
-    const id = (this.optionValue + this.optionLabel + this.label).replace(' ', '');
+    const id = (this.optionValue() + this.optionLabel() + this.label()).replace(' ', '');
 
     return id;
   }
@@ -252,8 +207,9 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
   getAllChildrenFromGroups(groups: any[]): any[] {
     const list: any[] = [];
     if (!Array.isArray(groups)) return list;
+    const childrenKey = this.optionGroupChildren();
     for (const group of groups) {
-      const children = group?.[this.optionGroupChildren] || [];
+      const children = group?.[childrenKey] || [];
       for (const child of children) {
         list.push(child);
       }
@@ -263,9 +219,10 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
 
   filterChildrenBySearch(children: any[]): any[] {
     if (!this.searchText) return children || [];
+    const optionLabel = this.optionLabel();
     const searchLower = this.searchText.toLowerCase();
     return (children || []).filter((c: any) => {
-      const title = (c?.[this.optionLabel] || '').toString().toLowerCase();
+      const title = (c?.[optionLabel] || '').toString().toLowerCase();
       const resultCode = (c?.result_code || '').toString().toLowerCase();
       const acronym = (c?.acronym || '').toString().toLowerCase();
       const phaseYear = (c?.phase_year || '').toString().toLowerCase();
@@ -281,21 +238,24 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
   }
 
   getDisplayLabel(option: any, useSelectedLabel: boolean = false): string {
-    if (this.displayLabelFormatter) {
-      return this.displayLabelFormatter(option);
+    const formatter = this.displayLabelFormatter();
+    if (formatter) {
+      return formatter(option);
     }
-    if (useSelectedLabel && this.selectedOptionLabel) {
-      return option?.[this.selectedOptionLabel] || '';
+    const selectedOptionLabel = this.selectedOptionLabel();
+    if (useSelectedLabel && selectedOptionLabel) {
+      return option?.[selectedOptionLabel] || '';
     }
-    return option?.[this.optionLabel] || '';
+    return option?.[this.optionLabel()] || '';
   }
 
   filterFlatOptions(options: any[]): any[] {
     if (!options?.length) return [];
     if (!this.searchText) return options;
+    const optionLabel = this.optionLabel();
     const searchLower = this.searchText.toLowerCase();
     return options.filter((option: any) => {
-      const title = (option?.[this.optionLabel] || '').toString().toLowerCase();
+      const title = (option?.[optionLabel] || '').toString().toLowerCase();
       const resultCode = (option?.result_code || '').toString().toLowerCase();
       const acronym = (option?.acronym || '').toString().toLowerCase();
       const phaseYear = (option?.phase_year || '').toString().toLowerCase();
@@ -330,21 +290,23 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
 
     if (option?.disabled) return;
 
+    const optionValue = this.optionValue();
+
     // Ensure value is initialized as an array
     if (!this.value) {
       this.value = [];
     }
 
-    const indexFind = this.value.findIndex(valueItem => valueItem[this.optionValue] == option[this.optionValue]);
+    const indexFind = this.value.findIndex(valueItem => valueItem[optionValue] == option[optionValue]);
     if (indexFind < 0) {
       const newValue = [...(this.value || []), { ...option, new: true, is_active: true }];
       this.value = newValue;
     } else {
       // Option is being deselected
-      const valueItemFind = this.value.find(valueItem => valueItem[this.optionValue] == option[this.optionValue]);
-      if (this.logicalDeletion && !valueItemFind.new) {
+      const valueItemFind = this.value.find(valueItem => valueItem[optionValue] == option[optionValue]);
+      if (this.logicalDeletion() && !valueItemFind.new) {
         const updated = this.value.map(item => {
-          if (item[this.optionValue] == option[this.optionValue]) {
+          if (item[optionValue] == option[optionValue]) {
             return { ...item, is_active: !option.selected };
           }
           return item;
@@ -362,19 +324,21 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
   removeOption(option) {
     this.selectAll = null;
 
+    const optionValue = this.optionValue();
+
     // Ensure value is initialized as an array
     if (!this.value) {
       this.value = [];
     }
 
-    if (this.logicalDeletion && !option.new) {
+    if (this.logicalDeletion() && !option.new) {
       const updated = this.value.map(item => {
-        if (item[this.optionValue] == option[this.optionValue]) return { ...item, is_active: false };
+        if (item[optionValue] == option[optionValue]) return { ...item, is_active: false };
         return item;
       });
       this.value = updated;
     } else {
-      const optionFinded = this.value.findIndex(valueItem => valueItem[this.optionValue] == option[this.optionValue]);
+      const optionFinded = this.value.findIndex(valueItem => valueItem[optionValue] == option[optionValue]);
       const filtered = this.value.filter((_, i) => i !== optionFinded);
       this.value = filtered;
     }
