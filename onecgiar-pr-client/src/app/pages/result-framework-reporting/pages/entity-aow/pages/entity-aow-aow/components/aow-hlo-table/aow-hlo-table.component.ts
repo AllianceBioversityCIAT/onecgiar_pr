@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, Input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { TableModule } from 'primeng/table';
 import { EntityAowService } from '../../../../services/entity-aow.service';
 import { ProgressBarModule } from 'primeng/progressbar';
@@ -38,10 +38,10 @@ export class AowHloTableComponent {
   entityAowService = inject(EntityAowService);
   resultLevelService = inject(ResultLevelService);
 
-  @Input() tableType: 'outputs' | 'outcomes' | '2030-outcomes' = 'outputs';
+  readonly tableType = input<'outputs' | 'outcomes' | '2030-outcomes'>('outputs');
 
   tableData = computed(() => {
-    switch (this.tableType) {
+    switch (this.tableType()) {
       case 'outputs':
         return this.entityAowService.tocResultsOutputsByAowId();
       case 'outcomes':
@@ -61,14 +61,21 @@ export class AowHloTableComponent {
     return expanded;
   });
 
-  // P2-3053: agreed nomenclature + dynamic phase year ("<year> target") instead of hardcoded "2025".
-  columnOrder = computed<ColumnOrder[]>(() => [
-    { title: 'KPI statement', attr: 'indicator_description', width: '30%' },
-    { title: 'Indicator typology', attr: 'type_name', width: '10%' },
-    { title: `${this.entityAowService.reportingPhaseYear} target`.trim(), attr: 'target_value_sum', width: '10%' },
-    { title: 'Achieved target', attr: 'actual_achieved_value_sum', width: '10%' },
-    { title: 'Status', attr: 'status', hideSortIcon: true, width: '11%' }
-  ]);
+  // P2-3053 / P2-3133: dynamic phase year target; 2030 Outcomes uses cumulative "2030 target"; Achieved value globally.
+  columnOrder = computed<ColumnOrder[]>(() => {
+    const targetTitle =
+      this.tableType() === '2030-outcomes'
+        ? '2030 target'
+        : `${this.entityAowService.reportingPhaseYear} target`.trim();
+
+    return [
+      { title: 'KPI statement', attr: 'indicator_description', width: '30%' },
+      { title: 'Indicator typology', attr: 'type_name', width: '10%' },
+      { title: targetTitle, attr: 'target_value_sum', width: '10%' },
+      { title: 'Achieved value', attr: 'actual_achieved_value_sum', width: '10%' },
+      { title: 'Status', attr: 'status', hideSortIcon: true, width: '11%' }
+    ];
+  });
 
   isKnowledgeProduct = signal<boolean>(true);
 

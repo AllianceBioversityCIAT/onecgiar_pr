@@ -144,6 +144,10 @@ describe('AowHloTableComponent', () => {
     });
   };
 
+  const setTableType = (tableType: 'outputs' | 'outcomes' | '2030-outcomes' | undefined | null) => {
+    fixture.componentRef.setInput('tableType', tableType as any);
+  };
+
   beforeEach(async () => {
     const mockShowReportResultModal = signal<boolean>(false);
     const mockCurrentResultToReport = signal<any>({});
@@ -229,7 +233,7 @@ describe('AowHloTableComponent', () => {
         { title: 'KPI statement', attr: 'indicator_description', width: '30%' },
         { title: 'Indicator typology', attr: 'type_name', width: '10%' },
         { title: '2026 target', attr: 'target_value_sum', width: '10%' },
-        { title: 'Achieved target', attr: 'actual_achieved_value_sum', width: '10%' },
+        { title: 'Achieved value', attr: 'actual_achieved_value_sum', width: '10%' },
         { title: 'Status', attr: 'status', hideSortIcon: true, width: '11%' }
       ]);
     });
@@ -261,16 +265,22 @@ describe('AowHloTableComponent', () => {
         width: '10%'
       });
       expect(columns[3]).toEqual({
-        title: 'Achieved target',
+        title: 'Achieved value',
         attr: 'actual_achieved_value_sum',
         width: '10%'
       });
-      expect(columns[4]).toEqual({
-        title: 'Status',
-        attr: 'status',
-        hideSortIcon: true,
-        width: '11%'
+    });
+
+    it('should use 2030 target label for 2030-outcomes table type', () => {
+      setTableType('2030-outcomes');
+
+      const columns = component.columnOrder();
+      expect(columns[2]).toEqual({
+        title: '2030 target',
+        attr: 'target_value_sum',
+        width: '10%'
       });
+      expect(columns[3].title).toBe('Achieved value');
     });
 
     it('should have all required column attributes', () => {
@@ -382,7 +392,7 @@ describe('AowHloTableComponent', () => {
         { id: 'output-2', title: 'Output 2', type: 'output' }
       ];
       mockEntityAowService.tocResultsOutputsByAowId.set(mockOutputsData);
-      component.tableType = 'outputs';
+      setTableType('outputs');
 
       const result = component.tableData();
 
@@ -395,7 +405,7 @@ describe('AowHloTableComponent', () => {
         { id: 'outcome-2', title: 'Outcome 2', type: 'outcome' }
       ];
       mockEntityAowService.tocResultsOutcomesByAowId.set(mockOutcomesData);
-      component.tableType = 'outcomes';
+      setTableType('outcomes');
 
       const result = component.tableData();
 
@@ -408,7 +418,7 @@ describe('AowHloTableComponent', () => {
         { id: '2030-outcome-2', title: '2030 Outcome 2', type: '2030-outcome' }
       ];
       mockEntityAowService.tocResults2030Outcomes.set(mock2030OutcomesData);
-      component.tableType = '2030-outcomes';
+      setTableType('2030-outcomes');
 
       const result = component.tableData();
 
@@ -416,7 +426,7 @@ describe('AowHloTableComponent', () => {
     });
 
     it('should return empty array when tableType is undefined', () => {
-      component.tableType = undefined as any;
+      setTableType(undefined);
 
       const result = component.tableData();
 
@@ -424,7 +434,7 @@ describe('AowHloTableComponent', () => {
     });
 
     it('should return empty array when tableType is null', () => {
-      component.tableType = null as any;
+      setTableType(null);
 
       const result = component.tableData();
 
@@ -439,7 +449,7 @@ describe('AowHloTableComponent', () => {
       ];
 
       mockEntityAowService.tocResultsOutputsByAowId.set(initialData);
-      component.tableType = 'outputs';
+      setTableType('outputs');
 
       // First call with initial data
       let result = component.tableData();
@@ -455,7 +465,7 @@ describe('AowHloTableComponent', () => {
 
     it('should handle empty data arrays correctly', () => {
       mockEntityAowService.tocResultsOutputsByAowId.set([]);
-      component.tableType = 'outputs';
+      setTableType('outputs');
 
       const result = component.tableData();
 
@@ -505,7 +515,7 @@ describe('AowHloTableComponent', () => {
         { result_title: 'Result 3', indicators: [] }
       ];
       mockEntityAowService.tocResultsOutputsByAowId.set(mockData);
-      component.tableType = 'outputs';
+      setTableType('outputs');
 
       const expandedKeys = component.expandedRowKeys();
 
@@ -518,7 +528,7 @@ describe('AowHloTableComponent', () => {
 
     it('should handle empty tableData', () => {
       mockEntityAowService.tocResultsOutputsByAowId.set([]);
-      component.tableType = 'outputs';
+      setTableType('outputs');
 
       const expandedKeys = component.expandedRowKeys();
 
@@ -532,7 +542,7 @@ describe('AowHloTableComponent', () => {
         { result_title: 'Result 2', indicators: [] }
       ];
       mockEntityAowService.tocResultsOutputsByAowId.set(mockData);
-      component.tableType = 'outputs';
+      setTableType('outputs');
 
       const expandedKeys = component.expandedRowKeys();
 
@@ -550,7 +560,7 @@ describe('AowHloTableComponent', () => {
       ];
 
       mockEntityAowService.tocResultsOutputsByAowId.set(initialData);
-      component.tableType = 'outputs';
+      setTableType('outputs');
 
       let expandedKeys = component.expandedRowKeys();
       expect(expandedKeys).toEqual({ 'Result 1': true });

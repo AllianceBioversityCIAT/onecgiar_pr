@@ -86,14 +86,14 @@ describe('AoWBilateralRepository', () => {
     expect(dataSourceQueryMock).toHaveBeenCalledTimes(2);
     const [query, params] = dataSourceQueryMock.mock.calls[0];
 
-    expect(params).toEqual([2025, 'SP01', 'EOI', 'PHASE-1']);
+    expect(params).toEqual([2025, 2030, 'SP01', 'EOI', 'PHASE-1']);
     expect(query).toContain('FROM toc_test.toc_results tr');
     expect(query).not.toContain('JOIN toc_test.toc_work_packages');
     expect(query).toContain(
       'JOIN toc_test.toc_results_indicators tri ON tri.toc_results_id = tr.id',
     );
     expect(query).toContain('JOIN toc_test.toc_result_indicator_target');
-    expect(query).toContain('AND trit.target_date = ?');
+    expect(query).toContain('AND trit.target_date BETWEEN ? AND ?');
     expect(query).toContain('AND tr.phase = ?');
   });
 
@@ -378,6 +378,43 @@ describe('AoWBilateralRepository', () => {
     await repository.findByCompositeCode('SP01', 'SP01-AOW01', defaultContext);
 
     expect(dataSourceQueryMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('should recalculate progress using cumulative 2030 target in find2030Outcomes', async () => {
+    mockResolveContext();
+    dataSourceQueryMock
+      .mockResolvedValueOnce([
+        {
+          toc_result_id: 1,
+          category: 'EOI',
+          result_title: 'Outcome 1',
+          related_node_id: 'n1',
+          indicator_id: 10,
+          indicator_description: 'KPI',
+          toc_result_indicator_id: 'ind-1',
+          indicator_related_node_id: 'ind-1',
+          unit_messurament: 'Number',
+          type_value: 'Number of Policy',
+          type_name: 'Policy',
+          location: null,
+          target_value_sum: 300,
+          result_level_id: 3,
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          indicator_id: 10,
+          target_value_sum: 100,
+          actual_achieved_value_sum: 150,
+          work_package_acronym: null,
+        },
+      ]);
+
+    const result = await repository.find2030Outcomes('SP01', defaultContext);
+
+    expect(result[0].indicators[0].target_value_sum).toBe(300);
+    expect(result[0].indicators[0].actual_achieved_value_sum).toBe(150);
+    expect(result[0].indicators[0].progress_percentage).toBe('50%');
   });
 
   it('should handle parallel execution in find2030Outcomes', async () => {

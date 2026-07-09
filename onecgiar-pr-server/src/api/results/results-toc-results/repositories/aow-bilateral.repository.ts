@@ -59,6 +59,8 @@ interface TocQueryOptions {
   areaAcronym?: string;
   categories?: string[];
   context: ReportingTocContext;
+  /** P2-3133: sum targets across this inclusive year range (2030 Outcomes only). */
+  cumulativeTargetYears?: { from: number; to: number };
 }
 
 export interface TocWorkPackageRow {
@@ -276,6 +278,7 @@ export class AoWBilateralRepository {
     const { query, params } = this.buildTocQuery(program, {
       categories: ['EOI'],
       context,
+      cumulativeTargetYears: { from: 2025, to: 2030 },
     });
 
     try {
@@ -284,13 +287,19 @@ export class AoWBilateralRepository {
         this.getIndicatorContributions(program, context),
       ]);
 
-      const enhancedRows = rows.map((row) => ({
-        ...row,
-        actual_achieved_value_sum:
-          contributions.get(row.indicator_id)?.actual_achieved_value_sum ?? 0,
-        progress_percentage:
-          contributions.get(row.indicator_id)?.progress_percentage ?? '0%',
-      }));
+      const enhancedRows = rows.map((row) => {
+        const actualAchieved =
+          contributions.get(row.indicator_id)?.actual_achieved_value_sum ?? 0;
+        const cumulativeTarget = Number(row.target_value_sum) || 0;
+
+        return {
+          ...row,
+          actual_achieved_value_sum: actualAchieved,
+          progress_percentage: this.formatProgressPercentage(
+            this.calculateProgressPercentage(cumulativeTarget, actualAchieved),
+          ),
+        };
+      });
 
       return this.groupTocRows(enhancedRows);
     } catch (error) {
@@ -329,9 +338,9 @@ export class AoWBilateralRepository {
         NULLIF(TRIM(tri.type_name), '') AS type_name,
         tri.location,
         COALESCE(SUM(CAST(trit.target_value AS SIGNED)), 0) AS target_value_sum,
-        trit.number_target,
-        trit.target_date,
-        trit.target_value,
+        MAX(trit.number_target) AS number_target,
+        MAX(trit.target_date) AS target_date,
+        MAX(trit.target_value) AS target_value,
         CASE
           WHEN tri.type_value LIKE '%Number of Policy%' THEN 1
           WHEN tri.type_value LIKE '%Innovation Use%' THEN 2
@@ -378,9 +387,22 @@ export class AoWBilateralRepository {
         AND tri.is_active = 1
       LEFT JOIN ${env.DB_TOC}.toc_result_indicator_target trit ON tri.id = trit.id_indicator
         AND CONVERT(trit.toc_result_indicator_id USING utf8mb4) = CONVERT(tri.related_node_id USING utf8mb4)
-        AND trit.target_date = ?
     `;
-    params.push(options.context.reportingYear);
+
+    if (options.cumulativeTargetYears) {
+      query += `
+        AND trit.target_date BETWEEN ? AND ?
+      `;
+      params.push(
+        options.cumulativeTargetYears.from,
+        options.cumulativeTargetYears.to,
+      );
+    } else {
+      query += `
+        AND trit.target_date = ?
+      `;
+      params.push(options.context.reportingYear);
+    }
 
     query += `
       WHERE
@@ -405,10 +427,7 @@ export class AoWBilateralRepository {
         tri.unit_messurament,
         tri.type_value,
         tri.type_name,
-        tri.location,
-        trit.number_target,
-        trit.target_date,
-        trit.target_value
+        tri.location
       ORDER BY tr.id ASC, tri.id ASC
     `;
 
