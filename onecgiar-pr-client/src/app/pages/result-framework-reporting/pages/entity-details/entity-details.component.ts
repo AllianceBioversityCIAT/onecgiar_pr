@@ -319,8 +319,10 @@ export class EntityDetailsComponent implements OnInit {
       }
       const mySPs = this.resultFrameworkReportingHomeService.mySPsList() ?? [];
       const otherSPs = this.resultFrameworkReportingHomeService.otherSPsList() ?? [];
-      const sp = [...mySPs, ...otherSPs].find(
-        (item: { initiativeCode?: string }) => item?.initiativeCode === 'SGP-02' || item?.initiativeCode === 'SGP02'
+      const otherProjects = this.resultFrameworkReportingHomeService.otherProjectsList() ?? [];
+      const sp = [...mySPs, ...otherSPs, ...otherProjects].find(
+        (item: { initiativeId?: number; initiativeCode?: string }) =>
+          item?.initiativeId === 41 || item?.initiativeCode === 'SGP-02' || item?.initiativeCode === 'SGP02'
       );
       if (sp) {
         const raw = sp as { initiativeShortName?: string; initiativeName?: string };
