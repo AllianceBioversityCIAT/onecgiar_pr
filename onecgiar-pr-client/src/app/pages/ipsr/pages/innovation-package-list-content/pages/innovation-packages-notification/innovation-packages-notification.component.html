@@ -12,19 +12,8 @@
       [(ngModel)]="phaseFilter">
     </app-pr-select>
     <div>
-      <!-- <app-pr-select
-          [options]="this.initiativesByPortfolio()"
-          label="Entity"
-          [isStatic]="true"
-          [required]="false"
-          optionLabel="full_name"
-          optionValue="initiative_id"
-          placeholder="Select entity"
-          [(ngModel)]="initiativeIdFilter">
-        </app-pr-select> -->
-
-      <app-s-select
-        [options]="this.initiativesByPortfolio"
+      <app-pr-select
+        [options]="this.initiativesByPortfolio()"
         label="Entity"
         [isStatic]="true"
         [required]="false"
@@ -32,7 +21,7 @@
         optionValue="initiative_id"
         placeholder="Select entity"
         [(ngModel)]="initiativeIdFilter">
-      </app-s-select>
+      </app-pr-select>
     </div>
   </div>
 

@@ -43,7 +43,7 @@
         <i class="pi pi-chevron-down icon_dropdown"></i>
 
         <div class="remove_focus" (click)="removeFocus()"></div>
-        <div class="options" style="min-width: 200px" [style]="overlayStyles()">
+        <div class="options" style="min-width: 200px" [style]="overlayToBody() ? overlayStyles() : optionsInlineStyles()">
           <div class="search_input_container">
             <p-iconfield>
               <p-inputicon styleClass="pi pi-search" />
