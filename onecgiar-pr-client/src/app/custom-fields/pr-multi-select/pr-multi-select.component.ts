@@ -1,4 +1,4 @@
-import { Component, computed, forwardRef, inject, input, output, signal, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, forwardRef, inject, input, output, signal, OnChanges, SimpleChanges } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { CustomizedAlertsFeService } from '../../shared/services/customized-alerts-fe.service';
@@ -55,6 +55,10 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
 
   private readonly _valueSig = signal<any[]>([]);
 
+  /** Stable clones for flat mode, rebuilt only when the source `options` reference/length changes. */
+  private _decorated: any[] = [];
+  private _decoratedSource: any = null;
+
   readonly rolesSE = inject(RolesService);
   private readonly customizedAlertsFeSE = inject(CustomizedAlertsFeService);
   readonly dataControlSE = inject(DataControlService);
@@ -66,34 +70,55 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
   }
 
   /**
-   * Flat-mode options decorated with `selected`/`disabled` flags — derived purely from the current
-   * value and `disableOptions` over a CLONED copy, so the parent's original `options` array is never
-   * mutated (fixes the shared-reference corruption). Grouped mode keeps its in-place decoration.
+   * Flat-mode options decorated with `selected`/`disabled` flags. Runs on every change detection
+   * (called from the template), re-deriving flags from the CURRENT bound value. This is intentional:
+   * several consumers mutate the bound model in place (e.g. a parent doing
+   * `partnersBody.contributing_center.splice(i, 1)`), which does NOT change the array reference and so
+   * never triggers `writeValue`. Re-deriving each cycle keeps the dropdown checkboxes in sync with
+   * those external changes — exactly like the pre-signals getter did.
+   *
+   * Flags are applied to STABLE clones (rebuilt only when the source `options` reference/length
+   * changes), so we never mutate the parent's original `options` array (fixes shared-reference
+   * corruption) and the virtual-scroll checkbox bindings stay stable. Grouped mode keeps its in-place
+   * decoration via `syncSelectionFlags`.
    */
-  readonly optionsIntance = computed<any[]>(() => {
+  optionsIntance(): any[] {
     const opts = this.options();
-    if (!opts?.length) return [];
+    if (!opts?.length) {
+      this._decorated = [];
+      this._decoratedSource = opts;
+      return this._decorated;
+    }
 
     const optionValue = this.optionValue();
     const logicalDeletion = this.logicalDeletion();
-    const clones = opts.map((o: any) => ({ ...o, disabled: false, selected: false }));
+
+    if (this._decoratedSource !== opts || this._decorated.length !== opts.length) {
+      this._decorated = opts.map((o: any) => ({ ...o }));
+      this._decoratedSource = opts;
+    }
+
+    for (const clone of this._decorated) {
+      clone.disabled = false;
+      clone.selected = false;
+    }
 
     this.disableOptions()?.forEach((disableOption: any) => {
-      const itemFinded = clones.find((listItem: any) => listItem[optionValue] == disableOption[optionValue]);
+      const itemFinded = this._decorated.find((listItem: any) => listItem[optionValue] == disableOption[optionValue]);
       if (itemFinded) itemFinded.disabled = true;
     });
 
     this._valueSig()?.forEach((savedListItem: any) => {
       const savedId = typeof savedListItem === 'object' ? savedListItem?.[optionValue] : savedListItem;
-      const itemFinded = clones.find((listItem: any) => listItem[optionValue] == savedId);
+      const itemFinded = this._decorated.find((listItem: any) => listItem[optionValue] == savedId);
       if (itemFinded) {
         itemFinded.selected = true;
         if (logicalDeletion) itemFinded.selected = savedListItem.is_active;
       }
     });
 
-    return clones;
-  });
+    return this._decorated;
+  }
 
   selectAllF() {
     this.selectAll = !this.selectAll;
@@ -162,11 +187,20 @@ export class PrMultiSelectComponent implements ControlValueAccessor, OnChanges {
 
   writeValue(value: any): void {
     const optionValue = this.optionValue();
-    // Support receiving array of IDs by mapping them to option objects for chip rendering
     if (Array.isArray(value)) {
-      const source = this.group() ? this.getAllChildrenFromGroups(this.options() || []) : this.options() || [];
-      const mapped = value.map((v: any) => (typeof v === 'object' ? v : source.find((s: any) => s?.[optionValue] == v))).filter(Boolean);
-      this._valueSig.set(mapped);
+      // Only remap when some entries are raw IDs (chips need objects). When every entry is already an
+      // object, keep the EXACT array reference so external in-place mutations (parent `.splice()`) stay
+      // visible to `optionsIntance()`/chips without re-triggering writeValue.
+      const needsMapping = value.some((v: any) => typeof v !== 'object' || v === null);
+      if (needsMapping) {
+        const source = this.group() ? this.getAllChildrenFromGroups(this.options() || []) : this.options() || [];
+        const mapped = value
+          .map((v: any) => (typeof v === 'object' && v !== null ? v : source.find((s: any) => s?.[optionValue] == v)))
+          .filter(Boolean);
+        this._valueSig.set(mapped);
+      } else {
+        this._valueSig.set(value);
+      }
       if (this.group()) this.syncSelectionFlags();
       return;
     }

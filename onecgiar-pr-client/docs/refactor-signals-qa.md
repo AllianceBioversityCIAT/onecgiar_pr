@@ -60,8 +60,13 @@
 **What changed (internal only):**
 - `@Input()` → `input()` signals; `@Output()` → `output()` (`selectOptionEvent`, `removeOptionEvent` unchanged).
 - `value` backed by a signal; `get/set value` is a side-effect-free CVA bridge (`[(ngModel)]` unchanged).
-- **Flat mode**: options are now decorated (selected/disabled) over a **cloned copy** — the original list passed by the parent is **never mutated** (same shared-list bug fix as `pr-select`). Flat reset is now **reactive** (clearing the model clears the checkboxes/chips on its own).
+- **Flat mode**: `optionsIntance()` decorates (selected/disabled) a set of **stable clones** — the original list passed by the parent is **never mutated** (same shared-list bug fix as `pr-select`). It re-derives flags from the **current bound value on every change-detection** (like the pre-signals getter), so both reactive resets and **external in-place mutations of the model are reflected**.
 - The old `get optionsIntance()` **reassigned the model** (`this.value = []` / all-options) as a side effect of a getter on every change-detection. That model mutation moved into `selectAllF()` (explicit) — same end state, no getter side effects.
+
+**Bug found & fixed after the first cut (why `optionsIntance` is a per-CD method, not a `computed`):**
+- Several parents deselect by **mutating the bound array in place** — e.g. Contributors & Partners does `partnersBody.contributing_center.splice(i, 1)` and renders its own chips. An in-place splice does **not** change the array reference, so Angular never calls `writeValue`.
+- The first refactor made `optionsIntance` a `computed` (only recomputes on signal-reference change) **and** made `writeValue` build a new array via `.map()` (decoupling from the parent's array). Result regression: removing a center from outside left its **dropdown checkbox still checked**.
+- Fix: `optionsIntance()` is a plain method that re-derives every cycle from the current value; `writeValue` **keeps the exact array reference** when every entry is already an object (only remaps when raw IDs are passed). Locked by regression tests in `pr-multi-select.component.spec.ts` (`reflects an external in-place removal (splice)`).
 - Removed dead `_beforeValueLength`; DI moved to `inject()`.
 - Preserved verbatim: `logicalDeletion` (soft-delete `is_active`), `confirmDeletion` dialog, `selectedPrimary` / `cannotRemoveOptionValues` chip guards, `displayLabelFormatter`, search, `cdk-virtual-scroll`, chip UI, `showSelectAll`.
 
@@ -79,7 +84,7 @@
 | 2 | **Admin → Create/Manage user modal** | Grouped **Entity** multi-select: select entities across groups, save. |
 | 3 | **IPSR → Innovation Use → Step 1** | SDG targets, **experts** (`logicalDeletion` — removing a saved one greys the chip, keeps it), EOI outcomes, action-area outcomes, impact areas, institutions, geoscope: select/deselect → chips + checkboxes update. |
 | 4 | **IPSR → Contributors** | Centers, **non-CGIAR partners** (`confirmDeletion`), ToC: add/remove shows confirm dialog; planned-result change clears dependent selects. |
-| 5 | **Result Detail (P25) → Contributors & Partners** | Bilateral projects / results multi-selects (`displayLabelFormatter`, `confirmDeletion`), multiple-WPs normal-selector. **No coverage.** |
+| 5 | **Result Detail (P25) → Contributors & Partners** | **Contributing CGIAR Centers**: select a few → **remove a center from the chip list outside the dropdown** → reopen the dropdown, its **checkbox must be unchecked** (this was the reported regression). Also bilateral projects / results multi-selects (`displayLabelFormatter`, `confirmDeletion`), multiple-WPs normal-selector. **No coverage.** |
 | 6 | **Result Detail → Theory of Change** | SDG / impact-area / action-area targets (`confirmDeletion`); switching WP tabs keeps the correct selections. **No coverage.** |
 | 7 | **Result Detail → Partners (P22)** + normal-selector | Institution multi-select select/remove. |
 | 8 | **Result Detail → Cap-dev / Policy-change info** | Their multi-selects select/remove. |
