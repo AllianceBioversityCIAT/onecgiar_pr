@@ -144,7 +144,8 @@
               optionLabel="full_name"
               optionValue="code"
               [required]="false"
-              [(ngModel)]="createResultBody().contributing_center"
+              [ngModel]="contributingCenters()"
+              (ngModelChange)="onContributingCentersChange($event)"
               placeholder="Select center(s)"
               (selectOptionEvent)="onContributingCenterSelect($event)">
             </app-pr-multi-select>
@@ -154,7 +155,7 @@
 
           <div class="medal_selector selected_container">
             <div class="centers chips_container">
-              <div class="center pr_chip_selected" *ngFor="let center of createResultBody().contributing_center; let i = index">
+              <div class="center pr_chip_selected" *ngFor="let center of contributingCenters(); let i = index">
                 <div class="name" [innerHtml]="center?.acronym || center?.name"></div>
                 <i
                   *ngIf="!this.api.rolesSE.readOnly && !this.api.dataControlSE?.currentResult?.status && !center.from_cgspace"
@@ -174,7 +175,8 @@
               optionLabel="full_name"
               optionValue="code"
               [required]="false"
-              [(ngModel)]="otherCentersSelected"
+              [ngModel]="otherCentersSelected()"
+              (ngModelChange)="onOtherCentersChange($event)"
               placeholder="Select other center(s)">
             </app-pr-multi-select>
 
@@ -251,7 +253,8 @@
               optionLabel="official_code"
               placeholder="Select other entity"
               appendTo="body"
-              [(ngModel)]="otherScienceSelected"
+              [ngModel]="otherScienceSelected()"
+              (ngModelChange)="otherScienceSelected.set($event ?? [])"
               [style]="{ width: '100%', height: '32px' }"
               [disabled]="creatingResult()">
               <ng-template let-entity #item>

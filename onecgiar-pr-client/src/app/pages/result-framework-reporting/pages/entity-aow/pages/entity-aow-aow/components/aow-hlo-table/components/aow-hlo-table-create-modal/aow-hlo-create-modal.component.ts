@@ -20,7 +20,6 @@ interface CreateResultBody {
   toc_progressive_narrative: string;
   result_type_id: number | null;
   contribution_to_indicator_target: number | null;
-  contributing_center: any[] | null;
 }
 
 @Component({
@@ -53,9 +52,10 @@ export class AowHloCreateModalComponent implements OnInit {
     result_name: '',
     toc_progressive_narrative: '',
     result_type_id: null,
-    contribution_to_indicator_target: null,
-    contributing_center: []
+    contribution_to_indicator_target: null
   });
+  /** Stable array for pr-multi-select ngModel (do not bind nested signal fields). */
+  contributingCenters = signal<any[]>([]);
   mqapJson = signal<any>(null);
   validatingHandler = signal<boolean>(false);
   mqapUrlError = signal<{ status: boolean; message: string }>({
@@ -74,20 +74,22 @@ export class AowHloCreateModalComponent implements OnInit {
 
   // P2-3114: ToC/Other split for Contributing CGIAR Centers (mirrors the C&P surface).
   readonly OTHER_CENTERS_CODE = '__OTHER_CENTERS__';
+  readonly otherCentersSentinel = {
+    code: '__OTHER_CENTERS__',
+    name: 'Other(s) CGIAR Centers',
+    acronym: 'Other(s)',
+    full_name: '<strong>Other(s) CGIAR Centers</strong>',
+    institutionId: -1
+  };
   tocCenters = signal<any[]>([]);
   otherCentersSelected = signal<any[]>([]);
   // Parity with C&P (P2-2998): "Other(s)" stays selected in dropdown 1; its presence reveals dropdown 2.
-  showOtherCenters = computed(() =>
-    (this.createResultBody().contributing_center ?? []).some((c: any) => c?.code === this.OTHER_CENTERS_CODE)
-  );
+  showOtherCenters = computed(() => this.contributingCenters().some((c: any) => c?.code === this.OTHER_CENTERS_CODE));
 
   hasReferenceCenters = computed(() => this.tocCenters().length > 0);
 
   // Dropdown 1: the ToC-derived centers + the "Other(s)" sentinel that opens dropdown 2.
-  dropdown1Options = computed(() => [
-    ...this.tocCenters(),
-    { code: this.OTHER_CENTERS_CODE, acronym: 'Other(s)', name: 'Other(s) CGIAR Centers', full_name: '<strong>Other(s) CGIAR Centers</strong>' }
-  ]);
+  dropdown1Options = computed(() => [...this.tocCenters(), this.otherCentersSentinel]);
 
   // Dropdown 2: every center not derived from the ToC node.
   otherCentersList = computed(() => {
@@ -158,8 +160,15 @@ export class AowHloCreateModalComponent implements OnInit {
         .map((center: any) => ({ ...center, from_toc: true }));
 
       this.tocCenters.set(preselected);
-      this.createResultBody.set({ ...this.createResultBody(), contributing_center: [...preselected] });
+      this.contributingCenters.set([...preselected]);
     });
+  }
+
+  onContributingCentersChange(centers: any[]): void {
+    this.contributingCenters.set(centers ?? []);
+    if (!this.showOtherCenters()) {
+      this.otherCentersSelected.set([]);
+    }
   }
 
   // P2-3114: when "Other(s)" is deselected, clear dropdown 2 (parity with rd-contributors-and-partners).
@@ -167,6 +176,10 @@ export class AowHloCreateModalComponent implements OnInit {
     if (!this.showOtherCenters()) {
       this.otherCentersSelected.set([]);
     }
+  }
+
+  onOtherCentersChange(centers: any[]): void {
+    this.otherCentersSelected.set(centers ?? []);
   }
 
   deleteOtherCenter(index: number): void {
@@ -229,21 +242,14 @@ export class AowHloCreateModalComponent implements OnInit {
   removeEntityOption(option: any) {
     this.entityAowService.selectedEntities.set(this.entityAowService.selectedEntities().filter(item => item.id !== option.id));
   }
-  deleteContributingCenter(index: number, updateComponent: boolean = false) {
-    // if (updateComponent) {
-    //   this.rdPartnersSE.updatingLeadData = true;
-    // }
-
-    const deletedCenter = this.createResultBody().contributing_center.splice(index, 1);
-    // if (deletedCenter.length === 1 && this.rdPartnersSE.leadCenterCode === deletedCenter[0].code) {
-    //   //always should happen
-    //   this.rdPartnersSE.leadCenterCode = null;
-    // }
-    // if (updateComponent) {
-    //   setTimeout(() => {
-    //     this.rdPartnersSE.updatingLeadData = false;
-    //   }, 50);
-    // }
+  deleteContributingCenter(index: number): void {
+    const current = this.contributingCenters();
+    const removed = current[index];
+    const next = current.filter((_, i) => i !== index);
+    this.contributingCenters.set(next);
+    if (removed?.code === this.OTHER_CENTERS_CODE) {
+      this.otherCentersSelected.set([]);
+    }
   }
   GET_mqapValidation() {
     this.validatingHandler.set(true);
@@ -327,7 +333,7 @@ export class AowHloCreateModalComponent implements OnInit {
       // P2-3114: merge dropdown 1 (ToC, from_toc:true) + dropdown 2 (Other, from_toc:false), dropping the sentinel,
       // so the C&P form buckets them identically on redirect.
       contributing_center: [
-        ...(this.createResultBody().contributing_center ?? [])
+        ...this.contributingCenters()
           .filter((center: any) => center?.code !== this.OTHER_CENTERS_CODE)
           .map((center: any) => ({ ...center, from_toc: true })),
         ...this.otherCentersSelected().map((center: any) => ({ ...center, from_toc: false }))
