@@ -9,6 +9,7 @@ import { RdContributorsAndPartnersService } from './rd-contributors-and-partners
 import { ResultLevelService } from '../../../result-creator/services/result-level.service';
 import { InnovationUseResultsService } from '../../../../../../shared/services/global/innovation-use-results.service';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
+import { filterOutAvisaInitiatives, isAvisaInitiative as checkAvisaInitiative } from '../../../../../../shared/utils/avisa-initiative.util';
 
 @Component({
   selector: 'app-rd-contributors-and-partners',
@@ -71,8 +72,11 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   }
 
   isAvisaInitiative = computed(() => {
-    const code = this.api.dataControlSE.currentResultSignal?.()?.initiative_official_code ?? this.api.dataControlSE.currentResult?.initiative_official_code;
-    return code === 'SGP-02' || code === 'SGP02';
+    const result = this.api.dataControlSE.currentResultSignal?.() ?? this.api.dataControlSE.currentResult;
+    return checkAvisaInitiative({
+      official_code: result?.initiative_official_code,
+      initiative_id: result?.initiative_id
+    });
   });
 
   hideWhyReportedField = computed(() => {
@@ -296,7 +300,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
         this.api.dataControlSE.currentResult = response;
         const activePortfolio = this.api.dataControlSE.currentResult?.portfolio;
         this.api.resultsSE.GET_AllWithoutResults(activePortfolio).subscribe(({ response }) => {
-          this.contributingInitiativesList = response;
+          this.contributingInitiativesList = filterOutAvisaInitiatives(response);
         });
         // P2-2929 (2026): full Science Programs/initiatives list to split "from ToC" vs "Other(s)".
         this.api.resultsSE.GET_AllInitiatives(activePortfolio).subscribe(({ response }) => {
