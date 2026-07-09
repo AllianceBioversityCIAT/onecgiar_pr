@@ -1,4 +1,4 @@
-import { Component, forwardRef, Input, Output, EventEmitter, ElementRef, HostListener } from '@angular/core';
+import { Component, computed, ElementRef, forwardRef, HostListener, inject, input, output, signal } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { RolesService } from '../../shared/services/global/roles.service';
 import { DataControlService } from '../../shared/services/data-control.service';
@@ -17,68 +17,74 @@ import { DataControlService } from '../../shared/services/data-control.service';
   standalone: false
 })
 export class PrSelectComponent implements ControlValueAccessor {
-  @Input() optionLabel: string;
-  @Input() optionValue: string;
-  @Input() options: any;
-  @Input() placeholder: string;
-  @Input() label: string;
-  @Input() description: string;
-  @Input() readOnly: boolean;
-  @Input() isStatic: boolean;
-  @Input() required: boolean = true;
-  @Input() flagsCode: string;
-  @Input() disableOptions: any;
-  @Input() disableOptionsText: any = '';
-  @Input() disabled: any = false;
-  @Input() editable: boolean = false;
-  @Input() showPartnerAlert: boolean = false;
-  @Input() extraInformation: boolean = false;
-  @Input() indexReference: number = null;
-  @Input() noDataText: string = '';
-  @Input() fieldDisabled: boolean = false;
-  @Input() group: boolean = false;
-  @Input() groupCode: string = '';
-  @Input() groupName: string = '';
-  @Input() descInlineStyles?: string = '';
-  @Input() labelDescInlineStyles?: string = '';
-  @Input() optionsInlineStyles?: string = '';
-  @Input() overlayToBody?: boolean = false; // When true, position dropdown as fixed overlay
-  @Input() idKey?: string = '';
-  @Input() showDescriptionLabel?: boolean = false;
-  @Input() truncateSelectionText?: boolean = false;
-  @Input() inlineStylesContainer?: string = '';
-  @Input() _value: string;
-  @Input() expandSpaceOnOpen?: boolean = false; // Enable 300px expansion when open
+  readonly optionLabel = input<string>();
+  readonly optionValue = input<string>();
+  readonly options = input<any>();
+  readonly placeholder = input<string>();
+  readonly label = input<string>();
+  readonly description = input<string>();
+  readonly readOnly = input<boolean>();
+  readonly isStatic = input<boolean>();
+  readonly required = input<boolean>(true);
+  readonly flagsCode = input<string>();
+  readonly disableOptions = input<any>();
+  readonly disableOptionsText = input<any>('');
+  readonly disabled = input<any>(false);
+  readonly editable = input<boolean>(false);
+  readonly showPartnerAlert = input<boolean>(false);
+  readonly extraInformation = input<boolean>(false);
+  readonly indexReference = input<number>(null);
+  readonly noDataText = input<string>('');
+  readonly fieldDisabled = input<boolean>(false);
+  readonly group = input<boolean>(false);
+  readonly groupCode = input<string>('');
+  readonly groupName = input<string>('');
+  readonly descInlineStyles = input<string>('');
+  readonly labelDescInlineStyles = input<string>('');
+  readonly overlayToBody = input<boolean>(false); // When true, position dropdown as fixed overlay
+  readonly idKey = input<string>('');
+  readonly showDescriptionLabel = input<boolean>(false);
+  readonly truncateSelectionText = input<boolean>(false);
+  readonly inlineStylesContainer = input<string>('');
+  readonly expandSpaceOnOpen = input<boolean>(false); // Enable 300px expansion when open
 
-  @Output() selectOptionEvent = new EventEmitter();
+  readonly selectOptionEvent = output<any>();
 
-  private _optionsIntance: any[];
+  private readonly elementRef = inject(ElementRef);
+  readonly rolesSE = inject(RolesService);
+  readonly dataControlSE = inject(DataControlService);
+
+  private readonly _sig = signal<any>(null);
   public fullValue: any = {};
   public searchText: string;
-  public isDropdownOpen?: boolean = false; // Track dropdown state
-
-  constructor(
-    public rolesSE: RolesService,
-    public dataControlSE: DataControlService,
-    private elementRef: ElementRef
-  ) {}
+  readonly isDropdownOpen = signal<boolean>(false); // Track dropdown state
+  /** Internal overlay positioning styles (no consumer binds this; kept internal). */
+  readonly overlayStyles = signal<string>('');
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: Event) {
-    if (this.expandSpaceOnOpen && this.isDropdownOpen && !this.elementRef.nativeElement.contains(event.target)) {
-      this.isDropdownOpen = false;
+    if (this.expandSpaceOnOpen() && this.isDropdownOpen() && !this.elementRef.nativeElement.contains(event.target)) {
+      this.isDropdownOpen.set(false);
     }
   }
 
   get value(): any {
-    return this._value;
+    return this._sig();
   }
 
   set value(v: string) {
-    if (v !== this._value) {
-      this._value = v;
+    if (v !== this._sig()) {
+      this._sig.set(v);
       this.onChange(v);
     }
+  }
+
+  /** Backward-compat bridge: user-management pokes `_value` via @ViewChild to reset filters. */
+  get _value(): any {
+    return this._sig();
+  }
+  set _value(v: any) {
+    this._sig.set(v);
   }
 
   onChange(_) {}
@@ -86,7 +92,7 @@ export class PrSelectComponent implements ControlValueAccessor {
   onTouch() {}
 
   writeValue(value: any): void {
-    this._value = value;
+    this._sig.set(value);
   }
 
   registerOnChange(fn: any): void {
@@ -99,71 +105,70 @@ export class PrSelectComponent implements ControlValueAccessor {
 
   removeFocus(option?) {
     if (option?.disabled) return;
-    const triggerId = (this.idKey || this.optionValue) + '_' + (this.indexReference ?? '');
+    const triggerId = (this.idKey() || this.optionValue()) + '_' + (this.indexReference() ?? '');
     const element: any = document.getElementById(triggerId);
-    element.blur();
-    if (this.expandSpaceOnOpen) {
-      this.isDropdownOpen = false; // Close dropdown only if expansion is enabled
+    element?.blur();
+    if (this.expandSpaceOnOpen()) {
+      this.isDropdownOpen.set(false); // Close dropdown only if expansion is enabled
     }
-    if (this.overlayToBody) {
+    if (this.overlayToBody()) {
       // Reset inline styles so next open recalculates position
-      this.optionsInlineStyles = '';
+      this.overlayStyles.set('');
     }
   }
 
   onDropdownOpen() {
-    if (this.expandSpaceOnOpen) {
-      this.isDropdownOpen = true; // Only track state if expansion is enabled
+    if (this.expandSpaceOnOpen()) {
+      this.isDropdownOpen.set(true); // Only track state if expansion is enabled
     }
-    if (this.overlayToBody) {
-      const triggerId = (this.idKey || this.optionValue) + '_' + (this.indexReference ?? '');
+    if (this.overlayToBody()) {
+      const triggerId = (this.idKey() || this.optionValue()) + '_' + (this.indexReference() ?? '');
       const triggerElement: any = document.getElementById(triggerId);
       if (triggerElement) {
         const rect = triggerElement.getBoundingClientRect();
         const top = rect.bottom + 4;
         const left = rect.left;
         const width = rect.width;
-        this.optionsInlineStyles = `position: fixed; left: ${left}px; top: ${top}px; width: ${width}px; max-height: 300px; z-index: 10000; transform: none; bottom: auto;`;
+        this.overlayStyles.set(`position: fixed; left: ${left}px; top: ${top}px; width: ${width}px; max-height: 300px; z-index: 10000; transform: none; bottom: auto;`);
       }
     }
   }
 
-  get optionsIntance() {
-    if (!this.options?.length) return [];
-    if (!this._optionsIntance?.length) this._optionsIntance = [...this.options];
+  /**
+   * Options decorated with `selected`/`disabled` flags — derived from the current value and
+   * `disableOptions` over a CLONED copy, so the parent's original `options` array is never mutated.
+   */
+  readonly optionsIntance = computed<any[]>(() => {
+    const opts = this.options();
+    if (!opts?.length) return [];
 
-    this._optionsIntance.forEach((resp: any) => {
-      resp.disabled = false;
-      resp.selected = false;
+    const optionValue = this.optionValue();
+    const clones = opts.map((o: any) => ({ ...o, disabled: false, selected: false }));
+
+    const val = this._sig();
+    const id = val != null && typeof val === 'object' ? val[optionValue] : val;
+
+    this.disableOptions()?.forEach((disableOption: any) => {
+      const itemFinded = clones.find((listItem: any) => listItem[optionValue] == disableOption[optionValue]);
+      if (itemFinded && itemFinded[optionValue] != id) itemFinded.disabled = true;
     });
 
-    this.disableOptions?.map(disableOption => {
-      const itemFinded = this._optionsIntance.find(listItem => listItem[this.optionValue] == disableOption[this.optionValue]);
-      if (itemFinded && itemFinded[this.optionValue] != this.value) itemFinded.disabled = true;
-    });
-    this.fullValue[this.optionValue] = this.value;
+    if (id !== null && id !== undefined && id !== '') {
+      const itemFinded = clones.find((listItem: any) => listItem[optionValue] == id);
+      if (itemFinded) itemFinded.selected = true;
+    }
 
-    if (!this.value) return this._optionsIntance;
-    const id = typeof this.value == 'object' ? this.value[this.optionValue] : this.value;
-    const itemFinded = this._optionsIntance?.find(listItem => listItem[this.optionValue] == id);
-    if (!itemFinded) return this._optionsIntance;
-    itemFinded.selected = true;
-    this.fullValue[this.optionLabel] = itemFinded[this.optionLabel];
+    return clones;
+  });
 
-    return this._optionsIntance;
-  }
   onSelectOption(option) {
     if (option?.disabled) return;
     this.fullValue = option;
-    this.value = option[this.optionValue];
+    this.value = option[this.optionValue()];
     option.selected = true;
     this.selectOptionEvent.emit(option);
-    if (this.expandSpaceOnOpen) {
-      this.isDropdownOpen = false; // Close dropdown only if expansion is enabled
+    if (this.expandSpaceOnOpen()) {
+      this.isDropdownOpen.set(false); // Close dropdown only if expansion is enabled
     }
-  }
-
-  labelName(value) {
-    return '';
   }
 }
