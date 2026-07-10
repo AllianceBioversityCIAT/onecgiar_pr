@@ -302,8 +302,9 @@ export class RdContributorsAndPartnersComponent implements OnInit {
           this.contributingInitiativesList = filterOutAvisaInitiatives(response);
         });
         // P2-2929 (2026): full Science Programs/initiatives list to split "from ToC" vs "Other(s)".
+        // P2-3131: AVISA (SGP-02) must not be selectable in the "Other(s) Science Program" dropdown either.
         this.api.resultsSE.GET_AllInitiatives(activePortfolio).subscribe(({ response }) => {
-          this.allScienceProgramsList.set(response || []);
+          this.allScienceProgramsList.set(filterOutAvisaInitiatives(response || []));
         });
       },
       error: err => {
