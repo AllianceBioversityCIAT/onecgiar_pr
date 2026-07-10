@@ -87,6 +87,14 @@ export const routingApp: PrRoute[] = [
     path: 'reports/ipsr-details/:id',
     loadChildren: () => import('../../pages/pdf-reports/pdf-reports.module').then(m => m.PdfReportsModule)
   },
+  {
+    prName: 'Bilateral Results',
+    underConstruction: false,
+    prHide: false,
+    canActivate: [CheckLoginGuard],
+    path: 'bilateral',
+    loadChildren: () => import('../../pages/bilateral/bilateral.module').then(m => m.BilateralModule)
+  },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'result-framework-reporting', prHide: true }
 ];
 
@@ -526,6 +534,26 @@ export const ResultFrameworkReportingRouting: PrRoute[] = [
     ]
   },
   { prName: '', path: '**', pathMatch: 'full', redirectTo: 'home' }
+];
+
+export const BilateralRouting: PrRoute[] = [
+  {
+    prName: 'Bilateral Result Creator',
+    path: 'create',
+    loadComponent: () =>
+      import('../../pages/bilateral/pages/bilateral-result-creator/bilateral-result-creator.component').then(
+        m => m.BilateralResultCreatorComponent
+      )
+  },
+  {
+    prName: 'Bilateral Result Editor',
+    path: 'result/:id',
+    loadComponent: () =>
+      import('../../pages/bilateral/pages/bilateral-result-creator/bilateral-result-creator.component').then(
+        m => m.BilateralResultCreatorComponent
+      )
+  },
+  { prName: '', path: '**', pathMatch: 'full', redirectTo: 'create' }
 ];
 
 export interface PrRoute extends Route {

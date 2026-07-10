@@ -1,0 +1,53 @@
+.brls-container {
+  margin-bottom: 24px;
+}
+
+.brls-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #212121;
+  margin: 0 0 16px;
+}
+
+.brls-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.brls-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 16px;
+  border: 2px solid #E0E0E0;
+  border-radius: 8px;
+  background: #FFFFFF;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 150ms ease, background 150ms ease;
+
+  &:hover {
+    border-color: #90CAF9;
+    background: #F5F5F5;
+  }
+
+  &--selected {
+    border-color: #1565C0;
+    background: #E3F2FD;
+  }
+}
+
+.brls-card-label {
+  font-size: 16px;
+  font-weight: 600;
+  color: #212121;
+}
+
+.brls-card-desc {
+  font-size: 12px;
+  color: #757575;
+  text-align: center;
+  line-height: 1.4;
+}

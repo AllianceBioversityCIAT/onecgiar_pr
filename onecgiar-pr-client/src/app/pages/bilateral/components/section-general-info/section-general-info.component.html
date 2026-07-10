@@ -1,0 +1,72 @@
+<div class="sgi-fields">
+  <div class="sgi-field">
+    <label class="sgi-label">Title <span class="sgi-required">*</span></label>
+    <input
+      type="text"
+      class="sgi-input"
+      [value]="title()"
+      (input)="onTitleChange($event)"
+      (blur)="onTitleBlur()"
+      maxlength="200"
+      placeholder="Enter result title (max 30 words)"
+    />
+    @if (titleStatus !== 'idle') {
+      <span class="sgi-status" [class.sgi-status--saved]="titleStatus === 'saved'" [class.sgi-status--error]="titleStatus === 'error'">
+        {{ titleStatus === 'saving' ? 'Saving...' : titleStatus === 'saved' ? 'Saved ✓' : 'Save failed — Retry' }}
+      </span>
+    }
+  </div>
+
+  <div class="sgi-field">
+    <label class="sgi-label">Description <span class="sgi-required">*</span></label>
+    <textarea
+      class="sgi-textarea"
+      [value]="description()"
+      (input)="onDescriptionChange($event)"
+      (blur)="onDescriptionBlur()"
+      maxlength="2000"
+      placeholder="Describe the result (max 300 words)"
+      rows="4"
+    ></textarea>
+    @if (descriptionStatus !== 'idle') {
+      <span class="sgi-status" [class.sgi-status--saved]="descriptionStatus === 'saved'" [class.sgi-status--error]="descriptionStatus === 'error'">
+        {{ descriptionStatus === 'saving' ? 'Saving...' : descriptionStatus === 'saved' ? 'Saved ✓' : 'Save failed — Retry' }}
+      </span>
+    }
+  </div>
+
+  <a class="sgi-show-all" (click)="toggleShowAll()">
+    {{ showAllFields() ? 'Hide' : 'Show' }} additional fields
+  </a>
+
+  @if (showAllFields()) {
+    <div class="sgi-extra">
+      <div class="sgi-field">
+        <label class="sgi-label">Lead Contact Person</label>
+        <input
+          type="text"
+          class="sgi-input"
+          [value]="leadContactPerson()"
+          (input)="onLeadContactChange($event)"
+          placeholder="Name of lead contact"
+        />
+      </div>
+
+      <div class="sgi-field">
+        <label class="sgi-label">KRS Status</label>
+        <label class="sgi-toggle">
+          <input type="checkbox" [checked]="isKrs()" (change)="toggleKrs()" class="sgi-checkbox" />
+          <span>Is KRS</span>
+        </label>
+      </div>
+
+      <div class="sgi-field">
+        <label class="sgi-label">Discontinued</label>
+        <label class="sgi-toggle">
+          <input type="checkbox" [checked]="isDiscontinued()" (change)="toggleDiscontinued()" class="sgi-checkbox" />
+          <span>Is Discontinued</span>
+        </label>
+      </div>
+    </div>
+  }
+</div>

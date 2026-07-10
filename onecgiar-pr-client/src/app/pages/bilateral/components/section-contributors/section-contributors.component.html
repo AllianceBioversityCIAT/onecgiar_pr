@@ -1,0 +1,37 @@
+<div class="sc-fields">
+  <div class="sc-field">
+    <label class="sc-label">Primary Science Program</label>
+    <div class="sc-sp-badge sc-sp-badge--primary">
+      {{ creationService.selectedPrimarySp()?.programCode }}
+      @if (creationService.selectedPrimarySp()?.allocation) {
+        <span class="sc-sp-pct">{{ creationService.selectedPrimarySp()?.allocation }}%</span>
+      }
+    </div>
+  </div>
+
+  @if (creationService.selectedSecondarySps().length) {
+    <div class="sc-field">
+      <label class="sc-label">Contributing Science Programs</label>
+      <div class="sc-chips">
+        @for (sp of creationService.selectedSecondarySps(); track sp.programId) {
+          <span class="sc-sp-badge">
+            {{ sp.programCode }}
+            @if (sp.allocation) {
+              <span class="sc-sp-pct">{{ sp.allocation }}%</span>
+            }
+          </span>
+        }
+      </div>
+    </div>
+  }
+
+  <div class="sc-field">
+    <label class="sc-label">Lead Center</label>
+    <span class="sc-lead">{{ creationService.selectedProject()?.leadCenter?.acronym || 'Auto-assigned from project' }}</span>
+  </div>
+
+  <div class="sc-field">
+    <label class="sc-label">Contributing Projects</label>
+    <span class="sc-value">{{ creationService.selectedProject()?.shortName || 'Selected project' }}</span>
+  </div>
+</div>

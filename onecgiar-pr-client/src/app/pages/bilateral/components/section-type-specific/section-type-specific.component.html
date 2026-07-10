@@ -1,0 +1,27 @@
+<div class="sts-fields">
+  <div class="sts-field">
+    <label class="sts-label">Result Type <span class="sts-required">*</span></label>
+    <select class="sts-select" (change)="onTypeChange($event)">
+      <option value="" disabled [selected]="!resultTypeId()">Select result type</option>
+      @for (type of resultTypes; track type.id) {
+        <option [value]="type.id" [selected]="resultTypeId() === type.id">
+          {{ type.label }}
+        </option>
+      }
+    </select>
+  </div>
+
+  @if (resultTypeId()) {
+    <p class="sts-hint">Type-specific fields for {{ resultTypeId() | json }} will be rendered here.</p>
+    <p class="sts-hint">
+      @switch (resultTypeId()) {
+        @case (1) { Policy Change: policy title, type, stage, evidence link }
+        @case (2) { Innovation Use: title, type, adoption stage, scale, beneficiaries }
+        @case (5) { Capacity Sharing: training title, type, participants, partners }
+        @case (6) { Knowledge Product: handle, title, type, authors, DOI }
+        @case (7) { Innovation Development: title, phase, readiness level, typology }
+        @default { Other: core sections only, no type-specific page }
+      }
+    </p>
+  }
+</div>

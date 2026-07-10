@@ -1,0 +1,16 @@
+<div class="brls-container">
+  <h3 class="brls-title">Select Result Level</h3>
+  <div class="brls-grid">
+    @for (level of levels; track level.id) {
+      <button
+        class="brls-card"
+        [class.brls-card--selected]="resultLevelId() === level.id"
+        (click)="selectLevel(level.id)"
+        type="button"
+      >
+        <span class="brls-card-label">{{ level.label }}</span>
+        <span class="brls-card-desc">{{ level.description }}</span>
+      </button>
+    }
+  </div>
+</div>

@@ -133,14 +133,18 @@ export class AppModule implements NestModule {
     consumer
       .apply(JwtMiddleware, apiVersionMiddleware)
       .exclude(
-        { path: 'api/platform-report/(.*)', method: RequestMethod.ALL },
-        { path: 'api/bilateral/(.*)', method: RequestMethod.ALL },
+        { path: 'api/platform-report/*path', method: RequestMethod.ALL },
+        { path: 'api/bilateral', method: RequestMethod.ALL },
+        { path: 'api/bilateral/create', method: RequestMethod.ALL },
+        { path: 'api/bilateral/list', method: RequestMethod.ALL },
+        { path: 'api/bilateral/results', method: RequestMethod.ALL },
+        { path: 'api/bilateral/:id', method: RequestMethod.ALL },
       )
       .forRoutes(
-        { path: 'api/(.*)', method: RequestMethod.ALL },
-        { path: 'v2/(.*)', method: RequestMethod.ALL },
-        { path: 'clarisa/(.*)', method: RequestMethod.ALL },
-        { path: 'toc/(.*)', method: RequestMethod.ALL },
+        { path: 'api/*path', method: RequestMethod.ALL },
+        { path: 'v2/*path', method: RequestMethod.ALL },
+        { path: 'clarisa/*path', method: RequestMethod.ALL },
+        { path: 'toc/*path', method: RequestMethod.ALL },
       );
 
     consumer

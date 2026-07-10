@@ -1,0 +1,76 @@
+<div class="bps-selector">
+  <label class="bps-label">Reporting Project <span class="bps-required">*</span></label>
+
+  @if (creationService.isLoadingProjects()) {
+    <div class="bps-field bps-loading">Loading projects...</div>
+  } @else {
+    <div class="bps-dropdown-anchor">
+      <div class="bps-field" (click)="toggleDropdown()" tabindex="0" role="combobox">
+        <span class="bps-field-text" [class.bps-placeholder]="!creationService.selectedProject()">
+          {{ selectedLabel }}
+        </span>
+        <i class="material-icons-round bps-chevron" [class.bps-chevron--open]="showDropdown()">expand_more</i>
+      </div>
+
+      @if (showDropdown()) {
+        <div class="bps-dropdown-overlay" (click)="closeDropdown()"></div>
+        <div class="bps-dropdown">
+        <div class="bps-search">
+          <i class="material-icons-round bps-search-icon">search</i>
+          <input
+            type="text"
+            class="bps-search-input"
+            placeholder="Search projects..."
+            (input)="onSearchInput($event)"
+            (click)="$event.stopPropagation()"
+          />
+        </div>
+        <div class="bps-options">
+          @if (filteredProjects().length === 0) {
+            <div class="bps-no-results">No projects found</div>
+          }
+          @for (project of filteredProjects(); track project.id) {
+            <div
+              class="bps-option"
+              [class.bps-option--selected]="creationService.selectedProject()?.id === project.id"
+              (click)="selectProject(project)"
+            >
+              <span class="bps-option-code">{{ project.shortName }}</span>
+              <span class="bps-option-name">{{ project.fullName }}</span>
+              @if (project.leadCenter) {
+                <span class="bps-option-center">{{ project.leadCenter.acronym }}</span>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    }
+    </div>
+  }
+
+  @if (creationService.selectedProject(); as project) {
+    <div class="bps-project-info">
+      <div class="bps-info-section">
+        <h4 class="bps-info-label">Project Summary</h4>
+        <div class="bps-info-card"><p class="bps-info-text">{{ displayText(project.summary) }}</p></div>
+      </div>
+      <div class="bps-info-section">
+        <h4 class="bps-info-label">Project Description</h4>
+        <div class="bps-info-card"><p class="bps-info-text">{{ displayText(project.description) }}</p></div>
+      </div>
+      @if (project.leadCenter) {
+        <div class="bps-info-section">
+          <h4 class="bps-info-label">Lead Center</h4>
+          <span class="bps-badge bps-badge--center">
+            <i class="material-icons-round">apartment</i>
+            {{ project.leadCenter.acronym }}
+          </span>
+        </div>
+      }
+    </div>
+  } @else {
+    <div class="bps-project-info">
+      <p class="bps-info-empty">Select a project to view its summary and description.</p>
+    </div>
+  }
+</div>

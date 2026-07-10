@@ -1,0 +1,116 @@
+.sgi-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sgi-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sgi-label {
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #546E7A;
+}
+
+.sgi-required {
+  color: #C62828;
+}
+
+.sgi-input {
+  padding: 10px 12px;
+  border: 1px solid #E0E0E0;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #212121;
+  font-family: inherit;
+  transition: border-color 150ms ease;
+
+  &:focus {
+    outline: none;
+    border-color: #1565C0;
+    box-shadow: 0 0 0 2px rgba(21, 101, 192, 0.1);
+  }
+
+  &::placeholder {
+    color: #BDBDBD;
+  }
+}
+
+.sgi-textarea {
+  padding: 10px 12px;
+  border: 1px solid #E0E0E0;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #212121;
+  font-family: inherit;
+  resize: vertical;
+  line-height: 1.5;
+  transition: border-color 150ms ease;
+
+  &:focus {
+    outline: none;
+    border-color: #1565C0;
+    box-shadow: 0 0 0 2px rgba(21, 101, 192, 0.1);
+  }
+
+  &::placeholder {
+    color: #BDBDBD;
+  }
+}
+
+.sgi-status {
+  font-size: 11px;
+  color: #757575;
+  transition: color 200ms ease;
+
+  &--saved {
+    color: #2E7D32;
+  }
+
+  &--error {
+    color: #C62828;
+  }
+}
+
+.sgi-show-all {
+  display: inline-block;
+  font-size: 12px;
+  color: #1565C0;
+  cursor: pointer;
+  text-decoration: none;
+  padding: 4px 0;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.sgi-extra {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-top: 8px;
+  border-top: 1px dashed #E0E0E0;
+}
+
+.sgi-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #424242;
+  cursor: pointer;
+}
+
+.sgi-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #1565C0;
+  cursor: pointer;
+}

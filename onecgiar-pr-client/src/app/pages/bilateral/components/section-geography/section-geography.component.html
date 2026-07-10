@@ -1,0 +1,20 @@
+<div class="sg-fields">
+  <div class="sg-field">
+    <label class="sg-label">Geographic Scope <span class="sg-required">*</span></label>
+    <select class="sg-select" (change)="onScopeChange($event)">
+      <option value="" disabled [selected]="!geographicScopeId()">Select scope</option>
+      <option value="1" [selected]="geographicScopeId() === 1">Global</option>
+      <option value="2" [selected]="geographicScopeId() === 2">Regional</option>
+      <option value="3" [selected]="geographicScopeId() === 3">National</option>
+      <option value="4" [selected]="geographicScopeId() === 4">Sub-national</option>
+      <option value="5" [selected]="geographicScopeId() === 5">Multi-country</option>
+    </select>
+    @if (scopeStatus !== 'idle') {
+      <span class="sg-status" [class.sg-status--saved]="scopeStatus === 'saved'" [class.sg-status--error]="scopeStatus === 'error'">
+        {{ scopeStatus === 'saving' ? 'Saving...' : scopeStatus === 'saved' ? 'Saved ✓' : 'Save failed — Retry' }}
+      </span>
+    }
+  </div>
+
+  <p class="sg-hint">Region and country selection will be shown based on the selected scope</p>
+</div>

@@ -1,0 +1,62 @@
+<div class="bp-dashboard">
+  <div class="bp-dashboard-card">
+    <h3 class="bp-card-title">Project</h3>
+    @if (creationService.selectedProject(); as project) {
+      <div class="bp-project-code">{{ project.shortName }}</div>
+      <div class="bp-project-name">{{ project.fullName }}</div>
+      @if (project.leadCenter) {
+        <div class="bp-lead-center">{{ project.leadCenter.acronym }}</div>
+      }
+      <div class="bp-sp-badges">
+        @for (sp of project.sciencePrograms; track sp.programId) {
+          <span class="bp-sp-badge" [class.bp-sp-badge--primary]="creationService.selectedPrimarySp()?.programId === sp.programId">
+            {{ sp.spShortName }}
+            @if (sp.allocation) {
+              <span class="bp-sp-allocation">{{ sp.allocation }}%</span>
+            }
+          </span>
+        }
+      </div>
+    } @else {
+      <p class="bp-empty-hint">Select a project to begin</p>
+    }
+  </div>
+
+  <div class="bp-dashboard-card bp-dashboard-card--progress">
+    <h3 class="bp-card-title">MDS Progress</h3>
+    <div class="bp-progress-center">
+      <app-mds-progress-ring [percentage]="overallPct()" [size]="80"></app-mds-progress-ring>
+    </div>
+    <div class="bp-section-breakdown">
+      @for (s of sectionStatuses(); track s.sectionName) {
+        <div class="bp-breakdown-row" (click)="scrollToSection(s.sectionName)" tabindex="0" role="link" (keydown.enter)="scrollToSection(s.sectionName)">
+          <span class="bp-breakdown-name">{{ s.sectionLabel }}</span>
+          <span class="bp-breakdown-count">{{ s.filledFields }}/{{ s.totalFields }}</span>
+          <div class="bp-breakdown-bar">
+            <div class="bp-breakdown-fill" [style.width.%]="s.percentage"></div>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="bp-dashboard-card bp-dashboard-card--actions">
+    <h3 class="bp-card-title">Actions</h3>
+    <button class="bp-action-btn" [disabled]="overallStatus() !== 'complete'" type="button">
+      <i class="material-icons-round">sparkles</i>
+      Generate Narrative
+    </button>
+    <button class="bp-action-btn" type="button">
+      <i class="material-icons-round">picture_as_pdf</i>
+      Download PDF
+    </button>
+    <button class="bp-action-btn" [disabled]="overallStatus() !== 'complete'" type="button">
+      <i class="material-icons-round">search_check</i>
+      AI Review
+    </button>
+    <button class="bp-action-btn bp-action-btn--primary" [disabled]="overallStatus() !== 'complete'" type="button" (click)="onSubmit()">
+      <i class="material-icons-round">send</i>
+      Submit for Review
+    </button>
+  </div>
+</div>

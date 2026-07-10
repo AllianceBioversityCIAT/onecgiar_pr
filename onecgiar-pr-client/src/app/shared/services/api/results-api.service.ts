@@ -1448,6 +1448,10 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/projects/get/all`);
   }
 
+  GET_bilateralProjects(centerId: string | number) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/bilateral/center/projects?centerId=${centerId}`);
+  }
+
   GET_ClarisaPortfolios() {
     return this.http.get<any>(`${environment.apiBaseUrl}clarisa/portfolios`);
   }

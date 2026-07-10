@@ -44,8 +44,11 @@
 
 **Codebase references:**
 - Backend bilateral ingestion: `onecgiar-pr-server/src/api/bilateral/`
+- Backend center-facing endpoint: `onecgiar-pr-server/src/api/bilateral/bilateral-center.controller.ts`
+- Backend projects service: `onecgiar-pr-server/src/api/bilateral/services/bilateral-projects.service.ts`
 - Backend AI module: `onecgiar-pr-server/src/api/ai/`
 - Backend result-qaed module: `onecgiar-pr-server/src/api/result-qaed/` (empty scaffold)
+- Frontend bilateral module: `onecgiar-pr-client/src/app/pages/bilateral/`
 - Frontend result creator: `onecgiar-pr-client/src/app/pages/results/pages/result-creator/`
 - Frontend AI assistant: `onecgiar-pr-client/src/app/pages/results/pages/result-creator/components/result-ai-assistant/`
 - Frontend bilateral review: `onecgiar-pr-client/src/app/pages/result-framework-reporting/pages/bilateral-results/`
@@ -273,8 +276,8 @@ The ToC contribution dropdown must align allocated percentages with the values f
 
 | Source | Data | Alignment |
 |--------|------|-----------|
-| `clarisa-projects.entity.ts` | `allocated` field on `ClarisaProject` | The percentage pre-filled in the contribution form must match the `allocated` value from the W3 Registry for that Science Program |
-| `onecgiar-pr-server/src/clarisa/clarisa-projects/entity/clarisa-projects.entity.ts` | `ClarisaProject.allocated` | This is the source of truth for percentage allocation per SP |
+| `clarisa-project-mapping.entity.ts` | `allocation` field on `ClarisaProjectMapping` (decimal 5,2) | The percentage pre-filled in the contribution form must match the `allocation` value from the W3 Registry for that Science Program |
+| `onecgiar-pr-server/src/clarisa/clarisa-projects/entity/clarisa-project-mapping.entity.ts` | `ClarisaProjectMapping.allocation` | This is the source of truth for percentage allocation per SP — **already synced by CLARISA cron** |
 
 **Rule:** The contribution dropdown must default to the `allocated` percentage from the W3 Registry mapped Science Program. User can override, but the default must be the registered value.
 
@@ -329,7 +332,7 @@ These need to be extended for the bilateral flow.
 
 | Integration | Current State | Needed For |
 |---|---|---|
-| **W3 Registry** | Not integrated; Science Program mapping done via CLARISA `official_code` | Primary Contributing Science Program identification (source of truth per Angel/Jarrin decision). Also provides **allocated percentage** per Science Program (`clarisa-projects.entity.ts` → `allocated` field) for contribution form defaults. **Secondary/contributing SPs** can be selected by the user from the same W3 Registry list. Only SPs mapped in W3 Registry are allowed — no manual additions. |
+| **W3 Registry** | **Implemented** — via `clarisa_project_mappings` entity (`program_code` = `ClarisaInitiative.official_code`, `allocation` decimal percentage) with new endpoint `GET /api/bilateral/center/projects?centerId={id}` | Primary Contributing Science Program identification (source of truth per Angel/Jarrin decision). Also provides **allocated percentage** per Science Program (`clarisa_project_mappings.allocation`). **Secondary/contributing SPs** can be selected by the user from the same W3 Registry list. Only SPs mapped in W3 Registry are allowed — no manual additions. Center ID accepted as acronym string or numeric institution ID.
 | **Webhook per Center** | Not implemented | Each Center provides a webhook URL where PRMS sends approval/rejection notifications (result code, title, status, justification). Centers manage their own endpoint; PRMS sends the full MDS payload on demand. |
 | **External text mining service** | Exists at `textMiningUrl`; called from frontend | Background processing for bilateral AI route; needs new endpoint or queue |
 | **External AI review service** | Exists at `reviewApiUrl` (AWS API Gateway `prms-qa`) | AI QA assessment; needs prompt expansion for MDS evaluation |
@@ -545,13 +548,14 @@ Three-column card layout:
 | **Transitions** | Smooth accordion expand/collapse (300ms ease). Progress ring animates on update. |
 | **Responsiveness** | On narrow screens (< 768px), Section 0 cards stack vertically. Accordions remain full-width. |
 
-#### 2.8.6 Implementation Notes
+#### 2.8.6 Implementation Notes (Phase 1 — Actual)
 
-- **PrimeNG components:** `p-accordion` (collapsible panels), `p-progressbar` (per-section progress), `p-knob` or custom SVG (overall ring), `p-chip` (SP chips), `p-tag` (status badges), `p-button` (actions), `p-card` (Section 0 cards).
-- **Tailwind CSS:** All new bilateral components use Tailwind (Decision D15). Avoid component-scoped CSS for layout.
-- **State management:** `GreenChecksService` already tracks per-section completeness. Extend it for bilateral sections. MDS completion % is derived from green check state.
-- **Section 0 service:** New `BilateralSummaryService` to aggregate project info, SP data, MDS progress, and available actions into a single view model.
-- **Existing reuse:** `pdf-actions` component, submission modal, AI review component, evidence modal — reused as-is or with minimal adaptation.
+- **PrimeNG components:** `p-progressbar` used sparingly; custom SVG for progress ring (`MdsProgressRingComponent`).
+- **CSS:** Component SCSS with consistent design tokens (blues, greens, ambers, grays). **Tailwind CSS deferred** (Decision D15 — Yecksin will migrate later).
+- **Accordion:** Custom `BilateralAccordionComponent` (not `p-accordion`) with single-open behavior via `openSectionName` model input, localStorage persistence, and auto-save flush on collapse.
+- **State management:** `BilateralMdsTrackerService` — frontend-only MDS completeness tracker using Angular signals. Computes per-section and overall percentage from form field values. No backend GreenChecks dependency.
+- **Auto-save:** `BilateralAutoSaveService` — 800ms debounce for text fields, immediate for selects/checkboxes. Flushes on accordion collapse and route navigation.
+- **Existing reuse:** Section 0 dashboard is custom-built. "Download PDF", "AI Review", and "Generate Narrative" buttons are present but disabled (Phase 3-4 scope).
 
 ---
 
@@ -862,16 +866,41 @@ RMQ Consumer (orchestrator)
 
 ### 4.7 Frontend Architecture
 
-**New pages/components:**
+**New pages/components (Phase 1 — implemented):**
 
 | Component | Location | Purpose |
 |---|---|---|
-| `bilateral-result-creator` | `pages/bilateral/pages/bilateral-result-creator/` | New creation flow per P2-3100 ACs. Includes SP selector (primary + secondary) with allocated % display |
-| `bilateral-ai-upload` | `components/bilateral-ai-upload/` | Multi-file upload + voice note + text context. Documents = evidence candidates; voice/text = AI context only |
-| `my-draft-results` | `pages/bilateral/pages/my-draft-results/` | Draft list with counter badge, source document display |
+| `bilateral-result-creator` | `pages/bilateral/pages/bilateral-result-creator/` | Main creation/editing page. Full flow: project → SP → result level → result type → create → accordion form |
+| `section-zero-dashboard` | `components/section-zero-dashboard/` | Dashboard header: project context + SP badges, MDS progress ring, action buttons |
+| `bilateral-accordion` | `components/bilateral-accordion/` | Reusable accordion with completion dots, progress bars, localStorage persistence, auto-save flush |
+| `bilateral-project-selector` | `components/bilateral-project-selector/` | Project dropdown filtered by center (auto-detected via `RolesService`) |
+| `bilateral-sp-selector` | `components/bilateral-sp-selector/` | Primary SP dropdown + secondary SP chip multi-select with allocation % |
+| `bilateral-result-level-selector` | `components/bilateral-result-level-selector/` | Outcome/Output card selector |
+| `mds-progress-ring` | `components/mds-progress-ring/` | SVG circle progress ring (80px, color-coded: red <40%, amber 40-80%, green >80%) |
+| `section-general-info` | `components/section-general-info/` | Title + description + "Show all fields" expandable (lead contact, impact areas, KRS, discontinued) |
+| `section-contributors` | `components/section-contributors/` | SP badges, lead center, contributing projects |
+| `section-geography` | `components/section-geography/` | Geographic scope selector |
+| `section-evidence` | `components/section-evidence/` | Evidence list with add/remove, max 6 pieces |
+| `section-type-specific` | `components/section-type-specific/` | Result type selector with field hints per type |
+
+**Services:**
+
+| Service | Purpose |
+|---|---|
+| `BilateralCreationService` | API calls (projects, create, submit), SP selection state |
+| `BilateralMdsTrackerService` | Frontend-only MDS completeness: per-section + overall %, reactive |
+| `BilateralAutoSaveService` | 800ms debounce text, immediate selects, flush on collapse/nav |
+| `BilateralExpandableStateService` | localStorage persistence for accordion expand/collapse state |
+
+**New pages/components (Phase 3-5 — not yet implemented):****New pages/components (Phase 3-5 — not yet implemented):**
+
+| Component | Location | Purpose |
+|---|---|---|
+| `bilateral-ai-upload` | `components/bilateral-ai-upload/` | Multi-file upload + voice note + text context |
+| `my-draft-results` | `pages/bilateral/pages/my-draft-results/` | Draft list with counter badge |
 | `draft-result-card` | `components/draft-result-card/` | Compact metadata display per draft |
-| `center-activity-dashboard` | `pages/bilateral/pages/center-activity/` | Summary of center's reporting activity: total results submitted, pending, approved, rejected (NEW scope — D30) |
-| `ai-review-extended` | `components/ai-review-extended/` | Extended AI review with evidence quality + MDS traffic light. Includes mismatch detection + re-run trigger for post-AI evidence |
+| `center-activity-dashboard` | `pages/bilateral/pages/center-activity/` | Summary of center's reporting activity |
+| `ai-review-extended` | `components/ai-review-extended/` | Extended AI review with traffic light |
 
 **Tailwind migration:** Yecksin will migrate bilateral components from CSS to Tailwind. Delgado's mockups should be the design reference.
 
@@ -948,7 +977,15 @@ result-detail/{resultId} (Editing status)
 
 ### 4.8 Backend Architecture
 
-**New endpoints:**
+**New endpoints (Phase 1 — implemented):**
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/bilateral/center/projects?centerId={id}` | Bilateral projects for a center with nested SP mappings. `BilateralCenterController` (JWT-auth, NOT X-API-Key). Joins `clarisa_projects` → `clarisa_institutions` (lead center) → `clarisa_project_mappings` → `clarisa_initiatives` (SP names via `program_code = official_code`). Accepts string acronym or numeric institution ID. |
+
+**New module registration:** `BilateralCenterController` + `BilateralProjectsService` registered in `bilateral.module.ts`. JWT middleware exclusion updated: only headless paths (`/api/bilateral`, `/api/bilateral/create`, `/api/bilateral/list`, `/api/bilateral/results`, `/api/bilateral/:id`) are excluded from JWT — `/api/bilateral/center/*` gets JWT auth.
+
+**New endpoints (Phase 3-5 — not yet implemented):**
 
 | Method | Path | Purpose |
 |---|---|---|

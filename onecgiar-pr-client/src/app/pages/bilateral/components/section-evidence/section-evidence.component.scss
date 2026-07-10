@@ -1,0 +1,114 @@
+.sev-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sev-item {
+  padding: 12px;
+  background: #FAFAFA;
+  border: 1px solid #EEEEEE;
+  border-radius: 4px;
+}
+
+.sev-item-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sev-link {
+  flex: 1;
+  font-size: 13px;
+  color: #1565C0;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.sev-remove {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #BDBDBD;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+
+  &:hover {
+    color: #C62828;
+  }
+}
+
+.sev-desc {
+  font-size: 12px;
+  color: #757575;
+  margin: 6px 0 0;
+}
+
+.sev-add {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 2px dashed #E0E0E0;
+  border-radius: 4px;
+}
+
+.sev-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sev-label {
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #546E7A;
+}
+
+.sev-input {
+  padding: 8px 10px;
+  border: 1px solid #E0E0E0;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #212121;
+
+  &:focus {
+    outline: none;
+    border-color: #1565C0;
+  }
+
+  &::placeholder {
+    color: #BDBDBD;
+  }
+}
+
+.sev-add-btn {
+  align-self: flex-start;
+  padding: 6px 14px;
+  background: #1565C0;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: #1257a8;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}

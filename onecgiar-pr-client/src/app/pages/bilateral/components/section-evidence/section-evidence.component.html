@@ -1,0 +1,41 @@
+<div class="sev-fields">
+  @for (item of evidenceList(); track $index) {
+    <div class="sev-item">
+      <div class="sev-item-header">
+        <a [href]="item.link" target="_blank" rel="noopener noreferrer" class="sev-link">{{ item.link }}</a>
+        <button class="sev-remove" (click)="removeEvidence($index)" type="button">&times;</button>
+      </div>
+      @if (item.description) {
+        <p class="sev-desc">{{ item.description }}</p>
+      }
+    </div>
+  }
+
+  @if (evidenceList().length < 6) {
+    <div class="sev-add">
+      <div class="sev-field">
+        <label class="sev-label">Evidence Link</label>
+        <input
+          type="url"
+          class="sev-input"
+          [value]="newLink()"
+          (input)="onLinkInput($event)"
+          placeholder="https://..."
+        />
+      </div>
+      <div class="sev-field">
+        <label class="sev-label">Description (optional)</label>
+        <input
+          type="text"
+          class="sev-input"
+          [value]="newDescription()"
+          (input)="onDescriptionInput($event)"
+          placeholder="Brief description of the evidence"
+        />
+      </div>
+      <button class="sev-add-btn" (click)="addEvidence()" [disabled]="!newLink().trim()" type="button">
+        + Add Evidence
+      </button>
+    </div>
+  }
+</div>

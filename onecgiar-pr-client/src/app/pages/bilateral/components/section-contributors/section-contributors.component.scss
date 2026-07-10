@@ -1,0 +1,54 @@
+.sc-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sc-label {
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #546E7A;
+}
+
+.sc-sp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid #E0E0E0;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #424242;
+
+  &--primary {
+    background: #1565C0;
+    border-color: #1565C0;
+    color: #FFFFFF;
+  }
+}
+
+.sc-sp-pct {
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.sc-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sc-lead,
+.sc-value {
+  font-size: 14px;
+  color: #424242;
+}
