@@ -70,9 +70,18 @@ Angular 22 is **blocked by PrimeNG** and comes LAST (see §5).
 
 ---
 
-## 6. ⚠️ OPEN BUG (blocking — investigate next)
+## 6. ✅ RESOLVED — hlmInput infinite change-detection loop (fix `64d68f283`)
 
-**Symptom:** navigating to `http://localhost:4200/result/result-detail/8618/general-information?phase=36` **loops / never loads the section** (reported by the user; reproduced after the merge). The build is green, so it's a **runtime** issue, not a compile error.
+**Symptom (was):** `result-detail/…/general-information` **looped / never loaded** — the page froze (a pure infinite CD loop, so NO console error; the browser tab just hung, which made it hard to observe).
+
+**Root cause:** the Spartan-CLI-generated `hlmInput` directive applied `BrnInput` + `BrnFieldControlDescribedBy` host directives plus a reactive `classes()` effect. On a form-heavy page (many `pr-input` fields) under Angular 21's stricter change detection, that machinery drove an infinite change-detection loop.
+
+**Fix:** reduced `hlmInput` (`src/app/spartan/input/src/lib/hlm-input.ts`) to a **lightweight static-class directive** — just the Spartan Tailwind classes on the host, no brain directives, no effect. PRMS already owns labels + invalid styling via its facade, so the Spartan form-field machinery isn't needed. Same look; loop gone. **Lesson:** the loop hung the browser with no error — had to reason it out from the code + verify by rebuild-and-retest (and beware a stale `ng serve` build masking the fix).
+
+---
+
+### Historical note (kept for context)
+The original report was on the `angular-upgrade-19-22` branch and reproduced after the merge; the build was always green, so it was purely runtime.
 
 **Prime suspect:** the Spartan **`hlmInput`** directive. It applies `BrnInput` + `BrnFieldControlDescribedBy` host directives and a `classes()` effect. On a page with many `pr-input` fields (general-information), this may trigger an infinite change-detection / effect loop or a repeated throw. (Both `BrnInput` and `BrnFieldControlDescribedBy` inject their deps as `{ optional: true }`, so it's not a missing-provider crash — more likely a CD/effect loop or an interaction with template-driven `[(ngModel)]` + `#emailInput="ngModel"`.)
 
