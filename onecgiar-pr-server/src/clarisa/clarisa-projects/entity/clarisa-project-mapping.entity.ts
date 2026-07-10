@@ -22,6 +22,14 @@ export class ClarisaProjectMapping {
   programId: number;
 
   @Column({
+    name: 'program_code',
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+  })
+  programCode: string | null;
+
+  @Column({
     type: 'decimal',
     precision: 5,
     scale: 2,

@@ -742,6 +742,7 @@ export class ClarisaTaskService {
         id: row.id,
         projectId: row.project_id,
         programId: row.program_id,
+        programCode: row.global_unit_object?.smo_code ?? null,
         allocation:
           row.allocation === null || row.allocation === undefined
             ? null
