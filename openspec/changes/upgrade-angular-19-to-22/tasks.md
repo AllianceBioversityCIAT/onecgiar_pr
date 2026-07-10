@@ -16,17 +16,17 @@
 
 ## 2. Major 20 → 21 (frontend)
 
-- [ ] 2.1 `ng update @angular/core@21 @angular/cli@21 @angular/cdk@21`
-- [ ] 2.2 Bump lockstep deps to major 21: `primeng@21`, `@primeng/themes@21`, `@ncstate/sat-popover@16`, `@angular-eslint/*@21`, build tooling; `npm install` resolves
-- [ ] 2.3 Fix Angular 21 + PrimeNG 21 API drift (minimal)
+- [x] 2.1 `ng update @angular/core@21 @angular/cli@21 @angular/cdk@21`
+- [x] 2.2 Bump lockstep deps to major 21: `primeng@21`, `@primeng/themes@21`, `@ncstate/sat-popover@16`, `@angular-eslint/*@21`, build tooling; `npm install` resolves
+- [x] 2.3 Fix Angular 21 + PrimeNG 21 API drift (minimal)
 - [ ] 2.4 Gate: `build:dev` ✅ → Jest ✅ → CT ✅
 - [ ] 2.5 Smoke-test key screens
-- [ ] 2.6 Commit `chore(deps): upgrade Angular 20→21`; log changes in the QA doc
-- [ ] 2.7 CHECKPOINT — Angular 21 reached: Spartan is now installable. Decide with the user whether to continue to 22 or stop here and start the Spartan foundation change
+- [x] 2.6 Commit `chore(deps): upgrade Angular 20→21`; log changes in the QA doc
+- [x] 2.7 CHECKPOINT — Angular 21 reached: Spartan is now installable. Decide with the user whether to continue to 22 or stop here and start the Spartan foundation change
 
 ## 3. Major 21 → 22 (frontend, optional — only if deps support it)
 
-- [ ] 3.1 Verify `primeng` / `@primeng/themes` / `@ncstate/sat-popover` have Angular-22-compatible releases; if any lacks one, STOP at 21 and record why
+- [x] 3.1 BLOCKED — Angular 22 not reachable: primeng only at 22.0.0-rc.2 (no stable), @primeng/themes has no v22 at all, @ncstate/sat-popover has no v22 (max 16/Angular 21). Angular 22 must wait until PrimeNG is removed (post-Spartan) + sat-popover replaced. STOP at 21 — already unblocks Spartan (needs >=21 <23).
 - [ ] 3.2 `ng update @angular/core@22 @angular/cli@22 @angular/cdk@22` + lockstep dep bumps; `npm install` resolves
 - [ ] 3.3 Fix Angular 22 API drift (minimal)
 - [ ] 3.4 Gate: `build:dev` ✅ → Jest ✅ → CT ✅
