@@ -2,9 +2,9 @@
 
 > **Epic:** [P2-2965](https://cgiarmel.atlassian.net/browse/P2-2965) — Bilateral module for centers: Module centralized for User Centers
 > **Lead US:** [P2-3100](https://cgiarmel.atlassian.net/browse/P2-3100) — W3/Bilateral results - Create New Bilateral Result Form Workflow
-> **Sprint:** PRMS Delivery Sprint 36 (2026-07-02 → 2026-07-16)
+> **Sprint:** PRMS Delivery Sprint 37 (2026-07-17 → 2026-07-31)
 > **Target release:** September 2026 (bilateral reporting window opening)
-> **Sources:** Meeting transcript 2026-07-08 (Delgado, Jarrin, Zuniga); Nicoleta alignment session 2026-07-06; codebase analysis; Jira children of P2-2965.
+> **Sources:** Meeting transcript 2026-07-08 (Delgado, Jarrin, Zuniga); Nicoleta alignment session 2026-07-06; codebase analysis; Angel Jarrin call 2026-07-09; Jira children of P2-2965.
 
 ---
 
@@ -28,14 +28,14 @@
 |---|---|---|---|---|
 | **P2-2965** | Epic | Bilateral module for centers: Module centralized for User Centers | Open | — |
 | P2-2966 | Task | Define mockups user flow to report W3/bilateral results | — | — |
-| **P2-3100** | US | Create New Bilateral Result Form Workflow | To Be Planned | Juan David Delgado |
-| P2-3101 | US | "Complete the form manually" Workflow — Common fields | — | — |
-| P2-3122 | US | Section 5: Innovation Development | — | — |
-| P2-3123 | US | Section 5: Capacity Sharing | — | — |
-| P2-3124 | US | Section 5: Knowledge Product | — | — |
-| P2-3125 | US | Other Output and Other Outcome | — | — |
-| P2-3126 | US | Section 5: Innovation Use | — | — |
-| P2-3127 | US | Section 5: Policy Change | — | — |
+| **P2-3100** | US | Create New Bilateral Result Form Workflow | In Progress | Juan David Delgado |
+| P2-3101 | US | "Complete the form manually" Workflow — Common fields | In Progress | Juan David Delgado |
+| P2-3122 | US | Section 5: Innovation Development | In Progress | Juan David Delgado |
+| P2-3123 | US | Section 5: Capacity Sharing | In Progress | Juan David Delgado |
+| P2-3124 | US | Section 5: Knowledge Product | In Progress | Juan David Delgado |
+| P2-3125 | US | Other Output and Other Outcome | In Progress | Juan David Delgado |
+| P2-3126 | US | Section 5: Innovation Use | In Progress | Juan David Delgado |
+| P2-3127 | US | Section 5: Policy Change | In Progress | Juan David Delgado |
 | NOST-360 | Polaris Idea | Bilateral module for centers (Discovery) | Discovery | — |
 
 **Design references:**
@@ -354,6 +354,204 @@ These need to be extended for the bilateral flow.
 | **Traffic light** | Red/Yellow/Green quality indicator | Advisory only; does not block submission |
 | **Third-party evidence** | Evidence from external, peer-reviewed, or independent sources | Higher QA weight |
 | **Self-generated evidence** | Evidence produced internally by the Center | Lower QA weight; valid |
+
+---
+
+### 2.7 Bilateral Result Detail Form — Section Definition
+
+The bilateral result form is a **simplified version** of the standard W1/W2 result detail. Each section shows the core MDS fields by default; non-MDS or secondary fields are hidden behind an expandable toggle so the form stays clean and focused.
+
+**Layout model:** Accordion sections (collapsible panels), NOT the standard left-aside navigation. See §2.8 for the UI/UX design proposal.
+
+**Creation-time auto-set fields (not shown):**
+
+| Field | Source | Value |
+|---|---|---|
+| `result_code` | Auto-generated (sequence) | Next available code |
+| `result_level` | User-selected during creation | From Route A create flow |
+| `result_type` | User-selected during creation | From Route A create flow |
+| `version_id` | Current active phase | Auto-assigned from reporting phase |
+| `source` | Constant | `SourceEnum.Bilateral` = `'API'` |
+| `status_id` | Constant | 1 (Editing) for manual route; 8 (Draft) for AI route |
+| `created_by` | JWT user | Authenticated user id |
+| `is_active` | Constant | `true` |
+
+#### Section 0: Result Summary (Dashboard)
+
+A **non-collapsible summary panel** at the top of the form. This is NOT a standard result detail section — it is custom for the bilateral module.
+
+| Area | Content |
+|---|---|
+| **Project context** | Reporting Project name + code, Project Summary (read-only from W3 Registry), Project Description (read-only) |
+| **Science Program** | Primary Contributing SP badge + allocated %, Secondary/contributing SP chips |
+| **Result metadata** | Result type icon + label, result level, result code, status badge |
+| **MDS completion** | Overall progress ring/bar: "% of MDS fields completed" across all sections. Per-section progress shown in each accordion header. Green checkmark when complete. |
+| **Action buttons** | "Generate result narrative" (AI narrative), "Download PDF report" (reuse existing pdf-actions component), "Run AI Review" (traffic light analysis) |
+| **AI draft context** (AI route only) | Source document names, AI confidence score badge, "AI suggested" marker |
+
+The summary area acts as the **command center**: user sees at a glance what is done, what is missing, and what actions are available.
+
+#### Section 1: General Information
+
+| Visibility | Fields | Notes |
+|---|---|---|
+| **Always shown** | `title` (text input, max 30 words), `description` (textarea, max 300 words) | Core MDS — same as existing `rd-general-information` |
+| **Expandable** | `lead_contact_person` (user picker), impact area scores (gender, climate, nutrition, environment, poverty), `is_krs`, `is_discontinued` | Same rules as existing result detail |
+| **Hidden (auto-set)** | `result_code`, `result_level`, `result_type`, `version_id`, `source`, `status_id`, `created_by`, `is_active` | Set at creation; visible in Section 0 summary for reference |
+
+**Reference:** `onecgiar-pr-server/src/api/results/entities/result.entity.ts` — fields `title` (line 73), `description` (line 79), `lead_contact_person` (line 440), impact area score columns (lines 108–246).
+
+#### Section 2: Contributors and Partners
+
+| Visibility | Fields | Notes |
+|---|---|---|
+| **Always shown** | ToC alignment (primary SP + contributing SPs) with Program planned TOC indicators + level/outcome/output/2030outcome mapping + indicator + target. Multiple WPs selection (one or more, same rules as existing). CGIAR Centers (primary pre-selected from project's lead center). Contributing W3/bilateral projects (the selected project). Lead Center. | Primary SP already known from creation flow. Centers come from the Project's lead center. |
+| **Expandable** | Partner institutions (MQAP + standard), Linked results, Share request | Same as existing `rd-contributors-and-partners` (P25) |
+| **Hidden** | Submitter initiative (auto-set to selected SP). ToC nodes not relevant to bilateral project. | — |
+
+**Key simplification:** Primary Contributing Science Program is NOT derived from ToC traversal (Decision D1). Comes from W3 Registry project mapping. ToC alignment is simplified to that SP's mapped work packages only.
+
+**Reference:** `results_by_inititiative.entity.ts` — `initiative_id`, `initiative_role_id` (Primary submitter role).
+
+#### Section 3: Geographic Location
+
+**Same logic as existing `rd-geographic-location`.**
+
+| Visibility | Fields | Notes |
+|---|---|---|
+| **Always shown** | `geographic_scope_id` (Global/Regional/National), `regions[]`, `countries[]` | Core MDS |
+| **Expandable** | Extra geographic scope (P25), `has_extra_regions`, `has_extra_countries`, `has_regions`, `has_countries` | Same as existing |
+| **Hidden** | — | — |
+
+**Reference:** `result.entity.ts` lines 382–460: `geographic_scope_id`, `has_extra_geo_scope`, `has_regions`, `has_countries`, etc.
+
+#### Section 4: Evidence
+
+**Same logic as existing `rd-evidences`.**
+
+| Visibility | Fields | Notes |
+|---|---|---|
+| **Always shown** | `evidence[]` — link + description per evidence row. Add evidence modal (link or file upload). Impact area tag coverage validation. | Core MDS. Same rules: max 6 pieces, public links only, no SharePoint/Drive. |
+| **Expandable** | Evidence typology (third-party vs. self-generated), evidence quality indicators | Quality indicators are read-only AI assessment results |
+| **Hidden** | — | — |
+
+**Reference:** `result.entity.ts` line 617: `evidence_array`. `Evidence` entity.
+
+#### Section 5: Type-Specific Pages (per ResultTypeEnum)
+
+Same component mapping as existing `rd-result-types-pages/`. Each follows the always-shown / expandable pattern.
+
+| Result Type | Component | Route |
+|---|---|---|
+| Policy Change (1) | `policy-change-info/` | `policy-change1-info` |
+| Innovation Use (2) | `innovation-use-info/` | `innovation-use-info` |
+| Capacity Sharing (5) | `cap-dev-info/` | `cap-dev-info` |
+| Knowledge Product (6) | `knowledge-product-info/` | `knowledge-product-info` |
+| Innovation Development (7) | `innovation-dev-info/` | `innovation-dev-info` |
+| Other Output / Other Outcome (4, 8) | — | Core sections only; no type-specific page |
+
+### 2.8 UI/UX Design Proposal — Accordion-Based Layout with Dashboard Header
+
+#### 2.8.1 Design Principles
+
+| Principle | Rationale |
+|---|---|
+| **Platform-consistent but refreshed** | Use existing PRMS color palette, typography, and branding. No new design system. Refresh layout and information hierarchy. |
+| **Progressive disclosure** | Core MDS fields always visible. Expandable sections for advanced fields. Keep the default view clean and scannable. |
+| **Informative at every level** | Every accordion header shows: section name, completion status (green/yellow/gray dot), field count ("3/5 fields complete"). No dead space. |
+| **Actionable summary** | Section 0 is the command center: progress overview, narrative generation, PDF download, AI review trigger. |
+| **Mobile-aware** | Accordion pattern works naturally on narrow viewports. Avoid fixed-width aside layouts. |
+
+#### 2.8.2 Layout Architecture
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  Section 0: Result Summary (dashboard header)                     │
+│  ┌────────────────┐  ┌────────────────┐  ┌────────────────────┐  │
+│  │ Project Info   │  │ MDS Ring       │  │ Action Buttons     │  │
+│  │ SP Badge + %   │  │ 67% complete   │  │ [Generate          │  │
+│  │ Result Code    │  │ ▓▓▓▓▓░░░░░░░░  │  │  Narrative]        │  │
+│  │ Status Badge   │  │ ▓▓▓▓▓░░░░░░░░  │  │ [Download PDF]     │  │
+│  └────────────────┘  └────────────────┘  │ [AI Review]        │  │
+│                                           │ [Submit]           │  │
+│                                           └────────────────────┘  │
+├──────────────────────────────────────────────────────────────────┤
+│  ▼ Section 1: General Information          ● 2/2 fields  ▓▓▓▓▓░  │
+│  ┌──────────────────────────────────────────────────────────────┐│
+│  │ Title:    [________________________________________]         ││
+│  │ Description: [________________________________]               ││
+│  │ ─── Expandable ───                                           ││
+│  │ ≫ Lead contact person, Impact Areas (5)  [Show all fields]  ││
+│  └──────────────────────────────────────────────────────────────┘│
+├──────────────────────────────────────────────────────────────────┤
+│  ▼ Section 2: Contributors and Partners  ● 5/8 fields  ▓▓▓▓▓░░░ │
+├──────────────────────────────────────────────────────────────────┤
+│  ▼ Section 3: Geographic Location         ● 3/3 fields  ▓▓▓▓▓▓▓ │
+├──────────────────────────────────────────────────────────────────┤
+│  ▼ Section 4: Evidence                     ● 2/4 fields  ▓▓▓░░░ │
+├──────────────────────────────────────────────────────────────────┤
+│  ▼ Section 5: Innovation Development      ● 6/10 fields ▓▓▓▓▓░░░ │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+#### 2.8.3 Accordion Behavior
+
+| Feature | Behavior |
+|---|---|
+| **Default state** | Section 1 (General Info) open on first load. All others collapsed. |
+| **Single open** | Only one accordion open at a time (auto-closes previous). Reduces cognitive load. |
+| **Header info** | Section name, completion dot (green=done, yellow=partial, gray=empty), field count badge "3/5", micro progress bar. |
+| **Expandable within** | Non-MDS fields show a "Show all fields" link at section bottom. Clicking reveals secondary fields inline — no page navigation. |
+| **Unsaved changes** | If user tries to collapse with unsaved changes, confirm dialog: "You have unsaved changes. Discard?" |
+| **Auto-save** | On section collapse, auto-save visible fields. Keep explicit save button in accordion footer for clarity. |
+
+#### 2.8.4 Section 0 Dashboard — Detailed Design
+
+Three-column card layout:
+
+**Column 1 — Project & Result Identity:**
+- Reporting Project name + W3 Registry code
+- Primary SP badge (colored pill with allocated %)
+- Secondary SP chips (smaller, muted)
+- Result type icon + label
+- Result code (clickable → opens read-only view)
+- Status badge (Draft / Editing / Pending Review)
+
+**Column 2 — MDS Completion:**
+- Circular progress ring (SVG stroke-dasharray) with percentage in center
+- Ring color: < 40% red, 40–80% amber, > 80% green
+- Below ring: condensed list per section with micro progress bar + status dot
+- Click section name → scrolls to that accordion
+
+**Column 3 — Actions:**
+| Action | Description |
+|---|---|
+| **Generate result narrative** | Calls AI to produce a narrative summary based on MDS fields. Opens a side panel with generated text; user can copy, edit, or regenerate. |
+| **Download PDF report** | Reuses existing `pdf-actions` component. Generates standard result PDF. |
+| **Run AI Review** | Triggers traffic-light QA analysis (Phase 4). Enabled when all MDS sections complete. |
+| **Submit for review** | Status transition: Editing (1) → Pending Review (5). Shows submission modal with confirmation. |
+
+#### 2.8.5 Visual Design Guidance
+
+| Element | Guidance |
+|---|---|
+| **Color palette** | Use existing PRMS brand colors (primary blue, accent green for completions, amber for warnings, red for missing). No new brand colors. |
+| **Typography** | Current PRMS font family. Headers: semi-bold, sentence case. Body: regular. Monospace for codes. |
+| **Accordion headers** | Background: subtle gray (`#f8f9fa` or equivalent). Hover: slightly darker. Active/open: white background with left accent border in primary blue. |
+| **Progress ring** | 80px diameter, 6px stroke width. Background track: light gray. Foreground: gradient amber→green. |
+| **Badges & chips** | SP badge: primary blue pill with white text + small % label. Secondary SPs: outlined gray chips. Status: colored dot + text (Draft=purple, Editing=blue, Pending Review=amber, Approved=green). |
+| **Spacing** | Generous white space between sections (24px+). Comfortable padding inside accordions (16–20px). |
+| **Icons** | Use PrimeNG icons (PrimeIcons) consistently. Section icons in accordion headers. |
+| **Transitions** | Smooth accordion expand/collapse (300ms ease). Progress ring animates on update. |
+| **Responsiveness** | On narrow screens (< 768px), Section 0 cards stack vertically. Accordions remain full-width. |
+
+#### 2.8.6 Implementation Notes
+
+- **PrimeNG components:** `p-accordion` (collapsible panels), `p-progressbar` (per-section progress), `p-knob` or custom SVG (overall ring), `p-chip` (SP chips), `p-tag` (status badges), `p-button` (actions), `p-card` (Section 0 cards).
+- **Tailwind CSS:** All new bilateral components use Tailwind (Decision D15). Avoid component-scoped CSS for layout.
+- **State management:** `GreenChecksService` already tracks per-section completeness. Extend it for bilateral sections. MDS completion % is derived from green check state.
+- **Section 0 service:** New `BilateralSummaryService` to aggregate project info, SP data, MDS progress, and available actions into a single view model.
+- **Existing reuse:** `pdf-actions` component, submission modal, AI review component, evidence modal — reused as-is or with minimal adaptation.
 
 ---
 
