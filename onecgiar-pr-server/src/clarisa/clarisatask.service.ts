@@ -659,14 +659,18 @@ export class ClarisaTaskService {
       const projectRepo = manager.getRepository(ClarisaProject);
       const mappingRepo = manager.getRepository(ClarisaProjectMapping);
       const countryRepo = manager.getRepository(ClarisaProjectCountry);
-      const countryList = await manager.getRepository(ClarisaCountry).find({ select: ['id'] });
+      const countryList = await manager
+        .getRepository(ClarisaCountry)
+        .find({ select: ['id'] });
       const validCountryIds = new Set(countryList.map((c) => c.id));
 
       let count = 0;
       for (const rawItem of data) {
         count++;
         if (count % 50 === 0 || count === data.length) {
-          this._logger.log(`>>>[${index}] Processing project ${count}/${data.length}...`);
+          this._logger.log(
+            `>>>[${index}] Processing project ${count}/${data.length}...`,
+          );
         }
         try {
           const itemId = rawItem.id;
@@ -756,7 +760,8 @@ export class ClarisaTaskService {
     const rows = item.project_countries_array ?? [];
     return rows
       .map((row) => {
-        const countryCode = row.country_code ?? row.country_object?.iso_numeric ?? null;
+        const countryCode =
+          row.country_code ?? row.country_object?.iso_numeric ?? null;
         return {
           id: row?.id,
           projectId: row?.project_id,
