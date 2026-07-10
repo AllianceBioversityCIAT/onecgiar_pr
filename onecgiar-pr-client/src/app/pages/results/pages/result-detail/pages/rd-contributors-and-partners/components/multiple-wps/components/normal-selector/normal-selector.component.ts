@@ -35,6 +35,9 @@ export class CPNormalSelectorComponent {
   // P2-3066 (2026): External Partners split into "from ToC" + "Other(s)". Gated by phase; 2025 keeps the single
   // legacy dropdown. The sentinel below toggles the second dropdown; it is never persisted/rendered as a chip.
   isCP2026 = computed(() => this.fieldsManagerSE.isContributorsPartners2026());
+  isTocDecoupled = computed(
+    () => this.isCP2026() && this.rdPartnersSE.partnersBody?.result_toc_result?.planned_result === false
+  );
   readonly OTHER_PARTNERS_CODE = this.rdPartnersSE.OTHER_PARTNERS_CODE;
   noPartnersNote = 'No External Partners related to the established HLO/Outcomes were found';
 
@@ -76,7 +79,7 @@ export class CPNormalSelectorComponent {
   // section is applicable. Mirrors the Centers preselect.
   private userTouchedPartners = false;
   preselectPartnersEffect = effect(() => {
-    if (!this.isCP2026() || this.userTouchedPartners) return;
+    if (!this.isCP2026() || this.isTocDecoupled() || this.userTouchedPartners) return;
     const refs = this.referenceExternalPartners();
     const body = this.rdPartnersSE.partnersBody;
     if (!body || body.no_applicable_partner) return;

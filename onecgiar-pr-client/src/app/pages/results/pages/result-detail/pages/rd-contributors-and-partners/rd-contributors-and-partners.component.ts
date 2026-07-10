@@ -9,6 +9,7 @@ import { RdContributorsAndPartnersService } from './rd-contributors-and-partners
 import { ResultLevelService } from '../../../result-creator/services/result-level.service';
 import { InnovationUseResultsService } from '../../../../../../shared/services/global/innovation-use-results.service';
 import { FieldsManagerService } from '../../../../../../shared/services/fields-manager.service';
+import { filterOutAvisaInitiatives, isAvisaInitiative as checkAvisaInitiative } from '../../../../../../shared/utils/avisa-initiative.util';
 
 @Component({
   selector: 'app-rd-contributors-and-partners',
@@ -71,8 +72,11 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   }
 
   isAvisaInitiative = computed(() => {
-    const code = this.api.dataControlSE.currentResultSignal?.()?.initiative_official_code ?? this.api.dataControlSE.currentResult?.initiative_official_code;
-    return code === 'SGP-02' || code === 'SGP02';
+    const result = this.api.dataControlSE.currentResultSignal?.() ?? this.api.dataControlSE.currentResult;
+    return checkAvisaInitiative({
+      official_code: result?.initiative_official_code,
+      initiative_id: result?.initiative_id
+    });
   });
 
   hideWhyReportedField = computed(() => {
@@ -98,6 +102,11 @@ export class RdContributorsAndPartnersComponent implements OnInit {
       row.program_invested_financial_resources = value;
     });
   }
+
+  // P2-3036 / P2-3130: when alignment = No, decouple Centers/SP/Partners from ToC prefill and split dropdowns.
+  isTocDecoupled = computed(
+    () => this.isCP2026() && this.rdPartnersSE.partnersBody?.result_toc_result?.planned_result === false
+  );
 
   tocQuestionLabel = computed(() =>
     this.isCP2026()
@@ -146,7 +155,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   // persisted/GET-hydrated centers are never removed here (removing persisted items stays a manual user action).
   private lastCentersRefSignature: string | null = null;
   preselectCentersEffect = effect(() => {
-    if (!this.isCP2026()) return;
+    if (!this.isCP2026() || this.isTocDecoupled()) return;
     const refs = this.referenceCenters();
     // Signature over the RESOLVED refs (ids ∩ catalog) so a late CLARISA catalog doesn't fake a node change,
     // and unrelated signal re-runs never churn the user's selection.
@@ -249,7 +258,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
   // "Other(s)" sentinel, manual Other picks and persisted/accepted/pending SP are never removed here.
   private lastScienceRefSignature: string | null = null;
   preselectScienceEffect = effect(() => {
-    if (!this.isCP2026()) return;
+    if (!this.isCP2026() || this.isTocDecoupled()) return;
     const refs = this.referenceScience();
     // Signature over the RESOLVED refs so a late SP catalog doesn't fake a node change and unrelated
     // signal re-runs never churn the user's selection.
@@ -295,11 +304,12 @@ export class RdContributorsAndPartnersComponent implements OnInit {
         this.api.dataControlSE.currentResult = response;
         const activePortfolio = this.api.dataControlSE.currentResult?.portfolio;
         this.api.resultsSE.GET_AllWithoutResults(activePortfolio).subscribe(({ response }) => {
-          this.contributingInitiativesList = response;
+          this.contributingInitiativesList = filterOutAvisaInitiatives(response);
         });
         // P2-2929 (2026): full Science Programs/initiatives list to split "from ToC" vs "Other(s)".
+        // P2-3131: AVISA (SGP-02) must not be selectable in the "Other(s) Science Program" dropdown either.
         this.api.resultsSE.GET_AllInitiatives(activePortfolio).subscribe(({ response }) => {
-          this.allScienceProgramsList.set(response || []);
+          this.allScienceProgramsList.set(filterOutAvisaInitiatives(response || []));
         });
       },
       error: err => {
@@ -416,6 +426,40 @@ export class RdContributorsAndPartnersComponent implements OnInit {
     let cancelPendingRequests: number[] = [];
 
     if (isCP2026) {
+      if (this.isTocDecoupled()) {
+        const isLeadByPartner = this.rdPartnersSE.partnersBody.is_lead_by_partner;
+        contributingCenterPayload = (this.rdPartnersSE.partnersBody.contributing_center || [])
+          .filter((c: any) => c?.code !== this.OTHER_CENTERS_CODE)
+          .map((c: any) => ({
+            ...c,
+            from_toc: false,
+            is_leading_result: !isLeadByPartner && this.rdPartnersSE.leadCenterCode === c.code
+          }));
+
+        institutionsPayload = (this.rdPartnersSE.partnersBody.institutions || [])
+          .filter((p: any) => p?.institutions_id !== this.rdPartnersSE.OTHER_PARTNERS_CODE)
+          .map((p: any) => ({
+            ...p,
+            from_toc: false,
+            is_leading_result: isLeadByPartner && this.rdPartnersSE.leadPartnerId === p.institutions_id
+          }));
+
+        const allSP = (this.rdPartnersSE.scienceSelected || [])
+          .filter((sp: any) => sp?.id !== this.OTHER_SP_CODE)
+          .map((sp: any) => ({ ...sp, from_toc: false }));
+        const wasAccepted = (sp: any) => this.rdPartnersSE.loadedAcceptedScienceIds.has(sp.id);
+        contributingInitiativesPayload = {
+          ...this.rdPartnersSE.partnersBody.contributing_initiatives,
+          accepted_contributing_initiatives: allSP.filter((sp: any) => wasAccepted(sp)).map((sp: any) => ({ id: sp.id, from_toc: false })),
+          pending_contributing_initiatives: allSP.filter((sp: any) => !wasAccepted(sp)).map((sp: any) => ({ id: sp.id, from_toc: false }))
+        };
+
+        const selectedSpIds = new Set(allSP.map((sp: any) => sp.id));
+        cancelPendingRequests = (this.rdPartnersSE.loadedPendingScience || [])
+          .filter((p: any) => !selectedSpIds.has(p.id))
+          .map((p: any) => p.share_result_request_id)
+          .filter((id: any) => id != null);
+      } else {
       const tocCenters = (this.rdPartnersSE.partnersBody.contributing_center || [])
         .filter((c: any) => c?.code !== this.OTHER_CENTERS_CODE)
         .map((c: any) => ({ ...c, from_toc: true }));
@@ -457,6 +501,7 @@ export class RdContributorsAndPartnersComponent implements OnInit {
         .filter((p: any) => !selectedSpIds.has(p.id))
         .map((p: any) => p.share_result_request_id)
         .filter((id: any) => id != null);
+      }
     }
 
     const sendedData = {
