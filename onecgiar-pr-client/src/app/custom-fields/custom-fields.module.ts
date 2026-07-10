@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { PrInputComponent } from './pr-input/pr-input.component';
 import { FormsModule } from '@angular/forms';
 import { InputTextModule } from 'primeng/inputtext';
-import { DropdownModule } from 'primeng/dropdown';
+import { SelectModule } from 'primeng/select';
 import { PrSelectComponent } from './pr-select/pr-select.component';
 import { RadioButtonModule } from 'primeng/radiobutton';
 import { PrFieldHeaderComponent } from './pr-field-header/pr-field-header.component';
@@ -31,12 +31,11 @@ import { UnderConstructionPointComponent } from './under-construction-point/unde
 import { LabelNamePipe } from './pr-select/label-name.pipe';
 import { SyncButtonComponent } from './sync-button/sync-button.component';
 import { YesOrNotByBooleanPipe } from './pipes/yes-or-not-by-boolean.pipe';
-import { InputNumberModule } from 'primeng/inputnumber';
+import { HlmInput } from '@spartan/input';
 import { CustomValidationTooltipComponent } from './custom-validation-tooltip/custom-validation-tooltip.component';
 import { TooltipModule } from 'primeng/tooltip';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
-import { MessageModule } from 'primeng/message';
 import { LeadContactPersonFieldComponent } from './lead-contact-person-field/lead-contact-person-field.component';
 import { FieldCardComponent } from './field-card/field-card.component';
 
@@ -79,17 +78,16 @@ const fieldComponents = [
     CommonModule,
     FormsModule,
     InputTextModule,
-    DropdownModule,
+    SelectModule,
     RadioButtonModule,
     MultiSelectModule,
     TextareaModule,
     CheckboxModule,
     ScrollingModule,
-    InputNumberModule,
     TooltipModule,
     IconFieldModule,
     InputIconModule,
-    MessageModule
+    HlmInput
   ]
 })
 export class CustomFieldsModule {}

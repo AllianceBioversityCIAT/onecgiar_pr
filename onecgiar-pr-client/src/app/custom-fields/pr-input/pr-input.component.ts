@@ -85,9 +85,9 @@ export class PrInputComponent implements ControlValueAccessor {
     return this._value();
   }
 
-  set value(v: string) {
+  set value(v: any) {
     if (v !== this._value()) {
-      if (this.type() === 'link') v = v.trim();
+      if (this.type() === 'link' && typeof v === 'string') v = v.trim();
 
       // Preserve legacy behavior: store clamped value but propagate the raw v.
       this._value.set(Number(v) < 0 ? (0 as any) : v);
@@ -115,6 +115,40 @@ export class PrInputComponent implements ControlValueAccessor {
     return this.effectiveRequired() ? 'pending' : 'optional'; // yellow vs blue when empty
   }
 
+  /**
+   * Currency field (replaces the old numeric field). `currencyRaw` is what the
+   * `<input>` shows. While editing it holds exactly what the user types (so
+   * decimals like "10." work — nothing rewrites the field mid-typing). It only
+   * reformats to USD on blur / focus / external value change. The stored model
+   * value stays numeric.
+   */
+  currencyRaw = '';
+
+  private toCurrencyString(v: any): string {
+    if (v === null || v === undefined || v === '') return '';
+    const n = Number(v);
+    return isNaN(n) ? '' : n.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+  }
+
+  /** Blurred/loaded state: show the USD-formatted value. */
+  syncCurrencyRaw() {
+    this.currencyRaw = this.toCurrencyString(this._value());
+  }
+
+  /** On focus, show the raw number so it's freely editable. */
+  onCurrencyFocus() {
+    const v = this._value();
+    this.currencyRaw = v === null || v === undefined || v === '' ? '' : String(v);
+  }
+
+  /** On blur, parse what was typed into a number and reformat for display. */
+  onCurrencyBlur() {
+    const cleaned = (this.currencyRaw ?? '').replace(/[^0-9.]/g, '');
+    const n = cleaned === '' ? null : Number(cleaned);
+    this.value = n === null || isNaN(n) ? null : n < 0 ? 0 : n;
+    this.syncCurrencyRaw();
+  }
+
   get badLink() {
     const regex = new RegExp(/^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([-.][a-z0-9]+)*\.[a-z]{2,6}(:\d{1,5})?(\/\S*)?$/i);
 
@@ -133,6 +167,7 @@ export class PrInputComponent implements ControlValueAccessor {
 
   writeValue(value: any): void {
     this._value.set(value);
+    if (this.type() === 'currency') this.syncCurrencyRaw();
   }
   registerOnChange(fn: any): void {
     this.onChange = fn;

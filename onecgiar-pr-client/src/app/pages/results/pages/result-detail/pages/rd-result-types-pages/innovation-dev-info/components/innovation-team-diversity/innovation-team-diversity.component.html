@@ -8,6 +8,7 @@
     ?.options" optionLabel="question_text" optionValue="result_question_id"
         subLabel="Multiple answers can be selected."
         [checkboxConfig]="{ listAttr: 'subOptions', optionLabel: 'question_text', optionValue: 'answer_boolean', optionTextValue: 'answer_text'}"
-        [(ngModel)]="this.options?.innovation_team_diversity['radioButtonValue']">
+        [ngModel]="this.options?.innovation_team_diversity['radioButtonValue']"
+        (ngModelChange)="this.options.innovation_team_diversity['radioButtonValue'] = $event">
     </app-pr-radio-button>
 </div>

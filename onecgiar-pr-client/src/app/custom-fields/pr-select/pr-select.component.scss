@@ -92,3 +92,22 @@
     height: 300px;
   }
 }
+
+// Search box (migrated off PrimeNG p-iconfield to a plain icon + Spartan hlmInput)
+.search_input_container {
+  position: relative;
+  display: flex;
+  align-items: center;
+
+  .search_icon {
+    position: absolute;
+    left: 8px;
+    font-size: 18px;
+    color: var(--pr-color-accents-4);
+    pointer-events: none;
+  }
+
+  input {
+    padding-left: 32px;
+  }
+}
