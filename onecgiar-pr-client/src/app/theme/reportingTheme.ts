@@ -16,19 +16,6 @@ export const reportingTheme = definePreset(Aura, {
       900: '#0a0c25',
       950: '#05071a'
     },
-    secondary: {
-      50: '#dde0ee',
-      100: '#9ca2c3',
-      200: '#6a73a4',
-      300: '#484f77',
-      400: '#2a2e45', // Main custom Color
-      500: '#1a1c2a',
-      600: '#16171e',
-      700: '#111218',
-      800: '#0d0d12',
-      900: '#08080b',
-      950: '#050507'
-    },
     colorScheme: {
       light: {
         primary: {
@@ -36,12 +23,6 @@ export const reportingTheme = definePreset(Aura, {
           contrastColor: '#ffffff',
           hoverColor: '{primary.600}',
           activeColor: '{primary.700}'
-        },
-        secondary: {
-          color: '{secondary.300}',
-          contrastColor: '#ffffff',
-          hoverColor: '{secondary.600}',
-          activeColor: '{secondary.700}'
         },
         highlight: {
           background: '{primary.50}',

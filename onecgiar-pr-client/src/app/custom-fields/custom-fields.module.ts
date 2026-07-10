@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { PrInputComponent } from './pr-input/pr-input.component';
 import { FormsModule } from '@angular/forms';
 import { InputTextModule } from 'primeng/inputtext';
-import { DropdownModule } from 'primeng/dropdown';
+import { SelectModule } from 'primeng/select';
 import { PrSelectComponent } from './pr-select/pr-select.component';
 import { RadioButtonModule } from 'primeng/radiobutton';
 import { PrFieldHeaderComponent } from './pr-field-header/pr-field-header.component';
@@ -79,7 +79,7 @@ const fieldComponents = [
     CommonModule,
     FormsModule,
     InputTextModule,
-    DropdownModule,
+    SelectModule,
     RadioButtonModule,
     MultiSelectModule,
     TextareaModule,

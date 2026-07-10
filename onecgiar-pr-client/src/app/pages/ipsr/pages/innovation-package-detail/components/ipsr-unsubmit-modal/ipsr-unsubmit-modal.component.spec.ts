@@ -9,7 +9,6 @@ import { FormsModule } from '@angular/forms';
 import { PrFieldHeaderComponent } from '../../../../../../custom-fields/pr-field-header/pr-field-header.component';
 import { DialogModule } from 'primeng/dialog';
 import { PrFieldValidationsComponent } from '../../../../../../custom-fields/pr-field-validations/pr-field-validations.component';
-import { InputTextarea } from 'primeng/inputtextarea';
 import { of, throwError } from 'rxjs';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { IpsrDataControlService } from '../../../../services/ipsr-data-control.service';
