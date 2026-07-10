@@ -98,7 +98,33 @@
 
 ---
 
-## 4. Phase B (pending, not done yet)
+## 4. `app-pr-textarea` — DONE (this change)
+
+**What changed (internal only):**
+- `@Input()` → `input()` signals (public names/defaults unchanged: `isStatic=false`, `required=true`, `hint=null`, `rows=5`, `autogenerate=false`, `showDescriptionLabel=true`, `labelDescInlineStyles=''`).
+- Killed the **side-effecting `preventFieldRender` computed** (it mutated `label`/`placeholder`/`description`/`required`). Replaced with a private `fieldConfig` computed + a pure `shouldRender` computed and pure `effectiveLabel`/`effectivePlaceholder`/`effectiveDescription`/`effectiveRequired` derivations (FieldsManager overrides, input fallback) — same pattern as `pr-input`.
+- `value` backed by a signal; `get value` is now **side-effect-free** (the old getter recomputed `wordCount` and mutated `beforeValue` on every read). `wordCount` is now a **pure `computed`**; `beforeValue` deleted.
+- `ControlValueAccessor` (`[(ngModel)]`) unchanged. No `@ViewChild` consumer reaches into this component, so there was no `_value` bridge to preserve (unlike `pr-select`/`pr-multi-select`).
+- CT spec: removed the temporary NG0100 (`ExpressionChanged`) swallow handler — no longer needed now that `wordCount` has no getter side effect.
+
+**No compatibility bridges needed** — the only external contract is the selector + inputs + CVA (all preserved).
+
+**Fields / sections to test** (68 usages / 26 templates) — narrative text areas, ranked by fragility. Result Detail P25 screens are **excluded from automated tests**, so manual QA there matters most:
+
+| # | Where | What to check |
+|---|---|---|
+| 1 | **Result Detail → General Information** | Title / description narrative textareas: type → text persists, word counter updates, over-limit shows red `invalid` border + field-card error state. |
+| 2 | **Result Detail → Evidences** | Evidence description/narrative textareas: typing + word limit behavior. |
+| 3 | **Innovation Dev / Innovation Use** type pages | Long-text narrative fields (`maxWords` enabled): counter + invalid state. |
+| 4 | **IPSR steps** (narratives) | Textareas reset correctly on step/tab change (parent `*ngIf` reset trick still ends empty/repopulated). |
+| 5 | **Any read-only view** (submitted result / QA) | Renders the value as HTML; empty shows red "Not provided" if required, else "Not applicable" — no textarea. |
+| 6 | **Autogenerate fields** (where `autogenerate=true`) | Over-limit shows the yellow `warning` style (not `invalid`) and no field-card error. |
+
+**Key thing to confirm:** anywhere a parent destroys+recreates the textarea to reset it, it must still end up **empty/repopulated correctly**; the word counter must track the live value with no stale count.
+
+---
+
+## 5. Phase B (pending, not done yet)
 
 Once each component resets reactively, the legacy `*ngIf`-toggle reset hacks in the 13 consumer files above can be removed one at a time (each with its own QA). A later change should also port `pr-multi-select` **grouped mode** to the pure-clone model. This section will be updated as those land.
 
@@ -110,4 +136,5 @@ Once each component resets reactively, the legacy `*ngIf`-toggle reset hacks in 
 |---|---|---|
 | `pr-input` | `refactor-pr-input-signals` | Done, committed `6661baa56` |
 | `pr-select` | `refactor-pr-select-signals` | Done, committed `2cbc75908` |
-| `pr-multi-select` | `refactor-pr-multi-select-signals` | Done (this commit) |
+| `pr-multi-select` | `refactor-pr-multi-select-signals` | Done, committed `ce453d804` |
+| `pr-textarea` | `refactor-pr-textarea-signals` | Done (this change) |

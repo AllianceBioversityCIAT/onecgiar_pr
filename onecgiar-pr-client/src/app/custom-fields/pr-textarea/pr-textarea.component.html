@@ -1,34 +1,34 @@
-@if (this.preventFieldRender()) {
+@if (shouldRender()) {
   <app-field-card
-    [label]="this.label"
-    [description]="this.description"
-    [required]="this.required"
+    [label]="effectiveLabel()"
+    [description]="effectiveDescription()"
+    [required]="effectiveRequired()"
     [hasValue]="hasValue"
-    [hasError]="!!maxWords && wordCount > maxWords && !autogenerate"
-    [showDescription]="this.showDescriptionLabel"
-    [descInlineStyles]="labelDescInlineStyles">
+    [hasError]="!!maxWords() && wordCount() > maxWords() && !autogenerate()"
+    [showDescription]="showDescriptionLabel()"
+    [descInlineStyles]="labelDescInlineStyles()">
     <div
-      [ngSwitch]="(readOnly || this.rolesSE.readOnly) && !isStatic"
+      [ngSwitch]="(readOnly() || this.rolesSE.readOnly) && !isStatic()"
       class="pr-field"
-      [ngClass]="{ mandatory: this.required, complete: value, readOnly: (readOnly || this.rolesSE.readOnly) && !isStatic }">
+      [ngClass]="{ mandatory: effectiveRequired(), complete: value, readOnly: (readOnly() || this.rolesSE.readOnly) && !isStatic() }">
       <div
         class="text-secondary-400 pr-body-2"
         *ngSwitchCase="true"
-        [innerHtml]="value || (this.required ? this.notProvidedText : 'Not applicable')"></div>
+        [innerHtml]="value || (effectiveRequired() ? this.notProvidedText : 'Not applicable')"></div>
       <div class="p-fluid input_container" *ngSwitchCase="false">
         <textarea
-          [rows]="rows"
+          [rows]="rows()"
           [cols]="30"
-          [disabled]="disabled"
+          [disabled]="disabled()"
           pTextarea
           [style]="{ width: '100%' }"
           [(ngModel)]="value"
-          [placeholder]="this.placeholder"
-          [ngClass]="{ 'pr-body-2': true, invalid: wordCount > maxWords && !autogenerate, warning: wordCount > maxWords && autogenerate }"></textarea>
+          [placeholder]="effectivePlaceholder()"
+          [ngClass]="{ 'pr-body-2': true, invalid: wordCount() > maxWords() && !autogenerate(), warning: wordCount() > maxWords() && autogenerate() }"></textarea>
 
         <div class="hints_container">
-          <div class="hint">{{ this.hint }}</div>
-          <app-pr-word-counter *ngIf="maxWords" [wordCount]="wordCount" [maxWords]="maxWords" [autogenerate]="autogenerate"></app-pr-word-counter>
+          <div class="hint">{{ hint() }}</div>
+          <app-pr-word-counter *ngIf="maxWords()" [wordCount]="wordCount()" [maxWords]="maxWords()" [autogenerate]="autogenerate()"></app-pr-word-counter>
         </div>
       </div>
       <app-pr-field-validations></app-pr-field-validations>

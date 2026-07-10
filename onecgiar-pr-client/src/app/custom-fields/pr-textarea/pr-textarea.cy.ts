@@ -38,12 +38,8 @@ describe('PrTextareaComponent (CT)', () => {
   });
 
   it('marks the textarea invalid past maxWords', () => {
-    // KNOWN PRE-EXISTING QUIRK: the `value` getter recomputes `wordCount` as a side effect,
-    // which trips Angular's dev-mode ExpressionChanged (NG0100) check. The app tolerates it in
-    // prod; the signals refactor (wordCount -> computed) will remove it. Swallow it here so the
-    // visible invalid state can still be asserted — and delete this handler after the refactor.
-    cy.on('uncaught:exception', err => !/NG0100|ExpressionChanged/.test(err.message));
-
+    // After the signals refactor, `wordCount` is a pure computed (no getter side effect),
+    // so the dev-mode ExpressionChanged (NG0100) check no longer trips here.
     mountCF(TEMPLATE, { editable: true, componentProperties: { model: '', maxWords: 3, readOnly: false } });
     cy.get('textarea[pTextarea]').type('one two three four five');
     cy.get('app-pr-word-counter').should('exist').and('contain.text', 'Max 3 words');
