@@ -45,10 +45,8 @@
         <div class="remove_focus" (click)="removeFocus()"></div>
         <div class="options" style="min-width: 200px" [style]="optionsInlineStyles">
           <div class="search_input_container">
-            <p-iconfield>
-              <p-inputicon styleClass="pi pi-search" />
-              <input type="text" pInputText placeholder="Search" [(ngModel)]="this.searchText" style="width: 100%" />
-            </p-iconfield>
+            <span class="material-icons-round search_icon">search</span>
+            <input type="text" hlmInput placeholder="Search" [(ngModel)]="this.searchText" style="width: 100%" />
           </div>
 
           <cdk-virtual-scroll-viewport [itemSize]="7" class="custom_scroll virtual_scroll">

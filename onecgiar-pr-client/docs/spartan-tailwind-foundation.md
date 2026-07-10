@@ -40,3 +40,10 @@ Then use it: `import { HlmButton } from '<your-path>'` and `<button hlmBtn>…</
 - **Pilot render + runtime smoke:** confirm on `npm start` that (a) a PrimeNG-heavy screen looks identical to before (no preflight bleed), and (b) an `hlm-button` renders styled. Build-green is proven; the visual check needs the browser.
 - **`tw-` prefix / `.m-N` collision:** the project generates `.m-N`/`.mx-N` margin utilities in `styles.scss` that collide with Tailwind's `m-*`. Not triggered yet (nothing uses Tailwind margin utilities). Decide the prefix (`tw-`) or delete the generated utilities in the first real migration change.
 - **Component migration + PrimeNG removal:** each PrimeNG component moves to Spartan in its own change; PrimeNG is removed last, which then unblocks Angular 22.
+
+## First migrated components (change `migrate-pr-input-pr-select-to-spartan`)
+
+- **`pr-input`** — zero PrimeNG. `pInputText` (text/email) → native `<input hlmInput>`; `p-message` → styled `<div>`; `p-inputNumber` (number/currency) → native inputs. **Currency delta:** USD `$1,234.56` formatting now applies on **blur** (via `currencyDisplay`/`onCurrencyInput` + Intl), not on every keystroke like PrimeNG did. Value stays numeric.
+- **`pr-select`** — zero PrimeNG. Only the search box changed (`p-iconfield`/`p-inputicon`/`pInputText` → `<input hlmInput>` + `material-icons-round` search icon). The rest was already a custom CDK virtual-scroll dropdown.
+- Removed from `custom-fields.module.ts`: `InputNumberModule`, `MessageModule` (only pr-input used them). Kept `InputTextModule`/`IconFieldModule`/`InputIconModule` — still used by `s-select` and `pr-multi-select`.
+- Spartan `HlmInput` lives at `src/app/spartan/input` (alias `@spartan/input`); added via `ng g @spartan-ng/cli:ui input` with a hand-written `components.json`.

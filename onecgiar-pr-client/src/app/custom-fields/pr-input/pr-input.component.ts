@@ -81,14 +81,35 @@ export class PrInputComponent implements ControlValueAccessor {
     return this._value;
   }
 
-  set value(v: string) {
+  set value(v: any) {
     if (v !== this._value) {
-      if (this.type === 'link') v = v.trim();
+      if (this.type === 'link' && typeof v === 'string') v = v.trim();
 
       this._value = v;
       if (Number(v) < 0) this._value = 0;
       this.onChange(v);
     }
+  }
+
+  /** Currency display (replaces the old numeric field): raw while focused, USD-formatted when blurred. */
+  currencyFocused = false;
+
+  get currencyDisplay(): string {
+    const v = this._value;
+    if (v === null || v === undefined || v === '') return '';
+    if (this.currencyFocused) return String(v);
+    const n = Number(v);
+    return isNaN(n) ? '' : n.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+  }
+
+  onCurrencyInput(raw: string) {
+    const cleaned = (raw ?? '').replace(/[^0-9.]/g, '');
+    if (cleaned === '') {
+      this.value = null;
+      return;
+    }
+    const n = Number(cleaned);
+    this.value = isNaN(n) ? null : n < 0 ? 0 : n;
   }
 
   get badLink() {

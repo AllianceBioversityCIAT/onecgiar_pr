@@ -33,7 +33,7 @@
         <input
           *ngIf="this.type != 'currency' && this.type != 'number' && this.type != 'email'"
           [disabled]="this.disabled"
-          pInputText
+          hlmInput
           [type]="this.type"
           [placeholder]="this.placeholder"
           [(ngModel)]="value"
@@ -49,7 +49,7 @@
         <div style="display: flex; flex-direction: column; gap: 2px" *ngIf="this.type == 'email'">
           <input
             [disabled]="this.disabled"
-            pInputText
+            hlmInput
             type="email"
             [placeholder]="this.placeholder"
             [(ngModel)]="value"
@@ -65,44 +65,42 @@
             }"
             [style]="{ 'max-height': this.variant === 'sm' ? '30px' : this.variant === 'xs' ? '25px' : 'auto', width: '100%' }" />
           @if (emailInput.invalid) {
-            <p-message severity="error" size="small" variant="simple">
+            <div class="pr-body-3 text-red-300 pr-input-error">
               @if (emailInput.hasError('required')) {
                 Email is Required.
               }
               @if (emailInput.hasError('email')) {
                 Please enter a valid email.
               }
-            </p-message>
+            </div>
           }
         </div>
 
-        <p-inputNumber
-          class=""
+        <input
           *ngIf="this.type == 'number'"
+          hlmInput
+          type="number"
           [(ngModel)]="value"
           [disabled]="this.disabled"
-          [mode]="this.numberMode"
-          [minFractionDigits]="this.numberMode && 2"
-          [maxFractionDigits]="this.numberMode && this.maxDecimals"
           [min]="0"
+          [step]="this.numberMode === 'decimal' ? 'any' : 1"
+          [placeholder]="this.placeholder"
           [ngClass]="{ 'pr-body-2': true }"
-          [style]="{ 'max-height': this.variant === 'sm' ? '30px' : this.variant === 'xs' ? '25px' : 'auto', width: '100%' }"
-          [placeholder]="this.placeholder">
-        </p-inputNumber>
+          [style]="{ 'max-height': this.variant === 'sm' ? '30px' : this.variant === 'xs' ? '25px' : 'auto', width: '100%' }" />
 
-        <p-inputNumber
-          class=""
+        <input
           *ngIf="this.type == 'currency'"
-          [(ngModel)]="value"
-          mode="currency"
-          currency="USD"
-          [ngClass]="{ 'pr-body-2': true }"
-          locale="en-US"
+          hlmInput
+          type="text"
+          inputmode="decimal"
+          [ngModel]="currencyDisplay"
+          (ngModelChange)="onCurrencyInput($event)"
+          (focus)="currencyFocused = true"
+          (blur)="currencyFocused = false"
           [disabled]="this.disabled"
           [placeholder]="this.placeholder"
-          [min]="0"
-          [style]="{ width: '100%' }">
-        </p-inputNumber>
+          [ngClass]="{ 'pr-body-2': true }"
+          [style]="{ width: '100%' }" />
         <div class="hints_container">
           <div class="hint">{{ this.hint }}</div>
           <app-pr-word-counter *ngIf="maxWords" [wordCount]="wordCount" [maxWords]="maxWords" [autogenerate]="autogenerate"> </app-pr-word-counter>
