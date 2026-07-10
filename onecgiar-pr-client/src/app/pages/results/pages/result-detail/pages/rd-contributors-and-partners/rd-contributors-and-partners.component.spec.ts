@@ -588,3 +588,104 @@ describe('RdContributorsAndPartnersComponent — reactive ToC prefill reconcilia
     expect(svc.scienceSelected).toBe(userEdited);
   });
 });
+
+describe('RdContributorsAndPartnersComponent — P2-3130 ToC decoupling (alignment = NO)', () => {
+  let component: RdContributorsAndPartnersComponent;
+  let fixture: ComponentFixture<RdContributorsAndPartnersComponent>;
+  let svc: any;
+  let patchSpy: jest.Mock;
+
+  beforeEach(async () => {
+    TestBed.resetTestingModule();
+    patchSpy = jest.fn().mockReturnValue(of({}));
+    svc = {
+      partnersBody: new ContributorsAndPartnersBody(),
+      getSectionInformation: jest.fn(),
+      loadFilteredBilateralProjects: jest.fn(),
+      resetState: jest.fn(),
+      setPossibleLeadCenters: jest.fn(),
+      contributingInitiativeNew: [],
+      leadPartnerId: null,
+      leadCenterCode: 'C1',
+      updatingLeadData: false,
+      scienceSelected: [{ id: 3, official_code: 'SP03' }],
+      otherScienceSelected: [{ id: 99, official_code: 'SP99' }],
+      otherCentersSelected: [{ code: 'C2' }],
+      loadedAcceptedScienceIds: new Set<number>([3]),
+      loadedPendingScience: [],
+      OTHER_PARTNERS_CODE: -999999,
+      tocReferenceSynergyInitiativeIds: signal<number[]>([1, 3]),
+      tocReferenceCenterInstitutionIds: signal<number[]>([11]),
+      tocReferencePartnerInstitutionIds: signal<number[]>([100]),
+      sectionHydratedFromToc: signal(false),
+      tocSelectionTouched: signal(false)
+    };
+    svc.partnersBody.result_toc_result.planned_result = false;
+    svc.partnersBody.is_lead_by_partner = false;
+    svc.partnersBody.contributing_center = [{ code: 'C1' }, { code: '__OTHER_CENTERS__' }];
+    svc.partnersBody.institutions = [{ institutions_id: 50 }, { institutions_id: -999999 }];
+    svc.partnersBody.linked_results = [];
+
+    await TestBed.configureTestingModule({
+      declarations: [RdContributorsAndPartnersComponent],
+      imports: [HttpClientTestingModule, FormsModule, TermPipe, CustomFieldsModule],
+      providers: [
+        {
+          provide: ApiService,
+          useValue: {
+            dataControlSE: {
+              currentResult: { result_code: 'R-123', version_id: 1, portfolio: 'P25' },
+              currentResultSectionName: signal(''),
+              findClassTenSeconds: jest.fn().mockResolvedValue(true)
+            },
+            resultsSE: {
+              GET_resultById: jest.fn().mockReturnValue(of({ response: {} })),
+              PATCH_ContributorsPartners: patchSpy
+            }
+          }
+        },
+        { provide: RdContributorsAndPartnersService, useValue: svc },
+        { provide: CustomizedAlertsFeService, useValue: { show: jest.fn() } },
+        { provide: InnovationUseResultsService, useValue: { resultsList: [] } },
+        { provide: ChangeDetectorRef, useValue: { detectChanges: jest.fn() } },
+        { provide: InstitutionsService, useValue: {} },
+        { provide: RolesService, useValue: {} },
+        { provide: CentersService, useValue: { centersList: [] } },
+        { provide: ResultLevelService, useValue: {} },
+        { provide: FieldsManagerService, useValue: { isContributorsPartners2026: () => true, isP25: () => true } }
+      ],
+      schemas: [NO_ERRORS_SCHEMA]
+    })
+      .overrideComponent(RdContributorsAndPartnersComponent, { set: { template: '' } })
+      .compileComponents();
+
+    fixture = TestBed.createComponent(RdContributorsAndPartnersComponent);
+    component = fixture.componentInstance;
+    component.allScienceProgramsList.set([{ id: 1 }, { id: 3 }]);
+  });
+
+  it('isTocDecoupled is true when planned_result is false on 2026', () => {
+    expect(component.isTocDecoupled()).toBe(true);
+  });
+
+  it('isTocDecoupled is false when planned_result is true on 2026', () => {
+    svc.partnersBody.result_toc_result.planned_result = true;
+    fixture.detectChanges();
+    expect(component.isTocDecoupled()).toBe(false);
+  });
+
+  it('does not preselect Centers or SP from ToC refs when decoupled', () => {
+    fixture.detectChanges();
+    expect(svc.partnersBody.contributing_center.map((c: any) => c.code)).toEqual(['C1', '__OTHER_CENTERS__']);
+    expect(svc.scienceSelected).toEqual([{ id: 3, official_code: 'SP03' }]);
+  });
+
+  it('save payload tags all entities from_toc false and drops sentinels when decoupled', () => {
+    component.onSaveSection();
+    const payload = patchSpy.mock.calls[0][0];
+    expect(payload.contributing_center).toEqual([{ code: 'C1', from_toc: false, is_leading_result: true }]);
+    expect(payload.institutions).toEqual([{ institutions_id: 50, from_toc: false, is_leading_result: false }]);
+    expect(payload.contributing_initiatives.accepted_contributing_initiatives).toEqual([{ id: 3, from_toc: false }]);
+    expect(payload.contributing_initiatives.pending_contributing_initiatives).toEqual([]);
+  });
+});
