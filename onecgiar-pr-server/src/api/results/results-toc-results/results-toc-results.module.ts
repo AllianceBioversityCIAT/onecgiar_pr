@@ -27,6 +27,7 @@ import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByU
 import { ResultsActionAreaOutcomeRepository } from './repositories/result-toc-action-area.repository';
 import { ResultsTocTargetIndicatorRepository } from './repositories/result-toc-result-target-indicator.repository';
 import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
+import { ResultsTocResultIndicatorsService } from './results-toc-result-indicators.service';
 import { TemplateRepository } from '../../platform-report/repositories/template.repository';
 import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
 import { EmailNotificationManagementModule } from '../../../shared/microservices/email-notification-management/email-notification-management.module';
@@ -64,6 +65,7 @@ import { SocketManagementModule } from '../../../shared/microservices/socket-man
     ResultsActionAreaOutcomeRepository,
     ResultsTocTargetIndicatorRepository,
     ClarisaInitiativesRepository,
+    ResultsTocResultIndicatorsService,
     TemplateRepository,
     UserNotificationSettingRepository,
     GlobalParameterRepository,

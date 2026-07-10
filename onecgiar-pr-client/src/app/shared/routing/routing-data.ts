@@ -470,6 +470,14 @@ export const ResultFrameworkReportingRouting: PrRoute[] = [
       )
   },
   {
+    prName: 'Center report',
+    path: 'center/:centerCode/report',
+    loadComponent: () =>
+      import('../../pages/result-framework-reporting/pages/center-report-stub/center-report-stub.component').then(
+        m => m.CenterReportStubComponent
+      )
+  },
+  {
     prName: 'Entity details',
     path: 'entity-details/:entityId',
     loadComponent: () =>

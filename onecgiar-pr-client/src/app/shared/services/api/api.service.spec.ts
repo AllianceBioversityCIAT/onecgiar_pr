@@ -76,8 +76,17 @@ describe('ApiService', () => {
 
     rolesServiceSpy = {
       validateReadOnly: jest.fn(),
+      applyRolesResponse: jest.fn(function (this: { roles: unknown; isAdmin: boolean }, response: { application?: { role_id: number } }) {
+        if (!response) return;
+        this.roles = response;
+        this.isAdmin = response?.application?.role_id == 1;
+      }),
       readOnly: false,
-      isAdmin: false
+      isAdmin: false,
+      roles: null,
+      getIsAdminValue: jest.fn(function (this: { roles: { application?: { role_id: number } } | null; isAdmin: boolean }) {
+        this.isAdmin = this.roles?.application?.role_id == 1;
+      })
     };
 
     titleServiceSpy = { setTitle: jest.fn() };
@@ -164,6 +173,7 @@ describe('ApiService', () => {
       ];
       const mockRoles = {
         response: {
+          application: { role_id: 1 },
           initiative: [
             { initiative_id: 10, description: 'Lead' },
             { initiative_id: 20, description: 'Member' }
@@ -187,6 +197,9 @@ describe('ApiService', () => {
 
       service.updateUserData(callback);
 
+      expect(rolesServiceSpy.applyRolesResponse).toHaveBeenCalledWith(mockRoles.response);
+      expect(rolesServiceSpy.roles).toEqual(mockRoles.response);
+      expect(rolesServiceSpy.isAdmin).toBe(true);
       expect(dataControlServiceSpy.myInitiativesList).toEqual(mockInitiatives);
       expect(dataControlServiceSpy.myInitiativesLoaded).toBe(true);
       expect(mockInitiatives[0].role).toBe('Lead');
@@ -214,18 +227,32 @@ describe('ApiService', () => {
       expect(callback).toHaveBeenCalled();
     });
 
+    it('should still call callback when roles API fails', () => {
+      const callback = jest.fn();
+      authServiceSpy.GET_allRolesByUser.mockReturnValue(throwError(() => new Error('roles API error')));
+      authServiceSpy.GET_initiativesByUser.mockReturnValue(of({ response: [] }));
+      authServiceSpy.GET_initiativesByUserByPortfolio.mockReturnValue(of({ response: { reporting: [], ipsr: [] } }));
+
+      service.updateUserData(callback);
+
+      expect(callback).toHaveBeenCalled();
+      expect(rolesServiceSpy.applyRolesResponse).toHaveBeenCalledWith(undefined);
+    });
+
     it('should handle error path in forkJoin subscribe', () => {
       const callback = jest.fn();
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
 
       authServiceSpy.GET_allRolesByUser.mockReturnValue(throwError(() => new Error('API error')));
+      authServiceSpy.GET_initiativesByUser.mockReturnValue(throwError(() => new Error('API error')));
+      authServiceSpy.GET_initiativesByUserByPortfolio.mockReturnValue(throwError(() => new Error('API error')));
 
       service.updateUserData(callback);
 
       expect(dataControlServiceSpy.myInitiativesLoaded).toBe(true);
       expect(resultsListFilterServiceSpy.updateMyInitiatives).toHaveBeenCalled();
       expect(ipsrListFilterServiceSpy.updateMyInitiatives).toHaveBeenCalled();
-      expect(callback).not.toHaveBeenCalled();
+      expect(callback).toHaveBeenCalled();
       expect(consoleSpy).toHaveBeenCalled();
 
       consoleSpy.mockRestore();

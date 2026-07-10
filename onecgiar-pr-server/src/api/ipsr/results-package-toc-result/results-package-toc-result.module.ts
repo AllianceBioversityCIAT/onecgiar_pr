@@ -27,6 +27,7 @@ import { ResultsSdgTargetRepository } from 'src/api/results/results-toc-results/
 import { ResultsActionAreaOutcomeRepository } from 'src/api/results/results-toc-results/repositories/result-toc-action-area.repository';
 import { ResultsTocTargetIndicatorRepository } from 'src/api/results/results-toc-results/repositories/result-toc-result-target-indicator.repository';
 import { ResultsTocResultsModule } from '../../results/results-toc-results/results-toc-results.module';
+import { ResultsTocResultIndicatorsService } from '../../results/results-toc-results/results-toc-result-indicators.service';
 import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { TemplateRepository } from '../../platform-report/repositories/template.repository';
 import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
@@ -49,6 +50,7 @@ import { ResultInstitutionsBudgetRepository } from '../../results/result_budget/
     ResultsPackageTocResultService,
     ResultRepository,
     VersionsService,
+    ResultsTocResultIndicatorsService,
     VersionRepository,
     IpsrRepository,
     ResultsCenterRepository,

@@ -18,6 +18,10 @@ import { ResultInitiativeBudgetRepository } from '../result_budget/repositories/
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 import { CreateShareResultRequestDto } from './dto/create-share-result-request.dto';
 import {
+  GetResultRequestQueryDto,
+  OrderDirection,
+} from './dto/get-result-request-query.dto';
+import {
   FindOptionsRelations,
   FindOptionsSelect,
   In,
@@ -29,7 +33,7 @@ import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiativ
 import { TemplateRepository } from '../../platform-report/repositories/template.repository';
 import Handlebars from 'handlebars';
 import { ResultsTocResultsService } from '../results-toc-results/results-toc-results.service';
-import { env } from 'process';
+import { env } from 'node:process';
 import { GlobalParameterRepository } from '../../global-parameter/repositories/global-parameter.repository';
 import { EmailNotificationManagementService } from '../../../shared/microservices/email-notification-management/email-notification-management.service';
 import { EmailTemplate } from '../../../shared/microservices/email-notification-management/enum/email-notification.enum';
@@ -138,11 +142,23 @@ export class ShareResultRequestService {
         ),
       ]);
 
-      // If initiative is already an active contributor, or is a pending/accepted/rejected contribution, skip
-      if (
-        initExist?.is_active ||
-        (requestExist && requestExist.request_status_id !== 4)
-      ) {
+      if (initExist?.is_active) {
+        continue;
+      }
+
+      if (requestExist && requestExist.request_status_id !== 4) {
+        const existingShare = this.buildShareResultRequest(
+          createTocShareResult,
+          resultId,
+          initiativeId,
+          shareInitId,
+          user,
+        );
+        existingShare.share_result_request_id =
+          requestExist.share_result_request_id;
+        existingShare.request_status_id = requestExist.request_status_id;
+        existingShare.is_active = true;
+        shareInitRequests.push(existingShare);
         continue;
       }
 
@@ -211,6 +227,8 @@ export class ShareResultRequestService {
       ? shareInitId
       : initiativeId;
     newShare.is_map_to_toc = !!createTocShareResult?.isToc;
+    newShare.from_toc =
+      !!createTocShareResult?.initiativeFromToc?.[shareInitId];
     newShare.requested_by = user.id;
     return newShare;
   }
@@ -240,6 +258,7 @@ export class ShareResultRequestService {
               is_active: req.is_active,
               requested_by: req.requested_by,
               requested_date: req.requested_date,
+              from_toc: req.from_toc,
             },
           ),
         ),
@@ -488,11 +507,23 @@ export class ShareResultRequestService {
     );
   }
 
-  async getReceivedResultRequest(user: TokenDto) {
+  async getReceivedResultRequest(
+    user: TokenDto,
+    query?: GetResultRequestQueryDto,
+  ) {
     try {
       const role = await this._roleByUserRepository.$_getMaxRoleByUser(user.id);
       const inits = await this.getUserInitiatives(user);
-      const whereConditions = this.buildWhereReceivedConditions(inits, role);
+
+      const extraConditions: any = {};
+      if (query?.version_id != null) {
+        extraConditions.obj_result = { version_id: query.version_id };
+      }
+      const whereConditions = this.buildWhereReceivedConditions(
+        inits,
+        role,
+        Object.keys(extraConditions).length ? extraConditions : undefined,
+      );
 
       const receivedContributionsPendingOwner = await this.getRequest(
         whereConditions.pendingOwner,
@@ -504,13 +535,30 @@ export class ShareResultRequestService {
         whereConditions.done,
       );
 
+      let receivedContributionsPending = this.combineAndDistinct(
+        receivedContributionsPendingOwner,
+        receivedContributionsPendingShared,
+      );
+      let receivedContributionsDoneList = receivedContributionsDone;
+
+      if (query?.orderDirection != null || query?.limit != null) {
+        const direction = query.orderDirection ?? 'DESC';
+        receivedContributionsPending = this.sortAndLimitByRequestedDate(
+          receivedContributionsPending,
+          direction,
+          query.limit,
+        );
+        receivedContributionsDoneList = this.sortAndLimitByRequestedDate(
+          receivedContributionsDoneList,
+          direction,
+          query.limit,
+        );
+      }
+
       return {
         response: {
-          receivedContributionsPending: this.combineAndDistinct(
-            receivedContributionsPendingOwner,
-            receivedContributionsPendingShared,
-          ),
-          receivedContributionsDone,
+          receivedContributionsPending,
+          receivedContributionsDone: receivedContributionsDoneList,
         },
         message: 'Successful response',
         status: HttpStatus.OK,
@@ -518,6 +566,19 @@ export class ShareResultRequestService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error, debug: true });
     }
+  }
+
+  private sortAndLimitByRequestedDate(
+    items: any[],
+    orderDirection: OrderDirection,
+    limit?: number,
+  ): any[] {
+    const sorted = [...items].sort((a, b) => {
+      const aDate = a.requested_date ? new Date(a.requested_date).getTime() : 0;
+      const bDate = b.requested_date ? new Date(b.requested_date).getTime() : 0;
+      return orderDirection === 'ASC' ? aDate - bDate : bDate - aDate;
+    });
+    return limit != null ? sorted.slice(0, limit) : sorted;
   }
 
   async getReceivedResultRequestPopUp(user: TokenDto) {
@@ -646,7 +707,7 @@ export class ShareResultRequestService {
       where: whereCondition,
     });
 
-    return results.map((result: any) => {
+    const mapped = results.map((result: any) => {
       if (result.obj_result && !Array.isArray(result.obj_result)) {
         result.obj_result = {
           ...result.obj_result,
@@ -656,12 +717,91 @@ export class ShareResultRequestService {
       }
       return result;
     });
+
+    return this.enrichRequestsWithTocContributionReview(mapped);
+  }
+
+  /**
+   * P2-3086 / P2-3003: attach ToC review fields for contribution-request notifications.
+   */
+  private async enrichRequestsWithTocContributionReview(
+    requests: any[],
+  ): Promise<any[]> {
+    if (!requests?.length) {
+      return requests;
+    }
+
+    const pairMap = new Map<
+      string,
+      { resultId: number; initiativeId: number }
+    >();
+
+    for (const request of requests) {
+      if (!request?.is_map_to_toc) {
+        continue;
+      }
+
+      const resultId = Number(request.result_id);
+      const contributorInitiativeId = Number(
+        request.shared_inititiative_id ?? request.obj_shared_inititiative?.id,
+      );
+
+      if (
+        !Number.isFinite(resultId) ||
+        !Number.isFinite(contributorInitiativeId)
+      ) {
+        continue;
+      }
+
+      pairMap.set(`${resultId}:${contributorInitiativeId}`, {
+        resultId,
+        initiativeId: contributorInitiativeId,
+      });
+    }
+
+    const reviewCache = new Map<string, any[]>();
+    await Promise.all(
+      Array.from(pairMap.entries()).map(async ([cacheKey, pair]) => {
+        reviewCache.set(
+          cacheKey,
+          await this._resultsTocResultRepository.getContributionReviewTocByResultAndInitiative(
+            pair.resultId,
+            pair.initiativeId,
+          ),
+        );
+      }),
+    );
+
+    return requests.map((request) => {
+      if (!request?.is_map_to_toc) {
+        return request;
+      }
+
+      const resultId = Number(request.result_id);
+      const contributorInitiativeId = Number(
+        request.shared_inititiative_id ?? request.obj_shared_inititiative?.id,
+      );
+
+      if (
+        !Number.isFinite(resultId) ||
+        !Number.isFinite(contributorInitiativeId)
+      ) {
+        return { ...request, toc_contribution_review: [] };
+      }
+
+      const cacheKey = `${resultId}:${contributorInitiativeId}`;
+      return {
+        ...request,
+        toc_contribution_review: reviewCache.get(cacheKey) ?? [],
+      };
+    });
   }
 
   private getRequestSelectFields(): FindOptionsSelect<ShareResultRequest> {
     return {
       share_result_request_id: true,
       result_id: true,
+      shared_inititiative_id: true,
       requested_date: true,
       aprovaed_date: true,
       request_status_id: true,
@@ -765,14 +905,15 @@ export class ShareResultRequestService {
     );
   }
 
-  async getSentResultRequest(user: TokenDto) {
+  async getSentResultRequest(user: TokenDto, query?: GetResultRequestQueryDto) {
     try {
       const role = await this._roleByUserRepository.$_getMaxRoleByUser(user.id);
       const inits = await this.getUserInitiatives(user);
 
-      const extraContidions: any = {
-        requested_by: user.id,
-      };
+      const extraContidions: any = { requested_by: user.id };
+      if (query?.version_id != null) {
+        extraContidions.obj_result = { version_id: query.version_id };
+      }
       const whereConditions = this.buildWhereSentConditions(
         inits,
         role,
@@ -787,13 +928,30 @@ export class ShareResultRequestService {
       );
       const sentContributionsDone = await this.getRequest(whereConditions.done);
 
+      let sentContributionsPending = this.combineAndDistinct(
+        sentContributionsPendingOwner,
+        sentContributionsPendingShared,
+      );
+      let sentContributionsDoneList = sentContributionsDone;
+
+      if (query?.orderDirection != null || query?.limit != null) {
+        const direction = query.orderDirection ?? 'DESC';
+        sentContributionsPending = this.sortAndLimitByRequestedDate(
+          sentContributionsPending,
+          direction,
+          query.limit,
+        );
+        sentContributionsDoneList = this.sortAndLimitByRequestedDate(
+          sentContributionsDoneList,
+          direction,
+          query.limit,
+        );
+      }
+
       return {
         response: {
-          sentContributionsPending: this.combineAndDistinct(
-            sentContributionsPendingOwner,
-            sentContributionsPendingShared,
-          ),
-          sentContributionsDone,
+          sentContributionsPending,
+          sentContributionsDone: sentContributionsDoneList,
         },
         message: 'Successful response',
         status: HttpStatus.OK,
@@ -976,6 +1134,7 @@ export class ShareResultRequestService {
         user,
         is_map_to_toc,
         dto,
+        !!findShare?.from_toc,
       );
     } else {
       await this.deactivateTocResults(result_id, shared_inititiative_id);
@@ -989,6 +1148,7 @@ export class ShareResultRequestService {
     user: TokenDto,
     is_map_to_toc: boolean,
     dto: CreateShareResultRequestDto,
+    from_toc = false,
   ) {
     try {
       const exists =
@@ -1003,6 +1163,7 @@ export class ShareResultRequestService {
           shared_inititiative_id,
           result_id,
           user,
+          from_toc,
         );
         await this.createBudgetForInitiative(newReIni.id, user);
 
@@ -1017,7 +1178,7 @@ export class ShareResultRequestService {
           await this.saveIndicatorsForPrimarySubmitter(dto, result_id);
         }
       } else {
-        await this.activateExistingInitiativeEntry(exists, user);
+        await this.activateExistingInitiativeEntry(exists, user, from_toc);
         await this.createOrUpdateBudgetForInitiative(exists.id, user);
         if (!is_map_to_toc) {
           await this.mapWorkPackagesToInitiative(
@@ -1040,6 +1201,7 @@ export class ShareResultRequestService {
     shared_initiative_id: number,
     result_id: number,
     user: TokenDto,
+    from_toc = false,
   ) {
     const newResultByInitiative = new ResultsByInititiative();
     newResultByInitiative.initiative_id = shared_initiative_id;
@@ -1047,6 +1209,7 @@ export class ShareResultRequestService {
     newResultByInitiative.result_id = result_id;
     newResultByInitiative.last_updated_by = user.id;
     newResultByInitiative.created_by = user.id;
+    newResultByInitiative.from_toc = from_toc;
 
     return await this._resultByInitiativesRepository.save(
       newResultByInitiative,
@@ -1064,9 +1227,14 @@ export class ShareResultRequestService {
     });
   }
 
-  private async activateExistingInitiativeEntry(exists: any, user: TokenDto) {
+  private async activateExistingInitiativeEntry(
+    exists: any,
+    user: TokenDto,
+    from_toc = false,
+  ) {
     await this._resultByInitiativesRepository.update(exists.id, {
       is_active: true,
+      from_toc,
       last_updated_by: user.id,
     });
   }
@@ -1262,6 +1430,7 @@ export class ShareResultRequestService {
         user,
         is_map_to_toc,
         dto,
+        !!findShare?.from_toc,
       );
     } else {
       // Reuse common method if logic is the same
@@ -1280,6 +1449,7 @@ export class ShareResultRequestService {
     user: TokenDto,
     is_map_to_toc: boolean,
     dto: CreateShareResultRequestDto,
+    from_toc = false,
   ) {
     try {
       const exists =
@@ -1295,6 +1465,7 @@ export class ShareResultRequestService {
           shared_inititiative_id,
           result_id,
           user,
+          from_toc,
         );
         await this.createBudgetForInitiative(newReIni.id, user);
 
@@ -1310,7 +1481,7 @@ export class ShareResultRequestService {
         }
       } else {
         // Reuse common methods if logic is the same
-        await this.activateExistingInitiativeEntry(exists, user);
+        await this.activateExistingInitiativeEntry(exists, user, from_toc);
         await this.createOrUpdateBudgetForInitiative(exists.id, user);
         if (!is_map_to_toc) {
           await this.mapWorkPackagesToInitiativeV2(

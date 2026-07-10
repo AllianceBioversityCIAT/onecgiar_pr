@@ -46,6 +46,7 @@ export interface CurrentResult {
   submitter_id?: any;
   crp?: any;
   role_id?: any;
+  appliesforTOCMWfilter?: boolean;
   initiative_entity_map?: any;
   initiative_entity_user?: any;
   portfolio?: string;

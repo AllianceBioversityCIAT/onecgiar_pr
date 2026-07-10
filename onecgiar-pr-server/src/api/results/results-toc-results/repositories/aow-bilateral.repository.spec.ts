@@ -329,6 +329,35 @@ describe('AoWBilateralRepository', () => {
     expect(result).toEqual(mockProjects);
   });
 
+  it('should find bilateral projects by science program official code', async () => {
+    const mockProjects = [
+      {
+        toc_result_id: 1,
+        official_code: 'SP01',
+        project_id: 100,
+        project_name: 'Project A',
+      },
+      {
+        toc_result_id: 2,
+        official_code: 'SP01',
+        project_id: 100,
+        project_name: 'Project A duplicate',
+      },
+    ];
+    dataSourceQueryMock.mockResolvedValueOnce(mockProjects);
+
+    const result = await repository.findBilateralProjectsByProgramOfficialCode(
+      'SP01',
+      'PHASE-1',
+    );
+
+    expect(dataSourceQueryMock).toHaveBeenCalledWith(
+      expect.stringContaining('UPPER(TRIM(tr.official_code))'),
+      ['SP01', 'PHASE-1'],
+    );
+    expect(result).toEqual(mockProjects);
+  });
+
   it('should group toc rows correctly', async () => {
     mockResolveContext();
     const mockRows = [

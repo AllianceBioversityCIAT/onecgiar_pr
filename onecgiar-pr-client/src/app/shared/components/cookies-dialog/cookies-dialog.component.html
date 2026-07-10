@@ -1,0 +1,9 @@
+<p-drawer [(visible)]="visible" position="bottom" [closable]="false" [modal]="false" [style]="{ width: '100%', height: 'auto' }">
+  <div class="cookies-content">
+    <p class="cookies-message">This website uses cookies in order to improve the use experience and provide additional functionality</p>
+    <div class="buttons">
+      <p-button size="large" label="Accept" icon="pi pi-check" severity="primary" (onClick)="acceptAll()"> </p-button>
+      <p-button size="large" label="Reject" icon="pi pi-times" severity="secondary" (onClick)="rejectAll()"> </p-button>
+    </div>
+  </div>
+</p-drawer>

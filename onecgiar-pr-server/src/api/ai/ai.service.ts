@@ -35,11 +35,60 @@ import { CreateEventDto } from './dto/create-event.dto';
 import { CreateProposalsDto } from './dto/create-proposals.dto';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { SaveChangesDto } from './dto/save-changes.dto';
+import { UpdateDacScoreDto } from './dto/update-dac-score.dto';
 import { Result } from '../results/entities/result.entity';
 import { ResultsInnovationsDev } from '../results/summary/entities/results-innovations-dev.entity';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { ReturnResponseUtil } from '../../shared/utils/response.util';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
+import { DacFieldName } from './constants/dac-field-name.enum';
+
+const DAC_FIELD_CONFIGURATION: Record<
+  DacFieldName,
+  {
+    tagColumn: keyof Result;
+    impactColumn: keyof Result;
+    revisionField: ResultFieldRevisionFieldName;
+    aiStateField: ResultFieldAiStateFieldName;
+    proposalField: AiReviewProposalFieldName;
+  }
+> = {
+  [DacFieldName.GENDER]: {
+    tagColumn: 'gender_tag_level_id',
+    impactColumn: 'gender_impact_area_id',
+    revisionField: ResultFieldRevisionFieldName.GENDER,
+    aiStateField: ResultFieldAiStateFieldName.GENDER,
+    proposalField: AiReviewProposalFieldName.GENDER,
+  },
+  [DacFieldName.CLIMATE]: {
+    tagColumn: 'climate_change_tag_level_id',
+    impactColumn: 'climate_impact_area_id',
+    revisionField: ResultFieldRevisionFieldName.CLIMATE,
+    aiStateField: ResultFieldAiStateFieldName.CLIMATE,
+    proposalField: AiReviewProposalFieldName.CLIMATE,
+  },
+  [DacFieldName.NUTRITION]: {
+    tagColumn: 'nutrition_tag_level_id',
+    impactColumn: 'nutrition_impact_area_id',
+    revisionField: ResultFieldRevisionFieldName.NUTRITION,
+    aiStateField: ResultFieldAiStateFieldName.NUTRITION,
+    proposalField: AiReviewProposalFieldName.NUTRITION,
+  },
+  [DacFieldName.ENVIRONMENTAL]: {
+    tagColumn: 'environmental_biodiversity_tag_level_id',
+    impactColumn: 'environmental_biodiversity_impact_area_id',
+    revisionField: ResultFieldRevisionFieldName.ENVIRONMENTAL,
+    aiStateField: ResultFieldAiStateFieldName.ENVIRONMENTAL,
+    proposalField: AiReviewProposalFieldName.ENVIRONMENTAL,
+  },
+  [DacFieldName.POVERTY]: {
+    tagColumn: 'poverty_tag_level_id',
+    impactColumn: 'poverty_impact_area_id',
+    revisionField: ResultFieldRevisionFieldName.POVERTY,
+    aiStateField: ResultFieldAiStateFieldName.POVERTY,
+    proposalField: AiReviewProposalFieldName.POVERTY,
+  },
+};
 
 @Injectable()
 export class AiService {
@@ -538,6 +587,196 @@ export class AiService {
     }
   }
 
+  async getDacScores(resultId: number) {
+    try {
+      const result = await this.resultRepository.findOne({
+        select: {
+          id: true,
+          gender_tag_level_id: true,
+          gender_impact_area_id: true,
+          climate_change_tag_level_id: true,
+          climate_impact_area_id: true,
+          nutrition_tag_level_id: true,
+          nutrition_impact_area_id: true,
+          environmental_biodiversity_tag_level_id: true,
+          environmental_biodiversity_impact_area_id: true,
+          poverty_tag_level_id: true,
+          poverty_impact_area_id: true,
+        },
+        where: { id: resultId },
+      });
+
+      if (!result) {
+        throw this.createHttpError('Result not found', HttpStatus.NOT_FOUND);
+      }
+
+      const dacScores = [
+        {
+          field_name: 'gender',
+          tag_id: result.gender_tag_level_id ?? null,
+          impact_area_id: result.gender_impact_area_id ?? null,
+        },
+        {
+          field_name: 'climate',
+          tag_id: result.climate_change_tag_level_id ?? null,
+          impact_area_id: result.climate_impact_area_id ?? null,
+        },
+        {
+          field_name: 'nutrition',
+          tag_id: result.nutrition_tag_level_id ?? null,
+          impact_area_id: result.nutrition_impact_area_id ?? null,
+        },
+        {
+          field_name: 'environmental',
+          tag_id: result.environmental_biodiversity_tag_level_id ?? null,
+          impact_area_id:
+            result.environmental_biodiversity_impact_area_id ?? null,
+        },
+        {
+          field_name: 'poverty',
+          tag_id: result.poverty_tag_level_id ?? null,
+          impact_area_id: result.poverty_impact_area_id ?? null,
+        },
+      ];
+
+      return ReturnResponseUtil.format({
+        response: dacScores,
+        message: 'DAC scores retrieved successfully',
+        statusCode: HttpStatus.OK,
+      });
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async updateDacScore(
+    resultId: number,
+    updateDacScoreDto: UpdateDacScoreDto,
+    user: TokenDto,
+  ) {
+    try {
+      const config = DAC_FIELD_CONFIGURATION[updateDacScoreDto.field_name];
+      if (!config) {
+        throw this.createHttpError(
+          'Unsupported DAC field',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      if (updateDacScoreDto.tag_id === undefined) {
+        throw this.createHttpError(
+          'tag_id is required',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      const result = await this.resultRepository.findOne({
+        where: { id: resultId },
+      });
+
+      if (!result) {
+        throw this.createHttpError('Result not found', HttpStatus.NOT_FOUND);
+      }
+
+      const tagId = this.normalizeNullableNumber(
+        updateDacScoreDto.tag_id,
+        'tag_id',
+      );
+      const impactAreaCandidate = this.normalizeNullableNumber(
+        updateDacScoreDto.impact_area_id,
+        'impact_area_id',
+      );
+
+      if (tagId === 3 && impactAreaCandidate === null) {
+        throw this.createHttpError(
+          'impact_area_id is required when tag_id equals 3',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      const impactAreaId = tagId === 3 ? impactAreaCandidate : null;
+      const previousSelection = {
+        tag_id: (result as any)[config.tagColumn] ?? null,
+        impact_area_id: (result as any)[config.impactColumn] ?? null,
+      };
+
+      let sessionId =
+        updateDacScoreDto.session_id !== undefined
+          ? updateDacScoreDto.session_id
+          : null;
+
+      if (!sessionId) {
+        const latestSession = await this.sessionRepository.findOne({
+          select: { id: true },
+          where: { result_id: resultId },
+          order: { opened_at: 'DESC' },
+        });
+        sessionId = latestSession?.id ?? null;
+      }
+
+      const updatePayload: Partial<Result> = {
+        last_updated_by: user.id,
+        last_updated_date: new Date(),
+      };
+      (updatePayload as any)[config.tagColumn] = tagId;
+      (updatePayload as any)[config.impactColumn] = impactAreaId;
+
+      await this.resultRepository.update({ id: resultId }, updatePayload);
+
+      if (sessionId) {
+        await this.proposalRepository.save({
+          session_id: sessionId,
+          field_name: config.proposalField,
+          original_text: JSON.stringify(previousSelection),
+          proposed_text: JSON.stringify({
+            tag_id: tagId,
+            impact_area_id: impactAreaId,
+          }),
+          needs_improvement: null,
+        });
+      }
+
+      await this.revisionRepository.save({
+        result_id: resultId,
+        user_id: user.id,
+        field_name: config.revisionField,
+        old_value: JSON.stringify(previousSelection),
+        new_value: JSON.stringify({
+          tag_id: tagId,
+          impact_area_id: impactAreaId,
+        }),
+        change_reason: updateDacScoreDto.change_reason ?? null,
+        provenance: ResultFieldRevisionProvenance.USER_EDIT,
+        proposal_id: null,
+      });
+
+      await this.aiStateRepository.upsert(
+        {
+          result_id: resultId,
+          field_name: config.aiStateField,
+          status: ResultFieldAiStateStatus.ACCEPTED,
+          ai_suggestion: null,
+          user_feedback: null,
+          last_updated_by: user.id,
+          last_ai_proposal_id: null,
+        },
+        ['result_id', 'field_name'],
+      );
+
+      return ReturnResponseUtil.format({
+        response: {
+          field_name: updateDacScoreDto.field_name,
+          tag_id: tagId,
+          impact_area_id: impactAreaId,
+        },
+        message: 'DAC score updated successfully',
+        statusCode: HttpStatus.OK,
+      });
+    } catch (error) {
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
   private getInnovationDevByResultId(
     resultId: number,
   ): Promise<ResultsInnovationsDev | null> {
@@ -620,6 +859,24 @@ export class AiService {
     }
 
     return innovationDev;
+  }
+
+  private normalizeNullableNumber(
+    value: number | string | null | undefined,
+    fieldName: string,
+  ): number | null {
+    if (value === null || value === undefined) {
+      return null;
+    }
+
+    const numericValue = Number(value);
+    if (Number.isNaN(numericValue)) {
+      throw this.createHttpError(
+        `${fieldName} must be a valid number`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    return numericValue;
   }
 
   private isDuplicateKeyError(error: any): boolean {

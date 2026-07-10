@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
 import { map, Observable, firstValueFrom } from 'rxjs';
@@ -25,7 +25,7 @@ import { ExtraGeographicLocationBody } from '../../../pages/results/pages/result
 export class ResultsApiService {
   constructor(
     public http: HttpClient,
-    private saveButtonSE: SaveButtonService,
+    private readonly saveButtonSE: SaveButtonService,
     public ipsrDataControlSE: IpsrDataControlService
   ) {}
   apiBaseUrl = environment.apiBaseUrl + 'api/results/';
@@ -1340,6 +1340,7 @@ export class ResultsApiService {
   PATCH_updateUserRoles(body: {
     email: string;
     role_assignments: { role_id: number; entity_id: number; force_swap?: boolean }[];
+    center_assignments?: { center_id: string }[];
     role_platform: number;
     first_name: string;
     last_name: string;
@@ -1355,9 +1356,6 @@ export class ResultsApiService {
     return this.http.post<any>(`${environment.textMiningUrl}prms/text-mining`, formData, { headers });
   }
 
-  GET_impactAreasScoresComponentsAll() {
-    return this.http.get<any>(`${environment.apiBaseUrl}api/results/impact-areas-scores-components/all`);
-  }
   GET_ScienceProgramsProgress() {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/get/science-programs/progress`);
   }
@@ -1395,6 +1393,11 @@ export class ResultsApiService {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/bilateral-projects?tocResultId=${tocResultId}`);
   }
 
+  // P2-3001: full W3/Bilateral list of a Science Program (official code, e.g. SP01), bypassing the indicator-level filter.
+  GET_W3BilateralProjectsByProgram(programId: string) {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/bilateral-projects/by-program?programId=${programId}`);
+  }
+
   POST_createResult(body: any) {
     return this.http.post<any>(`${environment.apiBaseUrl}api/results-framework-reporting/create`, body);
   }
@@ -1404,7 +1407,10 @@ export class ResultsApiService {
       `${environment.apiBaseUrl}api/results-framework-reporting/existing-result-contributors?resultTocResultId=${resultTocResultId}&tocResultIndicatorId=${tocResultIndicatorId}`
     );
   }
-  // /api/results-framework-reporting/dashboard
+  GET_impactAreasScoresComponentsAll() {
+    return this.http.get<any>(`${environment.apiBaseUrl}api/results/impact-areas-scores-components/all`);
+  }
+
   GET_DashboardData(entityId: string) {
     return this.http.get<any>(`${environment.apiBaseUrl}api/results-framework-reporting/dashboard?programId=${entityId}`);
   }

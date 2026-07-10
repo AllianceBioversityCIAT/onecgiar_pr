@@ -140,7 +140,7 @@ export class InnovationUseInfoComponent {
   }
 
   convertOrganizations(organizations) {
-    organizations?.map((item: any) => {
+    organizations?.forEach((item: any) => {
       if (item.parent_institution_type_id) {
         item.institution_sub_type_id = item?.institution_types_id;
         item.institution_types_id = item?.parent_institution_type_id;

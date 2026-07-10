@@ -2,20 +2,32 @@ import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { RoleByUser } from './entities/role-by-user.entity';
 import { HandlersError } from '../../../shared/handlers/error.utils';
-import { getSpecificRoleDto } from './dto/getSpecificRole.dto';
+import { GetSpecificRoleDto } from './dto/getSpecificRole.dto';
 import { RoleTypeEnum } from '../../../shared/constants/role-type.enum';
 
 @Injectable()
 export class RoleByUserRepository extends Repository<RoleByUser> {
   constructor(
-    private dataSource: DataSource,
+    private readonly dataSource: DataSource,
     private readonly _handlersError: HandlersError,
   ) {
     super(RoleByUser, dataSource.createEntityManager());
   }
 
   async isUserAdmin(userId: number): Promise<boolean> {
-    const queryData = `
+    const queryWithCenter = `
+    SELECT
+      if(rbu.role = 1, 1, 0) as is_admin
+    from
+      role_by_user rbu
+    WHERE
+      rbu.user = ?
+      and rbu.initiative_id is null
+      and rbu.action_area_id is null
+      and rbu.center_id is null
+      and rbu.active > 0;
+    `;
+    const queryLegacy = `
     SELECT
       if(rbu.role = 1, 1, 0) as is_admin
     from
@@ -27,18 +39,26 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
       and rbu.active > 0;
     `;
     try {
-      const isAdmin = await this.query(queryData, [userId]);
+      const isAdmin = await this.query(queryWithCenter, [userId]);
       if (isAdmin?.length > 0) {
-        return !!parseInt(isAdmin[0].is_admin);
+        return !!Number.parseInt(isAdmin[0].is_admin);
       }
 
       return null;
-    } catch (error) {
-      throw this._handlersError.returnErrorRepository({
-        className: RoleByUserRepository.name,
-        error: error,
-        debug: true,
-      });
+    } catch (_error) {
+      try {
+        const isAdmin = await this.query(queryLegacy, [userId]);
+        if (isAdmin?.length > 0) {
+          return !!Number.parseInt(isAdmin[0].is_admin);
+        }
+        return null;
+      } catch (legacyError) {
+        throw this._handlersError.returnErrorRepository({
+          className: RoleByUserRepository.name,
+          error: legacyError,
+          debug: true,
+        });
+      }
     }
   }
 
@@ -53,6 +73,7 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
       AND rbu.active > 0
       AND rbu.initiative_id IS NULL
       AND rbu.action_area_id IS NULL
+      AND rbu.center_id IS NULL
     LIMIT
       1;
 	`;
@@ -82,7 +103,27 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
   }
 
   async getAllRolesByUser(userId: number) {
-    const queryData = `
+    const queryWithCenter = `
+    select  
+    	r.id as role_id,
+    	rl.id as role_level_id,
+    	rl.name as role_level_name,
+    	r.description,
+    	rbu.initiative_id,
+    	rbu.action_area_id,
+    	rbu.center_id,
+    	ci.name as center_name,
+    	ci.acronym as center_acronym
+    from role_by_user rbu 
+    	inner join \`role\` r on r.id = rbu.\`role\` 
+    						and r.active > 0
+    	inner join role_levels rl on rl.id = r.role_level_id 
+    	left join clarisa_center cc on cc.code = rbu.center_id
+    	left join clarisa_institutions ci on ci.id = cc.institutionId
+    where rbu.\`user\` = ?
+      and rbu.active > 0;
+    `;
+    const queryLegacy = `
     select  
     	r.id as role_id,
     	rl.id as role_level_id,
@@ -98,18 +139,21 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
       and rbu.active > 0;
     `;
     try {
-      const deleteData = await this.query(queryData, [userId]);
-      return deleteData;
-    } catch (error) {
-      throw this._handlersError.returnErrorRepository({
-        className: RoleByUserRepository.name,
-        error: error,
-        debug: true,
-      });
+      return await this.query(queryWithCenter, [userId]);
+    } catch (_error) {
+      try {
+        return await this.query(queryLegacy, [userId]);
+      } catch (legacyError) {
+        throw this._handlersError.returnErrorRepository({
+          className: RoleByUserRepository.name,
+          error: legacyError,
+          debug: true,
+        });
+      }
     }
   }
 
-  async getSpecificRole(config: getSpecificRoleDto) {
+  async getSpecificRole(config: GetSpecificRoleDto) {
     const queryData = `
     select  
     	r.id as role_id,
@@ -165,6 +209,7 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
 	    		and u.id = ?
 	    		and rbu.action_area_id is NULL
 	    		and rbu.initiative_id is null
+	    		and rbu.center_id is null
         order by rbu.\`role\` asc
 	    	LIMIT 1) = 1) then true
 	    	else CASE 
@@ -198,7 +243,7 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
         [userId, userId, resultId],
       );
       return getSpecificRole?.length
-        ? parseInt(getSpecificRole[0].validation)
+        ? Number.parseInt(getSpecificRole[0].validation)
         : 0;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
@@ -225,7 +270,8 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
     and ubr.action_area_id is ${
       type == RoleTypeEnum.ACTION_AREA ? 'not' : ''
     } NULL
-    or (ubr.\`role\` = 1 and ubr.user = ?)
+    and ubr.center_id is ${type == RoleTypeEnum.CENTER ? 'not' : ''} NULL
+    or (ubr.\`role\` = 1 and ubr.user = ? and ubr.initiative_id is null and ubr.action_area_id is null and ubr.center_id is null)
   group by ubr.user;
     `;
     const result: { max_role: number }[] = await this.query(query, [
@@ -251,9 +297,43 @@ export class RoleByUserRepository extends Repository<RoleByUser> {
       roleByUser.role = guestRoleId;
       roleByUser.initiative_id = null;
       roleByUser.action_area_id = null;
+      roleByUser.center_id = null;
       roleByUser.active = true;
 
       return await this.save(roleByUser);
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: RoleByUserRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
+  async validationCenterPermissions(
+    userId: number,
+    centerCode: string,
+  ): Promise<number> {
+    const queryData = `
+    SELECT
+      CASE
+        WHEN EXISTS (
+          SELECT 1
+          FROM role_by_user rbu
+          WHERE rbu.\`user\` = ?
+            AND rbu.center_id = ?
+            AND rbu.\`role\` = 9
+            AND rbu.active > 0
+        ) THEN 1
+        ELSE 0
+      END AS validation;
+    `;
+    try {
+      const result: Array<{ validation: string }> = await this.query(
+        queryData,
+        [userId, centerCode],
+      );
+      return result?.length ? Number.parseInt(result[0].validation) : 0;
     } catch (error) {
       throw this._handlersError.returnErrorRepository({
         className: RoleByUserRepository.name,

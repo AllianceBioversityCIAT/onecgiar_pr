@@ -182,11 +182,9 @@ export class BiReportRepository extends Repository<BiReport> {
 
     return await this.query(
       `SELECT JSON_OBJECT(${columnNames}) as report, 
-      JSON_ARRAYAGG(IF (f.id IS null,null,JSON_OBJECT(${filterColumnNames}))) AS filters, 
-      JSON_ARRAYAGG(IF (bs.id IS null,null,JSON_OBJECT(${subpageColumnNames}))) AS subpages
+      COALESCE((SELECT JSON_ARRAYAGG(IF (f.id IS null,null,JSON_OBJECT(${filterColumnNames}))) FROM bi_filters f WHERE f.report_id = r.id), JSON_ARRAY()) AS filters, 
+      COALESCE((SELECT JSON_ARRAYAGG(IF (bs.id IS null,null,JSON_OBJECT(${subpageColumnNames}))) FROM bi_subpages bs WHERE bs.report_id = r.id), JSON_ARRAY()) AS subpages
       FROM bi_reports r
-      LEFT JOIN bi_filters f ON r.id = f.report_id 
-      LEFT JOIN bi_subpages bs ON r.id = bs.report_id 
       WHERE r.is_active = 1 
       GROUP BY r.id
       ORDER BY r.report_order ASC;`,

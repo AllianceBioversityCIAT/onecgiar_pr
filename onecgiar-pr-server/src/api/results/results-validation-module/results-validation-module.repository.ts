@@ -28,6 +28,10 @@ export class resultValidationRepository
     /^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/\S*)?$/i,
   );
 
+  private specificValidations = {
+    planeAndType: (...typeIds: ResultTypeEnum[]) =>
+      `if(rtr.planned_result = false and r.result_type_id in (${typeIds.toString()}), true, rtr.toc_result_id IS NOT NULL)`,
+  };
   async validateResultById(resultId: number): Promise<NewValidationsDto[]> {
     const result = await this.dataSource.getRepository(Result).findOne({
       where: {
@@ -253,6 +257,12 @@ export class resultValidationRepository
   async tocValidation(resultId: number, resultLevel: number) {
     const { version } = await this.version();
 
+    const specificSql = this.specificValidations.planeAndType(
+      ResultTypeEnum.POLICY_CHANGE,
+      ResultTypeEnum.INNOVATION_USE,
+      ResultTypeEnum.OTHER_OUTCOME,
+    );
+
     const queryData = `
 	SELECT
 		'theory-of-change' AS section_name,
@@ -270,7 +280,7 @@ export class resultValidationRepository
 				FROM results_toc_result rtr
 				WHERE rtr.results_id = r.id
 				AND rtr.is_active > 0
-				AND toc_result_id IS NOT NULL
+				AND ${specificSql}
 			)
 		)
 		AND (
@@ -279,7 +289,7 @@ export class resultValidationRepository
 				FROM results_toc_result rtr
 				WHERE rtr.initiative_id IN (rbi.inititiative_id)
 				AND rtr.results_id = r.id
-				AND rtr.toc_result_id IS NOT NULL
+				AND ${specificSql}
 				AND rtr.is_active > 0
 			) = 1
 		)
@@ -292,7 +302,7 @@ export class resultValidationRepository
 						WHERE rtr.initiative_id NOT IN (rbi.inititiative_id)
 						AND rtr.results_id = r.id
 						AND rtr.is_active > 0
-						AND rtr.toc_result_id IS NOT NULL
+						AND ${specificSql} 
 					),
 					0
 				)

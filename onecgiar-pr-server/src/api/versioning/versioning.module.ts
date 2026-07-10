@@ -41,6 +41,7 @@ import { ResultStatusRepository } from '../results/result-status/result-status.r
 import { ResultsActionAreaOutcomeRepository } from '../results/results-toc-results/repositories/result-toc-action-area.repository';
 import { ResultsTocTargetIndicatorRepository } from '../results/results-toc-results/repositories/result-toc-result-target-indicator.repository';
 import { ResultInitiativeBudgetRepository } from '../results/result_budget/repositories/result_initiative_budget.repository';
+import { ResultTypeRepository } from '../results/result_types/resultType.repository';
 import { EvidenceSharepointRepository } from '../results/evidences/repositories/evidence-sharepoint.repository';
 import { EvidencesService } from '../results/evidences/evidences.service';
 import { SharePointModule } from '../../shared/services/share-point/share-point.module';
@@ -63,6 +64,7 @@ import { ResultActorRepository } from '../results/result-actors/repositories/res
 import { NonPooledProjectBudgetRepository } from '../results/result_budget/repositories/non_pooled_proyect_budget.repository';
 import { ResultInstitutionsBudgetRepository } from '../results/result_budget/repositories/result_institutions_budget.repository';
 import { ResultCountrySubnationalRepository } from '../results/result-countries-sub-national/repositories/result-country-subnational.repository';
+import { ResultsTocResultIndicatorsService } from '../results/results-toc-results/results-toc-result-indicators.service';
 import { ResultAnswerRepository } from '../results/result-questions/repository/result-answers.repository';
 import { MQAPModule } from '../m-qap/m-qap.module';
 import { MQAPService } from '../m-qap/m-qap.service';
@@ -110,6 +112,7 @@ import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/
     ResultsActionAreaOutcomeRepository,
     ResultsTocTargetIndicatorRepository,
     ResultInitiativeBudgetRepository,
+    ResultTypeRepository,
     NonPooledProjectBudgetRepository,
     ResultInstitutionsBudgetRepository,
     EvidenceSharepointRepository,
@@ -129,6 +132,7 @@ import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/
     ResultsByIpInnovationUseMeasureRepository,
     ResultsIpInstitutionTypeRepository,
     ResultCountrySubnationalRepository,
+    ResultsTocResultIndicatorsService,
     ResultAnswerRepository,
     MQAPService,
     ClarisaInitiativesRepository,
@@ -167,6 +171,7 @@ import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/
     ResultsKnowledgeProductInstitutionRepository,
     RoleByUserRepository,
     ResultInitiativeBudgetRepository,
+    ResultTypeRepository,
     EvidenceSharepointRepository,
     ShareResultRequestRepository,
     IpsrRepository,

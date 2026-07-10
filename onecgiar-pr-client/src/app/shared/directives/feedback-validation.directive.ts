@@ -8,7 +8,9 @@ export class FeedbackValidationDirective implements OnInit, DoCheck {
   @Input() labelText: string = '';
   @Input() isComplete: boolean = false;
   fieldDiv = null;
+
   constructor(private el: ElementRef, private renderer: Renderer2) {}
+
   ngOnInit() {
     const labelDiv = this.renderer.createElement('div');
     this.renderer.addClass(labelDiv, 'pr_label');

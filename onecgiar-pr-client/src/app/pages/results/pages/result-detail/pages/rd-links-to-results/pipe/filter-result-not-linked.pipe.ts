@@ -9,6 +9,7 @@ export class FilterResultNotLinkedPipe implements PipeTransform {
   constructor(private readonly api: ApiService) {}
   transform(list: any[], linkedList: any[], combine: boolean, counter: number, text_to_search: string): any {
     if (!list?.length) return [];
+
     list = list.filter(result => result.id != this.api.resultsSE.currentResultId);
     list.forEach(result => {
       result.selected = false;
@@ -17,6 +18,7 @@ export class FilterResultNotLinkedPipe implements PipeTransform {
       const resultFinded = list.find(linked => linked.id == result.id);
       if (resultFinded) resultFinded.selected = true;
     });
+
     return this.convertList(this.filterByText(list, text_to_search), combine);
   }
 
@@ -28,6 +30,7 @@ export class FilterResultNotLinkedPipe implements PipeTransform {
         item.joinAll += (item[attr] ?? '') + ' ';
       });
     });
+
     return resultList.filter(item => item.joinAll.toUpperCase().indexOf(word?.toUpperCase()) > -1);
   }
 
@@ -36,15 +39,14 @@ export class FilterResultNotLinkedPipe implements PipeTransform {
   }
 
   separateResultInList(results) {
-    results.map(result => {
+    results.forEach(result => {
       result.results = [result];
     });
-    // //(results);
+
     return results;
   }
 
   combineRepeatedResults(results) {
-    // //('combineRepeatedResults');
     const resultMap: Record<number, any> = {};
 
     results.forEach(result => {
@@ -62,12 +64,7 @@ export class FilterResultNotLinkedPipe implements PipeTransform {
     });
 
     const transformedData = Object.values(resultMap);
-    // //(transformedData);
 
     return transformedData;
-
-    // teniendo los resultados anteriores necesito combinar los resultados iguales segun el result_code dejar un objeto con title y result_code pero dentro un array con la demas informacion de los resultados repetidos
   }
 }
-
-// , word: string

@@ -456,7 +456,6 @@ export class ExportTablesService {
           actual_target_achieved: 'Not provided',
           achieved_status: 'No',
           reporting_status: 'Editing',
-
           ...(isT1R
             ? {}
             : {

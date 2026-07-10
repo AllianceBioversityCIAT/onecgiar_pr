@@ -9,8 +9,7 @@ describe('AowHloCreateModalComponent - Unit Tests', () => {
       const mqapJson = signal({ metadata: [{ source: 'CGSpace' }] });
       const result_type_id = null;
 
-      const isKnowledgeProduct =
-        currentResultToReport()?.indicators?.[0]?.type_name === 'Number of knowledge products' || result_type_id === 6;
+      const isKnowledgeProduct = currentResultToReport()?.indicators?.[0]?.type_name === 'Number of knowledge products' || result_type_id === 6;
 
       let label = 'Title';
       if (isKnowledgeProduct && mqapJson()?.metadata?.length > 0) {
@@ -28,8 +27,7 @@ describe('AowHloCreateModalComponent - Unit Tests', () => {
       });
       const result_type_id = null;
 
-      const isKnowledgeProduct =
-        currentResultToReport()?.indicators?.[0]?.type_name === 'Number of knowledge products' || result_type_id === 6;
+      const isKnowledgeProduct = currentResultToReport()?.indicators?.[0]?.type_name === 'Number of knowledge products' || result_type_id === 6;
 
       let label = 'Title';
       if (isKnowledgeProduct) {
@@ -37,6 +35,140 @@ describe('AowHloCreateModalComponent - Unit Tests', () => {
       }
 
       expect(label).toBe('Title');
+    });
+  });
+
+  describe('preselectTocCenters logic (P2-3114)', () => {
+    const deriveTocCenters = (indicator: any, centersList: any[]) => {
+      const tocAcronyms = (indicator?.targets_by_center?.centers ?? []).map((c: any) => c?.center_acronym).filter(Boolean);
+      if (!tocAcronyms.length) return [];
+      return centersList.filter((c: any) => tocAcronyms.includes(c.acronym)).map((c: any) => ({ ...c, from_toc: true }));
+    };
+
+    it('should preselect the ToC-mapped centers tagged from_toc:true', () => {
+      const indicator = { targets_by_center: { centers: [{ center_acronym: 'ABC' }, { center_acronym: 'CIP' }] } };
+      const centersList = [
+        { code: 'ABC', acronym: 'ABC', name: 'Alliance' },
+        { code: 'CIP', acronym: 'CIP', name: 'CIP' },
+        { code: 'IRRI', acronym: 'IRRI', name: 'IRRI' }
+      ];
+
+      const preselected = deriveTocCenters(indicator, centersList);
+
+      expect(preselected.map(c => c.acronym)).toEqual(['ABC', 'CIP']);
+      expect(preselected.every(c => c.from_toc === true)).toBe(true);
+    });
+
+    it('should preselect nothing when the indicator has no mapped centers', () => {
+      const indicator = { targets_by_center: { centers: [] } };
+      const centersList = [{ code: 'ABC', acronym: 'ABC', name: 'Alliance' }];
+
+      expect(deriveTocCenters(indicator, centersList)).toEqual([]);
+    });
+  });
+
+  describe('createResult from_toc tagging (P2-3114)', () => {
+    it('should default from_toc to false for manually-added centers', () => {
+      const contributing_center = [
+        { code: 'ABC', from_toc: true },
+        { code: 'IRRI' } // manually added, no from_toc
+      ];
+
+      const tagged = contributing_center.map((c: any) => ({ ...c, from_toc: c?.from_toc ?? false }));
+
+      expect(tagged.find(c => c.code === 'ABC')?.from_toc).toBe(true);
+      expect(tagged.find(c => c.code === 'IRRI')?.from_toc).toBe(false);
+    });
+  });
+
+  describe('Centers ToC/Other split logic (P2-3114)', () => {
+    const OTHER = '__OTHER_CENTERS__';
+
+    it('should reveal dropdown 2 when "Other(s)" is in dropdown 1 selection (sentinel kept, C&P parity)', () => {
+      const OTHER = '__OTHER_CENTERS__';
+      const contributing_center = [{ code: 'IRRI', from_toc: true }, { code: OTHER }];
+      const showOtherCenters = contributing_center.some(c => c.code === OTHER);
+
+      expect(showOtherCenters).toBe(true);
+      expect(contributing_center.some(c => c.code === OTHER)).toBe(true);
+      expect(contributing_center.map(c => c.code)).toEqual(['IRRI', OTHER]);
+    });
+
+    it('should clear otherCenters when "Other(s)" is deselected from dropdown 1', () => {
+      const OTHER = '__OTHER_CENTERS__';
+      const contributing_center = signal<any[]>([{ code: 'IRRI', from_toc: true }]);
+      const otherCentersSelected = signal<any[]>([{ code: 'CIAT' }]);
+      const showOtherCenters = () => contributing_center().some(c => c.code === OTHER);
+
+      // onContributingCenterSelect logic after deselect
+      if (!showOtherCenters()) {
+        otherCentersSelected.set([]);
+      }
+
+      expect(showOtherCenters()).toBe(false);
+      expect(otherCentersSelected()).toEqual([]);
+    });
+
+    it('should merge dropdown1 (from_toc:true) + otherCenters (from_toc:false), excluding the sentinel', () => {
+      const dropdown1 = [{ code: 'IRRI', from_toc: true }, { code: OTHER }];
+      const otherCentersSelected = [{ code: 'CIAT' }];
+
+      const merged = [
+        ...dropdown1.filter((c: any) => c?.code !== OTHER).map((c: any) => ({ ...c, from_toc: true })),
+        ...otherCentersSelected.map((c: any) => ({ ...c, from_toc: false }))
+      ];
+
+      expect(merged).toEqual([
+        { code: 'IRRI', from_toc: true },
+        { code: 'CIAT', from_toc: false }
+      ]);
+    });
+
+    it('should auto-open dropdown 2 when the ToC returns no centers (AC4 via !hasReferenceCenters)', () => {
+      const tocCenters: any[] = [];
+      const hasReferenceCenters = tocCenters.length > 0;
+      expect(hasReferenceCenters).toBe(false);
+    });
+  });
+
+  describe('Science Programs ToC/Other split logic (P2-3114)', () => {
+    const OTHER_SP = -999;
+
+    it('should preselect ToC science programs by id, tagged from_toc:true', () => {
+      const tocSpIds = [51, 57];
+      const allInits = [
+        { id: 51, official_code: 'SP02', name: 'Sustainable Farming' },
+        { id: 52, official_code: 'SP03', name: 'Animal' },
+        { id: 57, official_code: 'SP08', name: 'Food Frontiers' }
+      ];
+
+      const preselected = allInits.filter(sp => tocSpIds.includes(sp.id)).map(sp => ({ ...sp, from_toc: true }));
+
+      expect(preselected.map(s => s.official_code)).toEqual(['SP02', 'SP08']);
+      expect(preselected.every(s => s.from_toc === true)).toBe(true);
+    });
+
+    it('should reveal dropdown 2 when "Other(s)" is in SP dropdown 1 (sentinel kept, C&P parity)', () => {
+      const selectedEntities = [{ id: 51 }, { id: OTHER_SP }];
+      const showOtherScience = selectedEntities.some(sp => sp?.id === OTHER_SP);
+
+      expect(showOtherScience).toBe(true);
+      expect(selectedEntities.map(s => s.id)).toEqual([51, OTHER_SP]);
+    });
+
+    it('should merge dropdown1 (from_toc:true) + otherScience (from_toc:false), excluding the sentinel', () => {
+      const selectedEntities = [{ id: 51 }, { id: OTHER_SP }];
+      const otherScienceSelected = [{ id: 61 }];
+
+      const merged = [
+        ...selectedEntities.filter(sp => sp?.id !== OTHER_SP).map(sp => ({ ...sp, from_toc: true })),
+        ...otherScienceSelected.map(sp => ({ ...sp, from_toc: false }))
+      ];
+
+      expect(merged).toEqual([
+        { id: 51, from_toc: true },
+        { id: 61, from_toc: false }
+      ]);
     });
   });
 

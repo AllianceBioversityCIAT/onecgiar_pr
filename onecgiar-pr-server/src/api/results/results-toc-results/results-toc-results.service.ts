@@ -1,12 +1,15 @@
 import { forwardRef, Inject, Injectable, HttpStatus } from '@nestjs/common';
 import { In, Not } from 'typeorm';
-import { env } from 'process';
+import { env } from 'node:process';
 import Handlebars from 'handlebars';
 import {
   ContributorResultTocResult,
   CreateResultsTocResultDto,
 } from './dto/create-results-toc-result.dto';
-import { CreateResultsTocResultV2Dto } from './dto/create-results-toc-result-v2.dto';
+import {
+  CreateResultsTocResultV2Dto,
+  ContributingInitiativeTocFlagDto,
+} from './dto/create-results-toc-result-v2.dto';
 import { ResultsTocResultRepository } from './repositories/results-toc-results.repository';
 import { HandlersError } from '../../../shared/handlers/error.utils';
 import { ResultsTocResult } from './entities/results-toc-result.entity';
@@ -19,6 +22,7 @@ import { ClarisaImpactAreaRepository } from '../../../clarisa/clarisa-impact-are
 import { ShareResultRequestService } from '../share-result-request/share-result-request.service';
 import { CreateTocShareResult } from '../share-result-request/dto/create-toc-share-result.dto';
 import { ShareResultRequestRepository } from '../share-result-request/share-result-request.repository';
+import { TocLevelEnum } from '../../../shared/constants/toc-level.enum';
 import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { TemplateRepository } from '../../platform-report/repositories/template.repository';
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
@@ -225,7 +229,7 @@ export class ResultsTocResultsService {
             await this._resultsTocResultRepository.saveActionAreaOutcomeResult(
               result_id,
               resultAction?.action,
-              resultAction?.init,
+              initSubmitter?.initiative_id,
             );
           }
         }
@@ -306,7 +310,6 @@ export class ResultsTocResultsService {
           resTocRes[0]['planned_result'] == 0
             ? 3
             : resTocRes[0]['toc_level_id'];
-
         for (const init of conInit) {
           result_toc_results =
             await this._resultsTocResultRepository.getRTRPrimary(
@@ -316,7 +319,10 @@ export class ResultsTocResultsService {
               [init.id],
             );
           result_toc_results.forEach((el) => {
-            if (el['planned_result'] === false) {
+            if (
+              el['planned_result'] === false &&
+              el['toc_level_id'] !== TocLevelEnum.ACTION_AREA_OUTCOME
+            ) {
               el['toc_level_id'] = 3;
             }
           });
@@ -465,7 +471,7 @@ export class ResultsTocResultsService {
           this._resultByInitiativesRepository.getContributorInitiativeByResult(
             resultId,
           ),
-          this._resultByInitiativesRepository.getPendingInit(resultId),
+          this._resultByInitiativesRepository.getDraftInit(resultId),
           this._resultByInitiativesRepository.getContributorInitiativeAndPrimaryByResult(
             resultId,
           ),
@@ -515,6 +521,7 @@ export class ResultsTocResultsService {
         initiative_id: number | null;
         toc_progressive_narrative: string | null;
         toc_level_id: number | null;
+        program_invested_financial_resources: boolean | null;
         indicatorsMap: Map<number, IndicatorAccumulator>;
       }
 
@@ -588,6 +595,11 @@ export class ResultsTocResultsService {
               row?.toc_level_id !== null && row?.toc_level_id !== undefined
                 ? Number(row.toc_level_id)
                 : null,
+            program_invested_financial_resources:
+              row?.program_invested_financial_resources === null ||
+              row?.program_invested_financial_resources === undefined
+                ? null
+                : Boolean(row.program_invested_financial_resources),
             indicatorsMap: new Map(),
           };
           initiativeEntry.resultsMap.set(resultTocResultId, resultEntry);
@@ -701,6 +713,8 @@ export class ResultsTocResultsService {
                 initiative_id: result.initiative_id,
                 toc_progressive_narrative: result.toc_progressive_narrative,
                 toc_level_id: result.toc_level_id,
+                program_invested_financial_resources:
+                  result.program_invested_financial_resources,
                 indicators: Array.from(result.indicatorsMap.values()).map(
                   (indicator) => ({
                     result_toc_result_indicator_id:
@@ -1006,7 +1020,11 @@ export class ResultsTocResultsService {
         } else {
           RtR = null;
         }
-
+        const saveResultTocResult =
+          this.validPermissionToSaveResultTocId<number>(
+            toc.toc_level_id,
+            toc.toc_result_id,
+          );
         if (RtR) {
           if (result.result_level_id == 2) {
             RtR.action_area_outcome_id = toc?.action_area_outcome_id || null;
@@ -1021,7 +1039,8 @@ export class ResultsTocResultsService {
           await this._resultsTocResultRepository.update(
             RtR.result_toc_result_id,
             {
-              toc_result_id: toc.toc_result_id,
+              toc_result_id: saveResultTocResult,
+              toc_level_id: toc.toc_level_id,
               action_area_outcome_id: toc.action_area_outcome_id,
               last_updated_by: user.id,
               planned_result:
@@ -1155,6 +1174,11 @@ export class ResultsTocResultsService {
     } catch (error) {
       return this._handlersError.returnErrorRes({ error });
     }
+  }
+
+  validPermissionToSaveResultTocId<T>(tocLevelId: TocLevelEnum, data: T): T {
+    if (TocLevelEnum.ACTION_AREA_OUTCOME === tocLevelId) return null;
+    return data ?? null;
   }
 
   async saveMapToToc(
@@ -1304,8 +1328,6 @@ export class ResultsTocResultsService {
       const {
         result_id,
         contributing_initiatives,
-        accepted_contributing_initiatives,
-        pending_contributing_initiatives,
         cancel_pending_requests,
         changePrimaryInit,
         email_template,
@@ -1339,27 +1361,54 @@ export class ResultsTocResultsService {
         initSubmitter = newInit;
       }
 
-      let acceptedIds: number[] = accepted_contributing_initiatives?.length
-        ? accepted_contributing_initiatives
-        : [];
-      let pendingIds: number[] = pending_contributing_initiatives?.length
-        ? pending_contributing_initiatives
-        : [];
+      let acceptedIds: number[] = [];
+      let pendingIds: number[] = [];
+      let acceptedFromTocById = new Map<number, boolean>();
+      let pendingFromTocById = new Map<number, boolean>();
 
-      if (contributing_initiatives?.accepted_contributing_initiatives?.length) {
-        acceptedIds = contributing_initiatives.accepted_contributing_initiatives
-          .map((i) => i.id)
-          .filter((id) => id !== initSubmitter.initiative_id);
-      } else {
-        acceptedIds = acceptedIds.filter(
-          (id) => id !== initSubmitter.initiative_id,
+      const tocDto = dto as CreateResultsTocResultV2Dto &
+        CreateResultsTocResultDto;
+      const acceptedPayload = this.resolveContributingInitiativesPayload(
+        tocDto,
+        contributing_initiatives,
+        'accepted_contributing_initiatives',
+      );
+      const pendingPayload = this.resolveContributingInitiativesPayload(
+        tocDto,
+        contributing_initiatives,
+        'pending_contributing_initiatives',
+      );
+
+      if (acceptedPayload.explicit) {
+        const acceptedEntries = this.extractInitiativeTocEntries(
+          acceptedPayload.value,
         );
+        acceptedIds = acceptedEntries.ids;
+        acceptedFromTocById = acceptedEntries.fromTocById;
       }
-      if (contributing_initiatives?.pending_contributing_initiatives?.length) {
-        pendingIds =
-          contributing_initiatives.pending_contributing_initiatives.map(
-            (i) => i.id,
-          );
+
+      acceptedIds = acceptedIds.filter(
+        (id) => id !== initSubmitter.initiative_id,
+      );
+
+      if (pendingPayload.explicit) {
+        const pendingEntries = this.extractInitiativeTocEntries(
+          pendingPayload.value,
+        );
+        pendingIds = pendingEntries.ids;
+        pendingFromTocById = pendingEntries.fromTocById;
+      }
+
+      pendingIds = pendingIds.filter(
+        (id) => id !== initSubmitter.initiative_id,
+      );
+
+      if (pendingPayload.explicit) {
+        await this.cancelOrphanedPendingShareRequests(
+          result_id,
+          pendingIds,
+          initSubmitter?.initiative_id ?? null,
+        );
       }
 
       const contributingInit =
@@ -1370,6 +1419,23 @@ export class ResultsTocResultsService {
           false,
           pendingIds,
         );
+
+      if (acceptedIds.length) {
+        await this._resultByInitiativesRepository.upsertContributorInitiatives(
+          result_id,
+          acceptedIds,
+          acceptedFromTocById,
+          user.id,
+        );
+      }
+
+      if (acceptedFromTocById.size) {
+        await this._resultByInitiativesRepository.updateInitiativeFromTocFlags(
+          result_id,
+          acceptedFromTocById,
+          user.id,
+        );
+      }
 
       if (contributingInit.length > 0) {
         await this.sendEmailNotification(
@@ -1384,6 +1450,7 @@ export class ResultsTocResultsService {
         const dataRequest: CreateTocShareResult = {
           isToc: false,
           initiativeShareId: pendingIds,
+          initiativeFromToc: Object.fromEntries(pendingFromTocById),
           email_template,
         };
         await this._shareResultRequestService.resultRequest(
@@ -1391,6 +1458,23 @@ export class ResultsTocResultsService {
           result_id,
           user,
         );
+
+        if (pendingFromTocById.size) {
+          await this._resultByInitiativesRepository.updateInitiativeFromTocFlags(
+            result_id,
+            pendingFromTocById,
+            user.id,
+          );
+
+          for (const [initiativeId, fromToc] of pendingFromTocById.entries()) {
+            await this._shareResultRequestRepository.updateFromTocByResultAndInitiative(
+              result_id,
+              initiativeId,
+              fromToc,
+              user.id,
+            );
+          }
+        }
       }
 
       const toCancelIds =
@@ -1463,6 +1547,8 @@ export class ResultsTocResultsService {
                 toc_result_id: t?.toc_result_id ?? null,
                 toc_progressive_narrative: t?.toc_progressive_narrative ?? null,
                 toc_level_id: t?.toc_level_id ?? null,
+                program_invested_financial_resources:
+                  this.resolveProgramInvestedFinancialResources(t),
                 planned_result: result_toc_result?.planned_result ?? null,
                 action_area_outcome_id: null,
                 is_active: true,
@@ -1487,6 +1573,8 @@ export class ResultsTocResultsService {
                 toc_result_id: t?.toc_result_id ?? null,
                 toc_progressive_narrative: t?.toc_progressive_narrative ?? null,
                 toc_level_id: t?.toc_level_id ?? null,
+                program_invested_financial_resources:
+                  this.resolveProgramInvestedFinancialResources(t),
                 planned_result: result_toc_result?.planned_result ?? null,
                 action_area_outcome_id: null,
                 result_id: result.id,
@@ -1582,12 +1670,18 @@ export class ResultsTocResultsService {
                 updatePayload.initiative_ids = resolvedInitiativeId;
               }
 
+              this.applyProgramInvestedFinancialResourcesToPayload(
+                updatePayload,
+                t,
+                result_toc_result,
+              );
+
               await this._resultsTocResultRepository.update(
                 Number(t.result_toc_result_id),
                 updatePayload,
               );
             } else {
-              await this._resultsTocResultRepository.insert({
+              const insertPayload: Record<string, any> = {
                 initiative_ids: resolvedInitiativeId ?? null,
                 toc_result_id: t?.toc_result_id ?? null,
                 toc_progressive_narrative: unplannedTocProgressiveNarrative,
@@ -1598,43 +1692,55 @@ export class ResultsTocResultsService {
                 is_active: true,
                 created_by: user.id,
                 last_updated_by: user.id,
-              });
+              };
+
+              this.applyProgramInvestedFinancialResourcesToPayload(
+                insertPayload,
+                t,
+                result_toc_result,
+              );
+
+              await this._resultsTocResultRepository.insert(insertPayload);
             }
           }
         } else {
           // Handle unplanned results without result_toc_results (original special case)
-          interface SpecialCaseResultTocResult {
-            planned_result: boolean;
-            initiative_id: number;
-            toc_progressive_narrative: string;
-          }
-
-          const rtr =
-            result_toc_result as unknown as SpecialCaseResultTocResult;
           const isSpecialCase =
-            rtr.planned_result === false && rtr.initiative_id;
+            result_toc_result?.planned_result === false &&
+            result_toc_result?.initiative_id;
 
           if (isSpecialCase) {
             await this._resultsTocResultRepository.update(
-              { result_id, initiative_ids: rtr.initiative_id },
+              { result_id, initiative_ids: result_toc_result.initiative_id },
               {
                 is_active: false,
                 last_updated_by: user.id,
               },
             );
 
-            await this._resultsTocResultRepository.insert({
-              initiative_ids: rtr.initiative_id,
+            const specialCaseInsertPayload: Record<string, any> = {
+              initiative_ids: result_toc_result.initiative_id,
               toc_result_id: null,
               toc_level_id: null,
-              toc_progressive_narrative: rtr.toc_progressive_narrative ?? null,
-              planned_result: rtr.planned_result,
+              toc_progressive_narrative:
+                result_toc_result.toc_progressive_narrative ?? null,
+              planned_result: result_toc_result.planned_result,
               action_area_outcome_id: null,
               result_id: result.id,
               is_active: true,
               created_by: user.id,
               last_updated_by: user.id,
-            });
+            };
+
+            this.applyProgramInvestedFinancialResourcesToPayload(
+              specialCaseInsertPayload,
+              null,
+              result_toc_result,
+            );
+
+            await this._resultsTocResultRepository.insert(
+              specialCaseInsertPayload,
+            );
           }
         }
       }
@@ -1672,12 +1778,18 @@ export class ResultsTocResultsService {
                 updatePayload.initiative_ids = resolvedContribInit;
               }
 
+              this.applyProgramInvestedFinancialResourcesToPayload(
+                updatePayload,
+                t,
+                contrib,
+              );
+
               await this._resultsTocResultRepository.update(
                 Number(t.result_toc_result_id),
                 updatePayload,
               );
             } else {
-              await this._resultsTocResultRepository.insert({
+              const insertPayload: Record<string, any> = {
                 initiative_ids: normalizeInitiativeId(contrib?.initiative_id),
                 toc_result_id: t?.toc_result_id ?? null,
                 toc_progressive_narrative: t?.toc_progressive_narrative ?? null,
@@ -1688,7 +1800,15 @@ export class ResultsTocResultsService {
                 is_active: true,
                 created_by: user.id,
                 last_updated_by: user.id,
-              });
+              };
+
+              this.applyProgramInvestedFinancialResourcesToPayload(
+                insertPayload,
+                t,
+                contrib,
+              );
+
+              await this._resultsTocResultRepository.insert(insertPayload);
             }
           }
         }
@@ -2027,6 +2147,8 @@ export class ResultsTocResultsService {
       toc_result_id: t?.toc_result_id ?? null,
       toc_progressive_narrative: t?.toc_progressive_narrative ?? null,
       toc_level_id: t?.toc_level_id ?? null,
+      program_invested_financial_resources:
+        this.resolveProgramInvestedFinancialResources(t),
       planned_result: resultTocResult?.planned_result ?? null,
       action_area_outcome_id: null,
       is_active: true,
@@ -2055,6 +2177,8 @@ export class ResultsTocResultsService {
       toc_result_id: t?.toc_result_id ?? null,
       toc_progressive_narrative: t?.toc_progressive_narrative ?? null,
       toc_level_id: t?.toc_level_id ?? null,
+      program_invested_financial_resources:
+        this.resolveProgramInvestedFinancialResources(t),
       planned_result: resultTocResult?.planned_result ?? null,
       action_area_outcome_id: null,
       result_id: result.id,
@@ -2176,6 +2300,7 @@ export class ResultsTocResultsService {
           t,
           unplannedTocProgressiveNarrative,
           resolvedInitiativeId,
+          resultTocResult,
           user,
         );
       } else {
@@ -2184,6 +2309,7 @@ export class ResultsTocResultsService {
           t,
           unplannedTocProgressiveNarrative,
           resolvedInitiativeId,
+          resultTocResult,
           user,
         );
       }
@@ -2194,6 +2320,7 @@ export class ResultsTocResultsService {
     t: any,
     unplannedTocProgressiveNarrative: string | null,
     resolvedInitiativeId: number | null,
+    resultTocResult: CreateResultsTocResultV2Dto['result_toc_result'],
     user: TokenDto,
   ): Promise<void> {
     const updatePayload: Record<string, any> = {
@@ -2210,6 +2337,12 @@ export class ResultsTocResultsService {
       updatePayload.initiative_ids = resolvedInitiativeId;
     }
 
+    this.applyProgramInvestedFinancialResourcesToPayload(
+      updatePayload,
+      t,
+      resultTocResult,
+    );
+
     await this._resultsTocResultRepository.update(
       Number(t.result_toc_result_id),
       updatePayload,
@@ -2221,9 +2354,10 @@ export class ResultsTocResultsService {
     t: any,
     unplannedTocProgressiveNarrative: string | null,
     resolvedInitiativeId: number | null,
+    resultTocResult: CreateResultsTocResultV2Dto['result_toc_result'],
     user: TokenDto,
   ): Promise<void> {
-    await this._resultsTocResultRepository.insert({
+    const insertPayload: Record<string, any> = {
       initiative_ids: resolvedInitiativeId ?? null,
       toc_result_id: t?.toc_result_id ?? null,
       toc_progressive_narrative: unplannedTocProgressiveNarrative,
@@ -2234,7 +2368,15 @@ export class ResultsTocResultsService {
       is_active: true,
       created_by: user.id,
       last_updated_by: user.id,
-    });
+    };
+
+    this.applyProgramInvestedFinancialResourcesToPayload(
+      insertPayload,
+      t,
+      resultTocResult,
+    );
+
+    await this._resultsTocResultRepository.insert(insertPayload);
   }
 
   private async _handleUnplannedSpecialCase(
@@ -2243,37 +2385,41 @@ export class ResultsTocResultsService {
     resultTocResult: CreateResultsTocResultV2Dto['result_toc_result'],
     user: TokenDto,
   ): Promise<void> {
-    interface SpecialCaseResultTocResult {
-      planned_result: boolean;
-      initiative_id: number;
-      toc_progressive_narrative: string;
-    }
-
-    const rtr = resultTocResult as unknown as SpecialCaseResultTocResult;
-    const isSpecialCase = rtr.planned_result === false && rtr.initiative_id;
+    const isSpecialCase =
+      resultTocResult?.planned_result === false &&
+      resultTocResult?.initiative_id;
 
     if (!isSpecialCase) return;
 
     await this._resultsTocResultRepository.update(
-      { result_id: resultId, initiative_ids: rtr.initiative_id },
+      { result_id: resultId, initiative_ids: resultTocResult.initiative_id },
       {
         is_active: false,
         last_updated_by: user.id,
       },
     );
 
-    await this._resultsTocResultRepository.insert({
-      initiative_ids: rtr.initiative_id,
+    const specialCaseInsertPayload: Record<string, any> = {
+      initiative_ids: resultTocResult.initiative_id,
       toc_result_id: null,
       toc_level_id: null,
-      toc_progressive_narrative: rtr.toc_progressive_narrative ?? null,
-      planned_result: rtr.planned_result,
+      toc_progressive_narrative:
+        resultTocResult.toc_progressive_narrative ?? null,
+      planned_result: resultTocResult.planned_result,
       action_area_outcome_id: null,
       result_id: result.id,
       is_active: true,
       created_by: user.id,
       last_updated_by: user.id,
-    });
+    };
+
+    this.applyProgramInvestedFinancialResourcesToPayload(
+      specialCaseInsertPayload,
+      null,
+      resultTocResult,
+    );
+
+    await this._resultsTocResultRepository.insert(specialCaseInsertPayload);
   }
 
   private async _handleIndicators(
@@ -2508,6 +2654,87 @@ export class ResultsTocResultsService {
     }
   }
 
+  private resolveProgramInvestedFinancialResources(
+    item:
+      | { program_invested_financial_resources?: boolean | null }
+      | null
+      | undefined,
+  ): boolean | null {
+    if (
+      item === null ||
+      item === undefined ||
+      !Object.prototype.hasOwnProperty.call(
+        item,
+        'program_invested_financial_resources',
+      )
+    ) {
+      return null;
+    }
+
+    const value = item.program_invested_financial_resources;
+    if (value === null || value === undefined) {
+      return null;
+    }
+
+    return Boolean(value);
+  }
+
+  private resolveProgramInvestedFinancialResourcesForUnplanned(
+    item:
+      | { program_invested_financial_resources?: boolean | null }
+      | null
+      | undefined,
+    block:
+      | { program_invested_financial_resources?: boolean | null }
+      | null
+      | undefined,
+  ): boolean | null | undefined {
+    if (
+      item !== null &&
+      item !== undefined &&
+      Object.prototype.hasOwnProperty.call(
+        item,
+        'program_invested_financial_resources',
+      )
+    ) {
+      return this.resolveProgramInvestedFinancialResources(item);
+    }
+
+    if (
+      block !== null &&
+      block !== undefined &&
+      Object.prototype.hasOwnProperty.call(
+        block,
+        'program_invested_financial_resources',
+      )
+    ) {
+      return this.resolveProgramInvestedFinancialResources(block);
+    }
+
+    return undefined;
+  }
+
+  private applyProgramInvestedFinancialResourcesToPayload(
+    payload: Record<string, any>,
+    item:
+      | { program_invested_financial_resources?: boolean | null }
+      | null
+      | undefined,
+    block:
+      | { program_invested_financial_resources?: boolean | null }
+      | null
+      | undefined,
+  ): void {
+    const value = this.resolveProgramInvestedFinancialResourcesForUnplanned(
+      item,
+      block,
+    );
+
+    if (value !== undefined) {
+      payload.program_invested_financial_resources = value;
+    }
+  }
+
   private groupCatalogTargetsByIndicatorNodeId(
     catalogTargets: Array<{
       toc_result_indicator_id: string;
@@ -2647,5 +2874,122 @@ export class ResultsTocResultsService {
         }
       }
     }
+  }
+
+  private resolveContributingInitiativesPayload(
+    dto: CreateResultsTocResultV2Dto & CreateResultsTocResultDto,
+    contributingInitiatives:
+      | {
+          accepted_contributing_initiatives?: Array<
+            number | ContributingInitiativeTocFlagDto
+          >;
+          pending_contributing_initiatives?: Array<
+            number | ContributingInitiativeTocFlagDto
+          >;
+        }
+      | undefined,
+    key:
+      | 'accepted_contributing_initiatives'
+      | 'pending_contributing_initiatives',
+  ): {
+    explicit: boolean;
+    value?: Array<number | ContributingInitiativeTocFlagDto>;
+  } {
+    if (
+      contributingInitiatives !== null &&
+      contributingInitiatives !== undefined &&
+      Object.prototype.hasOwnProperty.call(contributingInitiatives, key)
+    ) {
+      return {
+        explicit: true,
+        value: contributingInitiatives[key],
+      };
+    }
+
+    if (Object.prototype.hasOwnProperty.call(dto, key)) {
+      return {
+        explicit: true,
+        value: dto[key],
+      };
+    }
+
+    return { explicit: false };
+  }
+
+  private async cancelOrphanedPendingShareRequests(
+    resultId: number,
+    keepPendingInitiativeIds: number[],
+    submitterInitiativeId: number | null,
+  ): Promise<void> {
+    const activePending =
+      await this._resultByInitiativesRepository.getDraftInit(resultId);
+    const keepSet = new Set(keepPendingInitiativeIds ?? []);
+
+    const orphanRequestIds = (activePending ?? [])
+      .map((row) => ({
+        requestId: Number(
+          (row as { share_result_request_id?: number }).share_result_request_id,
+        ),
+        initiativeId: Number(row.id),
+      }))
+      .filter(
+        (row) =>
+          Number.isFinite(row.requestId) &&
+          row.requestId > 0 &&
+          Number.isFinite(row.initiativeId) &&
+          row.initiativeId > 0 &&
+          row.initiativeId !== submitterInitiativeId &&
+          !keepSet.has(row.initiativeId),
+      )
+      .map((row) => row.requestId);
+
+    if (orphanRequestIds.length) {
+      await this._shareResultRequestRepository.cancelRequest(orphanRequestIds);
+    }
+  }
+
+  private extractInitiativeTocEntries(
+    items?: Array<
+      | number
+      | ContributingInitiativeTocFlagDto
+      | {
+          id?: number;
+          from_toc?: boolean;
+        }
+    >,
+  ): { ids: number[]; fromTocById: Map<number, boolean> } {
+    const fromTocById = new Map<number, boolean>();
+    const ids: number[] = [];
+
+    for (const item of items ?? []) {
+      if (item === null || item === undefined) {
+        continue;
+      }
+
+      if (typeof item === 'number' || typeof item === 'string') {
+        const id = Number(item);
+        if (!Number.isFinite(id) || id <= 0) {
+          continue;
+        }
+        ids.push(id);
+        if (!fromTocById.has(id)) {
+          fromTocById.set(id, false);
+        }
+        continue;
+      }
+
+      const id = Number(item.id);
+      if (!Number.isFinite(id) || id <= 0) {
+        continue;
+      }
+
+      ids.push(id);
+      fromTocById.set(id, !!item.from_toc);
+    }
+
+    return {
+      ids: Array.from(new Set(ids)),
+      fromTocById,
+    };
   }
 }

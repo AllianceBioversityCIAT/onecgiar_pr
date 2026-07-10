@@ -5,6 +5,7 @@ import { DataControlService } from '../data-control.service';
 import {
   AISession,
   IAiRecommendation,
+  ImpactAreaScores,
   POSTAIAssistantCreateEvent,
   POSTAIAssistantSaveHistory,
   POSTPRMSQa,
@@ -14,6 +15,16 @@ import {
 import { ApiService } from './api.service';
 import { SaveButtonService } from '../../../custom-fields/save-button/save-button.service';
 import { Router } from '@angular/router';
+export interface DacScores {
+  field_name: string;
+  tag_id: string | number;
+  impact_area_id?: string | null;
+  change_reason?: string;
+  canSave?: boolean;
+  ai_recommendation?: string;
+  display_title?: string;
+  is_validated?: boolean;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -29,12 +40,80 @@ export class AiReviewService {
   aiReviewButtonState: 'idle' | 'loading' | 'completed' = 'idle';
   currnetFieldsList = signal<any[]>([]);
   aiContext = signal<any>(null);
+  dacScores = signal<DacScores[]>([]);
   api = inject(ApiService);
   saveButtonSE = inject(SaveButtonService);
   router = inject(Router);
 
   // Signal para notificar cuando se guarda en general-information
   generalInformationSaved = signal<number>(0);
+
+  /**
+   * Mapea el field_name a su título completo para mostrar en la UI
+   * @param fieldName - Nombre del campo (gender, climate, nutrition, environmental, poverty)
+   * @returns El título completo del área de impacto
+   */
+  private mapFieldNameToDisplayTitle(fieldName: string): string {
+    const fieldNameLower = fieldName.toLowerCase();
+
+    const titleMappings: Record<string, string> = {
+      gender: 'Gender equality, youth and social inclusion tag',
+      climate: 'Climate adaptation and mitigation',
+      nutrition: 'Nutrition, health and food security',
+      environmental: 'Environmental health and biodiversity tag',
+      poverty: 'Poverty reduction, livelihoods and jobs tag'
+    };
+
+    return titleMappings[fieldNameLower] || fieldName;
+  }
+
+  /**
+   * Mapea el field_name del DAC score al campo correspondiente en impact_area_scores
+   * @param fieldName - Nombre del campo (gender, climate, nutrition, environmental, poverty)
+   * @returns El nombre de la propiedad correspondiente en ImpactAreaScores
+   */
+  private mapFieldNameToImpactAreaKey(fieldName: string): keyof ImpactAreaScores | null {
+    const fieldNameLower = fieldName.toLowerCase();
+
+    const mappings: Record<string, keyof ImpactAreaScores> = {
+      gender: 'social_inclusion',
+      climate: 'climate_adaptation',
+      nutrition: 'food_security',
+      environmental: 'environmental_health',
+      poverty: 'poverty_reduction'
+    };
+
+    return mappings[fieldNameLower] || null;
+  }
+
+  /**
+   * Enriquece los DAC scores con las recomendaciones de IA
+   * @param dacScores - Array de DAC scores del backend
+   * @param impactAreaScores - Recomendaciones de IA para cada área de impacto
+   * @returns Array de DAC scores enriquecidos con recomendaciones
+   */
+  private enrichDacScoresWithAIRecommendations(dacScores: DacScores[], impactAreaScores: ImpactAreaScores): DacScores[] {
+    return dacScores.map(score => {
+      const mappingKey = this.mapFieldNameToImpactAreaKey(score.field_name);
+
+      if (!mappingKey) {
+        return { ...score, canSave: false, display_title: this.mapFieldNameToDisplayTitle(score.field_name), is_validated: false };
+      }
+
+      const aiRecommendation = impactAreaScores[mappingKey] || '';
+      const isValidated = aiRecommendation.toLowerCase().trim() === 'approved';
+
+      const enrichedScore: DacScores = {
+        ...score,
+        canSave: false,
+        display_title: this.mapFieldNameToDisplayTitle(score.field_name),
+        ai_recommendation: aiRecommendation,
+        is_validated: isValidated
+      };
+
+      return enrichedScore;
+    });
+  }
 
   // on AI review click
   async onAIReviewClick() {
@@ -47,26 +126,47 @@ export class AiReviewService {
       await this.POST_createSession();
       await this.GET_aiContext();
       await this.GET_resultContext();
-      const iaBody: POSTPRMSQa = {
-        user_id: this.api.authSE.localStorageUser.email,
-        result_metadata: this.aiContext()
-      };
-      const { json_content } = await this.POST_prmsQa(iaBody);
 
-      const customData = [
+      // Obtener DAC scores y recomendaciones de IA en paralelo
+      const [dacScoresData, { json_content }] = await Promise.all([
+        this.getDacScores(),
+        this.POST_prmsQa({
+          user_id: this.api.authSE.localStorageUser.email,
+          result_metadata: this.aiContext()
+        })
+      ]);
+
+      // Combinar DAC scores con recomendaciones de IA
+      const enrichedDacScores = this.enrichDacScoresWithAIRecommendations(dacScoresData, json_content.impact_area_scores);
+      this.dacScores.set(enrichedDacScores);
+
+      const allFieldsMapping = [
         { field_name_label: 'Title', field_name: 'new_title' },
         { field_name_label: 'Description', field_name: 'new_description' },
-        { field_name_label: 'Short Name', field_name: 'short_name' }
+        { field_name_label: 'Innovation Short Title', field_name: 'short_name' }
       ];
 
+      // Filtrar solo los campos que existen en json_content
+      const availableFields = allFieldsMapping.filter(field => json_content[field.field_name] !== undefined);
+
       this.currnetFieldsList.update(res => {
-        res.forEach((item, index) => {
-          item.proposed_text = json_content[customData[index].field_name];
-          item.needs_improvement = true;
-          item.field_name_label = customData[index].field_name_label;
+        // Filtrar la lista para incluir solo los campos disponibles en json_content
+        const filteredList = res.filter((_, index) => {
+          const fieldMapping = allFieldsMapping[index];
+          return fieldMapping && json_content[fieldMapping.field_name] !== undefined;
         });
 
-        return [...res];
+        // Mapear los campos disponibles con sus datos correspondientes
+        filteredList.forEach((item, index) => {
+          const fieldMapping = availableFields[index];
+          if (fieldMapping) {
+            item.proposed_text = json_content[fieldMapping.field_name];
+            item.needs_improvement = true;
+            item.field_name_label = fieldMapping.field_name_label;
+          }
+        });
+
+        return filteredList;
       });
 
       await this.POST_createProposal({
@@ -152,6 +252,18 @@ export class AiReviewService {
     });
   }
 
+  getDacScores(): Promise<DacScores[]> {
+    return new Promise((resolve, reject) => {
+      return this.http
+        .get<DacScores[]>(`${this.baseApiBaseUrl}ai/result-context/dac-scores/${this.dataControlSE.currentResultSignal().id}`)
+        .subscribe({
+          next: (response: any) => {
+            resolve(response.response);
+          }
+        });
+    });
+  }
+
   // STEP 4.1: Create proposal generated by AI
   POST_prmsQa(body: POSTPRMSQa) {
     return new Promise<IAiRecommendation>((resolve, reject) => {
@@ -210,6 +322,24 @@ export class AiReviewService {
             resolve(response);
           },
           error: (error: any) => {
+            reject(error);
+          }
+        });
+    });
+  }
+
+  // Save DAC score
+  PATCH_saveDacScore(resultId: number | string, dacScore: Omit<DacScores, 'canSave'>) {
+    return new Promise((resolve, reject) => {
+      return this.http
+        .patch<any>(`${this.baseApiBaseUrl}ai/dac-scores/${resultId}`, dacScore)
+        .pipe(this.saveButtonSE.isSavingPipe())
+        .subscribe({
+          next: (response: any) => {
+            resolve(response);
+          },
+          error: (error: any) => {
+            console.error('Error saving DAC score:', error);
             reject(error);
           }
         });

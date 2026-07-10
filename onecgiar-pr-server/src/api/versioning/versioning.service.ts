@@ -40,6 +40,7 @@ import {
 import { DataSource, In } from 'typeorm';
 import { UpdateQaResults } from './dto/update-qa.dto';
 import { ResultInitiativeBudgetRepository } from '../results/result_budget/repositories/result_initiative_budget.repository';
+import { ResultTypeRepository } from '../results/result_types/resultType.repository';
 import { EvidenceSharepointRepository } from '../results/evidences/repositories/evidence-sharepoint.repository';
 import { EvidencesService } from '../results/evidences/evidences.service';
 import { ShareResultRequestRepository } from '../results/share-result-request/share-result-request.repository';
@@ -99,6 +100,7 @@ export class VersioningService {
     private readonly _resultsKnowledgeProductMetadataRepository: ResultsKnowledgeProductMetadataRepository,
     private readonly _resultsKnowledgeProductInstitutionRepository: ResultsKnowledgeProductInstitutionRepository,
     private readonly _resultInitiativeBudgetRepository: ResultInitiativeBudgetRepository,
+    private readonly _resultTypeRepository: ResultTypeRepository,
     private readonly _resultNonPooledProjectBudgetRepository: NonPooledProjectBudgetRepository,
     private readonly _resultInstitutionsBudgetRepository: ResultInstitutionsBudgetRepository,
     private readonly _evidenceSharepointRepository: EvidenceSharepointRepository,
@@ -1058,6 +1060,9 @@ export class VersioningService {
         obj_reporting_phase: true,
         obj_portfolio: true,
       },
+      order: {
+        phase_name: 'ASC',
+      },
     });
 
     for (const key in res) {
@@ -1076,6 +1081,12 @@ export class VersioningService {
       });
       res[key]['can_be_deleted'] = !otherPreviousPhase && !otherPhase;
     }
+
+    res.sort((a, b) =>
+      (a.phase_name ?? '').localeCompare(b.phase_name ?? '', undefined, {
+        numeric: true,
+      }),
+    );
 
     return ReturnResponseUtil.format({
       message: `Phase Retrieved Successfully`,

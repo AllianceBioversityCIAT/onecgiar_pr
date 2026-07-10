@@ -19,6 +19,7 @@ import { DataSource } from 'typeorm';
 import { ClarisaInitiative } from '../../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 import { VersionRepository } from '../../../api/versioning/versioning.repository';
 import { GlobalParameterRepository } from '../../../api/global-parameter/repositories/global-parameter.repository';
+import { ClarisaCentersRepository } from '../../../clarisa/clarisa-centers/clarisa-centers.repository';
 
 describe('UserService', () => {
   let service: UserService;
@@ -215,6 +216,13 @@ describe('UserService', () => {
           provide: GlobalParameterRepository,
           useValue: {
             findOne: jest.fn().mockResolvedValue({ value: '' }),
+          },
+        },
+        {
+          provide: ClarisaCentersRepository,
+          useValue: {
+            find: jest.fn(),
+            findOne: jest.fn(),
           },
         },
       ],
@@ -886,6 +894,66 @@ describe('UserService', () => {
     });
   });
 
+  describe('updateUserRoles with center assignments', () => {
+    it('should include center data in roles update email payload', async () => {
+      const dto = {
+        email: 'test@example.com',
+        role_assignments: [],
+        center_assignments: [{ center_id: 'CIMMYT' }],
+        role_platform: 2,
+        first_name: 'Test',
+        last_name: 'User',
+      };
+
+      userRepository.findOneByOrFail = jest.fn().mockResolvedValue({
+        id: 1,
+        email: 'test@example.com',
+        first_name: 'Test',
+        last_name: 'User',
+        is_cgiar: true,
+      } as User);
+
+      roleByUserRepository.find = jest.fn().mockResolvedValue([]);
+      roleByUserRepository.save = jest.fn().mockResolvedValue({});
+      userRepository.update = jest.fn().mockResolvedValue({});
+
+      mockTemplateRepository.findOne.mockResolvedValue({
+        name: 'email_template_roles_update',
+        template: '<p>{{userName}}</p>',
+      });
+
+      jest.spyOn(Handlebars, 'compile').mockReturnValue((data: any) => {
+        return `<p>${data.userName}</p>`;
+      });
+
+      const clarisaCentersRepository = (service as any)
+        .clarisaCentersRepository as ClarisaCentersRepository;
+      (clarisaCentersRepository.find as jest.Mock).mockResolvedValue([
+        {
+          code: 'CIMMYT',
+          clarisa_institution: {
+            name: 'International Maize and Wheat Improvement Center',
+          },
+        },
+      ]);
+
+      jest.spyOn(service as any, 'saveUserToDB').mockResolvedValue({
+        response: { id: 1, email: 'test@example.com' },
+        message: 'Roles updated successfully',
+        status: 200,
+      });
+
+      const emailService = (service as any)
+        ._emailNotificationManagementService as EmailNotificationManagementService;
+      const sendEmailSpy = jest.spyOn(emailService, 'sendEmail');
+
+      const result = await service.updateUserRoles(dto as any, mockTokenDto);
+
+      expect(result.status).toBe(200);
+      expect(sendEmailSpy).toHaveBeenCalled();
+    });
+  });
+
   describe('updateUserStatus (simplified)', () => {
     const mockUser = {
       id: 1,
@@ -1017,6 +1085,7 @@ describe('UserService', () => {
           userStatus: 'Active',
           userCreationDate: new Date(),
           entities: 'ENT-001, ENT-002',
+          centers: 'CIMMYT - Center User, IRRI - Center User',
           createdByFirstName: 'Creator',
           createdByLastName: 'Owner',
           createdByEmail: 'creator@example.com',
@@ -1036,6 +1105,7 @@ describe('UserService', () => {
           {
             ...mockQueryResult[0],
             entities: ['ENT-001', 'ENT-002'],
+            centers: ['CIMMYT - Center User', 'IRRI - Center User'],
           },
         ],
         message: 'Successful response',

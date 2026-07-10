@@ -124,10 +124,9 @@ export class ResultsListFilterPipe implements PipeTransform {
   }
 
   separateResultInList(results) {
-    results.map(result => {
+    results.forEach(result => {
       result.results = [result];
     });
-
     return results;
   }
 

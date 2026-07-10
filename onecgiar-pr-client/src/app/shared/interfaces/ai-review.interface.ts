@@ -34,6 +34,17 @@ export interface JsonContent {
   new_title: string;
   new_description: string;
   short_name: string;
+  impact_area_scores: ImpactAreaScores;
+}
+
+export interface ImpactAreaScores {
+  social_inclusion: string;
+  social_inclusion_component: string;
+  climate_adaptation: string;
+  food_security: string;
+  food_security_component: string;
+  environmental_health: string;
+  poverty_reduction: string;
 }
 
 export interface POSTAIAssistantCreateEvent {

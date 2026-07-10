@@ -59,6 +59,33 @@ button {
   display: flex;
   align-items: center;
   gap: 20px;
+
+  .profile_menu_button {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  .profile_avatar_wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+
+    .admin_tag {
+      @include fonts.pr-typography('body-3');
+      background-color: var(--pr-color-primary-100);
+      color: var(--pr-color-secondary-300);
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-size: 9px;
+      font-weight: 600;
+      line-height: 1.2;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+  }
 }
 
 .overlay_panel {

@@ -144,7 +144,9 @@ export class RdGeneralInformationComponent implements OnInit {
       this.generalInfoBody.gender_impact_area_id = this.toSingleNumber(this.generalInfoBody.gender_impact_area_id);
       this.generalInfoBody.climate_impact_area_id = this.toSingleNumber(this.generalInfoBody.climate_impact_area_id);
       this.generalInfoBody.nutrition_impact_area_id = this.toSingleNumber(this.generalInfoBody.nutrition_impact_area_id);
-      this.generalInfoBody.environmental_biodiversity_impact_area_id = this.toSingleNumber(this.generalInfoBody.environmental_biodiversity_impact_area_id);
+      this.generalInfoBody.environmental_biodiversity_impact_area_id = this.toSingleNumber(
+        this.generalInfoBody.environmental_biodiversity_impact_area_id
+      );
       this.generalInfoBody.poverty_impact_area_id = this.toSingleNumber(this.generalInfoBody.poverty_impact_area_id);
     }
   }
@@ -155,15 +157,17 @@ export class RdGeneralInformationComponent implements OnInit {
     }
     if (Array.isArray(value)) {
       // Extract IDs from objects if they are objects, otherwise use the values directly
-      return value.map((item: any) => {
-        if (typeof item === 'object' && item !== null) {
-          // Extract the ID property (can be string or number, convert to number)
-          const id = item.id ?? null;
-          return id !== null && id !== undefined ? Number(id) : null;
-        }
-        // If it's already a number or string, convert to number
-        return item !== null && item !== undefined ? Number(item) : null;
-      }).filter((id: any) => id !== null && id !== undefined && !Number.isNaN(id));
+      return value
+        .map((item: any) => {
+          if (typeof item === 'object' && item !== null) {
+            // Extract the ID property (can be string or number, convert to number)
+            const id = item.id ?? null;
+            return id !== null && id !== undefined ? Number(id) : null;
+          }
+          // If it's already a number or string, convert to number
+          return item !== null && item !== undefined ? Number(item) : null;
+        })
+        .filter((id: any) => id !== null && id !== undefined && !Number.isNaN(id));
     }
     // Single value: convert to number and return as array
     return value !== null && value !== undefined ? [Number(value)] : [];
@@ -244,7 +248,9 @@ export class RdGeneralInformationComponent implements OnInit {
       this.generalInfoBody.gender_impact_area_id = this.toSingleNumber(this.generalInfoBody.gender_impact_area_id);
       this.generalInfoBody.climate_impact_area_id = this.toSingleNumber(this.generalInfoBody.climate_impact_area_id);
       this.generalInfoBody.nutrition_impact_area_id = this.toSingleNumber(this.generalInfoBody.nutrition_impact_area_id);
-      this.generalInfoBody.environmental_biodiversity_impact_area_id = this.toSingleNumber(this.generalInfoBody.environmental_biodiversity_impact_area_id);
+      this.generalInfoBody.environmental_biodiversity_impact_area_id = this.toSingleNumber(
+        this.generalInfoBody.environmental_biodiversity_impact_area_id
+      );
       this.generalInfoBody.poverty_impact_area_id = this.toSingleNumber(this.generalInfoBody.poverty_impact_area_id);
     }
 

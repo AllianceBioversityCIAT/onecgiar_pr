@@ -91,6 +91,7 @@ import { NonPooledProjectBudgetRepository } from '../results/result_budget/repos
 import { ResultCountriesSubNationalRepository } from '../results/result-countries-sub-national/repositories/result-countries-sub-national.repository';
 import { KnowledgeProductFairBaselineRepository } from '../results/knowledge_product_fair_baseline/knowledge_product_fair_baseline.repository';
 import { ResultCountrySubnationalRepository } from '../results/result-countries-sub-national/repositories/result-country-subnational.repository';
+import { ResultsTocResultIndicatorsService } from '../results/results-toc-results/results-toc-result-indicators.service';
 import { MQAPService } from '../m-qap/m-qap.service';
 import { InitiativeEntityMapRepository } from '../initiative_entity_map/initiative_entity_map.repository';
 import { RoleByUserRepository } from '../../auth/modules/role-by-user/RoleByUser.repository';
@@ -191,6 +192,7 @@ import { ResultDeletionAuditModule } from '../results/result-deletion-audit/resu
     ResultCountriesSubNationalRepository,
     KnowledgeProductFairBaselineRepository,
     ResultCountrySubnationalRepository,
+    ResultsTocResultIndicatorsService,
     MQAPService,
     InitiativeEntityMapRepository,
     RoleByUserRepository,
@@ -292,6 +294,9 @@ import { ResultDeletionAuditModule } from '../results/result-deletion-audit/resu
     VersionRepository,
     ClarisaGeographicScopeRepository,
     ApplicationModulesRepository,
+    DeleteRecoverDataService,
+    EvidenceSharepointRepository,
+    EvidencesService,
   ],
 })
 export class DeleteRecoverDataModule {}

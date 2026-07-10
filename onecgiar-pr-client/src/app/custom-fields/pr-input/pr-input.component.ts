@@ -40,6 +40,7 @@ export class PrInputComponent implements ControlValueAccessor {
   @Input() showDescription?: boolean = true;
   @Input() InlineStyles?: string = '';
   @Input() descInlineStyles?: string = '';
+  @Input() labelDescInlineStyles?: string = '';
   @Input() fieldRef: string | number;
   @Input() customLabel?: string;
   /** When true, `required` comes from the parent `@Input()` instead of FieldsManager (lead contact scan workaround). */
@@ -47,7 +48,6 @@ export class PrInputComponent implements ControlValueAccessor {
   @Input() showFieldHeader = true;
 
   fieldsManager = inject(FieldsManagerService);
-  @Input() labelDescInlineStyles?: string = '';
 
   private _value: any;
   private beforeValue: string;

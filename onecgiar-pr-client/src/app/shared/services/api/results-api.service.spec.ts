@@ -752,12 +752,11 @@ describe('ResultsApiService', () => {
   describe('PATCH_geographicSection', () => {
     it('should call PATCH_geographicSection and return expected data', done => {
       const mockBody = {
-        scope_id: 1,
+        geo_scope_id: 1,
         has_countries: false,
         has_regions: false,
         regions: [],
-        countries: [],
-        geo_scope_id: 2
+        countries: []
       };
       const spy = jest.spyOn(mockSaveButtonService, 'isSavingPipe');
       service.PATCH_geographicSection(mockBody).subscribe(response => {
@@ -4775,6 +4774,19 @@ describe('ResultsApiService', () => {
       });
 
       const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/bilateral-projects?tocResultId=toc123`);
+      expect(req.request.method).toBe('GET');
+      req.flush(mockResponse);
+    });
+  });
+
+  describe('GET_W3BilateralProjectsByProgram', () => {
+    it('should call GET_W3BilateralProjectsByProgram and return expected data', done => {
+      service.GET_W3BilateralProjectsByProgram('SP01').subscribe(response => {
+        expect(response).toEqual(mockResponse);
+        done();
+      });
+
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results-framework-reporting/bilateral-projects/by-program?programId=SP01`);
       expect(req.request.method).toBe('GET');
       req.flush(mockResponse);
     });

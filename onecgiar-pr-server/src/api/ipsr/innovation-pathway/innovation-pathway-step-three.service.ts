@@ -96,6 +96,11 @@ export class InnovationPathwayStepThreeService {
           last_updated_by: user.id,
         },
       );
+      await this.saveinnovationWorkshop(
+        user,
+        result_ip_core,
+        result_ip.assessed_during_expert_workshop_id,
+      );
 
       await this.saveinnovationWorkshop(
         user,
@@ -229,19 +234,29 @@ export class InnovationPathwayStepThreeService {
         };
       }
 
-      if (!workShopEvidence) {
-        await this._evidenceRepository.save({
-          result_id: resultId,
-          link: lwl,
-          evidence_type_id: 5,
-          created_by: user.id,
-          last_updated_by: user.id,
-        });
-      } else {
-        await this._evidenceRepository.update(workShopEvidence.id, {
-          link: lwl,
-          last_updated_by: user.id,
-        });
+      // if (rip.is_expert_workshop_organized === true && !lwl) {
+      //   return {
+      //     response: { valid: false },
+      //     message: 'The link workshop list is required',
+      //     status: HttpStatus.BAD_REQUEST,
+      //   };
+      // }
+
+      if (lwl) {
+        if (workShopEvidence) {
+          await this._evidenceRepository.update(workShopEvidence.id, {
+            link: lwl,
+            last_updated_by: user.id,
+          });
+        } else {
+          await this._evidenceRepository.save({
+            result_id: resultId,
+            link: lwl,
+            evidence_type_id: 5,
+            created_by: user.id,
+            last_updated_by: user.id,
+          });
+        }
       }
 
       if (ripewo?.length) {
@@ -525,14 +540,14 @@ export class InnovationPathwayStepThreeService {
           await this._resultsIpActorRepository.update(
             actorExists.result_ip_actors_id,
             {
-              actor_type_id: this.isNullData(el?.actor_type_id),
+              actor_type_id: el?.actor_type_id,
               is_active: el.is_active == undefined ? true : el.is_active,
-              men: this.isNullData(el?.men),
-              men_youth: this.isNullData(el?.men_youth),
-              women: this.isNullData(el?.women),
-              women_youth: this.isNullData(el?.women_youth),
-              evidence_link: this.isNullData(el?.evidence_link),
-              other_actor_type: this.isNullData(el?.other_actor_type),
+              men: el?.men,
+              men_youth: el?.men_youth,
+              women: el?.women,
+              women_youth: el?.women_youth,
+              evidence_link: el?.evidence_link,
+              other_actor_type: el?.other_actor_type,
               last_updated_by: user.id,
               sex_and_age_disaggregation:
                 el?.sex_and_age_disaggregation === true ? true : false,
@@ -620,11 +635,11 @@ export class InnovationPathwayStepThreeService {
           await this._resultsIpInstitutionTypeRepository.update(ite.id, {
             last_updated_by: user.id,
             institution_types_id: el.institution_types_id,
-            how_many: this.isNullData(el.how_many),
+            how_many: el?.how_many,
             other_institution: el?.other_institution,
             graduate_students: el?.graduate_students,
             is_active: el.is_active == undefined ? true : el.is_active,
-            evidence_link: this.isNullData(el.evidence_link),
+            evidence_link: el?.evidence_link,
           });
           if (
             useLevel?.obj_use_level_evidence_based &&

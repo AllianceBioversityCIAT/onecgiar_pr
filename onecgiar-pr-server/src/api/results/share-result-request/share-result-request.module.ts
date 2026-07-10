@@ -19,6 +19,7 @@ import { ResultsSdgTargetRepository } from '../results-toc-results/repositories/
 import { RoleByUserRepository } from '../../../auth/modules/role-by-user/RoleByUser.repository';
 import { ResultsActionAreaOutcomeRepository } from '../results-toc-results/repositories/result-toc-action-area.repository';
 import { ResultsTocTargetIndicatorRepository } from '../results-toc-results/repositories/result-toc-result-target-indicator.repository';
+import { ResultsTocResultIndicatorsService } from '../results-toc-results/results-toc-result-indicators.service';
 import { TemplateRepository } from '../../platform-report/repositories/template.repository';
 import { ClarisaInitiativesRepository } from '../../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { ResultsTocResultsModule } from '../results-toc-results/results-toc-results.module';
@@ -33,6 +34,7 @@ import { SocketManagementModule } from '../../../shared/microservices/socket-man
   controllers: [ShareResultRequestController],
   providers: [
     ShareResultRequestService,
+    ResultsTocResultIndicatorsService,
     ShareResultRequestRepository,
     HandlersError,
     ResultRepository,

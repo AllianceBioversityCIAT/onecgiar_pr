@@ -10,6 +10,12 @@
   // justify-content: space-between;
   overflow-y: auto;
 
+  .back_button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   .ai-review-button {
     display: flex;
     justify-content: center;

@@ -102,6 +102,14 @@ export class ResultsNotificationsComponent implements OnInit, OnDestroy {
   getAllPhases() {
     this.api.resultsSE.GET_versioning(StatusPhaseEnum.ALL, ModuleTypeEnum.ALL).subscribe(({ response }) => {
       this.phaseList = response;
+      // P2-3106 (AC2): default the Phases dropdown to the current active reporting phase when none is set
+      // (a phase from query params, applied in setQueryParams, takes precedence).
+      if (!this.resultsNotificationsSE.phaseFilter) {
+        const activePhaseId = this.api.dataControlSE.reportingCurrentPhase?.phaseId;
+        if (activePhaseId && this.phaseList.some(p => p.id == activePhaseId)) {
+          this.resultsNotificationsSE.phaseFilter = activePhaseId;
+        }
+      }
       if (this.resultsNotificationsSE.phaseFilter) {
         this.onPhaseChange(this.resultsNotificationsSE.phaseFilter);
       }

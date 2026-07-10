@@ -44,7 +44,8 @@
 
           <div class="status-filter">
             <label class="status-label" for="statusSelect">Status:</label>
-            <app-pr-select
+
+            <p-select
               #statusSelect
               id="statusSelect"
               [options]="statusOptions"
@@ -54,13 +55,13 @@
               [ngModel]="selectedStatus()"
               (ngModelChange)="onStatusChange($event)"
               [required]="false"
-              [indexReference]="1"></app-pr-select>
+              [style]="{ width: '100%' }"></p-select>
           </div>
 
           <!-- CGIAR filter -->
           <div class="cgiar-filter">
             <label class="cgiar-label" for="cgiarSelect">Is CGIAR:</label>
-            <app-pr-select
+            <p-select
               #cgiarSelect
               id="cgiarSelect"
               [options]="isCGIAROptions"
@@ -70,7 +71,7 @@
               [ngModel]="selectedCgiar()"
               (ngModelChange)="onCgiarChange($event)"
               [required]="false"
-              [indexReference]="2"></app-pr-select>
+              [style]="{ width: '100%' }"></p-select>
           </div>
 
           <!-- Entity filter -->
@@ -115,7 +116,12 @@
 
   <!-- export button -->
   <div class="export-button">
-    <app-pr-button text="Download .xlsx" icon="file_download" [verticalMargin]="0" (click)="this.exportExcel(this.users())"></app-pr-button>
+    <app-pr-button
+      text="Download .xlsx"
+      icon="file_download"
+      [verticalMargin]="0"
+      (clickEvent)="exportExcel(users())"
+      (keydown.enter)="exportExcel(users())"></app-pr-button>
   </div>
 
   <!-- Users table -->
@@ -163,34 +169,50 @@
             </div>
           </td>
           <td>
-            <div class="entities-container">
+            <div class="assignment-cell">
               @if (user.entities?.length > 0) {
-                @let displayEntities = getDisplayEntities(user.entities);
-                @for (entity of displayEntities; track entity) {
-                  <div class="entity-chip">
-                    <span>{{ entity }}</span>
-                  </div>
-                }
-                @if (hasMoreEntities(user.entities)) {
-                  <button class="view-more-btn" (click)="showEntityOverlay($event, entityOverlay, user.entities)" #entityTrigger type="button">
-                    View more
-                  </button>
-
-                  <p-popover #entityOverlay [style]="{ maxWidth: '300px' }">
-                    <div class="overlay-entities-container">
-                      <div class="overlay-title">All Entities</div>
-                      <div class="overlay-entities-grid">
-                        @for (entity of user.entities; track entity) {
-                          <div class="entity-chip">
-                            <span>{{ entity }}</span>
-                          </div>
-                        }
-                      </div>
+                <span class="assignment-count">{{ getAssignmentCountLabel(user.entities, 'program', 'programs') }}</span>
+                <div class="assignment-chips">
+                  @for (entity of getDisplayAssignments(user.entities); track entity) {
+                    <div class="entity-chip">
+                      <span>{{ entity }}</span>
                     </div>
-                  </p-popover>
+                  }
+                </div>
+                @if (hasMoreAssignments(user.entities)) {
+                  <button
+                    class="view-more-btn"
+                    type="button"
+                    (click)="openAssignmentOverlay($event, 'Science Programs / Accelerators', user.entities, false)">
+                    View all
+                  </button>
                 }
               } @else {
-                <span class="no-entities">No reporting role assigned</span>
+                <span class="no-entities">—</span>
+              }
+            </div>
+          </td>
+          <td>
+            <div class="assignment-cell">
+              @if (user.centers?.length > 0) {
+                <span class="assignment-count">{{ getAssignmentCountLabel(user.centers, 'center', 'centers') }}</span>
+                <div class="assignment-chips">
+                  @for (center of getDisplayAssignments(user.centers); track center) {
+                    <div class="center-chip">
+                      <span>{{ center }}</span>
+                    </div>
+                  }
+                </div>
+                @if (hasMoreAssignments(user.centers)) {
+                  <button
+                    class="view-more-btn"
+                    type="button"
+                    (click)="openAssignmentOverlay($event, 'CGIAR Centers', user.centers, true)">
+                    View all
+                  </button>
+                }
+              } @else {
+                <span class="no-entities">—</span>
               }
             </div>
           </td>
@@ -244,4 +266,27 @@
     [(visible)]="showAddUserModal"
     (managedUser)="this.getUsers()">
   </app-manage-user-modal>
+
+  <p-popover
+    #assignmentsPopover
+    appendTo="body"
+    styleClass="user-assignment-popover"
+    [style]="{ maxWidth: '320px' }">
+    <div class="overlay-assignments-container">
+      <div class="overlay-title">{{ assignmentOverlayTitle() }}</div>
+      <ul class="overlay-assignments-list">
+        @for (item of assignmentOverlayItems(); track item) {
+          @let parsed = parseAssignmentLabel(item);
+          <li
+            class="overlay-assignment-item"
+            [class.overlay-assignment-item--center]="assignmentOverlayIsCenter()">
+            <span class="overlay-assignment-name">{{ parsed.entity }}</span>
+            @if (parsed.role) {
+              <span class="overlay-assignment-role">{{ parsed.role }}</span>
+            }
+          </li>
+        }
+      </ul>
+    </div>
+  </p-popover>
 </div>

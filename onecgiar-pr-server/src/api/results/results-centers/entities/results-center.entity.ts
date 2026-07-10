@@ -37,6 +37,14 @@ export class ResultsCenter {
   })
   from_cgspace: boolean;
 
+  @Column({
+    name: 'from_toc',
+    type: 'boolean',
+    nullable: false,
+    default: false,
+  })
+  from_toc: boolean;
+
   @Column({ name: 'is_leading_result', type: 'boolean', nullable: true })
   is_leading_result: boolean;
 

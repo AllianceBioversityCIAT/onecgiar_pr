@@ -34,18 +34,6 @@
     border-top: none;
   }
 
-  .p-select-dropdown {
-    position: absolute;
-    right: 0;
-    background-color: var(--pr-color-primary-300) !important;
-    width: 43px !important;
-    z-index: 1;
-    pointer-events: none;
-    border-radius: 3px;
-    height: 36px;
-    color: white !important;
-  }
-
   .p-select .p-select-label {
     display: flex;
     align-items: center;
@@ -135,6 +123,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  background: transparent;
 
   &:hover {
     background-color: var(--pr-color-primary-300);
@@ -286,6 +275,10 @@
     margin-left: 10px;
     color: #374151;
     transition: all 0.2s ease;
+    border: none;
+    background: transparent;
+    padding: 0;
+    line-height: 1;
 
     &:hover {
       color: #dc2626;
@@ -330,6 +323,11 @@
 
   .save-btn {
     padding: 8px 15px;
+    min-width: 110px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
     border: 1px solid var(--pr-color-primary-300);
     background-color: var(--pr-color-primary-300);
     color: var(--pr-color-white);
@@ -337,9 +335,22 @@
     cursor: pointer;
     @include fonts.pr-typography('body-2');
     font-weight: 500;
-    transition: all 0.2s ease;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
 
-    &:hover:not(:disabled) {
+    &__spinner {
+      display: none;
+      font-size: 14px;
+    }
+
+    &--loading {
+      pointer-events: none;
+
+      .save-btn__spinner {
+        display: inline-block;
+      }
+    }
+
+    &:hover:not(:disabled):not(.save-btn--loading) {
       background-color: var(--pr-color-primary-300);
       border-color: var(--pr-color-primary-300);
     }
@@ -351,6 +362,46 @@
       opacity: 0.6;
     }
   }
+}
+
+.assignment-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.assignment-tab {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--pr-color-neutral-1000);
+  background-color: var(--pr-color-white);
+  color: var(--pr-color-secondary-400);
+  border-radius: 6px;
+  cursor: pointer;
+  @include fonts.pr-typography('body-2');
+  font-weight: 600;
+
+  &--active {
+    border-color: var(--pr-color-primary-300);
+    background-color: var(--pr-color-primary-300);
+    color: var(--pr-color-white);
+  }
+}
+
+.center-tab-headers .center-header-item {
+  width: 45%;
+}
+
+.sr-only-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .user-roles-container {

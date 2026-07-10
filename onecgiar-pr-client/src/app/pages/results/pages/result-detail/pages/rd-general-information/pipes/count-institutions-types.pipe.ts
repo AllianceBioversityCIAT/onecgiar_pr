@@ -23,6 +23,7 @@ export class CountInstitutionsTypesPipe implements PipeTransform {
     Object.keys(objectCounter).forEach(item => {
       result.push(objectCounter[item]);
     });
+
     return result;
   }
 }

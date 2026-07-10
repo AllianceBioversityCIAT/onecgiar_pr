@@ -52,6 +52,7 @@ import { InitiativeEntityMapModule } from './api/initiative_entity_map/initiativ
 import { apiVersionMiddleware } from './shared/middleware/api-versioning.middleware';
 import { BilateralModule } from './api/bilateral/bilateral.module';
 import { ResultsFrameworkReportingModule } from './api/results-framework-reporting/results-framework-reporting.module';
+import { PublicResultsFrameworkModule } from './api/public-results-framework/public-results-framework.module';
 import { AiModule } from './api/ai/ai.module';
 import { IpsrFrameworkModule } from './api/ipsr-framework/ipsr-framework.module';
 import { ResultImpactAreaScoresModule } from './api/result-impact-area-scores/result-impact-area-scores.module';
@@ -106,6 +107,7 @@ import { GlobalUtilsModule } from './shared/utils/global-utils.module';
     InitiativeEntityMapModule,
     BilateralModule,
     ResultsFrameworkReportingModule,
+    PublicResultsFrameworkModule,
     AiModule,
     IpsrFrameworkModule,
     ResultImpactAreaScoresModule,
@@ -135,6 +137,10 @@ export class AppModule implements NestModule {
       .exclude(
         { path: 'api/platform-report/(.*)', method: RequestMethod.ALL },
         { path: 'api/bilateral/(.*)', method: RequestMethod.ALL },
+        {
+          path: 'api/public-results-framework/(.*)',
+          method: RequestMethod.ALL,
+        },
       )
       .forRoutes(
         { path: 'api/(.*)', method: RequestMethod.ALL },

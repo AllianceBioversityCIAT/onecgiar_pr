@@ -54,6 +54,11 @@ import { GlobalParameterRepository } from '../global-parameter/repositories/glob
 import { HttpStatus } from '@nestjs/common';
 import { ReturnResponseUtil } from '../../shared/utils/response.util';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
+import {
+  ActiveEnum,
+  ModuleTypeEnum,
+  StatusPhaseEnum,
+} from '../../shared/constants/role-type.enum';
 import { ResultCountrySubnationalRepository } from '../results/result-countries-sub-national/repositories/result-country-subnational.repository';
 import { NonPooledProjectBudgetRepository } from '../results/result_budget/repositories/non_pooled_proyect_budget.repository';
 import { ResultInstitutionsBudgetRepository } from '../results/result_budget/repositories/result_institutions_budget.repository';
@@ -71,6 +76,8 @@ import { ResultIpExpertWorkshopOrganizedRepostory } from '../ipsr/innovation-pat
 import { ResultsIpActorRepository } from '../ipsr/results-ip-actors/results-ip-actor.repository';
 import { ResultsByIpInnovationUseMeasureRepository } from '../ipsr/results-by-ip-innovation-use-measures/results-by-ip-innovation-use-measure.repository';
 import { ResultsIpInstitutionTypeRepository } from '../ipsr/results-ip-institution-type/results-ip-institution-type.repository';
+import { ResultTypeRepository } from '../results/result_types/resultType.repository';
+import { ResultsTocResultIndicatorsService } from '../results/results-toc-results/results-toc-result-indicators.service';
 import { ResultAnswerRepository } from '../results/result-questions/repository/result-answers.repository';
 import { MQAPService } from '../m-qap/m-qap.service';
 import { MQAPModule } from '../m-qap/m-qap.module';
@@ -166,6 +173,8 @@ describe('VersioningService', () => {
         ResultsIpActorRepository,
         ResultsByIpInnovationUseMeasureRepository,
         ResultsIpInstitutionTypeRepository,
+        ResultTypeRepository,
+        ResultsTocResultIndicatorsService,
         MQAPService,
         {
           provide: ClarisaInitiativesRepository,
@@ -205,6 +214,7 @@ describe('VersioningService', () => {
         {
           provide: VersionRepository,
           useValue: {
+            find: jest.fn(),
             findOne: jest.fn(),
             $_getAllInovationDevToReplicate: jest.fn(),
           },
@@ -499,5 +509,30 @@ describe('VersioningService', () => {
         statusCode: HttpStatus.OK,
       }),
     );
+  });
+
+  describe('find', () => {
+    it('should return phases sorted by phase_name ascending', async () => {
+      const unsortedPhases = [
+        { id: 2, phase_name: 'Reporting 2023', app_module_id: 1 },
+        { id: 1, phase_name: 'Reporting 2022', app_module_id: 1 },
+        { id: 3, phase_name: 'Reporting 2024', app_module_id: 1 },
+      ];
+      versionRepository.find.mockResolvedValue(unsortedPhases);
+      resultRepository.findOne.mockResolvedValue(null);
+      versionRepository.findOne.mockResolvedValue(null);
+
+      const result = await service.find(
+        ModuleTypeEnum.REPORTING,
+        StatusPhaseEnum.OPEN,
+        ActiveEnum.ACTIVE,
+      );
+
+      expect(result.statusCode).toBe(HttpStatus.OK);
+      expect(result.response).toHaveLength(3);
+      expect(result.response[0].phase_name).toBe('Reporting 2022');
+      expect(result.response[1].phase_name).toBe('Reporting 2023');
+      expect(result.response[2].phase_name).toBe('Reporting 2024');
+    });
   });
 });

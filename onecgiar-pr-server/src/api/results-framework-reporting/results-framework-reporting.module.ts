@@ -15,13 +15,13 @@ import { ContributionToIndicatorResultsRepository } from '../contribution-to-ind
 import { ResultsByProjectsModule } from '../results/results_by_projects/results_by_projects.module';
 import { ContributorsPartnersModule } from './contributors-partners/contributors-partners.module';
 import { ResultsTocTargetIndicatorRepository } from '../results/results-toc-results/repositories/result-toc-result-target-indicator.repository';
+import { GeographicLocationModule } from './geographic-location/geographic-location.module';
+import { GeoScopeRoleModule } from './geo_scope_role/geo_scope_role.module';
 import { InnovationDevModule } from './innovation_dev/innovation_dev.module';
 import { InnovationUseModule } from './innovation-use/innovation-use.module';
 import { ResultScalingStudyUrlsModule } from './result_scaling_study_urls/result_scaling_study_urls.module';
 import { ResultInnovSectionModule } from './result_innov_section/result_innov_section.module';
 import { ResultsByInstitutionsModule } from '../results/results_by_institutions/results_by_institutions.module';
-import { GeographicLocationModule } from './geographic-location/geographic-location.module';
-import { GeoScopeRoleModule } from './geo_scope_role/geo_scope_role.module';
 import { ReportingTocContextService } from './reporting-toc-context/reporting-toc-context.service';
 import { CreateResultFromFrameworkHandler } from './application/commands/create-result-from-framework/create-result-from-framework.handler';
 import { CreateFrameworkResultEntityService } from './application/commands/create-result-from-framework/create-framework-result-entity.service';
@@ -31,22 +31,24 @@ import { ApplyFrameworkResultAssociationsService } from './application/commands/
 import { GetExistingResultContributorsToIndicatorsHandler } from './application/queries/get-existing-result-contributors/get-existing-result-contributors.handler';
 import { ExistingResultContributorsLoaderService } from './application/queries/get-existing-result-contributors/existing-result-contributors-loader.service';
 import { ContributorsRoleResolverService } from './application/queries/get-existing-result-contributors/contributors-role-resolver.service';
+import { TocResultsModule } from '../../toc/toc-results/toc-results.module';
 
 @Module({
   imports: [
     ResultsModule,
     ResultsKnowledgeProductsModule,
+    TocResultsModule,
     ResultsTocResultsModule,
     ShareResultRequestModule,
     ResultsByProjectsModule,
     ContributorsPartnersModule,
+    GeographicLocationModule,
+    GeoScopeRoleModule,
     InnovationDevModule,
     InnovationUseModule,
     ResultScalingStudyUrlsModule,
     ResultInnovSectionModule,
     ResultsByInstitutionsModule,
-    GeographicLocationModule,
-    GeoScopeRoleModule,
   ],
   controllers: [ResultsFrameworkReportingController],
   providers: [
@@ -69,6 +71,6 @@ import { ContributorsRoleResolverService } from './application/queries/get-exist
     ExistingResultContributorsLoaderService,
     ContributorsRoleResolverService,
   ],
-  exports: [ReportingTocContextService],
+  exports: [ResultsFrameworkReportingService, ReportingTocContextService],
 })
 export class ResultsFrameworkReportingModule {}

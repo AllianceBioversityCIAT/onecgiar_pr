@@ -5,6 +5,7 @@ import {
   Body,
   Patch,
   Param,
+  Query,
   UseInterceptors,
   Version,
 } from '@nestjs/common';
@@ -12,12 +13,14 @@ import { ShareResultRequestService } from './share-result-request.service';
 import { CreateTocShareResult } from './dto/create-toc-share-result.dto';
 import { TokenDto } from '../../../shared/globalInterfaces/token.dto';
 import { CreateShareResultRequestDto } from './dto/create-share-result-request.dto';
+import { GetResultRequestQueryDto } from './dto/get-result-request-query.dto';
 import { ResponseInterceptor } from '../../../shared/Interceptors/Return-data.interceptor';
 import { UserToken } from '../../../shared/decorators/user-token.decorator';
 import {
   ApiBody,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
@@ -92,7 +95,25 @@ export class ShareResultRequestController {
   @ApiOperation({
     summary: 'Get all received share result requests',
     description:
-      "Retrieves all share result requests that the current user has received. These are requests where the user's initiative is the recipient of a share request from another initiative.",
+      'Retrieves all share result requests that the current user has received. Supports optional filter by version, limit, and order (ASC/DESC) by requested_date.',
+  })
+  @ApiQuery({
+    name: 'version_id',
+    required: false,
+    type: Number,
+    description: 'Filter by version (phase) ID of the result',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Max items per list (pending and done). Between 1 and 100.',
+  })
+  @ApiQuery({
+    name: 'orderDirection',
+    required: false,
+    enum: ['ASC', 'DESC'],
+    description: 'Sort by requested_date',
   })
   @ApiResponse({
     status: 200,
@@ -130,15 +151,36 @@ export class ShareResultRequestController {
     status: 401,
     description: 'Unauthorized - Invalid or missing authentication token',
   })
-  findReceived(@UserToken() user: TokenDto) {
-    return this.shareResultRequestService.getReceivedResultRequest(user);
+  findReceived(
+    @UserToken() user: TokenDto,
+    @Query() query: GetResultRequestQueryDto,
+  ) {
+    return this.shareResultRequestService.getReceivedResultRequest(user, query);
   }
 
   @Get('get/sent')
   @ApiOperation({
     summary: 'Get all sent share result requests',
     description:
-      "Retrieves all share result requests that the current user has sent. These are requests where the user's initiative is the requester sharing a result with other initiatives.",
+      'Retrieves all share result requests that the current user has sent. Supports optional filter by version, limit, and order (ASC/DESC) by requested_date.',
+  })
+  @ApiQuery({
+    name: 'version_id',
+    required: false,
+    type: Number,
+    description: 'Filter by version (phase) ID of the result',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Max items per list (pending and done). Between 1 and 100.',
+  })
+  @ApiQuery({
+    name: 'orderDirection',
+    required: false,
+    enum: ['ASC', 'DESC'],
+    description: 'Sort by requested_date',
   })
   @ApiResponse({
     status: 200,
@@ -175,8 +217,11 @@ export class ShareResultRequestController {
     status: 401,
     description: 'Unauthorized - Invalid or missing authentication token',
   })
-  findSent(@UserToken() user: TokenDto) {
-    return this.shareResultRequestService.getSentResultRequest(user);
+  findSent(
+    @UserToken() user: TokenDto,
+    @Query() query: GetResultRequestQueryDto,
+  ) {
+    return this.shareResultRequestService.getSentResultRequest(user, query);
   }
 
   @Get('get/all')

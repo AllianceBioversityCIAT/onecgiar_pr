@@ -18,8 +18,8 @@ import { SplitButtonModule } from 'primeng/splitbutton';
 import { TooltipModule } from 'primeng/tooltip';
 import { ResultCreatorModule } from '../../../results/pages/result-creator/result-creator.module';
 import { MenuItem } from 'primeng/api';
-import { BilateralResultsReviewComponent } from './components/bilateral-results-review/bilateral-results-review.component';
 import { ResultLevelService } from '../../../results/pages/result-creator/services/result-level.service';
+import { BilateralResultsReviewComponent } from './components/bilateral-results-review/bilateral-results-review.component';
 import { ResultFrameworkReportingHomeService } from '../result-framework-reporting-home/services/result-framework-reporting-home.service';
 
 @Component({
@@ -312,8 +312,10 @@ export class EntityDetailsComponent implements OnInit {
       }
       const mySPs = this.resultFrameworkReportingHomeService.mySPsList() ?? [];
       const otherSPs = this.resultFrameworkReportingHomeService.otherSPsList() ?? [];
-      const sp = [...mySPs, ...otherSPs].find(
-        (item: { initiativeCode?: string }) => item?.initiativeCode === 'SGP-02' || item?.initiativeCode === 'SGP02'
+      const otherProjects = this.resultFrameworkReportingHomeService.otherProjectsList() ?? [];
+      const sp = [...mySPs, ...otherSPs, ...otherProjects].find(
+        (item: { initiativeId?: number; initiativeCode?: string }) =>
+          item?.initiativeId === 41 || item?.initiativeCode === 'SGP-02' || item?.initiativeCode === 'SGP02'
       );
       if (sp) {
         const raw = sp as { initiativeShortName?: string; initiativeName?: string };

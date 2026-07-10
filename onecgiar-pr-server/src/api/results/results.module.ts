@@ -96,6 +96,7 @@ import { ResultsTocSdgTargetRepository } from './results-toc-results/repositorie
 import { ResultsSdgTargetRepository } from './results-toc-results/repositories/results-sdg-targets.repository';
 import { ResultsActionAreaOutcomeRepository } from './results-toc-results/repositories/result-toc-action-area.repository';
 import { ResultsTocTargetIndicatorRepository } from './results-toc-results/repositories/result-toc-result-target-indicator.repository';
+import { ResultsTocResultIndicatorsService } from './results-toc-results/results-toc-result-indicators.service';
 import { AoWBilateralRepository } from './results-toc-results/repositories/aow-bilateral.repository';
 import { IntellectualPropertyExpertsModule } from './intellectual_property_experts/intellectual_property_experts.module';
 import { ResultReviewHistoryRepository } from './result-review-history/result-review-history.repository';
@@ -213,6 +214,7 @@ import { ReportingMetadataExportConsumer } from './reporting-metadata-export.con
     ResultsSdgTargetRepository,
     ResultsActionAreaOutcomeRepository,
     ResultsTocTargetIndicatorRepository,
+    ResultsTocResultIndicatorsService,
     AoWBilateralRepository,
     ResultReviewHistoryRepository,
     ShareResultRequestRepository,

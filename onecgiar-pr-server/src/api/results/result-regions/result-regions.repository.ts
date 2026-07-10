@@ -187,6 +187,46 @@ export class ResultRegionRepository
     }
   }
 
+  async getResultRegionsByResultIdAndRegionIds(
+    resultId: number,
+    regionIds: number[],
+    geo_scope_role_id: number = 1,
+  ) {
+    if (!regionIds || regionIds.length === 0) {
+      return [];
+    }
+
+    const query = `
+      select 
+        rr.result_region_id,
+        rr.region_id,
+        rr.result_id,
+        rr.is_active,
+        rr.created_date,
+        rr.last_updated_date 
+      from result_region rr 
+      where rr.is_active > 0
+        and rr.result_id = ?
+        and rr.region_id IN (${regionIds.map(() => '?').join(', ')})
+        and rr.geo_scope_role_id = ?;
+    `;
+
+    try {
+      const result: ResultRegion[] = await this.query(query, [
+        resultId,
+        ...regionIds,
+        geo_scope_role_id,
+      ]);
+      return result;
+    } catch (error) {
+      throw this._handlersError.returnErrorRepository({
+        className: ResultRegionRepository.name,
+        error: error,
+        debug: true,
+      });
+    }
+  }
+
   async getResultRegionById(id: number) {
     const query = `
     select 

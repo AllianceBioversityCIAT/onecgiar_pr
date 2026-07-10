@@ -20,6 +20,7 @@ export class QualityAssuranceComponent implements OnInit {
     public sanitizer: DomSanitizer,
     private qaSE: QualityAssuranceService
   ) {}
+
   allInitiatives = [];
   clarisaQaToken = null;
   official_code = null;

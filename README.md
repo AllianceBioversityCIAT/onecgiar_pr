@@ -50,13 +50,13 @@ For the full product picture — problem statement, goals, success metrics, scop
 
 ## Who uses it
 
-| Persona | What they do in PRMS |
-|---|---|
-| **Result submitter** (Initiative / Center staff) | Create typed results, attach evidence, align ToC, mark partners and geography, fix QA feedback. |
-| **Quality Assurance reviewer** | Review submissions, comment by field, advance or send back. |
-| **PMU / portfolio lead** | Run Type-One Reports, oversee IPSR pathways, edit global narratives, monitor submission progress per phase. |
-| **Platform admin** | Manage roles, AD users, CLARISA syncs, phases / versioning, delete-and-recover, notification settings, global parameters. |
-| **Bilateral / platform-report consumers** (non-interactive) | Read the typed payload APIs at `/api/bilateral/*` and `/api/platform-report/*`. |
+| Persona                                                     | What they do in PRMS                                                                                                      |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| **Result submitter** (Initiative / Center staff)            | Create typed results, attach evidence, align ToC, mark partners and geography, fix QA feedback.                           |
+| **Quality Assurance reviewer**                              | Review submissions, comment by field, advance or send back.                                                               |
+| **PMU / portfolio lead**                                    | Run Type-One Reports, oversee IPSR pathways, edit global narratives, monitor submission progress per phase.               |
+| **Platform admin**                                          | Manage roles, AD users, CLARISA syncs, phases / versioning, delete-and-recover, notification settings, global parameters. |
+| **Bilateral / platform-report consumers** (non-interactive) | Read the typed payload APIs at `/api/bilateral/*` and `/api/platform-report/*`.                                           |
 
 ---
 
@@ -263,16 +263,16 @@ README.md                                ← you are here
 
 ### Where to look (by intent)
 
-| I want to… | Read |
-|---|---|
-| Browse the docs online without cloning | [PRMS Wiki on Mintlify](https://mintlify.wiki/AllianceBioversityCIAT/onecgiar_pr/introduction) |
-| Understand the product, scope, goals, metrics, personas | [`docs/prd.md`](./docs/prd.md) |
-| Understand UI/UX rules, tokens, components, screens | [`docs/system-design/design.md`](./docs/system-design/design.md) |
-| Understand the technical architecture | [`docs/detailed-design/detailed-design.md`](./docs/detailed-design/detailed-design.md) |
-| Write a new module spec | Start from [`docs/specs/general-setup/`](./docs/specs/general-setup/) |
-| Work on the backend | [`onecgiar-pr-server/CLAUDE.md`](./onecgiar-pr-server/CLAUDE.md) → [`onecgiar-pr-server/src/CLAUDE.md`](./onecgiar-pr-server/src/CLAUDE.md) |
-| Work on the frontend | [`onecgiar-pr-client/CLAUDE.md`](./onecgiar-pr-client/CLAUDE.md) → [`onecgiar-pr-client/src/CLAUDE.md`](./onecgiar-pr-client/src/CLAUDE.md) |
-| Understand bilateral payload contracts | [`onecgiar-pr-server/docs/bilateral-result-summaries.en.md`](./onecgiar-pr-server/docs/bilateral-result-summaries.en.md) |
+| I want to…                                              | Read                                                                                                                                        |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Browse the docs online without cloning                  | [PRMS Wiki on Mintlify](https://mintlify.wiki/AllianceBioversityCIAT/onecgiar_pr/introduction)                                              |
+| Understand the product, scope, goals, metrics, personas | [`docs/prd.md`](./docs/prd.md)                                                                                                              |
+| Understand UI/UX rules, tokens, components, screens     | [`docs/system-design/design.md`](./docs/system-design/design.md)                                                                            |
+| Understand the technical architecture                   | [`docs/detailed-design/detailed-design.md`](./docs/detailed-design/detailed-design.md)                                                      |
+| Write a new module spec                                 | Start from [`docs/specs/general-setup/`](./docs/specs/general-setup/)                                                                       |
+| Work on the backend                                     | [`onecgiar-pr-server/CLAUDE.md`](./onecgiar-pr-server/CLAUDE.md) → [`onecgiar-pr-server/src/CLAUDE.md`](./onecgiar-pr-server/src/CLAUDE.md) |
+| Work on the frontend                                    | [`onecgiar-pr-client/CLAUDE.md`](./onecgiar-pr-client/CLAUDE.md) → [`onecgiar-pr-client/src/CLAUDE.md`](./onecgiar-pr-client/src/CLAUDE.md) |
+| Understand bilateral payload contracts                  | [`onecgiar-pr-server/docs/bilateral-result-summaries.en.md`](./onecgiar-pr-server/docs/bilateral-result-summaries.en.md)                    |
 
 ### SDD slash-commands (Claude Code)
 
@@ -292,12 +292,12 @@ These commands operate against the SDD baseline above:
 
 Format: `<emoji> <type>(<scope>) [ticket]: <description>`
 
-| Emoji | Type | Use |
-|---|---|---|
-| ✨ | `feat` | New features or functionality |
-| ♻️ | `refactor` | Refactor without behavior change |
-| 🔧 | `fix` | Bug fixes |
-| 🎨 | `style` | UI / formatting / styling |
+| Emoji | Type       | Use                              |
+| ----- | ---------- | -------------------------------- |
+| ✨    | `feat`     | New features or functionality    |
+| ♻️    | `refactor` | Refactor without behavior change |
+| 🔧    | `fix`      | Bug fixes                        |
+| 🎨    | `style`    | UI / formatting / styling        |
 
 Scope = component or service name (`bilateral.service`, `result-review-drawer`, `phase-management-table`). Ticket optional (`P2-2498`).
 
@@ -350,18 +350,18 @@ Authentication uses a custom `auth: <JWT>` header verified by `JwtMiddleware`. A
 
 PRMS integrates with — but does not own — these systems:
 
-| System | How PRMS uses it |
-|---|---|
-| **CLARISA** | Catalog source (institutions, centers, initiatives, countries, regions, indicators, etc.) — read-only via HTTP + scheduled syncs. |
-| **Theory of Change services** | ToC trees and outcomes (`/toc/*`). PRMS aligns results to ToC; it does not author ToC. |
-| **AWS Cognito + Active Directory (LDAP)** | Identity and authentication. PRMS doesn't provision users. |
-| **CGSpace** | Stable `handle` for knowledge products. |
-| **MQAP** | External knowledge-product attribute lookup. |
-| **AWS S3 / SharePoint** | Evidence files and PRMS documents. |
-| **AWS DynamoDB** | Operational logs only (`/logs/*`). |
-| **RabbitMQ** | `reporting-metadata-export` async pipeline. |
-| **Pusher + WebSockets** | Real-time notifications and updates. |
-| **Hotjar + Microsoft Clarity** | Client-side session telemetry. |
+| System                                    | How PRMS uses it                                                                                                                  |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **CLARISA**                               | Catalog source (institutions, centers, initiatives, countries, regions, indicators, etc.) — read-only via HTTP + scheduled syncs. |
+| **Theory of Change services**             | ToC trees and outcomes (`/toc/*`). PRMS aligns results to ToC; it does not author ToC.                                            |
+| **AWS Cognito + Active Directory (LDAP)** | Identity and authentication. PRMS doesn't provision users.                                                                        |
+| **CGSpace**                               | Stable `handle` for knowledge products.                                                                                           |
+| **MQAP**                                  | External knowledge-product attribute lookup.                                                                                      |
+| **AWS S3 / SharePoint**                   | Evidence files and PRMS documents.                                                                                                |
+| **AWS DynamoDB**                          | Operational logs only (`/logs/*`).                                                                                                |
+| **RabbitMQ**                              | `reporting-metadata-export` async pipeline.                                                                                       |
+| **Pusher + WebSockets**                   | Real-time notifications and updates.                                                                                              |
+| **Hotjar + Microsoft Clarity**            | Client-side session telemetry.                                                                                                    |
 
 ---
 
