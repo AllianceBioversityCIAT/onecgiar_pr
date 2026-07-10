@@ -229,7 +229,7 @@ describe('AowHloTableComponent', () => {
         { title: 'KPI statement', attr: 'indicator_description', width: '30%' },
         { title: 'Indicator typology', attr: 'type_name', width: '10%' },
         { title: '2026 target', attr: 'target_value_sum', width: '10%' },
-        { title: 'Achieved target', attr: 'actual_achieved_value_sum', width: '10%' },
+        { title: 'Achieved value', attr: 'actual_achieved_value_sum', width: '10%' },
         { title: 'Status', attr: 'status', hideSortIcon: true, width: '11%' }
       ]);
     });
@@ -261,7 +261,7 @@ describe('AowHloTableComponent', () => {
         width: '10%'
       });
       expect(columns[3]).toEqual({
-        title: 'Achieved target',
+        title: 'Achieved value',
         attr: 'actual_achieved_value_sum',
         width: '10%'
       });
