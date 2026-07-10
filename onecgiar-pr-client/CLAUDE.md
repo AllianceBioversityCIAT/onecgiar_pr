@@ -2,6 +2,8 @@
 
 This is the **package-level guide** for the PRMS Angular client. It complements the root [`../CLAUDE.md`](../CLAUDE.md) and the SDD constitutional baseline under [`../docs/`](../docs/).
 
+> 🚧 **ACTIVE MAJOR REFACTOR (branch `front-redesign-fields`)** — Angular 21 upgrade + PrimeNG → Spartan UI/Tailwind migration is in progress on this branch. If you're on `front-redesign-fields`, **read [`docs/refactor-angular21-spartan-migration.md`](./docs/refactor-angular21-spartan-migration.md) first** — it covers the branch state, what's done (Angular 21, Spartan foundation, pr-input/pr-select migrated), the Angular-22-blocked-by-PrimeNG situation, and the current open runtime bug. Note: on this branch the stack is **Angular 21 + Tailwind 4 + Spartan**, not the "Angular 19 + PrimeNG" described below.
+
 > **Always read the root guide first.** Frontend work MUST follow the SDD methodology:
 >
 > - [`../docs/prd.md`](../docs/prd.md) — product baseline (personas, goals, `AC-1..AC-9`).
