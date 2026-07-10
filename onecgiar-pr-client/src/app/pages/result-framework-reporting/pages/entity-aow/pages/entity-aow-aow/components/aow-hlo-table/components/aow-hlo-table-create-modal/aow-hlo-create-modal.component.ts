@@ -13,6 +13,7 @@ import { ResultsListFilterService } from '../../../../../../../../../results/pag
 import { InputNumberModule } from 'primeng/inputnumber';
 import { CentersService } from '../../../../../../../../../../shared/services/global/centers.service';
 import { TooltipModule } from 'primeng/tooltip';
+import { filterOutAvisaInitiatives } from '../../../../../../../../../../shared/utils/avisa-initiative.util';
 
 interface CreateResultBody {
   handler: string;
@@ -135,7 +136,8 @@ export class AowHloCreateModalComponent implements OnInit {
       this.entityAowService.currentResultToReport()?.indicators?.[0]?.related_node_id
     );
     this.api.resultsSE.GET_AllInitiatives('p25').subscribe(({ response }) => {
-      const all = response.filter(item => item.initiative_id !== this.entityAowService.entityDetails().id);
+      // P2-3131: exclude AVISA (SGP-02) from the "Other(s) Science Program" dropdown in the report popup.
+      const all = filterOutAvisaInitiatives(response.filter(item => item.initiative_id !== this.entityAowService.entityDetails().id));
       this.allInitiatives.set(all);
       this.preselectTocSciencePrograms(all);
     });
