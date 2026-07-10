@@ -93,10 +93,9 @@
           hlmInput
           type="text"
           inputmode="decimal"
-          [ngModel]="currencyDisplay"
-          (ngModelChange)="onCurrencyInput($event)"
-          (focus)="currencyFocused = true"
-          (blur)="currencyFocused = false"
+          [(ngModel)]="currencyRaw"
+          (focus)="onCurrencyFocus()"
+          (blur)="onCurrencyBlur()"
           [disabled]="this.disabled"
           [placeholder]="this.placeholder"
           [ngClass]="{ 'pr-body-2': true }"

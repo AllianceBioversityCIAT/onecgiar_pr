@@ -91,25 +91,38 @@ export class PrInputComponent implements ControlValueAccessor {
     }
   }
 
-  /** Currency display (replaces the old numeric field): raw while focused, USD-formatted when blurred. */
-  currencyFocused = false;
+  /**
+   * Currency field (replaces the old numeric field). `currencyRaw` is what the
+   * `<input>` shows. While editing it holds exactly what the user types (so
+   * decimals like "10." work — nothing rewrites the field mid-typing). It only
+   * reformats to USD on blur / focus / external value change. The stored model
+   * value stays numeric.
+   */
+  currencyRaw = '';
 
-  get currencyDisplay(): string {
-    const v = this._value;
+  private toCurrencyString(v: any): string {
     if (v === null || v === undefined || v === '') return '';
-    if (this.currencyFocused) return String(v);
     const n = Number(v);
     return isNaN(n) ? '' : n.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
   }
 
-  onCurrencyInput(raw: string) {
-    const cleaned = (raw ?? '').replace(/[^0-9.]/g, '');
-    if (cleaned === '') {
-      this.value = null;
-      return;
-    }
-    const n = Number(cleaned);
-    this.value = isNaN(n) ? null : n < 0 ? 0 : n;
+  /** Blurred/loaded state: show the USD-formatted value. */
+  syncCurrencyRaw() {
+    this.currencyRaw = this.toCurrencyString(this._value);
+  }
+
+  /** On focus, show the raw number so it's freely editable. */
+  onCurrencyFocus() {
+    const v = this._value;
+    this.currencyRaw = v === null || v === undefined || v === '' ? '' : String(v);
+  }
+
+  /** On blur, parse what was typed into a number and reformat for display. */
+  onCurrencyBlur() {
+    const cleaned = (this.currencyRaw ?? '').replace(/[^0-9.]/g, '');
+    const n = cleaned === '' ? null : Number(cleaned);
+    this.value = n === null || isNaN(n) ? null : n < 0 ? 0 : n;
+    this.syncCurrencyRaw();
   }
 
   get badLink() {
@@ -130,6 +143,7 @@ export class PrInputComponent implements ControlValueAccessor {
 
   writeValue(value: any): void {
     this._value = value;
+    if (this.type === 'currency') this.syncCurrencyRaw();
   }
   registerOnChange(fn: any): void {
     this.onChange = fn;
