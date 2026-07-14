@@ -138,7 +138,15 @@ Surface at start (outside `custom-fields/`): **~87 HTML files, ~290 PrimeNG comp
 - **C — medium controls:** `p-button`/`pButton` (needs hlm-button pilot), `p-toggleswitch`, `p-datepicker`, `p-inputNumber`, `p-password`, `p-toast`, `p-popover`/`p-overlayBadge`.
 - **D — heavy (dedicated effort each, needs an architecture decision):** `p-table` ×22 (+`p-sortIcon`, paginator, columnFilter, rowToggler), `p-dialog` ×36, `p-drawer`, `p-chart`.
 
-**Done so far (Phase A):**
-- `p-message` → `app-alert-status` (8 spots / 5 files; `MessageModule` dropped from 6 modules).
-- `p-skeleton` → `.pr-skeleton` global div + shimmer in `styles.scss` (51 spots / 10 files; `SkeletonModule` dropped from 16 modules/standalone components). Static `width/height` + `[style]` object bindings coexist (Angular 21 merges static + bound styles).
-- Browser-verified (Playwright, prtest): `app-alert-status` renders, `.pr-skeleton` style + shimmer apply, 0 leftover PrimeNG widgets, no new console errors.
+**Done (OpenSpec change `migrate-primeng-leaf-controls`, committed on branch):**
+- `p-message` → `app-alert-status` (8/5 files; `MessageModule` dropped ×6).
+- `p-skeleton` → `.pr-skeleton` global div + shimmer (51/10 files; `SkeletonModule` dropped ×16). Static `width/height` + `[style]` object coexist (Angular 21 merges).
+- `pTooltip` ×63 → `[prTooltip]` (36 files). `PrTooltipDirective` promoted to `shared/directives/` + `PrTooltipDirectiveModule` (re-exported from `CustomFieldsModule` for app-wide reach); extended with `prTooltipDisabled` + `prTooltipShowDelay`. `TooltipModule`/`Tooltip` dropped ×34.
+- `p-checkbox` ×12 → native `.pr-native-check`. 7 binary direct; **5 group/value** (IPSR step-n2) via new `PrCheckboxValueAccessorDirective` (array-membership CVA, unit-spec 3/3). `CheckboxModule` fully removed.
+- `p-chip` ×2 → `.pr-chip`, `p-avatar` ×2 → `.pr-avatar`, `p-progressBar` → `.pr-progress-bar-indeterminate`, `p-progressSpinner` → `.pr-spinner` (global styles). Their modules dropped.
+- Browser-verified (Playwright, prtest): tooltip works app-wide, native checkboxes render, 0 leftover leaf PrimeNG widgets, no new console errors.
+
+**Remaining PrimeNG surface (scan, outside custom-fields) — CHANGE 2/3 roadmap:**
+- **Selects (CHANGE 2):** `p-select` ×9, `p-multiselect` ×14, `p-iconfield`/`p-inputicon` ×8, `pInputText` ×9, `p-inputNumber` ×3, `p-password` ×2, `p-datepicker` ×2, `p-toggleswitch` ×3 → reuse custom `app-pr-select`/`app-pr-multi-select` etc. (per-usage audit for bridge logic/hacks).
+- **Heavy (CHANGE 3):** `p-table` ×22 (+`p-sortIcon` ×30, `pSortableColumn`, `p-paginator`, `p-columnFilter`, `pRowToggler`), `p-dialog` ×36, `p-drawer` ×3, `p-toast` ×9, `p-popover` ×5, `p-overlayBadge` ×3, `p-chart` ×2, `p-button` ×25 + `pButton` ×13, `p-splitbutton`.
+- **Dead imports to sweep (no usages left):** `RadioButtonModule` ×12 (0 `<p-radioButton>` anywhere — `pr-radio-button` is native), plus stray `primeng/tooltip`/`checkbox`/`progressbar` in `.spec.ts`.
