@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, computed, inject, OnDestroy, OnInit } from '@angular/core';
-import { DrawerModule } from 'primeng/drawer';
 import { EntityAowService } from '../../../../../../services/entity-aow.service';
 import { CommonModule } from '@angular/common';
 import { TableModule } from 'primeng/table';
@@ -24,7 +23,7 @@ interface TableRow {
 
 @Component({
   selector: 'app-aow-target-details-drawer',
-  imports: [DrawerModule, CommonModule, TableModule],
+  imports: [CommonModule, TableModule],
   templateUrl: './aow-target-details-drawer.component.html',
   styleUrl: './aow-target-details-drawer.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

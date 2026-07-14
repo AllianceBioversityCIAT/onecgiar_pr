@@ -18,10 +18,13 @@ describe('AowViewResultsDrawer', () => {
     mockEntityAowService = {
       aowId: signal<string>('test-aow-id'),
       entityId: signal<string>('test-entity-id'),
+      entityDetails: signal<any>({ name: 'Test Entity' }),
+      currentAowSelected: jest.fn(() => ({ code: 'TEST-AOW', name: 'Test AOW' })),
       getTocResultsByAowId: jest.fn(),
       tocResultsOutputsByAowId: signal<any[]>([]),
       tocResultsOutcomesByAowId: signal<any[]>([]),
       isLoadingTocResultsByAowId: signal<boolean>(false),
+      showViewResultDrawer: signal<boolean>(true),
       viewResultDrawerFullScreen: signal<boolean>(false),
       currentResultToView: currentResultToViewSignal,
       getExistingResultsContributors: jest.fn(),

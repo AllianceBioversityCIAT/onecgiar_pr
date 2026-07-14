@@ -193,6 +193,42 @@ input {
   box-sizing: border-box;
 }
 
+.password-field {
+  position: relative;
+  width: 100%;
+
+  input {
+    padding-right: 40px;
+  }
+
+  input.ng-invalid.ng-dirty {
+    border-color: var(--pr-color-red-400);
+  }
+}
+
+.password-toggle-btn {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--pr-color-accents-4);
+
+  .material-icons-round {
+    font-size: 18px;
+  }
+
+  &:hover {
+    color: var(--pr-color-primary-300);
+  }
+}
+
 .signin-btn {
   font-family: 'Poppins', sans-serif;
   background-color: var(--pr-color-primary-300);

@@ -1,5 +1,19 @@
 import { PrTooltipDirectiveModule } from '../../../../shared/directives/pr-tooltip-directive.module';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject, OnInit, PLATFORM_ID, signal } from '@angular/core';
+import {
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  computed,
+  effect,
+  ElementRef,
+  inject,
+  OnDestroy,
+  OnInit,
+  PLATFORM_ID,
+  signal,
+  ViewChild
+} from '@angular/core';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { ApiService } from '../../../../shared/services/api/api.service';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
@@ -8,12 +22,12 @@ import { FormsModule } from '@angular/forms';
 import { EntityAowCardComponent } from './components/entity-aow-card/entity-aow-card.component';
 import { EntityResultsByIndicatorCategoryCardComponent } from './components/entity-results-by-indicator-category-card/entity-results-by-indicator-category-card.component';
 import { EntityAowService } from '../entity-aow/services/entity-aow.service';
-import { ChartModule } from 'primeng/chart';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
-import { Chart, ChartData, ChartDataset, ChartOptions } from 'chart.js';
+import { Chart } from 'chart.js/auto';
+import { ChartData, ChartDataset, ChartOptions } from 'chart.js';
 import { ButtonModule } from 'primeng/button';
+import { HlmButton } from '@spartan/button';
 import { PrDialogComponent } from 'src/app/shared/components/pr-dialog/pr-dialog.component';
-import { SplitButtonModule } from 'primeng/splitbutton';
 import { ResultCreatorModule } from '../../../results/pages/result-creator/result-creator.module';
 import { MenuItem } from 'primeng/api';
 import { BilateralResultsReviewComponent } from './components/bilateral-results-review/bilateral-results-review.component';
@@ -29,10 +43,9 @@ import { ResultFrameworkReportingHomeService } from '../result-framework-reporti
     RouterModule,
     EntityAowCardComponent,
     EntityResultsByIndicatorCategoryCardComponent,
-    ChartModule,
     ButtonModule,
+    HlmButton,
     PrDialogComponent,
-    SplitButtonModule,
     ResultCreatorModule,
     BilateralResultsReviewComponent
   ],
@@ -40,7 +53,7 @@ import { ResultFrameworkReportingHomeService } from '../result-framework-reporti
   styleUrl: './entity-details.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class EntityDetailsComponent implements OnInit {
+export class EntityDetailsComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   api = inject(ApiService);
   entityAowService = inject(EntityAowService);
@@ -49,7 +62,31 @@ export class EntityDetailsComponent implements OnInit {
 
   cd = inject(ChangeDetectorRef);
 
+  @ViewChild('outputsCanvas') private readonly outputsCanvas?: ElementRef<HTMLCanvasElement>;
+  @ViewChild('outcomesCanvas') private readonly outcomesCanvas?: ElementRef<HTMLCanvasElement>;
+  private outputsChart?: Chart;
+  private outcomesChart?: Chart;
+  private readonly chartsViewReady = signal(false);
+
+  constructor() {
+    // Render/refresh the Outputs and Outcomes bar charts whenever their data/options change
+    // (once the view — and therefore the <canvas> refs — is ready).
+    effect(() => {
+      const data = this.dataOutputs();
+      const options = this.chartOptionsOutputs();
+      if (!this.chartsViewReady()) return;
+      this.outputsChart = this.renderBarChart(this.outputsCanvas, this.outputsChart, data, options);
+    });
+    effect(() => {
+      const data = this.dataOutcomes();
+      const options = this.chartOptionsOutcomes();
+      if (!this.chartsViewReady()) return;
+      this.outcomesChart = this.renderBarChart(this.outcomesCanvas, this.outcomesChart, data, options);
+    });
+  }
+
   showReportModal = signal(false);
+  reportMenuOpen = signal(false);
   reportMenuItems: MenuItem[] = [
     {
       label: 'AI Assistant',
@@ -340,5 +377,32 @@ export class EntityDetailsComponent implements OnInit {
   onModalClose() {
     this.showReportModal.set(false);
     this.resultLevelSE.cleanData?.();
+  }
+
+  ngAfterViewInit(): void {
+    this.chartsViewReady.set(true);
+  }
+
+  ngOnDestroy(): void {
+    this.outputsChart?.destroy();
+    this.outcomesChart?.destroy();
+  }
+
+  private renderBarChart(
+    canvasRef: ElementRef<HTMLCanvasElement> | undefined,
+    existing: Chart | undefined,
+    data: ChartData<'bar'>,
+    options: ChartOptions<'bar'>
+  ): Chart | undefined {
+    if (!isPlatformBrowser(this.platformId)) return existing;
+    const canvas = canvasRef?.nativeElement;
+    if (!canvas) return existing;
+    existing?.destroy();
+    return new Chart(canvas, { type: 'bar', data, options });
+  }
+
+  onReportMenuItemClick(item: MenuItem): void {
+    this.reportMenuOpen.set(false);
+    item.command?.({});
   }
 }

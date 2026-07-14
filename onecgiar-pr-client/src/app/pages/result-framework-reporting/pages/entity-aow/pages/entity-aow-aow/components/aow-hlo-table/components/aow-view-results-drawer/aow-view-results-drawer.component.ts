@@ -1,11 +1,9 @@
 import { ChangeDetectionStrategy, Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
-import { DrawerModule } from 'primeng/drawer';
 import { EntityAowService } from '../../../../../../services/entity-aow.service';
 import { TableModule } from 'primeng/table';
 import { CommonModule } from '@angular/common';
 import { ColumnOrder } from '../../aow-hlo-table.component';
 import { PdfIconModule } from '../../../../../../../../../../shared/icon-components/pdf-icon/pdf-icon.module';
-import { PopoverModule } from 'primeng/popover';
 import { Router } from '@angular/router';
 
 interface ActionItem {
@@ -16,7 +14,7 @@ interface ActionItem {
 
 @Component({
   selector: 'app-aow-view-results-drawer',
-  imports: [DrawerModule, TableModule, CommonModule, PdfIconModule, PopoverModule],
+  imports: [TableModule, CommonModule, PdfIconModule],
   templateUrl: './aow-view-results-drawer.component.html',
   styleUrl: './aow-view-results-drawer.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -27,6 +25,11 @@ export class AowViewResultsDrawerComponent implements OnInit, OnDestroy {
 
   selectedProduct: any = null;
   isLoadingResults = signal<boolean>(false);
+
+  // Row actions menu state (replaces PrimeNG p-popover)
+  actionMenuOpen = signal<boolean>(false);
+  actionMenuX = signal<number>(0);
+  actionMenuY = signal<number>(0);
 
   columns = signal<ColumnOrder[]>([
     { title: 'Code', attr: 'result_code', width: '10%' },
@@ -47,6 +50,18 @@ export class AowViewResultsDrawerComponent implements OnInit, OnDestroy {
 
   setSelectedProduct(product: any) {
     this.selectedProduct = product;
+  }
+
+  openActionMenu(event: MouseEvent, product: any) {
+    event.stopPropagation();
+    this.setSelectedProduct(product);
+    this.actionMenuX.set(event.clientX);
+    this.actionMenuY.set(event.clientY);
+    this.actionMenuOpen.set(true);
+  }
+
+  closeActionMenu() {
+    this.actionMenuOpen.set(false);
   }
 
   navigateToResultDirect(product: any) {

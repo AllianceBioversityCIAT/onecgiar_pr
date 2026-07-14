@@ -6,14 +6,15 @@ describe('AiFeedbackComponent', () => {
   let component: AiFeedbackComponent;
   let fixture: ComponentFixture<AiFeedbackComponent>;
 
-  const createPopoverMock = () => {
-    return {
-      show: jest.fn(),
-      hide: jest.fn(),
-      align: jest.fn(),
-      container: {} as unknown
-    } as any;
-  };
+  // Mimics the click event the thumbs buttons pass to toggleFeedback:
+  // needs stopPropagation() + a currentTarget the component can measure.
+  const createEvent = () =>
+    ({
+      stopPropagation: jest.fn(),
+      currentTarget: {
+        getBoundingClientRect: () => ({ bottom: 0, right: 0, top: 0, left: 0, width: 0, height: 0 })
+      }
+    }) as unknown as Event;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -22,8 +23,6 @@ describe('AiFeedbackComponent', () => {
 
     fixture = TestBed.createComponent(AiFeedbackComponent);
     component = fixture.componentInstance;
-    // Provide a mock for the ViewChild Popover
-    component.feedbackPanel = createPopoverMock();
     fixture.detectChanges();
   });
 
@@ -39,37 +38,32 @@ describe('AiFeedbackComponent', () => {
     expect(component.selectedType()).toEqual([]);
   });
 
-  it('should show popover and set type on first toggle', () => {
-    const event = {} as Event;
-    const showSpy = jest.spyOn(component.feedbackPanel, 'show');
-    const alignSpy = jest.spyOn(component.feedbackPanel, 'align');
+  it('should open panel and set type on first toggle', () => {
+    const event = createEvent();
 
     component.toggleFeedback(event, 'good');
 
     expect(component.feedbackType()).toBe('good');
+    expect(component.feedbackOpen()).toBe(true);
     expect(component.selectedType()).toEqual([]);
     expect(component.body().feedbackText).toBe('');
-    expect(showSpy).toHaveBeenCalledWith(event);
-    if (component.feedbackPanel.container) {
-      expect(alignSpy).toHaveBeenCalled();
-    }
   });
 
-  it('should hide popover and reset when toggling same type again', () => {
-    const event = {} as Event;
-    const hideSpy = jest.spyOn(component.feedbackPanel, 'hide');
+  it('should close panel and reset when toggling same type again', () => {
+    const event = createEvent();
 
     component.toggleFeedback(event, 'good');
     expect(component.feedbackType()).toBe('good');
+    expect(component.feedbackOpen()).toBe(true);
 
     component.toggleFeedback(event, 'good');
-    expect(hideSpy).toHaveBeenCalled();
+    expect(component.feedbackOpen()).toBe(false);
     expect(component.feedbackType()).toBeNull();
     expect(component.selectedType()).toEqual([]);
   });
 
   it('isRequired should reflect when feedbackType is bad', () => {
-    const event = {} as Event;
+    const event = createEvent();
     component.toggleFeedback(event, 'bad');
     expect(component.isRequired()).toBe(true);
     component.toggleFeedback(event, 'bad');
@@ -78,7 +72,7 @@ describe('AiFeedbackComponent', () => {
 
   it('should not submit when bad feedback missing type or text', async () => {
     jest.useFakeTimers();
-    const event = {} as Event;
+    const event = createEvent();
     component.toggleFeedback(event, 'bad');
 
     // Missing both selectedType and feedbackText
@@ -95,8 +89,7 @@ describe('AiFeedbackComponent', () => {
 
   it('should submit successfully for good feedback', async () => {
     jest.useFakeTimers();
-    const event = {} as Event;
-    const hideSpy = jest.spyOn(component.feedbackPanel, 'hide');
+    const event = createEvent();
 
     component.toggleFeedback(event, 'good');
     const initialType = component.feedbackType();
@@ -110,7 +103,7 @@ describe('AiFeedbackComponent', () => {
     expect(component.loadingFeedback()).toBe(false);
     expect(component.feedbackSent()).toBe(true);
     expect(component.lastFeedbackType()).toBe(initialType);
-    expect(hideSpy).toHaveBeenCalled();
+    expect(component.feedbackOpen()).toBe(false);
     expect(component.feedbackType()).toBeNull();
 
     jest.useRealTimers();
@@ -118,7 +111,7 @@ describe('AiFeedbackComponent', () => {
 
   it('should submit successfully for bad feedback when type and text provided', async () => {
     jest.useFakeTimers();
-    const event = {} as Event;
+    const event = createEvent();
     component.toggleFeedback(event, 'bad');
     component.selectType('Incorrect');
     component.body.update(b => ({ ...b, feedbackText: 'Details about the issue' }));
@@ -132,6 +125,7 @@ describe('AiFeedbackComponent', () => {
     expect(component.loadingFeedback()).toBe(false);
     expect(component.feedbackSent()).toBe(true);
     expect(component.lastFeedbackType()).toBe('bad');
+    expect(component.feedbackOpen()).toBe(false);
     expect(component.feedbackType()).toBeNull();
 
     jest.useRealTimers();

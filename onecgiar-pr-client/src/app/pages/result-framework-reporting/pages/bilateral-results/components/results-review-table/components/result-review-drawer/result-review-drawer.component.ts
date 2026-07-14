@@ -13,7 +13,6 @@ import {
   signal,
   untracked
 } from '@angular/core';
-import { DrawerModule } from 'primeng/drawer';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
@@ -40,7 +39,6 @@ import { RdContributorsAndPartnersModule } from '../../../../../../../../pages/r
 @Component({
   selector: 'app-result-review-drawer',
   imports: [
-    DrawerModule,
     CommonModule,
     FormsModule,
     ButtonModule,

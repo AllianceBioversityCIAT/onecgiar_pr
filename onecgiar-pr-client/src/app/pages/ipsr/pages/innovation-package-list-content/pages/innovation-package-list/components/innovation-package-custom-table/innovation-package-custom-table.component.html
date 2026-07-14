@@ -62,7 +62,7 @@
         <td *ngIf="!this.api.rolesSE.platformIsClosed">
           <div class="subResults" *ngFor="let subResult of result['results']">
             <div class="icon_container">
-              <i class="pi pi-ellipsis-v" (click)="menu.toggle($event); onPressAction(subResult)"></i>
+              <i class="pi pi-ellipsis-v" (click)="toggleMenu($event, subResult)"></i>
             </div>
           </div>
         </td>
@@ -75,18 +75,20 @@
   <div class="noDataText" *ngIf="!this.tableData?.length">There are no results for the selected filters.</div>
 </div>
 
-<p-popover #menu>
-  @for (item of this.api.dataControlSE?.currentResult?.role_id || this.api.rolesSE.isAdmin ? itemsWithDelete : items; track item) {
-    @if (item.visible) {
-      <div
-        class="table_menu_item"
-        [prTooltip]="item.disabled ? item.tooltipText : null"
-        prTooltipPosition="bottom"
-        [ngClass]="{ itemDisabled: item.disabled }"
-        (click)="item.disabled ? null : item.command(); menu.toggle($event)">
-        <i [class]="item.icon"></i>
-        <span>{{ item.label }}</span>
-      </div>
+@if (menuOpen()) {
+  <div class="pr-menu-panel" [style.top.px]="menuTop" [style.left.px]="menuLeft" (click)="$event.stopPropagation()">
+    @for (item of this.api.dataControlSE?.currentResult?.role_id || this.api.rolesSE.isAdmin ? itemsWithDelete : items; track item) {
+      @if (item.visible) {
+        <div
+          class="table_menu_item"
+          [prTooltip]="item.disabled ? item.tooltipText : null"
+          prTooltipPosition="bottom"
+          [ngClass]="{ itemDisabled: item.disabled }"
+          (click)="item.disabled ? null : item.command(); closeMenu()">
+          <i [class]="item.icon"></i>
+          <span>{{ item.label }}</span>
+        </div>
+      }
     }
-  }
-</p-popover>
+  </div>
+}

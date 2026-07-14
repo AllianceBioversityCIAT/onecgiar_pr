@@ -8,7 +8,6 @@ import { GlobalLinksService } from '../../services/variables/global-links.servic
 import { Router, RouterModule } from '@angular/router';
 import { ResultsNotificationsService } from '../../../pages/results/pages/results-outlet/pages/results-notifications/results-notifications.service';
 import { SatPopoverModule } from '@ncstate/sat-popover';
-import { OverlayBadgeModule } from 'primeng/overlaybadge';
 import { CommonModule } from '@angular/common';
 import { PopUpNotificationItemComponent } from './components/pop-up-notification-item/pop-up-notification-item.component';
 import { TawkComponent } from '../tawk/tawk.component';
@@ -22,7 +21,6 @@ import { NavigationBarComponent } from '../navigation-bar/navigation-bar.compone
   imports: [
     CommonModule,
     SatPopoverModule,
-    OverlayBadgeModule,
     PopUpNotificationItemComponent,
     TawkComponent,
     NavigationBarComponent,

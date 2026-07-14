@@ -15,7 +15,6 @@ import { ResultsToUpdateModalModule } from './components/results-to-update-modal
 import { ChangePhaseModalModule } from '../../../../../../shared/components/change-phase-modal/change-phase-modal.module';
 import { PdfIconModule } from '../../../../../../shared/icon-components/pdf-icon/pdf-icon.module';
 import { CustomSpinnerModule } from '../../../../../../shared/components/custom-spinner/custom-spinner.module';
-import { PopoverModule } from 'primeng/popover';
 
 @NgModule({
   declarations: [ResultsListComponent, ReportNewResultButtonComponent],
@@ -32,7 +31,6 @@ import { PopoverModule } from 'primeng/popover';
     CustomFieldsModule,
     ResultsListFilterPipeModule,
     PdfIconModule,
-    PopoverModule,
     ResultsListFiltersComponent
   ]
 })

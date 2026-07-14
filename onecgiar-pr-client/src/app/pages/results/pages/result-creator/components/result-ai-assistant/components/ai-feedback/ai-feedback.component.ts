@@ -1,13 +1,12 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, signal, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, signal } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { HlmButton } from '@spartan/button';
-import { Popover, PopoverModule } from 'primeng/popover';
 import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
 
 @Component({
   selector: 'app-ai-feedback',
-  imports: [CommonModule, ButtonModule, HlmButton, PopoverModule, CustomFieldsModule],
+  imports: [CommonModule, ButtonModule, HlmButton, CustomFieldsModule],
   standalone: true,
   templateUrl: './ai-feedback.component.html',
   styleUrl: './ai-feedback.component.scss',
@@ -39,7 +38,10 @@ export class AiFeedbackComponent {
   ]);
   selectedType = signal<string[]>([]);
 
-  @ViewChild('feedbackPanel') feedbackPanel!: Popover;
+  // Feedback panel overlay state (replaces PrimeNG p-popover)
+  feedbackOpen = signal<boolean>(false);
+  panelTop = 0;
+  panelLeft = 0;
 
   selectType(type: string) {
     if (this.selectedType().includes(type)) {
@@ -50,27 +52,37 @@ export class AiFeedbackComponent {
   }
 
   toggleFeedback(event: Event, type: 'good' | 'bad') {
+    event.stopPropagation();
     if (this.feedbackType() === type) {
-      this.feedbackPanel.hide();
+      this.feedbackOpen.set(false);
       this.feedbackType.set(null);
       this.selectedType.set([]);
     } else {
       this.feedbackType.set(type);
-      this.feedbackPanel.show(event);
+      const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+      this.panelTop = rect.bottom + 8;
+      this.panelLeft = rect.right;
+      this.feedbackOpen.set(true);
       this.selectedType.set([]);
       this.body.set({ feedbackText: '' });
-
-      if (this.feedbackPanel.container) {
-        this.feedbackPanel.align();
-      }
     }
   }
 
   closeFeedbackPanel() {
     this.selectedType.set([]);
-    this.feedbackPanel.hide();
+    this.feedbackOpen.set(false);
     this.feedbackType.set(null);
     this.body.update(b => ({ ...b, feedbackText: '' }));
+  }
+
+  @HostListener('document:click')
+  onDocumentClick() {
+    if (this.feedbackOpen()) this.closeFeedbackPanel();
+  }
+
+  @HostListener('window:scroll')
+  onWindowScroll() {
+    if (this.feedbackOpen()) this.closeFeedbackPanel();
   }
   async submitFeedback() {
     if (this.feedbackType() === 'bad' && (!this.selectedType().length || !this.body().feedbackText)) {

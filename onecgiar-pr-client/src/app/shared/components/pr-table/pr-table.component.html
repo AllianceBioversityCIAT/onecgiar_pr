@@ -1,0 +1,58 @@
+<div class="pr-table-wrap {{ styleClass }}">
+  <table class="pr-table" [class.pr-table--selectable]="selectionMode">
+    <thead>
+      @if (headerTpl) {
+        <ng-container *ngTemplateOutlet="headerTpl.tpl"></ng-container>
+      }
+    </thead>
+    <tbody>
+      @if (!loading && !pagedValue().length) {
+        @if (emptyTpl) {
+          <ng-container *ngTemplateOutlet="emptyTpl.tpl"></ng-container>
+        }
+      } @else {
+        @for (row of pagedValue(); track $index; let i = $index) {
+          @if (bodyTpl) {
+            <ng-container *ngTemplateOutlet="bodyTpl.tpl; context: { $implicit: row, index: i, rowIndex: i }"></ng-container>
+          }
+        }
+      }
+    </tbody>
+  </table>
+
+  @if (paginator && effectiveRows() > 0 && totalRecords() > effectiveRows()) {
+    <div class="pr-paginator">
+      <button
+        type="button"
+        class="pr-paginator__btn"
+        [disabled]="page() === 0"
+        (click)="goToPage(page() - 1)"
+        aria-label="Previous page">
+        <i class="material-icons-round">chevron_left</i>
+      </button>
+
+      <span class="pr-paginator__label">{{ pageRangeLabel() }}</span>
+
+      <button
+        type="button"
+        class="pr-paginator__btn"
+        [disabled]="page() >= lastPage()"
+        (click)="goToPage(page() + 1)"
+        aria-label="Next page">
+        <i class="material-icons-round">chevron_right</i>
+      </button>
+
+      @if (rowsPerPageOptions?.length) {
+        <select
+          class="pr-paginator__size"
+          [value]="effectiveRows()"
+          (change)="setPageSize(+$any($event.target).value)"
+          aria-label="Rows per page">
+          @for (opt of rowsPerPageOptions; track opt) {
+            <option [value]="opt">{{ opt }}</option>
+          }
+        </select>
+      }
+    </div>
+  }
+</div>

@@ -14,7 +14,7 @@
       </span>
 
       <!-- Apply filters button -->
-      <p-overlaybadge value="" [badgeDisabled]="filtersCount() === 0">
+      <span class="pr-overlay-badge-wrap">
         <app-pr-button
           (click)="openFiltersDrawer()"
           (keydown.enter)="openFiltersDrawer()"
@@ -22,7 +22,8 @@
           [verticalMargin]="-6"
           icon="filter_alt"
           [reverse]="true" />
-      </p-overlaybadge>
+        <span class="pr-overlay-badge" *ngIf="filtersCount() > 0"></span>
+      </span>
       <!-- Clear filters -->
       <app-pr-button
         (click)="clearAllNewFilters()"

@@ -3,7 +3,6 @@ import { Component, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { CustomizedAlertsFeService } from '../../../../../../../../shared/services/customized-alerts-fe.service';
 import { ScienceProgramAccess, PhaseDetailData } from './phase-detail.interface';
@@ -11,7 +10,7 @@ import { ScienceProgramAccess, PhaseDetailData } from './phase-detail.interface'
 @Component({
   selector: 'app-phase-detail',
   standalone: true,
-  imports: [PrTooltipDirectiveModule, CommonModule, RouterModule, FormsModule, ToggleSwitchModule],
+  imports: [PrTooltipDirectiveModule, CommonModule, RouterModule, FormsModule],
   templateUrl: './phase-detail.component.html',
   styleUrl: './phase-detail.component.scss'
 })

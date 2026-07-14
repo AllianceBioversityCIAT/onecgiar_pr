@@ -65,11 +65,12 @@
             notifications
           </i>
         } @else {
-          <p-overlayBadge [value]="notificationBadgeLength()" severity="danger" [style]="{ 'outline-style': 'none' }">
+          <span class="pr-overlay-badge-wrap">
             <i class="material-icons-round animate_bell info_icon" [ngClass]="{ info_icon_active: notificationsPopover.isOpen() }" aria-hidden="true">
               notifications
             </i>
-          </p-overlayBadge>
+            <span class="pr-overlay-badge" *ngIf="notificationBadgeLength()">{{ notificationBadgeLength() }}</span>
+          </span>
         }
       </button>
 

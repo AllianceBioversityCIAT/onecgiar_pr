@@ -163,22 +163,9 @@
                   </div>
                 }
                 @if (hasMoreEntities(user.entities)) {
-                  <button class="view-more-btn" (click)="showEntityOverlay($event, entityOverlay, user.entities)" #entityTrigger type="button">
+                  <button class="view-more-btn" (click)="showEntityOverlay($event, user.entities)" type="button">
                     View more
                   </button>
-
-                  <p-popover #entityOverlay [style]="{ maxWidth: '300px' }">
-                    <div class="overlay-entities-container">
-                      <div class="overlay-title">All Entities</div>
-                      <div class="overlay-entities-grid">
-                        @for (entity of user.entities; track entity) {
-                          <div class="entity-chip">
-                            <span>{{ entity }}</span>
-                          </div>
-                        }
-                      </div>
-                    </div>
-                  </p-popover>
                 }
               } @else {
                 <span class="no-entities">No reporting role assigned</span>
@@ -225,6 +212,22 @@
       <span class="total">{{ this.users().length }} total</span>
     </div>
   </div>
+
+  <!-- All Entities overlay (replaces PrimeNG p-popover) -->
+  @if (entitiesOverlayOpen()) {
+    <div class="pr-entities-panel" [style.top.px]="overlayTop" [style.left.px]="overlayLeft" (click)="$event.stopPropagation()">
+      <div class="overlay-entities-container">
+        <div class="overlay-title">All Entities</div>
+        <div class="overlay-entities-grid">
+          @for (entity of overlayEntities(); track entity) {
+            <div class="entity-chip">
+              <span>{{ entity }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  }
 
   <!-- Manage User Modal Component -->
   <app-manage-user-modal

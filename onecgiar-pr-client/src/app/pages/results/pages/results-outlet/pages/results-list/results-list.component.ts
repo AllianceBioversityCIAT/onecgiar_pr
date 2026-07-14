@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, AfterViewInit, ViewChild, effect, inject, computed, untracked } from '@angular/core';
+import { Component, OnDestroy, OnInit, AfterViewInit, ViewChild, effect, inject, computed, untracked, signal, HostListener } from '@angular/core';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { CurrentResult } from '../../../../../../shared/interfaces/current-result.interface';
 import { ResultsListService } from './services/results-list.service';
@@ -124,6 +124,11 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
 
   @ViewChild('table') table: Table;
 
+  // Action menu overlay state (replaces PrimeNG p-popover)
+  menuOpen = signal(false);
+  menuTop = 0;
+  menuLeft = 0;
+
   constructor(
     public resultsNotificationsSE: ResultsNotificationsService,
     public api: ApiService,
@@ -160,6 +165,35 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
         }
       });
     });
+  }
+
+  toggleMenu(event: MouseEvent, result?: CurrentResult) {
+    if (result) this.onPressAction(result);
+    event.stopPropagation();
+
+    if (this.menuOpen()) {
+      this.menuOpen.set(false);
+      return;
+    }
+
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    this.menuTop = rect.bottom + 6;
+    this.menuLeft = rect.right;
+    this.menuOpen.set(true);
+  }
+
+  closeMenu() {
+    this.menuOpen.set(false);
+  }
+
+  @HostListener('document:click')
+  onDocumentClick() {
+    if (this.menuOpen()) this.menuOpen.set(false);
+  }
+
+  @HostListener('window:scroll')
+  onWindowScroll() {
+    if (this.menuOpen()) this.menuOpen.set(false);
   }
 
   validateOrder(columnAttr) {

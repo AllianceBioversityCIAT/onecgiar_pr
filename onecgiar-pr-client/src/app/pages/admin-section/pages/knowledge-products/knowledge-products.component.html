@@ -16,7 +16,10 @@
         author affiliation coming from CGSpace.
       </p>
       <div class="kp_content_item--input">
-        <p-inputNumber [(ngModel)]="confidence_level" [inputStyle]="{ width: '55px' }" [min]="0" [max]="100" suffix="%"></p-inputNumber>
+        <span class="kp_confidence_field">
+          <input type="number" class="kp_confidence_input" [(ngModel)]="confidence_level" [min]="0" [max]="100" />
+          <span class="kp_confidence_suffix">%</span>
+        </span>
         <app-pr-button
           text="Update"
           (click)="onUpdateConfidenceLevel()"

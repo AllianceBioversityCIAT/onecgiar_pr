@@ -10,6 +10,20 @@ p {
   margin: 0;
 }
 
+.contribution-target-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--pr-color-neutral-1000);
+  border-radius: 6px;
+  @include fonts.pr-typography('body-2');
+  box-sizing: border-box;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
 .report-result-header {
   display: flex;
   align-items: center;

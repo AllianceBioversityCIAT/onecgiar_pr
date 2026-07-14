@@ -10,6 +10,101 @@ p {
   margin: 0;
 }
 
+// Native drawer (replaces PrimeNG p-drawer): fixed right-aligned panel + backdrop
+.drawer-overlay-root {
+  position: fixed;
+  inset: 0;
+  z-index: 1099;
+  pointer-events: auto;
+}
+
+.drawer-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  appearance: none;
+  cursor: pointer;
+  background: rgba(15, 23, 42, 0.48);
+  animation: pr-drawer-backdrop-in 0.3s ease forwards;
+}
+
+.custom-drawer-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  min-width: 65vw;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--pr-color-white);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.12);
+  animation: pr-drawer-slide-in 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+
+  &.full-screen {
+    min-width: 100%;
+    width: 100%;
+    left: 0;
+  }
+}
+
+.drawer-panel-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+// Row actions menu (replaces PrimeNG p-popover)
+.action-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  appearance: none;
+  background: transparent;
+  cursor: default;
+}
+
+.action-menu {
+  position: fixed;
+  z-index: 1101;
+  transform: translateX(-100%);
+  background: var(--pr-color-white);
+  border: 1px solid var(--pr-color-accents-2);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  padding: 0.25rem;
+  overflow: hidden;
+}
+
+@keyframes pr-drawer-slide-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes pr-drawer-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 .view-result-drawer-header {
   display: flex;
   flex-direction: column;
@@ -88,17 +183,3 @@ p {
   color: var(--pr-color-primary-300);
 }
 
-::ng-deep {
-  .p-drawer-header {
-    padding: 0 !important;
-  }
-
-  .p-popover:before,
-  .p-popover:after {
-    display: none;
-  }
-
-  .p-popover-content {
-    padding: 0.25rem !important;
-  }
-}

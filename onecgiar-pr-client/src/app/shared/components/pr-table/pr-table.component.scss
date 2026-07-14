@@ -1,0 +1,83 @@
+@use '../../../../styles/fonts' as fonts;
+
+.pr-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.pr-table {
+  width: 100%;
+  border-collapse: collapse;
+  @include fonts.pr-typography('body-2');
+
+  thead th {
+    text-align: left;
+    font-weight: 600;
+    color: var(--pr-color-secondary-400);
+    background: var(--pr-color-accents-1);
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--pr-color-accents-2);
+    white-space: nowrap;
+  }
+
+  tbody td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--pr-color-accents-2);
+    color: var(--pr-color-secondary-400);
+    vertical-align: middle;
+  }
+
+  &.pr-table--selectable tbody tr:hover {
+    background: var(--pr-color-primary-25);
+  }
+}
+
+.pr-paginator {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 10px 4px;
+
+  &__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--pr-color-accents-2);
+    border-radius: 6px;
+    background: var(--pr-color-white);
+    cursor: pointer;
+    color: var(--pr-color-secondary-400);
+    transition: background-color 0.15s ease-in-out;
+
+    &:hover:not(:disabled) {
+      background: var(--pr-color-accents-1);
+    }
+
+    &:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    i {
+      font-size: 18px;
+    }
+  }
+
+  &__label {
+    @include fonts.pr-typography('body-3');
+    color: var(--pr-color-accents-6);
+  }
+
+  &__size {
+    height: 30px;
+    border: 1px solid var(--pr-color-accents-2);
+    border-radius: 6px;
+    background: var(--pr-color-white);
+    color: var(--pr-color-secondary-400);
+    padding: 0 6px;
+    cursor: pointer;
+  }
+}

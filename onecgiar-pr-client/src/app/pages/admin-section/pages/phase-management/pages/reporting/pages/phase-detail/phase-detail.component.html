@@ -117,13 +117,14 @@
 
             <div class="sp-card__bottom">
               <div class="sp-card__toggle">
-                <p-toggleswitch
+                <input
+                  type="checkbox"
+                  class="pr-switch"
                   [(ngModel)]="program.reporting_enabled"
                   (ngModelChange)="onToggleProgram(program)"
                   [disabled]="!phaseDetail().status"
                   [prTooltip]="!phaseDetail().status ? 'Phase is closed' : program.reporting_enabled ? 'Click to close reporting' : 'Click to open reporting'"
-                  prTooltipPosition="top">
-                </p-toggleswitch>
+                  prTooltipPosition="top" />
                 <span
                   class="sp-card__status"
                   [ngClass]="program.reporting_enabled ? 'sp-card__status--open' : 'sp-card__status--closed'">

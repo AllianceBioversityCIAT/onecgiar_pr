@@ -5,11 +5,10 @@ import { PhaseManagementTableComponent } from './phase-management-table.componen
 import { TableModule } from 'primeng/table';
 import { FormsModule } from '@angular/forms';
 import { CustomFieldsModule } from '../../../custom-fields/custom-fields.module';
-import { DatePickerModule } from 'primeng/datepicker';
 
 @NgModule({
   declarations: [PhaseManagementTableComponent],
-  imports: [CommonModule, RouterModule, TableModule, FormsModule, CustomFieldsModule, DatePickerModule],
+  imports: [CommonModule, RouterModule, TableModule, FormsModule, CustomFieldsModule],
   exports: [PhaseManagementTableComponent]
 })
 export class PhaseManagementTableModule {}

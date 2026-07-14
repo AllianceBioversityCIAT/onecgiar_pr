@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, inject, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, inject, signal, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Table, TableModule } from 'primeng/table';
@@ -17,7 +17,6 @@ import { ManageUserModalComponent } from './components/manage-user-modal/manage-
 import { InitiativesService } from '../../../../shared/services/global/initiatives.service';
 import { DynamicPanelServiceService } from '../../../../shared/components/dynamic-panel-menu/dynamic-panel-service.service';
 import { PrFilterMultiselectModule } from '../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
-import { Popover } from 'primeng/popover';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
 import { UserRolesInfoModalComponent } from '../../../../shared/components/user-roles-info-modal/user-roles-info-modal.component';
 
@@ -47,7 +46,6 @@ interface CgiarOption {
     ButtonModule,
     InputTextModule,
     DialogModule,
-    Popover,
     CustomFieldsModule,
     IconFieldModule,
     InputIconModule,
@@ -331,10 +329,36 @@ export default class UserManagementComponent implements OnInit, OnDestroy {
     return entities.slice(2); // Return entities from index 2 onwards
   }
 
-  showEntityOverlay(event: any, overlay: any, entities: string[]): void {
-    if (this.hasMoreEntities(entities)) {
-      overlay.toggle(event);
+  // "All Entities" overlay state (replaces PrimeNG p-popover)
+  entitiesOverlayOpen = signal<boolean>(false);
+  overlayEntities = signal<string[]>([]);
+  overlayTop = 0;
+  overlayLeft = 0;
+
+  showEntityOverlay(event: MouseEvent, entities: string[]): void {
+    if (!this.hasMoreEntities(entities)) return;
+    event.stopPropagation();
+
+    if (this.entitiesOverlayOpen() && this.overlayEntities() === entities) {
+      this.entitiesOverlayOpen.set(false);
+      return;
     }
+
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    this.overlayTop = rect.bottom + 6;
+    this.overlayLeft = rect.right;
+    this.overlayEntities.set(entities);
+    this.entitiesOverlayOpen.set(true);
+  }
+
+  @HostListener('document:click')
+  onDocumentClick() {
+    if (this.entitiesOverlayOpen()) this.entitiesOverlayOpen.set(false);
+  }
+
+  @HostListener('window:scroll')
+  onWindowScroll() {
+    if (this.entitiesOverlayOpen()) this.entitiesOverlayOpen.set(false);
   }
 
   exportExcel(usersList) {

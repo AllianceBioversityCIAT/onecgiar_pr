@@ -2,7 +2,6 @@ import { CommonModule, Location } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
-import { InputNumberModule } from 'primeng/inputnumber';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { ApiService } from '../../../../shared/services/api/api.service';
@@ -20,7 +19,6 @@ import { IndicatorResultsModalComponent } from './components/indicator-results-m
         CommonModule,
         FormsModule,
         CustomFieldsModule,
-        InputNumberModule,
         TableModule,
         ButtonModule,
         ToastModule,

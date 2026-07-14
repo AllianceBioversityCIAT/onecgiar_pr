@@ -17,8 +17,9 @@
       <button hlmBtn variant="ghost" size="icon" (click)="this.toggleFeedback($event, 'bad')" [ngClass]="{ globalDisabled: true }"><i class="pi pi-thumbs-down"></i></button>
     </div>
 
-    <p-popover #feedbackPanel [style]="{ width: '400px' }">
-      <div dropdown-content>
+    @if (feedbackOpen()) {
+      <div class="pr-feedback-panel" [style.top.px]="panelTop" [style.left.px]="panelLeft" (click)="$event.stopPropagation()">
+        <div dropdown-content>
         <h2
           class="pr-h2 font-weight-600 m-0 mb-8"
           [ngClass]="{
@@ -78,6 +79,7 @@
             [disabled]="(feedbackType() === 'bad' && (!selectedType().length || !body().feedbackText)) || loadingFeedback()"></app-pr-button>
         </div>
       </div>
-    </p-popover>
+    </div>
+    }
   }
 </div>

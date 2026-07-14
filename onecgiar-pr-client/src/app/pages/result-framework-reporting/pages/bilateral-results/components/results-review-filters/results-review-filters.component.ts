@@ -10,7 +10,6 @@ import { CustomFieldsModule } from '../../../../../../custom-fields/custom-field
 import { PrFilterMultiselectModule } from '../../../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
 import { ButtonModule } from 'primeng/button';
 import { HlmButton } from '@spartan/button';
-import { OverlayBadgeModule } from 'primeng/overlaybadge';
 @Component({
   selector: 'app-results-review-filters',
   imports: [
@@ -22,7 +21,6 @@ import { OverlayBadgeModule } from 'primeng/overlaybadge';
     PrFilterMultiselectModule,
     ButtonModule,
     HlmButton,
-    OverlayBadgeModule,
     CustomFieldsModule
   ],
   templateUrl: './results-review-filters.component.html',

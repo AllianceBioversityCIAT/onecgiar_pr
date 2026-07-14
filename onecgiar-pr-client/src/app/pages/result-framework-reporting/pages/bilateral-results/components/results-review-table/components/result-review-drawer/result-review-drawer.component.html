@@ -1,5 +1,7 @@
-<p-drawer [(visible)]="visible" [position]="drawerFullScreen() ? 'full' : 'right'" [closable]="false" [style]="{ minWidth: '65vw' }">
-  <ng-template #header>
+<div class="drawer-overlay-root">
+  <button type="button" class="drawer-backdrop" aria-label="Close" tabindex="-1" (click)="closeDrawer()"></button>
+
+  <div class="custom-drawer-panel" [class.full-screen]="drawerFullScreen()" role="dialog" aria-modal="true">
     <div class="result-review-drawer-header">
       <p class="result-review-drawer-header_entity">
         <span class="result-review-drawer-header_entity_acronym">{{ resultDetail()?.commonFields?.center_name ?? 'Center - Not specified' }}</span>
@@ -22,9 +24,9 @@
         <i class="pi pi-times" style="font-size: 15px; cursor: pointer" (click)="closeDrawer()"></i>
       </div>
     </div>
-  </ng-template>
 
-  <div class="result-review-drawer-content">
+    <div class="drawer-panel-content">
+      <div class="result-review-drawer-content">
     @let fields = this.resultDetail();
     <!-- Result Header Info -->
     <div class="result-review-drawer-content_header">
@@ -418,11 +420,11 @@
         </div>
       }
     }
-  </div>
+      </div>
+    </div>
 
-  <!-- Footer Actions -->
-  @if (canEditInDrawer() && resultToReview()?.status_id == 5 && !isLoadingInformation()) {
-    <ng-template #footer>
+    <!-- Footer Actions -->
+    @if (canEditInDrawer() && resultToReview()?.status_id == 5 && !isLoadingInformation()) {
       <div class="result-review-drawer-footer">
         <button
           hlmBtn
@@ -439,9 +441,9 @@
         </button>
         <button hlmBtn variant="outline" size="lg" class="reject-button" (click)="onReject()"><i class="pi pi-times-circle"></i>REJECT</button>
       </div>
-    </ng-template>
-  }
-</p-drawer>
+    }
+  </div>
+</div>
 
 <!-- Confirm Approve Dialog -->
 <app-pr-dialog

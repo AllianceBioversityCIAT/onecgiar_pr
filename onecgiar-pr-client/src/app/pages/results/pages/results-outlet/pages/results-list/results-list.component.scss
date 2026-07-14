@@ -134,15 +134,14 @@ td {
   opacity: 0.5;
 }
 
-::ng-deep {
-  .p-popover:before,
-  .p-popover:after {
-    display: none;
-  }
-
-  .p-popover-content {
-    padding: 0.25rem !important;
-  }
+.pr-menu-panel {
+  position: fixed;
+  z-index: 1100;
+  transform: translateX(-100%);
+  background: var(--pr-color-white);
+  border-radius: 6px;
+  box-shadow: 0px 0px 20px rgba(var(--pr-color-black-rgb), 0.2);
+  padding: 0.25rem;
 }
 
 .disabledButtons {

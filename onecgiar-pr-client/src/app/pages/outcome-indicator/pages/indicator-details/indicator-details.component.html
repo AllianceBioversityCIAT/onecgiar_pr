@@ -52,13 +52,14 @@
 </div>
 
 <app-pr-field-header label="Cumulative value achieved by end of 2024" [required]="true"></app-pr-field-header>
-<p-inputNumber
+<input
+  type="number"
+  class="achieved-number-input"
   [(ngModel)]="this.indicatorDetailsService.indicatorData().achieved_in_2024"
-  [inputStyle]="{ width: '103px' }"
   [min]="0"
   [maxlength]="16"
   placeholder="100"
-  [readonly]="isSubmitted"></p-inputNumber>
+  [readonly]="isSubmitted" />
 
 <app-pr-textarea
   label="Narrative explaining value achievement"

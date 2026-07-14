@@ -18,11 +18,13 @@
 <app-alert-status [description]="description" inlineStyles="padding-left: 40px; padding-bottom: 5px;"></app-alert-status>
 
 <div class="settings-container">
-  <p-toggleswitch
+  <input
+    type="checkbox"
+    class="pr-switch"
     [(ngModel)]="emailNotifications"
     (ngModelChange)="handleInitiativeSettingsChange()"
-    [style]="{ marginTop: '10px' }"
-    [disabled]="isLoading || !this.activatedRoute.snapshot.queryParams['init']"></p-toggleswitch>
+    style="margin-top: 10px"
+    [disabled]="isLoading || !this.activatedRoute.snapshot.queryParams['init']" />
 
   <div class="settings-content">
     <h2 class="settings-content-title">Email for contribution requests</h2>
@@ -41,11 +43,13 @@
 <br />
 
 <div class="settings-container">
-  <p-toggleswitch
+  <input
+    type="checkbox"
+    class="pr-switch"
     [(ngModel)]="systemNotifications"
     (ngModelChange)="handleInitiativeSettingsChange()"
-    [style]="{ marginTop: '10px' }"
-    [disabled]="isLoading || !this.activatedRoute.snapshot.queryParams['init']"></p-toggleswitch>
+    style="margin-top: 10px"
+    [disabled]="isLoading || !this.activatedRoute.snapshot.queryParams['init']" />
 
   <div class="settings-content">
     <h2 class="settings-content-title">System notifications of updates</h2>

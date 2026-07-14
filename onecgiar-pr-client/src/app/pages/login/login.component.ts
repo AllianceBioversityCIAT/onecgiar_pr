@@ -3,13 +3,12 @@ import { AuthService } from '../../shared/services/api/auth.service';
 import { CognitoService } from '../../shared/services/cognito.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { PasswordModule } from 'primeng/password';
 import { HlmInput } from '@spartan/input';
 import { Router } from '@angular/router';
 
 @Component({
     selector: 'app-login',
-    imports: [CommonModule, FormsModule, PasswordModule, HlmInput],
+    imports: [CommonModule, FormsModule, HlmInput],
     templateUrl: './login.component.html',
     styleUrls: ['./login.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush
@@ -20,9 +19,19 @@ export class LoginComponent implements OnInit, OnDestroy {
   router = inject(Router);
 
   showLoginForm = signal(false);
+  showPassword = false;
+  showConfirmPassword = false;
 
   toggleLoginForm(): void {
     this.showLoginForm.set(!this.showLoginForm());
+  }
+
+  toggleShowPassword(): void {
+    this.showPassword = !this.showPassword;
+  }
+
+  toggleShowConfirmPassword(): void {
+    this.showConfirmPassword = !this.showConfirmPassword;
   }
 
   ngOnInit(): void {

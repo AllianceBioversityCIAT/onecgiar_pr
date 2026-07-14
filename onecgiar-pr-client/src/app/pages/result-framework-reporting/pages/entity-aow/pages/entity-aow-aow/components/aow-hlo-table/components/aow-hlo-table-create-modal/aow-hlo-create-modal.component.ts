@@ -11,7 +11,6 @@ import { HlmButton } from '@spartan/button';
 import { Router } from '@angular/router';
 import { SelectModule } from 'primeng/select';
 import { ResultsListFilterService } from '../../../../../../../../../results/pages/results-outlet/pages/results-list/services/results-list-filter.service';
-import { InputNumberModule } from 'primeng/inputnumber';
 import { CentersService } from '../../../../../../../../../../shared/services/global/centers.service';
 
 interface CreateResultBody {
@@ -34,7 +33,6 @@ interface CreateResultBody {
     ButtonModule,
     HlmButton,
     SelectModule,
-    InputNumberModule,
   ],
   templateUrl: './aow-hlo-create-modal.component.html',
   styleUrl: './aow-hlo-create-modal.component.scss',
