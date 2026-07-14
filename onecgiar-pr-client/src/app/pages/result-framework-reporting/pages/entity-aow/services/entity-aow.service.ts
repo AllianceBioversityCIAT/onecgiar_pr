@@ -36,6 +36,7 @@ export class EntityAowService {
   tocResultsOutputsByAowId = signal<any[]>([]);
   tocResultsOutcomesByAowId = signal<any[]>([]);
   tocResults2030Outcomes = signal<any[]>([]);
+  searchText = signal<string>('');
   isLoadingTocResults2030Outcomes = signal<boolean>(false);
   isLoadingTocResultsByAowId = signal<boolean>(false);
 
