@@ -111,7 +111,7 @@ The original report was on the `angular-upgrade-19-22` branch and reproduced aft
 
 - **33 Jest tests** fail on Angular 21 (dev-mode drift: NG0100 `checkNoChanges` on unstable template getters, PrimeNG Table `_Bind` harness) — not runtime bugs; need a fixing pass. See the `upgrade-angular-19-to-22` change. (The 4 custom-field specs migrated in §3.4 all pass — 19/19.)
 - **hlm-button pilot** render (foundation change) — deferred.
-- Migrate PrimeNG usages **outside `custom-fields/`** (pages/shared use `<p-table>`, `<p-dialog>`, `<p-select>`, etc. directly). custom-fields is now clean; the rest of the app is the next front.
+- Migrate PrimeNG usages **outside `custom-fields/`** — the big front (see §9). custom-fields is clean.
 - Then remove `primeng` + `@ncstate/sat-popover` entirely → **Angular 22**.
 - Reconcile: `angular-upgrade-19-22` branch can be considered superseded by the merge into `front-redesign-fields`.
 
@@ -125,3 +125,20 @@ npm install --legacy-peer-deps   # Angular 21 + Spartan; legacy-peer-deps for th
 npm run build:dev                # must stay green
 npx ng serve --port 4200         # points at the prtest backend
 ```
+
+---
+
+## 9. App-wide PrimeNG removal (outside custom-fields) — phased
+
+Surface at start (outside `custom-fields/`): **~87 HTML files, ~290 PrimeNG component usages, 30 component types, 34 primeng modules imported**. Directives: `pTooltip` ×63, `pButton` ×13, `pInputText` ×9, `pSortableColumn`/`pRipple`/`pRowToggler`.
+
+**Phases:**
+- **A — leaf/visual (low risk):** `p-skeleton` ✅ (→ global `.pr-skeleton` div + shimmer), `p-message` ✅ (→ `app-alert-status`), `p-chip`, `p-avatar`, `p-progressBar`/`p-progressSpinner`.
+- **B — reuse what we already migrated:** `pTooltip` ×63 → generalize `PrTooltipDirective` into a shared module; `p-select` → `app-pr-select`; `p-multiselect` → `app-pr-multi-select`; `p-checkbox` → `app-pr-checkbox`.
+- **C — medium controls:** `p-button`/`pButton` (needs hlm-button pilot), `p-toggleswitch`, `p-datepicker`, `p-inputNumber`, `p-password`, `p-toast`, `p-popover`/`p-overlayBadge`.
+- **D — heavy (dedicated effort each, needs an architecture decision):** `p-table` ×22 (+`p-sortIcon`, paginator, columnFilter, rowToggler), `p-dialog` ×36, `p-drawer`, `p-chart`.
+
+**Done so far (Phase A):**
+- `p-message` → `app-alert-status` (8 spots / 5 files; `MessageModule` dropped from 6 modules).
+- `p-skeleton` → `.pr-skeleton` global div + shimmer in `styles.scss` (51 spots / 10 files; `SkeletonModule` dropped from 16 modules/standalone components). Static `width/height` + `[style]` object bindings coexist (Angular 21 merges static + bound styles).
+- Browser-verified (Playwright, prtest): `app-alert-status` renders, `.pr-skeleton` style + shimmer apply, 0 leftover PrimeNG widgets, no new console errors.
