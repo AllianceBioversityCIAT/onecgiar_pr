@@ -11,7 +11,7 @@
 </div>
 
 <div class="sdg_targets_dropdowns">
-    <div class="dropdown-100p" *ngFor="let item of sdgTargetLis">
+    <div class="max-w-full" *ngFor="let item of sdgTargetLis">
         <app-pr-multi-select [options]="item?.sdgList" optionLabel="full_name" optionValue="id"
             *ngIf="this.currentsdgID === item?.sdgId" selectedOptionLabel="indicator_statement"
             [placeholder]="dropDownPlaceHolder(item?.short_name)" [(ngModel)]="this.body">
@@ -19,7 +19,7 @@
     </div>
 </div>
 
-<div class="selected_container custom_scroll dropdown-100p">
+<div class="selected_container custom_scroll max-w-full">
     <br>
     <app-pr-field-header [description]="'All SDG target(s) selected('+this.body?.length+'):'">
     </app-pr-field-header>
