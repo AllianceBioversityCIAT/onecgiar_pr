@@ -9,6 +9,17 @@ export type FieldStatus = 'idle' | 'saving' | 'saved' | 'error';
 const FIELD_ENDPOINTS: Record<string, string> = {
   title: 'bilateral/general-info/{id}',
   description: 'bilateral/general-info/{id}',
+  lead_contact_person: 'bilateral/general-info/{id}',
+  gender_tag_level_id: 'bilateral/general-info/{id}',
+  climate_change_tag_level_id: 'bilateral/general-info/{id}',
+  nutrition_tag_level_id: 'bilateral/general-info/{id}',
+  environmental_biodiversity_tag_level_id: 'bilateral/general-info/{id}',
+  poverty_tag_level_id: 'bilateral/general-info/{id}',
+  gender_impact_area_ids: 'bilateral/general-info/{id}',
+  climate_impact_area_ids: 'bilateral/general-info/{id}',
+  nutrition_impact_area_ids: 'bilateral/general-info/{id}',
+  environmental_biodiversity_impact_area_ids: 'bilateral/general-info/{id}',
+  poverty_impact_area_ids: 'bilateral/general-info/{id}',
 };
 
 @Injectable({ providedIn: 'root' })
@@ -103,6 +114,15 @@ export class BilateralAutoSaveService {
         });
       }
     }
+  }
+
+  updateFieldsBatch(updates: Record<string, unknown>): void {
+    for (const [fieldPath, value] of Object.entries(updates)) {
+      this.fieldStatus.update(s => ({ ...s, [fieldPath]: 'saving' }));
+      this._pendingFields.set(fieldPath, { fieldPath, value, fieldType: 'select' });
+    }
+    this.hasPendingSaves.set(true);
+    this.flush();
   }
 
   reset(): void {

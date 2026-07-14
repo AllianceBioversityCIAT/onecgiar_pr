@@ -3097,6 +3097,14 @@ export class ResultsService {
 
       const tocResponse = (tocMetadata?.response as Record<string, any>) ?? {};
 
+      const impactAreaScores = await this._resultImpactAreaScoresService.find(
+        resultId,
+        undefined,
+        {
+          impact_area_score: true,
+        },
+      );
+
       const mappedResult = {
         commonFields: commonFields ?? null,
         tocMetadata: tocResponse.result_toc_result ?? null,
@@ -3109,6 +3117,12 @@ export class ResultsService {
         contributingInitiatives: contributingInitiatives ?? [],
         evidence: evidence ?? [],
         resultTypeResponse: resultTypeResponse ?? [],
+        impactAreaScores: (impactAreaScores ?? []).map((r: any) => ({
+          id: r.id,
+          impact_area_score_id: r.impact_area_score_id,
+          impact_area: r.impact_area_score?.impact_area ?? null,
+          name: r.impact_area_score?.name ?? null,
+        })),
       };
 
       return {
@@ -4612,10 +4626,24 @@ export class ResultsService {
         };
       }
 
-      if (!dto.title?.trim() && !dto.description?.trim()) {
+      if (
+        !dto.title?.trim() &&
+        !dto.description?.trim() &&
+        dto.lead_contact_person === undefined &&
+        dto.gender_tag_level_id === undefined &&
+        dto.climate_change_tag_level_id === undefined &&
+        dto.nutrition_tag_level_id === undefined &&
+        dto.environmental_biodiversity_tag_level_id === undefined &&
+        dto.poverty_tag_level_id === undefined &&
+        dto.gender_impact_area_ids === undefined &&
+        dto.climate_impact_area_ids === undefined &&
+        dto.nutrition_impact_area_ids === undefined &&
+        dto.environmental_biodiversity_impact_area_ids === undefined &&
+        dto.poverty_impact_area_ids === undefined
+      ) {
         return {
           response: {},
-          message: 'At least one of title or description must be provided.',
+          message: 'At least one field must be provided.',
           status: HttpStatus.BAD_REQUEST,
         };
       }
@@ -4658,7 +4686,41 @@ export class ResultsService {
         (updates as any).description = dto.description.trim();
       }
 
-      if (Object.keys(updates).length === 0) {
+      if (dto.lead_contact_person !== undefined) {
+        (updates as any).lead_contact_person = dto.lead_contact_person || null;
+      }
+
+      const DAC_TAG_FIELDS: { dtoKey: string; col: string }[] = [
+        { dtoKey: 'gender_tag_level_id', col: 'gender_tag_level_id' },
+        {
+          dtoKey: 'climate_change_tag_level_id',
+          col: 'climate_change_tag_level_id',
+        },
+        { dtoKey: 'nutrition_tag_level_id', col: 'nutrition_tag_level_id' },
+        {
+          dtoKey: 'environmental_biodiversity_tag_level_id',
+          col: 'environmental_biodiversity_tag_level_id',
+        },
+        { dtoKey: 'poverty_tag_level_id', col: 'poverty_tag_level_id' },
+      ];
+      for (const { dtoKey, col } of DAC_TAG_FIELDS) {
+        if ((dto as any)[dtoKey] !== undefined) {
+          (updates as any)[col] = (dto as any)[dtoKey];
+        }
+      }
+
+      const DAC_IMPACT_FIELDS = [
+        { dtoKey: 'gender_impact_area_ids' },
+        { dtoKey: 'climate_impact_area_ids' },
+        { dtoKey: 'nutrition_impact_area_ids' },
+        { dtoKey: 'environmental_biodiversity_impact_area_ids' },
+        { dtoKey: 'poverty_impact_area_ids' },
+      ];
+      const hasImpactAreaUpdates = DAC_IMPACT_FIELDS.some(
+        (f) => (dto as any)[f.dtoKey] !== undefined,
+      );
+
+      if (Object.keys(updates).length === 0 && !hasImpactAreaUpdates) {
         return {
           response: { id: parsedResultId },
           message: 'No changes to apply.',
@@ -4672,7 +4734,32 @@ export class ResultsService {
           parsedResultId,
           user,
         );
-        await manager.update(Result, parsedResultId, updates);
+
+        if (Object.keys(updates).length > 0) {
+          await manager.update(Result, parsedResultId, updates);
+        }
+
+        const hasAnyImpactUpdate = DAC_IMPACT_FIELDS.some(
+          (f) => (dto as any)[f.dtoKey] !== undefined,
+        );
+
+        if (hasAnyImpactUpdate) {
+          const allScores: { impact_area_score_id: number }[] = [];
+          for (const { dtoKey } of DAC_IMPACT_FIELDS) {
+            const ids = (dto as any)[dtoKey];
+            if (ids && Array.isArray(ids)) {
+              for (const id of ids) {
+                allScores.push({ impact_area_score_id: Number(id) });
+              }
+            }
+          }
+          await this._resultImpactAreaScoresService.create(
+            parsedResultId,
+            allScores,
+            'impact_area_score_id',
+            { userId: user.id, manager },
+          );
+        }
       });
 
       return {

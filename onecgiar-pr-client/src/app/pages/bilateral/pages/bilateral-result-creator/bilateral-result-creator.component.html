@@ -9,12 +9,14 @@
     }
   </nav>
 
-  <app-bilateral-project-selector (projectSelected)="onProjectSelected($event)"></app-bilateral-project-selector>
+  @if (isCreating()) {
+    <app-bilateral-project-selector (projectSelected)="onProjectSelected($event)"></app-bilateral-project-selector>
 
-  @if (creationService.selectedProject()) {
-    <div id="bcr-sp-section">
-      <app-bilateral-sp-selector (primarySelected)="onPrimarySelected()"></app-bilateral-sp-selector>
-    </div>
+    @if (creationService.selectedProject()) {
+      <div id="bcr-sp-section">
+        <app-bilateral-sp-selector (primarySelected)="onPrimarySelected()"></app-bilateral-sp-selector>
+      </div>
+    }
   }
 
   @if (creationService.selectedPrimarySp() && isCreating()) {
@@ -59,18 +61,7 @@
 
   @if (!isCreating() && resultId()) {
     <div id="bcr-accordions">
-    <div class="bcr-section-zero" [class.bcr-section-zero--open]="sectionZeroOpen()">
-      <div class="bcr-section-zero-header" (click)="sectionZeroOpen.set(!sectionZeroOpen())" role="button" tabindex="0" (keydown.enter)="sectionZeroOpen.set(!sectionZeroOpen())">
-        <i class="material-icons-round">dashboard</i>
-        <span class="bcr-section-zero-label">Dashboard</span>
-        <i class="material-icons-round bcr-section-zero-chevron" [class.bcr-section-zero-chevron--rotated]="sectionZeroOpen()">expand_more</i>
-      </div>
-      @if (sectionZeroOpen()) {
-        <div class="bcr-section-zero-body">
-          <app-section-zero-dashboard (submitRequested)="submitResult()"></app-section-zero-dashboard>
-        </div>
-      }
-    </div>
+    <app-section-zero-dashboard (submitRequested)="submitResult()"></app-section-zero-dashboard>
 
     <app-bilateral-accordion sectionName="general-info" sectionLabel="General Information" sectionIcon="description"
       [totalFields]="getSectionTotal('general-info')" [filledFields]="getSectionFilled('general-info')"

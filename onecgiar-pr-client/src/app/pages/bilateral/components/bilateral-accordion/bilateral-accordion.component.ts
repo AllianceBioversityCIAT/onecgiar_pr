@@ -1,12 +1,14 @@
 import { Component, input, inject, signal, effect, model } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { BilateralExpandableStateService } from '../../services/bilateral-expandable-state.service';
 import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
 import { MdsStatus } from '../../services/bilateral-mds-tracker.service';
+import { FormSkeletonComponent } from '../form-skeleton/form-skeleton.component';
 
 @Component({
   selector: 'app-bilateral-accordion',
-  imports: [CommonModule],
+  imports: [CommonModule, FormSkeletonComponent],
   templateUrl: './bilateral-accordion.component.html',
   styleUrl: './bilateral-accordion.component.scss'
 })
@@ -22,6 +24,7 @@ export class BilateralAccordionComponent {
 
   private readonly expandStateService = inject(BilateralExpandableStateService);
   private readonly autoSaveService = inject(BilateralAutoSaveService);
+  readonly creationService = inject(BilateralCreationService);
 
   showAllFields = signal(false);
 

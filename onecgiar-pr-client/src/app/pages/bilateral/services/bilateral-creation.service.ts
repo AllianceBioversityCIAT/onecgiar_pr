@@ -25,8 +25,12 @@ export class BilateralCreationService {
 
   currentResultId = signal<number | null>(null);
   isLoadingProjects = signal(false);
+  isLoadingResult = signal(false);
   resultTitle = signal('');
   resultDescription = signal('');
+  resultLeadContact = signal('');
+  resultDacLevels = signal<Record<string, number>>({});
+  resultDacSubScores = signal<Record<string, number[]>>({});
 
   getProjects(centerId: string | number): void {
     this.isLoadingProjects.set(true);
@@ -41,15 +45,45 @@ export class BilateralCreationService {
 
   loadResult(resultId: number): void {
     this.currentResultId.set(resultId);
+    this.isLoadingResult.set(true);
     this.http.get<any>(`${environment.apiBaseUrl}api/results/bilateral/${resultId}`).subscribe({
       next: ({ response }) => {
         if (response?.commonFields) {
-          this.resultTitle.set(response.commonFields.result_title ?? '');
-          this.resultDescription.set(response.commonFields.result_description ?? '');
+          const cf = response.commonFields;
+          this.resultTitle.set(cf.result_title ?? '');
+          this.resultDescription.set(cf.result_description ?? '');
+          this.resultLeadContact.set(cf.lead_contact_person ?? '');
+          const dacLevels: Record<string, number> = {};
+          if (cf.gender_tag_level_id != null) dacLevels['gender'] = Number(cf.gender_tag_level_id);
+          if (cf.climate_change_tag_level_id != null) dacLevels['climate_change'] = Number(cf.climate_change_tag_level_id);
+          if (cf.nutrition_tag_level_id != null) dacLevels['nutrition'] = Number(cf.nutrition_tag_level_id);
+          if (cf.environmental_biodiversity_tag_level_id != null) dacLevels['environmental_biodiversity'] = Number(cf.environmental_biodiversity_tag_level_id);
+          if (cf.poverty_tag_level_id != null) dacLevels['poverty'] = Number(cf.poverty_tag_level_id);
+          this.resultDacLevels.set(dacLevels);
         }
+        if (response?.impactAreaScores && Array.isArray(response.impactAreaScores)) {
+          const areaMap: Record<string, string> = {
+            Gender: 'gender', Climate: 'climate_change', Nutrition: 'nutrition',
+            Environmental: 'environmental_biodiversity', Poverty: 'poverty',
+          };
+          const subs: Record<string, number[]> = {};
+          for (const s of response.impactAreaScores) {
+            const key = areaMap[s.impact_area];
+            if (key) {
+              if (!subs[key]) subs[key] = [];
+              subs[key].push(Number(s.impact_area_score_id));
+            }
+          }
+          this.resultDacSubScores.set(subs);
+        }
+        this.isLoadingResult.set(false);
       },
-      error: () => { /* result may not exist yet */ }
+      error: () => { this.isLoadingResult.set(false); }
     });
+  }
+
+  setDacSubScores(areaKey: string, ids: number[]): void {
+    this.resultDacSubScores.update(s => ({ ...s, [areaKey]: ids }));
   }
 
   selectProject(project: BilateralProject): void {

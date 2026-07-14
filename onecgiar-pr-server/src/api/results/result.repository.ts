@@ -2896,7 +2896,14 @@ left join results_by_inititiative rbi3 on rbi3.result_id = r.id
         r.title AS result_title,
         r.description AS result_description,
         rt.name AS result_category,
-        r.status_id 
+        r.status_id,
+        r.lead_contact_person,
+        r.lead_contact_person_id,
+        r.gender_tag_level_id,
+        r.climate_change_tag_level_id,
+        r.nutrition_tag_level_id,
+        r.environmental_biodiversity_tag_level_id,
+        r.poverty_tag_level_id 
       FROM result r
       JOIN result_type rt
         ON r.result_type_id = rt.id

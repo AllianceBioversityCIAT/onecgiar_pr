@@ -20,7 +20,11 @@
 
   @if (isOpen) {
     <div class="bp-accordion-body">
-      <ng-content></ng-content>
+      @if (creationService.isLoadingResult()) {
+        <app-form-skeleton [rows]="2" [hasLabel]="true" [hasExtra]="true" [extraRows]="5" />
+      } @else {
+        <ng-content></ng-content>
+      }
     </div>
   }
 </div>

@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BilateralAccordionComponent } from './bilateral-accordion.component';
+import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { BilateralExpandableStateService } from '../../services/bilateral-expandable-state.service';
 import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
 
@@ -8,6 +9,7 @@ describe('BilateralAccordionComponent', () => {
   let fixture: ComponentFixture<BilateralAccordionComponent>;
   let expandService: jest.Mocked<Partial<BilateralExpandableStateService>>;
   let autoSaveService: jest.Mocked<Partial<BilateralAutoSaveService>>;
+  let creationService: jest.Mocked<Partial<BilateralCreationService>>;
 
   beforeEach(async () => {
     expandService = {
@@ -21,11 +23,16 @@ describe('BilateralAccordionComponent', () => {
       flush: jest.fn().mockResolvedValue(undefined),
     };
 
+    creationService = {
+      isLoadingResult: jest.fn().mockReturnValue(false),
+    } as any;
+
     await TestBed.configureTestingModule({
       imports: [BilateralAccordionComponent],
       providers: [
         { provide: BilateralExpandableStateService, useValue: expandService },
         { provide: BilateralAutoSaveService, useValue: autoSaveService },
+        { provide: BilateralCreationService, useValue: creationService },
       ],
     }).compileComponents();
 
