@@ -1,7 +1,7 @@
 <app-pr-field-header [label]="options?.innovation_team_diversity?.question_text"
     [description]="options?.innovation_team_diversity?.question_description" [useColon]="false"></app-pr-field-header>
 
-<div class="paddingLeft20">
+<div class="pl-[20px]">
     <app-pr-radio-button
         (selectOptionEvent)="innovationDevInfoUtilsSE.mapBoolean( this.options?.innovation_team_diversity)"
         [verticalAlignment]="true" [options]="this.options?.innovation_team_diversity
