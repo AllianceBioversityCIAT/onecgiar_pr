@@ -5,24 +5,21 @@
   </div>
 
   <div class="table">
-    <p-table
-      #dt1
+    <app-pr-table
       sortField="result_code"
       [sortOrder]="-1"
       [value]="dataTable | filterByText: searchText"
-      responsiveLayout="scroll"
       [paginator]="!!(dataTable | filterByText: searchText)?.length"
       [rows]="10"
-      styleClass="p-datatable-gridlines p-datatable-sm"
       selectionMode="single"
       [rowsPerPageOptions]="[10, 50, 100]">
-      <ng-template pTemplate="header">
+      <ng-template prTableHeader>
         <tr>
           <th id="select" *ngIf="!this.api.rolesSE.platformIsClosed && !this.api.rolesSE.readOnly" style="width: 61px">Select</th>
 
           @for (column of columnOrder; track $index) {
-            <th [id]="column.attr" [pSortableColumn]="column.attr" [style]="{ width: column.width }">
-              <p-sortIcon [field]="column.attr"></p-sortIcon>
+            <th [id]="column.attr" [prSortableColumn]="column.attr" [style]="{ width: column.width }">
+              <pr-sort-icon [field]="column.attr"></pr-sort-icon>
               {{ column.title }}
             </th>
           }
@@ -31,7 +28,7 @@
         </tr>
       </ng-template>
 
-      <ng-template pTemplate="body" let-result>
+      <ng-template prTableBody let-result>
         <tr>
           @if (!this.api.rolesSE.platformIsClosed && !this.api.rolesSE.readOnly) {
             <td class="actionsSelect" style="min-height: 72px; height: 100%">
@@ -64,7 +61,7 @@
           }
         </tr>
       </ng-template>
-    </p-table>
+    </app-pr-table>
 
     <div class="total" *ngIf="(dataTable | filterByText: searchText)?.length">
       Total:
