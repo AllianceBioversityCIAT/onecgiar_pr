@@ -1,13 +1,10 @@
-<p-dialog
-  appendTo="body"
-  header="Title"
+<app-pr-dialog
   [visible]="this.createResultManagementService.showModal()"
-  [draggable]="false"
   [modal]="true"
   [closeOnEscape]="true"
   [showHeader]="false"
   [dismissableMask]="true"
-  [style]="{ padding: '0px', width: '80vw' }">
+  styleClass="result-ai-assistant-dialog">
   <div class="modal_header">
     <h1 class="modal_title">AI Assistant</h1>
     <i class="material-icons-round close_icon" (click)="this.createResultManagementService.closeModal()">close</i>
@@ -128,4 +125,4 @@
 
     @if (this.createResultManagementService.documentAnalyzed()) {}
   </ng-template>
-</p-dialog>
+</app-pr-dialog>

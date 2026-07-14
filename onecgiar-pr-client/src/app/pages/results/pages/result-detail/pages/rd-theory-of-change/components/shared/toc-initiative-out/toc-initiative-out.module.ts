@@ -11,7 +11,7 @@ import { TableModule } from 'primeng/table';
 import { RouterModule } from '@angular/router';
 import { MultipleWPsComponent } from './multiple-wps/multiple-wps.component';
 import { MultipleWPsContentComponent } from './multiple-wps/components/multiple-wps-content/multiple-wps-content.component';
-import { DialogModule } from 'primeng/dialog';
+import { PrDialogComponent } from 'src/app/shared/components/pr-dialog/pr-dialog.component';
 import { MappedResultsModalComponent } from './multiple-wps/components/mapped-results-modal/mapped-results-modal.component';
 import { FeedbackValidationDirectiveModule } from '../../../../../../../../../shared/directives/feedback-validation-directive.module';
 import { FilterOutcomeLevelByBooleanPipe } from './multiple-wps/components/multiple-wps-content/pipes/filter-outcome-level-by-boolean.pipe';
@@ -30,6 +30,6 @@ import { FilterOutcomeLevelByBooleanPipe } from './multiple-wps/components/multi
     FilterOutcomeLevelByBooleanPipe
   ],
   exports: [TocInitiativeOutComponent, ImpactAreaTargetsComponent, SdgTargetsComponent, ActionAreaOutcomeComponent],
-  imports: [CommonModule, CustomFieldsModule, FeedbackValidationDirectiveModule, TableModule, RouterModule, DialogModule]
+  imports: [CommonModule, CustomFieldsModule, FeedbackValidationDirectiveModule, TableModule, RouterModule, PrDialogComponent]
 })
 export class TocInitiativeOutModule {}

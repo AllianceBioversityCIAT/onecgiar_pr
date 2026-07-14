@@ -240,7 +240,7 @@ p {
 
 // Confirmation Modal Styles (centered layout)
 ::ng-deep .confirmation-modal {
-  &.p-dialog {
+  &.pr-dialog {
     border-radius: 12px !important;
     overflow: hidden;
     max-width: 650px !important;
@@ -248,7 +248,7 @@ p {
     box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.15);
   }
 
-  .p-dialog-content {
+  .pr-dialog__body {
     padding: 0 !important;
     background-color: white;
     position: relative;

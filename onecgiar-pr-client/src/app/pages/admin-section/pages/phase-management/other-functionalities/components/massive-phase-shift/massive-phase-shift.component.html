@@ -1,7 +1,7 @@
-<p-dialog
-    appendTo="body" header="Title" [(visible)]="this.api.dataControlSE.showMassivePhaseShiftModal"
-    [draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="false" [dismissableMask]="true"
-    [style]="{ padding: '0px' }">
+<app-pr-dialog
+    [(visible)]="this.api.dataControlSE.showMassivePhaseShiftModal"
+    [modal]="true" [closeOnEscape]="true" [showHeader]="false" [dismissableMask]="true"
+    styleClass="massive-phase-shift-dialog">
     <div id="change-phase">
         <div class="lateral-bar"></div>
         <div class="content-change-phase">
@@ -48,4 +48,4 @@
         </div>
         <div class="lateral-bar"></div>
     </div>
-</p-dialog>
+</app-pr-dialog>

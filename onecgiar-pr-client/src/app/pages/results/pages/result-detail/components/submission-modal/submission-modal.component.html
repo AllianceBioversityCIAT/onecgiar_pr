@@ -1,14 +1,11 @@
-<p-dialog
-  appendTo="body"
-  header="Title"
+<app-pr-dialog
   [(visible)]="this.submissionModalSE.showModal"
   (onHide)="cleanObject()"
-  [draggable]="false"
   [modal]="true"
   [closeOnEscape]="true"
   [showHeader]="false"
   [dismissableMask]="true"
-  [style]="{ padding: '0px' }">
+  styleClass="submission-modal-dialog">
   <div class="modal_title">Submission</div>
   <div class="modal_container partners-request-container">
     <div class="information_title">Confirm submission</div>
@@ -42,4 +39,4 @@
       (clickEvent)="onSubmit()">
     </app-pr-button>
   </div>
-</p-dialog>
+</app-pr-dialog>

@@ -1,5 +1,5 @@
-::ng-deep .save-confirmation-modal {
-  .p-dialog {
+::ng-deep app-pr-dialog .save-confirmation-modal {
+  &.pr-dialog {
     border-radius: 12px;
     overflow: hidden;
     max-width: 600px !important;
@@ -7,7 +7,7 @@
     box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.15);
   }
 
-  .p-dialog-content {
+  .pr-dialog__body {
     padding: 0;
     background-color: white;
     max-width: 500px !important;

@@ -1,13 +1,10 @@
-<p-dialog
-  appendTo="body"
-  header="Title"
+<app-pr-dialog
   [(visible)]="this.indicatorDetailsService.indicatorResultsModal().value"
-  [draggable]="false"
   [modal]="true"
   [closeOnEscape]="true"
   [showHeader]="false"
   [dismissableMask]="true"
-  [style]="{ padding: '0px' }">
+  styleClass="indicator-results-dialog">
   <div class="modal_title">
     Add link to result
     <i class="material-icons-round modal_close_icon" (click)="this.indicatorDetailsService.indicatorResultsModal.set({ value: false })"> close </i>
@@ -162,4 +159,4 @@
       </div>
     }
   </div>
-</p-dialog>
+</app-pr-dialog>

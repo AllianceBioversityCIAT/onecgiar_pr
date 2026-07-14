@@ -1,13 +1,10 @@
-<p-dialog
-  appendTo="body"
-  header="Title"
+<app-pr-dialog
   [(visible)]="this.visible"
-  [draggable]="false"
   [modal]="true"
   [closeOnEscape]="true"
   [showHeader]="false"
   [dismissableMask]="true"
-  [style]="{ padding: '0px' }">
+  styleClass="non-pooled-info-dialog">
   <div class="modal_title">Non-Pooled Project Info</div>
 
   <div class="modal_container partners-request-container">
@@ -43,7 +40,7 @@
   <div class="buttons">
     <app-pr-button padding="medium" text="Close" icon="cancel_schedule_send" colorType="secondary" (click)="this.visible = false"> </app-pr-button>
   </div>
-</p-dialog>
+</app-pr-dialog>
 
 <div class="buttonOpen" (click)="visible = true" style="font-size: 17px; margin-bottom: 5px">
   <i class="material-icons-round" style="font-size: 17px"> visibility </i>

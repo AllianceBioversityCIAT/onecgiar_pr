@@ -7,16 +7,13 @@
     (click)="complementaryInnovationService.dialogStatus = true"></app-pr-button>
 }
 
-<p-dialog
-  appendTo="body"
+<app-pr-dialog
   [(visible)]="complementaryInnovationService.dialogStatus"
-  [draggable]="false"
   [modal]="true"
   [closeOnEscape]="true"
   [showHeader]="true"
   [dismissableMask]="true"
-  [style]="{ padding: '0px', margin: '0px', width: '70vw' }"
-  [blockScroll]="true"
+  styleClass="new-complementary-innovation-dialog"
   (onHide)="complementaryInnovationService.resetAll()">
   <div style="display: flex; justify-content: center; flex-direction: column">
     <div class="modal_title">
@@ -146,4 +143,4 @@
         [tooltipText]="disableSaveButton() ? 'Please complete the mandatory fields.' : ''"></app-pr-button>
     </div>
   }
-</p-dialog>
+</app-pr-dialog>

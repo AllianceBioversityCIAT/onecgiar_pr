@@ -1,5 +1,15 @@
 @use '../../../../../../../styles/fonts.scss' as fonts;
 
+// app-pr-dialog wrapper: restore the flush layout the old p-dialog had
+// ([style]padding:0) so the full-bleed title bar renders like before.
+::ng-deep app-pr-dialog .result-history-dialog {
+  position: relative;
+
+  .pr-dialog__body {
+    padding: 0;
+  }
+}
+
 .modal_container {
   padding: 20px 50px 80px 50px;
   width: 100vw !important;

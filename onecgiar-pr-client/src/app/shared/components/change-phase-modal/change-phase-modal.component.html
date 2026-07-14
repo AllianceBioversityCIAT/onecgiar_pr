@@ -3,16 +3,13 @@
     ? this.api.dataControlSE.IPSRCurrentPhase.portfolioAcronym === 'P25'
     : this.api.dataControlSE?.reportingCurrentPhase?.portfolioAcronym === 'P25';
 
-<p-dialog
-  appendTo="body"
-  header="Title"
+<app-pr-dialog
   [(visible)]="this.api.dataControlSE.chagePhaseModal"
-  [draggable]="false"
   [modal]="true"
   [closeOnEscape]="true"
   [showHeader]="false"
   [dismissableMask]="true"
-  [style]="{ padding: '0px' }">
+  styleClass="change-phase-dialog">
   <div id="change-phase">
     <div class="lateral-bar"></div>
 
@@ -129,4 +126,4 @@
 
     <div class="lateral-bar"></div>
   </div>
-</p-dialog>
+</app-pr-dialog>

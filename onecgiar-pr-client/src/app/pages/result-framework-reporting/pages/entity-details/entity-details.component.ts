@@ -12,7 +12,7 @@ import { ChartModule } from 'primeng/chart';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { Chart, ChartData, ChartDataset, ChartOptions } from 'chart.js';
 import { ButtonModule } from 'primeng/button';
-import { DialogModule } from 'primeng/dialog';
+import { PrDialogComponent } from 'src/app/shared/components/pr-dialog/pr-dialog.component';
 import { SplitButtonModule } from 'primeng/splitbutton';
 import { ResultCreatorModule } from '../../../results/pages/result-creator/result-creator.module';
 import { MenuItem } from 'primeng/api';
@@ -31,7 +31,7 @@ import { ResultFrameworkReportingHomeService } from '../result-framework-reporti
     EntityResultsByIndicatorCategoryCardComponent,
     ChartModule,
     ButtonModule,
-    DialogModule,
+    PrDialogComponent,
     SplitButtonModule,
     ResultCreatorModule,
     BilateralResultsReviewComponent

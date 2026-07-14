@@ -1,14 +1,11 @@
-<p-dialog
-  appendTo="body"
-  header="Title"
+<app-pr-dialog
   [(visible)]="this.api.dataControlSE.showShareRequest"
   (onHide)="cleanObject()"
-  [draggable]="false"
   [modal]="true"
   [closeOnEscape]="true"
   [showHeader]="false"
   [dismissableMask]="true"
-  [style]="{ padding: '0px' }">
+  styleClass="share-request-dialog">
   <div class="modal_title">
     Request to be added as contributor of a result
     <i class="pi pi-times" style="cursor: pointer; font-size: 16px" (click)="this.api.dataControlSE.showShareRequest = false"></i>
@@ -97,4 +94,4 @@
       (click)="this.api.dataControlSE.inNotifications ? acceptOrReject() : onRequest()">
     </app-pr-button>
   </div>
-</p-dialog>
+</app-pr-dialog>

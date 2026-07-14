@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
-import { DialogModule } from 'primeng/dialog';
+import { PrDialogComponent } from 'src/app/shared/components/pr-dialog/pr-dialog.component';
 import { CustomFieldsModule } from '../../../../../../../../../../custom-fields/custom-fields.module';
 import { PrFilterMultiselectModule } from '../../../../../../../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
 import { EntityAowService } from '../../../../../../services/entity-aow.service';
@@ -27,7 +27,7 @@ interface CreateResultBody {
   selector: 'app-aow-hlo-create-modal',
   imports: [
     CommonModule,
-    DialogModule,
+    PrDialogComponent,
     CustomFieldsModule,
     PrFilterMultiselectModule,
     FormsModule,

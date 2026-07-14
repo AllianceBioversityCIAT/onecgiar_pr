@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Table, TableModule } from 'primeng/table';
-import { DialogModule } from 'primeng/dialog';
+import { PrDialogComponent } from 'src/app/shared/components/pr-dialog/pr-dialog.component';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { IndicatorDetailsService } from '../../services/indicator-details.service';
 import { RouterModule } from '@angular/router';
@@ -16,7 +16,7 @@ import { ButtonModule } from 'primeng/button';
   imports: [
     CommonModule,
     TableModule,
-    DialogModule,
+    PrDialogComponent,
     CustomFieldsModule,
     RouterModule,
     FilterIndicatorResultsPipe,

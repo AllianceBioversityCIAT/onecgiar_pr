@@ -444,15 +444,12 @@
 </p-drawer>
 
 <!-- Confirm Approve Dialog -->
-<p-dialog
-  appendTo="body"
+<app-pr-dialog
   [(visible)]="showConfirmApproveDialog"
   [modal]="true"
   [closeOnEscape]="true"
   [showHeader]="false"
   [dismissableMask]="true"
-  [draggable]="false"
-  [style]="{ padding: '0px' }"
   styleClass="confirmation-modal approve">
   <i class="pi pi-times modal-close-icon" (click)="cancelApprove()"></i>
   <div class="modal-body">
@@ -468,18 +465,15 @@
     <button hlmBtn variant="outline" size="lg" (click)="cancelApprove()" [disabled]="isSaving()">Cancel</button>
     <button hlmBtn size="lg" (click)="confirmApprove()" [disabled]="isSaving()">Confirm @if (isSaving()) { <i class="pi pi-spinner pi-spin"></i> }</button>
   </div>
-</p-dialog>
+</app-pr-dialog>
 
 <!-- Reject Justification Dialog -->
-<p-dialog
-  appendTo="body"
+<app-pr-dialog
   [(visible)]="showConfirmRejectDialog"
   [modal]="true"
   [closeOnEscape]="true"
   [showHeader]="false"
   [dismissableMask]="true"
-  [draggable]="false"
-  [style]="{ padding: '0px' }"
   styleClass="confirmation-modal reject">
   <i class="pi pi-times modal-close-icon" (click)="cancelReject()"></i>
   <div class="modal-body">
@@ -502,7 +496,7 @@
     <button hlmBtn variant="outline" size="lg" (click)="cancelReject()" [disabled]="isSaving()">Cancel</button>
     <button hlmBtn size="lg" (click)="confirmReject()" [disabled]="!rejectJustification.trim() || isSaving()">Confirm @if (isSaving()) { <i class="pi pi-spinner pi-spin"></i> }</button>
   </div>
-</p-dialog>
+</app-pr-dialog>
 
 <!-- Save Changes Justification Dialog -->
 <app-save-changes-justification-dialog

@@ -1,5 +1,16 @@
 @use '../../../../../../../styles/fonts.scss' as fonts;
 
+// app-pr-dialog wrapper: reproduce the old p-dialog [style] width + flush body.
+::ng-deep app-pr-dialog .result-ai-assistant-dialog {
+  &.pr-dialog {
+    width: 80vw;
+  }
+
+  .pr-dialog__body {
+    padding: 0;
+  }
+}
+
 h1,
 p {
   margin: 0;

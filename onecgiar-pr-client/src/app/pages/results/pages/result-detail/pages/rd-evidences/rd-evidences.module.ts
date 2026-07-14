@@ -6,7 +6,7 @@ import { RdEvidencesComponent } from './rd-evidences.component';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { EvidenceItemComponent } from './evidence-item/evidence-item.component';
 import { FeedbackValidationDirectiveModule } from '../../../../../../shared/directives/feedback-validation-directive.module';
-import { DialogModule } from 'primeng/dialog';
+import { PrDialogComponent } from 'src/app/shared/components/pr-dialog/pr-dialog.component';
 
 @NgModule({
   declarations: [RdEvidencesComponent, EvidenceItemComponent],
@@ -15,7 +15,7 @@ import { DialogModule } from 'primeng/dialog';
     RdEvidencesRoutingModule,
     CustomFieldsModule,
     FeedbackValidationDirectiveModule,
-    DialogModule,
+    PrDialogComponent,
   ]
 })
 export class RdEvidencesModule {}

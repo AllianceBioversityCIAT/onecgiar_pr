@@ -1,11 +1,9 @@
-<p-dialog
+<app-pr-dialog
   header="AI Review"
   [modal]="true"
   [(visible)]="aiReviewSE.showAiReview"
-  [style]="{ width: '90vw', maxWidth: '1200px' }"
   [dismissableMask]="true"
-  [draggable]="false"
-  [resizable]="false">
+  styleClass="ai-review-dialog">
   <div class="ai-review-container">
     <div class="ai-review-header">
       <img src="assets/icons/stars.png" alt="" srcset="" /> The AI analyzed your information and identified the following:
@@ -59,4 +57,4 @@
       </div>
     }
   </div>
-</p-dialog>
+</app-pr-dialog>

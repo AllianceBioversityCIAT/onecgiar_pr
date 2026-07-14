@@ -7,7 +7,7 @@ import { CustomFieldsModule } from '../../../../../../custom-fields/custom-field
 import { InstitutionsPipesModule } from './pipes/institutions-pipes.module';
 import { RdAnnualUpdatingComponent } from './components/rd-annual-updating/rd-annual-updating.component';
 import { ChangeResultTypeModalComponent } from './components/change-result-type-modal/change-result-type-modal.component';
-import { DialogModule } from 'primeng/dialog';
+import { PrDialogComponent } from '../../../../../../shared/components/pr-dialog/pr-dialog.component';
 import { TableModule } from 'primeng/table';
 import { PdfIconModule } from '../../../../../../shared/icon-components/pdf-icon/pdf-icon.module';
 import { ConfirmationKPComponent } from './components/confirmation-kp/confirmation-kp.component';
@@ -23,7 +23,7 @@ import { FeedbackValidationDirectiveModule } from '../../../../../../shared/dire
     CustomFieldsModule,
     InstitutionsPipesModule,
     FeedbackValidationDirectiveModule,
-    DialogModule,
+    PrDialogComponent,
     TableModule,
     PdfIconModule,
   ]

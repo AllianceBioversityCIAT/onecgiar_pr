@@ -3,20 +3,22 @@
 /* Add User Modal Styles */
 ::ng-deep .add-user-modal {
   overflow: hidden;
+  width: 600px;
 
-  .p-dialog-header {
+  .pr-dialog__header {
     background-color: var(--pr-color-secondary-400);
     color: var(--pr-color-white);
     padding: 20px 24px;
     border-radius: 8px 8px 0 0;
 
-    .p-dialog-title {
+    .pr-dialog__title {
       @include fonts.pr-typography('h3');
       font-weight: 600;
       margin: 0;
+      color: var(--pr-color-white);
     }
 
-    .p-dialog-header-icon {
+    .pr-dialog__close {
       color: var(--pr-color-white);
 
       &:hover {
@@ -25,11 +27,11 @@
     }
   }
 
-  .p-dialog-content {
+  .pr-dialog__body {
     padding: 0;
   }
 
-  .p-dialog-footer {
+  [pr-dialog-footer] {
     padding: 0;
     border-top: none;
   }

@@ -1,6 +1,6 @@
-<p-dialog appendTo="body" header="Title"
-    [(visible)]="this.api.dataControlSE.showResultHistoryOfChangesModal" (onHide)="cleanObject()" [draggable]="false"
-    [modal]="true" [closeOnEscape]="true" [showHeader]="false" [dismissableMask]="true" [style]="{padding: '0px'}">
+<app-pr-dialog
+    [(visible)]="this.api.dataControlSE.showResultHistoryOfChangesModal" (onHide)="cleanObject()"
+    [modal]="true" [closeOnEscape]="true" [showHeader]="false" [dismissableMask]="true" styleClass="result-history-dialog">
     <div class="modal_title">history of submissions</div>
     <div class="modal_container partners-request-container">
         <app-pr-button text="Download .xlsx" icon="file_download"
@@ -49,4 +49,4 @@
         </app-pr-button>
     </div>
 
-</p-dialog>
+</app-pr-dialog>

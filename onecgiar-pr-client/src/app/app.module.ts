@@ -18,6 +18,7 @@ import { YmzListStructureItemModule } from './shared/directives/ymz-list-structu
 import { ChangePhaseModalModule } from './shared/components/change-phase-modal/change-phase-modal.module';
 import { FooterModule } from './shared/components/footer/footer.module';
 import { DialogModule } from 'primeng/dialog';
+import { PrDialogComponent } from './shared/components/pr-dialog/pr-dialog.component';
 import { BadgeModule } from 'primeng/badge';
 import { OverlayBadgeModule } from 'primeng/overlaybadge';
 import { SatPopoverModule } from '@ncstate/sat-popover';
@@ -51,6 +52,7 @@ function initializeClarityService(clarityService: ClarityService) {
     ChangePhaseModalModule,
     FooterModule,
     DialogModule,
+    PrDialogComponent,
     BadgeModule,
     OverlayBadgeModule,
     SatPopoverModule,

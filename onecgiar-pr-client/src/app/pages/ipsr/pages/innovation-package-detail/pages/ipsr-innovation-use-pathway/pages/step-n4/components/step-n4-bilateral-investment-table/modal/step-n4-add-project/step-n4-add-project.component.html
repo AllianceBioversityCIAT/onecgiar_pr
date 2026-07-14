@@ -1,16 +1,13 @@
 @let filteredProjects = this.filterProjects();
 
-<p-dialog
-  appendTo="body"
-  header="Title"
+<app-pr-dialog
   [(visible)]="this.visible"
   (onHide)="cleanObject()"
-  [draggable]="false"
   [modal]="true"
   [closeOnEscape]="true"
   [showHeader]="false"
   [dismissableMask]="true"
-  [style]="{ padding: '0px' }">
+  styleClass="step-n4-add-project-dialog">
   <div class="modal_title">Add project</div>
   <div class="modal_container partners-request-container" *ngIf="showForm">
     <app-pr-select
@@ -33,7 +30,7 @@
       padding="medium"
       (click)="onAddProject()"></app-pr-button>
   </div>
-</p-dialog>
+</app-pr-dialog>
 <div style="width: 120px">
   <app-pr-button (click)="visible = true" padding="small" text="Add project" icon="add_box" *ngIf="!this.api.rolesSE.readOnly"></app-pr-button>
 </div>

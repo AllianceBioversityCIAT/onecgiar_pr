@@ -105,16 +105,14 @@
 <app-save-button class="position_sticky" [disabled]="this.validateButtonDisabled" (clickSave)="onSaveSection()"> </app-save-button>
 
 <!-- P2-2935: evidence creation modal -->
-<p-dialog
-  appendTo="body"
+<app-pr-dialog
   [(visible)]="showCreateModal"
-  [draggable]="false"
   [modal]="true"
   [closeOnEscape]="true"
   [showHeader]="false"
   [dismissableMask]="false"
   (onHide)="cancelCreateEvidence()"
-  [style]="{ width: '720px', maxWidth: '95vw' }">
+  styleClass="evidence-create-dialog">
   <div class="evidence_modal">
     <div class="modal_header">
       <div class="modal_title">{{ isEditingEvidence ? 'Edit Evidence' : 'Add New Evidence' }}</div>
@@ -133,4 +131,4 @@
         (click)="confirmCreateEvidence()"></app-pr-button>
     </div>
   </div>
-</p-dialog>
+</app-pr-dialog>

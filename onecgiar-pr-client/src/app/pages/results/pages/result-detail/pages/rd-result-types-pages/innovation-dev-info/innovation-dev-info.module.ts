@@ -14,7 +14,7 @@ import { InnovationLinksComponent } from './components/innovation-links/innovati
 import { YmzListStructureItemModule } from '../../../../../../../shared/directives/ymz-list-structure-item/ymz-list-structure-item.module';
 import { NonPooledInfoComponent } from './components/estimates/components/non-pooled-info/non-pooled-info.component';
 import { NonPooledInfoP25Component } from './components/estimates/components/non-pooled-info-p25/non-pooled-info.component';
-import { DialogModule } from 'primeng/dialog';
+import { PrDialogComponent } from 'src/app/shared/components/pr-dialog/pr-dialog.component';
 import { FeedbackValidationDirectiveModule } from '../../../../../../../shared/directives/feedback-validation-directive.module';
 import { MegatrendsComponent } from './components/megatrends/megatrends.component';
 import { TermPipe } from '../../../../../../../internationalization/term.pipe';
@@ -45,7 +45,7 @@ import { PartnersPoliciesSafeguardsComponent } from './components/partners-polic
     InnovationDevInfoRoutingModule,
     CustomFieldsModule,
     YmzListStructureItemModule,
-    DialogModule,
+    PrDialogComponent,
     FeedbackValidationDirectiveModule,
     TermPipe,
     InnovationUseFormModule

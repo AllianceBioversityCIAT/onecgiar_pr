@@ -149,15 +149,13 @@
 </div>
 
 @if (showReportModal()) {
-  <p-dialog
-    appendTo="body"
+  <app-pr-dialog
     [visible]="showReportModal()"
-    [draggable]="false"
     [modal]="true"
     [closeOnEscape]="true"
     [showHeader]="false"
     [dismissableMask]="true"
-    [styleClass]="'report-result-dialog'"
+    styleClass="report-result-dialog"
     (onHide)="onModalClose()">
     <div class="report-result-header">
       <span style="font-weight: 550; color: #000000; font-size: 16px !important; padding-left: 30px">
@@ -176,5 +174,5 @@
       [disableInitiativeSelect]="true"
       (resultCreated)="onModalClose()">
     </app-report-result-form>
-  </p-dialog>
+  </app-pr-dialog>
 }

@@ -1,6 +1,6 @@
-<p-dialog appendTo="body" header="Title" [(visible)]="this.mappedResultService.mappedResultsModal"
-  [draggable]="false" [modal]="true" [showHeader]="false" [dismissableMask]="true" [closeOnEscape]="true"
-  [style]="{padding: '0px'}" (onHide)="onCloseModal()">
+<app-pr-dialog [(visible)]="this.mappedResultService.mappedResultsModal"
+  [modal]="true" [showHeader]="false" [dismissableMask]="true" [closeOnEscape]="true"
+  styleClass="mapped-results-dialog" (onHide)="onCloseModal()">
 
   <div class="modal_header">
     <h1 class="modal_title">{{dynamicModalTitle()}}</h1>
@@ -67,4 +67,4 @@
       </div>
     </div>
   </div>
-</p-dialog>
+</app-pr-dialog>

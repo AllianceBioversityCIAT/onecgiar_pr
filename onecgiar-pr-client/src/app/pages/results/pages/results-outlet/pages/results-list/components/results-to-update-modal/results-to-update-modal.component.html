@@ -1,13 +1,10 @@
-<p-dialog
-  appendTo="body"
-  header="Title"
+<app-pr-dialog
   [(visible)]="this.api.dataControlSE.updateResultModal"
-  [draggable]="false"
   [modal]="true"
   [closeOnEscape]="true"
   [showHeader]="false"
   [dismissableMask]="true"
-  [style]="{ padding: '0px' }">
+  styleClass="results-to-update-dialog">
   <div class="modal_title">
     Update result
     <i class="material-icons-round modal_close_icon" (click)="this.api.dataControlSE.updateResultModal = false"> close </i>
@@ -94,4 +91,4 @@
       }}
     </div>
   </div>
-</p-dialog>
+</app-pr-dialog>

@@ -1,7 +1,7 @@
 import { Component, ViewChild, inject, signal, computed, Input, Output, EventEmitter, WritableSignal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { DialogModule } from 'primeng/dialog';
+import { PrDialogComponent } from 'src/app/shared/components/pr-dialog/pr-dialog.component';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
 import { ResultsApiService } from '../../../../../../shared/services/api/results-api.service';
@@ -33,7 +33,7 @@ interface AddUserForm {
   imports: [
     CommonModule,
     FormsModule,
-    DialogModule,
+    PrDialogComponent,
     CustomFieldsModule,
     SearchUserSelectComponent,
     SelectModule,

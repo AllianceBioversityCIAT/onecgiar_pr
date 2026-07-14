@@ -8,7 +8,7 @@ import { SectionHeaderModule } from '../../components/section-header/section-hea
 import { ResultsInnovationOutputListModule } from './components/results-innovation-output-list/results-innovation-output-list.module';
 import { IpsrGeoscopeCreatorModule } from './components/ipsr-geoscope-creator/ipsr-geoscope-creator.module';
 import { FeedbackValidationDirectiveModule } from '../../../../shared/directives/feedback-validation-directive.module';
-import { DialogModule } from 'primeng/dialog';
+import { PrDialogComponent } from 'src/app/shared/components/pr-dialog/pr-dialog.component';
 import { GeoscopeManagementModule } from '../../../../shared/components/geoscope-management/geoscope-management.module';
 import { TermPipe } from '../../../../internationalization/term.pipe';
 
@@ -22,7 +22,7 @@ import { TermPipe } from '../../../../internationalization/term.pipe';
     ResultsInnovationOutputListModule,
     IpsrGeoscopeCreatorModule,
     FeedbackValidationDirectiveModule,
-    DialogModule,
+    PrDialogComponent,
     GeoscopeManagementModule,
     TermPipe
   ],

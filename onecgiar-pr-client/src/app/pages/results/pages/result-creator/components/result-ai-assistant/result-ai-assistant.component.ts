@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, Input, signal } from '@angular/core';
-import { DialogModule } from 'primeng/dialog';
+import { PrDialogComponent } from 'src/app/shared/components/pr-dialog/pr-dialog.component';
 import { CreateResultManagementService } from '../../services/create-result-management.service';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { ApiService } from '../../../../../../shared/services/api/api.service';
@@ -45,7 +45,7 @@ interface MiningTextItem {
   imports: [
     CommonModule,
     FormsModule,
-    DialogModule,
+    PrDialogComponent,
     CustomFieldsModule,
     AiUploadFileComponent,
     ResultAiItemComponent,

@@ -198,15 +198,12 @@
 </div>
 
 <!-- Reject contribution Dialog -->
-<p-dialog
-  appendTo="body"
+<app-pr-dialog
   [(visible)]="showConfirmRejectDialog"
   [modal]="true"
   [closeOnEscape]="true"
   [showHeader]="false"
   [dismissableMask]="true"
-  [draggable]="false"
-  [style]="{ padding: '0px' }"
   styleClass="confirmation-modal reject">
   <i class="pi pi-times modal-close-icon" (click)="showConfirmRejectDialog.set(false)"></i>
   <div class="modal-body">
@@ -257,4 +254,4 @@
       [disabled]="invalidateRequest() || requestingReject"
       [ngClass]="{ globalDisabled: invalidateRequest() || requestingReject }"></app-pr-button>
   </div>
-</p-dialog>
+</app-pr-dialog>

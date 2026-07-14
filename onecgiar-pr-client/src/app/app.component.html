@@ -11,16 +11,13 @@
 @if (!this.AuthService.inLogin() && this.rolesSE.firstValidationOfReadOnly) {
   <app-footer></app-footer>
 }
-<p-dialog
-  appendTo="body"
-  header="Title"
+<app-pr-dialog
   [(visible)]="this.footerSE.displayContactUs"
-  [draggable]="false"
   [modal]="true"
   [closeOnEscape]="true"
   [showHeader]="false"
   [dismissableMask]="true"
-  [style]="{ padding: '0px' }">
+  styleClass="contact-us-dialog">
   <div class="modal_container">
     <div class="line"></div>
     <div class="line"></div>
@@ -35,6 +32,6 @@
       <a href="mailto: projectcoordinationunit@cgiar.org">projectcoordinationunit&#64;cgiar.org</a>
     </div>
   </div>
-</p-dialog>
+</app-pr-dialog>
 
 <p-toast key="globalUserNotification" [style]="{ marginTop: '50px' }" />

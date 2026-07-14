@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { DialogModule } from 'primeng/dialog';
+import { PrDialogComponent } from '../../../../../../shared/components/pr-dialog/pr-dialog.component';
 import { ButtonModule } from 'primeng/button';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -8,7 +8,7 @@ import { CustomFieldsModule } from '../../../../../../custom-fields/custom-field
 
 @Component({
   selector: 'app-ai-review',
-  imports: [DialogModule, ButtonModule, FormsModule, CommonModule, CustomFieldsModule],
+  imports: [PrDialogComponent, ButtonModule, FormsModule, CommonModule, CustomFieldsModule],
   templateUrl: './ai-review.component.html',
   styleUrl: './ai-review.component.scss'
 })

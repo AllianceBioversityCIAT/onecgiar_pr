@@ -1,6 +1,6 @@
-<p-dialog appendTo="body" header="Title" [(visible)]="this.ipsrDataControlSE.ipsrUpdateResultModal"
-    [draggable]="false" [modal]="true" [closeOnEscape]="true" [showHeader]="false" [dismissableMask]="true"
-    [style]="{padding: '0px'}">
+<app-pr-dialog [(visible)]="this.ipsrDataControlSE.ipsrUpdateResultModal"
+    [modal]="true" [closeOnEscape]="true" [showHeader]="false" [dismissableMask]="true"
+    styleClass="update-ipsr-result-dialog">
 
     <div class="ipsr_modal_title">
         Update an Innovation Package result
@@ -85,4 +85,4 @@
             Total: {{ (this.ipsrDataControlSE.ipsrResultList | ipsrToUpdateFilter : text_to_search)?.length }}/{{ this.ipsrDataControlSE.ipsrResultList?.length }}
         </div>
     </div>
-</p-dialog>
+</app-pr-dialog>

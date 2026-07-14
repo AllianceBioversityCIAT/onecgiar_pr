@@ -9,7 +9,7 @@ import { IpsrListFiltersComponent } from './components/ipsr-list-filters/ipsr-li
 import { UpdateIpsrResultModalComponent } from './components/update-ipsr-result-modal/update-ipsr-result-modal.component';
 import { RouterModule } from '@angular/router';
 import { TableModule } from 'primeng/table';
-import { DialogModule } from 'primeng/dialog';
+import { PrDialogComponent } from 'src/app/shared/components/pr-dialog/pr-dialog.component';
 import { IpsrToUpdateFilterPipe } from './components/update-ipsr-result-modal/ipsr-to-update-filter.pipe';
 import { ChangePhaseModalModule } from '../../../../../../shared/components/change-phase-modal/change-phase-modal.module';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
@@ -31,7 +31,7 @@ import { SectionHeaderModule } from '../../../../components/section-header/secti
     InnovationPackageCustomTableModule,
     SectionHeaderModule,
     FilterByTextModule,
-    DialogModule,
+    PrDialogComponent,
     TableModule,
     RouterModule,
     ChangePhaseModalModule

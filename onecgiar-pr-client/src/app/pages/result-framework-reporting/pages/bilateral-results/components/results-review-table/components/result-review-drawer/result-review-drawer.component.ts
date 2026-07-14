@@ -18,7 +18,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { HlmButton } from '@spartan/button';
-import { DialogModule } from 'primeng/dialog';
+import { PrDialogComponent } from 'src/app/shared/components/pr-dialog/pr-dialog.component';
 import { TextareaModule } from 'primeng/textarea';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
 import { GeoscopeManagementModule } from '../../../../../../../../shared/components/geoscope-management/geoscope-management.module';
@@ -45,7 +45,7 @@ import { RdContributorsAndPartnersModule } from '../../../../../../../../pages/r
     FormsModule,
     ButtonModule,
     HlmButton,
-    DialogModule,
+    PrDialogComponent,
     TextareaModule,
     GeoscopeManagementModule,
     KpContentComponent,
