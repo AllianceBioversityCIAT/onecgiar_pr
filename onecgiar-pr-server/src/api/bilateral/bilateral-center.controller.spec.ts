@@ -6,6 +6,10 @@ import { VersioningService } from '../versioning/versioning.service';
 import { ResultRepository } from '../results/result.repository';
 import { ResultByLevelRepository } from '../results/result-by-level/result-by-level.repository';
 import { YearRepository } from '../results/years/year.repository';
+import { ResultsTocResultsService } from '../results/results-toc-results/results-toc-results.service';
+import { ResultsTocResultRepository } from '../results/results-toc-results/repositories/results-toc-results.repository';
+import { ResultByInitiativesRepository } from '../results/results_by_inititiatives/resultByInitiatives.repository';
+import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 
 describe('BilateralCenterController', () => {
@@ -55,6 +59,26 @@ describe('BilateralCenterController', () => {
           useValue: {
             findOne: jest.fn().mockResolvedValue({ year: 2025 }),
           },
+        },
+        {
+          provide: ResultsTocResultsService,
+          useValue: {
+            updatePlannedResult: jest.fn().mockResolvedValue({}),
+          },
+        },
+        {
+          provide: ResultsTocResultRepository,
+          useValue: {},
+        },
+        {
+          provide: ResultByInitiativesRepository,
+          useValue: {
+            getOwnerInitiativeByResult: jest.fn().mockResolvedValue({ id: 1 }),
+          },
+        },
+        {
+          provide: ClarisaInitiativesRepository,
+          useValue: {},
         },
       ],
     }).compile();

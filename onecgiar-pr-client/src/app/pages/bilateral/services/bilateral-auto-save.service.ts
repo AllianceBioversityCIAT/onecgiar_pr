@@ -21,6 +21,8 @@ const FIELD_ENDPOINTS: Record<string, string> = {
   nutrition_impact_area_ids: 'bilateral/general-info/{id}',
   environmental_biodiversity_impact_area_ids: 'bilateral/general-info/{id}',
   poverty_impact_area_ids: 'bilateral/general-info/{id}',
+  planned_result: '../bilateral/center/planned-result/{id}',
+  programCode: '../bilateral/center/planned-result/{id}',
 };
 
 @Injectable({ providedIn: 'root' })

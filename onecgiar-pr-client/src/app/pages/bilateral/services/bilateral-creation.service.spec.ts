@@ -89,10 +89,11 @@ describe('BilateralCreationService', () => {
   });
 
   it('should create a result via POST', () => {
+    service.selectPrimarySp({ programId: 100, programCode: 'P11', allocation: '45.00' });
     service.createResult(1, 2).subscribe();
     const req = httpMock.expectOne(`${environment.apiBaseUrl}api/bilateral/center/create-header`);
     expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({ result_level_id: 1, result_type_id: 2 });
+    expect(req.request.body).toEqual({ result_level_id: 1, result_type_id: 2, program_code: 'P11' });
     req.flush({});
   });
 

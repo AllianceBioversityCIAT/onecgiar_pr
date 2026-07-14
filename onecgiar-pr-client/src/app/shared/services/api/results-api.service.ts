@@ -1373,9 +1373,10 @@ export class ResultsApiService {
     );
   }
 
-  GET_TocResultsByAowId(entityId: string, aowId: string, year?: string) {
-    const queryParams: string[] = [`program=${entityId}`, `areaOfWork=${aowId}`];
+  GET_TocResultsByAowId(entityId: string, aowId?: string | null, year?: string) {
+    const queryParams: string[] = [`program=${entityId}`];
 
+    if (aowId) queryParams.push(`areaOfWork=${aowId}`);
     if (year) queryParams.push(`year=${year}`);
 
     const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';

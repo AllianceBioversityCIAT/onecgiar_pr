@@ -2,6 +2,8 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
+  Param,
   Body,
   Query,
   UseInterceptors,
@@ -14,14 +16,17 @@ import { UserToken } from '../../shared/decorators/user-token.decorator';
 import { TokenDto } from '../../shared/globalInterfaces/token.dto';
 import { CreateCenterResultDto } from './dto/create-center-result.dto';
 import { ResultStatusData } from '../../shared/constants/result-status.enum';
-import { SourceEnum } from '../results/entities/result.entity';
+import { Result, SourceEnum } from '../results/entities/result.entity';
 import { AppModuleIdEnum } from '../../shared/constants/role-type.enum';
 import { VersioningService } from '../versioning/versioning.service';
 import { ResultRepository } from '../results/result.repository';
-import { Result } from '../results/entities/result.entity';
 import { ResultTypeEnum } from '../../shared/constants/result-type.enum';
 import { YearRepository } from '../results/years/year.repository';
 import { ResultByLevelRepository } from '../results/result-by-level/result-by-level.repository';
+import { ResultsTocResultsService } from '../results/results-toc-results/results-toc-results.service';
+import { ResultsTocResultRepository } from '../results/results-toc-results/repositories/results-toc-results.repository';
+import { ResultByInitiativesRepository } from '../results/results_by_inititiatives/resultByInitiatives.repository';
+import { ClarisaInitiativesRepository } from '../../clarisa/clarisa-initiatives/ClarisaInitiatives.repository';
 
 @Controller('center')
 @ApiTags('Bilateral Center')
@@ -33,6 +38,10 @@ export class BilateralCenterController {
     private readonly resultRepository: ResultRepository,
     private readonly resultByLevelRepository: ResultByLevelRepository,
     private readonly yearRepository: YearRepository,
+    private readonly resultsTocResultsService: ResultsTocResultsService,
+    private readonly resultsTocResultRepository: ResultsTocResultRepository,
+    private readonly resultByInitiativesRepository: ResultByInitiativesRepository,
+    private readonly clarisaInitiativesRepository: ClarisaInitiativesRepository,
   ) {}
 
   @Get('projects')
@@ -106,6 +115,22 @@ export class BilateralCenterController {
       title: `Bilateral Draft #${result.id}`,
     });
 
+    if (dto.program_code) {
+      const initiative =
+        await this.clarisaInitiativesRepository.findOne({
+          where: { official_code: dto.program_code, active: true },
+        });
+      if (initiative) {
+        await this.resultByInitiativesRepository.save({
+          result_id: result.id,
+          initiative_id: initiative.id,
+          initiative_role_id: 1,
+          is_active: true,
+          created_by: user.id,
+        });
+      }
+    }
+
     return {
       response: {
         id: result.id,
@@ -115,5 +140,77 @@ export class BilateralCenterController {
         status_id: result.status_id,
       },
     };
+  }
+
+  @Get('initiative/:resultId')
+  @ApiOperation({
+    summary: 'Get owner initiative ID for a bilateral result',
+  })
+  async getResultInitiativeId(@Param('resultId') resultId: number) {
+    const owner = await this.resultByInitiativesRepository.getOwnerInitiativeByResult(resultId);
+    return {
+      response: {
+        initiativeId: owner?.id ?? null,
+        officialCode: owner?.official_code ?? null,
+        initiativeName: owner?.initiative_name ?? null,
+      },
+    };
+  }
+
+  @Patch('planned-result/:resultId')
+  @ApiOperation({
+    summary: 'Update planned_result flag for a bilateral result',
+  })
+  async updatePlannedResult(
+    @Param('resultId') resultId: number,
+    @Body() body: { planned_result: boolean; programCode?: string },
+    @UserToken() user: TokenDto,
+  ) {
+    try {
+      let ownerInitiative =
+        await this.resultByInitiativesRepository.getOwnerInitiativeByResult(
+          resultId,
+        );
+
+      if (!ownerInitiative?.id && body.programCode) {
+        const initiative =
+          await this.clarisaInitiativesRepository.findOne({
+            where: { official_code: body.programCode, active: true },
+          });
+        if (initiative) {
+          ownerInitiative = {
+            id: initiative.id,
+            official_code: initiative.official_code,
+            initiative_name: initiative.name,
+            inititiative_id: initiative.id,
+            is_active: initiative.active ? 1 : 0,
+            short_name: initiative.short_name ?? '',
+          };
+        }
+      }
+
+      if (!ownerInitiative?.id) {
+        return {
+          response: { resultId },
+          message: 'Owner initiative not found for this result',
+          status: 404,
+        };
+      }
+
+      return this.resultsTocResultsService.updatePlannedResult(
+        resultId,
+        body.planned_result,
+        user.id,
+      );
+    } catch (error) {
+      return {
+        response: {},
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Failed to update planned result',
+        status: 500,
+      };
+    }
   }
 }

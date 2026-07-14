@@ -1,4 +1,4 @@
-import { Component, inject, Input, computed } from '@angular/core';
+import { Component, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker.service';
@@ -11,7 +11,6 @@ import { SectionTocComponent } from '../section-toc/section-toc.component';
   styleUrl: './section-contributors.component.scss'
 })
 export class SectionContributorsComponent {
-  @Input() resultTypeId: number | null = null;
 
   readonly creationService = inject(BilateralCreationService);
   readonly mdsTracker = inject(BilateralMdsTrackerService);

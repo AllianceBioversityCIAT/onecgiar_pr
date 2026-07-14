@@ -496,6 +496,7 @@ export class TocResultsRepository extends Repository<TocResult> {
     resultId?: number,
     planned?: boolean | string,
     explicitTocPhaseId?: string | number,
+    bilateral?: boolean,
   ) {
     const isPlanned = planned === true || planned === 'true';
 
@@ -560,6 +561,7 @@ export class TocResultsRepository extends Repository<TocResult> {
 
     let indicatorFilter = '';
     if (
+      !bilateral &&
       isPlanned &&
       resultTypeId &&
       RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId]?.length
@@ -664,6 +666,7 @@ export class TocResultsRepository extends Repository<TocResult> {
     resultId?: number,
     initId?: number,
     includeInactiveIndicators = false,
+    bilateral?: boolean,
   ): Promise<
     Array<{
       toc_result_id: number;
@@ -724,6 +727,7 @@ export class TocResultsRepository extends Repository<TocResult> {
     const indicatorConditions: string[] = [];
 
     if (
+      !bilateral &&
       !isUnplanned &&
       resultTypeId &&
       RESULT_TYPE_TO_INDICATOR_PATTERN[resultTypeId]?.length

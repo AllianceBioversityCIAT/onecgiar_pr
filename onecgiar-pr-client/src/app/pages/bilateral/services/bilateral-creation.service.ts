@@ -31,6 +31,9 @@ export class BilateralCreationService {
   resultLeadContact = signal('');
   resultDacLevels = signal<Record<string, number>>({});
   resultDacSubScores = signal<Record<string, number[]>>({});
+  resultInitiativeId = signal<number | null>(null);
+  resultLevelId = signal<number | null>(null);
+  resultTypeId = signal<number | null>(null);
 
   getProjects(centerId: string | number): void {
     this.isLoadingProjects.set(true);
@@ -53,6 +56,8 @@ export class BilateralCreationService {
           this.resultTitle.set(cf.result_title ?? '');
           this.resultDescription.set(cf.result_description ?? '');
           this.resultLeadContact.set(cf.lead_contact_person ?? '');
+          this.resultLevelId.set(cf.result_level_id ?? null);
+          this.resultTypeId.set(cf.result_type_id ?? null);
           const dacLevels: Record<string, number> = {};
           if (cf.gender_tag_level_id != null) dacLevels['gender'] = Number(cf.gender_tag_level_id);
           if (cf.climate_change_tag_level_id != null) dacLevels['climate_change'] = Number(cf.climate_change_tag_level_id);
@@ -76,6 +81,10 @@ export class BilateralCreationService {
           }
           this.resultDacSubScores.set(subs);
         }
+        const primaryInit = response?.contributingInitiatives?.contributing_and_primary_initiative?.[0];
+        if (primaryInit?.id) {
+          this.resultInitiativeId.set(primaryInit.id);
+        }
         this.isLoadingResult.set(false);
       },
       error: () => { this.isLoadingResult.set(false); }
@@ -91,6 +100,15 @@ export class BilateralCreationService {
     this.selectedPrimarySp.set(null);
     this.selectedSecondarySps.set([]);
     this.saveToStorage(LS_PROJECT_KEY, project);
+    localStorage.removeItem(LS_SP_KEY);
+    localStorage.removeItem(LS_SECONDARY_SP_KEY);
+  }
+
+  resetWizard(): void {
+    this.selectedProject.set(null);
+    this.selectedPrimarySp.set(null);
+    this.selectedSecondarySps.set([]);
+    localStorage.removeItem(LS_PROJECT_KEY);
     localStorage.removeItem(LS_SP_KEY);
     localStorage.removeItem(LS_SECONDARY_SP_KEY);
   }
@@ -115,10 +133,14 @@ export class BilateralCreationService {
   }
 
   createResult(resultLevelId: number, resultTypeId: number): Observable<any> {
-    const body = {
+    const body: Record<string, unknown> = {
       result_level_id: resultLevelId,
       result_type_id: resultTypeId,
     };
+    const programCode = this.selectedPrimarySp()?.programCode;
+    if (programCode) {
+      body['program_code'] = programCode;
+    }
     return this.http.post(`${environment.apiBaseUrl}api/bilateral/center/create-header`, body);
   }
 

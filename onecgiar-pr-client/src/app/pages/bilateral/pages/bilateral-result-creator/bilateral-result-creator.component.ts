@@ -1,6 +1,7 @@
-import { Component, inject, OnInit, signal, computed } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { Component, inject, OnInit, signal, computed, OnDestroy } from '@angular/core';
+import { ActivatedRoute, Router, NavigationEnd } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
+import { filter } from 'rxjs/operators';
 import { MessageService } from 'primeng/api';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
 import { BilateralMdsTrackerService, MdsStatus } from '../../services/bilateral-mds-tracker.service';
@@ -51,7 +52,7 @@ const RESULT_TYPES_BY_LEVEL: Record<number, { id: number; label: string }[]> = {
   styleUrl: './bilateral-result-creator.component.scss',
   providers: [MessageService]
 })
-export class BilateralResultCreatorComponent implements OnInit {
+export class BilateralResultCreatorComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly messageService = inject(MessageService);
@@ -111,12 +112,16 @@ export class BilateralResultCreatorComponent implements OnInit {
 
   onLevelSelected(levelId: number): void {
     this.resultLevelId.set(levelId);
+    this.creationService.resultLevelId.set(levelId);
     this.resultTypeId.set(null);
+    this.creationService.resultTypeId.set(null);
     this.scrollToSection('bcr-type-section');
   }
 
   onTypeSelected(event: Event): void {
-    this.resultTypeId.set(Number((event.target as HTMLSelectElement).value));
+    const typeId = Number((event.target as HTMLSelectElement).value);
+    this.resultTypeId.set(typeId);
+    this.creationService.resultTypeId.set(typeId);
   }
 
   onNext(): void {
@@ -183,5 +188,12 @@ export class BilateralResultCreatorComponent implements OnInit {
         this.messageService.add({ severity: 'error', summary: 'Submit failed', detail, life: 5000 });
       }
     });
+  }
+
+  ngOnDestroy(): void {
+    const url = this.router.url;
+    if (!url.startsWith('/bilateral/')) {
+      this.creationService.resetWizard();
+    }
   }
 }

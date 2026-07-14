@@ -1,5 +1,5 @@
-import { IsNotEmpty, IsNumber } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateCenterResultDto {
   @ApiProperty({
@@ -17,4 +17,12 @@ export class CreateCenterResultDto {
   @IsNumber()
   @IsNotEmpty()
   result_type_id: number;
+
+  @ApiPropertyOptional({
+    description: 'Science Program code (official_code from clarisa_initiatives)',
+    example: 'SP01',
+  })
+  @IsString()
+  @IsOptional()
+  program_code?: string;
 }
