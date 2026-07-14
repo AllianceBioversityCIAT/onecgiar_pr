@@ -4,12 +4,12 @@ import { CognitoService } from '../../shared/services/cognito.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PasswordModule } from 'primeng/password';
-import { InputTextModule } from 'primeng/inputtext';
+import { HlmInput } from '@spartan/input';
 import { Router } from '@angular/router';
 
 @Component({
     selector: 'app-login',
-    imports: [CommonModule, FormsModule, PasswordModule, InputTextModule],
+    imports: [CommonModule, FormsModule, PasswordModule, HlmInput],
     templateUrl: './login.component.html',
     styleUrls: ['./login.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush

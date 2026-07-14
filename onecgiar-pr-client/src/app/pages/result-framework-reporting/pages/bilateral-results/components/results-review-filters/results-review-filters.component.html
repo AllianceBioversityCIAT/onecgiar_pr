@@ -2,16 +2,16 @@
   <div class="filters">
     <div class="filters_items_container_left">
       <!-- Search -->
-      <p-iconfield>
-        <p-inputicon styleClass="pi pi-search" />
+      <span class="pr-search-box">
+        <span class="material-icons-round">search</span>
         <input
           type="text"
-          pInputText
+          hlmInput
           placeholder="Find result"
           [ngModel]="bilateralResultsService.searchText()"
           (ngModelChange)="onSearchChange($event)"
-          [style]="{ width: '350px' }" />
-      </p-iconfield>
+          style="width: 350px" />
+      </span>
 
       <!-- Apply filters button -->
       <p-overlaybadge value="" [badgeDisabled]="filtersCount() === 0">

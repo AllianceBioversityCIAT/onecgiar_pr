@@ -617,3 +617,22 @@ body {
 @keyframes pr-spin {
   to { transform: rotate(360deg); }
 }
+
+/* Reusable search box (PrimeNG p-iconfield + pInputText replacement). */
+.pr-search-box {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+
+  > .material-icons-round {
+    position: absolute;
+    left: 8px;
+    font-size: 18px;
+    color: var(--pr-color-accents-4);
+    pointer-events: none;
+  }
+
+  > input {
+    padding-left: 32px;
+  }
+}

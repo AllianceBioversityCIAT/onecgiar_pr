@@ -65,7 +65,7 @@ const fieldComponents = [
     LabelNamePipe,
     YesOrNotByBooleanPipe
   ],
-  exports: [...fieldComponents, FormsModule, PrTooltipDirectiveModule],
+  exports: [...fieldComponents, FormsModule, PrTooltipDirectiveModule, HlmInput],
   imports: [CommonModule, FormsModule, ScrollingModule, HlmInput, PrTooltipDirectiveModule]
 })
 export class CustomFieldsModule {}

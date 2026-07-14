@@ -26,18 +26,18 @@
           <!-- User search -->
           <div class="search-container">
             <label class="search-label" for="search-user-input" style="line-height: 20px; margin-bottom: 0">Search by user:</label>
-            <p-iconfield style="width: 100%">
-              <p-inputicon styleClass="pi pi-search" />
+            <span class="pr-search-box" style="width: 100%">
+              <span class="material-icons-round">search</span>
               <input
                 type="text"
-                pInputText
+                hlmInput
                 placeholder="Search"
                 [value]="searchText()"
                 (input)="onSearchInputChange($event)"
                 class="search-field"
                 style="height: 36px; width: 100%"
                 id="search-user-input" />
-            </p-iconfield>
+            </span>
           </div>
 
           <!-- Status filter -->

@@ -1,10 +1,10 @@
 <div class="filters">
   <div class="filters_items_container_left">
     <!-- Search -->
-    <p-iconfield [style]="{ flex: '1', width: '100%' }">
-      <p-inputicon styleClass="pi pi-search" />
-      <input type="text" pInputText placeholder="Find result..." [(ngModel)]="this.resultsListFilterSE.text_to_search" [style]="{ width: '100%' }" />
-    </p-iconfield>
+    <span class="pr-search-box" style="flex: 1; width: 100%">
+      <span class="material-icons-round">search</span>
+      <input type="text" hlmInput placeholder="Find result..." [(ngModel)]="this.resultsListFilterSE.text_to_search" style="width: 100%" />
+    </span>
     <!-- apply filters button -->
     <p-overlaybadge value="" [badgeDisabled]="filtersCount() === 0">
       <app-pr-button
