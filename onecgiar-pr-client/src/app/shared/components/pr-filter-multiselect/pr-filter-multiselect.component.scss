@@ -1,0 +1,31 @@
+.pr-filter-ms {
+  .pr-ms-list {
+    max-height: 260px;
+    overflow-y: auto;
+
+    .option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 10px;
+      cursor: pointer;
+      color: var(--pr-color-accents-5);
+
+      &:hover {
+        background-color: var(--pr-color-primary-25, #f5f6ff);
+      }
+
+      .label {
+        white-space: normal;
+      }
+    }
+
+    .no_info {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      color: var(--pr-color-primary-300);
+    }
+  }
+}
