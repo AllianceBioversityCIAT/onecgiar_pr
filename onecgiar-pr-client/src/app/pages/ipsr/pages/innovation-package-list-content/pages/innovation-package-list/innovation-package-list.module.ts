@@ -8,7 +8,14 @@ import { InnovationPackageListFilterPipe } from './components/innovation-package
 import { IpsrListFiltersComponent } from './components/ipsr-list-filters/ipsr-list-filters.component';
 import { UpdateIpsrResultModalComponent } from './components/update-ipsr-result-modal/update-ipsr-result-modal.component';
 import { RouterModule } from '@angular/router';
-import { TableModule } from 'primeng/table';
+import {
+  PrTableComponent,
+  PrSortIconComponent,
+  PrSortableColumnDirective,
+  PrTableHeaderDirective,
+  PrTableBodyDirective,
+  PrTableEmptyDirective
+} from 'src/app/shared/components/pr-table';
 import { PrDialogComponent } from 'src/app/shared/components/pr-dialog/pr-dialog.component';
 import { IpsrToUpdateFilterPipe } from './components/update-ipsr-result-modal/ipsr-to-update-filter.pipe';
 import { ChangePhaseModalModule } from '../../../../../../shared/components/change-phase-modal/change-phase-modal.module';
@@ -32,7 +39,12 @@ import { SectionHeaderModule } from '../../../../components/section-header/secti
     SectionHeaderModule,
     FilterByTextModule,
     PrDialogComponent,
-    TableModule,
+    PrTableComponent,
+    PrSortIconComponent,
+    PrSortableColumnDirective,
+    PrTableHeaderDirective,
+    PrTableBodyDirective,
+    PrTableEmptyDirective,
     RouterModule,
     ChangePhaseModalModule
   ]

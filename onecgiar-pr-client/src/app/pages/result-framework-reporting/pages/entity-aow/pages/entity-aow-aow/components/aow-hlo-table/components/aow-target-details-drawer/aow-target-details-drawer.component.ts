@@ -1,7 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, inject, OnDestroy, OnInit } from '@angular/core';
 import { EntityAowService } from '../../../../../../services/entity-aow.service';
 import { CommonModule } from '@angular/common';
-import { TableModule } from 'primeng/table';
+import {
+  PrTableComponent,
+  PrTableHeaderDirective,
+  PrTableBodyDirective,
+  PrTableEmptyDirective
+} from 'src/app/shared/components/pr-table';
 
 interface Center {
   center_id: string;
@@ -23,7 +28,7 @@ interface TableRow {
 
 @Component({
   selector: 'app-aow-target-details-drawer',
-  imports: [CommonModule, TableModule],
+  imports: [CommonModule, PrTableComponent, PrTableHeaderDirective, PrTableBodyDirective, PrTableEmptyDirective],
   templateUrl: './aow-target-details-drawer.component.html',
   styleUrl: './aow-target-details-drawer.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

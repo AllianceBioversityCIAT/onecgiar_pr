@@ -1,12 +1,28 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { TableModule } from 'primeng/table';
+import {
+  PrTableComponent,
+  PrSortIconComponent,
+  PrSortableColumnDirective,
+  PrTableHeaderDirective,
+  PrTableBodyDirective,
+  PrTableEmptyDirective
+} from 'src/app/shared/components/pr-table';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { IndicatorDetailsService } from '../../services/indicator-details.service';
 
 @Component({
     selector: 'app-details-table',
-    imports: [CommonModule, TableModule, CustomFieldsModule],
+    imports: [
+      CommonModule,
+      PrTableComponent,
+      PrSortIconComponent,
+      PrSortableColumnDirective,
+      PrTableHeaderDirective,
+      PrTableBodyDirective,
+      PrTableEmptyDirective,
+      CustomFieldsModule
+    ],
     templateUrl: './details-table.component.html',
     styleUrl: './details-table.component.scss',
     changeDetection: ChangeDetectionStrategy.OnPush

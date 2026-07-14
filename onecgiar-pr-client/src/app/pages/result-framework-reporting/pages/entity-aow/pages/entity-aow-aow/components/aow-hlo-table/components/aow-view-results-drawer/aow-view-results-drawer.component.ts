@@ -1,6 +1,13 @@
 import { ChangeDetectionStrategy, Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { EntityAowService } from '../../../../../../services/entity-aow.service';
-import { TableModule } from 'primeng/table';
+import {
+  PrTableComponent,
+  PrSortIconComponent,
+  PrSortableColumnDirective,
+  PrTableHeaderDirective,
+  PrTableBodyDirective,
+  PrTableEmptyDirective
+} from 'src/app/shared/components/pr-table';
 import { CommonModule } from '@angular/common';
 import { ColumnOrder } from '../../aow-hlo-table.component';
 import { PdfIconModule } from '../../../../../../../../../../shared/icon-components/pdf-icon/pdf-icon.module';
@@ -14,7 +21,16 @@ interface ActionItem {
 
 @Component({
   selector: 'app-aow-view-results-drawer',
-  imports: [TableModule, CommonModule, PdfIconModule],
+  imports: [
+    PrTableComponent,
+    PrSortIconComponent,
+    PrSortableColumnDirective,
+    PrTableHeaderDirective,
+    PrTableBodyDirective,
+    PrTableEmptyDirective,
+    CommonModule,
+    PdfIconModule
+  ],
   templateUrl: './aow-view-results-drawer.component.html',
   styleUrl: './aow-view-results-drawer.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

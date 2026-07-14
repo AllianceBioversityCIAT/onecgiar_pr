@@ -11,8 +11,8 @@
 
   &.phase_table {
     ::ng-deep {
-      .p-datatable {
-        .p-datatable-tbody {
+      .pr-table {
+        tbody {
           tr {
             td {
               padding: 10px;
@@ -160,7 +160,7 @@
 }
 
 ::ng-deep {
-  .p-datatable-table-container {
+  .pr-table-wrap {
     overflow: unset !important;
   }
 }

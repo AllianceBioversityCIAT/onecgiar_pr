@@ -1,30 +1,27 @@
 <div class="table">
-  <p-table
+  <app-pr-table
     sortField="result_code"
     [sortOrder]="-1"
     [value]="this.tableData"
-    responsiveLayout="scroll"
     [paginator]="this.tableData?.length"
     [rows]="10"
-    styleClass="p-datatable-gridlines p-datatable-sm"
     selectionMode="single"
-    [rowsPerPageOptions]="[10, 50, 100]"
-    [first]="this.ipsrListService.text_to_search && 0">
-    <ng-template pTemplate="header">
+    [rowsPerPageOptions]="[10, 50, 100]">
+    <ng-template prTableHeader>
       <tr>
-        <th id="result_code" pSortableColumn="result_code" style="text-align: center">
-          <p-sortIcon field="result_code"></p-sortIcon>
+        <th id="result_code" prSortableColumn="result_code" style="text-align: center">
+          <pr-sort-icon field="result_code"></pr-sort-icon>
           Result code
         </th>
-        <th id="{{ column.attr }}" pSortableColumn="{{ column.attr }}" *ngFor="let column of columnOrder">
-          <p-sortIcon field="{{ column.attr }}"></p-sortIcon>{{ column.title }}
+        <th id="{{ column.attr }}" prSortableColumn="{{ column.attr }}" *ngFor="let column of columnOrder">
+          <pr-sort-icon field="{{ column.attr }}"></pr-sort-icon>{{ column.title }}
         </th>
         <th id="pdf">PDF</th>
         <th id="action" *ngIf="!this.api.rolesSE.platformIsClosed">Action</th>
       </tr>
     </ng-template>
 
-    <ng-template pTemplate="body" let-result>
+    <ng-template prTableBody let-result>
       <tr>
         <td style="text-align: center">
           {{ result?.result_code }}
@@ -68,7 +65,7 @@
         </td>
       </tr>
     </ng-template>
-  </p-table>
+  </app-pr-table>
 
   <div class="total" *ngIf="this.tableData?.length && this.total">Total: {{ this.tableData?.length }} / {{ this.total }}</div>
 

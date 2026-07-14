@@ -6,9 +6,9 @@
         <app-pr-button text="Download .xlsx" icon="file_download"
             (click)="exportExcel(this.resultHistoryOfChangesModalSE.historyOfChangesList);"
             *ngIf="this.resultHistoryOfChangesModalSE.historyOfChangesList.length"></app-pr-button>
-        <p-table [value]="this.resultHistoryOfChangesModalSE.historyOfChangesList"
+        <app-pr-table [value]="this.resultHistoryOfChangesModalSE.historyOfChangesList"
             *ngIf="this.resultHistoryOfChangesModalSE.historyOfChangesList.length">
-            <ng-template pTemplate="header">
+            <ng-template prTableHeader>
                 <tr>
                     <th id="comment">Comment</th>
                     <th id="name">Name</th>
@@ -19,7 +19,7 @@
                     <th id="status">Status</th>
                 </tr>
             </ng-template>
-            <ng-template pTemplate="body" let-product>
+            <ng-template prTableBody let-product>
                 <tr>
                     <td>
                         <div *ngIf="product.comment">{{product.comment}}</div>
@@ -36,7 +36,7 @@
                     <td>{{product.is_submit == 0 ? 'Un-submit':'Submit'}}</td>
                 </tr>
             </ng-template>
-        </p-table>
+        </app-pr-table>
 
 
         <app-no-data-text title="No history"

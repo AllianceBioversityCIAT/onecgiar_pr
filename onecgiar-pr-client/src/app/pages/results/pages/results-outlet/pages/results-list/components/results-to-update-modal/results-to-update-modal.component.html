@@ -22,28 +22,25 @@
       <input type="text" placeholder="Find result..." [(ngModel)]="this.text_to_search" />
     </div>
 
-    <p-table
+    <app-pr-table
       id="resultListTable"
-      #table
       sortField="result_code"
       [sortOrder]="-1"
       [value]="this.api.dataControlSE.resultsList | resultsToUpdateFilter: text_to_search"
-      responsiveLayout="scroll"
       [paginator]="(this.api.dataControlSE.resultsList | resultsToUpdateFilter: text_to_search)?.length"
       [rows]="10"
-      styleClass="p-datatable-gridlines p-datatable-sm"
       selectionMode="single"
       [rowsPerPageOptions]="[10, 50, 100]">
-      <ng-template pTemplate="header">
+      <ng-template prTableHeader>
         <tr>
-          <th id="result_code" pSortableColumn="result_code"><p-sortIcon field="result_code"></p-sortIcon>Result code</th>
-          <th id="{{ column.attr }}" pSortableColumn="{{ column.attr }}" *ngFor="let column of columnOrder">
-            <p-sortIcon field="{{ column.attr }}"></p-sortIcon>{{ column.title }}
+          <th id="result_code" prSortableColumn="result_code"><pr-sort-icon field="result_code"></pr-sort-icon>Result code</th>
+          <th id="{{ column.attr }}" prSortableColumn="{{ column.attr }}" *ngFor="let column of columnOrder">
+            <pr-sort-icon field="{{ column.attr }}"></pr-sort-icon>{{ column.title }}
           </th>
           <th *ngIf="!this.api.rolesSE.platformIsClosed" id="actions">Action</th>
         </tr>
       </ng-template>
-      <ng-template pTemplate="body" let-result>
+      <ng-template prTableBody let-result>
         <tr>
           <td>
             {{ result?.result_code }}
@@ -78,12 +75,12 @@
         </tr>
       </ng-template>
 
-      <ng-template pTemplate="emptymessage">
+      <ng-template prTableEmpty>
         <tr style="height: 200px">
           <td colspan="10" class="noDataText">There are no results for the selected filters.</td>
         </tr>
       </ng-template>
-    </p-table>
+    </app-pr-table>
 
     <div class="total" *ngIf="(this.api.dataControlSE.resultsList | resultsToUpdateFilter: text_to_search)?.length">
       Total: {{ (this.api.dataControlSE.resultsList | resultsToUpdateFilter: text_to_search)?.length }}/{{

@@ -22,20 +22,20 @@
             <input type="text" placeholder="Find result..." [(ngModel)]="this.text_to_search">
         </div>
 
-        <p-table id="resultListTable" #table sortField="result_code" [sortOrder]="-1" responsiveLayout="scroll"
+        <app-pr-table id="resultListTable" sortField="result_code" [sortOrder]="-1"
             [value]="this.ipsrDataControlSE.ipsrResultList | ipsrToUpdateFilter : text_to_search"
             [paginator]="(this.ipsrDataControlSE.ipsrResultList | ipsrToUpdateFilter :text_to_search )?.length"
-            [rows]="10" styleClass="p-datatable-gridlines p-datatable-sm" selectionMode="single" [rowsPerPageOptions]="[10, 50, 100]">
-            <ng-template pTemplate="header">
+            [rows]="10" selectionMode="single" [rowsPerPageOptions]="[10, 50, 100]">
+            <ng-template prTableHeader>
                 <tr>
-                    <th id="{{column.attr}}" pSortableColumn="{{column.attr}}" *ngFor="let column of columnOrder">
-                        <p-sortIcon field="{{column.attr}}"></p-sortIcon>{{ column.title }}
+                    <th id="{{column.attr}}" prSortableColumn="{{column.attr}}" *ngFor="let column of columnOrder">
+                        <pr-sort-icon field="{{column.attr}}"></pr-sort-icon>{{ column.title }}
                     </th>
                     <th id="actions">Action</th>
                 </tr>
             </ng-template>
 
-            <ng-template pTemplate="body" let-result>
+            <ng-template prTableBody let-result>
                 <tr>
                     <td *ngFor="let column of columnOrder; let i = index" class="{{ column.attr }}"
                         style="max-width: 440px;">
@@ -73,12 +73,12 @@
                 </tr>
             </ng-template>
 
-            <ng-template pTemplate="emptymessage">
+            <ng-template prTableEmpty>
                 <tr style="height: 200px">
                 <td colspan="8" class="ipsr_modal_noDataText">There are no results for the selected filters.</td>
                 </tr>
             </ng-template>
-        </p-table>
+        </app-pr-table>
 
         <div class="total"
             *ngIf="(this.ipsrDataControlSE.ipsrResultList | ipsrToUpdateFilter : text_to_search)?.length">

@@ -3,20 +3,20 @@
     <input type="text" placeholder="Find Innovation Package..." [(ngModel)]="searchText">
 </div>
 <div class="table">
-    <p-table sortField="result_code" [sortOrder]="-1"
-        [value]="(this.manageInnovationsListSE.allInnovationsList | filterByText:searchText)" responsiveLayout="scroll"
+    <app-pr-table sortField="result_code" [sortOrder]="-1"
+        [value]="(this.manageInnovationsListSE.allInnovationsList | filterByText:searchText)"
         [paginator]="!!((this.manageInnovationsListSE.allInnovationsList| filterByText:searchText)?.length) "
-        [rows]="10" styleClass="p-datatable-gridlines p-datatable-sm" selectionMode="single"
-        [rowsPerPageOptions]="[10,50,100]" paginatorDropdownAppendTo="body">
-        <ng-template pTemplate="header">
+        [rows]="10" selectionMode="single"
+        [rowsPerPageOptions]="[10,50,100]">
+        <ng-template prTableHeader>
             <tr>
-                <th [id]="column.attr" pSortableColumn="{{column.attr}}" *ngFor="let column of columnOrder" class="{{column.attr}}">
-                    <p-sortIcon field="{{column.attr}}"></p-sortIcon>{{column.title}}
+                <th [id]="column.attr" prSortableColumn="{{column.attr}}" *ngFor="let column of columnOrder" class="{{column.attr}}">
+                    <pr-sort-icon field="{{column.attr}}"></pr-sort-icon>{{column.title}}
                 </th>
                 <th *ngIf="!this.api.rolesSE.platformIsClosed" id="action">Action</th>
             </tr>
         </ng-template>
-        <ng-template pTemplate="body" let-result>
+        <ng-template prTableBody let-result>
             <tr>
                 <td *ngFor="let column of columnOrder; let i=index" class="{{column.attr}}">
                     <a class="{{column.class}}">
@@ -45,7 +45,7 @@
                 </td>
             </tr>
         </ng-template>
-    </p-table>
+    </app-pr-table>
     <div class="total" *ngIf="((this.manageInnovationsListSE.allInnovationsList | filterByText:searchText))?.length">
         Total:
         {{(this.manageInnovationsListSE.allInnovationsList | filterByText:searchText)?.length}} /

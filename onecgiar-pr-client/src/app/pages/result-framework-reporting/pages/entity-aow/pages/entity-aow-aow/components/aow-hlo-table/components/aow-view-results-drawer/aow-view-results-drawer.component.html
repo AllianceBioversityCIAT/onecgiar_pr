@@ -44,21 +44,21 @@
         <h3 class="view-result-drawer-content_title">Results for {{ entityAowService.currentResultToView()?.indicators?.[0]?.indicator_description }}</h3>
         <p class="view-result-drawer-content_desc">See results details.</p>
 
-        <p-table [value]="entityAowService.existingResultsContributors()" [tableStyle]="{ marginTop: '24px' }" sortField="result_code" [sortOrder]="1" [scrollable]="false" [loading]="isLoadingResults()">
-          <ng-template #header>
+        <app-pr-table [value]="entityAowService.existingResultsContributors()" sortField="result_code" [sortOrder]="1" [loading]="isLoadingResults()">
+          <ng-template prTableHeader>
             <tr>
               @for (column of columns(); track column.attr) {
-                <th [id]="column.attr" [style.width]="column.width" [pSortableColumn]="column.attr">
+                <th [id]="column.attr" [style.width]="column.width" [prSortableColumn]="column.attr">
                   {{ column.title }}
 
-                  <p-sortIcon [field]="column.attr" />
+                  <pr-sort-icon [field]="column.attr" />
                 </th>
               }
               <th id="pdf" style="text-align: center; width: 10%">PDF</th>
               <th id="actions" style="text-align: center; width: 10%">Actions</th>
             </tr>
           </ng-template>
-          <ng-template #body let-product>
+          <ng-template prTableBody let-product>
             <tr style="cursor: pointer" (click)="navigateToResultDirect(product)">
               <td>{{ product.result_code }}</td>
               <td>{{ product.title }}</td>
@@ -82,12 +82,12 @@
             </tr>
           </ng-template>
 
-          <ng-template pTemplate="emptymessage">
+          <ng-template prTableEmpty>
             <tr>
               <td colspan="6" class="noDataText">No existing results found</td>
             </tr>
           </ng-template>
-        </p-table>
+        </app-pr-table>
       </div>
     </div>
   </div>

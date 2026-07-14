@@ -1,26 +1,23 @@
 <div class="setting_title">Phases</div>
 
 <div class="local_container phase_table">
-  <p-table
+  <app-pr-table
     sortField="result_code"
     [sortOrder]="-1"
     [value]="this.phaseList"
-    scrollHeight="calc(100vh - 303px)"
-    responsiveLayout="scroll"
     [paginator]="!!this.phaseList?.length"
     [rows]="10"
-    styleClass="p-datatable-gridlines p-datatable-sm"
     selectionMode="single"
     [rowsPerPageOptions]="[10, 50, 100]">
-    <ng-template pTemplate="header">
+    <ng-template prTableHeader>
       <tr>
-        <th *ngFor="let column of columnOrder" pSortableColumn="{{ column.attr }}" id="{{ column.attr }}">
-          <p-sortIcon field="{{ column.attr }}"></p-sortIcon>{{ column.title }}
+        <th *ngFor="let column of columnOrder" prSortableColumn="{{ column.attr }}" id="{{ column.attr }}">
+          <pr-sort-icon field="{{ column.attr }}"></pr-sort-icon>{{ column.title }}
         </th>
         <th id="actions">Actions</th>
       </tr>
     </ng-template>
-    <ng-template pTemplate="body" let-phase let-rowIndex="rowIndex">
+    <ng-template prTableBody let-phase let-rowIndex="rowIndex">
       <tr>
         <td [style.width.px]="30">
           {{ phase?.id }}
@@ -179,7 +176,7 @@
         </td>
       </tr>
     </ng-template>
-  </p-table>
+  </app-pr-table>
 </div>
 
 <div class="center_flex_100 items-center w-full">
