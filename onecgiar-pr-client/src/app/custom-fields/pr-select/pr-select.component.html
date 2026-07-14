@@ -39,6 +39,12 @@
               : placeholder()
           "></div>
 
+        <i
+          *ngIf="showClear() && (optionsIntance() | labelName: this.value : optionValue() : optionLabel()) && !disabled()"
+          class="material-icons-round pr-select-clear"
+          (click)="clearSelection($event)"
+          >close</i
+        >
         <div class="icon_container" [ngClass]="{ icon_container_active: disabled() }"></div>
         <i class="pi pi-chevron-down icon_dropdown"></i>
 

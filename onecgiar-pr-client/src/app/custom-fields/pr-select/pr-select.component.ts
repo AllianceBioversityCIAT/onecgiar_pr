@@ -42,6 +42,7 @@ export class PrSelectComponent implements ControlValueAccessor {
   readonly descInlineStyles = input<string>('');
   readonly labelDescInlineStyles = input<string>('');
   readonly overlayToBody = input<boolean>(false); // When true, position dropdown as fixed overlay
+  readonly showClear = input<boolean>(false); // When true, show a clear (×) button to reset the selection
   readonly idKey = input<string>('');
   readonly showDescriptionLabel = input<boolean>(false);
   readonly truncateSelectionText = input<boolean>(false);
@@ -166,11 +167,20 @@ export class PrSelectComponent implements ControlValueAccessor {
   onSelectOption(option) {
     if (option?.disabled) return;
     this.fullValue = option;
-    this.value = option[this.optionValue()];
+    // Whole-object binding when no optionValue is provided (mirrors PrimeNG p-select without optionValue).
+    this.value = this.optionValue() ? option[this.optionValue()] : option;
     option.selected = true;
     this.selectOptionEvent.emit(option);
     if (this.expandSpaceOnOpen()) {
       this.isDropdownOpen.set(false); // Close dropdown only if expansion is enabled
     }
+  }
+
+  /** Clears the current selection (used when `showClear` is enabled — mirrors PrimeNG `[showClear]`). */
+  clearSelection(event?: Event) {
+    event?.stopPropagation();
+    this.fullValue = null;
+    this.value = null;
+    this.selectOptionEvent.emit(null);
   }
 }
