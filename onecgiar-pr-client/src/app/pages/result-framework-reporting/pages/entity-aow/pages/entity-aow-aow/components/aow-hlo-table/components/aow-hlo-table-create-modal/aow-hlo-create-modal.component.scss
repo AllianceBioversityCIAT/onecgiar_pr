@@ -234,3 +234,21 @@ p {
     }
   }
 }
+
+// P2-2998 AC4 empty-state note — same look as rd-contributors-and-partners' .pr-message.
+.pr-message {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: var(--pr-color-orange-100);
+  padding: 10px 15px;
+  border-radius: 5px;
+  color: var(--pr-color-black);
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+
+  p {
+    margin: 0;
+  }
+}

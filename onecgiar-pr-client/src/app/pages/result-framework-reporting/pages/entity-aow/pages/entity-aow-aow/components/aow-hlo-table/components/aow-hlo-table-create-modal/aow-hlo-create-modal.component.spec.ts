@@ -40,32 +40,88 @@ describe('AowHloCreateModalComponent - Unit Tests', () => {
     });
   });
 
-  describe('preselectTocCenters logic (P2-3114)', () => {
-    const deriveTocCenters = (indicator: any, centersList: any[]) => {
-      const tocAcronyms = (indicator?.targets_by_center?.centers ?? []).map((c: any) => c?.center_acronym).filter(Boolean);
-      if (!tocAcronyms.length) return [];
-      return centersList.filter((c: any) => tocAcronyms.includes(c.acronym)).map((c: any) => ({ ...c, from_toc: true }));
+  describe('preselectTocCenters logic (P2-3114 / P2-2998 AC1-AC2)', () => {
+    // Mirrors the component: HLO-level partner institution ids ∪ KPI Targets acronyms, deduped by centersList filter.
+    const deriveTocCenters = (node: any, centersList: any[]) => {
+      const tocAcronyms = (node?.indicators?.[0]?.targets_by_center?.centers ?? [])
+        .map((c: any) => c?.center_acronym)
+        .filter(Boolean);
+      const partnerInstitutionIds = new Set(
+        (node?.toc_partner_institution_ids ?? []).map((id: any) => Number(id)).filter((id: number) => Number.isFinite(id))
+      );
+      return centersList
+        .filter((c: any) => tocAcronyms.includes(c.acronym) || partnerInstitutionIds.has(Number(c.institutionId)))
+        .map((c: any) => ({ ...c, from_toc: true }));
     };
 
-    it('should preselect the ToC-mapped centers tagged from_toc:true', () => {
-      const indicator = { targets_by_center: { centers: [{ center_acronym: 'ABC' }, { center_acronym: 'CIP' }] } };
-      const centersList = [
-        { code: 'ABC', acronym: 'ABC', name: 'Alliance' },
-        { code: 'CIP', acronym: 'CIP', name: 'CIP' },
-        { code: 'IRRI', acronym: 'IRRI', name: 'IRRI' }
-      ];
+    const centersList = [
+      { code: 'ABC', acronym: 'ABC', name: 'Alliance', institutionId: 100 },
+      { code: 'CIP', acronym: 'CIP', name: 'CIP', institutionId: 101 },
+      { code: 'IRRI', acronym: 'IRRI', name: 'IRRI', institutionId: 102 },
+      { code: 'IFPRI', acronym: 'IFPRI', name: 'IFPRI', institutionId: 103 }
+    ];
 
-      const preselected = deriveTocCenters(indicator, centersList);
+    it('should preselect the ToC-mapped centers tagged from_toc:true', () => {
+      const node = { indicators: [{ targets_by_center: { centers: [{ center_acronym: 'ABC' }, { center_acronym: 'CIP' }] } }] };
+
+      const preselected = deriveTocCenters(node, centersList);
 
       expect(preselected.map(c => c.acronym)).toEqual(['ABC', 'CIP']);
       expect(preselected.every(c => c.from_toc === true)).toBe(true);
     });
 
-    it('should preselect nothing when the indicator has no mapped centers', () => {
-      const indicator = { targets_by_center: { centers: [] } };
-      const centersList = [{ code: 'ABC', acronym: 'ABC', name: 'Alliance' }];
+    it('should preselect HLO-level ToC partners that are CGIAR Centers (by institutionId)', () => {
+      const node = {
+        toc_partner_institution_ids: [100, 103, 999], // 999 = partner that is not a CGIAR Center → excluded
+        indicators: [{ targets_by_center: { centers: [] } }]
+      };
 
-      expect(deriveTocCenters(indicator, centersList)).toEqual([]);
+      const preselected = deriveTocCenters(node, centersList);
+
+      expect(preselected.map(c => c.acronym)).toEqual(['ABC', 'IFPRI']);
+      expect(preselected.every(c => c.from_toc === true)).toBe(true);
+    });
+
+    it('should union partners and targets centers without duplicates', () => {
+      const node = {
+        toc_partner_institution_ids: [100], // ABC also comes from targets
+        indicators: [{ targets_by_center: { centers: [{ center_acronym: 'ABC' }, { center_acronym: 'IRRI' }] } }]
+      };
+
+      const preselected = deriveTocCenters(node, centersList);
+
+      expect(preselected.map(c => c.acronym)).toEqual(['ABC', 'IRRI']);
+    });
+
+    it('should fall back to targets-only when the payload lacks toc_partner_institution_ids', () => {
+      const node = { indicators: [{ targets_by_center: { centers: [{ center_acronym: 'CIP' }] } }] };
+
+      expect(deriveTocCenters(node, centersList).map(c => c.acronym)).toEqual(['CIP']);
+    });
+
+    it('should preselect nothing when the node has no partners nor mapped centers', () => {
+      const node = { indicators: [{ targets_by_center: { centers: [] } }] };
+
+      expect(deriveTocCenters(node, centersList)).toEqual([]);
+    });
+  });
+
+  describe('empty-state notes (P2-2998 AC4 / QA 2026-07-14)', () => {
+    it('should show the orange notes only when the ToC returns no reference entries', () => {
+      const hasReferenceCenters = (tocCenters: any[]) => tocCenters.length > 0;
+      const hasReferenceScience = (tocSciencePrograms: any[]) => tocSciencePrograms.length > 0;
+
+      expect(hasReferenceCenters([])).toBe(false); // → noCentersNote visible
+      expect(hasReferenceScience([])).toBe(false); // → noScienceProgramsNote visible
+      expect(hasReferenceCenters([{ code: 'ABC' }])).toBe(true); // → blue info note visible instead
+    });
+
+    it('should keep the note strings identical to the C&P section', () => {
+      const noCentersNote = 'No CGIAR Centers related to the established HLO/Outcomes were found';
+      const noScienceProgramsNote = 'No Science Programs related to the established HLO/Outcomes were found';
+
+      expect(noCentersNote).toContain('No CGIAR Centers related');
+      expect(noScienceProgramsNote).toContain('No Science Programs related');
     });
   });
 

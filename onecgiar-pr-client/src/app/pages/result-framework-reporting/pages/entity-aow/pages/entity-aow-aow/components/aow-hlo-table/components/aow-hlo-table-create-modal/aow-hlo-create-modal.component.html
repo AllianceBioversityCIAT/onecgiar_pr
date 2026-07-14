@@ -137,6 +137,8 @@
         <!-- P2-3114: Contributing CGIAR Centers split into "from ToC" (dropdown 1) + "Other(s)" (dropdown 2). -->
         <div>
           @if (hasReferenceCenters()) {
+            <!-- QA 2026-07-14: ToC parity info note, identical wording to rd-contributors-and-partners. -->
+            <app-alert-status [description]="contributingCentersInfoNote"></app-alert-status>
             <app-pr-multi-select
               [options]="dropdown1Options()"
               label="Contributing CGIAR Centers"
@@ -150,7 +152,12 @@
               (selectOptionEvent)="onContributingCenterSelect($event)">
             </app-pr-multi-select>
           } @else {
+            <!-- P2-2998 AC4: ToC returned no centers → show note; the Other(s) dropdown below auto-activates with ALL centers. -->
             <app-pr-field-header label="Contributing CGIAR Centers" [required]="false"></app-pr-field-header>
+            <div class="pr-message">
+              <i class="material-icons-round" style="font-size: 20px; color: var(--pr-color-orange-400)">info</i>
+              <p>{{ noCentersNote }}</p>
+            </div>
           }
 
           <div class="medal_selector selected_container">
@@ -205,6 +212,8 @@
 
           <!-- P2-3114: Contributing Science Programs split into "from ToC" (dropdown 1) + "Other(s)" (dropdown 2). -->
           @if (hasReferenceScience()) {
+            <!-- QA 2026-07-14: ToC parity info note, identical wording to rd-contributors-and-partners. -->
+            <app-alert-status [description]="contributingScienceInfoNote"></app-alert-status>
             <p-multiselect
               [options]="dropdown1ScienceOptions()"
               optionLabel="official_code"
@@ -220,6 +229,13 @@
                 </div>
               </ng-template>
             </p-multiselect>
+          } @else {
+            <!-- P2-2998 AC4 parity: ToC returned no Science Programs → show the orange note; the Other(s) dropdown
+                 below auto-activates. The note also visually separates this header from the Other(s) block. -->
+            <div class="pr-message">
+              <i class="material-icons-round" style="font-size: 20px; color: var(--pr-color-orange-400)">info</i>
+              <p>{{ noScienceProgramsNote }}</p>
+            </div>
           }
 
           @if (entityAowService.selectedEntities().length > 0) {
