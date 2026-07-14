@@ -9,7 +9,6 @@ import { RdAnnualUpdatingComponent } from './components/rd-annual-updating/rd-an
 import { ChangeResultTypeModalComponent } from './components/change-result-type-modal/change-result-type-modal.component';
 import { DialogModule } from 'primeng/dialog';
 import { TableModule } from 'primeng/table';
-import { CheckboxModule } from 'primeng/checkbox';
 import { PdfIconModule } from '../../../../../../shared/icon-components/pdf-icon/pdf-icon.module';
 import { ConfirmationKPComponent } from './components/confirmation-kp/confirmation-kp.component';
 import { SaveConfirmationModalComponent } from './components/save-confirmation-modal/save-confirmation-modal.component';
@@ -26,7 +25,6 @@ import { FeedbackValidationDirectiveModule } from '../../../../../../shared/dire
     FeedbackValidationDirectiveModule,
     DialogModule,
     TableModule,
-    CheckboxModule,
     PdfIconModule,
   ]
 })

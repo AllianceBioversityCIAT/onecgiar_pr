@@ -17,7 +17,7 @@
 
 - [x] 3.1 Classified the 12 `<p-checkbox>`: 7 binary vs 5 `[value]`/group (all in IPSR step-n2 complementary-innovation)
 - [x] 3.2 Migrated the **7 binary** checkboxes → `<input type="checkbox" class="pr-native-check">` (ngModel / [ngModel]+ngModelChange preserved)
-- [ ] 3.3 **DEFERRED — 5 group/value checkboxes** (`[value]` + array `ngModel` membership + `(click)`/`(ngModelChange)` bridge handlers). Native input can't replicate array-membership without adding toggle logic → carries "bridge logic/hack" risk. Move to the audited tier (with the selects) rather than a blind swap. `CheckboxModule` stays imported until these are done.
+- [x] 3.3 Migrated the **5 group/value checkboxes** (IPSR step-n2) with a new `PrCheckboxValueAccessorDirective` (`shared/directives`) — an array-membership `ControlValueAccessor` for a native checkbox, so `[value]` + `[(ngModel)]` keep identical semantics; Angular selects the custom accessor over the built-in boolean one. `item-options` `(click)` → `(ngModelChange)` so bridge handlers see post-toggle state deterministically. `CheckboxModule` removed from all 5 remaining files. Unit spec: 3/3 pass (membership add/remove + writeValue).
 
 ## 4. Remaining leaf visuals
 

@@ -85,13 +85,15 @@
         <div class="container">
           <div class="col{{ i }}" *ngFor="let item of columns; let i = index">
             <div *ngFor="let subItem of item" style="margin-bottom: 10px">
-              <p-checkbox
+              <input
+                type="checkbox"
+                prCheckboxValue
+                class="pr-native-check"
                 name="name"
                 [value]="subItem"
                 id="checkbox{{ subItem.complementary_innovation_functions_id }}"
-                [inputId]="subItem.complementary_innovation_functions_id"
-                [readonly]="this.api.rolesSE.readOnly"
-                [(ngModel)]="complementaryInnovationService.bodyNewComplementaryInnovation.complementaryFunctions"></p-checkbox>
+                [disabled]="this.api.rolesSE.readOnly"
+                [(ngModel)]="complementaryInnovationService.bodyNewComplementaryInnovation.complementaryFunctions" />
               <label for="checkbox{{ subItem.complementary_innovation_functions_id }}"> {{ subItem.name }}</label>
             </div>
           </div>

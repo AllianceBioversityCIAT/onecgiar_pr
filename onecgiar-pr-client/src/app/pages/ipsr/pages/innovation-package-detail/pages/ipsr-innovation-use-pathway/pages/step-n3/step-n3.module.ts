@@ -7,7 +7,6 @@ import { StepN3CurrentUseComponent } from './components/step-n3-current-use/step
 import { StepN3ComplementaryInnovationsComponent } from './components/step-n3-complementary-innovations/step-n3-complementary-innovations.component';
 import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
 import { CollapsibleContainerModule } from '../../../../../../../../shared/components/collapsible-container/collapsible-container.module';
-import { CheckboxModule } from 'primeng/checkbox';
 import { StepN3AssessedExpertWorkshopComponent } from './components/step-n3-assessed-expert-workshop/step-n3-assessed-expert-workshop.component';
 import { YmzListStructureItemModule } from '../../../../../../../../shared/directives/ymz-list-structure-item/ymz-list-structure-item.module';
 import { FeedbackValidationDirectiveModule } from '../../../../../../../../shared/directives/feedback-validation-directive.module';
@@ -19,7 +18,6 @@ import { FeedbackValidationDirectiveModule } from '../../../../../../../../share
     StepN3RoutingModule,
     CustomFieldsModule,
     CollapsibleContainerModule,
-    CheckboxModule,
     YmzListStructureItemModule,
     FeedbackValidationDirectiveModule
   ]

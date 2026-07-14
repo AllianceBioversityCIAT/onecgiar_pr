@@ -11,7 +11,7 @@ import { TableInnovationComponent } from './components/table-innovation/table-in
 import { CustomFieldsModule } from '../../../../../../../../../../custom-fields/custom-fields.module';
 import { NewComplementaryInnovationComponent } from './components/new-complementary-innovation/new-complementary-innovation.component';
 import { DialogModule } from 'primeng/dialog';
-import { CheckboxModule } from 'primeng/checkbox';
+import { PrCheckboxValueAccessorModule } from '../../../../../../../../../../shared/directives/pr-checkbox-value-accessor.module';
 import { FeedbackValidationDirectiveModule } from '../../../../../../../../../../shared/directives/feedback-validation-directive.module';
 
 @NgModule({
@@ -25,7 +25,7 @@ import { FeedbackValidationDirectiveModule } from '../../../../../../../../../..
     FormsModule,
     CustomFieldsModule,
     DialogModule,
-    CheckboxModule,
+    PrCheckboxValueAccessorModule,
     FeedbackValidationDirectiveModule
   ],
   exports: [ComplementaryInnovationComponent]
