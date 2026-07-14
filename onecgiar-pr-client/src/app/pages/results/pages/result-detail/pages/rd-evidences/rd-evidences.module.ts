@@ -8,7 +8,6 @@ import { EvidenceItemComponent } from './evidence-item/evidence-item.component';
 import { FeedbackValidationDirectiveModule } from '../../../../../../shared/directives/feedback-validation-directive.module';
 import { TooltipModule } from 'primeng/tooltip';
 import { DialogModule } from 'primeng/dialog';
-import { SkeletonModule } from 'primeng/skeleton';
 
 @NgModule({
   declarations: [RdEvidencesComponent, EvidenceItemComponent],
@@ -19,7 +18,6 @@ import { SkeletonModule } from 'primeng/skeleton';
     FeedbackValidationDirectiveModule,
     TooltipModule,
     DialogModule,
-    SkeletonModule
   ]
 })
 export class RdEvidencesModule {}

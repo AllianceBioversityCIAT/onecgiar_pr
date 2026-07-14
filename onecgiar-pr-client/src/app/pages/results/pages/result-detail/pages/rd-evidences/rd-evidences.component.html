@@ -50,7 +50,7 @@
           <!-- While the file is being uploaded: show its name + a skeleton, then switch to the link -->
           <span class="ev_ro_uploading" *ngIf="isEvidenceUploading(evidence); else evidenceReady">
             <span class="ev_ro_name">{{ evidenceUploadingName(evidence) }}</span>
-            <p-skeleton width="160px" height="9px" borderRadius="6px" styleClass="ev_ro_skeleton"></p-skeleton>
+            <div class="pr-skeleton ev_ro_skeleton" style="width:160px;height:9px;border-radius:6px"></div>
           </span>
           <ng-template #evidenceReady>
             <a

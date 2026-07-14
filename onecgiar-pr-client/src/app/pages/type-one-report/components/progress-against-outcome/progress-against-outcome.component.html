@@ -2,13 +2,13 @@
   @for (item of [1, 2]; track $index) {
     <div class="progress_container">
       <div class="progress_left">
-        <p-skeleton width="50px" />
+        <div class="pr-skeleton" style="width:50px"></div>
 
         <div style="display: flex; flex-direction: column; gap: 5px; margin-top: 10px">
-          <p-skeleton />
-          <p-skeleton />
-          <p-skeleton />
-          <p-skeleton />
+          <div class="pr-skeleton"></div>
+          <div class="pr-skeleton"></div>
+          <div class="pr-skeleton"></div>
+          <div class="pr-skeleton"></div>
         </div>
       </div>
 
@@ -16,7 +16,7 @@
         <div class="progress_right_item">
           <div style="display: flex; align-items: center; gap: 5px">
             <span class="progress_right_item_title_span">Indicator:</span>
-            <p-skeleton width="200px" />
+            <div class="pr-skeleton" style="width:200px"></div>
           </div>
 
           <div class="progress_right_item_progress">
@@ -28,20 +28,20 @@
                   <p class="indicator_info_item_label">{{ item?.label }}</p>
                 </div>
 
-                <p-skeleton width="100px" [style]="{ 'margin-top': '5px' }" />
+                <div class="pr-skeleton" style="width:100px" [style]="{ 'margin-top': '5px' }"></div>
               </div>
             }
           </div>
 
           <p class="progress_right_item_title_span">Target value achieved explanation:</p>
-          <p-skeleton [style]="{ 'margin-top': '5px' }" />
-          <p-skeleton [style]="{ 'margin-top': '5px' }" />
+          <div class="pr-skeleton" [style]="{ 'margin-top': '5px' }"></div>
+          <div class="pr-skeleton" [style]="{ 'margin-top': '5px' }"></div>
 
           <p class="progress_right_item_title_span" style="margin-top: 1rem">Linked results:</p>
 
           <div class="progress_right_item_linked_results">
             @for (result of [1, 2]; track $index) {
-              <p-skeleton />
+              <div class="pr-skeleton"></div>
             }
           </div>
         </div>

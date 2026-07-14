@@ -27,9 +27,9 @@
             headerItem.type == 'currency' ? (dataItem[headerItem.attr] | currency: 'USD' : 'symbol' : '1.0-0') : dataItem[headerItem.attr]
           "></div>
         <div *ngIf="headerItem.attr == 'value' && loadingData && !dataItem[headerItem.attr]">
-          <p-skeleton width="100%" height="10px"></p-skeleton>
+          <div class="pr-skeleton" style="width:100%;height:10px"></div>
           <div style="margin-top: 6px">
-            <p-skeleton width="50%" height="10px"></p-skeleton>
+            <div class="pr-skeleton" style="width:50%;height:10px"></div>
           </div>
         </div>
 

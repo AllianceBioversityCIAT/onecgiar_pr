@@ -15,7 +15,6 @@ import { YmzListStructureItemModule } from '../../../../../../../shared/directiv
 import { NonPooledInfoComponent } from './components/estimates/components/non-pooled-info/non-pooled-info.component';
 import { NonPooledInfoP25Component } from './components/estimates/components/non-pooled-info-p25/non-pooled-info.component';
 import { DialogModule } from 'primeng/dialog';
-import { SkeletonModule } from 'primeng/skeleton';
 import { FeedbackValidationDirectiveModule } from '../../../../../../../shared/directives/feedback-validation-directive.module';
 import { MegatrendsComponent } from './components/megatrends/megatrends.component';
 import { TermPipe } from '../../../../../../../internationalization/term.pipe';
@@ -48,7 +47,6 @@ import { PartnersPoliciesSafeguardsComponent } from './components/partners-polic
     YmzListStructureItemModule,
     DialogModule,
     FeedbackValidationDirectiveModule,
-    SkeletonModule,
     TermPipe,
     InnovationUseFormModule
   ]

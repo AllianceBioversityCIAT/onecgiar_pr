@@ -1,6 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { SkeletonNotificationItemComponent } from './skeleton-notification-item.component';
-import { SkeletonModule } from 'primeng/skeleton';
 import { CommonModule } from '@angular/common';
 
 describe('SkeletonNotificationItemComponent', () => {
@@ -9,7 +8,7 @@ describe('SkeletonNotificationItemComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [CommonModule, SkeletonModule]
+      imports: [CommonModule]
     }).compileComponents();
     fixture = TestBed.createComponent(SkeletonNotificationItemComponent);
     component = fixture.componentInstance;

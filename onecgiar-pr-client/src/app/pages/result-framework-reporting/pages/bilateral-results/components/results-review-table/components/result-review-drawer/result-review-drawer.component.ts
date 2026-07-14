@@ -36,7 +36,6 @@ import { InstitutionsService } from '../../../../../../../../shared/services/glo
 import { Router } from '@angular/router';
 import { RdContributorsAndPartnersModule } from '../../../../../../../../pages/results/pages/result-detail/pages/rd-contributors-and-partners/rd-contributors-and-partners.module';
 import { TooltipModule } from 'primeng/tooltip';
-import { SkeletonModule } from 'primeng/skeleton';
 
 @Component({
   selector: 'app-result-review-drawer',
@@ -57,7 +56,6 @@ import { SkeletonModule } from 'primeng/skeleton';
     CustomFieldsModule,
     RdContributorsAndPartnersModule,
     TooltipModule,
-    SkeletonModule
   ],
   templateUrl: './result-review-drawer.component.html',
   styleUrl: './result-review-drawer.component.scss',

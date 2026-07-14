@@ -29,10 +29,10 @@
         <div>
           <div *ngIf="saving">
             <div style="margin-top: 20px; margin-bottom: 7px">
-              <p-skeleton width="50%" height="20px"></p-skeleton>
+              <div class="pr-skeleton" style="width:50%;height:20px"></div>
             </div>
             <div style="margin-top: 6px">
-              <p-skeleton width="100%" height="40px"></p-skeleton>
+              <div class="pr-skeleton" style="width:100%;height:40px"></div>
             </div>
           </div>
           <app-pr-select
@@ -120,10 +120,10 @@
         *ngFor="let organizationItem of this.body.innovatonUse.organization; let i = index">
         <div *ngIf="saving">
           <div style="margin-top: 20px; margin-bottom: 7px">
-            <p-skeleton width="50%" height="20px"></p-skeleton>
+            <div class="pr-skeleton" style="width:50%;height:20px"></div>
           </div>
           <div style="margin-top: 6px">
-            <p-skeleton width="100%" height="40px"></p-skeleton>
+            <div class="pr-skeleton" style="width:100%;height:40px"></div>
           </div>
         </div>
         <div *ngIf="!saving">
@@ -153,10 +153,10 @@
         </div>
         <div *ngIf="saving">
           <div style="margin-top: 20px; margin-bottom: 7px">
-            <p-skeleton width="50%" height="20px"></p-skeleton>
+            <div class="pr-skeleton" style="width:50%;height:20px"></div>
           </div>
           <div style="margin-top: 6px">
-            <p-skeleton width="100%" height="40px"></p-skeleton>
+            <div class="pr-skeleton" style="width:100%;height:40px"></div>
           </div>
         </div>
         <div *ngIf="!saving">

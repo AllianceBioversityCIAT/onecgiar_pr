@@ -10,7 +10,6 @@ import { CollapsibleContainerModule } from '../../../../../../../../shared/compo
 import { CheckboxModule } from 'primeng/checkbox';
 import { StepN3AssessedExpertWorkshopComponent } from './components/step-n3-assessed-expert-workshop/step-n3-assessed-expert-workshop.component';
 import { YmzListStructureItemModule } from '../../../../../../../../shared/directives/ymz-list-structure-item/ymz-list-structure-item.module';
-import { SkeletonModule } from 'primeng/skeleton';
 import { FeedbackValidationDirectiveModule } from '../../../../../../../../shared/directives/feedback-validation-directive.module';
 
 @NgModule({
@@ -22,7 +21,6 @@ import { FeedbackValidationDirectiveModule } from '../../../../../../../../share
     CollapsibleContainerModule,
     CheckboxModule,
     YmzListStructureItemModule,
-    SkeletonModule,
     FeedbackValidationDirectiveModule
   ]
 })

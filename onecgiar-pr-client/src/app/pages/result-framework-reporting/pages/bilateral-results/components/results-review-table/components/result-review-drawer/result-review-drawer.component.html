@@ -33,7 +33,7 @@
     <!-- Result Header Info -->
     <div class="result-review-drawer-content_header">
       @if (isLoadingInformation()) {
-        <p-skeleton width="100%" height="25px" [shape]="'rectangle'"></p-skeleton>
+        <div class="pr-skeleton" style="width:100%;height:25px"></div>
       } @else {
         @if (isEditingTitle()) {
           <div class="result-review-drawer-content_title-edit">
@@ -56,7 +56,7 @@
       }
 
       @if (isLoadingInformation()) {
-        <p-skeleton width="100%" height="25px" [shape]="'rectangle'"></p-skeleton>
+        <div class="pr-skeleton" style="width:100%;height:25px"></div>
       } @else {
         <div class="result-review-drawer-content_meta">
           <span class="result-review-drawer-content_meta_item">
@@ -82,7 +82,7 @@
     </div>
 
     @if (isLoadingInformation()) {
-      <p-skeleton width="100%" height="250px" [shape]="'rectangle'" [style]="{ 'margin-bottom': '20px' }"></p-skeleton>
+      <div class="pr-skeleton" style="width:100%;height:250px" [style]="{ 'margin-bottom': '20px' }"></div>
     } @else {
       <div class="form-section">
         <h3 class="form-section_title">TOC ALIGNMENT</h3>
@@ -133,7 +133,7 @@
     }
 
     @if (isLoadingInformation()) {
-      <p-skeleton width="100%" height="400px" [shape]="'rectangle'"></p-skeleton>
+      <div class="pr-skeleton" style="width:100%;height:400px"></div>
     } @else {
       @if (fields?.commonFields) {
         <div class="form-section">

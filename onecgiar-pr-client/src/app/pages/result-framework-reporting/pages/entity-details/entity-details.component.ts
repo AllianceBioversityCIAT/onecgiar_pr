@@ -8,7 +8,6 @@ import { ProgressBarModule } from 'primeng/progressbar';
 import { EntityAowCardComponent } from './components/entity-aow-card/entity-aow-card.component';
 import { EntityResultsByIndicatorCategoryCardComponent } from './components/entity-results-by-indicator-category-card/entity-results-by-indicator-category-card.component';
 import { EntityAowService } from '../entity-aow/services/entity-aow.service';
-import { SkeletonModule } from 'primeng/skeleton';
 import { ChartModule } from 'primeng/chart';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { Chart, ChartData, ChartDataset, ChartOptions } from 'chart.js';
@@ -32,7 +31,6 @@ import { ResultFrameworkReportingHomeService } from '../result-framework-reporti
     ProgressBarModule,
     EntityAowCardComponent,
     EntityResultsByIndicatorCategoryCardComponent,
-    SkeletonModule,
     ChartModule,
     ButtonModule,
     DialogModule,

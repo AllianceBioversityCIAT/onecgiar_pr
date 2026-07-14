@@ -17,6 +17,37 @@ opacity: 0.5;
 pointer-events: none;
 }
 
+/* Skeleton loading placeholder (PrimeNG p-skeleton replacement — 0 PrimeNG).
+   Sizing comes from inline width/height/style on each element; this only owns
+   the base color + shimmer sweep. Default 1rem height / full width / 4px radius. */
+.pr-skeleton {
+  display: block;
+  width: 100%;
+  height: 1rem;
+  border-radius: 4px;
+  background-color: var(--pr-color-accents-2, #eaeaea);
+  overflow: hidden;
+  position: relative;
+}
+.pr-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0,
+    rgba(255, 255, 255, 0.5) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: pr-skeleton-shimmer 1.2s infinite;
+}
+@keyframes pr-skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 /* width */
 .custom_scroll::-webkit-scrollbar {
 width: 7px;
