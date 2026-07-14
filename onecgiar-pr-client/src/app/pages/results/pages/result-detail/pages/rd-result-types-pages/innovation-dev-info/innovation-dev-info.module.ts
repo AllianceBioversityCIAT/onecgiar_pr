@@ -17,7 +17,6 @@ import { NonPooledInfoP25Component } from './components/estimates/components/non
 import { DialogModule } from 'primeng/dialog';
 import { SkeletonModule } from 'primeng/skeleton';
 import { FeedbackValidationDirectiveModule } from '../../../../../../../shared/directives/feedback-validation-directive.module';
-import { MessageModule } from 'primeng/message';
 import { MegatrendsComponent } from './components/megatrends/megatrends.component';
 import { TermPipe } from '../../../../../../../internationalization/term.pipe';
 import { UserEvidenceComponent } from './components/user-evidence/user-evidence.component';
@@ -50,7 +49,6 @@ import { PartnersPoliciesSafeguardsComponent } from './components/partners-polic
     DialogModule,
     FeedbackValidationDirectiveModule,
     SkeletonModule,
-    MessageModule,
     TermPipe,
     InnovationUseFormModule
   ]

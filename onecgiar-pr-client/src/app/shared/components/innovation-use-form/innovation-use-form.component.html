@@ -339,11 +339,11 @@
 
   <app-alert-status [description]="alertInfoText2()"> </app-alert-status>
 
-  <p-message
+  <app-alert-status
     *ngIf="hasReadinessLevelDiminished()"
-    [style]="{ width: '100%', 'justify-content': 'flex-start' }"
-    severity="warn"
-    [text]="alertDiminishedReadinessLevel()"></p-message>
+    inlineStyles="width: 100%"
+    status="warning"
+    [description]="alertDiminishedReadinessLevel()"></app-alert-status>
 
   <app-pr-textarea
     [disabled]="saving"

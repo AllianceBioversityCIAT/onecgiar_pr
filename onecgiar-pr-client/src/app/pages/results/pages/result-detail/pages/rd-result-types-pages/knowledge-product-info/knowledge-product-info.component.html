@@ -106,11 +106,11 @@
         [label]="`Web of Science Core Collection (former ISI) (${knowledgeProductBody.source})`"
         [required]="false"
         [readOnly]="true"></app-pr-input>
-      <p-message
+      <app-alert-status
         *ngIf="knowledgeProductBody.isJournalArticle && (!knowledgeProductBody.is_isi_CG || knowledgeProductBody.is_isi_CG === 'Not provided')"
-        [style]="{ width: '100%', 'justify-content': 'flex-start', 'margin-top': '10px' }"
-        severity="info"
-        text="Please update the ISI Status field in CGSpace before proceeding with the Quality Assurance process."></p-message>
+        inlineStyles="width: 100%; margin-top: 10px"
+        status="info"
+        description="Please update the ISI Status field in CGSpace before proceeding with the Quality Assurance process."></app-alert-status>
     </div>
     <app-pr-input
       *ngIf="knowledgeProductBody.is_isi_WOS != undefined"
@@ -129,14 +129,14 @@
         [label]="`Accessibility (${knowledgeProductBody.source})`"
         [required]="false"
         [readOnly]="true"></app-pr-input>
-      <p-message
+      <app-alert-status
         *ngIf="
           knowledgeProductBody.isJournalArticle &&
           (!knowledgeProductBody.accessibility_CG || knowledgeProductBody.accessibility_CG === 'Not provided')
         "
-        [style]="{ width: '100%', 'justify-content': 'flex-start', 'margin-top': '10px' }"
-        severity="info"
-        text="Please update the Open Access field in CGSpace before proceeding with the Quality Assurance process."></p-message>
+        inlineStyles="width: 100%; margin-top: 10px"
+        status="info"
+        description="Please update the Open Access field in CGSpace before proceeding with the Quality Assurance process."></app-alert-status>
     </div>
     <app-pr-input
       *ngIf="knowledgeProductBody.accessibility_WOS"

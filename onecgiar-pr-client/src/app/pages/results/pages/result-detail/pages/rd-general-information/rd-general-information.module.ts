@@ -14,7 +14,6 @@ import { PdfIconModule } from '../../../../../../shared/icon-components/pdf-icon
 import { ConfirmationKPComponent } from './components/confirmation-kp/confirmation-kp.component';
 import { SaveConfirmationModalComponent } from './components/save-confirmation-modal/save-confirmation-modal.component';
 import { FeedbackValidationDirectiveModule } from '../../../../../../shared/directives/feedback-validation-directive.module';
-import { MessageModule } from 'primeng/message';
 
 @NgModule({
   declarations: [RdGeneralInformationComponent, ChangeResultTypeModalComponent, ConfirmationKPComponent, SaveConfirmationModalComponent],
@@ -29,7 +28,6 @@ import { MessageModule } from 'primeng/message';
     TableModule,
     CheckboxModule,
     PdfIconModule,
-    MessageModule
   ]
 })
 export class RdGeneralInformationModule {}

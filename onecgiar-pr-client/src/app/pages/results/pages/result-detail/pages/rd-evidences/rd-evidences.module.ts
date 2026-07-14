@@ -7,7 +7,6 @@ import { CustomFieldsModule } from '../../../../../../custom-fields/custom-field
 import { EvidenceItemComponent } from './evidence-item/evidence-item.component';
 import { FeedbackValidationDirectiveModule } from '../../../../../../shared/directives/feedback-validation-directive.module';
 import { TooltipModule } from 'primeng/tooltip';
-import { MessageModule } from 'primeng/message';
 import { DialogModule } from 'primeng/dialog';
 import { SkeletonModule } from 'primeng/skeleton';
 
@@ -19,7 +18,6 @@ import { SkeletonModule } from 'primeng/skeleton';
     CustomFieldsModule,
     FeedbackValidationDirectiveModule,
     TooltipModule,
-    MessageModule,
     DialogModule,
     SkeletonModule
   ]
