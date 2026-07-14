@@ -241,12 +241,20 @@
     </p>
   </div>
   <div class="modal-actions">
-    <p-button label="Cancel" size="large" (click)="showConfirmRejectDialog.set(false)" variant="outlined" [disabled]="requestingReject"></p-button>
-    <p-button
-      label="Confirm"
-      size="large"
+    <app-pr-button
+      text="Cancel"
+      colorType="secondary"
+      padding="big"
+      (click)="showConfirmRejectDialog.set(false)"
+      [disabled]="requestingReject"
+      [ngClass]="{ globalDisabled: requestingReject }"></app-pr-button>
+    <app-pr-button
+      text="Confirm"
+      padding="big"
+      [icon]="requestingReject ? 'loop' : ''"
+      [rotating]="requestingReject"
       (click)="acceptOrReject(false)"
       [disabled]="invalidateRequest() || requestingReject"
-      [loading]="requestingReject"></p-button>
+      [ngClass]="{ globalDisabled: invalidateRequest() || requestingReject }"></app-pr-button>
   </div>
 </p-dialog>

@@ -8,13 +8,34 @@
 
 ## 1. Setup — install Spartan components
 
-- [ ] 1.1 Verify Spartan CLI works (`ng g @spartan-ng/cli:ui <name>` — `hlmInput` was added this way; `components.json` exists). Install the needed hlm components under `src/app/spartan/` with `@spartan/*` aliases.
+- [x] 1.1 Verify Spartan CLI works (`ng g @spartan-ng/cli:ui <name>` — `hlmInput` was added this way; `components.json` exists). Install the needed hlm components under `src/app/spartan/` with `@spartan/*` aliases. **DONE** — CLI 1.1.0 works.
 - [ ] 1.2 Install/adopt: `hlm-button`, then dialog (`hlm-dialog`/`brn-dialog`), table (`hlm-table`), switch (`hlm-switch`), and a toast solution. Add tsconfig `paths` per component like `@spartan/input`.
+  - **`hlm-button` DONE** (`@spartan/button`, `src/app/spartan/button/`, tsconfig path added). It's a `button[hlmBtn]` directive (variants: default/outline/secondary/ghost/destructive/link; sizes: default/sm/lg/icon/icon-sm/icon-xs…). **Look decision (Yeck):** keep shadcn default tokens (slate) — do NOT remap to PRMS indigo. So hlm-buttons render shadcn-styled; app-pr-button stays indigo → two looks coexist during the gradual redesign (accepted).
+  - Dialog/table/switch/toast: still pending.
 
 ## 2. Buttons (p-button ×25 + pButton ×13)
 
 - [ ] 2.1 Migrate `p-button`/`pButton` → `hlm-button` (or `app-pr-button` where it already fits). Map icon/label/severity/loading/disabled.
-- [ ] 2.2 Drop `ButtonModule`/`primeng/button` imports where unused; drop `pRipple` (×3).
+  - **Batch 1 (safe/simple — DONE, build:dev green):** migrated to `app-pr-button` where the fit is exact (label + icon + click, no full-width, no custom styleClass, no projected content, not a bilateral-critical flow). Files:
+    - `no-edit-container` — "Edit".
+    - `indicator-details` — "Add result" (`iconsStylesClass="pi" icon="file-plus"`).
+    - `indicator-results-modal` — "Clear all filters" (`colorType="secondary"`, `(onClick)`→`(click)`).
+    - `notification-item` — reject-dialog "Cancel"/"Confirm" (`size="large"`→`padding="big"`; `[loading]`→`[rotating]="…" [icon]="… ? 'loop' : ''"`; `[disabled]` paired with `[ngClass]="{ globalDisabled }"` since app-pr-button `[disabled]` is opacity-only).
+  - **Batch 2 (hlm-button, shadcn look — DONE, build:dev green):** migrated the "rich" buttons to `<button hlmBtn>` (real `<button>` → keeps a11y that app-pr-button's div loses). Files:
+    - `results-list-filters` — "Export data" (`variant="outline" size="sm"`; `[loading]`→`[disabled]` while exporting + `pi-spinner pi-spin` icon; kept `[prTooltip]`) + full-width footer Cancel/Apply (`variant="outline"` + `class="w-full"`; dropped redundant `(keydown.enter)` — native button fires on Enter).
+    - `results-review-filters` — full-width footer Cancel/Apply (same as above).
+    - `ai-feedback` — thumbs up/down (`variant="ghost" size="icon"`, kept `globalDisabled`).
+    - `search-user-select` — reset filter (`variant="ghost" size="icon-sm"`).
+    - `aow-hlo-create-modal` — "Create and continue" (`[loading]`→`[disabled]` + spinner icon).
+  - **Batch 3 (DEFERRED — scss-coupled / needs care, next session):**
+    - P25 export drawer btns (`results-list-filters` :164/171) — scss `::ng-deep .p25-drawer-btn .p-button` targets the inner PrimeNG `.p-button`; migrating needs rewriting that per-component scss (Yeck's rule: don't attack per-component CSS for now).
+    - `entity-aow-aow` tabs — bg/border split between pButton base + `.tab-button_inactive` custom (with `!important` hovers); risky, needs scss reconciliation.
+    - `aow-hlo-table` — chevron (`pi-chevron`, maybe a p-table rowToggler — check) + 4 action buttons (`.tab-content_actions_button` only sets padding, so hlmBtn works; do next).
+    - `entity-results-by-indicator-category-card` — projected content (`<span>`+`<i>`) + custom class; hlmBtn with projected content, do next.
+    - `wp-home` — chevron (ghost).
+  - **Bilateral-critical (SEPARATE tanda w/ own flow verification):** `result-review-drawer` (approve/reject/link/save/loading), `save-changes-justification-dialog`, `results-review-table`.
+  - **Bilateral-critical (SEPARATE tanda w/ own flow verification):** `result-review-drawer` (approve/reject/link/save/loading), `save-changes-justification-dialog`, `results-review-table`.
+- [ ] 2.2 Drop `ButtonModule`/`primeng/button` imports where unused; drop `pRipple` (×3). *(Do after all button usages in a module are gone — none fully cleared yet.)*
 
 ## 3. Toggleswitch / datepicker / inputNumber / password / splitbutton
 

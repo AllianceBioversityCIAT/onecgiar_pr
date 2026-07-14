@@ -9,6 +9,7 @@ import { BilateralResultsService } from '../../bilateral-results.service';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
 import { PrFilterMultiselectModule } from '../../../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
 import { ButtonModule } from 'primeng/button';
+import { HlmButton } from '@spartan/button';
 import { OverlayBadgeModule } from 'primeng/overlaybadge';
 @Component({
   selector: 'app-results-review-filters',
@@ -20,6 +21,7 @@ import { OverlayBadgeModule } from 'primeng/overlaybadge';
     FormsModule,
     PrFilterMultiselectModule,
     ButtonModule,
+    HlmButton,
     OverlayBadgeModule,
     CustomFieldsModule
   ],

@@ -113,8 +113,8 @@
 
     <!-- Footer buttons -->
     <div class="drawer-footer">
-      <p-button label="Cancel" variant="outlined" [style]="{ width: '100%' }" (click)="cancelFilters()" (keydown.enter)="cancelFilters()"></p-button>
-      <p-button label="Apply filters" [style]="{ width: '100%' }" (click)="applyFilters()" (keydown.enter)="applyFilters()"></p-button>
+      <button hlmBtn variant="outline" class="w-full" (click)="cancelFilters()">Cancel</button>
+      <button hlmBtn class="w-full" (click)="applyFilters()">Apply filters</button>
     </div>
   </div>
 </div>

@@ -1,12 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, signal, ViewChild } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
+import { HlmButton } from '@spartan/button';
 import { Popover, PopoverModule } from 'primeng/popover';
 import { CustomFieldsModule } from '../../../../../../../../custom-fields/custom-fields.module';
 
 @Component({
   selector: 'app-ai-feedback',
-  imports: [CommonModule, ButtonModule, PopoverModule, CustomFieldsModule],
+  imports: [CommonModule, ButtonModule, HlmButton, PopoverModule, CustomFieldsModule],
   standalone: true,
   templateUrl: './ai-feedback.component.html',
   styleUrl: './ai-feedback.component.scss',

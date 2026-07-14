@@ -75,14 +75,15 @@
   description="Please ensure that your result is reported against this outcome. If a result is mapped to an incorrect outcome, you may adjust the unsubmitted result or use the “update result” feature to adjust the ToC section for 2024. You may also use the 'Add result' button to select a result and incorporate it as evidence."></app-alert-status>
 
 <div class="indicator_add_result_container">
-  <p-button
-    icon="pi pi-file-plus"
-    label="Add result"
+  <app-pr-button
+    iconsStylesClass="pi"
+    icon="file-plus"
+    text="Add result"
     (click)="this.indicatorDetailsService.indicatorResultsModal.set({ value: true })"
     class="add_result_button"
     [ngClass]="{
       globalDisabled: this.indicatorDetailsService.indicatorResults()?.length <= 0 || !this.indicatorDetailsService.indicatorResults()
-    }"></p-button>
+    }"></app-pr-button>
 </div>
 
 <app-details-table></app-details-table>

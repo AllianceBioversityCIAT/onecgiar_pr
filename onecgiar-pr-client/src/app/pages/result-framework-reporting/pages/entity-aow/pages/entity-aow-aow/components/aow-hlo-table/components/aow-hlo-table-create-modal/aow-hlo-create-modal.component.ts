@@ -7,6 +7,7 @@ import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
 import { CommonModule } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
+import { HlmButton } from '@spartan/button';
 import { Router } from '@angular/router';
 import { SelectModule } from 'primeng/select';
 import { ResultsListFilterService } from '../../../../../../../../../results/pages/results-outlet/pages/results-list/services/results-list-filter.service';
@@ -31,6 +32,7 @@ interface CreateResultBody {
     PrFilterMultiselectModule,
     FormsModule,
     ButtonModule,
+    HlmButton,
     SelectModule,
     InputNumberModule,
   ],

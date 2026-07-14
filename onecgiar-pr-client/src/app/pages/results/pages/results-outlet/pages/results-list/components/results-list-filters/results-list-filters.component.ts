@@ -26,6 +26,7 @@ import { InputIconModule } from 'primeng/inputicon';
 import { InputTextModule } from 'primeng/inputtext';
 import { switchMap } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
+import { HlmButton } from '@spartan/button';
 import { ReversePipe } from '../../../../../../../../shared/pipes/reverse.pipe';
 import { CustomizedAlertsFeService } from '../../../../../../../../shared/services/customized-alerts-fe.service';
 
@@ -272,6 +273,7 @@ const P25_COLUMN_LABEL_OVERRIDES: Record<string, string> = {
     InputIconModule,
     InputTextModule,
     ButtonModule,
+    HlmButton,
     ReversePipe,
   ]
 })

@@ -27,7 +27,7 @@
             style="height: 38px; width: 100%" />
         </p-iconfield>
         @if (filterValue) {
-          <button pButton icon="pi pi-times" (click)="resetFilter(options)" severity="secondary" [text]="true" size="small"></button>
+          <button hlmBtn variant="ghost" size="icon-sm" (click)="resetFilter(options)"><i class="pi pi-times"></i></button>
         }
       </div>
     </ng-template>

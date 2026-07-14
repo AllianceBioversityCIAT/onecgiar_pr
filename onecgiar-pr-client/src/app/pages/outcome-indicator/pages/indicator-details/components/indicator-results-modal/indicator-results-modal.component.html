@@ -28,12 +28,13 @@
         </div>
       </div>
 
-      <p-button
-        label="Clear all filters"
-        [outlined]="true"
-        icon="pi pi-filter-slash"
-        (onClick)="clear(dt1)"
-        [style]="{ marginBottom: '10px', width: 'max-content' }" />
+      <app-pr-button
+        text="Clear all filters"
+        colorType="secondary"
+        iconsStylesClass="pi"
+        icon="filter-slash"
+        (click)="clear(dt1)"
+        [style]="{ marginBottom: '10px', width: 'max-content' }"></app-pr-button>
     </div>
 
     <p-table

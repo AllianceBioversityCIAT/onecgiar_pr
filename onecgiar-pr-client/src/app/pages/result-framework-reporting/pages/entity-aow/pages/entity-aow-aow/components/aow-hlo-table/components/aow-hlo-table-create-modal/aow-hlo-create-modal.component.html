@@ -243,13 +243,12 @@
 
         @if (entityAowService.canReportResults()) {
           <div class="report-result-content_left_content_actions" [ngClass]="{ globalDisabled: creatingResult() }">
-            <p-button
-              label="Create and continue"
-              type="button"
-              class="pr-body-2"
-              (click)="createResult()"
-              [loading]="creatingResult()"
-              iconPos="right"></p-button>
+            <button hlmBtn type="button" class="pr-body-2" (click)="createResult()" [disabled]="creatingResult()">
+              Create and continue
+              @if (creatingResult()) {
+                <i class="pi pi-spinner pi-spin"></i>
+              }
+            </button>
           </div>
         }
       </div>
