@@ -1,8 +1,10 @@
 <div class="search_input" style="width: 100%; margin-bottom: 1rem">
   <i class="material-icons-round">search</i>
   <input
+    id="aowIndicatorSearchInput"
     type="text"
     placeholder="Find indicator..."
+    aria-label="Find indicator"
     [ngModel]="entityAowService.searchText()"
     (ngModelChange)="entityAowService.searchText.set($event)" />
 </div>
