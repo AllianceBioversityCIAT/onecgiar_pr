@@ -1,5 +1,8 @@
 @use '../styles/fonts' as fonts;
 
+// TODO: migrate to tailwind — nested component block: media query (max-width 650px flex-wrap),
+// pr-typography mixins, !important overrides, token bg colors, and deep parent/child nesting
+// (.filter/.chips/.chip/.chip_selected only work inside .filters). Not a flat utility — kept as-is.
 .filters {
   display: flex;
   gap: 10px;
@@ -52,6 +55,8 @@
   }
 }
 
+// TODO: migrate to tailwind — nested component block: token bg color, border-radius,
+// and nested .filters/.result_level_title children. Not a flat utility — kept as-is.
 .result_level_container {
   padding-bottom: 15px;
   margin: 15px 0px;
