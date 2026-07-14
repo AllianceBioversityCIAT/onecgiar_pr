@@ -213,8 +213,9 @@ export class RdContributorsAndPartnersComponent implements OnInit {
 
   // ----- P2-2929 (2026): Contributing Science Program/Accelerator split (VISUAL ONLY; pending/save deferred per Juan David) -----
   readonly OTHER_SP_CODE = '__OTHER_SCIENCE__';
+  // QA 2026-07-14: wording unified with the Report-result popup (aow-hlo-create-modal) — keep both in sync.
   contributingScienceInfoNote =
-    "The Programs/Accelerators listed below were identified in your 2026 ToC. To select a different contributing Program/Accelerator, choose 'Other' from the drop-down menu and then make your selection from the options that appear.";
+    "The Science Programs listed below were identified in your 2026 ToC. To select a different Science Program, choose 'Other' from the drop-down menu and then make your selection from the options that appear.";
   noScienceProgramsNote = 'No Science Programs related to the established HLO/Outcomes were found';
 
   // P2-3112: generic "result" wording of the linked/bundled question for non-innovation result types

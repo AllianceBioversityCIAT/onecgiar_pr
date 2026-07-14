@@ -62,11 +62,16 @@ export class AowHloTableComponent {
   });
 
   // P2-3053: agreed nomenclature + dynamic phase year ("<year> target") instead of hardcoded "2025".
+  // P2-3133: the 2030 Outcomes view shows a cumulative "2030 target"; "Achieved value" replaces "Achieved target" globally.
   columnOrder = computed<ColumnOrder[]>(() => [
     { title: 'KPI statement', attr: 'indicator_description', width: '30%' },
     { title: 'Indicator typology', attr: 'type_name', width: '10%' },
-    { title: `${this.entityAowService.reportingPhaseYear} target`.trim(), attr: 'target_value_sum', width: '10%' },
-    { title: 'Achieved target', attr: 'actual_achieved_value_sum', width: '10%' },
+    {
+      title: this.tableType === '2030-outcomes' ? '2030 target' : `${this.entityAowService.reportingPhaseYear} target`.trim(),
+      attr: 'target_value_sum',
+      width: '10%'
+    },
+    { title: 'Achieved value', attr: 'actual_achieved_value_sum', width: '10%' },
     { title: 'Status', attr: 'status', hideSortIcon: true, width: '11%' }
   ]);
 

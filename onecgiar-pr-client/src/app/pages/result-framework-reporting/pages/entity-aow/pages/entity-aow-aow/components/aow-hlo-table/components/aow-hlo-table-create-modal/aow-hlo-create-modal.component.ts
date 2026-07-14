@@ -73,6 +73,14 @@ export class AowHloCreateModalComponent implements OnInit {
 
   creatingResult = signal<boolean>(false);
 
+  // P2-2998 AC4 / QA 2026-07-14: notes shared with rd-contributors-and-partners — keep strings identical in both surfaces.
+  contributingCentersInfoNote =
+    "The CGIAR Centers listed below were identified in your 2026 ToC. To select a different Center, choose 'Other' from the drop-down menu and then make your selection from the options that appear.";
+  noCentersNote = 'No CGIAR Centers related to the established HLO/Outcomes were found';
+  contributingScienceInfoNote =
+    "The Science Programs listed below were identified in your 2026 ToC. To select a different Science Program, choose 'Other' from the drop-down menu and then make your selection from the options that appear.";
+  noScienceProgramsNote = 'No Science Programs related to the established HLO/Outcomes were found';
+
   // P2-3114: ToC/Other split for Contributing CGIAR Centers (mirrors the C&P surface).
   readonly OTHER_CENTERS_CODE = '__OTHER_CENTERS__';
   readonly otherCentersSentinel = {
@@ -148,17 +156,25 @@ export class AowHloCreateModalComponent implements OnInit {
     this.preselectTocCenters();
   }
 
-  // P2-3114: preselect the CGIAR Centers mapped in the selected indicator's ToC node.
-  // The AoW payload exposes them under indicators[0].targets_by_center.centers (by acronym).
+  // P2-3114 / P2-2998 AC1-AC2: preselect the CGIAR Centers mapped in the selected indicator's ToC node.
+  // Union of two sources (deduped — a center matching both is included once):
+  //  (a) HLO/Outcome-level ToC partners: node's toc_partner_institution_ids, matched by CLARISA institutionId
+  //      (partners that are not CGIAR Centers simply don't match; tolerate the field being absent in older payloads);
+  //  (b) KPI Targets centers: indicators[0].targets_by_center.centers, matched by acronym.
   // The ToC centers feed dropdown 1 (preselected, from_toc:true); the rest live in the "Other(s)" dropdown.
   private preselectTocCenters(): void {
     this.centersSE.getData().then(() => {
-      const tocAcronyms = (this.entityAowService.currentResultToReport()?.indicators?.[0]?.targets_by_center?.centers ?? [])
+      const node = this.entityAowService.currentResultToReport();
+      const tocAcronyms = (node?.indicators?.[0]?.targets_by_center?.centers ?? [])
         .map((center: any) => center?.center_acronym)
         .filter(Boolean);
 
+      const partnerInstitutionIds = new Set(
+        (node?.toc_partner_institution_ids ?? []).map((id: any) => Number(id)).filter((id: number) => Number.isFinite(id))
+      );
+
       const preselected = this.centersSE.centersList
-        .filter((center: any) => tocAcronyms.includes(center.acronym))
+        .filter((center: any) => tocAcronyms.includes(center.acronym) || partnerInstitutionIds.has(Number(center.institutionId)))
         .map((center: any) => ({ ...center, from_toc: true }));
 
       this.tocCenters.set(preselected);
