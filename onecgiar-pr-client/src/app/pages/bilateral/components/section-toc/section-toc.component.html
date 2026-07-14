@@ -61,6 +61,7 @@
             [ngModel]="selectedTocResultId()"
             (ngModelChange)="onTocResultSelect($event)"
             optionLabel="toc_result_id"
+            optionValue="toc_result_id"
             placeholder="Select {{ selectedLevelName() }}"
             [style]="{ width: '100%' }">
             <ng-template pTemplate="item" let-item>
@@ -94,7 +95,8 @@
               [options]="indicatorsList()"
               [ngModel]="selectedIndicatorId()"
               (ngModelChange)="onIndicatorSelect($event)"
-              optionLabel="related_node_id"
+              optionLabel="indicator_description"
+              optionValue="related_node_id"
               placeholder="Select an indicator"
               [style]="{ width: '100%' }">
               <ng-template pTemplate="item" let-ind>

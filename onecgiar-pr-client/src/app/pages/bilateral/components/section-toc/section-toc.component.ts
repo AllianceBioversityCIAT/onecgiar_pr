@@ -98,7 +98,7 @@ export class SectionTocComponent implements OnInit {
   readonly indicatorsList = computed(() => {
     const resultId = this.selectedTocResultId();
     if (!resultId) return [];
-    const result = this.activeList().find((r: any) => r.toc_result_id == resultId);
+    const result = this.activeList().find((r: any) => String(r.toc_result_id) === String(resultId));
     return (result?.indicators ?? []).map((ind: any) => ({
       ...ind,
       matchInfo: this.getIndicatorMatchInfo(ind),
@@ -108,7 +108,7 @@ export class SectionTocComponent implements OnInit {
   readonly selectedIndicatorData = computed(() => {
     const id = this.selectedIndicatorId();
     if (!id) return null;
-    return this.indicatorsList().find((ind: any) => ind.related_node_id == id) ?? null;
+    return this.indicatorsList().find((ind: any) => String(ind.related_node_id) === String(id)) ?? null;
   });
 
   readonly hasNoMatchingIndicator = computed(() => {
@@ -229,7 +229,7 @@ export class SectionTocComponent implements OnInit {
   }
 
   findIndicatorById(id: number | string): any {
-    return this.indicatorsList().find((i: any) => i.related_node_id == id) ?? null;
+    return this.indicatorsList().find((i: any) => String(i.related_node_id) === String(id)) ?? null;
   }
 
   setContributionValue(val: number | string | null): void {
