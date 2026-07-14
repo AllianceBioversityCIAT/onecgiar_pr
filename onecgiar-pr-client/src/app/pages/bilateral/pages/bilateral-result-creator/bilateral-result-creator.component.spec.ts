@@ -40,6 +40,7 @@ describe('BilateralResultCreatorComponent', () => {
     autoSaveService = {
       fieldStatus: signal({}),
       hasPendingSaves: signal(false),
+      globalSaveState: signal('idle'),
       setResultId: jest.fn(),
       registerField: jest.fn(),
       updateField: jest.fn(),

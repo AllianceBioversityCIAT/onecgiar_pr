@@ -12,7 +12,7 @@
           <span class="bp-sp-badge" [class.bp-sp-badge--primary]="creationService.selectedPrimarySp()?.programId === sp.programId">
             {{ sp.spShortName }}
             @if (sp.allocation) {
-              <span class="bp-sp-allocation">{{ sp.allocation }}%</span>
+              <span class="bp-sp-allocation">{{ formatAlloc(sp.allocation) }}%</span>
             }
           </span>
         }

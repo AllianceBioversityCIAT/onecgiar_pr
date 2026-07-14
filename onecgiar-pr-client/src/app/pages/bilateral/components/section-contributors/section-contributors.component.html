@@ -1,13 +1,18 @@
-<div class="sc-fields">
-  <div class="sc-field">
-    <label class="sc-label">Primary Science Program</label>
-    <div class="sc-sp-badge sc-sp-badge--primary">
-      {{ creationService.selectedPrimarySp()?.programCode }}
-      @if (creationService.selectedPrimarySp()?.allocation) {
-        <span class="sc-sp-pct">{{ creationService.selectedPrimarySp()?.allocation }}%</span>
-      }
+<div class="sc-fields" data-section="contributors">
+  @if (primarySpData(); as sp) {
+    <div class="sc-sp-header">
+      <img class="sc-sp-icon" [src]="sp.iconSrc" width="32" height="32" alt="" />
+      <div class="sc-sp-info">
+        <span class="sc-sp-code">{{ sp.programCode }}</span>
+        <span class="sc-sp-name">{{ sp.shortName }}</span>
+        @if (sp.allocation) {
+          <span class="sc-sp-pct">{{ formatAlloc(sp.allocation) }}%</span>
+        }
+      </div>
     </div>
-  </div>
+
+    <app-section-toc [resultTypeId]="resultTypeId"></app-section-toc>
+  }
 
   @if (creationService.selectedSecondarySps().length) {
     <div class="sc-field">
@@ -17,7 +22,7 @@
           <span class="sc-sp-badge">
             {{ sp.programCode }}
             @if (sp.allocation) {
-              <span class="sc-sp-pct">{{ sp.allocation }}%</span>
+              <span class="sc-sp-pct">{{ formatAlloc(sp.allocation) }}%</span>
             }
           </span>
         }

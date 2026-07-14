@@ -1,0 +1,150 @@
+<div class="st-fields" data-section="toc">
+  <div class="st-field">
+    <label class="st-label">Is this result planned? <span class="st-label-hint">Indicators are filtered by result type compatibility</span></label>
+    <div class="st-toggle-group">
+      <button
+        type="button"
+        class="st-toggle-btn"
+        [class.st-toggle-btn--active]="isPlanned()"
+        (click)="onPlannedChange(true)">
+        <i class="material-icons-round st-toggle-icon">event_repeat</i>
+        <span>Planned</span>
+      </button>
+      <button
+        type="button"
+        class="st-toggle-btn"
+        [class.st-toggle-btn--active]="!isPlanned()"
+        (click)="onPlannedChange(false)">
+        <i class="material-icons-round st-toggle-icon">event_busy</i>
+        <span>Not Planned</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="st-field">
+    <label class="st-label">ToC Level</label>
+    <div class="st-toggle-group">
+      @for (level of TOC_LEVELS; track level.value) {
+        <button
+          type="button"
+          class="st-toggle-btn"
+          [class.st-toggle-btn--active]="selectedLevel() === level.value"
+          (click)="onLevelChange(level.value)">
+          {{ level.label }}
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (isLoading()) {
+    <app-form-skeleton [rows]="3" [hasLabel]="true" [hasExtra]="true" [extraRows]="4" />
+  } @else {
+    @if (tocResults().length) {
+      <div class="st-field">
+        <label class="st-label">
+          @switch (selectedLevel()) {
+            @case (1) { Select High Level Output }
+            @case (3) { Select 2030 Outcome }
+            @default { Select Intermediate Outcome }
+          }
+        </label>
+
+        @for (tr of tocResults(); track tr.toc_result_id) {
+          <div
+            class="st-toc-card"
+            [class.st-toc-card--selected]="selectedTocId() === tr.toc_result_id"
+            (click)="onTocResultSelect(tr.toc_result_id)"
+            role="button"
+            tabindex="0"
+            (keydown.enter)="onTocResultSelect(tr.toc_result_id)"
+            (keydown.space)="onTocResultSelect(tr.toc_result_id)">
+            <div class="st-toc-card-body">
+              <div class="st-toc-title-row">
+                @if (tr.wp_short_name) {
+                  <span class="st-toc-wp">{{ tr.wp_short_name }}</span>
+                }
+                <span class="st-toc-title">{{ tr.title }}</span>
+              </div>
+
+              @if (tr.indicators.length) {
+                <div class="st-toc-match-info">
+                  @let matchInfo = getMatchesForResult(tr);
+                  <span
+                    class="st-toc-match-badge"
+                    [class.st-toc-match-badge--has]="matchInfo.count > 0">
+                    {{ matchInfo.label }}
+                  </span>
+                </div>
+
+                @if (selectedTocId() === tr.toc_result_id) {
+                  <div class="st-indicators">
+                    @for (ind of tr.indicators; track ind.indicator_id) {
+                      <div class="st-ind-card">
+                        <div class="st-ind-header">
+                          <span class="st-ind-desc">{{ ind.indicator_description || 'Unnamed indicator' }}</span>
+                          @if (ind.type_name) {
+                            <span
+                              class="st-ind-type-badge"
+                              [class]="ind.matchInfo.cssClass">
+                              {{ ind.matchInfo.label }}
+                            </span>
+                          }
+                        </div>
+
+                        @if (ind.unit_messurament) {
+                          <span class="st-ind-unit">Unit: {{ ind.unit_messurament }}</span>
+                        }
+
+                        @if (ind.targets?.length) {
+                          <div class="st-targets">
+                            <span class="st-targets-label">Target:</span>
+                            @for (t of ind.targets; track $index) {
+                              <span class="st-target-value">
+                                {{ t.target_value !== null && t.target_value !== undefined ? t.target_value : 'N/A' }}
+                              </span>
+                            }
+                          </div>
+                        }
+
+                        @if (ind.target_value !== null && ind.target_value !== undefined) {
+                          <div class="st-contribution">
+                            <label class="st-contrib-label">Actual:</label>
+                            <span class="st-contrib-value">{{ ind.target_value }}</span>
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+              } @else if (selectedTocId() === tr.toc_result_id) {
+                <div class="st-no-indicators">No indicators available for this result</div>
+              }
+            </div>
+
+            <i class="material-icons-round st-chevron" [class.st-chevron--open]="selectedTocId() === tr.toc_result_id">
+              {{ selectedTocId() === tr.toc_result_id ? 'expand_less' : 'expand_more' }}
+            </i>
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="st-empty">
+        <i class="material-icons-round st-empty-icon">account_tree</i>
+        <span>No ToC results found for this level.</span>
+      </div>
+    }
+
+    @if (selectedTocId()) {
+      <div class="st-field st-field--narrative">
+        <label class="st-label">Progressive Narrative</label>
+        <textarea
+          class="st-textarea"
+          rows="4"
+          [ngModel]="savedNarrative()"
+          placeholder="Describe how this result contributes to the selected ToC element..."
+          (input)="savedNarrative.set($any($event.target).value)">
+        </textarea>
+      </div>
+    }
+  }
+</div>

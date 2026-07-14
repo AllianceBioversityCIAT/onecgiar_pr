@@ -30,9 +30,9 @@ const DAC_AREAS = [
 ] as const;
 
 const TAG_LEVELS = [
-  { value: 1, label: 'Not Targeted' },
-  { value: 2, label: 'Significant' },
-  { value: 3, label: 'Principal' },
+  { value: 1, label: '(0) Not Targeted' },
+  { value: 2, label: '(1) Significant' },
+  { value: 3, label: '(2) Principal' },
 ];
 
 @Component({
@@ -143,7 +143,7 @@ export class SectionGeneralInfoComponent implements OnInit {
     this.http.get<any>(`${environment.apiBaseUrl}api/results/gender-tag-levels/all`).subscribe({
       next: ({ response }) => {
         if (response) {
-          this.tagLevels.set(response.map((r: any) => ({ value: Number(r.id), label: r.title })));
+          this.tagLevels.set(response.map((r: any) => ({ value: Number(r.id), label: r.description })));
         }
         this.isLoadingDac.set(false);
       },

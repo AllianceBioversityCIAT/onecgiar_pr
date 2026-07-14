@@ -1,7 +1,7 @@
 .sg-fields {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
 }
 
 .sg-field {
@@ -11,50 +11,54 @@
 }
 
 .sg-label {
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 11px;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #546E7A;
+  letter-spacing: 0.6px;
+  color: #607D8B;
 }
 
 .sg-required {
-  color: #C62828;
+  color: #E53935;
+  font-weight: 700;
 }
 
 .sg-select {
   padding: 10px 12px;
-  border: 1px solid #E0E0E0;
-  border-radius: 4px;
+  border: 1.5px solid #E0E0E0;
+  border-radius: 6px;
   font-size: 14px;
   color: #212121;
   background: #FFFFFF;
   font-family: inherit;
   cursor: pointer;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
 
   &:focus {
     outline: none;
     border-color: #1565C0;
-    box-shadow: 0 0 0 2px rgba(21, 101, 192, 0.1);
+    box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.08);
   }
 }
 
 .sg-status {
-  font-size: 11px;
-  color: #757575;
+  font-size: 10px;
+  color: #90A4AE;
+  letter-spacing: 0.3px;
+  transition: color 200ms ease;
 
   &--saved {
-    color: #2E7D32;
+    color: #43A047;
   }
 
   &--error {
-    color: #C62828;
+    color: #E53935;
   }
 }
 
 .sg-hint {
   font-size: 12px;
-  color: #BDBDBD;
+  color: #CFD8DC;
   margin: 0;
   font-style: italic;
 }

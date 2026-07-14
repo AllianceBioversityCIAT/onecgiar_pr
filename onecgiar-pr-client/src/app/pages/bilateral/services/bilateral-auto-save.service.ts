@@ -1,10 +1,11 @@
-import { Injectable, signal, inject } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
 import { debounceTime, Subject } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
 
 export type FieldType = 'text' | 'select' | 'checkbox';
 export type FieldStatus = 'idle' | 'saving' | 'saved' | 'error';
+export type GlobalSaveState = 'idle' | 'saving' | 'saved' | 'error';
 
 const FIELD_ENDPOINTS: Record<string, string> = {
   title: 'bilateral/general-info/{id}',
@@ -32,6 +33,14 @@ export class BilateralAutoSaveService {
 
   fieldStatus = signal<Record<string, FieldStatus>>({});
   hasPendingSaves = signal(false);
+
+  globalSaveState = computed<GlobalSaveState>(() => {
+    const statuses = Object.values(this.fieldStatus());
+    if (statuses.some(s => s === 'saving')) return 'saving';
+    if (statuses.some(s => s === 'error')) return 'error';
+    if (statuses.length > 0 && statuses.every(s => s === 'idle' || s === 'saved')) return 'saved';
+    return 'idle';
+  });
 
   constructor() {
     this._blurSubject.pipe(debounceTime(50)).subscribe(({ fieldPath, value }) => {

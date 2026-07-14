@@ -25,6 +25,12 @@ export class SectionZeroDashboardComponent {
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+  formatAlloc(value: string | null | undefined): string {
+    if (!value) return '';
+    const n = parseFloat(value);
+    return Number.isNaN(n) ? value : String(Math.round(n));
+  }
+
   onSubmit(): void {
     this.submitRequested.emit();
   }

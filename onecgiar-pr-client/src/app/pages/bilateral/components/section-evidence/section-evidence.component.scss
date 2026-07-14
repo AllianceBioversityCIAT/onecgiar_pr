@@ -5,16 +5,21 @@
 }
 
 .sev-item {
-  padding: 12px;
-  background: #FAFAFA;
-  border: 1px solid #EEEEEE;
-  border-radius: 4px;
+  padding: 14px;
+  background: #FAFBFC;
+  border: 1.5px solid #E8ECEE;
+  border-radius: 8px;
+  transition: border-color 150ms ease;
+
+  &:hover {
+    border-color: #D0D8DC;
+  }
 }
 
 .sev-item-header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .sev-link {
@@ -25,9 +30,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-weight: 500;
 
   &:hover {
     text-decoration: underline;
+    text-underline-offset: 2px;
   }
 }
 
@@ -35,56 +42,61 @@
   background: none;
   border: none;
   font-size: 18px;
-  color: #BDBDBD;
+  color: #90A4AE;
   cursor: pointer;
   padding: 0 4px;
   line-height: 1;
+  transition: color 150ms ease;
 
   &:hover {
-    color: #C62828;
+    color: #E53935;
   }
 }
 
 .sev-desc {
   font-size: 12px;
-  color: #757575;
-  margin: 6px 0 0;
+  color: #607D8B;
+  margin: 8px 0 0;
+  line-height: 1.5;
 }
 
 .sev-add {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 16px;
-  border: 2px dashed #E0E0E0;
-  border-radius: 4px;
+  padding: 18px;
+  border: 2px dashed #CFD8DC;
+  border-radius: 8px;
+  background: #FAFBFC;
 }
 
 .sev-field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
 }
 
 .sev-label {
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 11px;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #546E7A;
+  letter-spacing: 0.6px;
+  color: #607D8B;
 }
 
 .sev-input {
-  padding: 8px 10px;
-  border: 1px solid #E0E0E0;
-  border-radius: 4px;
+  padding: 10px 12px;
+  border: 1.5px solid #E0E0E0;
+  border-radius: 6px;
   font-size: 13px;
   font-family: inherit;
   color: #212121;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
 
   &:focus {
     outline: none;
     border-color: #1565C0;
+    box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.08);
   }
 
   &::placeholder {
@@ -94,21 +106,24 @@
 
 .sev-add-btn {
   align-self: flex-start;
-  padding: 6px 14px;
+  padding: 8px 16px;
   background: #1565C0;
   color: #FFFFFF;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   font-size: 12px;
+  font-weight: 600;
   font-family: inherit;
   cursor: pointer;
+  letter-spacing: 0.3px;
+  transition: background 150ms ease;
 
   &:hover:not(:disabled) {
-    background: #1257a8;
+    background: #1257A8;
   }
 
   &:disabled {
-    opacity: 0.5;
+    opacity: 0.45;
     cursor: not-allowed;
   }
 }
