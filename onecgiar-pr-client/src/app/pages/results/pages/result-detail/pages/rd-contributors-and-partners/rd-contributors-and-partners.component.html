@@ -282,33 +282,17 @@
   </div>
   <ng-template #selectLeadCenter>
     @if (!this.rdPartnersSE.updatingLeadData) {
-      <app-pr-field-header label="Lead center" [required]="!this.rdPartnersSE.partnersBody.is_lead_by_partner"></app-pr-field-header>
-      <p-select
+      <app-pr-select
+        label="Lead center"
+        [required]="!this.rdPartnersSE.partnersBody.is_lead_by_partner"
         [options]="this.rdPartnersSE.possibleLeadCenters"
         [(ngModel)]="this.rdPartnersSE.leadCenterCode"
         optionLabel="full_name"
         optionValue="code"
         placeholder="Select a lead center..."
         [showClear]="true"
-        [readonly]="this.api.rolesSE.readOnly"
-        [disabled]="this.api.rolesSE.readOnly"
-        [style]="{ width: '100%' }">
-        <ng-template pTemplate="item" let-item>
-          <div style="white-space: normal !important">
-            <div [innerHtml]="item.full_name"></div>
-          </div>
-        </ng-template>
-
-        <ng-template pTemplate="selectedItem" let-item>
-          <div style="white-space: normal !important">
-            <div [innerHtml]="item.full_name"></div>
-          </div>
-        </ng-template>
-      </p-select>
-      <div
-        appFeedbackValidation
-        labelText="Lead center"
-        [isComplete]="this.rdPartnersSE.partnersBody.is_lead_by_partner || !!this.rdPartnersSE.leadCenterCode"></div>
+        [readOnly]="this.api.rolesSE.readOnly">
+      </app-pr-select>
     }
   </ng-template>
 

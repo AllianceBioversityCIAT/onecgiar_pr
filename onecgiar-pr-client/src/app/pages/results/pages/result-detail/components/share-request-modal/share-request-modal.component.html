@@ -25,25 +25,17 @@
       been recorded for <strong> {{ this.api?.dataControlSE?.currentResult?.submitter }}. </strong>
     </div>
 
-    <app-pr-field-header label="Select entity"></app-pr-field-header>
-    <p-select
+    <app-pr-select
+      label="Select entity"
       [options]="entitiesList"
       optionLabel="full_name"
       optionValue="initiative_id"
       placeholder="Select entity"
       [(ngModel)]="this.shareRequestModalSE.shareRequestBody.initiative_id"
       (ngModelChange)="modelChange()"
-      [style]="{ width: '100%' }"
-      [filter]="true"
       [disabled]="this.api.dataControlSE.inNotifications"
-      [optionDisabled]="">
-      <ng-template #selectedItem let-selectedOption>
-        <div [innerHtml]="selectedOption.full_name"></div>
-      </ng-template>
-      <ng-template let-item #item>
-        <div [innerHtml]="item.full_name"></div>
-      </ng-template>
-    </p-select>
+      [required]="true">
+    </app-pr-select>
 
     @if (shouldShowTocInitiativeOut && !fieldsManagerSE.isP25()) {
       <app-toc-initiative-out
