@@ -55,11 +55,17 @@
 - [ ] 4.2 `p-overlaybadge`/`p-overlayBadge` ×3 → native badge (small absolute-positioned span).
 - [ ] 4.3 `p-drawer` ×3 → CDK Overlay / hlm sheet (note: bilateral results already has a hand-rolled `.custom-drawer` — mirror that pattern).
 
-## 5. Dialogs (p-dialog ×36)
+## 5. Dialogs (p-dialog ×35 outside custom-fields)
 
-- [ ] 5.1 Adopt `hlm-dialog`/`brn-dialog` (CDK overlay). Preserve `[visible]` two-way, header/footer, `[modal]`, close on X / backdrop, and any `(onHide)` handlers.
-- [ ] 5.2 Migrate in batches by feature area; `build:dev` between batches; Playwright-verify a couple of dialogs (open/close, focus, no loop).
-- [ ] 5.3 Drop `DialogModule` imports where unused.
+**DECISION (Yeck): reengineer for compatibility + reuse → built a single reusable wrapper `app-pr-dialog`, NOT hlm-dialog.**
+- ❌ `hlm-dialog` rejected: drags in `@ng-icons/core` + `@ng-icons/lucide` which ERESOLVE-conflict with Angular 21, and its API is imperative (brn-dialog trigger/service) — doesn't map to the declarative `[(visible)]` the 35 dialogs use. Install was reverted (package.json/tsconfig/spartan/dialog cleaned).
+- ✅ **`app-pr-dialog`** (`shared/components/pr-dialog/`) — created. Declarative API mirrors PrimeNG so migration is ~1:1: `[(visible)]` two-way, `[modal]`, `header`, `[showHeader]`, `[closable]`, `[closeOnEscape]`, `[dismissableMask]`, `styleClass`, `(onHide)`. Body via `<ng-content>`, footer via `<ng-content select="[pr-dialog-footer]">` (replaces `<ng-template pTemplate="footer">`). Fixed full-screen mask + high z-index (replaces `appendTo="body"`); Escape/backdrop close built in. PrimeNG-only props (draggable/resizable/appendTo) dropped.
+- **Usage scan (35 files):** `[(visible)]`×44, modal×36, showHeader×34, dismissableMask×34, closeOnEscape×33, styleClass×27, header×27, onHide×19; **26 files use `pTemplate` footer/header slots**.
+
+- [x] 5.0 Build the reusable `app-pr-dialog` wrapper (done, build:dev green).
+- [ ] 5.1 **PILOT DONE:** `save-changes-justification-dialog` migrated `<p-dialog>` → `<app-pr-dialog>` (build green). ⚠️ **Its `styleClass="confirmation-modal"` scss lives in the PARENT `result-review-drawer.component.scss` and targets `.p-dialog…` — needs re-pointing to `.pr-dialog`.** This is THE recurring dialog challenge: per-dialog `styleClass` scss coupled to PrimeNG's `.p-dialog*` internals (sometimes in another component). Needs visual QA + scss adaptation per dialog.
+- [ ] 5.2 Migrate the remaining 34 `<p-dialog>` → `<app-pr-dialog>` in batches by area; for each, map props, convert `pTemplate="footer"` → `[pr-dialog-footer]`, and re-point any `styleClass` scss from `.p-dialog*` to `.pr-dialog*`. `build:dev` + browser-verify open/close/escape/backdrop per batch.
+- [ ] 5.3 Drop `DialogModule`/`primeng/dialog` imports where unused.
 
 ## 6. Tables (p-table ×22 — biggest lift)
 

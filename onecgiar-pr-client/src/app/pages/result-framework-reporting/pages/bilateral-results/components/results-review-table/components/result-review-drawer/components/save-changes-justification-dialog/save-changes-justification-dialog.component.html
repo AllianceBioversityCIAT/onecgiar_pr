@@ -1,13 +1,10 @@
-<p-dialog
-  appendTo="body"
+<app-pr-dialog
   [(visible)]="visible"
   (visibleChange)="visibleChange.emit($event)"
   [modal]="true"
   [closeOnEscape]="!isSaving"
   [showHeader]="false"
   [dismissableMask]="!isSaving"
-  [draggable]="false"
-  [style]="{ padding: '0px' }"
   styleClass="confirmation-modal">
   <i class="pi pi-times modal-close-icon" [class.disabled]="isSaving" [style.cursor]="isSaving ? 'not-allowed' : 'pointer'" (click)="onCancel()"></i>
   <div class="modal-body">
@@ -32,4 +29,4 @@
     <button hlmBtn variant="outline" size="lg" (click)="onCancel()" [disabled]="isSaving">Cancel</button>
     <button hlmBtn size="lg" (click)="onConfirm()" [disabled]="!justification.trim() || isSaving">Confirm @if (isSaving) { <i class="pi pi-spinner pi-spin"></i> }</button>
   </div>
-</p-dialog>
+</app-pr-dialog>
