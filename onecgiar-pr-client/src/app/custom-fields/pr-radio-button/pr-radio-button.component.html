@@ -7,15 +7,16 @@
       [hidden]="hideOptions">
       <div *ngFor="let option of this.options; let i = index">
         <div class="radioButton">
-          <p-radioButton
+          <input
+            type="radio"
+            class="pr-native-radio"
             (click)="onSelect(option[optionValue])"
             (ngModelChange)="onValueChange($event)"
             [id]="'radio_' + i"
-            name="groupname"
+            [name]="groupName"
             [value]="option[optionValue]"
             [(ngModel)]="value"
-            [disabled]="(readOnly || disabled || this.rolesSE.readOnly) && !isStatic">
-          </p-radioButton>
+            [disabled]="(readOnly || disabled || this.rolesSE.readOnly) && !isStatic" />
           <label [for]="'radio_' + i" class="name pr-body-2">{{ option[this.optionLabel] }}</label>
         </div>
 

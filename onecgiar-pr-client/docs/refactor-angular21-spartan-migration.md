@@ -1,8 +1,8 @@
 # Refactor: Angular 21 upgrade + PrimeNG → Spartan UI migration
 
 **Branch:** `front-redesign-fields` (this is where all the work lives now).
-**Status:** build green on Angular 21; **one open runtime bug** (see §6) under investigation.
-**Last update:** 2026-07-10.
+**Status:** build green on Angular 21; **all custom-fields migrated off PrimeNG** (§3.4); the general-information loop bug is resolved (§6).
+**Last update:** 2026-07-14.
 
 This is the master context doc for the modernization of the PRMS client: moving off **PrimeNG** onto **Spartan UI + Tailwind**, which first required upgrading Angular. Read this before touching anything on `front-redesign-fields`.
 
@@ -50,6 +50,21 @@ Angular 22 is **blocked by PrimeNG** and comes LAST (see §5).
 - Spartan `HlmInput` lives at `src/app/spartan/input` (alias `@spartan/input`, tsconfig path). Added via `ng g @spartan-ng/cli:ui input` with a hand-written `components.json`.
 - Dropped `InputNumberModule` + `MessageModule` from `custom-fields.module.ts` (only pr-input used them). Kept `InputTextModule`/`IconFieldModule`/`InputIconModule` (still used by `pr-multi-select`).
 
+### 3.4 Remaining custom fields → Spartan (0 PrimeNG in `custom-fields/`)
+
+Same principle as 3.3: **native HTML + Tailwind/Spartan classes, no `@spartan-ng/brain` host-directives** (brain machinery is what caused the §6 loop). Facade (inputs/outputs/CVA) untouched → **zero consumer changes**. All four remaining PrimeNG usages removed:
+
+| Component | Before (PrimeNG) | After |
+|---|---|---|
+| `pr-checkbox` | `<p-checkbox binary>` | `<input type="checkbox" class="pr-native-check">` + ngModel |
+| `pr-radio-button` | `<p-radioButton>` | `<input type="radio" class="pr-native-radio">` + ngModel. Added a **unique `groupName` per instance** (`pr-radio-group-N`) so native radio grouping never bleeds across components. |
+| `pr-multi-select` | search `p-iconfield`/`p-inputicon`/`pInputText` + inner `<p-checkbox>` ×2 | `<input hlmInput>` + `material-icons-round` search icon; native `.pr-native-check` |
+| `pr-button` | `[pTooltip]` directive | new lightweight **`PrTooltipDirective`** (`[prTooltip]`) — renders a tooltip on `document.body` on hover (never clipped by the button's `overflow:hidden`), removed on leave/destroy. |
+
+- Shared native checkbox/radio styling lives in the **global** `custom-fields.scss` (`.pr-native-check` / `.pr-native-radio`): 18px box, `neutral-1000` border, `primary-300` fill when checked — clones the old PrimeNG look. Tooltip styling: `.pr-tooltip` (bg `secondary-400`).
+- `custom-fields.module.ts` now imports **only** `CommonModule, FormsModule, ScrollingModule, HlmInput` — every PrimeNG module removed (`SelectModule`, `RadioButtonModule`, `MultiSelectModule`, `TextareaModule`, `CheckboxModule`, `TooltipModule`, `IconFieldModule`, `InputIconModule`, `InputTextModule`). The `.p-dialog`/`.p-dropdown` overrides in `custom-fields.scss` stay — they're global and still style PrimeNG used elsewhere in the app.
+- **Browser-verified** (Playwright, prtest backend, result 8618): build green + no loop + 0 leftover PrimeNG widgets across general-information / contributor-partners / cap-dev-info. Interactive (runtime-unlocked read-only role): radio select/deselect propagates CVA value + `primary-300` fill + correct single-select grouping; checkbox toggles + `primary-300` fill; multi-select dropdown opens with `hlmInput` search (filters) + native checkboxes; tooltip appears on hover (`secondary-400`) and clears on leave. Jest: 19/19 across the 4 specs.
+
 ---
 
 ## 4. OpenSpec changes (under `openspec/changes/`)
@@ -59,6 +74,7 @@ Angular 22 is **blocked by PrimeNG** and comes LAST (see §5).
 | `upgrade-angular-19-to-22` | The Angular platform upgrade (19→21 done; 22 blocked). |
 | `install-spartan-tailwind-foundation` | Tailwind 4 + Spartan install, coexistence with PrimeNG. |
 | `migrate-pr-input-pr-select-to-spartan` | First component migration (pr-input + pr-select → Spartan). |
+| _(pending)_ `migrate-remaining-custom-fields-to-spartan` | pr-checkbox, pr-radio-button, pr-multi-select, pr-button → Spartan (§3.4). Code done on branch; OpenSpec change to be formalized after Yeck's OK (design-iteration exception flow). |
 
 ---
 
@@ -93,9 +109,10 @@ The original report was on the `angular-upgrade-19-22` branch and reproduced aft
 
 ## 7. Also pending
 
-- **33 Jest tests** fail on Angular 21 (dev-mode drift: NG0100 `checkNoChanges` on unstable template getters, PrimeNG Table `_Bind` harness) — not runtime bugs; need a fixing pass. See the `upgrade-angular-19-to-22` change.
-- **Browser smoke** of the migrated fields (text/email/currency/select-search) once the bug is fixed.
+- **33 Jest tests** fail on Angular 21 (dev-mode drift: NG0100 `checkNoChanges` on unstable template getters, PrimeNG Table `_Bind` harness) — not runtime bugs; need a fixing pass. See the `upgrade-angular-19-to-22` change. (The 4 custom-field specs migrated in §3.4 all pass — 19/19.)
 - **hlm-button pilot** render (foundation change) — deferred.
+- Migrate PrimeNG usages **outside `custom-fields/`** (pages/shared use `<p-table>`, `<p-dialog>`, `<p-select>`, etc. directly). custom-fields is now clean; the rest of the app is the next front.
+- Then remove `primeng` + `@ncstate/sat-popover` entirely → **Angular 22**.
 - Reconcile: `angular-upgrade-19-22` branch can be considered superseded by the merge into `front-redesign-fields`.
 
 ---

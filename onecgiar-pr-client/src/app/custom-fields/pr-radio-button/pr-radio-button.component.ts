@@ -45,6 +45,9 @@ export class PrRadioButtonComponent implements ControlValueAccessor {
   } = { listAttr: '', optionLabel: '', optionValue: '', optionTextValue: '', showInputIfAttr: '' };
   @Output() selectOptionEvent = new EventEmitter<any>();
   private _value: string;
+  /** Unique native radio-group name per instance so browser grouping never bleeds across components. */
+  private static _nextId = 0;
+  readonly groupName = `pr-radio-group-${PrRadioButtonComponent._nextId++}`;
   fieldsManager = inject(FieldsManagerService);
   constructor(
     public rolesSE: RolesService,

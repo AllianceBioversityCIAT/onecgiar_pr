@@ -142,6 +142,21 @@ input::placeholder,
       .search_input_container {
         width: 100%;
         padding: 5px 10px;
+        position: relative;
+        display: flex;
+        align-items: center;
+
+        .search_icon {
+          position: absolute;
+          left: 18px;
+          font-size: 18px;
+          color: var(--pr-color-accents-4);
+          pointer-events: none;
+        }
+
+        input {
+          padding-left: 32px;
+        }
 
         .p-fluid {
           width: 100%;
@@ -217,7 +232,7 @@ input::placeholder,
 }
 
 .disabled {
-  p-checkbox {
+  .pr-native-check {
     opacity: 0.7;
   }
 
@@ -253,4 +268,105 @@ input::placeholder,
   @include fonts.pr-typography('body-3');
   font-style: italic;
   color: var(--pr-color-accents-5);
+}
+
+/* ------------------------------------------------------------------
+   Native checkbox / radio (Spartan migration — 0 PrimeNG)
+   Clones the previous PrimeNG look: box with neutral-1000 border,
+   primary-300 fill when checked. No brain directives → cannot loop.
+   Shared by pr-checkbox, pr-radio-button and pr-multi-select.
+------------------------------------------------------------------ */
+.pr-native-check,
+.pr-native-radio {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--pr-color-neutral-1000);
+  background-color: var(--pr-color-white);
+  cursor: pointer;
+  display: inline-grid;
+  place-content: center;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.6;
+  }
+}
+
+.pr-native-check {
+  border-radius: 4px;
+
+  &::after {
+    content: '';
+    width: 10px;
+    height: 10px;
+    transform: scale(0);
+    transition: transform 0.12s ease-in-out;
+    background-color: var(--pr-color-white);
+    /* checkmark shape */
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+  }
+
+  &:checked {
+    background-color: var(--pr-color-primary-300);
+    border-color: var(--pr-color-primary-300);
+
+    &::after {
+      transform: scale(1);
+    }
+  }
+}
+
+.pr-native-radio {
+  border-radius: 50%;
+
+  &::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    transform: scale(0);
+    transition: transform 0.12s ease-in-out;
+    background-color: var(--pr-color-primary-300);
+  }
+
+  &:checked {
+    border-color: var(--pr-color-primary-300);
+
+    &::after {
+      transform: scale(1);
+    }
+  }
+}
+
+/* ------------------------------------------------------------------
+   Lightweight tooltip (Spartan migration — replaces PrimeNG pTooltip).
+   Rendered on <body> by PrTooltipDirective; positioned inline.
+------------------------------------------------------------------ */
+.pr-tooltip {
+  position: absolute;
+  z-index: 100000;
+  max-width: 240px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background-color: var(--pr-color-secondary-400);
+  color: var(--pr-color-white);
+  font-size: 11px;
+  line-height: 1.35;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  animation: pr-tooltip-fade 0.12s ease-in;
+}
+
+@keyframes pr-tooltip-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
