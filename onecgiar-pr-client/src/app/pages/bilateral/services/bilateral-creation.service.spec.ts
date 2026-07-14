@@ -90,9 +90,9 @@ describe('BilateralCreationService', () => {
 
   it('should create a result via POST', () => {
     service.createResult(1, 2).subscribe();
-    const req = httpMock.expectOne(`${environment.apiBaseUrl}api/results/create`);
+    const req = httpMock.expectOne(`${environment.apiBaseUrl}api/bilateral/center/create-header`);
     expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual(expect.objectContaining({ result_level_id: 1, result_type_id: 2, source: 'API', status_id: 1 }));
+    expect(req.request.body).toEqual({ result_level_id: 1, result_type_id: 2 });
     req.flush({});
   });
 

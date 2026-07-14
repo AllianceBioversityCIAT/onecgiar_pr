@@ -1,7 +1,9 @@
 import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
+import { MessageService } from 'primeng/api';
 import { BilateralCreationService } from '../../services/bilateral-creation.service';
-import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker.service';
+import { BilateralMdsTrackerService, MdsStatus } from '../../services/bilateral-mds-tracker.service';
 import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
 import { SectionZeroDashboardComponent } from '../../components/section-zero-dashboard/section-zero-dashboard.component';
 import { BilateralAccordionComponent } from '../../components/bilateral-accordion/bilateral-accordion.component';
@@ -17,13 +19,12 @@ import { SectionTypeSpecificComponent } from '../../components/section-type-spec
 import { BilateralProject } from '../../services/bilateral-creation.interfaces';
 
 const RESULT_TYPES_BY_LEVEL: Record<number, { id: number; label: string }[]> = {
-  1: [
+  3: [
     { id: 1, label: 'Policy Change' },
     { id: 2, label: 'Innovation Use' },
-    { id: 3, label: 'Capacity Change' },
     { id: 4, label: 'Other Outcome' }
   ],
-  2: [
+  4: [
     { id: 5, label: 'Capacity Sharing for Development' },
     { id: 6, label: 'Knowledge Product' },
     { id: 7, label: 'Innovation Development' },
@@ -47,11 +48,13 @@ const RESULT_TYPES_BY_LEVEL: Record<number, { id: number; label: string }[]> = {
     SectionTypeSpecificComponent
   ],
   templateUrl: './bilateral-result-creator.component.html',
-  styleUrl: './bilateral-result-creator.component.scss'
+  styleUrl: './bilateral-result-creator.component.scss',
+  providers: [MessageService]
 })
 export class BilateralResultCreatorComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly messageService = inject(MessageService);
   readonly creationService = inject(BilateralCreationService);
   readonly mdsTracker = inject(BilateralMdsTrackerService);
   readonly autoSaveService = inject(BilateralAutoSaveService);
@@ -64,6 +67,7 @@ export class BilateralResultCreatorComponent implements OnInit {
   openSectionName = signal<string | null>('general-info');
   isSubmitting = signal(false);
   selectedReportingWay = signal<'manual' | 'ai' | 'bulk' | null>(null);
+  sectionZeroOpen = signal(true);
 
   availableResultTypes = computed(() => {
     const level = this.resultLevelId();
@@ -127,13 +131,31 @@ export class BilateralResultCreatorComponent implements OnInit {
     this.creationService.createResult(level, type).subscribe({
       next: ({ response }) => {
         this.isCreatingResult.set(false);
+        if (!response?.id) {
+          this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Result created but no ID returned' });
+          return;
+        }
         this.autoSaveService.setResultId(response.id);
         this.router.navigate(['/bilateral/result', response.id]);
       },
-      error: () => {
+      error: (err: HttpErrorResponse) => {
         this.isCreatingResult.set(false);
+        const detail = err.error?.message || err.statusText || 'Unknown error';
+        this.messageService.add({ severity: 'error', summary: 'Failed to create result', detail, life: 5000 });
       }
     });
+  }
+
+  getSectionMdsStatus(sectionName: string): MdsStatus {
+    return this.mdsTracker.sectionStatus().find(s => s.sectionName === sectionName)?.status ?? 'empty';
+  }
+
+  getSectionFilled(sectionName: string): number {
+    return this.mdsTracker.sectionStatus().find(s => s.sectionName === sectionName)?.filledFields ?? 0;
+  }
+
+  getSectionTotal(sectionName: string): number {
+    return this.mdsTracker.sectionStatus().find(s => s.sectionName === sectionName)?.totalFields ?? 0;
   }
 
   private scrollToSection(id: string): void {
@@ -153,9 +175,12 @@ export class BilateralResultCreatorComponent implements OnInit {
     this.creationService.submitResult(rid).subscribe({
       next: () => {
         this.isSubmitting.set(false);
+        this.messageService.add({ severity: 'success', summary: 'Submitted', detail: 'Result submitted successfully' });
       },
-      error: () => {
+      error: (err: HttpErrorResponse) => {
         this.isSubmitting.set(false);
+        const detail = err.error?.message || err.statusText || 'Unknown error';
+        this.messageService.add({ severity: 'error', summary: 'Submit failed', detail, life: 5000 });
       }
     });
   }

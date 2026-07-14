@@ -34,17 +34,15 @@
         </div>
       }
 
-      @if (availableSecondarySps().length > 0) {
-        <p class="sps-help">
-          <i class="material-icons-round sps-help-icon">info</i>
-          Select any contributing Science Programs below. You can also add or change them later in the form.
-        </p>
-      }
     </div>
 
     @if (availableSecondarySps().length > 0 && creationService.selectedPrimarySp()) {
       <div class="sps-section">
         <label class="sps-label">Contributing Science Programs</label>
+        <p class="sps-help">
+          <i class="material-icons-round sps-help-icon">info</i>
+          Select any contributing Science Programs below. You can also add or change them later in the form.
+        </p>
         <div class="sps-chip-grid">
           @for (sp of availableSecondarySps(); track sp.programId) {
             <button

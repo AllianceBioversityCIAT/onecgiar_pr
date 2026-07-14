@@ -1,6 +1,7 @@
 import { Component, inject, signal, effect } from '@angular/core';
 import { BilateralAutoSaveService } from '../../services/bilateral-auto-save.service';
 import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker.service';
+import { BilateralCreationService } from '../../services/bilateral-creation.service';
 
 @Component({
   selector: 'app-section-general-info',
@@ -11,6 +12,7 @@ import { BilateralMdsTrackerService } from '../../services/bilateral-mds-tracker
 export class SectionGeneralInfoComponent {
   private readonly autoSaveService = inject(BilateralAutoSaveService);
   private readonly mdsTracker = inject(BilateralMdsTrackerService);
+  private readonly creationService = inject(BilateralCreationService);
 
   title = signal('');
   description = signal('');
@@ -18,6 +20,9 @@ export class SectionGeneralInfoComponent {
   isKrs = signal(false);
   isDiscontinued = signal(false);
   showAllFields = signal(false);
+
+  private _titleLoaded = false;
+  private _descriptionLoaded = false;
 
   constructor() {
     this.autoSaveService.registerField('title', 'text');
@@ -28,6 +33,22 @@ export class SectionGeneralInfoComponent {
       const d = this.description();
       const filled = (t.trim() ? 1 : 0) + (d.trim() ? 1 : 0);
       this.mdsTracker.updateSection('general-info', filled);
+    });
+
+    effect(() => {
+      const st = this.creationService.resultTitle();
+      if (st && !this._titleLoaded) {
+        this._titleLoaded = true;
+        this.title.set(st);
+      }
+    });
+
+    effect(() => {
+      const sd = this.creationService.resultDescription();
+      if (sd && !this._descriptionLoaded) {
+        this._descriptionLoaded = true;
+        this.description.set(sd);
+      }
     });
   }
 

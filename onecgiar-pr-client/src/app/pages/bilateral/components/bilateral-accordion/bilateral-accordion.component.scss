@@ -95,16 +95,17 @@
 
 .bp-accordion-body {
   padding: 20px 16px;
+  overflow: hidden;
   animation: bp-accordion-expand 300ms ease;
 }
 
 @keyframes bp-accordion-expand {
   from {
     opacity: 0;
-    max-height: 0;
+    transform: translateY(-8px);
   }
   to {
     opacity: 1;
-    max-height: 2000px;
+    transform: translateY(0);
   }
 }

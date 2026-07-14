@@ -29,10 +29,14 @@ export class BilateralProjectsService {
       return { projects: [] };
     }
 
-    this.logger.log(`Center found: code=${center.code}, institutionId=${center.institutionId}`);
+    this.logger.log(
+      `Center found: code=${center.code}, institutionId=${center.institutionId}`,
+    );
 
     const organizationCode = center.institutionId;
-    this.logger.log(`Querying projects with organization_code=${organizationCode}`);
+    this.logger.log(
+      `Querying projects with organization_code=${organizationCode}`,
+    );
 
     const projects = await this.projectRepo.find({
       where: { organizationCode },
@@ -48,7 +52,9 @@ export class BilateralProjectsService {
     this.logger.log(`${activeProjects.length} active projects`);
 
     if (activeProjects.length === 0 && projects.length > 0) {
-      this.logger.warn(`All ${projects.length} projects have isActive=false — check DB`);
+      this.logger.warn(
+        `All ${projects.length} projects have isActive=false — check DB`,
+      );
     }
 
     const allProgramCodes = activeProjects.flatMap((p) =>

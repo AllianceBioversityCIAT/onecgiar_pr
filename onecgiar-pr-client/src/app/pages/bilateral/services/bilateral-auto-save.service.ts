@@ -1,14 +1,18 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { debounceTime, Subject } from 'rxjs';
-import { ApiService } from '../../../shared/services/api/api.service';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../../environments/environment';
 
 export type FieldType = 'text' | 'select' | 'checkbox';
 export type FieldStatus = 'idle' | 'saving' | 'saved' | 'error';
 
+const FIELD_ENDPOINTS: Record<string, string> = {
+  title: 'bilateral/general-info/{id}',
+  description: 'bilateral/general-info/{id}',
+};
+
 @Injectable({ providedIn: 'root' })
 export class BilateralAutoSaveService {
-  private readonly api = inject(ApiService);
   private readonly http = inject(HttpClient);
 
   private _pendingFields = new Map<string, { fieldPath: string; value: unknown; fieldType: FieldType }>();
@@ -51,43 +55,53 @@ export class BilateralAutoSaveService {
 
   async flush(): Promise<void> {
     const pending = Array.from(this._pendingFields.entries());
+    const resultId = this._currentResultId();
+    if (!resultId || pending.length === 0) return;
+
     this._pendingFields.clear();
     this.hasPendingSaves.set(false);
 
-    const patchData: Record<string, unknown> = {};
-    pending.forEach(([_key, entry]) => {
-      patchData[entry.fieldPath] = entry.value;
-    });
+    const byEndpoint = new Map<string, { fields: string[]; body: Record<string, unknown> }>();
+    for (const [_key, entry] of pending) {
+      const endpoint = FIELD_ENDPOINTS[entry.fieldPath];
+      if (!endpoint) continue;
+      let batch = byEndpoint.get(endpoint);
+      if (!batch) {
+        batch = { fields: [], body: {} };
+        byEndpoint.set(endpoint, batch);
+      }
+      batch.fields.push(entry.fieldPath);
+      batch.body[entry.fieldPath] = entry.value;
+    }
 
-    if (Object.keys(patchData).length === 0) return;
+    for (const [endpoint, batch] of byEndpoint) {
+      const url = `${environment.apiBaseUrl}api/results/${endpoint.replace('{id}', String(resultId))}`;
 
-    const resultId = this._currentResultId();
-    if (!resultId) return;
-
-    try {
-      this.http.patch(`${this.api.resultsSE.apiBaseUrl}${resultId}`, patchData).subscribe({
-        next: () => {
-          pending.forEach(([key]) => {
-            this.fieldStatus.update(s => ({ ...s, [key]: 'saved' }));
-            setTimeout(() => {
-              this.fieldStatus.update(s => {
-                const next = { ...s };
-                if (next[key] === 'saved') next[key] = 'idle';
-                return next;
-              });
-            }, 2000);
-          });
-        },
-        error: () => {
-          pending.forEach(([key]) => {
-            this.fieldStatus.update(s => ({ ...s, [key]: 'error' }));
-          });
-        }
-      });
-    } catch {
-      pending.forEach(([key]) => {
-        this.fieldStatus.update(s => ({ ...s, [key]: 'error' }));
-      });
+      try {
+        this.http.patch(url, batch.body).subscribe({
+          next: () => {
+            batch.fields.forEach(field => {
+              this.fieldStatus.update(s => ({ ...s, [field]: 'saved' }));
+              setTimeout(() => {
+                this.fieldStatus.update(s => {
+                  const next = { ...s };
+                  if (next[field] === 'saved') next[field] = 'idle';
+                  return next;
+                });
+              }, 2000);
+            });
+          },
+          error: () => {
+            batch.fields.forEach(field => {
+              this.fieldStatus.update(s => ({ ...s, [field]: 'error' }));
+            });
+          }
+        });
+      } catch {
+        batch.fields.forEach(field => {
+          this.fieldStatus.update(s => ({ ...s, [field]: 'error' }));
+        });
+      }
     }
   }
 

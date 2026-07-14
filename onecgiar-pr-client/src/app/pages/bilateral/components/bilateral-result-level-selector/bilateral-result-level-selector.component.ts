@@ -1,8 +1,8 @@
 import { Component, input, output } from '@angular/core';
 
 const RESULT_LEVELS = [
-  { id: 1, label: 'Outcome', description: 'Long-term changes resulting from the research' },
-  { id: 2, label: 'Output', description: 'Products, services or capacities delivered' }
+  { id: 3, label: 'Outcome', description: 'Long-term changes resulting from the research' },
+  { id: 4, label: 'Output', description: 'Products, services or capacities delivered' }
 ];
 
 @Component({

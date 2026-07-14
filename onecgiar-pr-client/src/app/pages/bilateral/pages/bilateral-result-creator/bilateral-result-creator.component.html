@@ -59,30 +59,46 @@
 
   @if (!isCreating() && resultId()) {
     <div id="bcr-accordions">
-    <app-section-zero-dashboard (submitRequested)="submitResult()"></app-section-zero-dashboard>
+    <div class="bcr-section-zero" [class.bcr-section-zero--open]="sectionZeroOpen()">
+      <div class="bcr-section-zero-header" (click)="sectionZeroOpen.set(!sectionZeroOpen())" role="button" tabindex="0" (keydown.enter)="sectionZeroOpen.set(!sectionZeroOpen())">
+        <i class="material-icons-round">dashboard</i>
+        <span class="bcr-section-zero-label">Dashboard</span>
+        <i class="material-icons-round bcr-section-zero-chevron" [class.bcr-section-zero-chevron--rotated]="sectionZeroOpen()">expand_more</i>
+      </div>
+      @if (sectionZeroOpen()) {
+        <div class="bcr-section-zero-body">
+          <app-section-zero-dashboard (submitRequested)="submitResult()"></app-section-zero-dashboard>
+        </div>
+      }
+    </div>
 
-    <app-bilateral-accordion sectionName="general-info" sectionLabel="General Information" sectionIcon="description" [totalFields]="2"
-      [filledFields]="2" [mdsStatus]="'complete'" [resultId]="resultId()" [(openSectionName)]="openSectionName">
+    <app-bilateral-accordion sectionName="general-info" sectionLabel="General Information" sectionIcon="description"
+      [totalFields]="getSectionTotal('general-info')" [filledFields]="getSectionFilled('general-info')"
+      [mdsStatus]="getSectionMdsStatus('general-info')" [resultId]="resultId()" [(openSectionName)]="openSectionName">
       <app-section-general-info></app-section-general-info>
     </app-bilateral-accordion>
 
-    <app-bilateral-accordion sectionName="contributors" sectionLabel="Contributors & Partners" sectionIcon="people" [totalFields]="4"
-      [filledFields]="0" [mdsStatus]="'empty'" [resultId]="resultId()" [(openSectionName)]="openSectionName">
+    <app-bilateral-accordion sectionName="contributors" sectionLabel="Contributors & Partners" sectionIcon="people"
+      [totalFields]="getSectionTotal('contributors')" [filledFields]="getSectionFilled('contributors')"
+      [mdsStatus]="getSectionMdsStatus('contributors')" [resultId]="resultId()" [(openSectionName)]="openSectionName">
       <app-section-contributors></app-section-contributors>
     </app-bilateral-accordion>
 
-    <app-bilateral-accordion sectionName="geography" sectionLabel="Geographic Location" sectionIcon="map" [totalFields]="3"
-      [filledFields]="0" [mdsStatus]="'empty'" [resultId]="resultId()" [(openSectionName)]="openSectionName">
+    <app-bilateral-accordion sectionName="geography" sectionLabel="Geographic Location" sectionIcon="map"
+      [totalFields]="getSectionTotal('geography')" [filledFields]="getSectionFilled('geography')"
+      [mdsStatus]="getSectionMdsStatus('geography')" [resultId]="resultId()" [(openSectionName)]="openSectionName">
       <app-section-geography></app-section-geography>
     </app-bilateral-accordion>
 
-    <app-bilateral-accordion sectionName="evidence" sectionLabel="Evidence" sectionIcon="attachment" [totalFields]="2"
-      [filledFields]="0" [mdsStatus]="'empty'" [resultId]="resultId()" [(openSectionName)]="openSectionName">
+    <app-bilateral-accordion sectionName="evidence" sectionLabel="Evidence" sectionIcon="attachment"
+      [totalFields]="getSectionTotal('evidence')" [filledFields]="getSectionFilled('evidence')"
+      [mdsStatus]="getSectionMdsStatus('evidence')" [resultId]="resultId()" [(openSectionName)]="openSectionName">
       <app-section-evidence></app-section-evidence>
     </app-bilateral-accordion>
 
-    <app-bilateral-accordion sectionName="type-specific" sectionLabel="Type-Specific Details" sectionIcon="category" [totalFields]="5"
-      [filledFields]="0" [mdsStatus]="'empty'" [resultId]="resultId()" [(openSectionName)]="openSectionName">
+    <app-bilateral-accordion sectionName="type-specific" sectionLabel="Type-Specific Details" sectionIcon="category"
+      [totalFields]="getSectionTotal('type-specific')" [filledFields]="getSectionFilled('type-specific')"
+      [mdsStatus]="getSectionMdsStatus('type-specific')" [resultId]="resultId()" [(openSectionName)]="openSectionName">
       <app-section-type-specific></app-section-type-specific>
     </app-bilateral-accordion>
     </div>

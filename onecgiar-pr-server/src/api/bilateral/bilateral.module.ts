@@ -54,6 +54,7 @@ import { ClarisaProject } from '../../clarisa/clarisa-projects/entity/clarisa-pr
 import { ClarisaInitiative } from '../../clarisa/clarisa-initiatives/entities/clarisa-initiative.entity';
 import { ClarisaCenter } from '../../clarisa/clarisa-centers/entities/clarisa-center.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ResultByLevelModule } from '../results/result-by-level/result-by-level.module';
 
 @Module({
   imports: [
@@ -96,6 +97,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     ResultsByInititiativesModule,
     ShareResultRequestModule,
     PathwayModule,
+    ResultByLevelModule,
   ],
   controllers: [BilateralCenterController, BilateralController],
   providers: [

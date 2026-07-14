@@ -86,24 +86,24 @@ describe('BilateralResultCreatorComponent', () => {
   });
 
   it('should handle result level selection', () => {
-    component.onLevelSelected(1);
-    expect(component.resultLevelId()).toBe(1);
+    component.onLevelSelected(3);
+    expect(component.resultLevelId()).toBe(3);
     expect(component.resultTypeId()).toBeNull();
   });
 
   it('should filter result types by selected level', () => {
-    component.resultLevelId.set(1);
-    expect(component.availableResultTypes().length).toBe(4);
+    component.resultLevelId.set(3);
+    expect(component.availableResultTypes().length).toBe(3);
     expect(component.availableResultTypes()[0].label).toBe('Policy Change');
   });
 
   it('should return empty array for unsupported level', () => {
-    component.resultLevelId.set(3);
+    component.resultLevelId.set(1);
     expect(component.availableResultTypes().length).toBe(0);
   });
 
   it('should show output types for level 4', () => {
-    component.resultLevelId.set(2);
+    component.resultLevelId.set(4);
     expect(component.availableResultTypes().length).toBe(4);
     expect(component.availableResultTypes().find(t => t.id === 6)!.label).toBe('Knowledge Product');
   });
@@ -115,11 +115,11 @@ describe('BilateralResultCreatorComponent', () => {
   });
 
   it('should create result and navigate to editor', () => {
-    component.resultLevelId.set(1);
+    component.resultLevelId.set(3);
     component.resultTypeId.set(2);
     creationService.selectedPrimarySp.set({ programId: 100 });
     component.createResult();
-    expect(creationService.createResult).toHaveBeenCalledWith(1, 2);
+    expect(creationService.createResult).toHaveBeenCalledWith(3, 2);
   });
 
   it('should have null reporting way by default', () => {
@@ -138,7 +138,7 @@ describe('BilateralResultCreatorComponent', () => {
 
   it('should set type without creating on type selection', () => {
     component.selectedReportingWay.set('manual');
-    component.resultLevelId.set(1);
+    component.resultLevelId.set(3);
     creationService.selectedPrimarySp.set({ programId: 100 });
     const event = { target: { value: '2' } } as any;
     component.onTypeSelected(event);
@@ -148,11 +148,11 @@ describe('BilateralResultCreatorComponent', () => {
 
   it('should create result on next click', () => {
     component.selectedReportingWay.set('manual');
-    component.resultLevelId.set(1);
+    component.resultLevelId.set(3);
     component.resultTypeId.set(2);
     creationService.selectedPrimarySp.set({ programId: 100 });
     component.onNext();
-    expect(creationService.createResult).toHaveBeenCalledWith(1, 2);
+    expect(creationService.createResult).toHaveBeenCalledWith(3, 2);
   });
 
   it('should reset reporting way on project change', () => {

@@ -106,6 +106,7 @@ import {
   ReviewDecisionEnum,
 } from './dto/review-decision.dto';
 import { ReviewUpdateDto } from './dto/review-update.dto';
+import { UpdateBilateralGeneralInfoDto } from './dto/update-bilateral-general-info.dto';
 import {
   ResultReviewHistory,
   ReviewActionEnum,
@@ -4575,6 +4576,108 @@ export class ResultsService {
       return {
         response: { id: parsedResultId, title: title.trim() },
         message: 'Result title updated successfully.',
+        status: HttpStatus.OK,
+      };
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ConflictException
+      ) {
+        return {
+          response: {},
+          message: error.message,
+          status: error.getStatus(),
+        };
+      }
+      return this._handlersError.returnErrorRes({ error, debug: true });
+    }
+  }
+
+  async updateBilateralGeneralInfo(
+    resultId: number,
+    dto: UpdateBilateralGeneralInfoDto,
+    user: TokenDto,
+  ): Promise<ReturnResponseDto<any> | returnErrorDto> {
+    try {
+      const parsedResultId = Number(resultId);
+      if (
+        !parsedResultId ||
+        !Number.isFinite(parsedResultId) ||
+        parsedResultId <= 0
+      ) {
+        return {
+          response: {},
+          message: 'The resultId must be a valid positive number.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      if (!dto.title?.trim() && !dto.description?.trim()) {
+        return {
+          response: {},
+          message: 'At least one of title or description must be provided.',
+          status: HttpStatus.BAD_REQUEST,
+        };
+      }
+
+      const bilateralResult = await this._resultRepository.findOne({
+        where: { id: parsedResultId, is_active: true },
+        select: ['id', 'version_id', 'source', 'title'],
+      });
+      if (!bilateralResult) {
+        return {
+          response: {},
+          message: 'Result not found.',
+          status: HttpStatus.NOT_FOUND,
+        };
+      }
+
+      const updates: Partial<Result> = {};
+
+      if (dto.title?.trim()) {
+        if (dto.title.trim() !== bilateralResult.title) {
+          const existing = await this._resultRepository.findOne({
+            where: {
+              title: dto.title.trim(),
+              is_active: true,
+              version_id: bilateralResult.version_id,
+            },
+          });
+          if (existing?.id && existing.id !== parsedResultId) {
+            return {
+              response: {},
+              message: 'A result with this title already exists.',
+              status: HttpStatus.CONFLICT,
+            };
+          }
+          (updates as any).title = dto.title.trim();
+        }
+      }
+
+      if (dto.description?.trim() !== undefined) {
+        (updates as any).description = dto.description.trim();
+      }
+
+      if (Object.keys(updates).length === 0) {
+        return {
+          response: { id: parsedResultId },
+          message: 'No changes to apply.',
+          status: HttpStatus.OK,
+        };
+      }
+
+      await this._dataSource.transaction(async (manager) => {
+        await this._validateBilateralResultForUpdate(
+          manager,
+          parsedResultId,
+          user,
+        );
+        await manager.update(Result, parsedResultId, updates);
+      });
+
+      return {
+        response: { id: parsedResultId, ...updates },
+        message: 'General info updated successfully.',
         status: HttpStatus.OK,
       };
     } catch (error) {

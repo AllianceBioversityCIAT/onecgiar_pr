@@ -84,3 +84,64 @@
   border-top: 1px solid #F3F4F6;
   margin: 32px 0;
 }
+
+.bcr-section-zero {
+  border: 1px solid #EEEEEE;
+  margin-bottom: 2px;
+
+  &--open {
+    .bcr-section-zero-header {
+      background: #FFFFFF;
+      border-left: 3px solid #1565C0;
+    }
+  }
+}
+
+.bcr-section-zero-header {
+  display: flex;
+  align-items: center;
+  padding: 14px 16px;
+  background: #F5F5F5;
+  border-left: 3px solid transparent;
+  cursor: pointer;
+  user-select: none;
+  transition: background 150ms ease, border-color 150ms ease;
+  gap: 12px;
+
+  .material-icons-round {
+    font-size: 20px;
+    color: #757575;
+  }
+
+  &:hover {
+    background: #F0F0F0;
+  }
+}
+
+.bcr-section-zero-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #212121;
+}
+
+.bcr-section-zero-chevron {
+  margin-left: auto;
+  font-size: 20px;
+  color: #757575;
+  transition: transform 300ms ease;
+
+  &--rotated {
+    transform: rotate(180deg);
+  }
+}
+
+.bcr-section-zero-body {
+  padding: 20px 16px;
+  overflow: hidden;
+  animation: bcr-section-zero-expand 300ms ease;
+}
+
+@keyframes bcr-section-zero-expand {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
