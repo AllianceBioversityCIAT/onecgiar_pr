@@ -27,12 +27,9 @@
       <td colspan="8" style="background: var(--pr-color-primary-25); border-bottom: 1px solid var(--pr-color-secondary-50)">
         <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; padding-right: 20px">
           <div style="display: flex; justify-content: flex-start; align-items: center; gap: 0.5rem; cursor: pointer" pRipple [pRowToggler]="item">
-            <button
-              type="button"
-              pButton
-              class="p-button-text p-button-rounded"
-              style="border: none; box-shadow: none !important"
-              [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"></button>
+            <button type="button" hlmBtn variant="ghost" size="icon-sm">
+              <i class="pi" [ngClass]="expanded ? 'pi-chevron-down' : 'pi-chevron-right'"></i>
+            </button>
 
             <span style="font-weight: bold">{{ item.result_title }}</span>
           </div>
@@ -69,25 +66,27 @@
             <div class="tab-content_actions">
               @if (entityAowService.canReportResults()) {
                 <button
-                  pButton
-                  label="Report result"
+                  hlmBtn
+                  size="sm"
                   type="button"
                   class="pr-body-3 tab-content_actions_button"
-                  (click)="openReportResultModal(item, result.indicator_id)"></button>
+                  (click)="openReportResultModal(item, result.indicator_id)">Report result</button>
               }
               <button
-                pButton
-                label="View results"
+                hlmBtn
+                variant="outline"
+                size="sm"
                 type="button"
-                class="p-button-outlined pr-body-3 tab-content_actions_button"
-                (click)="openViewResultDrawer(item, result.indicator_id)"></button>
+                class="pr-body-3 tab-content_actions_button"
+                (click)="openViewResultDrawer(item, result.indicator_id)">View results</button>
               @if (hasTargets(item, result.indicator_id)) {
                 <button
-                  pButton
-                  label="Target details"
+                  hlmBtn
+                  variant="outline"
+                  size="sm"
                   type="button"
-                  class="p-button-outlined pr-body-3 tab-content_actions_button"
-                  (click)="openTargetDetailsDrawer(item, result.indicator_id)"></button>
+                  class="pr-body-3 tab-content_actions_button"
+                  (click)="openTargetDetailsDrawer(item, result.indicator_id)">Target details</button>
               }
             </div>
           </td>
@@ -105,11 +104,11 @@
             </p>
             @if (entityAowService.canReportResults()) {
               <button
-                pButton
-                label="Report result"
+                hlmBtn
+                size="sm"
                 type="button"
                 class="pr-body-3 no-indicators-button"
-                (click)="openReportResultModal(item, null)"></button>
+                (click)="openReportResultModal(item, null)">Report result</button>
             }
           </div>
         </td>

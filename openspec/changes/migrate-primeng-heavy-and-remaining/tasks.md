@@ -27,13 +27,13 @@
     - `ai-feedback` — thumbs up/down (`variant="ghost" size="icon"`, kept `globalDisabled`).
     - `search-user-select` — reset filter (`variant="ghost" size="icon-sm"`).
     - `aow-hlo-create-modal` — "Create and continue" (`[loading]`→`[disabled]` + spinner icon).
-  - **Batch 3 (DEFERRED — scss-coupled / needs care, next session):**
-    - P25 export drawer btns (`results-list-filters` :164/171) — scss `::ng-deep .p25-drawer-btn .p-button` targets the inner PrimeNG `.p-button`; migrating needs rewriting that per-component scss (Yeck's rule: don't attack per-component CSS for now).
-    - `entity-aow-aow` tabs — bg/border split between pButton base + `.tab-button_inactive` custom (with `!important` hovers); risky, needs scss reconciliation.
-    - `aow-hlo-table` — chevron (`pi-chevron`, maybe a p-table rowToggler — check) + 4 action buttons (`.tab-content_actions_button` only sets padding, so hlmBtn works; do next).
-    - `entity-results-by-indicator-category-card` — projected content (`<span>`+`<i>`) + custom class; hlmBtn with projected content, do next.
-    - `wp-home` — chevron (ghost).
-  - **Bilateral-critical (SEPARATE tanda w/ own flow verification):** `result-review-drawer` (approve/reject/link/save/loading), `save-changes-justification-dialog`, `results-review-table`.
+  - **Batch 3 (hlm-button — DONE, build:dev green):** Yeck OK'd touching a little per-component scss for these.
+    - `aow-hlo-table` — chevron (`variant="ghost" size="icon-sm"`, decorative; toggle stays on the parent `[pRowToggler]` div) + 4 action buttons (`hlmBtn size="sm"`, outline for View/Target; kept `.tab-content_actions_button` padding class).
+    - `entity-results-by-indicator-category-card` — 2 projected-content buttons (`variant="outline"`, kept `_button-full/_button-inline` class + `<span>`+`<i>` content).
+    - `wp-home` — chevron (`variant="ghost" size="icon-sm"`).
+    - `entity-aow-aow` — tabs (`hlmBtn` default; active = hlm base, inactive = `.tab-button_inactive` override; kept grid + typography class).
+    - P25 export drawer btns (`results-list-filters` :164/171) — migrated to hlmBtn; **scss updated**: `.p25-drawer-btn .p-button` → `.p25-drawer-btn` (dropped `::ng-deep`, the `<button>` now carries the class directly). `styleClass`→`class`, `[ariaLabel]`→`[attr.aria-label]`.
+  - **Bilateral-critical (STILL PENDING — do next, flow verification):** `result-review-drawer` (approve/reject/link/save/loading; has `.approve-button` green / `.reject-button` custom scss), `save-changes-justification-dialog`, `results-review-table`.
   - **Bilateral-critical (SEPARATE tanda w/ own flow verification):** `result-review-drawer` (approve/reject/link/save/loading), `save-changes-justification-dialog`, `results-review-table`.
 - [ ] 2.2 Drop `ButtonModule`/`primeng/button` imports where unused; drop `pRipple` (×3). *(Do after all button usages in a module are gone — none fully cleared yet.)*
 

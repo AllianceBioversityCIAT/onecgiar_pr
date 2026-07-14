@@ -327,14 +327,12 @@
   }
 
   .p25-drawer-btn {
-    .p-button {
-      min-width: 140px;
-      width: auto;
-      padding: 0.55rem 1rem;
-    }
+    min-width: 140px;
+    width: auto;
+    padding: 0.55rem 1rem;
   }
 
-  .p25-drawer-btn-cancel .p-button {
+  .p25-drawer-btn-cancel {
     min-width: 110px;
   }
 
@@ -377,7 +375,7 @@
     justify-content: stretch;
   }
 
-  ::ng-deep .p25-drawer-btn .p-button {
+  .p25-drawer-btn {
     width: 100%;
     min-width: 0;
   }

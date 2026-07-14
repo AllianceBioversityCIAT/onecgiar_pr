@@ -4,6 +4,7 @@ import { TableModule } from 'primeng/table';
 import { EntityAowService } from '../../../../services/entity-aow.service';
 import { CommonModule } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
+import { HlmButton } from '@spartan/button';
 import { AowHloCreateModalComponent } from './components/aow-hlo-table-create-modal/aow-hlo-create-modal.component';
 import { ResultLevelService } from '../../../../../../../results/pages/result-creator/services/result-level.service';
 import { AowViewResultsDrawerComponent } from './components/aow-view-results-drawer/aow-view-results-drawer.component';
@@ -23,6 +24,7 @@ export interface ColumnOrder {
     CommonModule,
     TableModule,
     ButtonModule,
+    HlmButton,
     AowHloCreateModalComponent,
     AowViewResultsDrawerComponent,
     AowTargetDetailsDrawerComponent

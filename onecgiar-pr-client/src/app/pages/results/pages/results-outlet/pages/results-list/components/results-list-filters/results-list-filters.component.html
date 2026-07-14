@@ -162,19 +162,17 @@
         </div>
 
         <div class="drawer-footer">
-          <p-button
-            label="Cancel"
-            variant="outlined"
-            styleClass="p25-drawer-btn p25-drawer-btn-cancel"
-            [ariaLabel]="p25DrawerCancelAriaLabel"
-            (click)="closeP25ColumnsDrawer()"
-            (keydown.enter)="closeP25ColumnsDrawer()"></p-button>
-          <p-button
-            label="Generate export"
-            styleClass="p25-drawer-btn p25-drawer-btn-primary"
-            [ariaLabel]="p25DrawerGenerateAriaLabel"
-            (click)="confirmP25ColumnsAndExport()"
-            (keydown.enter)="confirmP25ColumnsAndExport()"></p-button>
+          <button
+            hlmBtn
+            variant="outline"
+            class="p25-drawer-btn p25-drawer-btn-cancel"
+            [attr.aria-label]="p25DrawerCancelAriaLabel"
+            (click)="closeP25ColumnsDrawer()">Cancel</button>
+          <button
+            hlmBtn
+            class="p25-drawer-btn p25-drawer-btn-primary"
+            [attr.aria-label]="p25DrawerGenerateAriaLabel"
+            (click)="confirmP25ColumnsAndExport()">Generate export</button>
         </div>
       </div>
     </div>

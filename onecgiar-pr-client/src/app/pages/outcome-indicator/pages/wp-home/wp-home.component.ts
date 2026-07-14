@@ -7,6 +7,7 @@ import { FormsModule } from '@angular/forms';
 import { FilterIndicatorBySearchPipe } from '../../pipes/filter-indicator-by-search.pipe';
 import { CustomSpinnerModule } from '../../../../shared/components/custom-spinner/custom-spinner.module';
 import { ButtonModule } from 'primeng/button';
+import { HlmButton } from '@spartan/button';
 import { TableModule } from 'primeng/table';
 import { CustomFieldsModule } from '../../../../custom-fields/custom-fields.module';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
@@ -18,6 +19,7 @@ import { MessageService } from 'primeng/api';
         CommonModule,
         TableModule,
         ButtonModule,
+        HlmButton,
         CustomSpinnerModule,
         RouterLink,
         FilterIndicatorBySearchPipe,

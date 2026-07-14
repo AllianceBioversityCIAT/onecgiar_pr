@@ -1,7 +1,7 @@
 <div class="entity-aow-aow_tabs">
   @for (tab of tabs(); track tab.id) {
     <button
-      pButton
+      hlmBtn
       type="button"
       class="entity-aow-aow_tabs_button"
       [ngClass]="{ 'tab-button_active': isActiveTab(tab.id), 'tab-button_inactive': !isActiveTab(tab.id) }"

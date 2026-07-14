@@ -68,12 +68,9 @@
         pRipple
         [pRowToggler]="item">
         <div style="display: flex; justify-content: flex-start; align-items: center; gap: 0.5rem">
-          <button
-            type="button"
-            pButton
-            class="p-button-text p-button-rounded"
-            style="border: none; box-shadow: none !important"
-            [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"></button>
+          <button type="button" hlmBtn variant="ghost" size="icon-sm">
+            <i class="pi" [ngClass]="expanded ? 'pi-chevron-down' : 'pi-chevron-right'"></i>
+          </button>
 
           <span style="font-weight: bold">{{ item.workpackage_short_name }}: {{ item.workpackage_name }}</span>
         </div>

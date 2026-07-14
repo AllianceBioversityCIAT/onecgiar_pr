@@ -3,6 +3,7 @@ import { ActivatedRoute } from '@angular/router';
 import { EntityAowService } from '../../services/entity-aow.service';
 import { CommonModule } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
+import { HlmButton } from '@spartan/button';
 import { AowHloTableComponent } from './components/aow-hlo-table/aow-hlo-table.component';
 
 export interface Tab {
@@ -14,7 +15,7 @@ export interface Tab {
 
 @Component({
   selector: 'app-entity-aow-aow',
-  imports: [CommonModule, ButtonModule, AowHloTableComponent],
+  imports: [CommonModule, ButtonModule, HlmButton, AowHloTableComponent],
   templateUrl: './entity-aow-aow.component.html',
   styleUrl: './entity-aow-aow.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
