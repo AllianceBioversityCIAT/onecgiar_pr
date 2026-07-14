@@ -22,7 +22,8 @@
     "types": ["node", "jest", "cypress"],
     "paths": {
       "@spartan/input": ["./src/app/spartan/input/src/index.ts"],
-      "@spartan/utils": ["./src/app/spartan/utils/src/index.ts"]
+      "@spartan/utils": ["./src/app/spartan/utils/src/index.ts"],
+      "@spartan/button": ["./src/app/spartan/button/src/index.ts"]
     }
   },
   "angularCompilerOptions": {
