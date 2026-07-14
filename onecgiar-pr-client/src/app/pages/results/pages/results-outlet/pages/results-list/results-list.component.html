@@ -122,7 +122,7 @@
                          Future change: fall back to showing the lead partner here instead of leaving it blank. -->
                     <div
                       [prTooltip]="subResult.inQA ? 'This result is being QAed' : ''"
-                      [ngClass]="{ center_flex_100: column.center, 'text-center': column.center, 'truncate-multiline': column.attr === 'full_name' }"
+                      [ngClass]="{ 'flex items-center justify-center w-full': column.center, 'text-center': column.center, 'truncate-multiline': column.attr === 'full_name' }"
                       [innerHTML]="column.attr === 'lead_center' ? (subResult.lead_center || '') : (column.attr !== 'created_date' ? subResult[column.attr] : (subResult[column.attr] | date: 'YYYY-MM-dd'))"></div>
                   }
                 </a>
