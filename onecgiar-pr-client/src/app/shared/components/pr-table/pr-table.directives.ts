@@ -17,7 +17,7 @@ export class PrTableHeaderDirective {
 
 @Directive({ selector: '[prTableBody]', standalone: true })
 export class PrTableBodyDirective {
-  readonly tpl = inject<TemplateRef<{ $implicit: unknown; index: number }>>(TemplateRef);
+  readonly tpl = inject<TemplateRef<{ $implicit: unknown; index: number; rowIndex: number }>>(TemplateRef);
 }
 
 @Directive({ selector: '[prTableEmpty]', standalone: true })

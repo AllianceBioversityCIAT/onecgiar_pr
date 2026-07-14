@@ -167,7 +167,7 @@ export class ResultsListComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  toggleMenu(event: MouseEvent, result?: CurrentResult) {
+  toggleMenu(event: Event, result?: CurrentResult) {
     if (result) this.onPressAction(result);
     event.stopPropagation();
 
