@@ -16,7 +16,7 @@ import { InputIconModule } from 'primeng/inputicon';
 import { ManageUserModalComponent } from './components/manage-user-modal/manage-user-modal.component';
 import { InitiativesService } from '../../../../shared/services/global/initiatives.service';
 import { DynamicPanelServiceService } from '../../../../shared/components/dynamic-panel-menu/dynamic-panel-service.service';
-import { MultiSelectModule } from 'primeng/multiselect';
+import { PrFilterMultiselectModule } from '../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
 import { Popover } from 'primeng/popover';
 import { ExportTablesService } from '../../../../shared/services/export-tables.service';
 import { UserRolesInfoModalComponent } from '../../../../shared/components/user-roles-info-modal/user-roles-info-modal.component';
@@ -52,7 +52,7 @@ interface CgiarOption {
     IconFieldModule,
     InputIconModule,
     ManageUserModalComponent,
-    MultiSelectModule,
+    PrFilterMultiselectModule,
     UserRolesInfoModalComponent
   ],
   templateUrl: './user-management.component.html',

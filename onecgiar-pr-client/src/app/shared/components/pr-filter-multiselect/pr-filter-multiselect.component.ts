@@ -43,6 +43,14 @@ export class PrFilterMultiselectComponent implements ControlValueAccessor {
   value: any[] = [];
   searchText = '';
 
+  /** Backward-compat bridge for consumers that reset the selection via @ViewChild (`x._value = []`). */
+  get _value(): any[] {
+    return this.value;
+  }
+  set _value(v: any[]) {
+    this.value = Array.isArray(v) ? v : [];
+  }
+
   private onChange: (v: any) => void = () => {};
   private onTouched: () => void = () => {};
 

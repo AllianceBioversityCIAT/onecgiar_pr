@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { DialogModule } from 'primeng/dialog';
 import { CustomFieldsModule } from '../../../../../../../../../../custom-fields/custom-fields.module';
-import { MultiSelectModule } from 'primeng/multiselect';
+import { PrFilterMultiselectModule } from '../../../../../../../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
 import { EntityAowService } from '../../../../../../services/entity-aow.service';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../../../../../../../../../shared/services/api/api.service';
@@ -28,7 +28,7 @@ interface CreateResultBody {
     CommonModule,
     DialogModule,
     CustomFieldsModule,
-    MultiSelectModule,
+    PrFilterMultiselectModule,
     FormsModule,
     ButtonModule,
     SelectModule,

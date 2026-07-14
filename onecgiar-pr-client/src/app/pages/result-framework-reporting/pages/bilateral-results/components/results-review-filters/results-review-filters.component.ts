@@ -7,7 +7,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { BilateralResultsService } from '../../bilateral-results.service';
 import { CustomFieldsModule } from '../../../../../../custom-fields/custom-fields.module';
-import { MultiSelectModule } from 'primeng/multiselect';
+import { PrFilterMultiselectModule } from '../../../../../../shared/components/pr-filter-multiselect/pr-filter-multiselect.module';
 import { ButtonModule } from 'primeng/button';
 import { OverlayBadgeModule } from 'primeng/overlaybadge';
 @Component({
@@ -18,7 +18,7 @@ import { OverlayBadgeModule } from 'primeng/overlaybadge';
     InputIconModule,
     InputTextModule,
     FormsModule,
-    MultiSelectModule,
+    PrFilterMultiselectModule,
     ButtonModule,
     OverlayBadgeModule,
     CustomFieldsModule

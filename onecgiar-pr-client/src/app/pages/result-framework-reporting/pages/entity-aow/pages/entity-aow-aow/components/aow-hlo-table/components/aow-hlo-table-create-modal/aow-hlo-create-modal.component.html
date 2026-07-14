@@ -168,20 +168,14 @@
             [labelDescInlineStyles]="'margin-top: 0 !important'">
           </app-pr-field-header>
 
-          <p-multiselect
+          <app-pr-filter-multiselect
             [options]="allInitiatives()"
             optionLabel="official_code"
             placeholder="Select entity"
-            appendTo="body"
             [(ngModel)]="entityAowService.selectedEntities"
-            [style]="{ width: '100%', height: '32px' }"
-            [disabled]="creatingResult()">
-            <ng-template let-entity #item>
-              <div class="flex items-center gap-2">
-                <div>{{ entity.official_code }} - {{ entity.name }}</div>
-              </div>
-            </ng-template>
-          </p-multiselect>
+            [disabled]="creatingResult()"
+            [filter]="true">
+          </app-pr-filter-multiselect>
 
           @if (entityAowService.selectedEntities().length > 0) {
             <app-pr-field-header
@@ -210,23 +204,14 @@
             [labelDescInlineStyles]="'margin-top: 0 !important'">
           </app-pr-field-header>
 
-          <p-multiselect
+          <app-pr-filter-multiselect
             [options]="entityAowService.w3BilateralProjects()"
             placeholder="Select an W3 and/or bilateral projects"
-            appendTo="body"
             optionLabel="project_name"
-            [maxSelectedLabels]="1"
             [(ngModel)]="entityAowService.selectedW3BilateralProjects"
-            [style]="{ width: '100%', height: '32px' }"
-            [disabled]="creatingResult()">
-            <ng-template let-project #item>
-              <div class="flex items-center gap-2">
-                <div style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 400px">
-                  {{ project.project_name }}@if (project.organization_name) {<span> (Center: {{ project.organization_name }})</span>}
-                </div>
-              </div>
-            </ng-template>
-          </p-multiselect>
+            [disabled]="creatingResult()"
+            [filter]="true">
+          </app-pr-filter-multiselect>
 
           @if (entityAowService.selectedW3BilateralProjects().length > 0) {
             <div class="selected_bilateral_container">

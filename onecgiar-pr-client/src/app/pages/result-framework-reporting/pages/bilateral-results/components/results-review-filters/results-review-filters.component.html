@@ -78,45 +78,35 @@
             label="Indicator category(ies)"
             labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
             [required]="false"></app-pr-field-header>
-          <p-multiselect
+          <app-pr-filter-multiselect
             [options]="bilateralResultsService.indicatorCategoryOptions()"
             [ngModel]="tempSelectedIndicatorCategories()"
             (ngModelChange)="tempSelectedIndicatorCategories.set($event)"
             placeholder="Select indicator category(ies)"
-            [showHeader]="false"
-            [filter]="bilateralResultsService.indicatorCategoryOptions().length > 5"
-            [maxSelectedLabels]="2"
-            [style]="{ width: '100%' }" />
+            [filter]="bilateralResultsService.indicatorCategoryOptions().length > 5"></app-pr-filter-multiselect>
         </div>
         <div>
           <app-pr-field-header
             label="Status"
             labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
             [required]="false"></app-pr-field-header>
-          <p-multiselect
+          <app-pr-filter-multiselect
             [options]="bilateralResultsService.statusOptions()"
             [ngModel]="tempSelectedStatus()"
             (ngModelChange)="tempSelectedStatus.set($event)"
-            placeholder="Select status"
-            [showHeader]="false"
-            [filter]="false"
-            [maxSelectedLabels]="2"
-            [style]="{ width: '100%' }" />
+            placeholder="Select status"></app-pr-filter-multiselect>
         </div>
         <div>
           <app-pr-field-header
             label="Lead center"
             labelDescInlineStyles="margin-bottom: 5px; margin-top: 0; color: var(--pr-color-primary-300)"
             [required]="false"></app-pr-field-header>
-          <p-multiselect
+          <app-pr-filter-multiselect
             [options]="bilateralResultsService.leadCenterOptions()"
             [ngModel]="tempSelectedLeadCenters()"
             (ngModelChange)="tempSelectedLeadCenters.set($event)"
             placeholder="Select lead center(s)"
-            [showHeader]="false"
-            [filter]="bilateralResultsService.leadCenterOptions().length > 5"
-            [maxSelectedLabels]="2"
-            [style]="{ width: '100%' }" />
+            [filter]="bilateralResultsService.leadCenterOptions().length > 5"></app-pr-filter-multiselect>
         </div>
       </div>
     </div>
