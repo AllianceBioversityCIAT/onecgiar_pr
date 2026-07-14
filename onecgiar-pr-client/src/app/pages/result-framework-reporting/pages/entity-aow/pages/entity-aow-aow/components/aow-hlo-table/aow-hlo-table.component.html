@@ -1,7 +1,18 @@
+<div class="search_input" style="width: 100%; margin-bottom: 1rem">
+  <i class="material-icons-round">search</i>
+  <input
+    id="aowIndicatorSearchInput"
+    type="text"
+    placeholder="Find indicator..."
+    aria-label="Find indicator"
+    [ngModel]="entityAowService.searchText()"
+    (ngModelChange)="entityAowService.searchText.set($event)" />
+</div>
+
 <p-table
   id="tocResultsByAowIdTable"
   styleClass="p-datatable-gridlines p-datatable-sm"
-  [value]="tableData()"
+  [value]="filteredTableData()"
   [loading]="entityAowService.isLoadingTocResultsByAowId() || entityAowService.isLoadingTocResults2030Outcomes()"
   sortField="result_title"
   [sortOrder]="1"
@@ -119,7 +130,13 @@
 
   <ng-template #emptymessage>
     <tr style="height: 200px">
-      <td colspan="8" class="tab-content_empty">There are no High-Level Outputs Indicators found.</td>
+      <td colspan="8" class="tab-content_empty">
+        @if (entityAowService.searchText().trim()) {
+          No indicators match your search.
+        } @else {
+          There are no High-Level Outputs Indicators found.
+        }
+      </td>
     </tr>
   </ng-template>
 </p-table>
