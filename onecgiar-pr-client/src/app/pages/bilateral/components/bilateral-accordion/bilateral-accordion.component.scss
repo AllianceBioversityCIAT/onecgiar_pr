@@ -120,7 +120,7 @@
 
 .bp-accordion-body {
   padding: 22px 18px;
-  overflow: hidden;
+  overflow: visible;
   animation: bp-accordion-expand 250ms ease-out;
   background: #FFFFFF;
   border-top: 1px solid #F0F4F8;

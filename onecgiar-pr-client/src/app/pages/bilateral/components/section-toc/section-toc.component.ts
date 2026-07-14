@@ -95,6 +95,21 @@ export class SectionTocComponent implements OnInit {
     }
   });
 
+  readonly tocResultItems = computed(() => {
+    return this.activeList().map((item: any) => {
+      const indicators = item.indicators ?? [];
+      const hasMatch = indicators.some((ind: any) => {
+        const info = this.getIndicatorMatchInfo(ind);
+        return info.cssClass === 'bp-toc-match--match';
+      });
+      const hasOther = indicators.some((ind: any) => {
+        const info = this.getIndicatorMatchInfo(ind);
+        return info.cssClass === 'bp-toc-match--other';
+      });
+      return { ...item, hasMatch, hasOther };
+    });
+  });
+
   readonly indicatorsList = computed(() => {
     const resultId = this.selectedTocResultId();
     if (!resultId) return [];

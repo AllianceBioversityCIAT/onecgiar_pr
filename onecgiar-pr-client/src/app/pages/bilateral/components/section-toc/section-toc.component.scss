@@ -400,6 +400,13 @@
   padding: 2px 0;
 }
 
+.st-select-item-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
 .st-select-item-code {
   font-size: 10px;
   font-weight: 700;

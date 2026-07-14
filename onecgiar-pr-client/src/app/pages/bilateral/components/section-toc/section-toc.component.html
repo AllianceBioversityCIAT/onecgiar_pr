@@ -57,7 +57,7 @@
         <div class="st-field">
           <label class="st-label">{{ selectedLevelName() }} <span style="color:#C62828">*</span></label>
           <p-select
-            [options]="activeList()"
+            [options]="tocResultItems()"
             [ngModel]="selectedTocResultId()"
             (ngModelChange)="onTocResultSelect($event)"
             optionLabel="toc_result_id"
@@ -66,13 +66,29 @@
             [style]="{ width: '100%' }">
             <ng-template pTemplate="item" let-item>
               <div class="st-select-item">
-                <span class="st-select-item-code">{{ item.wp_short_name || item.extraInformation || 'AOW' }}</span>
+                <div class="st-select-item-row">
+                  <span class="st-select-item-code">{{ item.wp_short_name || item.extraInformation || 'AOW' }}</span>
+                  @if (item.hasMatch) {
+                    <span class="st-select-badge st-select-badge--match">Match [{{ resultTypeLabel() }}]</span>
+                  }
+                  @else if (item.hasOther) {
+                    <span class="st-select-badge st-select-badge--other">Review needed</span>
+                  }
+                </div>
                 <span class="st-select-item-desc">{{ item.title || item.extraInformation }}</span>
               </div>
             </ng-template>
             <ng-template pTemplate="selectedItem" let-item>
               <div class="st-select-item">
-                <span class="st-select-item-code">{{ item.wp_short_name || item.extraInformation || 'AOW' }}</span>
+                <div class="st-select-item-row">
+                  <span class="st-select-item-code">{{ item.wp_short_name || item.extraInformation || 'AOW' }}</span>
+                  @if (item.hasMatch) {
+                    <span class="st-select-badge st-select-badge--match">Match [{{ resultTypeLabel() }}]</span>
+                  }
+                  @else if (item.hasOther) {
+                    <span class="st-select-badge st-select-badge--other">Review needed</span>
+                  }
+                </div>
                 <span class="st-select-item-desc">{{ item.title || item.extraInformation }}</span>
               </div>
             </ng-template>
@@ -95,7 +111,7 @@
               [options]="indicatorsList()"
               [ngModel]="selectedIndicatorId()"
               (ngModelChange)="onIndicatorSelect($event)"
-              optionLabel="indicator_description"
+                optionLabel="indicator_description"
               optionValue="related_node_id"
               placeholder="Select an indicator"
               [style]="{ width: '100%' }">
