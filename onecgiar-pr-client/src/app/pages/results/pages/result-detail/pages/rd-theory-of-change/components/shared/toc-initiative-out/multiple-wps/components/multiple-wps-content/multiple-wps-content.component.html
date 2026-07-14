@@ -1,5 +1,5 @@
 <div class="container">
-  <div class="flex-no-wrap" *ngIf="activeTab?.planned_result !== null && showMultipleWPsContent">
+  <div class="flex flex-nowrap w-full gap-[20px] [&>*]:flex-1 [&>*]:max-w-none" *ngIf="activeTab?.planned_result !== null && showMultipleWPsContent">
     <app-pr-select
       *ngIf="activeTab?.planned_result && resultLevelId === 1"
       [options]="outputList"
