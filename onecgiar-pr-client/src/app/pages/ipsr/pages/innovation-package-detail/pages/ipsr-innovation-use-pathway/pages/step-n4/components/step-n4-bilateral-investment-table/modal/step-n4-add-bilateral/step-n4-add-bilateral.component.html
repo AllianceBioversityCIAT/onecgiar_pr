@@ -22,7 +22,7 @@
       [showPartnerAlert]="true">
     </app-pr-select>
 
-    <div class="auto_fit_container">
+    <div class="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-[20px]">
       <app-pr-input label="Grant title" [required]="true" [(ngModel)]="biltarealBody.grant_title" placeholder="Grant title goes here...">
       </app-pr-input>
       <app-pr-input label="Center Grant ID" [required]="true" [(ngModel)]="biltarealBody.center_grant_id" placeholder="e.g. G184"> </app-pr-input>

@@ -21,7 +21,7 @@
       [(ngModel)]="this.body.obj_non_pooled_projetct.funder_institution_id">
     </app-pr-select>
 
-    <div class="auto_fit_container">
+    <div class="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-[20px]">
       <app-pr-input label="Grant title" [required]="true" [(ngModel)]="this.body.obj_non_pooled_projetct.grant_title" [readOnly]="true">
       </app-pr-input>
 

@@ -2,7 +2,7 @@
     description="If you don't find the partner you are looking for, <a class='open_route alert-event-2'>request</a> to have it added to the list. Please note that once your partner request is approved, it could take up to an hour to be available in the CLARISA institutions list.">
 </app-alert-status>
 
-<div class="auto_fit_container fadeIn">
+<div class="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-[20px] fadeIn">
     <div class="dropdown-50p">
         <app-pr-multi-select [options]="this.institutionsSE.institutionsWithoutCentersList" [required]="false"
             label="Partners" selectedOptionLabel="institutions_name" optionLabel="full_name"

@@ -55,7 +55,7 @@
   </div>
 
   <app-pr-input [(ngModel)]="knowledgeProductBody.handle" label="Handle" [required]="false" [disabled]="true"> </app-pr-input>
-  <div class="auto_fit_container">
+  <div class="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-[20px]">
     <app-pr-input
       [(ngModel)]="knowledgeProductBody.onlineYearCG"
       [label]="`Date online (${knowledgeProductBody.source})`"
@@ -84,7 +84,7 @@
   </div>
 
   <app-pr-input [(ngModel)]="knowledgeProductBody.type" label="Knowledge product type" [required]="false" [readOnly]="true"> </app-pr-input>
-  <div class="auto_fit_container">
+  <div class="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-[20px]">
     <app-pr-input
       [(ngModel)]="knowledgeProductBody.is_peer_reviewed_CG"
       [label]="`Peer reviewed (${knowledgeProductBody.source})`"
@@ -99,7 +99,7 @@
       [readOnly]="true">
     </app-pr-input>
   </div>
-  <div class="auto_fit_container">
+  <div class="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-[20px]">
     <div>
       <app-pr-input
         [(ngModel)]="knowledgeProductBody.is_isi_CG"
@@ -122,7 +122,7 @@
   </div>
 
   <app-pr-input [(ngModel)]="knowledgeProductBody.doi" label="DOI" [required]="false" [readOnly]="true"> </app-pr-input>
-  <div class="auto_fit_container">
+  <div class="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-[20px]">
     <div>
       <app-pr-input
         [(ngModel)]="knowledgeProductBody.accessibility_CG"

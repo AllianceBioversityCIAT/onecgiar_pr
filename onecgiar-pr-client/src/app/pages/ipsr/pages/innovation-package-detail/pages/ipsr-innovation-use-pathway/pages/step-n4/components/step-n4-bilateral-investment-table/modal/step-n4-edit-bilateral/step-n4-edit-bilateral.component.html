@@ -12,7 +12,7 @@
             [(ngModel)]="biltarealBody.funder_institution_id" [readOnly]="this.isonlyread">
         </app-pr-select>
 
-        <div class="auto_fit_container">
+        <div class="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-[20px]">
             <app-pr-input label="Grant title" [required]="true" [(ngModel)]="biltarealBody.grant_title"
                 placeholder="Grant title goes here..." [readOnly]="this.isonlyread">
             </app-pr-input>
