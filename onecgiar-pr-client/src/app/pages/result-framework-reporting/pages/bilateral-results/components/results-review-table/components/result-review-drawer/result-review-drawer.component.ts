@@ -17,6 +17,7 @@ import { DrawerModule } from 'primeng/drawer';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
+import { HlmButton } from '@spartan/button';
 import { DialogModule } from 'primeng/dialog';
 import { TextareaModule } from 'primeng/textarea';
 import { ApiService } from '../../../../../../../../shared/services/api/api.service';
@@ -43,6 +44,7 @@ import { RdContributorsAndPartnersModule } from '../../../../../../../../pages/r
     CommonModule,
     FormsModule,
     ButtonModule,
+    HlmButton,
     DialogModule,
     TextareaModule,
     GeoscopeManagementModule,

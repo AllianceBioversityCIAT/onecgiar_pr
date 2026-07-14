@@ -32,12 +32,9 @@
     <tr>
       <td [attr.colspan]="this.bilateralResultsService.currentCenterSelected().length > 1 ? 9 : 8" class="group-header-cell">
         <div class="group-header-content" pRipple [pRowToggler]="item">
-          <button
-            type="button"
-            pButton
-            class="p-button-text p-button-rounded"
-            style="border: none; box-shadow: none !important"
-            [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"></button>
+          <button type="button" hlmBtn variant="ghost" size="icon-sm">
+            <i class="pi" [ngClass]="expanded ? 'pi-chevron-down' : 'pi-chevron-right'"></i>
+          </button>
 
           <span style="font-weight: bold">{{ item.project_name }}</span>
         </div>
@@ -81,9 +78,10 @@
           @let isPendingReview = result.status_id == 5;
 
           <button
-            pButton
+            hlmBtn
+            variant="outline"
+            size="sm"
             type="button"
-            variant="outlined"
             class="review-result-button"
             (click)="reviewResult(result)"
             [prTooltip]="isPendingReview && canReviewResults() ? 'Review result' : 'See result'"

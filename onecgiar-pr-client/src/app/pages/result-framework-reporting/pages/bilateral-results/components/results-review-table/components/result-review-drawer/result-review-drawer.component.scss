@@ -365,34 +365,33 @@ p {
   }
 }
 
+// Approve / Reject buttons (hlm-button carries the class directly now)
+.approve-button {
+  background-color: rgba(var(--pr-color-green-rgb), 0.1);
+  color: var(--pr-color-green-600);
+  border-color: var(--pr-color-green-600);
+
+  &:hover:not(.not-hover) {
+    background-color: var(--pr-color-green-600);
+    color: var(--pr-color-white);
+    border-color: var(--pr-color-green-600);
+  }
+}
+
+.reject-button {
+  background-color: rgba(var(--pr-color-red-rgb), 0.1);
+  color: var(--pr-color-red-500);
+  border-color: var(--pr-color-red-500);
+
+  &:hover {
+    background-color: var(--pr-color-red-500);
+    color: var(--pr-color-white);
+    border-color: var(--pr-color-red-500);
+  }
+}
+
 // PrimeNG overrides
 ::ng-deep {
-  .p-button {
-    &.approve-button {
-      background-color: rgba(var(--pr-color-green-rgb), 0.1);
-      color: var(--pr-color-green-600);
-      border-color: var(--pr-color-green-600);
-
-      &:hover:not(.not-hover) {
-        background-color: var(--pr-color-green-600);
-        color: var(--pr-color-white);
-        border-color: var(--pr-color-green-600);
-      }
-    }
-
-    &.reject-button {
-      background-color: rgba(var(--pr-color-red-rgb), 0.1);
-      color: var(--pr-color-red-500);
-      border-color: var(--pr-color-red-500);
-
-      &:hover {
-        background-color: var(--pr-color-red-500);
-        color: var(--pr-color-white);
-        border-color: var(--pr-color-red-500);
-      }
-    }
-  }
-
   .p-drawer-header {
     padding: 0 !important;
   }

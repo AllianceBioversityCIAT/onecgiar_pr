@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
+import { HlmButton } from '@spartan/button';
 import { TextareaModule } from 'primeng/textarea';
 
 @Component({
   selector: 'app-save-changes-justification-dialog',
-  imports: [CommonModule, FormsModule, DialogModule, ButtonModule, TextareaModule],
+  imports: [CommonModule, FormsModule, DialogModule, ButtonModule, HlmButton, TextareaModule],
   templateUrl: './save-changes-justification-dialog.component.html',
   styleUrl: '../../result-review-drawer.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

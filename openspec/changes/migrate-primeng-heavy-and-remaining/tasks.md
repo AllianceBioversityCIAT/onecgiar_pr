@@ -15,7 +15,7 @@
 
 ## 2. Buttons (p-button ×25 + pButton ×13)
 
-- [ ] 2.1 Migrate `p-button`/`pButton` → `hlm-button` (or `app-pr-button` where it already fits). Map icon/label/severity/loading/disabled.
+- [x] 2.1 Migrate `p-button`/`pButton` → `hlm-button` (or `app-pr-button` where it already fits). Map icon/label/severity/loading/disabled. **DONE — 0 `<p-button>` / `pButton` left outside custom-fields; build:dev green.**
   - **Batch 1 (safe/simple — DONE, build:dev green):** migrated to `app-pr-button` where the fit is exact (label + icon + click, no full-width, no custom styleClass, no projected content, not a bilateral-critical flow). Files:
     - `no-edit-container` — "Edit".
     - `indicator-details` — "Add result" (`iconsStylesClass="pi" icon="file-plus"`).
@@ -33,7 +33,11 @@
     - `wp-home` — chevron (`variant="ghost" size="icon-sm"`).
     - `entity-aow-aow` — tabs (`hlmBtn` default; active = hlm base, inactive = `.tab-button_inactive` override; kept grid + typography class).
     - P25 export drawer btns (`results-list-filters` :164/171) — migrated to hlmBtn; **scss updated**: `.p25-drawer-btn .p-button` → `.p25-drawer-btn` (dropped `::ng-deep`, the `<button>` now carries the class directly). `styleClass`→`class`, `[ariaLabel]`→`[attr.aria-label]`.
-  - **Bilateral-critical (STILL PENDING — do next, flow verification):** `result-review-drawer` (approve/reject/link/save/loading; has `.approve-button` green / `.reject-button` custom scss), `save-changes-justification-dialog`, `results-review-table`.
+  - **Bilateral-critical (DONE, build:dev green — NEEDS FLOW QA by Yeck):**
+    - `result-review-drawer` — Go-to-center (link), 2× Save changes (icon+disabled), APPROVE/REJECT (outline + `.approve-button` green / `.reject-button` red), approve+reject confirm dialogs Cancel/Confirm (lg, loading→spinner). **scss adapted**: `.approve-button`/`.reject-button` moved out of `::ng-deep .p-button {}` to direct rules (the `<button hlmBtn>` carries the class + view-encapsulation gives it weight over Tailwind utilities). `[loading]`→`[disabled]`+spinner; `(onClick)`→`(click)`; `styleClass`→`class`.
+    - `save-changes-justification-dialog` — Cancel/Confirm (lg, loading).
+    - `results-review-table` — row chevron (ghost icon) + review-result button (outline sm, kept `.review-result-button` class + icon/label projected content).
+    - ⚠️ **Verify:** approve/reject green/red colors win over hlm outline; confirm-dialog spinner shows while saving; approve/reject actually fire. (Playwright browser died mid-session — validated by build only.)
   - **Bilateral-critical (SEPARATE tanda w/ own flow verification):** `result-review-drawer` (approve/reject/link/save/loading), `save-changes-justification-dialog`, `results-review-table`.
 - [ ] 2.2 Drop `ButtonModule`/`primeng/button` imports where unused; drop `pRipple` (×3). *(Do after all button usages in a module are gone — none fully cleared yet.)*
 
